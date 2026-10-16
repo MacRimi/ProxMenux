@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Proxmox VE Systémové príkazy, pveverzia, uptime, journalctl, systemctl | ProxMenux",
-    "description": "Odkaz na základné Proxmox VE0 a Linux systémové príkazy: pveververzia, pveperf, uptime, journalctl, systemctl, lscpu, lsblk, df, voľný, posledný, kto. Všetko len na čítanie a bezpečné bežať na každom hostiteľovi.",
+    "description": "Odkaz na základné príkazy Proxmox VE a Linux: pveversion, pveperf, uptime, journalctl, systemctl, lscpu, lsblk, posledný kto, d, d Všetko len na čítanie a bezpečné na spustenie na akomkoľvek hostiteľovi.",
     "ogTitle": "Proxmox VE Systémové príkazy, pveverzia, uptime, journalctl, systemctl",
     "ogDescription": "Odkaz na základné Proxmox VE a Linux systémové príkazy verzia, uptime, služby, protokoly, užívateľské informácie, hardvérové sondy. Všetko len na čítanie.",
     "twitterTitle": "Proxmox VE Systémové príkazy ProxMenux",

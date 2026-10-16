@@ -113,7 +113,7 @@
       {
         "step": "4",
         "name": "Spustiť informácie",
-        "detail": "<code>metadata/run_info.env</code> zaznamenáva záložný beh identity"
+        "detail": "<code>metadata/run_info.env</code> zaznamenáva identitu spustenia zálohy – názov hostiteľa, časovú pečiatku, verziu jadra – používanú pri kontrole kompatibility obnovy na určenie smeru medzi jadrami."
       },
       {
         "step": "5",
@@ -164,7 +164,7 @@
   },
   "archiveStructure": {
     "heading": "Štruktúra archívu",
-    "intro": "Inscenačný adresár vytvorený každým backendom sleduje rovnaké rozloženie bez ohľadu na cieľ. Tarball, PBS0 <code>.pxar</code> alebo Borg archív ukladá tento strom doslova.",
+    "intro": "Priestorový adresár vytvorený každým backendom má rovnaké usporiadanie bez ohľadu na miesto určenia. Archív tarball, PBS <code>.pxar</code> alebo Borg uchováva tento strom doslovne.",
     "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # output of apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, kernel version, pmxcfs method\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root without volatile subpaths\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (state only)\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/crontabs"
   },
   "confirmation": {
@@ -185,14 +185,14 @@
       },
       {
         "topic": "Oznámenie (úplné/neúplné)",
-        "detail": "<code>hb_notify_lifecycle \"complete\"</code> alebo <code>\"fail\"</code> požiare s trvaním, veľkosť archívu a"
+        "detail": "<code>hb_notify_lifecycle \"complete\"</code> alebo <code>\"fail\"</code> s trvaním, veľkosťou archívu a – v prípade zlyhania – posledným chybovým riadkom z denníka."
       }
     ]
   },
   "finishedScreens": {
     "heading": "Ako vyzerá dokončená záloha",
     "intro": "Rovnaké ukončenie akcie sa vynorí oboma vstupnými bodmi. TUI píše súhrnný blok do terminálu; záložka monitora zobrazí spustenie v zozname archívov s veľkosťou, trvaním a odznakmi.",
-    "scriptsAlt": "ProxMenux Scripts TUI zobrazuje dokončenú zálohu hostiteľa",
+    "scriptsAlt": "ProxMenux Scripts TUI zobrazujúce dokončenú zálohu hostiteľa – cieľ, ID zálohy, cestu snapshot, veľkosť údajov, trvanie a stav šifrovania.",
     "scriptsCaption": "Ukončené zálohovanie ProxMenux Scripts (TUI). Dokončiť blok vytlačí cieľ, záložný ID, výsledný snímok alebo názov archívu, veľkosť dát, trvanie a šifrovanie stavu.",
     "monitorAlt": "ProxMenux Monitor Zálohy znázorňujúcu dokončenú zálohovaciu položku hostiteľa s veľkosťou, trvaním, metodologickým odznakom a indikátorom šifrovania.",
     "monitorCaption": "Dokončené zálohovanie ProxMenux Monitor Zálohy. Nová záloha sa zobrazí v zozname archívov s cieľovou metódou odznak, veľkosť, trvanie a v prípade potreby indikátor šifrovania zámku."

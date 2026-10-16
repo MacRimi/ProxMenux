@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "ProxMenux Monitor Dashboard: Systémový prehľad záložka ProxMenux Dokumentácia",
-    "description": "Štandardná pristávacia záložka ProxMenux Monitor0: štyri metrické karty (CPU, pamäť, aktívne VMs & LXC, Teplota) so živými aktualizáciami a iskrou, historické graf metriky, a kondenzované úložisko a sieťové panely s kliknite na ich vyhradené karty."
+    "description": "Predvolená vstupná karta ProxMenux Monitor: štyri metrické karty (CPU, Pamäť, Aktívne virtuálne počítače a LXC, Teplota) so živými aktualizáciami a bleskom, graf historických metrík a zhustené panely Úložisko a Sieť s prekliknutím na ich vyhradené karty."
   },
   "header": {
     "title": "Dashboard: Systémový prehľad karta",
@@ -68,10 +68,10 @@
     "detailTitle": "Detail za celý proces",
     "detailIntro": "Kliknutím na ľubovoľný riadok v zozname sa otvorí druhý dialóg so živým obrázkom tohto jedného procesu, ktorý je usporiadaný v štyroch sekciách:",
     "detailItems": [
-      "<strong>0Overview</strong>",
+      "<strong>Prehľad</strong> — stav, nadradený proces, počet vlákien, deskriptory otvorených súborov, používateľ a skupina.",
       "<strong>Zdroje</strong> — CPU %, Pamäť %, Resident (RSS), Virtuálna veľkosť, Swap, I/O čítať a písať celkom.",
       "<strong>Command</strong>",
-      "<strong>0Lifetime</strong>"
+      "<strong>Životnosť</strong> — časová pečiatka spustenia a uplynutý čas spustenia."
     ],
     "detailRefresh": "Dialóg detailov osviežuje každý 3 sekúnd pri otvorení. Ak sa proces dokončí v polovici dialógu, hlasovanie zastaví, jantár <em>Tento proces skončil </em> banner sa objaví, a posledný zachytený snímka zostane na obrazovke (tlmené), takže môžete stále vidieť, čo sa dialo tesne pred tým, než skončil.",
     "captureDetailAlt": "Detail procesu modal",
@@ -88,9 +88,9 @@
     "storageIntro": "Zhustený pohľad na pamäťový stav hostiteľa, rozbitý na tri bloky:",
     "storageItems": [
       "<strong>Celková kapacita uzla</strong> chápanie všetkých VM/LXC úložiská plus miestna úložná sústava, s gradientom pokroku z celkového použitého / voľného rozdelenia.",
-      "<strong>0Celková kapacita / Fyzický disk</strong>",
-      "<strong>0VM/LXC Storage</strong>",
-      "<strong>0Lokálne úložisko (System)</strong>"
+      "<strong>Celková kapacita / Fyzické disky</strong> — hlavička nespracovanej kapacity a počet objavených fyzických diskov.",
+      "<strong>VM/LXC Úložisko</strong> — využité / voľné / percento pre úložiská, v ktorých bývajú hostia, plus počítadlo, ak je nakonfigurovaných viac ako jeden.",
+      "<strong>Lokálne úložisko (systém)</strong> — hostiteľský vlastný root/systémové pripojenie, oddelene od hosťa pool."
     ],
     "storageDrillIn": "Drill-in životov v <link>Karta na ukladanie</link> Na disku SMART, ZFS pool podrobnosti, história pozorovania atď.",
     "networkTitle": "Sieťová prehľadová karta",
@@ -105,7 +105,7 @@
       "<strong>Mapa metrických uzlín</strong> A osviežte každý 30 s alebo zmeny v časovom rámci.",
       "<strong>Skladovacia karta</strong> A osviežte každý 60 s. SMART dáta sa vyrovnávajú dlhšie (záložka Storage spustí nové čítanie na požiadanie).",
       "<strong>Sieťová karta</strong> A osviežte každý 5 s v aktívnom časovom rámci.",
-      "<strong>Manual restifth</strong>"
+      "<strong>Manuálne obnovenie</strong> — tlačidlo Obnoviť v hlavičke vynúti okamžité opätovné načítanie všetkých panelov."
     ]
   },
   "dataCollected": {
@@ -120,7 +120,7 @@
         "source": "Celkový stav vyrovnávacej pamäte vytvorený každým cyklom Health Monitor."
       },
       {
-        "card": "CPU0 / RAM / Swap / Uptime",
+        "card": "CPU / RAM / Swap / Uptime",
         "endpoint": "/api/system",
         "source": "<code>/proc/stat</code>, <code>/proc/meminfo</code>, <code>/proc/uptime</code> s krátkym oknom CPU odber vzoriek."
       },
@@ -137,7 +137,7 @@
       {
         "card": "Obnoviť kadence",
         "endpoint": "—",
-        "source": "CPU0 / sieť 5 s; úložisko / VMs 30 s; statické informácie každý 5 min. Tlačidlo Refresh v hlavičke vynúti okamžitú re-fetch na každom paneli."
+        "source": "CPU / sieť 5 s; úložisko / VM 30 s; statické informácie každých 5 min. Tlačidlo Refresh v hlavičke vynúti okamžité opätovné načítanie na každom paneli."
       }
     ],
     "codeComment1": "# Single call that backs the header pilulky",
@@ -153,14 +153,14 @@
         "tail": " — "
       },
       {
-        "label": "API referencia",
+        "label": "Referenčná príručka API",
         "href": "/docs/monitor/api",
         "tail": " — Systém, informácie a zdravotné ukazovatele."
       },
       {
         "label": "Oznámenia",
         "href": "/docs/monitor/notifications",
-        "tail": " — Ako sa rovnaké statusy premenia na Telegram0 / Discord / E-mailové správy."
+        "tail": "— ako sa rovnaké stavy menia na Telegram / Discord / e-mailové správy."
       },
       {
         "label": "Index schránky",

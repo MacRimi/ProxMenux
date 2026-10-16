@@ -1,92 +1,92 @@
 {
   "meta": {
-    "title": "ProxMenux Zálohovanie a obnovenie Proxmox VE",
-    "description": "ProxMenux Zálohovanie & Obnovenie zachytáva kompletný stav Proxmox hostiteľa Zálohovanie a obnova sú samostatné: žiadne externé závislosti a cross-kernel obnovu sú podporované cez smer-uvedomené bezpečné subset filtra a jadra-agnostické hydratácie.",
-    "ogTitle": "ProxMenux Zálohovať a obnoviť",
-    "ogDescription": "Full host zálohovanie a obnoviť pre Proxmox VE so štruktúrovaným manifest, zoznam balíkov a komponenty reinštalátory.",
-    "twitterTitle": "ProxMenux Zálohovať a obnoviť ProxMenux",
-    "twitterDescription": "Full host zálohovanie a obnoviť pre Proxmox VE so štruktúrovaným manifest, zoznam balíkov a komponenty reinštalátory."
+    "title": "ProxMenux Zálohovanie a obnovenie — Prehľad | Úplné zálohovanie a obnovenie hostiteľa pre Proxmox VE",
+    "description": "ProxMenux Backup & Restore zachytáva úplný stav hostiteľa Proxmox – súborový systém, štruktúrovaný konfiguračný manifest a nainštalované balíky/komponenty – a reprodukuje ho na rovnakom alebo inom hostiteľovi. Zálohovanie a obnova sú samostatné: žiadne externé závislosti a obnovy medzi jadrami sú podporované prostredníctvom filtra bezpečných podmnožín, ktorý sleduje smer a hydratácie agnostického jadra.",
+    "ogTitle": "ProxMenux Zálohovanie a obnovenie — Prehľad",
+    "ogDescription": "Úplné zálohovanie a obnovenie hostiteľa pre Proxmox VE so štruktúrovaným manifestom, zoznamom balíkov a preinštalátormi komponentov.",
+    "twitterTitle": "ProxMenux Zálohovanie a obnovenie | ProxMenux",
+    "twitterDescription": "Úplné zálohovanie a obnovenie hostiteľa pre Proxmox VE so štruktúrovaným manifestom, zoznamom balíkov a preinštalátormi komponentov."
   },
   "header": {
-    "title": "Záloha a obnova",
-    "description": "Full-host zálohovanie a obnoviť pre Proxmox VE. Zachytáva súborový systém, konfiguráciu a nainštalované komponenty v jednom archíve a reprodukuje hostiteľa na rovnakej alebo inej inštalácii Proxmox bez externých závislostí.",
-    "section": "Záloha a obnova"
+    "title": "Zálohovanie a obnovenie",
+    "description": "Zálohovanie a obnovenie úplného hostiteľa pre Proxmox VE. Zachytáva súborový systém, konfiguráciu a nainštalované komponenty do jedného archívu a reprodukuje hostiteľa v rovnakej alebo inej inštalácii Proxmox bez externých závislostí.",
+    "section": "Zálohovanie a obnovenie"
   },
   "intro": {
     "title": "Čo to je, v jednom odseku",
-    "body": "A ProxMenux záloha zachytáva celkový stav hostiteľa Proxmoxu: <strong>súborový systém</strong> (príslušné adresáre <code>/etc</code>, <code>/root</code>, <code>/var/lib/pve-cluster</code>, plus voliteľné vlastné cesty), <strong>štruktúrovaný manifest</strong> (JSON so zisteným hardvérom, parametrami jadra, usporiadaním siete, ZFS stav, používatelia a záznamy o kronoch) a <strong>inventár žiadostí</strong> (všetky balíky označené ako ručne nainštalované APT, spolu so zoznamom komponentov nainštalovaných ProxMenux s ich presnými verziami). Akýkoľvek z troch podporovaných destinácií, Proxmox Backup Server (odporúčané) alebo Borg dostáva rovnaké samostatné užitočné zaťaženie, a každý z nich môže hydratovať cieľový hostiteľ, bez toho, aby v závislosti na zdroji je dosiahnuteľný v čase obnovy."
+    "body": "Záloha ProxMenux zachytáva úplný stav hostiteľa Proxmox: <strong>súborový systém</strong>, teda príslušné adresáre v <code>/etc</code>, <code>/root</code> a <code>/var/lib/pve-cluster</code> spolu s voliteľnými vlastnými cestami; <strong>štruktúrovaný manifest</strong> vo formáte JSON s detegovaným hardvérom, parametrami jadra, konfiguráciou siete, stavom ZFS, používateľmi a záznamami cron; a <strong>inventár aplikácií</strong> s balíkmi označenými v APT ako manuálne nainštalované a komponentmi nainštalovanými cez ProxMenux vrátane presných verzií. Všetky tri podporované ciele – lokálny archív, Proxmox Backup Server (odporúčaný) a Borg – dostávajú rovnaký samostatný obsah. Z každého možno obnoviť cieľového hostiteľa bez toho, aby bol zdrojový hostiteľ počas obnovy dostupný."
   },
   "video": {
-    "heading": "Name",
-    "intro": "Preferovať sledovanie zálohy & Obnoviť v akcii pred konfiguráciou? Táto prechádzka pokrýva kompletné demo funkcie v ProxMenux.",
-    "title": "ProxMenux",
-    "caption": "Externé video na YouTube. Hrá v režime ochrany osobných údajov (žiadne cookies, kým nestlačíte hru)."
+    "heading": "Videonávod",
+    "intro": "Uprednostňujete sledovanie zálohovania a obnovenia v akcii pred jeho konfiguráciou? Tento návod obsahuje úplné demo funkcie v ProxMenux.",
+    "title": "ProxMenux — Návod na zálohovanie a obnovenie",
+    "caption": "Externé video na YouTube. Prehráva sa v režime ochrany osobných údajov (žiadne súbory cookie, kým nestlačíte tlačidlo prehrávania)."
   },
   "whatItIsNot": {
-    "heading": "Čo to nie je?",
-    "intro": "Sekcia sa vzťahuje na <strong>host-level</strong> zálohovanie a obnovenie: sám Proxmox inštalácie, nie pracovné zaťaženie beží na vrchole.",
+    "heading": "Čo to nie je",
+    "intro": "Táto časť sa venuje zálohovaniu a obnove <strong>hostiteľa</strong>: samotnej inštalácie Proxmoxu, nie aplikácií a virtuálnych systémov, ktoré na nej bežia.",
     "items": [
-      "<strong>Nie je to VM/CT Záložný nástroj.</strong> disky pre hostí a RAM stav nie sú zachytené touto vlastnosťou; to je to, čo <code>vzdump</code> je pre. Hosť. <strong>konfiguračné súbory</strong> (<code>/etc/pve/nodes/&lt;node&gt;/qemu-server/*.conf</code> a <code>lxc/*.conf</code>) <strong>ak:</strong> zachytený, takže po obnovení hosť inventár znovu objaví a disky môžu byť znovu pripojené z existujúceho PBS/miestna záloha.",
-      "<strong>Nie je cluster-široký prevádzku.</strong> Každý uzol zálohuje sám. Členstvo v klastroch je zachytené ako súčasť <code>/etc/pve</code>, takže obnovený uzol sa môže znovu pridať do svojho klastra, ale obnovenie úplného klastra si vyžaduje koordináciu na jednotku.",
-      "<strong>Nie je úplný obraz disku.</strong> Kernel binárne súbory, initramfs a boot partície nie sú zachytené. Pri obnove sa ProxMenux spolieha na vlastné bootovacie artefakty cieľového hostiteľa (vygenerované automaticky <code>update-initramfs</code> a nástroj bootloader) a nainštaluje zodpovedajúce ovládače proti bežiacemu jadru cieľa."
+      "<strong>Nejde o nástroj na zálohovanie VM/CT.</strong> Táto funkcia nezachytáva disky ani stav RAM virtuálnych systémov; na to slúži <code>vzdump</code>. Ich <strong>konfiguračné súbory</strong> (<code>/etc/pve/nodes/&lt;node&gt;/qemu-server/*.conf</code> a <code>lxc/*.conf</code>) sa <strong>však zálohujú</strong>. Po obnove sa inventár znovu zobrazí a disky možno obnoviť alebo pripojiť z existujúcej zálohy v PBS či na lokálnom úložisku.",
+      "<strong>Nejde o operáciu pre celý klaster.</strong> Každý uzol zálohuje sám seba. Členstvo v klastri sa zachytáva v <code>/etc/pve</code>, aby sa obnovený uzol mohol opäť pridať do klastra. Obnova celého klastra však vyžaduje koordináciu jednotlivých uzlov.",
+      "<strong>Nejde o úplný obraz disku.</strong> Binárne súbory jadra, initramfs ani zavádzacia partícia sa nezálohujú. Pri obnove ProxMenux využíva zavádzacie súbory cieľového hostiteľa, automaticky vytvorené pomocou <code>update-initramfs</code> a nástroja zavádzača, a inštaluje ovládače zodpovedajúce jadru spustenému na cieľovom hostiteľovi."
     ]
   },
   "threePillars": {
-    "heading": "Tri piliere zálohy",
-    "intro": "Archív ProxMenux je štruktúrovaný okolo troch samostatných užitočného zaťaženia. Obnovenie využíva všetky tri spoločne na reprodukciu zdroja hostiteľa na cieľ, ktorý nemusí mať ani rovnaké jadro nainštalované.",
-    "diagramCaption": "Každá záložná loď má rovnaké tri užitočné zaťaženie bez ohľadu na cieľ. Obnovenie spotrebuje všetky tri: rootfs na položenie súborov, manifest na detekciu posunu a rozdiely medzikernel, a inventár aplikácie na opätovné nainštalovanie balíkov a komponentov proti vlastné jadro cieľa.",
+    "heading": "Tri piliere zálohovania",
+    "intro": "Archív ProxMenux je štruktúrovaný okolo troch samostatných dát. Obnova používa všetky tri spolu na reprodukciu zdrojového hostiteľa na cieli, ktorý nemusí mať dokonca nainštalované rovnaké jadro.",
+    "diagramCaption": "Každá záloha dodáva rovnaké tri užitočné zaťaženia bez ohľadu na miesto určenia. Obnova spotrebuje všetky tri: rootfs na uloženie súborov, manifest na zistenie posunu a rozdielov medzi jadrami a inventár aplikácií na preinštalovanie balíkov a komponentov do vlastného jadra cieľa.",
     "pillar1Label": "Súborový systém",
-    "pillar1Detail": "rootfs/\n(rsync0 /etc,\n/etc/systemd/network,\n/root, plus a\nsqlite3 snímka\n/var/lib/pve-cluster,\n+ voliteľné cesty)",
-    "pillar2Label": "Súpis obsahu",
-    "pillar2Detail": "manifest.json\n(hardware, jadro\nparamy, sieť,\nZFS, užívatelia, Cron,\nZFS bazény, skladovanie)",
+    "pillar1Detail": "rootfs/\n(rsync z /etc,\n/etc/systemd/network,\n/root, plus a\nsqlite3 snapshot\nz /var/lib/pve-cluster,\n+ voliteľné cesty)",
+    "pillar2Label": "Manifest",
+    "pillar2Detail": "manifest.json\n(hardvér, jadro\nparametre, sieť,\nZFS, používatelia, cron,\nZFS pools, úložisko)",
     "pillar3Label": "Aplikácie",
-    "pillar3Detail": "balíčky.manual.list\n+ components_status.json\n(APT manuál + ProxMenux\ninštalatéri s verziami)"
+    "pillar3Detail": "packages.manual.list\n+ components_status.json\n(príručka APT + ProxMenux\ninštalačné programy s verziami)"
   },
   "restoreIsUniversal": {
-    "heading": "Obnovenie reprodukuje zdrojový hostiteľ, nie archív",
-    "body": "Obnovenie zálohy ProxMenux nie je len extrahovať súborový systém. Obnovenie toku číta manifest na zistenie posunu medzi zdrojom a cieľom (rozdiely hardware, premeny NIC, verzia jadra, identita ZFS pool), prehráva súborový systém, potom spustí správny inštalátor komponentov pre každú službu, ktorá bola nainštalovaná na zdroji (ovládač NVIDIA, Coral TPU, nástroje AMD GPU, nástroje Intel GPU). Každý inštalátor beží proti súčasnému jadru <strong>target </strong>, takže obnovený hostiteľ nezávisí od prítomnosti jadra zdroja. Keď je jadro cieľa novšie ako záložné jadro, agnostik <strong>hydratácia</strong> sa zlučuje vlastné ladenie užívateľa (IOMMU tokeny, ID zariadenia VFIO, vlastné vibrácie, kľúče GRUB) do novej konfigurácie štartu cieľa bez kopírovania súborov viazanej jadra doslova."
+    "heading": "Obnova reprodukuje hostiteľa zdroja, nie archív",
+    "body": "Obnova a ProxMenux záloha nerozbalí iba súborový systém. Tok obnovy prečíta manifest, aby zistil posun medzi zdrojom a cieľom (hardvérové ​​rozdiely, premenovanie NIC, verzia jadra, ZFS pool identity), prehrá súborový systém a potom spustí správny inštalátor komponentov pre každú službu, ktorá bola nainštalovaná na zdroji (NVIDIA vodič, Coral TPU, AMD GPU nástroje, Intel GPU nástroje). Každý inštalátor beží proti <strong>aktuálne jadro cieľa</strong>, takže obnovený hostiteľ nezávisí od prítomnosti jadra zdroja. Keď je jadro cieľa novšie ako záložné, jadro je agnostické <strong>hydratácia</strong> pass spája vlastné ladenie používateľa (tokeny IOMMU, ID zariadení VFIO, vlastné vtipy, GRUB kľúče) do čerstvej zavádzacej konfigurácie cieľa bez doslovného kopírovania súborov viazaných na jadro."
   },
   "twoInterfaces": {
-    "heading": "Dva rozhrania, jeden backend",
-    "intro": "Každý krok zálohy a obnovenie pracovného postupu je k dispozícii z dvoch vstupných bodov. Obaja nazývajú tú istú shell knižnicu, produkujú identické archívy a čítajú rovnaký register pracovných miest.",
+    "heading": "Dve rozhrania, jeden backend",
+    "intro": "Každý krok pracovného postupu zálohovania a obnovy je dostupný z dvoch vstupných bodov. Obaja volajú rovnakú knižnicu shellu, vytvárajú identické archívy a čítajú rovnaký register úloh.",
     "cliLabel": "ProxMenux Scripts (TUI)",
-    "cliDetail": "menu → Nástroje →\nZálohovanie hostiteľa / Obnoviť\n\nDialógový tok,\nSSH-friendly, skriptovateľné\nna použitie bez dozoru.",
-    "webLabel": "ProxMenux Monitor (webové rozhranie)",
-    "webDetail": "Zálohy\nInternetové rozhranie monitora.\n\nJedno kliknutie obnoviť, žiť\nlog tail, integrované\noznámenia a\nprehliadač rollback delta."
+    "cliDetail": "menu → Nástroje →\nZálohovanie / obnovenie hostiteľa\n\nDialógový tok,\nSSH priateľský, skriptovateľný\nna použitie bez dozoru.",
+    "webLabel": "ProxMenux Monitor (Web UI)",
+    "webDetail": "Karta Zálohy v\nWebové rozhranie monitora.\n\nObnovenie jedným kliknutím, živé\nlog chvost, integrovaný s\noznámenia a\nrollback delta viewer."
   },
   "whereNext": {
-    "heading": "Kam ísť odtiaľto?",
-    "intro": "Každý nižšie uvedený pododdiel zahŕňa jeden aspekt pracovného toku do hĺbky. Začnite s <em>Ako to funguje</em>, ak cieľom je pochopiť, čo archív obsahuje a prečo. Prejsť na <em>Destinations</em> nastaviť cieľ pre kópiu. Prečítajte si <em>Obnovenie</em> a <em>Cross-kernel obnoviť</em> pre stranu zotavenie.",
+    "heading": "Kam ísť odtiaľto",
+    "intro": "Každá podsekcia nižšie podrobne pokrýva jeden aspekt pracovného postupu. Začnite s <em>Ako to funguje</em>, ak je cieľom pochopiť, čo archív obsahuje a prečo. Prejdite na <em>Ciele</em> a nakonfigurujte cieľ pre kópiu. Prečítajte si <em>Obnovovanie</em> a <em>Obnova medzi jadrami</em> pre stranu obnovy.",
     "items": [
       {
         "label": "Ako to funguje",
         "href": "/docs/backup-restore/how-it-works",
-        "tail": " — "
+        "tail": "— podrobne tri užitočné zaťaženia (rootfs, manifest, aplikácie) s kolektormi, ktoré ich vytvárajú, a formátom každého súboru."
       },
       {
-        "label": "Ciele",
+        "label": "Destinácie",
         "href": "/docs/backup-restore/destinations",
-        "tail": " Porovnanie miestnych, Proxmox Backup Server (odporúčané) a Borg, a ako konfigurovať každý jeden."
+        "tail": "— porovnanie miestnych, Proxmox Backup Server (odporúča sa) a Borg a ako nakonfigurovať každý z nich."
       },
       {
         "label": "Vytváranie záloh",
         "href": "/docs/backup-restore/creating-backups",
-        "tail": " check-off zálohy, predvolený profil trasy, pridanie vlastných ciest, šifrovanie pre PBS."
+        "tail": "— jednorazové zálohy, predvolený profil cesty, pridávanie vlastných ciest, šifrovanie pre PBS."
       },
       {
         "label": "Plánované úlohy",
         "href": "/docs/backup-restore/scheduled-jobs",
-        "tail": " — "
+        "tail": "— nové úlohy verzus pripojenie k existujúcej úlohe PVE vzdump, formáty plánovania, modálny detail úlohy."
       },
       {
-        "label": "Obnovenie",
+        "label": "Obnovuje sa",
         "href": "/docs/backup-restore/restoring",
-        "tail": " — Vlastné obnovenie, post-boot dispečer a prečo posledných desať minút záleží."
+        "tail": "– tri akcie s archívom (zobrazenie, stiahnutie, obnovenie), Dokončiť vs. Vlastné obnovenie, dispečer po spustení a prečo záleží na posledných desiatich minútach."
       },
       {
-        "label": "Obnova medzi kernelmi",
+        "label": "Obnova medzi jadrami",
         "href": "/docs/backup-restore/cross-kernel",
-        "tail": " — "
+        "tail": "– správanie sa orientované na smer, keď sa cieľové jadro líši od zálohy, filtra bezpečnej podmnožiny a štyroch fáz hydratácie."
       }
     ]
   }

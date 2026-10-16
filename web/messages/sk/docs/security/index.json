@@ -30,10 +30,10 @@
       "title": "Fail2Ban",
       "body": "Aktívna prevencia vniknutia. Sleduje SSH a webové UI auth protokoly a zakazuje IP po opakovaných zlyhaniach.",
       "bullets": [
-        "Tri väzenia: SSH, Proxmox UI (8006), ProxMenux Monitor (8008)",
-        "Fixes Proxmox zápis defaults that block auth logs",
+        "Tri jails: SSH, Proxmox UI (8006), ProxMenux Monitor (8008)",
+        "Opravuje predvolené nastavenia Proxmox journald, ktoré blokujú protokoly overenia",
         "Automatické detekcie nftables / iptables",
-        "SSH0 kalenie: MaxAuthTries=3 (Lynis odporúčanie)"
+        "SSH vytvrdzovanie: MaxAuthTries=3 (odporúčanie Lynis)"
       ]
     },
     "lynis": {
@@ -53,9 +53,9 @@
   },
   "fail2banSection": {
     "heading": "Fail2Ban",
-    "body": "ProxMenux inštaluje Fail2Ban s nastavenou konfiguráciou pre konkrétne Proxmox. Okrem štandardných SSH väzenie, dodáva ochranu pre Proxmox web UI a ProxMenux Monitor, a pracuje okolo dvoch Proxmox-špecifické vtipy: redakčný predvolený, ktorý klesne auth udalosti, a systemd-backend problém, ktorý zabraňuje Fail2Ban z čítania určitých zdrojov časopisu spoľahlivo. Stránka detailov pokrýva celý inštalačný tok, tri väzenia, redakčný denník, SSH kalenie zmeny a riešenie problémov podvádzať.",
+    "body": "ProxMenux nainštaluje Fail2Ban s konfiguráciou vyladenou špeciálne pre Proxmox. Nad rámec štandardu SSH jail, pridáva ochranu pre web Proxmox UI a ProxMenux Monitora pracuje okolo dvoch zvláštností špecifických pre Proxmox: a journald predvolená hodnota, ktorá zruší autorizačné udalosti, a systemd- backend problém, ktorý bráni Fail2Ban zo spoľahlivého čítania určitých zdrojov časopisov. Stránka podrobností pokrýva celý postup inštalácie, tri jails, journald opraviť, SSH zmena kalenia a cheatsheet na riešenie problémov.",
     "optionTitle": "Fail2Ban",
-    "optionDescription": "Tri predkonfigurované väzenia (sshd agresívne, Proxmox UI prístav 8006, ProxMenux Monitor prístav 8008 + reverzný proxy), automaticky detekované nftables/iptables backend, recorded fix a SSH MaxAuthTries zatvrdnutie."
+    "optionDescription": "Tri predkonfigurované jails (agresívny sshd, Proxmox UI port 8006, ProxMenux Monitor port 8008 + reverzný server proxy nfttables/detected journald fixovať a SSH MaxAuthTries vytvrdzovať."
   },
   "lynisSection": {
     "heading": "Lynis",

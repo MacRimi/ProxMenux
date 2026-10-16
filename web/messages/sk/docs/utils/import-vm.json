@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Dovoz VM z OVA / OVF ProxMenux Dokumentácia",
-    "description": "Import VMware ESXi / Workstation / Fusion / VirtualBox0 / ProxMenux VM do Proxmox VE. Auto-extracts OVA, parses OVF metadata, vytvára VM a importuje každý disk ako formát úložného materiálu (qkow2 / surový).",
+    "description": "Importujte VMware ESXi / Workstation / Fusion / VirtualBox / ProxMenux VM do Proxmox VE. Automaticky extrahuje OVA, analyzuje metadáta OVF, vytvorí VM a importuje každý disk ako natívny formát úložiska (qcow2 / raw).",
     "ogTitle": "Dovoz VM z OVA / OVF ProxMenux Dokumentácia",
     "ogDescription": "Prineste VM z VMware, VirtualBox alebo ProxMenux export do Proxmoxu. Disky sú automaticky prevrátené do formátu storage-nativ."
   },
   "header": {
     "title": "Importovať VM z OVA / OVF",
-    "description": "Import OVA / OVF balíček do Proxmox VE0: výpisy OVA archívov, parses OVF deskriptor pre vCPU / pamäť / NIC počet a disk referencie, potom vytvorí VM a importovať každý disk cez qm importdisk do vybraného úložiska. Kompatibilný s exportom z VMware (ESXi / Workstation / Fusion), VirtualBox a ProxMenux.",
+    "description": "Importuje balík OVA / OVF do Proxmox VE: extrahuje archívy OVA, analyzuje deskriptor OVF na vCPU / pamäť / počet NIC a referencie na disk, potom vytvorí VM a importuje každý disk do vybratého úložiska qm importdi.sk. Kompatibilné s exportmi z VMware (ESXi / Workstation / Fusion), VirtualBox a ProxMenux samotného.",
     "section": "Nástroje"
   },
   "intro": {
@@ -161,15 +161,15 @@
   "notImported": {
     "heading": "Čo nie je dovážané",
     "items": [
-      "<strong>0Špecifické NIC mosty</strong> Všetky NIC pristanú na moste, ktorý ste vybrali v čase importu.",
-      "<strong>0NIC model</strong>",
+      "<strong>Špecifické NIC mosty</strong> – iba počet. Všetky NIC pristanú na moste, ktorý ste vybrali v čase importu.",
+      "<strong>Model NIC</strong> – predvolená hodnota je e1000.",
       "<strong>BIOS / UEFI typ firmvéru</strong> Predvolené predvolené Proxmox (BIOS).",
-      "<strong>0PCI passhrough configuration</strong>.",
+      "<strong>Konfigurácia prechodu PCI</strong>.",
       "<strong>TPM</strong> (vTPM).",
       "<strong>Cloud-init</strong> disky.",
       "<strong>Snapshots</strong>",
       "<strong>USB / sériové / paralelné zariadenia</strong> deklarované v OVF.",
-      "<strong>0VM tagy / poznámky / start-on-boot</strong> možnosti."
+      "<strong>VM možnosti tagov / poznámok / štart-on-boot</strong>."
     ]
   },
   "troubleshoot": {
@@ -182,7 +182,7 @@
     "memIntro": "Nejasnosť pamäťovej jednotky v parseri OVF. Mimo faktor 1024 → OVF používa GB namiesto MiB. Fix:",
     "memCode": "qm set $VMID --memory 8192    # 8 GiB",
     "bootTitle": "Importované VM nezavádza \"Žiadne bootovacie zariadenie\"",
-    "bootIntro": "Najčastejšou príčinou: BIOS0 / UEFI nesúlad. VM bol UEFI, ale Proxmox ho vytvoril ako BIOS. Nastaviť zodpovedajúci firmware:",
+    "bootIntro": "Najčastejšia príčina: BIOS / UEFI nesúlad. VM bol UEFI, ale Proxmox ho vytvoril ako BIOS. Nastavte zodpovedajúci firmvér:",
     "bootCode": "qm set $VMID --bios ovmf       # UEFI\n# also add an EFI disk for the EFI vars:\nqm set $VMID --efidisk0 $STORAGE:1,format=qcow2,efitype=4m,pre-enrolled-keys=1",
     "bootOutro": "Druhá najbežnejšia: body na objednávku na scsi0 ale skutočný OS disk je scsi1. Upraviť objednávku štartu v záložke Možnosti VM.",
     "bsodTitle": "VMware-exported Windows VM import, ale BSOD na prvom štarte",

@@ -14,7 +14,7 @@
     "title": "Modernizácia veľkej verzie je deštruktívna a nie reverzibilná",
     "intro": "Táto operácia prepíše základňu Debianu (Bookworm → Trixie) a stack Proxmox na mieste. Tam je <strong>no rollback path</strong>. Pred začiatkom liečby:",
     "items": [
-      "<strong>0Overené zálohy</strong> z každého VM a CT (PBS, vzdump, ZFS snímky",
+      "<strong>Overené zálohy</strong> všetkých VM a CT (PBS, vzdump, ZFS snapshots – a overte ich obnovenie).",
       "<strong>Console / IPMI / iKVM access</strong> k hostiteľovi, keď SSH klesne v polovici-upgrade.",
       "Hostiteľ už up-to-date na PVE 8.4.x (skript presadí toto).",
       "Ceph (ak je k dispozícii) vo verzii 19.x Squid.",
@@ -136,7 +136,7 @@
     "distUpgradeOutro": "Výstupné prúdy do stadutu v reálnom čase a je tiež tee'd na <code>/var/log/pve8-a-pve9-&lt;timestamp&gt;.log</code>. Vidíte všetko, čo je potlačené len podnety.",
     "postHeading": "Úlohy po aktualizácii (automodálny režim)",
     "postItems": [
-      "<strong>EFI hosts:</strong> Inštalácie <code>grub-efi-amd64</code> (známy problém na Proxmox docs",
+      "<strong>Hostitelia EFI:</strong> nainštaluje <code>grub-efi-amd64</code> (známy problém v dokumentoch Proxmox – aktualizácia ho nestiahne automaticky a ďalšie spustenie by bez neho zlyhalo).",
       "<strong>Restart <code>pve-manager</code>.</strong> Vynúti čisté nabíjanie nových démonov.",
       "<strong>Re-run <code>pve8to9 --full</code>.</strong> Povrchy akýchkoľvek zostávajúcich problémov, ktoré aktualizácia nevyriešila. Ak sa ohlásia FAIL, objaví sa rovnaké menu so sprievodcom.",
       "<strong>Reboot prompt.</strong> \"Je to Recommended reštart teraz načítať nové jadro a služby. Reštartovať teraz?\" Znižovať iba v prípade, že máte špecifický dôvod,"
@@ -165,13 +165,13 @@
     "phase1Intro": "Prineste hostiteľa do najnovšieho PVE 8.4.x, overiť verziu, validovať Ceph (ak sa používa), spustiť Proxmox vlastné predbežnú kontrolu, a začať terminál multiplexer prežiť odpojenie.",
     "phase1Code": "# Step 1 — Update PVE 8 to the latest 8.4+\napt update && apt dist-upgrade -y\n\n# Step 2 — Verify version (must be 8.4.1 or newer)\npveversion\n\n# Step 2.1 — Hyper-converged Ceph: must already be on 19.x Squid\nceph --version\n# If older, follow https://pve.proxmox.com/wiki/Ceph_Squid\n\n# Step 3 — Run the official upgrade-readiness check\npve8to9 --full\n# If it warns about systemd-boot meta-package, remove it:\n#   apt remove systemd-boot\n\n# Step 4 — Start tmux or screen (so SSH disconnect doesn't kill the upgrade)\ntmux new-session -s upgrade\n# or\nscreen -S upgrade",
     "phase2Heading": "Fáza 2",
-    "phase2Intro": "Prepnite každý úložisko Debian a Proxmox z kódového mena Bookworm na Trixie a premeňte zdroje Proxmox na nový formát deb822. <strong>0Kick krok 7 ALEBO krok 8</strong> v závislosti na tom, či máte Enterprise predplatné. Preskočte krok 9, ak nebežíte Ceph.",
+    "phase2Intro": "Prepnite každý repozitár Debianu a Proxmoxu z kódového označenia Bookworm na Trixie a skonvertujte zdroje Proxmox do nového formátu deb822. <strong>Vyberte krok 7 ALEBO krok 8</strong> v závislosti od toho, či máte predplatné Enterprise. Preskočte krok 9, ak nespustíte Ceph.",
     "phase2Code": "# Step 5 — Debian: bookworm → trixie\nsed -i 's/bookworm/trixie/g' /etc/apt/sources.list\n\n# Step 6 — Same for the legacy enterprise list (only if you use enterprise)\nsed -i 's/bookworm/trixie/g' /etc/apt/sources.list.d/pve-enterprise.list\n\n# Step 7 — Add the new PVE 9 enterprise repo (deb822) — Enterprise users only\ncat > /etc/apt/sources.list.d/pve-enterprise.sources << EOF\nTypes: deb\nURIs: https://enterprise.proxmox.com/debian/pve\nSuites: trixie\nComponents: pve-enterprise\nSigned-By: /usr/share/keyrings/proxmox-archive-keyring.gpg\nEOF\n\n# Step 8 — OR add the no-subscription repo (most home / lab users)\ncat > /etc/apt/sources.list.d/proxmox.sources << EOF\nTypes: deb\nURIs: http://download.proxmox.com/debian/pve\nSuites: trixie\nComponents: pve-no-subscription\nSigned-By: /usr/share/keyrings/proxmox-archive-keyring.gpg\nEOF\n\n# Step 8.1 — Refresh and verify proxmox-ve candidate is 9.x\napt update && apt policy | sed -n '1,120p'\n\n# Step 9 — Update Ceph repo (only if you run Ceph)\ncat > /etc/apt/sources.list.d/ceph.sources << EOF\nTypes: deb\nURIs: http://download.proxmox.com/debian/ceph-squid\nSuites: trixie\nComponents: no-subscription\nSigned-By: /usr/share/keyrings/proxmox-archive-keyring.gpg\nEOF\n\n# Step 10 — Remove old .list files now superseded by deb822 .sources\nrm -f /etc/apt/sources.list.d/pve-enterprise.list /etc/apt/sources.list.d/ceph.list\n\n# Step 11 — Final apt update\napt update",
     "phase3Heading": "Fáza 3",
     "phase3Intro": "Skutočné vylepšenie. Krok 12 je voliteľný, ale odporúča sa (silný torrent audítorských správ počas aktualizácie). Krok 13 je dlhá jedna Krok 13.1 je iba EFI a podľa oficiálnych známych problémov.",
     "phase3Code": "# Step 12 — Disable kernel audit messages (optional)\nsystemctl disable --now systemd-journald-audit.socket\n\n# Step 13 — The main upgrade (this takes a while)\napt dist-upgrade\n# (answer prompts using the table below)\n\n# Step 13.1 — EFI hosts: install grub for EFI (per known issues)\n[ -d /sys/firmware/efi ] && apt install grub-efi-amd64",
     "dpkgHeading": "Odporúčané odpovede pre dpkg podnety",
-    "dpkgIntro": "Toto sú odpovede, ktoré odporúča oficiálna príručka Proxmox. <strong>0Y</strong> = inštalácia novej verzie správcu (prepíše váš súbor); <strong>N</strong> = udržať aktuálny súbor. Vždy skontrolujte diff najprv, keď máte pochybnosti:",
+    "dpkgIntro": "Toto sú odpovede, ktoré odporúča oficiálna príručka Proxmox. <strong>Y</strong> = nainštalovať novú verziu správcu (prepíše váš súbor); <strong>N</strong> = ponechať aktuálny súbor. V prípade pochybností vždy najprv skontrolujte rozdiel:",
     "dpkgTable": {
       "fileHeader": "Súbor / prompt",
       "answerHeader": "Odporúčaná odpoveď",
@@ -179,37 +179,37 @@
       "rows": [
         {
           "fileRich": "/etc/issue",
-          "answerRich": "<strong>0N</strong> (udržať prúd)",
+          "answerRich": "<strong>N</strong> (ponechať aktuálne)",
           "whyRich": "Banner, na ktorý si zvyknutý.",
           "fileFont": true
         },
         {
           "fileRich": "/etc/lvm/lvm.conf",
-          "answerRich": "<strong>0Y</strong> (maintainer)",
+          "answerRich": "<strong>Y</strong> (správca)",
           "whyRich": "PVE 9 potrebuje nové predvolené LVM",
           "fileFont": true
         },
         {
           "fileRich": "/etc/ssh/sshd_config",
-          "answerRich": "<strong>0Y</strong> (maintainer)",
+          "answerRich": "<strong>Y</strong> (správca)",
           "whyRich": "Znovu aplikovať svoje prispôsobenie po",
           "fileFont": true
         },
         {
           "fileRich": "/etc/default/grub",
-          "answerRich": "<strong>0N</strong>, ak je na mieru",
+          "answerRich": "<strong>N</strong> v prípade prispôsobenia",
           "whyRich": "Params topánok (IOMMU, PCI passhrough) žiť tu",
           "fileFont": true
         },
         {
           "fileRich": "/etc/chrony/chrony.conf",
-          "answerRich": "<strong>0Y</strong> (maintainer)",
+          "answerRich": "<strong>Y</strong> (správca)",
           "whyRich": "Časová synchronizácia predvolených aktualizovaných pre Trixie",
           "fileFont": true
         },
         {
           "fileRich": "Služba reštartuje počas aktualizácie",
-          "answerRich": "<strong>0Yes</strong> (default)",
+          "answerRich": "<strong>Áno</strong> (predvolené)",
           "whyRich": "Vyhýba sa reštartu väčšiny služieb",
           "fileFont": false
         },
@@ -231,7 +231,7 @@
     "heading": "Zoskupenie & Ceph",
     "clusterCalloutTitle": "Zoskupenie: upgrade uzly jeden po druhom",
     "clusterCalloutBody": "Detekovaný cez <code>pvecm status</code>. <strong>Do not</strong> upgrade viac ako jeden uzol naraz. Migrujte hostí z uzla prvý, upgrade, reštart, overiť uzol je späť v klastre ako PVE 9, len potom presunúť do ďalšieho uzla. Mixed PVE 8 / PVE 9 cluster pracuje po dobu trvania upgrade okna, ale živý migrácia medzi zmiešanými verziami nie je podporovaný len studená migrácia. HA skupiny sa automaticky presunú do nového formátu pravidiel HA.",
-    "cephCalloutTitle": "Ceph0: upgrade Ceph FIRST, potom Proxmox",
+    "cephCalloutTitle": "Ceph: NAJPRV inovujte Ceph, potom Proxmox",
     "cephCalloutBody": "Ceph musí byť už na 19.x Squid pred aktualizáciou programu Proxmox. Oficiálna objednávka: Ceph 17/18 → Ceph 19 (per <code>pveceph upgrade</code> per uzlo) → reštart pre nové Ceph démony → Proxmox upgrade per node. Preskakujeme krok Ceph nechá klaster zlomený, kým ho neopravíte z konzoly. Celý proces Ceph: <cephlink>Ceph Squid upgrade wiki</cephlink>."
   },
   "troubleshooting": {
@@ -292,7 +292,7 @@
       {
         "href": "https://pve.proxmox.com/wiki/Roadmap",
         "title": "Plán Proxmox VE",
-        "desc": "PVE 9 poznámky k vydaniu a čo sa zmenilo od 8.x"
+        "desc": "Poznámky k vydaniu PVE 9 a čo sa zmenilo od 8.x — prečítajte si pred aktualizáciou, aby ste vedeli, čo môžete očakávať."
       },
       {
         "href": "https://www.debian.org/releases/trixie/releasenotes",

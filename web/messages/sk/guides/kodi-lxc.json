@@ -3,7 +3,7 @@
     "title": "Nainštalovať Kodi LXC s GPU Zrýchlenie ProxMenux Príručky",
     "description": "Spustite Kodi vnútri privilegovaného LXC kontajnera na Proxmox VE, odhaľte hostiteľa iGPU a USB vstupné zariadenia a premeňte server Proxmox na mediálne centrum, ktoré je pripojené priamo k televízoru.",
     "ogTitle": "Inštalovať Kodi v LXC s GPU zrýchlenie",
-    "ogDescription": "Spustite Kodi vnútri privilegované LXC0 na Proxmox VE s hostiteľom iGPU a USB vstup passwhrough"
+    "ogDescription": "Spustite Kodi v privilegovanom LXC na Proxmox VE s hostiteľom iGPU a vstupom USB – premeňte server na mediálne centrum typu všetko v jednom."
   },
   "header": {
     "title": "Nainštalujte Kodi v LXC a Pripojte ho k monitoru / TV s GPU zrýchlenie",
@@ -12,7 +12,7 @@
   },
   "intro": {
     "calloutTitle": "Upozornenie",
-    "calloutBody": "Táto príručka používa externé komunitné skript na topánkytrap Kodi LXC. • GPU strana nastavenia (prechádzanie hostiteľom) iGPU do nádoby) je tiež pokrytá ProxMenux automatický tok: <strong>GPU a koral-TPU → Pridať GPU do LXC</strong> v ProxMenux Menu <code>/dev/dri</code> elektroinštalácia + inštalácia ovládača vo vnútri CT. Skript nižšie navyše bootstraps Kodi sám a autostart na <code>tty7</code>. Použite ho, ak chcete na kľúč mediálne centrum LXC; použite <gpuLink>ProxMenux prietok</gpuLink> ak len potrebujete GPU prístup pre CT Narafičili ste to ručne.",
+    "calloutBody": "Táto príručka používa externý komunitný skript na zavedenie Kodi LXC. The GPU strane nastavenia (odovzdanie hostiteľa iGPU do nádoby) sa vzťahuje aj na ProxMenux automatický tok: <strong>GPU a Coral-TPU → Pridať GPU do LXC</strong> v ProxMenux menu — spracováva <code>/dev/dri</code> kabeláž + inštalácia ovládača vo vnútri CT. Skript nižšie navyše spúšťa samotný Kodi a zapína automatické spustenie <code>tty7</code>. Použite ho, ak chcete mediálne centrum na kľúč LXC; použiť <gpuLink>ProxMenux tok</gpuLink> ak len potrebujete GPU prístup pre a CT nastavíte ručne.",
     "credit": "Pôvodný Kodi LXC skript vytvorený <authorLink>murudy</authorLink>.",
     "stepsTitle": "Čo urobíš",
     "steps": [

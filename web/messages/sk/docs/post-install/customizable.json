@@ -16,7 +16,7 @@
   },
   "compare": {
     "heading": "Ako sa porovnáva s Automatizovaným",
-    "body": "Prispôsobiteľné je superset <link>0Automatizovaného skriptu</link>. Zahŕňa tie isté základné optimalizácie 14 plus dlhý zoznam opt-in, ktoré automaticky zámerne preskočia veci, ktoré sú užitočné len na konkrétnom hardvéri (AMD opravy), konkrétnom hosting (OVH RTM), alebo špecifické pracovné zaťaženie (IOMMU/VFIO, Ceph repo, vysoká dostupnosť, Fastfetch, Figurine, ZFS ARC tuning, pizz, ZFS auto-snapshot, vzdump rýchlostné limity, Open vSwitch, TCP BBR...)."
+    "body": "Prispôsobiteľné je nadmnožinou <link>Automatizovaný skript</link>. Pokrýva to isté 14 základné optimalizácie plus dlhý zoznam voliteľných, ktoré automatizácia zámerne preskakuje – veci, ktoré sú užitočné len na konkrétnom hardvéri (AMD opravy), špecifickom hostingu (OVH RTM) alebo špecifických pracovných zaťaženiach (IOMMU/VFIO, Ceph repo, vysoká dostupnosť, rýchle načítanie, Figurine, ZFS ARC tuning, pigz, ZFS auto-snapshot, vzdump rýchlostné limity, Otvorené vSwitch, TCP BBR…)."
   },
   "categoriesSection": {
     "heading": "Kategórie 10",
@@ -29,7 +29,7 @@
     },
     {
       "name": "Systém",
-      "description": "Nalaďte subsystém log a limity jadra pre hostiteľa, ktorý nesie mnoho VM a kontajnery. Obálky časopis, logrotát, sysctl (pamäť, limity súborov), správanie jadra paniky a rýchle reštarty."
+      "description": "Vylaďte protokolový subsystém a limity jadra pre hostiteľa, ktorý nesie veľa VM a kontajnerov. Zahŕňa journald, logrotate, sysctl (pamäť, limity súborov), panické správanie jadra a rýchle reštarty."
     },
     {
       "name": "Virtualizácia",
@@ -40,8 +40,8 @@
       "description": "Harden a naladiť sieť hostiteľa. Sily APT nad IPv4, používa sysctl kalenie + TCP pufra ladenie, ponúka Open vSwitch, TCP BBR + TCP Fast Open, a kolíky trvalé názvy rozhraní podľa MAC."
     },
     {
-      "name": "Skladovanie",
-      "description": "Nastaviť Proxmox spoločné pamäťové podsystémy: ZFS ARC size, ZFS auto-snapshot, ZFS autotrim pre SSD/NVMe bazény, a vzdump rýchlostné limity, aby sa zabránilo nasýtenie disku počas záloh."
+      "name": "Úložisko",
+      "description": "Nastavte bežné úložné subsystémy Proxmox: ZFS Veľkosť ARC, ZFS auto-snapshot, ZFS autotrim pre SSD/NVMe pools, a vzdump rýchlostné limity, aby sa zabránilo presýteniu disku počas zálohovania."
     },
     {
       "name": "Zabezpečenie",

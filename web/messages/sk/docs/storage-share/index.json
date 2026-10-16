@@ -5,7 +5,7 @@
     "ogTitle": "Proxmox NFS, Samba, iSCSI & LXC Mount Points",
     "ogDescription": "Integrovať externé / lokálne skladovanie do Proxmox VE — NFS, Samba iSCSI registrácia plus LXC viazanie montáží a zdieľanie siete.",
     "twitterTitle": "Proxmox NFS, Samba, iSCSI | ProxMenux",
-    "twitterDescription": "Pridať NFS0 / Samba / iSCSI ako úložisko Proxmox a zdieľať priečinky medzi hostiteľom a LXC."
+    "twitterDescription": "Pridajte NFS / Samba / iSCSI ako úložisko Proxmox a zdieľajte priečinky medzi hostiteľom a LXC."
   },
   "header": {
     "title": "Správca úložísk a zdieľania",
@@ -27,7 +27,7 @@
     "hostTitle": "Úložisko hostiteľa",
     "hostBody": "Zaregistrujte externé a lokálne úložisko v Proxmoxe cez <code>pvesm add …</code>. Po registrácii, úložisko sa objaví v Proxmox UI a je k dispozícii pre VM a CT tvorcov.",
     "hostItems": [
-      "Externé NFS0 / Samba / iSCSI → Úložisko Proxmox",
+      "Externé NFS / Samba / iSCSI → Úložisko Proxmox",
       "Lokálny disk → Adresár Proxmox alebo pamäť ZFS",
       "Local shared directory (pre cross-CT viazanie pripojiť)"
     ],
@@ -42,7 +42,7 @@
     "lxcNetBody": "Štyri dodatočné toky pre scenáre, pri ktorých kontajner potrebuje priamo spotrebovať alebo vystaviť akcie NFS / Samba. Všetky vyžadujú <strong>privileged</strong> kontajner.",
     "lxcNetItems": [
       "NFS / Samba <strong>klient</strong> (spotreba externých akcií)",
-      "NFS0 / Samba <strong>server</strong> (expedovať CT priečinky)"
+      "NFS / Samba <strong>server</strong> (zobraziť priečinky CT)"
     ]
   },
   "host": {
@@ -71,7 +71,7 @@
         "href": "/docs/storage-share/host-local-disk",
         "icon": "HardDrive",
         "title": "Pridať lokálny disk ako Proxmox úložisko",
-        "description": "Formát lokálne SATA / SAS / NVMe disk a zaregistrovať ho ako Proxmox adresár alebo ZFS bazén úložisko."
+        "description": "Naformátujte lokálny disk SATA / SAS / NVMe a zaregistrujte ho ako adresár Proxmox alebo ZFS pool úložisko."
       },
       {
         "href": "/docs/storage-share/host-local-shared",
@@ -115,7 +115,7 @@
         "href": "/docs/storage-share/lxc-samba-server",
         "icon": "Upload",
         "title": "Samba server v LXC",
-        "description": "Vytvárať priečinky cez SMB0 / CIFS z vnútra privilegovaného LXC kontajnera."
+        "description": "Odhaliť priečinky cez SMB / CIFS z privilegovaného LXC kontajnera."
       }
     ]
   },

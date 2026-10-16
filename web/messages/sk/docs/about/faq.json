@@ -47,7 +47,7 @@
     "question": "Môžem prispôsobiť ProxMenux?",
     "p1Rich": "Základné skripty nemôžu byť upravené priamo, pretože sú hostované na GitHub a osviežené auto-aktualizačným tokom. Čo si <em>can</em> prispôsobiť:",
     "items": [
-      "Konzola banner prostredníctvom <strong>0FastFetch</strong> nástroj v Post-Install možnosti.",
+      "Banner konzoly prostredníctvom nástroja <strong>FastFetch</strong> v možnostiach po inštalácii.",
       "Ktoré voliteľné komponenty sú nainštalované (Monitor, Fail2Ban, Lynis...)"
     ]
   },
@@ -59,12 +59,12 @@
   "q6": {
     "question": "Kde môžem nahlásiť problémy?",
     "p1Rich": "Správy o chybách pokračujú <issueslink>GitHub Otázky</issueslink>. Zahrnúť reprodukčné kroky, chybové správy a (pre otázky súvisiace s monitorom) výstup <code>journalctl -u proxmenux-monitor -n 50</code>.",
-    "p2Rich": "Pre <strong>0security</strong> problémy, prosím <strong> nezverejňujú</strong>. Prečítajte si <coclink>Code of Conduct & Best Practices</coclink> pre zodpovedný postup zverejňovania."
+    "p2Rich": "V prípade problémov s <strong>bezpečnosťou</strong> ich prosím <strong>nezverejňujte</strong>. Prečítajte si <coclink>Kódex správania a osvedčené postupy</coclink> o zodpovednom postupe zverejnenia."
   },
   "q7": {
     "question": "Môžem prispieť k ProxMenux?",
     "p1Rich": "<strong>Absolútne.</strong> ProxMenux je otvorený zdroj a spolupracuje. Príspevky môžu byť kód (bash, Next.js / TypeScript, preklad Python venv), testovanie, dokumentácia, dizajn, alebo len nápady.",
-    "item1Rich": "Diskusia o nápadoch v <discusslink>0GitHub Diskusie</discusslink> pred otvorením požiadavky funkcie.",
+    "item1Rich": "Pred otvorením žiadosti o funkciu prediskutujte nápady v <discusslink>GitHub diskusiách</discusslink>.",
     "item2Rich": "Pre PR si najprv prečítajte <coclink>Code of Conduct & Best Practices</coclink>.",
     "item3Rich": "Pozri stránku <contriblink>Príspevky </contriblink> pre súčasných testerov a recenzentov."
   },
@@ -79,16 +79,16 @@
   },
   "q9": {
     "question": "Je bezpečné používať ProxMenux vo výrobe?",
-    "bodyRich": "<strong>0Áno.</strong> Vzhľadom k tomu, ProxMenux nemení jadro Proxmox súbory, ak výslovne požiadal, môže byť použitý vo výrobných prostrediach. Rovnako ako u akejkoľvek automatizácie, test v kontrolovanom prostredí najprv a mať zálohy pred spustením deštruktívne toky (PVE 8 → 9 upgrade, formát disku, VM zničiť...)."
+    "bodyRich": "<strong>Áno.</strong> Keďže ProxMenux neupravuje základné súbory Proxmox, pokiaľ nie je výslovne vyzvaný, môže byť použitý v produkčnom prostredí. Ako pri každej automatizácii, najprv otestujte v kontrolovanom prostredí a pred spustením deštruktívnych tokov si urobte zálohy (PVE 8 → 9 upgrade, formát disku, VM zničiť…)."
   },
   "q10": {
     "question": "Ako odinštalujem ProxMenux?",
-    "p1Rich": "Zvnútra ProxMenux0: <strong>Nastavenia → Odinštalovať ProxMenux</strong>. Odinštalátor odstráni skriptový strom, spúšťač a službu Monitor, voliteľne odstráni vybrané závislosti a obnoví zálohy <code>/root/.bashrc</code> a <code>/etc/motd</code> prijaté v čase inštalácie.",
+    "p1Rich": "Vo vnútri ProxMenux: <strong>Nastavenia → Odinštalovať ProxMenux</strong>. Odinštalačný program odstráni strom skriptov, spúšťač a službu Monitor, voliteľne odstráni vybrané závislosti a obnoví zálohy <code>/root/.bashrc</code> a <code>/etc/motd</code> vytvorené v čase inštalácie.",
     "p2Rich": "Celý krok za krokom: <uninstalllink>Odinštalovať ProxMenux</uninstalllink>."
   },
   "q11": {
     "question": "VirusTotal flags the install URL",
     "p1Rich": "A 1/95 detekcia heuristickými motormi (napr. <em>Chong Lua Dao</em>) je známy false pozitívny. Inštalátor používa štandardný model <code>curl | bash</code> a sťahuje legitímne binárne súbory (ako <code>jq</code> z oficiálneho vydania GitHub), ktoré agresívne skenery vlajky založené na <em>behaviour</em> skôr než skutočný škodlivý kód.",
-    "p2Rich": "ProxMenux0 je 100% open source a inštalačný skript je recenzentovateľný riadok po riadku: <scriptlink>install_proxmenux.sh</scriptlink>. Viac kontextu v <issuelink>Issue #162</issuelink>."
+    "p2Rich": "ProxMenux je 100% open source a inštalačný skript je možné skontrolovať riadok po riadku: <scriptlink>install_proxmenux.sh</scriptlink>. Viac kontextu v <issuelink>Vydanie č. 162</issuelink>."
   }
 }

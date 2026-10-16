@@ -25,7 +25,7 @@
     "space": "Niektoré voľné miesto v <code>/opt/nvidia</code> pre montáž <code>.run</code> plus RAM použité počas stavby. Pri šírení do LXC na non-Arch distros, každý kontajner potrebuje aspoň 1.5 GB zadarmo; ProxMenux dočasne zvyšuje kontajner RAM na 2 GB a obnovuje ho po. Reštart je potrebný na konci hostiteľovej inštalácie."
   },
   "vmWarn": {
-    "title": "GPU0 pridelený VM? Tu zastav.",
+    "title": "GPU priradené k VM? Zastavte sa tu",
     "body": "Ak je GPU v súčasnosti viazaný na <code>vfio-pci</code> (t. j. prechádza na VM), inštalácia hostiteľského vodiča môže prerušiť priechod a destabilizovať systém. ProxMenux detekuje a ruší. Pred spustením tohto skriptu odstráňte GPU z VM passhrough konfigurácie a reštartujte."
   },
   "running": {
@@ -47,7 +47,7 @@
     "version": {
       "title": "Vyberte verziu ovládača",
       "body1": "ProxMenux získa zoznam dostupných vodičov z NVIDIA a zužuje zberač na verzie, ktoré <strong>Zoznam GPUID zariadenia PCI v tabuľke podporovaných žetónov</strong> zodpovedajúcej pobočky dňa <code>nvidia.com</code>. Ďalšie heuristické odvrhovače developer / beta CDN kvapky, ktoré by sa inak objaví na vrchole. Prvá položka sa označuje <em>&lt;verzia&gt; Doporučené</em>Uprednostňuje hlavu vetvy vodiča, ktorý je už nainštalovaný na hostiteľovi (na mieste bugfix), inak vedúci aktuálneho výrobného odboru, inak najvyššie podporované číselné údaje.",
-      "body2": "Ak bol v súčasnosti nainštalovaný ovládač nalepený pomocou klávesnice (NVENC), auto-úzky zberača na verzie, ktoré sú stále pokryté tabuľkou patch, takže použitie <em>0Reinstall / update</em> bez straty náplasti je jedným kliknutím.",
+      "body2": "Ak bol aktuálne nainštalovaný ovládač opravený pomocou keylase (NVENC), výber sa automaticky zúži na verzie, ktoré sú stále pokryté tabuľkou opráv, takže použitie <em>Preinštalovania / aktualizácie</em> bez straty opravy je jedným kliknutím.",
       "whyTitle": "Ako je validovaná kompatibilita jadra",
       "whyBody": "Zoznam verzií prefiltruje údržba pobočky NVIDIA a podpora GPU PCI, nie tvrdo kódované jadro/vodič matrix. Po výbere, DKMS stavia modul proti bežiace jadro. Neúspešná stavba zastaví, aby sa inštalácia považovala za platnú; zvoľte si inú udržiavanú vetvu, ak NVIDIA neupravil toto uvoľnenie do vášho jadra.",
       "imageAlt": "Volič verzie ovládača s GPU-podporou NVIDIA vetvy a odporúčaný zápis hore"
@@ -79,12 +79,12 @@
       "title": "Voliteľné: nalepte náplasť NVENC",
       "body": "Spotrebiteľ NVIDIA GPU (GeForce) limitovať počet súbežných NVENC kódovanie sedení. Spoločenstvo <patchLink>keylase/nvidia-patch</patchLink> odstraňuje toto obmedzenie. Ak máte v pláne použiť GPU pre Plex / Jellyfin / Frigate s mnohými súbežnými prúdmi, odpovedzte <strong>Yes</strong> pri vyzvaní.",
       "supportTitle": "Skontrolujte podporu náplasti pre vodiča",
-      "supportBody": "Náplasť neprekrýva každú verziu vodiča. Pred spoliehaním na to vo výrobe, overiť svoju verziu je uvedený v <patchTableLink>0patch tabuľke</patchTableLink>. Ak ešte nie je podporovaná, vyberte si blízkeho staršieho vodiča."
+      "supportBody": "Oprava nepokrýva všetky verzie ovládačov. Predtým, ako sa na to spoľahnete v produkcii, overte, či je vaša verzia uvedená v <patchTableLink>tabuľke opráv</patchTableLink>. Ak ešte nie je podporovaný, vyberte starší ovládač v okolí, ktorý je podporovaný."
     },
     "propagate": {
       "title": "Voliteľné: rozšírenie ovládača na kontajnery LXC",
       "body1": "Ak je prehľadná obrazovka uvedená kontajnery s NVIDIA priechod, ProxMenux teraz ponúka aktualizáciu užívateľských knižníc vo vnútri každého z nich tak, aby zodpovedali hostiteľovi. Modul jadra hostiteľa a užívateľský priestor kontajnera <strong>musí byť presne rovnaká verzia</strong> inak <code>nvidia-smi</code> Vo vnútri kontajnera zlyhá chyba \"nesúladu s verziou.\"",
-      "body2": "Aktualizácia je distro-aware. Pre Debian / Ubuntu a iné glibc distro, rovnaké <code>.run</code> inštalátor (s <code>--no-kernel-modules --no-dkms --no-install-compat32-libs</code>) sa zatlačí do nádoby a vykoná; RAM je dočasne zvýšená na 2 GB, ak je nižšia a obnovená po. Za <strong>Arch, Manjaro a EndeavourOS</strong> aktualizácia je <code>pacman -Syu nvidia-utils</code> Pripnutý k hostiteľovej vetve vodiča. <strong>AlpskýName</strong> používa inú cestu <code>.run</code> je extrahovaný na hostiteľa, iba užívateľské knižnice sú zabalené ako tarball a tlačený s <code>pct push</code>potom <code>gcompat</code> + <code>binutils</code> shims sú nainštalované cez <code>apk</code> a SONAME symlinky sú znovu vytvorené s <code>readelf</code> Takže knižnice s glibc sú správne naložené na musli.",
+      "body2": "Aktualizácia podporuje distribúciu. Pre Debian / Ubuntu a ďalšie distribúcie glibc to isté <code>.run</code> inštalačný program (s <code>--no-kernel-modules --no-dkms --no-install-compat32-libs</code>) sa vtlačí do nádoby a vykoná sa; kontajner RAM je dočasne zvýšená na 2 GB, ak je nižšia a potom sa obnoví. Pre <strong>Arch, Manjaro a EndeavourOS</strong> aktualizácia je a <code>pacman -Syu nvidia-utils</code> pripnutý k pobočke ovládača hostiteľa. <strong>Alpine</strong> používa inú cestu - <code>.run</code> je extrahovaný na hostiteľovi, iba knižnice používateľského priestoru sú zabalené ako tarball a odoslané s <code>pct push</code>, potom <code>gcompat</code> + <code>binutils</code> podložky sú inštalované cez <code>apk</code> a symbolické odkazy SONAME sa znova vytvoria pomocou <code>readelf</code> takže knižnice prepojené s glibc sa správne načítajú na musl.",
       "imageAlt": "Rýchly zoznam LXCs s NVIDIA passmough a aktuálna verzia ovládača, s Áno/Nie aktualizovať všetky"
     },
     "reboot": {
@@ -126,7 +126,7 @@
   "verify": {
     "heading": "Overenie inštalácie",
     "intro": "Akonáhle hostiteľ je späť, prihláste sa cez SSH alebo Proxmox shell a spustiť:",
-    "after": "Mali by ste vidieť vaše GPU0 uvedené, verzia ovládača na hornom okraji, a zatiaľ žiadne procesy (nikto nepoužíva GPU v tomto bode). Potom skontrolujte vytrvalosť služby:",
+    "after": "Mali by ste vidieť svoje GPU, verziu ovládača na hornom okraji a zatiaľ žiadne procesy (v tomto bode nič nepoužíva GPU). Potom skontrolujte službu perzistencie:",
     "imageAlt": "Výstup nvidia-smi na hostiteľa zobrazujúci detekované GPU a nainštalovanú verziu ovládača"
   },
   "troubleshoot": {

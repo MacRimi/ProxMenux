@@ -42,7 +42,7 @@
         "tailRich": " Vzdump CLI odkaz, vrátane <code>--pigz</code> možnosť nite."
       },
       {
-        "label": "Skladovanie",
+        "label": "Úložisko",
         "href": "/docs/post-install/storage",
         "tail": " — Vzdump rýchlostné limity a ZFS ARC ladenie."
       },

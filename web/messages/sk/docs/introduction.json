@@ -13,7 +13,7 @@
     "section": "Úvod"
   },
   "hero": {
-    "tagline": "<strong>0One menu, každý workflow.</strong> Všetko, čo zvyčajne trvá záložku otvorené pre wiki, dve fórum vlákna a copy-pased sekvencie príkazov",
+    "tagline": "<strong>Jedna ponuka, každý pracovný tok.</strong> Všetko, čo bežne obsahuje kartu otvorenú na wiki, dve vlákna fóra a sekvenciu príkazov s kopírovaním a prilepením – vystavené ako očíslovaná možnosť, ktorú môžete spustiť v priebehu niekoľkých sekúnd.",
     "audience": "Postavený pre <em> prvý-time</em> Proxmox užívateľov (bezpečné, mienené predvolené) a <em>seed</em> admins (menej stlačenia klávesov pre úlohy, ktoré urobili stokrát). Voľný a otvorený zdroj pod aktívnu komunitu na <github>GitHub</github>."
   },
   "twoProducts": {
@@ -46,14 +46,14 @@
         "href": "/docs/post-install"
       },
       {
-        "title": "GPU a koral TPU",
+        "title": "GPU a Coral TPU",
         "description": "NVIDIA, Intel iGPU, AMD a Coral TPU prechod na VM a LXC, s prepínaním režimu medzi VM a LXC.",
         "icon": "Cpu",
         "href": "/docs/hardware/nvidia-host"
       },
       {
         "title": "Vytvoriť VM",
-        "description": "Čarodejníci pre NAS systémy, Windows a Linux",
+        "description": "Sprievodcovia pre systémy NAS, Windows a Linux – s rozumnými predvolenými nastaveniami pre hardvér, úložisko a sieť.",
         "icon": "Server",
         "href": "/docs/create-vm"
       },
@@ -107,7 +107,7 @@
       },
       {
         "title": "Oznámenia",
-        "description": "Telegram, Discord, E-mail, Gotify, Pushover a Apprise (multi- Channel)",
+        "description": "Telegram, Discord, E-mail, Gotify, Pushover a Apprise (viackanálové, hodiny a chladenie) – s kompletnou reguláciou, odstránením dutín histórie.",
         "icon": "Bell",
         "href": "/docs/monitor/notifications"
       },
@@ -172,13 +172,13 @@
     "heading": "Kam ísť ďalej",
     "items": [
       {
-        "lead": "<strong>0New to ProxMenux?</strong> ",
+        "lead": "<strong>Nový používateľ ProxMenux?</strong>",
         "linkHref": "/docs/installation",
         "linkLabel": "Nainštalujte ho do jedného príkazu",
         "tailRich": " a spustite <code>menu</code>."
       },
       {
-        "lead": "<strong>0Just installed Proxmox?</strong> Začnite s ",
+        "lead": "<strong>Práve nainštalovali ste Proxmox?</strong> Začnite s",
         "linkHref": "/docs/post-install",
         "linkLabel": "Skript po inštalácii",
         "tail": "."
@@ -196,10 +196,10 @@
         "tail": " je kurzovaný katalóg usporiadaný podľa témy, s kopírovať tlačidlá."
       },
       {
-        "lead": "<strong>0Čakáte dlhšie, ako-k sprievodcovia?</strong> ",
+        "lead": "<strong>Chcete dlhší návod?</strong>",
         "linkHref": "/guides",
         "linkLabel": "Časť príručky",
-        "tail": " zahŕňa koralové TPU, NVIDIA priechod, Kodi LXC a ďalšie."
+        "tail": "pokrýva Coral TPU, NVIDIA priechod, Kodi LXC a ďalšie."
       }
     ]
   }

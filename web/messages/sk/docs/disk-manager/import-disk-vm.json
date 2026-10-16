@@ -17,7 +17,7 @@
   "howRuns": {
     "heading": "Ako beží skript",
     "body": "Prietok má dve fázy s jasným oddelením medzi \"zhromažďovaním informácií a rozhodnutí\" a \"skutočne pripojením diskov na VM.\" Až do konečného potvrdenia, VM config je nedotknutý.",
-    "summary": "ProxMenux filtruje všetko, čo nemôže bezpečne prejsť: koreňový disk, disky namontované na hostiteľa, členovia aktívneho ZFS/LVM/RAID bazén a disky už odkazované akékoľvek VM/LXC. Disky s <em>stale</em> metadátami (staré ZFS / RAID / LVM podpisy, ktoré sa už nepoužívajú) sú zobrazené s označením, ale nie sú blokované."
+    "summary": "ProxMenux filtruje všetko, čo nemôže bezpečne prejsť: koreňový disk, disky pripojené k hostiteľovi, členovia aktívneho ZFS/LVM/RAID pool a disky, na ktoré už odkazujú VM/LXC konfigurácia. Disky s <em>zastaranými</em> metadátami (staré ZFS / RAID / LVM podpisy, ktoré sa už nepoužívajú) sú zobrazené s označením ⚠, ale nie sú blokované."
   },
   "prereqs": {
     "heading": "Predpoklady",
@@ -39,7 +39,7 @@
         "title": "Vyberte fyzický disk na pripojenie",
         "img": "/disk/disk-selection.png",
         "caption": "Voľné disky detekované na hostiteľovi (so štítkami pre zastavené metaúdaje)",
-        "body": "Skript skenuje každý hostiteľský disk a zobrazuje iba tie, ktoré sú bezpečné na pripojenie. Kontrolný zoznam umožňuje vybrať jeden alebo niekoľko naraz. Disky so starým ZFS0 / LVM / RAID podpisy stále zobrazí, označené s"
+        "body": "Skript prehľadá každý hostiteľský disk a zobrazí len tie, ktoré je možné bezpečne pripojiť. Kontrolný zoznam vám umožňuje vybrať jeden alebo niekoľko naraz. Disky so starými ZFS / LVM / RAID signatúrami sa stále zobrazujú a sú označené ⚠, takže viete, že je potrebné ich vymazať, aby ich hosť mohol naformátovať."
       },
       {
         "title": "Vyberte rozhranie zbernice",
@@ -78,7 +78,7 @@
     ],
     "noDisksOutro": "Spustite <code>lsblk -f</code> na hostiteľa skontrolovať stav každého disku.",
     "noVisibleTitle": "VM nevidí disk po štarte",
-    "noVisibleBody": "Ak ste si vybrali <strong>0SCSI</strong> alebo <strong>VirtIO</strong>, hosť potrebuje zodpovedajúce ovládač. Na Linux, ktorý je jadra-natívne; na Windows budete potrebovať VirtIO ISO a ovládač inštalovať (pozri <winLink>Create VM: System Windows</winLink> stránku). Prepínanie na SATA v hardvérovej karte VM je rýchlym prevedením na potvrdenie, že disk je fyzicky pripojený."
+    "noVisibleBody": "Ak ste vybrali <strong>SCSI</strong> alebo <strong>VirtIO</strong>, hosť potrebuje zodpovedajúci ovládač. Na Linuxe, ktorý je natívny jadro; v systéme Windows potrebujete VirtIO ISO a inštaláciu ovládača (pozrite si stránku <winLink>Vytvorenie VM: Systém Windows</winLink>). Prepnutie na SATA na karte hardvéru VM je rýchlym riešením na potvrdenie, že disk je fyzicky pripojený."
   },
   "related": {
     "heading": "Súvisiace",

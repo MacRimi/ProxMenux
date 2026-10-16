@@ -149,7 +149,7 @@
   ],
   "iptablesTip": {
     "title": "iptables vs nftables",
-    "bodyRich": "Moderný Debian / Proxmox používa <strong>0nftables</strong> ako základný firewallový motor. Klasický <code>iptables -L -n -v</code> príkaz stále funguje ako prekladateľská vrstva, ale zdrojom pravdy je <code>nft list ruleset</code>. <code>pve-firewall</code> príkazy sú Proxmox obal, ktorý vysiela nftables pravidlá z cluster firewall config."
+    "bodyRich": "Moderný Debian / Proxmox používa <strong>nftables</strong> ako základný firewall. Klasický príkaz <code>iptables -L -n -v</code> stále funguje ako vrstva prekladu, ale zdrojom pravdy je <code>nft list ruleset</code>. Príkazy <code>pve-firewall</code> sú obalom Proxmoxu, ktorý vysiela pravidlá nftables z konfigurácie klastrového firewallu."
   },
   "related": {
     "heading": "Súvisiace",

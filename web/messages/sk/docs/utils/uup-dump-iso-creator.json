@@ -28,7 +28,7 @@
       "Čisté, nemodifikované súbory pochádzajúce priamo zo serverov Microsoft.",
       "Presná kombinácia edícií a jazykov, ktoré chcete v jednom ISO."
     ],
-    "learnMore": "Ďalšie informácie o stránke projektu <extlink>0UUP Dump </extlink>."
+    "learnMore": "Viac informácií nájdete na <extlink>stránke projektu UUP Dump</extlink>."
   },
   "automates": {
     "heading": "Čo skript automatizuje"
@@ -150,7 +150,7 @@
         "title": "Čakať na dokončenie stavby",
         "img": "/iso-creator/end-uupdump-iso-creator.png",
         "caption": "Zostrojiť dokončené",
-        "bodyRich": "Konzola ukazuje ária2 postup a potom prevodník výstup. Keď skončí, ISO pristane v detekovanom úložisku Proxmox ISO a je pripravená vybrať si z <strong>0Create VM → Systém Windows → Inštalovať s ISO z UUP Dump</strong>."
+        "bodyRich": "Konzola zobrazuje priebeh aria2 a potom výstup prevodníka. Keď skončí, ISO pristane v zistenom úložisku ISO Proxmox a je pripravené na výber z <strong>Vytvoriť VM → Systém Windows → Inštalovať pomocou ISO z UUP Dump</strong>."
       }
     ]
   },

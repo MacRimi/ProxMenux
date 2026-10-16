@@ -43,7 +43,7 @@
       },
       {
         "name": "TrueNAS SCALE",
-        "tagline": "TrueNAS0 s aplikáciami Docker / Kubernetes a ZFS ako primárny súborový systém.",
+        "tagline": "Na Debiane TrueNAS s Docker / Kubernetes aplikáciami a ZFS ako primárnym súborovým systémom.",
         "icon": "Database",
         "base": "Debian Linux",
         "fileSystem": "ZFS",
@@ -108,7 +108,7 @@
   },
   "umbrel": {
     "title": "Možnosť Spoločenstva: Umbrella OS",
-    "bodyRich": "9. položka v menu NAS je <strong>0Umbrell OS</strong>. Spúšťa inštalátor <umbrelLink> Community-scripts </umbrelLink> udržiavaný mimo ProxMenux, takže nie je dokumentovaný tu. Inštalátor spracováva celý životný cyklus a na konci vytlačí svoje predvolené údaje."
+    "bodyRich": "Deviata položka v ponuke NAS je <strong>Umbrel OS</strong>. Spúšťa <umbrelLink>inštalátor komunitných skriptov</umbrelLink> udržiavaný mimo ProxMenux, takže tu nie je zdokumentovaný. Inštalačný program spracuje celý životný cyklus a na konci vytlačí svoje predvolené poverenia."
   },
   "zfsMem": {
     "title": "Pravidlo pamäte ZFS",

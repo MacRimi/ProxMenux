@@ -14,7 +14,7 @@
       "title": "Zariadenie, ktoré aplikácia potrebuje, nie celý hostiteľ",
       "blocks": [
         {
-          "p": "Zariadenie požadované kompozíciou alebo profilom aplikácie sa stáva betónovým vstupom <code>devN</code> alebo montážou LXC. Žiada o GPU, USB zariadenie alebo koral nerobí kontajner privilegovaný."
+          "p": "Zariadenie požadované súborom Compose alebo aplikačným profilom sa stáva konkrétnou položkou <code>devN</code> alebo LXC pripojením. Požiadanie o GPU, USB zariadenie alebo Coral nerobí kontajner privilegovaným."
         },
         {
           "flow": {
@@ -329,7 +329,7 @@
     },
     {
       "id": "usb",
-      "title": "USB, sériové a USB koral",
+      "title": "USB, sériové a USB Coral",
       "blocks": [
         {
           "calloutWarning": {

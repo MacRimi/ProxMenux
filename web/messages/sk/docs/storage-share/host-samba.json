@@ -58,7 +58,7 @@
     "intro": "Ak je <em>As Proxmox storage</em> označený, ProxMenux spustí pôvodný pvesm prietok:",
     "items": [
       "<strong>ID skladu</strong> Predvolené <code>cifs-&lt;server-ip-with-dashes&gt;</code>. Iba písmená, číslice, <code>-</code> a <code>_</code>.",
-      "<strong>0Obsahové typy</strong> WHS vystavuje <strong>6</strong> možnosti (rovnaké ako NFS mínus <code>rootdir</code>, ktoré Proxmox neumožňuje na CIFS, pretože uzamykacia sémantika nemôže držať živé LXC rootfs):"
+      "<strong>Typy obsahu</strong> — CIFS odhaľuje <strong>6</strong> možnosti (rovnaké ako NFS mínus <code>rootdir</code>, čo Proxmox na CIFS nepovoľuje, pretože sémantika uzamykania nemôže udržať živé LXC rootfs):"
     ],
     "headerType": "Typ obsahu",
     "headerAllows": "Čo to umožňuje",
@@ -112,7 +112,7 @@
     "lxcTitle": "Použitie fstab mount z neprivilegované LXC",
     "lxcBody": "Pretože klient CIFS platí <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code>, každý súbor v mount je vo vlastníctve hostiteľa UID 0 s režimom 0777. Neprivilegovaný LXC viazanie-pripojenie cesta vidí \"ostatných\" trvalosty na každom zázname (CT root = hostiteľ UID 100000 = ostatné na hostiteľskom súborovom systéme), takže číta a píše úspešne. <strong>V kontajneri nie sú vykonané žiadne zmeny.</strong> Nie. <code>chown</code> v CT, žiadne nastavenie skupiny, nič zmenené v <code>/etc/lxc</code> mimo jedinej <code>mp</code> Pripojiť-horská čiara. Skript vytlačí presne <code>pct set</code> príkaz na konci, alebo použiť <mountLink>LXC Správca pripojenia</mountLink> pripojiť cestu.",
     "noUiTitle": "Fstab mount nie je Proxmox úložisko",
-    "noUiBody": "Hostiteľ fstab mount je neviditeľný pre Proxmox web UI To sa neobjaví v <em>0Datacentrum > Storage</em>, nemôžete si vybrať v VM / CT tvorca, a Proxmox záložné úlohy nemôže zamerať. Je to čisto cesta k hostiteľskému súborovému systému. Ak chcete aj integráciu UI, označte metódy <em>both</em> v zberači."
+    "noUiBody": "Hostiteľský fstab mount je neviditeľný pre web Proxmox UI — podľa návrhu. Nezobrazuje sa v <em>Datacenter > Storage</em>, nemôžete ho vybrať v tvorcovi VM / CT a úlohy zálohovania Proxmox sa naň nemôžu zamerať. Je to čisto cesta hostiteľského súborového systému. Ak chcete aj integráciu UI, označte vo výbere <em>obe</em> metódy."
   },
   "manual": {
     "heading": "Ručný ekvivalent",

@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "ProxMenux Monitor Dashboard: Hardware záložka ProxMenux Dokumentácia",
-    "description": "Hardware záložka inventarizuje fyzický stroj: CPU a základnú dosku, pamäťové moduly, tepelné senzory, GPU (s per-slot real-time monitoring a jednoklikom inštalátor ovládača), urýchľovače koralové TPU, úložné zhrnutie s kontrolou link-speed, plné PCI a USB zoznamy zariadení, spotreba energie, PSU, ventilátory a UPS stav."
+    "description": "Na karte Hardvér je inventár fyzického počítača: CPU a základná doska, pamäťové moduly, teplotné senzory, GPU (s monitorovaním jednotlivých slotov v reálnom čase a inštalátorom ovládačov jedným kliknutím), Coral TPU akcelerátory, prehľad úložiska s kontrolou rýchlosti pripojenia, úplný zoznam zariadení PCI a USB, spotreba energie, jednotky PSU, ventilátory a stav UPS."
   },
   "header": {
     "title": "Prehľad: karta Hardvér",
@@ -40,8 +40,8 @@
       "<strong>NVME</strong> chromozómová kompozitná teplota spojená s jeho presným NVMe Menový priestor.",
       "<strong>HDD</strong> — <code>drivetemp</code> hodnoty pre zariadenia s rotačným blokovaním.",
       "<strong>SSD</strong> — <code>drivetemp</code> snímky pre nerotačné SATA/SAS blokovacie zariadenia.",
-      "<strong>0PCI</strong>",
-      "<strong>0OTHER</strong>"
+      "<strong>PCI</strong> — senzory, ktoré sa javia ako zariadenia pripojené k PCI (HBA, sieťové karty s internými senzormi).",
+      "<strong>OTHER</strong> — čipset, VRM, senzory okolia, ktoré sa inde nehodia."
     ]
   },
   "graphics": {
@@ -87,7 +87,7 @@
     "intelImageAlt": "GPU monitoring mode pre Intel UHD Graphics iGPU na i915 ovládači, ukazujúci 11.31 W napájací remienok, 1 % nahrávanie video motora a ffmpeg proces spotreby 8 MB",
     "intelImageCaption": "Intel iGPU s aktívnym <code>i915</code>. Stôl Active Processes zachytáva úlohu ffmpeg pomocou video motora.",
     "amdImageAlt": "Monitorovací modál GPU pre AMD Lucienne integrované GPU na ovládači amdgpu s tyčami na použitie motora na 0 % a amdgpu_top uvedenými ako aktívny proces",
-    "amdImageCaption": "AMD iGPU monitorovaný prostredníctvom <code>amdgpu_top</code>",
+    "amdImageCaption": "AMD iGPU monitorovaný prostredníctvom <code>amdgpu_top</code> – samotný nástroj sa javí ako aktívny proces, pretože ide o backend živého prieskumu.",
     "installTitle": "Inštalácia ovládača NVIDIA z modálneho režimu",
     "installBody": "Keď NVIDIA GPU je viazaný na <code>nouveau</code>/<code>nvidiafb</code> (nenainštalovaný vlastný ovládač), blok v reálnom čase nemôže čítať hodiny, výkon alebo zaťaženie na proces. modal potom nahrádza metriku s <strong>Install NVIDIA Drivers</strong>, že vedenie priamo do rovnakého skriptu zdokumentované na <link>Install NVIDIA Drivers (Host)</link>.",
     "noDriverAlt": "Monitorovací modál GPU pre NVIDIA Quadro P620 s modulmi jadra nvidiafb a nouveau načítanými, rozšírený monitoring nie je k dispozícii a modré tlačidlo Inštalovať NVIDIA Ovládače",
@@ -109,7 +109,7 @@
     "heading": "Coral TPU / AI akcelerátory",
     "subHeading": "(podmienečné)",
     "intro": "Strieda, keď má hostiteľ Google Coral alebo iné UI akcelerátory pripojené. Každé zariadenie otvára modal so svojím typom pripojenia (M.2 / mini-PCIe / USB), šírka spojenia PCIe, predajca / ID produktu, ovládač jadra (<code>apex</code> pre PCIe, <code>libedgetpu</code> pre USB), moduly jadra (<code>gasket</code> + <code>apex</code>), uzly zariadení (<code>/dev/apex_*</code>), stav prevádzky Edge TPU, teplota v priamom prenose a prahy na varovanie hardvéru.",
-    "imageAlt": "Koralový Edge TPU detail modal: PCIe / M.2 pripojenie, PCIe 5.0 GT/s x1 link, predajca 1ac1:089a, ovládač jadra apex moduly načítané, /dev/apex_0 prítomný, Edge TPU Runtime not installed, teplota 53.5 °C s prahmi na varovanie hardvéru",
+    "imageAlt": "Coral Edge TPU Detailný modal: PCIe / M.2 pripojenie, PCIe 5.0 Odkaz GT/s x1, dodávateľ 1ac1:089a, ovládač jadra apex, gasket a apex načítané moduly, /dev/apex_0 prítomný, Edge TPU Doba chodu nie je nainštalovaná, teplota 53.5 °C s hardvérovými výstražnými prahmi",
     "imageCaption": "M.2 Coral s načítanými modulmi hostiteľských jadier, uzol zariadenia a upozornenia na teplotu firmvéru vystavené. Runtime linka ide zelená, akonáhle zodpovedajúce Edge TPU bežecký čas je nainštalovaný.",
     "pathsIntro": "Existujú dve inštalačné cesty v závislosti od faktora:",
     "pathsItems": [
@@ -130,7 +130,7 @@
   },
   "pci": {
     "heading": "PCI zariadenia",
-    "intro": "Každé PCI-adresovateľné zariadenie, identifikované jeho <strong>0PCI BDF</strong> (Bus:Device.Function <code>03:00.0</code>) a jeho trieda zariadení (<em>Storage Controller</em>, <em>USB Controller</em>, <em>Grafics Card</em>, <em>Network Controller</em>, <em>Audio Controller</em> ...). Každá karta ukazuje výrobcu, názov zariadenia a <strong>kernel ovládač v súčasnej dobe viazaný</strong>",
+    "intro": "Každé zariadenie s adresou PCI, identifikované svojím <strong>PCI BDF</strong> (Bus:Device.Function — napr. <code>03:00.0</code>) a jeho trieda zariadenia (<em>Storage Controller</em>, <em>USB ovládač</em>, <em>Grafická karta</em>, <em>Sieťový ovládač</em>, <em>Ovládač zvuku</em> …). Každá karta zobrazuje výrobcu, názov zariadenia a <strong>ovládač jadra je momentálne viazaný</strong> — čo je pole, ktoré skutočne chcete pri riešení problémov s prechodom, skupinami IOMMU alebo kartou, ktorú hostiteľ neovláda správne.",
     "imageAlt": "PCI Devices sekcia uvádzajúca pätnásť zariadení zoskupených podľa tried: regulátory úložiska na ahci/nvme, USB radiče, grafické karty (jeden na vfio-pci, jeden na natívneho ovládača), sieťové regulátory na igb / tg3, audio radiče vedľa prechádzajúce GPU",
     "imageCaption": "Pätnásť zariadení na tomto uzle. Všimnite si GPU a jeho spoluúčastník audio funkcie oboch viazané na <code>vfio-pci</code> To je karta pripravená na VM Prejazd.",
     "bdfTitle": "Čítanie BDF",
@@ -168,7 +168,7 @@
   "ups": {
     "heading": "Stav UPS",
     "subHeading": "(podmienečné)",
-    "body": "Strieda, keď je server NUT (Network UPS Tools) nastavený a dosiahnuteľný. Zobrazí: stav (online / na batérie / nabíjanie / nízka batéria), percento nabitia batérie, odhad času, percento zaťaženia, vstupné napätie, model a firmware. Rovnaké dáta napája <em>0Security & Certificates</em> kategórie Health Monitor"
+    "body": "Vykreslí sa, keď je nakonfigurovaný a dostupný server NUT (Network UPS Tools). Zobrazuje: stav (online / na batérii / nabíjanie / slabá batéria), percento nabitia batérie, odhad doby chodu, percento zaťaženia, vstupné napätie, model a firmvér. Rovnaké údaje obsahujú kategóriu <em>Security & Certificates</em> Health Monitor – UPS, ktorý sa okamžite zapne na batérii."
   },
   "dataCollected": {
     "heading": "Spôsob zberu údajov",
@@ -216,7 +216,7 @@
       {
         "label": "Inštalovať Coral TPU na hostiteľa",
         "href": "/docs/hardware/install-coral-tpu-host",
-        "tail": " — "
+        "tail": "— Coral modul jadra / inštalácia runtime."
       },
       {
         "label": "SMART Zdravie a test disku",
@@ -234,7 +234,7 @@
         "tail": " — Kategória CPU & Teploty, ktorá spotrebuje rovnaké senzory."
       },
       {
-        "label": "API referencia",
+        "label": "Referenčná príručka API",
         "href": "/docs/monitor/api",
         "tail": " - hardvér a GPU koncové ukazovatele."
       },

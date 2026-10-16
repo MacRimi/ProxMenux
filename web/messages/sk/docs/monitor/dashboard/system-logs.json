@@ -15,7 +15,7 @@
   "topRow": {
     "heading": "Horný rad: štyri počítadlá",
     "items": [
-      "<strong>0Celkový počet záznamov </strong>",
+      "<strong>Celkový počet záznamov</strong> — počet záznamov denníka v okne aktívneho filtra.",
       "<strong>Chyby</strong> Počet závažnosti ≤ 3 (<code>err</code> / <code>crit</code> / <code>alert</code> / <code>emerg</code>).",
       "<strong>Upozornenia</strong> Počet krutosti 4 (<code>warning</code>).",
       "<strong>Zálohy</strong> Počet vzdump / PBS položky úloh v rovnakom okne."
@@ -26,16 +26,16 @@
     "logsTitle": "Logy",
     "logsIntro": "Systémový denník, servírovaný <code>journalctl</code> na backende. Filtre dostupné v paneli nástrojov:",
     "logsFilters": [
-      "<strong>0Vzdialenosť</strong>",
+      "<strong>Závažnosť</strong> — emerg / alert / crit / chyba / varovanie / upozornenie / info / ladenie alebo akákoľvek kombinácia.",
       "<strong>Časový rozsah</strong> Posledná 5 min/ 15 min/ 1 h / 6 h / 24 h / 7 d / vlastné.",
       "<strong>Hľadanie voľného textu</strong> Podreťazec alebo regex (<code>journalctl --grep</code>).",
       "<strong>Filter jednotiek</strong> - obmedzenie na konkrétne systemd Jednotka (<code>pveproxy.service</code>, <code>nginx.service</code>, …)."
     ],
     "logsRowsAfter": "Každý riadok zobrazuje časovú pečiatku, krutosť, zdrojovú jednotku a správu. Dlhé správy sa zrútia s \"ukázať viac\" prepnúť. <strong>Download</strong> akčné zväzky aktuálny filter do jedného súboru <code>.txt</code> cez <code>GET /api/logs/download</code>",
     "logDetailsModalTitle": "Detaily záznamu",
-    "logDetailsBody": "Kliknutím na ľubovoľný riadok sa otvorí a <strong>Detaily záznamu</strong> modal s každou štruktúrovanou poľa žurnál zachytený pre tento jediný záznam <code>journalctl --output=verbose</code> na hostiteľa.",
+    "logDetailsBody": "Kliknutím na ľubovoľný riadok sa otvorí a <strong>Podrobnosti denníka</strong> modálne s každou štruktúrovanou oblasťou journald zachytené pre tento jediný záznam – rovnaký pohľad, aký by ste vytvorili ručným spustením <code>journalctl --output=verbose</code> na hostiteľovi.",
     "logDetailsImageAlt": "Detaily denníka modalu chápaný jeden zápis časopisu rozšírený o Level, Service, Časová pečiatka, Zdroj, Systemd Jednotka, ID procesu, meno hostiteľa a úplná správa",
-    "logDetailsImageCaption": "Prihlásiť Detaily modalu Užitočné pre Cron a servisné protokoly, kde sa vykonáva príkazový riadok.",
+    "logDetailsImageCaption": "Modálne Podrobnosti denníka — každé štruktúrované pole journald obsahuje pre tento záznam s úplnou neskrátenou správou v spodnej časti. Užitočné pre cron a servisné protokoly, kde záleží na vykonanom príkazovom riadku.",
     "fieldsIntro": "Zobrazené polia:",
     "fields": [
       "<strong>0 Level</strong>",
@@ -47,13 +47,13 @@
       "<strong>Hostname</strong>",
       "<strong>Message</strong>"
     ],
-    "maxLevelStoreTitle": "Vydané MaxLevelStore",
+    "maxLevelStoreTitle": "Journald MaxLevelStore",
     "maxLevelStoreBody": "Na čerstvej inštalácii Proxmoxu, publikoval predvolený <code>MaxLevelStore=warning</code>, ktorý ticho pustí info-level správy. Monitor detekuje to pri štarte a pridáva drop-in (<code>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</code>) zvýšenie prahu na <code>info</code> takže záložka Logs skutočne má niečo ukázať vo všetkých závažnosti.",
     "backupsTitle": "Zálohy",
     "backupsBody": "História úloh Proxmox filtrovaná na položky súvisiace so zálohovaním. Jeden riadok za úlohu (<code>vzdump</code>, PBS transfery, zber odpadu, overenie) so statusom (OK / UPOZORNENIE / ERROR), hosť zapojený, skladovanie zdrojov, trvanie a UPID. Kliknite na riadok pre načítanie celého logu úloh cez <code>GET /api/task-log/&lt;upid&gt;</code> Rovnaké dáta Proxmox vystavuje cez <em>Datacenter → Úlohy</em>, skryté na zálohy.",
     "notificationsTitle": "Oznámenia",
     "notificationsBody1": "Každé oznámenie odoslané monitorom Telegram, Discord, e-mail, Gotify, ntfy, Slack, Tímy, webhook. Každý riadok: časová pečiatka, kanál, typ udalosti, závažnosť, preložený titul, preložené telo, a (ak je AI povolené) prepnúť na zobrazenie AI prepísať vedľa originálu.",
-    "notificationsBody2": "Použiť túto záložku na overenie kanála je skutočne dodáva a porovnať to, čo AI prepísať vyrobené v porovnaní so základom šablóny. Konfigurácia kanála žije v <link>0Notifikácie</link> hlboké stránky."
+    "notificationsBody2": "Túto kartu použite na overenie, či kanál skutočne poskytuje, a na porovnanie toho, čo vytvorilo prepísanie AI v porovnaní so základnou líniou šablóny. Konfigurácia kanála sa nachádza na hĺbkovej stránke <link>Upozornenia</link>."
   },
   "dataCollected": {
     "heading": "Spôsob zberu údajov",
@@ -106,7 +106,7 @@
         "tail": " — "
       },
       {
-        "label": "API referencia",
+        "label": "Referenčná príručka API",
         "href": "/docs/monitor/api",
         "tail": " — "
       },

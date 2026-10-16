@@ -24,7 +24,7 @@
     "diagramCtLabel": "LXC (privilegovaný)",
     "diagramCtDetail": "/mnt/data\nmontáž.nfs vnútri CT",
     "diagramArrow": "NFS",
-    "twoWaysTitle": "Dva spôsoby, ako dať CT0 NFS prístup",
+    "twoWaysTitle": "Dva spôsoby, ako poskytnúť CT NFS prístup — vyberte si jeden",
     "twoWaysBind": "<strong>Pripojiteľné via host</strong> (<mountLink>LXC Správca pripojenia</mountLink>): host upevní NFS raz, každý CT @ info: whatsthis Pracuje s neprivilegovanými CT. Odporúča sa, ak niekoľko CT potrebuje rovnaký podiel.",
     "twoWaysDirect": "<strong>Direct NFS pripojiť vnútri CT</strong> (táto stránka): CT pripojí NFS sám. Vyžaduje si to výsadné právo. Užitočné, keď CT musí vlastniť svoje pripojenie / poverenia, alebo pre nastavenia, kde každý CT hovorí na iný server."
   },
@@ -87,7 +87,7 @@
       "Arch: <code>pacman -S nfs-utils</code>",
       "Rocky / Alma: <code>dnf install nfs-utils</code>"
     ],
-    "aptOutro": "Potom re-spustiť ProxMenux skript",
+    "aptOutro": "Potom znova spustite skript ProxMenux — krok inštalácie preskočí, keď už sú nástroje k dispozícii.",
     "portTitle": "\"NFS port (2049) is not accessible\"",
     "portBody": "Ping uspel, ale <code>nc -z &lt;server&gt; 2049</code> zlyhal zvnútra CT. Skontrolujte, či služba NFS beží na serveri, či firewall umožňuje 2049 zo siete CT a či má CT skutočne platnú sieťovú trasu (try <code>pct exec &lt;ctid&gt; -- ip route</code>).",
     "bootTitle": "Trvalá montáž uspeje, ale nepríde na boot",
@@ -116,7 +116,7 @@
       {
         "href": "/docs/storage-share/lxc-nfs-server",
         "label": "NFS server v LXC",
-        "tailRich": " — Inverzné: vystaviť priečinky <em>0z</em> a CT cez NFS."
+        "tailRich": "— opak: odkryte priečinky <em>od</em> a CT cez NFS."
       },
       {
         "href": "/docs/storage-share/host-nfs",

@@ -13,8 +13,8 @@
     "body": "Pridať <code>dev&lt;N&gt;</code> zápisy do LXC konfig (<code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>) takže kontajner vidí <code>/dev/dri/*</code>, <code>/dev/kfd</code> alebo <code>/dev/nvidia*</code> - podľa toho, čo sa týka vášho GPU. Potom to topánky kontajnera, detekuje distro vnútri, a nainštaluje zodpovedajúce užívateľské ovládače (Mesa, intel-media-driver, NVIDIA Runtime...) takže aplikácie ako Plex, Jellyfin alebo Frigate v skutočnosti použiť GPU na transkódovanie. GIDs (<code>video</code>, <code>render</code>) sú zosúladené medzi hostiteľom a kontajnerom, takže oprávnenia zápasu."
   },
   "compare": {
-    "heading": "Zdieľanie LXC0 vs VM",
-    "intro": "Kontajnery LXC0 zdieľajú jadro hostiteľa, takže môžu <em>share</em> hostiteľa GPU bez prevzatia. To je veľký rozdiel od VM: s <vmLink>VM passing</vmLink> GPU je exkluzívny pre jednu VM a hostiteľ nemôže použiť. S LXC, viac kontajnerov plus hostiteľ môže zasiahnuť rovnaký GPU naraz.",
+    "heading": "Zdieľanie LXC verzus VM prechod",
+    "intro": "Kontajnery LXC zdieľajú jadro hostiteľa, takže môžu <em>zdieľať</em> GPU hostiteľa bez toho, aby ho prevzali. To je veľký rozdiel od VM: s <vmLink>VM priechodom</vmLink> je GPU exkluzívny pre jeden VM a hostiteľ ho nemôže použiť. S LXC môže viacero kontajnerov plus hostiteľ naraz naraziť na rovnaký GPU.",
     "headerFeature": "Funkcia",
     "headerLxc": "LXC (táto stránka)",
     "headerVm": "VM",
@@ -61,7 +61,7 @@
   },
   "running": {
     "heading": "Spustenie inštalátora",
-    "body": "Open ProxMenux0 on the host, go to <strong>Hardware: GPUs and Coral-TPU → Add GPU to LXC</strong>.",
+    "body": "OTVORENÉ ProxMenux na hostiteľovi, prejdite na <strong>Hardvér: GPU a Coral-TPU → Pridať GPU do LXC</strong>.",
     "imageAlt": "Položka menu 'Pridať GPU do LXC' vnútri Hardware: GPUs a Coral-TPU"
   },
   "howRuns": {

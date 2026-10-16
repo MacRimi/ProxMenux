@@ -12,7 +12,7 @@
     "title": "Skutočná PTY v prehliadači",
     "body": "Terminál prideľuje serverové PTY cez <code>flask_terminal_routes</code>, trubky to cez WebSocket do <code>xterm.js</code> v prehliadači a beží ako <code>root</code> (the systemd používateľ jednotky). Všetko, čo môžete urobiť v <code>ssh root@&lt;host&gt;</code> tu pracuje <code>vim</code>, <code>tmux</code>, ncurses tools a Proxmox CLIS (<code>qm</code>, <code>pct</code>, <code>pvesh</code>, <code>pvecm</code>). Každá PTY začala z tejto karty exportovať premennú prostredia <code>PROXMENUX_TERMINAL=monitor</code>, ktorý zdedí každé dieťa <code>bash</code> proces vrátane následného <code>menu</code> Štart ProxMenux toky môžu zistiť, kedy bežia vo vnútri terminálu prehliadača monitora."
   },
-  "singleAlt": "ProxMenux Monitor Terminálna karta",
+  "singleAlt": "ProxMenux Monitor Karta Terminál – jedna terminálová relácia zobrazujúca súhrn systému Fastfetch pri prihlásení",
   "singleCaption": "Jeden host terminál otvorený a vyššie uvedený panel nástrojov ukazuje počet (<em>1 / 4 terminály</em>), <em>+ Nové</em>, <em>Hľadať</em>, <em>Vyčistiť</em> a <em>Zavrieť</em>. Pomocníci mobilnej klávesnice sa objavia pod terminálom na dotykových zariadeniach.",
   "target": {
     "heading": "Cieľ pripojenia",
@@ -75,7 +75,7 @@
       "<code>Ctrl+R</code> Zvrátiť prehľadávanie histórie v bash (<code>\\x12</code>)."
     ],
     "modalTitle": "Rovnaký panel nástrojov v režime konzoly LXC",
-    "modalBody": "Kontajnerová konzola, ktorú spustíte z <link>0VMs & LXCs → Console</link> vykresľuje tých istých pomocníkov klávesnice pod modalom. modal tiež auto-typy <code>pct enter &lt;vmid&gt;</code> na pripojenie, takže sa dostanete priamo do kontajnera."
+    "modalBody": "Kontajnerová konzola, ktorú spustíte z <link>VMs & LXC → Console</link>, vykresľuje rovnakých pomocníkov klávesnice pod modálom. Modal tiež automaticky napíše <code>pct enter &lt;vmid&gt;</code> pri pripojení, takže pristanete priamo v kontajneri."
   },
   "lxcAlt": "ProxMenux Monitor LXC konzola modal 103) s rovnakým mobilný-priateľský panel nástrojov (ESC, TAB, šípky, Enter, Ctrl) pod terminálom",
   "lxcCaption": "konzola LXC otvorená z <em>VMs & LXCs → Console</em>. Hlavička zobrazuje cieľovú nádobu (<em>Terminál: ubuntu (ID: 103)</em>) a pod terminálom sa zobrazí rovnaký dotykový panel nástrojov.",
@@ -83,7 +83,7 @@
     "heading": "Vyhľadávanie Príkazy",
     "intro": "Modré tlačidlo <strong>Search</strong> v paneli nástrojov otvára modál s fuzzy príkazom. Zadajte niekoľko písmen akéhokoľvek príkazu Linux alebo Proxmox (<code>ls</code>, <code>tar</code>, <code>qm</code>, <code>pct</code>, <code>zpool</code>, <code>systemctl</code>...) a modal zoznam príkladov použitia s jedným-tap <em>Odoslať na aktívny terminál</em>. Odstraňuje to \"počkaj, aká to bola vlajka\" kruhový výlet do samostatnej karty prehliadača.",
     "modalAlt": "ProxMenux Monitor Vyhľadávanie Príkazy modalu Fuzzy vyhľadávanie pre príkazy Linux a Proxmox poháňané cheat.sh, zobrazuje niekoľko príkladov použitia ls",
-    "modalCaption": "Vyhľadávanie Príkazy modálne dotaz <code>ls</code> V pravom dolnom rohu je uvedený zdroj údajov (<em>Powered by cheat.sh</em>).",
+    "modalCaption": "Modálny dotaz na príkazy vyhľadávania <code>ls</code> — každý výsledok zobrazuje príkaz, jeho popis a malú šípku „odoslať“, ktorá ho prenesie na aktívny terminál. Pravý dolný roh označuje zdroj údajov (<em>Používa technológiu cheat.sh</em>).",
     "aboutLabel": "O cheat.sh:",
     "aboutBody": "je komunitne zameraný, open-source jednotný cheatsheet, ktorý zlučuje krátke, praktické príklady použitia pre stovky príkazov Linux, sysadmin nástroje a programovacie jazyky. Pôvodne navrhnutý tak, aby sa pýtal na terminál s <code>curl cheat.sh/&lt;command&gt;</code>, je tiež dosiahnuteľný z akéhokoľvek prehliadača. ProxMenux Monitor proxies the dotaz server-strana, takže modal stále pracuje pod rovnakým pôvodom ako palubná doska.",
     "headerSource": "Zdroj",
@@ -91,10 +91,10 @@
     "headerWhat": "Čo vidíš",
     "onlineLabel": "(online)",
     "onlineWhen": "Keď má hostiteľ prístup na internet a cheat.sh proxy odpovedá.",
-    "onlineWhat": "Niekoľko príkladov reálneho sveta na príkaz, napísaný s ich popisom na vrchole. Bodka stavu v hlavičke modálneho režimu je <green>0green</green>.",
+    "onlineWhat": "Niekoľko skutočných príkladov na príkaz, napísaných s ich popisom navrchu. Stavová bodka v modálnej hlavičke je <green>zelená</green>.",
     "fallbackLabel": "Miestna záložná možnosť",
     "fallbackWhen": "Keď cheat.sh je nedostupný (offline hostiteľ, obmedzujúci firewall, cheat.sh výpadok).",
-    "fallbackWhat": "Zoznam bežných príkazov Linux + Proxmox. Menší katalóg, ale vždy dostupný. Status bodka je <red>0red</red>.",
+    "fallbackWhat": "Zbalený zoznam bežných príkazov Linux + Proxmox. Menší katalóg, ale vždy dostupný. Stavová bodka je <red>červená</red>.",
     "sendingNote": "<strong>Ako funguje odosielanie</strong>: kliknite na malú šípku \"odoslať\" vedľa výsledku posúva text príkazu ku ktorémukoľvek terminálu, ktorý je momentálne aktívny (zameraná záložka, alebo tá, ktorú ste naposledy klikli v zobrazení mriežky). Režim sa automaticky uzavrie, takže môžete zasiahnuť Enter okamžite."
   },
   "auth": {
@@ -155,7 +155,7 @@
         "tail": "  WebSocket doprava (HTTP via flask-sock verzus HTTPS / WSS cez gevent)."
       },
       {
-        "label": "API referencia",
+        "label": "Referenčná príručka API",
         "href": "/docs/monitor/api",
         "tail": "  /ws/terminal a /ws/script/<sid> WebSocket koncové ukazovatele spolu s ostatnými API."
       },

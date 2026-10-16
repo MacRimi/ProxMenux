@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Čo to je?",
-    "body": "Dialógové menu, ktoré uvádza šesť podporovaných jazykov. Vyberte si jeden, ProxMenux0 ukladá na <code>config.json</code> ako <code>.language</code>, potom re-execs <code>config_menu.sh</code> takže nový jazyk nadobúda účinnosť okamžite."
+    "body": "Dialógové menu so zoznamom šiestich podporovaných jazykov. Vyberte si jeden, ProxMenux ho uloží do <code>config.json</code> ako <code>.language</code>, potom znova spustí <code>config_menu.sh</code>, aby sa nový jazyk okamžite prejavil."
   },
   "warn": {
     "title": "Iba nainštalovať preklad",

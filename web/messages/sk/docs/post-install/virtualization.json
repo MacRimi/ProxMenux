@@ -45,7 +45,7 @@
       "Chcete prejsť GPU na Windows hranie VM alebo macOS VM.",
       "Máte vyhradenú 10G NIC pre firewall / router VM (OPNsense, pfSense).",
       "Chcete prejsť HBA priamo na TrueNAS\"Unraid\" VM namiesto ZFS na holých diskoch.",
-      "Plánuješ použiť <em>Koral TPU</em>, zachytiť kartu, alebo SDR dongle v VM."
+      "Plánujete použiť <em>Coral TPU</em>, snímacia karta alebo kľúč SDR v a VM."
     ],
     "whoOutro": "Ak nič z toho neplatí, môžete túto možnosť bezpečne preskočiť. Pre prechod na <strong>LXC</strong> (nie VM), IOMMU je <em>nie</em> vyžaduje sa.",
     "doesTitle": "Čo robí ProxMenux",
@@ -81,7 +81,7 @@
     "rebootBody": "IOMMU, VFIO moduly a čiernu listinu nadobúdajú účinnosť až po reštarte + initramfs regenerácii. Skript spúšťa <code>update-initramfs -u -k all</code> a osviežovač boot-loader, a nastaví \"reboot potrebné\" vlajka, takže Prispôsobiteľné vás na konci.",
     "verifyTitle": "Overenie po reštarte",
     "revertTitle": "Reverzibilné z menu Odinštalovať",
-    "revertBody": "<link>0Uninstall Optimizations</link> vracia všetky zmeny: strips IOMMU tokeny z <code>/etc/kernel/cmdline</code> alebo GRUB, odstraňuje moduly VFIO z <code>/etc/modules</code>, odstraňuje položky na čiernej listine vodiča a obnovuje initramfs. Reštart je potrebný na skutočné uplatnenie reverzie."
+    "revertBody": "<link>Odinštalujte optimalizácie</link> vráti všetky zmeny: odoberie tokeny IOMMU <code>/etc/kernel/cmdline</code> alebo GRUB, odstráni moduly VFIO z <code>/etc/modules</code>, odstráni položky čiernej listiny ovládačov a prebuduje initramfs. Na skutočné použitie reverzie je potrebný reštart."
   },
   "related": {
     "heading": "Súvisiace",

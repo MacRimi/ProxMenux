@@ -63,7 +63,7 @@
     "modeRows": [
       {
         "mode": "Úplná obnova",
-        "detail": "Uplatňuje každú cestu v archíve, ktorá prežíva driftové a cross-kernelové filtre. Tiež spustí balíček inštalovať a komponent auto-reinštalovať priechod. Toto je predvolená a odporúčaná voľba"
+        "detail": "Použije každú cestu v archíve, ktorá prežije filtre drift a cross-kernel. Tiež spustí inštaláciu balíka a povolenie na automatickú reinštaláciu komponentu. Toto je predvolená a odporúčaná voľba – cieľom je reprodukovať zdroj, nie vyberať kúsky."
       },
       {
         "mode": "Vlastné obnovenie",
@@ -85,7 +85,7 @@
       },
       {
         "class": "nebezpečné",
-        "detail": "Cesty, ktoré sú <strong>0NOT použité na bežiacom systéme</strong> Tie sú nastavené v čakajúcej sade a napísané post-boot dispečer po reštarte, keď klaster je hore, ale systém ešte nie je plne v prevádzke. Príklady: <code>/etc/pve</code> (pmxcfs je live FUSE mount; písanie priamo k nemu obíde), <code>/var/lib/pve-cluster</code> (live cluster data), <code>/etc/network</code> (môže prekonfigurovať samotné rozhranie, na ktorom je používateľ pripojený cez SSH a stiahnuť reláciu)."
+        "detail": "Cesty, ktoré sú <strong>NIE JE aplikované na spustený systém</strong> — živý zápis by mohol poškodiť stav alebo prerušiť aktívne pripojenie. Tieto sú usporiadané do čakajúcej sady a zapísané dispečerom po spustení po reštarte, keď je klaster zapnutý, ale systém sa ešte plne nepoužíva. Príklady: <code>/etc/pve</code> (pmxcfs je živé pripojenie FUSE; písanie priamo do neho ho obchádza), <code>/var/lib/pve-cluster</code> (živé klastrové údaje), <code>/etc/network</code> (možno prekonfigurovať samotné rozhranie, ku ktorému je používateľ pripojený SSH a ukončiť reláciu)."
       }
     ]
   },
@@ -185,7 +185,7 @@
   "postbootExample": {
     "heading": "Ako vyzerá post-boot na konzole",
     "body": "Na fyzickej konzole hostiteľa, úspešný dispečer beží končí s <code>[ OK ] Finished proxmenux-apply-cluster-postboot.service</code> riadok. Keď sa táto čiara objaví, zvyčajne vedľa <code>OK</code>s pre <code>multi-user.target</code> a <code>graphical.target</code> Reštaurácia je kompletne dokončená: komponenty reinštalované, boot artefakty regenerované, klaster zmierený.",
-    "imageAlt": "Proxmox fyzická konzola zobrazujúca '[ OK ] Dokončené proxmenux-apply-cluster-postboot.service0 - ProxMenux Aplikujte Cluster Configs (post-boot).\" nasleduje OK pre multi-user.cieľ a grafický.cieľ, s prihlásením hostiteľa rýchle vyššie.",
+    "imageAlt": "Fyzická konzola Proxmox zobrazuje '[ OK ] Dokončené proxmenux-apply-cluster-postboot.service - ProxMenux Použiť konfigurácie klastra (po spustení).' nasleduje OK pre multi-user.target a graphical.target s výzvou na prihlásenie hostiteľa vyššie.",
     "imageCaption": "Fyzická konzola po úspešnom post-boot. Línia \"vyhotovené proxmenux-apply-cluster-postboot.service\" je signálom, že obnovený tok je úplne kompletný"
   },
   "tenMinutes": {
@@ -218,7 +218,7 @@
         "detail": "Stiahne nahranú verziu ovládača, kompiluje moduly DKMS oproti aktuálnemu jadru, použije náplas ProxMenux ak ju mal zdroj. Najdlhšia jediná úloha."
       },
       {
-        "stage": "Preinštalácie koralových/iných komponentov",
+        "stage": "Opätovná inštalácia Coral a ďalších komponentov",
         "time": "3–5 min",
         "detail": "DKMS kompiluje pre Coral, apt install pre intel-gpu-tools, .deb download + install for amdgpu_top."
       },
@@ -251,7 +251,7 @@
       },
       {
         "log": "/var/log/proxmenux/component-<name>-YYYYMMDD_HHMMSS.log",
-        "detail": "Jeden log na komponent inštalátora (nvidia, koral, atď), ktorý bežal v post-boot pass. Užitočné pri reinštalácii konkrétneho komponentu zlyhalo a používateľ potrebuje vlastný výstup nástroja."
+        "detail": "Jeden protokol na inštalačný program komponentu (nvidia, coral, atď.), ktorý bol spustený v prechode po spustení. Užitočné, keď preinštalovanie konkrétneho komponentu zlyhalo a používateľ potrebuje vlastný výstup nástroja."
       },
       {
         "log": "/var/log/proxmenux/restore-datapools-YYYYMMDD_HHMMSS.log",
@@ -265,7 +265,7 @@
       {
         "label": "Obnova medzi kernelmi",
         "href": "/docs/backup-restore/cross-kernel",
-        "tail": " — "
+        "tail": "— filter bezpečnej podmnožiny zohľadňujúci smer a prechod na hydratáciu vyvolaný, keď sa cieľové jadro líši od záložného."
       },
       {
         "label": "Ako to funguje",

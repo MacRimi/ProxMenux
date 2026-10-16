@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Proxmox Zálohovanie na osobné cloudové úložisko ProxMenux Príručky",
-    "description": "Použite rclon na pripojenie osobného cloudu (Google Drive, Mega, Dropbox, OneDrive, atď.) ako adresár na Proxmox VE hostiteľa, zaregistrovať ho ako vzdump datastore, a zálohovať VMs / CTs priamo do cloudu",
+    "description": "Použite rclone na pripojenie osobného cloudu (Disk Google, Mega, Dropbox, OneDrive atď.) ako adresár na hostiteľovi Proxmox VE, zaregistrujte ho ako úložisko údajov vzdump / CT – nezálohujte priamo do cloudu VM skript.",
     "ogTitle": "Proxmox Zálohovanie na osobné cloudové úložisko",
-    "ogDescription": "Pripojte osobný mrak s rclónom na Proxmox VE hostiteľa a zálohovať VM / CT priamo k nemu ako vzdump datastore."
+    "ogDescription": "Pripojte osobný cloud pomocou rclone na hostiteľa Proxmox VE a zálohujte VM / CT priamo do neho ako úložisko údajov vzdump."
   },
   "header": {
     "title": "Proxmox Zálohovanie na osobné cloudové úložisko",
-    "description": "Použite rclon na pripojenie osobného cloudu (Google Drive, Mega, Dropbox, OneDrive, atď.) ako adresár na Proxmox VE hostiteľa, zaregistrovať ho ako vzdump datastore, a zálohovať VMs / CTs priamo do cloudu",
+    "description": "Použite rclone na pripojenie osobného cloudu (Disk Google, Mega, Dropbox, OneDrive atď.) ako adresár na hostiteľovi Proxmox VE, zaregistrujte ho ako úložisko údajov vzdump / CT – nezálohujte priamo do cloudu VM skript.",
     "section": "Návody"
   },
   "intro": {
@@ -16,7 +16,7 @@
     "stepsTitle": "Čo urobíš",
     "steps": [
       "Vytvorte adresár na Proxmox host a zaregistrujte ho ako vzdump-kapable datastore.",
-      "Nainštalujte a nakonfigurujte rclón pre vášho poskytovateľa cloudu.",
+      "Nainštalujte a nakonfigurujte rclone pre svojho poskytovateľa cloudu.",
       "Pripojte priečinok cloud na adresár.",
       "Urobiť montáž prežiť reboots (systemd jednotka"
     ],
@@ -38,14 +38,14 @@
     "image2Alt": "Nastavenie nového úložiska v Proxmoxe",
     "afterConfig": "Kliknite na <strong>Add</strong>:",
     "image3Alt": "Nové skladovanie pridané v Proxmox",
-    "afterAdd": "Adresár je teraz registrovaný ako Proxmox datastore"
+    "afterAdd": "Adresár je teraz zaregistrovaný ako úložisko údajov Proxmox — ale stále je prázdny (zatiaľ v ňom nie je pripojený žiadny cloud)."
   },
   "installRclone": {
-    "heading": "2. Inštalovať a konfigurovať rclón",
+    "heading": "2. Nainštalujte a nakonfigurujte rclone",
     "body": "<rcloneLink>rclone</rcloneLink> je nástroj, ktorý hovorí s poskytovateľmi cloudového úložiska. Nainštalujte ho z úložiska Debianu:",
     "installCode": "apt-get update\napt-get install -y rclone",
-    "newerCalloutTitle": "Ak potrebujete novší rclon",
-    "newerCalloutBody": "Ak potrebujete novší rclon ako to, čo Debian loďí, použite oficiálny inštalátor:",
+    "newerCalloutTitle": "Ak potrebujete novší rclone",
+    "newerCalloutBody": "Ak potrebujete novší rclone ako dodáva Debian, použite oficiálny inštalátor:",
     "newerCode": "curl https://rclone.org/install.sh | bash",
     "tunnelHeading": "2.1 Overenie založené na prehliadači cez tunel SSH",
     "tunnelBody": "Rclone auth flow otvára miestny webový prehliadač. Vzhľadom k tomu, Proxmox hostiteľ nemá desktop, <remoteSetupLink>rclone vzdialené nastavenie postup</remoteSetupLink> trasy auth callback cez SSH tunel späť do prehliadača vášho notebooku.",
@@ -55,9 +55,9 @@
     "runHeading": "2.2 Spustiť rclone config",
     "runBody": "V SSH sedenie ste práve otvorili, spustiť:",
     "runCode": "rclone config",
-    "runAfter": "Postupujte podľa pokynov pre pridanie nového ovládača. Presné odpovede závisia od vášho poskytovateľa <providerDocsLink>Docs pre poskytovateľa rclónu</providerDocsLink> pre Google Drive, Mega, Dropbox, OneDriveatď. Kľúčovým krokom je auth otázka:",
+    "runAfter": "Postupujte podľa pokynov na pridanie nového diaľkového ovládača. Presné odpovede závisia od vášho poskytovateľa – pozrite si <providerDocsLink>rclone dokumenty poskytovateľa</providerDocsLink> pre Disk Google, Mega, Dropbox, OneDrive atď. Kľúčovým krokom je overovacia otázka:",
     "authPrompt": "Use web browser to automatically authenticate rclone with remote?\n * Say Y if the machine running rclone has a web browser you can use\n * Say N if running rclone on a (remote) machine without web browser access\nIf not sure try Y. If Y failed, try N.\ny) Yes\nn) No\ny/n> y",
-    "authAfter": "Odpoveď <strong>0Y</strong> Otvorte ho v prehliadači <strong> vášho notebooku</strong> (tunel SSH trasy to správne), povoľte aplikáciu rclone u svojho poskytovateľa cloudu a konfig dokončí.",
+    "authAfter": "Odpoveď <strong>Y</strong> — rclone vytlačí adresu URL lokálneho hostiteľa. Otvorte ho v <strong>prehliadači svojho notebooku</strong> (tunel SSH ho správne nasmeruje), autorizujte aplikáciu rclone u svojho poskytovateľa cloudu a konfigurácia sa dokončí.",
     "nameRemote": "Keď sa opýtate na meno diaľkového ovládača, použite niečo zodpovedajúce adresáru, ktorý ste vytvorili, napr. <code>gdrive</code>."
   },
   "mount": {

@@ -38,8 +38,8 @@
       "<strong>Najskôr hygiena úložiska.</strong> Zakáže podnik <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, odstráni staré repo súbory ponechané z predchádzajúcich verzií PVE, a napíše čistý <code>proxmox.sources</code> ukazovať na slobodu <em>pve-no-subscription</em> kanál (rovnajúci sa kódovému názvu Debianu hostiteľa: trixie pre PVE 9, knihomoľ pre PVE 8).",
       "<strong>Debian repos prepísaný</strong> s hlavnými / aktualizáciami / bezpečnosť, vrátane <code>non-free-firmware</code>, takže firmware varovanie počas aktualizácie zmizne.",
       "<strong>Spúšťa oficiálnu aktualizáciu.</strong> <code>apt-get update</code> po ktorom nasleduje <code>apt full-upgrade -y</code> (PVE 9) alebo <code>apt dist-upgrade -y</code> (PVE 8), oba spustené non-interaktívne s <code>--force-confdef --force-confold</code> Takže všetky konfiguračné súbory, ktoré ste si prispôsobili, zostanú vaše.",
-      "<strong>0Inštaluje základné balíky</strong>, ak chýbajú: <code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>.",
-      "<strong>0LVM metadata sanity check.</strong> Hľadá VMs s prejazdom disku, ktorý môže mať načmárané zapichnuté fyzické-objemové hlavičky na surové disky; varuje, či je niečo vypnuté (žiadna automatická oprava).",
+      "<strong>Nainštaluje základné balíky</strong>, ak chýbajú: <code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>.",
+      "<strong>LVM kontrola zdravého stavu metadát.</strong> Hľadá virtuálne počítače s prechodom cez disk, ktoré môžu mať napísané staré hlavičky fyzických zväzkov na nespracované disky; upozorní, ak je niečo vypnuté (bez automatickej opravy).",
       "<strong>Potom vyčistí:</strong> <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>, potom vyzve na reštart, ak jadro bolo aktualizované alebo <code>/var/run/reboot-required</code> je prítomný."
     ],
     "shortTitle": "Stručne povedané",
@@ -53,9 +53,9 @@
     "heading": "Automaticky synchronizovať čas",
     "intro": "Detekuje verejné IP servera cez <code>dig myip.opendns.com @resolver1.opendns.com</code>, potom dotaz <code>ipapi.co/'{'ip'}'/timezone</code> hľadať zodpovedajúce IANA časové pásmo, a uplatňuje ho s <code>timedatectl set-timezone</code>. Konečne umožňuje NTP s <code>timedatectl set-ntp true</code>.",
     "depTitle": "Závisí od dvoch externých služieb",
-    "depBody": "Vyhľadávanie sa spolieha na OpenDNS0 a <code>ipapi.co</code> je dosiahnuteľný, a na ich reakcie sú správne. Ak spustíte Proxmox za VPN alebo na VLAN, ktorý sa sťahuje z inej oblasti, auto-zistené časové pásmo môže byť nesprávne. V takom prípade preskočte túto možnosť a nastavte časové pásmo ručne:",
+    "depBody": "Vyhľadávanie závisí od dostupnosti OpenDNS a <code>ipapi.co</code> a od správnosti ich odpovedí. Ak spustíte Proxmox za VPN alebo na VLAN, ktorá vychádza z iného regiónu, automaticky zistené časové pásmo môže byť nesprávne. V takom prípade preskočte túto možnosť a nastavte časové pásmo ručne:",
     "revertTitle": "Reverzibilné z menu Odinštalovať",
-    "revertBody": "<link>0Uninstall Optimizations</link> resetuje časové pásmo na UTC (bezpečné predvolené). To nezakazuje NTP"
+    "revertBody": "<link>Odinštalovanie optimalizácií</link> obnoví časové pásmo na UTC (bezpečné predvolené nastavenie). Nezakáže NTP – vaše hodiny sa neustále synchronizujú, len sú ukotvené na UTC, kým manuálne nenastavíte nové časové pásmo."
   },
   "languages": {
     "heading": "Nesťahovať ďalšie jazyky",

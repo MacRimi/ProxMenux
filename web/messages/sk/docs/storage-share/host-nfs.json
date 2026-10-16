@@ -36,7 +36,7 @@
         "method": "<strong>Ako Proxmox uchovávanie (pvesm)</strong>",
         "mountRich": "<code>/mnt/pve/&lt;storage-id&gt;</code> (manažovaný spoločnosťou Proxmox)",
         "ui": "Áno",
-        "useCase": "VM diskové obrázky, zálohy, ISOs, LXC šablóny"
+        "useCase": "VM obrazy diskov, zálohy, ISO, LXC šablóny — čokoľvek, čo sa musí objaviť v Proxmox UI."
       },
       {
         "method": "<strong>Iba fstab hostiteľa</strong>",
@@ -115,7 +115,7 @@
     "lxcTitle": "Použitie fstab mount z LXC",
     "lxcBody": "Skript vytlačí presný <code>pct set</code> príkaz na konci priviazať cestu do kontajnera, napr. <code>pct set &lt;ctid&gt; -mp0 /mnt/&lt;path&gt;,mp=/mnt/&lt;ct-path&gt;,shared=1,backup=0</code>. Alebo použite <mountLink>LXC Mount Manager</mountLink>, ktorý detekuje montáž fstab automaticky. <strong>Vnútri kontajnera</strong> sa nemenia žiadne zmeny (neprivilegované LXC) na čítanie/napísanie údajov NFS, skript sa spolieha na svetovo zapisovateľnú sémantiku (typické pre synológiu, TrueNAS, OMV predvolené). Ak váš server NFS squashes koreň alebo obmedzuje trvalé hodnoty, pozri riešenie problémov.",
     "noUiTitle": "Fstab mount nie je Proxmox úložisko",
-    "noUiBody": "Hostiteľ fstab mount je neviditeľný pre Proxmox web UI To sa neobjaví v <em>0Datacentrum > Storage</em>, nemôžete si vybrať v VM / CT tvorca, a Proxmox záložné úlohy nemôže zamerať. Je to čisto cesta k hostiteľskému súborovému systému. Ak chcete aj integráciu UI, označte metódy <em>both</em> v zberači."
+    "noUiBody": "Hostiteľský fstab mount je neviditeľný pre web Proxmox UI — podľa návrhu. Nezobrazuje sa v <em>Datacenter > Storage</em>, nemôžete ho vybrať v tvorcovi VM / CT a úlohy zálohovania Proxmox sa naň nemôžu zamerať. Je to čisto cesta hostiteľského súborového systému. Ak chcete aj integráciu UI, označte vo výbere <em>obe</em> metódy."
   },
   "manual": {
     "heading": "Ručný ekvivalent",
@@ -147,7 +147,7 @@
     "inactiveTitle": "Úložisko ukazuje ako neaktívne v systéme Proxmox UI",
     "inactiveBody": "Spustiť <em>Skúška NFS Pripojiteľnosť</em> prvý 99 % času, kedy tento vlajok presný hop, ktorý sa zlomí (DNS, port, pripojte povolenia). Ak je konektivita v poriadku, ale Proxmox stále označuje neaktívne, skontrolujte <code>journalctl -u pvestatd</code> na uzol Proxmox; prerušovaný DNS alebo pomalé NFS mounts on boot môže ponechať úložiská v neaktívnom stave, kým <code>pvesm set &lt;id&gt; --disable 0</code> sa znovu uplatňuje.",
     "lxcNoWriteTitle": "fstab mount práce, ale neprivilegované LXC nemôže písať cez viazanie-mount",
-    "lxcNoWriteBody": "NFS oprávnenia sú vynútené server-strana, nie hostiteľ. Možnosti fstab (<code>uid=</code>, <code>file_mode=</code>), ktoré pracujú pre CIFS do <strong>not</strong> platí pre NFS. Ak vaše neprivilegované LXC (koreň vnútri CT = UID 100000 na hostiteľa, mapovaný na NFS ako \"ostatné\") nemôže zapísať, server NFS je buď squashing koreň alebo má obmedzujúce trvalé hodnoty. Fix na serveri: zmeniť export na <code>no_root_squash</code>, ak veríte hostiteľovi, alebo nastaviť export svet-zapisovateľný (Synology, TrueNAS, OMV všetko odhaliť to v UI). Skript skúša <code>chmod 1777</code> na montáži, ale to uspeje len vtedy, keď to server dovolí.",
+    "lxcNoWriteBody": "Povolenia NFS sú vynucované na strane servera, nie hostiteľom. Možnosti fstab (<code>uid=</code>, <code>file_mode=</code>), ktoré fungujú pre CIFS, <strong>neplatí</strong> na NFS. Ak váš neprivilegovaný LXC (koreň vnútri CT = UID 100000 na hostiteľovi, namapovaný na NFS ako \"ostatné\") nemôže zapisovať, server NFS je buď stlačený root, alebo má obmedzujúce povolenia. Oprava na serveri: zmeňte export na <code>no_root_squash</code>, ak hostiteľovi dôverujete, alebo nastavte export tak, aby bol zapisovateľný do celého sveta (Všetky Synology, TrueNAS, OMV to odhalia v UI). Skript sa pokúsi o pripojenie <code>chmod 1777</code>, ale podarí sa to iba vtedy, keď to server povolí.",
     "fstabBootTitle": "fstab mount nepríde po reštarte",
     "fstabBootBody": "Skript pridáva <code>nofail,_netdev</code>, takže chýbajúci podiel pri štarte neblokuje. Ak sa montáž nikdy neobjaví: potvrďte, že sieť je dosiahnuteľná (<code>ping &lt;server&gt;</code>), skontrolujte <code>journalctl -u remote-fs.target</code> a skontrolujte platnosť položky s <code>mount -fav | grep nfs</code>. <code>mount -a</code> po štarte pripojí všetko, čo v súčasnosti chýba."
   },

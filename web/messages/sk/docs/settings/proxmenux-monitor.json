@@ -73,7 +73,7 @@
     "heading": "Obnoviť heslo pre ProxMenux Monitor",
     "intro": "Cesta obnovy pre operátora, ktorý stratil heslo palubnej dosky (alebo zariadenie 2FA). Voľba sa zobrazí iba vtedy, keď je monitor nainštalovaný na hostiteľa. Výber:",
     "items": [
-      "Pýta sa na potvrdenie s áno/nie dialógom",
+      "Požiada o potvrdenie pomocou dialógového okna áno/nie – akcia je deštruktívna pre prihlasovacie údaje.",
       "Zálohuje existujúci <code>/root/.config/proxmenux-monitor/auth.json</code> na <code>auth.json.bak-&lt;UTC timestamp&gt;</code> (režim <code>0600</code>), takže predchádzajúci stav môže byť obnovený manuálne, ak reset bol chyba.",
       "Zastaví službu <code>proxmenux-monitor</code>, takže on-disk editácia nemôže pretekať s prihlásením počas letu.",
       "Vyčistí pole identity v <code>auth.json</code>0: <code>enabled=false</code>, <code>configured=false</code>, vyprázdni <code>username</code>, <code>password_hash</code>, <code>totp_secret</code> a pole zálohovacích kódov.",
@@ -107,7 +107,7 @@
       {
         "href": "/docs/security/fail2ban",
         "label": "Fail2Ban",
-        "tailRich": " — Väzenie <code>[proxmenux]</code> chráni Monitor na TCP 8008."
+        "tailRich": "— <code>[proxmenux]</code> jail chráni monitor na TCP 8008."
       },
       {
         "href": "/docs/settings",

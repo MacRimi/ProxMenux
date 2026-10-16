@@ -18,11 +18,11 @@
   },
   "targetConfig": {
     "heading": "Nastavenie cieľového adresára",
-    "intro": "Miestnou destináciou je <strong>0single pretrvávajúci cieľový adresár</strong> ProxMenux ukladá operátora na <code>/usr/local/share/proxmenux/local-target.conf</code> a číta ho na každej zálohe. Ak nebol konfigurovaný žiadny cieľ, použije sa predvolený <code>HB_LOCAL_TARGET_DEFAULT = /var/lib/vz/dump</code> (rovnaký adresár Proxmox používa pre svoje vlastné výstupy <code>vzdump</code>). Cieľ je nakonfigurovaný z <em>Konfigurovať záložné destinácie → Miestne destinácie</em>:",
+    "intro": "Miestny cieľ je <strong>jeden trvalý cieľový adresár</strong> — nie zoznam. ProxMenux ukladá voľbu operátora na <code>/usr/local/share/proxmenux/local-target.conf</code> a číta ju pri každej zálohe. Ak nie je nakonfigurovaný žiadny cieľ, použije sa predvolený <code>HB_LOCAL_TARGET_DEFAULT = /var/lib/vz/dump</code> (rovnaký adresár, ktorý Proxmox používa pre svoje vlastné výstupy <code>vzdump</code>). Cieľ sa konfiguruje z <em>Konfigurovať ciele zálohovania → Lokálne ciele</em>:",
     "options": [
-      "<strong>0Use default (<code>/var/lib/vz/dump</code>).</strong> Proxmox lokálne úložisko. Prezentovať na každej inštalácii Proxmox; Archív sedí vedľa výstupy vzdump a je zdvihol záložkou Monitor je automaticky.",
-      "<strong>0Zadajte vlastnú cestu.</strong> Akákoľvek absolútna cesta súborového systému môže byť použitá: montáž NFS, podiel SMB namontovaný cez <code>fstab</code>, dedikovaný súbor ZFS, druhý interný disk. ProxMenux potvrdzuje, že cesta existuje a je adresárom pred pretrvávaním.",
-      "<strong>0Pick a USB disk.</strong> Otvorí USB podmenu (dole), ktorý detekuje vymeniteľné zariadenia a ponúka pripojiť alebo formát jeden."
+      "<strong>Použiť predvolené (<code>/var/lib/vz/dump</code>).</strong> Lokálne úložisko Proxmox. Prítomný pri každej inštalácii Proxmox; archív sa nachádza vedľa výstupov vzdump a automaticky ho preberá karta Zálohy monitora.",
+      "<strong>Zadajte vlastnú cestu.</strong> Môžete použiť akúkoľvek absolútnu cestu súborového systému: pripojenie NFS, zdieľanie SMB pripojené cez <code>fstab</code>, vyhradený súbor údajov ZFS, druhý interný disk. ProxMenux overí, že cesta existuje a je adresárom, kým ju zachová.",
+      "<strong>Vyberte jednotku USB.</strong> Otvorí podponuku USB (nižšie), ktorá detekuje vymeniteľné zariadenia a ponúka pripojenie alebo formátovanie."
     ]
   },
   "usbFlow": {
@@ -50,7 +50,7 @@
   },
   "safetyCheck": {
     "heading": "Bezpečnostná kontrola - cieľ vnútri záložnej cesty",
-    "body": "Pred písaním archívu, <code>_bk_local</code> overí, že cieľový adresár je <strong>not</strong> subpath akéhokoľvek adresára je zálohovaný. Spoločná zbraň by bolo pridanie <code>/root</code> do profilu a vyberanie <code>/root/backups</code> ako cieľ Kontrola rieši obe cesty s <code>readlink -m</code>, porovnáva ich a v konflikte ruší zálohu s dialógom, ktorý označuje protichodnú cestu a uvádza tri spôsoby, ako ju vyriešiť: vyberte cieľ mimo protichodnej cesty, odstráňte vlastný záznam, ktorý obsahuje cieľ, alebo použite Vlastný režim na odkontrolovanie protichodnej cesty pre tento beh."
+    "body": "Pred zapísaním archívu <code>_bk_local</code> overí, že cieľový adresár <strong>nie je</strong> podcestou žiadneho zálohovaného adresára. Bežným krokom by bolo pridanie <code>/root</code> do profilu a výber <code>/root/backups</code> ako cieľ — archív by sa potom zahrnul, buď by vytvoril poškodený archív, alebo by rástol bez väzby, kým sa disk nezaplní. Kontrola vyrieši obe cesty pomocou <code>readlink -m</code>, porovná ich a v prípade konfliktu preruší zálohovanie pomocou dialógového okna, ktoré pomenuje konfliktnú cestu a uvedie tri spôsoby, ako to vyriešiť: vybrať cieľ mimo konfliktnej cesty, odstrániť vlastnú položku, ktorá obsahuje cieľ, alebo použiť vlastný režim na zrušenie začiarknutia konfliktnej cesty pre toto spustenie."
   },
   "archiveFormat": {
     "heading": "Archív formátu a kompresie",

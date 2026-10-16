@@ -12,12 +12,12 @@
   },
   "intro": {
     "title": "Čo táto stránka obsahuje",
-    "body": "Ako prepnúť monitor z HTTP0 na HTTPS v Nastaveniach → Bezpečnostný panel, čo každý zdroj certifikátu v skutočnosti ukazuje na disk, ako sa Proxmox voľba správa, keď hostiteľ má Let's Encrypt cert, a ako nastaviť vlastné cesty, ak budete spravovať certy mimo Proxmox."
+    "body": "Ako prepnúť monitor z HTTP na HTTPS na paneli Nastavenia → Zabezpečenie, na čo každý zdroj certifikátu skutočne ukazuje na disku, ako sa správa možnosť Proxmox, keď má hostiteľ certifikát Let's Encrypt, a ako nastaviť vlastné cesty k certifikátom Proxmox."
   },
   "wheresetting": {
     "heading": "Kde prostredie žije",
-    "body": "Otvorte monitor a prejdite na <strong>0Nastavenia → Bezpečnosť → HTTPS / SSL</strong>. Panel zobrazuje aktuálny stav (HTTP alebo HTTPS) a na hostiteľovi bez HTTPS napriek tomu uvádza zdroje certifikátov, ktoré bol monitor schopný detekovať.",
-    "imageAlt": "Nastavenia → Bezpečnosť → HTTPS0 / SSL panel v monitore zobrazujúci stav HTTPS-off, automaticky detekovaný certifikát Proxmox (predmet, vydavateľ, platnosť) a možnosť Use Custom Certificate",
+    "body": "Otvorte Monitor a prejdite na <strong>Nastavenia → Zabezpečenie → HTTPS / SSL</strong>. Panel zobrazuje aktuálny stav (HTTP alebo HTTPS) a na hostiteľovi bez HTTPS uvádza zdroje certifikátov, ktoré monitor dokázal zistiť.",
+    "imageAlt": "Nastavenia → Zabezpečenie → HTTPS / panel SSL na monitore zobrazujúci vypnutý stav HTTPS, automaticky zistený certifikát Proxmox (predmet, vydavateľ, expirácia) a možnosť Použiť vlastný certifikát",
     "caption": "Nastavenie → Bezpečnosť → HTTPS / SSL panel pred aktiváciou. Monitor rozprestiera samotný cert Proxmox používa a ponúka ho ako jednoklik."
   },
   "twoways": {
@@ -75,7 +75,7 @@
       "title": "Predpoklady",
       "items": [
         "Uzol má skutočný názov DNS (nielen IP) ukazuje na to.",
-        "<strong>0Either</strong> port 80 dosiahnuteľný z verejného internetu (HTTP-01 výzva, najjednoduchšie), <strong>or</strong> a DNS poskytovateľ s API poverenými osobami (DNS-01 výzva",
+        "<strong>Buď</strong> prístav 80 dostupné z verejného internetu (HTTP-01 výzva, najjednoduchšia), <strong>alebo</strong> a DNS poskytovateľ s API poverenia (DNS-01 výzva — funguje za NAT, podporuje zástupné znaky).",
         "E-mailová adresa pre účet ACME."
       ]
     },
@@ -87,7 +87,7 @@
     },
     "step2": {
       "heading": "Krok 2",
-      "http01Rich": "<strong>0HTTP-01</strong> je najjednoduchší: je postavený v, žiadny ďalší plugin. Let's Encrypt sa pripája k <code>http://&lt;your-host&gt;/.well-known/acme-challenge/...</code> na port 80, takže port 80 musí byť otvorený z verejného internetu na váš uzol",
+      "http01Rich": "<strong>HTTP-01</strong> je najjednoduchší: je zabudovaný, bez ďalšieho pluginu. Let's Encrypt sa pripája k <code>http://&lt;your-host&gt;/.well-known/acme-challenge/...</code> na porte 80, takže port 80 musí byť otvorený z verejného internetu do vášho uzla – zvyčajne port forward na vašom smerovači.",
       "dns01Rich": "<strong>DNS-01</strong> Práce bez odhalenia prístavu 80 (dobré pre homelabs za CG-NAT) a je jedinou voľbou pre certifikáty Wildcard. Pridáte DNS plugin raz s vaším poskytovateľom API Token. Cloudflare príklad:",
       "code": "pvenode acme plugin add dns cf \\\n  --api cloudflare \\\n  --data CF_Token=YOUR_CLOUDFLARE_API_TOKEN",
       "outroRich": "Pre ostatných poskytovateľov (Route Gandi, OVH, AWS 53, atď) kontrola <code>pvenode acme plugin add dns --help</code> - lode Proxmox <extlink2>všetky acme.sh DNS Moduly</extlink2>."
@@ -130,7 +130,7 @@
     "code": "# certbot\n/etc/letsencrypt/live/<your-host>/fullchain.pem\n/etc/letsencrypt/live/<your-host>/privkey.pem\n\n# acme.sh\n~/.acme.sh/<your-host>_ecc/fullchain.cer\n~/.acme.sh/<your-host>_ecc/<your-host>.key",
     "symlinkCallout": {
       "title": "Symlink ciele vs. súbory",
-      "bodyRich": "<code>certbot</code> ukladá skutočné súbory v <code>/etc/letsencrypt/archive/</code> a cesta <code>live/</code> je symlink. Nasmerujte monitor na <code>live/</code> symlink, nie súbor <code>archive/</code>"
+      "bodyRich": "<code>certbot</code> ukladá skutočné súbory do <code>/etc/letsencrypt/archive/</code> a cesta <code>live/</code> je symbolický odkaz. Nasmerujte monitor na symbolický odkaz <code>live/</code>, nie na súbor <code>archive/</code> – takto každý cyklus obnovy jednoducho prepíše cieľ symbolického odkazu a monitor si pri ďalšom spustení služby vyberie nový certifikát."
     }
   },
   "afterHttps": {
@@ -149,8 +149,8 @@
     "thenImport": "Potom ho importovať na strane klienta:",
     "items": [
       "<strong>Linux (systémový):</strong> <code>sudo cp pve-root-ca.pem /usr/local/share/ca-certificates/pve-root-ca.crt</code> a následne <code>sudo update-ca-certificates</code>. Prehliadače, ktoré používajú obchod so systémom (Chromium, Edge) ho po reštarte vyzdvihnúť; Firefox používa svoj vlastný obchod a potrebuje manuálny import nižšie.",
-      "<strong>0macOS:</strong> double-click the <code>.pem</code> file, Keychain Access opens → pridať do <em>System</em> Keychain → set <em>Trust → Always Trust</em>.",
-      "<strong>0Windows:</strong> kliknite na súbor → <em>Install Certificate</em> → umiestnite ho do <em>Dôverné koreňové certifikačné autority</em>.",
+      "<strong>macOS:</strong> dvakrát kliknite na <code>.pem</code> súbor, otvorí sa Keychain Access → pridajte ho do <em>Systém</em> kľúčenka → sada <em>Dôveruj → Vždy dôveruj</em>.",
+      "<strong>Windows:</strong> kliknite pravým tlačidlom myši na súbor → <em>Inštalovať certifikát</em> → umiestnite ho do <em>Dôveryhodné koreňové certifikačné autority</em>.",
       "<strong>Firefox (akýkoľvek OS):</strong> <em>Nastavenie → Súkromie &amp; Bezpečnosť → Certifikáty → Zobraziť certifikáty → Úrady → Import</em>, tick <em>Dôverovať tejto CA identifikovať webové stránky</em>."
     ],
     "standalone": {
@@ -160,7 +160,7 @@
   },
   "disable": {
     "heading": "Zastavenie HTTPS",
-    "bodyRich": "Kliknite na <strong>0Disable HTTPS</strong> v rovnakom paneli. Služba Monitor reštartuje späť na plain HTTP Neexistuje žiadny samostatný odinštalovať krok; koncertné súbory samotné nie sú dotknuté.",
+    "bodyRich": "Kliknite na <strong>Zakázať HTTPS</strong> na rovnakom paneli. Služba Monitor sa reštartuje späť na obyčajnom HTTP — užitočné, ak sa súbor vlastného certifikátu stane nečitateľným a služba sa už neobnoví. Neexistuje žiadny samostatný krok odinštalovania; samotné cert súbory sa nedotknú.",
     "stateCallout": {
       "title": "Kde štát žije",
       "bodyRich": "<code>/etc/proxmenux/ssl_config.json</code> ukladá aktívne cert chodníky a zdroj (<code>none</code>, <code>proxmox</code>, <code>custom</code>). Vymazanie súboru je ekvivalentné vymazaniu HTTPS V ďalšom štarte Monitor padá späť do HTTP."

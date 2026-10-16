@@ -27,7 +27,7 @@
             "rows": [
               [
                 "Stav",
-                "A <strong>0Watchdog</strong> prepínač pod Spustiť pri štarte: aplikácia sa znovu spustí, keď sa zastaví sama"
+                "Prepínač <strong>Watchdog</strong> pod Start at boot: aplikácia sa znova spustí, keď sa sama zastaví"
               ],
               [
                 "Aplikácie",
@@ -66,7 +66,7 @@
               {
                 "icon": "archive",
                 "title": "Obraz",
-                "body": "Dátum vytvorenia a trávenia nainštalovaného obrazu. O aktualizácii sa rozhoduje tu: nainštalovaný trávenie sa porovnáva s tým, ktorý register dnes zverejňuje pre rovnaký tag."
+                "body": "Dátum zostavenia a digest nainštalovaného obrazu. O aktualizácii sa rozhoduje tu: nainštalovaný digest sa porovná s tým, ktorý register dnes publikuje pre rovnakú značku."
               }
             ]
           }
@@ -74,8 +74,8 @@
         {
           "list": {
             "items": [
-              "Keď register zverejní novú digesciu, karta zobrazí <strong>0Nový obrázok</strong> s jeho dátumom a digesciou, aj keď sa verzia aplikácie vo vnútri nezmenila: prestavba na aktualizovanom základe je aktualizácia.",
-              "Keď sa digestory zhodujú, karta číta <strong>0Version</strong>.",
+              "Keď register zverejní nový digest, na karte sa zobrazí <strong>Nový obrázok</strong> s jeho dátumom a digest, aj keď sa verzia aplikácie vo vnútri nezmenila: prestavba na aktualizovanej báze je aktualizáciou.",
+              "Keď sa digests zhoduje, na karte sa zobrazí <strong>Verzia</strong>.",
               "Karta odkazuje na úložisko obrazu: jeho projekt GitHub alebo jeho stránku Docker Hub pre oficiálny obraz.",
               "Prístupové spojenie používa LAN adresu kontajnera, aj pre hlavného člena viackontajnerovej aplikácie, ktorá má druhú adresu vo svojej súkromnej sieti.",
               "Tlačidlo <strong>Obnoviť údaje</strong> číta záznam a register znova. Možnosti vyhľadávania prihlášok alebo registrácie iného nie sú ponúkané: kontajner má presne uplatnenie svojho záznamu."
@@ -90,7 +90,7 @@
           }
         },
         {
-          "p": "Kontrola beží raz denne s kontrolou aktualizácie monitora, a <strong>0Obnoviť dáta</strong> beží naraz. Nový obrázok sa zasiela ako upozornenie prostredníctvom kanálov nakonfigurovaných v <notificationsLink>Notifikáciách</notificationsLink>. Aktualizácia sa aplikuje z karty Aktualizácie."
+          "p": "Kontrola prebieha raz denne s kontrolami aktualizácií monitora a <strong>Obnoviť údaje</strong> ich spustí naraz. Nový obrázok sa odošle ako upozornenie prostredníctvom kanálov nakonfigurovaných v <notificationsLink>Upozornenia</notificationsLink>. Aktualizácia sa aplikuje na karte Aktualizácie."
         }
       ]
     },
@@ -158,10 +158,10 @@
             "items": [
               "Výstup je uložený na hostiteľa v <code>/var/log/proxmenux/oci/VMID.console.log</code> (režim 0600), od prvého začiatku a cez reštarty, takže to môže byť čítanie s kontajnerom zastavil.",
               "Súbor sa otáča na 10 MB, pričom sa uchovávajú tri komprimované kópie (<code>/etc/logrotate.d/proxmenux-oci</code>).",
-              "Každý štart nádrže je označený vo výstupe. Karta zobrazuje výstup od posledného predvoleného začiatku; <strong>0Full history</strong> tiež zobrazuje predchádzajúce.",
+              "Každý začiatok kontajnera je označený vo výstupe. Karta štandardne zobrazuje výstup od posledného spustenia; <strong>Úplná história</strong> zobrazuje aj predchádzajúce.",
               "Po odstránení aplikácie sa odstráni jeho výstup s ním.",
               "Zobrazujú sa posledné línie 100, 500 alebo 1000. Kým kontajner beží, nové línie sú sledované naživo; rolovanie sa zastaví nasledovať, a <strong>Follow</strong> pokračuje.",
-              "Filter zobrazí iba riadky, ktoré obsahujú text, a <strong>0Download</strong> uloží načítané riadky.",
+              "Filter zobrazí iba riadky, ktoré obsahujú text a <strong>Stiahnuť</strong> uloží načítané riadky.",
               "Farebné kódy sa odstránia a čiara, na ktorej sa v konečnom stave zobrazí zmena pruhu.",
               "Karta číta súbor na každom otvorenom; nie je cached."
             ]

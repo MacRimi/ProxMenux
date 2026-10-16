@@ -79,18 +79,18 @@
     },
     {
       "tool": "Log2RAM (prispôsobené pre SSD, automatické)",
-      "what": "Znižuje opotrebenie SSD/NVMe pohybom /var/log na tmpfs ramdisk s pravidelnou synchronizáciou disku. Inštalované z projektu proti prúdu, keď je koreňový disk SSD alebo NVMe. Rozmery ramdisk podľa hostiteľa RAM (128M / 256M / 512M), harmonogramy periodickej synchronizácie a auto-synchrónny strážca, ktorý vysáva na 80% a truncuje horúce protokoly na 92% pred písaním. Upravuje obmedzenia v denníku tak, aby sa zmestili do ramdisku. Úplné informácie o <link>Log2RAM</link>.",
-      "category": "Skladovanie",
+      "what": "Znižuje SSD /NVMe opotrebenie pohybom /var/log na ramdisk tmpfs s periodickou synchronizáciou disku. Inštaluje sa z upstream projektu, keď je koreňový disk SSD alebo NVMe. Veľkosť ramdisku podľa hostiteľa RAM (128M / 256M / 512M), naplánuje pravidelnú synchronizáciu a ochranu automatickej synchronizácie, ktorá vysáva pri 80% a skráti horúce protokoly na 92% pred písaním. Upravuje journald limity, aby sa zmestili na ramdisk. Úplné podrobnosti na <link>Log2RAM</link>.",
+      "category": "Úložisko",
       "categorySlug": "skladovanie"
     },
     {
       "tool": "Autotrim ZFS (iba SSD)",
-      "what": "Umožňuje zpool autotrim=on na každom ZFS bazéne, ktorého vdevs sú všetky SSD/NVMe s podporou TRIM (kontroluje /sys/block/[dev]/queue/rotational a discard_granularity). Bazény podporované HDD sú automaticky preskočené. Iba bazény skutočne zmenené ProxMenux sú zaznamenané pre odinštalovať",
-      "category": "Skladovanie",
+      "what": "Povolí zpool autotrim=on pri každom ZFS pool ktorých vdevs sú všetky SSD/NVMe s podporou TRIM (kontroly /sys/block/[dev]/queue/rotational a discard_granularity). Pools zálohované pevnými diskami sa automaticky preskočia. Iba pools vlastne zmenil ProxMenux sú zaznamenané na odinštalovanie — pools Autotrim, ktorý ste nastavili manuálne, zostanú na pokoji.",
+      "category": "Úložisko",
       "categorySlug": "skladovanie"
     },
     {
-      "tool": "Veľkostné limity pre žurnalistiku",
+      "tool": "Journald limity veľkosti",
       "what": "Forces perzistent storage, caps SystemMaxUse=64M / RuntimeMaxUse=60M, set compression, info-level loging (požadované pre Monitor). Automaticky preskočené, keď je log2RAM aktívny (upraví si vlastné nastavenie).",
       "category": "Systém",
       "categorySlug": "systém"
@@ -109,14 +109,14 @@
     }
   ],
   "hardwareTitle": "Štandardné hardvérové zariadenia",
-  "hardwareBody": "Skript pred použitím nastavenia číta hostiteľský hardvér. Log2RAM je nainštalovaný iba na SSD / NVMe koreňových diskoch štandardne (vyvoláva, ak detekcia hovorí inak). Veľkosť log2RAM ramdisku je vybraná z celkového RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). Limity denníka sa zhodujú s veľkosťou ramdiska, keď je log2RAM aktívny, aby sa zabránilo jeho naplneniu.",
+  "hardwareBody": "Skript načíta hostiteľský hardvér pred použitím nastavení. Log2RAM je nainštalovaný iba na SSD / NVMe štandardne koreňové disky (ak detekcia hovorí inak, zobrazí sa výzva). Veľkosť ramdisku Log2RAM sa vyberie z celkového počtu RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). The journald limity sú prispôsobené veľkosti ramdisku, keď je Log2RAM aktívny, aby sa predišlo jeho zaplneniu.",
   "upgrade": {
     "heading": "Aktualizovať systém",
     "intro": "Prvým krokom automatizovaného balíka je aktualizácia systému Proxmox. Proxmox vlastné upgrade návod pre bežiaci hostiteľ (v rámci rovnakej hlavnej verzie) je spustiť:",
-    "after": "Ten jediný riadok je oficiálnym príkazom na akékoľvek uvoľnenie Proxmoxu. Automatizovaný skript beží <strong>0exactly</strong>, ktorý, a zabalí ho s repo hygienou a post-upgrade upgrade upgrade oficiálna príručka upgrade tiež odporúča rovnaké kroky ako samostatné <link>Proxmox System Update</link> nástroj:",
+    "after": "Tento jeden riadok je oficiálnym príkazom na akomkoľvek aktuálnom vydaní Proxmox. Automatizovaný skript spustí <strong>presne</strong> a zabalí ho do hygieny repo a čistenia po aktualizácii, ktorú odporúča aj oficiálna príručka aktualizácie – rovnaké kroky ako pri samostatnom nástroji <link>Proxmox System Update</link>:",
     "items": [
       "Zakáže podnik <code>pve-enterprise.sources</code>0 / <code>ceph.sources</code>, odstráni pôvodné repo súbory, zapíše čistý zdroj bez predplatného pre meno hostiteľa.",
-      "Spustí aktualizáciu non-interaktívne s <code>DEBIAN_FRONTEND=noninteractive</code>0 a <code>--force-confdef --force-confold</code>",
+      "Spustí inováciu neinteraktívne pomocou <code>DEBIAN_FRONTEND=noninteractive</code> a <code>--force-confdef --force-confold</code> – konfiguračné súbory, ktoré ste si prispôsobili, zostanú vaše, aj keď ich upstream zmení.",
       "Inštaluje základné Proxmox balíčky, ak chýba (<code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>).",
       "LVM metadata sanity check, <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code> a reštart len v prípade, že jadro sa skutočne zmenilo."
     ],
@@ -126,15 +126,15 @@
   "endResult": {
     "heading": "Očakávaný konečný výsledok",
     "body": "Keď skript skončí, uvidíte správu o úspechu s per-step výstupom a reštartom (niektoré nastavenia jadra vyžadujú reštart, aby došlo k efektu). Znižovanie reštartu je bezpečné; nastavenia platia pri ďalšom štarte.",
-    "imageAlt": "Automatizovaný post-inštalačný skript"
+    "imageAlt": "Automatický skript po inštalácii – konečný výstup terminálu zobrazujúci každú úspešne aplikovanú optimalizáciu"
   },
   "notDoes": {
     "heading": "Čo tento skript nerobí",
     "items": [
       "Timezone auto-detection (prispôsobiteľné, ak chcete).",
-      "Zakázať portmapper / rpcbind (pozri <secLink>0Security</secLink>).",
-      "Povoliť IOMMU / VFIO (pozri <virtLink>0Virtualizácia</virtLink>).",
-      "Inštalovať Fastfetch / Figurine0 / Ceph repo / HA / AMD CPU opravy (pozri <optLink>voliteľné</optLink>).",
+      "Zakázať portmapper / rpcbind (pozri <secLink>Zabezpečenie</secLink>).",
+      "Povoliť IOMMU / VFIO (pozri <virtLink>Virtualizácia</virtLink>).",
+      "Nainštalujte opravy Fastfetch / Figurine / Ceph repo / HA / AMD CPU (pozrite si <optLink>Voliteľné</optLink>).",
       "Inštalujte prasa alebo naneste ZFS ARC ladenie (pozri <perfLink>Performance</perfLink> / <storLink>Storage</storLink>)."
     ]
   },

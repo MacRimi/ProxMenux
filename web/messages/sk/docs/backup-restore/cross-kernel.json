@@ -33,7 +33,7 @@
       {
         "direction": "bk_older",
         "condition": "Zálohovacie jadro je OLDER ako cieľová (napríklad: záloha bola vykonaná na jadre 6.17 a cieľová beží jadro 7.0).",
-        "behavior": "Bezpečnostný subsetový filter a štvorfázová hydratácia sú aktivované. Obnovenie pokračuje"
+        "behavior": "Filter bezpečnej podskupiny a štvorfázová hydratácia nižšie sú aktivované. Obnova pokračuje – cieľ reprodukuje zdroj, ale súbory kritické pri zavádzaní sa neskopírujú doslovne."
       }
     ]
   },
@@ -58,7 +58,7 @@
       {
         "category": "@ info: tooltip",
         "paths": "<code>/etc/fstab</code>, <code>/etc/multipath</code>, <code>/etc/iscsi</code>, <code>/etc/udev/rules.d</code>, <code>/etc/zfs</code>",
-        "reason": "UUID, ktoré nemusia existovať na tejto inštalácii, multipaty ovládače, ktoré sa menia medzi jadrami, iSCSI parametre, ktoré sa vyvíjajú, udev pravidlá, ktoré môžu zaviazať k neexistujúcim subsystémami, ZFS stav (<code>zpool.cache</code> + <code>hostid</code>), ktoré môžu zamknúť bazén ako cudzie."
+        "reason": "UUID, ktoré v tejto inštalácii nemusia existovať, viaccestné ovládače, ktoré sa menia medzi jadrami, iSCSI parametre, ktoré sa vyvíjajú, pravidlá udev, ktoré sa môžu viazať na neexistujúce podsystémy, ZFS štát (<code>zpool.cache</code> + <code>hostid</code>), ktoré môžu uzamknúť pool ako cudzie."
       },
       {
         "category": "APT zdroje",
@@ -75,7 +75,7 @@
   },
   "hydration": {
     "heading": "Kernel-agnostická hydratácia",
-    "intro": "Safe-subset filter sám by opustil cieľ bez ladenia užívateľ mal vnútri týchto boot-kritické súbory: IOMMU cmdline pre GPU0 passmough, VFIO ID zariadenia, vlastné <code>GRUB_TIMEOUT</code>, nvidia blacklists. Hydratácia prešla znova agnosticky tieto bity jadra. Štyri fázy bežia, keď je cieľové jadro novšie ako záložné, každá prídavná látka (nikdy neprepíše hodnotu, ktorú cieľ už nesie) a je impotentná (utekanie dvakrát je bezop).",
+    "intro": "Samotný filter bezpečnej podmnožiny by opustil cieľ bez ladenia, ktoré mal používateľ vo vnútri týchto kritických súborov: IOMMU cmdline pre GPU priechod, VFIO ID zariadení, vlastné <code>GRUB_TIMEOUT</code>, nvidia čierne listiny. Hydratačný priechod znovu aplikuje tieto bity jadra agnosticky. Keď je cieľové jadro novšie ako záložné jadro, spustia sa štyri fázy, každá aditívna (nikdy neprepíše hodnotu, ktorú už cieľ obsahuje) a idempotentná (dvakrát spustenie je nefunkčné).",
     "phaseRows": [
       {
         "phase": "1a GRUB cesta",
@@ -105,7 +105,7 @@
   },
   "flowDiagram": {
     "heading": "Tok, keď je cieľové jadro novšie ako záložné",
-    "intro": "Kroky pridané, keď je cieľové jadro novšie sedí vnútri normálne obnoviť tok. Všetko ostatné",
+    "intro": "Kroky pridané, keď je cieľové jadro novšie, sú v rámci normálneho toku obnovy. Všetko ostatné – horúce použitie, čakajúca príprava, inštalácia balíka, dispečer po spustení – beží identicky ako pri obnove rovnakého jadra.",
     "diagram": "  ┌────────────────────────────────────────────────────────────┐\n  │ hb_compat_check                                             │\n  │   HB_COMPAT_KERNEL_DIRECTION = bk_older                     │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ Add 16 boot-critical paths to RS_SKIP_PATHS                 │\n  │   /etc/default/grub, /etc/kernel, /etc/modules-load.d, ...  │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ _rs_apply_bk_older_hydration \"plan\"                         │\n  │   Compute what would be merged                              │\n  │   Populate RS_HYDRATION_SUMMARY (green block)               │\n  │   No writes                                                 │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ Confirmation dialog                                         │\n  │   Amber: paths skipped by safe-subset filter                │\n  │   Green: tokens/files reapplied by hydration                │\n  │   User accepts or cancels                                   │\n  └───────────────────────────┬────────────────────────────────┘\n                              │ (accepted)\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ _rs_apply_bk_older_hydration \"commit\"                       │\n  │   Phase 1a/1b: merge cmdline tokens + GRUB keys             │\n  │   Phase 2: append modules to /etc/modules                   │\n  │   Phase 3: copy whitelisted vfio/nvidia files               │\n  │   Set HB_HYDRATION_APPLIED=1                                │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ Rest of the restore runs normally                           │\n  │   _rs_apply hot (skips RS_SKIP_PATHS)                       │\n  │   _rs_prepare_pending_restore (writes plan.env with         │\n  │     HB_HYDRATION_APPLIED=1)                                 │\n  │   packages.manual.list install                              │\n  │   Reboot                                                    │\n  │   apply_pending_restore.sh (forces NEEDS_INITRAMFS=1,       │\n  │     NEEDS_GRUB=1 because of the hydration flag)             │\n  │   apply_cluster_postboot.sh                                 │\n  │     update-initramfs -u -k all                              │\n  │     update-grub / proxmox-boot-tool refresh                 │\n  │     component --auto-reinstall                              │\n  └────────────────────────────────────────────────────────────┘"
   },
   "concreteExamples": {

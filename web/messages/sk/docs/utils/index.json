@@ -99,7 +99,7 @@
       },
       {
         "title": "Importovať VM z OVA / OVF",
-        "description": "Prineste VMware / VirtualBox0 / ProxMenux export späť do Proxmoxu. Auto-extracts OVA, parses OVF metadata, vytvára VM a importuje každý disk ako úložný formát.",
+        "description": "Preneste export VMware / VirtualBox / ProxMenux späť do Proxmoxu. Automaticky extrahuje OVA, analyzuje metadáta OVF, vytvorí VM a importuje každý disk ako natívny formát úložiska.",
         "href": "/docs/utils/import-vm"
       }
     ]

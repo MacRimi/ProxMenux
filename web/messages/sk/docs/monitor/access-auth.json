@@ -1,20 +1,20 @@
 {
   "meta": {
     "title": "Proxmox Dashboard Authentication 2FA, API Tokeny, Profil užívateľov, Reverse Proxy ProxMenux Monitor",
-    "description": "Dosiahnutie a zabezpečenie ProxMenux Monitor: first-start protection-your-dashboard flow, autentifikácia hesla so zobrazovacím menom + avatar, profilová stránka, TOTP 2FA zápis, s dlhou životnosťou API žetóny pre scenáre, HTTPS konfigurácia, spätný-proxy útržky pre Nginx, Caddy a Traefik, audit log a voliteľné Fail2Ban Väzenie.",
+    "description": "Dosiahnite a zabezpečte ProxMenux Monitor: postup ochrany vášho ovládacieho panela pri prvom spustení, overenie hesla so zobrazovaným menom + avatar, stránka profilu, TOTP 2FA zápis, dlhoveký API tokeny pre skripty, HTTPS konfigurácia, úryvky reverzného proxy pre Nginx, Caddy a Traefik, protokol auditu a voliteľné Fail2Ban jail.",
     "ogTitle": "Proxmox Dashboard Authentication 2FA, API Tokeny, reverzné proxy",
-    "ogDescription": "Bezpečné ProxMenux Monitor s heslom + TOTP 2FA, s dlhou životnosťou API žetóny, HTTPS, reverzné-proxy útržky a voliteľné Fail2Ban väzenia.",
+    "ogDescription": "Zabezpečte ProxMenux Monitor pomocou hesla + TOTP 2FA, tokenov API s dlhou životnosťou, HTTPS, útržkov reverzného proxy a voliteľného Fail2Ban jail.",
     "twitterTitle": "Proxmox Dashboard Overenie ProxMenux Monitor",
     "twitterDescription": "Heslo + TOTP 2FA, API žetóny, HTTPS, Nginx/Caddy/Traefik útržky a audit log."
   },
   "header": {
     "title": "Prístup a overenie",
-    "description": "Dosiahnutie palubnej dosky, prvý štart bezpečnostného toku, a každá vrstva, ktorá môže sedieť medzi útočníkom a hostiteľom: heslo + TOTP, JWT sedenia, dlho-žil API žetóny, HTTPS, reverzné proxy, Bezpečná brána, a voliteľný fail2Ban väzenia.",
+    "description": "Dosiahnutie hlavného panela, bezpečnostného toku prvého spustenia a každej vrstvy, ktorá môže sedieť medzi útočníkom a hostiteľom: heslo + TOTP, relácie JWT, dlhotrvajúce API žetóny, HTTPS, reverzné proxy, Secure Gateway a voliteľné Fail2Ban jail.",
     "section": "ProxMenux Monitor"
   },
   "intro": {
     "title": "Overenie je opt-in",
-    "body": "Pri prvom spustení prístrojová doska ukazuje jeden dialóg <em>\"Chrániť svoj Dashboard?\"</em> S dvoma gombíkmi: <strong>Áno, nastavenie hesla</strong> a <strong>Nie, pokračujte bez ochrany</strong>. Nepovedal žiadne listy každý API 0, 017 0, 017 TCP 8008 Je to fajn pre izolovaný labák LAN, nebezpečný pre čokoľvek iné. Autentifikácia dvoch faktov (2FA) je <strong>nie</strong> časť tejto pôvodnej voľby; je nakonfigurovaná neskôr z <strong>Bezpečnostná karta</strong> keď je nastavené heslo."
+    "body": "Pri prvom spustení panel zobrazí dialóg <em>„Chrániť panel?“</em> s tlačidlami <strong>Áno, nastaviť heslo</strong> a <strong>Nie, pokračovať bez ochrany</strong>. Druhá možnosť ponechá koncové body API otvorené na TCP 8008: v izolovanej laboratórnej LAN to môže byť prijateľné, inde je to nebezpečné. Dvojfaktorové overenie (2FA) <strong>nie je</strong> súčasťou tejto úvodnej voľby; nastavuje sa až po vytvorení hesla na <strong>karte Zabezpečenie</strong>."
   },
   "reaching": {
     "heading": "Dosiahnutie prístrojovej dosky",
@@ -42,9 +42,9 @@
       }
     ],
     "twofaCalloutTitle": "2FA je konfigurovaný neskôr, nie tu",
-    "twofaCalloutBody": "Prvý úvodný dialóg pokrýva len rozhodnutie o hesle. <strong>0Two-Factor Authentication (TOTP)</strong> je nastavený neskôr z <strong>the Security tab</strong> akonáhle ste prihlásení heslom. Plný TOTP prechádza je ďalej dole touto stránkou.",
+    "twofaCalloutBody": "Dialóg pri prvom spustení pokrýva iba rozhodnutie o hesle. <strong>Dvojfaktorové overenie (TOTP)</strong> sa nastaví neskôr z <strong>karty Zabezpečenie</strong>, keď sa prihlásite pomocou hesla. Úplný návod TOTP je nižšie na tejto stránke.",
     "createTitle": "Vytvorenie prvého užívateľa",
-    "createIntro": "Kliknutím na <em>0Áno, nastavenie Heslo</em> otvorí jediný formulár, ktorý vytvorí účet a prípadne zašíva profil užívateľa v jednom ísť, takže avatar sa objaví v hlavičke hneď po uložení. Polia sú:",
+    "createIntro": "Kliknutím na <em>Áno, nastaviť heslo</em> sa otvorí jeden formulár, ktorý vytvorí účet a voliteľne jedným ťahom nasadí profil používateľa, aby sa avatar objavil v hlavičke hneď po uložení. Polia sú:",
     "headerField": "Pole",
     "headerRequired": "Požadované",
     "headerNotes": "Poznámky",
@@ -67,15 +67,15 @@
       {
         "field": "Obrázok Avatar",
         "required": "Nie",
-        "notes": "PNG, JPEG, WebP0 alebo GIF až do 2 MB. Vydal ako kruh v hlavičke a na profilovej stránke. Keď je záhlavie prázdne, na farebnom kruhu sa zobrazí prvé písmeno názvu zobrazenia (alebo užívateľského mena). Môže byť nahrané, nahradené alebo odstránené neskôr z profilovej stránky."
+        "notes": "PNG, JPEG, WebP alebo GIF až do 2 MB. Vykreslený ako kruh v hlavičke a na stránke profilu. Keď je prázdna, hlavička zobrazuje prvé písmeno zobrazovaného mena (alebo používateľského mena) vo farebnom kruhu. Dá sa nahrať, nahradiť alebo odstrániť neskôr zo stránky profilu."
       }
     ],
     "createImageAlt": "Vytvoriť užívateľský formulár s povinným užívateľským menom + Heslom a voliteľným názvom displeja + Avatar nahrať sekciu",
-    "createImageCaption": "Prvý spúšťací formulár pre tvorcov. Názov displeja a avatar sú voliteľné",
+    "createImageCaption": "Formulár na vytvorenie používateľa pri prvom spustení. Zobrazovaný názov a avatar sú voliteľné – ak ich ponecháte prázdne, vytvorí sa účet a vráti sa späť na jednopísmenový kruh v hlavičke.",
     "saveCalloutTitle": "Jedna záchrana, tri hovory API pod kapotou",
     "saveCalloutBody": "Formulár predkladá <code>POST /api/auth/setup</code> prvý (užívateľské meno + heslo). Pri úspechu využíva čerstvo vydaný JWT na sledovanie <code>PUT /api/auth/profile</code> (zobraziť názov) a <code>POST /api/auth/profile/avatar</code> (avatar bajtes), ak boli tieto polia vyplnené. Zlyhania v profile hovory sú non- fauted",
     "avatarTitle": "Avatar menu a profil stránky",
-    "avatarBody1": "Akonáhle je autentifikácia nakonfigurovaná, avatar kruh sa objaví v pravom hornom rohu každej palubnej dosky vedľa témy prepnúť. Kliknutím sa otvorí malé dropdown s skratkami na profilovú stránku a záložku Bezpečnosť, plus <strong>0Sign out</strong> akcia",
+    "avatarBody1": "Po nakonfigurovaní autentifikácie sa v pravom hornom rohu každej stránky informačného panela vedľa prepínača témy zobrazí kruh avatara. Kliknutím naň sa otvorí malá rozbaľovacia ponuka so skratkami na stránku profilu a kartu Zabezpečenie, plus akcia <strong>Odhlásiť sa</strong> – reláciu možno zatvoriť odtiaľto alebo na karte Zabezpečenie, podľa toho, čo je bližšie k vašej polohe.",
     "avatarBody2": "Samotná profilová stránka je malá karta s náhľadom avataru, užívateľským menom (iba pre čítanie) a menom zobrazenia s inline editáciou. Avatar uploady, náhrady a odstránenie sú atómové Rovnaký súbor koncových ukazovateľov zdokumentovaný v ďalšej časti sa používa vo forme \"create-user\" aj v profilovej stránke.",
     "profileImageAlt": "Stránka profilu s avatarovým náhľadom kružnice, Nahrať / Nahradiť / Odstrániť tlačidlá, prečítať iba užívateľské meno a editovateľné pole zobrazenia",
     "profileImageCaption": "Špecializovaná profilová stránka. Užívateľské meno je iba na čítanie; zobrazenie názvu a avataru je možné upraviť odtiaľto bez toho, aby ste sa dotkli karty Bezpečnosť.",
@@ -104,14 +104,14 @@
       }
     ],
     "reversibleTitle": "Pokračovanie bez ochrany je reverzibilný",
-    "reversibleBody": "Keď kliknete na <em>0Nie, Pokračovať bez ochrany</em>, uvítací dialóg sa už nikdy neobjaví. Môžete znovu povoliť autentifikáciu z <strong>the Security tab</strong> vnútri palubnej dosky, alebo editáciou <code>/root/.config/proxmenux-monitor/auth.json</code> a odstránením <code>declined</code> vlajky, potom reštartuje službu."
+    "reversibleBody": "Po kliknutí na <em>Nie, pokračovať bez ochrany</em> sa už nikdy viac nezobrazí uvítacie dialógové okno. Autentizáciu môžete znova povoliť na <strong>karte Zabezpečenie</strong> na hlavnom paneli alebo úpravou súboru <code>/root/.config/proxmenux-monitor/auth.json</code> a odstránením príznaku <code>declined</code> a reštartovaním služby."
   },
   "password": {
     "heading": "Overenie hesla",
     "intro": "Po nastavení, každý API hovor (okrem niekoľkých verejných cieľov uvedených nižšie) vyžaduje JWT v <code>Authorization: Bearer &lt;token&gt;</code>:",
     "items": [
       "<strong>Session token (login):</strong> 24-hodina platnosti. Vydal <code>POST /api/auth/login</code>.",
-      "<strong>0API token (integrácie):</strong> 365-dňová expirácia. Vydal <code>POST /api/auth/generate-api-token</code>. Samostatne zdokumentované v nasledujúcej časti."
+      "<strong>API token (integrácie):</strong> 365-deň expirácie. Vydané <code>POST /api/auth/generate-api-token</code>. Samostatne zdokumentované v ďalšej časti."
     ],
     "loginImageAlt": "Prihlasovacia obrazovka zobrazená po autentifikácii je nakonfigurovaná",
     "loginImageCaption": "Po nakonfigurovaní autentifikácie začína každá návšteva palubnej dosky tu. S 2FA zapnutý, obrazovka požaduje 6-miestny kód v druhom kroku po prijatí hesla.",
@@ -141,7 +141,7 @@
       },
       {
         "asset": "API token metaúdaje",
-        "algorithm": "SHA-2560 z JWT uložené vedľa <code>signed_with</code> odtlačky prstov <code>jwt_secret</code> použité na mätu",
+        "algorithm": "SHA-256 JWT uloženého spolu s <code>signed_with</code> odtlačkom prsta <code>jwt_secret</code> použitého na jeho razenie – ktorý sa používa na zobrazenie tokenu v UI a na zistenie tajných tokenov, ktorých podpis sa otočil.",
         "where": "<code>auth.json</code> → <code>api_tokens[]</code>"
       },
       {
@@ -250,14 +250,14 @@
     "setupSteps": [
       "<strong>Inštalujte aplikáciu autentifikátora na telefóne</strong> (alebo otvorte správcu hesla). Jedna z aplikácií z tabuľky vyššie. Stačí to urobiť len raz",
       "<strong>Prihláste sa do palubnej dosky</strong> s vaším užívateľským menom a heslom.",
-      "<strong>0Otvorte bezpečnostnú záložku</strong> na palubnej doske a potom kliknite na <strong>Enaable 2FA</strong>. Otvorí sa dialóg s QR kódom, dlhým reťazcom vo formáte Base32 a desiatimi krátkymi kódmi označenými \"zálohovacie kódy.\"",
+      "<strong>Otvorte kartu Zabezpečenie</strong> na bočnom paneli ovládacieho panela a potom kliknite na <strong>Povoliť 2FA</strong>. Otvorí sa dialógové okno s kódom QR, dlhým reťazcom vo formáte Base32 a desiatimi krátkymi kódmi označenými ako „záložné kódy“.",
       "<strong>Pridať položku do aplikácie autentifikátor:</strong>",
       "<strong>Uložiť záložné kódy.</strong> Skopírujte desať kódov niekde v bezpečí, Zaobchádzajte s nimi ako s náhradnými kľúčmi: každý funguje presne raz a dostane vás tam, ak je telefón preč alebo pokazený.",
       "<strong>Potvrdiť zadaním aktuálneho 6-ciferného kódu</strong> z aplikácie do poľa \"Overovací kód\" v dialógu nastavenia a predložiť. Kódy osviežujú každú 30 sekundy, takže ak vyprší, keď píšete, zadajte ďalšiu.",
       "<strong>Hotovo.</strong> 2FA je teraz aktívny. Nabudúce, keď sa prihlásite, palubná doska požiada o heslo prvý; akonáhle je prijatý, že žiada o aktuálnu 6- číselný kód."
     ],
     "setupStep4Sub": [
-      "<em>0Ľahká cesta:</em> v aplikácii, ťuknite na položku <em>Pridať účet</em> → <em>Scan QR kód</em>, nasmerujte kameru na QR obrazovku. Aplikácia automaticky označuje položku (niečo ako <code>ProxMenux Monitor (your-username)</code>) a začína zobrazovať 6-ciferný kód, ktorý osviežuje každý 30 sekúnd.",
+      "<em>Jednoduchá cesta:</em> v aplikácii klepnite na <em>Pridať účet</em> → <em>Naskenujte QR kód</em>, nasmerujte fotoaparát na QR na obrazovke. Aplikácia pomenuje položku automaticky (niečo ako <code>ProxMenux Monitor (your-username)</code>) a začne zobrazovať 6-číselný kód, ktorý sa obnovuje každých 30 sekúnd.",
       "<em>Manuálne opomenutie</em> (ak skenovanie nie je možné, napr. nastavenie na rovnakom telefóne, akým ste otvorili palubnú dosku): ťuknite na položku <em>Pridať účet</em> → <em>Zadajte kľúč nastavenia</em>. Zadajte akékoľvek meno (napr. <em>Proxmox Monitor</em>), vložte reťazec Base32 z dialógu, opustiť <em>Druh</em> ako <em>Časové nastavenie</em>, zachrániť."
     ],
     "testTitle": "Test pred odhlásením",
@@ -265,13 +265,13 @@
     "lostTitle": "Stratený autentifikátor",
     "lostIntro": "Tri únikové prielezy, podľa toho, aké sú rušivé:",
     "lostItems": [
-      "<strong>0Use a backup code.</strong> Na prihlasovacej obrazovke v poli TOTP zadajte jeden z desiatich kódov, ktoré ste uložili v čase nastavenia. Každý funguje raz a potom sa spotrebuje; zostávajúce kódy stále fungujú. Akonáhle ste v, regenerovať 2FA z Nastavenia získať čerstvé desať.",
+      "<strong>Použite záložný kód.</strong> Na prihlasovacej obrazovke zadajte do poľa TOTP jeden z desiatich kódov, ktoré ste si uložili pri nastavovaní. Každá funguje raz a potom sa spotrebuje; zostávajúce kódy stále fungujú. Keď ste v tom, vygenerujte 2FA z Nastavenia a získajte novú desiatku.",
       "<strong>Restore autentifikátor z cloud / záloha.</strong> Ak vaša aplikácia má cloud synchronizáciu (Google, Microsoft, Authy, Apple Passwords cez iCloud Keychain, Ente, 2FAS) nainštalujte ho na nové zariadenie, prihláste sa a položky sa znovu objavia. Ak aplikácia používa zašifrovaný exportný súbor (Agis, Raivo, FreeOTP+), nainštalujte aplikáciu na nové zariadenie a importujte súbor.",
-      "<strong>0Disable 2FA z shellu hostiteľa.</strong> Ak predchádzajúce možnosti nie sú k dispozícii, upravte <code>/root/.config/proxmenux-monitor/auth.json</code> na počítači Proxmox (potrebuješ root SSH alebo prístup ku konzole), nastavte <code>totp_enabled</code> na <code>false</code>, uložte a reštartujte službu:"
+      "<strong>Zakázať 2FA z hostiteľskej škrupiny.</strong> Ak predchádzajúce možnosti nie sú dostupné, upravte <code>/root/.config/proxmenux-monitor/auth.json</code> na hostiteľovi Proxmox (potrebujete root SSH alebo konzolový prístup), nastaviť <code>totp_enabled</code> do <code>false</code>, uložte a reštartujte službu:"
     ],
     "lostShellOutro": "Môžete sa prihlásiť iba s užívateľským menom + heslom a potom znovu zapnúť 2FA z Nastavenia.",
     "disableTitle": "Vypnúť 2FA",
-    "disableBody": "Z palubnej dosky otvorte kartu <strong>0Security</strong> a kliknite na <strong>Disable 2FA</strong>. Koncový ukazovateľ <code>POST /api/auth/totp/disable</code> vyžaduje aktuálne heslo ako potvrdenie, potom vymaže TOTP tajomstvo a odstráni záložné kódy. Nezabudnite tiež odstrániť položku v aplikácii autentifikátor",
+    "disableBody": "Na paneli otvorte kartu <strong>Zabezpečenie</strong> a kliknite na položku <strong>Zakázať 2FA</strong>. Koncový bod <code>POST /api/auth/totp/disable</code> vyžaduje ako potvrdenie aktuálne heslo, potom vymaže tajomstvo TOTP a vymaže záložné kódy. Nezabudnite tiež odstrániť položku v aplikácii na overovanie totožnosti – aplikácia nevie, že strana servera je preč, takže mŕtva položka tam bude sedieť navždy.",
     "rejectedTitle": "Kód 6 sa vždy zamieta.",
     "rejectedIntro": "TOTP je čas-založené na serverových hodinách a telefónnych hodinách musí súhlasiť s ~30 s. Dve kontroly:",
     "rejectedItems": [
@@ -288,7 +288,7 @@
     "generateTitle": "Generovať token",
     "generateIntro": "Z prístrojovej dosky:",
     "generateSteps": [
-      "Navigovať na <strong>0Bezpečnostná karta → API Prístupové tokeny</strong> sekcia.",
+      "Prejdite na <strong>kartu Zabezpečenie → časť API Prístupové tokeny</strong>.",
       "Zadajte opisný názov (<em>e.g. \"Home Assistant\"</em>).",
       "Zadajte svoje heslo. Ak je zapnutá 2FA, aj súčasný 6-miestny kód.",
       "Kliknite na <strong>Generate Token</strong>. Token sa objaví <strong>once</strong>"
@@ -303,7 +303,7 @@
       "Jeden symbol na integráciu, pomenovaný po spotrebiteľovi. Zrušiť individuálne pri odchode do dôchodku integrácie.",
       "Otočiť každý 6–12 mesiacov. Uplynutie platnosti je tvrdý limit, nie odporúčanie."
     ],
-    "outro": "Úplné skladovanie najlepšie postupy a integračné recepty žiť v <apiLink>0API Referenčné → Token Management</apiLink> a <intLink>Integrácie</intLink>."
+    "outro": "Úplné osvedčené postupy a recepty na integráciu sú k dispozícii v <apiLink>API Referencia → Správa tokenov</apiLink> a <intLink>Integrácie</intLink>."
   },
   "https": {
     "heading": "HTTPS",
@@ -313,11 +313,11 @@
       "<strong>Priama HTTPS v AppImage.</strong> Nastaviť certifikát cez <code>POST /api/ssl/configure</code> (UI: <strong>Nastavenie → SSL</strong>). Keď je SSL nakonfigurované, proces sa prepne Flask's dev server do <code>gevent.pywsgi</code> s gevent-websocket Manipulátor so WebSocket terminál funguje aj nad WSS. Cert súbory žijú kdekoľvek im ukazujete; cesty sú uložené v SSL config."
     ],
     "calloutTitle": "Priame obmedzenia HTTPS",
-    "calloutBody": "Zoskupená cesta je vhodná pre vlastné podpisy alebo iba certifikáty LAN. Pre Let's Encrypt0 / ACME a automatická obnova, spustiť skutočný reverzný proxy v prednej časti Monitor sám nerealizuje ACME."
+    "calloutBody": "Pripojená cesta gevent je vhodná pre certifikáty s vlastným podpisom alebo certifikáty iba pre LAN. Pre Let's Encrypt / ACME a automatickú obnovu spustite vpredu skutočný reverzný proxy – Caddy auto-obnovuje a Traefik / Nginx majú dobre známe vzory. Monitor neimplementuje ACME sám o sebe."
   },
   "gateway": {
     "heading": "Zabezpečená brána (Tailscale)",
-    "intro": "Reverzné proxy sú klasickou odpoveďou na \"dostať palubnú dosku zvonku,\" ale vyžadujú verejnú doménu, certifikát, a otvorený port na okraji. <strong>Bezpečná brána</strong> je alternatíva nula-port dodávaný v rámci samotného monitora LXC beží <a>Tailscale</a> ako podsieťový router. Potom, čo sa pripojil k vašej chvostovej sieti, každý prístroj na ňom môže zasiahnuť Monitor na hostiteľa vlastné LAN IP chee z notebooku na dovolenku, telefón na 5G, alebo iný uzol bez odhalenia TCP 8008 na internet.",
+    "intro": "Reverzné proxy sú klasickou odpoveďou na „dosiahnutie palubnej dosky zvonku“, ale vyžadujú verejnú doménu, certifikát a otvorený port na okraji. <strong>Bezpečná brána</strong> je alternatíva s nulovým portom dodávaná v samotnom monitore – vopred zostavená nasaditeľná aplikácia, ktorá sa otáča Alpine LXC beh <a>Tailscale</a> ako smerovač podsiete. Po pripojení k vášmu tailnetu môže každé zariadenie na ňom zasiahnuť monitor cez vlastnú IP LAN hostiteľa – z notebooku na dovolenke, telefónu na 5G alebo iného uzla – bez odhalenia TCP 8008 na internet.",
     "calloutTitle": "Prečo je to pohodlné",
     "calloutBody": "URL zostáva rovnaká ako na LAN <code>http://&lt;proxmox-lan-ip&gt;:8008</code> pracuje všade Tailscale Funguje to. Žiadne certifikáty, nie DNS, žiadny port forwarding. Samotný monitor vníma žiadosť ako žiadosť vychádzajúcu z IP siete (zvyčajne <code>100.x.y.z</code>), takže auth log a Fail2Ban hák stále funguje ako na LAN.",
     "deployBody": "Nasadiť tok je jedna obrazovka LXC skladovanie, pasta a Tailscale unit description in lists <a>Prihlásiť sa.tailscale.com/admin/sadzby/kľúče</a>), vyberte, ktoré subnety inzerovať, kliknite na položku Nasadiť. • LXC takes ~30 sekundy do pasce na topánky a automaticky sa zaregistruje do chvostovej siete.",
@@ -325,7 +325,7 @@
   },
   "proxy": {
     "heading": "Reverzné proxy útržky",
-    "intro": "Najjednoduchšie rozloženie je <strong>0dedikovaný názov hostiteľa</strong> pre Monitor (napr. <code>monitor.example.com</code>) ukazuje na port 8008 na Proxmox host. Snippets nižšie použiť tento vzor. Sub-path mounts (<code>example.com/proxmenux-monitor/</code>) sú možné, ale vyžadujú ďalšie prepísanie a nie sú predvolené",
+    "intro": "Najjednoduchším rozložením je <strong>vyhradený názov hostiteľa</strong> pre monitor (napr. <code>monitor.example.com</code>) smerujúci na port 8008 na hostiteľovi Proxmox. Úryvky nižšie používajú tento vzor. Pripojenia k Sub-ceste (<code>example.com/proxmenux-monitor/</code>) sú možné, ale vyžadujú dodatočné prepísanie a nie sú predvolené – pozrite si popis na konci.",
     "nginxTitle": "Nginx",
     "caddyTitle": "Caddy",
     "traefikTitle": "Traefik (značky Docker / Kubernetes)",
@@ -338,17 +338,17 @@
     "outro": "Vychvaľujte to obvyklým spôsobom: <code>tail -F /var/log/proxmenux-auth.log</code>. Súbor sa otáča <code>logrotate</code>, ak je pridaný konfiguračný drop-in; samotný Monitor ho neotáča."
   },
   "fail2ban": {
-    "heading": "Voliteľné: väzenie vo väzení Fail2Ban",
+    "heading": "Voliteľné: jail Fail2Ban",
     "calloutTitle": "Fail2Ban nie je zviazaný s Monitorom",
-    "calloutBody": "Fail2Ban je <strong>0not</strong> nainštalovaný samotným ProxMenux Monitor. Nainštalujte ho cez <link>Security → Fail2Ban</link> v ponuke ProxMenux (alebo štandardným balíkom Debianu). Bez neho, Monitor stále píše audit log vyššie",
-    "intro": "Keď je Fail2Ban nainštalovaný, ProxMenux integračné lode <code>[proxmenux]</code> väzenie, ktoré:",
+    "calloutBody": "Fail2Ban <strong>nie je</strong> nainštalovaný samotným ProxMenux Monitor. Nainštalujte ho cez <link>Zabezpečenie → Fail2Ban</link> v menu ProxMenux (alebo pomocou štandardného balíka Debian). Bez toho Monitor stále zapisuje vyššie uvedený protokol auditu – iba automaticky nezablokuje recidivistov.",
+    "intro": "Keď je nainštalovaný Fail2Ban, integrácia ProxMenux odošle <code>[proxmenux]</code> jail, ktorý:",
     "items": [
       "Číta <code>/var/log/proxmenux-auth.log</code>.",
       "Zodpovedá modelu <code>authentication failure; rhost=&lt;ip&gt;</code> s vyhradeným filtrom.",
       "Zakáže urážlivé IP na úrovni firewallu jadra štandardne.",
       "Je zvedavý Flask <code>before_request</code> hák každý 30 s, takže aj keď firewall nemôže blokovať (pretože pripojenie pochádza z spätného proxy), aplikácia vracia HTTP 403 zakázať IP na základe čoho Fail2Ban To vie."
     ],
-    "outro": "Konfigurácia, zákaz ladenie času a unban postupy sú v <link>0Security → Fail2Ban</link>."
+    "outro": "Konfigurácia, ladenie času zákazu a procedúry odblokovania sú v <link>Zabezpečenie → Fail2Ban</link>."
   },
   "troubleshoot": {
     "heading": "Riešenie problémov",
@@ -384,7 +384,7 @@
       {
         "label": "Bezpečnosť → Fail2Ban",
         "href": "/docs/security/fail2ban",
-        "tail": " — Ako nainštalovať a konfigurovať voliteľné väzenie."
+        "tail": "– ako nainštalovať a nakonfigurovať voliteľné jail."
       },
       {
         "label": "Nastavenie → ProxMenux Monitor",

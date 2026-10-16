@@ -8,7 +8,7 @@
     "twitterDescription": "Koncové body pre Home Assistant, Homepage, Grafana, Prometheus, n8n a vlastné prístrojové dosky."
   },
   "header": {
-    "title": "API referencia",
+    "title": "Referenčná príručka API",
     "description": "• HTTP integrátory koncových ukazovateľov používajú na čítanie stavu a spúšťajú bezpečné opatrenia na ProxMenux Monitor — Home Assistant senzory, domáce karty, Grafana prístrojové dosky, Prometheus škrabance, n8n toky a vlastné skripty. Každá kategória, plus kompletný zoznam Prometheus metriky, s kučeravými príkladmi.",
     "section": "ProxMenux Monitor"
   },
@@ -24,7 +24,7 @@
     "intro": "Každý koncový ukazovateľ označený ako \"autentikovaný\" očakáva v hlavičke žiadosti symbol JWT na doručiteľa:",
     "tokensIntro": "Dva spôsoby, ako získať žetón:",
     "items": [
-      "<strong>0API žetóny (odporúčané pre integráciu).</strong> Dlho živé žetóny razené z <strong>Nastavenia → Bezpečnosť → API žetóny</strong> v prístrojovej doske. Každý žetón je pomenovaný, môže byť zrušený individuálne, a je to, čo by ste mali odovzdať Home Assistant / Homepage / Grafana / n8n.",
+      "<strong>Tokeny API (odporúčané na integráciu).</strong> Tokeny s dlhou životnosťou vyrazené z <strong>Nastavenia → Zabezpečenie → Tokeny API</strong> na hlavnom paneli. Každý token je pomenovaný, môže byť odvolaný jednotlivo a je to, čo by ste mali odovzdať Home Assistant / Domovská stránka / Grafana / n8n.",
       "<strong>Prihlásenie (krátkodobý JWT).</strong> <code>POST /api/auth/login</code> s užívateľským menom, heslom a TOTP tokenom, ak je 2FA povolené. Vrátené JWT je krátkodobá a osviežená palubnou doskou automaticky; užitočné pre ad hoc skripty, ktoré autentifikujú ako ľudský používateľ."
     ],
     "flowLink": "Auth tok, zásady hesla, 2FA nastavenie, audit log a TLS konfigurácie všetko živé v <link>Access & Authentication</link>.",
@@ -37,7 +37,7 @@
       {
         "endpoint": "/api/auth/api-tokens",
         "method": "GET",
-        "use": "Zoznam API žetóny (metadata iba"
+        "use": "Uveďte API tokeny (iba metadáta — mená, predpony, dátumy; nikdy nie skutočný tajný kód)."
       },
       {
         "endpoint": "/api/auth/api-tokens",
@@ -96,7 +96,7 @@
       {
         "endpoint": "/api/gpu/<slot>/realtime",
         "method": "GET",
-        "use": "NVIDIA0 / Intel / AMD GPU live metrics by PCI slot."
+        "use": "NVIDIA / Intel / AMD GPU živé metriky podľa slotu PCI."
       }
     ]
   },
@@ -241,12 +241,12 @@
     "outro": "Tvary odozvy a sémantika kategórií žijú v <link>Health Monitor</link>."
   },
   "storage": {
-    "heading": "Skladovanie",
+    "heading": "Úložisko",
     "rows": [
       {
         "endpoint": "/api/storage",
         "method": "GET",
-        "use": "Všetky disky viditeľné pre hostiteľa (blokovacie zariadenia, ZFS bazény, LVM)."
+        "use": "Všetky disky viditeľné pre hostiteľa (blokové zariadenia, ZFS pools, LVM)."
       },
       {
         "endpoint": "/api/storage/summary",
@@ -422,7 +422,7 @@
   },
   "notifications": {
     "heading": "Oznámenia a AI",
-    "intro": "Expedičný ropovod, kanály prechádzky a AI prepisovač naživo v <notifLink>0Notifikácie</notifLink> a <aiLink>AI asistent</aiLink>.",
+    "intro": "Potrubie odoslania, prechody kanálov a nastavenie prepisovača AI sú dostupné v <notifLink>Upozorneniach</notifLink> a <aiLink>AI Assistant</aiLink>.",
     "rows": [
       {
         "endpoint": "/api/notifications",
@@ -502,12 +502,12 @@
       {
         "endpoint": "/api/security/fail2ban/details",
         "method": "GET",
-        "use": "Fail2Ban stav väzenia"
+        "use": "Stav Fail2Ban jail — užitočné len vtedy, keď je nainštalované voliteľné jail."
       },
       {
         "endpoint": "/api/security/fail2ban/activity",
         "method": "GET",
-        "use": "Nedávne udalosti Fail2Ban (zákazy, unbans, začína väzenie)."
+        "use": "Nedávne udalosti Fail2Ban (zákazy, zrušenie zákazu, spustenie jail)."
       },
       {
         "endpoint": "/api/security/lynis/status",
@@ -738,7 +738,7 @@
       {
         "label": "Prístup a overenie",
         "href": "/docs/monitor/access-auth",
-        "tail": " - mincovne, audit log, voliteľné Fail2Ban väzenie, TLS konfigurácia."
+        "tail": "— tokeny razby, denník auditu, voliteľná konfigurácia Fail2Ban jail, TLS."
       },
       {
         "label": "Oznámenia",

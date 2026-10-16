@@ -3,7 +3,7 @@
     "title": "Backup destinations Proxmox Backup Server, Borg ProxMenux",
     "description": "Tri úložné backendy dostávajú rovnaký ProxMenux zálohovací užitočné zaťaženie: miestny .tar.zst archív na akomkoľvek napísanom súborovom systéme, zálohu PBS v obchode s údajmi Proxmox Backup Server alebo archív Borg v miestnom alebo vzdialenom úložisku Borg. Každý backend má svoje vlastné kompresie, deduplikácie, šifrovanie a sieťové charakteristiky.",
     "ogTitle": "ProxMenux Zálohovacie miesta",
-    "ogDescription": "Miestne, Proxmox Backup Server a Borg",
+    "ogDescription": "Local, Proxmox Backup Server a Borg — tri backendy úložiska pre rovnakú užitočnú záťaž hostiteľa.",
     "twitterTitle": "ProxMenux Zálohovacie miesta ProxMenux",
     "twitterDescription": "Miestny archív, Proxmox Backup Server a Borg backendy pre zálohovanie hostiteľov."
   },
@@ -98,7 +98,7 @@
       {
         "label": "Proxmox Backup Server (odporúčané)",
         "href": "/docs/backup-restore/destinations/pbs",
-        "tail": " Nahrávanie blobu recovery PBS na rekuperáciu čerstvých inštalácií."
+        "tail": "— výber dátového úložiska, poverenia a odtlačok prsta, životný cyklus súboru šifrovacieho kľúča, prístupová fráza obnovy, nahranie objektu BLOB na obnovenie do PBS na obnovu po novej inštalácii."
       },
       {
         "label": "Borg",

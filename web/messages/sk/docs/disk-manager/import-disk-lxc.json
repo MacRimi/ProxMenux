@@ -11,7 +11,7 @@
     "section": "Správca disku · LXC"
   },
   "intro": {
-    "title": "VM0 passough vs LXC passhom",
+    "title": "VM prechod oproti LXC prechod",
     "body": "LXC Prienik je <strong>nie je surovým blokovacím zariadením</strong>. Kontajner dostane <em>Bod pripojenia</em> Takže adresár podporovaný partíciou, ktorú si vyberiete na hostiteľa. Na rozdiel od VM, jadro hosťa je hostiteľským jadrom, takže súborový systém (ext4 / xfs / btrfs) je čítaný a spravovaný samotným Proxmoxom a potom vystavený kontajneru."
   },
   "howRuns": {
@@ -23,7 +23,7 @@
     "heading": "Predpoklady",
     "items": [
       "Aspoň jeden kontajner LXC definovaný na hostiteľovi.",
-      "Kontajner je <strong>0privileged</strong>, alebo akceptujete ponuku skriptu previesť.",
+      "Kontajner je <strong>privilegovaný</strong>, alebo akceptujete ponuku skriptu na jeho konverziu.",
       "Aspoň jeden fyzický disk nepoužívaný hostiteľom alebo iným hosťom."
     ],
     "warnTitle": "Požadovaný privilegovaný kontajner",
@@ -75,9 +75,9 @@
   "important": {
     "heading": "Dôležité úvahy",
     "items": [
-      "<strong>0One disk per run</strong>. Znovu spustiť skript pre každý ďalší disk.",
-      "Do <strong>0not</strong> pripojiť rovnakú partíciu do niekoľkých kontajnerov, ktoré by mohli pripojiť súčasne",
-      "<strong>0Staré metaúdaje</strong> (RAID / ZFS / LVM) musia byť vymazané manuálne predtým, než vám skript umožní formátovať, inak <code>mkfs</code> odmietne prepísať. Na to použite nástroj <wipeLink>Format / Wipe Fyzický Disk</wipeLink>."
+      "<strong>Jeden disk na spustenie</strong>. Znova spustite skript pre každý ďalší disk.",
+      "Nepripájajte <strong></strong> rovnaký oddiel k niekoľkým kontajnerom, ktoré by ho mohli pripojiť súčasne – súbežné zápisy poškodzujú súborový systém.",
+      "<strong>Staré metadáta</strong> (podpisy RAID / ZFS / LVM) sa musia manuálne vymazať skôr, ako vám skript umožní formátovanie, inak <code>mkfs</code> odmietne prepísať. Použite na to nástroj <wipeLink>Formátovanie / vymazanie fyzického disku</wipeLink>."
     ]
   },
   "troubleshoot": {

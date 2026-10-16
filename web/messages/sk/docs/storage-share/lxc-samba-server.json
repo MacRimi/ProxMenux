@@ -7,7 +7,7 @@
   },
   "header": {
     "title": "Samba server v LXC",
-    "description": "Spustite server Samba (SMB0 / CIFS) vnútri kontajnera Proxmox LXC a vystavujte priečinky Windows / macOS / Linux klientom na sieti. ProxMenux nainštaluje sambu, vytvorí Samba užívateľa s smbpasswd, spravuje /etc/samba/smb.conf, a uplatňuje záväzné-mount uvedomelé práva, keď zdieľaný priečinok pochádza z hostiteľa.",
+    "description": "Spustite server Samba (SMB / CIFS) v kontajneri Proxmox LXC a vystavte priečinky klientom Windows / macOS / Linux v sieti. ProxMenux nainštaluje sambu, vytvorí používateľa Samba pomocou smbpasswd, spravuje /etc/samba/smb.conf a použije oprávnenia na pripojenie, keď zdieľaný priečinok pochádza od hostiteľa.",
     "section": "Úložisko & Share · LXC"
   },
   "privReq": {
@@ -66,7 +66,7 @@
     "windowsOs": "Windows",
     "windowsHowRich": "File Explorer → panel adries: <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code>. Alebo <em>Map Network Drive</em> → skontrolujte \"Prepojiť pomocou rôznych osvedčení.\"",
     "macosOs": "macOS",
-    "macosHowRich": "Hľadač → <em>0Go → Pripojte sa k serveru...</em> → <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code>. Alebo <code>mount_smbfs //user@&lt;ct-ip&gt;/&lt;share&gt; /mountpoint</code>.",
+    "macosHowRich": "Finder → <em>Choď → Pripojiť k serveru…</em> → <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code>. Alebo <code>mount_smbfs //user@&lt;ct-ip&gt;/&lt;share&gt; /mountpoint</code>.",
     "linuxOs": "Linux",
     "linuxHowRich": "<code>mount -t cifs //&lt;ct-ip&gt;/&lt;share&gt; /mnt/x -o username=&lt;u&gt;,password=&lt;p&gt;,iocharset=utf8</code>. Alebo použite klienta <clientLink>Samba na stránke LXC</clientLink>, ak je klientom iný Proxmox CT."
   },
@@ -99,7 +99,7 @@
       "Arch: <code>pacman -S samba</code>",
       "Rocky / Alma: <code>dnf install samba</code>"
     ],
-    "aptOutro": "Potom re-spustiť ProxMenux skript",
+    "aptOutro": "Potom znova spustite skript ProxMenux — krok inštalácie preskočí, keď už sú nástroje k dispozícii.",
     "noShareTitle": "Klient sa pripája, ale nevidí podiel",
     "noShareBody": "Skontrolujte, či je <code>browseable = yes</code> nastavený v bloku akcií (predvolená hodnota pre režimy rw / ro; môže chýbať na vlastné použitie). Tiež skontrolujte firewall CT a firewall Proxmox umožňuje TCP 445 (SMB) a 139 (NetBIOS). Niektorí klienti systému Windows tiež vyžadujú rozlíšenie mena",
     "authTitle": "Zlyhanie overovania (NT_STATUS_LOGON_FAILURE)",

@@ -53,7 +53,7 @@
         "settings": "<code>net.unix.max_dgram_qlen=4096</code>"
       }
     ],
-    "sourceOutro": "To tiež pridáva <code>source /etc/network/interfaces.d/*</code>0 do <code>/etc/network/interfaces</code> ak nie je už prítomný",
+    "sourceOutro": "Pridáva tiež <code>source /etc/network/interfaces.d/*</code> do <code>/etc/network/interfaces</code>, ak ešte nie je k dispozícii – štandardná prax, takže úryvky modulárneho rozhrania môžete zahodiť bez úpravy hlavného súboru.",
     "fwbrTitle": "Automatické ladenie virtuálnych mostov firewallu",
     "fwbrBody": "Popri profile sysctl, ProxMenux inštaluje pomocník na <code>/usr/local/sbin/proxmenux-fwbr-tune</code>, ktorý používa <code>rp_filter=0</code> a <code>log_martians=0</code> na <code>fwbr*</code> / <code>fwln*</code> / <code>fwpr*</code> / <code>tap*</code> rozhrania Proxmox vytvára okolo VMs a kontajnerov. Pomocník je vyvolaný <code>proxmenux-fwbr-tune.service</code> jednorázovou jednotkou pri štarte, a pravidlom <code>/etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules</code> na každom <code>net add</code> udalosť zodpovedajúca týmto predponám, ktoré sa vzťahujú na rozhrania, ktoré Proxmox znovu vytvára na VM štart/stop, reštart a živá migrácia. Pomocník tiež beží okamžite po inštalácii zametať rozhrania už prítomné.",
     "rpFilterTitle": "Prečo rp_filter=2 (voľná) namiesto 1 (strikt)",
@@ -63,7 +63,7 @@
     "heading": "Nainštalovať Open vSwitch",
     "intro": "Inštaluje <code>openvswitch-switch</code> + <code>openvswitch-common</code>. Tieto balíky pridávajú OVS ako premostenie ako alternatívu k štandardnému mostu Linux, ktorý Proxmox štandardne používa. Samotná inštalácia nemení žiadne vytváranie sietí <code>vmbrX</code> mosty pokračujú v práci. OVS je k dispozícii v Proxmoxe UI keď <em>vytvoriť</em> nový most a vybrať ho z typu dropdown.",
     "tipTitle": "Keď OVS dáva zmysel",
-    "tipBody": "Zvážte OVS, ak potrebujete <strong>0VLAN tmeing s non-kontigious VLAN IDs</strong>, <strong>LAKT s LLDP na špecifických režimoch</strong>, <strong>fine-grained flow programing</strong> (OpenFlow), alebo interoperation s radičmi SDN. Pre domáce laboratórium s niekoľkými VLAN a jedným LACP uplink, štandardné Linux mosty + <code>vmbrX.VID</code> sú jednoduchšie a dokonale v poriadku.",
+    "tipBody": "Zvážte OVS, ak potrebujete <strong>VLAN trunking s nesúvislými VLAN ID</strong>, <strong>LACP s LLDP v špecifických režimoch</strong>, <strong>jemnozrnné programovanie toku</strong> (OpenFlow), alebo súčinnosť s radičmi SDN. Pre domáce laboratórium s niekoľkými sieťami VLAN a jedným uplinkom LACP, štandardné linuxové mosty + <code>vmbrX.VID</code> sú jednoduchšie a úplne v poriadku.",
     "revertTitle": "Reverzibilné z menu Odinštalovať",
     "revertBody": "OVS je vystopovaný. <link>Unstall Optimizations</link> beží <code>apt purge</code> na <code>openvswitch-switch</code> a <code>openvswitch-common</code>. Migrujte mosty OVS späť na mosty Linux <em>pred</em> odinštaláciou, inak VM na mostoch strácajú sieť na ďalšom štarte. Ručný ekvivalent:"
   },
@@ -93,7 +93,7 @@
     "reviewTitle": "Preskúmať existujúce /etc/network/interfaces prvý",
     "reviewBody": "Ak má váš hostiteľ konfiguráciu odkazu <code>/etc/network/interfaces</code> ktoré odkazuje na názvy NIC generované štandardnou schémou jadra, odzrňovanie <em>dnešok</em> Mená sú presne to, čo chcete. Ale ak ste už ručne upravili konfig okolo konkrétnych mien, dvakrát skontrolujte pinking, čo súbor rozhrania očakáva pred reštartom.",
     "revertTitle": "Reverzibilné z menu Odinštalovať",
-    "revertBody": "<link>0Uninstall Optimizations</link> odstraňuje iba súbory <code>10-proxmenux-*.link</code> nesúce hlavičku ProxMenux z <code>/etc/systemd/network/</code>. Akýkoľvek súbor <code>.link</code> pridaný používateľom alebo iným balíkom je zachovaný. Názvy rozhraní sa vrátia k štandardnému správaniu systemd pri ďalšej reštarte."
+    "revertBody": "<link>Optimalizácie odinštalovania</link> odstránia iba súbory <code>10-proxmenux-*.link</code> s hlavičkou ProxMenux z <code>/etc/systemd/network/</code>. Akýkoľvek súbor <code>.link</code> pridaný používateľom alebo iným balíkom sa zachová. Názvy rozhraní sa pri ďalšom reštarte vrátia na predvolené správanie systemd."
   },
   "related": {
     "heading": "Súvisiace",

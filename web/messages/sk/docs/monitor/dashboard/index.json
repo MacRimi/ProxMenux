@@ -10,7 +10,7 @@
   },
   "oneHeader": {
     "title": "Jedna hlavička, desať kariet",
-    "body": "Záhlavie (logo, názov uzla, stav pilulky, uptime, osvieženie, prepínanie témy) zostane viditeľné všade. Aktívna karta pod ňou mení celú oblasť obsahu. Status pilulka farba odráža najhoršiu kategóriu <link>0Health Monitor</link>"
+    "body": "Hlavička (logo, názov uzla, stavová pilulka, doba prevádzkyschopnosti, obnovenie, prepínanie témy) zostáva viditeľná všade. Aktívna karta pod ňou mení celú oblasť obsahu. Farba stavovej pilulky odzrkadľuje najhoršiu kategóriu <link>Monitor zdravia</link> — je to rovnaký údajový bod, ktorý je vidieť z ovládacieho panela."
   },
   "tabs": {
     "heading": "Desať kariet",
@@ -21,7 +21,7 @@
       {
         "name": "Prehľad systému",
         "linksTo": "/docs/monitor/dashboard/system-overview",
-        "owns": "CPU0 / pamäť / teplota widgety, aktívny VM & LXC počet, historické grafy metriky, úložisko a sieťové súhrny. Predvolená pristávacia záložka, kým Navigácia objednávka nie je na mieru."
+        "owns": "CPU / widgety pamäte / teploty, aktívny počet VM a LXC, grafy historických metrík, súhrny úložiska a siete. Predvolená vstupná karta, kým sa neprispôsobí poradie navigácie."
       },
       {
         "name": "Aplikácie",
@@ -29,8 +29,8 @@
         "owns": "Unified launcher for registered LXC Webové odkazy a vlastné odkazy s kategóriami, vyhľadávaním, skratkami pre hostí a aktualizačnými signálmi pre aplikáciu."
       },
       {
-        "name": "Skladovanie",
-        "owns": "Proxmox bazény, fyzické disky, SMART dáta, ZFS stav, opotrebenie a životnosť, história pozorovania."
+        "name": "Úložisko",
+        "owns": "Proxmox pools, fyzické disky, SMART údaje, ZFS stav, opotrebovanie a životnosť, história pozorovania."
       },
       {
         "name": "Sieť",
@@ -54,7 +54,7 @@
       },
       {
         "name": "Zabezpečenie",
-        "owns": "Auth nastavenie, heslo / 2FA0 / API žetóny, audit log, voliteľný Fail2Ban panel, Nasadenie Secure Gateway."
+        "owns": "Nastavenie autorizácie, heslo / 2FA / API tokeny, denník auditu, voliteľný panel Fail2Ban, nasadenie zabezpečenej brány."
       },
       {
         "name": "Nastavenia",
@@ -65,12 +65,12 @@
   "headerAnatomy": {
     "heading": "Anatómia hlavičky",
     "items": [
-      "<strong>0Logo + názov produktu</strong> vľavo. Logo sa zmení na \"aktualizáciu dostupnú\" variantu, keď sa zistí novšia verzia monitora.",
+      "<strong>Logo + názov produktu</strong> vľavo. Keď sa zistí novšie vydanie monitora, logo sa zmení na variant „dostupná aktualizácia“.",
       "<strong>Identita uzla</strong> - názov uzla Proxmox je vyriešený <code>pvesh get /nodes</code>, návrat do <code>hostname</code>.",
       "<strong>Zdravý stav pilulka</strong> Kliknite na tlačidlo pre otvorenie spôsobu Health Monitor. Extra modrá <em>info</em> odznak sa objaví, keď sú prepustené položky stále v ich supresívne okno.",
       "<strong>Uptime</strong>",
       "<strong>Tlačidlo Obnoviť</strong> - Znovuvydáva všetko živé. API hovory bez plnej stránky reload.",
-      "<strong>0Theme toggle</strong> Pretrváva v <code>localStorage</code>."
+      "<strong>Prepínanie motívu</strong> — svetlý/tmavý/systém. Trvalé v <code>localStorage</code>."
     ]
   },
   "whereNext": {

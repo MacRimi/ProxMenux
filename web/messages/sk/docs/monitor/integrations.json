@@ -61,13 +61,13 @@
     "step2Title": "2 · Klesnúť v konfigurácii REST",
     "step2Body": "Šesť REST blokov pokrýva celý povrch Každý blok má rozumné <code>scan_interval</code>0 naladený na to, ako často základné dáta zmeny (systém zdroje každý 30 s, zdravie každý 60 s, pomaly meniace zásoby každý 5-10 min). Vložiť do <code>configuration.yaml</code>:",
     "step3Title": "3 · Pridať binárne senzory a šablóny pomocníkov",
-    "step3Body": "Dva binárne senzory a pár šablónových senzorov okolo integrácie",
+    "step3Body": "Dva binárne senzory a niekoľko šablónových senzorov dopĺňajú integráciu – vďaka nim sú automatizácie a podmienené karty Lovelace oveľa čistejšie ako reťazenie Jinja na každom mieste.",
     "step4Title": "4 · Znovu načítať a overiť",
     "step4Body": "Z HA UI: <em>Vývojové nástroje → YAML → Skontrolujte nastavenie</em> najprv validovať syntax, potom <em>Všetky konfigurácie YAML</em> znovu načítať (alebo reštartovať). Potom, čo sa vráti, filter <em>Nastavenia → Zariadenia a služby → Subjekty</em> podľa <em>proxmenux</em> Mal by si vidieť všetko.25 entity obsadené v rámci jedného skenovacieho intervalu.",
     "replaceTitle": "Nahradiť skoršiu verziu tohto receptu?",
     "replaceBody": "Ak ste skúsili predchádzajúcu verziu týchto YAML blokov, entity register Home Assistant môže mať cacheed staré entity ID a stale entity sa stále objaví (s <em>Entidad no encontrada</em> varovaní vo vašich Lovelace kariet). Čistý stav v dvoch krokoch: odstrániť predchádzajúce <code>rest:</code> a <code>template:</code> bloky z <code>configuration.yaml</code>, reload, a potom <em>Nastavenia → Zariadenia a služby → Subjekty</em> filter <em>proxmenux</em> a odstrániť všetky položky označené \"Obnovené\" alebo zobrazovať ako nedostupné. Potom vložte aktuálne YAML a znovu načítať",
     "step5Title": "5 · prístrojová doska Lovelace",
-    "step5Body": "YAML nižšie je jeden <strong>0vertical-stack</strong> karta, ktorá kombinuje všetky sub-karty v jednom bloku Ak ju chcete použiť: otvorte palubnú dosku, kliknite na ceruzku (edit), kliknite na <em>Pridať kartu</em>, prejdite na dno a vyberte <em>Manual</em>, potom vložte:",
+    "step5Body": "YAML nižšie je jediná <strong>vertikálna-stack</strong> karta, ktorá kombinuje všetky sub-karty v jednom bloku – hlavičku s logom, rýchlymi KPI, detailmi systému, VM, úložiskom, sieťou a kartou podmienených zdravotných problémov. Ak ho chcete použiť: otvorte si informačný panel, kliknite na ceruzku (upraviť), kliknite na <em>Pridať kartu</em>, posuňte sa nadol a vyberte <em>Manuálne</em>, potom vložte:",
     "viewTipTitle": "Chcete to namiesto jednej karty ako kompletný pohľad na prístrojovú dosku?",
     "viewTipBody": "Otvorte panel 3-dot menu → <em>Raw konfiguračný editor</em> a pridajte nový pohľad s touto hlavičkou (nad zoznam <code>cards:</code> z YAML vyššie):",
     "viewTipOutro": "To vám dáva vyhradenú záložku / pohľad na palubnej doske s vlastnou ikonou a názvom, namiesto jednej dlhej karty na existujúcom pohľade.",
@@ -88,7 +88,7 @@
       "<strong>Celotriedny redaktor Raw</strong> Otvorené z prístrojovej dosky 3- Menu na bodky. Očakáva, že celý <code>views:</code> zoznam, s každým pohľadom ako položka zoznamu (vedúci <code>-</code>)."
     ],
     "twoEditorsOutro": "Vlepenie prehliadač-telo YAML do celého-dashboard editor (alebo naopak) opustí vás s <em>Vista sin nombre</em> a <code>cards: []</code>. YAML nižšie je pre single-view editor",
-    "viewImageAlt": "Home Assistant špecializované zobrazenie renderovanie ProxMenux Monitor",
+    "viewImageAlt": "Home Assistant vykresľovanie vyhradeného zobrazenia ProxMenux Monitor — hlavička obrázkovej entity, kľúčové ukazovatele výkonu a karty entít systému / virtuálnych počítačov / úložiska / siete automaticky rozložené HA vo viacerých stĺpcoch",
     "viewImageCaption": "Špecializované <em>ProxMenux Monitor</em> Pohľad ako Home Assistant vykresľuje ho na širokej obrazovke a HA predvolené rozloženie automaticky rozdelí karty do viacerých stĺpcov.",
     "twoColTipTitle": "Chcete pevné dvojkolesové rozloženie namiesto automatického rozloženia?",
     "twoColTipBody": "Nahradiť ľubovoľný pár kariet (napr. <em>System</em> + <em>VMs</em>, alebo <em>Storage</em> + <em>Network</em>) s jedným <code>horizontal-stack</code> obalom, takže vždy vykresľujú bok po boku bez ohľadu na šírku obrazovky:",
@@ -102,7 +102,7 @@
     "logoBrokenSteps": [
       "Stiahnite si SVG z <a>cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmenux.svg</a>.",
       "Uložte si to na <code>/config/www/icons/proxmenux.svg</code> na HA hostiteľa.",
-      "V Lovelace YAML, nahradiť <code>image:</code> URL s <code>/local/icons/proxmenux.svg</code>. Uložiť a znovu načítať"
+      "V Lovelace YAML nahraďte <code>image:</code> URL adresu <code>/local/icons/proxmenux.svg</code>. Uložiť a znova načítať – obrázok sa vykreslí z lokálneho súboru, nie je potrebný internet."
     ],
     "scanTipTitle": "Pravidlo scan_interval palca",
     "scanTipBody": "<code>/api/system</code> je lacné volať 30 s je v poriadku. <code>/api/health/full</code> používa interný 6-min cache, takže opýtanie častejšie ako ~60 s vám nič nezíska. <code>/api/storage/summary</code> sa mení pomaly, každý 5 min je dosť. <code>/api/proxmenux/update-status</code> záleží len raz za hodinu. Nalaďte si rozpočet na hardvér, ak máte veľa senzorov naprieč mnohými hostiteľmi."
@@ -195,7 +195,7 @@
         "promql": "proxmox_gpu_temperature_celsius"
       }
     ],
-    "outro": "Pridať každý dotaz ako Grafana panel, nastaviť správnu vizualizáciu (<em>0Stat</em> pre rozchody, <em>Time series</em> pre trendy), a skupinové panely do riadkov podľa kategórie. Použite označenie <code>node</code> ako premennú palubnej dosky (<em>Nastavenie → Premenné → Nové → Otázka → label_values (proxmox_cpu_usage, uzly)</em>) na filtrovanie všetkých panelov hostiteľom."
+    "outro": "Pridajte každý dotaz ako panel Grafana, nastavte správnu vizualizáciu (<em>Štat</em> pre meradlá, <em>Časový rad</em> pre trendy) a zoskupte panely do riadkov podľa kategórie. Použite označenie <code>node</code> ako premennú dashboardu (<em>Nastavenia → Premenné → Nový → Dopyt → label_values(proxmox_cpu_usage, uzol)</em>) na filtrovanie všetkých panelov podľa hostiteľa."
   },
   "uptimeKuma": {
     "heading": "Uptime Kuma a iné kontroly stavu",
@@ -204,7 +204,7 @@
     "kumaTitle": "Uptime Kuma — HTTP monitor kľúčových slov",
     "kumaSteps": [
       "V Uptime Kuma, kliknite na <em>+ Pridať nový monitor</em>.",
-      "Typ monitora: <em>0HTTP(s) - Kľúčové slovo</em>.",
+      "Typ monitora: <em>HTTP(s) – kľúčové slovo</em>.",
       "Meno priateľa: <em>ProxMenux Monitor Pve01</em>.",
       "URL: <code>http://pve01.lan:8008/api/system-info</code>.",
       "Kľúčové slovo: <code>healthy</code> (hodnota <code>health.status</code>, keď hostiteľ je OK).",
@@ -219,7 +219,7 @@
   "workflows": {
     "heading": "n8n, Zapier a vlastné skripty",
     "intro": "Pre nástroje pracovného postupu a ad-hoc skripty, ktoré potrebujú <em>raise</em> oznámenia prostredníctvom monitora (zlyhanie CI, snímač smart-home, cron úloha, ktorá bežala príliš dlho), recept je jeden POST na <code>/api/notifications/send</code>. Podujatie tečie cez rovnaký dispečing potrubia ako čokoľvek emitované interne",
-    "n8nBody": "V n8n, Ekvivalent je <em>0HTTP Požiadavka</em> uzol s metódou POST, URL vyššie, <em>Authorization</em> hlavička nastavená na <code>Bearer '{''{'$credentials.proxmenux.token'}''}'</code> (s použitím n8n osvedčení), a JSON telo zodpovedajúce curl užitočné. Drôtený akýkoľvek predchádzajúci uzol ako spúšť (koreň, webhook, stav).",
+    "n8nBody": "V n8n je ekvivalentom an <em>HTTP Žiadosť</em> uzol s metódou POST, URL vyššie, an <em>Autorizácia</em> hlavička nastavená na <code>Bearer '{''{'$credentials.proxmenux.token'}''}'</code> (pomocou poverení n8n) a a JSON telo zodpovedajúce užitočnému zaťaženiu curl. Zapojte akýkoľvek predchádzajúci uzol ako spúšťač (cron, webhook, stav).",
     "severityBody": "Hodnoty závažnosti sú <code>INFO</code>, <code>WARNING</code> alebo <code>CRITICAL</code> (uppercase). <code>data</code> užitočné zaťaženie je voľný-forma JSON Full event-type sémantika žiť v <link> Notifikácie → Event catalogue</link>."
   },
   "pveWebhook": {
@@ -231,7 +231,7 @@
     "heading": "Kam ďalej",
     "items": [
       {
-        "label": "API referencia",
+        "label": "Referenčná príručka API",
         "href": "/docs/monitor/api",
         "tail": " — Každý koncový bod s metódou, cestou a kompletným katalógom Prometheus."
       },

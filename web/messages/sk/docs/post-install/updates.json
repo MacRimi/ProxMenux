@@ -48,7 +48,7 @@
   },
   "pathB": {
     "heading": "Cesta B",
-    "intro": "Rovnaké aktualizácie sa objavujú v monitore pod <link>0Settings → ProxMenux Optimizations</link>. Keď sa zistia nevybavené aktualizácie, karta zobrazí \"Aktualizované\" banner s počtom a <strong>Apply</strong>, ktorý otvorí rovnaký na optimalizáciu picker.",
+    "intro": "Rovnaké aktualizácie sa zobrazia na monitore pod <link>Nastavenia → ProxMenux Optimalizácie</link>. Keď sa zistia čakajúce aktualizácie, na karte sa zobrazí banner „Dostupné aktualizácie“ s počtom a akciou <strong>Použiť</strong>, ktorá otvorí rovnaký výber pre jednotlivé optimalizácie.",
     "imageAlt": "ProxMenux Optimizačná karta na prístrojovej doske monitora s aktualizáciou dostupného banneru v hornej časti zobrazuje počet nevybavených aktualizácií a tlačidlo Aplikovať, ktoré otvára na optimalizáciu zberača",
     "imageCaption": "Optimizačná karta v monitore, keď aspoň jedna optimalizácia má novšiu verziu na disku, banner ho rozprestiera bez nutnosti prístupu shell."
   },

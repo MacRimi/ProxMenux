@@ -24,7 +24,7 @@
     "arrowLabel": "pripojiť",
     "outro": "Hostiteľská cesta na ľavej strane a cesta kontajnera napravo môže byť odlišná napríklad, <code>/mnt/nas-films</code> na hostiteľa sa môže stať <code>/media/films</code> vnútri kontajnera. Skript pridáva položku do kontajnera (<code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>) pomocou ďalšieho bezplatného indexu <code>mpN</code> s dvoma trezormi upieknutými v:",
     "items": [
-      "<code>shared=1</code>",
+      "<code>shared=1</code> — informuje Proxmox, že dáta sú zdieľané úložisko, takže sa nepokúša o migráciu disku, keď migrujete kontajner.",
       "<code>backup=0</code> Zväzok z neho je vylúčený <code>vzdump</code> zálohy (údaje žijú na hostiteľa, budete zálohovať samostatne)."
     ]
   },
@@ -49,7 +49,7 @@
   },
   "writes": {
     "heading": "Čo ProxMenux píše a čo nie",
-    "intro": "Bežná zmätenosť pri spájaní do neprivilegovaného CT0: ľudia predpokladajú, že ProxMenux musí byť zápis <code>lxc.idmap</code> do <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>. <strong>To nie je.</strong> K tomuto súboru je pripojený len jeden riadok",
+    "intro": "Bežný zmätok pri pripájaní väzby do neprivilegovaného CT: ľudia predpokladajú, že ProxMenux musí zapisovať <code>lxc.idmap</code> položky do <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>. <strong>Nie.</strong> K tomuto súboru je pripojený iba jeden riadok – samotný bind mount:",
     "outro": "Výstupný riadok, ktorý vidíte na konci behu, <em>\"Neprivilegovaný kontajner: 100000\"</em>, je čisto informačná CT je pomocou Proxmox je predvolené neprivilegované mapovanie (koreň in CT = UID 100000 u hostiteľa). Skript okolo neho nič nenakonfiguruje.",
     "twoWaysHeading": "Dva spôsoby, ako robiť povolenia práce a prečo ProxMenux vyberá jeden",
     "headerApproach": "Prístup",
@@ -105,7 +105,7 @@
       {
         "source": "Ručný záznam",
         "where": "Čokoľvek iné, zadajte absolútnu cestu.",
-        "labelRich": "<em>0Nástupnica ručne</em>"
+        "labelRich": "<em>Zadajte cestu manuálne</em>"
       }
     ],
     "tipTitle": "Interné cesty Proxmox sú filtrované",

@@ -30,8 +30,8 @@
     "safetyItems": [
       "Disky so zablokovanými / aktívnymi metadátami zobrazujú podrobné upozornenia <em>pred</em> potvrdzujete.",
       "Disky používané <strong>beží</strong> VM ak: <strong>tvrdé blokované</strong> po potvrdení.",
-      "Disky s namontovanými partíciami sú <strong>0hard-blokované</strong> pri vykonávaní (čerstvé re-validácie beží tesne pred čokoľvek je napísané).",
-      "Dve potvrdenia sú vždy potrebné: <em>0yes/no</em> dialóg + písanie celej diskovej cesty presne."
+      "Disky s pripojenými oddielmi sú <strong>pevne zablokované</strong> pri spustení (tesne predtým, ako sa čokoľvek zapíše, sa spustí nové overenie).",
+      "Vždy sa vyžadujú dve potvrdenia: <em>áno/nie</em> dialógové okno + presné napísanie celej cesty k disku."
     ]
   },
   "modes": {
@@ -52,7 +52,7 @@
         "mode": "2. Odstrániť značky FS",
         "part": "Konzervované",
         "data": "Konzervované",
-        "useCase": "Clears stale ZFS0 / LVM / RAID podpisy, takže disk prestane byť automatické-claimed, bez dotyku dát."
+        "useCase": "Vymaže zastarané podpisy ZFS / LVM / RAID, takže disk sa prestane automaticky nárokovať bez toho, aby sa dotkol údajov."
       },
       {
         "mode": "3. Nula všetkých údajov",
@@ -79,11 +79,11 @@
     "list": [
       {
         "title": "Vyberte si voľný disk",
-        "body": "ProxMenux uvádza každý disk, ktorý prechádza cez viditeľné filtre vyššie. Disky s"
+        "body": "ProxMenux uvádza zoznam všetkých diskov, ktoré vyhovujú vyššie uvedeným filtrom viditeľnosti. Disky so značkami ⚠ nesú neaktuálne metadáta a zobrazujú sa s podrobnosťami, aby ste vedeli, čo sa chystáte prepísať."
       },
       {
         "title": "Vybrať operačný režim",
-        "bodyRich": "Vyberte si medzi <strong>0Wipe all</strong>, <strong>Remove FS etikety</strong>, <strong>Zero všetky dáta</strong> alebo <strong> Celý formát</strong> podľa tabuľky vyššie."
+        "bodyRich": "Vyberte si medzi <strong>Utrite všetko</strong>, <strong>Odstráňte štítky FS</strong>, <strong>Vynulujte všetky údaje</strong> alebo <strong>Plný formát</strong> podľa tabuľky vyššie."
       },
       {
         "title": "(iba celý formát) Vyberte súborový systém a popis",
@@ -125,7 +125,7 @@
       {
         "href": "/docs/storage-share/host-local-disk",
         "label": "Pridať lokálny disk ako Proxmox úložisko",
-        "tail": " — Zaregistrujte vymazaný disk ako úložný bazén Proxmox."
+        "tail": "— zaregistrujte vymazaný disk ako úložisko Proxmox pool."
       },
       {
         "href": "/docs/help-info/storage-commands",

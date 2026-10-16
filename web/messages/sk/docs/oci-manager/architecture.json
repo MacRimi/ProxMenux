@@ -116,7 +116,7 @@
               },
               {
                 "title": "Stiahnuť a overiť",
-                "body": "Skopeo stiahne obrázok ako archív OCI a každá vrstva je kontrolovaná proti jeho tráveniu a dekomprimované pred tým, než sa niečo vytvorí. Poškodený sťahovanie je stiahnutý druhýkrát pred zastavením inštalácie."
+                "body": "Skopeo stiahne obrázok ako archív OCI a každá vrstva sa skontroluje oproti svojmu digest a dekomprimuje sa predtým, ako sa čokoľvek vytvorí. Poškodené sťahovanie sa načíta druhýkrát predtým, ako sa inštalácia zastaví."
               },
               {
                 "title": "Stavať",
@@ -145,7 +145,7 @@
     },
     {
       "id": "example",
-      "title": "Príklad: obrázok s /config0 a /downloads",
+      "title": "Príklad: obrázok s /config a /downloads",
       "intro": "Spoločná definícia a konfigurácia Proxmox VE sa stáva. Cesta, ktorú aplikácia očakáva, sa nemení.",
       "blocks": [
         {

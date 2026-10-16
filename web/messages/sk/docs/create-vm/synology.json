@@ -21,7 +21,7 @@
         "extra": ""
       }
     ],
-    "customLoader": "Vlastný načítač",
+    "customLoader": "Vlastný zavádzač – možnosť použiť vlastný zavádzač, ak uprednostňujete úpravu alebo vytvorenie vlastnej konfigurácie",
     "simplifiesIntro": "Skript zjednodušuje proces tvorby VM tým, že ponúka nasledujúce možnosti:",
     "simplifies": [
       "Výber štandardnej alebo pokročilej konfigurácie",
@@ -81,7 +81,7 @@
       },
       {
         "param": "Typ BIOSu",
-        "options": "OVMF (UEFI0) alebo SeaBIOS (Legacy)"
+        "options": "OVMF (UEFI) alebo SeaBIOS (staršie)"
       },
       {
         "param": "Typ CPU",
@@ -186,7 +186,7 @@
             "caption": "RR webové rozhranie loader"
           },
           {
-            "htmlBefore": "<strong>0Terminálne rozhranie</strong>, Prístup priamo z výstupu konzoly VM písaním <strong>menu.sh</strong> na obrazovke",
+            "htmlBefore": "<strong>Rozhranie terminálu</strong>, pristupujte k nemu priamo z výstupu konzoly VM zadaním <strong>menu.sh</strong> na obrazovke",
             "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_1_1.png",
             "alt": "Rozhranie RR loader",
             "caption": "Rozhranie RR načítacieho terminálu"

@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Post-inštalácia: Systémová dokumentácia ProxMenux",
-    "description": "Optimalizácia systémovej úrovne v ProxMenux Prispôsobiteľný post-inštalačný skript: limity veľkosti žurnálu a logrotátu, vyššie limity jadra a deskriptora súborov, vyvážené ladenie pamäte, kexec pre rýchle reštarty a regenerácia paniky jadra."
+    "description": "Optimalizácia na úrovni systému v ProxMenux Prispôsobiteľný skript po inštalácii: journald a logrotate limity veľkosti, vyššie limity jadra a deskriptorov súborov, vyvážené ladenie pamäte, kexec pre rýchle reštarty a kernel panic recovery."
   },
   "header": {
     "title": "Po inštalácii: systém",
@@ -9,7 +9,7 @@
   },
   "intro": {
     "title": "Čo táto kategória zahŕňa",
-    "body": "Šesť nezávislých optimalizačných systémov. Naladia sa. <strong>v denníku</strong> a <strong>logrotát</strong> zastaviť záznamy z naplnenia disku, zvýšiť <strong>limity jadra a deskriptora súborov</strong> Takže aplikácie s mnohými otvorenými súbormi nezasahujú do stropov, <strong>pamäť rovnováhy</strong> pre virtualizačný hostiteľ, pridať <strong>kexec</strong> pre \"reboots bez BIOS\" a konfigurovať <strong>automatické zotavenie</strong> na jadra panike. Všetkých šesť je sledovaných a reverzibilných z menu Uninstall."
+    "body": "Šesť nezávislých optimalizácií na úrovni systému. Ladia <strong>journald</strong> a <strong>logrotate</strong> Ak chcete zabrániť tomu, aby sa denníky zapĺňali disk, zdvihnite <strong>limity jadra a deskriptorov súborov</strong> takže aplikácie s mnohými otvorenými súbormi nenarúšajú stropy, <strong>vyrovnávaciu pamäť</strong> pre hostiteľa virtualizácie pridajte <strong>kexec</strong> pre \"reštarty bez BIOS“ a nakonfigurujte <strong>automatické obnovenie</strong> na jadrovú paniku. Všetkých šesť je sledovaných a reverzibilných z ponuky Odinštalovať."
   },
   "journald": {
     "heading": "Optimalizovať journald",
@@ -86,7 +86,7 @@
     "installsTitle": "Čo nainštaluje ProxMenux",
     "installsItems": [
       "Balíček <code>kexec-tools</code> (debconf pre-odpovedá s <code>kexec-tools/load_kexec boolean false</code>, takže apt nie je rýchly a automatické zaťaženie pri vypnutí zostáva vypnuté).",
-      "Systemd jednotka <code>/etc/systemd/system/kexec-pve.service</code>",
+      "Jednotka Systemd <code>/etc/systemd/system/kexec-pve.service</code> — načíta jadro Proxmox a initrd do pamäte pri zavádzaní, pričom opätovne použije aktuálny cmdline.",
       "Prezývka v <code>/root/.bash_profile</code>0: <code>reboot-quick</code> → <code>systemctl kexec</code>."
     ],
     "usageIntro": "Použitie po ďalšom reštarte (alebo manuálnom <code>systemctl start kexec-pve</code>):",
@@ -97,13 +97,13 @@
     "heading": "Zapnúť reštart pri kernel panic",
     "intro": "Robí jadro <strong>auto-reboot</strong> namiesto toho, aby sedel navždy na panickej obrazovke. Kritické na bezhlavé / vzdialené Proxmox hostiteľov, kde zavesené jadro znamená, že všetky vaše VM sú dole, kým môžete power-cycle box.",
     "tipTitle": "Pár to s diaľkovým prístupom konzoly",
-    "tipBody": "Auto-reboot je mechanizmus obnovy, nie ladiaci nástroj. Ak chcete <em>0investigate</em> skôr paniku, než len vrátiť, použite <link>the kexec možnosť</link> vyššie s podporou jadra kdump (nie je nakonfigurovaný ProxMenux) alebo zachytiť sériovú konzolu na iný hostiteľ pred umožnením auto-reboot."
+    "tipBody": "Auto-reboot je mechanizmus obnovy, nie nástroj na ladenie. Ak chcete <em>preskúmať</em> paniku, namiesto toho, aby ste sa len vrátili, použite <link>možnosť kexec</link> vyššie s podporou kdump jadra (nenakonfigurovaná ProxMenux na inú konzolu s automatickým spustením počítača pred zachytením seriálu."
   },
   "verify": {
     "heading": "Overenie",
     "intro": "Po uplatnení optimalizácie systému:",
     "tipTitle": "Úplne reverzibilné",
-    "tipBody": "Všetkých šesť možností je sledovaných v <code>installed_tools.json</code>, takže sa objaví v <link>Uninstall Optimizations</link>, ak chcete vypnúť niektoré z nich. Vráti obnovenie sysctl súborov predvolených, pokles systemd jednotky a alias pre kexec, a reset redakčnej / logrotate skladom Debian konfigurácie."
+    "tipBody": "Všetkých šesť možností je sledovaných v <code>installed_tools.json</code>, takže ak chcete niektorú z nich zálohovať, zobrazia sa v <link>Optimalizácii odinštalovania</link>. Obnoví predvolené nastavenia súborov sysctl, zruší jednotku systemd a alias pre kexec a resetuje journald/logrotate na základné konfigurácie Debianu."
   },
   "related": {
     "heading": "Súvisiace",

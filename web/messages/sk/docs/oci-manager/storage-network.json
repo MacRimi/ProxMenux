@@ -167,7 +167,7 @@
     {
       "id": "rclone",
       "title": "Cloud storage prostredníctvom aplikácie Rclone",
-      "intro": "Aplikácia katalógu Rclone ponúka okrem svojej inštalácie <strong>0Umožniť montáž na existujúci Rclone OCI kontajner</strong>. To pripojí vzdialené už vytvorené a povolené v Rclone web UI a publikuje ho na hostiteľa, kde ostatné kontajnery môžu použiť ako hostiteľ adresár.",
+      "intro": "Aplikácia katalógu Rclone ponúka okrem inštalácie aj <strong>Umožnenie pripojenia na existujúci Rclone kontajner OCI</strong>. Pripojí vzdialené, ktoré už bolo vytvorené a autorizované na webe Rclone UI a zverejní ho na hostiteľovi, kde ho ostatné kontajnery môžu použiť ako hostiteľský adresár.",
       "blocks": [
         {
           "steps": {
@@ -194,7 +194,7 @@
         {
           "calloutInfo": {
             "title": "Ak sa nehodí",
-            "body": "Predchádzajúca konfigurácia kontajnera je obnovená a znovu sa spustí, takže neúspešná aktivácia opustí Rclon ako to bolo."
+            "body": "Predchádzajúca konfigurácia kontajnera sa obnoví a spustí sa znova, takže neúspešná aktivácia ponechá Rclone tak, ako bola."
           }
         }
       ]

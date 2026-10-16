@@ -213,7 +213,7 @@
       "<strong>01 (zlyhal):</strong> apt zlyhal, počíta sa ako <em>Failed</em>.",
       "<strong>2 (varovanie):</strong> apt uspel, ale príkaz ešte nie je v PATH (Hash obnovovacie čaká) <em>S upozorneniami</em>."
     ],
-    "summary": "Na konci skupinovej / vlastnej inštalácie, súhrnný dialóg zobrazuje <em>0Úspešné / S upozorneniami / Failed</em> počíta."
+    "summary": "Na konci skupinovej/vlastnej inštalácie sa v súhrnnom dialógovom okne zobrazí počet <em>Úspešné / S upozorneniami / Neúspešné</em>."
   },
   "verify": {
     "heading": "Overiť inštalácie",

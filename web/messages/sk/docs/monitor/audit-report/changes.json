@@ -110,7 +110,7 @@
           }
         },
         {
-          "p": "V každej sekcii <strong>0By functions</strong> groups the entry under the function that made them."
+          "p": "V rámci každej sekcie <strong>Podľa funkcie</strong> zoskupuje položky pod funkciou, ktorá ich vytvorila."
         }
       ]
     },
@@ -127,7 +127,7 @@
               "Línie pridané a odstránené.",
               "Balíčky, ktoré boli skutočne pridané.",
               "Zmena stavu služby.",
-              "<strong>0Undo this</strong>: <em>Restores presne to, čo tam bolo </em>, <em>Vypúšťa súbor (nebol predtým žiadny)</em>, <em>balík môže byť odinštalovaný</em>, čiastočná undo, alebo <em>Nemôže byť odčinený z časopisu</em>."
+              "<strong>Vrátenie tejto akcie</strong>: <em>Obnovuje presne to, čo tam bolo</em>, <em>Odstráni súbor (predtým žiadny nebol)</em>, <em>Balík je možné odinštalovať</em>, čiastočné vrátenie alebo <em>Z denníka sa nedá vrátiť späť</em>."
             ]
           }
         }

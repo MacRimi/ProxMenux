@@ -69,7 +69,7 @@
     "warnBody": "Opätovné spustenie <code>networking</code> odtrhne a znovu použije každé rozhranie deklarované v <code>/etc/network/interfaces</code>. SSH sedenia hostili na tých rozhraniach. Ak je nová konfig neplatná, sieť sa nikdy nevráti. Spustite to len vtedy, keď:",
     "warnItems": [
       "Máte konzolu / IPMI / iKVM prístup pripravený, <em>alebo</em>",
-      "Ste fyzicky vedľa stroja, <em>0or</em>",
+      "Ste fyzicky vedľa stroja, <em>alebo</em>",
       "Práve ste sa úspešne vrátili späť do známej dobrej konfigy a chcete ju použiť."
     ]
   },

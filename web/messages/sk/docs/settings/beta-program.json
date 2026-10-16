@@ -25,7 +25,7 @@
   },
   "dialog": {
     "heading": "Dialóg",
-    "intro": "Z hlavného menu, <strong>0Nastavenia → Zmeniť uvoľňovací kanál</strong>. Zobrazí sa dvojriadkové menu:",
+    "intro": "V hlavnej ponuke <strong>Nastavenia → Zmeniť kanál vydania</strong>. Zobrazí sa dvojriadkové menu:",
     "options": [
       "<code>stable</code>",
       "<code>beta</code>"
@@ -40,7 +40,7 @@
     "heading": "Čo sa stane, keď potvrdíte",
     "items": [
       "<strong>Stiahne oficiálneho inštalátora</strong> pre cieľový kanál:<ul><li>Stabilné: <code>install_proxmenux.sh</code> od <code>main</code></li><li>Beta: <code>install_proxmenux_beta.sh</code> od <code>develop</code></li></ul>Stiahnutie je overené, že existuje a spustiteľné pred ďalším krokom.",
-      "<strong>0Runs the installer</strong> end-to-end. Inštalatér je ten istý, ktorý README publikuje bez vlastnej cesty, bez skratky. To znamená, že existujúca detekcia komponentov, zálohovanie súborov, inštalácie závislosti, zachovanie jazyka atď. sa správajú rovnako ako nová inštalácia cieľového kanála.",
+      "<strong>Spustí celý inštalačný program</strong>. Inštalátor je ten istý, ktorý publikuje README – žiadna vlastná cesta, žiadna skratka. To znamená, že detekcia existujúcich komponentov, zálohy súborov, inštalácie závislostí, zachovanie jazyka atď. sa správajú rovnako ako pri novej inštalácii cieľového kanála.",
       "Pri prepnutí na <strong>Stable</strong>, menu potom scvrkne akékoľvek zvyšné beta metaúdaje z <code>config.json</code>: <code>beta_program</code>, <code>beta_version</code>, <code>install_branch</code>, <code>update_available.beta*</code> sa odstránia a <code>proxmenux_monitor.status = beta_updated</code> sa normalizuje na <code>updated</code>. Zvyškový súbor <code>beta_version.txt</code> a akýkoľvek stiahnutý beta inštalátor sú odstránené.",
       "Pri prepnutí na Stabilný monitor systemd súbor jednotky je tiež prepísaný zo šablóny Stable (stráca príponu od popisu jednotky, body <code>ExecStart</code> Späť na Runtime dir) tak čerstvá <code>systemctl status</code> Odzrkadľuje kanál, na ktorom ste.",
       "Znovu načíta konfiguračné menu. Ďalšia návšteva <em>Show Version Information</em> ukáže nový kanál."
@@ -48,7 +48,7 @@
   },
   "switching": {
     "heading": "Prepínam dopredu a dozadu",
-    "intro": "Oba smery prejdú rovnakým inštalátorom, ktoré sú <strong>0not</strong> špeciálne-cased odinštalovať + reinštalovať toky. Každý smer jednoducho spustí vlastný inštalátor kanála, ktorý je navrhnutý tak, aby bol nepozorný a bezpečný na opätovné vykonanie existujúcej inštalácie. Praktické dôsledky:",
+    "intro": "Obidva smery prechádzajú rovnakým inštalačným programom — <strong>nie sú</strong> špeciálnymi postupmi odinštalovania a preinštalovania. Každý smer jednoducho spúšťa vlastný inštalačný program kanála, ktorý je navrhnutý tak, aby bol idempotentný a bezpečný na opätovné spustenie cez existujúcu inštaláciu. Praktické dôsledky:",
     "items": [
       "Váš existujúci config, ProxMenux Monitor login (<code>auth.json</code>), oznamovacie kanály, register po inštalácii, vlastné prahy Prepínač kanála iba vymení skriptový strom a binárny AppImage.",
       "Monitor, ktorý bol aktívny pred spínačom zostane aktívny po; ten, ktorý bol deaktivovaný, zostane deaktivovaný.",
@@ -67,7 +67,7 @@
     ],
     "logsCommand": "journalctl -u proxmenux-monitor -n 50 --no-pager",
     "versionLine": "Aktuálna verzia ProxMenux (Nastavenia → <link>Ukázať informácie o verzii</link>).",
-    "issueLine": "Otvorte <ghlink>0GitHub vydanie</ghlink> s týmito informáciami a dostaneme sa k oprave rýchlejšie."
+    "issueLine": "Otvorte <ghlink>GitHub problém</ghlink> s týmito informáciami a rýchlejšie sa dostaneme k oprave."
   },
   "manual": {
     "heading": "Ručný ekvivalent",

@@ -20,7 +20,7 @@
     "headerUse": "Použitie",
     "rows": [
       {
-        "question": "Kto nasýti odkaz <em>0right teraz</em>?",
+        "question": "Kto presýti odkaz <em>práve teraz</em>?",
         "use": "iftop"
       },
       {
@@ -49,11 +49,11 @@
     "rows": [
       {
         "mode": "Monitor prevádzky IP",
-        "useFor": "Live TCP0 / UDP / ICMP / other-IP flow list with bajte counters and connection state"
+        "useFor": "Live TCP / UDP / ICMP / iný-IP tokový zoznam s bajtovými počítadlami a stavom pripojenia"
       },
       {
         "mode": "Štatistiky všeobecného rozhrania",
-        "useFor": "Agregát IPv4 / IPv6 / TCP0 / UDP / ICMP / neIP paket počíta na NIC"
+        "useFor": "Súhrnný počet paketov IPv4 / IPv6 / TCP / UDP / ICMP / non-IP paketov na sieťovú kartu"
       },
       {
         "mode": "Podrobné štatistiky rozhrania",
@@ -94,7 +94,7 @@
     "workflowIntro": "Typický pracovný postup na testovanie 10 GbE spojenia medzi dvoma hostiteľmi Proxmox:",
     "workflow": [
       "Na hostiteľovi A otvorte sieťové menu → <em> Test šírky (iperf3)</em> → vyberte <strong>Server</strong>.",
-      "Na hostiteľovi B otvorte rovnaký vstup do menu → vyberte <strong>0Client</strong> → zadajte IP hostiteľa A.",
+      "Na hostiteľovi B otvorte rovnakú položku ponuky → vyberte <strong>Klient</strong> → zadajte IP hostiteľa A.",
       "Počkajte 10 sekúnd. Porovnajte vykazovanú mieru s teoretickým maximom spojenia."
     ],
     "sample": "Vzorový výstup klienta:",

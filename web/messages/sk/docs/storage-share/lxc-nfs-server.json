@@ -29,7 +29,7 @@
     "gidTitle": "Prečo konkrétne GID 101000",
     "gidBody": "Mapuje ho ako hostiteľa GID <strong>1000</strong> keď sa v neprivilegovanom kontajneri nachádza ten istý súbor (LXC predvolená idmap posunie všetko o +100000). V súčasnosti ProxMenux ťuknite NFS samotný server beží v <strong>Privilegované</strong> CT (žiadny posun na jeho strane), ale konvencia udržuje ID skupiny numericky v súlade s neprivilegovanými klientskymi CT, ktoré môžu pripojiť tento podiel neskôr. Dva privilegované CT, ktoré používajú <code>sharedfiles</code> v GID 101000 môžete čítať / písať navzájom súbory čisto, pretože GID čísla zodpovedajú end-to-end.",
     "remapTitle": "Skript tiež vytvára 'remap *' užívateľov",
-    "remapBody": "Pre každého pravidelného užívateľa v CT0 (a pre bežné UID ako 33 = www-data, 1000, 1001, 1002) skript vytvára paralelného používateľa <code>remap_&lt;uid&gt;</code> s UID = <code>&lt;uid&gt; + 100000</code>, všetci členovia <code>sharedfiles</code>. <code>+100000</code> posun napodobňuje LXC unprivileged idmap, ale pretože tento skript presadzuje <strong>privileged</strong> CT (bez posunu), tí <code>remap_*</code> užívatelia sú tieňové účty bez reálneho partnera na hostiteľa. Sú neškodné zvyšky z ambicióznejšieho zámeru návrhu. Ak ich neuvidíte v <code>getent passwd</code>, nič sa nerozbije."
+    "remapBody": "Pre každého bežného užívateľa v CT (a pre bežné UID ako 33 = www-data, 1000, 1001, 1002), skript vytvára paralelu <code>remap_&lt;uid&gt;</code> užívateľ s UID = <code>&lt;uid&gt; + 100000</code>, všetci členovia skupiny <code>sharedfiles</code>. The <code>+100000</code> posun napodobňuje LXC neprivilegovaný idmap, ale keďže tento skript vynucuje a <strong>privilegovaný</strong> CT (bez posunu), tie <code>remap_*</code> Používatelia sú tieňové účty bez skutočného náprotivku na hostiteľovi. Sú to neškodné pozostatky z ambicióznejšieho dizajnérskeho zámeru. Ak ich tam nevidíte <code>getent passwd</code>, nič sa nezlomí."
   },
   "defaults": {
     "heading": "Predvolené exportné možnosti",
@@ -111,7 +111,7 @@
     "heading": "Odinštalovať server NFS",
     "body": "Kompletné čistenie po potvrdení: zastaví + vypne <code>nfs-kernel-server</code> a <code>rpcbind</code>, jasné <code>/etc/exports</code>, <code>apt-get purge</code> a) NFS balenie, odstraňuje <code>sharedfiles</code> skupina a <code>remap_*</code> Užívatelia zabíjajú všetky zbytky procesov. Vývoz <strong>samy priečinky nie sú vymazané</strong> Iba NFS konfiguráciu a balíky.",
     "warnTitle": "Skript sa zastaví na exportnom riadku, nie na dátach",
-    "warnBody": "Obaja <em>0Delete export</em> a <em>Uninstall NFS server</em> odstrániť konfiguráciu exportu. Údaje o exportovanom priečinku sú zachované. Ak chcete odstrániť dáta taky, urobte to explicitne s <code>rm -rf</code> po skriptu končí a späť najprv, ak niekto ešte môže potrebovať."
+    "warnBody": "<em>Odstrániť export</em> a <em>Odinštalovať server NFS</em> odstráni konfiguráciu exportu. Údaje o exportovanom priečinku sa zachovajú. Ak chcete odstrániť aj údaje, urobte to explicitne pomocou <code>rm -rf</code> po dokončení skriptu – a ak by ich ešte niekto mohol potrebovať, najprv si ich zálohujte."
   },
   "troubleshoot": {
     "heading": "Riešenie problémov",
@@ -124,7 +124,7 @@
       "Arch: <code>pacman -S nfs-utils</code>",
       "Rocky / Alma: <code>dnf install nfs-utils</code>"
     ],
-    "aptOutro": "Potom re-spustiť ProxMenux skript",
+    "aptOutro": "Potom znova spustite skript ProxMenux — krok inštalácie preskočí, keď už sú nástroje k dispozícii.",
     "aclTitle": "Klient sa nemôže pripojiť: 'prístup zamietnutý serverom'",
     "aclBody": "IP klienta je mimo siete ACL, ktorú ste nakonfigurovali. Znovu vytvoriť export so širšou podsiete, alebo pridať klienta presný IP. Common gotcha: klienti pripájajúci sa cez router NAT sa môže objaviť s router WAN IP, nie klient LAN IP <code>tcpdump -n port 2049</code>.",
     "ownTitle": "Súbory napísané klientom sa objavujú s divným vlastníctvom na serveri",

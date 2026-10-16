@@ -105,7 +105,7 @@
                 "Port a spôsob kontroly služby sú potvrdené"
               ],
               [
-                "Architektúry a trávenie v registri",
+                "Architektúry a digest v registri",
                 "Zariadenia, oprávnenia alebo externé závislosti",
                 "Žiadna z nich nie je povolená bez definície, ktorá o ňu žiada."
               ]
@@ -136,7 +136,7 @@
               },
               {
                 "title": "Blokovať to, čo nemožno preložiť",
-                "body": "Kľúč bez bezpečného ekvivalentu je zobrazený v <strong>0Čo nemožno preložiť </strong> a inštalácia nepokračuje. Nič neklesne ticho."
+                "body": "Kľúč bez bezpečného ekvivalentu je zobrazený v časti <strong>Čo sa nedá preložiť</strong> a inštalácia nepokračuje. Nič sa neruší ticho."
               },
               {
                 "title": "Pýtajte sa na tajomstvá",
@@ -210,7 +210,7 @@
           }
         },
         {
-          "p": "Formát je popísaný blok po bloku, s dvoma kompletnými príkladmi, v <readmeLink>0README OCI motora</readmeLink>. Záznam o inštalácii možno čítať rovnakým spôsobom: používa sa iba šablóna, z ktorej bol nainštalovaný, a žiadna z odpovedí na túto inštaláciu."
+          "p": "Formát je popísaný blok po bloku s dvoma úplnými príkladmi v <readmeLink>README motora OCI</readmeLink>. Záznam o inštalácii je možné prečítať rovnakým spôsobom: použije sa iba šablóna, z ktorej bol nainštalovaný, a žiadna z odpovedí tejto inštalácie."
         }
       ]
     },
@@ -238,7 +238,7 @@
           }
         },
         {
-          "p": "<strong>0Registračné účty</strong>, v hlavnom menu aplikácie správcu OCI, uvádza uložené účty podľa registra a užívateľa, nikdy ich tajomstvo. Z každého účtu možno obraz skontrolovať, stiahnuť alebo nainštalovať a účet aktualizovať alebo odstrániť."
+          "p": "<strong>Účty registra</strong> v hlavnom menu OCI manager Apps uvádza zoznam uložených účtov podľa registra a používateľa, nikdy nie ich tajomstvo. Z každého účtu je možné skontrolovať, stiahnuť alebo nainštalovať obrázok a účet aktualizovať alebo odstrániť."
         },
         {
           "list": {

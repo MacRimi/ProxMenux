@@ -3,9 +3,9 @@
     "title": "ZFS Príkazy na Proxmox zpool, zfs snímka, send/prijímanie, vydrhnúť ProxMenux",
     "description": "Referencie ZFS príkazov pre správu Proxmox VE: zpool create / status / history, zfs list / get / set, snímky, klon, zfs odosielať a prijímať, vydrhnúť, jasné, nahradiť, zpool iostat, ARC zhrnutie.",
     "ogTitle": "ZFS Príkazy na Proxmox zpoole, zfs snímka, odosielanie/prijímanie, drh",
-    "ogDescription": "Odkaz na zpool a zfs príkazy na Proxmox VE",
+    "ogDescription": "Referencia príkazov zpool a zfs na Proxmox VE — pools, množiny údajov, snapshots, replikácia, údržba.",
     "twitterTitle": "ZFS Príkazy na Proxmox ProxMenux",
-    "twitterDescription": "zpool a zfs príkazy pre Proxmox VE: bazény, súbory údajov, snímky, replikácia, údržba."
+    "twitterDescription": "príkazy zpool a zfs pre Proxmox VE: pools, množiny údajov, snapshots, replikácia, údržba."
   },
   "header": {
     "title": "Správa ZFS",
@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Dve veliteľské rodiny",
-    "body": "<code>zpool *</code> spravuje úložné bazény (fyzická vrstva <code>zfs *</code> spravuje súbory údajov a snímky, ktoré žijú v týchto bazénoch (logická vrstva súborových systémov, zväzky, snímky, vlastnosti)."
+    "body": "<code>zpool *</code> spravuje úložisko pools (fyzická vrstva – disky, vdevs, redundancia). <code>zfs *</code> spravuje množiny údajov a snapshots, ktoré žijú vo vnútri týchto pools (logická vrstva – súborové systémy, zväzky, snapshots, vlastnosti)."
   },
   "commandGroups": [
     {
@@ -26,23 +26,23 @@
         },
         {
           "command": "zpool status",
-          "description": "Zobraziť detailný stav a zdravie bazéna"
+          "description": "Zobraziť podrobný pool stav a zdravie"
         },
         {
           "command": "zpool status -v",
-          "description": "Zobraziť stav doslovného bazéna s chybami"
+          "description": "Zobraziť podrobný stav pool s chybami"
         },
         {
           "command": "zpool history",
-          "description": "Zobraziť históriu príkazov pre všetky bazény"
+          "description": "Zobraziť históriu príkazov pre všetky pools"
         },
         {
           "command": "zpool history <pool>",
-          "description": "Zobraziť históriu príkazov pre konkrétny bazén"
+          "description": "Zobraziť históriu príkazov pre konkrétne pool"
         },
         {
           "command": "zpool get all <pool>",
-          "description": "Ukáž všetky vlastnosti bazéna"
+          "description": "Zobraziť všetky vlastnosti pool"
         }
       ]
     },
@@ -88,7 +88,7 @@
         },
         {
           "command": "zfs list -t snapshot -r <pool>",
-          "description": "Zoznam všetkých snímok v bazéne"
+          "description": "Uveďte všetky snapshots v pool"
         },
         {
           "command": "zfs snapshot <pool>/<dataset>@<snapshot-name>",
@@ -142,7 +142,7 @@
       "commands": [
         {
           "command": "zpool scrub <pool>",
-          "description": "Spustiť čistenie na bazéne"
+          "description": "Spustite operáciu čistenia na pool"
         },
         {
           "command": "zpool scrub -s <pool>",
@@ -150,7 +150,7 @@
         },
         {
           "command": "zpool clear <pool>",
-          "description": "Vyčistiť počet chýb v bazéne"
+          "description": "Vymazať počet chýb v pool"
         },
         {
           "command": "zpool clear <pool> <device>",

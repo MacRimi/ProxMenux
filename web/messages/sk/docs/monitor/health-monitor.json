@@ -20,7 +20,7 @@
     "heading": "Ako to funguje",
     "intro": "Health Monitor beží na dvoch paralelných pruhoch v rámci procesu Monitor. Ľahká <strong>vitálne príznaky vzorkovač</strong> má byť CPU, pamäť a teplota každých pár sekúnd tak, že trvalé-prahové podmienky sú detekované rýchlo; paralelne, <strong>cyklus plného zdravia</strong> beží každých päť minút a cvičí každú kategóriu od konca do konca. Obe pruhy sa zbiehajú do rovnakého SQLite tabuľkami a odtiaľ traja spotrebitelia čítajú štát nezávisle.",
     "scannerTitle": "Od vzorky po skladovaný nález",
-    "scannerCaption": "Ten skener. Vitálne príznaky sú vzorkované rýchlo, takže trvalo-CPU/trvalý tlak pamäti možno detekovať pred ďalším 5-min cyklu. Celý cyklus číta tieto nárazníky a vykonáva ťažšie kontroly (SMART, ZFS bazén stav, skenovanie časopisov, služby zdravie, atď) pred písaním štruktúrovaných zistení SQLite.",
+    "scannerCaption": "Skener. Vitálne funkcie sa odoberajú rýchlo, takže trvalý-CPU / tlak trvalej pamäte možno zistiť pred ďalším 5-minútovým cyklom. Celý cyklus načíta tieto vyrovnávacie pamäte a spustí náročnejšie kontroly (stav SMART, ZFS pool, skenovanie denníka, stav služby atď.) pred zápisom štruktúrovaných zistení do SQLite.",
     "scannerArrowLabel": "krok",
     "scannerNodes": {
       "samplerLabel": "Vitálne znaky vzorkovač",
@@ -33,7 +33,7 @@
       "sqliteDetail": "Tabuľka chýb\n(aktívne +\nzamietnuté)\n+ disk_observations\n(trvalé\ndejiny na disk)"
     },
     "notifTitle": "Od uloženého nálezu k užívateľovi",
-    "notifCaption": "Oznamovacia cesta. Rovnaké chyby tabuľka tiež riadi pohľad do prístrojovej dosky (Aktívne / Odmietnuté zoznamy preložené naživo) a je spotrebovaný vyčistenie rutiny na konci každého cyklu auto-resolvovať zastávky položky",
+    "notifCaption": "Cesta oznámenia. Rovnaká tabuľka chýb riadi aj zobrazenie dashboardu (Aktívne/Zrušené zoznamy sa vykresľujú naživo) a je spotrebovaná rutinou čistenia na konci každého cyklu na automatické vyriešenie zastaraných záznamov – obe sa spúšťajú z rovnakých údajov bez toho, aby museli prejsť cez dispečera.",
     "notifArrowLabel": "udalosť",
     "notifNodes": {
       "errorsLabel": "Tabuľka chýb",
@@ -50,7 +50,7 @@
     "heading": "Desať kategórií",
     "imageAlt": "Zobrazenie zdravotného monitora zobrazujúce desať kategórií s ich aktuálnymi stavmi (CPU, pamäť, úložisko, disky, sieť, VMs, služby, záznamy, aktualizácie, bezpečnosť)",
     "imageCaption": "Zdravotný monitor pohľad na desať kategórií s ich aktuálny stav. Kategórie na zdravom hostiteľovi všetky ukazujú OK; varovania a kritické udalosti sa objavujú v súlade s radmi, ktoré ich vytvorili.",
-    "intro": "Každý cyklus cvičí desať nezávislých dám. Každý vyrába jeden zo štyroch stavov (<strong>0OK</strong>, <strong>INFO</strong>, <strong>WARNING</strong>, <strong>CRITICAL</strong>) plus štruktúrované šírenie zariadenia názvy, vzorky log linky, presné prahové hodnoty",
+    "intro": "Každý cyklus vykonáva desať nezávislých kontrolórov. Každý vytvára jeden zo štyroch stavov (<strong>OK</strong>, <strong>INFO</strong>, <strong>POZOR</strong>, <strong>KRITICKÝ</strong>) plus štruktúrované užitočné zaťaženie – názvy zariadení, riadky záznamu vzoriek, presné prahové hodnoty – ktoré sa objavia na palubnej doske a prejdú až k orgánu upozornení.",
     "headerCategory": "Kategória",
     "headerChecks": "Kontroly Sub",
     "headerEvents": "Typické udalosti",
@@ -66,13 +66,13 @@
         "events": "Trvalý tlak pamäte; aktivita zabijaka OOM; výmena vyčerpania."
       },
       {
-        "category": "Skladovanie",
+        "category": "Úložisko",
         "checks": "Proxmox úložiská, koreňový súborový systém",
-        "events": "Skladovanie offline (NFS server nedostupný, CIFS exspirované credds); root mount > 90 %; LVM tenký bazén blízko plnej."
+        "events": "Ukladací priestor offline (NFS server nedostupný, CIFS vypršala platnosť); root mount > 90 %; LVM thin pool sa blíži k naplneniu."
       },
       {
         "category": "Disky & SMART",
-        "checks": "SMART, chyby dmegg I/O, ZFS bazény, LVM, chyby súborového systému",
+        "checks": "SMART, dmesg I/O chyby, ZFS pools, LVM, chyby súborového systému",
         "events": "Zlyhalo zdravie SMART; prerozdelené / nevybavené sektory; chyby ATA I/O; ZFS pool DEGADED / FAULTED; prečítanie ext4."
       },
       {
@@ -102,7 +102,7 @@
       },
       {
         "category": "Bezpečnosť a certifikáty",
-        "checks": "Prihlasovacie pokusy, platnosť certifikátov, voliteľný status väzenia Fail2Ban",
+        "checks": "Pokusy o prihlásenie, platnosť certifikátov končí, voliteľný Fail2Ban jail stav",
         "events": "Opakované zlyhania SSH/ web auth; PVE certifikát < 30 dní od skončenia platnosti; Fail2Ban aktívny zákaz."
       }
     ]
@@ -123,7 +123,7 @@
       {
         "status": "INFO",
         "colour": "Modrá",
-        "meaning": "Prechodný alebo už vyriešený stav stojí za zmienku raz. Používa sa aj pre kategórie, ktoré majú <em>0len</em> vynechané položky.",
+        "meaning": "Prechodný alebo už vyriešený stav, ktorý stojí za zmienku. Používa sa aj pre kategórie, v ktorých zostali <em>len</em> zamietnuté položky.",
         "notification": "Nepovinné. Každý typ udalosti sa môže zvoliť na každý kanál."
       },
       {
@@ -139,7 +139,7 @@
         "notification": "Odoslané, keď je zapnutá prepnutie pre každý prípad. KRITICKÁ teplota CPU sa považuje za bezpečnostné upozornenie, ktoré prepáli aj v prípade, že bolo predtým zamietnuté."
       }
     ],
-    "infoNote": "Kategória, ktorá je <strong>0OK</strong>, ale zamietla udalosti stále vo vnútri ich potlačenie okna je prerobená ako <strong>INFO</strong>",
+    "infoNote": "Kategória, ktorá je <strong>OK</strong>, ale odmietla udalosti stále vo svojom okne potlačenia, sa vykreslí ako <strong>INFO</strong> — aby vám pripomenula, že sa niečo umlčalo, namiesto toho, aby sa nikdy nič nestalo.",
     "unknownTitle": "Unknown, kedy šek nemôže dokončiť",
     "unknownBody": "Kontrola, ktorá nevytvorí verdikt pre tri cykly v rade (sonda, ktorá sa vynásobí, senzor, ktorý zmizol, nástroj, ktorý vyjde s chybou) sa interne zaznamenáva ako <code>UNKNOWN</code>. Palubná doska je rozprestieraná ako žltý stav, takže celkový pohľad čiapky <code>UNKNOWN</code> na <strong>WARNING</strong>, takže to nikdy eskaluje zdravý hostiteľ CRITIC na vlastnú päsť."
   },
@@ -147,8 +147,8 @@
     "heading": "Zobrazenie prístrojovej dosky",
     "intro": "Monitor zdravia žije v záložke <strong>Overview</strong>. Záhlavie stav pilulka (Zdravé / Varovanie / Kritické) otvára spôsob, ktorý rozdeľuje nálezy do dvoch zoznamov:",
     "items": [
-      "<strong>0Active</strong> Každý riadok sa rozširuje, aby ukázal jednotlivé kontroly, ktoré vytvorili stav, surový <code>reason</code> reťazec, zariadenie alebo VM ID zapojené, a (pre kategórie, ktoré odkazujú na záložku) kliknutím do úložiska / siete / VMs / Logs / Hardware vyšetrovať.",
-      "<strong>0Dismissed</strong> Každý riadok ukazuje, koľko z potlačenia zostáva a nakonfigurované trvanie. Keď okno vyprší, položka zmizne z tohto zoznamu; ak je základná podmienka stále prítomná a kategória podporuje opätovné zapálenie, znovu sa objaví v <em>Active</em>."
+      "<strong>Aktívne</strong> — každá kategória s nevyriešeným nálezom. Každý riadok sa rozbalí a zobrazí jednotlivé kontroly, ktoré vytvorili stav, nespracovaný reťazec <code>reason</code>, príslušné zariadenie alebo VM ID a (v prípade kategórií, ktoré odkazujú na kartu) prekliknutie na Úložisko / Sieť / VM / Protokoly / Hardvér, ktoré treba preskúmať.",
+      "<strong>Zrušené</strong> — položky predtým potvrdené používateľom, ktoré sú stále v okne potlačenia. Každý riadok zobrazuje, koľko z potlačenia zostáva a nakonfigurované trvanie. Po uplynutí platnosti okna položka zmizne z tohto zoznamu; ak je základný stav stále prítomný a kategória podporuje opätovné spustenie, znova sa objaví v <em>Aktívne</em>."
     ],
     "pillTitle": "Tabletka odráža najhoršiu kategóriu",
     "pillBody": "Farba záhlavia palubnej dosky je najvyššia závažnosť v rámci desiatich kategórií: každá KRITICKÁ → červená, iné UPOZORNENIE → žltá, iná INFO → modrá, iná zelená. Rovnaká logika poháňa bodku a odznak PWA.",
@@ -167,7 +167,7 @@
     "imageCaption": "Potlačenie Doba trvania karty Vyberte si dlhšie okno pre hlučné udalosti (napr. prebiehajúce aktualizácie) a kratšie pre tie, ktoré chcete rýchlo prehodnotiť. Aktívne potlačenia sú uvedené nižšie (pozri nižšie).",
     "outro": "Zatiaľ čo udalosť je potlačená, skener stále beží a aktualizuje časovú pečiatku <code>last_seen</code>, ale žiadne nové oznámenie nie je odoslané a prístrojová doska zostáva pokojná. Keď okno vyprší, nasledujúci cyklus prehodnotí stav a buď prepáli čerstvé, alebo ak sa tento stav sám vyčistí, pustí riadok zo zoznamov.",
     "activeSuppressionsTitle": "Recenzia a vrátenie odmieta",
-    "activeSuppressionsBody": "Každý v súčasnosti tlmený poplach (časovo obmedzený a trvalý) je uvedený pod <strong>0Nastavenia → Monitor zdravia → Aktívne potláčanie</strong>. Každý riadok zobrazuje výstražný identifikátor, kategóriu, závažnosť, keď bol prepustený a koľko času zostáva, plus tlačidlo <strong>Re-sable</strong>, ktoré vymaže potvrdenie, aby upozornenie mohlo znovu vystreliť na ďalšom snímku. Trvalé prepúšťanie sa môže vrátiť len odtiaľto; časovo obmedzené môžu byť tiež násilne odstránené bez čakania na odpočítavanie. Zapnutie akcie je riadený monitorom zdravia <em>Edit</em> režim v hornej časti tejto karty Zrušiť vyhadzovanie frontu.",
+    "activeSuppressionsBody": "Všetky aktuálne stíšené výstrahy (časovo obmedzené a trvalé) sú uvedené v časti <strong>Nastavenia → Monitor zdravia → Aktívne potlačenia</strong>. Každý riadok zobrazuje identifikátor výstrahy, kategóriu, závažnosť, kedy bola výstraha zrušená a koľko zostávajúceho času, plus tlačidlo <strong>Znova povoliť</strong>, ktoré vymaže potvrdenie, aby sa výstraha mohla znova spustiť pri ďalšom skenovaní. Trvalé prepustenie je možné vrátiť len odtiaľto; časovo obmedzené možno aj násilne oživiť bez čakania na odpočítavanie. Akcia Opätovné zapnutie je zabezpečená režimom Health Monitor <em>Upraviť</em> v hornej časti tejto karty – prepnite Upraviť, kliknite na Znova povoliť v každom riadku, ktorý chcete oživiť (riadky vo fronte majú zelené orámovanie a prečiarknutie), potom kliknite na Uložiť na potvrdenie. Zrušiť zahodí front.",
     "autoTitle": "Automatické potlačenie po zmene trvania",
     "autoBody": "Nastavenie doby trvania potláčania kategórie na čokoľvek iné, než je predvolená 24 h má druhý účinok nad rámec prepúšťania iniciovaného používateľom: <strong> budúce zistenia v tejto kategórii zadajte tabuľku už uznanú </strong> s týmto trvaním. To je podľa dizajnu, ak ste povedali Monitor, že chcete disk-súvisiace udalosti umlčal po dobu jedného týždňa, zbrusu nový disk nálezy cti, že zámer, bez toho aby ste museli odmietnuť každý jeden ručne. Objavujú sa priamo v rozpustenom zozname s nastaveným zostávajúcim časom. Kategórie vľavo na 24 h nie sú ovplyvnené a správať sa klasickej spôsobom (nové nálezy pozemky v Active, kým budete konať).",
     "tempTitle": "Teplota CPU CRITICAL je bezpečnostný prepínač",
@@ -187,7 +187,7 @@
       },
       {
         "finding": "ZFS pool DEGRADED / FAULTED",
-        "why": "Riziko integrity údajov Udusenie, zatiaľ čo bazén je nezdravý, nikdy nie je správna odpoveď."
+        "why": "Riziko integrity údajov — zlyhanie pool ohrozuje každú množinu údajov. Umlčať, kým je pool nezdravé, nie je nikdy tým správnym riešením."
       },
       {
         "finding": "Chyba disku I/O s SMART FAILED",
@@ -195,14 +195,14 @@
       },
       {
         "finding": "Sieťové rozhranie dole",
-        "why": "Strata Connectivity Umlčanie by zamaskovalo výpadok diaľkového riadenia."
+        "why": "Strata pripojenia – mosty, väzby a fyzické rozhrania s aktívnou prevádzkou musia zostať viditeľné. Ich umlčaním by sa zamaskoval výpadok diaľkovej správy."
       },
       {
         "finding": "I/O udalosti na zdravých diskoch (INFO)",
         "why": "Prechodné ATA / dmegg udalosti na disku, ktorého SMART hovorí OK Nič, čo by sme mohli odmietnuť, pretože ďalší cyklus ich už odstraňuje."
       }
     ],
-    "principle": "Všetko ostatné môže byť zamietnuté. Princíp je: upozornenia, ktoré indikujú \"skutočné škody v priebehu\" alebo ktoré už boli vyriešené sami, sú zadržané mimo cesty prepustenia; upozornenia o trvalých podmienkach, ktoré možno budete chcieť neskôr potvrdiť a znovu skontrolovať (vysoké používanie CPU0, čakajúce aktualizácie, certifikát blízko skončenia platnosti, upozornenia na prihlásenie, VM startup štikúta atď.) všetky odhaľujú tlačidlo Odchodu."
+    "principle": "Všetko ostatné môže byť zrušené. Princíp je nasledovný: výstrahy, ktoré naznačujú, že „skutočná škoda prebieha“ alebo ktoré sa už vyriešili samy, sú držané mimo cesty prepustenia; upozornenia na pretrvávajúce stavy, ktoré možno budete chcieť potvrdiť a znova skontrolovať neskôr (vysoké využitie CPU, čakajúce aktualizácie, blížiace sa vypršanie platnosti certifikátu, varovania denníka, VM problémy pri spustení atď.), to všetko odhalí tlačidlo Zrušiť."
   },
   "autoresolve": {
     "heading": "Automatické rozlíšenie a čistenie",
@@ -219,7 +219,7 @@
         "action": "Vyriešené."
       },
       {
-        "trigger": "VM0 / CT zmienená chyba už neexistuje (<code>qm status</code> / <code>pct status</code> non-nula).",
+        "trigger": "VM / CT, na ktoré odkazuje chyba, už neexistuje (<code>qm status</code> / <code>pct status</code> nenulové).",
         "action": "Označený ako odstránený zdroj."
       },
       {
@@ -280,7 +280,7 @@
     "intro": "Každá aktívna chyba je tiež kandidátom pre oznamovací motor. Prietok:",
     "items": [
       "Scanner zaznamenáva zistenie s kategóriou + závažnosť + štruktúrované detaily.",
-      "Ak je typ udalosti <strong>0pendabled</strong> v globálnom nastavení upozornenia a kanál neumlčí túto kategóriu, udalosť je v čakacom rade.",
+      "Ak je typ udalosti <strong>povolený</strong> v globálnych nastaveniach upozornení a kanál túto kategóriu neumlčal, udalosť je zaradená do poradia.",
       "Šablóna motora vykresľuje (titul, telo) dvojicu zo štruktúrovaných detailov. Ak je prepisovateľ AI zapnutý, rovnaký pár prechádza aj nakonfigurovaným poskytovateľom pre jednoduchú jazykovú verziu.",
       "Implementácia kanála ju posiela: Telegram správa, Discord vložené, Gotify push alebo email. Výsledok expedície je uložený v <code>notification_history</code>.",
       "Ak prepustenie príde neskôr, potláčanie okna kopne a akékoľvek ďalšie prepálenie rovnaké <code>error_key</code> zostať front-strane, kým sa okno zavrie."

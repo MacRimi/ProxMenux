@@ -14,7 +14,7 @@
   },
   "interfaceLanguage": {
     "heading": "Jazyk rozhrania",
-    "intro": "Vyberte jazyk používaný <strong>0web Monitor</strong>. Zmena sa aplikuje okamžite na aktuálne rozhranie; neobnovuje službu a nemení jazyk použitý v menu ProxMenux.",
+    "intro": "Vyberte jazyk používaný <strong>webovým monitorom</strong>. Zmena sa okamžite aplikuje na aktuálne rozhranie; nereštartuje službu a nemení jazyk používaný v ProxMenux ponukách shellu.",
     "items": [
       "ProxMenux Monitor v súčasnosti ponúka angličtinu, nemčinu, španielčinu, francúzštinu, taliančinu, portugalčinu, slovenčinu a švédčinu.",
       "Pri prvej návšteve Monitor používa jazyk prehliadača, keď je podporovaný; inak sa vráti do angličtiny.",
@@ -26,7 +26,7 @@
   },
   "navigationOrder": {
     "heading": "Poradie navigácie",
-    "intro": "Použite túto kartu na usporiadanie siedmich navigačných slotov najvyššej úrovne: <strong>0Overview, Apps, VMs & LXCs, Node, Backup, Terminál a Admin</strong>. Stlačte <strong>Edit</strong>, pretiahnite riadky a potom uložte výsledok.",
+    "intro": "Túto kartu použite na usporiadanie siedmich navigačných slotov najvyššej úrovne: <strong>Prehľad, Aplikácie, VM a LXC, Uzol, Záloha, Terminál a Správca</strong>. Stlačte <strong>Upraviť</strong>, potiahnite riadky a potom uložte výsledok.",
     "items": [
       "Ťahanie myšou začína v tlači. Touch používa krátky 250 ms s dlhým lisom, takže normálne rolovanie nie je omylom pre zmenu poradia.",
       "Zoskupené <strong>Node</strong> a <strong>Admin</strong> položky pohybovať ako kompletné jednotky; ich vnútorné stránky udržať ich kanonické poradie.",
@@ -55,7 +55,7 @@
       "<strong>Základné hodiny</strong>"
     ],
     "imageAlt": "Nastavenia → Karta Health Monitor s rozbaľovačmi podľa kategórie a sekciou Active Supressions",
-    "imageCaption": "Zdravotný monitor karta",
+    "imageCaption": "Karta Monitora zdravia – rozbaľovacie ponuky pre jednotlivé kategórie nastavujú predvolené hodnoty pre nové prepustenia; sekcia Aktívne potlačenia nižšie uvádza všetky aktuálne stíšené výstrahy a umožňuje vám ich vrátiť späť.",
     "editTitle": "Upraviť mód",
     "editBody": "Karta je automaticky iba na čítanie. Kliknite na <strong>Edit</strong> v pravom hornom rohu karty, aby ste umožnili dropdowns a znovu zapnúť tlačidlá. <strong>Save</strong> zaväzuje všetky nevybavené zmeny (zmeny potlačenia a opätovné zapnutie frontu) v jednej dávke; <strong>Cancel</strong> ich všetky vyhodí. Tlačidlo Uložiť aktivuje sa len vtedy, keď je aspoň jedna nevybavená zmena.",
     "activeTitle": "Aktívne skryté upozornenia",
@@ -64,11 +64,11 @@
       "Farebný odznak – <strong>Trvalo</strong> (jantárový) alebo odpočet, napríklad <strong>zostáva 24h</strong> / <strong>zostáva 7d</strong> (modrý).",
       "Identifikátor upozornenia normalizovaný na čitateľnosť (napr. <code>pve_storage_full_PBS-Cloud</code> → <em>PVE úložisko plné: PBS-Cloud</em>).",
       "Kategória, závažnosť a časová pečiatka zápisu boli zamietnuté.",
-      "Tlačidlo <strong>0Re-enable</strong> (aktívne iba v režime Edit), ktoré frontuje upozornenie, aby nebolo známe pri ďalšej Uložiť."
+      "Tlačidlo <strong>Znovu povoliť</strong> (aktívne len v režime úprav), ktoré zaradí výstrahu tak, aby sa pri nasledujúcom uložení zrušilo potvrdenie."
     ],
     "activeReenableTitle": "Spätný tok",
-    "activeReenableBody": "Kliknutím na <strong>0Re-enable</strong> v režime Upraviť značky riadok v zelenej a strike jeho identifikátor Kliknutím na rovnaký riadok kliknite znova na <strong>Undo</strong> frontu. Pri stlačení <strong>Save</strong>, každý frontovaný znovu zapnutý požiar <code>POST /api/health/un-acknowledge</code> paralelne a postihnuté riadky zmiznú zo zoznamu. Ak je základná podmienka je stále prítomný a kategória podporuje presviedčanie, upozornenie sa znovu objaví v zozname Active Health Monitor na ďalšom snímacom cykle.",
-    "activePermanentNote": "Trvalé odvolania (alerty zamietnuté s <em>0Premenne</em> z modalu Health Monitor, alebo tie, ktorých kategória je nastavená na <code>-1</code>) <strong> sa môžu vrátiť len z tohto</strong>. Režim palubnej dosky nevystavuje un-dismiss tlačidlo pre nich",
+    "activeReenableBody": "Kliknutím na <strong>Znova povoliť</strong> v režime úprav sa riadok označí zelenou farbou a označí sa jeho identifikátor – je zaradený do frontu, ale ešte nie je použitý. Opätovným kliknutím na ten istý riadok <strong>Vrátite späť</strong> front. Keď stlačíte <strong>Uložiť</strong>, každé opätovné povolenie vo fronte spustí paralelne <code>POST /api/health/un-acknowledge</code> a dotknuté riadky zmiznú zo zoznamu. Ak je základný stav stále prítomný a kategória podporuje opätovné spustenie, výstraha sa znova zobrazí v zozname Aktívne monitora zdravia pri nasledujúcom cykle skenovania.",
+    "activePermanentNote": "Trvalé odmietnutia (upozornenia zrušené pomocou <em>Natrvalo</em> z modálu Health Monitor alebo tie, ktorých kategória je predvolená na <code>-1</code>) <strong>môžete vrátiť späť iba odtiaľto</strong> Modal dashboardu im neukazuje tlačidlo na zrušenie – panel Aktívne potlačenia je jediný protokol auditu + vrátenie UI.",
     "activeAutoRefreshTitle": "Automatické obnovenie",
     "activeAutoRefreshBody": "Zoznam sa automaticky osvieži, keď odmietnete alebo neodmietnete upozornenie z modalu Health Monitor (prostredníctvom udalosti in-browser), keď sa karta prehliadača znovu zameria a zmení viditeľnosť. Nemusíte znovu načítať stránku po zamietnutí upozornenia z palubnej dosky.",
     "calloutTitle": "Plné sémantika žiť na stránke Health Monitor",
@@ -207,9 +207,9 @@
     "whatRunsTitle": "Čo ten sken vlastne beží",
     "whatRunsIntro": "Pre každý CT v <code>running</code> stave s podporou správcu balíkov:",
     "whatRunsItems": [
-      "<strong>0Cache freshness gate.</strong> Ak je in-container apt/apk metadata cache je starší ako <strong>24 hodiny</strong>, best-effort obnovovacie beží prvý (<code>apt-get update -qq</code> na Debian/Ubuntu, <code>apk update</code> na Alpine) s 60 s časom. Akékoľvek zlyhanie (žiadna sieť, zlomené repo, tichšie prestávka) sa prehltne, a zoznam nižšie stále beží proti akejkoľvek cache existuje, takže prechodné repo problém nemôže nikdy robiť detekciu horšie ako predtým.",
-      "<strong>0Listing.</strong> Potom ProxMenux beží <code>apt list --upgradable</code> / <code>apk list -u</code> a parses výstup do štruktúrovaného počtu plus vzorka horných názvov balíkov.",
-      "<strong>0Per-CT dedup.</strong> Odtlačok prsta vytvorený z počtu, bezpečnostného počítania a triedených horných mien je uložený tak stabilný súbor nevybavených aktualizácií neopakuje denne, zatiaľ čo zmysluplne odlišný súbor robí."
+      "<strong>Brána čerstvosti vyrovnávacej pamäte.</strong> Ak je vyrovnávacia pamäť metadát apt/apk v kontajneri staršia ako <strong>24 hodiny</strong>, najskôr sa spustí obnovenie podľa maximálneho úsilia (<code>apt-get update -qq</code> na Debian/Ubuntu, <code>apk update</code> na Alpine) s a 60 s časový limit. Akékoľvek zlyhanie (žiadna sieť, nefunkčné úložisko, časový limit) sa potichu prehltne – zoznam nižšie stále beží proti akejkoľvek existujúcej vyrovnávacej pamäti, takže prechodný problém s úložiskom nikdy nemôže zhoršiť detekciu ako predtým.",
+      "<strong>Výpis.</strong> Potom ProxMenux spustí <code>apt list --upgradable</code> / <code>apk list -u</code> a analyzuje výstup na štruktúrovaný počet plus vzorku hlavných názvov balíkov.",
+      "<strong>Odstránené za CT.</strong> Odtlačok prsta vytvorený z počtu, počtu zabezpečenia a zoradených hlavných mien je uložený, takže stabilná sada čakajúcich aktualizácií sa neoznamuje denne, zatiaľ čo zmysluplne odlišná sada áno."
     ],
     "selfUpdateTitle": "CT, ktoré sa samoaktualizujú mimo apt, môžu oprávnene nahlásiť 0",
     "selfUpdateBody": "Detekcia vidí len to, čo vie manažér obalov v kontajneroch. A CT ktorého kľúčový softvér sa aktualizuje mimo apt (Plex's <code>plexupdate</code> krokodíl, Docker kontajnery aktualizované prostredníctvom <code>docker pull</code>, Frigate's vstavanou aktualizátorom, atď.) bude naďalej hlásiť nízku alebo nulovú apt aktualizácie aj keď spotrebič aktívne zostáva aktuálny, to je pravda, nie chyba. Apt-level base systém na rovnakej CT môže mať stále svoje vlastné nevybavené aktualizácie, ktoré sken robí povrch.",
@@ -223,13 +223,13 @@
   "storageExclusions": {
     "heading": "Vylúčené vzdialené úložiská",
     "imageAlt": "Remote Storage Vylúčenie karty výpis PBS-Cloud, PBS a PBS2 zásobníky s Health and Alerts toggles za riadok",
-    "imageCaption": "Per-storage <em>0Health</em> a <em>Alerts</em> toggles. Sklady s oboma prepína prestať počítať proti monitoru zdravia a prestať generovať oznámenia",
-    "intro": "Mark Proxmox-managed storage (NFS0 / CIFS / PBS / Ceph / iSCSI / atď.) ako je vylúčené z monitorovania. Dva nezávislé prepínače na pamäť:",
+    "imageCaption": "Na úložisko <em>Zdravie</em> a <em>Upozornenia</em>. Úložné priestory s oboma prepínačmi vypnuté prestanú započítavať do Health Monitor a prestanú generovať upozornenia – ale stále sa vykresľujú na karte Úložisko označené ako vylúčené.",
+    "intro": "Označte úložiská spravované Proxmoxom (NFS / CIFS / PBS / Ceph / iSCSI / atď.) ako vylúčené z monitorovania. Dva nezávislé prepínače na úložisko:",
     "items": [
       "<strong>Health</strong> Užitočné pre archívne objemy, ktoré sú zámerne offline väčšinu času alebo vzdialené záložné ciele len napájané podľa plánu.",
-      "<strong>Alerts</strong> Užitočné, keď chcete zobrazenie palubnej dosky, ale nie oznámenia."
+      "<strong>Upozornenia</strong> — keď je vypnuté, upozornenia o tomto úložisku sa už nebudú zobrazovať cez nakonfigurované kanály, aj keď kontroly stavu zostanú povolené. Užitočné, keď chcete zobraziť informačný panel, ale nie upozornenia."
     ],
-    "outro": "Vylúčené úložiská stále vykresľovať na <link>0Storage tab</link> s fialovou <em>bezpochyby</em> odznak, takže položka nie je ticho zmizne z vášho inventára. Stav pretrváva v tabuľke <code>excluded_storages</code> SQLite."
+    "outro": "Vylúčené úložiská sa stále vykresľujú na <link>karte Úložisko</link> s fialovým odznakom <em>vylúčené</em>, takže záznam ticho nezmizne z vášho inventára. Stav je trvalý v tabuľke <code>excluded_storages</code> SQLite."
   },
   "interfaceExclusions": {
     "heading": "Vylúčené sieťové rozhrania",
@@ -270,7 +270,7 @@
     "whyTitle": "Prečo na tom záleží",
     "whyBody": "ProxMenux mení veci na vašom hostiteľovi: parametre jadra, konfigurácia úložiska, sieťové bity, otáčanie logov, GPU priechod, atď. Vedieť presne to, čo je aktívne, je nevyhnutné pred tým, než začnete pridávať ručné prispôsobenie na vrchole a ešte viac, ak iný admin prevádzkuje hostiteľa, než ten, kto ho nastavil. Táto karta je auditovateľným záznamom každej momentálne platnej optimalizácie s presným kódom, ktorý ju vytvoril.",
     "updatesTitle": "Aktualizácie dostupné banner",
-    "updatesBody": "Keď optimalizácia po inštalácii dostane novšiu verziu na disku ako tá, ktorá je v súčasnosti registrovaná na hostiteľovi, karta zobrazí navrchu banner \"Aktualizované aktualizácie\" a tlačidlo <strong>0Apply</strong>. Kliknutím na <strong>Application</strong> sa otvorí na optimalizačný zberač (rovnaký je k dispozícii z menu <em>Apply available updates</em> entry). Vyberte si, ktoré optimalizácia zdvihnúť; ProxMenux re-spustí zodpovedajúcu funkciu a osvieži verziu v registri. Keď je všetko aktuálne, banner zmizne.",
+    "updatesBody": "Keď optimalizácia po inštalácii dostane na disk novšiu verziu, než je tá, ktorá je momentálne zaregistrovaná na hostiteľovi, karta zobrazí v hornej časti banner \"Dostupné aktualizácie\" s počtom a tlačidlom <strong>Použiť</strong>. Kliknutím na <strong>Použiť</strong> sa otvorí výber pre jednotlivé optimalizácie (rovnaký, ktorý je dostupný v položke <em>Použiť dostupné aktualizácie</em> v ponuke Po inštalácii). Vyberte, ktoré optimalizácie chcete zrušiť; ProxMenux znova spustí zodpovedajúcu funkciu a obnoví verziu v registri. Keď je všetko aktuálne, banner zmizne.",
     "updatesAlt": "ProxMenux Optimizations karta s aktualizáciami k dispozícii banner v hornej časti",
     "updatesCaption": "Banner vykresľuje iba vtedy, keď aspoň jedna optimalizácia má novšiu verziu na disku. Pozri <link>Aplikácia Dostupné aktualizácie</link> pre úplný tok aktualizácie a ekvivalent cesty-A v menu shell.",
     "revertTitle": "Vrátenie optimalizácie",
@@ -350,7 +350,7 @@
       {
         "label": "ProxMenux Scripts → Automatizované po inštalácii",
         "href": "/docs/post-install/automated",
-        "tailRich": " a <customLink>Zákazné post-inštalovať</customLink>"
+        "tailRich": "a <customLink>Prispôsobiteľné po inštalácii</customLink> — skutočné skripty, ktoré sa zaregistrujú v zozname optimalizácie vyššie."
       },
       {
         "label": "Odinštalovať optimalizácie",

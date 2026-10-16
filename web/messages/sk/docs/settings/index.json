@@ -3,7 +3,7 @@
     "title": "ProxMenux Nastavenia Aktivácia monitora, kanál uvoľňovania, Jazyky ProxMenux",
     "description": "Konfiguračné menu ProxMenux: Aktivácia a prepínanie ProxMenux Monitor, Resetovať heslo monitora, Zmeniť kanál uvoľňovania medzi Stable a Beta, výber jazyka (nainštalácia prekladu), informácie o verzii a odinštalovať. Možnosti sa zdajú byť podmienené tým, čo je nainštalované a aktívne.",
     "ogTitle": "ProxMenux Nastavenie",
-    "ogDescription": "Nastaviť ProxMenux",
+    "ogDescription": "Konfigurácia ProxMenux — Monitorovanie služby, kanála vydania, jazyka, informácií o verzii a odinštalovanie.",
     "twitterTitle": "Nastavenie ProxMenux",
     "twitterDescription": "Aktivácia monitora, vypustenie kanála prepínač, jazyky, informácie o verzii a odinštalovať."
   },

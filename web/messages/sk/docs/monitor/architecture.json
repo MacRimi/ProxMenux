@@ -19,7 +19,7 @@
   "requestFlow": {
     "heading": "Požadovaný tok",
     "intro": "Z prehliadača do jadra sa každý pohľad do prístrojovej dosky riadi rovnakou cestou:",
-    "diagramCaption": "Každá žiadosť je overená JWT (keď je povolený auth), odoslaná na plán a zodpovedaná údajmi zozbieranými na požiadanie z hostiteľského nástroja. Ak je Fail2Ban nainštalovaný a väzenie proxmenux je aktívne, middleware tiež kontroluje žiadosť proti zakázanému IP zoznamu väzenia. Voliteľné reverzné proxy je transparentné pre Flask Stav, ktorý musí prežiť žiadosť žije v SQLite.",
+    "diagramCaption": "Každá požiadavka je overená JWT (keď je auth povolená), odoslaná na blueprint a zodpovedaná údajmi zozbieranými na požiadanie z hostiteľských nástrojov. Ak je nainštalovaný Fail2Ban a proxmenux jail je aktívny, middleware tiež skontroluje požiadavku so zoznamom zakázaných IP adries jail. Voliteľný reverzný proxy je transparentný pre Flask – preposiela hlavičky X-Forwarded-* a aplikácia z nich obnoví skutočnú IP adresu klienta. Štát, ktorý potrebuje prežiť žiadosť, žije v SQLite.",
     "diagramArrowLabel": "HTTP / WS",
     "nodes": {
       "clientLabel": "Klient",
@@ -116,7 +116,7 @@
         "prefix": [
           "/api/terminal/* + WS"
         ],
-        "owns": "Pridelenie PTY na reláciu a WebSocket0 potrubia <code>xterm.js</code> v prehliadači."
+        "owns": "Pridelenie PTY na reláciu a kanál WebSocket do <code>xterm.js</code> v prehliadači."
       },
       {
         "blueprint": "flask_notification_routes.py",
@@ -130,7 +130,7 @@
         "prefix": [
           "/api/security/*"
         ],
-        "owns": "Zlyhanie overovania a, keď je Fail2Ban nainštalovaný, stav väzenia, zákaz udalostí a manuálne unban."
+        "owns": "Zlyhania autentifikácie a po nainštalovaní Fail2Ban stav jail, udalosti zákazu a manuálne zrušenie zákazu."
       },
       {
         "blueprint": "flask_proxmenux_routes.py",
@@ -151,7 +151,7 @@
   },
   "dataSources": {
     "heading": "Zdroje údajov",
-    "intro": "Nič sa zhromažďuje od vlastného agenta",
+    "intro": "Od vlastného agenta sa nič nezhromažďuje – Monitor číta rovnaké súbory a spúšťa rovnaké príkazy, aké by urobil ľudský administrátor:",
     "headerSource": "Zdroj",
     "headerUsedFor": "Používa sa na",
     "rows": [
@@ -161,7 +161,7 @@
       },
       {
         "source": "pvesh / qm / pct",
-        "usedFor": "Proxmox uzol info, VM0 a CT inventár a konfig, úložné bazény, história úloh."
+        "usedFor": "Informácie o uzle Proxmox, VM a CT inventár a konfigurácia, úložisko pools, história úloh."
       },
       {
         "source": "smartctl",
@@ -169,7 +169,7 @@
       },
       {
         "source": "zpool / zfs",
-        "usedFor": "Stav bazéna (ONLINE / DEGRADED / FAULTED / UNAVAIL), pokrok v vydrhaní, používanie súborov údajov."
+        "usedFor": "Stav Pool (ONLINE / ZRUŠENÉ / CHYBNÉ / NEDOSTUPNÉ), priebeh čistenia, používanie množiny údajov."
       },
       {
         "source": "journalctl",
@@ -196,7 +196,7 @@
         "usedFor": "UPS stav batérie, načítať, čas bežania"
       }
     ],
-    "cacheTitle": "Výstup je cached",
+    "cacheTitle": "Výstup sa ukladá do vyrovnávacej pamäte – nie každá požiadavka zasiahne hostiteľa",
     "cacheBody": "Drahé zdroje (<code>smartctl -a</code>, <code>pvesh get</code>) sú zabalené v časovo viazanej vyrovnávacej pamäti vnútri Flask procesu, takže rušné palubnej dosky nie je kladivo disk alebo klastr API. cache TTL sú naladené na zdroj (niekoľko sekúnd pre živé metriky, niekoľko minút pre SMART)."
   },
   "persistence": {
@@ -224,7 +224,7 @@
       {
         "path": "/var/log/proxmenux-auth.log",
         "owner": "root:root",
-        "contents": "Jasný textový log udalostí. Vždy napísané. Ak je Fail2Ban nainštalovaný s <code>[proxmenux]</code>0 väzenia, väzenie číta tento súbor zakázať brutálne-sily pokusy; ak nie, súbor jednoducho hromadí záznamy."
+        "contents": "Protokol udalostí autentifikácie vo formáte obyčajného textu. Vždy napísané. Ak je Fail2Ban nainštalovaný s <code>[proxmenux]</code> jail, jail prečíta tento súbor, aby zakázal pokusy hrubou silou; ak nie, súbor jednoducho zhromažďuje záznamy protokolu."
       }
     ],
     "backupTitle": "Zálohovanie auth.json pred reinštaláciou",
@@ -236,17 +236,17 @@
     "items": [
       "Kritické služby PVE (<code>pveproxy</code>, <code>pvedaemon</code>, <code>pvestatd</code>, <code>pve-cluster</code>).",
       "Storage pools Proxmox (<code>pvesh get /storage</code> + dostupnosť na uskladnenie).",
-      "Disky a súborové systémy: SMART, chyby v dmegg I/O, zdravie v bazéne ZFS, kapacita mountpoint.",
+      "Disky a súborové systémy: SMART, I/O chyby dmesg, ZFS pool, kapacita bodu pripojenia.",
       "VM a CT: zlyhali štarty, havarovali hostia, chyby QMP, zlyhanie vypnutia.",
       "Sieť: stav mosta / dlhopisov, stav spojenia, latencia k bráne.",
       "Aktualizácie: čakajúce aktualizácie balíkov a bezpečnostné záplaty.",
       "Logy: trvalá / špička / detekcia kaskádového vzoru v systémovom časopise.",
       "Pamäť: Vražedná aktivita, vysoký tlak.",
       "Teplota: CPU/šasiové senzory proti prahom predajcu.",
-      "Bezpečnosť: zlyhania pri overovaní totožnosti, zákaz udalostí, stav väzenia fail2ban."
+      "Bezpečnosť: zlyhania autentifikácie, udalosti zákazu, fail2ban jail stav."
     ],
     "afterIntro": "Každý nález sa normalizuje na stabilnú <code>error_key</code> + kategória + závažnosť. Perzistencia vrstvy deduplikuje proti existujúcemu <code>errors</code> tabu3⁄4ková aktualizácia opakovaných udalostí <code>last_seen</code> a počítadlo udalostí bez spamovacích oznámení.",
-    "cycleEnd": "Cyklus tiež auto-resolves stale chyby pomocou podľa-kategória <em>0Upresnenie nastavenie Doba trvania</em>, čistí chyby pre zdroje, ktoré už neexistujú (vypúšťa VM / odstránené disky / nemontované úložiská), a prerezáva <code>events</code> log staršie ako 30 dní. Celý katalóg kategórií a pohľad z prístrojovej dosky, že ich povrchy sú zdokumentované v <link>Dashboard → Health Monitor</link>."
+    "cycleEnd": "Cyklus tiež automaticky rieši zastarané chyby pomocou jednotlivých kategórií <em>Trvanie potlačenia</em> nastavenie, vyčistí chyby pre prostriedky, ktoré už neexistujú (vymazané virtuálne počítače / odstránené disky / nepripojené úložiská) a vymaže <code>events</code> log starší ako 30 dní. Je zdokumentovaný úplný katalóg kategórií a pohľad na dashboard, ktorý ich zobrazuje <link>Dashboard → Health Monitor</link>."
   },
   "notifications": {
     "heading": "Oznamovací motor",
@@ -257,14 +257,14 @@
       "<strong>Kanály</strong> doručovanie správ: Telegram, Discord, e-mail, Gotify, Pushover a Apprise (viackanálové). Každý je implementovaný v <code>notification_channels.py</code> za to isté <code>create_channel()</code> / <code>send()</code> rozhranie, takže pridanie nového kanála je jedna trieda.",
       "<strong>0 šifrovanie.</strong> Citlivé nastavenia (<code>telegram.bot_token</code>, <code>discord.webhook_url</code>, <code>pushover.user_key</code>, <code>pushover.api_token</code>, <code>ai_api_key_*</code>, <code>email.password</code>) sú zašifrované kľúčom v <code>.notification_key</code> pred napísaním do DB a sú maskované v rozhraní."
     ],
-    "linksFooter": "V <notifLink>0Nastavenia → Oznámenia</notifLink> a <aiLink>Nastavenia → AI Asistent</aiLink>."
+    "linksFooter": "Prepínače pre jednotlivé udalosti, prepisy kanálov a konfigurácia AI sú uvedené v <notifLink>Nastavenia → Upozornenia</notifLink> a <aiLink>Nastavenia → Asistent AI</aiLink>."
   },
   "websocket": {
     "heading": "Terminál WebSocket",
     "intro": "Záložka <em>Terminál</em> v prístrojovej doske je tenký klient <code>xterm.js</code> napojený na serverovú stranu PTY cez WebSocket. Dva druhy dopravy:",
     "items": [
-      "<strong>0HTTP režim (default):</strong> Flask vývojový server s <code>flask-sock</code> spracováva požiadavky na aktualizáciu. Dosť dobré pre LAN / priamy prístup.",
-      "<strong>0HTTPS / WSS režim:</strong> keď je konfigurovaný certifikát SSL, proces prepína na <code>gevent.pywsgi.WSGIServer</code> s <code>geventwebsocket.handler.WebSocketHandler</code>, takže WebSockets pracovať cez TLS bez polyfillov."
+      "<strong>Režim HTTP (predvolené):</strong> Vývojový server Flask s <code>flask-sock</code> spracováva požiadavky na aktualizáciu. Dostatočne dobré pre LAN / priamy prístup.",
+      "<strong>HTTPS / režim WSS:</strong> keď je nakonfigurovaný certifikát SSL, proces sa prepne na <code>gevent.pywsgi.WSGIServer</code> s <code>geventwebsocket.handler.WebSocketHandler</code>, teda WebSockets prepracovať TLS bez polyfillov."
     ],
     "outro": "PTY je dieťa procesu Flask, takže zdedí <code>User=root</code> z jednotky. Každá požiadavka terminálu prechádza cez JWT auth; Užívateľ musí byť prihlásený na palubnej doske pred pridelením PTY.",
     "proxyNote": "Ak pristupujete k monitoru prostredníctvom spätného proxy, uistite sa, že je zapnutý posun WebSocket (hlavy <code>Upgrade</code> a <code>Connection</code>). Bez neho terminál nebude fungovať."
@@ -274,11 +274,11 @@
     "intro": "Dve záruky zabezpečujú, aby bezpečnosť fungovala rovnakým spôsobom, či je prístrojová doska zasiahnutá priamo alebo prostredníctvom spätného proxy:",
     "items": [
       "<strong>Real client IP recovery.</strong> A <code>before_request</code> hák číta <code>X-Forwarded-For</code> a <code>X-Real-IP</code> v tomto poradí, pád späť na <code>request.remote_addr</code>. Obnovená adresa je to, čo auth protokolovanie a rýchlosť obmedzujú vidieť. Toto je vždy zapnuté.",
-      "<strong>0Aplikácia-level Fail2Ban check (voliteľné).</strong> Keď palubná doska sedí za proxy, jadro firewall nemôže blokovať skutočný útočník IP Ak chcete prepojiť túto medzeru, rovnaký hák nad dopytom <code>proxmenux</code> Fail2Ban väzenia každý 30 sekúnd, vyrovnáva zakázané IP sadu, a skraty žiadosti z týchto IP s HTTP 403 vnútri Flask."
+      "<strong>Aplikačná úroveň Fail2Ban kontrola (voliteľné).</strong> Keď je panel umiestnený za serverom proxy, brána firewall jadra nemôže blokovať skutočnú IP adresu útočníka – pripojenie vždy pochádza z proxy. Ak chcete vyplniť túto medzeru, rovnaký hák vyššie sa pýta na <code>proxmenux</code> Fail2Ban jail každý 30 sekúnd, uloží do vyrovnávacej pamäte zakázanú sadu IP a skratuje požiadavky z týchto adries IP pomocou HTTP 403 vnútri Flask."
     ],
     "calloutTitle": "Fail2Ban nie je zviazaný",
-    "calloutBody": "Fail2Ban je <strong>0not</strong> nainštalovaný samotným ProxMenux Monitor. Kontrola úrovne aplikácie je no-op, kým nenainštalujete Fail2Ban na hostiteľa (napr. prostredníctvom <link>Security → Fail2Ban</link> v menu ProxMenux). Keď <code>fail2ban-client</code> binárne alebo <code>proxmenux</code> väzenie chýba, volanie zlyhá ticho a požiadavky nie sú ggeded",
-    "outro": "Reverse-proxy snippets (Nginx / Caddy / Traefik) a Fail2Ban väzenie prechádza sú v <accessLink>0Access & Authentication</accessLink> a <fail2banLink>Security → Fail2Ban</fail2banLink>."
+    "calloutBody": "Fail2Ban <strong>nie je</strong> nainštalovaný samotným ProxMenux Monitor. Kontrola na úrovni aplikácie je bezproblémová, kým nenainštalujete Fail2Ban na hostiteľa (napr. cez <link>Zabezpečenie → Fail2Ban</link> v ponuke ProxMenux). Keď nie je prítomný binárny súbor <code>fail2ban-client</code> alebo <code>proxmenux</code> jail, volanie zlyhá v tichosti a požiadavky nie sú hradené – auth sa stále používa, ale nie je blokovanie na úrovni IP.",
+    "outro": "Reverzné úryvky proxy (Nginx / Caddy / Traefik) a Fail2Ban jail návod sú v <accessLink>Prístup a overenie</accessLink> a <fail2banLink>Security Fail2Ban</fail2banLink>."
   },
   "whereNext": {
     "heading": "Kam ďalej",
@@ -286,10 +286,10 @@
       {
         "label": "Prístup a overenie",
         "href": "/docs/monitor/access-auth",
-        "tail": " Nastavenia prvého spustenia, heslo + TOTP 2FA, spätno-proxy útržky, Fail2Ban Väzenie."
+        "tail": "— nastavenie pri prvom spustení, heslo + TOTP 2FA, úryvky reverzného proxy, Fail2Ban jail."
       },
       {
-        "label": "API referencia",
+        "label": "Referenčná príručka API",
         "href": "/docs/monitor/api",
         "tail": " — Každý koncový bod, token manažment, bezpečnostné najlepšie postupy."
       },

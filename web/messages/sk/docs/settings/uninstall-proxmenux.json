@@ -25,7 +25,7 @@
   },
   "deps": {
     "heading": "Odstránenie závislosti: čo ponúkame",
-    "intro": "Kontrolný zoznam závisí od typu inštalácie. <strong>None of the boxs is checked by default</strong>",
+    "intro": "Kontrolný zoznam závisí od typu inštalácie. <strong>Žiadne z políčok nie je predvolene začiarknuté</strong> — toto sú balíky pre celý systém, ktoré môžu používať iné aplikácie, takže bezpečnejšie je ich ponechať.",
     "headerType": "Typ inštalácie",
     "headerOffered": "Ponúkané na odstránenie",
     "rows": [

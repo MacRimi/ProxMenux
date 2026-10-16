@@ -14,12 +14,12 @@
   },
   "intro": {
     "title": "Na čo je toto menu",
-    "body": "Hneď po inštalácii Proxmox VE0, tam sú desiatky malých zmien, ktoré robia hostiteľa rýchlejšie a jednoduchšie udržiavať zadarmo úložiská, zdravé žurnalistiky limity, citlivé TCP nárazníky, SSD-friendly log úložisko, bashrc milosti, a ďalšie. ProxMenux ich automatizuje a sleduje podporované reverzibilné zmeny konfigurácie."
+    "body": "Hneď po inštalácii Proxmox VE existujú desiatky malých zmien, vďaka ktorým je hostiteľ rýchlejší a jednoduchší na údržbu – bezplatné úložiská, rozumné journald limity, rozumné TCP vyrovnávacie pamäte, príjemné logovacie úložiská SSD a ďalšie bashrc. ProxMenux ich automatizuje a sleduje podporované reverzibilné zmeny konfigurácie."
   },
   "openingMenu": {
     "heading": "Otvorenie menu",
     "body": "Od ProxMenuxhlavné menu, vyberte <strong>Nastavenie po inštalácii Proxmox</strong>. Uvidíte toto:",
-    "imageAlt": "Poinštalačné skripty menu"
+    "imageAlt": "Ponuka Skripty po inštalácii – Automatizované, Prispôsobiteľné, podmienené Použiť dostupné aktualizácie (iba keď čakajú aktualizácie) a Odinštalovať, po ktorej nasleduje sekcia Komunitné skripty"
   },
   "threeWays": {
     "heading": "Štyri spôsoby, ako uplatniť optimalizáciu",
@@ -33,7 +33,7 @@
         "Bezplatné repo obchody + aktualizácia systému",
         "Pamäť, jadro, sieťové ladenie",
         "Log2RAM (automatické zistenie SSD/NVMe)",
-        "Povinné + veľkostné limity logrotátu",
+        "Journald + limity veľkosti logrotate",
         "Stále názvy sieťových rozhraní"
       ]
     },

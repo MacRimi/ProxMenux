@@ -1,9 +1,9 @@
 {
   "meta": {
-    "title": "Proxmox VE Sprievodcovia TPU, NVIDIA, Kodi LXC, Samba, Cloud Backup ProxMenux",
+    "title": "Proxmox VE Sprievodcovia — Coral TPU, NVIDIA, Kodi LXC, Samba, Cloud Backup | ProxMenux",
     "description": "Ručne napísané návody pre Proxmox VE: nainštalujte Kodi vnútri LXC s GPU zrýchlenie, NVIDIA ovládač nastavenia na PVE 9, USB disk cez Sambu v kontajneri, vzdump zálohovanie na osobný cloud (Google Drive, Mega, Dropbox, OneDrive). Plus vyliečené komunitné zdroje, slovník a odkaz na velenie.",
-    "ogTitle": "Proxmox VE Sprievodcovia TPU, NVIDIA, Kodi LXC, Samba, Cloud Backup",
-    "ogDescription": "Ručne napísané Proxmox VE tutoriály: GPU passhrough, Kodi LXC mediálne centrum, Samba nad USB, cloudové zálohovanie s rclónom a vyliečené komunitné zdroje.",
+    "ogTitle": "Proxmox VE Príručky — Coral TPU, NVIDIA, Kodi LXC, Samba, Cloud Backup",
+    "ogDescription": "Ručne písané Proxmox VE návody: GPU priechod, Kodi LXC mediálne centrum, Samba cez USB, zálohovanie do cloudu s rclonea spravovali komunitné zdroje.",
     "twitterTitle": "Proxmox VE Sprievodcovia ProxMenux",
     "twitterDescription": "Ručne písané návody pre Proxmox VE — GPU, Kodi LXC, Samba, cloudové zálohy a ďalšie.",
     "ogImageAlt": "ProxMenux Sprievodcovia: Ručne písané návody pre Proxmox VE"
@@ -24,7 +24,7 @@
       {
         "slug": "backup-cloud",
         "title": "Proxmox Zálohovanie na osobné cloudové úložisko",
-        "description": "Použite rclon na pripojenie osobného cloudu (Google Drive, Mega, Dropbox, OneDrive, atď.) ako adresár na Proxmox VE hostiteľa, zaregistrovať ho ako vzdump datastore, a zálohovať VMs / CTs priamo do cloudu"
+        "description": "Použite rclone na pripojenie osobného cloudu (Google Drive, Mega, Dropbox, OneDrive, atď.) ako adresára na hostiteľovi Proxmox VE, zaregistrujte ho ako vzdump dátové úložisko / CT – nezálohujte priamo do cloudu VM skript."
       },
       {
         "slug": "lxc-samba",
@@ -95,7 +95,7 @@
         "description": "Veľký komunitný meta-zoznam Proxmox VE zdrojov: nástroje, knižnice, integrácie, blogy, videá. Dobrý odpaľovač, aby sme zistili viac."
       }
     },
-    "suggestRich": "Máte kvalitný zdroj, ktorý by sme tu mali pridať? Otvorte problém alebo PR na <link>0GitHub</link>. Snažíme sa, aby tento zoznam bol skôr vyliečený ako vyčerpávajúci."
+    "suggestRich": "Máte kvalitný zdroj, ktorý by sme sem mali pridať? Otvorte problém alebo PR na <link>GitHub</link>. Naším cieľom je zachovať tento zoznam kurátorsky, nie vyčerpávajúco."
   },
   "discussion": {
     "heading": "Diskusia Spoločenstva",
@@ -103,7 +103,7 @@
     "cards": {
       "proxmenuxDiscussions": {
         "title": "ProxMenux Discussions",
-        "description": "ProxMenux0-špecifická GitHub Diskusie: funkcie nápady, Q&A, zdieľať nastavenie. Správne miesto pre všetko o menu, Monitor a doktori."
+        "description": "ProxMenux špecifické pre GitHub Diskusie: nápady na funkcie, otázky a odpovede, zdieľajte svoje nastavenie. Správne miesto pre všetko o ponuke, monitore a dokumentoch."
       },
       "proxmoxForum": {
         "title": "Proxmox Forum",

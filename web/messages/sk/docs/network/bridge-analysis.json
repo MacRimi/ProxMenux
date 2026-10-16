@@ -20,7 +20,7 @@
     "items": [
       "Pridanie alebo odstránenie PCIe karty (NIC, GPU, a HBA, nosič NVMe).",
       "Presun existujúcej karty na iný PCIe slot.",
-      "BIOS0 / UEFI aktualizácie, ktoré prečíslia PCI zariadenia.",
+      "Aktualizácie BIOS / UEFI, ktoré znovu vymenúvajú zariadenia PCI.",
       "Migrácia disku bootingu na iný hardvér."
     ],
     "outro": "Po ďalšom štarte sa most snaží pripojiť k portu, ktorý už neexistuje, nechodí hore a hostiteľ stratí svoju sieť. <link>Persistentné názvy rozhraní</link> zabraňuje tomu, aby sa to stalo znova"
@@ -50,7 +50,7 @@
   },
   "step1": {
     "heading": "Krok 1: analýza (iba pre čítanie)",
-    "intro": "Výber <strong>0Analyzovať konfiguráciu mosta</strong> okamžite preruší, ak hostiteľ nie je na klasickom stacku Debian/Proxmox. Inak prejde každým mostom a podá správu:",
+    "intro": "Výber <strong>Analyzovať konfiguráciu mosta</strong> sa okamžite zruší, ak hostiteľ nie je na klasickom zásobníku Debian/Proxmox. Inak chodí po každom moste a hlási:",
     "items": [
       "Názov mosta, aktuálny stav (UP / dole), pridelený IP.",
       "Každý deklarovaný port a či v súčasnosti existuje (<code>ip link show &lt;port&gt;</code>).",

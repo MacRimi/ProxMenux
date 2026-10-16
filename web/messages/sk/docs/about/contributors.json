@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Podľa dokumentácie ProxMenux",
-    "description": "Uznanie pre ľudí, ktorí robia ProxMenux možné",
+    "description": "Uznanie pre ľudí, ktorí umožňujú ProxMenux – testerov, recenzentov a vývojárov, ktorí formujú každé vydanie.",
     "ogTitle": "Podľa dokumentácie ProxMenux",
     "ogDescription": "Zoznámte sa s prispievateľmi ProxMenux."
   },
   "header": {
     "title": "Prispievatelia",
-    "description": "Projekt ProxMenux rastie a prosperuje vďaka prínosu svojich spolupracovníkov. To je dobre-zaslúžené uznanie ich práce",
+    "description": "Projekt ProxMenux rastie a prosperuje vďaka príspevku jeho spolupracovníkov. Toto je zaslúžené uznanie ich práce – testovanie zostáv pred vydaním, zachytávanie regresií, kontrola PR a formovanie smeru nových funkcií.",
     "section": "O projekte"
   },
   "beyond": {
@@ -25,7 +25,7 @@
   },
   "contribute": {
     "heading": "Chceš prispieť?",
-    "intro": "Akýkoľvek príspevok je vítaný",
+    "intro": "Akýkoľvek príspevok je vítaný – kód, testovanie, dizajn, dokumentácia alebo len zdieľanie nápadov:",
     "tester": "<strong>Tester</strong> - Vyskúšaj <beta>beta-kanál</beta> a nahláste, čo funguje a čo nie pred stabilným vydaním.",
     "developer": "<strong>Vývojár</strong> Bash + Next.js (TypeScript) + trochu Python pre preklad venv. Privítanie PR <gh>GitHub</gh>.",
     "designer": "<strong>Designer</strong>",

@@ -22,14 +22,14 @@
   },
   "onTop": {
     "heading": "Čo ProxMenux beží na vrchole",
-    "intro": "Táto možnosť beží <strong>0exactly</strong> apt príkaz vyššie, zabalené s repo hygieny, DKMS prestavba pre ProxMenux-managed ovládače a post-upgrade čistenie oficiálny upgrade sprievodca tiež odporúča. Všetko pod mapami 1:1 na <code>scripts/utilities/proxmox_update.sh</code> a jediný bezpečný pracovník <code>scripts/global/update-pve-safe.sh</code>",
+    "intro": "Táto možnosť spustí <strong>presne</strong> vyššie uvedený príkaz apt, zabalený do repo hygieny, prestavby DKMS pre ovládače spravované ProxMenux a čistenie po aktualizácii, ktoré odporúča aj oficiálna príručka aktualizácie. Všetko nižšie mapuje 1:1 na <code>scripts/utilities/proxmox_update.sh</code> a jediného bezpečného pracovníka <code>scripts/global/update-pve-safe.sh</code> — nič nenaznačuje, každý krok je v kóde:",
     "items": [
       "<strong>Detekuje hlavnú verziu PVE</strong> zvnútra pracovníka (<code>pveversion | grep -oP ''pve-manager/\\K[0-9]+''</code>) a prispôsobuje základ Proxmox / Debian repo URL (bookworm na PVE 8, trixie na PVE 9). Neexistuje žiadny fan-out per-version pracovník skripty",
       "<strong>Udržuje konfigurované úložiská.</strong> <code>ensure_repositories</code> číta úložiská prostredníctvom úložiska Proxmox API spolu so stavom predplatného. Hostiteľ s aktívnym predplatením, alebo ten, ktorý už nepoužíva žiadne predplatné alebo úložisko skúšok, zostáva nezmenený. Hostiteľ bez aktívneho predplatného, ktorého jediným úložiskom Proxmoxu je Enterprise, je požiadaný o to, či prepnúť na zákaz predplatného; pokles zastaví aktualizáciu bez zmeny zdroja.",
-      "<strong>Runs upgrade non-interactive</strong> s <code>DEBIAN_FRONTEND=noninteractive</code> a <code>--force-confdef --force-confold</code> Žiadne tiché prepísanie vlastných konfigurácií.",
+      "<strong>Spustí inováciu neinteraktívne</strong> s <code>DEBIAN_FRONTEND=noninteractive</code> a <code>--force-confdef --force-confold</code> — ak sa konfiguračný súbor, ktorý ste už upravili, zmenil aj proti prúdu, vaša verzia zostane na svojom mieste. Žiadne tiché prepisovanie vlastných konfigurácií.",
       "<strong>Lyžiarske balíčky, ktoré nútia voliteľné inžinierske siete.</strong> Bezpečný pracovník netlačí <code>zfsutils-linux</code>, <code>chrony</code>, <code>ifupdown2</code> alebo podobné balíčky na hostiteľa Chýbajúce balíčky sú vynorené tokmi inštalátora vyššej úrovne, nie cestou aktualizácie.",
-      "<strong>0LVM metadáta Sanity Check</strong> proti zablúdeným PV hlavičkám z priechodných diskov (iba na varenie, bez automatickej opravy).",
-      "<strong>0Cleans up after:</strong> <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>.",
+      "<strong>LVM kontrola čistoty metadát</strong> proti strateným hlavičkám PV z priechodných diskov (iba varovanie, žiadna automatická oprava).",
+      "<strong>Potom vyčistí:</strong> <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>.",
       "<strong>DKMS prestavať pred reštartom.</strong> Keď upgrade zinscenoval nové jadro, obal volá <code>pmx_rebuild_dkms_after_kernel</code> prestavať každý vodič, ktorý ProxMenux nainštalovaný cez DKMS proti prichádzajúcemu verzie jadra chemikálií, takže moduly sú pripravené pred tým, než pole príde späť. Použitie detekcie reštartov <code>/var/run/reboot-required</code> keď <code>needrestart</code> je prítomný, a spadne späť do <code>dpkg-query</code> porovnanie medzi bežiacim jadrom a najnovším nainštalovaným <code>proxmox-kernel-*-pve-signed</code> / <code>pve-kernel-*-pve</code> balíček, keď to nie je signál, ktorý prežíva veľa Proxmox hostí, že loď bez <code>needrestart</code>."
     ]
   },
@@ -71,7 +71,7 @@
       "<strong>Apt full-upgrade.</strong> Spúšťa s <code>DEBIAN_FRONTEND=noninteractive</code> a <code>--force-confdef --force-confold</code> takže akýkoľvek konfiguračný súbor, ktorý ste si prispôsobili, udržuje svoj aktuálny obsah, keď ho tiež zmenil. Nikdy neprepisuje operátor-editované konfigy ticho.",
       "<strong>LVM Kontrola zdravého rozumu.</strong> <code>lvm_repair_check</code> osviežuje metaúdaje VG, keď disky prechádzajú na hosťovské VMs (DSM, TrueNAS, zásobníky) sa vrátia so starými PV hlavičkami.",
       "<strong>DKMS prestavba ProxMenux- Spravovaní vodiči.</strong> Keď upgrade zinscenoval nové jadro, <code>pmx_rebuild_dkms_after_kernel</code> má byť <code>components_status.json</code> pre vodičov ProxMenux nainštalovaný (v súčasnosti <code>nvidia_driver</code> → modul <code>nvidia</code>, <code>coral_driver</code> → modul <code>gasket</code>), nainštaluje zodpovedajúce hlavičky jadra (<code>proxmox-headers-&lt;newkver&gt;</code> ak je k dispozícii, iné <code>pve-headers-&lt;newkver&gt;</code>) a behy <code>dkms autoinstall -k &lt;newkver&gt;</code>. Ak <code>dkms status</code> potom neukazuje moduly postavené proti novému jadru, pracovník spadne späť k opätovnému spusteniu každého inštalátora s <code>--auto-reinstall</code>. Akékoľvek zlyhanie je prihlásený, ale neporušuje aktualizáciu",
-      "<strong>0Post-cleaning.</strong> <code>apt-get autoremove</code> + <code>apt-get autoclean</code> pred návratom kontroly na obal."
+      "<strong>Po vyčistení.</strong> <code>apt-get autoremove</code> + <code>apt-get autoclean</code> pred vrátením kontroly do obalu."
     ]
   },
   "post": {
@@ -101,7 +101,7 @@
       "S <strong>aktívne predplatné</strong>, úložiská sú ponechané nezmenené a Enterprise riadi upgrade.",
       "S <strong>no-predpis alebo testovacie úložisko už povolené</strong>, úložiská sú ponechané nezmenené, čokoľvek iné je konfigurované vedľa nich.",
       "S <strong>no aktívne predplatné a len Enterprise úložisko</strong>, dialóg ponúka prepínač. Akceptovanie vypne Enterprise zdroj, umožňuje no-predpis jeden a osvieži zoznamy balíkov; zmena je zaznamenaná v <em>Changes</em> zobrazenie auditu a správy. Deklinovanie zastaví aktualizáciu bez zmeny zdroja.",
-      "<strong>0Enterprise Ceph zdroje</strong>, ak sú prítomné, sú vypnuté v rovnakom prepínači bez výberu iného Ceph kanála; hostiteľ, ktorý používa Ceph má svoj kanál nakonfigurovaný samostatne.",
+      "<strong>Podnikové Ceph zdroje</strong>, ak sú prítomné, sú zakázané v tom istom prepínači bez výberu iného Ceph kanálu; hostiteľ, ktorý používa Ceph má svoj kanál nakonfigurovaný samostatne.",
       "Keď beh má <strong>1no terminál sa opýtať v</strong>, žiadny zdroj sa zmení a aktualizácia zastaví s správou, ktorá ukazuje na <em>Node → Aktualizácie → Repository</em>."
     ],
     "outro": "Zdroje Debianu a každý iný súbor úložiska nie sú nikdy upravené cestou aktualizácie. Zdroj, ktorý mieša Enterprise s inými komponentmi v tom istom zázname, nie je prepnutý: aktualizácia sa zastaví a žiada, aby bola rozdelená z pohľadu úložiska Proxmox."

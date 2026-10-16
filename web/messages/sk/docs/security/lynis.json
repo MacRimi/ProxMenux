@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Čo to robí?",
-    "body": "Inštaluje Lynis (open-source bezpečnostný audítor CISOfy) z protiprúdu GitHub0 do <code>/opt/lynis</code> a vytvára obal na <code>/usr/local/bin/lynis</code> takže je to vo vašom <code>PATH</code>. Detekuje existujúcu inštaláciu pri spustení a zobrazí riadiace menu (audit / aktualizácia / reinštalácia / odstránenie)."
+    "body": "Nainštaluje Lynis (otvorený bezpečnostný audítor od CISOfy) z upstream GitHub do <code>/opt/lynis</code> a vytvorí obal na <code>/usr/local/bin/lynis</code>, takže je vo vašej <code>PATH</code>. Pri spustení zistí existujúcu inštaláciu a namiesto toho zobrazí ponuku správy (audit / aktualizácia / preinštalovanie / odstránenie)."
   },
   "manageMenu": {
     "heading": "Spravovať menu (po inštalácii)",
@@ -28,7 +28,7 @@
     "headerFresh": "Sviežosť verzie",
     "rows": [
       {
-        "sourceRich": "<strong>0ProxMenux (tento skript)</strong>",
+        "sourceRich": "<strong>ProxMenux (tento skript)</strong>",
         "path": "/opt/lynis/",
         "update": "git pull (in-menu)",
         "fresh": "Posledné proti prúdu"
@@ -49,7 +49,7 @@
     "node2Detail": "celý repo obchod\nvrátane skriptu ./lynis",
     "node3Label": "/usr/local/bin/lynis",
     "node3Detail": "obal:\ncd /opt/lynis && ./lynis $@",
-    "outro": "Wrapper je povinný Obal skrýva detail tak <code>lynis audit system</code> len pracuje odkiaľkoľvek."
+    "outro": "Balíčk je povinný – Lynis trvá na tom, aby bol spustený z vlastného adresára, pretože načítava relatívne cesty pre zásuvné moduly a údaje profilu. Obal tento detail skrýva, takže <code>lynis audit system</code> jednoducho funguje odkiaľkoľvek."
   },
   "detection": {
     "heading": "Zisťovacie cesty",
@@ -70,7 +70,7 @@
   },
   "report": {
     "heading": "Čítanie správy",
-    "intro": "Dve dôležité sekcie sú <strong>0Warnings</strong> (veci by ste mali opraviť čoskoro) a <strong>Suggestions</strong> (odporúčania na zlepšenie kalenia). Každá položka nesie kontrolné ID ako <code>SSH-7408</code>",
+    "intro": "Dve dôležité časti sú <strong>Upozornenia</strong> (veci, ktoré by ste mali čoskoro opraviť) a <strong>Návrhy</strong> (odporúčania na zlepšenie vytvrdzovania). Každá položka nesie kontrolné ID ako <code>SSH-7408</code> – užitočné pri hľadaní zdôvodnenia a opravy v dokumentoch Lynis.",
     "headerMarker": "Značka",
     "headerMeaning": "Význam",
     "headerAction": "Akcia",
@@ -153,7 +153,7 @@
       {
         "href": "/docs/monitor/dashboard/security",
         "label": "ProxMenux Monitor → Bezpečnostná karta",
-        "tail": " — "
+        "tail": "— spustite audit, prezerajte historické správy a stiahnite si PDF priamo z hlavného panela."
       },
       {
         "href": "/docs/security/fail2ban",

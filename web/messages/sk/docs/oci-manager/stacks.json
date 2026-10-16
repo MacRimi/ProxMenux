@@ -55,7 +55,7 @@
               ],
               [
                 "Obrazy",
-                "Odkaz na valcovanie, architektúra a vyriešené trávenie každej služby",
+                "Rolujúca referencia, architektúra a vyriešené digest každej služby",
                 "Všetky existujú, podporovať architektúru a prejsť kontrolu integrity OCI"
               ],
               [
@@ -295,7 +295,7 @@
     {
       "id": "manage",
       "title": "Správa nainštalovaného zásobníka",
-      "intro": "V <strong>Manažment nainštalovaný OCI aplikácie</strong>, každý člen vedie k celému stohu. Menu stohu ponúka <strong> Aktualizujte každý kontajner aplikácie</strong>, <strong>Upravte ďalšie cesty a zariadenia</strong>, <strong>Vytvorte každý kontajner s uloženou konfiguráciou</strong> a <strong>Odstrániť: odstrániť aplikáciu a jej kontajnery</strong>. Obnoviť prestavuje každý kontajner z obrazu, ktorý bol nainštalovaný, jeho uložené trávenie a bez hľadá novšie, s rovnakými krokmi ako aktualizácia; je ponúkaný pre komíny, ktoré môžu byť aktualizované.",
+      "intro": "In <strong>Spravujte nainštalované aplikácie OCI</strong>, ktorýkoľvek člen vedie k celému zásobníku. Ponuka zásobníka <strong>Aktualizujte každý kontajner aplikácie</strong>, <strong>Upravte ďalšie cesty a zariadenia</strong>, <strong>Znova vytvorte každý kontajner s jeho uloženou konfiguráciou</strong> a <strong>Odstrániť: odstránenie aplikácie a jej kontajnerov</strong>. Recreate znovu vytvorí každý kontajner z obrazu, s ktorým bol nainštalovaný, tým, že sa uloží digest a bez hľadania novšieho, s rovnakými krokmi ako pri aktualizácii; ponúka sa pre zásobníky, ktoré je možné aktualizovať.",
       "blocks": [
         {
           "steps": {

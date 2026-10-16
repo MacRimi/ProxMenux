@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Fail2Ban | ProxMenux Dokumentácia",
-    "description": "Nainštalujte Fail2Ban s tromi väzeniami naladený pre Proxmox (SSH0 agresívne, Proxmox UI 8006, ProxMenux Monitor 8008). Obsahuje redakčnú opravu MaxLevelStore, vlastné log služby pre spoľahlivosť, auto-zistené nftables/iptables backend a SSH MaxAuthTries kalenie.",
+    "description": "Nainštalujte Fail2Ban s tromi jails vyladenými pre Proxmox (SSH agresívny, Proxmox UI 8006, ProxMenux Monitor 8008). Zahŕňa opravu journald MaxLevelStore, vlastné protokolové služby pre spoľahlivosť, automaticky detekovaný backend nftables/iptables a zosilnenie SSH MaxAuthTries.",
     "ogTitle": "Fail2Ban | ProxMenux Dokumentácia",
-    "ogDescription": "Brute-force ochrana pre SSH0 a Proxmox webové UI, s Proxmox-špecifické redakčné a backend opravy."
+    "ogDescription": "Ochrana hrubou silou pre SSH a webové používateľské rozhrania Proxmox s opravami journald špecifickými pre Proxmox."
   },
   "header": {
     "title": "Fail2Ban",
-    "description": "Inštaluje Fail2Ban s konfiguráciou pre Proxmox: tri väzenia (SSH0 agresívne, Proxmox UI na porte 8006, ProxMenux Monitor na porte 8008 + reverzný proxy), gramofónové log-level fix tak SSH auth udalosti sú v skutočnosti uložené, dve služby denník-k-súboru logger, ktoré pracujú okolo známeho Fail2Ban systemd-backend problém, auto-detected firewall backend a SSH MaxAuthTries kalenie.",
+    "description": "Inštalácie Fail2Ban s konfiguráciou špecifickou pre Proxmox: tri jails (SSH agresívny, Proxmox UI v prístave 8006, ProxMenux Monitor v prístave 8008 + reverzný proxy), a journald log-level opraviť tak SSH auth udalosti sú v skutočnosti uložené, dve služby denníka do súboru, ktoré fungujú okolo známeho Fail2Ban systemd-problém s backendom, automaticky zistený backend firewallu a SSH MaxAuthTries otužovanie.",
     "section": "Zabezpečenie"
   },
   "intro": {
@@ -17,10 +17,10 @@
   "firstLaunch": {
     "heading": "Dialóg prvého spustenia",
     "body": "Na hostiteľa bez Fail2Ban, skript ukazuje potvrdzovací dialóg sumarizujúci všetko, čo sa chystá nainštalovať a nakonfigurovať. Zrušiť východy bez zmien; potvrdenie spustí inštalačný prietok.",
-    "imageAlt": "Fail2Ban confirmačný dialóg inštalácie zoznam troch väzníc, žurnalizovaný opravy a SSH kalenie"
+    "imageAlt": "Fail2Ban dialógové okno potvrdenia inštalácie so zoznamom troch jails, journald opravy a SSH spevnenia"
   },
   "jails": {
-    "heading": "Tri väzenia",
+    "heading": "Tri jails",
     "headerJail": "Jail",
     "headerProtects": "Chráni",
     "headerRetries": "Description",
@@ -45,15 +45,15 @@
         "ban": "1 hodina"
       }
     ],
-    "outro": "Globálne defaults from <code>jail.local</code>0: <code>ignoreip = 127.0.0.1/8 ::1</code>, <code>ignoreself = true</code>,<code> bantime = 86400</code> (24h falzifikát pre väzenie, ktoré ho neprepíšu), <code>maxretry = 2</code>, <code>findtime = 1800</code>."
+    "outro": "Globálne predvolené hodnoty od <code>jail.local</code>: <code>ignoreip = 127.0.0.1/8 ::1</code>, <code>ignoreself = true</code>,<code> bantime = 86400</code> (24-hodinová rezerva pre jails ktoré to neprepíšu), <code>maxretry = 2</code>, <code>findtime = 1800</code>."
   },
   "journald": {
-    "heading": "Prečo na tom záleží?",
+    "heading": "Prečo je oprava journald dôležitá",
     "intro": "Lode Proxmox <code>/etc/systemd/journald.conf</code> s <codeNw>MaxLevelStore= Varovanie</codeNw>. napíše každú správu denníka <em>nižšie</em> varovanie pred jeho ukladaním. SSH a PAM emituje auth poruchy pri <em>Informácie</em> / <em>Upozornenie</em> úrovne, takže:",
     "diagram": {
       "sshLabel": "SSH / PAM",
       "sshDetail": "ur\n(úroveň informácií / upozornení)",
-      "journaldLabel": "zápis",
+      "journaldLabel": "journald",
       "journaldDetail": "MaxLevelStore = varovanie\n→ udalosť ticho klesla",
       "fail2banLabel": "Fail2Ban",
       "fail2banDetail": "nevidí nič\n→ nikdy nič nezakazuje",
@@ -82,7 +82,7 @@
         "output": "/var/log/ssh-auth.log"
       }
     ],
-    "outro": "Obe služby sú deklarované <code>PartOf=fail2ban.service</code>, takže reštartujú s Fail2Ban a prestanú s tým. Režim 640 vo vlastníctve <code>root:adm</code> na logových súboroch. Tretí záznam používaný <code>[proxmenux]</code> väzenia (<code>/var/log/proxmenux-auth.log</code>) je napísaný priamo ProxMenux Monitor Flask app"
+    "outro": "Obe služby sú deklarované ako <code>PartOf=fail2ban.service</code>, takže sa reštartujú s Fail2Ban a zastavia sa s ním. Režim 640, ktorý vlastní <code>root:adm</code> v súboroch denníka. Tretí protokol používaný <code>[proxmenux]</code> jail (<code>/var/log/proxmenux-auth.log</code>) je zapísaný priamo aplikáciou ProxMenux Monitor Flask – nie je potrebná žiadna služba zapisovača."
   },
   "backend": {
     "heading": "Automatická detekcia firewallu",
@@ -90,8 +90,8 @@
     "code": "# nftables host\nbanaction = nftables\nbanaction_allports = nftables[type=allports]\n\n# iptables host (fallback)\nbanaction = iptables-multiport\nbanaction_allports = iptables-allports"
   },
   "hardening": {
-    "heading": "SSH0 kalenie: MaxAuthTries",
-    "intro": "Kontrola Lynisu <strong>SSH-7408</strong> ritonaviru <code>MaxAuthTries 3</code> on <code>sshd_config</code>. s Fail2Ban's <code>maxretry = 2</code> na tému SSH väzenie, zlomyseľný klient nikdy nedosiahne tri pokusy tak ako tak, ale explicitné nastavenie spĺňa audit a pridáva obranu do hĺbky (napr. ak Fail2Ban je zastavený na údržbu).",
+    "heading": "SSH kalenie: MaxAuthTries",
+    "intro": "Lynis control <strong>SSH-7408</strong> odporúča <code>MaxAuthTries 3</code> v <code>sshd_config</code>. S <code>maxretry = 2</code> Fail2Ban na SSH jail škodlivý klient aj tak nikdy nedosiahne tri pokusy – ale explicitné nastavenie uspokojí audit a pridá ochranu do hĺbky (napr. ak je Fail2Ban zastavený z dôvodu údržby).",
     "installerIntro": "Inštalatér:",
     "items": [
       "Číta aktuálnu hodnotu <code>MaxAuthTries</code> (alebo predvolené hodnoty 6 v prípade neprítomnosti).",
@@ -113,7 +113,7 @@
       },
       {
         "action": "Odstrániť",
-        "what": "Zastaví fail2ban a dve logger služby, vyčistí apt balík, odstráni všetky súbory väzenia / filtra, odstráni žurnalizovaný drop-in (obnovuje Proxmox predvolené), a obnoví pôvodný SSH MaxAuthTries."
+        "what": "Zastaví fail2ban a dve loggerové služby, vyčistí balík apt, odstráni všetky jail / súbory filtrov, odstráni drop-in journald (obnoví predvolené nastavenie Proxmox) a obnoví pôvodný SSH MaxAuthTries."
       }
     ]
   },
@@ -125,9 +125,9 @@
   "troubleshoot": {
     "heading": "Riešenie problémov",
     "neverBansTitle": "Fail2Ban beží, ale nikdy nič nezakazuje",
-    "neverBansBody": "Kontrola log súborov Auth skutočne prijímať položky: <code>tail -f /var/log/ssh-auth.log</code> a skúste zlé heslo SSH pokus z iného stroja. Ak záznam zostane prázdny, logger služba nie je spustená: <code>systemctl status ssh-auth-logger.service</code>. Ak je aktívny, ale log je prázdny, skontrolujte, či zadaný drop-in nadobudol účinnosť: <code>journalctl --dump-catalog | head</code> - udalosti pri <em>Informácie</em> úroveň by mala byť viditeľná.",
-    "monitorEmptyTitle": "ProxMenux Monitor väzenie nemá žiadne záznamy ani po neúspešných prihlásení",
-    "monitorEmptyBody": "Uväznenie <code>[proxmenux]</code> číta <code>/var/log/proxmenux-auth.log</code>, ktorý je napísaný ProxMenux Monitor Flask app Ak nespustíte monitor, súbor zostane prázdny a väzenie nikdy nevystrelí. To sa očakáva, väzenie je neškodné. Ak spustíte monitor a log je prázdny, skontrolujte konfiguráciu protokolovania Flask.",
+    "neverBansBody": "Skontrolujte, či súbory denníka overenia skutočne prijímajú položky: <code>tail -f /var/log/ssh-auth.log</code> a skúste zadať nesprávne heslo SSH pokus z iného stroja. Ak protokol zostane prázdny, služba zapisovača nie je spustená: <code>systemctl status ssh-auth-logger.service</code>. Ak je aktívny, ale denník je prázdny, skontrolujte, či je journald drop-in sa prejavil: <code>journalctl --dump-catalog | head</code> — udalosti o <em>info</em> úroveň by mala byť viditeľná.",
+    "monitorEmptyTitle": "ProxMenux Monitor jail nemá žiadne položky ani po neúspešnom prihlásení",
+    "monitorEmptyBody": "<code>[proxmenux]</code> jail číta <code>/var/log/proxmenux-auth.log</code>, ktorý je napísaný aplikáciou ProxMenux Monitor Flask – nie zapisovačom journald. Ak nespustíte Monitor, súbor zostane prázdny a jail sa nikdy nespustí. To sa očakáva; konfigurácia jail je neškodná. Ak spustíte Monitor a protokol je prázdny, skontrolujte konfiguráciu protokolovania Flask.",
     "selfBanTitle": "Zakázal som sám seba.",
     "selfBanIntro": "Z konzoly / IPMI / iKVM (alebo iný biely zoznam IP):",
     "selfBanCode": "fail2ban-client unban '<'YOUR_IP'>'\n\n# To prevent it next time, edit /etc/fail2ban/jail.local and add your IP:\nignoreip = 127.0.0.1/8 ::1 192.168.1.0/24 203.0.113.42\n\n# Then reload\nfail2ban-client reload",
@@ -143,7 +143,7 @@
   "related": {
     "heading": "Súvisiace",
     "monitorLabel": "ProxMenux Monitor → Bezpečnostná karta",
-    "monitorTail": " — Rovnaká inštalácia dosiahnuteľný z palubnej dosky, plus live stav väzenia, zakázané IP a na-jail retry / ban-time ladenie z prehliadača.",
+    "monitorTail": "— rovnaká inštalácia dosiahnuteľná z dashboardu, plus živý stav jail, zakázané adresy IP a ladenie opakovania / ban-time z prehliadača jail.",
     "lynisLabel": "Lynis",
     "lynisTail": " Spustiť bezpečnostný audit pred/po potvrdení SSH-7408 Kontrola je uspokojená.",
     "securityLabel": "Prehľad bezpečnosti",

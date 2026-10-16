@@ -22,7 +22,7 @@
     "rows": [
       {
         "ram": "Vzorec",
-        "max": "RAM0 / 10, limitované na 16 GiB, s 64 MiB podlahe"
+        "max": "RAM / 10, obmedzená na 16 GiB, s 64 MiB"
       },
       {
         "ram": "8 GB hostiteľ",
@@ -45,12 +45,12 @@
     "rebootTitle": "Požaduje reštart, aby sa účinok",
     "rebootBody": "Nastavenia ARC sú čítané pri načítavaní modulu jadra <code>zfs</code>. Na to, aby uzáver nadobudol účinok na hostiteľov ZFS-on-root, ProxMenux regeneruje initramfs pomocou <code>update-initramfs -u -k all</code> a v prípade potreby osvieži nakladač bootu s <code>proxmox-boot-tool refresh</code>. Na vyzdvihnutie nového parametra modulu je stále potrebná reštart; označenie \"reboot required\" je automaticky nastavené.",
     "safeTitle": "Bezpečné na non-ZFS hostiteľov",
-    "safeBody": "Funkcia píše konfiguráciu iba vtedy, keď <code>zpool list</code> hlási aspoň jeden importovaný ZFS bazén. Na ext4 / LVM-iba Proxmox hosts, alebo na strojoch s ZFS nástroje nainštalované, ale žiadny bazén importovaný, zaškrtnutie tejto možnosti je no-op",
+    "safeBody": "Funkcia zapíše konfiguráciu iba vtedy, keď <code>zpool list</code> ohlási aspoň jeden importovaný ZFS pool. Na hostiteľoch Proxmox iba ext4 / LVM alebo na počítačoch s nainštalovanými nástrojmi ZFS, ale bez importovaného pool, začiarknutie tejto možnosti nie je možné – nič sa nezapíše.",
     "verifyTitle": "Overovanie a manuálne spätné získanie"
   },
   "autoSnap": {
     "heading": "Nainštalovať ZFS auto-snapshot",
-    "intro": "Nainštaluje balík <a>0zfs-auto-snapshot</a> a prepíše jeho rozvrhy kronov, takže snímky sa prijímajú automaticky v niekoľkých intervaloch. Veľká záchranná sieť bez úsilia na vrchole vašich pravidelných záloh.",
+    "intro": "Nainštaluje balík <a>zfs-auto-snapshot</a> a prepíše jeho plány cron tak, aby sa snapshots automaticky preberali v niekoľkých intervaloch. Skvelá bezpečnostná sieť bez námahy nad vašimi bežnými zálohami.",
     "cadenceTitle": "Konfigurácie Snapshot cadence ProxMenux",
     "headerLabel": "Štítok",
     "headerRuns": "Beží",
@@ -83,8 +83,8 @@
       }
     ],
     "conservativeTitle": "Konzervatívne udržať počítať",
-    "conservativeBody": "ProxMenux0 lodí s konzervatívnou retenciou (len 4 časté + 1 každého dlhšieho intervalu) takže ZFS snímka úložisko nie je balón. Ak chcete dlhšie uchovávanie, upraviť čísla v <code>/etc/cron.d/zfs-auto-snapshot</code>, <code>/etc/cron.hourly/zfs-auto-snapshot</code>, atď. po spustení skriptu.",
-    "onlyZfsTitle": "Užitočné len v bazénoch ZFS",
+    "conservativeBody": "ProxMenux sa dodáva s konzervatívnym uchovávaním (len 4 často + 1 každého dlhšieho intervalu), takže ZFS snapshot úložisko nenarastá. Ak chcete dlhšie uchovávanie, po spustení skriptu upravte čísla v <code>/etc/cron.d/zfs-auto-snapshot</code>, <code>/etc/cron.hourly/zfs-auto-snapshot</code> atď.",
+    "onlyZfsTitle": "Užitočné iba na ZFS pools",
     "onlyZfsBody": "Inštalácia balíčka na ext4-iba hostiteľa je neškodné, ale zbytočné ZFS Súbory údajov pre to snímku. Preskočte túto voľbu, ak nepoužívate ZFS.",
     "verifyTitle": "Overovanie a manuálne spätné získanie"
   },
@@ -93,7 +93,7 @@
     "intro": "Povolí <code>autotrim</code> majetok na každom ZFS pool ktorá je krytá výlučne SSD alebo NVMe pohony s podporou TRIM. Pools ktoré obsahujú jeden HDD vdev sú preskočené automaticky ZFS Odmietne to. Pools ktoré už boli stanovené na <code>autotrim=on</code> zostávajú takí, akí sú.",
     "trimTitle": "Čo TRIM robí, a prečo to záleží na ZFS",
     "trimBody1": "SSD/ NVMe mechaniky spravujú interné úložisko v blokoch s pevnou veľkosťou vymazania, ktoré sú oveľa väčšie ako logické sektory, na ktoré súborový systém hovorí. Keď súborový systém vymaže súbor, disk nevie, že stále si myslí, že tieto sektory sú v prevádzke, takže jeho interný zberateľ odpadu udržuje shuthling stale dáta okolo zadarmo nové vymazať bloky. <strong>TRIM</strong> je štandardný príkaz, ktorý OS používa, aby povedal pohonu \"tieto sektory sú teraz zadarmo, môžete ich vymazať pred časom.\"",
-    "trimBody2": "Bez TRIM, SSD výkon degraduje v priebehu času, ako pohon vyprší z pred-vymazaných blokov a musí urobiť vymazanie-on-write, a písať amputácie zvyšuje S TRIM zapnutý, disk môže udržať zdravý bazén prázdnych blokov pripravený na zápis.",
+    "trimBody2": "Bez TRIM sa výkon SSD časom znižuje, pretože na disku sa míňajú vopred vymazané bloky a musí vykonať vymazanie pri zápise a zvyšuje sa zosilnenie zápisu – oboje skracuje životnosť disku. So zapnutým TRIM môže disk udržiavať zdravé pool prázdnych blokov pripravených na zápis.",
     "trimBody3": "Na ZFS, <code>autotrim=on</code> je moderný ekvivalent periodickej <code>zpool trim &lt;pool&gt;</code> príkaz, namiesto toho, aby ste si zapamätali spustiť obloženie ručne (alebo plán jeden), pool vydáva príkazy TRIM automaticky a nepretržite, pretože bloky sa stanú voľnými. Je to low-overhead a odporúčané nastavenie pre SSD-backed pools.",
     "practicalTitle": "Prečo je to praktické?",
     "practicalItems": [
@@ -102,19 +102,19 @@
       "<strong>Žiadny naplánovaný cron prácu pamätať.</strong> Na rozdiel od periodického <code>zpool trim</code>, autotrim je oheň-a-zabudnuteľný"
     ],
     "whenTitle": "Kedy je to nutné?",
-    "whenIntro1": "<strong>0Mali by ste povoliť to</strong> na ľubovoľnom ZFS bazéne, ktorého vdevs sú všetky SSD alebo NVMe s podporou TRIM",
+    "whenIntro1": "<strong>Mali by ste to povoliť</strong> na akomkoľvek ZFS pool, ktorého vdevs sú všetky SSD alebo NVMe s podporou TRIM – typická inštalácia Proxmox na spotrebiteľské alebo podnikové SSD.",
     "whenIntro2": "<strong>Skript ho automaticky preskočí</strong> na:",
     "whenSkipItems": [
       "Pools obsahujúce akékoľvek HDD (rotačné) vdev",
-      "Pohonné jednotky bez <code>discard_granularity</code> vystavené v sysfs",
-      "Pools, kde ZFS sám vykazuje nehnuteľnosť nepodporovaná (zriedkavé; veľmi staré bazény).",
+      "Disky bez <code>discard_granularity</code> vystavené v sysfs – zvyčajne staré SSD bez TRIM alebo priechodných ciest, kde OS nevidí základné zariadenie.",
+      "Pools, kde ZFS sám uvádza, že vlastnosť nie je podporovaná (zriedkavé; veľmi staré pools).",
       "Pools už nastavený na <code>autotrim=on</code> (bez-op)."
     ],
     "whenIntro3": "<strong>Netýka sa len hostiteľov ext4</strong> Nie je tu nič pre ZFS ostrihať. Funkcia vystupuje s priateľskou správou v tom prípade.",
-    "recordedTitle": "Prečo sa zaznamenávajú len bazény ProxMenux",
+    "recordedTitle": "Prečo sa zaznamenávajú iba zmeny pools ProxMenux",
     "recordedBody": "Funkcia píše len pool do svojho interného súboru stavu (<code>/usr/local/share/proxmenux/zfs_autotrim_pools</code>) keď aktívne prevrátila, že pool od <code>off</code> do <code>on</code>. Pools mali ste na autotrim pred spustením skriptu sú vynechané zo zoznamu, takže budúci Uninstall nevypne nastavenia, ktoré ste nakonfigurovali sami ProxMenuxVlastné zmeny sú vrátené.",
     "manualTitle": "Manuálny ekvivalent (bež na serveri)",
-    "manualIntro": "Plná sekvencia skriptu beží proti každému bazénu je replikovateľný ručne. Toto by ste napísali, keby ste chceli urobiť to isté na jednom bazéne bez ProxMenux:",
+    "manualIntro": "Úplná sekvencia skriptu spustená proti každému pool je replikovateľná ručne. Toto by ste napísali, ak by ste chceli urobiť to isté na jednom pool bez ProxMenux:",
     "verifyTitle": "Overovanie a manuálne spätné získanie",
     "oneShotTitle": "Potrebuješ ostrihať miesto súvislého?",
     "oneShotBody": "Niektorí operátori uprednostňujú skôr ručnú úpravu v čase mimo špičky ako nepretržitú činnosť prispôsobovania. Zakázať autotrim a naplánovať cron prácu, ktorá beží <code>zpool trim &lt;pool&gt;</code>"

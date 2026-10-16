@@ -64,7 +64,7 @@
     "doesLabel": "Čo robí:",
     "doesItems": [
       "Ticho stiahne a nainštaluje najnovšiu verziu Fastfetch",
-      "Umožňuje vybrať vlastné logo (<strong>0ProxMenux, Proxmox, Pomocné skripty, Home-Labs-Club, Proxmology</strong> alebo vlastné)",
+      "Umožňuje vám vybrať si vlastné logo (<strong>ProxMenux, Proxmox, Helper-Scripts, Home-Labs-Club, Proxmology</strong> alebo vlastné logo)",
       "Nastaví Fastfetch na zobrazenie <em>\"System optimalizovaný ProxMenux\"</em>",
       "Nastaví Fastfetch pre automatické spustenie pri prihlásení konzoly"
     ],
@@ -133,7 +133,7 @@
   },
   "log2ram": {
     "title": "Inštalácia log2RAM (zníženie opotrebenia SSD/NVMe)",
-    "intro": "Log2RAM pripojí <code>/var/log</code> na tmpfs ramdisk a pravidelne synchronizuje obsah späť na základný disk. Na hypervisor žurnál churn hity koreň SSD každých pár sekúnd; pohybujúce sa zápisy na RAM znižuje opotrebenie a disk I/O bez straty logov",
+    "intro": "Log2RAM pripojí <code>/var/log</code> na tmpfs ramdisk a pravidelne synchronizuje obsah späť na základný disk. Pri hypervízore journald každých pár sekúnd zasiahne vracanie koreňov SSD; presun zápisov do RAM znižuje opotrebovanie a diskový vstup/výstup bez straty protokolov – pravidelná synchronizácia ich vymaže na disk a čisté vypnutie ich tiež vymaže.",
     "upstreamLabel": "Projekt v počiatočnom štádiu:",
     "upstreamUrl": "https://github.com/azlux/log2ram",
     "upstreamLinkLabel": "azlux/log2ram na GitHub",
@@ -143,7 +143,7 @@
       "Klonuje úložisko proti prúdu (<code>azlux/log2ram</code>) do <code>/tmp/log2ram</code> a zalepí <code>install.sh</code> a nahradí <code>rsync -aAXv</code> <code>rsync -aXv --no-acls</code>. Táto úprava zabraňuje <em>set_acl: Operácia nie je podporovaná</em> exit 23 zlyhanie, že vanilla skript aktivuje pri pohybe /var/log na súborových systémoch bez podpory ACL. Jednotka <code>log2ram</code> systemd je povolená po inštalácii.",
       "Rozmery ramdisk na základe hostiteľa RAM: <code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>&gt; 16 GB → 512M</code>. Zapíše hodnotu do <code>SIZE=</code> v <code>/etc/log2ram.conf</code>.",
       "Plánuje periodickú synchronizáciu disku cez <code>/etc/cron.d/log2ram</code>: každý 1h / 3h / 6h podľa rovnakej úrovne RAM.",
-      "Nainštaluje autosynchrónny strážca <code>/usr/local/bin/log2ram-check.sh</code>, drôtové na <code>/etc/cron.d/log2ram-auto-sync</code> spustiť každých 10 minút. Kedy <code>/var/log</code> dosiahnuté 80% veľkosti ramdisku, na ktorom sa napísalo strážne vysávače; 92% to first runs <code>logrotate -f /etc/logrotate.d/proxmox-backup-api</code> ak tento súbor existuje (poháňa rotáciu PBS API logy, typicky najväčší spotrebiteľ na hostiteľa beží PBS) a potom trnkaty <code>pveproxy access/error</code> a <code>pveam.log</code> pred synchronizáciou. Plain <code>log2ram write</code> príkaz kopíruje tmpfs na disk, ale NOT zmenšuje tmpfs, takže tento ochranný kryt zabraňuje PVE havarovať s <em>Na zariadení nezostáva žiadne miesto</em> keď polená rastú nekontrolované.",
+      "Nainštaluje ochranu automatickej synchronizácie na <code>/usr/local/bin/log2ram-check.sh</code>, pripojený k <code>/etc/cron.d/log2ram-auto-sync</code> bežať každý 10 minút. Kedy <code>/var/log</code> dosiahne 80% veľkosti ramdisku, ktorý kryt vysáva journald; pri 92% sa najprv spustí <code>logrotate -f /etc/logrotate.d/proxmox-backup-api</code> keď tento súbor existuje (vynútené otočenie súboru PBS API logy, zvyčajne najväčší spotrebiteľ na spustenom hostiteľovi PBS) a potom sa skráti <code>pveproxy access/error</code> a <code>pveam.log</code> pred synchronizáciou. Rovina <code>log2ram write</code> príkaz skopíruje tmpfs na disk, ale NEZmenší tmpfs, takže táto ochrana zabraňuje zlyhaniu PVE s <em>Na zariadení nezostáva žiadne miesto</em> keď polená nekontrolovane rastú.",
       "Odhaľuje, či <code>proxmox-backup-server</code> beží ako služba na hostiteľa. Ak sú prítomné, kvapky <code>/etc/logrotate.d/proxmox-backup-api</code> (20 MB × 3 rotácia) a <code>/etc/cron.hourly/proxmox-backup-logrotate</code>, takže PBS API guľatiny chronický zdroj rastu na PBS Hostiteľský pobyt ohraničený aj medzi pravidelnými synchronizáciami log2RAM. Na hostiteľov bez PBS Tento krok je ne-op.",
       "Upravuje limity systemd-journald (<code>SystemMaxUse</code>, <code>RuntimeMaxUse</code>) tak, aby sa zmestili do ramdisku, takže ho nemôže vyplniť jediný výbuch.",
       "Zaregistruje sa v <code>installed_tools.json</code>, takže sa môže vrátiť z Uninstall Optimizations."

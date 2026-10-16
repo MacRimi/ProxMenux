@@ -24,7 +24,7 @@
     "diagramCtLabel": "LXC (privilegovaný)",
     "diagramCtDetail": "/mnt/share\nmount.cifs vnútri CT",
     "diagramArrow": "CIFS",
-    "twoWaysTitle": "Dva spôsoby, ako dať CT0 a Samba zdieľať",
+    "twoWaysTitle": "Dva spôsoby, ako dať CT zdieľanie Samba — vyberte si jeden",
     "twoWaysBind": "<strong>Pripojiteľné via host</strong> (<mountLink>LXC Správca pripojenia</mountLink>): host montuje CIFS raz, každý CT @ info: whatsthis Pracuje s neprivilegovanými CT. Odporúča sa, ak niekoľko CT potrebuje rovnaký podiel.",
     "twoWaysDirect": "<strong>Direct CIFS mount inside the CT</strong> (this page): CT montuje sám CIFS. Vyžaduje si to výsadné právo. Užitočné, keď CT musí vlastniť svoje vlastné poverenia, alebo keď každý CT hovorí na iný server."
   },
@@ -104,7 +104,7 @@
   },
   "test": {
     "heading": "Testovať Samba konektivitu",
-    "body": "Diagnostický prechod vo vnútri CT0: potvrdzuje, <code>cifs-utils</code> je nainštalovaný, uvádza aktuálne CIFS mounts, potom pre každý server odkazovaný v kontrole fstab ping → porty 139/445 → zoznam hostí. \"Požaduje autentifikáciu\" na hosťa test je normálny pre akýkoľvek server, ktorý nevystavuje verejné akcie."
+    "body": "Diagnostický priechod vnútri CT: potvrdzuje, že je nainštalovaný <code>cifs-utils</code>, uvádza aktuálne pripojenia CIFS, potom pre každý server, na ktorý sa odkazuje vo fstab, kontroluje ping → porty 139/445 → zoznam hostí. \"Vyžaduje overenie\" v teste hosťa je normálne pre každý server, ktorý nezverejňuje verejné zdieľania."
   },
   "troubleshoot": {
     "heading": "Riešenie problémov",
@@ -117,7 +117,7 @@
       "Arch: <code>pacman -S cifs-utils smbclient</code>",
       "Rocky / Alma: <code>dnf install cifs-utils samba-client</code>"
     ],
-    "aptOutro": "Potom re-spustiť ProxMenux skript",
+    "aptOutro": "Potom znova spustite skript ProxMenux — krok inštalácie preskočí, keď už sú nástroje k dispozícii.",
     "guestFallbackTitle": "\"Server vás spájal ako hosť namiesto zadaného užívateľa\"",
     "guestFallbackBody": "Aktívna validácia skriptu chytil skutočný problém. Server prijal pripojenie, ale znížil hostí, pretože poverovacie listiny sú zlé. Bežné príčiny: preklep v užívateľskom mene / heslo, užívateľ neexistuje na serveri, užívateľ je zamknutý, alebo pracovná skupina / doména je nesúlad. Znovu spustiť tok a znovu zadať osvedčenia starostlivo (heslo je skryté v dialógu).",
     "denyTitle": "\"NT_STATUS_ACCESS_DENIED\" pri montáži",
@@ -143,7 +143,7 @@
       {
         "href": "/docs/storage-share/lxc-samba-server",
         "label": "Samba server v LXC",
-        "tailRich": " — Inverzné: vystaviť priečinky <em>0z</em> a CT nad Samba."
+        "tailRich": "— opak: odkryte priečinky <em>z</em> a CT cez Samba."
       },
       {
         "href": "/docs/storage-share/host-samba",

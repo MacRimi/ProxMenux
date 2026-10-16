@@ -68,7 +68,7 @@
                   },
                   {
                     "label": "Obsah",
-                    "value": "Identita; klaster; CPU0 a pamäť; doska, BIOS a regulátory; sieť; úložisko; VMs a LXCs; priechod; aplikácie a prvky spravované ProxMenux."
+                    "value": "Identita; klaster; CPU a pamäť; doska, BIOS a ovládače; sieť; skladovanie; VM a LXC; priechod; aplikácie a prvky spravované ProxMenux."
                   }
                 ]
               },
@@ -113,7 +113,7 @@
                   },
                   {
                     "label": "Obsah",
-                    "value": "Využitie a prahové hodnoty; tenké bazény; nadmerné poskytovanie; pamäť; inódy; ZFS; teploty; napájanie hodín; chyby SMART a životnosť NVMe/SSD."
+                    "value": "Použitie a prahové hodnoty; thin pools; nadmerné poskytovanie; pamäť; inódy; ZFS; teploty; hodiny zapnutia; Chyby SMART a životnosť NVMe/SSD."
                   }
                 ]
               }
@@ -169,7 +169,7 @@
     {
       "id": "compare",
       "title": "Porovnanie s referenčným behom",
-      "intro": "<strong>0Use as reference</strong> značí dokončený beh ako referencia. Porovnávajú sa s ním neskoršie behy a ich zistenia sú rozdelené na:",
+      "intro": "<strong>Použiť ako referenciu</strong> označuje dokončený chod ako referenciu. Neskoršie behy sa s ním porovnávajú a ich zistenia sú rozdelené do:",
       "blocks": [
         {
           "table": {

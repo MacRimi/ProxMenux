@@ -61,7 +61,7 @@
   },
   "uninstall": {
     "heading": "Odinštalovanie",
-    "body": "Zvnútra ProxMenux0: <strong>Nastavenia → Odinštalovať ProxMenux</strong>. Odstráni službu skriptového stromu, spúšťača a monitora, voliteľne odstráni vybrané závislosti, obnoví zálohy <code>/root/.bashrc</code> a <code>/etc/motd</code> prijaté v čase inštalácie. Celý krok za krokom: <uninstalllink>Uninstall ProxMenux</uninstalllink>."
+    "body": "Vo vnútri ProxMenux: <strong>Nastavenia → Odinštalovať ProxMenux</strong>. Odstráni strom skriptov, spúšťač a službu Monitor, voliteľne odstráni vybrané závislosti, obnoví zálohy <code>/root/.bashrc</code> a <code>/etc/motd</code> urobené v čase inštalácie. Celý krok za krokom: <uninstalllink>Odinštalujte ProxMenux</uninstalllink>."
   },
   "troubleshoot": {
     "heading": "Riešenie problémov",
@@ -74,12 +74,12 @@
     "stuckTitle": "Inštalácia visí alebo nepostupuje",
     "stuckBody": "Ak sa inštalácia, reinštalácia alebo aktualizácia zasekne kvôli problému pripojenia, zrušiť s <strong>Ctrl + C</strong> a re-spustiť inštalátor ručne.",
     "otherTitle": "Iné otázky",
-    "otherBody": "Skontrolujte <issueslink>0GitHub issues</issueslink> pre známe problémy alebo otvorte nový s príslušným log výstupom. Užívatelia Beta: zahŕňajú <code>journalctl -u proxmenux-monitor -n 50</code>, ak sa týkajú monitora."
+    "otherBody": "Skontrolujte <issueslink>GitHub Problémy</issueslink>, či nemáte známe problémy, alebo otvorte nový s príslušným výstupom protokolu. Používatelia verzie beta: zahrňte <code>journalctl -u proxmenux-monitor -n 50</code>, ak súvisí s monitorom."
   },
   "next": {
     "heading": "Čo ďalej?",
     "postInstall": "<postlink>Post-Install Script</postlink>",
-    "introduction": "<introlink>0Úvod</introlink>",
+    "introduction": "<introlink>Úvod</introlink> — úplná prehliadka funkcií.",
     "monitor": "<monitorlink>ProxMenux Monitor</monitorlink> Web dashboard pre hostiteľa (auto-inštalovaný vedľa menu)."
   },
   "requirements": {

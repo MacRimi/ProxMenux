@@ -88,7 +88,7 @@
       },
       {
         "param": "BIOS",
-        "optionsRich": "OVMF (UEFI0) alebo SeaBIOS (Legacy)"
+        "optionsRich": "OVMF (UEFI) alebo SeaBIOS (staršie)"
       },
       {
         "param": "Typ CPU",
@@ -122,7 +122,7 @@
   },
   "storagePlan": {
     "heading": "Plán skladovania",
-    "introRich": "Po CPU0 / RAM kroku, ProxMenux otvorí <strong>Storage Plan</strong> menu, kde môžete <strong>combine</strong> virtuálne disky, importované disky a PCI priechodné zariadenia v rovnakej VM, pridať položky jeden naraz a dokončiť, keď ste hotoví.",
+    "introRich": "Po kroku CPU / RAM otvorí ProxMenux ponuku <strong>Plán úložiska</strong>, kde môžete <strong>kombinovať</strong> virtuálne disky a importované PCI disky VM, pridávanie položiek po jednej a dokončenie, keď skončíte.",
     "virtualHeading": "a. Pridať virtuálny disk",
     "virtualItemsRich": [
       "Zobrazí úložné objemy Proxmox dostupné na hostiteľovi.",
@@ -162,7 +162,7 @@
     "itemsRich": [
       "<code>qm create</code> Vytvárajú VM s vybraným CPU, RAM, BIOS a typ stroja.",
       "<code>qm importdisk</code> - dováža nakladač ako <strong>IDE</strong> disk (maximálna kompatibilita).",
-      "<code>qm set sataN: …</code>",
+      "<code>qm set sataN: …</code> — pripojí virtuálne disky a importované disky z plánu úložiska plus sieťové rozhranie.",
       "<code>qm set hostpciN: …</code> chápa každého kontrolóra / NVMe zariadenia vybrané pre PCI priechod.",
       "<code>qm set --boot</code>"
     ]
@@ -178,7 +178,7 @@
     "title": "Spustiť VM a prístup do hlavného menu",
     "intro": "Po vytvorení VM začnite. Prvá topánka vás zavedie do konfiguračného rozhrania loader, kde si vyberiete a postavíte požadovaný model DSM. Po vybudovaní nakladača preskočia nasledujúce topánky tento krok, ak nevynútite rekonfiguráciu z vlastného batožinového monitora nakladača. Všetky tri nakladače podporujú UI aj webové UI.",
     "arc": {
-      "webRich": "<strong>0Web rozhranie.</strong> Otvorte prehliadač a prejdite na IP zobrazené v konzole VM (v našom príklade: <code>http://192.168.0.32</code>).",
+      "webRich": "<strong>Webové rozhranie.</strong> Otvorte prehliadač a prejdite na adresu IP zobrazenú v konzole VM (v našom príklade: <code>http://192.168.0.32</code>).",
       "webAlt": "Webové rozhranie Arc loader",
       "webCaption": "Webové rozhranie Arc loader",
       "termRich": "<strong>Terminálne rozhranie.</strong> Použite ho priamo z výstupu konzoly VM.",
@@ -355,7 +355,7 @@
     "updateTitle": "Aktualizácia nakladača",
     "updateBody": "Niektoré nakladače ponúkajú možnosť aktualizácie sami priamo z ich konfiguračného menu Nemusíte zničiť a obnoviť VM.",
     "warnTitle": "ProxMenux nepodporuje nakladače",
-    "warnBody": "ProxMenux0 automatizuje stranu VM. Problémy s nahrávačom (model nenájdený, add-on neschopnosť nainštalovať, DSM odmieta zaviesť) sú mimo rozsah tu",
+    "warnBody": "ProxMenux automatizuje stranu VM. Problémy so zavádzačom (model sa nenašiel, doplnok sa nedarí nainštalovať, DSM odmieta spustiť systém) sú mimo rozsahu pôsobnosti – použite vlastný nástroj na sledovanie problémov a dokumentáciu každého zavádzača.",
     "docsHeading": "Dokumentácia nakladača",
     "docLinks": [
       {
@@ -378,7 +378,7 @@
       {
         "href": "/docs/create-vm/system-nas",
         "label": "Prehľad systému NAS",
-        "tail": " — Porovnanie synológie vs TrueNAS0 / OMV / Rockstor / XigmaNAS."
+        "tail": "— porovnanie Synology vs TrueNAS / OMV / Rockstor / XigmaNAS."
       },
       {
         "href": "/docs/create-vm/system-nas/system-nas-others",

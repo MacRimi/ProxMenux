@@ -92,7 +92,7 @@
               "reapply": "Uplatňovať zmluvu znova",
               "healthy": "v poriadku",
               "failure": "zlyhanie",
-              "commit": "Zmluva uverejnená s novým trávením",
+              "commit": "Zmluva zverejnená s novým digest",
               "restored": "Predchádzajúca inštancia obnovená"
             }
           }
@@ -100,7 +100,7 @@
         {
           "list": {
             "items": [
-              "Keď register stále slúži nainštalovaný trávenie, nič nie je stiahnuté a inštancia nie je dotkol.",
+              "Keď register stále slúži nainštalovanému digest, nič sa nestiahne a inštancia sa nedotkne.",
               "Nový obrázok je overená vrstva po vrstve pred zastavením CT. Stiahnutie, ktoré dorazí poškodené je stiahnuté druhýkrát; obrázok už cache, ktorý zlyhá kontrola je stiahnutý znova.",
               "Nastavenie zmenené v Proxmox VE po inštalácii (pamäť, výmena, jadrá, limit CPU, priorita CPU, štart s uzlom) sú uchovávané a prenesené do novej zmluvy.",
               "Rozhranie LAN, ktoré Arr apartmány a multi-kontajner aplikácie pridať (<code>net1</code>) a štart (<code>startup</code>) sú uvedené späť do nového kontajnera, ako sú.",
@@ -153,7 +153,7 @@
               },
               {
                 "title": "Staky ako jednotka",
-                "body": "V prípade viackontajnerovej žiadosti sa každý člen vymáha z toho istého miesta transakcie, nielen z vybraného miesta."
+                "body": "V prípade aplikácie s viacerými kontajnermi je každý člen obnovený z rovnakého transakčného bodu, nielen z vybraného."
               }
             ]
           }
@@ -202,7 +202,7 @@
           }
         },
         {
-          "p": "Inštalátor sa ho spýta v oboch režimoch inštalácie a navrhuje, čo recept v aplikácii deklaruje. To sa neskôr zmení z <strong>0Manažér nainštalovaný OCI aplikácie</strong> alebo s <strong>Watchdog</strong> prepínač kontajnera v <monitorLink>ProxMenux Monitor</monitorLink> a vzťahuje sa na každý kontajner multi-kontajner aplikácie. Jedna služba hostiteľa, <code>proxmenux-oci-watchdog.service</code>, sleduje každú aplikáciu, ktorá si to vyžiadala; jeho inštalácia je uvedená v záložke Zmeny Audit & Report."
+          "p": "Inštalátor sa ho spýta v oboch režimoch inštalácie a navrhne, čo deklaruje recept aplikácie. Neskôr sa zmení z <strong>Spravovať nainštalované aplikácie OCI</strong> alebo pomocou prepínača <strong>Watchdog</strong> kontajnera v <monitorLink>ProxMenux Monitor</monitorLink> platí pre každú aplikáciu z viacerých kontajnerov, kontajnerov. Jedna služba hostiteľa, <code>proxmenux-oci-watchdog.service</code>, sleduje každú aplikáciu, ktorá si to vyžiadala; jeho inštalácia je uvedená na karte Zmeny v aplikácii Audit & Report."
         },
         {
           "calloutInfo": {
@@ -226,7 +226,7 @@
               },
               {
                 "title": "Open Správa nainštalovaných aplikácií OCI",
-                "body": "Reštaurované kontajnery sú uvedené a regenerácia je ponúkaná. Tlačidlo <strong>0Recover</strong> záložky Aktualizácie <monitorLink>ProxMenux Monitor</monitorLink> otvára rovnakú obnovu."
+                "body": "Zobrazia sa obnovené kontajnery a ponúkne sa obnovenie. Tlačidlo <strong>Obnoviť</strong> na karte Aktualizácie <monitorLink>ProxMenux Monitor</monitorLink> otvorí rovnaké obnovenie."
               },
               {
                 "title": "Pred zmenou skontrolujte",
@@ -274,7 +274,7 @@
                 "Opäť je nainštalovaný hák neprivilegovaného kontajnera. Privilegovaný kontajner dostane súbory vodiča tohto hostiteľa namiesto tých z hostiteľa, z ktorého pochádza."
               ],
               [
-                "Prípojka Rclón",
+                "Pripojenie Rclone",
                 "Whatscript a programy, ktoré publikujú mount sú opäť napísané, s rovnakými pohľadmi na hostiteľa"
               ],
               [
@@ -349,7 +349,7 @@
       "title": "Odstránenie aplikácie OCI",
       "blocks": [
         {
-          "p": "Pred potvrdením sa zo skutočnej konfigurácie zostaví súhrn: odstránené kontajnery, vymazané dáta spolu s nimi, vydaná súkromná sieť a uchovávané adresáre. Potvrdenie predvolené <strong>0No</strong>, pretože údaje z vymazaných diskov nie je možné obnoviť neskôr."
+          "p": "Pred potvrdením je zostavený súhrn zo skutočnej konfigurácie: kontajnery, ktoré sú odstránené, údaje s nimi vymazané, súkromná sieť, ktorá je uvoľnená a hostiteľské adresáre, ktoré sú uchovávané. Potvrdenie je predvolene <strong>Nie</strong>, pretože údaje z vymazaných diskov nie je možné následne obnoviť."
         },
         {
           "table": {
@@ -426,7 +426,7 @@
         {
           "calloutInfo": {
             "title": "Aktualizácie nepotrebujú archív",
-            "body": "Bez archívu, aktualizácia vyrieši uložený kanál a stiahne nový trávenie. Archív sa pomocou neho znovu použije len vtedy, keď sa jeho odkaz a integrita zhodujú s tým, čo sa požaduje."
+            "body": "Bez archívu aktualizácia vyrieši uložený kanál a stiahne nový digest. S ním sa archív znova použije iba vtedy, keď sa jeho referencia a integrita zhodujú s požadovaným."
           }
         }
       ]
@@ -466,7 +466,7 @@
               ],
               [
                 "Hostiteľské adresáre a zariadenia",
-                "Rovnaké pravidlá ako akékoľvek LXC0: hostiteľský adresár musí existovať na cieľovom uzle a byť označený ako zdieľané, a GPU, Koral alebo NPU musí byť prítomný tam."
+                "Rovnaké pravidlá ako všetky LXC: hostiteľský adresár musí existovať na cieľovom uzle a musí byť označený ako zdieľaný a musí tam byť prítomný GPU, Coral alebo NPU."
               ],
               [
                 "Záznam ProxMenux",
@@ -491,7 +491,7 @@
       "title": "Valcovací štítok nie je bez dozoru aktualizácia",
       "blocks": [
         {
-          "p": "Katalóg nainštaluje rolovací štítok jeho správca publikuje, ale efektívne trávenie je vyriešené, zaznamenané a zmenené len prostredníctvom explicitnej aktualizácie s predletom a rollback. <monitorLink>ProxMenux Monitor</monitorLink> porovnáva nainštalovaný trávenie s tým, ktorý register publikuje a zobrazuje, a oznamuje, keď je k dispozícii nový obrázok."
+          "p": "Katalóg nainštaluje rolovaciu značku, ktorú zverejní jeho správca, ale efektívna digest je vyriešená, zaznamenaná a zmenená iba prostredníctvom explicitnej aktualizácie s predbežnou kontrolou a návratom späť. <monitorLink>ProxMenux Monitor</monitorLink> porovnáva nainštalovaný digest s tým, ktorý register publikuje a zobrazuje a upozorní, keď bude k dispozícii nový obrázok."
         }
       ]
     }

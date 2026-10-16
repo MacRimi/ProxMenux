@@ -5,7 +5,7 @@
   },
   "header": {
     "title": "Dashboard: tab VMs & LXCs",
-    "description": "Úplný súpis hostí na uzle. Štyri hlavné metriky po celej hornej, roztriediteľný zoznam všetkých VM0 a LXC nižšie, a vrták-in na hosťa s konfig, zdroje, zálohy, protokoly a štyri riadenie životného cyklu (začať / Shutdown / Reboot / Stop).",
+    "description": "Úplný inventár hostí v uzle. Štyri hlavné metriky v hornej časti, zoraďovateľný zoznam všetkých VM a LXC nižšie a hĺbková analýza pre každého hosťa s konfiguráciou, zdrojmi, zálohami, denníkmi a štyrmi ovládacími prvkami životného cyklu (Spustenie / Vypnutie / Reštartovanie / Stop).",
     "section": "ProxMenux Monitor · Prehľad"
   },
   "intro": {
@@ -37,13 +37,13 @@
     "heading": "Zoznam virtuálnych strojov a kontajnerov",
     "intro": "Jeden rad za hosťa. Zoznam je single-sourced z <code>/api/vms</code>, ktorý konsoliduje <code>qm list</code> + <code>pct list</code> + <code>pvesh /cluster/resources</code> na hostiteľa.",
     "imageAlt": "Virtuálne stroje & Kontajnery Zoznam 1 riadok na hosťa so statusom, typovým odznakom, menom, ID a inline CPU / pamäť / percento disku",
-    "imageCaption": "Mobilné optimalizované rozloženie inventára",
+    "imageCaption": "Rozloženie inventára optimalizované pre mobilné zariadenia – rovnaké údaje, aké zobrazuje zobrazenie na počítači, preskupené do jedného stĺpca, pričom percentá a indikátory stavu sú kompaktné.",
     "rowsIntro": "Každý riadok zobrazuje:",
     "rows": [
       "<strong>Status icon</strong> Pre zastavených hostí, zvyšok riadku stmieva, takže okamžite uvidíte, čo je offline.",
       "<strong>Typový preukaz</strong> — <em>LXC</em> (kyan) pre kontajnery, <em>VM</em> (fialová) pre virtuálne stroje.",
       "<strong>Name</strong>",
-      "<strong>0VMID</strong>",
+      "<strong>VMID</strong> — číselné ID Proxmox pod názvom.",
       "<strong>Vložené metriky</strong> 3 percentá s ikonou (CPU %, % pamäte, % disku). Každá ikona sa zmení na oranžovú, keď metrika prekročí prah pozornosti (napr. pamäť nad 90 %), takže rýchly sken vám povie, ktorý hosť je pod tlakom bez otvorenia."
     ],
     "clickHint": "Kliknutím na ľubovoľný riadok, ktorý beží alebo zastavil, otvorí vrták-in modal popísaný nižšie.",
@@ -52,7 +52,7 @@
   },
   "drillIn": {
     "heading": "Vrták na hosťa",
-    "intro": "modal sa otvára s menom hosťa, VMID, typ, stav a čas prevádzky. Jeho navigácia sa prispôsobuje hosťovi: <strong>0Status</strong>, <strong>App</strong> a <strong>Updates</strong> pre LXC manažment aplikácií, <strong>Mounts</strong> keď LXC má montážne body, <strong>Logs</strong> pre kontajnery nainštalované OCI manažérom Apps, plus <strong>Backups</strong> a <strong>Firewall</strong>. Pevná akčná tyč udržuje kontrolu životného cyklu a terminál LXC dostupný z každej karty.",
+    "intro": "Modálny sa otvorí s názvom hosťa, VMID, typom, stavom a dobou prevádzky. Jeho navigácia sa prispôsobuje hosťovi: <strong>Stav</strong>, <strong>App</strong> a <strong>Aktualizácie</strong> pre LXC správa aplikácií, <strong>Držiaky</strong> keď LXC má montážne body, <strong>Denníky</strong> pre kontajnery inštalované spoločnosťou OCI manager Apps, plus <strong>Zálohy</strong> a <strong>POŽARNE DVERE</strong>. Pevná lišta akcií udržuje ovládacie prvky životného cyklu a LXC terminál dostupný z každej karty.",
     "statusTitle": "Záložka 1",
     "statusImageAlt": "Vrták pre každého hosťa s CPU / Pamäťové / Diskové živé karty, Disk a sieťové I/O súčty, logo OS distro a blok zdrojov / IP adresy",
     "statusImageCaption": "Stavová záložka CPU / Pamäť / Disk s výstupmi v hornej časti, nahromadené I/O súčty (čítanie/zapísanie disku, zníženie/up siete) nižšie, potom statické zdroje blok s poznámkami a + Info expanzie a zoznam IP adries pilulky.",
@@ -66,13 +66,13 @@
     "ioTitle": "2. I/O celkový počet + logo OS",
     "ioItems": [
       "<strong>Disk I/O</strong> Užitočné vidieť hosťa, ktorý sa náhle stal I/O-ťažký v porovnaní s jeho východiskovou hodnotou.",
-      "<strong>0Network I/O</strong> Rovnaký nápad na strane siete.",
-      "<strong>0OS distro logo</strong> Rýchly vizuálny podnet pri posúvaní niekoľkých spôsobov otvárania."
+      "<strong>Sieťové I/O</strong> – akumulované sťahovanie (↓) a odovzdávanie (↑). Rovnaký nápad na strane siete.",
+      "<strong>Logo distribúcie OS</strong> — ikona Debian / Ubuntu / Alpine / Windows / atď. zistená z typu OS hosťa. Rýchla vizuálna pomôcka pri posúvaní niekoľkých otvorených modálov."
     ],
     "resourcesTitle": "3. Blok zdrojov",
     "resourcesIntro": "Konfigurácia hosťa ako Proxmox vidí to CPU Jadro, pamäť (konfigurované) <code>maxmem</code>), Swap. Dva skolabovateľné tlačidlá v hlavičke bloku:",
     "resourcesItems": [
-      "<strong>0Notes</strong> Editovateľné: písanie tu a ukladanie hovorov <code>PUT /api/vms/&lt;vmid&gt;/config</code> a píše späť na <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> alebo <code>/etc/pve/lxc/&lt;vmid&gt;.conf</code>.",
+      "<strong>Poznámky</strong> — pole popisu hosťa. Upraviteľné: tu zadajte a uložte hovory <code>PUT /api/vms/&lt;vmid&gt;/config</code> a spätné zapísanie na <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> alebo <code>/etc/pve/lxc/&lt;vmid&gt;.conf</code>.",
       "<strong>+ Info</strong> Ďalšie polia, ktoré sú príliš slovesné pre predvolené zobrazenie: bios režim, typ stroja, stav agenta, prejazdové položky hospci, body pripojenia (CT), objednávka topánok."
     ],
     "ipsTitle": "4. IP adresy",
@@ -83,7 +83,7 @@
     "appLinkLabel": "vyhradená stránka aplikácie",
     "appLinkTail": "pre cached discover, katalóg-pomocné registráciu, Docker webové odkazy a verzie detektory.",
     "updatesTitle": "Karta 3 Aktualizácie (LXC iba)",
-    "updatesIntro": "Udržuje balíky <strong>0OS</strong>, registrované aplikácie, <strong>Docker Engine</strong> a Docker obrázky ako samostatné ciele. Každý cieľ môže fungovať nezávisle; voliteľná hromadná akcia a harmonogram môžu vybrať presné metódy, ktoré by mali prebiehať spoločne.",
+    "updatesIntro": "Uchováva <strong>balíky OS</strong>, registrované aplikácie, <strong>Docker Engine</strong> a Docker obrázky ako samostatné ciele. Každý cieľ môže bežať nezávisle; voliteľná hromadná akcia a plán môžu vybrať presné metódy, ktoré by sa mali spúšťať spolu.",
     "updatesLinkLead": "Pozrite si",
     "updatesLinkLabel": "vyhradené aktualizácie stránky",
     "updatesLinkTail": "pre integrované a vlastné aktualizácie, Docker rekreácia, hromadný výber, bezpečnostné možnosti a plánovanie.",
@@ -109,20 +109,20 @@
     "logsTitle": "Tab 5",
     "logsBody": "Objavuje sa len pre kontajnery nainštalované Apps správcu OCI. Zobrazuje výstup konzoly hlavného procesu obrazu, ktorý sa uchovával na hostiteľa v <code>/var/log/proxmenux/oci/VMID.console.log</code>: posledný 100, 500 alebo 1000 linky, nasledoval naživo, zatiaľ čo kontajner beží, s filtrom a sťahovanie. Číta súbor na každom otvorenom, takže to tiež funguje s kontajnerom zastavil. Podrobnosti sú v <ociLink>OCI kontajneroch v ProxMenux Monitor</ociLink>.",
     "backupsTitle": "Tab 6",
-    "backupsImageAlt": "Per-guest vŕtačka-in mode",
-    "backupsImageCaption": "Zálohy záložka Záhlavie tab nesie odznak.",
+    "backupsImageAlt": "Modul na hĺbkovú analýzu pre každého hosťa – karta Zálohy so zoznamom dostupných záloh, cieľovou značkou, veľkosťami a tlačidlom Vytvoriť zálohu",
+    "backupsImageCaption": "Karta Zálohy – každá záloha uložená na nakonfigurovaných úložiskách Proxmox pre tohto hosťa, zoradená ako posledná. Hlavička karty obsahuje odznak počtu.",
     "backupsIntro": "Zobrazí všetky zálohy uložené v nakonfigurovaných skladoch Proxmox pre tohto hosťa, zoradené ako prvé. Názov záložky nesie odznak, takže vidíte na prvý pohľad, či je hosť zálohovaný. Za riadok:",
     "backupsItems": [
       "<strong>Timestamp</strong>",
       "<strong>Cieľová značka</strong> V sklade, kde žije (PBS-Cloud, PBS- Local, NFS-Záloha, ...) farebná podľa stavu.",
       "<strong>Size</strong>"
     ],
-    "backupsOutro": "<strong>+ Vytvoriť Backup</strong> tlačidlo v pravom hornom rohu spustí nový beh na úložisku označené ako \"Backup cieľ\" v Proxmox úložisku konfig. Obnoviť životy vo webovom UI Proxmox",
+    "backupsOutro": "Tlačidlo <strong>+ Vytvoriť zálohu</strong> vpravo hore spustí nový chod na úložisku označenom ako \"Cieľ zálohy\" v konfigurácii úložiska Proxmox. Obnovte životy na webe Proxmox UI — Monitor odhaľuje \"je tento hosť nedávno zálohovaný?\" zobrazenie, nie tok obnovy.",
     "firewallTitle": "Záložka 7",
     "firewallIntro": "Číta per-hostiteľ Proxmox firewall log priamo od hostiteľa (žiadna extra služba, žiadny prieskum). Záložka je vždy prítomná v navigačnom páse; panel sa rozhodne, čo urobiť v závislosti od toho, či je firewall pre tohto hosťa povolený a či sa nejaké pravidlo skutočne prihlasuje:",
     "firewallItems": [
       "<strong>Firewall vypnutý</strong> Výpoveď z jantáru presne vysvetľuje, kde je možné ju v Proxmoxe UI (<em>&lt;KontajnerVM&gt; → Firewall → Možnosti</em>) a pripomína vám, že aspoň jedno pravidlo potrebuje <code>log: info</code> (alebo vyššie) predtým, ako sa objavia balíčky.",
-      "<strong>0Firewall zapnutý, žiadne udalosti ešte</strong>",
+      "<strong>Firewall povolený, zatiaľ žiadne udalosti</strong> — nápoveda v prázdnom stave s rovnakou požiadavkou na protokolovanie, užitočná, keď ste práve zapli bránu firewall.",
       "<strong>Súčasné udalosti</strong> Priehľadná monopriestorová tabuľa so surovými položkami zafarbenými akciou: <green>ACCEPT</green> (zelená), <orange>ZAMIETNUTIE</orange> (oranžová), <red>DROP</red> (červená). Počítací odznak v hlavičke ukazuje, koľko položiek je momentálne načítaných."
     ],
     "firewallRefresh": "A <em>Refresh</em> tlačidlo v pravom hornom rohu panela vytiahne najnovšie položky na požiadanie Údaje pochádzajú zo súboru záznamov podľa hostí, ktorý Proxmox píše pod <code>/var/log/pve-firewall.log</code> filtrovaný VMIDom, vystaveným cez <code>GET /api/vms/&lt;vmid&gt;/firewall/log</code>.",
@@ -225,7 +225,7 @@
         "tailRich": " — Čo <code>vm_*</code>, <code>ct_*</code>, <code>migration_*</code> a <code>backup_*</code> udalosti spúšťajú po prúde."
       },
       {
-        "label": "API referencia",
+        "label": "Referenčná príručka API",
         "href": "/docs/monitor/api",
         "tailRich": "  VM a záložné ciele."
       },
@@ -237,7 +237,7 @@
       {
         "label": "ProxMenux → Vytvoriť VM",
         "href": "/docs/create-vm",
-        "tailRich": " — "
+        "tailRich": "— strana poskytovania: šablóny systémových NAS (Synology a iné), virtuálne počítače Linux / Windows, predvolené nastavenia prispôsobené pre Proxmox."
       }
     ]
   }

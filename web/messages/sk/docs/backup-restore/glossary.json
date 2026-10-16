@@ -105,7 +105,7 @@
         {
           "id": "repositorio-pbs",
           "term": "PBS repozitár",
-          "def": "Kombinácia Proxmox Backup Server0 + <a href=\"#datastore\"> datastore</a> + užívateľa, ktorý prijíma zálohu. Identifikovaný reťazec <code>user@realm@host:datastore</code>. Jeden PBS server môže hostiť niekoľko úložísk."
+          "def": "Kombinácia Proxmox Backup Server + <a href=\"#datastore\">úložisko údajov</a> + používateľ, ktorý prijíma zálohu. Identifikované podľa reťazca <code>user@realm@host:datastore</code>. Jeden PBS server môže hostiť niekoľko úložísk."
         },
         {
           "id": "datastore",
@@ -177,7 +177,7 @@
         {
           "id": "restauracion-universal",
           "term": "Všeobecná obnova",
-          "def": "ProxMenux obnoviť tok nielen extrahovať súborový systém: číta manifest na mieste rozdiely medzi zdrojom a cieľom, reprodukuje konfiguráciu systému a re-spustí inštalátory pre ProxMenux-managed komponenty. Cieľom je reprodukovať zdrojového hostiteľa, nielen archív."
+          "def": "Tok obnovy ProxMenux neextrahuje iba súborový systém: prečíta manifest, aby zistil rozdiely medzi zdrojom a cieľom, reprodukuje konfiguráciu systému a znova spustí inštalačné programy pre komponenty spravované ProxMenux. Cieľom je reprodukovať hostiteľa zdroja, nielen archív."
         },
         {
           "id": "hidratacion",
@@ -187,7 +187,7 @@
         {
           "id": "cross-kernel",
           "term": "Obnova medzi kernelmi",
-          "def": "Obnoviť, kde sa jadro cieľa líši od (zvyčajne je novší ako) zdroja. Vyžaduje <a href=\"#hidratacion\">0hydratácia</a> prejsť, aby sa zabránilo ťahanie pozdĺž súborov nezlučiteľných s cieľovým jadrom."
+          "def": "Obnovte tam, kde sa jadro cieľa líši od jadra zdroja (zvyčajne je novšie). Vyžaduje sa prechod <a href=\"#hidratacion\">hydratácia</a>, aby sa predišlo presúvaniu súborov nekompatibilných s jadrom cieľa."
         },
         {
           "id": "instalador-postboot",
@@ -218,7 +218,7 @@
       {
         "label": "Cieľ Proxmox Backup Server",
         "href": "/docs/backup-restore/destinations/pbs",
-        "tail": " — "
+        "tail": "— kde sú do hĺbky zdokumentované šifrovanie na strane klienta, súbor kľúčov, prístupová fráza na obnovenie a obálka."
       },
       {
         "label": "Obnovenie",

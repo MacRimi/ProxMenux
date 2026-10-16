@@ -9,7 +9,7 @@
   },
   "header": {
     "title": "Ako to funguje",
-    "description": "Interné členenie zálohovania ProxMenux",
+    "description": "Interné zlyhanie zálohy ProxMenux — súborový systém, zoznam manifestov a aplikácií — a spôsob, akým obnova spotrebuje všetky tri na reprodukciu zdrojového hostiteľa na cieli, ktorý nemusí zdieľať rovnaké jadro.",
     "section": "Záloha a obnova"
   },
   "intro": {
@@ -80,7 +80,7 @@
     "customExtrasTitle": "1. Trvalé doplnky (na-host súbor)",
     "customExtrasBody": "Textový súbor na <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code> obsahuje zoznam absolútnych ciest, ktoré má používateľ na tomto hostiteľovi označené ako \"vždy vrátane.\" Keď spustí záloha v režime <strong>Default</strong>, ProxMenux automaticky pripojí tieto cesty k štandardnému profilu bez opýtania. Súbor je editovaný z rozhrania Jedna absolútna dráha na riadok; <code>#</code> komentáre sú povolené.",
     "customModeTitle": "2. Vlastný režim (na beh)",
-    "customModeBody": "Spustenie zálohy v režime <strong>0Custom</strong> nahrádza automatickú aplikáciu štandardného profilu kontrolným zoznamom zobrazujúcim každú cestu: predvolený profil a trvalé doplnky (predfixné s <code>[+]</code> a predkontrolované). Užívateľ kliešte alebo untiks položky pre tento špecifický spustiť, a tiež môže stlačiť <em>Pridať vlastnú cestu</em> zadať novú cestu",
+    "customModeBody": "Spustenie zálohy v režime <strong>Vlastný</strong> nahradí automatickú aplikáciu predvoleného profilu kontrolným zoznamom zobrazujúcim každú cestu: položky predvoleného profilu a trvalé doplnky (s predponou <code>[+]</code> a vopred skontrolované). Používateľ začiarkne alebo odznačí položky pre daný konkrétny chod a môže tiež stlačiť <em>Pridať vlastnú cestu</em> na zadanie novej cesty – ktorá sa potom uloží do extra súboru pre budúce zálohy.",
     "customMissingTitle": "Cesta neprítomná zo zdroja",
     "customMissingBody": "Akákoľvek cesta z profilu (predvolená alebo pridaná), ktorá neexistuje na zdrojovom hostiteľovi, sa zaznamenáva v <code>metadata/missing_paths.txt</code> vo vnútri archívu. Zálohovanie ani zlyhá, ani sa nezastaví. Užívateľ vidí súhrn archivovaných ciest a chýbajúce cesty na konci. V praxi sa to stane pre voliteľné cesty nástrojov, ako je <code>/etc/wireguard</code> alebo <code>/etc/prometheus</code>, ak tieto nástroje nie sú nainštalované."
   },
@@ -97,12 +97,12 @@
       {
         "collector": "collect_hardware.sh",
         "produces": "hardware_inventory",
-        "content": "GPU (s mapovaním dodávateľa a ProxMenux), TPU (koral USB + M.2 s detekciou <code>lsusb</code>/<code>lspci</code>), NIC (s MAC, PCI slot a členstvo v moste), bezdrôtové zariadenia. GPU položky nesú heuristiku <code>passthrough_eligible</code>."
+        "content": "GPU (s mapovaním dodávateľa a inštalátora ProxMenux), TPU (Coral USB + M.2 s <code>lsusb</code>/<code>lspci</code> s detekciou, bezdrôtové zariadenia a zariadenia PCI. GPU položky nesú heuristiku <code>passthrough_eligible</code>."
       },
       {
         "collector": "collect_storage.sh",
         "produces": "storage_inventory",
-        "content": "ZFS bazény (s typ bazénu + členské disky vyriešené na <code>/dev/disk/by-id/*</code>, <code>/dev/disk/by-partuuid/*</code> alebo surových <code>/dev/sdX</code> trasy v závislosti od toho, ako bol pôvodne vytvorený bazén), LVM objemové skupiny + tenké bazény, fyzické disky s SMART schopnosť, PVE <code>storage.cfg</code> vstupy, externé pripojenia."
+        "content": "ZFS pools (s pool typ + členské disky vyriešené na <code>/dev/disk/by-id/*</code>, <code>/dev/disk/by-partuuid/*</code> alebo surové <code>/dev/sdX</code> cesty v závislosti od toho, ako každý pool bol pôvodne vytvorený), LVM objemové skupiny + thin pools, fyzické disky s SMART schopnosť, PVE <code>storage.cfg</code> vstupy, externé držiaky."
       },
       {
         "collector": "collect_kernel.sh",
@@ -129,7 +129,7 @@
     "packagesTitle": "packages.manual.list",
     "packagesBody": "Jasný textový zoznam, ktorý vypracoval <code>apt-mark showmanual</code>: každý balík APT, ktorý bol <em>explicitne nainštalovaný</em> na zdrojovom hostiteľovi, zoradené abecedne. To vylučuje balíky nainštalované ako závislosti od základne Proxmox VE ISO (sú automaticky znovu vytláčané vlastným APT cieľa). Čítanie: <code>_rs_run_complete_extras</code> počas obnovy, filtrované cez trojpass <em>kaskádovo bezpečné</em> filter (<code>dpkg -s</code> v prípade už nainštalovanej, súrodeneckej veľkej detekcie pre knižničné balíky, <code>apt-get install --simulate</code> pre riziko odstraňovania kaskád), potom sa nainštaluje <code>apt-get install -y</code>.",
     "componentsTitle": "components_status.json (časť koreňových listov)",
-    "componentsBody": "A JSON register pod <code>/usr/local/share/proxmenux/</code> ktorá zaznamenáva každú zložku ProxMenux má nainštalovaný so svojím presným stavom: verzia, ProxMenux- špecifické vlajky (pre NVIDIA: <code>patched</code> boolean; pre Coral: DKMS verzia). Tento súbor žije vo vnútri rootfs <code>metadata/</code> Pretože je <em>prečítať po</em> Rootfs bol skopírovaný k cieľu. Poboot dispečer (<code>apply_cluster_postboot.sh</code>) iteruje cez svoje položky a beží každý komponent <code>--auto-reinstall</code> hák, ktorý číta nahraný stav a reprodukuje inštaláciu oproti aktuálnemu jadru cieľa.",
+    "componentsBody": "A JSON registra pod <code>/usr/local/share/proxmenux/</code> ktorý zaznamenáva každý komponent ProxMenux nainštalovaný s presným stavom: verzia, ProxMenux-špecifické príznaky (napr NVIDIA: <code>patched</code> boolean; pre Coral: DKMS verzia). Tento súbor žije vo vnútri rootfs — nie v <code>metadata/</code> — pretože je <em>prečítať po</em> a rootfs bol skopírovaný do cieľa. Dispečer po spustení (<code>apply_cluster_postboot.sh</code>) iteruje svoje položky a spúšťa jednotlivé komponenty <code>--auto-reinstall</code> hook, ktorý načíta zaznamenaný stav a reprodukuje inštaláciu oproti aktuálnemu jadru cieľa.",
     "componentInstallersTitle": "Inštalatéri komponentov",
     "componentInstallersBody": "Štyri inštalátory ProxMenux v súčasnosti vystavujú vstupný bod <code>--auto-reinstall</code>:",
     "installerRows": [
@@ -181,8 +181,8 @@
       {
         "stage": "3b",
         "name": "Dovoz dátovej skupiny",
-        "reads": "manifest.storage_inventory0 + cieľový ZFS stav",
-        "action": "<code>_rs_import_data_pools</code> importuje každý nekoreň ZFS bazén, ktorého plná sada diskov je prítomná na cieli. Bazény s cudzím hostidom sú znovu získané s <code>zpool import -f</code>. Bazény, ktorým chýba disk, sú preskočené s varovaním. Výsledok za jednu skupinu sa zaznamená v <code>/var/log/proxmenux/restore-datapools-&lt;timestamp&gt;.log</code>."
+        "reads": "manifest.storage_inventory + cieľový ZFS stav",
+        "action": "<code>_rs_import_data_pools</code> importuje každého ZFS pool každého iného typu než root, ktorého úplná sada diskov sa nachádza v cieli. Pools nesúci cudzí hostid sa zopakuje s <code>zpool import -f</code>. Pools chýbajúce disky sú preskočené s varovaním. Výsledok per-pool je zaznamenaný v <code>/var/log/proxmenux/restore-datapools-&lt;timestamp&gt;.log</code>."
       },
       {
         "stage": "4",

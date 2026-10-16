@@ -69,7 +69,7 @@
       },
       {
         "param": "BIOS",
-        "options": "OVMF (UEFI0) alebo SeaBIOS (Legacy)"
+        "options": "OVMF (UEFI) alebo SeaBIOS (staršie)"
       },
       {
         "param": "Typ CPU",
@@ -103,7 +103,7 @@
   },
   "storagePlan": {
     "heading": "Plán skladovania",
-    "body": "Po CPU0 / RAM, ProxMenux otvorí <strong>Storage Plan</strong> menu, kde môžete kombinovať virtuálne disky, importované disky a PCI priechodné zariadenia v rovnakom VM, pridať položky jeden naraz a dokončiť, keď ste hotoví.",
+    "body": "Po CPU / RAM otvorí ProxMenux ponuku <strong>Plán úložiska</strong>, kde môžete kombinovať virtuálne disky, importované zariadenia PCI a rovnaké disky VM, pridávanie položiek po jednej a dokončenie, keď skončíte.",
     "virtualDiskTitle": "a. Pridať virtuálny disk",
     "virtualDiskItems": [
       "Zobrazí úložné objemy Proxmox dostupné na hostiteľovi.",

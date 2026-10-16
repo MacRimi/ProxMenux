@@ -3,8 +3,8 @@
     "title": "Vytvoriť VMs na Proxmox VE Synológia, Windows, Linux, NAS Čarodejníci ProxMenux",
     "description": "Vytvoriť a konfigurovať virtuálne stroje na Proxmox VE s ProxMenux. Vyhradení sprievodcovia pre spotrebiče NAS (Synology DSM, TrueNAS, OpenMediaVault, UnRAID, atď.), Windows, Linux distros a externý inštalátor macOS. Citlivé predvolené zariadenia pre hardvér VM, úložisko a vytváranie sietí.",
     "ogTitle": "Vytvoriť VM na Proxmox VE",
-    "ogDescription": "Sprievodcovia ProxMenux0 pre vytvorenie Synológie DSM, TrueNAS, OMV, UnRAID, Windows a Linux VMs na Proxmox VE.",
-    "ogImageAlt": "ProxMenux0 Create VM Menu",
+    "ogDescription": "ProxMenux sprievodcovia na vytváranie Synology DSM, TrueNAS, OMV, UnRAID, Windows a Linux VM na Proxmox VE.",
+    "ogImageAlt": "ProxMenux Vytvoriť ponuku VM",
     "twitterTitle": "Vytvoriť VMs na Proxmox VE | ProxMenux",
     "twitterDescription": "Čarodejníci pre synológiu, TrueNAS, OMV, UnRAID, Windows a Linux VMs na Proxmox VE."
   },
@@ -80,7 +80,7 @@
     "title": "Skripty Spoločenstva (tu nie sú zdokumentované)",
     "intro": "Dva položky pod <em>0 Community Scripts</em> oddeľovací spúšťací kód, ktorý je <strong> nie je súčasťou ProxMenux</strong>, takže sú zámerne ponechané mimo tejto dokumentácie:",
     "macosRich": "<strong>Systém macOS</strong> chápaná externá <osxLink>OSX-PROXMOX</osxLink> inštalátor. Klonuje úložisko proti prúdu, pripravuje hostiteľa a <strong>reštartuje automaticky po dokončení</strong>. Pozrite si vlastnú dokumentáciu projektu.",
-    "othersRich": "<strong>System Others (Linux-based)</strong> Každý skript komunity je udržiavaný mimo ProxMenux."
+    "othersRich": "<strong>Ostatné systémy (založené na Linuxe)</strong> — načíta upravený zoznam komunitných inštalátorov založených na Linuxe (operačné systémy domáceho servera, zariadenia smerovača/brány firewall atď.). Každý skript komunity je udržiavaný mimo ProxMenux."
   },
   "afterPick": {
     "heading": "Čo sa stane potom, čo si vyberiete OS",
@@ -88,7 +88,7 @@
     "items": [
       "<strong>Default vs Advanced.</strong> Potvrdzovací dialóg umožňuje prijať prednastavenia ProxMenux alebo otvoriť úplný konfigurátor (CPU model/core, RAM, BIOS/UEFI, model NIC, typ stroja).",
       "<strong>Storage plan.</strong> Skombinujete jeden alebo niekoľko virtuálnych diskov, importovaných diskov a PCI priechodných zariadení (celý regulátor / NVMe) v rovnakom VM.",
-      "<strong>0Voliteľné GPU passhrough.</strong> Ak je kompatibilný GPU detekované na hostiteľa, ProxMenux ponúka na spustenie GPU asistent po VM je vytvorený",
+      "<strong>Voliteľný prechod GPU.</strong> Ak sa na hostiteľovi zistí kompatibilný GPU, ProxMenux ponúkne spustenie asistenta GPU – po vytvorení VM sa môže vyžadovať reboot.",
       "<strong>VM tvorba.</strong> • VM je postavený, označený, a štýlový HTML popis je pripojený k nemu pre rýchlu referenciu v Proxmox UI."
     ],
     "tipTitle": "Preferujte Pokročilé pre VMs máte v úmysle zachovať",
@@ -158,7 +158,7 @@
       {
         "href": "/docs/utils/import-vm",
         "label": "Importovať VM z OVA / OVF",
-        "tail": " — Prineste predstavené VM z VMware / VirtualBox0 / ProxMenux export."
+        "tail": "— priveďte vopred vytvorené VM z exportov VMware / VirtualBox / ProxMenux."
       },
       {
         "href": "/docs/hardware/gpu-vm-passthrough",

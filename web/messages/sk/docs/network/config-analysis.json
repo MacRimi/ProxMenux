@@ -75,7 +75,7 @@
       },
       {
         "title": "5. Overovanie",
-        "body": "Znovu si prečíta súbor, uvádza, čo bolo odstránené, a znovu kontroluje zostávajúce rozhrania. Vytlačí príkaz na vrátenie peňazí. Má <strong>0not</strong> automaticky reštartovať vytváranie sietí",
+        "body": "Opätovne načíta súbor, vypíše, čo bolo odstránené, a znova skontroluje zostávajúce rozhrania. Vytlačí príkaz na vrátenie. <strong>nereštartuje</strong> automaticky sieť – odstránenie nepoužívaného bloku je bezpečné použiť pri ďalšom reštarte a nedotýka sa aktívneho stavu.",
         "tone": "emerald"
       }
     ],

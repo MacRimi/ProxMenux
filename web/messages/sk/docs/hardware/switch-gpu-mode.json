@@ -26,19 +26,19 @@
     "rows": [
       {
         "situation": "GPU je zadarmo Chcete to dať VM.",
-        "useRich": "Bez použitia <vmLink>0Pridať GPU k VM</vmLink>"
+        "useRich": "Nie – použite <vmLink>Pridať GPU do VM</vmLink>"
       },
       {
         "situation": "GPU je zadarmo Chcete ho dať LXC.",
-        "useRich": "Bez použitia <lxcLink>0Pridať GPU k LXC</lxcLink>"
+        "useRich": "Nie – použite <lxcLink>Pridať GPU do LXC</lxcLink>"
       },
       {
         "situationRich": "GPU ci rá st gi re ou VM via <code>vfio-pci</code>, Chcem ho použiť z LXC namiesto toho.",
-        "useRich": "<strong>0Áno Táto stránka.</strong>"
+        "useRich": "<strong>Áno – táto stránka.</strong>"
       },
       {
         "situation": "GPU je zdieľaný s LXC, chcem ho venovať VM.",
-        "useRich": "<strong>0Áno Táto stránka.</strong>"
+        "useRich": "<strong>Áno – táto stránka.</strong>"
       },
       {
         "situation": "Chcem úplne odviazať GPU od všetkého.",
@@ -52,7 +52,7 @@
     "iommu": "<strong>IOMMU povolené na hostiteľa</strong> Iba prísne požadované pri prepínaní <em>do</em> VM režim, ale stojí za to mať na oboch smeroch. Ak parameter jadra chýba, skript automaticky pridá <code>intel_iommu=on iommu=pt</code> alebo <code>amd_iommu=on</code> k príkazovému riadku pre štart (cez <code>proxmox-boot-tool refresh</code> týkajúce sa systemd- Boot alebo <code>update-grub</code> týkajúce sa GRUB) a zahŕňa ju do reštartovej promócie na konci.",
     "iommuCheck": "dmesg | grep -i 'IOMMU enabled' | head -1",
     "reboot": "<strong>Be OK s reštart.</strong> Prepínanie GPU väzby na úrovni jadra znamená hostiteľ regeneruje initramfs a vy reštartovať použiť. Skript na konci.",
-    "knowList": "<strong>0Know, ktoré VMs / LXCs používajú GPU.</strong> Skript ich nájde a spýta sa, čo robiť s každým, ale je to rýchlejšie, ak už poznáte zoznam."
+    "knowList": "<strong>Zistite, ktoré VM / LXC používajú GPU.</strong> Skript ich nájde a spýta sa, čo má s každým urobiť, ale je to rýchlejšie, ak už poznáte zoznam."
   },
   "blocklist": {
     "title": "Nie všetky GPU sú bezpečné prejsť na VM",
@@ -101,7 +101,7 @@
       "removePolicy": "Odstrániť GPU z konfigurácie",
       "removeEffect": "<code>hostpci</code>0 / <code>dev</code> linky pre tento GPU je sed'd von.",
       "removeWhen": "VM/LXC bude fungovať bez GPU (CPU-iba transkódovanie atď.). Čistý pracovný postup.",
-      "imageAlt": "Dialóg otázky na-VM0 / na-LXC politika konfliktu pri zmene GPU ktorý je momentálne pridelený"
+      "imageAlt": "Dialógové okno s otázkou pre VM / pre LXC politiku konfliktu pri prepínaní GPU, ktorá je momentálne priradená"
     },
     "audio": {
       "title": "Vyčistenie sirotského zvuku (iba pri odchode z režimu VM)",
@@ -120,8 +120,8 @@
   },
   "manual": {
     "heading": "Ručný ekvivalent",
-    "intro": "Ak chcete presne pochopiť, čo skript robí (alebo vystreliť jeden z krokov po ruke), toto sú surové operácie pre <strong>0VM → LXC</strong> na karte NVIDIA s dodávateľom:device <code>10de:2204</code>:",
-    "lxcToVm": "A pre <strong>0LXC → VM</strong>:",
+    "intro": "Ak chcete presne pochopiť, čo skript robí (alebo ručne vyriešiť jeden z krokov), toto sú nespracované operácie pre <strong>VM → LXC</strong> na karte NVIDIA <code>10de:2204</code>:",
+    "lxcToVm": "A pre <strong>LXC → VM</strong>:",
     "oneVmTitle": "Iba jeden VM môže použiť dané vfio-pci GPU naraz",
     "oneVmBody": "Uvádzanie viacerých <code>hostpci</code> položiek s rovnakým PCI slotu v dvoch VM je platný konfig, ale len jeden z VM môže začať s GPU Krok politiky konfliktu ProxMenux je presne o tom, ako sa vyhnúť tejto pasci."
   },
@@ -135,7 +135,7 @@
     "vmFailTitle": "VM nezačne po prepnutí GPU na LXC mód",
     "vmFailBody": "VM má stále <code>hostpci</code> položky ukazujúce na GPU nemôže nárokovať. Spustite skript znovu a vyberte <em>Remove GPU z konfig</em> politiky, alebo vyčistiť konfig ručne:",
     "smiFailTitle": "nvidia-smi zlyhá s 'Nesúlad verzie Driver/library' po návrate do LXC",
-    "smiFailBody": "Hostiteľ NVIDIA moduly nenačítali čisto. <code>modprobe -r nvidia</code> a <code>modprobe nvidia</code>. Ak to zlyhá, reštart",
+    "smiFailBody": "Hostiteľské NVIDIA moduly sa nenačítali čisto. <code>modprobe -r nvidia</code> a potom <code>modprobe nvidia</code>. Ak to zlyhá, reštartujte – úplný reštart vždy vymaže zvyškový stav z väzby vfio.",
     "logTitle": "Inštalovať log",
     "logBody": "Každý beh píše <code>/tmp/proxmenux_gpu_switch_mode.log</code> na hostiteľa. Pripojte ho pri žiadosti o pomoc na GitHub."
   },

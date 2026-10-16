@@ -3,18 +3,18 @@
     "title": "Proxmox GPU Passhrough Commands lspci, VFIO, IOMMU, qm set hospci ProxMenux",
     "description": "Referencia pre GPU priechod na Proxmox VE: Identifikácia zariadenia lspci, moduly VFIO, IOMMU skupiny (intel_iommu / amd_iommu), GRUB a aktualizácií initramfs, qm sada hospci0, NVIDIA / AMD / Intel passough up.",
     "ogTitle": "Proxmox GPU Passhrough Commands lspci, VFIO, IOMMU, qm set hospci",
-    "ogDescription": "Referencie pre kontrolu a konfiguráciu GPU passhrough na Proxmox VE",
+    "ogDescription": "Odkaz na kontrolu a konfiguráciu GPU priechodu na Proxmox VE — PCI zariadenia, VFIO moduly, IOMMU skupiny, parametre zavádzania jadra, qm set hostpci.",
     "twitterTitle": "Proxmox GPU Passhrough Commands ProxMenux",
     "twitterDescription": "Skontrolujte PCI zariadenia, konfigurujte VFIO a IOMMU a pripojte GPU k VM na Proxmox VE."
   },
   "header": {
     "title": "GPU",
-    "description": "Odkaz na kontrolu a konfiguráciu GPU0 / TPU priechod na Proxmox: identifikácia zariadenia (lspci), nastavenie modulu VFIO, validácia IOMMU, initramfs / GRUB aktualizácie a na-VM passmough config (qm set hospci, machine q35, bios ovmf).",
+    "description": "Odkaz na kontrolu a konfiguráciu GPU / TPU passthrough na Proxmox: identifikácia zariadenia (lspci), nastavenie modulu VFIO, overenie IOMMU, initramfs / GRUB aktualizácie aVM passthrough config (qm set hostpci, stroj q35, bios ovmf).",
     "section": "Pomoc a informácie"
   },
   "intro": {
-    "title": "IOMMU musí byť povolená v BIOS0 / UEFI",
-    "body": "Pred akýmkoľvek z týchto príkazov musí byť IOMMU povolená na úrovni firmware (vyhľadávanie <em>0VT-d</em>, <em>AMD-Vi</em> alebo <em>IOMMU</em> v BIOS / UEFI). Bežné parametre GRUB na Linuxovej strane: <code>intel_iommu=on</code> (Intel) alebo <code>amd_iommu=on</code> (AMD), často kombinované s <code>iommu=pt video=efifb:off video=vesa:off</code>."
+    "title": "IOMMU musí byť povolené v BIOS / UEFI",
+    "body": "Predtým, než na ktoromkoľvek z týchto príkazov záleží, musí byť IOMMU povolená na úrovni firmvéru (hľadajte <em>VT-d</em>, <em>AMD-Vi</em> alebo <em>IOMMU</em> v BIOS / UEFI). Spoločné GRUB parametre, ktoré to umožňujú na strane Linuxu: <code>intel_iommu=on</code> (Intel) resp <code>amd_iommu=on</code> (AMD), často v kombinácii s <code>iommu=pt video=efifb:off video=vesa:off</code>."
   },
   "commandGroups": [
     {

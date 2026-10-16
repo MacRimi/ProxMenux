@@ -14,13 +14,13 @@
   },
   "ovh": {
     "heading": "Inštalovať OVH monitorovanie v reálnom čase (RTM)",
-    "intro": "Ak je váš Proxmox hostiteľ špecializovaný server prenajatý z <a>0Hcloud</a>, môžete RTM povoliť vystaviť hardvérovú telemetriu (teplotu CPU, stav PSU, stav disku SMART, stav ovládača RAID atď.) riadiacemu panelu OVH. To je rovnaký agent OVH používa pre ich vlastné funkcie \"Server Monitoring.\"",
+    "intro": "Ak je váš hostiteľ Proxmox dedikovaný server prenajatý od <a>OVHcloud</a>, môžete povoliť RTM, aby sprístupnil hardvérovú telemetriu (CPU teplota, stav PSU, disk SMART, RAID stav ovládacieho panela OVH atď.) Toto je ten istý agent, ktorý OVH používa pre svoju vlastnú funkciu \"Monitorovanie servera\".",
     "decisionsTitle": "Ako sa rozhoduje ProxMenux",
     "decisionsItems": [
       "Získa IP prostredníctvom <code>curl ipinfo.io/ip</code>.",
       "Vyhľadáva vlastný ISP s dotazom <code>whois</code> na <code>v4.whois.cymru.com</code>.",
       "Ak sa výsledok zmieňuje o OVH, privedie <code>last-public-ovh-infra-yak.snap.mirrors.ovh.net/yak/archives/apply.sh</code> a privedie ho do <code>bash</code> s RTM v2 bábkovým manifestom.",
-      "Ak výsledok robí <em>0not</em> spomenúť OVH, nič nie je nainštalovaný. Voľba je žiadna."
+      "Ak výsledok <em>neuvádza</em> OVH, nič sa nenainštaluje. Táto možnosť nie je možná."
     ],
     "remoteTitle": "Vzdialený skript na bash",
     "remoteBody": "Inštalácia beží <code>wget -qO - https://…apply.sh | bash</code>. Ak OVH zrkadlo je niekedy ohrozená, skript vykonáva ako koreň na hostiteľa. Pred umožnením tejto možnosti sa rozhodnite, či dôverujete zrkadlovej reťazi OVH viac ako monitorovaniu, ktoré získate. Pre väčšinu domácich-lab alebo non-OVH užívateľov by táto možnosť mala jednoducho zostať mimo.",

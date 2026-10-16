@@ -42,7 +42,7 @@
       "aliases": [
         "Adaptive Replacement Cache"
       ],
-      "category": "Skladovanie",
+      "category": "Úložisko",
       "definitionRich": "ZFS je pamäťová pamäť. Drží nedávno a často používané dátové bloky; veľkostné stupnice s dostupným hostiteľom RAM. Defaults are agresive",
       "seeAlso": [
         {
@@ -93,7 +93,7 @@
     },
     {
       "term": "Ceph",
-      "category": "Skladovanie",
+      "category": "Úložisko",
       "definitionRich": "Distribuovaný úložný systém pevne integrovaný s Proxmoxom pre hyper-konvergované klastre. Poskytuje objekt, blok a ukladanie súborov podporované OSD (Object Storage Démons). PVE 9 vyžaduje Ceph 19.x (Squid).",
       "seeAlso": [
         {
@@ -106,7 +106,7 @@
       "term": "CT",
       "aliases": [
         "Kontajner",
-        "Obal LXC"
+        "Kontajner LXC"
       ],
       "category": "Proxmox",
       "definitionRich": "Skratka pre \"potrubie\" a terminológiu Proxmox LXC príklad. Má numerickú CTID, ktorá mapuje <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>. Pozri tiež <strong>LXC</strong>.",
@@ -251,7 +251,7 @@
       "aliases": [
         "Internet SCSI"
       ],
-      "category": "Skladovanie",
+      "category": "Úložisko",
       "definitionRich": "Sieťový protokol, ktorý odhaľuje blok úložisko cez IP           , sa objaví vzdialené disk ako lokálne SCSI zariadenie. Registrovaný ako Proxmox úložisko cez <code>pvesm add iscsi</code>.",
       "seeAlso": [
         {
@@ -273,8 +273,8 @@
       "aliases": [
         "Logical Volume Manager"
       ],
-      "category": "Skladovanie",
-      "definitionRich": "Linux úložný zásobník, ktorý abstrakty fyzické disky do objemových skupín (VG) logických objemov (LV). Proxmox používa LVM-tenké bazény pre VM disky štandardne. Stručné nástroje: <code>pvs</code>, <code>vgs</code>, <code>lvs</code>.",
+      "category": "Úložisko",
+      "definitionRich": "Linuxový úložný zásobník, ktorý abstrahuje fyzické disky do skupín zväzkov (VG) logických zväzkov (LV). Proxmox štandardne používa LVM-thin pools pre VM disky. Stručné nástroje: <code>pvs</code>, <code>vgs</code>, <code>lvs</code>.",
       "seeAlso": [
         {
           "label": "Príkazy na ukladanie a disky",
@@ -334,7 +334,7 @@
       "aliases": [
         "Systém sieťových súborov"
       ],
-      "category": "Skladovanie",
+      "category": "Úložisko",
       "definitionRich": "Unix-native sieťový protokol zdieľania súborov. Registrovaný ako Proxmox skladovanie cez <code>pvesm add nfs</code>; tiež použiteľné ako LXC klient / server cez dedikovaný ProxMenux toky.",
       "seeAlso": [
         {
@@ -382,7 +382,7 @@
         "Open Virtualization Format"
       ],
       "category": "Virtualizácia",
-      "definitionRich": "DMTF-štandardný formát balenia pre prenosné VM. <strong>0OVA</strong> je jediný archív TAR; <strong>OVF</strong> je adresár s XML deskriptorom + externými VMDK súbormi. Importovateľné na VMware, VirtualBox a Proxmox.",
+      "definitionRich": "Štandardné formáty balenia DMTF pre prenosné VM. <strong>OVA</strong> je jeden archív TAR; <strong>OVF</strong> je adresár s XML deskriptorom + externými súbormi VMDK. Importovateľné na VMware, VirtualBox a Proxmox.",
       "seeAlso": [
         {
           "label": "Exportovať VM do OVA / OVF",
@@ -415,7 +415,7 @@
         "Proxmox Backup Server"
       ],
       "category": "Proxmox",
-      "definitionRich": "Samostatné produkty z Proxmox pre prírastkové, deduplikované, šifrované VM0 / CT zálohy. Odporúčame cez plain vzdump, keď máte samostatný stroj, aby ho na."
+      "definitionRich": "Samostatný produkt od Proxmox pre prírastkové, deduplikované, šifrované VM / CT zálohy. Odporúča sa cez obyčajný vzdump, keď máte samostatný počítač, na ktorom ho môžete hostiť."
     },
     {
       "term": "pct",
@@ -484,7 +484,7 @@
       "aliases": [
         "QEMU Copy-On-Write v2"
       ],
-      "category": "Skladovanie",
+      "category": "Úložisko",
       "definitionRich": "Štandardný formát obrazu VM na adresári Proxmox. Podporuje tenké poskytovanie, snímky a kopírovanie. Previesť s <code>qemu-img convert -O qcow2 ...</code>."
     },
     {
@@ -524,7 +524,7 @@
     },
     {
       "term": "Samba / SMB / CIFS",
-      "category": "Skladovanie",
+      "category": "Úložisko",
       "definitionRich": "Rodina protokolu zdieľania súborov od spoločnosti Microsoft. <strong>SMB</strong> je protokol; <strong>Samba</strong> je open-source Linux implementácia; <strong>P AKS</strong> je starší SMB dialekt. Registrovaný ako Proxmox skladovanie cez <code>pvesm add cifs</code>.",
       "seeAlso": [
         {
@@ -543,7 +543,7 @@
       "aliases": [
         "Self-Monitoring, Analysis and Reporting Technology"
       ],
-      "category": "Skladovanie",
+      "category": "Úložisko",
       "definitionRich": "Zabudovaná diagnostika disku, ktorá hlási zdravie pohonu, počíta chyby a výsledky vlastných testov. <code>smartctl</code>0 (z <code>smartmontools</code>) je CLI; pre NVMe disky, balík <code>nvme-cli</code> pridáva NVMe-špecifické príkazy.",
       "seeAlso": [
         {
@@ -651,7 +651,7 @@
     {
       "term": "vzdump",
       "category": "Proxmox",
-      "definitionRich": "Proxmoxov vstavaný záložný nástroj pre VMs a CTs. <strong>0Nie inkrementálne</strong> Nastaviť režimy (snapshot / suspend / stop), kompresia (zstd / pinz / lzo), uchovávanie a oznámenie na prácu.",
+      "definitionRich": "Vstavaný zálohovací nástroj Proxmox pre VM a CT. <strong>Nie prírastkové</strong> — každá záloha je úplná snapshot. Nakonfigurujte režimy (snapshot / pozastavenie / zastavenie), kompresiu (zstd / pigz / lzo), uchovávanie a oznamovanie pre každú úlohu.",
       "seeAlso": [
         {
           "label": "Zálohovanie a obnovenie príkazov",
@@ -664,7 +664,7 @@
       "aliases": [
         "Zettabyte File System"
       ],
-      "category": "Skladovanie",
+      "category": "Úložisko",
       "definitionRich": "Kombinované súborový systém a správca zväzkov známy pre snímky, odosielanie/prijímanie replikácie, end-to-end kontrolné čísla, kompresie a samoliečenie. Pamäť-hlad (pozri <strong>ARC</strong>), ale extrémne robustný.",
       "seeAlso": [
         {

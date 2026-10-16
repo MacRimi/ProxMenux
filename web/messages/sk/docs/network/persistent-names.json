@@ -16,11 +16,11 @@
   },
   "problem": {
     "heading": "Problém, ktorý rieši",
-    "intro": "Linux odvodzuje predvolené názvy rozhraní z PCI topológie <code>eno1</code> = vozidlo, <code>enp3s0</code> = karta v zbernici PCI 3, slot 0atď. Systém menovania je deterministický. <em>za predpokladu rovnakého usporiadania hardvéru</em>. Zmeniť rozloženie a zmenu mien:",
+    "intro": "Linux odvodzuje predvolené názvy rozhraní z topológie PCI — <code>eno1</code> = na palube, <code>enp3s0</code> = karta v zbernici PCI 3, slot 0, atď. Schéma pomenovania je deterministická <em>vzhľadom na rovnaké rozloženie hardvéru</em>. Zmeňte rozloženie a posun názvov:",
     "items": [
       "Pridať GPU pred existujúce NIC → NIC bus číslo môže zmeniť → meno zmeny.",
       "Presuňte kartu na iný PCIe slot → zmeny názvu.",
-      "BIOS0 / UEFI aktualizácia, ktorá znovu počíta zariadenia → mená sa môžu zmeniť.",
+      "Aktualizácia BIOS / UEFI, ktorá opätovne vymenúva zariadenia → názvy sa môžu zmeniť.",
       "Nahradiť chybnú kartu s rovnakým modelom v inom slotu → zmeny názvu."
     ],
     "outro": "Po takejto zmene, <code>/etc/network/interfaces</code> stále sa odvoláva na <em>staré</em> Meno; most sa nepodarí prísť; hostiteľ stráca sieť. Stanovenie trvalých názvov bráni tomu, aby sa tento scenár opäť odohral."
@@ -68,7 +68,7 @@
       {
         "type": "veth / docker0 / br-XXXX",
         "behaviour": "Preskočené",
-        "why": "Vytvorené na požiadanie Docker0 / LXC"
+        "why": "Vytvorené na požiadanie používateľom Docker / LXC — nie je trvalý hardvér"
       },
       {
         "type": "tap / fwpr / fwln",

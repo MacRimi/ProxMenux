@@ -62,7 +62,7 @@
     },
     {
       "id": "storage",
-      "title": "Skladovanie",
+      "title": "Úložisko",
       "blocks": [
         {
           "p": "Nedostupné skladovanie sa oznamuje ako kritické, ak je vyhlásené za nevyhnutné alebo slúži bežiacemu hosťovi ako varovanie, keď nie je uvedená jeho úloha, a ako pozorovanie, keď je vyhlásené za voliteľné."
@@ -78,7 +78,7 @@
         {
           "list": {
             "items": [
-              "Preskúmanie skladovacej kapacity (%) a preskúmanie tenkého bazéna (%).",
+              "Kontrola kapacity úložného priestoru (%) a kontrola plnenia thin pool (%).",
               "Pomer tenkej nadmernej ponuky a pomer nadmernej komunikácie s pamäťou.",
               "Interval čistenia ZFS (dni).",
               "Zálohovanie veku pádu (dni) a plán milosti (pomer).",

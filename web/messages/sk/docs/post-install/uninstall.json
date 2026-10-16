@@ -116,7 +116,7 @@
         "title": "Zaznamenávanie",
         "items": [
           {
-            "tool": "Zvestovaná optimalizácia",
+            "tool": "Optimalizácia journald",
             "restores": "Prepíše /etc/systemd/journald.conf s predvolenou vanilkou a reštartuje systemd-journald."
           },
           {
@@ -125,11 +125,11 @@
           },
           {
             "tool": "Log2RAM",
-            "restores": "Zastaví a vypne službu a časovač. Purges cron jobs, systemd0 jednotiek, binárnych súborov, konfiguračných súborov a adresár /var/log.hdd. Tiež odinštaluje apt balíček, ak bol nainštalovaný týmto spôsobom."
+            "restores": "Zastaví a zakáže službu a časovač. Čistí úlohy cron, jednotky systemd, binárne súbory, konfiguračné súbory a adresár /var/log.hdd. Tiež odinštaluje balík apt, ak bol nainštalovaný týmto spôsobom."
           },
           {
             "tool": "Automatický TRIM ZFS",
-            "restores": "Číta /usr/local/share/proxmenux/zfs_autotrim_pools (zoznam bazénov ProxMenux skutočne zmenil) a beží zpool set autotrim=off na každom z nich. Pools nastavíte autotrim ručne pred ProxMenux beží nie sú dotkol."
+            "restores": "Prečíta /usr/local/share/proxmenux/zfs_autotrim_pools (zoznam pools ProxMenux sa skutočne zmenil) a na každom spustí zpool set autotrim=off. Pools, ktoré ste nastavili manuálne pred spustením ProxMenux, sa nedotknú."
           }
         ]
       },
@@ -172,7 +172,7 @@
         ]
       },
       {
-        "title": "Skladovanie",
+        "title": "Úložisko",
         "items": [
           {
             "tool": "Nastavenie veľkosti ARC ZFS",
@@ -180,7 +180,7 @@
           },
           {
             "tool": "Automatické snímky ZFS",
-            "restores": "Odstráni Cron položky skript napísal a ponúka apt očistiť zfs-auto-snapshot. Existujúce snímkové súbory údajov v bazénoch sú ponechané neporušené"
+            "restores": "Odstráni položky cron, ktoré skript napísal, a ponúkne apt vyčistiť zfs-auto-snapshot. Existujúce snapshot množiny údajov na pools zostávajú nedotknuté – ak ich chcete odstrániť, odstráňte ich samostatne."
           },
           {
             "tool": "Obmedzenia rýchlosti vzdump",
@@ -230,18 +230,18 @@
   "edge": {
     "heading": "Puzdrá na hrany a kryty",
     "packageTitle": "Obnovenie balenia sa dotkne živých balíkov Proxmox",
-    "packageBody": "Reverzia <strong>0Odstraňovanie prekážok </strong> preinštaluje <code>pve-manager</code>, <code>proxmox-widget-toolkit</code>, <code>libjs-extjs</code> a <code>libpve-http-server-perl</code> s <code>--force-confnew</code>. To je všeobecne bezpečné, ale dotknite sa bežiace webové UI Nerob to uprostred migrácie alebo operácie klonu.",
+    "packageBody": "Vracia sa späť <strong>Odstránenie bannera predplatného</strong> preinštaluje <code>pve-manager</code>, <code>proxmox-widget-toolkit</code>, <code>libjs-extjs</code> a <code>libpve-http-server-perl</code> s <code>--force-confnew</code>. Vo všeobecnosti je to bezpečné, ale dotýka sa bežiaceho webu UI — Potom obnovte svoj prehliadač a čakajte niekoľko sekúnd na opätovné pripojenie. Nespúšťajte to uprostred operácie migrácie alebo klonovania.",
     "rebootTitle": "Trvalé mená a VFIO potrebujú reštart",
     "rebootBody": "Odstránenie ProxMenux <code>10-proxmenux-*.link</code> súborov (<em>Persistent Interface Names</em>) a vrátenie <em>IOMMU/VFIO</em> nemajú vplyv na bežiaci systém ProxMenux automaticky nastaví vlajku reštartu.",
     "perItemTitle": "Môžeš vrátiť jednu vec a zvyšok si nechať.",
-    "perItemBody": "Odinštalátor funguje podľa jednotlivých položiek. Ak chcete odstrániť Log2RAM, ale udržať sieť ladenie a Bashrc zmeny, zaškrtnite iba <em>0Log2RAM</em>. Nič iné sa nedotýka a register sa zodpovedajúcim spôsobom aktualizuje."
+    "perItemBody": "Odinštalačný program funguje pre každú položku. Ak chcete odstrániť iba Log2RAM, ale zachovať ladenie siete a zmeny bashrc, začiarknite iba <em>Log2RAM</em>. Nič iného sa nedotkne a register sa podľa toho aktualizuje."
   },
   "inspect": {
     "heading": "Manuálne sledovanie registra",
     "intro": "Ak chcete vidieť, čo je sledované bez otvorenia menu:",
     "outro": "Každý záznam <code>\"tool\": true</code> zodpovedá niečomu použitému ProxMenux a môže sa obrátiť. Odstránenie položky manuálne sa neodporúča",
     "reinstallTitle": "Preinštalovať po odinštalovaní",
-    "reinstallBody": "Vrátiť optimalizáciu vám nezabráni neskôr ju znovu aplikovať. Open <link>0the Post-Install menu</link> znovu a spustiť buď Automatizované alebo Prispôsobiteľné"
+    "reinstallBody": "Vrátenie optimalizácie vám nezabráni v jej opätovnom použití neskôr. Znova otvorte <link>ponuku po inštalácii</link> a spustite buď Automated alebo Customizable – register bude sledovať nový stav."
   },
   "related": {
     "heading": "Súvisiace",

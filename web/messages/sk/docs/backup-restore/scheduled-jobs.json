@@ -22,7 +22,7 @@
   },
   "attachBadge": {
     "title": "Pripojiť režim",
-    "body": "Keď je PVE vzdump záložná úloha už nakonfigurovaná pre VM a LXC na tomto uzle, pripojenie zálohy hostiteľa k tejto úlohe zaručuje, že konfigurácia hostiteľa je zachytená v <strong>0same window</strong> ako hostia. Na obnovenie, hosť konfigy pochádzajú z hostiteľa zálohovanie (žijú pod <code>/etc/pve</code>), a hosť disky pochádzajú z vzdump zálohovanie prijaté spolu s"
+    "body": "Keď je úloha zálohovania PVE vzdump už nakonfigurovaná pre VM a LXC na tomto uzle, pripojenie zálohy hostiteľa k tejto úlohe zaručuje, že konfigurácia hostiteľa bude zachytená v <strong>rovnakom okne</strong> ako hostia. Pri obnove prichádzajú konfigurácie hosťa zo zálohy hostiteľa (žijú pod <code>/etc/pve</code>) a disky hosťa pochádzajú zo zálohy vzdump prijatej súčasne – obe sady sú navzájom konzistentné, takže obnova celého uzla môže reprodukovať hostiteľa a znova pripojiť každého hosťa bez zmeny verzie."
   },
   "frequencyBadge": {
     "title": "Odporúčaná frekvencia",
@@ -121,7 +121,7 @@
       },
       {
         "action": "Zobraziť záznam",
-        "detail": "Streams <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> Bežec tiež vydáva kompaktný stavový riadok publikovať pod systemd služby."
+        "detail": "Prúdy <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — jeden protokolový súbor na beh. Bežec tiež vydáva kompaktný stavový riadok na journald pod systemd služby."
       }
     ]
   },

@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Čo to robí (a nerobí)",
-    "body": "Toto je <strong>0device-level passhrough</strong>: PCIe karta zanecháva zobrazenie hostiteľského jadra a je viazaná na <code>vfio-pci</code>. VM vidí regulátor sám Každý disk pripojený k tomuto regulátora ho sleduje automaticky, s narodenými dátami SMART, plnými funkciami firmware a bez vrstvy Proxmox medzi."
+    "body": "Toto je <strong>priechod na úrovni zariadenia</strong>: karta PCIe opustí pohľad hostiteľského jadra a je viazaná na <code>vfio-pci</code>. VM vidí samotný radič – nie jednotlivé disky za ním – a načíta svoj vlastný ovládač pre tento presný model. Každý disk pripojený k tomuto radiču ho nasleduje automaticky, s natívnymi SMART údajmi, úplnými funkciami firmvéru a bez vrstvy Proxmox medzi nimi."
   },
   "howRuns": {
     "heading": "Ako beží skript",
@@ -26,10 +26,10 @@
   "prereqs": {
     "heading": "Predpoklady",
     "items": [
-      "<strong>0CPU a podpora základnej dosky</strong> VT-d (Intel) alebo AMD-Vi, a je povolená v firmware (BIOS/UEFI). ProxMenux môže pre vás povoliť stranu jadra, ale nemôže prepnúť prepínač firmware.",
+      "<strong>CPU a podpora základnej dosky</strong> VT-d (Intel) alebo AMD-Vi a je povolená vo firmvéri (BIOS/UEFI). ProxMenux môže povoliť stranu jadra, ale nemôže prepnúť prepínač firmvéru.",
       "Cieľ VM ci <strong>vypnutý</strong> pred pripojením PCI zariadení.",
       "Regulátor/NVMe <strong>nie je ten, ktorý drží koreňový súborový systém Proxmox</strong>. Scenár skrýva všetko, čo používa hostiteľ.",
-      "Hosť OS má ovládače pre model regulátora. Linux pokrýva prakticky každý HBA z krabice; Windows potrebuje predajcu ovládač nainštalovaný <em>0pred</em> zavádzate s pripojeným ovládačom."
+      "Hosťujúci OS má ovládače pre model radiča. Linux pokrýva prakticky každý HBA hneď po vybalení; Windows potrebuje nainštalovaný ovládač od dodávateľa <em>pred</em> spustením s pripojeným radičom."
     ],
     "warnTitle": "Živá migrácia nie je možná",
     "warnBody": "VM s PCI priechod je viazaný na uzol, ktorý fyzicky drží kartu. Živá migrácia cez uzly zlyhá. Plán zálohovanie / replikácia zodpovedajúcim spôsobom."
@@ -94,7 +94,7 @@
     "noGroupsTitle": "IOMMU povolené, ale žiadne skupiny pod /sys/kernel/iommu_groups/",
     "noGroupsBody": "Reštart je potrebný na to, aby jadra cmdline nadobudla účinnosť. Ak skupiny stále chýbajú po reštarte, VT-d / AMD-Vi je pravdepodobne deaktivovaná vo firmware BIOS/UEFI Pripravte sa.",
     "busyTitle": "VM nezačína s \"hostpciN: zariadenie obsadené\"",
-    "busyBody": "Ďalší proces stále drží PCI zariadenie. Najčastejšie príčiny: predchádzajúca VM0, ktorá havarovala bez toho, aby ju uvoľnil, alebo hostiteľská jadro regeneroval na poslednej topánke. Spustite <code>lspci -nnk -s &lt;addr&gt;</code> aby ste videli, ktorý ovládač je viazaný; mal by to byť <code>vfio-pci</code>. Reštart celého hostiteľa to zvyčajne odstráni.",
+    "busyBody": "Iný proces stále drží PCI zariadenie. Najčastejšie príčiny: predchádzajúci VM, ktorý zlyhal bez jeho uvoľnenia, alebo ho hostiteľské jadro získalo späť pri poslednom spustení. Spustite <code>lspci -nnk -s &lt;addr&gt;</code> a zistite, ktorý ovládač je viazaný; malo by to byť <code>vfio-pci</code>. Úplný reštart hostiteľa to zvyčajne vymaže.",
     "noDisksTitle": "Hosť vidí ovládač, ale nie disky",
     "noDisksBody": "Model regulátora nemá hosťa. Linux takmer nikdy hity to; Windows robí LSI / Broadcom pre staršie SAS HBA) zatiaľ čo karta je odpojená, potom reštartovať s pripojenou kartou.",
     "sharedTitle": "Spoločná skupina IOMMU tiež vyváža neprepojené zariadenie",

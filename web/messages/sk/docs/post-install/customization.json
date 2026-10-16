@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Čo táto kategória zahŕňa",
-    "body": "Tri malé, nezávislé možnosti: <strong>0farebné bash prompt + aliasy</strong> pre koreňový shell, jednoriadkový <strong>MOTD banner</strong> viditeľné na SSH prihlásenie, a odstránenie <strong>\"Žiadne platné predplatné\" popup</strong> že Proxmox ukazuje na každom prihlásení do webu UI."
+    "body": "Tri malé, nezávislé možnosti: a <strong>farebný bash prompt + aliasy</strong> pre koreňový obal jednoriadkový <strong>banner MOTD</strong> viditeľné na SSH prihlásenie a odstránenie <strong>Vyskakovacie okno „Žiadne platné predplatné“.</strong> ktorý Proxmox zobrazuje pri každom prihlásení na web UI."
   },
   "bashrc": {
     "heading": "Prispôsobiť bashrc",
@@ -31,14 +31,14 @@
     "intro": "Odstráni <em>\"Nemáte platné predplatné pre tento server\"</em> modus, ktorý sa objaví zakaždým, keď sa niekto prihlási do webového UI Proxmox bez predplatného podniku. Patch je verzia-aware: rôzne hlavné verzie Proxmox majú rôzne UI zväzky, takže ProxMenux odosiela na správny skript.",
     "versionTitle": "Odosielanie s verziou",
     "versionItems": [
-      "<strong>0PVE 9.x</strong> → beží <code>remove-banner-pve-v3.sh</code> (patches ako desktop <code>proxmoxlib.js</code> a nové Yew-based mobilné UI).",
-      "<strong>0PVE 8.x</strong> → beží <code>remove-banner-pve8.sh</code> (iba desktop)."
+      "<strong>PVE 9.x</strong> → spúšťa <code>remove-banner-pve-v3.sh</code> (opravuje desktop <code>proxmoxlib.js</code> aj nový mobilný UI založený na Yew).",
+      "<strong>PVE 8.x</strong> → spustí <code>remove-banner-pve8.sh</code> (iba pre počítač)."
     ],
     "versionOutro": "Pred patchingom ProxMenux zálohuje pôvodné JS/template súbory <code>/usr/local/share/proxmenux/backups/</code> s časovou pečiatkou. Tok odinštalovania používa tieto zálohy na obnovenie pôvodných súborov a spadá späť do reinštalácie balíkov Proxmox UI, ak záloha chýba alebo je poškodená.",
     "breakTitle": "Môže sa zlomiť po aktualizáciách Proxmoxu",
     "breakBody": "Pravidelné lode Proxmox UI aktualizácie, ktoré prepíšu <code>proxmoxlib.js</code>. Keď sa to stane, banner sa vráti. Túto možnosť môžete znovu použiť po každej aktualizácii Proxmoxu, aby ste súbor znovu preverili, alebo jednoducho prijať nárez, kým znovu nezadáte. ProxMenux tiež nainštaluje APT hák, ktorý auto-re-patches na upgrade balíčkov <link>Odinštalovať optimalizáciu</link> Pretože ten hák je obrátený.",
     "legalTitle": "Právne upozornenie (vždy stojí za to zopakovať)",
-    "legalBody": "Táto možnosť len skrýva UI nag. To robí <strong>0not</strong> poskytnúť podporu podniku, prístup do úložiska podnikov, alebo akékoľvek práva na loď Proxmox komerčne bez predplatného. Ak spustíte Proxmox v prostredí generujúcom príjmy, zakúpte si predplatné"
+    "legalBody": "Táto možnosť skryje iba UI nag. <strong>neposkytuje</strong> vám podnikovú podporu, prístup k podnikovému úložisku ani žiadne práva na komerčnú dodávku Proxmoxu bez predplatného. Ak prevádzkujete Proxmox v prostredí generujúcom príjmy, kúpte si predplatné – podporí projekt a získate stabilný podnikový kanál."
   },
   "verify": {
     "heading": "Overenie",

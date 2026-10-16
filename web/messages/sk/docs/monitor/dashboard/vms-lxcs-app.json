@@ -120,7 +120,7 @@
       },
       {
         "method": "OCI image",
-        "use": "Pre kontajnery nainštalované Apps správcu OCI. Číta verzie aplikácie a obrazu z inštalačného záznamu a porovnáva nainštalovaný trávenie s tým, ktorý register zverejňuje; nepotrebuje konfiguráciu."
+        "use": "Pre kontajnery nainštalované OCI manager Apps. Načíta verzie aplikácie a obrazu z inštalačného záznamu a porovná nainštalovaný digest s tým, ktorý publikuje register; nepotrebuje žiadnu konfiguráciu."
       }
     ],
     "sourcesHeading": "Zdroje dostupnej verzie",

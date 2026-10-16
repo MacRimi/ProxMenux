@@ -55,7 +55,7 @@
     "items": [
       "Vyhľadávanie zodpovedá názvu aplikácie, menu hosťa, VMID a kategórii.",
       "Filter kategórie zobrazuje jednu kategóriu naraz alebo všetky aplikácie.",
-      "Zoradiť podľa <strong>0Name</strong>, <strong>ID</strong> alebo <strong>Kategória</strong>. Kategórie triedenia vloží položky skupín medzi skupiny kariet.",
+      "Zoradiť podľa <strong>Názvu</strong>, <strong>ID</strong> alebo <strong>Kategórie</strong>. Triedenie podľa kategórií vkladá nadpisy skupín medzi skupiny kariet.",
       "Vybrané poradie je zapamätané v tomto prehliadači. Vyhľadávanie textu a filtrovanie kategórie po opätovnom prečítaní stránky.",
       "Karta Apps zostáva k dispozícii, keď je mriežka prázdna, takže prvý vlastný odkaz môže byť pridaný bez registrácie aplikácie LXC ako prvý."
     ]
@@ -121,7 +121,7 @@
       "Registrované odkazy LXC zostávajú súčasťou uloženého záznamu monitora v ich aplikácii; prístrojová doska Apps ich nezdvojuje do vlastného súboru.",
       "Vytváranie, editovanie alebo vymazávanie vlastného odkazu okamžite osvieži zoznam in-memory.",
       "Typ preferencie je prehliadač-lokálne. Nie je synchronizovaný medzi zariadeniami alebo užívateľmi.",
-      "Polohu aplikácií najvyššej úrovne kontroluje osobitne <settingsLink>0Nastavenia → Navigácia</settingsLink>."
+      "Pozícia aplikácií na najvyššej úrovni sa ovláda samostatne pomocou <settingsLink>Nastavenia → Poradie navigácie</settingsLink>."
     ]
   },
   "troubleshooting": {

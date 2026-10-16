@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Na čo je toto menu",
-    "body": "Každá možnosť tu funguje na <strong>0fyzických diskoch, ktoré sú už viditeľné pre Proxmox host</strong>. Menu je rozdelené do troch skupín: <strong>VM</strong> (prijímacie disky alebo importné obrázky do virtuálneho stroja), <strong>LXC</strong> (prijímacie disky do kontajnera) a <strong>Utility</strong> (bezpečný formát, zdravie SMART). Všade platia bezpečnostné kontroly: systémové disky a disky, ktoré sa už používajú, sú skryté alebo blokované."
+    "body": "Každá možnosť tu funguje na <strong>fyzických diskoch, ktoré sú už viditeľné pre hostiteľa Proxmox</strong>. Ponuka je rozdelená do troch skupín — <strong>VM</strong> (pripojenie diskov alebo import obrázkov do virtuálneho počítača), <strong>LXC</strong> (pripojenie), a disky <strong>Nástroje</strong> (bezpečný formát, SMART zdravie). Bezpečnostné kontroly platia všade: systémové disky a už používané disky sú skryté alebo zablokované."
   },
   "opening": {
     "heading": "Otvorenie menu",
@@ -101,7 +101,7 @@
     "title": "Bezpečnostné pravidlá spoločné pre každú možnosť",
     "intro": "ProxMenux filtruje čokoľvek, čo by mohlo poškodiť hostiteľa:",
     "items": [
-      "<strong>system disk</strong> (koreň bazén, výmena, aktívny ZFS / LVM / RAID členovia) je vždy skryté.",
+      "<strong>systémový disk</strong> (koreňový pool, swap, aktívny ZFS / LVM členovia RAID) je vždy skrytý.",
       "Disky <strong>0 namontované </strong> kdekoľvek na hostiteľovi sú skryté alebo blokované pri vykonávaní.",
       "Disky <strong>0 preferované spustením VM alebo LXC</strong> nemožno preradiť ani vymazať.",
       "Operácie, ktoré môžu zmeniť hostiteľský stav (IOMMU povoliť, vymazať) vyžadujú explicitné potvrdenie."

@@ -26,7 +26,7 @@
   },
   "howRuns": {
     "heading": "Ako beží skript",
-    "body": "Skript nemá žiadne hlavné menu, spúšťa jednu akciu, <strong>0Vytvára zdieľaný adresár</strong>. Fáza 1 zhromažďuje cieľovú cestu; Fáza 2 vytvára adresár a uplatňuje oprávnenia."
+    "body": "Skript nemá žiadne hlavné menu – spúšťa jedinú akciu, <strong>Vytvoriť zdieľaný adresár</strong>. Fáza 1 zhromažďuje cieľovú cestu; Fáza 2 vytvorí adresár a použije povolenia."
   },
   "bits": {
     "heading": "Čo robí každé povolenie",
@@ -48,7 +48,7 @@
       {
         "bit": "ACL (predvolené)",
         "effect": "Zdedil na každý novo vytvorený súbor / poddir.",
-        "why": "Oprávnenia sa uplatňujú navždy"
+        "why": "Povolenia platia navždy – nový obsah zachová otvorený profil bez opätovného spustenia skriptu."
       }
     ],
     "privTitle": "Privilegované CT vidia to isté, len bez zmeny.",
@@ -74,7 +74,7 @@
   },
   "next": {
     "heading": "Ďalší krok: naviazať-mount do kontajnerov",
-    "body": "Vytváranie adresára len ho pripravuje Aby bolo viditeľné vo vnútri jedného alebo viacerých LXC, použite <mountLink>0LXC Mount Manager</mountLink> na viazanie <code>/mnt/&lt;name&gt;</code> do CT. Vzhľadom k tomu, oprávnenia sú už otvorené, Mount Manager bude <strong>not</strong> ponuka na ich zmenu"
+    "body": "Vytvorením adresára sa iba pripraví – zatiaľ ho nevidí žiadny kontajner. Aby bolo viditeľné v jednom alebo viacerých LXC, použite <mountLink>LXC Mount Manager</mountLink> na pripojenie <code>/mnt/&lt;name&gt;</code> do CT. Pretože oprávnenia sú už otvorené, Mount Manager <strong>neponúkne</strong> ich zmenu – adresár je pripravený na použitie tak, ako je."
   },
   "troubleshoot": {
     "heading": "Riešenie problémov",

@@ -55,7 +55,7 @@
     "items": [
       "<strong>Zápis na portáli</strong> Typ IP alebo názov hostiteľa iSCSI cieľový server. Prístav <code>3260</code> predpokladá sa, ak nenapíšete <code>host:port</code>.",
       "<strong>Cieľový objav</strong> — ProxMenux hovory <code>iscsiadm --mode discovery --type sendtargets --portal &lt;ip:port&gt;</code>. Server reaguje s každou IQN umožňuje tomuto iniciátorovi vidieť. Ak objav zlyhá, skript zobrazí presnú chybu z <code>iscsiadm</code> a uvádza bežné príčiny (nesprávne IP, firewall, iniciátor IQN nie je povolený).",
-      "<strong>0Target selection</strong>",
+      "<strong>Výber cieľa</strong> — jeden cieľ sa vyberie automaticky; viacero cieľov zobrazí ponuku.",
       "<strong>ID skladu</strong> Predvolená hodnota <code>iscsi-&lt;last IQN segment, 20 chars max&gt;</code>. Iba písmená, číslice, <code>-</code> a <code>_</code>.",
       "<strong>Typ obsahu</strong> Na rozdiel od NFS / Samba, iSCSI obsah je <strong>nastavený na <code>images</code></strong>. iSCSI odhaľuje surové blokovacie zariadenia, nie súborový systém, takže Proxmox vám umožňuje iba hostiť VM na diskoch."
     ],
@@ -84,7 +84,7 @@
   "troubleshoot": {
     "heading": "Riešenie problémov",
     "portalTitle": "\"Nedostať sa k portálu,\" ale server IP reaguje inde",
-    "portalBody": "Ping zlyhal na adrese portálu. Skontrolujte, či ste dosiahli <em>0storage sieť</em> rozhranie (iSCSI často žije na samostatnej VLAN / subnet zo siete manažmentu). Tiež overiť DNS, ak ste zadali meno hostiteľa.",
+    "portalBody": "Ping zlyhal na adrese portálu. Skontrolujte, či sa pripájate k rozhraniu <em>siete úložiska</em> (iSCSI často žije na oddelenej VLAN / podsieti od siete správy). Overte tiež DNS, ak ste zadali názov hostiteľa.",
     "discoverTitle": "\"iSCSI objav zlyhal\" z iscsiadm",
     "discoverIntro": "Skript ukazuje presnú chybu. Najčastejšie príčiny:",
     "discoverItems": [

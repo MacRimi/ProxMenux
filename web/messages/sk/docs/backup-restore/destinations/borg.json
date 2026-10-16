@@ -63,7 +63,7 @@
       {
         "type": "local",
         "url": "/backup/borgbackup (any absolute path)",
-        "detail": "Úložisko žije v miestnom adresári. Významné iba v prípade, že cieľový adresár je na samostatnom fyzickom disku"
+        "detail": "Úložisko žije v lokálnom adresári. Zmysluplné iba vtedy, keď je cieľový adresár na samostatnom fyzickom disku – úložisko na rovnakom disku ako zdroj chráni pred chybou operátora, ale nie pred zlyhaním disku."
       }
     ]
   },
@@ -75,7 +75,7 @@
     "hostChoicesItems": [
       "Dedikovaný NAS alebo záložný box (Debian, Ubuntu, TrueNAS SCALE so shellom).",
       "Kontajner LXC vnútri uzol Proxmox. Malá stopa, izolovaná od hostiteľa, ktorý riadi zálohy.",
-      "Ďalšie Proxmox hostiteľ na rovnakej LAN, alebo VM0 kdekoľvek dosiahnuteľný cez SSH."
+      "Ďalší hostiteľ Proxmox v rovnakej sieti LAN alebo VM kdekoľvek dosiahnuteľný cez SSH."
     ],
     "lxcWarningTitle": "LXC ako server Borg",
     "lxcWarningBody": "Ak server Borg beží vnútri LXC, kontajner musí mať používateľský účet s heslom.",
@@ -112,7 +112,7 @@
       {
         "mode": "genere-auto",
         "label": "Odporúčané",
-        "detail": "ProxMenux generuje nový ed25519 keypair na <code>~/.ssh/borg_proxmenux_HOST_ed25519</code>, potom používa <code>sshpass</code> sa prihlásiť na Once na server s admin heslom a pripojiť verejný kľúč k <code>~borg/.ssh/authorized_keys</code>. Admin heslo sa používa len pre tento jeden hovor"
+        "detail": "ProxMenux vygeneruje nový kľúčový pár ed25519 na adrese <code>~/.ssh/borg_proxmenux_HOST_ed25519</code>, potom použije <code>sshpass</code> na prihlásenie JEDNORAZ s heslom správcu a na pripojenie verejného kľúča <code>~borg/.ssh/authorized_keys</code>. Heslo správcu sa používa iba pre tento jeden hovor – nikdy sa neukladá."
       },
       {
         "mode": "Manuálne generovanie",
@@ -127,7 +127,7 @@
       {
         "mode": "existujúci",
         "label": "Použiť existujúci kľúč",
-        "detail": "ProxMenux0 skenuje <code>/root/.ssh/</code> a <code>$HOME/.ssh/</code> pre parseable ed25519/RSA súkromné kľúče a uvádza ich. Operátor vyberie jedno alebo prehliadanie ručne na neštandardnú cestu."
+        "detail": "ProxMenux skenuje <code>/root/.ssh/</code> a <code>$HOME/.ssh/</code> na analyzovateľné súkromné ​​kľúče ed25519/RSA a uvádza ich. Operátor vyberie jednu alebo manuálne prejde na neštandardnú cestu."
       },
       {
         "mode": "bez",
@@ -153,7 +153,7 @@
         "content": "Passfráza pre cieľ uvedený vyššie (<code>chmod 600</code>). Prítomný len vtedy, keď si operátor vybral kódovanie repokey."
       }
     ],
-    "outro": "Úspora je voliteľná"
+    "outro": "Uloženie je voliteľné – operátor môže odmietnuť výzvu na uloženie pre jednorazovú zálohu, ktorá na hostiteľovi nezanechá žiadne poverenia."
   },
   "encryption": {
     "heading": "Šifrovanie",
@@ -186,7 +186,7 @@
       {
         "var": "BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK",
         "value": "áno",
-        "purpose": "Preklad: dusanho"
+        "purpose": "Potlačí interaktívnu výzvu, ktorú Borg vyvolá pri prvom prístupe k nezašifrovanému úložisku z nového klienta."
       }
     ]
   },
