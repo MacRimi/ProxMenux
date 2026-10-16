@@ -7079,6 +7079,7 @@
   "Unsupported OCI-LXC AppArmor profile:": "Ostödd OCI-LXC AppArmor-profil:",
   "Unsupported OCI-LXC seccomp profile:": "Unsupported OCI-LXC seccomp profil:",
   "Unsupported Terminal": "Terminal som inte stöds",
+  "Unsupported architecture for Figurine:": "Arkitekturen stöds inte av Figurine:",
   "Unsupported architecture:": "Ostödd arkitektur:",
   "Unsupported backup compression": "Unsupported backup komprimering",
   "Unsupported credential pattern:": "Unsupported credential mönster:",
@@ -8154,6 +8155,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Diskdata kommer INTE att raderas.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disken kommer att avmonteras och tas bort från /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ /etc/fstab-posten kommer att tas bort.",
-  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras.",
-  "Unsupported architecture for Figurine:": "Arkitekturen stöds inte av Figurine:"
+  "⚠ The disk will be unmounted.": "⚠ Disken kommer att avmonteras."
 }

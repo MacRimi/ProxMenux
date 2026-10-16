@@ -7079,6 +7079,7 @@
   "Unsupported OCI-LXC AppArmor profile:": "Nicht unterstütztes OCI-LXC AppArmor-Profil:",
   "Unsupported OCI-LXC seccomp profile:": "Nicht unterstütztes OCI-LXC seccomp Profil:",
   "Unsupported Terminal": "Nicht unterstütztes Terminal",
+  "Unsupported architecture for Figurine:": "Nicht unterstützte Architektur für Figurine:",
   "Unsupported architecture:": "Nicht unterstützte Architektur:",
   "Unsupported backup compression": "Nicht unterstützte Backup-Komprimierung",
   "Unsupported credential pattern:": "Nicht unterstütztes credential-Muster:",
@@ -8154,6 +8155,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Festplattendaten werden NICHT gelöscht.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Die Festplatte wird ausgehängt und aus /etc/fstab entfernt.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Der /etc/fstab-Eintrag wird entfernt.",
-  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt.",
-  "Unsupported architecture for Figurine:": "Nicht unterstützte Architektur für Figurine:"
+  "⚠ The disk will be unmounted.": "⚠ Die Festplatte wird ausgehängt."
 }

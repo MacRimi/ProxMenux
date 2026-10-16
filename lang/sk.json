@@ -7080,6 +7080,7 @@
   "Unsupported OCI-LXC AppArmor profile:": "Nepodporovaný profil OCI-LXC AppArmor:",
   "Unsupported OCI-LXC seccomp profile:": "Nepodporovaný profil OCI-LXC seccomp:",
   "Unsupported Terminal": "Nepodporovaný terminál",
+  "Unsupported architecture for Figurine:": "Nepodporovaná architektúra pre Figurine:",
   "Unsupported architecture:": "Nepodporovaná architektúra:",
   "Unsupported backup compression": "Nepodporovaná kompresia zálohy",
   "Unsupported credential pattern:": "Nepodporovaný credential vzor:",
@@ -8155,6 +8156,5 @@
   "⚠ Disk data will NOT be erased.": "⚠ Dáta na disku sa NEVYMAŽÚ.",
   "⚠ Disk will be unmounted and removed from /etc/fstab.": "⚠ Disk sa odpojí a odstráni z /etc/fstab.",
   "⚠ The /etc/fstab entry will be removed.": "⚠ Záznam v /etc/fstab bude odstránený.",
-  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený.",
-  "Unsupported architecture for Figurine:": "Nepodporovaná architektúra pre Figurine:"
+  "⚠ The disk will be unmounted.": "⚠ Disk bude odpojený."
 }
