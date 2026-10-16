@@ -4570,6 +4570,7 @@
   "Passwords do not match. Please try again.": "Le password non corrispondono. Riprova.",
   "Paste an oci-compose in the terminal": "Incolla un oci-compose nel terminale",
   "Paste it here and press Ctrl+D on an empty line.": "Incollalo qui e premi Ctrl+D su una riga vuota.",
+  "Paste it here and press Ctrl+D.": "incollalo qui e premi Ctrl+D.",
   "Paste its Compose file in the terminal": "Incolla il file Compose nel terminale",
   "Paste its docker run command in the terminal": "Incolla il comando docker run nel terminale",
   "Paste the UUP Dump URL here": "Incolla qui l'URL di UUP Dump",

@@ -4570,6 +4570,7 @@
   "Passwords do not match. Please try again.": "Lösenord stämmer inte överens. Försök igen.",
   "Paste an oci-compose in the terminal": "Klistra in en oci-compose i terminalen",
   "Paste it here and press Ctrl+D on an empty line.": "Klistra här och tryck på Ctrl+D på en tom linje.",
+  "Paste it here and press Ctrl+D.": "Klistra in den här och tryck på Ctrl+D.",
   "Paste its Compose file in the terminal": "Klistra på sin komponeringsfil i terminalen",
   "Paste its docker run command in the terminal": "Klistra på docker körkommandot i terminalen",
   "Paste the UUP Dump URL here": "Klistra in in UUP Dump URL här",

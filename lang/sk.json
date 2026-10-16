@@ -4572,6 +4572,7 @@
   "Passwords do not match. Please try again.": "Heslá sa nezhodujú. Skúste to znova.",
   "Paste an oci-compose in the terminal": "Vložiť oci-compose do terminálu",
   "Paste it here and press Ctrl+D on an empty line.": "Vložte ho sem a stlačte Ctrl+D na prázdne riadky.",
+  "Paste it here and press Ctrl+D.": "Vložte ho sem a stlačte Ctrl+D.",
   "Paste its Compose file in the terminal": "Vložiť súbor Compose v termináli",
   "Paste its docker run command in the terminal": "Vložiť príkaz docker run v termináli",
   "Paste the UUP Dump URL here": "Sem vložte UUP Dump URL",
