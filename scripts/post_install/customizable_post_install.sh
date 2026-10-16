@@ -2453,19 +2453,19 @@ EOF
 
 configure_zram_swap() {
     local FUNC_VERSION="1.0"
-    # description: Enable an opt-in ZRAM-only swap profile sized to one tenth of RAM.
+    # description: Enable an opt-in ZRAM swap profile sized to one tenth of RAM.
     pmx_journal_context "configure_zram_swap" "$FUNC_VERSION"
 
     local config=/etc/systemd/zram-generator.conf.d/90-proxmenux.conf
     local marker="$BASE_DIR/zram-swap.state"
     local package_added=false package_owned=false owned=false previous_active=false state_mutated=false
-    local previous_config="" previous_marker="" desired="" conflicts="" systemd_conflicts="" version="" algorithm=""
-    local supports_params=false failure="" old_umask swap_detection_status
+    local previous_config="" previous_marker="" desired="" conflicts="" fstab_conflicts="" systemd_conflicts="" version="" algorithm=""
+    local supports_params=false failure="" old_umask allowed_zram=""
 
     if ! declare -f zram_render_generator_config >/dev/null ||
-       ! declare -f zram_has_non_zram_swap >/dev/null ||
-       ! declare -f zram_list_non_zram_swap >/dev/null ||
-       ! declare -f zram_list_defined_systemd_swap_units >/dev/null ||
+       ! declare -f zram_list_foreign_active_zram_swap >/dev/null ||
+       ! declare -f zram_list_foreign_fstab_zram_swap >/dev/null ||
+       ! declare -f zram_list_foreign_systemd_zram_units >/dev/null ||
        ! declare -f zram_foreign_generator_config >/dev/null ||
        ! declare -f zram_profile_verify_active >/dev/null; then
         msg_error "$(translate "ZRAM profile helpers are missing")"
@@ -2475,29 +2475,8 @@ configure_zram_swap() {
         msg_error "$(translate "Cannot inspect current swap configuration")"
         return 1
     fi
-    if zram_has_non_zram_swap /proc/swaps /etc/fstab; then
-        conflicts="$(zram_list_non_zram_swap /proc/swaps /etc/fstab)" || return 1
-    else
-        swap_detection_status=$?
-        if [[ "$swap_detection_status" -ne 1 ]]; then
-            msg_error "$(translate "Cannot inspect current swap configuration")"
-            return 1
-        fi
-    fi
-    systemd_conflicts="$(zram_list_defined_systemd_swap_units)"
-    if [[ -n "$systemd_conflicts" ]]; then
-        [[ -n "$conflicts" ]] && conflicts+=$'\n'
-        conflicts+="$systemd_conflicts"
-    fi
-    if [[ -n "$conflicts" ]]; then
-        msg_error "$(translate "ZRAM-only profile requires removing these conflicting swap sources first:") $conflicts"
-        return 1
-    fi
-    conflicts="$(zram_foreign_generator_config "$config")"
-    if [[ -n "$conflicts" ]]; then
-        msg_error "$(translate "Another ZRAM generator configuration exists; refusing to overwrite it:") $conflicts"
-        return 1
-    fi
+
+    # Validate ownership before allowing the existing /dev/zram0 device.
     if [[ -e "$marker" ]]; then
         if [[ ! -f "$config" || -L "$config" || -L "$marker" ]] ||
            ! grep -qx '# ProxMenux ZRAM profile' "$config" ||
@@ -2509,8 +2488,37 @@ configure_zram_swap() {
         previous_config="$(cat "$config")"
         previous_marker="$(cat "$marker")"
         grep -qx 'installed_by_proxmenux=true' "$marker" && package_owned=true
-    elif [[ -e "$config" || -L "$config" ]] || awk 'NR > 1 && $1 == "/dev/zram0" { found=1 } END { exit !found }' /proc/swaps; then
-        msg_error "$(translate "Existing zram0 configuration or swap is not owned by ProxMenux")"
+        allowed_zram=/dev/zram0
+    fi
+
+    if ! conflicts="$(zram_list_foreign_active_zram_swap /proc/swaps "$allowed_zram")" ||
+       ! fstab_conflicts="$(zram_list_foreign_fstab_zram_swap /etc/fstab)" ||
+       ! systemd_conflicts="$(zram_list_foreign_systemd_zram_units)"; then
+        msg_error "$(translate "Cannot inspect existing ZRAM configurations")"
+        return 1
+    fi
+    if [[ -n "$fstab_conflicts" ]]; then
+        [[ -n "$conflicts" ]] && conflicts+=$'\n'
+        conflicts+="$fstab_conflicts"
+    fi
+    if [[ -n "$systemd_conflicts" ]]; then
+        [[ -n "$conflicts" ]] && conflicts+=$'\n'
+        conflicts+="$systemd_conflicts"
+    fi
+    if [[ -n "$conflicts" ]]; then
+        msg_error "$(translate "Another ZRAM swap setup exists; refusing to replace it:") $conflicts"
+        return 1
+    fi
+    if ! conflicts="$(zram_foreign_generator_config "$config")"; then
+        msg_error "$(translate "Cannot inspect existing ZRAM generator configuration")"
+        return 1
+    fi
+    if [[ -n "$conflicts" ]]; then
+        msg_error "$(translate "Another ZRAM generator configuration exists; refusing to overwrite it:") $conflicts"
+        return 1
+    fi
+    if [[ "$owned" == false && ( -e "$config" || -L "$config" ) ]]; then
+        msg_error "$(translate "Existing zram0 configuration is not owned by ProxMenux")"
         return 1
     fi
 
@@ -2586,7 +2594,7 @@ configure_zram_swap() {
     fi
     if [[ -z "$failure" ]]; then
         register_tool "zram_swap" true "$FUNC_VERSION"
-        msg_success "$(translate "ZRAM-only swap profile enabled")"
+        msg_success "$(translate "ZRAM swap profile enabled")"
         return 0
     fi
 
@@ -2619,21 +2627,6 @@ configure_zram_swap() {
     fi
     return 1
 }
-
-zram_profile_verify_active() {
-    local expected_algorithm="$1" expected_bytes actual_bytes active_algorithm
-    [[ -r /sys/block/zram0/disksize && -r /sys/block/zram0/comp_algorithm ]] || return 1
-    expected_bytes="$(awk '/^MemTotal:/ { print int($2 * 1024 / 10) }' /proc/meminfo)"
-    actual_bytes="$(cat /sys/block/zram0/disksize)"
-    [[ "$expected_bytes" =~ ^[0-9]+$ && "$actual_bytes" =~ ^[0-9]+$ ]] || return 1
-    (( actual_bytes >= expected_bytes - 1048576 && actual_bytes <= expected_bytes + 1048576 )) || return 1
-    active_algorithm="$(grep -oE '\[[^]]+\]' /sys/block/zram0/comp_algorithm | tr -d '[]')"
-    [[ "$active_algorithm" == "$expected_algorithm" ]] || return 1
-    awk 'NR > 1 { if ($1 !~ /^\/dev\/zram[0-9]+$/) bad=1; if ($1 == "/dev/zram0") found=1 } END { exit !(found && !bad) }' /proc/swaps
-}
-
-
-
 
 # ==========================================================
 
@@ -3858,7 +3851,7 @@ custom_post_description_label() {
     "Enable High Availability services") translate "Enable High Availability services" ;;
     "Install Figurine") translate "Install Figurine" ;;
     "Install and configure Log2RAM") translate "Install and configure Log2RAM" ;;
-    "Enable ZRAM-only swap profile") translate "Enable ZRAM-only swap profile" ;;
+    "Enable ZRAM swap profile") translate "Enable ZRAM swap profile" ;;
     *) echo "$1" ;;
   esac
 }
@@ -3954,7 +3947,7 @@ main_menu() {
     "System|Increase various system limits|LIMITS"
     # Entropy (haveged) removed — modern kernels 5.6+ have built-in entropy generation
     "System|Optimize Memory|MEMORYFIXES"
-    "Optional|Enable ZRAM-only swap profile|ZRAM_SWAP"
+    "Optional|Enable ZRAM swap profile|ZRAM_SWAP"
     "System|Enable fast reboots|KEXEC"
     "System|Enable restart on kernel panic|KERNELPANIC"
     "Optional|Apply AMD CPU fixes|AMDFIXES"

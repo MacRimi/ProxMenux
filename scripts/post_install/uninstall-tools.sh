@@ -63,10 +63,13 @@ uninstall_zram_swap() {
     pmx_journal_context "uninstall_zram_swap" "$FUNC_VERSION"
     local config=/etc/systemd/zram-generator.conf.d/90-proxmenux.conf
     local marker="$BASE_DIR/zram-swap.state"
-    local package_owned=false foreign="" other_active="" old_active=false
+    local package_owned=false foreign="" other_active="" fstab_zram="" systemd_zram="" inspection_failed=false old_active=false
     local old_config="" old_marker=""
 
-    if ! declare -f zram_foreign_generator_config >/dev/null; then
+    if ! declare -f zram_foreign_generator_config >/dev/null ||
+       ! declare -f zram_list_foreign_active_zram_swap >/dev/null ||
+       ! declare -f zram_list_foreign_fstab_zram_swap >/dev/null ||
+       ! declare -f zram_list_foreign_systemd_zram_units >/dev/null; then
         msg_error "$(translate "ZRAM profile helpers are missing")"
         return 1
     fi
@@ -109,16 +112,20 @@ uninstall_zram_swap() {
     rmdir "$(dirname "$config")" 2>/dev/null || true
 
     if [[ "$package_owned" == true ]]; then
-        foreign="$(zram_foreign_generator_config "$config")"
-        other_active="$(awk 'NR > 1 && $1 ~ /^\/dev\/zram[0-9]+$/ { print $1 }' /proc/swaps)"
-        if [[ -z "$foreign" && -z "$other_active" ]]; then
+        if ! foreign="$(zram_foreign_generator_config "$config")" ||
+           ! other_active="$(zram_list_foreign_active_zram_swap /proc/swaps /dev/zram0)" ||
+           ! fstab_zram="$(zram_list_foreign_fstab_zram_swap /etc/fstab)" ||
+           ! systemd_zram="$(zram_list_foreign_systemd_zram_units)"; then
+            inspection_failed=true
+        fi
+        if [[ "$inspection_failed" == false && -z "$foreign" && -z "$other_active" && -z "$fstab_zram" && -z "$systemd_zram" ]]; then
             if DEBIAN_FRONTEND=noninteractive apt-get purge -y systemd-zram-generator >/dev/null 2>&1; then
                 pmx_record_uninstall "systemd-zram-generator" "$FUNC_VERSION"
             else
                 msg_warn "$(translate "ZRAM profile removed, but package purge failed")"
             fi
         else
-            msg_warn "$(translate "systemd-zram-generator is still used by another configuration; package retained")"
+            msg_warn "$(translate "Another ZRAM configuration exists or could not be inspected; systemd-zram-generator was retained")"
         fi
     fi
     register_tool "zram_swap" false
@@ -1343,7 +1350,7 @@ show_uninstall_menu() {
             system_limits) desc="System Limits Increase";;
             entropy) desc="Entropy Generation (haveged)";;
             memory_settings) desc="Memory Settings Optimization";;
-            zram_swap) desc="ZRAM-only swap profile";;
+            zram_swap) desc="ZRAM swap profile";;
             kernel_panic) desc="Kernel Panic Configuration";;
             apt_ipv4) desc="APT IPv4 Force";;
             kexec) desc="kexec for quick reboots";;
