@@ -68,7 +68,7 @@ show_menu() {
             search "$(translate "Search options and applications")" \
             "" "" \
             1 "$(translate "Settings post-install Proxmox")" \
-            2 "$(translate "Hardware: GPUs and Coral-TPU")" \
+            2 "$(translate "Hardware: GPUs, Coral-TPU and USB/IP")" \
             3 "$(translate "Create VM from template or script")" \
             4 "$(translate "Disk Manager")" \
             5 "$(translate "Storage & Share Manager")" \
