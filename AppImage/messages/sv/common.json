@@ -1302,7 +1302,10 @@
         "torsdag",
         "fredag",
         "lördag"
-      ]
+      ],
+      "runSkippedStatus": "körning överhoppad",
+      "reasonStoppedContainer": "Behållaren är stoppad; den schemalagda uppdateringen hoppades över.",
+      "reasonStoppedContainerHistorical": "Behållaren stoppades vid den schemalagda uppdateringstiden."
     },
     "cronChip": {
       "detected": "host cron upptäckt",

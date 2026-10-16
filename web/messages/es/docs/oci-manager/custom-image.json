@@ -29,12 +29,12 @@
           "table": {
             "headers": ["Opción", "Qué lee"],
             "rows": [
-              ["Pegar su archivo Compose en la terminal", "El YAML se pega en la terminal y termina con Ctrl+D en una línea vacía."],
+              ["Pegar su archivo Compose en la terminal", "El YAML se pega en la terminal y termina con Ctrl+D."],
               ["Leer su archivo Compose desde un archivo de este host", "Una ruta del nodo, <code>/root/docker-compose.yml</code> por defecto. El archivo debe existir y ocupar como máximo 256 KiB."],
               ["Descargar su archivo Compose desde una dirección", "Una dirección <code>http://</code> o <code>https://</code> que sirva el YAML sin procesar. Se descargan como máximo 256 KiB."],
               ["Pegar su comando docker run en la terminal", "El comando que publica el proyecto. Se traducen puertos, entorno, volúmenes, dispositivos, capacidades, usuario, memoria compartida y el resto de opciones admitidas."],
               ["Solo la referencia de la imagen, sin archivo Compose", "Una referencia como <code>ghcr.io/user/application:latest</code>. Se consulta el registro y se conservan los metadatos OCI de la imagen."],
-              ["Pegar un oci-compose en la terminal", "El JSON se pega en la terminal y termina con Ctrl+D en una línea vacía. No se traduce: se comprueba y se instala tal como está escrito."],
+              ["Pegar un oci-compose en la terminal", "El JSON se pega en la terminal y termina con Ctrl+D. No se traduce: se comprueba y se instala tal como está escrito."],
               ["Leer un oci-compose desde un archivo de este host", "Un archivo JSON del nodo, <code>/root/oci-compose.json</code> por defecto, de 2 MiB como máximo."],
               ["Descargar un oci-compose desde una dirección", "Una dirección <code>http://</code> o <code>https://</code> que sirva el archivo JSON. Se descargan como máximo 2 MiB."]
             ]
@@ -76,7 +76,7 @@
           "steps": {
             "items": [
               { "title": "Analizar", "body": "Se leen servicios, imagen, puertos, rutas, entorno, dispositivos, seguridad y healthcheck." },
-              { "title": "Consultar el registro", "body": "La imagen debe existir en un registro público, y se enumeran las arquitecturas que publica." },
+              { "title": "Consultar el registro", "body": "La imagen debe existir en su registro, y se enumeran las arquitecturas que publica. Un registro privado se lee con la cuenta guardada para él." },
               { "title": "Enumerar lo que no se aplica", "body": "Se enumeran las etiquetas, las redes Docker, los ajustes de Swarm y el resto de claves que no tienen efecto en un LXC." },
               { "title": "Bloquear lo que no puede traducirse", "body": "Una clave sin equivalencia segura aparece en <strong>Lo que no puede traducirse</strong> y la instalación no continúa. Nada se descarta en silencio." },
               { "title": "Pedir los secretos", "body": "Las variables cuyo nombre corresponde a una contraseña, un token o una clave se convierten en preguntas sensibles de la instalación." }
@@ -153,13 +153,44 @@
       ]
     },
     {
+      "id": "private-registries",
+      "title": "Imágenes en registros privados",
+      "intro": "Una imagen en un registro privado, como un paquete privado de GitHub o un repositorio privado de Docker Hub, se lee con una cuenta guardada en ProxMenux.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              { "title": "El registro rechaza la imagen", "body": "Cuando el registro responde que la imagen necesita una cuenta, la revisión ofrece iniciar sesión en ese registro y vuelve a leer la imagen." },
+              { "title": "Iniciar sesión", "body": "Un usuario y una contraseña o un token de acceso que puedan descargar la imagen. El registro los comprueba y solo se guardan si los acepta." },
+              { "title": "Instalar y mantener al día", "body": "La instalación descarga la imagen con esa cuenta, y también las actualizaciones, Modificar, Recrear, la vigilancia y la comprobación de actualizaciones del Monitor, en cualquier nodo del clúster." }
+            ]
+          }
+        },
+        { "p": "<strong>Cuentas de registro</strong>, en el menú principal de OCI manager Apps, lista las cuentas guardadas por registro y usuario, nunca su secreto. Desde cada cuenta se puede comprobar, descargar o instalar una imagen, y actualizar o eliminar la cuenta." },
+        {
+          "list": {
+            "items": [
+              "GitHub (<code>ghcr.io</code>): el usuario es la cuenta de GitHub, y la contraseña un token de acceso personal con el permiso <code>read:packages</code>.",
+              "Docker Hub (<code>docker.io</code>): el usuario es la cuenta de Docker Hub, y la contraseña un token de acceso con permiso de lectura.",
+              "Otros registros, también uno con su propio puerto como <code>registry.example.com:5000</code>: el usuario y la contraseña o token que da ese registro."
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Dónde se guardan",
+            "body": "En <code>/etc/pve/priv/proxmenux/registry-auth.json</code>, legible solo por root, en la misma carpeta donde Proxmox guarda las contraseñas de sus almacenamientos. <code>/etc/pve</code> lo comparten todos los nodos del clúster, así que una cuenta añadida en un nodo se usa en todos. El backup del host lo incluye, y al desinstalar ProxMenux se elimina de todos los nodos."
+          }
+        }
+      ]
+    },
+    {
       "id": "limits",
       "title": "Definiciones que no se instalan",
       "blocks": [
         {
           "list": {
             "items": [
-              "Imágenes en registros privados: no se piden credenciales del registro.",
               "Un Dockerfile sin imagen publicada: la imagen debe construirse y publicarse antes en un registro OCI.",
               "Un archivo Compose con varios servicios: queda bloqueado porque describe más de una imagen. Esta opción instala un único contenedor.",
               "<code>configs</code>, secretos externos o formatos de dispositivo que no pueden traducirse sin ambigüedad.",

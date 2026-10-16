@@ -18,7 +18,7 @@
 #
 # Features:
 # - Auto-detects latest versions for TrueNAS SCALE/CORE, OMV,
-#   XigmaNAS and Rockstor, with safe fallbacks.
+#   XigmaNAS, Rockstor and FygoOS, with safe fallbacks.
 # - Dispatches Synology DSM to the dedicated loader-based flow.
 # - Dispatches ZimaOS to its own installer script.
 # - Runs the Umbrel OS community installer (external script).
@@ -179,6 +179,30 @@ function resolve_rockstor_iso() {
   HN="Rockstor"
 }
 
+function resolve_fygoos_iso() {
+  local default_file="fygoos_PE_x86_1.2.0701_2731.iso"
+  local base_url="https://download.liveupdate.fygonas.com/x86_64/trim"
+  local detected_file="" detected_ver=""
+
+  if _has_curl; then
+    detected_file=$(
+      curl -fsSL "https://fygonas.com/download" 2>/dev/null \
+        | grep -Eo 'download\.liveupdate\.fygonas\.com/x86_64/trim/fygoos_PE_x86_[0-9.]+_[0-9]+\.iso' \
+        | sed 's|.*/||' \
+        | _latest_version_from_lines
+    )
+  fi
+
+  [[ -z "$detected_file" ]] && detected_file="$default_file"
+  detected_ver=$(sed -E 's/^fygoos_PE_x86_([0-9.]+)_.*/\1/' <<<"$detected_file")
+
+  ISO_NAME="FygoOS ${detected_ver}"
+  ISO_FILE="$detected_file"
+  ISO_URL="${base_url}/${ISO_FILE}"
+  ISO_PATH="$ISO_DIR/$ISO_FILE"
+  HN="FygoOS"
+}
+
 function select_nas_iso() {
 
   local NAS_OPTIONS=(
@@ -189,17 +213,18 @@ function select_nas_iso() {
     "5" "XigmaNAS       VM          (FreeBSD based)"
     "6" "Rockstor       VM          (openSUSE based)"
     "7" "ZimaOS         VM          (Proxmox-zimaos)"
+    "8" "FygoOS         VM          (Debian based)"
     ""  ""
     ""  "\Z4───────────────── $(translate "Community Scripts") ─────────────────\Zn"
     ""  ""
-    "8" "Umbrel OS      VM          (Helper-Scripts)"
-    "9" "$(translate "Return to Main Menu")"
+    "9" "Umbrel OS      VM          (Helper-Scripts)"
+    "10" "$(translate "Return to Main Menu")"
   )
 
   local NAS_TYPE
   NAS_TYPE=$(dialog --colors --backtitle "ProxMenux" \
     --title "$(translate "NAS Systems")" \
-    --menu "\n$(translate "Select the NAS system to install:")" 20 70 10 \
+    --menu "\n$(translate "Select the NAS system to install:")" 22 70 13 \
     "${NAS_OPTIONS[@]}" 3>&1 1>&2 2>&3)
 
 
@@ -234,6 +259,9 @@ function select_nas_iso() {
       return 1
       ;;
     8)
+      resolve_fygoos_iso
+      ;;
+    9)
       HN="Umbrel OS"
       bash -c "$(wget -qLO - https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/umbrel-os-vm.sh)"
       echo -e
@@ -251,7 +279,7 @@ function select_nas_iso() {
       return 1
       ;;
 
-    9)
+    10)
       return 1
       ;;
   esac

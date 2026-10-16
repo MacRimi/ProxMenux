@@ -1,19 +1,19 @@
 {
   "meta": {
     "title": "Crear VM: Otros sistemas NAS | ProxMenux Documentation",
-    "description": "Crea máquinas virtuales de TrueNAS SCALE, TrueNAS CORE, OpenMediaVault, XigmaNAS, Rockstor y ZimaOS en Proxmox VE con ProxMenux. Cubre la configuración por defecto / avanzada, el nuevo plan de almacenamiento, el passthrough de GPU opcional y las specs recomendadas por sistema.",
+    "description": "Crea máquinas virtuales de TrueNAS SCALE, TrueNAS CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS y FygoOS en Proxmox VE con ProxMenux. Cubre la configuración por defecto / avanzada, el nuevo plan de almacenamiento, el passthrough de GPU opcional y las specs recomendadas por sistema.",
     "ogTitle": "Crear VM: Otros sistemas NAS | ProxMenux Documentation",
-    "ogDescription": "Crea VMs de TrueNAS SCALE / CORE, OpenMediaVault, XigmaNAS, Rockstor y ZimaOS en Proxmox VE con ProxMenux.",
+    "ogDescription": "Crea VMs de TrueNAS SCALE / CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS y FygoOS en Proxmox VE con ProxMenux.",
     "ogImageAlt": "Selector NAS de ProxMenux"
   },
   "header": {
     "title": "Crear VM: Otros sistemas NAS",
-    "description": "ProxMenux puede crear una VM lista para instalar TrueNAS SCALE, TrueNAS CORE, OpenMediaVault, XigmaNAS, Rockstor y ZimaOS. Esta página cubre el flujo de creación compartido (configuración por defecto / avanzada, el nuevo plan de almacenamiento, passthrough de GPU opcional) más notas por sistema y specs recomendadas.",
+    "description": "ProxMenux puede crear una VM lista para instalar TrueNAS SCALE, TrueNAS CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS y FygoOS. Esta página cubre el flujo de creación compartido (configuración por defecto / avanzada, el nuevo plan de almacenamiento, passthrough de GPU opcional) más notas por sistema y specs recomendadas.",
     "section": "Máquinas virtuales · NAS"
   },
   "intro": {
     "title": "Cómo se crean estos sistemas",
-    "bodyRich": "Los seis sistemas comparten el mismo asistente de ProxMenux. El selector de NAS elige el instalador correspondiente (autodetectando la última versión estable para TrueNAS, OMV, XigmaNAS y Rockstor) y luego cede el control al configurador genérico de VM y al plan de almacenamiento. ZimaOS usa su propio script de instalador (<code>vm/zimaos.sh</code>) pero sigue la misma secuencia de CPU / RAM / almacenamiento / GPU opcional."
+    "bodyRich": "Los siete sistemas comparten el mismo asistente de ProxMenux. El selector de NAS elige el instalador correspondiente (autodetectando la última versión estable para TrueNAS, OMV, XigmaNAS, Rockstor y FygoOS) y luego cede el control al configurador genérico de VM y al plan de almacenamiento. ZimaOS usa su propio script de instalador (<code>vm/zimaos.sh</code>) pero sigue la misma secuencia de CPU / RAM / almacenamiento / GPU opcional."
   },
   "config": {
     "heading": "Configuración por defecto vs Avanzada",
@@ -260,6 +260,21 @@
         "RAM por defecto: 4 GB (suficiente para multimedia / apps autoalojadas)",
         "Núcleos de CPU mínimos: 2",
         "Arranque UEFI (OVMF)",
+        "Adaptador de red VirtIO para mejor throughput"
+      ]
+    },
+    "fygoos": {
+      "id": "fygoos",
+      "title": "FygoOS",
+      "icon": "Server",
+      "officialName": "fygonas.com",
+      "officialUrl": "https://fygonas.com",
+      "description": "Edición internacional de fnOS, un NAS basado en Debian. ProxMenux descarga la última ISO de instalación publicada en fygonas.com y la monta en la VM. El instalador coloca el sistema en un disco; el espacio que queda en ese disco puede alojar volúmenes para apps y archivos. Al terminar la instalación, la consola muestra la dirección de la interfaz web, en el puerto 5666 (el puerto 80 redirige a él): al abrirla en el navegador se da nombre al equipo y se crea la cuenta de administrador.",
+      "specs": [
+        "Disco del sistema: FygoOS propone una partición de sistema de 64 GB, que puede ser menor en una VM",
+        "Instalación: Graphical Install, o Rescuing Install si la gráfica falla",
+        "Arranque UEFI (OVMF) sin claves de Secure Boot, como pide el instalador",
+        "Red: Ethernet con DHCP por defecto",
         "Adaptador de red VirtIO para mejor throughput"
       ]
     }

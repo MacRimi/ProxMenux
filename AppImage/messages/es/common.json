@@ -607,7 +607,7 @@
         "controllerBusyTime": "Minutos totales que el controlador pasó procesando comandos de E/S. Los valores altos indican una carga de trabajo pesada y sostenida.",
         "errorLogEntries": "Número de entradas en el registro de información de errores. A menudo incluye artefactos benignos de autoevaluación; verifique con Errores de Medios.",
         "warningTempTime": "Total de minutos transcurridos por encima del umbral de temperatura de advertencia. Provoca una limitación del rendimiento. El cero es ideal.",
-        "criticalTempTime": "Minutos totales pasados ​​por encima del umbral de temperatura crítica. La unidad puede apagarse para evitar daños. Siempre debe ser cero.",
+        "criticalTempTime": "Minutos totales pasados por encima del umbral de temperatura crítica. La unidad puede apagarse para evitar daños. Siempre debe ser cero.",
         "warningCompositeTemperatureTime": "Minutos totales que la temperatura compuesta superó el umbral de advertencia.",
         "criticalCompositeTemperatureTime": "Minutos totales la temperatura compuesta superó el umbral crítico. Debe ser cero.",
         "thermalManagementT1TransCount": "Número de veces que la unidad entró en aceleración térmica ligera (T1). Indica problemas de enfriamiento.",
@@ -1302,7 +1302,10 @@
         "jueves",
         "viernes",
         "sábado"
-      ]
+      ],
+      "runSkippedStatus": "ejecución omitida",
+      "reasonStoppedContainer": "El contenedor está parado; se ha omitido la actualización programada.",
+      "reasonStoppedContainerHistorical": "El contenedor estaba parado a la hora de la actualización programada."
     },
     "cronChip": {
       "detected": "cron del host detectado",
@@ -3569,8 +3572,8 @@
       "short": {
         "hour": "Pasada 1 hora",
         "day": "Pasadas 24h",
-        "week": "Pasados ​​los 7 días",
-        "month": "Pasados ​​los 30 días",
+        "week": "Pasados los 7 días",
+        "month": "Pasados los 30 días",
         "year": "Último 1 año"
       },
       "last": {
