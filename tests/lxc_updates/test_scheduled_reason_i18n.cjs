@@ -63,7 +63,7 @@ for (const locale of ['en', 'sk']) {
     return String(message ?? key).replace(/\{([^}]+)\}/g, (_, name) => String(variables[name] ?? `{${name}}`))
   }
   const context = {
-    exports: {}, t, selectedVM: { vmid: 100 }, scheduleLastRunAt: '2026-10-16T05:10:02Z',
+    exports: {}, t, selectedVM: { vmid: 100, status: 'stopped' }, scheduleLastRunAt: '2026-10-16T05:10:02Z',
     scheduleLastRunStatus: 'skipped', scheduleLastRunReasonCode: 'stopped_container',
     scheduleLastRunReason: 'container is stopped; scheduled update was skipped',
     scheduleLastRunRebootRequired: false, scheduleLastRunRebootPackages: [], scheduleLastRunLog: null,
@@ -72,16 +72,28 @@ for (const locale of ['en', 'sk']) {
   }
   const render = compile(context)
   const translated = flattenText(render(true))
-  const expected = t('vmLxc.scheduled.reasonStoppedContainer')
+  const expectedCurrentReason = t('vmLxc.scheduled.reasonStoppedContainer')
+  const expectedHistoricalReason = t('vmLxc.scheduled.reasonStoppedContainerHistorical')
   const skippedLabel = t('vmLxc.scheduled.runSkippedStatus')
-  const expectedHistoricalReason = locale === 'sk'
-    ? 'Kontajner bol vypnutý; plánovaná aktualizácia sa preskočila.'
-    : 'Container was stopped; scheduled update was skipped.'
-  assert.equal(expected, expectedHistoricalReason,
-    `${locale}: stopped reason must describe the historical scheduled run, not current container state`)
-  assert(translated.includes(expected), `${locale}: known reason code must use the locale catalog`)
+  const expectedCurrentText = locale === 'sk'
+    ? 'Kontajner je vypnutý; plánovaná aktualizácia sa preskočila.'
+    : 'Container is stopped; scheduled update was skipped.'
+  const expectedHistoricalText = locale === 'sk'
+    ? 'Kontajner bol vypnutý, keď sa mala spustiť plánovaná aktualizácia.'
+    : 'Container was stopped when the scheduled update was due to run.'
+  assert.equal(expectedCurrentReason, expectedCurrentText,
+    `${locale}: stopped CT must describe its current stopped state`)
+  assert.equal(expectedHistoricalReason, expectedHistoricalText,
+    `${locale}: running CT must describe the stopped state at the prior scheduled run`)
+  assert(translated.includes(expectedCurrentReason), `${locale}: currently stopped CT must use the present-state catalog`)
+  assert(!translated.includes(expectedHistoricalReason), `${locale}: currently stopped CT must not use historical wording`)
   assert(translated.includes(skippedLabel), `${locale}: skipped run must not claim that no updates are pending`)
   assert(!translated.includes(context.scheduleLastRunReason), `${locale}: raw stopped reason must not leak into UI`)
+
+  context.selectedVM.status = 'running'
+  const historical = flattenText(render(true))
+  assert(historical.includes(expectedHistoricalReason), `${locale}: running CT must use historical wording for a past skipped run`)
+  assert(!historical.includes(expectedCurrentReason), `${locale}: running CT must not claim it is currently stopped`)
 
   context.scheduleLastRunReasonCode = 'unknown_reason'
   const fallback = flattenText(render(true))

@@ -2450,7 +2450,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     if (!scheduleLastRunAt || !selectedVM) return null
     const spacing = indented ? "pl-4" : ""
     const scheduleLastRunReasonText = scheduleLastRunReasonCode === "stopped_container"
-      ? t("vmLxc.scheduled.reasonStoppedContainer")
+      ? selectedVM.status === "stopped"
+        ? t("vmLxc.scheduled.reasonStoppedContainer")
+        : t("vmLxc.scheduled.reasonStoppedContainerHistorical")
       : scheduleLastRunReason
     return (
       <div className={`space-y-1.5 ${spacing}`}>

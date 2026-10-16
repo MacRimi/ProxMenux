@@ -218,6 +218,10 @@ class CommandDescriptionsTests(unittest.TestCase):
                         english["vmLxc"]["scheduled"]["reasonStoppedContainer"],
                     )
                     messages["vmLxc"]["scheduled"].setdefault(
+                        "reasonStoppedContainerHistorical",
+                        english["vmLxc"]["scheduled"]["reasonStoppedContainerHistorical"],
+                    )
+                    messages["vmLxc"]["scheduled"].setdefault(
                         "runSkippedStatus",
                         english["vmLxc"]["scheduled"]["runSkippedStatus"],
                     )
