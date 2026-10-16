@@ -37,6 +37,7 @@ def routes():
               _lxc_update_target_labels=lambda *_: [],
               _append_lxc_update_log=lambda *_: None,
               _prune_lxc_update_logs=lambda *_: None,
+              _scheduled_runner_reported_stopped=lambda *_: False,
               _finalize_lxc_update=Mock(return_value={}),
               _inspect_lxc_reboot_requirement=lambda *_, **__: (False, [], None))
     exec(compile(ast.Module(body=nodes, type_ignores=[]), 'update-routes', 'exec'), ns)

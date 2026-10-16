@@ -1302,7 +1302,10 @@
         "Jeudi",
         "Vendredi",
         "Samedi"
-      ]
+      ],
+      "runSkippedStatus": "exécution ignorée",
+      "reasonStoppedContainer": "Le conteneur est arrêté ; la mise à jour programmée a été ignorée.",
+      "reasonStoppedContainerHistorical": "Le conteneur était arrêté à l'heure de la mise à jour programmée."
     },
     "cronChip": {
       "detected": "cron hôte détecté",

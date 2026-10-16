@@ -1302,7 +1302,10 @@
         "Donnerstag",
         "Freitag",
         "Samstag"
-      ]
+      ],
+      "runSkippedStatus": "Lauf übersprungen",
+      "reasonStoppedContainer": "Container ist gestoppt; das geplante Update wurde übersprungen.",
+      "reasonStoppedContainerHistorical": "Der Container wurde zum geplanten Aktualisierungszeitpunkt gestoppt."
     },
     "cronChip": {
       "detected": "Host-Cron erkannt",

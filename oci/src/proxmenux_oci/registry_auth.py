@@ -33,6 +33,13 @@ import tempfile
 from .i18n import translate
 
 ANSI = re.compile(r'\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~]')
+# Where Proxmox keeps its own storage passwords: readable only by root and
+# shared by every node of the cluster.
+CLUSTER_AUTH_FILE = Path('/etc/pve/priv/proxmenux/registry-auth.json')
+ACCESS_REFUSED = ('unauthorized', 'authentication required', 'denied', 'forbidden', 'invalid username',
+                  'invalid password', 'invalid credentials', 'username/password',
+                  'statuscode: 401', 'statuscode: 403', 'status code from registry 401',
+                  'status code from registry 403')
 
 
 class RegistryError(RuntimeError):
@@ -120,6 +127,19 @@ def validate_image(value):
     return value
 
 
+def use_cluster_auth_file(environment=os.environ):
+    """ProxMenux keeps its registry accounts in the cluster filesystem, so
+    every node installs and updates private images with them."""
+    if not environment.get('REGISTRY_AUTH_FILE') and os.path.ismount(CLUSTER_AUTH_FILE.parents[2]):
+        environment['REGISTRY_AUTH_FILE'] = str(CLUSTER_AUTH_FILE)
+
+
+def refuses_access(error) -> bool:
+    """Whether a registry error says the image needs an account."""
+    detail = str(error).casefold()
+    return any(word in detail for word in ACCESS_REFUSED)
+
+
 def registry_error(registry, error='', login=False):
     """Classify errors without echoing registry-controlled text or a token."""
     detail = str(error).casefold()
@@ -133,10 +153,7 @@ def registry_error(registry, error='', login=False):
                                       'statuscode: 504', 'status code: 504', 'status: 504',
                                       'internal server error', 'service unavailable', 'bad gateway')):
         return translate('{registry} reported a server error. Try again later.').format(registry=registry)
-    if any(word in detail for word in ('unauthorized', 'authentication required', 'denied', 'forbidden', 'invalid username',
-                                      'invalid password', 'invalid credentials', 'username/password',
-                                      'statuscode: 401', 'statuscode: 403', 'status code from registry 401',
-                                      'status code from registry 403')):
+    if refuses_access(detail):
         return (translate('Authentication failed for {registry}. Check the account and token permissions.').format(registry=registry) if login else
                 translate('Access denied by {registry}. Check the image name and sign in from Registry accounts.').format(registry=registry))
     if any(word in detail for word in ('http response to https client',
