@@ -1106,7 +1106,11 @@
       "shutdown": "Shutdown",
       "reboot": "Reboot",
       "forceStop": "Force Stop",
-      "working": "Working..."
+      "working": "Working...",
+      "startPending": "Starting...",
+      "shutdownPending": "Shutting down...",
+      "rebootPending": "Restarting...",
+      "stopPending": "Stopping..."
     },
     "confirm": {
       "forceStopTitle": "Force Stop",
@@ -1150,6 +1154,7 @@
       "unknown": "Unknown error",
       "backupStartFailed": "Failed to start backup: {message}",
       "controlFailed": "Failed to {action} VM {vmid}: {message}",
+      "controlNotConfirmed": "The operation has not been confirmed complete. Check the guest status before trying again.",
       "saveNotesFailed": "Error saving notes. Please try again.",
       "appNotFound": "This application is no longer available. Refresh the page and try again.",
       "saveCustomCommandFailed": "Could not save the custom update command: {message}",
@@ -1338,7 +1343,14 @@
     },
     "updates": {
       "osPackagesTitle": "OS packages",
-      "checkNow": "Check now",
+      "checkNow": "Check updates",
+      "checkSystemPackages": "Check system packages",
+      "checkInProgress": "Check in progress",
+      "refreshCheckHelp": "Refreshes package indexes and checks pending updates while the container is running. Nothing is installed.",
+      "notCheckedYet": "Updates have not been checked yet.",
+      "checkStillRunning": "The check is still running. Its result will be saved when it finishes.",
+      "checkBeforeUpdate": "Check updates first",
+      "startBeforeCheck": "Start the container, then check for updates. No badge does not mean there are no updates.",
       "checkReadOnlyHelp": "Read current OS and pending packages from existing indexes. No installation or package index refresh.",
       "checkCooldown": "Check already running or recently requested. Try again in {seconds} seconds.",
       "checkStale": "Check outdated",
@@ -1386,6 +1398,9 @@
       "applyUpdate": "Apply update",
       "upToDate": "Up to date",
       "runUpdater": "Run updater",
+      "runCustomCommand": "Run custom command",
+      "installedVersionUnverified": "Installed version is unverified. Update availability could not be confirmed.",
+      "versionStatusUnknown": "Update availability is unverified. Version information is unavailable or incomplete.",
       "terminalTitle": "Apply updates — CT {vmid}",
       "terminalDescriptionOs": "Applying OS package updates inside the container...",
       "terminalDescriptionApp": "Running the application updater inside the container...",
@@ -1489,9 +1504,12 @@
       "notConfigured": "Not configured.",
       "configure": "Configure",
       "edit": "Edit",
-      "apply": "Apply updates",
+      "apply": "Start bulk update",
       "osTarget": "OS",
       "osRequired": "Required for a bulk update.",
+      "osDockerScope": "OS updates also include Docker when it is installed as a system package.",
+      "unverifiedTargetsHelp": "Update availability for some selected items is unverified. Starting will run the selected update methods even without a confirmed new version.",
+      "dockerImageMethod": "Docker image",
       "includesDependencies": "Also includes declared dependencies: {names}",
       "noMethod": "No executable update method is available.",
       "staleTarget": "This selection is no longer available. Remove it before saving.",
@@ -2181,6 +2199,17 @@
         "unsupportedScheme": "Only an address beginning with http:// or https:// is allowed.",
         "localPveApi": "The address cannot point to the local PVE API (localhost:8006/8007).",
         "metadataIp": "The link-local metadata IP cannot be used as a Gotify endpoint."
+      },
+      "history": {
+        "title": "Notification history",
+        "description": "The last 20 notifications sent, including each run of the daily digest, with the result of each one.",
+        "empty": "No notifications have been sent yet.",
+        "loadFailed": "The notification history could not be loaded.",
+        "sent": "Sent",
+        "notSent": "Not sent",
+        "severityInfo": "Info",
+        "severityWarning": "Warning",
+        "severityCritical": "Critical"
       },
       "customPromptInfo": {
         "title": "Custom prompt mode",
@@ -3409,7 +3438,7 @@
       "webhookHttps": "Proxmox notifications reach the Monitor with HTTPS enabled — they are delivered on a local-only address and no longer fail with a certificate error.",
       "persistentLogs": "A burst of log errors that ended is no longer reported as persistent: a pattern has to keep appearing for 15 minutes, and its warning clears on its own (reported by @Joshua1264).",
       "mountsLanAddress": "Mount points on LVM-thin and other block storage show their usage, and multi-container applications open at their LAN address.",
-      "ociManager": "OCI manager Apps (beta) — a new entry in the ProxMenux menu installs applications from their official container images as native Proxmox LXC, with no Docker engine. The catalog carries over 360 applications.",
+      "ociManager": "OCI manager Apps (Technology Preview) — a new entry in the ProxMenux menu installs applications from their official container images as native Proxmox LXC, with no Docker engine. The catalog carries over 360 applications.",
       "ociInMonitor": "OCI applications in the Monitor — the App tab recognises them, the Updates tab updates and modifies them as the menu does, and a Logs tab follows the console output of the application live.",
       "ociAcceleration": "Hardware acceleration for OCI applications — the installer offers only the profiles the host can run: NVIDIA, Intel and AMD GPUs and, for Frigate, an Intel NPU or a Coral. The NVIDIA Container Toolkit installs with the driver.",
       "ociRecovery": "An OCI application travels with its backup — restored on this host or on another one, it is registered and managed again, and in a cluster it starts on whichever node it moves to.",
@@ -4991,7 +5020,9 @@
   "lxcTerminal": {
     "title": "Terminal: {name} (ID: {id})",
     "errors": {
-      "invalidVmid": "Invalid VMID — refusing to execute pct enter"
+      "invalidVmid": "Invalid VMID — refusing to execute pct enter",
+      "noShell": "This container's image has no shell, so it cannot open a terminal. Its output is in the Logs tab.",
+      "enterFailed": "The container could not be entered."
     },
     "commands": {
       "listFiles": "List all files with details",
@@ -5206,6 +5237,7 @@
     "processing": "Processing...",
     "controlSequences": "Control Sequences",
     "cancelInterrupt": "Cancel/Interrupt",
+    "endOfInput": "End of input",
     "exitNano": "Exit (nano)",
     "searchHistory": "Search history",
     "clipboard": "Clipboard",

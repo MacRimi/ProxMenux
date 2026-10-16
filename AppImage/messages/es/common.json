@@ -1085,7 +1085,11 @@
       "shutdown": "Apagar",
       "reboot": "Reiniciar",
       "forceStop": "Parar",
-      "working": "Procesando..."
+      "working": "Procesando...",
+      "startPending": "Iniciando...",
+      "shutdownPending": "Apagando...",
+      "rebootPending": "Reiniciando...",
+      "stopPending": "Parando..."
     },
     "confirm": {
       "forceStopTitle": "Parar",
@@ -1134,7 +1138,8 @@
       "saveCustomCommandFailed": "No se pudo guardar el comando de actualización personalizado: {message}",
       "removeCustomCommandConfirm": "¿Eliminar el comando de actualización personalizado para \"{name}\"?",
       "removeCustomCommandFailed": "No se pudo eliminar el comando de actualización personalizado: {message}",
-      "hideNoticeFailed": "No se pudo ocultar este aviso: {message}"
+      "hideNoticeFailed": "No se pudo ocultar este aviso: {message}",
+      "controlNotConfirmed": "No se ha confirmado que la operación haya terminado. Compruebe el estado de la VM o del contenedor antes de volver a intentarlo."
     },
     "backupModal": {
       "title": "Backup de {type} {vmid} ({name})",
@@ -1455,11 +1460,21 @@
       "postApplyNothingPending": "Nada pendiente — todo actualizado.",
       "postApplyPartial": "{pending} paquete(s) siguen pendientes tras la ejecución.",
       "postApplyPartialSubline": "{applied} aplicados. Algunas actualizaciones no finalizaron — revisa la salida del terminal.",
-      "checkNow": "Comprobar ahora",
+      "checkNow": "Comprobar actualizaciones",
       "checkReadOnlyHelp": "Lee el sistema operativo actual y los paquetes pendientes a partir de los índices existentes. No instala nada ni actualiza los índices de paquetes.",
       "checkCooldown": "Ya hay una comprobación en curso o se ha solicitado hace poco. Inténtalo de nuevo en {seconds} segundos.",
       "checkStale": "Comprobación caducada",
-      "checkStaleHelp": "Este resultado tiene más de 48 horas o no tiene una fecha de comprobación válida. Lanza una nueva comprobación antes de fiarte de él."
+      "checkStaleHelp": "Este resultado tiene más de 48 horas o no tiene una fecha de comprobación válida. Lanza una nueva comprobación antes de fiarte de él.",
+      "checkSystemPackages": "Comprobar paquetes del sistema",
+      "checkInProgress": "Comprobación en curso",
+      "refreshCheckHelp": "Renueva los índices de paquetes y comprueba las actualizaciones pendientes mientras el contenedor está en marcha. No instala nada.",
+      "notCheckedYet": "Las actualizaciones aún no se han comprobado.",
+      "checkStillRunning": "La comprobación sigue en curso. Su resultado se guardará al terminar.",
+      "checkBeforeUpdate": "Comprobar actualizaciones primero",
+      "startBeforeCheck": "Inicie el contenedor y después compruebe las actualizaciones. Que no aparezca el indicador no significa que no haya actualizaciones.",
+      "runCustomCommand": "Ejecutar comando personalizado",
+      "installedVersionUnverified": "La versión instalada no está verificada. No se pudo confirmar si hay una actualización disponible.",
+      "versionStatusUnknown": "No se ha verificado si hay una actualización disponible. La información de versión falta o está incompleta."
     },
     "bulkUpdate": {
       "title": "Actualización en bloque",
@@ -1468,7 +1483,7 @@
       "notConfigured": "No configurada.",
       "configure": "Configurar",
       "edit": "Editar",
-      "apply": "Aplicar actualizaciones",
+      "apply": "Iniciar actualización masiva",
       "osTarget": "SO",
       "osRequired": "Obligatorio en una actualización en bloque.",
       "includesDependencies": "Incluye también las dependencias declaradas: {names}",
@@ -1484,7 +1499,10 @@
       "saveFailed": "No se pudo guardar la configuración de actualización en bloque.",
       "deleteFailed": "No se pudo eliminar la configuración de actualización en bloque.",
       "planFailed": "No se pudo preparar la actualización en bloque. Edite la configuración y revise los métodos no disponibles.",
-      "loadFailed": "no se pudo cargar la configuración de actualización masiva."
+      "loadFailed": "no se pudo cargar la configuración de actualización masiva.",
+      "osDockerScope": "Las actualizaciones del sistema operativo también incluyen Docker cuando está instalado como paquete del sistema.",
+      "unverifiedTargetsHelp": "No se ha verificado si hay actualización para algunos de los elementos seleccionados. Al iniciar se ejecutarán los métodos de actualización elegidos aunque no haya una versión nueva confirmada.",
+      "dockerImageMethod": "Imagen Docker"
     },
     "appEditor": {
       "dockerDetectedWithWorkloads": "Docker detectado con {count} aplicaciones en contenedores",
@@ -2182,6 +2200,17 @@
         "unsupportedScheme": "Sólo se permite una dirección que comience con http:// o https://.",
         "localPveApi": "La dirección no puede apuntar a la API PVE local (localhost:8006/8007).",
         "metadataIp": "La IP de metadatos del enlace local no se puede utilizar como punto final de Gotify."
+      },
+      "history": {
+        "title": "Historial de notificaciones",
+        "description": "Las últimas 20 notificaciones enviadas, incluida cada ejecución del resumen diario, con el resultado de cada una.",
+        "empty": "Todavía no se ha enviado ninguna notificación.",
+        "loadFailed": "No se pudo cargar el historial de notificaciones.",
+        "sent": "Enviada",
+        "notSent": "No enviada",
+        "severityInfo": "Info",
+        "severityWarning": "Advertencia",
+        "severityCritical": "Crítico"
       },
       "customPromptInfo": {
         "title": "Modo de aviso personalizado",
@@ -3410,7 +3439,7 @@
       "webhookHttps": "Las notificaciones de Proxmox llegan al Monitor con HTTPS activado — se entregan en una dirección solo local y ya no fallan por un error de certificado.",
       "persistentLogs": "Una ráfaga de errores en los logs que ya terminó no se presenta como persistente: el patrón tiene que seguir apareciendo durante 15 minutos, y su aviso se cierra solo (reportado por @Joshua1264).",
       "mountsLanAddress": "Los puntos de montaje en LVM-thin y otros almacenamientos de bloques muestran su uso, y las aplicaciones multicontenedor se abren en su dirección de la LAN.",
-      "ociManager": "OCI manager Apps (beta) — una nueva entrada del menú de ProxMenux instala aplicaciones desde sus imágenes de contenedor oficiales como LXC nativos de Proxmox, sin motor Docker. El catálogo reúne más de 360 aplicaciones.",
+      "ociManager": "OCI manager Apps (Technology Preview) — una nueva entrada del menú de ProxMenux instala aplicaciones desde sus imágenes de contenedor oficiales como LXC nativos de Proxmox, sin motor Docker. El catálogo reúne más de 360 aplicaciones.",
       "ociInMonitor": "Aplicaciones OCI en el Monitor — la pestaña App las reconoce, la pestaña Actualizaciones las actualiza y modifica igual que el menú, y una pestaña Logs sigue en directo la salida de consola de la aplicación.",
       "ociAcceleration": "Aceleración por hardware para aplicaciones OCI — el instalador ofrece solo los perfiles que el host puede ejecutar: GPU NVIDIA, Intel y AMD y, para Frigate, una NPU de Intel o una Coral. NVIDIA Container Toolkit se instala con el driver.",
       "ociRecovery": "Una aplicación OCI viaja con su backup — restaurada en este host o en otro, vuelve a quedar registrada y gestionada, y en un clúster arranca en el nodo al que se mueva.",
@@ -4992,7 +5021,9 @@
   "lxcTerminal": {
     "title": "Terminal: {name} (ID: {id})",
     "errors": {
-      "invalidVmid": "VMID no válido: se niega a ejecutar pct enter"
+      "invalidVmid": "VMID no válido: se niega a ejecutar pct enter",
+      "noShell": "La imagen de este contenedor no incluye shell, así que no puede abrir una terminal. Su salida está en la pestaña Logs.",
+      "enterFailed": "No se pudo entrar en el contenedor."
     },
     "commands": {
       "listFiles": "Listar todos los archivos con detalles",
@@ -5207,6 +5238,7 @@
     "processing": "Tratamiento...",
     "controlSequences": "Secuencias de control",
     "cancelInterrupt": "Cancelar/Interrumpir",
+    "endOfInput": "Fin de la entrada",
     "exitNano": "Salir (nano)",
     "searchHistory": "Historial de búsqueda",
     "clipboard": "Portapapeles",

@@ -63,6 +63,13 @@ ALLOW_HELPER_WITH_CUSTOM="${ALLOW_HELPER_WITH_CUSTOM:-0}"
 DOCKER_STANDALONE_TARGETS="${DOCKER_STANDALONE_TARGETS:-}"
 UPDATE_DOCKER_ENGINE="${UPDATE_DOCKER_ENGINE:-0}"
 
+# Reject an abandoned local-only mode rather than silently installing if an
+# older launcher still exports it. The check now has its own non-install job.
+if [[ "${CHECK_APPLY_OS:-0}" != "0" ]]; then
+  echo "ERROR: combined check-and-update was removed; run the explicit package check first." >&2
+  exit 4
+fi
+
 if [[ ! "$VMID" =~ ^[1-9][0-9]*$ ]]; then
   echo "ERROR: VMID must be a positive integer." >&2
   exit 1
@@ -117,10 +124,24 @@ extract_helper_slug_from_wrapper() {
 # One update per CT at a time, regardless of whether it came from the
 # UI or the scheduler. The descriptor remains open for this process.
 LOCK_DIR="${PROXMENUX_LOCK_DIR:-/run/lock}"
-exec 9>"${LOCK_DIR}/proxmenux-lxc-update-${VMID}.lock"
+exec 9>>"${LOCK_DIR}/proxmenux-lxc-update-${VMID}.lock"
 if ! flock -n 9; then
   echo "ERROR: another ProxMenux update is already running for CT $VMID." >&2
   exit 7
+fi
+
+if [[ -s "${LOCK_DIR}/proxmenux-lxc-update-${VMID}.lock" ]]; then
+  if ! python3 -c 'import sys; sys.path.insert(0, "/usr/local/share/proxmenux/monitor-app/usr/bin"); import lxc_check_job; lxc_check_job.check_control_task(int(sys.argv[1]))' "$VMID"; then
+    echo "ERROR: container control completion is not confirmed; nothing was changed." >&2
+    exit 7
+  fi
+fi
+
+if [[ "${REQUIRE_CHECKED_OS:-0}" == "1" ]]; then
+  if ! python3 -c 'import sys; sys.path.insert(0, "/usr/local/share/proxmenux/monitor-app/usr/bin"); import lxc_check_job; lxc_check_job.checked_os(int(sys.argv[1]))' "$VMID"; then
+    echo "ERROR: a fresh successful positive OS check is required; nothing was installed." >&2
+    exit 4
+  fi
 fi
 
 STARTED_AT=$(date -Iseconds)

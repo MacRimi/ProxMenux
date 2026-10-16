@@ -67,6 +67,28 @@ grep -q 'ids=8086:7ad0' "$PROXMENUX_VFIO_CONF"
 ! grep -qi '10de:228b' "$PROXMENUX_VFIO_CONF"
 _proxmenux_all_nvidia_in_vfio
 [[ -f "$PROXMENUX_NVIDIA_VFIO_BLACKLIST" ]]
+_proxmenux_vfio_bind_udev_rule_current
+
+# A rule removed by hand while the state still lists the GPU is written again
+# when the GPU is added once more, and the host is marked for a reboot.
+rm -f "$PROXMENUX_VFIO_BIND_UDEV_RULE"
+! _proxmenux_vfio_bind_udev_rule_current
+HOST_CONFIG_CHANGED=false
+_proxmenux_vfio_bind_add_bdfs 0000:01:00.0 0000:01:00.1
+grep -qF 'KERNEL=="0000:01:00.0"' "$PROXMENUX_VFIO_BIND_UDEV_RULE"
+grep -qF 'KERNEL=="0000:02:00.1"' "$PROXMENUX_VFIO_BIND_UDEV_RULE"
+_proxmenux_vfio_bind_udev_rule_current
+[[ "$HOST_CONFIG_CHANGED" == true ]]
+
+# A rule that already matches the state is left alone.
+HOST_CONFIG_CHANGED=false
+_proxmenux_vfio_bind_add_bdfs 0000:01:00.0
+[[ "$HOST_CONFIG_CHANGED" == false ]]
+
+# A rule edited by hand is replaced by the one the state asks for.
+echo '# edited' >> "$PROXMENUX_VFIO_BIND_UDEV_RULE"
+_proxmenux_vfio_bind_add_bdfs 0000:01:00.0
+! grep -qF '# edited' "$PROXMENUX_VFIO_BIND_UDEV_RULE"
 
 # Returning only one GPU to the host must keep the other exact BDF in VFIO,
 # remove the global NVIDIA blacklist, retain NVIDIA softdeps, and restore any

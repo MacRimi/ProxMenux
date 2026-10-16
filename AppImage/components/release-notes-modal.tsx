@@ -307,7 +307,7 @@ const CURRENT_VERSION_FEATURES = [
   {
     icon: <Package className="h-5 w-5" />,
     key: "releaseNotes.currentFeatures.ociManager",
-    text: "OCI manager Apps (beta) — a new entry in the ProxMenux menu installs applications from their official container images as native Proxmox LXC, with no Docker engine. The catalog carries over 360 applications.",
+    text: "OCI manager Apps (Technology Preview) — a new entry in the ProxMenux menu installs applications from their official container images as native Proxmox LXC, with no Docker engine. The catalog carries over 360 applications.",
   },
   {
     icon: <ScrollText className="h-5 w-5" />,

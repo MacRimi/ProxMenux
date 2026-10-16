@@ -1038,6 +1038,10 @@ const handleClose = () => {
                 <span className="font-mono text-xs mr-2">Ctrl+C</span>
                 <span className="text-muted-foreground text-xs">{t("scriptTerminal.cancelInterrupt")}</span>
               </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => sendSequence("\x04")}>
+                <span className="font-mono text-xs mr-2">Ctrl+D</span>
+                <span className="text-muted-foreground text-xs">{t("scriptTerminal.endOfInput")}</span>
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => sendSequence("\x18")}>
                 <span className="font-mono text-xs mr-2">Ctrl+X</span>
                 <span className="text-muted-foreground text-xs">{t("scriptTerminal.exitNano")}</span>

@@ -90,5 +90,37 @@ class UsbDevicesTests(unittest.TestCase):
                          [("/dev/ttyACM0", "/dev/ttyACM0")])
 
 
+class UpsDeviceRequestTests(unittest.TestCase):
+    """The UPS a recipe asks for is the one the host sees on USB."""
+
+    REQUEST = {"id": "ups-usb", "purpose": "ups", "host_path_default": "/dev/bus/usb/001/001"}
+
+    def test_the_host_ups_is_proposed(self):
+        from proxmenux_oci.installer import ups_device_request
+        rows = [{"path": "/dev/ttyACM0", "name": "ConBee II", "kind": "Serial"},
+                {"path": "/dev/bus/usb/003/002", "name": "Ellipse ECO", "kind": "UPS"}]
+        with patch.object(host, "usb_devices", return_value=rows):
+            self.assertEqual(ups_device_request(self.REQUEST, False)["host_path_default"], "/dev/bus/usb/003/002")
+
+    def test_without_a_ups_the_installation_stops(self):
+        from proxmenux_oci.installer import ups_device_request
+        from proxmenux_oci.ui import UserCancelled
+        with patch.object(host, "usb_devices", return_value=[]):
+            with self.assertRaises(UserCancelled):
+                ups_device_request(self.REQUEST, False)
+            # The advanced installation lets the node be typed by hand.
+            self.assertEqual(ups_device_request(self.REQUEST, True), self.REQUEST)
+
+    def test_the_nut_server_recipe_asks_for_the_ups(self):
+        import json
+        recipe = json.loads((ROOT / "catalog/curated/nut-server.json").read_text(encoding="utf-8"))
+        self.assertEqual(recipe, json.loads((ROOT / "catalog/apps/nut-server.json").read_text(encoding="utf-8")))
+        request, = recipe["proxmox"]["installer_profile"]["device_requests"]
+        self.assertEqual((request["purpose"], request["mode"], request["required_for_runtime"]), ("ups", "0666", True))
+        self.assertIn("API_PASSWORD", recipe["proxmox"]["installer_profile"]["generated_sensitive_environment"])
+        self.assertIsNone(recipe["catalog_ui"]["launch"]["port"])
+        self.assertTrue(recipe["proxmox"]["defaults"]["onboot"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -100,7 +100,7 @@ function resolve_truenas_core_iso() {
 }
 
 function resolve_omv_iso() {
-  local default_ver="8.1.1"
+  local default_ver="8.3.1"
   local detected_ver=""
 
   if _has_curl; then
@@ -157,13 +157,14 @@ function resolve_xigmanas_iso() {
 }
 
 function resolve_rockstor_iso() {
-  local default_file="Rockstor-Leap15.6-generic.x86_64-5.0.15-0.install.iso"
+  local default_file="Rockstor-Leap15.6-generic.x86_64-5.1.0-0.install.iso"
   local detected_file=""
   local base_url="https://rockstor.com/downloads/installer/leap/15.6/x86_64"
 
   if _has_curl; then
     detected_file=$(
-      curl -fsSL "${base_url}/" 2>/dev/null \
+      # The installer directory forbids listings; use the official downloads page.
+      curl -fsSL "https://rockstor.com/dls/index.html" 2>/dev/null \
         | grep -Eo 'Rockstor-Leap15\.6-generic\.x86_64-[0-9]+\.[0-9]+\.[0-9]+-[0-9]+\.install\.iso' \
         | _latest_version_from_lines
     )

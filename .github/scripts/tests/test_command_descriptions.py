@@ -212,10 +212,28 @@ class CommandDescriptionsTests(unittest.TestCase):
                     # New LXC observation labels intentionally ship only EN/SK.
                     # Model the bot's future output in temporary catalogs, just
                     # like the other pending keys above; never rewrite locales.
+                    messages["scriptTerminal"].setdefault("endOfInput", english["scriptTerminal"]["endOfInput"])
+                    for key in ("noShell", "enterFailed"):
+                        messages["lxcTerminal"]["errors"].setdefault(key, english["lxcTerminal"]["errors"][key])
+                    # The notification history panel texts await the bot as well.
+                    for key, value in english["settings"]["notifications"]["history"].items():
+                        messages["settings"]["notifications"].setdefault("history", {}).setdefault(key, value)
                     for key in ("checkNow", "checkReadOnlyHelp", "checkCooldown",
-                                "checkStale", "checkStaleHelp"):
+                                "checkStale", "checkStaleHelp", "checkBeforeUpdate",
+                                "startBeforeCheck", "notCheckedYet",
+                                "checkStillRunning", "refreshCheckHelp",
+                                "checkInProgress", "checkSystemPackages", "runCustomCommand",
+                                "installedVersionUnverified", "versionStatusUnknown"):
                         messages["vmLxc"]["updates"].setdefault(
                             key, english["vmLxc"]["updates"][key])
+                    for key in ("startPending", "shutdownPending", "rebootPending", "stopPending"):
+                        messages["vmLxc"]["actions"].setdefault(
+                            key, english["vmLxc"]["actions"][key])
+                    for key in ("osDockerScope", "dockerImageMethod", "unverifiedTargetsHelp"):
+                        messages["vmLxc"]["bulkUpdate"].setdefault(
+                            key, english["vmLxc"]["bulkUpdate"][key])
+                    messages["vmLxc"]["errors"].setdefault(
+                        "controlNotConfirmed", english["vmLxc"]["errors"]["controlNotConfirmed"])
                     path.write_text(json.dumps(messages, ensure_ascii=False))
             before = {p: p.read_bytes() for p in root.glob("*/common.json")}
             argv = [str(SCRIPT), "--source", str(root / "en/common.json"),

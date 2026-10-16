@@ -468,6 +468,25 @@ class RepositoryPolicyTest(unittest.TestCase):
                     self.run_policy(apply=True)
                 self.assertFalse(any(c[1] in ('create', 'set') for c in self.calls))
 
+    def test_wrong_suite_names_each_stale_source_and_where_to_fix_it(self):
+        self.repositories = fixture(
+            ('/etc/apt/sources.list.d/pve.list', [repo('pve-no-subscription')]),
+            ('/etc/apt/sources.list.d/pve-install-repo.list',
+             [repo('pve-no-subscription', uri='https://user:secret@mirror.example/debian/pve', suite='bookworm')]),
+            ('/etc/apt/sources.list.d/debian.sources', [repo('main', uri='https://deb.example/debian')]),
+        )
+        with self.assertRaises(ValueError) as error:
+            self.run_policy(apply=True)
+        message = str(error.exception)
+        self.assertIn('/etc/apt/sources.list.d/pve-install-repo.list', message)
+        self.assertIn('pve-no-subscription', message)
+        self.assertIn('suite bookworm', message)
+        self.assertIn('runs Proxmox VE on trixie', message)
+        self.assertIn('Node > Updates > Repositories', message)
+        self.assertNotIn('/etc/apt/sources.list.d/pve.list', message)
+        self.assertNotIn('secret', message)
+        self.assertFalse(any(c[1] in ('create', 'set') for c in self.calls))
+
     def test_ceph_enterprise_mirror_is_disabled_without_choosing_ceph_channel(self):
         self.repositories['files'].append({'path': '/etc/apt/sources.list.d/storage.list',
             'repositories': [repo('enterprise', uri='https://mirror.example/ceph-squid')]})

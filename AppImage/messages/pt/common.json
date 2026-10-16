@@ -1081,11 +1081,15 @@
       "logs": "Logs"
     },
     "actions": {
-      "start": "Começar",
+      "start": "Iniciar",
       "shutdown": "Desligar",
-      "reboot": "Reinício",
+      "reboot": "Reiniciar",
       "forceStop": "Forçar parada",
-      "working": "Trabalhando..."
+      "working": "Processando...",
+      "startPending": "Iniciando...",
+      "shutdownPending": "Desligando...",
+      "rebootPending": "Reiniciando...",
+      "stopPending": "Parando..."
     },
     "confirm": {
       "forceStopTitle": "Forçar parada",
@@ -1134,7 +1138,8 @@
       "saveCustomCommandFailed": "Não foi possível salvar o comando de atualização personalizado: {message}",
       "removeCustomCommandConfirm": "Remover o comando de atualização personalizado para \"{name}\"?",
       "removeCustomCommandFailed": "não foi possível remover o comando de atualização personalizado: {message}",
-      "hideNoticeFailed": "Não foi possível ocultar este aviso: {message}"
+      "hideNoticeFailed": "Não foi possível ocultar este aviso: {message}",
+      "controlNotConfirmed": "A conclusão da operação não foi confirmada. Verifique o estado do convidado antes de tentar novamente."
     },
     "backupModal": {
       "title": "Backup {type} {vmid} ({name})",
@@ -1459,7 +1464,17 @@
       "checkReadOnlyHelp": "Lê o sistema operativo atual e os pacotes pendentes a partir dos índices existentes. Não instala nada nem atualiza os índices de pacotes.",
       "checkCooldown": "Já há uma verificação em execução ou pedida recentemente. Tente novamente dentro de {seconds} segundos.",
       "checkStale": "Verificação desatualizada",
-      "checkStaleHelp": "Este resultado tem mais de 48 horas ou não tem uma data de verificação válida. Execute uma nova verificação antes de confiar nele."
+      "checkStaleHelp": "Este resultado tem mais de 48 horas ou não tem uma data de verificação válida. Execute uma nova verificação antes de confiar nele.",
+      "checkSystemPackages": "Verificar pacotes do sistema",
+      "checkInProgress": "Verificação em andamento",
+      "refreshCheckHelp": "Atualiza os índices de pacotes e verifica as atualizações pendentes enquanto o contêiner está em execução. Nada é instalado.",
+      "notCheckedYet": "As atualizações ainda não foram verificadas.",
+      "checkStillRunning": "A verificação ainda está em execução. O resultado será salvo quando terminar.",
+      "checkBeforeUpdate": "Verificar atualizações primeiro",
+      "startBeforeCheck": "Inicie o contêiner e depois verifique as atualizações. A ausência do selo não significa que não haja atualizações.",
+      "runCustomCommand": "Executar comando personalizado",
+      "installedVersionUnverified": "A versão instalada não foi verificada. Não foi possível confirmar se há uma atualização disponível.",
+      "versionStatusUnknown": "A disponibilidade de atualização não foi verificada. As informações de versão estão indisponíveis ou incompletas."
     },
     "bulkUpdate": {
       "title": "Atualização em bloco",
@@ -1484,7 +1499,10 @@
       "saveFailed": "Não foi possível guardar a configuração de atualização em bloco.",
       "deleteFailed": "Não foi possível remover a configuração de atualização em bloco.",
       "planFailed": "Não foi possível preparar a atualização em bloco. Reveja os métodos indisponíveis.",
-      "loadFailed": "não foi possível carregar a configuração de atualização em massa."
+      "loadFailed": "não foi possível carregar a configuração de atualização em massa.",
+      "osDockerScope": "As atualizações do sistema operacional também incluem o Docker quando ele está instalado como pacote do sistema.",
+      "unverifiedTargetsHelp": "A disponibilidade de atualização de alguns itens selecionados não foi verificada. Ao iniciar, os métodos de atualização escolhidos serão executados mesmo sem uma nova versão confirmada.",
+      "dockerImageMethod": "Imagem Docker"
     },
     "appEditor": {
       "methodOciImage": "Imagem OCI (instalada pelo ProxMenux)",
@@ -2199,6 +2217,17 @@
         "gettingStartedDescription": "Um exemplo de prompt está pronto para ajudá-lo a começar. Você pode ajustá-lo, exportá-lo para compartilhar com outras pessoas ou importar um prompt da comunidade.",
         "loadExample": "Exemplo de carregamento",
         "startFromScratch": "Comece do zero"
+      },
+      "history": {
+        "title": "Histórico de notificações",
+        "description": "As últimas 20 notificações enviadas, incluindo cada execução do resumo diário, com o resultado de cada uma.",
+        "empty": "Nenhuma notificação foi enviada ainda.",
+        "loadFailed": "O histórico de notificações não pôde ser carregado.",
+        "sent": "Enviado",
+        "notSent": "Não enviado",
+        "severityInfo": "Info",
+        "severityWarning": "Aviso",
+        "severityCritical": "Crítico"
       }
     },
     "optimizations": {
@@ -3410,7 +3439,7 @@
       "webhookHttps": "As notificações do Proxmox chegam ao Monitor com HTTPS ativo — são entregues num endereço apenas local e já não falham por um erro de certificado.",
       "persistentLogs": "Uma rajada de erros nos logs que terminou já não é apresentada como persistente: um padrão tem de continuar a aparecer durante 15 minutos, e o seu aviso fecha-se sozinho (reportado por @Joshua1264).",
       "mountsLanAddress": "Os pontos de montagem em LVM-thin e outros armazenamentos em bloco mostram a sua utilização, e as aplicações com vários contentores abrem no seu endereço LAN.",
-      "ociManager": "OCI manager Apps (beta) — uma nova entrada no menu do ProxMenux instala aplicações a partir das suas imagens de contentor oficiais como LXC nativos do Proxmox, sem motor Docker. O catálogo reúne mais de 360 aplicações.",
+      "ociManager": "OCI manager Apps (Technology Preview) — uma nova entrada no menu do ProxMenux instala aplicações a partir das suas imagens de contentor oficiais como LXC nativos do Proxmox, sem motor Docker. O catálogo reúne mais de 360 aplicações.",
       "ociInMonitor": "Aplicações OCI no Monitor — o separador App reconhece-as, o separador Atualizações atualiza-as e modifica-as como o menu, e um separador Logs segue em direto a saída da consola da aplicação.",
       "ociAcceleration": "Aceleração por hardware para aplicações OCI — o instalador oferece apenas os perfis que o host pode executar: GPU NVIDIA, Intel e AMD e, para o Frigate, uma NPU Intel ou uma Coral. O NVIDIA Container Toolkit é instalado com o driver.",
       "ociRecovery": "Uma aplicação OCI viaja com o seu backup — restaurada neste host ou noutro, volta a ficar registada e gerida, e num cluster arranca no nó para onde for movida.",
@@ -4992,7 +5021,9 @@
   "lxcTerminal": {
     "title": "Terminal: {name} (ID: {id})",
     "errors": {
-      "invalidVmid": "VMID inválido – recusando-se a executar pct enter"
+      "invalidVmid": "VMID inválido – recusando-se a executar pct enter",
+      "noShell": "A imagem deste contêiner não possui shell, portanto não pode abrir um terminal. A sua saída está na aba Logs.",
+      "enterFailed": "Não foi possível entrar no contêiner."
     },
     "commands": {
       "listFiles": "Liste todos os arquivos com detalhes",
@@ -5225,7 +5256,8 @@
     "yes": "Sim",
     "yourInput": "Sua entrada:",
     "submit": "Enviar",
-    "ok": "OK"
+    "ok": "OK",
+    "endOfInput": "Fim da entrada"
   },
   "apps": {
     "searchPlaceholder": "Search app or CT…",

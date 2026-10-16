@@ -22,6 +22,7 @@ from flask import Flask, jsonify
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "AppImage/scripts"))
 import managed_installs as managed
+import lxc_check_job
 
 SERVER = ROOT / "AppImage/scripts/flask_server.py"
 FUNCTIONS = {
@@ -50,6 +51,9 @@ class ObservedStateRoutesTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
+        lock_patch = patch.object(lxc_check_job, 'LOCK_DIR', Path(self.temp.name))
+        lock_patch.start()
+        self.addCleanup(lock_patch.stop)
         self.conf = Path(self.temp.name) / "100.conf"
         self.conf.write_text("onboot: 0\nnet0: name=eth0,ip=dhcp\ntags: old\n")
         self.clock = Mock(time=Mock(return_value=1000), monotonic=Mock(return_value=1000))
@@ -140,6 +144,26 @@ class ObservedStateRoutesTests(unittest.TestCase):
         response = self.client.get("/api/vms")
         self.assertEqual(response.status_code, 200, response.json)
         return response.json[0]
+
+    def test_completed_shutdown_cannot_revert_to_stale_cluster_running(self):
+        self.running = False
+        self.scope['get_cached_pvesh_cluster_resources_vm'] = lambda: [
+            dict(type='lxc', node='fixture-pve', vmid=100, name='dev-trixie', status='running')]
+        for _ in range(3):
+            row = self.row()
+            self.assertEqual(row['status'], 'stopped', 'cached summary cannot override live local state')
+            self.assertEqual(row['ips'], [])
+        self.ip_probe.assert_not_called()
+        self.assertEqual(self.commands, [], 'status polling never enters the guest')
+
+    def test_completed_start_cannot_revert_to_stale_cluster_stopped(self):
+        self.running = True
+        self.scope['get_cached_pvesh_cluster_resources_vm'] = lambda: [
+            dict(type='lxc', node='fixture-pve', vmid=100, name='dev-trixie', status='stopped')]
+        row = self.row()
+        self.assertEqual(row['status'], 'running')
+        self.assertEqual(row['ip'], self.ip)
+        self.assertEqual(self.commands, [])
 
     def test_dhcp_change_after_ttl_without_lifecycle_and_api_compatibility(self):
         first = self.row()
@@ -359,6 +383,35 @@ class ObservedStateRoutesTests(unittest.TestCase):
         self.assertEqual(managed.get_registry()["items"][0]["_os_family"], "debian")
         self.assertEqual(self.row()["update_check"]["count"], 0)
 
+    def test_daily_successful_check_clears_an_older_failed_check_marker(self):
+        marker = Path(self.temp.name) / 'proxmenux-lxc-check-invalid-100'
+        marker.touch()
+
+        with patch.object(managed, '_refresh_lxc_pkg_cache_if_stale', return_value={}):
+            managed.check_for_updates()
+
+        self.assertFalse(marker.exists())
+        self.assertIsNone(managed.get_registry()['items'][0]['update_check']['error'])
+
+    def test_daily_check_keeps_a_marker_created_after_it_started(self):
+        marker = Path(self.temp.name) / 'proxmenux-lxc-check-invalid-100'
+        marker.touch()
+        os.utime(marker, ns=(2_000, 2_000))
+
+        with patch.object(managed.time, 'time_ns', return_value=1_000):
+            managed.check_for_updates()
+
+        self.assertTrue(marker.exists())
+
+    def test_daily_check_does_not_clear_marker_when_result_cannot_be_persisted(self):
+        marker = Path(self.temp.name) / 'proxmenux-lxc-check-invalid-100'
+        marker.touch()
+
+        with patch.object(managed, '_write_registry', return_value=False):
+            managed.check_for_updates()
+
+        self.assertTrue(marker.exists())
+
     def test_existing_global_refresh_route_keeps_its_collector_contract(self):
         with patch.object(managed, "_DETECTORS", [managed._detect_lxc_containers]), \
                 patch.object(managed, "_refresh_lxc_pkg_cache_if_stale", return_value={}) as refresh:
@@ -368,10 +421,13 @@ class ObservedStateRoutesTests(unittest.TestCase):
         self.assertEqual(managed.get_registry()["items"][0]["_os_family"], "debian")
 
     def test_existing_lifecycle_refresh_keeps_index_refresh_default(self):
+        marker = Path(self.temp.name) / 'proxmenux-lxc-check-invalid-100'
+        marker.touch()
         with patch.object(managed, "_refresh_lxc_pkg_cache_if_stale", return_value={}) as refresh:
             item = managed.refresh_lxc(100)
         refresh.assert_called_once_with("100", "debian")
         self.assertEqual(item["update_check"]["_count"], 0)
+        self.assertFalse(marker.exists())
 
     def test_other_lxc_has_independent_ip_cache_and_manual_rate_limit(self):
         conf200 = Path(self.temp.name) / "200.conf"
