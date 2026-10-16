@@ -355,6 +355,7 @@ class ScheduledStoppedContainerTests(unittest.TestCase):
         self.assertEqual(outcome["status"], "skipped")
         self.assertEqual(outcome["executed_targets"], [])
         self.assertIn("container is stopped", outcome["reason"])
+        self.assertEqual(outcome["reason_code"], "stopped_container")
         runner.assert_not_called()
         self.assertEqual(finalizer.call_args.kwargs["status"], "skipped")
         self.assertEqual(finalizer.call_args.kwargs["source"], "scheduled")
@@ -409,6 +410,7 @@ class ScheduledStoppedContainerTests(unittest.TestCase):
         self.assertEqual(outcome["status"], "skipped")
         self.assertEqual(outcome["executed_targets"], [])
         self.assertIn("before scheduled update could begin", outcome["reason"])
+        self.assertEqual(outcome["reason_code"], "stopped_container")
         self.assertEqual(runner.call_args.args[0], ["bash", "/bin/true"])
         self.assertEqual(runner.call_args.kwargs["env"]["EXECUTION_MODE"], "scheduled")
         self.assertTrue(runner.call_args.kwargs["env"]["SCHEDULED_STOPPED_MARKER"].startswith(

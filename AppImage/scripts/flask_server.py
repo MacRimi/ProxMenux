@@ -22700,6 +22700,7 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
     requested_target = sched.get("target") or "both"
     deferred_targets: list[str] = []
     reasons: list[str] = []
+    reason_code: str | None = None
     reboot_required: bool | None = None
     reboot_packages: list[str] = []
     reboot_check_error: str | None = None
@@ -22751,6 +22752,7 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
             'status': status,
             'target': actual_target,
             'reason': reason,
+            'reason_code': reason_code,
             'run_id': run_id,
             'requested_targets': requested_targets,
             'executed_targets': list(executed),
@@ -22763,6 +22765,7 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
         }
 
     if not originally_running:
+        reason_code = 'stopped_container'
         reasons.append('container is stopped; scheduled update was skipped')
         return finish('skipped', requested_target, [])
 
@@ -22978,6 +22981,7 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
                 timeout=60 * 60,
             )
         if _scheduled_runner_reported_stopped(r, log_path, scheduled_stopped_marker):
+            reason_code = 'stopped_container'
             reasons.append('container was stopped before scheduled update could begin')
             return finish('skipped', target, [])
         reboot_required, reboot_packages, reboot_check_error = (
@@ -23055,12 +23059,14 @@ def _scheduler_loop():
                     status = outcome.get('status') or 'failure'
                     actual_target = outcome.get('target') or 'both'
                     reason = outcome.get('reason')
+                    reason_code = outcome.get('reason_code')
                     try:
                         lxc_apps.record_schedule_run(
                             _vmid,
                             status,
                             actual_target,
                             reason,
+                            reason_code=reason_code,
                             log_name=outcome.get('log_name'),
                             reboot_required=outcome.get('reboot_required'),
                             reboot_packages=outcome.get('reboot_packages'),

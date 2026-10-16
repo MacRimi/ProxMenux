@@ -1288,6 +1288,7 @@
       "runFailed": "✗ failed",
       "runDeferred": "held for safety",
       "runSkipped": "nothing pending",
+      "reasonStoppedContainer": "Container is stopped; scheduled update was skipped.",
       "releaseDelaySummary": "{days}-day release hold",
       "releaseDelayLabel": "Wait after a new app release",
       "releaseDelayNone": "No waiting period",

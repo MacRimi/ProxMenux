@@ -94,6 +94,7 @@ _VALID_UPSTREAM_TYPES = ("github", "http_json", "docker_hub")
 # `*/N` step, and comma lists — that covers every preset the UI
 # exposes and the freeform "custom" text field.
 _VALID_SCHEDULE_TARGETS = ("os", "app", "both")
+_SCHEDULE_REASON_CODES = frozenset({"stopped_container"})
 _SCHEDULE_TARGET_ID_RE = re.compile(
     r"^(?:os|apps|oci_image|app:[A-Za-z0-9_-]{1,64}|docker-engine|docker-(?:compose|container):[A-Za-z0-9][A-Za-z0-9_.-]{0,127}|docker-unit:[a-f0-9]{20})$"
 )
@@ -3918,6 +3919,7 @@ def record_schedule_run(
     target: str,
     reason: Optional[str] = None,
     *,
+    reason_code: Optional[str] = None,
     log_name: Optional[str] = None,
     reboot_required: Optional[bool] = None,
     reboot_packages: Optional[list[str]] = None,
@@ -3937,6 +3939,10 @@ def record_schedule_run(
             sidecar["schedule"]["last_run_reason"] = str(reason)[:300]
         else:
             sidecar["schedule"].pop("last_run_reason", None)
+        if reason_code in _SCHEDULE_REASON_CODES:
+            sidecar["schedule"]["last_run_reason_code"] = reason_code
+        else:
+            sidecar["schedule"].pop("last_run_reason_code", None)
         if log_name:
             sidecar["schedule"]["last_run_log"] = os.path.basename(str(log_name))[:220]
         else:
