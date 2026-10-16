@@ -1,0 +1,87 @@
+{
+  "meta": {
+    "title": "Proxmox Commands Reference qm, pct, vzdump, zpool, pveversion ProxMenux",
+    "description": "Cured reference of essential Proxmox VE a príkazy Linuxu organizované podľa témy: kontrola systému, VM a LXC management (qm / pct), storage a disky, vytváranie sietí, aktualizácie, GPU priechod, ZFS, zálohovanie a obnova, a každodenný CLI nástroje.",
+    "ogTitle": "Proxmox Commands Reference Qm, pct, vzdump, zpool",
+    "ogDescription": "Cured reference of the najužitočnejšie Proxmox VE a príkazy Linux, zoskupené podľa témy systému, VM/CT, úložisko, sieť, aktualizácie, GPU priechod, ZFS, zálohy a CLI nástroje.",
+    "twitterTitle": "Proxmox Commands Reference ProxMenux",
+    "twitterDescription": "Curated referencie najužitočnejších Proxmox VE a Linux príkazy, zoskupené podľa témy."
+  },
+  "header": {
+    "title": "Pomoc a informácie",
+    "description": "Curated compendium of usual Linux a Proxmox VE príkazy organizované podľa témy. Deväť kategórií pokrýva všetko od rýchlej kontroly pveversion až po multi-line zfs send/ received GPU, disk a zdieľať časti ProxMenux ako odkaz na jednu zastávku.",
+    "section": "Pomoc a informácie"
+  },
+  "intro": {
+    "title": "Čo to je?",
+    "body": "Referenčný katalóg príkazov, ktoré skutočne používate na Proxmox host, zoskupený podľa témy. Vnútri ProxMenux si môžete vybrať číslo pre spustenie príkazu priamo alebo vložiť vlastné na výzvu; na tejto stránke je každá kategória stola copy-paste."
+  },
+  "opening": {
+    "heading": "Otvorenie menu",
+    "body": "Z hlavného menu ProxMenux stlačte tlačidlo <kbd>h</kbd>. Uvidíte toto:",
+    "imageAlt": "Poradenské a informačné menu s 9 kategóriami príkazov"
+  },
+  "categories": {
+    "heading": "Deväť kategórií",
+    "options": [
+      {
+        "icon": "Terminal",
+        "href": "/docs/help-info/system-commands",
+        "title": "Užitočné systémové príkazy",
+        "description": "pveversion, uptime, free, journalctl, hosnamectl, aktuálne informácie o užívateľovi, audit lynis, fastfetch."
+      },
+      {
+        "icon": "Cpu",
+        "href": "/docs/help-info/vm-ct-commands",
+        "title": "Správa VM a CT",
+        "description": "qm list / config / start / stop / migrate, pct list / config / enter, snapshots, cloning."
+      },
+      {
+        "icon": "HardDrive",
+        "href": "/docs/help-info/storage-commands",
+        "title": "Úložiská a disky",
+        "description": "lsblk, blkid, smartctl, informácie o montáži, stav pvesm, príkazy LVM."
+      },
+      {
+        "icon": "Network",
+        "href": "/docs/help-info/network-commands",
+        "title": "Sieťové príkazy",
+        "description": "ip / ss / nmcli, bridge inspection, ping / traceroute, DNS lookups, fail2ban-client."
+      },
+      {
+        "icon": "Package",
+        "href": "/docs/help-info/update-commands",
+        "title": "Aktualizácie a balíky",
+        "description": "apt update / dist-upgrade, apt-cache policy, dpkg queries, repo file checks."
+      },
+      {
+        "icon": "Cpu",
+        "href": "/docs/help-info/gpu-commands",
+        "title": "GPU",
+        "description": "lspci / dmesg checks, IOMMU enablement verification, vfio-pci binding, GPU usage from the host."
+      },
+      {
+        "icon": "Database",
+        "href": "/docs/help-info/zfs-commands",
+        "title": "Správa ZFS",
+        "description": "zpool / zfs príkazy pre stav, súbory údajov, snímky, odosielanie/prijímanie, ladenie ARC, orezávanie."
+      },
+      {
+        "icon": "Archive",
+        "href": "/docs/help-info/backup-commands",
+        "title": "Zálohovanie a obnova",
+        "description": "vzdump, qmrestore / pct obnoviť, Proxmox Backup Server pomocníci, snímkové operácie."
+      },
+      {
+        "icon": "Wrench",
+        "href": "/docs/help-info/tools-commands",
+        "title": "Systémové CLI nástroje",
+        "description": "tmux, obrazovka, htop / btop, ncdu, jq, kopať, lsof, sledovať"
+      }
+    ]
+  },
+  "tip": {
+    "title": "Hľadať z globálneho vyhľadávania",
+    "body": "Každý príkaz na týchto stránkach je indexovaný vyhľadávaním dokumentácie. Ak si pamätáte vlajku alebo fragment, ale nie na ktorej strane je, hit vyhľadávacieho panela na vrchole"
+  }
+}

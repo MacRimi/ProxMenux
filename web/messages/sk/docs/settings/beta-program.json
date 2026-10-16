@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "title": "Zmeniť kanál uvoľňovania ProxMenux Dokumentácia",
+    "description": "Prepnúť ProxMenux medzi kanálmi Stable (hlava) a Beta (vývoj) v jednom dialógu. Obojsmerný, nemenný, prevádzkuje oficiálny inštalátor pre zvolený kanál a normalizuje službu Monitor.",
+    "ogTitle": "Zmeniť kanál uvoľňovania ProxMenux Dokumentácia",
+    "ogDescription": "Jeden Nastavenia možnosť prepínať medzi Stable a Beta kanály"
+  },
+  "header": {
+    "title": "Zmeniť kanál uvoľnenia",
+    "description": "Jednou jednotnou možnosťou nastavenia je prepínanie ProxMenux medzi kanálmi Stable (hlavná vetva) a Beta (rozvojová vetva). Predchádzajúci jednosmerný \"Deaktivovať Beta program\" bol nahradený obojsmerným dialógom, ktorý vždy ponúka oba smery a prevádzkuje oficiálny inštalátor pre akýkoľvek kanál si vyberiete.",
+    "section": "Nastavenia"
+  },
+  "intro": {
+    "title": "Čo sa zmenilo?",
+    "body": "Predošlé verzie ProxMenux vystavené dva samostatné toky Sú zlúčené do jedného <strong>Change Release Channel</strong> záznam, ktorý je vždy prítomný, ukazuje aktuálny kanál a umožňuje prevrátiť medzi Stable a Beta v oboch smeroch."
+  },
+  "why": {
+    "heading": "Prečo táto možnosť existuje",
+    "intro": "ProxMenux lodí z dvoch vetiev:",
+    "items": [
+      "<strong>Stabilná</strong>  <code>main</code> vetva. Čo README poukazuje na to, čo väčšina operátorov chce, s pomalším uvoľnením kadency a len zmeny, ktoré už prešli beta validáciou.",
+      "<strong>Beta</strong>  <code>develop</code> vetva. Novšie funkcie a Monitor stavia; nesie štítok ďalšie stabilné vydanie zdedí. Niektoré veci nemusia fungovať perfektne, že je dohoda sa prihlásite a spôsob, ako nové funkcie sa testujú pred tým, než loď."
+    ],
+    "outro": "Hopping medzi kanálmi, ktoré sa používajú na zapamätanie správneho inštalačného URL, kopírovanie z README, a editovanie <code>config.json</code> ručne, ak sa niečo dostalo von zo synchronizácie. Jednotná možnosť predstavuje celý tok ako jedinú usmerňovanú akciu."
+  },
+  "dialog": {
+    "heading": "Dialóg",
+    "intro": "Z hlavného menu, <strong>0Nastavenia → Zmeniť uvoľňovací kanál</strong>. Zobrazí sa dvojriadkové menu:",
+    "options": [
+      "<code>stable</code>",
+      "<code>beta</code>"
+    ],
+    "behaviour": "Aktuálny kanál je vopred vybraný a zobrazený v hornej časti menu. Vyberanie rovnakého kanála vracia priateľský Vyberanie iného kanála sa objaví potvrdenie so špecifickým textom kanála:",
+    "directions": [
+      "<strong>Stable → Beta:</strong> varuje, že beta stavby môžu obsahovať chyby alebo neúplné funkcie.",
+      "<strong>Beta → Stable:</strong> varuje, že beta aktualizácie kontroly sa zastaví a stabilný inštalátor bude znovu inštalovať Stabilné kanály komponenty."
+    ]
+  },
+  "confirm": {
+    "heading": "Čo sa stane, keď potvrdíte",
+    "items": [
+      "<strong>Stiahne oficiálneho inštalátora</strong> pre cieľový kanál:<ul><li>Stabilné: <code>install_proxmenux.sh</code> od <code>main</code></li><li>Beta: <code>install_proxmenux_beta.sh</code> od <code>develop</code></li></ul>Stiahnutie je overené, že existuje a spustiteľné pred ďalším krokom.",
+      "<strong>0Runs the installer</strong> end-to-end. Inštalatér je ten istý, ktorý README publikuje bez vlastnej cesty, bez skratky. To znamená, že existujúca detekcia komponentov, zálohovanie súborov, inštalácie závislosti, zachovanie jazyka atď. sa správajú rovnako ako nová inštalácia cieľového kanála.",
+      "Pri prepnutí na <strong>Stable</strong>, menu potom scvrkne akékoľvek zvyšné beta metaúdaje z <code>config.json</code>: <code>beta_program</code>, <code>beta_version</code>, <code>install_branch</code>, <code>update_available.beta*</code> sa odstránia a <code>proxmenux_monitor.status = beta_updated</code> sa normalizuje na <code>updated</code>. Zvyškový súbor <code>beta_version.txt</code> a akýkoľvek stiahnutý beta inštalátor sú odstránené.",
+      "Pri prepnutí na Stabilný monitor systemd súbor jednotky je tiež prepísaný zo šablóny Stable (stráca príponu od popisu jednotky, body <code>ExecStart</code> Späť na Runtime dir) tak čerstvá <code>systemctl status</code> Odzrkadľuje kanál, na ktorom ste.",
+      "Znovu načíta konfiguračné menu. Ďalšia návšteva <em>Show Version Information</em> ukáže nový kanál."
+    ]
+  },
+  "switching": {
+    "heading": "Prepínam dopredu a dozadu",
+    "intro": "Oba smery prejdú rovnakým inštalátorom, ktoré sú <strong>0not</strong> špeciálne-cased odinštalovať + reinštalovať toky. Každý smer jednoducho spustí vlastný inštalátor kanála, ktorý je navrhnutý tak, aby bol nepozorný a bezpečný na opätovné vykonanie existujúcej inštalácie. Praktické dôsledky:",
+    "items": [
+      "Váš existujúci config, ProxMenux Monitor login (<code>auth.json</code>), oznamovacie kanály, register po inštalácii, vlastné prahy Prepínač kanála iba vymení skriptový strom a binárny AppImage.",
+      "Monitor, ktorý bol aktívny pred spínačom zostane aktívny po; ten, ktorý bol deaktivovaný, zostane deaktivovaný.",
+      "ProxMenux Monitor <code>auth.json</code>, API žetóny a JWT tajomstvo sú zachované cez zmeny kanálov. Sedenia sa nezaznamenávajú.",
+      "Môžete flip kanály toľkokrát, koľkokrát sa vám páči Nie je potrebný reštart Proxmoxu.",
+      "Inštalátor prepínača kanála nahradí vlastný skriptový strom ProxMenux, takže nemôže bežať vo vnútri prehliadača terminálu monitora (že PTY by bolo roztrhané v polovici aktualizácie a nechať dialóg uviazol). Ak spustíte možnosť odtiaľ, potvrdenie je nahradené informačným msgboxom zobrazujúcim jednoriadkový inštalátor pre cieľový kanál; spustite príkaz z SSH relácie alebo konzoly Proxmox."
+    ]
+  },
+  "feedback": {
+    "heading": "Správy o emisiách beta",
+    "intro": "Ak sa niečo správa nečakane, keď ste na kanáli Beta, otvorenie problému s dostatočným kontextom je to, čo uzatvára medzeru k stabilnému uvoľňovaniu. Najužitočnejšia správa obsahuje:",
+    "items": [
+      "Čo si urobil a čo si čakal, že sa stane.",
+      "Všetky chybové správy zobrazené na obrazovke.",
+      "Príslušné protokoly monitora:"
+    ],
+    "logsCommand": "journalctl -u proxmenux-monitor -n 50 --no-pager",
+    "versionLine": "Aktuálna verzia ProxMenux (Nastavenia → <link>Ukázať informácie o verzii</link>).",
+    "issueLine": "Otvorte <ghlink>0GitHub vydanie</ghlink> s týmito informáciami a dostaneme sa k oprave rýchlejšie."
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent",
+    "intro": "Ak uprednostňujete shell alebo skriptujete prepínač kanálov, dialóg je len tenký obal okolo týchto príkazov:"
+  },
+  "unifiedCallout": {
+    "title": "Prečo sú oba smery teraz jednou možnosťou",
+    "body": "Predošlá Deaktivácia Beta Programu existovala len vtedy, ak sa hostiteľ niekedy pripojil k beta. Operátori, ktorí chceli <em>0 pripojiť</em>, museli nájsť inštalačné URL beta inde; operátori, ktorí chcú <em>leave</em> niekedy museli ručne čistiť <code>beta_*</code> metaúdaje, aby si boli istí. Jednotný <strong>Change Release Channel</strong> možnosť vždy ukáže, robí súčasný kanál explicitný, a zaobchádza s oboma smermi ako rovnaký druh operácie"
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "downloadTitle": "Nepodarilo sa stiahnuť inštalatéra",
+    "downloadBody": "Odchádzajúci HTTPS na <code>raw.githubusercontent.com</code> zlyhal. Skontrolujte pripojenie a DNS z hostiteľa:",
+    "downloadCmd": "curl -fsSL -o /tmp/test https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh && head -1 /tmp/test",
+    "downloadOutro": "Ak toto zlyhá mimo ProxMenux, je to sieťový / proxy problém na hostiteľa.",
+    "errorsTitle": "Installer skončil s chybami",
+    "errorsBody": "Inštalátor vynoril nenulový výstupný kód. Predchádzajúci kanál a všetky už nainštalované komponenty zostávajú tak, ako boli pred prepínačom. Znovu spustiť akciu; ak to stále zlyháva, spustite inštalátor ručne z shellu (pozri manuálny ekvivalent vyššie)",
+    "configTitle": "Nie je možné aktualizovať konfiguračný súbor po prepnutí na Stable",
+    "configBody": "Vyčistenie beta metadát po inštalácii zlyhalo, zvyčajne preto, že <code>config.json</code> má syntax chybu z manuálnej úpravy. Overte ho:",
+    "configCmd": "jq . /usr/local/share/proxmenux/config.json",
+    "configOutro": "Fix alebo obnoviť súbor a znovu spustiť možnosť."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/settings/show-version-information",
+        "label": "Zobraziť informácie o verzii",
+        "tail": " — Potvrďte, ktorý kanál je teraz aktívny."
+      },
+      {
+        "href": "/docs/settings/proxmenux-monitor",
+        "label": "ProxMenux Monitor",
+        "tail": " — "
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Prehľad nastavení",
+        "tail": "."
+      }
+    ]
+  }
+}

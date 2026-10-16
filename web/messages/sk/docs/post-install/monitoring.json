@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "title": "Post-install: Monitoring ProxMenux Dokumentácia",
+    "description": "Možnosti monitorovania v ProxMenux Prispôsobiteľný post-inštalačný skript. V súčasnosti jediná možnosť: nainštalujte OVH Real-Time Monitoring (RTM), ktorý aktivuje iba vtedy, ak je hostiteľ detekovaný ako OVH server."
+  },
+  "header": {
+    "title": "Po inštalácii: monitorovanie",
+    "description": "Možnosti monitorovania vo vnútri prispôsobiteľného post-inštalačného skriptu. Táto kategória je malá a poskytovateľ-špecifická",
+    "section": "Nastavenie Proxmoxu po inštalácii"
+  },
+  "intro": {
+    "title": "Úzky rozsah účelu",
+    "body": "Monitorovanie po inštalácii je obmedzené na <strong>one špecifický agent </strong>. Všeobecné monitorovanie (Prometheus, Grafana, node_exporter) je mimo rozsahu, pretože tie si vyžadujú architektonické rozhodnutia (samostatný hostiteľ alebo nie, uchovávanie údajov, upozorňovanie ciele), ktoré nie sú vhodné jedno-kliknite post-inštalovať krok. ProxMenux Monitor sám, zviazané s ProxMenux, vypĺňa väčšinu tejto úlohy bez nutnosti externého agenta."
+  },
+  "ovh": {
+    "heading": "Inštalovať OVH monitorovanie v reálnom čase (RTM)",
+    "intro": "Ak je váš Proxmox hostiteľ špecializovaný server prenajatý z <a>0Hcloud</a>, môžete RTM povoliť vystaviť hardvérovú telemetriu (teplotu CPU, stav PSU, stav disku SMART, stav ovládača RAID atď.) riadiacemu panelu OVH. To je rovnaký agent OVH používa pre ich vlastné funkcie \"Server Monitoring.\"",
+    "decisionsTitle": "Ako sa rozhoduje ProxMenux",
+    "decisionsItems": [
+      "Získa IP prostredníctvom <code>curl ipinfo.io/ip</code>.",
+      "Vyhľadáva vlastný ISP s dotazom <code>whois</code> na <code>v4.whois.cymru.com</code>.",
+      "Ak sa výsledok zmieňuje o OVH, privedie <code>last-public-ovh-infra-yak.snap.mirrors.ovh.net/yak/archives/apply.sh</code> a privedie ho do <code>bash</code> s RTM v2 bábkovým manifestom.",
+      "Ak výsledok robí <em>0not</em> spomenúť OVH, nič nie je nainštalovaný. Voľba je žiadna."
+    ],
+    "remoteTitle": "Vzdialený skript na bash",
+    "remoteBody": "Inštalácia beží <code>wget -qO - https://…apply.sh | bash</code>. Ak OVH zrkadlo je niekedy ohrozená, skript vykonáva ako koreň na hostiteľa. Pred umožnením tejto možnosti sa rozhodnite, či dôverujete zrkadlovej reťazi OVH viac ako monitorovaniu, ktoré získate. Pre väčšinu domácich-lab alebo non-OVH užívateľov by táto možnosť mala jednoducho zostať mimo.",
+    "noOpTitle": "Povoliť iba vtedy, ak je hostiteľ skutočne na OVH",
+    "noOpBody": "Voľba je no-op na non-OVH serveroch, takže zaškrtnutie na domovskej labke Proxmox nič nezlomí. Na non-OVH hostiť skript tlače <em>\"Nie OVH server, preskočiť RTM inštaláciu\"</em> a výstupy čisto; žiadne balíky nie sú nainštalované.",
+    "runsTitle": "Čo ProxMenux beží",
+    "verifyTitle": "Overenie",
+    "verifyBody": "Na skutočné OVH hostiteľa, po reštarte by ste mali vidieť <a>RTM prístrojová doska</a> vo vašom OVH Manager obsadené živými dátami pre hostiteľa. Na strane Proxmox, RTM kolektor je systemd servis",
+    "troubleTitle": "Riešenie problémov",
+    "revertTitle": "Nie sú reverzibilné z menu Odinštalovať",
+    "revertBody": "Pre RTM nie je žiadny vyhradený odinštalačný záznam. Na skutočnom hostiteľovi OVH odstráňte balíky ručne s <code>apt purge ovh-*</code> a odstráňte všetky bábkové manifesty pod <code>/etc/puppet/</code>, ktoré RTM inštaloval. Na hostiteľa, ktorý nie je OVH, nebolo nikdy nič nainštalované, takže nie je čo vrátiť."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "ProxMenux Monitor",
+        "href": "/docs/settings/proxmenux-monitor",
+        "tail": " — "
+      },
+      {
+        "label": "Užitočné systémové príkazy",
+        "href": "/docs/help-info/system-commands",
+        "tail": " — "
+      },
+      {
+        "label": "Prispôsobiteľné Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — Späť do rodičovského menu."
+      }
+    ]
+  }
+}

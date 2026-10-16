@@ -1,0 +1,404 @@
+{
+  "meta": {
+    "title": "Aplikácie pre viac kontajnerové lode ProxMenux",
+    "description": "Ako OCI manažér Apps zmení aplikáciu so svojou databázou a vyrovnávaciu pamäť na koordinované natívne LXC: plán, súkromná sieť, závislý hák, validácia a aktualizácie transakcií."
+  },
+  "header": {
+    "title": "Aplikácie s viacerými kontajnermi",
+    "description": "Aplikácia so svojou databázou, vyrovnávacou pamäťou a ďalšími službami sa stáva niekoľkými koordinovanými LXC, nainštalovanými a aktualizovanými ako jedna.",
+    "section": "Správca OCI aplikácií"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Jedna aplikácia pre užívateľa, niekoľko LXC pre Proxmox VE",
+            "body": "Definícia viacerých kontajnerov je jedným záznamom v katalógu. Inštalátor vytvorí jeden natívne LXC za službu a udržuje ich závislosť explicitná. Immich, Nextcloud, Paperless-ngx a Tandoor sú nainštalované týmto spôsobom."
+          }
+        },
+        {
+          "mermaid": {
+            "chartCode": "flowchart LR\n C[\"Docker Compose\"] --> O[\"{{plan}}\"]\n O --> A[\"{{app}}<br/>{{appNet}}\"]\n O --> D[\"{{db}}<br/>{{private}}\"]\n O --> R[\"{{cache}}<br/>{{private}}\"]\n V1[(\"config\")] --> A\n V2[(\"database\")] --> D\n V3[(\"cache\")] --> R\n D --> A\n R --> A",
+            "labels": {
+              "plan": "Stack plán",
+              "app": "Aplikácia LXC",
+              "appNet": "LAN + súkromné",
+              "db": "PostgreSQL LXC",
+              "cache": "Valkey LXC",
+              "private": "súkromné"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "plan",
+      "title": "1. Plán, pred akýmkoľvek kontajnerom existuje",
+      "blocks": [
+        {
+          "p": "Pri interpretácii definície kompozície sa nevytvára LXC. Kompletný plán je na prvom mieste, s každým členom, image, VMID, sieť, cesta, tajné, poriadok a zdravotné kontroly. Ak plán nie je konzistentný, inštalácia sa nezačne."
+        },
+        {
+          "table": {
+            "headers": [
+              "Prvok plánu",
+              "Obsah",
+              "Zaškrtnuté pred vytvorením niečoho"
+            ],
+            "rows": [
+              [
+                "Členovia",
+                "Hlavná aplikácia, databáza, vyrovnávacia pamäť, strojové učenie a iné závislosti",
+                "Jedinečné VMID, známe úlohy a presne jeden hlavný člen"
+              ],
+              [
+                "Obrazy",
+                "Odkaz na valcovanie, architektúra a vyriešené trávenie každej služby",
+                "Všetky existujú, podporovať architektúru a prejsť kontrolu integrity OCI"
+              ],
+              [
+                "Sieť",
+                "Súkromný most, podsiete, pevná adresa pre každú službu a prístup LAN pre hlavného člena",
+                "Žiadna zrážka s existujúcimi mostmi alebo podsietami a žiadna opakovaná adresa"
+              ],
+              [
+                "Perzistencia",
+                "Kontajnerové disky, hostiteľské adresáre, majitelia a zálohovanie",
+                "Nie sú k dispozícii žiadne prekrývajúce sa cesty, ukladanie a deklarované povolenia"
+              ],
+              [
+                "Tajomstvá",
+                "Databázové heslo, aplikačné kľúče a počiatočné údaje",
+                "Generované raz a podané iba členom, ktorí ich používajú"
+              ],
+              [
+                "Životný cyklus",
+                "Spustiť objednávku, zastaviť objednávku a zdravotnú prehliadku každého člena",
+                "Hlavná aplikácia začína posledný a zastaví sa prvý"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "create",
+      "title": "2. Vytvorenie, člen podľa členov",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Rezervujte každý VMID",
+                "body": "Súpis Proxmox VE a inštančný register sú kontrolované. Existujúce CT nie je prijaté a zmluva, ktorá stále patrí do inej inštancie, sa opätovne nepoužíva."
+              },
+              {
+                "title": "Pripravte každý obrázok",
+                "body": "Všetky obrázky sú vyriešené, stiahnuté a overené pred vytvorením prvého kontajnera."
+              },
+              {
+                "title": "Vytvoriť každý rootfs",
+                "body": "Oficiálne metaúdaje OCI sa dovážajú a pridáva sa identifikácia inštancie ProxMenux a úloha člena."
+              },
+              {
+                "title": "Súkromná sieť",
+                "body": "Vytvorí sa most a podsieť a každý člen dostane svoju pevnú adresu; iba hlavný člen dostane rozhranie LAN."
+              },
+              {
+                "title": "Perzistencia",
+                "body": "Každá databáza a konfigurácia dostane svoj vlastný disk kontajnera; iba údaje určené na zdieľanie používajú adresáre hostiteľov."
+              },
+              {
+                "title": "Životné prostredie",
+                "body": "Interné koncové body, zdieľané tajomstvá a servisné premenné sú napísané. Aplikácia dosahuje svoju závislosť na ich vyhradených súkromných adresách."
+              },
+              {
+                "title": "Záznam",
+                "body": "Každý člen zaznamenáva svoju prirodzenú konfiguráciu, rootfs zmeny, ktoré aktualizácie musia reprodukovať a jeho vzťah k stohu."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "checks",
+      "title": "3. Spustiť a skontrolovať každý kontajner",
+      "intro": "Vytvorená LXC neznamená ready servis. Závislosti začínajú v poradí a každý z nich prejde kontrolou špecifickou pre svoju službu.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Služba",
+              "Poraďte",
+              "Čo ukazuje"
+            ],
+            "rows": [
+              [
+                "PostgreSQL",
+                "<code>pg_isready</code> v CT s očakávaným hostiteľom, používateľom a databázou",
+                "Server akceptuje spojenia pre nakonfigurovanú databázu"
+              ],
+              [
+                "Redis / Valkey",
+                "<code>redis-cli</code>0 alebo <code>valkey-cli</code> <code>PING</code> proti jeho súkromnej adrese",
+                "Sprostredkovateľ počúva a odpovedá"
+              ],
+              [
+                "Immich strojové učenie",
+                "HTTP <code>GET /ping</code>, plus kontrola zvoleného času spustenia GPU",
+                "Odpovede na službu a požadované zrýchlenie sa nevrátili do CPU"
+              ],
+              [
+                "Nextcloud",
+                "<code>GET /status.php</code> s <code>installed=true</code>, <code>maintenance=false</code> a <code>needsDbUpgrade=false</code>",
+                "Inicializácia ukončená bez ďalšej migrácie"
+              ],
+              [
+                "Paperless-ngx / Tandoor",
+                "HTTP na adrese LAN a skutočnom porte služby",
+                "Čelník a jeho závislosti slúžia aplikácii"
+              ],
+              [
+                "Hlavné uplatnenie",
+                "Parameter jeho šablóny, napríklad <code>/api/server/ping</code> v Immich",
+                "Celý zásobník pracuje prostredníctvom aplikácie, ktorá používa závislosti"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "beh nie je zdravý",
+            "body": "Bežiaci štát len hovorí, že proces LXC existuje. Tam, kde služba ponúka lepšiu kontrolu, sa používa exec alebo HTTP kontrola s časovým limitom. Ak člen zastaví alebo zlyhá jeho kontrola, zásobník nie je deklarovaný ako nainštalovaný."
+          }
+        }
+      ]
+    },
+    {
+      "id": "hook",
+      "title": "4. Závislosť",
+      "blocks": [
+        {
+          "p": "Háčik je nastavený len na hlavný kontajner závislého zásobníka. Proxmox VE drží scenár ako striptíz a spustí ho ako <code>hookscript</code> z toho CT. Recept na stack nie je napísaný v scenári: žije v samostatnej súkromnej zmluve."
+        },
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Hlavné nastavenie CT",
+                "code": "hookscript: local:snippets/proxmenux-stack-dependencies.sh"
+              },
+              {
+                "title": "Súkromná zmluva (príklad)",
+                "code": "/etc/pve/priv/proxmenux-stack-VMID.json\n{\n  \"schema\": 1,\n  \"stack\": \"immich\",\n  \"dependencies\": [\n    {\"vmid\": 107, \"label\": \"PostgreSQL\", \"healthcheck\": {...}},\n    {\"vmid\": 108, \"label\": \"Valkey\", \"healthcheck\": {...}},\n    {\"vmid\": 106, \"label\": \"Machine Learning\", \"healthcheck\": {...}}\n  ]\n}"
+              }
+            ]
+          }
+        },
+        {
+          "snippet": {
+            "summary": "Kompletný zdroj proxmenux-stack-dependencies.sh",
+            "pathCode": "local:snippets/proxmenux-stack-dependencies.sh",
+            "snippetCode": "stackDependencyHook"
+          }
+        },
+        {
+          "p": "Skript je rovnaký pre každý zásobník. VMID, názvy, kontrolné typy a timeouty pochádzajú zo súkromného kontraktu <code>/etc/pve/priv/proxmenux-stack-VMID.json</code> každého zásobníka."
+        },
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Proxmox VE predštartuje",
+                "body": "Pred hlavnou CT začne, háčik beží s jeho VMID a fázy životného cyklu."
+              },
+              {
+                "title": "Zámok na zásobník",
+                "body": "<code>flock</code> na <code>/run/lock/proxmenux-stack-VMID.lock</code> zabraňuje dvom štartovým sekvenciám súčasne."
+              },
+              {
+                "title": "Zmluva je prečítaná a overená",
+                "body": "Požaduje sa známa schéma, numerické závislosti, etikety, exec, http alebo kontrola chodu a pozitívny timeout."
+              },
+              {
+                "title": "Závislosti v poradí",
+                "body": "Každý CT musí existovať; zastavený sa spustí a jeden už beží nie je reštartovaný."
+              },
+              {
+                "title": "Čakajte na zdravie",
+                "body": "Kontrola beží každé dve sekundy, a CT je tiež potvrdené, že stále beží."
+              },
+              {
+                "title": "Hlavné CT začína",
+                "body": "Keď je každá závislosť pripravená, pre-start končí a Proxmox VE spustí aplikáciu."
+              }
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Háčik nezastaví závislosť",
+            "body": "Fázy post-start, pre-stop a post-stop nerobia nič. Zastavenie hlavného CT opustí PostgreSQL, Redis, Valkey alebo strojové učenie beží. Háčik objednáva štart; to nie je premeniť niekoľko LXC do jedného procesu."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Typ",
+              "Príklad",
+              "Neskôr začína"
+            ],
+            "rows": [
+              [
+                "Závislý zásobník",
+                "Immich, Nextcloud, aplikácia s PostgreSQL",
+                "Háčik hlavného CT začína závislosť a čaká na ne"
+              ],
+              [
+                "Aplikácia",
+                "Arr apartmán",
+                "Žiadny hlavný člen: každý LXC sleduje svoje vlastné <code>onboot</code>"
+              ],
+              [
+                "Jednotná žiadosť",
+                "Jellyfin",
+                "Proxmox VE začína, že LXC priamo"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "stack-checks",
+      "title": "5. Kontrola stohu ako celku",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Každý VMID existuje, je jedinečný a udržiava očakávanú inštančnú identitu.",
+              "Každá zmluva patrí do rovnakého kopu, udržuje si svoju úlohu a svoju nahranú konfiguráciu.",
+              "Hlavný člen je posledný v <code>start_order</code> a prvý v <code>stop_order</code>.",
+              "Chýba žiadny člen, objem alebo rootfs adaptácia.",
+              "Háčik ukazuje na oficiálnu striptíz, jeho obsah je nezmenený a jeho zmluva zodpovedá stack recept.",
+              "Pozorované snímky a trávy zodpovedajú pripraveným archívom OCI.",
+              "Zariadenia, profily GPU, montá, tajomstvá a koncové body stále zodpovedajú zmluvám.",
+              "Po každej závislosti prejde koncový ukazovateľ hlavnej aplikácie kontroluje integráciu medzi členmi."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "manage",
+      "title": "Správa nainštalovaného zásobníka",
+      "intro": "V <strong>Manažment nainštalovaný OCI aplikácie</strong>, každý člen vedie k celému stohu. Menu stohu ponúka <strong> Aktualizujte každý kontajner aplikácie</strong>, <strong>Upravte ďalšie cesty a zariadenia</strong>, <strong>Vytvorte každý kontajner s uloženou konfiguráciou</strong> a <strong>Odstrániť: odstrániť aplikáciu a jej kontajnery</strong>. Obnoviť prestavuje každý kontajner z obrazu, ktorý bol nainštalovaný, jeho uložené trávenie a bez hľadá novšie, s rovnakými krokmi ako aktualizácia; je ponúkaný pre komíny, ktoré môžu byť aktualizované.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Každý člen",
+                "body": "Zmluva člena menuje hlavné VMID a kompletný zoznam členov."
+              },
+              {
+                "title": "Stack je reprodukovateľný",
+                "body": "Validujú sa identity, zmluvy, hák, úpravy a koordinovaná opakovaný záznam pre tento recept."
+              },
+              {
+                "title": "Prvé obrázky",
+                "body": "Aplikácia sa nezastaví, kým sa nevyrieši, nestiahne a nepreverí každá tráva."
+              },
+              {
+                "title": "Zastaviť súčasti a zálohovať celú zostavu",
+                "body": "Overené natívne zálohy sú prijaté s stack zastavil, takže aplikácie a databázy patria do rovnakého okamihu."
+              },
+              {
+                "title": "Aktualizovať a skontrolovať každého člena",
+                "body": "Adaptácia, sieť, montá, tajomstvá a zariadenia sa používajú opäť pred kontrolou stavu každého člena."
+              },
+              {
+                "title": "Publikovať alebo obnoviť všetko",
+                "body": "Nové zmluvy sa uverejňujú iba vtedy, keď každý člen prejde. Ak jeden zlyhá, každý člen je obnovený."
+              }
+            ]
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Upraviť",
+              "Čo sa zmení?",
+              "Čo sa uchováva"
+            ],
+            "rows": [
+              [
+                "Extra cesty a zariadenia",
+                "Sú pridané alebo odstránené z aplikačného kontajnera, ktorý reštartuje. Nič nie je prestavané.",
+                "Údaje aplikácie, jej databázy a ostatných kontajnerov"
+              ],
+              [
+                "Čo spúšťa rozpoznanie (Immich)",
+                "Strojové učenie kontajner berie obraz a zariadenia CPU alebo GPU hostiteľa. Celá aplikácia je zastavená a aktualizovaná, ako v aktualizácii",
+                "Modelová vyrovnávacia pamäť, knižnica a databáza. Ak niečo zlyhá, predchádzajúce kontajnery a predchádzajúca voľba sú obnovené"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Stack bez koordinovanej opakovanej hry nie je aktualizovaný",
+            "body": "Ak sa príprava zásobníka nedá reprodukovať, aktualizácia sa zamietne pred zastavením zásobníka. Aplikácia funguje tak, ako je."
+          }
+        }
+      ]
+    },
+    {
+      "id": "failure",
+      "title": "6. Keď niečo zlyhá",
+      "blocks": [
+        {
+          "p": "Počas inštalácie sa chyba zastaví a odstráni nedokončené kontajnery, ktoré boli vytvorené, a súkromný most, ak ho operácia vytvorila. Kôš nie je publikovaný ako platný, kým sa neskončí celá sekvencia."
+        },
+        {
+          "p": "Aktualizácia je transakčná: všetky obrázky sú pripravené ako prvé, potom stack zastaví, každý člen je zálohovaný a záloha overená, a len potom je každý rootfs nahradený. Členovia začínajú jeden po druhom so zdravotnou kontrolou; ak jeden zlyhá, každý člen je obnovený z rovnakého súboru záloh, takže databáza a aplikácia nikdy nepatria do rôznych momentov."
+        },
+        {
+          "mermaid": {
+            "chartCode": "flowchart LR\n P[\"{{prepare}}\"] --> S[\"{{stop}}\"]\n S --> B[\"{{backup}}\"]\n B --> R[\"{{replace}}\"]\n R --> H{\"{{healthy}}\"}\n H -- \"{{yes}}\" --> C[\"{{commit}}\"]\n H -- \"{{no}}\" --> X[\"{{rollback}}\"]",
+            "labels": {
+              "prepare": "Pripravte každý obrázok",
+              "stop": "Stop, hlavný člen prvý",
+              "backup": "Overená záloha každého CT",
+              "replace": "Nahradiť rootfs",
+              "healthy": "Všetko zdravé?",
+              "yes": "Áno",
+              "no": "Nie",
+              "commit": "Zverejňovanie zmlúv",
+              "rollback": "Obnoviť každého člena"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "not-assumed",
+      "title": "Čo zásobník nezahŕňa",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Apartmán nainštalovaný v jednom prúde, ako je Arr apartmán, nie je závislá stack: jeho kontajnery nemajú žiadnu počiatočnú objednávku medzi nimi.",
+              "Súkromná sieť nenahrádza autentifikáciu, TLS ani konfiguráciu každej aplikácie.",
+              "Zálohovanie jedného LXC neobsahuje most, hák ani zmluvy zvyšku zásobníka.",
+              "Prowlarr, Sonarr alebo Radar neprijíma žiadne indexátory, profily alebo poskytovateľov z ProxMenux."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,247 @@
+{
+  "meta": {
+    "title": "Správy a porovnania",
+    "description": "Šesť dokumentov auditu a správy, ako sú vytlačené alebo uložené vo formáte PDF, a ako beží sú porovnané s referenčným behom."
+  },
+  "header": {
+    "title": "Správy a porovnania",
+    "description": "Šesť dokumentov, z ktorých každá pozostáva z inej otázky, a porovnanie každého pokusu s referenčným behom.",
+    "section": "Audit a správy"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Šesť dokumentov, nie šesť štýlov",
+            "body": "Motor vyberá kontroly a úseky pred komponovaním dokumentu. Rýchla diagnóza nie je úplný audit s menším počtom strán a inventár neobsahuje žiadne výsledky hodnotenia. Nižšie uvedené vzorové dokumenty používajú fiktívne údaje."
+          }
+        }
+      ]
+    },
+    {
+      "id": "documents",
+      "title": "Šesť dokumentov",
+      "blocks": [
+        {
+          "downloads": {
+            "items": [
+              {
+                "title": "Úplný audit",
+                "body": "Dokumentuje koniec uzla ako technický záznam.",
+                "href": "/monitor/audit/sample-audit-full-report.pdf",
+                "facts": [
+                  {
+                    "label": "Kontroly",
+                    "value": "Každý dostupný šek."
+                  },
+                  {
+                    "label": "Obsah",
+                    "value": "Zhrnutie; identita a klaster; hardvér; sieť a latencia; skladovanie; hostia; priechod; aplikácie; zistenia s dôkazmi; zdroje a rozsah."
+                  }
+                ]
+              },
+              {
+                "title": "Rýchla diagnostika",
+                "body": "Ukazuje, čo potrebuje pozornosť bez kompletného inventára.",
+                "href": "/monitor/audit/sample-audit-diagnostic-report.pdf",
+                "facts": [
+                  {
+                    "label": "Kontroly",
+                    "value": "Rovnaké kontroly ako úplný audit."
+                  },
+                  {
+                    "label": "Obsah",
+                    "value": "Minimálna identita; kritické zistenia; varovania; príslušné pozorovania; neoverené údaje a prioritné opatrenia. Diagramy, súpis a dlhé prílohy sú vynechané."
+                  }
+                ]
+              },
+              {
+                "title": "Inventár",
+                "body": "Opisuje, čo existuje na uzle bez posúdenia.",
+                "href": "/monitor/audit/sample-audit-inventory-report.pdf",
+                "facts": [
+                  {
+                    "label": "Kontroly",
+                    "value": "Žiadne; žiadne zistenie nie je tajné."
+                  },
+                  {
+                    "label": "Obsah",
+                    "value": "Identita; klaster; CPU0 a pamäť; doska, BIOS a regulátory; sieť; úložisko; VMs a LXCs; priechod; aplikácie a prvky spravované ProxMenux."
+                  }
+                ]
+              },
+              {
+                "title": "Kontrola bezpečnosti",
+                "body": "Zahŕňa vystavenie a kontrolu prístupu k uzlu.",
+                "href": "/monitor/audit/sample-audit-security-report.pdf",
+                "facts": [
+                  {
+                    "label": "Kontroly",
+                    "value": "Bezpečnostná oblasť, plus oprávnenia kontajnerov, aktualizácie, úložiská a APT reťazec."
+                  },
+                  {
+                    "label": "Obsah",
+                    "value": "Identita a klaster; sieť a latencia; prístup; firewall; 2FA; certifikáty; oprávnenia; aktualizácie; archívy; stav a vek Lynisu."
+                  }
+                ]
+              },
+              {
+                "title": "Overenie záloh",
+                "body": "Kontrola, či vyhlásená ochrana existuje a či sú jej zálohy použiteľné.",
+                "href": "/monitor/audit/sample-audit-backup-report.pdf",
+                "facts": [
+                  {
+                    "label": "Kontroly",
+                    "value": "Záložný priestor, plus pripojenie k úložisku a oznámenie doručenia."
+                  },
+                  {
+                    "label": "Obsah",
+                    "value": "Pokrytie na hosťa; deklarovaný cieľ obnovy; vek a výsledok; cieľ; zachovanie; overenie; neúspešné pracovné miesta; obnova a neúplné zdroje."
+                  }
+                ]
+              },
+              {
+                "title": "Kapacita a opotrebenie",
+                "body": "Meria mieru rastu a známky vyčerpania alebo starnutia.",
+                "href": "/monitor/audit/sample-audit-capacity-report.pdf",
+                "facts": [
+                  {
+                    "label": "Kontroly",
+                    "value": "Skladové a hardvérové oblasti, plus pamäť, výmena, denník a hostiteľský súborový systém."
+                  },
+                  {
+                    "label": "Obsah",
+                    "value": "Využitie a prahové hodnoty; tenké bazény; nadmerné poskytovanie; pamäť; inódy; ZFS; teploty; napájanie hodín; chyby SMART a životnosť NVMe/SSD."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/audit-report-preview.png",
+            "alt": "Prvá strana úplnej audítorskej správy",
+            "caption": "Každý dokument zdieľa identifikátor správy, očíslované časti, dátum, uzol, profil a pätku."
+          }
+        },
+        {
+          "p": "Dokument obsahuje totožnosť uzla a dátum posúdenia, výkonný výsledok, zhrnutie podľa oblasti, štruktúru hardvéru, sieť a skladovanie, ochranu hostí, zistenia s ich dôkazmi, zdroje, ktoré nebolo možné prečítať, a rozsah a politiku, ktoré sa uplatňujú, v opatrení každý profil zahŕňa."
+        }
+      ]
+    },
+    {
+      "id": "print",
+      "title": "Tlač alebo uloženie vo formáte PDF",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Spustiť",
+                "body": "Hodnotenie prebieha s profilom vybraným v <strong>Report</strong>."
+              },
+              {
+                "title": "Preskúmanie",
+                "body": "Konečná jazda ukazuje svoje zistenia, zdroje, ktoré nevedela prečítať a politiku, ktorú uplatňovala."
+              },
+              {
+                "title": "Vytvoriť správu",
+                "body": "<strong>Generate report</strong> otvára pohľad pripravený ako dokument."
+              },
+              {
+                "title": "Tlač",
+                "body": "<strong>Vytlačiť alebo uložiť ako PDF</strong> otvorí tlačový dialóg prehliadača, kde je zvolená tlačiareň alebo <em>Uložiť ako PDF</em>."
+              }
+            ]
+          }
+        },
+        {
+          "calloutTip": {
+            "title": "Výtlačok je dokument, nie snímka obrazovky",
+            "body": "Akčná lišta je skrytá, tabuľka, ktorá pokračuje na ďalšej strane opakuje svoju hlavičku, blokuje vyhnúť sa zbytočným prestávkam a každá stránka udržuje identifikáciu a číslovanie."
+          }
+        }
+      ]
+    },
+    {
+      "id": "compare",
+      "title": "Porovnanie s referenčným behom",
+      "intro": "<strong>0Use as reference</strong> značí dokončený beh ako referencia. Porovnávajú sa s ním neskoršie behy a ich zistenia sú rozdelené na:",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Skupina",
+              "Význam"
+            ],
+            "rows": [
+              [
+                "Nový",
+                "Hlásené teraz a nie predtým."
+              ],
+              [
+                "Zhoršené",
+                "Stále hlásané, a ryžovejšie alebo siahať ďalej ako predtým."
+              ],
+              [
+                "Zlepšené",
+                "Napriek tomu hlásené, ale menej hrobu alebo dosiahnuť menej ďaleko ako predtým."
+              ],
+              [
+                "Vyriešené",
+                "Už sa neohlásil a nikto ich neprijal."
+              ],
+              [
+                "Prijaté",
+                "Už sa nepočítalo, pretože riziko bolo prijaté, nie preto, že sa hostiteľ zmenil."
+              ],
+              [
+                "Už sa nevyhodnocujú",
+                "Prítomný pred a neprítomný v tomto behe; nič nepotvrdilo, že sa zastavili."
+              ]
+            ]
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Referenčný beh",
+              "Správanie"
+            ],
+            "rows": [
+              [
+                "Nastavenie",
+                "Akýkoľvek dokončený beh môže byť označený; žiadny nie je označený automaticky."
+              ],
+              [
+                "Zmena",
+                "Označenie iný beh pohybuje odkaz bez vymazania histórie."
+              ],
+              [
+                "Porovnanie",
+                "Ak nie sú vybrané žiadne dva behy, porovnanie použije odkaz a vybraný alebo najnovší beh."
+              ],
+              [
+                "Udržiavanie chodov",
+                "Posledné behy 30 sú zachované a referenčný beh sa nikdy neodstráni."
+              ],
+              [
+                "Bez odkazu",
+                "V stanovisku sa uvádza, že zatiaľ nebola zvolená žiadna referenčná metóda, takže sa nedá nič porovnať."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Správa opisuje jednu chvíľu",
+            "body": "Posúdenie nepotvrdzuje celé obdobie. Staršie výsledky prestanú popisovať súčasný stav; pohľad ukazuje vek posledného pokusu a každý zdroj zachováva čas, ktorý bol zhromaždený."
+          }
+        }
+      ]
+    }
+  ]
+}

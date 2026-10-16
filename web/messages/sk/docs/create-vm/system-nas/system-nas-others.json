@@ -1,0 +1,312 @@
+{
+  "meta": {
+    "title": "Vytvoriť VM: Ostatné NAS systémy ProxMenux Dokumentácia",
+    "description": "Vytvoriť TrueNAS0 SCALE, TrueNAS CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS a FygoOS virtuálne stroje na Proxmox VE s ProxMenux. Zahŕňa predvolenú / pokročilú konfiguráciu, nový plán skladovania, voliteľný GPU priechod a na-systém odporúčané špecifikácie.",
+    "ogTitle": "Vytvoriť VM: Ostatné NAS systémy ProxMenux Dokumentácia",
+    "ogDescription": "Vytvoriť TrueNAS0 SCALE / CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS a FygoOS VMs na Proxmox VE s ProxMenux.",
+    "ogImageAlt": "ProxMenux NAS volič"
+  },
+  "header": {
+    "title": "Vytvoriť VM: Ostatné NAS systémy",
+    "description": "ProxMenux dokáže vytvoriť pre VM pre TrueNAS SCALE, TrueNAS CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS a FygoOS pripravený na inštaláciu. Táto stránka pokrýva spoločný tok tvorby (predvolená/pokročilá konfigurácia, nový plán ukladania, voliteľný prenos GPU) plus poznámky na jednotlivé systémy a odporúčané špecifikácie.",
+    "section": "Virtuálne stroje · NAS"
+  },
+  "intro": {
+    "title": "Ako sú tieto systémy vytvorené",
+    "bodyRich": "Všetkých sedem systémov má rovnakého sprievodcu ProxMenux. Volič NAS vyberá zodpovedajúceho inštalátora (auto-detekcia najnovšej stabilnej verzie pre TrueNAS, OMV, XigmaNAS, Rockstor a FygoOS) a potom odovzdá všeobecnému konfigurátoru VM a úložnému plánu. ZimaOS používa svoj vlastný inštalačný skript (<code>vm/zimaos.sh</code>), ale dodržiava rovnakú postupnosť CPU / RAM / úložisko / voliteľné-GPU."
+  },
+  "config": {
+    "heading": "Štandardná vs Rozšírená konfigurácia",
+    "intro": "Ak je vybraný NAS, ProxMenux pýta sa, či sa štandardne použije VM profil alebo otvoriť pokročilého sprievodcu. Predvolené nastavenia sú naladené pre pracovné zaťaženie NAS RAM ako obyčajný Linux VM pretože ZFS- systémy to potrebujú pre ARC cache.",
+    "defaultHeading": "Štandardná konfigurácia",
+    "headerParam": "Parameter",
+    "headerValue": "Štandardná hodnota",
+    "defaultRowsRich": [
+      {
+        "param": "Typ stroja",
+        "valueRich": "<code>q35</code>"
+      },
+      {
+        "param": "BIOS",
+        "valueRich": "OVMF (UEFI)<note> — SeaBIOS namiesto OpenMediaVault</note>"
+      },
+      {
+        "param": "Typ CPU",
+        "valueRich": "Hostiteľ"
+      },
+      {
+        "param": "Jadro",
+        "valueRich": "2"
+      },
+      {
+        "param": "RAM",
+        "valueRich": "8192 MB<note> — 4096 MB pre ZimaOS</note>"
+      },
+      {
+        "param": "Most",
+        "valueRich": "<code>vmbr0</code>"
+      },
+      {
+        "param": "Adresa MAC",
+        "valueRich": "Automatické generovanie"
+      },
+      {
+        "param": "Začiatok po dokončení",
+        "valueRich": "Nie"
+      }
+    ],
+    "advancedHeading": "Pokročilá konfigurácia",
+    "advancedIntro": "Pokročilý sprievodca odhaľuje každý parameter samostatne:",
+    "headerOptions": "Možnosti",
+    "advancedRowsRich": [
+      {
+        "param": "Typ stroja",
+        "optionsRich": "<code>q35</code> alebo <code>i440fx</code>"
+      },
+      {
+        "param": "BIOS",
+        "optionsRich": "OVMF (UEFI0) alebo SeaBIOS (Legacy)"
+      },
+      {
+        "param": "Typ CPU",
+        "optionsRich": "Hostiteľ alebo KVM64"
+      },
+      {
+        "param": "Jadro",
+        "optionsRich": "Počet jadier CPU"
+      },
+      {
+        "param": "RAM",
+        "optionsRich": "Pamäť pridelená VM"
+      },
+      {
+        "param": "Most",
+        "optionsRich": "Sieťový most"
+      },
+      {
+        "param": "Adresa MAC",
+        "optionsRich": "Vlastná MAC adresa"
+      },
+      {
+        "param": "VLAN",
+        "optionsRich": "Značka VLAN (voliteľné)"
+      },
+      {
+        "param": "MTU",
+        "optionsRich": "Veľkosť MTU"
+      }
+    ],
+    "zfsCalloutTitle": "ZFS0 a RAM",
+    "zfsCalloutBody": "TrueNAS SCALE / CORE a XigmaNAS ak: ZFS- na základe. ZFS používa bezplatnú pamäť ako ARC cache, takže 8 GB predvolená je minimum 16 GB alebo viac, ak plánujete uložiť niečo zmysluplné. OMV (ext4/XFS), Rockstor (Btrfs) a ZimaOS sú oveľa menej spomienky a hladné."
+  },
+  "storagePlan": {
+    "heading": "Plán skladovania",
+    "intro": "Po CPU0 / RAM, ProxMenux otvorí menu Plánu úložiska, kde môžete kombinovať virtuálne disky, importované disky a PCI priechodné zariadenia v rovnakom VM, pridávať položky jeden naraz a dokončiť, keď ste hotoví.",
+    "virtualHeading": "a. Pridať virtuálny disk",
+    "virtualItemsRich": [
+      "Zobrazí úložné objemy Proxmox dostupné na hostiteľovi.",
+      "Vyberiete cieľovú pamäť a veľkosť v GB.",
+      "Disk je pripojený k VM ako SATA (<code>sata0</code>, <code>sata1</code>, ... až do 6)."
+    ],
+    "importHeading": "b. Pridať importný disk",
+    "importItemsRich": [
+      "Detekuje fyzické disky, ktoré sú bezpečné pre import (systém a chránené disky sú skryté).",
+      "Vyberte jeden alebo viac diskov prostredníctvom kontrolného zoznamu.",
+      "Importované disky sú pripojené ako SATA cez <code>qm set</code>."
+    ],
+    "pciHeading": "c. Pridať Controller alebo NVMe (PCI passhrough)",
+    "pciItemsRich": [
+      "Detekty SATA/SAS HBA a NVMe zariadenia na hostiteľa a umožňuje prejsť <em>entire regulátor</em> do VM. IOMMU musí byť zapnutá; skript ponúka, aby ju povolil a reštartuje, ak je to potrebné.",
+      "Potvrdzovací krok varuje pred rizikom celého regulátora (celá karta, vrátane každého disku na ňom, opúšťa hostiteľa).",
+      "Vybrané PCI zariadenia sú pripojené cez <code>qm set hostpciN: …</code>."
+    ],
+    "resetCalloutTitle": "Resetovať a dokončiť",
+    "resetCalloutBodyRich": "Menu tiež ponúka <strong>r</strong> (resetovať aktuálny výber a začať znova) a <strong>d</strong> (dokončiť a pokračovať). Nemôžeš dokončiť prázdny plán."
+  },
+  "gpu": {
+    "heading": "Voliteľný priechod GPU",
+    "bodyRich": "Po pláne úložiska, ak je na hostiteľovi detekované kompatibilné GPU, ProxMenux ponúka spustenie GPU prejazdového asistenta. Pozri <link>Pridať GPU na VM (Passthrough)</link> pre to, ako asistent pracuje"
+  },
+  "autoFeatures": {
+    "heading": "Automatické funkcie VM",
+    "efiTitle": "disk EFI",
+    "efiBody": "Keď je vybraný OVMF (UEFI0), ProxMenux automaticky vytvorí na pamäťovom disku 4 MB EFI disk, ktorý vyberiete, formátovaný tak, aby zodpovedal typu úložiska (raw pre pamäť na báze adresára).",
+    "isoTitle": "Montáž ISO",
+    "isoBodyRich": "Inštalácia ISO je stiahnutá (v prípade potreby) a pripojený k <code>ide2</code> ako CD-ROM, pripravený pre prvý štart.",
+    "guestTitle": "QEMU agent",
+    "guestBody": "Kanál hosťujúceho agenta je zapnutý v konfigurácii VM. Stále musíte nainštalovať agenta vnútri hosťa po NAS OS je hore."
+  },
+  "endToEnd": {
+    "heading": "Čo skript robí end-to-end",
+    "itemsRich": [
+      "Odhaľuje a sťahuje najnovšiu stabilnú ISO (alebo používa záložnú verziu, ak je predpoveď nedosiahnuteľná).",
+      "Uplatňuje predvolený alebo pokročilý CPU0 / RAM / BIOS / typ stroja.",
+      "Otvorí plán úložiska a pripojí vybrané virtuálne disky, importované disky a PCI zariadenia.",
+      "Vytvorí disk EFI, ak je vybraný UEFI.",
+      "Namontuje ISO inštalácie na <code>ide2</code>.",
+      "Nastaví objednávku štartu (disk najprv, potom ISO).",
+      "Povoliť QEMU kanál hosťujúci agent.",
+      "Voliteľne spustí GPU passhoss asistent.",
+      "Generuje štýlový HTML popis pripojený k VM.",
+      "Začne VM, ak sa rozhodnete."
+    ]
+  },
+  "perSystem": {
+    "heading": "Poznámky podľa systému",
+    "shellLabel": "Rozhranie Shell",
+    "webLabel": "Webové rozhranie"
+  },
+  "systems": {
+    "truenasScale": {
+      "id": "truenas-scale",
+      "title": "TrueNAS SCALE",
+      "icon": "Database",
+      "officialName": "TrueNAS SCALE",
+      "officialUrl": "https://www.truenas.com/truenas-scale/",
+      "description": "TrueNAS0 s aplikáciami Docker / Kubernetes, Linux KVM a ZFS ako primárny súborový systém. Moderný nástupca FreeNAS pre užívateľov, ktorí chcú ZFS plus kontajnerový ekosystém.",
+      "specs": [
+        "Odporúčané rozhranie: SATA alebo SCSI (obe podporujú odvrhnutie/trim)",
+        "Minimálne RAM: 8 GB (16 GB+ odporúčané pre skutočné pracovné zaťaženie)",
+        "Minimálne jadrá CPU: 2 (odporúčané 4+)",
+        "UEFI (OVMF) odporúča",
+        "VirtIO sieťový adaptér pre najlepší priepustnosť"
+      ],
+      "shellImg": "/vm/truenas/truenas-scale-shell.png",
+      "webImg": "/vm/truenas/truenas-scale-web.png",
+      "shellAlt": "TrueNAS SCALE rozhranie shellu",
+      "webAlt": "TrueNAS SCALE webové rozhranie"
+    },
+    "truenasCore": {
+      "id": "truenas-core",
+      "title": "TrueNAS CORE",
+      "icon": "Database",
+      "officialName": "TrueNAS CORE",
+      "officialUrl": "https://www.truenas.com/truenas-core/",
+      "description": "FreeBSD založené na TrueNAS (bývalá FreeNAS). Staršie ZFS skladovanie s väzňami a pluginy, ale žiadne Docker / Kubernetes. Postupne sa vyraďuje v prospech SCALE, ale stále je široko rozmiestnený.",
+      "specs": [
+        "Odporúčané rozhranie: SATA",
+        "Minimálne RAM0: 8 GB (odporúčané 16 GB+)",
+        "Minimálne jadrá CPU: 2 (odporúčané 4+)",
+        "UEFI (OVMF) odporúča",
+        "VirtIO sieťový adaptér pre najlepší priepustnosť"
+      ],
+      "shellImg": "/vm/truenas/truenas-core-shell.png",
+      "webImg": "/vm/truenas/truenas-core-web.png",
+      "shellAlt": "TrueNAS CORE shell rozhranie",
+      "webAlt": "TrueNAS CORE webové rozhranie"
+    },
+    "openmediavault": {
+      "id": "openmediavault",
+      "title": "OpenMediaVault",
+      "icon": "Server",
+      "officialName": "openmediavault.org",
+      "officialUrl": "https://www.openmediavault.org",
+      "description": "Debian-based NAS s modulárnym pluginovým systémom. Svetlo na zdroje a ľahko beží na skromný hardvér ZFS.",
+      "specs": [
+        "Odporúčané rozhranie: SATA alebo VirtIO",
+        "Minimálne RAM0: 2 GB (odporúčané 4 GB+)",
+        "Minimálne jadrá CPU: 1 (odporúčané 2+)",
+        "BIOS: ProxMenux @ info: tooltip SeaBIOS pre OMV (prekročenie v prípade potreby v pokročilom štádiu)",
+        "VirtIO sieťový adaptér pre najlepší priepustnosť"
+      ],
+      "shellImg": "/vm/openmediavault/openmediavault-shell.png",
+      "webImg": "/vm/openmediavault/openmediavault-web.png",
+      "shellAlt": "Rozhranie shellu OpenMediaVault",
+      "webAlt": "Webové rozhranie OpenMediaVault"
+    },
+    "xigmanas": {
+      "id": "xigmanas",
+      "title": "XigmaNAS",
+      "icon": "Database",
+      "officialName": "xigmanas.com",
+      "officialUrl": "https://www.xigmanas.com",
+      "description": "FreeBSD-založené NAS chápanie priameho pokračovania originálu FreeNAS (0.7) Codebase. Sústredené na ZFS a jednoduchosť, s ľahšou stopou ako TrueNAS.",
+      "specs": [
+        "Odporúčané rozhranie: SATA alebo SCSI",
+        "Minimálne RAM0: 4 GB (8 GB+ odporúčané pre ZFS)",
+        "Minimálne jadrá CPU: 2",
+        "UEFI (OVMF) odporúča",
+        "VirtIO sieťový adaptér pre najlepší priepustnosť"
+      ]
+    },
+    "rockstor": {
+      "id": "rockstor",
+      "title": "Rockstor",
+      "icon": "HardDrive",
+      "officialName": "rockstor.com",
+      "officialUrl": "https://rockstor.com",
+      "description": "openSUSE NAS na báze Leap postavený okolo Btrfs. Snapshoty, subobjemy a rámec aplikácie Rock-ons (Docker) pre médiá, zdieľanie súborov a zálohovanie.",
+      "specs": [
+        "Odporúčané rozhranie: SATA alebo VirtIO",
+        "Minimálne RAM0: 2 GB (odporúčané 4 GB+)",
+        "Minimálne jadrá CPU: 2",
+        "UEFI (OVMF) odporúča",
+        "VirtIO sieťový adaptér pre najlepší priepustnosť"
+      ],
+      "shellImg": "/vm/rockstor/rockstor-shell.png",
+      "webImg": "/vm/rockstor/rockstor-web.png",
+      "shellAlt": "Rozhranie Rockstor shell",
+      "webAlt": "Webové rozhranie Rockstor"
+    },
+    "zimaos": {
+      "id": "zimaos",
+      "title": "ZimaOS",
+      "icon": "MonitorIcon",
+      "officialName": "zimaspace.com",
+      "officialUrl": "https://www.zimaspace.com/zimaos",
+      "description": "Ľahká NAS / domáci server OS postavený na vrchole Debianu so zameraním na médiá, aplikácie Docker a automatizáciu domácností. ZimaOS používa špecializovaný inštalátor ProxMenux (vm/zimaos.sh), ktorý sťahuje predstavený obraz, ale profil VM sleduje rovnaký tok ako ostatné systémy NAS.",
+      "specs": [
+        "Odporúčané rozhranie: SATA alebo VirtIO",
+        "Štandardná RAM0: 4 GB (s výnimkou médií / self-hostovaných aplikácií)",
+        "Minimálne jadrá CPU: 2",
+        "Spúšťač UEFI (OVMF)",
+        "VirtIO sieťový adaptér pre najlepší priepustnosť"
+      ]
+    },
+    "fygoos": {
+      "id": "fygoos",
+      "title": "FygoOS",
+      "icon": "Server",
+      "officialName": "fygonas.com",
+      "officialUrl": "https://fygonas.com",
+      "description": "International edition of fnOS, a Debian-based NAS. ProxMenux si stiahne najnovší inštalátor ISO uverejnený na fygonas.com a pripojí ho do VM. Inštalátor umiestni systém na jeden disk; priestor vľavo na disku môže držať objemy pre aplikácie a súbory. Po inštalácii, konzola ukazuje adresu webového rozhrania, na porte 5666 (port 80 presmeruje na neho): otvorte ho v prehliadači pre meno zariadenia a vytvoriť účet správcu.",
+      "specs": [
+        "Systémový disk: FygoOS navrhuje 64 systémovú partíciu GB, ktorá môže byť menšia v VM",
+        "Inštalácia: Grafická inštalácia, alebo obnovovanie Inštalácia, ak grafický zlyhá",
+        "UEFI (OVMF) boot bez klávesov Secure Boot, ako inštalátor vyžaduje",
+        "Sieť: Ethernet s DHCP štandardne",
+        "VirtIO sieťový adaptér pre najlepší priepustnosť"
+      ]
+    }
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "itemsRich": [
+      {
+        "href": "/docs/create-vm/system-nas",
+        "label": "Prehľad systému NAS",
+        "tail": " — Rýchle porovnanie všetkých možností NAS."
+      },
+      {
+        "href": "/docs/create-vm/system-nas/synology",
+        "label": "Synológia VM",
+        "tail": " — "
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importovať disk do VM",
+        "tail": " — Odporúča sa pre prípady použitia NAS (reálne disky > virtuálne disky)."
+      },
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "ZFS Riadiace príkazy",
+        "tail": " — Ak si vyberiete TrueNAS alebo inú distribúciu ZFS- backed."
+      },
+      {
+        "href": "/docs/create-vm",
+        "label": "Vytvoriť prehľad VM",
+        "tail": "."
+      }
+    ]
+  }
+}

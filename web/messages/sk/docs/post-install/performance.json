@@ -1,0 +1,61 @@
+{
+  "meta": {
+    "title": "Po inštalácii: Výkonnosť - dokumentácia ProxMenux",
+    "description": "Možnosti výkonu v ProxMenux Prispôsobiteľný post-inštalačný skript. Nahrádza jednoväzbový gzip s pinzetou (paralelný gzip) pre rýchlejšie zálohovanie a kompresiu na viacjadrových hostiteľoch."
+  },
+  "header": {
+    "title": "Po inštalácii: výkon",
+    "description": "Možnosti výkonu vo vnútri prispôsobiteľného post-inštalačného skriptu. V súčasnej dobe táto kategória obsahuje jednu optimalizáciu: nahradenie gzipu prasačmi, takže zálohy a kompresie použiť každý CPU jadro namiesto jedného.",
+    "section": "Nastavenie Proxmoxu po inštalácii"
+  },
+  "intro": {
+    "title": "Čo táto kategória zahŕňa",
+    "body": "Jediná možnosť výkonu tu prepojí systém gzip na paralelnú implementáciu. Ďalšie vylepšenia súvisiace s výkonom (doladenie pamäti, I/O plánovanie, ZFS ARC size, limity jadra) žijú podľa vlastných kategórií (<em>System</em>, <em>Storage</em>), pretože ovplyvňujú rôzne subsystémy."
+  },
+  "pigz": {
+    "heading": "Použiť pigz pre rýchlejšiu gzip kompresiu",
+    "intro": "Štandardné <code>gzip</code> stláča dáta pomocou <strong>single CPU core</strong>. Na moderných Proxmox hostí s 8, 16 alebo 32 jadier, čo je obrovský problém počas <code>vzdump</code> VM/CT zálohovanie, otáčanie logov, a všetko ostatné, čo potrubia cez <code>gzip</code>. <a>pigz</a> je paralelná náhrada drop-in: rovnaký gzip-kompatibilný výstup, ale rozširuje prácu cez každé jadro.",
+    "doesTitle": "Čo robí ProxMenux",
+    "doesIntro": "Štyri kroky, všetky ideálne:",
+    "doesItems": [
+      "Nastaví <code>pigz: 1</code> v <code>/etc/vzdump.conf</code>, takže záložný nástroj Proxmox používa prasa natívne.",
+      "Nainštaluje apt balíček <code>pigz</code>, ak už nie je prítomný.",
+      "Napíše wrapper skript na <code>/bin/pigzwrapper</code>, ktorý posiela každý argument na <code>/usr/bin/pigz</code>.",
+      "Zaregistruje dpkg rozptýlenie pre systém <code>gzip</code> binárne (<code>/usr/bin/gzip</code> týkajúce sa Proxmox VE 9, <code>/bin/gzip</code> týkajúce sa Proxmox VE 8): skutočný binárny sa drží vedľa neho ako <code>gzip.distrib</code> a obal zaujme svoje miesto. Odteraz, <em>čokoľvek</em> ktorý volá <code>gzip</code> chromozóm, <code>tar czf</code>, skripty, vzdump a používa prasce priehľadne.",
+      "Skontroluje, že súbor uložený ako <code>gzip.distrib</code> je pracovný gzip pred wrapper je uvedený na mieste, a preinštaluje <code>gzip</code> balíček prvý, keď nie je. Hostiteľ, ktorý má ešte skoršiu výmenu <code>/bin/gzip.original</code> sa presunie na odklon, keď sa táto možnosť znova uplatní."
+    ],
+    "replacesTitle": "To nahrádza systém binárne",
+    "replacesBody": "Vloženie obalu na miesto <code>gzip</code> je nezvyčajná. Je to bezpečné (balenie produkuje gzip-kompatibilný výstup), ale stojí za to vedieť: skripty, ktoré hardcode cesty, spustiť vnútri obmedzujúce chroughs, alebo overiť binárne hašé sa môže správať inak. Skutočný binárny sa zachoval ako <code>gzip.distrib</code>, a pretože náhrada je dpkg rozptýlenie, aktualizácia <code>gzip</code> balík alebo upgrade od Proxmox VE 8 do 9 Tento súbor aktualizuje a zanecháva obal na mieste.",
+    "revertTitle": "Reverzibilné z menu Odinštalovať",
+    "revertBody": "Táto optimalizácia je sledovaná. <link>Uninstall Optimizations</link> kopíruje skutočný binárny od <code>gzip.distrib</code> späť cez obal, odstraňuje rozptýlenie a <code>pigzwrapper</code>, komentuje <code>pigz</code> riadok v <code>/etc/vzdump.conf</code>, a beží <code>apt purge pigz</code> raz gzip je overený do práce. Ručný ekvivalent Proxmox VE 9:",
+    "verifyTitle": "Overenie",
+    "verifyBody": "Po aplikácii by mal <code>gzip --version</code> spomenúť prasa. Rýchla referenčná hodnota tiež ukazuje rozdiel v rýchlosti na viacjadrovom hostiteľovi:",
+    "whenTitle": "Keď na tom záleží najviac",
+    "whenBody": "Stupnica dopadu s <strong>Koľko jadier má hostiteľ</strong> a <strong>ako často spúšťate zálohy</strong>. Na 2-core domáce lab box s jedným denným vzdump, benefit je okrajový. Na 16-core production hostiteľ zálohovanie tucet VMs každý večer, prasa môže znížiť záložné okno na zlomok toho, čo jednoväzbový gzip trvá."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Zálohovanie a obnovenie príkazov",
+        "href": "/docs/help-info/backup-commands",
+        "tailRich": " Vzdump CLI odkaz, vrátane <code>--pigz</code> možnosť nite."
+      },
+      {
+        "label": "Skladovanie",
+        "href": "/docs/post-install/storage",
+        "tail": " — Vzdump rýchlostné limity a ZFS ARC ladenie."
+      },
+      {
+        "label": "Systém",
+        "href": "/docs/post-install/system",
+        "tail": " — "
+      },
+      {
+        "label": "Prispôsobiteľné Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — Späť do rodičovského menu."
+      }
+    ]
+  }
+}

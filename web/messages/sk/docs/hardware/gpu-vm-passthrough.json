@@ -1,0 +1,178 @@
+{
+  "meta": {
+    "title": "Pridať GPU do VM (Passthrough) ProxMenux Dokumentácia",
+    "description": "Prejdite cez Intel, AMD alebo NVIDIA GPU na Proxmox VM s takmer prirodzeným výkonom. ProxMenux manipuluje s prípravou hostiteľov (moduly VFIO, blacklist ovládača, jadra cmdline), konfiguráciou VM (hospci, audio funkcia, súrodenci skupiny IOMMU), špecifickými pracovnými cyklami pre predajcu (NVIDIA kód 43, AMD reset chyba, ROM skládka) a spínač-mode konflikty s LXC."
+  },
+  "header": {
+    "title": "Pridať GPU do VM (passthrough)",
+    "description": "Dajte jeden z vašich GPU virtuálnemu stroju s takmer originálnym výkonom. ProxMenux detekuje Intel / AMD / NVIDIA, potvrdzuje IOMMU, analyzuje IOMMU skupinu GPU prejsť každý súrodenec zariadenie spoločne, konfiguruje VFIO na hostiteľa, zapíše správne hospci linky do VM config, a v prípade potreby použije špecifické opravy pre predajcu.",
+    "section": "Hardvér: grafické karty a Coral TPU"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "Všetko, čo <pveLink>0oficial Proxmox PCI passhrough wiki</pveLink> prechádzky vás manuálne, IOMMU povolenie, VFIO moduly, driver blacklisting, predajca ID objav, <code>hostpci</code> nastavenie, ROM skládky na AMD, KVM skrýva na NVIDIA Skript je tiež vedomý <em>other</em> veci na vašom hostiteľa: ak je rovnaký GPU je už priradený LXC alebo iný VM, ponúka migrovať čisto namiesto ticha poruší existujúce nastavenie."
+  },
+  "who": {
+    "heading": "Pre koho je toto?",
+    "body": "Máte telesnú GPU vo vašom Proxmox hostiteľa a chcete <strong>virtuálny stroj</strong> (Windows gaming, macOS, bez hlavy GPU výpočet uzla, a VM- na báze mediálneho servera) ho použiť priamo. Prechádzame GPU do VM nie je to isté, ako ho preniesť na LXC VM potrebujú jadro na liečbu GPU ako zariadenie VFIO (v podstate \"hostiteľ sa ho nedotkne\"), čo znamená, že hostiteľ nemôže použiť, že GPU pre čokoľvek iné, zatiaľ čo VM uteká. Za <em>LXC</em> transkódovanie/počítanie, použitie <lxcLink>Pridať GPU do LXC</lxcLink> Namiesto toho sa podieľa na GPU a nepotrebuje VFIO."
+  },
+  "prereqs": {
+    "title": "Skôr ako začnete",
+    "gpu": "<strong>Podporovaná GPU</strong> fyzicky nainštalovaný. Skript detekuje Intel, AMD a NVIDIA via <code>lspci</code>.",
+    "gpuCheck": "lspci | grep -iE 'VGA|3D|Display'",
+    "iommu": "<strong>IOMMU virtualizácia</strong> k dispozícii v BIOS/UEFI (Intel VT-d alebo AMD-Vi). Ak je to vypnuté na úrovni firmware, žiadne množstvo Linux config napraví BIOS Najprv. Skript to detekuje a ponúka na to, aby to bolo možné na strane OS.",
+    "q35": "Cieľ VM použitie <strong>(0, 35)</strong> typ stroja. Staršie <code>i440fx</code> spoľahlivo nepodporuje PCIe passhrough a skript odmietne pokračovať.",
+    "q35Check": "qm config '<'vmid'>' | grep machine",
+    "moreGpus": "Najlepšie <strong>viac ako jeden GPU</strong> v hostiteľovi, alebo prístup ku konzole na inom výstupe (IPMI, KVM-over-IP, sériové). Raz prejdeš jediným. GPU do VMHostiteľská konzola sa stmieva. S dvoma NVIDIA GPU môžete odovzdať jeden na VM a udržať druhý na hostiteľa <em>NVIDIA</em> v poznámkach dodávateľa nižšie).",
+    "nvidiaInstalled": "Ak ste na Proxmox, ktorý už nainštalovaný NVIDIA vodič cez <nvidiaLink>NVIDIA Ovládače hostiteľa</nvidiaLink>: GPU Môžete prejsť na VM sa odpúta od hostiteľa <code>nvidia</code> vodič a návrat na <code>vfio-pci</code>. • <code>nvidia</code> modul zostáva načítaný, takže každý <strong>ostatná</strong> NVIDIA GPU máte na hostiteľa stále pracuje s <code>nvidia-smi</code>."
+  },
+  "pickOne": {
+    "title": "VM prechod vs LXC Zdieľanie Zvoľte jeden na GPU",
+    "body": "GPU0 naviazané na <code>vfio-pci</code> pre VM passhrough nemôže byť súčasne použitý hostiteľom alebo LXC. Ak máte dva GPU, môžete venovať jeden každej ceste. Ak máte len jeden, vyberte si:",
+    "vmItem": "<strong>0VM trasa (táto stránka):</strong> plný hardvérový prístup, ale výlučne pre VM, ktorý vlastní GPU, zatiaľ čo beží.",
+    "lxcItem": "<strong>0LXC trasa (<lxcLink>Pridať GPU na LXC</lxcLink>):</strong> zdieľané s hostiteľom a ďalšie kontajnery, skvelé pre transkódovanie, žiadne VFIO mágie potrebné."
+  },
+  "running": {
+    "heading": "Spustenie inštalátora",
+    "body": "Open ProxMenux0 on the host, go to <strong>Hardware: GPUs and Coral-TPU → Add GPU to VM</strong>.",
+    "imageAlt": "Položka menu 'Pridať GPU do VM' vnútri Hardware: GPUs a Coral-TPU"
+  },
+  "howRuns": {
+    "heading": "Ako beží skript",
+    "body": "Tento tok má tri fázy s jasným oddelením medzi \"zhromažďovaním informácií a rozhodnutí\" a \"skutočným uplatňovaním zmien.\" Až do posledného potvrdenia, nič na vášho hostiteľa alebo VM bol dojatý."
+  },
+  "walkthrough": {
+    "heading": "Prechádzam prúdom",
+    "detect": {
+      "title": "Detekovať GPU a skontrolovať IOMMU",
+      "body": "Skript uvádza každý GPU Nájde. Ak IOMMU už nie je zapnutá v spustenom jadre cmdline, dostanete áno/nie výzvu na pripojenie <code>intel_iommu=on</code> (alebo <code>amd_iommu=on</code>) + <code>iommu=pt</code> do pravej boot zložky. Výber je založený na bootloader: <code>/etc/kernel/cmdline</code> keď host boots cez systemd-boot (zistený prítomnosťou <code>root=ZFS=</code> v tomto súbore, predvolený na ProxmoxVE-inštalovaný ZFS-vnútrozemské systémy), inak <code>/etc/default/grub</code>. Ak prijmete a zmeníte kernel cmdline, na konci bude potrebné skriptové označenie, že reštart je potrebný.",
+      "tipTitle": "Už si bežal po inštalácii?",
+      "tipBody": "Ak ste predtým povolili podporu <postLink>0VFIO IOMMU</postLink> z post-inštalačných skriptov, IOMMU je už zapnutá a tento krok ticho prejde. Dobre.",
+      "imageAlt": "Zoznam zistených GPU s predávajúcim a PCI adresa"
+    },
+    "preflight": {
+      "title": "Vyberte GPU a spustite predletové kontroly",
+      "intro": "Akonáhle si vyberiete GPU, skript spustí sériu kontrol, ktoré môžu každý blok ďalší postup:",
+      "items": [
+        "<strong>0Nie v SR-IOV.</strong> Ak je zariadenie virtuálnou funkciou alebo fyzickou funkciou s aktívnymi VF, priechod by bol v rozpore s používaním SR-IOV. Zablokované.",
+        "<strong>JednorazovéGPU varovanie.</strong> Ak je toto jediné GPU v hostiteľovi, dostanete strašidelný dialóg pripomínajúci vám, že po reštarte konzola ide tmavé SSH alebo web-UI prístup z iného stroja.",
+        "Metóda resetovania <strong>AMD.</strong> GPU AMD majú dlhú históriu neresetovania medzi zastávkami a štartmi VM. Skript kontroluje <code>/sys/bus/pci/devices/&lt;pci&gt;/reset_method</code>: ak je karta APU bez FLR je <em>blocks</em> (prakticky nepoužiteľná); dedikovaná AMD karta bez FLR je tiež zablokovaná; čokoľvek s neznámym resetom varuje, ale umožňuje vám pokračovať s explicitným prepisom.",
+        "<strong>0Nie v D3Cold.</strong> Niektoré AMD karty hlásia stav napájania <code>D3cold</code> počas nečinnosti, čo z nich robí neviditeľné počas štartu VM. Zablokovaný, kým nezobudíte GPU.",
+        "<strong>Analýza skupiny IOMMU.</strong> Čítanie <code>/sys/kernel/iommu_groups/</code> nájsť všetky non-most zariadenia v GPUJe to skupina. <em>Všetky.</em> bude odovzdaný na VM spoločne chápanie, ak vaša základná doska skupina GPU s sieťovou kartou, sieťová karta ide tiež."
+      ],
+      "audioIntro": "<strong>Audio spoločník.</strong> Dve cesty, v závislosti na tom, kde audio žije:",
+      "audioDgpu": "<strong>0Diskret GPU (NVIDIA / AMD):</strong> HDMI audio sedí na rovnakej karte ako funkcia <code>.1</code> GPU je PCI slot. Auto-zahrnuté. Toto zvukové zariadenie nebolo nikdy použité hostiteľom, takže nikto nič nestratí.",
+      "audioIgpu": "<strong>Intel iGPU (alebo akýkoľvek GPU bez <code>.1</code> súrodenca):</strong> HDMI / analógový audio žije na čipset v inom slotu (<code>00:1f.3</code> typicky). Skript skenuje hostiteľa, uvádza každý PCI audio ovládač so svojím aktuálnym ovládačom (<code>snd_hda_intel</code>, atď.) a pýta sa, ktorý z nich má prejsť. Predvolené je <strong>none</strong>"
+    },
+    "pickVm": {
+      "title": "Vyberte cieľovú VM",
+      "body": "Ukazuje sa vám zoznam VM na hostiteľovi a vyber si jeden. Skript kontroluje VM ci rá st gi re ou BIOS/i440fx typy strojov sú odmietnuté, pretože PCIe prechádza na nich je nespoľahlivý. Ak máte q35 VM s GPU už priradená (čiastočne alebo úplne) existujúca položka sa namiesto duplikácie opätovne používa.",
+      "imageAlt": "Zoznam VM s názvom, ID a stavom zobrazený ako zberač"
+    },
+    "switchMode": {
+      "title": "Režim prepínača: GPU už niekde inde.",
+      "intro": "Skript skenuje každý VM config a každý LXC sa zdôveruje hostiteľovi hľadajúcemu GPU, ktoré ste vybrali. Tri možné výsledky:",
+      "items": [
+        "<strong>0GPU je zadarmo.</strong> Nič robiť, pokračovať.",
+        "<strong>GPU je v inom VM.</strong> Ak zdroj VM je v súčasnej dobe beží, skript potraty a dva VMs nemôže zdieľať exkluzívny VFIO úlohu, a zdroj VM Najprv musíme zastaviť. Ak zdroj VM je zastavená, dostanete dve možnosti: <em>Ponechať GPU v zdroji VM's config but disable start on boot</em>alebo <em>Odstrániť GPU čiary zo zdroja VM's config and keep start on boot</em>. Rýchla cesta tiež existuje: ak GPU je už viazaná <code>vfio-pci</code> a zdroj VM je rovina VM→VM Výmena, žiadna rekonfigurácia hostiteľa nie je vykonaná a nie je potrebná reštart.",
+        "<strong>GPU ác LXC (spoločný režim).</strong> Dostanete dve možnosti v menu: <em>Ponechať GPU v LXC konfigurovať, ale zakázať Štart pri štarte</em>alebo <em>Odstrániť GPU riadky z LXC konfig (<code>lxc.cgroup2.devices.allow</code> / <code>lxc.mount.entry</code>) a udržať Štart na boot</em>. Tak či onak, LXC neuvidia GPU po vypínači, a VM will check this is the \"switch mode\" mechanik, ktorý dáva toto menu vstup jeho sekundárne štítok."
+      ],
+      "imageAlt": "Dialóg ponúka odstrániť GPU z LXC pred pridelením do VM",
+      "smartTitle": "Audio súrodenci sú tiež šikovne vyčistení",
+      "smartBody": "Ak zdroj VM mal ďalšie zvukové zariadenia pripojené vedľa GPU, skript odstraňuje <strong> iba tie, ktoré sú teraz siroty</strong> Audio viazané na iný GPU, ktorý zostane v VM je udržiavaný nedotknutý. Záleží na tom, keď oddelíte Intel iGPU (ktorý zdieľa chipsetový zvuk) od VM, ktorý má tiež diskrétne NVIDIA / AMD karta stále prešiel: HDMI zvuku dGPU (<code>02:00.1</code>) zostáva, chipset audio (<code>00:1f.3</code>) odchádza."
+    },
+    "audioPick": {
+      "title": "(Ak nie .1 súrodenec) Vybrať, ktoré audio ovládače zahrnúť",
+      "body": "Stáva sa to len pre Intel iGPU a podobné split-audio nastavenia. Kontrolný zoznam zobrazuje každý PCI audio ovládač na hostiteľovi (s výnimkou všetkých už v skupine IOMMU GPU), označený jeho súčasným vodičom. Vyberte tie, ktoré chcete, alebo žiadne, ak VM nepotrebuje audio z hostiteľa hardvéru.",
+      "imageAlt": "Kontrolný dialóg s každým hostiteľom PCI audio ovládač (BDF + ovládač), keď GPU nemá .1 súrodenec",
+      "warnTitle": "Nekliknite zvuk, na ktorý sa hostiteľ spolieha",
+      "warnBody": "Ak hostiteľ v súčasnej dobe používa audio regulátor pre čokoľvek, napríklad, Proxmox shell pípanie, alebo VM Už ste ho odovzdali do Ticking to znamená, že hostiteľ (a akékoľvek iné VM Zdieľanie ho) stráca prístup po reštarte. Ak máte pochybnosti, nechajte to prázdne a skript môžete vždy znovu spustiť neskôr, aby ste v prípade potreby pridali zvuk."
+    },
+    "summary": {
+      "title": "Preskúmanie zhrnutia potvrdenia",
+      "body": "Konečný dialóg zobrazí presne to, čo sa chystá zmeniť na hostiteľa a v VM. To je posledný off rampa che ak niečo vyzerá zle (naviac zariadenie v IOMMU skupine ste nečakali, zle GPU, zlé VM), zrušiť tu a nič sa ešte nedotklo.",
+      "imageAlt": "Súhrnný dialóg obsahujúci zmeny hostiteľa (súbory VFIO/blacklist) a VM zmeny konfigurácie (riadky hospci) pred použitím"
+    },
+    "hostApply": {
+      "title": "Uplatnia sa zmeny hostiteľa",
+      "intro": "Fáza 2 beží non-interactive. Hostiteľská strana skriptu sa môže dotknúť:",
+      "items": [
+        "<code>/etc/modules</code> Dodáva: <code>vfio</code>, <code>vfio_iommu_type1</code>, <code>vfio_pci</code> (plus <code>vfio_virqfd</code> o jadrách &lt; 6.2).",
+        "<code>/etc/modprobe.d/vfio.conf</code> AMD / Intel, sady <code>options vfio-pci ids=&lt;vendor:device,...&gt; disable_vga=1</code> VFIO tvrdí, že GPU Skoro na štarte. Za NVIDIA súbor iba pridáva <code>softdep nvidia pre: vfio-pci</code> (plus <code>_drm</code>/<code>_modeset</code>/<code>_uvm</code>Prostredníctvom pravidla udev nižšie je skutočná väzba na BDF. Na AMD, tiež dodáva <code>softdep</code> line forceing <code>vfio-pci</code> načítať pred <code>radeon</code> / <code>amdgpu</code>.",
+        "<code>/etc/modprobe.d/iommu_unsafe_interrupts.conf</code> a <code>kvm.conf</code> - Rozumné práce, ktoré väčšina Windows / macOS Potreba VM (<code>allow_unsafe_interrupts=1</code>, <code>ignore_msrs=1</code>).",
+        "<code>/etc/modprobe.d/blacklist.conf</code> Čierne zoznamy iba open-source ovládače pre vybraného dodávateľa (<code>nouveau</code>/<code>lbm-nouveau</code> namiesto NVIDIA; <code>radeon</code>+<code>amdgpu</code> pre AMD; <code>i915</code> pre Intel), takže vodiči pre ostatných predajcov na rovnakom hostiteľa zostať načítaný. Vlastný <code>nvidia</code> modul je <strong>iba</strong> čierny zoznam (prostredníctvom samostatného <code>/etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf</code>) jedenkrát <em>každých</em> NVIDIA GPU na hostiteľa bol prepnutý na VFIO až do tohto bodu zostáva naložený tak akýkoľvek NVIDIA Karta, ktorú držíš na hostiteľovi, stále funguje.",
+        "<code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> + <code>/etc/proxmenux/vfio-bind.bdfs</code> — <strong>NVIDIA iba</strong>. Per-BDF záväzný stav. Uplatňuje sa pravidlo udev. <code>ATTR'{'driver_override'}'=\"vfio-pci\"</code> na PCI ADD udalosť pre každý sledovať Bus:Device.Function, takže len GPUexplicitne ste prešli na VFIO. To je to, čo robí multi-GPU NVIDIA Práca a ostatné NVIDIA karty si ich ponechávajú <code>nvidia</code> vodič a zostať použiteľná na hostiteľa.",
+        "Len <strong>AMD.</strong> Odráža GPU ROM od sysfs (<code>/sys/bus/pci/.../rom</code>) alebo tabuľka ACPI VFCT na <code>/usr/share/kvm/vbios_&lt;card&gt;.bin</code>. VM to odkazuje cez <code>romfile=</code>, takže karty, ktoré nesprávne ohlasujú svoj vlastný VBIOS, sú stále správne inicializované.",
+        "Len <strong>0NVIDIA.</strong> Host NVIDIA služby (<code>nvidia-persistenced</code>, <code>nvidia-powerd</code>, <code>nvidia-fabricmanager</code>) sú zastavené a deaktivované iba vtedy, keď je každý NVIDIA GPU priradený k VFIO. So zmiešaným hostiteľom zostávajú aktívne spolu s modulom <code>nvidia</code> pre GPU (s), ktoré zostávajú natívne.",
+        "<code>update-initramfs -u -k all</code>"
+      ]
+    },
+    "vmApply": {
+      "title": "Konfigurácia VM sa používa pomocou qm sady",
+      "body": "VM konfig na <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> je aktualizovaný prostredníctvom <code>qm set</code> (nikdy priamo <code>sed</code>):",
+      "after1": "A <code>x-vga=1</code> vlajka je pridaná pre každého predajcu <strong>okrem</strong> Intel iGPU",
+      "after2": "Dodatočné linky <code>hostpciN</code> sú pripojené, ak skupina IOMMU GPU obsahuje ďalšie zariadenia, ktoré potrebujete spoločne prechádzať."
+    },
+    "reboot": {
+      "title": "Reštartovať, ak hostiteľ konfigurácia bola dojatá",
+      "body": "Ak fáza 2 zmení čokoľvek na úrovni jadra / cmdline / blacklist, budete vyzvaní k reštartu. Reštart je povinný pred spustením VM V opačnom prípade GPU je stále v držbe hostiteľského vodiča a VFIO si to nemôže nárokovať.",
+      "imageAlt": "Súhrnná obrazovka znázorňujúca, čo bolo zmenené, nasledovaná reštartom"
+    }
+  },
+  "vendors": {
+    "heading": "Poznámky špecifické pre dodávateľa",
+    "nvidiaHeading": "NVIDIA",
+    "nvidiaBody": "NVIDIA spotrebiteľských vodičov detekuje, že bežia v VM a odmietajú inicializovať neslávne známy <em>\"Code 43\"</em>. Práce ProxMenux: skryť KVM pred hosťom (<code>hidden=1</code>), nastaviť Spoofed hypervisor predajcu ID <code>NV43FIX</code> na linke <code>args</code>, a prejsť <code>kvm=off</code>. To už roky spoľahlivo funguje na ovládačoch GeForce. Na datacentre / Tesla / Quadro karty to nie je potrebné",
+    "nvidiaMultiHeading": "Podpora multi-GPU NVIDIA",
+    "nvidiaMultiBody": "Hostitelia s dvoma alebo viacerými NVIDIA GPU sú prvotriedne. Môžete odovzdať jednu kartu VM a uchovať ostatné (s) na hostiteľa pre <code>nvidia-smi</code>, LXC GPU zdieľanie alebo akékoľvek pracovné zaťaženie na strane hostiteľa. ProxMenux viaže VFIO <strong>per-BDF</strong> (Bus:Device.Function) cez pravidlo udev skôr než globálne blacklisting <code>nvidia</code> modul, takže destinácia každej karty je nezávislá od ostatných, aj keď obaja GPU sú rovnaký model a zdieľať rovnaké <code>vendor:device</code> ID. Hostiteľ nvidia vodič zostane načítaný; iba konkrétne BDF, ktoré vyberiete, sa presmerujú do <code>vfio-pci</code>.",
+    "amdHeading": "AMD",
+    "amdBody": "Chyba označovaná ako \"AMD reset bug\" spôsobuje, že niektoré karty po zastavení VM zlyhajú a bez reštartu hostiteľa sa nedokážu znova inicializovať. ProxMenux vopred kontroluje metódu resetovania PCI, ale vzniknutú chybu nedokáže opraviť. Ak sa s ňou stretnete, komunitným riešením je modul jadra <vendorResetLink>vendor-reset</vendorResetLink>. Skript ho nenainštaluje automaticky: ide o zostavenie cez DKMS, ktoré si pridáte sami pri zlyhaniach resetovania. V hosťoch Windows sa ako bežné riešenie v používateľskom priestore používa služba <em>RadeonResetBugFix</em>.",
+    "intelHeading": "Intel iGPU",
+    "intelBody": "Intel iGPU passhrough je fully, ale možné na UHD 630+ generácie s <sriovLink>i915-sriov-dkms</sriovLink> pre SR-IOV. Pre jeden prípad \"daj iGPU jednému prípadu VM\" ho skript viaže presne ako vyhradený GPU, ale preskočí <code>x-vga=1</code> (iGPUs nenosí pre-boot VBIOS). Stratíte výstup hostiteľa konzoly podľa plánu."
+  },
+  "verification": {
+    "heading": "Overenie"
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "code43Title": "Kód 43 vo Windows (NVIDIA)",
+    "code43Body": "KVM skrývanie args neplatil. Skontrolovať <code>qm config &lt;vmid&gt; | grep -E \"cpu|args\"</code> Mal by si vidieť. <code>hidden=1</code> a <code>hv_vendor_id=NV43FIX</code>. Ak chýba, znovu spustite skript a znovu zvoľte rovnaký VM.",
+    "amdResetTitle": "AMD GPU funguje raz, zlyháva na reštarte VM",
+    "amdResetBody": "AMD reset chrobák. Riešenia (v poradí): (1) reštartovať hostiteľa GPU bude opäť použiteľná pre ešte jedného VM cyklus; (2) inštalovať <code>vendor-reset</code> DKMS modul a pridať <code>softdep amdgpu pre: vendor-reset</code>; (3) vnútri Windows, nainštalujte <em>RadeonResetBugFix</em> služby.",
+    "stuckBootTitle": "VM prilepené booting / GPU nezistené",
+    "stuckBootBody": "Potvrdiť VFIO vlastne drží GPU na štarte: <code>lspci -nnk -d vendor:device</code> musí zobraziť <code>Kernel driver in use: vfio-pci</code>. Ak to ešte ukazuje vodiča predajcu, čierna listina nenadobudla účinnosť, skontrolujte <code>/etc/modprobe.d/blacklist.conf</code> a <code>dmesg | grep vfio</code>, a regenerovať initramfs: <code>update-initramfs -u -k all</code> potom reštartovať.",
+    "darkTitle": "Hostiteľská konzola ide tma po reštarte a nemôžem SSH v",
+    "darkBody": "Prešiel si primárnym. GPU pred alternatívnym prístupom. Boot do recovery shell (záchrana ISO, IPMI), odstrániť riadky z VM konfig (<code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code>), a odstrániť vfio možnosti:",
+    "logTitle": "Skontrolujte protokol inštalácie",
+    "logBody": "Každý beh píše <code>/tmp/add_gpu_vm.log</code>. Pripojte ho pri žiadosti o pomoc na GitHub."
+  },
+  "revert": {
+    "heading": "Manuálne vrátenie",
+    "intro": "Dnes nie je vyhradená skratka \"odstrániť GPU z VM\" v ProxMenux. Odpojiť čisto:"
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Nainštalovať ovládače NVIDIA (host)",
+        "href": "/docs/hardware/nvidia-host",
+        "tail": " Nainštalujte ovládače na hostiteľa ako prvý, ak tiež chcete GPU použiteľné odtiaľ."
+      },
+      {
+        "label": "Pridať GPU do LXC",
+        "href": "/docs/hardware/igpu-acceleration-lxc",
+        "tail": " Alternatívny model: GPU s viacerými nádobami namiesto toho, aby ich venovali VM."
+      },
+      {
+        "label": "Prepnúť režim GPU (VM ↔ LXC)",
+        "href": "/docs/hardware/switch-gpu-mode",
+        "tail": " To isté. GPU medzi režimami bez opätovného zapojenia."
+      },
+      {
+        "label": "GPU Prenosové príkazy",
+        "href": "/docs/help-info/gpu-commands",
+        "tail": " — lspci, IOMMU verification, qm set hospci reference."
+      }
+    ]
+  }
+}

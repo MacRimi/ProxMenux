@@ -1,0 +1,177 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Dashboard: Systémový prehľad záložka ProxMenux Dokumentácia",
+    "description": "Štandardná pristávacia záložka ProxMenux Monitor0: štyri metrické karty (CPU, pamäť, aktívne VMs & LXC, Teplota) so živými aktualizáciami a iskrou, historické graf metriky, a kondenzované úložisko a sieťové panely s kliknite na ich vyhradené karty."
+  },
+  "header": {
+    "title": "Dashboard: Systémový prehľad karta",
+    "description": "Prvá karta, na ktorej sa otvára prístrojová doska. Štyri živé metrické karty na vrchole, historické-metrická graf v strede, a kondenzované úložisko / sieťové panely v spodnej časti",
+    "section": "ProxMenux Monitor · Prehľad"
+  },
+  "readOnly": {
+    "title": "Name",
+    "body": "Nič na tejto karte je ovládací povrch, každý panel je informačný. Akcie žijú v vyhradených záložkách, ktoré odkazujú na: vŕtať do úložiska pre správu diskov, do VMs & LXC pre spustenie / zastavenie hostí, do bezpečnostnej karty pre nastavenie auth, a tak ďalej."
+  },
+  "captureAlt": "Systémové prehľady karta 4 metrické karty (CPU, Pamäť, Aktívne VMs, Teplota), uzol metriky graf, a úložisko / Sieťové súhrnné karty",
+  "captureCaption": "Záložka Systémové prehľady, na ktorej sa otvára prístrojová doska. Štyri karty sú živé, graf nižšie je historický, a dve karty v dolnej časti sumarizujú úložisko a sieť.",
+  "topRow": {
+    "heading": "Horný riadok: live metrické karty",
+    "intro": "Štyri karty v 2×2 mriežke na mobile, jeden riadok na ploche. Každá aktualizácia z <code>/api/system</code> každých pár sekúnd.",
+    "headerCard": "Karta",
+    "headerWhat": "Čo ukazuje",
+    "headerSource": "Zdroj",
+    "rows": [
+      {
+        "card": "Využitie CPU",
+        "what": "Aktuálne percento s progress bar. Aktualizácie ~1 s cez vitálny vzorkovač.",
+        "source": "psutil.cpu_percent()"
+      },
+      {
+        "card": "Využitie pamäte",
+        "what": "Použitá GB, percento, celková GB. Progress bar sleduje percento.",
+        "source": "psutil.virtual_memory()"
+      },
+      {
+        "card": "Aktívne VM a LXC",
+        "what": "Počet aktuálne bežiacich hostí, s Beh / Zastavené rozpis odznak a päta čiaru pre celkové VM a LXC.",
+        "source": "/api/vms (konsolidované)"
+      },
+      {
+        "card": "Teplota",
+        "what": "Teplota CPU v °C s označením stavu (chladnička / teplá / horúca) a 5-minútová iskra za ním. Zobrazí <em>N/A</em>, ak nie je detekovaný žiadny senzor. Kliknite pre otvorenie teplotného detailu modálu.",
+        "source": "senzory / teplota jadra"
+      }
+    ],
+    "thresholdsTitle": "Farby stavu a prahové hodnoty, ktoré sa tu uplatňujú",
+    "thresholdsIntro": "Každý prsteň, tyč a iskra na štyroch metrických kartách sa riadi rovnakou klasifikáciou <green/> <strong>zelená</strong> pod Upozornenie: <amber/> <strong>oranžová</strong> od varovania ku kritickému, <red/> <strong>červená</strong> v kritickej a vyššej miere. Odporúčané predvolené dodávané s ProxMenux:",
+    "thresholdsItems": [
+      "<strong>CPU použitie</strong> ooo 85 %, kritická 95 %.",
+      "<strong>Pamäť</strong> ooo 85 %, kritická 95 % (Swap tiež požiare Kritické 5 % použitého",
+      "<strong>CPU teplota</strong> ooo 80 °C, kritické 90 °C."
+    ],
+    "thresholdsOutro": "Každá hodnota je konfigurovateľná na hostiteľa <link>Nastavenia → Prahové hodnoty monitorovania zdravia</link> je jediným zdrojom pravdy a vysvetľuje, ako ich naladiť.",
+    "sparklineTitle": "Iskra má zmysel.",
+    "sparklineBody": "Teplotná karta vytiahne 5-minútovú stopu pod hodnotou, pričom farba čiary a gradientu nasleduje po rovnakej Výstražnej/kritickej dvojici zdokumentovanej vyššie. Je to najrýchlejší spôsob, ako zistiť, či je hostiteľ v termálnom stúpaní bez otvorenia detailu modalu."
+  },
+  "processes": {
+    "heading": "Najlepšie procesy CPU / Pamäť",
+    "intro": "• CPU Použitie a pamäťové karty na karte Prehľad sú klikateľné. Kliknutím otvoríte zoznam hore 25 procesmi, ktoré si objednal CPU používanie pri otvorení z CPU karta, rezidentná pamäť po otvorení z pamäťovej karty.",
+    "listTitle": "Dialóg zoznamu",
+    "listItems": [
+      "<strong>Automaticky osviežujúce</strong> V zozname sa aktualizuje každý 5 sekúnd, zatiaľ čo dialóg je otvorený a prestane hlasovať, akonáhle sa zavrie.",
+      "<strong>Filter</strong>",
+      "<strong>Inline lišty</strong> Primárna metrická kolóna kreslí malú tyč mierku na najvyššiu hodnotu vo filtrovanom zozname, takže poradie zostáva viditeľné aj vtedy, keď nie je blízko žiadny proces. 100 %.",
+      "<strong>Mobilné usporiadanie</strong> Podľa 640 px PID a User stĺpce skryť tak Príkaz, CPU % a pamäť sa stále zmestí na obrazovku telefónu bez horizontálneho zvitku."
+    ],
+    "captureListAlt": "Top procesy podľa Memory modale chease tabuľky s PID, server, COMMAND, CPU %, Pamäťové stĺpce zoradené podľa RSS",
+    "captureListCaption": "Pamäťová karta otvára zoznam zoradené podľa RSS (indigo akcent). Karta CPU otvára rovnaký zoznam zoradené podľa použitia CPU (modrý prízvuk).",
+    "detailTitle": "Detail za celý proces",
+    "detailIntro": "Kliknutím na ľubovoľný riadok v zozname sa otvorí druhý dialóg so živým obrázkom tohto jedného procesu, ktorý je usporiadaný v štyroch sekciách:",
+    "detailItems": [
+      "<strong>0Overview</strong>",
+      "<strong>Zdroje</strong> — CPU %, Pamäť %, Resident (RSS), Virtuálna veľkosť, Swap, I/O čítať a písať celkom.",
+      "<strong>Command</strong>",
+      "<strong>0Lifetime</strong>"
+    ],
+    "detailRefresh": "Dialóg detailov osviežuje každý 3 sekúnd pri otvorení. Ak sa proces dokončí v polovici dialógu, hlasovanie zastaví, jantár <em>Tento proces skončil </em> banner sa objaví, a posledný zachytený snímka zostane na obrazovke (tlmené), takže môžete stále vidieť, čo sa dialo tesne pred tým, než skončil.",
+    "captureDetailAlt": "Detail procesu modal",
+    "captureDetailCaption": "Dialóg detailov pre celý proces otvorený z riadku zoznamu. Farba akcentu sa zhoduje s farbou karty, ktorá ju otvorila (modrá pre CPU, indigo pre pamäť)."
+  },
+  "middle": {
+    "heading": "Stredný: uzol metriky grafy",
+    "body1": "Pod horným radom sedí <code>NodeMetricsCharts</code> zložka CPU, pamäť a disk-I/O grafy pochádzajúce z vlastného obchodu Proxmox cez <code>/api/node/metrics</code>. Prepínače časového rámca medzi <em>1 hodina / 24 hodiny / 7 dní / 30 dní / 1 rok</em>; Rozlíšenie dát klesá, ako okno rastie, takže graf zostane hladký.",
+    "body2": "Toto sú rovnaké grafy, ktoré webové UI Proxmox poskytuje za uzol, len konsolidovaný do tmavej témy monitora a v súlade s ostatnými panelmi."
+  },
+  "bottom": {
+    "heading": "Dolný riadok: Súhrny úložiska a siete",
+    "storageTitle": "Comment",
+    "storageIntro": "Zhustený pohľad na pamäťový stav hostiteľa, rozbitý na tri bloky:",
+    "storageItems": [
+      "<strong>Celková kapacita uzla</strong> chápanie všetkých VM/LXC úložiská plus miestna úložná sústava, s gradientom pokroku z celkového použitého / voľného rozdelenia.",
+      "<strong>0Celková kapacita / Fyzický disk</strong>",
+      "<strong>0VM/LXC Storage</strong>",
+      "<strong>0Lokálne úložisko (System)</strong>"
+    ],
+    "storageDrillIn": "Drill-in životov v <link>Karta na ukladanie</link> Na disku SMART, ZFS pool podrobnosti, história pozorovania atď.",
+    "networkTitle": "Sieťová prehľadová karta",
+    "networkBody1": "Horná čiara zobrazuje počet aktívnych rozhraní (fyzické + mosty kombinované). Pod tým, dva rady farebných odznakov pre rozhrania, ktoré sú <code>up</code> Časový volič v pravom hornom rohu (1 hodina / 24 hodiny / 7 dni / 30 dni / 1 rok) ovláda malú RX / TX dopravnú mapu.",
+    "networkBody2": "Per-interface vrták (IP/MAC, RRD graf, členovia mosta, režim dlhopisov, atď.) žije v <link>Network tab</link>."
+  },
+  "refresh": {
+    "heading": "Obnoviť model",
+    "intro": "Každý panel riadi svoj vlastný stav zaťaženia (<code>loadingStates.cpu</code>, <code>loadingStates.storage</code>, ...) takže pomalý zdroj neblokuje zvyšok. Kým panel sťahuje, ukazuje pulz-animovaný kostru; zlyhalo snímanie degradovať elegantne <em>neuvádza sa</em> namiesto chyby.",
+    "items": [
+      "<strong>Najlepšie metrické karty</strong> Oživiť každý ~5 s. • CPU a teplotné panely tiež dostávajú 1 S tlačiť z vitálne známky vzorkovač.",
+      "<strong>Mapa metrických uzlín</strong> A osviežte každý 30 s alebo zmeny v časovom rámci.",
+      "<strong>Skladovacia karta</strong> A osviežte každý 60 s. SMART dáta sa vyrovnávajú dlhšie (záložka Storage spustí nové čítanie na požiadanie).",
+      "<strong>Sieťová karta</strong> A osviežte každý 5 s v aktívnom časovom rámci.",
+      "<strong>Manual restifth</strong>"
+    ]
+  },
+  "dataCollected": {
+    "heading": "Spôsob zberu údajov",
+    "headerCard": "Karta",
+    "headerEndpoint": "Koncový ukazovateľ",
+    "headerSource": "Zdroj",
+    "rows": [
+      {
+        "card": "pilulka so stavom hlavičky",
+        "endpoint": "/api/health",
+        "source": "Celkový stav vyrovnávacej pamäte vytvorený každým cyklom Health Monitor."
+      },
+      {
+        "card": "CPU0 / RAM / Swap / Uptime",
+        "endpoint": "/api/system",
+        "source": "<code>/proc/stat</code>, <code>/proc/meminfo</code>, <code>/proc/uptime</code> s krátkym oknom CPU odber vzoriek."
+      },
+      {
+        "card": "Informácie o hostiteľovi (kernel, BIOS, distro)",
+        "endpoint": "/api/info",
+        "source": "<code>uname -a</code>, <code>dmidecode</code>, verzia PVE. Uväznený na jeden proces."
+      },
+      {
+        "card": "Skladovanie / sieť / VMs karty",
+        "endpoint": "/api/storage/summary, /api/network/summary, /api/vms",
+        "source": "Pozri špecializované karty pre každého. Karty z hlavičky ukazujú zhutnený pohľad z rovnakých koncových ukazovateľov."
+      },
+      {
+        "card": "Obnoviť kadence",
+        "endpoint": "—",
+        "source": "CPU0 / sieť 5 s; úložisko / VMs 30 s; statické informácie každý 5 min. Tlačidlo Refresh v hlavičke vynúti okamžitú re-fetch na každom paneli."
+      }
+    ],
+    "codeComment1": "# Single call that backs the header pilulky",
+    "codeComment2": "# Public, no token",
+    "codeComment3": "# Overená snímka použitá kartami"
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "Monitor zdravia",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — "
+      },
+      {
+        "label": "API referencia",
+        "href": "/docs/monitor/api",
+        "tail": " — Systém, informácie a zdravotné ukazovatele."
+      },
+      {
+        "label": "Oznámenia",
+        "href": "/docs/monitor/notifications",
+        "tail": " — Ako sa rovnaké statusy premenia na Telegram0 / Discord / E-mailové správy."
+      },
+      {
+        "label": "Index schránky",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — Ďalších osem kariet na prvý pohľad."
+      },
+      {
+        "label": "Architektúra",
+        "href": "/docs/monitor/architecture",
+        "tail": " — "
+      }
+    ]
+  }
+}

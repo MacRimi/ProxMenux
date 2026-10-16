@@ -1,0 +1,292 @@
+{
+  "meta": {
+    "title": "Vytvoriť VM: System Linux ProxMenux Dokumentácia",
+    "description": "Vytvoriť virtuálne stroje Linux zapnuté Proxmox VE s ProxMenux. Zahŕňa upravený oficiálny katalóg ISO (Ubuntu, Debian, Fedora, Arch, Rocky, Mint, openSUSE, Alpine, Kali, Manjaro), jednotný plán skladovania, voliteľný GPU prejazd a tipy po inštalácii.",
+    "ogTitle": "Vytvoriť VM: System Linux ProxMenux Dokumentácia",
+    "ogDescription": "Vytvoriť VMs Linux na Proxmox VE s ProxMenux. Vyhodnotený katalóg ISO, zjednotený plán skladovania, voliteľné tipy GPU na prenos a po inštalácii.",
+    "ogImageAlt": "Ponuka virtuálnych strojov Linux v ProxMenuxe"
+  },
+  "header": {
+    "title": "Vytvoriť VM: System Linux",
+    "description": "Vytvoriť Linux VM na Proxmox VE. ProxMenux lode s kučeravý katalóg oficiálnych Linux ISO pripravený na stiahnutie, plus miestne-ISO picker, a trasy všetko cez zdieľané VM sprievodca, jednotný plán úložiska a voliteľný GPU.",
+    "section": "Virtuálne stroje"
+  },
+  "intro": {
+    "title": "Čo robí tento scenár?",
+    "body": "Volič Linuxu ponúka dva ProxMenux riadené zdroje inštalačných médií: oficiálnu ISO zo zoznamu kurovaných (auto-downloaded) alebo lokálnu ISO, ktorú ste nahrali sami. Čokoľvek si vyberiete, zvyšok toku je zdieľaný sprievodca: CPU / RAM / BIOS → úložný plán → voliteľný GPU priechod → tvorba VM."
+  },
+  "image": {
+    "alt": "Možnosti inštalácie ProxMenux Linux",
+    "caption": "Možnosti inštalácie Linuxu"
+  },
+  "config": {
+    "heading": "Štandardná vs Rozšírená konfigurácia",
+    "intro": "Po zvolení ISO sa ProxMenux pýta, či použiť štandardný VM profil alebo otvoriť pokročilého sprievodcu.",
+    "defaultHeading": "Štandardná konfigurácia",
+    "headerParam": "Parameter",
+    "headerValue": "Štandardná hodnota",
+    "defaultRows": [
+      {
+        "param": "Typ stroja",
+        "valueRich": "<code>q35</code>"
+      },
+      {
+        "param": "BIOS",
+        "value": "OVMF (UEFI)"
+      },
+      {
+        "param": "Typ CPU",
+        "value": "Hostiteľ"
+      },
+      {
+        "param": "Jadro",
+        "value": "2"
+      },
+      {
+        "param": "RAM",
+        "value": "4096 MB"
+      },
+      {
+        "param": "Most",
+        "valueRich": "<code>vmbr0</code>"
+      },
+      {
+        "param": "Adresa MAC",
+        "value": "Automatické generovanie"
+      },
+      {
+        "param": "Začiatok po dokončení",
+        "value": "Nie"
+      }
+    ],
+    "advancedHeading": "Pokročilá konfigurácia",
+    "advancedIntro": "Pokročilý sprievodca odhaľuje každý parameter samostatne:",
+    "headerOptions": "Možnosti",
+    "advancedRows": [
+      {
+        "param": "Typ stroja",
+        "optionsRich": "<code>q35</code> alebo <code>i440fx</code>"
+      },
+      {
+        "param": "BIOS",
+        "options": "OVMF (UEFI0) alebo SeaBIOS (Legacy)"
+      },
+      {
+        "param": "Typ CPU",
+        "options": "Hostiteľ alebo KVM64"
+      },
+      {
+        "param": "Jadro",
+        "options": "Počet jadier CPU"
+      },
+      {
+        "param": "RAM",
+        "options": "Pamäť pridelená VM"
+      },
+      {
+        "param": "Most",
+        "options": "Sieťový most"
+      },
+      {
+        "param": "Adresa MAC",
+        "options": "Vlastná MAC adresa"
+      },
+      {
+        "param": "VLAN",
+        "options": "Značka VLAN (voliteľné)"
+      },
+      {
+        "param": "MTU",
+        "options": "Veľkosť MTU"
+      }
+    ]
+  },
+  "storagePlan": {
+    "heading": "Plán skladovania",
+    "body": "Po CPU0 / RAM, ProxMenux otvorí <strong>Storage Plan</strong> menu, kde môžete kombinovať virtuálne disky, importované disky a PCI priechodné zariadenia v rovnakom VM, pridať položky jeden naraz a dokončiť, keď ste hotoví.",
+    "virtualDiskTitle": "a. Pridať virtuálny disk",
+    "virtualDiskItems": [
+      "Zobrazí úložné objemy Proxmox dostupné na hostiteľovi.",
+      "Vyberiete cieľovú pamäť a veľkosť v GB.",
+      "Disk je pripojený k VM ako SATA (<code>sata0</code>, <code>sata1</code>, ... až do 6)."
+    ],
+    "importDiskTitle": "b. Pridať importný disk",
+    "importDiskItems": [
+      "Detekuje fyzické disky, ktoré sú bezpečné pre import (systém a chránené disky sú skryté).",
+      "Vyberte jeden alebo viac diskov prostredníctvom kontrolného zoznamu.",
+      "Importované disky sú pripojené ako SATA cez <code>qm set</code>."
+    ],
+    "pciTitle": "c. Pridať Controller alebo NVMe (PCI passhrough)",
+    "pciItems": [
+      "Detekty SATA/SAS HBA a NVMe zariadenia na hostiteľa a umožňuje prejsť <em>entire regulátor</em> do VM. IOMMU musí byť zapnutá; skript ponúka, aby ju povolil a reštartuje, ak je to potrebné.",
+      "Potvrdzovací krok varuje pred rizikom celého regulátora (celá karta, vrátane každého disku na ňom, opúšťa hostiteľa).",
+      "Vybrané PCI zariadenia sú pripojené cez <code>qm set hostpciN: …</code>."
+    ],
+    "resetTitle": "Resetovať a dokončiť",
+    "resetBody": "Menu tiež ponúka <strong>r</strong> (resetovať aktuálny výber a začať znova) a <strong>d</strong> (dokončiť a pokračovať). Nemôžeš dokončiť prázdny plán."
+  },
+  "gpu": {
+    "heading": "Voliteľný priechod GPU",
+    "body": "Po pláne úložiska, ak sa zistí kompatibilný GPU na hostiteľovi ProxMenux ponúka na spustenie GPU passhrough asistent. Pozri <gpuLink>Pridať GPU na VM (Passthrough)</gpuLink> pre to, ako asistent pracuje"
+  },
+  "autoFeatures": {
+    "heading": "Automatické funkcie VM",
+    "efiTitle": "disk EFI",
+    "efiBody": "Keď je vybraný OVMF (UEFI), ProxMenux vytvorí na úložisku disk systému 4 MB EFI, ktorý vyberiete, takže firmware má miesto na ukladanie svojich premenných.",
+    "isoTitle": "Montáž ISO",
+    "isoBody": "Inštalácia ISO je pripojená k <code>ide2</code> ako CD-ROM, pripravený pre prvú topánku.",
+    "guestTitle": "QEMU agent",
+    "guestBody": "Kanál hosťujúceho agenta je zapnutý v konfigurácii VM. Stále musíte nainštalovať agenta vnútri hosťa"
+  },
+  "installOptions": {
+    "heading": "Možnosti inštalácie Linuxu",
+    "officialHeading": "Oficiálna ISO (tradičná inštalácia)",
+    "officialBody": "ProxMenux lodí so zoznamom oficiálnych noriem ISO Linux. Vyberte jeden a skript ho stiahne priamo z predného zrkadla do <code>/var/lib/vz/template/iso</code>, potom ho pripojí k VM.",
+    "officialImageAlt": "Výber distribúcie Linuxu",
+    "officialImageCaption": "Výber distribúcie Linuxu",
+    "localHeading": "Miestne ISO",
+    "localBody": "Používa akýkoľvek Linux ISO už prítomný v <code>/var/lib/vz/template/iso</code>. Skript uvádza každý <code>*.iso</code> nájde a umožňuje vám vybrať jeden.",
+    "localImageAlt": "Lokálne menu výberu ISO",
+    "localImageCaption": "Lokálne menu výberu ISO",
+    "distros": [
+      {
+        "name": "Ubuntu",
+        "variants": [
+          "25.10 Desktop",
+          "24.04 Desktop",
+          "22.04 Desktop",
+          "20.04 Desktop",
+          "25.10 Server",
+          "24.04 Server",
+          "22.04 Server",
+          "20.04 Server"
+        ]
+      },
+      {
+        "name": "Debian",
+        "variants": [
+          "13 Desktop",
+          "12 Desktop",
+          "11 Desktop",
+          "13 Netinst",
+          "12 Netinst",
+          "11 Netinst"
+        ]
+      },
+      {
+        "name": "Fedora",
+        "variants": [
+          "Workstation 42"
+        ]
+      },
+      {
+        "name": "Arch Linux",
+        "variants": [
+          "najnovší"
+        ]
+      },
+      {
+        "name": "Rocky Linux",
+        "variants": [
+          "9"
+        ]
+      },
+      {
+        "name": "Linux Mint",
+        "variants": [
+          "22.1 Cinnamon"
+        ]
+      },
+      {
+        "name": "openSUSE",
+        "variants": [
+          "Leap 15.6"
+        ]
+      },
+      {
+        "name": "Alpine Linux",
+        "variants": [
+          "3.21"
+        ]
+      },
+      {
+        "name": "Kali Linux",
+        "variants": [
+          "2026.1"
+        ]
+      },
+      {
+        "name": "Manjaro",
+        "variants": [
+          "25.0 GNOME"
+        ]
+      }
+    ]
+  },
+  "endToEnd": {
+    "heading": "Čo skript robí end-to-end",
+    "items": [
+      "Získa Linux ISO (oficiálny alebo miestny súbor).",
+      "Uplatňuje štandardnú alebo pokročilú konfiguráciu typu CPU / RAM / BIOS / typ stroja.",
+      "Otvorí plán úložiska a pripojí vybrané virtuálne disky, importované disky a PCI zariadenia.",
+      "Vytvorí disk EFI pri výbere UEFI.",
+      "Namontuje Linux ISO na <code>ide2</code>.",
+      "Nastaví objednávku štartu (disk najprv, potom ISO).",
+      "Povoliť QEMU kanál hosťujúci agent.",
+      "Voliteľne spustí GPU passhoss asistent.",
+      "Generuje štýlový HTML popis pripojený k VM.",
+      "Začne VM, ak sa rozhodnete."
+    ]
+  },
+  "postInstall": {
+    "heading": "Tipy po inštalácii",
+    "guestAgentHeading": "Inštalovať QEMU Hosť Agent vnútri VM",
+    "guestAgentBody": "ProxMenux umožňuje hosťujúci kanál agenta v VM, ale samotný agent musí byť nainštalovaný vnútri hosťa. Umožňuje elegantné vypnutie, zmrazenie súborového systému pre konzistentné snímky a presné hlásenie pamäte v systéme Proxmox UI.",
+    "debian": "Debian / Ubuntu",
+    "fedora": "Fedora / Rocky / RHEL",
+    "arch": "Arch Linux",
+    "opensuse": "openSUSE",
+    "virtioHeading": "Podpora VirtIO v Linuxe",
+    "virtioBody": "Moderné jadrá Linuxu (2.6.25+) zahŕňajú disk VirtIO a sieťové ovládače mimo poľa, takže môžete prepnúť diskové rozhranie na <code>virtio</code> alebo <code>virtio-scsi</code> v pokročilom sprievodcovi a sieťový adaptér na <code>virtio</code> bez ďalšieho kroku ovládača.",
+    "virtioWarnTitle": "Veľmi staré distribúcie",
+    "virtioWarnBody": "Ak inštalujete niečo, čo predchádza jadru 2.6.25, moduly VirtIO nemusia byť k dispozícii v čase inštalácie. V takom prípade uchovajte SATA / SCSI alebo zadajte disk vodiča.",
+    "trimHeading": "Povoliť TRIM / zahodiť na SSD- backed pamäť",
+    "trimBody": "Keď VM sedí na úložisku Proxmox krytých SSD a disk bol pripojený s vlajkou <code>discard</code>, môžete posunúť trim príkazy zvnútra hosťa. Dve možnosti:",
+    "trimItems": [
+      "Spustiť <code>fstrim -av</code> pravidelne (alebo povoliť <code>fstrim.timer</code> jednotka na systemd distribúcie).",
+      "Alebo pripojiť súborové systémy s možnosťou <code>discard</code> v <code>/etc/fstab</code>."
+    ],
+    "balloonHeading": "Balónovanie pamäte",
+    "balloonBody": "Vodiči <code>virtio_balloon</code> s moderným Linuxom. Proxmox ho používa na regeneráciu nevyužitej pamäte z VM a ukazujú presné využitie v UI"
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-image-vm",
+        "label": "Importovať obraz disku do VM",
+        "tail": " V prípade potreby pripevnite Linux.qcow2 / .img / .raw na čerstvú VM."
+      },
+      {
+        "href": "/docs/utils/import-vm",
+        "label": "Importovať VM z OVA / OVF",
+        "tail": " — Prineste Linux VM exportovaný z VMware / VirtualBox / Proxmox."
+      },
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Pridať GPU do VM (passthrough)",
+        "tail": " — Pre VMs Linux, ktoré potrebujú zrýchlenie GPU."
+      },
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "VM a CT Riadiace príkazy",
+        "tail": " — Referencia qm CLI."
+      },
+      {
+        "href": "/docs/create-vm",
+        "label": "Vytvoriť prehľad VM",
+        "tail": "."
+      }
+    ]
+  }
+}

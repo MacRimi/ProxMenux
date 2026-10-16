@@ -1,0 +1,251 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Dashboard: Sieťová karta ProxMenux Dokumentácia",
+    "description": "Sieťová záložka inzeruje každé rozhranie na hostiteľa: fyzické NIC, mosty, dlhopisy, VLAN a VM/LXC virtuálne rozhrania. Per-interface vŕtačky ukazuje IP / MAC / stav / dlhopisov členov / prevádzka od zavedenia a historické RRD graf."
+  },
+  "header": {
+    "title": "Dashboard: Sieťová karta",
+    "description": "Každé rozhranie, ktoré jadro hlási, je fyzické NIC, mosty, dlhopisy, VLAN a VM/LXC virtuálne porty sú zoskupené do troch kariet. Každý riadok je možné kliknúť a otvorí vrták s riešením, dopravné počítadlá a historické RRD dáta.",
+    "section": "ProxMenux Monitor · Prehľad"
+  },
+  "intro": {
+    "title": "Živý + historický, oba zahrnuté",
+    "body": "Živý stav pochádza z <code>psutil.net_if_stats()</code>0 a <code>ip</code>; historická šírka pásma z predajne Proxmox RRD cez <code>/api/network/&lt;interface&gt;/metrics</code>. Stránka obnovuje každý ~5 sekúnd pre živé počítače a vytiahne čerstvé RRD dáta na dopyt po grafe."
+  },
+  "topRow": {
+    "heading": "Horný riadok: štyri stat karty",
+    "headerCard": "Karta",
+    "headerWhat": "Čo ukazuje",
+    "rows": [
+      {
+        "card": "Sieťová premávka",
+        "what": "Agregovaná rýchlosť RX / TX na všetkých rozhraniach, formátovaná v správnej jednotke (bps / Kbps / Mbps / Gbps)."
+      },
+      {
+        "card": "Aktívne rozhrania",
+        "what": "Dva počítadlá: <em>0Fyzikálne X / Y</em> a <em>Bridges X / Y</em> (aktívny nad celkom). Prvý počítadlo budete sledovať, keď niečo prestane fungovať."
+      },
+      {
+        "card": "Stav siete",
+        "what": "Rýchly verdikt Zrkadlá <em>Sieťové rozhrania</em> kategórie Health Monitor."
+      },
+      {
+        "card": "Odozva siete",
+        "what": "Round-trip čas k bráne s iskrou. Kliknutím na kartu sa otvorí <strong>Siete Latency mode</strong> zdokumentované ďalej dole chronologický pohľad + na požiadanie ping test proti bráne / Cloudflare / Google s stiahnuť správu PDF."
+      }
+    ]
+  },
+  "flow": {
+    "heading": "Diagram sieťových tokov",
+    "intro": "Medzi horným radom a tromi skupinovými kartami sa záložka stáva živým zobrazením topológie s názvom <strong>Network Flow</strong>. To kreslí každú cestu balíček môže cez hostiteľa",
+    "imageAlt": "Schéma sieťového toku",
+    "imageCaption": "Sieťové prúdenie",
+    "elementsTitle": "Čo ukazuje diagram",
+    "elementsIntro": "Každý uzol je jeden subjekt z rovnakého inventára, ktorý používajú nižšie uvedené skupinové karty, ale usporiadané ako topológia, takže vzťahy medzi nimi sú okamžité:",
+    "elements": [
+      "<strong>0NICS</strong> (amber) Rozhrania hlásené ako dole sú vykreslené vyblednuté.",
+      "<strong>Host</strong> (amber) Kreslený ako pevná kotva; nie je možné kliknúť.",
+      "<strong>Bridges</strong> (kyan) Nakreslia sa len mosty, ktoré nesú aspoň jedného aktívneho hosťa; nepoužité mosty sú skryté, aby sa diagram zameral na to, čo skutočne hýbe dopravou.",
+      "<strong>LXCs</strong> (kyan)",
+      "<strong>VMs</strong> (fialové)",
+      "Offline hostia (stiahnuté VM / kontajnery) sú skryté."
+    ],
+    "pulsesTitle": "Čo animácia kóduje",
+    "pulsesBody": "Animované kométy, ktoré cestujú pozdĺž každého okraja predstavujú živú premávku:",
+    "pulses": [
+      "<strong>Smer</strong> Pulz tečúci do NIC <em>tx</em> od hosťa; smerom k hosťovi je <em>rx</em>.",
+      "<strong>Stuková šírka</strong> škála s kombinovanou rýchlosťou rx+tx. Nečinný hosť stále kreslí slabú animovanú čiaru; zaneprázdnený dostane hustú čiaru.",
+      "<strong>Žiari hlava kométy</strong> Zahrejeme na ~1 MB/s, horúce pri ≥30 MB/s. Užitočné vidieť na prvý pohľad, ktorý hosť dominuje NIC.",
+      "<strong>Click</strong> Tapping hostiteľa je zámerne no-op"
+    ],
+    "useTitle": "Keď je to užitočné",
+    "useBody": "Nižšie uvedené skupinové karty vám povedia <em>0What</em> existuje; diagram vám povie <em>how je pripojený</em> a kde doprava práve teraz tečie. Vzory ľahko rozoznateľné na prvý pohľad: most bez aktívneho hosťa pripojený, dvaja ťažkí hostia prechádza rovnaký NIC (bottleunk kandidát), alebo jeden VM nasýtenie odkaz, zatiaľ čo všetko ostatné je pokojné."
+  },
+  "groups": {
+    "heading": "Tri skupiny rozhraní",
+    "intro": "Pod horným radom sa tri karty delia podľa úlohy. Každá karta má v hlavičke svoj odznak aktívneho počtu. Rozhranie <strong>type</strong> je označené na prvý pohľad farebným označením na každom riadku:",
+    "badges": [
+      "Modrá <strong>0Physical</strong>",
+      "Zelená <strong>Most</strong> Most Linux alebo most OVS (<code>vmbr*</code>).",
+      "Purple <strong>Bond</strong>",
+      "Kyán <strong>VLAN</strong> VLAN sub- Rozhranie (<code>vmbr0.10</code>, <code>eno1.42</code>, …)."
+    ],
+    "clickable": "<strong>Každý riadok je klikateľný</strong>",
+    "physicalTitle": "Fyzické rozhrania",
+    "physicalBody": "Každý NIC jadro vidí ako skutočné zariadenie <code>eno1</code>, <code>enp4s0</code>, <code>eth0</code>, <code>wlp3s0</code>atď. Jeden riadok za zariadenie s modrou <strong>Fyzická</strong> odznak a linkový štát. <em>Členovia dlhopisov</em> (Nics zotročený putom) sú tu tiež zobrazené, s náznakom ukazujúcim na materské puto.",
+    "bridgeTitle": "Sieťové mosty",
+    "bridgeBody": "Linux mosty (<code>vmbr0</code>, <code>vmbr1</code>, ...) a OVS mosty Proxmox riadi. Každý riadok ukazuje zelený <strong>Bridge</strong> odznak, základné fyzické rozhranie (keď je to jedno-port most), a stav mosta. Dlhopisy viditeľné v tejto vrstve získať fialové <strong>Bond</strong> odznak; VLAN sub-rozhrania získať cyan <strong>VLAN</strong> odznak.",
+    "vmTitle": "Rozhrania VM / LXC",
+    "vmBody": "Rozhrania <code>tap*</code> a <code>veth*</code> vytvorené, keď hostia začínajú Hlavička karty zobrazuje <em>X / Y Active</em>; riadky sú spojené s VM/CT patria, takže môžete skočiť priamo na hosťa v záložke VMs & LXCs. Neaktívne vstupy sa krátko po zastávke hosťa poflakujú; starnú v rámci obnovovacieho cyklu."
+  },
+  "drillIn": {
+    "heading": "Vŕtačky na rozvádzače",
+    "intro": "Kliknutím na ľubovoľný riadok sa otvorí modálny režim s piatimi blokmi:",
+    "headerBlock": "Blok",
+    "headerContents": "Obsah",
+    "rows": [
+      {
+        "block": "Základné informácie",
+        "contents": "Názov rozhrania, typ (fyzický / most / dlhopis / VLAN / vm0), MAC adresa, stav (hore / dole), MTU, a podkladové fyzické rozhranie pre nefyzické typy."
+      },
+      {
+        "block": "Členovia dlhopisov",
+        "contents": "Len pre dlhopisy. Zobrazí každý zotročený NIC s aktívnou / neúspešnou vlajkou, režim dlhopisov (active-backup / 802.3ad / balance-alb / ...) a primárne rozhranie pri nakonfigurovaní."
+      },
+      {
+        "block": "IP adresy",
+        "contents": "Každá IPv4 / IPv6 adresa s predponou dĺžky. Automaticky konfigurované adresy odkazu sú uvedené, ale sivé."
+      },
+      {
+        "block": "Historická tabuľka",
+        "contents": "RX / TX šírka pásma v zvolenom časovom rámci (1 hodina / 24 hodiny / 7 dní / 30 dní / 1 rok), stiahnutý z <code>/api/network/&lt;interface&gt;/metrics</code> (Proxmox RRD)."
+      },
+      {
+        "block": "Premávka od posledného štartu",
+        "contents": "Total RX / TX bytes a pakety od hostiteľa naposledy booted, plus chyba a pokles počítadla."
+      }
+    ],
+    "inactiveTitle": "Neaktívne rozhrania stále otvárajú vrták",
+    "inactiveBody": "Pre rozhranie, ktoré je <em>0down</em>, modál robí malý \"Interface neaktívny\" banner a preskočí živé počítadlá. Konfigurácia (adresy, členovia dlhopisov) a historické údaje sú stále zobrazené"
+  },
+  "latency": {
+    "heading": "Siete Latency mode",
+    "intro": "Kliknutím na kartu <em>0Network Latency</em> v hornom riadku otvoríte špecializovaný spôsob. Má dva režimy (historický test a test na požiadanie), tri cieľové možnosti a správu z PDF na stiahnutie.",
+    "targetsTitle": "Ciele",
+    "targetsIntro": "Cieľové dropdown v hornej časti modálneho režimu vyberá, čo dostane pinged:",
+    "targets": [
+      "<strong>0Gateway</strong> Testuje len miestnu-sieť nohu; užitočné, keď máte podozrenie, prepínač / kabeláž problém a chcete vylúčiť WAN.",
+      "<strong>Cloudflare (1.1.1.1)</strong> Na verejnosti DNS odlučovač, akákoľvek sieť. Testuje nohu WAN.",
+      "<strong>Google (8.8.8.8)</strong> - alternatívny verejný cieľ, užitočný ako kontrola zdravosti, alebo keď Cloudflare je regionálne degradovaná."
+    ],
+    "mode1Title": "Režim 1",
+    "mode1Alt": "Sieťová Latency mode v historickom režime 1- hodinový časový rámec a zakreslené predchádzajúce vzorky",
+    "mode1Caption": "Historický pohľad Cieľ Gateway za poslednú hodinu, kŕmený z latencie-histórie databázy napísal každý 60 sekúnd podľa teploty / latencie zberateľskej nite.",
+    "mode1Body1": "Štandardný režim, keď sa otvorí modálny režim. Druhý pokles vyberie časový rámec (<em>1 Hodina / 24 Hodiny / 7 Dni / 30 Dni / 1 Rok</em>); Rozlíšenie dát klesne s oknom, takže graf zostane čitateľný. Štatistiky na titulnej strane: Current / Min / Avg / Max",
+    "mode1Body2": "Zdroj: tie isté vzorky latencie, ktoré používa Health Monitor na detekciu pretrvávajúcich spomalení siete 60 sekundy proti bráne pozadím <code>_temperature_collector_loop</code> niť, napísaná miestnemu SQLite História.",
+    "mode2Title": "Režim 2",
+    "mode2Alt": "Sieťová Latency modal beží ping test v reálnom čase proti Cloudflare Výstupná čiara 50%, živé vzorky hromadiace sa na grafe",
+    "mode2Caption": "Skúška v reálnom čase proti Cloudflare — 2- minútový beh s jedným čítaním 5 sekundy, vzorky nakreslené ako prídu. Kliknite <em>Stop</em> ukončiť predčasne; <em>Skúška znova</em> pridá viac vzoriek do rovnakého súboru údajov.",
+    "mode2Intro": "Prepnutie cieľa na Cloudflare alebo Google spustí na požiadanie ping test. Správanie:",
+    "mode2Items": [
+      "<strong>Trvanie</strong> — 2 minúty za beh, s progress bar a zostávajúce sekundy počítadlo.",
+      "<strong>Cadence</strong> Jeden čítanie každý 5 sekundy (24 hodnoty na jeden beh).",
+      "<strong>Metóda</strong> IMP Echo žiadosť (<code>ping</code>), 3 za sebou idúce pingy na vzorku, priemerná latencia.",
+      "<strong>Stop</strong>",
+      "<strong>Test Again</strong>",
+      "<strong>0Live stav pilulka</strong>"
+    ],
+    "thresholdsTitle": "Hraničné hodnoty výkonu",
+    "headerStatus": "Stav",
+    "headerRange": "Rozsah",
+    "headerImpact": "Praktický vplyv",
+    "thresholdRows": [
+      {
+        "status": "Výborná",
+        "range": "< 50 ms",
+        "impact": "Optimálne pre aplikácie v reálnom čase, herné a video hovory."
+      },
+      {
+        "status": "Dobre.",
+        "range": "50 – 100 ms",
+        "impact": "V poriadku pre väčšinu aplikácií, s minimálnym dopadom."
+      },
+      {
+        "status": "Zvýšená",
+        "range": "100 – 200 ms",
+        "impact": "Pozoruhodné oneskorenie. Môže ovplyvniť VoIP a interaktívne aplikácie."
+      },
+      {
+        "status": "Slabá",
+        "range": "> 200 ms",
+        "impact": "Odozva je výrazne zvýšená. Odporúča sa preveriť sieť."
+      }
+    ],
+    "reportTitle": "Správa o latencii siete (PDF)",
+    "reportIntro": "Oba režimy majú vedľa cieľového voliča tlačidlo <strong>Report</strong>. Kliknutím vygeneruje PDF so všetkým, čo by ste poslali do svojho ISP, ak by ste chceli urobiť prípad pre zlé služby.",
+    "reportPreviewAlt": "Prvá strana správy o latencii siete PDF",
+    "reportPreviewCaption": "Prvá stránka správy siete Latency Report Page 2 a ďalej má tabuľku na vzorku a metodiku.",
+    "downloadLabel": "Stiahnuť vzorku Správa o latencii siete (PDF)",
+    "sectionsIntro": "Správa obsahuje šesť sekcií:",
+    "sections": [
+      "<strong>Zhrnutie</strong> Rozmerový ciferník (0–300+ ms so zelenou / žltou / červenou zónou), verdikt o stave (EXCELLENT / GOOD / FAIR / POOR), cieľ / režim / počet vzoriek a jednoriadkový súhrn straty paketov.",
+      "<strong>Štatistiky čitateľnosti</strong>",
+      "<strong>Latenčný graf</strong>",
+      "<strong>Performance Prahové hodnoty</strong>",
+      "<strong>0Detailed Test Results</strong> Užitočné na zachytenie mikro-výbuchov, ktoré sa skrývajú v priemere.",
+      "<strong>Metodika</strong> Testovacia metóda (ICMP Echo Request), vzorky na test (3 po sebe idúce pings), cieľový názov, cieľové IP a posledný odsek \"Posúdenie výkonnosti\" odvodený z rozsudku."
+    ],
+    "useCaseTitle": "Prípad použitia: nároky na váš ISP",
+    "useCaseBody": "Spustite test v reálnom čase proti Cloudflare pre 2 minút počas okamihu vnímanej pomalosti, potom kliknite na <em>Test Opäť</em> niekoľkokrát rozšíriť súbor údajov, a nakoniec <em>Report</em>. PDF obsahuje kompletnú tabuľku na vzorku, ako aj metodický blok"
+  },
+  "excluding": {
+    "heading": "Okrem hlučných rozhraní",
+    "body1": "Rovnako ako zásobníky, jednotlivé rozhrania môžu byť vylúčené z monitorovania zdravia Vlajka je uložená v tabuľke <code>excluded_interfaces</code> a rešpektuje cyklus Health Monitor: žiadne varovania, žiadne oznámenia, žiadny príspevok k záhlaviu stav pilulky.",
+    "body2": "Z kontextového menu riadku si vyberte <em>0Vylúčenie z monitorovania</em>. Rozhranie zostane viditeľné v prístrojovej doske s fialovou <strong> bez označenia </strong> a môžete opätovne povoliť monitorovanie z rovnakého menu."
+  },
+  "dataCollected": {
+    "heading": "Spôsob zberu údajov",
+    "headerSection": "Comment",
+    "headerEndpoint": "Koncový ukazovateľ",
+    "headerSource": "Zdroj",
+    "rows": [
+      {
+        "section": "Inventár rozhrania",
+        "endpoint": "/api/network",
+        "source": "<code>ip -j addr</code> + <code>ip -j link</code> + Bond / most introspection."
+      },
+      {
+        "section": "Súhrnné karty",
+        "endpoint": "/api/network/summary",
+        "source": "Agregácia nad inventárom plus na medzitvárnu hodnotu."
+      },
+      {
+        "section": "Per-interface RX/TX časový rad",
+        "endpoint": "/api/network/<iface>/metrics",
+        "source": "<code>/proc/net/dev</code> sa odobrala vzorka zo zdravotného monitora s výpočtom byte-rate."
+      },
+      {
+        "section": "Latency: prúd",
+        "endpoint": "/api/network/latency/current",
+        "source": "Krátky <code>ping</code> praskne proti nastavenej bráne / cieľ."
+      },
+      {
+        "section": "Latency: historické",
+        "endpoint": "/api/network/latency/history",
+        "source": "Pretrvávajúce vzorky 5 min. podľa cyklu Health Monitor."
+      }
+    ],
+    "codeComment1": "# Cross-check the interface state seeen by the dashboard",
+    "codeComment2": "# Overiť aktuálnu latentnú sondu na konci"
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "Monitor zdravia",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — "
+      },
+      {
+        "label": "API referencia",
+        "href": "/docs/monitor/api",
+        "tail": " — "
+      },
+      {
+        "label": "Integrácie",
+        "href": "/docs/monitor/integrations",
+        "tail": " — Prometheus šrot odhaľuje rovnaké sieťové metriky."
+      },
+      {
+        "label": "Index schránky",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — Ostatné karty."
+      },
+      {
+        "label": "ProxMenux → Sieť",
+        "href": "/docs/network",
+        "tail": " — "
+      }
+    ]
+  }
+}

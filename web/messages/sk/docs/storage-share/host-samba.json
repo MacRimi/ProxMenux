@@ -1,0 +1,172 @@
+{
+  "meta": {
+    "title": "Hostiteľ: Mount Samba share on Host ProxMenux Dokumentácia",
+    "description": "Pripojte externé zdieľanie Samba / CIFS na hostiteľovi Proxmox: ako úložisko Proxmox (pvesm add cifs), ako bežné pripojenie cez fstab hostiteľa s otvorenými oprávneniami uid/gid/file_mode (NEZOBRAZUJE sa v Datacenter > Storage), alebo oboma spôsobmi. Metóda fstab otvorí oprávnenia, aby neprivilegovaný LXC s bind mountom tejto cesty mohol čítať a zapisovať bez zmien v kontajneri.",
+    "ogTitle": "Hostiteľ: Mount Samba share on Host ProxMenux Dokumentácia",
+    "ogDescription": "Pripojte externý Samba / CIFS zdieľať na Proxmox hostiteľa cez pvesm, fstab s otvorenými perms (ideálne pre LXC) alebo oboch."
+  },
+  "header": {
+    "title": "Hostiteľ: Mount Samba share on Host",
+    "description": "Pripojiť externú Sambu (SMB / CIFS) zdieľať od NAS, Windows box, a TrueNAS SMB exportovať na Proxmox hostiteľa. Vybrať jednu alebo obe metódy: zaregistrovať ho ako Proxmox úložisko (viditeľné v Datacenter > úložisko) a/alebo pridať obyčajný /etc/fstab pripojiť na cestu, ktorú si vyberiete, s otvoreným uid/gid/file_mode takže neprivilegované LXC môžu viazať-mount a písať bez akýchkoľvek zmien vnútri kontajnera.",
+    "section": "Úložisko a zdieľanie · hostiteľ"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "ProxMenux ponúka dve metódy montáže pre akýkoľvek podiel Samba: <strong>(1) Proxmox uchovávanie</strong> via <code>pvesm add cifs</code> Viditeľné v datacentre > úložisku, namontované <code>/mnt/pve/&lt;id&gt;</code>, údaje uložené zašifrované v <code>/etc/pve/priv/storage/&lt;id&gt;.pw</code>; <strong>(2) Host fstab mount</strong> na ceste, ktorú si vyberiete <code>/etc/fstab</code>na použitie pri výrobe motorových vozidiel [1] <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> tak neprivilegovaný LXC @ info: tooltip <code>/etc/samba/credentials/</code> súbor (heslo nikdy v <code>fstab</code>). Môžete spustiť jednu metódu, druhú, alebo oboje."
+  },
+  "opening": {
+    "heading": "Otvorenie nástroja",
+    "body": "Od ProxMenux's hlavné menu, otvorené <strong>Skladovanie &amp; Share Manager → Mount Samba Zdieľať na hostiteľa</strong>. Toto uvidíte. sub- menu so štyrmi možnosťami:",
+    "imageAlt": "Samba Host Manager menu"
+  },
+  "howRuns": {
+    "heading": "Ako beží skript",
+    "body": "Prietok má dve fázy. Fáza 1: objavovať server, potvrdiť poverovacie listiny, vybrať zdieľanie, potom vybrať metódu pripojenia (s) prostredníctvom kontrolného zoznamu. Fáza 2: iba metódy, ktoré ste označili sú vykonané. Dôverné informácie sú potrebné vopred, pretože <code>smbclient</code> potrebuje, aby vymenovali akcie. Až do konečného potvrdenia, ani <code>/etc/pve/storage.cfg</code> ani <code>/etc/fstab</code> sa dotýkajú."
+  },
+  "modes": {
+    "heading": "Pripojiť zberateľ metódy (dve možnosti, označiť jednu alebo obe)",
+    "intro": "Po výbere zdieľania a validácii údajov ProxMenux zobrazuje kontrolný zoznam s dvoma metódami montáže. Môžete označiť buď, alebo oboje. Ak stlačíte OK bez toho, aby ste niečo označili, dialóg sa znovu objaví, až kým nevyberiete aspoň jednu možnosť alebo nestlačíte Zrušiť, aby ste ukončili tok.",
+    "headerMethod": "Metóda",
+    "headerMount": "Pripojiť cestu",
+    "headerUi": "Viditeľné v datacentre > Úložisko",
+    "headerUseCase": "Typický prípad použitia",
+    "rows": [
+      {
+        "method": "<strong>Ako Proxmox uchovávanie (pvesm)</strong>",
+        "mountRich": "<code>/mnt/pve/&lt;storage-id&gt;</code> (manažovaný spoločnosťou Proxmox)",
+        "ui": "Áno",
+        "useCase": "Zálohy, ISOs, LXC šablóny Živé disky VM sú technicky podporované, ale odrádzajú od CIFS (blokovanie sémantiky)."
+      },
+      {
+        "method": "<strong>Iba fstab hostiteľa</strong>",
+        "mountRich": "<code>/mnt/&lt;path&gt;</code> s otvoreným uidom/gid/file_mode",
+        "ui": "Nie",
+        "useCaseRich": "Väzba akcie do jedného alebo viacerých LXCs <em>bez</em> odhaľuje ako Proxmox úložisko. Otvorené perms zaručujú neprivilegované CTs môžu písať cez viazaciu-mount."
+      },
+      {
+        "method": "<strong>Obe</strong>",
+        "mount": "Oba cesty vyššie (dve nezávislé CIFS pripojenia k serveru)",
+        "ui": "Áno",
+        "useCase": "Chcete UI integráciu A stabilnú cestu na strane hostiteľa s otvorenými právami pre LXC viazanie-mounts. Pripojka pvesm používa predvolené zariadenia Proxmox; pripojka fstab aplikuje otvor uid/gid/file_mode samostatne."
+      }
+    ],
+    "bothTitle": "\"Oboje\" vytvára dve nezávislé CIFS pripojenia",
+    "bothBody": "pvesm and fstab mount the same share twice with different options. The pvesm mount at <code>/mnt/pve/&lt;id&gt;</code> uses Proxmox defaults (no open uid/gid) — Proxmox UI is happy. The fstab mount at <code>/mnt/&lt;path&gt;</code> uses <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> — unprivileged LXC bind-mounts to it can write. Two TCP connections to the SMB server from the same Proxmox host."
+  },
+  "pvesmBranch": {
+    "heading": "Ako Proxmox skladovanie (pvesm)",
+    "intro": "Ak je <em>As Proxmox storage</em> označený, ProxMenux spustí pôvodný pvesm prietok:",
+    "items": [
+      "<strong>ID skladu</strong> Predvolené <code>cifs-&lt;server-ip-with-dashes&gt;</code>. Iba písmená, číslice, <code>-</code> a <code>_</code>.",
+      "<strong>0Obsahové typy</strong> WHS vystavuje <strong>6</strong> možnosti (rovnaké ako NFS mínus <code>rootdir</code>, ktoré Proxmox neumožňuje na CIFS, pretože uzamykacia sémantika nemôže držať živé LXC rootfs):"
+    ],
+    "headerType": "Typ obsahu",
+    "headerAllows": "Čo to umožňuje",
+    "rows": [
+      {
+        "type": "import",
+        "allows": "Import obrazu disku (štandardne vybraný)."
+      },
+      {
+        "type": "backup",
+        "allowsRich": "VM a CT záložné súbory (<code>vzdump</code>)."
+      },
+      {
+        "type": "iso",
+        "allows": "Obrázky ISO inštalácie."
+      },
+      {
+        "type": "vztmpl",
+        "allows": "Modely LXC."
+      },
+      {
+        "type": "images",
+        "allowsRich": "Živé VM snímky disku <strong>wared inline</strong>, pozri nižšie."
+      },
+      {
+        "type": "snippets",
+        "allows": "Háčikové skripty a oblačnosti."
+      }
+    ],
+    "warnTitle": "Živé disky VM na CIFS",
+    "warnBody": "Ak zaškrtnete <code>images</code>, ProxMenux sa objaví varovanie pred pokračovaním. CIFS používa poradenský blokovací model, ktorý veľmi interaguje s operáciami disku KVM (snímky, živá migrácia, I/O v rámci sporu). Záložný alebo ISO obchod na CIFS je úplne v poriadku; live-disk obchod žiada o problémy. Použite NFS (alebo lokálne úložisko) pre <code>images</code>, keď môžete.",
+    "credsTitle": "Kde pvesm ukladá údaje",
+    "credsBody": "Keď používate autentifikáciu používateľa, heslo NIE JE zapísané <code>/etc/pve/storage.cfg</code>. Proxmox ho drží v <code>/etc/pve/priv/storage/&lt;storage-id&gt;.pw</code> Režim <code>0600</code>, majiteľ <code>root</code>, člen zoskupenia synchronizácia. Ak neskôr zmeníte heslo na serveri Samba, použite <code>pvesm set &lt;id&gt; --password &lt;new&gt;</code> alebo odstrániť a znovu pridať cez ProxMenux."
+  },
+  "fstabBranch": {
+    "heading": "Metóda B",
+    "intro": "Ak <em>Len ako hostiteľ fstab mount</em> je označené, ProxMenux žiada o hostiteľa pripojiť cestu a pretrvávajúce možnosti, píše koreňovo jediný súbor (User mode), potom sa pripojí a zapíše položku do <code>/etc/fstab</code>:",
+    "items": [
+      "<strong>Cesta pripojenia k hostiteľovi</strong> Predvolené <code>/mnt/&lt;share-name&gt;</code>. Musí to byť absolútna cesta. Ak je tam niečo už namontované, alebo existuje fstab položka, ProxMenux ponúka, že ho nahradí.",
+      "<strong>Možnosti pripojenia</strong> Vyber <em>Čítanie/napísanie</em> (predvolený s <code>rw,uid=0,gid=0,file_mode=0777,dir_mode=0777,iocharset=utf8,nofail,_netdev</code>), <em>Len na čítanie</em> (prečítaný len variant s <code>file_mode=0555,dir_mode=0555</code>) alebo <em>Vlastné</em> (napíšte svoj vlastný reťazec možností). Otvoriť uid/gid/file_mode sú vždy odporúčané pre LXC @ info: whatsthis"
+    ],
+    "credsTitle": "Súbor Credentials (Používateľský režim)",
+    "credsBody": "Ak ste overili užívateľským menom + heslom, ProxMenux zapíše súbor s údajmi iba pre koreň na <code>/etc/samba/credentials/&lt;server&gt;_&lt;share&gt;.cred</code> (mode <code>0600</code>) s <code>username=</code> a <code>password=</code>, a odkazuje na to v zápise fstab cez možnosť pripojenia <code>credentials=</code>. Jednoduchý text nikdy nepristane v <code>/etc/fstab</code>. Pre režim Hosť je možnosť <code>guest</code> pripojená namiesto toho a nie je vytvorený žiadny súbor s údajmi.",
+    "appliesIntro": "Keď potvrdíte, skript:",
+    "applies": [
+      "<code>mkdir -p</code> cesta k montáži.",
+      "<code>mount -t cifs -o &lt;opts&gt;,credentials=&lt;file&gt;</code> (alebo <code>guest</code>) <code>//&lt;srv&gt;/&lt;share&gt; &lt;path&gt;</code>.",
+      "Napíše jednoriadkový zápis do <code>/etc/fstab</code>: <code>//&lt;srv&gt;/&lt;share&gt; &lt;path&gt; cifs &lt;opts&gt; 0 0</code>.",
+      "Spustí <code>systemctl daemon-reload</code> takže systemd zachytí novú fstab položku."
+    ],
+    "lxcTitle": "Použitie fstab mount z neprivilegované LXC",
+    "lxcBody": "Pretože klient CIFS platí <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code>, každý súbor v mount je vo vlastníctve hostiteľa UID 0 s režimom 0777. Neprivilegovaný LXC viazanie-pripojenie cesta vidí \"ostatných\" trvalosty na každom zázname (CT root = hostiteľ UID 100000 = ostatné na hostiteľskom súborovom systéme), takže číta a píše úspešne. <strong>V kontajneri nie sú vykonané žiadne zmeny.</strong> Nie. <code>chown</code> v CT, žiadne nastavenie skupiny, nič zmenené v <code>/etc/lxc</code> mimo jedinej <code>mp</code> Pripojiť-horská čiara. Skript vytlačí presne <code>pct set</code> príkaz na konci, alebo použiť <mountLink>LXC Správca pripojenia</mountLink> pripojiť cestu.",
+    "noUiTitle": "Fstab mount nie je Proxmox úložisko",
+    "noUiBody": "Hostiteľ fstab mount je neviditeľný pre Proxmox web UI To sa neobjaví v <em>0Datacentrum > Storage</em>, nemôžete si vybrať v VM / CT tvorca, a Proxmox záložné úlohy nemôže zamerať. Je to čisto cesta k hostiteľskému súborovému systému. Ak chcete aj integráciu UI, označte metódy <em>both</em> v zberači."
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent",
+    "pvesmIntro": "Metóda A (pvesm) máp pre:",
+    "fstabUserIntro": "Metóda B (fstab, user auth)",
+    "fstabGuestIntro": "Metóda B (fstab, guest auth)"
+  },
+  "view": {
+    "heading": "Name",
+    "body": "Zoznamy všetkých položiek CIFS v Proxmoxe (<code>pvesm status | awk ''$2 == \"cifs\"''</code>) so serverom, zdieľaním, typmi obsahu, užívateľským menom (alebo <em>Hosť</em>), pripojiť cestu a live status. Heslo je <strong>nikdy nepotlačené</strong>. <strong>Poznámka:</strong> tento pohľad len ukazuje pvesm-registrované úložiská iba fstab nie sú uvedené. Skontrolujte si ich. <code>findmnt -t cifs</code> alebo <code>grep cifs /etc/fstab</code>."
+  },
+  "remove": {
+    "heading": "Odstrániť CIFS skladovanie",
+    "body": "Beží <code>pvesm remove &lt;storage-id&gt;</code> po potvrdení, ktoré zobrazuje server / zdieľať / obsah. Odstráni sa iba registrácia na Proxmox-strane <strong>vzdialeného Samba servera nie je dotkol</strong>. Proxmox tiež zmaže súbor s párovanými údajmi. Ak chcete odstrániť iba fstab pripojiť, editovať <code>/etc/fstab</code> ručne, beh <code>umount &lt;path&gt;</code>, a odstrániť súbor z <code>/etc/samba/credentials/</code>.",
+    "warnTitle": "Zálohovanie závislostí najprv",
+    "warnBody": "VMs, CTs alebo záložné úlohy, ktoré odkazujú na tento úložisko ID zlyhá po odstránení. Presun / pokles tieto referencie pred odstránením úložiska."
+  },
+  "test": {
+    "heading": "Testovať Samba konektivitu",
+    "body": "Spustí diagnostický priepust cez každý CIFS úložisko registrované v Proxmox: kontroluje, že <code>smbclient</code> je k dispozícii, pings každý server, sondy porty 445 a 139, skúste hosťa výpis, a hlási Proxmox vlastný pohľad (<code>pvesm status</code>). \"Požaduje autentifikáciu\" na zozname hostí znamená, že váš server iba vystavuje akcie overeným užívateľom"
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "noServersTitle": "\"Žiadne Samba servery nájdené v sieti\"",
+    "noServersBody": "Automatické vyhľadávanie používa <code>nmap -p 139,445</code>. Server môže byť na inej podsiete, firewalled, alebo len dosiahnuteľný podľa mena hostiteľa (mDNS / WINS). Použite možnosť <em>Manual</em> s IP alebo názov hostiteľa.",
+    "noSharesTitle": "\"Nijaké dostupné akcie\"",
+    "noSharesBody": "<code>smbclient -L</code> nevrátil nič za tieto poverovacie listiny. Príčiny: Užívateľ nemá žiadne povolenie uvádzať akcie (skúste s administrátorskými údajmi raz, alebo zadajte meno akcie ručne), server zdieľanie viditeľnosť vypnuté, alebo poverenia sú zlé. Skript vám umožní zadať názov zdieľania ručne v tomto prípade.",
+    "denyTitle": "Montáž Proxmoxu zlyhá s NT_STATUS_ACCESS_DENIED",
+    "denyBody": "Poverenia pvesm uložené sú mimo synchronizáciu so serverom Samba (zmenilo sa heslo, účet vypnutý, nesúlad domény / pracovnej skupiny). Opätovne zadať údaje <code>pvesm set &lt;id&gt; --username &lt;u&gt; --password &lt;p&gt;</code> alebo odstrániť a opätovne pridať z ProxMenux. Ak je server v doméne AD, pripojte <code>--domain &lt;DOMAIN&gt;</code> k hovoru <code>pvesm set</code>.",
+    "sleepTitle": "\"host je dole\" alebo stav úložiska je neaktívny v noci",
+    "sleepBody": "Niektoré NAS spotrebiče dali SMB do agresívneho spánku. <code>pvestatd</code> potom vidí úložisko ako neaktívne, kým prvý prístup prebudí NAS. Ak je to kozmetické, nič nie je pokazené. Ak to spôsobí poruchy zálohovania, zakázať SMB vypnuté odpojenie na NAS alebo plán záloh mimo okna spánku.",
+    "lxcNoWriteTitle": "Privilegovaný LXC back-mount nemôže písať na cestu fstab",
+    "lxcNoWriteBody": "Potvrdiť montáž používa otvorené možnosti: <code>findmnt /mnt/&lt;path&gt;</code> by mal zobraziť <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code>. Ak Vlastná voľba reťazec vynechá tie, neprivilegované LXC dostane povolenie odmietnutý (CT UID mapa host \"ostatné,\" ktoré bez otvorenia file_mode nemajú žiadny zápis bit). Re-mount s predvoleným RW alebo pridať štyri možnosti späť do svojho vlastného reťazca.",
+    "fstabBootTitle": "fstab mount nepríde po reštarte",
+    "fstabBootBody": "Skript pridáva <code>nofail,_netdev</code>, takže chýbajúci podiel pri štarte neblokuje. Ak sa montáž nikdy nepríde: potvrďte, že sieť je dosiahnuteľná (<code>ping &lt;server&gt;</code>), skontrolujte <code>journalctl -u remote-fs.target</code>, preverte, či súbor s údajmi stále existuje (<code>ls -l /etc/samba/credentials/</code>) a je čitateľný, a skúste <code>mount -a</code> ručne."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/storage-share/host-nfs",
+        "label": "Podiel NFS ako úložisko Proxmox",
+        "tail": " Súrodenec strana s rovnakým vzorcom prietoku (Metóda A pvesm + metóda B fstab) a vedľajšie kompromisy."
+      },
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "Správca LXC mountov",
+        "tailRich": " Pripojiť cestu, ktorá je určená len pre fstab <code>/mnt/&lt;path&gt;</code> do jedného alebo viacerých kontajnerov."
+      },
+      {
+        "href": "/docs/storage-share/lxc-samba-client",
+        "label": "Samba klient v LXC",
+        "tail": " — "
+      }
+    ]
+  }
+}

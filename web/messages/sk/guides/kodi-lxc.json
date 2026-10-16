@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "title": "Nainštalovať Kodi LXC s GPU Zrýchlenie ProxMenux Príručky",
+    "description": "Spustite Kodi vnútri privilegovaného LXC kontajnera na Proxmox VE, odhaľte hostiteľa iGPU a USB vstupné zariadenia a premeňte server Proxmox na mediálne centrum, ktoré je pripojené priamo k televízoru.",
+    "ogTitle": "Inštalovať Kodi v LXC s GPU zrýchlenie",
+    "ogDescription": "Spustite Kodi vnútri privilegované LXC0 na Proxmox VE s hostiteľom iGPU a USB vstup passwhrough"
+  },
+  "header": {
+    "title": "Nainštalujte Kodi v LXC a Pripojte ho k monitoru / TV s GPU zrýchlenie",
+    "description": "Spustite Kodi vnútri privilegovaného LXC kontajnera na Proxmox VE, odhaľte hostiteľa iGPU a USB vstupné zariadenia a premeňte server Proxmox na mediálne centrum, ktoré je pripojené priamo k televízoru.",
+    "section": "Návody"
+  },
+  "intro": {
+    "calloutTitle": "Upozornenie",
+    "calloutBody": "Táto príručka používa externé komunitné skript na topánkytrap Kodi LXC. • GPU strana nastavenia (prechádzanie hostiteľom) iGPU do nádoby) je tiež pokrytá ProxMenux automatický tok: <strong>GPU a koral-TPU → Pridať GPU do LXC</strong> v ProxMenux Menu <code>/dev/dri</code> elektroinštalácia + inštalácia ovládača vo vnútri CT. Skript nižšie navyše bootstraps Kodi sám a autostart na <code>tty7</code>. Použite ho, ak chcete na kľúč mediálne centrum LXC; použite <gpuLink>ProxMenux prietok</gpuLink> ak len potrebujete GPU prístup pre CT Narafičili ste to ručne.",
+    "credit": "Pôvodný Kodi LXC skript vytvorený <authorLink>murudy</authorLink>.",
+    "stepsTitle": "Čo urobíš",
+    "steps": [
+      "Vytvoriť privilegovaný LXC beží Kodi (script-riadený).",
+      "Prepojte USB klávesnicu, myš alebo ovládač do CT.",
+      "(nepovinné) Aktualizovať Kodi na najnovšiu verziu z team-xbmc PPA."
+    ]
+  },
+  "createCt": {
+    "heading": "1. Vytvoriť kodi LXC",
+    "body": "• CT musí byť <strong>Privilegované</strong> tak to má prístup k USB vstupným zariadeniam (kľúčové dosky, ovládače, ovládače). Skript manipuluje s privilégnymi vlajkami + GPU elektroinštalácia + Kodi inštalácia + automatický štart zapnutý <code>tty7</code>:",
+    "code": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/mrrudy/proxmoxHelper/main/ct/kodi-v1.sh)\"",
+    "after": "Buďte trpezliví a chvíľu trvá nainštalovať. Keď to skončí a Kodi začne na <code>tty7</code>, môžete pripojiť monitor alebo TV priamo do HDMI / DisplayPort výstup hostiteľa a mali by ste vidieť Kodi UI."
+  },
+  "addInput": {
+    "heading": "2. Pridať klávesnicu, myš alebo USB ovládač",
+    "body": "Vstupné zariadenia žijú pod <code>/dev/input/</code> na hostiteľa. Uveďte hlavné číslo:",
+    "listCode": "ls -l /dev/input",
+    "imageAlt": "Zoznam vstupných zariadení",
+    "afterList": "Vezmite si číslo prvého stĺpca (v príklade: <code>13</code>). Zastavte Kodi LXC, potom upravte jeho konfiguráciu (nahradiť <code>'<'CTID'>'</code> kontajnerom ID napríklad, <code>102</code>):",
+    "editCode": "nano /etc/pve/lxc/'<'CTID'>'.conf",
+    "addLines": "Pridať (nastaviť) <code>13</code> k tomu, čo ste videli na <strong>Vaša</strong> host):",
+    "configCode": "lxc.cgroup2.devices.allow = c 13:* rwm\nlxc.mount.entry: /dev/input dev/input none bind,optional,create=dir",
+    "imageConfigAlt": "Konfigurácia LXC",
+    "save": "Uložiť (<code>Ctrl+X</code>) a znovu začať <strong>iba nádoba</strong> Nie je potrebné reštartovať celý Proxmox host:",
+    "restartCode": "pct restart '<'CTID'>'",
+    "plug": "Plug in the keyboard / mouse / radič and Kodi should response to it."
+  },
+  "updateKodi": {
+    "heading": "3. (nepovinné) Aktualizovať Kodi na najnovšiu verziu",
+    "calloutTitle": "Dôležité",
+    "calloutBody": "Tím-xbmc PPA je <strong>Iba Ubuntu</strong>. Ak Kodi LXC je založený na šablóne Debianu, <code>add-apt-repository</code> nebude k dispozícii a PPA nebude fungovať. Mrrudy skript predvolený pre Ubuntu šablónu, takže to by malo platiť normálne. Overiť: <code>cat /etc/os-release</code> vo vnútri kontajnera, hľadajte <code>NAME=\"Ubuntu\"</code>.",
+    "body": "Vnútri kontajnera (<code>pct enter '<'CTID'>'</code>):",
+    "code": "sudo add-apt-repository ppa:team-xbmc/ppa\nsudo apt update\nsudo apt install kodi kodi-bin",
+    "after": "Reštartovať kontajner po dokončení; na topánke budete mať najnovšie Kodi."
+  },
+  "screenshots": {
+    "heading": "Snímky obrazovky",
+    "image1Alt": "Kodi rozhranie 1",
+    "image2Alt": "Kodi rozhranie 2"
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "items": [
+      "<strong>Kodi LXC začína, ale nič v televízii:</strong> a) CT možno nezdedili iGPU. Potvrďte <code>ls /dev/dri</code> Vnútri kontajnera (treba vidieť <code>card0</code>, <code>renderD128</code>). Ak je prázdny, GPU passhow wasn't appliced ProxMenux <strong>Pridať GPU do LXC</strong> menu.",
+      "<strong>Klávesnica / myš nebola zistená po reštarte:</strong> hlavné číslo pre <code>/dev/input</code> zmenené (zriedkavé, ale stane sa po aktualizáciách jadra). Znovu spustiť <code>ls -l /dev/input</code> na hostiteľa a aktualizovať <code>lxc.cgroup2.devices.allow</code>.",
+      "<strong>Hardware-zrýchlené prehrávanie používa CPU namiesto GPU:</strong> inštalovať alebo aktualizovať VA-API ovládače vnútri kontajnera (<code>intel-media-va-driver</code> pre novšie Intel iGPUs, <code>i965-va-driver</code> pre staršie, <code>mesa-va-drivers</code> na AMD).",
+      "<strong>0<code>add-apt-repository: command not found</code>:</strong> kontajner je Debian, nie Ubuntu. Buď použite balíky Debian Kodi (staršie, ale stabilné) alebo vytvorte CT zo šablóny Ubuntu."
+    ]
+  },
+  "further": {
+    "heading": "Ďalšie informácie",
+    "konpatRich": "<konpatLink>Kopatský blog</konpatLink> Ďalšie súvislosti týkajúce sa informácií iGPU prechod do LXC."
+  }
+}

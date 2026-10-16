@@ -1,0 +1,170 @@
+{
+  "meta": {
+    "title": "Cross-kernel obnoviť smerovú detekciu, bezpečné-subset filter, hydratácia ProxMenux",
+    "description": "Ako ProxMenux obnovuje zálohovanie hostiteľa na cieľ bežiaci inú hlavnú verziu jadra. Dokumenty o tom, ako sa zistí smer nesúladu, bezpečný subsetový filter, ktorý preskočí cesty kritické pre topánku, keď cieľ spustí novšie jadro ako záloha, a štvorfázová agnostikovaná hydratácia jadra, ktorá oživuje užívateľské ladenie ako IOMMU, ID VFIO a vlastné cmdline žetóny bez kopírovania jadra viazanej doslova.",
+    "ogTitle": "ProxMenux Zálohovanie",
+    "ogDescription": "Smer-aware cross-kernel obnoviť s bezpečným subsetovým filtrom a jadra-agnostická hydratácia.",
+    "twitterTitle": "Cross-kernel restoria ProxMenux",
+    "twitterDescription": "Ako ProxMenux spracováva obnovenie, keď sa cieľové jadro líši od zálohy."
+  },
+  "header": {
+    "title": "Obnova medzi kernelmi",
+    "description": "Ako ProxMenux zvláda obnovenie, keď cieľový hostiteľ spustí iné jadro od toho, ktoré je zaznamenané v zálohe, najmä keď cieľ spustí novšie jadro. Dokumenty, ako sa rozdiel detekuje, ako sa prefiltrujú cesty kritické z hľadiska zavádzania, ktoré by mohli porušiť cieľ, a ako sa užívateľská konfigurácia znovu dodáva bez kopírovania súborov viazaných na jadro doslova.",
+    "section": "Záloha a obnova"
+  },
+  "intro": {
+    "title": "Každý skok do jadra je riadený inak",
+    "body": "Jadro Proxmox host je identifikované ako reťazec verzie <code>6.17.13-2-pve</code>. Prvé dve čísla (<strong>6.17</strong> v tomto príklade) definovať hlavnú verziu: keď sa zmenia, niektoré konfiguračné súbory napísané pre predchádzajúce jadro nemusia byť platné pre nové. Keď obnovenie zistí, že zálohovanie a cieľ majú rôzne hlavné verzie jadra, prietok vetvy založené na smere skoku Zálohy novšie ako cieľ obnoviť čisto as-is (bench-overené cez viac jadra skokov). Zálohy staršie ako cieľ potrebujú filter, aby sa zabránilo rozbitiu topánky cieľa s konfiguráciou napísanou pre jadro, ktoré sa odvtedy zmenilo."
+  },
+  "directionCheck": {
+    "heading": "Kontrola smeru",
+    "intro": "Počas kontroly kompatibility <code>hb_compat_check</code> porovnáva jadro zaznamenané v manifeste zálohy s aktuálnym jadrom cieľa (<code>uname -r</code>) a klasifikuje obnovenie do jedného z troch prípadov, uložené vo vnútornej premennej <code>HB_COMPAT_KERNEL_DIRECTION</code>:",
+    "rows": [
+      {
+        "direction": "rovnaké",
+        "condition": "Hlavná verzia jadra sa zhoduje medzi zálohou a cieľom.",
+        "behavior": "Úplné obnovenie toku beží nezmenený. Žiadny ďalší filter, žiadna hydratácia, žiadne špeciálne upozornenie v UI."
+      },
+      {
+        "direction": "bk_newer",
+        "condition": "Zálohovacie jadro je NEWER ako cieľová (napríklad: záloha bola vykonaná na jadre 7.0 a cieľová beží jadra 6.17).",
+        "behavior": "Úplné obnovenie toku beží nezmenený, presne ako <code>same</code>. Filter sa nepoužije. Overené empiricky: ovládače autoreinštalujú proti jadru cieľa, IOMMU config platí čisto, VMs s GPU priechod prísť bez problémov."
+      },
+      {
+        "direction": "bk_older",
+        "condition": "Zálohovacie jadro je OLDER ako cieľová (napríklad: záloha bola vykonaná na jadre 6.17 a cieľová beží jadro 7.0).",
+        "behavior": "Bezpečnostný subsetový filter a štvorfázová hydratácia sú aktivované. Obnovenie pokračuje"
+      }
+    ]
+  },
+  "whyBkNewerIsSafe": {
+    "heading": "Prečo záloha s novším jadrom ako cieľ obnoví nezmenený",
+    "body": "Keď reštaurácia beží proti cieľu s <em>older</em> jadro, než ten, ktorý je zaznamenaný v zálohe, každý mechanizmus, na ktorom je obnova závislá, je nezávislý od verzie jadra. Inštalátori ovládača GPU a ďalší inštalátori PCI-device detekujú bežiace jadro s <code>uname -r</code> a kompilujú DKMS podľa toho, čo má cieľ. APT balíček nainštaluje ťahanie binárnych súborov postavených pre distribúciu cieľa. IOMMU cmdline žetóny ako <code>intel_iommu=on</code> sú stabilné vo všetkých hlavných verziách jadra. Zálohovanie nesie cesty napísané pod novším jadrom, ale tieto cesty (modul blacklists, GRUB defaults, initramfs config) sú stále platné syntax na staršieho zrnká ignorujú žetóny, ktoré nerozoznávajú namiesto zlyhania. Tento prípad je v praxi rovnocenný s obnovou rovnakého kernelu a ProxMenux sa k nemu tak správa."
+  },
+  "safeSubsetFilter": {
+    "heading": "Bezpečný subsetový filter (iba ak je cieľové jadro novšie)",
+    "intro": "Keď je cieľové jadro novšie ako záložné, kontrola kompatibility pridáva 16 cesty kritické pre nohy z <code>hb_unsafe_paths_cross_version</code> do <code>RS_SKIP_PATHS</code>. Tieto cesty sú vylúčené z obnovy, pretože písanie ich verzie zo staršieho jadra nad cieľom spusteným novším spôsobilo paniku jadra v lavičkových testoch. Trasy pokrývajú štyri kategórie:",
+    "categoryRows": [
+      {
+        "category": "Zavádzač",
+        "paths": "<code>/etc/default/grub</code>, <code>/etc/kernel</code>",
+        "reason": "GRUB defaults viazaná na predchádzajúcu objednávku jadra a stav proxmox-boot-tool (cmdline, ESP UUIDs, háčiky), ktorý odkazuje na cesty a identifikátory zo staršej inštalácie."
+      },
+      {
+        "category": "Kernelové moduly a štartovacie artefakty",
+        "paths": "<code>/etc/modules-load.d</code>, <code>/etc/modprobe.d</code>, <code>/etc/initramfs-tools</code>",
+        "reason": "Automaticky načítať zoznamy, ktoré môžu referenčné moduly premenovať medzi hlavicami jadra, možnosti modulu, ktoré sa nemusia použiť, initramfs háčiky napísané pre staršie jadro."
+      },
+      {
+        "category": "@ info: tooltip",
+        "paths": "<code>/etc/fstab</code>, <code>/etc/multipath</code>, <code>/etc/iscsi</code>, <code>/etc/udev/rules.d</code>, <code>/etc/zfs</code>",
+        "reason": "UUID, ktoré nemusia existovať na tejto inštalácii, multipaty ovládače, ktoré sa menia medzi jadrami, iSCSI parametre, ktoré sa vyvíjajú, udev pravidlá, ktoré môžu zaviazať k neexistujúcim subsystémami, ZFS stav (<code>zpool.cache</code> + <code>hostid</code>), ktoré môžu zamknúť bazén ako cudzie."
+      },
+      {
+        "category": "APT zdroje",
+        "paths": "<code>/etc/apt</code>",
+        "reason": "APT zdrojové apartmány môžu spustiť zníženie úrovne kritických balíkov na ďalšiu aktualizáciu."
+      },
+      {
+        "category": "systemd",
+        "paths": "<code>/etc/systemd/system</code>, <code>/etc/systemd/journald.conf</code>, <code>/etc/systemd/logind.conf</code>, <code>/etc/systemd/system.conf</code>, <code>/etc/systemd/user.conf</code>",
+        "reason": "Jednotka ovláda a .wants viazaná na staršie systemd major; konfiguračné kľúče, ktoré nemusia spracovať na novšie systemd."
+      }
+    ],
+    "outroBody": "Filter beží PRED konfirmačným dialógom, takže užívateľ vidí presný zoznam ciest, ktoré budú preskočené, kategorizované z dôvodu. Obnovenie stále pokračuje všetko ostatné (VMs, LXCs, sieť, /etc/pve, užívatelia, cron, ProxMenux stav, balíčky, ovládače, /root) je obnovená normálne."
+  },
+  "hydration": {
+    "heading": "Kernel-agnostická hydratácia",
+    "intro": "Safe-subset filter sám by opustil cieľ bez ladenia užívateľ mal vnútri týchto boot-kritické súbory: IOMMU cmdline pre GPU0 passmough, VFIO ID zariadenia, vlastné <code>GRUB_TIMEOUT</code>, nvidia blacklists. Hydratácia prešla znova agnosticky tieto bity jadra. Štyri fázy bežia, keď je cieľové jadro novšie ako záložné, každá prídavná látka (nikdy neprepíše hodnotu, ktorú cieľ už nesie) a je impotentná (utekanie dvakrát je bezop).",
+    "phaseRows": [
+      {
+        "phase": "1a GRUB cesta",
+        "detail": "Pre hostiteľov používajúcich GRUB (ext4/lvm). <code>_rs_hyd_grub</code> spája každý token zo zálohy <code>manifest.kernel_params.cmdline_extra</code> do cieľovej živého <code>GRUB_CMDLINE_LINUX_DEFAULT</code>, preskočí žetóny, ktorých kľúč cieľ už nesie. Potom zlučuje biele označené <code>GRUB_*</code> klávesy (<code>GRUB_TIMEOUT</code>, <code>GRUB_TIMEOUT_STYLE</code>, <code>GRUB_DEFAULT</code>, <code>GRUB_TERMINAL</code>, <code>GRUB_DISABLE_OS_PROBER</code>, <code>GRUB_SERIAL_COMMAND</code>, <code>GRUB_GFXMODE</code>, <code>GRUB_GFXPAYLOAD_LINUX</code>) od zálohy <code>/etc/default/grub</code> ak sa líšia od cieľov."
+      },
+      {
+        "phase": "1b systemd- Boot / ZFS cesta",
+        "detail": "Pre hostiteľov používajúcich systemd-boot (zvyčajne ZFS-on-root). <code>_rs_hyd_kernel_cmdline</code> zlučuje užívateľské žetóny z <code>cmdline_extra</code> do cieľovej <code>/etc/kernel/cmdline</code>, udržuje cieľ vlastné <code>root=</code>, <code>boot=</code> a <code>rootflags=</code> kotolňa neporušená."
+      },
+      {
+        "phase": "2 — /etc/modules zlúčenie",
+        "detail": "<code>_rs_hyd_modules</code> dopĺňa moduly z <code>manifest.kernel_params.modules_loaded_at_boot</code>, ktoré sú na bielom zozname (<code>vfio</code>, <code>vfio_pci</code>, <code>vfio_iommu_type1</code>, <code>vfio_virqfd</code>, <code>kvm</code>, <code>kvm_intel</code>, <code>kvm_amd</code>, <code>nvidia</code>, <code>nvidia_drm</code>, <code>nvidia_modeset</code>, <code>nvidia_uvm</code>, <code>i915</code>, <code>xe</code>) a ešte nie sú prítomné v cieľovom <code>/etc/modules</code>."
+      },
+      {
+        "phase": "3",
+        "detail": "<code>_rs_hyd_files</code> skopíruje súbory autorizované užívateľom z inscenácie rootfs na živý cieľ, keď sa obsah líši. Whitelist pokrýva súbory VFIO/nvidia/blacklist podľa pravidiel <code>/etc/modprobe.d</code>, <code>/etc/modules-load.d</code> a ProxMenux VFIO sa viaže na pravidlo + nvidia udev podľa pravidiel <code>/etc/udev/rules.d</code>. Distro-vlastnené súbory (<code>pve-blacklist.conf</code>, <code>mdadm.conf</code>, <code>nvme.conf</code>) sú zámerne vylúčené"
+      },
+      {
+        "phase": "4",
+        "detail": "Štyri fázy píšu priamo na živý cieľ mimo normálne obnoviť potrubia. Aby zlúčené žetóny/moduly/súbory nadobudli účinnosť na ďalšom štarte, <code>HB_HYDRATION_APPLIED=1</code> sa šíri cez <code>plan.env</code> na <code>apply_pending_restore.sh</code>, čo núti <code>NEEDS_INITRAMFS=1</code> a <code>NEEDS_GRUB=1</code> bez ohľadu na to, čo bolo v zozname. Post-boot dispečer potom regeneruje initramfs a osvieži bootloader."
+      }
+    ]
+  },
+  "planCommit": {
+    "heading": "Plán vs commit",
+    "body": "Hydratácia prebieha v dvoch režimoch. Pred dialógom s potvrdením, ProxMenux behy <code>_rs_apply_bk_older_hydration</code> on <code>plan</code> režim: počíta presne to, čo by bolo zlúčené, zaľudňuje <code>RS_HYDRATION_SUMMARY</code> s zeleným blokom zoznam každej akcie, a vráti sa bez písania. Potvrdzovací dialóg ukazuje, že zelený blok vedľa jantárovej safe-subset preskočiť zoznam, takže užívateľ vidí UPFRONT, čo sa bude znovu používať automaticky. Po potvrdení užívateľa, ProxMenux znovu spustí toho istého pomocníka <code>commit</code> režim chromozómy rovnaké fázy, rovnaká logika, ale tentoraz každá fáza píše na živý cieľ. Zrušenie dialógu s potvrdením opustí cieľ nedotknutý."
+  },
+  "flowDiagram": {
+    "heading": "Tok, keď je cieľové jadro novšie ako záložné",
+    "intro": "Kroky pridané, keď je cieľové jadro novšie sedí vnútri normálne obnoviť tok. Všetko ostatné",
+    "diagram": "  ┌────────────────────────────────────────────────────────────┐\n  │ hb_compat_check                                             │\n  │   HB_COMPAT_KERNEL_DIRECTION = bk_older                     │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ Add 16 boot-critical paths to RS_SKIP_PATHS                 │\n  │   /etc/default/grub, /etc/kernel, /etc/modules-load.d, ...  │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ _rs_apply_bk_older_hydration \"plan\"                         │\n  │   Compute what would be merged                              │\n  │   Populate RS_HYDRATION_SUMMARY (green block)               │\n  │   No writes                                                 │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ Confirmation dialog                                         │\n  │   Amber: paths skipped by safe-subset filter                │\n  │   Green: tokens/files reapplied by hydration                │\n  │   User accepts or cancels                                   │\n  └───────────────────────────┬────────────────────────────────┘\n                              │ (accepted)\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ _rs_apply_bk_older_hydration \"commit\"                       │\n  │   Phase 1a/1b: merge cmdline tokens + GRUB keys             │\n  │   Phase 2: append modules to /etc/modules                   │\n  │   Phase 3: copy whitelisted vfio/nvidia files               │\n  │   Set HB_HYDRATION_APPLIED=1                                │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ Rest of the restore runs normally                           │\n  │   _rs_apply hot (skips RS_SKIP_PATHS)                       │\n  │   _rs_prepare_pending_restore (writes plan.env with         │\n  │     HB_HYDRATION_APPLIED=1)                                 │\n  │   packages.manual.list install                              │\n  │   Reboot                                                    │\n  │   apply_pending_restore.sh (forces NEEDS_INITRAMFS=1,       │\n  │     NEEDS_GRUB=1 because of the hydration flag)             │\n  │   apply_cluster_postboot.sh                                 │\n  │     update-initramfs -u -k all                              │\n  │     update-grub / proxmox-boot-tool refresh                 │\n  │     component --auto-reinstall                              │\n  └────────────────────────────────────────────────────────────┘"
+  },
+  "concreteExamples": {
+    "heading": "Konkrétne príklady",
+    "intro": "Hydratácia priepust nie je abstraktné Dva príklady, ktoré hydratácia ovláda automaticky:",
+    "rows": [
+      {
+        "scenario": "GPU priechod (VFIO)",
+        "detail": "Zdroj mal <code>intel_iommu=on iommu=pt</code> v cmdline, <code>vfio</code>/<code>vfio_pci</code>/<code>vfio_iommu_type1</code> v <code>/etc/modules</code>, <code>/etc/modprobe.d/vfio.conf</code> s <code>options vfio-pci ids=10de:2216</code>, a <code>/etc/modprobe.d/blacklist-nvidia.conf</code>. Hydratácia zlučuje žetóny cmdline do cieľovej GRUB alebo jadra cmdline, pridá vfio moduly do <code>/etc/modules</code>, a skopíruje dva užívateľsky povolené modprobe súbory. Pri ďalšom štarte je IOMMU aktívna, VFIO module zaťaženie, GPU je viazaný na vfio-pci a VM prichádza s priechodom pracovať."
+      },
+      {
+        "scenario": "Vlastné GRUB predvolené",
+        "detail": "Zdroj mal <code>GRUB_TIMEOUT=1</code> a <code>GRUB_DISABLE_OS_PROBER=true</code>. Hydratácia číta oba kľúče z <code>/etc/default/grub</code> zálohy, vidí, že sa líšia od čerstvých predvolených inštalácií, a prepíše tieto dva riadky v cieľovom súbore (uloženie všetko ostatné, vrátane <code>GRUB_DISTRIBUTOR</code>, nedotknuté)."
+      }
+    ]
+  },
+  "callout": {
+    "warningTitle": "Aká hydratácia sa znovu neplní, keď je cieľové jadro novšie",
+    "warningBody": "Hydratácia využíva len konfiguráciu ProxMenux vie byť bezpečný vo všetkých verziách jadra: IOMMU žetóny, VFIO ID, whitelisted GRUB kľúče a moduly z pevného zoznamu (<code>vfio*</code>, <code>nvidia*</code>, <code>i915</code>, <code>xe</code>, <code>kvm*</code>). Anything outside that set chick initramfs hands under <code>/etc/initramfs-tools/hooks/</code>, súbory, ktoré nie sú uvedené v zozname <code>/etc/modprobe.d/</code>, autorom užívateľa systemd jednotka má prednosť pred kontrolou. Dôvod je konkrétny: tieto súbory môžu volať vnútorné rozhrania jadra (modul API, <code>/sys</code> usporiadanie, <code>udev</code> Háčiky), ktoré sa menia medzi hlavnými verziami, a ich použitie doslova na novšie jadro môže zabrániť cieľ od spustenia. Ak je potrebná presná reprodukcia bootového reťazca, obnova musí bežať na hostiteľa s rovnakou hlavnou verziou jadra ako záloha."
+  },
+  "codeReference": {
+    "heading": "Kde mechanizmy žijú",
+    "intro": "Pre vývojárov, ktorí chcú vystopovať alebo rozšíriť správanie kríža:",
+    "rows": [
+      {
+        "component": "Smerové zistenie",
+        "location": "<code>hb_compat_check</code> v <code>lib_host_backup_common.sh</code>. Nastaví <code>HB_COMPAT_KERNEL_DIRECTION</code>."
+      },
+      {
+        "component": "Safe-subset zoznam trás",
+        "location": "<code>hb_unsafe_paths_cross_version</code> v <code>lib_host_backup_common.sh</code>. Emits <code>path\\treason</code> linky používané ako CLI filter a webový koncový ukazovateľ <code>/api/host-backups/restore/prepare</code>."
+      },
+      {
+        "component": "Hydratačné fázy",
+        "location": "<code>_rs_hyd_grub</code>, <code>_rs_hyd_kernel_cmdline</code>, <code>_rs_hyd_modules</code>, <code>_rs_hyd_files</code> v <code>backup_host.sh</code>. Orchestrovaný <code>_rs_apply_bk_older_hydration</code>."
+      },
+      {
+        "component": "Núdzový reflux",
+        "location": "<code>apply_pending_restore.sh</code> má byť <code>HB_HYDRATION_APPLIED</code> od <code>plan.env</code> a sily <code>NEEDS_INITRAMFS=1</code>/<code>NEEDS_GRUB=1</code>."
+      },
+      {
+        "component": "Webový náhľad",
+        "location": "<code>/api/host-backups/restore/prepare</code> v <code>flask_server.py</code>. Zdroje knižnice pomocníka, spustí <code>_rs_apply_bk_older_hydration</code> v režime plánu, vráti akcie na Web modus."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Kam ísť ďalej",
+    "items": [
+      {
+        "label": "Obnovenie",
+        "href": "/docs/backup-restore/restoring",
+        "tail": " — "
+      },
+      {
+        "label": "Ako to funguje",
+        "href": "/docs/backup-restore/how-it-works",
+        "tail": " chápatelia a zberatelia, ktorí produkujú <code>kernel_params</code> blok hydratácia odčíta od."
+      }
+    ]
+  }
+}

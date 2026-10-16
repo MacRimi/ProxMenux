@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "UP Dump, PVE 8 do 9 Upgrade, OVA Export/Import ProxMenux",
+    "description": "Denné Proxmox VE inžinierske siete: stavať systémy Windows ISO z UUP Dump, nainštalovať vykurované nástroje CLI, spustiť bezpečnú aktualizáciu systému Proxmox, vykonávať hlavnú verziu PVE 8 PVE 9, export VMs do OVA / OVF a import OVA / OVF VMs z VMware alebo VirtualBox.",
+    "ogTitle": "UP Dump, PVE 8 do 9 Aktualizácia, vývoz/dovoz OVA",
+    "ogDescription": "Zostrojte Windows ISO, nainštalujte nástroje CLI, spustite bezpečnú aktualizáciu, upgrade PVE 8 na PVE 9, export / import OVA / OVF VMs.",
+    "twitterTitle": "Proxmox Utilities ProxMenux",
+    "twitterDescription": "Tvorba ISO, nástroje CLI, aktualizácia Proxmoxu, PVE 8→9 upgrade, OVA / OVF VM prenosnosť."
+  },
+  "header": {
+    "title": "Nástroje a zariadenia",
+    "description": "Šesť nástrojov, ktoré zaokrúhľujú každodenný pracovný postup Proxmox VE: vytvorenie ISO, údržba systému a prenosnosť VM. Každá možnosť je nezávislá, vyberte si ten, ktorý potrebujete; nič nie je nainštalovaný, kým o to požiadate.",
+    "section": "Nástroje"
+  },
+  "intro": {
+    "title": "Na čo je toto menu",
+    "body": "Tri skupiny nesúvisiacich, ale bežne potrebných nástrojov: <strong>vytvoriť Windows ISO</strong> z UUP Dump, <strong>udržiavať hostiteľa Proxmoxu</strong> (CLI inžinierske siete, aktualizácie, aktualizácia hlavnej verzie) a <strong>Presun VMs dovnútra a von</strong> Proxmox s použitím štandardného formátu OVA / OVF."
+  },
+  "opening": {
+    "heading": "Otvorenie menu",
+    "body": "Od ProxMenuxhlavné menu, vyberte <strong>Nástroje</strong>. Uvidíte toto:",
+    "imageAlt": "Menu využitia pomocou UUP Dump, systémových inžinierov, aktualizácie, aktualizácie, exportu a importu"
+  },
+  "groups": {
+    "heading": "Tri skupiny nástrojov",
+    "intro": "Šesť nástrojov patrí do troch nezávislých skupín. Kliknite na kartu nižšie pre skok do zodpovedajúcej časti.",
+    "iso": {
+      "title": "Tvorba ISO",
+      "body": "Zostavte oficiálne Windows ISO z UUP Dump na Proxmox hostiteľa.",
+      "bullets": [
+        "UUP Dump zdieľaný odkaz → bootable ISO",
+        "Závislosti nainštalované automaticky",
+        "Výsledok klesne do cesty šablóny Proxmox podľa ISO"
+      ]
+    },
+    "maintenance": {
+      "title": "Údržba systému",
+      "body": "Udržujte hostiteľa zdravé: CLI nástroje, pravidelné aktualizácie, a hlavné-verzia upgrade, keď je čas.",
+      "bullets": [
+        "Inštalátor systémových zariadení (náradie 26 CLI)",
+        "Aktualizácia systému Proxmox (apt + dist-upgrade)",
+        "PVE 8 → PVE 9 veľká aktualizácia"
+      ]
+    },
+    "portability": {
+      "title": "Prenosnosť VM",
+      "body": "Presuňte VMs do a z Proxmoxu pomocou štandardného formátu OVA / OVF.",
+      "bullets": [
+        "Exportovať Proxmox VM → OVA / OVF",
+        "Importovať OVA / OVF → Proxmox VM",
+        "Kompatibilný s VMware a VirtualBox"
+      ]
+    }
+  },
+  "upgradeWarn": {
+    "title": "PVE 8 → Upgrade 9 je deštruktívna a nie reverzibilná",
+    "body": "Aktualizácia hlavnej verzie prepíše základňu Debianu (Bookworm → Trixie) a komín Proxmox na mieste. Neexistuje žiadna spiatočná cesta, potrebujete <strong>0 Overené zálohy</strong> každého VM a CT a <strong>console / IPMI / iKVM prístup</strong> pred začatím. Nástroj na aktualizáciu z tohto dôvodu odmieta spustiť z webového terminálu Proxmox."
+  },
+  "isoSection": {
+    "heading": "Tvorba ISO",
+    "body": "Vytvorte novú, aktuálnu inštaláciu systému Windows ISO priamo na počítači Proxmox. Skript automatizuje celý tok UUP Dump: inštalácia závislosti (aria2c, výpis z kabíny, wimlib-imagex, ...), paralelné sťahovanie aktualizačných súborov cez aria2 a premena na jeden bootable ISO, ktorý pristane v <code>/var/lib/vz/template/iso</code> pripravený pripojiť na VM.",
+    "options": [
+      {
+        "title": "Tvorba ISO cez UUP Dump",
+        "description": "Vybudovať aktuálnu inštaláciu systému Windows ISO z zdieľaného odkazu UUP Dump. Závislosti, sťahovanie a konverziu plne automatizované; výsledné ISO pozemky v /var/lib/vz/template/iso pripravený pre VM tvorbu.",
+        "href": "/docs/utils/UUp-Dump-ISO-Creator"
+      }
+    ]
+  },
+  "maintenanceSection": {
+    "heading": "Údržba systému",
+    "body": "Tri nástroje zahŕňajú každodennú a príležitostnú prácu hostiteľa. <strong>System Utilities Installer</strong> nastaví nástroje CLI, ktoré skutočne používate po novej inštalácii. <strong>Proxmox System Update</strong> je týždenný / mesačný hygienický beh. <strong>Upgrade PVE 8 na PVE 9</strong> je raz-za-veľký-cyklový veľký ťah",
+    "options": [
+      {
+        "title": "Inštalátor systémových nástrojov",
+        "description": "Cured picker for 26 CLI nástroje (htop, btop, iperf3, jq, tmux, ncdu, ...) s vlastným výberom alebo vopred definovanými skupinami (základné, dev, kompresia, multiplexery, analýza, sieť). Používa kanonické repo + overiť-príkaz tok.",
+        "href": "/docs/utils/system-utils"
+      },
+      {
+        "title": "Aktualizácia systému Proxmox",
+        "description": "Kontrola úložiska + apt aktualizácia + apt dist-upgrade s reštartom. Detekuje PVE hlavnú verziu (8 alebo 9), udržuje nakonfigurované úložiská a pýta sa pred prepnutím hostiteľa bez predplatného na žiadne predplatné, potom spustí autoremove.",
+        "href": "/docs/utils/system-update"
+      },
+      {
+        "title": "Upgrade PVE 8 na PVE 9",
+        "description": "Modernizácia veľkej verzie (Debian Bookworm → Trixie + PVE 8 → 9). Predletové kontroly, migrácia úložiska, automatizovaný alebo interaktívny režim, overenie po aktualizácii a reštart. Odmieta bežať z webového terminálu.",
+        "href": "/docs/utils/upgrade-pve8-pve9"
+      }
+    ]
+  },
+  "portabilitySection": {
+    "heading": "Prenosnosť VM (OVA / OVF)",
+    "body": "OVA a OVF sú cross-hypervisor baliace formáty z DMTF štandardu VirtualBox a Proxmox. Tieto dva nástroje sú určené na kruhový výlet: a VM exportované z Proxmoxu môžu byť dovezené späť, a naopak. Použite ich na migráciu pracovného zaťaženia z ESXi, vziať prenosnú zálohu VM, alebo zdieľať pripravený VM s niekým, kto uteká VirtualBox.",
+    "options": [
+      {
+        "title": "Exportovať VM do OVA / OVF",
+        "description": "Previesť Proxmox VM do prenosného OVA archívu alebo OVF adresára. Štandardná schéma DMTF, SHA1 manifest, disky streamOptimized VMDK. Importovateľné na VMware (ESXi / Workstation / Fusion), VirtualBox a späť do Proxmoxu.",
+        "href": "/docs/utils/export-vm"
+      },
+      {
+        "title": "Importovať VM z OVA / OVF",
+        "description": "Prineste VMware / VirtualBox0 / ProxMenux export späť do Proxmoxu. Auto-extracts OVA, parses OVF metadata, vytvára VM a importuje každý disk ako úložný formát.",
+        "href": "/docs/utils/import-vm"
+      }
+    ]
+  },
+  "diskSpaceCallout": {
+    "title": "Poznámka o disku miesto pre export / import",
+    "body": "Oba nástroje konvertujú formáty diskov: exportuje použitie <code>qemu-img convert -O vmdk -o subformat=streamOptimized</code>; použitie na dovoz <code>qm importdisk</code> previesť späť do formátu storage-native (qkow2 / surový). Plán <strong>~120% veľkosti virtuálneho disku</strong> pre OVF a <strong>~220%</strong> pre OVA chron. konverzia napíše celý disk pred kompresiou. Skontrolujte cieľový adresár má headroom pred začatím."
+  },
+  "fitsTogether": {
+    "heading": "Ako sa menu zhoduje",
+    "body": "Každý nástroj má vyhradený skript pod <code>scripts/utilities/</code>. Proxmox System Update je obal, ktorý deleguje na jeden z dvoch pracovných skriptov v <code>scripts/global/</code> v závislosti od detekovanej hlavnej verzie (PVE 8 alebo PVE 9). PVE 8 → 9 upgrade odhaľuje dve ďalšie akcie v menu vo svojom vlastnom toku <em>Kontrola pred aktualizáciou</em> (beží) <code>pve8to9 --full</code>) a iba na čítanie <em>Príručka na manuálne vylepšenie</em> (17-step runbook) - pre užívateľov, ktorí chcú kontrolovať alebo pracovať ručne namiesto automatizovanej cesty."
+  }
+}

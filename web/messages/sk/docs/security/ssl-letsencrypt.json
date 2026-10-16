@@ -1,0 +1,169 @@
+{
+  "meta": {
+    "title": "HTTPS namiesto ProxMenux Monitor Proxmox host certificate alebo vlastné cesty ProxMenux",
+    "description": "Slúžiť ProxMenux Monitor cez HTTPS pomocou buď Proxmox host certificate (auto-detected, vrátane Let's Encrypt cert uploaded prostredníctvom karty Proxmox ACME) alebo vlastné certifikát na akejkoľvek ceste na disku.",
+    "ogTitle": "HTTPS pre ProxMenux Monitor",
+    "ogDescription": "Povoliť HTTPS na porte 8008 s certifikátom Proxmox hostiteľa alebo akýkoľvek vlastný .pum / .key pár."
+  },
+  "header": {
+    "title": "HTTPS pre ProxMenux Monitor",
+    "description": "Zapnite HTTPS pre monitor (port 8008) buď pomocou certifikátu Proxmox host, ktorý Monitor automaticky identifikuje, alebo pomocou vlastného certifikátu, ktorý sa nachádza kdekoľvek na disku. Možnosť Proxmox transparentne vyberá certifikát ACME-uploaded, keď je prítomný, takže Let's Encrypt cert spravovaný systémom Proxmox UI sa opätovne používa bez ďalšieho obnovenia zamestnania.",
+    "section": "Zabezpečenie"
+  },
+  "intro": {
+    "title": "Čo táto stránka obsahuje",
+    "body": "Ako prepnúť monitor z HTTP0 na HTTPS v Nastaveniach → Bezpečnostný panel, čo každý zdroj certifikátu v skutočnosti ukazuje na disk, ako sa Proxmox voľba správa, keď hostiteľ má Let's Encrypt cert, a ako nastaviť vlastné cesty, ak budete spravovať certy mimo Proxmox."
+  },
+  "wheresetting": {
+    "heading": "Kde prostredie žije",
+    "body": "Otvorte monitor a prejdite na <strong>0Nastavenia → Bezpečnosť → HTTPS / SSL</strong>. Panel zobrazuje aktuálny stav (HTTP alebo HTTPS) a na hostiteľovi bez HTTPS napriek tomu uvádza zdroje certifikátov, ktoré bol monitor schopný detekovať.",
+    "imageAlt": "Nastavenia → Bezpečnosť → HTTPS0 / SSL panel v monitore zobrazujúci stav HTTPS-off, automaticky detekovaný certifikát Proxmox (predmet, vydavateľ, platnosť) a možnosť Use Custom Certificate",
+    "caption": "Nastavenie → Bezpečnosť → HTTPS / SSL panel pred aktiváciou. Monitor rozprestiera samotný cert Proxmox používa a ponúka ho ako jednoklik."
+  },
+  "twoways": {
+    "heading": "Dva spôsoby, ako umožniť HTTPS",
+    "proxmox": {
+      "title": "Použiť Proxmox certifikát",
+      "summary": "Jedno kliknutie. Monitor znovu použije certifikát Proxmox VE samotný slúži na porte 8006.",
+      "items": [
+        "Auto-detected",
+        "Vyberie si ACME-uploadovaný koncert, ak je prítomný, spadne späť do vlastnej predvolenej",
+        "Obnovenie sa uskutočňuje prostredníctvom Proxmoxu; Monitor automaticky nasleduje pri ďalšom štarte"
+      ]
+    },
+    "custom": {
+      "title": "Použiť vlastný certifikát",
+      "summaryRich": "Nasmerujte monitor na <code>.pem</code>0 / <code>.key</code> pár kdekoľvek na disku.",
+      "items": [
+        "Iba absolútne cesty (proces monitora musí byť schopný čítať oboje)",
+        "Užitočné, keď certy pochádzajú z <code>certbot</code>, <code>acme.sh</code> alebo divokej karty",
+        "Vlastníte obnovenie"
+      ]
+    }
+  },
+  "proxmoxCert": {
+    "heading": "Proxmox certifikát",
+    "intro": "Proxmox VE uchováva dva páry certifikátov v <code>/etc/pve/local/</code>:",
+    "table": {
+      "headers": {
+        "file": "Súbor",
+        "origin": "Pôvod",
+        "when": "Keď ho Monitor používa"
+      },
+      "rows": [
+        {
+          "fileRich": "<code>pveproxy-ssl.pem</code><br /><code>pveproxy-ssl.key</code>",
+          "originRich": "Colný certifikát nahraný cez Proxmox UI  Let's Encrypt osvedčenie vydané na základe <em>Datacenter → Uzol → Certifikáty → ACME</em>.",
+          "when": "Preferované vždy, keď oba súbory existujú. Monitor bude sledovať koncert Proxmox sám slúži."
+        },
+        {
+          "fileRich": "<code>pve-ssl.pem</code><br /><code>pve-ssl.key</code>",
+          "originRich": "Samopodpísaný certifikát vytvorený v čase inštalácie spoločnosťou Proxmox PKI.",
+          "whenRich": "Úpadok, keď tu nie je <code>pveproxy-ssl.pem</code>."
+        }
+      ]
+    },
+    "callout": {
+      "title": "Rovnaká priorita ako samotný Proxmox",
+      "bodyRich": "<code>pveproxy</code> používa rovnaké pravidlo výberu, takže výber možnosti Proxmox v monitore vždy slúži na koncerte webového UI Proxmox už slúži na porte 8006. Žiadne kopírovanie, žiadne samostatné obnovu potrubia."
+    }
+  },
+  "letsencrypt": {
+    "heading": "Získanie certifikátu Let's Encrypt cez Proxmox ACME",
+    "intro": "Proxmox VE preváža svojho vlastného klienta ACME. Kliknutím na <em>\"Objednávkový certifikát teraz\"</em> píše výsledok na <code>/etc/pve/local/pveproxy-ssl.pem</code>, čo je presne to, čo monitor číta. Päťkrokový recept nižšie je rovnaký postup ako <extlink1>oficial Proxmox sprievodca</extlink1>",
+    "prereqs": {
+      "title": "Predpoklady",
+      "items": [
+        "Uzol má skutočný názov DNS (nielen IP) ukazuje na to.",
+        "<strong>0Either</strong> port 80 dosiahnuteľný z verejného internetu (HTTP-01 výzva, najjednoduchšie), <strong>or</strong> a DNS poskytovateľ s API poverenými osobami (DNS-01 výzva",
+        "E-mailová adresa pre účet ACME."
+      ]
+    },
+    "step1": {
+      "heading": "Krok 1",
+      "introRich": "Nahraďte e-mail s vaším. Názov účtu <code>default</code> je len štítok",
+      "code": "pvenode acme account register default you@example.com",
+      "afterRich": "Proxmox vás vyzve prijať Let's Encrypt podmienky služby. Potom je účet pretrvával pod <code>/etc/pve/priv/acme/</code> a ACME karta v GUI ho ukáže."
+    },
+    "step2": {
+      "heading": "Krok 2",
+      "http01Rich": "<strong>0HTTP-01</strong> je najjednoduchší: je postavený v, žiadny ďalší plugin. Let's Encrypt sa pripája k <code>http://&lt;your-host&gt;/.well-known/acme-challenge/...</code> na port 80, takže port 80 musí byť otvorený z verejného internetu na váš uzol",
+      "dns01Rich": "<strong>DNS-01</strong> Práce bez odhalenia prístavu 80 (dobré pre homelabs za CG-NAT) a je jedinou voľbou pre certifikáty Wildcard. Pridáte DNS plugin raz s vaším poskytovateľom API Token. Cloudflare príklad:",
+      "code": "pvenode acme plugin add dns cf \\\n  --api cloudflare \\\n  --data CF_Token=YOUR_CLOUDFLARE_API_TOKEN",
+      "outroRich": "Pre ostatných poskytovateľov (Route Gandi, OVH, AWS 53, atď) kontrola <code>pvenode acme plugin add dns --help</code> - lode Proxmox <extlink2>všetky acme.sh DNS Moduly</extlink2>."
+    },
+    "step3": {
+      "heading": "Krok 3",
+      "http01Rich": "Pre HTTP-01 (používa vstavaný <code>standalone</code> modul):",
+      "code1": "pvenode config set --acme domains=host.example.com,account=default",
+      "dns01": "Pre DNS-01 s plugin Cloudflare zo Step 2:",
+      "code2": "pvenode config set --acmedomain0 domain=host.example.com,plugin=cf\npvenode config set --acme account=default",
+      "wildcardRich": "Wildcard? Pridať <code>domain=*.example.com</code> na samostatnú položku <code>--acmedomainN</code>. Wildcards vyžadujú DNS-01."
+    },
+    "step4": {
+      "heading": "Krok 4",
+      "code": "pvenode acme cert order",
+      "afterRich": "Prvý beh zvyčajne trvá 30–60 sekundy, kým sa výzva šíri. O úspechu Proxmox píše <code>/etc/pve/local/pveproxy-ssl.pem</code> + <code>.key</code>, reštartuje <code>pveproxy</code>, a obnovenie cron je naplánované automaticky (Let's Encrypt Certs sú platné 90 dní; Proxmox obnovuje pri 60)."
+    },
+    "step5": {
+      "heading": "Krok 5",
+      "code": "openssl x509 -in /etc/pve/local/pveproxy-ssl.pem -noout -issuer",
+      "afterRich": "Mal by vytlačiť vydavateľa začínajúci <code>O = Let's Encrypt</code>. Ak namiesto toho číta <code>CN = Proxmox Virtual Environment</code> Objednávka zlyhala a súbor je stále self-signed PVE cert <code>pvenode acme cert order --debug 1</code> aby som zistila prečo."
+    },
+    "gui": {
+      "title": "Preferujete GUI? Rovnakých päť krokov",
+      "bodyRich": "<em>Datacentrum → ACME</em> eviduje účet, <em>Datacentrum → ACME → Plugins</em> pridáva plugin DNS, <em>Node → Certifikáty → ACME</em> viaže doménu, a <em>Objednať Certifikáty Now</em> beží Step 4. Vyššie uvedené príkazy CLI sú užitočné pre skriptovanie a pre nastavenie bezhlavého / CLI."
+    }
+  },
+  "switchToHttps": {
+    "heading": "Prepnúť monitor na HTTPS",
+    "bodyRich": "Raz <code>/etc/pve/local/pveproxy-ssl.pem</code> je podpísaná Let's Encrypt, strana monitora je jedno kliknutie: otvorené <strong>Nastavenie → Bezpečnosť → HTTPS / SSL</strong>, potvrďte vydavateľa zobrazeného v paneli odhaleného osvedčenia <em>Let's Encrypt</em> (a nie miestny Proxmox CA) a kliknite na tlačidlo <strong>Použiť certifikát Proxmox</strong>. Služba Monitor reštartuje a ďalšie načítanie prehliadača je HTTPS o prístave 8008 Bez upozornenia na certifikát, pretože reťaz je verejne dôveryhodná. Neskôr Proxmox ACME obnovenie sú validované a vybrané počas nasledujúceho nového TLS pripojenie; nie je tam žiadne opakujúce sa certificate poller alebo obnovenie-čas služby reštart. <strong>Aktualizovať certifikát</strong> zostáva k dispozícii v oblasti bezpečnosti ako explicitná diagnostická akcia a opatrenie na obnovu."
+  },
+  "custom": {
+    "heading": "Custom certificate",
+    "intro": "Kliknite na <strong>Use Custom Certificate</strong> zadať dve absolútne cesty:",
+    "items": [
+      "<strong>Osvedčenie</strong> Celý reťazec v PEM (<code>.pem</code> alebo <code>.crt</code>).",
+      "<strong>Súkromný kľúč</strong> Zhodovací kľúč v PEM (<code>.key</code>)."
+    ],
+    "outro": "Oba súbory sú prečítané procesom Monitor pri štarte. Uistite sa, že sú naďalej čitateľné užívateľom systemd jednotka beží ako (koreň štandardne). Bežné miesta, kde je ACME riadený mimo Proxmox:",
+    "code": "# certbot\n/etc/letsencrypt/live/<your-host>/fullchain.pem\n/etc/letsencrypt/live/<your-host>/privkey.pem\n\n# acme.sh\n~/.acme.sh/<your-host>_ecc/fullchain.cer\n~/.acme.sh/<your-host>_ecc/<your-host>.key",
+    "symlinkCallout": {
+      "title": "Symlink ciele vs. súbory",
+      "bodyRich": "<code>certbot</code> ukladá skutočné súbory v <code>/etc/letsencrypt/archive/</code> a cesta <code>live/</code> je symlink. Nasmerujte monitor na <code>live/</code> symlink, nie súbor <code>archive/</code>"
+    }
+  },
+  "afterHttps": {
+    "heading": "Po umožnení HTTPS",
+    "bodyRich": "Ukladanie zmien píše <code>/etc/proxmenux/ssl_config.json</code> a spustí reštart <code>proxmenux-monitor</code> systemd Jednotka. Záložka prehliadača stratí svoje aktuálne pripojenie. <code>https://&lt;host&gt;:8008/</code>. Prvá záťaž s Let's Encrypt cert by nemal zobrazovať žiadne varovanie; s Proxmox self-signed cert prehliadač bude vyžadovať výnimku, ten istý ako pre port 8006.",
+    "reverse": {
+      "heading": "Reverzný proxy a webhooks",
+      "bodyRich": "Keď sa monitor prepne na HTTPS, Proxmox VE webhook URL registrované na oznámenia tiež flip z <code>http://</code> do <code>https://</code> automaticky. Existujúca webhook záznamy sú prepísané pri ďalšom ukladaní alebo opätovnom odhalení notifikačného pravidla, takže nie je potrebná žiadna manuálna úprava oznámenia Proxmox."
+    }
+  },
+  "trustCa": {
+    "heading": "Dôverujte samopodpísanej CA spoločnosti Proxmox",
+    "intro1Rich": "Ak dávate prednosť uchovaniu predvoleného certifikátu Proxmox generovaného (bez ACME), môžete zastaviť varovanie prehliadača importom koreň CA klastra do OS alebo prehliadača dôveryhodného obchodu. Monitor bude naďalej automaticky detekovať rovnaký <code>/etc/pve/local/pveproxy-ssl.pem</code>; jediná vec, ktorá sa zmení je, že zariadenie prehliadanie palubnej dosky teraz rozpozná vydavateľa.",
+    "intro2Rich": "CA súbor žije v <code>/etc/pve/pve-root-ca.pem</code> na každom uzle. V klastri cesta je na zdieľanom <code>pmxcfs</code> súborovom systéme, takže všetky uzly zdieľajú rovnaký koreň a jeden import pokrýva celý dátový stred. Skopírujte ho do svojho stroja:",
+    "code": "scp root@<your-host>:/etc/pve/pve-root-ca.pem ./pve-root-ca.pem",
+    "thenImport": "Potom ho importovať na strane klienta:",
+    "items": [
+      "<strong>Linux (systémový):</strong> <code>sudo cp pve-root-ca.pem /usr/local/share/ca-certificates/pve-root-ca.crt</code> a následne <code>sudo update-ca-certificates</code>. Prehliadače, ktoré používajú obchod so systémom (Chromium, Edge) ho po reštarte vyzdvihnúť; Firefox používa svoj vlastný obchod a potrebuje manuálny import nižšie.",
+      "<strong>0macOS:</strong> double-click the <code>.pem</code> file, Keychain Access opens → pridať do <em>System</em> Keychain → set <em>Trust → Always Trust</em>.",
+      "<strong>0Windows:</strong> kliknite na súbor → <em>Install Certificate</em> → umiestnite ho do <em>Dôverné koreňové certifikačné autority</em>.",
+      "<strong>Firefox (akýkoľvek OS):</strong> <em>Nastavenie → Súkromie &amp; Bezpečnosť → Certifikáty → Zobraziť certifikáty → Úrady → Import</em>, tick <em>Dôverovať tejto CA identifikovať webové stránky</em>."
+    ],
+    "standalone": {
+      "title": "Samostatné uzly mimo klastra",
+      "bodyRich": "Každý non-clustered Proxmox hostiteľ má svoje vlastné <code>pve-root-ca.pem</code>. Ak spravujete niekoľko samostatných hostiteľov, opakujte kópiu/dovoz pre každého, alebo sa pripojte k klastru, takže zdieľajú jeden koreň."
+    }
+  },
+  "disable": {
+    "heading": "Zastavenie HTTPS",
+    "bodyRich": "Kliknite na <strong>0Disable HTTPS</strong> v rovnakom paneli. Služba Monitor reštartuje späť na plain HTTP Neexistuje žiadny samostatný odinštalovať krok; koncertné súbory samotné nie sú dotknuté.",
+    "stateCallout": {
+      "title": "Kde štát žije",
+      "bodyRich": "<code>/etc/proxmenux/ssl_config.json</code> ukladá aktívne cert chodníky a zdroj (<code>none</code>, <code>proxmox</code>, <code>custom</code>). Vymazanie súboru je ekvivalentné vymazaniu HTTPS V ďalšom štarte Monitor padá späť do HTTP."
+    }
+  }
+}

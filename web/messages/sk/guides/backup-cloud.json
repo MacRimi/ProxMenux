@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "title": "Proxmox Zálohovanie na osobné cloudové úložisko ProxMenux Príručky",
+    "description": "Použite rclon na pripojenie osobného cloudu (Google Drive, Mega, Dropbox, OneDrive, atď.) ako adresár na Proxmox VE hostiteľa, zaregistrovať ho ako vzdump datastore, a zálohovať VMs / CTs priamo do cloudu",
+    "ogTitle": "Proxmox Zálohovanie na osobné cloudové úložisko",
+    "ogDescription": "Pripojte osobný mrak s rclónom na Proxmox VE hostiteľa a zálohovať VM / CT priamo k nemu ako vzdump datastore."
+  },
+  "header": {
+    "title": "Proxmox Zálohovanie na osobné cloudové úložisko",
+    "description": "Použite rclon na pripojenie osobného cloudu (Google Drive, Mega, Dropbox, OneDrive, atď.) ako adresár na Proxmox VE hostiteľa, zaregistrovať ho ako vzdump datastore, a zálohovať VMs / CTs priamo do cloudu",
+    "section": "Návody"
+  },
+  "intro": {
+    "pbsCalloutTitle": "Najprv zvážte Proxmox Backup Server",
+    "pbsCalloutBody": "Ak máte druhý stroj (pi, starý počítač, NAS), beží <pbsLink>Proxmox Backup Server</pbsLink> na to vám dáva prírastkové, deduplikované, zašifrované zálohy VM záloha ako rsync-Style cloud synchronizácia. Cloud-mount prístup v tejto príručke je pre užívateľov, ktorí konkrétne chcú zálohy na pristátie v ich osobnom cloude (Google Drive / Mega / OneDrive / Dropbox).",
+    "stepsTitle": "Čo urobíš",
+    "steps": [
+      "Vytvorte adresár na Proxmox host a zaregistrujte ho ako vzdump-kapable datastore.",
+      "Nainštalujte a nakonfigurujte rclón pre vášho poskytovateľa cloudu.",
+      "Pripojte priečinok cloud na adresár.",
+      "Urobiť montáž prežiť reboots (systemd jednotka"
+    ],
+    "vzdumpCalloutTitle": "Hlavy hore o Proxmox vzdump zálohy",
+    "vzdumpCalloutBody": "Sú to <strong>0 nie prírastkové</strong>. Každá záloha obsahuje plný obraz VM disku (komprimovaný). Na limitovanom mraku sa to naplní rýchlo. Plánovať politiku zachovania od prvého dňa (pozri koniec príručky)."
+  },
+  "createDir": {
+    "heading": "1. Vytvoriť hostiteľský adresár a zaregistrovať ho ako datastore",
+    "body": "SSH do hostiteľa (alebo použite shell Proxmox) a vytvoriť adresár s bodom pripojenia pod <code>/mnt/</code>. Názov je svojvoľne",
+    "mkdirCode": "mkdir -p /mnt/gdrive",
+    "afterMkdir": "V webe Proxmox UI: <strong>Datacentrum → Úložisko → Pridať → Directory</strong>.",
+    "image1Alt": "Pridanie nového úložiska v Proxmoxe",
+    "configIntro": "Nastaviť to takto:",
+    "configItems": [
+      "<strong>ID:</strong> <code>gdrive</code> (alebo čokoľvek ste použili pre názov adresára)",
+      "<strong> Adresár:</strong> <code>/mnt/gdrive</code>",
+      "<strong>Obsah:</strong> vyberte súbor <strong>VZDump zálohovanie</strong>"
+    ],
+    "image2Alt": "Nastavenie nového úložiska v Proxmoxe",
+    "afterConfig": "Kliknite na <strong>Add</strong>:",
+    "image3Alt": "Nové skladovanie pridané v Proxmox",
+    "afterAdd": "Adresár je teraz registrovaný ako Proxmox datastore"
+  },
+  "installRclone": {
+    "heading": "2. Inštalovať a konfigurovať rclón",
+    "body": "<rcloneLink>rclone</rcloneLink> je nástroj, ktorý hovorí s poskytovateľmi cloudového úložiska. Nainštalujte ho z úložiska Debianu:",
+    "installCode": "apt-get update\napt-get install -y rclone",
+    "newerCalloutTitle": "Ak potrebujete novší rclon",
+    "newerCalloutBody": "Ak potrebujete novší rclon ako to, čo Debian loďí, použite oficiálny inštalátor:",
+    "newerCode": "curl https://rclone.org/install.sh | bash",
+    "tunnelHeading": "2.1 Overenie založené na prehliadači cez tunel SSH",
+    "tunnelBody": "Rclone auth flow otvára miestny webový prehliadač. Vzhľadom k tomu, Proxmox hostiteľ nemá desktop, <remoteSetupLink>rclone vzdialené nastavenie postup</remoteSetupLink> trasy auth callback cez SSH tunel späť do prehliadača vášho notebooku.",
+    "tunnelFrom": "Z tvojho <strong>notebook</strong> (náhrada) <code>ip_proxmox</code> s Proxmox IP:",
+    "tunnelCode": "ssh -L localhost:53682:localhost:53682 root@ip_proxmox",
+    "tunnelAfter": "Toto sedenie SSH presmeruje port 53682 z hostiteľa Proxmoxu na miestneho hostiteľa vášho notebooku. Udržujte otvorené počas rclone config nižšie.",
+    "runHeading": "2.2 Spustiť rclone config",
+    "runBody": "V SSH sedenie ste práve otvorili, spustiť:",
+    "runCode": "rclone config",
+    "runAfter": "Postupujte podľa pokynov pre pridanie nového ovládača. Presné odpovede závisia od vášho poskytovateľa <providerDocsLink>Docs pre poskytovateľa rclónu</providerDocsLink> pre Google Drive, Mega, Dropbox, OneDriveatď. Kľúčovým krokom je auth otázka:",
+    "authPrompt": "Use web browser to automatically authenticate rclone with remote?\n * Say Y if the machine running rclone has a web browser you can use\n * Say N if running rclone on a (remote) machine without web browser access\nIf not sure try Y. If Y failed, try N.\ny) Yes\nn) No\ny/n> y",
+    "authAfter": "Odpoveď <strong>0Y</strong> Otvorte ho v prehliadači <strong> vášho notebooku</strong> (tunel SSH trasy to správne), povoľte aplikáciu rclone u svojho poskytovateľa cloudu a konfig dokončí.",
+    "nameRemote": "Keď sa opýtate na meno diaľkového ovládača, použite niečo zodpovedajúce adresáru, ktorý ste vytvorili, napr. <code>gdrive</code>."
+  },
+  "mount": {
+    "heading": "3. Pripojiť priečinok cloud",
+    "body": "Vytvorte priečinok vo vašom osobnom cloude, aby ste podržali zálohy. Nazvime to niečo ako <code>PBC</code> (Proxmox Backup Cloud).",
+    "mountIntro": "Pripojte ho do adresára hostiteľa:",
+    "mountCode": "rclone mount gdrive:/PBC /mnt/gdrive --allow-other --allow-non-empty",
+    "mountItems": [
+      "<code>gdrive:/PBC</code>",
+      "<code>/mnt/gdrive</code>"
+    ],
+    "mountFootnote": "<strong>Tento príkaz zostáva v popredí.</strong> Pre testovanie ho nechajte bežať v termináli a skúste zálohu. Pre trvalé pripevnenie na každú topánku nastavte jednotku systemd (ďalšia časť)."
+  },
+  "systemd": {
+    "heading": "4. Automatické pripojenie na každú topánku (systemd)",
+    "body": "A systemd jednotka je robustnejšia ako <code>crontab @reboot</code> To môže počkať, kým sieť bude pripravená, reštartovať na zlyhanie, a dáva vám správne protokoly prostredníctvom <code>journalctl</code>.",
+    "createIntro": "Vytvoriť súbor jednotiek:",
+    "createCode": "nano /etc/systemd/system/rclone-gdrive.service",
+    "pasteIntro": "Vložte:",
+    "unitCode": "[Unit]\nDescription=rclone mount for Proxmox cloud backups\nWants=network-online.target\nAfter=network-online.target\n\n[Service]\nType=notify\nExecStart=/usr/bin/rclone mount \\\n    gdrive:/PBC /mnt/gdrive \\\n    --allow-other \\\n    --allow-non-empty \\\n    --vfs-cache-mode writes \\\n    --log-level INFO \\\n    --log-file /var/log/rclone-gdrive.log\nExecStop=/bin/fusermount -uz /mnt/gdrive\nRestart=on-failure\nRestartSec=10\n\n[Install]\nWantedBy=multi-user.target",
+    "adjust": "Upraviť <code>gdrive:/PBC</code> a <code>/mnt/gdrive</code> ak ste použili rôzne mená. Uložiť (<code>Ctrl+X</code>), potom zapnúť a začať:",
+    "enableCode": "systemctl daemon-reload\nsystemctl enable --now rclone-gdrive.service",
+    "verifyIntro": "Overiť:",
+    "verifyCode": "systemctl status rclone-gdrive.service\nmount | grep /mnt/gdrive",
+    "verifyAfter": "Ak služba niekedy zlyhá (prevádzkovateľ rýchlosť-limity, exspirovaný auth token, sieťový blip), bude automaticky reštartovať po 10 sekúnd. Záznamy sú na <code>/var/log/rclone-gdrive.log</code> a cez <code>journalctl -u rclone-gdrive.service -f</code>.",
+    "vfsCalloutTitle": "Prečo --vfs-cache-mode píše?",
+    "vfsCalloutBody": "vzdump streams záložný archív na disk; bez VFS write caching, každý <code>fwrite</code> bloky na HTTP kolo-trip na cloud Cache pufry píšu lokálne a splachujú ich v pozadí."
+  },
+  "configureBackup": {
+    "heading": "5. Nastaviť zálohu na pristátie v cloude",
+    "body": "V systéme Proxmox UI, pri plánovaní zálohy alebo spustení ad hoc, si vyberte úložisko, ktoré ste zaregistrovali ako <strong>target</strong>:",
+    "image5Alt": "Výber cieľovej zálohy v Proxmoxe",
+    "after": "Po dokončení zálohy sa súbor zobrazí v cloude:",
+    "image6Alt": "Záložný súbor v cloudovom úložisku"
+  },
+  "retention": {
+    "heading": "6. Retention",
+    "body": "Zálohy Proxmox vzdump sú <strong>0 plné snímky, nie prírastkové</strong>. 30 GB VM = 30 GB na zálohu. Bez zadržiavania sa oblak naplní.",
+    "uiPath": "In the Proxmox UI: <strong>Datacenter → Backup → [your job] → Retention</strong>:",
+    "image7Alt": "Nastavenie zálohovania v Proxmoxe",
+    "starterIntro": "Rozumné štartovacie hodnoty pre domáce / laboratórne nastavenie:",
+    "starterItems": [
+      "Udržať posledné 5 denné zálohy",
+      "Udržujte posledné zálohy 4 týždenne",
+      "Udržať posledné 60 mesačné zálohy"
+    ],
+    "adjust": "Úprava na základe vašej cloudovej kvóty a ako často sa VM menia."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "items": [
+      "<strong>0<code>Mount point /mnt/gdrive is itself on a fuse.rclone filesystem</code>:</strong> predchádzajúca montáž neodmontovala čisto. Force-ununt: <code>fusermount -uz /mnt/gdrive</code>, potom reštartujte jednotku systemd.",
+      "<strong>Backup je extrémne pomalý:</strong> potvrdenie <code>--vfs-cache-mode writes</code> je na linke <code>ExecStart</code>. Bez neho, každý písať bloky na oblaku. Tiež skontrolujte svoje predné šírky pásma",
+      "<strong>Backup zlyhá s ''No space left on device'':</strong> adresár vyrovnávacej pamäte (<code>~/.cache/rclone/</code>) vyplnený pred nahrávaním zachytené. Presuňte ho do väčšieho súborového systému s <code>--cache-dir /var/cache/rclone</code> v jednotke systemd.",
+      "<strong>Rclone auth token exspiroval (typické na Google Drive po dlhej dobe nečinnosti):</strong> SSH späť do tunela (<code>ssh -L localhost:53682:localhost:53682 root@ip_proxmox</code>) a beh <code>rclone config reconnect gdrive:</code> na osvieženie.",
+      "<strong>Backups land, ale sú poškodené pri obnove:</strong> stop pomocou cloudového úložiska ako <strong>len</strong> zálohovacie miesto. Kombinovať s miestnymi PBS / vzdump na inom disku pre odolnosť."
+    ]
+  }
+}

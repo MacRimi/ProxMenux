@@ -1,0 +1,172 @@
+{
+  "meta": {
+    "title": "Prepínač GPU Režim (VM ↔ LXC) | ProxMenux Dokumentácia",
+    "description": "Presuňte už priradenú GPU medzi režim VM (vfio-pci) a režim LXC (materinský ovládač) na počítači Proxmox. ProxMenux detekuje súčasné záväzné, podnety na-workload konflikt politiky, spracováva siroty audio čistenie, a obnovuje initramfs len v prípade potreby."
+  },
+  "header": {
+    "title": "Prepnúť režim GPU (VM ↔ LXC)",
+    "description": "Prepísať a GPU To je už v prevádzke, otočiť ho z VM prechod na LXC Zdieľanie alebo naopak. ProxMenux spracováva všetky záväzné zmeny na strane hostiteľa (vfio.conf, čiernu listinu vodičov, moduly, initramfs) a ponúka čistú politiku pre každého VM alebo LXC v súčasnosti používa GPU, takže vypínač nenechá rozbité konfig pozadu.",
+    "section": "Hardvér: grafické karty a Coral TPU"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "GPU na Proxmox host žije v jednom z dvoch režimov: viazaný na <code>vfio-pci</code> (vyhradené pre VM) alebo viazaný na jeho natívne ovládač <em> (i915 / amdgpu / nvidia)</em> takže hostiteľ + LXCs môžu zdieľať. <strong>Switch GPU Mode</strong> flipy medzi týmito dvoma bez toho, aby ste museli ručne editovať <code>vfio.conf</code>, spravovať čiernu listinu, alebo si pamätajte, ktoré VM / LXC riadky ukazujú na kartu. Tiež vás čisto varuje, ak pracovné zaťaženie stále odkazuje na GPU, takže neskončíte so zlomeným VM pri štarte."
+  },
+  "graphics": {
+    "lxcTitle": "Pripravené pre LXC kontajnery",
+    "lxcDesc": "Aktívny natívny ovládač",
+    "vmTitle": "Pripravené pre VM passthrough",
+    "vmDesc": "Aktívny VFIO-PCI ovládač"
+  },
+  "when": {
+    "heading": "Kedy to mám použiť?",
+    "intro": "Použiť tento skript, ak GPU ci <strong>už pridelené</strong> A chcete s tým pohnúť:",
+    "headerSituation": "Situácia",
+    "headerUse": "Použiť túto stránku?",
+    "rows": [
+      {
+        "situation": "GPU je zadarmo Chcete to dať VM.",
+        "useRich": "Bez použitia <vmLink>0Pridať GPU k VM</vmLink>"
+      },
+      {
+        "situation": "GPU je zadarmo Chcete ho dať LXC.",
+        "useRich": "Bez použitia <lxcLink>0Pridať GPU k LXC</lxcLink>"
+      },
+      {
+        "situationRich": "GPU ci rá st gi re ou VM via <code>vfio-pci</code>, Chcem ho použiť z LXC namiesto toho.",
+        "useRich": "<strong>0Áno Táto stránka.</strong>"
+      },
+      {
+        "situation": "GPU je zdieľaný s LXC, chcem ho venovať VM.",
+        "useRich": "<strong>0Áno Táto stránka.</strong>"
+      },
+      {
+        "situation": "Chcem úplne odviazať GPU od všetkého.",
+        "use": "Áno, vyberte LXC-režim cieľ a potom oddeliť ručne."
+      }
+    ]
+  },
+  "prereqs": {
+    "title": "Skôr ako začnete",
+    "assigned": "<strong>A GPU už pridelené</strong>  VM prostredníctvom VFIO alebo pripojenou aspoň k jednému LXC. Ak ste ho ešte nepridelili, začnite od Pridať GPU do VM / LXC namiesto toho.",
+    "iommu": "<strong>IOMMU povolené na hostiteľa</strong> Iba prísne požadované pri prepínaní <em>do</em> VM režim, ale stojí za to mať na oboch smeroch. Ak parameter jadra chýba, skript automaticky pridá <code>intel_iommu=on iommu=pt</code> alebo <code>amd_iommu=on</code> k príkazovému riadku pre štart (cez <code>proxmox-boot-tool refresh</code> týkajúce sa systemd- Boot alebo <code>update-grub</code> týkajúce sa GRUB) a zahŕňa ju do reštartovej promócie na konci.",
+    "iommuCheck": "dmesg | grep -i 'IOMMU enabled' | head -1",
+    "reboot": "<strong>Be OK s reštart.</strong> Prepínanie GPU väzby na úrovni jadra znamená hostiteľ regeneruje initramfs a vy reštartovať použiť. Skript na konci.",
+    "knowList": "<strong>0Know, ktoré VMs / LXCs používajú GPU.</strong> Skript ich nájde a spýta sa, čo robiť s každým, ale je to rýchlejšie, ak už poznáte zoznam."
+  },
+  "blocklist": {
+    "title": "Nie všetky GPU sú bezpečné prejsť na VM",
+    "body": "Malý blokový zoznam ID GPU je odmietnutý pre režim VM z dôvodu známej priechodnej nestability (napr. Intel Arc A770 <code>8086:5a84</code> / <code>8086:5a85</code>). Ak sa vybraný GPU zhoduje, skript vysvetľuje prečo a odchádza. Prepínanie <em> na</em> LXC je vždy povolené."
+  },
+  "running": {
+    "heading": "Spustenie skriptu",
+    "body": "Otvoriť ProxMenux na hostiteľa, choďte na <strong>Hardware: GPU a Coral-TPU → Prepínač GPU Režim (VM ↔ LXC)</strong>.",
+    "imageAlt": "Zápis do menu 'Switch GPU Mode (VM ↔ LXC)' vnútri Hardware: GPUs a Coral-TPU"
+  },
+  "howRuns": {
+    "heading": "Ako beží skript",
+    "body": "Dve fázy ako zvyčajne: všetko sa zhromažďuje a overuje ako prvé, nič sa nepoužije, kým na konci nepotvrdíte."
+  },
+  "walkthrough": {
+    "heading": "Prechádzam prúdom",
+    "detect": {
+      "title": "Detekovať GPU a ich aktuálnu záväznosť",
+      "body": "Skript skenuje každý ovládač VGA / 3D / Display na hostiteľa a kontroluje <code>/sys/bus/pci/devices/*/driver</code>, aby našiel aktuálny ovládač jadra. Uvidíte každý GPU označené s jeho názvom, PCI slot a aktuálny vodič viazanie",
+      "imageAlt": "Kontrolný zoznam GPU znázorňujúci každý zistený GPU so súčasným vodičom (vfio-pci / nvidia / amdgpu / i915) a slotom PCI"
+    },
+    "pickGpu": {
+      "title": "Vyberte GPU (s) pre prepínanie",
+      "body": "Samostatné GPU → Auto-selected. Viacnásobné GPU → kontrolný zoznam. Môžete zaškrtnúť niekoľko, ale všetky musia byť v <em>rovnaké</em> Súčasný režim, inak skript nemôže vybrať cieľový režim pre dávku a dostanete \"zmiešaný režim\" varovanie vás žiada zúžiť výber.",
+      "tipTitle": "Spínače číslovania",
+      "tipBody": "Užitočné pri prestavbe hostiteľa: \"Všetky tri NVIDIAs prejsť do režimu VM, potom iGPU ide späť do LXC.\" Dva beží, každý s jednotným cieľom, oveľa menej trenia ako jeden v čase."
+    },
+    "direction": {
+      "title": "Preskúmanie navrhovaného smerovania",
+      "intro": "Na základe aktuálneho režimu, skript navrhuje opak ako cieľ:",
+      "items": [
+        "<strong>VM → LXC:</strong> unbind od <code>vfio-pci</code>, nechajte natívneho vodiča (<code>nvidia</code>, <code>amdgpu</code>, <code>i915</code>) späť získať kartu, takže LXCs môže zdieľať. Na NVIDIA, na-BDF záznam sa odstráni z <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> Takže... nvidia modul získa späť GPU po reštarte.",
+        "<strong>LXC → VM:</strong> sa viažu na <code>vfio-pci</code> Takže karta je zadarmo pre VFIO prechod na jeden VM. Na AMD / Intel to znamená blacklisting natívneho vodiča a nastavenie <code>options vfio-pci ids=…</code>. Na NVIDIA a) <code>nvidia</code> modul je <strong>nie</strong> blacklisted namiesto toho platí pravidlo na-BDF udev <code>driver_override=vfio-pci</code> iba k GPU, ktoré vyberiete, takže iné NVIDIA GPU na hostiteľa udržať ich <code>nvidia</code> vodič."
+      ],
+      "outro": "Potvrdiť smer alebo zrušiť."
+    },
+    "conflict": {
+      "title": "Politika konfliktu na postihnuté pracovné zaťaženie",
+      "body": "Skript skenuje každý <code>/etc/pve/lxc/*.conf</code>0 a <code>/etc/pve/qemu-server/*.conf</code> a hľadá odkazy na PCI slot GPU. Pre každú postihnutú pracovnú záťaž si vyberiete politiku:",
+      "headerPolicy": "Politika",
+      "headerEffect": "Účinok",
+      "headerWhen": "Kedy vybrať",
+      "keepPolicy": "Ponechať konfiguráciu, zakázať spustenie pri štarte",
+      "keepEffect": "<code>pct set -onboot 0</code> (alebo <code>qm set</code>). Linky GPU zostávajú v konfigurácii.",
+      "keepWhen": "Plánujete sa vrátiť k tomuto VM/LXC akonáhle je GPU späť v pôvodnom režime. Bezpečné predvolené.",
+      "removePolicy": "Odstrániť GPU z konfigurácie",
+      "removeEffect": "<code>hostpci</code>0 / <code>dev</code> linky pre tento GPU je sed'd von.",
+      "removeWhen": "VM/LXC bude fungovať bez GPU (CPU-iba transkódovanie atď.). Čistý pracovný postup.",
+      "imageAlt": "Dialóg otázky na-VM0 / na-LXC politika konfliktu pri zmene GPU ktorý je momentálne pridelený"
+    },
+    "audio": {
+      "title": "Vyčistenie sirotského zvuku (iba pri odchode z režimu VM)",
+      "body1": "dGPUs (NVIDIA / AMD) loď s funkciou HDMI zvuku pri <code>.1</code> rovnakého slotu, a niekedy ďalšie audio regulátory sú pripojené vedľa GPU. Keď GPU opúšťa VM, Tieto audio linky sa stanú siroty VM má <code>hostpci</code> položky ukazujúce na audio zariadenia, ktoré nie sú ide s GPU.",
+      "body2": "Objaví ich skript (presný BDF zápas, žiadne podreťazce false-Pozitívy) a ukazuje kontrolný zoznam, aby ste ich mohli odstrániť čisto. To tiež čistí ich predajcu: ID zariadenia od <code>/etc/modprobe.d/vfio.conf</code> Ale len ak žiadny iný VM Stále používa tie zvukové ID."
+    },
+    "apply": {
+      "title": "Použiť hostiteľa + zmeny pracovnej záťaže",
+      "body": "Akonáhle potvrdíte, skript píše zmenu na strane hostiteľa <code>vfio.conf</code>, čierna listina, moduly a (pre NVIDIA) pravidlo na základe BDF <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> plus stav BDF <code>/etc/proxmenux/vfio-bind.bdfs</code>. Takisto uplatňuje vybranú politiku v oblasti konfliktov na každého dotknutého VM/LXC. Ak sa hostiteľ naozaj zmenil, beží <code>update-initramfs -u -k all</code> po ktorom nasleduje <code>proxmox-boot-tool refresh</code>; inak sú obe preskočené."
+    },
+    "reboot": {
+      "title": "Reštartovať",
+      "body": "Nový GPU Väzba nadobudne účinnosť až po reštarte. Skript vás vyzve; môžete reštartovať teraz alebo neskôr, ale nezačínajte cieľ VM/LXC kým hostiteľ reštartoval GPU je stále v držbe predchádzajúceho vodiča.",
+      "imageAlt": "Súhrnný dialógový zoznam toho, čo sa zmenilo, nasledovaný reštartom"
+    }
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent",
+    "intro": "Ak chcete presne pochopiť, čo skript robí (alebo vystreliť jeden z krokov po ruke), toto sú surové operácie pre <strong>0VM → LXC</strong> na karte NVIDIA s dodávateľom:device <code>10de:2204</code>:",
+    "lxcToVm": "A pre <strong>0LXC → VM</strong>:",
+    "oneVmTitle": "Iba jeden VM môže použiť dané vfio-pci GPU naraz",
+    "oneVmBody": "Uvádzanie viacerých <code>hostpci</code> položiek s rovnakým PCI slotu v dvoch VM je platný konfig, ale len jeden z VM môže začať s GPU Krok politiky konfliktu ProxMenux je presne o tom, ako sa vyhnúť tejto pasci."
+  },
+  "verification": {
+    "heading": "Overenie po reštarte"
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "stillVfioTitle": "GPU stále ukazuje vfio-pci po prepnutí do režimu LXC",
+    "stillVfioBody": "<code>update-initramfs</code> neutiekol (alebo reštart sa v skutočnosti nestal). Skontrolovať <code>lsmod | grep vfio</code> Ak je vfio-pci načítané, rerun <code>update-initramfs -u -k all</code> a reštart. Pre AMD/Intel: Overte <code>vfio.conf</code> už viac neobsahuje GPUPredávajúci: ID zariadenia. Za NVIDIA: overiť, že BDF už nie je <code>/etc/proxmenux/vfio-bind.bdfs</code> a že <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> to nie je zoznam.",
+    "vmFailTitle": "VM nezačne po prepnutí GPU na LXC mód",
+    "vmFailBody": "VM má stále <code>hostpci</code> položky ukazujúce na GPU nemôže nárokovať. Spustite skript znovu a vyberte <em>Remove GPU z konfig</em> politiky, alebo vyčistiť konfig ručne:",
+    "smiFailTitle": "nvidia-smi zlyhá s 'Nesúlad verzie Driver/library' po návrate do LXC",
+    "smiFailBody": "Hostiteľ NVIDIA moduly nenačítali čisto. <code>modprobe -r nvidia</code> a <code>modprobe nvidia</code>. Ak to zlyhá, reštart",
+    "logTitle": "Inštalovať log",
+    "logBody": "Každý beh píše <code>/tmp/proxmenux_gpu_switch_mode.log</code> na hostiteľa. Pripojte ho pri žiadosti o pomoc na GitHub."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Pridať GPU do VM (passthrough)",
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "tail": " Prvýkrát VM nastavenie režimu."
+      },
+      {
+        "label": "Pridať GPU do LXC",
+        "href": "/docs/hardware/igpu-acceleration-lxc",
+        "tail": " Prvýkrát LXC nastavenie režimu."
+      },
+      {
+        "label": "Nainštalovať ovládače NVIDIA (host)",
+        "href": "/docs/hardware/nvidia-host",
+        "tail": " — Vyžadované pre LXC režim na NVIDIA GPU."
+      },
+      {
+        "label": "ProxMenux Monitor",
+        "href": "/docs/monitor/dashboard/hardware",
+        "tail": " — V sekcii Grafické karty, kde každý GPU zobrazuje svoj aktuálny režim a odhaľuje ovládanie prepínača."
+      },
+      {
+        "label": "GPU Prenosové príkazy",
+        "href": "/docs/help-info/gpu-commands",
+        "tail": " — Rýchly odkaz na príkaz."
+      }
+    ]
+  }
+}

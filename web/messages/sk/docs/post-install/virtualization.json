@@ -1,0 +1,116 @@
+{
+  "meta": {
+    "title": "Post-inštalácia: Virtualizácia Dokumentácia ProxMenux",
+    "description": "Možnosti virtualizácie v ProxMenux Prispôsobiteľný post-inštalačný skript: auto-inštalovať pravého hosťa, ak Proxmox beží vnútri VM, a povoliť IOMMU / VFIO, takže môžete prejsť PCI zariadenia (GPU, NICs, HBA) cez svoje vlastné VM."
+  },
+  "header": {
+    "title": "Po inštalácii: Virtualizácia",
+    "section": "Nastavenie Proxmoxu po inštalácii"
+  },
+  "intro": {
+    "title": "Čo táto kategória zahŕňa",
+    "body": "Dve nezávislé možnosti. <strong>Inštalovať relevantného hosťujúceho agenta</strong> je záchranná sieť pre keď Proxmox sám beží vnorené do iného hypervisora. <strong>Enable VFIO IOMMU support</strong> je ten, o ktorý sa najviac užívateľov zaujíma: obracia sa na funkcie jadra, ktoré potrebujete prejsť GPU, HBA alebo NIC priamo do VM s takmer originálnym výkonom."
+  },
+  "guestAgent": {
+    "heading": "Nainštalovať vhodného guest agenta",
+    "intro": "Detekuje virtualizačné prostredie, na ktorom beží hostiteľ Proxmox (pomocou <code>systemd-detect-virt</code> a <code>dmidecode</code>), a nainštaluje zodpovedajúci balík nástrojov pre hostí, takže vonkajší hypervisor môže komunikovať s Proxmoxom čisto (graceful close, hodin syncation, IP reporting, atď.).",
+    "headerDetected": "Detekovaný hostiteľ",
+    "headerPackage": "Inštalovaný balík",
+    "rows": [
+      {
+        "detected": "QEMU / KVM",
+        "package": "qemu-guest-agent"
+      },
+      {
+        "detected": "VMware (ESXi, Workstation)",
+        "package": "open-vm-tools"
+      },
+      {
+        "detected": "VirtualBox",
+        "package": "virtualbox-guest-utils"
+      },
+      {
+        "detected": "Bare metal (žiadne)",
+        "package": "Nie, nič nainštalované."
+      }
+    ],
+    "skipTitle": "Preskoč to na holým kovovým Proxmoxom",
+    "skipBody": "Ak Proxmox beží priamo na hardware (bežný prípad), zaškrtnutie tejto možnosti je no-op <code>none</code> a skript vychádza bez zmien. Možnosť záleží len na menšine nastavení, ktoré spúšťajú Proxmox <em>ako hosť</em> na testy alebo laboratóriá."
+  },
+  "vfio": {
+    "heading": "Zapnúť podporu VFIO/IOMMU",
+    "intro": "Zapne IOMMU na hostiteľa a nastaví moduly jadra, ktoré umožňujú PCI priechod (<code>vfio</code>, <code>vfio_iommu_type1</code>, <code>vfio_pci</code>). S týmto zapnutým, môžete naviazať fyzikálne zariadenie na VM a hosť dostane priamy, takmer bare-metal prístup k nemu.",
+    "whoTitle": "Kto to potrebuje?",
+    "whoItems": [
+      "Chcete prejsť GPU na Windows hranie VM alebo macOS VM.",
+      "Máte vyhradenú 10G NIC pre firewall / router VM (OPNsense, pfSense).",
+      "Chcete prejsť HBA priamo na TrueNAS\"Unraid\" VM namiesto ZFS na holých diskoch.",
+      "Plánuješ použiť <em>Koral TPU</em>, zachytiť kartu, alebo SDR dongle v VM."
+    ],
+    "whoOutro": "Ak nič z toho neplatí, môžete túto možnosť bezpečne preskočiť. Pre prechod na <strong>LXC</strong> (nie VM), IOMMU je <em>nie</em> vyžaduje sa.",
+    "doesTitle": "Čo robí ProxMenux",
+    "doesIntro": "Funkcia je boot-loader vedomí: zistí, či Proxmox je na ZFS (systemd-boot) alebo LVM/ext4 (GRUB) a píše do správneho súboru. Je to tiež idempotentné, ak parametre sú už prítomné, nič nie je pridaná.",
+    "headerBoot": "Typ topánky",
+    "headerFile": "Dotyk súboru",
+    "headerPost": "Krok po aktualizácii",
+    "bootRows": [
+      {
+        "boot": "systemd-boot (ZFS)",
+        "file": "/etc/kernel/cmdline",
+        "post": "Obnovenie proxmox-boot-tool"
+      },
+      {
+        "boot": "GRUB (LVM/ext4)",
+        "file": "/etc/default/grub",
+        "post": "update-grub"
+      }
+    ],
+    "kernelIntro": "Pridané parametre kernelu:",
+    "modulesIntro": "Kernelové moduly pridané do <code>/etc/modules</code>:",
+    "blacklistIntro": "Protichodné ovládače čierne na zozname v <code>/etc/modprobe.d/blacklist.conf</code>:",
+    "blacklistTitle": "Blacklisting ovládače GPU sú v rozpore s používaním GPU.",
+    "blacklistBody": "Čierna listina zaisťuje, že jadro hostiteľa sa nikdy neviaže <em>akékoľvek</em> GPU vodič, takže VFIO si môže nárokovať GPU Čisto. To je presne to, čo chcete pre prechod na VM Ale je to... <strong>opačný</strong> o tom, čo potrebujete <link>inštalovať NVIDIA ovládače na hostiteľovi</link> (pre LXC transkódovanie, napríklad). Vybrať jednu cestu na GPU:",
+    "pathItems": [
+      "<strong>GPU → VM:</strong> povoliť VFIO / IOMMU tu, opustiť GPU vodiči na čiernom zozname.",
+      "<strong>GPU → LXC (alebo hostiteľ):</strong> preskočiť túto možnosť, použite NVIDIA host install, do not blacklist nvidia\"Nouveau.\"",
+      "<strong>Dva GPU:</strong> Jeden môže ísť na VM a druhý na LXC, ale budete potrebovať jemnejšie-zrnená konfigurácia (zviažte len jednu kartu <code>vfio-pci</code> PCI ID). Štandardná čierna listina je príliš široká pre tento prípad <code>blacklist.conf</code> Potom."
+    ],
+    "acsTitle": "O pcie_acs_override",
+    "acsBody": "<code>pcie_acs_override=downstream,multifunction</code> uvoľňuje kontrolu PCIe Access Control Services. To umožňuje jadro rozdeliť IOMMU skupiny, že firmware hlási ako monolitický, čo je niekedy jediný spôsob, ako prejsť cez jedno zariadenie skupiny bez ťahania zvyšok. Vymenou je <strong> znížená izolácia medzi zariadeniami</strong>: zlomyseľné alebo oslabené VM s priechodom má väčší útočný povrch cez DMA. Fajn pre domáce laboratórium; premyslite si dvakrát predtým, ako si to na hostiteľa, ktorý má nedôveryhodné pracovné zaťaženie. Ak ho nepotrebujete, odstráňte tento token z <code>/etc/kernel/cmdline</code> alebo <code>/etc/default/grub</code> po spustení skriptu a opätovnom spustení kroku aktualizácie spúšťača.",
+    "rebootTitle": "Vyžaduje sa reštart",
+    "rebootBody": "IOMMU, VFIO moduly a čiernu listinu nadobúdajú účinnosť až po reštarte + initramfs regenerácii. Skript spúšťa <code>update-initramfs -u -k all</code> a osviežovač boot-loader, a nastaví \"reboot potrebné\" vlajka, takže Prispôsobiteľné vás na konci.",
+    "verifyTitle": "Overenie po reštarte",
+    "revertTitle": "Reverzibilné z menu Odinštalovať",
+    "revertBody": "<link>0Uninstall Optimizations</link> vracia všetky zmeny: strips IOMMU tokeny z <code>/etc/kernel/cmdline</code> alebo GRUB, odstraňuje moduly VFIO z <code>/etc/modules</code>, odstraňuje položky na čiernej listine vodiča a obnovuje initramfs. Reštart je potrebný na skutočné uplatnenie reverzie."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Pridať GPU do VM (passthrough)",
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "tail": " — "
+      },
+      {
+        "label": "Pridať radič alebo NVMe do VM",
+        "href": "/docs/disk-manager/add-controller-nvme-vm",
+        "tail": " — "
+      },
+      {
+        "label": "GPU Prenosové príkazy",
+        "href": "/docs/help-info/gpu-commands",
+        "tail": " — Referencia na overenie IOMMU."
+      },
+      {
+        "label": "Odinštalovať optimalizácie",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — IOMMU / VFIO je čistý."
+      },
+      {
+        "label": "Prispôsobiteľné Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — Späť do rodičovského menu."
+      }
+    ]
+  }
+}

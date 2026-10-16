@@ -1,0 +1,305 @@
+{
+  "meta": {
+    "title": "Dáta, cesty a vytváranie sietí ProxMenux",
+    "description": "Ako správca OCI Apps uchováva dáta kontajnera OCI: kontajnerové disky, hostiteľské adresáre, Rclone mounts, adresy a súkromné siete."
+  },
+  "header": {
+    "title": "Dáta, cesty a sieť",
+    "description": "Čo žije v koreňových fľaštičkách, čo prežíva jeho výmenu, ako sa delia údaje o kontajneroch a ako každý kontajner dostane svoju adresu.",
+    "section": "Správca OCI aplikácií"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Pretrvávanie je rozhodnuté pred LXC existuje",
+            "body": "Objemy publikované obrazom a jeho kompozičným súborom sa čítajú pred vytvorením kontajnera. Každá cesta, ktorá musí prežiť aktualizáciu sa stáva bod pripojenia nezávislý od rootfs, takže rootfs drží len to, čo patrí k obrazu a môžu byť nahradené."
+          }
+        }
+      ]
+    },
+    {
+      "id": "questions",
+      "title": "Čo sa inštalátor pýta",
+      "intro": "Vzor poskytuje cesty, ktoré aplikácia potrebuje. Každý je umiestnený na disku kontajnera alebo na adresári hostiteľa a pred sumárom je možné pridať viac ciest.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Požadované cesty",
+                "body": "<code>/config</code>, <code>/data</code>, knižnice, sťahovanie a každý objem, ktorý aplikácia deklaruje, sú uvedené."
+              },
+              {
+                "title": "Umiestnenie",
+                "body": "Každá cesta je umiestnená na disku kontajnera alebo na existujúcom adresári."
+              },
+              {
+                "title": "Skladovanie a veľkosť",
+                "body": "Kontajnerový disk je vytvorený na Proxmox VE úložisku s danými rozmermi. Predvolená inštalácia používa <code>local-lvm</code>; pokročilá inštalácia žiada uloženie každej trasy tesne pred jej veľkosťou a navrhuje jeden z rootfs. Vyzerá ako <code>vm-VMID-disk-N</code> a je pripojený ako <code>mpN</code>."
+              },
+              {
+                "title": "Adresár na serveri",
+                "body": "Hostiteľský adresár je daný jeho cestou. Adresár, ktorý neexistuje, je vytvorený, vo vlastníctve užívateľa kontajnerových máp."
+              },
+              {
+                "title": "Ďalšie cesty",
+                "body": "Pred inštaláciou je možné pridať ďalšie páry cesty hostiteľa alebo objemu a cesty kontajnera."
+              },
+              {
+                "title": "Zhrnutie",
+                "body": "Kompletné mapovanie je zobrazené pred vytvorením CT a je uložené vo svojej inštančnej zmluve."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "options",
+      "title": "Dve pretrvávajúce miesta",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Vlastnosť",
+              "Kontajnerový disk",
+              "Adresár na serveri"
+            ],
+            "rows": [
+              [
+                "V konfigurácii",
+                "<code>mpN: STORAGE:vm-VMID-disk-N,mp=/config,backup=1,size=16G</code>",
+                "<code>mpN: /mnt/oci-shared/media,mp=/data/media</code>"
+              ],
+              [
+                "Záloha kontajnera (vzdump)",
+                "Zahrnuté s <code>backup=1</code>",
+                "nezahrnuté"
+              ],
+              [
+                "Veľkosť",
+                "Pevné; pestované so zmenou veľkosti bodu pripojenia",
+                "Voľný priestor hostiteľského súborového systému alebo súboru údajov"
+              ],
+              [
+                "Ostatné nádoby",
+                "Namontované iba vlastnou nádobou",
+                "Rovnaký adresár môže byť namontovaný v niekoľkých kontajneroch"
+              ],
+              [
+                "Snímky a obnovenie",
+                "Riadi Proxmox VE spolu s CT",
+                "Spravovaný na pamäťi hostiteľa"
+              ],
+              [
+                "Odstránenie aplikácie",
+                "Vypustené s kontajnerom",
+                "Kept, s obsahom"
+              ],
+              [
+                "Presun CT na iný uzol",
+                "Presunie sa s CT",
+                "Rovnaká cesta musí existovať na druhom uzol"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Korene sú vyhradené pre binárne súbory a obsah obrazu. Aktualizácia alebo rekreácia ju nahrádza bez toho, aby sa dotýkal niektorého druhu bod pripojenia."
+        }
+      ]
+    },
+    {
+      "id": "example",
+      "title": "Príklad: kontajner s oboma miestami",
+      "blocks": [
+        {
+          "code": {
+            "title": "Jellyfin nainštalovaný ako CT 151 na lokálnej-lvm (excerpt)",
+            "code": "rootfs: local-lvm:vm-151-disk-0,size=8G\n# Container disk, part of the CT backup\nmp0: local-lvm:vm-151-disk-1,mp=/config,backup=1,size=16G\n\n# Host directory, outside the CT backup\nmp1: /mnt/oci-shared/media,mp=/data/media"
+          }
+        },
+        {
+          "p": "Aktualizácia alebo rekreácia nahrádza iba rootfs: <code>mp0</code> udržuje užívateľov, knižnice a nastavenia, a <code>mp1</code> stále zobrazuje rovnaké médiá. Obnovenie zálohy CT prináša späť <code>/config</code>; adresár médií je v prípade potreby obnovený zo zálohy hostiteľa."
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Zmluva",
+                "detail": "/config"
+              },
+              {
+                "label": "Umiestnenie",
+                "detail": "disk kontajnera\nalebo adresár hostiteľa"
+              },
+              {
+                "label": "LXC",
+                "detail": "vždy /config\npre žiadosť"
+              }
+            ],
+            "caption": "Aplikácia vidí cestu, ktorú obrázok publikuje; iba tam, kde je uložený zmeny."
+          }
+        }
+      ]
+    },
+    {
+      "id": "shared",
+      "title": "Jeden hostiteľský adresár, niekoľko kontajnerov",
+      "blocks": [
+        {
+          "mermaid": {
+            "chartCode": "flowchart TB\n H[\"{{host}}<br/>/mnt/oci-shared/media\"]\n H --> Q[\"qBittorrent<br/>/data\"]\n H --> J[\"Jellyfin<br/>/data\"]\n H --> R[\"Radarr / Sonarr<br/>/data\"]\n Q -. \"{{config}}\" .-> QV[(\"/config mpN\")]\n J -. \"{{config}}\" .-> JV[(\"/config mpN\")]\n R -. \"{{config}}\" .-> RV[(\"/config mpN\")]",
+            "labels": {
+              "host": "Adresár na serveri",
+              "config": "vlastné nastavenie"
+            }
+          }
+        },
+        {
+          "p": "Každý kontajner udržiava svoju konfiguráciu na vlastnom disku. Knižnica alebo sťahovanie sú jedným hostiteľským adresárom namontovaným na rovnakej vnútornej ceste v každom kontajneri, takže cesta, ktorú jedna aplikácia píše, je rovnaká ako cesta, ktorú číta iný."
+        }
+      ]
+    },
+    {
+      "id": "rclone",
+      "title": "Cloud storage prostredníctvom aplikácie Rclone",
+      "intro": "Aplikácia katalógu Rclone ponúka okrem svojej inštalácie <strong>0Umožniť montáž na existujúci Rclone OCI kontajner</strong>. To pripojí vzdialené už vytvorené a povolené v Rclone web UI a publikuje ho na hostiteľa, kde ostatné kontajnery môžu použiť ako hostiteľ adresár.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Kontajner a diaľkové",
+                "body": "VMID kontajnera Rclone, presný názov diaľkového a prípadne cesty v ňom."
+              },
+              {
+                "title": "Názov pripojenia a vyrovnávacia pamäť",
+                "body": "Názov pripojenia a režim vyrovnávacej pamäte VFS: <code>off</code>, <code>minimal</code>, <code>writes</code> alebo <code>full</code> (default)."
+              },
+              {
+                "title": "Uverejnené názory",
+                "body": "Spoločný koreň, <code>/mnt/oci-shared</code> štandardne, má zobrazenie na čítanie/ zápis v <code>/mnt/oci-shared/remotes/NAME</code> a zobrazenie iba na čítanie v <code>/mnt/oci-shared/remotes-ro/NAME</code>."
+              },
+              {
+                "title": "Aktivácia",
+                "body": "Po potvrdení, CT je zastavený, jeho štartový príkaz a Proxmox VE skript sú nastavené, a to sa začína znova. Operácia čaká, kým sa na hostiteľa primontujú oba pohľady."
+              }
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Ak sa nehodí",
+            "body": "Predchádzajúca konfigurácia kontajnera je obnovená a znovu sa spustí, takže neúspešná aktivácia opustí Rclon ako to bolo."
+          }
+        }
+      ]
+    },
+    {
+      "id": "network",
+      "title": "Adresáti a siete",
+      "intro": "Jedna žiadosť potrebuje adresu. Aplikácia viacerých kontajnerov potrebuje aj stabilnú sieť medzi svojimi členmi.",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "network",
+                "title": "Jednotná žiadosť",
+                "body": "Most a DHCP alebo pevná adresa CIDR sú vybrané. LXC má vlastnú adresu a súhrn zobrazuje úplné URL služieb."
+              },
+              {
+                "icon": "waypoints",
+                "title": "Aplikácia s viacerými kontajnermi",
+                "body": "Nájde sa bezplatná podsiete, vytvorí sa trvalý súkromný most a každý člen (prihláška, databáza, vyrovnávacia pamäť) na ňom dostane pevnú adresu."
+              }
+            ]
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "LAN",
+                "detail": "dostupná adresa\niba hlavná služba"
+              },
+              {
+                "label": "Hlavné LXC",
+                "detail": "web / API\nLAN + súkromná sieť"
+              },
+              {
+                "label": "Súkromná sieť",
+                "detail": "PostgreSQL · Valkey · ML\npevné adresy"
+              }
+            ],
+            "caption": "Závislosti hovoria o súkromnej sieti a nemajú adresu v LAN."
+          }
+        },
+        {
+          "p": "Stack zmluva ukladá most, subnet, adresy a vzťahy medzi službami. Aktualizácia aplikácie opätovne využíva rovnakú topológiu pre každého člena. ProxMenux Monitor otvára hlavný kontajner na svojej LAN adrese, nie na jeho adrese v súkromnej sieti."
+        }
+      ]
+    },
+    {
+      "id": "ownership",
+      "title": "Vlastníctvo",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Nové adresáre sú vytvorené s UID a GID neprivilegované mapy LXC.",
+              "Existujúce adresáre sa rekurzívne nevlastnia.",
+              "Sockety, systémové súbory a citlivé cesty nie sú ponúkané ako generické adresáre."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backup",
+      "title": "Čo záloha kontajnera obsahuje",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Prvok",
+              "V CT vzdump",
+              "Kde sa skladuje"
+            ],
+            "rows": [
+              [
+                "OCI rootfs",
+                "Áno",
+                "Zálohovanie CT; môže byť tiež prestavané z obrazu a zmluvy"
+              ],
+              [
+                "Kontajnerový disk s <code>backup=1</code>",
+                "Áno",
+                "Záloha CT"
+              ],
+              [
+                "Adresár na serveri",
+                "Nie",
+                "Záloha skladu hostiteľa"
+              ],
+              [
+                "Zmluva o inštancii",
+                "Nie",
+                "<code>/usr/local/share/proxmenux/oci/instances/VMID/</code> na hostiteľa"
+              ],
+              [
+                "Aplikácia s viacerými kontajnermi",
+                "Každý člen vo vlastnej zálohe",
+                "Zálohy každého člena, plus zásobník zmluvy a jeho most na hostiteľa"
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

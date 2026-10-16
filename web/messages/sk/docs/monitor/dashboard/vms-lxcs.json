@@ -1,0 +1,244 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Dashboard: VMs & LXCs karta ProxMenux Dokumentácia",
+    "description": "Záložka VMs & LXCs inzeruje každého hosťa na hostiteľa so živou CPU / pamäť / používanie disku. Per-guest vŕtačka ukazuje konfiguráciu, zdroje, zálohy, plné záznamy hostí, poznámky, a Štart / Shutdown / Reboot / Stop ovládanie."
+  },
+  "header": {
+    "title": "Dashboard: tab VMs & LXCs",
+    "description": "Úplný súpis hostí na uzle. Štyri hlavné metriky po celej hornej, roztriediteľný zoznam všetkých VM0 a LXC nižšie, a vrták-in na hosťa s konfig, zdroje, zálohy, protokoly a štyri riadenie životného cyklu (začať / Shutdown / Reboot / Stop).",
+    "section": "ProxMenux Monitor · Prehľad"
+  },
+  "intro": {
+    "title": "Ovládací povrch pre hostí",
+    "body": "Ostatné karty sú iba na čítanie; toto je tá, z ktorej konáte. Všetko, čo zmení stav hosťa prechádza <code>POST /api/vms/&lt;vmid&gt;/control</code> s explicitným potvrdením a odpoveď sa odráža späť v riadku hosťa. Neexistuje žiadna sila-shutdown bez ísť cez vyhradené tlačidlo Stop."
+  },
+  "topRow": {
+    "heading": "Horný riadok: štyri stat karty",
+    "intro": "Otvorenie záložky VMs & LXC vás pristane na štvorcardovom prehľade hosťovského stavu, CPU využitie, záväzok pamäte vs kapacita hostiteľa a rozdelenie disku.",
+    "imageAlt": "VMs & LXCs záložka Vrchný rad štyroch stat kariet: Celkom VMs & LXCs, Spolu CPU, celková pamäť, celkový disk",
+    "imageCaption": "Horný riadok záložky VMs & LXCs + Beh / Zastavené odznaky, aktuálny CPU využitie, pamäť v členení na použité / bežiace-pridelené / celkom-pridelené (s označením v rámci limitov), a pridelený disk priestor.",
+    "headerCard": "Karta",
+    "headerWhat": "Čo ukazuje",
+    "totalLabel": "VM a LXC spolu",
+    "totalWhat": "Celkový počet s dvoma odznakmi <em>X Beh</em> (zelená) a <em>Y zastavená</em> (červená, len ak > 0). Číslo, ktoré pozeráš, keď sa po reštarte niečo nevrátilo.",
+    "cpuLabel": "CPU celkom",
+    "cpuWhat": "Agregované živé využitie CPU u všetkých hostí ako percento z fyzickej CPU, s pätovou čiarou <em>\"Pridelené CPU použitie\"</em>.",
+    "memoryLabel": "Pamäť spolu",
+    "memoryIntro": "Tri hodnoty nastavené vertikálne:",
+    "memoryItems": [
+      "<strong>V súčasnej dobe používa </strong> <em>15.4 GB</em>) plus <em>X.X % Y GB</em> proti celkovému počtu hostí RAM. Modrá čiara pokroku sleduje percento.",
+      "<strong>Pridelená prevádzka</strong> + <strong>Pridelené spolu</strong>  <code>maxmem</code> medzi hosťami, ktorí sú <em>v súčasnej dobe hore</em> vedľa rovnakej sumy v rámci <em>každých</em> hosť vrátane zastavených. Na prvom dnes záleží; na druhom záleží, keď všetko začnete naraz.",
+      "<strong>V rámci limitov</strong> odznak (zelený) <em>Nadviazanie viazanosti</em> ak celkový pridelený počet presahuje počet hostiteľov RAM. Zdravá pamäť over-commit je v poriadku na hostiteľov s KSM, ale odznak je včasné varovanie, keď to už nie je pohodlné."
+    ],
+    "diskLabel": "Disk spolu",
+    "diskWhat": "Súčet miesta na disku pridelených všetkým hosťom v príslušnej jednotke (GB / TB) s päticou <em>\"Pridelený priestor na disku\"</em>."
+  },
+  "inventory": {
+    "heading": "Zoznam virtuálnych strojov a kontajnerov",
+    "intro": "Jeden rad za hosťa. Zoznam je single-sourced z <code>/api/vms</code>, ktorý konsoliduje <code>qm list</code> + <code>pct list</code> + <code>pvesh /cluster/resources</code> na hostiteľa.",
+    "imageAlt": "Virtuálne stroje & Kontajnery Zoznam 1 riadok na hosťa so statusom, typovým odznakom, menom, ID a inline CPU / pamäť / percento disku",
+    "imageCaption": "Mobilné optimalizované rozloženie inventára",
+    "rowsIntro": "Každý riadok zobrazuje:",
+    "rows": [
+      "<strong>Status icon</strong> Pre zastavených hostí, zvyšok riadku stmieva, takže okamžite uvidíte, čo je offline.",
+      "<strong>Typový preukaz</strong> — <em>LXC</em> (kyan) pre kontajnery, <em>VM</em> (fialová) pre virtuálne stroje.",
+      "<strong>Name</strong>",
+      "<strong>0VMID</strong>",
+      "<strong>Vložené metriky</strong> 3 percentá s ikonou (CPU %, % pamäte, % disku). Každá ikona sa zmení na oranžovú, keď metrika prekročí prah pozornosti (napr. pamäť nad 90 %), takže rýchly sken vám povie, ktorý hosť je pod tlakom bez otvorenia."
+    ],
+    "clickHint": "Kliknutím na ľubovoľný riadok, ktorý beží alebo zastavil, otvorí vrták-in modal popísaný nižšie.",
+    "mobileTitle": "Zoznam je postavený mobilný-prvý",
+    "mobileBody": "Na telefónoch a úzkych oknách inventár preteká do jedného stĺpca s typovým odznakom, menom, ID a tri metrické percentá na jednom riadku každý V širšom pohľade sa rovnaké údaje rozprestierajú horizontálne s extra priestorom pre percentá. Tak či onak, každý riadok je rovnaký plný cieľ: ťuknite na vŕtačku."
+  },
+  "drillIn": {
+    "heading": "Vrták na hosťa",
+    "intro": "modal sa otvára s menom hosťa, VMID, typ, stav a čas prevádzky. Jeho navigácia sa prispôsobuje hosťovi: <strong>0Status</strong>, <strong>App</strong> a <strong>Updates</strong> pre LXC manažment aplikácií, <strong>Mounts</strong> keď LXC má montážne body, <strong>Logs</strong> pre kontajnery nainštalované OCI manažérom Apps, plus <strong>Backups</strong> a <strong>Firewall</strong>. Pevná akčná tyč udržuje kontrolu životného cyklu a terminál LXC dostupný z každej karty.",
+    "statusTitle": "Záložka 1",
+    "statusImageAlt": "Vrták pre každého hosťa s CPU / Pamäťové / Diskové živé karty, Disk a sieťové I/O súčty, logo OS distro a blok zdrojov / IP adresy",
+    "statusImageCaption": "Stavová záložka CPU / Pamäť / Disk s výstupmi v hornej časti, nahromadené I/O súčty (čítanie/zapísanie disku, zníženie/up siete) nižšie, potom statické zdroje blok s poznámkami a + Info expanzie a zoznam IP adries pilulky.",
+    "statusIntro": "Predvolená karta Tri bloky:",
+    "liveTitle": "1. Live metrický riadok",
+    "liveItems": [
+      "<strong>CPU Použitie (kĺbky X)</strong> Súčasné percento s progress barom. Hlavička ukazuje nakonfigurovaný počet jadier, takže viete, čo 100 % by znamenalo.",
+      "<strong>Pamäť</strong> — <em>použité / max</em> v GB s panelom pokroku.",
+      "<strong>Disk</strong> — <em>použité / max</em> cez primárny obraz disku hosťa, rovnaký tvar."
+    ],
+    "ioTitle": "2. I/O celkový počet + logo OS",
+    "ioItems": [
+      "<strong>Disk I/O</strong> Užitočné vidieť hosťa, ktorý sa náhle stal I/O-ťažký v porovnaní s jeho východiskovou hodnotou.",
+      "<strong>0Network I/O</strong> Rovnaký nápad na strane siete.",
+      "<strong>0OS distro logo</strong> Rýchly vizuálny podnet pri posúvaní niekoľkých spôsobov otvárania."
+    ],
+    "resourcesTitle": "3. Blok zdrojov",
+    "resourcesIntro": "Konfigurácia hosťa ako Proxmox vidí to CPU Jadro, pamäť (konfigurované) <code>maxmem</code>), Swap. Dva skolabovateľné tlačidlá v hlavičke bloku:",
+    "resourcesItems": [
+      "<strong>0Notes</strong> Editovateľné: písanie tu a ukladanie hovorov <code>PUT /api/vms/&lt;vmid&gt;/config</code> a píše späť na <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> alebo <code>/etc/pve/lxc/&lt;vmid&gt;.conf</code>.",
+      "<strong>+ Info</strong> Ďalšie polia, ktoré sú príliš slovesné pre predvolené zobrazenie: bios režim, typ stroja, stav agenta, prejazdové položky hospci, body pripojenia (CT), objednávka topánok."
+    ],
+    "ipsTitle": "4. IP adresy",
+    "ipsBody": "Pilulky zoznam každej IPv4 / IPv6 adresy hosť v súčasnej dobe vystavuje Prázdne, keď je hosť zastavený alebo keď agent QEMU nie je nainštalovaný v VM (LXC vždy hlási adresy priamo).",
+    "appTitle": "Karta 2 App (LXC iba)",
+    "appIntro": "Registruje aplikácie, ktoré patria do LXC, ukladá webové odkazy a voliteľne porovnáva nainštalované a dostupné verzie. Návrhy pochádzajú zo štartovacej cache; <strong>Nájsť aplikácie</strong> explicitne osvieži objav pre tento LXC po nainštalovaní nového softvéru.",
+    "appLinkLead": "Pozrite si",
+    "appLinkLabel": "vyhradená stránka aplikácie",
+    "appLinkTail": "pre cached discover, katalóg-pomocné registráciu, Docker webové odkazy a verzie detektory.",
+    "updatesTitle": "Karta 3 Aktualizácie (LXC iba)",
+    "updatesIntro": "Udržuje balíky <strong>0OS</strong>, registrované aplikácie, <strong>Docker Engine</strong> a Docker obrázky ako samostatné ciele. Každý cieľ môže fungovať nezávisle; voliteľná hromadná akcia a harmonogram môžu vybrať presné metódy, ktoré by mali prebiehať spoločne.",
+    "updatesLinkLead": "Pozrite si",
+    "updatesLinkLabel": "vyhradené aktualizácie stránky",
+    "updatesLinkTail": "pre integrované a vlastné aktualizácie, Docker rekreácia, hromadný výber, bezpečnostné možnosti a plánovanie.",
+    "mountsTitle": "Karta 4 Vrchy (LXC iba v prípade prítomnosti)",
+    "mountsImageAlt": "LXC Vrták-in modale NFS/CIFS namontuje operátora zvnútra CT. Každá karta obsahuje typový odznak, kapacitnú tyč, použité/celkové bajty, možnosti pripojenia a farebne zakódovanú bodku (zelená zdravá, jantárová čítaná len/divírna, červená bodka)",
+    "mountsImageCaption": "Záložka je určená iba pre LXC kontajnery a len vtedy, ak je prítomný aspoň jeden bod pripojenia alebo ad-hoc vzdialená montáž. CT bez držiakov nedostane žiadnu kartu.",
+    "mountsIntro": "Proxmoxova vlastná UI zobrazí položky bodov pripojenia definované v kontajneri (<code>mpX</code>), ale zastavuje tam čokoľvek sa pripojíte zvnútra CT neskôr (<code>mount.cifs</code>, NFS via <code>autofs</code>, ...) je neviditeľný. Táto karta sa spojí <strong>obidva pohľady</strong>: konfigurované pripojenia <strong>a</strong> @ info: tooltip ProxMenux sondy zvnútra kontajnera s per-mount zdravotným stavom a kapacitnou tyčou, kde backend môže vyriešiť jeden.",
+    "mountTypesTitle": "Typy zisteného pripojenia",
+    "mountTypesItems": [
+      "<strong>Objem PVE</strong> Podopreté Proxmox-riadený skladovanie (a ZFS subvol, záznam adresára, a Ceph RBD, ...). Kapacita pochádza zo štatistiky úložiska PVE, takže bar zodpovedá tomu, čo ukazuje samotný Proxmox.",
+      "<strong>Väzba zo skladu PVE</strong> — <code>mpX</code> vstup ukazujúci na cestu na PVE-známy úložisko.",
+      "<strong>Bind z hostiteľa</strong> — <code>mpX</code> vstup ukazujúci na ľubovoľnú cestu hostiteľa (<code>/mnt/something</code>). Kapacita je <code>df</code> na ceste k hostiteľovi.",
+      "<strong>Ad-hoc vnútri CT</strong> Namontujte to. <em>iba</em> existuje v priestore pripojenia kontajnera (napr. NFS podiel, ktorý CT sa montuje samostatne). Kapacita je prečítaná cez <code>pct exec &lt;vmid&gt; df</code>, ktorý je jediný spôsob, ako ju vidieť <code>/proc/&lt;pid&gt;/root</code> od hostiteľa neodhaľuje skutočné štatistiky diaľkového pripojenia."
+    ],
+    "mountStateTitle": "Bodka na karte a upozornenia",
+    "mountStateItems": [
+      "<green/> <strong>Zelená</strong> Kopnutie je zdravé a dosiahnuteľné.",
+      "<amber/> <strong>Oranžová</strong> Odchýlky (konfigurované, ale v skutočnosti nemontované), iba na čítanie, alebo <em>zombie viazanie</em> (hostiteľ zdroj bol odstránený, ale CT stále vidí viazanie ako namontovaná <code>umount</code> sa stalo na hostiteľa).",
+      "<red/> <strong>Červená</strong> chlopňa: sonda Runtime nemohol dosiahnuť na montáž (spoločné s NFS exportuje, ktorého server je vypnutý)."
+    ],
+    "mountsCalloutTitle": "Čo ti to dáva cez prirodzené UI?",
+    "mountsCalloutBody": "Pravdivý, kapacitne uvedomelý pohľad na každé miesto, ktoré kontajner číta alebo píše. NFS alebo CIFS akcie namontované zvnútra CT Stale vzdialené držiaky a zombie viaže sú označené pred uhryznutie počas zálohy.",
+    "logsTitle": "Tab 5",
+    "logsBody": "Objavuje sa len pre kontajnery nainštalované Apps správcu OCI. Zobrazuje výstup konzoly hlavného procesu obrazu, ktorý sa uchovával na hostiteľa v <code>/var/log/proxmenux/oci/VMID.console.log</code>: posledný 100, 500 alebo 1000 linky, nasledoval naživo, zatiaľ čo kontajner beží, s filtrom a sťahovanie. Číta súbor na každom otvorenom, takže to tiež funguje s kontajnerom zastavil. Podrobnosti sú v <ociLink>OCI kontajneroch v ProxMenux Monitor</ociLink>.",
+    "backupsTitle": "Tab 6",
+    "backupsImageAlt": "Per-guest vŕtačka-in mode",
+    "backupsImageCaption": "Zálohy záložka Záhlavie tab nesie odznak.",
+    "backupsIntro": "Zobrazí všetky zálohy uložené v nakonfigurovaných skladoch Proxmox pre tohto hosťa, zoradené ako prvé. Názov záložky nesie odznak, takže vidíte na prvý pohľad, či je hosť zálohovaný. Za riadok:",
+    "backupsItems": [
+      "<strong>Timestamp</strong>",
+      "<strong>Cieľová značka</strong> V sklade, kde žije (PBS-Cloud, PBS- Local, NFS-Záloha, ...) farebná podľa stavu.",
+      "<strong>Size</strong>"
+    ],
+    "backupsOutro": "<strong>+ Vytvoriť Backup</strong> tlačidlo v pravom hornom rohu spustí nový beh na úložisku označené ako \"Backup cieľ\" v Proxmox úložisku konfig. Obnoviť životy vo webovom UI Proxmox",
+    "firewallTitle": "Záložka 7",
+    "firewallIntro": "Číta per-hostiteľ Proxmox firewall log priamo od hostiteľa (žiadna extra služba, žiadny prieskum). Záložka je vždy prítomná v navigačnom páse; panel sa rozhodne, čo urobiť v závislosti od toho, či je firewall pre tohto hosťa povolený a či sa nejaké pravidlo skutočne prihlasuje:",
+    "firewallItems": [
+      "<strong>Firewall vypnutý</strong> Výpoveď z jantáru presne vysvetľuje, kde je možné ju v Proxmoxe UI (<em>&lt;KontajnerVM&gt; → Firewall → Možnosti</em>) a pripomína vám, že aspoň jedno pravidlo potrebuje <code>log: info</code> (alebo vyššie) predtým, ako sa objavia balíčky.",
+      "<strong>0Firewall zapnutý, žiadne udalosti ešte</strong>",
+      "<strong>Súčasné udalosti</strong> Priehľadná monopriestorová tabuľa so surovými položkami zafarbenými akciou: <green>ACCEPT</green> (zelená), <orange>ZAMIETNUTIE</orange> (oranžová), <red>DROP</red> (červená). Počítací odznak v hlavičke ukazuje, koľko položiek je momentálne načítaných."
+    ],
+    "firewallRefresh": "A <em>Refresh</em> tlačidlo v pravom hornom rohu panela vytiahne najnovšie položky na požiadanie Údaje pochádzajú zo súboru záznamov podľa hostí, ktorý Proxmox píše pod <code>/var/log/pve-firewall.log</code> filtrovaný VMIDom, vystaveným cez <code>GET /api/vms/&lt;vmid&gt;/firewall/log</code>.",
+    "firewallCalloutTitle": "Prečo ho tu máme, keď ho už ukazuje UI Proxmox?",
+    "firewallCalloutBody": "Dva dôvody: odstraňuje to kolo-cesta cez Proxmox web UI, keď ste už kontrolu hosťa z palubnej dosky, a udržuje rovnaký VMID-scoped pohľad zvyšok modalu používa Monitor nikdy neupravuje pravidlá firewallu; pravidlá úpravy zostávajú v natívnom rozhraní Proxmox, kam patrí.",
+    "actionBarTitle": "Akčný panel dole",
+    "actionBarIntro": "Vždy viditeľné na úpätí modálneho režimu bez ohľadu na to, ktorá záložka je aktívna:",
+    "consoleItem": "<strong>Konzola</strong> (LXC len, beží) <code>pct enter &lt;vmid&gt;</code> a pristane v kontajneri. To isté. xterm.js + WebSocket inštalatérstvo ako samostatný <link>Záložka terminálov</link>, vrátane <strong>Nástrojová lišta pre mobilné telefóny</strong> s ESC, TAB, klávesy so šípkami, Enter a Ctrl combo (Ctrl+C / Ctrl+X / Ctrl+R) pod terminálom VM nevystavujú tlačidlo Console; používajte webovú konzolu Proxmox (noVNC) pre hosťovský prístup.",
+    "lifecycleIntro": "Pod ním štyri tlačidlá životného cyklu v mriežke 2×2. Každý požiar <code>POST /api/vms/&lt;vmid&gt;/control</code> so zodpovedajúcou <code>action</code>; povolený stav závisí od toho, či hosť momentálne beží:",
+    "headerButton": "Tlačidlo",
+    "headerEnabled": "Povolené, keď",
+    "headerAction": "Akcia zaslaná hostiteľovi",
+    "lifecycleRows": [
+      {
+        "button": "Začiatok",
+        "color": "green",
+        "enabled": "Hosť je zastavený.",
+        "action": "qm start / pct start"
+      },
+      {
+        "button": "Vypnúť",
+        "color": "blue",
+        "enabled": "Hosť beží.",
+        "action": "qm shutdown / pct shutdown — graceful, ACPI"
+      },
+      {
+        "button": "Reštartovať",
+        "color": "blue",
+        "enabled": "Hosť beží.",
+        "action": "qm reboot / pct reboot — graceful restart"
+      },
+      {
+        "button": "Vynútiť vypnutie",
+        "color": "red",
+        "enabled": "Hosť beží.",
+        "action": "qm stop / pct stop — hard power-off"
+      }
+    ],
+    "forceStopTitle": "Force Stop je vypínač, nie zdvorilá voľba",
+    "forceStopBody": "<strong>Force Stop</strong> obíde postup vypnutia hosťa Použite <strong>Shutdown</strong> keď hosť reaguje; dosah pre Force Stop iba pri vypnutí visí a akceptujete riziko straty dát nekoordinovaného power-off. Tlačidlo je červené a označené zámerne, aby ste ho nekliklikli reflexom."
+  },
+  "dataCollected": {
+    "heading": "Spôsob zberu údajov",
+    "headerSection": "Comment",
+    "headerEndpoint": "Koncový ukazovateľ",
+    "headerSource": "Zdroj",
+    "rows": [
+      {
+        "section": "Zoznam zásob",
+        "endpoint": "/api/vms",
+        "source": "<code>pvesh get /cluster/resources --type vm</code> pre VM a CT."
+      },
+      {
+        "section": "Detailný panel (config, sieť, disky)",
+        "endpoint": "/api/vms/<vmid>",
+        "source": "<code>qm config &lt;id&gt;</code> pre VM / <code>pct config &lt;id&gt;</code> pre CT."
+      },
+      {
+        "section": "Mapa metrík podľa hostí",
+        "endpoint": "/api/vms/<vmid>/metrics",
+        "source": "PVE RRD dáta (<code>pvesh get /nodes/&lt;node&gt;/qemu/&lt;id&gt;/rrddata</code>) kondenzovaný na graf-friendly tvar."
+      },
+      {
+        "section": "Posledné protokoly úloh (modálne)",
+        "endpoint": "/api/vms/<vmid>/logs",
+        "source": "Úlohy pre <code>vmid</code> z <code>/var/log/pve/tasks/index</code>."
+      },
+      {
+        "section": "Zálohy k dispozícii pre hostí",
+        "endpoint": "/api/vms/<vmid>/backups",
+        "source": "<code>pvesm list &lt;storage&gt;</code> filtrované VMID."
+      },
+      {
+        "section": "Log firewallu pre hosťov (Firewall tab)",
+        "endpoint": "/api/vms/<vmid>/firewall/log",
+        "source": "<code>/var/log/pve-firewall.log</code> filtrované VMID."
+      },
+      {
+        "section": "Tlačidlá napájania (začiatok / zastávka / reštart / vypnutie)",
+        "endpoint": "/api/vms/<vmid>/control",
+        "source": "ekvivalenty <code>qm start|stop|reboot|shutdown</code> alebo <code>pct</code>."
+      }
+    ],
+    "codeComment1": "# Porovnajte údaje panela s údajmi PVE",
+    "codeComment2": "# Inspect a specific guest's config as the mode sees it",
+    "codeComment3": "# VM",
+    "codeComment4": "# CT"
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "Monitor zdravia",
+        "href": "/docs/monitor/health-monitor",
+        "tailRich": " — Kategória VMs & Containers (neúspešné spustenie, timeouty QMP, zlyhania vypnutia CT)."
+      },
+      {
+        "label": "Oznámenia",
+        "href": "/docs/monitor/notifications",
+        "tailRich": " — Čo <code>vm_*</code>, <code>ct_*</code>, <code>migration_*</code> a <code>backup_*</code> udalosti spúšťajú po prúde."
+      },
+      {
+        "label": "API referencia",
+        "href": "/docs/monitor/api",
+        "tailRich": "  VM a záložné ciele."
+      },
+      {
+        "label": "Index schránky",
+        "href": "/docs/monitor/dashboard",
+        "tailRich": " — Ostatné karty."
+      },
+      {
+        "label": "ProxMenux → Vytvoriť VM",
+        "href": "/docs/create-vm",
+        "tailRich": " — "
+      }
+    ]
+  }
+}

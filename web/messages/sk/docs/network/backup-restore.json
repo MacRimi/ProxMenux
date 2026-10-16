@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "Zálohovanie a reštart rozhrania ProxMenux Dokumentácia",
+    "description": "Ručné snímky, prehliadanie a obnovenie /etc/network/interfaces zálohy uložené v /var/backups/proxmenux/. Obsahuje sieťovú službu reštartovať s potvrdením a rýchlym zobrazením živých konfigurácie.",
+    "ogTitle": "Zálohovanie a reštart rozhrania ProxMenux Dokumentácia",
+    "ogDescription": "Snapshot a obnoviť konfiguráciu siete Proxmox; reštartovať sieťový servis s potvrdením."
+  },
+  "header": {
+    "title": "Záloha a reštart rozhraní",
+    "description": "Štyri utility, ktoré sa točia okolo /etc/network/interfaces: vziať manuálny snímok, zobraziť live config, obnoviť predchádzajúcu zálohu s voliteľným náhľadom, a reštartovať sieťové služby s výslovným súhlasom. Rovnaký záložný adresár, ktorý sa používa pri riadených tokoch opráv.",
+    "section": "Sieť"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "Spravuje rovnaký záložný adresár používaný pomocou riadených tokov opráv (<code>/var/backups/proxmenux/</code>). Umožňuje vziať extra snímku pred akoukoľvek manuálnou zmenou, prechádzať všetky existujúce zálohy a vrátiť sa späť k niektorej z nich, vždy s čerstvou zálohou pred restore automaticky ako druhú bezpečnostnú sieť."
+  },
+  "shared": {
+    "heading": "Zdieľaný adresár zálohovania",
+    "intro": "Každá záloha prijatá kdekoľvek v ponuke siete pristane na tom istom mieste:",
+    "outro": "Názvy súborov sú časovo označené, zoradené podľa dátumu a nikdy neprepísané. Adresár je vytvorený pri prvom použití."
+  },
+  "show": {
+    "heading": "Zobraziť konfiguračný súbor siete",
+    "body": "Prints <code>/etc/network/interfaces</code> doslova na terminál. Len na čítanie. Užitočná ako kontrola zdravosti pred nástupom zálohy alebo po obnovení nie je žiadny samostatný \"diff s predchádzajúcou zálohou\" nástroj, takže oko buľvy live súbor je najjednoduchší spôsob, ako potvrdiť, čo máte."
+  },
+  "create": {
+    "heading": "Vytvoriť zálohu siete",
+    "body": "Skopíruje aktuálny <code>/etc/network/interfaces</code> do záložného adresára s novou časovou značkou. To je všetko, žiadna analýza, žiadne stopy, len snímka.",
+    "whenTitle": "Kedy vziať manuálnu zálohu",
+    "whenBody": "Pred úpravou <code>/etc/network/interfaces</code> ručne, pred inštaláciou balíka, ktorý sa môže dotknúť siete stack (napr. NetworkManager, Open vSwitch) alebo pred akoukoľvek zmenou hardvéru. Sprievodca opravy už snímka automaticky Táto voľba je pre <em>manual</em> momenty."
+  },
+  "restore": {
+    "heading": "Obnoviť sieť zo zálohy",
+    "intro": "Zoznamy každej zálohy v <code>/var/backups/proxmenux/</code> zoradené z najnovších na najstarší, a prechádza strážené obnovenie:",
+    "steps": [
+      {
+        "title": "1. Vybrať zálohu",
+        "body": "Menu uvádza každú zálohu podľa časovej pečiatky. Ak neexistujú žiadne zálohy, prietok vychádza s jasnou správou.",
+        "tone": "blue"
+      },
+      {
+        "title": "2. Nepovinný náhľad",
+        "body": "Ponúka na otvorenie vybranej zálohy v posuvnom pohľade pred spáchaním. Áno v predvolenom predvolení",
+        "tone": "blue"
+      },
+      {
+        "title": "3. Záloha pred restorom",
+        "body": "Pred prepísaním <code>/etc/network/interfaces</code>, berie <strong>ďalší </strong> zálohovanie aktuálneho stavu. Obnovenie zálohy je samo o sebe deštruktívnou akciou, takže nová snímka pre-restore vám umožní vrátiť sa späť, ak sa ukáže, že zvolená záloha je nesprávna.",
+        "tone": "amber"
+      },
+      {
+        "title": "4. Použiť obnovenie",
+        "body": "Kopíruje vybranú zálohu cez <code>/etc/network/interfaces</code>. Zmena súboru je na disku; stav živého jadra stále odráža predchádzajúcu konfiguráciu.",
+        "tone": "amber"
+      },
+      {
+        "title": "5. Nepovinný reštart",
+        "body": "Pýta sa, či spustiť <code>systemctl restart networking</code> teraz. Odložte zmenu na ďalšiu reštart.",
+        "tone": "emerald"
+      }
+    ],
+    "autoBackupTitle": "Obnovenie automaticky prevezme vlastnú zálohu",
+    "autoBackupBody": "Výber <em>Restore Network Backup</em> vždy vytvára svieži snímok <em>pruent</em> config pred jej prepísaním. Ak obnovíte nesprávne zálohovanie, najnovší súbor v <code>/var/backups/proxmenux/</code> je stav, z ktorého ste prišli."
+  },
+  "restart": {
+    "heading": "Reštartovať sieťovú službu",
+    "body": "Spustí <code>systemctl restart networking</code> po potvrdení \"áno/nie.\" Výsledok hlási s <code>msg_ok</code> / <code>msg_error</code>. Väčšina tokov v tomto menu ponúka vlastnú reštartovaciu výzvu na konci; táto voľba je určená na reštartovanie po manuálnej úprave alebo po znížení prítoku reštartu skôr.",
+    "warnTitle": "Zaručené krátke odpojenie; možné trvalé odpojenie",
+    "warnBody": "Opätovné spustenie <code>networking</code> odtrhne a znovu použije každé rozhranie deklarované v <code>/etc/network/interfaces</code>. SSH sedenia hostili na tých rozhraniach. Ak je nová konfig neplatná, sieť sa nikdy nevráti. Spustite to len vtedy, keď:",
+    "warnItems": [
+      "Máte konzolu / IPMI / iKVM prístup pripravený, <em>alebo</em>",
+      "Ste fyzicky vedľa stroja, <em>0or</em>",
+      "Práve ste sa úspešne vrátili späť do známej dobrej konfigy a chcete ju použiť."
+    ]
+  },
+  "manualRollback": {
+    "heading": "Ručné otočenie z konzoly",
+    "intro": "Ak nemôžete dosiahnuť menu (žiadne SSH, dialógové zrútenie, ...), ale môžete dosiahnuť konzolu, rollback je dva príkazy:",
+    "outro": "Jedná sa o <em>same</em> operácia vykonáva menu, len písaný ručne. Ak sa <code>networking</code> stále nespustí, pre príslušnú syntax / chybu ovládača skontrolujte <code>journalctl -u networking -b</code>."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "noneTitle": "\"Nenájdené žiadne zálohy\" v Restore",
+    "noneBody": "Adresár <code>/var/backups/proxmenux/</code> neexistuje alebo neobsahuje žiadne súbory <code>interfaces_backup_*</code>. Spustiť <em>Create Network Backup</em> aspoň raz, alebo spustiť akékoľvek usmerňované opravy (ktorý automaticky vytvorí jeden). Potvrďte s <code>ls /var/backups/proxmenux/</code>.",
+    "unreachTitle": "Reštartovať siete uspeje, ale hostiteľ je stále nedosiahnuteľný",
+    "unreachBody": "Buď je nová konfigurácia nesprávna, alebo ste reštartovali do konfigurácie, ktorá nezaväzuje váš manažérsky IP. Vrátiť späť z konzoly (pozri vyššie). Po opätovnom navrátení použite analýzu <bridgeLink>bridge </bridgeLink> a analýzu <configLink>config </configLink> na pochopenie toho, čo bolo zlé pred opätovným použitím.",
+    "emptyTitle": "Obnoviť náhľad ukazuje prázdny súbor",
+    "emptyBody": "Záložný súbor je prázdny (0 bajtov). To sa stane, ak kópia počas predchádzajúceho spustenia ticho zlyhala. Vyberte si staršie zálohovanie, alebo znovu spustiť <em>Create Network Backup</em> práve teraz, ak live config je zdravá."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Analýza a oprava mosta",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — Najbežnejší dôvod, prečo tu končí záloha."
+      },
+      {
+        "label": "Analýza konfigurácií a usmerňované čistenie",
+        "href": "/docs/network/config-analysis",
+        "tailRich": " A tiež píše <code>/var/backups/proxmenux/</code> automaticky."
+      },
+      {
+        "label": "Diagnostika",
+        "href": "/docs/network/diagnostics",
+        "tail": " — "
+      }
+    ]
+  }
+}

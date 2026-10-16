@@ -1,0 +1,12 @@
+{
+  "meta": {
+    "title": "Kódex správania a dokumentácia ProxMenux",
+    "description": "Kódex správania ProxMenux a najlepšie postupy pre prispievateľov, testerov a používateľov.",
+    "ogTitle": "Kódex správania a dokumentácia ProxMenux",
+    "ogDescription": "Očakávania týkajúce sa zodpovednosti za kód, zabezpečenia zverejnenia a PR rozsahu projektu ProxMenux."
+  },
+  "errors": {
+    "notFound": "Chyba: Súbor CODE_OF_CONDUCT.md nebol nájdený.",
+    "loadFailed": "Chyba: Nemožno načítať obsah kódexu správania."
+  }
+}

@@ -1,0 +1,232 @@
+{
+  "meta": {
+    "title": "Proxmox Storage and Disk Commands lsblk, LVM, pvesm, qm importdisk ProxMenux",
+    "description": "Odkaz na úložisko a diskové príkazy na Proxmox VE: lsblk, blkid, parted, lvdisplay, vgdisplay, pvs, mount, df, du, ncdu, pvesm stav, qm importdisk a qemu-img konvertovať pre VM operácie na disku.",
+    "ogTitle": "Proxmox Storage and Disk Commands lsblk, LVM, pvesm, qm importdisk",
+    "ogDescription": "Odkaz na úložisko a diskové príkazy na Proxmox VE Na disku, LVM, mounts, Proxmox úložný manažment, VM import disku a prevod obrazu.",
+    "twitterTitle": "Príkazy úložiska Proxmox ProxMenux",
+    "twitterDescription": "Kontrola disku, informácie o montáži, správa LVM, úložisko Proxmox a príkazy na import / konverziu VM disku."
+  },
+  "header": {
+    "title": "Úložiská a disky",
+    "description": "Cured reference for storage inspection on Proxmox hosts: blokovacie zariadenia, priečky, držiaky, LVM objemy, konfigurácia úložiska Proxmox a niekoľko VM prevádzky diskov (importdisk, qemu-Img konvertovať).",
+    "section": "Pomoc a informácie"
+  },
+  "intro": {
+    "title": "Rýchly diskový inventár",
+    "body": "<code>lsblk</code> je najrýchlejší spôsob, ako vidieť všetky blokovacie zariadenia a ich oddiely v stromovom pohľade. Pre trvalé identifikátory (ktoré prežijú medzi topánkami a hardvérovými zmenami) použite <code>ls -lh /dev/disk/by-id/</code>."
+  },
+  "commandGroups": [
+    {
+      "title": "Informácie o disku",
+      "commands": [
+        {
+          "command": "lsblk",
+          "description": "Zobraziť blokové zariadenia a oddiely"
+        },
+        {
+          "command": "fdisk -l",
+          "description": "Zobraziť disky s podrobnými informáciami"
+        },
+        {
+          "command": "blkid",
+          "description": "Zobraziť UUID a typ súborového systému zariadení"
+        },
+        {
+          "command": "ls -lh /dev/disk/by-id/",
+          "description": "Zobraziť trvalé identifikátory diskov"
+        },
+        {
+          "command": "parted -l",
+          "description": "Podrobné rozdelenie disku vrátane GPT"
+        }
+      ]
+    },
+    {
+      "title": "Použitie pri skladovaní",
+      "commands": [
+        {
+          "command": "df -h",
+          "description": "Zobraziť využitie diskov podľa bodu pripojenia"
+        },
+        {
+          "command": "du -sh /path",
+          "description": "Zobraziť veľkosť priečinka"
+        },
+        {
+          "command": "mount | grep ^/dev",
+          "description": "Zobraziť pripojené úložné zariadenia"
+        },
+        {
+          "command": "cat /proc/mounts",
+          "description": "Zobraziť všetky aktívne pripojenia z kernelu"
+        }
+      ]
+    },
+    {
+      "title": "Správa LVM",
+      "commands": [
+        {
+          "command": "pvdisplay",
+          "description": "Zobraziť fyzické zväzky (LVM)"
+        },
+        {
+          "command": "vgdisplay",
+          "description": "Zobraziť skupiny zväzkov (LVM)"
+        },
+        {
+          "command": "lvdisplay",
+          "description": "Zobraziť logické zväzky (LVM)"
+        },
+        {
+          "command": "pvs",
+          "description": "Stručný výpis fyzických zväzkov"
+        },
+        {
+          "command": "vgs",
+          "description": "Stručný výpis skupín zväzkov"
+        },
+        {
+          "command": "lvs",
+          "description": "Stručný výpis logických zväzkov"
+        }
+      ]
+    },
+    {
+      "title": "Úložiská Proxmoxu",
+      "commands": [
+        {
+          "command": "cat /etc/pve/storage.cfg",
+          "description": "Zobraziť nastavenie úložísk Proxmoxu"
+        },
+        {
+          "command": "pvesm status",
+          "description": "Zobraziť stav všetkých úložísk"
+        },
+        {
+          "command": "pvesm list",
+          "description": "Zoznam všetkých dostupných úložísk"
+        },
+        {
+          "command": "pvesm list <storage>",
+          "description": "Zobraziť obsah vybraného úložiska"
+        },
+        {
+          "command": "pvesm scan <storage>",
+          "description": "Vyhľadať nový obsah v úložisku"
+        }
+      ]
+    },
+    {
+      "title": "Akcia disku",
+      "commands": [
+        {
+          "command": "qm importdisk <vmid> <image_path> <storage>",
+          "description": "Pripojiť obrázok disku k VM"
+        },
+        {
+          "command": "qm set <vmid> -<bus><index> <disk_path>",
+          "description": "Priradiť fyzický disk na VM (prejazdový režim)"
+        },
+        {
+          "command": "qemu-img convert -O <format> <input> <output>",
+          "description": "Previesť formát obrazu disku"
+        }
+      ]
+    },
+    {
+      "title": "Stav disku podľa SMART",
+      "commands": [
+        {
+          "command": "smartctl --scan",
+          "description": "Zoznam zariadení SMART-schopných na hostiteľovi"
+        },
+        {
+          "command": "smartctl -i /dev/<disk>",
+          "description": "Základné informácie o zariadení (model, firmware, sériový)"
+        },
+        {
+          "command": "smartctl -H /dev/<disk>",
+          "description": "Rýchla kontrola zdravotného stavu"
+        },
+        {
+          "command": "smartctl -A /dev/<disk>",
+          "description": "Iba atribúty SMART (surové hodnoty, prahové hodnoty)"
+        },
+        {
+          "command": "smartctl -a /dev/<disk>",
+          "description": "Full SMART info"
+        },
+        {
+          "command": "smartctl -t short /dev/<disk>",
+          "description": "Spustiť krátky samotest (~2 minút, beží v pozadí)"
+        },
+        {
+          "command": "smartctl -t long /dev/<disk>",
+          "description": "Spustiť dlhý samotest (hodiny, behy v pozadí)"
+        },
+        {
+          "command": "smartctl -l selftest /dev/<disk>",
+          "description": "Zobraziť samotestový log (výsledky minulých testov)"
+        },
+        {
+          "command": "smartctl -X /dev/<disk>",
+          "description": "Prerušiť spustenie vlastného testu"
+        }
+      ]
+    },
+    {
+      "title": "Stav disku NVMe",
+      "commands": [
+        {
+          "command": "nvme list",
+          "description": "Zoznam zariadení NVMe viditeľných do jadra"
+        },
+        {
+          "command": "nvme smart-log /dev/<nvme>",
+          "description": "NVMe špecifický SMART log (teplota, opotrebenie, chyby)"
+        },
+        {
+          "command": "nvme id-ctrl /dev/<nvme>",
+          "description": "Controller info (model, firmware, schopnosti)"
+        },
+        {
+          "command": "nvme error-log /dev/<nvme>",
+          "description": "Nedávne záznamy chýb NVMe"
+        }
+      ]
+    }
+  ],
+  "lvmTip": {
+    "title": "LVM krátke vs dlhé príkazy",
+    "bodyRich": "Obe formy existujú pre zlučiteľnosť. <code>pvs</code>0 / <code>vgs</code> / <code>lvs</code> dávajú čistý single-line-per-objemová tabuľka; <code>pvdisplay</code> / <code>vgdisplay</code> / <code>lvdisplay</code> dať doslova multi-line skládka na objem. Pre každodenné použitie preferujte krátke verzie."
+  },
+  "smartInfo": {
+    "title": "SMART pre spinning disky vs NVMe",
+    "bodyRich": "<strong>Spinning / SATA / SAS disky</strong> ťo <code>smartctl</code> rodina z <code>smartmontools</code> (nainštalované štandardne na Proxmoxe). Posuňte zariadenie ako <code>/dev/sda</code>, <code>/dev/sdb</code>atď. <strong>NVMe disky</strong> majú svoj vlastný rodný protokol <code>smartctl</code> pracuje proti nim (prechádza väčšinu dát), ale <code>nvme</code> nástroj od <code>nvme-cli</code> hlási viac NVMe- špecifické polia (oblečte si rovnanie, chyby v médiách, informácie o namespace). Inštalovať pomocou <code>apt install nvme-cli</code> ak nie je prítomný."
+  },
+  "selfTestWarn": {
+    "title": "Samotesty bežia v pozadí",
+    "bodyRich": "<code>smartctl -t short</code> a <code>-t long</code> sa okamžite vráti. Skontrolujte pokrok s <code>smartctl -a /dev/&lt;disk&gt;</code> (pozrite sa na \"Self-test rutiny vo vývoji\") alebo čakať na dokončenie a čítať <code>smartctl -l selftest /dev/&lt;disk&gt;</code>. Krátke testy trvať ~2 min; dlhé testy môžu trvať hodiny na veľkých otočkách. Disk zostane použiteľný počas testu, ale výkon I/O klesne."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "Správa ZFS",
+        "tail": " Zpool / zfs príkazy pre ZFS- krytý sklad."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Správca diskov",
+        "tail": " — Interaktívne toky ProxMenux pre prenos, import, formátovanie, SMART."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Prehľad pomoci a informácií",
+        "tail": "."
+      }
+    ]
+  }
+}

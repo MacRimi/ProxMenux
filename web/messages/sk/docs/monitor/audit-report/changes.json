@@ -1,0 +1,208 @@
+{
+  "meta": {
+    "title": "Zmeny",
+    "description": "Zmeniť časopis Audit & Report: čo ProxMenux zmenil na hostiteľa, čo tam bolo predtým, rozdiel a či to môže byť odčinené."
+  },
+  "header": {
+    "title": "Zmeny",
+    "description": "Časopis operácií ProxMenux vykonáva na hostiteľa a, kde to bolo zachytené, štát pred a po každom jednom.",
+    "section": "Audit a správy"
+  },
+  "sections": [
+    {
+      "id": "purpose",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Z scenára, ktorý bežal na zmenu to urobil",
+            "body": "Dlhá funkcia môže zmeniť len dva riadky. Časopis udržuje každú konkrétnu operáciu so skriptom, funkciou a zodpovednou verziou, príslušným zdrojom, rozdielom a či sa dá odčiniť."
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Skript",
+                "detail": "funkcia + verzia"
+              },
+              {
+                "label": "Zachytiť",
+                "detail": "obsah pred"
+              },
+              {
+                "label": "Operácia",
+                "detail": "súbor · balík · služba"
+              },
+              {
+                "label": "Systémový denník",
+                "detail": "Priradenie + rozdiel"
+              }
+            ],
+            "caption": "Zachytávanie sa vykonáva, keď operácia beží a je konsolidovaná, keď Monitor číta denník."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/changes-view.png",
+            "alt": "Zmeny zobrazenia auditu a správy s položkami zoskupenými po inštalácii a skriptom",
+            "caption": "Zobrazenie zmien s rozdielmi v súbore upravenom ProxMenuxom."
+          }
+        }
+      ]
+    },
+    {
+      "id": "types",
+      "title": "Druh vstupu",
+      "intro": "Filter hore oddeľuje položky podľa druhu.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Druh",
+              "Čo nahráva?"
+            ],
+            "rows": [
+              [
+                "Konfigurácia",
+                "ProxMenux napísal, upravil alebo odstránil súbor, zmenil nastavenie alebo zmenil službu."
+              ],
+              [
+                "Inštalácie",
+                "ProxMenux pridal balíček alebo komponent, a balíky, ktoré sa skutočne objavili, sú zaznamenané."
+              ],
+              [
+                "Spustenia",
+                "ProxMenux spustil príkaz; čo sa zmenilo je až na samotný príkaz."
+              ],
+              [
+                "Použité",
+                "Pred vznikom časopisu bola použitá funkcia; stav predtým, ako nebol zachytený."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "groups",
+      "title": "Ako je organizovaný názor",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Oddiel",
+              "Obsah"
+            ],
+            "rows": [
+              [
+                "Optimalizácie po inštalácii",
+                "Zoskupený pomocou možnosti po inštalácii vybraný užívateľ."
+              ],
+              [
+                "Skripty ProxMenux",
+                "GPU, Coral, network, storage, security, utility a ostatné inštrumentálne skripty vrátane inštalátora ProxMenux a ProxMenux Monitor."
+              ],
+              [
+                "Nainštalované balíky a nástroje",
+                "Softvér ProxMenux nainštalovaný na hostiteľa."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "V každej sekcii <strong>0By functions</strong> groups the entry under the function that made them."
+        }
+      ]
+    },
+    {
+      "id": "entry",
+      "title": "Čo každý záznam ukazuje",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Skript, funkcia a zodpovedná verzia.",
+              "Dátum a dotknutý zdroj.",
+              "Známy stav pred zmenou a po nej.",
+              "Línie pridané a odstránené.",
+              "Balíčky, ktoré boli skutočne pridané.",
+              "Zmena stavu služby.",
+              "<strong>0Undo this</strong>: <em>Restores presne to, čo tam bolo </em>, <em>Vypúšťa súbor (nebol predtým žiadny)</em>, <em>balík môže byť odinštalovaný</em>, čiastočná undo, alebo <em>Nemôže byť odčinený z časopisu</em>."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "before",
+      "title": "Čo znamená štát predtým?",
+      "blocks": [
+        {
+          "p": "Stav predtým možno zachytiť obsah, súbor vytvorený prvýkrát alebo neznámy stav. Zmeny vykonané pred vznikom časopisu nie je možné zrekonštruovať; spustenie funkcie opäť zachytí najprv štát, ktorý bol v tom čase nájdený."
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Rozsah pôsobnosti časopisu",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Ručné zmeny a zmeny vykonané iným softvérom sa nezaznamenávajú.",
+              "Sú zahrnuté len operácie, ktoré prechádzajú primitívmi auditu ProxMenux.",
+              "Záznam nikdy neblokuje operáciu, ktorú opisuje: ak nie je možné zápis zapísať, operácia pokračuje.",
+              "Následné zmeny jedného zdroja sú uvedené ako známy pôvod proti súčasnému stavu."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "retention",
+      "title": "Uložené dôkazy",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Prvok",
+              "Správanie"
+            ],
+            "rows": [
+              [
+                "Položky",
+                "Sú uložené na hostiteľa; nič nie je automaticky odstránené z časopisu."
+              ],
+              [
+                "Zachovaný obsah",
+                "Zachytený objekt sa uchováva, kým sa na neho vzťahuje záznam."
+              ],
+              [
+                "Veľkosť zachytenia",
+                "Obsah nad 1 MiB nie je uložený ako celok; záznamy o vstupe, že zachytenie bolo preskočené kvôli jeho veľkosti."
+              ],
+              [
+                "Čítanie",
+                "Monitor nezaťažuje uložené objekty nad 2 MiB."
+              ],
+              [
+                "Rozdiel",
+                "Na väčšine línií 400 sú zobrazené a dlhší rozdiel je označený ako skrátený."
+              ],
+              [
+                "Zoznam",
+                "API vracia 200 položky na žiadosť štandardne a až do 1000."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Zachovaný obsah nie je automatická spätná väzba",
+            "body": "Obsah pred zmenou môže byť skontrolovaný a obnovený ručne, ale zobrazenie zmien nevráti operácie. Záznam o poprave zaznamenáva príkaz bez toho, aby poznal každý efekt nástroja, ktorý bežal."
+          }
+        }
+      ]
+    }
+  ]
+}

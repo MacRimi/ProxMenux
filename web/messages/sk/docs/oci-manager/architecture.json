@@ -1,0 +1,171 @@
+{
+  "meta": {
+    "title": "Ako je obraz OCI preložený ProxMenux",
+    "description": "Z úložiska obrázkov a jeho kompozície do recenzentovateľnej šablóny, plánu nasadenia a natívneho Proxmox VE LXC, bez Docker vnútri."
+  },
+  "header": {
+    "title": "Ako sa prekladá OCI obraz",
+    "description": "Z úložiska obrázkov a jeho kompozície do recenzentovateľnej šablóny, plánu nasadenia a natívneho LXC, bez inštalácie Docker vnútri.",
+    "section": "Správca OCI aplikácií"
+  },
+  "sections": [
+    {
+      "id": "pipeline",
+      "title": "Prekladateľský plynovod",
+      "blocks": [
+        {
+          "mermaid": {
+            "chartCode": "flowchart LR\n A[\"{{repo}}\"] --> B[\"Compose + README\"]\n B --> C[\"{{converter}}\"]\n C --> D[\"{{template}}\"]\n D --> E{\"{{blockers}}\"}\n E -- \"{{no}}\" --> F[\"{{review}}\"]\n F --> D\n E -- \"{{yes}}\" --> G[\"{{plan}}\"]\n G --> H[\"pct create\"]\n H --> I[\"{{lxc}}\"]",
+            "labels": {
+              "repo": "Úložisko obrázkov",
+              "converter": "Konvertor",
+              "template": "Šablóna JSON",
+              "blockers": "Žiadne blokovanie?",
+              "no": "Nie",
+              "yes": "Áno",
+              "review": "Preskúmanie / prekrývanie",
+              "plan": "Plán nasadenia",
+              "lxc": "Natívne LXC"
+            }
+          }
+        },
+        {
+          "p": "Prevodník číta obrázok a súbor kompozície jeho projekt publikuje a píše šablónu JSON. Šablóna s nepreloženými blokovačmi prechádza recenziou, kde ich vyrieši kurated prekrytie, predtým ako je publikovaná v katalógu. Pre inštaláciu sú ponúkané iba šablóny bez blokovačov."
+        }
+      ]
+    },
+    {
+      "id": "template",
+      "title": "Čo drží šablóna?",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "archive",
+                "title": "Identita obrázku",
+                "body": "Repozitár, rolovací štítok, architektúra, vyriešená digescia a revízia zdrojov."
+              },
+              {
+                "icon": "braces",
+                "title": "Kontajnerová zmluva",
+                "body": "Vstupný bod, Cmd, prostredie, užívateľ, pracovný adresár, stop signál, porty a objemy."
+              },
+              {
+                "icon": "layers",
+                "title": "Preklad Proxmox VE",
+                "body": "Zdroje, bezpečnosť, montáž body, zariadenia, sysctls, zdravotné kontroly a úpravy každý z nich potrebuje, s ich dôvodom."
+              },
+              {
+                "icon": "shield",
+                "title": "Zlučiteľnosť",
+                "body": "Podporované kľúče, nepreložené blokátory a stav každej validácie."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sources",
+      "title": "OCI poskytuje proces; Compose poskytuje životné prostredie",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Zdroj",
+              "Príklad",
+              "Natívny výsledok"
+            ],
+            "rows": [
+              [
+                "Metaúdaje OCI",
+                "<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>",
+                "Proxmox VE importuje, keď je CT"
+              ],
+              [
+                "Docker Compose",
+                "<code>environment</code>, <code>volumes</code>, <code>devices</code>",
+                "Položky prostredia LXC, <code>mpN</code> a <code>devN</code>"
+              ],
+              [
+                "Profil ProxMenux",
+                "GPU, zdravotná kontrola, poverovacie listiny",
+                "otázky a revidované úpravy"
+              ],
+              [
+                "Používateľ",
+                "VMID, pamäť, sieť",
+                "pôvodná zmluva"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "install",
+      "title": "Čo sa stane počas inštalácie",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Resolv",
+                "body": "Register je pýtať, hostiteľská architektúra je vybraná a efektívne stráviť valec je stanovená."
+              },
+              {
+                "title": "Stiahnuť a overiť",
+                "body": "Skopeo stiahne obrázok ako archív OCI a každá vrstva je kontrolovaná proti jeho tráveniu a dekomprimované pred tým, než sa niečo vytvorí. Poškodený sťahovanie je stiahnutý druhýkrát pred zastavením inštalácie."
+              },
+              {
+                "title": "Stavať",
+                "body": "<code>pct create</code> buduje korektúry z archívu a udržiava oficiálne procesné metaúdaje obrazu."
+              },
+              {
+                "title": "Komunita",
+                "body": "Deklarované objemy, sieť, životné prostredie, zariadenia a bezpečnostné profily sú pripojené."
+              },
+              {
+                "title": "Konzola",
+                "body": "Výstup konzoly kontajnera je uchovaný na hostiteľovi a konzola Proxmox VE otvára schránku, keď je obraz lode jeden."
+              },
+              {
+                "title": "Poraďte",
+                "body": "Prvý štart čaká na adresu a na odpoveď služby; porucha nie je hlásená ako úspešná inštalácia."
+              },
+              {
+                "title": "Pridať",
+                "body": "Efektívna konfigurácia je napísaná do inštančnej zmluvy, ktorá aktualizuje a rekreácie použitie."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "example",
+      "title": "Príklad: obrázok s /config0 a /downloads",
+      "intro": "Spoločná definícia a konfigurácia Proxmox VE sa stáva. Cesta, ktorú aplikácia očakáva, sa nemení.",
+      "blocks": [
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Docker Compose",
+                "code": "image: lscr.io/linuxserver/example:latest\nenvironment:\n  - PUID=1000\n  - PGID=1000\nvolumes:\n  - config:/config\n  - /srv/downloads:/downloads\nports:\n  - 8080:8080"
+              },
+              {
+                "title": "/etc/pve/lxc/VMID.conf (excerpt)",
+                "code": "entrypoint: /init\nmp0: local-lvm:vm-VMID-disk-1,mp=/config,backup=1,size=8G\nmp1: /srv/downloads,mp=/downloads\nnet0: name=eth0,bridge=vmbr0,ip=dhcp,type=veth\nlxc.environment.runtime: PUID=1000\nlxc.environment.runtime: PGID=1000"
+              }
+            ]
+          }
+        },
+        {
+          "p": "<code>mp0</code> je druhý disk, ktorý patrí do kontajnera, s názvom <code>vm-VMID-disk-N</code> na vybranom úložisku. Je namontovaný na <code>/config</code> a s <code>backup=1</code>, je súčasťou zálohovania kontajnera. <code>mp1</code> nevytvára disk: viaže hostiteľský adresár <code>/srv/downloads</code> na <code>/downloads</code> vnútri LXC. Port 8080 nie je mapovaný: LXC má vlastnú adresu a servisné odpovede na ňu."
+        }
+      ]
+    }
+  ]
+}

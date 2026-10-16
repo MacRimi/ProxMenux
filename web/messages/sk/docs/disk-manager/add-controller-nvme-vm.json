@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "title": "Pridať Controller alebo NVMe do VM | ProxMenux Dokumentácia",
+    "description": "PCI priechodný pamäťovým ovládačom (SATA / SAS HBA) alebo NVMe zariadenie na Proxmox VM použitie ProxMenux. Umožňuje IOMMU, odhaľovanie konfliktov a qm sada --hostpci elektrické vedenie.",
+    "ogTitle": "Pridať Controller alebo NVMe do VM | ProxMenux Dokumentácia",
+    "ogDescription": "Prejdite celým zariadením SATA / SAS HBA alebo NVMe do zariadenia Proxmox VM. ProxMenux manipuluje s IOMMU, detekciou konfliktov a hospci pripojením."
+  },
+  "header": {
+    "title": "Pridať radič alebo NVMe do VM",
+    "description": "Pass a whole SATA / SAS host bus adapter (HBA) alebo NVMe zariadenie do Proxmoxu VM prechodom cez PCI. ProxMenux kontroly a s vaším súhlasom umožňuje IOMMU, vyčísľuje priechod-oprávnené zariadenia, filtre von konflikty a drôty priradenie s qm nastaviť --hostpci.",
+    "section": "Správca disku · VM"
+  },
+  "intro": {
+    "title": "Čo to robí (a nerobí)",
+    "body": "Toto je <strong>0device-level passhrough</strong>: PCIe karta zanecháva zobrazenie hostiteľského jadra a je viazaná na <code>vfio-pci</code>. VM vidí regulátor sám Každý disk pripojený k tomuto regulátora ho sleduje automaticky, s narodenými dátami SMART, plnými funkciami firmware a bez vrstvy Proxmox medzi."
+  },
+  "howRuns": {
+    "heading": "Ako beží skript",
+    "body": "Prietok má dve fázy s jasným oddelením medzi \"zhromažďovaním informácií, kontrolou IOMMU a kótovaním kandidátov\" a \"skutočne pripojením PCI zariadenia.\" Až do konečného potvrdenia sa nič nenapíše do VM config."
+  },
+  "iommu": {
+    "heading": "IOMMU skupiny",
+    "body": "PCI priechod sa vykonáva na <strong>Skupina IOMMU</strong>, ktorá je najmenšou jednotkou CPUIOMMU dokáže izolovať. Všetko v skupine sa pohybuje spoločne. Ak váš prevádzkovateľ SATA zdieľa svoju IOMMU skupinu s USB ovládačom, odovzdáva kartu SATA VM Tiež sa USB porty s ním často nežiaduce.",
+    "outro": "ProxMenux zobrazuje skupinu IOMMU vedľa každého zariadenia a varuje vás, keď skupina nesie viac ako len ovládač, ktorý chcete. Stále môžete pokračovať, ak sú ďalšie zariadenia v skupine prijateľné (napríklad všetky ovládače diskov), alebo vycúvať, ak nie sú."
+  },
+  "prereqs": {
+    "heading": "Predpoklady",
+    "items": [
+      "<strong>0CPU a podpora základnej dosky</strong> VT-d (Intel) alebo AMD-Vi, a je povolená v firmware (BIOS/UEFI). ProxMenux môže pre vás povoliť stranu jadra, ale nemôže prepnúť prepínač firmware.",
+      "Cieľ VM ci <strong>vypnutý</strong> pred pripojením PCI zariadení.",
+      "Regulátor/NVMe <strong>nie je ten, ktorý drží koreňový súborový systém Proxmox</strong>. Scenár skrýva všetko, čo používa hostiteľ.",
+      "Hosť OS má ovládače pre model regulátora. Linux pokrýva prakticky každý HBA z krabice; Windows potrebuje predajcu ovládač nainštalovaný <em>0pred</em> zavádzate s pripojeným ovládačom."
+    ],
+    "warnTitle": "Živá migrácia nie je možná",
+    "warnBody": "VM s PCI priechod je viazaný na uzol, ktorý fyzicky drží kartu. Živá migrácia cez uzly zlyhá. Plán zálohovanie / replikácia zodpovedajúcim spôsobom."
+  },
+  "steps": {
+    "heading": "Krok za krokom",
+    "stepLabel": "Krok",
+    "list": [
+      {
+        "title": "Vyberte cieľovú VM",
+        "bodyRich": "ProxMenux číta <code>qm list</code> a zobrazuje každý VM. Vyberte ten, ktorý dostane ovládač.",
+        "img": "/disk/nvme-passthrough/vm-selection.png",
+        "alt": "dialóg výberu VM",
+        "caption": "dialóg výberu VM"
+      },
+      {
+        "title": "Kontrola IOMMU",
+        "bodyRich": "V prípade, že IOMMU nie je povolená na kernelu cmdline, ProxMenux ponúka možnosť. Upravuje <code>/etc/kernel/cmdline</code> (pre systemd-boot) alebo <code>/etc/default/grub</code> (pre GRUB) a dopĺňa správny parameter pre vaše CPU:",
+        "items": [
+          "<code>intel_iommu=on</code> pre procesory Intel.",
+          "<code>amd_iommu=on</code> pre CPU AMD."
+        ],
+        "outro": "Po tejto zmene je potrebná reštart. Skript vás vyzve, aby ste reštartovali teraz alebo neskôr; passhrough nemôže pokračovať, kým nie je nové jadro cmdline aktívne.",
+        "img": "/disk/nvme-passthrough/iommu-warning.png",
+        "alt": "Požadovaný dialóg IOMMU",
+        "caption": "IOMMU vyžaduje"
+      },
+      {
+        "title": "Počet zariadení",
+        "body": "ProxMenux uvádza každý pamäťový ovládač (SATA / SAS HBA) a každé zariadenie NVMe na PCI zbernici. Pre každé zariadenie zobrazuje:",
+        "items": [
+          "Adresa PCI (<code>00:17.0</code>, <code>01:00.0</code>, ...).",
+          "Dodávateľ / popis zariadenia.",
+          "IOMMU skupina",
+          "Disk momentálne za regulátorom (takže viete, čo bude nasledovať na VM)."
+        ],
+        "img": "/disk/nvme-passthrough/device-list.png",
+        "alt": "Regulátor / stanovenie počtu zariadení NVMe",
+        "caption": "Controller / NVMe enumeration zariadenia s IOMMU Group info"
+      },
+      {
+        "title": "Odhalenie konfliktov",
+        "bodyRich": "Skript blokuje zariadenia, ktoré sú jednoznačne nebezpečné: už priradené k inému VM (prostredníctvom <code>hostpci</code> v tom, že VM je config), v používaní hostiteľa (ovládač root disku), alebo sedí v skupine IOMMU, ktorých ostatní členovia skript nemôže bezpečne identifikovať. Na výber sú k dispozícii vhodné zariadenia.",
+        "img": "/disk/nvme-passthrough/conflict-warning.png",
+        "alt": "Varovanie pred zistením konfliktov",
+        "caption": "Detekcia konfliktov"
+      },
+      {
+        "title": "Priložiť a dokončiť",
+        "bodyRich": "Pre každé vybrané zariadenie ProxMenux beží <code>qm set &lt;VMID&gt; --hostpciN &lt;pci-addr&gt;,pcie=1</code>, výber ďalšieho voľného slotu <code>hostpci</code>. Ak bola IOMMU povolená počas tohto sedenia, je potrebné vám pripomenúť, aby ste pred spustením VM reštartovali.",
+        "img": "/disk/nvme-passthrough/assignment.png",
+        "alt": "Zhrnutie zaradenia",
+        "caption": "Pridelenie zhrnutie hostpciN sloty a PCI adresy pripojené"
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent"
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "noGroupsTitle": "IOMMU povolené, ale žiadne skupiny pod /sys/kernel/iommu_groups/",
+    "noGroupsBody": "Reštart je potrebný na to, aby jadra cmdline nadobudla účinnosť. Ak skupiny stále chýbajú po reštarte, VT-d / AMD-Vi je pravdepodobne deaktivovaná vo firmware BIOS/UEFI Pripravte sa.",
+    "busyTitle": "VM nezačína s \"hostpciN: zariadenie obsadené\"",
+    "busyBody": "Ďalší proces stále drží PCI zariadenie. Najčastejšie príčiny: predchádzajúca VM0, ktorá havarovala bez toho, aby ju uvoľnil, alebo hostiteľská jadro regeneroval na poslednej topánke. Spustite <code>lspci -nnk -s &lt;addr&gt;</code> aby ste videli, ktorý ovládač je viazaný; mal by to byť <code>vfio-pci</code>. Reštart celého hostiteľa to zvyčajne odstráni.",
+    "noDisksTitle": "Hosť vidí ovládač, ale nie disky",
+    "noDisksBody": "Model regulátora nemá hosťa. Linux takmer nikdy hity to; Windows robí LSI / Broadcom pre staršie SAS HBA) zatiaľ čo karta je odpojená, potom reštartovať s pripojenou kartou.",
+    "sharedTitle": "Spoločná skupina IOMMU tiež vyváža neprepojené zariadenie",
+    "sharedBody": "Možnosti: (a) presunúť kartu na iný PCIe slot zmeniť svoju skupinu, (b) povoliť <em>1CS prepísať</em> v jadre do rozdelených skupín (bezpečnostný obchod-off"
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importovať disk do VM",
+        "tail": " — Alternatívny model: pripojiť fyzický disk cez Proxmox bez plnej PCIe priechod."
+      },
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Pridať GPU do VM (passthrough)",
+        "tail": " — Rovnaké IOMMU / VFIO koncepty použité na GPU."
+      },
+      {
+        "href": "/docs/help-info/gpu-commands",
+        "label": "GPU Prenosové príkazy",
+        "tail": " Overovacie príkazy IOMMU sa vzťahujú aj na ovládač / NVMe Prejazd."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Prehľad správcu diskov",
+        "tail": "."
+      }
+    ]
+  }
+}

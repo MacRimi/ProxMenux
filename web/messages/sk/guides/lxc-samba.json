@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "title": "Pridať USB disk do LXC a podeľte sa o to so Samba ProxMenux Príručky",
+    "description": "Pripojte USB pevný disk alebo pamäťový kľúč k privilegovanému LXC kontajneru na Proxmox VE, nainštalujte Samba vnútri kontajnera a zdieľajte obsah cez sieť.",
+    "ogTitle": "Pridať USB disk na LXC a zdieľať s Samba",
+    "ogDescription": "Pripojte USB disk na privilegovaný LXC na Proxmox VE, nainštalujte Samba vnútri kontajnera, a zdieľať obsah cez LAN."
+  },
+  "header": {
+    "title": "Pridať USB disk alebo pamäť na LXC a zdieľať ju cez sieť so Sambou",
+    "description": "Pripojte USB pevný disk alebo pamäťový kľúč k privilegovanému LXC kontajneru na Proxmox VE, nainštalujte Samba vnútri kontajnera a zdieľajte obsah cez sieť.",
+    "section": "Návody"
+  },
+  "recommended": {
+    "calloutTitle": "Odporúčané",
+    "calloutIntro": "ProxMenux teraz odhaľuje obe polovice tohto pracovného postupu ako usmerňované menu:",
+    "items": [
+      "<strong>Disk Manager → Formát / Wipe Fyzický Disk</strong> pre krok vo formáte.",
+      "<strong>Storage & Share Manager → LXC zdieľanie siete → Samba server v LXC</strong> pre privilegovaný-CT install + Samba config."
+    ],
+    "calloutOutro": "Sprevádzané toky manipulujú s neprivilegovanými CT povoľovacími výkrikmi, prednastaveniami zdieľaného režimu (read-write / read-only / custom) a nastavením skupiny zdieľaných súborov. Tento sprievodca je manuálny ekvivalent"
+  },
+  "intro": {
+    "body": "Niekedy je užitočné pridať pevný disk alebo USB pamäťový kľúč do hostiteľa Proxmoxu, najmä na mini PC s obmedzenou vnútornou expanziou. Tento sprievodca prechádza:",
+    "stepsTitle": "Čo urobíš",
+    "steps": [
+      "Pripojenie USB disku k privilegovanému LXC.",
+      "Inštalácia Samby vnútri kontajnera.",
+      "Zdieľanie obsahu disku cez LAN."
+    ],
+    "useCasesTitle": "Prípady použitia",
+    "useCases": [
+      "Hostiť súbory Torrent a podávať ich na sieti.",
+      "Podpora mediálneho servera (Plex / Jellyfin / Emby).",
+      "Držia dokumenty, ktoré autoskenujú bezpapierové.",
+      "Generic NAS-štýl úložiska pre domácu sieť."
+    ],
+    "privilegedCalloutTitle": "Požadovaný privilegovaný kontajner",
+    "privilegedCalloutBody": "Prienik priamym zariadením (<code>mp0</code> s hostiteľskou cestou) potrebuje privilegovaný LXC. Neprivilegované CTs nemôžu viazať-mount blok zariadenia priamo pre tých, ktorí potrebujete pripojiť držiaky hostiteľských adresárov miesto (pozri ProxMenux <strong>Správca úložiska a zdieľania → LXC Body pripojenia</strong>)."
+  },
+  "attach": {
+    "heading": "1. Pripojte USB disk k LXC",
+    "identifyHeading": "1.1 Identifikujte zariadenie",
+    "identifyBody": "Porovnajte zoznam diskov <strong>0pred</strong> a <strong>po</strong> pripojenie v USB disku",
+    "beforeLabel": "Pred:",
+    "afterLabel": "Po:",
+    "imageBeforeAlt": "Zoznam diskov pred pridaním USB disku",
+    "imageAfterAlt": "Zoznam diskov po pridaní USB disku",
+    "lsblkBody": "Môžete tiež použiť <code>lsblk -o NAME,SIZE,MODEL,SERIAL</code> zoznam každého bloku zariadenia s modelom a sériou.",
+    "stableCalloutTitle": "Dôležité použitie stabilného identifikátora",
+    "stableCalloutBody": "<code>/dev/sdb1</code> sa môže zmeniť medzi topánkami, ak máte viacero USB diskov. Nájdite trvalý identifikátor:",
+    "stableCalloutCode": "ls -l /dev/disk/by-id/ | grep -v part",
+    "stableCalloutAfter": "Použite cestu <code>/dev/disk/by-id/usb-...</code> v LXC konfigurácii nižšie ako <code>/dev/sdb1</code>. Prežíva reštarty a prepájanie.",
+    "formatHeading": "1.2 Formát disku",
+    "formatBody": "ext4 je rozumné predvolené pre akcie kryté Linuxom (prípadne citlivé, podporuje POSIX ACL, bez obmedzenia veľkosti súborov). Spustiť z <strong>Proxmox host</strong>, nie kontajner:",
+    "formatCode": "mkfs.ext4 /dev/sdb1",
+    "formatAfter": "Nahradiť <code>/dev/sdb1</code> so skutočným deliacim zariadením alebo s trvalou dráhou <code>/dev/disk/by-id/usb-...-part1</code>.",
+    "mkdirHeading": "1.30 Vytvoriť bod pripojenia vnútri LXC",
+    "mkdirBody": "Vnútri LXC, vytvoriť adresár, kde sa objaví disk (akékoľvek meno funguje):",
+    "mkdirCode": "mkdir /mnt/lxc_USB",
+    "wireHeading": "1.4 Prepojte zariadenie do LXC",
+    "wireBody": "Na <strong>Proxmox host</strong> (nie vo vnútri CT), editovať kontajner je konfig. Nahradiť ID kontajnera <code>'<'CTID'>'</code>:",
+    "wireEditCode": "nano /etc/pve/lxc/'<'CTID'>'.conf",
+    "wireAddLine": "Pridať tento riadok:",
+    "wireConfigCode": "mp0: /dev/disk/by-id/usb-VENDOR_MODEL_SERIAL-part1,mp=/mnt/lxc_USB,backup=0",
+    "wireShortForm": "(Alebo, ak akceptujete riziko zmeny trasy zariadenia, kratší formulár: <code>mp0: /dev/sdb1,mp=/mnt/lxc_USB,backup=0</code>.)",
+    "wireBackupNote": "Vlajka <code>backup=0</code> vylučuje tento bod pripojenia z <code>vzdump</code> zálohy",
+    "restartHeading": "1.5 Reštart LXC a nastaviť práva",
+    "restartBody": "Reštartovanie CT na použitie bodu pripojenia:",
+    "restartCode": "pct restart '<'CTID'>'",
+    "permsBody": "Vnútri LXC, dať práva adresára vhodné pre užívateľa, ktorý bude vlastniť podiel:",
+    "permsCode": "# Inside the container\nmkdir -p /mnt/lxc_USB\nchown -R proxmenux:proxmenux /mnt/lxc_USB\nchmod 770 /mnt/lxc_USB",
+    "permsNoteTitle": "Poznámka",
+    "permsNote": "Nahradiť <code>proxmenux</code> s užívateľským menom vytvoríte v kroku 2.2 nižšie. <code>770</code> poskytuje úplný prístup k užívateľovi a skupine, žiadny prístup k iným <code>chmod -R 777</code> zatiaľ čo stále nechať zdieľať pracovať."
+  },
+  "samba": {
+    "heading": "2. Inštalovať Sambu",
+    "installHeading": "2.1 Nainštalujte balík vo vnútri LXC",
+    "installCode": "apt-get update\napt-get install -y samba",
+    "confirmBody": "Potvrďte, že služba beží:",
+    "confirmCode": "systemctl status smbd.service",
+    "userHeading": "2.2 Vytvoriť užívateľa zdieľania",
+    "userBody": "Vyberte si užívateľské meno (tu používame <code>proxmenux</code>; nahradiť svoje vlastné). Vytvorte ho ako systémový užívateľ bez shellu:",
+    "userCode": "adduser proxmenux",
+    "passwordBody": "Nastaviť heslo Samba (oddelené od hesla systému",
+    "passwordCode": "smbpasswd -a proxmenux",
+    "aclHeading": "2.3 Nastaviť vlastníctvo / ACL",
+    "aclBody": "Ak jednoduchý <code>chown</code> z kroku 1.5 je dosť pre váš prípad, ste hotoví s oprávneniami. V prípade kontroly s jemným zrnom (viacnásobní používatelia, ktorí zdieľajú rovnakú cestu s rôznymi právami), použite ACL:",
+    "aclCode": "apt-get install -y acl\nsetfacl -R -m \"u:proxmenux:rwx\" /mnt/lxc_USB\nsetfacl -d -R -m \"u:proxmenux:rwx\" /mnt/lxc_USB    # default ACL — applies to new files"
+  },
+  "configure": {
+    "heading": "3. Nastaviť podiel Samba",
+    "editHeading": "3.10 Upraviť smb.conf",
+    "editCode": "nano /etc/samba/smb.conf",
+    "appendBody": "Doplniť definíciu podielu na konci:",
+    "shareCode": "[lxc_usb]\n    comment = Shared USB storage\n    path = /mnt/lxc_USB\n    read only = no\n    writable = yes\n    browseable = yes\n    guest ok = no\n    valid users = proxmenux\n    create mask = 0660\n    directory mask = 0770",
+    "validUsersNoteTitle": "Poznámka",
+    "validUsersNote": "Linka <code>valid users = proxmenux</code> obmedzuje prístup k tomu jedinému používateľovi Samby. Pre skupinový prístup použite <code>valid users = @samba_users</code> po pridaní užívateľa (-ov) do skupiny s názvom <code>samba_users</code>.",
+    "reloadHeading": "3.2 Znova načítať Sambu",
+    "reloadCode": "systemctl restart smbd"
+  },
+  "verify": {
+    "heading": "4. Overiť prístup",
+    "body": "Z ľubovoľného klienta LAN prejdite na <code>\\\\'<'CT_IP'>'</code> (Windows) alebo <code>smb://'<'CT_IP'>'</code> (macOS / Linux správcovia súborov). Overte si to s používateľom Samby (<code>proxmenux</code>) a heslom, ktoré ste nastavili s <code>smbpasswd</code>.",
+    "image1Alt": "Prístup k serveru Samba od klienta",
+    "image2Alt": "Poplach na overenie Samby",
+    "usageBody": "Môžete použiť zdieľanie ako vnútri kontajnera, tak v celej sieti:",
+    "image3Alt": "Používanie USB disku cez akciu"
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "items": [
+      "<strong>0<code>pct restart</code> zlyhá s \"zariadenie nenájdené\":</strong> cesta zariadenia v <code>mp0</code> neexistuje na hostiteľa. Skontrolovať pomocou <code>ls -l /dev/disk/by-id/</code> a aktualizovať cestu.",
+      "<strong>CT začína, ale <code>/mnt/lxc_USB</code> je prázdny:</strong> disk nie je namontovaný vo vnútri CT. Kontrola z hostiteľa: <code>pct exec '<'CTID'>' -- mount | grep lxc_USB</code>. Ak chýba, bod pripojenia v konfigurácii je nesprávny.",
+      "<strong>Samba autentifikuje, ale píše zlyhať s \"Permission odmietnutý\":</strong> Linux oprávnenia na adresári neumožňujú používateľovi Samba písať. Znovu skontrolujte <code>chown</code> / <code>setfacl</code> v sekcii 1.5 / 2.3.",
+      "<strong>Share sa neobjavuje v sieťových prehliadačoch, ale <code>smb://'<'ip'>'/lxc_usb</code> funguje:</strong> prehliadateľnosť cez LAN závisí od NetBIOS / WS-Discovery. Pridať <code>nmbd</code>: <code>apt-get install -y samba-common-bin</code> a zabezpečiť <code>nmbd</code> je povolená.",
+      "<strong>Chcete pridať druhého užívateľa k rovnakému podielu:</strong> vytvoriť užívateľa s <code>adduser</code>, zaregistrujte sa <code>smbpasswd -a</code>, pridať k podielu <code>valid users =</code> zoznam čiarovo oddelených."
+    ]
+  }
+}

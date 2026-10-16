@@ -1,0 +1,120 @@
+{
+  "meta": {
+    "title": "Pridať Coral TPU do LXC | ProxMenux Dokumentácia",
+    "description": "Prejdite Google Coral TPU (USB alebo M.2 / PCIe) do nádoby Proxmox LXC. ProxMenux píše správne dev / cgroup / pripojiť položky pre každý variant, topánky kontajner, a nainštaluje Edge TPU beží vnútri, takže aplikácie ako Frigate môže použiť urýchľovač."
+  },
+  "header": {
+    "title": "Pridať Coral TPU do LXC",
+    "description": "Zdieľať Google Coral TPU (UsB akcelerátor alebo M.2 / Mini-PCIe) s Proxmox LXC kontajner. ProxMenux riadi LXC config a vnútorné kontajnery Edge TPU runtime install. Coral je TPU-iba: pre GPU / iGPU zdieľanie (Quick Sync, VA-API, NVENC) v rovnakom kontajneri, spustiť Pridať GPU na LXC samostatne.",
+    "section": "Hardvér: grafické karty a Coral TPU"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "@ info: tooltip <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> Rôzne položky v závislosti na tom, či hostiteľ má <strong>USB akcelerátor</strong>, a <strong>M.2 / PCIe Koral</strong>, alebo oboje. Potom spustí kontajner a nainštaluje najnovšie Google <code>libedgetpu</code> beží v ňom čas. iGPU / GPU passmough je riešený samostatným skriptom (<lxcGpuLink>Pridať GPU do LXC</lxcGpuLink>Tento sa zameriava na TPU."
+  },
+  "whenUse": {
+    "heading": "Kedy použiť tento",
+    "body": "Typický prípad použitia: bežiaci <frigateLink>Frigate</frigateLink>, Agent DVR, Blue Iris + CodeProject.AI, alebo akýkoľvek iný objekt-detection app vnútri LXC a chcú Coral TPU Namiesto ML inferencie CPU. S Coral, inference latency kvapky z ~100 ms to ~5 ms na rám a CPU zaťaženie zostáva blízko nuly."
+  },
+  "prereqs": {
+    "title": "Skôr ako začnete",
+    "drivers": "<strong>Corálne ovládače už nainštalované na host</strong>. Tento skript ich nenainštaluje; iba konfiguruje prechod do kontajnera. Spustite <hostLink>Install Coral TPU na Host</hostLink> prvý, ak nemáte.",
+    "driversCheck": "ls /dev/apex_* 2>/dev/null ; lsusb | grep -E '1a6e:089a|18d1:9302'",
+    "container": "<strong>Existujúca LXC nádoba</strong>, ideálne beží <strong>Debian / Ubuntu</strong>- na báze distro chease in-container runtime install uses <code>apt-get</code>. <strong>Non-Debian kontajnery</strong> (Alpine, Arch, RHEL, SUSE...) sú stále podporované v <strong>len prejazdový režim</strong>: skript detekuje distro a ponúka prompt preskočiť <code>libedgetpu</code> APT nainštalovať, zatiaľ čo stále písanie zariadenia passhrough config app kontajnery, ktoré zväzok behime sami (napr. Frigate Docker (obrázok).",
+    "downtime": "<strong>0Be v poriadku s krátkym prestoje</strong> kontajnera. Skript ho zastaví pre použitie zmeny konfigurácie, potom ho spustí späť na inštaláciu ovládačov vnútri. Nepotrebuje reštart hostiteľa."
+  },
+  "hostPrep": {
+    "title": "Hostiteľ musí byť pripravený ako prvý",
+    "body": "Ak spustíte tento skript pred inštaláciou Coral ovládače na hostiteľa (the <code>gasket</code>/<code>apex</code> modul jadra pre M.2, <code>libedgetpu</code> čas pre USB), LXC config je stále napísané, ale kontajner nenájde zariadenie v čase bežania. Záležitosti týkajúce sa objednávok: <strong>inštalácia hostiteľa → LXC priechod → aplikácia v kontajneroch</strong>."
+  },
+  "running": {
+    "heading": "Spustenie skriptu",
+    "body": "Otvoriť ProxMenux na hostiteľa, choďte na <strong>Hardware: GPU a Coral-TPU → Pridať koral TPU do LXC</strong>.",
+    "imageAlt": "Položka menu pre 'Pridať Koral TPU do LXC' vnútri Hardware: GPUs and Coral-TPU"
+  },
+  "howRuns": {
+    "heading": "Ako beží skript",
+    "body": "Jedno rozhodnutie vopred (ktorý kontajner?), potom skript spracováva cesty USB a PCIe nezávisle na tom, čo nájde na hostiteľa. Ak sú obe prítomné, obe prejdú."
+  },
+  "walkthrough": {
+    "heading": "Prechádzam prúdom",
+    "pick": {
+      "title": "Vyberte kontajner LXC",
+      "body": "Dialóg zobrazuje každý LXC na hostiteľovi (z <code>pct list</code>). Vyberte si ten, ktorý by mal dostať Coral. Beh alebo zastavil, nezáleží na tom, že skript manipuluje s oboma (zastaví to v krátkosti písať config, potom spustí to späť na inštaláciu ovládačov)."
+    },
+    "gpuHint": {
+      "title": "GPU prejazdný návrh (voliteľné)",
+      "body": "Ak má hostiteľ GPU (Intel iGPU, AMD, NVIDIA) a zvolená nádoba NEPODÁVA GPU passhrough nakonfigurovaný, skript zobrazí jednorázový dialóg naznačujúci spustenie <lxcGpuLink>Pridať GPU do LXC</lxcGpuLink> Najprv. Coral je najčastejšie spárovaný s hardvérom video decode (Quick Sync, VA-API, NVEnc) pre aplikácie ako sú Frigate. Môžete povedať áno (výstupy, spustiť GPU skript, potom sa vrátiť) alebo nie (pokračuje s TPU- Iba nastavenie."
+    },
+    "usb": {
+      "title": "Napíšte LXC konfiguráciu USB",
+      "body": "Ak je prítomný akcelerátor USB, skript robí dve veci: (1) píše pravidlo udev na hostiteľa, takže zariadenie dostane stabilný názov <code>/dev/coral</code> bez ohľadu na USB port, v ktorom je, a (2) viaže-mounts <strong>celý</strong> <code>/dev/bus/usb</code> strom do kontajnera.",
+      "whyTitle": "Prečo pripojiť /dev/bus/usb namiesto /dev/coral?",
+      "whyBody": "Cesta uzla USB zariadenia (napr. <code>/dev/bus/usb/001/005</code>) sa zmení, keď prepojíte akcelerátor do iného portu. Skoršie verzie skriptu viažucu <code>/dev/coral</code>, ktoré ukazujú na starú cestu a zlomili. Namontovanie celého USB stromu znamená, že kontajner vidí čokoľvek je aktuálna cesta, takže replukcia funguje."
+    },
+    "pcie": {
+      "title": "Write LXC config M.2 / PCIe cesta",
+      "body1": "Ak M.2 / PCIe Coral je prítomný na hostiteľovi a <code>/dev/apex_0</code> existuje (modul jadra apex je načítaný), skript používa moderný Proxmox <code>dev</code> API, ktorý spracováva povolenia cgroup2 automaticky pre privilegované aj neprivilegované kontajnery:",
+      "body2": "Ak host ešte nenaštartoval s načítaným modulom Apex (len ste bežali) <hostLink>Inštalovať Coral na hostiteľa</hostLink> a nezreštartoval), <code>/dev/apex_0</code> ešte neexistuje. Skript spadá späť do klasickej cgroup2 + pripojiť <code>create=file</code> Takže položky sú platné aj vtedy, keď zariadenie nebolo zhmotnené:",
+      "rebootTitle": "Reštartovať hostiteľa ako prvý, ak ste práve nainštalovali Coral ovládače",
+      "rebootBody": "Záložná cgroup2 + montáž bude napísaná, ale zariadenie skutočne existuje len po reštarte hostiteľa načíta <code>apex</code> modul. Ak ste nereštartovali, reštartujte teraz pred spustením kontajnera."
+    },
+    "drivers": {
+      "title": "Spustiť kontajner + nainštalovať Coral čas vnútri",
+      "body": "Konfig zmeny v Proxmox LXC mať vplyv na ďalší štart, takže skript spustí kontajner, čaká až 15 sekúnd pre <code>pct exec</code> reagovať, potom klesne bash skript vnútri, že:",
+      "items": [
+        "Spúšťa <code>apt-get update</code>.",
+        "Inštaluje koralové úložisko predpoklady: <code>gnupg</code>, <code>curl</code>, <code>ca-certificates</code>.",
+        "Importovať koralový GPG kľúč Google do <code>/etc/apt/keyrings/coral-edgetpu.gpg</code> (moderná cesta, rovnako ako host inštalátor používa) a pridáva <code>coral-edgetpu-stable</code> APT úložisko s <code>signed-by=</code>.",
+        "Nainštaluje najnovšiu <code>libedgetpu1-std</code> (default). Ak máte M.2 Coral, budete vyzvaní k výberu medzi <code>libedgetpu1-std</code> (štandard) a <code>libedgetpu1-max</code> (max výkon, beží horúcejšie)."
+      ],
+      "noIgpuTitle": "Prečo tu nie sú žiadne ovládače iGPU?",
+      "noIgpuBody": "Skoršie verzie tohto skriptu tiež nainštalovaný Intel <code>va-driver-all</code>, <code>intel-opencl-icd</code> a priatelia, takže rovnaký kontajner mohol urobiť Quick Sync video decode vedľa Coral inference. Toto zdvojnásobenie zodpovednosti spôsobilo mätúce zlyhania, keď používateľ chcel len Coral. iGPU strana je teraz exkluzívna úloha <lxcGpuLink>Pridať GPU na LXC</lxcGpuLink>",
+      "debianTitle": "Non-Debian containers",
+      "debianBody": "Použitie in-container runtime install <code>apt-get</code>, ktoré len lode na Debian/Ubuntu-rodinné distro. Na <strong>Alpine, Arch, RHEL alebo SUSE</strong> kontajnery skript detekuje distro cez <code>/etc/os-release</code> a zobrazuje promptné potvrdenie: <em>pokračovať v režime iba priecestia</em> (napíše zariadenie do <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> a preskočí <code>libedgetpu</code> APT inštalácia) alebo <em>prerušenie</em>. Passhrough-len je správna voľba, ak kontajner aplikácie, ktorá bude skutočne používať Coral už zväzky behtime Frigate Docker obraz. Inak nasledujte Google's <coralLink>oficiálna príručka</coralLink> inštalovať <code>libedgetpu</code> ručne po skripte napísal LXC config."
+    },
+    "summary": {
+      "title": "Zhrnutie",
+      "body": "Skript vytlačí kontrolný zoznam na konci zhrnutím toho, čo bolo povolené (Coral USB, Coral M.2) s Kontajner zostáva v chode a môžete skočiť priamo do Frigate / CodeProject.AI / vaše aplikácie konfig."
+    }
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent",
+    "body": "Ak chcete vidieť presne to, čo ide do LXC konfig, alebo ho aplikujte ručne:",
+    "usbHeading": "USB Coral",
+    "pcieHeading": "M.2 / PCIe Coral",
+    "runtimeHeading": "Vnútri kontajnera"
+  },
+  "verification": {
+    "heading": "Overenie",
+    "body": "Vložte kontajner a skontrolujte, či je Coral viditeľný:"
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "apexTitle": "Kontajner začal, ale /dev/apex_0 chýba vnútri",
+    "apexBody": "Modul Apex pre hostiteľa nie je načítaný. Na hostiteľa: <code>lsmod | grep apex</code> Ak je prázdny, spustite <code>modprobe apex</code>, alebo reštartovať, ak ste práve nainštalovali Coral ovládače. Akonáhle hostiteľ má <code>/dev/apex_0</code>, reštartovať kontajner: <code>pct stop &lt;ctid&gt; &amp;&amp; pct start &lt;ctid&gt;</code>.",
+    "replugTitle": "USB Coral zmizne po prepojení v inom porte",
+    "replugBody": "To je presne dôvod, prečo skript pripojí <code>/dev/bus/usb</code> namiesto <code>/dev/coral</code> symlink. Ak narazíte na to, skontrolujte si svoj LXC config má <code>lxc.mount.entry: /dev/bus/usb dev/bus/usb ...</code> a nie odkaz na <code>/dev/coral</code> priamo. Staré konfigy z predchádzajúcich verzií skriptu môžu potrebovať aktualizáciu",
+    "alpineTitle": "Alpine / Arch / RHEL / SUSE kontajner",
+    "alpineBody": "Ak ste si vybrali <em>len prejazdový režim</em> keď bol scenár vyzvaný, LXC Config je napísané a koralové zariadenie je viditeľné vnútri kontajnera, ale <code>libedgetpu</code> čas nie je nainštalovaný. To je podľa návrhu: APT repo Google iba pre lode Debian/Ubuntu. Manuálne nainštalujte čas s distro manažérom balíka (Alpine: <code>apk add</code>; Arch: AUR; RHEL/SUSE: stavať zo zdroja) podľa oficiálneho sprievodcu Google, alebo spustiť app kontajner, ktorý zväzuje čas Frigate Docker obraz je kánonické príklad: stačí odhaliť zariadenie s <code>--device /dev/apex_0:/dev/apex_0</code> (M.2) alebo USB viazanie pripojiť skript už napísal (USB).",
+    "frigateTitle": "Frigate hovorí 'Coral EdgeTPU detected but not available'",
+    "frigateBody": "V kontajneri sa takmer vždy vydávajú povolenia. Frigate spustí ako koreň predvolene; skontrolujte, či je koreň užívateľa v <code>plugdev</code> skupina vnútri kontajnera (pre USB), a že proces môže čítať <code>/dev/apex_0</code> (pre M.2). <code>ls -l /dev/apex_0</code> zvnútra kontajnera by mal vykazovať skupinu <code>apex</code> Ak nie, pridajte nastavenie GID <code>/etc/group</code> alebo prepnite kontajner na privilegovaný režim.",
+    "logsTitle": "Skontrolujte host a kontajnerové protokoly",
+    "logsBody": "Na hostiteľa: <code>journalctl -u pvedaemon | grep -i coral</code>. Vnútri kontajnera: skontrolujte protokoly aplikácií (Frigate: <code>/config/logs/</code>, CodeProject.AI: jeho vlastný log adresár). Klasický chybový vzor je \"Coral detected, runtime loaded, but inference engine can't request it\" 9 mimo 10 časy."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Nainštalovať Coral TPU (host)",
+        "href": "/docs/hardware/install-coral-tpu-host",
+        "tail": " Podľa požiadavky M.2 / PCIe Koralové karty pred prechodom do CT."
+      },
+      {
+        "label": "Pridať GPU do LXC",
+        "href": "/docs/hardware/igpu-acceleration-lxc",
+        "tail": " — Rovnaký vzor pre GPU (často spárované s Koral TPU v Frigate nastavenia)."
+      }
+    ]
+  }
+}

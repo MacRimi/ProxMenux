@@ -1,0 +1,135 @@
+{
+  "meta": {
+    "title": "Správca diskov Proxmox Pripojte disky k VMs / LXC, SMART Testy, utrite ProxMenux",
+    "description": "Správa fyzických diskov na a Proxmox VE host with ProxMenux: prejsť cez disky do VMs alebo LXC kontajnery (qm set scsi/sata/virtio, pct mp), import qcow2 / vmdk / vdi disk snímky, prejsť cez celé HBA alebo NVMe ovládače, bezpečne vymazať disky a spustiť SMART sebatesty.",
+    "ogTitle": "Správca diskov Proxmox Pripojte disky k VMs / LXC, SMART Testy, otieranie",
+    "ogDescription": "Pripojiť disky VMs / LXC, import diskové obrázky, PCI priechod pre regulátory, bezpečné utieranie a SMART testy na Proxmox VE.",
+    "twitterTitle": "Proxmox Disk Manager ProxMenux",
+    "twitterDescription": "Pripojiť disky k VMs / LXC, import obrázky, PCI priechod, bezpečné utieranie a SMART testy."
+  },
+  "header": {
+    "title": "Správca diskov",
+    "description": "Menu Disk Manager združuje nástroje ProxMenux pre manipuláciu s fyzickými diskami na počítači Proxmox: pripojiť disky na VMs a LXC kontajnery, importovať obrázky disku, prejsť celým ovládačom alebo zariadením NVMe, vymazať disky bezpečne a spustiť zdravotné testy SMART.",
+    "section": "Správca diskov"
+  },
+  "intro": {
+    "title": "Na čo je toto menu",
+    "body": "Každá možnosť tu funguje na <strong>0fyzických diskoch, ktoré sú už viditeľné pre Proxmox host</strong>. Menu je rozdelené do troch skupín: <strong>VM</strong> (prijímacie disky alebo importné obrázky do virtuálneho stroja), <strong>LXC</strong> (prijímacie disky do kontajnera) a <strong>Utility</strong> (bezpečný formát, zdravie SMART). Všade platia bezpečnostné kontroly: systémové disky a disky, ktoré sa už používajú, sú skryté alebo blokované."
+  },
+  "opening": {
+    "heading": "Otvorenie menu",
+    "body": "Od ProxMenuxhlavné menu, vyberte <strong>Správca diskovName</strong>. Uvidíte toto:",
+    "imageAlt": "Menu správcu diskov s VM, LXC a blokmi utilít"
+  },
+  "groups": {
+    "heading": "Tri skupiny nástrojov",
+    "intro": "Ponuka Disk Manager je organizovaná v troch skupinách <strong>VM</strong>, <strong>LXC</strong> a <strong>Nástroje</strong>. Kliknite na kartu pre skok priamo na nástroje v tejto skupine.",
+    "vmTitle": "VM",
+    "vmBody": "Nástroje, ktoré fungujú na existujúcich virtuálnych strojoch. VM musí byť napájaný; ProxMenux to potvrdí pred dotykom s konfiguráciou.",
+    "vmItems": [
+      "Importovať disk do VM",
+      "Importovať obraz disku do VM",
+      "Pridať radič alebo NVMe do VM"
+    ],
+    "lxcTitle": "LXC",
+    "lxcBody": "Nástroje, ktoré fungujú na existujúcich kontajneroch. Priamy prejazd zariadenia potrebuje privilegovaný kontajner; skript ho v prípade potreby prevedie.",
+    "lxcItems": [
+      "Importovať disk do LXC"
+    ],
+    "utilitiesTitle": "Nástroje",
+    "utilitiesBody": "Nástroje na strane hostiteľa, ktoré fungujú na samotných diskoch, nezávisle od akéhokoľvek VM alebo kontajnera.",
+    "utilitiesItems": [
+      "Formátovať / vymazať fyzický disk",
+      "SMART Zdravie a test disku"
+    ]
+  },
+  "vm": {
+    "heading": "VM",
+    "intro": "Nástroje, ktoré fungujú na existujúcich virtuálnych strojoch. VM musí byť napájaný; ProxMenux to potvrdí pred dotykom s konfiguráciou.",
+    "options": [
+      {
+        "icon": "HardDrive",
+        "href": "/docs/disk-manager/import-disk-vm",
+        "title": "Importovať disk do VM",
+        "description": "Pripojte nepridelený fyzický disk na existujúci VM. Podporuje SATA / SCSI / VirtIO / IDE, používa trvalé cesty /dev/disk/by-id."
+      },
+      {
+        "icon": "FileDown",
+        "href": "/docs/disk-manager/import-disk-image-vm",
+        "title": "Importovať obraz disku do VM",
+        "description": "Import diskových obrazových súborov (.img / .qcow2 / .vmdk / .raw) do existujúceho VM. Dvojfázový prietok, qm importdisk pod kapotou."
+      },
+      {
+        "icon": "Cpu",
+        "href": "/docs/disk-manager/add-controller-nvme-vm",
+        "title": "Pridať radič alebo NVMe do VM",
+        "description": "PCI priechod celého zariadenia SATA / SAS HBA alebo NVMe do zariadenia VM. Ovláda IOMMU a umožňuje odhaľovanie konfliktov."
+      }
+    ]
+  },
+  "lxc": {
+    "heading": "LXC",
+    "intro": "Nástroje, ktoré pracujú na existujúcich nádobách LXC. Priamy priechod zariadenia vyžaduje privilegovaný kontajner; skript ponúka previesť kontajner v prípade potreby.",
+    "options": [
+      {
+        "icon": "Boxes",
+        "href": "/docs/disk-manager/import-disk-lxc",
+        "title": "Importovať disk do LXC",
+        "description": "Pripojte nepridelený fyzický disk k existujúcemu LXC kontajneru ako bod pripojenia. Ovláda detekciu súborového systému / formát a privilegovanú konverziu."
+      }
+    ]
+  },
+  "utilities": {
+    "heading": "Nástroje",
+    "intro": "Nástroje na strane hostiteľa, ktoré fungujú na samotných diskoch, nezávisle od akéhokoľvek VM alebo kontajnera.",
+    "options": [
+      {
+        "icon": "Eraser",
+        "href": "/docs/disk-manager/format-disk",
+        "title": "Formátovať / vymazať fyzický disk (bezpečne)",
+        "description": "Bezpečné utieranie disku s prísnymi bezpečnostnými ovládačmi: sú zobrazené iba úplne voľné disky a vždy sa vyžaduje dvojité potvrdenie."
+      },
+      {
+        "icon": "Activity",
+        "href": "/docs/disk-manager/smart-disk-test",
+        "title": "SMART Zdravie a test disku",
+        "description": "Spustite SMART zdravotné kontroly a krátke / dlhé vlastné testy na SATA, SAS a NVMe disky. Exportuje JSON pre monitor."
+      }
+    ]
+  },
+  "safety": {
+    "title": "Bezpečnostné pravidlá spoločné pre každú možnosť",
+    "intro": "ProxMenux filtruje čokoľvek, čo by mohlo poškodiť hostiteľa:",
+    "items": [
+      "<strong>system disk</strong> (koreň bazén, výmena, aktívny ZFS / LVM / RAID členovia) je vždy skryté.",
+      "Disky <strong>0 namontované </strong> kdekoľvek na hostiteľovi sú skryté alebo blokované pri vykonávaní.",
+      "Disky <strong>0 preferované spustením VM alebo LXC</strong> nemožno preradiť ani vymazať.",
+      "Operácie, ktoré môžu zmeniť hostiteľský stav (IOMMU povoliť, vymazať) vyžadujú explicitné potvrdenie."
+    ]
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/storage-share",
+        "label": "Správca úložísk a zdieľania",
+        "tail": " Registrácia úložiska v Proxmoxe (NFS / Samba / iSCSI / miestne) a zdieľať priečinky medzi hostiteľom a CTs."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Príkazy na ukladanie a disky",
+        "tail": " - blokovacie zariadenia, LVM, pvesm, SMART referenčné."
+      },
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "ZFS Riadiace príkazy",
+        "tail": "  ZFS pools a súbory údajov."
+      },
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Pridať GPU do VM (passthrough)",
+        "tail": " — "
+      }
+    ]
+  }
+}

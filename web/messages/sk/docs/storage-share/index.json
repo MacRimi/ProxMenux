@@ -1,0 +1,135 @@
+{
+  "meta": {
+    "title": "Proxmox NFS, Samba iSCSI & LXC Mount Points ProxMenux",
+    "description": "Integrovať externé a lokálne úložisko do Proxmox VE a zdieľať priečinky medzi hostiteľom a LXC kontajnery. Pridať NFS akcie, Samba (CIFS) akcie a iSCSI ciele ako Proxmox úložisko, nastaviť LXC viazanie pripojiť (Mount Manager) a spustiť NFS / Samba klienti a servery vnútri kontajnerov.",
+    "ogTitle": "Proxmox NFS, Samba, iSCSI & LXC Mount Points",
+    "ogDescription": "Integrovať externé / lokálne skladovanie do Proxmox VE — NFS, Samba iSCSI registrácia plus LXC viazanie montáží a zdieľanie siete.",
+    "twitterTitle": "Proxmox NFS, Samba, iSCSI | ProxMenux",
+    "twitterDescription": "Pridať NFS0 / Samba / iSCSI ako úložisko Proxmox a zdieľať priečinky medzi hostiteľom a LXC."
+  },
+  "header": {
+    "title": "Správca úložísk a zdieľania",
+    "description": "Integrovať externé alebo lokálne skladovanie do Proxmox VE a zdieľať priečinky medzi hostiteľom a LXC kontajnery. Tri bloky nástrojov: Integrácia úložiska hostiteľa (registračný úložný priestor v Proxmoxe samotný), LXC Mount Manager (pripojení s pragmatickým oprávnením) a LXC zdieľanie siete (NFS / Samba klient a tok serverov pre špecifické prípady použitia).",
+    "section": "& Zdieľanie úložiska"
+  },
+  "intro": {
+    "title": "Na čo je toto menu",
+    "body": "Disk Manager pracuje na úrovni <em>jednotlivé fyzikálne disky</em>. Skladovanie &amp; Share Manager pracuje o jednu úroveň vyššie <strong>skladovanie registrov pools a sieťové podiely v Proxmoxe</strong> (takže UI a VM tvorca ich môže použiť) a <strong>nastaví zdieľanie súborov medzi hostiteľom a kontajnermi</strong>."
+  },
+  "opening": {
+    "heading": "Otvorenie menu",
+    "body": "Od ProxMenuxhlavné menu, vyberte <strong>Skladovanie &amp; Správca zdieľania</strong>. Uvidíte toto:",
+    "imageAlt": "Menu správcu úložiska a zdieľania s blokmi HOST a LXC"
+  },
+  "groups": {
+    "heading": "Tri skupiny nástrojov",
+    "intro": "Menu je rozdelené na tri bloky. <strong>Host storage integration</strong> registruje externé alebo lokálne úložisko v samotnom Proxmoxe. <strong>LXC Mount Manager</strong> je primárny nástroj pre zdieľanie priečinky s kontajnermi <strong>LXC zdieľanie siete</strong> zahŕňa štyri ďalšie scenáre, pri ktorých kontajner potrebuje <em> consume</em> alebo <em> explose</em> NFS / Samba akcie priamo.",
+    "hostTitle": "Úložisko hostiteľa",
+    "hostBody": "Zaregistrujte externé a lokálne úložisko v Proxmoxe cez <code>pvesm add …</code>. Po registrácii, úložisko sa objaví v Proxmox UI a je k dispozícii pre VM a CT tvorcov.",
+    "hostItems": [
+      "Externé NFS0 / Samba / iSCSI → Úložisko Proxmox",
+      "Lokálny disk → Adresár Proxmox alebo pamäť ZFS",
+      "Local shared directory (pre cross-CT viazanie pripojiť)"
+    ],
+    "lxcMountTitle": "Správca LXC mountov",
+    "lxcMountBody": "Primárny nástroj na zdieľanie LXC. Väzba-mounts hostiť adresáre do kontajnerov cez <code>pct set -mpN</code> a manipuluje povolenie variácie neprivilegovaných CTs bez vytvorenia akejkoľvek skupiny alebo užívateľa vnútri kontajnera.",
+    "lxcMountItems": [
+      "Pracuje s privilegovanými a neprivilegovanými CT",
+      "Ponúka nastaviť <code>o+rwx</code> na hostiteľa dir pre unprivileged UIDs",
+      "Fixuje existujúce CIFS / NFS montáže v prípade potreby"
+    ],
+    "lxcNetTitle": "Sieťové zdieľanie v LXC",
+    "lxcNetBody": "Štyri dodatočné toky pre scenáre, pri ktorých kontajner potrebuje priamo spotrebovať alebo vystaviť akcie NFS / Samba. Všetky vyžadujú <strong>privileged</strong> kontajner.",
+    "lxcNetItems": [
+      "NFS / Samba <strong>klient</strong> (spotreba externých akcií)",
+      "NFS0 / Samba <strong>server</strong> (expedovať CT priečinky)"
+    ]
+  },
+  "host": {
+    "heading": "Napojenie úložiska na hosta",
+    "intro": "Zaregistrujte skladovanie v Proxmox. Každá možnosť volá <code>pvesm add …</code> pod kapotou, takže úložisko sa zobrazí v <strong>Datacenter → Úložisko</strong> a stáva sa k dispozícii pre tvorcov VM / CT.",
+    "options": [
+      {
+        "href": "/docs/storage-share/host-nfs",
+        "icon": "Network",
+        "title": "Pridať NFS zdieľanie ako Proxmox úložisko",
+        "description": "Zaregistrujte externý NFS exportovať ako Proxmox skladovanie cez pvesm Pridať nfs. Proxmox manipuluje s montážou bez fstab položky potrebné."
+      },
+      {
+        "href": "/docs/storage-share/host-samba",
+        "icon": "Share2",
+        "title": "Pridať Samba zdieľanie ako Proxmox úložisko",
+        "description": "Zaregistrujte externú Samba / CIFS zdieľať ako Proxmox úložisko cez pvesm pridať cifs. Proxmox manipuluje s montážou a údajmi."
+      },
+      {
+        "href": "/docs/storage-share/host-iscsi",
+        "icon": "Database",
+        "title": "Pridať iSCSI target ako Proxmox úložisko",
+        "description": "Pripojte sa k externému iSCSI cieľu a zaregistrujte ho ako úložisko Proxmox (blokovacie zariadenie) pre obrazy VM disku."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "icon": "HardDrive",
+        "title": "Pridať lokálny disk ako Proxmox úložisko",
+        "description": "Formát lokálne SATA / SAS / NVMe disk a zaregistrovať ho ako Proxmox adresár alebo ZFS bazén úložisko."
+      },
+      {
+        "href": "/docs/storage-share/host-local-shared",
+        "icon": "FolderOpen",
+        "title": "Pridať zdieľaný priečinok na hoste",
+        "description": "Vytvoriť hostiteľský adresár, ktorý má byť viazaný do viacerých CT. Nie je Proxmox úložisko LXC Priviažte sa."
+      }
+    ]
+  },
+  "lxcMount": {
+    "heading": "Správca LXC mountov",
+    "intro": "Primárny nástroj pre zdieľanie priečinkov medzi počítačom Proxmox a kontajnermi LXC. Používa <code>pct set -mpN</code> pre viazanie-mount hostiteľskom adresári do kontajnera, a spracováva povolenie variácie neprivilegovaných CT na hostiteľskej strane (žiadny skupiny alebo používatelia sú vytvorené vo vnútri kontajnera).",
+    "card": {
+      "title": "LXC montážne body (Host ↔ CT)",
+      "description": "Bind-mount akýkoľvek adresár do LXC kontajnera cez pct sadu -mpN. Pracuje s privilegovanými aj neprivilegovanými CTs; ponúka chmod o+rwx / ACL na host dir a opravy existujúce CIFS / NFS sa pripojí v prípade potreby."
+    }
+  },
+  "lxcNet": {
+    "heading": "Sieťové zdieľanie v LXC",
+    "intro": "Použite tieto toky, keď kontajner potrebuje <em>be</em> NFS / Samba koncový bod Pre väčšinu potrieb zdieľania súborov (host ↔ CT viazanie pripojiť), <mountLink>LXC Mount Manager</mountLink> je jednoduchšie a nevyžaduje privilegované kontajnery.",
+    "options": [
+      {
+        "href": "/docs/storage-share/lxc-nfs-client",
+        "icon": "Download",
+        "title": "NFS klient v LXC",
+        "description": "Pripojiť externé NFS akcie z vnútri privilegovaného LXC kontajnera. Podporuje auto-objavenie, pretrvávanie /etc/fstab a čisté odpojenia."
+      },
+      {
+        "href": "/docs/storage-share/lxc-samba-client",
+        "icon": "Download",
+        "title": "Samba klient v LXC",
+        "description": "Mount Samba / CIFS akcie zvnútra privilegovaného LXC kontajnera. Kredencie uložené bezpečne, auto-objavenie k dispozícii."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-server",
+        "icon": "Upload",
+        "title": "NFS server v LXC",
+        "description": "Exportovať priečinky cez NFS z vo vnútri privilegovaného LXC kontajnera."
+      },
+      {
+        "href": "/docs/storage-share/lxc-samba-server",
+        "icon": "Upload",
+        "title": "Samba server v LXC",
+        "description": "Vytvárať priečinky cez SMB0 / CIFS z vnútra privilegovaného LXC kontajnera."
+      }
+    ]
+  },
+  "privReq": {
+    "title": "Požiadavka na privilegovaný kontajner",
+    "body": "Štyria. <strong>LXC zdieľanie siete</strong> vyššie uvedené toky vyžadujú a <strong>Privilegované</strong> Kontajnerový modul jadra (<code>nfs-kernel-server</code>, <code>smbd</code>, <code>mount.nfs</code>, <code>mount.cifs</code>) potrebujú schopnosti, ktoré neprivilegované CT nevystavujú. Ak len potrebujete zdieľať súbory medzi hostiteľom a neprivilegovaným CT, použite <mountLink>LXC Správca pripojenia</mountLink> namiesto toho sa viaže-mounts od hostiteľa a upravuje oprávnenia na strane hostiteľa, takže kontajner môže čítať a písať bez akéhokoľvek jadra modul mágie."
+  },
+  "unprivExplain": {
+    "title": "Ako ProxMenux spracováva neprivilegované práva CT",
+    "body": "Neprivilegovaný LXC kontajnery presúvajú svoje UID <strong>+100000</strong> o hostiteľovi (UID kontajnera) 0 = UID hostiteľa 100000, UID kontajnera 1000 = UID hostiteľa 101000, …). Súbor vytvorený užívateľom kontajnera sa preto zobrazí na hostiteľovi ako <em>iné</em> Nepatrí žiadnemu skutočnému užívateľovi alebo skupine hostí. • LXC Mount Manager rieši tento pragmaticky: namiesto snahy o zosúladenie UID / GIDs medzi hostiteľom a CT, ponúka uplatnenie <code>chmod o+rwx</code> (plus zodpovedajúce ACL) v hostiteľskom adresári, takže každý zmapovaný UID môže čítať a písať. Pre CIFS znovu nasadzuje <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code>; pre NFS to nastaví lepkavý svet-zapisovateľný adresár a, ak server squashes koreň, vedie vás k správnemu server-strana opraviť."
+  },
+  "scripts": {
+    "heading": "Uvedené skripty",
+    "intro": "Každá jednotlivá stránka odkazuje na skript, ktorý riadi jej tok. Nižšie uvedený súbor je zdieľaný pomocník, ktorý nie je zdokumentovaný ako jeho vlastná stránka, ale je používaný niekoľkými z LXC sieťových tokov:",
+    "itemTail": " — CT validácia, výber bod pripojenia, privilegovaná kontrola a univerzálne nastavenie skupiny pomocníkov zdieľaných v rámci LXC klient / server prúdi."
+  }
+}

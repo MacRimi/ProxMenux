@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "title": "Po inštalácii: Bezpečnosť ProxMenux Dokumentácia",
+    "description": "Bezpečnostné možnosti sú k dispozícii v ProxMenux Prispôsobiteľný post-inštalačný skript. V súčasnej dobe jediná možnosť: zakázať portmapper / rpcbind služby znížiť útok povrchu hostiteľa."
+  },
+  "header": {
+    "title": "Po inštalácii: Bezpečnosť",
+    "section": "Nastavenie Proxmoxu po inštalácii"
+  },
+  "intro": {
+    "title": "Čo táto kategória zahŕňa",
+    "body": "Post-inštalácia bezpečnosť je obmedzená na <strong>host kalenie, ktoré je bezpečné použiť bez dozoru</strong> Aktívne bezpečnostné nástroje (Fail2Ban pre prevenciu vniknutia, Lynis pre audit) žije pod vyhradeným <em>Security</em> vstup na ProxMenux hlavné menu, nie tu po inštalácii."
+  },
+  "rpcbind": {
+    "heading": "Zakázať portmapper / rpcbind",
+    "intro": "<code>rpcbind</code> (predtým <code>portmap</code>) je služba, ktorá mapuje čísla programov RPC do sieťových portov. Je to závislosť NFS a niektoré pôvodné nástroje založené na RPC. Na typickej Proxmox hostiteľa, ktorý nepôsobí ako NFS server, <strong>nič ho nepoužíva.</strong> A zanechávanie povolené udržuje port <code>111/tcp</code> Počúvanie na každom rozhraní.",
+    "whyTitle": "Prečo to stojí za vypovedanie?",
+    "whyItems": [
+      "Znižuje útok povrchu hostiteľa",
+      "Historicky zneužívaný ako reflexný/zmrazujúci vektor pri útokoch DDoS. Vylúčenie <code>rpcbind</code> odstraňuje tento amplifikačný faktor pre vášho hostiteľa.",
+      "Odstráni hluk, ktorý generuje v logoch a <code>netstat</code>0 / <code>ss</code> výstup, čím sa skutočná aktivita ľahšie spot."
+    ],
+    "nfsTitle": "Nevypnite to, ak používate NFS",
+    "nfsBody": "NFS server <strong>a</strong> NFS klient sa spolieha na <code>rpcbind</code> rokovať o prístavoch, ktoré používajú <code>mountd</code>, <code>statd</code>, <code>lockd</code>atď. Ak je váš Proxmox hostiteľ buď <em>vývoz</em> NFS akcie na iné stroje alebo <em>Prípojky</em> NFS akcie z NAS, neuplatňujú túto možnosť. Mounts zlyhá s <code>mount.nfs: rpc.statd is not running</code> alebo podobné.",
+    "runsTitle": "Čo ProxMenux beží",
+    "runsOutro": "Balík zostáva nainštalovaný. ProxMenux zaznamenáva pôvodný zapnutý/aktívny stav rpcbind.service aj rpcbind.socket, potom vypne a zastaví obe jednotky, takže aktivácia zásuvky nemôže vrátiť službu späť.",
+    "verifyTitle": "Overenie",
+    "verifyBody": "Po aplikácii, potvrďte <code>rpcbind</code> je vypnuté a nič nepočúva na porte 111:",
+    "reversibleTitle": "Obnovuje pôvodný stav služby",
+    "reversibleBody": "Táto zmena je registrovaná v <code>installed_tools.json</code>. <link>Uninstall Optimizations</link> obnovuje každú rpcbind jednotku na zapnutú/vypnutú a aktívnu/neaktívny stav zachytený pred ProxMenux zmenil; nepredpokladá sa, že rpcbind bol povolený na každom hostiteľovi."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Bezpečnostné menu",
+        "href": "/docs/security",
+        "tail": " Väčší hitujúci: Fail2Ban (predchádzanie narušeniu) a Lynis (audit)."
+      },
+      {
+        "label": "Lynis",
+        "href": "/docs/security/lynis",
+        "tail": " — "
+      },
+      {
+        "label": "Užitočné systémové príkazy",
+        "href": "/docs/help-info/system-commands",
+        "tail": " — Stav služby, journalctl, referencia auditu lynis."
+      },
+      {
+        "label": "Prispôsobiteľné Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — Späť do rodičovského menu."
+      }
+    ]
+  }
+}

@@ -1,0 +1,151 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor chápaná Web Dashboard pre Proxmox VE | ProxMenux",
+    "description": "ProxMenux Monitor je self-hosted web dashboard pre Proxmox VE: real-time host metriky, ukladanie a SMART dát, sieť, VMs a kontajnery, hardvér, protokoly, integrovaný webový terminál, proaktívny Health Monitor, oznámenia Telegram / Discord / E-mail, voliteľný AI asistent, REST API a integrácie s nástrojmi ako Homepage a Home Assistant.",
+    "ogTitle": "ProxMenux Monitor chápaná Web Dashboard pre Proxmox VE",
+    "ogDescription": "V reálnom čase Proxmox VE palubná doska: hostiteľ metriky, úložisko SMART, sieť, VMs a kontajnery, hardvér, protokoly, webový terminál, Health Monitor, oznámenia, AI asistent, REST API.",
+    "twitterTitle": "ProxMenux Monitor | ProxMenux",
+    "twitterDescription": "Self-hosted Proxmox VE prístrojová doska so zdravotným monitorom, oznámenia, AI asistent a REST API."
+  },
+  "header": {
+    "title": "ProxMenux Monitor",
+    "description": "Samoobslužná webová palubná doska pre Proxmox VE dodávaná ako AppImage. To beží na hostiteľa ako jedna služba systemd, počúva na TCP 8008 a slúži ako API a UI z jedného procesu.",
+    "section": "ProxMenux Monitor"
+  },
+  "atGlance": {
+    "title": "Na prvý pohľad",
+    "body": "Single AppImage on the Proxmox host → Flask backend (port 8008) zber živých dát cez <code>psutil</code>, <code>pvesh</code>, <code>smartctl</code>, <code>journalctl</code> → Next.js palubná doska slúžila z rovnakého procesu. Voliteľný auth (heslo + 2FA), voliteľný AI asistent, voliteľné oznámenia, REST API pre integráciu."
+  },
+  "hero": {
+    "alt": "ProxMenux Monitor prístrojová doska s obrazovkou s prehľadom systému CPU, pamäť, teplota a uptime widgety",
+    "caption": "Predvolená pristávacia obrazovka"
+  },
+  "coverage": {
+    "heading": "Čo pokrýva prístrojová doska",
+    "intro": "Osem prvotriednych sekcií, každá podporovaná vlastnými koncovými ukazovateľmi API:",
+    "tableSection": "Oddiel",
+    "tableWhat": "Čo ukazuje",
+    "sections": [
+      {
+        "name": "Monitor zdravia",
+        "description": "Aktívne a zamietnuté upozornenia cez CPU, pamäť, úložisko, disky, sieť, služby, protokoly, VM, aktualizácie a bezpečnosť. Riadi oznamovací motor."
+      },
+      {
+        "name": "Skladovanie",
+        "description": "Storage pools Proxmox, fyzické disky (SATA / NVMe0 / USB), atribúty SMART, stav bazéna ZFS, opotrebenie a životnosť, aktivita I/O."
+      },
+      {
+        "name": "Sieť",
+        "description": "Všetky rozhrania (fyzické, dlhopisy, mosty, OVS), IP/MAC/state, grafy RX/TX v reálnom čase, historické RRD dáta na rozhranie."
+      },
+      {
+        "name": "VM a kontajnery",
+        "description": "Zoznam všetkých VM a LXC so stavom, zdrojmi a dobou prevádzky. Drill-in ukazuje konfig, historické metriky, full guest logs a štart / stop / reboot / shutdown akcie."
+      },
+      {
+        "name": "Hardvér",
+        "description": "Model CPU a topológia, rozloženie pamäte, zariadenia PCIe, zoznam GPU s ovládačom a monitoringom v reálnom čase (NVIDIA / Intel iGPU)."
+      },
+      {
+        "name": "Záznamy a udalosti",
+        "description": "Živé <code>journalctl</code> s vážnosťou / časový rozsah / kľúčové slová filtre, História úloh Proxmox, oznamovací log, sťahovacie log zväzky."
+      },
+      {
+        "name": "Terminál",
+        "description": "Shell prehliadača k hostiteľovi alebo k ľubovoľnému VM/CT, napájaný <code>xterm.js</code> cez WebSockets. Overené a auditované ako zvyšok API."
+      },
+      {
+        "name": "Zabezpečenie",
+        "description": "Zlyhanie overovania, stav väzenia Fail2Ban, nedávne zákazové udalosti, integrácia s hostovým <code>[proxmenux]</code> väzením."
+      }
+    ],
+    "footer": "Každá sekcia má vyhradenú dokumentačnú stránku pod <link>Dashboard</link> v bočnom paneli."
+  },
+  "howItRuns": {
+    "heading": "Ako to beží",
+    "intro": "ProxMenux Monitor ako samostatné AppImage. Jedna jednotka systemd (<code>proxmenux-monitor.service</code>) spustí proces Flask, ktorý:",
+    "bullets": [
+      "Počúvajte na <strong>0TCP 8008</strong> na hostiteľa (HTTP).",
+      "Slúži palubnej doske Next.js ako statické aktíva v rámci <code>/</code> a API v rámci <code>/api/*</code> z rovnakého procesu.",
+      "Vytiahne živé dáta pomocou štandardných nástrojov: <code>psutil</code>, <code>pvesh</code>, <code>smartctl</code>, <code>journalctl</code>, <code>zpool</code>, <code>ip</code>, <code>nvidia-smi</code>, atď.",
+      "Pretrváva vo svojom vlastnom stave v miestnej databáze SQLite (<code>/usr/local/share/proxmenux/health_monitor.db</code>): prepustené upozornenia, pozorovania disku, konfig oznámenia, AI config. Stav overovania žije samostatne v <code>/root/.config/proxmenux-monitor/auth.json</code>."
+    ],
+    "footer": "Kompletný tok žiadosti, rozloženie súboru a systemd integrácia je popísaná v <link>Architektúra</link>."
+  },
+  "noAgent": {
+    "title": "Žiadny agent na hostí",
+    "body": "Monitor číta všetko od hostiteľa. VM a CT nepotrebujú inštalovať žiadne agenta, a údaje hostí pochádzajú z Proxmoxu. API a z vlastnej viditeľnosti hostiteľa na úrovni jadra na bežiacich hostí."
+  },
+  "access": {
+    "heading": "Prístup k prístrojovej doske",
+    "intro": "Podporujú sa dva modely prístupu a aplikácia zistí, ktorý z nich sa používa:",
+    "codeComment1": "# 1) Priamy prístup na hostiteľa",
+    "codeComment2": "# 2) Via back proxy (Nginx / Caddy / Traefik)",
+    "afterCode": "Pri použití reverzného proxy Monitor zohľadňuje <code>X-Forwarded-For</code>, <code>X-Forwarded-Proto</code> a <code>X-Forwarded-Host</code>, aby URL a CORS fungovali správne bez ručnej konfigurácie.",
+    "footer": "Nastavenia prvého štartu, heslo + TOTP 2FA, a spätné rezy sú zahrnuté v <link>Access & Authentication</link>."
+  },
+  "mobile": {
+    "heading": "Mobilné použitie a inštalácia domácej obrazovky",
+    "intro": "Palubná doska je reagujúca a lode ako progresívna webová aplikácia. Balený <code>public/manifest.json</code> deklaruje <code>display: standalone</code> s názvom aplikácie, ikonou a farbou témy, takže pridanie URL na domovskú obrazovku vytvára skutočný samostatný spúšťač",
+    "phoneAlt": "ProxMenux Monitor beží na telefóne",
+    "phoneCaption": "Hlavná prístrojová doska na telefóne",
+    "addHeading": "Pridať na domovskú obrazovku",
+    "iosLabel": "iOS Safari:",
+    "iosBody": "share button → <em>Pridať do domovskej obrazovky</em>. Ikona pochádza z <code>/apple-touch-icon.png</code> dodávaných v AppImage.",
+    "androidLabel": "Android Chrome / Edge:",
+    "androidBody": "trojbodové menu → <em>0Install app</em> (alebo <em>Pridať na Domovská obrazovka</em> na starších verziách).",
+    "afterInstall": "Po nainštalovaní otvorí ikonu spustí palubnú dosku v samostatnom režime s vlastným vstupom prepínača úloh.",
+    "onlineOnlyTitle": "Len online",
+    "onlineOnlyBody": "PWA je nainštalovateľný, ale to je <strong>0not</strong> offline-kapable Launcher sa správa ako natívne aplikácie, ale zariadenie stále potrebuje dosiahnuť hostiteľa na TCP 8008 (LAN, VPN alebo reverzné-proxied HTTPS) pre palubnej doske načítať."
+  },
+  "health": {
+    "heading": "Monitor zdravia a oznámenia",
+    "alt": "Monitorová obrazovka zdravia zobrazujúca sledované kategórie 10 (CPU, pamäť, pamäť, úložisko, disky, sieť, služby, protokoly, VM, aktualizácie, zabezpečenie) s aktuálnym stavom",
+    "caption": "Health Monitor pohľad na 10 kategórie sledovať, s ich aktuálny stav. Aktívne a prepustené zápisy sa tu objavujú, keď systém zvyšuje akékoľvek.",
+    "body1": "Vnútri palubnej dosky, <strong>Health Monitor</strong> beží nepretržite v pozadí a vytvára štruktúrovaný prúd udalostí: vysoká teplota CPU, disk SMART varovania, ZFS bazén degradácia, OOM zabíja, VM/CT zlyhania, bezpečnostné incidenty, a tak ďalej. Každá udalosť má kategóriu, závažnosť (INFO / VAROVANIE / KRITICKÁ) a stabilný <code>error_key</code>, takže duplikuje kolaps namiesto zaplavenia obrazovky.",
+    "feedsIntro": "Udalosti zároveň živia tri veci:",
+    "feedsHealth": "Zobrazenie <strong>Health Monitor </strong> v prístrojovej doske (aktívne + zrušené zoznamy).",
+    "feedsChannels": "• <strong>oznamovací motor</strong> — Telegram, Discord, e-mail, Gotify, Pushover a Apprise (viackanálové). Každý kanál je nakonfigurovaný nezávisle a na jednotlivé kategórie udalostí je možné umlčať.",
+    "feedsAI": "Voliteľné <strong>Asistent AI</strong> Ak je povolené, nakonfigurovaný poskytovateľ (OpenAI, antropic, Gemini, Groq, Ollama alebo OpenRouter) vysvetľuje prichádzajúce udalosti v jednoduchom jazyku a, ak je povolené v nastaveniach AI, navrhuje ďalšie kroky.",
+    "suppressionTitle": "Potlačenie namiesto nemého",
+    "suppressionBody": "Každá kategória má svoju vlastnú <em>0Upresnenie Trvanie</em>: po zamietnutí upozornenia je rovnaké upozornenie umlčané pre toto okno (predvolené 24 hodiny, konfigurovateľné pre každú kategóriu až po trvalé). Skutočné eskalácie, napr. CPU teplota prekračovanie kritického prahu"
+  },
+  "api": {
+    "heading": "REST API a integrácie",
+    "intro": "Všetko, čo UI ukazuje je k dispozícii ako JSON cez HTTP/HTTPS. Rovnaké koncové body napájania Homepage widgety, Home Assistant senzory, Grafana palubnej dosky (prostredníctvom Prometheus exportér na <code>/api/prometheus</code>), Uptime Kuma sondy a akýkoľvek vlastný skript, ktorý hovorí <code>curl</code>.",
+    "tokens": "Dlho žijúce API žetóny (365 dní) sú generované z <strong>Nastavenia → API Prístupové žetóny</strong> alebo cez <code>POST /api/auth/generate-api-token</code>.",
+    "bearer": "Tokeny cestujú ako <code>Authorization: Bearer …</code>. Verejné koncové body (<code>/api/health</code>, <code>/api/auth/*</code>) pracujú bez žetónu, takže externé uptime sondy môžu zasiahnuť hostiteľa bez rozdávania osvedčení.",
+    "catalog": "Kompletný katalóg koncových ukazovateľov, návod na rotáciu žetónov a najlepšie bezpečnostné postupy žiť v <linkApi>API Odkaz</linkApi>; hotové príklady na domovskú stránku, Home Assistant, Grafana, Uptime Kuma a generický cURL sú v <linkIntegrations>Integrácia</linkIntegrations>."
+  },
+  "serviceControl": {
+    "heading": "Kontrola prevádzky",
+    "intro": "Denne je monitor spravovaný presne ako každá iná služba systemd. Je tiež vystavený ako dva položky vo vnútri ProxMenux TUI pod <em>Settings</em>:",
+    "codeComment": "# Manuálna kontrola",
+    "footer": "Pozri <link>0Nastavenia → ProxMenux Monitor</link> pre prepínanie v menu a postup overovania stavu."
+  },
+  "nextSteps": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "Architektúra",
+        "description": "— Flask backend, systemd jednotka, SQLite schéma, poskytovatelia AI, oznamovacie kanály."
+      },
+      {
+        "label": "Prístup a overenie",
+        "description": "Prvý štart, nastavenie hesla, TOTP 2FA, reverzná konfigurácia, Fail2Ban integrácia."
+      },
+      {
+        "label": "Panel",
+        "description": "Každá časť UI, každá strana."
+      },
+      {
+        "label": "API referencia",
+        "description": "Každý koncový ukazovateľ, forma žiadosti / odpovede a token manažmentu."
+      },
+      {
+        "label": "Integrácie",
+        "description": "Domovská stránka, Home Assistant, Grafana / Prometheus, Uptime Kuma, generic cURL vzor."
+      }
+    ]
+  }
+}

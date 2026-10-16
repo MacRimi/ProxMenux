@@ -140,8 +140,11 @@
     "items": [
       "Vyberte predvoľbu alebo cron výraz a potom presné ciele: balíky OS, jednotlivé aplikácie, Docker Engine, samostatné jednotky Dockeru alebo skupiny služieb Compose.",
       "Oneskorenie po vydaní platí iba pre vybrané aplikácie so sledovaním verzie. Aplikácie bez sledovania spustia aktualizátor pri každom termíne.",
-      "Stav posledného behu rozlišuje úspech, čiastočné dokončenie, zlyhanie, bezpečnostné pozdržanie a stav bez čakajúcich aktualizácií.",
-      "Zistené externé plány Proxmox VE Helper-Scripts sa zobrazia samostatne, aby bola viditeľná prekrývajúca sa automatizácia."
+      "Stav posledného spustenia rozlišuje úspech, čiastočné dokončenie, zlyhanie, bezpečnostné pozastavenie a spustenie bez čakajúcich aktualizácií. Po prvom plánovanom spustení otvorí <strong>Aktualizácie → Plánované aktualizácie → Zobraziť záznam</strong> úplný výstup zachytený z aktualizačného nástroja a všetkých podradených skriptov, ktoré spustil.",
+      "Zistené externé plány Proxmox VE Helper-Scripts sa zobrazia samostatne, aby bola viditeľná prekrývajúca sa automatizácia.",
+      "Na počítači Proxmox sa v <code>/usr/local/share/proxmenux/logs/lxc-updates/</code> ukladajú záznamy plánovaného priebehu pomocou mena <code>&lt;VMID&gt;-scheduled-&lt;run-id&gt;.log</code>. Posledných desať protokolov je zachovaných na LXC a staršie súbory sú automaticky odstránené.",
+      "Táto zachovaná história sa vzťahuje na plánované aktualizácie. Manuálna aktualizácia zobrazuje svoj výstup naživo v okne vykonávania monitora a v tomto adresári nevytvára plánovaný záznam.",
+      "Externé programy host detekované z Proxmox VE Helper-Scripts sú zobrazené samostatne, takže je viditeľná prekrývajúca sa automatizácia."
     ],
     "callout": "Pred zapnutím plánu otestujte každú vybranú metódu manuálne. Plánovaný príkaz nemôže odpovedať na interaktívne otázky."
   },
@@ -152,7 +155,8 @@
       "Rovnaký beh uloží konečný výsledok a podľa potreby obnoví stav balíkov OS, verzie aplikácií a inventár Dockeru.",
       "Vyrovnávacia pamäť LXC sa nahradí overeným stavom po aktualizácii, takže odznaky a tlačidlá nezostanú v starom stave.",
       "Po spustení zastaveného alebo obnoveného LXC existujúca udalosť životného cyklu znova obnoví tento LXC. Inventár Dockeru čaká na pripravenosť démona a dočasne prázdny výsledok nepovažuje za konečný.",
-      "Povolené upozornenia sa odošlú z dokončeného behu vrátane čiastočných zlyhaní a zoskupených výsledkov Docker obrazov."
+      "Povolené upozornenia sa odošlú z dokončeného behu vrátane čiastočných zlyhaní a zoskupených výsledkov Docker obrazov.",
+      "Povolené oznámenia sú vysielané z dokončeného chodu, vrátane čiastočných porúch a zoskupených Docker obrazových výsledkov."
     ]
   },
   "troubleshooting": {
@@ -179,6 +183,10 @@
       {
         "problem": "Vlastný príkaz zlyhá",
         "resolution": "Spustite ho v termináli LXC a skontrolujte cestu, závislosti, neinteraktívne parametre a návratový kód."
+      },
+      {
+        "problem": "Plánovaná aktualizácia hovorí, že je potrebné reštartovať",
+        "resolution": "Open View log na preskúmanie dokončenej behu, potom reštartovať, že LXC. ProxMenux vymaže varovanie z existujúcej udalosti životného cyklu po tom, čo kontajner začne znovu."
       }
     ]
   },

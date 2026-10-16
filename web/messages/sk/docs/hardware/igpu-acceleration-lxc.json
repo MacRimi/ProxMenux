@@ -1,0 +1,185 @@
+{
+  "meta": {
+    "title": "Pridať GPU do LXC | ProxMenux Dokumentácia",
+    "description": "Zdieľať Intel, AMD alebo NVIDIA GPU s LXC kontajnerom pre hardvér-zrýchlené transkódovanie (Plex / Jellyfin / Frigate), OpenCL / CUDA pracovné zaťaženie, a Mesa video zrýchlenie. ProxMenux manipuluje s uzlami zariadenia, GID zarovnanie, a distro-špecifické vodič inštalovať vnútri kontajnera."
+  },
+  "header": {
+    "title": "Pridať GPU do LXC",
+    "description": "Zdieľajte jeden alebo viac GPU s obalom Proxmox LXC. Hostiteľ stále používa GPU normálne Pracuje s kartami Intel iGPUs (Quick Sync / VA-API), AMD (Mesa / ROCm) a NVIDIA (CUDA / NVENC).",
+    "section": "Hardvér: grafické karty a Coral TPU"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "Pridať <code>dev&lt;N&gt;</code> zápisy do LXC konfig (<code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>) takže kontajner vidí <code>/dev/dri/*</code>, <code>/dev/kfd</code> alebo <code>/dev/nvidia*</code> - podľa toho, čo sa týka vášho GPU. Potom to topánky kontajnera, detekuje distro vnútri, a nainštaluje zodpovedajúce užívateľské ovládače (Mesa, intel-media-driver, NVIDIA Runtime...) takže aplikácie ako Plex, Jellyfin alebo Frigate v skutočnosti použiť GPU na transkódovanie. GIDs (<code>video</code>, <code>render</code>) sú zosúladené medzi hostiteľom a kontajnerom, takže oprávnenia zápasu."
+  },
+  "compare": {
+    "heading": "Zdieľanie LXC0 vs VM",
+    "intro": "Kontajnery LXC0 zdieľajú jadro hostiteľa, takže môžu <em>share</em> hostiteľa GPU bez prevzatia. To je veľký rozdiel od VM: s <vmLink>VM passing</vmLink> GPU je exkluzívny pre jednu VM a hostiteľ nemôže použiť. S LXC, viac kontajnerov plus hostiteľ môže zasiahnuť rovnaký GPU naraz.",
+    "headerFeature": "Funkcia",
+    "headerLxc": "LXC (táto stránka)",
+    "headerVm": "VM",
+    "rows": [
+      {
+        "feature": "Hostiteľ stále používa GPU?",
+        "lxc": "Áno",
+        "vm": "Nie, exkluzívny pre VM"
+      },
+      {
+        "feature": "Viac kontajnerov zdieľajúcich jednu GPU?",
+        "lxc": "Áno",
+        "vm": "Nie"
+      },
+      {
+        "feature": "Vyžaduje IOMMU / VFIO na hostiteľa?",
+        "lxc": "Nie",
+        "vm": "Áno"
+      },
+      {
+        "feature": "Požaduje sa reštart?",
+        "lxc": "Zvyčajne nie (len reštart CT)",
+        "vm": "Áno, vždy."
+      },
+      {
+        "feature": "Podporuje vedenie OS?",
+        "lxc": "Iba Linux (LXC je iba Linux)",
+        "vm": "Windows, macOS, akýkoľvek Linux"
+      }
+    ]
+  },
+  "prereqs": {
+    "title": "Skôr ako začnete",
+    "gpu": "<strong>A GPU o hostiteľovi</strong> Intel iGPU, AMD dGPU alebo APU, alebo NVIDIA kartu. Skript automaticky detekuje všetky tri cez <code>lspci</code>.",
+    "gpuCheck": "lspci | grep -iE 'VGA|3D|Display'",
+    "vfio": "<strong>0 GPU nie je viazaný na vfio-pci.</strong> Ak je GPU v súčasnosti priradená k VM, je neviditeľná pre ovládač jadra hostiteľa a LXC ho nemôže použiť. Skript detekuje toto a ponúka spustenie <switchLink>Switch GPU Mode</switchLink> pre vás.",
+    "nvidia": "<strong>Za NVIDIA iba:</strong> , NVIDIA hostiteľ už musí byť nainštalovaný ProxMenux musí zodpovedať libs používateľského priestoru kontajnera podľa hostiteľskej verzie. Ak ste to ešte neurobili, bežte. <nvidiaLink>Inštalovať NVIDIA Ovládače hostiteľa</nvidiaLink> Najprv.",
+    "nvidiaCheck": "nvidia-smi",
+    "container": "<strong>Existujúci LXC kontajner.</strong> Skript pracuje na kontajneri, ktorý ste už vytvorili, nevytvorí. Kontajner by mal byť v ideálnom prípade <strong>privileged</strong> (neprivilegované práce, ale potrebuje UID/GID mapovanie, ktoré skript nenakonfiguruje)."
+  },
+  "unpriv": {
+    "title": "Pracuje na privilegovaných aj neprivilegovaných kontajneroch",
+    "body": "Skript píše položky <code>dev&lt;N&gt;</code> na LXC config a, na neprivilegovaných kontajneroch, zarovná <code>video</code> a <code>render</code> GIDs medzi hostiteľom a kontajnerom, takže uzly zariadenia GPU sú dosiahnuteľné zvnútra bez toho, aby ste museli ručne editovať <code>lxc.idmap</code>."
+  },
+  "running": {
+    "heading": "Spustenie inštalátora",
+    "body": "Open ProxMenux0 on the host, go to <strong>Hardware: GPUs and Coral-TPU → Add GPU to LXC</strong>.",
+    "imageAlt": "Položka menu 'Pridať GPU do LXC' vnútri Hardware: GPUs a Coral-TPU"
+  },
+  "howRuns": {
+    "heading": "Ako beží skript",
+    "body": "Dve fázy: všetky rozhodnutia vopred, potom všetky zmeny v jednom ísť. Nič na tvojom kontajneri sa nedotkne, kým to nepotvrdíš."
+  },
+  "walkthrough": {
+    "heading": "Prechádzam prúdom",
+    "detect": {
+      "title": "Detekovať hostiteľa GPU",
+      "body": "Skript prehľadá výstup <code>lspci</code> a hľadá radiče VGA / 3D / Display od Intel, AMD alebo NVIDIA. Pri NVIDIA tiež overí, či je načítaný modul jadra <code>nvidia</code> a funguje <code>nvidia-smi</code>. Oznámenú verziu ovládača hostiteľa použije na výber správneho inštalátora <code>.run</code> pre kontajner.",
+      "tipTitle": "NVIDIA nie je pripravený?",
+      "tipBody": "Ak je NVIDIA detekované, ale modul nie je načítaný, skript neponúkne cestu NVIDIA. Spustite <nvidiaLink>Install NVIDIA Vodiči na Host</nvidiaLink> prvý (a reštart), potom sa vrátiť."
+    },
+    "pickCt": {
+      "title": "Vyberte si nádobu LXC",
+      "body": "Uvidíte zoznam všetkých LXC na hostiteľovi s jeho ID a menom. Vyberte ten, ktorý by mal dostať GPU. Kontajner môže byť spustený alebo zastavený",
+      "imageAlt": "Dialógový zoznam existujúcich LXC kontajnerov na výber"
+    },
+    "selectGpu": {
+      "title": "Vyberte GPU (s) pre pridanie",
+      "body": "Ak je prítomný viac ako jeden GPU, dostanete kontrolný zoznam. Môžete pridať viac do rovnakého kontajnera (napr. Intel iGPU pre Quick Sync + AMD dGPU pre ROCm). Ak je detekovaný len jeden GPU, je to automatické.",
+      "imageAlt": "Kontrolný zoznam zobrazujúci zistené GPU (Intel / AMD / NVIDIA) s predávajúcim a PCI adresou"
+    },
+    "preflight": {
+      "title": "Predletové kontroly",
+      "imageAlt": "Dialóg ponúka spustenie Prepínač GPU Režim, keď je vybraný GPU je stále viazaný na vfio-pci pre VM priechod",
+      "intro": "Tri kontroly, ktoré vás môžu blokovať alebo presmerovať:",
+      "items": [
+        "<strong>SR-IOV.</strong> Ak je zvolená GPU je virtuálna funkcia (VF) alebo fyzická funkcia s aktívnymi VF, LXC Passhout sa neuplatňuje, zariadenie je riadené vodičom SR-IOV. Zablokované.",
+        "<strong>Naviazaná na vfio-pci.</strong> Ak GPU je v súčasnosti vo vlastníctve VFIO pre VM Passhrough, jadra hostiteľa nemôže vytvoriť <code>/dev/dri/*</code> alebo <code>/dev/nvidia*</code> Kvôli tomu uzly. Skript ponúka spustenie <switchLink>Prepínač GPU Režim</switchLink> ktorá ruší viazanie VFIO; pravdepodobne budete potrebovať reštart pred opätovným spustením Pridať GPU do LXC.",
+        "<strong>Už nakonfigurované.</strong> Ak kontajner už má každý dev uzol pre vybrané GPU, skript hovorí, a vyjde čisto. Ak je čiastočne nakonfigurovaný, pokračuje len s chýbajúcimi kusmi."
+      ]
+    },
+    "applyConfig": {
+      "title": "Použiť zmeny konfigurácie LXC",
+      "body1": "Skript zastaví kontajner, upraví <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> a pridá <code>dev&lt;N&gt;</code> položky so správnym GIDs pre vybrané GPU. Pomocou <code>dev:</code> položky (nad staršími <code>lxc.mount.entry</code>) je moderný spôsob Proxmox",
+      "body2": "Príklad po Intel + NVIDIA na tom istom kontajneri:"
+    },
+    "installDrivers": {
+      "title": "Spustiť kontajner a inštalovať ovládače vnútri",
+      "body": "Akonáhle je konfigurácia je napísaná, skript spustí kontajner, čaká až ~30 sekúnd na <code>pct exec</code> reagovať, a potom detekuje distribúciu kontajnera z <code>/etc/os-release</code>. Na základe toho nainštaluje správne užívateľské balíčky.",
+      "headerDistro": "Distribúcia",
+      "headerInt": "Intel / AMD",
+      "headerNvidia": "NVIDIA",
+      "rows": [
+        {
+          "distro": "Alpine",
+          "intel": "apk add mesa-va-gallium intel-media-driver libva-utils",
+          "nvidia": "apk add nvidia-utils"
+        },
+        {
+          "distro": "Arch / Manjaro",
+          "intel": "pacman -Sy intel-media-driver mesa libva-utils",
+          "nvidia": "pacman -Sy nvidia-utils"
+        }
+      ],
+      "debianDistro": "Debian / Ubuntu / ostatné",
+      "debianIntel": "apt-get install va-driver-all intel-opencl-icd vainfo",
+      "debianNvidia": "extract host <code>.run</code> → <code>pct push</code> → beh s <code>--no-kernel-modules --no-dkms</code>",
+      "whyTitle": "Prečo NVIDIA .run tanec na Debiane",
+      "whyBody": "Debian / Ubuntu don't lodi NVIDIA balíky s verziou dostatočne zrnitá na to, aby zodpovedala hostiteľovi byte-for-byte. Userspace libs vo vnútri kontajnera <strong>musí zodpovedať verzii modulu jadra</strong> naložené na hostiteľa alebo <code>nvidia-smi</code> zlyhá s nepomerom verzie. ProxMenux rieši to pomocou presne rovnaké <code>.run</code> inštalátor, ktorý bol použitý pre hostiteľa <code>pct push</code>, a beh s <code>--no-kernel-modules --no-dkms</code> Takže sa dotýka len užívateľského priestoru."
+    },
+    "alignGids": {
+      "title": "Zarovnať GID a obnoviť stav",
+      "body1": "Súbory zariadení na hostiteľovi sú vo vlastníctve skupiny <code>video</code> (GID 44) alebo <code>render</code> (GID 104). Distro kontajnera môže odosielať rôzne GID čísla pre tieto skupiny, čo by urobilo uzly GPU nedosiahnuteľné zvnútra. Skript prepíše <code>/etc/group</code> v kontajneri, takže <code>video:44</code> a <code>render:104</code> presne zodpovedajú.",
+      "body2": "Nakoniec, obnovuje kontajner do svojho pôvodného stavu, ak bol zastavený, keď ste začali, dostane zase zastaví. Ak utekal, tak uteká."
+    }
+  },
+  "vendors": {
+    "heading": "Poznámky špecifické pre dodávateľa",
+    "intelHeading": "Intel iGPU",
+    "intelBody": "Najbežnejšou cestou je Plex / Jellyfin / Frigate hardware transkódovanie cez <em>Rýchla synchronizácia</em>. Kontajner dostane <code>/dev/dri/card0</code> (legacy) a <code>/dev/dri/renderD128</code> (moderný uzol iba pre kresbu Nie sú potrebné žiadne zmeny na strane hostiteľa; <code>i915</code> vodič na hostiteľa už vytvoril uzly.",
+    "amdHeading": "AMD",
+    "amdBody": "Rovnaké DRI uzly ako Intel pre grafiku / VA-API. Ak <code>/dev/kfd</code> existuje na hostiteľa (AMD compute / ROCm podpora jadra), skript tiež pridáva, takže kontajnery môžu robiť OpenCL / ROCm pracovné zaťaženie. Mesa VA ovládače pokrývajú video dekódovať stranu.",
+    "nvidiaHeading": "NVIDIA",
+    "nvidiaBody": "Pridá každý <code>/dev/nvidia*</code> uzol hostiteľa odhalí. Kritická časť je <strong>Zosúladenie jazdnej polohy</strong>: verzia hostiteľského modulu a verzia užívateľského lib kontajnera musí byť rovnaká, inak <code>nvidia-smi</code> vo vnútri kontajnera zlyhá. ProxMenux zachytáva hostiteľskú verziu v čase detekcie a používa rovnakú verziu <code>.run</code> súbor na inštaláciu užívateľského priestoru kontajnera. Pre kontajnery Debianu nainštalujte pamäť kontajnera na 2 GB dočasne (inštalátor potrebuje ~1.5 GB zadarmo k extraktu) a obnovuje ho potom.",
+    "updateTitle": "Po aktualizácii ovládača NVIDIA spustíte nový skript",
+    "updateBody": "Keď aktualizujete ovládač NVIDIA na hostiteľovi, užívateľské libs kontajnera zostávajú na starej verzii a <code>nvidia-smi</code> vnútri kontajnera prestávky. ProxMenux je <nvidiaLink>NVIDIA Host inštalátor</nvidiaLink> detekuje kontajnery s NVIDIA priechod a ponúka ich automaticky aktualizovať, ale ak ste preskočili, že prompt, stačí spustiť Pridať GPU na LXC opäť na rovnakom kontajneri a to bude osviežiť užívateľský priestor."
+  },
+  "verification": {
+    "heading": "Overenie",
+    "body": "Po dokončení skriptu, prihláste sa do kontajnera a skontrolujte GPU je vidieť:"
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "mismatchTitle": "nvidia-smi: Failed to initialize NVML: Driver/library version mismatch",
+    "mismatchBody": "Container userspace version ≠ host module version. Spustiť pridanie GPU do LXC opäť na tomto kontajneri, skript vyberá aktuálneho hostiteľa <code>.run</code> a znovu nainštaluje užívateľský priestor.",
+    "denyTitle": "Povolenie zamietnuté na /dev/dri/renderD128 vnútri kontajnera",
+    "denyBody": "Zvyčajne jeden z: (1) kontajner je neprivilegovaný bez UID / GID mapovanie hostiteľa <code>render</code> skupiny; (2) užívateľ vnútri kontajnera nie je v <code>render</code> skupine. Fix: pridať užívateľa do <code>render</code> vnútri kontajnera (<code>usermod -aG render &lt;user&gt;</code>), alebo prepnúť na privilegovaný režim, ak je pracovné zaťaženie dôveryhodné.",
+    "vainfoTitle": "vainfo hovorí: VA-API verzia 1.xx; nepodarilo sa inicializovať",
+    "vainfoBody": "VA-API beží tam, ale nebol nainštalovaný žiadny vhodný ovládač. Na Intel, inštalujte <code>intel-media-driver</code> (novší gens) alebo <code>i965-va-driver</code> (starší gens). Na AMD, <code>mesa-va-drivers</code>. Znovu spustite scenár, ak máte pochybnosti.",
+    "logTitle": "Inštalovať log",
+    "logBody": "Každý beh píše <code>/tmp/add_gpu_lxc.log</code> na hostiteľa. Zapojte ho pri žiadosti o pomoc na GitHub."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Nainštalovať ovládače NVIDIA (host)",
+        "href": "/docs/hardware/nvidia-host",
+        "tail": " — Pred ich prenesením do kontajnera je potrebný predpoklad pre NVIDIA GPU."
+      },
+      {
+        "label": "Pridať GPU do VM (passthrough)",
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "tail": " — Alternatívny model, keď potrebujete GPU venovaný jednému VM."
+      },
+      {
+        "label": "Prepnúť režim GPU (VM ↔ LXC)",
+        "href": "/docs/hardware/switch-gpu-mode",
+        "tail": " — Prepnúť rovnaký GPU medzi LXC zdieľanie a VM priechod."
+      },
+      {
+        "label": "GPU Prenosové príkazy",
+        "href": "/docs/help-info/gpu-commands",
+        "tail": " — "
+      }
+    ]
+  }
+}

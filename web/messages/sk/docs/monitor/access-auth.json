@@ -1,0 +1,396 @@
+{
+  "meta": {
+    "title": "Proxmox Dashboard Authentication 2FA, API Tokeny, Profil užívateľov, Reverse Proxy ProxMenux Monitor",
+    "description": "Dosiahnutie a zabezpečenie ProxMenux Monitor: first-start protection-your-dashboard flow, autentifikácia hesla so zobrazovacím menom + avatar, profilová stránka, TOTP 2FA zápis, s dlhou životnosťou API žetóny pre scenáre, HTTPS konfigurácia, spätný-proxy útržky pre Nginx, Caddy a Traefik, audit log a voliteľné Fail2Ban Väzenie.",
+    "ogTitle": "Proxmox Dashboard Authentication 2FA, API Tokeny, reverzné proxy",
+    "ogDescription": "Bezpečné ProxMenux Monitor s heslom + TOTP 2FA, s dlhou životnosťou API žetóny, HTTPS, reverzné-proxy útržky a voliteľné Fail2Ban väzenia.",
+    "twitterTitle": "Proxmox Dashboard Overenie ProxMenux Monitor",
+    "twitterDescription": "Heslo + TOTP 2FA, API žetóny, HTTPS, Nginx/Caddy/Traefik útržky a audit log."
+  },
+  "header": {
+    "title": "Prístup a overenie",
+    "description": "Dosiahnutie palubnej dosky, prvý štart bezpečnostného toku, a každá vrstva, ktorá môže sedieť medzi útočníkom a hostiteľom: heslo + TOTP, JWT sedenia, dlho-žil API žetóny, HTTPS, reverzné proxy, Bezpečná brána, a voliteľný fail2Ban väzenia.",
+    "section": "ProxMenux Monitor"
+  },
+  "intro": {
+    "title": "Overenie je opt-in",
+    "body": "Pri prvom spustení prístrojová doska ukazuje jeden dialóg <em>\"Chrániť svoj Dashboard?\"</em> S dvoma gombíkmi: <strong>Áno, nastavenie hesla</strong> a <strong>Nie, pokračujte bez ochrany</strong>. Nepovedal žiadne listy každý API 0, 017 0, 017 TCP 8008 Je to fajn pre izolovaný labák LAN, nebezpečný pre čokoľvek iné. Autentifikácia dvoch faktov (2FA) je <strong>nie</strong> časť tejto pôvodnej voľby; je nakonfigurovaná neskôr z <strong>Bezpečnostná karta</strong> keď je nastavené heslo."
+  },
+  "reaching": {
+    "heading": "Dosiahnutie prístrojovej dosky",
+    "intro": "ProxMenux Monitor sa viaže na <code>0.0.0.0:8008</code>. Existujú tri bežné spôsoby, ako ju dosiahnuť:",
+    "outro": "Priamy prístup sa zhoduje s tým, čo systemd z krabice. Reverse-proxy a Secure Gateway časti dole pokrývajú ďalšie dva. Monitor poctí <code>X-Forwarded-For</code>, <code>X-Forwarded-Proto</code> a <code>X-Forwarded-Host</code>, takže URL a CORS pracujú za ktorýmkoľvek z nich bez manuálnej konfigurácie."
+  },
+  "firstLaunch": {
+    "heading": "Prietok pri prvom štarte",
+    "intro": "Prvýkrát keď otvoríte palubnú dosku, frontend volá <code>GET /api/auth/status</code>. Ak auth config nikdy nebol napísaný (<code>configured: false</code>), objaví sa jediný dialóg s názvom <em>\"Chráňte svoju tabuľu?\"</em> s dvoma možnosťami:",
+    "imageAlt": "Prvý úvodný dialóg 'Chrániť svoju tabuľu?' s dvoma tlačidlami: Áno Nastavenie hesla, Nie Pokračovať bez ochrany",
+    "imageCaption": "Prvý autentifikátor. Dva tlačidlá Znovu spustí po novej inštalácii alebo po \"Disable autentifikation\" z Nastavení.",
+    "headerButton": "Tlačidlo",
+    "headerWhat": "Čo sa stane?",
+    "headerApi": "Volanie API",
+    "rows": [
+      {
+        "button": "Áno, nastaviť heslo",
+        "what": "Otvorí formulár s povinným užívateľským menom + heslom a voliteľným názvom <em> Display</em> + <em>avatar image</em>. Ukladá ich v <code>auth.json</code> s <code>enabled: true</code>. Description Formulár je podrobne zdokumentovaný nižšie.",
+        "api": "POST /api/auth/setup"
+      },
+      {
+        "button": "Nie, pokračovať bez ochrany",
+        "what": "Označenia <code>declined: true</code> v <code>auth.json</code>. Každý koncový ukazovateľ API je verejne dostupný, až kým nezmeníte názor z Nastavenia.",
+        "api": "POST /api/auth/skip"
+      }
+    ],
+    "twofaCalloutTitle": "2FA je konfigurovaný neskôr, nie tu",
+    "twofaCalloutBody": "Prvý úvodný dialóg pokrýva len rozhodnutie o hesle. <strong>0Two-Factor Authentication (TOTP)</strong> je nastavený neskôr z <strong>the Security tab</strong> akonáhle ste prihlásení heslom. Plný TOTP prechádza je ďalej dole touto stránkou.",
+    "createTitle": "Vytvorenie prvého užívateľa",
+    "createIntro": "Kliknutím na <em>0Áno, nastavenie Heslo</em> otvorí jediný formulár, ktorý vytvorí účet a prípadne zašíva profil užívateľa v jednom ísť, takže avatar sa objaví v hlavičke hneď po uložení. Polia sú:",
+    "headerField": "Pole",
+    "headerRequired": "Požadované",
+    "headerNotes": "Poznámky",
+    "fieldRows": [
+      {
+        "field": "Užívateľské meno",
+        "required": "Áno",
+        "notes": "Identifikátor prihlásenia. Nie je možné zmeniť neskôr z UI; editácia vyžaduje dotyk <code>auth.json</code> priamo."
+      },
+      {
+        "field": "Heslo",
+        "required": "Áno",
+        "notes": "Minimálne znaky 10 s aspoň 3 kategórií 4 (vedľajší prípad, veľké písmená, číslica, symbol). Krátky zoznam jasných hesiel (<code>password</code>, <code>12345678</code>, <code>proxmenux</code>...) je zamietnutý priamo. Rovnaké pravidlá sú vynútené na strane servera, takže curl volanie nemôže obísť kontrolu front-end."
+      },
+      {
+        "field": "Zobrazované meno",
+        "required": "Nie",
+        "notes": "Priateľský štítok zobrazený v hlavičke dropdown a na profilovej stránke. Keď je prázdne, vráti sa späť k užívateľskému menu. Môže sa neskôr zmeniť z <strong>Avatar → Zobraziť profil</strong>."
+      },
+      {
+        "field": "Obrázok Avatar",
+        "required": "Nie",
+        "notes": "PNG, JPEG, WebP0 alebo GIF až do 2 MB. Vydal ako kruh v hlavičke a na profilovej stránke. Keď je záhlavie prázdne, na farebnom kruhu sa zobrazí prvé písmeno názvu zobrazenia (alebo užívateľského mena). Môže byť nahrané, nahradené alebo odstránené neskôr z profilovej stránky."
+      }
+    ],
+    "createImageAlt": "Vytvoriť užívateľský formulár s povinným užívateľským menom + Heslom a voliteľným názvom displeja + Avatar nahrať sekciu",
+    "createImageCaption": "Prvý spúšťací formulár pre tvorcov. Názov displeja a avatar sú voliteľné",
+    "saveCalloutTitle": "Jedna záchrana, tri hovory API pod kapotou",
+    "saveCalloutBody": "Formulár predkladá <code>POST /api/auth/setup</code> prvý (užívateľské meno + heslo). Pri úspechu využíva čerstvo vydaný JWT na sledovanie <code>PUT /api/auth/profile</code> (zobraziť názov) a <code>POST /api/auth/profile/avatar</code> (avatar bajtes), ak boli tieto polia vyplnené. Zlyhania v profile hovory sú non- fauted",
+    "avatarTitle": "Avatar menu a profil stránky",
+    "avatarBody1": "Akonáhle je autentifikácia nakonfigurovaná, avatar kruh sa objaví v pravom hornom rohu každej palubnej dosky vedľa témy prepnúť. Kliknutím sa otvorí malé dropdown s skratkami na profilovú stránku a záložku Bezpečnosť, plus <strong>0Sign out</strong> akcia",
+    "avatarBody2": "Samotná profilová stránka je malá karta s náhľadom avataru, užívateľským menom (iba pre čítanie) a menom zobrazenia s inline editáciou. Avatar uploady, náhrady a odstránenie sú atómové Rovnaký súbor koncových ukazovateľov zdokumentovaný v ďalšej časti sa používa vo forme \"create-user\" aj v profilovej stránke.",
+    "profileImageAlt": "Stránka profilu s avatarovým náhľadom kružnice, Nahrať / Nahradiť / Odstrániť tlačidlá, prečítať iba užívateľské meno a editovateľné pole zobrazenia",
+    "profileImageCaption": "Špecializovaná profilová stránka. Užívateľské meno je iba na čítanie; zobrazenie názvu a avataru je možné upraviť odtiaľto bez toho, aby ste sa dotkli karty Bezpečnosť.",
+    "headerEndpoint": "Koncový ukazovateľ",
+    "headerEpWhat": "Čo to robí?",
+    "endpointRows": [
+      {
+        "endpoint": "GET /api/auth/profile",
+        "what": "Vráti aktuálne užívateľské meno, zobrazí meno a či je avatar nastavený (<code>has_avatar</code>, <code>avatar_mtime</code>)."
+      },
+      {
+        "endpoint": "PUT /api/auth/profile",
+        "what": "Aktualizuje názov displeja. Telo: <code>'{' \"display_name\": \"...\" '}'</code>."
+      },
+      {
+        "endpoint": "GET /api/auth/profile/avatar",
+        "what": "Vráti avatar bajtov (PNG / JPEG / WebP / GIF) so zodpovedajúcim typom obsahu. Požaduje záhlavie Nosič chyťte ho ako blob a konvertuje na miestny objekt URL pre renderovanie."
+      },
+      {
+        "endpoint": "POST /api/auth/profile/avatar",
+        "what": "Nahrá nový avatar (max 2 MB). Typ obsahu musí zodpovedať súboru. Starý avatar je nahradený atómovo."
+      },
+      {
+        "endpoint": "DELETE /api/auth/profile/avatar",
+        "what": "Odstráni avatar. Záhlavie spadne späť do začiatočnej-na-farebné-kruh miesto držiteľa."
+      }
+    ],
+    "reversibleTitle": "Pokračovanie bez ochrany je reverzibilný",
+    "reversibleBody": "Keď kliknete na <em>0Nie, Pokračovať bez ochrany</em>, uvítací dialóg sa už nikdy neobjaví. Môžete znovu povoliť autentifikáciu z <strong>the Security tab</strong> vnútri palubnej dosky, alebo editáciou <code>/root/.config/proxmenux-monitor/auth.json</code> a odstránením <code>declined</code> vlajky, potom reštartuje službu."
+  },
+  "password": {
+    "heading": "Overenie hesla",
+    "intro": "Po nastavení, každý API hovor (okrem niekoľkých verejných cieľov uvedených nižšie) vyžaduje JWT v <code>Authorization: Bearer &lt;token&gt;</code>:",
+    "items": [
+      "<strong>Session token (login):</strong> 24-hodina platnosti. Vydal <code>POST /api/auth/login</code>.",
+      "<strong>0API token (integrácie):</strong> 365-dňová expirácia. Vydal <code>POST /api/auth/generate-api-token</code>. Samostatne zdokumentované v nasledujúcej časti."
+    ],
+    "loginImageAlt": "Prihlasovacia obrazovka zobrazená po autentifikácii je nakonfigurovaná",
+    "loginImageCaption": "Po nakonfigurovaní autentifikácie začína každá návšteva palubnej dosky tu. S 2FA zapnutý, obrazovka požaduje 6-miestny kód v druhom kroku po prijatí hesla.",
+    "loginFlowTitle": "Prihlasovací tok",
+    "twofaIntro": "S 2FA zapnutý, rovnaký hovor vracia <code>requires_totp: true</code> prvý. Opätovné vydanie s číselným kódom 6:",
+    "publicTitle": "Verejné koncové ukazovatele (žiadny token)",
+    "publicIntro": "Toto sú jediné parametre, ktoré fungujú bez autentifikácie, aj keď je auth povolený:",
+    "publicItems": [
+      "<code>/api/auth/login</code>, <code>/api/auth/status</code>, <code>/api/auth/setup</code> Auth prúdi sám, nevyhnutne.",
+      "<code>/api/system-info</code> chromý snímok systému (hostname, uptime, <code>health.status</code>). Správny koncový ukazovateľ pre externé sondy (Uptime Kuma, kontrola zdravotného stavu pri záťažovom vyvážení, stavové stránky)."
+    ],
+    "cryptoTitle": "Kryptografia a skladovanie",
+    "cryptoIntro": "ProxMenux Monitor je open source, nič z toho nie je tajné. Zdokumentovanie zásobníka je tu výslovne úmyselná voľba: prevádzkovatelia, ktorí uchovávajú doklady na svojom hostiteľovi, si zaslúžia vedieť, ako sú tieto osvedčenia chránené predtým, ako sa rozhodnú im dôverovať. Algoritmy uvedené nižšie sú tie isté kód v <code>scripts/auth_manager.py</code> používa; táto časť je zmluva, nie marketingový sľub.",
+    "headerAsset": "Aktíva",
+    "headerAlgo": "Algoritmus",
+    "headerWhere": "Kde býva",
+    "cryptoRows": [
+      {
+        "asset": "Heslo",
+        "algorithm": "PBKDF2-HMAC-SHA256 s náhodnou soľou na heslo a vysokým počtom iterácií (OWASP 2023+ východisková hodnota). Uložené ako <code>pbkdf2_sha256$&lt;iters&gt;$&lt;salt&gt;$&lt;hash&gt;</code>.",
+        "where": "<code>auth.json</code> → <code>password_hash</code>"
+      },
+      {
+        "asset": "Sekcia / API JWT",
+        "algorithm": "HS256 podpísaný nainštalačným tajomstvom razeným pri prvom štarte (<code>secrets.token_urlsafe</code>, ≥48 bajtov). Tokeny nesú <code>iss=proxmenux-monitor</code> + <code>aud=api</code> nároky; podpis je validovaný proti súčasnému tajomstvu na každú žiadosť.",
+        "where": "Tajomstvo: <code>auth.json</code> → <code>jwt_secret</code>. JWT sám: len na klienta."
+      },
+      {
+        "asset": "API token metaúdaje",
+        "algorithm": "SHA-2560 z JWT uložené vedľa <code>signed_with</code> odtlačky prstov <code>jwt_secret</code> použité na mätu",
+        "where": "<code>auth.json</code> → <code>api_tokens[]</code>"
+      },
+      {
+        "asset": "Tajný kľúč TOTP pre 2FA",
+        "algorithm": "Štandardná TOTP (RFC 6238) báza32 kódovaná. Záložné kódy sú predgenerované, na jedno použitie, hashed s rovnakou schémou PBKDF2 ako heslo.",
+        "where": "<code>auth.json</code> → <code>totp_secret</code> + <code>backup_codes[]</code>"
+      },
+      {
+        "asset": "Zrušenie",
+        "algorithm": "Keď je token alebo relácia zrušená, jeho SHA-2560 sa pridá do zoznamu popierajúcich kontrol na každom overení (mem-cached pre ~30 s, aby sa zabránilo disku číta na horúcej ceste).",
+        "where": "<code>auth.json</code> → <code>revoked_tokens[]</code>"
+      }
+    ],
+    "authJsonTitle": "auth.json",
+    "authJsonBody": "Všetko. ProxMenux Monitor potrebuje overiť, že žijete v jednom súbore: <code>/root/.config/proxmenux-monitor/auth.json</code>, režim <code>0600</code>, majiteľ <code>root</code>. Súbor má <em>hašiš</em> (PBKDF2) a <em>podpisový materiál</em> (<code>jwt_secret</code>, <code>totp_secret</code>Nikdy nepíšte heslo. Zaobchádzajte s ním ako s akýmkoľvek iným tajomstvom, ktoré je iba koreňom: ak ustúpite alebo zopakujete hostiteľa, zašifrujete cieľ a nikdy ho neodviažete na ovládanie verzie.",
+    "rotateTitle": "Rotačná jwt_secret ruší všetky existujúce JWT",
+    "rotateBody": "Ak <code>auth.json</code> sa regeneruje (manuálne vymazať, preinštalovať, obnoviť zo zálohy s iným tajomstvom) <code>jwt_secret</code> zmeny a všetky predtým vydané JWT API žetóny chyťú overenie s \"Neplatný alebo exspirovaný token.\" • UI dotknuté vlajky API žetóny <strong>Invalidné regenerovať</strong> preukaz, aby prevádzkovateľ vedel, že ich zruší a znovu uvedie; Home Assistant / skripty / akýkoľvek externý klient po tom potrebuje nový token.",
+    "recoverTitle": "Obnovenie strateného hesla",
+    "recoverIntro": "Neexistuje žiadny on-line \"zabudol heslo\" tok ProxMenux dodáva riadený reset vo vnútri konfiguračného menu, takže nemusíte ručne editovať <code>auth.json</code>:",
+    "survivesTitle": "Čo prežíva reset",
+    "survivesBody": "Vymaže sa iba interaktívne prihlásenie. • <code>jwt_secret</code> a registrovaného <code>api_tokens</code> sú zachované tak Home Assistant a s akýmkoľvek iným skriptom s dlhou životnosťou API žetón pokračovať v práci bez rekonfigurácie. Ak chcete úplne čistú bridlicu (tiež otáčať JWT tajomstvo), odstrániť <code>auth.json</code> ručne a reštartovať službu. Ďalší štart vytvára nové tajomstvo a všetky staré žetóny sa stanú neplatnými.",
+    "physicalTitle": "Predpoklad fyzického prístupu",
+    "physicalBody": "Táto cesta resetu potrebuje shell <strong>root na host</strong>. To je dôvera kotva celej autentifikačné schémy: každý, kto môže spustiť <code>menu</code> ako koreň už môže urobiť čokoľvek na poli, takže dať im heslo reset nie je privilégium zvýšenie. Výsledok: ak dovolíte nedôveryhodnému používateľovi dostať sa do shellu Proxmox, prihlásenie monitora neochráni nič, čo užívateľ už nemôže zničiť iným spôsobom."
+  },
+  "twofa": {
+    "heading": "Overenie dvoma faktami (TOTP)",
+    "intro": "2FA pridáva druhý faktor na vrchole hesla: 6-ciferný kód, ktorý otáča každý 30 sekúnd, generovaný na telefóne alebo správcu hesla, ktorý ovládate. Aj keď niekto získa heslo, stále sa nemôže prihlásiť bez kódu z vášho zariadenia. ProxMenux Monitor implementuje štandardný <strong>TOTP</strong> protokol (RFC 6238), takže akákoľvek autentifikátor aplikácia funguje.",
+    "pickTitle": "Vyberte autentifikátor aplikácie",
+    "pickIntro": "Ak už používate jeden pre Google / GitHub / svoju banku, že jeden bude pracovať Ak nie, tu je prieskum spoločných možností. Všetky z nich sú zadarmo; rozdiely sú hlavne o tom, ktoré platformy bežia a ako (alebo či) zálohujú vaše tajomstvá.",
+    "headerApp": "Aplikácie",
+    "headerPlatforms": "Platformy",
+    "headerAppNotes": "Poznámky",
+    "apps": [
+      {
+        "name": "Google Authenticator",
+        "href": "https://safety.google/authentication/",
+        "platforms": "iOS, Android",
+        "notes": "Predvolené pre mnohých užívateľov. Nepovinná záloha cloudového účtu Google."
+      },
+      {
+        "name": "Microsoft Authenticator",
+        "href": "https://www.microsoft.com/en-us/security/mobile-authenticator-app",
+        "platforms": "iOS, Android",
+        "notes": "Záloha Microsoft-account. Tiež spracováva MS push oznámenia, ak ich používate v práci."
+      },
+      {
+        "name": "Authy",
+        "href": "https://authy.com/",
+        "platforms": "iOS, Android, počítač",
+        "notes": "Multi-device šifrovaná synchronizácia (plocha aplikácie sa postupne vymení"
+      },
+      {
+        "name": "Apple Passwords",
+        "href": "https://support.apple.com/guide/passwords/welcome/mac",
+        "platforms": "iOS, iPadOS, macOS, visionOS, Windows (cez iCloud)",
+        "notes": "Vstavaný do Apple OSes; samostatné aplikácie Heslá od iOS 18 / macOS Sequoia. Uloží TOTP vedľa hesla a synchronizuje cez zariadenia cez iCloud Keychain."
+      },
+      {
+        "name": "Bitwarden",
+        "href": "https://bitwarden.com/",
+        "platforms": "iOS, Android, desktop, prehliadač",
+        "notes": "Otvorený zdroj. TOTP žije vedľa hesla, ktoré chráni (ak používate aj BW pre heslá, porazí \"samostatné zariadenie,\" ak nie)."
+      },
+      {
+        "name": "1Password",
+        "href": "https://1password.com/",
+        "platforms": "iOS, Android, desktop, prehliadač",
+        "notes": "Rovnaký nápad ako Bitwarden TOTP integrovaný s heslom trezor. Predplatné."
+      },
+      {
+        "name": "Aegis Authenticator",
+        "href": "https://getaegis.app/",
+        "platforms": "Android",
+        "notes": "Otvorený zdroj. Zašifrovaný záložný súbor na zariadení, ktorý ovládate. Žiadny oblak, žiadny účet."
+      },
+      {
+        "name": "Raivo OTP",
+        "href": "https://raivo-otp.com/",
+        "platforms": "iOS, macOS",
+        "notes": "Otvorený zdroj. Voliteľné iCloud synchronizácia. Apple-ecosystem náprotivok Aegis."
+      },
+      {
+        "name": "Ente Auth",
+        "href": "https://ente.io/auth/",
+        "platforms": "iOS, Android, počítač, web",
+        "notes": "Otvorený zdroj. end-to-end šifrované cloud synchronizácia medzi zariadeniami."
+      },
+      {
+        "name": "2FAS",
+        "href": "https://2fas.com/",
+        "platforms": "iOS, Android, rozšírenie prehliadača",
+        "notes": "Otvorený zdroj. Voliteľné šifrované cloudové zálohovanie; rozšírenie prehliadača môže autofill kódy."
+      },
+      {
+        "name": "FreeOTP+",
+        "href": "https://github.com/helloworld1/FreeOTPPlus",
+        "platforms": "Android, iOS",
+        "notes": "Otvorený zdroj (červený klobúk-led). Minimálni bez cloudu, bez účtu."
+      }
+    ],
+    "backupTitle": "Na čom \"záloha\" naozaj záleží",
+    "backupBody": "Ak stratíte zariadenie, ktoré má autentifikátor na ňom, jediný spôsob, ako späť sú (1) uložený záložný kód, keď ste povolili 2FAalebo (2Posily autentifikátorovho trezoru. Aplikácie so synchronizáciou cloud (Google Auth, Microsoft Auth, Authy, Apple Passwords, Ente, 2FAS, Bitwarden, 1Heslo) môžu obnoviť na novom zariadení. Apps without cloud (Agis, Raivo, FreeOTP+) potrebujete zašifrovaný exportný súbor, ktorý ste skopírovali niekde v bezpečí. Buď prístup funguje, a zlý prípad je \"žiadna záloha vôbec.\"",
+    "setupTitle": "Nastavenie krok za krokom z prístrojovej dosky",
+    "setupImageAlt": "Nastavovacia obrazovka 2FA s QR kódom a záložnými kódmi",
+    "setupImageCaption": "Nastavovací dialóg 2FA QR kód, Base32 tajomstvo (pre manuálny vstup), a desať jednorazových zálohovacích kódov. Kódy sú zobrazené len tu; ak zavriete dialóg bez ich kopírovania, sú preč.",
+    "setupSteps": [
+      "<strong>Inštalujte aplikáciu autentifikátora na telefóne</strong> (alebo otvorte správcu hesla). Jedna z aplikácií z tabuľky vyššie. Stačí to urobiť len raz",
+      "<strong>Prihláste sa do palubnej dosky</strong> s vaším užívateľským menom a heslom.",
+      "<strong>0Otvorte bezpečnostnú záložku</strong> na palubnej doske a potom kliknite na <strong>Enaable 2FA</strong>. Otvorí sa dialóg s QR kódom, dlhým reťazcom vo formáte Base32 a desiatimi krátkymi kódmi označenými \"zálohovacie kódy.\"",
+      "<strong>Pridať položku do aplikácie autentifikátor:</strong>",
+      "<strong>Uložiť záložné kódy.</strong> Skopírujte desať kódov niekde v bezpečí, Zaobchádzajte s nimi ako s náhradnými kľúčmi: každý funguje presne raz a dostane vás tam, ak je telefón preč alebo pokazený.",
+      "<strong>Potvrdiť zadaním aktuálneho 6-ciferného kódu</strong> z aplikácie do poľa \"Overovací kód\" v dialógu nastavenia a predložiť. Kódy osviežujú každú 30 sekundy, takže ak vyprší, keď píšete, zadajte ďalšiu.",
+      "<strong>Hotovo.</strong> 2FA je teraz aktívny. Nabudúce, keď sa prihlásite, palubná doska požiada o heslo prvý; akonáhle je prijatý, že žiada o aktuálnu 6- číselný kód."
+    ],
+    "setupStep4Sub": [
+      "<em>0Ľahká cesta:</em> v aplikácii, ťuknite na položku <em>Pridať účet</em> → <em>Scan QR kód</em>, nasmerujte kameru na QR obrazovku. Aplikácia automaticky označuje položku (niečo ako <code>ProxMenux Monitor (your-username)</code>) a začína zobrazovať 6-ciferný kód, ktorý osviežuje každý 30 sekúnd.",
+      "<em>Manuálne opomenutie</em> (ak skenovanie nie je možné, napr. nastavenie na rovnakom telefóne, akým ste otvorili palubnú dosku): ťuknite na položku <em>Pridať účet</em> → <em>Zadajte kľúč nastavenia</em>. Zadajte akékoľvek meno (napr. <em>Proxmox Monitor</em>), vložte reťazec Base32 z dialógu, opustiť <em>Druh</em> ako <em>Časové nastavenie</em>, zachrániť."
+    ],
+    "testTitle": "Test pred odhlásením",
+    "testBody": "Po kliknutí na Uložiť sa odhláste a <em>okamžite</em> sa znova prihláste, kým si ešte pamätáte nastavovací dialóg. Ak je kód odmietnutý (najčastejšou príčinou je rozdiel času medzi serverom a telefónom), stále to môžete opraviť z otvorenej relácie. Odhlásenie bez predchádzajúceho otestovania znamená stratu tejto možnosti: potom vám prístup vráti iba záložný kód alebo úprava <code>auth.json</code> na hostiteľovi.",
+    "lostTitle": "Stratený autentifikátor",
+    "lostIntro": "Tri únikové prielezy, podľa toho, aké sú rušivé:",
+    "lostItems": [
+      "<strong>0Use a backup code.</strong> Na prihlasovacej obrazovke v poli TOTP zadajte jeden z desiatich kódov, ktoré ste uložili v čase nastavenia. Každý funguje raz a potom sa spotrebuje; zostávajúce kódy stále fungujú. Akonáhle ste v, regenerovať 2FA z Nastavenia získať čerstvé desať.",
+      "<strong>Restore autentifikátor z cloud / záloha.</strong> Ak vaša aplikácia má cloud synchronizáciu (Google, Microsoft, Authy, Apple Passwords cez iCloud Keychain, Ente, 2FAS) nainštalujte ho na nové zariadenie, prihláste sa a položky sa znovu objavia. Ak aplikácia používa zašifrovaný exportný súbor (Agis, Raivo, FreeOTP+), nainštalujte aplikáciu na nové zariadenie a importujte súbor.",
+      "<strong>0Disable 2FA z shellu hostiteľa.</strong> Ak predchádzajúce možnosti nie sú k dispozícii, upravte <code>/root/.config/proxmenux-monitor/auth.json</code> na počítači Proxmox (potrebuješ root SSH alebo prístup ku konzole), nastavte <code>totp_enabled</code> na <code>false</code>, uložte a reštartujte službu:"
+    ],
+    "lostShellOutro": "Môžete sa prihlásiť iba s užívateľským menom + heslom a potom znovu zapnúť 2FA z Nastavenia.",
+    "disableTitle": "Vypnúť 2FA",
+    "disableBody": "Z palubnej dosky otvorte kartu <strong>0Security</strong> a kliknite na <strong>Disable 2FA</strong>. Koncový ukazovateľ <code>POST /api/auth/totp/disable</code> vyžaduje aktuálne heslo ako potvrdenie, potom vymaže TOTP tajomstvo a odstráni záložné kódy. Nezabudnite tiež odstrániť položku v aplikácii autentifikátor",
+    "rejectedTitle": "Kód 6 sa vždy zamieta.",
+    "rejectedIntro": "TOTP je čas-založené na serverových hodinách a telefónnych hodinách musí súhlasiť s ~30 s. Dve kontroly:",
+    "rejectedItems": [
+      "<strong>Phone:</strong> Nastavenie → Dátum a čas → automatická / sieťová synchronizácia zapnuté.",
+      "<strong>Proxmox host:</strong> <code>timedatectl status</code> \"Systém synchronizovaný: áno\" by mal byť viditeľný. Ak nie, <code>timedatectl set-ntp true</code> a počkaj chvíľu."
+    ],
+    "rejectedOutro": "Keď sa obe hodiny dohodnú, kód je prijatý v ďalšom 30-sekundovom okne."
+  },
+  "apiTokens": {
+    "heading": "API tokeny (dlhodobé)",
+    "intro": "Prehliadač po 24 hodinách končí. Pre nekontrolované integrácie (Homepage widgety, Home Assistant senzory, Grafana škrabky, Uptime Kuma sondy...) generujete samostatné <strong>API token</strong>, ktorý žije 365 dní. Token je JWT podpísaný s rovnakým tajomstvom ako relácie token, ale jeho <code>token_name</code> tvrdenie uľahčuje sledovať a zrušiť individuálne.",
+    "imageAlt": "Panel tokenov API znázorňujúci zoznam tokenov s názvom, predponou, vytvoreným dátumom a expiráciou",
+    "imageCaption": "Zoznam tokenov API v časti Nastavenia Názov, predpona (posledné znaky 4 sú zobrazené na identifikáciu), vytvorené a vypovedané dátumy, zrušiť akciu.",
+    "generateTitle": "Generovať token",
+    "generateIntro": "Z prístrojovej dosky:",
+    "generateSteps": [
+      "Navigovať na <strong>0Bezpečnostná karta → API Prístupové tokeny</strong> sekcia.",
+      "Zadajte opisný názov (<em>e.g. \"Home Assistant\"</em>).",
+      "Zadajte svoje heslo. Ak je zapnutá 2FA, aj súčasný 6-miestny kód.",
+      "Kliknite na <strong>Generate Token</strong>. Token sa objaví <strong>once</strong>"
+    ],
+    "generateCli": "Z príkazového riadku:",
+    "useTitle": "Použiť žetón",
+    "revokeTitle": "Zrušiť token",
+    "revokeBody": "Z panelu vyššie: každý riadok má <strong>Revoke</strong> akcie, ktorá pridáva token hash <code>revoked_tokens</code> v <code>auth.json</code>. Zrušené žetóny zlyhajú okamžite na ďalšiu žiadosť.",
+    "cheatTitle": "@ info: whatsthis",
+    "cheatItems": [
+      "Uložiť žetóny vo vašej integrácie natívne tajomstvo obchod <code>secrets.yaml</code>, Home Assistant <code>!secret</code>, environmentálne premenné atď. Nikdy ich nezaväzuj.",
+      "Jeden symbol na integráciu, pomenovaný po spotrebiteľovi. Zrušiť individuálne pri odchode do dôchodku integrácie.",
+      "Otočiť každý 6–12 mesiacov. Uplynutie platnosti je tvrdý limit, nie odporúčanie."
+    ],
+    "outro": "Úplné skladovanie najlepšie postupy a integračné recepty žiť v <apiLink>0API Referenčné → Token Management</apiLink> a <intLink>Integrácie</intLink>."
+  },
+  "https": {
+    "heading": "HTTPS",
+    "intro": "Dve cesty k TLS:",
+    "items": [
+      "<strong>Reverse proxy (odporúčané).</strong> Terminate TLS on Nginx / Caddy / Traefik a forward HTTP on port 8008 to the Flask process. Podložky.",
+      "<strong>Priama HTTPS v AppImage.</strong> Nastaviť certifikát cez <code>POST /api/ssl/configure</code> (UI: <strong>Nastavenie → SSL</strong>). Keď je SSL nakonfigurované, proces sa prepne Flask's dev server do <code>gevent.pywsgi</code> s gevent-websocket Manipulátor so WebSocket terminál funguje aj nad WSS. Cert súbory žijú kdekoľvek im ukazujete; cesty sú uložené v SSL config."
+    ],
+    "calloutTitle": "Priame obmedzenia HTTPS",
+    "calloutBody": "Zoskupená cesta je vhodná pre vlastné podpisy alebo iba certifikáty LAN. Pre Let's Encrypt0 / ACME a automatická obnova, spustiť skutočný reverzný proxy v prednej časti Monitor sám nerealizuje ACME."
+  },
+  "gateway": {
+    "heading": "Zabezpečená brána (Tailscale)",
+    "intro": "Reverzné proxy sú klasickou odpoveďou na \"dostať palubnú dosku zvonku,\" ale vyžadujú verejnú doménu, certifikát, a otvorený port na okraji. <strong>Bezpečná brána</strong> je alternatíva nula-port dodávaný v rámci samotného monitora LXC beží <a>Tailscale</a> ako podsieťový router. Potom, čo sa pripojil k vašej chvostovej sieti, každý prístroj na ňom môže zasiahnuť Monitor na hostiteľa vlastné LAN IP chee z notebooku na dovolenku, telefón na 5G, alebo iný uzol bez odhalenia TCP 8008 na internet.",
+    "calloutTitle": "Prečo je to pohodlné",
+    "calloutBody": "URL zostáva rovnaká ako na LAN <code>http://&lt;proxmox-lan-ip&gt;:8008</code> pracuje všade Tailscale Funguje to. Žiadne certifikáty, nie DNS, žiadny port forwarding. Samotný monitor vníma žiadosť ako žiadosť vychádzajúcu z IP siete (zvyčajne <code>100.x.y.z</code>), takže auth log a Fail2Ban hák stále funguje ako na LAN.",
+    "deployBody": "Nasadiť tok je jedna obrazovka LXC skladovanie, pasta a Tailscale unit description in lists <a>Prihlásiť sa.tailscale.com/admin/sadzby/kľúče</a>), vyberte, ktoré subnety inzerovať, kliknite na položku Nasadiť. • LXC takes ~30 sekundy do pasce na topánky a automaticky sa zaregistruje do chvostovej siete.",
+    "outro": "postupné nasadenie, konfigurácia podsieťových trás, Tailscale Režim ACL a Uzol ukončenia sú zdokumentované samostatne v <link>Dashboard → Bezpečnosť → Bezpečná brána</link> To je miesto, kde nasadenie sprievodca žije v prístrojovej doske UI. Táto stránka pokrýva iba prístupový vzor."
+  },
+  "proxy": {
+    "heading": "Reverzné proxy útržky",
+    "intro": "Najjednoduchšie rozloženie je <strong>0dedikovaný názov hostiteľa</strong> pre Monitor (napr. <code>monitor.example.com</code>) ukazuje na port 8008 na Proxmox host. Snippets nižšie použiť tento vzor. Sub-path mounts (<code>example.com/proxmenux-monitor/</code>) sú možné, ale vyžadujú ďalšie prepísanie a nie sú predvolené",
+    "nginxTitle": "Nginx",
+    "caddyTitle": "Caddy",
+    "traefikTitle": "Traefik (značky Docker / Kubernetes)",
+    "subPathTitle": "Pokročilé: sub-cesta sa pripája pod existujúcou doménou",
+    "subPathBody": "Ak nechcete dedikovaný názov hostiteľa, môžete pripojiť monitor pod cestu na existujúcu doménu napríklad <code>example.com/proxmenux-monitor/</code>. • Next.js budova používa relatívne cesty aktív, takže statické súbory vyriešiť, ale proxy musí <strong>prúžok predpony</strong> Pred zaslaním, takže Monitor stále dostane jasné <code>/api/*</code> URL. Na Nginx, to je <code>location /proxmenux-monitor/ &rbrace; proxy_pass http://127.0.0.1:8008/; &lbrace;</code> (sledovanie lomítko na <code>proxy_pass</code> robí prúžok). Na Caddy, použitie <code>handle_path /proxmenux-monitor/*</code>. Vyhradené meno hostiteľa je jednoduchšie."
+  },
+  "audit": {
+    "heading": "Auditný záznam",
+    "intro": "Každá autentifikačná udalosť (úspech a zlyhanie) je pripojená k <code>/var/log/proxmenux-auth.log</code> v jednom riadku, syslog štýle:",
+    "outro": "Vychvaľujte to obvyklým spôsobom: <code>tail -F /var/log/proxmenux-auth.log</code>. Súbor sa otáča <code>logrotate</code>, ak je pridaný konfiguračný drop-in; samotný Monitor ho neotáča."
+  },
+  "fail2ban": {
+    "heading": "Voliteľné: väzenie vo väzení Fail2Ban",
+    "calloutTitle": "Fail2Ban nie je zviazaný s Monitorom",
+    "calloutBody": "Fail2Ban je <strong>0not</strong> nainštalovaný samotným ProxMenux Monitor. Nainštalujte ho cez <link>Security → Fail2Ban</link> v ponuke ProxMenux (alebo štandardným balíkom Debianu). Bez neho, Monitor stále píše audit log vyššie",
+    "intro": "Keď je Fail2Ban nainštalovaný, ProxMenux integračné lode <code>[proxmenux]</code> väzenie, ktoré:",
+    "items": [
+      "Číta <code>/var/log/proxmenux-auth.log</code>.",
+      "Zodpovedá modelu <code>authentication failure; rhost=&lt;ip&gt;</code> s vyhradeným filtrom.",
+      "Zakáže urážlivé IP na úrovni firewallu jadra štandardne.",
+      "Je zvedavý Flask <code>before_request</code> hák každý 30 s, takže aj keď firewall nemôže blokovať (pretože pripojenie pochádza z spätného proxy), aplikácia vracia HTTP 403 zakázať IP na základe čoho Fail2Ban To vie."
+    ],
+    "outro": "Konfigurácia, zákaz ladenie času a unban postupy sú v <link>0Security → Fail2Ban</link>."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "noScreenTitle": "Obrazovka prvého spustenia sa nikdy neobjaví",
+    "noScreenBody": "Buď je auth už nakonfigurovaný (<code>configured: true</code>) alebo niekto už vybral Skip. Ak chcete začať odznova:",
+    "noScreenOutro": "Tým sa vymaže auth stav tiež akékoľvek TOTP tajomstvo a API žetóny. Ustúpte. <code>auth.json</code> Najskôr ak máš žetóny, ktoré si chceš nechať.",
+    "tokenTitle": "HTTP 401 na každú žiadosť pracovného API tokenu",
+    "tokenBody": "Token vypršal (365 d limit) alebo sa dostal do zoznamu <code>revoked_tokens</code>. Generovať nový v Nastaveniach a aktualizovať integráciu. Kontrola:",
+    "tokenOutro": "Vypršal alebo zrušil žetóny vrátiť <code>'{'\"error\":\"Invalid or expired token\"'}'</code>.",
+    "no2faTitle": "Nemôžem sa prihlásiť po umožnení 2FA, žiadny autentifikátor po ruke",
+    "no2faBody": "Použite záložný kód v TOTP poli. Ak sú preč, editujte <code>/root/.config/proxmenux-monitor/auth.json</code> z hostiteľa, nastavte <code>totp_enabled</code> na <code>false</code>, reštartujte službu.",
+    "wsTitle": "Reverzný proxy funguje, ale záložka terminálu sa odpojí každú minútu",
+    "wsBody": "WebSocket voľnobežný timeout v proxy. Skočiť na čas odčítania (Nginx: <code>proxy_read_timeout 86400s</code>; Traefik: <code>idleTimeout</code> v mieste vstupu alebo middleware) a potvrdiť <code>proxy_set_header Upgrade $http_upgrade</code> a <code>Connection \"upgrade\"</code> sú prítomné."
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "Odkaz na API → Riadenie tokenov",
+        "href": "/docs/monitor/api",
+        "tail": " Celoživotný cyklus API žetóny (generovať / zoznam / zrušiť), bezpečnosť best-postupy, tajné úložné vzory."
+      },
+      {
+        "label": "Integrácie",
+        "href": "/docs/monitor/integrations",
+        "tail": " — Domovská stránka, Home Assistant, Grafana / Prometheus, Uptime Kuma, generic cURL."
+      },
+      {
+        "label": "Dashboard → Bezpečnosť → Bezpečná brána",
+        "href": "/docs/monitor/dashboard/security",
+        "tail": " — Nasadenie brány Tailscale LXC krok za krokom (podnetové trasy, ACLs, Exit Node mód)."
+      },
+      {
+        "label": "Bezpečnosť → Fail2Ban",
+        "href": "/docs/security/fail2ban",
+        "tail": " — Ako nainštalovať a konfigurovať voliteľné väzenie."
+      },
+      {
+        "label": "Nastavenie → ProxMenux Monitor",
+        "href": "/docs/settings/proxmenux-monitor",
+        "tail": " Štart / stop systemd služby ProxMenux TUI."
+      }
+    ]
+  }
+}

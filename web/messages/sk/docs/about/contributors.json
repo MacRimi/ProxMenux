@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "title": "Podľa dokumentácie ProxMenux",
+    "description": "Uznanie pre ľudí, ktorí robia ProxMenux možné",
+    "ogTitle": "Podľa dokumentácie ProxMenux",
+    "ogDescription": "Zoznámte sa s prispievateľmi ProxMenux."
+  },
+  "header": {
+    "title": "Prispievatelia",
+    "description": "Projekt ProxMenux rastie a prosperuje vďaka prínosu svojich spolupracovníkov. To je dobre-zaslúžené uznanie ich práce",
+    "section": "O projekte"
+  },
+  "beyond": {
+    "title": "Za týmto zoznamom",
+    "body": "Oveľa viac ľudí prispieva prostredníctvom správ o chybách, predstaví nápady v diskusiách, beta testovaní a prekladoch. Úplný zoznam prispievateľov kódov žije na <extlink>GitHub graf prispievateľov</extlink>. Nižšie uvedená stránka zdôrazňuje ľudí, ktorí boli najúčinnejšie zapojení do testovania a preskúmania ProxMenux Vypúšťam."
+  },
+  "testers": {
+    "heading": "Testery a recenzie",
+    "intro": "Tie boli medzi prvými, ktoré prispeli k projektu ProxMenux vyrásť do toho, čo je to dnes.",
+    "roles": {
+      "testing": "Testujem",
+      "testingReviewer": "Testovací & recenzent"
+    },
+    "youtube": "YouTube"
+  },
+  "contribute": {
+    "heading": "Chceš prispieť?",
+    "intro": "Akýkoľvek príspevok je vítaný",
+    "tester": "<strong>Tester</strong> - Vyskúšaj <beta>beta-kanál</beta> a nahláste, čo funguje a čo nie pred stabilným vydaním.",
+    "developer": "<strong>Vývojár</strong> Bash + Next.js (TypeScript) + trochu Python pre preklad venv. Privítanie PR <gh>GitHub</gh>.",
+    "designer": "<strong>Designer</strong>",
+    "ideas": "<strong>Myšlienky</strong> Otvorte niť <disc>GitHub Diskusie</disc> pred otvorením vydania žiadosti o funkciu."
+  },
+  "coc": {
+    "title": "Najprv si prečítajte kódex správania",
+    "body": "Pred odoslaním kódu alebo správy problémy, dajte <coclink>Code of Conduct & Best Practices</coclink> rýchle čítanie. Zahŕňa očakávania týkajúce sa zodpovednosti za kódex, zverejňovania bezpečnostných údajov a rozsahu PR."
+  }
+}

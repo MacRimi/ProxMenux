@@ -1,0 +1,167 @@
+{
+  "meta": {
+    "title": "Po inštalácii: Skladovanie ProxMenux Dokumentácia",
+    "description": "Optimalizácia úložiska v ProxMenux Prispôsobiteľný post-inštalačný skript: ZFS ARC size based on host RAM, zfs-auto-snapshot pre periodické snímky a vzdump záložné obmedzenia rýchlosti odstránenie."
+  },
+  "header": {
+    "title": "Po inštalácii: Skladovanie",
+    "section": "Nastavenie Proxmoxu po inštalácii"
+  },
+  "intro": {
+    "title": "Čo táto kategória zahŕňa",
+    "body": "Štyri optimalizácie týkajúce sa úložiska: naladiť <strong>ZFS ARC</strong> veľkosť vyrovnávacej pamäte na rozumnú časť hostiteľa RAM, inštalácia a harmonogram <strong>ZFS automatické snímky</strong>, povoliť <strong>ZFS autotrim</strong> o SSD/NVMe poolsa odstraňovať škrtiace klapky <strong>vzdump</strong> Takže zálohy bežia plnou rýchlosťou. Všetky štyri sú nezávislé a vybrať tie, ktoré zodpovedajú vášmu nastaveniu. Piata optimalizácia úložiska, <link>Log2RAM</link>, znižuje SSD/NVMe opotrebenie pohybom <code>/var/log</code> na ramdisku, ktorý žije na Voliteľnej stránke, pretože ProxMenux Prispôsobiteľné menu to tam združuje."
+  },
+  "trackedTitle": "Všetky štyri sú sledované v menu Odinštalovať",
+  "trackedBody": "Každá z týchto možností registruje nástroj v <code>installed_tools.json</code>, takže sa objavia v <link>Odinštalovať optimalizáciu</link>. Vrátenie <code>zfs_arc</code> odstraňuje <code>/etc/modprobe.d/99-zfsarc.conf</code> a obnovu initramfov; <code>zfs_auto_snapshot</code> zvráti časový rozvrh kronov a ponúkne vyčistenie balíka; <code>zfs_autotrim</code> sady <code>autotrim=off</code> na tému pools bolo povolené; <code>vzdump_speed</code> obnovu <code>/etc/vzdump.conf</code> z <code>.bak</code> vytvorená inštalácia.",
+  "arc": {
+    "heading": "Optimalizovať veľkosť ZFS ARC",
+    "intro": "<strong>Adaptive Replacement Cache (ARC)</strong> je ZFS in-memory read cache. Bez explicitného ladenia, ZFS šťastne chytí až polovicu hostiteľa RAM pre seba, čo je nadmerné na Proxmox hostiteľa, ktorý tiež potrebuje pamäť pre VMs a LXCs. Táto možnosť zapína ARC na normálny zlomok celkového RAM podľa veľkosti stroja.",
+    "sizingTitle": "Pravidlá veľkosti",
+    "headerRam": "RAM hostiteľa",
+    "headerMax": "Limit ARC",
+    "rows": [
+      {
+        "ram": "Vzorec",
+        "max": "RAM0 / 10, limitované na 16 GiB, s 64 MiB podlahe"
+      },
+      {
+        "ram": "8 GB hostiteľ",
+        "max": "≈ 819 MiB (RAM/10)"
+      },
+      {
+        "ram": "16 GB hostiteľ",
+        "max": "≈ 1.6 GiB (RAM/10)"
+      },
+      {
+        "ram": "64 GB hostiteľ",
+        "max": "≈ 6.4 GiB (RAM/10)"
+      },
+      {
+        "ram": "≥ 160 GB hostiteľ",
+        "max": "16 GiB (limit)"
+      }
+    ],
+    "after": "Súbor <code>/etc/modprobe.d/99-zfsarc.conf</code> obsahuje jednu smernicu <code>options zfs zfs_arc_max=…</code>. Každý iný ZFS Parameter modulu (<code>zfs_arc_min</code>, L2ARC prefetch/write škrtiaca klapka, TXG timeout) je ponechaná na jeho OpenZFS predvolené. Pred písaním, zmierovací krok skenuje všetky ostatné <code>*.conf</code> on <code>/etc/modprobe.d/</code> ktoré nastavujú <code>zfs_arc_min</code> / <code>zfs_arc_max</code>, podporuje ich <code>/usr/local/share/proxmenux/backups/zfs_arc/</code> s manifestom, a pruhy konfliktné čiary tak len ProxMenuxSúbor je aktívny. Po napísaní súboru, ProxMenux behy <code>update-initramfs -u -k all</code> a v prípade potreby <code>proxmox-boot-tool refresh</code>, takže čiapka tiež pristane v initramfs používané ZFS- na výjazdoch.",
+    "rebootTitle": "Požaduje reštart, aby sa účinok",
+    "rebootBody": "Nastavenia ARC sú čítané pri načítavaní modulu jadra <code>zfs</code>. Na to, aby uzáver nadobudol účinok na hostiteľov ZFS-on-root, ProxMenux regeneruje initramfs pomocou <code>update-initramfs -u -k all</code> a v prípade potreby osvieži nakladač bootu s <code>proxmox-boot-tool refresh</code>. Na vyzdvihnutie nového parametra modulu je stále potrebná reštart; označenie \"reboot required\" je automaticky nastavené.",
+    "safeTitle": "Bezpečné na non-ZFS hostiteľov",
+    "safeBody": "Funkcia píše konfiguráciu iba vtedy, keď <code>zpool list</code> hlási aspoň jeden importovaný ZFS bazén. Na ext4 / LVM-iba Proxmox hosts, alebo na strojoch s ZFS nástroje nainštalované, ale žiadny bazén importovaný, zaškrtnutie tejto možnosti je no-op",
+    "verifyTitle": "Overovanie a manuálne spätné získanie"
+  },
+  "autoSnap": {
+    "heading": "Nainštalovať ZFS auto-snapshot",
+    "intro": "Nainštaluje balík <a>0zfs-auto-snapshot</a> a prepíše jeho rozvrhy kronov, takže snímky sa prijímajú automaticky v niekoľkých intervaloch. Veľká záchranná sieť bez úsilia na vrchole vašich pravidelných záloh.",
+    "cadenceTitle": "Konfigurácie Snapshot cadence ProxMenux",
+    "headerLabel": "Štítok",
+    "headerRuns": "Beží",
+    "headerKept": "Držia sa snímky",
+    "rows": [
+      {
+        "label": "časté",
+        "runs": "každý 15 min.",
+        "kept": "4"
+      },
+      {
+        "label": "hodinová",
+        "runs": "každú hodinu",
+        "kept": "1"
+      },
+      {
+        "label": "denne",
+        "runs": "jedenkrát denne",
+        "kept": "1"
+      },
+      {
+        "label": "týždenne",
+        "runs": "jedenkrát týždenne",
+        "kept": "1"
+      },
+      {
+        "label": "mesačne",
+        "runs": "jedenkrát mesačne",
+        "kept": "1"
+      }
+    ],
+    "conservativeTitle": "Konzervatívne udržať počítať",
+    "conservativeBody": "ProxMenux0 lodí s konzervatívnou retenciou (len 4 časté + 1 každého dlhšieho intervalu) takže ZFS snímka úložisko nie je balón. Ak chcete dlhšie uchovávanie, upraviť čísla v <code>/etc/cron.d/zfs-auto-snapshot</code>, <code>/etc/cron.hourly/zfs-auto-snapshot</code>, atď. po spustení skriptu.",
+    "onlyZfsTitle": "Užitočné len v bazénoch ZFS",
+    "onlyZfsBody": "Inštalácia balíčka na ext4-iba hostiteľa je neškodné, ale zbytočné ZFS Súbory údajov pre to snímku. Preskočte túto voľbu, ak nepoužívate ZFS.",
+    "verifyTitle": "Overovanie a manuálne spätné získanie"
+  },
+  "autotrim": {
+    "heading": "Zapnúť ZFS autotrim (SSD/NVMe pooly)",
+    "intro": "Povolí <code>autotrim</code> majetok na každom ZFS pool ktorá je krytá výlučne SSD alebo NVMe pohony s podporou TRIM. Pools ktoré obsahujú jeden HDD vdev sú preskočené automaticky ZFS Odmietne to. Pools ktoré už boli stanovené na <code>autotrim=on</code> zostávajú takí, akí sú.",
+    "trimTitle": "Čo TRIM robí, a prečo to záleží na ZFS",
+    "trimBody1": "SSD/ NVMe mechaniky spravujú interné úložisko v blokoch s pevnou veľkosťou vymazania, ktoré sú oveľa väčšie ako logické sektory, na ktoré súborový systém hovorí. Keď súborový systém vymaže súbor, disk nevie, že stále si myslí, že tieto sektory sú v prevádzke, takže jeho interný zberateľ odpadu udržuje shuthling stale dáta okolo zadarmo nové vymazať bloky. <strong>TRIM</strong> je štandardný príkaz, ktorý OS používa, aby povedal pohonu \"tieto sektory sú teraz zadarmo, môžete ich vymazať pred časom.\"",
+    "trimBody2": "Bez TRIM, SSD výkon degraduje v priebehu času, ako pohon vyprší z pred-vymazaných blokov a musí urobiť vymazanie-on-write, a písať amputácie zvyšuje S TRIM zapnutý, disk môže udržať zdravý bazén prázdnych blokov pripravený na zápis.",
+    "trimBody3": "Na ZFS, <code>autotrim=on</code> je moderný ekvivalent periodickej <code>zpool trim &lt;pool&gt;</code> príkaz, namiesto toho, aby ste si zapamätali spustiť obloženie ručne (alebo plán jeden), pool vydáva príkazy TRIM automaticky a nepretržite, pretože bloky sa stanú voľnými. Je to low-overhead a odporúčané nastavenie pre SSD-backed pools.",
+    "practicalTitle": "Prečo je to praktické?",
+    "practicalItems": [
+      "<strong>Sustained write performance.</strong> SSDs, ktoré nikdy nevideli príkazy TRIM spomaľujú v priebehu niekoľkých mesiacov. Autotrim uľahčuje prácu regulátora.",
+      "<strong>Drive longevity.</strong> Nižšie písanie amplifikácia znamená menej celkových NAND writes pre rovnaké množstvo dát a merateľné v rokoch životnosti pre disk.",
+      "<strong>Žiadny naplánovaný cron prácu pamätať.</strong> Na rozdiel od periodického <code>zpool trim</code>, autotrim je oheň-a-zabudnuteľný"
+    ],
+    "whenTitle": "Kedy je to nutné?",
+    "whenIntro1": "<strong>0Mali by ste povoliť to</strong> na ľubovoľnom ZFS bazéne, ktorého vdevs sú všetky SSD alebo NVMe s podporou TRIM",
+    "whenIntro2": "<strong>Skript ho automaticky preskočí</strong> na:",
+    "whenSkipItems": [
+      "Pools obsahujúce akékoľvek HDD (rotačné) vdev",
+      "Pohonné jednotky bez <code>discard_granularity</code> vystavené v sysfs",
+      "Pools, kde ZFS sám vykazuje nehnuteľnosť nepodporovaná (zriedkavé; veľmi staré bazény).",
+      "Pools už nastavený na <code>autotrim=on</code> (bez-op)."
+    ],
+    "whenIntro3": "<strong>Netýka sa len hostiteľov ext4</strong> Nie je tu nič pre ZFS ostrihať. Funkcia vystupuje s priateľskou správou v tom prípade.",
+    "recordedTitle": "Prečo sa zaznamenávajú len bazény ProxMenux",
+    "recordedBody": "Funkcia píše len pool do svojho interného súboru stavu (<code>/usr/local/share/proxmenux/zfs_autotrim_pools</code>) keď aktívne prevrátila, že pool od <code>off</code> do <code>on</code>. Pools mali ste na autotrim pred spustením skriptu sú vynechané zo zoznamu, takže budúci Uninstall nevypne nastavenia, ktoré ste nakonfigurovali sami ProxMenuxVlastné zmeny sú vrátené.",
+    "manualTitle": "Manuálny ekvivalent (bež na serveri)",
+    "manualIntro": "Plná sekvencia skriptu beží proti každému bazénu je replikovateľný ručne. Toto by ste napísali, keby ste chceli urobiť to isté na jednom bazéne bez ProxMenux:",
+    "verifyTitle": "Overovanie a manuálne spätné získanie",
+    "oneShotTitle": "Potrebuješ ostrihať miesto súvislého?",
+    "oneShotBody": "Niektorí operátori uprednostňujú skôr ručnú úpravu v čase mimo špičky ako nepretržitú činnosť prispôsobovania. Zakázať autotrim a naplánovať cron prácu, ktorá beží <code>zpool trim &lt;pool&gt;</code>"
+  },
+  "vzdump": {
+    "heading": "Zvýšiť rýchlosť záloh vzdump",
+    "intro": "V predvolenom nastavení, Proxmox vzdump škrtiacej škrtiacej klapky pre ochranu bežiace VMs / CTs pred hladom. Na mnohých nastaveniach, že plyn je konzervatívnejší, než je potrebné. Táto možnosť odstraňuje čiapku šírky pásma a znižuje prioritu I/O, takže vzdump môže nasýtiť cestu úložiska počas zálohovania okien.",
+    "changedTitle": "Čo sa zmení v /etc/vzdump.conf",
+    "backupTitle": "Prvý beh vytvára .bak vzdump.conf",
+    "backupBody": "Prvýkrát táto možnosť beží, ProxMenux kopíruje <code>/etc/vzdump.conf</code> na <code>/etc/vzdump.conf.bak</code> pred dotykom. Následné beží znovu použiť, že záloha a neprepíše ho, takže ručne EDITED konfiškácia z pred prvým použitie zostáva vymáhateľný. Zmeny <code>bwlimit</code> a <code>ionice</code> sú potom vykonané s <code>sed</code>, a všetky ďalšie možnosti v súbore (kompresia, pinzeta, tmpdir, vylúčenie-cesta, atď) sú zachované.",
+    "skipTitle": "Kedy to preskočiť",
+    "skipBody": "Na hostiteľa s pomalým lokálnym úložiskom a VMs, ktoré sú citlivé na latenciu, odstránenie čiapky šírky pásma môže spôsobiť výrazné spomalenie počas záloh. Ak ste predtým nastavili konkrétnu <code>bwlimit</code> z tohto dôvodu, aby to preskočiť túto možnosť.",
+    "verifyTitle": "Overovanie a manuálne spätné získanie"
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "ZFS Riadiace príkazy",
+        "href": "/docs/help-info/zfs-commands",
+        "tail": " Zpool / zfs referencie pre ARC, snímky, vydrhnúť."
+      },
+      {
+        "label": "Príkazy na ukladanie a disky",
+        "href": "/docs/help-info/storage-commands",
+        "tail": " — "
+      },
+      {
+        "label": "Zálohovanie a obnovenie príkazov",
+        "href": "/docs/help-info/backup-commands",
+        "tail": " Vzdump CLI referenčné (teraz bez predchádzajúceho bwlimitu / iónové čiapky)."
+      },
+      {
+        "label": "Odinštalovať optimalizácie",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — "
+      },
+      {
+        "label": "Log2RAM",
+        "href": "/docs/post-install/optional#log2ram",
+        "tail": " - znižuje SSD/NVMe opotrebenie ramdiskom /var/log; zdokumentované podľa Voliteľné."
+      },
+      {
+        "label": "Prispôsobiteľné Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — Späť do rodičovského menu."
+      }
+    ]
+  }
+}

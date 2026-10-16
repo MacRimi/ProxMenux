@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Proxmox Network Commands chip, ping, ss, pve-firewall, iptables ProxMenux",
+    "description": "Referencie Proxmox VE host networking príkazov: ip / ip link / ip adder, ping, traceroute, mtr, ss, ettool, dig, nslookup, plus pve-firewall, iptables a nftables pre filtrovanie. Kontrola mosta, väzby a VLAN.",
+    "ogTitle": "Proxmox Network Commands",
+    "ogDescription": "Odkaz na sieťové príkazy pre Proxmox VE Kontrola rozhrania, testy konektivity, monitorovanie, firewall (pve-firewall, iptables, nftables) a DNS Pohľady.",
+    "twitterTitle": "Proxmox Network Commands ProxMenux",
+    "twitterDescription": "Príkazy sieťovej kontroly, testovania, konfigurácie a firewallu pre Proxmox VE."
+  },
+  "header": {
+    "title": "Sieťové príkazy",
+    "description": "Curated reference for Proxmox host networking: interface info, connection tests, configuration, traffic monitoring and firewall management. Kombinuje ip / ss / nmcli / ettool / tcpdump / pve-firewall.",
+    "section": "Pomoc a informácie"
+  },
+  "intro": {
+    "title": "Rýchly inventár rozhrania",
+    "body": "<code>ip a</code> zobrazuje každé rozhranie so svojimi IP a MAC. <code>ip r</code> zobrazuje smerovaciu tabuľku. Spoločne najviac \"je toto rozhranie nastavené správne?\" otázky v sekundách."
+  },
+  "commandGroups": [
+    {
+      "title": "Sieťové informácie",
+      "commands": [
+        {
+          "command": "ip a",
+          "description": "Zobraziť sieťové rozhrania a IP adresy"
+        },
+        {
+          "command": "ip r",
+          "description": "Zobraziť smerovaciu tabuľku"
+        },
+        {
+          "command": "ip -s link",
+          "description": "Zobraziť štatistiky prenosu podľa rozhrania"
+        },
+        {
+          "command": "brctl show",
+          "description": "Zobraziť nastavené sieťové bridge"
+        },
+        {
+          "command": "cat /etc/network/interfaces",
+          "description": "Zobraziť surové sieťové nastavenie"
+        }
+      ]
+    },
+    {
+      "title": "Testovanie siete",
+      "commands": [
+        {
+          "command": "ping <host>",
+          "description": "Skontrolovať spojenie s iným hostom"
+        },
+        {
+          "command": "traceroute <host>",
+          "description": "Sledovať trasu k hostiteľovi"
+        },
+        {
+          "command": "mtr <host>",
+          "description": "Kombinácia ping a traceroute v reálnom čase"
+        },
+        {
+          "command": "dig <domain>",
+          "description": "DNS vyhľadanie domény"
+        },
+        {
+          "command": "nslookup <domain>",
+          "description": "Alternatívne vyhľadávanie DNS"
+        }
+      ]
+    },
+    {
+      "title": "Nastavenie siete",
+      "commands": [
+        {
+          "command": "ifreload -a",
+          "description": "Znovu načítať sieťové nastavenie (ifupdown2)"
+        },
+        {
+          "command": "ethtool <iface>",
+          "description": "Zobraziť informácie o ethernetovom zariadení"
+        },
+        {
+          "command": "resolvectl status",
+          "description": "Zobraziť stav DNS prekladu"
+        },
+        {
+          "command": "nmcli device show",
+          "description": "Zobraziť detaily sieťového zariadenia (ak sa použije NetworkManager)"
+        },
+        {
+          "command": "ip link set <iface> up",
+          "description": "Zdvihnite sieťové rozhranie"
+        },
+        {
+          "command": "ip link set <iface> down",
+          "description": "Znížiť sieťové rozhranie"
+        }
+      ]
+    },
+    {
+      "title": "Monitorovanie siete",
+      "commands": [
+        {
+          "command": "ss -tuln",
+          "description": "Zobraziť počúvajúce porty (TCP/UDP)"
+        },
+        {
+          "command": "netstat -tuln",
+          "description": "Alternatíva k zobrazeniu počúvacích portov"
+        },
+        {
+          "command": "lsof -i",
+          "description": "Zoznam otvorených sieťových súborov a pripojení"
+        },
+        {
+          "command": "tcpdump -i <iface>",
+          "description": "Zachytiť pakety na rozhraní"
+        },
+        {
+          "command": "iftop -i <iface>",
+          "description": "Monitorovať využívanie šírky pásma na rozhraní"
+        }
+      ]
+    },
+    {
+      "title": "Správa firewallu",
+      "commands": [
+        {
+          "command": "iptables -L -n -v",
+          "description": "Zobraziť aktívne pravidlá firewallu (iptables)"
+        },
+        {
+          "command": "nft list ruleset",
+          "description": "Zobraziť pravidlá nftables"
+        },
+        {
+          "command": "pve-firewall status",
+          "description": "Skontrolovať stav Proxmox firewallu"
+        },
+        {
+          "command": "pve-firewall compile",
+          "description": "Zostaviť pravidlá firewallu pre všetky uzly"
+        },
+        {
+          "command": "pve-firewall reload",
+          "description": "Znovu načítať pravidlá Proxmox firewallu"
+        }
+      ]
+    }
+  ],
+  "iptablesTip": {
+    "title": "iptables vs nftables",
+    "bodyRich": "Moderný Debian / Proxmox používa <strong>0nftables</strong> ako základný firewallový motor. Klasický <code>iptables -L -n -v</code> príkaz stále funguje ako prekladateľská vrstva, ale zdrojom pravdy je <code>nft list ruleset</code>. <code>pve-firewall</code> príkazy sú Proxmox obal, ktorý vysiela nftables pravidlá z cluster firewall config."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/network",
+        "label": "Sieť",
+        "tail": " — ProxMenux interaktívne sieťové nástroje (analýza mosta, trvalé názvy, monitorovanie)."
+      },
+      {
+        "href": "/docs/help-info/tools-commands",
+        "label": "Systémové CLI nástroje",
+        "tail": " — Viac nástrojov na monitorovanie sietí."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Prehľad pomoci a informácií",
+        "tail": "."
+      }
+    ]
+  }
+}

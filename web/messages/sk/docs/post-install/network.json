@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "title": "Po inštalácii: sieť ProxMenux Dokumentácia",
+    "description": "Optimalizácia v súvislosti so sieťou ProxMenux Prispôsobiteľný post-inštalačný skript: vynútiť APT cez IPv4, použiť kurated sysctl ladiaci profil, nainštalovať Open vSwitch, povoliť TCP BBR + Fast Open, a pin názvy rozhraní na ich MAC adresy."
+  },
+  "header": {
+    "title": "Po inštalácii: sieť",
+    "section": "Nastavenie Proxmoxu po inštalácii"
+  },
+  "intro": {
+    "title": "Čo táto kategória zahŕňa",
+    "body": "Päť nezávislých sieťových možností. Dve sú malé (<strong>APT nad IPv4</strong>, <strong>Otvoriť vSwitch inštalovať</strong>), dve skladby TCP správanie (<strong>sieťový sysctl profil</strong>, <strong>BBR + Fast Open</strong>) a jeden stanovuje spoločnú operačnú bolesť hlavy <strong>názvy spinningových rozhraní</strong> tak nový NIC alebo BIOS aktualizácia nepremenuje <code>enp3s0</code> do <code>enp4s0</code> a prelomiť mosty."
+  },
+  "ipv4": {
+    "heading": "Prinútiť APT používať IPv4",
+    "intro": "Píše <code>Acquire::ForceIPv4 \"true\";</code> na <code>/etc/apt/apt.conf.d/99-force-ipv4</code>. APT potom odmieta používať IPv6 na sťahovanie balíkov, aj keď má hostiteľ IPv6 pripojenie.",
+    "tipTitle": "Kto má prospech",
+    "tipBody": "Užitočné, keď je vaša IPv6 cesta odlupujúca, pomalšia ako IPv4, alebo zrkadlo Debian/Proxmox sa občas prelomí cez IPv6 (to sa stáva). Neškodná na hostiteľov bez IPv6. Na zdravom dual-stack sieti, je to len záruka predvídateľného správania"
+  },
+  "sysctl": {
+    "heading": "Použiť sieťové optimalizácie",
+    "intro": "Napíše kurovaný profil sysctl na <code>/etc/sysctl.d/99-network.conf</code> pokrývajúci pufre so zásuvkami jadra, tvrdnutie ICMP, základná ochrana proti lyžičkám a veľkosť pufru TCP, ktoré majú zmysel na hypervízore s množstvom súbežných tokov.",
+    "tunedTitle": "Čo sa naladí",
+    "headerArea": "Oblasť",
+    "headerSettings": "Nastavenie kľúča",
+    "rows": [
+      {
+        "area": "Nárazníky so zásuvkami jadra",
+        "settings": "<code>netdev_max_backlog=8192</code>, <code>rmem_max=16M</code>, <code>wmem_max=16M</code>, <code>somaxconn=8192</code>"
+      },
+      {
+        "area": "Stvrdnutie ICMP",
+        "settings": "<code>icmp_echo_ignore_broadcasts=1</code>, <code>icmp_ignore_bogus_error_responses=1</code>"
+      },
+      {
+        "area": "Bezpečnosť presunu",
+        "settings": "<code>accept_redirects=0</code>, <code>accept_source_route=0</code>, <code>secure_redirects=0</code>, <code>send_redirects=0</code>, <code>log_martians=0</code>"
+      },
+      {
+        "area": "Filter so spätnou cestou",
+        "settings": "<code>rp_filter=2</code> (voľný režim, pozri poznámku nižšie)"
+      },
+      {
+        "area": "TCP",
+        "settings": "<code>tcp_mtu_probing=1</code>, <code>tcp_rfc1337=1</code>, <code>tcp_sack=1</code>, <code>tcp_rmem=8K/87K/16M</code>, <code>tcp_wmem=8K/64K/16M</code>"
+      },
+      {
+        "area": "Porty",
+        "settings": "<code>ip_local_port_range=1024 65535</code> (Ephemeral Port Pool)"
+      },
+      {
+        "area": "Unixové zásuvky",
+        "settings": "<code>net.unix.max_dgram_qlen=4096</code>"
+      }
+    ],
+    "sourceOutro": "To tiež pridáva <code>source /etc/network/interfaces.d/*</code>0 do <code>/etc/network/interfaces</code> ak nie je už prítomný",
+    "fwbrTitle": "Automatické ladenie virtuálnych mostov firewallu",
+    "fwbrBody": "Popri profile sysctl, ProxMenux inštaluje pomocník na <code>/usr/local/sbin/proxmenux-fwbr-tune</code>, ktorý používa <code>rp_filter=0</code> a <code>log_martians=0</code> na <code>fwbr*</code> / <code>fwln*</code> / <code>fwpr*</code> / <code>tap*</code> rozhrania Proxmox vytvára okolo VMs a kontajnerov. Pomocník je vyvolaný <code>proxmenux-fwbr-tune.service</code> jednorázovou jednotkou pri štarte, a pravidlom <code>/etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules</code> na každom <code>net add</code> udalosť zodpovedajúca týmto predponám, ktoré sa vzťahujú na rozhrania, ktoré Proxmox znovu vytvára na VM štart/stop, reštart a živá migrácia. Pomocník tiež beží okamžite po inštalácii zametať rozhrania už prítomné.",
+    "rpFilterTitle": "Prečo rp_filter=2 (voľná) namiesto 1 (strikt)",
+    "rpFilterBody": "Prísne spätné filtrovanie kvapky pakety, ktorých zdroj by bol routed out <em>wifer</em> rozhranie. To je správne predvolené na klientskom počítači, ale zlomí zle na Proxmox hostiteľa, kde VM doprava často prichádza na most a necháva na vzostupnom spojení s asymetrickými trasami. <code>rp_filter=2</code> (voľný) kvapky iba balíčky s naozaj neobrátiteľnými zdrojmi. Je to pragmatický kompromis - mierne zníženie lokálnej-IP-poof detekcie výmenou za nie rozbitie siete VM."
+  },
+  "ovs": {
+    "heading": "Nainštalovať Open vSwitch",
+    "intro": "Inštaluje <code>openvswitch-switch</code> + <code>openvswitch-common</code>. Tieto balíky pridávajú OVS ako premostenie ako alternatívu k štandardnému mostu Linux, ktorý Proxmox štandardne používa. Samotná inštalácia nemení žiadne vytváranie sietí <code>vmbrX</code> mosty pokračujú v práci. OVS je k dispozícii v Proxmoxe UI keď <em>vytvoriť</em> nový most a vybrať ho z typu dropdown.",
+    "tipTitle": "Keď OVS dáva zmysel",
+    "tipBody": "Zvážte OVS, ak potrebujete <strong>0VLAN tmeing s non-kontigious VLAN IDs</strong>, <strong>LAKT s LLDP na špecifických režimoch</strong>, <strong>fine-grained flow programing</strong> (OpenFlow), alebo interoperation s radičmi SDN. Pre domáce laboratórium s niekoľkými VLAN a jedným LACP uplink, štandardné Linux mosty + <code>vmbrX.VID</code> sú jednoduchšie a dokonale v poriadku.",
+    "revertTitle": "Reverzibilné z menu Odinštalovať",
+    "revertBody": "OVS je vystopovaný. <link>Unstall Optimizations</link> beží <code>apt purge</code> na <code>openvswitch-switch</code> a <code>openvswitch-common</code>. Migrujte mosty OVS späť na mosty Linux <em>pred</em> odinštaláciou, inak VM na mostoch strácajú sieť na ďalšom štarte. Ručný ekvivalent:"
+  },
+  "bbr": {
+    "heading": "Povoliť TCP BBR + TCP Fast Open",
+    "intro": "Napíše dva sysctl súbory a znovu ich načíta. BBR nahrádza štandardnú CUBIC kontrolu preťaženia algoritmom založeným na šírku pásma spoločnosti Google, ktorý manipuluje s dlhotučnými rúrkami a stratovými väzbami oveľa lepšie. TCP Fast Open (TFO) eliminuje okružnú cestu na opakovaných spojeniach TCP pomocou spätných dát na SYN.",
+    "verifyTitle": "Overenie",
+    "impactTitle": "Vplyv závisí od pracovného zaťaženia",
+    "impactBody": "BBR svieti na vysokej latencii alebo stratené odkazy (krížová replikácia, tunely VPN, mobilní klienti). Na LAN medzi dvoma strojmi na rovnakom prepínači, rozdiel je často v rámci hluku. TFO pomáha krátke, opakované pripojenie HTTP najviac.",
+    "revertTitle": "Reverzibilné z menu Odinštalovať",
+    "revertBody": "BBR/TFO sú sledované. <link>Uninstall Optimizations</link> odstraňuje dva sysctl súbory (<code>/etc/sysctl.d/99-tcp-bbr.conf</code> a <code>99-tcp-fastopen.conf</code>) a reloads sysctl takže jadro sa vracia do <code>cubic</code> a <code>tcp_fastopen=1</code>. Ručný ekvivalent:"
+  },
+  "names": {
+    "heading": "Trvalé názvy rozhraní",
+    "intro": "Iteruje nad každým fyzickým NIC, ktorý má hostiteľ (nárazník, Docker Vetvy, mosty, TAP zariadenia, väzby, Cílium, ZeroTier, WireGuard) a píše a systemd <code>.link</code> súbor viažuci aktuálny názov rozhrania na aktuálnu adresu MAC. Pomenovanie jadra logikou potom už nemôže premenovať, že NIC MAC vyhrá.",
+    "whyTitle": "Prečo na tom záleží",
+    "whyItems": [
+      "Pridanie alebo odstránenie PCIe zariadení môže presunúť číslovanie zbernice, otáčanie <code>enp3s0</code> do <code>enp4s0</code>. Ak váš <code>/etc/network/interfaces</code> odkazuje na staré meno, most zmizne na reštarte.",
+      "BIOS / Aktualizácie firmvéru niekedy menia spôsob, akým zariadenia enumerujú, s rovnakým účinkom.",
+      "LXC kontajnery s <code>hotplug</code> NIC a viazané odkazy môžu pretekať na štarte a skončiť pomenovaný nejednotne. Prinning to napraví."
+    ],
+    "writtenTitle": "Čo sa napíše",
+    "writtenIntro": "Jeden spis na fyzický NIC, na <code>/etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code>. Každý súbor začína s hlavičkou <code># Managed by ProxMenux — do not edit</code>, takže ProxMenux dokáže rozlíšiť svoje vlastné súbory od súborov <code>.link</code> poskytovaných užívateľom alebo balíkom.",
+    "writtenOutro": "Súbory <code>.link</code> z iných balíčkov alebo ručne napísané užívateľom sú ponechané na mieste iba súbory nesúce hlavičku ProxMenux sú riadené. Pri opakovanom chode funkcia zmierňuje svoju vlastnú sadu: znovu číta <code>MACAddress=</code> z každého <code>10-proxmenux-*.link</code> a padá na všetky, ktorých MAC sa už neobjavuje pod <code>/sys/class/net/</code>. Súbory napísané skorším ProxMenux vydanie v starom formáte <code>10-&lt;iface&gt;.link</code> sú migrované automaticky prvýkrát.",
+    "pveTitle": "PVE 9 vs PVE 8",
+    "pveBody": "Na Proxmox VE 9 (<code>systemd-networkd</code> rodák), skript reloads udev pravidlá po písaní <code>.link</code> súbory, takže nové hotplug NICs vyzdvihnúť správne meno bez reštartu. Na PVE 8 (<code>ifupdown2</code>), Rozhranie meno je vyriešené pri štarte tak ako tak Skript nastavuje vlajku reštartu tak či tak, aby vás prispôsobiteľné motivovalo.",
+    "reviewTitle": "Preskúmať existujúce /etc/network/interfaces prvý",
+    "reviewBody": "Ak má váš hostiteľ konfiguráciu odkazu <code>/etc/network/interfaces</code> ktoré odkazuje na názvy NIC generované štandardnou schémou jadra, odzrňovanie <em>dnešok</em> Mená sú presne to, čo chcete. Ale ak ste už ručne upravili konfig okolo konkrétnych mien, dvakrát skontrolujte pinking, čo súbor rozhrania očakáva pred reštartom.",
+    "revertTitle": "Reverzibilné z menu Odinštalovať",
+    "revertBody": "<link>0Uninstall Optimizations</link> odstraňuje iba súbory <code>10-proxmenux-*.link</code> nesúce hlavičku ProxMenux z <code>/etc/systemd/network/</code>. Akýkoľvek súbor <code>.link</code> pridaný používateľom alebo iným balíkom je zachovaný. Názvy rozhraní sa vrátia k štandardnému správaniu systemd pri ďalšej reštarte."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Sieť",
+        "href": "/docs/network",
+        "tail": " — Description"
+      },
+      {
+        "label": "Stále názvy sieťových rozhraní",
+        "href": "/docs/network/persistent-names",
+        "tail": " — Rovnaká myšlienka vystavená ako vlastné menu neskôr (použite buď, nie oboje)."
+      },
+      {
+        "label": "Odkaz na sieťové príkazy",
+        "href": "/docs/help-info/network-commands",
+        "tail": " — ip, ss, ethtool, sysctl."
+      },
+      {
+        "label": "Odinštalovať optimalizácie",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — "
+      },
+      {
+        "label": "Prispôsobiteľné Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — Späť do rodičovského menu."
+      }
+    ]
+  }
+}

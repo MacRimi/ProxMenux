@@ -1,0 +1,278 @@
+{
+  "meta": {
+    "title": "Nainštalujte obrázok, ktorý nie je v katalógu ProxMenux",
+    "description": "Preložiť obraz OCI zo súboru Compose, URL, docker spustiť príkaz alebo odkaz na obrázok, a skontrolovať, čo ProxMenux môže reprodukovať pred inštaláciou."
+  },
+  "header": {
+    "title": "Inštalovať obraz, ktorý nie je v katalógu",
+    "description": "Vlastný obraz sa prevedie zo súboru Compose, príkazu docker run alebo iba z jeho referencie. Výsledok sa zobrazí na kontrolu pred vytvorením akéhokoľvek LXC.",
+    "section": "Správca OCI aplikácií"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Ten istý konvertor, ten istý inštalátor",
+            "body": "Voľba <strong>Inštalovať obraz, ktorý nie je v katalógu</strong> používa prevodník a inštalátor šablón katalógu. Rozdiel je v tom, že zmluva je vygenerovaná v tom momente z uvedenej definície a potvrdená pred vytvorením akejkoľvek LXC."
+          }
+        }
+      ]
+    },
+    {
+      "id": "sources",
+      "title": "Ako je opísaný obrázok",
+      "intro": "Prvá obrazovka sa pýta, ako je obrázok opísaný. Štyri spôsoby, ako dať definíciu, ktorá je preložená, piaty používa iba názov obrazu, a tri vziať oci-kompozitu, ktorá je už napísaná.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Možnosť",
+              "Čo číta"
+            ],
+            "rows": [
+              [
+                "Vložiť súbor Compose v termináli",
+                "YAML je vložený v termináli a končí Ctrl+D."
+              ],
+              [
+                "Načítať súbor Compose z tohto hostiteľa",
+                "Cesta na uzle, <code>/root/docker-compose.yml</code> štandardne. Súbor musí existovať a byť na väčšine 256 KiB."
+              ],
+              [
+                "Stiahnuť súbor Compose z URL adresy",
+                "Adresa <code>http://</code> alebo <code>https://</code>, ktorá slúži surovému YAMLu. Na väčšine 256 KiB sú stiahnuté."
+              ],
+              [
+                "Vložiť príkaz docker run v termináli",
+                "Príkaz vydaný projektom. Porty, prostredie, objemy, zariadenia, schopnosti, užívateľ, zdieľaná pamäť a ďalšie podporované možnosti sú preložené."
+              ],
+              [
+                "Len odkaz na obraz bez súboru Compose",
+                "Odkaz ako <code>ghcr.io/user/application:latest</code>. Register je vyčíslený a metaúdaje OCI obrázku sa uchovávajú."
+              ],
+              [
+                "Vložiť oci-compose do terminálu",
+                "JSON je vložený v termináli a končí Ctrl+D. Nie je preložený: je kontrolovaný a nainštalovaný, ako je napísané."
+              ],
+              [
+                "Načítať oci-compose zo súboru tohto hostiteľa",
+                "Súbor JSON na uzle, <code>/root/oci-compose.json</code> štandardne, z väčšiny 2 MiB."
+              ],
+              [
+                "Stiahnuť oci-compose z adresy",
+                "Adresa <code>http://</code> alebo <code>https://</code>, ktorá slúži súboru JSON. Na väčšine 2 MiB sú stiahnuté."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/custom-source-menu.png",
+            "alt": "Menu, ktorá sa pýta, ako je opísaný obrázok, ktorý nie je v katalógu",
+            "caption": "Spôsoby, ako opísať obrázok, ktorý nie je v katalógu."
+          }
+        }
+      ]
+    },
+    {
+      "id": "reference-only",
+      "title": "Čo len odkaz na obrázok poskytuje",
+      "intro": "Obrázok nesie svoje metaúdaje, ale nie všetko, čo kompozíciu súbor zvyčajne pridáva okolo neho.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Čítanie z obrázku",
+              "Nie na obrázku",
+              "Dôsledky"
+            ],
+            "rows": [
+              [
+                "<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>, <code>WorkingDir</code> a vložené prostredie",
+                "Premenné, ktoré sa objavujú len v dokumentácii",
+                "Pridávajú sa počas inštalácie alebo s úpravou"
+              ],
+              [
+                "Objemy uvedené obrazom",
+                "Hostiteľské adresáre, ktoré tvoria iba názvy súborov",
+                "Pred inštaláciou sa pridajú ďalšie cesty"
+              ],
+              [
+                "Porty <code>EXPOSE</code>",
+                "URL, protokol alebo funkčná kontrola zdravotného stavu",
+                "Port a spôsob kontroly služby sú potvrdené"
+              ],
+              [
+                "Architektúry a trávenie v registri",
+                "Zariadenia, oprávnenia alebo externé závislosti",
+                "Žiadna z nich nie je povolená bez definície, ktorá o ňu žiada."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "title": "Preskúmanie pred inštaláciou",
+      "intro": "Po preklade definície, ProxMenux ukazuje, čo pochopil pred požiadaním o VMID, zdroje alebo skladovanie.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Analýza",
+                "body": "Čítajú sa služby, obraz, porty, cesty, životné prostredie, zariadenia, bezpečnosť a kontrola zdravia."
+              },
+              {
+                "title": "Dotaz na register",
+                "body": "Obraz musí existovať vo svojom registri a sú uvedené jeho zverejnené architektúry. Súkromný register sa prečíta s účtom uloženým pre neho."
+              },
+              {
+                "title": "Uveďte, čo sa neuplatňuje",
+                "body": "Etikety, siete Docker, nastavenia rojov a iné kľúče, ktoré nemajú žiadny vplyv na LXC sú uvedené."
+              },
+              {
+                "title": "Blokovať to, čo nemožno preložiť",
+                "body": "Kľúč bez bezpečného ekvivalentu je zobrazený v <strong>0Čo nemožno preložiť </strong> a inštalácia nepokračuje. Nič neklesne ticho."
+              },
+              {
+                "title": "Pýtajte sa na tajomstvá",
+                "body": "Premenné, ktorých mená sa čítajú ako heslo, žetón alebo kľúč sa stávajú citlivými otázkami inštalácie."
+              }
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/custom-review.png",
+            "alt": "Zhrnutie toho, čo ProxMenux pochopil zo súboru",
+            "caption": "Zhrnutie pred tým, ako zariadenie požiada o VMID a zdroje."
+          }
+        },
+        {
+          "p": "Po prijatí súhrnu je tok jedným z katalógu: meno, predvolený alebo pokročilý režim, VMID, CPU, pamäť, sieť, štart s uzlom, pretrvávajúce cesty, ďalšie cesty, kompatibilné zariadenia a konečné zhrnutie."
+        }
+      ]
+    },
+    {
+      "id": "examples",
+      "title": "Príklady vstupov",
+      "blocks": [
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Skladba",
+                "code": "services:\n  app:\n    image: ghcr.io/example/app:latest\n    ports:\n      - \"8080:8080\"\n    volumes:\n      - ./config:/config\n      - /srv/media:/media\n    environment:\n      TZ: Europe/Madrid"
+              },
+              {
+                "title": "docker run",
+                "code": "docker run -d \\\n  --name app \\\n  -p 8080:8080 \\\n  -e TZ=Europe/Madrid \\\n  -v app-config:/config \\\n  -v /srv/media:/media \\\n  ghcr.io/example/app:latest"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "oci-compose",
+      "title": "Oci-kompozit napísaný ručne",
+      "intro": "Oci-kompozit je súbor JSON aplikácia je nainštalovaná z. Katalóg udržuje jeden pre každú svoju aplikáciu a rovnaký formát môže byť napísaný ručne a nainštalovaný s touto voľbou.",
+      "blocks": [
+        {
+          "p": "Jeden napísaný ručne uvádza, čo autor rozhodne: obraz, jeho porty, premenné a zväzky, a čo zariadenie žiada. ProxMenux dokončí zvyšok pri čítaní súboru. To môže povedať, čo súbor kompozície nemôže: text otázky, heslo generované počas inštalácie, profil GPU, vlastník každého objemu, kontrola prvého štartu alebo osvedčenia uvedené na konci."
+        },
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Poraďte",
+                "body": "Súbor s chybami nie je nainštalovaný. Každá chyba označuje pole, v ktorom je, a súbor, ktorý nie je platný JSON uvádza riadok a stĺpec."
+              },
+              {
+                "title": "Preskúmanie",
+                "body": "Platný súbor ukazuje, čo inštaluje: obraz, webová adresa, porty, pretrvávajúce cesty, premenné, ktoré inštalácia požaduje a súbory, ktoré píše."
+              },
+              {
+                "title": "Inštalovať",
+                "body": "Inštalácia je jednou z aplikácií katalógu, s predvoleným alebo pokročilým nastavením."
+              }
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Súbor, ktorý rozhoduje o oprávneniach",
+            "body": "Oci-kompozit rozhodne, čo je namontované v kontajneri a s ktorými oprávneniami. Recenzia hovorí, že pred inštaláciou: nainštalovať iba súbory, ktoré pochádzajú zo zdroja, ktorému dôverujete."
+          }
+        },
+        {
+          "p": "Formát je popísaný blok po bloku, s dvoma kompletnými príkladmi, v <readmeLink>0README OCI motora</readmeLink>. Záznam o inštalácii možno čítať rovnakým spôsobom: používa sa iba šablóna, z ktorej bol nainštalovaný, a žiadna z odpovedí na túto inštaláciu."
+        }
+      ]
+    },
+    {
+      "id": "private-registries",
+      "title": "Obrázky v súkromných registroch",
+      "intro": "Obraz v súkromnom registri, ako napríklad súkromný balík na GitHub alebo súkromný úložisko na Docker Hub, sa číta s účtom uloženým v ProxMenux.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Register odmieta obraz",
+                "body": "Keď register odpovedá, že obrázok potrebuje účet, recenzia ponúka prihlásenie do tohto registra a znovu si prečíta obrázok."
+              },
+              {
+                "title": "Prihlásiť sa",
+                "body": "Užívateľ a heslo alebo prístupový token, ktorý môže vytiahnuť obrázok. Register ich kontroluje a sú uložené iba vtedy, ak ich prijme."
+              },
+              {
+                "title": "Inštalovať a aktualizovať",
+                "body": "Inštalácia stiahne obraz s týmto účtom, a tak aj aktualizácie, Upraviť, Recreate, strážny pes a kontrola aktualizácie monitora, na každom uzle klastra."
+              }
+            ]
+          }
+        },
+        {
+          "p": "<strong>0Registračné účty</strong>, v hlavnom menu aplikácie správcu OCI, uvádza uložené účty podľa registra a užívateľa, nikdy ich tajomstvo. Z každého účtu možno obraz skontrolovať, stiahnuť alebo nainštalovať a účet aktualizovať alebo odstrániť."
+        },
+        {
+          "list": {
+            "items": [
+              "GitHub (<code>ghcr.io</code>): Užívateľ je GitHub účet, a heslo osobný prístup token s <code>read:packages</code> povolenie.",
+              "Docker Hub (<code>docker.io</code>): Užívateľom je Docker Hub účet a heslo je token s povolením na čítanie.",
+              "Iné registre, vrátane jedného s vlastným portom, ako je <code>registry.example.com:5000</code>: užívateľ a heslo alebo žetón, ktorý register dáva."
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Ak sa vedie účtovná závierka",
+            "body": "V <code>/etc/pve/priv/proxmenux/registry-auth.json</code>, čitateľné iba koreňom, v rovnakom priečinku, kde Proxmox uchováva svoje úložné heslá. <code>/etc/pve</code> zdieľa každý uzol klastra, takže účet pridaný na jeden uzol sa používa na všetky z nich. Zálohovanie hostiteľa ho zahŕňa a odinštalovanie ProxMenux ho odstraňuje z každého uzla."
+          }
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Neinštalované definície",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Dockerfile bez publikovaného obrázku: obrázok musí byť postavený a zverejnený v registri OCI ako prvý.",
+              "Súbor s niekoľkými službami: je zablokovaný, pretože popisuje viac ako jeden obrázok. Táto voľba nainštaluje jeden kontajner.",
+              "<code>configs</code>, externé tajomstvá alebo formáty zariadení, ktoré nemožno jednoznačne preložiť.",
+              "Shell substitúcie, ako je <code>$(command)</code>0: výsledná hodnota musí byť napísané miesto.",
+              "<code>docker run</code> možnosti, ktoré nie sú uznané, a <code>--env-file</code>: explicitné Compose súbor sa namiesto toho prečíta."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

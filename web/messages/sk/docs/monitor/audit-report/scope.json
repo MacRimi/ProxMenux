@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Rozsah pôsobnosti a záruky",
+    "description": "Tam, odkiaľ pochádzajú údaje z auditu a správy, čo je mimo jeho pohľadu, záruky jeho návrhu a kde sa uchovávajú jeho údaje."
+  },
+  "header": {
+    "title": "Rozsah pôsobnosti a záruky",
+    "description": "Ak pochádzajú údaje z posúdenia, čo zostáva mimo jeho pohľadu a kde audit a správa uchovávajú svoje údaje.",
+    "section": "Audit a správy"
+  },
+  "sections": [
+    {
+      "id": "sees",
+      "title": "Čo pozoruje",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Konfigurácia a stav miestneho uzla.",
+              "Deklarovaná konfigurácia VM a LXC.",
+              "Stav skladu ako Proxmox VE to vie.",
+              "Dostupná história záloh a overovania.",
+              "Údaje SMART a udalosti, ktoré Monitor zozbieral.",
+              "Stav služieb, klastrov, HA a miestnych zdrojov."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "outside",
+      "title": "Čo je mimo jeho pohľadu",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Interiér hostí, nad rámec toho, čo vyhlasujú Proxmox VE.",
+              "Sieťové vybavenie mimo hostiteľa.",
+              "Diaľkové závislosti, ktoré uzol nemôže pozorovať.",
+              "Fyzický stav, ktorý hardvér nevystavuje.",
+              "Manuálne akcie alebo akcie iného softvéru, v časopise zmien."
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Chýbajúce dôkazy nie sú dôkazom neprítomnosti",
+            "body": "Zdroj, ktorý sa nedá prečítať, dáva neoverený alebo neúplný výsledok, nikdy nie zodpovedajúci. Správa uvádza zdroje, ktoré neboli k dispozícii."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guarantees",
+      "title": "Záruky dizajnu",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Stabilné identifikátory kontrol.",
+              "História behov a nálezov.",
+              "Potvrdená politika, zachránená atómovo.",
+              "Prijaté riziká z nejakého dôvodu, viditeľné.",
+              "Atribution of changes to script and function.",
+              "Zachytiť pred a po, kde je k dispozícii.",
+              "Výslovný výsledok, keď niečo nemôže byť merané alebo zachytené."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Ak sa údaje uchovávajú",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Údaje",
+              "Umiestnenie"
+            ],
+            "rows": [
+              [
+                "Politika",
+                "<code>/usr/local/share/proxmenux/audit_policy.json</code>"
+              ],
+              [
+                "Hodnotenie",
+                "Audítorská databáza monitora"
+              ],
+              [
+                "Zachytené objekty",
+                "<code>/usr/local/share/proxmenux/changes/objects/</code>"
+              ],
+              [
+                "Nevybavené záznamy",
+                "<code>/usr/local/share/proxmenux/changes/spool/</code>"
+              ],
+              [
+                "Konsolidovaný časopis",
+                "<code>/usr/local/share/proxmenux/changes.db</code>"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Nástroj na preskúmanie, nie certifikácia",
+            "body": "Audit & Report reviews, porovnáva a dokumentuje uzol. Jeho výsledky sa čítajú spolu s účelom systému, deklarovanou politikou a dostupnými zdrojmi."
+          }
+        }
+      ]
+    }
+  ]
+}

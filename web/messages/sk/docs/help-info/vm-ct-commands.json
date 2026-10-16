@@ -1,0 +1,182 @@
+{
+  "meta": {
+    "title": "Proxmox qm a pct Commands VM a LXC Manažment kontajnerov ProxMenux",
+    "description": "Odkaz na Proxmox VE qm a pct príkazy pre VM a LXC kontajnery: zoznam, konfig, štart, stop, vypnutie, reštart, zničiť, klon, migrovať, snímka, zmena veľkosti, plus pct exec / enter / push / pull pre kontajnery.",
+    "ogTitle": "Proxmox qm a pct Commands VM a LXC Správa kontajnerov",
+    "ogDescription": "Odkaz na Proxmox VE qm a pct príkazy LXC kontajnery z CLI: štart, stop, konfigurácia, snímka, migrácia, klon, zničiť.",
+    "twitterTitle": "Proxmox qm / pct Commands ProxMenux",
+    "twitterDescription": "Curated qm / pct príkazy pre správu virtuálnych strojov a LXC kontajnerov v Proxmox VE."
+  },
+  "header": {
+    "title": "Správa VM a CT",
+    "description": "Curated reference for the qm (VM) and pct (LXC Kontajnery) príkazy. Zoznam, životný cyklus (začiatok / zastavenie / zničenie / zničenie), kontrola konfiškácie, a kontajner-špecifické operácie, ako je exec, vstúpiť, tlačiť a ťahať.",
+    "section": "Pomoc a informácie"
+  },
+  "intro": {
+    "title": "Najprv nájdite VMID alebo CTID",
+    "body": "Takmer každý príkaz potrebuje numerickú identifikáciu. Použite <code>qm list</code> pre VMs a <code>pct list</code> pre kontajnery. Nahradiť <code>&lt;vmid&gt;</code> / <code>&lt;ctid&gt;</code> v útržkoch s aktuálnym ID pred spustením."
+  },
+  "commandGroups": [
+    {
+      "title": "Zoznam a informácie",
+      "commands": [
+        {
+          "command": "qm list",
+          "description": "Zobraziť všetky VM"
+        },
+        {
+          "command": "pct list",
+          "description": "Zobraziť všetky LXC kontajnery"
+        },
+        {
+          "command": "qm config <vmid>",
+          "description": "Zobraziť konfiguráciu VM (vyhovuje qm)"
+        },
+        {
+          "command": "pct config <ctid>",
+          "description": "Zobraziť konfiguráciu kontajnera (vyhovuje pct)"
+        }
+      ]
+    },
+    {
+      "title": "Konfiguračné súbory (raw)",
+      "commands": [
+        {
+          "command": "cat /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Zobraziť konfiguračný súbor VM"
+        },
+        {
+          "command": "cat /etc/pve/lxc/<ctid>.conf",
+          "description": "Zobraziť konfiguračný súbor CT"
+        },
+        {
+          "command": "nano /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Upraviť konfiguračný súbor VM (nano)"
+        },
+        {
+          "command": "nano /etc/pve/lxc/<ctid>.conf",
+          "description": "Upraviť konfiguračný súbor CT (nano)"
+        },
+        {
+          "command": "vi /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Upraviť konfiguračný súbor VM (vi)"
+        },
+        {
+          "command": "vi /etc/pve/lxc/<ctid>.conf",
+          "description": "Upraviť konfiguračný súbor CT (vi)"
+        }
+      ]
+    },
+    {
+      "title": "Riadenie VM",
+      "commands": [
+        {
+          "command": "qm start <vmid>",
+          "description": "Spustiť VM. Použite správne <vmid>"
+        },
+        {
+          "command": "qm stop <vmid>",
+          "description": "Vynútene zastaviť VM. Použite správne <vmid>"
+        },
+        {
+          "command": "qm shutdown <vmid>",
+          "description": "Gracefully vypnutie virtuálneho stroja"
+        },
+        {
+          "command": "qm reset <vmid>",
+          "description": "Resetovať virtuálny stroj (hard reštart)"
+        },
+        {
+          "command": "qm suspend <vmid>",
+          "description": "Pozastaviť virtuálny stroj"
+        },
+        {
+          "command": "qm resume <vmid>",
+          "description": "Obnoviť zavesený virtuálny stroj"
+        },
+        {
+          "command": "qm destroy <vmid>",
+          "description": "Vymazať VM (nedá sa vrátiť späť). Použite správne <vmid>"
+        }
+      ]
+    },
+    {
+      "title": "Správa kontajnerov",
+      "commands": [
+        {
+          "command": "pct start <ctid>",
+          "description": "Spustiť kontajner. Použite správne <ctid>"
+        },
+        {
+          "command": "pct stop <ctid>",
+          "description": "Vynútene zastaviť kontajner. Použite správne <ctid>"
+        },
+        {
+          "command": "pct shutdown <ctid>",
+          "description": "Gracefully vypnutie kontajnera"
+        },
+        {
+          "command": "pct restart <ctid>",
+          "description": "Znovu spustiť kontajner"
+        },
+        {
+          "command": "pct destroy <ctid>",
+          "description": "Vymazať CT (nedá sa vrátiť späť). Použite správne <ctid>"
+        }
+      ]
+    },
+    {
+      "title": "Prevádzka kontajnerov",
+      "commands": [
+        {
+          "command": "pct exec <ctid> -- getent passwd | column -t -s :",
+          "description": "Zobraziť používateľov CT v tabuľke"
+        },
+        {
+          "command": "pct exec <ctid> -- ps aux --sort=-%mem | head",
+          "description": "Procesy s najväčšou spotrebou pamäte v CT"
+        },
+        {
+          "command": "pct enter <ctid>",
+          "description": "Zadajte obal kontajnera"
+        },
+        {
+          "command": "pct push <ctid> <source> <dest>",
+          "description": "Kopírovať súbor z hostiteľa do kontajnera"
+        },
+        {
+          "command": "pct pull <ctid> <source> <dest>",
+          "description": "Kopírovať súbor z kontajnera na hostiteľa"
+        }
+      ]
+    }
+  ],
+  "destroyWarn": {
+    "title": "Zničiť je nezvratné",
+    "bodyRich": "<code>qm destroy</code>0 a <code>pct destroy</code> zmazať VM / CT a všetky jeho disky. Neexistuje žiadne potvrdenie prompt v predvolenom nastavení. Vezmite zálohu prvý, ak je nejaká šanca, že by ste mohli chcieť dáta späť, pozri <backupLink>Backup a Obnoviť</backupLink>."
+  },
+  "qmConfigTip": {
+    "title": "qm config vs editing the .conf file directly",
+    "bodyRich": "<code>qm config &lt;vmid&gt;</code>0 a <code>pct config &lt;ctid&gt;</code> si prečítal súbor pomocou vlastného parsera Proxmox je normalizovaný, komentáre vyzlečený, až do zmien zobrazených samostatne. Úprava <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> alebo <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> priamo obíde parser. Užitočné pre opravu poškodené konfig alebo použitie nastavenia <code>qm set</code> nebude akceptovať, ale zastaviť hosťa ako prvý, aby sa zabránilo pretekom. Súborový systém zoskupenia (<code>pmxcfs</code>) sa stará o šírenie zmeny na iné uzly."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/help-info/backup-commands",
+        "label": "Zálohovanie a obnova",
+        "tail": " — "
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Úložiská a disky",
+        "tail": " — "
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Prehľad pomoci a informácií",
+        "tail": "."
+      }
+    ]
+  }
+}

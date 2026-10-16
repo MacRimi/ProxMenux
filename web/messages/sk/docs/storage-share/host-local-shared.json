@@ -1,0 +1,103 @@
+{
+  "meta": {
+    "title": "Hostiteľ: Pridať zdieľaný adresár na Hostiteľa ProxMenux Dokumentácia",
+    "description": "Vytvoriť hostiteľský adresár pripravený pre LXC viazanie pripojiť, s oprávneniami, ktoré pracujú pre privilegované a neprivilegované kontajnery naraz. Sticky bit + svet-rwx + ACL pre predvolené dedičstvo.",
+    "ogTitle": "Hostiteľ: Pridať zdieľaný adresár na Hostiteľa ProxMenux Dokumentácia",
+    "ogDescription": "Pripravte si hostiteľský adresár pre LXC pripojiť s oprávneniami kompatibilnými s privilegovanými a neprivilegovanými CT."
+  },
+  "header": {
+    "title": "Hostiteľ: Pridať zdieľaný adresár na hostiteľa",
+    "description": "Vytvoriť hostiteľov adresár určený na viazanie do jedného alebo viacerých LXC kontajnery. ProxMenux uplatňuje súbor povolení, ktoré pracujú ako pre privilegované, tak aj neprivilegované CT naraz LXC Mount Manager si to môže vyzdvihnúť neskôr.",
+    "section": "Úložisko a zdieľanie · hostiteľ"
+  },
+  "intro": {
+    "title": "Čo je toto (a NIE)",
+    "body": "Tento nástroj robí <strong>nie</strong> zaregistrovať čokoľvek v Proxmox (nie <code>pvesm add</code> tu). To len pripravuje adresár na hostiteľa <code>/mnt/shared</code>, predvolene s povoleniami, ktoré LXC kontajner môže čítať a písať, bez ohľadu na to, či CT je privilegovaná alebo neprivilegovaná. Zvyčajný ďalší krok je priviazať ho do každého CT s <mountLink>LXC Správca pripojenia</mountLink>."
+  },
+  "why": {
+    "heading": "Prečo je to špecializovaný nástroj",
+    "intro": "Keď pripojíte adresár do LXC kontajnera, práva závisia od:",
+    "items": [
+      "Či CT ci <strong>Privilegované</strong> (UID 0 on CT = UID 0 v prípade hostiteľa) alebo <strong>neprivilegovaný</strong> (UID 0 on CT = UID 100000 na hostiteľa100000).",
+      "Vlastníctvo hostiteľského adresára (súbor vo vlastníctve UID) 1000 na hostiteľa sa objaví ako \"ostatní\" z pohľadu neprivilegované CT, pretože nie CT užívateľské mapy pre host UID 1000).",
+      "Či viaceré CT zdieľajú rovnaký adresár (rôzne CT môžu mať rôzne UID rozsahy)."
+    ],
+    "outro": "Pragmatický trik ProxMenux použitie tu je pre <strong>poskytnúť každému prístup</strong> na úrovni súborového systému: svet-rwx plus lepkavý bit plus ACL, takže nové súbory dedia rovnaké práva. Akékoľvek mapované UID môže čítať a písať; nie je potrebné nastavenie UID / GID."
+  },
+  "howRuns": {
+    "heading": "Ako beží skript",
+    "body": "Skript nemá žiadne hlavné menu, spúšťa jednu akciu, <strong>0Vytvára zdieľaný adresár</strong>. Fáza 1 zhromažďuje cieľovú cestu; Fáza 2 vytvára adresár a uplatňuje oprávnenia."
+  },
+  "bits": {
+    "heading": "Čo robí každé povolenie",
+    "intro": "Číslo <strong>1777</strong> nie je svojvoľné <code>/tmp</code>. Tri vlastnosti kombinované:",
+    "headerBit": "Bit",
+    "headerEffect": "Účinok",
+    "headerWhy": "Prečo na tom záleží tu",
+    "rows": [
+      {
+        "bit": "1 (lepkavé)",
+        "effect": "Iba vlastník súboru môže odstrániť / premenovať súbor.",
+        "why": "Zabraňuje CT-A zmazaniu súborov vytvorených CT-B v rovnakom adresári."
+      },
+      {
+        "bit": "777 (rwx-rwx-rwx)",
+        "effect": "Každý vie čítať, písať a prechádzať.",
+        "why": "Neprivilegované CT UID (100000+) sa objavujú ako \"ostatné\" z hostiteľa, takže svet-rwx im dáva prístup."
+      },
+      {
+        "bit": "ACL (predvolené)",
+        "effect": "Zdedil na každý novo vytvorený súbor / poddir.",
+        "why": "Oprávnenia sa uplatňujú navždy"
+      }
+    ],
+    "privTitle": "Privilegované CT vidia to isté, len bez zmeny.",
+    "privBody": "Pre privilegovanú CT, UID 0 v CT je UID 0 na hostiteľa, takže <code>root</code> Vnútri CT môžete prečítať / napísať adresár hostiteľa priamo. <code>1777</code> je stále v poriadku, znamená to len non-koreňových užívateľov vo vnútri CT môžete tiež použiť adresár. Rovnaké povolenia sa vzťahujú na obidva prípady."
+  },
+  "where": {
+    "heading": "Kam dať zdieľaný adresár",
+    "intro": "Miesto zberač ponúka štyri možnosti:",
+    "opt1Title": "1. Vytvoriť nový priečinok v /mnt",
+    "opt1Body": "Zvyčajná voľba. ProxMenux auto-navrhuje prvý voľný názov (<code>shared</code>, <code>shared2</code>, <code>shared3</code>, ...). Stačí potvrdiť alebo napísať iný názov.",
+    "opt2Title": "2. Zadajte vlastnú cestu",
+    "opt2Body": "Pre adresáre mimo <code>/mnt</code>. Akákoľvek absolútna cesta funguje (napr. <code>/srv/media</code>, <code>/data/family</code>). Skript uplatňuje rovnaké práva.",
+    "opt3Title": "3. Zobraziť existujúce priečinky v /mnt",
+    "opt3Body": "Diagnostika iba na čítanie: uvádza každý adresár pod <code>/mnt</code> so svojimi oprávneniami, vlastníkom a dostupným priestorom. Užitočné pred vytvorením nového, aby sa zabránilo pomenovaniu kolízie.",
+    "opt4Title": "4. Zrušiť",
+    "opt4Body": "Exits bez vytvorenia niečoho. Rovnako ako stlačenie <kbd>Esc</kbd>.",
+    "tipTitle": "Kde žije /mnt?",
+    "tipBody": "Štandardne <code>/mnt</code> sedí na root súborovom systéme Proxmox. Ak chcete zdieľaný adresár na inom disku (date disk, ZFS), pripojiť tento disk pod <code>/mnt/&lt;name&gt;</code> najprv (Disk Manager alebo <diskLink>Pridať lokálny disk ako Proxmox storage</diskLink>), a potom vytvoriť zdieľaný adresár ako podpriečinok vo vnútri"
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent",
+    "body": "Celý tok sa dá prehrať ručne:"
+  },
+  "next": {
+    "heading": "Ďalší krok: naviazať-mount do kontajnerov",
+    "body": "Vytváranie adresára len ho pripravuje Aby bolo viditeľné vo vnútri jedného alebo viacerých LXC, použite <mountLink>0LXC Mount Manager</mountLink> na viazanie <code>/mnt/&lt;name&gt;</code> do CT. Vzhľadom k tomu, oprávnenia sú už otvorené, Mount Manager bude <strong>not</strong> ponuka na ich zmenu"
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "mkdirTitle": "\"Failed to create directory\"",
+    "mkdirBody": "Zvyčajne je problém súborového systému: <code>/mnt</code> je na súborovom systéme iba na čítanie, cesta obsahuje komponent, ktorý nie je adresárom (napr. ste zadali <code>/etc/passwd/sub</code>), alebo disk je plný. Overte si to s <code>df -h /mnt</code> a <code>mount | grep /mnt</code>.",
+    "writeTitle": "Kontajner nemôže písať napriek otvoreným povoleniam",
+    "writeBody": "Dvojitú kontrolu CT je v skutočnosti pomocou viazania (<code>pct config &lt;ctid&gt; | grep ^mp</code>). Vnútri CT, beh <code>touch /mnt/data/test-$(date +%s)</code> Ak to zlyhá s povolením odmietnuté, može byť na hostiteľskom súborovom systéme, ktorý neuznáva ACL (niektoré staršie <code>ext3</code> alebo <code>vfat</code> pripevňovacie zariadenia). Presunúť zdieľaný adresár do ext4 / xfs / btrfs / zfs záloha.",
+    "aclTitle": "ACL príkazy ticho nedostupné",
+    "aclBody": "Na minimálnej inštalácii Proxmox <code>setfacl</code>0 / <code>getfacl</code> nemusia byť nainštalované. Skript padá späť elegantne (<code>command -v setfacl</code> kontrola) a uplatňuje POSIX oprávnenia len Nainštalujte <code>acl</code> s <code>apt-get install -y acl</code> a znovu spustite skript na adresári."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "Správca LXC mountov",
+        "tail": " — "
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "label": "Pridať lokálny disk ako Proxmox úložisko",
+        "tailRich": " — Ak chcete zdieľaný adresár na vyhradenom disku, pripravte najprv disk, pripojte ho pod <code>/mnt</code>, potom tu vytvorte zdieľaný podpriečinok."
+      }
+    ]
+  }
+}

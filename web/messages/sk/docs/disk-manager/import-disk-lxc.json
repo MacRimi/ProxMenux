@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Importovať disk do LXC | ProxMenux Dokumentácia",
+    "description": "Pripojte fyzický disk k existujúcemu LXC kontajneru na Proxmox VE pomocou ProxMenux. Ovláda detekciu súborového systému / formátovanie, pripojiť bod, neprivilegované → privilegované cesty konverzie a trvalého zariadenia.",
+    "ogTitle": "Importovať disk do LXC | ProxMenux Dokumentácia",
+    "ogDescription": "Pripojte fyzický disk k existujúcemu LXC kontajneru. Rukoväte súborového systému, pripojiť bod a neprivilegované → privilegované konverzie."
+  },
+  "header": {
+    "title": "Importovať disk do LXC",
+    "description": "Pripojte fyzický disk k existujúcemu LXC kontajneru na Proxmox hostiteľa. ProxMenux detekuje voľné disky, voliteľne ich formátuje podporovaným súborovým systémom a prepojí partíciu na bod pripojenia vo vnútri kontajnera pomocou trvalých trás zariadenia.",
+    "section": "Správca disku · LXC"
+  },
+  "intro": {
+    "title": "VM0 passough vs LXC passhom",
+    "body": "LXC Prienik je <strong>nie je surovým blokovacím zariadením</strong>. Kontajner dostane <em>Bod pripojenia</em> Takže adresár podporovaný partíciou, ktorú si vyberiete na hostiteľa. Na rozdiel od VM, jadro hosťa je hostiteľským jadrom, takže súborový systém (ext4 / xfs / btrfs) je čítaný a spravovaný samotným Proxmoxom a potom vystavený kontajneru."
+  },
+  "howRuns": {
+    "heading": "Ako beží skript",
+    "body": "Prietok má dve fázy s jasným oddelením medzi \"zhromažďovaním informácií a rozhodnutí\" a \"skutočne zmenou kontajnera konfig.\" Až do konečného potvrdenia sa do CT nič nemontuje.",
+    "summary": "ProxMenux filtruje koreňový disk, namontované disky a disky, na ktoré už odkazuje akýkoľvek VM/LXC config. Disky s aktívnymi ZFS/LVM/RAID členstvo sú skryté; stale podpisy ukazujú"
+  },
+  "prereqs": {
+    "heading": "Predpoklady",
+    "items": [
+      "Aspoň jeden kontajner LXC definovaný na hostiteľovi.",
+      "Kontajner je <strong>0privileged</strong>, alebo akceptujete ponuku skriptu previesť.",
+      "Aspoň jeden fyzický disk nepoužívaný hostiteľom alebo iným hosťom."
+    ],
+    "warnTitle": "Požadovaný privilegovaný kontajner",
+    "warnBody": "Priame zariadenie prechádzajúce do LXC nádoba funguje len vtedy, ak je nádoba <strong>Privilegované</strong>. Ak skript detekuje <code>unprivileged: 1</code> v konfigurácii ponúka previesť na mieste (edits <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>). Zrušiť, ak nemôžete prijať bezpečnostný kompromis privilegovaného kontajnera."
+  },
+  "steps": {
+    "heading": "Krok za krokom",
+    "stepLabel": "Krok",
+    "list": [
+      {
+        "title": "Vyberte cieľovú nádobu",
+        "img": "/disk/select-container.png",
+        "caption": "Výberové menu kontajnera",
+        "bodyRich": "ProxMenux uvádza každý LXC kontajner na hostiteľa (<code>pct list</code>). Vyberte ten, ktorý dostane disk. Ak je kontajner neprivilegovaný, ponúka sa mu konvertovať teraz."
+      },
+      {
+        "title": "Vyberte fyzický disk",
+        "img": "/disk/disk-selection-ct.png",
+        "caption": "Voľné disky detekované na hostiteľovi (so štítkami pre zastavené metaúdaje)",
+        "bodyRich": "Zobrazujú sa len bezpečné kandidátky. Na rozdiel od VM tok, tento skript sa pripojí <strong>jeden disk na spustenie</strong> Spustite to znova pre každý ďalší disk, ktorý chcete pridať."
+      },
+      {
+        "title": "Formát alebo opakované použitie",
+        "intro": "Skript kontroluje disk:",
+        "items": [
+          "Ak už nesie podporovaný súborový systém (ext4 / xfs / btrfs) môžete ho opätovne použiť ako-is (existujúce súbory sú zachované).",
+          "Ak nemá podporovaný súborový systém, ponúka sa na jeho formátovanie. Pick ext4 / xfs / btrfs."
+        ]
+      },
+      {
+        "title": "Vyberte bod pripojenia",
+        "bodyRich": "Napíšte cestu, kde by mal kontajner vidieť disk, napr. <code>/mnt/data</code> alebo <code>/mnt/disk_passthrough</code>. Toto je cesta <em>inside</em> kontajner; hostiteľ už vidí partíciu pod <code>/dev/disk/by-id/…</code>."
+      },
+      {
+        "title": "Pripojiť a overiť",
+        "img": "/disk/assignment-ct.png",
+        "caption": "Pridelenie CT",
+        "bodyRich": "ProxMenux pridá čerstvý <code>mpN:</code> vstup do kontajnera konfigurovať, preskočiť indexy už v prevádzke, a znovu prečíta konfiguráciu potvrdiť. Ak je kontajner beží, montáž je exec'd žiť; inak to má vplyv na ďalší začiatok.",
+        "extraImg": "/disk/result-point.png",
+        "extraAlt": "Bod pripojenia vytvorený úspešne",
+        "extraCaption": "Pripojiť bod vytvorený a overený"
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent",
+    "body": "Scenár zabalí <code>pct set</code>. Priame vyvolanie jedného disku vyzerá ako:"
+  },
+  "important": {
+    "heading": "Dôležité úvahy",
+    "items": [
+      "<strong>0One disk per run</strong>. Znovu spustiť skript pre každý ďalší disk.",
+      "Do <strong>0not</strong> pripojiť rovnakú partíciu do niekoľkých kontajnerov, ktoré by mohli pripojiť súčasne",
+      "<strong>0Staré metaúdaje</strong> (RAID / ZFS / LVM) musia byť vymazané manuálne predtým, než vám skript umožní formátovať, inak <code>mkfs</code> odmietne prepísať. Na to použite nástroj <wipeLink>Format / Wipe Fyzický Disk</wipeLink>."
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "unprivTitle": "\"Nemôže pokračovať s neprivilegovaným kontajnerom\"",
+    "unprivBody": "Odmietli ste ponuku na konverziu. Buď znovu spustiť a prijať konverziu, alebo previesť kontajner ručne editáciou <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> a nahradiť <code>unprivileged: 1</code> s <code>unprivileged: 0</code>. Môžete tiež prestavať kontajner ako privilegovaný, ak radšej nepremieňate na mieste.",
+    "permsTitle": "Práva vnútri kontajnera sú nesprávne",
+    "permsBody": "Pripojí sa z hostiteľa do privilegovanej kontajnerovej pôdy ako <code>root:root</code>. Ak služba vnútri CT beží ako iný užívateľ (napr. <code>www-data</code> pre Nextcloud), <code>chown</code>/<code>chmod</code> vo vnútri kontajnera, aby zodpovedal jeho UID/GID po prvej montáži."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importovať disk do VM",
+        "tail": " — "
+      },
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "LXC mount pointy (Host ↔ CT)",
+        "tail": " Zdieľať adresáre hostiteľa s CT namiesto pripojenia celého disku."
+      },
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "VM a CT Riadiace príkazy",
+        "tail": " — "
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Prehľad správcu diskov",
+        "tail": "."
+      }
+    ]
+  }
+}

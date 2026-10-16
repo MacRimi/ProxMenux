@@ -1,0 +1,58 @@
+{
+  "meta": {
+    "title": "Externé repozitóriá Dokumentácia ProxMenux",
+    "description": "ProxMenux sa integruje s vybranými externými úložiskami skriptov (komunitné skripty, ZimaOS) ako alternatívami v niektorých sekciách menu. Každý externý skript je jasne označený svojím zdrojom; hlásenia o chybách idú do pôvodného správcu.",
+    "ogTitle": "Externé repozitóriá Dokumentácia ProxMenux",
+    "ogDescription": "Externé úložiská skriptov integrované do ProxMenux ako alternatívne možnosti v menu."
+  },
+  "header": {
+    "title": "Externé repozitáre",
+    "description": "ProxMenux sa integruje s vybranými externými úložiskami skriptov ako alternatívne možnosti v niektorých častiach menu. Tieto skripty pochádzajú z dôveryhodných zdrojov tretích strán a sú jasne označené ich pôvodom, keď sú zobrazené v menu.",
+    "section": "Externé repozitáre"
+  },
+  "practice": {
+    "title": "Čo to znamená v praxi",
+    "body": "Keď je možnosť menu podporovaná externým skriptom (namiesto vlastného kódu ProxMenux), v ponuke sa výslovne uvádza, odkiaľ je a z ktorého úložiska sa načíta. ProxMenux pôsobí ako spúšťač, nemení externé skripty. Problémy s tým, čo externý skript patrí do správcu tohto úložiska, nie ProxMenux."
+  },
+  "integrated": {
+    "heading": "V súčasnosti integrovaná",
+    "usedInLabel": "Použité v:",
+    "items": [
+      {
+        "name": "community-scripts / ProxmoxVE",
+        "url": "https://community-scripts.github.io/ProxmoxVE/",
+        "description": "Duchovný nástupca teckových skriptov. Veľký katalóg jednorázových skriptov pre nasadenie LXC (Home Assistant, Plex, Frigate, ...), VMs, addons a PVE vylepšenia.",
+        "usedIn": "Pomocník skripty spúšťač, Network (NIC offloading fix pre Intel e1000e)"
+      }
+    ]
+  },
+  "attribution": {
+    "heading": "Atribution & Uznanie",
+    "items": [
+      "Kredit je vždy daný pôvodným autorom v ponuke a na stránke dokumentácie, ktorá zabalí skript.",
+      "Odkaz na zdrojový úložisko je zobrazený",
+      "Užívatelia sú povzbudzovaní, aby podporovali vývojárov týchto externých projektov (dávať"
+    ]
+  },
+  "report": {
+    "title": "Kde nahlásiť problémy s externými skriptmi",
+    "body": "Ak skript z jedného z týchto externých archívov nefunguje tak, ako sa očakávalo, <strong>nahláste ho priamo do tohto úložiska</strong> - Nie. ProxMenux. ProxMenux len stiahne a spustí skript doslova; nemení zdroj. Pôvodný správca je tá správna osoba na triedenie a opravu. ProxMenux problémy sa týkajú problémov so samotným štartérom alebo s tým, ako ProxMenux integruje externý skript."
+  },
+  "suggest": {
+    "heading": "Navrhované nové externé archívy",
+    "intro": "Našiel si skript alebo úložisko, ktoré by sa pekne zmestili do menu ProxMenux? Navrhnite to prostredníctvom:",
+    "discussionTitle": "🙂 Otvoriť diskusiu",
+    "discussionBody": "Najlepšie pre nápady",
+    "issueTitle": "🙂 Otvoriť spornú otázku",
+    "issueBody": "V prípade žiadostí o špecifické vlastnosti s jasným rozsahom pôsobnosti."
+  },
+  "candidate": {
+    "title": "Čo robí dobrého kandidáta na integráciu",
+    "items": [
+      "Otvorený zdroj s aktívnym správcom.",
+      "Idempotentné / bezpečné bežať viac ako raz.",
+      "Nemodifikuje Proxmox core config.",
+      "Popolom problém ProxMenux sa už nevzťahuje (vyhýba sa duplicite funkcie)."
+    ]
+  }
+}

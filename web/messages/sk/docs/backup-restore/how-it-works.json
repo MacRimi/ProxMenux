@@ -1,0 +1,205 @@
+{
+  "meta": {
+    "title": "Ako ProxMenux Backup funguje interne",
+    "description": "Detailné členenie toho, čo obsahuje záloha ProxMenux: korektúry vytvorené rsync štandardného profilu trasy, štruktúrovaný manifest vytvorený šiestimi nezávislými kolektormi a inventár aplikácie, ktorý riadi automatickú reinštaláciu balíkov a komponentov po obnovení.",
+    "ogTitle": "Ako ProxMenux Backup funguje interne",
+    "ogDescription": "Tri užitočné zaťaženie zálohy ProxMenux vysvetlil: rootfs, manifest a aplikácie.",
+    "twitterTitle": "Ako ProxMenux Zálohové práce ProxMenux",
+    "twitterDescription": "Tri užitočné zaťaženie zálohy ProxMenux a ako obnova reprodukuje zdroj hostiteľa z nich."
+  },
+  "header": {
+    "title": "Ako to funguje",
+    "description": "Interné členenie zálohovania ProxMenux",
+    "section": "Záloha a obnova"
+  },
+  "intro": {
+    "title": "Jeden archív, tri užitočné zaťaženie",
+    "body": "Každá záloha vytvára rozloženie adresára s tromi dobre definovanými užitočnými prostriedkami pod jedným koreňom inscenácie. Archív nahraný do cieľa (lokálne <code>.tar.zst</code>, zálohovanie PBS alebo Borg archív) obsahuje toto presné rozloženie. Obnovenie číta tri užitočné zaťaženie nezávisle, v špecifickom poradí, ktoré zaručuje správnosť: <strong>rootfs</strong> je skopírovaný ako prvý na položenie konfigurácie, <strong> manifest</strong> je konzultovaný zistiť drift a rozhodnúť, čo preskočiť, a <strong>súpis aplikácie</strong> riadi post-boot reinštalovať priechod. Žiadny cross-payload d condocies"
+  },
+  "layout": {
+    "heading": "Rozloženie archívu",
+    "intro": "Každý archív sleduje rovnaké rozloženie stromov bez ohľadu na cieľ. Podadresár <code>metadata/</code> má štruktúrované užitočné zaťaženie; podadresár <code>rootfs/</code> má kópiu súborového systému.",
+    "treeCaption": "Zoznam inscenácií bol položený počas zálohy. Každá destinácia dostane rovnaký strom (prispôsobený do svojho rodného formátu: decht pre miestne, PBS kúsky pre PBS, Borg segmenty pre Borg).",
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state\n├── metadata/\n│   ├── packages.manual.list       # apt-mark showmanual\n│   ├── run_info.env               # backup run identity + kernel version + pmxcfs method\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, …\n    ├── root/                      # /root (with volatile subdirs excluded)\n    ├── usr/local/                 # /usr/local/bin, /usr/local/share/proxmenux, …\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/…"
+  },
+  "rootfs": {
+    "heading": "Rootfs užitočné zaťaženie",
+    "intro": "Strom <code>rootfs/</code> je kópiou <strong>plain súborového systému </strong> vyrobený <code>rsync</code> zo zdrojového hostiteľa. Obsahuje kurovaný <strong>default profil</strong> ciest, ktoré majú význam pre Proxmox obnoviť, plus akékoľvek <strong>custom cesty</strong> pridal používateľ k záložnej práci alebo interaktívne sedenie. Sada je zámerne úzka: iba cesty, ktoré buď <em> Hold konfigurácia</em> alebo <em>hold stav, že Proxmox nemôže regenerovať na vlastnú </em>.",
+    "defaultProfileTitle": "Štandardný profil",
+    "defaultProfileBody": "Štandardný profil je definovaný <code>hb_default_profile_paths</code> v <code>lib_host_backup_common.sh</code>. Zahŕňa osem kategórií, ktoré spolu opisujú fungujúceho hostiteľa Proxmoxu:",
+    "categoriesTitle": "Kategórie trás",
+    "categoryRows": [
+      {
+        "category": "Jadro PVE",
+        "paths": "/etc/pve, /var/lib/pve-cluster, /etc/vzdump.conf",
+        "why": "Cluster filesystem obsah a vzdump predvolené. Databáza pmxcfs (<code>config.db</code>) je zachytená ako konzistentná snímka prostredníctvom <code>sqlite3 .backup</code> bez zastavenia klastra a bočné autá <code>.db-wal</code> / <code>.db-shm</code> sú vylúčené z rsync. Keď <code>sqlite3</code> nie je k dispozícii, <code>config.db.raw-fallback</code> je upustené miesto, ktoré obnovenie podporuje automaticky."
+      },
+      {
+        "category": "Identita hostiteľa & sieť",
+        "paths": "/etc/hostname, /etc/hosts, /etc/timezone, /etc/resolv.conf, /etc/network, /etc/systemd/network",
+        "why": "Všetko, čo hostiteľ musí prísť na sieť s rovnakou identitou. Súbory <code>.link</code> pod <code>/etc/systemd/network</code> pin NIC názvy do ich MAC, takže reinštalácie a zmeny hardvéru nepremenujú rozhrania."
+      },
+      {
+        "category": "Prístup & auth",
+        "paths": "/etc/ssh, /etc/sudoers, /etc/sudoers.d, /etc/pam.d, /etc/security",
+        "why": "SSH kľúče, pravidlá sudo a PAM konfigurácia. Strata týchto zámkov užívateľa z obnoveného hostiteľa."
+      },
+      {
+        "category": "Jadro a štart systému",
+        "paths": "/etc/default/grub, /etc/kernel, /etc/modules, /etc/modules-load.d, /etc/modprobe.d, /etc/sysctl.conf, /etc/sysctl.d, /etc/udev/rules.d, /etc/fstab, /etc/iscsi, /etc/multipath",
+        "why": "IOMMU žetóny, čiernu listinu modulu, ID zariadenia VFIO, upevňovací stôl, konfigurácia úložiska."
+      },
+      {
+        "category": "Shell a miestne nastavenia",
+        "paths": "/etc/environment, /etc/bash.bashrc, /etc/inputrc, /etc/profile, /etc/profile.d, /etc/locale.gen, /etc/locale.conf",
+        "why": "Systémové nastavenie shellu, environmentálne premenné, konfigurácia lokálnej generácie."
+      },
+      {
+        "category": "Balenie a cron",
+        "paths": "/etc/apt, /etc/cron.d, /etc/cron.{daily,hourly,weekly,monthly}, /etc/cron.allow, /etc/cron.deny, /var/spool/cron/crontabs",
+        "why": "APT zdroje pre konzistentné riešenie balíkov, plánované úlohy definované užívateľom."
+      },
+      {
+        "category": "Stav a nástroje ProxMenux",
+        "paths": "/etc/proxmenux, /etc/systemd/system, /etc/log2ram.conf, /etc/logrotate.conf, /etc/logrotate.d, /etc/lm-sensors, /etc/sensors3.conf, /etc/fail2ban, /etc/snmp, /etc/postfix, /etc/wireguard, /etc/openvpn, /etc/grafana, /etc/influxdb, /etc/prometheus, /etc/telegraf, /etc/zabbix",
+        "why": "Voliteľné, ale bežné náradie Proxmox. Chýbajúce cesty sú zaznamenané v <code>metadata/missing_paths.txt</code> bez zastavenia zálohy."
+      },
+      {
+        "category": "Bináre a korienky ProxMenux",
+        "paths": "/usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux, /var/lib/proxmenux, /root (bez prémiových subdirov)",
+        "why": "Binárne systémy nainštalované ProxMenux a konfigurácia na užívateľa podľa <code>/root</code>. Prchavé cesty (<code>.bash_history</code>, <code>.cache/</code>, <code>tmp/</code>, <code>.local/share/Trash/</code>) sú z kópie vylúčené. <code>/var/lib/proxmenux</code> drží plánované záložné úlohy a hostiteľský štát udržiava ProxMenux; obnovenie inscenácie, rollback kópie a post-restore markery sú vylúčené, pretože patria k hostiteľovi, ktorý prevádzkuje obnovenie."
+      },
+      {
+        "category": "Stav ZFS (podmienený)",
+        "paths": "/etc/zfs",
+        "why": "Zahrnuté iba vtedy, keď zdroj spustí ZFS. Obsahuje <code>zpool.cache</code> a <code>hostid</code>."
+      }
+    ],
+    "customTitle": "Rozšírenie profilu vlastnými cestami",
+    "customBody": "Okrem predvoleného profilu, ProxMenux ponúka dva spôsoby, ako zahrnúť ďalšie cesty do zálohy. Skladajú sa bez konfliktu a obe sa vzťahujú na interaktívne zálohy a plánované pracovné miesta.",
+    "customExtrasTitle": "1. Trvalé doplnky (na-host súbor)",
+    "customExtrasBody": "Textový súbor na <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code> obsahuje zoznam absolútnych ciest, ktoré má používateľ na tomto hostiteľovi označené ako \"vždy vrátane.\" Keď spustí záloha v režime <strong>Default</strong>, ProxMenux automaticky pripojí tieto cesty k štandardnému profilu bez opýtania. Súbor je editovaný z rozhrania Jedna absolútna dráha na riadok; <code>#</code> komentáre sú povolené.",
+    "customModeTitle": "2. Vlastný režim (na beh)",
+    "customModeBody": "Spustenie zálohy v režime <strong>0Custom</strong> nahrádza automatickú aplikáciu štandardného profilu kontrolným zoznamom zobrazujúcim každú cestu: predvolený profil a trvalé doplnky (predfixné s <code>[+]</code> a predkontrolované). Užívateľ kliešte alebo untiks položky pre tento špecifický spustiť, a tiež môže stlačiť <em>Pridať vlastnú cestu</em> zadať novú cestu",
+    "customMissingTitle": "Cesta neprítomná zo zdroja",
+    "customMissingBody": "Akákoľvek cesta z profilu (predvolená alebo pridaná), ktorá neexistuje na zdrojovom hostiteľovi, sa zaznamenáva v <code>metadata/missing_paths.txt</code> vo vnútri archívu. Zálohovanie ani zlyhá, ani sa nezastaví. Užívateľ vidí súhrn archivovaných ciest a chýbajúce cesty na konci. V praxi sa to stane pre voliteľné cesty nástrojov, ako je <code>/etc/wireguard</code> alebo <code>/etc/prometheus</code>, ak tieto nástroje nie sú nainštalované."
+  },
+  "manifest": {
+    "heading": "Zjavné užitočné zaťaženie",
+    "intro": "<code>manifest.json</code> je štruktúrovaný JSON dokument, ktorý opisuje zdroj hostiteľa v okamihu zálohy. Vyrába ho <strong>six nezávislý zberateľ</strong> usporiadaný <code>build_manifest.sh</code>. Každý zberateľ je len na čítanie, vytvára dobre-definovaný JSON fragment, a spadne späť do bezpečného prázdneho predvoleného, ak zlyhá, je manifest stále použiteľný, ak jedna časť je neúplná.",
+    "orchestratorCaption": "Šesť zberateľov tvorí zoznam. Každý zberateľ beží vo svojom vlastnom subprocese; zlyhanie v jednom spadne späť do zdokumentovaného bezpečného predvoleného stavu a varuje, ale neporušuje zálohu.",
+    "collectorRows": [
+      {
+        "collector": "collect_source_host.sh",
+        "produces": "source_host",
+        "content": "Hostname, PVE verzia (<code>pveversion</code>0), PBS verzia, ak hostiteľ spustí záložný server role, jadro (<code>uname -r</code>), režim boot (efi/bios), typ koreňového súborového systému, model CPU + architektúra, pamäť v KB."
+      },
+      {
+        "collector": "collect_hardware.sh",
+        "produces": "hardware_inventory",
+        "content": "GPU (s mapovaním dodávateľa a ProxMenux), TPU (koral USB + M.2 s detekciou <code>lsusb</code>/<code>lspci</code>), NIC (s MAC, PCI slot a členstvo v moste), bezdrôtové zariadenia. GPU položky nesú heuristiku <code>passthrough_eligible</code>."
+      },
+      {
+        "collector": "collect_storage.sh",
+        "produces": "storage_inventory",
+        "content": "ZFS bazény (s typ bazénu + členské disky vyriešené na <code>/dev/disk/by-id/*</code>, <code>/dev/disk/by-partuuid/*</code> alebo surových <code>/dev/sdX</code> trasy v závislosti od toho, ako bol pôvodne vytvorený bazén), LVM objemové skupiny + tenké bazény, fyzické disky s SMART schopnosť, PVE <code>storage.cfg</code> vstupy, externé pripojenia."
+      },
+      {
+        "collector": "collect_kernel.sh",
+        "produces": "kernel_params",
+        "content": "Operátorom povolené žetóny z <code>/proc/cmdline</code>0 (strúhanie kotolne ako <code>BOOT_IMAGE=</code>, <code>root=</code>, <code>ro/rw</code>, <code>quiet</code>, <code>splash</code>), moduly naložené pri štarte z <code>/etc/modules</code>, a trasy súborov <code>/etc/modprobe.d/*.conf</code> s aktuálnymi smernicami (<code>options</code>, <code>blacklist</code>, <code>install</code>, <code>alias</code>, <code>softdep</code>)."
+      },
+      {
+        "collector": "collect_proxmenux_state.sh",
+        "produces": "proxmenux_installed_components",
+        "content": "Číta <code>/usr/local/share/proxmenux/managed_installs.json</code> (registrácia všetkého, čo ProxMenux nainštaloval) a <code>installed_tools.json</code>. Každý záznam udržuje inštalačnú dráhu (<code>menu_script</code>), takže obnovenie môže spustiť presne rovnaký inštalačný tok."
+      },
+      {
+        "collector": "collect_guests.sh",
+        "produces": "vms_lxcs_at_backup",
+        "content": "Menuje VMs (<code>qm list</code>) a LXCs (<code>pct list</code>) prítomné v čase zálohovania, Iba inventár: aktuálne údaje o hosťoch sú zodpovednosťou <code>vzdump</code> / PBS."
+      }
+    ],
+    "schemaTitle": "Potvrdenie schémy",
+    "schemaBody": "Manifest potvrdzuje proti <code>scripts/backup_restore/schema/manifest.schema.json</code>. Spustenie <code>build_manifest.sh --validate</code> aktivuje Python-side JSON Schema validácia (vyžaduje <code>python3</code> + <code>jsonschema</code>). V prípade, že modul nie je prítomný, kontrola je preskočená ticho"
+  },
+  "applications": {
+    "heading": "Inventár žiadostí",
+    "intro": "Dva súbory v rámci katalógu <code>metadata/</code> všetko nainštalované na zdroji, ktorý nie je súčasťou základnej sady balíka Proxmox VE. Obnovenie ich využíva na reprodukciu presnej sady softvéru nainštalovaného používateľom na cieľ, pričom sa používajú buď vlastné inštalátory APT alebo ProxMenux v závislosti od spôsobu, akým bol softvér pôvodne nainštalovaný.",
+    "packagesTitle": "packages.manual.list",
+    "packagesBody": "Jasný textový zoznam, ktorý vypracoval <code>apt-mark showmanual</code>: každý balík APT, ktorý bol <em>explicitne nainštalovaný</em> na zdrojovom hostiteľovi, zoradené abecedne. To vylučuje balíky nainštalované ako závislosti od základne Proxmox VE ISO (sú automaticky znovu vytláčané vlastným APT cieľa). Čítanie: <code>_rs_run_complete_extras</code> počas obnovy, filtrované cez trojpass <em>kaskádovo bezpečné</em> filter (<code>dpkg -s</code> v prípade už nainštalovanej, súrodeneckej veľkej detekcie pre knižničné balíky, <code>apt-get install --simulate</code> pre riziko odstraňovania kaskád), potom sa nainštaluje <code>apt-get install -y</code>.",
+    "componentsTitle": "components_status.json (časť koreňových listov)",
+    "componentsBody": "A JSON register pod <code>/usr/local/share/proxmenux/</code> ktorá zaznamenáva každú zložku ProxMenux má nainštalovaný so svojím presným stavom: verzia, ProxMenux- špecifické vlajky (pre NVIDIA: <code>patched</code> boolean; pre Coral: DKMS verzia). Tento súbor žije vo vnútri rootfs <code>metadata/</code> Pretože je <em>prečítať po</em> Rootfs bol skopírovaný k cieľu. Poboot dispečer (<code>apply_cluster_postboot.sh</code>) iteruje cez svoje položky a beží každý komponent <code>--auto-reinstall</code> hák, ktorý číta nahraný stav a reprodukuje inštaláciu oproti aktuálnemu jadru cieľa.",
+    "componentInstallersTitle": "Inštalatéri komponentov",
+    "componentInstallersBody": "Štyri inštalátory ProxMenux v súčasnosti vystavujú vstupný bod <code>--auto-reinstall</code>:",
+    "installerRows": [
+      {
+        "component": "nvidia_driver",
+        "installer": "gpu_tpu/nvidia_installer.sh",
+        "action": "Číta <code>version</code> + <code>patched</code>. Stiahne presne ten istý NVIDIA spustiť súbor, stavia DKMS moduly proti cieľovej jadru, preplikuje ProxMenux náplasť, ak zdroj mal."
+      },
+      {
+        "component": "coral_driver",
+        "installer": "gpu_tpu/install_coral.sh",
+        "action": "Číta verziu Coral ovládač. Kompiluje modul DKMS s jadrom cieľa."
+      },
+      {
+        "component": "amdgpu_top",
+        "installer": "gpu_tpu/amd_gpu_tools.sh",
+        "action": "Číta nahranú verziu. Znovu stiahne presný <code>.deb</code> z GitHub vydania."
+      },
+      {
+        "component": "intel_gpu_tools",
+        "installer": "gpu_tpu/intel_gpu_tools.sh",
+        "action": "APT inštaluje balík. Idempotentné, ak už prítomný z <code>packages.manual.list</code>."
+      }
+    ]
+  },
+  "restoreFlow": {
+    "heading": "Ako obnova spotrebuje tri užitočné zaťaženie",
+    "intro": "Obnovenie je šesťstupňový plynovod. Každá etapa číta špecifickú podskupinu archívu a aktualizuje cieľového hostiteľa. Žiadna etapa vyžaduje, aby zdroj hostiteľa byť dosiahnuteľný",
+    "stagesCaption": "Fáza 1 používa manifest rozhodnúť, čo sa dotknúť. Stage 2 kopíruje rootfs cesty, ktoré sú bezpečné pre aplikáciu na bežiaci systém. Etapa 3 pripravuje rizikové cesty pre ďalšiu topánku. Etapa 3b dováža neroot ZFS dátové súbory, ktorých disky sú všetky prítomné. Fáza 4 spracováva balíčky. Fáza 5 beží po reštarte a preinštaluje komponenty proti jadru cieľa.",
+    "stageRows": [
+      {
+        "stage": "1",
+        "name": "Kontrola kompatibility",
+        "reads": "manifest.json",
+        "action": "Spúšťa <code>hb_compat_check</code>. Porovnáva zdrojový a cieľový hardvér (NIC, pamäťové ID), verziu PVE a hlavnú verziu jadra. Nastavuje <code>HB_COMPAT_KERNEL_DIRECTION</code> (<code>same</code>, <code>bk_newer</code> alebo <code>bk_older</code>) a zaľudňuje <code>RS_SKIP_PATHS</code> s hardware-drift a cross-kernel s výnimkou."
+      },
+      {
+        "stage": "2",
+        "name": "Použitie za tepla",
+        "reads": "rootfs/ (len bezpečné chodníky)",
+        "action": "<code>_rs_apply … hot</code> kopíruje <code>hb_classify_path</code>=<code>hot</code> položky priamo do živého cieľa. Všetko pod <code>/etc/pve</code>, <code>/etc/network</code> alebo cesty klasifikované ako <em>reboot</em>/<em>dangerous</em> je odložený."
+      },
+      {
+        "stage": "3",
+        "name": "Pripravená príprava",
+        "reads": "rootfs/ (reboot + nebezpečné cesty)",
+        "action": "<code>_rs_prepare_pending_restore</code> scény rizikové cesty pod <code>/var/lib/proxmenux/pending-restore/</code>, píše <code>plan.env</code>, <code>apply-on-boot.list</code> a <code>rs-skip-paths.txt</code>, a umožňuje <code>proxmenux-restore-onboot.service</code> strieľať na ďalšiu topánku."
+      },
+      {
+        "stage": "3b",
+        "name": "Dovoz dátovej skupiny",
+        "reads": "manifest.storage_inventory0 + cieľový ZFS stav",
+        "action": "<code>_rs_import_data_pools</code> importuje každý nekoreň ZFS bazén, ktorého plná sada diskov je prítomná na cieli. Bazény s cudzím hostidom sú znovu získané s <code>zpool import -f</code>. Bazény, ktorým chýba disk, sú preskočené s varovaním. Výsledok za jednu skupinu sa zaznamená v <code>/var/log/proxmenux/restore-datapools-&lt;timestamp&gt;.log</code>."
+      },
+      {
+        "stage": "4",
+        "name": "Inštalácia balíka",
+        "reads": "metadata/packages.manual.list",
+        "action": "<code>_rs_run_complete_extras</code> spustí kaskádovo bezpečný filter a zavolá <code>apt-get install -y</code> so zoznamom prežitých balíkov. Celý výstup ide do <code>/var/log/proxmenux/restore-apt-*.log</code>."
+      },
+      {
+        "stage": "5",
+        "name": "Po štarte systému",
+        "reads": "rootfs (už použité) + components_status.json",
+        "action": "Po reštarte, <code>apply_pending_restore.sh</code> hrá späť odložené cesty a <code>apply_cluster_postboot.sh</code> beží <code>update-initramfs</code>, <code>update-grub</code> (alebo <code>proxmox-boot-tool refresh</code>) a iteruje cez <code>components_status.json</code> vypaľovanie každého komponentu <code>--auto-reinstall</code> hák."
+      }
+    ]
+  },
+  "whyItWorks": {
+    "heading": "Prečo je použitý trojplatný split",
+    "body": "Delenie nie je rozhodnutie súborového systému <strong>životný cyklus</strong> rozhodnutie. Obsah súborového systému sa pohybuje s <code>rsync</code>: rýchla, transparentná, atómová na súbor. Konfigurácia stavu, že obnovenie musí interpretovať pred dotykom cieľa sa pohybuje ako <strong>štruktúrované JSON</strong>: čitateľný nezávisle, verzibilný prostredníctvom schémy, stroj-očakávateľný proti vlastnému stavu cieľa. Softvér, ktorý musí byť znovu nainštalovaný proti životnému prostrediu cieľa sa pohybuje ako <strong>Inventár</strong>: len mená a verzie, takže cieľového správcu balíkov a ProxMenuxVlastní inštalátori rozhodujú o skutočných binárnych agentoch. Každé užitočné zaťaženie optimalizuje na to, čo musí urobiť, a tieto tri sa skombinujú do obnovy, ktorá je atómová v úmysle, ale chybne tolerantná v praxi: poškodený manifest stále zanecháva korektúry regeneračné, chýbajúci balíček stále opúšťa komponenty nainštalovateľné, inštalátor komponentov zlyháva na jednom zázname nezastaví ďalší."
+  }
+}

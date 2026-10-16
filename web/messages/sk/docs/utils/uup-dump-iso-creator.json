@@ -1,0 +1,161 @@
+{
+  "meta": {
+    "title": "UUP Dump ISO Creator ProxMenux Dokumentácia",
+    "description": "Vytvoriť aktuálnu inštaláciu systému Windows ISO na vašom počítači Proxmox pomocou systému ProxMenux UUP Dump ISO Creator. Automatizuje závislosť inštalovať, stiahnuť a konverzie UUP súborov do bootable ISO pripravený pre VM tvorbu.",
+    "ogTitle": "UUP Dump ISO Creator ProxMenux Dokumentácia",
+    "ogDescription": "Vytvoriť aktuálne Windows ISO z UUP Dump pomocou ProxMenux. Závislosti, sťahovanie a konverziu sú plne automatizované.",
+    "ogImageAlt": "ProxMenux — Tvorca ISO UUP Dump"
+  },
+  "header": {
+    "title": "Tvorba ISO cez UUP Dump",
+    "description": "Vybudovať aktuálnu inštaláciu systému Windows ISO na vašom počítači Proxmox pomocou UUP Dump. ProxMenux spracováva závislosti, sťahuje UUP súbory paralelne, spustí oficiálny prevodník a pustí finálny ISO do Proxmox ISO úložisko VM.",
+    "section": "Nástroje"
+  },
+  "intro": {
+    "title": "Čo robí tento scenár?",
+    "body": "Poskytujete UUP Dump URL (jeden uupdump.net generuje po tom, čo si vyberiete zostavenie, jazyk a edíciu) a skript robí zvyšok: nainštaluje všetky chýbajúce závislosti, stiahne UUP Dump prevodník, stiahne každý UUP užitočného súboru s ária2, zostaví bootable Windows ISO a presunie ho do Proxmox ISO úložiska, takže VM tvorca ho môže pripojiť na prvom štarte."
+  },
+  "hero": {
+    "imageAlt": "UUP Dump položka ISO Creator v ProxMenux",
+    "caption": "UUP Dump položka ISO Creator v ProxMenux"
+  },
+  "what": {
+    "heading": "Čo je UUP Dump?",
+    "intro": "UUP Dump je verejnoprospešná služba, ktorá vám umožní stiahnuť surové Zjednotené aktualizácie Platform (UUP) užitočné zaťaženie, ktoré Windows Aktualizovať sám používa na dodanie Windows. Tieto užitočné zaťaženie je možné zmontovať späť do štandardného zavádzateľného ISO. Je to spôsob, ako získať:",
+    "items": [
+      "Najnovšie Windows vybudovať (vrátane Insider Preview kanálov).",
+      "Konkrétna historická budova, ktorá už nie je uvedená na stránke Microsoft na stiahnutie.",
+      "Čisté, nemodifikované súbory pochádzajúce priamo zo serverov Microsoft.",
+      "Presná kombinácia edícií a jazykov, ktoré chcete v jednom ISO."
+    ],
+    "learnMore": "Ďalšie informácie o stránke projektu <extlink>0UUP Dump </extlink>."
+  },
+  "automates": {
+    "heading": "Čo skript automatizuje"
+  },
+  "dependencies": {
+    "heading": "Závislosti",
+    "intro": "Prvá vec, ktorú skript robí, je skontrolovať nástroje potrebné na stiahnutie UUP užitočného zaťaženia a montáž ISO. Všetky chýbajúce sú nainštalované s <code>apt-get</code>:",
+    "headerPackage": "Balenie",
+    "headerRole": "Úloha",
+    "rows": [
+      {
+        "pkg": "curl",
+        "roleRich": "HTTP sťahuje (converter bootstrap)."
+      },
+      {
+        "pkg": "aria2",
+        "roleRich": "Paralelný sťahovák používaný pre každý UUP užitočné zaťaženie."
+      },
+      {
+        "pkg": "cabextract",
+        "roleRich": "Extrakty Microsoft CAB balíčky."
+      },
+      {
+        "pkg": "wimtools",
+        "roleRich": "Buduje <code>install.wim</code> (wimlib-imagex)."
+      },
+      {
+        "pkg": "genisoimage",
+        "roleRich": "Napíše finálny bootable ISO (alebo <code>mkisofs</code>)."
+      },
+      {
+        "pkg": "chntpw",
+        "roleRich": "Vylepšuje Windows registra úle počas výstavby."
+      }
+    ],
+    "manualIntro": "Manuálny ekvivalent",
+    "manualCode": "apt-get install curl aria2 cabextract wimtools genisoimage chntpw"
+  },
+  "flow": {
+    "heading": "Sťahovanie a konverzia",
+    "steps": [
+      "Detekuje úložisko Proxmox ISO (prostredníctvom <code>pvesm status -content iso</code>) alebo spadá späť do <code>/var/lib/vz/template/iso</code>.",
+      "Žiada o základný priečinok pre dočasné súbory (default <code>/root/uup-temp</code>).",
+      "Stiahne konvertor UUP Dump z <code>git.uupdump.net</code>.",
+      "Parses <code>id</code>, <code>pack</code> a <code>edition</code> z URL vložíte.",
+      "Volanie <code>https://uupdump.net/get.php?…&aria2=2</code> generovať ária2 download zoznam.",
+      "Stiahne každý UUP užitočné zaťaženie do <code>UUPs/</code> s aria2 (paralelné, možné).",
+      "Spustí <code>convert.sh wim UUPs 1</code> z prevodníka produkovať finálne ISO.",
+      "Presunie ISO do úložiska Proxmox ISO a vyčistí dočasné súbory."
+    ]
+  },
+  "aria2": {
+    "heading": "Použité prepínače sťahovania Aria2",
+    "code": "aria2c --no-conf --console-log-level=warn --log-level=info \\\n  --log=aria2_download.log \\\n  -x16 -s16 -j5 -c -R \\\n  -d\"$destDir\" -i\"$tempScript\"",
+    "flags": [
+      "<code>-x16</code> až po pripojenie 16 na server.",
+      "<code>-s16</code> Rozdelí každý súbor do 16 segmenty.",
+      "<code>-j5</code> — 5 súbory stiahnuté paralelne.",
+      "<code>-c</code>",
+      "<code>-R</code>"
+    ],
+    "runtime": "Typický čas je okolo 10 minút, dominuje rýchlosť vášho internetového spojenia a UUP Dump zaťaženie zrkadla."
+  },
+  "step1": {
+    "heading": "Krok 1 · Získajte UUP Dump URL",
+    "intro": "Pred spustením skriptu potrebujete UUP Dump URL, ktorý obsahuje parametre dotazu <code>id</code>, <code>pack</code> a <code>edition</code>. Generovať na <extlink>uupdump.net</extlink>:",
+    "stepBadge": "Krok",
+    "items": [
+      {
+        "title": "Vyberte verziu Windows",
+        "img": "/iso-creator/step-1-select-version-windows.png",
+        "caption": "UUP Dump hlavnej stránky",
+        "body": "Otvorte domovskú stránku UUP Dump a vyberte verziu Windows, ktorú chcete."
+      },
+      {
+        "title": "Vyberte si konkrétnu stavbu",
+        "img": "/iso-creator/step-2-select-version-windows.png",
+        "caption": "Vyberte si konkrétnu stavbu",
+        "body": "Vyberte si stavať: najnovšie, Insider Náhľad kanál, alebo špecifické staršie vybudovať ešte uvedené."
+      },
+      {
+        "title": "Vybrať jazyk",
+        "img": "/iso-creator/step-3-select-version-windows.png",
+        "caption": "Vybrať jazyk",
+        "body": "Vyberte si jazyk, ktorým by ISO mala byť."
+      },
+      {
+        "title": "Vybrať edície",
+        "img": "/iso-creator/step-4-select-version-windows.png",
+        "caption": "Vybrať vydania zahrnúť",
+        "body": "Vyberte si edície pre zväzok do ISO (Home, Pro, Enterprise, ...). Môžete kombinovať niekoľko."
+      },
+      {
+        "title": "Kopírovať URL",
+        "img": "/iso-creator/step-5-select-version-windows.png",
+        "caption": "Kopírovať URL z panela adries",
+        "bodyRich": "Na konečnej stránke skopírujte URL <em> z panelu adries prehliadača</em>. Musí obsahovať <code>id=…</code>, <code>pack=…</code> a <code>edition=…</code>. To je reťazec, ktorý scenár spracuje."
+      }
+    ]
+  },
+  "step2": {
+    "heading": "Krok 2 · Spustite tvorcu",
+    "intro": "S URL v ruke, otvoriť ProxMenux a spustiť tvorca:",
+    "stepBadge": "Krok",
+    "items": [
+      {
+        "title": "Spustiť UUP Dump ISO Creator",
+        "img": "/iso-creator/start-uupdump-iso-creator.png",
+        "caption": "Spustiť UUP Dump ISO Creator z ProxMenux",
+        "bodyRich": "V ProxMenux Prejsť na <strong>Nástroje → UUP Dump ISO Creator</strong>. Skript kontroluje závislosti a adresár ukladanie ISO pred požiadaním o vstup."
+      },
+      {
+        "title": "Vložiť UUP Dump URL",
+        "img": "/iso-creator/add-url-iso-creator.png",
+        "caption": "Vložte URL, ktoré ste skopírovali z uupdump.net",
+        "body": "Vložte URL do vstupného dialógu. Skript potvrdzuje, že sú prítomné tri požadované parametre; ak nejaký chýba, preruší sa čisto."
+      },
+      {
+        "title": "Čakať na dokončenie stavby",
+        "img": "/iso-creator/end-uupdump-iso-creator.png",
+        "caption": "Zostrojiť dokončené",
+        "bodyRich": "Konzola ukazuje ária2 postup a potom prevodník výstup. Keď skončí, ISO pristane v detekovanom úložisku Proxmox ISO a je pripravená vybrať si z <strong>0Create VM → Systém Windows → Inštalovať s ISO z UUP Dump</strong>."
+      }
+    ]
+  },
+  "tempFiles": {
+    "title": "Dočasné súbory",
+    "body": "Štandardne, dočasné súbory žiť pod <code>/root/uup-temp</code> (<code>uup-temp/</code> pre sťahovanie a <code>uup-converter/</code> pre prevodník skript). Tvorca čistí oboje po úspešnom behe. Pri zlyhaní sa stále čistí a vracia vás do menu, takže opakovanie začína od nuly."
+  }
+}

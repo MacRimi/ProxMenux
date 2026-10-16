@@ -1,0 +1,111 @@
+{
+  "meta": {
+    "title": "Politika",
+    "description": "Politika uzla auditu a správy: zálohovanie, autostart a recovery cieľ každého hosťa, úloha každého úložiska a prahy kontrol."
+  },
+  "header": {
+    "title": "Politika",
+    "description": "Politika deklaruje, čo žiadna kontrola môže odvodiť: na čo je každý hosť a skladovanie a platia prahové hodnoty kontrol.",
+    "section": "Audit a správy"
+  },
+  "sections": [
+    {
+      "id": "principle",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Bez vyhlásenia, správa opisuje; s jedným, hodnotí",
+            "body": "Hodnotenie vidí, čo robí hostiteľ, nie na čo je. Hosť bez zálohy, ktorého účel nie je deklarovaný, sa vykazuje ako pozorovanie. Ak je jeho záloha vyhlásená za požadovanú, tá istá neprítomnosť sa oznamuje ako varovanie. Nič sa nemusí vyhlásiť."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/policy-view.png",
+            "alt": "Pohľad na politiku s hosťami, skladovanie a prahy uzla",
+            "caption": "Pohľad na politiku."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guests",
+      "title": "Hostia",
+      "intro": "Každá VM a LXC uzol má tri polia. Hodnota ponechaná ako predvolená berie všeobecnú hodnotu zobrazenú vedľa nej.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Pole",
+              "Hodnoty",
+              "Vplyv na posúdenie"
+            ],
+            "rows": [
+              [
+                "Zálohovanie",
+                "vyžaduje sa, nevyžaduje sa, neuvádza sa",
+                "Chýbajúca záloha je varovanie, keď sa vyžaduje, pozorovanie, ak nie je uvedené, a je vynechané z počtu, keď sa nevyžaduje."
+              ],
+              [
+                "Automatický štart",
+                "vyžaduje sa, nevyžaduje sa, neuvádza sa",
+                "Či hosť musí začať s hostiteľom."
+              ],
+              [
+                "Požadovaný vek zálohy",
+                "Hodiny",
+                "Maximálny prijateľný vek poslednej zálohy."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Skladovanie",
+      "blocks": [
+        {
+          "p": "Nedostupné skladovanie sa oznamuje ako kritické, ak je vyhlásené za nevyhnutné alebo slúži bežiacemu hosťovi ako varovanie, keď nie je uvedená jeho úloha, a ako pozorovanie, keď je vyhlásené za voliteľné."
+        }
+      ],
+      "intro": "Každé uchovávanie uzla je vyhlásené za základné, voliteľné alebo nie je uvedené."
+    },
+    {
+      "id": "thresholds",
+      "title": "Limity",
+      "intro": "Prázdna prahová hodnota používa dodanú hodnotu zobrazenú ako jej miestodržiteľ.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Preskúmanie skladovacej kapacity (%) a preskúmanie tenkého bazéna (%).",
+              "Pomer tenkej nadmernej ponuky a pomer nadmernej komunikácie s pamäťou.",
+              "Interval čistenia ZFS (dni).",
+              "Zálohovanie veku pádu (dni) a plán milosti (pomer).",
+              "Oznámenie o uplynutí platnosti osvedčenia (dni).",
+              "Životnosť disku (hodiny) a nedávne okno chyby disku (dni).",
+              "Lynis hlási vek (dni) a balíček index veku (dni).",
+              "Časopis proti jeho čiapke (%).",
+              "Prieskum priestoru súborového systému (%) a hodnotenie inode súborového systému (%)."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "save",
+      "title": "Ako je politika zachránená",
+      "blocks": [
+        {
+          "p": "Vyhlásenie je overené a uložené atómovo v <code>/usr/local/share/proxmenux/audit_policy.json</code>. Každá úspora obsahuje revíziu: ak sa vyhlásenie zmenilo v inom sedení, návrh nie je uložený a zobrazenie ponúka opätovné načítanie uloženého vyhlásenia."
+        },
+        {
+          "calloutWarning": {
+            "title": "Politika nie je nikdy odvodená",
+            "body": "ProxMenux nepridáva žiadnu požiadavku. Prázdne pole udržiava dodanú hodnotu alebo zostáva neuvedená a čiastočné vyhlásenie sa týka len prvkov, ktoré uvádza."
+          }
+        }
+      ]
+    }
+  ]
+}

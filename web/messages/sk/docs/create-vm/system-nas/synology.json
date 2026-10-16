@@ -1,0 +1,400 @@
+{
+  "meta": {
+    "title": "Vytvoriť VM: Synológia DSM ProxMenux Dokumentácia",
+    "description": "Vytvorte si na Proxmox VE virtuálny stroj DSM. ProxMenux stiahne nakladač podľa vášho výberu (Arc, RR, TinyCore M-shell alebo vlastné), importuje ho ako VM boot disk a pripravuje CPU, RAM a skladovanie prostredníctvom predvoleného alebo pokročilého sprievodcu.",
+    "ogTitle": "Vytvoriť VM: Synológia DSM ProxMenux Dokumentácia",
+    "ogDescription": "Vytvoriť synológiu DSM virtuálny stroj na Proxmox VE s ProxMenux."
+  },
+  "header": {
+    "title": "Vytvoriť VM: Synológia DSM",
+    "description": "Vytvorte si na Proxmox VE virtuálny stroj DSM. ProxMenux stiahne nakladač podľa vášho výberu (Arc, RR, TinyCore M-shell alebo vlastné), importuje ho ako VM boot disk a pripravuje CPU, RAM a skladovanie prostredníctvom predvoleného alebo pokročilého sprievodcu.",
+    "section": "Virtuálne stroje · NAS"
+  },
+  "loaderLabels": {
+    "arc": "Arc Loader",
+    "rr": "RR Loader",
+    "tinycore": "TinyCore Loader"
+  },
+  "whatThisDoes": {
+    "title": "Čo to robí?",
+    "bodyRich": "ProxMenux Automatizuje VM-vnútri inštalácie Synológie DSM: stiahne jeden z podporovaných nakladačov, importuje ho do nového VM ako IDE boot disk, a platí CPU / RAM / sieť / úložisko si vyberiete. Zvyšok chápanie nakladača, výber modelu DSM, inštalácia DSM sa stane <strong>Vnútri VM</strong>, poháňaný vlastným webovým alebo terminálovým rozhraním nakladača. Tieto kroky sú v komunite udržiavané a často sa menia, takže táto stránka vám dáva pracovný základ."
+  },
+  "supportedLoaders": {
+    "heading": "Podporované nakladače",
+    "intro": "Skript umožňuje vybrať si medzi štyrmi zdrojmi nakladača:",
+    "loaders": [
+      {
+        "name": "AuxXxilium Arc",
+        "url": "https://github.com/AuxXxilium/arc"
+      },
+      {
+        "name": "RedPill RR",
+        "url": "https://github.com/RROrg/rr"
+      },
+      {
+        "name": "TinyCore RedPill M-shell",
+        "url": "https://github.com/PeterSuh-Q3/tinycore-redpill"
+      }
+    ],
+    "customRich": "<strong>Vlastný nakladač</strong> Drop your own loader image do <code>/var/lib/vz/template/iso</code> a scenár to zdvihne."
+  },
+  "config": {
+    "heading": "Štandardná vs Rozšírená konfigurácia",
+    "intro": "Pri spustení skriptu sa pýta, či použijete predvolený ProxMenux profil VM alebo otvoríte pokročilého sprievodcu. Štandardné hodnoty sú ladené pre DSM a pracujú pre väčšinu inštalácií.",
+    "defaultHeading": "Štandardná konfigurácia",
+    "headerParam": "Parameter",
+    "headerValue": "Štandardná hodnota",
+    "defaultRowsRich": [
+      {
+        "param": "Typ stroja",
+        "valueRich": "<code>q35</code>"
+      },
+      {
+        "param": "BIOS",
+        "valueRich": "OVMF (UEFI)"
+      },
+      {
+        "param": "Typ CPU",
+        "valueRich": "Hostiteľ"
+      },
+      {
+        "param": "Jadro",
+        "valueRich": "2"
+      },
+      {
+        "param": "RAM",
+        "valueRich": "4096 MB"
+      },
+      {
+        "param": "Most",
+        "valueRich": "<code>vmbr0</code>"
+      },
+      {
+        "param": "Adresa MAC",
+        "valueRich": "Automatické generovanie"
+      },
+      {
+        "param": "Začiatok po dokončení",
+        "valueRich": "Nie"
+      }
+    ],
+    "advancedHeading": "Pokročilá konfigurácia",
+    "advancedIntro": "Pokročilý čarodejník odhaľuje každý gombík. Môžete slobodne zmeniť niektorý z týchto:",
+    "headerOptions": "Možnosti",
+    "advancedRowsRich": [
+      {
+        "param": "Typ stroja",
+        "optionsRich": "<code>q35</code> alebo <code>i440fx</code>"
+      },
+      {
+        "param": "BIOS",
+        "optionsRich": "OVMF (UEFI0) alebo SeaBIOS (Legacy)"
+      },
+      {
+        "param": "Typ CPU",
+        "optionsRich": "Hostiteľ alebo KVM64"
+      },
+      {
+        "param": "Jadro",
+        "optionsRich": "Počet jadier CPU"
+      },
+      {
+        "param": "RAM",
+        "optionsRich": "Pamäť pridelená VM"
+      },
+      {
+        "param": "Most",
+        "optionsRich": "Sieťový most"
+      },
+      {
+        "param": "Adresa MAC",
+        "optionsRich": "Vlastná MAC adresa"
+      },
+      {
+        "param": "VLAN",
+        "optionsRich": "Značka VLAN (voliteľné)"
+      },
+      {
+        "param": "MTU",
+        "optionsRich": "Veľkosť MTU"
+      }
+    ]
+  },
+  "storagePlan": {
+    "heading": "Plán skladovania",
+    "introRich": "Po CPU0 / RAM kroku, ProxMenux otvorí <strong>Storage Plan</strong> menu, kde môžete <strong>combine</strong> virtuálne disky, importované disky a PCI priechodné zariadenia v rovnakej VM, pridať položky jeden naraz a dokončiť, keď ste hotoví.",
+    "virtualHeading": "a. Pridať virtuálny disk",
+    "virtualItemsRich": [
+      "Zobrazí úložné objemy Proxmox dostupné na hostiteľovi.",
+      "Vyberiete cieľovú pamäť a veľkosť v GB.",
+      "Disk je pripojený k VM ako SATA (<code>sata0</code>, <code>sata1</code>, ... až do 6)."
+    ],
+    "importHeading": "b. Pridať importný disk",
+    "importItemsRich": [
+      "Detekuje fyzické disky, ktoré sú bezpečné pre import (systém a chránené disky sú skryté).",
+      "Vyberte jeden alebo viac diskov prostredníctvom kontrolného zoznamu.",
+      "Importované disky sú pripojené ako SATA cez <code>qm set</code>."
+    ],
+    "pciHeading": "c. Pridať Controller alebo NVMe (PCI passhrough)",
+    "pciItemsRich": [
+      "Detekty SATA/SAS HBA a NVMe zariadenia na hostiteľa a umožňuje prejsť <em>entire regulátor</em> do VM. IOMMU musí byť zapnutá; skript ponúka, aby ju povolil a reštartuje, ak je to potrebné.",
+      "Potvrdzovací krok varuje pred rizikom celého regulátora (celá karta, vrátane každého disku na ňom, opúšťa hostiteľa).",
+      "Vybrané PCI zariadenia sú pripojené cez <code>qm set hostpciN: …</code>."
+    ],
+    "resetCalloutTitle": "Resetovať a dokončiť",
+    "resetCalloutBodyRich": "Menu tiež ponúka <strong>r</strong> (resetovať aktuálny výber a začať znova) a <strong>d</strong> (dokončiť a pokračovať). Nemôžete dokončiť s prázdnym plánom Synológia potrebuje aspoň jeden disk na inštaláciu DSM na."
+  },
+  "gpu": {
+    "heading": "Voliteľný priechod GPU",
+    "bodyRich": "Po pláne ukladania, ak skript detekuje kompatibilný GPU na hostiteľa, pýta sa, či ho chcete odovzdať tomuto VM. Pozri <link>Pridať GPU na VM (Passthrough)</link> pre to, ako asistent pracuje"
+  },
+  "loaderInstall": {
+    "heading": "Inštalácia nakladača",
+    "intro1Rich": "<strong>Arc</strong>, <strong>RR</strong> a <strong>TinyCore M-shell</strong> sú stiahnuté a extrahované automaticky z ich predných GitHub archívov. Ak sťahovanie zlyhá, skript sa zruší s jasnou správou.",
+    "intro2Rich": "Pre <strong>Custom Loader</strong> voľba skript skenuje <code>/var/lib/vz/template/iso</code>. Ak nájdete viac ako jedného kandidáta, môžete si vybrať toho, ktorého chcete.",
+    "uploadIntro": "Môžete nahrať vlastné nakladače z miestneho úložiska Proxmox:",
+    "imageAlt": "Pridať vlastný nakladač",
+    "imageCaption": "Pridať vlastný nakladač"
+  },
+  "vmCreation": {
+    "heading": "Vytváranie VM",
+    "introRich": "Keď potvrdíte nakladač, ProxMenux spustí ekvivalent týchto <code>qm</code> príkazov:",
+    "itemsRich": [
+      "<code>qm create</code> Vytvárajú VM s vybraným CPU, RAM, BIOS a typ stroja.",
+      "<code>qm importdisk</code> - dováža nakladač ako <strong>IDE</strong> disk (maximálna kompatibilita).",
+      "<code>qm set sataN: …</code>",
+      "<code>qm set hostpciN: …</code> chápa každého kontrolóra / NVMe zariadenia vybrané pre PCI priechod.",
+      "<code>qm set --boot</code>"
+    ]
+  },
+  "stepByStep": {
+    "heading": "Konfigurácia krok za krokom",
+    "intro": "Všetky nakladače sledovať rovnaký vysoký vzor VM, vybrať model, vybrať si DSM verziu, vybrať add-ons, vytvoriť, booting Nižšie uvedená príručka prechádza šiestimi spoločnými krokmi s screenshoty pre každý nakladač. Presné možnosti sa môžu meniť pri nových vydaniach nakladača.",
+    "warnCalloutTitle": "Nakladače nie sú udržiavané ProxMenux",
+    "warnCalloutBody": "Arc, RR a TinyCore sú komunitné projekty s vlastným vydaním kadence. Ak krok vyzerá inak ako snímky obrazovky nižšie, načítač pravdepodobne aktualizoval"
+  },
+  "stepBadge": "Krok",
+  "step1": {
+    "title": "Spustiť VM a prístup do hlavného menu",
+    "intro": "Po vytvorení VM začnite. Prvá topánka vás zavedie do konfiguračného rozhrania loader, kde si vyberiete a postavíte požadovaný model DSM. Po vybudovaní nakladača preskočia nasledujúce topánky tento krok, ak nevynútite rekonfiguráciu z vlastného batožinového monitora nakladača. Všetky tri nakladače podporujú UI aj webové UI.",
+    "arc": {
+      "webRich": "<strong>0Web rozhranie.</strong> Otvorte prehliadač a prejdite na IP zobrazené v konzole VM (v našom príklade: <code>http://192.168.0.32</code>).",
+      "webAlt": "Webové rozhranie Arc loader",
+      "webCaption": "Webové rozhranie Arc loader",
+      "termRich": "<strong>Terminálne rozhranie.</strong> Použite ho priamo z výstupu konzoly VM.",
+      "termAlt": "Arc loader rozhranie terminálu",
+      "termCaption": "Arc loader rozhranie terminálu"
+    },
+    "rr": {
+      "webRich": "<strong>Web rozhranie.</strong> Otvorte prehliadač a prejdite na IP zobrazené v konzole VM a následne port <strong>7681</strong> (príklad: <code>http://192.168.0.33:7681</code>).",
+      "webAlt": "Webové rozhranie RR loader",
+      "webCaption": "Webové rozhranie RR loader",
+      "termRich": "<strong>Terminálne rozhranie.</strong> V konzole VM typ <code>menu.sh</code> ju otvoriť.",
+      "termAlt": "rozhranie terminálu RR loader",
+      "termCaption": "rozhranie terminálu RR loader"
+    },
+    "tinycore": {
+      "webRich": "<strong>Web rozhranie.</strong> Otvorte prehliadač a prejdite na IP zobrazené v konzole VM a následne port <strong>7681</strong> (príklad: <code>http://192.168.0.35:7681</code>).",
+      "webAlt": "Webové rozhranie TinyCore loader",
+      "webCaption": "Webové rozhranie TinyCore loader",
+      "termRich": "<strong>Terminálne rozhranie.</strong> Použite ho z konzoly VM. Dávajte na to pozor, a to v určitom bode môže podnietiť k stlačeniu kľúča pokračovať alebo zmeniť jazyk.",
+      "termAlt": "TinyCore rozhranie terminálu",
+      "termCaption": "TinyCore rozhranie terminálu"
+    }
+  },
+  "step2": {
+    "title": "Vyberte model",
+    "introRich": "Vyberte si model Synológie DSM, ktorý chcete inštalovať. V závislosti na načítacom možno budete musieť rozšíriť možnosti vidieť celý zoznam. V screenshoty nižšie používame <strong>SA6400</strong> model ako príklad.",
+    "arc": {
+      "alt": "Výber oblúkového modelu",
+      "caption": "Výber oblúkového modelu"
+    },
+    "rr": {
+      "alt": "Výber modelu RR",
+      "caption": "Výber modelu RR"
+    },
+    "tinycore": {
+      "alt": "Výber modelu TinyCore",
+      "caption": "Výber modelu TinyCore"
+    }
+  },
+  "step3": {
+    "title": "Vyberte verziu DSM",
+    "intro": "Po vybratí modelu vyberte verziu DSM pre inštaláciu.",
+    "arc": [
+      {
+        "alt": "Arc version 1",
+        "caption": "Arc version selection krok 1"
+      },
+      {
+        "alt": "Arc version 2",
+        "caption": "Arc version selection krok 2"
+      }
+    ],
+    "rr": [
+      {
+        "alt": "RR verzia 1",
+        "caption": "RR výber verzie 1"
+      },
+      {
+        "alt": "RR verzia 2",
+        "caption": "RR výber verzie 2"
+      },
+      {
+        "alt": "RR verzia 3",
+        "caption": "RR výber verzie 3"
+      }
+    ],
+    "tinycore": [
+      {
+        "alt": "TinyCore version 1",
+        "caption": "TinyCore version selection 1"
+      },
+      {
+        "alt": "TinyCore version 2",
+        "caption": "TinyCore version selection 2"
+      }
+    ]
+  },
+  "step4": {
+    "title": "Vybrať doplnky",
+    "intro": "Tento krok vám umožní pridať do nakladača ďalšie funkcie alebo vlastnú konfiguráciu.",
+    "arc": {
+      "autoRich": "<strong>Arc</strong> ponúka automatický režim (odporúčaný) a manuálny režim. V automatickom režime nakladač používa rozumné predvolené nastavenia a reštartuje sám.",
+      "autoAlt": "Automatická konfigurácia oblúka",
+      "autoCaption": "Automatická konfigurácia oblúka",
+      "manualRich": "Ak si vyberiete manuál, prejdete možnosťami jeden po druhom:",
+      "manualAlt": "Arc manuálna konfigurácia",
+      "manualCaption": "Arc manuálna konfigurácia",
+      "snMacAlt": "Arc SN/MAC",
+      "snMacCaption": "Arc SN / MAC konfigurácia",
+      "portmapAlt": "Arc SATA portmap",
+      "portmapCaption": "Arc SATA portmap (použite odporúčanú voľbu)",
+      "addonsAlt": "Arc adsons",
+      "addonsCaption": "Výber oblúkových doplnkov"
+    },
+    "rr": [
+      {
+        "alt": "RR addon 1",
+        "caption": "RR addon 1"
+      },
+      {
+        "alt": "RR addon 2",
+        "caption": "RR addon 2: stlačte pridať addon"
+      },
+      {
+        "alt": "RR addon 3",
+        "caption": "RR addon 3: kliknite na doplnok chcete. Opakujte predchádzajúce dva screenshoty pridať viac."
+      }
+    ],
+    "tinycore": [
+      {
+        "alt": "Konfigurácia TinyCore SN",
+        "caption": "Konfigurácia TinyCore SN"
+      },
+      {
+        "alt": "Náhodná voľba TinyCore",
+        "caption": "TinyCore náhodná voľba (odporúčaná)"
+      },
+      {
+        "alt": "Konfigurácia TinyCore MAC",
+        "caption": "Konfigurácia TinyCore MAC"
+      },
+      {
+        "alt": "TinyCore VM MAC",
+        "caption": "TinyCore Vyberte si VM's MAC alebo náhodná"
+      }
+    ]
+  },
+  "step5": {
+    "title": "Zostavte nakladač",
+    "introRich": "S vybraným modelom, verziou DSM a doplnkami si vyberte <strong>Build Loader</strong>. To môže trvať niekoľko minút v závislosti od načítacieho zariadenia a vybraných možností.",
+    "arc": {
+      "alt": "Arc building loader",
+      "caption": "Arc"
+    },
+    "rr": {
+      "alt": "Zostavenie zavádzača RR",
+      "caption": "RR"
+    },
+    "tinycore": {
+      "alt": "Stavebný nakladač TinyCore",
+      "caption": "TinyCore"
+    }
+  },
+  "step6": {
+    "title": "Boot nakladač",
+    "intro": "Po vybudovaní nakladača sa VM reštartuje s konfiguráciou, ktorú ste vytvorili a začne sa inštalácia DSM.",
+    "arc": {
+      "alt": "Zavádzač Arc",
+      "caption": "Arc"
+    },
+    "rr": {
+      "alt": "RR nakladač topánok",
+      "caption": "RR"
+    },
+    "tinycore": {
+      "alt": "TinyCore nakladač topánok",
+      "caption": "TinyCore"
+    }
+  },
+  "dsmInstall": {
+    "heading": "Spustenie zariadenia DSM",
+    "intro": "Akonáhle nakladač nabooted môžete objaviť vaše DSM VM otvorením:",
+    "afterCode": "Dokončite inštaláciu DSM podľa pokynov na obrazovke.",
+    "setupAlt": "Nastavenie DSM",
+    "setupCaption": "Obrazovka nastavenia DSM",
+    "patience": "Buďte trpezliví, proces môže trvať niekoľko minút. Aktualizácie pokroku automaticky a odpočítavanie sa objaví ako inštalácia blízko dokončenia.",
+    "finishAlt": "Inštalácia dokončená",
+    "finishCaption": "Inštalácia dokončená"
+  },
+  "tips": {
+    "heading": "Tipy",
+    "recentTitle": "Použiť najnovšie modely DSM",
+    "recentBody": "Niektoré staršie modely DSM majú problémy s rozpoznávaním diskov alebo sieťovej karty. Preferované najnovšie modely (napr. SA6400) pre hladší zážitok prvej boot.",
+    "updateTitle": "Aktualizácia nakladača",
+    "updateBody": "Niektoré nakladače ponúkajú možnosť aktualizácie sami priamo z ich konfiguračného menu Nemusíte zničiť a obnoviť VM.",
+    "warnTitle": "ProxMenux nepodporuje nakladače",
+    "warnBody": "ProxMenux0 automatizuje stranu VM. Problémy s nahrávačom (model nenájdený, add-on neschopnosť nainštalovať, DSM odmieta zaviesť) sú mimo rozsah tu",
+    "docsHeading": "Dokumentácia nakladača",
+    "docLinks": [
+      {
+        "label": "Arc dokumentácia",
+        "url": "https://github.com/AuxXxilium/arc"
+      },
+      {
+        "label": "Dokumentácia RR",
+        "url": "https://github.com/RROrg/rr"
+      },
+      {
+        "label": "Dokumentácia TinyCore",
+        "url": "https://github.com/PeterSuh-Q3/tinycore-redpill"
+      }
+    ]
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "itemsRich": [
+      {
+        "href": "/docs/create-vm/system-nas",
+        "label": "Prehľad systému NAS",
+        "tail": " — Porovnanie synológie vs TrueNAS0 / OMV / Rockstor / XigmaNAS."
+      },
+      {
+        "href": "/docs/create-vm/system-nas/system-nas-others",
+        "label": "Iné systémy NAS",
+        "tail": " — Nesynologické distribúcie NAS."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importovať disk do VM",
+        "tail": " Prejdite skutočnými diskami do synológie VM (odporúčané pre výkon v sklade)."
+      },
+      {
+        "href": "/docs/create-vm",
+        "label": "Vytvoriť prehľad VM",
+        "tail": "."
+      }
+    ]
+  }
+}

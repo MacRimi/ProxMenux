@@ -1,0 +1,213 @@
+{
+  "meta": {
+    "title": "OCI manažér Apps ProxMenux",
+    "description": "Spustite oficiálne obrazy OCI ako natívne Proxmox VE LXC kontajnery, s trvalou dáta, zariadenia, multi-kontajnerové aplikácie a transakčné aktualizácie."
+  },
+  "header": {
+    "title": "Správca OCI aplikácií",
+    "description": "Oficiálne obrazy OCI bežia ako natívne Proxmox VE LXC kontajnery. Obraz zostane ten, ktorý jeho správca publikuje; ProxMenux reprodukuje prostredie Docker Compose by vytvoril okolo neho.",
+    "section": "Správca OCI aplikácií"
+  },
+  "sections": [
+    {
+      "id": "model",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Jeden obraz OCI, jeden narodený LXC",
+            "body": "Žiadne Docker engine nie je v kontajneroch. Proxmox VE importuje súborový systém obrazu a jeho OCI metaúdaje, a aplikácia sa stáva hlavným procesom natívne LXC, riadený s rovnakými nástrojmi ako akýkoľvek iný kontajner uzla."
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Zdroj",
+                "detail": "Obrázok OCI\nSkladanie a dokumentácia"
+              },
+              {
+                "label": "ProxMenux",
+                "detail": "Zmluva JSON\nvalidácia a plán"
+              },
+              {
+                "label": "Proxmox VE",
+                "detail": "natívne LXC\nobjemy a zariadenia"
+              }
+            ],
+            "caption": "Aplikácia nie je prestavaná: jej prostredie je reprodukované deklaratívne."
+          }
+        }
+      ]
+    },
+    {
+      "id": "where",
+      "title": "Kde to je?",
+      "intro": "OCI manažér Apps sa otvára z možnosti <strong>Aplikácie pre správcu OCI (Technologický náhľad)</strong> na tému ProxMenux hlavné menu, na uzol Proxmox a ako koreň. Jeho prvá obrazovka ponúka:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "<strong>Vyhľadávanie aplikácie</strong>",
+              "<strong>Všetky aplikácie</strong>",
+              "<strong>Manage nainštalované aplikácie OCI</strong>",
+              "<strong>Registračné účty</strong>",
+              "<strong>Inštalovať obrázok, ktorý nie je v katalógu</strong> Preložiť súbor Compose, a <code>docker run</code> príkaz alebo odkaz na obrázok.",
+              "Katalógové kategórie, každá s počtom aplikácií."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/main-menu.png",
+            "alt": "Hlavná obrazovka OCI manažéra Apps s hľadaním, všetky aplikácie, správa, vlastný obrázok a katalógové kategórie",
+            "caption": "Hlavná obrazovka aplikácie správcu OCI."
+          }
+        },
+        {
+          "p": "Výberom aplikácie sa zobrazí jej popis, obraz, ktorý beží, a dva režimy inštalácie: <strong>Install s predvoleným nastavením</strong>, ktorý sa pýta len to, čo sa rozhodne každá inštalácia (ukladanie, kam dáta idú, adresa a štart), a <strong>Install s pokročilým nastavením</strong>, ktorý otvára každé rozhodnutie v poradí: VMID a zdroje, ukladanie každej cesty, most a zariadenia."
+        },
+        {
+          "p": "Aplikácia, ktorá bola testovaná na reálne zobrazenie <strong>Overené</strong> v tomto pohľade a je označený s y v zoznamoch, či bol testovaný ProxMenux labák alebo komunita."
+        }
+      ]
+    },
+    {
+      "id": "beta",
+      "title": "Prečo je to technologický náhľad",
+      "blocks": [
+        {
+          "p": "OCI manažér Apps nesie <strong>Technológia Preview</strong>, ktoré Proxmox VE dáva aplikačným kontajnerom vytvoreným z obrázkov OCI, zavedeným v Proxmox VE 9.1. Odkazuje na to, čo beží OCI manažér Apps, nie na motor ProxMenux: správanie týchto kontajnerov sa môže stále meniť medzi Proxmox VE vydania. Štítok zostáva dovtedy, kým Proxmox VE neznačí, že podporuje ako stabilný."
+        },
+        {
+          "p": "Motor OCI manažér Apps (inštalácia, aktualizácia, modifikácia, rekreácia, zálohovanie, obnova, migrácia a strážny pes) je testovaný v laboratóriu ProxMenux. Každá aplikácia je testovaná na vlastnú päsť: tie testované na reálnu show <strong>Overené</strong> a niesť v zoznamoch."
+        }
+      ]
+    },
+    {
+      "id": "translation",
+      "title": "Čo Docker vyjadruje a čo Apps OCI manažér ho zmení na",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Požiadavka",
+              "Docker to vyjadruje ako",
+              "OCI manažér Apps zmení ho na"
+            ],
+            "rows": [
+              [
+                "Spustiť aplikáciu",
+                "<code>image</code>, <code>entrypoint</code>, <code>command</code>",
+                "OCI rootfs a hlavný proces LXC"
+              ],
+              [
+                "Udržiavať konfiguráciu",
+                "<code>volumes: /config</code>",
+                "pretrvávajúci <code>mpN</code> disk v zálohe alebo adresár hostiteľa"
+              ],
+              [
+                "Zverejnenie služby",
+                "<code>ports</code>",
+                "vlastnú adresu pre LXC a prístupové URL služby"
+              ],
+              [
+                "Použiť hardvér",
+                "<code>devices</code>, <code>group_add</code>",
+                "<code>devN</code> položky s efektívnym hostiteľom GID a validovaný profil"
+              ],
+              [
+                "Pripojenie závislostí",
+                "<code>networks</code>, <code>depends_on</code>",
+                "súkromný most, pevné adresy, začiatok a zdravotné prehliadky"
+              ],
+              [
+                "Aktualizácia",
+                "<code>pull</code> a znovuzrodenie",
+                "nové rootfs s rovnakou pretrvávajúcou zmluvou"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "kept",
+      "title": "Čo sa uchováva a čo sa mení",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "archive",
+                "title": "Ponechané",
+                "body": "Oficiálny obraz, jeho vnútorné cesty, jeho prostredie, jeho štartovací proces a jeho funkčná dokumentácia."
+              },
+              {
+                "icon": "boxes",
+                "title": "Upravené",
+                "body": "Runtime prostredie: sieť, perzistencia, zariadenia, oprávnenia a závislé použitie natívne Proxmox VE LXC primitívy."
+              },
+              {
+                "icon": "shield",
+                "title": "Nepreložené",
+                "body": "Skladací kľúč bez bezpečného ekvivalentu je uvedený ako blokátor. Šablóny s blokátormi nie sú ponúkané a citlivé možnosti sú potvrdené počas inštalácie."
+              },
+              {
+                "icon": "refresh",
+                "title": "Zaznamenané",
+                "body": "Obrázok trávenie, zdroje, cesty, sieť, zariadenia a stoh členstvo sú uložené v inštančnej zmluve, ktoré aktualizácie a rekreácie reprodukujú."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "pages",
+      "title": "Strany tejto sekcie",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Ako sa prekladá OCI obraz",
+                "href": "/docs/oci-manager/architecture",
+                "tail": "z obrázku a jeho kompozície do natívneho LXC."
+              },
+              {
+                "label": "Inštalovať obraz, ktorý nie je v katalógu",
+                "href": "/docs/oci-manager/custom-image",
+                "tail": "Skladba, spustenie docker alebo odkaz na obrázok."
+              },
+              {
+                "label": "Dáta, cesty a sieť",
+                "href": "/docs/oci-manager/storage-network",
+                "tail": "kontajnerové disky, hostiteľské adresáre, Rclone sa pripája a adresy."
+              },
+              {
+                "label": "Zariadenia a akcelerácia",
+                "href": "/docs/oci-manager/hardware",
+                "tail": "GPU, NVIDIA, Coral, USB a ďalšie zariadenia."
+              },
+              {
+                "label": "Aplikácie s viacerými kontajnermi",
+                "href": "/docs/oci-manager/stacks",
+                "tail": "aplikácie, databázy a vyrovnávacej pamäte ako koordinované LXC."
+              },
+              {
+                "label": "Inštalácia, aktualizácia a vytvorenie znova",
+                "href": "/docs/oci-manager/lifecycle",
+                "tail": "prípadná zmluva a jej činnosť."
+              },
+              {
+                "label": "V ProxMenux Monitore",
+                "href": "/docs/oci-manager/monitor",
+                "tail": "verzie, aktualizácie, konzolový výstup a terminál."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

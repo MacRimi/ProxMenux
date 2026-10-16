@@ -1,0 +1,203 @@
+{
+  "meta": {
+    "title": "Nainštalujte Coral TPU na Hostiteľský ProxMenux Dokumentácia",
+    "description": "Nainštalujte ovládače Google Coral TPU na počítači Proxmox VE. ProxMenux automaticky detekuje, či máte M.2 / Mini-PCIe alebo akcelerátor USB (alebo oboje) a spustí iba cestu inštalácie, ktorá sa vzťahuje na moduly petket/apex jadra prostredníctvom DKMS pre PCIe, libedgetpu1-std runttime pre USB."
+  },
+  "header": {
+    "title": "Inštalovať Coral TPU na hostiteľa",
+    "description": "Pripravte Proxmox hostiteľa, takže Coral TPU môže byť neskôr odovzdaný na LXC kontajner. ProxMenux Auto-detekuje, či máte M.2 / Mini-PCIe karta, USB Accelerator, alebo oboje, a spustí iba inštalačnú cestu, ktorá používa DKMS pre PCIe, Google's Edge TPU čas na USB.",
+    "section": "Hardvér: grafické karty a Coral TPU"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "Inštalátor Coral je <strong>0 unified a hardware-aware</strong>: spustíte jednu možnosť menu a zistíte, čo vlastne máte. M.2 / Mini-PCIe karty potrebujú moduly jadra (<code>gasket</code> + <code>apex</code>) vyrobené s DKMS tak, aby prežili upgrade jadra. Akcelerátory USB len potrebujú bežiaci čas Google Edge TPU (<code>libedgetpu1-std</code>) z vlastného APT úložiska Google. Oba typy zapojené? Obe cesty bežia postupne."
+  },
+  "which": {
+    "heading": "Ktorý Coral mám?",
+    "body": "Dva druhy Coral zariadenia, ktoré môžete pripojiť do Proxmox hostiteľa vyzerať veľmi odlišné a host-strana inštalácia je veľmi odlišná taky. Skript manipuluje s oboma, ale je dobré vedieť, čo máte pred spustením niečoho:",
+    "headerForm": "Faktor formy",
+    "headerDetect": "Detekcia",
+    "headerInstall": "Typ inštalácie",
+    "headerReboot": "Reštart?",
+    "pcieForm": "M.2 / Mini-PCIe",
+    "pcieFormSub": "(dvojitá edge TPU na karte M.2)",
+    "pcieDetect": "PCI predajca <code>1ac1</code>",
+    "pcieInstall": "Kernelový modul (plyn + apex) cez DKMS",
+    "pcieReboot": "Áno",
+    "usbForm": "USB akcelerátor",
+    "usbFormSub": "(malé plastové šišky)",
+    "usbDetect": "USB <code>1a6e:089a</code> (nenaprogramované) / <code>18d1:9302</code> (naprogramované)",
+    "usbInstall": "Čas bežania užívateľského priestoru (<code>libedgetpu1-std</code>) from Google APT repo",
+    "usbReboot": "Nie"
+  },
+  "prereqs": {
+    "title": "Skôr ako začnete",
+    "coral": "<strong>A Koral TPU pripojený do host</strong> (M.2, Mini-PCIe alebo USB). Žiadny Coral znamená, že žiadna inštalácia",
+    "coralCheck": "lspci -d 1ac1: ; lsusb | grep -E '1a6e:089a|18d1:9302'",
+    "internet": "<strong>Internetový prístup</strong> na hostiteľa pre PCIe cestu DKMS klonuje GitHub repo, pre USB pridáva APT repo Google a sťahuje balík <code>libedgetpu1-std</code>.",
+    "headers": "<strong>Kernelové hlavičky sú k dispozícii cez APT</strong>. Na Proxmoxe to znamená <code>proxmox-headers-$(uname -r)</code> musí byť možné nainštalovať iba pre PCIe/M.2 cesta, ale scenár ju stiahne automaticky, aby ste nemuseli.",
+    "reboot": "<strong>0Be OK s reštart</strong> ak máte PCIe hardvér. Modul jadra je postavený a naložený na konci, ale čerstvá topánka je čistý spôsob, ako potvrdiť, že príde sám."
+  },
+  "hostPrepTip": {
+    "title": "To len pripravuje hostiteľa",
+    "body": "Inštalácia Coral tu robí hostiteľa <em>pripravený</em>  TPU je viditeľný pre jadro hostiteľa a môže byť odovzdaný do LXC. Vlastne... <em>použitie</em> z kontajnera (Frigate, DeepStackatď.), ďalším krokom je <lxcLink>Pridať Coral TPU do LXC</lxcLink>."
+  },
+  "running": {
+    "heading": "Spustenie inštalátora",
+    "body": "Otvoriť ProxMenux na hostiteľa, choďte na <strong>Hardware: GPU a Coral-TPU → Inštalovať/aktualizovať koral TPU o hostiteľovi</strong>.",
+    "imageAlt": "Položka menu pre 'Install/Update Coral TPU on Host' vnútri Hardware: GPUs and Coral-TPU"
+  },
+  "howRuns": {
+    "heading": "Ako beží skript",
+    "body": "Hardware je detekovaný ako prvý, takže inštalačný plán je formovaný na vaše skutočné nastavenie. Nič nie je nainštalované, kým nepotvrdíte."
+  },
+  "walkthrough": {
+    "heading": "Prechádzam prúdom",
+    "detect": {
+      "title": "Detekcia hardvéru",
+      "body": "Skript číta <code>/sys/bus/pci/devices/*/vendor</code> hľadá <code>0x1ac1</code> (Global Unichip Corp., predajca kremíka čipov Coral TPU) a beží <code>lsusb</code> hľadá USB akcelerátor ID. USB zariadenie má <strong>two</strong> ID v závislosti na tom, či jeho firmware bol načítaný ešte:",
+      "items": [
+        "<code>1a6e:089a</code> chip Globálny <em>nenaprogramované</em> stav (pred Edge TPU Runtime hovorí s ním prvýkrát).",
+        "<code>18d1:9302</code> Google, <em>naprogramované</em> stav (po náložiach firmware na neho)."
+      ],
+      "outro": "Ak nie je nájdený ani jeden, dostanete informatívny dialóg a skript vystúpi čisto."
+    },
+    "prompt": {
+      "title": "Predinštalácia",
+      "body": "Pred tým, než sa niečoho dotknete, jeden dialóg sumarizuje to, čo bolo zistené a čo bude nainštalované. Tu môžete zrušiť bez vedľajších účinkov.",
+      "imageAlt": "Predinštalačný dialóg zobrazujúci detekovaný koralový hardvér (M.2/PCIe count + USB count) a zoznam krokov, ktoré inštalátor spustí"
+    },
+    "pcie": {
+      "title": "PCIe cesta DKMS",
+      "body": "Spúšťa sa len vtedy, ak skript našiel koral PCIe / M.2. Je to ťažšia z dvoch ciest, pretože zostavuje modul jadra pre vaše presné bežiace jadro.",
+      "items": [
+        "<strong>Cleanup.</strong> Ak predchádzajúca <code>gasket-dkms</code> nainštalovať ľavý dpkg v zlom stave (typické po PVE 9 upgrade jadra, kde DKMS autoinštalácia zlyhala ticho), silový očistiť.",
+        "<strong>Nainštalujte depy pre stavbu:</strong> <code>git</code>, <code>dkms</code>, <code>build-essential</code>, <code>proxmox-headers-$(uname -r)</code>."
+      ],
+      "cloneIntro": "<strong>Uzavrite zdroj vodiča.</strong> Preferuje <feranickLink>feranick/vodič na pažerák</feranickLink> Spoločenská vidlica (aktívne udržiavaná, jadro 6.12+ pripravený). Vracia sa do <googleLink>Google/pasca-driver</googleLink> ak je feranick nedosiahnuteľný, nanesením špecifických škvŕn:",
+      "kernelPatches": [
+        "Kernel 6.5+: <code>no_llseek</code> odstránený proti prúdu → substitúcia <code>noop_llseek</code>",
+        "Kernel 6.13+: <code>MODULE_IMPORT_NS(DMA_BUF)</code> vyžaduje doslovný reťazec"
+      ],
+      "afterItems": [
+        "<strong>0Zdroj stavu pod <code>/usr/src/gasket-1.0/</code>,</strong> generovať <code>dkms.conf</code>, register s <code>dkms add</code>.",
+        "<strong>Build + inštalácia:</strong> <code>dkms build</code> potom <code>dkms install</code>. Ak niečo zlyhá, posledné 50 riadky <code>make.log</code> tlač na terminál, takže vidíte skutočnú chybu",
+        "<strong>Vytvorte skupinu <code>apex</code> + udev pravidlá</strong> (<code>/etc/udev/rules.d/99-coral-apex.rules</code>) takže uzly <code>/dev/apex_*</code> dostanú správnu skupinu na ďalšom štarte.",
+        "<strong>0Načítať moduly:</strong> <code>modprobe gasket</code> + <code>modprobe apex</code>."
+      ],
+      "imageAlt": "DKMS build progress + modul load output for the petket/apex core moduls"
+    },
+    "usb": {
+      "title": "USB cesta Edge TPU čas od Google",
+      "body": "Spustí sa len vtedy, ak bol zistený akcelerátor USB. Oveľa jednoduchšie:",
+      "items": [
+        "<strong>Pridať Google GPG kľúč</strong> na <code>/etc/apt/keyrings/coral-edgetpu.gpg</code>.",
+        "<strong>Pridať APT úložisko</strong> do <code>/etc/apt/sources.list.d/coral-edgetpu.list</code> s <code>signed-by=</code> ukazovať na klávesnicu (moderný, nedeformovaný formát).",
+        "<strong>Inštalovať <code>libedgetpu1-std</code></strong> chronologický výkon Edge TPU Bežte.",
+        "<strong>Reload udev</strong>, takže pravidlá dodávané s balíkom platia pre USB zariadenie bez nutnosti odpojiť/odpojiť."
+      ],
+      "stdTitle": "Prečo libedgetpu1-std a nie libedgetpu1-max?",
+      "stdBody": "Variant <code>max</code> prekoná Coral a beží teplejšie. Jemné pre použitie na ploche s prietokom vzduchu; neodporúča sa vnútri malých NUC / Mini-PC stavia alebo pasívne chladený Proxmox hostiteľov. Ak to naozaj chcete, potom nainštalujte ručne: <code>apt install libedgetpu1-max</code>."
+    },
+    "reboot": {
+      "title": "Reštart (iba ak PCIe bežala)",
+      "body": "Ak cesta PCIe bežala, skript ponúka reštart. Moduly boli: <code>modprobe</code>'d už tak teoreticky môžete preskočiť reštart, ale čistá topánka je správny spôsob, ako overiť modul príde na jeho vlastné a <code>/dev/apex_0</code> sa objaví so skupinou <code>apex</code>. Pre inštaláciu iba USB sa neodporúča reštart (runtime a udev pravidlá sú aktívne okamžite).",
+      "imageAlt": "Záverečné zhrnutie + reštart po inštalácii PCIe"
+    }
+  },
+  "legacyCleanup": {
+    "heading": "Čistenie odkazu gasket-dkms na USB-iba hostiteľov",
+    "intro": "Ak má hostiteľ <strong>no detekované PCIe / M.2 Coral</strong> ale stále obsahuje predchádzajúcu inštaláciu <code>gasket-dkms</code>, ProxMenux identifikuje tento stav samostatne a ponúka voliteľné čistenie. Nič nie je odstránené bez potvrdenia.",
+    "items": [
+      "Ak je prítomný PCIe / M.2 Coral, toto vyčistenie sa nikdy neponúkne; namiesto toho sa použije normálna cesta obnovy DKMS.",
+      "Čistenie čistiareň <code>gasket-dkms</code>, odstraňuje zastavený tesnenie DKMS registrácie a zdrojové stromy, a opravy až do stavu <code>dpkg</code> / APT.",
+      "USB runtime balíčky <code>libedgetpu1-std</code>0 a <code>libedgetpu1-max</code> sú ponechané nedotknuté, takže USB Coral udržuje svoj čas.",
+      "Skript potvrdzuje, že starý balík je preč a že správa balíkov je pred nahlásením úspechu zdravá."
+    ],
+    "warningTitle": "Potvrdiť najprv hardvér",
+    "warningBody": "Ak PCIe / M.2 Coral môžu byť nainštalované, ale nie je detekované, zrušiť vyčistenie a skontrolovať kartu, slot a firmware nastavenia pred pokračovaním."
+  },
+  "reinstallUninstall": {
+    "heading": "Preinštalovať alebo odinštalovať",
+    "intro": "Spustenie inštalátora na hostiteľa, kde je Coral už nainštalovaný (PCIe cez <code>gasket-dkms</code>, USB cez <code>libedgetpu1-std</code>/<code>libedgetpu1-max</code> alebo oboje) už neklesne priamo do inej novej inštalácie. Namiesto toho, ProxMenux detekuje existujúce nastavenie a zobrazí akčné menu, takže sa môžete rozhodnúť, čo robiť.",
+    "imageAlt": "Coral akčné menu s dvoma možnosťami",
+    "imageCaption": "Akčné menu sa zobrazí iba vtedy, ak je už nainštalovaná aspoň jedna zložka koralu (zápis tesnenia DKMS, balík <code>libedgetpu1-*</code> alebo živé uzly zariadenia <code>/dev/apex_*</code>).",
+    "reinstallHeading": "Preinštalovať/aktualizovať",
+    "reinstallBody": "Pokračovať s normálnym tokom inštalácie DKMS prestavba sa nestala automaticky, alebo zdvihnúť čas do novšieho <code>libedgetpu1-*</code> z Google Coral apt repo. Predchádzajúci DKMS stav je vyčistený ako prvý, takže poloinštalovaný balík z neúspešného predchádzajúceho pokusu neblokuje novú stavbu.",
+    "uninstallHeading": "Odinštalovať čo sa odstráni",
+    "uninstallIntro": "Potvrdí s áno / nie dialóg pred tým, než niečo (LXC kontajnery s apex passhrough stratí prístup k <code>/dev/apex_*</code> po ďalšom reštarte Potom vykoná úplný, nepozorný návrat:",
+    "uninstallItems": [
+      "Vypúšťa moduly jadra <code>apex</code> a <code>gasket</code>.",
+      "Odstráni každú položku DKMS registrovanú na <code>gasket/&lt;version&gt;</code>, aby sa moduly nevrátili na ďalšiu inštaláciu jadra.",
+      "Purges <code>gasket-dkms</code>, <code>libedgetpu1-std</code> a <code>libedgetpu1-max</code> apt balíčky, potom spustí <code>apt-get autoremove --purge</code>.",
+      "Odstráni pravidlo udev <code>/etc/udev/rules.d/99-coral-apex.rules</code> ProxMenux napísal; obnovuje skupinu <code>60-gasket-dkms.rules</code> proti prúdu do svojho predvoleného stavu, ak je stále prítomná.",
+      "Odstráni <code>apex</code> systémová skupina <strong>iba ak k nej stále nepatria žiadni používatelia</strong> Ak ste zmapovali vlastného užívateľa do <code>apex</code> pre LXC Passover, skupina je ponechaná na mieste a varovanie vytlačí súčasných členov.",
+      "Čistí položku Google Coral apt úložiska a klávesnicu (<code>/etc/apt/sources.list.d/coral-edgetpu.list</code> + <code>coral-edgetpu-archive-keyring.gpg</code>).",
+      "Prompty pre reštart na konci <strong>0 iba v prípade, že PCIe cesta bola nainštalovaná </strong> USB-iba odinštalovať nepotrebuje žiadne."
+    ],
+    "lxcWarnTitle": "Nádoby LXC s priechodom apex",
+    "lxcWarnBody": "Odinštalácia na hostiteľovi znehodnocuje cestu zariadenia mapovanú do akéhokoľvek LXC kontajnera nakonfigurovaného pre apex passhrough. Naplánujte prevádzku počas okna údržby, ak Frigate / DeepStack / podobné pracovné zaťaženie závisí od neho."
+  },
+  "updates": {
+    "heading": "Aktualizácia oznámení",
+    "intro": "ProxMenux teraz sleduje nainštalované koralové komponenty v registri riadených inštalácií. Oba varianty sú sledované nezávisle a hostiteľ s oboma M.2 a USB Coral zariadenia dostane dva aktualizácie prúdy, každý s vlastným predným zdrojom:",
+    "headerVariant": "Variant",
+    "headerTracked": "Sledovaná verzia",
+    "headerUpstream": "Zdroj prúdu",
+    "pcieVariant": "PCIe / M.2",
+    "pcieTracked": "<code>gasket-dkms</code> Verzia Debianu (alebo DKMS-registrovaná verzia, ak bol balíček vymazaný silou)",
+    "pcieUpstream": "Posledná značka <code>feranick/gasket-driver</code> na GitHub (7-dňová vyrovnávacia pamäť, porovnanie počtu budov)",
+    "usbVariant": "USB",
+    "usbTracked": "<code>libedgetpu1-std</code> alebo <code>libedgetpu1-max</code> apt verzia",
+    "usbUpstream": "Lokálny kandidát na <code>apt-cache policy</code> (Google Coral apt repo)",
+    "outro": "Keď sa zistí novšia verzia, monitor vystrelí <code>coral_driver_update_available</code> oznámenie na každom aktivovanom kanáli (Telegram, Discord, Gotify, ntfy, e-mail, webhook). Oznamovacie body späť na tej istej inštalačnej vstupnej pick <strong>Preinštalovať/aktualizovať</strong> z vyššie uvedeného akčného menu na jeho aplikáciu.",
+    "antiTitle": "Konštrukčné antikaskády",
+    "antiBody": "Jedna notifikácia na variant, len keď sa verzia v protiprúdovom smere zmení, nikdy na každých 24 hodín. Ak ignoruješ aktualizáciu, neprepne ťa, kým nepristane novšie vydanie.",
+    "rebootTitle": "Reštart je potrebný len pre PCIe cestu",
+    "rebootBody": "Tesnenie DKMS prestavuje zaťaženie nových modulov jadra Upgrade USB runtime je výmena knižníc pre užívateľské priestory, nevyžaduje sa reštart."
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent",
+    "intro": "Ak chcete vedieť, čo sa stane pod kapotou, alebo prerobiť individuálne krok za krokom, surové príkazy na cestu vyzerajú takto.",
+    "pcieHeading": "PCIe / M.2 (železnica + apex cez DKMS)",
+    "usbHeading": "USB (behové prostredie libedgetpu)"
+  },
+  "verification": {
+    "heading": "Overenie",
+    "pcieHeading": "PCIe / M.2",
+    "usbHeading": "USB"
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "dkmsFailTitle": "Vybudovanie DKMS zlyhalo po aktualizácii jadra",
+    "dkmsFailBody": "Najčastejšia príčina na PVE 9: bežiace jadro narazil, ale <code>proxmox-headers-$(uname -r)</code> ešte na to nie je nainštalovaný. Poraďte sa s lekárom. <code>dpkg -l proxmox-headers-$(uname -r)</code>. Nainštalujte chýbajúce hlavičky a znovu spustiť skript ProxMenux's <code>cleanup_broken_gasket_dkms</code> krok manipuluje s akýmkoľvek zostávajúcim polokonfigurovaným stavom balenia.",
+    "apexMissTitle": "/dev/apex_0 chýba po reštarte",
+    "apexMissBody": "Modul nie je načítaný. Skús <code>modprobe apex</code> ručne. Ak sa vyskytnú tieto chyby, skontrolujte <code>dmesg | grep -iE \"apex|gasket\"</code> v prípade skutočného zlyhania sú spoločnými vinníkmi nesúlad verzie jadra (DKMS bol postavený pre iné jadro, než ten, ktorý ste booted) alebo upgrade firmware, ktorý vypnutý PCIe slot Coral je v.",
+    "lxcMissTitle": "Môžete vidieť /dev/apex_00 ale LXC nemôže",
+    "lxcMissBody": "Hostiteľ je v poriadku. Problém je priestupok konfig <lxcLink>Pridať Coral TPU do LXC</lxcLink>.",
+    "usbUnreachTitle": "USB akcelerátor detekovaný, ale Frigate / TFLite nemôže dosiahnuť",
+    "usbUnreachBody": "Skontrolujte, či pravidlá udev dodávané s <code>libedgetpu1-std</code> nadobudlo účinnosť: <code>ls -l /dev/bus/usb/*/*</code>. Zariadenie by nemalo byť vo vlastníctve koreňa: root s režimom 0600 Ak áno, tak bež. <code>udevadm control --reload-rules &amp;&amp; udevadm trigger</code> Na hostiteľa, odpojte USB Coral, počkajte. 3 sekundy a zapojte ho späť.",
+    "logTitle": "Inštalovať log",
+    "logBody": "Každý beh píše: <code>/tmp/coral_install.log</code> na hostiteľa. Ak DKMS @ info: whatsthis 50 línie <code>/var/lib/dkms/gasket/1.0/build/make.log</code> k tomuto denníku, pripojte ho pri žiadosti o pomoc GitHub."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Pridať Coral TPU do LXC",
+        "href": "/docs/hardware/coral-tpu-lxc",
+        "tail": " Preneste hostiteľa Coral zariadenie do kontajnera (Frigate, CodeProject.AI...)."
+      },
+      {
+        "label": "Nainštalovať ovládače NVIDIA (host)",
+        "href": "/docs/hardware/nvidia-host",
+        "tail": " — Rovnaký nápad pre NVIDIA GPU."
+      },
+      {
+        "label": "ProxMenux Monitor",
+        "href": "/docs/monitor/dashboard/hardware",
+        "tail": " — Coral mode, že povrchy vodiča, moduly, zariadenia uzly, stav beží a živá teplota, akonáhle hostiteľ inštaluje je host urobil."
+      }
+    ]
+  }
+}

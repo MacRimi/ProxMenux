@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "title": "Importovať disk do VM | ProxMenux Dokumentácia",
+    "description": "Pripojte fyzický disk na existujúci Proxmox VM s ProxMenux. Bezpečná detekcia disku (okrem systému, namontovaných, používaných, ZFS/RAID/LVM), perzistentných ciest /dev/disk/by-id a SATA / SCSI / VirtIO / IDE rozhraní.",
+    "ogTitle": "Importovať disk do VM | ProxMenux Dokumentácia",
+    "ogDescription": "Pripojte fyzický disk na existujúci Proxmox VM. Používa perzistentné cesty /dev/disk/by-id a podporuje SATA / SCSI / VirtIO / IDE."
+  },
+  "header": {
+    "title": "Importovať disk do VM",
+    "description": "Pripojte fyzický disk, ktorý už existuje na Proxmox hostiteľa k existujúcemu virtuálnemu stroju. ProxMenux detekuje voľné disky, umožňuje vám vybrať cieľovú VM, typ zbernice (SATA / SCSI / VirtIO / IDE) a pripojí všetko pomocou perzistentných ciest /dev/disk/by-id, takže mapovanie prežije reštarty a zmeny v poradí zariadenia.",
+    "section": "Správca disku · VM"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "To je raw-disk priechod: hosť OS vidí disk ako skutočný blok zariadenia (s jeho SMART údaje a prirodzená geometria). Disk je pripojený cez jeho <code>/dev/disk/by-id/…</code> cesta nie <code>/dev/sdX</code> Takže priradenie neprerušuje, ak ovládače disku pomenujú zariadenia v inom poradí na ďalšom štarte."
+  },
+  "howRuns": {
+    "heading": "Ako beží skript",
+    "body": "Prietok má dve fázy s jasným oddelením medzi \"zhromažďovaním informácií a rozhodnutí\" a \"skutočne pripojením diskov na VM.\" Až do konečného potvrdenia, VM config je nedotknutý.",
+    "summary": "ProxMenux filtruje všetko, čo nemôže bezpečne prejsť: koreňový disk, disky namontované na hostiteľa, členovia aktívneho ZFS/LVM/RAID bazén a disky už odkazované akékoľvek VM/LXC. Disky s <em>stale</em> metadátami (staré ZFS / RAID / LVM podpisy, ktoré sa už nepoužívajú) sú zobrazené s označením, ale nie sú blokované."
+  },
+  "prereqs": {
+    "heading": "Predpoklady",
+    "items": [
+      "Aspoň jeden VM definovaný na hostiteľovi (skript odosiela priamo do <code>qm list</code>).",
+      "<strong>target VM je napájaný z </strong>. Ak je spustenie skript prerušuje s správou",
+      "Aspoň jeden fyzický disk na hostiteľa, ktorý nie je v prevádzke hostiteľom alebo iným hosťom."
+    ]
+  },
+  "steps": {
+    "heading": "Krok za krokom",
+    "stepLabel": "Krok",
+    "list": [
+      {
+        "title": "Vyberte cieľovú VM",
+        "bodyRich": "ProxMenux uvádza každý VM na hostiteľa (prostredníctvom <code>qm list</code>). Vyberte ten, ktorý dostane disk. Ak VM beží skript sa ruší a žiada vás, aby ste ho vypnúť ako prvý."
+      },
+      {
+        "title": "Vyberte fyzický disk na pripojenie",
+        "img": "/disk/disk-selection.png",
+        "caption": "Voľné disky detekované na hostiteľovi (so štítkami pre zastavené metaúdaje)",
+        "body": "Skript skenuje každý hostiteľský disk a zobrazuje iba tie, ktoré sú bezpečné na pripojenie. Kontrolný zoznam umožňuje vybrať jeden alebo niekoľko naraz. Disky so starým ZFS0 / LVM / RAID podpisy stále zobrazí, označené s"
+      },
+      {
+        "title": "Vyberte rozhranie zbernice",
+        "img": "/disk/disk-assigment.png",
+        "caption": "Výber rozhrania zbernice",
+        "intro": "Vyberte si, ako by mal hosť vidieť disk:",
+        "items": [
+          "<strong>SCSI</strong> Moderné predvolené pre Linux a Windows s VirtIO- Nainštalované ovládače SPSI.",
+          "<strong>SATA</strong>",
+          "<strong>VirtIO</strong> Paravirtualizované blokovacie zariadenie, najrýchlejšie, ale vyžaduje hostí vodiči.",
+          "<strong>IDE</strong>"
+        ]
+      },
+      {
+        "title": "Pripojiť a overiť",
+        "bodyRich": "ProxMenux pripojí každý vybraný disk so svojou najlepšou cestou <code>/dev/disk/by-id/</code>, preskočí sloty indexy, ktoré sa už používajú v VM config (<code>scsi0</code>, <code>sata0</code>, ...) a znovu prečíta konfiguráciu na potvrdenie úlohy. Na konci je vytlačený súhrn."
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent",
+    "body": "Scenár je obal okolo <code>qm set</code>. Presný príkaz pre jeden disk vyzerá takto:",
+    "migrationTitle": "Živá migrácia nie je možná",
+    "migrationBody": "A VM s priechodovým diskom je <strong>priviazaná k hostiteľovi, ktorý odhaľuje ten disk</strong>. Živá migrácia do iného uzla Proxmox zlyhá, pretože cieľový uzol nevidí to isté <code>/dev/disk/by-id/…</code> cesta. Namiesto toho použite replikáciu alebo zálohu/rezerváciu alebo vyberte virtuálne disky na zdieľanom úložisku, ak potrebujete mobilitu.",
+    "shareTitle": "Nezdieľať fyzický disk medzi VM",
+    "shareBody": "Pripojenie rovnakého fyzického disku k dvom VM súčasne skazí dáta pri ďalšom zápise. ProxMenux detekuje túto situáciu a blokuje ju, ale ak obídete skript (direct <code>qm set</code>), uistite sa, že len jeden hosť niekedy pripojí disk."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "noDisksTitle": "\"Nie sú k dispozícii disky pre tento VM\"",
+    "noDisksIntro": "Skript našiel disky, ale každý kandidát bol odfiltrovaný. Časté dôvody:",
+    "noDisksItems": [
+      "Každý zostávajúci disk je už uvedený v cieľovom VM konfigurácii.",
+      "Každý zostávajúci disk je namontovaný na hostiteľa alebo je súčasťou aktívneho ZFS / LVM / RAID.",
+      "Hostiteľ má nainštalovaný iba koreňový disk."
+    ],
+    "noDisksOutro": "Spustite <code>lsblk -f</code> na hostiteľa skontrolovať stav každého disku.",
+    "noVisibleTitle": "VM nevidí disk po štarte",
+    "noVisibleBody": "Ak ste si vybrali <strong>0SCSI</strong> alebo <strong>VirtIO</strong>, hosť potrebuje zodpovedajúce ovládač. Na Linux, ktorý je jadra-natívne; na Windows budete potrebovať VirtIO ISO a ovládač inštalovať (pozri <winLink>Create VM: System Windows</winLink> stránku). Prepínanie na SATA v hardvérovej karte VM je rýchlym prevedením na potvrdenie, že disk je fyzicky pripojený."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-image-vm",
+        "label": "Importovať obraz disku do VM",
+        "tail": " — "
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-lxc",
+        "label": "Importovať disk do LXC",
+        "tail": " — Ekvivalent prietoku pre kontajnery LXC."
+      },
+      {
+        "href": "/docs/disk-manager/add-controller-nvme-vm",
+        "label": "Pridať radič alebo NVMe do VM",
+        "tail": " — Ak potrebujete plnú PCIe / NVMe priechod skôr ako pripojiť disk."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Príkazy na ukladanie a disky",
+        "tail": " — "
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Prehľad správcu diskov",
+        "tail": "."
+      }
+    ]
+  }
+}

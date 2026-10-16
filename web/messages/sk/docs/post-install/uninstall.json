@@ -1,0 +1,271 @@
+{
+  "meta": {
+    "title": "Odinštalovať optimalizáciu ProxMenux Dokumentácia",
+    "description": "Obnoviť reverzibilné zmeny konfigurácie po inštalácii použité ProxMenux. Registrované nástroje používajú špecializované odinštalátory, ktoré zachovávajú už existujúci hostiteľský štát, ak je to možné."
+  },
+  "header": {
+    "title": "Odinštalovať optimalizácie",
+    "description": "Obnoviť reverzibilné zmeny vykonané automatizovanými alebo prispôsobiteľnými skriptmi po inštalácii. ProxMenux registruje každú podporovanú optimalizáciu s jeho špecializovanou funkciou obnovy; aktualizácie balíkov sú zámerne vylúčené.",
+    "section": "Nastavenie Proxmoxu po inštalácii"
+  },
+  "intro": {
+    "title": "Prečo to existuje?",
+    "body": "Každý podporovaný reverzibilný vylepšenie je <strong>stopované</strong> on <code>/usr/local/share/proxmenux/installed_tools.json</code>. Tento register umožňuje odinštalovať tok: uvádza aktívne optimalizácie a odosiela zodpovedajúcu funkciu obnovy. Akcie bez bezpečného spätného vrátenia, ako je úplná aktualizácia balíka, nie sú pridané."
+  },
+  "openMenu": {
+    "heading": "Ako to otvoriť",
+    "body": "Od ProxMenux's hlavným menu, <strong>Nastavenia po inštalácii Proxmox → Odinštalovať optimalizácie</strong>. Pozrite si zoznam <em>v súčasnosti uplatňované</em> optimalizácia položky, ktoré ste nepoužili, sa nezobrazujú.",
+    "imageAlt": "Odinštalovať Kontrolný zoznam Optimizácií zobrazujúci položky, ktoré sa v súčasnosti používajú na hostiteľovi, pomocou zaškrtávacích políčok na výber, ktoré sa majú vrátiť"
+  },
+  "howWorks": {
+    "heading": "Ako reverzia účinkuje",
+    "steps": [
+      {
+        "title": "Register a autodetekcia",
+        "body1": "Pri prvom behu, ProxMenux prechádzky hostiteľ hľadá súbory odtlačkov prstov (napr. <code>/etc/sysctl.d/99-memory.conf</code>, <code>/etc/apt/apt.conf.d/99-force-ipv4</code>, nainštalovaný balík <code>haveged</code>, služba log2RAM aktívna...). Všetko nájdené je pridané do registra ako reverzibilné, aj keď to bolo použité staršou verziou ProxMenux, ktorá predchádza registra.",
+        "body2": "Táto migrácia prebieha len raz. Potom sa každá aplikácia/reverzná aktualizácia registra priamo."
+      },
+      {
+        "title": "Vyberte si, čo vrátiť",
+        "body1": "Kontrolný zoznam obsahuje čitateľné označenie každej položky (napr. <em>Memory Settings Optimization</em>, <em>IOMMU/VFIO PCI Passhrough</em>, <em>Log2RAM (SSD Protection)</em>). Označ tie, ktoré chceš obrátiť. Nič, čoho by ste sa nedotkli."
+      },
+      {
+        "title": "Zvratné chody",
+        "body1": "Pre každú vybranú položku ProxMenux volá zodpovedajúcu funkciu odinštalovania. Väčšina zvratov nasleduje jeden z troch vzorov:",
+        "items": [
+          "<strong>Na základe zálohy</strong>  <code>.bak</code> zachytený v čase podania žiadosti (bashrc, logrotate.conf, journald.conf, GRUB/Kernel cmdline).",
+          "<strong>Odstrániť- the- config</strong> Odstrániť ProxMenux's <code>/etc/sysctl.d/99-*.conf</code>, <code>/etc/apt/apt.conf.d/99-*</code>alebo systemd Jednotka, potom znovu nabiť.",
+          "<strong>Package reinštalácia</strong> pre UI zmeny, ako je predplatné banner, preinštalovať predné balíčky s <code>--force-confnew</code> obnoviť dodávanú konfiguráciu."
+        ],
+        "body2": "Každý obrat zaznamenáva svoj pokrok. Položky, ktoré vyžadujú reštart (VFIO, trvalé názvy rozhraní) nastaviť vlajku, ktorá spustí reštart prompt na konci."
+      },
+      {
+        "title": "Reštart na konci",
+        "body1": "Po ukončení zvratu zobrazí menu reštart. Položky, ktoré zmenili parametre jadra, moduly jadra alebo sieťovú pomenovanie (VFIO, trvalé názvy rozhraní), potrebujú, aby reštart nastal; iné položky nie, a pohovka je predvolená bezpečnosť, nie kontrola jednotlivých položiek."
+      }
+    ]
+  },
+  "reversible": {
+    "heading": "Čo je reverzibilné",
+    "intro": "Registrované reverzibilné optimalizácie a ich zodpovedajúce odinštalátory sú zoskupené podľa oblastí:",
+    "groups": [
+      {
+        "title": "Repozície a APT",
+        "items": [
+          {
+            "tool": "Odstránenie banneru pri odbere",
+            "restores": "Prvý pokus o obnovenie UI súborov z ProxMenux vlastných záloh (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup.* a, keď je mobilné UI patched, index.html.tpl.backup.*). Iba v prípade, že záloha chýba alebo je poškodená, spadne späť do reinštalácie pve-manager, proxmox- widget-toolkit, libjs-extjs a libpve-http-server-perl s force-confnew. Tiež čistí cached .js / .gz kópie."
+          },
+          {
+            "tool": "Preskočiť jazykové súbory APT",
+            "restores": "Odstráni /etc/apt/apt.conf.d/99-disable-translations. APT znovu stiahne jazykové balíky."
+          },
+          {
+            "tool": "Vynútiť IPv4 pre APT",
+            "restores": "Odstráni /etc/apt/apt.conf.d/99-force-ipv4."
+          },
+          {
+            "tool": "Systémové zariadenia",
+            "restores": "Purges iba vybrané balíky služieb, ktoré ProxMenux zaznamenal ako novo nainštalované. Balíky, ktoré už boli pred prijatím akcie predložené, sa do tohto zoznamu nikdy nepridávajú a zostávajú nedotknuté."
+          }
+        ]
+      },
+      {
+        "title": "Kernel, pamäť a systémové limity",
+        "items": [
+          {
+            "tool": "Nastavenie pamäte",
+            "restores": "Odstráni /etc/sysctl.d/99-memory.conf a znovu načíta sysctl."
+          },
+          {
+            "tool": "Kernel Konfigurácia paniky",
+            "restores": "Odstráni /etc/sysctl.d/99-kernelpanic.conf."
+          },
+          {
+            "tool": "Zvýšenie systémových limitov",
+            "restores": "Odstraňuje /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf a /etc/security/limits.d/99-limits.conf. Reverzuje limity PAM a systemd DefaultLimitNOFILE, a necháva ulimit -n 256000 riadok z /root/.profile."
+          },
+          {
+            "tool": "Profil výmeny ZRAM",
+            "restores": "Vypne výmenu za /dev/zram0, zastaví dev-zram0.swap a odstráni /etc/systemd/zram-generator.conf.d/90-proxmenux.conf. • systemd-zram-generátor balíček je vyčistený, len ak ProxMenux nainštalovaný a žiadne iné nastavenie ZRAM nie je k dispozícii. Ak stránky v ZRAM nie je možné presunúť von, profil zostáva aktívny a nič nie je odstránené."
+          }
+        ]
+      },
+      {
+        "title": "Sieťovanie",
+        "items": [
+          {
+            "tool": "Optimalizácia siete",
+            "restores": "Odstráni /etc/sysctl.d/99-network.conf, 97-proxmenux-fwbr.conf a 98-proxmenux-rpf.conf spolu s jednotkou proxmenux-fwbr-tune.service, pomocníkom /usr/local/sbin/proxmenux-fwbr-tune a pravidlom /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules udev. Tiež prúžky zdroj /etc/network/interfaces.d/* linka z /etc/network/interfaces. Reloads sysctl, systemd a udev pravidláet."
+          },
+          {
+            "tool": "Open vSwitch",
+            "restores": "Spustí apt vyčistiť na openvswitch-switch a openvswitch-bežné. Migrujte mosty OVS späť na mosty Linux pred spustením tohto odinštalovať"
+          },
+          {
+            "tool": "TCP BBR + TCP Rýchle otvorenie",
+            "restores": "Odstráni /etc/sysctl.d/99-tcp-bbr.conf a 99-tcp-fastopen.conf a znovu načíta sysctl, takže jadro sa vráti do kubickej kontroly preťaženia a do tcp_fastopen=1."
+          },
+          {
+            "tool": "Pretrvávajúce názvy rozhraní",
+            "restores": "Odstráni iba 10-proxmenux-*.link súbory nesúce hlavičku ProxMenux z /etc/systemd/network/. Akýkoľvek . odkaz súbor poskytnutý iným balíkom alebo napísaný užívateľom zostáva na mieste. Názvy rozhraní sa vrátia k štandardnému správaniu systemd pri ďalšej reštarte."
+          }
+        ]
+      },
+      {
+        "title": "Zaznamenávanie",
+        "items": [
+          {
+            "tool": "Zvestovaná optimalizácia",
+            "restores": "Prepíše /etc/systemd/journald.conf s predvolenou vanilkou a reštartuje systemd-journald."
+          },
+          {
+            "tool": "Optimalizácia logrotácie",
+            "restores": "Obnoví /etc/logrotate.conf zo súboru .bak zachytený pred zmenou."
+          },
+          {
+            "tool": "Log2RAM",
+            "restores": "Zastaví a vypne službu a časovač. Purges cron jobs, systemd0 jednotiek, binárnych súborov, konfiguračných súborov a adresár /var/log.hdd. Tiež odinštaluje apt balíček, ak bol nainštalovaný týmto spôsobom."
+          },
+          {
+            "tool": "Automatický TRIM ZFS",
+            "restores": "Číta /usr/local/share/proxmenux/zfs_autotrim_pools (zoznam bazénov ProxMenux skutočne zmenil) a beží zpool set autotrim=off na každom z nich. Pools nastavíte autotrim ručne pred ProxMenux beží nie sú dotkol."
+          }
+        ]
+      },
+      {
+        "title": "& Vzhľad",
+        "items": [
+          {
+            "tool": "Prispôsobenie Bashrc",
+            "restores": "Obnovuje /root/.bashrc zo zálohy .bak. Ak neexistuje záloha, odstráni blok PMX_CORE_BASHRC pomocou markerov."
+          },
+          {
+            "tool": "Vlastný banner MOTD",
+            "restores": "Obnoví presný originálny obsah /etc/motd uchovávaný pod /usr/local/share/proxmenux, odstráni súbor, keď predtým neexistoval, alebo bezpečne odstráni pôvodnú značku pri prechode na staršiu inštaláciu."
+          },
+          {
+            "tool": "Fastfetch",
+            "restores": "Odstráni binárny, konfiguračný adresár, modálny hák a oplotený BEGIN FASTFETCH / END FASTFETCH blok z /root/.bashrc, ~/.profile, /etc/profile a /etc/profile.d/fastfetch.sh. Purges apt balíček, ak je nainštalovaný."
+          },
+          {
+            "tool": "Figurine",
+            "restores": "Odstráni binárny, profil.d záznam a alias blok v bashrc/profil."
+          }
+        ]
+      },
+      {
+        "title": "Hardware & virtualizácia",
+        "items": [
+          {
+            "tool": "IOMMU / VFIO",
+            "restores": "Odstráni vfio moduly z /etc/modules, noveau / radeon / nvidia položky na čiernej listine a intel_iommu=on / amd_iommu=on / iommu=pt / pcie_acs_override parametre od /etc/kernel/cmdline (ZFS) alebo GRUB. Prestavuje initramfs."
+          },
+          {
+            "tool": "Opravy AMD CPU (Ryzen/EPYC)",
+            "restores": "Odstraňuje nečinnosť=nezávislosť od jadra cmdline (ZFS) alebo GRUB, a možnosti ignore_msrs / report_ignored_msrs z /etc/modprobe.d/kvm.conf."
+          },
+          {
+            "tool": "QEMU Guest Agent (šablóny)",
+            "restores": "Číta /usr/local/share/proxmenux/guest_agent.pkg (zaznamenané v čase inštalácie) a apt očisty podľa toho, ktorý balík bol nainštalovaný (qemu-host-agent pre štandardné hostiteľov, korenie-vdagent pri použití režimu Spice)."
+          }
+        ]
+      },
+      {
+        "title": "Skladovanie",
+        "items": [
+          {
+            "tool": "Nastavenie veľkosti ARC ZFS",
+            "restores": "Odstraňuje /etc/modprobe.d/99-zfsarc.conf, obnovuje akýkoľvek konfliktný externý *.conf, ktorý bol usporiadaný stranou v /usr/local/share/proxmenux/backups/zfs_arc/, prestavuje initramfs a beží proxmox-boot-tool obnovovať na systemd-boot hostiteľov."
+          },
+          {
+            "tool": "Automatické snímky ZFS",
+            "restores": "Odstráni Cron položky skript napísal a ponúka apt očistiť zfs-auto-snapshot. Existujúce snímkové súbory údajov v bazénoch sú ponechané neporušené"
+          },
+          {
+            "tool": "Obmedzenia rýchlosti vzdump",
+            "restores": "Obnovuje /etc/vzdump.conf z .bak vytvorený inštaláciu, prináša späť bwlimit a iónov na ich pred-ProxMenux hodnoty."
+          }
+        ]
+      },
+      {
+        "title": "Služby a doplnky",
+        "items": [
+          {
+            "tool": "Synchronizácia času",
+            "restores": "Nastaví časovú zónu späť do UTC (bezpečné predvolené) prostredníctvom timedatectl."
+          },
+          {
+            "tool": "Generovanie entropie",
+            "restores": "Zastaví, zneškodní a vyčistí balík."
+          },
+          {
+            "tool": "kexec (rýchly reštart)",
+            "restores": "Zakáže kexec-pve.service, odstráni súbor jednotiek a alias reštartu z /root/.bash_profile, vyčistí kexec-tools."
+          },
+          {
+            "tool": "Zakázať RPC / rpcbind",
+            "restores": "Obnovuje rpcbind.service a rpcbind.socket nezávisle na zapnutých/vypnutých a aktívnych/neaktívnych stavoch zaznamenaných pred ich zmenou ProxMenux."
+          },
+          {
+            "tool": "prasiatko (paralelný gzip)",
+            "restores": "Skopíruje skutočný gzip späť z gzip.distrib, odstraňuje dpkg rozptýlenie a /bin/pigzwrapper, komentuje prasacia čiara v /etc/vzdump.conf a apt očistí prasiatko raz gzip je overený."
+          },
+          {
+            "tool": "Vysoko dostupné služby",
+            "restores": "Zastavuje a zneškodňuje pve-ha-lrm, pve-ha-crm a corosync. Existujúce HA skupiny a definície zdrojov nie sú vymazané"
+          },
+          {
+            "tool": "Archív Ceph",
+            "restores": "Purges Ceph balíčky nainštalované touto voľbou odstráni deb822 /etc/apt/sources.list.d/ceph.sources o PVE 9 (alebo odkaz Ceph zoznam PVE 8) a osvieži vyrovnávaciu pamäť APT."
+          },
+          {
+            "tool": "OVH RTM (monitorovanie)",
+            "restores": "apt purges any ovh-* packages the RTM installer added and deletes the puppet manifests it dropped under /etc/puppet/. On non-OVH hosts nothing was ever installed, so nothing is removed."
+          }
+        ]
+      }
+    ]
+  },
+  "edge": {
+    "heading": "Puzdrá na hrany a kryty",
+    "packageTitle": "Obnovenie balenia sa dotkne živých balíkov Proxmox",
+    "packageBody": "Reverzia <strong>0Odstraňovanie prekážok </strong> preinštaluje <code>pve-manager</code>, <code>proxmox-widget-toolkit</code>, <code>libjs-extjs</code> a <code>libpve-http-server-perl</code> s <code>--force-confnew</code>. To je všeobecne bezpečné, ale dotknite sa bežiace webové UI Nerob to uprostred migrácie alebo operácie klonu.",
+    "rebootTitle": "Trvalé mená a VFIO potrebujú reštart",
+    "rebootBody": "Odstránenie ProxMenux <code>10-proxmenux-*.link</code> súborov (<em>Persistent Interface Names</em>) a vrátenie <em>IOMMU/VFIO</em> nemajú vplyv na bežiaci systém ProxMenux automaticky nastaví vlajku reštartu.",
+    "perItemTitle": "Môžeš vrátiť jednu vec a zvyšok si nechať.",
+    "perItemBody": "Odinštalátor funguje podľa jednotlivých položiek. Ak chcete odstrániť Log2RAM, ale udržať sieť ladenie a Bashrc zmeny, zaškrtnite iba <em>0Log2RAM</em>. Nič iné sa nedotýka a register sa zodpovedajúcim spôsobom aktualizuje."
+  },
+  "inspect": {
+    "heading": "Manuálne sledovanie registra",
+    "intro": "Ak chcete vidieť, čo je sledované bez otvorenia menu:",
+    "outro": "Každý záznam <code>\"tool\": true</code> zodpovedá niečomu použitému ProxMenux a môže sa obrátiť. Odstránenie položky manuálne sa neodporúča",
+    "reinstallTitle": "Preinštalovať po odinštalovaní",
+    "reinstallBody": "Vrátiť optimalizáciu vám nezabráni neskôr ju znovu aplikovať. Open <link>0the Post-Install menu</link> znovu a spustiť buď Automatizované alebo Prispôsobiteľné"
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Automatizované po inštalácii",
+        "href": "/docs/post-install/automated",
+        "tail": " — "
+      },
+      {
+        "label": "Prispôsobiteľné Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — Vyber si inú podskupinu."
+      },
+      {
+        "label": "Odinštalovať ProxMenux",
+        "href": "/docs/settings/uninstall-proxmenux",
+        "tail": " — Rôzne operácie: odstraňuje ProxMenux sám, nie jeho aplikované optimalizácie."
+      },
+      {
+        "label": "Prehľad po inštalácii",
+        "href": "/docs/post-install",
+        "tail": "."
+      }
+    ]
+  }
+}

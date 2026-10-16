@@ -1,0 +1,133 @@
+{
+  "meta": {
+    "title": "Post-inštalácia: Systémová dokumentácia ProxMenux",
+    "description": "Optimalizácia systémovej úrovne v ProxMenux Prispôsobiteľný post-inštalačný skript: limity veľkosti žurnálu a logrotátu, vyššie limity jadra a deskriptora súborov, vyvážené ladenie pamäte, kexec pre rýchle reštarty a regenerácia paniky jadra."
+  },
+  "header": {
+    "title": "Po inštalácii: systém",
+    "section": "Nastavenie Proxmoxu po inštalácii"
+  },
+  "intro": {
+    "title": "Čo táto kategória zahŕňa",
+    "body": "Šesť nezávislých optimalizačných systémov. Naladia sa. <strong>v denníku</strong> a <strong>logrotát</strong> zastaviť záznamy z naplnenia disku, zvýšiť <strong>limity jadra a deskriptora súborov</strong> Takže aplikácie s mnohými otvorenými súbormi nezasahujú do stropov, <strong>pamäť rovnováhy</strong> pre virtualizačný hostiteľ, pridať <strong>kexec</strong> pre \"reboots bez BIOS\" a konfigurovať <strong>automatické zotavenie</strong> na jadra panike. Všetkých šesť je sledovaných a reverzibilných z menu Uninstall."
+  },
+  "journald": {
+    "heading": "Optimalizovať journald",
+    "intro": "Prepíše <code>/etc/systemd/journald.conf</code> so štandardnými predvolenými údajmi, takže časopis systemd nemôže pomaly zjesť vašu koreňovú partíciu, potom reštartuje <code>systemd-journald</code> a vysáva existujúce protokoly.",
+    "keyTitle": "Kľúčové hodnoty",
+    "keyItems": [
+      "<code>Storage=persistent</code>",
+      "<code>SystemMaxUse=64M</code>0 / <code>RuntimeMaxUse=60M</code>",
+      "<code>Compress=yes</code>, <code>Seal=no</code> Compress logs, preskočiť dopredu-zabezpečené tesnenie (uložiť CPU).",
+      "<code>MaxLevelStore=info</code> (vyžaduje sa ProxMenux Monitor@ info: tooltip Fail2Ban detekcia SSH/Proxmox auth zlyhanie z denníka).",
+      "Rate-limity: <code>1000 events / 30 s</code>, aby sa zabránilo zaplaveniu prihlásením.",
+      "<code>ForwardToSyslog=no</code>, <code>ForwardToWall=no</code>"
+    ],
+    "tipTitle": "Prečo MaxLevelStore = info záleží",
+    "tipBody": "Použitie vyššej úrovne, ako je <code>warning</code> makes ProxMenux Monitor's log prehliadač ukazuje takmer rovnaké záznamy vo všetkých rozsahoch dátumov (pretože väčšina aktivity je info-level), a to zabraňuje Fail2Ban z pohľadu neúspešných prihlásení. Ak chcete menej log hlasitosti, spoľahnite sa na <code>SystemMaxUse</code> viečko a <code>RateLimitBurst</code> namiesto zníženia skladovanej úrovne."
+  },
+  "logrotate": {
+    "heading": "Optimalizovať logrotate",
+    "intro": "Prepíše <code>/etc/logrotate.conf</code> s tesnejšou politikou, ktorá je vhodná pre hostiteľa, ktorý je tiež súčasťou SSD-ochrana Log2RAM nastavenia: denné rotácie, 7-dňová retencia, 10 MB veľkosť spúšť, kompresia, a <code>copytruncate</code> tak aktívne služby držať písanie bez opätovného otvorenia svojich log súborov. Originál <code>logrotate.conf</code> je zálohovaný na <code>.bak</code> pri prvom použití.",
+    "tipTitle": "Vhodné pre Log2RAM",
+    "tipBody": "<code>size 10M</code> spúšť znamená logy otáčať na veľkosť <em>alebo</em> denne, podľa toho, čo príde prvý. V kombinácii s log2RAM RAM-back <code>/var/log</code>, to udržuje pracovný set malé, takže flushes na disk zostať lacné."
+  },
+  "limits": {
+    "heading": "Zvýšiť systémové limity",
+    "intro": "Zvyšuje kopu jadra, systemd a PAM obmedzuje, že predvolené hodnoty príliš nízke pre hostiteľa beží mnoho VMs, kontajnerov a sieťových služieb.",
+    "headerFile": "Súbor",
+    "headerSets": "Čo nastavuje",
+    "rows": [
+      {
+        "file": "/etc/sysctl.d/99-maxwatches.conf",
+        "sets": "<code>fs.inotify.max_user_watches / max_user_instances / max_queued_events = 1048576</code>"
+      },
+      {
+        "file": "/etc/sysctl.d/99-maxkeys.conf",
+        "sets": "<code>kernel.keys.maxkeys / root_maxkeys = 1000000</code>"
+      },
+      {
+        "file": "/etc/sysctl.d/99-swap.conf",
+        "sets": "<code>vm.swappiness = 10</code>, <code>vm.vfs_cache_pressure = 100</code>"
+      },
+      {
+        "file": "/etc/sysctl.d/99-fs.conf",
+        "sets": "<code>fs.nr_open / file-max = 2097152</code>, <code>fs.aio-max-nr = 1048576</code>"
+      },
+      {
+        "file": "/etc/security/limits.d/99-limits.conf",
+        "sets": "<code>nofile</code>0 a <code>nproc</code> až 1,048,576 (neobmedzená na koreň)"
+      },
+      {
+        "file": "/etc/systemd/system.conf + user.conf",
+        "sets": "<code>DefaultLimitNOFILE=1048576</code> pre služby systemd"
+      },
+      {
+        "file": "/etc/pam.d/common-session + runuser-l",
+        "sets": "<code>session required pam_limits.so</code>, takže vyššie uvedené sa vzťahujú na prihlasovacie škrupiny"
+      },
+      {
+        "file": "/root/.profile",
+        "sets": "<code>ulimit -n 1048576</code> pre koreňový shell"
+      }
+    ],
+    "tipTitle": "Prečo to dráždiť",
+    "tipBody": "Aplikácie ako Docker, Synchronizácia, Node.js hodinky, Plex knižnica skener a mnoho ďalších hit <code>max_user_watches</code> rýchlo. Štandardne na Debian je 8192 1M je veľkorysá a stojí ~1 KB RAM za hodinky, čo je zanedbateľné."
+  },
+  "memory": {
+    "heading": "Optimalizácia nastavenia pamäte",
+    "intro": "Napíše vyvážený sysctl profil do <code>/etc/sysctl.d/99-memory.conf</code>. Navrhnuté pre hypervízor hostiteľa VM pracovné súpravy RAM a stránky zdarma aktívne, takže prideľovanie praskne.",
+    "warnTitle": "swappíny = 10 na pamäťovo-tesné hostiteľov",
+    "warnBody": "Na hostiteľa s 16 GB RAM beh mnohých VMs, zníženie swappín môže tlačiť jadro do OOM-kill procesov namiesto výmeny. Ak bežne vidíte OOM udalosti, zvýšiť swappines späť na 30–60 on <code>/etc/sysctl.d/99-memory.conf</code> po spustení scenára."
+  },
+  "kexec": {
+    "heading": "Povoliť rýchle reštarty (kexec)",
+    "intro": "Inštaluje <code>kexec-tools</code> a odpojí ho, aby ste mohli reštartovať hostiteľa priamo do nového jadra. <em>bez toho, aby prešli BIOS/UEFI firmware</em>. Na veľkých serveroch, kde POST trvá 45 – 90 sekundy, to zmení reštart z prestávky na kávu do niekoľkých sekúnd prestoja.",
+    "installsTitle": "Čo nainštaluje ProxMenux",
+    "installsItems": [
+      "Balíček <code>kexec-tools</code> (debconf pre-odpovedá s <code>kexec-tools/load_kexec boolean false</code>, takže apt nie je rýchly a automatické zaťaženie pri vypnutí zostáva vypnuté).",
+      "Systemd jednotka <code>/etc/systemd/system/kexec-pve.service</code>",
+      "Prezývka v <code>/root/.bash_profile</code>0: <code>reboot-quick</code> → <code>systemctl kexec</code>."
+    ],
+    "usageIntro": "Použitie po ďalšom reštarte (alebo manuálnom <code>systemctl start kexec-pve</code>):",
+    "warnTitle": "Kedy nepoužívať kexec",
+    "warnBody": "Kexec preskočí firmware init. Ak sa spoliehate na BIOS/UEFI reset hardware state napríklad, GPU robí priechod, ktorý len resetuje čisto na plnej POST, alebo problémové HBA firmware Po aktualizáciách jadra alebo keď potrebujete zmeny BIOS/UEFI, použite normálny <code>reboot</code>. <code>reboot-quick</code> je pre každodenné reštarty."
+  },
+  "panic": {
+    "heading": "Zapnúť reštart pri kernel panic",
+    "intro": "Robí jadro <strong>auto-reboot</strong> namiesto toho, aby sedel navždy na panickej obrazovke. Kritické na bezhlavé / vzdialené Proxmox hostiteľov, kde zavesené jadro znamená, že všetky vaše VM sú dole, kým môžete power-cycle box.",
+    "tipTitle": "Pár to s diaľkovým prístupom konzoly",
+    "tipBody": "Auto-reboot je mechanizmus obnovy, nie ladiaci nástroj. Ak chcete <em>0investigate</em> skôr paniku, než len vrátiť, použite <link>the kexec možnosť</link> vyššie s podporou jadra kdump (nie je nakonfigurovaný ProxMenux) alebo zachytiť sériovú konzolu na iný hostiteľ pred umožnením auto-reboot."
+  },
+  "verify": {
+    "heading": "Overenie",
+    "intro": "Po uplatnení optimalizácie systému:",
+    "tipTitle": "Úplne reverzibilné",
+    "tipBody": "Všetkých šesť možností je sledovaných v <code>installed_tools.json</code>, takže sa objaví v <link>Uninstall Optimizations</link>, ak chcete vypnúť niektoré z nich. Vráti obnovenie sysctl súborov predvolených, pokles systemd jednotky a alias pre kexec, a reset redakčnej / logrotate skladom Debian konfigurácie."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Užitočné systémové príkazy",
+        "href": "/docs/help-info/system-commands",
+        "tail": " overovať zmeny (free - h, journalctl, ulimit -a)."
+      },
+      {
+        "label": "Výkon",
+        "href": "/docs/post-install/performance",
+        "tail": " — "
+      },
+      {
+        "label": "Odinštalovať optimalizácie",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — "
+      },
+      {
+        "label": "Prispôsobiteľné Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — Späť do rodičovského menu."
+      }
+    ]
+  }
+}

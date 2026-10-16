@@ -1,0 +1,453 @@
+{
+  "title": "Synológia VM Creator Script",
+  "stepLabel": "Krok",
+  "intro": {
+    "heading": "Úvod",
+    "intro": "ProxMenux poskytuje automatizovaný skript, ktorý vytvára a konfiguruje virtuálny stroj (VM) pre inštaláciu Synológie DSM (DiskStation) na Proxmox VE. Tento skript zjednodušuje proces sťahovaním a pridaním jedného z dostupných nakladačov do spúšťača VM, čo vám dáva možnosť medzi štyrmi rôznymi možnosťami:",
+    "loaders": [
+      {
+        "name": "AuxXxilium Arc",
+        "url": "https://github.com/AuxXxilium/arc",
+        "extra": ""
+      },
+      {
+        "name": "RedPill RR",
+        "url": "https://github.com/RROrg/rr",
+        "extra": ""
+      },
+      {
+        "name": "TinyCore RedPill M-shell",
+        "url": "https://github.com/PeterSuh-Q3/tinycore-redpill",
+        "extra": ""
+      }
+    ],
+    "customLoader": "Vlastný načítač",
+    "simplifiesIntro": "Skript zjednodušuje proces tvorby VM tým, že ponúka nasledujúce možnosti:",
+    "simplifies": [
+      "Výber štandardnej alebo pokročilej konfigurácie",
+      "Konfigurácia CPU, RAM, BIOS a typ stroja",
+      "Voľba medzi virtuálnym diskom alebo fyzickým diskom priechod"
+    ]
+  },
+  "config": {
+    "heading": "Štandardné a pokročilé nastavenie",
+    "intro": "Skript ponúka dva režimy konfigurácie:",
+    "defaultHeading": "Štandardné nastavenie",
+    "defaultIntro": "Ak zvolíte predvolenú konfiguráciu, skript automaticky použije nasledujúce hodnoty:",
+    "headerParam": "Parameter",
+    "headerValue": "Štandardná hodnota",
+    "defaultRows": [
+      {
+        "param": "Typ stroja",
+        "value": "q35"
+      },
+      {
+        "param": "Typ BIOSu",
+        "value": "OVMF (UEFI)"
+      },
+      {
+        "param": "Typ CPU",
+        "value": "Hostiteľ"
+      },
+      {
+        "param": "Počet jadier",
+        "value": "2"
+      },
+      {
+        "param": "Veľkosť RAM",
+        "value": "4096 MB"
+      },
+      {
+        "param": "Most",
+        "value": "vmbr0"
+      },
+      {
+        "param": "MAC adresa",
+        "value": "Automaticky generované"
+      },
+      {
+        "param": "Spustiť VM pri dokončení",
+        "value": "Nie"
+      }
+    ],
+    "defaultOutro": "Ak chcete prispôsobiť nastavenie, vyberte možnosť Pokročilé nastavenia v menu.",
+    "advancedHeading": "Pokročilé nastavenie",
+    "advancedIntro": "Ak zvolíte pokročilú konfiguráciu, skript vám umožní prispôsobiť každý parameter:",
+    "headerOptions": "Možnosti",
+    "advancedRows": [
+      {
+        "param": "Typ stroja",
+        "options": "q35 alebo i440fx"
+      },
+      {
+        "param": "Typ BIOSu",
+        "options": "OVMF (UEFI0) alebo SeaBIOS (Legacy)"
+      },
+      {
+        "param": "Typ CPU",
+        "options": "Hostiteľ alebo KVM64"
+      },
+      {
+        "param": "Počet jadier",
+        "options": "Počet jadier CPU"
+      },
+      {
+        "param": "Veľkosť RAM",
+        "options": "Množstvo pamäte pridelené VM"
+      },
+      {
+        "param": "Most",
+        "options": "Sieťový most na pripojenie"
+      },
+      {
+        "param": "MAC adresa",
+        "options": "Vlastná adresa MAC"
+      },
+      {
+        "param": "VLAN",
+        "options": "Značka VLAN (ak sa používa)"
+      },
+      {
+        "param": "MTU",
+        "options": "Maximálna veľkosť prepravnej jednotky"
+      }
+    ]
+  },
+  "diskSelection": {
+    "heading": "Výber disku",
+    "intro": "Keď je stroj nastavený, skript vám umožní vybrať si medzi dvoma typmi diskov:",
+    "virtualHeading": "Virtuálny disk",
+    "virtualItems": [
+      "Skript uvádza možnosti ukladania dostupné v Proxmoxe",
+      "Užívateľ vyberie disk a veľkosť v GB",
+      "Virtuálny disk je automaticky priradený VM. Ak sú konfigurované ďalšie disky, pridajú sa ako <strong>SATA</strong> (napr. sata0, sata1, atď.) až do maximálnej hodnoty 6 virtuálnych diskov."
+    ],
+    "physicalHeading": "Telesný disk",
+    "physicalItems": [
+      "Skript detekuje všetky dostupné fyzické disky",
+      "Užívateľ vyberá fyzický disk alebo disky, ktoré chcú používať.",
+      "Fyzický disk je priamo priradený VM prostredníctvom priechodu. Ak sú konfigurované ďalšie disky, budú pridané ako <strong>SATA</strong> (napr. sata0, sata1, atď.), až do maxima fyzických diskov 6."
+    ]
+  },
+  "loaderInstall": {
+    "heading": "Inštalácia nakladača",
+    "intro1": "Skript automaticky stiahne a extrahuje nakladač z úložiska vývojárov. Ak sťahovanie zlyhá, skript zobrazí chybovú správu.",
+    "intro2Rich": "<strong>AuxXxilium Oblúk</strong>, <strong>RedPill RR</strong>a <strong>TinyCore RedPill M-shell</strong>. Sťahovanie a výpisy automaticky.",
+    "customRich": "Pre <strong>Custom Loader</strong>, skript hľadá súbory v <code>/var/lib/vz/template/iso</code>. Ak sa nájde viac súborov, budete vyzvaní vybrať požadovaný súbor.",
+    "uploadIntro": "Môžete nahrať vlastné nakladače z lokálneho úložiska:",
+    "imageAlt": "Pridať vlastný nakladač",
+    "imageCaption": "Pridať vlastný nakladač"
+  },
+  "vmCreation": {
+    "heading": "Vytvorenie VM",
+    "intro": "Keď sa načítavač stiahne, skript vytvorí VM pomocou nasledujúcich príkazov:",
+    "items": [
+      "<code>qm create</code>",
+      "<code>qm importdisk</code> Image the boot loader disk to the VM. Pre väčšiu kompatibilitu je načítanie importované ako IDE disk",
+      "<code>qm set</code> - Priraďuje konfiguračné hodnoty ako napríklad CPU, RAM, a skladovanie",
+      "<code>qm set -boot</code>"
+    ]
+  },
+  "stepGuide": {
+    "heading": "Konfiguračný sprievodca Step-by-Step Boot Loader",
+    "intro": "Zatiaľ čo všetky nakladače zdieľajú podobnosti, každý z nich má vlastnú štruktúru a konfiguračné metódy. Táto časť poskytuje základnú príručku, ktorá pokrýva kroky 6 zapojené do vytvorenia nakladača pre Synológiu DSM. Presné kroky sa môžu meniť v závislosti od nakladača a akýchkoľvek zmien zavedených vývojárom. Preto je pochopenie týchto spoločných základných krokov rozhodujúce pre správne budovanie a konfigurovanie nakladača podľa vášho výberu pre správnu funkčnosť Synológie DSM.",
+    "selectorHeading": "Vyberte typ nakladača:",
+    "loaderButtons": {
+      "arc": "Arc Loader",
+      "rr": "RR Loader",
+      "tinycore": "TinyCore Loader"
+    }
+  },
+  "steps": [
+    {
+      "id": "step1",
+      "title": "Spustiť VM a prístup k hlavnému menu",
+      "intro": "Po vytvorení VM začnite. Pri prvom spustení VM, budete mať prístup k hlavnému menu loader pre výber a konfiguráciu modelu DSM, ktorý chcete vytvoriť. Po vytvorení nakladača bude tento krok preskočený, ak manuálne nevynútite rekonfiguráciu z boot monitora. Všetky nakladače majú tiež možnosť nakonfigurovať nakladač cez webové rozhranie.",
+      "loaders": {
+        "arc": [
+          {
+            "htmlBefore": "<strong>Web rozhranie</strong>, Prístup k webovému rozhraniu jednoducho otvorí webový prehliadač a zadá IP adresu zobrazenú v konzole VM. Napríklad v našom prípade: http://192.169.0.32.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_0_1.png",
+            "alt": "Webové rozhranie Arc LoaderName",
+            "caption": "Webové rozhranie Arc LoaderName"
+          },
+          {
+            "htmlBefore": "<strong>Terminálne rozhranie</strong>, Prístup priamo z výstupu konzoly VM.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_1_1.png",
+            "alt": "Terminálové rozhranie zavádzača Arc",
+            "caption": "Terminálové rozhranie zavádzača Arc"
+          }
+        ],
+        "rr": [
+          {
+            "htmlBefore": "<strong>Webové rozhranie</strong>, Ak chcete prístup k webovému rozhraniu, jednoducho otvorte webový prehliadač a zadajte IP adresu zobrazenú v VM's výstup konzoly, po ktorom nasleduje port <strong>7681</strong>. Napríklad v našom prípade: <code>http://192.169.0.33:7681</code>.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_0_2.png",
+            "alt": "Príklad príkazu RR",
+            "caption": "RR webové rozhranie loader"
+          },
+          {
+            "htmlBefore": "<strong>0Terminálne rozhranie</strong>, Prístup priamo z výstupu konzoly VM písaním <strong>menu.sh</strong> na obrazovke",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_1_1.png",
+            "alt": "Rozhranie RR loader",
+            "caption": "Rozhranie RR načítacieho terminálu"
+          }
+        ],
+        "tinycore": [
+          {
+            "htmlBefore": "<strong>Webové rozhranie</strong>, Ak chcete prístup k webovému rozhraniu, jednoducho otvorte webový prehliadač a zadajte IP adresu zobrazenú v VM's výstup konzoly, po ktorom nasleduje port <strong>7681</strong>. Napríklad v našom prípade: <code>http://192.169.0.35:7681</code>.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_0_1.png",
+            "alt": "Rozhranie TinyCore Loader",
+            "caption": "Webové rozhranie TinyCore Loader"
+          },
+          {
+            "htmlBefore": "<strong>Terminálne rozhranie</strong>, Prístup priamo z výstupu konzoly VM. Dávajte pozor na obrazovku, pretože v určitom bode vás môže podnietiť, aby ste stlačili kľúč, aby ste pokračovali alebo sa spýtali, či chcete zmeniť jazyk.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_1_1.png",
+            "alt": "Rozhranie TinyCore Loader",
+            "caption": "TinyCore Načítavacie terminálové rozhranie"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "Vybrať model",
+      "intro": "Po načítaní menu vyberte model Synológie DSM, ktorý chcete nainštalovať. V závislosti od nakladača, niekedy budete musieť rozšíriť možnosti vidieť viac modelov.",
+      "outro": "V našom príklade si vyberieme model SA6400.",
+      "loaders": {
+        "arc": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_2_1.png",
+            "alt": "Výber modelu oblúka",
+            "caption": "Výber modelu oblúka"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_2_1.png",
+            "alt": "Výber modelu RR",
+            "caption": "Výber modelu RR"
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_2_1.png",
+            "alt": "Výber modelu TinyCore",
+            "caption": "Výber modelu TinyCore"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "Vyberte verziu DSM",
+      "intro": "Po výbere modelu musíte vybrať verziu DSM, ktorú chcete nainštalovať.",
+      "loaders": {
+        "arc": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_3_1.png",
+            "alt": "Arc Version Selection - krok 1",
+            "caption": "Arc Version Selection - krok 1"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_3_2.png",
+            "alt": "Arc Version Selection - krok 2",
+            "caption": "Arc Version Selection - krok 2"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_3_1.png",
+            "alt": "Výber verzie RR - krok 1",
+            "caption": "Výber verzie RR - krok 1"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_3_2.png",
+            "alt": "Výber verzie RR - krok 2",
+            "caption": "Výber verzie RR - krok 2"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_3_3.png",
+            "alt": "Výber verzie RR - krok 3",
+            "caption": "Výber verzie RR - krok 3"
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_3_1.png",
+            "alt": "Výber verzie TinyCore - krok 1",
+            "caption": "Výber verzie TinyCore - krok 1"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_3_2.png",
+            "alt": "Výber verzie TinyCore - krok 2",
+            "caption": "Výber verzie TinyCore - krok 2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step4",
+      "title": "Vybrať prídavky",
+      "intro": "Tento krok vám umožní pridať do nakladača ďalšie funkcie alebo vlastné konfigurácie.",
+      "loaders": {
+        "arc": [
+          {
+            "htmlBefore": "<strong>Arc</strong> vám dáva možnosť automaticky nastaviť alebo manuálne upraviť nastavenia. Ak je zvolená automatická konfigurácia, nahrávač začne používať potrebné nastavenia a po dokončení procesu sa automaticky reštartuje.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_1.png",
+            "alt": "Automatické nastavenie Arc",
+            "caption": "Automatické nastavenie Arc"
+          },
+          {
+            "htmlBefore": "Ak sa rozhodneme nepoužívať automatický režim, zadáme menu pre nastavenie rôznych možností potrebných pre nakladač:",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_2.png",
+            "alt": "ObjectClass",
+            "caption": "ObjectClass"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_3.png",
+            "alt": "Konfigurácia Arc SN/Mac",
+            "caption": "Konfigurácia Arc SN/Mac"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_4.png",
+            "alt": "Arc Sata Portmap",
+            "caption": "Arc Sata Portmap (použite odporúčanú možnosť)"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_5.png",
+            "alt": "Výber Arc Addons",
+            "caption": "Výber Arc Addons"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_4_1.png",
+            "alt": "Doplnok RR – krok 1",
+            "caption": "Doplnok RR – krok 1"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_4_2.png",
+            "alt": "Doplnok RR – krok 2",
+            "caption": "RR Addon Step 2 - Stlačte pre doplnky"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_4_3.png",
+            "alt": "Doplnok RR – krok 3",
+            "caption": "RR Addon Step 3 - Vyberte ten, ktorý chcete, kliknutím na neho. Ak chcete pridať viac, opakujte proces z obrázkov 2.4.2 a 2.4.3"
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_1.png",
+            "alt": "Nastavenie TinyCore SN",
+            "caption": "Nastavenie TinyCore SN"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_2.png",
+            "alt": "TinyCore Náhodná voľba",
+            "caption": "TinyCore Náhodná voľba - Odporúča sa náhodná voľba"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_3.png",
+            "alt": "Nastavenie TinyCore MAC",
+            "caption": "Nastavenie TinyCore MAC"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_4.png",
+            "alt": "TinyCore VM MAC",
+            "caption": "TinyCore VM MAC - Vyberte si používať MAC VM alebo náhodnú"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step5",
+      "title": "Postaviť nakladač",
+      "intro": "Potom, čo ste si vybrali model, DSM verzia, a doplnky, pokračujte stavať nakladač. Tento proces môže trvať niekoľko minút v závislosti od načítačky a zvolenej konfigurácie. Ak chcete spustiť, vyberte možnosť \"Build the Loader.\"",
+      "loaders": {
+        "arc": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_5_1.png",
+            "alt": "Arc Build Loader",
+            "caption": "Arc Build Loader"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_5_1.png",
+            "alt": "RR Build Loader",
+            "caption": "RR Build Loader"
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_5_1.png",
+            "alt": "TinyCore Build Loader",
+            "caption": "TinyCore Build Loader"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step6",
+      "title": "Boot Loader",
+      "intro": "Akonáhle bude nakladač postavený, bude vás nútiť k štartovaniu. VM reštartuje s konfiguráciou, ktorú ste vytvorili a spustí inštaláciu DSM.",
+      "loaders": {
+        "arc": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_6_1.png",
+            "alt": "Arc Boot Loader",
+            "caption": "Arc Boot Loader"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_6_1.png",
+            "alt": "RR Boot Loader",
+            "caption": "RR Boot Loader"
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_6_1.png",
+            "alt": "TinyCore Boot Loader",
+            "caption": "TinyCore Boot Loader"
+          }
+        ]
+      }
+    }
+  ],
+  "dsmInstall": {
+    "heading": "Spustenie zariadenia DSM",
+    "intro": "Akonáhle je nakladač zavádzaný, môžete nájsť svoje Synologické zariadenie pomocou:",
+    "afterCode": "Dokončite inštaláciu DSM podľa pokynov na obrazovke.",
+    "setupAlt": "Nastavenie DSM",
+    "setupCaption": "Obrazovka nastavenia DSM",
+    "patience": "Prosím, buďte trpezliví Percento pokroku sa automaticky aktualizuje v priebehu nastavenia. Odpočítavanie sa začne po dokončení inštalácie.",
+    "finishAlt": "Inštalácia dokončená",
+    "finishCaption": "Inštalácia dokončená"
+  },
+  "tips": {
+    "heading": "Tipy",
+    "introItem": "Majte na pamäti, že dostupné možnosti sa môžu meniť v závislosti od verzie loader a aktualizácie vývojárov. Ak sa počas procesu vytvárania nakladača stretnete s problémami, pozrite si dokumentáciu na načítanie:",
+    "docLinks": [
+      {
+        "label": "Arc dokumentácia",
+        "url": "https://github.com/AuxXxilium/arc"
+      },
+      {
+        "label": "Dokumentácia RR",
+        "url": "https://github.com/RROrg/rr"
+      },
+      {
+        "label": "Dokumentácia TinyCore",
+        "url": "https://github.com/PeterSuh-Q3/tinycore-redpill"
+      }
+    ],
+    "olderModels": "Niektoré staršie modely DSM môžu mať problémy s rozpoznaním diskov alebo sieťovej karty. Odporúča sa používať novšie modely.",
+    "updateLabel": "Aktualizácia:",
+    "updateBody": "Niektoré nakladače ponúkajú možnosť aktualizácie nakladača priamo z menu.",
+    "importantLabel": "Dôležité:",
+    "importantBody": "ProxMenux neposkytuje podporu pre rôzne nakladače."
+  }
+}

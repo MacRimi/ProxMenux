@@ -1,0 +1,74 @@
+{
+  "meta": {
+    "title": "Post-Install: Prispôsobenie ProxMenux Dokumentácia",
+    "description": "Možnosti prispôsobenia v ProxMenux Prispôsobiteľný post-inštalačný skript: farebný bash prompt s užitočnými prezývkami, ProxMenux banner v MOTD, a možnosť odstrániť Proxmox predplatné nag z webového rozhrania."
+  },
+  "header": {
+    "title": "Po inštalácii: prispôsobenie",
+    "description": "Kozmetika a kvalita života pre Proxmox hostiteľa. Robia shell krajšie používať a skryť predplatné nag vo webovom UI. Bashrc, MOTD a predplatné banner sú sledované a reverzibilné z menu Odinštalovať.",
+    "section": "Nastavenie Proxmoxu po inštalácii"
+  },
+  "intro": {
+    "title": "Čo táto kategória zahŕňa",
+    "body": "Tri malé, nezávislé možnosti: <strong>0farebné bash prompt + aliasy</strong> pre koreňový shell, jednoriadkový <strong>MOTD banner</strong> viditeľné na SSH prihlásenie, a odstránenie <strong>\"Žiadne platné predplatné\" popup</strong> že Proxmox ukazuje na každom prihlásení do webu UI."
+  },
+  "bashrc": {
+    "heading": "Prispôsobiť bashrc",
+    "intro": "Vstrekne zaočkovaný blok do <code>/root/.bashrc</code> s farebným promptom, časovo označené históriu, štandardné <code>ls</code> / <code>grep</code> aliasy, a <code>source</code> pre bash dokončenie. Robí prácu cez SSH výrazne príjemnejšie a robí to zrejmé, ktorý hostiteľ ste na, keď máte veľa kariet otvorené.",
+    "writesTitle": "Čo ProxMenux pridáva do .bashrc",
+    "writesOutro": "Blok je ohraničený značkami <code>PMX_CORE_BASHRC</code>. Spustenie skriptu znovu nahrádza predchádzajúci blok namiesto jeho duplikácie. Originál <code>.bashrc</code> je raz zálohovaný na <code>/root/.bashrc.bak</code> a linka <code>source /root/.bashrc</code> je pripojená k <code>/root/.bash_profile</code>, takže prompt sa vzťahuje aj na prihlasovacie náboje (napr. po <code>su -</code>).",
+    "rootTitle": "Uplatňuje sa len na koreň",
+    "rootBody": "Prispôsobenie sa zameriava na ulitu koreňového účtu. Ostatní používatelia, ktorých vytvoríte na hostiteľovi, si zachovávajú svoje predvolené hodnoty. Ak podávate Proxmox výhradne cez webové UI a nikdy nepoužívate shell, táto možnosť je čistá estetika a môžete ju preskočiť."
+  },
+  "motd": {
+    "heading": "Nastaviť vlastnú MOTD správu",
+    "intro": "Preddavky <em>\"Tento systém je optimalizovaný: ProxMenux\"</em> do <code>/etc/motd</code>, správa zobrazená po úspešnom SSH Prihlásenie (nad shell prompt, pred akýmkoľvek <code>update-motd</code> skripty bežia). Neškodlivé a čisto informatívne ProxMenux bola aplikovaná na tohto hostiteľa.",
+    "writesTitle": "Čo píše ProxMenux",
+    "writesOutro": "Pri prvom uplatnení ProxMenux zaznamenáva, či <code>/etc/motd</code> existovalo a uchováva jeho pôvodný obsah pod <code>/usr/local/share/proxmenux</code>. Operácia je impotentná: ak je markerová linka už prítomná, nič sa nepridáva. Staršie zariadenia s existujúcim <code>/etc/motd.bak</code> sa presúvajú do rovnakého reverzibilného stavu."
+  },
+  "banner": {
+    "heading": "Odstrániť hlásenie o predplatnom",
+    "intro": "Odstráni <em>\"Nemáte platné predplatné pre tento server\"</em> modus, ktorý sa objaví zakaždým, keď sa niekto prihlási do webového UI Proxmox bez predplatného podniku. Patch je verzia-aware: rôzne hlavné verzie Proxmox majú rôzne UI zväzky, takže ProxMenux odosiela na správny skript.",
+    "versionTitle": "Odosielanie s verziou",
+    "versionItems": [
+      "<strong>0PVE 9.x</strong> → beží <code>remove-banner-pve-v3.sh</code> (patches ako desktop <code>proxmoxlib.js</code> a nové Yew-based mobilné UI).",
+      "<strong>0PVE 8.x</strong> → beží <code>remove-banner-pve8.sh</code> (iba desktop)."
+    ],
+    "versionOutro": "Pred patchingom ProxMenux zálohuje pôvodné JS/template súbory <code>/usr/local/share/proxmenux/backups/</code> s časovou pečiatkou. Tok odinštalovania používa tieto zálohy na obnovenie pôvodných súborov a spadá späť do reinštalácie balíkov Proxmox UI, ak záloha chýba alebo je poškodená.",
+    "breakTitle": "Môže sa zlomiť po aktualizáciách Proxmoxu",
+    "breakBody": "Pravidelné lode Proxmox UI aktualizácie, ktoré prepíšu <code>proxmoxlib.js</code>. Keď sa to stane, banner sa vráti. Túto možnosť môžete znovu použiť po každej aktualizácii Proxmoxu, aby ste súbor znovu preverili, alebo jednoducho prijať nárez, kým znovu nezadáte. ProxMenux tiež nainštaluje APT hák, ktorý auto-re-patches na upgrade balíčkov <link>Odinštalovať optimalizáciu</link> Pretože ten hák je obrátený.",
+    "legalTitle": "Právne upozornenie (vždy stojí za to zopakovať)",
+    "legalBody": "Táto možnosť len skrýva UI nag. To robí <strong>0not</strong> poskytnúť podporu podniku, prístup do úložiska podnikov, alebo akékoľvek práva na loď Proxmox komerčne bez predplatného. Ak spustíte Proxmox v prostredí generujúcom príjmy, zakúpte si predplatné"
+  },
+  "verify": {
+    "heading": "Overenie",
+    "intro": "Po uplatnení všetkých troch:",
+    "reversibleTitle": "Všetky tri zmeny prispôsobenia sú sledované",
+    "reversibleBody": "<link>Odinštalovať optimalizáciu</link> obnovu <code>/root/.bashrc</code>, vráti MOTD do svojej presnej pred-ProxMenux obsah (alebo odstráni súbor, ak predtým neexistoval) a obnoví patched UI súbory zo zálohy alebo v prípade potreby preinštaluje postihnuté balíky Proxmox."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Voliteľné",
+        "href": "/docs/post-install/optional",
+        "tail": " Fastfetch a Figurine (iné vizuálne prispôsobenie)."
+      },
+      {
+        "label": "Zobraziť informácie o verzii",
+        "href": "/docs/settings/show-version-information",
+        "tail": " — "
+      },
+      {
+        "label": "Odinštalovať optimalizácie",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — "
+      },
+      {
+        "label": "Prispôsobiteľné Post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — Späť do rodičovského menu."
+      }
+    ]
+  }
+}

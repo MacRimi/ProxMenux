@@ -1,0 +1,206 @@
+{
+  "meta": {
+    "title": "ProxMenux - Menu pre Driven Proxmox VE Manažment Otvorené zdroje",
+    "description": "Open-source, menu-riadený nástroj pre riadenie Proxmox VE. ProxMenux sú dva kusy, ktoré zdieľajú jeden projekt: CLI/TUI pre poinštalačné vylepšenia, VM a LXC tvorba, GPU a Coral TPU priechod, disk, úložisko a sieťové pracovné postupy; a self-hosted web dashboard s proaktívnym monitorovaním zdravia, oznámenia Telegram / Discord / E-mail, AI prepísať a REST API.",
+    "ogTitle": "ProxMenux - Menu pre Driven Proxmox VE Liečba",
+    "ogDescription": "Otvorený zdroj CLI/TUI plus webová palubná doska pre Proxmox VE. Post-inštalácia, VMs, GPUs, disky, sieť, úložisko, bezpečnosť a samostatný Monitor so zdravotnými kontrolami, oznámenia, AI prepísať a REST API.",
+    "twitterTitle": "ProxMenux - Menu pre Driven Proxmox VE Liečba",
+    "twitterDescription": "Open-source CLI/TUI + webová prístrojová doska pre Proxmox VE. Monitor zdravia, oznámenia, AI prepísať, REST API."
+  },
+  "header": {
+    "title": "Úvod",
+    "description": "ProxMenux je open-source, menu-riadený nástroj pre Proxmox VE. Dva kusy zdieľajú rovnaký projekt: CLI/TUI, ktorý zabalí najbežnejšieho hostiteľa, VM, kontajner, úložisko, sieť a bezpečnostné pracovné postupy; a samo-hostiteľom web dashboard s proaktívnym monitorovaním zdravia, oznámenia, AI prepísať hák a REST API.",
+    "section": "Úvod"
+  },
+  "hero": {
+    "tagline": "<strong>0One menu, každý workflow.</strong> Všetko, čo zvyčajne trvá záložku otvorené pre wiki, dve fórum vlákna a copy-pased sekvencie príkazov",
+    "audience": "Postavený pre <em> prvý-time</em> Proxmox užívateľov (bezpečné, mienené predvolené) a <em>seed</em> admins (menej stlačenia klávesov pre úlohy, ktoré urobili stokrát). Voľný a otvorený zdroj pod aktívnu komunitu na <github>GitHub</github>."
+  },
+  "twoProducts": {
+    "heading": "Dva výrobky, jeden projekt",
+    "intro": "ProxMenux lodí ako dva nezávislé kusy zdieľajúce rovnaký zdrojový strom. Inštalatér nasadzuje obe, žijú bok po boku na hostiteľa a nezávisia na sebe:",
+    "scripts": {
+      "title": "Skripty ProxMenux",
+      "body": "Pôvodný CLI/TUI spustíte s <code>menu</code>. Deväť funkčných oblastí, ktoré pokrývajú optimalizáciu po inštalácii, tvorbu VM a LXC, GPU a Coral TPU priechod, disky, úložisko, sieť, bezpečnosť, utility, plus kurované príkazy odkaz. Spustí sa v každom termináli, SSH alebo web."
+    },
+    "monitor": {
+      "title": "ProxMenux Monitor",
+      "body": "Self-hosted web dashboard (AppImage). Metrika hostiteľa v reálnom čase, proaktívny monitor zdravia, oznámenia, voliteľný hák AI (šesť poskytovateľov), integrovaný webový terminál a REST API. Povoliť z menu skriptov (Nastavenia → ProxMenux Monitor)."
+    },
+    "calloutTitle": "Na čom pôsobí ProxMenux",
+    "calloutIntro": "Tri vrstvy, všetky dosiahnuteľné z toho istého projektu:",
+    "layers": [
+      "<strong>Proxmoxov hostiteľ</strong> Repo obchody, balíky, sieť, ZFS, Ceph, jadro, všímateľnosť.",
+      "<strong>Virtuálne stroje (VM)</strong> Vytváranie, GPU passmough, OVA / OVF import / export, disk passmough.",
+      "<strong>LXC kontajnery</strong> Vytváranie, montáž bodov, GPU / TPU priechod, NFS / Samba klienti a servery."
+    ]
+  },
+  "scriptsSection": {
+    "heading": "ProxMenux Scripts",
+    "intro": "Deväť funkčných oblastí, každý s vlastným menu vnútri <code>menu</code> a detailnú stránku v dokumentácii. Kliknite na ľubovoľnú kartu pre skok priamo do prehľadu tejto sekcie.",
+    "items": [
+      {
+        "title": "Po inštalácii",
+        "description": "Optimalizácia pre čerstvo nainštalované nastavenie Proxmoxu: repo, jadro, časová synchronizácia, základné zabezpečenie, výkon s reverzibilnými možnosťami.",
+        "icon": "Server",
+        "href": "/docs/post-install"
+      },
+      {
+        "title": "GPU a koral TPU",
+        "description": "NVIDIA, Intel iGPU, AMD a Coral TPU prechod na VM a LXC, s prepínaním režimu medzi VM a LXC.",
+        "icon": "Cpu",
+        "href": "/docs/hardware/nvidia-host"
+      },
+      {
+        "title": "Vytvoriť VM",
+        "description": "Čarodejníci pre NAS systémy, Windows a Linux",
+        "icon": "Server",
+        "href": "/docs/create-vm"
+      },
+      {
+        "title": "Správca diskov",
+        "description": "Importovanie fyzických diskov do VMs a LXC, formát a utieranie, skúšky SMART, qcow2 / vmdk / vdi import obrazu z menu.",
+        "icon": "HardDrive",
+        "href": "/docs/disk-manager"
+      },
+      {
+        "title": "& Zdieľanie úložiska",
+        "description": "Zaregistrujte NFS, Samba (CIFS), iSCSI a lokálne úložisko v Proxmoxe; zdieľajte priečinky medzi hostiteľom a LXC kontajnermi cez pripojenie alebo sieťové protokoly.",
+        "icon": "Boxes",
+        "href": "/docs/storage-share"
+      },
+      {
+        "title": "Sieť",
+        "description": "Diagnostika iba na čítanie, analyzovať-potom-navrhnúť pracovné postupy a usmerňované opravy pre /etc/network/interfaces. Povinné zálohy pred akoukoľvek zmenou.",
+        "icon": "Network",
+        "href": "/docs/network"
+      },
+      {
+        "title": "Zabezpečenie",
+        "description": "Fail2Ban (intrusion prevention for SSH a web UI) a Lynis (hardening audit)",
+        "icon": "Shield",
+        "href": "/docs/security"
+      },
+      {
+        "title": "Nástroje",
+        "description": "Build Windows ISOs z UUP Dump, inštalovať nástroje CLI, spustiť bezpečnú aktualizáciu systému, vykonávať PVE 8 → 9 upgrade, export a import OVA / OVF VMs.",
+        "icon": "Wrench",
+        "href": "/docs/utils"
+      },
+      {
+        "title": "Prehľad príkazov",
+        "description": "Vyliečený katalóg príkazov Linuxu a Proxmoxu usporiadaných podľa témy Systém, VM/CT (qm, pct), úložisko, sieť, ZFS, GPU prejazd, zálohovanie, každodenný CLI nástroje.",
+        "icon": "BookOpen",
+        "href": "/docs/help-info"
+      }
+    ]
+  },
+  "monitorSection": {
+    "heading": "ProxMenux Monitor",
+    "intro": "Produkt webovej prístrojovej dosky. Samoobsadený na hostiteľovi Proxmoxu na TCP 8008. Kliknite na akúkoľvek kartu pre skok priamo na stránku tejto sekcie, alebo si prečítajte <link>Monitor prehľad</link> prvý.",
+    "items": [
+      {
+        "title": "Monitor zdravia",
+        "description": "Desať kategórií skenovaných každých 5 minút (CPU, pamäť, úložisko, disky/SMART, sieť, VMs, služby, protokoly, aktualizácie, bezpečnosť) s úrovňou závažnosti a potlačenie podľa kategórie.",
+        "icon": "Activity",
+        "href": "/docs/monitor/health-monitor"
+      },
+      {
+        "title": "Oznámenia",
+        "description": "Telegram, Discord, E-mail, Gotify, Pushover a Apprise (multi- Channel)",
+        "icon": "Bell",
+        "href": "/docs/monitor/notifications"
+      },
+      {
+        "title": "AI asistent",
+        "description": "Nepovinné prepísanie oznámení v jednoduchom jazyku. Šesť poskytovateľov: OpenAI, Antropic Claude, Google Gemini, Groq, OpenRouter, miestny Ollama. Dvanásť jazykov.",
+        "icon": "Sparkles",
+        "href": "/docs/monitor/ai-assistant"
+      },
+      {
+        "title": "Web terminál",
+        "description": "Interaktívny shell založený na prehliadači na počítači Proxmox plus samostatný terminál ProxMenux Scripts, ktorý spúšťa menu cez webové UI.",
+        "icon": "Terminal",
+        "href": "/docs/monitor/dashboard/terminal"
+      },
+      {
+        "title": "REST API",
+        "description": "HTTP koncové ukazovatele pre systém, zdravie, skladovanie / SMART, sieť, VMs, oznámenia a bezpečnosť užitočné pre Homepage, Home Assistant, Prometheus alebo vlastné skripty.",
+        "icon": "Code2",
+        "href": "/docs/monitor/api"
+      },
+      {
+        "title": "Integrácie",
+        "description": "Native Proxmox VE webhook, Prometheus šrot, Uptime Kuma sonda, Homepage / Home Assistant / Glance widgety, n8n / Zapier toky, Tailscale Secure Gateway.",
+        "icon": "Plug",
+        "href": "/docs/monitor/integrations"
+      }
+    ]
+  },
+  "installPaths": {
+    "heading": "Inštalovať cesty",
+    "intro": "Inštalátor nasadzuje skripty a monitor na jeden pokus. Skripty majú dve chute AppImage z menu povolíte neskôr:",
+    "headerPath": "Install path",
+    "headerBundles": "Čo to zväzuje",
+    "headerWhen": "Keď si si ju vybral",
+    "rows": [
+      {
+        "pathRich": "<strong>Skripty: preklad</strong>",
+        "bundles": "CLI/TUI + Python venv + googletrans (anglický, španielsky, francúzsky, nemecký, taliansky, portugalský)",
+        "when": "Viacjazyčné menu, neanglické reproduktory"
+      },
+      {
+        "pathRich": "<strong>Skripty: Normálne (ľahké)</strong>",
+        "bundles": "CLI/TUI iba pre angličtinu, menšia stopa, žiadna Python venv",
+        "when": "Väčšina užívateľov"
+      },
+      {
+        "pathRich": "<strong>Monitor</strong>",
+        "bundles": "Samostatné AppImage týkajúce sa TCP 8008. Nezávislá inštalácia AppImage priamo.",
+        "when": "Keď je webová palubná doska pre hostiteľa užitočná, telefón, tablet, záložka prehliadača"
+      }
+    ],
+    "outro": "Podrobné inštalačné príkazy a predpoklady sú na <link>Inštalačná stránka</link>."
+  },
+  "warnSource": {
+    "title": "Vždy skontrolujte, aké skripty spustíte z internetu",
+    "body": "ProxMenux je open source a každý skript je na GitHub. Pred spustením príkazu inštalácie sa pozrite na zdroj. Urobiť to isté s akýmkoľvek iným nástrojom automatizácie.",
+    "sourceLabel": "Zobraziť zdroj ProxMenux",
+    "cocLabel": "Kódex správania"
+  },
+  "next": {
+    "heading": "Kam ísť ďalej",
+    "items": [
+      {
+        "lead": "<strong>0New to ProxMenux?</strong> ",
+        "linkHref": "/docs/installation",
+        "linkLabel": "Nainštalujte ho do jedného príkazu",
+        "tailRich": " a spustite <code>menu</code>."
+      },
+      {
+        "lead": "<strong>0Just installed Proxmox?</strong> Začnite s ",
+        "linkHref": "/docs/post-install",
+        "linkLabel": "Skript po inštalácii",
+        "tail": "."
+      },
+      {
+        "lead": "<strong>Chceš webovú palubnú dosku?</strong> ",
+        "linkHref": "/docs/monitor",
+        "linkLabel": "ProxMenux Monitor",
+        "tail": " pokrýva to, čo ukazuje, ako je postavená a ako ju zabezpečiť."
+      },
+      {
+        "lead": "<strong> Hľadáte konkrétny príkaz?</strong> ",
+        "linkHref": "/docs/help-info",
+        "linkLabel": "Prehľad príkazov",
+        "tail": " je kurzovaný katalóg usporiadaný podľa témy, s kopírovať tlačidlá."
+      },
+      {
+        "lead": "<strong>0Čakáte dlhšie, ako-k sprievodcovia?</strong> ",
+        "linkHref": "/guides",
+        "linkLabel": "Časť príručky",
+        "tail": " zahŕňa koralové TPU, NVIDIA priechod, Kodi LXC a ďalšie."
+      }
+    ]
+  }
+}

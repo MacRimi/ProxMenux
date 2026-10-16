@@ -1,0 +1,152 @@
+{
+  "meta": {
+    "title": "Plánované pracovné miesta: časovače, attache mode, retention ProxMenux",
+    "description": "Plánované ProxMenux záložné úlohy. Dva režimy vytvárania (vlastný časovač systemd alebo pripojiť k existujúcej práci PVE vzdump), retenčné hodnoty použité na prácu prostredníctvom proxmox-backup-client/borg/lokálny sliv, rozloženie úložiska pod /var/lib/proxmenux/backup-jobs a skript bežca, ktorý produkuje archívy identické s interaktívnym tokom.",
+    "ogTitle": "ProxMenux Zálohovanie",
+    "ogDescription": "Bez dozoru plánované zálohovanie hostiteľa s pripojiť režim, uchovávanie, a rovnaké tri destinácie ako interaktívny tok.",
+    "twitterTitle": "Plánované pracovné miesta ProxMenux",
+    "twitterDescription": "Bez dozoru plánované záložné úlohy hostiteľa s pripojeným režimom a zachovanie."
+  },
+  "header": {
+    "title": "Plánované úlohy",
+    "description": "Bez dozoru. Dva modely tvorby: nová nezávislá práca s vlastným rozvrhom alebo práca spojená s existujúcou úlohou PVE vzdump, ktorá dedí túto úlohu rozvrh a zachovanie. Obe produkujú archívy identické s interaktívnym tokom.",
+    "section": "Záloha a obnova"
+  },
+  "intro": {
+    "title": "Dva modely plánovanej práce",
+    "body": "Plánované pracovné miesto možno vytvoriť podľa jedného z dvoch modelov:",
+    "modelsList": [
+      "<strong>Nová nezávislá práca</strong> — ProxMenux sám definuje pracovný program s vlastným systemd časovač, nezávislý od akejkoľvek inej úlohy na hostiteľovi. Kompatibilný so všetkými tromi destináciami: Local, PBS a Borg.",
+      "<strong>Attach to a existing PVE vzdump task</strong> Zdedí rozvrh a zdržanie sa rodičovskej úlohy. Kompatibilný s miestnymi a PBS (Borg nie je podporovaný, pretože PVE nemá žiadny natívne plánovač pre Borg)."
+    ]
+  },
+  "attachBadge": {
+    "title": "Pripojiť režim",
+    "body": "Keď je PVE vzdump záložná úloha už nakonfigurovaná pre VM a LXC na tomto uzle, pripojenie zálohy hostiteľa k tejto úlohe zaručuje, že konfigurácia hostiteľa je zachytená v <strong>0same window</strong> ako hostia. Na obnovenie, hosť konfigy pochádzajú z hostiteľa zálohovanie (žijú pod <code>/etc/pve</code>), a hosť disky pochádzajú z vzdump zálohovanie prijaté spolu s"
+  },
+  "frequencyBadge": {
+    "title": "Odporúčaná frekvencia",
+    "body": "Ak chcete maximalizovať kompatibilitu medzi zálohovaním hostiteľa a jeho budúcou obnovou, spustite často zálohy hostiteľa. Čím bližšie je záloha k aktuálnemu stavu hostiteľa, tým menšia konfigurácia, balíček a komponent drift obnova musí zmieriť."
+  },
+  "modes": {
+    "heading": "Dva režimy",
+    "rows": [
+      {
+        "mode": "Nová plánovaná úloha",
+        "backends": "Miestne, PBS, Borg",
+        "schedule": "Vlastná expresia <code>OnCalendar</code> (systemd kalendár syntax <code>daily</code>, <code>Mon..Fri 03:00</code>).",
+        "retention": "Samostatné: <code>keep-last</code>, <code>keep-hourly</code>, <code>keep-daily</code>, <code>keep-weekly</code>, <code>keep-monthly</code>, <code>keep-yearly</code>. Aplikuje bežec po každej úspešnej zálohe."
+      },
+      {
+        "mode": "Pripojiť k práci PVE vzdump",
+        "backends": "Local, PBS (Borg nemá PVE-side programátor)",
+        "schedule": "Zdedil z rodičovskej PVE práce. Nie. systemd časovač je nainštalovaný na ProxMenux na strane.",
+        "retention": "Zdedil sa od rodiča <code>prune-backups</code> konfigurácia (zmapovaná one-to-one na bežcovo <code>KEEP_*</code> premenné cez <code>hb_pve_prune_to_keep_env</code>)."
+      }
+    ]
+  },
+  "attachDetail": {
+    "heading": "Ako funguje režim pripojenia",
+    "intro": "PVE píše <code>vzdump</code> úlohy na <code>/etc/pve/jobs.cfg</code> - jedna tanza za úlohu, každý ukazuje na sklade, kde VM a LXC skládky pôdy. Pripojiť režim vyžaduje, aby pamäť bola backend ProxMenux Pochopenie (miestne alebo PBS); keď úloha vystrelí, ProxMenux beží vedľa neho.",
+    "steps": [
+      {
+        "step": "1",
+        "detail": "Počas vytvárania pracovných miest ProxMenux uvádza kompatibilné rodičovské PVE úlohy prostredníctvom <code>hb_pve_list_vzdump_jobs_for_backend</code>. Užívateľ si vyberie jednu."
+      },
+      {
+        "step": "2",
+        "detail": "Práce <code>.env</code> je napísané s <code>PVE_PARENT_JOB</code>, <code>PVE_STORAGE</code> a zdedený <code>KEEP_*</code> hodnoty; nie systemd časovač je vytvorený."
+      },
+      {
+        "step": "3",
+        "detail": "<code>hb_install_vzdump_hook</code> zaregistruje skript v <code>/etc/vzdump.conf</code>. Keď PVE spustí akúkoľvek vzdump úlohu, hák skript vystrelí; ak <code>$STOREID</code> prešiel na neho zodpovedá pripojené pracovné <code>PVE_STORAGE</code>, bežec sa odvoláva na túto prácu."
+      },
+      {
+        "step": "4",
+        "detail": "Archív sa nachádza v rovnakom úložisku, na ktoré práve napísali vzdumpové skládky: <code>path/dump/</code> pre miestne alebo PBS úložisko nakonfigurované na pamäťovom zázname PVE."
+      }
+    ],
+    "outroBody": "Pripojiť režim má jeden prevádzkové dôsledky: vypnutie alebo vymazanie materskej PVE úloha tiež vypne zálohovanie hostiteľa Vstup do úlohy zostáva na disku, takže ho možno neskôr znovu pripojiť."
+  },
+  "storageLayout": {
+    "heading": "Súbory, ktoré tvoria prácu",
+    "intro": "Každá plánovaná úloha je plne popísaná tromi alebo štyrmi súbormi na disku. Čítanie im dáva plnú konfiguráciu úlohy bez spoliehania sa na rozhranie.",
+    "rows": [
+      {
+        "path": "/var/lib/proxmenux/backup-jobs/JOB_ID.env",
+        "content": "Backend, záložný ID alebo cieľ, plán (nový režim) alebo PVE materský (režim Attach), povolená vlajka, retenčný <code>KEEP_*</code> hodnoty, poverovacie ukazovatele."
+      },
+      {
+        "path": "/var/lib/proxmenux/backup-jobs/JOB_ID.paths",
+        "content": "Jedna absolútna cesta na líniu Editácia súboru znovu spustí prácu s novým výberom na ďalší časovač oheň."
+      },
+      {
+        "path": "/etc/systemd/system/proxmenux-backup-JOB_ID.timer + .service",
+        "content": "Iba nový režim. Služba vyvoláva <code>run_scheduled_backup.sh JOB_ID</code>. Časovač ho naplánuje s <code>Persistent=true</code> (nechýbajúce požiare bežia pri ďalšom štarte) a malým <code>RandomizedDelaySec=120</code> rozložiť zaťaženie, keď viac pracovných miest zdieľa rovnaký OnCalendar výraz."
+      },
+      {
+        "path": "/etc/vzdump.conf script-hook",
+        "content": "Pripojiť len režim. Nainštalovaný raz <code>hb_install_vzdump_hook</code>; zodpovedá každej pripojenej úlohy <code>PVE_STORAGE</code> proti <code>$STOREID</code> PVE prechádza na háčik skript."
+      }
+    ]
+  },
+  "runner": {
+    "heading": "Čo robí práca, keď strieľa",
+    "intro": "Každá práca, či je nový model alebo pripojený, má rovnakú trojstupňovú sekvenciu:",
+    "steps": [
+      "<strong>Prepare zálohovanie.</strong> Číta konfiguráciu úloh (určenie, profil, cesty) a zhromažďuje archívny strom presne tak, ako interaktívny tok robí. Výsledkom je rovnaký archív manuálne zálohovanie s týmito nastaveniami by produkovať.",
+      "<strong>Napíšte do cieľa.</strong> Uploaduje alebo zapíše archív do nakonfigurovanej destinácie <code>.tar.zst</code> súbor, a PBS záloha, alebo Borg archív",
+      "<strong>Aplikácia retention.</strong> Odstráni staré zálohy z cieľa, pričom <code>keep-last</code> / <code>keep-daily</code> / <code>keep-weekly</code> počíta nakonfigurovaný na úlohu. Prerezávanie vykonáva samotná destinácia: PBS uplatňuje svoju vlastnú retenciu, Borg beží <code>borg prune</code>, a pre miestne ProxMenux odstraňuje súbory, ktoré spadajú mimo okno <code>keep-last</code>."
+    ]
+  },
+  "management": {
+    "heading": "Riadenie pracovných miest",
+    "intro": "Menu rozvrhu (Scripts TUI) a záložka Monitor Backup odhaľujú rovnaké akcie na akejkoľvek práci.",
+    "rows": [
+      {
+        "action": "Bež!",
+        "detail": "Okamžite zavádza bežca, obchádza časovač / vzdump hák. Užitočné na overenie konfigurácie práce bez čakania na ďalší plánovaný požiar."
+      },
+      {
+        "action": "Povoliť / zakázať",
+        "detail": "Nový režim: <code>systemctl enable/disable --now</code> časovač. Pripojte režim: otočí vlajku <code>ENABLED</code> v pracovnom dokumente"
+      },
+      {
+        "action": "Upraviť",
+        "detail": "Znovu otvorí destináciu, rozvrh, profil a retenčný postup a prepíše pracovné súbory. Zachováva ID práce."
+      },
+      {
+        "action": "Odstrániť",
+        "detail": "Odstráni súbor úloh, cesty, časovač systemd + službu (nový režim) a vypne viazanie háku (režim dotyku). Nedotýka archívu už na mieste určenia."
+      },
+      {
+        "action": "Zobraziť záznam",
+        "detail": "Streams <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> Bežec tiež vydáva kompaktný stavový riadok publikovať pod systemd služby."
+      }
+    ]
+  },
+  "notifications": {
+    "heading": "Oznámenia",
+    "body": "Každý plánovaný beh vystrelí rovnaké <code>hb_notify_lifecycle</code> udalosti ako interaktívny tok (<code>start</code>, <code>complete</code>, <code>fail</code>). Ak sú oznamovacie kanály konfigurované v monitore, bez dozoru úlohy povrch ich výsledky rovnakým spôsobom manuálne zálohovanie robiť"
+  },
+  "whereNext": {
+    "heading": "Kam ísť ďalej",
+    "items": [
+      {
+        "label": "Vytváranie záloh",
+        "href": "/docs/backup-restore/creating-backups",
+        "tail": " — "
+      },
+      {
+        "label": "Ciele",
+        "href": "/docs/backup-restore/destinations",
+        "tail": " — "
+      },
+      {
+        "label": "Obnovenie",
+        "href": "/docs/backup-restore/restoring",
+        "tail": " — "
+      }
+    ]
+  }
+}

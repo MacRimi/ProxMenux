@@ -1,0 +1,132 @@
+{
+  "meta": {
+    "title": "Samba server v LXC | ProxMenux Dokumentácia",
+    "description": "Spustiť Sambu (SMB / CIFS) server vnútri Proxmox LXC nádoba ProxMenux. Automatické inštalácie Samba, manažuje /etc/samba/smb.conf, smbpasswd užívatelia, zdieľané súbory skupiny pre viazanie-položiek. Vyžaduje privilegovaný kontajner.",
+    "ogTitle": "Samba server v LXC | ProxMenux Dokumentácia",
+    "ogDescription": "Vytvárať priečinky cez SMB/CIFS z vo vnútri privilegovaného LXC kontajnera. Autoinštalácia, smbpasswd užívateľ, viazanie-mount uvedomelé práva."
+  },
+  "header": {
+    "title": "Samba server v LXC",
+    "description": "Spustite server Samba (SMB0 / CIFS) vnútri kontajnera Proxmox LXC a vystavujte priečinky Windows / macOS / Linux klientom na sieti. ProxMenux nainštaluje sambu, vytvorí Samba užívateľa s smbpasswd, spravuje /etc/samba/smb.conf, a uplatňuje záväzné-mount uvedomelé práva, keď zdieľaný priečinok pochádza z hostiteľa.",
+    "section": "Úložisko & Share · LXC"
+  },
+  "privReq": {
+    "title": "Požadovaný privilegovaný kontajner",
+    "body": "Samba sa vydáva za pripájajúceho užívateľa <code>setgroups()</code> na každom strome pripojenie (v okamihu, keď klient otvorí podiel). V neprivilegovaných LXC, jadro odmieta, že syscall, pretože užívateľské meno kontajnera je vytvorený s <code>setgroups=deny</code> a <code>smbd</code> reaguje prerušením pracovného procesu s <code>PANIC: sys_setgroups failed</code>. Výsledkom je, že <code>smbd</code> začína a viaže porty 139/445, ale každý klient spojenie zlyhá s <code>NT_STATUS_CONNECTION_DISCONNECTED</code>. Skript presadzuje privilegovaný CT z tohto dôvodu a <strong>ruší, ak je neprivilegovaná</strong>. Na strane servera nie je žiadne čisté fixovanie; použite privilegovaný CT, alebo spustiť Samba vnútri VM."
+  },
+  "what": {
+    "heading": "Čo to robí?",
+    "body": "Kontajner sa stáva SMB/CIFS serverom: prevádzkuje <code>smbd</code>, vystavuje priečinok cez <code>/etc/samba/smb.conf</code> a prijíma klientske pripojenia na portoch <code>139</code> / <code>445</code>. Klienti vidieť podiel na <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code> vo Windows Explorer, <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code> v macOS Finder, alebo prostredníctvom <code>mount.cifs</code> na Linuxe.",
+    "diagramServerLabel": "LXC (privilegovaný)",
+    "diagramServerDetail": "/mnt/data\n(priečinok, ktorý odhalíte)\n\nsmbd + nmbd beží\n\nUžívateľ: <username>\n(prostredníctvom smbpasswd)\n\nSkupina síl:\nzdieľané súbory",
+    "diagramClientLabel": "Každý klient v sieti",
+    "diagramClientDetail": "Okná:\\\\<ip>\\<share>\nmacOS:   smb://<ip>/<share>\nLinux: mount.cifs",
+    "diagramArrow": "SMB / CIFS"
+  },
+  "perms": {
+    "heading": "Dve cesty povolenia v závislosti od typu priečinka",
+    "body": "Pred pridaním akcie do <code>smb.conf</code>, skript kontroluje, či je vybraný priečinok <strong>bind mount z host</strong> alebo pravidelný <strong>lokálny priečinok vo vnútri CT</strong>",
+    "headerType": "Typ priečinku",
+    "headerAction": "Čo robí scenár?",
+    "bindType": "Väzba z hostiteľa",
+    "bindTypeSubRich": "detekovaný prostredníctvom výstupu <code>mount</code>",
+    "bindActionRich": "Vytvorí skupinu <code>sharedfiles</code> (default GID 999, dynamic if taken), pridá k nej Samba užívateľa, potom <code>chown root:sharedfiles</code> + <code>chmod 2775</code> (SGID Ak používateľ stále nemôže zapísať, použije <code>setfacl -m u:&lt;user&gt;:rwx</code>.",
+    "localType": "Lokálny priečinok vnútri CT",
+    "localTypeSub": "žiadna spojka zistená",
+    "localActionRich": "Štandardné vlastníctvo: <code>chown -R &lt;user&gt;:&lt;user&gt;</code> + <code>chmod -R 755</code>. Žiadna spoločná skupina nie je potrebná, pretože do tohto priečinku nepíše žiadna iná CT. Vracia sa do <code>setfacl</code> ak stále chýba prístup k zápisu.",
+    "gidTitle": "GID pre zdieľané súbory sa líši od toku servera NFS",
+    "gidBody": "Skript Samba server používa GID <strong>999</strong> namiesto <code>sharedfiles</code>, zatiaľ čo <nfsLink>NFS tok servera</nfsLink> používa GID <strong>101000</strong>. Ak spustíte oba servery v rovnakom CT a chcú jednu spoločnú skupinu v oboch protokoloch, upraviť jeden z nich tak, aby zodpovedal druhému po inštalácii (napr. <code>groupmod -g 101000 sharedfiles</code>) a opätovne uplatňovať vlastníctvo príslušných zložiek. Toto je známy nesúlad v aktuálnych skriptoch."
+  },
+  "opening": {
+    "heading": "Otvorenie nástroja",
+    "body": "Od ProxMenux's hlavné menu, otvorené <strong>Skladovanie &amp; Share Manager → Nastaviť server Samba v LXC (len privilegované)</strong>. ProxMenux Najprv vás požiada, aby ste si vybrali cieľ. CT (a začne to, ak sa zastaví), preruší, ak nie je privilegovaný. Raz CT je vybraný vidíte toto sub-Ponuka s piatimi možnosťami:",
+    "imageAlt": "Samba Server Manager menu"
+  },
+  "howRuns": {
+    "heading": "Ako spustí skript (Create flow)"
+  },
+  "modes": {
+    "heading": "Tri režimy zdieľania",
+    "intro": "Každý režim píše inú stanzu na <code>smb.conf</code>. Všetky tri zahŕňajú <code>valid users = &lt;username&gt;</code> (nie anonymné), <code>force group = sharedfiles</code> (takže nové súbory patria do zdieľanej skupiny) a <code>veto files = /lost+found/</code> (skrýva ich od klientov).",
+    "headerMode": "Režim",
+    "headerBlock": "Blok napísaný smb.conf",
+    "rwMode": "Čítanie a zápis",
+    "roMode": "Iba na čítanie",
+    "customMode": "Vlastné",
+    "customBodyRich": "Svoje vlastné smernice zapíšete do voľného textu. ProxMenux ich stále zabalí do bloku <code>[share]</code> štandardným <code>path</code>, <code>valid users</code>, <code>force group</code> a <code>veto files</code>."
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent",
+    "body": "Replikovať celý tok ručne <strong>Vnútri CT</strong> via <code>pct exec &lt;ctid&gt; --</code> alebo <code>pct enter &lt;ctid&gt;</code>:"
+  },
+  "connect": {
+    "heading": "Pripojenie od klientov",
+    "headerOs": "Operačný systém klienta",
+    "headerHow": "Ako sa pripojiť",
+    "windowsOs": "Windows",
+    "windowsHowRich": "File Explorer → panel adries: <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code>. Alebo <em>Map Network Drive</em> → skontrolujte \"Prepojiť pomocou rôznych osvedčení.\"",
+    "macosOs": "macOS",
+    "macosHowRich": "Hľadač → <em>0Go → Pripojte sa k serveru...</em> → <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code>. Alebo <code>mount_smbfs //user@&lt;ct-ip&gt;/&lt;share&gt; /mountpoint</code>.",
+    "linuxOs": "Linux",
+    "linuxHowRich": "<code>mount -t cifs //&lt;ct-ip&gt;/&lt;share&gt; /mnt/x -o username=&lt;u&gt;,password=&lt;p&gt;,iocharset=utf8</code>. Alebo použite klienta <clientLink>Samba na stránke LXC</clientLink>, ak je klientom iný Proxmox CT."
+  },
+  "view": {
+    "heading": "Zobraziť aktuálne akcie",
+    "body": "Parézy <code>/etc/samba/smb.conf</code> Vnútri CT a uvádza každý <code>[share]</code> blok (lyžovanie) <code>[global]</code>, <code>[homes]</code>, <code>[printers]</code>) svojou cestou. Užitočné ako rýchly inventár."
+  },
+  "delete": {
+    "heading": "Odstrániť podiel",
+    "body": "Umožňuje vybrať zdieľanie podľa mena, odstraňuje blok z <code>smb.conf</code> (<code>sed</code> odstráni z <code>[share]</code> do ďalšieho prázdneho riadku) a reštartuje <code>smbd</code>. Priečinok sám a jeho obsah sú ponechané neporušené."
+  },
+  "status": {
+    "heading": "Kontrola stavu Samby",
+    "body": "Správy o tom, či sú <code>smbd</code> a <code>nmbd</code> nainštalované a aktívne, uvádzajú Sambu (<code>pdbedit -L</code>) a tlač aktívnych sedení (<code>smbstatus</code>)."
+  },
+  "uninstall": {
+    "heading": "Odinštalovať server Samba",
+    "body": "Kompletné čistenie po potvrdení: zastaví + vypne <code>smbd</code> a <code>nmbd</code>, zálohuje <code>smb.conf</code> na <code>smb.conf.backup.YYYYMMDD_HHMMSS</code>, odstráni Samba užívateľov s <code>smbpasswd -x</code>, a <code>apt-get purge</code> Samba balíky. Samotné vyvážané <strong> priečinky sa nevymažú </strong>.",
+    "warnTitle": "Priečinky prežiť",
+    "warnBody": "Obaja <em>Delete share</em> a <em>Uninstall Samba server</em> odstrániť konfiguráciu zdieľania. Údaje o exportovaných priečinkoch sú zachované. Ak chcete odstrániť dáta taky, urobte to explicitne s <code>rm -rf</code> po skončení skriptu."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "privTitle": "Požadovaná privilegovaná nádoba (potraty skriptu)",
+    "privBody": "Vybrané CT je neprivilegované a <code>smbd</code> tam nemôže slúžiť súbory. Ak obídete bránu a konfigurujete Sambu ručne, začne sa <code>smbd</code> a otvoria sa porty, ale prvé klientske spojenie spanikári s <code>PANIC: sys_setgroups failed</code> v <code>/var/log/samba/log.&lt;client&gt;</code> a klient vidí <code>NT_STATUS_CONNECTION_DISCONNECTED</code>. Príčinou je neprivilegované užívateľské meno s <code>setgroups=deny</code>, ktoré blokuje Samba na pripojenie imitácie. Ani <code>features=keyctl=1</code> ani odstránenie <code>force user</code> / <code>force group</code> to nemení. Jediné funkčné možnosti sú: previesť CT na privilegované, alebo presunúť Samba na VM.",
+    "aptTitle": "apt-get install fails",
+    "aptIntro": "Skript predpokladá rodinu Debianu CT. Na Alpine / Arch / Rocky / Alma, inštalujte Samba ručne:",
+    "aptItems": [
+      "Alpine: <code>apk add samba</code>",
+      "Arch: <code>pacman -S samba</code>",
+      "Rocky / Alma: <code>dnf install samba</code>"
+    ],
+    "aptOutro": "Potom re-spustiť ProxMenux skript",
+    "noShareTitle": "Klient sa pripája, ale nevidí podiel",
+    "noShareBody": "Skontrolujte, či je <code>browseable = yes</code> nastavený v bloku akcií (predvolená hodnota pre režimy rw / ro; môže chýbať na vlastné použitie). Tiež skontrolujte firewall CT a firewall Proxmox umožňuje TCP 445 (SMB) a 139 (NetBIOS). Niektorí klienti systému Windows tiež vyžadujú rozlíšenie mena",
+    "authTitle": "Zlyhanie overovania (NT_STATUS_LOGON_FAILURE)",
+    "authBody": "Buď zlé heslo (Samba hesla sú <em>oddelená</em> od systémových heslá <code>pdbedit -L</code>) alebo nie je v <code>valid users</code> za tento podiel. Resetovať heslo pomocou <code>smbpasswd &lt;user&gt;</code> Vnútri CT.",
+    "groupTitle": "Súbory napísané klientom sa objavujú s nesprávnou skupinou na serveri",
+    "groupBody": "Skript nastaví <code>force group = sharedfiles</code> v bloku zdieľania, takže nové súbory by mali byť skupiny <code>sharedfiles</code>. Ak nie sú, SGID bit na rodičovskom adresári mohol byť stratený (niekto bežal <code>chmod</code> ručne). Opakovane: <code>chmod 2775 /mnt/&lt;share&gt;</code>.",
+    "bothTitle": "Zdieľanie rovnakého priečinka na oboch NFS a Samba",
+    "bothBody": "ProxMenux používa rôzne GIDs pre <code>sharedfiles</code> v každom skripte (Samba: 999, NFS: 101000). Ak podávate rovnaký priečinok prostredníctvom oboch, rozhodnite sa pre jednu GID a zarovnajte obe. Najjednoduchšia oprava: po spustení oboch skriptov upravte menšie GID:"
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-samba-client",
+        "label": "Samba klient v LXC",
+        "tail": " — Inverzné: pripojiť externé Samba akcie zvnútra CT."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-server",
+        "label": "NFS server v LXC",
+        "tail": " Na strane súrodencov, rovnaký vzor s NFS namiesto CIFS."
+      },
+      {
+        "href": "/docs/storage-share/host-samba",
+        "label": "Samba / CIFS ako Proxmox skladovanie",
+        "tailRich": " — Akonáhle vaše CT je vystavený, zaregistrovať, že podiel v Proxmox, takže sa objaví pod <em>Datacenter → Storage</em>."
+      }
+    ]
+  }
+}

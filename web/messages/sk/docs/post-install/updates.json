@@ -1,0 +1,112 @@
+{
+  "meta": {
+    "title": "Aplikujte dostupné aktualizácie a post-inštalujte optimalizácie ProxMenux Dokumentácia",
+    "description": "Ako ProxMenux zistí, kedy bola po inštalácii optimalizácia (Log2Ram, Memory Settings, System Limits, Logrotate, Network tuning...) bola aktualizovaná pred, a ako aplikovať novú verziu z menu Post-Install alebo z panela monitor."
+  },
+  "header": {
+    "title": "Aplikovať dostupné aktualizácie",
+    "description": "Keď po inštalácii optimalizácia (Log2Ram, Memory Nastavenia, systémové limity, Logrotate...) dostane novšiu verziu na disku ako tá, ktorá je v súčasnosti registrovaná na hostiteľovi, ProxMenux ju surfuje ako dostupnú aktualizáciu. Môžete ju použiť z menu Post-Install (strana skriptov) alebo z prístrojovej dosky monitora",
+    "section": "Nastavenie Proxmoxu po inštalácii"
+  },
+  "intro": {
+    "title": "Čo to je?",
+    "body": "ProxMenux po inštalácii optimalizácie sú verziované. Každý skript v úložisku nesie číslo verzie (napr. <code>Log2ram SSD Protection v1.2</code>), a hostiteľ vedie register, ktorého optimalizácia sú aktívne a na ktorej verzii v <code>/usr/local/share/proxmenux/installed_tools.json</code>. Keď nové ProxMenux vydanie lodí aktualizovanú verziu akejkoľvek optimalizácie, ProxMenux detekuje nesúlad a ponúka znovu použiť len to, že jeden"
+  },
+  "why": {
+    "heading": "Prečo to existuje?",
+    "body": "Po inštalácii optimalizácia občas získať zlepšenie Bez cesty aktualizácie mal operátor len dve možnosti: manuálne re-spustiť post-inštalovať skript (ktorý znovu napája <em>ever</em>) optimalizácia) alebo úplne preskočiť zlepšenie. Aplikujte dostupné aktualizácie je stredná pôda: na optimalizáciu, opt-in re-run, ktorý dvíha iba verzie, ktoré skutočne presunuli."
+  },
+  "detection": {
+    "heading": "Spôsob zistenia aktualizácií",
+    "steps": [
+      {
+        "title": "Verzia skriptov na disku",
+        "body": "Každá funkcia po inštalácii deklaruje svoju verziu vo vnútri skriptu (<code>scripts/post_install/auto_post_install.sh</code> a <code>scripts/post_install/customizable_post_install.sh</code>). Scanner vyberá tieto verzie zo zdroja na disku."
+      },
+      {
+        "title": "Verzia registra na hostiteľa",
+        "body": "Keď operátor uplatnil každú optimalizáciu, zodpovedajúci hovor <code>register_tool</code> napísal aktívnu verziu do <code>/usr/local/share/proxmenux/installed_tools.json</code>. Tento súbor je zdrojom pravdy pre \"to, čo je aktívne na tomto hostiteľovi práve teraz.\""
+      },
+      {
+        "title": "Monitor porovnáva obe strany",
+        "body": "Pri štarte a každých 24 hodín monitor porovnáva verzie disku s verziami registra. Akýkoľvek nesúlad vytvára záznam v <code>/usr/local/share/proxmenux/updates_available.json</code>. Tento súbor poháňa vstup do menu Post-Install a palubnú kartu Monitor."
+      },
+      {
+        "title": "Jedno oznámenie na novú verziu",
+        "body": "Ak má aspoň jedna optimalizácia očakávanú aktualizáciu, Monitor vydáva jedno skupinové oznámenie <em>\"4 ProxMenux optimalizácia aktualizácia (disponibilné) \"</em> S jedným riadok na nástroj v rovnakej <code>name (vX → vY)</code> formát použitý pre aktualizácie balenia Proxmox. Oznámenie je anti-kaskády, takže sa neopakuje deň čo deň pre rovnakú sadu; iba nová verzia (alebo nový nástroj v zozname) re-aktivuje ju."
+      }
+    ]
+  },
+  "pathA": {
+    "heading": "Cesta A",
+    "intro": "Od ProxMenux's hlavné menu, otvorené <strong>Nastavenie po inštalácii Proxmox</strong>. Keď sa čakajú aktualizácie, nová položka <strong>Aplikovať dostupné aktualizácie (N)</strong> Objaví sa priamo nad <em>Odinštalovať optimalizácie</em>. Číslo odráža, koľko optimalizácie majú novšiu verziu na disku, než to, čo hostiteľ v súčasnej dobe zaregistroval. Keď je všetko aktuálne, položka sa jednoducho neobjaví, takže menu zostane čisté.",
+    "menuAlt": "Point-Install Scripts menu zobrazujúce podmienenú 'Apply available updates (N)' položku umiestnenú tesne nad 'Unstall optimalizations', s znakom počtu udávajúcim, koľko optimalizácií má novšiu verziu na disku",
+    "menuCaption": "<em>Aplikácia je k dispozícii (N)</em> položka iba vykresľuje, keď aspoň jedna optimalizácia má čakajúcu aktualizáciu",
+    "checklistBody": "Výber položky otvára kontrolný zoznam s každou prebiehajúcou aktualizáciou, každý riadok formátovaný ako <code>name (vX → vY)</code>. Všetky riadky sú prednastavené; odškrtnite akékoľvek, ktoré nechcete použiť toto kolo.",
+    "checklistAlt": "Použiť dostupné aktualizácie kontrolný dialóg s jedným radom na očakávanú optimalizáciu, každý označený názvom optimalizácie a prechod verzie (aktuálny → k dispozícii). Všetky riadky boli vopred skontrolované.",
+    "checklistCaption": "Optimalizácia na optimalizáciu: vyberte presne, ktoré verzie zdvihnúť. Ten istý motor, ktorý poháňa automatickú a prispôsobiteľnú post-inštaláciu beží v pozadí, aby znovu uplatňoval každú funkciu a obnovil jej verziu registra."
+  },
+  "pathB": {
+    "heading": "Cesta B",
+    "intro": "Rovnaké aktualizácie sa objavujú v monitore pod <link>0Settings → ProxMenux Optimizations</link>. Keď sa zistia nevybavené aktualizácie, karta zobrazí \"Aktualizované\" banner s počtom a <strong>Apply</strong>, ktorý otvorí rovnaký na optimalizáciu picker.",
+    "imageAlt": "ProxMenux Optimizačná karta na prístrojovej doske monitora s aktualizáciou dostupného banneru v hornej časti zobrazuje počet nevybavených aktualizácií a tlačidlo Aplikovať, ktoré otvára na optimalizáciu zberača",
+    "imageCaption": "Optimizačná karta v monitore, keď aspoň jedna optimalizácia má novšiu verziu na disku, banner ho rozprestiera bez nutnosti prístupu shell."
+  },
+  "applying": {
+    "heading": "Čo sa stane pri podaní žiadosti",
+    "steps": [
+      {
+        "title": "Znovu spustí funkciu po inštalácii",
+        "body": "Vybraná optimalizácia funkcie je znovu vykonávaná proti hostiteľovi. Pretože každá funkcia po inštalácii je <strong>idempotent</strong>, re-running to nie je duplicitné config"
+      },
+      {
+        "title": "Obnovuje register",
+        "body": "Volanie <code>register_tool</code> vo vnútri funkcie zapíše novú verziu do <code>installed_tools.json</code>. Ďalší sken už nevidí nesúlad a položka aktualizácie zmizne z menu aj z karty Monitor."
+      },
+      {
+        "title": "Žiadny reštart, pokiaľ to funkcia nepovie",
+        "body": "Väčšina aktualizácií nadobúda účinnosť okamžite. Aktualizácie, ktoré sa dotýkajú modulov jadra, trvalých názvov rozhraní alebo VFIO ukazujú rovnaký reštart ako nová inštalácia."
+      },
+      {
+        "title": "Aktualizácia registra zaslaná monitoru",
+        "body": "Po dokončení šarže, menu POSTs na <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> prestavať <code>/usr/local/share/proxmenux/updates_available.json</code>. To je to, čo robí Optimizations kartou monitora a shell menu zmizne hneď po aktualizácii, bez čakania na ďalšie plánované skenovanie."
+      }
+    ],
+    "jqTitle": "jq is required",
+    "jqBody": "Kontrolný zoznam trasy A sa spolieha na <code>jq</code> spracovať nevybavené aktualizácie JSON. Ak <code>jq</code> chýba, prietok vystúpi ticho Na akejkoľvek modernej inštalácii Proxmox <code>jq</code> je prítomný; v prípade pochybností spustite <code>apt install -y jq</code>."
+  },
+  "differs": {
+    "heading": "Ako sa líši od ostatných ciest",
+    "headerPath": "Path",
+    "headerScope": "Rozsah",
+    "headerWhen": "Keď to dáva zmysel",
+    "rows": [
+      {
+        "pathLabel": "Automatizované",
+        "pathHref": "/docs/post-install/automated",
+        "scope": "Reaplikuje <em>0 every</em> optimalizácia v balíku.",
+        "when": "Čerstvý hostiteľ, alebo úplná re-základ plne riadený uzol."
+      },
+      {
+        "pathLabel": "Prispôsobiteľné",
+        "pathHref": "/docs/post-install/customizable",
+        "scope": "Vyberte si z celého katalógu.",
+        "when": "Cherry-kock, ktoré optimalizácia sú aktívne na hostiteľa."
+      },
+      {
+        "pathLabel": "Nainštalovať dostupné aktualizácie",
+        "pathHref": null,
+        "scope": "Iba optimalizácie, ktorých verzia narazila na disk.",
+        "when": "Udržujte už nainštalovanú optimalizáciu prúdu bez dotyku so zvyškom."
+      },
+      {
+        "pathLabel": "Odstrániť optimalizácie",
+        "pathHref": "/docs/post-install/uninstall",
+        "scope": "Zvrátiť optimalizáciu a odstrániť svoj záznam registra.",
+        "when": "Otočiť konkrétnu zmenu."
+      }
+    ]
+  },
+  "notifTitle": "Oznamovacia brána",
+  "notifBody": "Oznámenie, ktoré oznamuje prebiehajúce aktualizácie, je <em>ProxMenux optimalizácia aktualizácie k dispozícii</em> udalosť. To je povolené štandardne na každom kanáli, môže byť tlmený na-kanál od <link>Nastavenia → Oznámenia</link>, a je anti-kaskáda"
+}

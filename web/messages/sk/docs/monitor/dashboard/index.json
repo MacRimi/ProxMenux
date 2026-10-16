@@ -1,0 +1,101 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Dashboard ProxMenux Dokumentácia",
+    "description": "Palubná doska je hlavným UI ProxMenux Monitor: desať obsahových kariet vrátane spúšťača aplikácií, plus globálna hlavička a konfigurovateľný navigačný príkaz najvyššej úrovne."
+  },
+  "header": {
+    "title": "Panel",
+    "description": "Palubná doska je každodenný pohľad na ProxMenux Monitor 10 obsahových kariet, vrátane spúšťača aplikácií, plus globálna hlavička a konfigurovateľný top-level navigačný príkaz.",
+    "section": "ProxMenux Monitor"
+  },
+  "oneHeader": {
+    "title": "Jedna hlavička, desať kariet",
+    "body": "Záhlavie (logo, názov uzla, stav pilulky, uptime, osvieženie, prepínanie témy) zostane viditeľné všade. Aktívna karta pod ňou mení celú oblasť obsahu. Status pilulka farba odráža najhoršiu kategóriu <link>0Health Monitor</link>"
+  },
+  "tabs": {
+    "heading": "Desať kariet",
+    "intro": "Každá karta má svoju vlastnú vyhradenú stránku. Stránky sa pridávajú postupne pri vypĺňaní dokumentácie; nižšie je úplný zoznam a za čo je zodpovedný každý z nich.",
+    "headerTab": "Karta",
+    "headerOwns": "Čo vlastní",
+    "rows": [
+      {
+        "name": "Prehľad systému",
+        "linksTo": "/docs/monitor/dashboard/system-overview",
+        "owns": "CPU0 / pamäť / teplota widgety, aktívny VM & LXC počet, historické grafy metriky, úložisko a sieťové súhrny. Predvolená pristávacia záložka, kým Navigácia objednávka nie je na mieru."
+      },
+      {
+        "name": "Aplikácie",
+        "linksTo": "/docs/monitor/dashboard/apps",
+        "owns": "Unified launcher for registered LXC Webové odkazy a vlastné odkazy s kategóriami, vyhľadávaním, skratkami pre hostí a aktualizačnými signálmi pre aplikáciu."
+      },
+      {
+        "name": "Skladovanie",
+        "owns": "Proxmox bazény, fyzické disky, SMART dáta, ZFS stav, opotrebenie a životnosť, história pozorovania."
+      },
+      {
+        "name": "Sieť",
+        "owns": "Každé rozhranie (fyzické / Bond / most / OVS), IP/MAC, RX/TX grafy, historické RRD na rozhranie."
+      },
+      {
+        "name": "VM a LXC",
+        "owns": "Zoznam hostí, vrták-in pre konfiguráciu / metriky / logy, štart / stop / reštart / vypnutie akcie."
+      },
+      {
+        "name": "Hardvér",
+        "owns": "Model CPU a topológia, rozloženie pamäte, topológia PCIe, GPU s monitoringom v reálnom čase."
+      },
+      {
+        "name": "Systémové záznamy",
+        "owns": "Živé <code>journalctl</code> s filtrami, História úloh Proxmox, protokol upozornení, sťahovacie log zväzky."
+      },
+      {
+        "name": "Terminál",
+        "owns": "Shell prehliadača hostiteľa alebo akejkoľvek VM/CT, napájaný <code>xterm.js</code> cez WebSockets."
+      },
+      {
+        "name": "Zabezpečenie",
+        "owns": "Auth nastavenie, heslo / 2FA0 / API žetóny, audit log, voliteľný Fail2Ban panel, Nasadenie Secure Gateway."
+      },
+      {
+        "name": "Nastavenia",
+        "owns": "Monitorovať jazyk, navigačný príkaz, oznamovacie kanály, AI poskytovateľa, zdravotné prahy, vylúčenia a po inštalácii optimalizácia inventára."
+      }
+    ]
+  },
+  "headerAnatomy": {
+    "heading": "Anatómia hlavičky",
+    "items": [
+      "<strong>0Logo + názov produktu</strong> vľavo. Logo sa zmení na \"aktualizáciu dostupnú\" variantu, keď sa zistí novšia verzia monitora.",
+      "<strong>Identita uzla</strong> - názov uzla Proxmox je vyriešený <code>pvesh get /nodes</code>, návrat do <code>hostname</code>.",
+      "<strong>Zdravý stav pilulka</strong> Kliknite na tlačidlo pre otvorenie spôsobu Health Monitor. Extra modrá <em>info</em> odznak sa objaví, keď sú prepustené položky stále v ich supresívne okno.",
+      "<strong>Uptime</strong>",
+      "<strong>Tlačidlo Obnoviť</strong> - Znovuvydáva všetko živé. API hovory bez plnej stránky reload.",
+      "<strong>0Theme toggle</strong> Pretrváva v <code>localStorage</code>."
+    ]
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "Záložka aplikácií",
+        "href": "/docs/monitor/dashboard/apps",
+        "tail": " Vďaka zjednotenému webovému odkazu a jeho vzťahu s registrovaným LXC žiadosti."
+      },
+      {
+        "label": "Karta Prehľad systému",
+        "href": "/docs/monitor/dashboard/system-overview",
+        "tail": " — "
+      },
+      {
+        "label": "Monitor zdravia",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — "
+      },
+      {
+        "label": "Architektúra",
+        "href": "/docs/monitor/architecture",
+        "tail": " — Ako doska hovorí s Flask backend."
+      }
+    ]
+  }
+}

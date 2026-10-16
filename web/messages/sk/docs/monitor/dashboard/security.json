@@ -1,0 +1,246 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Dashboard: Bezpečnostná karta ProxMenux Dokumentácia",
+    "description": "Bezpečnostná karta zoskupuje všetky kontroly súvisiace s ochranou do dvoch stĺpcov: ProxMenux Monitor (Autentifikácia, SSL/HTTPS, API tokeny, bezpečná brána) a Proxmox VE (Požiarna stena, Fail2Ban, Lynis audit). Step-by-step Secure Gateway kúzelník, Lynis audit prešiel, Fail2Ban nainštalovať a ladiť pravidlá."
+  },
+  "header": {
+    "title": "Dashboard: Bezpečnostná karta",
+    "description": "Každý bezpečnostný ovládač v prístrojovej doske, zoskupený do dvoch jasne označených blokov: konfigurácia samotného monitora (auth, SSL, žetóny, Secure Gateway) a konfigurácia Proxmox hostí hostí (firewall, Fail2Ban, Lynis).",
+    "section": "ProxMenux Monitor · Prehľad"
+  },
+  "intro": {
+    "title": "Dva rozsahy, jedna karta",
+    "body": "Bezpečnostná karta je rozdelená do dvoch zreteľne oddelených častí: <strong>ProxMenux Monitor</strong> (nastavenia samotnej prístrojovej dosky) a <strong>Proxmox VE</strong> (nastavenia pre hostiteľa pod ním). Karty robia podmienečne Fail2Ban a Lynis sa objaví len raz."
+  },
+  "monitor": {
+    "heading": "ProxMenux Monitor",
+    "intro": "Štyri karty ovládajú, ako sa dosiahne a overí prístrojová doska."
+  },
+  "auth": {
+    "heading": "Prihlásenie",
+    "imageAlt": "Karta overovania so stavom Povolené, tlačidlami Odhlásiť sa a Zmeniť heslo, informáciami o dvojfaktorovom overovaní a tlačidlami Povoliť dvojfaktorové overovanie a Zakázať overovanie",
+    "imageCaption": "Authentication card with auth enabled 2FA a (deštruktívne) Zakázať overenie.",
+    "intro": "Karta vám umožní spravovať prihlásenie palubnej dosky. Úplné prvé spustenie toku, pravidlá hesla, TOTP vstup obrazoviek a stratený-autentikátor obnovenie sú zdokumentované v <link>Access & Authentication</link>",
+    "items": [
+      "<strong>Stav overenia</strong> Znázorňujúci odznak <em>Povolené</em> / <em>Zakázané</em> / <em>Odkloniť</em>.",
+      "<strong>Zmeniť heslo</strong>",
+      "<strong>0Enable / Disable Two-Factor Authentication</strong>",
+      "<strong>Zakázať overenie</strong> Deštruktívna akcia, ktorá znovu ukazuje prvé spustenie <em>Chrániť si prístrojovú dosku?</em> dialóg pri ďalšej návšteve."
+    ]
+  },
+  "ssl": {
+    "heading": "SSL / HTTPS",
+    "imageAlt": "SSL / HTTPS zobrazená karta HTTP Žiadny SSL status, detected Proxmox host certificate with Subject, Emitent, Expires, Use Proxmox Certificate button and Use Custom Certificate option",
+    "imageCaption": "SSL / HTTPS karta s HTTPS vypnutá. Monitor detekuje certifikát už nainštalovaný na Proxmox host a ponúka ho ako jednoklikaciu možnosť, s poklesom <em>Use Custom Certificate</em> ak máte svoje vlastné súbory inde.",
+    "intro": "Podáva palubnú dosku cez HTTPS bez spätného proxy vpredu. Karta auto-detektuje certifikát, ktorý Proxmox sám používa (pod <code>/etc/pve/local/</code>) a zobrazuje predmet, vydavateľ a platnosť, takže ho môžete overiť pred aktiváciou. Dve cesty na umožnenie HTTPS:",
+    "items": [
+      "<strong>0Use Proxmox Certificate</strong> Monitor znovu použije certifikát nainštalovaný na hostiteľa. Dobré pre užívateľov, ktorí už majú PVE beží na rovnakom DNS meno ako palubná doska.",
+      "<strong>Použiť vlastný certifikát</strong> Vložte absolútnu cestu do svojho <code>.pem</code> osvedčenie a <code>.key</code> Súkromný kľúč. Trate sú validované pred reštartom služby; ak načítanie zlyhá, prístrojová doska sa vráti späť do HTTP automaticky (neporušený stav)."
+    ],
+    "enabledAlt": "SSL/HTTPS karta s HTTPS Povolený stav, Active Certificate showing pve-ssl.pum and pve-ssl.key pathers, and a Disable HTTPS •",
+    "enabledCaption": "HTTPS aktívna karta vytyčuje certifikát, ktorý sa v súčasnosti používa, cesty súborov a <em>Zakázať HTTPS</em> akcia, ktorá sa vracia späť do HTTP v rovnakom prístave.",
+    "acmeTitle": "ACME / Let's Encrypt cez Proxmox",
+    "acmeBody": "Ak váš Proxmox uzol už má Let's Encrypt nakonfigurované na <em>Datacenter → Certifikáty → ACME</em>, to je certifikát, ktorý hostiteľ slúži pre prehliadače a to je to, čo palubná doska opakovane, keď kliknete <em>Použiť certifikát Proxmox</em>. Nepotrebuješ samostatné rozvody ACME pre Monitor.",
+    "walkthroughLink": "Pre krok-za-krokom walking through, vrátane toho, ako Monitor auto-detects ACME-uploaded certifikát, čo sa napíše na disk, a ako sa vrátiť do vlastného <code>.pem</code> / <code>.key</code> dvojica <link>HTTPS namiesto ProxMenux Monitor</link>."
+  },
+  "apiTokens": {
+    "heading": "Prístupové žetóny API",
+    "emptyAlt": "API Prístup Tokeny karta prázdny stav s O API Tokeny info box a Generovať nové API Token tlačidlo",
+    "emptyCaption": "API Prístup Tokens karta na novú inštaláciu <em>O API Tokeny</em> box sumarizuje životnosť, použitie a ako vložiť token v <code>Authorization: Bearer</code> hlavičky.",
+    "intro": "Známky s dlhou životnosťou (1 rok) pre bezobsluhované integračné prvky Homepage, Home Assistant snímače REST, Grafana škrabky, n8n toky, vlastné skripty. Karta vás prevedie tromi stavmi: prázdny → formulár → generovaný.",
+    "generateBody": "<strong>Generate a token.</strong> Kliknite na <em>Generate New API Token</em>. Formulár požaduje opisný <em>Token Name</em> (pomáha identifikovať ho v aktívnom zozname neskôr) a vaše <em> hesla</em> ako druhý faktor potvrdenie. Ak je 2FA zapnutý, formulár navyše žiada o aktuálny kód TOTP.",
+    "generateAlt": "API Access Tokens generovať formulár s Token Meno vstupu, Heslo vstup, Generovať Token a Zrušiť tlačidlá",
+    "generateCaption": "Generovať API Tokenový formulár Vyplňte meno a potvrďte heslom (a TOTP ak 2FA je k dispozícii).",
+    "saveBody": "<strong>Uložte token okamžite.</strong> Celý token reťazec je zobrazený <strong> iba raz</strong> po generácii. Karta to zvýrazňuje s jantárovým oznámením a kopírovacím tlačidlom. Neexistuje žiadny spôsob, ako ju získať neskôr",
+    "generatedAlt": "API token úspešne generovaný s maskovaným tokenom, kopírovacím tlačidlom, pokynmi pre záhlavie autorizácie Nosič a zoznam aktívnych tokenov s predponou",
+    "generatedCaption": "Token generovaný <code>Authorization: Bearer</code> Strihačka. Nižšie je zoznam Active Tokens udržiava názov + predpona + dátum vytvorenia, takže môžete odvolať jednotlivé žetóny neskôr.",
+    "outro": "Karta zobrazuje každý aktívny token s tlačidlom <em>Revoke</em> za riadok. Odvolanie okamžite zruší token; akákoľvek integrácia, ktorá ho používa, prestane fungovať od toho momentu. Cookbooks for Homepage, Home Assistant, n8n a Prometheus sú v <link>Integrácie</link>."
+  },
+  "gateway": {
+    "heading": "Zabezpečená brána",
+    "cardAlt": "Bezpečná kartička Gateway s tlačidlom Deploy Secure Gateway pred nasadením akejkoľvek brány",
+    "cardCaption": "Bezpečná karta Gateway na novom nastavení a jedno tlačidlo spustí sprievodcu.",
+    "intro": "Dostať sa na prístrojovú dosku, sieť Proxmox UI a každého hosťa odkiaľkoľvek na vašom <a>Tailscale</a> tailnet, bez toho, aby vystavoval akýkoľvek prístav verejnému internetu. Monitor rozmiestňuje Alpine LXC kontajner na bežiaci hostiteľ <code>tailscaled</code> ako podsieťový router; po schválení v Tailscale admin konzola, vaše diaľkové zariadenia dosiahnuť hostiteľa LAN IP odkiaľkoľvek.",
+    "wizardTitle": "Sprievodca krok za krokom",
+    "wizardIntro": "Pred kliknutím <em>Nasadiť bezpečnú bránu</em>, generovať auth kľúč vo vašom Tailscale admin konzola chápateľ bude žiadať o to krok 2.",
+    "step0Title": "0. Generovať kláves Tailscale auth",
+    "step0Body": "Prihláste sa do <a>login.tailscale.com/admin/settings/keys</a> a kliknite na <em>Generate auth key...</em>. Vyberte si <em>pre-autentikated</em> kľúč (takže brána nepotrebuje interaktívne prihlásenie Tailscale), a kopírovať hodnotu",
+    "step0Alt": "Administračná konzola Tailscale Nastavenie stránky klávesy s tlačidlom Generovať auth zvýraznené",
+    "step0Caption": "Tailscale admin konzola <em>Nastavenia → Kľúče → Generovať klávesy...</em>. Použiť zadarmo Tailscale účet, ak ešte žiadny nemáte (odkaz vo vnútri sprievodcu).",
+    "step1Title": "1. Otvorte sprievodcu",
+    "step1Body": "Späť na záložke Bezpečnosť, kliknite na <em>0Zapnúť bezpečnú bránu</em>. Prvým krokom je intro s tým, čo dostanete a čo potrebujete.",
+    "step1Alt": "Secure Gateway Setup Sprievodca intro krok vysvetľujúci, čo brána poskytuje: VPN prístup, žiadny port forwarding, end-to-end šifrovanie",
+    "step1Caption": "Krok 1 Prehľad toho, čo Secure Gateway poskytuje, a pripomienka, že budete potrebovať zadarmo Tailscale účet.",
+    "step2Title": "2. Tailscale Overenie",
+    "step2Body": "Vložiť auth kľúč od kroku 0 a vybrať meno hostiteľa (toto je to, čo brána sa objaví ako v Tailscale admin konzola typicky <code>proxmox-gateway</code> alebo meno vášho uzla).",
+    "step2Alt": "Secure Gateway sprievodca krok žiada Tailscale Auth kľúč a zariadenie Hostname s odkazom na generovanie kľúča",
+    "step2Caption": "Step 2 Odkaz pod poľom otvára stránku Tailscale od kroku 0, ak preskočíte dopredu.",
+    "step3Title": "3. Rozsah prístupu",
+    "step3Intro": "Vyberte si, čo môže vaša sieť dosiahnuť cez bránu:",
+    "step3Items": [
+      "<strong>Proxmox Only</strong> Najmenší útočný povrch.",
+      "<strong>0 Full Local Network</strong> Umožňuje osloviť NAS, tlačiarne, VMs a akékoľvek iné LAN zariadenie.",
+      "<strong>Custom Subnets</strong> Pre multi-VLAN nastavenia, kde chcete odhaliť niektoré segmenty, ale nie iné."
+    ],
+    "step3Alt": "Bezpečný sprievodca Gateway Access Scape krok s tromi možnosťami: Proxmox Iba, Full Local Network, Vlastné subnety",
+    "step3Caption": "Krok 3 <em> Full Local Network</em> automaticky naplní detekovanou podsiete LAN.",
+    "step4Title": "4. Pokročilé možnosti (nepovinné)",
+    "step4Intro": "Dve voliteľné prepínače. Obe sú <strong>-off v predvolenom nastavení</strong>:",
+    "step4Items": [
+      "<strong>0 Exit Node</strong> Užitočné pre cestovné scenáre, kde chcete, aby prevádzka telefónu vyzerať ako doma.",
+      "<strong>Akceptovať cesty</strong> Táto brána nech sa dostane do sietí propagovaných <em>ostatná</em> podsieťové routery (pre viacsídlové nastavenia)."
+    ],
+    "step4Alt": "Secure Gateway sprievodca Rozšírené možnosti krok s výstupným uzlom a prijať zaškrtávacie políčka Trasy",
+    "step4Caption": "Krok 4 Preskočte oboje, ak chcete iba prístup do prístrojovej dosky z telefónu alebo notebooku.",
+    "step5Title": "5. Preskúmanie a zavedenie",
+    "step5Body": "Záverečné zhrnutie pred začiatkom nasadenia. Čarodejník vám pripomína, že jeden manuálny krok v Admin Tailscale je stále čaká po nasadení: <strong>0prijímajúci subnetovú trasu</strong>.",
+    "step5Alt": "Bezpečný sprievodca Gateway Review a Deploy krok s Konfigurácia Súhrn zobrazujúci meno hostiteľa, prístupový režim, siete, výstupný uzol, prijať trasy a tlačidlo Deploy Gateway",
+    "step5Caption": "Krok 5 Modré oznámenie v spodnej časti označuje schválenie trate v očakávaní.",
+    "approvalTitle": "Posledný manuálny krok v Tailscale admin",
+    "approvalBody": "Po nasadení sa vráťte do <a>Prihlásiť sa.tailscale.com/admin/stroje</a> a schváliť podsieťovú trasu, brána je reklama. Kým to neurobíte, vzdialené zariadenia na chvostovej sieti sa cez bránu nedostanú k LAN IP. Tailscale značky nevybavené trasy so žltým upozornením na riadku zariadenia <em>Upraviť nastavenie trasy</em> a zaškrtnite route box."
+  },
+  "pve": {
+    "heading": "Proxmox VE",
+    "intro": "Vlastná ochrana hostiteľa Posledné dve vykresľujú len vtedy, keď sú nainštalované ich príslušné nástroje."
+  },
+  "firewall": {
+    "heading": "Proxmox Firewall",
+    "imageAlt": "Firewallová karta Proxmox zobrazujúca Cluster Firewall a Host Firewall stav, rýchle pravidlá prístupu pre ProxMenux Monitor a Proxmox Web UI, pravidlá Prehľadové počítadlá a zoznam pravidiel Firewallu s tlačidlom Pridať pravidlo",
+    "imageCaption": "Firewallová karta Proxmox <em>Pravidlá rýchleho prístupu</em>, spolu <em>Prehľad pravidiel</em>, a celý zoznam pravidiel s <em>+ Pridať pravidlo</em>.",
+    "intro": "Karta rozkladá Proxmox VE zabudovaný firewall (ktorý je nezávislý od akejkoľvek host-level <code>iptables</code> / <code>nftables</code> môžete bežať vedľa). Tri bloky:",
+    "items": [
+      "<strong>Cluster Firewall + Host Firewall</strong> Firewall klastra musí byť aktívny, aby nadobudlo účinnosť akékoľvek pravidlo na úrovni hostiteľa; karta označuje túto závislosť inline.",
+      "<strong>Pravidlá rýchleho prístupu</strong> - vopred definované riadky pre prístavy, na ktorých záleží ProxMenux sama osebe: <code>8008/TCP</code> (Monitor), <code>8006/TCP</code> (Proxmox Web UI). Každý riadok zobrazuje aktuálnu možnosť / popretie / nechránený stav. Web Proxmox UI je povolené cez <em>vstavané</em> Proxmox firewall makro a nemožno ho náhodne odstrániť.",
+      "<strong>Pravidlá Prehľad</strong> Čísla sú čítané z <code>/etc/pve/firewall/cluster.fw</code> a <code>/etc/pve/nodes/&lt;node&gt;/host.fw</code>.",
+      "<strong>Firewall Pravidlá</strong> <em>+ Pridať pravidlo</em> otvorí inline editor; ikona koša na každom riadku odstráni pravidlo. Upravuje zápis do rovnakých súborov, ktoré používa Proxmox, takže zmeny sa objavujú aj v UI Proxmox (Datacenter / Node → Firewall)."
+    ]
+  },
+  "fail2ban": {
+    "heading": "Fail2Ban",
+    "subHeading": "(podmienečné)",
+    "whatIs": "<strong>0Čo to je.</strong> Fail2Ban je open-source vniknutie-prevencia démon, ktorý sleduje log súbory pre opakované neúspešné prihlasovacie pokusy a zakazuje urážlivé IP na úrovni firewallu. Je to de-facto odpoveď na brutálne-silné skenery, ktoré hit SSH a webové prihlasovacie formy 24/7. ProxMenux ho predvolene prepojí do troch väzníc: SSH, login Proxmox web UI (port 8006) a prihlásenie ProxMenux Monitor (port 8008).",
+    "notBundled": "Fail2Ban je <strong>0nezviazaný</strong>. Karta zisťuje, či je nainštalovaný a prispôsobuje sa: keď chýba, ponúka inštaláciu s jedným kliknutím; akonáhle je nainštalovaný, zobrazuje stav živého väzenia, zakázané IP a umožňuje vám ladiť opakovanie / zákaz času na väzenie.",
+    "notInstalledAlt": "Fail2Ban karta zobrazujúca neinštalovaný stav s vysvetlením toho, čo by nakonfigurovala: SSH, Proxmox web UI a ProxMenux Monitor ochrana s nftables backend, plus install and Configure Fail2Ban tlačidlo",
+    "notInstalledCaption": "Fail2Ban karta pred inštaláciou",
+    "clickBody": "Kliknite na <em>Install a nastaviť Fail2Ban</em> a dostanete potvrdenie modálneho zoznamu každej zmeny, ktorú skript urobí na hostiteľovi:",
+    "confirmAlt": "Inštalovať Fail2Ban potvrdenie zoznamu spôsobov SSH ochrana agresívny režim, Proxmox webové rozhranie ochranný port 8006, ProxMenux Monitor Ochranný prístav 8008, auto-detected nftables backend, nahrané nastavenie úrovne denníka a SSH MaxAuthTries kalenie",
+    "confirmCaption": "Install confirmation - explicitný zoznam väzníc, vylepšenia na úrovni denníka (takže auth väzenia môže čítať SSH udalosti) a SSH- stvrdnutie vedľajšieho účinku (<code>MaxAuthTries=3</code>).",
+    "confirmIntro": "Potvrdenie spustí streaming inštalačný panel (apt + väzenie config + testy). Rovnaká inštalácia ako inštalátor ProxMenux CLI.",
+    "progressAlt": "Fail2Ban Inštalačný panel zobrazujúci live inštalačný log: inštalácia balíka, naladený MaxLevelStore naladený na auth protokolovanie, nakonfigurované väzenia, detekovaný backend nftables, kalenie MaxAuthTries, komunikačný test fail2ban-klient, správa o dokončení",
+    "progressCaption": "Nainštalujte v priebehu Spojenie uzavreté na dne znamená koniec streamovania.",
+    "afterInstall": "Po inštalácii karty sa prevráti do živého zobrazenia stavu: väzenie nakonfigurované, zakázané IP počítadlo, nedávne zákaz udalosti. Rozdeliť veľké karty <em>Väznice a zakázané IP</em> od <em>Nedávna činnosť</em> (posledné položky N z Fail2Ban log).",
+    "activeAlt": "Fail2Ban karta po inštalácii s aktívnym stavom, tri väzenia konfigurované (proxmenux, proxmox, sshd), Banned IPs counter, Total Bans, Failed Pokusy, a na-jail riadkov s opakovaniami, zákaz času, okno a prevodovky ikona",
+    "activeCaption": "Fail2Ban Aktívne tri predvolené väzenia (<code>proxmenux</code>, <code>proxmox</code>, <code>sshd</code>) s ich retries / zákaz času / nastavenia okna.",
+    "tuneBody": "<strong>0Pravidlá väzeniaTune.</strong> Kliknite na ikonu zariadenia na ľubovoľnom riadku väzenia pre úpravu <em>Max Retries</em>, <em>Ban Time</em> (použite trvalý zákaz, ak chcete, aby páchatelia blokovaný, kým manuálne unban) a <em>Nájsť Time</em> (valcové okno pre počítanie opakovaní). Spoločné hodnoty sú zdokumentované vo formulári.",
+    "configAlt": "Nastaviť sshd väzenský formulár s Max Retries, Zakázať čas v sekundách s možnosťou trvalého zákazu, Nájsť čas, spoločné hodnoty upomienku, a Uložiť tlačidlo Nastavenie",
+    "configCaption": "Upraviť sshd väzenie Vybrať prísnejšie <em>Max. ubytovacie zariadenia</em> namiesto SSH ak sa len niekedy prihlásite zo svojej vlastnej podsiete, alebo predĺžiť <em>Zakázať čas</em> pre palubnú dosku orientovanú na verejnosť.",
+    "outro": "Úplná <em>Čo inštaluje / ako je nakonfigurovaný / ako odinštalovať</em> walk through SSH MaxAuthTries vedľajšie účinky a vzťah k <code>proxmenux-auth.log</code> v časopise <link>ProxMenux → Bezpečnosť → Fail2Ban</link>.",
+    "calloutTitle": "Bez Fail2Ban, brut-force ochrana je najlepšie-úsilie",
+    "calloutBody": "ProxMenux Monitor má svoje vlastné <em>úroveň aplikácie</em> zákaz háku v Flask žiadosť ropovodu Fail2Ban je nainštalovaný a píše do tabuľky zákazov. bez Fail2Ban, Monitor logy zlyhali prihlásenie do <code>proxmenux-auth.log</code> pre budúcu inšpekciu, ale aktívne neblokuje IP."
+  },
+  "lynis": {
+    "heading": "Bezpečnostný audit Lynis",
+    "subHeading": "(podmienečné)",
+    "whatIs": "<strong>Čo to je.</strong> Lynis je open-source bezpečnostný audit nástroj, ktorý prevádzkuje ~280 testy naprieč hostiteľom (povolenia súborov, kalenie jadra, SSH konfig, balíček zraniteľnosti, krypto politika, plánované úlohy, banner chytiť, atď.) a vytvára tvrdnutie skóre 0–100, zoznam varovaní a zoznam návrhov. Je to de-facto východisková hodnota pre \"je tento server v dobrom stave\" na serveroch založených na Debiane.",
+    "whyUseful": "<strong>0Prečo je to užitočné.</strong> Poznanie bezpečnostné držanie vášho servera je ťažké urobiť čítaním konfig súbory jeden po druhom. Lynis chytí veci, ktoré sa bežne prehliadajú: chýba tvrdnutie jadra vlajky, slabé SSH šifry povolené, časopis nie je perzistentné, sudoers <code>NOPASSWD</code> na predvolených účtoch, a mnoho ďalších. Opätovné spustenie po aplikácii ProxMenux po inštalácii vylepšenia vám dáva objektívne číslo pre zlepšenie.",
+    "notInstalledAlt": "Karta bezpečnostného auditu Lynis so stavom Nenainštalované a tlačidlom Nainštalovať Lynis. Uvádza funkcie: hodnotenie zabezpečenia, zisťovanie zraniteľností, kontrola súladu a zdroj na GitHube.",
+    "notInstalledCaption": "Lynis karta pred inštaláciou",
+    "notBundled": "Lynis je tiež <strong>0nezviazaný</strong>. ProxMenux nainštaluje najnovšiu verziu priamo z oficiálneho zdroja GitHub (nie balík Debianu, ktorý zaostáva za niekoľkými menšími verziami).",
+    "confirmAlt": "Nainštalujte Lynis confirmation modal listing to, čo Lynis robí: kalenie bodovania, detekcia zraniteľnosti, konfiguračná analýza, kontrola súladu, zdroj z oficiálneho GitHub úložiska",
+    "confirmCaption": "Nainštalujte potvrdenie o zdroji GitHub.",
+    "progressAlt": "Lynis Inštalačný streamovací panel: inštalácia najnovšieho skenovacieho nástroja, verzia 3.1.6 potvrdená, inštalácia dokončená správa",
+    "progressCaption": "Nainštalujte vo fáze Fail2Ban.",
+    "afterInstall": "Po inštalácii karty zobrazuje verziu a prázdnu históriu auditu. Kliknutím na <em>Run Security Audit</em> spustíte prvý sken.",
+    "installedAlt": "Lynis Security Audit karta po inštalácii s verziou 3.1.6 Nainštalovaný odznak, časová pečiatka posledného skenovania, Hardening Index 0, Varovanie 0, návrhy 0, prázdny riadok správy o audite a tlačidlo Spustiť bezpečnostný audit",
+    "installedCaption": "Lynis inštaloval, zatiaľ žiadny audit. Karta predplní metrické dlaždice s nulami.",
+    "runningAlt": "Lynis Security Audit card while audit is running shows Security Audit in progress message, odhad 2-5 minútové trvanie a vypnuté tlačidlo Bežiaci audit",
+    "runningCaption": "Prebieha audit a akčné tlačítko zobrazí spinner a karta výslovne varuje, že sken môže trvať 2–5 minút.",
+    "finishedBody": "Po dokončení sa karta prevráti na zobrazenie výsledkov: tvrdnutie indexu, varovania, návrhy a <em>Auditné správy</em> zoznam s každým historickým skenom.",
+    "resultsAlt": "Karta bezpečnostného auditu Lynis s výsledkami: index zabezpečenia 71 s rozdelením Lynis 66 a PVE 71, 3 varovania, 40 návrhov, ukazovateľ skóre zabezpečenia upraveného pre Proxmox na hodnote 71 zo 100 v pásme Dobré, zoznam správ auditu so stiahnutím PDF a tlačidlo Spustiť bezpečnostný audit",
+    "resultsCaption": "Audítorské výsledky <strong>71/100 (dobré)</strong> na odber vzoriek. Karta tiež ukazuje \"Lynis surové skóre\" (66) oproti skóre upravenému podľa Proxmoxu (71) ktorá pridáva späť 11 Body pre zistenia Lynis test corpus flags, ale očakáva sa správanie na Proxmox VE.",
+    "scoreTitle": "Lynisové surové skóre vs skóre upravené o Proxmox",
+    "scoreIntro": "Lynis lode pravidlá ladené pre všeobecné-účel Debian. Proxmox sa oprávnene líši od niektorých z nich (služby bežiace ako koreň z dôvodov klastra, vlastné <code>journald</code> ladenie, atď.). Karta zobrazuje obe čísla, takže môžete:",
+    "scoreItems": [
+      "Sledovať svoje <em>0Lynis surové skóre</em> rovnako ako externý audítori.",
+      "Sledovať <em>Proxmox-upravená</em> skóre"
+    ],
+    "reportBody": "<strong>0Celá správa.</strong> Každý riadok v zozname má tlačidlo <em>PDF</em>, ktoré sťahuje viacstranovú správu s executive súhrnom, systémové informácie, bezpečnostné držanie tela, každé varovanie s vysvetlením, každý návrh zoradené podľa vplyvu, a balíček inventár. Je to artefakt, ktorý by ste priložili k bezpečnostnej kontrole.",
+    "reportAlt": "Vzorka prvej stránky správy Lynis Security Audit PDF zobrazujúcej zhrnutie s kalením 71 100, varovania a návrhy počíta, systémový informačný blok s hostiteľom, jadro, Lynis verzia, dátum hlásenia, prehľad bezpečnostnej polohy",
+    "reportCaption": "Prvá stránka stiahnutej správy Celá správa pokračuje podrobnými varovaniami, návrhmi a zoznamom nainštalovaných balíkov. Pre informáciu je priložená vzorka <a> PDF</a>.",
+    "runPeriodically": "Spustiť audit pravidelne (po veľkých upgrade Proxmox, po aplikácii post-inštalovať vylepšenia, pred otvorením diaľkové-prístupová cesta) a udržať správy",
+    "outro": "Kompletné <em>0Čo inštaluje / ako sa nakonfiguruje / ako odinštalovať</em> walkthrough a rozpis písomnej vzorky správy sú v <link>ProxMenux → Security → Lynis</link>."
+  },
+  "dataCollected": {
+    "heading": "Spôsob zberu údajov",
+    "headerCard": "Karta",
+    "headerEndpoint": "Koncový ukazovateľ",
+    "headerSource": "Zdroj",
+    "rows": [
+      {
+        "card": "Overenie, 2FA, zmena hesla",
+        "endpoint": "/api/auth/*",
+        "source": "Miestne SQLite + JWT vydané monitorom."
+      },
+      {
+        "card": "SSL / HTTPS",
+        "endpoint": "/api/auth/ssl/*",
+        "source": "<code>openssl x509</code> na <code>/etc/pve/local/pve-ssl.pem</code> + <code>/etc/proxmenux/ssl_config.json</code>."
+      },
+      {
+        "card": "Zoznam tokenov API0 / mint / zrušiť",
+        "endpoint": "/api/auth/api-tokens",
+        "source": "Tokenové rady udržiavané lokálne; nič neopúšťa hostiteľa."
+      },
+      {
+        "card": "Bezpečná brána (zapnúť + stav)",
+        "endpoint": "/api/oci/*",
+        "source": "Rezervy Alpine LXC0 + <code>tailscaled</code> cez <code>pct create</code> / <code>pct exec</code>."
+      },
+      {
+        "card": "Stav a pravidlá firewallu",
+        "endpoint": "/api/security/firewall/*",
+        "source": "<code>pve-firewall</code> + <code>/etc/pve/firewall/&lt;cluster|host&gt;.fw</code>."
+      },
+      {
+        "card": "Fail2Ban (iba po nainštalovaní)",
+        "endpoint": "/api/security/fail2ban/*",
+        "source": "<code>fail2ban-client status</code>, <code>/var/log/fail2ban.log</code>, <code>/etc/fail2ban/jail.local</code>."
+      },
+      {
+        "card": "Lynisov audit (iba pri inštalácii)",
+        "endpoint": "/api/security/lynis/*",
+        "source": "Spúšťa <code>lynis audit system</code> v pozadí; správa spracovaná z <code>/var/log/lynis-report.dat</code>."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "Prístup a overenie",
+        "href": "/docs/monitor/access-auth",
+        "tail": " Plný štartovací prietok, 2FA App picker, regenerácia stratených autentifikátorov, spätný odraz."
+      },
+      {
+        "label": "Integrácie",
+        "href": "/docs/monitor/integrations",
+        "tail": " chyžné knihy na použitie API žetóny s Homepage, Home Assistant, Prometheus, n8n a bezpečná brána end-to-end."
+      },
+      {
+        "label": "API referencia",
+        "href": "/docs/monitor/api",
+        "tailRich": " — Každý <code>/api/auth</code>, <code>/api/security</code> a <code>/api/oci</code> koncový ukazovateľ s metódou, telo a curl príklady."
+      },
+      {
+        "label": "ProxMenux → Bezpečnosť → Fail2Ban",
+        "href": "/docs/security/fail2ban",
+        "tail": " — "
+      },
+      {
+        "label": "ProxMenux → Bezpečnosť → Lynis",
+        "href": "/docs/security/lynis",
+        "tail": " — "
+      }
+    ]
+  }
+}

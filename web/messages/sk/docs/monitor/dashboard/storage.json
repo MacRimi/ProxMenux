@@ -1,0 +1,268 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Dashboard: Záložka úložiska ProxMenux Dokumentácia",
+    "description": "Karta úložiska konsoliduje štyri pohľady: Proxmox-manažované úložiská s ich stavom, ZFS bazény, vnútorné fyzikálne disky s SMART dátami a externé (USB) disky. Každý vrták disku odhaľuje atribúty SMART, opotrebenie a životnosť a trvalú históriu pozorovania."
+  },
+  "header": {
+    "title": "Dashboard: Záložka úložiska",
+    "description": "Stav úložiska hostiteľa v jednej obrazovke pools (NFS / CIFS / LVM / ZFS / dir), ZFS pool zdravie, interná SATA / NVMe disky s SMART, a externé USB disky. Kliknite na akýkoľvek disk pre otvorenie vrták s plnou SMART tabuľka atribútov a história pozorovania na disku.",
+    "section": "ProxMenux Monitor · Prehľad"
+  },
+  "intro": {
+    "title": "Podporované tromi zdrojmi",
+    "body": "Proxmoxové úložiská pochádzajú z <code>pvesm status</code>0; ZFS stav z <code>zpool status</code>; fyzikálne disky z <code>lsblk</code> + <code>smartctl</code> (a <code>nvme</code> pre NVMe-špecifické polia). Karta osvieži každý ~60 sekúnd; na-disk vrták spustí čerstvé SMART čítať na požiadanie."
+  },
+  "thresholds": {
+    "title": "Farby stavu a prahové hodnoty, ktoré sa tu uplatňujú",
+    "intro": "Každá tyč, čip, a bodka na tejto karte sa riadi rovnakou trojstupňovou klasifikáciou <green/> <strong>zelená</strong> pod Upozornenie: <amber/> <strong>oranžová</strong> od varovania ku kritickému, <red/> <strong>červená</strong> v kritickej a vyššej miere. Odporúčané predvolené dodávané s ProxMenux:",
+    "items": [
+      "<strong>Kapacita</strong> (hostiteľské disky, PVE sklady, ZFS pools, LXC Upozornenie 85 %, kritický 95 %.",
+      "<strong>Teplota disku</strong> HDD 60/65 °C · SSD 70/75 °C · NVMe 80/85 °C · SAS 55/65 °C (varovanie/kritické)."
+    ],
+    "outro": "Každá hodnota je konfigurovateľná na hostiteľa <link>Nastavenia → Prahové hodnoty monitorovania zdravia</link> je jediným zdrojom pravdy a vysvetľuje, ako ich naladiť."
+  },
+  "topRow": {
+    "heading": "Vrchný rad: úložný priestor",
+    "intro": "Otvorenie karty Úložisko pristáť na štvor-kartové zhrnutie hostiteľovho úložného stavu Každá karta je jednoriadková odpoveď na spoločnú otázku; karty pod radom sú tam, kde vŕtate do detailu.",
+    "imageAlt": "Záložka úložiska",
+    "imageCaption": "Horný riadok záložky úložiska",
+    "headerCard": "Karta",
+    "headerWhat": "Čo ukazuje",
+    "totalLabel": "Skladovanie spolu",
+    "totalWhat": "Kombinovaná surová kapacita na každom fyzickom disku. Línia päty ukazuje počet objavených fyzických diskov.",
+    "localLabel": "Lokálne využité",
+    "localWhat": "Byty používané na miestnych skladoch (LVM0 / LVM-thin / ZFS / dir na vlastných diskoch hostiteľa). Zobrazí použitý bajty prominentne, s pätkou <em>X.XX % Y TB</em>, takže vidíte výplň-percento súčasne.",
+    "remoteLabel": "Vzdialené využité",
+    "remoteWhat": "Rovnaký tvar ako Local Used, ale pre diaľkové úložiská (NFS0 / CIFS / PBS / Ceph / iSCSI). Počítané samostatne, pretože odľahlé výpadky neovplyvňujú miestne dáta a typicky ich zväčšujete a sledujete inak.",
+    "disksLabel": "Fyzické disky",
+    "disksIntro": "Dva riadky členenia pre súpis:",
+    "disksItems": [
+      "<strong>Podľa typu</strong> Počet NVMe (purpurová), SSD (modrá) a HDD (modrá) objavené. Hostitelia zmiešaných diskov dostanú všetky tri; all-NVMe host ukazuje iba NVMe rátajte.",
+      "<strong>Podľa zdravia</strong> Počet <em>normálne</em> (zelená), <em>Varovanie</em> (žltá) a <em>kritická</em> disky. Zdravý stav zvyčajne ukazuje len \"X normal\"; varovania a kritické sa objavujú len vtedy, keď sa niečo stupňovalo."
+    ]
+  },
+  "pveStorage": {
+    "heading": "Skladovacia karta Proxmox",
+    "intro": "Jeden riadok na úložisko nakonfigurované v <code>/etc/pve/storage.cfg</code>. Každý riadok zobrazuje odznak typu (<code>nfs</code> / <code>cifs</code> / <code>zfspool</code> / <code>lvm</code> / <code>lvmthin</code> / <code>dir</code> / <code>pbs</code>), názov úložiska, aktívny / chyba / nemonitorovaný odznak, percento použitia a farebný panel pokroku:",
+    "items": [
+      "<strong>&lt; 75 %</strong> Modrý panel pokroku, hodnota v modrej farbe.",
+      "<strong>75 – 90 %</strong> o yellow progress bar, hodnota v žltej (Health Monitor varuje v tomto bode).",
+      "<strong>> 90 %</strong> chered progress bar, hodnota v červenej (Health Monitor eskaluje).",
+      "<strong>chyba</strong> Celý riadok vyznačený červenou farbou, používaný pri nakonfigurovaní úložiska, ale nedosiahnuteľný (NFS Server vypnutý, CIFS creds vypršal).",
+      "<strong>0 okrem </strong> Skladovanie, ktoré používateľ výslovne vylúčil zo zdravotných kontrol (ručne pre manuálne / archívne objemy, ktoré sú zámerne offline)."
+    ],
+    "calloutTitle": "Okrem hlučného skladovania",
+    "calloutBody": "Z úložného radu ho môžete označiť ako <em>0 bez monitoringu</em>. Vlajka je uložená v tabuľke <code>excluded_storages</code> a rešpektuje ako náhľad na palubnej doske a cyklu Health Monitor"
+  },
+  "zfs": {
+    "heading": "ZFS Pools karta",
+    "intro": "Strieda len vtedy, keď je nainštalovaný ZFS a existuje aspoň jeden bazén. Jeden riadok za bazén s zdravotným odznakom, veľkosť / pridelené / zadarmo, a ikona odráža zdravotný stav:",
+    "items": [
+      "<strong>0ONLINE</strong> Všetko zdravé.",
+      "<strong>0DEGRADED</strong> Bazén slúži dáta, ale aspoň jedno zariadenie nie je k dispozícii; spustí sa náhradné okno.",
+      "<strong>0FAULTED</strong> / <strong>UNAVAIL</strong> / <strong>SUSPENDED</strong> Skupina, ktorá neposkytuje údaje; vyžaduje sa okamžitý zásah."
+    ],
+    "outro": "Stav ZFS a stav na disku SMART pridávajú <em>Disky a I/O</em> kategórie <link>Health Monitor</link>."
+  },
+  "physical": {
+    "heading": "Fyzické disky a SMART stav",
+    "intro": "Interné disky (SATA / NVMe). Každý riadok kondenzuje najužitočnejšie polia na prvý pohľad:",
+    "items": [
+      "<strong>Trasa zariadenia</strong> — <code>/dev/sda</code>, <code>/dev/nvme0n1</code>.",
+      "<strong>Typový preukaz</strong> SATA / NVMe (a príslušná ikona).",
+      "<strong>System bed</strong> Palubná doska je odvodená z montážnych bodov <code>/</code> a <code>/boot</code>: akýkoľvek fyzický disk, ktorý ich usporadúva, dostane značku <em>System</em>, aby ste ho náhodou neutierali alebo neprerobili. Disky bez značky sú čisté dátové disky.",
+      "<strong>Vzor</strong> Predávajúci + reťazec modelu od <code>smartctl -i</code>.",
+      "<strong>Kapacita</strong>",
+      "<strong>Teplota</strong> Priebežné °C, farebné podľa prahu typu disku (NVMe beží teplejšie ako SATA).",
+      "<strong>SMART stav</strong> Prešiel / zlyhal / neznámy.",
+      "<strong>Označenie pozorovaní</strong> Ak je trvalé <code>disk_observations</code> História má položky pre tento disk, modrý odznak s počtom sa objaví (napr. <em>3 obs.</em>). Kliknite na disk vŕtať a prehodnocovať ich.",
+      "<strong>Zdravotný preukaz</strong> chronologické / Varovanie / kritické, odvodené z SMART kontrola + nedávne pozorovania."
+    ],
+    "clickHint": "Celý riadok je možné kliknúť a otvorí vrták na disk popísaný nižšie.",
+    "warningTitle": "Nedotýkajte sa systémovo označené disky ľahko",
+    "warningBody": "Disky s pomarančom <strong>Systém</strong> odznak je hostiteľom bežiaceho OS. Palubná doska rozprestiera štítok ako ochranná lišta a deštruktívne akcie vypustené z <link>ProxMenux → Disk Manager → Formát / Wipe</link> výslovne odmietať konať v ich prípade. Ak naozaj potrebujete prefunkčovať bootovací disk, urobte to zo záchranného prostredia, nie zvnútra Proxmoxu."
+  },
+  "external": {
+    "heading": "Externé úložisko (USB)",
+    "body": "Samostatná karta pre USB pripojené disky, vykresľuje iba vtedy, keď je prítomná aspoň jedna. Rovnaké polia ako vnútorné disky plus oranžová značka <strong>USB</strong>. USB disky sa často objavujú a miznú (chladné zálohy, príležitostné offload pracovných miest), takže Health Monitor je konzervatívny o nich"
+  },
+  "drillIn": {
+    "heading": "Disk vrták-in modal",
+    "intro": "Kliknutím na ľubovoľný diskový riadok sa otvorí štvortabuľový modál: <strong>0Overview</strong> · <strong>SMART</strong> · <strong>História</strong> · <strong>Schedule</strong>. Záhlavie vždy zobrazuje cestu zariadenia, kapacitu modelu + a oranžovú značku <em>System</em>, ak je to vhodné.",
+    "overviewTitle": "Tab 1",
+    "overviewImageAlt": "Disk vrták-in modale check checks with health status, Wear & Lifetime ring, and fast SMART atribúty",
+    "overviewImageCaption": "Prehľadná záložka identity, zdravotného odznaku, život-zotrvačnou krúžkom s aktuálnym opotrebením a údajmi napísanými, plus rýchly blok najviac sledovaných SMART atribúty.",
+    "overviewIntro": "Predvolená pristávacia karta Všetko, čo potrebujete k odpovedi \"je tento disk OK?\" bez spustenia testu. Tri bloky:",
+    "overviewItems": [
+      "<strong>Identity</strong>",
+      "<strong>Nosiť & životnosť</strong> - Veľký kruh na udržanie života (97 %, 50 %, ...) so zdrojovým atribútom vyhláseným (<em>Indikátor využívania médií</em>, <em>Použitý percentuálny podiel</em>, ...), tyč opotrebenia (spotreba prúdu %), a <em>Est. Život</em> projekcia v rokoch a celkový počet napísaných údajov. NVMe disky tiež ukazujú <em>Dostupné rezervy</em>.",
+      "<strong>Atribúty SMART</strong> – šesť hlavných polí v mriežke s 2 stĺpcami: teplota, počet hodín prevádzky (s čitateľným trvaním, napríklad <em>3 roky a 116 dní</em>), otáčky (alebo <em>SSD</em>), počet zapnutí, stav SMART, prerozdelené sektory, čakajúce sektory a chyby CRC. Úplná tabuľka atribútov je na karte SMART."
+    ],
+    "smartTitle": "Karta 2 — SMART",
+    "smartImageAlt": "Disk vrták-in modal SMART karta s Run SMART Skúšobné tlačidlá (horná / predĺžená), výsledok poslednej skúšky a úplný SMART Tabuľka atribútov",
+    "smartImageCaption": "Záložka SMART Spustite krátky alebo rozšírený test, pozri posledný výsledok testu, posúvajte celú tabuľku atribútov SMART a vygenerujte úplný PDF zdravotný záznam.",
+    "smartIntro": "Kde žijú činy. Tri časti:",
+    "smartItems": [
+      "<strong>Spustiť SMART Skúška</strong> Dva gombíky. <em>Krátka skúška (~2 min)</em> beží synchrónne a ukazuje výsledok v riadku. <em>Rozšírená skúška (zadný povrch)</em> môže trvať hodiny na veľkých diskoch, beží server-strana a vystrelí oznámenie, keď sa dokončí.",
+      "<strong>0Posledný test</strong> Typ, status odznak (<em> passed</em> / <em> zlyhal </em>) a časová pečiatka posledného spustenia.",
+      "<strong>SMART Atribúty</strong> Celý atribút tabuľky (ID / názov / hodnota / najhoršie / stav s OK / varovanie / kritické ikony). Pre SATA / SAS, klasický očíslovaný zoznam. Za NVMe, štruktúrované polia z <code>nvme smart-log</code> (teplota, k dispozícii náhradné, použité percento, dátové jednotky napísané / čítané, hostiteľ číta / píše, regulátor rušný čas, napájacie cykly, nebezpečné vypnutie, mediálne chyby, chyba-log položky, varovanie / kritický kompozitný čas teploty)."
+    ],
+    "pdfTitle": "Zobraziť úplnú správu SMART (PDF)",
+    "pdfIntro": "V dolnej časti záložky SMART, <strong>Zobraziť Full SMART Report</strong> generuje printable, archív-ready PDF",
+    "pdfPreviewAlt": "Prvá strana generovaného SMART Health Report PDF",
+    "pdfPreviewCaption": "Prvá stránka správy SMART Zdravie Celý PDF nižšie má SSD opotrebovací prsteň, každý atribút SMART a históriu testu.",
+    "pdfDownloadLabel": "Stiahnuť vzorku správy SMART (PDF)",
+    "pdfSectionsIntro": "Správa obsahuje päť sekcií najvyššej úrovne:",
+    "pdfSections": [
+      "<strong>0Výkonný súhrn</strong>",
+      "<strong>Informácie o disku</strong> Model, sériový, kapacita, typ (HDD / SSD / NVMe), rodina, faktor formy, rozhranie (SATA) 3.3 · 6.0 Gb/s, ...), podpora TRIM, teplota prúdu s optimálnou prahovou hodnotou, čas zapnutia, výkonové cykly, SMART status plus hlavné protiklady (výdavkové sektory, chyby CRC, prerozdelené sektory).",
+      "<strong>SSD Nosiť a životnosť</strong> (SSD / NVMe Iba) chronologický kruh, zdrojový atribút, aktuálna úroveň opotrebenia, údaje napísané, power-on hodiny.",
+      "<strong>SMART Atribúty (plné)</strong> Každý atribút správy disku, s ID, meno, hodnota, najhoršie, prah, surová hodnota a stav pilulku. Najrelevantnejšie pre používateľov (prerozdelený sektor) Ct, Power On Hours, Hlásené nesprávne, UDMA CRC chybový počet, Media Wearout Indicator, ...) zahŕňajú jedno-riadkové jednoduché-jazykové vysvetlenie v riadku.",
+      "<strong>Posledný samo-skúšobný výsledok + Full Self-Test História</strong>",
+      "<strong>Odporúčania</strong> Akčné body na základe rozsudku: <em>Disk je zdravý / Plán pravidelných testov / Zálohovacia stratégia</em> pre zdravé jazdy, eskalovanie jazyka s náhradným vedením, keď atribúty sú mimo dosahu."
+    ],
+    "pdfOutro": "PDF sa vyrába na strane servera a sťahuje sa so stabilným vzorom názvu súboru (<code>SMART-&lt;short-id&gt;.pdf</code>), takže viac snímok v priebehu času môže sedieť vedľa seba vo vašom archíve. Užitočné, keď sledujete degradáciu počas mesiacov alebo posielate dôkazy na podporu dodávateľa.",
+    "historyTitle": "Tab. 3",
+    "historyImageAlt": "Disk vŕtačka v modale - História karty zoznam minulosti SMART testy s stiahnuť a odstrániť akcie",
+    "historyImageCaption": "História záložka SMART test na tento disk. Za riadok: typ, časová pečiatka, tag \"X pred dňami,\" najnovšia značka, download (raw <code>smartctl</code> výstup) a vymazať akcie.",
+    "historyIntro": "Zachovaný bazén SMART testy pre tento disk Každá položka je surová <code>smartctl</code> výstup zachytený v čase chodu, plus štruktúrované polia monitor spracovaný pre palubnú dosku. Akcie na jednom riadku:",
+    "historyItems": [
+      "<strong>Stiahnuť</strong> Zachraňuje surové <code>smartctl -a</code> výstup ako textový súbor. Identické k tomu, čo PDF správa parses, užitočné, keď potrebujete presný riadok, ktorý predávajúci žiada.",
+      "<strong>Delete</strong> Limit retencie nastavený v záložke Plán (<em>Last 5 / 10 / 20</em>) odstráni najstarší-prvý automaticky; táto akcia je manuálne prepísať."
+    ],
+    "scheduleTitle": "Tab 4",
+    "scheduleImageAlt": "Disk vrták-in modale SMART Testy, zoznam nakonfigurovaných schém a tlačidlo Pridať plán",
+    "scheduleImageCaption": "Záložka Plánovať Vybrať Test typ, frekvencia a zadržiavanie; Monitor prepojí ho do <code>cron</code> Takže testy prebiehajú bez dozoru.",
+    "scheduleIntro": "Automatické skúšky SMART, bez potreby škrupiny. Stránka má tri oblasti:",
+    "scheduleItems": [
+      "<strong>Automatické SMART Prepnúť testy</strong> Celosvetový vypínač zapnutý/vypnutý pre každý rozvrh na tomto disku. Užitočné, keď chcete zastaviť všetko počas údržby bez straty definície rozvrhu.",
+      "<strong>Nastavené plány</strong> Jeden riadok za existujúci harmonogram s odznakom typu testu (<em>krátka</em> / <em>dlhá</em>), výraz cron v ľudskej forme (<em>\"Deň 1 mesiaca 03:00\"</em>, <em>\"Každú nedeľu v 02:00\"</em>), disky, ktoré pokrýva, a retenčné nastavenie.",
+      "<strong>Pridať plán / Upraviť plán</strong> Formulár s: Typ testu (<em>Krátky ~2 min</em> / <em>Dlhá 1-4 h</em>), frekvencia (<em>Denne / týždenne / mesačne</em>), deň mesiaca / deň týždňa, čas, udržať výsledky (<em>Posledný 5 / 10 / 20</em>)."
+    ],
+    "scheduleOutro": "Harmonogram je zhmotnený ako kron vstup na hostiteľa, ktorý volá späť do monitora; výsledky sú uložené do rovnakej histórie SMART zobrazené v Tab 3 a nastavenie retencie auto-prunes najstarší test, keď nový dokončí.",
+    "tempTitle": "História teploty modal",
+    "tempIntro": "Každý disk, ktorý odhaľuje teplotný senzor, má odčítané hodnoty, ktoré priebežne odoberá monitor a pokračuje v miestnych časových radoch. Aktuálna hodnota sa objaví ako jeden zo šiestich titulkov atribútov SMART v karte Prehľad; kliknutím na tento blok sa otvorí vyhradený teplotný história s úplným obrázkom.",
+    "tempImageAlt": "História teploty disku modalu s diskovou dráhou a modelom, volič časového rámca (1 Hodina / 24 Hodiny / 7 Dni / 30 Dni), rad štyroch stat kariet (Current / Min / Avg / Max), a riadkový graf teploty v celom zvolenom rozsahu farebné podľa prahov na disk",
+    "tempImageCaption": "Teplotný detail sa otvára z karty Prehľad na každom disku, ktorého senzor vracia non-nulové čítanie. Graf je farebný oproti prahu diskového typu (HDD / SSD / NVMe - SAS).",
+    "tempShowsTitle": "Čo ukazuje modálny režim",
+    "tempShowsItems": [
+      "<strong>0Timeframe volitel</strong> so štyrmi rozsahmi: <em>1 Hour</em>, <em>24 Hodiny</em> (default), <em>7 Days</em>, <em>30 Days</em>. Každý z nich sa pýta na rovnaký backend s iným výberom nadol, takže graf zostane čitateľný na každom obzore.",
+      "<strong>Štyri stat karty</strong> v hornej časti modálneho režimu: <em>Bežný</em>, <em>Min.</em>, <em>Avg</em>, <em>Max.</em> pre zvolený rozsah. • <em>Bežný</em> karta je farebná rovnakým stavovým prahom, ako je karta úložiska a používajú sa upozornenia, takže môžete na prvý pohľad vidieť, či je disk v normálnom / teplom / horúcom území.",
+      "<strong>0Line graf</strong> teploty v priebehu času, s čiarou a tienisté plochy farebné podľa typu disku:"
+    ],
+    "tempDiskTypes": [
+      "HDD",
+      "SSD",
+      "NVMe Vyššie prahové hodnoty (NVMe beží teplejšie podľa dizajnu).",
+      "SAS"
+    ],
+    "tempConfigurable": "Všetky štyri sú konfigurovateľné z <em>0Nastavenia → Prahové hodnoty zdravotného monitora</em>.",
+    "tempWhyTitle": "Prečo na histórii záleží tu",
+    "tempWhyItems": [
+      "<strong>Drift detection.</strong> Disky, ktoré sa postupne zahrievajú v priebehu týždňov (neúspešný ventilátor, hromadenie prachu, susedný disk umiera a tlačí horúci vzduch naprieč) sú neviditeľné na jednu \"aktuálnu teplotu\" odčítanie. Výhľad 7-dňový a 30-dňový povrch driftu.",
+      "<strong>Spike korelácia.</strong> Keď záložné okno alebo prestavba stlačili disk krátko nad jeho prahom, rozsahy 1-hodina a 24-hodina ukazujú, či to bolo jednorazové alebo opakujúce sa vzorce.",
+      "<strong>Threshold ladenie.</strong> Pred zvýšením alebo znížením prahu v <em>Nastavenia → Health Monitor Prahové hodnoty</em>, 30-dňový graf zobrazuje skutočný prevádzkový rozsah disku, takže nová hodnota sa zaradí do toho, čo hardvér naozaj robí, a nie hádať."
+    ],
+    "obsTitle": "História pozorovania (cez karty)",
+    "obsIntro": "Moderné disky postupne zlyhávajú. Disk môže hlásiť SMART <strong>VYHLASOVANÉ</strong> a stále prihlásiť občas čítanie chyby v dmegg, pokles SATA odkazy, alebo odhaliť čakajúce sektory, ktoré prichádzajú a odchádzajú. Štandardný Proxmox UI ukazuje aktuálnu SMART verdikt, nedrží históriu tých, <em>signály</em>. ProxMenux robí, a povrchy je priamo vo vnútri disku modal.",
+    "obsImageAlt": "Detaily disku modalu Prehľadná záložka zobrazujúca zdravý disk so stavom SMART Prešiel, chyby 0 premiestnené/výdavkové/CRC chyby a úsek pozorovania, v ktorom sa uvádza jedna zaznamenaná I/O chybová udalosť so správou surového jadra, ľudský preklad chybového kódu ATA, časová pečiatka prvého a posledného výskytu a počet udalostí",
+    "obsImageCaption": "Disk, ktorý <strong>0SMART hovorí, že je v poriadku</strong> môže stále mať históriu pozorovania. Karta je historická signálna vrstva pod verdiktom SMART.",
+    "obsWhatTitle": "Čo je to postreh",
+    "obsWhatIntro": "Čokoľvek. ProxMenux úlovky v denníku jadra, dmegg alebo SMART Výstup, ktorý vyzerá ako disk-level udalosti <strong>pozorovanie</strong>. Každý riadok zobrazuje:",
+    "obsWhatItems": [
+      "<strong>Typový preukaz</strong> (I/O chyba, SMART Chyba, Chyba súborového systému, ZFS Pool Chyba, Chyba pripojenia).",
+      "<strong>Raw správy jadra</strong> ako sa objavil v dmegg",
+      "<strong>Jednoloďová ľudská</strong> v rámci nespracovanej správy pre známe kódy ATA (<code>IDNF</code> → \"Sektorová adresa nebola nájdená\" <code>UNC</code> → \"Neopraviteľné čítanie chyba \" a zvyšok štandardných kódov).",
+      "<strong>0Prvé a posledné časové známky výskytu</strong>, plus počet udalostí <strong></strong> deduplikovaný chybovým podpisom."
+    ],
+    "obsWhyTitle": "Prečo ProxMenux zaznamenáva a ukazuje ich",
+    "obsWhyItems": [
+      "<strong>Zlyhanie disku je zriedka jedna udalosť.</strong> Zvyčajne sa začína so sporadickými chybami autobusu ATA, nepárnym sektorom UNC, alebo pár stredných chýb týždňov pred prevrátením SMART na <em>FAILED</em>. Bez vytrvalosti tieto skoré varovania zmiznú z dmegg na ďalšej topánke.",
+      "<strong>SMART môže klamať.</strong> Pohon môže ukázať všetky atribúty zelená a stále je na ceste von SMART nevystavuje (najmä ICRC, IDNF, resetovanie odkazu pri nižších SATA rýchlostiach).",
+      "<strong>It oddeľuje \"sa deje teraz\" od \"sa nedávno\".</strong> The Health Monitor auto-rieši prechodné chyby, akonáhle prestanú strieľať, čo je skvelé pre udržanie aktívneho zoznamu varovaní čisté Pozorovateľská tabuľka je odpoveďou.",
+      "<strong>Privádza stupňovaný oznamovací model.</strong> Detektor disk_io číta z tejto tabuľky rýchlosť pozorovania, aby rozhodol tichý / VAROVANIE / KRITICKÉ (posuvné 24h okno zavedené v 1.2.1.2). História umožňuje túto klasifikáciu."
+    ],
+    "obsDedupTitle": "Ako funguje dedup a opätovné oznamovanie",
+    "obsDedupBody1": "Pozorovania sú deduplikované svojím podpisom <strong> </strong> Rovnaké opakovanie udalostí narazí <code>occurrence_count</code> na existujúci riadok, skôr než vytvoriť nový. <strong>rôzne signature</strong> na rovnakom disku vytvára nové pozorovanie a považuje sa za novú udalosť na účely oznamovania.",
+    "obsDedupBody2": "Upozornenia sa riadia anti-kaskádovým pravidlom: prvý výskyt daného (disk, podpis, závažnosť) kombinácie stránok operátora, a ProxMenux0 potom čaká 24 hodiny pred ping opäť o rovnakej kombinácii Eskalačná závažnosť (VARENIE → KRITICKÁ) rozbije chladenie, takže operátorovi sa povie, kedy sa situácia zhorší, nielen keď sa to stane.",
+    "obsDismissTitle": "Trvalá história vs aktívne chyby",
+    "obsDismissBody1": "Pozorovanie nemožno zamietnuť, skryť ani odstrániť. Každé iné pozorovanie disku je jedna karta, tá istá, ktorá je opäť viditeľná, pridáva počet udalostí a presúva svoj posledný dátum namiesto vytvorenia novej karty. História patrí do disku, ktorý je identifikovaný svojím sériovým číslom: disk je pripojený tam, kde bol iný spustený s žiadnou, a disk, ktorý jadro premenuje si ponechá svoje vlastné.",
+    "obsDismissBody2": "Riešenie alebo zamietnutie na active-error strane (Health Monitor) je nezávislý od pozorovaní To je celý bod: prežije, takže dočasné varovanie z minulého týždňa je stále viditeľné na diskte dnes. Pozri <link>Health Monitor</link> pre stranu aktívneho žiarenia rovnakého obrazu."
+  },
+  "dataCollected": {
+    "heading": "Spôsob zberu údajov",
+    "headerSection": "Comment",
+    "headerEndpoint": "Koncový ukazovateľ",
+    "headerSource": "Zdroj",
+    "rows": [
+      {
+        "section": "Najlepšie súhrnné karty",
+        "endpoint": "/api/storage/summary",
+        "source": "Agregované z <code>lsblk</code>, <code>zpool list</code>, <code>vgs</code> / <code>lvs</code>."
+      },
+      {
+        "section": "Inventár na disky",
+        "endpoint": "/api/storage",
+        "source": "<code>lsblk -O</code> + <code>smartctl -i</code> na jedno zariadenie, so stabilnou diskovou cache (vyčistenou na hot-plug udalostiach)."
+      },
+      {
+        "section": "Proxmoxové zásobníky",
+        "endpoint": "/api/proxmox-storage",
+        "source": "<code>pvesh get /nodes/&lt;node&gt;/storage</code> s aktívnym/online stavom každého."
+      },
+      {
+        "section": "Aktuálne hodnoty SMART",
+        "endpoint": "/api/storage/smart/<disk>",
+        "source": "<code>smartctl -A &lt;dev&gt;</code>"
+      },
+      {
+        "section": "História samotestov SMART",
+        "endpoint": "/api/storage/smart/<disk>/history",
+        "source": "Uložené pod <code>/var/lib/proxmenux-monitor/smart/&lt;disk&gt;/</code> ako JSON snímky."
+      },
+      {
+        "section": "Trvalé pozorovania",
+        "endpoint": "/api/storage/observations",
+        "source": "SQLite tabuľka kŕmená Health Monitor každý cyklus (zachovaný cez auto-resolve)."
+      }
+    ],
+    "outro": "Overovanie reťazca zberu na hostiteľovi:",
+    "codeComment1": "# Vytiahnite aktuálny snímok zo skriptu",
+    "codeComment2": "# Porovnajte údaje panela s priamym výstupom operačného systému"
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "Monitor zdravia",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — "
+      },
+      {
+        "label": "API referencia",
+        "href": "/docs/monitor/api",
+        "tail": " - skladovanie a SMART koncové ukazovatele."
+      },
+      {
+        "label": "Oznámenia",
+        "href": "/docs/monitor/notifications",
+        "tailRich": " — To, čo <code>disk_io_error</code>, <code>storage_unavailable</code> a <code>smart_test_failed</code> spúšťa po prúde."
+      },
+      {
+        "label": "Index schránky",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — Ostatné karty."
+      },
+      {
+        "label": "ProxMenux → Správca diskov",
+        "href": "/docs/disk-manager",
+        "tail": " Na strane akcie: formát / utierka / SMART testy / import disky do VM a CT z TUI."
+      },
+      {
+        "label": "ProxMenux → SMART Zdravie disku & Test",
+        "href": "/docs/disk-manager/smart-disk-test",
+        "tail": "  CLI náprotivok tejto karty: rozpis SMART Testy, export JSON prístrojová doska a hlbší skúšobný typ / interpretačný odkaz."
+      }
+    ]
+  }
+}

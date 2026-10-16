@@ -1,0 +1,162 @@
+{
+  "meta": {
+    "title": "Proxmox GPU Passhrough Commands lspci, VFIO, IOMMU, qm set hospci ProxMenux",
+    "description": "Referencia pre GPU priechod na Proxmox VE: Identifikácia zariadenia lspci, moduly VFIO, IOMMU skupiny (intel_iommu / amd_iommu), GRUB a aktualizácií initramfs, qm sada hospci0, NVIDIA / AMD / Intel passough up.",
+    "ogTitle": "Proxmox GPU Passhrough Commands lspci, VFIO, IOMMU, qm set hospci",
+    "ogDescription": "Referencie pre kontrolu a konfiguráciu GPU passhrough na Proxmox VE",
+    "twitterTitle": "Proxmox GPU Passhrough Commands ProxMenux",
+    "twitterDescription": "Skontrolujte PCI zariadenia, konfigurujte VFIO a IOMMU a pripojte GPU k VM na Proxmox VE."
+  },
+  "header": {
+    "title": "GPU",
+    "description": "Odkaz na kontrolu a konfiguráciu GPU0 / TPU priechod na Proxmox: identifikácia zariadenia (lspci), nastavenie modulu VFIO, validácia IOMMU, initramfs / GRUB aktualizácie a na-VM passmough config (qm set hospci, machine q35, bios ovmf).",
+    "section": "Pomoc a informácie"
+  },
+  "intro": {
+    "title": "IOMMU musí byť povolená v BIOS0 / UEFI",
+    "body": "Pred akýmkoľvek z týchto príkazov musí byť IOMMU povolená na úrovni firmware (vyhľadávanie <em>0VT-d</em>, <em>AMD-Vi</em> alebo <em>IOMMU</em> v BIOS / UEFI). Bežné parametre GRUB na Linuxovej strane: <code>intel_iommu=on</code> (Intel) alebo <code>amd_iommu=on</code> (AMD), často kombinované s <code>iommu=pt video=efifb:off video=vesa:off</code>."
+  },
+  "commandGroups": [
+    {
+      "title": "Identifikácia zariadenia",
+      "commands": [
+        {
+          "command": "lspci -nn | grep -i nvidia",
+          "description": "Zoznam zariadení NVIDIA PCI"
+        },
+        {
+          "command": "lspci -nn | grep -i vga",
+          "description": "Zoznam všetkých VGA kompatibilných zariadení"
+        },
+        {
+          "command": "lspci -nn | grep -i amd",
+          "description": "Zoznam zariadení AMD PCI"
+        },
+        {
+          "command": "lspci -nnk | grep -A3 VGA",
+          "description": "Zoznam zariadení VGA s ovládačmi jadra"
+        },
+        {
+          "command": "lspci -v -s <PCI_ID>",
+          "description": "Zobraziť podrobné informácie pre konkrétne PCI zariadenie"
+        }
+      ]
+    },
+    {
+      "title": "Nastavenie VFIO",
+      "commands": [
+        {
+          "command": "dmesg | grep -i vfio",
+          "description": "Kontrola správ modulu VFIO"
+        },
+        {
+          "command": "cat /etc/modprobe.d/vfio.conf",
+          "description": "Preskúmanie VFIO priepustnej konfigurácie"
+        },
+        {
+          "command": "ls -la /etc/modprobe.d/",
+          "description": "Zoznam všetkých konfiguračných súborov modprobe"
+        },
+        {
+          "command": "cat /etc/modules",
+          "description": "Zobraziť načítané moduly v čase zavedenia"
+        },
+        {
+          "command": "lsmod | grep vfio",
+          "description": "Skontrolujte, či sú moduly VFIO načítané"
+        }
+      ]
+    },
+    {
+      "title": "Nastavenie IOMMU",
+      "commands": [
+        {
+          "command": "cat /etc/default/grub",
+          "description": "Preskúmanie možností GRUB pre IOMMU"
+        },
+        {
+          "command": "update-grub",
+          "description": "Použiť zmeny GRUB"
+        },
+        {
+          "command": "dmesg | grep -i iommu",
+          "description": "Skontrolujte IOMMU správy v loge jadra"
+        },
+        {
+          "command": "dmesg | grep -e DMAR -e IOMMU",
+          "description": "Skontrolujte správy DMAR a IOMMU"
+        },
+        {
+          "command": "find /sys/kernel/iommu_groups/ -type l | sort -V",
+          "description": "Zoznam skupín IOMMU"
+        }
+      ]
+    },
+    {
+      "title": "Aktualizácie systému",
+      "commands": [
+        {
+          "command": "update-initramfs -u",
+          "description": "Použiť zmeny initramfs (VFIO)"
+        },
+        {
+          "command": "update-initramfs -u -k all",
+          "description": "Aktualizovať initramfs pre všetky jadrá"
+        },
+        {
+          "command": "cat /proc/cmdline",
+          "description": "Zobraziť aktuálne parametre zavádzania jadra"
+        }
+      ]
+    },
+    {
+      "title": "Nastavenie VM",
+      "commands": [
+        {
+          "command": "qm config <vmid> | grep hostpci",
+          "description": "Zobraziť PCI passmail config pre VM"
+        },
+        {
+          "command": "qm set <vmid> -hostpci0 <PCI_ID>,pcie=1,x-vga=1",
+          "description": "Pridať GPU priechod na VM"
+        },
+        {
+          "command": "cat /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Zobraziť konfiguračný súbor VM"
+        },
+        {
+          "command": "qm set <vmid> -machine q35",
+          "description": "Nastaviť VM pre použitie čipset Q35 (odporúčané pre priechod)"
+        },
+        {
+          "command": "qm set <vmid> -bios ovmf",
+          "description": "Nastaviť VM na použitie UEFI/OVMF (požadované pre GPU)"
+        }
+      ]
+    }
+  ],
+  "afterChangesTip": {
+    "title": "Po zmene GRUB alebo modprobe konfigurácie",
+    "bodyRich": "Spustite <code>update-grub</code>0 + <code>update-initramfs -u</code>, potom reštartujte. Overiť pomocou <code>cat /proc/cmdline</code> (kernové parametre), <code>dmesg | grep -i iommu</code> (IOMMU inicializované) a <code>find /sys/kernel/iommu_groups/ -type l | sort -V</code> (prezentované skupiny)."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Pridať GPU do VM (passthrough)",
+        "tail": " — Interaktívny tok ProxMenux."
+      },
+      {
+        "href": "/docs/hardware/igpu-acceleration-lxc",
+        "label": "Pridať GPU do LXC",
+        "tail": "  VM."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Prehľad pomoci a informácií",
+        "tail": "."
+      }
+    ]
+  }
+}

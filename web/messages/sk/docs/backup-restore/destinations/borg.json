@@ -1,0 +1,234 @@
+{
+  "meta": {
+    "title": "Miesto určenia Borg SSH auth, šifrovanie ProxMenux",
+    "description": "Destinácia Borg píše ProxMenux hostiť zálohy do úložiska Borg, lokálne, na inštalovanom externom disku, alebo na vzdialenom serveri prístupnom cez SSH. Pokrýva reťazec binárneho rozlíšeniaborg, štyri SSH kľúčové stratégie, šifrovanie repokey, uchovaná konfigurácia cieľa a ponechanie na plánovanú prácu.",
+    "ogTitle": "ProxMenux Backup",
+    "ogDescription": "Ako ProxMenux píše zálohovanie hostiteľa do úložiska Borg, s SSH auth stratégie a repokey šifrovanie.",
+    "twitterTitle": "Borg backup destination ProxMenux",
+    "twitterDescription": "Local, USB a SSH-served Borg archívy pre zálohovanie hostiteľov."
+  },
+  "header": {
+    "title": "Borg",
+    "description": "Cieľ Borg píše zálohy hostiteľa do úložiska Borg. Podporujú sa tri typy úložiska: cesta k lokálnemu súborovému systému, namontovaný externý disk alebo vzdialený server cez SSH. Deduplikácia na úrovni Chuck vo všetkých archívoch v úložisku a voliteľné šifrovanie repokey.",
+    "section": "Záloha a obnova"
+  },
+  "aboutBorg": {
+    "heading": "Čo je Borg?",
+    "body": "Borg (tiež hláskovaný BorgBackup) je open-source deduplikating záložný nástroj udržiavaný Borg Backup komunita. Skladuje každý archív ako súbor blokov s premenlivou dĺžkou vnútri úložiska; kusy sú zdieľané v archívoch, takže opätovné zálohovanie nezmenených dát má takmer nulové náklady na ukladanie. Borg nie je viazaná na Proxmox ProxMenux ho používa ako jednu z troch destinácií pre zálohovanie hostiteľov; každý Borg špecifický mechanizmus opísaný na tejto stránke (typy úložiska, borg-serve nad SSH, šifrovanie repokey, pruna) je štandardné správanie Borg."
+  },
+  "intro": {
+    "title": "Deduplikácia založená na chunk-based s miestnymi alebo SSH-served úložiskami",
+    "body": "Borg úložisko ukladá kusy, ktoré sú zdieľané v každom archíve, ktorý obsahuje, takže opätovné zálohovanie nezmenený prenos súborov a ukladá nič nové. ProxMenux vyvoláva <code>borg create</code> proti úložisku v čase zálohovania a <code>borg extract</code> v čase obnovenia. Úložisko môže žiť na rovnakom súborovom systéme ako zdroj, na pripojenom externom disku alebo na vzdialenom počítači prístupnom cez SSH."
+  },
+  "binarySourcing": {
+    "heading": "Binárny borg",
+    "intro": "Borg nie je základnou závislosťou inštalátora ProxMenux. Keď beží záloha, <code>hb_ensure_borg</code> vyrieši binárny zo štyroch zdrojov v poradí a vráti prvý, ktorý funguje:",
+    "rows": [
+      {
+        "priority": "1",
+        "source": "Systém <code>borg</code>",
+        "detail": "Ak má hostiteľ už <code>borg</code> nainštalovaný cez APT (<code>which borg</code>), použije sa tento binárny kód."
+      },
+      {
+        "priority": "2",
+        "source": "Comment",
+        "detail": "<code>/usr/local/share/proxmenux/borg</code> ooooo GitHub stiahnuť na tohto hostiteľa."
+      },
+      {
+        "priority": "3",
+        "source": "Monitorovať AppImage zväzok",
+        "detail": "<code>/usr/local/share/proxmenux/monitor-app/usr/bin/borg</code>  AppImage zväzky podpísaný borg-linux64. To je cesta offline-safe: hostiteľ bez internetu má stále funguje <code>borg</code>."
+      },
+      {
+        "priority": "4",
+        "source": "GitHub stiahnuť",
+        "detail": "<code>wget</code>0 proti <code>borg-linux64</code> URL pri <code>github.com/borgbackup/borg/releases/</code>, overené na konštantné SHA-256 v <code>lib_host_backup_common.sh</code> (<code>HB_BORG_LINUX64_SHA256</code>). Pri nesúlade kontrolného čísla sa binárny kód vyradí a záloha sa zruší. Stiahnutý súbor je cacheed v stave dir, takže následné zálohovanie použiť cestu 2."
+      }
+    ]
+  },
+  "repoTypes": {
+    "heading": "Typy registrov",
+    "intro": "Typ úložiska je vybraný pri pridaní cieľa. Každý typ rieši inú URL úložiska, ktorému Borg rozumie.",
+    "rows": [
+      {
+        "type": "remote",
+        "url": "ssh://USER@HOST/RPATH",
+        "detail": "Úložisko žije na vzdialenom serveri, ktorý prevádzkuje <code>borg serve</code>. Vyžaduje pripojenie SSH k tomu serveru."
+      },
+      {
+        "type": "usb",
+        "url": "/mnt/MOUNTPOINT/borgbackup",
+        "detail": "Repozitár žije na pripojenom externom disku (zvyčajne USB). Pripojenie je riešené pomocou <code>hb_prompt_mounted_path</code>, ktorý detekuje, pripojí alebo formáty USB partícií podľa potreby."
+      },
+      {
+        "type": "local",
+        "url": "/backup/borgbackup (any absolute path)",
+        "detail": "Úložisko žije v miestnom adresári. Významné iba v prípade, že cieľový adresár je na samostatnom fyzickom disku"
+      }
+    ]
+  },
+  "serverSetup": {
+    "heading": "Príprava servera Borg (strana servera)",
+    "intro": "Typ úložiska <code>remote</code> očakáva pracovný server Borg prístupný cez SSH. ProxMenux nie je bootstrap server sám Táto časť dokumentuje, čo server potrebuje pred pripojením ProxMenux.",
+    "hostChoicesTitle": "Kde môže server žiť",
+    "hostChoicesBody": "Každý host Linux s prístupom SSH spĺňa požiadavky. Spoločné nastavenia:",
+    "hostChoicesItems": [
+      "Dedikovaný NAS alebo záložný box (Debian, Ubuntu, TrueNAS SCALE so shellom).",
+      "Kontajner LXC vnútri uzol Proxmox. Malá stopa, izolovaná od hostiteľa, ktorý riadi zálohy.",
+      "Ďalšie Proxmox hostiteľ na rovnakej LAN, alebo VM0 kdekoľvek dosiahnuteľný cez SSH."
+    ],
+    "lxcWarningTitle": "LXC ako server Borg",
+    "lxcWarningBody": "Ak server Borg beží vnútri LXC, kontajner musí mať používateľský účet s heslom.",
+    "requirementsTitle": "Požiadavky na server",
+    "requirementsRows": [
+      {
+        "requirement": "borg binary at <code>/usr/bin/borg</code>",
+        "detail": "Priamka <code>command=\"/usr/bin/borg serve ...\"</code> ProxMenux píše do tvrdých kódov <code>authorized_keys</code>. Inštalácia cez APT (<code>apt install borgbackup</code>) ju tam dáva. Samostatné binárne pripojenie musí byť symetrické s <code>/usr/bin/borg</code>."
+      },
+      {
+        "requirement": "Dedikovaný užívateľský účet (zvyčajne <code>borg</code>)",
+        "detail": "Vlastní adresár úložiska a prijíma prichádzajúce SSH spojenie. Nepotrebuje sudo alebo shell prístup authorized_keys linka aj tak znemožňuje interaktívne škrupiny."
+      },
+      {
+        "requirement": "Zapisovateľný adresár úložiska",
+        "detail": "Cesta, ktorú operátor poskytuje ProxMenux (napríklad <code>/backup/borgbackup</code>) musí existovať na serveri a musí byť vo vlastníctve používateľaborgu."
+      },
+      {
+        "requirement": "SSH démon akceptujúci používateľaborgu",
+        "detail": "<code>PubkeyAuthentication yes</code> (default). Autentifikácia hesla je potrebná len pre jeden snímok <em>genere-auto</em> Tok Po nainštalovaní kľúča, server môže zakázať heslo auth úplne."
+      }
+    ],
+    "minimalSetupTitle": "Nastavenie minimálneho servera",
+    "minimalSetupBody": "Na serveri Debian alebo Ubuntu Borg je pracovná základňa štyri príkazy ako koreň:",
+    "minimalSetupCmd": "apt install borgbackup\nuseradd -m -d /home/borg -s /bin/bash borg\nmkdir -p /backup/borgbackup\nchown borg:borg /backup/borgbackup",
+    "minimalSetupNote": "Po tomto, ProxMenux's <code>generate-auto</code> režim sa môže pripojiť pomocou hesla používateľa Borg raz, nainštalovať svoje vlastné SSH kľúč, a každá ďalšia záloha používa ten kľúč. Nie je potrebná žiadna ďalšia konfigurácia na strane servera. <code>borg serve</code> na tejto ceste."
+  },
+  "sshAuth": {
+    "heading": "Overenie SSH (klientská strana)",
+    "intro": "Remote Borg archívy sú prístupné cez SSH. Spojenie beží od ProxMenux host na užívateľský účet na serveri Borg, ktorý beží <code>borg serve</code>. Tento užívateľ je zvyčajne pomenovaný <code>borg</code>, NIE je admin / root užívateľa servera borg-serve príkazový riadok zablokuje pripojenie k tejto konkrétnej trase úložiska (pozri nižšie kľúčové stratégie).",
+    "strategiesTitle": "Štyri kľúčové stratégie",
+    "strategiesIntro": "Keď sa pridá vzdialený cieľ, ProxMenux vyzýva na SSH užívateľa, hostiteľa a vzdialenú cestu, potom sa pýta, ako overiť. Štyri režimy:",
+    "strategyRows": [
+      {
+        "mode": "genere-auto",
+        "label": "Odporúčané",
+        "detail": "ProxMenux generuje nový ed25519 keypair na <code>~/.ssh/borg_proxmenux_HOST_ed25519</code>, potom používa <code>sshpass</code> sa prihlásiť na Once na server s admin heslom a pripojiť verejný kľúč k <code>~borg/.ssh/authorized_keys</code>. Admin heslo sa používa len pre tento jeden hovor"
+      },
+      {
+        "mode": "Manuálne generovanie",
+        "label": "Žiadne admin heslo na tomto hostiteľovi",
+        "detail": "ProxMenux generuje klávesový pár, ako je uvedené vyššie, ale zobrazuje plnú linku <code>authorized_keys</code> pre operátora na manuálne vkladanie do servera. Admin heslo nikdy neopustí ProxMenux hostiteľa, pretože to nie je nikdy žiadané."
+      },
+      {
+        "mode": "genere- pct",
+        "label": "Borg server je PVE LXC",
+        "detail": "Server Borg beží vo vnútri LXC na uzle PVE. ProxMenux povoľuje kľúč cez <code>pct exec</code> z PVE hostiteľa a koreň na PVE hostiteľa píše do LXC's <code>~borg/.ssh/authorized_keys</code> bez potreby SSH do LXC sama o sebe."
+      },
+      {
+        "mode": "existujúci",
+        "label": "Použiť existujúci kľúč",
+        "detail": "ProxMenux0 skenuje <code>/root/.ssh/</code> a <code>$HOME/.ssh/</code> pre parseable ed25519/RSA súkromné kľúče a uvádza ich. Operátor vyberie jedno alebo prehliadanie ručne na neštandardnú cestu."
+      },
+      {
+        "mode": "bez",
+        "label": "Štandardná konfigurácia SSH",
+        "detail": "No custom key Borg spolieha na predvolený hostiteľ SSH konfigurácia (obvykle <code>~/.ssh/id_rsa</code> alebo SSH (Zdravotník)."
+      }
+    ],
+    "restrictTitle": "Čiara authorized_keys",
+    "restrictBody": "Pre každý generovaný kľúč, <code>authorized_keys</code> riadok ProxMenux píše na serveri zámky kľúč k jednému borg-serve vyvolanie proti konfigurovanej ceste úložiska:",
+    "restrictLine": "Command=\"/usr/bin/borg Service --restrict-to-path RPATH,\" restrict PUBKEY",
+    "restrictNote": "<code>command=</code> núti každé SSH sedenie pomocou tohto kľúča spustiť len to borg-serve príkaz; <code>restrict</code> vypne port forwarding, agent forwarding, X11 forwarding a PTY alokácie. Kľúč nemožno použiť na otvorenie interaktívneho shellu na serveri alebo na prístup k akejkoľvek inej ceste úložiska, aj keď má účet širšie práva."
+  },
+  "savedTargets": {
+    "heading": "Uložené ciele",
+    "intro": "Uložený cieľ pretrváva v konfigurácii úložiska pod priateľským menom, takže detaily nemusia byť znovu zadané. Rozloženie úložiska v adresári stavu ProxMenux:",
+    "rows": [
+      {
+        "file": "borg-targets.txt",
+        "content": "Jeden riadok na cieľ: <code>NAME|REPO|SSH_KEY_PATH|ENCRYPT_MODE</code>. Prečítajte si <code>hb_collect_borg_configs</code> zaľudniť menu výberu cieľov."
+      },
+      {
+        "file": "borg-pass-NAME.txt",
+        "content": "Passfráza pre cieľ uvedený vyššie (<code>chmod 600</code>). Prítomný len vtedy, keď si operátor vybral kódovanie repokey."
+      }
+    ],
+    "outro": "Úspora je voliteľná"
+  },
+  "encryption": {
+    "heading": "Šifrovanie",
+    "body": "Repozície sú inicializované s šifrovacím režimom cez <code>hb_borg_init_if_needed</code>0: moderný <code>borg repo-create -e MODE</code> ak je k dispozícii, alebo odkaz <code>borg init --encryption=MODE</code>. ProxMenux vystavuje dva režimy: <code>repokey</code> (default) a <code>none</code>. V režime <code>repokey</code> Borg ukladá šifrovací kľúč v samotnom úložisku; prístup vyžaduje heslo, ktoré ProxMenux vyzýva na dvojnásobné overenie zhody a ukladá na <code>borg-pass-NAME.txt</code>. Po uložení passfrázy sa zobrazí povinný dialóg s potvrdením: passfráza je jediný spôsob, ako sa dostať k zašifrovaným archívom a jej strata robí každý archív v úložisku neobjaviteľným."
+  },
+  "runtimeEnv": {
+    "heading": "Runtime prostredie",
+    "intro": "ProxMenux exportuje nasledujúce premenné prostredia pred vyvolaním <code>borg</code>. Konfigurujú pripojenie a odomykajú úložisko bez vloženia tajomstiev do príkazového riadku.",
+    "rows": [
+      {
+        "var": "BORG_RSH",
+        "value": "ssh -i SSH_KEY_PATH -o StrictHostKeyChecking=accept-new",
+        "purpose": "Diaľkové shell príkaz Borg používa pre SSH-served archívy. Nastaviť iba pri výbere vlastného kľúča; inak deset tak Borg používa predvolenú konfiguráciu SSH."
+      },
+      {
+        "var": "BORG_PASSPHRASE",
+        "value": "(passfráza zborg-pass-NAME.txt)",
+        "purpose": "Odomkne repokey. Nastaviť iba vtedy, keď cieľ používa šifrovanie <code>repokey</code>. Nikdy sa neobjaví v zozname procesných argumentov."
+      },
+      {
+        "var": "BORG_ENCRYPT_MODE",
+        "value": "repokey",
+        "purpose": "Použité <code>hb_borg_init_if_needed</code> pri inicializácii úložiska, ktoré ešte neexistuje. Ignorované <code>borg create</code> na existujúcich archívoch."
+      },
+      {
+        "var": "BORG_RELOCATED_REPO_ACCESS_IS_OK",
+        "value": "áno",
+        "purpose": "Pretláča interaktívnu výzvu Borg zvyšuje, keď sa URL úložiska líši od URL, z ktorého bol pôvodne dosiahnutý (bežné po premenovaní bodu pripojenia alebo SSH-host dosiahnuteľný prostredníctvom novej adresy)."
+      },
+      {
+        "var": "BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK",
+        "value": "áno",
+        "purpose": "Preklad: dusanho"
+      }
+    ]
+  },
+  "archiveFormat": {
+    "heading": "Archive pomenovanie a uchovávanie",
+    "intro": "Každá záloha vytvorí nový archív vo vnútri úložiska.",
+    "namePattern": "hostcfg-HOSTNAME-YYYYMMDD_HHMMSS",
+    "retentionBody": "Pre plánované úlohy, <code>run_scheduled_backup.sh</code> beží <code>borg prune</code> proti úložisku po každom úspešnom zálohovaní s retenčnými hodnotami nastavenými na úlohu (<code>--keep-last</code>, <code>--keep-daily</code>, <code>--keep-weekly</code>). Interaktívne zálohy neprerezávajú."
+  },
+  "restoreAccess": {
+    "heading": "Získavanie na strane obnovy",
+    "body": "Obnovenie zoznamov archívov s <code>borg list REPO</code> a extrahuje vybraný s <code>borg extract REPO::ARCHIVE-NAME</code> do inscenačného adresára, ktorý <code>_rs_check_layout</code> napája na štandardné obnoviť potrubia. Pre ručné vyhľadávanie mimo ProxMenux rovnaké príkazy práce; extrahovaný strom je štandardné tri-playload rozloženie popísané v <em>Ako to funguje</em>."
+  },
+  "references": {
+    "heading": "Odkazy",
+    "intro": "Oficiálna dokumentácia Borg pre komponenty ProxMenux sa spolieha na.",
+    "items": [
+      {
+        "label": "Dokumentácia Borg",
+        "href": "https://borgbackup.readthedocs.io/",
+        "tail": " — "
+      },
+      {
+        "label": "borg create",
+        "href": "https://borgbackup.readthedocs.io/en/stable/usage/create.html",
+        "tail": " - Príkaz. ProxMenux sa odvoláva na každú zálohu so všetkými podporovanými vlajkami."
+      },
+      {
+        "label": "šifrovanie repository",
+        "href": "https://borgbackup.readthedocs.io/en/stable/usage/init.html#encryption-mode",
+        "tail": " Borg podporuje šifrovanie, vrátane repokey, ktorý ProxMenux použitie štandardne."
+      },
+      {
+        "label": "borg serve and SSH deployment",
+        "href": "https://borgbackup.readthedocs.io/en/stable/deployment/central-backup-server.html",
+        "tail": " — Ako nastaviť centrálny Borg server prístupný cez SSH, vrátane borg-serve príkaz a restrict-to-path vlajka ProxMenux píše do authorized_keys."
+      },
+      {
+        "label": "borg prune",
+        "href": "https://borgbackup.readthedocs.io/en/stable/usage/prune.html",
+        "tail": " chápaný model ponechania --keep-last / --keep-daily / --keep-weekly že ProxMenux sa vzťahuje na plánované zamestnanie."
+      }
+    ]
+  }
+}

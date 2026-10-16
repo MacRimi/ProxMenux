@@ -1,0 +1,170 @@
+{
+  "meta": {
+    "title": "Proxmox Update and Package Commands Apt, pveupgrade, dpkg ProxMenux",
+    "description": "Odkaz na príkazy aktualizácie a balíčka pre Proxmox VE: apt update, apt upgrade, apt dist-upgrade, pveupgrade, dpkg -l, balíčky informácií, konfigurácia úložiska v /etc/apt/sources.list.d/.",
+    "ogTitle": "Proxmox Update and Package Commands",
+    "ogDescription": "apt, pveupgrade a dpkg príkazy pre udržanie Proxmox VE upgrade systému, správa balíkov, konfigurácia úložiska.",
+    "twitterTitle": "Proxmox Update Commands ProxMenux",
+    "twitterDescription": "apt and pveupgrade commands for managing updates and packages on Proxmox VE hosts."
+  },
+  "header": {
+    "title": "Aktualizácie a balíky",
+    "description": "Vybraný prehľad príkazov apt a príkazov na aktualizáciu Proxmoxu: aktualizácie systému, inštalácia, odstránenie a úplné vyčistenie balíkov, zisťovanie informácií o balíkoch (apt-cache policy, dpkg -l) a kontrola konfigurácie repozitárov.",
+    "section": "Pomoc a informácie"
+  },
+  "intro": {
+    "title": "Vždy najprv aktualizovať index",
+    "body": "<code>apt update</code> osviežuje miestny zoznam balíkov z nakonfigurovaných úložísk. Bez neho, <code>apt install</code> môže vytiahnuť stale verzie alebo zlyhať s \"Nepodarilo sa nájsť balíček.\""
+  },
+  "commandGroups": [
+    {
+      "title": "Aktualizácie systému",
+      "commands": [
+        {
+          "command": "apt update && apt upgrade -y",
+          "description": "Aktualizovať všetky systémové balíky"
+        },
+        {
+          "command": "apt dist-upgrade -y",
+          "description": "Úplná aktualizácia systému vrátane závislostí"
+        },
+        {
+          "command": "apt update",
+          "description": "Aktualizovať iba zoznamy balíkov"
+        },
+        {
+          "command": "apt upgrade",
+          "description": "Len upgrade balíkov (interaktívne)"
+        },
+        {
+          "command": "apt full-upgrade",
+          "description": "Aktualizovať balíky s manipuláciou so závislosťou (interaktívne)"
+        }
+      ]
+    },
+    {
+      "title": "Aktualizácie Proxmox",
+      "commands": [
+        {
+          "command": "pveupdate",
+          "description": "Aktualizovať zoznamy Proxmox balíkov"
+        },
+        {
+          "command": "pveupgrade",
+          "description": "Zobraziť dostupné aktualizácie Proxmoxu"
+        },
+        {
+          "command": "pve-upgrade",
+          "description": "Vykonať upgrade Proxmox VE"
+        },
+        {
+          "command": "pveceph upgrade",
+          "description": "Aktualizujte balíky Ceph (ak je nainštalovaný Ceph)"
+        }
+      ]
+    },
+    {
+      "title": "Správa balíkov",
+      "commands": [
+        {
+          "command": "apt autoremove --purge",
+          "description": "Odstrániť nepoužívané balíky aj ich nastavenia"
+        },
+        {
+          "command": "apt clean",
+          "description": "Vymazať lokálne úložisko súborov balíčkov"
+        },
+        {
+          "command": "apt autoclean",
+          "description": "Vymazať iba zastarané súbory balíkov"
+        },
+        {
+          "command": "apt install <package>",
+          "description": "Inštalovať konkrétny balík"
+        },
+        {
+          "command": "apt remove <package>",
+          "description": "Odstrániť balík"
+        },
+        {
+          "command": "apt purge <package>",
+          "description": "Odstrániť balík a jeho konfiguračné súbory"
+        }
+      ]
+    },
+    {
+      "title": "Informácie o balíku",
+      "commands": [
+        {
+          "command": "apt list --installed",
+          "description": "Zoznam všetkých nainštalovaných balíkov"
+        },
+        {
+          "command": "apt search <keyword>",
+          "description": "Hľadať balíky podľa kľúčového slova"
+        },
+        {
+          "command": "apt show <package>",
+          "description": "Zobraziť podrobné informácie o balení"
+        },
+        {
+          "command": "dpkg -l",
+          "description": "Zoznam všetkých nainštalovaných balíkov (alternatívnych)"
+        },
+        {
+          "command": "dpkg -l | grep <keyword>",
+          "description": "Hľadať nainštalované balíky podľa kľúčového slova"
+        },
+        {
+          "command": "apt-cache policy <package>",
+          "description": "Zobraziť verzie a priority balíkov"
+        }
+      ]
+    },
+    {
+      "title": "Správa registrov",
+      "commands": [
+        {
+          "command": "cat /etc/apt/sources.list",
+          "description": "Zobraziť hlavné zdroje úložiska APT"
+        },
+        {
+          "command": "ls -la /etc/apt/sources.list.d/",
+          "description": "Zoznam ďalších zdrojových súborov úložiska"
+        },
+        {
+          "command": "cat /etc/apt/sources.list.d/pve-enterprise.list",
+          "description": "Zobraziť repo konfig Proxmox Enterprise"
+        },
+        {
+          "command": "apt-key list",
+          "description": "Name"
+        }
+      ]
+    }
+  ],
+  "backupWarn": {
+    "title": "Vezmite zálohu pred hlavnými aktualizáciami",
+    "bodyRich": "Pre bodové vydania (8.4.1 → 8.4.5) je štandard <code>apt update &amp;&amp; apt upgrade</code> bezpečný. Pre <strong> hlavné verzie upgrade</strong> (PEVE 8 → 9) použite dedikovaný ProxMenux tok: <upgradeLink>Upgrade PVE 8 PVE 9</upgradeLink>"
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/utils/system-update",
+        "label": "Aktualizácia systému Proxmox (interaktívna)",
+        "tail": " Wrapper, ktorý to všetko robí s potvrdzovacím dialógom, automatickým DKMS prestavba ProxMenux-riadil ovládače, keď je nainštalované nové jadro, a reštart. Tiež spustené z Aktualizovať Teraz tlačidlo ProxMenux Monitor prístrojová doska."
+      },
+      {
+        "href": "/docs/utils/upgrade-pve8-pve9",
+        "label": "Upgrade PVE 8 na PVE 9",
+        "tail": " — "
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Prehľad pomoci a informácií",
+        "tail": "."
+      }
+    ]
+  }
+}

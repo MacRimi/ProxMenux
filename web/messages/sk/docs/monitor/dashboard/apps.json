@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Apps dashboard: jeden spúšťač pre každý Web Link ProxMenux",
+    "description": "Pomocou prístrojovej dosky Apps otvorte registrované LXC Webové odkazy a vlastné odkazy, zorganizujte ich podľa kategórie a skočte späť k hosťovi, ktorý vlastní každú službu."
+  },
+  "header": {
+    "title": "Dashboard: Záložka aplikácií",
+    "description": "Jediný spúšťač pre webové rozhrania, ktoré používate cez uzol, či už pochádzajú z registrovanej aplikácie LXC alebo z vlastného webového odkazu.",
+    "section": "ProxMenux Monitor · Prehľad"
+  },
+  "intro": {
+    "title": "Launcher, nie inštalátor aplikácií",
+    "body": "Záložka <strong>Apps</strong> neinštaluje softvér ani neobjaví služby sama o sebe. Premení uložené webové odkazy na jednu prehľadávanú mriežku. Odkazy vo vlastníctve LXC sú nakonfigurované v záložke <appTabLink>App </appTabLink>; vlastné odkazy umožňujú zahrnúť služby VM, reverzné proxies a externé prístrojové dosky."
+  },
+  "sources": {
+    "heading": "Čo sa objavuje v Apps",
+    "intro": "Každá spúšťateľná URL sa stáva vlastnou kartou. Zdroj určuje, kde je karta upravená, ale nie ako vyzerá počas bežného používania.",
+    "colSource": "Zdroj",
+    "colAppears": "Čo sa objaví",
+    "colManagedFrom": "Ak je riadený",
+    "rows": [
+      {
+        "source": "Registrovaná aplikácia LXC",
+        "appears": "Jedna karta pre každý Web Link uložený na zázname aplikácie.",
+        "managedFrom": "VM a LXC → Okno LXC → Aplikácia"
+      },
+      {
+        "source": "Vlastný odkaz viazaný na hosťa",
+        "appears": "URL služby spojená so špecifickým VM alebo LXC.",
+        "managedFrom": "Aplikácie → Upraviť"
+      },
+      {
+        "source": "Bez obmedzenia.",
+        "appears": "akékoľvek cieľové miesto HTTP (S) vrátane externej alebo reverznej splnomocnenej služby.",
+        "managedFrom": "Aplikácie → Upraviť"
+      }
+    ],
+    "relationshipTitle": "Aplikácie a karta LXC App majú rôzne úlohy",
+    "relationshipBody": "• LXC <appTabLink>App záložka</appTabLink> vlastní aplikačnú identitu, webové odkazy a voliteľné sledovanie verzií. Najvyššia úroveň <strong>Aplikácie</strong> záložka spotrebuje tieto odkazy a robí je jednoduché spustenie. Editácia LXC- vlastná karta vás preto dovedie späť k záznamu hosťa, a nie k vytvoreniu druhej kópie konfigurácie."
+  },
+  "cards": {
+    "heading": "Ako používať kartu",
+    "intro": "Celá karta je cieľ štartu, zatiaľ čo jej menšie kontroly poskytujú kontext bez otvorenia služby.",
+    "items": [
+      "Kliknutím na kartu otvoríte URL v záložke nového prehliadača.",
+      "Logo najprv používa logo Web Link a v prípade potreby sa vráti k logu aplikácie.",
+      "Čip kategórie používa rovnakú farbu a označenie ako zodpovedajúci webový odkaz v záložke LXC App.",
+      "Hosťujúca pilulka identifikuje viazaný VM alebo LXC. Kliknite pre otvorenie modalu tohto hosťa; LXC links land directly on <strong>App</strong>, zatiaľ čo VM links open <strong>Status</strong>.",
+      "Fialová šípka hore znamená, že špecifická aplikácia alebo obraz Docker má k dispozícii aktualizáciu. Nie je to všeobecný počet aktualizácií pre celého hosťa."
+    ]
+  },
+  "toolbar": {
+    "heading": "Hľadať, filtrovať a triediť",
+    "intro": "Nástrojová lišta zužuje veľkú kolekciu aplikácií bez zmeny uložených záznamov.",
+    "items": [
+      "Vyhľadávanie zodpovedá názvu aplikácie, menu hosťa, VMID a kategórii.",
+      "Filter kategórie zobrazuje jednu kategóriu naraz alebo všetky aplikácie.",
+      "Zoradiť podľa <strong>0Name</strong>, <strong>ID</strong> alebo <strong>Kategória</strong>. Kategórie triedenia vloží položky skupín medzi skupiny kariet.",
+      "Vybrané poradie je zapamätané v tomto prehliadači. Vyhľadávanie textu a filtrovanie kategórie po opätovnom prečítaní stránky.",
+      "Karta Apps zostáva k dispozícii, keď je mriežka prázdna, takže prvý vlastný odkaz môže byť pridaný bez registrácie aplikácie LXC ako prvý."
+    ]
+  },
+  "customLinks": {
+    "heading": "Pridávanie a úprava vlastných webových odkazov",
+    "intro": "Použite vlastný odkaz, ak služba nie je reprezentovaná registrovanou aplikáciou LXC.",
+    "steps": [
+      "Stlačte <strong>Pridať odkaz</strong> z panela nástrojov alebo prázdny stav.",
+      "Zadajte meno a kompletnú <code>http://</code> alebo <code>https://</code> URL.",
+      "Voliteľne pridať logo, vybrať alebo vytvoriť kategóriu a pripojiť odkaz na VM alebo LXC.",
+      "Nechaj si to. Nová karta sa okamžite vloží do mriežky.",
+      "Ak chcete zmeniť alebo odstrániť vlastný odkaz, stlačte <strong>Edit</strong> a použite ceruzku na karte."
+    ],
+    "colField": "Pole",
+    "colRequired": "Požadované",
+    "colPurpose": "Účel",
+    "fields": [
+      {
+        "field": "Názov",
+        "required": "Áno",
+        "purpose": "Názov karty a hľadaný termín."
+      },
+      {
+        "field": "URL",
+        "required": "Áno",
+        "purpose": "Úplné miesto určenia HTTP (S) otvorené kartou."
+      },
+      {
+        "field": "URL loga",
+        "required": "Nie",
+        "purpose": "Diaľkový obrázok zobrazený na karte."
+      },
+      {
+        "field": "Kategória",
+        "required": "Nie",
+        "purpose": "Pridá zdieľaný odznak a umožňuje filtrovanie kategórií."
+      },
+      {
+        "field": "Viazanie na hosťa",
+        "required": "Nie",
+        "purpose": "Spája odkaz s VM alebo LXC a umožňuje hosťom skratku."
+      }
+    ],
+    "editTitle": "Upraviť zdroj pravdy",
+    "editBody": "Upraviť režim odhaľuje len ceruzky pre vlastné odkazy. Ak chcete zmeniť kartu vygenerovanú z registrovanej aplikácie LXC, otvorte záložku <appTabLink>App pre hostí </appTabLink> a upravte tam uložený webový odkaz."
+  },
+  "categories": {
+    "heading": "Kategórie a signály aktualizácie",
+    "intro": "Kategórie organizujú odkazy; Aktualizácia signálov hlási stav softvéru. Sú zámerne oddelené.",
+    "items": [
+      "Registrácia LXC podporovaná katalógom môže predplniť kategóriu, ale zostáva editovateľná.",
+      "Vlastné názvy kategórií môžu byť vytvorené z rovnakého voliča a následne opätovne použité filtrom.",
+      "Farby kategórie sú deterministické a prispôsobujú sa téme svetla alebo tmy. Fialové a červené rozsahy sú vyhradené pre aktuálne a nebezpečné stavy.",
+      "Pre Docker Web Links, ProxMenux zodpovedá karta jeho kontajner alebo obrázok a hlási, že stav aktualizácie obrazu. Aktualizácia Docker Engine zostáva v LXC <updatesLink> Aktualizácie záložka</updatesLink>."
+    ]
+  },
+  "persistence": {
+    "heading": "Pretrvávanie a cache správanie",
+    "intro": "Palubná doska je určená na otvorenie z už dostupných dát Monitor, a nie na preskenovanie každého hosťa.",
+    "items": [
+      "Vlastné odkazy sú uložené atómovo v <code>/etc/proxmenux/custom_links.json</code> a zahreje sa do pamäte, keď Monitor začne.",
+      "Registrované odkazy LXC zostávajú súčasťou uloženého záznamu monitora v ich aplikácii; prístrojová doska Apps ich nezdvojuje do vlastného súboru.",
+      "Vytváranie, editovanie alebo vymazávanie vlastného odkazu okamžite osvieži zoznam in-memory.",
+      "Typ preferencie je prehliadač-lokálne. Nie je synchronizovaný medzi zariadeniami alebo užívateľmi.",
+      "Polohu aplikácií najvyššej úrovne kontroluje osobitne <settingsLink>0Nastavenia → Navigácia</settingsLink>."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Bežné situácie",
+    "colProblem": "Situácia",
+    "colResolution": "Riešenie",
+    "rows": [
+      {
+        "problem": "Aplikácia LXC je registrovaná, ale nie je zobrazená žiadna karta",
+        "resolution": "Otvorte záložku App a pridajte aspoň jeden webový odkaz. Samotné sledovanie verzie nevytvára kartu spúšťača."
+      },
+      {
+        "problem": "URL alebo logo je nesprávne",
+        "resolution": "Upraviť vlastný odkaz v Apps, alebo upraviť webový odkaz vo vlastnej záložke LXC App."
+      },
+      {
+        "problem": "Chýba služba Docker",
+        "resolution": "Upraviť registrovanú aplikáciu Docker a uložiť webový port služby ako webový odkaz."
+      },
+      {
+        "problem": "Fialová šípka sa vzťahuje na nesprávnu aktualizáciu Docker",
+        "resolution": "Prezrite si názov webového odkazu a popis, aby mohli byť prispôsobené plánované kontajner alebo obrázok."
+      },
+      {
+        "problem": "Aplikácie sa otvárajú najskôr namiesto systému Prehľad",
+        "resolution": "Prvá uložená položka v Nastaveniach → Navigácia sa stáva pristávacou záložkou. Obnoviť predvolenú objednávku alebo presunúť Prehľad prvý."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "LXC App záložka",
+        "href": "/docs/monitor/dashboard/vms-lxcs/app",
+        "tail": " — "
+      },
+      {
+        "label": "LXC Aktualizuje kartu",
+        "href": "/docs/monitor/dashboard/vms-lxcs/updates",
+        "tail": " — Konfigurácia a spustenie aplikácie, Docker Engine a aktualizácie obrazu."
+      },
+      {
+        "label": "Karta Nastavenia",
+        "href": "/docs/monitor/dashboard/settings#navigation-order",
+        "tail": " — Zmeňte navigačný príkaz a pristávaciu kartu."
+      }
+    ]
+  }
+}

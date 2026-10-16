@@ -1,0 +1,92 @@
+{
+  "meta": {
+    "title": "Odinštalovať ProxMenux | ProxMenux Dokumentácia",
+    "description": "Vyčistite ProxMenux odinštalátor s voliteľným odstránením závislosti (jq, dialóg, python3-*) a automatickým obnovením záloh /root/.bashrc a /etc/motd vytvorených v čase inštalácie. Tiež odstraňuje proxmenux-monitor službu, ak je prítomný.",
+    "ogTitle": "Odinštalovať ProxMenux | ProxMenux Dokumentácia",
+    "ogDescription": "Čisto odstrániť ProxMenux z Proxmox hostiteľa s voliteľným vyčistenie závislosti."
+  },
+  "header": {
+    "title": "Odinštalovať ProxMenux",
+    "description": "Odstráni ProxMenux z hostiteľa Proxmoxu s interaktívnym tokom: potvrdenie, voliteľné odstránenie závislosti, vyčistenie služby ProxMenux Monitor, obnovenie záloh /root/.bashrc a /etc/motd. Ukazuje celý panel pokroku.",
+    "section": "Nastavenia"
+  },
+  "scopeWarn": {
+    "title": "Postihuje ProxMenux iba",
+    "body": "Odinštalácia ProxMenux odstráni ProxMenux scripts, spúšťač menu, voliteľnú službu Monitor a akékoľvek zálohy ProxMenux prevzali systémové súbory, keď ste ho nainštalovali. <strong>Nedotýka sa vašich VMs, kontajnerov, úložiska, konfigurácie siete, Fail2Ban, ovládač NVIDIA alebo čokoľvek iné, čo ste nainštalovali cez ProxMenux.</strong> Tí zostanú takí, ako sú."
+  },
+  "flow": {
+    "heading": "Odinštalovať tok",
+    "items": [
+      "<strong>Potvrdzovací dialóg.</strong> Áno/nie chápané Ste si istý, že chcete odinštalovať ProxMenux?”",
+      "Kontrolný zoznam <strong>Odstránenie zodpovednosti.</strong> Predbežne vybraný zoznam závisí od typu inštalácie (pozri tabuľku nižšie). Všetky políčka predvolené na OFF sa rozhodnete pre odstránenie každej závislosti.",
+      "<strong>Removal beží s progress bar.</strong> Odstráni venv (iba prevedenie inštalácia), <code>menu</code> spúšťač, strom <code>/usr/local/share/proxmenux/</code>, služba ProxMenux Monitor, ak je prítomný spolu s oznamovacím cieľom sa zaregistroval v Proxmox VE (<code>proxmenux-webhook</code> a jeho zápalka), závislosti ste zaškrtli, a nakoniec obnoví zálohovanie systémového súboru (pozri nižšie).",
+      "<strong>C dokončovacie dialóg.</strong> Zoznamy odstránené závislosti a východy."
+    ]
+  },
+  "deps": {
+    "heading": "Odstránenie závislosti: čo ponúkame",
+    "intro": "Kontrolný zoznam závisí od typu inštalácie. <strong>None of the boxs is checked by default</strong>",
+    "headerType": "Typ inštalácie",
+    "headerOffered": "Ponúkané na odstránenie",
+    "rows": [
+      {
+        "type": "Preklad",
+        "offeredRich": "<code>python3-venv</code>, <code>python3-pip</code>, <code>python3</code>, <code>jq</code>"
+      },
+      {
+        "type": "V poriadku",
+        "offeredRich": "<code>dialog</code>, <code>jq</code>"
+      }
+    ],
+    "warnTitle": "Celosystémové balíky",
+    "warnBody": "<code>python3</code>, <code>jq</code> a <code>dialog</code> sa bežne používajú inými nástrojmi (vrátane samotného Proxmoxu v niektorých pracovných tokoch). Odstránenie <code>python3</code> najmä môže zlomiť pomocníkov Proxmox, Ceph utility a mnoho skriptov tretích strán. Nechajte ich, ak si nie ste istí, že ich nič iné nepotrebuje."
+  },
+  "removed": {
+    "heading": "Čo sa odstráni",
+    "code": "/usr/local/bin/menu                                  # the launcher\n/usr/local/share/proxmenux/                          # everything: scripts, config, cache, version\n/opt/googletrans-env/                                # virtual env (Translation install only)\n/etc/systemd/system/proxmenux-monitor.service        # Monitor service unit\n/root/.config/proxmenux-monitor/                     # Monitor config dir\n                                                     # + dependencies you ticked in the checklist"
+  },
+  "restored": {
+    "heading": "Čo sa obnoví",
+    "items": [
+      "Ak <code>/root/.bashrc.bak</code> existuje → premenovaná späť na <code>/root/.bashrc</code> (vaše pôvodné Bashrc vracia).",
+      "Ak <code>/etc/motd.bak</code> existuje → premenovaná späť na <code>/etc/motd</code>. V opačnom prípade ProxMenux riadok (<em>Tento systém je optimalizovaný: ProxMenux”</em>) je odstránená z existujúceho motd so sedom."
+    ]
+  },
+  "othersCallout": {
+    "title": "Ostatné ProxMenux-inštalované komponenty zostávajú",
+    "body": "Čokoľvek. ProxMenux nainštalovaný prostredníctvom iných menu Fail2BanLynis, NVIDIA vodiči, po inštalácii vylepšenia <strong>nie</strong> dotkla sa tohto odinštalátora. Každý z nich má svoj vlastný odinštalačný tok vo svojom príslušnom menu (alebo môžete odstrániť s apt priamo). Pozrite sa na <em>Zobraziť informácie o verziách</em> Najprv zistiť, čo je registrované."
+  },
+  "manual": {
+    "heading": "Ručné odinštalovanie",
+    "intro": "Ak z nejakého dôvodu menu odinštalátor nemôže bežať (napr. <code>dialog</code> už chýba), ekvivalentná manuálna sekvencia:",
+    "code": "# 1. Stop and remove the Monitor service (if installed)\nsystemctl stop proxmenux-monitor.service 2>/dev/null\nsystemctl disable proxmenux-monitor.service 2>/dev/null\nrm -f /etc/systemd/system/proxmenux-monitor.service\nrm -rf /root/.config/proxmenux-monitor\nsystemctl daemon-reload\nsystemctl reset-failed 2>/dev/null\n\n# 2. Remove the venv (Translation install only)\nrm -rf /opt/googletrans-env\n\n# 3. Remove ProxMenux files\nrm -f /usr/local/bin/menu\nrm -rf /usr/local/share/proxmenux\n\n# 4. Restore backups\n[ -f /root/.bashrc.bak ] && mv /root/.bashrc.bak /root/.bashrc\n[ -f /etc/motd.bak ] && mv /etc/motd.bak /etc/motd \\\n    || sed -i '/This system is optimised by: ProxMenux/d' /etc/motd"
+  },
+  "reinstall": {
+    "heading": "Preinštalácia neskôr",
+    "body": "Znovu spustite oficiálny inštalátor ProxMenux. Vyberte si preklad alebo Normálne, ako si preferujete, voľba je nezávislá od toho, čo ste mali predtým."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "hangTitle": "Odinštalovať visí na",
+    "hangBody": "<code>pip uninstall</code> môže zastaviť, ak Pip nereaguje. Z iného shellu: <code>rm -rf /opt/googletrans-env</code> priamo (skript robí to isté ako pád po pipe).",
+    "aptTitle": "apt warns about packages still in use during dependency removal",
+    "aptBody": "Očakáva sa, ak ste zaškrtli <code>python3</code>0 alebo <code>jq</code>, zatiaľ čo iné veci na hostiteľa závisí na nich. apt <code>autoremove</code> odmietne odstrániť v tomto prípade (čo je bezpečné správanie). Odškrtnite tú závislosť a znovu utečte.",
+    "motdTitle": "MOTD stále ukazuje čiaru ProxMenux po odinštalovaní",
+    "motdBody": "Buď neexistoval <code>/etc/motd.bak</code> a sed pás sa nezhodoval (napr. riadok bol upravený). Upraviť <code>/etc/motd</code> ručne a odstrániť všetky zvyšky ProxMenux riadok."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/settings/show-version-information",
+        "label": "Zobraziť informácie o verzii",
+        "tail": " — "
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Prehľad nastavení",
+        "tail": "."
+      }
+    ]
+  }
+}

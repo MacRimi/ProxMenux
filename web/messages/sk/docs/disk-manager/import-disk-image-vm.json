@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "Importovať obrázok disku do VM | ProxMenux Dokumentácia",
+    "description": "Import súboru obrazu disku (.img / .qcow2 / .vmdk / .raw) do existujúceho súboru Proxmox VM pomocou ProxMenux. Per-image rozhranie, SSD emulácia a bootable vlajka, s qm importdisk pod kapotou.",
+    "ogTitle": "Importovať obrázok disku do VM | ProxMenux Dokumentácia",
+    "ogDescription": "Importovať .img / .qcow2 / .vmdk / .raw diskové snímky do existujúceho VM s ProxMenux. Používa qm importdisk pod kapotou."
+  },
+  "header": {
+    "title": "Importovať obraz disku do VM",
+    "description": "Import súboru obrazu disku (.img, .qcow2, .vmdk alebo .raw) do existujúceho Proxmoxu VM. ProxMenux zhromažďuje každé rozhodnutie na začiatku cieľa VM, Proxmox úložisko, zdrojový adresár, rozhranie, SSD emulácie, boot order a potom beží qm importdisk pre každý vybraný obrázok.",
+    "section": "Správca disku · VM"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "Na rozdiel od <em>Importovať disk do VM</em> (ktorý pripevňuje surový fyzický disk), tento tok trvá <strong>súbor</strong> sediaci na hostiteľovi, exportovaný z iného hypervisora, stiahnutý ako oblačnosť, extrahovaný zo zálohy a konvertuje ho do správneho Proxmoxu VM disk na úložnom objeme podľa vášho výberu. pôvodný súbor je zachovaný; ProxMenux skopírovať to, to nepohne."
+  },
+  "howRuns": {
+    "heading": "Ako beží skript",
+    "body": "Prietok má dve fázy. Fáza 1 zhromažďuje každé rozhodnutie (VM, úložisko, zdrojový adresár, obrázky, možnosti na zobrazenie) vopred cez dialógy. Fáza 2 beží <code>qm importdisk</code> pre každý zvolený obrázok. Kým sa fáza 2 nezačne, nič sa neskopíruje a konfigurácia VM sa nedotýka."
+  },
+  "prereqs": {
+    "heading": "Predpoklady",
+    "items": [
+      "Aspoň jeden VM definovaný na hostiteľovi. Cieľ VM by mal byť <strong> poháňaný mimo </strong>.",
+      "Aspoň jeden obrázok podporovaného formátu v zdrojovom adresári. Podporované: <code>.img</code>, <code>.qcow2</code>, <code>.vmdk</code>, <code>.raw</code>.",
+      "Dosť voľného miesta na cieľovej Proxmox úložisko držať každý importovaný disk.",
+      "ProxMenux hľadá obrázky v <code>/var/lib/vz/template/iso</code> štandardne. Môžete ho nasmerovať na akýkoľvek iný adresár na hostiteľa, keď sa ho spýta."
+    ]
+  },
+  "steps": {
+    "heading": "Krok za krokom",
+    "stepLabel": "Krok",
+    "list": [
+      {
+        "title": "Vyberte cieľovú VM",
+        "bodyRich": "ProxMenux číta <code>qm list</code> a zobrazuje každý VM. Vyberte ten, ktorý dostane importovaný disk (s)."
+      },
+      {
+        "title": "Vyberte Proxmox úložisko",
+        "bodyRich": "Zoznam obsahuje každú pamäť, ktorá má zapnutý typ obsahu <code>images</code>. Ak je len jeden kandidát, je automaticky vybraný a dialóg je preskočený."
+      },
+      {
+        "title": "Vyberte zdrojový adresár",
+        "bodyRich": "Vyberte predvolený adresár (<code>/var/lib/vz/template/iso</code>) alebo zadajte vlastnú cestu Skript odmieta cesty, ktoré neexistujú."
+      },
+      {
+        "title": "Vyberte si jeden alebo niekoľko obrázkov",
+        "bodyRich": "Adresár je skenovaný pre <code>.img</code>0 / <code>.qcow2</code> / <code>.vmdk</code> / <code>.raw</code> súbory. Môžete si vybrať niekoľko naraz; každý bude prejsť per-image možnosti v ďalšom kroku."
+      },
+      {
+        "title": "Možnosti na zobrazenie",
+        "intro": "Pre každý vybraný obrázok ProxMenux sa pýta:",
+        "items": [
+          "<strong>Rozhranie</strong> — <code>scsi</code> (predvolené), <code>virtio</code>, <code>sata</code> alebo <code>ide</code>. Zhoduje sa s tým, ako hosť uvidí disk.",
+          "<strong>Emulácia SSD</strong> Ponúkané len pre non-VirtIO rozhrania. Pridať <code>ssd=1</code> Takže hosť inzeruje disk ako solid-state (užitočné pre OS-level TRIM / nastavenie).",
+          "<strong>Boostable</strong> Ak áno, ProxMenux pridá disk do boot objednávky, takže sa stane primárnym boot zariadenia VM."
+        ]
+      },
+      {
+        "title": "Importovať a pripojiť",
+        "bodyRich": "ProxMenux behy <code>qm importdisk</code> pre každý obrázok (konverzia formátu na muchu tam, kde je to potrebné), pripojí výsledný disk na ďalší voľný slot (<code>scsiN</code>, <code>sataN</code>, ...) s vybranými možnosťami a Pokrok ukazuje v termináli."
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent",
+    "body": "Jednoobrazové importné mapy do troch <code>qm</code> príkazov:",
+    "warnTitle": "Prevod formátu obrázku",
+    "warnBody": "Ak cieľové úložisko nemôže držať zdrojový formát natívne (napríklad LVM úložisko nemôže držať <code>.qcow2</code>), <code>qm importdisk</code> konvertuje obraz transparentne. To môže trvať niekoľko minút pre viac-GB snímky; podľa toho plán a neprerušujte skript."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "noImagesTitle": "\"Nenájdené žiadne kompatibilné obrazy disku\"",
+    "noImagesBody": "Skript skenoval adresár, ale nenašiel súbor <code>.img</code>0 / <code>.qcow2</code> / <code>.vmdk</code> / <code>.raw</code>. Skontrolujte rozšírenie (prípadové otázky), že súbor sedí priamo vo vybranom adresári (nevyhľadávajú sa žiadne sub-adresáre) a že oprávnenia umožňujú koreň čítať.",
+    "slowTitle": "Import je pomalý",
+    "slowBody": "VMDK → QCOW2 → surové konverzie sú CPU- a I/O-viazané. Rýchlosť importu závisí od rýchlosti čítania zdroja, cieľovej rýchlosti zápisu a CPU pre dekompresiu. Ak je to možné, uprednostnite surové alebo qkow2 zdroje.",
+    "uefiTitle": "Importované diskové topánky do UEFI shellu",
+    "uefiBody": "Obrázok bol postavený pre dedičstvo (SeaBIOS), ale VM používa OVMF (alebo naopak). Buď prepnite VM BIOS v Proxmoxe tak, aby zodpovedal obrazu, alebo pred importom pretvorte obraz v správnom režime."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importovať disk do VM",
+        "tail": " — "
+      },
+      {
+        "href": "/docs/utils/import-vm",
+        "label": "Importovať VM z OVA / OVF",
+        "tail": " — Keď máte plný VM balíček, nielen obrázok disku."
+      },
+      {
+        "href": "/docs/utils/UUp-Dump-ISO-Creator",
+        "label": "Tvorba ISO cez UUP Dump",
+        "tail": " — "
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Príkazy na ukladanie a disky",
+        "tail": " Importisk qemu-Img convert referencie."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Prehľad správcu diskov",
+        "tail": "."
+      }
+    ]
+  }
+}

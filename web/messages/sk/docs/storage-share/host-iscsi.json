@@ -1,0 +1,123 @@
+{
+  "meta": {
+    "title": "Hostiteľ: Pridať iSCSI cieľ ako Proxmox skladovanie ProxMenux Dokumentácia",
+    "description": "Zaregistrujte cieľ iSCSI ako úložisko Proxmox pomocou ProxMenux. Handles open-iscsi install, portal discovery prostredníctvom sendtargets, target selection and pvesm add iscsi. Poskytuje surové blokovacie zariadenia pre obrazy disku VM.",
+    "ogTitle": "Hostiteľ: Pridať iSCSI cieľ ako Proxmox skladovanie ProxMenux Dokumentácia",
+    "ogDescription": "Registrovať iSCSI cieľ ako Proxmox skladovanie so sprievodcom objav. Použitie pvesm add iscsi a poskytuje surové blokové zariadenia pre VM disky."
+  },
+  "header": {
+    "title": "Host: Pridať iSCSI cieľ ako Proxmox úložisko",
+    "description": "Zaregistrujte iSCSI cieľ (z SAN, TrueNAS / FreeNAS, Synológia, Windows Server cieľ, akékoľvek pole, ktoré hovorí iSCSI) ako Proxmox úložisko. Exportované LUNs sa objavujú ako blokovacie zariadenia a môžu hostiť VM diskové snímky s takmer lokálnym výkonom v sieti.",
+    "section": "Úložisko a zdieľanie · hostiteľ"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "ProxMenux wraps <code>pvesm add iscsi</code> s riadeným tokom: v prípade potreby nainštaluje <code>open-iscsi</code> a požiada o portál iSCSI (IP:port), prevádzkuje <code>iscsiadm --mode discovery --type sendtargets</code> proti nemu, umožňuje vám vybrať cieľovú IQN, a zaregistrovať iSCSI úložisko v Proxmox. Služba <code>iscsid</code> potom udržuje iSCSI nažive cez reštarty."
+  },
+  "vocab": {
+    "heading": "slovná zásoba iSCSI (rýchlosť)",
+    "headerTerm": "Termín",
+    "headerMeaning": "Význam",
+    "rows": [
+      {
+        "term": "Portál",
+        "meaningRich": "• iSCSI koncový ukazovateľ služby na cieľovom serveri TCP prístav. Štandardný port je <code>3260</code>; ProxMenux predpokladá, že ak nešpecifikujete jeden."
+      },
+      {
+        "term": "Cieľ",
+        "meaningRich": "Jeden exportovaný \"server\" vnútri portálu, identifikovaný jeho IQN (<em>iSCSI Kvalifikovaný názov</em>). Jeden portál môže hostiť veľa cieľov."
+      },
+      {
+        "term": "IQN",
+        "meaningRich": "Kanonická forma je <code>iqn.YYYY-MM.reverse.domain:identifier</code>, napríklad <code>iqn.2024-08.com.truenas:proxmox-pool</code>. Cieľ aj iniciátor majú vlastné IQN."
+      },
+      {
+        "term": "LUN",
+        "meaningRich": "Blokovacie zariadenie vnútri cieľa (Logické číslo jednotky). Jeden cieľ môže odhaliť niekoľko LUNs; každý LUN sa objaví ako svoj vlastný disk v Proxmox a môže sa stať VM disk."
+      },
+      {
+        "term": "Iniciátor",
+        "meaningRich": "Klient, ktorý sa pripojí k cieľu, v tomto prípade, váš Proxmox hostiteľ. Iniciátor má vlastné IQN uložené v <code>/etc/iscsi/initiatorname.iscsi</code>. Ciele zvyčajne prijímajú iba sedenia od vopred schválených iniciátorov IQN."
+      }
+    ]
+  },
+  "opening": {
+    "heading": "Otvorenie nástroja",
+    "body": "Z hlavného menu ProxMenux, otvoriť <strong>Storage &amp; Share Manager → Pridať iSCSI Target ako Proxmox Storage</strong>. Uvidíte toto sub- menu so štyrmi možnosťami:",
+    "imageAlt": "iSCSI Host Manager menu"
+  },
+  "howRuns": {
+    "heading": "Ako beží skript (Pridať tok)",
+    "body": "Prietok má dve fázy s jasným oddelením medzi \"nastavením iniciátora, objavením cieľov\" a \"skutočne registráciou úložiska v Proxmoxe.\" Na rozdiel od NFS / Samba, nie je tam žiadny auto-objavenie na podsieteiSCSI nie je príjemný k vysielaniu)."
+  },
+  "add": {
+    "heading": "Pridať iSCSI target ako Proxmox úložisko",
+    "items": [
+      "<strong>Zápis na portáli</strong> Typ IP alebo názov hostiteľa iSCSI cieľový server. Prístav <code>3260</code> predpokladá sa, ak nenapíšete <code>host:port</code>.",
+      "<strong>Cieľový objav</strong> — ProxMenux hovory <code>iscsiadm --mode discovery --type sendtargets --portal &lt;ip:port&gt;</code>. Server reaguje s každou IQN umožňuje tomuto iniciátorovi vidieť. Ak objav zlyhá, skript zobrazí presnú chybu z <code>iscsiadm</code> a uvádza bežné príčiny (nesprávne IP, firewall, iniciátor IQN nie je povolený).",
+      "<strong>0Target selection</strong>",
+      "<strong>ID skladu</strong> Predvolená hodnota <code>iscsi-&lt;last IQN segment, 20 chars max&gt;</code>. Iba písmená, číslice, <code>-</code> a <code>_</code>.",
+      "<strong>Typ obsahu</strong> Na rozdiel od NFS / Samba, iSCSI obsah je <strong>nastavený na <code>images</code></strong>. iSCSI odhaľuje surové blokovacie zariadenia, nie súborový systém, takže Proxmox vám umožňuje iba hostiť VM na diskoch."
+    ],
+    "authTitle": "Povoľte iniciátora Proxmox na cieľ",
+    "authBody1": "Pred Pridať tok funguje end-to-end, iSCSI cieľ musí poznať váš Proxmox hostiteľ. Získajte iniciátor IQN:",
+    "authBody2": "Potom pridať, že IQN do zoznamu cieľového prístupu (v TrueNAS: <em>Zdieľanie → Blok → Iniciátorské skupiny</em>; v synológii: <em>SAN Správca → iSCSI → Cieľ → Upraviť → Iniciátori</em>; atď.). Ak iniciátor nie je povolený, <code>iscsiadm</code> Objav vracia prázdny zoznam alebo autentifikáciu chyby."
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent",
+    "body": "Celý tok máp týchto príkazov:"
+  },
+  "view": {
+    "heading": "Zobraziť konfigurované pamäte iSCSI",
+    "body": "Zobrazí každú položku iSCSI v Proxmoxe (<code>pvesm status | awk ''$2 == \"iscsi\"''</code>) s portálom, cieľovou IQN, typom obsahu a živým stavom."
+  },
+  "remove": {
+    "heading": "Odstrániť pamäť iSCSI",
+    "body": "Spustí <code>pvesm remove &lt;storage-id&gt;</code> po potvrdení portálu, cieľa a obsahu. Iba registrácia Proxmox je odstránená <strong>the iSCSI cieľ sám o sebe nie je dotkol</strong> a existujúce sedenia na strane jadra môže zostať až do ďalšej reštart.",
+    "warnTitle": "Existujúce VM disky na tomto iSCSI prvý",
+    "warnBody": "Odstránenie pamäte iSCSI, zatiaľ čo VMs majú stále disky na ňom opúšťajú VM ukazuje na zmiznutý obchod. Proxmox bude označiť chybu, ale LUN dáta sú nedotknuté na cieľ Napriek tomu, presunúť alebo zálohovať VMs najprv byť v bezpečí."
+  },
+  "test": {
+    "heading": "Test iSCSI konektivita",
+    "body": "Spúšťa diagnostický preukaz: kontroluje, že <code>iscsiadm</code> je nainštalovaný, vytlačí IQN váš iniciátor, potvrdzuje <code>iscsid</code> beží, sleduje každý registrovaný portál, sonduje svoj port a podáva správy <code>pvesm status</code> plus, či iSCSI relácia je momentálne aktívna (<code>iscsiadm --mode session</code>). Aktívne sedenie plus dosiahnuteľný portál, ale \"neaktívne\" v Proxmox zvyčajne znamená stav stale <code>pvesm set &lt;id&gt; --disable 0</code>."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "portalTitle": "\"Nedostať sa k portálu,\" ale server IP reaguje inde",
+    "portalBody": "Ping zlyhal na adrese portálu. Skontrolujte, či ste dosiahli <em>0storage sieť</em> rozhranie (iSCSI často žije na samostatnej VLAN / subnet zo siete manažmentu). Tiež overiť DNS, ak ste zadali meno hostiteľa.",
+    "discoverTitle": "\"iSCSI objav zlyhal\" z iscsiadm",
+    "discoverIntro": "Skript ukazuje presnú chybu. Najčastejšie príčiny:",
+    "discoverItems": [
+      "Portál IP / port zle (dvojitá kontrola, predvolená je 3260).",
+      "Služba iSCSI nebeží na cieľovom serveri.",
+      "Firewall blokuje 3260 medzi Proxmox a cieľ.",
+      "<strong>Initiátor IQN nie je povolený na cieľ.</strong> Najčastejšou príčinou na podnikových poliach. Pridajte svoj Proxmox IQN k iniciátorovi cieľa ACL prvý."
+    ],
+    "noTargetTitle": "Neboli nájdené žiadne ciele, ale objav bol úspešný",
+    "noTargetBody": "Server prijal vášho iniciátora, ale nevystavuje mu žiadny cieľ. Review the target's autentifikation / access controls",
+    "noLunTitle": "LUNs sa po registrácii v /dev/disk/by-path neobjavujú",
+    "noLunBody": "<code>pvesm add iscsi</code> podarilo, ale jadro nie je vidieť blok zariadenia. Skontrolovať <code>iscsiadm --mode session</code> Ak nie je relácia aktívna, spustite jeden ručne <code>iscsiadm --mode node --login</code>. Ak relácia existuje, ale žiadne LUNs sa objaví, vynútiť rescan: <code>iscsiadm --mode session --rescan</code>. Ak stále nič, cieľ pravdepodobne nemá žiadne LUNs priradené k tejto IQN ešte (konfigurácia LUN mapovanie na cieľ).",
+    "chapTitle": "Autentifikácia CHAP",
+    "chapBody": "ProxMenux nevystavuje používateľské meno/heslá CHAP v interaktívnom toku. Ak váš cieľ vyžaduje CHAP, zaregistrujte sa najskôr s ProxMenux (objav s CHAP môže zlyhať, ale <code>pvesm add</code> bude stále napísať položku), potom pridajte údaje ručne: <code>pvesm set &lt;id&gt; --username &lt;chap-user&gt;</code> a upraviť <code>/etc/iscsi/iscsid.conf</code> heslom, potom <code>systemctl restart iscsid</code>. Toto je medzera v aktuálnom skripte, ktorý je zdokumentovaný tu, takže viete, čo robiť."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/storage-share/host-nfs",
+        "label": "Podiel NFS ako úložisko Proxmox",
+        "tail": " — Jednoduchšie nastavenie, flexibilnejšie (zálohovanie / ISO / tmpl / obrázky), mierne pomalšie pre živé VM disky."
+      },
+      {
+        "href": "/docs/storage-share/host-samba",
+        "label": "Samba / CIFS ako Proxmox skladovanie",
+        "tail": " Ďalšie možnosti na úrovni súboru; vyhnúť sa pre live VM disky kvôli zamykaniu sémantiky."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "label": "Pridať lokálny disk ako Proxmox úložisko",
+        "tail": " — Keď je disk lokálne pre Proxmox hostiteľa, nie na inom boxe cez sieť."
+      }
+    ]
+  }
+}

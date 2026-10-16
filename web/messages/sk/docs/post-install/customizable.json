@@ -1,0 +1,106 @@
+{
+  "meta": {
+    "title": "Prispôsobiteľný post-inštalačný skript ProxMenux Dokumentácia",
+    "description": "Čerešňový výber, ktorý optimalizuje aplikáciu na Proxmox VE hostiteľa s ProxMenux. 10 kategórie, ~35 jednotlivé nástroje, kontrolný zoznam UI. Zahŕňa všetko, čo Automatizovaný skript robí, plus opt-in funkcie (IOMMU, Fastfetch, Figurine, Ceph, HA, AMD opravy...).",
+    "ogTitle": "Prispôsobiteľný post-inštalačný skript ProxMenux Dokumentácia",
+    "ogDescription": "Kategórie 10, ~35 individuálna optimalizácia. Vyberte si presne to, čo chcete na Proxmox VE hostiteľa. Zaznamenávajú sa reverzibilné zmeny."
+  },
+  "header": {
+    "title": "Prispôsobiteľný post-inštalačný skript",
+    "description": "Čerešňový kick presne, ktoré optimalizácie aplikovať na Proxmox VE hostiteľa. ProxMenux skupiny ~35 jednotlivé nástroje do kategórií 10, každá s vlastným kontrolným dialógom. Rovnaký motor ako Automatizovaný, ale s plnou kontrolou nad tým, čo sa použije.",
+    "section": "Post-Install · Prispôsobiteľné"
+  },
+  "intro": {
+    "title": "Kedy vybrať prispôsobiteľné",
+    "body": "Vyberte si túto cestu, keď už viete, ktoré vylepšenia chcete na hostiteľa, alebo ktoré rozhodne nechcete. Skript predstavuje kontrolný zoznam pre každú kategóriu, takže môžete vopred vybrať, zrušiť alebo zmiešať optimalizáciu. Položky môžu byť použité opäť neskôr a reverzibilné zmeny konfigurácie sú sledované pre <link>Uninstall Optimizations</link>. Aktualizácie balíkov nie sú prezentované ako reverzibilné."
+  },
+  "compare": {
+    "heading": "Ako sa porovnáva s Automatizovaným",
+    "body": "Prispôsobiteľné je superset <link>0Automatizovaného skriptu</link>. Zahŕňa tie isté základné optimalizácie 14 plus dlhý zoznam opt-in, ktoré automaticky zámerne preskočia veci, ktoré sú užitočné len na konkrétnom hardvéri (AMD opravy), konkrétnom hosting (OVH RTM), alebo špecifické pracovné zaťaženie (IOMMU/VFIO, Ceph repo, vysoká dostupnosť, Fastfetch, Figurine, ZFS ARC tuning, pizz, ZFS auto-snapshot, vzdump rýchlostné limity, Open vSwitch, TCP BBR...)."
+  },
+  "categoriesSection": {
+    "heading": "Kategórie 10",
+    "body": "Prispôsobiteľné skupiny skriptov optimalizuje do kategórií 10. Každá kategória má svoj vlastný kontrolný dialóg a svoju vlastnú dokumentačnú stránku"
+  },
+  "categories": [
+    {
+      "name": "Základné nastavenia",
+      "description": "Očistite APT zdroje, spustite oficiálnu aktualizáciu Proxmoxu a nastavte časovú zónu, locale a spoločné siete. Východisková hodnota každej inej skupiny je na vrchole."
+    },
+    {
+      "name": "Systém",
+      "description": "Nalaďte subsystém log a limity jadra pre hostiteľa, ktorý nesie mnoho VM a kontajnery. Obálky časopis, logrotát, sysctl (pamäť, limity súborov), správanie jadra paniky a rýchle reštarty."
+    },
+    {
+      "name": "Virtualizácia",
+      "description": "Pripravte hostiteľa na pokročilú virtualizáciu. Automaticky nainštaluje hosťujúceho agenta na šablóny a umožňuje IOMMU/VFIO pre PCI priechod GPU, regulátorov a TPU."
+    },
+    {
+      "name": "Sieť",
+      "description": "Harden a naladiť sieť hostiteľa. Sily APT nad IPv4, používa sysctl kalenie + TCP pufra ladenie, ponúka Open vSwitch, TCP BBR + TCP Fast Open, a kolíky trvalé názvy rozhraní podľa MAC."
+    },
+    {
+      "name": "Skladovanie",
+      "description": "Nastaviť Proxmox spoločné pamäťové podsystémy: ZFS ARC size, ZFS auto-snapshot, ZFS autotrim pre SSD/NVMe bazény, a vzdump rýchlostné limity, aby sa zabránilo nasýtenie disku počas záloh."
+    },
+    {
+      "name": "Zabezpečenie",
+      "description": "Znížte útočný povrch štandardne vystavený. Zakáže služby RPC (portmapper/rpcbind), ktoré Proxmox nepotrebuje, ale zanecháva počúvanie."
+    },
+    {
+      "name": "Prispôsobenie",
+      "description": "Zmeniť vizuálny a shell zážitok hostiteľa: farby a prezývky v bashrc, MOTD banner a odstránenie predplatného oznámenia vo webovom UI."
+    },
+    {
+      "name": "Monitorovanie",
+      "description": "Integrovať hostiteľa s OVH Real-Time Monitoring. Objaví sa iba vtedy, keď ProxMenux detekuje OVH server."
+    },
+    {
+      "name": "Výkon",
+      "description": "Urýchliť kompresné operácie (zálohy, transfery) nahradením gzipu paralelným náprotivkom prasce."
+    },
+    {
+      "name": "Voliteľné",
+      "description": "Niche kúsky nie každý hostiteľ potrebuje: AMD CPU opravy, Fastfetch banner, Figurine 3D hostname, PVE Appliance Manager index recovery, Ceph úložisko, služby s vysokou dostupnosťou, log2RAM na zníženie opotrebenia SSD a swapový profil ZRAM."
+    }
+  ],
+  "mixTip": {
+    "title": "Zmiešajte automatizované a prispôsobiteľné",
+    "body": "Spoločný vzor: beh <strong>Automatizované</strong> najprv zamknúť v rozumnej základnej čiare, potom otvoriť <strong>Prispôsobiteľné</strong> a vybrať iba opt-in nástroje, na ktorých vám záleží (napríklad IOMMU na hostiteľa, ktorý bude robiť GPU priesmyk). Zmeny sú sledované nezávisle; menu Odinštalovať ukazuje všetko, čo ste použili bez ohľadu na to, ktorá cesta ju pridala."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Automatizované po inštalácii",
+        "href": "/docs/post-install/automated",
+        "tail": " — "
+      },
+      {
+        "label": "Odinštalovať optimalizácie",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — Akýkoľvek výber je čistý."
+      },
+      {
+        "label": "Základné nastavenia",
+        "href": "/docs/post-install/basic-settings",
+        "tail": " — Repoobchody, čas, jazyk, služby."
+      },
+      {
+        "label": "Virtualizácia",
+        "href": "/docs/post-install/virtualization",
+        "tail": " — "
+      },
+      {
+        "label": "Zabezpečenie",
+        "href": "/docs/post-install/security",
+        "tailRich": " · <storageLink>Storage</storageLink> · <networkLink>Network</networkLink> · <customLink>Customization</customLink>"
+      },
+      {
+        "label": "Prehľad po inštalácii",
+        "href": "/docs/post-install",
+        "tail": "."
+      }
+    ]
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "Backup destinations Proxmox Backup Server, Borg ProxMenux",
+    "description": "Tri úložné backendy dostávajú rovnaký ProxMenux zálohovací užitočné zaťaženie: miestny .tar.zst archív na akomkoľvek napísanom súborovom systéme, zálohu PBS v obchode s údajmi Proxmox Backup Server alebo archív Borg v miestnom alebo vzdialenom úložisku Borg. Každý backend má svoje vlastné kompresie, deduplikácie, šifrovanie a sieťové charakteristiky.",
+    "ogTitle": "ProxMenux Zálohovacie miesta",
+    "ogDescription": "Miestne, Proxmox Backup Server a Borg",
+    "twitterTitle": "ProxMenux Zálohovacie miesta ProxMenux",
+    "twitterDescription": "Miestny archív, Proxmox Backup Server a Borg backendy pre zálohovanie hostiteľov."
+  },
+  "header": {
+    "title": "Ciele",
+    "description": "Tri úložné zálohy podporované ProxMenux Zálohovanie: miestny archív, Proxmox Backup Server (odporúčané) a Borg. Každý dostane rovnaký archív s tromi výplatami; líšia sa vo formáte úložiska, deduplikácii, šifrovacom modeli a sieťových požiadavkách.",
+    "section": "Záloha a obnova"
+  },
+  "intro": {
+    "title": "Rovnaké zaťaženie, tri backendy",
+    "body": "Každá záloha produkuje rovnaké tri užitočné zaťaženie (koreň, manifest, aplikácie). Čo sa mení medzi miestami určenia, je spôsob, akým sa tieto užitočné zaťaženie skladuje a ako ich prevádzkovateľ získa na obnovenie. Každý backend je implementovaný ako samostatná funkcia v <code>backup_host.sh</code> — <code>_bk_local</code>, <code>_bk_pbs</code>, <code>_bk_borg</code> Ale všetky štyri zdieľajú rovnaký krok inscenácie (<code>hb_prepare_staging</code>) a rovnakú cestu obnoviť kód. Výber destinácie ovplyvňuje iba zápis a vyhľadávanie; nemení to, čo reštaurácia robí alebo ako konzumuje archív."
+  },
+  "comparison": {
+    "heading": "Porovnanie prvkov",
+    "intro": "Nasledujúca tabuľka uvádza konkrétne rozdiely medzi tromi backendmi, ako sa správajú v ProxMenux dnes. Všetky hodnoty opisujú pozorované správanie samotného backendu, nie redakčné odporúčania.",
+    "rows": [
+      {
+        "feature": "Formát úložiska",
+        "local": "Jeden súbor <code>.tar.zst</code> (alebo <code>.tar.gz</code>, ak <code>zstd</code> chýba).",
+        "pbs": "Zálohovanie PBS (<code>.pxar</code> kusy v datastore).",
+        "borg": "Borg archív vnútri úložiska Borg (segment súbory)."
+      },
+      {
+        "feature": "Kompresia",
+        "local": "zstd (štandardná úroveň) cez <code>tar --zstd</code>. gzip fallback.",
+        "pbs": "PBS-managed. Klient streams uncompressed; server bloky + obklady.",
+        "borg": "Borgov vstavaný (lz4 default). Konfigurovateľné v repo iniciáli."
+      },
+      {
+        "feature": "Deduplikácia",
+        "local": "Žiadne. Každá záloha je úplne nezávislý archív.",
+        "pbs": "Úplná deduplikácia na všetkých zálohách v datastore.",
+        "borg": "Úplná deduplikácia v archíve."
+      },
+      {
+        "feature": "Šifrovanie v pokoji",
+        "local": "Žiadne (podliehajú ochrane súborového systému).",
+        "pbs": "Voliteľné šifrovanie súboru kľúča na strane klienta. Po povolení sa súbor na obnovu nahrá ako samostatná skupina záloh.",
+        "borg": "Voliteľné šifrovanie repokey (kľúč uložený v repo, odomknutý heslom)."
+      },
+      {
+        "feature": "Zachovanie / prerezávanie",
+        "local": "Aplikované na plánovanú prácu cez <code>KEEP_LAST</code>. Staré archívy (a ich postranné vozíky + guľatiny bežcov) sa symetricky vypúšťajú. Interaktívne zálohy neprerezávajú.",
+        "pbs": "Aplikované na plánovanú prácu cez <code>proxmox-backup-client prune --keep-last / --keep-daily / --keep-weekly</code>. Interaktívne zálohy neprerezávajú.",
+        "borg": "Aplikované na plánovanú prácu cez <code>borg prune --keep-last / --keep-daily / --keep-weekly</code>. Interaktívne zálohy neprerezávajú."
+      },
+      {
+        "feature": "Sieť",
+        "local": "Žiadne. Píše do lokálneho bodu pripojenia (obvykle interný disk alebo USB disk).",
+        "pbs": "TCP na server PBS (default port 8007). Požaduje údaje PBS + odtlačky prstov.",
+        "borg": "Lokálna cesta súborového systému alebo tunel SSH k vzdialenému Borg hostiteľovi."
+      },
+      {
+        "feature": "Závislosti",
+        "local": "<code>tar</code>, <code>zstd</code> (predvolene prítomné na Proxmoxe).",
+        "pbs": "<code>proxmox-backup-client</code> balíček (zabalený s Proxmox VE 8+).",
+        "borg": "Binárny <code>borg</code>. Automatické poskytovanie ProxMenux z balíka Monitor AppImage v prípade, že chýba."
+      },
+      {
+        "feature": "Obnoviť prístup",
+        "local": "Akýkoľvek hostiteľ s tar+zstd môže extrahovať archív. Nie je potrebné PBS/Borg.",
+        "pbs": "Požaduje údaje <code>proxmox-backup-client</code> + PBS + súbor kľúčov (ak je zašifrovaný).",
+        "borg": "Vyžaduje <code>borg</code> + cestu k úložisku + heslo (ak je zašifrované)."
+      }
+    ],
+    "captionCode": "feature",
+    "captionLocal": "Lokálne",
+    "captionPbs": "Proxmox Backup Server (odporúčané)",
+    "captionBorg": "Borg"
+  },
+  "sameArchive": {
+    "heading": "Rozloženie archívu sa nemení s destináciou",
+    "body": "V rámci ktorejkoľvek z troch destinácií, rovnaké <code>rootfs/</code> + <code>metadata/</code> + <code>manifest.json</code> rozloženie popísané v <em>Ako to funguje</em> je prítomný. A <code>.tar.zst</code> extrahovaný z miestneho archívu, <code>.pxar</code> obnovený z PBS a Borg archív extrahovaný s <code>borg extract</code> všetky produkujú rovnaký adresár strom. Cesta k obnovenému kódu (<code>_rs_check_layout</code>, <code>_rs_apply</code>, <code>_rs_prepare_pending_restore</code>) je rovnaká ako tri užitočné zaťaženie bez toho, aby sa vedelo, z ktorého miesta pochádzajú."
+  },
+  "extractStandalone": {
+    "heading": "Ťahanie zálohy mimo ProxMenux",
+    "intro": "Akýkoľvek z troch formátov archívu je možné čítať pomocou štandardných nástrojov bez nainštalovaného ProxMenux na počítači. Nižšie uvedené príkazy vytvárajú rovnaký adresárový strom, ktorý reštaurácia spotrebuje interne.",
+    "localCmd": "# From a local .tar.zst archive:\ntar --zstd -xf hostcfg-HOST-TIMESTAMP.tar.zst\n\n# From a .tar.gz fallback:\ntar -xzf hostcfg-HOST-TIMESTAMP.tar.gz",
+    "pbsCmd": "# From a PBS backup (requires proxmox-backup-client):\nproxmox-backup-client restore \\\n    --repository USER@REALM@HOST:DATASTORE \\\n    host/hostcfg-HOST/BACKUP-TIME \\\n    hostcfg.pxar /tmp/hostcfg\n\n# Add --keyfile KEY-PATH when the backup is encrypted.",
+    "borgCmd": "# Z archívu Borg (vyžaduje Borg binárny + heslo pre šifrované repo):\nextrakt z borgu REPO-PATH:::ARCHIVE-NAM\n\n# On a remote SSH-served repo:\nextrakt z borgu ssh://USER@HOST:PORT/REPO-PATH::ARCHIVE-NAME",
+    "note": "Extrahovaný strom môže byť potom skontrolovaný ručne alebo kŕmený na manuálne obnovenie. Pozrite si jednotlivé cieľové stránky pre presný tok vyhľadávania ProxMenux používa pod kapotou."
+  },
+  "whereNext": {
+    "heading": "Údaj o mieste určenia",
+    "intro": "Každá destinácia má svoju vlastnú stránku pokrývajúcu konfiguračný tok, formát on-disku a príkaz na vyhľadávanie použitý pri obnove.",
+    "items": [
+      {
+        "label": "Lokálny archív",
+        "href": "/docs/backup-restore/destinations/local",
+        "tail": " Pre-konfigurácia miestneho cieľa, USB pohon montáž, bezpečnostná kontrola proti písaniu archívu do seba, sidecar JSON ktorý umožní monitoru identifikovať súbor."
+      },
+      {
+        "label": "Proxmox Backup Server (odporúčané)",
+        "href": "/docs/backup-restore/destinations/pbs",
+        "tail": " Nahrávanie blobu recovery PBS na rekuperáciu čerstvých inštalácií."
+      },
+      {
+        "label": "Borg",
+        "href": "/docs/backup-restore/destinations/borg",
+        "tail": " - miestne vs. SSH-served archívy, Borg binárne zdroje (systém / vyrovnávacia pamäť / Monitor) AppImage zväzok / GitHub sťahovanie), inicializácia úložiska, spracovanie passfráz, SSH nastavenie kľúča pre vzdialené repo obchody."
+      }
+    ]
+  }
+}

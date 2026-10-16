@@ -1,0 +1,136 @@
+{
+  "meta": {
+    "title": "Nástroje na monitorovanie života ProxMenux Dokumentácia",
+    "description": "Tri interaktívne sieťové monitorovacie spúšťače: ak je to možné (šírka pásma v reálnom čase na pár hostiteľov), iptraf-ng (viacrežimový dopravný monitor) a iperf3 (test šírky pásma, server / klient). Každý je nainštalovaný na prvé použitie.",
+    "ogTitle": "Nástroje na monitorovanie života ProxMenux Dokumentácia",
+    "ogDescription": "Interaktívne monitorovanie siete a testovanie šírky pásma pre Proxmox host: iftop, iptraf-ng, iperf3."
+  },
+  "header": {
+    "title": "Živé monitorovacie nástroje",
+    "description": "Tri interaktívne spúšťače pre pozorovanie a meranie šírky pásma siete v reálnom čase: iftop, iptraf-ng a iperf3. Každý nástroj je automaticky nainštalovaný z apt pri prvom použití, beží v popredí, a je ukončená s dokumentovaným stlačením klávesu. Read-iba proti konfigurácii hostiteľa",
+    "section": "Sieť"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "Tri interaktívne monitorovacie nástroje, každý za vlastným vstupom do menu. Pri prvom spustení jedného sa balík inštaluje ticho cez <code>apt-get</code>. Následné štarty začínajú okamžite. Žiadny z týchto nástrojov nemení konfiguráciu hostiteľskej siete."
+  },
+  "when": {
+    "heading": "Kedy použiť ktorý",
+    "headerQuestion": "Otázka",
+    "headerUse": "Použitie",
+    "rows": [
+      {
+        "question": "Kto nasýti odkaz <em>0right teraz</em>?",
+        "use": "iftop"
+      },
+      {
+        "question": "Aké členenie protokolu / veľkosti paketov / toky TCP prúdia?",
+        "use": "iptraf-ng"
+      },
+      {
+        "question": "Koľko šírky pásma je skutočne k dispozícii medzi dvoma hostiteľmi?",
+        "use": "iperf3"
+      }
+    ]
+  },
+  "iftop": {
+    "heading": "Sieťová prevádzka v reálnom čase (iftop)",
+    "body": "Živá šírka pásma na pár hostiteľov (source ↔ destination) <code>top</code> pre dopravu. Zobrazí najťažšie prúdy na vrchole, s rolovanie 2/10/40- Druhé priemery. Najlepší nástroj na otázku <em>\"Prečo je moje spojenie nasýtené?\"</em>.",
+    "exit": "<strong>0 Exit:</strong> stlačte <kbd>q</kbd>. ProxMenux pred spustením zobrazí úvodný dialóg.",
+    "keysTitle": "Užitočné kľúče vnútri iftop",
+    "keysBody": "<kbd>n</kbd>0 prepnúť DNS vyhľadávanie, <kbd>p</kbd> Zobraziť čísla portov, <kbd>P</kbd> pauza displej, <kbd>t</kbd> prepnúť smer linky (poslané / prijaté / oboje), <kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd> triediť podľa 2s / 10s / 40s priemer. <code>man iftop</code> pre celú sadu."
+  },
+  "iptraf": {
+    "heading": "Nástroj na sledovanie siete (iptraf-ng)",
+    "intro": "Menu poháňané viacrežimovým dopravným monitorom. Kde ak je to možné, odpovede <em>\"kto\"</em>, iptraf-ng odpovede <em>\"čo\"</em>: na-protocol byte/paket počíta, TCP sledovanie stavu pripojenia, histogramy veľkosti paketov a na-station LAN aktivitu.",
+    "menuIntro": "Pri spustení dostanete ponuku piatich možností:",
+    "headerMode": "Režim",
+    "headerUseFor": "Použiť pre",
+    "rows": [
+      {
+        "mode": "Monitor prevádzky IP",
+        "useFor": "Live TCP0 / UDP / ICMP / other-IP flow list with bajte counters and connection state"
+      },
+      {
+        "mode": "Štatistiky všeobecného rozhrania",
+        "useFor": "Agregát IPv4 / IPv6 / TCP0 / UDP / ICMP / neIP paket počíta na NIC"
+      },
+      {
+        "mode": "Podrobné štatistiky rozhrania",
+        "useFor": "Rovnaké ako vyššie, ale pre jedno rozhranie, s veľkosťou paketov a podrobnosti o rýchlosti"
+      },
+      {
+        "mode": "Štatistické členenia",
+        "useFor": "Distribučný histogram veľkosti balenia podľa TCP / UDP port"
+      },
+      {
+        "mode": "Monitor stanice LAN",
+        "useFor": "Per-MAC dopravné štatistiky pre miestne vysielacie domény"
+      }
+    ],
+    "exit": "<strong>0 Exit:</strong> stlačte <kbd>x</kbd> z ľubovoľného pohľadu (alebo <kbd>Q</kbd> z hlavného menu). ProxMenux zobrazí pred spustením úvodný dialóg.",
+    "logTitle": "Zachytávanie záznamu do súboru",
+    "logBody": "Každý režim ponúka logovať zachytené štatistiky <code>/var/log/iptraf-ng/</code>. Užitočné, ak budete potrebovať záznam o dopravnej špice"
+  },
+  "iperf3": {
+    "heading": "Test priepustnosti (iperf3)",
+    "intro1": "Meria skutočnú TCP priepustnosť medzi dvoma hostiteľmi. Na rozdiel od iftop / iptraf-ng (ktoré pozorujú existujúcu prevádzku), iperf3 generuje syntetickú prevádzku na stres-testovať odkaz. Nevyhnutné pre odpovede na otázky, ako je <em>\"je môj 10 GbE v skutočnosti robí 10 GbE?\"</em> alebo <em>\"je prekážkou NIC, prepínač, alebo úložisko?\"</em>.",
+    "intro2": "iperf3 is a <strong>two-host tool</strong>: one side runs as server (listens on TCP port 5201), the other runs as client (connects, sends data, prints the rate). The ProxMenux launcher asks which mode you want:",
+    "headerMode": "Režim",
+    "headerBehaviour": "Správanie",
+    "headerCli": "Ekvivalentný CLI",
+    "rows": [
+      {
+        "mode": "Server",
+        "behaviour": "Počúvajte na TCP 5201 a výsledky tlače pre každý prichádzajúci test. Zastaví sa Ctrl+C.",
+        "cli": "iperf3 -s"
+      },
+      {
+        "mode": "Klient",
+        "behaviour": "Asks for the server IP / hostname, connects, spustí predvolený 10-sekundový test a vytlačí správu.",
+        "cli": "iperf3 -c <target>"
+      }
+    ],
+    "workflowIntro": "Typický pracovný postup na testovanie 10 GbE spojenia medzi dvoma hostiteľmi Proxmox:",
+    "workflow": [
+      "Na hostiteľovi A otvorte sieťové menu → <em> Test šírky (iperf3)</em> → vyberte <strong>Server</strong>.",
+      "Na hostiteľovi B otvorte rovnaký vstup do menu → vyberte <strong>0Client</strong> → zadajte IP hostiteľa A.",
+      "Počkajte 10 sekúnd. Porovnajte vykazovanú mieru s teoretickým maximom spojenia."
+    ],
+    "sample": "Vzorový výstup klienta:",
+    "flagsTitle": "Užitočné manuálne vlajky (bež z ulity)",
+    "flagsBody": "<code>-t 60</code> dlhší test (60s namiesto predvolených 10s), <code>-P 4</code> 4 paralelné prúdy (nasýtené rýchlejšie), <code>-R</code> spätný smer (server → klient), <code>-u -b 100M</code> UDP test pri 100 Mbit/s (pre meranie strát zo strmhlava / paketu), <code>-p 5202</code> použiť iný port (viacnásobné testy paralelne). <code>man iperf3</code> pre celú sadu.",
+    "firewallTitle": "Otvoriť firewall port na serveri",
+    "firewallBody": "Server počúva na TCP <strong>5201</strong> automaticky. Ak spustíte server vo vnútri Proxmox hostiteľa s prísnym firewall (datacentrum alebo úroveň hostiteľa), povoliť vstup TCP 5201 z IP klienta po dobu trvania testu, potom ho znova zavrite. To isté platí pre: <code>nftables</code> / <code>iptables</code> na holých hostiteľoch."
+  },
+  "install": {
+    "heading": "Prvé spustenie nainštaluje balík",
+    "body": "Všetky tri odpaľovače skontrolovať binárne a spustiť <code>apt-get update -qq &amp;&amp; apt-get install -y &lt;pkg&gt;</code> ak chýba. Inštalácia je tichá: menu sa môže zobraziť zamrznuté 10–30 Sekundy po prvýkrát. Následné štarty začínajú okamžite."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "hangTitle": "Inštalácia visí navždy pri prvom spustení",
+    "hangBody": "Hostiteľ nemá internet alebo apt repo sú nedosiahnuteľné. Zrušiť pomocou <kbd>Ctrl</kbd>+<kbd>C</kbd>, spustiť <code>apt-get update</code> ručne vidieť skutočnú chybu (DNS, repo podpis, proxy ...), potom sa vrátiť do menu.",
+    "refusedTitle": "iperf3 client: \"unable to connect to server: Connection refused\"",
+    "refusedBody": "Buď server nebeží, alebo jeho firewall bloky TCP 5201. Potvrďte na serveri: <code>ss -tlnp | grep 5201</code> Mal by ukázať iperf3 počúvanie. Ak počúvanie, ale klient stále zlyhá, skontrolujte cestu firewallu medzi dvoma hostiteľmi.",
+    "slowTitle": "iperf3 reports way less than the expected link speed",
+    "slowBody": "Bežné príčiny, v poradí pravdepodobnosti: (1) jeden z hostiteľov je preťažený CPU Skúste. <code>iperf3 -c &lt;target&gt; -P 4</code> na použitie viacerých jadier; (2) cesta prechádza pomalším spojením (gigabitový spínač uprostred dvoch 10 GbE NIC); (3Kontrola nesúladu s MTU <code>ip link show</code> na oboch koncoch; (4) NIC offloading zdravotne postihnutých <em>Zakázať vylodenie NIC</em> Community skript, ak máte kartu Intel e1000e.",
+    "noTrafficTitle": "iftop / iptraf-ng nevykazujú žiadnu prevádzku pre rušného hostiteľa",
+    "noTrafficBody": "Štandardné zachytenie je na prvom detekovanom rozhraní. Špecifikujte ten správny explicitne zo shellu: <code>iftop -i vmbr0</code> alebo <code>iptraf-ng -i vmbr0</code>. Spúšťač menu používa predvolené; pre predvolené rozhrania beží z konzoly."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Diagnostika",
+        "href": "/docs/network/diagnostics",
+        "tail": " — "
+      },
+      {
+        "label": "Analýza a oprava mosta",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — Keď monitorovanie odhalí rozhranie alebo most nerobí to, čo by malo."
+      }
+    ]
+  }
+}

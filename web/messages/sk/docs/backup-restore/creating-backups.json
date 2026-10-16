@@ -1,0 +1,220 @@
+{
+  "meta": {
+    "title": "Vytváranie zálohovanie interaktívny záložný tok ProxMenux",
+    "description": "Interaktívny záložný tok v ProxMenux. Dva vstupné body (skripty TUI menu a monitor Web UI), tri destinácie, dva režimy profilu, jeden krok inscenácie a jeden dialóg s potvrdením. Dokumenty šesť-možnosť matrix, predvolené a vlastné profily, a čo užívateľ vidí medzi výberom zálohy a pristátie archívu na mieste určenia.",
+    "ogTitle": "ProxMenux Zálohovanie",
+    "ogDescription": "Interaktívny záložný tok s tromi destináciami, dvoma profilmi a spoločným inscenačným krokom.",
+    "twitterTitle": "Vytváranie záloh ProxMenux",
+    "twitterDescription": "Interaktívny záložný tok s tromi destináciami a dvoma režimami profilu."
+  },
+  "header": {
+    "title": "Vytváranie záloh",
+    "description": "Interaktívny záložný tok: vyberte cieľ a profil, preskúmajte zhrnutie potvrdenia, sledujte archívny pozemok. Dva vstupné body zdieľajú rovnaký backend a produkujú rovnaké archívy.",
+    "section": "Záloha a obnova"
+  },
+  "intro": {
+    "title": "Dva vstupné body, rovnaká funkčnosť",
+    "body": "Skripty TUI a monitor web UI odhalenie <strong>presne rovnaké funkcie</strong>. Každá záloha matrix (tri miesta určenia × dva profily) a odvoláva sa na rovnakú funkciu backend na bunku (<code>_bk_pbs</code>, <code>_bk_borg</code> alebo <code>_bk_local</code>). Archív vytvorený z jedného vstupného miesta je nerozoznateľný. Ktoré použiť je otázka preferencie: TUI je SSH-priateľský a skriptovateľný; Monitor ponúka point-a-click a žije spolu s notifikáciou a log tail pohľady."
+  },
+  "entryPoints": {
+    "heading": "Dva vstupné body",
+    "rows": [
+      {
+        "entry": "ProxMenux Scripts (TUI)",
+        "path": "menu → Utilities → Host Config Backup",
+        "detail": "Dialógový tok, SSH-priateľský. Hlavné menu predstavuje šesť možností priamo. Používa <code>backup_menu</code> v <code>backup_host.sh</code>."
+      },
+      {
+        "entry": "ProxMenux Monitor (webové rozhranie)",
+        "path": "Backups tab → Create backup",
+        "detail": "Sprievodca-štýl prúdenie. Rovnakých šesť možností prezentované ako dvojstupňový formulár (určenie → profil). Rovnaké backend funkcie sú vyvolané cez Flask API."
+      }
+    ]
+  },
+  "modes": {
+    "heading": "Manuálne vs plánované zálohy",
+    "body": "Zálohy možno vyrábať v dvoch režimoch: <strong>manuálne</strong> (interaktívna tok tejto stránky dokumenty . Užívateľ vyberie cieľ a profil z menu a sleduje archív pozemkov) alebo <strong>naplánované</strong> (nedodržaná práca, ktorá beží na časovači v štýle kronu a uplatňuje retenčný konfigurovaný na prácu). Oba režimy podporujú rovnaké tri destinácie a rovnaké dva profily, a oba sú k dispozícii z oboch vstupných bodov Plánované úlohy používajú rovnaké funkcie backendu ako manuálny tok cez <code>run_scheduled_backup.sh</code>; vytvorené archívy sú nerozoznateľné.",
+    "seeAlso": "Stránka naplánovaných pracovných miest pokrýva celý tok, vrátane toho, ako vytvoriť prácu, pripojiť ju k existujúcemu PVE vzdump časovača, a konfigurovať retenčné hodnoty.",
+    "monitorAlt": "ProxMenux Monitor Zálohy zobrazí nový plánovaný dialóg zálohovania s cieľovým, profilom, harmonogramom a retenčnými poľami.",
+    "monitorCaption": "Plánované zálohovanie ProxMenux Monitor. Rovnaký sprievodca-štýl dialóg, ktorý vytvára manuálne zálohovanie nesie rozvrh a ponechanie polí v dolnej časti pre bez dozoru cestu."
+  },
+  "matrix": {
+    "heading": "Šesťmožnosť matrix",
+    "intro": "Voľba určuje, ktoré backend beží a aká stratégia výberu trasy sa uplatňuje. Prejdite odkaz na konkrétne cieľové stránky pre detaily konfigurácie každej bunky.",
+    "rows": [
+      {
+        "combo": "1",
+        "destination": "PBS",
+        "profile": "Štandardné",
+        "action": "Uploaduje štandardný profil plus trvalé doplnky do nakonfigurovaného PBS úložiska."
+      },
+      {
+        "combo": "2",
+        "destination": "Borg",
+        "profile": "Štandardné",
+        "action": "Vytvorí archív so štandardným profilom plus trvalé doplnky vo vybranom úložisku Borg."
+      },
+      {
+        "combo": "3",
+        "destination": "Lokálne",
+        "profile": "Štandardné",
+        "action": "Napíše archív <code>.tar.zst</code> so štandardným profilom plus trvalé doplnky k nakonfigurovanému lokálnemu cieľu."
+      },
+      {
+        "combo": "4",
+        "destination": "PBS",
+        "profile": "Vlastné",
+        "action": "Otvorí zberateľ cesty pred uploadom PBS; užívateľ kliešte cesty a môže pridať nové."
+      },
+      {
+        "combo": "5",
+        "destination": "Borg",
+        "profile": "Vlastné",
+        "action": "Otvorí zberateľ cesty pred vytvorením archívu Borg."
+      },
+      {
+        "combo": "6",
+        "destination": "Lokálne",
+        "profile": "Vlastné",
+        "action": "Otvorí zberateľ cesty pred písaním miestneho <code>.tar.zst</code>."
+      }
+    ]
+  },
+  "profiles": {
+    "heading": "Štandardný vs vlastný profil",
+    "defaultTitle": "Predvolený profil",
+    "defaultBody": "Predvolený profil je zoznam vyriešený z <code>hb_default_profile_paths</code> (dokumentovaný v <em>Ako to funguje</em> menej ako <em>Kategórie trás</em>) plus každý záznam v súbore trvalých extras <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code>. Užívateľ potvrdzuje cieľ a možnosti šifrovania a zálohovanie pokračuje bez ďalšieho výberu trasy.",
+    "customTitle": "Vlastný profil",
+    "customBody": "Vlastný profil otvorí kontrolný zoznam zobrazujúci každú cestu v štandardnom profile (nekontrolovaný) a každý pretrvávajúci extra (predkontrolovaný, s predponou <code>[+]</code>). Užívateľ kliknite na sadu pre tento spustiť a môžete stlačiť <em>Pridať vlastnú cestu</em> pripojiť novú absolútnu cestu. Akákoľvek pridaná cesta v riadku pretrváva <code>backup-extra-paths.txt</code> Takže budúce zálohy ju automaticky zdvihnú bez toho, aby ju znovu pridali. Odstránenie pretrvávajúcich extra odrieka pre tento sun, ale nevymaže ho zo súboru <em>Správa vlastných ciest</em> akcia mimo záložného toku.",
+    "customPickerAlt": "Vlastný kontrolný zoznam profilu zobrazujúci predvolené cesty profilu (nekontrolované) a trvalé doplnky (predkontrolované s predponou [+]) plus tlačidlá na pridanie novej cesty alebo potvrdenie výberu.",
+    "customPickerCaption": "Vlastný profil Predvolený profil cesty sú nekontrolované; trvalé doplnky sa objavujú predkontrolované s predponou [+]. Užívateľ zaškrtne sadu pre tento beh.",
+    "manageCustomAlt": "Spravovať vlastné menu ciest zobrazujúce zoznam trvalých príplatkov a možností ich pridávať, odstraňovať alebo upravovať.",
+    "manageCustomCaption": "Spravovať vlastné cesty Každá tu uvedená cesta je automaticky zahrnutá do záloh v štandardnom režime bez potreby otvorenia Vlastného zberača."
+  },
+  "commonPipeline": {
+    "heading": "Čo beží bez ohľadu na cieľ",
+    "intro": "Po vyriešení profilu beží každý backend ten istý inscenačný plynovod predtým, ako sa odchyľuje od svojej vlastnej cesty uploadu. <code>hb_prepare_staging</code> zhromažďuje archívny strom v <code>/tmp/proxmenux-DESTINATION-stage.XXXXXX</code> a zaľudňuje každý z troch užitočného zaťaženia.",
+    "steps": [
+      {
+        "step": "1",
+        "name": "Zostava rootfs",
+        "detail": "Spustí <code>rsync -a</code> pre každú vybranú trasu do <code>staging_root/rootfs/</code>. Databáza Pmxcfs na <code>/var/lib/pve-cluster/config.db</code> je zachytená samostatne prostredníctvom <code>sqlite3 .backup</code> produkovať konzistentný snímok bez zastavenia klastra, a <code>.db-wal</code> / <code>.db-shm</code> sidecars sú vylúčené z rsync; keď <code>sqlite3</code> nie je k dispozícii <code>config.db.raw-fallback</code> je pokles namiesto, a obnovenie podporuje ju pri dovoze. Z <code>/root/</code> sú vylúčené prchavé subpathy (história bash, cache, odpadky). Cesta neprítomná zo zdroja sa zaznamenáva v <code>metadata/missing_paths.txt</code> bez zastavenia zálohy."
+      },
+      {
+        "step": "2",
+        "name": "Zdanlivá generácia",
+        "detail": "<code>build_manifest.sh</code> organizuje šesť zberateľov a píše <code>manifest.json</code> na vrchole inscenácie. Pri zlyhaní kolektora sa postihnutá časť vráti späť do zdokumentovaného prázdneho predvoleného stavu; manifest je stále platný."
+      },
+      {
+        "step": "3",
+        "name": "Zoznam balíkov",
+        "detail": "<code>apt-mark showmanual</code> je zachytený doslovne do <code>metadata/packages.manual.list</code>. Stav komponentu je už vnútri obnovených rootfs (<code>components_status.json</code>), pretože <code>/usr/local/share/proxmenux/</code> je súčasťou štandardného profilu."
+      },
+      {
+        "step": "4",
+        "name": "Spustiť informácie",
+        "detail": "<code>metadata/run_info.env</code> zaznamenáva záložný beh identity"
+      },
+      {
+        "step": "5",
+        "name": "Oznámenie (začiatok)",
+        "detail": "Požiare <code>hb_notify_lifecycle \"start\"</code>. Ak sú v monitore nakonfigurované upozornenia, emituje sa zálohovanie <em>Host spustené </em>. Tichý, ak nie sú konfigurované žiadne kanály."
+      }
+    ]
+  },
+  "included": {
+    "heading": "Čo ide dnu a čo zostane vonku",
+    "intro": "Každá cesta v vyriešenom profile (predvolené + trvalé doplnky + výber vlastného režimu) je skopírovaná s <code>rsync -aAXH --numeric-ids</code>. Spoločný zoznam vylúčených subjektov sa vzťahuje na každú cestu a dve adresáre prinášajú dodatočné výnimky špecifické pre jednotlivé trasy.",
+    "globalTitle": "Globálne vylúčenia (uplatnené na každú cestu)",
+    "globalItems": [
+      "<code>images/</code>",
+      "<code>dump/</code> výstupy.",
+      "<code>tmp/</code> - dočasné súbory.",
+      "<code>*.log</code>"
+    ],
+    "rootTitle": "Výnimky <code>/root/</code>",
+    "rootBody": "<code>/root/</code> je súčasťou predvoleného profilu, takže užívateľské skripty a konfigurácia pristáť v archíve. Prchavé subpaty sú vypustené:",
+    "rootItems": [
+      "<code>.bash_history</code>",
+      "<code>.cache/</code>",
+      "<code>tmp/</code>",
+      "<code>.local/share/Trash/</code>"
+    ],
+    "proxmenuxTitle": "Výnimky <code>/usr/local/share/proxmenux/</code>",
+    "proxmenuxBody": "Tento adresár loďou užívateľ stav iba <code>components_status.json</code>, preferencie, post-inštalovať cache. Kód, ktorý bude mať destinácia už z vlastnej inštalácie ProxMenux je vylúčený, takže obnova neprepisuje aktuálne binárne súbory cieľa so staršími:",
+    "proxmenuxItems": [
+      "<code>restore-pending/</code>, <code>scripts/</code>, <code>web/</code>",
+      "<code>monitor-app/</code>, <code>monitor-app.*/</code>, <code>AppImage/</code>",
+      "<code>images/</code>, <code>json/</code>",
+      "<code>utils.sh</code>, <code>helpers_cache.json</code>",
+      "<code>ProxMenux-Monitor.AppImage*</code>, <code>install_proxmenux*.sh</code>"
+    ],
+    "notInProfileTitle": "Cesta mimo profilu",
+    "notInProfileBody": "Všetko, čo nie je uvedené v <code>hb_default_profile_paths</code> a nepridal ako vlastné alebo trvalé extra nie je súčasťou zálohy. Pozoruhodné príklady:",
+    "notInProfileItems": [
+      "<strong>VM a LXC disky</strong>  <code>vzdump</code>, nie podľa tejto funkcie. Konfiguračné súbory pre hostí pod <code>/etc/pve/nodes/*/qemu-server/*.conf</code> a <code>lxc/*.conf</code> sú zajatí ( žijú pod <code>/etc/pve</code>) tak obnovenie reprodukuje inventár; samy disky sú znovu pripojené z existujúceho vzdump /PBS Posily.",
+      "<strong><code>/boot</code> a <code>/boot/efi</code></strong> Binári, initramfs a UEFI ESP partície sú regenerované cieľovej vlastnej <code>update-initramfs</code>, <code>update-grub</code> alebo <code>proxmox-boot-tool refresh</code> po obnove. Bootloader sa nikdy neskopíruje doslova.",
+      "<strong>Kernel a systémové systémy na spracovanie súborov</strong> — <code>/proc</code>, <code>/sys</code>, <code>/dev</code> a <code>/run</code> sú pseudosúborové systémy produkované jadrom a udev; nikde sa nepretrvajú.",
+      "<strong>Binárne balíky pod <code>/usr/bin</code>, <code>/usr/lib</code>, <code>/lib</code>, <code>/sbin</code></strong> APT cieľa od <code>packages.manual.list</code>.",
+      "<strong>0<code>/var/log/</code>, <code>/var/tmp/</code>, <code>/var/cache/</code></strong>",
+      "<strong><code>/home/USER</code></strong> Nie v štandardnom profile. Pridať ako vlastnú cestu, keď systém nesie užívateľské domovské adresáre, ktoré musia prežiť obnovenie."
+    ],
+    "customPathsTitle": "Ako sa zaobchádza s vlastnou cestou",
+    "customPathsBody": "Vlastná cesta pridaná inline v režime na objednávku alebo pretrváva v <code>backup-extra-paths.txt</code> prechádza rovnakým potrubím <code>rsync</code> ako predvolený profil cesty. Uplatňujú sa globálne výnimky. Ak sa stane, že vlastná cesta bude podľa <code>/root/</code> alebo <code>/usr/local/share/proxmenux/</code>, naďalej platia vyššie uvedené výnimky týkajúce sa trasy. Každá archivovaná cesta je zaznamenaná v <code>metadata/paths_archived.txt</code>. Cesty, ktoré na zdroji neexistujú, sa zaznamenávajú v <code>metadata/missing_paths.txt</code> bez zastavenia zálohy."
+  },
+  "archiveStructure": {
+    "heading": "Štruktúra archívu",
+    "intro": "Inscenačný adresár vytvorený každým backendom sleduje rovnaké rozloženie bez ohľadu na cieľ. Tarball, PBS0 <code>.pxar</code> alebo Borg archív ukladá tento strom doslova.",
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # output of apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, kernel version, pmxcfs method\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root without volatile subpaths\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (state only)\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/crontabs"
+  },
+  "confirmation": {
+    "heading": "Zhrnutie potvrdenia",
+    "body": "Pred backend napíše niečo do cieľa, ProxMenux zobrazí súhrnný dialóg s cieľovým, záložným ID alebo menom archívu, šifrovaním stavu a zoznam skopírovaných ciest. Zrušenie tu pozastavuje zálohovanie čisto <code>trap</code> hák nastaviť na backend funkciu a žiadne čiastočné dáta sa dostanú do cieľa."
+  },
+  "writing": {
+    "heading": "Písanie na miesto určenia",
+    "intro": "Akonáhle užívateľ potvrdí, každý backend beží svoj vlastný krok zápisu. Mechanika je pokrytá cieľovými stránkami; zdieľaná plocha je log, sidecar a oznámenie o dokončení.",
+    "rows": [
+      {
+        "topic": "Súbor záznamu",
+        "detail": "Každý backend napíše celý svoj výstup do <code>/tmp/proxmenux-DESTINATION-backup-YYYYMMDD_HHMMSS.log</code> a pri zlyhaní ho otvorí v rolovacom dialógu. Cesta záznamu je vytlačená v súhrne dokončenia iba vtedy, keď má súbor obsah."
+      },
+      {
+        "topic": "Bočné auto (len lokálne)",
+        "detail": "<code>hb_write_archive_sidecar</code> padá <code>*.proxmenux.json</code> vedľa lokálneho archívu, takže Monitor ho identifikuje ako zálohovanie ProxMenux hostí aj po pohybe alebo premenovaní."
+      },
+      {
+        "topic": "Oznámenie (úplné/neúplné)",
+        "detail": "<code>hb_notify_lifecycle \"complete\"</code> alebo <code>\"fail\"</code> požiare s trvaním, veľkosť archívu a"
+      }
+    ]
+  },
+  "finishedScreens": {
+    "heading": "Ako vyzerá dokončená záloha",
+    "intro": "Rovnaké ukončenie akcie sa vynorí oboma vstupnými bodmi. TUI píše súhrnný blok do terminálu; záložka monitora zobrazí spustenie v zozname archívov s veľkosťou, trvaním a odznakmi.",
+    "scriptsAlt": "ProxMenux Scripts TUI zobrazuje dokončenú zálohu hostiteľa",
+    "scriptsCaption": "Ukončené zálohovanie ProxMenux Scripts (TUI). Dokončiť blok vytlačí cieľ, záložný ID, výsledný snímok alebo názov archívu, veľkosť dát, trvanie a šifrovanie stavu.",
+    "monitorAlt": "ProxMenux Monitor Zálohy znázorňujúcu dokončenú zálohovaciu položku hostiteľa s veľkosťou, trvaním, metodologickým odznakom a indikátorom šifrovania.",
+    "monitorCaption": "Dokončené zálohovanie ProxMenux Monitor Zálohy. Nová záloha sa zobrazí v zozname archívov s cieľovou metódou odznak, veľkosť, trvanie a v prípade potreby indikátor šifrovania zámku."
+  },
+  "whereNext": {
+    "heading": "Kam ísť ďalej",
+    "items": [
+      {
+        "label": "Ciele",
+        "href": "/docs/backup-restore/destinations",
+        "tail": " — Detaily konfigurácie pre Local, PBS a Borg."
+      },
+      {
+        "label": "Plánované úlohy",
+        "href": "/docs/backup-restore/scheduled-jobs",
+        "tail": " — "
+      },
+      {
+        "label": "Obnovenie",
+        "href": "/docs/backup-restore/restoring",
+        "tail": " — "
+      }
+    ]
+  }
+}

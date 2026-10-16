@@ -1,0 +1,158 @@
+{
+  "meta": {
+    "title": "Proxmox VE Systémové príkazy, pveverzia, uptime, journalctl, systemctl | ProxMenux",
+    "description": "Odkaz na základné Proxmox VE0 a Linux systémové príkazy: pveververzia, pveperf, uptime, journalctl, systemctl, lscpu, lsblk, df, voľný, posledný, kto. Všetko len na čítanie a bezpečné bežať na každom hostiteľovi.",
+    "ogTitle": "Proxmox VE Systémové príkazy, pveverzia, uptime, journalctl, systemctl",
+    "ogDescription": "Odkaz na základné Proxmox VE a Linux systémové príkazy verzia, uptime, služby, protokoly, užívateľské informácie, hardvérové sondy. Všetko len na čítanie.",
+    "twitterTitle": "Proxmox VE Systémové príkazy ProxMenux",
+    "twitterDescription": "Essential system inspection príkazy pre Proxmox VE"
+  },
+  "header": {
+    "title": "Užitočné systémové príkazy",
+    "description": "Príkazy iba pre čítanie sa pozrieť na Proxmox hostiteľa: verzia, jadro, uptime, pamäť, stav webového UI, nedávne log riadky, ktorý je prihlásený, a pár audit / zhrnutie nástrojov. Žiadny z nich nemení systém.",
+    "section": "Pomoc a informácie"
+  },
+  "intro": {
+    "title": "Čo to je?",
+    "body": "Rovnaký očíslovaný zoznam ProxMenux zobrazuje, keď si vyberiete <em>Užitočné systémové príkazy</em>. Použite tlačidlo Kopírovať chytiť akýkoľvek príkaz, alebo si ho pozrieť, aby si zapamätali presnú vlajku."
+  },
+  "commandGroups": [
+    {
+      "title": "Informácie o systéme",
+      "commands": [
+        {
+          "command": "pveversion",
+          "description": "Zobraziť verziu Proxmoxu"
+        },
+        {
+          "command": "pveversion -v",
+          "description": "Podrobné informácie o verzii Proxmoxu"
+        },
+        {
+          "command": "hostnamectl",
+          "description": "Názov systému a informácie o jadre"
+        },
+        {
+          "command": "uname -a",
+          "description": "Informácie o jadre a architektúre"
+        },
+        {
+          "command": "cat /etc/os-release",
+          "description": "Podrobnosti o vydaní systému"
+        }
+      ]
+    },
+    {
+      "title": "Stav systému",
+      "commands": [
+        {
+          "command": "uptime",
+          "description": "Doba behu systému"
+        },
+        {
+          "command": "uptime -p",
+          "description": "Prehľadný formát doby behu systému"
+        },
+        {
+          "command": "free -h",
+          "description": "Využitie RAM a swapu"
+        },
+        {
+          "command": "who -b",
+          "description": "Čas posledného štartu systému"
+        },
+        {
+          "command": "last -x | grep shutdown",
+          "description": "Predchádzajúce vypnutia"
+        }
+      ]
+    },
+    {
+      "title": "Riadenie služieb",
+      "commands": [
+        {
+          "command": "systemctl status pveproxy",
+          "description": "Skontrolovať stav webového rozhrania Proxmoxu"
+        },
+        {
+          "command": "systemctl restart pveproxy",
+          "description": "Reštartovať proxy webového rozhrania"
+        },
+        {
+          "command": "journalctl -xe",
+          "description": "Systémové chyby a logy"
+        },
+        {
+          "command": "dmesg -T | tail -n 50",
+          "description": "Posledných 50 riadkov logu jadra"
+        }
+      ]
+    },
+    {
+      "title": "Informácie pre používateľov",
+      "commands": [
+        {
+          "command": "whoami",
+          "description": "Aktuálny používateľ"
+        },
+        {
+          "command": "id",
+          "description": "UID, GID a skupiny aktuálneho používateľa"
+        },
+        {
+          "command": "who",
+          "description": "Prihlásení používatelia"
+        },
+        {
+          "command": "w",
+          "description": "Aktivita používateľov a doba behu systému"
+        },
+        {
+          "command": "uptime && w",
+          "description": "Doba behu systému a prihlásení používatelia"
+        },
+        {
+          "command": "cut -d: -f1,3,4 /etc/passwd",
+          "description": "Všetci používatelia s UID a GID"
+        },
+        {
+          "command": "getent passwd | column -t -s :",
+          "description": "Prehľadná tabuľka používateľov (UID, shell a pod.)"
+        }
+      ]
+    },
+    {
+      "title": "Kontrolné a súhrnné nástroje",
+      "commands": [
+        {
+          "command": "lynis audit system",
+          "description": "Spustiť úplný audit systémovej bezpečnosti"
+        },
+        {
+          "command": "fastfetch",
+          "description": "Zobraziť stručný prehľad systému v termináli"
+        }
+      ]
+    }
+  ],
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/help-info/update-commands",
+        "label": "Aktualizácie a balíky",
+        "tail": " — Apt and pve upgrade príkazy."
+      },
+      {
+        "href": "/docs/help-info/tools-commands",
+        "label": "Systémové CLI nástroje",
+        "tail": " — Htop, btop, ncdu a priatelia."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Prehľad pomoci a informácií",
+        "tail": "."
+      }
+    ]
+  }
+}

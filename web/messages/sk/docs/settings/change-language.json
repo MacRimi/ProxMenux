@@ -1,0 +1,98 @@
+{
+  "meta": {
+    "title": "Zmeniť jazykovú dokumentáciu ProxMenux",
+    "description": "Prepnúť ProxMenux UI medzi angličtinu, španielčinu, francúzštinu, nemčinu, taliančinu alebo portugalčinu. Preklad nainštalovať iba Menu sa automaticky načíta s novým jazykom.",
+    "ogTitle": "Zmeniť jazykovú dokumentáciu ProxMenux",
+    "ogDescription": "Vyberte jazyk rozhrania ProxMenux z menu Nastavenie. Šesť jazykov podporovaných."
+  },
+  "header": {
+    "title": "Zmeniť jazyk",
+    "description": "Prepnite ProxMenux UI medzi šiestimi podporovanými jazykmi. Uloží výber do config.json a re-execs menu s novým jazykom. K dispozícii len na Preklade inštalovať typ",
+    "section": "Nastavenia"
+  },
+  "intro": {
+    "title": "Čo to je?",
+    "body": "Dialógové menu, ktoré uvádza šesť podporovaných jazykov. Vyberte si jeden, ProxMenux0 ukladá na <code>config.json</code> ako <code>.language</code>, potom re-execs <code>config_menu.sh</code> takže nový jazyk nadobúda účinnosť okamžite."
+  },
+  "warn": {
+    "title": "Iba nainštalovať preklad",
+    "body": "Táto možnosť sa zobrazí len v Nastaveniach, ak obe kontroly prejdú: <code>/opt/googletrans-env/bin/activate</code> existuje (Python venv s googletrans), <em>a</em> <code>config.json</code> má neprázdnu <code>.language</code>. Na normálne (iba pre angličtinu) inštalovať ani nie je prítomný a jazyk zberač nie je zobrazený."
+  },
+  "supported": {
+    "heading": "Podporované jazyky",
+    "headerCode": "Code",
+    "headerLang": "Jazyk",
+    "headerNotes": "Poznámky",
+    "rows": [
+      {
+        "code": "en",
+        "lang": "Angličtina",
+        "notes": "Zdrojový jazyk"
+      },
+      {
+        "code": "es",
+        "lang": "Španielčina",
+        "notes": "cached + auto-translated"
+      },
+      {
+        "code": "fr",
+        "lang": "Francúzština",
+        "notes": "cached + auto-translated"
+      },
+      {
+        "code": "de",
+        "lang": "Nemčina",
+        "notes": "cached + auto-translated"
+      },
+      {
+        "code": "it",
+        "lang": "Taliančina",
+        "notes": "cached + auto-translated"
+      },
+      {
+        "code": "pt",
+        "lang": "Portugalčina",
+        "notes": "cached + auto-translated"
+      }
+    ]
+  },
+  "englishTip": {
+    "title": "Angličtina je najpresnejšia",
+    "body": "Non-anglické struny sú vyrábané pred-cached tabuľky semien Googletrans. Struny na hrane (zriedkavo spustené možnosti, nedávne doplnenia) môžu prepadnúť na živý hovor Googletrans alebo na anglický originál. Ak sa nejaký preklad necíti dobre, angličtina je vždy zdrojom pravdy."
+  },
+  "underHood": {
+    "heading": "Ako to funguje pod kapotou",
+    "items": [
+      "Dialógové menu uvádza kódy 6; vyberiete si jeden.",
+      "Ak <code>config.json</code> existuje: <code>jq --arg lang \"$new_language\" '.language = $lang''</code> aktualizuje pole na mieste.",
+      "Ak <code>config.json</code> neexistuje: nový je vytvorený s jazykovým kódom v objekte s jedným poľom.",
+      "Potvrdzovací dialóg: <em>\"Jazyk sa zmenil na [kód]\"</em>.",
+      "<code>exec bash config_menu.sh</code> znovu načíta menu Nastavenie s novým jazykom aktívny."
+    ]
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent"
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "noOptionTitle": "Voľba sa neobjavuje v Nastaveniach",
+    "noOptionBody": "Ste na normálne (iba pre angličtinu) inštaláciu. Ak chcete získať jazykovú podporu, preinštalujte ProxMenux výber možnosti inštalácie prekladu (vytiahne Python venv + Googletrans).",
+    "stillEnglishTitle": "Jazyk sa zmenil, ale UI stále ukazuje angličtina",
+    "stillEnglishBody": "Po zmene sa menu vráti. Ak ste otvorili nový shell a spustili iný vstupný bod ProxMenux, spustite opäť <code>menu</code> a vyzdvihnite nový jazyk. Potvrdzujem: <code>jq -r '.language' /usr/local/share/proxmenux/config.json</code>."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/settings/show-version-information",
+        "label": "Zobraziť informácie o verzii",
+        "tail": " — "
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Prehľad nastavení",
+        "tail": "."
+      }
+    ]
+  }
+}

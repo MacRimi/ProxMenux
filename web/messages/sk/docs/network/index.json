@@ -1,0 +1,107 @@
+{
+  "meta": {
+    "title": "Proxmox Network Management ProxMenux",
+    "description": "Diagnostika iba na čítanie, analýza-potom-navrhol pracovné postupy a usmerňované opravy pre sieť Debian / Proxmox stack (/etc/network/interfaces). Pozrite sa na mosty a dlhopisy, spustite live monitorovacie nástroje, pretrvávajúce názvy rozhraní, zálohovať a bezpečne reštartovať vytváranie sietí s povinnými zálohovanie a krok-za-krokom náhľady.",
+    "ogTitle": "Proxmox Network Management",
+    "ogDescription": "Diagnostika, analýza a usmerňované opravy pre sieť Proxmox stack s povinnými zálohami a krok za krokom náhľady.",
+    "twitterTitle": "Proxmox Network Management ProxMenux",
+    "twitterDescription": "Mosty, väzby, diagnostika a riadená oprava siete Proxmox s povinnými zálohami."
+  },
+  "header": {
+    "title": "Sieť",
+    "description": "Diagnostika iba na čítanie, analýza-potom-navrhnite správy a usmerňované opravy pre klasické sieťové stack Debian/Proxmox. Každý deštruktívny tok najprv zaberie zálohu a pred použitím prehliada presné zmeny.",
+    "section": "Sieť"
+  },
+  "intro": {
+    "title": "Na čo je toto menu",
+    "body": "Skontrolujte, diagnostikovať a (v prípade potreby) opraviť konfiguráciu siete Proxmox bez straty vzdialeného prístupu. Nástroje sú navrhnuté okolo jednej zásady: <strong>read prvý, navrhnúť, potom platí len s výslovným súhlasom a bezpečnostné zálohovanie</strong>. Neexistuje žiadne tlačidlo \"auto-fixovať všetko.\""
+  },
+  "openingMenu": {
+    "heading": "Otvorenie menu",
+    "intro": "Od ProxMenuxhlavné menu, vyberte <strong>Sieť</strong>. Uvidíte toto:",
+    "imageAlt": "Menu Network Management s diagnostikou, monitorovaním, analýzou, opravou, trvalými menami a možnosťami zálohovania"
+  },
+  "safety": {
+    "heading": "Bezpečnostný model",
+    "body": "Úprava konfigurácie siete na vzdialenom počítači Proxmox je jedným z najjednoduchších spôsobov, ako sa vymknúť. ProxMenux zaobchádza každý krok zodpovedajúcim spôsobom. Nástroje spadajú do troch úrovní správania"
+  },
+  "tiers": {
+    "readOnly": {
+      "title": "Iba na čítanie",
+      "body": "Čistá kontrola. Nepodarilo sa zmeniť systém za žiadnych okolností.",
+      "items": [
+        "Routingová tabuľka, testy konektivity, pokročilé štatistiky",
+        "Sledovanie živej premávky (ak je to možné, iptraf-ng)",
+        "Test priepustnosti (iperf3)"
+      ]
+    },
+    "analyze": {
+      "title": "Analyzovať, potom navrhnúť",
+      "body": "Detekuje problémy, vytlačí správu s navrhovanými príkazmi a zastaví. Rozhodnete sa, či zadáte sprievodcu opravy potom.",
+      "items": [
+        "Analýza konfigurácie mosta",
+        "Analýza konfigurácie siete"
+      ]
+    },
+    "apply": {
+      "title": "Aplikovať so zálohou",
+      "body": "Upravuje systém. Vždy sa časovo označené zálohovanie postihnutého súboru prvý a ukazuje náhľad pred písaním.",
+      "items": [
+        "Trvalé názvy rozhraní (.link súborov)",
+        "Ručné zálohovanie, obnovenie a reštart služby"
+      ]
+    }
+  },
+  "classicTitle": "Iba klasický zásobník",
+  "classicBody": "Každá analýza a oprava funkcie skontroluje aktívneho manažéra siete predtým, než sa niečoho dotkne. Ak host beží <strong>netplan</strong>, <strong>systemd-sieťované</strong> alebo <strong>NetworkManager</strong>, nástroj okamžite preruší s jasnou správou <code>/etc/network/interfaces</code>. Toto je úmyselné: editovanie netplan súbor s pravidlami napísanými pre <code>ifupdown</code> potichu by skazila konfiguráciu.",
+  "backups": {
+    "heading": "Kde idú zálohy",
+    "intro": "Každý sprievodca opravy, obnoviť alebo manuálne zálohovanie zapíše časovú pečiatku kópiu <code>/etc/network/interfaces</code> <code>/var/backups/proxmenux/</code>:",
+    "rollbackIntro": "Ručne sa vrátiť z konzoly:"
+  },
+  "readOnlySection": {
+    "heading": "Kontrola len na čítanie",
+    "body": "Východiskový bod, keď sa niečo cíti zle. Čistá inšpekcia nikdy nepíše na <code>/etc/network/interfaces</code> a nikdy nespustí modifikujúci príkaz (s jednou explicitnou, opt-in výnimkou pre vyčistenie NetworkManager pri detekovaní). Bezpečné použitie cez SSH kedykoľvek.",
+    "options": [
+      {
+        "title": "Diagnostika",
+        "description": "Tri kontroly iba na čítanie: Zobraziť tabuľku Routing, Test Connectivity a Advanced Diagnostics. Čistá kontrola nikdy nepíše do systému."
+      },
+      {
+        "title": "Živé monitorovacie nástroje",
+        "description": "Tri interaktívne spúšťače: ak je to možné (šírka pásma v reálnom čase na hostiteľský pár), iptraf-ng (viacrežimový dopravný monitor) a iperf3 (test šírky pásma, server / klient)."
+      }
+    ]
+  },
+  "analyzeSection": {
+    "heading": "Analyzovať, potom navrhnúť",
+    "body": "Použité pri kontrole (alebo skutočnom výpadku) ukazuje na problém konfigurácie. Každý nástroj prejde relevantnou časťou <code>/etc/network/interfaces</code>, vytlačí podrobnú správu s presným príkazom shellu, ktorý by opraviť každý nález, a <strong>stops</strong>. Ak prijmete voliteľné opravy sprievodca potom, každá zmena je zálohované a prehliadané pred napísaním.",
+    "options": [
+      {
+        "title": "Analýza a oprava mosta",
+        "description": "Odhaľuje mosty vmbrX s chýbajúcimi alebo neplatnými portami (typické po opätovnom výpočte PCI). Zobrazí správu ako prvú; iba opravy, keď prijmete 5-krook riadený tok."
+      },
+      {
+        "title": "Analýza konfigurácií a usmerňované čistenie",
+        "description": "Nájde fyzické rozhrania deklarované v /etc/network/interfaces, ktoré už neexistujú (ojedinelé konfigy zanechané zmenami hardvéru). Hlási ich a ponúka usmerňované odstránenie."
+      }
+    ]
+  },
+  "applySection": {
+    "heading": "Aplikovať so zálohou",
+    "body": "Nástroje, ktoré píšu na disk dizajnom. Každý z nich trvá časovo označené zálohovanie postihnutého súboru pred písaním, a deštruktívne možnosti (restor, reštart) vyžadujú explicitné áno/nie potvrdenie. <em>Persistentné názvy rozhraní</em> pôsobí na ďalšom reštarte, nie hneď, takže je bezpečné naplánovať aj na vzdialenom hostiteľovi.",
+    "options": [
+      {
+        "title": "Stále názvy sieťových rozhraní",
+        "description": "Pins názvy rozhraní (eno1, enp3s0, ...) na MAC adresy prostredníctvom systemd . odkaz súborov. Mená prežijú PCI zmeny slotu, aktualizácie jadra a pridanie / odstránenie ďalších NIC."
+      },
+      {
+        "title": "Záloha a reštart rozhraní",
+        "description": "Manuálna snímka /etc/network/interfaces, prehliadanie a obnovenie predchádzajúcich záloh, zobrazenie live config a reštartovanie sieťových služieb v prípade potreby."
+      }
+    ]
+  },
+  "consoleTitle": "Mať pripravený prístup ku konzole",
+  "consoleSubTitle": "Pred akoukoľvek opravou na vzdialenom hostiteľovi",
+  "consoleBody": "Ak ste pripojení cez SSH a máte len jednu cestu k hostiteľovi, pred použitím zmeny siete majte zálohu: fyzická / IPMI / iKVM konzola, alebo iný stroj na rovnakej LAN. Prevedené opravy sú bezpečné a vždy ponúkajú príkaz na otočenie, ale chybný konfigurovaný most alebo spadnutý odkaz vás môže stále vymknúť, kým nedosiahnete konzolu."
+}

@@ -1,0 +1,218 @@
+{
+  "meta": {
+    "title": "Dovoz VM z OVA / OVF ProxMenux Dokumentácia",
+    "description": "Import VMware ESXi / Workstation / Fusion / VirtualBox0 / ProxMenux VM do Proxmox VE. Auto-extracts OVA, parses OVF metadata, vytvára VM a importuje každý disk ako formát úložného materiálu (qkow2 / surový).",
+    "ogTitle": "Dovoz VM z OVA / OVF ProxMenux Dokumentácia",
+    "ogDescription": "Prineste VM z VMware, VirtualBox alebo ProxMenux export do Proxmoxu. Disky sú automaticky prevrátené do formátu storage-nativ."
+  },
+  "header": {
+    "title": "Importovať VM z OVA / OVF",
+    "description": "Import OVA / OVF balíček do Proxmox VE0: výpisy OVA archívov, parses OVF deskriptor pre vCPU / pamäť / NIC počet a disk referencie, potom vytvorí VM a importovať každý disk cez qm importdisk do vybraného úložiska. Kompatibilný s exportom z VMware (ESXi / Workstation / Fusion), VirtualBox a ProxMenux.",
+    "section": "Nástroje"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "Drops kompletný VM do Proxmox z prenosného balíčka. Po importe, VM je pripravený začať, ale niekoľko post-import touch-up (NIC model, firmware, OS-type validácia) sú odporúčané pre výkon a kompatibilitu."
+  },
+  "picker": {
+    "heading": "Vyberač súborov",
+    "intro": "Pri štarte skript ponúka dva prednastavené adresáre alebo manuálnu cestu:",
+    "items": [
+      "<code>/var/lib/vz/dump</code>",
+      "<code>/var/lib/vz/template/iso</code>",
+      "Manuálna cesta pre OVA / OVF súbory kdekoľvek inde na hostiteľovi."
+    ],
+    "outro": "To potom uvádza každý súbor <code>.ova</code> a <code>.ovf</code> vo vybranom adresári.",
+    "imageAlt": "Importovať VM dialóg súborov"
+  },
+  "flow": {
+    "heading": "Ako funguje dovoz",
+    "nodes": [
+      {
+        "label": "Vstup OVA / OVF",
+        "detail": ".ova → decht xf až\n /tmp/.proxmenux-import-*\n.ovf → použitie na mieste",
+        "variant": "source"
+      },
+      {
+        "label": "Spracovať + dialógy",
+        "detail": "AWK číta OVF\n(názov, vCPU, RAM, národné identifikačné číslo,\ndisky). Užívateľské tipy\nVMID / pamäť / most",
+        "variant": "bridge"
+      },
+      {
+        "label": "qm create + importdisk",
+        "detail": "qm create $VMID\nqm importdisk\n(VMDK → qcow2)\nqm set --scsiN",
+        "variant": "target"
+      }
+    ]
+  },
+  "ovf": {
+    "heading": "OVF spracovanie",
+    "intro": "A <strong>tráva</strong> parser číta OVF deskriptor a vytiahne VM metadáta. Parser používa 3- forma argumentácie <code>match()</code> ktorý je špecifický pre gawk (mawk <code>awk</code> na Debian / Proxmox ho nepodporuje). Pri prvom importe, skript auto-inštaluje gawk cez kanonické <code>ensure_repositories</code> + <code>install_single_package</code> pár, ak chýba; následný dovoz začne okamžite. Vytiahnuté polia:",
+    "headerField": "Pole",
+    "headerSource": "Zdroj v OVF",
+    "headerDefault": "Štandardne, ak chýba",
+    "rows": [
+      {
+        "field": "Názov VM",
+        "source": "<Name> (prvý zápas)",
+        "default": "import-vm"
+      },
+      {
+        "field": "Počet vCPU",
+        "source": "RASD ResourceType 3 → VirtualQuantity",
+        "default": "1"
+      },
+      {
+        "field": "Pamäť (MiB)",
+        "source": "RASD ResourceType 4 → VirtualQuantity",
+        "default": "1024"
+      },
+      {
+        "field": "Počet NIC",
+        "source": "počet ResourceType 10",
+        "default": "1"
+      },
+      {
+        "field": "Typ OS",
+        "source": "/Linux/ alebo /Windows/ v popise",
+        "default": "ostatná"
+      },
+      {
+        "field": "Odkazy na disk",
+        "source": "href atribúty končiace v .vmdk / .qcow2 / .img / .raw",
+        "default": "žiadne (pozastavenia dovozu)"
+      }
+    ]
+  },
+  "memWarn": {
+    "title": "Nejasnosť pamäťovej jednotky",
+    "body": "Parser <strong>predpokladá MiB</strong>. Ak OVF deklaruje pamäť v <em>GB</em> (napr. niektoré VMware exporty áno), importované VM bude mať 1/1024. zo zamýšľaných RAM. Po dovoze, dvojitá kontrola <code>qm config $VMID | grep memory</code> proti zdroju VM's zdokumentované RAM a prispôsobiť <code>qm set $VMID --memory &lt;MiB&gt;</code> ak je to vypnuté faktorom 1024 alebo 10242."
+  },
+  "dialog": {
+    "heading": "Importovať dialógový tok",
+    "items": [
+      "<strong>VMID</strong> chápanie predvolených na ďalšie dostupné (<code>pvesh get /cluster/nextid</code>).",
+      "<strong>VM Názov</strong> Na meno OVF môžete predvolené prepísať.",
+      "<strong>Cieľové skladovanie</strong> Menu všetkých skladov <code>images</code> obsah (od <code>pvesm status -content images</code>).",
+      "<strong>Sieťový most</strong> Menu mostov (z <code>ip link show type bridge</code>); auto-piks, ak len jeden existuje; predvolené <code>vmbr0</code>.",
+      "<strong>Potvrdenie</strong> Zhrnutie dialógu s VMID, názov, vCPU, pamäť, NIC, úložisko, most a zoznam diskov, ktoré sa majú importovať. Zrušiť tu = nič sa nemení."
+    ]
+  },
+  "create": {
+    "heading": "Vytvorenie VM",
+    "intro": "Po potvrdení skript beží:",
+    "code": "qm create $VMID \\\n    --name \"$NAME\" \\\n    --memory $MEMORY \\\n    --cores $VCPU \\\n    --ostype $OSTYPE \\\n    --scsihw lsi \\\n    --net0 e1000,bridge=$BRIDGE\n\n# For each additional NIC:\nqm set $VMID --netN e1000,bridge=$BRIDGE",
+    "outro": "SCSI radič predvolí <code>lsi</code> (LSI Logic) pre kompatibilitu VMDK. NIC predvolené <code>e1000</code> (univerzálna kompatibilita) na zvolenom moste."
+  },
+  "diskLoop": {
+    "heading": "Importný disk",
+    "intro": "Pre každý odkaz na disk v OVF:",
+    "items": [
+      "<code>qm importdisk $VMID $disk_path $STORAGE</code> VMDK konvertuje na pamäťový formát (napr. qkow2 na lokálnej-lvm, surové na ZFS) a vytvára <code>unusedN:</code> položka v VM config.",
+      "Skript vykresľuje konfiguráciu práve vytvoreného odkazu na <code>unusedN</code>.",
+      "<code>qm set $VMID --scsiN $unused_disk</code> Prikladá disk ako <code>scsi0</code>, <code>scsi1</code>, …",
+      "<code>qm set $VMID --delete unusedN</code>"
+    ],
+    "outro": "Boot je nastavená na prvý SCSI disk: <code>qm set $VMID --boot c --bootdisk scsi0</code>."
+  },
+  "postImport": {
+    "heading": "Odporúčané dotyky po dovoze",
+    "intro": "Pri importe sa zámerne používajú nastavenia najnižšieho-bežného menovateľa, aby sa maximalizovala šanca, že VM topánky najprv vyskúšajú. Akonáhle potvrdíte, že topánky, prepnúť na lepšie predvolené cez Proxmox UI alebo CLI:",
+    "headerSetting": "Nastavenie",
+    "headerDefault": "Štandardné po importe",
+    "headerRecommended": "Odporúčané (ak hosť podporuje)",
+    "rows": [
+      {
+        "setting": "Vzor NIC",
+        "default": "e1000",
+        "recommended": "VirtIO (oveľa rýchlejšie, potrebuje hosťa vodiča)"
+      },
+      {
+        "setting": "SCSI radič",
+        "default": "LSI",
+        "recommended": "VirtIO SCSI single (moderný Linux + ovládače Windows w/ VirtIO)"
+      },
+      {
+        "setting": "Firmvér (BIOS / UEFI)",
+        "default": "Proxmox predvolený (BIOS)",
+        "recommended": "Zápas zdroj VM firmware (nezhodný = nebude boot)"
+      },
+      {
+        "setting": "QEMU hosťujúci agent",
+        "default": "Vypnúť",
+        "recommendedRich": "Na + inštalácii <code>qemu-guest-agent</code> v hosťovi (lepšie zálohy, IP reporting)"
+      },
+      {
+        "setting": "Typ OS",
+        "default": "l26 / výhra10 / iné (heuristické)",
+        "recommended": "Overiť oproti aktuálnemu hosťovi OS"
+      },
+      {
+        "setting": "Zobrazenie",
+        "default": "Štandardné",
+        "recommended": "VirtIO-GPU alebo SPICE (lepší výkon konzol)"
+      }
+    ]
+  },
+  "fwWarn": {
+    "title": "Nesúlad firmvéru = žiadna boot",
+    "body": "Ak zdroj VM bol UEFI, ale Proxmox ho vytvára ako BIOS (alebo naopak), hosť nenájde štartovací disk. Skontrolujte OVF alebo pôvodné nastavenia VM pre <em>FirmwareType / firmware</em> a nastaviť to isté v Proxmox: <code>qm set $VMID --bios ovmf</code> pre UEFI; predvolená je <code>seabios</code> pre BIOS."
+  },
+  "notImported": {
+    "heading": "Čo nie je dovážané",
+    "items": [
+      "<strong>0Špecifické NIC mosty</strong> Všetky NIC pristanú na moste, ktorý ste vybrali v čase importu.",
+      "<strong>0NIC model</strong>",
+      "<strong>BIOS / UEFI typ firmvéru</strong> Predvolené predvolené Proxmox (BIOS).",
+      "<strong>0PCI passhrough configuration</strong>.",
+      "<strong>TPM</strong> (vTPM).",
+      "<strong>Cloud-init</strong> disky.",
+      "<strong>Snapshots</strong>",
+      "<strong>USB / sériové / paralelné zariadenia</strong> deklarované v OVF.",
+      "<strong>0VM tagy / poznámky / start-on-boot</strong> možnosti."
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "orphanTitle": "VM bol vytvorený, ale import disku zlyhal VM zabudnutý",
+    "orphanIntro": "Známe obmedzenie. Scenár automaticky nevyčistí čiastočný import. Zničiť sirotu s:",
+    "orphanCode": "qm destroy $VMID --destroy-unreferenced-disks 1",
+    "orphanOutro": "Potom opraviť základnú príčinu (pravdepodobne miesto na disku na cieľovom úložisku) a re-import.",
+    "memTitle": "Importované VM má 8 MB RAM (alebo 8)",
+    "memIntro": "Nejasnosť pamäťovej jednotky v parseri OVF. Mimo faktor 1024 → OVF používa GB namiesto MiB. Fix:",
+    "memCode": "qm set $VMID --memory 8192    # 8 GiB",
+    "bootTitle": "Importované VM nezavádza \"Žiadne bootovacie zariadenie\"",
+    "bootIntro": "Najčastejšou príčinou: BIOS0 / UEFI nesúlad. VM bol UEFI, ale Proxmox ho vytvoril ako BIOS. Nastaviť zodpovedajúci firmware:",
+    "bootCode": "qm set $VMID --bios ovmf       # UEFI\n# also add an EFI disk for the EFI vars:\nqm set $VMID --efidisk0 $STORAGE:1,format=qcow2,efitype=4m,pre-enrolled-keys=1",
+    "bootOutro": "Druhá najbežnejšia: body na objednávku na scsi0 ale skutočný OS disk je scsi1. Upraviť objednávku štartu v záložke Možnosti VM.",
+    "bsodTitle": "VMware-exported Windows VM import, ale BSOD na prvom štarte",
+    "bsodBody": "Windows je citlivý na zmeny ovládača disku. Buď: a) inštalácia VirtIO vodiči <em>pred</em> export z VMware, alebo b) udržiavať SCSI regulátor ako <code>lsi</code> (predvolený) a iba prepnúť na VirtIO SCSI po hostí topánky a môžete nainštalovať VirtIO ovládače vo Windows.",
+    "zeroTitle": "OVF parser hlási 0 disky",
+    "zeroBody": "Deskriptor OVF používa nezvyčajný diskový referenčný štýl. Otvorte .ovf v textovom editore a potvrďte, že každý disk má položku <code>&lt;File ovf:href=\"...vmdk\" ...&gt;</code>. Ak je prípona súboru nezvyčajná (napr. len <code>.dat</code>), premenujte ju na <code>.vmdk</code> a zaktualizujte referenciu OVF, potom ju znovu spustite.",
+    "awkTitle": "wk: syntax chyba v alebo blízko ,",
+    "awkIntro": "Parser OVF používa gawk-špecifickú syntax (3- argument <code>match()</code>) ktorý mawk <code>awk</code> na Debian / Proxmox nepodporuje. Nedávne verzie skriptu autoinštalovať gawk pri prvom použití cez kanonické <code>ensure_repositories</code> + <code>install_single_package</code> pár; ak spúšťate staršiu kópiu, nainštalujte ju ručne:",
+    "awkCode": "apt-get install -y gawk",
+    "awkOutro": "Potom znovu spustite import.",
+    "netTitle": "Sieť nefunguje po prvom spustení",
+    "netBody": "Model NIC v Proxmoxe (e1000) nemusí zodpovedať tomu, na čo má hosť OS ovládače, alebo most, ktorý ste si vybrali, nie je ten správny. Z karty hardvéru VM v systéme Proxmox UI: zmeniť sieťové zariadenie → Model. Tiež skontrolujte <code>ip a</code> vnútri hosťa"
+  },
+  "files": {
+    "heading": "Príslušné súbory",
+    "code": "scripts/utilities/import_vm_ova_ovf.sh       # this script\n/tmp/.proxmenux-import-*/                    # temp extraction dir for OVA\n/etc/pve/nodes/<node>/qemu-server/<vmid>.conf  # created by qm create\n<storage>/<vmid>/<vmid>-disk-<n>.<fmt>        # disk images, format depends on storage"
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/utils/export-vm",
+        "label": "Exportovať VM do OVA / OVF",
+        "tail": " — "
+      },
+      {
+        "href": "/docs/utils",
+        "label": "Prehľad služieb",
+        "tail": " — Späť na prehľad sekcie."
+      }
+    ]
+  }
+}

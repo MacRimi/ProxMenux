@@ -1,0 +1,155 @@
+{
+  "meta": {
+    "title": "Samba klient v LXC | ProxMenux Dokumentácia",
+    "description": "Mount Samba / CIFS akcie priamo z vnútra kontajnera Proxmox LXC s ProxMenux. Automatické inštalácie CIFs-utils + smbclient, podporuje auto-objavenie, bezpečné vierohodné skladovanie, a trvalé inštalácie cez /etc/fstab. vyžaduje privilegovaný kontajner.",
+    "ogTitle": "Samba klient v LXC | ProxMenux Dokumentácia",
+    "ogDescription": "Mount Samba / CIFS akcie zvnútra privilegovaného LXC kontajnera. Auto-objavenie, bezpečný kreditový súbor, vytrvalosť /etc/fstab."
+  },
+  "header": {
+    "title": "Samba klient v LXC",
+    "description": "Mount Samba (SMB / CIFS) akcie priamo z vnútra Proxmoxu LXC kontajner. Kontajner sa stáva skutočným CIFS klientom /etc/fstab. ProxMenux nainštaluje CIFs-utils + smbclient pre vás a potvrdí osvedčenia proti serveru pred montážou.",
+    "section": "Úložisko & Share · LXC"
+  },
+  "privReq": {
+    "title": "Požadovaný privilegovaný kontajner",
+    "body": "Jadro <code>mount.cifs</code> klient potrebuje schopnosti (<code>SYS_ADMIN</code>), ktoré neprivilegované LXC kontajnery nevystavujú. Skript presadzuje túto požiadavku, aby ste si vybrali CT a <strong>aborts, ak je to neprivilegované</strong>. Ak potrebujete podiel vnútri neprivilegovaného CT, pripojte ho na Proxmox host prvý (s <hostSambaLink>Samba / CIFS ako Proxmox storage</hostSambaLink>) a pripojte ho do CT s <mountLink>LXC Mount Manager</mountLink>."
+  },
+  "what": {
+    "heading": "Čo to robí?",
+    "body": "Kontajner hovorí CIFS cez sieť a montuje podiel na vlastnú päsť. Proxmox host je len sieťový most",
+    "diagramServerLabel": "Samba server",
+    "diagramServerDetail": "//srv/share",
+    "diagramHostLabel": "Hostiteľ Proxmox",
+    "diagramHostDetail": "(len\nmost siete)",
+    "diagramCtLabel": "LXC (privilegovaný)",
+    "diagramCtDetail": "/mnt/share\nmount.cifs vnútri CT",
+    "diagramArrow": "CIFS",
+    "twoWaysTitle": "Dva spôsoby, ako dať CT0 a Samba zdieľať",
+    "twoWaysBind": "<strong>Pripojiteľné via host</strong> (<mountLink>LXC Správca pripojenia</mountLink>): host montuje CIFS raz, každý CT @ info: whatsthis Pracuje s neprivilegovanými CT. Odporúča sa, ak niekoľko CT potrebuje rovnaký podiel.",
+    "twoWaysDirect": "<strong>Direct CIFS mount inside the CT</strong> (this page): CT montuje sám CIFS. Vyžaduje si to výsadné právo. Užitočné, keď CT musí vlastniť svoje vlastné poverenia, alebo keď každý CT hovorí na iný server."
+  },
+  "opening": {
+    "heading": "Otvorenie nástroja",
+    "body": "Od ProxMenux's hlavné menu, otvorené <strong>Skladovanie &amp; Share Manager → Nastaviť klienta Samba v LXC (len privilegované)</strong>. ProxMenux Najprv ťa požiadam, aby si <strong>vybrať cieľ CT</strong> (a začne to, ak sa zastaví), preruší, ak nie je privilegovaný. Raz CT je vybraný vidíte toto sub- Menu:",
+    "imageAlt": "Samba Client Manager menu"
+  },
+  "howRuns": {
+    "heading": "Ako beží skript (Mount flow)"
+  },
+  "creds": {
+    "heading": "Kde býva heslo",
+    "body": "ProxMenux <strong>nikdy neukladá heslo v jednoduchom texte</strong> v príkaze o montáži alebo <code>/etc/fstab</code>. Namiesto toho píše súbor s údajmi vo vnútri CT:",
+    "whyTitle": "Prečo samostatný súbor skôr než fstab",
+    "whyBody": "Modul CIFS prijíma <code>username=</code>0 / <code>password=</code> možnosti inline v fstab, ale každý, kto môže čítať <code>/etc/fstab</code> vidí heslo v prehľadnom. Uvedenie údajov do koreňového súboru a ukazovanie fstab na neho (<code>credentials=</code>) udržuje heslo mimo svet-čitateľné konfig."
+  },
+  "options": {
+    "heading": "Vysvetlenie možností pripojenia",
+    "headerOption": "Možnosť",
+    "headerEffect": "Čo to robí?",
+    "rows": [
+      {
+        "option": "rw / ro",
+        "effect": "Režim na čítanie alebo čítanie pre celú montáž."
+      },
+      {
+        "option": "file_mode=0664",
+        "effect": "Oprávnenia hlásené pre súbory prostredníctvom CIFS. Štandardne umožňuje majiteľ+skupina písať, iní čítať."
+      },
+      {
+        "option": "dir_mode=0775",
+        "effect": "Práva hlásené pre adresáre. Štandardne umožňuje majiteľ + skupina vstúpiť a vytvárať, ostatné traverse."
+      },
+      {
+        "option": "iocharset=utf8",
+        "effect": "Nútiť UTF-8 pre názvy súborov prichádzajúce cez drôt. Vyhýba sa mojibake na non-ASCII mená."
+      },
+      {
+        "option": "credentials=file",
+        "effect": "Čítať užívateľské meno / heslo zo súboru (pridané automaticky pre užívateľa auth)."
+      },
+      {
+        "option": "hosť",
+        "effect": "Overte ako hosť, nie sú potrebné žiadne údaje (pri výbere hosťa automaticky pridané)."
+      },
+      {
+        "option": "netdev",
+        "effect": "Podľa init systému potrebuje táto montáž sieť. Čižma neblokuje čakanie."
+      },
+      {
+        "option": "x-systemd.automount",
+        "effect": "Lenivý montáž: iba pripojiť na prvý prístup. CIFS server nedostupný na boot nemá zastaviť CT."
+      },
+      {
+        "option": "noauto",
+        "effect": "Preskočiť horiace mount na boot. V kombinácii s automountovou jednotkou je montáž založená lazicky."
+      }
+    ],
+    "netEffectTitle": "Čistý účinok indikátorov fstab",
+    "netEffectBody": "Váš kontajner vždy topánky, aj keď Samba server je offline. Prvýkrát sa niečo dotýka horskej cesty, systemd Potichu ho namontuje. Ak je server stále vypnutý, tento jeden prístup zlyhá <em>dočasne nedostupný zdroj</em> Ale nič iné v CT je ovplyvnený."
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent",
+    "body": "Replikovať celý tok ručne <strong>Vnútri CT</strong> via <code>pct exec &lt;ctid&gt; --</code> alebo priamo cez <code>pct enter &lt;ctid&gt;</code>:",
+    "guestIntro": "Variant hostí"
+  },
+  "view": {
+    "heading": "Zobraziť aktuálne pripojenia",
+    "body": "Zobrazí každý bod pripojenia CIFS aktívny vo vnútri CT (<code>mount -t cifs</code>) plus každý riadok CIFS v CT <code>/etc/fstab</code>. Pre každú položku fstab je zobrazený stav live mount"
+  },
+  "unmount": {
+    "heading": "Odpojiť podiel Samba",
+    "body": "Kombinuje live mounts a fstab položky do jedného zoznamu, umožňuje vybrať jeden, a <strong>removeves zodpovedajúci riadok z <code>/etc/fstab</code></strong> plus zodpovedajúceho súboru údajov. Skript nebeží <code>umount</code> na live mount namiesto toho vám povie, že reštart CT je potrebný pre odpojení, aby sa účinok.",
+    "warnTitle": "Skript odstraňuje fstab položky, nie live pripojiť",
+    "warnBody": "Rovnaký dizajn ako NFS klient: <code>umount</code> na rušnej mount zlyhá s \"device rušný\" . Odstránenie vstupu fstab zaručuje, že montáž zmizne čisto pri ďalšom štarte CT. Ak chcete pripojiť preč <em>now</em>, spustite <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> ručne po skončení skriptu."
+  },
+  "test": {
+    "heading": "Testovať Samba konektivitu",
+    "body": "Diagnostický prechod vo vnútri CT0: potvrdzuje, <code>cifs-utils</code> je nainštalovaný, uvádza aktuálne CIFS mounts, potom pre každý server odkazovaný v kontrole fstab ping → porty 139/445 → zoznam hostí. \"Požaduje autentifikáciu\" na hosťa test je normálny pre akýkoľvek server, ktorý nevystavuje verejné akcie."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "privTitle": "Požadovaná privilegovaná nádoba (potraty skriptu)",
+    "privBody": "Vybrané CT je neprivilegované. Jadro CIFS klient potrebuje <code>SYS_ADMIN</code>, ktoré neprivilegované CT nevystavujú. Buď konvertujte CT na privilegovanú alebo použite alternatívnu cestu popísanú v varovaní v hornej časti tejto stránky.",
+    "aptTitle": "apt-get install fails",
+    "aptIntro": "Skript predpokladá rodinu Debianu CT (<code>apt-get</code>). Na Alpine / Arch / Rocky / Alma, inštalujte CIFS klienta ručne:",
+    "aptItems": [
+      "Alpine: <code>apk add cifs-utils samba-client</code>",
+      "Arch: <code>pacman -S cifs-utils smbclient</code>",
+      "Rocky / Alma: <code>dnf install cifs-utils samba-client</code>"
+    ],
+    "aptOutro": "Potom re-spustiť ProxMenux skript",
+    "guestFallbackTitle": "\"Server vás spájal ako hosť namiesto zadaného užívateľa\"",
+    "guestFallbackBody": "Aktívna validácia skriptu chytil skutočný problém. Server prijal pripojenie, ale znížil hostí, pretože poverovacie listiny sú zlé. Bežné príčiny: preklep v užívateľskom mene / heslo, užívateľ neexistuje na serveri, užívateľ je zamknutý, alebo pracovná skupina / doména je nesúlad. Znovu spustiť tok a znovu zadať osvedčenia starostlivo (heslo je skryté v dialógu).",
+    "denyTitle": "\"NT_STATUS_ACCESS_DENIED\" pri montáži",
+    "denyBody": "Dôveryhodnosť bola potvrdená, ale podiel popiera prístup. Skontrolujte na strane servera, či užívateľ má na tejto konkrétnej akcii práva (validácia potvrdzuje len prihlásenie, nie na zdieľané ACL). Tiež skontrolujte, či server vyžaduje konkrétnu verziu protokolu SMB: pripojiť <code>vers=3.0</code> (alebo <code>2.1</code>, <code>2.0</code>) k možnosti pripojenia.",
+    "utf8Title": "UTF-80 / non-ASCII názvy súborov sú rozpracované",
+    "utf8Body": "Predvolené možnosti zahŕňajú <code>iocharset=utf8</code>, ale niektoré konfigurácie serverov hlásia neočakávanú stránku kódov. Ak mená súborov s akcentmi / symbolmi vyzerajú zle, skúste aj <code>nounix</code> (niektoré servery Linux Samba to potrebujú, keď je klient tiež Linux) alebo nastavte stranu servera na <code>unix extensions = no</code>.",
+    "bootTitle": "Trvalá montáž uspeje, ale nepríde na boot",
+    "bootBody": "Takmer vždy jeden z: sieť nie je pripravená, keď CT @ info: whatsthis <code>_netdev,x-systemd.automount,noauto</code> vlajky opraviť to), server je nedostupný na boot (auto-mount čakanie na prvý prístup, ktorý je normálny), alebo DNS je nevyriešený pri štarte (použi IP servera, nie jeho meno hostiteľa)."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "LXC Body pripojenia (Host ↔ Container)",
+        "tail": " - alternatíva pre neprivilegované CT: pripojiť sa na hostiteľa, naviazať do CT."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-client",
+        "label": "NFS klient v LXC",
+        "tail": " — Súrodenecká stránka, rovnaký vzor pre akcie NFS."
+      },
+      {
+        "href": "/docs/storage-share/lxc-samba-server",
+        "label": "Samba server v LXC",
+        "tailRich": " — Inverzné: vystaviť priečinky <em>0z</em> a CT nad Samba."
+      },
+      {
+        "href": "/docs/storage-share/host-samba",
+        "label": "Samba / CIFS ako Proxmox skladovanie",
+        "tail": " Zaregistrujte podiel v Proxmoxe sám namiesto vnútri jedného CT."
+      }
+    ]
+  }
+}

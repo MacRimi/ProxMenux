@@ -1,0 +1,175 @@
+{
+  "meta": {
+    "title": "Vytvoriť VMs na Proxmox VE Synológia, Windows, Linux, NAS Čarodejníci ProxMenux",
+    "description": "Vytvoriť a konfigurovať virtuálne stroje na Proxmox VE s ProxMenux. Vyhradení sprievodcovia pre spotrebiče NAS (Synology DSM, TrueNAS, OpenMediaVault, UnRAID, atď.), Windows, Linux distros a externý inštalátor macOS. Citlivé predvolené zariadenia pre hardvér VM, úložisko a vytváranie sietí.",
+    "ogTitle": "Vytvoriť VM na Proxmox VE",
+    "ogDescription": "Sprievodcovia ProxMenux0 pre vytvorenie Synológie DSM, TrueNAS, OMV, UnRAID, Windows a Linux VMs na Proxmox VE.",
+    "ogImageAlt": "ProxMenux0 Create VM Menu",
+    "twitterTitle": "Vytvoriť VMs na Proxmox VE | ProxMenux",
+    "twitterDescription": "Čarodejníci pre synológiu, TrueNAS, OMV, UnRAID, Windows a Linux VMs na Proxmox VE."
+  },
+  "header": {
+    "title": "Vytvoriť VM",
+    "description": "ProxMenux skupiny VM vytvorenie interaktívneho dispečera. Vyberte skupinu operačného systému a zodpovedajúce sprievodca spracováva výber ISO, CPU, RAM, BIOS, sieť, úložisko a voliteľne GPU Prejazd.",
+    "section": "Virtuálne stroje"
+  },
+  "intro": {
+    "title": "Na čo je toto menu",
+    "body": "Menu Vytvoriť VM je router, nie jediný sprievodca. Pýta sa, ktorý rad operačných systémov chcete nainštalovať a načítať príslušný volič ISO a konfigurátor. Predvolené toky používajú rozumné prednastavenia ProxMenux; Pokročilé toky odhaľujú každú konfigurovateľnú možnosť pred vytvorením VM."
+  },
+  "opening": {
+    "heading": "Otvorenie menu",
+    "body": "Z hlavného menu ProxMenux vyberte <strong>Create VM</strong>. Uvidíte toto:",
+    "imageAlt": "Vytvoriť VM dispečer s 3 ProxMenux možnosti (NAS / Windows / Linux) nasledované sekciou Community Scripts (macOS / Iní)"
+  },
+  "families": {
+    "heading": "Tri rodiny OS",
+    "intro": "Tri ProxMenux položky v hornej časti menu zdieľajú rovnaký základný motor a post-ISO prietok Vyberte si ten, ktorý sa zhoduje s hosťom, ktorého chcete nainštalovať.",
+    "routes": [
+      {
+        "key": "nas",
+        "title": "Systém NAS",
+        "icon": "HardDrive",
+        "href": "/docs/create-vm/system-nas",
+        "accent": "border-emerald-300 bg-emerald-50",
+        "iconBg": "bg-emerald-100 text-emerald-700",
+        "description": "Sedem NAS operačných systémov ako vyhradené VMs. Väčšina používa auto-ISO tok; Synológia DSM prevádzkuje špecializované nakladač sprievodca.",
+        "bullets": [
+          "Synológia DSM (ARC / RR / TinyCore nakladače)",
+          "TrueNAS SCALE a CORE (ZFS)",
+          "OpenMediaVault (na báze Debianu)",
+          "XigmaNAS (FreeBSD ZFS)",
+          "Rockstor (openSUSE / Btrfs), ZimaOS"
+        ]
+      },
+      {
+        "key": "okná",
+        "title": "Systém Windows",
+        "icon": "MonitorCog",
+        "href": "/docs/create-vm/system-windows",
+        "accent": "border-blue-300 bg-blue-50",
+        "iconBg": "bg-blue-100 text-blue-700",
+        "description": "Windows 10, 11 a Server edície s Windows-friendly predvolených (q35 + OVMF + TPM 2.0) a VirtIO ovládače predmontované.",
+        "bullets": [
+          "UUP Dump pre aktuálne ISO",
+          "Alebo miestne ISO z /var/lib/vz/template/iso",
+          "TPM 2.0 pridaný automaticky",
+          "Ovládače VirtIO ISO pripojené k ide3",
+          "Zapnutý kanál pre hostí"
+        ]
+      },
+      {
+        "key": "linux",
+        "title": "Systém Linux",
+        "icon": "Laptop",
+        "href": "/docs/create-vm/system-linux",
+        "accent": "border-amber-300 bg-amber-50",
+        "iconBg": "bg-amber-100 text-amber-700",
+        "description": "Curated katalóg oficiálnych Linux ISOs auto-downloaded z protiprúdu, plus miestne-ISO picker pre čokoľvek iné.",
+        "bullets": [
+          "Ubuntu (Pracovná plocha / Server, 20.04–25.10)",
+          "Debian (Pracovná plocha / Netinst, 11–13)",
+          "Fedora, Arch, Rocky, Mint, openSUSE",
+          "Alpine, Kali, Manjaro",
+          "Lokálna cesta ISO pre vlastné obrázky"
+        ]
+      }
+    ]
+  },
+  "community": {
+    "title": "Skripty Spoločenstva (tu nie sú zdokumentované)",
+    "intro": "Dva položky pod <em>0 Community Scripts</em> oddeľovací spúšťací kód, ktorý je <strong> nie je súčasťou ProxMenux</strong>, takže sú zámerne ponechané mimo tejto dokumentácie:",
+    "macosRich": "<strong>Systém macOS</strong> chápaná externá <osxLink>OSX-PROXMOX</osxLink> inštalátor. Klonuje úložisko proti prúdu, pripravuje hostiteľa a <strong>reštartuje automaticky po dokončení</strong>. Pozrite si vlastnú dokumentáciu projektu.",
+    "othersRich": "<strong>System Others (Linux-based)</strong> Každý skript komunity je udržiavaný mimo ProxMenux."
+  },
+  "afterPick": {
+    "heading": "Čo sa stane potom, čo si vyberiete OS",
+    "intro": "Po výbere ISO sa dispečer vydá rovnakou cestou bez ohľadu na skupinu OS:",
+    "items": [
+      "<strong>Default vs Advanced.</strong> Potvrdzovací dialóg umožňuje prijať prednastavenia ProxMenux alebo otvoriť úplný konfigurátor (CPU model/core, RAM, BIOS/UEFI, model NIC, typ stroja).",
+      "<strong>Storage plan.</strong> Skombinujete jeden alebo niekoľko virtuálnych diskov, importovaných diskov a PCI priechodných zariadení (celý regulátor / NVMe) v rovnakom VM.",
+      "<strong>0Voliteľné GPU passhrough.</strong> Ak je kompatibilný GPU detekované na hostiteľa, ProxMenux ponúka na spustenie GPU asistent po VM je vytvorený",
+      "<strong>VM tvorba.</strong> • VM je postavený, označený, a štýlový HTML popis je pripojený k nemu pre rýchlu referenciu v Proxmox UI."
+    ],
+    "tipTitle": "Preferujte Pokročilé pre VMs máte v úmysle zachovať",
+    "tipBody": "Predvolené prednastavenia fungujú dobre pre rýchle testy. Pre VM máte v úmysle zachovať, Pokročilá cesta vám umožní vybrať si správne BIOS (SeaBIOS vs OVMF/UEFI), typ stroja (<code>i440fx</code> vs <code>q35</code>) a ovládač disku (VirtIO SCSI single vs SATA) vpredu"
+  },
+  "scripts": {
+    "heading": "Uvedené skripty",
+    "intro": "Dispečer vygeneruje niekoľko zdieľaných skriptov, ktoré nie sú zdokumentované ako jednotlivé stránky. Sú tu uvedené ako referencie. Každý sub-strana odkazy na hlavný skript relevantné pre jeho tok.",
+    "headerScript": "Skript",
+    "headerRole": "Úloha",
+    "rows": [
+      {
+        "path": "menus/create_vm_menu.sh",
+        "role": "Odosielateľ miesta vstupu."
+      },
+      {
+        "path": "vm/select_nas_iso.sh",
+        "role": "ISO / prepínač spotrebičov pre NAS systémy (synológia, TrueNAS, OMV, Rockstor, ZimaOS)."
+      },
+      {
+        "path": "vm/select_windows_iso.sh",
+        "role": "Windows ISO volič. Delegáti UUP Dump staviteľ v prípade potreby."
+      },
+      {
+        "path": "vm/select_linux_iso.sh",
+        "role": "Linuxový volič ISO pre prietok Linuxu (distribúcie hlavného prúdu)."
+      },
+      {
+        "path": "vm/synology.sh",
+        "role": "Synológia toku DSM: sťahuje nakladač a obrázok DSM a pripravuje profil VM."
+      },
+      {
+        "path": "vm/zimaos.sh",
+        "role": "ZimaOS tok: stiahne obraz a prepojí ho do definície VM."
+      },
+      {
+        "path": "vm/vm_configurator.sh",
+        "role": "Predvolené vs Pokročilý sprievodca: CPU model/skóre, RAM, BIOS, NIC, typ stroja."
+      },
+      {
+        "path": "vm/disk_selector.sh",
+        "role": "Plán úložiska: virtuálny disk, import disku, alebo Controller/NVMe priechod."
+      },
+      {
+        "path": "vm/vm_creator.sh",
+        "role": "Finálna tvorba VM: použije konfiguráciu, pripojí pamäť, napíše HTML popis."
+      },
+      {
+        "path": "vm/guest_agent_config.sh",
+        "role": "Voliteľný QEMU hosťujúci agent nastaviť hák, používaný niekoľkými tokmi."
+      }
+    ]
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/disk-manager",
+        "label": "Správca diskov",
+        "tail": " — "
+      },
+      {
+        "href": "/docs/utils/UUp-Dump-ISO-Creator",
+        "label": "Tvorba ISO cez UUP Dump",
+        "tail": " — "
+      },
+      {
+        "href": "/docs/utils/import-vm",
+        "label": "Importovať VM z OVA / OVF",
+        "tail": " — Prineste predstavené VM z VMware / VirtualBox0 / ProxMenux export."
+      },
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Pridať GPU do VM (passthrough)",
+        "tail": " Prihraj! GPU do čerstvo vytvoreného VM."
+      },
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "VM a CT Riadiace príkazy",
+        "tail": " — Referencia qm pre stranu CLI."
+      }
+    ]
+  }
+}

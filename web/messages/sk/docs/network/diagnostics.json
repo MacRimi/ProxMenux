@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Diagnostika Dokumentácia ProxMenux",
+    "description": "Tri iba jednorázové diagnostické kontroly: Zobraziť tabuľku Routing, Test Connectivity a pokročilú diagnostiku. Čistá inšpekcia nikdy nepíše na /etc/network/interfaces a nikdy spustí modifikujúci príkaz (jeden explicitný, opt-in výnimka pre vyčistenie NetworkManager pri detekovaní).",
+    "ogTitle": "Diagnostika Dokumentácia ProxMenux",
+    "ogDescription": "Sieťová diagnostika iba na čítanie pre hostiteľa Proxmoxu: smerovanie, dosiahnuteľnosť, pokročilé štatistiky."
+  },
+  "header": {
+    "title": "Diagnostika",
+    "description": "Tri jednorázové kontroly len na čítanie, ktoré kontrolujú stav živej siete: smerovacia tabuľka, skúška konektivity a pokročilé štatistiky. Nikto z nich nepíše. /etc/network/interfaces Bezpečné použitie kedykoľvek, vrátane nad SSH. Pre interaktívne monitorovanie v priamom prenose pozri Live monitoring tools.",
+    "section": "Sieť"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "Správy o smerovaní, dosiahnuteľnosti a súhrnnej štatistike <strong> bez úpravy niečoho</strong>. Použite ho na potvrdenie, že sieť je zdravá alebo identifikuje duplicitné IP. Pre nepretržité sledovanie dopravy pozri <monitoringLink>Live monitorovacie nástroje</monitoringLink>; pre zobrazenie surového konfiguračného súboru pozri <backupLink>Interfaces backup a reštart </backupLink>."
+  },
+  "routing": {
+    "heading": "Zobraziť smerovaciu tabuľku",
+    "body": "Zobrazí každú trasu, ktorú jadro momentálne používa (<code>ip route show</code>) a zvýrazní štandardnú bránu. Užitočné na potvrdenie, že doprava na internet odchádza cez očakávané rozhranie a že žiadne zvyšné trasy majú prednosť."
+  },
+  "connectivity": {
+    "heading": "Otestovať pripojenie",
+    "intro": "Posiela dve ICMP sondy na tri ciele v poradí a každý z nich hlási. Potom spustí <code>nslookup google.com</code> pre overenie DNS rozlíšenie nezávisle od ICMP.",
+    "headerTest": "Skúška",
+    "headerTarget": "Cieľ",
+    "headerConfirms": "Čo potvrdzuje",
+    "rows": [
+      {
+        "test": "Google DNS",
+        "target": "8.8.8.8",
+        "confirms": "Externá dosiahnuteľnosť prostredníctvom známej akejkoľvek IP"
+      },
+      {
+        "test": "Cloudflare DNS",
+        "target": "1.1.1.1",
+        "confirms": "Nezávislé druhé stanovisko, ak Google blokuje ICMP"
+      },
+      {
+        "test": "Brána",
+        "target": "(štandardná trasa)",
+        "confirms": "L2 / L3 pripojenie k miestnemu routeru"
+      },
+      {
+        "test": "Preklad DNS",
+        "target": "google.com",
+        "confirms": "DNS server je dosiahnuteľný a odpovede"
+      }
+    ],
+    "readingTitle": "Čítanie výsledku",
+    "readingBody": "Ak je vstupná brána skúška prejde, ale verejné DNS ciele zlyhajú, máte lokálnu konektivitu, ale žiadny internet Ak DNS rozlíšenie zlyhá, ale ping to <code>8.8.8.8</code> uspeje, problém je riešiteľ, nie sieť: skontrolujte <code>/etc/resolv.conf</code>."
+  },
+  "advanced": {
+    "heading": "Pokročilá diagnostika",
+    "intro": "Agregáty štatistiky celej siete a vedie súbor kontrol spoločných emisií. Hlásenia aktívneho pripojenia počíta, počúvanie porty, celkové rozhrania a vlajky dva anti-vzory výslovne:",
+    "items": [
+      "<strong>NetworkManager beží po Proxmoxovom hostiteľovi.</strong> NetworkManager a Proxmox's <code>ifupdown</code> Konflikt, obaja sa snažia riadiť rozhrania, čo vedie k mostom, ktoré klapku alebo odmietajú prísť. Ak je detekované, nástroj ponúka interaktívnu výzvu zastaviť, zakázať a očistiť ho (toto je <em>iba</em> diagnostika, ktorá môže zmeniť systém a len po výslovnom súhlase).",
+      "<strong>Duplicate IP adresy na rôznych rozhraniach.</strong> Dva rozhrania, ktoré majú rovnaký IPv4, spôsobujú intermitentnú konektivitu, ktorá je extrémne ťažké ladiť z vnútra VM. Detekovaný cez <code>ip -4 addr show | sort | uniq -d</code>."
+    ],
+    "nmTitle": "Poplach NetworkManager je tu jedinou zmenou",
+    "nmBody": "Každá ďalšia kontrola v aplikácii Advanced Diagnostics je len na čítanie. Odstránenie NetworkManager je zakázané za dialógom áno/nie a beží <code>systemctl stop / disable</code> + <code>apt-get purge -y network-manager</code>. Ak odmietnete, nič sa nezmení."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "gwTitle": "Test Connectivity hlási bránu ako neúspešnú, ale hostiteľ má internet",
+    "gwBody": "Niektoré routery nereagujú na ICMP zo svojho interného rozhrania, aj keď šťastne dopredu prevádzku. Test s <code>traceroute 8.8.8.8</code> z konzoly: ak druhý hop je váš ISP a verejné DNS test prešiel, brána je v poriadku aj napriek neúspešné ping.",
+    "dupTitle": "Advanced Diagnostics drží flagging duplicitné IP po tom, čo som odstránil jeden",
+    "dupBody": "Kontrola sa pozerá na stav živého jadra, nie na konfiguračný súbor. Spustite <code>ip -4 addr show</code> na potvrdenie; ak je duplikát stále prítomný, rozhranie ho stále drží. Použite <code>ip addr del &lt;IP&gt;/&lt;mask&gt; dev &lt;iface&gt;</code> odstrániť z živého stavu, potom upraviť <code>/etc/network/interfaces</code> ak je tiež pretrvávajúce."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Živé monitorovacie nástroje",
+        "href": "/docs/network/monitoring",
+        "tail": " — Interaktívne iftop / iptraf-ng / iperf3 spúšťače."
+      },
+      {
+        "label": "Analýza a oprava mosta",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — Keď vmbrX chýba fyzický port."
+      },
+      {
+        "label": "Analýza konfigurácií a usmerňované čistenie",
+        "href": "/docs/network/config-analysis",
+        "tail": " — Keď je starý NIC stále vyhlásený, ale už nie je prítomný."
+      },
+      {
+        "label": "Záloha a reštart rozhraní",
+        "href": "/docs/network/backup-restore",
+        "tail": " — "
+      }
+    ]
+  }
+}

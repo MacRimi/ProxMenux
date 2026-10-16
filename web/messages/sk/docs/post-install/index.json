@@ -1,0 +1,106 @@
+{
+  "meta": {
+    "title": "Proxmox VE Post-Install Script ProxMenux",
+    "description": "Prehľad ProxMenux Post-Install skripty pre Proxmox VE. Spustite automatický skript pre zdravé predvolené s nulovými výzvami, prispôsobiteľný skript vybrať presne to, čo chcete naprieč 10 kategórie, alebo obnoviť podporované reverzibilné zmeny s Uninstall Optimizations.",
+    "ogTitle": "Proxmox VE Post-Install Script",
+    "ogDescription": "Aplikujte bežné Proxmox VE po inštalácii optimalizácie v rámci 10 kategórie",
+    "twitterTitle": "Proxmox VE Post-Install Script ProxMenux",
+    "twitterDescription": "Automatizované a prispôsobiteľné post-inštalačné optimalizácie pre Proxmox VE"
+  },
+  "header": {
+    "title": "Skripty po inštalácii",
+    "description": "Nastaviť nový Proxmox VE hostiteľ s optimalizáciou ProxMenux po inštalácii. Aplikujte základnú líniu automaticky, vyberte jednotlivé možnosti, aktualizujte nainštalované funkcie alebo obnovte podporované reverzibilné zmeny. Aktualizácie balíkov nie sú prezentované ako reverzibilné.",
+    "section": "Nastavenie Proxmoxu po inštalácii"
+  },
+  "intro": {
+    "title": "Na čo je toto menu",
+    "body": "Hneď po inštalácii Proxmox VE0, tam sú desiatky malých zmien, ktoré robia hostiteľa rýchlejšie a jednoduchšie udržiavať zadarmo úložiská, zdravé žurnalistiky limity, citlivé TCP nárazníky, SSD-friendly log úložisko, bashrc milosti, a ďalšie. ProxMenux ich automatizuje a sleduje podporované reverzibilné zmeny konfigurácie."
+  },
+  "openingMenu": {
+    "heading": "Otvorenie menu",
+    "body": "Od ProxMenuxhlavné menu, vyberte <strong>Nastavenie po inštalácii Proxmox</strong>. Uvidíte toto:",
+    "imageAlt": "Poinštalačné skripty menu"
+  },
+  "threeWays": {
+    "heading": "Štyri spôsoby, ako uplatniť optimalizáciu",
+    "body": "Štyri ProxMenux položky zdieľajú rovnaký základný kód a rovnaký register nainštalovaných nástrojov Aplikácia <em> Application Available Updates</em> zobrazuje len vtedy, keď aspoň jedna nainštalovaná optimalizácia má novšiu verziu na disku než to, čo je registrované; na čerstvo aplikovanom hostiteľovi zostáva skrytá."
+  },
+  "routes": [
+    {
+      "title": "Automatizované",
+      "description": "Kurovaná sada 14 bezpečné, vždy užitočné optimalizácie použité v postupnosti s nulami. Dobré predvolené pre väčšinu užívateľov.",
+      "bullets": [
+        "Bezplatné repo obchody + aktualizácia systému",
+        "Pamäť, jadro, sieťové ladenie",
+        "Log2RAM (automatické zistenie SSD/NVMe)",
+        "Povinné + veľkostné limity logrotátu",
+        "Stále názvy sieťových rozhraní"
+      ]
+    },
+    {
+      "title": "Prispôsobiteľné",
+      "description": "~35 individuálna optimalizácia v kategóriách 10. Vyberte si presne tie, ktoré sa majú použiť. Rovnaký motor ako Automatizovaný, ale s plnou kontrolou.",
+      "bullets": [
+        "Kontrolný zoznam UI podľa kategórie",
+        "Zahŕňa všetko automatizované robí, plus opt-in položky (IOMMU, Fastfetch, Figurine, Ceph, HA, AMD opravy...)",
+        "Spustiť toľkokrát, koľko chcete"
+      ]
+    },
+    {
+      "title": "Aplikovať dostupné aktualizácie",
+      "description": "Keď optimalizácia po inštalácii (Log2Ram, Memory Nastavenia, Logrotate...) dostane novšiu verziu na disku, než je to, čo je registrované na hostiteľa, tento vstup sa vyznačuje iba tými, ktoré sa pohybovali. Znovu spustí zodpovedajúcu funkciu a osvieži register.",
+      "bullets": [
+        "Optimalizácia na optimalizáciu (len to, čo sa zmenilo)",
+        "Rovnaký zberač dostupný z prístrojovej dosky monitora",
+        "Jedno skupinové oznámenie pri nových aktualizáciách pozemkov"
+      ]
+    },
+    {
+      "title": "Odinštalovať optimalizácie",
+      "description": "Podporované reverzibilné zmeny sú sledované v registri JSON a spárované s funkciou obnovy. Opatrenia bez bezpečného vrátenia, ako napríklad úplná aktualizácia balíka, sú zámerne vylúčené.",
+      "bullets": [
+        "Odhaľuje predtým aplikovanú optimalizáciu automaticky",
+        "Reversal si vyberie správnu cestu pre každú položku a obnoví z .bak zálohovanie, kde jeden bol vyrobený, odstráni sysctl.d snipppet, kde nič potrebné zálohovanie, alebo znovu nainštaluje vanilkový balík s --force-confnew (napr. predplatné banner)",
+        "V prípade potreby reštartujte (VFIO, trvalé mená atď.)"
+      ]
+    }
+  ],
+  "whichTitle": "Ktorý by si si mal vybrať?",
+  "whichBody": "Ak je to čerstvé Proxmox inštalovať a chcete rozumnú východiskovú hodnotu bez rozhodnutí: <autoLink><strong>Automatizované</strong></autoLink>. Ak už viete, ktoré vylepšenia chcete (alebo ktoré rozhodne nechcete): <customLink><strong>Prispôsobiteľné</strong></customLink>. Ak máte niečo, čo ste už uplatnili, má novšiu verziu na disku a chcete zdvihnúť iba to: <updatesLink><strong>Aplikovať dostupné aktualizácie</strong></updatesLink>. Ak ste použili niečo skôr a chcete to úplne vycúvať: <uninstallLink><strong>Odinštalovať optimalizáciu</strong></uninstallLink>. Môžete ich zmiešať a aplikovať Automatizovaný ako prvý, potom otvoriť Prispôsobiteľné pridať opt-in, ako je Fastfetch alebo IOMMU, a vrátiť každú jednotlivú položku neskôr.",
+  "mixing": {
+    "heading": "Miešanie s inými postinštalačnými skriptmi",
+    "stackTitle": "Nepokladajte viac skriptov po inštalácii",
+    "stackBody": "Spustenie niekoľkých post-inštalovať skripty na rovnakom hostiteľovi môže spôsobiť duplicitné konfiguračné súbory, protichodné sysctl položky, alebo horšie Ak ste už použili <strong>Helper-Scripts Post Install</strong>, niektoré optimalizácie ProxMenux sa môžu prekrývať s tým, čo už nakonfiguroval. Držte sa jedného nástroja po inštalácii na hostiteľa.",
+    "xshokTitle": "xshok-proxmox: deprekovaný",
+    "xshokBody": "Skoršie verzie ProxMenux odkazovali na <a>xshok-proxmox</a> ako na poinštalačný nástroj. Tento projekt je teraz oslabený a už nie je ponúknutý z ProxMenux. Ak predchádzajúci spustiť xshok-proxmox ľavé markery na hostiteľa, ProxMenux stále detekuje a varuje vás, ale to nie je niečo, čo by ste mali nainštalovať vedľa ProxMenux dnes."
+  },
+  "community": {
+    "heading": "Skripty Spoločenstva",
+    "body": "Menu tiež odhaľuje dva skripty tretích strán z <a>Predpisy Spoločenstva</a> projekt: <em>Proxmox VE @ title: menu</em> a <em>Proxmox VE Mikrokód</em>. Toto sú obaly, ktoré <code>wget | bash</code> originálne autorské písma. Nie sú udržiavané ProxMenux. Pozri <link>Externé repozície</link> pre detaily a otázky dôvery pred ich spustením."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Aktualizácia systému Proxmox",
+        "href": "/docs/utils/system-update",
+        "tail": " — "
+      },
+      {
+        "label": "Zabezpečenie",
+        "href": "/docs/security",
+        "tail": " — Fail2Ban + Lynis na vrchole po inštalácii kalenia."
+      },
+      {
+        "label": "Zobraziť informácie o verzii",
+        "href": "/docs/settings/show-version-information",
+        "tail": " — Pozrite sa, ktoré komponenty po inštalácii sú sledované ako nainštalované."
+      },
+      {
+        "label": "Aktualizácie a príkazy balíčkov",
+        "href": "/docs/help-info/update-commands",
+        "tail": " — Referencie pre apt / pveupgrade."
+      }
+    ]
+  }
+}
