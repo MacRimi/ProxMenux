@@ -200,6 +200,11 @@ class CommandDescriptionsTests(unittest.TestCase):
                 if lang != "en":
                     messages = json.loads(path.read_text())
                     english = catalog("en")
+                    # Provider help ships in English before the translation bot.
+                    for key in ("appriseServiceHelp", "appriseSlackSteps", "appriseSlackDocs",
+                                "appriseMatrixSteps", "appriseMatrixDocs", "appriseServiceFinish"):
+                        messages["settings"]["notifications"]["ui"].setdefault(
+                            key, english["settings"]["notifications"]["ui"][key])
                     for section, key in (("encryption", "pbsHelp"),
                                          ("keyfileActions", "pveKeyDescription")):
                         messages["backup"][section].setdefault(key, english["backup"][section][key])
