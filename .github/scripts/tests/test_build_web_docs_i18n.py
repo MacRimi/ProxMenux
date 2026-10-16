@@ -94,6 +94,22 @@ class WebDocsI18nTests(unittest.TestCase):
             self.assertNotIn(literal, protected)
         self.assertEqual(MODULE.restore_text(protected, mapping), source)
 
+    def test_bare_sentinel_with_added_digit_is_rejected(self):
+        with mock.patch.object(MODULE, "BARE_SENTINELS", True):
+            protected, mapping = MODULE.protect_text("ProxMenux collects metrics.")
+        token = next(iter(mapping))
+        with self.assertRaisesRegex(ValueError, "changed protected token"):
+            MODULE.restore_text(protected.replace(token, token + "0"), mapping)
+        self.assertEqual(MODULE.restore_text(protected, mapping), "ProxMenux collects metrics.")
+
+    def test_product_and_kernel_module_names_are_protected(self):
+        source = "Flask uses SQLite and journald; rclone works with Coral, gasket, apex and Alpine."
+        protected, mapping = MODULE.protect_text(source)
+        for name in ("Flask", "SQLite", "journald", "rclone", "Coral", "gasket", "apex", "Alpine"):
+            self.assertIn(name, mapping.values())
+            self.assertNotIn(name, protected)
+        self.assertEqual(MODULE.restore_text(protected, mapping), source)
+
     def test_literal_only_changes_sync_without_retranslating_human_prose(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

@@ -73,6 +73,24 @@ TECHNICAL_TERMS = (
     "DKMS",
     "SSH",
     "API",
+    "Flask",
+    "SQLite",
+    "Prometheus",
+    "Grafana",
+    "Uptime Kuma",
+    "PWA",
+    "Fail2Ban",
+    "Tailscale",
+    "JavaScript",
+    "TypeScript",
+    "Next.js",
+    "Coral",
+    "rclone",
+    "journald",
+    "gasket",
+    "apex",
+    "Alpine",
+    "OpenVINO",
 )
 
 PROTECTED_PATTERNS = (
@@ -358,11 +376,14 @@ def protect_text(text: str) -> tuple[str, dict[str, str]]:
 
 
 def restore_text(text: str, mapping: dict[str, str]) -> str:
-    missing = [token for token in mapping if token not in text]
+    # A local model may append a digit to a bare sentinel. A substring match
+    # would silently restore the prefix and leak the extra digit into prose.
+    patterns = {token: re.compile(re.escape(token) + r"(?![0-9])") for token in mapping}
+    missing = [token for token, pattern in patterns.items() if not pattern.search(text)]
     if missing:
         raise ValueError(f"translation provider changed protected token {missing[0]}")
     for token, original in mapping.items():
-        text = text.replace(token, original)
+        text = patterns[token].sub(lambda match: original, text)
     return text
 
 
