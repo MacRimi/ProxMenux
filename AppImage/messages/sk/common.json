@@ -2124,7 +2124,13 @@
         "inactiveFooter": "Zapnite notifikácie a dostávajte upozornenia o systéme, stave a bezpečnosti cez nastavené kanály.",
         "notificationLanguage": "Jazyk notifikácií",
         "selectNotificationLanguage": "Vyberte jazyk notifikácií",
-        "notificationLanguageHint": "Používa sa pre spoľahlivé runtime notifikácie aj vtedy, keď je AI vypnutá."
+        "notificationLanguageHint": "Používa sa pre spoľahlivé runtime notifikácie aj vtedy, keď je AI vypnutá.",
+        "appriseServiceHelp": "Nastavenie Slack a Matrix",
+        "appriseSlackSteps": "V aplikácii Slack vytvorte prichádzajúci webhook pre cieľový kanál a vložte jeho úplnú HTTPS URL do poľa URL Apprise. Nie je potrebný žiadny prevod.",
+        "appriseSlackDocs": "Formáty URL a nastavenie Slack",
+        "appriseMatrixSteps": "Použite účet pre oznámenia, ktorý môže odosielať správy do miestnosti. Nahraďte vzorového používateľa, heslo, domovský server a úplné ID miestnosti; špeciálne znaky v prihlasovacích údajoch zakódujte pre URL. Schéma matrixs používa HTTPS. Podporu tokenov, SSO a šifrovaných miestností v nainštalovanej verzii Apprise nájdete v dokumentácii.",
+        "appriseMatrixDocs": "Formáty URL a nastavenie Matrix",
+        "appriseServiceFinish": "Povoľte Apprise, zadajte svoju URL, vyberte kategórie oznámení alebo jednotlivé udalosti, uložte a potom použite Odoslať test. Tieto príklady nemenia uloženú URL. Tento kanál Apprise má jeden cieľ; pre viac služieb naraz použite API Apprise."
       },
       "ai": {
         "title": "AI vylepšenie",
@@ -4769,6 +4775,24 @@
       "thursday": "štvrtok",
       "tuesday": "utorok",
       "wednesday": "streda"
+    },
+    "storageRetention": {
+      "title": "Uchovávanie záloh úložiska",
+      "keepAll": "Ponechať všetky zálohy",
+      "description": "Predvolená politika uchovávania záloh uložená v Proxmoxe. Zálohovacie úlohy s vlastnou politikou majú pred týmto predvoleným nastavením prednosť.",
+      "refresh": "Obnoviť",
+      "saved": "Politika uchovávania záloh úložiska bola uložená. Prerezávanie sa nevykonalo.",
+      "choosePolicy": "Vyberte Ponechať všetky alebo aspoň jeden počet uchovávaných záloh väčší ako nula.",
+      "saveFailed": "Nepodarilo sa uložiť politiku uchovávania záloh úložiska. Ak sa konfigurácia zmenila, obnovte zoznam.",
+      "loadFailed": "Nepodarilo sa načítať politiku uchovávania záloh úložiska.",
+      "empty": "Nenašli sa žiadne úložiská záloh.",
+      "default": "Predvolené nastavenie Proxmoxu",
+      "edit": "Upraviť",
+      "editTitle": "Uchovávanie záloh pre {storage}",
+      "effect": "Platí pre budúce zálohovania, ktoré preberajú túto politiku úložiska. Uložením sa existujúce zálohy neodstránia. Chránené zálohy zostanú chránené.",
+      "cancel": "Zrušiť",
+      "save": "Uložiť uchovávanie záloh",
+      "useDefault": "Použite predvolené nastavenie Proxmox (žiadne pravidlá pre toto úložisko)"
     }
   },
   "healthStatus": {

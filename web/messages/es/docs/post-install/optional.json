@@ -119,9 +119,9 @@
     "intro": "Esta opción instala y configura Figurine, una herramienta que crea banners de texto ASCII con estilo para tu terminal, mostrando tu hostname en un formato 3D atractivo visualmente.",
     "doesLabel": "Qué hace:",
     "doesItems": [
-      "Descarga e instala Figurine v2.0.0 desde GitHub",
+      "Descarga e instala Figurine v2.1.1 desde GitHub para la arquitectura del host (AMD64, ARM64 o ARMv7)",
       "Crea un mensaje de bienvenida que muestra tu hostname en ASCII art 3D al hacer login",
-      "Elimina automáticamente cualquier instalación previa de Figurine si la hay",
+      "Actualiza el binario existente de Figurine tras descargar y extraer el paquete correctamente",
       "Configura el mensaje de bienvenida para que se ejecute automáticamente al hacer login"
     ],
     "practicalLabel": "Uso práctico:",

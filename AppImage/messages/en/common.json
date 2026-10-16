@@ -2111,6 +2111,12 @@
         "pushoverCredentialsHint": "Create an application in Pushover and copy its API token and your user or group key.",
         "enableApprise": "Enable Apprise",
         "urlFormats": "+URL formats",
+        "appriseServiceHelp": "Slack and Matrix setup",
+        "appriseSlackSteps": "Create an Incoming Webhook in your Slack app for the target channel, then paste its complete HTTPS URL into Apprise URL. No conversion is needed.",
+        "appriseSlackDocs": "Slack URL formats and setup",
+        "appriseMatrixSteps": "Use a notification account that can post to the room. Replace the example user, password, homeserver and full room ID; URL-encode special characters in credentials. The matrixs scheme uses HTTPS. See the documentation for token, SSO and encrypted-room support in your installed Apprise version.",
+        "appriseMatrixDocs": "Matrix URL formats and setup",
+        "appriseServiceFinish": "Enable Apprise, enter your URL, choose the notification categories or individual events, save, then use Send Test. These examples do not change your saved URL. This Apprise channel has one destination; use Apprise API for several services at once.",
         "appriseUrl": "Apprise URL",
         "showUrl": "Show URL",
         "hideUrl": "Hide URL",
@@ -3955,6 +3961,24 @@
     }
   },
   "backup": {
+    "storageRetention": {
+      "useDefault": "Use the Proxmox default (no policy on this storage)",
+      "title": "Storage retention",
+      "keepAll": "Keep all backups",
+      "description": "Default backup retention stored in Proxmox. Backup jobs with an explicit policy override this default.",
+      "refresh": "Refresh",
+      "saved": "Storage retention saved. No pruning was run.",
+      "choosePolicy": "Choose Keep all or at least one positive retention count.",
+      "saveFailed": "Could not save storage retention. Refresh the list if the configuration changed.",
+      "loadFailed": "Could not load storage retention.",
+      "empty": "No backup storages found.",
+      "default": "Proxmox default",
+      "edit": "Edit",
+      "editTitle": "Retention for {storage}",
+      "effect": "Applies to future backup runs that inherit this storage policy. Saving does not delete existing backups. Protected backups remain protected.",
+      "cancel": "Cancel",
+      "save": "Save retention"
+    },
     "actions": {
       "addAnother": "Add another",
       "addPath": "Add path",

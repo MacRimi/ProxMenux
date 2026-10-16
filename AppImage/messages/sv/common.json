@@ -1317,8 +1317,8 @@
         "fredag",
         "lördag"
       ],
-      "runSkippedStatus": "kör hoppade över",
-      "reasonStoppedContainer": "Behållaren är stoppad;schemalagd uppdatering hoppades över.",
+      "runSkippedStatus": "körning överhoppad",
+      "reasonStoppedContainer": "Behållaren är stoppad; den schemalagda uppdateringen hoppades över.",
       "reasonStoppedContainerHistorical": "Behållaren stoppades vid den schemalagda uppdateringstiden."
     },
     "cronChip": {
@@ -2125,7 +2125,13 @@
         "inactiveFooter": "Aktivera aviseringar för att ta emot system-, hälso- och säkerhetsvarningar via de konfigurerade kanalerna.",
         "notificationLanguage": "Aviseringsspråk",
         "selectNotificationLanguage": "Välj språk för meddelanden",
-        "notificationLanguageHint": "Används för deterministiska körtidsmeddelanden även när AI är inaktiverat."
+        "notificationLanguageHint": "Används för deterministiska körtidsmeddelanden även när AI är inaktiverat.",
+        "appriseServiceHelp": "Konfiguration av Slack och Matrix",
+        "appriseSlackSteps": "Skapa en inkommande webhook i din Slack-app för målkanalen och klistra sedan in dess fullständiga HTTPS-URL i fältet Apprise-URL. Ingen omvandling behövs.",
+        "appriseSlackDocs": "URL-format och konfiguration för Slack",
+        "appriseMatrixSteps": "Använd ett aviseringskonto som får skicka meddelanden till rummet. Ersätt exemplets användare, lösenord, hemserver och fullständiga rums-ID; URL-koda specialtecken i inloggningsuppgifterna. Schemat matrixs använder HTTPS. Se dokumentationen för stöd för token, SSO och krypterade rum i din installerade Apprise-version.",
+        "appriseMatrixDocs": "URL-format och konfiguration för Matrix",
+        "appriseServiceFinish": "Aktivera Apprise, ange din URL, välj aviseringskategorier eller enskilda händelser, spara och använd sedan Skicka test. Dessa exempel ändrar inte din sparade URL. Denna Apprise-kanal har ett mål; använd Apprise-API för flera tjänster samtidigt."
       },
       "ai": {
         "title": "AI-förbättring",
@@ -4770,6 +4776,24 @@
       "thursday": "torsdag",
       "tuesday": "tisdag",
       "wednesday": "onsdag"
+    },
+    "storageRetention": {
+      "title": "Lagringens bevarandepolicy",
+      "keepAll": "Behåll alla säkerhetskopior",
+      "description": "Standardpolicy för bevarande av säkerhetskopior, sparad i Proxmox. Säkerhetskopieringsjobb med en uttrycklig policy åsidosätter denna standard.",
+      "refresh": "Uppdatera",
+      "saved": "Lagringens bevarandepolicy har sparats. Ingen gallring har körts.",
+      "choosePolicy": "Välj Behåll alla eller minst ett bevarandeantal som är större än noll.",
+      "saveFailed": "Det gick inte att spara lagringens bevarandepolicy. Uppdatera listan om konfigurationen har ändrats.",
+      "loadFailed": "Det gick inte att läsa in lagringens bevarandepolicy.",
+      "empty": "Ingen lagring för säkerhetskopior hittades.",
+      "default": "Proxmox standard",
+      "edit": "Redigera",
+      "editTitle": "Bevarande för {storage}",
+      "effect": "Gäller framtida säkerhetskopieringar som ärver denna lagringspolicy. Att spara tar inte bort befintliga säkerhetskopior. Skyddade säkerhetskopior förblir skyddade.",
+      "cancel": "Avbryt",
+      "save": "Spara bevarandepolicy",
+      "useDefault": "Använd Proxmox-standard (ingen policy för denna lagring)"
     }
   },
   "healthStatus": {

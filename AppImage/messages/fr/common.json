@@ -1318,8 +1318,8 @@
         "Samedi"
       ],
       "runSkippedStatus": "exécution ignorée",
-      "reasonStoppedContainer": "le conteneur est arrêté ;la mise à jour programmée a été ignorée.",
-      "reasonStoppedContainerHistorical": "le conteneur a été arrêté à l'heure de mise à jour prévue."
+      "reasonStoppedContainer": "Le conteneur est arrêté ; la mise à jour programmée a été ignorée.",
+      "reasonStoppedContainerHistorical": "Le conteneur était arrêté à l'heure de la mise à jour programmée."
     },
     "cronChip": {
       "detected": "cron hôte détecté",
@@ -2125,7 +2125,13 @@
         "inactiveFooter": "Activez les notifications pour recevoir des alertes système, de santé et de sécurité via les canaux configurés.",
         "notificationLanguage": "Langue de notification",
         "selectNotificationLanguage": "Sélectionnez la langue de notification",
-        "notificationLanguageHint": "Utilisé pour les notifications d'exécution déterministes, même lorsque l'IA est désactivée."
+        "notificationLanguageHint": "Utilisé pour les notifications d'exécution déterministes, même lorsque l'IA est désactivée.",
+        "appriseServiceHelp": "Configuration de Slack et Matrix",
+        "appriseSlackSteps": "Créez un webhook entrant dans votre application Slack pour le canal cible, puis collez son URL HTTPS complète dans le champ URL Apprise. Aucune conversion n'est nécessaire.",
+        "appriseSlackDocs": "Formats d'URL et configuration de Slack",
+        "appriseMatrixSteps": "Utilisez un compte de notification autorisé à publier dans le salon. Remplacez l'utilisateur, le mot de passe, le serveur d'origine et l'identifiant complet du salon de l'exemple ; encodez les caractères spéciaux des identifiants pour les URL. Le schéma matrixs utilise HTTPS. Consultez la documentation pour la prise en charge des jetons, du SSO et des salons chiffrés dans votre version d'Apprise.",
+        "appriseMatrixDocs": "Formats d'URL et configuration de Matrix",
+        "appriseServiceFinish": "Activez Apprise, saisissez votre URL, choisissez les catégories de notification ou les événements individuels, enregistrez, puis utilisez Envoyer un test. Ces exemples ne modifient pas votre URL enregistrée. Ce canal Apprise possède une destination ; utilisez l'API Apprise pour plusieurs services à la fois."
       },
       "ai": {
         "title": "Amélioration de l'IA",
@@ -4770,6 +4776,24 @@
       "thursday": "Jeudi",
       "tuesday": "Mardi",
       "wednesday": "Mercredi"
+    },
+    "storageRetention": {
+      "title": "Rétention du stockage",
+      "keepAll": "Conserver toutes les sauvegardes",
+      "description": "Rétention par défaut des sauvegardes enregistrée dans Proxmox. Les tâches de sauvegarde avec une politique explicite remplacent cette valeur par défaut.",
+      "refresh": "Actualiser",
+      "saved": "Rétention du stockage enregistrée. Aucune purge n'a été exécutée.",
+      "choosePolicy": "Choisissez Tout conserver ou au moins un nombre de rétention supérieur à zéro.",
+      "saveFailed": "Impossible d'enregistrer la rétention du stockage. Actualisez la liste si la configuration a changé.",
+      "loadFailed": "Impossible de charger la rétention du stockage.",
+      "empty": "Aucun stockage de sauvegarde trouvé.",
+      "default": "Valeur par défaut de Proxmox",
+      "edit": "Modifier",
+      "editTitle": "Rétention de {storage}",
+      "effect": "S'applique aux futures sauvegardes qui héritent de cette politique de stockage. L'enregistrement ne supprime pas les sauvegardes existantes. Les sauvegardes protégées restent protégées.",
+      "cancel": "Annuler",
+      "save": "Enregistrer la rétention",
+      "useDefault": "Utiliser la valeur par défaut de Proxmox (aucune politique sur ce stockage)"
     }
   },
   "healthStatus": {

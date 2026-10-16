@@ -1564,7 +1564,7 @@ class AppriseChannel(NotificationChannel):
             return apprise_mod.NotifyType.FAILURE
         if sev == 'WARNING':
             return apprise_mod.NotifyType.WARNING
-        if sev == 'SUCCESS':
+        if sev in ('SUCCESS', 'OK'):
             return apprise_mod.NotifyType.SUCCESS
         return apprise_mod.NotifyType.INFO
 
