@@ -1,6 +1,7 @@
 import ast
 import json
 import os
+import re
 import sys
 import subprocess
 import tempfile
@@ -428,6 +429,43 @@ class ScheduledStoppedContainerTests(unittest.TestCase):
         self.assertIn("exited with code 8", outcome["reason"])
         stopped_marker.assert_called_once()
         reboot_probe.assert_called_once()
+
+    def test_oci_race_to_stopped_skips_before_the_oci_engine_runs(self):
+        runner = MagicMock(return_value=SimpleNamespace(returncode=0, stdout="", stderr=""))
+        finalizer = MagicMock(return_value={"recorded": True})
+        status = MagicMock(side_effect=["running", "stopped"])
+        scope = {
+            "time": SimpleNamespace(monotonic=MagicMock(return_value=10.0)),
+            "uuid": SimpleNamespace(uuid4=lambda: SimpleNamespace(hex="c" * 32)),
+            "datetime": __import__("datetime").datetime,
+            "subprocess": SimpleNamespace(
+                run=runner,
+                STDOUT=object(),
+                DEVNULL=object(),
+                TimeoutExpired=subprocess.TimeoutExpired,
+            ),
+            "os": os,
+            "re": re,
+            "_create_lxc_update_log": lambda _vmid, _run_id: (None, None),
+            "_fast_guest_status": status,
+            "_normalise_schedule_targets": lambda _sched: ["oci_image"],
+            "_lxc_update_snapshot": lambda _vmid: {"ct_name": "fixture"},
+            "_lxc_update_target_labels": lambda *_: ["OCI image"],
+            "_append_lxc_update_log": MagicMock(),
+            "_prune_lxc_update_logs": MagicMock(),
+            "_finalize_lxc_update": finalizer,
+        }
+
+        outcome = self._worker(scope)(101, {"targets": ["oci_image"]})
+
+        self.assertEqual(outcome["status"], "skipped")
+        self.assertEqual(outcome["target"], "oci_image")
+        self.assertEqual(outcome["executed_targets"], [])
+        self.assertEqual(outcome["reason_code"], "stopped_container")
+        self.assertIn("before scheduled update could begin", outcome["reason"])
+        self.assertEqual(status.call_count, 2)
+        runner.assert_not_called()
+        self.assertEqual(finalizer.call_args.kwargs["status"], "skipped")
 
 
 class DockerStackNotificationTests(unittest.TestCase):

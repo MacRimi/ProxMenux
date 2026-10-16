@@ -22772,6 +22772,15 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
     if requested_targets == ['oci_image']:
         # A container installed by OCI manager Apps is updated by replacing
         # its image, through the same flow as the OCI menu, unattended.
+        # OCI updates have their own runner rather than apply_updates.sh.
+        # Check once more immediately before handing control to it: a user
+        # may have intentionally stopped the CT after the scheduler's first
+        # observation, and the OCI transaction can start a replacement CT
+        # while validating its new image.
+        if _fast_guest_status(vmid, 'lxc') != 'running':
+            reason_code = 'stopped_container'
+            reasons.append('container was stopped before scheduled update could begin')
+            return finish('skipped', 'oci_image', [])
         command = ['bash', '/usr/local/share/proxmenux/scripts/oci/oci_manager_apps.sh',
                    'manage', str(vmid), '--action', 'update', '--unattended']
         storage = (sched.get('backup_storage') or '').strip()
