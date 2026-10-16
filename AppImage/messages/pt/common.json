@@ -4778,7 +4778,8 @@
       "editTitle": "Retenção para {storage}",
       "effect": "Aplica-se às futuras cópias de segurança que herdem esta política de armazenamento. Guardar não elimina as cópias existentes. As cópias protegidas permanecem protegidas.",
       "cancel": "Cancelar",
-      "save": "Guardar retenção"
+      "save": "Guardar retenção",
+      "useDefault": "Use o padrão Proxmox (nenhuma política neste armazenamento)"
     }
   },
   "healthStatus": {

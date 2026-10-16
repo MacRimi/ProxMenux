@@ -4778,7 +4778,8 @@
       "editTitle": "Bevarande för {storage}",
       "effect": "Gäller framtida säkerhetskopieringar som ärver denna lagringspolicy. Att spara tar inte bort befintliga säkerhetskopior. Skyddade säkerhetskopior förblir skyddade.",
       "cancel": "Avbryt",
-      "save": "Spara bevarandepolicy"
+      "save": "Spara bevarandepolicy",
+      "useDefault": "Använd Proxmox standard (ingen policy för denna lagring)"
     }
   },
   "healthStatus": {

@@ -4778,7 +4778,8 @@
       "editTitle": "Aufbewahrung für {storage}",
       "effect": "Gilt für zukünftige Sicherungsläufe, die diese Speicherrichtlinie übernehmen. Das Speichern löscht keine vorhandenen Sicherungen. Geschützte Sicherungen bleiben geschützt.",
       "cancel": "Abbrechen",
-      "save": "Aufbewahrung speichern"
+      "save": "Aufbewahrung speichern",
+      "useDefault": "Verwenden Sie die Proxmox-Standardeinstellung (keine Richtlinie für diesen Speicher)."
     }
   },
   "healthStatus": {

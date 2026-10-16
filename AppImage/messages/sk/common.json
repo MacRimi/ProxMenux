@@ -4777,7 +4777,8 @@
       "editTitle": "Uchovávanie záloh pre {storage}",
       "effect": "Platí pre budúce zálohovania, ktoré preberajú túto politiku úložiska. Uložením sa existujúce zálohy neodstránia. Chránené zálohy zostanú chránené.",
       "cancel": "Zrušiť",
-      "save": "Uložiť uchovávanie záloh"
+      "save": "Uložiť uchovávanie záloh",
+      "useDefault": "Použite predvolené nastavenie Proxmox (žiadne pravidlá pre toto úložisko)"
     }
   },
   "healthStatus": {

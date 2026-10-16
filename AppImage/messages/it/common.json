@@ -4778,7 +4778,8 @@
       "editTitle": "Conservazione per {storage}",
       "effect": "Si applica alle future esecuzioni dei backup che ereditano questa politica di archiviazione. Il salvataggio non elimina i backup esistenti. I backup protetti rimangono protetti.",
       "cancel": "Annulla",
-      "save": "Salva conservazione"
+      "save": "Salva conservazione",
+      "useDefault": "utilizza l'impostazione predefinita Proxmox (nessuna policy su questo storage)"
     }
   },
   "healthStatus": {

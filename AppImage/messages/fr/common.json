@@ -4778,7 +4778,8 @@
       "editTitle": "Rétention de {storage}",
       "effect": "S'applique aux futures sauvegardes qui héritent de cette politique de stockage. L'enregistrement ne supprime pas les sauvegardes existantes. Les sauvegardes protégées restent protégées.",
       "cancel": "Annuler",
-      "save": "Enregistrer la rétention"
+      "save": "Enregistrer la rétention",
+      "useDefault": "utiliser la valeur par défaut Proxmox (aucune politique sur ce stockage)"
     }
   },
   "healthStatus": {
