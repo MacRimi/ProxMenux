@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "title": "Contribuidores □ Documentação ProxMenux",
+    "description": "Reconhecimento para as pessoas que tornam possível o ProxMenux — testadores, revisores e desenvolvedores que moldam cada lançamento.",
+    "ogTitle": "Contribuidores □ Documentação ProxMenux",
+    "ogDescription": "Conheça os colaboradores por trás do ProxMenux."
+  },
+  "header": {
+    "title": "Contribuidores",
+    "description": "O projeto ProxMenux cresce e prospera graças à contribuição de seus colaboradores. Este é o merecido reconhecimento de seu trabalho — o teste constrói-se antes da liberação, captura de regressões, revisão de RPs e modelagem da direção de novos recursos.",
+    "section": "Sobre"
+  },
+  "beyond": {
+    "title": "Para além desta lista",
+    "body": "Muitas mais pessoas contribuem através de relatórios de bugs, apresentam ideias em discussões, testes beta e traduções. A lista completa de contribuidores de código vive na <extlink>GitHub gráfico de contribuidores</extlink>. A página abaixo destaca as pessoas que estiveram mais ativamente envolvidas em testes e revisões ProxMenux libertações."
+  },
+  "testers": {
+    "heading": "Testadores e revisores",
+    "intro": "Estes foram os primeiros a contribuir para o projeto — testar, relatar questões e sugerir melhorias que ajudaram o ProxMenux a crescer no que é hoje.",
+    "roles": {
+      "testing": "Teste",
+      "testingReviewer": "Testando & revisor"
+    },
+    "youtube": "YouTube"
+  },
+  "contribute": {
+    "heading": "Queres contribuir?",
+    "intro": "Qualquer contribuição é bem-vinda — código, teste, design, documentação ou apenas compartilhando suas ideias:",
+    "tester": "<strong>Tester</strong> — tente o canal <beta>beta</beta> e relate o que funciona e o que não funciona antes de lançamentos estáveis.",
+    "developer": "<strong>Desenvolvedor</strong> — Bash + Next.js (TypeScript) + um pouco de Python para o vídeo de tradução. PRs bem-vindos em <gh>GitHub</gh>.",
+    "designer": "<strong>Designer</strong> — Melhorias de interface, ícones, capturas de tela para documentação.",
+    "ideas": "<strong>Ideas</strong> — abra um tópico em <disc>GitHub Discussões</disc> antes de abrir um problema de solicitação de recursos."
+  },
+  "coc": {
+    "title": "Leia primeiro o Código de Conduta",
+    "body": "Antes de enviar o código ou reportar problemas, dê ao <coclink>Código de Conduta e Melhores Práticas</coclink> uma leitura rápida. Abrange expectativas em torno de responsabilidade de código, divulgação de segurança e escopo de RP."
+  }
+}

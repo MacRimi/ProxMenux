@@ -1,0 +1,186 @@
+{
+  "meta": {
+    "title": "Máquina: Adicionar o disco local como armazenamento Proxmox ProxMenux Documentação",
+    "description": "Formatar um SATA local / SAS / NVMe disco em uma máquina Proxmox e registrá- lo como diretório Proxmox ou ZFS pool armazenamento. Detecção segura de disco, entrada de confirmação destrutiva-op, fstab baseado em UUID, ZFS pool criação e pvesm adicionar dir / zfspool sob o capô.",
+    "ogTitle": "Máquina: Adicionar o disco local como armazenamento Proxmox ProxMenux Documentação",
+    "ogDescription": "Formatar um disco local e registrá- lo como diretório Proxmox ou ZFS pool armazenamento com um fluxo guiado e filtrado por segurança."
+  },
+  "header": {
+    "title": "Máquina: Adicionar disco local como armazenamento Proxmox",
+    "description": "Pegue um disco físico na máquina Proxmox, opcionalmente formate-o (ext4 / xfs / btrfs / zfs) e registre-o como armazenamento Proxmox — quer como diretório (pvesm add dir) quer como um pool ZFS (pvesm add zfspool). ProxMenux filtra a lista de discos para que você não possa escolher o disco raiz ou qualquer coisa em uso, e torna cada passo destrutivo explícito antes de executá-lo.",
+    "section": "Armazenamento e Compartilhamento · Máquina"
+  },
+  "intro": {
+    "title": "O que isto faz",
+    "body": "Outras ferramentas <em>Host</em> nesta seção lidam com <strong>network</strong> armazenamento (NFS / Samba / iSCSI). Este lida com discos <strong>local</strong> — unidades de reposição fisicamente conectadas ao seu host Proxmox que você deseja usar para discos VM, backups, ISOs ou modelos. ProxMenux prepara o disco (partição + formato + montagem) e registra-o em Proxmox para que a UI possa colocar conteúdo lá."
+  },
+  "destructive": {
+    "title": "Ferramenta destrutiva para o caminho do 'formato'",
+    "body": "O <em>Format</em> caminho <strong> apaga cada partição e byte no disco selecionado</strong>. O ProxMenux mostra a lista de discos com um banner de aviso, filtra discos já em uso e requer uma confirmação explícita antes de qualquer execução do <code>wipefs</code> / <code>sgdisk</code> / <code>mkfs</code>. Ainda assim — leia o caminho do dispositivo em voz alta duas vezes antes de digitar \"sim\"."
+  },
+  "compare": {
+    "heading": "Directório vs ZFS pool — qual escolher",
+    "headerDir": "Pasta (ext4 / xfs / btrfs)",
+    "headerZfs": "Conjunto ZFS",
+    "rows": [
+      {
+        "label": "Tipo de armazenamento Proxmox",
+        "dirRich": "<code>dir</code>",
+        "zfsRich": "<code>zfspool</code>"
+      },
+      {
+        "label": "Formato de disco VM",
+        "dir": "qcow2 / arquivo bruto em um sistema de arquivos",
+        "zfs": "Conjunto de dados nativo ZFS (zvol) por disco"
+      },
+      {
+        "label": "Instantâneos",
+        "dir": "qcow2 instantâneos; btrfs instantâneos se fs=btrfs",
+        "zfs": "Nativo, instantâneo, copy-on-write"
+      },
+      {
+        "label": "Aprovisionamento dinâmico",
+        "dir": "Sim (qcow2 por omissão)",
+        "zfs": "Sim (ZFS por omissão)"
+      },
+      {
+        "label": "Necessidades de RAM",
+        "dir": "Baixo",
+        "zfs": "Alto — ZFS usa RAM grátis como cache ARC"
+      },
+      {
+        "label": "Suporta tipos de conteúdo",
+        "dir": "imagens, backup, iso, vztmpl, trechos, rootdir",
+        "zfs": "imagens, somente rootdir (armazenamento de blocos)"
+      },
+      {
+        "label": "Melhor para",
+        "dir": "Disco de uso geral: mistura de discos VM, backups, ISOs",
+        "zfs": "Puro disco de dados VM / LXC com instantâneo + necessidades de integridade"
+      }
+    ]
+  },
+  "opening": {
+    "heading": "Abrir a ferramenta",
+    "body": "Do menu principal do ProxMenux, abra o <strong>Storage &amp; Share Manager → Adicione disco local como armazenamento Proxmox</strong>. Você verá este sub-menu com quatro opções:",
+    "imageAlt": "Menu de gerenciamento de disco local — Adicionar / Ver / Remover / Listar discos disponíveis"
+  },
+  "howRuns": {
+    "heading": "Como o script é executado (Adicionar fluxo)",
+    "body": "O fluxo tem duas fases com um filtro de segurança de porta tripla. Fase 1 descobre discos seguros, decide o que fazer com o escolhido e coleta parâmetros de armazenamento; Fase 2 faz o trabalho destrutivo. Até a confirmação final o disco está intocado."
+  },
+  "format": {
+    "heading": "Formatar um disco em branco",
+    "intro": "O caminho para um disco fresco ou um cujo conteúdo você não se importa.",
+    "items": [
+      "Escolha o disco (sistema / discos em uso estão escondidos).",
+      "Escolha \"Format disk (ERASE todos os dados)\".",
+      "Escolha o sistema de arquivos — veja a tabela acima para trade-offs.",
+      "ID de armazenamento (padrão <code>disk-&lt;device&gt;</code>), caminho de montagem, tipo de conteúdo predefinido.",
+      "Confirmar no diálogo <strong>FINAL — DADOS SERÃO ERASED</strong>.",
+      "ProxMenux limpa a tabela de partição, cria uma partição abrangendo todo o disco, executa <code>mkfs.&lt;fs&gt;</code> (ou <code>zpool create</code>), monta-o, adiciona-o a <code>/etc/fstab</code> por UUID com <code>defaults,nofail</code>, e registra-o em Proxmox via <code>pvesm add dir</code> ou <code>pvesm add zfspool</code>."
+    ],
+    "tipTitle": "Porquê UUID + nofail em /etc/fstab",
+    "tipBody": "O script escreve <code>UUID=… /mnt/&lt;id&gt; &lt;fs&gt; defaults,nofail 0 2</code>. O UUID sobrevive à reordenação do dispositivo através de reinicialização (então o <code>/dev/sdc</code> tornando-se o <code>/dev/sdd</code> não quebra a inicialização). <code>nofail</code> significa que se o disco desaparecer (falha de Hardware, desconectado), o Proxmox ainda inicia — o armazenamento só será mostrado como inativo até que o disco volte."
+  },
+  "reuse": {
+    "heading": "Reutilizar um sistema de ficheiros existente",
+    "intro": "O caminho para um disco que você deseja manter os dados em — talvez você tenha movido de outro host Proxmox, ou o disco já tem backups / ISOs que você deseja manter acessível.",
+    "items": [
+      "Escolhe o disco.",
+      "Escolha \"Usar o sistema de arquivos existente\".",
+      "ID de armazenamento, local de montagem, predefinição do tipo de conteúdo.",
+      "ProxMenux faz <strong>not</strong> tocar os dados: cria o ponto de montagem, monta o disco, adiciona uma entrada UUID para <code>/etc/fstab</code>, e registra-o como um armazenamento Proxmox <code>dir</code>."
+    ],
+    "warnTitle": "O caminho de reutilização não lida com ZFS pools",
+    "warnBody": "Se o disco já contém um pool ZFS, o caminho <em>reuse</em> aqui apenas tenta montá-lo como um sistema de arquivos regular – que falha. Para importar um pool ZFS existente use <code>zpool import &lt;name&gt;</code> na linha de comando e registre-o manualmente com <code>pvesm add zfspool</code>."
+  },
+  "presets": {
+    "heading": "Predefinições do tipo de conteúdo",
+    "intro": "Em vez de uma longa lista de verificação, o ProxMenux oferece predefinições 4 mais uma opção personalizada. O texto predefinido é passado para <code>pvesm add … --content &lt;csv&gt;</code>:",
+    "headerPreset": "Predefinição",
+    "headerContent": "Texto do conteúdo",
+    "headerUse": "Caso de uso",
+    "rows": [
+      {
+        "preset": "Armazenamento VM",
+        "content": "imagens, backup",
+        "use": "Uma loja de disco dedicada VM que também mantém backups dessas VMs nas proximidades."
+      },
+      {
+        "preset": "NAS padrão",
+        "content": "backup,iso,vztmpl",
+        "use": "Um arquivo / disco de mídia — backups, ISOs e modelos LXC. Nenhum disco VM vivo aqui."
+      },
+      {
+        "preset": "Todos os tipos",
+        "content": "images,backup,iso,vztmpl,snippets",
+        "use": "\"Deixe o host decidir\" — permite que cada tipo de conteúdo do Proxmox suporte neste armazenamento."
+      },
+      {
+        "preset": "Personalizado",
+        "content": "(input livre)",
+        "useRich": "Digite o CSV exato, por exemplo. <code>images</code> sozinho, ou <code>rootdir,images</code>."
+      }
+    ],
+    "zfsTitle": "ZFS pool conteúdo é mais estreito",
+    "zfsBody": "Se você escolheu <strong>zfs</strong> como o sistema de arquivos, Proxmox só aceita <code>images</code> e <code>rootdir</code> como tipos de conteúdo em um <code>zfspool</code> (é armazenamento em bloco, não um sistema de arquivos para ISOs). As predefinições acima ainda funcionarão, mas o Proxmox silenciosamente deixa cair os tipos de conteúdo que não pode usar — verifique <code>pvesm status</code> depois."
+  },
+  "manual": {
+    "heading": "Equivalente manual",
+    "extIntro": "Formato + registrar um disco como armazenamento de diretório ext4:",
+    "zfsIntro": "Ou como um ZFS pool:"
+  },
+  "view": {
+    "heading": "Ver os armazenamentos de discos",
+    "body": "Lista cada armazenamento Proxmox apoiado em disco (ambos <code>dir</code> e <code>zfspool</code> que são criados pelo usuário – pools de sistema como <code>rpool</code> estão escondidos). Mostra o caminho de montagem / nome do pool, tipos de conteúdo e estado ao vivo."
+  },
+  "remove": {
+    "heading": "Remover o armazenamento do disco",
+    "body": "Não regista o armazenamento do Proxmox (<code>pvesm remove</code>) e oferece para limpar a entrada correspondente em <code>/etc/fstab</code>. Pela ZFS pools o script faz <strong>não</strong> Destruir automaticamente a pool — que é uma distinção <code>zpool destroy &lt;name&gt;</code> passo que você faz à mão quando você tem certeza.",
+    "warnTitle": "Dados e dependências VM existentes",
+    "warnBody": "A remoção do armazenamento não toca no sistema de arquivos nem no pool — os dados permanecem no disco. Mas VMs / CTs que referenciam este armazenamento por ID não vai começar após a remoção. Mova esses discos VM para outro armazenamento (ou faça um backup) antes de remover."
+  },
+  "list": {
+    "heading": "Listar os discos disponíveis",
+    "body": "Uma visão diagnóstica somente de leitura: imprime a saída de <code>lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,MODEL</code> seguida pelo <code>dir</code> / <code>zfspool</code> armazenamentos Proxmox já sabe sobre. Boa primeira parada quando você abrir a ferramenta e quiser ver \"o que está neste host?\" antes de adicionar qualquer coisa."
+  },
+  "troubleshoot": {
+    "heading": "Resolução de Problemas",
+    "noDisksTitle": "\"Nenhum disco disponível encontrado\"",
+    "noDisksIntro": "O filtro de segurança escondeu todos os discos. Razões comuns:",
+    "noDisksItems": [
+      "Apenas o disco raiz está presente.",
+      "Cada outro disco é parte de uma matriz ativa ZFS / LVM / RAID.",
+      "Cada outro disco é referenciado por uma configuração VM ou LXC (passthrough).",
+      "O disco está em modo somente leitura (falha de hardware ou bloqueio de gravação)."
+    ],
+    "noDisksOutro": "Use <em>Lista de discos disponíveis</em> do menu para ver a saída <code>lsblk</code> bruta e entender o que está acontecendo.",
+    "mountedTitle": "O formato falha com \"o dispositivo está montado\"",
+    "mountedBody": "Algo montou automaticamente o disco (udisksd, um gerenciador de desktop, uma unidade de systemd). Desmontá-lo: <code>umount /dev/sdX?*</code> ou <code>systemctl stop &lt;whatever-mounts-it&gt;</code>, então tente novamente. O filtro de segurança do script deve ter discos montados ocultos, então se você alcançou este erro a montagem aconteceu entre o menu mostrando e você confirmando.",
+    "zpoolTitle": "zpool criar falhas \"especificação vdev inválida\"",
+    "zpoolBody": "Normalmente significa que o disco ainda tem GPT / LVM / ZFS assinaturas que <code>zpool</code> se recusa a substituir sem força. O script executa <code>wipefs</code> e <code>sgdisk --zap-all</code> antes do formato, mas um disco muito teimoso ainda pode ter uma etiqueta antiga. Forçar uma limpeza limpa manualmente: <code>zpool labelclear -f /dev/sdX</code> ou <code>dd if=/dev/zero of=/dev/sdX bs=1M count=10</code> e tentar novamente.",
+    "inactiveTitle": "O armazenamento mostra como inativo após reiniciar",
+    "inactiveBody": "Verifique <code>findmnt &lt;mount-path&gt;</code> — se a montagem está faltando, algo em <code>/etc/fstab</code> falhou. <code>dmesg | tail</code> geralmente aponta para a razão (incompatibilidade UUID, corrupção do sistema de arquivos, <code>nofail</code> deixou cair a repetição). Um <code>mount -a</code> geralmente reativa o armazenamento uma vez que a causa é fixa."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/disk-manager/format-disk",
+        "label": "Gerenciador de disco: Formato / Limpar disco físico",
+        "tail": " — alternativa de baixo nível quando você só quer preparar um disco sem registá-lo como armazenamento Proxmox."
+      },
+      {
+        "href": "/docs/storage-share/host-iscsi",
+        "label": "Adicionar o alvo iSCSI como armazenamento Proxmox",
+        "tail": " — equivalente à rede quando o dispositivo de bloqueio estiver instalado noutra caixa."
+      },
+      {
+        "href": "/docs/storage-share/host-local-shared",
+        "label": "Adicionar a Pasta Partilhada na Máquina",
+        "tail": " — preparar um directório na máquina para as montagens de ligação LXC (não regista um armazenamento Proxmox)."
+      }
+    ]
+  }
+}

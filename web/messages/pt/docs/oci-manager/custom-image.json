@@ -1,0 +1,278 @@
+{
+  "meta": {
+    "title": "Instale uma imagem que não está no catálogo □ ProxMenux",
+    "description": "Traduzir uma imagem OCI de um arquivo Compose, uma URL, um comando de execução docker ou uma referência de imagem, e rever o que ProxMenux pode reproduzir antes de instalá-lo."
+  },
+  "header": {
+    "title": "Instalar uma imagem que não está no catálogo",
+    "description": "Uma imagem própria é traduzida de seu arquivo Compose, um comando de execução docker ou sua referência somente, e o resultado é mostrado para revisão antes que qualquer LXC seja criado.",
+    "section": "Aplicações do gestor OCI"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Mesmo conversor, mesmo instalador",
+            "body": "A opção <strong>Instalar uma imagem que não está no catálogo</strong> utiliza o conversor e o instalador dos modelos do catálogo. A diferença é que o contrato é gerado naquele momento a partir da definição dada, e validado antes de qualquer LXC é criado."
+          }
+        }
+      ]
+    },
+    {
+      "id": "sources",
+      "title": "Como a imagem é descrita",
+      "intro": "A primeira tela pergunta como a imagem é descrita. Quatro maneiras dar uma definição que é traduzida, um quinto usa apenas o nome da imagem, e três tomar um oci-compose que já está escrito.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Opção",
+              "O que lê"
+            ],
+            "rows": [
+              [
+                "Colar o seu ficheiro Compor no terminal",
+                "O YAML é colado no terminal e termina com Ctrl+D."
+              ],
+              [
+                "Leia seu arquivo Compor de um arquivo desta máquina",
+                "Um caminho no nó, <code>/root/docker-compose.yml</code> por padrão. O arquivo deve existir e estar no máximo 256 KiB."
+              ],
+              [
+                "Baixe seu arquivo Compose de um endereço",
+                "Um endereço <code>http://</code> ou <code>https://</code> que serve o YAML bruto. No máximo 256 KiB são baixados."
+              ],
+              [
+                "Colar seu comando de execução docker no terminal",
+                "O comando publicado pelo projeto. Portas, ambiente, volumes, dispositivos, capacidades, usuário, memória compartilhada e as outras opções suportadas são traduzidas."
+              ],
+              [
+                "Apenas a referência da imagem, sem composição do ficheiro",
+                "Uma referência como <code>ghcr.io/user/application:latest</code>. O registro é consultado e os metadados OCI da imagem são mantidos."
+              ],
+              [
+                "Cole um oci-compose no terminal",
+                "O JSON é colado no terminal e termina com Ctrl+D. Não é traduzido: é verificado e instalado como está escrito."
+              ],
+              [
+                "Leia um oci-compose de um arquivo deste host",
+                "Um arquivo JSON no nó, <code>/root/oci-compose.json</code> por padrão, de no máximo 2 MiB."
+              ],
+              [
+                "Baixe um oci-compose de um endereço",
+                "Um endereço <code>http://</code> ou <code>https://</code> que serve o arquivo JSON. No máximo 2 MiB são baixados."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/custom-source-menu.png",
+            "alt": "Menu que pergunta como uma imagem que não está no catálogo é descrita",
+            "caption": "As formas de descrever uma imagem que não está no catálogo."
+          }
+        }
+      ]
+    },
+    {
+      "id": "reference-only",
+      "title": "O que uma referência de imagem sozinho fornece",
+      "intro": "Uma imagem carrega seus metadados de processo, mas nem tudo que um arquivo Compose geralmente adiciona ao seu redor.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Ler da imagem",
+              "Não na imagem",
+              "Consequência"
+            ],
+            "rows": [
+              [
+                "<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>, <code>WorkingDir</code> e ambiente incorporado",
+                "Variáveis que só aparecem na documentação",
+                "Eles são adicionados durante a instalação ou com Modify"
+              ],
+              [
+                "Volumes declarados pela imagem",
+                "Directórios da máquina que apenas compõe nomes de ficheiros",
+                "Caminhos adicionais são adicionados antes de instalar"
+              ],
+              [
+                "Portas <code>EXPOSE</code>",
+                "O URL, protocolo ou verificação de saúde funcional",
+                "O porto e a forma como o serviço é verificado são confirmados"
+              ],
+              [
+                "Arquiteturas e digerir no registro",
+                "Dispositivos, privilégios ou dependências externas",
+                "Nenhum deles está habilitado sem uma definição que pede por ele"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "title": "Revisão antes de instalar",
+      "intro": "Após traduzir a definição, ProxMenux mostra o que entendeu antes de pedir VMID, recursos ou armazenamento.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Analisar",
+                "body": "Serviços, imagem, portos, caminhos, ambiente, dispositivos, segurança e verificação de saúde são lidos."
+              },
+              {
+                "title": "Consultar o registo",
+                "body": "A imagem deve existir em seu registro, e suas arquiteturas publicadas estão listadas. Um registro privado é lido com a conta guardada para ele."
+              },
+              {
+                "title": "Listar o que não é aplicado",
+                "body": "Rótulos, redes Docker, configurações Swarm e outras chaves que não têm efeito sobre um LXC estão listados."
+              },
+              {
+                "title": "Bloquear o que não pode ser traduzido",
+                "body": "Uma chave sem equivalente seguro é mostrada em <strong>O que não pode ser traduzido</strong> e a instalação não continua. Nada é deixado em silêncio."
+              },
+              {
+                "title": "Pedir segredos",
+                "body": "Variáveis cujos nomes são lidos como senha, token ou chave tornam-se questões sensíveis da instalação."
+              }
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/custom-review.png",
+            "alt": "Resumo do que ProxMenux entendeu de um arquivo Compose",
+            "caption": "O resumo mostrado antes da instalação pede VMID e recursos."
+          }
+        },
+        {
+          "p": "Após aceitar o resumo, o fluxo é o do catálogo: nome, padrão ou modo avançado, VMID, CPU, memória, rede, começar com o nó, caminhos persistentes, caminhos adicionais, dispositivos compatíveis e um resumo final."
+        }
+      ]
+    },
+    {
+      "id": "examples",
+      "title": "Exemplos de entradas",
+      "blocks": [
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Compor",
+                "code": "services:\n  app:\n    image: ghcr.io/example/app:latest\n    ports:\n      - \"8080:8080\"\n    volumes:\n      - ./config:/config\n      - /srv/media:/media\n    environment:\n      TZ: Europe/Madrid"
+              },
+              {
+                "title": "docker run",
+                "code": "docker run -d \\\n  --name app \\\n  -p 8080:8080 \\\n  -e TZ=Europe/Madrid \\\n  -v app-config:/config \\\n  -v /srv/media:/media \\\n  ghcr.io/example/app:latest"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "oci-compose",
+      "title": "Um oci-composto escrito à mão",
+      "intro": "Um oci-compose é o arquivo JSON de onde uma aplicação é instalada. O catálogo mantém um para cada uma das suas aplicações, e o mesmo formato pode ser escrito à mão e instalado com esta opção.",
+      "blocks": [
+        {
+          "p": "Um escrito à mão afirma o que seu autor decide: a imagem, suas portas, variáveis e volumes, e o que a instalação pede. ProxMenux completa o resto quando lê o arquivo. Ele pode dizer o que um arquivo Compose não pode: o texto de uma pergunta, uma senha gerada durante a instalação, um perfil GPU, o proprietário de cada volume, a verificação do primeiro início ou as credenciais mostradas no final."
+        },
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Verificar",
+                "body": "Um arquivo com erros não está instalado. Cada erro nomeia o campo em que está, e um arquivo que não é válido JSON relata a linha e a coluna."
+              },
+              {
+                "title": "Revisão",
+                "body": "Um arquivo válido mostra o que ele instala: imagem, endereço web, portas, caminhos persistentes, as variáveis que a instalação pede e os arquivos que ele escreve."
+              },
+              {
+                "title": "Instalar",
+                "body": "A instalação é a de qualquer aplicação do catálogo, com configurações padrão ou avançada."
+              }
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Um ficheiro que decide os privilégios",
+            "body": "Um oci-compose decide o que está montado no recipiente e com que privilégios. A revisão diz isso antes de instalar: instale apenas arquivos que vêm de uma fonte que você confia."
+          }
+        },
+        {
+          "p": "O formato é descrito bloco por bloco, com dois exemplos completos, no <readmeLink>README do motor OCI</readmeLink>. O registro de uma instalação pode ser lido da mesma forma: somente o modelo de onde foi instalado é usado, e nenhuma das respostas dessa instalação."
+        }
+      ]
+    },
+    {
+      "id": "private-registries",
+      "title": "Imagens em registos privados",
+      "intro": "Uma imagem em um registro privado, como um pacote privado em GitHub ou um repositório privado em Docker Hub, é lida com uma conta salva em ProxMenux.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "O registro recusa a imagem",
+                "body": "Quando o registro responde que a imagem precisa de uma conta, a revisão se oferece para entrar no registro e ler a imagem novamente."
+              },
+              {
+                "title": "Iniciar sessão",
+                "body": "Um usuário e uma senha ou token de acesso que pode puxar a imagem. O registro os verifica, e eles só são salvos se ele os aceitar."
+              },
+              {
+                "title": "Instalar e manter-se atualizado",
+                "body": "A instalação baixa a imagem com essa conta, assim como as atualizações, Modifique, Recreate, o watchdog e a verificação de atualização do Monitor, em qualquer nó do cluster."
+              }
+            ]
+          }
+        },
+        {
+          "p": "<strong>Contas de registro</strong>, no menu principal do OCI manager Apps, lista as contas salvas por registro e usuário, nunca seu segredo. De cada conta, uma imagem pode ser verificada, baixada ou instalada e a conta atualizada ou removida."
+        },
+        {
+          "list": {
+            "items": [
+              "GitHub (<code>ghcr.io</code>): o usuário é a conta GitHub, e a senha um token de acesso pessoal com a permissão <code>read:packages</code>.",
+              "Docker Hub (<code>docker.io</code>): o usuário é a conta Docker Hub, e a senha um token de acesso com permissão de leitura.",
+              "Outros registros, incluindo um com sua própria porta, como <code>registry.example.com:5000</code>: o usuário e senha ou token que o registro dá."
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Quando as contas são mantidas",
+            "body": "Em <code>/etc/pve/priv/proxmenux/registry-auth.json</code>, legível apenas por root, na mesma pasta onde o Proxmox mantém suas senhas de armazenamento. <code>/etc/pve</code> é compartilhado por cada nó do cluster, então uma conta adicionada em um nó é usada em todos eles. O backup do host inclui-o, e desinstalar ProxMenux remove-lo de cada nó."
+          }
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Definições que não estão instaladas",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Um arquivo Docker sem imagem publicada: a imagem tem que ser construída e publicada em um registro OCI primeiro.",
+              "Um arquivo Compose com vários serviços: ele é bloqueado porque descreve mais de uma imagem. Esta opção instala um único recipiente.",
+              "<code>configs</code>, segredos externos ou formatos de dispositivos que não podem ser traduzidos de forma inequívoca.",
+              "Substituições de shell como <code>$(command)</code>: o valor resultante tem de ser escrito em vez disso.",
+              "<code>docker run</code> opções que não são reconhecidas, e <code>--env-file</code>: um arquivo Compose explícito é lido em vez disso."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

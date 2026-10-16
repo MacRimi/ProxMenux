@@ -1,0 +1,213 @@
+{
+  "meta": {
+    "title": "Aplicativos do gerenciador de OCI ProxMenux",
+    "description": "Execute imagens OCI oficiais como containers Proxmox VE LXC, com dados persistentes, dispositivos, aplicativos multi-contentores e atualizações transacionais."
+  },
+  "header": {
+    "title": "Aplicações do gestor OCI",
+    "description": "Imagens OCI oficiais são executadas como containers Proxmox VE LXC. A imagem permanece a que seu mantenedor publica; ProxMenux reproduz o ambiente Docker Compose teria criado em torno dele.",
+    "section": "Aplicações do gestor OCI"
+  },
+  "sections": [
+    {
+      "id": "model",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Uma imagem OCI, uma LXC nativa",
+            "body": "Nenhum Docker engine é executado dentro dos recipientes. Proxmox VE importa o sistema de arquivos da imagem e seus metadados OCI, e a aplicação torna-se o principal processo de um LXC nativo, gerenciado com as mesmas ferramentas que qualquer outro recipiente do nó."
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Origem",
+                "detail": "Imagem OCI\nComposição e documentação"
+              },
+              {
+                "label": "ProxMenux",
+                "detail": "Contrato JSON\nvalidação e plano"
+              },
+              {
+                "label": "Proxmox VE",
+                "detail": "LXC nativo\nvolumes e dispositivos"
+              }
+            ],
+            "caption": "A aplicação não é reconstruída: o seu ambiente é reproduzido declarativamente."
+          }
+        }
+      ]
+    },
+    {
+      "id": "where",
+      "title": "Onde está",
+      "intro": "O OCI Manager Apps abre a partir da opção <strong>OCI Manager Apps (Technology Preview)</strong> do menu principal ProxMenux, no nó Proxmox e como raiz. Sua primeira tela oferece:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "<strong>Aplicações de pesquisa</strong> — pesquisa por nome no catálogo.",
+              "<strong>Todas as aplicações</strong> — o catálogo completo, com o número de aplicações.",
+              "<strong>Gerenciar aplicativos OCI instalados</strong> — atualizar, modificar, remover ou recuperar o que foi instalado.",
+              "<strong>Contas de registro</strong> — as contas usadas para instalar e atualizar imagens de registros privados.",
+              "<strong>Instale uma imagem que não está no catálogo</strong> — traduza um arquivo Compose, um comando <code>docker run</code> ou uma referência de imagem.",
+              "As categorias de catálogo, cada um com o seu número de aplicações."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/main-menu.png",
+            "alt": "Tela principal do gerenciador de OCI Apps com pesquisa, todos os aplicativos, gerenciamento, imagem personalizada e as categorias de catálogo",
+            "caption": "Tela principal do gerenciador de OCI Apps."
+          }
+        },
+        {
+          "p": "Selecionando um aplicativo mostra sua descrição, a imagem que ele executa e dois modos de instalação: <strong>Instalar com configurações padrão</strong>, que pergunta apenas o que cada instalação decide (armazenamento, onde os dados vão, endereço e início), e <strong>Instalar com configurações avançadas</strong>, que abre todas as decisões em ordem: VMID e recursos, o armazenamento de cada caminho, a ponte e os dispositivos."
+        },
+        {
+          "p": "Uma aplicação que foi testada para real mostra <strong>Verified</strong> nessa visualização e está marcada com 文 nas listas, seja no laboratório ProxMenux ou pela comunidade."
+        }
+      ]
+    },
+    {
+      "id": "beta",
+      "title": "Por que é uma Visualização de Tecnologia",
+      "blocks": [
+        {
+          "p": "O OCI Manager Apps carrega o <strong>Technology Preview</strong> label que o Proxmox VE dá aos recipientes de aplicativos criados a partir de imagens OCI, introduzidos em Proxmox VE 9.1. Refere-se ao que o OCI Manager Apps roda, não ao motor ProxMenux: o comportamento desses recipientes ainda pode mudar entre as versões Proxmox VE. A etiqueta permanece até que o Proxmox VE marque que suporta como estável."
+        },
+        {
+          "p": "O motor do OCI Manager Apps (instalação, atualização, modificação, recreação, backups, restauração, migração e watchdog) é testado no laboratório ProxMenux. Cada aplicativo é testado por conta própria: os testados para show real <strong>Verificado</strong> e carregam um 文 nas listas."
+        }
+      ]
+    },
+    {
+      "id": "translation",
+      "title": "O que o Docker expressa e o que o OCI manager Apps transforma em",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Requerimento",
+              "Docker expressa-o como",
+              "O OCI Manager Apps transforma-o em"
+            ],
+            "rows": [
+              [
+                "Executar o aplicativo",
+                "<code>image</code>, <code>entrypoint</code>, <code>command</code>",
+                "Rootfs OCI e o principal processo do LXC"
+              ],
+              [
+                "Manter a configuração",
+                "<code>volumes: /config</code>",
+                "um disco <code>mpN</code> persistente incluído no backup, ou um diretório de host"
+              ],
+              [
+                "Publicar o serviço",
+                "<code>ports</code>",
+                "um endereço próprio para o LXC e a URL de acesso do serviço"
+              ],
+              [
+                "Usar hardware",
+                "<code>devices</code>, <code>group_add</code>",
+                "Entradas <code>devN</code> com GID de host eficaz e um perfil validado"
+              ],
+              [
+                "Conectar dependências",
+                "<code>networks</code>, <code>depends_on</code>",
+                "uma ponte privada, endereços fixos, ordem de início e verificações de saúde"
+              ],
+              [
+                "Atualizar",
+                "<code>pull</code> e recriar",
+                "um novo rootfs com o mesmo contrato persistente"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "kept",
+      "title": "O que é guardado e o que muda",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "archive",
+                "title": "Mantido",
+                "body": "A imagem oficial, seus caminhos internos, seu ambiente, seu processo de inicialização e sua documentação funcional."
+              },
+              {
+                "icon": "boxes",
+                "title": "Adaptado",
+                "body": "O ambiente de execução: rede, persistência, dispositivos, permissões e dependências usam primitivos Proxmox VE LXC."
+              },
+              {
+                "icon": "shield",
+                "title": "Não traduzido",
+                "body": "Uma chave Compose sem equivalente seguro é listada como um bloqueador. Modelos com bloqueadores não são oferecidos, e opções sensíveis são confirmadas durante a instalação."
+              },
+              {
+                "icon": "refresh",
+                "title": "Gravado",
+                "body": "As imagens digerem, recursos, caminhos, rede, dispositivos e membros da pilha são armazenados no contrato de instância, que as atualizações e recriações reproduzem."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "pages",
+      "title": "Páginas desta secção",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Como uma imagem OCI é traduzida",
+                "href": "/docs/oci-manager/architecture",
+                "tail": "da imagem e seu arquivo Compose para um LXC nativo."
+              },
+              {
+                "label": "Instalar uma imagem que não está no catálogo",
+                "href": "/docs/oci-manager/custom-image",
+                "tail": "Compor, executar docker ou uma referência de imagem."
+              },
+              {
+                "label": "Dados, caminhos e redes",
+                "href": "/docs/oci-manager/storage-network",
+                "tail": "discos de contentores, directórios de máquinas, montagens e endereços Rclone."
+              },
+              {
+                "label": "Dispositivos e aceleração",
+                "href": "/docs/oci-manager/hardware",
+                "tail": "GPU, NVIDIA, Coral, USB e outros dispositivos."
+              },
+              {
+                "label": "Aplicações multicontentores",
+                "href": "/docs/oci-manager/stacks",
+                "tail": "aplicativo, banco de dados e cache como LXCs coordenados."
+              },
+              {
+                "label": "Instalar, atualizar e modificar",
+                "href": "/docs/oci-manager/lifecycle",
+                "tail": "O contrato de instância e as suas operações."
+              },
+              {
+                "label": "No ProxMenux Monitor",
+                "href": "/docs/oci-manager/monitor",
+                "tail": "versões, atualizações, saída do console e terminal."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

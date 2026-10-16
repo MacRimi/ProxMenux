@@ -1,0 +1,499 @@
+{
+  "meta": {
+    "title": "Instale, atualize e modifique o ProxMenux",
+    "description": "O contrato de instância de um recipiente OCI e as operações que o usam: atualizar, modificar, remover, recuperação de uma operação interrompida e recuperação após uma restauração neste ou em outro host."
+  },
+  "header": {
+    "title": "Instalar, atualizar e modificar",
+    "description": "Cada instância mantém um contrato reprodutível, para que seus rootfs possam ser substituídos sem perder configuração ou dados persistentes.",
+    "section": "Aplicações do gestor OCI"
+  },
+  "sections": [
+    {
+      "id": "contract",
+      "title": "O contrato de instância",
+      "blocks": [
+        {
+          "p": "Após uma instalação, a configuração eficaz é armazenada em <code>/usr/local/share/proxmenux/oci/instances/VMID/oci-compose.json</code>. Não é uma cópia do arquivo Compose original: é o contrato reprodutível do LXC que existe neste host."
+        },
+        {
+          "code": {
+            "code": "instances/\n└── 105/\n    └── oci-compose.json\n        ├── image and resolved digest\n        ├── resources and network\n        ├── environment (secrets protected)\n        ├── container disks and host directories\n        ├── hardware profile and devices\n        ├── console log and terminal mode\n        └── stack membership and lifecycle"
+          }
+        },
+        {
+          "p": "Uma cópia do contrato viaja dentro do recipiente, em <code>/.proxmenux/oci-record.json</code>, legível apenas por raiz do recipiente, de modo que um backup do recipiente sempre carrega o contrato que tinha naquele momento. Uma segunda cópia é mantida em <code>/etc/pve/priv/proxmenux/oci</code>, que cada nó de um cluster compartilha e somente a raiz do host lê. Ambos são escritos após cada instalação, atualização e mudança."
+        }
+      ]
+    },
+    {
+      "id": "manage",
+      "title": "Gerenciar aplicativos OCI instalados",
+      "intro": "Esta opção da tela principal lista as instâncias registradas com sua aplicação e imagem. Cada um é verificado em relação ao seu contrato antes de qualquer ação; um CT que já não corresponde ao seu registro não é modificado nem excluído. A mesma atualização e o mesmo editor são oferecidos na aba Atualizações do <monitorLink>ProxMenux Monitor</monitorLink>.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Opção",
+              "O que muda",
+              "O que é guardado"
+            ],
+            "rows": [
+              [
+                "Atualizar a imagem com a configuração salva",
+                "O rootfs é substituído pela imagem que o canal salvo publica hoje",
+                "Contrato, discos de contêiner, diretórios de host, rede e dispositivos"
+              ],
+              [
+                "Modificar: editar recursos, rede, caminhos e GPU",
+                "O editor abre com o contrato atual; o CT é reconstruído com as alterações",
+                "Os dados dos discos de contentores e pastas da máquina"
+              ],
+              [
+                "Watchdog: reinicie o aplicativo quando ele falhar",
+                "Se o aplicativo é iniciado novamente quando ele pára por conta própria. Nada é reconstruído.",
+                "Toda a instalação; somente a escolha é salva no contrato"
+              ],
+              [
+                "Remover: apagar o aplicativo e seus recipientes",
+                "O LXC, ou cada membro de uma pilha, e seus contratos são excluídos",
+                "Directórios da máquina, com o seu conteúdo"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Para um aplicativo multi-contentor, o menu oferece <strong>Atualizar cada recipiente do aplicativo</strong>, <strong>Modificar caminhos extras e dispositivos</strong>, <strong>Recriar cada recipiente com sua configuração salva</strong>, o watchdog e a remoção. Modificar adiciona ou remove os caminhos extras e dispositivos do recipiente de aplicação sem reconstruir nada e, em Immich, altera o que executa o reconhecimento. Recriar reconstrói cada recipiente da imagem com a qual foi instalado, sem procurar uma nova."
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/manage-menu.png",
+            "alt": "Lista de aplicativos OCI instalados e as opções de atualização, modificação e remoção",
+            "caption": "Gerencie aplicativos OCI instalados."
+          }
+        }
+      ]
+    },
+    {
+      "id": "update",
+      "title": "Uma atualização transacional",
+      "blocks": [
+        {
+          "mermaid": {
+            "chartCode": "sequenceDiagram\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: digest\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n X-->>P: healthcheck\n alt {{healthy}}\n  P-->>U: {{commit}}\n else {{failure}}\n  P->>X: Rollback\n  P-->>U: {{restored}}\n end",
+            "labels": {
+              "user": "Usuário",
+              "registry": "Registo de OCI",
+              "update": "Atualizar instância",
+              "resolve": "Resolver a etiqueta",
+              "verify": "Verificar arquivo e pré- voo",
+              "backup": "Pare e faça backup do CT",
+              "import": "Importar os novos rootfs",
+              "reapply": "Aplicar o contrato novamente",
+              "healthy": "íntegro",
+              "failure": "falha",
+              "commit": "Contrato publicado com a nova digest",
+              "restored": "A instância anterior foi restaurada"
+            }
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Quando o registro ainda serve o digest instalado, nada é baixado e a instância não é tocada.",
+              "A nova imagem é verificada camada por camada antes do CT parar. Um download que chega danificado é obtido uma segunda vez; uma imagem já em cache que falha a verificação é baixado novamente.",
+              "As configurações alteradas em Proxmox VE após a instalação (memória, swap, núcleos, limite CPU, prioridade CPU, começar com o nó) são mantidas e levadas ao novo contrato.",
+              "A interface LAN que as aplicações Arr suite e multi-contentor adicionam (<code>net1</code>) e a ordem de início (<code>startup</code>) são devolvidas ao novo recipiente como são.",
+              "Qualquer outra diferença entre o CT e seu contrato para a atualização antes do CT é parado."
+            ]
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Antes",
+                "detail": "rootfs A\n/config mp0\nDirectório da máquina /media"
+              },
+              {
+                "label": "Atualizar",
+                "detail": "substitui apenas\no rootfs"
+              },
+              {
+                "label": "Após",
+                "detail": "rootfs B\n/config mp0\nDirectório da máquina /media"
+              }
+            ]
+          }
+        },
+        {
+          "p": "Antes de tudo ser parado, a operação verifica se o backup se encaixa: os dados em uso sobre os volumes que são copiados, mais uma margem. É escrito ao lado do registro da aplicação, no disco do sistema do host. Quando não cabe lá, o menu pede outro armazenamento do host que aceita backups: o backup é feito lá, é excluído quando a operação termina, e a escolha é lembrada para esse aplicativo, atualizações agendadas incluídas. Sem armazenamento que tenha espaço, a operação é recusada e a aplicação permanece como estava. A nova imagem é verificada da mesma forma antes de ser baixada."
+        }
+      ]
+    },
+    {
+      "id": "recovery",
+      "title": "Recuperar uma operação interrompida",
+      "intro": "Uma atualização e uma mudança usam uma transação persistente. Se o processo, o terminal ou o nó são interrompidos após a parada do CT, a operação não é tomada como terminada.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Marcador pendente",
+                "body": "Quando as aplicações OCI instaladas são abertas, o estado salvo mostra que a substituição nunca foi publicada."
+              },
+              {
+                "title": "Ver o estado",
+                "body": "Mostra a fase atingida sem alterar recipientes ou dados."
+              },
+              {
+                "title": "Recuperar a instalação anterior",
+                "body": "Restaura o backup nativo verificado feito antes da substituição e do contrato anterior."
+              },
+              {
+                "title": "Pilha como unidade",
+                "body": "Para um aplicativo multi-contentor, cada membro é recuperado do mesmo ponto de transação, não apenas o selecionado."
+              }
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Os diretórios da máquina estão fora do rollback",
+            "body": "O backup cobre os rootfs e os discos do recipiente que inclui. Um diretório host não é revertido, porque outros LXCs podem usar seus dados."
+          }
+        }
+      ]
+    },
+    {
+      "id": "watchdog",
+      "title": "Watchdog: reiniciar uma aplicação que pára",
+      "intro": "Proxmox não tem política de reiniciar: quando o processo de um recipiente de aplicação termina, o recipiente fica parado. Com o cão de guarda ligado, um aplicativo que pára por conta própria é iniciado novamente. Ele faz para uma aplicação OCI o que <code>restart: unless-stopped</code> faz em um arquivo Compose.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "O que acontece?",
+              "Com o cão de guarda ligado"
+            ],
+            "rows": [
+              [
+                "O aplicativo trava ou seu processo termina",
+                "O recipiente é reiniciado em segundos"
+              ],
+              [
+                "É parado ou desligado do Proxmox, do Monitor ou com <code>pct</code>",
+                "Fica parado até alguém começar."
+              ],
+              [
+                "Um backup, uma migração ou uma operação ProxMenux está trabalhando nele",
+                "Nada é feito até que isso acabe."
+              ],
+              [
+                "Já estava parado quando a máquina começou",
+                "Ele permanece parado; <strong>Iniciar com Proxmox</strong> decide que"
+              ],
+              [
+                "Ele continua parando logo após começar",
+                "Uma aplicação que pára novamente dentro de segundos após o início, ou que não começa, é tentado cinco vezes, esperando 30 segundos, 1, 2 e 5 minutos entre eles. Em seguida, é deixado parado e uma notificação é enviada"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "O instalador pede em ambos os modos de instalação e propõe o que a receita do aplicativo declara. Ele é alterado mais tarde de <strong>Manage instalado aplicações OCI</strong> ou com o interruptor <strong>Watchdog</strong> do recipiente em <monitorLink>ProxMenux Monitor</monitorLink>, e se aplica a cada recipiente de uma aplicação multi-contentor. Um serviço do host, <code>proxmenux-oci-watchdog.service</code>, observa cada aplicativo que pediu por ele; sua instalação está listada na aba Alterações de Auditoria e Relatório."
+        },
+        {
+          "calloutInfo": {
+            "title": "O que a máquina não pode dizer",
+            "body": "O código de saída do aplicativo não atinge o host, então uma saída limpa e um crash olhar o mesmo e ambos são reiniciados, como <code>always</code> e <code>unless-stopped</code> fazer em Docker. Uma paragem solicitada fora do Proxmox, com <code>lxc-stop</code> ou <code>systemctl</code>, não deixa nenhuma tarefa de paragem e é tomada como uma paragem própria."
+          }
+        }
+      ]
+    },
+    {
+      "id": "restore",
+      "title": "Backup, restauração e outra máquina",
+      "intro": "Um backup feito com vzdump ou Proxmox Backup Server inclui o recipiente, seus discos e a cópia de seu contrato. O que a instalação mantém no host não faz parte dele. <strong>Gerenciar aplicativos OCI instalados</strong> detecta os recipientes restaurados em um host que não tem contrato para eles, uma nova instalação Proxmox ou outro host, e oferece para registrá-los novamente.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Restaurar os recipientes em Proxmox",
+                "body": "A partir do armazenamento de backup, com o ID original ou com qualquer gratuito. Um aplicativo multi-contentor precisa de cada um de seus contêineres."
+              },
+              {
+                "title": "Abrir Gerenciar aplicativos OCI instalados",
+                "body": "Os recipientes restaurados estão listados e a recuperação é oferecida. O botão <strong>Recover</strong> da guia Atualizações de <monitorLink>ProxMenux Monitor</monitorLink> abre a mesma recuperação."
+              },
+              {
+                "title": "Verificar antes de mudar",
+                "body": "A recuperação verifica que o host tem tudo o que cada aplicativo precisa. Uma aplicação que não pode ser recuperada inteira é deixada como foi encontrado, com a razão."
+              },
+              {
+                "title": "Registar e iniciar",
+                "body": "O contrato está registrado neste host e o que a instalação manteve nele é escrito novamente. Iniciar as aplicações é uma pergunta separada, respondida com Não quando os recipientes originais ainda estão em execução em outro host."
+              }
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/restore-offer.png",
+            "alt": "Diálogo que lista os recipientes restaurados e oferece para recuperá-los",
+            "caption": "A recuperação oferecida quando Gerenciar aplicativos OCI instalados abre."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "O que o anfitrião guardou",
+              "Após a recuperação"
+            ],
+            "rows": [
+              [
+                "Contrato de instância",
+                "Registrado a partir da cópia que o recipiente carrega, verificado com a configuração restaurada Proxmox"
+              ],
+              [
+                "Rede privada de uma aplicação multi-contentor",
+                "Criado novamente com a mesma ponte e sub-rede; os endereços fixos dos contentores não mudam"
+              ],
+              [
+                "Ordem inicial de uma aplicação multi-contentor",
+                "O hookscript de dependência e seu contrato são instalados novamente; trechos são habilitados no armazenamento <code>local</code> quando nenhum armazenamento os aceita"
+              ],
+              [
+                "Sysctls de rede e ficheiro de monitorização da máquina",
+                "Escrito novamente em <code>/etc/pve/proxmenux</code>"
+              ],
+              [
+                "NVIDIA tempo de execução",
+                "O gancho de um recipiente sem privilégios é instalado novamente. Um recipiente privilegiado recebe os arquivos do driver desta máquina em vez dos da máquina de onde vem"
+              ],
+              [
+                "Montagem Rclone",
+                "O hookscript e os programas que publicam a montagem são escritos novamente, com as mesmas vistas na máquina"
+              ],
+              [
+                "Regra de firewall host de um monitor host",
+                "Perguntado novamente, para a sua porta web ea subnet da ponte neste host"
+              ],
+              [
+                "<code>lost+found</code> de cada disco restaurado",
+                "Removido quando vazio; uma restauração cria- o e algumas aplicações não podem começar com ele nos seus dados"
+              ],
+              [
+                "Discos restaurados em outro armazenamento",
+                "O contrato é atualizado para o armazenamento em que eles estão agora"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Um recipiente restaurado com outro ID mantém sua aplicação. O contrato, seu log de console, seus sysctls de rede, o hookscript de uma montagem Rclone e a ordem de início de uma aplicação multi-contentor são registrados com os IDs que os contêineres têm neste host."
+        },
+        {
+          "table": {
+            "headers": [
+              "O que impede uma recuperação",
+              "O que fazer"
+            ],
+            "rows": [
+              [
+                "Falta um recipiente de uma aplicação multi- conteúdo",
+                "Restaure-o também; o aplicativo é recuperado inteiro"
+              ],
+              [
+                "A sub- rede privada já é usada nesta máquina",
+                "A recuperação é cancelada e nada é alterado: os endereços dos contentores são fixados e não são movidos para outra subrede"
+              ],
+              [
+                "Não existe uma pasta da máquina",
+                "Montar ou criar com os seus dados; uma cópia de segurança do contentor não inclui pastas da máquina"
+              ],
+              [
+                "Não existe um dispositivo nesta máquina",
+                "Conecte-o ou remova-o do recipiente em Proxmox"
+              ],
+              [
+                "Um aplicativo com NVIDIA em uma máquina sem o driver",
+                "Instale o driver NVIDIA e o Kit de Ferramentas do Container"
+              ],
+              [
+                "O backup foi feito antes da cópia do contrato existir",
+                "O recipiente permanece como um LXC normal e não é oferecido novamente"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Um contentor que volta",
+            "body": "Um recipiente restaurado sobre si mesmo a partir de um backup antigo, rolado para trás para um instantâneo ou retornado de outro nó carrega o contrato do estado em que está. Quando ele é selecionado para uma operação e seu contrato difere do deste host, a operação não começa e o recipiente é oferecido para recuperação."
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/restore-result.png",
+            "alt": "Resultado da recuperação com a rede privada, a ordem de início e os contentores registados",
+            "caption": "Resultado de uma recuperação, passo a passo."
+          }
+        }
+      ]
+    },
+    {
+      "id": "remove",
+      "title": "Removendo uma aplicação OCI",
+      "blocks": [
+        {
+          "p": "Antes da confirmação, um resumo é construído a partir da configuração real: os recipientes que são removidos, os dados excluídos com eles, a rede privada que é liberada e os diretórios host que são mantidos. A confirmação padrão para <strong>No</strong>, uma vez que os dados dos discos excluídos não podem ser recuperados depois."
+        },
+        {
+          "table": {
+            "headers": [
+              "Recurso",
+              "Ao remover",
+              "Justificação"
+            ],
+            "rows": [
+              [
+                "rootfs e discos de contentores",
+                "Removido",
+                "Pertencem apenas ao recipiente."
+              ],
+              [
+                "Pasta da máquina",
+                "Mantido, com o seu conteúdo",
+                "Outras aplicações podem utilizá-lo"
+              ],
+              [
+                "Arquivos de máquina do recipiente",
+                "Removido",
+                "Seu log de console, sysctls de rede, rclone mount hookscript e seu registro na aba App do ProxMenux Monitor não servem outro recipiente"
+              ],
+              [
+                "Arquivos de várias instalações compartilhar",
+                "Excluído com a última instalação que os usa",
+                "O arquivo host-monitor e o hookscript de dependência de aplicativos multi-contentor"
+              ],
+              [
+                "Contrato de instância",
+                "Excluído após uma remoção bem- sucedida",
+                "Nenhum CT está mais associado a ele"
+              ],
+              [
+                "Ponte privada de uma pilha",
+                "Lançado com a pilha",
+                "Não tem mais membros para conectar"
+              ],
+              [
+                "Rede partilhada pela suite Arr",
+                "Lançado com a última aplicação da suite",
+                "Cada aplicação da suite é independente e é removida por conta própria"
+              ],
+              [
+                "Um único membro de uma pilha",
+                "Não removido isoladamente",
+                "O aplicativo inteiro é removido, então nenhuma pilha fica incompleta"
+              ],
+              [
+                "Um recipiente em outro nó do cluster",
+                "Não removido",
+                "Seus arquivos de registro e host estão no nó onde foi instalado: ele é removido lá, depois de migrar de volta"
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/remove-summary.png",
+            "alt": "Resumo de remoção com os recipientes, dados e diretórios do host afetados",
+            "caption": "O resumo de remoção, construído a partir da configuração real."
+          }
+        }
+      ]
+    },
+    {
+      "id": "archives",
+      "title": "Imagens transferidas e espaço da máquina",
+      "blocks": [
+        {
+          "p": "O arquivo OCI é usado para construir o rootfs; o CT em execução não o lê. Após uma instalação ou uma atualização, os arquivos baixados dessa operação são listados com seu tamanho e sua exclusão é oferecida. Excluindo-os liberta o espaço sem afetar o recipiente ou seus dados."
+        },
+        {
+          "calloutInfo": {
+            "title": "As atualizações não precisam do arquivo",
+            "body": "Sem o arquivo, uma atualização resolve o canal salvo e baixa o novo digest. Com ele, um arquivo é reutilizado apenas quando sua referência e integridade correspondem ao que é solicitado."
+          }
+        }
+      ]
+    },
+    {
+      "id": "registry",
+      "title": "Registo e limpeza",
+      "blocks": [
+        {
+          "p": "Quando o <strong>Manage instalated OCI applications</strong> abre, o que resta de contêineres que não existem em nenhum nó do cluster é removido primeiro: o registro salvo de um contêiner excluído da interface Proxmox, que é mantido como histórico, e os arquivos host uma remoção deixada para trás. Um registro com uma operação à esquerda metade é mantido, porque seu backup ainda pode ser necessário. Os volumes e diretórios de máquinas nunca são excluídos por inferência."
+        }
+      ]
+    },
+    {
+      "id": "cluster",
+      "title": "Em um cluster: migração e alta disponibilidade",
+      "intro": "Um recipiente OCI é um Proxmox LXC comum: pode ser migrado ou gerido por HA como qualquer outro, dentro dos mesmos limites. O que ele precisa para começar é mantido onde cada nó do cluster encontra.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Parte",
+              "Em outro nó do cluster"
+            ],
+            "rows": [
+              [
+                "Registo da consola",
+                "O recipiente cria <code>/var/log/proxmenux/oci</code> antes de começar, em qualquer nó que o execute. Cada nó mantém o log do início que ele executou."
+              ],
+              [
+                "Sysctls de rede e monitor host",
+                "Mantido em <code>/etc/pve/proxmenux</code>, que cada nó do cluster compartilha, então um contêiner migrado os encontra."
+              ],
+              [
+                "Discos de contentores",
+                "O Proxmox move-os com o contentor. O HA precisa deles no armazenamento partilhado."
+              ],
+              [
+                "Directórios e dispositivos da máquina",
+                "As mesmas regras que qualquer LXC: um diretório host deve existir no nó alvo e ser marcado como compartilhado, e um GPU, Coral ou NPU deve estar presente lá."
+              ],
+              [
+                "Registo ProxMenux",
+                "O contrato permanece no nó onde a aplicação foi instalada, e cada nó lê a cópia mantida em <code>/etc/pve/priv/proxmenux/oci</code>. Uma aplicação de conteúdo único que migra é registrada no nó que chega quando <strong>Manage instalated OCI applications</strong> abre ou uma operação é lançada para ele. Uma aplicação multi-container é oferecida para recuperação lá, uma vez que sua rede privada tem que ser criada nesse nó."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Não para alta disponibilidade",
+            "body": "Uma aplicação multi-contentor atinge seus membros através de uma ponte privada do nó onde foi instalado, então seus membros permanecem nesse nó. Um monitor host, como o Glances no modo host ou o Netdata, monitora o nó em que ele é executado; movendo-o monitoraria outro nó."
+          }
+        },
+        {
+          "p": "Um backup restaurado fora do cluster recebe os arquivos de <code>/etc/pve/proxmenux</code> que o recipiente usa quando o aplicativo é recuperado."
+        }
+      ]
+    },
+    {
+      "id": "channel",
+      "title": "Uma etiqueta de rolamento não é uma atualização sem acompanhamento",
+      "blocks": [
+        {
+          "p": "O catálogo instala a etiqueta de rolamento que seu mantenedor publica, mas o digest efetivo é resolvido, gravado e alterado apenas através de uma atualização explícita com pré-voo e rollback. <monitorLink>ProxMenux Monitor</monitorLink> compara o digest instalado com o que o registro publica e mostra, e notifica, quando uma nova imagem está disponível."
+        }
+      ]
+    }
+  ]
+}

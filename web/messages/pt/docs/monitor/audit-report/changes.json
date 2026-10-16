@@ -1,0 +1,208 @@
+{
+  "meta": {
+    "title": "Alterações",
+    "description": "A revista de alterações de Audit & Report: o que ProxMenux mudou no host, o que estava lá antes, a diferença e se pode ser desfeito."
+  },
+  "header": {
+    "title": "Alterações",
+    "description": "O diário das operações ProxMenux realiza no hospedeiro e, onde foi capturado, o estado antes e depois de cada uma.",
+    "section": "Auditoria e relatórios"
+  },
+  "sections": [
+    {
+      "id": "purpose",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Do script que correu para a mudança que fez",
+            "body": "Uma função longa pode mudar apenas duas linhas. A revista mantém cada operação concreta com o script, função e versão responsável, o recurso afetado, a diferença e se pode ser desfeito."
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Script",
+                "detail": "função + versão"
+              },
+              {
+                "label": "Capturar",
+                "detail": "conteúdo antes"
+              },
+              {
+                "label": "Operação",
+                "detail": "arquivo · pacote · serviço"
+              },
+              {
+                "label": "Diário",
+                "detail": "atribuição + diferença"
+              }
+            ],
+            "caption": "A captura é feita quando a operação é executada e consolidada quando o Monitor lê a revista."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/changes-view.png",
+            "alt": "Muda a visão de Auditoria e Relatório com os itens agrupados por opção e script pós-instalação",
+            "caption": "A visão Mudanças, com a diferença de um arquivo editado por ProxMenux."
+          }
+        }
+      ]
+    },
+    {
+      "id": "types",
+      "title": "Tipos de entrada",
+      "intro": "O filtro no topo separa as entradas por tipo.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Tipo",
+              "O que grava"
+            ],
+            "rows": [
+              [
+                "Configuração",
+                "ProxMenux escreveu, editou ou removeu um arquivo, alterou uma configuração ou alterou um serviço."
+              ],
+              [
+                "Instalações",
+                "ProxMenux adicionou um pacote ou componente, e os pacotes que realmente apareceram são gravados."
+              ],
+              [
+                "Execuções",
+                "ProxMenux executou um comando; o que ele mudou é até o próprio comando."
+              ],
+              [
+                "Aplicado",
+                "Uma função foi aplicada antes da existência da revista; o estado antes de ela não ser capturada."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "groups",
+      "title": "Como se organiza a visão",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Secção",
+              "Índice"
+            ],
+            "rows": [
+              [
+                "Otimizações pós-instalação",
+                "Agrupado pela opção pós-instalação selecionada pelo usuário."
+              ],
+              [
+                "Scripts do ProxMenux",
+                "GPU, Coral, rede, armazenamento, segurança, utilitários e os outros scripts instrumentados, incluindo o instalador ProxMenux e ProxMenux Monitor."
+              ],
+              [
+                "Pacotes e utilitários instalados",
+                "Software ProxMenux instalado no host."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Dentro de cada seção, <strong>Por função</strong> agrupa as entradas sob a função que as fez."
+        }
+      ]
+    },
+    {
+      "id": "entry",
+      "title": "O que cada item mostra",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "O script, função e versão responsável.",
+              "A data e o recurso afetado.",
+              "O estado conhecido antes e depois da mudança.",
+              "As linhas adicionadas e removidas.",
+              "Os pacotes que foram realmente adicionados.",
+              "A transição estatal de um serviço.",
+              "<strong>Desfazer isto</strong>: <em>Restaura exatamente o que estava lá</em>, <em>Exclui o ficheiro (não houve nenhum antes)</em>, <em>O pacote pode ser desinstalado</em>, uma desfazer parcial ou <em>Não pode ser desfeito do diário</em>."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "before",
+      "title": "O que o estado anterior significa",
+      "blocks": [
+        {
+          "p": "O estado anterior pode ser capturado conteúdo, um arquivo criado pela primeira vez ou um estado desconhecido. As alterações feitas antes da existência da revista não podem ser reconstruídas; executar a função novamente captura primeiro o estado encontrado naquele momento."
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Âmbito da revista",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "As alterações manuais e feitas por outros softwares não são gravadas.",
+              "Apenas as operações que passam pelos primitivos de auditoria ProxMenux estão cobertas.",
+              "A gravação nunca bloqueia a operação que descreve: se a entrada não puder ser escrita, a operação continua.",
+              "Mudanças sucessivas em um recurso são mostradas como a origem conhecida contra o estado atual."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "retention",
+      "title": "Provas armazenadas",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Elemento",
+              "Comportamento"
+            ],
+            "rows": [
+              [
+                "Entradas",
+                "Eles são mantidos no host; nada é removido do diário automaticamente."
+              ],
+              [
+                "Conteúdo capturado",
+                "Um objeto capturado é mantido enquanto uma entrada se refere a ele."
+              ],
+              [
+                "Tamanho de uma captura",
+                "Conteúdo acima de 1 MiB não é armazenado inteiro; os registros de entrada que a captura foi ignorada por causa de seu tamanho."
+              ],
+              [
+                "Leitura",
+                "O Monitor não carrega objetos armazenados acima de 2 MiB."
+              ],
+              [
+                "Diferença",
+                "No máximo são mostradas linhas 400, e uma diferença maior é marcada como truncada."
+              ],
+              [
+                "Listagem",
+                "O API retorna entradas 200 por solicitação por padrão e até 1000."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "O conteúdo mantido não é uma desfazer automaticamente",
+            "body": "O conteúdo antes de uma alteração pode ser inspecionado e restaurado manualmente, mas a área de Alterações não reverte as operações. Uma entrada de execução registra o comando sem saber todos os efeitos da ferramenta que ele executou."
+          }
+        }
+      ]
+    }
+  ]
+}

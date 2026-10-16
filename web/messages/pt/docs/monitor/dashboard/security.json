@@ -1,0 +1,246 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Painel: guia de segurança ProxMenux Documentação",
+    "description": "A guia Segurança agrupa todos os controles relacionados à proteção em duas colunas: ProxMenux Monitor (Autenticação, SSL/HTTPS, API tokens, Secure Gateway) e Proxmox VE (Firewall, Fail2Ban, Lynis). Assistente Secure Gateway passo-a-passo, Lynis audit walkthrough, Fail2Ban instalar e ajuste de regras."
+  },
+  "header": {
+    "title": "Painel: Página de segurança",
+    "description": "Cada controle de segurança no painel, agrupado em dois blocos claramente marcados: configuração do próprio Monitor (auth, SSL, tokens, Secure Gateway) e configuração do host Proxmox que ele assiste (firewall, Fail2Ban, Lynis).",
+    "section": "ProxMenux Monitor · Painel"
+  },
+  "intro": {
+    "title": "Dois escopos, uma aba",
+    "body": "A guia Segurança é dividida em duas seções claramente separadas: <strong>ProxMenux Monitor</strong> (definições para o painel em si) e <strong>Proxmox VE</strong> (definições para o hospedeiro por baixo). Os cartões renderizam condicionalmente — Fail2Ban e Lynis só aparecem uma vez instalados."
+  },
+  "monitor": {
+    "heading": "Monitor do ProxMenux",
+    "intro": "Quatro cartas controlam como o painel em si é alcançado e autenticado."
+  },
+  "auth": {
+    "heading": "Autenticação",
+    "imageAlt": "Cartão de autenticação que mostra o estado Activado, Encerramento, Mudança de Senha, Informação de Autenticação de Dois Fatores, Activar a Autenticação de Dois Factores e Desactivar os botões de Autenticação",
+    "imageCaption": "Cartão de autenticação com autenticação activada — emblema de estado, mudança de senha, activar 2FA e a acção (destrutiva) desactivar a autenticação.",
+    "intro": "O cartão permite gerenciar o login do próprio painel. O fluxo completo do primeiro lançamento, política de senha, telas de inscrição TOTP e recuperação do autenticador perdido estão documentados em <link>Acesso e autenticação</link> - este cartão é a superfície do dia-a-dia para essas configurações:",
+    "items": [
+      "<strong>Status de autenticação</strong> — emblema que mostra <em>Permitido</em> / <em>Desabilitado</em> / <em>Declinado</em>.",
+      "<strong>Alterar senha</strong> — senha atual + nova senha + confirmação.",
+      "<strong>Ativar / desactivar a autenticação de dois fatores</strong> — abre a janela de inscrição QR ao activar, pede a senha actual ao desactivar.",
+      "<strong>Autenticação desativada</strong> — ação destrutiva que re-mostra o primeiro lançamento <em>Proteja seu painel?</em> diálogo na próxima visita."
+    ]
+  },
+  "ssl": {
+    "heading": "SSL/HTTPS",
+    "imageAlt": "SSL / HTTPS cartão mostrando HTTP Nenhum estado SSL, certificado de host detectado Proxmox com Assunto, Emissor, Expira, Use o botão Certificado Proxmox e Use a opção Certificado Personalizado",
+    "imageCaption": "Cartão SSL / HTTPS com HTTPS desligado. O Monitor detecta o certificado já instalado no host Proxmox e oferece-o como uma opção de um clique, com um retorno para <em>Use o Certificado Personalizado</em> se você tiver seus próprios arquivos em outro lugar.",
+    "intro": "Serve o painel sobre HTTPS sem qualquer proxy reverso na frente. O cartão detecta automaticamente o certificado que o próprio Proxmox usa (em <code>/etc/pve/local/</code>) e mostra o assunto, o emitente e a validade para que você possa verificar antes de ativar. Dois caminhos para ativar o HTTPS:",
+    "items": [
+      "<strong>Use o certificado Proxmox</strong> — um clique. O Monitor reutiliza o certificado instalado na máquina. Bom ajuste para usuários que já têm seu PVE rodando no mesmo nome DNS que o painel.",
+      "<strong>Use Certificado Personalizado</strong> — cole caminhos absolutos para seu próprio certificado <code>.pem</code> e chave privada <code>.key</code>. Os caminhos são validados antes de o serviço reiniciar; se o carregamento falhar, o painel cai para HTTP automaticamente (sem estado quebrado)."
+    ],
+    "enabledAlt": "Cartão SSL/HTTPS com HTTPS Estado habilitado, Certificado ativo mostrando caminhos pve-ssl.pem e pve-ssl.key, e um botão Desabilitar HTTPS",
+    "enabledCaption": "HTTPS ativo — o cartão apresenta o certificado atualmente em uso, os caminhos dos arquivos e um <em>Desable HTTPS</em> ação que cai de volta para HTTP na mesma porta.",
+    "acmeTitle": "ACME / Let's Encrypt através do Proxmox",
+    "acmeBody": "Se seu nó Proxmox já tem Let's Encrypt configurado no <em>Datacenter → Certificados → ACME</em>, esse é o certificado que o host serve para navegadores — e é isso que o painel reutiliza quando você clica em <em>Use o Certificado Proxmox</em>. Não precisas de canalização ACME separada para o Monitor.",
+    "walkthroughLink": "Para uma caminhada passo-a-passo — incluindo como o Monitor detecta automaticamente o certificado carregado com ACME, o que é escrito no disco, e como voltar para um costume <code>.pem</code> / <code>.key</code> par – ver <link>HTTPS em vez ProxMenux Monitor</link>."
+  },
+  "apiTokens": {
+    "heading": "Tokens de acesso API",
+    "emptyAlt": "API Cartão de acesso Tokens estado vazio com Sobre API caixa de informações Tokens e Gerar novo botão de Token API",
+    "emptyCaption": "O cartão API Access Tokens em uma nova instalação — o <em>Sobre a caixa API Tokens</em> resume a vida útil, o uso e como incorporar o token em cabeçalhos <code>Authorization: Bearer</code>.",
+    "intro": "Tokens de longa duração (1 ano) para integrações desacompanhadas — widgets Web, sensores Home Assistant REST, raspadores Grafana, fluxos n8n, scripts personalizados. O cartão leva você através de três estados: vazio → formulário → gerado.",
+    "generateBody": "<strong> Gerar um token.</strong> Clique em <em> Gerar novo API Token</em>. O formulário pede um <em>Token Name</em> descritivo (ajuda você a identificá-lo na lista ativa mais tarde) e seu <em>password</em> como confirmação de segundo fator. Se o 2FA estiver habilitado, o formulário pede adicionalmente o código TOTP atual.",
+    "generateAlt": "API Tokens de acesso geram formulário com entrada Nome do Token, entrada de senha, Gerar Token e Cancelar botões",
+    "generateCaption": "O formulário Gerar API Token — preencha um nome e confirme com sua senha (e TOTP se o 2FA estiver ligado).",
+    "saveBody": "<strong>Salve o token imediatamente.</strong> O texto completo do token é mostrado <strong>apenas uma vez</strong> após a geração. A carta destaca isso com um aviso de âmbar e um botão de cópia. Não há como recuperá-lo mais tarde — você só verá o prefixo na lista de Tokens ativos.",
+    "generatedAlt": "Token API gerado com sucesso com token mascarado, botão de cópia, instruções para cabeçalho do portador de autorização e lista de itens ativos com prefixo",
+    "generatedCaption": "Token gerado — o valor é mostrado uma vez com um botão de cópia e o excerto exato <code>Authorization: Bearer</code>. Abaixo, a lista de itens ativos mantém nome + prefixo + data de criação para que você possa revogar fichas individuais mais tarde.",
+    "outro": "A carta mostra cada token ativo com uma <em>Revogar</em> botão por linha. A revogação invalida o token imediatamente; qualquer integração que o utilize deixa de funcionar a partir desse momento. Livros de cozinha para a página inicial, Home Assistant, n8n e Prometheus estão dentro <link>Integrações</link>."
+  },
+  "gateway": {
+    "heading": "Gateway seguro",
+    "cardAlt": "Cartão de Gateway seguro com botão Deploy Gateway seguro antes de qualquer gateway foi implantado",
+    "cardCaption": "Secure Gateway card em uma nova configuração — um botão inicia o assistente.",
+    "intro": "Alcance o painel, a interface web da Proxmox e qualquer hóspede de qualquer lugar em seu <a>Tailscale</a>, sem expor qualquer porta à internet pública. O Monitor implementa um recipiente de LXC alpino no host executando <code>tailscaled</code> como um roteador de subnet; uma vez aprovado no console de administração Tailscale, seus dispositivos remotos alcançam o IP de LAN do host de qualquer lugar.",
+    "wizardTitle": "Assistente passo a passo",
+    "wizardIntro": "Antes de clicar em <em>Deploy Secure Gateway</em>, gere uma chave de autenticação em seu console de administração Tailscale — o assistente irá pedir por isso no passo 2.",
+    "step0Title": "0. Gerar a tecla de autenticação Tailscale",
+    "step0Body": "Inicie sessão em <a>login.tailscale.com/admin/settings/keys</a> e clique em <em>Generate auth key...</em>. Escolha uma chave <em> pré-autenticada</em> (então o gateway não precisa de um login interativo Tailscale), e copie o valor — ele é mostrado apenas uma vez.",
+    "step0Alt": "Tailscale consola de administração Configuração Página de chaves com o botão Gerar auth chave realçado",
+    "step0Caption": "Console de administração de escala de cauda — <em>Configurações → Chaves → Gerar chave de autenticação...</em>. Use uma conta de Tailscale gratuita se ainda não tiver uma (link dentro do assistente).",
+    "step1Title": "1. Abrir o assistente",
+    "step1Body": "Voltar para a guia Segurança, clique em <em>Deploy Secure Gateway</em>. O primeiro passo é uma introdução com o que você vai ter e o que você precisa.",
+    "step1Alt": "Passo de introdução do assistente Secure Gateway Setup explicando o que o gateway oferece: acesso VPN, sem encaminhamento de porta, criptografia de ponta a ponta",
+    "step1Caption": "Passo 1 — visão geral do que o Secure Gateway fornece e um lembrete de que você precisará de uma conta de Tailscale gratuita.",
+    "step2Title": "2. Tailscale Autenticação",
+    "step2Body": "Cole a chave de autenticação da etapa 0 e escolha um nome de máquina (este é o que o gateway irá aparecer como no console de administração Tailscale — tipicamente <code>proxmox-gateway</code> ou seu nome de nó).",
+    "step2Alt": "Passo de assistente de Gateway seguro pedindo Tailscale Auth Key e dispositivo Hostname com link para gerar a chave",
+    "step2Caption": "Passo 2 — cole a chave pré-auth e escolha o nome do host do dispositivo. O link abaixo do campo abre a página Tailscale do passo 0 se você pulou adiante.",
+    "step3Title": "3. Âmbito de acesso",
+    "step3Intro": "Escolha o que sua tailnet pode alcançar através do gateway:",
+    "step3Items": [
+      "<strong>Proxmox Only</strong> — apenas a IU Proxmox e o Monitor. Superfície de ataque mais pequena.",
+      "<strong>Full Local Network</strong> — toda a sub-rede LAN (auto-detectado a partir da interface primária do host). Permite alcançar NAS, impressoras, VMs e qualquer outro dispositivo LAN.",
+      "<strong>Subnets personalizadas</strong> — listar CIDRs específicos. Para configurações multi-VLAN onde você deseja expor alguns segmentos, mas não outros."
+    ],
+    "step3Alt": "Assistente de Gateway seguro acesso passo com três opções: Proxmox Only, Rede local completa, Subnets personalizados",
+    "step3Caption": "Passo 3 — escolha o escopo de acesso. <em>Full Local Network</em> preenche automaticamente com a subrede LAN detectada.",
+    "step4Title": "4. Opções avançadas (opcional)",
+    "step4Intro": "Duas teclas opcionais. Ambos são <strong>off por padrão</strong>:",
+    "step4Items": [
+      "<strong>Exit Node</strong> — quando ativado e selecionado a partir de um dispositivo remoto, todo o tráfego de internet desse dispositivo sai através da WAN do host Proxmox. Útil para cenários de viagem onde você quer que o tráfego do seu telefone pareça com casa.",
+      "<strong>Accept Routes</strong> — deixe este gateway alcançar redes anunciadas pelo <em>other</em> roteadores de subnet tailnet (para configurações multi-site)."
+    ],
+    "step4Alt": "Assistente de gateway seguro Opções avançadas passo com Node de saída e aceitar rotas caixas de seleção",
+    "step4Caption": "Passo 4 — Sair do Nó e Aceitar Rotas. Pular ambos se tudo o que você quer é o acesso do painel do seu telefone ou laptop.",
+    "step5Title": "5. Revisão & Implantação",
+    "step5Body": "Resumo final antes do início da implantação. O assistente lembra que um passo manual no administrador Tailscale ainda está pendente após a implantação: <strong>aprovando a rota da subnet</strong>.",
+    "step5Alt": "Assistente de Gateway seguro Revisão e implementação passo com Resumo de configuração mostrando nome do host, modo de acesso, redes, nó de saída, aceitar rotas e um botão de Gateway deploy",
+    "step5Caption": "Passo 5 — rever a configuração e implantar. O aviso azul no fundo indica a aprovação da rota pendente.",
+    "approvalTitle": "Um último passo manual no administrador Tailscale",
+    "approvalBody": "Depois de implantar, volte para <a>login.tailscale.com/admin/machins</a> e aprove a rota da subnet que o gateway está anunciando. Até o fazer, os dispositivos remotos na sua tailnet não serão realmente capazes de alcançar IPs LAN através do gateway. Marca rotas pendentes com um aviso amarelo na linha do dispositivo — clique em <em>Editar configurações de rota</em> e marque a caixa de rota."
+  },
+  "pve": {
+    "heading": "Proxmox VE",
+    "intro": "Proteções próprias do anfitrião — firewall, prevenção de intrusões e auditoria de segurança. Os dois últimos renderizam somente quando suas respectivas ferramentas são instaladas."
+  },
+  "firewall": {
+    "heading": "Proxmox Firewall",
+    "imageAlt": "Cartão Proxmox Firewall mostrando o status Firewall e Host Firewall Cluster, Regras de Acesso Rápido para ProxMenux Monitor e UI Web Proxmox, Contadores Visão geral de Regras e uma lista de Regras Firewall com botão Adicionar Regra",
+    "imageCaption": "Placa de Firewall Proxmox — nível de cluster e nível de host habilitar / desativar alternâncias, portas comuns como <em>Regras de Acesso Rápidas</em>, totaliza em <em>Regras Visão Geral</em>, e a lista completa de regras com <em>+ Adicionar regra</em>.",
+    "intro": "O cartão tem a superfície do firewall incorporado Proxmox VE (que é independente de qualquer nível de host <code>iptables</code> / <code>nftables</code> que você pode correr ao lado). Três quarteirões:",
+    "items": [
+      "<strong>Cluster Firewall + Host Firewall</strong> — alternações globais. O firewall de cluster deve estar ativo para que qualquer regra de nível host faça efeito; o card sinaliza esta dependência em linha.",
+      "<strong>Regras de acesso rápido</strong> — linhas pré-definidas para portas que importam para ProxMenux em si: <code>8008/TCP</code> (Monitor), <code>8006/TCP</code> (Proxmox Web UI). Cada linha mostra o estado atual de permissão / negação / desprotegido. A interface Web da Proxmox é permitida através do <em> built-in</em> Proxmox firewall macro e não pode ser removida acidentalmente.",
+      "<strong>Regras Visão Geral</strong> — contadores para regras totais, aceitar regras, regras de queda/rejeição e portas distintas protegidas. Os números são lidos de <code>/etc/pve/firewall/cluster.fw</code> e <code>/etc/pve/nodes/&lt;node&gt;/host.fw</code>.",
+      "<strong>Regras de Firewall</strong> — lista completa com ação / protocolo / porta / fonte / nível. <em>+ Adicionar regra</em> abre um editor em linha; o ícone de lixo em cada linha remove a regra. Edita escrever para os mesmos arquivos que o Proxmox usa, então as alterações também aparecem na UI Proxmox (Datacenter / Node → Firewall)."
+    ]
+  },
+  "fail2ban": {
+    "heading": "Fail2Ban",
+    "subHeading": "(condicional)",
+    "whatIs": "<strong>O que é.</strong> Fail2Ban é um daemon de invasão de código aberto que observa arquivos de log para tentativas de login falhadas repetidas e proíbe o IP ofensivo no nível do firewall. É a resposta de fato para scanners de força bruta que atingiram SSH e formulários de login da web 24/7. ProxMenux liga-o a três cadeias por padrão: SSH, o login de interface web do Proxmox (porto 8006), e o login do ProxMenux Monitor (porto 8008).",
+    "notBundled": "O Fail2Ban é <strong> não empacotado</strong>. O cartão detecta se ele está instalado e se adapta: quando falta ele oferece uma instalação de um clique; uma vez instalado, ele mostra o status de prisão ao vivo, IPs banidos e permite que você afina repetições / tempo de proibição por cadeia.",
+    "notInstalledAlt": "Cartão Fail2Ban mostrando o estado não instalado com explicação do que ele configuraria: SSH, Proxmox web UI e proteção ProxMenux Monitor com infraestrutura nftables, além de um botão Instalar e Configurar Fail2Ban",
+    "notInstalledCaption": "Cartão Fail2Ban antes de instalar — a caixa azul visualiza o que a instalação configuraria.",
+    "clickBody": "Clique em <em>Instalar e Configurar Fail2Ban</em> e você terá uma confirmação modal listando cada alteração que o script fará no host:",
+    "confirmAlt": "Instale Fail2Ban confirmação modal listando SSH proteção modo agressivo, Proxmox web interface proteção porta 8006, ProxMenux Monitor proteção porta 8008, auto-detectado nftables backend, ajuste de nível de log diário e SSH MaxAuthTries endurecimento",
+    "confirmCaption": "Instale confirmação — lista explícita de prisões, ajustes ao nível de log diário (assim a cadeia de autenticação pode ler eventos SSH) e um efeito colateral de endurecimento SSH (<code>MaxAuthTries=3</code>).",
+    "confirmIntro": "Confirmação desencadeia um painel de instalação de streaming (apt + gail config + tests). A mesma canalização do instalador ProxMenux CLI.",
+    "progressAlt": "Painel de instalação Fail2Ban mostrando log de instalação ao vivo: instalação de pacote, MaxLevelStore afinado para registro de autenticação, cadeias configuradas, infraestrutura nftables detectada, endurecimento MaxAuthTries, teste de comunicação fail2ban-client, mensagem de conclusão",
+    "progressCaption": "Instale em andamento — cada passo é registrado no painel. A ligação fechada na parte inferior marca o fim da sessão de transmissão.",
+    "afterInstall": "Depois de instalar o cartão muda para a visualização de status ao vivo: cadeias configuradas, contador de IPs banidos, eventos recentes de ban. As abas grandes dividem <em>Jails & Banned IPs</em> de <em>Atividade recente</em> (as últimas entradas N do log Fail2Ban).",
+    "activeAlt": "Cartão Fail2Ban após instalar com o status Active, três cadeias configuradas (proxmenux, proxmox, sshd), contador de IPs banidos, Total Bans, Tentativas Falhadas e linhas por prisão com repetições, tempo de banimento, janela e ícone de engrenagem",
+    "activeCaption": "Fail2Ban ativo — as três cadeias padrão (<code>proxmenux</code>, <code>proxmox</code>, <code>sshd</code>) com suas configurações de tempo / ban / janela.",
+    "tuneBody": "<strong>Regras de prisão de tune.</strong> Clique no ícone de engrenagem em qualquer linha de cadeia para ajustar o <em>Max Retries</em>, <em>Ban Time</em> (use uma proibição permanente se você quiser os infratores bloqueados até que você manualmente unban) e <em>Find Time</em> (a janela de rolamento para retries de contagem). Valores comuns estão documentados dentro do formulário.",
+    "configAlt": "Configure o formulário de cadeia sshd com Max Retries, Ban Time em segundos com a opção Ban Permanente, Find Time, lembrete de valores comuns e botão Salvar Configuração",
+    "configCaption": "Edição da cadeia sshd — escolha um <em>Max Retries</em> mais rigoroso para SSH se você só fizer login na sua própria sub-rede, ou estender <em>Ban Time</em> para o painel voltado para o público.",
+    "outro": "O <em> completoO que ele instala / como ele é configurado / como desinstalar</em> walkthrough — incluindo o caminho de instalação manual, o efeito colateral SSH MaxAuthTries, e a relação com o periódico <code>proxmenux-auth.log</code> — está em <link>ProxMenux → Segurança → Fail2Ban</link>.",
+    "calloutTitle": "Sem Fail2Ban, proteção de força bruta é o melhor esforço",
+    "calloutBody": "ProxMenux Monitor tem seu próprio <em> nível de aplicação</em> gancho de ban no gasoduto de pedido Flask — mas só faz efeito se Fail2Ban está instalado e escreve para a tabela de bans. Sem o Fail2Ban, os logs do Monitor falham no login do <code>proxmenux-auth.log</code> para inspeção futura, mas não bloqueiam ativamente IPs."
+  },
+  "lynis": {
+    "heading": "Auditoria de segurança Lynis",
+    "subHeading": "(condicional)",
+    "whatIs": "<strong>O que é.</strong> Lynis é uma ferramenta de auditoria de segurança de código aberto que executa ~280 testa através da máquina (permissões de ficheiros, endurecimento do kernel, SSH config, vulnerabilidades de pacotes, política de criptografia, tarefas agendadas, captura de banners, etc.) e produz uma pontuação de endurecimento 0–100, uma lista de advertências e uma lista de sugestões. É a linha de base de fato para \"é este servidor em boa forma\" em servidores baseados no Debian.",
+    "whyUseful": "<strong>Por que é útil.</strong> Saber a postura de segurança do seu servidor é difícil de fazer lendo arquivos de configuração um por um. Lynis pega as coisas que são rotineiramente negligenciadas: bandeiras de endurecimento do kernel faltando, cifras SSH fracas habilitadas, diário não persistente, sudoers <code>NOPASSWD</code> em contas padrão, e muitos mais. Reexecutá-lo após a aplicação de ajustes pós-instalação ProxMenux dá-lhe um número objetivo para a melhoria.",
+    "notInstalledAlt": "Lynis Security Cartão de auditoria com estado não instalado e botão Instalar Lynis, listando recursos: pontuação de endurecimento, detecção de vulnerabilidade, verificação de conformidade e fonte GitHub",
+    "notInstalledCaption": "Cartão Lynis antes de instalar — a caixa azul resume o que a ferramenta faz.",
+    "notBundled": "Lynis também é <strong>not bundled</strong>. O ProxMenux instala a última versão diretamente da fonte oficial do GitHub (não o pacote Debian, que defasa várias versões menores).",
+    "confirmAlt": "Instale o modo de confirmação Lynis listando o que Lynis faz: pontuação de endurecimento, detecção de vulnerabilidade, análise de configuração, verificação de conformidade, fonte do repositório oficial GitHub",
+    "confirmCaption": "Instalar confirmação — explícita sobre a fonte GitHub.",
+    "progressAlt": "Lynis Painel de streaming de instalação: instalação da ferramenta de digitalização mais recente, versão 3.1.6 confirmado, mensagem de instalação concluída",
+    "progressCaption": "Instale em andamento — o mesmo padrão de painel de streaming que Fail2Ban.",
+    "afterInstall": "Depois de instalar o cartão mostra a versão e um histórico de auditoria vazio. Clique em <em>Auditoria de segurança Run</em> para iniciar a primeira varredura.",
+    "installedAlt": "Lynis Security Cartão de auditoria após instalar com a versão 3.1.6 Emblema instalado, última verificação timestamp, índice de endurecimento 0, avisos 0, sugestões 0, uma linha de relatório de auditoria vazia e um botão de auditoria de segurança de execução",
+    "installedCaption": "Lynis instalado, ainda não há auditoria. A carta preenche as peças métricas com zeros.",
+    "runningAlt": "Lynis Security Audit card enquanto a auditoria está em execução mostrando a auditoria de segurança na mensagem de progresso, a duração estimada de 2-5 minutos, e um botão de auditoria de execução desabilitado",
+    "runningCaption": "Auditoria em andamento — o botão de ação mostra um spinner e o cartão adverte explicitamente que a varredura pode levar 2–5 minutos.",
+    "finishedBody": "Quando termina, o cartão muda para a visão de resultados: índice de endurecimento, avisos, sugestões e uma lista <em>Audit Reports</em> com cada digitalização histórica.",
+    "resultsAlt": "Lynis Security Placa de auditoria com resultados: Índice de endurecimento 71 com Lynis 66 PVE 71 avaria, avisos 3, sugestões 40, segurança barra de progresso da pontuação de endurecimento Proxmox Ajustado 71 de 100 na boa gama, lista de relatórios de auditoria com download PDF e botão Executar Auditoria de segurança",
+    "resultsCaption": "Resultados da auditoria — Índice de endurecimento <strong>71/100 (Bom)</strong> numa amostra. O cartão também mostra o \"Lynis raw score\" (66) versus o Proxmox-ajustado score (71) que adiciona de volta 11 pontos para os achados as bandeiras do corpus de teste de Lynis mas são o comportamento esperado em Proxmox VE.",
+    "scoreTitle": "Pontuação bruta de Lynis vs pontuação ajustada a Proxmox",
+    "scoreIntro": "Lynis envia regras sintonizadas para o Debian de propósito geral. Proxmox diverge legitimamente de alguns deles (serviços rodando como raiz por razões de cluster, ajuste personalizado <code>journald</code>, etc). A carta mostra ambos os números para que você possa:",
+    "scoreItems": [
+      "Acompanhe o seu <em>Lynis raw score</em> da mesma forma que auditores externos faria.",
+      "Acompanhe a pontuação <em>Proxmox-ajustada</em> — uma linha de base mais justa se você estiver comparando nós dentro do mesmo cluster."
+    ],
+    "reportBody": "<strong>O relatório completo.</strong> Cada linha de auditoria na lista tem um botão <em>PDF</em> que baixa um relatório de várias páginas com o resumo executivo, informações do sistema, postura de segurança, cada aviso com explicação, cada sugestão classificada por impacto e o inventário do pacote. É o artefacto que anexarias a uma revisão de segurança.",
+    "reportAlt": "Exemplo primeira página do relatório de auditoria de segurança de Lynis PDF mostrando resumo executivo com endurecimento 71 de 100, advertências e sugestões contagens, bloco de informação do sistema com nome de host, kernel, versão de Lynis, data de relatório, postura de segurança visão geral",
+    "reportCaption": "Primeira página de um relatório baixado — resumo executivo, informação do sistema e visão geral da postura de segurança. O relatório completo continua com advertências detalhadas, sugestões e a lista de pacotes instalados. Uma amostra <a> PDF</a> é anexada para referência.",
+    "runPeriodically": "Execute a auditoria periodicamente (após grandes atualizações do Proxmox, após a aplicação de ajustes pós-instalação, antes de abrir um caminho de acesso remoto) e mantenha os relatórios – a tendência importa mais do que qualquer número.",
+    "outro": "O <em> completoO que ele instala / como ele é configurado / como desinstalar o </em> e um relatório de exemplo escrito de quebra são em <link>ProxMenux → Segurança → Lynis</link>."
+  },
+  "dataCollected": {
+    "heading": "Como os dados são coletados",
+    "headerCard": "Cartão",
+    "headerEndpoint": "Ponto final",
+    "headerSource": "Origem",
+    "rows": [
+      {
+        "card": "Autenticação, 2FA, mudança de senha",
+        "endpoint": "/api/auth/*",
+        "source": "SQLite local + JWT emitido pelo Monitor."
+      },
+      {
+        "card": "SSL/HTTPS",
+        "endpoint": "/api/auth/ssl/*",
+        "source": "<code>openssl x509</code> em <code>/etc/pve/local/pve-ssl.pem</code> + <code>/etc/proxmenux/ssl_config.json</code>."
+      },
+      {
+        "card": "Lista de fichas API / hortelã / revogação",
+        "endpoint": "/api/auth/api-tokens",
+        "source": "Token linhas mantidas localmente; nada sai da máquina."
+      },
+      {
+        "card": "Gateway seguro (deploy + status)",
+        "endpoint": "/api/oci/*",
+        "source": "Disposições Alpina LXC + <code>tailscaled</code> via <code>pct create</code> / <code>pct exec</code>."
+      },
+      {
+        "card": "& Regras de estado do Firewall",
+        "endpoint": "/api/security/firewall/*",
+        "source": "<code>pve-firewall</code> + <code>/etc/pve/firewall/&lt;cluster|host&gt;.fw</code>."
+      },
+      {
+        "card": "Fail2Ban (somente quando instalado)",
+        "endpoint": "/api/security/fail2ban/*",
+        "source": "<code>fail2ban-client status</code>, <code>/var/log/fail2ban.log</code>, <code>/etc/fail2ban/jail.local</code>."
+      },
+      {
+        "card": "Auditoria Lynis (apenas quando instalado)",
+        "endpoint": "/api/security/lynis/*",
+        "source": "Executa o <code>lynis audit system</code> em segundo plano; relatório analisado do <code>/var/log/lynis-report.dat</code>."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Para onde seguir",
+    "items": [
+      {
+        "label": "Acesso e autenticação",
+        "href": "/docs/monitor/access-auth",
+        "tail": " — fluxo completo do primeiro lançamento, picador de aplicativos 2FA, recuperação do autenticador perdido, trechos reversos."
+      },
+      {
+        "label": "Integração",
+        "href": "/docs/monitor/integrations",
+        "tail": " — livros de receitas para o uso de fichas API com Homepage, Home Assistant, Prometheus, n8n e a porta segura ponta a ponta."
+      },
+      {
+        "label": "Referência API",
+        "href": "/docs/monitor/api",
+        "tailRich": " — cada <code>/api/auth</code>, <code>/api/security</code> e <code>/api/oci</code> com exemplos de método, corpo e cacho."
+      },
+      {
+        "label": "ProxMenux → Segurança → Fail2Ban",
+        "href": "/docs/security/fail2ban",
+        "tail": " — instalar a passagem, as cadeias configuradas, o caminho de instalação manual."
+      },
+      {
+        "label": "ProxMenux → Segurança → Lynis",
+        "href": "/docs/security/lynis",
+        "tail": " — relatório de amostragem, interpretação das pontuações, quando deve ser reexecutado."
+      }
+    ]
+  }
+}

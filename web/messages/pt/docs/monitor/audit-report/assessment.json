@@ -1,0 +1,218 @@
+{
+  "meta": {
+    "title": "Avaliação e inventário",
+    "description": "A avaliação Audit & Report: relatórios de perfis, como os resultados são classificados, riscos aceitos, fontes ilegíveis, Lynis e o inventário do nó."
+  },
+  "header": {
+    "title": "Avaliação e inventário",
+    "description": "A avaliação inspeciona o nó, mantém seus achados e responde a diferentes perguntas dependendo do perfil do relatório.",
+    "section": "Auditoria e relatórios"
+  },
+  "sections": [
+    {
+      "id": "read-only",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Uma avaliação inspeciona; não altera a configuração",
+            "body": "Lê a configuração e o estado da máquina. Ele escreve seus resultados, relatórios e registros, e as verificações de inicialização podem montar partições do sistema EFI por um momento. A configuração que avalia não é modificada."
+          }
+        },
+        {
+          "p": "<strong>Avaliação de execução</strong> inicia uma execução com o perfil selecionado em <strong>Report</strong>. A vista mostra a data da última execução e há quanto tempo foi."
+        }
+      ]
+    },
+    {
+      "id": "profiles",
+      "title": "Perfis de relatórios",
+      "intro": "Cada perfil responde a uma pergunta diferente. Os controlos e secções são seleccionados antes da composição do documento.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Perfil",
+              "O que cobre"
+            ],
+            "rows": [
+              [
+                "Auditoria completa",
+                "Cada verificação e toda a estrutura disponível."
+              ],
+              [
+                "Diagnóstico rápido",
+                "Cada verificação; o resultado se abre com os achados críticos, as advertências e as leituras que não puderam ser verificadas."
+              ],
+              [
+                "Inventário",
+                "Uma descrição do nó, sem verificações e sem classificação."
+              ],
+              [
+                "Revisão da segurança",
+                "Exposição, acesso, privilégios, certificados, atualizações, repositórios e Lynis."
+              ],
+              [
+                "Garantia de backup",
+                "Cobertura, idade, resultados, verificação, retenção e recuperação dos backups."
+              ],
+              [
+                "Capacidade e desgaste",
+                "Margem de crescimento, memória, uso do espaço e a vida útil dos discos."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "O conteúdo de cada documento está descrito em <reportsLink>Relatórios e comparações</reportsLink>."
+        }
+      ]
+    },
+    {
+      "id": "results",
+      "title": "Como os resultados são classificados",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Classificação",
+              "Significado"
+            ],
+            "rows": [
+              [
+                "Crítico",
+                "Uma condição falhada que tem prioridade."
+              ],
+              [
+                "Aviso",
+                "Uma condição que precisa de uma revisão, dada a evidência ou a política."
+              ],
+              [
+                "Observação",
+                "Informações sobre o nó que não é relatado como uma falha."
+              ],
+              [
+                "Não verificado",
+                "A fonte das necessidades de verificação não pôde ser lida. Não significa que o problema esteja ausente."
+              ],
+              [
+                "Conforme",
+                "A condição preenche o critério aplicado."
+              ],
+              [
+                "Não aplicável",
+                "Não se aplica nada no âmbito do controlo."
+              ],
+              [
+                "Risco aceite",
+                "A descoberta existe e uma decisão sobre ela foi registrada."
+              ],
+              [
+                "Excluído pela política",
+                "A política declara que o elemento está fora da contagem."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Os achados podem ser filtrados por área: Sistema, Armazenamento, Rede, Segurança, Backup, Convidados e Hardware. Cada achado mantém sua evidência, com a fonte da qual foi lido."
+        }
+      ]
+    },
+    {
+      "id": "unverified",
+      "title": "Quando uma fonte não pode ser lida",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Processo",
+              "Comportamento"
+            ],
+            "rows": [
+              [
+                "Não verificado",
+                "A verificação mantém sua identidade, declara em sua evidência qual fonte falhou e não transforma dados em um resultado conforme."
+              ],
+              [
+                "Evidência incompleta",
+                "O relatório nomeia a fonte e a hora da coleta, para que um problema real possa ser dito além de uma leitura insuficiente."
+              ],
+              [
+                "Uma nova execução",
+                "Uma vez que o acesso, pacote ou serviço é corrigido, o mesmo perfil é executado novamente e a comparação mostra se o resultado pode ser verificado."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "lynis",
+      "title": "Lynis",
+      "blocks": [
+        {
+          "p": "A revisão de segurança usa o relatório Lynis do anfitrião. Quando Lynis ainda não foi executado, ou seu relatório é mais antigo do que o limiar da política, uma janela oferece <strong>Run com Lynis</strong>, que leva alguns minutos a mais, ou <strong>Run sem Lynis</strong>, que usa o relatório existente."
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/lynis-dialog.png",
+            "alt": "Janela que se oferece para executar a avaliação com ou sem Lynis",
+            "caption": "O diálogo Lynis antes de uma revisão de segurança."
+          }
+        }
+      ]
+    },
+    {
+      "id": "accept",
+      "title": "Aceitar um risco",
+      "blocks": [
+        {
+          "p": "<strong>Accept risk</strong> regista uma decisão sobre um resultado. A razão é necessária e é armazenada com o autor e a data."
+        },
+        {
+          "table": {
+            "headers": [
+              "Campo",
+              "Opções"
+            ],
+            "rows": [
+              [
+                "Justificação",
+                "Texto livre, necessário."
+              ],
+              [
+                "Deixa de aplicar-se após",
+                "90 dias, 180 dias, 1 ano ou não expirar. Quando o período termina o achado torna-se ativo novamente."
+              ],
+              [
+                "Lembrar-me de rever",
+                "Um lembrete que traz a decisão de volta à atenção enquanto ela permanece em vigor."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Um achado aceito permanece visível com sua decisão, e <strong>Return to active</strong> o revoga. Um risco aceito não é uma correção: a comparação relata-o como aceito, não como resolvido."
+        }
+      ]
+    },
+    {
+      "id": "inventory",
+      "title": "Inventário",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Identidade, versão Proxmox VE, kernel, assinatura e cluster.",
+              "CPU, memória, placa, BIOS, controladores e IOMMU.",
+              "Discos, SMART, horas de energia e eventos gravados.",
+              "Adaptadores, ligações, pontes, latência e conexões.",
+              "Armazenamento, hóspedes com seus discos e interfaces e backups.",
+              "A passagem PCI e o software ProxMenux gerenciam."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,453 @@
+{
+  "title": "Script Criador de Sinologia VM",
+  "stepLabel": "Etapa",
+  "intro": {
+    "heading": "Introdução",
+    "intro": "ProxMenux fornece um script automatizado que cria e configura uma máquina virtual (VM) para instalar Synology DSM (DiskStation Manager) em Proxmox VE. Este script simplifica o processo baixando e adicionando um dos carregadores disponíveis à inicialização VM, dando-lhe a opção entre quatro opções diferentes:",
+    "loaders": [
+      {
+        "name": "AuxXxilium Arc",
+        "url": "https://github.com/AuxXxilium/arc",
+        "extra": ""
+      },
+      {
+        "name": "RedPill RR",
+        "url": "https://github.com/RROrg/rr",
+        "extra": ""
+      },
+      {
+        "name": "TinyCore RedPill M-shell",
+        "url": "https://github.com/PeterSuh-Q3/tinycore-redpill",
+        "extra": ""
+      }
+    ],
+    "customLoader": "Carregador personalizado – opção para usar um carregador personalizado se você preferir modificar ou criar sua própria configuração",
+    "simplifiesIntro": "O script simplifica o processo de criação do VM, oferecendo as seguintes opções:",
+    "simplifies": [
+      "Seleção da configuração padrão ou avançada",
+      "Configuração de CPU, RAM, BIOS e tipo de máquina",
+      "Escolha entre disco virtual ou passagem de disco físico"
+    ]
+  },
+  "config": {
+    "heading": "Configuração Predefinida e Avançado",
+    "intro": "O script oferece dois modos de configuração:",
+    "defaultHeading": "Configuração padrão",
+    "defaultIntro": "Se você selecionar a configuração padrão, o script aplicará automaticamente os seguintes valores:",
+    "headerParam": "Parâmetro",
+    "headerValue": "Valor Padrão",
+    "defaultRows": [
+      {
+        "param": "Tipo de máquina",
+        "value": "q35"
+      },
+      {
+        "param": "Tipo de BIOS",
+        "value": "OVMF (UEFI)"
+      },
+      {
+        "param": "Tipo de CPU",
+        "value": "Máquina"
+      },
+      {
+        "param": "Número de núcleos",
+        "value": "2"
+      },
+      {
+        "param": "Tamanho da RAM",
+        "value": "4096 MB"
+      },
+      {
+        "param": "Ponte",
+        "value": "vmbr0"
+      },
+      {
+        "param": "Endereço MAC",
+        "value": "Gerado automaticamente"
+      },
+      {
+        "param": "Iniciar o VM na Completação",
+        "value": "Não"
+      }
+    ],
+    "defaultOutro": "Se você quiser personalizar a configuração, selecione a opção Configurações avançadas no menu.",
+    "advancedHeading": "Configuração Avançada",
+    "advancedIntro": "Se você selecionar a configuração avançada, o script lhe permitirá personalizar cada parâmetro:",
+    "headerOptions": "Opções",
+    "advancedRows": [
+      {
+        "param": "Tipo de máquina",
+        "options": "q35 ou i440fx"
+      },
+      {
+        "param": "Tipo de BIOS",
+        "options": "OVMF (UEFI) ou SeaBIOS (Legado)"
+      },
+      {
+        "param": "Tipo de CPU",
+        "options": "Máquina ou KVM64"
+      },
+      {
+        "param": "Número de núcleos",
+        "options": "Número de núcleos CPU"
+      },
+      {
+        "param": "Tamanho da RAM",
+        "options": "Quantidade de memória atribuída ao VM"
+      },
+      {
+        "param": "Ponte",
+        "options": "Ponte de rede para conexão"
+      },
+      {
+        "param": "Endereço MAC",
+        "options": "Endereço MAC personalizado"
+      },
+      {
+        "param": "VLAN",
+        "options": "Marca VLAN (se usada)"
+      },
+      {
+        "param": "MTU",
+        "options": "Tamanho máximo da unidade de transmissão"
+      }
+    ]
+  },
+  "diskSelection": {
+    "heading": "Selecção do Disco",
+    "intro": "Uma vez que a máquina está configurada, o script permite que você escolha entre dois tipos de discos:",
+    "virtualHeading": "Disco Virtual",
+    "virtualItems": [
+      "O script lista as opções de armazenamento disponíveis no Proxmox",
+      "O usuário seleciona o disco e tamanho em GB",
+      "O disco virtual é automaticamente atribuído ao VM. Se mais discos forem configurados, eles serão adicionados como <strong>SATA</strong> (por exemplo, sata0, sata1, etc), até um máximo de discos virtuais 6."
+    ],
+    "physicalHeading": "Passagem de Disco Físico",
+    "physicalItems": [
+      "O programa detecta todos os discos físicos disponíveis",
+      "O usuário seleciona o disco físico ou discos que deseja usar.",
+      "O disco físico é diretamente atribuído ao VM via passagem. Se mais discos forem configurados, eles serão adicionados como <strong>SATA</strong> (por exemplo, sata0, sata1, etc.), até um máximo de discos físicos 6."
+    ]
+  },
+  "loaderInstall": {
+    "heading": "Instalação do Carregador",
+    "intro1": "O script baixa automaticamente e extrai o carregador do repositório do desenvolvedor. Se o download falhar, o script exibirá uma mensagem de erro.",
+    "intro2Rich": "<strong>AuxXxilium Arc</strong>, <strong>RedPill RR</strong> e <strong>TinyCore RedPill M-shell</strong>. Downloads e extrai automaticamente.",
+    "customRich": "Para <strong>Carregador personalizado</strong>, o script procura por arquivos em <code>/var/lib/vz/template/iso</code>. Se vários arquivos forem encontrados, você será solicitado a selecionar o arquivo desejado.",
+    "uploadIntro": "Você pode enviar carregadores personalizados das opções de armazenamento local:",
+    "imageAlt": "Adicionar Carregador Personalizado",
+    "imageCaption": "Adicionar Carregador Personalizado"
+  },
+  "vmCreation": {
+    "heading": "Criação do VM",
+    "intro": "Uma vez que o carregador é baixado, o script cria o VM usando os seguintes comandos:",
+    "items": [
+      "<code>qm create</code> – Cria a máquina virtual com os parâmetros configurados",
+      "<code>qm importdisk</code> – Importa o disco carregador de inicialização para o VM. Para maior compatibilidade, o carregador é importado como um disco IDE",
+      "<code>qm set</code> – Atribui valores de configuração como CPU, RAM e armazenamento",
+      "<code>qm set -boot</code> – Configura a ordem de arranque"
+    ]
+  },
+  "stepGuide": {
+    "heading": "Guia de configuração do carregador de inicialização passo a passo",
+    "intro": "Enquanto todos os carregadores compartilham semelhanças, cada um tem sua própria estrutura e métodos de configuração. Esta seção fornece um guia básico cobrindo as etapas 6 envolvidas na criação de um carregador DSM Synology. Os passos exatos podem variar dependendo do carregador e de quaisquer alterações introduzidas pelo desenvolvedor. Portanto, entender esses passos básicos comuns é crucial para construir e configurar corretamente o carregador de sua escolha para a funcionalidade DSM de Sinologia adequada.",
+    "selectorHeading": "Selecione seu tipo de carregador:",
+    "loaderButtons": {
+      "arc": "Arc Loader",
+      "rr": "RR Loader",
+      "tinycore": "TinyCore Loader"
+    }
+  },
+  "steps": [
+    {
+      "id": "step1",
+      "title": "Inicie o VM e Aceda ao Menu Principal",
+      "intro": "Assim que o VM for criado, inicie-o. A primeira vez que iniciar o VM, você acessará o menu principal do carregador para selecionar e configurar o modelo DSM que deseja construir. Uma vez criado o carregador, este passo será ignorado a menos que force manualmente uma reconfiguração do monitor de inicialização. Todos os carregadores também têm a opção de configurar o carregador através de uma interface web.",
+      "loaders": {
+        "arc": [
+          {
+            "htmlBefore": "<strong>Interface web</strong>, Para acessar a interface web, basta abrir um navegador web e inserir o endereço IP mostrado na saída do console VM. Por exemplo, no nosso caso: http://192.169.0.32.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_0_1.png",
+            "alt": "Interface Web Arc Loader",
+            "caption": "Interface Web Arc Loader"
+          },
+          {
+            "htmlBefore": "<strong>Interface terminal</strong>, Acesse-o diretamente da saída do console VM.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_1_1.png",
+            "alt": "Interface de Terminal Arc Loader",
+            "caption": "Interface de Terminal Arc Loader"
+          }
+        ],
+        "rr": [
+          {
+            "htmlBefore": "<strong>Interface web</strong>, Para acessar a interface web, basta abrir um navegador da web e digitar o endereço IP mostrado na saída do console VM, seguido pela porta <strong>7681</strong>. Por exemplo, no nosso caso: <code>http://192.169.0.33:7681</code>.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_0_2.png",
+            "alt": "Exemplo de Comando RR",
+            "caption": "Interface Web do Carregador RR"
+          },
+          {
+            "htmlBefore": "<strong>Interface terminal</strong>, Acesse-o diretamente da saída do console VM, digitando <strong>menu.sh</strong> na tela",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_1_1.png",
+            "alt": "Interface de Carregador RR",
+            "caption": "Interface de Terminal de Carregamento RR"
+          }
+        ],
+        "tinycore": [
+          {
+            "htmlBefore": "<strong>Interface web</strong>, Para acessar a interface web, basta abrir um navegador da web e digitar o endereço IP mostrado na saída do console VM, seguido pela porta <strong>7681</strong>. Por exemplo, no nosso caso: <code>http://192.169.0.35:7681</code>.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_0_1.png",
+            "alt": "Interface do TinyCore Loader",
+            "caption": "Interface Web do Carregador TinyCore"
+          },
+          {
+            "htmlBefore": "<strong>Interface terminal</strong>, Acesse-o diretamente da saída do console VM. Fique de olho na tela, pois em algum momento ela pode pedir que você pressione uma tecla para continuar ou perguntar se deseja mudar o idioma.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_1_1.png",
+            "alt": "Interface do TinyCore Loader",
+            "caption": "Interface de Terminal de Carregamento TinyCore"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "Selecionar modelo",
+      "intro": "Depois de carregar o menu, selecione o modelo DSM Synology que você deseja instalar. Dependendo do carregador, você pode às vezes precisar expandir as opções para ver mais modelos.",
+      "outro": "No nosso exemplo, vamos escolher o modelo SA6400.",
+      "loaders": {
+        "arc": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_2_1.png",
+            "alt": "Selecção do Modelo do Arco",
+            "caption": "Selecção do Modelo do Arco"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_2_1.png",
+            "alt": "Seleção do modelo RR",
+            "caption": "Seleção do modelo RR"
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_2_1.png",
+            "alt": "Seleção do modelo TinyCore",
+            "caption": "Seleção do modelo TinyCore"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "Selecione a versão do DSM",
+      "intro": "Depois de selecionar o modelo, você precisa escolher a versão DSM que deseja instalar.",
+      "loaders": {
+        "arc": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_3_1.png",
+            "alt": "Seleção da versão do arco - Passo 1",
+            "caption": "Seleção da versão do arco - Passo 1"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_3_2.png",
+            "alt": "Seleção da versão do arco - Passo 2",
+            "caption": "Seleção da versão do arco - Passo 2"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_3_1.png",
+            "alt": "Seleção da versão RR - Passo 1",
+            "caption": "Seleção da versão RR - Passo 1"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_3_2.png",
+            "alt": "Seleção da versão RR - Passo 2",
+            "caption": "Seleção da versão RR - Passo 2"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_3_3.png",
+            "alt": "Seleção da versão RR - Passo 3",
+            "caption": "Seleção da versão RR - Passo 3"
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_3_1.png",
+            "alt": "Seleção da versão do TinyCore - Passo 1",
+            "caption": "Seleção da versão do TinyCore - Passo 1"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_3_2.png",
+            "alt": "Seleção da versão do TinyCore - Passo 2",
+            "caption": "Seleção da versão do TinyCore - Passo 2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step4",
+      "title": "Seleccionar os Anexos",
+      "intro": "Esta etapa permite adicionar recursos adicionais ou configurações personalizadas ao carregador.",
+      "loaders": {
+        "arc": [
+          {
+            "htmlBefore": "<strong>Arc</strong> dá-lhe a opção de configurar automaticamente ou manualmente ajustar as configurações. Se a configuração automática for selecionada, o carregador começará a aplicar as configurações necessárias e reiniciará automaticamente quando o processo estiver concluído.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_1.png",
+            "alt": "Configuração Automática do Arco",
+            "caption": "Configuração Automática do Arco"
+          },
+          {
+            "htmlBefore": "Se optarmos por não usar o modo automático, introduzimos o menu para configurar as diferentes opções necessárias para o carregador:",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_2.png",
+            "alt": "Configuração Manual do Arco",
+            "caption": "Configuração Manual do Arco"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_3.png",
+            "alt": "Configuração do Arc SN/Mac",
+            "caption": "Configuração do Arc SN/Mac"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_4.png",
+            "alt": "Arc Sata Portmap",
+            "caption": "Arc Sata Portmap (use a opção recomendada)"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_5.png",
+            "alt": "Selecção do Arc Addons",
+            "caption": "Selecção do Arc Addons"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_4_1.png",
+            "alt": "Passo RR 1",
+            "caption": "Passo RR 1"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_4_2.png",
+            "alt": "Passo RR 2",
+            "caption": "Passo RR Addon 2 - Pressione para adicionar addons"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_4_3.png",
+            "alt": "Passo RR 3",
+            "caption": "Passo RR 3 - Selecione o que você deseja clicando sobre ele. Se você quiser adicionar mais, repita o processo das imagens 2.4.2 e 2.4.3"
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_1.png",
+            "alt": "Configuração do SN TinyCore",
+            "caption": "Configuração do SN TinyCore"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_2.png",
+            "alt": "Opção aleatória TinyCore",
+            "caption": "Opção aleatória TinyCore - A opção aleatória é recomendada"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_3.png",
+            "alt": "Configuração do MAC do TinyCore",
+            "caption": "Configuração do MAC do TinyCore"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_4.png",
+            "alt": "TinyCore VM MAC",
+            "caption": "TinyCore VM MAC - Escolha usar o MAC do seu VM ou um MAC aleatório"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step5",
+      "title": "Compilar o Carregador",
+      "intro": "Uma vez que você tenha selecionado o modelo, versão DSM, e addons, prossiga para construir o carregador. Este processo pode levar alguns minutos dependendo do carregador e da configuração selecionada. Para iniciar, selecione a opção \"Construir o Carregador\".",
+      "loaders": {
+        "arc": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_5_1.png",
+            "alt": "Arc Build Loader",
+            "caption": "Arc Build Loader"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_5_1.png",
+            "alt": "RR Build Loader",
+            "caption": "RR Build Loader"
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_5_1.png",
+            "alt": "TinyCore Build Loader",
+            "caption": "TinyCore Build Loader"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step6",
+      "title": "Iniciar o Carregador",
+      "intro": "Uma vez que o carregador foi construído, ele irá pedir-lhe para iniciar. O VM reiniciará com a configuração criada e iniciará a instalação do DSM.",
+      "loaders": {
+        "arc": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_6_1.png",
+            "alt": "Arc Boot Loader",
+            "caption": "Arc Boot Loader"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_6_1.png",
+            "alt": "RR Boot Loader",
+            "caption": "RR Boot Loader"
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_6_1.png",
+            "alt": "TinyCore Boot Loader",
+            "caption": "TinyCore Boot Loader"
+          }
+        ]
+      }
+    }
+  ],
+  "dsmInstall": {
+    "heading": "Iniciando a Instalação DSM",
+    "intro": "Uma vez que o carregador é inicializado, você pode encontrar seu dispositivo Synology usando:",
+    "afterCode": "Siga os passos no ecrã para concluir a instalação do DSM.",
+    "setupAlt": "Configuração do DSM",
+    "setupCaption": "Ecrã de configuração do DSM",
+    "patience": "Por favor, seja paciente – O processo pode levar alguns minutos para ser concluído. A percentagem de progresso será atualizada automaticamente à medida que a configuração progride. Uma contagem regressiva começará assim que a instalação estiver se aproximando da conclusão.",
+    "finishAlt": "Instalação concluída",
+    "finishCaption": "Instalação concluída"
+  },
+  "tips": {
+    "heading": "Dicas",
+    "introItem": "Tenha em mente que as opções disponíveis podem mudar dependendo da versão do carregador e atualizações do desenvolvedor. Se você encontrar problemas durante o processo de criação do carregador, consulte a documentação do carregador:",
+    "docLinks": [
+      {
+        "label": "Documentação do Arco",
+        "url": "https://github.com/AuxXxilium/arc"
+      },
+      {
+        "label": "Documentação RR",
+        "url": "https://github.com/RROrg/rr"
+      },
+      {
+        "label": "Documentação TinyCore",
+        "url": "https://github.com/PeterSuh-Q3/tinycore-redpill"
+      }
+    ],
+    "olderModels": "Alguns modelos DSM mais antigos podem ter problemas em reconhecer discos ou o cartão de rede. Recomenda-se a utilização de modelos mais recentes.",
+    "updateLabel": "Actualização:",
+    "updateBody": "Alguns carregadores oferecem a opção de atualizar o carregador diretamente do menu.",
+    "importantLabel": "Importante:",
+    "importantBody": "ProxMenux não fornece suporte para os diferentes carregadores."
+  }
+}

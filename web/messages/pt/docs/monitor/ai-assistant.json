@@ -1,0 +1,342 @@
+{
+  "meta": {
+    "title": "Assistente de IA Proxmox — OpenAI, Claude, Gemini, Groq, Ollama ProxMenux Monitor",
+    "description": "O Assistente de IA opcional do ProxMenux Monitor reescreve os corpos de notificação do Proxmox VE em linguagem simples. Seis provedores suportaram: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter e local Ollama. Doze idiomas, três níveis de detalhe por canal, o modo prompt personalizado com uma biblioteca comunitária e uma camada de enriquecimento de contexto que adiciona tempo, recorrência e dados SMART aos eventos em disco.",
+    "ogTitle": "Assistente de IA Proxmox — OpenAI, Claude, Gemini, Groq, Ollama",
+    "ogDescription": "Reescreva notificações Proxmox VE em linguagem simples com OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter ou local Ollama.",
+    "twitterTitle": "Assistente de IA Proxmox ProxMenux Monitor",
+    "twitterDescription": "Reescreva notificações Proxmox VE em linguagem simples com OpenAI, Anthropic, Gemini, Groq, OpenRouter ou Ollama local."
+  },
+  "header": {
+    "title": "Assistente de IA",
+    "description": "O reescritor opt-in que executa todas as notificações de saída através de um LLM antes de um fan-out — transformando modelos estruturados em mensagens de linguagem simples, com níveis de detalhes por canal, doze idiomas, um modo prompt personalizado com uma biblioteca pública comunitária, e uma camada de enriquecimento de contexto que adiciona tempo, recorrência, dados SMART e erro conhecido corresponde ao prompt.",
+    "section": "Monitor do ProxMenux"
+  },
+  "intro": {
+    "title": "Desligado por omissão, comutador único para activar",
+    "body": "AI reescrever é opt-in. Até você virar o master alternância dentro de <em>Configurações → Notificações → Avançado: AI Enhancement</em>, cada evento é enviado com o corpo modelo original. Quando a opção estiver ativada e uma chamada do provedor falhar ou o expedidor voltar ao corpo template silenciosamente — suas notificações nunca bloqueiam o LLM."
+  },
+  "howItWorks": {
+    "heading": "Como funciona",
+    "intro": "Cada evento que o Monitor envia passa pelo mesmo oleoduto. O reescritor de IA é uma etapa opcional que fica entre o corpo modelado e o canal de envio. Fim a fim, um único evento caminha através de quatro passos:",
+    "steps": [
+      "<strong>Evento + modelo.</strong> Um evento chega de um dos seis coletores e é renderizado em um corpo estruturado de texto simples por <code>notification_templates.py</code>. Este é o corpo que o canal enviaria se a IA reescrever estivesse desligada.",
+      "<strong>Aprimoramento de contexto.</strong> O expedidor inspeciona o evento e, condicionalmente, adiciona os sinais extras relevantes — tempo de funcionamento do sistema (somente para falhas críticas do sistema), frequência do evento, dados do SMART (somente para eventos em disco), correspondências de banco de dados de erros conhecidos e linhas de diário.",
+      "<strong>Prompt builder.</strong> O prompt do sistema é montado a partir do template mais as configurações por canal: idioma de destino, nível de detalhe, regras emoji de <em>Mensagens baratas</em>, e o addon de Sugestões de IA se habilitado. No modo de prompt personalizado, seu prompt substitui o prompt do sistema inteiramente. A mensagem do usuário é construída a partir do corpo modelado mais os blocos de contexto enriquecidos.",
+      "<strong>Provider call.</strong> O provedor configurado (Groq, OpenAI, Anthropic, Gemini, Ollama ou OpenRouter) retorna um título e um corpo reescritos. O despachante analisa a resposta, substitui o título e o corpo originais para esse canal e entrega-o ao adaptador de canal para entrega."
+    ],
+    "notesIntro": "Três detalhes que valem a pena manter antes de ler o resto desta página:",
+    "notes": [
+      "<strong>A IA não produz eventos.</strong> Cada evento nasce de um sinal real (Scan Health Monitor, linha de diário, PVE webhook, etc.) e é renderizado em um corpo modelado antes que a IA o veja. A IA é um tradutor e re-formatador, não um observador.",
+      "<strong>A IA é executada por canal.</strong> Telegram e Discord podem usar uma breve reescrita enquanto o Email recebe um relatório detalhado — mesmo evento, forma diferente, tudo de uma chamada de provedor por canal.",
+      "<strong>Falha é silenciosa.</strong> Se o provedor 5xx's, times out, retorna saída malformada ou rejeita a solicitação, o expedidor registra o erro e cai de volta para o corpo modelo original para esse canal. Você nunca perde uma notificação porque a LLM teve um dia ruim."
+    ]
+  },
+  "enabling": {
+    "heading": "Habilitando o painel",
+    "intro": "A configuração de IA vive na parte inferior do painel Notificações dentro da aba Configurações, como um <em> desmontávelAvançado: AI Enhancement</em>. Clique no cabeçalho para expandir:",
+    "collapsedAlt": "Cabeçalho AI Avançado Recolher com indicador chevron",
+    "collapsedCaption": "Recolher por padrão — um clique expande o painel.",
+    "panelAlt": "Painel ampliado de realce de IA mostrando a opção mestre de mensagens melhoradas por IA, Provedor Google Gemini, API Chave mascarada, Modelo gemini-2.5-flash, Modo de prompt padrão, Idioma Inglês, Nível de detalhe por canal para Telegram Discord Gotify Email, Sugestões de IA botão de alternância e conexão de teste",
+    "panelCaption": "O painel completo de melhoria de IA — todos os controles documentados nesta página mapas para um dos campos acima.",
+    "outro": "De cima para baixo, o painel expõe: o <em>AI-Anhanced Messages</em> master alternância, o seletor de provedor com um modal de informação ao lado dele, a entrada de chave API (ou URL Ollama para o modo local), o dropdown do modelo (carregado do provedor após a entrada da chave), o modo prompt (<em>Default</em> / <em>Custom</em>), o idioma de saída, o nível de detalhe por canal, as Sugestões <em>AI</em> opt-in, e um botão <em>Test Connection</em> que envia uma mensagem sonda ao provedor para validar as credenciais."
+  },
+  "context": {
+    "heading": "Qual o contexto que a IA recebe",
+    "intro": "Antes que o prompt seja construído, o despachante caminha uma rotina de enriquecimento de contexto que decide quais sinais extras são relevantes para o evento em questão. O objetivo é dar ao LLM informações suficientes para produzir uma mensagem útil, sem alagá-la (e sua carteira) com ruído que não se aplica. Cinco blocos de contexto podem ser adicionados à mensagem do usuário:",
+    "headerBlock": "Bloco",
+    "headerWhen": "Quando é injetado",
+    "headerWhat": "O que carrega",
+    "rows": [
+      {
+        "block": "Tempo de atividade do sistema",
+        "when": "Apenas para falhas de nível crítico do sistema: <code>crash</code>, <code>panic</code>, <code>oom</code>, <code>kernel</code>, <code>split_brain</code>, <code>quorum_lost</code>, <code>node_offline</code>, <code>node_fail</code>, <code>system_fail</code>, <code>boot_fail</code>. Saltou para erros de disco, avisos e operações de rotina para manter o prompt apertado.",
+        "what": "Uma linha como <code>System uptime: 14 days (stable system)</code>. Permite ao LLM distinguir problemas de inicialização de falhas de longo prazo."
+      },
+      {
+        "block": "Frequência do evento",
+        "when": "Sempre, quando o Monitor já viu a mesma impressão digital antes.",
+        "what": "Contagem de ocorrências, primeira marca temporal, etiqueta de padrão opcional (recorrendo / one-off / pico). O LLM usa isso para dizer \"problema recorrente\" vs \"primeira vez visto\"."
+      },
+      {
+        "block": "Dados SMART",
+        "when": "Apenas para eventos relacionados ao disco (tipo evento contém <code>disk</code>, <code>smart</code>, <code>storage</code>, <code>io_error</code>, ou o corpo menciona <code>/dev/sd</code>, <code>ata</code>, <code>i/o error</code>).",
+        "what": "Saída de <code>smartctl</code> para o dispositivo afetado — saúde geral (PASSED / FAILED) mais os atributos relevantes para o modo de falha."
+      },
+      {
+        "block": "Erros conhecidos DB",
+        "when": "Quando o contexto do corpo ou diário corresponde a um padrão de erro específico do Proxmox enviado com o Monitor.",
+        "what": "Um bloco <code>KNOWN PROXMOX ERROR DETECTED</code> com a causa combinada e uma solução de concreto. O prompt instrui o LLM a traduzir este texto — sem parafraseamento da correção recomendada."
+      },
+      {
+        "block": "Registos de diários",
+        "when": "Sempre que o colecionador de origem capturava linhas de diário para o evento (principalmente o observador de diário e o observador de tarefas).",
+        "what": "Excertos crus <code>journalctl</code>. O prompt diz ao LLM para extrair IDs, timestamps e dicas de causa-root, e ignorar entradas não relacionadas."
+      }
+    ],
+    "afterBlocks": "Uma vez que estes blocos são unidos, a mensagem de usuário enviada para o LLM tem esta forma:",
+    "calloutTitle": "Nenhuma telemetria além do próprio evento",
+    "calloutBody": "O Monitor só envia o que tem à mão para o evento atual — nenhuma telemetria em todo o sistema, nenhuma série métrica histórica, nenhum depósito de inventário. Os cinco blocos acima são o limite superior do que deixa o hospedeiro em uma única reescrita de IA."
+  },
+  "tokens": {
+    "heading": "Tokens — o que são e como são consumidos",
+    "intro1": "Cada fornecedor comercial cobra por <em>token</em>, então vale a pena entender o que é um token antes de escolher um plano. Um token é aproximadamente quatro caracteres do texto em inglês ou cerca de três quartos de uma palavra. A frase <em>\"Backup concluído no armazenamento local-bak\"</em> é em torno de oito tokens. Um trecho curto de dez linhas de diário pode ser 200-400 tokens dependendo da densidade técnica.",
+    "intro2": "Duas coisas são cobradas em cada chamada:",
+    "items": [
+      "<strong>Tokens de entrada</strong> — o prompt do sistema mais a mensagem do usuário (severidade, título, corpo, contexto enriquecido). Para ProxMenux o prompt do sistema está sozinho na ordem de 1.5-2 KB (ou seja, 400-500 tokens) e a mensagem do usuário varia de 50 tokens (um backup limpo-completo) a ~1500 tokens (um erro de disco com 30 linhas do contexto do diário).",
+      "<strong>Tokens de saída</strong> — o que o modelo escreve de volta. O Monitor tampa isto com <code>max_tokens</code> (ver a tabela abaixo). A tampa é um <em>limit</em>, não uma carga: se o modelo produz fichas 250 com uma tampa de 1500, você paga por 250."
+    ],
+    "capsIntro": "Estas são as tampas reais que o expedidor aplica, tiradas diretamente de <code>AI_DETAIL_TOKENS</code> em <code>notification_templates.py</code>:",
+    "headerLevel": "Nível de detalhe",
+    "headerCap": "Tampa de saída (tokens)",
+    "headerConsumption": "Consumo real típico",
+    "capRows": [
+      {
+        "level": "breve",
+        "cap": "500",
+        "consumption": "Tokens de saída 50-200 para eventos curtos."
+      },
+      {
+        "level": "padrão",
+        "cap": "1500",
+        "consumption": "Tokens de saída 200-700 para eventos típicos com contexto de luz."
+      },
+      {
+        "level": "detalhado",
+        "cap": "3000",
+        "consumption": "Tokens de saída 500-2000 para relatórios completos de e-mail com logs e tabelas SMART."
+      }
+    ],
+    "customNote": "O modo prompt personalizado usa uma tampa fixa de tokens de saída 500 independentemente do nível de detalhe — o prompt personalizado está no seu controle e o cap protege contra respostas em fuga.",
+    "sizingTitle": "Tamanho prático",
+    "sizingBody": "Um homelab com eventos 50-100 por dia em <code>standard</code> normalmente consome alguns milhares de tokens por dia. Com os níveis gratuitos oferecidos por Groq e Gemini, que se encaixa sem tocar em um plano pago. Com OpenAI ou Anthropic, faturado por-token, o custo cai no intervalo de centavos por mês para esse volume. Se a sua contagem de eventos é muito maior, a seção <link>Detalhe nível por canal</link> explica como manter os canais de bate-papo em <code>brief</code> ao deixar o Email levar o relatório completo."
+  },
+  "providers": {
+    "heading": "Prestadores de IA",
+    "intro": "Seis fornecedores estão ligados ao Monitor. O dropdown do provedor na UI mostra todos eles; um botão de informação ao lado dele abre um modal com uma descrição de uma linha para cada um. Abaixo está a referência completa, com o URL para obter uma chave API, a descrição mostrada na UI e as notas relevantes do codebase.",
+    "imageAlt": "AI Providers Information modal que enumera os seis fornecedores apoiados — Groq, OpenAI, Anthropic Claude, Google Gemini, Ollama, OpenRouter — cada uma com o seu ícone e a sua descrição de uma linha, bem como uma descrição especial OpenAI- Nota compatível com APIs para OpenAI",
+    "imageCaption": "O modal no aplicativo — seis cartões, um por provedor, com as mesmas descrições documentadas abaixo.",
+    "groq": {
+      "heading": "Groq",
+      "tagline": "Nível livre muito rápido e generoso (30 req/min). Ideal para começar.",
+      "items": [
+        "Chave API: <a>console.groq.com/keys</a>",
+        "Modelos verificados: <code>llama-3.3-70b-versatile</code>, <code>llama-3.1-70b-versatile</code>, <code>llama-3.1-8b-instant</code>, <code>llama3-70b-8192</code>, <code>llama3-8b-8192</code>, <code>mixtral-8x7b-32768</code>, <code>gemma2-9b-it</code>.",
+        "Recomendado: <strong><code>llama-3.3-70b-versatile</code></strong> — a melhor qualidade a plena velocidade de inferência Groq."
+      ]
+    },
+    "openai": {
+      "heading": "OpenAI",
+      "tagline": "Padrão industrial. Muito preciso e amplamente utilizado.",
+      "items": [
+        "Chave API: <a>platform.openai.com/api-keys</a>",
+        "Modelos verificados: <code>gpt-4.1-nano</code>, <code>gpt-4.1-mini</code>, <code>gpt-4o-mini</code>, <code>gpt-4.1</code>, <code>gpt-4o</code>, <code>gpt-5-chat-latest</code>, <code>gpt-5.4-nano</code>, <code>gpt-5.4-mini</code>.",
+        "Recomendado: <strong><code>gpt-4.1-nano</code></strong> — o membro mais barato da família de chat, qualidade suficiente para tradução e reformatação. Os modelos raciocinantes (o-série, gpt-5 non-chat) são suportados pelo encanamento do provedor, mas mantidos fora da lista verificada: maior latência sem ganho de qualidade mensurável nesta carga de trabalho."
+      ],
+      "baseUrlTitle": "URL base compatível com OpenAI",
+      "baseUrlBody": "A OpenAI provedor também aceita um personalizado <em>URL base</em>, o que permite apontar o Monitor para qualquer OpenAI- endpoint compatível. Confirmado para trabalhar com <strong>BytePlus / ByteDance (Kimi K2.5)</strong>, <strong>LocalAI</strong>, <strong>Estúdio LM</strong>, <strong>vLLM</strong>, <strong>AI em conjunto</strong>, <strong>Fogos de artifício AI</strong>, e qualquer outro serviço que fala o OpenAI <code>/v1/chat/completions</code> dialeto. Definir o URL na OpenAI aba ao lado da API Campo chave."
+    },
+    "anthropic": {
+      "heading": "Anthropic (Claude)",
+      "tagline": "Excelente para escrever e traduzir. Rápido e económico.",
+      "items": [
+        "Chave API: <a>console.anthropic.com/settings/keys</a>",
+        "Modelos verificados: <code>claude-3-5-haiku-latest</code>, <code>claude-3-5-sonnet-latest</code>, <code>claude-3-opus-latest</code>.",
+        "Recomendado: <strong><code>claude-3-5-haiku-latest</code></strong> — o modelo menor e mais rápido de Claude com forte qualidade de linguagem para a carga de trabalho de tradução."
+      ]
+    },
+    "gemini": {
+      "heading": "Google Gemini",
+      "tagline": "Camada livre disponível, grande relação qualidade / preço.",
+      "items": [
+        "Chave API: <a>aistudio.google.com/app/apikey</a>",
+        "Modelos verificados: <code>gemini-2.5-flash-lite</code>, <code>gemini-2.5-flash</code>, <code>gemini-3-flash-preview</code>.",
+        "Recomendado: <strong><code>gemini-2.5-flash-lite</code></strong> — flash e flash-lite passam o verificador de forma consistente. As variantes pro rejeitam a configuração <code>thinkingBudget=0</code> que o Monitor usa e são exageradas para esta carga de trabalho."
+      ]
+    },
+    "openrouter": {
+      "heading": "OpenRouter",
+      "tagline": "Agregador com acesso a modelos 100+ usando uma única chave API. Máxima flexibilidade.",
+      "items": [
+        "Chave API: <a>openrouter.ai/keys</a>",
+        "Modelos verificados: <code>meta-llama/llama-3.3-70b-instruct</code>, <code>meta-llama/llama-3.1-70b-instruct</code>, <code>meta-llama/llama-3.1-8b-instruct</code>, <code>anthropic/claude-3.5-haiku</code>, <code>anthropic/claude-3.5-sonnet</code>, <code>google/gemini-flash-1.5</code>, <code>openai/gpt-4o-mini</code>, <code>mistralai/mistral-7b-instruct</code>, <code>mistralai/mixtral-8x7b-instruct</code>.",
+        "Recomendado: <strong><code>meta-llama/llama-3.3-70b-instruct</code></strong> — mesmo modelo da entrada Groq, mas roteado através de OpenRouter, o que significa uma única chave para todos os modelos listados."
+      ]
+    },
+    "ollama": {
+      "heading": "Ollama (local)",
+      "tagline": "Usa modelos disponíveis no seu servidor Ollama. 100% local, sem custos, privacidade total.",
+      "items": [
+        "Nenhuma chave API. Defina o campo <em>Ollama URL</em> para o seu servidor (padrão <code>http://localhost:11434</code> ou qualquer máquina roda sua instância Ollama).",
+        "Modelos: <strong>not filtered.</strong> O monitor lê os modelos que você puxou no lado do Ollama via <code>ollama pull &lt;model&gt;</code>. O dropdown é povoado do <code>GET /api/tags</code> no seu servidor Ollama.",
+        "Instale: <a>ollama.com/download</a> — é executado em Linux, macOS, Windows. Para melhores resultados, escolha um modelo que se encaixe no RAM com uma janela de contexto grande o suficiente para o diário bloqueia o expedidor injeta."
+      ]
+    }
+  },
+  "models": {
+    "heading": "Por que esses modelos específicos",
+    "intro": "O modelo dropdown para cada fornecedor comercial é preenchido a partir de uma lista com curadoria enviada com o Monitor (<code>verified_ai_models.json</code>). Modelos nesta lista foram testados de ponta a ponta com o chat / completa o formato API que o Monitor usa, com a forma exata <code>system_prompt + user_message + max_tokens</code> que o AI Enhancer envia. A lista é atualizada antes de cada lançamento ProxMenux com uma ferramenta de verificação privada que sonda cada modelo candidato e poda aqueles que se comportam mal.",
+    "consequencesIntro": "Duas consequências que merecem ser conscientes:",
+    "consequences": [
+      "<strong>O modelo recomendado</strong> para cada provedor é aquele que tem o melhor equilíbrio de qualidade, latência e custo para tradução de notificação especificamente — não o modelo mais capaz que o provedor vende. As reescritas de notificação não precisam de raciocínio de modelo de fronteira; precisam de raciocínio rápido e barato.",
+      "<strong>Você ainda pode escolher outro modelo verificado</strong> do dropdown — às vezes você tem uma cota de nível livre que deseja gastar em um determinado modelo, ou você tem uma forte preferência. Escolha qualquer um dos itens listados; todos eles passaram pelo verificador."
+    ],
+    "ollamaTitle": "Ollama é a exceção",
+    "ollamaBody": "Os modelos Ollama são locais e o Monitor não os filtra — o dropdown reflete o que quer que tenha puxado. Escolha um modelo na faixa 7B-13B com pelo menos uma janela de contexto de 8K para a reescrita de IA se comportar razoavelmente com os blocos de contexto de diário."
+  },
+  "defaultPrompt": {
+    "heading": "Solicitação padrão",
+    "intro": "Com o modo prompt definido para <em>Default</em>, o monitor usa o prompt do sistema abaixo. O prompt é modelado em tempo de execução: <code>'{'language'}'</code>, <code>'{'detail_level'}'</code>, <code>'{'emoji_instructions'}'</code> e <code>'{'suggestions_addon'}'</code> são substituídos antes da chamada. As variantes para canais ricos vs simples e o suplemento de Sugestões de IA são mostrados imediatamente após.",
+    "showFullSummary": "Mostrar o prompt completo do sistema por omissão",
+    "passagesIntro": "Duas passagens no prompt acima são placeholders que são trocados dependendo da mensagem <em>Rich por canal</em> alternar:",
+    "passages": [
+      "<strong>Rich on</strong> → um bloco emoji é injetado listando os ícones que o LLM pode usar, além de uma regra hostname (o LLM deve manter o prefixo hostname do título verbatim) e um punhado de exemplos formatados (início de backup, backup completo, atualizações, VM start, saúde degradada). Isto é o que produz as mensagens emoji-prefixadas em Telegram e Discord.",
+      "<strong>Rich off</strong> → um bloco de uma linha diz ao LLM para usar ASCII simples apenas — sem emojis, sem símbolos Unicode. Usado para email e qualquer canal onde a formatação do ruído fere as regras da caixa de entrada ou a legibilidade."
+    ],
+    "suggestionsPlaceholder": "E o placeholder <code>'{'suggestions_addon'}'</code> está vazio a menos que você habilite as Sugestões de IA (próxima seção), caso em que este bloco é injetado:",
+    "showAddonSummary": "Mostrar o addon de Sugestões de IA"
+  },
+  "customPrompt": {
+    "heading": "Modo de prompt personalizado",
+    "intro": "Mudando o modo prompt para <em>Custom</em> troca todo o prompt de sistema padrão para um que você mesmo escreve. O prompt personalizado é armazenado nas configurações SQLite do Monitor e enviado literalmente em cada chamada de reescrita de IA. É a escotilha de escape certa quando você quer uma voz, estrutura ou foco completamente diferente do que o pronto pacote oferece.",
+    "imageAlt": "Modo de Prompt Personalizado que mostra uma área de texto com regras de tradução e botões de Importação de Exportação mais uma ligação de avisos da Comunidade",
+    "imageCaption": "Prompt personalizado — área de texto grande com o prompt do usuário, além de <em>Export</em>, <em>Import</em> e um link para a galeria comunitária em GitHub.",
+    "changesTitle": "O que muda quando o Personalizado está ligado",
+    "changes": [
+      "<strong>O prompt padrão é substituído por completo.</strong> Os mapeamentos do Proxmox, as regras de contexto e as instruções emoji desapareceram. Se você quiser manter qualquer um deles, cole-os em seu prompt – o pacote <code>EXAMPLE_CUSTOM_PROMPT</code> mostrado abaixo é um ponto de partida.",
+      "<strong>O seletor de idioma é ignorado.</strong> O prompt padrão tem um placeholder <code>'{'language'}'</code>; o prompt personalizado não. Se você quer saída em um idioma específico, declará-lo dentro de seu prompt (\"Traduzir para o espanhol\", \"Sair de tudo em francês\").",
+      "<strong>O nível de detalhes ainda se aplica</strong> no sentido de que ele está disponível como uma configuração por canal, mas a tampa em tokens de saída torna-se uma 500 fixa em modo personalizado (vs o 500 / 1500 / 3000 rampa do prompt padrão). Se o seu prompt personalizado pedir um relatório longo, aumente o limite editando o prompt ou divida o pedido.",
+      "<strong>Os marcadores Formato de Saída ainda são obrigatórios.</strong> O Monitor analisa a resposta procurando por <code>[TITLE]</code> e <code>[BODY]</code> em suas próprias linhas. Um prompt personalizado que não emite esses marcadores irá quebrar o analisador e voltar para o corpo modelo original.",
+      "<strong>As regras de emoji de mensagens ricas não são auto-injetadas.</strong> Se quer emojis, diga ao prompt para usá-los. Se queres texto simples, diz-lhe para não o fazer. A opção apenas fecha os blocos empacotados do prompt padrão, não o seu texto personalizado."
+    ],
+    "starterTitle": "Chamada inicial",
+    "starterIntro": "O <em>Prompt personalizado</em> naves de área de texto pré-cheia com um exemplo mínimo que você pode adaptar:",
+    "showStarterSummary": "Mostrar o pedido personalizado do arranque",
+    "shareTitle": "Compartilhando avisos com a comunidade",
+    "shareIntro": "O botão <em>Export</em> escreve seu prompt personalizado atual para um arquivo (<code>.txt</code> / <code>.md</code>) que você pode manter como backup ou mão para outra pessoa. <em>Import</em> puxa um para trás. O terceiro botão ao lado deles links para uma galeria da comunidade pública em GitHub:",
+    "shareLinkLabel": "github.com/MacRimi/ProxMenux/discussions — Compartilhe prompts personalizados para notificações de IA",
+    "shareOutro": "Navegue na discussão para ver o que outros operadores construíram — alertas de tipo pager terse, relatórios técnicos detalhados, variantes específicas de linguagem. Se você ajustar o seu e como o resultado, postá-lo lá: mesmo uma descrição de um parágrafo do que o seu pronto otimiza para ajuda as pessoas a escolher um bom ponto de partida. Feedback sobre o que funciona e o que não é igualmente bem-vindo."
+  },
+  "suggestions": {
+    "heading": "Sugestões de IA (BETA)",
+    "intro": "AI Sugestões é um addon opt-in que permite que o LLM anexe <strong>one</strong> ponta curta, acionável no final do corpo. Ele só ativa quando o modo prompt é <em>Default</em>, a chave mestre de IA está ligada, e o interruptor <em>AI Suggestions</em> é desligado — e mesmo assim, o prompt instrui o modelo a pular a ponta sempre que a causa ou a solução não estiver clara.",
+    "formatIntro": "Quando uma dica é adicionada, segue este formato exato:",
+    "rulesIntro": "As regras colocadas no addon (visível no bloco dobrável sob a seção de prompt padrão acima):",
+    "rules": [
+      "A dica está incluída <em>only</em> se o contexto da revista ou o banco de dados de Erros Conhecidos claramente aponta para uma correção específica.",
+      "A ponta está tapada em caracteres 100.",
+      "Deve ser específico (comando concreto ou caminho) — o conselho genérico é rejeitado pelo próprio prompt.",
+      "Se um Erro Conhecido fornece uma solução, o LLM deve usar essa solução, não inventar uma nova.",
+      "Se nada na entrada der ao LLM certeza suficiente para sugerir uma correção de concreto, a ponta é ignorada — sem adivinhar."
+    ],
+    "betaTitle": "POR QUE BETA",
+    "betaBody": "A qualidade da dica depende de duas coisas fora do ProxMenux: o modelo escolhido e o quão rico foi o contexto da revista para o evento. Com um modelo forte (Claude 3.5 Haiku, GPT-4.1 Mini, Llama 3.3 70B) e um erro de disco que vem com linhas smartctl + diário, a ponta é consistentemente útil. Com um pequeno modelo Ollama local e um evento de uma linha, a ponta pode cair plana ou ser ignorada inteiramente. Desactivar a opção se encontrar as pontas barulhentas e voltar a ativá- la quando quiser."
+  },
+  "detailLevel": {
+    "heading": "Nível de detalhe por canal",
+    "intro": "Cada um dos quatro canais (Telegram, Discord, Gotify, Email) tem seu próprio nível de detalhes. Três valores estão disponíveis, mapeados para token caps de saída específicos e para instruções específicas no prompt padrão:",
+    "headerLevel": "Nível",
+    "headerLabel": "Rótulo UI",
+    "headerCap": "Tampa de saída",
+    "headerProduce": "O que o prompt pede ao LLM para produzir",
+    "rows": [
+      {
+        "level": "breve",
+        "label": "Linhas 2-3, essenciais apenas",
+        "cap": "500 unidades",
+        "produce": "\"O que aconteceu + onde\". Mais nada."
+      },
+      {
+        "level": "padrão",
+        "label": "Conciso com o contexto básico",
+        "cap": "1500 unidades",
+        "produce": "Linhas 3-6: o que, onde, causam, afetam os dispositivos."
+      },
+      {
+        "level": "detalhado",
+        "label": "Detalhes técnicos completos",
+        "cap": "3000 unidades",
+        "produce": "Relatório completo: o que, onde, causa, afetado, logs, dados SMART, histórico."
+      }
+    ],
+    "defaultsIntro": "Por omissão, o Monitor aplica- se na primeira instalação:",
+    "defaults": [
+      "<strong>Telegram, Discord, Gotify</strong> — <code>standard</code>.",
+      "<strong>Email</strong> — <code>detailed</code>. Email é o canal onde você normalmente quer a imagem completa para arquivo."
+    ],
+    "emailTitle": "Nível de detalhes de e- mail adiciona o original",
+    "emailBody": "Quando o email está em <code>detailed</code> e o corpo tem um conteúdo substancial (mais do que caracteres 50), o expedidor adiciona a mensagem original na parte inferior da reescrita da IA, separada por um divisor 40-dash e uma etiqueta <code>Original message:</code>. Isso significa que um e-mail detalhado sempre carrega tanto a versão amiga da IA quanto o modelo cru amigável à máquina — útil quando você quiser criar um alerta antigo mais tarde."
+  },
+  "language": {
+    "heading": "Linguagem",
+    "intro": "Doze línguas estão ligadas. O dropdown define <code>ai_language</code> na configuração e o valor é interpolado no prompt do sistema no local onde o prompt diz <em> \"traduzir alertas em '{'linguagem'}'\"</em>. A lista completa:",
+    "list": "Inglês (<code>en</code>), Espanhol (<code>es</code>), Francês (<code>fr</code>), Alemão (<code>de</code>), Português (<code>pt</code>), Italiano (<code>it</code>), Russo (<code>ru</code>), Sueco (<code>sv</code>), Norueguês (<code>no</code>), Japonês (<code>ja</code>), Chinês (<code>zh</code>), Holandês (<code>nl</code>).",
+    "rulesIntro": "Duas regras importantes tomadas diretamente do prompt:",
+    "rules": [
+      "<strong>Translate</strong>: etiquetas, descrições, palavras de estado, unidades (p. ex. GB → Vá em francês).",
+      "<strong>Não traduz</strong>: nomes de máquinas, IPs, caminhos, IDs VM/CT, nomes de dispositivos como <code>/dev/sdX</code>, identificadores técnicos. Estes permanecem verbatim independentemente da linguagem."
+    ],
+    "customNote": "Modo de prompt personalizado <strong>não utilizar</strong> o seletor de idiomas. Se você mudar para Custom e quiser um idioma de saída específico, declare-o dentro de seu prompt."
+  },
+  "templates": {
+    "heading": "Uma nota sobre modelos",
+    "body1": "O corpo que a IA recebe não é dados de eventos brutos — é um modelo pré-renderizado. Cada tipo de evento (<code>backup_complete</code>, <code>vm_start</code>, <code>auth_fail</code>, <code>health_degraded</code>, etc.) tem um modelo em <code>notification_templates.py</code> que sabe como formatar esse evento específico em um corpo de texto simples estruturado. A IA reescreve esse corpo, não substitui o passo templating.",
+    "body2": "Duas implicações práticas: a IA nunca vê um nome de host ou VMID que tem que inventar — esses campos são colocados pelo modelo antes da reescrita. E se o IA está desativado, o corpo templateado é o que é enviado diretamente. A página <link>Notificações</link> documenta o oleoduto de expedição na íntegra e é a referência cruzada certa para tudo o que acontece com um evento antes de atingir esta camada."
+  },
+  "privacy": {
+    "heading": "Privacidade e fluxo de dados",
+    "intro": "Com a reescrita de IA habilitada, o Monitor envia o corpo de notificação renderizado mais os blocos de contexto enriquecidos para o provedor configurado. Isso pode incluir nomes de host, IPs, nomes de usuário, caminhos do dispositivo, linhas de registro de diário e atributos SMART para o dispositivo afetado. Se isso deixa a máquina depende de qual provedor você escolheu:",
+    "headerProvider": "Provedor",
+    "headerDestination": "Destino dos dados",
+    "rows": [
+      {
+        "provider": "Ollama",
+        "destination": "Fica no anfitrião do Ollama. Se o Ollama correr no mesmo nó Proxmox, nada sai da rede."
+      },
+      {
+        "provider": "OpenAI",
+        "destination": "<code>api.openai.com</code> (ou seu endpoint de URL base personalizado). Sujeito à política de tratamento de dados do OpenAI no momento da chamada."
+      },
+      {
+        "provider": "Antrópico",
+        "destination": "<code>api.anthropic.com</code>."
+      },
+      {
+        "provider": "Google Gemini",
+        "destination": "<code>generativelanguage.googleapis.com</code>."
+      },
+      {
+        "provider": "Groq",
+        "destination": "<code>api.groq.com</code>."
+      },
+      {
+        "provider": "OpenRouter",
+        "destination": "<code>openrouter.ai</code>, que remete para o fornecedor do modelo subjacente escolhido no campo <code>model</code>. Dois saltos em vez de um."
+      }
+    ],
+    "calloutTitle": "Se o conteúdo do evento não puder sair da rede",
+    "calloutBody": "Use Ollama, ou desabilite o reescritor de IA. Não há meio-termo — o expedidor não tenta redigir nomes de host ou IPs antes de enviar; o prompt é construído a partir da carga útil real do evento como o Monitor vê."
+  },
+  "whereNext": {
+    "heading": "Para onde seguir",
+    "items": [
+      {
+        "label": "Notificações",
+        "href": "/docs/monitor/notifications",
+        "tail": " — o gasoduto de expedição, os canais, os interruptores por evento e a integração PVE webhook que rodeia esta camada."
+      },
+      {
+        "label": "Monitor de Saúde",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — o maior produtor único de eventos que a IA acaba por reescrever, com as suas próprias durações de supressão por categoria."
+      },
+      {
+        "label": "Arquitetura",
+        "href": "/docs/monitor/architecture",
+        "tail": " — quando o AI Enhancer se encaixa no processo Monitor mais amplo (é um módulo, não um serviço separado)."
+      }
+    ],
+    "communityLabel": "Fontes comunitárias sobre o GitHub",
+    "communityTail": " — navegar, partilhar, perguntar."
+  }
+}

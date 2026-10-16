@@ -1,0 +1,118 @@
+{
+  "meta": {
+    "title": "Proxmox VE Guias — Coral TPU, NVIDIA, Kodi LXC, Samba, Backup em nuvem ProxMenux",
+    "description": "Tutoriais escritos à mão para Proxmox VE: instale Kodi dentro de um LXC com aceleração GPU, configuração do driver NVIDIA em PVE 9, unidade USB sobre Samba em um recipiente, backups vzdump para nuvem pessoal (Google Drive, Mega, Dropbox, OneDrive). Além de recursos comunitários curados, glossário e referência de comando.",
+    "ogTitle": "Guias Proxmox VE — Coral TPU, NVIDIA, Kodi LXC, Samba, Cloud Backup",
+    "ogDescription": "Tutoriais Proxmox VE escritos à mão: passagem GPU, centro de mídia Kodi LXC, Samba sobre USB, backup em nuvem com rclone e recursos comunitários curados.",
+    "twitterTitle": "Proxmox VE Guias ProxMenux",
+    "twitterDescription": "Tutoriais escritos à mão para Proxmox VE — GPU, Kodi LXC, Samba, backup de nuvem e muito mais.",
+    "ogImageAlt": "Guias ProxMenux — Tutoriais escritos à mão para Proxmox VE"
+  },
+  "header": {
+    "title": "Guias do ProxMenux",
+    "tagline": "Tutoriais profundos, referências rápidas e recursos comunitários curados para aproveitar ao máximo o Proxmox VE."
+  },
+  "inDepth": {
+    "heading": "Guias aprofundados",
+    "intro": "Tutoriais escritos à mão cobrindo fluxos de trabalho específicos do Proxmox. Cada um é o equivalente manual de um fluxo automatizado ProxMenux — útil quando você quer visibilidade total em cada passo.",
+    "items": [
+      {
+        "slug": "kodi-lxc",
+        "title": "Instale Kodi em um LXC e Conecte-o a um monitor / TV com aceleração GPU",
+        "description": "Execute Kodi dentro de um recipiente LXC privilegiado em Proxmox VE, exponha os dispositivos de entrada iGPU e USB do host, e transforme o servidor Proxmox em um centro de mídia tudo-em-um conectado diretamente a uma TV."
+      },
+      {
+        "slug": "backup-cloud",
+        "title": "Backup do Proxmox para armazenamento em nuvem pessoal",
+        "description": "Use rclone para montar uma nuvem pessoal (Google Drive, Mega, Dropbox, OneDrive, etc.) como um diretório no host Proxmox VE, registre-o como uma loja de dados vzdump e faça backup de VMs / CTs diretamente para a nuvem — sem script extra."
+      },
+      {
+        "slug": "lxc-samba",
+        "title": "Adicione uma unidade USB ou memória a um LXC e compartilhe-o através da rede com Samba",
+        "description": "Anexar um disco rígido USB ou memory stick a um recipiente privilegiado LXC em Proxmox VE, instalar Samba dentro do recipiente, e compartilhar o conteúdo através da rede."
+      },
+      {
+        "slug": "nvidia-manual",
+        "title": "Instalação de drivers de placas gráficas NVIDIA no Proxmox VE 9 (procedimento manual)",
+        "description": "Instalação manual e configuração de drivers NVIDIA em um host Proxmox VE 9, além da fiação LXC necessária para expor o GPU a um ou mais recipientes. Cobre a instalação do driver, o serviço de persistência, o patch opcional NVENC e a configuração por container."
+      }
+    ]
+  },
+  "references": {
+    "heading": "Referências ProxMenux",
+    "intro": "Material de referência rápida da própria documentação ProxMenux.",
+    "cards": {
+      "glossary": {
+        "title": "Glossário",
+        "description": "60+ definições dos termos técnicos usados em ProxMenux: Proxmox, virtualização, armazenamento, rede, Linux. Pesquisa rápida com crachás de categoria e ligações cruzadas."
+      },
+      "helpInfo": {
+        "title": "Ajuda e Informações — Catálogo de comandos",
+        "description": "Catálogo curado de comandos úteis Linux + Proxmox organizados por tópico, com cópia para painel de recortes. Espelha a referência no menu dentro de ProxMenux."
+      },
+      "linuxResources": {
+        "title": "Recursos Linux",
+        "description": "Recursos externos para aprendizagem de linha de comando Linux, práticas de segurança, ferramentas de monitoramento e ZFS — complementa o catálogo de comandos ProxMenux."
+      },
+      "externalRepos": {
+        "title": "Repositórios Externos",
+        "description": "Repositórios de scripts de terceiros integrados em ProxMenux como opções alternativas de menu (comunidade-scripts/ProxmoxVE, etc.)."
+      }
+    }
+  },
+  "official": {
+    "heading": "Recursos oficiais da Proxmox",
+    "intro": "Documentação de primeira parte da Proxmox Server Solutions — a fonte da verdade para a plataforma.",
+    "cards": {
+      "pveDocs": {
+        "title": "Documentação Proxmox VE",
+        "description": "O guia oficial de administração. Referência abrangente cobrindo instalação, rede, armazenamento, clustering, HA e o API."
+      },
+      "pbsDocs": {
+        "title": "Documentação do Proxmox Backup Server",
+        "description": "Documentação para PBS — backups incrementais, desduplicados e criptografados para Proxmox VE."
+      },
+      "videoTraining": {
+        "title": "Formação em vídeo oficial",
+        "description": "Proxmox tutoriais vídeo oficiais e cursos de formação."
+      },
+      "forum": {
+        "title": "Proxmox Forum",
+        "description": "Fórum oficial da comunidade — perguntas, solução de problemas, experiências compartilhadas. Mantenedor monitorado."
+      }
+    }
+  },
+  "community": {
+    "heading": "Projectos e recursos comunitários",
+    "intro": "Projetos de código aberto e listas de curadoria da comunidade Proxmox mais ampla. Não afiliado à Proxmox Server Solutions ou à ProxMenux — incluídos porque se mostraram úteis.",
+    "cards": {
+      "helperScripts": {
+        "title": "Proxmox VE Helper-Scripts",
+        "description": "Catálogo comunitário de scripts de uma tomada para implantar LXCs (Home Assistant, Plex, Frigate, ...), VMs e ajustes PVE. O sucessor espiritual dos guiões de ajuda do Tteck."
+      },
+      "awesome": {
+        "title": "awesome-proxmox-ve (lista curadora)",
+        "description": "Grande meta-lista comunitária de recursos Proxmox VE: ferramentas, bibliotecas, integrações, blogs, vídeos. Uma boa plataforma de lançamento para descobrir mais."
+      }
+    },
+    "suggestRich": "Tem um recurso de qualidade que devemos adicionar aqui? Abra um número ou PR em <link>GitHub</link>. Pretendemos manter esta lista com curadoria e não exaustiva."
+  },
+  "discussion": {
+    "heading": "Discussão comunitária",
+    "intro": "Onde as pessoas falam sobre Proxmox e ProxMenux.",
+    "cards": {
+      "proxmenuxDiscussions": {
+        "title": "ProxMenux Discussions",
+        "description": "ProxMenux específico GitHub Discussões: idéias de recursos, Q&A, compartilhe sua configuração. O lugar certo para tudo sobre o menu, o Monitor e os documentos."
+      },
+      "proxmoxForum": {
+        "title": "Proxmox Forum",
+        "description": "Fórum oficial do Proxmox (também ligado acima). O lugar certo para solucionar problemas em profundidade e problemas específicos de configuração."
+      },
+      "reddit": {
+        "title": "r/Proxmox no Reddit",
+        "description": "Subreddit ativo para discussões, dicas e suporte técnico. Barreira inferior que o fórum, volta mais rápida para perguntas casuais."
+      }
+    }
+  }
+}

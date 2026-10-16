@@ -1,0 +1,172 @@
+{
+  "meta": {
+    "title": "Script Pós-Instalar Automatizado ProxMenux Documentação",
+    "description": "A ProxMenux O programa pós- instalação automatizado aplica um conjunto de 14 optimizações seguras e conscientes de hardware para um novo Proxmox VE máquina com zero prompts. Alterações de configuração reversíveis são registradas para restauração posterior.",
+    "ogTitle": "Script Pós-Instalar Automatizado ProxMenux Documentação",
+    "ogDescription": "Optimizações com curadoria 14 aplicadas a um host Proxmox VE fresco com zero prompts. Com conhecimento de hardware, com alterações de configuração reversíveis."
+  },
+  "header": {
+    "title": "Script pós-instalação automatizado",
+    "description": "Um clique, zero prompts - ProxMenux aplica um conjunto curado de 14 otimizações seguras que quase todo host Proxmox beneficia. Alterações de configuração reversíveis são registradas para Desinstalar Otimizações; atualizações de pacotes não são descritas como reversíveis.",
+    "section": "Pós- Instalação · Automatizado"
+  },
+  "intro": {
+    "title": "Quando escolher Automatizado",
+    "body": "Execute isso em um host recentemente instalado do Proxmox quando você quiser a linha de base sensata sem tomar decisões. O script é idempotente — executá-lo duas vezes é seguro, apenas reaplica as mesmas configurações. Os recursos de opt-in (Fastfetch, IOMMU, Ceph repo, HA, AMD requirements...) são intencionalmente <strong>not</strong> parte deste caminho; escolha-os de <link>Customizável</link> se precisar deles."
+  },
+  "applies": {
+    "heading": "O que o script se aplica",
+    "intro": "As otimizações são aplicadas nesta ordem exata. O <em>Category</em> coluna links para a documentação detalhada de cada alteração na referência personalizável.",
+    "headerNum": "#",
+    "headerTool": "Ferramenta",
+    "headerWhat": "O que ele faz",
+    "headerCategory": "Categoria"
+  },
+  "optimizations": [
+    {
+      "tool": "Repositórios APT + atualização completa",
+      "what": "Desativa a empresa pve-enterprise.sources e ceph.sources, escreve uma fonte limpa sem assinatura para o codinome Debian do host, então executa apt update && apt full-upgrade -y (comando de atualização oficial da Proxmox).",
+      "category": "configurações básicas",
+      "categorySlug": "definições básicas"
+    },
+    {
+      "tool": "Remoção de banner de assinatura",
+      "what": "Aplica patches na interface web para ocultar o banner 'Sem assinatura válida'. Pede confirmação antes de aplicar; reversível de Desinstalar Otimizações.",
+      "category": "Personalização",
+      "categorySlug": "personalização"
+    },
+    {
+      "tool": "Forçar IPv4",
+      "what": "Escreve /etc/apt/apt.conf.d/99-force-ipv4 para que o apt use apenas IPv4 — ignora configurações de espelhos IPv6.",
+      "category": "Rede",
+      "categorySlug": "rede"
+    },
+    {
+      "tool": "Ignorar pacotes de idioma",
+      "what": "Escreve /etc/apt/apt.conf.d/99-disable-translations para parar de baixar pacotes locais específicos. Atualizações mais rápidas e leves.",
+      "category": "configurações básicas",
+      "categorySlug": "definições básicas"
+    },
+    {
+      "tool": "Aumentar os limites do sistema",
+      "what": "Eleva relógios inotify, limites nofile/nproc, limites de chaveiro do kernel e fs.file-max através de sysctl.d, limits.d, pam e systemd — suficientemente alto para hospedeiros pesados de containers.",
+      "category": "Sistema",
+      "categorySlug": "sistema"
+    },
+    {
+      "tool": "Ajuste de memória",
+      "what": "Define vm.swappiness=10, razões sujas equilibradas, vm.max_map_count=262144 e proatividade de compactação quando suportado. A política de sobrecompromisso de memória do kernel é deixada no padrão Proxmox.",
+      "category": "Sistema",
+      "categorySlug": "sistema"
+    },
+    {
+      "tool": "Comportamento de pânico no Kernel",
+      "what": "Configura o host para reiniciar 10 segundos após um pânico / oops / hardlockup em vez de congelar indefinidamente.",
+      "category": "Sistema",
+      "categorySlug": "sistema"
+    },
+    {
+      "tool": "Ajuste de pilha de rede",
+      "what": "TCP buffer sizing, endurecimento IPv4 (redirects off, rp_filter=2, marciano log off), faixa de porta local 1024-65535, TCP MTU probing, RFC 1337, além de um ajudante em /usr/local/sbin/proxmenux-fwbr-tune ligado a uma unidade systemd oneshot e uma regra udev, então rp_filter=0 / log_martians=0 são reaplicados para fwbr*/fwln*/fwpr*/tap* interfaces cada vez que Proxmox os recria no VM start/stop, reboot ou migração ao vivo.",
+      "category": "Rede",
+      "categorySlug": "rede"
+    },
+    {
+      "tool": "Personalização de Bashrc (raiz)",
+      "what": "PS1 colorido, aliases comuns (l/la/ll/ls/grep), histórico cronometrado e bash-completion sourcing, tudo dentro de um bloco vedado PMX_CORE_BASHRC para que seja fácil de remover.",
+      "category": "Personalização",
+      "categorySlug": "personalização"
+    },
+    {
+      "tool": "Log2RAM (SSD- ciente, automático)",
+      "what": "Reduz o desgaste SSD/NVMe movendo /var/log para um ramdisk tmpfs com sincronização periódica de disco. Instalado a partir do projeto upstream quando o disco raiz é SSD ou NVMe. Tamanhos do ramdisk pelo host RAM (128M / 256M / 512M), programação de sincronização periódica e uma proteção de sincronização automática que aspira em 80% e trunca hot logs em 92% antes de escrever. Ajusta os limites do diário para caber no ramdisk. Detalhes completos sobre <link>Log2RAM</link>.",
+      "category": "Armazenamento",
+      "categorySlug": "armazenamento"
+    },
+    {
+      "tool": "Autotrim ZFS (somente SD)",
+      "what": "Activa o autotrim zpool=on em cada ZFS pool cujos vdevs são todos SSD/NVMe com suporte TRIM (verifica /sys/block/[dev]/queue/rotational e discard_granularity). Pools suportada por HDDs são ignoradas automaticamente. Apenas pools realmente alterado por ProxMenux são registados para desinstalação — pools você definir autotrim em manualmente são deixados em paz.",
+      "category": "Armazenamento",
+      "categorySlug": "armazenamento"
+    },
+    {
+      "tool": "Limites de tamanho diário",
+      "what": "Forças de armazenamento persistente, tampas SystemMaxUse=64M / RuntimeMaxUse=60M, define compressão, registro de nível de informação (obrigatório para o Monitor). Pulou automaticamente quando o Log2RAM está ativo (faz seu próprio ajuste).",
+      "category": "Sistema",
+      "categorySlug": "sistema"
+    },
+    {
+      "tool": "Afinação logrota",
+      "what": "Rotação diária com tampa de tamanho 10M, rotações 7, compressão e copiador — Log2RAM-friendly.",
+      "category": "Sistema",
+      "categorySlug": "sistema"
+    },
+    {
+      "tool": "Nomes de interface persistentes",
+      "what": "Escreve um <code>/etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code> por NIC físico (cada um começando com um cabeçalho 'Gerenciado por ProxMenux') que prende o MAC com o nome atual, então nomes <code>eth0</code> / <code>enp…</code> permanecem estáveis através de reinicializaçãos e novas adições NIC.",
+      "category": "Rede",
+      "categorySlug": "rede"
+    }
+  ],
+  "hardwareTitle": "Por omissão consciente de hardware",
+  "hardwareBody": "O script lê o hardware da máquina antes de aplicar as configurações. Log2RAM só é instalado em discos de raiz SSD / NVMe por padrão (ele pede se a detecção disser o contrário). O tamanho do ramdisk log2RAM é escolhido a partir do RAM total (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). Os limites do diário correspondem ao tamanho do ramdisk quando o Log2RAM está ativo, para evitar enchê-lo.",
+  "upgrade": {
+    "heading": "Atualizar e atualizar o sistema",
+    "intro": "O primeiro passo do pacote automatizado é a atualização do Proxmox. A própria orientação de atualização do Proxmox para um host em execução (na mesma versão principal) deve ser executada:",
+    "after": "Essa única linha é o comando oficial em qualquer versão atual do Proxmox. O script automatizado roda <strong>exatamente</strong> que, e envolve-o com a higiene do repo e limpeza pós-upgrade o guia de atualização oficial também recomenda — as mesmas etapas do utilitário independente <link>Proxmox System Update</link>:",
+    "items": [
+      "Desativa a empresa <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, remove arquivos de repo legados, escreve uma fonte limpa sem assinatura para o codinome do host.",
+      "Executa a atualização não-interativa com <code>DEBIAN_FRONTEND=noninteractive</code> e <code>--force-confdef --force-confold</code> — os arquivos de configuração que você personalizou permanecem seus quando o upstream também os alterou.",
+      "Instala pacotes essenciais do Proxmox em falta (<code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>).",
+      "Verificação de sanidade de metadados LVM, <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>, e um prompt de reinicialização apenas se o kernel realmente mudou."
+    ],
+    "sameTitle": "Mesmo updater, dois pontos de entrada",
+    "sameBody": "O pacote automatizado e o utilitário independente <link>Proxmox System Update</link> compartilham os mesmos scripts subjacentes (<code>update-pve8.sh</code> / <code>update-pve9_2.sh</code>). Use o utilitário por conta própria quando você só quiser atualizar o host sem aplicar o resto das otimizações."
+  },
+  "endResult": {
+    "heading": "Resultado final esperado",
+    "body": "Quando o script terminar, você verá uma mensagem de sucesso com a saída por passo e um prompt de reinicialização (algumas configurações do kernel requerem um reinício para fazer efeito). Diminuir a reinicialização é seguro; as configurações se aplicam na próxima inicialização.",
+    "imageAlt": "Programa pós-instalação automatizado — saída final do terminal mostrando cada otimização aplicada com sucesso"
+  },
+  "notDoes": {
+    "heading": "O que este script NÃO faz",
+    "items": [
+      "Detecção automática do fuso- horário (comentário a montante; use Personalizável se quiser).",
+      "Desactivar o portmapper / rpcbind (ver <secLink>Security</secLink>).",
+      "Activar IOMMU / VFIO (ver <virtLink>Virtualização</virtLink>).",
+      "Instale as correções Fastfetch / Figurine / Ceph repo / HA / AMD CPU (ver <optLink>Optional</optLink>).",
+      "Instale pigz ou aplique afinação ZFS ARC (veja <perfLink>Performance</perfLink> / <storLink>Storage</storLink>)."
+    ]
+  },
+  "xshokTitle": "detecção xshok-proxmox",
+  "xshokBody": "Se o host tiver executado anteriormente o script <code>xshok-proxmox</code>, ProxMenux detecta o arquivo marcador e avisa você antes de continuar. Alguns ajustes podem se sobrepor. O script companheiro está desatualizado — se você decidir continuar de qualquer forma, reveja <link>a visão geral</link> para o contexto.",
+  "revert": {
+    "heading": "Revertendo",
+    "body": "Cada ferramenta na tabela acima se registra em <code>/usr/local/share/proxmenux/installed_tools.json</code>. Abra <link>Otimizações de desinstalação</link> para escolher itens individuais para reverter. Backups de arquivos de configuração modificados são colocados ao lado dos originais com um sufixo <code>.bak</code>."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "label": "Post- Install personalizável",
+        "href": "/docs/post-install/customizable",
+        "tail": " — escolher exactamente o que pretende do mesmo catálogo."
+      },
+      {
+        "label": "Desinstalar otimizações",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — reverter qualquer subconjunto do que foi aqui aplicado."
+      },
+      {
+        "label": "Comandos úteis do sistema",
+        "href": "/docs/help-info/system-commands",
+        "tail": " — verificar as alterações (tempo livre, tempo livre, journalctl, etc.)."
+      },
+      {
+        "label": "Visão geral pós-instalar",
+        "href": "/docs/post-install",
+        "tail": "."
+      }
+    ]
+  }
+}

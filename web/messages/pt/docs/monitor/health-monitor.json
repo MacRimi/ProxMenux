@@ -1,0 +1,372 @@
+{
+  "meta": {
+    "title": "Monitor de saúde Proxmox — CPU, Memória, Armazenamento, SMART, ZFS, Logs □ ProxMenux",
+    "description": "Monitoramento de saúde Proativo Proxmox VE: dez categorias digitalizadas a cada cinco minutos (CPU e temperatura, memória e troca, armazenamento, discos/SMART, rede, VMs, serviços, logs, atualizações, segurança), quatro níveis de gravidade, duraçãos de supressão por categoria, limpeza automática de erros resolvidos, um histórico de observação de disco permanente e o caminho de um evento bruto para um Telegram, Discord, Gotify ou notificação de e-mail.",
+    "ogTitle": "Monitor de saúde Proxmox — CPU, memória, armazenamento, SMART, ZFS, logs",
+    "ogDescription": "Monitoramento de saúde pró-ativo Proxmox VE em dez categorias com níveis de gravidade, duração de supressão e notificações orientadas para eventos.",
+    "twitterTitle": "Monitor de Saúde Proxmox ProxMenux",
+    "twitterDescription": "Monitoramento de saúde pró-ativo Proxmox VE em dez categorias com níveis de gravidade e notificações."
+  },
+  "header": {
+    "title": "Monitor de Saúde",
+    "description": "O auto-controlo contínuo que verifica dez categorias de estado do hospedeiro em um ciclo de cinco minutos, amostras de sinais vitais continuamente entre ciclos, deduplica achados em um fluxo de eventos estruturado, e alimenta o painel, o motor de notificação e o reescritor opcional de IA de uma fonte de verdade.",
+    "section": "Monitor do ProxMenux"
+  },
+  "intro": {
+    "title": "Um scanner, três consumidores",
+    "body": "Uma thread de fundo roda o ciclo de saúde completo a cada 5 minutos, persiste cada achado em SQLite sob um <code>error_key</code> estável e permite que <strong>(1)</strong> o painel renderize o estado atual, <strong>(2)</strong> o motor de notificação alarga novos eventos aos canais configurados, e <strong>(3)</strong> o assistente opcional de AI reescrever alertas em linguagem simples. Você configura o scanner uma vez; tudo a jusante permanece sincronizado."
+  },
+  "howItWorks": {
+    "heading": "Como funciona",
+    "intro": "O Health Monitor funciona em duas faixas paralelas dentro do processo Monitor. Um sampler de sinais vitais <strong></strong> leve lê CPU, memória e temperatura a cada poucos segundos para que as condições de limiar sustentado sejam detectadas rapidamente; em paralelo, o ciclo completo de saúde <strong></strong> é executado a cada cinco minutos e exercita cada categoria de ponta a ponta. Ambas as faixas convergem para as mesmas tabelas SQLite e, a partir daí, três consumidores lêem o estado de forma independente.",
+    "scannerTitle": "Da amostra ao achado armazenado",
+    "scannerCaption": "O scanner. Sinais vitais são amostrados rapidamente, então a pressão de memória sustentada-CPU / sustentada pode ser detectada antes do próximo ciclo de 5-min. O ciclo completo lê esses buffers e executa as verificações mais pesadas (SMART, ZFS pool state, digitalização de diário, saúde de serviço, etc.) antes de escrever os achados estruturados para SQLite.",
+    "scannerArrowLabel": "passo",
+    "scannerNodes": {
+      "samplerLabel": "Amostra de sinais vitais",
+      "samplerDetail": "CPU usa 30 s\nMemória 30 s\nTemperatura 15 s\n→ buffers de histórico",
+      "cycleLabel": "Ciclo completo de saúde",
+      "cycleDetail": "Cada 5 min\nLê buffers\n+ sondas vivas\n(SMART, ZFS,\nserviços, diário...)",
+      "checksLabel": "Controlos por categoria",
+      "checksDetail": "Dez categorias\n(CPU, memória,\narmazenamento, discos,\nrede, VMs,\nserviços, registos,\natualizações, segurança)",
+      "sqliteLabel": "SQLite",
+      "sqliteDetail": "tabela de erros\n(activa +\ndemitido)\n+ disk_observations\n(permanente)\nhistórico per- disk)"
+    },
+    "notifTitle": "Do achado armazenado ao usuário",
+    "notifCaption": "O caminho da notificação. A mesma tabela de erros também impulsiona a visão do painel (listas ativa/descartada renderizadas ao vivo) e é consumida pela rotina de limpeza no final de cada ciclo para resolver automaticamente entradas antigas — ambas são executadas a partir dos mesmos dados sem passar pelo expedidor.",
+    "notifArrowLabel": "evento",
+    "notifNodes": {
+      "errorsLabel": "tabela de erros",
+      "errorsDetail": "Activo +\nLinhas descartadas\nkeyed by\nerror_key",
+      "dispatcherLabel": "Enviador de notificações",
+      "dispatcherDetail": "Novo + aumentado\neventos em fila\nAtravés de alternações\n+ arrefecimento",
+      "templatesLabel": "Modelos + reescrita de IA",
+      "templatesDetail": "Por evento\nmodelo\n→ IA opcional\nlinguagem simples\nreescrever",
+      "channelsLabel": "Canais",
+      "channelsDetail": "Telegram\nDiscord\nGotify\nCorreio eletrónico (SMTP)"
+    }
+  },
+  "categories": {
+    "heading": "As dez categorias",
+    "imageAlt": "Visão Monitor de Saúde mostrando as dez categorias com seus status atuais (CPU, Memória, Armazenamento, Discos, Rede, VMs, Serviços, Logs, Atualizações, Segurança)",
+    "imageCaption": "Health Monitor view — as dez categorias com seu status atual. Categorias em um host saudável todas mostram OK; avisos e eventos críticos aparecem em linha com as linhas que os produziram.",
+    "intro": "Cada ciclo exerce dez damas independentes. Cada um produz um dos quatro estados (<strong>OK</strong>, <strong>INFO</strong>, <strong>WARNING</strong>, <strong>CRITICAL</strong>) além de uma carga útil estruturada — nomes do dispositivo, linhas de registo de amostras, limiares exatos — essa superfície no painel e viajar para o corpo de notificação.",
+    "headerCategory": "Categoria",
+    "headerChecks": "Verificações Sub",
+    "headerEvents": "Eventos típicos",
+    "rows": [
+      {
+        "category": "CPU & Temperatura",
+        "checks": "Uso de CPU com histerese, temperatura do sensor",
+        "events": "Alta carga sustentada; CPU temperatura cruzando o aviso do fornecedor / limiares críticos."
+      },
+      {
+        "category": "Memória e swap",
+        "checks": "Utilização do RAM, utilização do swap",
+        "events": "Pressão de memória mantida; atividade OOM-killer; exaustão de troca."
+      },
+      {
+        "category": "Armazenamento",
+        "checks": "Armazenamento do Proxmox, sistema de arquivos raiz",
+        "events": "Armazenamento offline (NFS servidor inalcançável, CIFS créditos expirados; mount root > 90 %; LVM fina pool A aproximar-se."
+      },
+      {
+        "category": "Discos e SMART",
+        "checks": "Erros de E/S do SMART, erros de E/S do dmesg, pools do ZFS, erros do sistema de ficheiros LVM,",
+        "events": "A saúde do SMART falhou; setores realocados / pendentes; erros de I/O ATA; pool ZFS DEGRADADO / FALHADO; remontagem ext4 somente para leitura."
+      },
+      {
+        "category": "Rede",
+        "checks": "Conectividade, estado de ligação, latência do gateway",
+        "events": "Ponte ou ligação para baixo; gateway inalcançável; picos de latência persistentes."
+      },
+      {
+        "category": "VMs e contêineres",
+        "checks": "Comunicação QMP, arranque do VM, arranque do contentor",
+        "events": "Falha na inicialização do VM; falha no desligamento do CT; tempo- limite do socket do QMP; falta a configuração / disco após um clone."
+      },
+      {
+        "category": "Serviços PVE",
+        "checks": "<code>pveproxy</code>, <code>pvedaemon</code>, <code>pvestatd</code>, <code>pve-cluster</code>, modo de cluster",
+        "events": "O serviço caiu; quórum de cluster perdido; o <code>pmxcfs</code> ficou preso."
+      },
+      {
+        "category": "Registros do sistema",
+        "checks": "Erros persistentes, picos de erro, cascatas de erros, mensagens críticas do kernel",
+        "events": "Erros idênticos repetidos; explosão súbita de avisos (padrão cascata); <code>BUG:</code> / <code>OOPS:</code> / <code>oom-killer</code> em dmesg."
+      },
+      {
+        "category": "Atualizações do sistema",
+        "checks": "Atualizações pendentes, atualizações de segurança, kernel / versão PVE, idade do sistema",
+        "events": "Atualizações de segurança disponíveis; kernel preso várias versões menores atrás; host uptime > 90 dias. Quando as atualizações estão pendentes, o cabeçalho Visão geral mostra uma <em>Atualizar Agora</em> botão que executa o completo ProxMenux atualizar o fluxo em linha; em close- hits re- o ponto final de saúde com <code>?refresh=1</code> assim, a contagem de crachás reflete o novo estado sem esperar pelo próximo 5- ciclo de minutos."
+      },
+      {
+        "category": "Segurança e Certificados",
+        "checks": "Tentativas de login, certificados expirando, status opcional de cadeia Fail2Ban",
+        "events": "Falhas de autenticação de SSH/web; Certificado PVE < 30 dias a partir do término; Proibições ativas Fail2Ban."
+      }
+    ]
+  },
+  "severity": {
+    "heading": "Modelo de gravidade",
+    "headerStatus": "Estado",
+    "headerColour": "Cor",
+    "headerMeaning": "Significado",
+    "headerNotification": "Notificação",
+    "rows": [
+      {
+        "status": "OK",
+        "colour": "Verde",
+        "meaning": "Saudável. Não há resultados nesta categoria.",
+        "notification": "Silêncio."
+      },
+      {
+        "status": "INFO",
+        "colour": "Azul",
+        "meaning": "Condição transitória ou já resolvida vale a pena notar uma vez. Também usado para categorias que têm <em>only</em> itens rejeitados esquerda.",
+        "notification": "Opcional. Cada tipo de evento pode ser optado dentro ou fora por canal."
+      },
+      {
+        "status": "WARNING",
+        "colour": "Amarelo",
+        "meaning": "Atenção é necessária, mas o hospedeiro ainda está funcional. A causa não é trivial — leia os detalhes.",
+        "notification": "Enviado quando a opção por evento estiver ligada para o canal."
+      },
+      {
+        "status": "CRITICAL",
+        "colour": "Vermelho",
+        "meaning": "Funcionalidade quebrada ou perda de dados possível. Acção necessária.",
+        "notification": "Enviado quando a opção por evento estiver ligada para o canal. A temperatura de CPU CRITICAL é tratada como um alerta de segurança que re-dispara, mesmo que anteriormente demitido."
+      }
+    ],
+    "infoNote": "Uma categoria que é <strong>OK</strong> mas descartou eventos ainda dentro de sua janela de supressão é renderizada como <strong>INFO</strong> — para lembrá-lo que algo está sendo silenciado em vez de que nada estava errado.",
+    "unknownTitle": "DESCONHECIDO, quando um cheque não pode completar",
+    "unknownBody": "Uma verificação que não produz um veredito para três ciclos consecutivos (uma sonda que cronometra, um sensor que desaparece, uma ferramenta que sai com um erro) é registrada internamente como <code>UNKNOWN</code>. O painel de bordo apresenta este estado amarelo — as tampas de visão geral <code>UNKNOWN</code> em <strong>WARNING</strong> para que nunca aumente um hospedeiro saudável para CRITICAL por conta própria."
+  },
+  "dashboardView": {
+    "heading": "A visão do painel",
+    "intro": "O Monitor de Saúde vive dentro da aba <strong>Overview</strong>. A pílula de status do cabeçalho (Healthy / Warning / Critical) abre um modal que divide as descobertas em duas listas:",
+    "items": [
+      "<strong>Active</strong> — todas as categorias com um resultado não resolvido. Cada linha se expande para mostrar as verificações individuais que produziram o status, a cadeia de <code>reason</code>, o dispositivo ou o ID VM envolvido, e (para categorias que se ligam a uma aba) um click-through em Armazenamento / Rede / VMs / Logs / Hardware para investigar.",
+      "<strong>Dismissed</strong> — itens previamente reconhecidos pelo usuário que ainda estão dentro de sua janela de supressão. Cada linha mostra quanto da supressão permanece e a duração configurada. Quando a janela expira, o item desaparece desta lista; se a condição subjacente ainda estiver presente e a categoria suportar o re-firing, ele reaparece em <em>Active</em>."
+    ],
+    "pillTitle": "A pílula espelha a pior categoria",
+    "pillBody": "A cor do cabeçalho do painel de instrumentos é a mais alta gravidade nas dez categorias: qualquer CRÍTICA → vermelho, outro qualquer AVISO → amarelo, outro qualquer INFO → azul, outro verde. A mesma lógica conduz o ponto Favicon e o distintivo PWA.",
+    "updateNowTitle": "Atualizar agora no cabeçalho Visão geral",
+    "updateNowBody1": "Quando a categoria <em>System Update</em> relata uma ou mais atualizações pendentes, o cabeçalho Visão geral renderiza um botão <strong>Update Now</strong> ao lado da pílula de saúde. O botão abre um modal que executa o mesmo fluxo do lado do hospedeiro como <em>ProxMenux → Configurações pós-instalação Proxmox → Atualização do sistema Proxmox</em>: higiene do repo, <code>apt full-upgrade</code> através do trabalhador seguro <code>update-pve-safe.sh</code>, reconstrução automática DKMS de drivers gerenciados ProxMenux quando um novo kernel pousa, remoção automática / limpeza automática e um prompt de reinicialização se o kernel mudou. As linhas de progresso fluem no modal à medida que o trabalhador as imprime.",
+    "updateNowBody2": "Quando a execução termina, fechando o modal chama <code>GET /api/health/details?refresh=1</code>, que invalida o cache de ponto de saúde antes de servir. A linha de atualizações pendentes e a gravidade da pílula são recomputadas do novo estado da embalagem no local, de modo que o crachá desaparece sem esperar pelo próximo ciclo de cinco minutos. Quando o host já está atualizado, o botão está escondido — sem ruído visual em um sistema saudável."
+  },
+  "dismiss": {
+    "heading": "Alertas de demissão e duração da supressão",
+    "intro": "Alguns eventos são barulhentos por natureza — um <em>System Updates: atualizações pendentes disponíveis</em> permanece true até que você patch o host, e você não quer uma notificação a cada cinco minutos por uma semana. O botão <em>Update Now</em> no cabeçalho Visão geral é o atalho direto para resolver esse caso específico no lugar; para tudo o mais, ou quando o patch é adiado, o Health Monitor também oferece dois mecanismos de silenciamento acoplados:",
+    "step1": "<strong>Per-evento Dispensar acção</strong> no modal. O botão Descartar abre uma pequena lista com três opções — <strong>24 horas</strong>, <strong>7 dias</strong> ou <strong>Permanentemente</strong> — permitindo que você escolha quanto tempo este alerta específico permanece silenciado, independentemente do padrão da categoria. Escolher um chama <code>POST /api/health/acknowledge</code> com o <code>error_key</code> e o <code>suppression_hours</code> escolhido (<code>-1</code> para permanente). O evento se move para a lista dispensada com um <code>acknowledged_at</code> cronometrado.",
+    "dropdownImageAlt": "Rejeitar a retirada de um alerta de vigilância sanitária — 24 horas, 7 dias ou permanentemente",
+    "dropdownImageCaption": "Per-evento Dispensar dropdown. A janela escolhida aplica- se a este alerta único; se não for seleccionada nenhuma janela por evento, é usado o padrão da categoria. As dispensas permanentes são marcadas com um distintivo âmbar <em>Permanent</em> na lista dispensada e nunca mais disparam.",
+    "step2": "<strong>Por categoria Configuração da duração da supressão</strong>. A partir do cartão Configurações → Health Monitor (ou <code>POST /api/health/settings</code>), cada uma das dez categorias tem sua própria janela padrão aplicada quando um Dispensa é disparado sem uma escolha por evento:",
+    "imageAlt": "Por categoria Supressão Cartão de configurações de duração em Configurações → Monitor de saúde",
+    "imageCaption": "Cartão de Supressão Duração — uma gota por categoria. Escolha uma janela mais longa para eventos barulhentos (por exemplo, atualizações pendentes) e mais curta para aqueles que você deseja reavaliar rapidamente. As Supressões Ativas estão listadas abaixo (ver abaixo).",
+    "outro": "Enquanto um evento é suprimido, o scanner ainda executa e atualiza a linha <code>last_seen</code> timestamp, mas nenhuma nova notificação é enviada e o painel fica calmo. Quando a janela expira, o ciclo seguinte reavalia a condição e ou re-dispara fresco ou, se a condição tiver limpado por conta própria, retira a linha das listas.",
+    "activeSuppressionsTitle": "Recapitulação e reversão dos despedimentos — painel de Supressões Ativas",
+    "activeSuppressionsBody": "Todos os alertas atualmente silenciosos (limitados pelo tempo e permanentes) estão listados em <strong>Configurações → Monitor de Saúde → Supressões Ativas</strong>. Cada linha mostra o identificador de alerta, categoria, gravidade, quando foi demitido e quanto tempo resta, além de um botão <strong>Re-enable</strong> que limpa o reconhecimento para que o alerta possa disparar novamente na próxima varredura. Despedidas permanentes só podem ser revertidas a partir daqui; as limitadas no tempo também podem ser revividas sem esperar pela contagem regressiva. A ação Re-enable é fechada pelo Monitor de Saúde <em>Edit</em> modo na parte superior dessa carta — alternar Editar, clicar em Re-enable em cada linha que você deseja reviver (linhas em filas mostram uma borda verde e um strike-through), em seguida, clique em Salvar para commit. Cancelar elimina a fila.",
+    "autoTitle": "Supressão automática quando você altera a Duração",
+    "autoBody": "Definir a Supressão de uma categoria Duração para qualquer outra coisa que não o 24 h padrão tem um segundo efeito além de demissões iniciadas pelo usuário: <strong>futuras descobertas nessa categoria entrar na tabela já reconhecido</strong> com essa duração. Isto é por design — se você disse ao Monitor que quer que os eventos relacionados ao disco sejam silenciados por uma semana, as descobertas de disco novas honram essa intenção sem que você tenha que dispensar cada um à mão. Eles aparecem diretamente na lista dispensada com o tempo restante configurado. Categorias deixadas em 24 h não são afetadas e se comportam da maneira clássica (novas descobertas de terra em ativo até que você aja).",
+    "tempTitle": "CPU temperatura CRITICAL é a sobreposição de segurança",
+    "tempBody": "Um achado específico ignora completamente a supressão: <strong>CPU temperatura CRITICAL</strong>. Se o sensor atravessar o limiar crítico, o alerta dispara de novo, independentemente de qualquer demissão prévia — um CPU cozido é um CPU. Esta é a única substituição integrada do modelo de demissão.",
+    "nonDismissableTitle": "Conclusões que não podem ser rejeitadas",
+    "nonDismissableBody": "Um punhado de descobertas são sinalizadas não descartáveis de propósito — eles sinalizam uma condição em que silenciar o alerta pode custar dados, hardware ou conectividade. O botão Descartar está oculto para estas linhas; o alerta limpa somente quando a condição subjacente recupera e a limpeza de resolução automática pega-lo. Outras descobertas (acontecimentos transitórios de E/S em um disco saudável, estados recuperados) também são marcadas não descartáveis, mas pelo motivo oposto: não há nada para silenciar porque a linha já é informacional e auto-limpante.",
+    "headerFinding": "Encontrando",
+    "headerWhy": "Por que não pode ser demitido?",
+    "rows": [
+      {
+        "finding": "Aviso de temperatura CPU / crítico",
+        "why": "Risco de hardware – o silício é danificado por excesso de temperatura. Silenciar deixaria uma cozinha CPU passar despercebida."
+      },
+      {
+        "finding": "Espaço do sistema de arquivos crítico (montagem da raiz)",
+        "why": "Risco de perda de dados — uma raiz completa previne escrita e corrompe o estado. O alerta deve permanecer visível até libertar espaço."
+      },
+      {
+        "finding": "ZFS pool DEGRADED / FAULTED",
+        "why": "Risco de integridade dos dados — pool O fracasso ameaça cada conjunto de dados sobre ele. Silenciar enquanto o pool é insalubre nunca é a resposta certa."
+      },
+      {
+        "finding": "Erros de I/O de disco com SMART falhou",
+        "why": "Falha de acionamento confirmada pelo SMART — mascarar esconde o hardware real morrendo. O alerta permanece até o dispositivo ser substituído (ou removido do hospedeiro)."
+      },
+      {
+        "finding": "Interface de rede para baixo",
+        "why": "Perda de conectividade — pontes, ligações e interfaces físicas com tráfego ativo devem permanecer visíveis. Silenciá-los esconderia uma falha de gestão remota."
+      },
+      {
+        "finding": "E/S eventos em discos saudáveis (INFO)",
+        "why": "Eventos transientes ATA / dmesg em um disco cujo SMART diz OK — INFO sinalizado e auto-limpeza. Nada para descartar porque o próximo ciclo já os remove."
+      }
+    ],
+    "principle": "Tudo o resto pode ser dispensado. O princípio é: alertas que indicam \"prejuízo real em andamento\" ou que já foram auto-resolvidos são mantidos fora do caminho de descarte; alertas sobre condições sustentadas que você pode querer reconhecer e verificar mais tarde (uso elevado de CPU, atualizações pendentes, certificado perto de expiração, avisos de log, soluços de inicialização de VM, etc.) todos expor o botão Dispensar."
+  },
+  "autoresolve": {
+    "heading": "Resolução automática e limpeza",
+    "intro": "Muitos alertas devem se limpar quando a condição desaparece — um VM que estava falhando em iniciar e agora está rodando, um disco que não está mais no sistema, uma temperatura que caiu de volta ao normal. Uma rotina de limpeza decorre no final de cada ciclo de cinco minutos e aplica estas regras:",
+    "headerTrigger": "Acionador",
+    "headerAction": "Ação",
+    "rows": [
+      {
+        "trigger": "Uso de CPU de volta ao intervalo normal após um aviso relacionado com CPU.",
+        "action": "Marcado resolvido. Sai da lista Active."
+      },
+      {
+        "trigger": "Pressão de memória de volta abaixo do limiar de aviso após um OOM / aviso de memória.",
+        "action": "Marcado resolvido."
+      },
+      {
+        "trigger": "VM / CT referenciado pelo erro já não existe (<code>qm status</code> / <code>pct status</code> non-zero).",
+        "action": "Marcado resolvido como recurso removido."
+      },
+      {
+        "trigger": "Disco referenciado pelo erro não mais presente em <code>/dev/</code>.",
+        "action": "Marcado resolvido como dispositivo removido. O histórico de observação permanente está preservado (ver secção seguinte)."
+      },
+      {
+        "trigger": "Achados provenientes da revista (categoria <code>logs</code>, entradas SMART, erros ATA / I/O) quando sua janela de supressão expira.",
+        "action": "Removido de forma limpa. Cada varredura inspeciona entradas novas de periódicos a partir desse ponto em diante; a mesma linha histórica na revista não é reemitida."
+      },
+      {
+        "trigger": "Erros resolvidos com mais de sete dias.",
+        "action": "Excluído da base de dados para manter a tabela pequena. O histórico de notificação é independente e mantido por mais tempo."
+      }
+    ],
+    "permanentTitle": "Supressão permanente não é o mesmo que resolvido",
+    "permanentBody": "Definir a duração de supressão de uma categoria para <code>-1</code> (<em>permanent</em>) silencia alertas futuros para itens que você descarta nessa categoria — mas não ignora a verificação de resolução automática acima. Se a condição subjacente desaparecer (recurso excluído, limiar não mais violado), o item ainda é limpo automaticamente."
+  },
+  "observations": {
+    "heading": "Observações em disco — o histórico permanente",
+    "intro": "Os eventos de disco são especiais. Um aviso SMART no <code>/dev/sdh</code> no 02:14 AM é algo que você deseja lembrar mesmo depois que a tempestade de E/S diminuiu e o erro foi resolvido automaticamente — o disco tem um histórico agora. Para esse efeito, o Health Monitor mantém uma tabela <strong>permanent</strong> separada: <code>disk_observations</code>.",
+    "headerProperty": "Propriedade",
+    "headerErrors": "Quadro <code>errors</code> (Active)",
+    "headerObs": "<code>disk_observations</code> tabela",
+    "rows": [
+      {
+        "property": "Objecto",
+        "errors": "Conduz o <em>current</em> health view + notificação despacho.",
+        "obs": "Trilha de auditoria permanente por disco."
+      },
+      {
+        "property": "Resolver automaticamente",
+        "errors": "Sim — as linhas são limpas quando a condição desaparece.",
+        "obs": "Não — as entradas persistem para sempre, a menos que o usuário as descarte explicitamente."
+      },
+      {
+        "property": "Tecla Dedup",
+        "errors": "<code>error_key</code> (por exemplo <code>smart_sdh</code>).",
+        "obs": "<code>(disk_registry_id, error_type, error_signature)</code> com assinaturas estáveis sem dados voláteis."
+      },
+      {
+        "property": "Onde mostrado",
+        "errors": "Health Monitor modal (listas activas/descartadas).",
+        "obs": "Cartão de detalhe do disco na aba <strong>Storage</strong>, com um crachá \"X obs.\" por disco."
+      },
+      {
+        "property": "O que grava",
+        "errors": "O que quer que esteja a falhar.",
+        "obs": "Avisos SMART (problemas sectoriais / temperatura / CRC / auto-testes falhados), erros de I/O (ATA / NVMe / dm), erros do sistema de ficheiros, eventos de agrupamento ZFS."
+      }
+    ],
+    "outro": "Consequência prática: um alerta pode limpar do painel enquanto o mesmo incidente ainda é registrado no histórico do disco. Quando você clica em um disco sob o Armazenamento, o cartão mostra a contagem de observações pendentes e uma lista com datas, gravidade e a mensagem bruta original — útil quando você está decidindo se uma unidade precisa de substituição.",
+    "renameTitle": "Renomeamentos entre dispositivos são mesclados automaticamente",
+    "renameBody": "Os discos às vezes aparecem sob nomes transitórios (<code>ata8</code>, <code>nvme0n1p3</code>) antes de obter um nome de dispositivo de bloco estável. A camada de observação consolida entradas por número de série quando conhecido: se um evento foi gravado pela primeira vez como <code>ata8</code> e o mesmo disco é posteriormente identificado como <code>sdh</code>, as observações históricas são religadas ao <code>sdh</code> no ciclo seguinte, de modo que a história não é fragmentada."
+  },
+  "notification": {
+    "heading": "De uma constatação a uma notificação",
+    "intro": "Cada erro ativo também é um candidato para o motor de notificação. O fluxo:",
+    "items": [
+      "O scanner registra o achado com categoria + gravidade + detalhes estruturados.",
+      "Se o tipo de evento for <strong>enabled</strong> nas configurações globais de notificação, e o canal não silenciou esta categoria, um evento está em fila.",
+      "O motor template renderiza um par (título, corpo) dos detalhes estruturados. Se o reescritor de IA estiver habilitado, o mesmo par também é passado através do provedor configurado para uma versão em linguagem simples.",
+      "A implementação do canal envia: mensagem Telegram, Discord embed, Gotify push ou email. O resultado da expedição é armazenado em <code>notification_history</code>.",
+      "Se um descarte chegar mais tarde, a janela de supressão inicia e qualquer novo disparo do mesmo <code>error_key</code> fica na fila até que a janela feche."
+    ],
+    "outro": "A configuração do canal (Telegram bot token, webhook URLs, chaves de provedor de IA, alternações por evento, sobreposições de canal) está documentada em <notifLink>Notificações</notifLink> e <aiLink>AI Assistant</aiLink>."
+  },
+  "rest": {
+    "heading": "Endpoints REST",
+    "intro": "Tudo o que o modal faz é chamado do API — útil para scripts, painéis personalizados ou sua própria integração chat-bot. Cada chamada precisa de um token API; chama que muda algo — descartando um alerta, salvando as configurações de supressão, limpando órfãos — requer um com escopo full_admin, e um token read_only recebe 403.",
+    "headerEndpoint": "Ponto final",
+    "headerMethod": "Método",
+    "headerUse": "Usar",
+    "rows": [
+      {
+        "endpoint": "/api/health",
+        "method": "GET",
+        "use": "Sonda de saúde pequena – retorna JSON com <code>status</code>, <code>timestamp</code> e <code>version</code>. Adequado para verificação da palavra- chave Uptime Kuma; o receptor deverá enviar o cabeçalho do portador."
+      },
+      {
+        "endpoint": "/api/health/status",
+        "method": "GET",
+        "use": "Veredito geral sobre saúde — gravidade única + cadeia sumária. Autenticado."
+      },
+      {
+        "endpoint": "/api/health/details",
+        "method": "GET",
+        "use": "Todas as dez categorias com seus status por categoria e a carga útil estruturada que produziu cada uma delas."
+      },
+      {
+        "endpoint": "/api/health/full",
+        "method": "GET",
+        "use": "Instantâneo completa — categorias + erros ativos + lista descartada + configurações de supressão personalizadas. Retorna o modal em uma viagem de ida e volta e usa uma cache de fundo 6-min para resposta instantânea."
+      },
+      {
+        "endpoint": "/api/health/active-errors",
+        "method": "GET",
+        "use": "Só a lista dos Activos. Filtrado por <code>?category=&lt;name&gt;</code>."
+      },
+      {
+        "endpoint": "/api/health/dismissed",
+        "method": "GET",
+        "use": "Apenas a lista de dispensa, com as horas de supressão restantes."
+      },
+      {
+        "endpoint": "/api/health/acknowledge",
+        "method": "POST",
+        "use": "Corpo: <code>'{'\"error_key\":\"smart_sdh\"'}'</code>. Descarte um alerta com a janela configurada da categoria."
+      },
+      {
+        "endpoint": "/api/health/settings",
+        "method": "GET / POST",
+        "use": "Leia ou escreva os valores por categoria Supressão Duração."
+      },
+      {
+        "endpoint": "/api/health/cleanup-orphans",
+        "method": "POST",
+        "use": "Limpeza manual de erros cujo dispositivo subjacente / VM se foi. Idempotente."
+      }
+    ],
+    "codeComment1": "Deslize a saúde atual para um script",
+    "codeComment2": "# Rejeite um erro específico",
+    "codeComment3": "# Configura a supressão da categoria de discos para uma semana"
+  },
+  "whereNext": {
+    "heading": "Para onde seguir",
+    "items": [
+      {
+        "label": "Painel",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — quando o modo de monitorização da saúde é aberto na IU."
+      },
+      {
+        "label": "Notificações",
+        "href": "/docs/monitor/notifications",
+        "tail": " — canais, interruptores por evento, o gancho de reescrita de IA, história."
+      },
+      {
+        "label": "Assistente de IA",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": " — configuração do provedor (OpenAI / Anthropic / Gemini / Groq / Ollama / OpenRouter), modo imediato, nível de detalhe por canal, idioma."
+      },
+      {
+        "label": "Arquitetura",
+        "href": "/docs/monitor/architecture",
+        "tailRich": " — o esquema SQLite (<code>errors</code>, <code>disk_observations</code>, <code>events</code>) e a cadência de fundo."
+      }
+    ]
+  }
+}

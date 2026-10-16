@@ -1,0 +1,116 @@
+{
+  "meta": {
+    "title": "Post-Install: Virtualização □ Documentação ProxMenux",
+    "description": "Opções de virtualização no script pós-instalação personalizável ProxMenux: auto-instale o agente convidado certo se o Proxmox correr dentro de um VM, e habilite o IOMMU / VFIO para que você possa passar dispositivos PCI (GPUs, NICs, HBAS) através de suas próprias VMs."
+  },
+  "header": {
+    "title": "Post-Install: Virtualização",
+    "section": "Configurações pós-instalação do Proxmox"
+  },
+  "intro": {
+    "title": "O que esta categoria abrange",
+    "body": "Duas opções independentes. <strong>Instalar agente convidado relevante</strong> é uma rede de segurança para quando o próprio Proxmox corre aninhado dentro de outro hipervisor. <strong>Enable VFIO IOMMU support</strong> é o que mais interessa aos usuários: ele muda as características do kernel que você precisa para passar um GPU, HBA ou NIC diretamente em um VM com desempenho quase-nativo."
+  },
+  "guestAgent": {
+    "heading": "Instale o agente convidado relevante",
+    "intro": "Detecta o ambiente de virtualização em que o host Proxmox está em execução (usando <code>systemd-detect-virt</code> e <code>dmidecode</code>) e instala o pacote de ferramentas de hóspedes correspondentes para que o hipervisor externo possa comunicar-se com o Proxmox de forma limpa (desligação graciosa, sincronização do relógio, relatórios IP, etc.).",
+    "headerDetected": "Máquina detectada",
+    "headerPackage": "Pacote instalado",
+    "rows": [
+      {
+        "detected": "QEMU / KVM",
+        "package": "qemu-guest-agent"
+      },
+      {
+        "detected": "VMware (ESXi, Workstation)",
+        "package": "open-vm-tools"
+      },
+      {
+        "detected": "VirtualBox",
+        "package": "virtualbox-guest-utils"
+      },
+      {
+        "detected": "Sem metal (nenhum)",
+        "package": "— no-op, nada instalado"
+      }
+    ],
+    "skipTitle": "Ignora isto no Proxmox de metal nu",
+    "skipBody": "Se o Proxmox for executado diretamente no hardware (o caso comum), assinalar esta opção é um no-op — o detector devolve <code>none</code> e o script sai sem alterações. A opção só importa para a minoria de configurações que executam Proxmox <em> como um guest</em> para testes ou laboratórios."
+  },
+  "vfio": {
+    "heading": "Habilitar suporte VFIO IOMMU",
+    "intro": "Liga o IOMMU no host e carrega os módulos do kernel que tornam possível a passagem do PCI (<code>vfio</code>, <code>vfio_iommu_type1</code>, <code>vfio_pci</code>). Com isso habilitado, você pode ligar um dispositivo físico a um VM e o hóspede tem acesso direto, quase sem metal a ele.",
+    "whoTitle": "Quem precisa disto?",
+    "whoItems": [
+      "Você quer passar um GPU para um jogo de Windows VM ou um macOS VM.",
+      "Você tem um NIC de 10G dedicado para um firewall/roteador VM (OPNsense, pfSense).",
+      "Você quer passar um HBA diretamente para um TrueNAS / Unraid VM para ZFS em discos nus.",
+      "Você está planejando usar <em>Coral TPU</em>, uma placa de captura, ou um dongle SDR em um VM."
+    ],
+    "whoOutro": "Se nenhum deles se aplicar, você pode pular esta opção com segurança. Para passar através de um <strong>LXC</strong> (não um VM), IOMMU é <em>not</em> necessário.",
+    "doesTitle": "O que o ProxMenux faz",
+    "doesIntro": "A função está ciente de boot-loader: detecta se Proxmox está em ZFS (systemd-boot) ou LVM/ext4 (GRUB) e escreve para o arquivo direito. Também é idempotente — se os parâmetros já estão presentes, nada é adicionado.",
+    "headerBoot": "Tipo de arranque",
+    "headerFile": "Arquivo tocado",
+    "headerPost": "Passo de pós- atualização",
+    "bootRows": [
+      {
+        "boot": "systemd-boot (ZFS)",
+        "file": "/etc/kernel/cmdline",
+        "post": "Actualização do proxmox-boot-tool"
+      },
+      {
+        "boot": "GRUB (LVM/ext4)",
+        "file": "/etc/default/grub",
+        "post": "update-grub"
+      }
+    ],
+    "kernelIntro": "Parâmetros do kernel adicionados:",
+    "modulesIntro": "Módulos de kernel adicionados ao <code>/etc/modules</code>:",
+    "blacklistIntro": "Conflitantes drivers na lista negra em <code>/etc/modprobe.d/blacklist.conf</code>:",
+    "blacklistTitle": "A lista negra de drivers GPU entra em conflito com o uso do GPU no lado do host",
+    "blacklistBody": "A lista negra garante que o kernel do host nunca liga o driver <em>any</em> GPU, para que o VFIO possa reivindicar o GPU de forma limpa. Isto é exatamente o que você quer para passar para um VM — mas é o <strong>opposite</strong> do que você precisa para <link>instalar drivers NVIDIA no host</link> (para transcodificação LXC, por exemplo). Escolha um caminho por GPU:",
+    "pathItems": [
+      "<strong>GPU → VM:</strong> habilite VFIO/IOMMU aqui, deixe os drivers GPU na lista negra.",
+      "<strong>GPU → LXC (ou host):</strong> skip this option, use a instalação do host NVIDIA, do not blacklist nvidia/nouveau.",
+      "<strong>Dois GPUs:</strong> um pode ir para um VM e o outro para um LXC, mas você precisará de uma configuração mais fina (ligar apenas um cartão para <code>vfio-pci</code> por ID PCI). A lista negra padrão é muito ampla para este caso — edite <code>blacklist.conf</code> depois."
+    ],
+    "acsTitle": "Sobre o pcie_acs_override — saiba o que está habilitando",
+    "acsBody": "<code>pcie_acs_override=downstream,multifunction</code> relaxa a verificação dos Serviços de Controle de Acesso PCIe. Ele permite que o kernel divida grupos IOMMU que o firmware reporta como monolítico, que às vezes é a única maneira de passar através de um dispositivo de um grupo sem arrastar o resto. O trade-off é o isolamento reduzido <strong> entre dispositivos</strong>: um VM malicioso ou comprometido com passagem tem uma superfície de ataque maior via DMA. Tudo bem para um laboratório doméstico; pense duas vezes antes de habilitar um host que executa cargas de trabalho não confiáveis. Se você não precisar, remova esse token do <code>/etc/kernel/cmdline</code> ou <code>/etc/default/grub</code> após o script correr e execute novamente a etapa de atualização do carregador de inicialização.",
+    "rebootTitle": "Reiniciar necessário",
+    "rebootBody": "IOMMU, módulos VFIO e a lista negra só entram em vigor após uma reinicialização + regeneração initramfs. O script desencadeia <code>update-initramfs -u -k all</code> e a atualização do carregador de inicialização, e define a bandeira \"reiniciar necessário\" para que o Personalizável promova você no final.",
+    "verifyTitle": "Verificação após reiniciar",
+    "revertTitle": "Reversível do menu Desinstalar",
+    "revertBody": "<link>Otimizações de desinstalação</link> reverte todas as alterações: tira os tokens IOMMU do <code>/etc/kernel/cmdline</code> ou GRUB, remove os módulos VFIO do <code>/etc/modules</code>, remove as entradas da lista negra do driver e reconstrui os initramfs. Uma reinicialização é necessária para realmente aplicar a reversão."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "label": "Adicionar GPU ao VM (Passo)",
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "tail": " — passo seguinte natural uma vez activado o IOMMU + VFIO."
+      },
+      {
+        "label": "Adicionar Controlador ou NVMe ao VM",
+        "href": "/docs/disk-manager/add-controller-nvme-vm",
+        "tail": " — a mesma infra-estrutura de passagem para os controladores de armazenamento."
+      },
+      {
+        "label": "Comandos de passagem GPU",
+        "href": "/docs/help-info/gpu-commands",
+        "tail": " — Referência da verificação IOMMU."
+      },
+      {
+        "label": "Desinstalar otimizações",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — voltar a IOMMU / VFIO de forma limpa."
+      },
+      {
+        "label": "Post- Install personalizável",
+        "href": "/docs/post-install/customizable",
+        "tail": " — voltar ao menu dos pais."
+      }
+    ]
+  }
+}

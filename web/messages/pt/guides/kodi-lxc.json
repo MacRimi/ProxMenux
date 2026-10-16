@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "title": "Instalar o Kodi em uma LXC com GPU Aceleração ProxMenux Guias",
+    "description": "Execute Kodi dentro de um recipiente LXC privilegiado em Proxmox VE, exponha os dispositivos de entrada iGPU e USB do host, e transforme o servidor Proxmox em um centro de mídia tudo-em-um conectado diretamente a uma TV.",
+    "ogTitle": "Instale Kodi em um LXC com aceleração GPU",
+    "ogDescription": "Execute Kodi dentro de um LXC privilegiado em Proxmox VE com host iGPU e passagem de entrada USB - transforme o servidor em um centro de mídia tudo-em-um."
+  },
+  "header": {
+    "title": "Instale Kodi em um LXC e Conecte-o a um monitor / TV com aceleração GPU",
+    "description": "Execute Kodi dentro de um recipiente LXC privilegiado em Proxmox VE, exponha os dispositivos de entrada iGPU e USB do host, e transforme o servidor Proxmox em um centro de mídia tudo-em-um conectado diretamente a uma TV.",
+    "section": "Guias"
+  },
+  "intro": {
+    "calloutTitle": "Aviso",
+    "calloutBody": "Este guia usa um script comunitário externo para iniciar o Kodi LXC. O lado GPU da configuração (passando o host iGPU para o recipiente) também é coberto pelo fluxo automatizado ProxMenux: <strong>GPUs e Coral-TPU → Adicione GPU para LXC</strong> no menu ProxMenux — lida com a instalação de cablagem <code>/dev/dri</code> + driver dentro do CT. O script abaixo também inicializa o próprio Kodi e o autostart no <code>tty7</code>. Use-o se você quiser um LXC do centro de mídia turnkey; use o fluxo <gpuLink>ProxMenux</gpuLink> se você só precisa de acesso GPU para um CT configurado manualmente.",
+    "credit": "Original Kodi LXC script criado por <authorLink>mrrudy</authorLink>.",
+    "stepsTitle": "O que vais fazer?",
+    "steps": [
+      "Criar um LXC privilegiado a executar o Kodi (script-driven).",
+      "Transfira seu teclado USB, mouse ou controlador para o CT.",
+      "(Opcional) Atualizar Kodi para a versão mais recente do team-xbmc PPA."
+    ]
+  },
+  "createCt": {
+    "heading": "1. Criar o Kodi LXC",
+    "body": "O CT precisa ser <strong>privileged</strong> para que possa acessar dispositivos de entrada USB (teclados, remotos, controladores). O script lida com bandeiras de privilégio + fiação GPU + instalação Kodi + arranque automático em <code>tty7</code>:",
+    "code": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/mrrudy/proxmoxHelper/main/ct/kodi-v1.sh)\"",
+    "after": "Seja paciente — leva um tempo para instalar. Quando terminar e Kodi iniciar em <code>tty7</code>, você pode conectar seu monitor ou TV diretamente na saída HDMI / DisplayPort do host e você deve ver a interface Kodi."
+  },
+  "addInput": {
+    "heading": "2. Adicionar um teclado, mouse ou controlador USB",
+    "body": "Os dispositivos de entrada vivem sob <code>/dev/input/</code> no host. Identificar o número principal:",
+    "listCode": "ls -l /dev/input",
+    "imageAlt": "Lista de dispositivos de entrada",
+    "afterList": "Tome o número da primeira coluna (no exemplo: <code>13</code>). Pare o Kodi LXC, em seguida, edite sua configuração (substitua o <code>'<'CTID'>'</code> com o ID do recipiente — por exemplo, o <code>102</code>):",
+    "editCode": "nano /etc/pve/lxc/'<'CTID'>'.conf",
+    "addLines": "Adicionar (ajustar <code>13</code> ao que você viu no <strong>sua máquina</strong>):",
+    "configCode": "lxc.cgroup2.devices.allow = c 13:* rwm\nlxc.mount.entry: /dev/input dev/input none bind,optional,create=dir",
+    "imageConfigAlt": "Configuração do LXC",
+    "save": "Salvar (<code>Ctrl+X</code>) e reiniciar <strong>apenas o contêiner</strong> — não há necessidade de reiniciar toda a máquina Proxmox:",
+    "restartCode": "pct restart '<'CTID'>'",
+    "plug": "Ligue o teclado / mouse / controlador e Kodi deve responder a ele."
+  },
+  "updateKodi": {
+    "heading": "3. (Opcional) Actualize o Kodi para a versão mais recente",
+    "calloutTitle": "Importante",
+    "calloutBody": "A equipe-xbmc PPA é <strong>Ubuntu-only</strong>. Se o Kodi LXC for baseado em um modelo Debian, o <code>add-apt-repository</code> não estará disponível e o PPA não funcionará. O script mrrudy é padrão para um modelo Ubuntu, então isso deve se aplicar normalmente. Para verificar: <code>cat /etc/os-release</code> dentro do recipiente — procure por <code>NAME=\"Ubuntu\"</code>.",
+    "body": "Dentro do recipiente (<code>pct enter '<'CTID'>'</code>):",
+    "code": "sudo add-apt-repository ppa:team-xbmc/ppa\nsudo apt update\nsudo apt install kodi kodi-bin",
+    "after": "Reinicie o recipiente quando terminar; na inicialização você terá o mais recente Kodi."
+  },
+  "screenshots": {
+    "heading": "Imagens",
+    "image1Alt": "Interface Kodi 1",
+    "image2Alt": "Interface Kodi 2"
+  },
+  "troubleshoot": {
+    "heading": "Resolução de Problemas",
+    "items": [
+      "<strong>Kodi LXC começa mas nada na TV:</strong> o CT pode não ter herdado o iGPU. Confirme com <code>ls /dev/dri</code> dentro do recipiente (você deve ver <code>card0</code>, <code>renderD128</code>). Se vazio, a passagem GPU não foi aplicada — execute novamente o script ou use o menu ProxMenux <strong>Adicionar GPU ao menu LXC</strong>.",
+      "<strong>Keyboard / mouse não detectado após reiniciar:</strong> o número principal para <code>/dev/input</code> mudou (raro, mas acontece após atualizações do kernel). Re-executar <code>ls -l /dev/input</code> no host e atualizar a linha <code>lxc.cgroup2.devices.allow</code>.",
+      "<strong>Reprodução acelerada por hardware usa CPU em vez de GPU:</strong> instalar ou atualizar drivers VA-API dentro do recipiente (<code>intel-media-va-driver</code> para mais recente Intel iGPUs, <code>i965-va-driver</code> para os mais velhos, <code>mesa-va-drivers</code> em AMD).",
+      "<strong><code>add-apt-repository: command not found</code>:</strong> o recipiente é Debian, não Ubuntu. Ou usa os pacotes Debian Kodi (mais antigos, mas estáveis) ou recria o CT de um modelo Ubuntu."
+    ]
+  },
+  "further": {
+    "heading": "Outras leituras",
+    "konpatRich": "<konpatLink>O blog do Konpat post</konpatLink> — contexto adicional na passagem do Intel iGPU para o LXC."
+  }
+}

@@ -1,0 +1,136 @@
+{
+  "meta": {
+    "title": "Ferramentas de Monitoramento ao Vivo ProxMenux Documentação",
+    "description": "Três lançadores interativos de monitoramento de rede: iftop (largura de banda em tempo real por par host), iptraf-ng (monitor de tráfego multimodo) e iperf3 (teste de largura de banda, servidor / modo cliente). Cada um é instalado na primeira utilização.",
+    "ogTitle": "Ferramentas de Monitoramento ao Vivo ProxMenux Documentação",
+    "ogDescription": "Monitoramento de rede interativo e testes de largura de banda para o host Proxmox: iftop, iptraf-ng, iperf3."
+  },
+  "header": {
+    "title": "Ferramentas de monitorização ao vivo",
+    "description": "Três lançadores interativos para observação de rede em tempo real e medição de largura de banda: iftop, iptraf-ng e iperf3. Cada ferramenta é auto-instalada a partir do apt no primeiro uso, é executada em primeiro plano e é encerrada com a tecla documentada. Apenas leitura contra a configuração do host — eles só observam tráfego.",
+    "section": "Rede"
+  },
+  "intro": {
+    "title": "O que isto faz",
+    "body": "Três ferramentas interativas de monitoramento, cada uma atrás de seu próprio menu. A primeira vez que você lança um, o pacote é instalado silenciosamente via <code>apt-get</code>. Lançamentos subsequentes começam instantaneamente. Nenhuma destas ferramentas modifica a configuração da rede host."
+  },
+  "when": {
+    "heading": "Quando utilizar qual",
+    "headerQuestion": "Pergunta",
+    "headerUse": "Usar",
+    "rows": [
+      {
+        "question": "Quem está saturando o link <em> agora</em>?",
+        "use": "iftop"
+      },
+      {
+        "question": "Que quebra de protocolo / tamanhos de pacotes / fluxos TCP estão fluindo?",
+        "use": "iptraf-ng"
+      },
+      {
+        "question": "Quanta largura de banda está disponível entre duas máquinas?",
+        "use": "iperf3"
+      }
+    ]
+  },
+  "iftop": {
+    "heading": "uso de rede em tempo real (iftop)",
+    "body": "Largura de banda ao vivo por par de hosts (destino de origem ↔) — como <code>top</code> para tráfego. Mostra os fluxos mais pesados no topo, com médias de 2/10/40 segundos. Melhor ferramenta para a pergunta <em>\"por que meu uplink está saturado?\"</em>.",
+    "exit": "<strong>Saída:</strong> imprensa <kbd>q</kbd>. O ProxMenux mostra uma janela de lembrete antes do lançamento.",
+    "keysTitle": "Chaves úteis dentro do iftop",
+    "keysBody": "<kbd>n</kbd> alternar a pesquisa do DNS, <kbd>p</kbd> mostrar os números das portas, visualização de pausa do <kbd>P</kbd>, direção da linha do <kbd>t</kbd> (enviado / recebido / ambos), <kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd> ordenar por 2s / 10s / 40s média. <code>man iftop</code> para o conjunto completo."
+  },
+  "iptraf": {
+    "heading": "ferramenta de monitoramento de rede (iptraf-ng)",
+    "intro": "Um monitor de tráfego multimodo orientado por menu. Onde iftop responde <em>\"who\"</em>, iptraf-ng responde <em>\"what\"</em>: contagens de byte/packet por protocolo, rastreamento de estado de conexão TCP, histogramas de tamanho de pacote e atividade de LAN por estação.",
+    "menuIntro": "No lançamento você recebe um menu de cinco opções:",
+    "headerMode": "Modo",
+    "headerUseFor": "Use-o para",
+    "rows": [
+      {
+        "mode": "Monitor de tráfego IP",
+        "useFor": "Live TCP / UDP / ICMP / lista de fluxos de outros IP com contadores de byte e estado de conexão"
+      },
+      {
+        "mode": "Estatísticas gerais da interface",
+        "useFor": "IPv4 / IPv6 / TCP / UDP / ICMP / contagens de pacotes não IP por NIC"
+      },
+      {
+        "mode": "Estatísticas de interface detalhadas",
+        "useFor": "O mesmo que acima, mas para uma interface, com tamanho de pacote e detalhe de taxa"
+      },
+      {
+        "mode": "Desagregações estatísticas",
+        "useFor": "Histograma de distribuição do tamanho do pacote, por porta TCP / UDP"
+      },
+      {
+        "mode": "Monitor de estação LAN",
+        "useFor": "Estatísticas de tráfego por MAC para o domínio de transmissão local"
+      }
+    ],
+    "exit": "<strong>Saída:</strong> pressione <kbd>x</kbd> de qualquer vista (ou <kbd>Q</kbd> do menu principal). O ProxMenux mostra uma janela de lembrete antes do lançamento.",
+    "logTitle": "Capturas de registro no arquivo",
+    "logBody": "Cada modo oferece para registrar estatísticas capturadas para <code>/var/log/iptraf-ng/</code>. Útil se você precisar de um registro de um pico de tráfego — deixe-o em execução, faça log para arquivo, reveja o arquivo depois, em vez de tentar ler a tela ao vivo."
+  },
+  "iperf3": {
+    "heading": "teste de largura de banda (iperf3)",
+    "intro1": "Mede o rendimento real do TCP entre dois hospedeiros. Ao contrário do iftop / iptraf-ng (que observa o tráfego existente), o iperf3 gera tráfego sintético para testar o link. Indispensável para responder a perguntas como <em>\"é o meu 10 GbE realmente fazendo 10 GbE?\"</em> ou <em>\"é o gargalo o NIC, o interruptor, ou o armazenamento?\"</em>.",
+    "intro2": "iperf3 is a <strong>two-host tool</strong>: one side runs as server (listens on TCP port 5201), the other runs as client (connects, sends data, prints the rate). The ProxMenux launcher asks which mode you want:",
+    "headerMode": "Modo",
+    "headerBehaviour": "Comportamento",
+    "headerCli": "CLI equivalente",
+    "rows": [
+      {
+        "mode": "Servidor",
+        "behaviour": "Escuta em TCP 5201 e imprime resultados para cada teste de entrada. Para em Ctrl+C.",
+        "cli": "iperf3 -s"
+      },
+      {
+        "mode": "Cliente",
+        "behaviour": "Pede o servidor IP / hostname, conecta, executa um teste padrão 10-segundo e imprime o relatório.",
+        "cli": "iperf3 -c <target>"
+      }
+    ],
+    "workflowIntro": "Fluxo de trabalho típico para testar uma ligação 10 GbE entre duas máquinas Proxmox:",
+    "workflow": [
+      "No host A, abra o menu Rede → <em>Teste de largura (iperf3)</em> → escolha <strong>Server</strong>.",
+      "No host B, abra a mesma entrada de menu → escolha <strong>Client</strong> → insira IP do host A.",
+      "Espera, 10 segundos. Compare a taxa relatada com o máximo teórico do link."
+    ],
+    "sample": "Saída do cliente da amostra:",
+    "flagsTitle": "Bandeiras manuais úteis (correr de uma shell)",
+    "flagsBody": "<code>-t 60</code> teste mais longo (60s em vez de 10s padrão), <code>-P 4</code> 4 fluxos paralelos (satura mais rápido), <code>-R</code> direção reversa (servidor → cliente), <code>-u -b 100M</code> UDP teste em 100 Mbit/s (para medições de jitter / perda de pacotes), <code>-p 5202</code> usar uma porta diferente (testes múltiplos em paralelo). <code>man iperf3</code> para o conjunto completo.",
+    "firewallTitle": "Abrir a porta de firewall no servidor",
+    "firewallBody": "O servidor ouve em TCP <strong>5201</strong> por padrão. Se você executar o servidor dentro de um host Proxmox com um firewall rígido (centro de dados ou nível de host), permita que o TCP 5201 inbound do IP do cliente durante a duração do teste, então feche-o novamente. O mesmo se aplica ao <code>nftables</code> / <code>iptables</code> em hospedeiros nus."
+  },
+  "install": {
+    "heading": "Primeiro lançamento instala o pacote",
+    "body": "Todos os três lançadores verificam o binário e executam o <code>apt-get update -qq &amp;&amp; apt-get install -y &lt;pkg&gt;</code> se estiver em falta. A instalação é silenciosa: o menu pode aparecer congelado para 10–30 segundos na primeira vez. Lançamentos subsequentes começam instantaneamente."
+  },
+  "troubleshoot": {
+    "heading": "Resolução de Problemas",
+    "hangTitle": "Instalar para sempre no primeiro lançamento",
+    "hangBody": "O host não tem internet ou os acordos são inalcançáveis. Cancelar com <kbd>Ctrl</kbd>+<kbd>C</kbd>, executar <code>apt-get update</code> manualmente para ver o erro real (DNS, repo assinatura, proxy ...), em seguida, voltar para o menu.",
+    "refusedTitle": "iperf3 client: \"unable to connect to server: Connection refused\"",
+    "refusedBody": "Ou o servidor não está em execução, ou seu firewall bloqueia TCP 5201. Confirme no servidor: <code>ss -tlnp | grep 5201</code> — deve mostrar iperf3 ouvindo. Se ouvir mas o cliente ainda falhar, verifique o caminho do firewall entre os dois hosts.",
+    "slowTitle": "iperf3 reports way less than the expected link speed",
+    "slowBody": "Causas comuns, por ordem de probabilidade: (1) um dos anfitriões está bloqueado em CPU — tentar <code>iperf3 -c &lt;target&gt; -P 4</code> Utilização de múltiplos núcleos; (2) o caminho passa por um link mais lento (gigabit switch no meio de dois 10 GbE NIC); (3) Desfasamento da MTU — verificação <code>ip link show</code> em ambas as extremidades; (4) NIC desactivação — ver <em>Desactivar a Transferência de NIC</em> script comunitário se você tiver um cartão Intel e1000e.",
+    "noTrafficTitle": "iftop / iptraf-ng não mostram tráfego para uma máquina ocupada",
+    "noTrafficBody": "A captura padrão está na primeira interface detectada. Especifique o direito explicitamente a partir do shell: <code>iftop -i vmbr0</code> ou <code>iptraf-ng -i vmbr0</code>. O lançador de menus usa o padrão; para interfaces não padrão, execute a partir de uma consola."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "label": "Diagnósticos",
+        "href": "/docs/network/diagnostics",
+        "tail": " — as verificações apenas de leitura (rotação, conectividade, estatísticas avançadas)."
+      },
+      {
+        "label": "Análise de ponte e reparo guiado",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — quando o controlo revela que uma interface ou ponte não está a fazer o que deveria."
+      }
+    ]
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "meta": {
+    "title": "Formato / Limpar Disco Físico ProxMenux Documentação",
+    "description": "Limpar e formato de disco físico seguro em Proxmox VE usando ProxMenux. Quatro modos de operação, filtros de segurança rigorosos (sistema / montado / discos em uso bloqueados) e dupla confirmação, incluindo digitação de caminho completo.",
+    "ogTitle": "Formato / Limpar Disco Físico ProxMenux Documentação",
+    "ogDescription": "Limpar ou formatar com segurança um disco físico no Proxmox. Regras de visibilidade seguras, modos de operação 4, dupla confirmação."
+  },
+  "header": {
+    "title": "Formato / Limpar disco físico",
+    "description": "Limpar ou formatar com segurança um disco físico no host Proxmox. ProxMenux só mostra discos totalmente livres (sem uso do sistema, sem referência de convidado, sem montagens) e força uma confirmação dupla — sim/não mais digitando o caminho do disco completo — antes de destruir quaisquer dados.",
+    "section": "Gerenciador de disco · Utilitários"
+  },
+  "danger": {
+    "title": "Ferramenta destrutiva",
+    "body": "Cada operação aqui escreve para o disco. Não há nada a desfazer. ProxMenux aplica rigorosos filtros de segurança e confirmações, mas a responsabilidade pela escolha do disco certo é sua. Leia o caminho do disco em voz alta duas vezes antes de digitá-lo."
+  },
+  "howRuns": {
+    "heading": "Como o script é executado",
+    "body": "O fluxo tem duas fases com um filtro de segurança de porta tripla no meio. A lista de discos, o modo de operação e os detalhes do sistema de arquivos são todos coletados na Fase 1; nada é escrito até que a Fase 2 passe uma revalidação final logo antes de executar."
+  },
+  "visibility": {
+    "heading": "Regras de visibilidade",
+    "intro": "Antes mesmo do menu aparecer, o ProxMenux filtra a lista de discos. Apenas os candidatos que são comprovadamente seguros são mostrados:",
+    "items": [
+      "<strong>Mostrado</strong> — discos <em>não</em> usado pela máquina (root pool, swap, montado, ativo ZFS/LVM/RAID) e <em>não</em> referenciado por qualquer VM/LXC configuração (executando ou parado).",
+      "<strong>Hidden</strong> — discos de máquina / sistema.",
+      "<strong>Hidden</strong> — discos referenciados por uma configuração VM/LXC."
+    ],
+    "safetyTitle": "Segurança na confirmação e execução",
+    "safetyItems": [
+      "Discos com metadados obsoletos / ativos mostram avisos detalhados <em> antes de</em> você confirma.",
+      "Os discos usados por um <strong>running</strong> VM são <strong>hard-bloqueado</strong> na confirmação.",
+      "Os discos com partições montadas são <strong>hard-blocked</strong> na execução (uma nova re-validação é executada logo antes de tudo ser escrito).",
+      "Duas confirmações são sempre necessárias: <em>yes/no</em> dialog + digitando o caminho do disco completo exatamente."
+    ]
+  },
+  "modes": {
+    "heading": "Modos de operação",
+    "intro": "Depois de escolher um disco você escolhe um dos quatro modos. Divergem no que destroem e no que deixam para trás.",
+    "headerMode": "Modo",
+    "headerPart": "Tabela de partições",
+    "headerData": "Dados",
+    "headerUseCase": "Caso de uso",
+    "rows": [
+      {
+        "mode": "1. Limpar tudo",
+        "part": "Destruído",
+        "data": "Assinaturas apagadas",
+        "useCase": "Começando de novo: tudo no disco vai, pronto para um novo layout."
+      },
+      {
+        "mode": "2. Remover rótulos FS",
+        "part": "Preservado",
+        "data": "Preservado",
+        "useCase": "Limpa ZFS / LVM / RAID assinaturas para que o disco deixe de ser auto-afirmado, sem tocar nos dados."
+      },
+      {
+        "mode": "3. Zero todos os dados",
+        "part": "Preservado",
+        "data": "Destruído (zero)",
+        "useCase": "Sanite antes de entregar o disco, mantendo o layout de partição existente."
+      },
+      {
+        "mode": "4. Formato completo",
+        "part": "Novo GPT",
+        "data": "Destruído",
+        "useCase": "Pronto para usar o disco com uma única partição nova e um novo sistema de arquivos."
+      }
+    ],
+    "fullFormatOutro": "<strong>Formato completo</strong> continua com duas janelas extras:",
+    "fullFormatItems": [
+      "<strong>Filesystem</strong> — <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (portátil), ou <code>btrfs</code>. As ferramentas em falta (por exemplo, <code>mkfs.btrfs</code>) abortam com uma mensagem clara.",
+      "<strong>Label</strong> — etiqueta opcional do sistema de arquivos para identificação."
+    ]
+  },
+  "steps": {
+    "heading": "Passo a passo",
+    "stepLabel": "Etapa",
+    "list": [
+      {
+        "title": "Escolha um disco livre",
+        "body": "ProxMenux lista todos os discos que passam os filtros de visibilidade acima. Discos com marcadores □ carregam metadados obsoletos e são mostrados com os detalhes para que você saiba o que você está prestes a sobrescrever."
+      },
+      {
+        "title": "Escolha um modo de operação",
+        "bodyRich": "Escolha entre <strong>Wipe all</strong>, <strong>Remover etiquetas FS</strong>, <strong>Zero todos os dados</strong> ou <strong>Formato completo</strong> de acordo com a tabela acima."
+      },
+      {
+        "title": "(Apenas formato completo) Escolha o sistema de arquivos e a etiqueta",
+        "body": "ext4 / xfs / exfat / btrfs, além de uma etiqueta opcional."
+      },
+      {
+        "title": "Confirmar duas vezes",
+        "bodyRich": "ProxMenux mostra um resumo do que vai acontecer. Você aceita com um diálogo sim/não e <strong>type o caminho completo do disco</strong> exatamente como mostrado (por exemplo <code>/dev/sdc</code>). Qualquer outra coisa aborta."
+      },
+      {
+        "title": "Revalidação e execução",
+        "body": "Pouco antes de escrever, o script verifica novamente o estado do disco. Se uma partição tiver sido montada ou uma VM tiver sido iniciada, a execução será interrompida. Caso contrário, a operação escolhida é executada e um resumo é impresso no final."
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Equivalentes manuais",
+    "body": "Se preferir executar os comandos equivalentes à mão:"
+  },
+  "troubleshoot": {
+    "notListedTitle": "Disco não listado no menu",
+    "notListedBody": "Foi filtrado por segurança. Razões comuns: é montado (mesmo em <code>/mnt/tmp</code>), é um ZFS / LVM / RAID membro, é referenciado por um VM ou LXC config, ou é seu disco raiz Proxmox. Execute <code>lsblk -f</code> e <code>cat /proc/mdstat</code> no host para entender o porquê.",
+    "busyTitle": "\"O disco pode estar ocupado\" / desmontar falhou",
+    "busyBody": "Algo ainda está segurando um arquivo aberto em uma partição desse disco — na maioria das vezes um recipiente ou uma shell cujo cwd está dentro de um ponto de montagem. Identifique-o com <code>lsof | grep /dev/sdX</code> ou <code>fuser -vm /dev/sdX1</code>, pare-o e, em seguida, execute novamente a ferramenta."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/disk-manager/smart-disk-test",
+        "label": "Integridade e teste do disco SMART",
+        "tail": " — verificar um disco antes / após limpar para confirmar que é saudável."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importar disco para VM",
+        "tail": " — passar um disco recém-formatado para um VM."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "label": "Adicionar o disco local como armazenamento Proxmox",
+        "tail": " — registar um disco apagado como conjunto de armazenamento Proxmox."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Comandos de armazenamento e discos",
+        "tail": " — lsblk, blkid, referência separada."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Visão geral do Gerenciador de Discos",
+        "tail": "."
+      }
+    ]
+  }
+}

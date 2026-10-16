@@ -1,0 +1,92 @@
+{
+  "meta": {
+    "title": "Desinstalar ProxMenux | ProxMenux Documentação",
+    "description": "Desinstalador ProxMenux limpo com remoção de dependência opcional (jq, diálogo, python3-*) e restauração automática de backups /root/.bashrc e /etc/motd criados no momento da instalação. Também remove o serviço de monitor proxmenux se presente.",
+    "ogTitle": "Desinstalar ProxMenux | ProxMenux Documentação",
+    "ogDescription": "Remova ProxMenux de forma limpa de um host Proxmox com limpeza de dependência opcional."
+  },
+  "header": {
+    "title": "Desinstalar ProxMenux",
+    "description": "Remove ProxMenux do host Proxmox com um fluxo interativo: confirmação, remoção de dependência opcional, limpeza de serviço ProxMenux Monitor, restauração de backups /root/.bashrc e /etc/motd. Mostra uma barra de progresso.",
+    "section": "Configurações"
+  },
+  "scopeWarn": {
+    "title": "Afecta apenas a instalação ProxMenux — não as suas VMs / CTs / armazenamento",
+    "body": "Desinstalar ProxMenux remove o ProxMenux scripts, o lançador de menu, o serviço opcional Monitor e quaisquer backups ProxMenux levou de arquivos do sistema quando você instalou. <strong>Ele não toca em suas VMs, containers, armazenamento, configuração de rede, Fail2Ban, driver NVIDIA ou em qualquer outra coisa que você instalou via ProxMenux.</strong> Aqueles permanecem como estão."
+  },
+  "flow": {
+    "heading": "O fluxo de desinstalação",
+    "items": [
+      "Diálogo de confirmação <strong>.</strong> Sim/não — “Tem certeza de que deseja desinstalar o ProxMenux?”",
+      "<strong>Checklist de remoção de dependência.</strong> A lista pré-selecionada depende do tipo de instalação (veja tabela abaixo). Todas as caixas padrão para OFF — você opta por remover cada dependência.",
+      "<strong>Removal corre com uma barra de progresso.</strong> Remove o venv (apenas instalação de tradução), o lançador <code>menu</code>, a árvore <code>/usr/local/share/proxmenux/</code>, o serviço ProxMenux Monitor se presente junto com o alvo de notificação que ele registrou em Proxmox VE (<code>proxmenux-webhook</code> e seu fósforo), as dependências que você marcou, e finalmente restaura os backups de arquivos do sistema (veja abaixo).",
+      "Diálogo <strong>Completion.</strong> Listas removidas dependências e saídas."
+    ]
+  },
+  "deps": {
+    "heading": "Remoção de dependência: o que é oferecido",
+    "intro": "A lista de verificação depende do tipo de instalação. <strong>Nenhuma das caixas é verificada por padrão</strong> — estes são pacotes de todo o sistema que outras aplicações podem usar, então o padrão mais seguro é deixá-los.",
+    "headerType": "Tipo de instalação",
+    "headerOffered": "Oferecido para remoção",
+    "rows": [
+      {
+        "type": "Tradução",
+        "offeredRich": "<code>python3-venv</code>, <code>python3-pip</code>, <code>python3</code>, <code>jq</code>"
+      },
+      {
+        "type": "Normal",
+        "offeredRich": "<code>dialog</code>, <code>jq</code>"
+      }
+    ],
+    "warnTitle": "Pacotes em todo o sistema — pense duas vezes",
+    "warnBody": "<code>python3</code>, <code>jq</code> e <code>dialog</code> são comumente usados por outras ferramentas (incluindo o próprio Proxmox em alguns fluxos de trabalho). Removendo <code>python3</code> em particular pode quebrar ajudantes Proxmox, utilitários Ceph e muitos scripts de terceiros. Deixa-os a menos que tenhas a certeza de que nada mais precisa deles."
+  },
+  "removed": {
+    "heading": "O que é removido",
+    "code": "/usr/local/bin/menu                                  # the launcher\n/usr/local/share/proxmenux/                          # everything: scripts, config, cache, version\n/opt/googletrans-env/                                # virtual env (Translation install only)\n/etc/systemd/system/proxmenux-monitor.service        # Monitor service unit\n/root/.config/proxmenux-monitor/                     # Monitor config dir\n                                                     # + dependencies you ticked in the checklist"
+  },
+  "restored": {
+    "heading": "O que é restaurado",
+    "items": [
+      "Se o <code>/root/.bashrc.bak</code> existe → renomeado de volta para <code>/root/.bashrc</code> (seu bashrc original retorna).",
+      "Se <code>/etc/motd.bak</code> existe → renomeado de volta para <code>/etc/motd</code>. Caso contrário, a linha ProxMenux (<em> \"Este sistema é otimizado por: ProxMenux\"</em>) é despojado do motd existente com sed."
+    ]
+  },
+  "othersCallout": {
+    "title": "Outros componentes instalados em ProxMenux",
+    "body": "Qualquer coisa ProxMenux instalada através de outros menus — Fail2Ban, Lynis, drivers NVIDIA, ajustes pós-instalação — é <strong>not</strong> tocado por este desinstalador. Cada um tem seu próprio fluxo de desinstalação dentro de seu respectivo menu (ou você pode remover com apt diretamente). Olhe para o <em>Show Version Information</em> primeiro para ver o que está registrado."
+  },
+  "manual": {
+    "heading": "Desinstalação manual",
+    "intro": "Se por alguma razão o desinstalador de menu não pode executar (por exemplo. <code>dialog</code> já em falta), a sequência manual equivalente:",
+    "code": "# 1. Stop and remove the Monitor service (if installed)\nsystemctl stop proxmenux-monitor.service 2>/dev/null\nsystemctl disable proxmenux-monitor.service 2>/dev/null\nrm -f /etc/systemd/system/proxmenux-monitor.service\nrm -rf /root/.config/proxmenux-monitor\nsystemctl daemon-reload\nsystemctl reset-failed 2>/dev/null\n\n# 2. Remove the venv (Translation install only)\nrm -rf /opt/googletrans-env\n\n# 3. Remove ProxMenux files\nrm -f /usr/local/bin/menu\nrm -rf /usr/local/share/proxmenux\n\n# 4. Restore backups\n[ -f /root/.bashrc.bak ] && mv /root/.bashrc.bak /root/.bashrc\n[ -f /etc/motd.bak ] && mv /etc/motd.bak /etc/motd \\\n    || sed -i '/This system is optimised by: ProxMenux/d' /etc/motd"
+  },
+  "reinstall": {
+    "heading": "Reinstalar mais tarde",
+    "body": "Execute o instalador oficial ProxMenux novamente. Escolha Tradução ou Normal como preferir — a escolha é independente do que você tinha antes."
+  },
+  "troubleshoot": {
+    "heading": "Resolução de Problemas",
+    "hangTitle": "Desinstalar pendura em \"Remover googletrans e ambiente virtual\"",
+    "hangBody": "O <code>pip uninstall</code> pode parar se o pip não responder. De outro shell: <code>rm -rf /opt/googletrans-env</code> diretamente (o script faz o mesmo que um backback após pip).",
+    "aptTitle": "apt warns about packages still in use during dependency removal",
+    "aptBody": "Espera-se que se você marcou <code>python3</code> ou <code>jq</code>, enquanto outras coisas do host dependem deles. <code>autoremove</code> do apt irá recusar removê-los nesse caso (que é o comportamento seguro). Desamarre essa dependência e repita.",
+    "motdTitle": "MOTD ainda mostra a linha ProxMenux após desinstalar",
+    "motdBody": "Ou não existia nenhum <code>/etc/motd.bak</code> e a faixa sed não correspondia (por exemplo, a linha foi modificada). Editar <code>/etc/motd</code> à mão e remover qualquer restante linha ProxMenux."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/settings/show-version-information",
+        "label": "Mostrar informações da versão",
+        "tail": " — ver o que seria removido antes de desinstalar."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Visão geral das configurações",
+        "tail": "."
+      }
+    ]
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Painel de instrumentos □ Documentação ProxMenux",
+    "description": "O painel é a interface principal do ProxMenux Monitor: dez guias de conteúdo, incluindo o lançador Apps, além do cabeçalho global e uma ordem de navegação configurável de topo."
+  },
+  "header": {
+    "title": "Painel",
+    "description": "O painel é a visão diária do ProxMenux Monitor — dez guias de conteúdo, incluindo o lançador Apps, além de um cabeçalho global e uma ordem de navegação configurável de alto nível.",
+    "section": "Monitor do ProxMenux"
+  },
+  "oneHeader": {
+    "title": "Um cabeçalho, dez páginas",
+    "body": "O cabeçalho (logo, nome do nó, pílula de status, tempo de funcionamento, atualização, mudança de tema) permanece visível em todos os lugares. A aba ativa abaixo altera toda a área de conteúdo. A cor da pílula de status reflete a pior categoria do <link>Health Monitor</link> — é o mesmo ponto de dados visto do painel."
+  },
+  "tabs": {
+    "heading": "As dez páginas",
+    "intro": "Cada guia tem sua própria página dedicada. As páginas são adicionadas incrementalmente à medida que a documentação é preenchida; abaixo está a lista completa e pelo que cada uma é responsável.",
+    "headerTab": "Página",
+    "headerOwns": "O que possui",
+    "rows": [
+      {
+        "name": "Visão geral do sistema",
+        "linksTo": "/docs/monitor/dashboard/system-overview",
+        "owns": "CPU / widgets de memória / temperatura, contagem ativa de VM e LXC, gráficos de métricas históricas, resumos de armazenamento e rede. Guia de aterrissagem padrão até que a ordem de navegação seja personalizada."
+      },
+      {
+        "name": "Aplicativos",
+        "linksTo": "/docs/monitor/dashboard/apps",
+        "owns": "Lançador unificado para links de web registrados LXC e links personalizados, com categorias, busca, atalhos de hóspedes e sinais de atualização por aplicação."
+      },
+      {
+        "name": "Armazenamento",
+        "owns": "pools Proxmox, discos físicos, dados SMART, estado ZFS, desgaste & vida útil, histórico de observação."
+      },
+      {
+        "name": "Rede",
+        "owns": "Cada interface (física / bond / bridge / OVS), IP/MAC, gráficos RX/TX, RRD histórico por interface."
+      },
+      {
+        "name": "VMs e LXCs",
+        "owns": "Inventário de convidados, broca de configuração / métricas / logs, iniciar / parar / reiniciar / desligar ações."
+      },
+      {
+        "name": "Hardware",
+        "owns": "CPU modelo e topologia, layout de memória, topologia PCIe, GPUs com monitoramento em tempo real por slot."
+      },
+      {
+        "name": "Registros do sistema",
+        "owns": "Live <code>journalctl</code> com filtros, histórico de tarefas Proxmox, registro de notificação, pacotes de logs para download."
+      },
+      {
+        "name": "Terminal",
+        "owns": "Navegador shell para hospedar ou para qualquer VM/CT, alimentado por <code>xterm.js</code> sobre WebSockets."
+      },
+      {
+        "name": "Segurança",
+        "owns": "Configuração de autenticação, senha / 2FA / API tokens, log de auditoria, painel Fail2Ban opcional, implantação de Gateway seguro."
+      },
+      {
+        "name": "Configurações",
+        "owns": "Monitore linguagem, ordem de navegação, canais de notificação, provedor de IA, limiares de saúde, exclusões e inventário de otimização pós-instalação."
+      }
+    ]
+  },
+  "headerAnatomy": {
+    "heading": "Anatomia do cabeçalho",
+    "items": [
+      "<strong>Logo + nome do produto</strong> à esquerda. O logotipo se transforma em uma variante \"atualização disponível\" quando uma versão mais recente do Monitor é detectada.",
+      "<strong>Node identity</strong> — o nome do nó Proxmox resolvido a partir de <code>pvesh get /nodes</code>, recuando para <code>hostname</code>.",
+      "<strong>Pill de saúde</strong> — Saudável (verde), Aviso (amarelo), Crítico (vermelho). Clique nele para abrir o Health Monitor modal. Um emblema <em>info</em> azul extra aparece quando há itens rejeitados ainda dentro de sua janela de supressão.",
+      "<strong>Uptime</strong> — host uptime, formatado para leitura humana.",
+      "<strong>Botão de atualização</strong> — reedita todas as chamadas de API ao vivo sem um reload de página inteira.",
+      "<strong>Theme alternância</strong> — luz / escuro / sistema. Persistente em <code>localStorage</code>."
+    ]
+  },
+  "whereNext": {
+    "heading": "Para onde seguir",
+    "items": [
+      {
+        "label": "Página de aplicativos",
+        "href": "/docs/monitor/dashboard/apps",
+        "tail": " — o lançador unificado do Web Link e a sua relação com aplicações de LXC registadas."
+      },
+      {
+        "label": "Página Visão Geral do Sistema",
+        "href": "/docs/monitor/dashboard/system-overview",
+        "tail": " — a guia de aterragem, totalmente documentada."
+      },
+      {
+        "label": "Monitor de Saúde",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — o modal por trás da pílula de status do cabeçalho, dez categorias de mergulho profundo."
+      },
+      {
+        "label": "Arquitetura",
+        "href": "/docs/monitor/architecture",
+        "tail": " — como o painel fala com a infra-estrutura Flask."
+      }
+    ]
+  }
+}

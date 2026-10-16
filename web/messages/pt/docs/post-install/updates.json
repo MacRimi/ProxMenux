@@ -1,0 +1,112 @@
+{
+  "meta": {
+    "title": "Aplicar Atualizações Disponíveis — Otimizações pós-instalar ProxMenux Documentação",
+    "description": "Como o ProxMenux detecta quando uma otimização pós-instalação (Log2Ram, Configurações de Memória, Limites de Sistema, Logrotate, Ajuste de Rede...) foi atualizada a montante, e como aplicar a nova versão — do menu Post-Install ou do painel Monitor."
+  },
+  "header": {
+    "title": "Aplicar atualizações disponíveis",
+    "description": "Quando uma otimização pós-instalação (Log2Ram, Memory Settings, System Limits, Logrotate...) obtém uma versão mais recente no disco do que a atualmente registrada no host, o ProxMenux a mostra como uma atualização disponível. Você pode aplicá-lo no menu Post-Install (Scripts side) ou no painel Monitor — ambos os caminhos re-executem a mesma função pós-instalação e atualizar o registro.",
+    "section": "Configurações pós-instalação do Proxmox"
+  },
+  "intro": {
+    "title": "O que é isto?",
+    "body": "As otimizações pós-instalação ProxMenux são versionadas. Cada script no repositório carrega um número de versão (e.g. <code>Log2ram SSD Protection v1.2</code>), e o host mantém um registro de quais otimizações são ativos e em qual versão em <code>/usr/local/share/proxmenux/installed_tools.json</code>. Quando uma nova versão do ProxMenux envia uma versão atualizada de qualquer otimização, o ProxMenux detecta o descompasso e oferece-se para re-aplicar apenas esse – sem repetir toda a pós-instalação."
+  },
+  "why": {
+    "heading": "Por que isto existe",
+    "body": "Otimizações pós-instalação ocasionalmente obtêm melhorias — uma melhor afinação de sysctl, um limite de logrotate mais rigoroso, uma nova heurística de tamanho Log2RAM, uma correção para um caso de borda relatado por um testador. Sem um caminho de atualização, o operador tinha apenas duas opções: executar manualmente o script pós-instalação (que re-aplica <em>every</em> otimização) ou pular a melhoria inteiramente. Aplicar Atualizações Disponíveis é o meio-termo: uma per-optimização, opt-in re-run que levanta apenas as versões que realmente se movem."
+  },
+  "detection": {
+    "heading": "Como as atualizações são detectadas",
+    "steps": [
+      {
+        "title": "Programas versionados no disco",
+        "body": "Cada função pós-instalação declara sua versão dentro do script (<code>scripts/post_install/auto_post_install.sh</code> e <code>scripts/post_install/customizable_post_install.sh</code>). Um scanner extrai estas versões da fonte no disco."
+      },
+      {
+        "title": "Registo versionado na máquina",
+        "body": "Quando o operador aplicou cada otimização, a chamada <code>register_tool</code> correspondente escreveu a versão ativa em <code>/usr/local/share/proxmenux/installed_tools.json</code>. Esse arquivo é a fonte da verdade para \"o que está ativo neste host agora\"."
+      },
+      {
+        "title": "Monitor compara ambos os lados",
+        "body": "Na inicialização e a cada 24h, o Monitor compara versões de disco com versões de registro. Qualquer incompatibilidade produz uma entrada em <code>/usr/local/share/proxmenux/updates_available.json</code>. Esse arquivo dirige tanto a entrada de menu Post-Install quanto o cartão de painel Monitor."
+      },
+      {
+        "title": "Uma notificação por nova versão",
+        "body": "Quando pelo menos uma otimização tem uma atualização pendente, o Monitor emite uma única notificação agrupada — por exemplo <em>\"4 ProxMenux atualização(s) disponível(s)\"</em> — com uma linha por ferramenta no mesmo formato <code>name (vX → vY)</code> usado para atualizações de pacotes Proxmox. A notificação é anti-cascade para que ela não repita dia após dia para o mesmo conjunto; apenas uma nova versão (ou uma nova ferramenta que entra na lista) o reativa."
+      }
+    ]
+  },
+  "pathA": {
+    "heading": "Caminho A — Do menu pós- instalação",
+    "intro": "Do menu principal do ProxMenux, abra <strong>Configurações pós-instalação Proxmox</strong>. Quando existem atualizações pendentes, uma nova entrada <strong>Aplicar atualizações disponíveis (N)</strong> aparece logo acima de <em>Otimização de desinstalação</em>. O número reflete quantas otimizações têm uma versão mais recente no disco do que o host atualmente registrado. Quando tudo está atualizado, a entrada simplesmente não aparece, então o menu permanece limpo.",
+    "menuAlt": "Post-Install Scripts menu mostrando a entrada condicional 'Aplicar atualizações disponíveis (N)' posicionado logo acima 'Desinstalar otimizações', com o crachá de contagem indicando quantas otimizações têm uma versão mais recente no disco",
+    "menuCaption": "A entrada <em>Aplicar atualizações disponíveis (N)</em> só renderiza quando pelo menos uma otimização tem uma atualização pendente — ela esconde quando o host está atual.",
+    "checklistBody": "A seleção da entrada abre uma lista de verificação com cada atualização pendente, cada linha formatada como <code>name (vX → vY)</code>. Todas as linhas são pré- verificadas por padrão; desmarque qualquer que você não queira aplicar esta rodada.",
+    "checklistAlt": "Aplique o diálogo de checklist de Atualizações Disponíveis com uma linha por otimização pendente, cada uma com o nome de otimização e a transição de versão (atual → disponível). Todas as linhas pré-verificadas.",
+    "checklistCaption": "Opt-in por otimização: escolha exatamente quais versões levantar. O mesmo motor que alimenta pós-instalação automatizada e personalizável roda em segundo plano para reaplicar cada função e atualizar sua versão de registro."
+  },
+  "pathB": {
+    "heading": "Caminho B — Do painel do monitor",
+    "intro": "As mesmas atualizações aparecem no Monitor sob <link>Configurações → ProxMenux Otimizações</link>. Quando as atualizações pendentes são detectadas, o cartão mostra um banner \"Atualiza disponível\" com a contagem e uma ação <strong>Apply</strong> que abre o mesmo coletor de per-optimização.",
+    "imageAlt": "Cartão ProxMenux Optimizations no painel Monitor com um banner de atualizações disponível no topo mostrando a contagem de atualizações pendentes e um botão Aplicar que abre o seletor de per-optimização",
+    "imageCaption": "O cartão Optimizations no Monitor – quando pelo menos uma otimização tem uma versão mais recente no disco, o banner o mostra sem precisar de acesso à shell."
+  },
+  "applying": {
+    "heading": "O que acontece quando você se candidata",
+    "steps": [
+      {
+        "title": "Repetir a função pós-instalação",
+        "body": "A função de otimização escolhida é re-executada contra o host. Porque cada função pós-instalação é <strong>idempotent</strong>, re-executando-o não duplica a configuração — ele substitui a versão anterior com a nova (arquivos sysctl, drop-ins, unidades de serviço, etc.)."
+      },
+      {
+        "title": "Atualiza o registro",
+        "body": "A chamada <code>register_tool</code> dentro da função escreve a nova versão em <code>installed_tools.json</code>. A próxima varredura não vê mais um descompasso e a entrada de atualização desaparece tanto do menu quanto do cartão Monitor."
+      },
+      {
+        "title": "Sem reiniciar, a menos que a função o diga",
+        "body": "A maioria das actualizações produz efeitos imediatamente. Atualizações que tocam módulos do kernel, nomes de interface persistentes ou VFIO mostram o mesmo prompt de reinicialização que uma nova instalação seria."
+      },
+      {
+        "title": "Actualizar o registo enviado para o Monitor",
+        "body": "Uma vez que o lote termina, o menu POSTs para <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> para reconstruir <code>/usr/local/share/proxmenux/updates_available.json</code>. Isso é o que faz o cartão de Otimização do Monitor e a entrada do menu shell desaparecer imediatamente após a atualização, sem esperar pela próxima varredura agendada."
+      }
+    ],
+    "jqTitle": "jq is required",
+    "jqBody": "A lista de verificação Caminho A baseia-se em <code>jq</code> para processar as atualizações pendentes JSON. Se o <code>jq</code> estiver faltando, o fluxo sai silenciosamente — você verá a entrada do menu com uma contagem, mas nada aconteceria depois de escolher linhas. Em qualquer instalação moderna Proxmox <code>jq</code> está presente; se em dúvida executar <code>apt install -y jq</code>."
+  },
+  "differs": {
+    "heading": "Como difere dos outros caminhos",
+    "headerPath": "Path",
+    "headerScope": "Escopo",
+    "headerWhen": "Quando faz sentido",
+    "rows": [
+      {
+        "pathLabel": "Automatizado",
+        "pathHref": "/docs/post-install/automated",
+        "scope": "Aplica novamente a otimização <em>every</em> no pacote.",
+        "when": "Host fresco, ou re-base completa de um nó totalmente gerido."
+      },
+      {
+        "pathLabel": "Personalizável",
+        "pathHref": "/docs/post-install/customizable",
+        "scope": "Escolha no catálogo completo.",
+        "when": "Cherry-pick quais otimizações são ativos no host."
+      },
+      {
+        "pathLabel": "Aplicar atualizações disponíveis",
+        "pathHref": null,
+        "scope": "Apenas as otimizações cuja versão bateu no disco.",
+        "when": "Mantenha as otimizações já instaladas atuais sem tocar no resto."
+      },
+      {
+        "pathLabel": "Desinstalar otimizações",
+        "pathHref": "/docs/post-install/uninstall",
+        "scope": "Inverta a otimização e remova sua entrada de registro.",
+        "when": "Retroceda uma mudança específica."
+      }
+    ]
+  },
+  "notifTitle": "Porta de notificação",
+  "notifBody": "A notificação que anuncia atualizações pendentes é a <em>ProxMenux atualizações de otimização disponíveis</em> evento. Ele está habilitado por padrão em cada canal, pode ser silenciado por canal de <link>Configurações → Notificações</link>, e é anti-cascade - ele dispara uma vez por conjunto distinto de atualizações pendentes, não em cada varredura de 24h."
+}

@@ -1,0 +1,81 @@
+{
+  "meta": {
+    "title": "ProxMenux Configurações — Monitor de ativação, canal de liberação, idiomas ProxMenux",
+    "description": "Menu de configuração ProxMenux: ativação e alternância de serviço ProxMenux Monitor, Reiniciar a senha do monitor, alterar o canal de lançamento entre Estável e Beta, seleção de idioma (instalação de tradução), informações de versão e desinstalar. As opções aparecem condicionalmente com base no que é instalado e ativo.",
+    "ogTitle": "Configurações ProxMenux — Monitor de ativação, canal de liberação, idiomas",
+    "ogDescription": "Configure ProxMenux — Monitore serviço, Release Channel, idioma, informações de versão e desinstalar.",
+    "twitterTitle": "Configuração do ProxMenux",
+    "twitterDescription": "Monitorar ativação, Release Channel switch, idiomas, informações de versão e desinstalar."
+  },
+  "header": {
+    "title": "Configurações",
+    "description": "Menu de configuração ProxMenux. Lista o que está instalado, permite que você alternar o serviço Monitor, redefinir a senha de login Monitor, alternar entre canais de liberação Stable e Beta em qualquer direção, alterar a linguagem UI (instalação de tradução apenas), e fornece um desinstalador limpo. As opções aparecem condicionalmente — o que você vê depende do seu tipo de instalação e estado atual.",
+    "section": "Configurações"
+  },
+  "intro": {
+    "title": "Para que serve este menu",
+    "body": "Autoadministração do próprio ProxMenux: serviço de monitor, opt-out de canal beta, linguagem, diagnósticos de versão e o desinstalador. Nada neste menu toca nas suas VMs, contentores ou armazenamento."
+  },
+  "opening": {
+    "heading": "Abrir o menu",
+    "body": "Do menu principal do ProxMenux, pressione <kbd>s</kbd>. As opções mostradas dependem do seu tipo de instalação e do que está atualmente ativo:",
+    "imageAlt": "Configuração do menu ProxMenux com opções condicionais baseadas no tipo de instalação e no estado do componente"
+  },
+  "installTypes": {
+    "heading": "Dois tipos de instalação, menus diferentes",
+    "intro": "ProxMenux navios em dois sabores. O menu Configurações se adapta a qual você tem:",
+    "headerType": "Tipo de instalação",
+    "headerBundles": "O que ele empacota",
+    "headerMenu": "Menu mostra",
+    "rows": [
+      {
+        "type": "Tradução",
+        "bundles": "Python venv + Googletrans + configuração multi-linguagem",
+        "menuRich": "<strong>Change Language</strong> + Mostrar versão + Desinstalar"
+      },
+      {
+        "type": "Normal (peso leve)",
+        "bundles": "Apenas Inglês, sem vingança, pegada menor",
+        "menu": "Mostrar versão + desinstalar (sem seletor de idioma)"
+      }
+    ],
+    "detectionTitle": "A detecção acontece automaticamente",
+    "detectionBody": "O script verifica para <code>/opt/googletrans-env/bin/activate</code> e uma chave <code>language</code> não-vazio em <code>config.json</code>. Ambos presentes → Instalação de tradução. Falta qualquer um → Instalação normal. Você não escolhe; o menu se adapta."
+  },
+  "options": {
+    "heading": "Opções do menu",
+    "intro": "Cinco ferramentas. Os emblemas <em>Conditional</em> significam que a opção só aparece quando o pré-requisito é cumprido (Monitor instalado; Programa beta ativo; Instalação de tradução).",
+    "list": [
+      {
+        "icon": "Activity",
+        "href": "/docs/settings/proxmenux-monitor",
+        "title": "Monitor do ProxMenux",
+        "description": "Ativar / desativar a unidade proxmenux-monitor.service systemd, verificar seu estado atual, e redefinir a senha de login do painel se ela foi perdida. UI Web disponível em TCP 8008.",
+        "badge": "Condicional"
+      },
+      {
+        "icon": "TestTube",
+        "href": "/docs/settings/beta-program",
+        "title": "Alterar canal de lançamento",
+        "description": "Alternar entre Estável (principal) e Beta (desenvolvida) em qualquer direção a partir de uma única janela. Executa o instalador oficial do canal escolhido; idempotente e sempre visível.",
+        "badge": "Sempre disponível"
+      },
+      {
+        "icon": "Info",
+        "href": "/docs/settings/show-version-information",
+        "title": "Mostrar informações da versão",
+        "description": "Versão ProxMenux, tipo de instalação, componentes instalados, caminhos de arquivos, estado de ambiente virtual e linguagem atual."
+      },
+      {
+        "icon": "Trash2",
+        "href": "/docs/settings/uninstall-proxmenux",
+        "title": "Desinstalar ProxMenux",
+        "description": "Remova ProxMenux e (opcionalmente) suas dependências. Também restaura backups /root/.bashrc e /etc/motd criados no momento da instalação."
+      }
+    ]
+  },
+  "configTip": {
+    "title": "Onde vive a configuração",
+    "bodyRich": "A maioria dos estados geridos por este menu vive em <code>/usr/local/share/proxmenux/config.json</code> — <code>language</code>, <code>beta_program.status</code> e bandeiras de instalação por componente. O estado do serviço Monitor vive em systemd (<code>proxmenux-monitor.service</code>), não aqui. A versão é lida a partir de <code>/usr/local/share/proxmenux/version.txt</code>."
+  }
+}

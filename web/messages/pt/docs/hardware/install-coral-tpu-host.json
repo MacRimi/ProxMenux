@@ -1,0 +1,203 @@
+{
+  "meta": {
+    "title": "Instalar o Coral TPU no Host ProxMenux Documentação",
+    "description": "Instale drivers Google Coral TPU em um host Proxmox VE. O ProxMenux detecta automaticamente se você tem M.2 / Mini-PCIe ou o Acelerador USB (ou ambos) e executa apenas o caminho de instalação que se aplica – módulos de kernel de junta/apex via DKMS para PCIe, libedgetpu1-std para USB."
+  },
+  "header": {
+    "title": "Instale Coral TPU no Host",
+    "description": "Prepare o hospedeiro Proxmox para um Coral TPU pode mais tarde ser passado para um LXC recipiente. ProxMenux auto- detecta se você tem um M.2 / Cartão Mini-PCIe, um Acelerador USB, ou ambos, e executa apenas o caminho de instalação que se aplica — kernel-module build via DKMS para PCIe, Google's Edge TPU tempo de execução para USB.",
+    "section": "Hardware: GPUs e Coral-TPU"
+  },
+  "intro": {
+    "title": "O que isto faz",
+    "body": "O instalador Coral é <strong>unified e hardware-aware</strong>: você executa uma opção de menu e ele descobre o que você realmente tem. As placas M.2 / Mini-PCIe precisam de módulos de kernel (<code>gasket</code> + <code>apex</code>) construídos com DKMS para sobreviverem às atualizações do kernel. Aceleradores USB só precisam do tempo de execução do Google Edge TPU (<code>libedgetpu1-std</code>) do próprio repositório APT do Google. Ambos os tipos ligados? Ambos os caminhos correm em sequência."
+  },
+  "which": {
+    "heading": "Qual Coral eu tenho?",
+    "body": "Os dois tipos de dispositivos Coral que você pode conectar em um host Proxmox parecem muito diferentes e a instalação lado host é muito diferente também. O script lida com ambos, mas é bom saber o que você tem antes de executar qualquer coisa:",
+    "headerForm": "Factor de forma",
+    "headerDetect": "Detecção",
+    "headerInstall": "Tipo de instalação",
+    "headerReboot": "Reiniciar?",
+    "pcieForm": "M.2 / Mini-PCIe",
+    "pcieFormSub": "(dual-edge TPU num cartão M.2)",
+    "pcieDetect": "Fornecedor PCI <code>1ac1</code>",
+    "pcieInstall": "Módulo Kernel (gaxe + ápice) via DKMS",
+    "pcieReboot": "Sim",
+    "usbForm": "Acelerador USB",
+    "usbFormSub": "(dongle de plástico pequeno)",
+    "usbDetect": "<code>1a6e:089a</code> USB (não programado) / <code>18d1:9302</code> (programado)",
+    "usbInstall": "Tempo de execução do espaço do usuário (<code>libedgetpu1-std</code>) do Google APT repo",
+    "usbReboot": "Não"
+  },
+  "prereqs": {
+    "title": "Antes de começar",
+    "coral": "<strong>A Coral TPU ligado ao host</strong> (M.2, Mini-PCIe ou USB). Não Coral significa não instalar — o script apenas diz que nada foi detectado e sai.",
+    "coralCheck": "lspci -d 1ac1: ; lsusb | grep -E '1a6e:089a|18d1:9302'",
+    "internet": "<strong>Acesso à Internet</strong> no host — para PCIe o caminho DKMS clona um repo GitHub, para USB adiciona um repo do Google APT e baixa o pacote <code>libedgetpu1-std</code>.",
+    "headers": "Cabeçalhos <strong>Kernel disponíveis via APT</strong>. No Proxmox isso significa que o <code>proxmox-headers-$(uname -r)</code> deve ser instalável — necessário apenas para o caminho PCIe/M.2, mas o script o busca automaticamente para que você não precise.",
+    "reboot": "<strong>Esteja bem com uma reinicialização</strong> se você tiver hardware PCIe. O módulo do kernel é construído e carregado no final, mas uma inicialização nova é a maneira limpa de confirmar que ele aparece por conta própria."
+  },
+  "hostPrepTip": {
+    "title": "Isto só prepara a máquina",
+    "body": "Instalar o Coral aqui faz com que a máquina <em>pronto</em> — o TPU é visível para o kernel da máquina e pode ser entregue a uma LXC. Para realmente <em>Utilização</em> a partir de um recipiente (Frigate, DeepStack, etc.), o próximo passo é <lxcLink>Adicionar Coral TPU a uma LXC</lxcLink>."
+  },
+  "running": {
+    "heading": "Executar o instalador",
+    "body": "Abra o ProxMenux no host, vá para <strong>Hardware: GPUs e Coral-TPU → Instalar/Atualizar o Coral TPU no Host</strong>.",
+    "imageAlt": "Entrada do menu 'Instalar/Atualizar Coral TPU no Host' dentro de Hardware: GPUs e Coral-TPU"
+  },
+  "howRuns": {
+    "heading": "Como o script é executado",
+    "body": "O hardware é detectado primeiro, então o plano de instalação é moldado para sua configuração real. Nada está instalado até confirmares."
+  },
+  "walkthrough": {
+    "heading": "Caminhando pelo fluxo",
+    "detect": {
+      "title": "Detecção de hardware",
+      "body": "O script lê <code>/sys/bus/pci/devices/*/vendor</code> à procura de <code>0x1ac1</code> (Global Unichip Corp., o fornecedor de silício do Coral TPU chips) e executa <code>lsusb</code> à procura de IDs de acelerador USB. O dispositivo USB tem IDs <strong>two</strong> dependendo se seu firmware foi carregado ainda:",
+      "items": [
+        "<code>1a6e:089a</code> — Unichip Global, <em>estado não programado</em> (antes das conversas de execução do Edge TPU com ele pela primeira vez).",
+        "<code>18d1:9302</code> — Google, <em>programmed</em> state (depois de carregar firmware em tempo de execução nele)."
+      ],
+      "outro": "Se nenhum dos dois for encontrado, você obtém uma janela informativa e o script sai limpo — sem alterações parciais no host."
+    },
+    "prompt": {
+      "title": "Pré- instalação",
+      "body": "Antes de tocar em qualquer coisa, um único diálogo resume o que foi detectado e o que será instalado. Você pode cancelar aqui sem efeitos colaterais.",
+      "imageAlt": "Diálogo de pré-instalação mostrando o hardware Coral detectado (M.2/PCIe count + USB count) e a lista de passos que o instalador executará"
+    },
+    "pcie": {
+      "title": "Caminho PCIe – junta + módulos de kernel de ápice via DKMS",
+      "body": "Só é executado se o programa encontrar uma Coral PCIe / M.2. É o mais pesado dos dois caminhos porque ele está compilando um módulo do kernel para o seu kernel em execução exata.",
+      "items": [
+        "<strong>Cleanup.</strong> Se um anterior <code>gasket-dkms</code> instalar dpkg esquerdo em um estado quebrado (típico após uma atualização do kernel PVE 9 onde a autoinstalação DKMS falhou silenciosamente), force-purge-lo.",
+        "<strong>Instalar deps de construção:</strong> <code>git</code>, <code>dkms</code>, <code>build-essential</code>, <code>proxmox-headers-$(uname -r)</code>."
+      ],
+      "cloneIntro": "<strong>Clone a fonte do driver.</strong> Prefere o <feranickLink>feranick/driver-gasket</feranickLink> fork comunitário (activamente mantido, o kernel 6.12+ pronto). Regressa a <googleLink>google/gasket-driver</googleLink> se o feranick não for acessível, aplicando patches específicos do kernel:",
+      "kernelPatches": [
+        "Kernel 6.5+ : <code>no_llseek</code> removido a montante → substituição <code>noop_llseek</code>",
+        "Kernel 6.13+ : <code>MODULE_IMPORT_NS(DMA_BUF)</code> requer string literal"
+      ],
+      "afterItems": [
+        "<strong>Fontes de estádio sob <code>/usr/src/gasket-1.0/</code>,</strong> geram <code>dkms.conf</code>, cadastram-se com <code>dkms add</code>.",
+        "<strong>Build + install:</strong> <code>dkms build</code> então <code>dkms install</code>. Se algo falhar, as últimas linhas 50 de <code>make.log</code> imprimam no terminal para que você veja o erro real — sem caça em arquivos de log.",
+        "<strong>Crie o grupo <code>apex</code> + regras udev</strong> (<code>/etc/udev/rules.d/99-coral-apex.rules</code>) para que os nós <code>/dev/apex_*</code> obtenham o grupo certo na próxima inicialização.",
+        "<strong>Carregue os módulos:</strong> <code>modprobe gasket</code> + <code>modprobe apex</code>."
+      ],
+      "imageAlt": "DKMS build progress + módulo de saída de carga para os módulos de kernel de junta/apex"
+    },
+    "usb": {
+      "title": "Caminho USB — Edge TPU runtime from Google",
+      "body": "Só é executado se um Acelerador USB foi detectado. Muito mais simples:",
+      "items": [
+        "<strong>Adicionar chave GPG do Google</strong> ao <code>/etc/apt/keyrings/coral-edgetpu.gpg</code>.",
+        "<strong>Add the APT repository</strong> to <code>/etc/apt/sources.list.d/coral-edgetpu.list</code> com <code>signed-by=</code> apontando para o keyring (formato moderno e não obsoleto).",
+        "<strong>Instalar <code>libedgetpu1-std</code></strong> — o desempenho normalizado Edge TPU Hora de correr.",
+        "<strong>Recarregar udev</strong> para que as regras enviadas com o pacote se apliquem ao dispositivo USB sem ter que desconectar/replugar."
+      ],
+      "stdTitle": "Por que libedgetpu1- std e não libedgetpu1- max?",
+      "stdBody": "A variante <code>max</code> overclocks o Coral e funciona mais quente. Fine para uso no desktop com fluxo de ar; não recomendado dentro de pequenas construções NUC / Mini-PC ou hosts Proxmox refrigerados passivamente. Se você realmente quer, instale à mão depois: <code>apt install libedgetpu1-max</code>."
+    },
+    "reboot": {
+      "title": "Reiniciar o prompt (apenas se o PCIe for executado)",
+      "body": "Se o caminho PCIe for executado, o script oferece uma reinicialização. Os módulos eram <code>modprobe</code>'d já assim que, em teoria, você pode pular a reinicialização — mas uma inicialização limpa é a maneira certa de verificar que o módulo surge por conta própria e <code>/dev/apex_0</code> aparece com grupo <code>apex</code>. Para as instalações somente USB, nenhuma reinicialização é sugerida (as regras de execução e udev estão ativas imediatamente).",
+      "imageAlt": "Resumo final + prompt de reinicialização após uma instalação PCIe"
+    }
+  },
+  "legacyCleanup": {
+    "heading": "Limpar o legado gasket-dkms em máquinas USB",
+    "intro": "Se o host tem <strong>no detectado PCIe / M.2 Coral</strong> mas ainda contém uma instalação anterior <code>gasket-dkms</code>, ProxMenux identifica esse estado separadamente e oferece uma limpeza opcional. Nada é removido sem confirmação.",
+    "items": [
+      "Se estiver presente um Coral PCIe / M.2, esta limpeza nunca é oferecida; o caminho normal de reconstrução DKMS é usado.",
+      "A limpeza purga <code>gasket-dkms</code>, remove os registros e árvores de origem DKMS, e repara até o estado <code>dpkg</code> / APT.",
+      "Os pacotes de tempo de execução USB <code>libedgetpu1-std</code> e <code>libedgetpu1-max</code> são deixados intocados, então um Coral USB mantém o seu tempo de execução.",
+      "O script verifica que o pacote legado desapareceu e que o gerenciamento de pacotes é saudável antes de relatar o sucesso."
+    ],
+    "warningTitle": "Confirmar primeiro o hardware",
+    "warningBody": "Se um Coral PCIe / M.2 pode ser instalado, mas não está sendo detectado, cancele a limpeza e verifique as configurações do cartão, slot e firmware antes de continuar."
+  },
+  "reinstallUninstall": {
+    "heading": "Reinstalar ou desinstalar",
+    "intro": "Executando o instalador em um host onde Coral já está instalado (PCIe via <code>gasket-dkms</code>, USB via <code>libedgetpu1-std</code>/<code>libedgetpu1-max</code>, ou ambos) não mais cai diretamente em outra instalação fresca. Em vez disso, o ProxMenux detecta a configuração existente e mostra um menu de ação para que você possa decidir o que fazer.",
+    "imageAlt": "Menu de ação Coral com duas opções — Reinstalar / atualizar drivers Coral, ou Desinstalar drivers Coral e configuração — mostrado quando o instalador detecta uma instalação anterior Coral no host",
+    "imageCaption": "O menu de ação só aparece quando pelo menos um componente Coral já está instalado (entrada de junta DKMS, pacote <code>libedgetpu1-*</code> ou nós de dispositivo <code>/dev/apex_*</code> vivos).",
+    "reinstallHeading": "Reinstalar / atualizar",
+    "reinstallBody": "Continua com o fluxo de instalação normal — útil após uma atualização do kernel se a reconstrução do DKMS não aconteceu automaticamente, ou para elevar o tempo de execução para um <code>libedgetpu1-*</code> mais recente do Google Coral apt repo. O estado anterior de DKMS é limpo primeiro, então um pacote semi-instalado de uma tentativa anterior falhada não bloqueia a nova compilação.",
+    "uninstallHeading": "Desinstalar — o que é removido",
+    "uninstallIntro": "Confirma com um diálogo sim/não antes de fazer qualquer coisa (contêineres LXC com apex passthrough perderá o acesso ao <code>/dev/apex_*</code> após a próxima reinicialização — o aviso deixa isso claro). Em seguida, executa um rollback completo e idempotente:",
+    "uninstallItems": [
+      "Descarrega os módulos de kernel <code>apex</code> e <code>gasket</code>.",
+      "Remove a cada DKMS-registrado <code>gasket/&lt;version&gt;</code> entrada para que os módulos não voltem na próxima instalação do kernel.",
+      "Purga os pacotes <code>gasket-dkms</code>, <code>libedgetpu1-std</code> e <code>libedgetpu1-max</code> apt, em seguida, executa <code>apt-get autoremove --purge</code>.",
+      "Apaga a regra do udev <code>/etc/udev/rules.d/99-coral-apex.rules</code> ProxMenux escrita; restaura o grupo <code>60-gasket-dkms.rules</code> para o seu padrão se ainda estiver presente.",
+      "Remove o grupo de sistema <code>apex</code> <strong>somente se nenhum usuário ainda pertence a ele</strong> — se você mapeou um usuário personalizado em <code>apex</code> para uma passagem LXC, o grupo fica no lugar e um aviso imprime os membros atuais.",
+      "Limpa a entrada e o chaveiro do repositório apt Google Coral (<code>/etc/apt/sources.list.d/coral-edgetpu.list</code> + <code>coral-edgetpu-archive-keyring.gpg</code>).",
+      "Pede uma reinicialização no final do <strong> apenas se o caminho PCIe foi instalado</strong> — a maneira mais limpa de lavar os módulos do kernel. Desinstalações USB só não precisam de uma."
+    ],
+    "lxcWarnTitle": "Recipientes LXC com passagem de ápice",
+    "lxcWarnBody": "Desinstalar no host invalida o caminho do dispositivo mapeado em qualquer recipiente LXC configurado para a passagem do ápice. Planeje a operação durante uma janela de manutenção se Frigate / DeepStack / cargas de trabalho semelhantes dependem disso."
+  },
+  "updates": {
+    "heading": "Atualizar notificações",
+    "intro": "ProxMenux agora rastreia os componentes instalados da Coral em seu registro de instalações gerenciadas. Ambas as variantes são seguidas independentemente — um host com ambos os dispositivos M.2 e USB Coral recebe dois fluxos de atualização, cada um com sua própria fonte upstream:",
+    "headerVariant": "Variante",
+    "headerTracked": "Versão rastreada",
+    "headerUpstream": "Fonte a montante",
+    "pcieVariant": "PCIe / M.2",
+    "pcieTracked": "Versão Debian <code>gasket-dkms</code> (ou versão registrada pelo DKMS se o pacote foi removido por força)",
+    "pcieUpstream": "Última etiqueta de <code>feranick/gasket-driver</code> ligado GitHub (7-cache de dias, comparação de números de compilação)",
+    "usbVariant": "USB",
+    "usbTracked": "Versão apt <code>libedgetpu1-std</code> ou <code>libedgetpu1-max</code>",
+    "usbUpstream": "Candidato local ao <code>apt-cache policy</code> (Google Coral apt repo)",
+    "outro": "Quando uma versão mais recente é detectada, o Monitor dispara uma notificação <code>coral_driver_update_available</code> em cada canal habilitado (Telegram, Discord, Gotify, ntfy, e-mail, webhook). A notificação aponta para trás na mesma entrada do instalador — escolha <strong>Reinstalar / atualizar</strong> do menu de ação acima para aplicá-lo.",
+    "antiTitle": "Anti-cascada por projeto",
+    "antiBody": "Uma notificação por variante, apenas quando a versão upstream realmente muda — nunca em cada varredura 24h. Se você ignorar uma atualização, ela não vai re-pingá-lo até que um lançamento mais recente chegue.",
+    "rebootTitle": "A reinicialização só é necessária para o caminho PCIe",
+    "rebootBody": "A junta DKMS reconstrui novos módulos do kernel — que precisam de uma reinicialização para estar ativa. A atualização de tempo de execução USB é uma troca de biblioteca de espaço-usuário, não é necessário reiniciar."
+  },
+  "manual": {
+    "heading": "Equivalente manual",
+    "intro": "Se você quiser saber o que acontece sob o capô, ou refazer um passo individual à mão, os comandos brutos por caminho se parecem com isso.",
+    "pcieHeading": "PCIe / M.2 (gaxe + ápice via DKMS)",
+    "usbHeading": "USB (libedgetpu tempo de execução)"
+  },
+  "verification": {
+    "heading": "Verificação",
+    "pcieHeading": "PCIe / M.2",
+    "usbHeading": "USB"
+  },
+  "troubleshoot": {
+    "heading": "Resolução de Problemas",
+    "dkmsFailTitle": "A compilação do DKMS falhou após uma atualização do kernel",
+    "dkmsFailBody": "Causa mais comum na VPP 9: o kernel em execução bateu, mas <code>proxmox-headers-$(uname -r)</code> Ainda não está instalado para isso. Verificar com <code>dpkg -l proxmox-headers-$(uname -r)</code>. Instale os cabeçalhos em falta e execute novamente o script — ProxMenux's <code>cleanup_broken_gasket_dkms</code> O passo lida com qualquer estado de pacote semi-configurado.",
+    "apexMissTitle": "Falta o /dev/apex_0 após reiniciar",
+    "apexMissBody": "O módulo não está carregado. Tente <code>modprobe apex</code> à mão. Se esse erro, verifique <code>dmesg | grep -iE \"apex|gasket\"</code> para a falha real — os culpados comuns são o erro de versão do kernel (DKMS foi construído para um kernel diferente daquele que você inicializou) ou uma atualização de firmware que desativou o slot PCIe em que o Coral está.",
+    "lxcMissTitle": "Pode ver /dev/apex_0 mas LXC não pode",
+    "lxcMissBody": "O anfitrião está bem. O problema é a configuração de passagem — veja <lxcLink>Add Coral TPU to an LXC</lxcLink>.",
+    "usbUnreachTitle": "Acelerador USB detectado, mas Frigate / TFLite não pode alcançá-lo",
+    "usbUnreachBody": "Verifique as regras udev enviadas com <code>libedgetpu1-std</code> entrou em vigor: <code>ls -l /dev/bus/usb/*/*</code>. O dispositivo NÃO deve ser de propriedade de root:root com modo 0600 — se for, execute <code>udevadm control --reload-rules &amp;&amp; udevadm trigger</code> no host, desligue o Coral USB, espere 3 segundos e conecte-o de volta.",
+    "logTitle": "Instalar o registo",
+    "logBody": "Cada execução escreve para <code>/tmp/coral_install.log</code> no anfitrião. Se a compilação DKMS morrer, o script também adiciona as últimas linhas 50 de <code>/var/lib/dkms/gasket/1.0/build/make.log</code> a esse log — anexe-o ao pedir ajuda em GitHub."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "label": "Adicionar Coral TPU ao LXC",
+        "href": "/docs/hardware/coral-tpu-lxc",
+        "tail": " — passar o dispositivo Coral para um contentor (Frigate, CodeProject.AI...)."
+      },
+      {
+        "label": "Instalar Drivers NVIDIA (Host)",
+        "href": "/docs/hardware/nvidia-host",
+        "tail": " — a mesma ideia para as GPU NVIDIA."
+      },
+      {
+        "label": "ProxMenux Monitor — Página de hardware",
+        "href": "/docs/monitor/dashboard/hardware",
+        "tail": " — o Coral modal que sobrepõe o condutor, os módulos, os nós do dispositivo, o estado de execução e a temperatura viva, uma vez concluída a instalação do host."
+      }
+    ]
+  }
+}

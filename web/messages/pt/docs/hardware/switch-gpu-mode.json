@@ -1,0 +1,172 @@
+{
+  "meta": {
+    "title": "Mudar GPU Modo (VM ↔ LXC) | ProxMenux Documentação",
+    "description": "Mova um GPU já atribuído entre o modo VM (vfio-pci) e o modo LXC (controlador nativo) numa máquina Proxmox. O ProxMenux detecta a ligação atual, solicita políticas de conflito por carga de trabalho, lida com a limpeza de áudio órfão e reconstrui o initramfs apenas quando necessário."
+  },
+  "header": {
+    "title": "Modo de comutação GPU (VM ↔ LXC)",
+    "description": "Reatribua um GPU que já esteja em uso — desloque-o da passagem de VM para a partilha de LXC ou o contrário. ProxMenux lida com todas as alterações de ligação do lado do host (vfio.conf, lista negra do driver, módulos, initramfs) e oferece uma política limpa para cada VM ou LXC atualmente usando o GPU, para que o interruptor não deixe a configuração quebrada para trás.",
+    "section": "Hardware: GPUs e Coral-TPU"
+  },
+  "intro": {
+    "title": "O que isto faz",
+    "body": "Um GPU em um host Proxmox vive em um de dois modos: ligado a <code>vfio-pci</code> (reservado para um VM) ou ligado ao seu driver nativo <em>(i915 / amdgpu / nvidia)</em> para que o host + LXCs possa compartilhá-lo. <strong>Switch GPU Mode</strong> gira entre aqueles dois sem você ter que editar manualmente <code>vfio.conf</code>, gerenciar listas negras, ou lembrar que linhas VM / LXC apontam para o cartão. Também avisa se uma carga de trabalho ainda referencia o GPU para que você não acabe com um VM quebrado no arranque."
+  },
+  "graphics": {
+    "lxcTitle": "Pronto para contêineres LXC",
+    "lxcDesc": "Driver nativo ativo",
+    "vmTitle": "Pronto para passagem de VM",
+    "vmDesc": "Driver VFIO-PCI ativo"
+  },
+  "when": {
+    "heading": "Quando devo usar isto?",
+    "intro": "Use este script quando um GPU é <strong> já atribuído</strong> e você deseja movê-lo:",
+    "headerSituation": "Situação",
+    "headerUse": "Usar esta página?",
+    "rows": [
+      {
+        "situation": "O GPU é gratuito — nunca atribuído. Quero dá-lo a um VM.",
+        "useRich": "Não — utilizar <vmLink>Adicionar GPU a VM</vmLink>"
+      },
+      {
+        "situation": "O GPU é gratuito — nunca atribuído. Quero dá-lo a um LXC.",
+        "useRich": "Não — utilizar <lxcLink>Adicionar GPU a LXC</lxcLink>"
+      },
+      {
+        "situationRich": "GPU está em um VM via <code>vfio-pci</code>, quero usá-lo de um LXC em vez disso.",
+        "useRich": "<strong>Sim — esta página.</strong>"
+      },
+      {
+        "situation": "GPU é compartilhado com um LXC, quero dedicá-lo a um VM.",
+        "useRich": "<strong>Sim — esta página.</strong>"
+      },
+      {
+        "situation": "Só quero desamarrar completamente um GPU de tudo.",
+        "use": "Sim — escolha o alvo LXC-modo e, em seguida, desamarre manualmente."
+      }
+    ]
+  },
+  "prereqs": {
+    "title": "Antes de começar",
+    "assigned": "<strong>A GPU já atribuído</strong> — seja em um VM via VFIO ou ligado a pelo menos um LXC. Se você ainda não o designou, comece de Adicionar GPU para VM / LXC em vez disso.",
+    "iommu": "<strong>IOMMU habilitado no host</strong> — somente estritamente necessário ao alternar <em>to</em> VM, mas vale a pena ter em qualquer maneira. Se o param do kernel está faltando o script auto-adiciona <code>intel_iommu=on iommu=pt</code> ou <code>amd_iommu=on</code> à linha de comando de inicialização (via <code>proxmox-boot-tool refresh</code> em systemd-boot ou <code>update-grub</code> em GRUB) e inclui-o no prompt de reinicialização no final.",
+    "iommuCheck": "dmesg | grep -i 'IOMMU enabled' | head -1",
+    "reboot": "<strong>Estar OK com uma reinicialização.</strong> Mudar as ligações GPU no nível do kernel significa que o host regenera initramfs e você reinicia para aplicar. O script pede no final.",
+    "knowList": "<strong>Saiba quais VMs / LXCs estão usando o GPU.</strong> O script irá encontrá-los e perguntar o que fazer com cada um, mas é mais rápido se você já conhece a lista."
+  },
+  "blocklist": {
+    "title": "Nem todas as GPUs são seguras para passar para um VM",
+    "body": "Uma pequena lista de IDs GPU é recusada para o modo VM devido à instabilidade conhecida da passagem (por exemplo. Arco Intel A770 <code>8086:5a84</code> / <code>8086:5a85</code>). Se o GPU selecionado corresponder, o script explica por que e sai. Comutar o modo <em>to</em> LXC é sempre permitido."
+  },
+  "running": {
+    "heading": "A executar o programa",
+    "body": "Abra o ProxMenux no host, vá para <strong>Hardware: GPUs e Coral-TPU → Mudar o modo GPU (VM ↔ LXC)</strong>.",
+    "imageAlt": "Entrada do menu 'Switch GPU Mode (VM ↔ LXC)' dentro de Hardware: GPUs e Coral-TPU"
+  },
+  "howRuns": {
+    "heading": "Como o script é executado",
+    "body": "Duas fases como de costume: tudo é coletado e validado primeiro, nada é aplicado até que você confirme no final."
+  },
+  "walkthrough": {
+    "heading": "Caminhando pelo fluxo",
+    "detect": {
+      "title": "Detectar GPUs e sua ligação atual",
+      "body": "O script verifica cada controlador VGA / 3D / Display no host e inspeciona <code>/sys/bus/pci/devices/*/driver</code> para encontrar o driver do kernel atual. Você verá cada GPU rotulada com seu nome, slot PCI e encadernação atual do driver — assim você pode dizer de relance em que modo ele está.",
+      "imageAlt": "Lista de verificação GPU que mostra cada GPU detectado com seu driver atual (vfio-pci / nvidia / amdgpu / i915) e slot PCI"
+    },
+    "pickGpu": {
+      "title": "Escolha o( s) GPU( s) para alternar",
+      "body": "Único GPU → auto-selecionado. Várias GPUs → checklist. Você pode marcar vários, mas todos eles devem estar no modo atual <em>ame</em> – caso contrário, o script não pode escolher um modo alvo para o lote e você recebe um aviso de \"modo misto\" pedindo que você reduza a seleção.",
+      "tipTitle": "Interruptores",
+      "tipBody": "Útil quando você está reconstruindo um host: \"Todos os três NVIDIAs vão para o modo VM, então o iGPU volta para o LXC.\" Duas corridas, cada uma com alvo uniforme, muito menos atrito do que uma vez."
+    },
+    "direction": {
+      "title": "Rever a direcção proposta",
+      "intro": "Com base no modo atual, o script propõe o oposto como alvo:",
+      "items": [
+        "<strong>VM → LXC:</strong> unbind de <code>vfio-pci</code>, deixe o driver nativo (<code>nvidia</code>, <code>amdgpu</code>, <code>i915</code>) recuperar o cartão para que LXCs pode compartilhá-lo. Em NVIDIA, a entrada por BDF é removida do <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> para que o módulo nvidia recupere o GPU após reiniciar.",
+        "<strong>LXC → VM:</strong> ligar a <code>vfio-pci</code> para que o cartão é livre para VFIO passagem para um único VM. No AMD / Intel isso significa listar o driver nativo e definir <code>options vfio-pci ids=…</code>. No NVIDIA, o módulo <code>nvidia</code> é <strong>not</strong> na lista negra — em vez disso, uma regra de udev per-BDF aplica <code>driver_override=vfio-pci</code> apenas às GPUs que você seleciona, então outras GPUs NVIDIA no host mantêm seu driver <code>nvidia</code>."
+      ],
+      "outro": "Confirme a direção ou cancele."
+    },
+    "conflict": {
+      "title": "Política de conflitos por carga de trabalho afectada",
+      "body": "O script verifica cada <code>/etc/pve/lxc/*.conf</code> e <code>/etc/pve/qemu-server/*.conf</code> procurando referências ao slot PCI do GPU. Para cada carga de trabalho afetada você escolhe uma política:",
+      "headerPolicy": "Política",
+      "headerEffect": "Efeito",
+      "headerWhen": "Quando escolher",
+      "keepPolicy": "Manter a configuração, desativar o onboot",
+      "keepEffect": "<code>pct set -onboot 0</code> (ou <code>qm set</code>). As linhas GPU permanecem na configuração.",
+      "keepWhen": "Você planeja voltar para este VM/LXC uma vez que o GPU está de volta em seu modo original. Predefinição segura.",
+      "removePolicy": "Remover o GPU da configuração",
+      "removeEffect": "<code>hostpci</code> / <code>dev</code> linhas para este slot de GPU são sed'd para fora.",
+      "removeWhen": "O VM/LXC continuará rodando sem o GPU (CPU somente transcodificação, etc.). Limpar o fluxo de trabalho.",
+      "imageAlt": "Diálogo pedindo por-VM / por-LXC política de conflito ao mudar um GPU que está atualmente atribuído"
+    },
+    "audio": {
+      "title": "Limpeza de áudio órfão (apenas ao sair do modo VM)",
+      "body1": "dGPUs (NVIDIA / AMD) envia com uma função de áudio HDMI em <code>.1</code> do mesmo slot, e às vezes controladores de áudio extra são anexados ao lado do GPU. Quando o GPU sai do VM, essas linhas de áudio ficam órfãs — o VM tem entradas <code>hostpci</code> apontando para dispositivos de áudio que não estão indo com o GPU.",
+      "body2": "O script descobre-os (correspondência BDF precisa, sem substring false-positivos) e mostra uma lista de verificação para que você possa removê-los de forma limpa. Ele também limpa seu fornecedor: IDs de dispositivos de <code>/etc/modprobe.d/vfio.conf</code> — mas apenas se nenhum outro VM ainda usa esses IDs de áudio."
+    },
+    "apply": {
+      "title": "Aplicar alterações na máquina + carga de trabalho",
+      "body": "Uma vez que você confirma, o script escreve as mudanças no lado do host — <code>vfio.conf</code>, lista negra, módulos e (para NVIDIA) a regra udev per-BDF em <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> mais o estado BDF em <code>/etc/proxmenux/vfio-bind.bdfs</code>. Aplica igualmente a política de conflitos escolhida a cada VM/LXC afectado. Se a configuração do host realmente mudou, ele executa <code>update-initramfs -u -k all</code> seguido por <code>proxmox-boot-tool refresh</code>; caso contrário ambos são ignorados."
+    },
+    "reboot": {
+      "title": "Reiniciar",
+      "body": "A nova ligação GPU só produz efeitos após uma reinicialização. O script lhe pede; você pode reiniciar agora ou mais tarde, mas não inicie o VM/LXC até que o host tenha reiniciado — caso contrário o GPU ainda é mantido pelo driver anterior.",
+      "imageAlt": "Diálogo de resumo que lista o que mudou, seguido pelo prompt de reinicialização"
+    }
+  },
+  "manual": {
+    "heading": "Equivalente manual",
+    "intro": "Se você quiser entender exatamente o que o script faz (ou solucionar problemas em um dos passos à mão), estas são as operações brutas para <strong>VM → LXC</strong> em um cartão NVIDIA com fornecedor:dispositivo <code>10de:2204</code>:",
+    "lxcToVm": "E para <strong>LXC → VM</strong>:",
+    "oneVmTitle": "Apenas um VM pode usar um determinado vfio-pci GPU de cada vez",
+    "oneVmBody": "Colocar várias entradas <code>hostpci</code> com o mesmo slot PCI em duas VMs é uma configuração válida, mas apenas uma das VMs pode começar com o GPU — a segunda falha. O passo da política de conflitos ProxMenux é exatamente evitar esta armadilha."
+  },
+  "verification": {
+    "heading": "Verificação após reiniciar"
+  },
+  "troubleshoot": {
+    "heading": "Resolução de Problemas",
+    "stillVfioTitle": "GPU ainda mostra vfio- pci após a mudança para o modo LXC",
+    "stillVfioBody": "<code>update-initramfs</code> não foi executado (ou o reinício não aconteceu). Verifique <code>lsmod | grep vfio</code> — se vfio-pci for carregado, reexecute <code>update-initramfs -u -k all</code> e reinicie. Para AMD/Intel: verificar <code>vfio.conf</code> não contém mais o fornecedor do GPU: ID do dispositivo. Para NVIDIA: verificar se o BDF já não está em <code>/etc/proxmenux/vfio-bind.bdfs</code> e que o <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> não o lista.",
+    "vmFailTitle": "Um VM não começa depois de mudar um GPU para o modo LXC",
+    "vmFailBody": "O VM ainda tem entradas <code>hostpci</code> apontando para um GPU que não pode reivindicar. Execute o script novamente e escolha o <em>Remova o GPU da política config</em> ou limpe a configuração à mão:",
+    "smiFailTitle": "nvidia-smi falha com 'Driver/library version mismatch' após voltar para LXC",
+    "smiFailBody": "Os módulos NVIDIA não recarregaram de forma limpa. <code>modprobe -r nvidia</code> e <code>modprobe nvidia</code>. Se isso falhar, reinicie — uma reinicialização completa sempre limpa o estado residual da ligação vfio.",
+    "logTitle": "Instalar o registo",
+    "logBody": "Cada execução escreve para <code>/tmp/proxmenux_gpu_switch_mode.log</code> no anfitrião. Anexar ao pedir ajuda no GitHub."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "label": "Adicionar GPU ao VM (Passo)",
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "tail": " — primeira configuração do modo VM."
+      },
+      {
+        "label": "Adicionar GPU ao LXC",
+        "href": "/docs/hardware/igpu-acceleration-lxc",
+        "tail": " — primeira configuração do modo LXC."
+      },
+      {
+        "label": "Instalar Drivers NVIDIA (Host)",
+        "href": "/docs/hardware/nvidia-host",
+        "tail": " — exigido para o modo LXC em GPUs NVIDIA."
+      },
+      {
+        "label": "ProxMenux Monitor — Página de hardware",
+        "href": "/docs/monitor/dashboard/hardware",
+        "tail": " — a secção de Cartões Gráficos em que cada GPU mostra o seu modo actual e expõe o comando de comutação em linha."
+      },
+      {
+        "label": "Comandos de passagem GPU",
+        "href": "/docs/help-info/gpu-commands",
+        "tail": " — referência rápida de comando."
+      }
+    ]
+  }
+}
