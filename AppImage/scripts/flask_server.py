@@ -95,6 +95,8 @@ from flask_notification_routes import notification_bp  # noqa: E402
 from flask_oci_routes import oci_bp  # noqa: E402
 from flask_audit_routes import audit_bp  # noqa: E402
 from flask_vm_backup_routes import vm_backup_bp  # noqa: E402
+from guest_backup_archives import (BackupArchiveError, delete_guest_backups,
+                                   guest_backup_deletion_status)  # noqa: E402
 from notification_manager import notification_manager, resolve_notification_hostname  # noqa: E402
 import post_install_versions  # noqa: E402  — Sprint 12A: detect post-install function updates
 from jwt_middleware import require_auth, require_auth_or_ticket, require_admin_scope  # noqa: E402
@@ -13303,6 +13305,32 @@ def api_create_backup(vmid):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/vms/<int:vmid>/backups/delete', methods=['POST'])
+@require_admin_scope
+def api_delete_vm_backups(vmid):
+    """Delete an explicitly confirmed selection, revalidated by Proxmox."""
+    try:
+        return jsonify(delete_guest_backups(vmid, request.get_json(silent=True)))
+    except BackupArchiveError as error:
+        return jsonify({'error': str(error)}), error.code
+    finally:
+        # Native deletion may have started even if the pvesh response was lost.
+        _vm_cache_invalidate(vmid, _vm_backups_cache)
+
+
+@app.route('/api/vms/<int:vmid>/backups/delete-status', methods=['GET'])
+@require_admin_scope
+def api_vm_backup_deletion_status(vmid):
+    """Only poll deletion tasks started here for this guest."""
+    try:
+        result = guest_backup_deletion_status(vmid, request.args.get('task'))
+        if result['status'] != 'pending':
+            _vm_cache_invalidate(vmid, _vm_backups_cache)
+        return jsonify(result)
+    except BackupArchiveError as error:
+        return jsonify({'error': str(error)}), error.code
+
+
 @app.route('/api/vms/<int:vmid>/backups', methods=['GET'])
 @require_auth
 def api_vm_backups(vmid):
@@ -13383,6 +13411,7 @@ def api_vm_backups(vmid):
                             'timestamp': ctime,
                             'date': datetime.fromtimestamp(ctime).strftime('%Y-%m-%d %H:%M') if ctime else '',
                             'notes': item.get('notes', ''),
+                            'protected': item.get('protected', False) not in (False, 0, '0', '', None),
                         })
                 except Exception:
                     pass

@@ -1131,7 +1131,21 @@
       "available": "Available backups",
       "loading": "Loading backups...",
       "empty": "No backups found",
-      "emptyHint": "Create your first backup using the button above"
+      "emptyHint": "Create your first backup using the button above",
+      "refresh": "Refresh",
+      "refreshFailed": "Could not refresh backups. Refresh again to confirm their current state.",
+      "deleteSelected": "Delete selected ({count})",
+      "deletedCount": "{count} backup(s) deleted.",
+      "unconfirmedCount": "Deletion of {count} backup(s) was not confirmed. Refresh the list and check Proxmox Tasks before trying again.",
+      "deleteFailed": "Deletion could not be confirmed. Refresh the list and check Proxmox Tasks before trying again.",
+      "selectHint": "Select unprotected backups (up to 20 per batch)",
+      "selectBackup": "Select backup",
+      "protected": "Protected",
+      "confirmTitle": "Delete {count} backup(s)?",
+      "confirmDescription": "These backup archives for VM/CT {vmid} will be permanently deleted. Protected backups are excluded. This does not delete the guest.",
+      "deleting": "Waiting for Proxmox to finish deleting the selected archives…",
+      "cancel": "Cancel",
+      "confirmDelete": "Delete backups"
     },
     "updatesPanel": {
       "pendingTitle": "Pending package updates",
