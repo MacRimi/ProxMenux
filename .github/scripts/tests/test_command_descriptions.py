@@ -232,6 +232,16 @@ class CommandDescriptionsTests(unittest.TestCase):
                     for key in ("osDockerScope", "dockerImageMethod", "unverifiedTargetsHelp"):
                         messages["vmLxc"]["bulkUpdate"].setdefault(
                             key, english["vmLxc"]["bulkUpdate"][key])
+                    # Guest archive controls use English fallback until the
+                    # translation bot runs. Model only these pending additions
+                    # in the disposable steady-state catalogs, preserving all
+                    # shipped translations and the frozen command arrays.
+                    for key in ("refresh", "refreshFailed", "deleteSelected", "deletedCount",
+                                "unconfirmedCount", "deleteFailed", "selectHint", "selectBackup",
+                                "protected", "confirmTitle", "confirmDescription", "deleting",
+                                "cancel", "confirmDelete"):
+                        messages["vmLxc"]["backups"].setdefault(
+                            key, english["vmLxc"]["backups"][key])
                     messages["vmLxc"]["errors"].setdefault(
                         "controlNotConfirmed", english["vmLxc"]["errors"]["controlNotConfirmed"])
                     path.write_text(json.dumps(messages, ensure_ascii=False))
