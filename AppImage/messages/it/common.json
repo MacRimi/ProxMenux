@@ -4762,6 +4762,23 @@
       "thursday": "Giovedì",
       "tuesday": "Martedì",
       "wednesday": "Mercoledì"
+    },
+    "storageRetention": {
+      "title": "Conservazione dell'archiviazione",
+      "keepAll": "Mantieni tutti i backup",
+      "description": "Conservazione predefinita dei backup salvata in Proxmox. Le attività di backup con una politica esplicita hanno la precedenza su questo valore.",
+      "refresh": "Aggiorna",
+      "saved": "Politica di conservazione dell'archiviazione salvata. Non è stata eseguita alcuna pulizia.",
+      "choosePolicy": "Scegli Mantieni tutti oppure almeno un numero di conservazione maggiore di zero.",
+      "saveFailed": "Impossibile salvare la politica di conservazione dell'archiviazione. Aggiorna l'elenco se la configurazione è cambiata.",
+      "loadFailed": "Impossibile caricare la politica di conservazione dell'archiviazione.",
+      "empty": "Nessuno spazio di archiviazione dei backup trovato.",
+      "default": "Valore predefinito di Proxmox",
+      "edit": "Modifica",
+      "editTitle": "Conservazione per {storage}",
+      "effect": "Si applica alle future esecuzioni dei backup che ereditano questa politica di archiviazione. Il salvataggio non elimina i backup esistenti. I backup protetti rimangono protetti.",
+      "cancel": "Annulla",
+      "save": "Salva conservazione"
     }
   },
   "healthStatus": {

@@ -3947,6 +3947,24 @@
     }
   },
   "backup": {
+    "storageRetention": {
+      "useDefault": "Use the Proxmox default (no policy on this storage)",
+      "title": "Storage retention",
+      "keepAll": "Keep all backups",
+      "description": "Default backup retention stored in Proxmox. Backup jobs with an explicit policy override this default.",
+      "refresh": "Refresh",
+      "saved": "Storage retention saved. No pruning was run.",
+      "choosePolicy": "Choose Keep all or at least one positive retention count.",
+      "saveFailed": "Could not save storage retention. Refresh the list if the configuration changed.",
+      "loadFailed": "Could not load storage retention.",
+      "empty": "No backup storages found.",
+      "default": "Proxmox default",
+      "edit": "Edit",
+      "editTitle": "Retention for {storage}",
+      "effect": "Applies to future backup runs that inherit this storage policy. Saving does not delete existing backups. Protected backups remain protected.",
+      "cancel": "Cancel",
+      "save": "Save retention"
+    },
     "actions": {
       "addAnother": "Add another",
       "addPath": "Add path",

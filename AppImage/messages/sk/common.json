@@ -4761,6 +4761,23 @@
       "thursday": "štvrtok",
       "tuesday": "utorok",
       "wednesday": "streda"
+    },
+    "storageRetention": {
+      "title": "Uchovávanie záloh úložiska",
+      "keepAll": "Ponechať všetky zálohy",
+      "description": "Predvolená politika uchovávania záloh uložená v Proxmoxe. Zálohovacie úlohy s vlastnou politikou majú pred týmto predvoleným nastavením prednosť.",
+      "refresh": "Obnoviť",
+      "saved": "Politika uchovávania záloh úložiska bola uložená. Prerezávanie sa nevykonalo.",
+      "choosePolicy": "Vyberte Ponechať všetky alebo aspoň jeden počet uchovávaných záloh väčší ako nula.",
+      "saveFailed": "Nepodarilo sa uložiť politiku uchovávania záloh úložiska. Ak sa konfigurácia zmenila, obnovte zoznam.",
+      "loadFailed": "Nepodarilo sa načítať politiku uchovávania záloh úložiska.",
+      "empty": "Nenašli sa žiadne úložiská záloh.",
+      "default": "Predvolené nastavenie Proxmoxu",
+      "edit": "Upraviť",
+      "editTitle": "Uchovávanie záloh pre {storage}",
+      "effect": "Platí pre budúce zálohovania, ktoré preberajú túto politiku úložiska. Uložením sa existujúce zálohy neodstránia. Chránené zálohy zostanú chránené.",
+      "cancel": "Zrušiť",
+      "save": "Uložiť uchovávanie záloh"
     }
   },
   "healthStatus": {

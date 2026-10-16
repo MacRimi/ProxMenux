@@ -4762,6 +4762,23 @@
       "thursday": "Jeudi",
       "tuesday": "Mardi",
       "wednesday": "Mercredi"
+    },
+    "storageRetention": {
+      "title": "Rétention du stockage",
+      "keepAll": "Conserver toutes les sauvegardes",
+      "description": "Rétention par défaut des sauvegardes enregistrée dans Proxmox. Les tâches de sauvegarde avec une politique explicite remplacent cette valeur par défaut.",
+      "refresh": "Actualiser",
+      "saved": "Rétention du stockage enregistrée. Aucune purge n'a été exécutée.",
+      "choosePolicy": "Choisissez Tout conserver ou au moins un nombre de rétention supérieur à zéro.",
+      "saveFailed": "Impossible d'enregistrer la rétention du stockage. Actualisez la liste si la configuration a changé.",
+      "loadFailed": "Impossible de charger la rétention du stockage.",
+      "empty": "Aucun stockage de sauvegarde trouvé.",
+      "default": "Valeur par défaut de Proxmox",
+      "edit": "Modifier",
+      "editTitle": "Rétention de {storage}",
+      "effect": "S'applique aux futures sauvegardes qui héritent de cette politique de stockage. L'enregistrement ne supprime pas les sauvegardes existantes. Les sauvegardes protégées restent protégées.",
+      "cancel": "Annuler",
+      "save": "Enregistrer la rétention"
     }
   },
   "healthStatus": {

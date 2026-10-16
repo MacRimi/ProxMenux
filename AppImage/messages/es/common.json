@@ -4762,6 +4762,24 @@
       "thursday": "Jueves",
       "tuesday": "Martes",
       "wednesday": "Miércoles"
+    },
+    "storageRetention": {
+      "useDefault": "Usar el valor por defecto de Proxmox (sin política en este almacenamiento)",
+      "title": "Retención del almacenamiento",
+      "keepAll": "Conservar todos los backups",
+      "description": "Retención por defecto de los backups, guardada en Proxmox. Las tareas de backup con su propia política tienen prioridad sobre ella.",
+      "refresh": "Actualizar",
+      "saved": "Retención guardada. No se ha purgado ningún backup.",
+      "choosePolicy": "Elige Conservar todos o al menos un número de retención mayor que cero.",
+      "saveFailed": "No se pudo guardar la retención del almacenamiento. Actualiza la lista si ha cambiado la configuración.",
+      "loadFailed": "No se pudo cargar la retención del almacenamiento.",
+      "empty": "No hay almacenamientos de backups.",
+      "default": "Valor por defecto de Proxmox",
+      "edit": "Editar",
+      "editTitle": "Retención de {storage}",
+      "effect": "Se aplica a los próximos backups que hereden la política de este almacenamiento. Guardar no elimina los backups existentes, y los protegidos siguen protegidos.",
+      "cancel": "Cancelar",
+      "save": "Guardar retención"
     }
   },
   "healthStatus": {
