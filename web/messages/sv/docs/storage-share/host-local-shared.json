@@ -1,0 +1,103 @@
+{
+  "meta": {
+    "title": "Värd: Lägg till delad katalog på Värd | ProxMenux Dokumentation",
+    "description": "Skapa en värdkatalog redo för LXC binda fästen, med behörigheter som fungerar för privilegierade och oprivilegierade behållare samtidigt. Sticky bit + world-rwx + ACLs för standard arv.",
+    "ogTitle": "Värd: Lägg till delad katalog på Värd | ProxMenux Dokumentation",
+    "ogDescription": "Förbered en värdkatalog för LXC binda fästen med behörigheter som är kompatibla med privilegierade och oprivilegierade CT."
+  },
+  "header": {
+    "title": "Värd: Lägg till delad katalog på värd",
+    "description": "Skapa en värdkatalog utformad för att vara bindmonterad till en eller flera LXC-behållare. ProxMenux tillämpar en uppsättning behörigheter som fungerar för både privilegierade och oprivilegierade CT på en gång - ingen skiftad UID huvudvärk, inga per-container chowns - och registrerar katalogen så LXC Mount Manager kan plocka upp det senare.",
+    "section": "Storage & Share · Värd"
+  },
+  "intro": {
+    "title": "Vad detta är (och inte)",
+    "body": "Detta verktyg registrerar <strong>not</strong> något i Proxmox (ingen <code>pvesm add</code> här). Det förbereder bara en katalog på värden - <code>/mnt/shared</code>, som standard - med behörigheter att någon LXC behållare kan läsa och skriva, oavsett om CT är privilegierad eller oprivilegierad. Det vanliga nästa steget är att binda det till varje CT med <mountLink>LXC Mount Manager</mountLink>."
+  },
+  "why": {
+    "heading": "Varför ett dedikerat verktyg för detta",
+    "intro": "När du binder en värdkatalog till en LXC-behållare beror behörigheter på:",
+    "items": [
+      "Oavsett om CT är <strong>privileged</strong> (UID 0 i CT = UID 0 på värd) eller <strong>unprivileged</strong> (UID 0 i CT = UID 100000 på värd - allt skiftas med + 100000).",
+      "Ägandet av värdkatalogen (en fil som ägs av UID 1000 på värden visas som \"andra\" ur perspektivet av en oprivilegierad CT, eftersom ingen CT-användarkartor för att vara värd för UID 1000).",
+      "Oavsett om flera CT delar samma katalog (annorlunda CT kan ha olika UID-intervall)."
+    ],
+    "outro": "Det pragmatiska tricket ProxMenux använder här är att <strong>give alla access</strong> på filsystemnivå: världsrwx plus den klibbiga biten, plus ACLs så nya filer ärver samma behörigheter. Alla kartlagda UID kan läsa och skriva; ingen UID / GID-justering krävs."
+  },
+  "howRuns": {
+    "heading": "Hur manuset går",
+    "body": "Skriptet har ingen huvudmeny - det driver en enda åtgärd, <strong>Create delad katalog</strong>. Fas 1 samlar in målvägen; Fas 2 skapar katalogen och tillämpar behörigheter."
+  },
+  "bits": {
+    "heading": "Vad varje tillstånd bit gör",
+    "intro": "Numret <strong>1777</strong> är inte godtyckligt - det är samma läge Linux använder för <code>/tmp</code>. Tre egenskaper kombinerade:",
+    "headerBit": "Bit",
+    "headerEffect": "Effekt",
+    "headerWhy": "Varför det spelar roll här",
+    "rows": [
+      {
+        "bit": "1 (klibbig)",
+        "effect": "Endast filägaren kan ta bort / byta namn på en fil.",
+        "why": "Förhindrar CT-A från att ta bort filer som skapats av CT-B i samma katalog."
+      },
+      {
+        "bit": "777 (rwx-rwx-rwx)",
+        "effect": "Alla kan läsa, skriva och korsa.",
+        "why": "Oprivilegierade CT UID (100000+) visas som \"andra\" från värden, så världsrwx ger dem tillgång."
+      },
+      {
+        "bit": "ACL:er (standard)",
+        "effect": "Ärvd på varje nyskapad fil/underdir.",
+        "why": "Behörigheterna gäller för alltid - nytt innehåll håller den öppna profilen utan att köra skriptet igen."
+      }
+    ],
+    "privTitle": "Privilegierade CT ser samma sak, bara utan skiftet",
+    "privBody": "För en privilegierad CT, UID 0 i CT är UID 0 på värden, så <code>root</code> inuti CT kan läsa / skriva värdkatalogen direkt. <code>1777</code> är fortfarande bra - det betyder bara att icke-rotanvändare i CT också kan använda katalogen. Samma behörighet omfattar båda fallen."
+  },
+  "where": {
+    "heading": "Var ska man sätta den delade katalogen",
+    "intro": "Platsvalaren erbjuder fyra alternativ:",
+    "opt1Title": "1. Skapa ny mapp i /mnt",
+    "opt1Body": "Det vanliga valet. ProxMenux auto föreslår det första fria namnet (<code>shared</code>, <code>shared2</code>, <code>shared3</code>, ...). Du bekräftar eller skriver ett annat namn.",
+    "opt2Title": "2. Ange anpassad väg",
+    "opt2Body": "För kataloger utanför <code>/mnt</code>. All absolut väg fungerar (t.ex. <code>/srv/media</code>, <code>/data/family</code>). Skriptet tillämpar samma behörigheter.",
+    "opt3Title": "3. Visa befintliga mappar i /mnt",
+    "opt3Body": "Läs-bara diagnostik: listar varje katalog under <code>/mnt</code> med sina behörigheter, ägare och tillgängligt utrymme. Användbar innan du skapar en ny för att undvika namnkollisioner.",
+    "opt4Title": "4. Avbokning",
+    "opt4Body": "Utgångar utan att skapa någonting. Som att trycka på <kbd>Esc</kbd>.",
+    "tipTitle": "Var bor /mnt?",
+    "tipBody": "Som standard <code>/mnt</code> sitter på Proxmox rotfilsystem. Om du vill ha den delade katalogen på en annan disk (en dataskiva, en ZFS pool), montera den disken under <code>/mnt/&lt;name&gt;</code> först (Disk Manager eller <diskLink>Lägg till lokal disk som Proxmox lagring</diskLink>), och sedan skapa den delade katalogen som en undermapp i den - eller välj \"Enter custom path\" här och peka på den monterade disken."
+  },
+  "manual": {
+    "heading": "Manuell motsvarande",
+    "body": "Hela flödet kan återspelas för hand:"
+  },
+  "next": {
+    "heading": "Nästa steg: bind-mount i behållare",
+    "body": "Skapa katalogen förbereder den bara - ingen behållare ser den ännu. För att göra det synligt i en eller flera LXCs, använd <mountLink>LXC Mount Manager</mountLink> för att binda <code>/mnt/&lt;name&gt;</code> i CT. Eftersom behörigheterna redan är öppna, kommer Mount Manager <strong>not</strong> erbjuda att ändra dem - katalogen är redo att använda som-är."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "mkdirTitle": "\"Failed to create directory\"",
+    "mkdirBody": "Vanligtvis ett filsystemproblem: <code>/mnt</code> är på ett lättläst filsystem, banan innehåller en komponent som inte är en katalog (t.ex. du skrev <code>/etc/passwd/sub</code>), eller disken är full. Kolla med <code>df -h /mnt</code> och <code>mount | grep /mnt</code>.",
+    "writeTitle": "Container kan inte skriva trots öppna behörigheter",
+    "writeBody": "Dubbelkolla CT använder faktiskt bindfästet (<code>pct config &lt;ctid&gt; | grep ^mp</code>). Inuti CT, kör <code>touch /mnt/data/test-$(date +%s)</code> - om detta misslyckas med tillstånd nekas, kan fästet vara på ett värdfilsystem som inte hedrar ACLs (vissa äldre <code>ext3</code> eller <code>vfat</code> fästen). Flytta den delade katalogen till en ext4 / xfs / btrfs / zfs-backning.",
+    "aclTitle": "ACL kommandon tyst otillgängliga",
+    "aclBody": "På en minimal Proxmox installera <code>setfacl</code> / <code>getfacl</code> kanske inte installeras. Manuset faller tillbaka graciöst (<code>command -v setfacl</code> check) och tillämpar endast POSIX behörigheter - vilket ofta är tillräckligt, men nya filer kommer inte automatiskt att ärva den tillåtna profilen. Installera <code>acl</code> med <code>apt-get install -y acl</code> och kör om manuset på katalogen."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "Monteringshanterare för LXC",
+        "tail": " - det naturliga nästa steget: binda samman denna katalog till en eller flera behållare."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "label": "Lägg till lokal disk som Proxmox lagring",
+        "tailRich": " — Om du vill ha den delade katalogen på en dedikerad disk, förbered disken först, montera den under <code>/mnt</code>, skapa sedan den delade undermappen här."
+      }
+    ]
+  }
+}

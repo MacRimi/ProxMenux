@@ -1,0 +1,404 @@
+{
+  "meta": {
+    "title": "Multi-container applikationer | ProxMenux",
+    "description": "Hur OCI Manager Apps förvandlar en applikation med sin databas och cache i samordnade inhemska LXC: plan, privat nätverk, beroende krok, validering och transaktionsuppdateringar."
+  },
+  "header": {
+    "title": "Multi-container applikationer",
+    "description": "En applikation med sin databas, cache och andra tjänster blir flera samordnade inhemska LXCs, installerade och uppdaterade som en.",
+    "section": "Appar i OCI-hanteraren"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "En applikation för användaren, flera LXCs för Proxmox VE",
+            "body": "En multi-container definition är en post av katalogen. Installationsprogrammet skapar en infödd LXC per tjänst och håller sina beroenden explicit. Immich, Nextcloud, Paperless-ngx och Tandoor installeras på detta sätt."
+          }
+        },
+        {
+          "mermaid": {
+            "chartCode": "flowchart LR\n C[\"Docker Compose\"] --> O[\"{{plan}}\"]\n O --> A[\"{{app}}<br/>{{appNet}}\"]\n O --> D[\"{{db}}<br/>{{private}}\"]\n O --> R[\"{{cache}}<br/>{{private}}\"]\n V1[(\"config\")] --> A\n V2[(\"database\")] --> D\n V3[(\"cache\")] --> R\n D --> A\n R --> A",
+            "labels": {
+              "plan": "Stackplan",
+              "app": "Ansökan LXC",
+              "appNet": "LAN + privat",
+              "db": "PostgreSQL LXC",
+              "cache": "Valkey LXC",
+              "private": "privat privat"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "plan",
+      "title": "1. Planen, innan någon behållare finns",
+      "blocks": [
+        {
+          "p": "Inget LXC skapas medan Compose definitionen tolkas. En komplett plan kommer först, med varje medlem, bild, VMID, nätverk, väg, hemlighet, ordning och hälsokontroll. Om planen inte är konsekvent startar installationen inte."
+        },
+        {
+          "table": {
+            "headers": [
+              "Planelement",
+              "Innehåll",
+              "Kontrolleras innan du skapar något"
+            ],
+            "rows": [
+              [
+                "Medlemmar",
+                "Huvudapplikation, databas, cache, maskininlärning och andra beroenden",
+                "Unika VMID, kända roller och exakt en huvudmedlem"
+              ],
+              [
+                "Avbilder",
+                "Rullande referens, arkitektur och löst smälta av varje tjänst",
+                "Allt finns, stöd arkitekturen och passera OCI integritetskontrollen"
+              ],
+              [
+                "Nätverk",
+                "Privat bro, subnet, en fast adress per tjänst och LAN-åtkomst för huvudmedlemmen",
+                "Ingen kollision med befintliga broar eller undernät och ingen upprepad adress"
+              ],
+              [
+                "Persistens",
+                "Container diskar, värdkataloger, ägare och backup",
+                "Inga överlappande vägar, lagring tillgängliga och deklarerade behörigheter"
+              ],
+              [
+                "Hemligheter",
+                "Databaslösenord, applikationsnycklar och initiala referenser",
+                "Genereras en gång och ges endast till de medlemmar som använder dem"
+              ],
+              [
+                "Livscykel",
+                "Startorder, stopporder och hälsokontroll per medlem",
+                "Huvudapplikationen börjar sist och stoppar först"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "create",
+      "title": "2. Skapande, medlem av medlem",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Reservera varje VMID",
+                "body": "Proxmox VE-inventeringen och instansregistret kontrolleras. En befintlig CT antas inte och ett kontrakt som fortfarande tillhör en annan instans återanvänds inte."
+              },
+              {
+                "title": "Förbered varje bild",
+                "body": "Alla bilder löses, laddas ner och verifieras innan den första behållaren skapas."
+              },
+              {
+                "title": "Skapa varje rootfs",
+                "body": "Den officiella OCI-metadatan importeras och ProxMenux-instansidentiteten och medlemsrollen läggs till."
+              },
+              {
+                "title": "Privat nätverk",
+                "body": "En bro och undernät skapas och varje medlem får sin fasta adress; endast huvudmedlemmen får också LAN-gränssnittet."
+              },
+              {
+                "title": "Persistens",
+                "body": "Varje databas och konfiguration får sin egen containerdisk; endast data avsedda att delas använder värdkataloger."
+              },
+              {
+                "title": "Miljö",
+                "body": "Interna slutpunkter, delade hemligheter och servicevariabler skrivs. Ansökan når sina beroenden på deras reserverade privata adresser."
+              },
+              {
+                "title": "Rekord",
+                "body": "Varje medlem registrerar sin ursprungliga konfiguration, rootfs förändringar som uppdateringar måste reproducera och dess förhållande till stacken."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "checks",
+      "title": "3. Börja och kontrollera varje behållare",
+      "intro": "En skapad LXC betyder inte en färdig tjänst. Beroende börjar i ordning och var och en passerar en check specifik för sin tjänst.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Serviceservice",
+              "Kolla in",
+              "Vad det visar"
+            ],
+            "rows": [
+              [
+                "PostgreSQL",
+                "<code>pg_isready</code> i CT med förväntad värd, användare och databas",
+                "Servern accepterar anslutningar för den konfigurerade databasen"
+              ],
+              [
+                "Redis / Valkey",
+                "<code>redis-cli</code> eller <code>valkey-cli</code> <code>PING</code> mot sin privata adress",
+                "Mäklaren lyssnar och svarar"
+              ],
+              [
+                "Immich maskininlärning",
+                "HTTP <code>GET /ping</code>, plus en kontroll av den valda GPU runtime",
+                "Tjänsten svarar och den begärda accelerationen har inte fallit tillbaka till CPU"
+              ],
+              [
+                "Nextcloud",
+                "<code>GET /status.php</code> med <code>installed=true</code>, <code>maintenance=false</code> och <code>needsDbUpgrade=false</code>",
+                "Initialiseringen avslutades utan någon i väntan på migration"
+              ],
+              [
+                "Paperless-ngx / Tandoor",
+                "HTTP på LAN-adressen och den verkliga hamnen i tjänsten",
+                "Gränsen och dess beroenden tjänar programmet"
+              ],
+              [
+                "Huvudapplikation",
+                "Slutpunkten för dess mall, till exempel <code>/api/server/ping</code> i Immich",
+                "Hela stacken fungerar genom programmet som använder beroenden"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Att springa är inte hälsosamt",
+            "body": "Det löpande tillståndet säger bara att LXC-processen existerar. Där tjänsten erbjuder en bättre check, en exec eller HTTP check med en timeout används. Om en medlem slutar eller misslyckas med sin kontroll, deklareras inte stacken installerad."
+          }
+        }
+      ]
+    },
+    {
+      "id": "hook",
+      "title": "4. Beroende hook",
+      "blocks": [
+        {
+          "p": "Kroken är endast inställd på huvudbehållaren av en beroende stack. Proxmox VE håller manuset som en snippet och kör det som <code>hookscript</code> av den CT. Receptet är inte skrivet i manuset: det lever i ett separat privat kontrakt."
+        },
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Huvud CT konfiguration",
+                "code": "hookscript: local:snippets/proxmenux-stack-dependencies.sh"
+              },
+              {
+                "title": "Privat kontrakt (exempel)",
+                "code": "/etc/pve/priv/proxmenux-stack-VMID.json\n{\n  \"schema\": 1,\n  \"stack\": \"immich\",\n  \"dependencies\": [\n    {\"vmid\": 107, \"label\": \"PostgreSQL\", \"healthcheck\": {...}},\n    {\"vmid\": 108, \"label\": \"Valkey\", \"healthcheck\": {...}},\n    {\"vmid\": 106, \"label\": \"Machine Learning\", \"healthcheck\": {...}}\n  ]\n}"
+              }
+            ]
+          }
+        },
+        {
+          "snippet": {
+            "summary": "Fullständig källa till proxmenux-stack-dependencies.sh",
+            "pathCode": "local:snippets/proxmenux-stack-dependencies.sh",
+            "snippetCode": "stackDependencyHook"
+          }
+        },
+        {
+          "p": "Skriptet är detsamma för varje stack. VMID, namn, checktyper och timeouts kommer från det privata kontraktet <code>/etc/pve/priv/proxmenux-stack-VMID.json</code> av varje stack."
+        },
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Proxmox VE samtal förstart",
+                "body": "Innan CT startar körs kroken med sin VMID och livscykelfasen."
+              },
+              {
+                "title": "Ett lås per stack",
+                "body": "<code>flock</code> på <code>/run/lock/proxmenux-stack-VMID.lock</code> förhindrar två startsekvenser samtidigt."
+              },
+              {
+                "title": "Kontraktet läses och valideras",
+                "body": "Ett känt schema, numeriska beroenden, etiketter, en exec, http eller kör kontroll och en positiv timeout krävs."
+              },
+              {
+                "title": "Beroende i ordning",
+                "body": "Varje CT måste finnas; en stoppad startas och en som redan körs inte startas om."
+              },
+              {
+                "title": "Vänta på hälsa",
+                "body": "Kontrollen körs vartannat sekund, och CT bekräftas också vara igång."
+              },
+              {
+                "title": "Huvud CT startar",
+                "body": "När varje beroende är klar startar förstart och Proxmox VE programmet."
+              }
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Kroken stoppar inte beroenden",
+            "body": "Post-start, pre-stop och post-stop faser gör ingenting. Att stoppa huvud CT lämnar PostgreSQL, Redis, Valkey eller maskininlärning. Kroken beställer starten; den gör inte flera LXC till en process."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Typ",
+              "Exempel",
+              "Senare startar"
+            ],
+            "rows": [
+              [
+                "Beroende stack",
+                "Immich, Nextcloud, applikation med PostgreSQL",
+                "Den huvudsakliga CT startar beroenden och väntar på dem"
+              ],
+              [
+                "Applikationssvit",
+                "Arr-programsviten",
+                "Varje LXC följer sin egen <code>onboot</code>"
+              ],
+              [
+                "Enkel ansökan",
+                "Jellyfin",
+                "Proxmox VE startar att LXC direkt"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "stack-checks",
+      "title": "5. Kontroller på stacken som helhet",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Varje VMID finns, är unik och håller den förväntade instansidentiteten.",
+              "Varje kontrakt tillhör samma stack, håller sin roll och dess inspelade inhemska konfiguration.",
+              "Huvudmedlemmen är senast i <code>start_order</code> och först i <code>stop_order</code>.",
+              "Ingen medlem, volym eller rootfs anpassning saknas.",
+              "Kroken pekar på den officiella snippet, dess innehåll är oförändrat och dess kontrakt matchar stack receptet.",
+              "De observerade bilderna och smältorna matchar de förberedda OCI-arkiven.",
+              "Enheter, GPU profiler, fästen, hemligheter och slutpunkter fortfarande matcha kontrakten.",
+              "Efter varje beroende passerar, kontrollerar slutpunkten för huvudapplikationen integrationen mellan medlemmarna."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "manage",
+      "title": "Hantera en installerad stack",
+      "intro": "I <strong>Manage installerade OCI-program</strong> leder alla medlemmar till hela stacken. Menyn på en stack erbjuder <strong>Uppdatera varje behållare av programmet</strong>, <strong>Modify extra vägar och enheter</strong>, <strong>Skapa varje behållare med sin sparade konfiguration</strong> och <strong>Ta bort: ta bort programmet och dess behållare</strong>. Återskapa återuppbygger varje behållare från bilden den installerades med, genom sin sparade smälta och utan att leta efter en nyare, med samma steg som en uppdatering; den erbjuds för staplarna som kan uppdateras.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Alla medlemmar",
+                "body": "Medlemskontraktet heter huvud VMID och den fullständiga listan över medlemmar."
+              },
+              {
+                "title": "Stacken är reproducerbar",
+                "body": "Identiteter, kontrakt, krok, anpassningar och en samordnad replay för det receptet valideras."
+              },
+              {
+                "title": "Bilder först",
+                "body": "Ansökan stoppas inte förrän varje smälta har lösts, laddats ner och verifierats."
+              },
+              {
+                "title": "Stoppa och backa upp setet",
+                "body": "Verifierade infödda säkerhetskopior tas med stacken stoppas, så applikation och databaser hör till samma ögonblick."
+              },
+              {
+                "title": "Uppdatera och kontrollera varje medlem",
+                "body": "Anpassning, nätverk, fästen, hemligheter och enheter appliceras igen innan hälsokontrollen av varje medlem."
+              },
+              {
+                "title": "Publicera eller återställa allt",
+                "body": "De nya kontrakten publiceras endast när varje medlem passerar. Om man misslyckas återställs varje medlem."
+              }
+            ]
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Ändra",
+              "Vilka förändringar",
+              "Vad hålls"
+            ],
+            "rows": [
+              [
+                "Extra vägar och enheter",
+                "De läggs till eller tas bort från applikationsbehållaren, som startar om. Ingenting byggs om",
+                "Uppgifterna för programmet, dess databas och andra behållare"
+              ],
+              [
+                "Vad som driver erkännande (Immich)",
+                "Maskininlärningsbehållaren tar bilden och enheterna i CPU eller en GPU av värden. Hela programmet stoppas och uppdateras, som i en uppdatering",
+                "Modellen cache, biblioteket och databasen. Om något misslyckas, återställs tidigare behållare och tidigare val"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "En stack utan samordnad replay uppdateras inte",
+            "body": "Om beredningen av en stack inte kan reproduceras vägras uppdateringen innan stacken stoppas. Applikationen fortsätter att fungera som det är."
+          }
+        }
+      ]
+    },
+    {
+      "id": "failure",
+      "title": "6. När något misslyckas",
+      "blocks": [
+        {
+          "p": "Under en installation stannar ett fel och tar bort de ofullständiga behållarna som skapats och den privata broen om operationen skapade den. En stack publiceras inte som giltig tills hela sekvensen avslutas."
+        },
+        {
+          "p": "En uppdatering är transaktionell: alla bilder är förberedda först, sedan stacken stannar, varje medlem backas upp och backup verifieras, och först då är varje rootfs ersatt. Medlemmar startar en efter en med sin hälsokontroll; om man misslyckas återställs varje medlem från samma uppsättning säkerhetskopior, så databasen och ansökan hör aldrig till olika ögonblick."
+        },
+        {
+          "mermaid": {
+            "chartCode": "flowchart LR\n P[\"{{prepare}}\"] --> S[\"{{stop}}\"]\n S --> B[\"{{backup}}\"]\n B --> R[\"{{replace}}\"]\n R --> H{\"{{healthy}}\"}\n H -- \"{{yes}}\" --> C[\"{{commit}}\"]\n H -- \"{{no}}\" --> X[\"{{rollback}}\"]",
+            "labels": {
+              "prepare": "Förbered varje bild",
+              "stop": "Sluta, huvudmedlem först",
+              "backup": "Verifierad säkerhetskopia av varje CT",
+              "replace": "Ersätt rootfs",
+              "healthy": "All frisk?",
+              "yes": "Ja",
+              "no": "Nej",
+              "commit": "Publicera avtal",
+              "rollback": "Återställ varje medlem"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "not-assumed",
+      "title": "Vad en stack inte inkluderar",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "En svit installerad i ett flöde, till exempel Arr-sviten, är inte en beroende stack: dess behållare har ingen startordning mellan dem.",
+              "Det privata nätverket ersätter inte autentisering, TLS eller konfigurationen av varje applikation.",
+              "Säkerhetskopieringen av en LXC innehåller inte bron, kroken eller kontrakten i resten av stacken.",
+              "Prowlarr, Sonarr eller Radarr får inga indexerare, profiler eller leverantörer från ProxMenux."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Diagnostik | ProxMenux Dokumentation",
+    "description": "Tre lättlästa diagnostiska kontroller: Show Routing Table, Test Connectivity och Advanced Diagnostics. Ren inspektion - skriver aldrig till /etc/network/interfaces och kör aldrig ett modifierande kommando (ett uttryckligt, opt-in undantag för rensning av NetworkManager när det upptäcks).",
+    "ogTitle": "Diagnostik | ProxMenux Dokumentation",
+    "ogDescription": "Läs-bara nätverksdiagnostik för Proxmox-värden: routing, reachability, avancerad statistik."
+  },
+  "header": {
+    "title": "Diagnostik",
+    "description": "Tre en-shot läs-bara kontroller som inspekterar live-nätverksstatus: routingtabell, anslutningstest och avancerad statistik. Ingen av dem skriver till /etc/network/interfaces - säker att använda när som helst, inklusive över SSH. För interaktiv övervakning, se Live-övervakningsverktyg.",
+    "section": "Nätverk"
+  },
+  "intro": {
+    "title": "Vad detta gör",
+    "body": "Rapporter om routing, räckvidd och samlad statistik <strong> utan att ändra något</strong>. Använd den för att bekräfta att nätverket är hälsosamt eller identifiera dubbla IP-adresser. För kontinuerlig trafikobservation se <monitoringLink>Live-övervakningsverktyg</monitoringLink>; för visning av raw config-filen se <backupLink>Interfaces backup & restart</backupLink>."
+  },
+  "routing": {
+    "heading": "Visa rutttabell",
+    "body": "Listar varje rutt som kärnan för närvarande använder (<code>ip route show</code>) och markerar standardgatewayen. Användbart för att bekräfta att trafiken till internet lämnar genom det förväntade gränssnittet och att inga vänsterrutter tar företräde."
+  },
+  "connectivity": {
+    "heading": "Testa anslutning",
+    "intro": "Skickar två ICMP-sonder till tre mål i sekvens och rapporterar var och en. Sedan kör en <code>nslookup google.com</code> för att verifiera DNS resolution oberoende av ICMP.",
+    "headerTest": "Testa test",
+    "headerTarget": "Mål",
+    "headerConfirms": "Vad den bekräftar",
+    "rows": [
+      {
+        "test": "Google DNS",
+        "target": "8.8.8.8",
+        "confirms": "Extern tillgänglighet via välkända Anycast IP"
+      },
+      {
+        "test": "Cloudflare DNS",
+        "target": "1.1.1.1",
+        "confirms": "Oberoende andra åsikt om Google blockerar ICMP"
+      },
+      {
+        "test": "Inkörsport",
+        "target": "(standardväg)",
+        "confirms": "L2 / L3-anslutning till den lokala routern"
+      },
+      {
+        "test": "DNS-upplösning",
+        "target": "google.com",
+        "confirms": "DNS server är tillgänglig och svarar"
+      }
+    ],
+    "readingTitle": "Läsa resultatet",
+    "readingBody": "Om gateway-testet passerar men de offentliga DNS-målen misslyckas, har du lokal anslutning men inget internet - kontrollera gatewayens uppströms. Om DNS-upplösningen misslyckas, men pings till <code>8.8.8.8</code> lyckas, är problemet lösningsmedlet, inte nätverket: kontrollera <code>/etc/resolv.conf</code>."
+  },
+  "advanced": {
+    "heading": "Avancerad diagnostik",
+    "intro": "Aggregerar nätverksövergripande statistik och driver ett batteri av kontroller för allmänt bruk. Rapporter aktiva anslutningar, lyssnande portar, totala gränssnitt och flaggar två anti-mönster uttryckligen:",
+    "items": [
+      "<strong>NetworkManager kör på en Proxmox värd.</strong> NetworkManager och Proxmox <code>ifupdown</code>-konflikt - båda försöker hantera gränssnitt, vilket leder till broar som flikar eller vägrar att komma upp. Om detekteras erbjuder verktyget en interaktiv omgång för att stoppa, inaktivera och rensa det (detta är <em>only</em>-diagnostiken som kan ändra systemet, och först efter uttryckligt samtycke).",
+      "<strong>Duplicera IP-adresser på olika gränssnitt.</strong> Två gränssnitt som håller samma IPv4 orsakar intermittent anslutning som är extremt svårt att debug inifrån VM. Upptäckt via <code>ip -4 addr show | sort | uniq -d</code>."
+    ],
+    "nmTitle": "NetworkManager-prompten är den enda modifierande åtgärden här",
+    "nmBody": "Alla andra kontroller i Advanced Diagnostics är lättläst. NetworkManager borttagning gated bakom en ja / ingen dialog och kör <code>systemctl stop / disable</code> + <code>apt-get purge -y network-manager</code>. Om du nekar, förändras ingenting."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "gwTitle": "Test Connectivity rapporterar porten som misslyckad men värden har internet",
+    "gwBody": "Vissa routrar svarar inte på ICMP från sitt interna gränssnitt även när de glatt vidarebefordrar trafiken. Test med <code>traceroute 8.8.8.8</code> från en konsol: om den andra hoppet är din ISP och den offentliga DNS test passerade, är gateway bra trots den misslyckade pingen.",
+    "dupTitle": "Avancerad diagnostik håller flaggning dubblett IPs efter att jag tagit bort en",
+    "dupBody": "Kontrollen tittar på levande kärnstatus, inte konfigfilen. Kör <code>ip -4 addr show</code> för att bekräfta; om dubbletten fortfarande är närvarande håller ett gränssnitt det fortfarande. Använd <code>ip addr del &lt;IP&gt;/&lt;mask&gt; dev &lt;iface&gt;</code> för att ta bort det från levande tillståndet, redigera sedan <code>/etc/network/interfaces</code> om det också är ihållande."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "label": "Levande övervakningsverktyg",
+        "href": "/docs/network/monitoring",
+        "tail": " — interaktiva iftop / iptraf-ng / iperf3-startare."
+      },
+      {
+        "label": "Bridge analys och guidad reparation",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — När en vmbrX saknas sin fysiska hamn."
+      },
+      {
+        "label": "Config analys och guidad rengöring",
+        "href": "/docs/network/config-analysis",
+        "tail": " — När en gammal NIC fortfarande förklaras, men inte längre närvarande."
+      },
+      {
+        "label": "Interfaces backup och omstart",
+        "href": "/docs/network/backup-restore",
+        "tail": " - att snapshot konfigen innan någon förändring."
+      }
+    ]
+  }
+}

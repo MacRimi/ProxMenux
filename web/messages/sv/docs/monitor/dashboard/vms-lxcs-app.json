@@ -1,0 +1,245 @@
+{
+  "meta": {
+    "title": "LXC App flik: upptäckt, länkar och version spårning | ProxMenux",
+    "description": "Upptäck och registrera LXC-program, skapa webblänkar och eventuellt spåra installerade och tillgängliga versioner."
+  },
+  "header": {
+    "title": "LXC App-flik: upptäckt, länkar och versionsspårning",
+    "description": "Ge varje LXC-applikation en ihållande identitet, webbåtkomst och valfria versionsbevis utan att koppla registrering till uppdateringar."
+  },
+  "intro": {
+    "p1": "Fliken <strong>App</strong> som tillhör en LXC. En registrering kan endast innehålla ett namn och en webblänk, eller också inkludera en installerad version detektor och en uppströms källa.",
+    "p2": "Förfarandet som ändrar programvara konfigureras separat på <link>Updates-fliken</link>. Att spara en app kör aldrig en installatör eller uppdatering.",
+    "callout": "Registrering, versionsspårning och uppdatering är tre oberoende funktioner. Alla kan användas utan att kräva de andra två.",
+    "dashboardTitle": "Från registrering till Apps launcher",
+    "dashboard": "Varje webblänk som sparas här presenteras också som ett kort på toppnivå <appsLink>Apps-fliken</appsLink>. Denna LXC-sida är fortfarande källan till sanningen för programmets namn, logotyp, länkar och versionsspårning."
+  },
+  "overview": {
+    "heading": "Vad ett ansökningsrekord kan ge",
+    "lead": "En enda sparad rekord kan inkludera:",
+    "items": [
+      "Ett visningsnamn och en temamedveten logotyp.",
+      "En eller flera klickbara webblänkar byggda från LXC-adressen, schemat och sparad port.",
+      "En valfri detektor för den version som för närvarande är installerad i LXC.",
+      "En valfri GitHub, HTTP JSON eller Docker Hub-källa för den senaste tillgängliga versionen.",
+      "Per-application release meddelanden och inkluderingsinställningar för uppdatering-counter.",
+      "En motsvarande sektion på fliken Uppdateringar, även när versionsspårning är inaktiverad."
+    ]
+  },
+  "discovery": {
+    "heading": "Cached discovery och Hitta applikationer",
+    "lead": "Ansökningsförslag är en del av per-LXC modal cache. Start Scan förbereder dem i bakgrunden så att öppna fliken App kan visa cachade resultat omedelbart.",
+    "items": [
+      "Öppna App-fliken startar <strong>not</strong> en ny katalogskanning och frågar inte upprepade gånger LXC.",
+      "<strong>Find applikationer</strong> driver uttryckligen ett nytt upptäcktspass för den LXC. Använd den efter att ha installerat ny programvara medan ProxMenux redan körs.",
+      "Den tidigare listan är fortfarande synlig medan den explicita skanningen körs. Nya matcher läggs till när den slutar.",
+      "Om ingen ny match hittas anges resultatet bredvid åtgärderna och <strong>Register-applikationen</strong> förblir tillgänglig för manuell inresa.",
+      "Spara, ta bort eller återställa en app uppdaterar samma cache omedelbart. Starta eller återställa en LXC uppdateringar bara den gästen genom sin befintliga livscykel händelse."
+    ],
+    "callout": "Ett förslag är inte en registrering. Det förblir lätt tills <strong>Register</strong> trycks och formuläret sparas."
+  },
+  "registration": {
+    "heading": "Registrera en ansökan",
+    "lead": "Ett upptäckt förslag och en manuell rekord använder samma redaktör:",
+    "steps": [
+      "Tryck på <strong>Register</strong> på ett förslag eller <strong>Registerprogram</strong> att välja mellan katalogen eller ange ett anpassat namn.",
+      "Granska namnet och logotypen som föreslås av katalogen.",
+      "Lägg till nödvändiga webblänkar. Upptäckta lyssningsportar erbjuds som genvägar, men ingen sparas automatiskt.",
+      "Lämna <strong>Track uppströms version</strong> inaktiverad för en länk-bara rekord, eller aktivera den och granska den installerade versionen detektor och uppströms källa.",
+      "Använd <strong>Test detector</strong> när spårning är aktiverad, sedan spara rekordet.",
+      "Tryck på <strong>Done</strong> efter redigering. App- och uppdateringsflikarna återanvänder den uppdaterade cachade posten."
+    ]
+  },
+  "catalog": {
+    "heading": "Katalogstödd registrering",
+    "lead": "Katalogen levererar standarder, men den sparade posten förblir redigerbar.",
+    "items": [
+      "Sökresultat kan fylla det kanoniska namnet, logotypen och vanliga webbportar.",
+      "Kända versionsdetektorer är baserade på riktiga paketnamn, binärer, filer, Python-distributioner, OCI-etiketter eller kommandon snarare än ett universellt <code>/root/.app</code>-antagande.",
+      "Verifierade runtime overrides tar företräde när en installation använder en väg som skiljer sig från dess installationsmetadata.",
+      "Proxmox VE Helper-Scripts markörer som <code>/root/.slug</code> förblir en kompatibilitetssignal för nyare hjälparinstallationer, inte den enda detektorn.",
+      "Varje föreslaget värde kan redigeras innan du sparar för att täcka officiella installatörer och manuella installationer."
+    ]
+  },
+  "docker": {
+    "heading": "Hur Docker LXC representeras",
+    "lead": "För en LXC vars primära plattform är Docker, är <strong>Docker</strong> programmet registrerat på LXC nivå.",
+    "items": [
+      "En containeriserad arbetsbelastning som Portainer, Frigate eller Vaultwarden föreslås inte som en oberoende LXC-applikation.",
+      "Kör Docker-tjänster med publicerade TCP-portar erbjuds i Docker-redigeraren som valfria webblänkar.",
+      "Varje föreslagen länk visar tjänsten, värdporten och containerporten. Endast länkar som tillhandahåller ett webbgränssnitt bör sparas.",
+      "Den globala Docker-logotypen används när en länk saknar specifik logotyp. En per länk logotyp åsidosätter den när man är konfigurerad.",
+      "Efter att Docker är registrerad visas Docker Engine och bilduppdateringar tillsammans i avsnittet på fliken Uppdateringar."
+    ],
+    "callout": "Denna struktur förhindrar en Docker arbetsbelastning från att se ut som programvara installerad direkt i LXC samtidigt bevara snabba länkar till dess gränssnitt."
+  },
+  "webLinks": {
+    "heading": "Webblänkar och logos",
+    "lead": "Webblänkar fungerar med eller utan versionsspårning.",
+    "items": [
+      "Varje länk lagrar ett system, port, valfri beskrivning och valfri logotyp URL.",
+      "Den visade webbadressen använder den aktuella adressen som redan upptäckts för LXC; adressen är inte duplicerad i varje apppost.",
+      "En länk utan sin egen logotyp faller tillbaka till app-nivå logotypen.",
+      "Flera länkar kan representera ett admingränssnitt, API, sekundär UI eller annan slutpunkt i samma app.",
+      "En sparad länk-bara app visas också på uppdateringar, där en anpassad uppdaterare kan konfigureras senare."
+    ]
+  },
+  "tracking": {
+    "heading": "Valfri version spårning",
+    "lead": "Spårning kombinerar en installerad-version detektor med en valfri uppströmskälla. De två sidorna kontrolleras oberoende.",
+    "colMethod": "Installerad versionsmetod",
+    "colUse": "Använda",
+    "detectorRows": [
+      {
+        "method": "dpkg / apk",
+        "use": "Läser den installerade paketversionen från Debian, Ubuntu eller Alpine paketmetadata."
+      },
+      {
+        "method": "binary",
+        "use": "Kör en absolut binär väg eller ett kommandonamn med versionsargument."
+      },
+      {
+        "method": "file + regex",
+        "use": "Läser en riktig fil och extraherar versionen med en fångstgrupp."
+      },
+      {
+        "method": "docker label / docker exec",
+        "use": "Läser en OCI-versionsetikett eller kör ett versionskommando i en Docker-container."
+      },
+      {
+        "method": "python distribution",
+        "use": "Använder importlib.metadata via den valda Python-tolken."
+      },
+      {
+        "method": "command",
+        "use": "Kör en avancerad argv-stil kommando utan ett skal och extraherar versionen från dess utgång."
+      },
+      {
+        "method": "manual",
+        "use": "Lagrar en version som anges manuellt; den måste ändras efter uppgradering av appen."
+      },
+      {
+        "method": "OCI image",
+        "use": "För behållare installerade av OCI Manager Apps. Läser applikations- och bildversionerna från installationsposten och jämför den installerade smältningen med den som registret publicerar; den behöver ingen konfiguration."
+      }
+    ],
+    "sourcesHeading": "Tillgängliga källor",
+    "sources": [
+      "<strong>GitHub repository</strong>: senaste utgåvan eller taggen från en offentlig <code>owner/name</code> repository.",
+      "<strong>HTTP JSON</strong>: en offentlig slutpunkt plus en prickad väg som <code>data.version</code> eller <code>releases[0].tag_name</code>.",
+      "<strong>Docker Hub</strong>: versionerade taggar filtrerade av ett vanligt uttryck. En live förhandsvisning visar riktiga matchande taggar innan rekordet sparas.",
+      "Flytta taggar som <code>latest</code>, <code>stable</code> eller <code>lts</code> innehåller inte en version. Spåra dessa bilder genom att smälta från Docker bilduppdateringar istället."
+    ],
+    "regexHeading": "Skriva fånga uttryck",
+    "regexLead": "En detektor regelbundet uttryck måste returnera versionen i sin <strong>första inspelningsgruppen</strong>.",
+    "regexRules": [
+      "Matcha texten som avges av den valda binära, fil, kommando eller tag källa; gissa inte en generisk väg.",
+      "Undvik bokstavliga prickar som <code>\\.</code> så att de inte kan matcha godtyckliga karaktärer.",
+      "Tillåt en ledande <code>v</code> endast när källan kan inkludera den.",
+      "Inkludera suffix som prerelease eller distro revideringar endast när de är meningsfulla för jämförelsen.",
+      "Använd <strong>Test detector</strong> innan du sparar och verifierar att den visade installerade versionen matchar LXC."
+    ],
+    "regexExampleLead": "Vanlig semantisk-version fånga:",
+    "regexExample": "v?(\\d+\\.\\d+\\.\\d+)",
+    "regexCallout": "En framgångsrik regex match är inte ett bevis på att detektorvägen är korrekt. Vägen eller paketet måste också finnas i den verkliga installationen som registreras."
+  },
+  "updater": {
+    "heading": "Version spårning och uppdatering är oberoende",
+    "lead": "Den är <link>Uppdaterar fliken</link> Skapar en app-sektion så snart som alla programposter sparas.",
+    "items": [
+      "En länk-bara rekord visar att versionsspårning inte är konfigurerad, men kan fortfarande få ett anpassat uppdateringskommando.",
+      "En app med spårning men utan en körbar metod visar ett neutralt meddelande som ber om ett anpassat kommando.",
+      "En app med en verifierad Proxmox VE Helper-Scripts wrapper kan använda den integrerade uppdateringen även när registreringen började från en webblänk.",
+      "Lägga till eller redigera en uppdaterare ändrar inte detektorn eller uppströmskällan lagrad på fliken App."
+    ]
+  },
+  "states": {
+    "heading": "Version säger på App-kortet",
+    "colState": "Staten",
+    "colDisplay": "Visning",
+    "colMeaning": "Betydelse",
+    "rows": [
+      {
+        "state": "Uppdatering tillgänglig",
+        "display": "Tillgänglig version i lila med en uppåtpil ikon",
+        "meaning": "De installerade och uppströms versionerna skiljer sig."
+      },
+      {
+        "state": "Nuvarande",
+        "display": "Installerade och senaste versioner utan lila varning",
+        "meaning": "Den sista kontrollen hittade ingen nyare uppströms version."
+      },
+      {
+        "state": "Tracking i väntan",
+        "display": "Kontrollera eller vänta stat",
+        "meaning": "Skivan är konfigurerad men har inte slutfört båda kontrollerna ännu."
+      },
+      {
+        "state": "Spåra funktionshindrade",
+        "display": "Webblänkar endast; inget versionsjämförelseblock",
+        "meaning": "Rekordet är fortfarande giltigt och kan fortfarande ha en uppdaterare."
+      },
+      {
+        "state": "Kolla fel",
+        "display": "Amber förklaring inuti kortet",
+        "meaning": "Det tidigare sparade tillståndet är fortfarande synligt medan detektorn eller uppströms fel rapporteras."
+      }
+    ]
+  },
+  "management": {
+    "heading": "Hantera sparade och föreslagna appar",
+    "lead": "Åtgärderna längst ner på fliken har olika roller:",
+    "items": [
+      "<strong>Find applikationer</strong> uppdaterar upptäckten endast för denna LXC.",
+      "<strong>Registrera en annan applikation</strong> öppnar katalogen och manuell redaktör utan att rescanning LXC.",
+      "<strong>Edit</strong> avslöjar per kort Ta bort, Kontrollera, meddela och redigera fält åtgärder.",
+      "<strong>Gömd</strong> tar bort ett oönskat förslag. Dolda upptäckter kan återställas från registreringswebbläsaren.",
+      "<strong>Kolla in</strong> uppdaterar den valda sparade appens versionsbevis; den söker inte efter nya appar."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Vanliga situationer",
+    "colProblem": "Situation",
+    "colResolution": "Beslut",
+    "rows": [
+      {
+        "problem": "Programvara installerades efter ProxMenux startade",
+        "resolution": "Tryck Hitta applikationer. De explicita skanningsuppdateringarna cachade förslag för den LXC."
+      },
+      {
+        "problem": "Ingen ansökan upptäcktes",
+        "resolution": "Registrera det manuellt. Ett namn och en webblänk räcker; spårning kan läggas till senare."
+      },
+      {
+        "problem": "Den föreslagna detektorn returnerar fel version",
+        "resolution": "Öppna redigeringsfält, välj det verkliga paketet, binär eller filvägen och testa detektorn innan du sparar."
+      },
+      {
+        "problem": "En Docker arbetsbelastning erbjuds inte som en LXC app",
+        "resolution": "Registrera Docker och lägg till arbetsbelastningens publicerade gränssnitt som en Docker webblänk. Bilduppdateringar finns kvar i avsnittet Docker."
+      },
+      {
+        "problem": "En sparad app har ingen uppdateringsknapp",
+        "resolution": "Öppna fliken Uppdateringar och konfigurera dess uppdateringsmetod. Enbart versionsspårning definierar inte hur en uppdatering installeras."
+      }
+    ]
+  },
+  "figures": {
+    "catalog": {
+      "alt": "Ansökan registreringskatalog med sökresultat, logotyper, hamnar och detektorfält",
+      "caption": "Katalogmetadata accelererar registrering medan varje föreslaget värde förblir redigerbart."
+    },
+    "webLinks": {
+      "alt": "Saved LXC-applikationskort som innehåller en klickbar webblänk",
+      "caption": "En länk-bara rekord är giltig: versionsspårning kan vara inaktiverad och en uppdaterare kan läggas till oberoende."
+    },
+    "tracking": {
+      "alt": "Valfri installerad-version detektor och uppströms källfält",
+      "caption": "Installerad versionsdetektering och uppströmskällan är konfigurerade och testade separat."
+    },
+    "card": {
+      "alt": "Sparat applikationskort med installerade och tillgängliga versioner plus en webblänk",
+      "caption": "Kortet kombinerar identitet, versionsbevis och webbåtkomst utan att köra uppdateringsåtgärder från den här fliken."
+    }
+  }
+}

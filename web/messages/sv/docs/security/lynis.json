@@ -1,0 +1,170 @@
+{
+  "meta": {
+    "title": "Lynis | ProxMenux Dokumentation",
+    "description": "Installera Lynis från den officiella CISOfy GitHub repository (alltid senaste), kör en systemrevision med härdning poäng 0-100, uppdatering via git pull. Endast genom design – ändrar aldrig systemet.",
+    "ogTitle": "Lynis | ProxMenux Dokumentation",
+    "ogDescription": "Installera och kör Lynis säkerhetsrevisor på Proxmox VE. Uppströms GitHub installera, revision, uppdatering."
+  },
+  "header": {
+    "title": "Lynis",
+    "description": "Kloner den senaste Lynis från den officiella CISOfy GitHub repository, avslöjar det som /usr/local/bin/lynis och erbjuder run-audit / uppdatering / ominstallera / avinstallera åtgärder från menyn. Läs-bara revisor genom design - ändrar aldrig systemet, bara rapporter.",
+    "section": "Säkerhet"
+  },
+  "intro": {
+    "title": "Vad detta gör",
+    "body": "Installerar Lynis (öppen säkerhetsrevisor av CISOfy) från uppströms GitHub till <code>/opt/lynis</code> och skapar en wrapper på <code>/usr/local/bin/lynis</code> så det är i din <code>PATH</code>. Detekterar en befintlig installation på lanseringen och visar en meny (audit / update / reinstall / remove) istället."
+  },
+  "manageMenu": {
+    "heading": "Hantera meny (efter installation)",
+    "intro": "När Lynis är installerad, öppnar varje efterföljande fakturering hanteringsmenyn istället för att köra om installationsprogrammet. Härifrån startar du en revision, uppdatering via git pull, ominstallera eller avinstallera:",
+    "imageAlt": "Lynis management meny med revision, uppdatering, ominstallera och ta bort alternativ"
+  },
+  "whyUpstream": {
+    "heading": "Varför uppströms GitHub, inte apt",
+    "intro": "Debian fartyg Lynis genom apt, men paketet släpar vanligtvis flera stora versioner bakom uppströms. Nyare kontroller, fixar för nya attackvektorer och raffinerade rekommendationer landar bara i GitHub repo. Lynis själv är ett självinnehållet skalskript - ingen sammanställning, inga beroenden bortom <code>git</code> för installationen - så kloning repo är den kanoniska installationsmetod som rekommenderas av CISOfy själva.",
+    "headerSource": "Källa",
+    "headerPath": "Install path",
+    "headerUpdate": "Uppdateringsmetod",
+    "headerFresh": "Version friskhet",
+    "rows": [
+      {
+        "sourceRich": "<strong>ProxMenux (detta manus) </strong>",
+        "path": "/opt/lynis/",
+        "update": "git pull (in-menu)",
+        "fresh": "Senaste upstream"
+      },
+      {
+        "sourceRich": "<strong>Debian apt</strong>",
+        "path": "/usr/bin/lynis",
+        "update": "apt upgrade",
+        "fresh": "Ofta månader / år bakom"
+      }
+    ]
+  },
+  "install": {
+    "heading": "Hur installationen fungerar",
+    "node1Label": "github.com/CISOfy/lynis",
+    "node1Detail": "git clone\n(install git first if missing)",
+    "node2Label": "/opt/lynis/",
+    "node2Detail": "Fullständig repo\ninklusive ./lynis script",
+    "node3Label": "/usr/local/bin/lynis",
+    "node3Detail": "Wrapper:\ncd /opt/lynis & & ./lynis $@",
+    "outro": "Wrapper är obligatorisk - Lynis insisterar på att köras från sin egen katalog eftersom det laddar relativa vägar för plugins och profildata. Wrapper döljer den detaljen så <code>lynis audit system</code> fungerar bara från var som helst."
+  },
+  "detection": {
+    "heading": "Detektering vägar",
+    "intro": "Innan du visar menyn kontrollerar manuset tre platser för att avgöra om Lynis redan är närvarande:",
+    "items": [
+      "<code>/usr/local/bin/lynis</code> Wrapper installerad av ProxMenux",
+      "<code>/opt/lynis/lynis</code> - direkt väg (om wrapperen togs bort)",
+      "<code>/usr/bin/lynis</code> apt-installerad version, om användaren installerade den på det sättet tidigare"
+    ],
+    "outro": "Om någon av dessa finns öppnar menyn hanteras. Skriptet <strong>does not</strong> avinstallerar en apt-installerad Lynis - bara den som den hanterar sig själv (<code>/opt/lynis</code> + wrapper)."
+  },
+  "audit": {
+    "heading": "Kör en revision",
+    "intro": "Från hanteringsmenyn väljer du <strong>Run säkerhetsgranskning nu</strong>. Detta motsvarar exekvering:",
+    "code": "lynis audit system --no-colors",
+    "outro": "Revisionen tar 30 sekunder till några minuter beroende på värdstorlek. Utgångsströmmar direkt till terminalen - det finns ingen spinnare. Lynis trycker sektioner för varje kontrollkategori, markerar varje test som <ok> [OK]</ok>, <warn> [VARNING] </warn> eller <sugg> [SUGESTION]</sugg>. Sammanfattningen i slutet har rubriknummer:",
+    "summary": "================================================================================\n\nLynis säkerhetsskanning detaljer:\n\nHardening index: 76 [###################]\nTester utförda: 247\nPlugins: 0\n\nKomponenter:\nBrandvägg [V]\nMalware scanner [X]\n\nLynis moduler:\nÖverensstämmelsestatus [?]\nSäkerhetsrevision [V]\nVulnerability scan [V]\n\n================================================================================"
+  },
+  "report": {
+    "heading": "Läsa rapporten",
+    "intro": "De två viktiga avsnitten är <strong>Warnings</strong> (saker du bör fixa snart) och <strong>Suggestions</strong> (rekommendationer för att förbättra härdning). Varje objekt bär ett kontroll-ID som <code>SSH-7408</code> - användbart när du söker Lynis-dokumenten för motiveringen och fixen.",
+    "headerMarker": "Markör",
+    "headerMeaning": "Betydelse",
+    "headerAction": "Handling",
+    "rows": [
+      {
+        "markerRich": "<strong>OK</strong>",
+        "meaning": "Test passerade",
+        "action": "Ingenting"
+      },
+      {
+        "markerRich": "<strong>WARNING</strong>",
+        "meaning": "Verklig fråga, fix rekommenderad",
+        "action": "Läs kontrollbeskrivningen, planera en fix"
+      },
+      {
+        "markerRich": "<strong>SUGGESTION</strong>",
+        "meaning": "Hardening förbättring tillgänglig",
+        "action": "Ansök om det passar din hotmodell"
+      }
+    ],
+    "outro": "Fullständig rapport och maskinläsbara data skrivs till <code>/var/log/lynis.log</code> och <code>/var/log/lynis-report.dat</code> av Lynis själv."
+  },
+  "pairFail2ban": {
+    "title": "Par med Fail2Ban",
+    "body": "SSH-7408 (MaxAuthTries) är en av de vanligaste varningarna. Installera <link>Fail2Ban</link> från ProxMenux rensar det automatiskt eftersom installationsprogrammet sätter <code>MaxAuthTries=3</code> som en del av dess SSH härdning steg. Kör Lynis igen efteråt för att bekräfta varningen är borta."
+  },
+  "update": {
+    "heading": "Uppdatering Lynis",
+    "body": "Från hanteringsmenyn kör <strong>Update Lynis till senaste version</strong> <code>git pull --quiet</code> inuti <code>/opt/lynis</code>. Om katalogen finns men inte är en Git checkout (t.ex. någon kopierade filerna manuellt), skriptet faller tillbaka till en fullständig ominstallation."
+  },
+  "reinstall": {
+    "heading": "Reinstall / Avinstallera",
+    "headerAction": "Handling",
+    "headerWhat": "Vad det gör",
+    "rows": [
+      {
+        "actionRich": "<strong>Installera om</strong>",
+        "whatRich": "Ta bort <code>/opt/lynis</code>, re-clones från GitHub, återskapar wrapper. Använd detta om den lokala kassan är skadad."
+      },
+      {
+        "actionRich": "<strong>Ta bort</strong>",
+        "whatRich": "Ta bort <code>/opt/lynis</code> och <code>/usr/local/bin/lynis</code>. Loggar på <code>/var/log/lynis*</code> hålls (de är revisionshistorik). En apt-installerad Lynis på <code>/usr/bin/lynis</code> lämnas orörd."
+      }
+    ]
+  },
+  "cli": {
+    "heading": "Användbara CLI-alternativ",
+    "intro": "När du är installerad kan Lynis åberopas direkt från ett skal med extra alternativ som inte exponeras av menyn:",
+    "code": "lynis show version            # version + build date\nlynis show commands           # list every available command\nlynis show details TEST-ID    # explain a specific control\nlynis audit system --quick    # skip slow tests (e.g. malware scan)\nlynis audit system --pentest  # treat host as untrusted (more aggressive)\nlynis update info             # check if a newer Lynis is available\n\n# Filter the report log for just the warnings\ngrep \"Warning\" /var/log/lynis.log\n\n# Same, for suggestions only\ngrep \"Suggestion\" /var/log/lynis.log"
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "cloneTitle": "git clone fails during install",
+    "cloneBody": "Värden behöver nätverksåtkomst och DNS för att nå <code>github.com</code>. Från en konsol: <code>curl -sI https://github.com</code> och <code>git ls-remote https://github.com/CISOfy/lynis.git</code> kommer att avslöja det faktiska felet (DNS, TLS, proxy, repo URL). Om en proxy krävs, sätt <code>https_proxy</code> i miljön innan du kör menyn.",
+    "notFoundTitle": "lynis: kommandot som inte hittats efter installation",
+    "notFoundIntro": "Wrapper på <code>/usr/local/bin/lynis</code> skapades eller togs bort. Snabbaste fix: ominstallera från menyn. Manuell fix:",
+    "notFoundCode": "cat > /usr/local/bin/lynis <<'EOF'\n#!/bin/bash\ncd /opt/lynis && ./lynis \"$@\"\nEOF\nchmod +x /usr/local/bin/lynis",
+    "sshTitle": "Revisionsutskrifter \"Varning: Test SSH-7408 - MaxAuthTries inkorrekt\"",
+    "sshIntro": "SSH daemon tillåter för många auth försök per anslutning. Antingen installera <link>Fail2Ban</link> från ProxMenux (som sätter <code>MaxAuthTries=3</code> automatiskt) eller redigera <code>/etc/ssh/sshd_config</code> för hand:",
+    "sshCode": "sed -i 's/^#?MaxAuthTries.*/MaxAuthTries 3/' /etc/ssh/sshd_config\nsystemctl reload sshd",
+    "scoreTitle": "Score gick ner efter en Proxmox uppgradering",
+    "scoreBody": "Kör <code>lynis update info</code> först - en Lynis-uppdatering kan ha lagt till nya kontroller som flaggar befintlig konfig. Uppdatera Lynis från menyn, re-audit och adressera de nya resultaten."
+  },
+  "files": {
+    "heading": "Filer skrivna",
+    "code": "/opt/lynis/                   # full Lynis git checkout\n/usr/local/bin/lynis          # wrapper script (cd + exec)\n/var/log/lynis.log            # human-readable audit log (Lynis itself)\n/var/log/lynis-report.dat     # machine-readable report (Lynis itself)"
+  },
+  "sample": {
+    "heading": "Provrapport",
+    "intro": "ProxMenux Monitor paket varje Lynis går in i en multi-sida PDF tillgänglig från <link>Security tab</link> i instrumentbrädan. Den första sidan är den verkställande sammanfattningen - härdning poäng, system info, säkerhetsställning översikt. Därefter listar sidor varje varning med förklaring och varje förslag som rangordnas av påverkan, plus det paket som används under revisionen.",
+    "imageAlt": "Första sidan av Lynis Security Audit Report PDF - verkställande sammanfattning med Hardening Index 71/100, systeminformationsblock och säkerhetsställningsöversikt med brandvägg, malware scanner och installerade paket räknas",
+    "captionPrefix": "Första sidan i en provrapport. Full PDF (full PDF)",
+    "captionLink": "Provprov",
+    "captionSuffix": ") fortsätter med detaljerade varningar, förslag och den installerade förpackningslistan.",
+    "cli": "På CLI-sidan är samma data i <code>/var/log/lynis-report.dat</code> (maskinläsbar plattfil) och <code>/var/log/lynis.log</code> (den mänskliga läsbara körloggen). PDF genereras på begäran av ProxMenux Monitor - kör <code>lynis</code> från kommandoraden producerar inte en."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/monitor/dashboard/security",
+        "label": "ProxMenux Monitor → Säkerhetsflik",
+        "tail": " - köra revisionen, bläddra i historiska rapporter och ladda ner PDF direkt från instrumentbrädan."
+      },
+      {
+        "href": "/docs/security/fail2ban",
+        "label": "Fail2Ban",
+        "tailRich": " - implementerar SSH brute-force skydd som Lynis rekommenderar."
+      },
+      {
+        "href": "/docs/security",
+        "label": "Säkerhetsöversikt",
+        "tail": " - tillbaka till avsnittsöversikten."
+      }
+    ]
+  }
+}

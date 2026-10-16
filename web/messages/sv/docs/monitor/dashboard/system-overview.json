@@ -1,0 +1,177 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Dashboard: Systemöversikt flik | ProxMenux Dokumentation",
+    "description": "Standardlandningsfliken för ProxMenux Monitor: fyra metriska kort (CPU, Memory, Active VMs & LXCs, Temperature) med levande uppdateringar och glittrande, historiska mätvärden diagram och kondenserad lagring och nätverkspaneler med klick-genom till sina dedikerade flikar."
+  },
+  "header": {
+    "title": "Dashboard: Systemöversikt flik",
+    "description": "Den första fliken instrumentbrädan öppnas på. Fyra levande metriska kort över toppen, det historiska metriska diagrammet i mitten och kondenserad lagring / nätverkspaneler längst ner - alla härrör från samma API som driver dedikerade flikarna.",
+    "section": "ProxMenux Monitor Dashboard"
+  },
+  "readOnly": {
+    "title": "En lätt snapshot",
+    "body": "Ingenting på denna flik är en kontrollyta - varje panel är informativ. Åtgärder lever i de dedikerade flikar som de länkar till: borra in Lagring för att hantera diskar, till VMs & LXCs för att starta / stoppa gästerna, i fliken Säkerhet för att konfigurera auth och så vidare."
+  },
+  "captureAlt": "Systemöversiktsfliken - fyra metriska kort (CPU, Memory, Active VMs, Temperatur), nodmetridiagram och lagring / Network sammanfattningskort",
+  "captureCaption": "fliken Systemöversikt - vad instrumentpanelen öppnar på. De fyra korten är live, diagrammet nedan är historiskt, och de två korten längst ner sammanfattar lagring och nätverk.",
+  "topRow": {
+    "heading": "Top row: live metriska kort",
+    "intro": "Fyra kort i ett 2 × 2-rutnät på mobil, enkelrad på skrivbordet. Varje uppdatering från <code>/api/system</code> varje sekund.",
+    "headerCard": "Kort",
+    "headerWhat": "Vad det visar",
+    "headerSource": "Källa",
+    "rows": [
+      {
+        "card": "CPU-användning",
+        "what": "Aktuell procentandel med en progress bar. Uppdateringar ~ 1 s via vital-signs-provtagaren.",
+        "source": "psutil.cpu_percent()"
+      },
+      {
+        "card": "Minnesanvändning",
+        "what": "Använd GB, procent, total GB. Progress bar spårar procenten.",
+        "source": "psutil.virtual_memory()"
+      },
+      {
+        "card": "Aktiv VM & LXC",
+        "what": "Räkna med för närvarande löpande gäster, med en Running / Stopped uppdelningsmärke och en sidfotlinje för totala VM och LXC.",
+        "source": "/api/vms (konsoliderad)"
+      },
+      {
+        "card": "Temperatur",
+        "what": "CPU-temperaturen i °C med statusmärke (cool / varm / varm) och en 5-minuters gnistring bakom den. Visar <em>N/A</em> när ingen sensor upptäcks. Klicka för att öppna temperaturdetalj modal.",
+        "source": "sensorer / coretemp"
+      }
+    ],
+    "thresholdsTitle": "Statusfärger och trösklar som tillämpas här",
+    "thresholdsIntro": "Varje ring, bar och gnista på de fyra metriska korten följer samma klassificering - <green/> <strong>green</strong> under Varning, <amber/> <strong>amber</strong> från Varning till kritisk, <red/> <strong>red</strong> på kritisk och ovan. Rekommenderade standarder levererade med ProxMenux:",
+    "thresholdsItems": [
+      "<strong>CPU användning</strong> - Varning 85%, Kritisk 95%.",
+      "<strong>Memory</strong> - Varning 85%, Kritisk 95% (Swap eldar också Kritisk vid 5% som används - en hälsosam Proxmox värd bör sällan röra swap).",
+      "<strong>CPU temperatur</strong> - Varning 80 ° C, Kritisk 90 °C."
+    ],
+    "thresholdsOutro": "Varje värde är konfigurerbart per värd - <link>Settings → Health Monitor Thresholds</link> är den enda källan till sanningen och förklarar hur man stämmer över dem.",
+    "sparklineTitle": "Gnistlinjen är meningsfull",
+    "sparklineBody": "Temperaturkortet drar ett 5-minuters spår under värdet, med linjen och gradientfärgen efter samma varning / kritiskt par dokumenterat ovan. Det är det snabbaste sättet att se om värden är i en termisk klättring utan att öppna detaljerna."
+  },
+  "processes": {
+    "heading": "Toppprocesser av CPU / Memory",
+    "intro": "CPU Användning och minneskort på fliken Översikt är klickbara. Klicka på antingen öppnar en sorterbar lista över de bästa 25-processerna - beställd av CPU-användning när den öppnas från CPU-kortet, med hemligt minne när det öppnas från minneskortet.",
+    "listTitle": "Listdialogrutan",
+    "listItems": [
+      "<strong>Auto-refresh</strong> - listan uppdaterar varje 5 sekunder medan dialogen är öppen och slutar polera så snart den stängs.",
+      "<strong>Filter</strong> - sökrutan begränsar listan med kommando, användare eller PID.",
+      "<strong>Inline bar</strong> - den primära metriska kolumnen drar en liten bar skalas till det högsta värdet i den filtrerade listan, så rankningen förblir synlig även när ingen process är nära 100%.",
+      "<strong>Mobile layout</strong> - under 640 px PID- och användarkolumnerna döljer så Command, CPU% och Memory passar fortfarande på en telefonskärm utan horisontell rullning."
+    ],
+    "captureListAlt": "Toppprocesser av Memory modal - tabell med PID, användare, COMMAND, CPU%, Memory kolumner sorterade av RSS",
+    "captureListCaption": "Minneskortet öppnar listan sorterad av RSS (indigo accent). CPU-kortet öppnar samma lista sorterad av CPU-användning (blå accent).",
+    "detailTitle": "Per-process detaljer",
+    "detailIntro": "Klicka på raden i listan öppnar en andra dialog med den levande bilden av den ena processen, organiserad i fyra avsnitt:",
+    "detailItems": [
+      "<strong>Overview</strong> - stat, föräldraprocess, trådräkning, öppna filbeskrivningar, användare och grupp.",
+      "<strong>Resources</strong> - CPU%, Memory%, Resident (RSS), Virtuell storlek, Swap, I / O läs och skrivsummor.",
+      "<strong>Command</strong> - kort namn, full kommandorad, körbar väg och arbetskatalog.",
+      "<strong>Lifetime</strong> - start tidsstämpel och förflutna runtime."
+    ],
+    "detailRefresh": "Detaljdialogen uppdaterar varje 3 sekunder medan den är öppen. Om processen avslutar mid-dialog, polling stopp, en amber <em> Denna process har avslutat</em> banner visas, och den sista fångade ögonblicksbilden stannar på skärmen (dimmade) så att du fortfarande kan se vad som hände strax innan det slutade.",
+    "captureDetailAlt": "Processdetalj modal - Översikt, Resurser, kommando och livstid sektioner för en enda PID",
+    "captureDetailCaption": "Perprocessdetaljdialog öppnad från en lista rad. Accentfärgen matchar kortet som öppnade det (blå för CPU, indigo för minne)."
+  },
+  "middle": {
+    "heading": "Middle: Node Metrics diagram",
+    "body1": "Nedanför den övre raden sitter <code>NodeMetricsCharts</code>-komponenten - historisk CPU, minne och disk-I / O-grafer från Proxmox egna RRD-butik via <code>/api/node/metrics</code>. En tidsram väljare växlar mellan <em>1 timme / 24 timmar / 7 dagar / 30 dagar / 1 år</em>; dataupplösning sjunker när fönstret växer så diagrammet förblir smidigt.",
+    "body2": "Dessa är samma grafer som Proxmox webb UI gör för en nod, bara konsolideras in i Monitor mörka tema och i linje med de andra panelerna."
+  },
+  "bottom": {
+    "heading": "Bottom row: Storage & Network sammanfattningar",
+    "storageTitle": "Storage Overview kort",
+    "storageIntro": "En kondenserad utsikt över värdens lagringstillstånd, bruten i tre block:",
+    "storageItems": [
+      "<strong>Total Node Capacity</strong> - summan av alla VM / LXC lagringsutrymmen plus lokal systemlagring, med en gradient framstegsstäng av den totala använda / fria uppdelningen.",
+      "<strong>Total Capacity / Physical Disks</strong> - rå kapacitet rubrik och antalet fysiska diskar upptäckta.",
+      "<strong>VM / LXC Storage</strong> - används / gratis / procentandel för lagringarna där gästerna bor, plus en räknare när mer än en är konfigurerad.",
+      "<strong>Local Storage (System)</strong> - värdens egen rot / systemfäste, separat från gästpoolen."
+    ],
+    "storageDrillIn": "Drill-in bor i <link>Storage tab</link> - per-disk SMART, ZFS pool detaljer, observation historia, etc.",
+    "networkTitle": "Nätverksöversikt kort",
+    "networkBody1": "Top line visar antalet aktiva gränssnitt (fysiska + broar i kombination). Nedan följer två rader färgade märken för de gränssnitt som är <code>up</code> - fysiska NIC i blå, broar i en sekundär färg. En tidsram väljare höger (1 timme / 24 timmar / 7 dagar / 30 dagar / 1 år) kontrollerar en liten RX / TX trafik diagram.",
+    "networkBody2": "Per-interface borr-in (IP/MAC, RRD-diagram, bromedlemmar, obligationsläge etc.) bor i <link>Network-fliken</link>."
+  },
+  "refresh": {
+    "heading": "Refresh modell",
+    "intro": "Varje panel hanterar sitt eget lasttillstånd (<code>loadingStates.cpu</code>, <code>loadingStates.storage</code>, ...) så en långsam källa blockerar inte resten. Medan en panel hämtar, visar den ett puls-animerat skelett; misslyckade fetches nedbryts graciöst - till exempel gör en saknad temperatursensor kortet som <em>N / A</em> istället för ett fel.",
+    "items": [
+      "<strong>Top metriska kort</strong> - uppdatera varje ~ 5 s. CPU och temperaturpaneler får också en 1 s tryck från vital-signs provtagare.",
+      "<strong>Node metrics chart</strong> - uppdatera varje 30 s, eller på tidsram förändring.",
+      "<strong>Lagringskort</strong> Uppfriskande varje 60 s. SMART data cachas längre (fliken Lagring utlöser en ny läsning på efterfrågan).",
+      "<strong>Network card</strong> - uppdatera varje 5 s på den aktiva tidsramen.",
+      "<strong>Manual refresh</strong> - Refresh-knappen i rubriken tvingar alla paneler att återfå omedelbart."
+    ]
+  },
+  "dataCollected": {
+    "heading": "Hur data samlas in",
+    "headerCard": "Kort",
+    "headerEndpoint": "Slutpunkt",
+    "headerSource": "Källa",
+    "rows": [
+      {
+        "card": "Header status piller",
+        "endpoint": "/api/health",
+        "source": "Den cachade övergripande status som produceras av hälsokontrollen varje cykel."
+      },
+      {
+        "card": "CPU / RAM Swap / Uptime",
+        "endpoint": "/api/system",
+        "source": "<code>/proc/stat</code>, <code>/proc/meminfo</code>, <code>/proc/uptime</code> med kortfönster CPU provtagning."
+      },
+      {
+        "card": "Värd info (kernel, BIOS, distro)",
+        "endpoint": "/api/info",
+        "source": "<code>uname -a</code>, <code>dmidecode</code>, PVE version. Cachad per process."
+      },
+      {
+        "card": "Lagring / nätverk / VM-kort",
+        "endpoint": "/api/storage/summary, /api/network/summary, /api/vms",
+        "source": "Se dedikerade flikarna för varje. Rubriken visar en kompakt vy från samma slutpunkter."
+      },
+      {
+        "card": "Refresh Cadence",
+        "endpoint": "—",
+        "source": "CPU / nätverk 5 s; lagring / VMs 30 s; statisk info varje 5 min. Skärmknappen i rubriken tvingar en omedelbar återkoppling på varje panel."
+      }
+    ],
+    "codeComment1": "# Single call som backar rubrikpiller",
+    "codeComment2": "# offentliga, ingen token",
+    "codeComment3": "# Autentiserad ögonblicksbild som används av korten"
+  },
+  "whereNext": {
+    "heading": "Var till nästa",
+    "items": [
+      {
+        "label": "Hälsoövervakare",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — modalen bakom rubrikstatuspiller (tio kategorier, uppsägningar, förtryck)."
+      },
+      {
+        "label": "API Referens",
+        "href": "/docs/monitor/api",
+        "tail": " - systemet, info och hälsoeffekter."
+      },
+      {
+        "label": "Aviseringar",
+        "href": "/docs/monitor/notifications",
+        "tail": " — Hur samma status förvandlas till Telegram / Discord / E-postmeddelanden."
+      },
+      {
+        "label": "Översiktsindex",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — de andra åtta flikarna vid en blick."
+      },
+      {
+        "label": "Arkitektur",
+        "href": "/docs/monitor/architecture",
+        "tail": " — bakgrundstrådar och API som driver denna vy."
+      }
+    ]
+  }
+}

@@ -1,0 +1,218 @@
+{
+  "meta": {
+    "title": "Bedömning och lager | Audit & Report",
+    "description": "Rapportbedömning: Rapportprofiler, hur resultat klassificeras, accepteras risker, oläsliga källor, Lynis och inventeringen av noden."
+  },
+  "header": {
+    "title": "Bedömning och inventering",
+    "description": "Bedömningen inspekterar noden, håller sina resultat och svarar på olika frågor beroende på rapportprofilen.",
+    "section": "Granskning och rapporter"
+  },
+  "sections": [
+    {
+      "id": "read-only",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "En bedömning inspekterar; den ändrar inte konfigurationen",
+            "body": "Den läser värdens konfiguration och tillstånd. Det skriver sina resultat, rapporter och loggar, och startkontrollerna kan montera EFI-systempartitioner för ett ögonblick. Konfigurationen den bedömer är inte modifierad."
+          }
+        },
+        {
+          "p": "<strong>Run bedömning</strong> startar en körning med den profil som valts i <strong>Report</strong>. Utsikten visar datumet för sista loppet och hur länge sedan det var."
+        }
+      ]
+    },
+    {
+      "id": "profiles",
+      "title": "Rapportprofiler",
+      "intro": "Varje profil svarar på en annan fråga. Kontrollerna och sektionerna väljs innan dokumentet komponeras.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Profil",
+              "Vad det täcker"
+            ],
+            "rows": [
+              [
+                "Full revision",
+                "Varje check och all den struktur som finns tillgänglig."
+              ],
+              [
+                "Snabbdiagnos",
+                "Varje kontroll; resultatet öppnas med de kritiska resultaten, varningarna och avläsningarna som inte kunde verifieras."
+              ],
+              [
+                "Inventering",
+                "En beskrivning av noden, utan kontroller och ingen klassificering."
+              ],
+              [
+                "Säkerhetsgranskning",
+                "Exponering, åtkomst, privilegier, certifikat, uppdateringar, repositorier och Lynis."
+              ],
+              [
+                "Backup Assurance",
+                "Täckning, ålder, resultat, verifiering, lagring och återhämtning av säkerhetskopiorna."
+              ],
+              [
+                "Kapacitet och bär",
+                "Tillväxtmarginal, minne, rymdanvändning och diskens livslängd."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Innehållet i varje dokument beskrivs i <reportsLink>Rapporter och jämförelser</reportsLink>."
+        }
+      ]
+    },
+    {
+      "id": "results",
+      "title": "Hur resultat klassificeras",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Klassificering",
+              "Betydelse"
+            ],
+            "rows": [
+              [
+                "Kritisk",
+                "Ett misslyckat tillstånd som har prioritet."
+              ],
+              [
+                "Varning",
+                "Ett villkor som behöver en översyn, med tanke på bevisen eller policyn."
+              ],
+              [
+                "observation",
+                "Information om noden som inte rapporteras som ett misslyckande."
+              ],
+              [
+                "Ej verifierat",
+                "Källan som kontrollbehovet inte kunde läsas. Det betyder inte att problemet är frånvarande."
+              ],
+              [
+                "Uppfyllt",
+                "Villkoret möter det kriterium som tillämpas."
+              ],
+              [
+                "Ej tillämpligt",
+                "Inget inom ramen för kontrollen gäller."
+              ],
+              [
+                "Accepterad risk",
+                "Resultatet finns och ett beslut om det har registrerats."
+              ],
+              [
+                "Undantagen enligt policy",
+                "Policyn förklarar att elementet lämnas utanför räkningen."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Resultat kan filtreras efter område: System, lagring, nätverk, säkerhet, säkerhetskopiering, gäster och hårdvara. Varje fynd håller sina bevis, med källan det lästes från."
+        }
+      ]
+    },
+    {
+      "id": "unverified",
+      "title": "När en källa inte kan läsas",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "fall",
+              "Beteende"
+            ],
+            "rows": [
+              [
+                "Ej verifierat",
+                "Kontrollen håller sin identitet, säger i sina bevis som källa misslyckades och inte förvandla saknade data till en överensstämmelse resultat."
+              ],
+              [
+                "Ofullständiga underlag",
+                "Rapporten namnger källan och tiden för samlingen, så ett verkligt problem kan berättas bortsett från en otillräcklig läsning."
+              ],
+              [
+                "En ny körning",
+                "När åtkomsten, paketet eller tjänsten korrigeras körs samma profil igen och jämförelsen visar om resultatet kan verifieras."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "lynis",
+      "title": "Lynis",
+      "blocks": [
+        {
+          "p": "Säkerhetsgranskningen använder Lynis-rapporten från värden. När Lynis inte har körts ännu, eller dess rapport är äldre än tröskeln till policyn, erbjuder en dialog <strong>Run med Lynis</strong>, som tar några minuter längre, eller <strong>Run utan Lynis</strong>, som använder den befintliga rapporten."
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/lynis-dialog.png",
+            "alt": "Dialog som erbjuder att köra bedömningen med eller utan Lynis",
+            "caption": "Lynis-dialogen före en säkerhetsgranskning."
+          }
+        }
+      ]
+    },
+    {
+      "id": "accept",
+      "title": "Acceptera en risk",
+      "blocks": [
+        {
+          "p": "<strong>Acceptera risk</strong> registrerar ett beslut om ett resultat. Anledningen krävs och lagras med författaren och datumet."
+        },
+        {
+          "table": {
+            "headers": [
+              "Fält",
+              "Alternativ"
+            ],
+            "rows": [
+              [
+                "Orsak",
+                "Gratis text, krävs."
+              ],
+              [
+                "Slutar gälla efter",
+                "90 dagar, 180 dagar, 1 år eller inte upphör. När perioden slutar blir resultatet aktiv igen."
+              ],
+              [
+                "Påminn mig om att granska",
+                "En påminnelse som tar beslutet tillbaka till uppmärksamhet medan det är i kraft."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Ett accepterat resultat är synligt med sitt beslut, och <strong>Return till aktiv</strong> återkallar det. En accepterad risk är inte en korrigering: jämförelsen rapporterar den som accepterad, inte så löst."
+        }
+      ]
+    },
+    {
+      "id": "inventory",
+      "title": "Inventering",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Identitet, Proxmox VE version, kärna, abonnemang och kluster.",
+              "CPU, minne, bräda, BIOS, controllers och IOMMU.",
+              "Disker, SMART, power-on timmar och inspelade händelser.",
+              "Anpassningar, obligationer, broar, latens och anslutningar.",
+              "Lagring, gäster med sina diskar och gränssnitt och säkerhetskopior.",
+              "PCI genomgång och programvaran ProxMenux hanterar."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "meta": {
+    "title": "Ändra språk | ProxMenux Dokumentation",
+    "description": "Byt ProxMenux UI mellan engelska, spanska, franska, tyska, italienska eller portugisiska. Översättningsinstallation - använder googletrans + ett förkastat översättningsbord. Menyn laddas automatiskt med det nya språket.",
+    "ogTitle": "Ändra språk | ProxMenux Dokumentation",
+    "ogDescription": "Välj ProxMenux-gränssnittsspråket från menyn Inställningar. Sex språk stöds."
+  },
+  "header": {
+    "title": "Byt språk",
+    "description": "Byt ProxMenux UI mellan sex språk. Spara valet till config.json och återutför menyn med det nya språket. Endast tillgänglig på Translation installera typ - Normal (lätt) installation är engelsk-bara genom design.",
+    "section": "Inställningar"
+  },
+  "intro": {
+    "title": "Vad detta är",
+    "body": "En dialogmeny som listar de sex språk som stöds. Välj en, ProxMenux sparar den till <code>config.json</code> som <code>.language</code>, sedan åter exekverar <code>config_menu.sh</code> så det nya språket träder i kraft omedelbart."
+  },
+  "warn": {
+    "title": "Översättning installeras endast",
+    "body": "Detta alternativ visas endast i Inställningar om båda kontrollerna passerar: <code>/opt/googletrans-env/bin/activate</code> finns (Python venv med googletrans), <em>and</em> <code>config.json</code> har en icke-tom <code>.language</code>. På den normala (engelska-bara) installationen är inte heller närvarande och språkplockaren visas inte."
+  },
+  "supported": {
+    "heading": "Stödda språk",
+    "headerCode": "Code",
+    "headerLang": "Språk",
+    "headerNotes": "Anteckningar",
+    "rows": [
+      {
+        "code": "en",
+        "lang": "engelska",
+        "notes": "Källa språk - mest exakt"
+      },
+      {
+        "code": "es",
+        "lang": "spanska",
+        "notes": "Cached + auto översatt"
+      },
+      {
+        "code": "fr",
+        "lang": "franska",
+        "notes": "Cached + auto översatt"
+      },
+      {
+        "code": "de",
+        "lang": "tyska",
+        "notes": "Cached + auto översatt"
+      },
+      {
+        "code": "it",
+        "lang": "italienska",
+        "notes": "Cached + auto översatt"
+      },
+      {
+        "code": "pt",
+        "lang": "portugisiska",
+        "notes": "Cached + auto översatt"
+      }
+    ]
+  },
+  "englishTip": {
+    "title": "Engelska är den mest exakta",
+    "body": "Icke-engelska strängar produceras av en pre-cached tabell utsäde från googletrans. Edge-case strängar (sällan utlösta alternativ, nya tillägg) kan falla igenom till en levande googletrans samtal eller till den engelska original. Om en översättning känns av, är engelska alltid källan till sanningen."
+  },
+  "underHood": {
+    "heading": "Hur det fungerar under huven",
+    "items": [
+      "Dialogmenyn listar 6-koderna; du väljer en.",
+      "Om <code>config.json</code> finns: <code>jq --arg lang \"$new_language\" '.language = $lang''</code> uppdaterar området på plats.",
+      "Om <code>config.json</code> inte existerar: en ny skapas med språkkoden i ett enda fältobjekt.",
+      "Bekräftelsedialog: <em>\"Language ändrades till [kod]\"</em>.",
+      "<code>exec bash config_menu.sh</code> laddar om menyn Inställningar med det nya språket aktivt."
+    ]
+  },
+  "manual": {
+    "heading": "Manuell motsvarande"
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "noOptionTitle": "Alternativ visas inte i Inställningar",
+    "noOptionBody": "Du är på Normal (endast engelska) installera. För att få språkstöd, installera om ProxMenux väljer alternativet Översättningsinstallation (det drar Python venv + googletrans).",
+    "stillEnglishTitle": "Språk förändrats men UI visar fortfarande engelska",
+    "stillEnglishBody": "Menyn återförenas efter förändringen. Om du öppnade ett nytt skal och startade en annan ProxMenux entrépunkt, kör <code>menu</code> igen för att hämta det nya språket. Bekräfta: <code>jq -r '.language' /usr/local/share/proxmenux/config.json</code>."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/settings/show-version-information",
+        "label": "Visa versionsinformation",
+        "tail": " - bekräftar installation av typ och aktuellt språk."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Inställningar översikt",
+        "tail": "."
+      }
+    ]
+  }
+}

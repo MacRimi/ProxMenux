@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "title": "Lägg till Controller eller NVMe till VM | ProxMenux Dokumentation",
+    "description": "PCI genomgång av en lagringskontroll (SATA / SAS HBA) eller NVMe enhet till en Proxmox VM med ProxMenux. Hantera IOMMU-tillgänglighet, konfliktdetektering och qm set --hostpci-ledningar.",
+    "ogTitle": "Lägg till Controller eller NVMe till VM | ProxMenux Dokumentation",
+    "ogDescription": "Passera en hel SATA / SAS HBA eller NVMe-enhet i en Proxmox VM. ProxMenux hanterar IOMMU, konfliktdetektering och fientliga ledningar."
+  },
+  "header": {
+    "title": "Lägg till Controller eller NVMe till VM",
+    "description": "Passera en hel SATA / SAS-värdbussadapter (HBA) eller NVMe-enhet till en Proxmox VM via PCI-genomgång. ProxMenux kontroller och - med ditt samtycke - möjliggör IOMMU, räknar upp de genomgående berättigade enheterna, filtrerar ut konflikter och trådar uppdraget med qm set --hostpci.",
+    "section": "Diskhanterare · VM"
+  },
+  "intro": {
+    "title": "Vad detta gör (och inte) gör",
+    "body": "Detta är <strong>device-nivå passthrough</strong>: PCIe-kortet lämnar värdkärnans syn och är bunden till <code>vfio-pci</code>. VM ser själva styrenheten - inte de enskilda diskarna bakom den - och laddar sin egen drivrutin för den exakta modellen. Varje disk som är kopplad till den kontrollen följer den automatiskt, med infödda SMART-data, fullständiga firmwarefunktioner och inget Proxmox-skikt däremellan."
+  },
+  "howRuns": {
+    "heading": "Hur manuset går",
+    "body": "Flödet har två faser med tydlig separation mellan \"samla information, kontrollera IOMMU och lista kandidater\" och \"faktiskt fästa PCI-enheten\". Fram till den slutliga bekräftelsen skrivs ingenting till VM-konfig."
+  },
+  "iommu": {
+    "heading": "IOMMU-grupper – varför hela kortet lämnar samtidigt",
+    "body": "PCI genomgång görs per <strong>IOMMU grupp</strong>, som är den minsta enhet CPU IOMMU kan isolera. Allt i en grupp rör sig tillsammans. Om din SATA-kontrollant delar sin IOMMU-grupp med USB-kontrollen, passerar SATA-kortet till en VM tar också USB-portarna med det - ofta oönskade.",
+    "outro": "ProxMenux visar IOMMU-gruppen bredvid varje enhet och varnar dig när en grupp bär mer än bara den kontroller du vill ha. Du kan fortfarande fortsätta om de extra enheterna i gruppen är acceptabla (alla diskkontroller, till exempel), eller backa ut om de inte är det."
+  },
+  "prereqs": {
+    "heading": "Förutsättningar",
+    "items": [
+      "<strong>CPU och moderkort stöd</strong> VT-d (Intel) eller AMD-Vi, och det är aktiverat i firmware (BIOS/UEFI). ProxMenux kan aktivera kärnsidan för dig, men det kan inte vända firmware switch.",
+      "Målet VM är <strong>powered off</strong> innan du ansluter PCI-enheter.",
+      "Controller/NVMe <strong> är inte den som innehar Proxmox root-filsystem</strong>. Skriptet döljer allt som används av värden.",
+      "Guest OS har förare för kontrollmodellen. Linux täcker praktiskt taget varje HBA ur lådan; Windows behöver leverantörsdrivrutinen installerad <em>before</em> du startar med styrenheten bifogad."
+    ],
+    "warnTitle": "Live migration är inte möjligt",
+    "warnBody": "En VM med PCI genomgång är knuten till noden som fysiskt håller kortet. Live migration över noder kommer att misslyckas. Plan backups / replikering därefter."
+  },
+  "steps": {
+    "heading": "Steg-för-steg",
+    "stepLabel": "Steg",
+    "list": [
+      {
+        "title": "Välj målet VM",
+        "bodyRich": "ProxMenux läser <code>qm list</code> och visar varje VM. Välj den som kommer att få kontrollen.",
+        "img": "/disk/nvme-passthrough/vm-selection.png",
+        "alt": "VM urvalsdialog",
+        "caption": "VM urvalsdialog"
+      },
+      {
+        "title": "IOMMU-kontroll",
+        "bodyRich": "Om IOMMU inte är aktiverad på kärnan cmdline, erbjuder ProxMenux att aktivera den. Den redigerar <code>/etc/kernel/cmdline</code> (för systemd-start) eller <code>/etc/default/grub</code> (för GRUB) och appenderar rätt parameter för din CPU:",
+        "items": [
+          "<code>intel_iommu=on</code> för Intel CPU.",
+          "<code>amd_iommu=on</code> för AMD CPU."
+        ],
+        "outro": "En omstart krävs efter denna förändring. Manuset uppmanar dig att starta om nu eller senare; genomgången kan inte fortsätta tills den nya kärnan cmdline är aktiv.",
+        "img": "/disk/nvme-passthrough/iommu-warning.png",
+        "alt": "IOMMU Krävs dialog",
+        "caption": "IOMMU Required - erbjudande för att möjliggöra och starta om"
+      },
+      {
+        "title": "Enhetsuppräkning",
+        "body": "ProxMenux listar varje lagringskontroll (SATA / SAS HBA) och varje NVMe-enhet på PCI-bussen. För varje enhet den visar:",
+        "items": [
+          "PCI-adress (<code>00:17.0</code>, <code>01:00.0</code>, ...).",
+          "Leverantör / enhetsbeskrivning.",
+          "IOMMU-gruppen - och en varning om gruppen delas med andra, orelaterade enheter.",
+          "De diskar som för närvarande ligger bakom kontrollen (så du vet vad som kommer att följa den till VM)."
+        ],
+        "img": "/disk/nvme-passthrough/device-list.png",
+        "alt": "Controller / NVMe enhet uppräkning",
+        "caption": "Controller / NVMe enhet uppräkning med IOMMU grupp info"
+      },
+      {
+        "title": "Konfliktdetektering",
+        "bodyRich": "Skriptet blockerar enheter som är klart osäkra: redan tilldelats till en annan VM (via <code>hostpci</code> i den VM: s konfig), som används av värden (root disk controller), eller sitter i en IOMMU grupp vars andra medlemmar manuset inte kan identifiera säkert. Berättigade enheter är tillgängliga för val.",
+        "img": "/disk/nvme-passthrough/conflict-warning.png",
+        "alt": "Konflikt upptäckt varning",
+        "caption": "Konfliktdetektering - enhet blockerad med anledning"
+      },
+      {
+        "title": "Bifoga och slutföra",
+        "bodyRich": "För varje vald enhet ProxMenux kör <code>qm set &lt;VMID&gt; --hostpciN &lt;pci-addr&gt;,pcie=1</code>, välja nästa gratis <code>hostpci</code> slot. Om IOMMU var aktiverad under denna session påminns du om att starta om innan du startar VM.",
+        "img": "/disk/nvme-passthrough/assignment.png",
+        "alt": "Tilldelningssammanfattning",
+        "caption": "Uppdrag sammanfattning - hostpciN slots och PCI-adresser bifogade"
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Manuell motsvarande"
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "noGroupsTitle": "IOMMU aktiverade men inga grupper under /sys/kernel/iommu_groups/",
+    "noGroupsBody": "Reboot krävs för att kärnan cmdline ska träda i kraft. Om grupperna fortfarande saknas efter omstart, VT-d / AMD-Vi är förmodligen inaktiverad i firmware - kontrollera BIOS / UEFI inställning.",
+    "busyTitle": "VM misslyckas med att börja med \"hostpciN: enhet upptagen\"",
+    "busyBody": "En annan process håller fortfarande PCI-enheten. De vanligaste orsakerna: en tidigare VM som kraschade utan att släppa den, eller värdkärnan återtog den på den sista starten. Kör <code>lspci -nnk -s &lt;addr&gt;</code> för att se vilken förare som är bunden; det bör vara <code>vfio-pci</code>. En fullvärdig reboot rensar vanligtvis detta.",
+    "noDisksTitle": "Gäst ser regulatorn men inte diskarna",
+    "noDisksBody": "Kontrollmodellen saknar en gästförare. Linux träffar nästan aldrig detta; Windows gör - installera leverantörsdrivrutinen (t.ex. LSI / Broadcom för äldre SAS HBAs) medan kortet är fristående, sedan starta om med kortet bifogas.",
+    "sharedTitle": "Delad IOMMU-grupp exporterar också en orelaterad enhet",
+    "sharedBody": "Alternativ: (a) flytta kortet till en annan PCIe slot för att ändra sin grupp, (b) aktivera <em>ACS override</em> i kärnan för att dela grupper (säkerhet avvägning - forskning innan applicering), eller (c) välja ett annat kort i en renare grupp."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importera disk till VM",
+        "tail": " — alternativ modell: bifoga en fysisk disk via Proxmox utan full PCIe genomgång."
+      },
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Lägg till GPU till VM (Passthrough)",
+        "tail": " - samma IOMMU / VFIO-koncept som tillämpas på en GPU."
+      },
+      {
+        "href": "/docs/help-info/gpu-commands",
+        "label": "GPU Passthrough kommandon",
+        "tail": " - IOMMU-verifieringskommandon gäller också för styrenhet / NVMe-genomgång."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Disk Manager översikt",
+        "tail": "."
+      }
+    ]
+  }
+}

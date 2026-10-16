@@ -1,0 +1,142 @@
+{
+  "meta": {
+    "title": "Format / Torka fysisk disk | ProxMenux Dokumentation",
+    "description": "Säkra fysisk disk torka och format på Proxmox VE med ProxMenux. Fyra driftlägen, strikta säkerhetsfilter (system / monterade / in-use diskar blockerade) och dubbelbekräftelse inklusive full väg typning.",
+    "ogTitle": "Format / Torka fysisk disk | ProxMenux Dokumentation",
+    "ogDescription": "Torka eller formatera en fysisk disk på Proxmox. Säker sikt regler, 4 driftlägen, dubbel bekräftelse."
+  },
+  "header": {
+    "title": "Formatera / radera fysisk disk",
+    "description": "Torka eller formatera en fysisk disk på Proxmox-värden. ProxMenux visar bara diskar som är helt gratis (ingen systemanvändning, ingen gästreferens, inga fästen) och tvingar en dubbelbekräftelse - ja / nej plus att skriva hela diskvägen - innan du förstör några data.",
+    "section": "Diskhanterare · Verktyg"
+  },
+  "danger": {
+    "title": "Destruktivt verktyg",
+    "body": "Varje operation här skriver till disken. Det finns ingen undo. ProxMenux tillämpar strikta säkerhetsfilter och bekräftelser, men ansvaret för att välja rätt disk är din. Läs diskvägen högt två gånger innan du skriver den."
+  },
+  "howRuns": {
+    "heading": "Hur manuset går",
+    "body": "Flödet har två faser med ett trippelporterat säkerhetsfilter däremellan. Skivlistan, driftläget och filsystemets detaljer samlas alla in i fas 1; ingenting skrivs tills fas 2 passerar en slutlig omvärdering precis innan avrättningen."
+  },
+  "visibility": {
+    "heading": "Synlighetsregler",
+    "intro": "Innan menyn ens visas filtrerar ProxMenux disklistan. Endast kandidater som är bevisligen säkra visas:",
+    "items": [
+      "<strong>Shown</strong> - diskar <em>Inte inte</em> används av värden (root) poolSwapp, monterad, aktiv ZFS/LVM/RAID) och <em>Inte inte</em> refereras till av någon VM/LXC konfig (körning eller stoppad).",
+      "<strong>Hidden</strong> - värd / systemdisker.",
+      "<strong>Hidden</strong> - skivor som refereras av en VM/LXC-konfig."
+    ],
+    "safetyTitle": "Säkerhet vid bekräftelse och utförande",
+    "safetyItems": [
+      "Disker med stal / aktiv metadata visar detaljerade varningar <em>before</em> du bekräftar.",
+      "Disker som används av en <strong>running</strong> VM är <strong>hard-blocked</strong> vid bekräftelse.",
+      "Disker med monterade partitioner är <strong>hard-blocked</strong> vid utförande (en ny omvärdering körs precis innan något skrivs).",
+      "Två bekräftelser krävs alltid: <em>yes/no</em> dialog + skriva hela diskvägen exakt."
+    ]
+  },
+  "modes": {
+    "heading": "Operationslägen",
+    "intro": "Efter att ha valt en disk väljer du en av fyra lägen. De skiljer sig åt i vad de förstör och vad de lämnar efter sig:",
+    "headerMode": "Läge",
+    "headerPart": "Partitionstabell",
+    "headerData": "Datadatadata data",
+    "headerUseCase": "Använd fall",
+    "rows": [
+      {
+        "mode": "1. Torka alla",
+        "part": "Förstörd",
+        "data": "Signaturer torkade",
+        "useCase": "Börja färskt: allt på skivan går, redo för en ny layout."
+      },
+      {
+        "mode": "2. Ta bort FS-etiketter",
+        "part": "Bevarad",
+        "data": "Bevarad",
+        "useCase": "Clears stale ZFS / LVM / RAID signaturer så att disken slutar vara auto-claimed, utan att röra data."
+      },
+      {
+        "mode": "3. Nollställ alla data",
+        "part": "Bevarad",
+        "data": "Förstörd (noll)",
+        "useCase": "Sanitise innan du lämnar skivan över, håller den befintliga partitionslayouten."
+      },
+      {
+        "mode": "4. Fullständigt format",
+        "part": "Ny GPT",
+        "data": "Förstörd",
+        "useCase": "Redo att använda disk med en enda ny partition och ett nytt filsystem."
+      }
+    ],
+    "fullFormatOutro": "<strong>Full format</strong> fortsätter med två extra dialoger:",
+    "fullFormatItems": [
+      "<strong>Filesystem</strong> - <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (portabel), eller <code>btrfs</code>. Saknade verktyg (till exempel <code>mkfs.btrfs</code>) aborterar med ett tydligt budskap.",
+      "<strong>Label</strong> - valfri filsystemetikett för identifiering."
+    ]
+  },
+  "steps": {
+    "heading": "Steg-för-steg",
+    "stepLabel": "Steg",
+    "list": [
+      {
+        "title": "Välj en gratis disk",
+        "body": "ProxMenux listar varje disk som passerar synlighetsfiltren ovan. Disker med 88 markörer bär stal metadata och visas med detaljerna så att du vet vad du ska skriva över."
+      },
+      {
+        "title": "Välj ett operationsläge",
+        "bodyRich": "Välj mellan <strong>Wipe all</strong>, <strong> Ta bort FS-etiketter</strong>, <strong>Zero all data</strong> eller <strong>Full format</strong> enligt tabellen ovan."
+      },
+      {
+        "title": "(Full format) Pick filsystem och etikett",
+        "body": "ext4 / xfs / exfat / btrfs, plus en valfri etikett."
+      },
+      {
+        "title": "Bekräfta två gånger",
+        "bodyRich": "ProxMenux visar en sammanfattning av vad som kommer att hända. Du accepterar med en ja/nej-dialog och <strong>type hela diskvägen</strong> exakt som visas (till exempel <code>/dev/sdc</code>). Allt annat aborter."
+      },
+      {
+        "title": "Re-validering och utförande",
+        "body": "Precis innan du skriver, re-checkar manuset diskstatus. Om en partition har monterats eller en VM startade under tiden, avrättning avbryts. Annars körs den valda operationen och en sammanfattning trycks i slutet."
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Manuella motsvarigheter",
+    "body": "Om du föredrar att köra motsvarande kommandon för hand:"
+  },
+  "troubleshoot": {
+    "notListedTitle": "Disk som inte anges i menyn",
+    "notListedBody": "Det filtrerades för säkerhet. Vanliga skäl: det är monterat (även på <code>/mnt/tmp</code>), det är en aktiv ZFS / LVM / RAID-medlem, det refereras av en VM eller LXC config, eller det är din Proxmox root disk. Kör <code>lsblk -f</code> och <code>cat /proc/mdstat</code> på värden för att förstå varför.",
+    "busyTitle": "\"Disk kan vara upptagen\" / oöverträffad misslyckad",
+    "busyBody": "Något håller fortfarande en öppen fil på en partition av den disken - oftast en behållare eller ett skal vars cwd är inuti en monteringspunkt. Identifiera det med <code>lsof | grep /dev/sdX</code> eller <code>fuser -vm /dev/sdX1</code>, stoppa det och sedan köra verktyget igen."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/disk-manager/smart-disk-test",
+        "label": "SMART-status och disktest",
+        "tail": " — Kontrollera en disk före / efter att ha torkat för att bekräfta att den är frisk."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importera disk till VM",
+        "tail": " — passera en nyformaterad disk till en VM."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "label": "Lägg till lokal disk som Proxmox lagring",
+        "tail": " - registrera en torkad disk som en Proxmox lagringspool."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Lagring och Disks kommandon",
+        "tail": " — lsblk, blkid, delade referens."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Disk Manager översikt",
+        "tail": "."
+      }
+    ]
+  }
+}

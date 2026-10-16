@@ -1,0 +1,122 @@
+{
+  "meta": {
+    "title": "Config Analysis & Guided Cleanup | ProxMenux Dokumentation",
+    "description": "Upptäcker iface block i /etc/network/interfaces som referens fysiska NIC inte längre finns på värden. Rapporterar dem och erbjuder en 5-stegs guidade borttagning med obligatorisk backup och per block förhandsgranskning.",
+    "ogTitle": "Config Analysis & Guided Cleanup | ProxMenux Dokumentation",
+    "ogDescription": "Hitta och ta bort föräldralösa gränssnittsblock kvar av hårdvaruförändringar, med full förhandsgranskning och återgång."
+  },
+  "header": {
+    "title": "Config analys och guidad rengöring",
+    "description": "Går varje iface block i /etc/network/interfaces och verifierar att den underliggande fysiska NIC fortfarande finns. Rapporter föräldralösa block kvar av hårdvaruförändringar och erbjuder en guidad borttagning med backup, förhandsgranskning och per blockbekräftelse.",
+    "section": "Nätverk"
+  },
+  "intro": {
+    "title": "Vad detta gör",
+    "body": "Identifierar <code>iface</code>-deklarationer vars stöd NIC inte längre finns på värden (typiskt efter att ha ersatt eller tagit bort ett nätverkskort). Sedan erbjuder en guidad rengöring som tar bort <em>only</em> föräldralösa block, med en säkerhetskopia, en förhandsgranskning per avsnitt och en explicit slutlig bekräftelse."
+  },
+  "differs": {
+    "heading": "Hur det skiljer sig från bridgeanalys",
+    "headerAspect": "Aspekt",
+    "headerBridge": "Bridge analys",
+    "headerConfig": "Config analys",
+    "rows": [
+      {
+        "aspect": "Titta på",
+        "bridge": "Bryggor (<code>vmbrX</code>) och deras <code>bridge-ports</code> linje",
+        "config": "Varje <code>iface</code> block (exklusive loopback, broar, obligationer)"
+      },
+      {
+        "aspect": "Detekterar",
+        "bridge": "Broar som hänvisar till en icke-existerande hamn",
+        "config": "Standalone gränssnitt block för NIC som inte finns"
+      },
+      {
+        "aspect": "Reparationsåtgärder",
+        "bridge": "Ersätter portnamnet i <code>bridge-ports</code>",
+        "config": "Ta bort hela <code>iface</code>-blocket"
+      },
+      {
+        "aspect": "Exkluderar",
+        "bridge": "Ingenting – varje bro analyseras",
+        "config": "Broar (<code>vmbrX</code>) och obligationer (<code>bondX</code>) hålls alltid, eftersom de är virtuella och \"inte befintliga\" skulle vara normala under starten."
+      }
+    ],
+    "outro": "I praktiken kör du ofta båda, i denna ordning: <strong>config analys</strong> först för att ta bort föräldralösa, sedan <link>bridge analys</link> för att åter peka ut någon bro som förlitade sig på det nu avlägsnade gränssnittet."
+  },
+  "step1": {
+    "heading": "Steg 1: analys (läs endast)",
+    "intro": "Aborts omedelbart om värden inte är på den klassiska stacken. Annars listar alla konfigurerade icke-loopback-gränssnitt och rapporterar sin status:",
+    "virtTitle": "Virtuella gränssnitt skyddas",
+    "virtBody": "Broar (<code>vmbrX</code>) och obligationer (<code>bondX</code>) är virtuella konstruktioner. De kan legitimt inte existera vid inspektionstillfället (t.ex. en bro med inga hamnar ännu), så analysen föreslår aldrig att ta bort dem - endast fysiska NIC."
+  },
+  "step2": {
+    "heading": "Steg Steg 2guidad rengöring (guidad rengöring)5 Steg)",
+    "intro": "Anges endast om du accepterar prompten i slutet av analysen. Varje steg kräver bekräftelse; avbryta vid varje punkt utan att skriva.",
+    "steps": [
+      {
+        "title": "1. Säkerhet backup",
+        "body": "Kopior <code>/etc/network/interfaces</code> till <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Vägen som visas före och efter.",
+        "tone": "blue"
+      },
+      {
+        "title": "2. Bekräfta borttagningslistan",
+        "body": "Listor exakt vilka fysiska gränssnitt block kommer att tas bort. Om, mellan analys och rengöring, NIC återkommer (t.ex. du sitter ett kort), flödet avslutas med <em>\"Ingen rengöring behövs.\"</em>",
+        "tone": "blue"
+      },
+      {
+        "title": "3. Förhandsgranska det exakta blocket(s)",
+        "body": "Öppnar en rullbar bild av varje <code>iface</code>-block som skulle raderas, verbatim från filen. Detta är ögonblicket att upptäcka t.ex. en intressant <code>up</code> krok du vill bevara.",
+        "tone": "blue"
+      },
+      {
+        "title": "4. Applicera borttagning",
+        "body": "För varje föräldralös gränssnitt, kör <code>sed -i \"/^iface $iface/,/^$/d\" /etc/network/interfaces</code>. Det tar bort från matchande <code>iface</code> linje upp till nästa tomma rad.",
+        "tone": "amber"
+      },
+      {
+        "title": "5. Verifiering",
+        "body": "Re-läser filen, listar vad som togs bort och kontrollerar återstående gränssnitt. Skriver rollback-kommandot. Gör <strong>not</strong> automatiskt starta om nätverk - ta bort ett oanvändt block är säkert att tillämpa på nästa omstart, och undviker att röra levande tillstånd.",
+        "tone": "emerald"
+      }
+    ],
+    "noRestartTitle": "Inga automatiska startnätverk",
+    "noRestartBody": "Till skillnad från broreparation erbjuder rengöringsflödet inte att starta om tjänsten. Att ta bort ett oanvändt gränssnitt block har ingen omedelbar effekt på löpande konfig, så en omstart är onödigt och skulle vara en onödig anslutningsrisk. Förändringen träder i kraft nästa manual <code>systemctl restart networking</code> eller vid nästa omstart."
+  },
+  "caveats": {
+    "heading": "Viktiga förbehåll",
+    "boundaryTitle": "Blockgränsen är den första tomma linjen",
+    "boundaryBody": "<code>sed</code>-mönstret tar bort från <code>iface &lt;name&gt;</code> ner till nästa tomma rad. Om din <code>/etc/network/interfaces</code> inte har någon tom linje som skiljer block (sällsynta, men möjligt om handredigerad), kan raderingen förbruka nästa block också. Det är därför <strong>step 3 är obligatoriskt</strong>: granska förhandsgranskningen innan du bekräftar.",
+    "tandemTitle": "En föräldralöss som används av en bro upptäcks här, inte i broanalys",
+    "tandemBody": "Om <code>vmbr0</code> förklarar <code>bridge-ports enp3s0</code> och <code>enp3s0</code> har också sitt eget <code>iface enp3s0 inet manual</code> block, ta bort <code>enp3s0</code> här kommer att lämna <code>vmbr0</code> med en dangling referens. Efter rengöringen, kör <link>bridge analys</link> för att återställa eller ta bort bryggporten. De två flödena är utformade för att användas i tandem."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "notFoundTitle": "Analysen visar min nya NIC som \"Inte FOUND\"",
+    "notFoundBody": "Kerneln ser enheten under ett annat namn än vad som finns i filen. Kör <code>ip link show</code> för att få det verkliga namnet. Detta är exakt det fall där <link>Persistent gränssnitt namn</link> skulle förhindra att problemet går framåt.",
+    "tooMuchTitle": "Städningen tog bort för mycket (ett block jag ville behålla)",
+    "tooMuchBody": "Återställ från backupen tryckt i steg 5:",
+    "tooMuchOutro": "Redigera filen för hand för att lägga till en tydlig tom linje mellan block innan du kör rengöring, eller ta bort problematiskt block manuellt.",
+    "bridgeBreakTitle": "En bro slutar fungera efter rengöring",
+    "bridgeBreakBody": "Bron förlitade sig på en port vars <code>iface</code>-block bara avlägsnades. Kör <link>bridge analys</link> och förslag kommer att peka på bron på ett befintligt fysiskt gränssnitt."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "label": "Bridge analys och guidad reparation",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — Den naturliga uppföljningen efter en rengöring."
+      },
+      {
+        "label": "Persistenta gränssnitt namn",
+        "href": "/docs/network/persistent-names",
+        "tail": " — stoppar föräldralösa block från att ackumulera efter varje hårdvaruförändring."
+      },
+      {
+        "label": "Interfaces backup och omstart",
+        "href": "/docs/network/backup-restore",
+        "tail": " - manuella ögonblicksbilder och återställningswebbläsaren."
+      }
+    ]
+  }
+}

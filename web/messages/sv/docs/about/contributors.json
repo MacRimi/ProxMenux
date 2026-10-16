@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "title": "Bidragsgivare | ProxMenux Dokumentation",
+    "description": "Erkännande för de människor som gör ProxMenux00 möjligt - testare, granskare och utvecklare som formar varje release.",
+    "ogTitle": "Bidragsgivare | ProxMenux Dokumentation",
+    "ogDescription": "Möt bidragsgivarna bakom ProxMenux."
+  },
+  "header": {
+    "title": "Bidragsgivare",
+    "description": "Projektet ProxMenux växer och trivs tack vare sina medarbetares bidrag. Detta är det välförtjänta erkännandet av deras arbete - testning bygger innan release, fånga regressioner, granska PR och forma riktningen av nya funktioner.",
+    "section": "Om"
+  },
+  "beyond": {
+    "title": "Utöver denna lista",
+    "body": "Många fler människor bidrar via buggrapporter, har idéer i Diskussioner, beta-testning och översättningar. Den fullständiga listan över kodbidragsgivare bor på <extlink>GitHub-bidragsgivare graph</extlink>. Sidan nedan belyser de personer som har varit mest aktiva med att testa och granska ProxMenux-utgåvor."
+  },
+  "testers": {
+    "heading": "Testare och granskare",
+    "intro": "Dessa var bland de första att bidra till projektet - testa, rapportera problem och föreslå förbättringar som hjälpte ProxMenux växa till vad det är idag.",
+    "roles": {
+      "testing": "Testning",
+      "testingReviewer": "Testa och granskare"
+    },
+    "youtube": "YouTube"
+  },
+  "contribute": {
+    "heading": "Vill du bidra?",
+    "intro": "Alla bidrag är välkomna - kod, testning, design, dokumentation eller bara dela dina idéer:",
+    "tester": "<strong>Tester</strong> - prova <beta>beta-kanalen</beta> och rapportera vad som fungerar och vad som inte före stabila utgåvor.",
+    "developer": "<strong>Developer</strong> - Bash + Next.js (TypeScript) + lite Python för översättning venv. PR välkomnar <gh>GitHub</gh>.",
+    "designer": "<strong>Designer</strong> — UI förbättringar, ikoner, skärmdumpar för dokumentation.",
+    "ideas": "<strong>Ideas</strong> - öppna en tråd i <disc>GitHub Discussions</disc> innan du öppnar ett funktionsförfrågan."
+  },
+  "coc": {
+    "title": "Läs uppförandekoden först",
+    "body": "Innan du skickar in koden eller rapporterar frågor, ge <coclink>Code of Conduct & Best Practices</coclink> en snabb läsning. Det täcker förväntningar kring kod ansvar, säkerhets avslöjande och PR omfattning."
+  }
+}

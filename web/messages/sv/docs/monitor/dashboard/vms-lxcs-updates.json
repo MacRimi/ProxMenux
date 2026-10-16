@@ -1,0 +1,203 @@
+{
+  "meta": {
+    "title": "LXC-uppdateringar: OS, appar och Docker | ProxMenux",
+    "description": "Konfigurera och köra operativsystem, applikation, Docker Engine och Docker bilduppdateringar från en LXC behållare."
+  },
+  "header": {
+    "title": "LXC-uppdateringar: OS, appar och Docker",
+    "description": "Granska varje uppdateringsmål på ett ställe, kör det självständigt eller kombinera utvalda mål i en kontrollerad bulk åtgärd."
+  },
+  "intro": {
+    "p1": "<strong>Updates</strong>-fliken skiljer versionsdetektering från den åtgärd som installerar en uppdatering. Registrering och valfri version spårning live på <link>App-fliken</link>; körbara uppdateringsmetoder bor här.",
+    "p2": "En sparad applikation visas i uppdateringar även när den endast innehåller en webblänk. Versionsspårning är frivillig, och en uppdaterare kan konfigureras oberoende.",
+    "callout": "Registrera ett program väljer inte en uppdatering. Om en matchande Helper-Scripts-uppdatering upptäcks, välj och spara <strong>Helper-Scripts</strong> eller <strong>Custom kommandot</strong>. Detektering är inte en kompatibilitetsgaranti. Valet tillhör varje applikation, även när flera appar delar en LXC."
+  },
+  "overview": {
+    "heading": "Vad fliken innehåller",
+    "lead": "Varje tillgängligt mål har sin egen sektion och handling:",
+    "items": [
+      "<strong>OS paket</strong> för Debian, Ubuntu och Alpine behållare.",
+      "Ett avsnitt för varje <strong>Registered Application</strong>, inklusive länk-bara poster.",
+      "En <strong>Docker</strong> sektion när Docker är registrerad, med Docker Engine och taggade bilder grupperade tillsammans.",
+      "En konfigurerbar <strong>Bulk update</strong> sektion, följt av backup, omstart och schemaläggning alternativ."
+    ]
+  },
+  "mechanisms": {
+    "heading": "Hur en uppdateringsmetod väljs",
+    "lead": "Den integrerade Proxmox VE Helper-Scripts-vägen följer den officiella <helper>update-apps-mekanismen</helper>. Andra installationstyper använder matchningspaketet, Docker eller anpassad väg.",
+    "officialReference": "Officiell referens: <helper>Proxmox VE Helper-Scripts-uppdateringsdokumentation</helper> täcker interaktiva och obevakade lägen, säkerhetskopior, torra körningar, tillfälliga byggresurser, loggar och exitkoder.",
+    "colSource": "Källa",
+    "colAction": "Visad åtgärd",
+    "colNotes": "Vad springs",
+    "rows": [
+      {
+        "source": "APT- eller APK-paket",
+        "action": "Applicera OS-uppdateringar",
+        "notes": "Uppdaterar containerpaketen. Registrerade appar installerade som dpkg eller apk-paket täcks av samma pass."
+      },
+      {
+        "source": "Proxmox VE Helper-Scripts",
+        "action": "Tillämpa uppdatering",
+        "notes": "Efter att Helper-Scripts är explicit vald, kör det officiella applikationsskriptet som identifierats av den validerade /usr/bin/update wrapper. En markör eller katalogmatch ensam möjliggör aldrig utförande."
+      },
+      {
+        "source": "Eget kommando",
+        "action": "Kör uppdateringsprogrammet",
+        "notes": "Kör det sparade kommandot inuti LXC och ersätter alla integrerade appuppdateringar för det rekordet."
+      },
+      {
+        "source": "Docker Engine",
+        "action": "Uppdatera Docker Engine",
+        "notes": "Uppdateringar installerade endast Docker-paket och deras nödvändiga beroenden. Andra OS-paket och behållare ändras inte."
+      },
+      {
+        "source": "Docker-avbildning",
+        "action": "Uppdatera avbild",
+        "notes": "Dra den valda bilden och återskapar sin Compose-servicegrupp eller skyddad fristående behållare."
+      }
+    ],
+    "callout": "Ett anpassat kommando <strong>replaces</strong> Helper-Scripts för den applikationen. Manuell, bulk och schemalagd kör alla respektera det sparade valet. Befintliga anpassade kommandon och arv sparas uttryckligen bulk / aktiverade schemaval bevaras; nyregistrerade applikationer är aldrig valda av ett gammalt schema."
+  },
+  "docker": {
+    "heading": "Docker Engine och Docker bilder",
+    "lead": "Efter Docker registreras på fliken App visas dess motor och bildinventering i samma <strong>Docker</strong>-avsnitt.",
+    "items": [
+      "Docker Engine-versionsspårning är separat från OS-paketräknaren och har en egen uppdateringsknapp.",
+      "Taggade lokala bilder jämförs med deras register genom oföränderlig smältning. <strong>Kolla nu</strong> uppdateringar denna inventering utan att dra bilder eller starta om behållare.",
+      "Komponera tjänster uppdateras från deras deklarerade projekt. Bilder som tillhör samma servicegrupp hanteras tillsammans så att projektet inte återskapas upprepade gånger.",
+      "En fristående behållare återskapas från sin nuvarande konfiguration. Det skyddade flödet håller rullningsdata och återställer den tidigare behållaren om rekreationen misslyckas.",
+      "Varje bild kan väljas separat i manuella, bulk och schemalagda uppdateringar, förutom deklarerade komponeringsberoende som måste följa sin föräldertjänst."
+    ],
+    "callout": "Behållare som kör inuti Docker visas inte som oberoende LXC-applikationer. Deras publicerade webbportar kan sparas som länkar under Docker-registreringen, medan bilduppdateringar kvarstår i Docker-sektionen."
+  },
+  "actions": {
+    "heading": "Individuella åtgärder och statusfärger",
+    "lead": "Varje avsnitt förblir oberoende genomförbart, oavsett om en bulkuppdatering är konfigurerad.",
+    "items": [
+      "<strong>Configure</strong> öppnar uppdateringsväljaren när ingen metod väljs; <strong>Edit</strong> ändrar ett sparat val. Informationsknapparna förklarar varje alternativ, länkar till officiell dokumentation och visar ett skräddarsydda exempel. Att välja ett alternativ utför inte det.",
+      "När versionsspårning är inaktiverad men en uppdaterare finns, visas den neutrala <strong>Run updater</strong>-åtgärden. ProxMenux hävdar inte att en uppdatering väntar.",
+      "Utan en tillgänglig Helper-Scripts-uppdatering, konfigurera ett anpassat kommando. Inaktivera en metod väljer inte tyst en annan; befintliga plan- / schemaval sparas och otillgängliga mål rapporteras.",
+      "<strong>Update image</strong>-åtgärden gäller endast den valda Docker-enheten; den uppdaterar inte Docker Engine eller orelaterade bilder."
+    ],
+    "statusColState": "Känd stat",
+    "statusColAppearance": "Utseende",
+    "statusColMeaning": "Betydelse",
+    "statusRows": [
+      {
+        "state": "Verifierad uppdatering tillgänglig",
+        "appearance": "Lila text, uppåtpil ikon och lila handling",
+        "meaning": "Installerade och tillgängliga versioner eller bildsmältningar skiljer sig åt."
+      },
+      {
+        "state": "Verifierad ström",
+        "appearance": "Grön kontroll och grön uppdaterad åtgärd",
+        "meaning": "Den senaste genomförda kontrollen bekräftar att målet är aktuellt."
+      },
+      {
+        "state": "Version okänd",
+        "appearance": "Neutral text och neutral handling",
+        "meaning": "En uppdaterare kan köra, men inga versionsbevis finns för att märka det pågående eller aktuellt."
+      }
+    ]
+  },
+  "custom": {
+    "heading": "Anpassade uppdateringskommandon",
+    "lead": "Använd ett anpassat kommando när installationen inte har någon verifierad integrerad uppdatering, eller när den normala proceduren måste bytas ut.",
+    "items": [
+      "Öppna <strong>Configure</strong> när fältet är tomt eller <strong>Edit</strong> när en metod redan finns.",
+      "För en integrerad app eller Docker Engine visar redaktören kommandot som för närvarande används. Att spara olika innehåll förvandlar det till den explicita överskridandet för det rekordet.",
+      "Testa hela proceduren i LXC-terminalen först. Det måste vara icke-interaktivt, använd rätt arbetskatalog och returnera en icke-noll exit status på misslyckande.",
+      "Inkludera inte <code>pct exec</code>; ProxMenux går redan in i behållaren och kör kommandot som rot."
+    ],
+    "exampleLead": "Exempel på ett komplett in-container-förfarande:",
+    "example": "cd /opt/my-app && ./update.sh",
+    "callout": "Ett versionskommando som <code>myapp --version</code> läser bara en version; det är inte en uppdatering. Kommandon körs med administrativa privilegier, så lagrat innehåll måste granskas med samma omsorg som ett rot skalkommando."
+  },
+  "bulk": {
+    "heading": "Gruppuppdatering",
+    "lead": "Bulk update skapar en återanvändbar åtgärd för en exakt uppsättning mål i LXC. Den placeras efter den enskilda appen och Docker sektioner och före <strong>Options</strong>.",
+    "items": [
+      "OS-paket är obligatoriska. Minst en extra app, Docker Engine eller Docker bildenhet måste väljas.",
+      "Ansökningar och Docker-enheter väljs individuellt. En komponerad förälder visar de beroenden som kommer att uppdateras med den.",
+      "Otillgängliga eller borttagna mål markeras som stale och måste tas bort innan konfigurationen kan sparas.",
+      "<strong>Apply-uppdateringar</strong>-knappen är lila när valda mål har en verifierad uppdatering, grönt när alla valda mål verifieras ström och neutral när resultatet är okänt.",
+      "Ta bort bulkkonfigurationen tar inte bort enskilda uppdateringsmetoder eller schemalagda inställningar."
+    ],
+    "callout": "Bulk-uppdateringen ersätter inte de enskilda knapparna. Det är en valfri genväg för ett val som ska köras tillsammans."
+  },
+  "options": {
+    "heading": "Backup och omstart alternativ",
+    "lead": "Samma alternativ gäller för manuella, bulk och schemalagda körningar:",
+    "items": [
+      "<strong>Snapshot innan applicering</strong> skapar en vzdump backup på den valda lagringen. Om den nödvändiga säkerhetskopian misslyckas startar uppdateringen inte.",
+      "<strong>Starta om efter applicering</strong> omstarter av LXC Först efter en lyckad körning.",
+      "Urvalen lagras per LXC och förblir oberoende från mållistan."
+    ]
+  },
+  "scheduled": {
+    "heading": "Schemalagda uppdateringar",
+    "lead": "Planerade uppdateringar använder samma körbara mål och säkerhetsalternativ som manuella åtgärder.",
+    "items": [
+      "Välj ett förinställt eller krönt uttryck, välj sedan exakta mål: OS-paket, enskilda appar, Docker Engine, fristående Docker-enheter eller komponera servicegrupper.",
+      "Ett releasehold gäller endast för utvalda applikationer med versionsspårning. Appar utan att spåra kör deras uppdatering när deras schema beror.",
+      "Den sista staten skiljer framgång, partiell slutförande, misslyckande, säkerhet och en körning med inget pågående. Efter den första schemalagda körningen öppnar <strong>Updates → Schemalagda uppdateringar → Visa log</strong> den kompletta utgången som fångats från uppdateringsprogrammet och alla barnskript som det åberopade.",
+      "Efter varje körning kontrollerar ProxMenux standarden Debian reboot-krävd markör. När en omstart behövs, säger fliken Uppdateringar och slutförandet meddelandet så; varningen rensas när LXC startar eller startar om.",
+      "På Proxmox värd lagras schemalagda loggar i <code>/usr/local/share/proxmenux/logs/lxc-updates/</code> med namnet <code>&lt;VMID&gt;-scheduled-&lt;run-id&gt;.log</code>. De senaste tio loggar sparas per LXC och äldre filer tas bort automatiskt.",
+      "Denna bevarade historia gäller för schemalagda uppdateringar. En manuell uppdatering visar sin produktion live i Monitor-avrättningsfönstret och skapar inte en schemalagd logg i den katalogen.",
+      "Externa värdscheman som upptäckts från Proxmox VE Helper-Scripts visas separat så överlappande automatisering är synlig."
+    ],
+    "callout": "Kör varje vald metod manuellt innan du aktiverar ett schema. Planerade kommandon kan inte svara på instruktioner."
+  },
+  "completion": {
+    "heading": "Vad händer efter en uppdatering",
+    "lead": "Uppdateringen anses inte avslutad när terminalkommandot bara lämnar.",
+    "items": [
+      "Samma körning registrerar sitt slutresultat och uppdaterar OS-paketstatus, registrerade appversioner och Docker-inventering som tillämpligt.",
+      "Planerade körningar behåller sin terminalutgång och rapporterar om en omstart fortfarande krävs för att slutföra paketändringar.",
+      "LXC-cache ersätts med det verifierade post-update-tillståndet, så märken och knappar behåller inte det tidigare resultatet.",
+      "Om en stoppad eller restaurerad LXC startar, uppdaterar den befintliga livscykelhändelsen att LXC igen. Docker-inventeringen väntar på att daemonen ska bli redo istället för att cacha ett tomt startresultat som slutgiltigt.",
+      "Aktiverade meddelanden avges från den slutliga körningen, inklusive partiella misslyckanden och grupperade Docker-bildresultat."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Vanliga situationer",
+    "colProblem": "Situation",
+    "colResolution": "Beslut",
+    "rows": [
+      {
+        "problem": "Ingen uppdateringsmetod har identifierats",
+        "resolution": "Öppen konfiguration, lägg till den officiella icke-interaktiva proceduren och testa den manuellt innan du schemalägger den."
+      },
+      {
+        "problem": "En Proxmox VE Helper-Scripts-identitet visas men ingen handling existerar",
+        "resolution": "LXC har arv identifieringsdata men ingen verifierad /usr/bin/update wrapper. Lägg till en anpassad metod först efter att ha bekräftat rätt förfarande."
+      },
+      {
+        "problem": "Docker bilder är tillfälligt tomma efter start eller återställning",
+        "resolution": "Vänta på Docker för att bli redo eller trycka på Kontroll nu. Inventory retries startup och behandlar inte ett övergående tomt resultat som slutgiltigt."
+      },
+      {
+        "problem": "Ett sparat bulkmål är inte längre tillgängligt",
+        "resolution": "Redigera bulkkonfigurationen, ta bort stale-målet och välj den aktuella ersättningen om den finns."
+      },
+      {
+        "problem": "Ett anpassat kommando misslyckas",
+        "resolution": "Kör den i LXC-terminalen och granska dess väg, beroenden, icke-interaktiva flaggor och exitkod."
+      },
+      {
+        "problem": "En schemalagd uppdatering säger att en omstart krävs",
+        "resolution": "Open View log för att granska den färdiga körningen, sedan starta om den LXC. ProxMenux rensar varningen från den befintliga livscykelhändelsen efter att behållaren börjar igen."
+      }
+    ]
+  },
+  "figures": {
+    "osPending": {
+      "alt": "Operativsystempaket med väntande och säkerhetsuppdatering räknas",
+      "caption": "Operativsystemsektionen håller paketuppdateringar oberoende av applicering och Docker-åtgärder."
+    },
+    "options": {
+      "alt": "LXC uppdateringsalternativ med pre-update backup och post-update omstart",
+      "caption": "Backup och omstart preferenser gäller för manuella, bulk och schemalagda avrättningar."
+    }
+  }
+}

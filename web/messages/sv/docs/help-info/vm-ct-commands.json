@@ -1,0 +1,182 @@
+{
+  "meta": {
+    "title": "Proxmox qm och pct Commands - VM och LXC Container Management | ProxMenux",
+    "description": "Hänvisning till Proxmox VE qm och pct kommandon för VMs och LXC containers: list, config, start, stop, shutdown, reboot, destroy, clone, migrate, snapshot, resize, plus pct exec / enter / push / pull för behållare.",
+    "ogTitle": "Proxmox qm och pct Commands - VM och LXC Container Management",
+    "ogDescription": "Referens av Proxmox VE qm och pct kommandon - hantera virtuella maskiner och LXC behållare från CLI: start, stopp, konfigurera, ögonblicksbild, migrera, klon, förstöra.",
+    "twitterTitle": "Proxmox qm/pct Commands ProxMenux",
+    "twitterDescription": "Curated qm / pct kommandon för hantering av virtuella maskiner och LXC behållare i Proxmox VE."
+  },
+  "header": {
+    "title": "VM och CT Management",
+    "description": "Curated referens för qm (VM) och pct (LXC behållare) kommandon. Lista, livscykel (start / stopp / avstängning / förstöra), konfig inspektion och containerspecifika operationer som exec, ange, driva och dra.",
+    "section": "Hjälp och info"
+  },
+  "intro": {
+    "title": "Hitta ett VMID eller CTID först",
+    "body": "Nästan varje kommando behöver ett numeriskt ID. Använd <code>qm list</code> för VM och <code>pct list</code> för behållare. Ersätt <code>&lt;vmid&gt;</code> / <code>&lt;ctid&gt;</code> i snipporna med det faktiska ID innan du kör."
+  },
+  "commandGroups": [
+    {
+      "title": "Lista och information",
+      "commands": [
+        {
+          "command": "qm list",
+          "description": "Lista alla virtuella maskiner"
+        },
+        {
+          "command": "pct list",
+          "description": "Lista alla LXC-behållare"
+        },
+        {
+          "command": "qm config <vmid>",
+          "description": "Visa VM-konfiguration (beredd av qm)"
+        },
+        {
+          "command": "pct config <ctid>",
+          "description": "Visa containerkonfiguration (förberedd av pct)"
+        }
+      ]
+    },
+    {
+      "title": "Konfigurationsfiler (rå)",
+      "commands": [
+        {
+          "command": "cat /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Visa rå VM-konfigurationsfil"
+        },
+        {
+          "command": "cat /etc/pve/lxc/<ctid>.conf",
+          "description": "Visa rå CT-konfigurationsfil"
+        },
+        {
+          "command": "nano /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Redigera rå VM konfigurationsfil (nano)"
+        },
+        {
+          "command": "nano /etc/pve/lxc/<ctid>.conf",
+          "description": "Redigera rå CT konfigurationsfil (nano)"
+        },
+        {
+          "command": "vi /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Redigera rå VM konfigurationsfil (vi)"
+        },
+        {
+          "command": "vi /etc/pve/lxc/<ctid>.conf",
+          "description": "Redigera rå CT konfigurationsfil (vi)"
+        }
+      ]
+    },
+    {
+      "title": "VM-hantering",
+      "commands": [
+        {
+          "command": "qm start <vmid>",
+          "description": "Starta en virtuell maskin. Använd rätt <vmid>"
+        },
+        {
+          "command": "qm stop <vmid>",
+          "description": "Tvinga stopp av en virtuell maskin. Använd rätt <vmid>"
+        },
+        {
+          "command": "qm shutdown <vmid>",
+          "description": "Gracefully shutdown en virtuell maskin"
+        },
+        {
+          "command": "qm reset <vmid>",
+          "description": "Återställ en virtuell maskin (hård omstart)"
+        },
+        {
+          "command": "qm suspend <vmid>",
+          "description": "Avbryta en virtuell maskin"
+        },
+        {
+          "command": "qm resume <vmid>",
+          "description": "Återuppta en avstängd virtuell maskin"
+        },
+        {
+          "command": "qm destroy <vmid>",
+          "description": "Ta bort en virtuell dator (oåterkallelig). Använd rätt <vmid>"
+        }
+      ]
+    },
+    {
+      "title": "Containerhantering",
+      "commands": [
+        {
+          "command": "pct start <ctid>",
+          "description": "Starta en container. Använd rätt <ctid>"
+        },
+        {
+          "command": "pct stop <ctid>",
+          "description": "Tvinga stopp av en container. Använd rätt <ctid>"
+        },
+        {
+          "command": "pct shutdown <ctid>",
+          "description": "Gracefully shutdown en behållare"
+        },
+        {
+          "command": "pct restart <ctid>",
+          "description": "Starta en behållare"
+        },
+        {
+          "command": "pct destroy <ctid>",
+          "description": "Ta bort en CT (irreversibel). Använd rätt <ctid>"
+        }
+      ]
+    },
+    {
+      "title": "Containeråtgärder",
+      "commands": [
+        {
+          "command": "pct exec <ctid> -- getent passwd | column -t -s :",
+          "description": "Visa CT-användare i tabellformat"
+        },
+        {
+          "command": "pct exec <ctid> -- ps aux --sort=-%mem | head",
+          "description": "Topp minnesprocesser i CT"
+        },
+        {
+          "command": "pct enter <ctid>",
+          "description": "Öppna containerns skal"
+        },
+        {
+          "command": "pct push <ctid> <source> <dest>",
+          "description": "Kopiera fil från värd till container"
+        },
+        {
+          "command": "pct pull <ctid> <source> <dest>",
+          "description": "Kopiera fil från container till värd"
+        }
+      ]
+    }
+  ],
+  "destroyWarn": {
+    "title": "Förstörelse är irreversibel",
+    "bodyRich": "<code>qm destroy</code> och <code>pct destroy</code> raderar VM / CT och alla dess diskar. Det finns ingen bekräftelse omedelbar som standard. Ta en säkerhetskopia först om det finns någon chans att du kanske vill ha data tillbaka - se <backupLink>Backup och Restore</backupLink>."
+  },
+  "qmConfigTip": {
+    "title": "qm config vs editing the .conf file directly",
+    "bodyRich": "<code>qm config &lt;vmid&gt;</code> och <code>pct config &lt;ctid&gt;</code> läste filen genom Proxmox egen parser - utgång normaliseras, kommentarer avskalade, i väntan på ändringar som visas separat. Redigera <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> eller <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> direkt kringgår parsern. Användbart för att fixa en korrupt fikon eller tillämpa en inställning <code>qm set</code> kommer inte att acceptera, men stoppa gästen först för att undvika raser. Klustrfilsystemet (<code>pmxcfs</code>) tar hand om att sprida förändringen till andra noder."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/help-info/backup-commands",
+        "label": "Backup och återställ",
+        "tail": " — vzdump och qmrestore / pct restaurering."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Lagring och diskar",
+        "tail": " — qm importdisk och diskhantering."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Hjälp och info översikt",
+        "tail": "."
+      }
+    ]
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "title": "Post-Install: Nätverk | ProxMenux Dokumentation",
+    "description": "Nätverksrelaterade optimeringar i ProxMenux Customizable post-install script: force APT över IPv4, tillämpa en curated sysctl tuning profil, installera Open vSwitch, aktivera TCP BBR + Fast Open, och stift gränssnitt namn till deras MAC-adresser."
+  },
+  "header": {
+    "title": "Post-Install: Nätverk",
+    "section": "Inställningar efter installation av Proxmox"
+  },
+  "intro": {
+    "title": "Vad denna kategori täcker",
+    "body": "Fem oberoende nätverksalternativ. Två är små (eller små)<strong>APT över IPv4</strong>, <strong>Öppet Öppet Öppet Öppet Öppet vSwitch Installera</strong>), två melodi TCP beteende (beteende)<strong>nätverkssysctl profil</strong>, <strong>BBR + Fast Open</strong>), och en fixar en gemensam operationell huvudvärk - <strong>Pinning Interface namn</strong> En ny NIC eller en BIOS Uppdatering byter inte namn <code>enp3s0</code> för att <code>enp4s0</code> och bryta dina broar."
+  },
+  "ipv4": {
+    "heading": "Tvinga APT att använda IPv4",
+    "intro": "Skriver <code>Acquire::ForceIPv4 \"true\";</code> till <code>/etc/apt/apt.conf.d/99-force-ipv4</code>. APT vägrar sedan att använda IPv6 för nedladdning av paket, även om värden har IPv6-anslutning.",
+    "tipTitle": "Vilka fördelar",
+    "tipBody": "Användbart när din IPv6-väg är fläckig, långsammare än IPv4, eller Debian/Proxmox-spegeln bryts ibland över IPv6 (det händer). Harmlöst på värdar utan IPv6. På ett hälsosamt dual-stack-nätverk är det bara en garanti för förutsägbart beteende - apt kommer inte att överraska dig med en IPv6 timeout."
+  },
+  "sysctl": {
+    "heading": "Tillämpa nätverksoptimeringar",
+    "intro": "Skriver en curated sysctl-profil till <code>/etc/sysctl.d/99-network.conf</code> som täcker kärnuttagsbuffertar, ICMP-härdning, grundläggande spoof-skydd och TCP buffertstorlekar som är meningsfulla på en hypervisor med massor av samtidiga flöden.",
+    "tunedTitle": "Vad blir tuned",
+    "headerArea": "Område",
+    "headerSettings": "Nyckelinställningar",
+    "rows": [
+      {
+        "area": "Kärnans socketbuffertar",
+        "settings": "<code>netdev_max_backlog=8192</code>, <code>rmem_max=16M</code>, <code>wmem_max=16M</code>, <code>somaxconn=8192</code>"
+      },
+      {
+        "area": "ICMP härdning",
+        "settings": "<code>icmp_echo_ignore_broadcasts=1</code>, <code>icmp_ignore_bogus_error_responses=1</code>"
+      },
+      {
+        "area": "Routing säkerhet",
+        "settings": "<code>accept_redirects=0</code>, <code>accept_source_route=0</code>, <code>secure_redirects=0</code>, <code>send_redirects=0</code>, <code>log_martians=0</code>"
+      },
+      {
+        "area": "Omvänd vägfilter",
+        "settings": "<code>rp_filter=2</code> (löst läge, se nedan)"
+      },
+      {
+        "area": "TCP",
+        "settings": "<code>tcp_mtu_probing=1</code>, <code>tcp_rfc1337=1</code>, <code>tcp_sack=1</code>, <code>tcp_rmem=8K/87K/16M</code>, <code>tcp_wmem=8K/64K/16M</code>"
+      },
+      {
+        "area": "Hamnar",
+        "settings": "<code>ip_local_port_range=1024 65535</code> (efemeral port pool)"
+      },
+      {
+        "area": "Unix-socketar",
+        "settings": "<code>net.unix.max_dgram_qlen=4096</code>"
+      }
+    ],
+    "sourceOutro": "Det lägger också till <code>source /etc/network/interfaces.d/*</code> till <code>/etc/network/interfaces</code> om det inte redan finns - standardpraxis så att du kan släppa modulära gränssnitt utan att redigera huvudfilen.",
+    "fwbrTitle": "Automatisk melodi av virtuella brandväggsbroar",
+    "fwbrBody": "Vid sidan av sysctl-profilen installerar ProxMenux en hjälpare på <code>/usr/local/sbin/proxmenux-fwbr-tune</code> som tillämpar <code>rp_filter=0</code> och <code>log_martians=0</code> till <code>fwbr*</code> / <code>fwln*</code> / <code>fwpr*</code> / <code>tap*</code> gränssnitt Proxmox skapar runt VM och behållare. Hjälparen åberopas av <code>proxmenux-fwbr-tune.service</code> en-shot enhet vid start, och av <code>/etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules</code> regel på varje <code>net add</code> händelse som matchar dessa prefix - täcker gränssnitt som Proxmox återskapar på VM start / stopp, starta om och live migration. Hjälparen körs också omedelbart efter installation för att svepa gränssnitt som redan finns.",
+    "rpFilterTitle": "Varför rp_filter=2 (lös) istället för 1 (strict)",
+    "rpFilterBody": "Strikt reverse-path filtrering droppar paket vars källa skulle dirigeras ut en <em>different</em> gränssnitt. Det är rätt standard på en klientmaskin, men bryter dåligt på en Proxmox-värd där VM-trafiken ofta anländer på en bro och lämnar på en upplänk med asymmetriska rutter. <code>rp_filter=2</code> (loose) släpper bara paket med verkligt oroliga källor. Det är en pragmatisk avvägning - liten minskning av lokal-IP-spoof-detektering i utbyte mot att inte bryta ditt VM-nätverk."
+  },
+  "ovs": {
+    "heading": "Installera Open vSwitch",
+    "intro": "Installerar <code>openvswitch-switch</code> + <code>openvswitch-common</code>. Dessa paket lägger till OVS som ett brogenomförande alternativ till standard Linux broar som Proxmox använder som standard. Installationen ensam ändrar inte något nätverk - befintliga <code>vmbrX</code>-broar fortsätter att fungera. OVS blir tillgängligt i Proxmox UI när du <em>create</em> en ny bro och plocka den från typnedgången.",
+    "tipTitle": "När OVS är meningsfullt",
+    "tipBody": "Tänk på OVS om du behöver <strong>VLAN trunking med icke-kontant VLAN IDs</strong>, <strong>LACP med LLDP på specifika lägen</strong>, <strong>fine-grained flow programming</strong> (OpenFlow), eller interoperation med SDN controllers. För ett hemlaboratorium med ett par VLAN och en enda LACP-upplänk är standard Linux-broar + <code>vmbrX.VID</code> enklare och perfekt bra.",
+    "revertTitle": "Reversibel från Uninstall-menyn",
+    "revertBody": "OVS spåras. <link>Uninstall Optimizations</link> kör <code>apt purge</code> på <code>openvswitch-switch</code> och <code>openvswitch-common</code>. Migrera alla OVS broar tillbaka till Linux broar <em>before</em> avinstallera, annars VMs på dessa broar förlorar nätverk på nästa start. Manuell motsvarighet:"
+  },
+  "bbr": {
+    "heading": "Aktivera TCP BBR + TCP Fast Open",
+    "intro": "Skriver två sysctl-filer och laddar om dem. BBR ersätter standard CUBIC trängsel kontroll med Googles bandbredd-baserade algoritm, som hanterar lång fett rör och förlust länkar mycket bättre. TCP Fast Open (TFO) eliminerar en rund resa på upprepa TCP-anslutningar genom piggy-backing data på SYN.",
+    "verifyTitle": "Verifiering",
+    "impactTitle": "Impact är workload-beroende",
+    "impactBody": "BBR lyser på hög latens eller förlust länkar (korskontinent replikering, VPN-tunnlar, mobila kunder). På en LAN mellan två maskiner på samma strömbrytare är skillnaden ofta inom buller. TFO hjälper korta, upprepade HTTP-anslutningar mest.",
+    "revertTitle": "Reversibel från Uninstall-menyn",
+    "revertBody": "BBR/TFO spåras. <link>Uninstall Optimizations</link> tar bort de två sysctl-filerna (<code>/etc/sysctl.d/99-tcp-bbr.conf</code> och <code>99-tcp-fastopen.conf</code>) och reloads sysctl så att kärnan återvänder till <code>cubic</code> och <code>tcp_fastopen=1</code>. Manuell motsvarighet:"
+  },
+  "names": {
+    "heading": "Gränssnittsnamn (beständig)",
+    "intro": "Iterates över varje fysisk NIC värden har (skippa loopback, Docker veths, broar, TAP-enheter, obligationer, Cilium, ZeroTier, WireGuard) och skriver en systemd <code>.link</code>-fil som binder det aktuella gränssnittet namn till den nuvarande MAC-adressen. Kernelns namnlogik kan sedan inte längre namnge att NIC - MAC vinner.",
+    "whyTitle": "Varför detta är viktigt",
+    "whyItems": [
+      "Lägga till eller ta bort PCIe-enheter kan flytta bussnumret, vända <code>enp3s0</code> till <code>enp4s0</code>. Om din <code>/etc/network/interfaces</code> refererar till det gamla namnet försvinner bron på omstart.",
+      "BIOS / firmwareuppdateringar ändrar ibland hur enheterna räknas, med samma effekt.",
+      "LXC-containrar med <code>hotplug</code> NIC och bundna länkar kan tävla på start och hamna uppkallad inkonsekvent. Pinning fixar det."
+    ],
+    "writtenTitle": "Vad blir skrivet",
+    "writtenIntro": "En fil per fysisk NIC, på <code>/etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code>. Varje fil börjar med rubriken <code># Managed by ProxMenux — do not edit</code> så att ProxMenux kan skilja sina egna filer från användar- eller pakettillhandahållna <code>.link</code>-filer.",
+    "writtenOutro": "<code>.link</code>-filer från andra paket eller handskrivna av användaren lämnas på plats - endast filer som bär ProxMenux-rubriken hanteras. På omkörning försonar funktionen sin egen uppsättning: den läser om <code>MACAddress=</code> från varje <code>10-proxmenux-*.link</code> och släpper alla vars MAC inte längre visas under <code>/sys/class/net/</code>. Filer skrivna av en tidigare ProxMenux-utgåva i det gamla <code>10-&lt;iface&gt;.link</code>-formatet migreras automatiskt första gången.",
+    "pveTitle": "PVE 9 vs PVE 8",
+    "pveBody": "På Proxmox VE 9 (<code>systemd-networkd</code> infödda), reloads udev regler efter att ha skrivit <code>.link</code> filer så nya hotplug NICs plocka upp rätt namn utan en omstart. På PVE 8 (<code>ifupdown2</code>) löses gränssnittet namn på start ändå - en omstart krävs för att förändringarna ska träda i kraft. Skriptet sätter omstart flaggan på något sätt så Anpassningsbar uppmanar dig.",
+    "reviewTitle": "Granska befintlig /etc/network/interfaces först",
+    "reviewBody": "Om din värd har arvskonfiguration i <code>/etc/network/interfaces</code> som refererar till NIC-namn som genereras av kärnans standardschema, pinning <em>todays </em>-namn är exakt vad du vill. Men om du redan har manuellt anpassat konfigen kring specifika namn, dubbelkolla pinning matchar vad gränssnittet filen förväntar sig innan omstart.",
+    "revertTitle": "Reversibel från Uninstall-menyn",
+    "revertBody": "<link>Uninstall Optimizations</link> raderar endast <code>10-proxmenux-*.link</code> filer som bär ProxMenux-rubriken från <code>/etc/systemd/network/</code>. Varje <code>.link</code>-fil som läggs till av användaren eller av ett annat paket bevaras. Interface namn återvänder till systemd standard beteende på nästa omstart."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "label": "Nätverkshantering",
+        "href": "/docs/network",
+        "tail": " — diagnostik, broanalys, guidade reparationer."
+      },
+      {
+        "label": "Persistenta gränssnitt namn",
+        "href": "/docs/network/persistent-names",
+        "tail": " — samma idé som sin egen meny senare (använd antingen inte båda)."
+      },
+      {
+        "label": "Nätverkskommandon referens",
+        "href": "/docs/help-info/network-commands",
+        "tail": " — ip, ss, ethtool, sysctl."
+      },
+      {
+        "label": "Avinstallera optimering",
+        "href": "/docs/post-install/uninstall",
+        "tail": " - återställ någon av dessa nätverksändringar."
+      },
+      {
+        "label": "Anpassningsbar post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — tillbaka till föräldermenyn."
+      }
+    ]
+  }
+}

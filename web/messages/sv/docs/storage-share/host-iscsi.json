@@ -1,0 +1,123 @@
+{
+  "meta": {
+    "title": "Värd: Lägg till iSCSI-mål som Proxmox-lagring | ProxMenux Dokumentation",
+    "description": "Registrera ett iSCSI-mål som Proxmox-lagring med ProxMenux. Handles open-iscsi installera, portal upptäckt via sendtargets, målval och pvesm lägga till iscsi. Ger rå block enheter för VM disk bilder.",
+    "ogTitle": "Värd: Lägg till iSCSI-mål som Proxmox-lagring | ProxMenux Dokumentation",
+    "ogDescription": "Registrera ett iSCSI-mål som Proxmox-lagring med guidad upptäckt. Använder pvesm lägga till iscsi och ger rå block enheter för VM diskar."
+  },
+  "header": {
+    "title": "Värd: Lägg till iSCSI-mål som Proxmox-lagring",
+    "description": "Registrera ett iSCSI-mål (från en SAN, TrueNAS / FreeNAS, Synology, ett Windows Server-mål, någon matris som talar iSCSI) som Proxmox-lagring. De exporterade LUNs visas som blockenheter och kan vara värd för VM-diskbilder vid nära lokal prestanda över nätverket.",
+    "section": "Storage & Share · Värd"
+  },
+  "intro": {
+    "title": "Vad detta gör",
+    "body": "ProxMenux wraps <code>pvesm add iscsi</code> med ett guidat flöde: det installerar <code>open-iscsi</code> om det behövs, ber om iSCSI portal (IP:port), kör <code>iscsiadm --mode discovery --type sendtargets</code> mot det, låter dig välja ett mål IQN, och registrerar iSCSI lagring i Proxmox. <code>iscsid</code>-tjänsten håller sedan iSCSI-sessionen levande över omstart."
+  },
+  "vocab": {
+    "heading": "iSCSI ordförråd (snabb referens)",
+    "headerTerm": "Termen",
+    "headerMeaning": "Betydelse",
+    "rows": [
+      {
+        "term": "Portal",
+        "meaningRich": "iSCSI service endpoint på målservern - en IP (eller värdnamn) plus en TCP-port. Standardport är <code>3260</code>; ProxMenux antar det om du inte anger en."
+      },
+      {
+        "term": "Mål",
+        "meaningRich": "En enda exporterad \"server\" i portalen, identifierad av dess IQN (<em>iSCSI Kvalificerad Name</em>). En portal kan vara värd för många mål."
+      },
+      {
+        "term": "IQN",
+        "meaningRich": "Kanonisk form är <code>iqn.YYYY-MM.reverse.domain:identifier</code>, till exempel <code>iqn.2024-08.com.truenas:proxmox-pool</code>. Både målet och initiativtagaren har sin egen IQN."
+      },
+      {
+        "term": "LUN",
+        "meaningRich": "En blockenhet inuti ett mål (Logical Unit Number). Ett enda mål kan exponera flera LUNs; varje LUN visas som sin egen disk i Proxmox och kan bli en VM-skiva."
+      },
+      {
+        "term": "Initiator",
+        "meaningRich": "Kunden som ansluter till ett mål - i det här fallet din Proxmox värd. Initiativtagaren har sin egen IQN lagrad i <code>/etc/iscsi/initiatorname.iscsi</code>. Mål accepterar vanligtvis bara sessioner från förhandstillstånd initiativtagare IQN."
+      }
+    ]
+  },
+  "opening": {
+    "heading": "Öppna verktyget",
+    "body": "Från ProxMenux: s huvudmeny, öppna <strong>Storage &amp; Share Manager → Lägg till iSCSI Mål som Proxmox Storage</strong>. Du kommer att se denna sub-meny med fyra alternativ:",
+    "imageAlt": "iSCSI Host Manager-menyn - Lägg till / Visa / Ta bort / Testanslutning"
+  },
+  "howRuns": {
+    "heading": "Hur man kör skriptet (Lägg till flöde)",
+    "body": "Flödet har två faser med tydlig åtskillnad mellan att \"sätta upp initiativtagaren, upptäcka mål\" och \"registrera lagring i Proxmox\". Till skillnad från NFS / Samba finns det ingen auto-upptäckt på subnet - du måste veta portal adressen (iSCSI är inte sändningsvänlig)."
+  },
+  "add": {
+    "heading": "Lägg till iSCSI-mål som Proxmox-lagring",
+    "items": [
+      "<strong>Portal entry</strong> - Skriv IP- eller värdnamnet på iSCSI-målsservern. Port <code>3260</code> antas om du inte skriver <code>host:port</code>.",
+      "<strong>Target discovery</strong> - ProxMenux kallar <code>iscsiadm --mode discovery --type sendtargets --portal &lt;ip:port&gt;</code>. Servern svarar med varje IQN som gör det möjligt för denna initiativtagare att se. Om upptäckten misslyckas visar manuset exakt felet från <code>iscsiadm</code> och listar vanliga orsaker (fel IP, brandvägg, initiativtagare IQN inte godkänt).",
+      "<strong>Target urval</strong> - ett enda mål är automatisk vald; flera mål visar en meny.",
+      "<strong>Lagring ID</strong> — standard är <code>iscsi-&lt;last IQN segment, 20 chars max&gt;</code>. Endast brev, siffror, <code>-</code> och <code>_</code>.",
+      "<strong>Content type</strong> - till skillnad från NFS / Samba, iSCSI innehåll är <strong>fixed till <code>images</code></strong>. iSCSI exponerar rå blockenheter, inte ett filsystem, så Proxmox låter dig bara värd VM diskar på den."
+    ],
+    "authTitle": "auktorisera Proxmox-initiativtagaren på målet",
+    "authBody1": "Innan Add-flödet fungerar slutändan måste iSCSI-målet känna till din Proxmox-värd. Få din initiativtagare IQN:",
+    "authBody2": "Lägg sedan till att IQN till målets åtkomstlista (i TrueNAS: <em>Dela → Blockera initiativgrupper</em>; i synologi: <em>SAN Manager iSCSI Mål → Redigera → Initiativtagare</em>; etc.). Om initiativtagaren inte är tillåten, <code>iscsiadm</code> upptäckten returnerar en tom lista eller ett autentiseringsfel."
+  },
+  "manual": {
+    "heading": "Manuell motsvarande",
+    "body": "Hela flödet kartlägger dessa kommandon:"
+  },
+  "view": {
+    "heading": "Visa konfigurerade iSCSI lager",
+    "body": "Listar varje iSCSI-post i Proxmox (<code>pvesm status | awk ''$2 == \"iscsi\"''</code>) med portal, mål IQN, innehållstyp och levande status."
+  },
+  "remove": {
+    "heading": "Ta bort iSCSI lagring",
+    "body": "Kör <code>pvesm remove &lt;storage-id&gt;</code> efter att ha bekräftat portal, mål och innehåll. Endast Proxmox-registreringen tas bort - <strong>iSCSI-målet i sig är inte rörd</strong> och befintliga sessioner på kärnsidan kan dröja kvar till nästa omstart.",
+    "warnTitle": "Befintliga VM-skivor på denna iSCSI först",
+    "warnBody": "Ta bort en iSCSI lagring medan VM fortfarande har diskar på det lämnar de VM som pekar på en försvunnen butik. Proxmox kommer att flagga felet, men LUN-data är orörd på målet - du kan registrera lagringen senare för att få diskarna tillbaka. Fortfarande, flytta eller säkerhetskopiera VM först för att vara säker."
+  },
+  "test": {
+    "heading": "Test iSCSI-anslutning",
+    "body": "Kör ett diagnostiskt pass: kontrollerar att <code>iscsiadm</code> installeras, skriver din initiativtagare IQN, bekräftar <code>iscsid</code> körs, pings varje registrerad portal, sondar sin port och rapporterar <code>pvesm status</code> plus om en iSCSI session är för närvarande aktiv (<code>iscsiadm --mode session</code>). Aktiv session plus nåbar portal men \"inaktiv\" i Proxmox betyder vanligtvis ett stalt tillstånd - prova <code>pvesm set &lt;id&gt; --disable 0</code>."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "portalTitle": "\"Kan inte nå portal\" men servern IP svarar någon annanstans",
+    "portalBody": "Ping misslyckades på portal adressen. Kontrollera att du når <em>storage network</em>-gränssnittet (iSCSI bor ofta på ett separat VLAN / subnet från ledningsnätverket). Kontrollera också DNS om du skrev ett värdnamn.",
+    "discoverTitle": "\"iSCSI upptäckt misslyckades\" från iscsiadm",
+    "discoverIntro": "Skriptet visar exakt fel. De vanligaste orsakerna:",
+    "discoverItems": [
+      "Portal IP / port fel (dubbelkontroll, standard är 3260).",
+      "iSCSI-tjänst som inte körs på målservern.",
+      "Brandvägg blockerar 3260 mellan Proxmox och målet.",
+      "<strong>Initiator IQN är inte auktoriserad på målet.</strong> Den vanligaste orsaken till företagsarrayer. Lägg till din Proxmox IQN till målets initiativtagare ACL först."
+    ],
+    "noTargetTitle": "Inga mål hittades men upptäckten lyckades",
+    "noTargetBody": "Servern accepterade din initiativtagare men avslöjar inte något mål för den. Granska målets autentisering / åtkomstkontroller - vissa arrays tillåter upptäckt för alla IQN men filter som riktar sig till varje IQN kan se.",
+    "noLunTitle": "LUNs visas inte i /dev/disk/by-path efter registrering",
+    "noLunBody": "<code>pvesm add iscsi</code> lyckades men kärnan ser inte blockenheter. Kontrollera <code>iscsiadm --mode session</code> - om ingen session är aktiv, starta en manuellt med <code>iscsiadm --mode node --login</code>. Om en session existerar men inga LUN visas, tvinga en rescan: <code>iscsiadm --mode session --rescan</code>. Om fortfarande ingenting, har målet förmodligen inga LUNs tilldelats denna IQN än (konfigurera LUN-kartläggning på målet).",
+    "chapTitle": "CHAP autentisering",
+    "chapBody": "ProxMenux exponerar inte CHAP-användarnamnet / lösenordsfälten i det interaktiva flödet. Om ditt mål kräver CHAP, registrera dig med ProxMenux först (upptäckt med CHAP kan misslyckas, men <code>pvesm add</code> kommer fortfarande att skriva inmatningen), lägg sedan till uppgifter manuellt: <code>pvesm set &lt;id&gt; --username &lt;chap-user&gt;</code> och redigera <code>/etc/iscsi/iscsid.conf</code> med lösenordet, sedan <code>systemctl restart iscsid</code>. Detta är ett gap i det aktuella manuset - dokumenterat här så att du vet vad du ska göra."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/storage-share/host-nfs",
+        "label": "NFS delas som Proxmox lagring",
+        "tail": " — fil-nivå alternativ. Enkelt att ställa in, mer flexibel (backup / ISO / tmpl / bilder), något långsammare för levande VM-skivor."
+      },
+      {
+        "href": "/docs/storage-share/host-samba",
+        "label": "Samba / CIFS som Proxmox förvaring",
+        "tail": " — ett annat filnivåalternativ; undvika för levande VM-skivor på grund av låsning av semantik."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "label": "Lägg till lokal disk som Proxmox lagring",
+        "tail": " — När disken är lokal till Proxmox-värden, inte på en annan ruta över nätverket."
+      }
+    ]
+  }
+}

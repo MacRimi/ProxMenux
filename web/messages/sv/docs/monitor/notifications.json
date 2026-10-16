@@ -1,0 +1,535 @@
+{
+  "meta": {
+    "title": "Proxmox Notifications - Telegram, Discord, Email, Gotify, Pushover, Apprise | ProxMenux Monitor",
+    "description": "Skicka Proxmox VE meddelanden till Telegram, Discord, Email, Gotify, Pushover och ~ 80 extra tjänster via Apprise. ProxMenux Monitor förvandlar händelser från Health Monitor, tidskriftsvakten och Proxmox VE webhook till rika meddelanden med deduplicering, nedkylning, utbrott aggregation, en valfri AI-skrivare och en fullständig historia.",
+    "ogTitle": "Proxmox Notifications – Telegram, Discord, Email, Gotify, Pushover, Apprise",
+    "ogDescription": "Skicka Proxmox VE varningar till Telegram, Discord, Email, Gotify, Pushover och ~ 80 extra tjänster via Apprise - med deduplicering, nedkylning, brist aggregation och en valfri AI omskrivning.",
+    "twitterTitle": "Proxmox-meddelanden | ProxMenux Monitor",
+    "twitterDescription": "Skicka Proxmox VE varningar till Telegram, Discord, Email, Gotify, Pushover och ~ 80 extra tjänster via Apprise."
+  },
+  "header": {
+    "title": "Aviseringar",
+    "description": "Den fan-out motor som tar händelser från varje samlare inuti Monitor och levererar dem till Telegram, Discord, Email, Gotify, Pushover och ~ 80 extra tjänster via Apprise - med deduplicering, nedkylning, brist aggregation, per-event och per-kanal toggles, en valfri AI-rewriter och en förfräsbar historia.",
+    "section": "ProxMenux-övervakning"
+  },
+  "intro": {
+    "title": "Där meddelanden kommer från",
+    "body": "Meddelanden är inte en separat skanner. De är utgångssidan av varje samlare som redan körs inuti Monitor - <link>Health Monitor</link>, tidskriftsvakten, Proxmox arbetsvakt, PVE webhook krok, valsamlaren och de processhändelser som avges av ProxMenux scripts. Varje händelse körs genom samma sändningspipeline innan du når en telefon eller en inkorg."
+  },
+  "howItWorks": {
+    "heading": "Hur det fungerar",
+    "intro": "Varje meddelande följer samma väg genom övervakningsprocessen. Händelser produceras av en handfull oberoende samlare, normaliserade till en strukturerad nyttolast, passerade genom en sändningspipeline som bestämmer om du ska skicka och i vilken form, valfritt skriven av en LLM, och slutligen fläckade ut till vilken kanaler användaren har konfigurerat.",
+    "arrowLabel": "händelse",
+    "caption": "Hög nivå flöde. Varje verkligt avsändande försök - framgångsrikt, aggregerat eller misslyckat - registreras i SQLite historia tabell för retrospektiv inspektion. Händelser undertryckta av nedkylningsfasen är inte inloggade.",
+    "nodes": {
+      "sourcesLabel": "Källor",
+      "sourcesDetail": "Hälsokontroll\nJournal watcher\nTask watcher\nPVE webhook krok\nPolling samlare\nIn-process emitters",
+      "dispatchLabel": "Hanteringskedja",
+      "dispatchDetail": "Per-event Toggle\nFingerprint Dedup\nCooldown\nBurst aggregation",
+      "aiLabel": "AI-omskrivning (valfritt)",
+      "aiDetail": "OpenAI / Antropisk\nGemini / Groq\nOpenRouter / Ollama\n(som standard)",
+      "channelsLabel": "Kanaler",
+      "channelsDetail": "Telegram\nDiscord\nE-post (SMTP)\nGotify\nPushover\nApprise (~80-tjänster)"
+    }
+  },
+  "enabling": {
+    "heading": "Gör panelen",
+    "intro": "På en ny installation av meddelandekortet på fliken Inställningar visar en <em>Disabled</em>-märke och en enda <em>Enable Notifications</em>-knapp. Ingenting skickas och ingen PVE-konfig berörs tills du trycker på den.",
+    "disabledAlt": "Meddelanden kort på en ny installation som visar funktionshindrad märke och en enda Aktivera meddelanden knapp",
+    "disabledCaption": "Det första tillståndet - ett klick för att aktivera.",
+    "stepsIntro": "Tryck på knappen gör tre saker i sekvens:",
+    "steps": [
+      "Flips panelen till dess <em>Active</em> tillstånd och utvecklar kanalformen nedan.",
+      "Registrerar ett Proxmox VE webhook mål i <code>/etc/pve/notifications.cfg</code> pekar på <code>POST http://127.0.0.1:8008/api/notifications/webhook</code>. Från detta ögonblick strömmar allt Proxmox VE ut på egen hand (HA, replikation, vzdump från GUI) in i samma pipeline som Monitorns egna händelser. Se <pvelink>PVE webhook integration</pvelink> nedan för full mekanik.",
+      "Börjar sänd bakgrund tråd. Tråden omröstar händelsen kö och går varje händelse genom rörledningen diagrammet ovan."
+    ],
+    "activeAlt": "Meddelanden kort efter att ha aktiverat - Aktivt märke, kanalflikar, Visa namn fält och Avancerad AI Enhancement kollapsbar sektion",
+    "activeCaption": "Aktivt tillstånd - kanalflikar på toppen (Telegram / Gotify / Discord / Email / Pushover / Apprise), Display Name-fältet, kategorilistan per kanal och den kollapsbara <em>Advanced: AI Enhancement</em> sektionen."
+  },
+  "sources": {
+    "heading": "Eventkällor",
+    "intro": "Sex oberoende samlare matar anmälningsmotorn. De kör som bakgrundstrådar inuti övervakningsprocessen och avger en strukturerad <code>NotificationEvent</code> varje gång något händer.",
+    "headerCollector": "Insamlare",
+    "headerWatches": "klockor",
+    "headerEvents": "Typiska händelser",
+    "rows": [
+      {
+        "collector": "Hälsoövervakare",
+        "watches": "Tio kategorier, varje 5 minuter",
+        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>."
+      },
+      {
+        "collector": "Övervakning av systemjournalen",
+        "watches": "<code>journalctl --follow</code> med mönstermatchning för SSH / web auth misslyckanden, Fail2Ban förbud (när valfri fängelse är installerad), kärn I / O fel, OOM, smarta händelser.",
+        "events": "<code>auth_fail</code>, <code>ip_block</code>, <code>oom_kill</code>, <code>disk_io_error</code>, <code>service_fail</code>."
+      },
+      {
+        "collector": "Uppgiftsövervakning",
+        "watches": "Undersökningar <code>/var/log/pve/tasks/index</code> för nya uppgift UPID och följer deras per-fil loggar.",
+        "events": "<code>backup_start</code>, <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>migration_*</code>, <code>snapshot_complete</code>."
+      },
+      {
+        "collector": "Proxmox webhook krok",
+        "watches": "Lyssna på <code>POST /api/notifications/webhook</code>. Proxmox VE 8.1+ driver sina egna meddelanden här när integrationen är upprättad (se <pvelink>below</pvelink>).",
+        "events": "Allt PVE avger - inklusive händelser som Monitor annars skulle missa (HA, replikering, vzdump från GUI)."
+      },
+      {
+        "collector": "Polling samlare",
+        "watches": "Periodiska jämförelser (klusternoder online, certifikatutgång, GPU passthrough state, PVE / ProxMenux uppdatering tillgänglighet).",
+        "events": "<code>node_disconnect</code>, <code>node_reconnect</code>, <code>pve_update</code>, <code>proxmenux_update</code>, <code>gpu_mode_switch</code>, <code>pci_passthrough_conflict</code>."
+      },
+      {
+        "collector": "Händelsekällor i processen",
+        "watches": "Direkta samtal från ProxMenux scripts och från Monitor själv (<code>notification_manager.emit_event(...)</code>).",
+        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>ai_model_migrated</code>, anpassade testevenemang."
+      }
+    ],
+    "after1": "Varje händelse bär en stabil <code>event_type</code> (katalogen är nedan), en <code>severity</code> (<code>INFO</code>, <code>WARNING</code>, <code>CRITICAL</code>), en <code>category</code> (används för emoji berikning och per gruppfilter) och en <code>data</code> nyttolast med allt mallbehov (<code>vmid</code>, <code>device</code>, <code>source_ip</code>, <code>reason</code>...).",
+    "after2": "Varje <code>event_type</code> har en matchande mall i <code>notification_templates.py</code> som gör den strukturerade händelsen till en vanlig textkropp innan något annat händer. Den mallade kroppen är vad som färdas genom avsändningsledningen, och vad det frivilliga AI-skiktet skriver om om om det är möjligt. Se <ailink>AI Assistant page</ailink> för hur omskrivningsskiktet interagerar med denna mallade kropp."
+  },
+  "channels": {
+    "heading": "Genomgångar av kanaler",
+    "intro": "Sex kanaler stöds för närvarande: Telegram, Discord, Gotify, Email (SMTP), Pushover och Apprise. De första fem är inhemska integrationer med egna konfigurationsfält. Apprise är ett generiskt nav som lägger till runt 80 ytterligare tjänster (ntfy, Matrix, Slack, Teams, Pushbullet, AWS SNS, Mattermost...) genom ett enda URL-fält. De är alla dokumenterade steg för steg nedan.",
+    "credsTitle": "Där referenser lever",
+    "credsBody": "Tokens, nycklar, webhook URLs och SMTP-lösenord lagras lokalt i Monitor's SQLite-databas under <code>/usr/local/share/proxmenux/</code>. Känsliga värden skyddas och maskeras i gränssnittet. De lämnar aldrig värden förutom att nå sina respektive tjänster. En säkerhetskopia av den katalogen är tillräckligt för att återställa de konfigurerade kanalerna."
+  },
+  "telegram": {
+    "heading": "Telegram",
+    "intro": "Två bitar av information krävs: en <strong>Bot Token</strong> (en per bot, återanvändbar över chattar) och en <strong>Chat ID</strong> (där bot ska posta - din privata chatt, en grupp eller ett ämne i en supergrupp). In-app guiden nedan innehåller hela steg-för-steg; resten av detta avsnitt upprepar det som text plus de två formerna Chatt-ID kan ta.",
+    "guideAlt": "Telegram Bot Setup Guide modal med fyra numrerade sektioner: Skapa en Bot med BotFather, Få Bot Token, Få ditt chatt-ID och för grupper eller kanaler",
+    "guideCaption": "<em>+ installationsguide</em>-länken inuti Telegram-fliken öppnar denna modal - de fyra numrerade stegen går från ingen bot till en fungerande kanal på cirka två minuter.",
+    "step1Title": "1 Skapa en bot med BotFather",
+    "step1Items": [
+      "Öppna Telegram och starta en chatt med <a>@BotFather</a> (den med den blå verifieringsticken - kopior är vanliga).",
+      "Skicka <code>/newbot</code>",
+      "Välj ett displaynamn (t.ex. <em>ProxMenux Lab</em>). Det kan ändras senare.",
+      "Välj ett användarnamn som slutar i <code>bot</code> (t.ex. <em>proxmenux_lab_bot</em>). Det måste vara unikt över Telegram.",
+      "BotFather svarar med ett tecken på formuläret <code>123456789:ABCdef…</code> - det är Bot Token. Behandla det som ett lösenord."
+    ],
+    "step2Title": "2 · Få chatt-ID",
+    "step2Intro": "Chatt-ID identifierar <em>where</em> botposterna. Det tar en av två former beroende på målet.",
+    "privateLabel": "Privat chatt (du får varningarna på ditt eget konto):",
+    "privateItems": [
+      "Starta en chatt med din nya bot och skicka något meddelande (t.ex. <code>/start</code>).",
+      "Öppna en chatt med <a1>@userinfobot</a1> (eller <a2>@myidbot</a2>) och skicka <code>/start</code>. Det svarar med ditt numeriska användar-ID - det är chatt-ID. Det är ett positivt tal."
+    ],
+    "privateAlt": "Telegram kanalform fylld med Bot Token (maskerad), positiv chatt-ID för en privat chatt och ett tomt valfritt ämnes-ID-fält",
+    "privateCaption": "Privat chatt med bot - Chatt ID är ett positivt nummer (ditt personliga användar-ID).",
+    "groupLabel": "Grupp eller supergrupp med ämnen:",
+    "groupItems": [
+      "Lägg till bot till gruppen som medlem (och gör det admin om gruppen kräver det att posta).",
+      "Skicka alla meddelanden i gruppen.",
+      "Öppna <code>https://api.telegram.org/bot&lt;YOUR_TOKEN&gt;/getUpdates</code> i en webbläsare. Leta efter <code>chat.id</code> i JSON-svaret - för grupper är det ett negativt nummer, för supergrupper börjar det med <code>-100</code>.",
+      "För supergrupper med <em>Topics</em> aktiverad, notera också <code>message_thread_id</code> av det ämne du vill rikta - som går i det valfria <em>Topic ID</em>-fältet."
+    ],
+    "groupAlt": "Telegram kanalform med Bot Token (masked), negativ chatt-ID prefixed med -100 indikerar en supergrupp och ämne ID 3 set för att leverera till ett specifikt ämne",
+    "groupCaption": "Supergrupp - Chatt ID börjar med <code>-100…</code> och den valfria <em>Topic ID</em> riktar sig till en specifik tråd.",
+    "step3Title": "3 Spara och testa",
+    "step3Body": "Klistra in Bot Token och Chatt ID i Telegram-fliken, spara och tryck på <em>Send Test</em> längst ner i panelen. Ett testmeddelande ska anlända inom en sekund; om det inte gör det registrerar avsnittet Historik felet med den exakta orsaken (ogiltig token, bot inte i grupp, blockerad av användaren etc.)."
+  },
+  "discord": {
+    "heading": "Discord",
+    "intro": "Discord-kanaler accepterar inkommande meddelanden genom en <em>Webhook URL</em> knuten till en enda kanal. Övervakaren behöver denna URL och inget annat.",
+    "items": [
+      "I Discord, öppna servern där du vill ha meddelanden att landa och gå till <em>Server Inställningar → Integrationer → Webhooks</em>.",
+      "Klicka på <em>New Webhook</em>. Ge det ett namn (t.ex. <em>ProxMenux</em>) och välj den kanal den ska posta till. En avatar är valfri.",
+      "Klicka på <em>Copy Webhook URL</em> - det ser ut som <code>https://discord.com/api/webhooks/&lt;id&gt;/&lt;token&gt;</code>.",
+      "Klistra in det i Webhook URL-fältet i Discord-fliken i meddelandepanelen och spara."
+    ],
+    "imageAlt": "Discord kanalform med Webhook URL-fält som börjar med https://discord.com/api/webhooks/",
+    "imageCaption": "Discord - klistra in Webhook URL från <em>Serverinställningar → Integrationer → Webhooks</em>."
+  },
+  "gotify": {
+    "heading": "Gotify",
+    "intro": "Gotify är en självhäftad push-server. Du behöver sin bas URL och en <em>Application Token</em> som genereras från Gotify admin UI.",
+    "items": [
+      "Om du inte redan har en Gotify-instans, installera en - se <a>officiell installationsguide</a>.",
+      "Öppna Gotify webb UI, logga in som admin, gå till <em>Apps</em> → <em>Create Application</em>. Ge det ett namn (t.ex. <em>ProxMenux</em>). Gotify genererar en token - kopiera den.",
+      "I Gotify-fliken för meddelandepanelen, ställ in <em>Server URL</em> till basURL för ditt instans (t.ex. <code>https://gotify.example.com</code>) och klistra in App Token.",
+      "Spara och tryck på <em>Send Test</em>."
+    ],
+    "imageAlt": "Gotify kanalform med Server URL-fältet som är inställt på https://gotify.example.com och ett App Token-fält med platshållare A_valid_gotify_token",
+    "imageCaption": "Gotify - server URL för ditt självvärda instans plus App Token från Gotify admin UI."
+  },
+  "email": {
+    "heading": "E-post (SMTP)",
+    "intro": "E-post är den mest flexibla kanalen – och den som har flest fält. Du behöver en SMTP-server, en port, ett TLS-läge, valfritt ett användarnamn och lösenord, en avsändaradress och minst en mottagare.",
+    "imageAlt": "E-postkanalform med SMTP Host, Port, TLS Mode dropdown, användarnamn, lösenord, från adress, till adresser komma-separerade och Subject Prefix-fält",
+    "imageCaption": "E-post - SMTP-värd / port / TLS-läge, valfritt användarnamn + lösenord, avsändaradress, komma-separerade mottagare och ett ämnesprefix för att göra varningar lätta att filtrera inbox-side.",
+    "appNote": "Om du använder ett personligt Gmail eller Microsoft 365-konto kan lösenordsfältet inte vara ditt vanliga kontolösenord - båda leverantörerna kräver en <strong>app lösenord</strong> som genereras specifikt för tredjepartsklienter. De två flödena är nedanför.",
+    "gmailTitle": "Gmail app lösenord",
+    "gmailIntro": "Gmail app lösenord kräver <strong>2-Step Verification</strong> att vara aktiv på Google-kontot. Om det inte är det, kommer <em>App lösenord</em>-sidan inte att existera.",
+    "gmailItems": [
+      "Öppna <a>myaccount.google.com/security</a> och slå på <em>2-Step Verification</em> om det inte redan är på.",
+      "Gå till <a>myaccount.google.com/apppasswords</a>.",
+      "Skriv ett namn (t.ex. <em>ProxMenux</em>) och klicka på <em>Create</em>. Google visar ett 16-karaktärslösenord - kopiera det.",
+      "Fyll e-postfliken med: <em>Värd</em> <code>smtp.gmail.com</code>, <em>Port Port Port Port Port</em> <code>587</code>, <em>TLS Mode</em> <code>STARTTLS</code>, <em>Användarnamn</em> din Gmail-adress, <em>Lösenord</em> och 16Karaktär app lösenord."
+    ],
+    "outlookTitle": "Microsoft / Outlook app lösenord",
+    "outlookIntro": "Microsoft kräver nu <strong>two-step verification</strong> på det personliga kontot innan ett applösenord kan skapas. Enterprise hyresgäster där administratören har inaktiverat SMTP grundläggande auth behöver en annan väg (OAuth2) som för närvarande inte stöds av Monitor - peka dem på ett SMTP-relä du styr istället.",
+    "outlookItems": [
+      "Open <a>account.microsoft.com/security</a> och möjliggör tvåstegsverifiering.",
+      "Öppna <em>Avancerade säkerhetsalternativ</em>, bläddra till <em>App lösenord</em> och klicka på <em>Create en ny app lösenord</em>.",
+      "Microsoft visar ett lång slumpmässigt lösenord - kopiera det.",
+      "Fyll e-postfliken med: <em>Värd</em> <code>smtp-mail.outlook.com</code>, <em>Port Port Port Port Port</em> <code>587</code>, <em>TLS Mode</em> <code>STARTTLS</code>, <em>Användarnamn</em> Din Outlook / Microsoft 365 adress, <em>Lösenord</em> det genererade app lösenordet."
+    ],
+    "relayTitle": "Självvärd SMTP relä",
+    "relayBody": "Om du kör ditt eget SMTP relä (Postfix, msmtp, etc.) på LAN, peka Monitor på det och hoppa över app-passord dansen helt. Reläet hanterar auth uppströms och Monitor skickar i klartext på ett betrott nätverk."
+  },
+  "pushover": {
+    "heading": "Pushover",
+    "intro": "Pushover är en mobil push-tjänst med officiella appar för iOS, Android och stationära webbläsare. Den dedikerade ProxMenux-kanalen talar direkt till <a>Pushover API</a>, så ingen Apprise-URL krävs.",
+    "stepsTitle": "Konfiguration",
+    "steps": [
+      "Skapa en <a>Pushover konto</a>, installera den officiella appen på de enheter som ska få varningar och logga in.",
+      "Kopiera <em>User Key</em> visas på din Pushover instrumentbräda. En gruppnyckel kan användas istället när flera personer eller enheter måste få samma varning.",
+      "Öppet Öppet Öppet Öppet Öppet <a>Skapa en applikation/API Token</a>Skapa en applikation som heter <em>ProxMenux</em> och kopiera dess 30Karaktär API Token.",
+      "I <em>Inställningar → Meddelanden → Pushover</em>, klistra in användaren eller gruppnyckeln och applikationen API token. Enheten och ljudfälten är valfria.",
+      "Spara inställningarna och tryck på <em>Send test</em>. Pushover-appen ska få meddelandet omedelbart."
+    ],
+    "priorityTitle": "Prioriterad kartläggning",
+    "priorityBody": "Normala ProxMenux-meddelanden använder Pushover-prioritet 0. När <strong>High prioritet för kritiska varningar</strong> är aktiverad, CRITICAL händelser använder prioritet 1 så att de sticker ut och kringgår användarens Pushover tysta timmar. ProxMenux använder inte akutprioritet 2, vilket skulle kräva upprepade meddelanden och en erkännandeuppmaning.",
+    "secretTitle": "Skydda båda värdena",
+    "secretBody": "Användaren eller gruppnyckeln och applikationen API token både auktorisera meddelandeleverans. ProxMenux lagrar dem som skyddade underrättelsehemligheter och maskerar dem i gränssnittet; publicera inte heller värde i skärmdumpar eller supportloggar."
+  },
+  "apprise": {
+    "heading": "Apprise (generiskt nav för ~ 80-tjänster)",
+    "intro": "Apprise är ett open-source-meddelande bibliotek som talar protokollet runt 80 olika tjänster genom ett enda URL-format. Lägga till det som en mer kanal inuti Monitor innebär att du kan leverera varningar till tjänster som inte har en dedikerad flik - ntfy, Matrix, Slack, Microsoft TeamsMattermost, Pushbullet, AWS SNS, Pushsafer, Rocket.Chat, Signal API och många andra – utan ProxMenux måste genomföra varje integration separat. Pushover kan också nås genom Apprise, även om dess dedikerade flik är enklare för en enda Pushover destination.",
+    "listIntro": "Den fullständiga listan över stödda tjänster och det exakta URL-formatet för var och en finns tillgänglig i den officiella Apprise-dokumentationen:",
+    "listItems": [
+      "<a>Apprise servicedokumentation</a> - fullständigt index över stödda tjänster.",
+      "<a>URL bass</a> - hur Apprise URL är strukturerade."
+    ],
+    "stepsTitle": "Steg",
+    "steps": [
+      "Välj måltjänsten i <a>Apprise wiki</a> och kopiera URL-mallen för den. Varje servicesida visar det exakta systemet att använda (<code>ntfy://</code>, <code>matrix://</code>, <code>pover://</code>, <code>slack://</code> ...) plus alla nödvändiga tokens, kanaler eller värdnamn.",
+      "Fyll i platshållarna med dina egna referenser. Till exempel ser ett ntfy.sh-ämne ut som <code>ntfy://ntfy.sh/my-topic</code>; en Pushover-URL ser ut som <code>pover://user@token</code>; en Matrix-URL ser ut som <code>matrix://user:pass@host:port/#room</code>.",
+      "Klistra in den slutliga webbadressen i <em>Apprise URL</em>-fältet i Apprise-fliken i meddelandepanelen och spara.",
+      "Tryck <em>Send Test</em> för att verifiera URL:n är tillgänglig och referenserna accepteras."
+    ],
+    "deliveredTitle": "Vad som levereras",
+    "deliveredBody": "Apprise får samma nyttolast som de andra kanalerna - titel, kropp och svårighetsgrad (info / framgång / varning / misslyckande). Allvaret är kartlagt till vad destinationstjänsten exponerar (ikon, prioritet, färg). Rich-message formatering och AI omskriva lager alla körs innan URL åberopas, precis som för Telegram eller e-post.",
+    "fanoutTitle": "En URL per Apprise kanal",
+    "fanoutBody": "Monitorn avslöjar en enda URL-slot per Apprise-kanal. Om du behöver fläkt ut till flera Apprise-tjänster samtidigt (t.ex. ntfy.sh plus ett Matrix-rum), det renaste tillvägagångssättet är att vara värd för en liten <a>Apprise API server</a> med en taggad konfig och peka på Monitorn vid dess slutpunkt - servern sänder sedan till varje URL bakom den taggen."
+  },
+  "rich": {
+    "heading": "Rika meddelanden, kategorier och per kanalfiltrering",
+    "intro": "Nedanför kanalformen exponerar varje kanal samma tre kontroller: en <em>Rich-meddelanden</em>-växla på toppen (highlighted med pilen i skärmdumpen), 11 kollapsbara <em>Notification Categories</em> med per-event-tugglar och en <em>Send Test</em>-knapp längst ner.",
+    "imageAlt": "Meddelande Kategorier panel med Rich meddelanden master toggle markeras högst upp, kollapsbara sektioner för VM / CT, Backups, Resurser, Lagring, Nätverk, Säkerhet, Kluster, Tjänster, Hälsokontroll, Uppdateringar var och en med växel och händelse räknas, och en Skicka Test knapp",
+    "imageCaption": "Topppil - per-kanalen <em>Rich meddelanden</em> växel. Nedan - de elva kollapsbara kategorierna med per-event toggles. <em>Send Test</em> sitter längst ner i kanalen.",
+    "richTitle": "Riktiga meddelanden",
+    "richIntro": "Med <em>Rich meddelanden</em> på, är varje händelse header prefixed med en kategori emoji och kroppen görs med hjälp av kanalens inhemska formatering (Telegram HTML, Discord inbäddad med svårighetsgrad färg). Med det skickar Monitor en vanlig textversion med samma information minus de visuella signalerna. Samma innehåll, olika presentation:",
+    "plainHeader": "Plain - Rika meddelanden av",
+    "richHeader": "Rik - Rika meddelanden på",
+    "richOutro": "Växeln är per-kanal: lämna E-postlätt för inbox-regel läsbarhet samtidigt som Telegram och Discord gör den rika versionen. Kanaler som inte stöder inline-formatering (plain-text-e-post, Gotify) ignorerar formateringen och faller tillbaka till texten på något sätt.",
+    "togglesTitle": "Per-event kategorier",
+    "togglesIntro": "Omkring sjuttio evenemangstyper grupperas i elva UI-kategorier. Varje händelse har en mästare och en per-kanalsöverskridande - två lager som bestämmer om en viss händelse når en given kanal:",
+    "togglesItems": [
+      "<strong>Per-event master toggle.</strong> Om <code>vm_start</code> är av överallt, ser ingen kanal någonsin en <code>vm_start</code>. Toggles kvarstår som <code>event_toggles[event_type] = true | false</code>.",
+      "<strong>Per-channel overrides.</strong> En händelsetyp kan också dämpas för en specifik kanal (<em> \"sända <code>backup_complete</code> till Discord men inte till Telegram \"</em>). Dessa lever i <code>channel_overrides[channel_name][event_type]</code> och gäller endast om händelsen passerade mästaren."
+    ],
+    "togglesOutro": "Varje kategori rubrik i skärmdumpen visar också antalet händelser <em>currently aktiverad</em> / <em>total</em> för den gruppen, och en kategori-nivå växel som vänder varje händelse inuti den på eller av i ett klick - genvägen för att muta en hel grupp (t.ex. alla <code>info</code> säkerhetskopior, alla uppdateringsrelaterade händelser) utan att sektionen."
+  },
+  "quiet": {
+    "heading": "Tyst timmar",
+    "intro": "Quiet Hours är ett tidsfönster per kanal under vilket avsändaren endast låter <strong>CRITICAL</strong> händelser genom. Allt annat - INFO, WARNING, actionhändelser - hålls tillbaka, kvarstår till disk och levereras som en grupperad sammanfattning i det ögonblick fönstret stängs. Kanalen får fortfarande de brådskande sakerna i realtid; bullret väntar tills du sannolikt vill ha det.",
+    "imageAlt": "Kanalinställningar som visar båda knopparna sida vid sida: Quiet Hours kort med växel på, Start 22:00 och slut 07:00 plus en live förhandsgranskning av nästa övergång, och precis nedanför det dagliga smältkortet med sin egen växel, en leveranstid plockare inställd på 09:00 notera att CRITICAL och WARNING aldrig försenas",
+    "imageCaption": "Båda knopparna lever sida vid sida inuti varje kanals inställningskort - tysta timmar på toppen, daglig smälta under. oberoende per kanal.",
+    "purposeTitle": "Vad det är för",
+    "purposeItems": [
+      "<strong>Var inte mig på 03:00 för ett uppdateringsmeddelande.</strong> Backups, appuppdateringar, optimeringar efter installationen och andra händelser på INFO-nivå slutar pinga din telefon på natten.",
+      "<strong> Men väck mig fortfarande för en brand.</strong> Diskfel, OOM dödar, värdstängningar, fail2ban förbud - allt som klassificeras som CRITICAL - kringgå fönstret och anländer omedelbart.",
+      "<strong> Missa inte något heller.</strong> Händelserna undertryckta under fönstret är inte tyst tappade - de sitter i en SQLite buffert tills du är tillbaka på klockan."
+    ],
+    "howTitle": "Hur det fungerar",
+    "howItems": [
+      "<strong>Per-channel toggle.</strong> Varje kanal har sin egen Quiet Hours-konfig Telegram Kan vara tyst 22:00–07:00 medan e-post fortsätter att ta emot allt 24/7.",
+      "<strong>Start- och sluttid</strong> i din lokala tidszon, halvöppna intervall (starta inkluderande, slut exklusiv). Fönstret kan passera midnatt (t.ex. 22:00–07:00 betyder ikväll fram till morgondagen morgon).",
+      "<strong>Live preview line</strong> under ingångarna visar om fönstret för närvarande är aktivt och när nästa övergång sker. Sparar att öppna en klocka.",
+      "<strong> Under fönstret: </strong> CRITICAL-händelser eldar fortfarande genom den normala sändningspipeline. INFO- och WARNING-evenemang dirigeras till en ihållande buffert (<code>quiet_pending</code>-bordet i Monitor's SQLite DB).",
+      "<strong> När fönstret stängs:</strong> skickas en grupperad meddelande med allt som ackumulerats - en linje per buffert händelse, i kronologisk ordning. Bufferten rensas först efter att kanalen bekräftar leverans, så ett övergående Telegram / SMTP-avbrott förlorar inte nattens sammanhang.",
+      "<strong>Över startar om.</strong> Om Monitor startar om mitten av fönster, är bufferten intakt på disken. Om omstarten sker strax efter att fönstret stängts, upptäcker nästa avsändningscykel de väntande raderna och spolar dem med en enda \"återhämtning\" -sammanfattning - inga meddelanden går förlorade till en utplacering eller en omstart."
+    ],
+    "criticalTitle": "Vad räknas som kritik",
+    "criticalBody": "Svårighetsgraden fastställs vid händelseskapande, inte vid avsändningstid. Diskfel, OOM dödar, kluster split-brain, värdstängningar och den \"hårda\" nivån på disk I / O-fel fartyg som CRITICAL genom design. Allt annat (backups OK, uppdateringar tillgängliga, INFO-loggar, räntebegränsningar) standarder för INFO eller WARNING och är därför tyst. Du kan verifiera en viss händelses standardstörning i <link>Event katalog</link> längre ner på denna sida."
+  },
+  "digest": {
+    "heading": "Daglig sammanfattning av INFO-händelser",
+    "intro1": "Daily Digest är den motsatta knoppen: en <strong>opt-in</strong> inställning som säger \"Sänd mig inte varje framgångsrik backup eller uppdatera meddelande som det händer - samla in dem och skicka mig en sammanfattning per dag på 09: 00 (eller vilken timme jag väljer). Samma mål som Quiet Hours (mindre buller) men en annan mekanism (tidsbaserad sammanfattning istället för ett dagligt fönster).",
+    "intro2": "Det bor i samma kanalinställningar kort som Quiet Hours (se figuren under <link>Quiet Hours</link>), under. Du aktiverar var och en oberoende.",
+    "purposeTitle": "Vad det är för",
+    "purposeItems": [
+      "<strong> Morgonen \"allt som hände\" recap.</strong> Om du checkar på värden en gång om dagen med en kaffe, en smälta på 09:00 bär samma information som 20 enskilda pings under föregående dag, utan att du läser 20 Telegram bubblor.",
+      "<strong>Separate buller från signal.</strong> INFO händelser svara \"vad som hände\"; CRITICAL och WARNING svar \"vad behöver jag göra just nu\". Den smälta hanterar den första; allt annat håller sin levande leverans."
+    ],
+    "howTitle": "Hur det fungerar",
+    "howItems": [
+      "<strong>Per-channel opt-in.</strong> Av som standard - Telegram inte tyst batch dina varningar. Du aktiverar det på de kanaler där du vill ha en smälta, lämnar andra på levande leverans.",
+      "<strong>Delivery time</strong> i din lokala tidszon. Standarder till 09:00 men du kan välja när som helst; avsändaren eldar smälta inom ~ 60 s av den minuten.",
+      "<strong> Vad går in i smält:</strong> varje händelse kanalen skulle ha fått live vars svårighetsgrad är <strong>INFO</strong>. Exempel - <em>vzdump komplett</em>, <em>Tailscale update available</em>, <em>ProxMenux optimeringsuppdatering tillgänglig</em>, <em>APT säkerhetsuppdateringar pending</em>, <em>rate-limit hit</em>.",
+      "<strong> Vad är aldrig försenat:</strong>",
+      "<strong>Persistence.</strong> Pending-evenemang sitter i ett SQLite-bord (<code>digest_pending</code>) tills den konfigurerade timmen. Övervakaren kan starta om fritt utan att förlora vad smältan så småningom kommer att innehålla.",
+      "<strong>Empty dagar är tyst.</strong> Om ingenting INFO-nivå hände, ingen smälta skickas - kanalen förblir tyst snarare än att få en \"inga händelser att rapportera\" meddelande."
+    ],
+    "neverDelayedSub": [
+      "<strong>Kritiskt</strong> Händelser går alltid igenom omedelbart.",
+      "<strong>Varning</strong> Händelser går alltid igenom omedelbart.",
+      "Live-action händelser (VM/CT start / stop / stopp / avstängning / omstart, vm_fail / ct_fail, backup start / misslyckande, replikation start / misslyckande, värd avstängning / omstart) kringgå smältningen även vid INFO svårighetsgrad - du valde att se dessa live, smälta skulle besegra den opt-in."
+    ],
+    "comboTitle": "Kombinera tysta timmar och dagliga Digest",
+    "comboBody": "De två arbetar tillsammans. En kanal kan ha <em>both</em> aktiv - Quiet Hours från 22:00 till 07:00 plus en Daily Digest på 09:00. INFO-händelser under det tysta fönstret går till den tysta bufferten och anländer till 07:00 som närmast fönstersammanfattning; INFO-händelser under dagen går till smältbufferten och anländer till 09:00 nästa morgon. Kritik och VARNING skär alltid igenom båda. Välj Quiet Hours när målet är en <em>window of silence</em>, Daily Digest när målet är en <em>fixed-time sammanfattning</em>; många inställningar vill båda."
+  },
+  "displayName": {
+    "heading": "Visa namn",
+    "intro": "Varje meddelande bär en <em>Display Name</em> - etiketten som identifierar vilken värd som producerade varningen. Det är det värde du ser längst ner på de rika meddelanden exemplet ovan (<code>🏠 home-lab</code>) och inuti e-post ämne prefixet.",
+    "imageAlt": "Visa fältet Namn med värdet som visas som exempel, etikettnamn som visas i meddelanden - redigera för att anpassa eller lämna tomt för att använda systemets värdnamn",
+    "imageCaption": "Display Name-fältet - lämna tomt för att använda systemets värdnamn eller åsidosätta dig med allt du vill ha.",
+    "outro": "Om fältet är tomt faller Monitor tillbaka till systemvärdnamnet. Överridningen är mest användbar när du kör flera ProxMenux-värdar som skickar till samma Telegram-chatt eller inkorg - en vänligare etikett (<em>home-lab</em>, <em>office-pve</em>) är lättare att läsa än <code>pve01.lan</code> eller <code>pmx-prod-01</code>."
+  },
+  "dispatch": {
+    "heading": "Hanteringskedja",
+    "intro": "Mellan en händelse som höjs och ett meddelande som lämnar värden körs tre steg i denna ordning:",
+    "headerStage": "Steg",
+    "headerWhat": "Vad det gör",
+    "headerTunable": "Konfigurerbar?",
+    "rows": [
+      {
+        "stage": "1. Fingerprint Dedup",
+        "what": "Varje händelse hashed in a fingerprint (<code>event_type + key fields from data</code>). Identiska fingeravtryck inuti ett kort fönster anses dubbletter av den första.",
+        "tunable": "Nej - intern dispatcher logik."
+      },
+      {
+        "stage": "2. Väntetid",
+        "what": "Efter att ett fingeravtryck skickas, undertrycks samma fingeravtryck för per-severity nedkylningstiden. Lagras i <code>notification_last_sent</code> SQLite-bordet så det överlever omstarter. Standarder: <code>CRITICAL</code> 60 s, <code>WARNING</code> 300 s, <code>INFO</code> 900 s, plus en per-kategori override ovanpå (t.ex. <code>resources</code> 900, <code>updates</code> 86 400 s).",
+        "tunable": "Nej - standarder bakade in i avsändaren."
+      },
+      {
+        "stage": "3. Sammanställning av händelsetoppar",
+        "what": "När N-händelser av ett slag anländer inuti ett kort fönster (t.ex. en SSH brute-force översvämning), slås de samman till ett enda <code>burst_*</code>-meddelande med ett räkning och ett prov.",
+        "tunable": "Nej - fönster och tröskel är hårdkodade per händelsetyp."
+      }
+    ],
+    "calloutTitle": "Dispatch sker i en bakgrundstråd",
+    "calloutBody": "Avsändningsslingan går i sin egen tråd. HTTP-förfrågan som avger en händelse returneras så snart händelsen är köad - det väntar inte på Telegram, SMTP eller webhook RTT. Varje sändningsresultat registreras i historiebordet för retrospektiv inspektion."
+  },
+  "aiRewrite": {
+    "heading": "Optionell AI-rewrite",
+    "body1": "Varje händelse kan passeras genom en LLM som skriver om sin kropp på vanligt språk och (valfritt) i målanvändarens språk innan fläkten ut. AI-rewriter är av som standard. När det är aktiverat körs det i avsändningstråden; om leverantören ringer misslyckas eller gånger ut, används den ursprungliga mallade kroppen istället.",
+    "body2": "Sex leverantörer stöds (OpenAI, Anthropic, Google Gemini, Groq, OpenRouter och lokal Ollama), med per-kanal detaljnivå (<code>brief</code>, <code>standard</code>, <code>detailed</code>), utgångsspråk, snabbläge (<code>default</code> eller <code>custom</code>) och en valfri anpassad prompt. Full konfiguration walk-through, catchs and prompt examples live i dedikerade <link>AI Assistant</link>-sidan.",
+    "privacyTitle": "Integritetsmeddelande",
+    "privacyBody": "AI-rewrite skickar evenemangskroppen - som kan inkludera värdnamn, IP-adresser, användarnamn, felmeddelanden och tidskriftslinjer - till den konfigurerade leverantören. Ollama håller allt på plats; de andra fem leverantörerna överför data till sina respektive slutpunkter. Inaktivera skrivaren eller använd Ollama, om värden körs i en miljö där händelseinnehållet inte kan lämna nätverket."
+  },
+  "pveWebhook": {
+    "heading": "PVE-webhookintegration",
+    "intro1": "Proxmox VE 8.1+ har ett eget meddelandesystem med inbyggt <em>endpoints</em> (sendmail, gotify, SMTP, webhook). När du aktiverar meddelanden på Monitor registrerar det sig som en av dessa slutpunkter - ett <code>webhook</code>-mål som pekar tillbaka på Monitors egen API. Från det ögonblicket, allt Proxmox själv avger (HA fäktning, replikering, vzdump från GUI, certifikat förnyelse, etc.) strömmar genom samma avsändning pipeline som Monitor egna händelser.",
+    "intro2": "Målet är synligt från Proxmox GUI på <em>Datacenter → Meddelanden → Meddelande Targets</em>:",
+    "imageAlt": "Proxmox VE Edit Webhook dialog som visar den auto-skapade proxmenux-webhook mål med metoden POST, URL http://127.0.0.1:8008/api/notifications/webhook och en JSON kroppsmall med hjälp av flykt titel, fly meddelande, fly svårighetsgrad, fly timestamp och json Fält",
+    "imageCaption": "PVE-sidan webhook-målet som Proxmox ser det (GUI ligger i värdens konfigurerade lokal - spanska i det här exemplet). Samma fält gäller på alla språk.",
+    "registeredIntro": "Vad blir registrerat:",
+    "registeredItems": [
+      "<strong>Method & URL.</strong> <code>POST http://127.0.0.1:8008/api/notifications/webhook</code>. Loopback - PVE pratar med Monitor-processen som körs på samma värd.",
+      "<strong>Body template.</strong> En JSON-kropp med PVE: s infödda Handlebars-hjälpare - lagrade bas64-kodade i konfigfilen av PVE, men det expanderar till:",
+      "<strong>Matcher.</strong> En följeslagare <code>matcher: proxmenux-matcher</code> blockera med <code>mode all</code> Varje PVE-meddelande når målet.",
+      "<strong>Companion priv block.</strong> En tom <code>webhook: proxmenux-webhook</code> inträde appenderas till <code>/etc/pve/priv/notifications.cfg</code>. PVE vägrar att omedelbara någon webhook endpoint utan ett matchande privat block, även när inga hemligheter behövs - så Monitor skriver en header-only stub där. Inga tokens, headers eller HMAC är konfigurerade på PVE-sidan."
+    ],
+    "securityTitle": "Hur mottagaren är säkrad",
+    "securityIntro": "webhook-mottagaren på <code>POST /api/notifications/webhook</code> tillämpar olika säkerhetslager beroende på var begäran kommer från:",
+    "securityItems": [
+      "<strong>Loopback (<code>127.0.0.1</code> / <code>::1</code>).</strong> Rate-limit endast. Slutpunkten litar på loopback-gränssnittet - bara processer som körs på värden kan nå det, och PVE själv kan inte skicka egna auth-rubriker i kroppen det genererar. Detta är den väg som varje PVE-utgiven anmälan reser.",
+      "<strong>Remote callers.</strong> Fem lager staplar på toppen av räntebegränsning: en delad hemlighet i <code>X-Webhook-Secret</code>-rubriken, en frisk tidsstämpel i <code>X-ProxMenux-Timestamp</code> (avvisad om den driver mer än det konfigurerade fönstret), en replay-cache lookup och en valfri IP-tilläggslista. Den delade hemligheten bor i Monitor's SQLite inställningar tabell - inte i <code>/etc/pve/priv/notifications.cfg</code> - och genereras vid första installationen. Denna väg finns för anpassade integreringar som publiceras utanför värden; PVE-konfigurerat mål utövar aldrig det."
+    ],
+    "practiceTitle": "I praktiken",
+    "practiceBody": "PVE-inställningen skriver målet som <code>http://127.0.0.1:8008</code>, så PVE-utsedda meddelanden går alltid igenom loopbackbanan med endast säkerhet. Den fjärrkallervägen med den delade hemligheten är opt-in för anpassade integrationer - peka en extern tjänst på <code>https://&lt;monitor-host&gt;:&lt;port&gt;/api/notifications/webhook</code> och leverera <code>X-Webhook-Secret</code>-rubriken för att använda den.",
+    "actionsIntro": "Övervakaren hanterar detta mål genom tre åtgärder på fliken Inställningar:",
+    "actionsItems": [
+      "<strong>Setup</strong> körs automatiskt när du aktiverar meddelanden. Skapar inträdet i <code>/etc/pve/notifications.cfg</code>. Filen är skriven endast när innehållet måste ändras, och en kopia av den tidigare hålls i <code>/usr/local/share/proxmenux/backups/pve-notifications/</code> (de tre nyaste). Ingenting är skrivet medan <code>/etc/pve</code> är inte monterad: en Monitor som startar under en omstart av <code>pve-cluster</code> registrerar posten när den är tillbaka.",
+      "<strong>Cleanup</strong> - tar bort posten. Den tidigare säkerhetskopian av filen hålls.",
+      "<strong>Read config</strong> - visar nuvarande mål och matchare som PVE ser dem. Så här bekräftar du Monitor's inträde är den som skjuter när PVE har flera meddelanderutter konfigurerade."
+    ],
+    "clusterTitle": "Cluster noder",
+    "clusterBody": "<code>/etc/pve/</code> replikeras över klustermedlemmar, så webhook-målet är synligt på varje nod. Varje nod, dock inlägg till sin <em>own</em> <code>127.0.0.1:8008</code> - vilket innebär att Monitor kör på den noden får de händelser som PVE genererade lokalt. Kör Övervakaren på varje nod du vill se i Notifikationshistorien."
+  },
+  "catalogue": {
+    "heading": "Event Katalog",
+    "intro": "Omkring sjuttio evenemangstyper grupperas i elva UI-kategorier. Anmälningspanelen gör en kollapsbar sektion per grupp med en växel för varje händelse i den. Varje händelse är på som standard om inte uttryckligen markerat annat.",
+    "headerGroup": "Grupp",
+    "headerEvents": "Händelser",
+    "rows": [
+      {
+        "group": "VM / CT",
+        "events": "<code>vm_start</code>, <code>vm_start_warning</code>, <code>vm_stop</code>, <code>vm_shutdown</code>, <code>vm_fail</code>, <code>vm_restart</code>, plus <code>ct_*</code>-ekvivalenter, <code>migration_start</code>, <code>migration_complete</code>, <code>migration_warning</code>, <code>migration_fail</code>, <code>replication_complete</code>, <code>replication_fail</code>."
+      },
+      {
+        "group": "Säkerhetskopieringar",
+        "events": "<code>backup_start</code>, <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>snapshot_complete</code>, <code>snapshot_fail</code>."
+      },
+      {
+        "group": "Resurser",
+        "events": "<code>cpu_high</code>, <code>ram_high</code>, <code>temp_high</code>, <code>load_high</code>."
+      },
+      {
+        "group": "Lagring",
+        "events": "<code>disk_space_low</code>, <code>disk_io_error</code>, <code>storage_unavailable</code>, <code>smart_test_complete</code>, <code>smart_test_failed</code>."
+      },
+      {
+        "group": "Nätverk",
+        "events": "<code>network_down</code>, <code>network_latency</code>."
+      },
+      {
+        "group": "Säkerhet",
+        "events": "<code>auth_fail</code>, <code>ip_block</code>, <code>firewall_issue</code>, <code>user_permission_change</code>."
+      },
+      {
+        "group": "Kluster",
+        "events": "<code>split_brain</code>, <code>node_disconnect</code>, <code>node_reconnect</code>."
+      },
+      {
+        "group": "Tjänster",
+        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>system_problem</code>, <code>service_fail</code>, <code>oom_kill</code>, <code>system_mail</code>."
+      },
+      {
+        "group": "Hälsoövervakare",
+        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>, <code>health_issue_new</code>, <code>health_issue_resolved</code>."
+      },
+      {
+        "group": "Uppdateringar",
+        "events": "<code>update_summary</code>, <code>update_available</code>, <code>pve_update</code>, <code>update_complete</code>, <code>proxmenux_update</code>."
+      },
+      {
+        "group": "Maskinvara / GPU",
+        "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>, <code>ai_model_migrated</code>."
+      }
+    ],
+    "burstNote": "En handfull <code>burst_*</code> aggregationstyper (<code>burst_auth_fail</code>, <code>burst_ip_block</code>, <code>burst_disk_io</code>, etc.) finns endast i avsändaren - de ersätter utbrott av enskilda händelser med ett enda sammanfattande meddelande och utsätts inte som växlar i UI. De ärver på/av tillståndet för deras föräldrahändelse typ.",
+    "backupResults": {
+      "heading": "Backup resultat",
+      "intro": "En anmälan om en Proxmox backup jobb säger hur jobbet slutade. Resultatet läses från rapporten Proxmox skickar, och det sätter titeln, den ikon som visas med <em>Rich meddelanden</em> på, och status raden av e-post.",
+      "headerIcon": "Icon",
+      "headerResult": "Resultat",
+      "headerWhen": "När",
+      "rows": [
+        {
+          "icon": "💾✅",
+          "result": "Säkerhetskopieringen är klar",
+          "when": "Varje gäst på jobbet avslutas och rapporten bär inga varningar."
+        },
+        {
+          "icon": "💾⚠️",
+          "result": "Säkerhetskopiering avslutad med varningar",
+          "when": "Varje gäst är färdig och rapporten bär minst en varningslinje."
+        },
+        {
+          "icon": "💾❌",
+          "result": "Backup fel rapporterade",
+          "when": "En gäst misslyckades, eller jobbet slutade med ett fel."
+        },
+        {
+          "icon": "💾❔",
+          "result": "Backup resultat obekräftat",
+          "when": "Rapporten är ofullständig eller anger inte ett resultat för varje gäst."
+        }
+      ],
+      "items": [
+        "<strong>Titeln heter vad jobbet var om.</strong> Det bär lagringen och, för ett jobb med en enda gäst, dess typ, namn och ID. Ett misslyckat jobbnamn gästen som misslyckades.",
+        "<strong>Kroppen listar varje gäst</strong> med sitt eget resultat, storlek, varaktighet och arkiv, följt av en linje med totalen av jobbet.",
+        "<strong>Warnings och fel listas en gång.</strong> Upprepade linjer visas en enda gång med huvudorsaken först; tidigare åtta linjer, resten räknas i en stängningslinje och stannar i Proxmox arbetsloggen.",
+        "<strong>A jobb som misslyckas före sin första gäst</strong> visar orsaken Proxmox gav, till exempel en lagring som inte existerar.",
+        "<strong>Summaries hålla resultatet.</strong> En backup listad i Quiet Hours sammanfattning eller Daily Digest bär ikonen för sitt eget resultat."
+      ]
+    }
+  },
+  "history": {
+    "heading": "Historik",
+    "body1": "Varje sändning <em>attempt</em> avsändaren faktiskt utför är inspelad i <code>notification_history</code> SQLite bord. Varje rad lagrar tidsstämpeln (<code>sent_at</code>), kanal, händelsetyp, svårighetsgrad, titel, gjorde meddelande kropp, en <code>success</code> flagga och - när sändningen misslyckades - felet returneras av leverantören i <code>error_message</code>. Burst-aggregerade händelser visas som en enda rad med <code>burst_*</code>-händelsetypen. Händelser undertryckta av nedkylningsfasen är inte inloggade: de blir aldrig ett avsändande försök.",
+    "body2": "Inställningar → Meddelanden har en <em>Notification history</em> sektion, stängd som standard, med de sista 20-posterna: resultatet av varje sändning, dess kanal och datum, felet när det misslyckades och, för varje dag smälta körning, oavsett om det hade något att skicka. Sidan erbjuder inte att radera den: Audit & Report läser samma historia för att kontrollera leveransen av varje kanal.",
+    "body3": "Samma data exponeras på <code>GET /api/notifications/history</code> med valfri <code>limit</code>, <code>offset</code>, <code>severity</code> och <code>channel</code> frågeparametrar, och kan rensas med <code>DELETE /api/notifications/history</code>."
+  },
+  "api": {
+    "heading": "API-slutpunkter",
+    "headerEndpoint": "Slutpunkt",
+    "headerMethod": "Metod",
+    "headerUse": "Använda",
+    "rows": [
+      {
+        "endpoint": "/api/notifications/settings",
+        "method": "GET / POST",
+        "use": "Läs eller skriv hela konfigurationen (kanaler, per-event toggles, AI-skrivare, Visa namn)."
+      },
+      {
+        "endpoint": "/api/notifications/test",
+        "method": "POST",
+        "use": "Skicka ett testmeddelande till en kanal: <code>'{'\"channel\":\"telegram\"'}'</code>."
+      },
+      {
+        "endpoint": "/api/notifications/test-ai",
+        "method": "POST",
+        "use": "Gör och skriv om en provhändelse utan att skicka den."
+      },
+      {
+        "endpoint": "/api/notifications/provider-models",
+        "method": "POST",
+        "use": "Lista tillgängliga modeller för den valda AI-leverantören."
+      },
+      {
+        "endpoint": "/api/notifications/send",
+        "method": "POST",
+        "use": "Begränsa en händelse utifrån (anpassad integration)."
+      },
+      {
+        "endpoint": "/api/notifications/history",
+        "method": "GET / DELETE",
+        "use": "Läs historia med filter; rensa den."
+      },
+      {
+        "endpoint": "/api/notifications/webhook",
+        "method": "POST",
+        "use": "Får Proxmox VE egna meddelanden. Loopback-anropare är endast räntebegränsade; fjärranropare måste dessutom passera <code>X-Webhook-Secret</code>-rubriken, <code>X-ProxMenux-Timestamp</code>-friskhetskontroll, replay cache och valfri IP-tilläggslista."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/setup-webhook",
+        "method": "POST",
+        "use": "Registrera Monitor som mål i <code>/etc/pve/notifications.cfg</code>."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/cleanup-webhook",
+        "method": "POST",
+        "use": "Ta bort Monitor-målet från PVE:s anmälningskonfig."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/read-cfg",
+        "method": "GET",
+        "use": "Visa nuvarande PVE-meddelandekonfig som PVE ser det."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Var till nästa",
+    "items": [
+      {
+        "label": "AI assistent",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": " - leverantörer, modeller, snabba lägen, språk, per-kanal detaljnivåer."
+      },
+      {
+        "label": "Hälsoövervakare",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " - den största enskilda producenten av händelser, med sina egna förtrycksperioder per kategori."
+      },
+      {
+        "label": "Arkitektur",
+        "href": "/docs/monitor/architecture",
+        "tailRich": " - där SQLite-borden (<code>notification_last_sent</code>, <code>notification_history</code>) och sändningstråden passar in i den bredare övervakningsprocessen."
+      },
+      {
+        "label": "Åtkomst och autentisering",
+        "href": "/docs/monitor/access-auth",
+        "tailRich": " - hur API tokens präglas för skript som kallar <code>/api/notifications/send</code>."
+      },
+      {
+        "label": "Dashboard → Systemloggar",
+        "href": "/docs/monitor/dashboard/system-logs",
+        "tail": " - den levande utsikten över samma tidskrift som matar tidskriftsvakten."
+      }
+    ]
+  }
+}

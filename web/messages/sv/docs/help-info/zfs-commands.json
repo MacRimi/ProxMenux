@@ -1,0 +1,227 @@
+{
+  "meta": {
+    "title": "ZFS Kommandon på Proxmox - zpool, zfs snapshot, skicka / ta emot, scrub | ProxMenux",
+    "description": "Referens av ZFS ledningskommandon på Proxmox VE: zpool skapa / status / historia, zfs lista / få / ställa in, ögonblicksbilder, klon, zfs skicka och ta emot, skrubba, klar, ersätta, zpool iostat, ARC sammanfattning.",
+    "ogTitle": "ZFS Commands on Proxmox - zpool, zfs snapshot, send/receive, scrub",
+    "ogDescription": "Referens av zpool och zfs kommandon på Proxmox VE - pooler, datamängder, ögonblicksbilder, replikering, underhåll.",
+    "twitterTitle": "ZFS kommandon på Proxmox | ProxMenux",
+    "twitterDescription": "zpool och zfs kommandon för Proxmox VE: pooler, datamängder, ögonblicksbilder, replikering, underhåll."
+  },
+  "header": {
+    "title": "ZFS-hantering",
+    "description": "Curated referens för zpool och zfs kommandon: pool inspektion, dataset CRUD, ögonblicksbilder, klon och skicka / ta emot (inkrementell och återkommande), scrub / klar / ersätta för underhåll, plus I / O statistik och ARC sammanfattning.",
+    "section": "Hjälp och info"
+  },
+  "intro": {
+    "title": "Två kommandofamiljer",
+    "body": "<code>zpool *</code> hanterar lagringspoolerna (fysiskt lager - skivor, vdevs, redundans). <code>zfs *</code> hanterar datamängder och ögonblicksbilder som bor i dessa pooler (logiskt lager - filsystem, volymer, ögonblicksbilder, egenskaper)."
+  },
+  "commandGroups": [
+    {
+      "title": "Poolinformation",
+      "commands": [
+        {
+          "command": "zpool list",
+          "description": "Lista alla ZFS-pooler"
+        },
+        {
+          "command": "zpool status",
+          "description": "Visa detaljerad poolstatus och hälsa"
+        },
+        {
+          "command": "zpool status -v",
+          "description": "Visa verbose pool status med fel"
+        },
+        {
+          "command": "zpool history",
+          "description": "Visa kommandohistoria för alla pooler"
+        },
+        {
+          "command": "zpool history <pool>",
+          "description": "Visa kommandohistoria för specifik pool"
+        },
+        {
+          "command": "zpool get all <pool>",
+          "description": "Visa alla egenskaper hos en pool"
+        }
+      ]
+    },
+    {
+      "title": "Datasethantering",
+      "commands": [
+        {
+          "command": "zfs list",
+          "description": "Lista alla ZFS dataset"
+        },
+        {
+          "command": "zfs list -r <pool>",
+          "description": "Lista alla datamängder i en pool återkommande"
+        },
+        {
+          "command": "zfs create <pool>/<dataset>",
+          "description": "Skapa en ny dataset"
+        },
+        {
+          "command": "zfs destroy <pool>/<dataset>",
+          "description": "Förstör en dataset"
+        },
+        {
+          "command": "zfs rename <pool>/<dataset> <pool>/<new-name>",
+          "description": "byta namn på en dataset"
+        },
+        {
+          "command": "zfs get all <pool>/<dataset>",
+          "description": "Visa alla egenskaper hos en dataset"
+        },
+        {
+          "command": "zfs set compression=on <pool>/<dataset>",
+          "description": "Aktivera komprimering på en dataset"
+        }
+      ]
+    },
+    {
+      "title": "Hantering av ögonblicksbilder",
+      "commands": [
+        {
+          "command": "zfs list -t snapshot",
+          "description": "Lista alla snapshots"
+        },
+        {
+          "command": "zfs list -t snapshot -r <pool>",
+          "description": "Lista alla ögonblicksbilder i en pool"
+        },
+        {
+          "command": "zfs snapshot <pool>/<dataset>@<snapshot-name>",
+          "description": "Skapa en snapshot"
+        },
+        {
+          "command": "zfs destroy <pool>/<dataset>@<snapshot-name>",
+          "description": "Ta bort en ögonblicksbild"
+        },
+        {
+          "command": "zfs rollback <pool>/<dataset>@<snapshot-name>",
+          "description": "Rollback till en snapshot"
+        },
+        {
+          "command": "zfs hold <tag> <pool>/<dataset>@<snapshot-name>",
+          "description": "Placera ett grepp på en snapshot"
+        },
+        {
+          "command": "zfs release <tag> <pool>/<dataset>@<snapshot-name>",
+          "description": "Släpp ett grepp på en ögonblicksbild"
+        }
+      ]
+    },
+    {
+      "title": "Klon och skicka / ta emot",
+      "commands": [
+        {
+          "command": "zfs clone <pool>/<dataset>@<snapshot> <pool>/<clone-name>",
+          "description": "Skapa en klon från en ögonblicksbild"
+        },
+        {
+          "command": "zfs send <pool>/<dataset>@<snapshot> > backup.zfs",
+          "description": "Skicka en ögonblicksbild till en fil"
+        },
+        {
+          "command": "zfs receive <pool>/<dataset> < backup.zfs",
+          "description": "Få en ögonblicksbild från en fil"
+        },
+        {
+          "command": "zfs send -i <pool>/<dataset>@<snap1> <pool>/<dataset>@<snap2> > incr.zfs",
+          "description": "Skicka inkrementell snapshot"
+        },
+        {
+          "command": "zfs send -R <pool>/<dataset>@<snapshot> > full-recursive.zfs",
+          "description": "Skicka återkommande ögonblicksbild"
+        }
+      ]
+    },
+    {
+      "title": "Underhåll och reparation",
+      "commands": [
+        {
+          "command": "zpool scrub <pool>",
+          "description": "Starta en scrub operation på en pool"
+        },
+        {
+          "command": "zpool scrub -s <pool>",
+          "description": "Stoppa en spring scrub"
+        },
+        {
+          "command": "zpool clear <pool>",
+          "description": "Tydliga fel räknas i en pool"
+        },
+        {
+          "command": "zpool clear <pool> <device>",
+          "description": "Tydliga fel på en specifik enhet"
+        },
+        {
+          "command": "zpool replace <pool> <old-device> <new-device>",
+          "description": "Ersätt en misslyckad enhet"
+        },
+        {
+          "command": "zpool offline <pool> <device>",
+          "description": "Ta en enhet offline"
+        },
+        {
+          "command": "zpool online <pool> <device>",
+          "description": "Ta med en enhet online"
+        }
+      ]
+    },
+    {
+      "title": "Prestanda och övervakning",
+      "commands": [
+        {
+          "command": "zpool iostat",
+          "description": "Visa I/O statistik för pooler"
+        },
+        {
+          "command": "zpool iostat -v",
+          "description": "Visa detaljerad I/O statistik"
+        },
+        {
+          "command": "zpool iostat 5",
+          "description": "Visa I/O statistik varje 5 sekunder"
+        },
+        {
+          "command": "arc_summary",
+          "description": "Visa ARC-statistik (om den är installerad)"
+        },
+        {
+          "command": "zfs get compressratio <pool>/<dataset>",
+          "description": "Visa kompressionsförhållande"
+        },
+        {
+          "command": "zfs get used,available,referenced <pool>/<dataset>",
+          "description": "Visa rymdanvändning"
+        }
+      ]
+    }
+  ],
+  "bestPractices": {
+    "title": "Operativa bästa praxis",
+    "bodyRich": "Kör <code>zpool scrub</code> per vecka eller månad för att upptäcka tyst korruption. Håll minst 10-15% av poolutrymmet gratis - ZFS prestanda försämrar kraftigt över 80% full. Byt alltid ut misslyckade enheter med <code>zpool replace</code> (på plats) istället för detach + add (som förlorar redundans tillfälligt)."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Lagring och diskar",
+        "tail": " — generiska block-enhet och LVM kommandon."
+      },
+      {
+        "href": "/docs/help-info/backup-commands",
+        "label": "Backup och återställ",
+        "tail": " — vzdump, qmrestore."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Hjälp och info översikt",
+        "tail": "."
+      }
+    ]
+  }
+}

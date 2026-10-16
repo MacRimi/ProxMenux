@@ -1,0 +1,12 @@
+{
+  "meta": {
+    "title": "Uppförandekod | ProxMenux Dokumentation",
+    "description": "ProxMenux Uppförandekod och bästa praxis för bidragsgivare, testare och användare.",
+    "ogTitle": "Uppförandekod | ProxMenux Dokumentation",
+    "ogDescription": "Förväntningar kring kodansvar, säkerhetsutlämnande och PR-omfattning för projektet ProxMenux."
+  },
+  "errors": {
+    "notFound": "Fel: CODE_OF_CONDUCT.md-filen hittades inte.",
+    "loadFailed": "Fel: Kan inte ladda upp innehållet i uppförandekoden."
+  }
+}

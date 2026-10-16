@@ -1,0 +1,132 @@
+{
+  "meta": {
+    "title": "Samba server i LXC | ProxMenux Dokumentation",
+    "description": "Kör en Samba (SMB / CIFS) server i en Proxmox LXC behållare med ProxMenux. Auto-installerar samba, hanterar /etc/samba/smb.conf, smbpasswd-användare, sharedfiles grupp för bindmonterade mappar. Kräver en privilegierad behållare.",
+    "ogTitle": "Samba server i LXC | ProxMenux Dokumentation",
+    "ogDescription": "Exponera mappar över SMB/CIFS inifrån en privilegierad LXC-behållare. Auto-install, smbpasswd användare, bind-mount medvetna behörigheter."
+  },
+  "header": {
+    "title": "Samba server i LXC",
+    "description": "Kör en Samba (SMB / CIFS) server i en Proxmox LXC behållare och exponera mappar till Windows / macOS / Linux klienter på nätverket. ProxMenux installerar samba, skapar en Samba användare med smbpasswd, hanterar /etc/samba/smb.conf, och tillämpar bind-mount medvetna behörigheter när den delade mappen kommer från värden.",
+    "section": "Lagring & Dela · LXC"
+  },
+  "privReq": {
+    "title": "Privilegierad behållare krävs",
+    "body": "Samba impersonates den anslutande användaren med <code>setgroups()</code> på varje trädanslutning (det ögonblick en klient öppnar en aktie). I en oprivilegierad LXC avvisar kärnan det syscall eftersom behållarens användarnamnrymd skapas med <code>setgroups=deny</code> - och <code>smbd</code> svarar genom att abortera arbetarprocessen med <code>PANIC: sys_setgroups failed</code>. Resultatet är att <code>smbd</code> startar och binder portar 139/445, men varje klientanslutning misslyckas med <code>NT_STATUS_CONNECTION_DISCONNECTED</code>. Skriptet genomdriver en privilegierad CT av denna anledning och <strong>aborts om det är oprivileged</strong>. Det finns ingen ren fix på serversidan; använd en privilegierad CT eller kör Samba i en VM."
+  },
+  "what": {
+    "heading": "Vad detta gör",
+    "body": "Behållaren blir en SMB/CIFS-server: den kör <code>smbd</code>, exponerar en mapp via <code>/etc/samba/smb.conf</code> och accepterar klientanslutningar på portar <code>139</code>/<code>445</code>. Kunder ser andelen på <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code> i Windows Explorer, <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code> i macOS Finder, eller via <code>mount.cifs</code> på Linux.",
+    "diagramServerLabel": "LXC (privilegierad) - Samba server",
+    "diagramServerDetail": "/mnt/data\n(mapp du exponerar)\n\nsmbd + nmbd running\n\nAnvändare: <username>\n(via smbpasswd)\n\nForce Group:\nsharedfiles",
+    "diagramClientLabel": "Alla kunder i nätverket",
+    "diagramClientDetail": "Windows: <ip>\\<share>\nmacOS:   smb://<ip>/<share>\nLinux: Mount.cifs",
+    "diagramArrow": "SMB / CIFS"
+  },
+  "perms": {
+    "heading": "Två tillståndsvägar beroende på mapptypen",
+    "body": "Innan du lägger till andelen till <code>smb.conf</code> kontrollerar manuset om den valda mappen är en <strong>bind-fäste från värd</strong> eller en vanlig <strong>local-mapp i CT</strong> - och tillämpar olika ägande / behörigheter enligt följande:",
+    "headerType": "Mappar typ",
+    "headerAction": "Vad manuset gör",
+    "bindType": "Bind-mount från värd",
+    "bindTypeSubRich": "Detekteras via <code>mount</code>-utgång",
+    "bindActionRich": "Skapar grupp <code>sharedfiles</code> (standard GID 999, dynamisk om det tas), lägger till Samba-användaren till den, sedan <code>chown root:sharedfiles</code> + <code>chmod 2775</code> (SGID - nya filer ärver gruppen). Om användaren fortfarande inte kan skriva gäller <code>setfacl -m u:&lt;user&gt;:rwx</code>.",
+    "localType": "Lokal mapp i CT",
+    "localTypeSub": "Inget bindfäste detekterat",
+    "localActionRich": "Standard ägande: <code>chown -R &lt;user&gt;:&lt;user&gt;</code> + <code>chmod -R 755</code>. Ingen delad grupp behövdes eftersom ingen annan CT skriver till den här mappen. Falls tillbaka till <code>setfacl</code> om skrivåtkomst fortfarande saknas.",
+    "gidTitle": "GID för \"sharedfiles\" skiljer sig från NFS-serverflödet",
+    "gidBody": "Samba server script använder GID <strong>999</strong> för <code>sharedfiles</code>, medan <nfsLink>NFS server flow</nfsLink> använder GID <strong>101000</strong>. Om du kör båda servrarna i samma CT och vill ha en gemensam grupp över båda protokollen, redigera en av dem för att matcha den andra efter installationen (t.ex. <code>groupmod -g 101000 sharedfiles</code>) och återanvända ägande på de drabbade mappar. Detta är en känd inkonsekvens i de nuvarande skripten."
+  },
+  "opening": {
+    "heading": "Öppna verktyget",
+    "body": "Från ProxMenux: s huvudmeny, öppna <strong>Storage &amp; Share Manager → Konfigurera Samba Server i LXC (endast privilegierad) </strong>. ProxMenux ber dig först att välja målet CT (och startar det om det stoppas); aborter om det är oprivilegierat. När CT väljs ser du denna sub-meny med fem alternativ:",
+    "imageAlt": "Samba Server Manager-menyn - Skapa / Visa / Ta bort / Status / Avinstallera"
+  },
+  "howRuns": {
+    "heading": "Hur manuset går (Skapa flöde)"
+  },
+  "modes": {
+    "heading": "De tre aktielägena",
+    "intro": "Varje läge skriver en annan stanza till <code>smb.conf</code>. Alla tre inkluderar <code>valid users = &lt;username&gt;</code> (ingen anonym), <code>force group = sharedfiles</code> (så nya filer tillhör den delade gruppen) och <code>veto files = /lost+found/</code> (döljer det från kunder).",
+    "headerMode": "Läge",
+    "headerBlock": "Block skriven till smb.conf",
+    "rwMode": "Läsning och skrivning",
+    "roMode": "Skrivskyddad",
+    "customMode": "Anpassad",
+    "customBodyRich": "Du skriver dina egna direktiv i en fritextlåda. ProxMenux fortfarande wraps dem i ett <code>[share]</code> block med standard <code>path</code>, <code>valid users</code>, <code>force group</code> och <code>veto files</code>."
+  },
+  "manual": {
+    "heading": "Manuell motsvarande",
+    "body": "Replicera hela flödet för hand - varje kommando kör <strong>inside CT</strong> via <code>pct exec &lt;ctid&gt; --</code> eller <code>pct enter &lt;ctid&gt;</code>:"
+  },
+  "connect": {
+    "heading": "Anslutning från kunder",
+    "headerOs": "Klientens operativsystem",
+    "headerHow": "Hur att ansluta",
+    "windowsOs": "Windows",
+    "windowsHowRich": "File Explorer → adressfält: <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code>. Eller <em>Map Network Drive</em> → Kontrollera \"Anslut med olika referenser\".",
+    "macosOs": "macOS",
+    "macosHowRich": "Finder → <em>Go → Anslut till Server...</em> → <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code>. <code>mount_smbfs //user@&lt;ct-ip&gt;/&lt;share&gt; /mountpoint</code>.",
+    "linuxOs": "Linux",
+    "linuxHowRich": "<code>mount -t cifs //&lt;ct-ip&gt;/&lt;share&gt; /mnt/x -o username=&lt;u&gt;,password=&lt;p&gt;,iocharset=utf8</code>. Eller använd <clientLink>Samba-klienten i LXC</clientLink>-sida om kunden är en annan Proxmox CT."
+  },
+  "view": {
+    "heading": "Visa aktuella aktier",
+    "body": "Parses <code>/etc/samba/smb.conf</code> inuti CT och listar varje <code>[share]</code> block (skippa <code>[global]</code>, <code>[homes]</code>, <code>[printers]</code>) med sin väg. Användbart som en snabb inventering."
+  },
+  "delete": {
+    "heading": "Ta bort en aktie",
+    "body": "Låter du välja en aktie med namn, tar bort blocket från <code>smb.conf</code> (<code>sed</code> raderar från <code>[share]</code> ner till nästa tomma rad) och startar om <code>smbd</code>. Mappen själv och dess innehåll lämnas intakt."
+  },
+  "status": {
+    "heading": "Kontrollera Samba status",
+    "body": "Rapporter om <code>smbd</code> och <code>nmbd</code> är installerade och aktiva, listar Samba-användare (<code>pdbedit -L</code>) och trycker aktiva sessioner (<code>smbstatus</code>)."
+  },
+  "uninstall": {
+    "heading": "Avinstallera Samba server",
+    "body": "Full rengöring efter bekräftelse: stannar + inaktiverar <code>smbd</code> och <code>nmbd</code>, backar upp <code>smb.conf</code> till <code>smb.conf.backup.YYYYMMDD_HHMMSS</code>, tar bort Samba-användare med <code>smbpasswd -x</code> och <code>apt-get purge</code> Samba-paketen. De exporterade <strong>-mapparna själva raderas inte </strong>.",
+    "warnTitle": "Mappar överlever - säkerhetskopiera data separat",
+    "warnBody": "Både <em>Delete share</em> och <em>Uninstall Samba server</em> tar bort aktiekonfigurationen. Uppgifterna om de exporterade mappar bevaras. För att ta bort data också, gör det explicit med <code>rm -rf</code> efter skriptet avslutas."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "privTitle": "Privilegierad behållare krävs (skript aborter)",
+    "privBody": "Den valda CT är oprivilegierad och <code>smbd</code> kan inte servera filer där. Om du kringgår porten och konfigurerar Samba för hand börjar <code>smbd</code> och portarna öppna, men de första klientanslutningspanikerna med <code>PANIC: sys_setgroups failed</code> i <code>/var/log/samba/log.&lt;client&gt;</code> och klienten ser <code>NT_STATUS_CONNECTION_DISCONNECTED</code>. Orsaken är det oprivilegierade användarnamnsutrymmet med <code>setgroups=deny</code>, som blockerar Sambas per-anslutning impersonation. Varken <code>features=keyctl=1</code> eller ta bort <code>force user</code>/<code>force group</code> ändrar detta. De enda användbara alternativen är: konvertera CT till privilegierad, eller flytta Samba till en VM.",
+    "aptTitle": "apt-get install fails",
+    "aptIntro": "Manuset antar en Debian-familj CT. På Alpine / Arch / Rocky / Alma, installera Samba för hand:",
+    "aptItems": [
+      "Alpine: <code>apk add samba</code>",
+      "Arch: <code>pacman -S samba</code>",
+      "Rocky / Alma: <code>dnf install samba</code>"
+    ],
+    "aptOutro": "Sedan kör ProxMenux-skriptet - installationssteget hoppar när verktygen redan finns.",
+    "noShareTitle": "Kunden ansluter men kan inte se andelen",
+    "noShareBody": "Kontrollera att <code>browseable = yes</code> är inställd i aktieblocket (standard för rw / ro-lägen; kan saknas i anpassad). Kontrollera också CT brandvägg och Proxmox värd brandvägg tillåter TCP 445 (SMB) och 139 (NetBIOS). Vissa Windows-klienter kräver också namnupplösning - prova IP direkt först.",
+    "authTitle": "Autentisering misslyckas (NT_STATUS_LOGON_FAILURE)",
+    "authBody": "Antingen fel lösenord (Samba lösenord är <em>separate</em> från systemlösenord - se dem med <code>pdbedit -L</code>) eller användaren är inte i <code>valid users</code> för den delen. Återställ lösenordet med <code>smbpasswd &lt;user&gt;</code> i CT.",
+    "groupTitle": "Filer skrivna av kunden visas med fel grupp på servern",
+    "groupBody": "Skriptet sätter <code>force group = sharedfiles</code> i aktieblocket, så nya filer bör vara grupp <code>sharedfiles</code>. Om de inte är det kan SGID-biten på föräldrakatalogen ha gått förlorad (någon sprang <code>chmod</code> för hand). Reapply: <code>chmod 2775 /mnt/&lt;share&gt;</code>.",
+    "bothTitle": "Dela samma mapp över både NFS och Samba",
+    "bothBody": "ProxMenux använder olika GID för <code>sharedfiles</code> i varje manus (Samba: 999, NFS: 101000). Om du tjänar samma mapp via båda, besluta om en GID och anpassa båda. Den enklaste fixen: efter att ha kört båda skripten, redigera den mindre GID:"
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-samba-client",
+        "label": "Samba klient i LXC",
+        "tail": " - omvänt: montera externa Samba-aktier inifrån en CT."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-server",
+        "label": "NFS server i LXC",
+        "tail": " — syskonsidan, samma mönster med NFS istället för CIFS."
+      },
+      {
+        "href": "/docs/storage-share/host-samba",
+        "label": "Samba / CIFS som Proxmox förvaring",
+        "tailRich": " — När din CT exponeras, registrera som delar i Proxmox så det visas under <em>Datacenter → Storage</em>."
+      }
+    ]
+  }
+}

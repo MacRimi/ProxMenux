@@ -1,0 +1,111 @@
+{
+  "meta": {
+    "title": "Policy | Revision och rapport",
+    "description": "Nodpolitiken för Audit & Report: backup, autostart och återhämtningsmål för varje gäst, rollen för varje lagring och trösklarna för kontrollerna."
+  },
+  "header": {
+    "title": "Policypolitik",
+    "description": "Policyn förklarar vad ingen inspektion kan härleda: vad varje gäst och lagring är för och trösklarna kontrollerna gäller.",
+    "section": "Granskning och rapporter"
+  },
+  "sections": [
+    {
+      "id": "principle",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Utan förklaring beskriver rapporten; med en bedömer den",
+            "body": "En bedömning ser vad värden gör, inte vad det är för. En gäst utan en säkerhetskopia vars syfte inte förklaras rapporteras som en observation. Om dess backup förklaras krävs, rapporteras samma frånvaro som en varning. Ingenting måste förklaras."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/policy-view.png",
+            "alt": "Policyvisning med gästerna, lagringen och trösklarna på noden",
+            "caption": "Policyvyn."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guests",
+      "title": "Gäster",
+      "intro": "Varje VM och LXC av noden har tre fält. Ett värde kvar som standard tar det allmänna värdet, som visas bredvid det.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Fält",
+              "Värden",
+              "Effekt på bedömningen"
+            ],
+            "rows": [
+              [
+                "Säkerhetskopiering",
+                "Krävs, inte krävs, inte anges",
+                "En saknad säkerhetskopia är en varning när det krävs, en observation när det inte anges, och det lämnas ur räkningen när det inte krävs."
+              ],
+              [
+                "Autostart",
+                "Krävs, inte krävs, inte anges",
+                "Oavsett om gästen måste börja med värden."
+              ],
+              [
+                "Återställningsmål",
+                "Timmar",
+                "Den högsta acceptabla åldern för den sista säkerhetskopian."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Lagring",
+      "blocks": [
+        {
+          "p": "En ouppnåelig lagring rapporteras som kritisk när den förklaras väsentlig eller tjänar en löpande gäst, som en varning när dess roll inte anges, och som en observation när den förklaras frivillig."
+        }
+      ],
+      "intro": "Varje lagring av noden förklaras Essential, Optional eller Not anges."
+    },
+    {
+      "id": "thresholds",
+      "title": "Trösklar",
+      "intro": "En tom tröskel använder det levererade värdet, som visas som platshållare.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Översyn av lagringskapaciteten (%) och tunn poolfyllning (%).",
+              "Tunn överbevisande förhållande och minne överbegränsar förhållandet.",
+              "ZFS scrub intervall (dagar).",
+              "Backup ålder fallback (dagar) och schema grace (förhållande).",
+              "Certifikat utgångsmeddelande (dagar).",
+              "Disk livslängd (timmar) och nyligen diskfel fönster (dagar).",
+              "Lynis rapportera ålder (dagar) och paket indexålder (dagar).",
+              "Journal mot dess cap (%).",
+              "Filsystemutrymme översyn (%) och filsystem inode review (%)."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "save",
+      "title": "Hur politiken sparas",
+      "blocks": [
+        {
+          "p": "Deklarationen valideras och sparas atomiskt i <code>/usr/local/share/proxmenux/audit_policy.json</code>. Varje sparande har en revidering: om deklarationen ändras i en annan session sparas inte utkastet och utsikten erbjuder att ladda om den sparade deklarationen."
+        },
+        {
+          "calloutWarning": {
+            "title": "Policyn är aldrig slutförd",
+            "body": "ProxMenux lägger inga krav på egen hand. Ett tomt fält håller det skeppade värdet eller stannar inte angivet, och en partiell deklaration påverkar endast de element som det heter."
+          }
+        }
+      ]
+    }
+  ]
+}

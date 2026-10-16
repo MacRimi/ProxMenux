@@ -1,0 +1,247 @@
+{
+  "meta": {
+    "title": "Rapporter och jämförelser | Audit & Report",
+    "description": "De sex Audit & Report-dokumenten, hur de skrivs ut eller sparas som PDF och hur körningar jämförs med en referenskörning."
+  },
+  "header": {
+    "title": "Rapporter och jämförelser",
+    "description": "Sex dokument, var och en komponerade för en annan fråga, och jämförelsen av varje körning med en referenskörning.",
+    "section": "Granskning och rapporter"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Sex dokument, inte sex stilar",
+            "body": "Motorn väljer checkar och sektioner innan dokumentet komponeras. En snabb diagnos är inte en fullständig revision med färre sidor, och ett lager presenterar inga bedömningsresultat. Provdokumenten nedan använder fiktiva data."
+          }
+        }
+      ]
+    },
+    {
+      "id": "documents",
+      "title": "De sex dokumenten",
+      "blocks": [
+        {
+          "downloads": {
+            "items": [
+              {
+                "title": "Full revision",
+                "body": "Dokument noden slutar som en teknisk post.",
+                "href": "/monitor/audit/sample-audit-full-report.pdf",
+                "facts": [
+                  {
+                    "label": "kontroller",
+                    "value": "Varje tillgänglig check."
+                  },
+                  {
+                    "label": "Innehåll",
+                    "value": "Executive sammanfattning; identitet och kluster; hårdvara; nätverk och latens; lagring; gäster; genomgång; tillämpningar; fynd med bevis; källor och omfattning."
+                  }
+                ]
+              },
+              {
+                "title": "Snabbdiagnos",
+                "body": "Visar vad som behöver uppmärksamhet utan hela lagret.",
+                "href": "/monitor/audit/sample-audit-diagnostic-report.pdf",
+                "facts": [
+                  {
+                    "label": "kontroller",
+                    "value": "Samma kontroller som fullständig revision."
+                  },
+                  {
+                    "label": "Innehåll",
+                    "value": "Minimal identitet; kritiska fynd; varningar; relevanta observationer; overifierade avläsningar och prioriterade åtgärder. Diagram, lager och långa bilagor lämnas ut."
+                  }
+                ]
+              },
+              {
+                "title": "Inventering",
+                "body": "Beskriver vad som finns på noden utan att bedöma det.",
+                "href": "/monitor/audit/sample-audit-inventory-report.pdf",
+                "facts": [
+                  {
+                    "label": "kontroller",
+                    "value": "Ingen; ingen upptäckt klassificeras."
+                  },
+                  {
+                    "label": "Innehåll",
+                    "value": "Identitet; kluster; CPU och minne; ombord, BIOS och controllers; nätverk; lagring; VMs och LXCs; genomgång; applikationer och element som förvaltas av ProxMenux."
+                  }
+                ]
+              },
+              {
+                "title": "Säkerhetsgranskning",
+                "body": "Täcker exponering och kontrollerna över tillgången till noden.",
+                "href": "/monitor/audit/sample-audit-security-report.pdf",
+                "facts": [
+                  {
+                    "label": "kontroller",
+                    "value": "Säkerhetsområdet, plus containerprivilegier, uppdateringar, repositorier och APT-kedjan."
+                  },
+                  {
+                    "label": "Innehåll",
+                    "value": "Identitet och kluster; nätverk och latens; tillgång; brandvägg; 2FA; certifikat; privilegier; uppdateringar; repositorier; tillstånd och ålder av Lynis."
+                  }
+                ]
+              },
+              {
+                "title": "Backup Assurance",
+                "body": "Kontrollerar att det deklarerade skyddet finns och att dess säkerhetskopior är användbara.",
+                "href": "/monitor/audit/sample-audit-backup-report.pdf",
+                "facts": [
+                  {
+                    "label": "kontroller",
+                    "value": "Backup-området, plus lagringsanslutning och meddelandeleverans."
+                  },
+                  {
+                    "label": "Innehåll",
+                    "value": "Täckning per gäst; deklarerat återhämtningsmål; ålder och resultat; destination; bevarande; verifiering; misslyckade jobb; återhämtning och ofullständiga källor."
+                  }
+                ]
+              },
+              {
+                "title": "Kapacitet och bär",
+                "body": "Mäter tillväxtmarginal och tecken på utmattning eller åldrande.",
+                "href": "/monitor/audit/sample-audit-capacity-report.pdf",
+                "facts": [
+                  {
+                    "label": "kontroller",
+                    "value": "Lagrings- och hårdvaruområden, plus minne, swap, journal och värdfilsystemet."
+                  },
+                  {
+                    "label": "Innehåll",
+                    "value": "Användning och tröskelvärden; tunna pooler; överbevisande; minne; inoder; ZFS; temperaturer; power-on timmar; SMART fel och NVMe/SSD livslängd."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/audit-report-preview.png",
+            "alt": "Första sidan i en fullständig revisionsrapport",
+            "caption": "Varje dokument delar rapportidentifieraren, numrerade sektioner, datum, nod, profil och sidfot."
+          }
+        },
+        {
+          "p": "Ett dokument innehåller identiteten på noden och datumet för bedömningen, det verkställande resultatet, en sammanfattning efter område, strukturen av hårdvara, nätverk och lagring, skyddet av gästerna, resultaten med deras bevis, de källor som inte kunde läsas och omfattningen och politiken tillämpas, i den utsträckning varje profil innehåller dem."
+        }
+      ]
+    },
+    {
+      "id": "print",
+      "title": "Tryck eller spara som PDF",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Sikt",
+                "body": "En bedömning går med den profil som valts i <strong>Report</strong>."
+              },
+              {
+                "title": "Granska",
+                "body": "Den färdiga körningen visar sina resultat, de källor som den inte kunde läsa och den politik den tillämpade."
+              },
+              {
+                "title": "Skapa rapport",
+                "body": "<strong>Generate Report</strong> öppnar den vy som utarbetats som ett dokument."
+              },
+              {
+                "title": "Skriv ut",
+                "body": "<strong>Print eller spara som PDF</strong> öppnar webbläsarens utskriftsdialog, där en skrivare eller <em>Save som PDF</em> väljs."
+              }
+            ]
+          }
+        },
+        {
+          "calloutTip": {
+            "title": "Utskriften är ett dokument, inte en skärmdump",
+            "body": "Handlingsfältet är dolt, en tabell som fortsätter på nästa sida upprepar sin rubrik, block undviker onödiga raster och varje sida håller identifieringen och numreringen."
+          }
+        }
+      ]
+    },
+    {
+      "id": "compare",
+      "title": "Jämför med en referenskörning",
+      "intro": "<strong>Använd som referens</strong> markerar en färdig körning som referens. Senare körningar jämförs med det och deras resultat separeras i:",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Grupp",
+              "Betydelse"
+            ],
+            "rows": [
+              [
+                "Nytt nytt",
+                "Rapporterade nu och inte tidigare."
+              ],
+              [
+                "Försämrade",
+                "Fortfarande rapporterade, och gravare eller nå längre än tidigare."
+              ],
+              [
+                "Förbättrade",
+                "Fortfarande rapporterade, men mindre grav eller nå mindre långt än tidigare."
+              ],
+              [
+                "Lösning",
+                "Inte längre rapporterade, och ingen accepterade dem."
+              ],
+              [
+                "Accepterade",
+                "Inte längre räknas eftersom en risk accepterades, inte för att värden ändrades."
+              ],
+              [
+                "Bedöms inte längre",
+                "Före och frånvarande från denna körning; ingenting verifierade att de stannade."
+              ]
+            ]
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Referenskörning",
+              "Beteende"
+            ],
+            "rows": [
+              [
+                "Ställa in den",
+                "Varje färdig körning kan markeras; ingen markeras automatiskt."
+              ],
+              [
+                "Ändra den",
+                "Markera en annan kör flyttar referensen utan att ta bort historien."
+              ],
+              [
+                "Jämför",
+                "När inga två körningar väljs använder jämförelsen referensen och den valda eller senaste körningen."
+              ],
+              [
+                "Hålla runs",
+                "30 senaste körningarna hålls, och referenskörningen tas aldrig bort."
+              ],
+              [
+                "Utan en referens",
+                "Utsikten säger att ingen referenskörning har valts ännu, så det finns inget att jämföra med."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "En rapport beskriver ett ögonblick",
+            "body": "En bedömning certifierar inte en hel period. Äldre resultat slutar beskriva det nuvarande tillståndet; utsikten visar åldern på sista körningen och varje källa håller den tid det samlades in."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "meta": {
+    "title": "Lokala arkivdestination - tar.zst på ett filsystem eller USB-enhet | ProxMenux",
+    "description": "Den lokala backup destinationen skriver en enda .tar.zst arkiv till någon skrivbar katalog: en intern disk, en Proxmox monteringspunkt, en NFS-andel eller en USB-enhet. Dokument konfigurationsflödet, USB-detektering och monteringslogik, säkerhetskontrollen mot att skriva arkivet till en väg som säkerhetskopieras och sidovagnen JSON som identifierar filen.",
+    "ogTitle": "ProxMenux Backup - Lokal arkiv destination",
+    "ogDescription": "Hur ProxMenux skriver lokala säkerhetskopior som .tar.zst arkiv och hur man konfigurerar destinationskatalogen eller USB-enheten.",
+    "twitterTitle": "Lokal backup destination | ProxMenux",
+    "twitterDescription": "Hur ProxMenux skriver lokala säkerhetskopior som .tar.zst arkiv på ett filsystem eller USB-enhet."
+  },
+  "header": {
+    "title": "Lokalt arkiv",
+    "description": "Den lokala destinationen skriver en enda komprimerad tjärarkiv till någon skrivbar katalog på värden: en intern disk, en NFS eller SMB-fäste eller en USB-enhet.",
+    "section": "Säkerhetskopiering och återställning"
+  },
+  "intro": {
+    "title": "En fil, självinnehållen",
+    "body": "En lokal säkerhetskopia producerar en enda <code>hostcfg-HOST-TIMESTAMP.tar.zst</code>-fil (eller <code>.tar.gz</code> när <code>zstd</code> är frånvarande). Filen innehåller hela arkivträdet - <code>manifest.json</code>, <code>metadata/</code> och <code>rootfs/</code> - och kan återställas på någon Proxmox värd med ProxMenux återställningsflöde, eller extraheras manuellt med <code>tar --zstd -xf</code> på alla Linux-system. Ingen server, ingen förvaringsinit, ingen extern beroende. Detta är destinationen med den kortaste återhämtningsvägen när varken PBS eller Borg är tillgänglig."
+  },
+  "targetConfig": {
+    "heading": "Konfigurera målkatalogen",
+    "intro": "Den lokala destinationen är en <strong>singel kvarstående målkatalog</strong> Inte en lista. ProxMenux lagrar operatörens val på <code>/usr/local/share/proxmenux/local-target.conf</code> och läser den på varje backup. När inget mål har konfigurerats har standarden <code>HB_LOCAL_TARGET_DEFAULT = /var/lib/vz/dump</code> används (samma katalog Proxmox använder för sin egen <code>vzdump</code> utgångar). Målet är konfigurerat från <em>Konfigurera backup destinationer → Lokala destinationer</em>:",
+    "options": [
+      "<strong>Use standard (<code>/var/lib/vz/dump</code>).</strong> Proxmox lokal lagring. Presentera på varje Proxmox-installation; arkivet sitter bredvid vzdump-utgångar och hämtas av fliken Monitor's Backups automatiskt.",
+      "<strong>Enter en anpassad väg.</strong> Alla absoluta filsystemväg kan användas: en NFS-fäste, en SMB-andel monterad via <code>fstab</code>, en dedikerad ZFS-dataset, en andra intern disk. ProxMenux bekräftar att vägen existerar och är en katalog innan den fortsätter.",
+      "<strong>Välj en USB-enhet.</strong> Öppnar USB-undermenyn (nedan), som upptäcker flyttbara enheter och erbjudanden för att montera eller formatera en."
+    ]
+  },
+  "usbFlow": {
+    "heading": "USB-enhetsdetektering och montering",
+    "intro": "USB-undermenyn listar partitioner på flyttbara enheter som rapporterats av <code>lsblk</code>. Varje partition presenteras med sin storlek, filsystem etikett och nuvarande tillstånd. Staten bestämmer åtgärden ProxMenux erbjudanden.",
+    "statesTitle": "De tre enheterna anger",
+    "stateRows": [
+      {
+        "state": "monterad",
+        "shown": "Storlek · etikett · [fstyp] → /mount/point",
+        "action": "Partitionen är redan monterad någonstans. Välja det kvarstår den nuvarande monteringspunkten som det lokala målet. Ingen montering utförs."
+      },
+      {
+        "state": "Unmounted",
+        "shown": "Storlek · etikett · [fstyp] · (ej monterad - kommer att monteras)",
+        "action": "Ett filsystem är närvarande men inte monterat. På bekräftelse kör ProxMenux <code>hb_mount_usb_partition</code>: skapar <code>/mnt/backup-LABEL</code> (eller en UUID-baserad väg om det inte finns någon etikett), monterar partitionen och kvarstår monteringspunkten som det lokala målet."
+      },
+      {
+        "state": "tom",
+        "shown": "Storlek · rå USB-disk – inget filsystem (kommer att vara FORMATTED)",
+        "action": "Enheten har inget filsystem. En destruktiv väg – skyddad av två bekräftelser. Först förklarar en Ja/Nej-dialog att operationen raderar disken. För det andra kräver en inputbox operatören att <strong>type den exakta enhetsvägen</strong> (t.ex. <code>/dev/sdb</code>) innan ProxMenux skapar en ny GPT + ext4 partition och monterar den."
+      }
+    ],
+    "notMountedFallback": "När ingen USB-enhet upptäcks faller undermenyn tillbaka till en vanlig ingångslåda. Verksamhetsutövaren kan gå in på en godtycklig monteringsbana; om vägen inte är en registrerad monteringspunkt varnar en bekräftelsedialog innan du fortsätter."
+  },
+  "safetyCheck": {
+    "heading": "Säkerhetskontroll - destination inuti en backupbana",
+    "body": "Innan du skriver arkivet, verifierar <code>_bk_local</code> att destinationskatalogen är <strong>not</strong> en delväg av någon katalog som backas upp. En vanlig fotpistol skulle lägga till <code>/root</code> till profilen och plocka <code>/root/backups</code> som destination - arkivet skulle då inkludera sig själv, antingen producera ett korrupt arkiv eller växa utan bunden tills skivan fyller. Kontrollen löser båda vägarna med <code>readlink -m</code>, jämför dem och på konflikt, aborter backup med en dialog som namnger den motstridiga vägen och listar tre sätt att lösa det: välj en destination utanför den motstridiga vägen, ta bort den anpassade posten som innehåller destinationen, eller använd Custom-läge för att avmarkera den motstridiga vägen för denna körning."
+  },
+  "archiveFormat": {
+    "heading": "Arkivformat och komprimering",
+    "intro": "Utdatafilnamnet bäddar in källvärdnamnet och backup timestamp så att en katalog med flera arkiv sorterar kronologiskt och varje fil är självidentifierande.",
+    "namePattern": "hostcfg-HOSTNAME-YYYYMMDD_HHMMSS.tar.zst",
+    "compressionTitle": "Kompression",
+    "compressionBody": "Den primära vägen använder <code>tar --zstd -cf</code> - en enda befälsledning som komprimerar på zstd standardnivå. När <code>zstd</code> inte finns på källan (sällsynta på Proxmox men möjligt på minimala installationer) faller ProxMenux tillbaka till <code>gzip</code>. I nedgångsbanan, om <code>pv</code> är tillgänglig, läggs en framstegsfält till pipeline så att operatören ser arkivstorleken växa i realtid; utan <code>pv</code>, vanlig <code>tar -czf</code> används tyst.",
+    "sourceTitle": "Vad går in i arkivet",
+    "sourceBody": "Tjärkommandot åberopas med <code>-C \"$staging_root\" .</code>, som arkiverar <strong>full staging root</strong>: <code>rootfs/</code>, <code>metadata/</code> och <code>manifest.json</code>. Alla tre nyttolast land sida vid sida på toppen av tarball. Utvinning av arkivet producerar exakt samma träd som återställningskoden förbrukar."
+  },
+  "sidecar": {
+    "heading": "Sidbilen JSON",
+    "intro": "Varje framgångsrik lokal backup producerar en följeslagare fil: <code>HOSTNAME-TIMESTAMP.tar.zst.proxmenux.json</code>, skriven bredvid arkivet av <code>hb_write_archive_sidecar</code>. Denna lilla JSON-fil låter ProxMenux Monitor identifiera arkivet som en ProxMenux-värdbackup även om det senare flyttas, bytas namn eller arkiveras någon annanstans.",
+    "contentTitle": "Sidecar innehåll",
+    "contentBody": "Sidvagnen lagrar schemaversionen, oavsett om backupen kom från en interaktiv körning eller ett schemalagt jobb (<code>kind</code>), jobb-ID för schemalagda körningar, det profilläge som används (<code>default</code> eller <code>custom</code>), källvärdnamnet, den ursprungliga arkivbasnamnet, en ISO-8601 skapelse timestamp och arkivstorleken i byte.",
+    "whyBody": "Monitor's Backups-fliken skannar konfigurerade lokala kataloger för <code>*.proxmenux.json</code>-sidvagnar - inte för <code>*.tar.zst</code>-filer - eftersom en <code>.tar.zst</code> utan en sidovagn kanske inte är en ProxMenux-backup alls. Skanningen är snabb (JSON-filer är små) och parningen är stabil över strömmar av arkivet så länge sidovagnen döptes till match."
+  },
+  "restoreAccess": {
+    "heading": "Återställande från ett lokalt arkiv",
+    "body": "ProxMenux återställningsflödet upptäcker lokala arkiv genom att skanna det konfigurerade lokala målet för sidovagnar och visa dem i arkivlistan. Välja en triggers <code>_rs_check_layout</code>, som extraherar tarball i en staging katalog och bekräftar tre-payload layout innan du fortsätter. För manuell utvinning utanför ProxMenux ger <code>tar --zstd -xf hostcfg-HOSTNAME-TIMESTAMP.tar.zst -C /tmp/hostcfg</code> samma träd som återställningskoden förbrukar."
+  }
+}

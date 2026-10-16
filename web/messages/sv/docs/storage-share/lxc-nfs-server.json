@@ -1,0 +1,159 @@
+{
+  "meta": {
+    "title": "NFS server i LXC | ProxMenux Dokumentation",
+    "description": "Exponera mappar över NFS inifrån en Proxmox LXC behållare med ProxMenux. Auto-installerar nfs-kernel-server, sätter upp en universell sharedfiles gruppkonvention, hanterar /etc/exports, nätverk ACL och avinstallera. Kräver en privilegierad behållare.",
+    "ogTitle": "NFS server i LXC | ProxMenux Dokumentation",
+    "ogDescription": "Kör en NFS-server i en privilegierad LXC-behållare. Universal sharedfiles group, network ACL och full avinstallation."
+  },
+  "header": {
+    "title": "NFS server i LXC",
+    "description": "Kör en NFS kernel server inuti en Proxmox LXC behållare och exponera mappar till andra maskiner i nätverket. ProxMenux installerar nfs-kernel-server, sätter upp en universell sharedfiles gruppkonvention så att flera privilegierade CT kan dela filer rent, hanterar /etc/exports och erbjuder en fullständig avinstallationsväg.",
+    "section": "Lagring & Dela · LXC"
+  },
+  "privReq": {
+    "title": "Privilegierad behållare krävs",
+    "body": "<code>nfs-kernel-server</code> måste montera kärnfilsystemet <code>nfsd</code> på <code>/proc/fs/nfsd</code>, vilket kräver <code>CAP_SYS_ADMIN</code> i värdkärnans namnrymd - inte bara i behållarens användarnamnrymd. Oprivilegierad LXC avslöjar inte denna förmåga. I praktiken misslyckas tjänsten helt enkelt med <code>rpc.nfsd: Unable to access /proc/fs/nfsd errno 2 (No such file or directory)</code> och systemd markerar <code>nfs-server.service</code> som ett misslyckat beroende. Manuset genomdriver ett privilegierat CT och <strong>aborts om det är oprivileged</strong>. Om du inte kan använda en privilegierad CT, kör NFS-servern i en VM."
+  },
+  "what": {
+    "heading": "Vad detta gör",
+    "body": "Detta är <em>opposite</em> av NFS klientsida. Behållaren blir en NFS <strong>server</strong>: den exponerar en mapp av filsystemet till kunder i nätverket. Andra CT, Proxmox värd, VM eller fysiska maskiner kan sedan montera den mappen.",
+    "diagramServerLabel": "LXC (privilegierad) - NFS server",
+    "diagramServerDetail": "/mnt/data\n(mapp du exponerar)\n\nchown root:sharedfiles\nchmod 2775 (SGID)\n\nnfs-kernel-server\n+ rpcbind löpning",
+    "diagramClientLabel": "Alla kunder i nätverket",
+    "diagramClientDetail": "En annan CT, värden,\nVM, en fysisk maskin.",
+    "diagramArrow": "NFS-export"
+  },
+  "shared": {
+    "heading": "\"Sharedfiles\" gruppkonvention",
+    "body": "Innan du exporterar mappen skapar ProxMenux en grupp som heter <code>sharedfiles</code> med <strong>GID 101000</strong> inuti behållaren, lägger till varje vanlig användare till den och ställer sedan in exportkatalogen till <code>root:sharedfiles</code> med läge <code>2775</code>. <code>2</code> på framsidan är SGID-biten - varje fil eller mapp som skapas inuti ärver automatiskt <code>sharedfiles</code>-gruppen.",
+    "gidTitle": "Varför GID 101000",
+    "gidBody": "Den kartlägger till värd GID <strong>1000</strong> när en oprivilegierad behållare läser samma fil (LXC standard idmap skiftar allt med + 100000). I det nuvarande ProxMenux-flödet går NFS-servern själv i en <strong>privileged</strong> CT (ingen skift på sidan), men konventionen håller grupp-ID numeriskt konsekvent med oprivilegierade klient-CT som kan montera denna andel senare. Två privilegierade CTs som båda använder <code>sharedfiles</code> på GID 101000 kan läsa / skriva varandras filer rent eftersom GID-nummer matchar end-to-end.",
+    "remapTitle": "Manuset skapar också \"remap *\" -användare - de är vestigiala här",
+    "remapBody": "För varje vanlig användare i CT (och för vanliga UID som 33 = www-data, 1000, 1001, 1002) skapar manuset en parallell <code>remap_&lt;uid&gt;</code>-användare med UID = <code>&lt;uid&gt; + 100000</code>, alla medlemmar i <code>sharedfiles</code>. <code>+100000</code> skift efterliknar LXC oprivilegierad idmap, men eftersom detta manus genomdriver en <strong>privileged</strong> CT (inget skift), dessa <code>remap_*</code> användare är skuggkonton utan verkliga motsvarighet på värden. De är ofarliga rester från en mer ambitiös design avsikt. Om du inte ser dem i <code>getent passwd</code> bryter ingenting."
+  },
+  "defaults": {
+    "heading": "Standardexportalternativ - läs detta första",
+    "warnTitle": "Standardalternativ inkluderar no_root_squash",
+    "warnBody": "ProxMenux standarder till <code>rw,sync,no_subtree_check,'<'strong'>'no_root_squash'<'/strong'>'</code>. Detta innebär att <strong>any klientrotanvändare kan skriva som rot på export</strong> - lämplig för ett betrott hem LAN men aldrig för ett opålitligt nätverk. Om din CT är tillgänglig från ett opålitligt segment (ett offentligt nätverk, en VPS, en fientlig VLAN), <strong> ändra exportalternativen till <code>root_squash</code></strong> i dialogrutan för tulloptioner."
+  },
+  "opening": {
+    "heading": "Öppna verktyget",
+    "body": "Från ProxMenux: s huvudmeny, öppna <strong>Storage &amp; Share Manager → Konfigurera NFS Server i LXC (endast privilegierad) </strong>. ProxMenux ber dig först att välja målet CT (och startar det om det stoppas); aborter om det är oprivilegierat. När CT väljs ser du denna sub-meny med fem alternativ:",
+    "imageAlt": "NFS Server Manager-menyn - Skapa / Visa / Ta bort / Status / Avinstallera"
+  },
+  "howRuns": {
+    "heading": "Hur manuset går (Skapa flöde)"
+  },
+  "network": {
+    "heading": "Nätverk ACL – som kan montera aktien",
+    "intro": "Nätverksfältet i <code>/etc/exports</code>-filter som kunder får montera. ProxMenux erbjuder tre lägen:",
+    "headerMode": "Läge",
+    "headerValue": "Värde skrivet till /etc/exports",
+    "headerWhen": "När man väljer den",
+    "rows": [
+      {
+        "mode": "Lokalt nätverk",
+        "value": "192.168.0.0/16",
+        "whenRich": "Standard hem / SOHO LAN. Täcker varje <code>192.168.*.*</code>-adress."
+      },
+      {
+        "mode": "Anpassad subnet",
+        "value": "din CIDR (t.ex. 10.0.0.0/24)",
+        "when": "När ditt LAN inte är i 192.168.x.x eller om du vill ha en hårdare omfattning."
+      },
+      {
+        "mode": "Ensam värd",
+        "value": "din IP (till exempel 10.0.0.42)",
+        "when": "Endast en specifik maskin bör montera. De flesta restriktiva."
+      }
+    ]
+  },
+  "options": {
+    "heading": "Exportalternativ förklarade",
+    "headerOption": "Alternativ",
+    "headerEffect": "Vad det gör",
+    "rows": [
+      {
+        "option": "rw / ro",
+        "effect": "Tillåt läs-skriv eller läs-bara tillgång för att ansluta kunder."
+      },
+      {
+        "option": "synkronisera",
+        "effectRich": "Svara på att skriva förfrågningar först efter att data är på disken. Säkrare än <code>async</code> till kostnaden för genomströmning."
+      },
+      {
+        "option": "no_subtree_check",
+        "effect": "Hoppa över förfrågan kontrollera att filen fortfarande är inne i den exporterade subtret. Snabbare och undviker problem när filer döpas om mitten av flygningen."
+      },
+      {
+        "option": "no_root_squash",
+        "effectRich": "<strong>Trust klient root.</strong> En klient montering som root skriver som rot på servern. Bra för betrodda LANs (t.ex. backupverktyg måste bevara äganderätten). Ersätt med <code>root_squash</code> om du inte litar på alla maskiner i nätverket ACL."
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Manuell motsvarande",
+    "body": "Replicera hela flödet för hand - varje kommando kör <strong>inside CT</strong> via <code>pct exec &lt;ctid&gt; --</code> eller <code>pct enter &lt;ctid&gt;</code>:"
+  },
+  "view": {
+    "heading": "Visa aktuell export",
+    "body": "Katter <code>/etc/exports</code> från insidan av CT (skippa kommentarer / tomma) och trycker varje export med sitt nätverk ACL och alternativ sträng. Användbart för att kontrollera vilka mappar som exponeras innan du delar CT IP med någon."
+  },
+  "delete": {
+    "heading": "Ta bort en export",
+    "body": "Listor varje rad i <code>/etc/exports</code> för val, tar bort den valda (<code>sed -i</code>), kör <code>exportfs -ra</code> och startar om <code>nfs-kernel-server</code>. Mappen själv och dess innehåll lämnas intakt."
+  },
+  "status": {
+    "heading": "Kontrollera NFS status",
+    "body": "Diagnostic pass: bekräftar <code>nfs-kernel-server</code> och <code>rpcbind</code> är installerade och aktiva, trycker <code>exportfs -v</code>-utgång, listar aktiva NFS-sessioner (<code>showmount -a</code>) och nuvarande klientanslutningar."
+  },
+  "uninstall": {
+    "heading": "Avinstallera NFS server",
+    "body": "Full rengöring efter bekräftelse: stannar + inaktiverar <code>nfs-kernel-server</code> och <code>rpcbind</code>, rensar <code>/etc/exports</code>, <code>apt-get purge</code> NFS-paketen, tar bort <code>sharedfiles</code>-gruppen och <code>remap_*</code>-användarna, dödar alla kvarvarande processer. De exporterade <strong>-mapparna själva raderas inte </strong> - endast NFS-konfigurationen och paketen.",
+    "warnTitle": "Skriptet stannar vid exportlinjen, inte vid data",
+    "warnBody": "Både <em>Delete export</em> och <em>Uninstall NFS server</em> tar bort exportkonfigurationen. Uppgifterna om den exporterade mappen bevaras. För att ta bort data också, gör det explicit med <code>rm -rf</code> efter skriptet avslutas - och säkerhetskopiera det först om någon fortfarande behöver det."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "privTitle": "Privilegierad behållare krävs (skript aborter)",
+    "privBody": "Den valda CT är oprivilegierad. <code>nfs-kernel-server</code> kan inte börja där eftersom montering <code>/proc/fs/nfsd</code> behöver <code>CAP_SYS_ADMIN</code> i värdkärnans namnrymd, och <code>nfsd</code>-modulen inte utsätts för behållarens namnrymd antingen (<code>modprobe nfsd</code> inifrån returnerar <code>FATAL: Module nfsd not found</code>). Om du kringgår porten ser du <code>rpc.nfsd: Unable to access /proc/fs/nfsd errno 2 (No such file or directory)</code> i tidskriften och inga NFS-portar kommer någonsin att öppnas. De enda användbara alternativen är: konvertera CT till privilegierad, eller flytta NFS-servern till en VM.",
+    "aptTitle": "apt-get install fails",
+    "aptIntro": "Manuset antar en Debian-familj CT. På Alpine / Arch / Rocky / Alma, installera NFS serverpaket för hand:",
+    "aptItems": [
+      "Alpine: <code>apk add nfs-utils</code>",
+      "Arch: <code>pacman -S nfs-utils</code>",
+      "Rocky / Alma: <code>dnf install nfs-utils</code>"
+    ],
+    "aptOutro": "Sedan kör ProxMenux-skriptet - installationssteget hoppar när verktygen redan finns.",
+    "aclTitle": "Kunden kan inte montera: \"åtkomst nekas av servern\"",
+    "aclBody": "Kundens IP är utanför nätverket ACL du konfigurerade. Återskapa exporten med ett bredare undernät, eller lägg till kundens exakta IP. Common gotcha: klienter som ansluter via en router NAT kan visas med routerns WAN IP, inte klientens LAN IP - kolla på servern med <code>tcpdump -n port 2049</code>.",
+    "ownTitle": "Filer skrivna av kunden visas med konstig ägande på servern",
+    "ownIntro": "Två möjligheter:",
+    "ownItems": [
+      "Med <code>no_root_squash</code> (standard) skriver klientrot som rot på servern. Filer ägs av <code>root:sharedfiles</code> tack vare SGID på mappen.",
+      "Icke-root klient användare skriver som sin egen UID / GID. Om deras UID inte finns på servern visas filer med råa nummer (t.ex. <code>1234:1234</code>). Använd <code>sharedfiles</code>-gruppen på klienten också, eller anpassa UID över de system som delar filer."
+    ],
+    "noShowTitle": "Server nåable men showmount returnerar ingenting",
+    "noShowBody": "Efter redigering av <code>/etc/exports</code> måste du ladda om exportbordet med <code>exportfs -ra</code> och starta om <code>nfs-kernel-server</code> - manuset gör båda, men om du redigerade filen för hand, gör det själv. Bekräfta också brandväggen på CT (och på Proxmox värd) tillåter TCP / UDP 2049 och rpcbind port (111)."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-nfs-client",
+        "label": "NFS klient i LXC",
+        "tail": " - omvänt: montering externa NFS aktier inifrån en CT."
+      },
+      {
+        "href": "/docs/storage-share/lxc-samba-server",
+        "label": "Samba server i LXC",
+        "tail": " — syskonsidan, samma mönster med SMB / CIFS istället för NFS."
+      },
+      {
+        "href": "/docs/storage-share/host-nfs",
+        "label": "NFS delas som Proxmox lagring",
+        "tailRich": " — När din CT exporterar, registrera att NFS-andel i Proxmox så det visas under <em>Datacenter → Storage</em>."
+      }
+    ]
+  }
+}

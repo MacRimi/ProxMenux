@@ -1,0 +1,146 @@
+{
+  "meta": {
+    "title": "SMART Disk Health & Test | ProxMenux Dokumentation",
+    "description": "Kör SMART hälsokontroller och disktester på Proxmox VE med ProxMenux. Stöder SATA / SAS (smartmontools) och NVMe (nvme-cli). Korta och långa självtester, JSON export för ProxMenux Monitor integration.",
+    "ogTitle": "SMART Disk Health & Test | ProxMenux Dokumentation",
+    "ogDescription": "SMART hälsokontroller och självtest för SATA / SAS och NVMe-enheter på Proxmox. JSON export för Monitor."
+  },
+  "header": {
+    "title": "SMART-status och disktest",
+    "description": "Läs SMART-data och utlösa självtester på de fysiska diskarna som är knutna till Proxmox-värden. ProxMenux autoinstallerar smartmontooler för SATA / SAS och nvme-cli för NVMe, driver åtgärden inuti drivfirmware (långa tester överlever terminal nära) och exporterar JSON resultat för ProxMenux Monitor.",
+    "section": "Diskhanterare · Verktyg"
+  },
+  "intro": {
+    "title": "Vad detta är för",
+    "body": "SMART (Self-Monitoring, Analysis and Reporting Technology) låter enheten rapportera sin hälsa och köra självtester. Detta verktyg visar att data utan att du behöver komma ihåg rätt <code>smartctl</code> / <code>nvme</code> fakturering, och kvarstår utgången som JSON så att Monitorn kan diagram trender över tiden."
+  },
+  "howRuns": {
+    "heading": "Hur manuset går",
+    "body": "Alla åtgärder här är icke-destruktiva - SMART läser driva firmware räknare, och självtester köas inuti själva enheten. Ingen fas separation behövs. Flödet är: beroendekontroll → diskval → åtgärdsval → verktygsfakturering (smartctl eller nvme-cli beroende på diskbussen) → tryckt utgång plus JSON-export för Monitorn."
+  },
+  "deps": {
+    "heading": "Beroende",
+    "body": "Verktyget installerar automatiskt vad det behöver på första körningen. SATA / SAS-enheter är beroende av <code>smartmontools</code>; NVMe-enheter är beroende av <code>nvme-cli</code>. Båda:"
+  },
+  "actions": {
+    "heading": "Tillgängliga åtgärder",
+    "headerAction": "Handling",
+    "headerWhat": "Vad det läser / springer",
+    "headerDur": "Varaktighet",
+    "rows": [
+      {
+        "action": "Snabb hälsostatus",
+        "whatRich": "Totalt PASSED/FAILED + nyckelattribut.<br /><code>smartctl -H</code> + <code>-A</code> (SATA/SAS) eller <code>nvme smart-log</code> (NVMe).",
+        "dur": "Omedelbart"
+      },
+      {
+        "action": "Fullständig rapport",
+        "whatRich": "Komplett SMART data, rullbar. <code>smartctl -x</code> för SATA/SAS eller <code>nvme smart-log</code> + <code>id-ctrl</code> för NVMe.",
+        "dur": "Omedelbart"
+      },
+      {
+        "action": "Kort test",
+        "what": "Grundläggande yta och elektrisk kontroll, köad inuti drive firmware.",
+        "dur": "2 minuter"
+      },
+      {
+        "action": "Långt test",
+        "what": "Full skanning av hela ytan. Körs på hårdvaran - kvarstår även om du stänger terminalen.",
+        "dur": "Timmar (diskstorlek beroende)"
+      },
+      {
+        "action": "Kontrollera test framsteg",
+        "what": "Status för det aktiva eller senaste självtestet.",
+        "dur": "Omedelbart"
+      }
+    ],
+    "tipTitle": "Långa tester överlever terminal nära",
+    "tipBody": "Ett långt test är köad <em>inuti drive</em> - det beror inte på ProxMenux-processen som lever. Du kan stänga terminalen, starta om Proxmox-värden (testet plockar upp där det slutade på vissa enheter) eller bara komma tillbaka senare och använda <strong>Check testprogress</strong> för att se resultatet."
+  },
+  "json": {
+    "heading": "JSON export för Monitor",
+    "intro": "Varje körning skriver en tidstämplad JSON-fil till <code>/usr/local/share/proxmenux/smart/&lt;disk&gt;/</code>. Strukturen är:",
+    "outro": "ProxMenux Monitor plockar upp dessa för att göra hälsotrender per disk; gamla filer roteras automatiskt när lagringsgränsen nås."
+  },
+  "steps": {
+    "heading": "Steg-för-steg",
+    "stepLabel": "Steg",
+    "list": [
+      {
+        "title": "Välj en disk",
+        "body": "ProxMenux listar varje fysisk disk på värden med sin modell och storlek. Till skillnad från Format-verktyget filtreras inte den här listan av säkerhet - läs SMART är en icke-destruktiv operation.",
+        "img": "/disk/smart/disk-selection.png",
+        "alt": "SMART diskval meny",
+        "caption": "SMART diskval meny"
+      },
+      {
+        "title": "Välj en åtgärd",
+        "body": "Välj mellan snabb hälsostatus, fullständig rapport, kort test, lång test eller kontroll framsteg. Menyn är öppen efter varje åtgärd så att du kan kedja flera frågor mot samma disk.",
+        "img": "/disk/smart/action-menu.png",
+        "alt": "SMART åtgärdsmenyn",
+        "caption": "SMART åtgärdsmenyn (5 åtgärder + avbryta)"
+      },
+      {
+        "title": "(Långt test) Bekräfta bakgrundsutförande",
+        "body": "ProxMenux varnar för att testet kommer att fortsätta springa efter terminalen stängs och visar var JSON-resultatet kommer att landa. Acceptera att köa det.",
+        "img": "/disk/smart/long-test-warning.png",
+        "alt": "Lång testbekräftelsedialog",
+        "caption": "Lång testbekräftelse - körs i bakgrunden, vilket sparas till JSON"
+      },
+      {
+        "title": "Granska resultat",
+        "bodyRich": "Status och rapport trycks till terminalen och skrivs till JSON. För långa tester, returnera senare och kör <strong>Check testprogress</strong> på samma disk för att se resultatet.",
+        "img": "/disk/smart/quick-status.png",
+        "alt": "Snabb hälsa status output",
+        "caption": "Snabb hälsostatusutgång (SATA - smartctl -H + -A)"
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Manuella motsvarigheter",
+    "nvmeWarnTitle": "NVMe självtest är drive-firmware beroende",
+    "nvmeWarnBody": "Inte varje NVMe-enhet stöder det korta / långa självtestkommandot. Om en enhet vägrar testet är SMART-loggen och ID-kontrolldata (<code>nvme smart-log</code> + <code>id-ctrl</code>) fortfarande den mest tillförlitliga hälsosignalen."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "noSmartTitle": "\"Kan inte läsa SMART data från /dev/sdX\"",
+    "noSmartBody": "Skivan är förmodligen bakom en RAID / SAS controller som inte passerar SMART. Med megaraidbaserade kort, prova <code>smartctl -d megaraid,N /dev/sdX</code>. För HBA i IT-läge fungerar den direkta faktureringen.",
+    "longTitle": "Långt test slutför aldrig",
+    "longBody": "Testet köas på drive firmware och pauser om disken är under tung belastning. Kör det över natten på ett tomt system fungerar vanligtvis. Du kan också kontrollera <code>smartctl -c</code> för att se procentuell återstående; om den är fast på en fast LBA, disken misslyckas på den sektorn."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/disk-manager/format-disk",
+        "label": "Formatera / radera fysisk disk",
+        "tail": " — Återanvänd en disk efter att ha bekräftat att den är frisk."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Lagring och diskar kommandon → SMART Disk Health",
+        "tail": " - copy-pasteable smartctl / nvme referens."
+      },
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "ZFS Ledningskommandon",
+        "tail": " — zpool scrub för lagringsskikt motsvarande SMART tester."
+      },
+      {
+        "href": "/docs/monitor/dashboard/storage",
+        "label": "ProxMenux Monitor - Lagringsflik",
+        "tail": " — diskborrning som förbrukar JSON exporteras här (full SMART-tabell, historia, PDF-rapport)."
+      },
+      {
+        "href": "/docs/monitor/dashboard/hardware",
+        "label": "ProxMenux Monitor Hardware Tab",
+        "tail": " - Lagring Sammanfattning med modell, kapacitet och förhandlad länkhastighet (nuvarande vs maximum på NVMe)."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Disk Manager översikt",
+        "tail": "."
+      }
+    ]
+  }
+}

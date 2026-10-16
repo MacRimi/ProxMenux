@@ -1,0 +1,120 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Dashboard: System Logs flik | ProxMenux Dokumentation",
+    "description": "fliken System Logs konsoliderar tre källor i en skärm: live journalctl med filter och nedladdning, Proxmox aktivitetshistorik (UPID) och meddelandelogg - allt sökbart, filtrerat genom svårighetsgrad / tidsintervall och nedladdningsbart som textpaket."
+  },
+  "header": {
+    "title": "Dashboard: System Logs flik",
+    "description": "Tre sub-tabs under ett tak: systemtidskriften (journalctl med filter), Proxmox aktivitetshistorik och anmälningsloggen. Alla tre är sökbara, filtrerbara och nedladdningsbara som textpaket.",
+    "section": "ProxMenux Monitor Dashboard"
+  },
+  "readOnly": {
+    "title": "Read-only av design",
+    "body": "Ingenting på denna flik ändrar loggfiler. Filter lever i URL / staten, nedladdningar är server-side buntar. Dashboarden tar aldrig bort loggposter - för hushållning använder värdens egen <code>journalctl --vacuum-time=&lt;N&gt;</code> eller <code>logrotate</code>."
+  },
+  "topRow": {
+    "heading": "Top row: fyra räknare",
+    "items": [
+      "<strong>Total Entries</strong> - antal loggposter inuti det aktiva filterfönstret.",
+      "<strong>Errors</strong> - antal svårighetsgrad ≤ 3 (<code>err</code> / <code>crit</code> / <code>alert</code> / <code>emerg</code>).",
+      "<strong>Warnings</strong> - antal svårighetsgrad 4 (<code>warning</code>).",
+      "<strong>Backups</strong> - räkna med vzdump / PBS aktivitetsposter i samma fönster."
+    ]
+  },
+  "subtabs": {
+    "heading": "Tre sub-tabs",
+    "logsTitle": "Loggar",
+    "logsIntro": "Systemtidskriften, som serveras av <code>journalctl</code> på backend. Filter som finns i verktygsfältet:",
+    "logsFilters": [
+      "<strong>Allvarlighet</strong> - emerg / alert / crit / err / varning / varning / meddelande / info / debug eller någon kombination.",
+      "<strong>Time range</strong> - sista 5 min / 15 min / 1 h / 6 h / 24 h / 7 d / custom.",
+      "<strong>Free-text sök</strong> - substring eller regex (<code>journalctl --grep</code>).",
+      "<strong>Unit filter</strong> - begränsar till en specifik systemd-enhet (<code>pveproxy.service</code>, <code>nginx.service</code>, ...)."
+    ],
+    "logsRowsAfter": "Varje rad visar tidsstämpel, svårighetsgrad, källenhet och meddelandet. Långa meddelanden kollapsar med en \"visa mer\" växel. Den är <strong>Ladda ner</strong> Åtgärder buntar det aktuella filtret i en enda <code>.txt</code> fil via <code>GET /api/logs/download</code> - användbar när du vill dela en bit av tidskrift med någon.",
+    "logDetailsModalTitle": "Dialogruta för loggdetaljer",
+    "logDetailsBody": "Klicka på någon rad öppnar en <strong>Log Details</strong>-modal med varje strukturerad fält som registrerats fångad för den enda posten - samma vy du skulle bygga för hand som kör <code>journalctl --output=verbose</code> på värden.",
+    "logDetailsImageAlt": "Log Details modal - enstaka tidskriftspost utökad med Level, Service, Timestamp, Source, Systemd Enhet, Process ID, Hostname och hela meddelandet",
+    "logDetailsImageCaption": "Log Details modal - varje strukturerad fält journald bär för denna post, med det fullständiga okontrollerade meddelandet längst ner. Användbart för cron och serviceloggar där den utförda kommandoraden är viktiga.",
+    "fieldsIntro": "Fält som visas:",
+    "fields": [
+      "<strong>Level</strong> - färgad svårighetsgrad (INFO / WARNING / ERROR / CRITICAL).",
+      "<strong>Service</strong> - kort namn på enheten / processen som sände inträdet.",
+      "<strong>Timestamp</strong> - helt datum och tid för logglinjen.",
+      "<strong>Source</strong> - ursprunget till posten (journal, kärna, revision, ...).",
+      "<strong>Systemd Unit</strong> - den faktiska <code>.service</code> / <code>.timer</code> / <code>.socket</code> enhet om posten var associerad med en.",
+      "<strong>Process ID</strong> – PID för emitteringsprocessen.",
+      "<strong>Hostname</strong> - användbar när tidskrifter vidarebefordras över klusternoder.",
+      "<strong>Message</strong> - det fullständiga okontrollerade meddelandet i ett monospace block, redo att kopiera."
+    ],
+    "maxLevelStoreTitle": "Journalerad MaxLevelStore",
+    "maxLevelStoreBody": "På en ny Proxmox-installation, journalade standarder till <code>MaxLevelStore=warning</code>, som tyst släpper info-nivå meddelanden. Monitorn upptäcker detta vid start och lägger till en drop-in (<code>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</code>) höja tröskeln till <code>info</code> så fliken Logs faktiskt har något att visa över alla svårigheter.",
+    "backupsTitle": "Säkerhetskopieringar",
+    "backupsBody": "Proxmox aktivitetshistorik filtrerad till backup-relaterade poster. En rad per uppgift (<code>vzdump</code>, PBS överföringar, Garbage Collect, Verify) med status (OK / WARNINGS / ERROR), gäst involverad, källlagring, varaktighet och UPID. Klicka på en rad för att ladda hela uppgiftsloggen via <code>GET /api/task-log/&lt;upid&gt;</code> - samma data Proxmox exponerar genom <em>Datacenter → Tasks</em>, omfattad till säkerhetskopior.",
+    "notificationsTitle": "Aviseringar",
+    "notificationsBody1": "Varje meddelande skickas av Monitor - Telegram, Discord, Email, Gotify, ntfy, Slack, Teams, webhook. Varje rad: tidsstämpel, kanal, händelsetyp, svårighetsgrad, den gjorda titeln, den gjorda kroppen och (om AI är aktiverad) ett växel för att se AI skriva bredvid originalet.",
+    "notificationsBody2": "Använd den här fliken för att verifiera en kanal levererar faktiskt och jämföra vad AI-rewrite producerade vs mallbaslinjen. Kanalkonfiguration bor i <link>Notifications</link> djup sida."
+  },
+  "dataCollected": {
+    "heading": "Hur data samlas in",
+    "headerSubtab": "Underflik",
+    "headerEndpoint": "Slutpunkt",
+    "headerSource": "Källa",
+    "rows": [
+      {
+        "subtab": "Loggar (livefilter)",
+        "endpoint": "/api/logs",
+        "source": "<code>journalctl --output json --since &lt;range&gt;</code> med svårighetsgrad / enhet / sökfilter tillämpad server-side."
+      },
+      {
+        "subtab": "Ladda ner",
+        "endpoint": "/api/logs/download",
+        "source": "Samma fråga, återvände som vanlig text för grep / mindre."
+      },
+      {
+        "subtab": "Säkerhetskopieringar",
+        "endpoint": "/api/backups",
+        "source": "PVE aktivitetshistoria filtrerad av <code>vzdump</code>, PBS överföringar, Garbage Collect, Verify."
+      },
+      {
+        "subtab": "Backup uppgift borr-in",
+        "endpoint": "/api/task-log/&lt;upid&gt;",
+        "source": "Plain-text full aktivitetslogg läs från <code>/var/log/pve/tasks/&lt;index&gt;/&lt;upid&gt;</code>."
+      },
+      {
+        "subtab": "Meddelanden historia",
+        "endpoint": "/api/notifications/history",
+        "source": "SQLite <code>notification_history</code>-bordet matas av avsändningsslingan."
+      }
+    ],
+    "apiIntro": "Både livefiltret och nedladdningarna kan också nås via API:",
+    "codeComment1": "# Förra timmen av fel och värre, med ett nyckelord",
+    "codeComment2": "Ladda ner hela tidskriften för den sista 6 timmar som vanlig text",
+    "codeComment3": "Titta upp hela produktionen av en specifik uppgift av UPID"
+  },
+  "whereNext": {
+    "heading": "Var till nästa",
+    "items": [
+      {
+        "label": "Hälsoövervakare",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " - kategorin System Logs som tittar på ihållande / spik / kaskadmönster."
+      },
+      {
+        "label": "Aviseringar",
+        "href": "/docs/monitor/notifications",
+        "tail": " - Tidskriftsvaktaren läser samma källa och förvandlar matcher till meddelanden."
+      },
+      {
+        "label": "API Referens",
+        "href": "/docs/monitor/api",
+        "tail": " - loggar och uppgiftslogg slutpunkter med sina frågor parametrar."
+      },
+      {
+        "label": "Översiktsindex",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — de andra flikarna."
+      }
+    ]
+  }
+}

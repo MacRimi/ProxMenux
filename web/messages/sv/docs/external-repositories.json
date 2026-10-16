@@ -1,0 +1,58 @@
+{
+  "meta": {
+    "title": "Externa repositorier | ProxMenux Dokumentation",
+    "description": "ProxMenux integreras med utvalda externa skriptregister (community-scripts, ZimaOS) som alternativ i vissa menyavsnitt. Varje externt skript är tydligt märkt med sin källa; buggrapporter går till den ursprungliga underhållaren.",
+    "ogTitle": "Externa repositorier | ProxMenux Dokumentation",
+    "ogDescription": "Externa skriptregister integrerade i ProxMenux som alternativa alternativ i menyer."
+  },
+  "header": {
+    "title": "Externa repositorier",
+    "description": "ProxMenux integreras med utvalda externa skriptregister som alternativa alternativ i vissa menyavsnitt. Dessa skript kommer från betrodda tredjepartskällor och är tydligt märkta med deras ursprung när de visas i menyn.",
+    "section": "Externa repositorier"
+  },
+  "practice": {
+    "title": "Vad detta innebär i praktiken",
+    "body": "När ett menyalternativ backas upp av ett externt skript (snarare än ProxMenux: s egen kod), menyn uttryckligen säger var den är från och vilken förvar den laddas. ProxMenux fungerar som en launcher - det ändrar inte externa skript. Frågor med vad ett externt skript tillhör den förvarsmakten, inte ProxMenux."
+  },
+  "integrated": {
+    "heading": "För närvarande integrerad",
+    "usedInLabel": "Används i:",
+    "items": [
+      {
+        "name": "community-scripts / ProxmoxVE",
+        "url": "https://community-scripts.github.io/ProxmoxVE/",
+        "description": "Andlig efterträdare för att tteck hjälpmanus. Stor katalog över en-shot skript för att distribuera LXCs (Home Assistant, Plex, Frigate, ...), VMs, addons och PVE tweaks.",
+        "usedIn": "Helper Scripts launcher, Network (NIC offloading fix för Intel e1000e)"
+      }
+    ]
+  },
+  "attribution": {
+    "heading": "Attribution och erkännande",
+    "items": [
+      "Kredit ges alltid till de ursprungliga författarna i menyn och i dokumentationssidan som lindrar manuset.",
+      "En länk till källförvaret visas - både innan du kör skriptet och på matchningsdokumentsidan.",
+      "Användare uppmanas att stödja utvecklarna av dessa externa projekt (ge en , sponsor, filkvalitetsbuggrapporter)."
+    ]
+  },
+  "report": {
+    "title": "Var kan man rapportera problem med externa skript",
+    "body": "Om ett manus från en av dessa externa repositorier inte fungerar som förväntat, rapporterar <strong> det direkt till den repository</strong> - inte till ProxMenux. ProxMenux bara laddar ner och kör skriptet verbatim; det ändrar inte källan. Den ursprungliga underhållaren är rätt person att triage och fixa den. ProxMenux problem är för problem med lanseringen själv eller med hur ProxMenux integrerar externt manus."
+  },
+  "suggest": {
+    "heading": "Förslag till nya externa repositorier",
+    "intro": "Hittade ett skript eller förvar som skulle passa bra in i en ProxMenux-meny? Föreslå det via:",
+    "discussionTitle": "Öppna en diskussion",
+    "discussionBody": "Bäst för idéer - får gemenskapsinput innan du blir en funktionsförfrågan.",
+    "issueTitle": "Öppna en fråga",
+    "issueBody": "För specifika funktionsförfrågningar med ett tydligt utrymme."
+  },
+  "candidate": {
+    "title": "Vad gör en bra integrationskandidat",
+    "items": [
+      "Öppen källa med en aktiv underhållare.",
+      "Idempotent / säker att springa mer än en gång.",
+      "Ändra inte tyst Proxmox kärnkonfig.",
+      "Löser ett problem ProxMenux inte redan täcker (undviker funktion duplicering)."
+    ]
+  }
+}

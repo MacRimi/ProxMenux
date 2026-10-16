@@ -1,0 +1,151 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Self-hosted Web Dashboard för Proxmox VE | ProxMenux",
+    "description": "ProxMenux Monitor är en egen värd web dashboard för Proxmox VE: realtid värdmetri, lagring och SMART data, nätverk, VMs och behållare, hårdvara, loggar, en integrerad webbterminal, en proaktiv hälsokontroll, meddelanden till Telegram / Discord / Email, en valfri AI-assistent, en REST API och integrationer med verktyg som Homepage och Home Assistant.",
+    "ogTitle": "ProxMenux Monitor Self-hosted Web Dashboard för Proxmox VE",
+    "ogDescription": "Realtid Proxmox VE dashboard: värdmetri, lagring SMART, nätverk, VM och behållare, hårdvara, loggar, webbterminal, Health Monitor, meddelanden, AI-assistent, REST API.",
+    "twitterTitle": "ProxMenux Monitor | ProxMenux",
+    "twitterDescription": "Självvärd Proxmox VE dashboard med Health Monitor, meddelanden, AI-assistent och REST API."
+  },
+  "header": {
+    "title": "ProxMenux-övervakning",
+    "description": "En självhäftad webbdashboard för Proxmox VE levereras som en AppImage. Den körs på värden som en enda systemd-tjänst, lyssnar på TCP 8008 och tjänar både API och UI från en process.",
+    "section": "ProxMenux-övervakning"
+  },
+  "atGlance": {
+    "title": "Vid en blick",
+    "body": "Single AppImage på Proxmox värd → Flask backend (port 8008) samla levande data via <code>psutil</code>, <code>pvesh</code>, <code>smartctl</code>, <code>journalctl</code> → Next.js instrumentbräda serveras från samma process. Valfri auth (lösenord + 2FA), valfri AI-assistent, valfria meddelanden, REST API för integrationer."
+  },
+  "hero": {
+    "alt": "ProxMenux Monitor dashboard - systemöversiktsskärm med CPU, minne, temperatur och upptid widgets",
+    "caption": "Standard landningsskärm - värdnivåmätningar och hälsotillstånd vid en blick."
+  },
+  "coverage": {
+    "heading": "Vad instrumentpanelen täcker",
+    "intro": "Åtta förstklassiga sektioner, var och en backas upp av sina egna API endpoints:",
+    "tableSection": "Avsnitt",
+    "tableWhat": "Vad det visar",
+    "sections": [
+      {
+        "name": "Hälsoövervakare",
+        "description": "Aktiva och avfärdade varningar över CPU, minne, lagring, diskar, nätverk, tjänster, loggar, VM, uppdateringar och säkerhet. Kör anmälningsmotorn."
+      },
+      {
+        "name": "Lagring",
+        "description": "Proxmox lagring pooler, fysiska diskar (SATA / NVMe / USB), SMART attribut, ZFS pool status, slitage och livstid, I / O aktivitet."
+      },
+      {
+        "name": "Nätverk",
+        "description": "Alla gränssnitt (fysiska, obligationer, broar, OVS), IP / MAC / stat, realtid RX / TX grafer, historiska RRD-data per gränssnitt."
+      },
+      {
+        "name": "virtuella datorer och behållare",
+        "description": "Inventering av alla VM och LXC med status, resurser och drifttid. Drill-in visar konfig, historiska mätvärden, full gästloggar och start / stop / start / nedstängning åtgärder."
+      },
+      {
+        "name": "Hårdvara",
+        "description": "CPU-modell och topologi, minneslayout, PCIe-enheter, GPU-lista med förare och per-slot realtidsövervakning (NVIDIA / Intel iGPU)."
+      },
+      {
+        "name": "Loggar och händelser",
+        "description": "Live <code>journalctl</code> med svårighetsgrad / tidsintervall / sökordsfilter, Proxmox aktivitetshistorik, anmälningslogg, nedladdningsbara loggpaket."
+      },
+      {
+        "name": "Terminal",
+        "description": "Webbläsarskal till värden eller till någon VM/CT, som drivs av <code>xterm.js</code> över WebSockets. Autentiserad och granskad som resten av API."
+      },
+      {
+        "name": "Säkerhet",
+        "description": "Autentiseringsfel, Fail2Ban fängelse status, senaste förbud händelser, integration med värdens <code>[proxmenux]</code> fängelse."
+      }
+    ],
+    "footer": "Varje avsnitt har en dedikerad dokumentationssida under <link>Dashboard</link> i sidofältet."
+  },
+  "howItRuns": {
+    "heading": "Hur det går",
+    "intro": "ProxMenux Monitor fartyg som en självinnehållen AppImage. En enda systemd enhet (<code>proxmenux-monitor.service</code>) startar en Flask process som:",
+    "bullets": [
+      "Lyssna på <strong>TCP 8008</strong> på värden (HTTP).",
+      "Serverar Next.js dashboard som statiska tillgångar under <code>/</code> och API under <code>/api/*</code> från samma process.",
+      "Pulls live data med standard värdverktyg: <code>psutil</code>, <code>pvesh</code>, <code>smartctl</code>, <code>journalctl</code>, <code>zpool</code>, <code>ip</code>, <code>nvidia-smi</code>, etc.",
+      "Består sitt eget tillstånd i en lokal SQLite-databas (<code>/usr/local/share/proxmenux/health_monitor.db</code>): avfärdade varningar, diskobservationer, meddelandekonfig, AI-konfig. Autentiseringsstaten lever separat i <code>/root/.config/proxmenux-monitor/auth.json</code>."
+    ],
+    "footer": "Det fullständiga förfrågningsflödet, fillayouten och systemd-integrationen beskrivs i <link>Architecture</link>."
+  },
+  "noAgent": {
+    "title": "Ingen agent på gästerna",
+    "body": "Monitorn läser allt från värden. VM och CT behöver inte någon agent installerad - gästdata kommer från Proxmox API och från värdens egen kärnnivå synlighet i de löpande gästerna."
+  },
+  "access": {
+    "heading": "Tillgång till instrumentbrädan",
+    "intro": "Två åtkomstmönster stöds och programmet upptäcker vilken som används:",
+    "codeComment1": "# 1) Direkt tillgång på värden",
+    "codeComment2": "# 2) Via omvänd proxy (Nginx / Caddy / Traefik)",
+    "afterCode": "När en omvänd proxy används tar Monitor hänsyn till <code>X-Forwarded-For</code>, <code>X-Forwarded-Proto</code> och <code>X-Forwarded-Host</code>, så att URL:er och CORS fungerar korrekt utan manuell konfiguration.",
+    "footer": "Första lanseringen, lösenord + TOTP 2FA, och omvänd proxy snippets är täckta i <link>Access & Authentication</link>."
+  },
+  "mobile": {
+    "heading": "Mobil användning och hemskärm installera",
+    "intro": "Dashboarden är responsiv och fartyg som en progressiv webbapp. Den förpackade <code>public/manifest.json</code> förklarar <code>display: standalone</code> med ett appnamn, ikon och temafärg, så att lägga till webbadressen till hemskärmen ger en riktig fristående launcher - ingen webbläsaradressfält, anpassad stänk, mörkt tema matchad till instrumentbrädan.",
+    "phoneAlt": "ProxMenux Monitor körs på en telefon - huvuddashboardvy",
+    "phoneCaption": "Huvuddashboard på en telefon - layouten flöden för små visningar.",
+    "addHeading": "Lägg till hemma skärmen",
+    "iosLabel": "iOS Safari:",
+    "iosBody": "dela knappen → <em>Lägg till Home Screen</em>. Ikonen kommer från <code>/apple-touch-icon.png</code> levereras i AppImage.",
+    "androidLabel": "Android Chrome / Edge:",
+    "androidBody": "3-dot meny → <em>Install app</em> (eller <em>Lägg till Home screen</em> på äldre versioner).",
+    "afterInstall": "När den är installerad, öppnar ikonen instrumentpanelen i fristående läge med sin egen uppgift växlare post.",
+    "onlineOnlyTitle": "Online-bara",
+    "onlineOnlyBody": "PWA är installerad men det är <strong>not</strong> offline-kapabel - det finns ingen servicearbetare. Lanseringen beter sig som en inbyggd app, men enheten behöver fortfarande nå värden på TCP 8008 (LAN, VPN eller omvänd HTTPS) för instrumentbrädan att ladda."
+  },
+  "health": {
+    "heading": "Health Monitor och meddelanden",
+    "alt": "Hälsokontrollskärm som visar 10-kategorier spårade (CPU, minne, lagring, diskar, nätverk, tjänster, loggar, VM, uppdateringar, säkerhet) med aktuell status",
+    "caption": "Hälsoövervakning - 10-kategorierna spårade med sin nuvarande status. Aktiva och avfärdade varningar visas här när systemet höjer någon.",
+    "body1": "Inuti instrumentpanelen kör <strong>Health Monitor</strong> kontinuerligt i bakgrunden och producerar en strukturerad ström av händelser: hög CPU-temperatur, disk SMART varningar, ZFS pool nedbrytning, OOM dödar, VM / CT misslyckanden, säkerhetsinciden, och så vidare. Varje händelse har en kategori, en svårighetsgrad (INFO / WARNING / CRITICAL) och en stabil <code>error_key</code> så duplicerar kollaps istället för att översvämma skärmen.",
+    "feedsIntro": "Händelser matar tre saker samtidigt:",
+    "feedsHealth": "<strong>Health Monitor view</strong> i instrumentpanelen (aktiva + avvisade listor).",
+    "feedsChannels": "Den är <strong>anmälningsmotor</strong> — Telegram, Discord, e-post, Gotify, Pushover och Apprise (multi-kanal). Varje kanal konfigureras oberoende och per-event-kategorier kan tystas.",
+    "feedsAI": "Den valfria <strong>AI assistent</strong> - när den är aktiverad, den konfigurerade leverantören (OpenAI, Anthropic, Gemini, Groq, Ollama eller OpenRouter) förklarar inkommande händelser på vanligt språk och, om det är aktiverat i AI-inställningarna, föreslår nästa steg.",
+    "suppressionTitle": "Förtryck istället för mute-all",
+    "suppressionBody": "Varje kategori har sin egen <em>Suppression Duration</em>: När du avfärdar en varning tystas samma varning för det fönstret (standard 24 timmar, konfigurerbar per kategori upp till permanent). Verkliga upptrappningar – t.ex. CPU temperatur som korsar det kritiska tröskelvärdet - alltid re-trigger oavsett förtryck."
+  },
+  "api": {
+    "heading": "REST API och integrationer",
+    "intro": "Allt UI visar är tillgängligt som JSON över HTTP/HTTPS. Samma slutpunkter kraft Homepage widgets, Home Assistant sensorer, Grafana instrumentbrädor (via Prometheus exportör på <code>/api/prometheus</code>), Uptime Kuma probes och alla anpassade skript som talar <code>curl</code>.",
+    "tokens": "Långlivade API tokens (365 dagar) genereras från <strong>Settings → API Access Tokens</strong> eller via <code>POST /api/auth/generate-api-token</code>.",
+    "bearer": "Tokens reser som <code>Authorization: Bearer …</code> Offentliga slutpunkter (<code>/api/health</code>, <code>/api/auth/*</code>) fungerar utan en token så externa upptidssonder kan träffa värden utan att dela ut referenser.",
+    "catalog": "Den fullständiga endpoint katalogen, token rotation vägledning och säkerhet bästa praxis lever i <linkApi>API Reference</linkApi>; färdiga exempel för hemsida, Home Assistant, Grafana, Uptime Kuma och en generisk cURL mönster finns i <linkIntegrations>Integrations</linkIntegrations>."
+  },
+  "serviceControl": {
+    "heading": "Servicekontroll",
+    "intro": "Dagligen hanteras Monitor precis som alla andra systemd-tjänster. Det exponeras också som två poster i ProxMenux TUI under <em>Settings</em>:",
+    "codeComment": "# Manuell kontroll",
+    "footer": "Se <link>Settings → ProxMenux Monitor</link> för in-menyn växel och statusverifieringsflöde."
+  },
+  "nextSteps": {
+    "heading": "Var till nästa",
+    "items": [
+      {
+        "label": "Arkitektur",
+        "description": "Flask backend, systemd enhet, SQLite schema, AI-leverantörer, meddelandekanaler."
+      },
+      {
+        "label": "Åtkomst och autentisering",
+        "description": "- första lanseringen, lösenordsinställning, TOTP 2FA, omvänd proxykonfiguration, Fail2Ban integration."
+      },
+      {
+        "label": "Översikt",
+        "description": "varje del av UI, en sida vardera."
+      },
+      {
+        "label": "API Referens",
+        "description": "- varje slutpunkt, begäran / svarsform och token management."
+      },
+      {
+        "label": "Integrationer",
+        "description": "Hemsida, Home Assistant, Grafana / Prometheus, Uptime Kuma, generiskt cURL-mönster."
+      }
+    ]
+  }
+}

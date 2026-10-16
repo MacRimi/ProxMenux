@@ -1,0 +1,120 @@
+{
+  "meta": {
+    "title": "Lägg till Coral TPU till LXC | ProxMenux Dokumentation",
+    "description": "Passera en Google Coral TPU (USB eller M.2 / PCIe) i en Proxmox LXC behållare. ProxMenux skriver rätt dev / cgroup / monteringsposter för varje variant, startar behållaren och installerar Edge TPU runtime inuti så appar som Frigate kan använda acceleratorn."
+  },
+  "header": {
+    "title": "Lägg till Coral TPU till LXC",
+    "description": "Dela en Google Coral TPU (USB Accelerator eller M.2 / Mini-PCIe) med en Proxmox LXC behållare. ProxMenux hanterar LXC-konfig och in-container Edge TPU runtime installation. Coral är TPU-bara: för GPU / iGPU-delning (Quick Sync, VA-API, NVENC) i samma behållare, kör Add GPU till LXC separat.",
+    "section": "Hårdvara: GPU:er och Coral-TPU"
+  },
+  "intro": {
+    "title": "Vad detta gör",
+    "body": "Skriver genomgångskonfig till <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> - olika poster beroende på om värden har en <strong>USB Accelerator</strong>, en <strong>M.2 / PCIe Coral</strong>, eller båda. Sedan startar den behållaren och installerar Googles senaste <code>libedgetpu</code> runtime inuti den. iGPU / GPU passthrough hanteras av ett separat skript (<lxcGpuLink>Add GPU till LXC</lxcGpuLink>) - den här fokuserar på TPU."
+  },
+  "whenUse": {
+    "heading": "När du ska använda detta",
+    "body": "Typiskt användningsfall: kör <frigateLink>Frigate</frigateLink>, Agent DVR, Blue Iris + CodeProject.AI, eller någon annan objekt-detection-app i en LXC och vill ha Coral TPU för att göra ML-inferensen istället för CPU. Med Coral faller inferens latens från ~ 100 ms till ~ 5 ms per ram och CPU last stannar nära noll."
+  },
+  "prereqs": {
+    "title": "Innan du börjar",
+    "drivers": "<strong>Coral drivrutiner som redan är installerade på värden</strong>. Detta skript installerar inte dem; det konfigurerar bara genomgång till behållaren. Kör <hostLink>Installera Coral TPU På Värden</hostLink> Först om du inte har det.",
+    "driversCheck": "ls /dev/apex_* 2>/dev/null ; lsusb | grep -E '1a6e:089a|18d1:9302'",
+    "container": "<strong>En befintlig LXC container</strong>Ideellt kör en <strong>Debian / Ubuntu</strong>-baserad distro - användningen av in-container runtime install <code>apt-get</code>. <strong>Icke-debianska behållare</strong> (Alpine, Arch, RHEL, SUSE ...) stöds fortfarande i <strong>passthrough-only-läge</strong>skriptet upptäcker distro och erbjuder en snabb att hoppa över <code>libedgetpu</code> APT installera medan du fortfarande skriver enheten genomgångskonfig - användbar för appbehållare som buntar körtiden själva (t.ex. Frigate Docker bild).",
+    "downtime": "<strong>Be OK med en kort nedtid</strong> av behållaren. Skriptet stoppar det för att tillämpa konfigförändringar, sedan startar det tillbaka för att installera drivrutiner inuti. Ingen värd omstart behövs."
+  },
+  "hostPrep": {
+    "title": "Värd måste förberedas först",
+    "body": "Om du kör detta skript innan du installerar Coral drivrutiner på värden (<code>gasket</code>/<code>apex</code> kärnmodulen för M.2, <code>libedgetpu</code> runtime för USB), är LXC-konfig fortfarande skriven men behållaren kommer inte att hitta enheten vid runtime. Beställ frågor: <strong>host installera → LXC genomgång → in-container app</strong>."
+  },
+  "running": {
+    "heading": "Kör skriptet",
+    "body": "Öppna ProxMenux på värden, gå till <strong>Hardware: GPUs och Coral-TPU → Lägg till Coral TPU till LXC</strong>.",
+    "imageAlt": "Meny inträde för \"Lägg till Coral TPU till LXC\" inuti Hardware: GPUs och Coral-TPU"
+  },
+  "howRuns": {
+    "heading": "Hur manuset går",
+    "body": "Ett beslut i förskott (som container?), då skriptet hanterar USB och PCIe vägar oberoende baserat på vad det hittar på värden. Om båda är närvarande, blir båda passerade."
+  },
+  "walkthrough": {
+    "heading": "Walking genom flödet",
+    "pick": {
+      "title": "Välj LXC container",
+      "body": "En dialog visar varje LXC på värden (från <code>pct list</code>). Välj den som ska få Coral. Kör eller stoppas, det spelar ingen roll - manuset hanterar båda (slutar det kort att skriva konfig, sedan startar det tillbaka för att installera drivrutiner)."
+    },
+    "gpuHint": {
+      "title": "GPU genomgående förslag (valfritt)",
+      "body": "Om värden har en GPU (Intel iGPU, AMD, NVIDIA) och den valda behållaren inte har GPU passthrough konfigurerad, visar manuset en engångsdialog som tyder på att du kör <lxcGpuLink>Add GPU till LXC</lxcGpuLink> först. Coral är oftast parad med hårdvara video decode (Quick Sync, VA-API, NVENC) för appar som Frigate. Du kan säga ja (utgångar, köra GPU-skriptet, sedan komma tillbaka) eller nej (fortsätter med TPU-bara inställning)."
+    },
+    "usb": {
+      "title": "Skriv LXC config - USB-väg",
+      "body": "Om en USB-accelerator är närvarande skriver manuset två saker: (1) skriver en udevregel på värden så att enheten får ett stabilt namn <code>/dev/coral</code> oavsett USB-port det är i, och (2) bindmonterar <strong>whole</strong> <code>/dev/bus/usb</code> träd i behållaren.",
+      "whyTitle": "Varför montera /dev/bus/usb istället för /dev/coral?",
+      "whyBody": "USB-enhetsnoden (t.ex. <code>/dev/bus/usb/001/005</code>) ändras när du kopplar acceleratorn till en annan port. Tidigare versioner av skriptet bindmonterade <code>/dev/coral</code> symlink, som pekade på en gammal väg och bröt. Att montera hela USB-trädet betyder att behållaren ser vad den nuvarande vägen är, så en kopia fungerar bara."
+    },
+    "pcie": {
+      "title": "Skriv LXC config - M.2 / PCIe bana",
+      "body1": "Om en M2 / PCIe Coral finns på värden och <code>/dev/apex_0</code> finns (Apex kernel modulen laddas), skriptet använder den moderna Proxmox <code>dev</code> API som hanterar cgroup2 behörigheter automatiskt för både privilegierade och oprivilegierade behållare:",
+      "body2": "Om värden inte har startat ännu med apexmodulen laddad (du körde bara <hostLink>Install Coral på Host</hostLink> och har inte startat om), <code>/dev/apex_0</code> finns inte ännu. Manuset faller tillbaka till klassisk cgroup2 + binda montering med <code>create=file</code> så att posterna är giltiga även när enheten inte har materialiserats:",
+      "rebootTitle": "Starta om värden först om du bara installerade Coral-drivrutiner",
+      "rebootBody": "Den fallback cgroup2 + montering kommer att skrivas, men enheten finns bara faktiskt efter en värd omstart laddar <code>apex</code> modulen. Om du inte har startat om, starta om nu innan du startar behållaren."
+    },
+    "drivers": {
+      "title": "Starta behållaren + installera Coral runtime inuti",
+      "body": "Config förändringar i Proxmox LXC träder i kraft nästa start - så skriptet startar behållaren, väntar upp till 15 sekunder för <code>pct exec</code> att svara, sedan släpper en bash skript inuti det:",
+      "items": [
+        "Kör <code>apt-get update</code>.",
+        "Installerar Coral repository förutsättningar: <code>gnupg</code>, <code>curl</code>, <code>ca-certificates</code>.",
+        "Importerar Googles Coral GPG-nyckel till <code>/etc/apt/keyrings/coral-edgetpu.gpg</code> (modern väg, samma som värdinstallationsprogrammet) och lägger till <code>coral-edgetpu-stable</code> APT-förvaret med <code>signed-by=</code>.",
+        "Installerar den senaste <code>libedgetpu1-std</code> (standard). Om du har en M2 Coral, kommer du att uppmanas att välja mellan <code>libedgetpu1-std</code> (standard) och <code>libedgetpu1-max</code> (max prestanda, körs varmare)."
+      ],
+      "noIgpuTitle": "Varför inga iGPU-förare här?",
+      "noIgpuBody": "Tidigare versioner av detta manus installerade också Intel <code>va-driver-all</code>, <code>intel-opencl-icd</code> och vänner så samma behållare kan göra Quick Sync video decode tillsammans med Coral inference. Det fördubblade ansvaret orsakade förvirrande misslyckanden när användaren bara ville ha Coral. iGPU-sidan är nu det exklusiva jobbet av <lxcGpuLink>Add GPU till LXC</lxcGpuLink> - kör det först om du också vill ha hårdvaruvideoavkodning i behållaren.",
+      "debianTitle": "Icke-debianska behållare - genomgångsläge",
+      "debianBody": "In-container runtime installation använder <code>apt-get</code>, som endast fartyg på Debian / Ubuntu-familj distros. På <strong>Alpine, Arch, RHEL eller SUSE</strong>-behållare upptäcker skriptet distro via <code>/etc/os-release</code> och visar en bekräftelseprompt: <em> fortsätter i genomgående-bara mode</em> (skriver enheten konfig till <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> och hoppar över <code>libedgetpu</code> APT-installation) eller <em>abort</em>. Passthrough-only är det rätta valet om appbehållaren som faktiskt kommer att använda Coral redan buntar körtiden - det kanoniska exemplet är Frigate Docker bild. Annars, följ Googles <coralLink>officiell guide</coralLink> för att installera <code>libedgetpu</code> manuellt efter att manuset har skrivit LXC-konfig."
+    },
+    "summary": {
+      "title": "Sammanfattning",
+      "body": "Skriptet skriver ut en checklista i slutet som sammanfattar vad som var aktiverat (Coral USB, Coral M.2) med ✓ eller 88 märken beroende på om hårdvaran faktiskt upptäcktes. Behållaren körs - du kan hoppa rakt in i Frigate / CodeProject.AI / din app konfig."
+    }
+  },
+  "manual": {
+    "heading": "Manuell motsvarande",
+    "body": "Om du vill se exakt vad som går in i LXC-konfigen eller tillämpa den för hand:",
+    "usbHeading": "USB Coral",
+    "pcieHeading": "M.2 / PCIe Coral",
+    "runtimeHeading": "Inne i behållaren - Coral runtime"
+  },
+  "verification": {
+    "heading": "Verifiering",
+    "body": "Ange behållaren och kontrollera Korallen är synlig:"
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "apexTitle": "Container började men /dev/apex_0 saknas inuti",
+    "apexBody": "Värd apex modul är inte laddad. På värden: <code>lsmod | grep apex</code> - om tomt, kör <code>modprobe apex</code> eller starta om om du bara installerade Coral-drivrutiner. När värden har <code>/dev/apex_0</code>, starta om behållaren: <code>pct stop &lt;ctid&gt; &amp;&amp; pct start &lt;ctid&gt;</code>.",
+    "replugTitle": "USB Coral försvinner efter koppling i en annan hamn",
+    "replugBody": "Det är just därför manuset monterar <code>/dev/bus/usb</code> istället för <code>/dev/coral</code>-symlink. Om du träffar detta, kontrollera din LXC konfig har <code>lxc.mount.entry: /dev/bus/usb dev/bus/usb ...</code> och inte en referens till <code>/dev/coral</code> direkt. Gamla konfigs från tidigare skriptversioner kan behöva uppdatera - kör skriptet på samma behållare och konfigen blir uppdaterad.",
+    "alpineTitle": "Alpin / Arch / RHEL / SUSE container - runtime inte installerad",
+    "alpineBody": "Om du väljer <em>passthrough-only-läge</em> när manuset föranledde, LXC config är skriven och Coral-enheten är synlig i behållaren, men <code>libedgetpu</code> runtime är inte installerat. Det är genom design: Googles APT repo bara fartyg för Debian / Ubuntu. Installera runtime manuellt med din distro pakethanterare (Alpine: <code>apk add</code>; Arch: AUR; RHEL / SUSE: bygga från källan) efter Googles officiella guide, eller kör en app behållare som buntar i drifttiden - Frigate Docker bild är det kanoniska exemplet: bara exponera enheten med <code>--device /dev/apex_0:/dev/apex_0</code> (M.2) eller USB binda montage skriptet som redan skrevs (USB).",
+    "frigateTitle": "Frigate säger \"Coral EdgeTPU upptäckt men inte tillgänglig\"",
+    "frigateBody": "Nästan alltid ett behörighetsproblem i behållaren. Frigate körs som root som standard; kontrollera rotanvändaren är i <code>plugdev</code>-gruppen i behållaren (för USB), och att processen kan läsa <code>/dev/apex_0</code> (för M.2). <code>ls -l /dev/apex_0</code> inifrån behållaren bör visa grupp <code>apex</code> - om inte, lägga till GID-inriktningen till <code>/etc/group</code> eller byta behållaren till privilegierat läge.",
+    "logsTitle": "Kontrollera både värd- och containerloggar",
+    "logsBody": "På värden: <code>journalctl -u pvedaemon | grep -i coral</code>. Inne i behållaren: kontrollera apploggarna (Frigate: <code>/config/logs/</code>, CodeProject.AI: sin egen logga katalog). Det klassiska felmönstret är \"Coral detected, runtime laddad, men inferensmotorn kan inte hävda det\" - det är behörigheter 9 av 10 gånger."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "label": "Installera Coral TPU (Host)",
+        "href": "/docs/hardware/install-coral-tpu-host",
+        "tail": " - krävs förutsättning för M.2 / PCIe Coral kort innan de passerar in i en CT."
+      },
+      {
+        "label": "Lägg till GPU till LXC",
+        "href": "/docs/hardware/igpu-acceleration-lxc",
+        "tail": " - samma mönster för GPU (ofta ihop med en Coral TPU i Frigate-inställningar)."
+      }
+    ]
+  }
+}

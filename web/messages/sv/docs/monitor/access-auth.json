@@ -1,0 +1,396 @@
+{
+  "meta": {
+    "title": "Proxmox Dashboard Authentication 2FA, API Tokens, User Profile, Reverse Proxy ProxMenux Monitor",
+    "description": "Nå och säkra ProxMenux Monitor: först-lansera skydd-dashboard flöde, lösenord autentisering med display namn + avatar, profil sida, TOTP 2FA inskrivning, långlivade API tokens för skript, HTTPS konfiguration, omvänd proxy snippets för Nginx, Caddy och Traefik, revisionsloggen och den valfria Fail2Ban fängelse.",
+    "ogTitle": "Proxmox Dashboard Authentication - 2FA, API Tokens, Reverse Proxy",
+    "ogDescription": "Säkra ProxMenux Monitor med lösenord + TOTP 2FA, långlivade API tokens, HTTPS, reverse-proxy snippets och en valfri Fail2Ban fängelse.",
+    "twitterTitle": "Proxmox Dashboardautentisering | ProxMenux Monitor",
+    "twitterDescription": "Lösenord + TOTP 2FA, API tokens, HTTPS, Nginx/Caddy/Traefik snippets och revisionslogg."
+  },
+  "header": {
+    "title": "Åtkomst och autentisering",
+    "description": "Nå instrumentbrädan, det första lanseringssäkerhetsflödet, och varje lager som kan sitta mellan en angripare och värd: lösenord + TOTP, JWT-sessioner, långlivade API-tokens, HTTPS, omvänd proxies, Secure Gateway och den valfria Fail2Ban fängelse.",
+    "section": "ProxMenux-övervakning"
+  },
+  "intro": {
+    "title": "Autentisering är opt-in",
+    "body": "Vid första lanseringen visar instrumentbrädan en enda dialog <em>\"Skydda din Dashboard?\"</em> med två knappar: <strong>Ja, Setup Password</strong> och <strong>Nej, fortsätt utan skydd</strong>. Säger inga löv varje API Slutpunkt öppen på TCP 8008 böter för ett isolerat labb LAN, farligt på allt annat. Tvåfaktorsautentisering (2FA) är <strong>Inte inte</strong> en del av detta första val; det är konfigurerat senare från <strong>Säkerhetsfliken</strong> När ett lösenord är inställt."
+  },
+  "reaching": {
+    "heading": "Nå dashboard",
+    "intro": "ProxMenux Monitor binder till <code>0.0.0.0:8008</code>. Det finns tre vanliga sätt att nå den:",
+    "outro": "Direkt åtkomst matchar vad systemd-enheten skickar ut ur lådan. De omvända proxy- och Secure Gateway-sektionerna nedan täcker de andra två. Monitorn hedrar <code>X-Forwarded-For</code>, <code>X-Forwarded-Proto</code> och <code>X-Forwarded-Host</code> så URLs och CORS arbetar bakom någon av dem utan manuell konfiguration."
+  },
+  "firstLaunch": {
+    "heading": "Första lanseringen flöde",
+    "intro": "Första gången du öppnar instrumentbrädan kallar frontend <code>GET /api/auth/status</code>. Om auth config aldrig har skrivits (<code>configured: false</code>) visas en enda dialogruta med titeln <em> \"Protect Your Dashboard?\"</em> med två val:",
+    "imageAlt": "Första lanseringen dialogrutan \"Skydd din instrumentpanel?\" med två knappar: Ja Setup Password, Ingen Fortsätt Utan Skydd",
+    "imageCaption": "Den första lanseringen autentisering väljare. Två knappar – lösenordsskydd eller hoppa. Re-runs efter en ny installation eller efter \"Disable autentisering\" från Inställningar.",
+    "headerButton": "Knapp",
+    "headerWhat": "Vad händer",
+    "headerApi": "API samtal",
+    "rows": [
+      {
+        "button": "Ja, Setup Password",
+        "what": "Öppnar ett formulär med det obligatoriska användarnamnet + lösenord och ett valfritt <em>display-namn</em> + <em>avatar image</em>. Lagrar dem i <code>auth.json</code> med <code>enabled: true</code>. Returnerar en JWT så att du är inloggad omedelbart. Formuläret dokumenteras i detalj nedan.",
+        "api": "POST /api/auth/setup"
+      },
+      {
+        "button": "Nej, fortsätt utan skydd",
+        "what": "Marks <code>declined: true</code> i <code>auth.json</code>. Varje API slutpunkt är allmänt tillgänglig tills du ändrar ditt sinne från Inställningar.",
+        "api": "POST /api/auth/skip"
+      }
+    ],
+    "twofaCalloutTitle": "2FA är konfigurerad senare, inte här",
+    "twofaCalloutBody": "Den första dialogrutan omfattar endast lösenordsbeslutet. <strong>Tvåfaktorsautentisering (TOTP)</strong> upprättas efteråt från <strong>Säkerhetsfliken</strong> När du är inloggad med ett lösenord. Hela TOTP-genomgången ligger längre ner på denna sida.",
+    "createTitle": "Skapa den första användaren",
+    "createIntro": "Klicka på <em>Yes, Setup Password</em> öppnar ett enda formulär som skapar kontot och, valfritt, frön användarens profil i en gå så att avataren visas i rubriken direkt efter att ha sparat. Fälten är:",
+    "headerField": "Fält",
+    "headerRequired": "Krav",
+    "headerNotes": "Anteckningar",
+    "fieldRows": [
+      {
+        "field": "Användarnamn",
+        "required": "Ja",
+        "notes": "Inloggningsidentifieraren. Kan inte ändras senare från UI; redigera det kräver att <code>auth.json</code> direkt."
+      },
+      {
+        "field": "Lösenord",
+        "required": "Ja",
+        "notes": "Minsta 10-tecken, med minst 3 av 4-kategorier (lägre, överkropp, siffra, symbol). En kort lista över uppenbara lösenord (<code>password</code>, <code>12345678</code>, <code>proxmenux</code> ...) avvisas direkt. Samma regler tillämpas server-side, så ett lock call kan inte kringgå front-end kontroll."
+      },
+      {
+        "field": "Visningsnamn",
+        "required": "Nej",
+        "notes": "Vänlig etikett som visas i rubriknedgången och på profilsidan. Falls tillbaka till användarnamnet när det är tomt. Kan ändras senare från <strong>Avatar → Visa profil</strong>."
+      },
+      {
+        "field": "Avatar bild",
+        "required": "Nej",
+        "notes": "PNG, JPEG, WebP eller GIF upp till 2 MB. Görs som en cirkel i rubriken och på profilsidan. När tomt visar rubriken det första brevet i visningsnamnet (eller användarnamnet) på en färgad cirkel. Kan laddas upp, ersättas eller tas bort senare från profilsidan."
+      }
+    ],
+    "createImageAlt": "Skapa användarformulär med obligatoriska användarnamn + Lösenordsfält och det valfria Display-namnet + Avatar-uppladdningssektionen",
+    "createImageCaption": "Den första lanseringen skapar användarform. Visa namn och avatar är valfria - lämnar dem tomma skapar kontot och faller tillbaka till en enskild bokstav cirkel i rubriken.",
+    "saveCalloutTitle": "En spara, tre API samtal under huven",
+    "saveCalloutBody": "Formuläret skickar <code>POST /api/auth/setup</code> först (användarnamn + lösenord). På framgång använder den nyligen utfärdade JWT för att följa upp med <code>PUT /api/auth/profile</code> (display name) och <code>POST /api/auth/profile/avatar</code> (avatar byte) om dessa fält fylldes. Underlåtenheter på profilsamtalen är icke-dödliga - kontot är redan skapat och du kan slutföra profilen senare från den dedikerade sidan.",
+    "avatarTitle": "Avatar meny och profilsida",
+    "avatarBody1": "När autentiseringen är konfigurerad visas en avatar cirkel längst upp till höger på varje instrumentpanel sida bredvid temat växel. Klicka på den öppnar en liten nedgång med genvägar till profilsidan och fliken Säkerhet, plus en <strong>Sign out</strong>-åtgärd - stängning av sessionen kan göras härifrån eller från fliken Säkerhet, beroende på var du är.",
+    "avatarBody2": "Profilsidan själv är ett litet kort med en avatar förhandsgranskning, användarnamnet (läs endast) och displaynamnet med en inline redigeringsknapp. Avatar uppladdningar, ersättningar och borttagningar är atomära - header avatar uppdateras automatiskt när någon av dem lyckas, så det finns ingen anledning att ladda om sidan. Samma uppsättning slutpunkter som dokumenteras i nästa avsnitt används av både skapande användarformuläret och profilsidan.",
+    "profileImageAlt": "Profil sida med avatar förhandsgranskning cirkel, Ladda upp / Byta / Ta bort knappar, läs-bara användarnamn och redigerbar visning namnfält",
+    "profileImageCaption": "Den dedikerade profilsidan. Användarnamn är lättläst; visa namn och avatar kan redigeras härifrån utan att röra på fliken Säkerhet.",
+    "headerEndpoint": "Slutpunkt",
+    "headerEpWhat": "Vad det gör",
+    "endpointRows": [
+      {
+        "endpoint": "GET /api/auth/profile",
+        "what": "Returnerar det aktuella användarnamnet, visa namn och om en avatar är inställd (<code>has_avatar</code>, <code>avatar_mtime</code>)."
+      },
+      {
+        "endpoint": "PUT /api/auth/profile",
+        "what": "Uppdaterar displaynamnet. Kroppen: <code>'{' \"display_name\": \"...\" '}'</code>"
+      },
+      {
+        "endpoint": "GET /api/auth/profile/avatar",
+        "what": "Returnerar avatar byte (PNG / JPEG / WebP / GIF) med matchande innehållstyp. Kräver Bearer header - front-end fetches det som en blob och konverterar till en lokal objekt URL för rendering."
+      },
+      {
+        "endpoint": "POST /api/auth/profile/avatar",
+        "what": "Laddar en ny avatar (max 2 MB). Innehållstyp måste matcha filen. Gamla avatar ersätts atomiskt."
+      },
+      {
+        "endpoint": "DELETE /api/auth/profile/avatar",
+        "what": "Ta bort avataren. Rubriken faller tillbaka till den initiala-på-färgade-cirkel platshållaren."
+      }
+    ],
+    "reversibleTitle": "Fortsätt utan skydd är reversibel - men bara från värden",
+    "reversibleBody": "När du klickar på <em>No, Fortsätt utan skydd</em>, visas välkomstdialogen aldrig igen. Du kan återaktivera autentisering från <strong>the Security-fliken</strong> inuti instrumentbrädan eller genom att redigera <code>/root/.config/proxmenux-monitor/auth.json</code> och ta bort <code>declined</code>-flaggan och sedan starta om tjänsten."
+  },
+  "password": {
+    "heading": "Lösenordsautentisering",
+    "intro": "Efter inställningen kräver varje API-samtal (förutom de få offentliga slutpunkterna som anges nedan) en JWT i <code>Authorization: Bearer &lt;token&gt;</code>:",
+    "items": [
+      "<strong>Session token (login):</strong> 24-timmes utgång. Utfärdas av <code>POST /api/auth/login</code>.",
+      "<strong>API token (integrationer):</strong> 365-dagars utgång. Utgiven av <code>POST /api/auth/generate-api-token</code>. Dokumenterad separat i nästa avsnitt."
+    ],
+    "loginImageAlt": "Inloggningsskärm som visas efter autentisering är konfigurerad - användarnamn och lösenordsfält",
+    "loginImageCaption": "När autentiseringen är konfigurerad börjar varje besök på instrumentbrädan här. Med 2FA aktiverad ber skärmen om 6-siffrig kod i ett andra steg efter att lösenordet accepteras.",
+    "loginFlowTitle": "Inloggningsflöde",
+    "twofaIntro": "Med 2FA aktiverat returnerar samma samtal <code>requires_totp: true</code> först. Återutgivning med 6-siffrig kod:",
+    "publicTitle": "Public endpoints (ingen token)",
+    "publicIntro": "Detta är de enda slutpunkterna som fungerar utan autentisering, även när auth är aktiverad:",
+    "publicItems": [
+      "<code>/api/auth/login</code>, <code>/api/auth/status</code>, <code>/api/auth/setup</code> - auth flödet själv, med nödvändighet.",
+      "<code>/api/system-info</code> lätta system snapshot (värdnamn, upptid, <code>health.status</code>). Den rätta slutpunkten för externa sonder (externa sonder)Uptime Kuma, load-balancer hälsokontroller, statussidor)."
+    ],
+    "cryptoTitle": "Kryptografi och lagring",
+    "cryptoIntro": "ProxMenux Monitor är öppen källkod – inget av detta är hemligt. Att dokumentera stacken här är uttryckligen ett avsiktligt val: operatörer som lagrar referenser på sin värd förtjänar att veta hur dessa referenser skyddas innan de bestämmer sig för att lita på dem. Algoritmerna nedan är samma som koden i <code>scripts/auth_manager.py</code> använder; detta avsnitt är ett kontrakt, inte ett marknadsföringslöfte.",
+    "headerAsset": "Tillgång",
+    "headerAlgo": "Algoritm",
+    "headerWhere": "Där det lever",
+    "cryptoRows": [
+      {
+        "asset": "Lösenord",
+        "algorithm": "PBKDF2-HMAC-SHA256 med ett per-passord slumpmässigt salt och ett högt iterationstal (OWASP 2023 + baslinjen). Förvaras som <code>pbkdf2_sha256$&lt;iters&gt;$&lt;salt&gt;$&lt;hash&gt;</code>.",
+        "where": "<code>auth.json</code> → <code>password_hash</code>"
+      },
+      {
+        "asset": "Sessions-JWT / API-JWT",
+        "algorithm": "HS256 signerad med en per-install hemlig minted vid första lanseringen (<code>secrets.token_urlsafe</code>, ≥48 byte). Tokens bär <code>iss=proxmenux-monitor</code> + <code>aud=api</code> påståenden; signaturen valideras mot den nuvarande hemligheten på varje begäran.",
+        "where": "Hemlighet: <code>auth.json</code> → <code>jwt_secret</code>. JWT själv: bara på klienten."
+      },
+      {
+        "asset": "Metadata för API-token",
+        "algorithm": "SHA-256 av JWT lagras tillsammans med en <code>signed_with</code> fingeravtryck av <code>jwt_secret</code> som används för att mynta det - används för att visa token i UI och för att upptäcka tokens vars signeringshemlighet har roterats.",
+        "where": "<code>auth.json</code> → <code>api_tokens[]</code>"
+      },
+      {
+        "asset": "TOTP-hemlighet för 2FA",
+        "algorithm": "Standard TOTP (RFC 6238) base32-kodade. Backup-koder är förgenererade, engångsbruk, hashed med samma PBKDF2-system som lösenordet.",
+        "where": "<code>auth.json</code> → <code>totp_secret</code> + <code>backup_codes[]</code>"
+      },
+      {
+        "asset": "Återkallelser",
+        "algorithm": "När en token eller session återkallas, dess SHA-256 läggs till i en neka-lista kontrolleras på varje verifiering (mem-cached för ~ 30 s för att undvika disk läser på den heta vägen).",
+        "where": "<code>auth.json</code> → <code>revoked_tokens[]</code>"
+      }
+    ],
+    "authJsonTitle": "auth.json Vad den innehåller och hur den är skyddad",
+    "authJsonBody": "Allt ProxMenux Monitor behöver för att autentisera dig bor i en enda fil: <code>/root/.config/proxmenux-monitor/auth.json</code>, läge <code>0600</code>, ägare <code>root</code>. Filen innehåller <em>hashes</em> (PBKDF2) och <em>signing material</em> (<code>jwt_secret</code>, <code>totp_secret</code>) - aldrig ett vanligt lösenord. Behandla det som någon annan rot-bara hemlighet: om du backar upp eller replikera värden, kryptera destinationen och aldrig begå den till versionskontroll.",
+    "rotateTitle": "Roterande jwt_secret ogiltigförklarar alla befintliga JWTs",
+    "rotateBody": "Om <code>auth.json</code> regenereras (manuell borttagning, ominstallera, återställa från en säkerhetskopia med en annan hemlighet) <code>jwt_secret</code> förändringar och varje tidigare utfärdad JWT - både interaktiva sessioner och långlivade API tokens - misslyckas verifiering med \"ogiltig eller utgången token\". UI-flaggarna påverkade API-tokens med en <strong>Invalid - regenerate</strong>-märket så att operatören vet att återkalla och påminna dem; Home Assistant / skript / någon extern klient behöver en ny token efter det.",
+    "recoverTitle": "Återställa ett förlorat lösenord",
+    "recoverIntro": "Det finns inget online \"glömt lösenord\" -flöde - genom design, eftersom instrumentpanelen körs på operatörens egen värd och återhämtningsvägen är skal tillgång till den värden. ProxMenux levererar en guidad återställning i konfigurationsmenyn så att du inte behöver redigera <code>auth.json</code>:",
+    "survivesTitle": "Vad överlever återställningen",
+    "survivesBody": "Endast interaktiv inloggning är torkad. <code>jwt_secret</code> och den registrerade <code>api_tokens</code> bevaras - så Home Assistant och alla andra manus med en långlivad API token fortsätter att fungera utan omkonfiguration. Om du vill ha en helt ren skiffer (även rotera JWT-hemligheten), ta bort <code>auth.json</code> manuellt och starta om tjänsten. Nästa lansering genererar en ny hemlighet och alla gamla tokens blir ogiltiga.",
+    "physicalTitle": "Fysisk tillgång förutsättning",
+    "physicalBody": "Denna återställningsväg behöver <strong>root skal på värd</strong>. Det är förtroendeankaret för hela autentiseringssystemet: alla som kan köra <code>menu</code> som rot kan redan göra någonting på rutan, så att ge dem lösenordsåterställning är inte en privilegieökning. Korollären: om du låter en opålitlig användare nå Proxmox-skalet, kommer Monitor-inloggningen inte att skydda något som användaren inte redan kan förstöra på annat sätt."
+  },
+  "twofa": {
+    "heading": "Tvåfaktorsautentisering (TOTP)",
+    "intro": "2FA lägger till en andra faktor ovanpå ditt lösenord: en 6-siffrig kod som roterar varje 30 sekunder, genererad på en telefon eller lösenordshanterare du styr. Även om någon får lösenordet kan de fortfarande inte logga in utan koden från din enhet. ProxMenux Monitor implementerar standard <strong>TOTP</strong>-protokollet (RFC 6238), så alla autentiseringsapp fungerar.",
+    "pickTitle": "Välj en autentiseringsapp",
+    "pickIntro": "Om du redan använder en för Google / GitHub / din bank, kommer den att fungera - hoppa över konfigurationen genomgång. Om inte, här är en undersökning av vanliga alternativ. Alla är gratis, skillnaderna handlar främst om vilka plattformar de kör på och hur (eller om) de backar upp dina hemligheter.",
+    "headerApp": "App",
+    "headerPlatforms": "Plattformar",
+    "headerAppNotes": "Anteckningar",
+    "apps": [
+      {
+        "name": "Google Authenticator",
+        "href": "https://safety.google/authentication/",
+        "platforms": "iOS, Android",
+        "notes": "Standarden för många användare. Valfri Google-konto molnbackup."
+      },
+      {
+        "name": "Microsoft Authenticator",
+        "href": "https://www.microsoft.com/en-us/security/mobile-authenticator-app",
+        "platforms": "iOS, Android",
+        "notes": "Microsoft-konto backup. Dessutom hanterar MS push-meddelanden om du använder dem på jobbet."
+      },
+      {
+        "name": "Authy",
+        "href": "https://authy.com/",
+        "platforms": "iOS, Android, skrivbord",
+        "notes": "Multi-device krypterad synkronisering (skrivbordsappen fasas ut - kontrollera den senaste statusen)."
+      },
+      {
+        "name": "Apple Passwords",
+        "href": "https://support.apple.com/guide/passwords/welcome/mac",
+        "platforms": "iOS, iPadOS, macOS, visionOS, Windows (via iCloud)",
+        "notes": "Byggd i Apple OS; fristående lösenord app sedan iOS 18 / macOS Sequoia. Lagrar TOTP bredvid lösenordet och synkroniserar över enheter via iCloud Keychain."
+      },
+      {
+        "name": "Bitwarden",
+        "href": "https://bitwarden.com/",
+        "platforms": "iOS, Android, skrivbord, webbläsare",
+        "notes": "Öppen källa. TOTP lever bredvid lösenordet det skyddar (när du använder BW för lösenord; besegrar \"separat enhet\" om du inte gör det)."
+      },
+      {
+        "name": "1Password",
+        "href": "https://1password.com/",
+        "platforms": "iOS, Android, skrivbord, webbläsare",
+        "notes": "Samma idé som Bitwarden - TOTP integrerad med lösenordsvalvet. Prenumeration."
+      },
+      {
+        "name": "Aegis Authenticator",
+        "href": "https://getaegis.app/",
+        "platforms": "Android",
+        "notes": "Öppen källa. Krypterad backup-fil på enheten du kontrollerar. Inget moln, inget konto krävs."
+      },
+      {
+        "name": "Raivo OTP",
+        "href": "https://raivo-otp.com/",
+        "platforms": "iOS, macOS",
+        "notes": "Öppen källa. Valfri iCloud synkroniseras. Apple-ekosystem motsvarighet till Aegis."
+      },
+      {
+        "name": "Ente Auth",
+        "href": "https://ente.io/auth/",
+        "platforms": "iOS, Android, skrivbord, webb",
+        "notes": "Öppen källa. End-to-end krypterat moln synkroniseras över enheter."
+      },
+      {
+        "name": "2FAS",
+        "href": "https://2fas.com/",
+        "platforms": "iOS, Android, webbläsartillägg",
+        "notes": "Öppen källa. Valfri krypterad molnbackup; webbläsartillägg kan autofill koder."
+      },
+      {
+        "name": "FreeOTP+",
+        "href": "https://github.com/helloworld1/FreeOTPPlus",
+        "platforms": "Android, iOS",
+        "notes": "Öppen källa (Red Hat-led). Minimal - inget moln, inget konto."
+      }
+    ],
+    "backupTitle": "Vad \"backup\" verkligen betyder för",
+    "backupBody": "Om du förlorar enheten som har autentiseringen på den, är de enda sätten tillbaka i (1) en säkerhetskopia som sparats när du aktiverat 2FAeller (eller)2En säkerhetskopia av autentiseringens valv. Appar med molnsynkronisering (Google Auth, Microsoft Auth, Authy, Apple Passwords, Ente, 2FAS, Bitwarden, 1Password) kan återställas på en ny enhet. Appar utan moln (Aegis, Raivo, FreeOTP+) behöver en krypterad exportfil som du har kopierat någonstans säkert. Antingen tillvägagångssätt fungerar - det dåliga fallet är \"ingen backup alls\".",
+    "setupTitle": "Steg-för-steg-inställning från instrumentbrädan",
+    "setupImageAlt": "2FA Installera skärm med QR-kod och säkerhetskopieringskoder",
+    "setupImageCaption": "2FA-inställningsdialogen - QR-kod, Base32-hemlighet (för manuell inmatning) och de tio engångs säkerhetskopieringskoderna. Koderna visas bara här, om du stänger dialogrutan utan att kopiera dem är de borta.",
+    "setupSteps": [
+      "<strong>Installera autentiseringsappen på din telefon</strong> (eller öppna din lösenordshanterare). En av apparna från tabellen ovan. Du behöver bara göra det en gång - samma app kommer att hålla koder för varje tjänst du skyddar.",
+      "<strong>Log in i instrumentbrädan</strong> med ditt användarnamn och lösenord.",
+      "<strong>Öppna säkerhets tab</strong> i instrumentpanelen sidofält, klicka sedan på <strong>Enable 2FA</strong>. En dialog öppnas med en QR-kod, en lång sträng i Base32-format och tio kortkoder märkta \"backup-koder\".",
+      "<strong>Lägg till autentiseringsappen:</strong>",
+      "<strong>Spara säkerhetskopieringskoderna.</strong> Kopiera de tio koder någonstans säker - en lösenordshanterare, en krypterad anteckning, en tryckt kopia i en låda. Behandla dem som reservnycklar: varje fungerar exakt en gång och får dig in om din telefon är borta eller trasig.",
+      "<strong>Bekräfta genom att skriva strömmen 6-digit kod</strong> från appen till fältet \"Verifieringskod\" i inställningsdialogen och skicka in. Koder uppdaterar varje 30 sekunder, så om det går ut medan du skriver, skriv bara in nästa.",
+      "<strong>Done.</strong> 2FA är nu aktiv. Nästa gång du loggar in ber instrumentpanelen om lösenordet först; när det accepteras frågar det om den aktuella 6-siffriga koden."
+    ],
+    "setupStep4Sub": [
+      "<em>Easy path:</em> i appen, tryck på <em>Add account</em> → <em>Scan QR code</em>, peka kameran på QR på skärmen. Appen heter posten automatiskt (något som <code>ProxMenux Monitor (your-username)</code>) och börjar visa en 6-siffrig kod som uppdaterar varje 30 sekunder.",
+      "<em>Manual fallback</em> (när skanning inte är möjligt - t.ex. att ställa in på samma telefon du öppnade instrumentpanelen med): tryck på <em>Add account</em> → <em>Enter setup key</em>. Skriv något namn (t.ex. <em>Proxmox Monitor</em>), klistra in Base32-strängen från dialogrutan, lämna <em>Type</em> som <em>Time-based</em>, spara."
+    ],
+    "testTitle": "Test innan du loggar ut",
+    "testBody": "När du klickar på Spara, logga ut och logga in i <em>immediately</em>, medan installationsdialogen fortfarande är färsk i ditt sinne. Om koden avvisas (klockskuggan mellan server och telefon är den vanligaste orsaken), kan du fortfarande fixa den från den öppna sessionen. Logga ut utan att testa först betyder en en-trip-no-return - vid den tidpunkten får du bara en säkerhetskopia eller redigera <code>auth.json</code> på värden.",
+    "lostTitle": "Förlorad autentisering",
+    "lostIntro": "Tre flyktfläckar, för hur störande de är:",
+    "lostItems": [
+      "<strong>Use en backup code.</strong> Vid inloggningsskärmen, i TOTP-fältet, skriv en av de tio koder du sparade vid installationstid. Varje fungerar en gång och konsumeras sedan; de återstående koderna fungerar fortfarande. När du är i, regenerera 2FA från Inställningar för att få en ny tio.",
+      "<strong>Återställ autentiseringen från moln / backup.</strong> Om din app har en molnsynkronisering (Google, Microsoft, Authy, Apple Passwords via iCloud Keychain, Ente, 2FAS) installera den på en ny enhet, logga in och posterna återkommer. Om din app använder en krypterad exportfil (Aegis, Raivo, FreeOTP+), installera appen på den nya enheten och importera filen.",
+      "<strong>Disable 2FA från värdskalet.</strong> När de tidigare alternativen inte är tillgängliga, redigera <code>/root/.config/proxmenux-monitor/auth.json</code> på Proxmox-värden (du behöver root SSH eller konsolåtkomst), ställa in <code>totp_enabled</code> till <code>false</code>, spara och starta om tjänsten:"
+    ],
+    "lostShellOutro": "Du kan logga in med användarnamn + lösenord bara, sedan aktivera 2FA från Inställningar.",
+    "disableTitle": "Inaktivera 2FA",
+    "disableBody": "Från instrumentpanelen, öppna <strong>Security</strong>-fliken och klicka på <strong>Disable 2FA</strong>. Slutpunkten <code>POST /api/auth/totp/disable</code> kräver det aktuella lösenordet som bekräftelse, sedan tar bort TOTP-hemligheten och rensar säkerhetskopieringskoderna. Kom ihåg att också ta bort posten i autentiseringsappen - appen vet inte att serversidan är borta, så den döda posten kommer att sitta där för alltid annars.",
+    "rejectedTitle": "6-siffrig kod förkastas alltid",
+    "rejectedIntro": "TOTP är tidsbaserad - serverklocka och telefonklocka måste komma överens om inom ~ 30 s. Två kontroller:",
+    "rejectedItems": [
+      "<strong>Phone:</strong> Inställningar → Datum & Tid → automatisk / nätverk synkroniserar på.",
+      "<strong>Proxmox värd: </strong> <code>timedatectl status</code> - \"System klocka synkroniserad: ja\" bör vara synlig. Om inte, <code>timedatectl set-ntp true</code> och vänta en minut."
+    ],
+    "rejectedOutro": "När båda klockorna är överens accepteras koden inom nästa 30-sekundsfönster."
+  },
+  "apiTokens": {
+    "heading": "API tokens (långa)",
+    "intro": "Webbläsarsessioner löper ut efter 24 timmar. För obevakad integration (Homepage widgets, Home Assistant sensorer, Grafana skrapor, Uptime Kuma probes...) du genererar en separat <strong>API token</strong> som lever 365 dagar. Token är en JWT undertecknad med samma hemlighet som sessionen token, men dess <code>token_name</code> påstående gör det enkelt att spåra och återkalla individuellt.",
+    "imageAlt": "API tokens panel som visar tokenlistan med namn, prefix, skapat datum och utgång",
+    "imageCaption": "API-tokens lista under Inställningar - namn, prefix (sista 4-diagram visas för identifiering), skapade och utgångsdatum, återkalla åtgärder.",
+    "generateTitle": "Generera en token",
+    "generateIntro": "Från instrumentbrädan:",
+    "generateSteps": [
+      "Navigera till <strong>the Security fliken → API Access Tokens</strong> sektion.",
+      "Skriv ett beskrivande namn (<em>t.ex. \"Home Assistant\"</em>).",
+      "Skriv in ditt lösenord. Om 2FA är på, även den nuvarande 6-siffriga koden.",
+      "Klicka på <strong>Generera Token</strong>. Token visas <strong>once</strong> - kopiera den omedelbart."
+    ],
+    "generateCli": "Från kommandoraden:",
+    "useTitle": "Använd en token",
+    "revokeTitle": "Återkalla en token",
+    "revokeBody": "Från panelen ovan: varje rad har en <strong>Revoke</strong> åtgärd som lägger till token hash till <code>revoked_tokens</code> i <code>auth.json</code>. Återkallade tokens misslyckas validering omedelbart på nästa begäran.",
+    "cheatTitle": "Token säkerhetscheat-sheet",
+    "cheatItems": [
+      "Lagra tokens i din integrations hemliga hemligheter butik - hemsida <code>secrets.yaml</code>, Home Assistant <code>!secret</code>, miljövariabler, etc. Begå dem aldrig till git.",
+      "En token per integration, uppkallad efter konsumenten. Återkalla individuellt när du går i pension en integration.",
+      "Rotera varje 6-12 månader. Utgången är en hård gräns, inte en rekommendation."
+    ],
+    "outro": "Full lagring bästa praxis och integration recept lever i <apiLink>API Reference → Token Management</apiLink> och <intLink>Integrations</intLink>."
+  },
+  "https": {
+    "heading": "HTTPS",
+    "intro": "Två vägar till TLS:",
+    "items": [
+      "<strong>Reverse proxy (rekommenderas).</strong> Terminate TLS på Nginx / Caddy / Traefik och framåt HTTP på port 8008 till Flask processen. Snippets nedan.",
+      "<strong>Direct HTTPS i AppImage.</strong> Konfigurera ett certifikat via <code>POST /api/ssl/configure</code> (UI: <strong>Settings → SSL</strong>). När SSL konfigureras processen växlar från Flasks dev-server till <code>gevent.pywsgi</code> med gevent-websocket-hanteraren så WebSocket-terminal fungerar också över WSS. Certfilerna lever var du än pekar på dem; banorna lagras i SSL-konfigen."
+    ],
+    "calloutTitle": "Direkt HTTPS begränsningar",
+    "calloutBody": "Den buntade geventvägen är lämplig för självsignerade eller LAN-bara certifikat. För Let's Encrypt / ACME och automatisk förnyelse, kör en verklig omvänd proxy framför - Caddy auto-förnyelser och Traefik / Nginx har välkända mönster. Monitorn implementerar inte ACME på egen hand."
+  },
+  "gateway": {
+    "heading": "Säker gateway (Tailscale)",
+    "intro": "Omvända proxyer är det klassiska svaret på \"nå instrumentbrädan från utsidan\" men de kräver en offentlig domän, certifikat och en öppen port på kanten. <strong>Säkra Gateway</strong> är nollportalternativet som skickas inuti Monitor själv - en förbyggd distribuerbar app som snurrar upp en Alpine LXC springa <a>Tailscale</a> Som subnet router. När du har gått med i ditt tailnet, kan varje enhet på det slå Monitor på värdens egen LAN IP - från en bärbar dator på semester, en telefon på 5G eller en annan nod - utan att exponera TCP 8008 till internet.",
+    "calloutTitle": "Varför detta är bekvämt",
+    "calloutBody": "Adressen förblir densamma som på LAN - <code>http://&lt;proxmox-lan-ip&gt;:8008</code> fungerar överallt Tailscale fungerar. Inga certifikat, ingen DNS, ingen port vidarebefordran. Monitorn själv ser begäran som kommer från en tailnet IP (vanligtvis <code>100.x.y.z</code>), så auth log och Fail2Ban krok fortfarande fungerar som på LAN.",
+    "deployBody": "Distributflödet är en skärm - välj värd LXC lagring, klistra in en Tailscale auth-key (genererad på <a>login.tailscale.com/admin/settings/keys</a>), välj vilka undernät att annonsera, klicka på Distribuera. LXC tar ~ 30 sekunder att starta och registrera sig automatiskt i tailnet.",
+    "outro": "Steg-för-steg-distribution, subnet-routes konfiguration, Tailscale ACLs och Exit Node-läge dokumenteras separat i <link>Dashboard → Säkerhet → Secure Gateway</link> - det är där distribueringsguiden bor i instrumentbrädan UI. Denna sida täcker endast åtkomstmönstret."
+  },
+  "proxy": {
+    "heading": "Konfigurationsexempel för omvänd proxy",
+    "intro": "Den enklaste layouten är ett <strong>-dedikerat värdnamn</strong> för Monitor (t.ex. <code>monitor.example.com</code>) pekar på port 8008 på Proxmox värd. Snippets nedan använder det mönstret. Sub-vägsfästen (<code>example.com/proxmenux-monitor/</code>) är möjliga men kräver extra omskrivning och är inte standard - se utropet i slutet.",
+    "nginxTitle": "Nginx",
+    "caddyTitle": "Caddy",
+    "traefikTitle": "Traefik (label - Docker / Kubernetes)",
+    "subPathTitle": "Avancerad: sub-vägsfästen under en befintlig domän",
+    "subPathBody": "Om du inte vill ha ett dedikerat värdnamn kan du montera Monitor under en väg på en befintlig domän - till exempel <code>example.com/proxmenux-monitor/</code>. Next.js bygger använder relativa tillgångsvägar så statiska filer löser, men proxy måste <strong>strip prefix</strong> innan vidarebefordran så att Monitorn fortfarande får vanliga <code>/api/*</code>-URL. På Nginx som är en <code>location /proxmenux-monitor/ &rbrace; proxy_pass http://127.0.0.1:8008/; &lbrace;</code> (spårskiva på <code>proxy_pass</code> gör remsan). Använd <code>handle_path /proxmenux-monitor/*</code>. Ett dedikerat värdnamn är enklare."
+  },
+  "audit": {
+    "heading": "Granskningslogg",
+    "intro": "Varje autentiseringshändelse (framgång och misslyckande) läggs till <code>/var/log/proxmenux-auth.log</code> i en enda rad, syslog-format:",
+    "outro": "Smaka på det vanliga sättet: <code>tail -F /var/log/proxmenux-auth.log</code>. Filen roteras av <code>logrotate</code> om en config drop-in läggs till; Monitor själv roterar inte den."
+  },
+  "fail2ban": {
+    "heading": "Valfritt: Fail2Ban fängelse",
+    "calloutTitle": "Fail2Ban är inte buntad med Monitor",
+    "calloutBody": "Fail2Ban är <strong>not</strong> installerad av ProxMenux Monitor själv. Installera den via <link>Security → Fail2Ban</link> i ProxMenux-menyn (eller med standard Debian-paketet). Utan det skriver Monitor fortfarande revisionsloggen ovan - det gör bara inte auto-ban upprepa brottslingar.",
+    "intro": "När Fail2Ban installeras skickar ProxMenux-integrationen ett <code>[proxmenux]</code>-fängelse som:",
+    "items": [
+      "Läser <code>/var/log/proxmenux-auth.log</code>",
+      "Matchar <code>authentication failure; rhost=&lt;ip&gt;</code> mönster med ett dedikerat filter.",
+      "Förbjuder den förolämpande IP på kärnans brandväggsnivå som standard.",
+      "Är queried av Flask <code>before_request</code> krok varje 30 s - så även när brandväggen inte kan blockera (eftersom anslutningen kommer från den omvända proxy), returnerar programmet HTTP 403 förbjudna IPs baserat på vad Fail2Ban vet."
+    ],
+    "outro": "Konfiguration, förbud tidsjustering och unban förfaranden är i <link>Security → Fail2Ban</link>."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "noScreenTitle": "Den första lanseringsskärmen visas aldrig",
+    "noScreenBody": "Antingen auth är redan konfigurerad (<code>configured: true</code>) eller någon redan valt Skip. För att börja färskt:",
+    "noScreenOutro": "Detta wipes auth state - även alla TOTP hemligheter och API tokens. Tillbaka upp <code>auth.json</code> först om du har tokens du vill behålla.",
+    "tokenTitle": "HTTP 401 på varje begäran från en fungerande API token",
+    "tokenBody": "Token gick ut (365 d-gräns) eller kom in i <code>revoked_tokens</code>-listan. Skapa en ny i Inställningar och uppdatera integrationen. För att kontrollera:",
+    "tokenOutro": "Utgångna eller återkallade tokens returnerar <code>'{'\"error\":\"Invalid or expired token\"'}'</code>.",
+    "no2faTitle": "Kan inte logga in efter att 2FA, ingen autentisering till hands",
+    "no2faBody": "Använd en säkerhetskopia i TOTP-fältet. Om de är borta, redigera <code>/root/.config/proxmenux-monitor/auth.json</code> från ett värdskal, sätt <code>totp_enabled</code> till <code>false</code>, starta om tjänsten.",
+    "wsTitle": "Omvänd proxy fungerar men den terminala fliken kopplar bort varje minut",
+    "wsBody": "WebSocket idle timeout i proxy. Bump the read timeout (Nginx: <code>proxy_read_timeout 86400s</code>; Traefik: <code>idleTimeout</code> i ingångspunkten eller middleware) och bekräfta <code>proxy_set_header Upgrade $http_upgrade</code> och <code>Connection \"upgrade\"</code> är närvarande."
+  },
+  "whereNext": {
+    "heading": "Var till nästa",
+    "items": [
+      {
+        "label": "API Referens → Token Management",
+        "href": "/docs/monitor/api",
+        "tail": " - full livscykel av API tokens (generera / lista / återkalla), säkerhets bästa praxis, hemligheter lagringsmönster."
+      },
+      {
+        "label": "Integrationer",
+        "href": "/docs/monitor/integrations",
+        "tail": " — Hemsida, Home Assistant, Grafana / Prometheus, Uptime Kuma, generisk cURL."
+      },
+      {
+        "label": "Dashboard → Säkerhet → Secure Gateway",
+        "href": "/docs/monitor/dashboard/security",
+        "tail": " - distribuera Tailscale gateway LXC steg för steg (subnetrutter, ACLs, Exit Node-läge)."
+      },
+      {
+        "label": "Säkerhet - Fail2Ban",
+        "href": "/docs/security/fail2ban",
+        "tail": " — Hur man installerar och konfigurerar det valfria fängelset."
+      },
+      {
+        "label": "Inställningar → ProxMenux Monitor",
+        "href": "/docs/settings/proxmenux-monitor",
+        "tail": " - starta / stoppa systemd-tjänsten från ProxMenux TUI."
+      }
+    ]
+  }
+}

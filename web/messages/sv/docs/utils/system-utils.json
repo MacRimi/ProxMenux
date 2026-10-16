@@ -1,0 +1,257 @@
+{
+  "meta": {
+    "title": "Systemverktyg Installer | ProxMenux Dokumentation",
+    "description": "Curated installer för 26 CLI verktyg (htop, btop, iperf3, jq, tmux, ncdu, ...) på Proxmox VE. Anpassad urval eller fördefinierade grupper (grundläggande, dev, komprimering, multiplexers, analys, nätverk). Använder det kanoniska ensure_repositories + install_single_package-flödet.",
+    "ogTitle": "Systemverktyg Installer | ProxMenux Dokumentation",
+    "ogDescription": "Installera curated CLI verktyg på Proxmox VE med ett klick eller anpassat urval."
+  },
+  "header": {
+    "title": "Installationsprogram för systemverktyg",
+    "description": "Curated picker för 26 CLI-verktyg definierade i den kanoniska PROXMENUX_UTILS-listan. Erbjuder anpassat urval, installera-all, sex fördefinierade grupper och en verifieringskontroll. Använder den delade ensure_repositories() + install_single_package() par så repo konfiguration och per-paket återkoppling hålla konsekvent över hela projektet.",
+    "section": "Verktyg"
+  },
+  "info": {
+    "title": "Vad detta gör",
+    "body": "Installerar CLI-verktyg från en kurerad lista över 26-paket. Varje installation går igenom samma kanoniska flöde: <code>ensure_repositories</code> kontrollerar att värden har ett användbart Proxmox-förvar för den löpande PVE-versionen, sedan <code>install_single_package</code> kör installationen och verifierar det resulterande kommandot är i PATH."
+  },
+  "opening": {
+    "heading": "Öppna installationsprogrammet",
+    "intro": "Från menyn Utilities väljer du <strong>System Utilities Installer</strong>. Huvudmenyn erbjuder nio alternativ:",
+    "imageAlt": "Systemverktyg Installationsmenyn med eget val, ALL, fördefinierade grupper och verifiera"
+  },
+  "actions": {
+    "heading": "9-menyn åtgärder",
+    "headerOption": "Alternativ",
+    "headerBehaviour": "Beteende",
+    "rows": [
+      {
+        "option": "1. Anpassat urval",
+        "behaviourRich": "Dialog checklista över alla 26-paket. Använd SPACE för att växla, ENTER för att bekräfta; endast de valda är installerade."
+      },
+      {
+        "option": "2. Installera alla verktyg",
+        "behaviourRich": "En-shot installation av varje paket i <code>PROXMENUX_UTILS</code>. Använd efter en ny Proxmox-installation."
+      },
+      {
+        "option": "3. Grundläggande",
+        "behaviourRich": "<code>grc</code>, <code>htop</code>, <code>tree</code>, <code>curl</code>, <code>wget</code>"
+      },
+      {
+        "option": "4. utveckling",
+        "behaviourRich": "<code>git</code>, <code>vim</code>, <code>nano</code>"
+      },
+      {
+        "option": "5. Kompression",
+        "behaviourRich": "<code>zip</code>, <code>unzip</code>, <code>rsync</code>"
+      },
+      {
+        "option": "6. Terminalmultiplexrar",
+        "behaviourRich": "<code>screen</code>, <code>tmux</code>"
+      },
+      {
+        "option": "7. Analys",
+        "behaviourRich": "<code>jq</code>, <code>ncdu</code>, <code>iotop</code>"
+      },
+      {
+        "option": "8. Nätverk",
+        "behaviourRich": "<code>iperf3</code>, <code>nethogs</code>, <code>nmap</code>, <code>tcpdump</code>, <code>lsof</code>"
+      },
+      {
+        "option": "9. Verifiera installationer",
+        "behaviourRich": "Går varje post i <code>PROXMENUX_UTILS</code>, kontrollerar om verifieringskommandot är i PATH, skriver en tillgänglig / saknad sammanfattning."
+      }
+    ]
+  },
+  "packages": {
+    "heading": "26-paket",
+    "intro": "Definieras i den delade <code>scripts/global/utils-install-functions.sh</code> som <code>PROXMENUX_UTILS</code> (format: <code>package:verify_command:description</code>). Övriga ProxMenux scripts (t.ex. nätverksövervakningsstartarna för iftop / iptraf-ng / iperf3) återanvända poster från denna lista så paket + verifiera kommandot i synkronisering.",
+    "headerPackage": "Paketpaket",
+    "headerVerify": "Verifiera kommandot",
+    "headerDescription": "Beskrivning",
+    "rows": [
+      {
+        "package": "axel",
+        "verify": "axel",
+        "description": "Ladda ner accelerator"
+      },
+      {
+        "package": "aria2",
+        "verify": "aria2c",
+        "description": "Nedladdare med flera källor"
+      },
+      {
+        "package": "btop",
+        "verify": "btop",
+        "description": "Modern resursövervakning"
+      },
+      {
+        "package": "cabextract",
+        "verify": "cabextract",
+        "description": "Extrahera CAB filer"
+      },
+      {
+        "package": "chntpw",
+        "verify": "chntpw",
+        "description": "Redigera Windows-registret / lösenord"
+      },
+      {
+        "package": "dos2unix",
+        "verify": "dos2unix",
+        "description": "Konvertera DOS / Unix textfiler"
+      },
+      {
+        "package": "genisoimage",
+        "verify": "genisoimage",
+        "description": "Skapa ISO-bilder"
+      },
+      {
+        "package": "grc",
+        "verify": "grc",
+        "description": "Generisk log Colorizer"
+      },
+      {
+        "package": "htop",
+        "verify": "htop",
+        "description": "Interaktiv processvisare"
+      },
+      {
+        "package": "iftop",
+        "verify": "iftop",
+        "description": "Realtidsnätverksanvändning"
+      },
+      {
+        "package": "intel-gpu-tools",
+        "verify": "intel_gpu_top",
+        "description": "Intel GPU verktyg"
+      },
+      {
+        "package": "iotop",
+        "verify": "iotop",
+        "description": "Övervaka disk I/O-användning"
+      },
+      {
+        "package": "iperf3",
+        "verify": "iperf3",
+        "description": "Nätverk bandbredd testning"
+      },
+      {
+        "package": "ipset",
+        "verify": "ipset",
+        "description": "Hantera IP-apparater"
+      },
+      {
+        "package": "iptraf-ng",
+        "verify": "iptraf-ng",
+        "description": "Nätverk övervakning verktyg"
+      },
+      {
+        "package": "libguestfs-tools",
+        "verify": "virt-filesystems",
+        "description": "VM diskverktyg"
+      },
+      {
+        "package": "msr-tools",
+        "verify": "rdmsr",
+        "description": "Tillgång CPU MSR"
+      },
+      {
+        "package": "net-tools",
+        "verify": "netstat",
+        "description": "Legacy nätverksverktyg"
+      },
+      {
+        "package": "plocate",
+        "verify": "Lokala",
+        "description": "Hitta filer snabbt"
+      },
+      {
+        "package": "s-tui",
+        "verify": "s-tui",
+        "description": "Stress-Terminal UI"
+      },
+      {
+        "package": "sshpass",
+        "verify": "sshpass",
+        "description": "Icke-interaktiv SSH inloggning"
+      },
+      {
+        "package": "tmux",
+        "verify": "tmux",
+        "description": "Terminalmultiplexer"
+      },
+      {
+        "package": "unzip",
+        "verify": "unzip",
+        "description": "Extrahera ZIP-filer"
+      },
+      {
+        "package": "wimtools",
+        "verify": "wimlib-imagex",
+        "description": "Hantera WIM bilder"
+      },
+      {
+        "package": "zip",
+        "verify": "zip",
+        "description": "Skapa ZIP-filer"
+      },
+      {
+        "package": "libguestfs-tools",
+        "verify": "virt-filesystems",
+        "description": "VM diskverktyg"
+      }
+    ]
+  },
+  "howItWorks": {
+    "heading": "Hur ett enda paket installerar fungerar",
+    "items": [
+      "<code>ensure_repositories</code> upptäcker PVE 8 eller 9 och läser repositorier genom Proxmox API. En värd med ett användbart Proxmox-förvar lämnas oförändrad; en värd utan aktiv prenumeration och endast Enterprise-förvaret frågas innan du byter till no-subscription, och <code>apt-get update</code> körs efter en accepterad switch.",
+      "<code>install_single_package \"pkg\" \"verify_cmd\" \"description\"</code> kör <code>apt-get install -y \"$pkg\"</code> med feedback (<code>msg_info</code> / <code>msg_ok</code> / <code>msg_error</code>)."
+    ],
+    "verifyIntro": "Efter installationen kontrolleras verifieringskommandot med <code>command -v \"$verify_cmd\"</code>. Tre resultat:",
+    "verifyOutcomes": [
+      "<strong>0 (framgång):</strong> kommandot tillgängligt, paket räknas som <em>Successful</em>.",
+      "<strong>1 (misslyckad):</strong> apt misslyckades, räknas som <em>Failed</em>.",
+      "<strong>2 (varning):</strong> apt lyckades men kommandot ännu inte i PATH (hash refresh pending) - räknas som <em> Med varningar</em>."
+    ],
+    "summary": "I slutet av en grupp / anpassad installation visar en sammanfattningsdialog <em>Successful / Med varningar / Failed</em> räknas."
+  },
+  "verify": {
+    "heading": "Verifiera installationer",
+    "intro": "Alternativ 9 är lättläst: det går <code>PROXMENUX_UTILS</code> och kör <code>command -v</code> för varje verifierat kommando. Utgång ser ut så här:",
+    "code": "Total: 26\nAvailable: 18\nMissing: 8\n\n✓ axel - Download accelerator\n✓ aria2c - Multi-source downloader\n✓ btop - Modern resource monitor\n✗ cabextract - Extract CAB files\n✓ dos2unix - Convert DOS / Unix text files\n✗ genisoimage - Create ISO images\n✓ grc - Generic log colorizer\n...",
+    "outro": "Användbart innan du kör skript som beror på dessa verktyg (t.ex. <code>uup_dump_iso_creator.sh</code> behöver <code>aria2c</code> + <code>cabextract</code> + <code>wimlib-imagex</code>). Om något saknas, kör matchningsgruppen installera eller välj de saknade paketen via eget val."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "reposTitle": "\"Fel att konfigurera repositorier. Installationen avbryts.”",
+    "reposBody": "Förvarskontrollen passerade inte: växeln till abonnemangsförvaret avböjdes, abonnemangsstatusen kunde inte läsas, eller en förvaringspost behöver uppmärksamhet. Budskapet tryckt ovan anger orsaken. Repositorier är listade i <em>Node → Uppdateringar → Repositories</em> och <code>apt-get update</code> från en konsol visar felanpassade rapporter.",
+    "warningsTitle": "Ett paket rapporteras \"Med varningar\" men kommandot fungerar när jag stänger menyn",
+    "warningsBody": "Förväntat. Efter <code>apt-get install</code> är den nya binären på disk men det nuvarande skalets PATH-cache (<code>hash -t</code>) vet ännu inte. ProxMenux kör <code>hash -r</code> efter varje installation, men i vissa skal sker uppdateringen bara på nästa prompt. Öppna ett nytt skal och kommandot kommer att fungera.",
+    "hangsTitle": "En apt installera hänger",
+    "hangsBody": "Troligtvis är en debconf-prompt blockerad bakom den tysta utgången. Manuset slår alla apt samtal med <code>DEBIAN_FRONTEND=noninteractive</code>, som vanligtvis undertrycker prompts, men några paket kräver fortfarande användarinmatning. Avbryt med <kbd>Ctrl</kbd>+<kbd>C</kbd>, kör <code>apt-get install -y &lt;pkg&gt;</code> manuellt från ett skal för att se prompten och bestämma."
+  },
+  "files": {
+    "heading": "Filer involverade",
+    "code": "scripts/utilities/system_utils.sh                    # this script\nscripts/global/utils-install-functions.sh            # PROXMENUX_UTILS, install_single_package\nscripts/global/repository-functions.sh               # ensure_repositories\nscripts/global/repository_policy.py                  # reads and switches repositories through the Proxmox API\n/etc/apt/sources.list.d/proxmox.sources              # no-subscription source, written by Proxmox when the switch is accepted"
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/utils/system-update",
+        "label": "Proxmox systemuppdatering",
+        "tailRich": " — för den faktiska <code>apt dist-upgrade</code> på värden."
+      },
+      {
+        "href": "/docs/network/monitoring",
+        "label": "Levande övervakningsverktyg (Network)",
+        "tailRich": " - använder iftop / iptraf-ng / iperf3 från samma lista."
+      },
+      {
+        "href": "/docs/utils",
+        "label": "Utilities översikt",
+        "tailRich": " - tillbaka till avsnittsöversikten."
+      }
+    ]
+  }
+}

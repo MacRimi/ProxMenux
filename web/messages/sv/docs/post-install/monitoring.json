@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "title": "Post-Install: Övervakning | ProxMenux Dokumentation",
+    "description": "Övervakningsalternativ i ProxMenux Customizable post-install script. För närvarande ett enda alternativ: installera OVH Real-Time Monitoring (RTM), som bara aktiveras om värden upptäcks som en OVH-server."
+  },
+  "header": {
+    "title": "Efter installationen: övervakning",
+    "description": "Övervaka alternativ inuti Customizable post-install script. Denna kategori är liten och leverantörsspecifik - den installerar OVH Real-Time Monitoring-agenten på dedikerade OVH-servrar och gör ingenting annat.",
+    "section": "Inställningar efter installation av Proxmox"
+  },
+  "intro": {
+    "title": "Smal omfattning om syfte",
+    "body": "Post-install övervakning är begränsad till <strong>En leverantörsspecifik agent</strong>. Allmänt ändamålsövervakning (Prometheus, Grafana, node_exporter) är utom räckvidd här eftersom de kräver arkitektoniska beslut (separat värd eller inte, datalagring, varning mål) som inte passar ett enklick post-install steg. ProxMenux Monitor sig själv, bundled med ProxMenuxfyller det mesta av den rollen utan att behöva någon extern agent."
+  },
+  "ovh": {
+    "heading": "Installera OVH Real-Time Monitoring (RTM)",
+    "intro": "Om din Proxmox värd är en dedikerad server hyrd från <a>OVHcloud</a>, kan du aktivera RTM för att exponera hårdvara telemetri (CPU temperatur, PSU status, disk SMART, RAID controller state, etc.) till OVH kontrollpanelen. Detta är samma agent OVH använder för sin egen \"Server Monitoring\" -funktion.",
+    "decisionsTitle": "Hur ProxMenux bestämmer",
+    "decisionsItems": [
+      "Få värdens offentliga IP via <code>curl ipinfo.io/ip</code>.",
+      "Ser upp den ägande ISP med en <code>whois</code>-fråga till <code>v4.whois.cymru.com</code>.",
+      "Om resultatet nämner OVH, hämtar <code>last-public-ovh-infra-yak.snap.mirrors.ovh.net/yak/archives/apply.sh</code> och rör den till <code>bash</code> med RTM v2-muppen manifest.",
+      "Om resultatet nämner <em>not</em> OVH installeras ingenting. Alternativet är en no-op."
+    ],
+    "remoteTitle": "Remote script piped till bash",
+    "remoteBody": "Installationen kör <code>wget -qO - https://…apply.sh | bash</code>. Om OVH-spegeln någonsin äventyras, kör manuset som rot på din värd. Innan du aktiverar det här alternativet bestämmer du om du litar på OVHs spegelkedja mer än den övervakning du får. För de flesta hem-labb eller icke-OVH-användare bör detta alternativ helt enkelt stanna.",
+    "noOpTitle": "Endast aktivera om värden faktiskt är på OVH",
+    "noOpBody": "Alternativet är en no-op på icke-OVH-servrar, så att kryssa det på ett hem-labb Proxmox inte bryter något. På en icke-OVH-värd trycker manuset <em>\"Inte en OVH-server, hoppar över RTM-installation\"</em> och lämnar rent; inga paket installeras.",
+    "runsTitle": "Vad ProxMenux körs",
+    "verifyTitle": "Verifiering",
+    "verifyBody": "På en riktig OVH-värd, efter en omstart bör du se <a>RTM-dashboard</a> i din OVH-chef befolkad med levande data för värden. På Proxmox sida är RTM-samlaren en systemd-tjänst - kontrollera den direkt:",
+    "troubleTitle": "Felsökning",
+    "revertTitle": "Inte reversibel från Uninstall-menyn",
+    "revertBody": "Det finns ingen dedikerad avinstallation för RTM. På en riktig OVH-värd, ta bort paketen manuellt med <code>apt purge ovh-*</code> och ta bort alla marionett manifest under <code>/etc/puppet/</code> som RTM installerade. På en icke-OVH värd var ingenting någonsin installerat, så det finns inget att återgå."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "label": "ProxMenux-övervakning",
+        "href": "/docs/settings/proxmenux-monitor",
+        "tail": " - Lokal web dashboard för värden (arbetar på någon leverantör, inte bara OVH)."
+      },
+      {
+        "label": "Användbara systemkommandon",
+        "href": "/docs/help-info/system-commands",
+        "tail": " - lokal-värd övervakning referens."
+      },
+      {
+        "label": "Anpassningsbar post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — tillbaka till föräldermenyn."
+      }
+    ]
+  }
+}

@@ -1,0 +1,158 @@
+{
+  "meta": {
+    "title": "Proxmox VE Systemkommandon - pveversion, uptime, journalctl, systemctl | ProxMenux",
+    "description": "Referens av viktiga Proxmox VE och Linux-systemkommandon: pveversion, pveperf, uptime, journalctl, systemctl, lscpu, lsblk, df, gratis, sist, vem. Allt lätt och säkert att springa på någon värd.",
+    "ogTitle": "Proxmox VE Systemkommandon - pveversion, uptime, journalctl, systemctl",
+    "ogDescription": "Referens av viktiga Proxmox VE och Linux-systemkommandon - version, drifttid, tjänster, loggar, användarinformation, hårdvaruprober. All read-only.",
+    "twitterTitle": "Proxmox VE Systemkommandon | ProxMenux",
+    "twitterDescription": "Viktiga systeminspektionskommandon för Proxmox VE - version, status, tjänster, loggar, användarinformation."
+  },
+  "header": {
+    "title": "Användbara systemkommandon",
+    "description": "Läs-bara kommandon för att titta på Proxmox värd: version, kärna, upptid, minne, webb UI status, senaste logglinjer, som är inloggad och ett par revision / sammanfattningsverktyg. Ingen av dem ändrar systemet.",
+    "section": "Hjälp och info"
+  },
+  "intro": {
+    "title": "Vad detta är",
+    "body": "Samma numrerade lista ProxMenux visar när du väljer <em>Useful System Commands</em>. Använd knappen Kopiera för att ta tag i något kommando, eller se upp det för att komma ihåg den exakta flaggan."
+  },
+  "commandGroups": [
+    {
+      "title": "Systeminformation",
+      "commands": [
+        {
+          "command": "pveversion",
+          "description": "Visa Proxmox-version"
+        },
+        {
+          "command": "pveversion -v",
+          "description": "Detaljerad Proxmox-versionsinformation"
+        },
+        {
+          "command": "hostnamectl",
+          "description": "Systemvärdnamn och kärninformation"
+        },
+        {
+          "command": "uname -a",
+          "description": "Information om kärnor och arkitektur"
+        },
+        {
+          "command": "cat /etc/os-release",
+          "description": "OS release detaljer"
+        }
+      ]
+    },
+    {
+      "title": "Systemstatus",
+      "commands": [
+        {
+          "command": "uptime",
+          "description": "Systemuppetid"
+        },
+        {
+          "command": "uptime -p",
+          "description": "Ganska upptidsformat"
+        },
+        {
+          "command": "free -h",
+          "description": "Användning av RAM och swap"
+        },
+        {
+          "command": "who -b",
+          "description": "Sista systemstarttid"
+        },
+        {
+          "command": "last -x | grep shutdown",
+          "description": "Tidigare avstängningar"
+        }
+      ]
+    },
+    {
+      "title": "Tjänstehantering",
+      "commands": [
+        {
+          "command": "systemctl status pveproxy",
+          "description": "Kontrollera status för Proxmox Web UI"
+        },
+        {
+          "command": "systemctl restart pveproxy",
+          "description": "Starta om proxy för webbgränssnittet"
+        },
+        {
+          "command": "journalctl -xe",
+          "description": "Systemfel och loggar"
+        },
+        {
+          "command": "dmesg -T | tail -n 50",
+          "description": "Senaste 50 kärnloggraderna"
+        }
+      ]
+    },
+    {
+      "title": "Användarinformation",
+      "commands": [
+        {
+          "command": "whoami",
+          "description": "Nuvarande användare"
+        },
+        {
+          "command": "id",
+          "description": "Aktuell användar-UID, GID och grupper"
+        },
+        {
+          "command": "who",
+          "description": "Inloggade användare"
+        },
+        {
+          "command": "w",
+          "description": "Användaraktivitet och drifttid"
+        },
+        {
+          "command": "uptime && w",
+          "description": "Upptid och vem som är inloggad"
+        },
+        {
+          "command": "cut -d: -f1,3,4 /etc/passwd",
+          "description": "Alla användare med UID och GID"
+        },
+        {
+          "command": "getent passwd | column -t -s :",
+          "description": "Läsbar användartabell (UID, skal, etc.)"
+        }
+      ]
+    },
+    {
+      "title": "Auditering & Sammanfattning Verktyg",
+      "commands": [
+        {
+          "command": "lynis audit system",
+          "description": "Kör en fullständig systemsäkerhetsrevision"
+        },
+        {
+          "command": "fastfetch",
+          "description": "Visa systemsammanfattning i ASCII-format"
+        }
+      ]
+    }
+  ],
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/help-info/update-commands",
+        "label": "Uppdateringar och paket",
+        "tail": " — apt och pve uppgradera kommandon."
+      },
+      {
+        "href": "/docs/help-info/tools-commands",
+        "label": "System CLI-verktyg",
+        "tail": " - Htop, btop, ncdu och vänner."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Hjälp och info översikt",
+        "tail": "."
+      }
+    ]
+  }
+}

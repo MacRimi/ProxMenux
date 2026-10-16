@@ -1,0 +1,208 @@
+{
+  "meta": {
+    "title": "Förändringar | Audit & Report",
+    "description": "Förändringstidskriften för Audit & Report: vad ProxMenux förändrades på värden, vad som fanns där förut, skillnaden och om det kan vara ogjort."
+  },
+  "header": {
+    "title": "Ändringar",
+    "description": "Tidskriften för verksamheten ProxMenux utförs på värden och, där den fångades, staten före och efter var och en.",
+    "section": "Granskning och rapporter"
+  },
+  "sections": [
+    {
+      "id": "purpose",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Från manuset som sprang till förändringen det gjorde",
+            "body": "En lång funktion kan bara ändra två rader. Tidskriften håller varje konkret operation med manuset, funktionen och versionen ansvarig, resursen påverkas, skillnaden och om det kan vara ogjort."
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Skript",
+                "detail": "Funktion + version"
+              },
+              {
+                "label": "Insamling",
+                "detail": "innehåll före"
+              },
+              {
+                "label": "Drift",
+                "detail": "fil · paket · service"
+              },
+              {
+                "label": "Journalistik",
+                "detail": "attribution + skillnad"
+              }
+            ],
+            "caption": "Fångsten tas när operationen körs och konsolideras när monitorn läser tidskriften."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/changes-view.png",
+            "alt": "Ändra vy över Audit & Report med posterna grupperade efter installationsalternativet och skriptet",
+            "caption": "Förändringsvyn, med skillnaden i en fil redigerad av ProxMenux."
+          }
+        }
+      ]
+    },
+    {
+      "id": "types",
+      "title": "Typer av inträde",
+      "intro": "Filtret på toppen skiljer posterna efter typ.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Typ",
+              "Vad den registrerar"
+            ],
+            "rows": [
+              [
+                "Konfiguration",
+                "ProxMenux skrev, redigerade eller tog bort en fil, ändrade en inställning eller ändrade en tjänst."
+              ],
+              [
+                "Installationer",
+                "ProxMenux lade till ett paket eller en komponent, och de paket som faktiskt visas registreras."
+              ],
+              [
+                "Körningar",
+                "ProxMenux körde ett kommando; vad det ändrade är upp till kommandot själv."
+              ],
+              [
+                "Tillämpat",
+                "En funktion användes innan tidskriften fanns; staten innan den inte fångades."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "groups",
+      "title": "Hur utsikten är organiserad",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Avsnitt",
+              "Innehåll"
+            ],
+            "rows": [
+              [
+                "Optimeringar efter installation",
+                "Grupperas av post-install alternativet som användaren valt."
+              ],
+              [
+                "ProxMenux-skript",
+                "GPU, Coral, nätverk, lagring, säkerhet, verktyg och andra instrumenterade skript, inklusive ProxMenux installatör och ProxMenux Monitor."
+              ],
+              [
+                "Installerade paket och verktyg",
+                "Programvara ProxMenux installerad på värden."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Inom varje avsnitt, <strong>By funktion</strong> grupper poster under den funktion som gjorde dem."
+        }
+      ]
+    },
+    {
+      "id": "entry",
+      "title": "Vad varje inträde visar",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Skriptet, funktionen och versionen ansvarig.",
+              "Datumet och den berörda resursen.",
+              "Den kända staten före och efter förändringen.",
+              "Linjerna läggs till och tas bort.",
+              "De paket som faktiskt lades till.",
+              "Den statliga övergången till en tjänst.",
+              "<strong>Undoing this</strong>: <em>Restores exakt vad som var där</em>, <em>Deletes filen (det fanns ingen tidigare) </em>, <em>Förpackningen kan avinstalleras</em>, en partiell ångest eller <em>Cannot vara undone från tidskriften</em>."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "before",
+      "title": "Vad staten före betyder",
+      "blocks": [
+        {
+          "p": "Staten innan kan fångas innehåll, en fil som skapats för första gången eller ett okänt tillstånd. Förändringar som gjorts innan tidskriften fanns kan inte rekonstrueras; att köra funktionen igen fångar först staten som finns i det ögonblicket."
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Scope av tidskriften",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Manuella ändringar och ändringar som görs av annan programvara registreras inte.",
+              "Endast operationer som går igenom ProxMenux-revisionsprimitiva täcks.",
+              "Inspelningen blockerar aldrig den operation som den beskriver: om inträdet inte kan skrivas fortsätter operationen.",
+              "Framgångsrika förändringar i en resurs visas som det kända ursprunget mot det nuvarande tillståndet."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "retention",
+      "title": "Lagrade bevis",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Element",
+              "Beteende"
+            ],
+            "rows": [
+              [
+                "Inlägg",
+                "De hålls på värden; ingenting tas bort från tidskriften automatiskt."
+              ],
+              [
+                "Fångat innehåll",
+                "Ett fångat objekt hålls medan en post hänvisar till det."
+              ],
+              [
+                "Storlek på en fånga",
+                "Innehåll över 1 MiB lagras inte hela; posten registrerar att fångsten hoppades på grund av dess storlek."
+              ],
+              [
+                "Läsa",
+                "Monitorn laddar inte lagrade objekt över 2 MiB."
+              ],
+              [
+                "Skillnad",
+                "På de flesta 400-linjer visas, och en längre skillnad markeras som truncated."
+              ],
+              [
+                "Lista",
+                "API returnerar 200 poster per förfrågan som standard och upp till 1000."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Kept innehåll är inte en automatisk undo",
+            "body": "Innehållet innan en förändring kan inspekteras och återställas för hand, men vyn Förändringar återställer inte verksamheten. En utförandepost registrerar kommandot utan att veta varje effekt av verktyget som det sprang."
+          }
+        }
+      ]
+    }
+  ]
+}

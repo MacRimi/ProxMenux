@@ -1,0 +1,213 @@
+{
+  "meta": {
+    "title": "OCI Manager Apps | ProxMenux",
+    "description": "Kör officiella OCI-bilder som infödda Proxmox VE LXC-behållare, med ihållande data, enheter, multi-container-applikationer och transaktionsuppdateringar."
+  },
+  "header": {
+    "title": "Appar i OCI-hanteraren",
+    "description": "Officiella OCI-bilder körs som infödda Proxmox VE LXC-behållare. Bilden förblir den som dess underhållare publicerar; ProxMenux reproducerar miljön Docker Compose skulle ha skapat runt den.",
+    "section": "Appar i OCI-hanteraren"
+  },
+  "sections": [
+    {
+      "id": "model",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "En OCI-bild, en infödd LXC",
+            "body": "Ingen Docker engine körs inuti behållarna. Proxmox VE importerar bildens filsystem och dess OCI-metadata, och applikationen blir huvudprocessen för en infödd LXC, hanterad med samma verktyg som alla andra behållare av noden."
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Källa",
+                "detail": "OCI bild\nKomponera och dokumentera"
+              },
+              {
+                "label": "ProxMenux",
+                "detail": "JSON kontrakt\nvalidering och plan"
+              },
+              {
+                "label": "Proxmox VE",
+                "detail": "Infödd LXC\nVolymer och enheter"
+              }
+            ],
+            "caption": "Ansökan är inte byggd: dess miljö återges deklarativt."
+          }
+        }
+      ]
+    },
+    {
+      "id": "where",
+      "title": "Där det är",
+      "intro": "OCI Manager Apps öppnar från option <strong>OCI Manager Apps (Technology Preview) </strong> av ProxMenux huvudmenyn, på Proxmox nod och som root. Dess första skärm erbjuder:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "<strong>Search Apps</strong> - Sök efter namn över katalogen.",
+              "<strong>Alla applikationer</strong> - hela katalogen, med antalet applikationer.",
+              "<strong>Manage installerade OCI-program</strong> - uppdatering, modifiera, ta bort eller återställa vad som installerades.",
+              "<strong>Registry-konton</strong> - de konton som används för att installera och uppdatera bilder från privata register.",
+              "<strong>Installera en bild som inte finns i katalogen</strong> - översätta en komponeringsfil, ett <code>docker run</code>-kommando eller en bildreferens.",
+              "Katalogen kategorier, var och en med sitt antal applikationer."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/main-menu.png",
+            "alt": "Huvudskärm av OCI-hanterare Apps med sökning, alla applikationer, hantering, anpassad bild och katalogkategorier",
+            "caption": "Huvudskärm av OCI Manager Apps."
+          }
+        },
+        {
+          "p": "Välja en applikation visar sin beskrivning, den bild den körs och två installationslägen: <strong>Install med standardinställningar</strong>, som endast frågar vad varje installation bestämmer (lagring, där data går, adress och start) och <strong>Install med avancerade inställningar</strong>, som öppnar varje beslut i ordning: VMID och resurser, lagring av varje väg, bron och enheterna."
+        },
+        {
+          "p": "En applikation som har testats för riktiga visar <strong>Verified</strong> i den vyn och är märkt med ✓ i listorna, oavsett om det testades i ProxMenux-labbet eller av samhället."
+        }
+      ]
+    },
+    {
+      "id": "beta",
+      "title": "Varför det är en teknisk förhandsgranskning",
+      "blocks": [
+        {
+          "p": "OCI-chef Apps bär <strong>Technology Preview</strong>-etiketten som Proxmox VE ger till applikationsbehållare som skapats från OCI-bilder, introducerade i Proxmox VE 9.1. Det hänvisar till vad OCI Manager Apps körs på, inte till ProxMenux-motorn: beteendet hos dessa behållare kan fortfarande ändras mellan Proxmox VE-utgåvor. Etiketten stannar tills Proxmox VE-märken som stöder sig som stabila."
+        },
+        {
+          "p": "Motorn av OCI Manager Apps (installation, uppdatering, modifiering, rekreation, backups, restaurering, migration och vakthund) testas i ProxMenux-labbet. Varje applikation testas på egen hand: de som testats för riktig show <strong>Verified</strong> och bär en ✓ i listorna."
+        }
+      ]
+    },
+    {
+      "id": "translation",
+      "title": "Vad Docker uttrycker och vad OCI Manager Apps gör det till",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Krav",
+              "Docker uttrycker det som",
+              "OCI Manager Apps gör det till"
+            ],
+            "rows": [
+              [
+                "Kör ansökan",
+                "<code>image</code>, <code>entrypoint</code>, <code>command</code>",
+                "OCI rootfs och huvudprocessen av LXC"
+              ],
+              [
+                "Håll konfigurationen",
+                "<code>volumes: /config</code>",
+                "en ihållande <code>mpN</code>-disk som ingår i backupen, eller en värdkatalog"
+              ],
+              [
+                "Publicera tjänsten",
+                "<code>ports</code>",
+                "En egen adress för LXC och tjänstens åtkomstadress"
+              ],
+              [
+                "Använd hårdvara",
+                "<code>devices</code>, <code>group_add</code>",
+                "<code>devN</code>-poster med effektiv värd GID och en validerad profil"
+              ],
+              [
+                "Ansluta beroenden",
+                "<code>networks</code>, <code>depends_on</code>",
+                "en privat bro, fasta adresser, startorder och hälsokontroller"
+              ],
+              [
+                "Uppdatering",
+                "<code>pull</code> och återskapa",
+                "nya rötter med samma ihållande kontrakt"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "kept",
+      "title": "Vad som hålls och vilka förändringar",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "archive",
+                "title": "Behållet",
+                "body": "Den officiella bilden, dess interna vägar, dess miljö, dess startprocess och dess funktionella dokumentation."
+              },
+              {
+                "icon": "boxes",
+                "title": "Anpassad",
+                "body": "Runtime miljö: nätverk, uthållighet, enheter, behörigheter och beroenden använder inhemska Proxmox VE LXC primitiva."
+              },
+              {
+                "icon": "shield",
+                "title": "Översatt inte",
+                "body": "En komponera nyckel utan säker motsvarighet är listad som en blockerare. Mallar med blockerare erbjuds inte, och känsliga alternativ bekräftas under installationen."
+              },
+              {
+                "icon": "refresh",
+                "title": "Inspelad",
+                "body": "Bildsmälta, resurser, vägar, nätverk, enheter och stack medlemskap lagras i instansavtalet, som uppdateringar och rekreationer reproducerar."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "pages",
+      "title": "Sidor i detta avsnitt",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Hur en OCI-bild översätts",
+                "href": "/docs/oci-manager/architecture",
+                "tail": "från bilden och dess Compose-fil till en infödd LXC."
+              },
+              {
+                "label": "Installera en bild som inte finns i katalogen",
+                "href": "/docs/oci-manager/custom-image",
+                "tail": "Komponera, docker kör eller en bildreferens."
+              },
+              {
+                "label": "Data, vägar och nätverk",
+                "href": "/docs/oci-manager/storage-network",
+                "tail": "containerskivor, värdkataloger, Rclone-fästen och adresser."
+              },
+              {
+                "label": "Enheter och acceleration",
+                "href": "/docs/oci-manager/hardware",
+                "tail": "GPU, NVIDIA, Coral, USB och andra enheter."
+              },
+              {
+                "label": "Multi-container applikationer",
+                "href": "/docs/oci-manager/stacks",
+                "tail": "applikation, databas och cache som koordinerade LXC."
+              },
+              {
+                "label": "Installera, uppdatera och modifiera",
+                "href": "/docs/oci-manager/lifecycle",
+                "tail": "instanskontraktet och dess verksamhet."
+              },
+              {
+                "label": "I ProxMenux Monitor",
+                "href": "/docs/oci-manager/monitor",
+                "tail": "versioner, uppdateringar, konsolutgång och terminal."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

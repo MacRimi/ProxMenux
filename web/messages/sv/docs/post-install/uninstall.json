@@ -1,0 +1,271 @@
+{
+  "meta": {
+    "title": "Avinstallera optimeringar | ProxMenux Dokumentation",
+    "description": "Återställ reversibla ändringar av efterinstallationen som tillämpas av ProxMenux. Registrerade verktyg använder dedikerade avinstallatörer som bevarar det befintliga värdlandet där det är möjligt."
+  },
+  "header": {
+    "title": "Avinstallera optimering",
+    "description": "Återställ reversibla ändringar som gjorts av Automatiserade eller Anpassningsbara postinstallationsskript. ProxMenux registrerar varje stödd optimering med sin dedikerade restaureringsfunktion; paketuppgraderingar är avsiktligt uteslutna.",
+    "section": "Inställningar efter installation av Proxmox"
+  },
+  "intro": {
+    "title": "Varför detta existerar",
+    "body": "Varje stödd reversibel tweak är <strong>tracked</strong> i <code>/usr/local/share/proxmenux/installed_tools.json</code>. Det registret driver avinstallationsflödet: det listar de aktiva optimeringarna och skickar den matchande restaureringsfunktionen. Åtgärder utan säker återgång, till exempel en fullständig paketuppgradering, läggs inte till."
+  },
+  "openMenu": {
+    "heading": "Hur man öppnar den",
+    "body": "Från ProxMenux: s huvudmeny, <strong>Settings post-install Proxmox → Avinstallera optimeringar</strong>. Du kommer att se en checklista över <em>current tillämpad</em> optimeringar - objekt som du inte har tillämpat visas inte.",
+    "imageAlt": "Avinstallera Optimizations checklista som visar objekt som för närvarande tillämpas på värden, med kryssrutor för att välja vilka som ska återgå"
+  },
+  "howWorks": {
+    "heading": "Hur reverseringen fungerar",
+    "steps": [
+      {
+        "title": "Registrering och auto-detection",
+        "body1": "På första körningen går ProxMenux värden söker fingeravtrycksfiler (t.ex. <code>/etc/sysctl.d/99-memory.conf</code>, <code>/etc/apt/apt.conf.d/99-force-ipv4</code>, <code>haveged</code>-paket installerat, Log2RAM-tjänst aktiv...). Allt som finns läggs till i registret som reversibelt, även om det tillämpades av en äldre ProxMenux-version som föregår registret.",
+        "body2": "Denna migration går bara en gång. Därefter uppdaterar varje ansökan/återgå registreringen direkt."
+      },
+      {
+        "title": "Välj vad du ska återgå",
+        "body1": "Checklistan visar en mänsklig läsbar etikett per objekt (t.ex. <em>Minnesinställningar optimering</em>, <em>IOMMU/VFIO PCI Passthrough</em>, <em>Log2RAM (SSD-skydd)</em>). Kryssa de du vill vända. Ingenting du inte fäster kommer att beröras."
+      },
+      {
+        "title": "Återställningskörningar",
+        "body1": "För varje valt objekt kallar ProxMenux sin matchande avinstallationsfunktion. De flesta omkastningar följer ett av tre mönster:",
+        "items": [
+          "<strong>Backup-based</strong> - återställa en <code>.bak</code> fångad vid appliceringstid (bashrc, logrotate.conf, journald.conf, GRUB/kernel cmdline).",
+          "<strong>Delete-the-config</strong> — ta bort ProxMenuxs. <code>/etc/sysctl.d/99-*.conf</code>, <code>/etc/apt/apt.conf.d/99-*</code>eller systemd Enhet, sedan reload.",
+          "<strong>Package ominstallation</strong> För UI ändringar som abonnemangsbannern, installera om uppströmspaketen med <code>--force-confnew</code> för att återställa skeppad konfiguration."
+        ],
+        "body2": "Varje omvänd loggar sina framsteg. Objekt som kräver en omstart (VFIO, ihållande gränssnittsnamn) ställer in en flagga som utlöser omstartsprompten i slutet."
+      },
+      {
+        "title": "Reboot prompt i slutet",
+        "body1": "Efter omvändningen avslutar menyn visar en omstart prompt. Objekt som ändrade kärnparametrar, kärnmoduler eller nätverksnamn (VFIO, ihållande gränssnittsnamn) behöver omstart för att träda i kraft; andra objekt gör det inte, och prompten är en säkerhetsstandard snarare än en per-itemkontroll."
+      }
+    ]
+  },
+  "reversible": {
+    "heading": "Vad är reversibelt",
+    "intro": "Registrerade reversibla optimeringar och deras matchande avinstallatörer grupperas här efter område:",
+    "groups": [
+      {
+        "title": "Repositorier och APT",
+        "items": [
+          {
+            "tool": "Prenumeration Banner borttagning",
+            "restores": "Först försöker återställa UI-filerna från ProxMenux: s egna säkerhetskopior (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup. * och när mobilen UI är patched, index.html.tpl.backup. *). Endast om en säkerhetskopia saknas eller korrupta, faller tillbaka för att installera om pve-manager, proxmox-widget-toolkit, libjs-extjs och libpve-http-server-perl med force-confnew. Också rensar cached .js / .gz kopior."
+          },
+          {
+            "tool": "Hoppa över APT-språkfiler",
+            "restores": "Ta bort /etc/apt/apt.conf.d/99-disable-translations. APT kommer att ladda ner språkpaket igen."
+          },
+          {
+            "tool": "Tvinga IPv4 för APT",
+            "restores": "Ta bort /etc/apt/apt.conf.d/99-force-ipv4."
+          },
+          {
+            "tool": "Systemverktyg",
+            "restores": "Endast utvalda verktygspaket som ProxMenux registreras som nyinstallerade. Paket som redan finns innan åtgärden aldrig läggs till i den här listan och lämnas orörda."
+          }
+        ]
+      },
+      {
+        "title": "Kernel, minne och systemgränser",
+        "items": [
+          {
+            "tool": "Minnesinställningar",
+            "restores": "Ta bort /etc/sysctl.d/99-memory.conf och reloads sysctl."
+          },
+          {
+            "tool": "Konfiguration vid kärnpanik",
+            "restores": "Ta bort /etc/sysctl.d/99-kernelpanic.conf."
+          },
+          {
+            "tool": "Systemgränser ökar",
+            "restores": "Ta bort /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf och /etc/security/limits.d/99-limits.conf. Reverts PAM gränser och systemd DefaultLimitNOFILE, och remsor ulimit -n 256000 linje från /root/.profile."
+          },
+          {
+            "tool": "ZRAM swap profil",
+            "restores": "Stänger av bytet på /dev/zram0, stoppar dev-zram0.swap och tar bort /etc/systemd/zram-generator.conf.d/90-proxmenux.conf. systemd-zram-generatorpaketet rensas endast när ProxMenux installerade det och ingen annan ZRAM-installation är närvarande. Om sidorna i ZRAM inte kan flyttas ut, förblir profilen aktiv och ingenting tas bort."
+          }
+        ]
+      },
+      {
+        "title": "Nätverk",
+        "items": [
+          {
+            "tool": "Nätverksoptimeringar",
+            "restores": "Ta bort /etc/sysctl.d/99-network.conf, 97-proxmenux-fwbr.conf och 98-proxmenux-rpf.conf tillsammans med proxmenux-fwbr-tune.service-enheten, /usr/local/sbin/proxmenux-fwbr-tune-hjälparen och /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules-udevregeln. Också remsor källan /etc/network/interfaces.d/* linje från /etc/network/interfaces. Reloads sysctl, systemd och udev-reglementet."
+          },
+          {
+            "tool": "Open vSwitch",
+            "restores": "Runs apt purge på openvswitch-switch och openvswitch-common. Migrera alla OVS broar tillbaka till Linux broar innan du kör detta avinstallera - annars VM på dessa broar förlorar nätverk på nästa start."
+          },
+          {
+            "tool": "TCP BBR + TCP Fast Open",
+            "restores": "Ta bort /etc/sysctl.d/99-tcp-bbr.conf och 99-tcp-fastopen.conf och reloads sysctl så att kärnan återvänder till kubik trängsel kontroll och till tcp_fastopen = 1."
+          },
+          {
+            "tool": "Persistenta gränssnittsnamn",
+            "restores": "Ta bort endast 10-proxmenux-*.link-filer som bär ProxMenux-rubriken från /etc/systemd/network/. Alla .link-filer som tillhandahålls av ett annat paket eller skrivs av användaren lämnas på plats. Interface namn återvänder till systemd: s standard beteende på nästa omstart."
+          }
+        ]
+      },
+      {
+        "title": "Loggning",
+        "items": [
+          {
+            "tool": "Journalerad optimering",
+            "restores": "Rewrites /etc/systemd/journald.conf med vaniljstandarder och startar om systemd-journald."
+          },
+          {
+            "tool": "Logrotate-optimering",
+            "restores": "Återställer /etc/logrotate.conf från .bak-filen som fångats före ändringen."
+          },
+          {
+            "tool": "Log2RAM",
+            "restores": "Slutar och inaktiverar tjänsten och timern. Purges cron jobb, systemd enheter, binärer, config filer och /var/log.hdd katalogen. Avinstallerar också apt-paketet om det installerades på det sättet."
+          },
+          {
+            "tool": "Automatisk ZFS-TRIM",
+            "restores": "Läser /usr/local/share/proxmenux/zfs_autotrim_pools (listan över pooler ProxMenux faktiskt förändrats) och kör zpool set autotrim=off på var och en. Pooler du sätter autotrim på manuellt innan ProxMenux sprang inte rörs."
+          }
+        ]
+      },
+      {
+        "title": "Shell & utseende",
+        "items": [
+          {
+            "tool": "Anpassning av Bashrc",
+            "restores": "Återställer /root/.bashrc från .bak backup. Om ingen säkerhetskopia finns, tar bort PMX_CORE_BASHRC blocket av markörer."
+          },
+          {
+            "tool": "Egen MOTD-banner",
+            "restores": "Återställer det exakta ursprungliga /etc/motd-innehållet som hålls under /usr/local/share/proxmenux, tar bort filen när den inte fanns innan, eller tar säkert bort arvsmarkören när du migrerar en äldre installation."
+          },
+          {
+            "tool": "Fastfetch",
+            "restores": "Ta bort binär, konfig katalog, uppdaterad krok och den inhägnade BEGIN FASTFETCH / END FASTFETCH blocket från /root/.bashrc, ~ /.profile, /etc/profile och /etc/profile.d/fastfetch.sh. Purges apt paketet om det är installerat."
+          },
+          {
+            "tool": "Figurine",
+            "restores": "Ta bort den binära, profil.d inträde och alias block i bashrc / profil."
+          }
+        ]
+      },
+      {
+        "title": "Hårdvara och virtualisering",
+        "items": [
+          {
+            "tool": "IOMMU / VFIO",
+            "restores": "Ta bort vfio-moduler från /etc/modules, nouveau / radeon / nvidia svartlista poster, och intel_iommu=on / amd_iommu=on / iommu=pt / pcie_acs_override parametrar från /etc/kernel/cmdline (ZFS) eller GRUB. Bygger initramfs."
+          },
+          {
+            "tool": "AMD CPU fixar (Ryzen/EPYC)",
+            "restores": "Ta bort idle=nomwait från kernel cmdline (ZFS) eller GRUB, och ignore_msrs / report_ignored_msrs alternativ från /etc/modprobe.d/kvm.conf."
+          },
+          {
+            "tool": "QEMU Guest Agent (mallar)",
+            "restores": "Läser /usr/local/share/proxmenux/guest_agent.pkg (inspelad vid installationstid) och apt rensar beroende på vilket paket som installerades (qemu-gäst-agent för standardvärdar, krydda-vdagent när Spice-läge används)."
+          }
+        ]
+      },
+      {
+        "title": "Lagring",
+        "items": [
+          {
+            "tool": "Dimensionering av ZFS ARC",
+            "restores": "Removes /etc/modprobe.d/99-zfsarc.conf, återställer alla motstridiga externa *.conf som iscensattes i /usr/local/share/proxmenux/backups/zfs_arc /, återuppbygger initramfs och kör proxmox-boot-tool uppfriskningar på systemd-boot värdar."
+          },
+          {
+            "tool": "Automatiska ZFS-ögonblicksbilder",
+            "restores": "Ta bort cron-posterna som manuset skrev och erbjuder till apt purge zfs-auto-snapshot. Befintliga snapshot-dataset på poolerna lämnas intakt - ta bort dem separat om du vill ha dem borta."
+          },
+          {
+            "tool": "Hastighetsgränser för vzdump",
+            "restores": "Återställer /etc/vzdump.conf från .bak den installerade, vilket ger tillbaka bwlimit och jonice till sina pre-ProxMenux-värden."
+          }
+        ]
+      },
+      {
+        "title": "Tjänster & extras",
+        "items": [
+          {
+            "tool": "Time Synkronisering",
+            "restores": "Ställ in tidszon tillbaka till UTC (säker standard) via timedatectl."
+          },
+          {
+            "tool": "Entropigenerering (har påstått)",
+            "restores": "Slutar, inaktiverar och rensar det trasiga paketet."
+          },
+          {
+            "tool": "Kexec (snabba omstarter)",
+            "restores": "Inaktiverar kexec-pve.service, tar bort enhetsfilen och reboot-quick alias från /root/.bash_profile, rensar kexec-verktyg."
+          },
+          {
+            "tool": "RPC/Rpcbind Disable",
+            "restores": "Återställer rpcbind.service och rpcbind.socket oberoende av de aktiverade / funktionshindrade och aktiva / inaktiva tillstånd som registrerats innan ProxMenux ändrade dem."
+          },
+          {
+            "tool": "Pigz (Parl Gzip)",
+            "restores": "Kopierar den verkliga gzip tillbaka från gzip.distrib, tar bort dpkg diversion och /bin/pigzwrapper, kommenterar pigzlinjen i /etc/vzdump.conf och apt renar pigz när gzip verifieras."
+          },
+          {
+            "tool": "Hög tillgänglighetstjänster",
+            "restores": "Stops och inaktiverar pve-ha-lrm, pve-ha-crm och corosync. Befintliga HA-grupper och resursdefinitioner raderas inte – ta bort dem från webb-UI om du inte längre behöver dem."
+          },
+          {
+            "tool": "Ceph-paketförråd",
+            "restores": "Ceph-paket installerade med det här alternativet tar bort deb822 /etc/apt/sources.list.d/ceph.sources på PVE 9 (eller arvet Ceph-listan på PVE 8) och uppdaterar APT-cache."
+          },
+          {
+            "tool": "OVH RTM (övervakning)",
+            "restores": "apt purges any ovh-* packages the RTM installer added and deletes the puppet manifests it dropped under /etc/puppet/. On non-OVH hosts nothing was ever installed, so nothing is removed."
+          }
+        ]
+      }
+    ]
+  },
+  "edge": {
+    "heading": "Edge case och caveats",
+    "packageTitle": "Package reinstall touches live Proxmox-paket",
+    "packageBody": "Revertering <strong>Subscription Banner Removal</strong> installerar <code>pve-manager</code>, <code>proxmox-widget-toolkit</code>, <code>libjs-extjs</code> och <code>libpve-http-server-perl</code> med <code>--force-confnew</code>. Detta är i allmänhet säkert men rör det löpande webb-UI - uppdatera din webbläsare efteråt och förvänta dig några sekunder av återkoppling. Kör inte detta mitt i en migration eller klonoperation.",
+    "rebootTitle": "Ihållande namn och VFIO behöver en omstart",
+    "rebootBody": "Ta bort ProxMenux <code>10-proxmenux-*.link</code>-filer (<em>Persistent Interface Names</em>) och återställa <em>IOMMU / VFIO</em> påverkar inte körsystemet - de spelar bara roll efter en omstart. ProxMenux sätter omstart flaggan automatiskt för dessa.",
+    "perItemTitle": "Du kan återställa en sak och hålla resten",
+    "perItemBody": "Avinstalleraren fungerar per-item. Om du bara vill ta bort Log2RAM men hålla nätverket stämning och bashrc förändringar, kryssa bara <em>Log2RAM</em>. Ingenting annat berörs, och registret uppdateras därefter."
+  },
+  "inspect": {
+    "heading": "Inspektera registret manuellt",
+    "intro": "Om du vill se vad som spåras utan att öppna menyn:",
+    "outro": "Varje <code>\"tool\": true</code>-post motsvarar något ProxMenux tillämpas och kan vända. Ta bort en post manuellt rekommenderas inte - använd alltid menyn, som också kör omvänd funktion istället för att bara glömma förändringen.",
+    "reinstallTitle": "Reinstallera efter avinstallation",
+    "reinstallBody": "Att återställa en optimering hindrar dig inte från att återanvända den senare. Öppna <link>The Post-Install meny</link> igen och kör antingen Automated eller Customizable - registret kommer att spåra det nya tillståndet."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "label": "Automatiserad post-Install",
+        "href": "/docs/post-install/automated",
+        "tail": " - återanvända baslinjen för sane-defaults."
+      },
+      {
+        "label": "Anpassningsbar post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — Välj en annan delmängd."
+      },
+      {
+        "label": "Avinstallera ProxMenux",
+        "href": "/docs/settings/uninstall-proxmenux",
+        "tail": " - olika operationer: tar bort ProxMenux själv, inte dess tillämpade optimeringar."
+      },
+      {
+        "label": "Post-Install översikt",
+        "href": "/docs/post-install",
+        "tail": "."
+      }
+    ]
+  }
+}

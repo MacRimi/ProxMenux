@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Importera disk till LXC | ProxMenux Dokumentation",
+    "description": "Bifoga en fysisk disk till en befintlig LXC-behållare på Proxmox VE med ProxMenux. Hantera filsystemdetektering / formatering, monteringspunkt, oprivilegierade → privilegierad omvandling och ihållande enhetsvägar.",
+    "ogTitle": "Importera disk till LXC | ProxMenux Dokumentation",
+    "ogDescription": "Bifoga en fysisk disk till en befintlig LXC-behållare. Hantera filsystem, monteringspunkt och oprivilegierad → privilegierad omvandling."
+  },
+  "header": {
+    "title": "Importera disk till LXC",
+    "description": "Bifoga en fysisk disk till en befintlig LXC-behållare på Proxmox-värden. ProxMenux upptäcker fria diskar, valfritt formaterar dem med ett stöd filsystem, och trådar partitionen till en monteringspunkt inuti behållaren med ihållande enhetsvägar.",
+    "section": "Diskhanterare · LXC"
+  },
+  "intro": {
+    "title": "VM passthrough vs LXC genomgång",
+    "body": "LXC passthrough är <strong> inte en rå block enhet</strong>. Behållaren får en <em>mount point</em> - dvs en katalog som stöds av en partition du väljer på värden. Till skillnad från en VM är gästkärnan värdkärnan, så filsystemet (ext4 / xfs / btrfs) läses och hanteras av Proxmox själv och sedan exponeras för behållaren."
+  },
+  "howRuns": {
+    "heading": "Hur manuset går",
+    "body": "Flödet har två faser med tydlig åtskillnad mellan \"samla information och beslut\" och \"faktiskt ändra containerkonfig\". Fram till den slutliga bekräftelsen monteras ingenting i CT.",
+    "summary": "ProxMenux filtrerar ut rotskivan, monterade diskar och diskar som redan refereras av någon VM/LXC-konfig. Disker med aktiv ZFS/LVM/RAID-medlemskap är dolda; stjäla signaturer visar en 88-etikett så att du kan torka dem innan du formaterar."
+  },
+  "prereqs": {
+    "heading": "Förutsättningar",
+    "items": [
+      "Minst en LXC-container definierad på värden.",
+      "Behållaren är <strong>privileged</strong>, eller du accepterar skriptets erbjudande att konvertera det.",
+      "Minst en fysisk disk som inte används av värden eller någon annan gäst."
+    ],
+    "warnTitle": "Privilegierad behållare krävs",
+    "warnBody": "Direkt enhet passerar till en LXC-behållare fungerar endast om behållaren är <strong>privileged</strong>. Om manuset upptäcker <code>unprivileged: 1</code> i konfigen erbjuder det att konvertera det på plats (redigerar <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>). Annullera om du inte kan acceptera säkerhetsavvägning av en privilegierad behållare."
+  },
+  "steps": {
+    "heading": "Steg-för-steg",
+    "stepLabel": "Steg",
+    "list": [
+      {
+        "title": "Välj målbehållaren",
+        "img": "/disk/select-container.png",
+        "caption": "Container urvalsmenyn",
+        "bodyRich": "ProxMenux listar varje LXC-container på värden (<code>pct list</code>). Välj den som får disken. Om behållaren är oprivilegierad erbjuds du att konvertera den nu."
+      },
+      {
+        "title": "Välj den fysiska disken",
+        "img": "/disk/disk-selection-ct.png",
+        "caption": "Gratis diskar som upptäckts på värden (med 88 etiketter för stal metadata)",
+        "bodyRich": "Endast säkra kandidater visas. Till skillnad från VM-flödet fäster detta skript <strong>one disk per run</strong> - kör det igen för varje extra disk du vill lägga till."
+      },
+      {
+        "title": "Format eller återanvändning",
+        "intro": "Skriptet inspekterar disken:",
+        "items": [
+          "Om det redan har ett stöd filsystem (ext4 / xfs / btrfs) kan du återanvända det as-is (befintliga filer bevaras).",
+          "Om det inte har något stöd filsystem erbjuds du att formatera det. Pick ext4 / xfs / btrfs."
+        ]
+      },
+      {
+        "title": "Välj monteringspunkten",
+        "bodyRich": "Skriv den väg där behållaren ska se disken, t.ex. <code>/mnt/data</code> eller <code>/mnt/disk_passthrough</code>. Detta är vägen <em>inside</em> behållaren; värden ser redan partitionen under <code>/dev/disk/by-id/…</code>."
+      },
+      {
+        "title": "Bifoga och verifiera",
+        "img": "/disk/assignment-ct.png",
+        "caption": "Uppdrag till CT",
+        "bodyRich": "ProxMenux appends a fresh <code>mpN:</code> inträde till behållaren konfig, hoppa över index som redan används, och återläser konfigen för att bekräfta. Om behållaren kör montet är exec'd live; annars tar det effekt på nästa start.",
+        "extraImg": "/disk/result-point.png",
+        "extraAlt": "Mount Point skapade framgångsrikt",
+        "extraCaption": "Mount Point skapad och verifierad"
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Manuell motsvarande",
+    "body": "Skriptet wraps <code>pct set</code>. En direkt fakturering för en enda disk ser ut:"
+  },
+  "important": {
+    "heading": "Viktiga överväganden",
+    "items": [
+      "<strong>En disk per run</strong>. Kör skriptet för varje ytterligare disk.",
+      "Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do <strong>Inte inte</strong> Bifoga samma partition till flera behållare som kan montera den samtidigt - samtidig skriver korrupt filsystemet.",
+      "<strong>Old metadata</strong> (RAID / ZFS / LVM signaturer) måste rensas manuellt innan manuset låter dig formatera, annars <code>mkfs</code> vägrar att skriva över. Använd <wipeLink>Format / Wipe Physical Disk</wipeLink> verktyg för det."
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "unprivTitle": "\"Kan inte fortsätta med en oprivilegierad behållare\"",
+    "unprivBody": "Du avböjde konverteringserbjudandet. Antingen re-run och acceptera konvertering, eller konvertera behållaren manuellt genom att redigera <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> och ersätta <code>unprivileged: 1</code> med <code>unprivileged: 0</code>. Du kan också bygga om behållaren som privilegierad om du föredrar att inte konvertera på plats.",
+    "permsTitle": "Behörigheter inne i behållaren är fel",
+    "permsBody": "Mounts from the host in a privileged container land as <code>root:root</code>. Om tjänsten i CT körs som en annan användare (t.ex. <code>www-data</code> för Nextcloud), <code>chown</code> / <code>chmod</code> inuti behållaren för att matcha sin UID / GID efter den första monteringen."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importera disk till VM",
+        "tail": " - motsvarande flöde för VM."
+      },
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "LXC Mount Points (Host = CT)",
+        "tail": " - dela värdkataloger med en CT istället för att fästa en hel disk."
+      },
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "VM och CT Management kommandon",
+        "tail": " — pct config / push / pull referens."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Disk Manager översikt",
+        "tail": "."
+      }
+    ]
+  }
+}

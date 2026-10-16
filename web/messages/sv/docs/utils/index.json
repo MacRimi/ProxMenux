@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Proxmox Utilities - UUP Dump, PVE 8 till 9 Upgrade, OVA Export / Import | ProxMenux",
+    "description": "Dag-till-dag Proxmox VE verktyg: bygga Windows ISOs från UUP Dump, installera curated CLI verktyg, köra en säker Proxmox systemuppdatering, utföra den stora versionen PVE 8 till PVE 9 uppgradering, exportera VM till OVA / OVA / OVA / OVF VMs från VMware eller VirtualBox.",
+    "ogTitle": "Proxmox Utilities - UUP Dump, PVE 8 till 9 Upgrade, OVA Export / Import",
+    "ogDescription": "Bygga Windows ISOs, installera CLI-verktyg, kör en säker uppdatering, uppgradera PVE 8 till PVE 9, export / import OVA / OVF VM.",
+    "twitterTitle": "Proxmox verktyg | ProxMenux",
+    "twitterDescription": "ISO skapelse, CLI verktyg, Proxmox uppdatering, PVE 8→9 uppgradering, OVA / OVF VM portabilitet."
+  },
+  "header": {
+    "title": "Verktyg & Verktyg",
+    "description": "Sex verktyg som avrundar det dagliga Proxmox VE-arbetsflödet: ISO-skapelse, systemunderhåll och VM-portabilitet. Varje alternativ är oberoende - välj den du behöver; ingenting är installerat tills du ber om det.",
+    "section": "Verktyg"
+  },
+  "intro": {
+    "title": "Vad denna meny är för",
+    "body": "Tre grupper av orelaterade men allmänt nödvändiga verktyg: <strong> bygg en Windows ISO</strong> från UUP Dump, <strong> underhålla Proxmox värd</strong> (CLI verktyg, uppdateringar, storversion uppgradering), och <strong>move VMs in och out</strong> av Proxmox med standard OVA / OVF format."
+  },
+  "opening": {
+    "heading": "Öppna menyn",
+    "body": "Från ProxMenux huvudmenyn väljer du <strong>Utilities</strong>. Du kommer att se detta:",
+    "imageAlt": "Användarmenyn med UUP Dump, systemverktyg, uppdatering, uppgradering, export och import"
+  },
+  "groups": {
+    "heading": "Tre verktygsgrupper",
+    "intro": "De sex verktygen faller i tre oberoende grupper. Klicka på ett kort nedan för att hoppa till matchningsavsnittet.",
+    "iso": {
+      "title": "ISO skapelse",
+      "body": "Bygga officiella Windows ISOs från UUP Dump på Proxmox värd själv.",
+      "bullets": [
+        "UUP Dump delade länk → startbar ISO",
+        "Beroende installerade automatiskt",
+        "Resultatet sjunker i Proxmoxs ISO-mallväg"
+      ]
+    },
+    "maintenance": {
+      "title": "Systemunderhåll",
+      "body": "Håll värden frisk: CLI-verktyg, regelbundna uppdateringar och storversionsuppgraderingen när det är dags.",
+      "bullets": [
+        "Systemverktyg Installer (26 CLI verktyg)",
+        "Proxmox systemuppdatering (apt + dist-upgrade)",
+        "PVE 8 → PVE 9 större uppgradering"
+      ]
+    },
+    "portability": {
+      "title": "VM portabilitet",
+      "body": "Flytta VMs in och ut ur Proxmox med standard OVA / OVF-format.",
+      "bullets": [
+        "Export Proxmox VM OVA / OVF",
+        "Importera OVA / OVF → Proxmox VM",
+        "Kompatibel med VMware och VirtualBox"
+      ]
+    }
+  },
+  "upgradeWarn": {
+    "title": "PVE 8 → 9 uppgradering är destruktiv och inte reversibel.",
+    "body": "En storversionsuppgradering skriver om Debianbasen (Bookworm → Trixie) och Proxmox-stapeln på plats. Det finns ingen återgångsväg - du behöver <strong>verified backups</strong> av varje VM och CT och <strong>console / IPMI / iKVM access</strong> innan du börjar. Uppgraderingsverktyget vägrar att köras från Proxmox webbterminal av denna anledning."
+  },
+  "isoSection": {
+    "heading": "ISO skapelse",
+    "body": "Bygg en ny, uppdaterad Windows-installation ISO direkt på Proxmox-värden. Skriptet automatiserar hela UUP Dump-flödet: beroendeinstallation (aria2c, cabextract, wimlib-imagex, ...), parallelliserad nedladdning av uppdateringsfilerna via aria2 och omvandling till en enda startbar ISO som landar i <code>/var/lib/vz/template/iso</code> redo att fästa till en VM.",
+    "options": [
+      {
+        "title": "UUP Dump ISO-skapare",
+        "description": "Bygg en uppdaterad Windows-installation ISO från en UUP Dump delad länk. Beroende, nedladdning och omvandling helt automatiserad; den resulterande ISO landar i /var/lib/vz/template/iso redo för VM skapande.",
+        "href": "/docs/utils/UUp-Dump-ISO-Creator"
+      }
+    ]
+  },
+  "maintenanceSection": {
+    "heading": "Systemunderhåll",
+    "body": "Tre verktyg täcker det dagliga och en gång i tiden värdarbete. <strong>Systemverktyg Installer</strong> ställer upp CLI verktyg du faktiskt använder efter en ny installation. <strong>Proxmox System Update</strong> är den veckovisa / månatliga hygien löpning. <strong>Uppgradera PVE 8 till PVE 9</strong> är det en gång per större cykel stora draget - hanteras med extra säkerhetsportar eftersom det inte är reversibelt.",
+    "options": [
+      {
+        "title": "Installationsprogram för systemverktyg",
+        "description": "Curated picker för 26 CLI verktyg (htop, btop, iperf3, jq, tmux, ncdu, ...) med anpassad urval eller fördefinierade grupper (basic, dev, komprimering, multiplexers, analys, nätverk). Använder det kanoniska repo + verifieringskommandoflödet.",
+        "href": "/docs/utils/system-utils"
+      },
+      {
+        "title": "Proxmox systemuppdatering",
+        "description": "Repository check + apt update + apt dist-upgrade med reboot prompt. Detekterar PVE-versionen (8 eller 9), håller konfigurerade repositorier och frågar innan du byter en värd utan abonnemang till no-subscription, körs sedan autoremove.",
+        "href": "/docs/utils/system-update"
+      },
+      {
+        "title": "Uppgradera PVE 8 till PVE 9",
+        "description": "Major-version uppgradering (Debian Bookworm → Trixie + PVE 8 → 9). Pre-flight checkar, repository migration, automatiserat eller interaktivt läge, post-upgrade validering och omstart. Vägra att köra från webbterminalen.",
+        "href": "/docs/utils/upgrade-pve8-pve9"
+      }
+    ]
+  },
+  "portabilitySection": {
+    "heading": "VM portabilitet (OVA / OVF)",
+    "body": "OVA och OVF är korshypervisorförpackningsformat från DMTF-standarden - som stöds av VMware, VirtualBox och Proxmox. De två verktygen är utformade för rundtur: en VM som exporteras från Proxmox kan importeras tillbaka och vice versa. Använd dem för att migrera arbetsbelastningar av ESXi, ta en bärbar säkerhetskopia av en VM, eller dela en förberedd VM med någon som kör VirtualBox.",
+    "options": [
+      {
+        "title": "Exportera VM till OVA / OVF",
+        "description": "Konvertera en Proxmox VM till en portabel OVA-arkiv eller OVF-katalog. Standard DMTF schema, SHA1 manifest, streamOptimized VMDK diskar. Importerbart på VMware (ESXi / Workstation / Fusion), VirtualBox och tillbaka till Proxmox.",
+        "href": "/docs/utils/export-vm"
+      },
+      {
+        "title": "Importera VM från OVA / OVF",
+        "description": "Ta med en VMware / VirtualBox / ProxMenux export tillbaka till Proxmox. Auto-extraherar OVA, analyserar OVF-metadata, skapar VM och importerar varje disk som lagringsinbyggt format.",
+        "href": "/docs/utils/import-vm"
+      }
+    ]
+  },
+  "diskSpaceCallout": {
+    "title": "En anteckning på diskutrymme för export / import",
+    "body": "Båda verktygen konverterar diskformat: export använder <code>qemu-img convert -O vmdk -o subformat=streamOptimized</code>; import använder <code>qm importdisk</code> för att konvertera tillbaka till lagringsinbyggt format (qcow2 / rå). Plan för <strong> ~ 120% av virtuell disk storlek</strong> för OVF och <strong> ~ 220% </strong> för OVA - omvandlingen skriver hela disken innan någon komprimering. Kontrollera destinationskatalogen har huvudrummet innan du börjar."
+  },
+  "fitsTogether": {
+    "heading": "Hur menyn passar ihop",
+    "body": "Varje verktyg har ett dedikerat manus under <code>scripts/utilities/</code>. Proxmox System Update är en wrapper som delegerar till en av två arbetarskript i <code>scripts/global/</code> beroende på den upptäckta stora versionen (PVE 8 eller PVE 9). PVE 8 → 9 uppgraderar två extra menyåtgärder inuti sitt eget flöde - en fristående <em>Pre-upgrade check</em> (kör <code>pve8to9 --full</code>) och en lättläst <em>Manual uppgraderingsguide</em> (17-stegs runbook) - för användare som vill inspektera eller arbeta för hand istället för den automatiserade vägen."
+  }
+}

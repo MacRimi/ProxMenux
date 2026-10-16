@@ -1,0 +1,155 @@
+{
+  "meta": {
+    "title": "Samba klient i LXC | ProxMenux Dokumentation",
+    "description": "Mount Samba / CIFS aktier direkt inifrån en Proxmox LXC behållare med ProxMenux. Auto-installerar cifs-utils + smbclient, stöder automatisk upptäckt, säker legitim lagring och ihållande fästen via /etc/fstab. Kräver en privilegierad behållare.",
+    "ogTitle": "Samba klient i LXC | ProxMenux Dokumentation",
+    "ogDescription": "Mount Samba / CIFS aktier inifrån en privilegierad LXC behållare. Auto-upptäckt, säker referensfil, /etc/fstab uthållighet."
+  },
+  "header": {
+    "title": "Samba klient i LXC",
+    "description": "Mount Samba (SMB / CIFS) delar direkt inifrån en Proxmox LXC behållare. Behållaren blir en riktig CIFS-klient - pratar med Samba-servern över nätverket, kör mont.cifs, lagrar referenser säkert och skriver till /etc/fstab. ProxMenux installerar cifs-utils + smbclient för dig och validerar referenser mot servern innan du monterar.",
+    "section": "Lagring & Dela · LXC"
+  },
+  "privReq": {
+    "title": "Privilegierad behållare krävs",
+    "body": "Kernel <code>mount.cifs</code>-klientens behovsfunktioner (<code>SYS_ADMIN</code> åtminstone) som oprivilegierade LXC-behållare inte exponerar. Skriptet genomdriver detta - det ber dig att välja en CT och <strong>aborts om det är oprivileged</strong>. Om du behöver andelen inuti en oprivilegierad CT, montera den på Proxmox värd först (med <hostSambaLink>Samba / CIFS som Proxmox lagring</hostSambaLink>) och binda det till CT med <mountLink>LXC Mount Manager</mountLink>."
+  },
+  "what": {
+    "heading": "Vad detta gör",
+    "body": "Behållaren talar CIFS över nätverket och monterar aktien på egen hand. Proxmox värd är bara nätverksbroen - det ser inte eller hanterar monteringen.",
+    "diagramServerLabel": "Samba server",
+    "diagramServerDetail": "//srv/share",
+    "diagramHostLabel": "Proxmox-värd",
+    "diagramHostDetail": "(bara en\nNätverksbro)",
+    "diagramCtLabel": "LXC (privilegierad)",
+    "diagramCtDetail": "/mnt/share\nMount.cifs inuti CT",
+    "diagramArrow": "CIFS",
+    "twoWaysTitle": "Två sätt att ge en CT en Samba-andel - välj en",
+    "twoWaysBind": "<strong>Bind montering via host</strong> (<mountLink>LXC Mount Manager</mountLink>): värd monterar CIFS en gång, varje CT binder upp samma väg. Fungerar med oprivilegierade CT. Rekommenderas när flera CT behöver samma andel.",
+    "twoWaysDirect": "<strong>Direct CIFS montering inuti CT</strong> (denna sida): CT monterar själva CIFS. Kräver privilegierad. Användbart när CT måste äga sina egna referenser, eller när varje CT talar till en annan server."
+  },
+  "opening": {
+    "heading": "Öppna verktyget",
+    "body": "Från ProxMenux: s huvudmeny, öppna <strong>Storage &amp; Share Manager → Konfigurera Samba klient i LXC (endast privilegierad) </strong>. ProxMenux frågar dig först till <strong>pick målet CT</strong> (och startar det om det stoppas); aborter om det är oprivilegierat. När CT väljs ser du denna sub-meny:",
+    "imageAlt": "Samba Client Manager-menyn - Mount / View / Unmount / Test-anslutning"
+  },
+  "howRuns": {
+    "heading": "Hur man kör skriptet (Mount flow)"
+  },
+  "creds": {
+    "heading": "Där lösenordet lever",
+    "body": "ProxMenux <strong> lagrar aldrig lösenordet i vanlig text</strong> i monteringskommandot eller i <code>/etc/fstab</code>. Istället skriver den en referensfil inuti CT:",
+    "whyTitle": "Varför en separat fil snarare än fstab",
+    "whyBody": "CIFS modulen accepterar <code>username=</code> / <code>password=</code> alternativ inline i fstab, men alla som kan läsa <code>/etc/fstab</code> ser lösenordet i klart. Att sätta referenser i en root-only-fil och peka fstab på den (<code>credentials=</code>) håller lösenordet ur världsläsbar konfig."
+  },
+  "options": {
+    "heading": "Mount alternativ förklarade",
+    "headerOption": "Alternativ",
+    "headerEffect": "Vad det gör",
+    "rows": [
+      {
+        "option": "rw / ro",
+        "effect": "Läs-skriv eller läs-bara läget för hela fästet."
+      },
+      {
+        "option": "file_mode=0664",
+        "effect": "Behörigheter som rapporterats för filer via CIFS. Default låter ägaren + gruppen skriva, andra läser."
+      },
+      {
+        "option": "dir_mode=0775",
+        "effect": "Behörigheter rapporterade för kataloger. Default låter ägaren + gruppen komma in och skapa, andra korsar."
+      },
+      {
+        "option": "iocharset=utf8",
+        "effect": "Force UTF-8 för filnamn som kommer över tråden. Undvik mojibake på icke-ASCII-namn."
+      },
+      {
+        "option": "credentials=file",
+        "effect": "Läs användarnamn / lösenord från filen (läggs automatiskt till användaren auth)."
+      },
+      {
+        "option": "Gäst",
+        "effect": "Autentisera som gäst, inga referenser behövs (läggs automatiskt när gäst väljs)."
+      },
+      {
+        "option": "netdev",
+        "effect": "Berättar initsystemet denna montering behöver nätverket. Boot blockerar inte vänta på det."
+      },
+      {
+        "option": "x-systemd.automount",
+        "effect": "Lazy montering: endast fästen vid första åtkomst. CIFS-servern som inte kan nås på starten stannar inte CT."
+      },
+      {
+        "option": "noauto",
+        "effect": "Hoppa över ivrig montering på boot. Kombinerat med bilmonteringsenheten är monteringen etablerad lat."
+      }
+    ],
+    "netEffectTitle": "Nettoeffekten av fstabflaggarna",
+    "netEffectBody": "Din behållare stövlar alltid, även om Samba servern är offline. Första gången något rör monteringsvägen, systemd monterar den tyst. Om servern fortfarande är nere, att en åtkomst misslyckas med <em>resource tillfälligt otillgänglig</em> - men inget annat i CT påverkas."
+  },
+  "manual": {
+    "heading": "Manuell motsvarande",
+    "body": "Replicera hela flödet för hand - varje kommando kör <strong>inside CT</strong> via <code>pct exec &lt;ctid&gt; --</code> eller direkt via <code>pct enter &lt;ctid&gt;</code>:",
+    "guestIntro": "Gästvariant - ingen referensfil som behövs:"
+  },
+  "view": {
+    "heading": "Visa aktuella fästen",
+    "body": "Listar varje CIFS-monteringspunkt aktiv inuti CT (<code>mount -t cifs</code>) plus varje CIFS-linje i CT <code>/etc/fstab</code>. För varje fstab-post visas levande monteringsstatus - användbar för att upptäcka permanenta fästen som inte kom upp på start."
+  },
+  "unmount": {
+    "heading": "Unmount Samba dela",
+    "body": "Kombinerar levande fästen och fstab poster i en lista, låter dig välja en, och <strong> tar bort motsvarande linje från <code>/etc/fstab</code></strong> plus matchande referenser fil. Manuset kör inte <code>umount</code> på levande montage - istället berättar det att en CT-omstart behövs för att det inte går att träda i kraft.",
+    "warnTitle": "Skriptet tar bort fstab-poster, inte levande fästen",
+    "warnBody": "Samma design som NFS-klienten: <code>umount</code> på en upptagen montering misslyckas med \"enhet upptagen\". Ta bort fstab-posten garanterar att fästet försvinner rent på nästa CT-start. Om du vill att berget har gått <em>now</em>, kör <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> för hand efter att manuset har avslutats."
+  },
+  "test": {
+    "heading": "Testa Samba-anslutning",
+    "body": "Diagnostic pass inuti CT: bekräftar <code>cifs-utils</code> installeras, listar nuvarande CIFS-fästen, sedan för varje server som refereras i fstab-kontroller ping → portar 139 / 445 → gästlista. \"Kräver autentisering\" på gästtestet är normalt för alla servrar som inte exponerar offentliga aktier."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "privTitle": "Privilegierad behållare krävs (skript aborter)",
+    "privBody": "Den valda CT är oprivilegierad. Kernel CIFS-klienten behöver <code>SYS_ADMIN</code>-kapacitet som oprivilegierade CT inte exponerar. Antingen konvertera CT till privilegierad, eller använd den alternativa vägen som beskrivs i varningen högst upp på denna sida.",
+    "aptTitle": "apt-get install fails",
+    "aptIntro": "Manuset antar en Debian-familj CT (<code>apt-get</code>). På Alpine / Arch / Rocky / Alma, installera CIFS-klienten för hand:",
+    "aptItems": [
+      "Alpine: <code>apk add cifs-utils samba-client</code>",
+      "Arch: <code>pacman -S cifs-utils smbclient</code>",
+      "Rocky / Alma: <code>dnf install cifs-utils samba-client</code>"
+    ],
+    "aptOutro": "Sedan kör ProxMenux-skriptet - installationssteget hoppar när verktygen redan finns.",
+    "guestFallbackTitle": "\"Servern kopplade dig som gäst istället för den angivna användaren\"",
+    "guestFallbackBody": "Manusets aktiva validering fångade ett verkligt autproblem. Servern accepterade anslutningen men nedgraderade den till gästen eftersom referenserna är fel. Vanliga orsaker: typo i användarnamnet / lösenordet, användaren finns inte på servern, användaren är låst, eller arbetsgruppen / domänen är missmatchad. Re-run flödet och åter ange referenser noggrant (lösenordet är dolt i dialogrutan).",
+    "denyTitle": "\"NT_STATUS_ACCESS_DENIED\" vid montering",
+    "denyBody": "Krediter validerades men aktien förnekar åtkomst. Kontrollera på serversidan om användaren har behörigheter på den specifika andelen (bekräftar endast inloggningen, inte per aktie ACL). Kontrollera också om servern kräver en specifik SMB-protokollversion: appendera <code>vers=3.0</code> (eller <code>2.1</code>, <code>2.0</code>) till monteringsalternativen.",
+    "utf8Title": "UTF-8 / icke-ASCII-filnamn mangled",
+    "utf8Body": "Standardalternativen inkluderar <code>iocharset=utf8</code>, men vissa serverkonfigurationer rapporterar en oväntad kodsida. Om filnamn med accenter / symboler ser fel, prova också <code>nounix</code> (vissa Linux Samba-servrar behöver detta när klienten också är Linux) eller ställa in serversidan till <code>unix extensions = no</code>.",
+    "bootTitle": "Permanent montering lyckas men kommer inte upp på start",
+    "bootBody": "Nästan alltid en av: nätverket är inte klart när CT-fästen (skriptets <code>_netdev,x-systemd.automount,noauto</code>-flaggor fixar detta), servern är oåtkomlig vid start (auto-mount väntar på första åtkomst - det är normalt), eller DNS är olöst på start (använd serverns IP, inte dess värdnamn)."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "LXC Mount Points (Host = Container)",
+        "tail": " — alternativet för oprivilegierade CT: montering på värd, binda till CT."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-client",
+        "label": "NFS klient i LXC",
+        "tail": " — syskonsidan, samma mönster för NFS-aktier."
+      },
+      {
+        "href": "/docs/storage-share/lxc-samba-server",
+        "label": "Samba server i LXC",
+        "tailRich": " - omvänt: exponera mappar <em>from</em> en CT över Samba."
+      },
+      {
+        "href": "/docs/storage-share/host-samba",
+        "label": "Samba / CIFS som Proxmox förvaring",
+        "tail": " — registrera andelen i Proxmox själv istället för inuti en enda CT."
+      }
+    ]
+  }
+}

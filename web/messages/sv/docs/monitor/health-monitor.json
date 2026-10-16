@@ -1,0 +1,372 @@
+{
+  "meta": {
+    "title": "Proxmox Health Monitor - CPU, Memory, Storage, SMART, ZFS, Logs | ProxMenux",
+    "description": "Proaktiv Proxmox VE hälsoövervakning: tio kategorier skannade var femte minut (CPU & temperatur, minne & swap, lagring, diskar / SMART, nätverk, VMs, tjänster, loggar, uppdateringar, säkerhet), fyra svårighetsgrader, per-kategori undertryckningstid, automatisk rengöring av lösta fel, en permanent disk observationshistorik och vägen från en rå händelse till en Telegram, Discord, Gotify eller inte.",
+    "ogTitle": "Proxmox Health Monitor - CPU, minne, lagring, SMART, ZFS, Logs",
+    "ogDescription": "Proaktiv Proxmox VE hälsoövervakning i tio kategorier med svårighetsgrad, undertryckningstider och händelsedrivna meddelanden.",
+    "twitterTitle": "Proxmox Health Monitor ProxMenux",
+    "twitterDescription": "Proaktiv Proxmox VE hälsoövervakning i tio kategorier med svårighetsgrad och meddelanden."
+  },
+  "header": {
+    "title": "Hälsoövervakare",
+    "description": "Den kontinuerliga självkontrollen som skannar tio kategorier av värdstatus på en fem minuters cykel, prover vitala tecken kontinuerligt mellan cykler, deduplicerar fynd i en strukturerad händelseström och matar instrumentbrädan, anmälningsmotorn och den valfria AI-rewriter från en källa till sanning.",
+    "section": "ProxMenux-övervakning"
+  },
+  "intro": {
+    "title": "En skanner, tre konsumenter",
+    "body": "En bakgrundstråd kör hela hälsocykeln varje 5 minuter, kvarstår varje upptäckt i SQLite under en stabil <code>error_key</code>och låtar <strong>(1)</strong> dashboard gör det nuvarande tillståndet, <strong>(2)</strong> anmälningsmotorn fan ut nya händelser till de konfigurerade kanalerna, och <strong>(3)</strong> Den valfria AI-assistenten skriver om varningar på vanligt språk. Du konfigurerar skannern en gång; allt nedströms stannar i synkronisering."
+  },
+  "howItWorks": {
+    "heading": "Hur det fungerar",
+    "intro": "Health Monitor körs på två parallella banor inuti övervakningsprocessen. En lätt <strong>vital tecken sampler</strong> läser CPU, minne och temperatur varannan sekund så att långvariga tröskelförhållanden upptäcks snabbt; parallellt, <strong>full hälsa cykel</strong> körs var femte minut och övningar varje kategori från slutet till slut. Båda körfälten konvergerar i samma SQLite-bord - och därifrån läser tre konsumenter staten självständigt.",
+    "scannerTitle": "Från prov till lagrad upptäckt",
+    "scannerCaption": "Skannern. Vitala tecken provas snabbt så långvarigt-CPU / långvarigt minne tryck kan detekteras före nästa 5-min cykel. Den fullständiga cykeln läser dessa buffertar och kör de tyngre kontrollerna (SMART, ZFS poolstatus, tidskriftsskanning, servicehälsa etc.) innan du skriver strukturerade fynd till SQLite.",
+    "scannerArrowLabel": "steg för steg",
+    "scannerNodes": {
+      "samplerLabel": "Vitala tecken sampler",
+      "samplerDetail": "CPU användning 30 s\nMinnet 30 s\nTemperatur 15 s\nHistoria buffers",
+      "cycleLabel": "Full hälsocykel",
+      "cycleDetail": "Varje 5 min\nLäser buffers\n+ live probes\n(SMART, ZFS,\ntjänster, tidskrift...)",
+      "checksLabel": "Per-kategori kontroller",
+      "checksDetail": "Tio kategorier\n(CPU, minne,\nlagring, diskar,\nnätverk, VMs,\ntjänster, loggar,\nuppdateringar, säkerhet)",
+      "sqliteLabel": "SQLite",
+      "sqliteDetail": "fel tabell\n(aktiv +\navfärdas)\n+ disk_observations\n(permanent)\nper-disk historia)"
+    },
+    "notifTitle": "Från lagrad upptäckt till användare",
+    "notifCaption": "Meddelandevägen. Samma fel tabellen driver också instrumentbrädan vyn (Aktiv / Avfärdade listor som gjorts live) och konsumeras av rensningsrutinen i slutet av varje cykel för att auto-resolve stale poster - båda körs från samma data utan att gå igenom avsändaren.",
+    "notifArrowLabel": "händelse",
+    "notifNodes": {
+      "errorsLabel": "fel tabell",
+      "errorsDetail": "Aktiv +\nAvfärdade rader\nNyckeln\nerror_key",
+      "dispatcherLabel": "Anmälan Dispatcher",
+      "dispatcherDetail": "Ny + eskalerad\nhändelser queued\nGenom växlar\n+ cooldown",
+      "templatesLabel": "Mallar + AI-rewrite",
+      "templatesDetail": "Per-event\nmall\nvalfri AI\nLågt språk\nomskrivning",
+      "channelsLabel": "Kanaler",
+      "channelsDetail": "Telegram\nDiscord\nGotify\nE-post (SMTP)"
+    }
+  },
+  "categories": {
+    "heading": "De tio kategorierna",
+    "imageAlt": "Hälsokontrollvy som visar de tio kategorierna med sina nuvarande statuser (CPU, minne, lagring, diskar, nätverk, VM, tjänster, loggar, uppdateringar, säkerhet)",
+    "imageCaption": "Hälsoövervakning - de tio kategorierna med sin nuvarande status. Kategorier på en hälsosam värd visar alla OK; varningar och kritiska händelser visas i linje med raderna som producerade dem.",
+    "intro": "Varje cykel utövar tio oberoende checkers. Varje producerar en av fyra statuser (<strong>OK</strong>, <strong>INFO</strong>, <strong>WARNING</strong>, <strong>CRITICAL</strong>) plus en strukturerad nyttolast - enhetsnamn, prova logglinjer, exakta trösklar - den ytan i instrumentbrädan och resa genom till anmälningsorganet.",
+    "headerCategory": "Kategori",
+    "headerChecks": "Sub-checkar",
+    "headerEvents": "Typiska händelser",
+    "rows": [
+      {
+        "category": "CPU & Temperatur",
+        "checks": "CPU användning med hysteres, sensortemperatur",
+        "events": "Hög hållbar belastning; CPU-temperatur som korsar leverantörsvarningen / kritiska trösklar."
+      },
+      {
+        "category": "Minne och swap",
+        "checks": "RAM användning, byta användning",
+        "events": "Hållt minnestryck; OOM-mördare aktivitet; byta utmattning."
+      },
+      {
+        "category": "Lagring",
+        "checks": "Proxmox lagring, root filesystem",
+        "events": "Lagring offline (NFS server unreachable, CIFS utgångna creds); root mount > 90%; LVM tunn pool nära full."
+      },
+      {
+        "category": "Disker och SMART",
+        "checks": "SMART, dmesg I/O fel, ZFS pooler, LVM, filsystemfel",
+        "events": "SMART hälsa misslyckades; omfördelade / pågående sektorer; ATA I / O fel; ZFS pool DEGRADED / FAULTED; ext4 lätt att ta bort."
+      },
+      {
+        "category": "Nätverk",
+        "checks": "Anslutning, länkstatus, gateway latens",
+        "events": "Brygga eller binda ner; gateway unreachable; ihållande latens spikar."
+      },
+      {
+        "category": "virtuella datorer och behållare",
+        "checks": "QMP-kommunikation, VM start, containerstart",
+        "events": "Misslyckades VM boot; CT avstängningsfel; QMP socket timeout; saknas konfig / disk efter en klon."
+      },
+      {
+        "category": "PVE-tjänster",
+        "checks": "<code>pveproxy</code>, <code>pvedaemon</code>, <code>pvestatd</code>, <code>pve-cluster</code>, klusterläge",
+        "events": "Service kraschade; klusterkvorum förlorade; <code>pmxcfs</code> fastnade."
+      },
+      {
+        "category": "Systemloggar",
+        "checks": "Ihållande fel, felspikar, felkaskader, kritiska kärnmeddelanden",
+        "events": "Upprepade identiska fel; plötslig brist på varningar (kaskadmönster); <code>BUG:</code> / <code>OOPS:</code> / <code>oom-killer</code> i dmesg."
+      },
+      {
+        "category": "Systemuppdateringar",
+        "checks": "I väntan på uppdateringar, säkerhetsuppdateringar, kärna / PVE-version, systemålder",
+        "events": "Säkerhetsuppdateringar tillgängliga; stiftade kärnan flera mindre versioner bakom; värd upptid > 90 dagar. När uppdateringar väntar visar översiktsrubriken en <em>Update Now</em>-knappen som kör hela ProxMenux-uppdateringsflödesinline; på nära håll återhittas hälsoeffekten med <code>?refresh=1</code> så att märket räkna speglar det nya tillståndet utan att vänta på nästa 5-min-cykel."
+      },
+      {
+        "category": "Säkerhet och certifikat",
+        "checks": "Inloggningsförsök, certifikat som löper ut, valfritt Fail2Ban fängelse status",
+        "events": "Upprepad SSH / web auth misslyckanden; PVE certifikat < 30 dagar från utgången; Fail2Ban aktiva förbud."
+      }
+    ]
+  },
+  "severity": {
+    "heading": "Allvarlig modell",
+    "headerStatus": "Status",
+    "headerColour": "Färg",
+    "headerMeaning": "Betydelse",
+    "headerNotification": "Underrättelse",
+    "rows": [
+      {
+        "status": "OK",
+        "colour": "Grönt grönt",
+        "meaning": "Frisk. Inga resultat i denna kategori.",
+        "notification": "Tyst."
+      },
+      {
+        "status": "INFO",
+        "colour": "Blå",
+        "meaning": "Övergående eller redan upplöst tillstånd värt att notera en gång. Används också för kategorier som har <em>only</em> avfärdade objekt kvar.",
+        "notification": "Valfritt. Varje händelsetyp kan väljas in eller ut per kanal."
+      },
+      {
+        "status": "WARNING",
+        "colour": "Gul",
+        "meaning": "Uppmärksamhet behövs men värden är fortfarande funktionell. Orsaken är icke-trivial - läs detaljerna.",
+        "notification": "Skicka när per-event toggle är på för kanalen."
+      },
+      {
+        "status": "CRITICAL",
+        "colour": "Röd",
+        "meaning": "Funktionalitet bruten eller dataförlust möjlig. Åtgärder som krävs.",
+        "notification": "Skicka när per-event toggle är på för kanalen. CPU-temperaturen CRITICAL behandlas som en säkerhetsvarning som re-fires även om den tidigare avfärdas."
+      }
+    ],
+    "infoNote": "En kategori som är <strong>OK</strong> men har avfärdat händelser fortfarande i sitt undertryckningsfönster görs som <strong>INFO</strong> - för att påminna dig om att något tystas snarare än att ingenting någonsin var fel.",
+    "unknownTitle": "När en check inte kan slutföras",
+    "unknownBody": "En check som inte producerar en dom för tre cykler i rad (en sond som utgår, en sensor som försvann, ett verktyg som lämnar med ett fel) registreras internt som <code>UNKNOWN</code>. Dashboarden ytor detta som en gul status - den övergripande vyn caps <code>UNKNOWN</code> på <strong>WARNING</strong> så det aldrig eskalerar en hälsosam värd för CRITICAL på egen hand."
+  },
+  "dashboardView": {
+    "heading": "Dashboard View",
+    "intro": "Health Monitor bor i <strong>Overview</strong>-fliken. Healthy / Warning / Critical öppnar en modal som delar resultat i två listor:",
+    "items": [
+      "<strong>Active</strong> – varje kategori med olöst resultat. Varje rad expanderar för att visa de enskilda kontrollerna som producerade statusen, den råa <code>reason</code> strängen, enheten eller VM ID inblandad, och (för kategorier som länkar till en flik) ett klick-genom till lagring / nätverk / VMs / Logs / Hardware att undersöka.",
+      "<strong>Dismissed</strong> - objekt som tidigare erkänts av användaren som fortfarande är inne i deras undertryckningsfönster. Varje rad visar hur mycket av förtrycket kvarstår och den konfigurerade varaktigheten. När fönstret löper ut försvinner objektet från denna lista; om det underliggande tillståndet fortfarande är närvarande och kategorin stöder ombyggnad, återkommer det i <em>Active</em>."
+    ],
+    "pillTitle": "Pillret speglar den värsta kategorin",
+    "pillBody": "Dashboard-huvudfärgen är den högsta svårighetsgraden över de tio kategorierna: alla CRITICAL → röd, annars någon VARNING → gul, annars någon INFO → blå, annan grön. Samma logik driver favicon dot och PWA märket.",
+    "updateNowTitle": "Uppdatera nu knappen i Översiktsrubriken",
+    "updateNowBody1": "När <em>Systemuppdateringar</em> kategori rapporterar en eller flera pågående uppdateringar, översiktsrubriken gör en <strong>Uppdatera nu</strong> knappen bredvid hälsopiller. Knappen öppnar en modal som kör samma värd-side flöde som <em>ProxMenux Inställningar efter installation Proxmox → Proxmox System Update</em>repo hygien, <code>apt full-upgrade</code> via den säkra arbetstagaren <code>update-pve-safe.sh</code>Automatisk DKMS ombyggnad av ProxMenux-hanterade förare när en ny kärna landar, autoremove / autoclean och en omstart prompt om kärnan ändrades. Progresslinjerna strömmar i modalen när arbetaren skriver ut dem.",
+    "updateNowBody2": "När körningen slutar, stänger modalen samtal <code>GET /api/health/details?refresh=1</code>, som ogiltigförklarar hälso-endpoint cache innan servering. Den väntande uppdaterade raden och piller svårighetsgraden rekomputeras från det nya paketet tillståndet på plats, så märket försvinner utan att vänta på nästa fem minuters cykel. När värden redan är uppdaterad är knappen dold - inget visuellt ljud på ett hälsosamt system."
+  },
+  "dismiss": {
+    "heading": "Avfärda varningar och undertryckningstiden",
+    "intro": "Vissa händelser är bullriga av naturen - en <em>Systemuppdateringar: väntande uppdateringar tillgängliga</em> stannar true tills du plågar värden, och du vill inte ha en anmälan var femte minut i en vecka. Den är <em>Uppdatera nu</em> knappen i Översiktsrubriken är den direkta genvägen för att lösa det specifika fallet på plats; för allt annat, eller när lappning skjuts, erbjuder Hälsokontrollen också två kopplade tystningsmekanismer:",
+    "step1": "<strong>Per-event Avfärda åtgärd</strong> i modalen. Avfärdsknappen öppnar en liten nedgång med tre alternativ - <strong>24 timmar</strong>, <strong>7 days</strong> eller <strong>Permanently</strong> - så att du väljer hur länge denna specifika varning håller tyst oavsett kategorins standard. Välja ett samtal <code>POST /api/health/acknowledge</code> med <code>error_key</code> och den valda <code>suppression_hours</code> (<code>-1</code> för permanent). Evenemanget flyttar till listan Avvisad med en tidsstämplad <code>acknowledged_at</code>.",
+    "dropdownImageAlt": "Avfärda nedgång på en Hälsokontroll varning - 24 timmar, 7 dagar eller permanent",
+    "dropdownImageCaption": "Per-event Dismiss dropdown. Det valda fönstret gäller för denna enda varning; om inget per-event-fönster väljs kategorins standard används. Permanenta avfärdningar är taggade med en distinkt bärnsten <em>Permanent</em>-märket i Avfärdad lista och aldrig återföda.",
+    "step2": "<strong>Per-kategori Suppression Duration inställning</strong>. Från inställningarna → Hälsokontrollkort (eller <code>POST /api/health/settings</code>) har var och en av de tio kategorierna sitt eget standardfönster tillämpat när en avsked avfyras utan ett per-event val:",
+    "imageAlt": "Per-kategori Suppression Duration Inställningar kort i Inställningar → Hälsokontroll",
+    "imageCaption": "Suppression Duration kort - en nedgång per kategori. Välj ett längre fönster för bullriga händelser (t.ex. pågående uppdateringar) och kortare för dem som du vill omvärdera snabbt. Aktiva undertryckningar anges nedan (se nedan).",
+    "outro": "Medan en händelse undertrycks, kör skannern fortfarande och uppdaterar radens <code>last_seen</code> tidsstämpel, men ingen ny anmälan skickas och instrumentbrädan förblir lugn. När fönstret går ut, omvärderar nästa cykel tillståndet och antingen återföds färskt eller, om tillståndet har rensat på egen hand, släpper raden från listorna.",
+    "activeSuppressionsTitle": "Granska och återgå avfärdar - panelen för aktiva undertryckningar",
+    "activeSuppressionsBody": "Varje för närvarande tystad varning (tidsbegränsad och permanent) är listad under <strong>Settings → Health Monitor → Active Suppressions</strong>. Varje rad visar varningsidentifieraren, kategorin, svårighetsgraden, när den avfärdades och hur mycket tid som finns kvar, plus en <strong>Re-enable</strong>-knapp som rensar bekräftelsen så att varningen kan skjuta igen på nästa skanning. Permanenta avsked kan bara återföras härifrån; tidsbegränsade kan också återupplivas utan att vänta på nedräkningen. Återaktivera åtgärden gated av Health Monitor <em>Edit</em>-läget högst upp på det kortet - växla redigera, klicka på Återaktivera på varje rad som du vill återuppliva (torkade rader visar en grön gräns och ett genomslag), klicka sedan på Spara för att begå. Avbryt kasserar köen.",
+    "autoTitle": "Auto-suppression när du ändrar varaktigheten",
+    "autoBody": "Att ställa in en kategoris undertryckande varaktighet till något annat än standard 24 h har en andra effekt utöver användarinitierade uppsägningar: <strong>future resultat i den kategorin ange tabellen redan erkänt</strong> med den varaktigheten. Detta är genom design - om du har berättat för Monitor att du vill ha diskrelaterade händelser tystade i en vecka, är helt nya diskresultat heder den avsikten utan att du behöver avfärda var och en för hand. De visas direkt i listan Dismissed med den konfigurerade återstående tiden. Kategorier kvar på 24 h är opåverkade och beter sig på det klassiska sättet (nya fynd landar i Aktiv tills du agerar).",
+    "tempTitle": "CPU temperatur CRITICAL är säkerhetsöverskridandet",
+    "tempBody": "En specifik upptäckt kringgår undertryckandet helt: <strong>CPU temperatur CRITICAL</strong>. Om sensorn korsar det kritiska tröskelvärdet, ombildar varningen oavsett tidigare uppsägning - en kokt CPU är en kokt CPU. Detta är den enda inbyggda överskridandet av uppsägningsmodellen.",
+    "nonDismissableTitle": "Resultat som inte kan avfärdas",
+    "nonDismissableBody": "En handfull fynd flaggas icke-avvisbara på syftet - de signalerar ett tillstånd där tystnad av varningen kan kosta data, hårdvara eller anslutning. Avfärdsknappen är dold för dessa rader; varningen rensar endast när det underliggande tillståndet återhämtar sig och den automatiska upplösningen plockar upp det. Andra fynd (övergående I/O-händelser på en hälsosam disk, återvunna tillstånd) är också markerade icke-avvisbara men av motsatt anledning: det finns inget att tysta eftersom raden redan är informativ och självrengöring.",
+    "headerFinding": "Hitta",
+    "headerWhy": "Varför det inte kan avfärdas",
+    "rows": [
+      {
+        "finding": "CPU temperaturvarning / kritisk",
+        "why": "Hårdvarurisk - bibehållen övertemperaturskador kisel. Silencing skulle låta en matlagning CPU köra obemärkt."
+      },
+      {
+        "finding": "Filsystem utrymme kritiskt (root mount)",
+        "why": "Dataförlustrisk - en fullständig rot förhindrar att skriva och korrumpera staten. Varningen måste förbli synlig tills du frigör utrymme."
+      },
+      {
+        "finding": "ZFS pool DEGRADED / FAULTED",
+        "why": "Dataintegritetsrisk - poolfel hotar varje datamängd på den. Att tysta medan poolen är ohälsosam är aldrig rätt svar."
+      },
+      {
+        "finding": "Disk I/O-fel med SMART",
+        "why": "Drive misslyckande bekräftas av SMART - maskering döljer riktig hårdvara döende. Varningen stannar tills enheten ersätts (eller tas bort från värden)."
+      },
+      {
+        "finding": "Nätverksgränssnitt DOWN",
+        "why": "Anslutningsförlust - broar, obligationer och fysiska gränssnitt med aktiv trafik måste vara synliga. Silencing dem skulle maskera en fjärrhanteringsavbrott."
+      },
+      {
+        "finding": "I/O-händelser på sunda diskar (INFO)",
+        "why": "Övergående ATA / dmesg händelser på en disk vars SMART säger OK - flaggade INFO och självrengöring. Inget att avfärda eftersom nästa cykel redan tar bort dem."
+      }
+    ],
+    "principle": "Allt annat kan avfärdas. Principen är: varningar som indikerar \"verkliga skador på framsteg\" eller som redan har självupplöst hålls borta från avfärdsvägen; varningar om hållbara förhållanden du kanske vill erkänna och återkontrollera senare (hög CPU-användning, i väntan på uppdateringar, certifikat nära utgången, loggvarningar, VM startup hicka, etc.) alla exponera Avfärda knappen."
+  },
+  "autoresolve": {
+    "heading": "Auto-resolution och rensning",
+    "intro": "Många varningar bör rensa sig när tillståndet försvinner - en VM som inte började och körs nu, en disk som inte längre finns i systemet, en temperatur som sjönk tillbaka till det normala. En rengöringsrutin löper i slutet av varje fem minuters cykel och tillämpar dessa regler:",
+    "headerTrigger": "Utlösare",
+    "headerAction": "Handling",
+    "rows": [
+      {
+        "trigger": "CPU användning tillbaka till normalt intervall efter en CPU-relaterad varning.",
+        "action": "Markerad löst. Släpper ur Active-listan."
+      },
+      {
+        "trigger": "Minnestryck tillbaka under varningströskeln efter en OOM / minnesvarning.",
+        "action": "Markerad löst."
+      },
+      {
+        "trigger": "VM / CT som refereras av felet inte längre finns (<code>qm status</code> / <code>pct status</code> icke-noll).",
+        "action": "Markerad löst som resurs bort."
+      },
+      {
+        "trigger": "Disk som refereras av felet inte längre finns i <code>/dev/</code>.",
+        "action": "Markerad löst som enheten bort. Den permanenta observationshistorien bevaras (se nästa avsnitt)."
+      },
+      {
+        "trigger": "Resultat från tidskriften (<code>logs</code>-kategorin, SMART-poster, ATA / I / O-fel) när deras undertryckningsfönster löper ut.",
+        "action": "Tas bort rent. Varje skanning inspekterar färska journalposter från den punkten framåt; samma historiska linje i tidskriften är inte re-emitterad."
+      },
+      {
+        "trigger": "Lösta fel äldre än sju dagar.",
+        "action": "Tas bort från databasen för att hålla tabellen liten. Notifieringshistoria är oberoende och hålls längre."
+      }
+    ],
+    "permanentTitle": "Permanent förtryck är inte detsamma som löst",
+    "permanentBody": "Ställa in en kategoris Suppression Duration to <code>-1</code> (<em>permanent</em>) tystar framtida varningar för objekt som du avfärdar i den kategorin - men det hoppar inte över automatisk upplösning check ovan. Om det underliggande tillståndet försvinner (resursen raderas, tröskelvärdet inte längre bryts), rengörs objektet fortfarande automatiskt."
+  },
+  "observations": {
+    "heading": "Diskobservationer – den permanenta historien",
+    "intro": "Disk händelser är speciella. En SMART varning på <code>/dev/sdh</code> på 02:14 AM är något du vill komma ihåg även efter att I/O stormen avtagit och felet automatiskt lösas - disken har en meritlista nu. För detta ändamål håller Health Monitor en separat <strong>permanent</strong> tabell: <code>disk_observations</code>.",
+    "headerProperty": "Fastighet",
+    "headerErrors": "<code>errors</code> tabell (Aktiv)",
+    "headerObs": "<code>disk_observations</code> bord",
+    "rows": [
+      {
+        "property": "syfte",
+        "errors": "Kör <em>current</em> hälsovy + anmälan avsändning.",
+        "obs": "Permanent per disk revision spår."
+      },
+      {
+        "property": "Lös automatiskt",
+        "errors": "Ja - rader rensas när tillståndet försvinner.",
+        "obs": "Nej - poster kvarstår för alltid om inte användaren uttryckligen avfärdar dem."
+      },
+      {
+        "property": "Dedup nyckel",
+        "errors": "<code>error_key</code> (till exempel <code>smart_sdh</code>).",
+        "obs": "<code>(disk_registry_id, error_type, error_signature)</code> med stabila signaturer avtagna av volatila data."
+      },
+      {
+        "property": "Där visas",
+        "errors": "Health Monitor modal (Aktiv / Avvisad listor).",
+        "obs": "Diskdetaljkort i <strong>Storage</strong>-fliken, med en \"X obs\".-märke per disk."
+      },
+      {
+        "property": "Vad den registrerar",
+        "errors": "Vad som för närvarande misslyckas.",
+        "obs": "SMART varningar (sektorns problem / temperatur / CRC / misslyckade självtester), I / O-fel (ATA / NVMe / dm), filsystemfel, ZFS poolhändelser."
+      }
+    ],
+    "outro": "Praktisk konsekvens: en varning kan rensa från instrumentbrädan medan samma incident fortfarande registreras i diskens historia. När du klickar på en skiva under lagring visar kortet antalet enastående observationer och en lista med tidsstämplar, svårighetsgrad och det ursprungliga råmeddelandet - användbart när du bestämmer om en enhet behöver ersättas.",
+    "renameTitle": "Cross-device-renamer slås samman automatiskt",
+    "renameBody": "Disk visas ibland under övergående namn (<code>ata8</code>, <code>nvme0n1p3</code>) innan du får ett stabilt block-enhet namn. Observationsskiktet konsoliderar poster med serienummer när det är känt: om en händelse först registrerades som <code>ata8</code> och samma skiva senare identifieras som <code>sdh</code>, är de historiska observationerna återanslutna till <code>sdh</code> på nästa cykel så historien är inte fragmenterad."
+  },
+  "notification": {
+    "heading": "Från ett fynd till ett meddelande",
+    "intro": "Varje aktivt fel är också en kandidat för anmälningsmotorn. Flödet:",
+    "items": [
+      "Skannern registrerar resultaten med kategori + svårighetsgrad + strukturerade detaljer.",
+      "Om händelsetypen är <strong>enabled</strong> i de globala meddelandeinställningarna, och kanalen har inte tystat denna kategori, är en händelse köad.",
+      "Mallen motor gör en (titel, kropp) par från strukturerade detaljer. Om AI-skrivaren är aktiverad, passeras samma par också genom den konfigurerade leverantören för en vanlig version.",
+      "Kanalens genomförande skickar det: Telegram meddelande, Discord inbäddat, Gotify push eller e-post. Avsändningsresultatet lagras i <code>notification_history</code>.",
+      "Om ett avsked anländer senare, sparkar undertryckningsfönstret in och ytterligare ombyggnader av samma <code>error_key</code> stanna kösidan tills fönstret stängs."
+    ],
+    "outro": "Kanalkonfiguration (Telegram bot token, webhook URLs, AI leverantörsnycklar, per-event toggles, kanalöverskridande) dokumenteras i <notifLink>Notifications</notifLink> och <aiLink>AI Assistant</aiLink>."
+  },
+  "rest": {
+    "heading": "REST-slutpunkter",
+    "intro": "Allt modalen gör är att ringa från API - praktiskt för skript, anpassade instrumentbrädor eller din egen chatt-bot integration. Varje samtal behöver en API-token; samtal som ändrar något - avfärdar en varning, sparar undertryckningsinställningarna, rengöring av föräldralösa barn - kräver en med full_admin-omfattning och en read_only-token får 403.",
+    "headerEndpoint": "Slutpunkt",
+    "headerMethod": "Metod",
+    "headerUse": "Använda",
+    "rows": [
+      {
+        "endpoint": "/api/health",
+        "method": "GET",
+        "use": "Små hälso sond - returnerar JSON med <code>status</code>, <code>timestamp</code> och <code>version</code>. Lämplig för Uptime Kuma sökordskontroller; mottagaren måste skicka björnhuvudet."
+      },
+      {
+        "endpoint": "/api/health/status",
+        "method": "GET",
+        "use": "Övergripande hälsobeslut - enstaka svårighetsgrad + sammanfattningssträng. Autentiserad."
+      },
+      {
+        "endpoint": "/api/health/details",
+        "method": "GET",
+        "use": "Alla tio kategorier med sina per kategoristatus och den strukturerade nyttolast som producerade var och en."
+      },
+      {
+        "endpoint": "/api/health/full",
+        "method": "GET",
+        "use": "Full ögonblicksbild - kategorier + aktiva fel + avfärdad lista + anpassade undertryckningsinställningar. Backar modalen i en rundtur och använder en 6-min bakgrund cache för omedelbar respons."
+      },
+      {
+        "endpoint": "/api/health/active-errors",
+        "method": "GET",
+        "use": "Bara den aktiva listan. Filterbar av <code>?category=&lt;name&gt;</code>."
+      },
+      {
+        "endpoint": "/api/health/dismissed",
+        "method": "GET",
+        "use": "Bara den avfärdade listan, med återstående undertryckningstimmar."
+      },
+      {
+        "endpoint": "/api/health/acknowledge",
+        "method": "POST",
+        "use": "Kroppen: <code>'{'\"error_key\":\"smart_sdh\"'}'</code> Avfärda en varning med kategorins konfigurerade fönster."
+      },
+      {
+        "endpoint": "/api/health/settings",
+        "method": "GET / POST",
+        "use": "Läs eller skriv värdena per kategori Suppression Duration."
+      },
+      {
+        "endpoint": "/api/health/cleanup-orphans",
+        "method": "POST",
+        "use": "Manuell rensning av fel vars underliggande enhet / VM är borta. Idempotent."
+      }
+    ],
+    "codeComment1": "# Snapshot den nuvarande hälsan för ett manus",
+    "codeComment2": "# Avfärda ett specifikt fel",
+    "codeComment3": "# Ställ in diskkategoriundertryckning till en vecka"
+  },
+  "whereNext": {
+    "heading": "Var till nästa",
+    "items": [
+      {
+        "label": "Översikt",
+        "href": "/docs/monitor/dashboard",
+        "tail": " – där Hälsokontrollens modal öppnas från UI."
+      },
+      {
+        "label": "Aviseringar",
+        "href": "/docs/monitor/notifications",
+        "tail": " - kanaler, per-event toggles, AI skriver om krok, historia."
+      },
+      {
+        "label": "AI assistent",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": " - leverantörskonfiguration (OpenAI / Anthropic / Gemini / Groq / Ollama / OpenRouter), snabbläge, per-kanal detaljnivå, språk."
+      },
+      {
+        "label": "Arkitektur",
+        "href": "/docs/monitor/architecture",
+        "tailRich": " - SQLite-schemat (<code>errors</code>, <code>disk_observations</code>, <code>events</code>) och bakgrundstrådens kadens."
+      }
+    ]
+  }
+}

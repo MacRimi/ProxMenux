@@ -1,0 +1,74 @@
+{
+  "meta": {
+    "title": "Post-Install: Anpassning | ProxMenux Dokumentation",
+    "description": "Anpassningsalternativ i ProxMenux Customizable post-install script: en färgad bash prompt med användbara alias, en ProxMenux banner i MOTD, och möjlighet att ta bort Proxmox prenumerationsnag från webbgränssnittet."
+  },
+  "header": {
+    "title": "Efter installationen: anpassning",
+    "description": "Kosmetiska och kvalitet-of-life tweaks för Proxmox värd. De gör skalet trevligare att använda och dölja prenumerationsnag i webben UI. Bashrc, MOTD och prenumerationsbannern spåras och reversibla från Uninstall-menyn.",
+    "section": "Inställningar efter installation av Proxmox"
+  },
+  "intro": {
+    "title": "Vad denna kategori täcker",
+    "body": "Tre små, oberoende alternativ: en <strong>colored bash prompt + aliases</strong> för root shell, en en-line <strong>MOTD banner</strong> synlig på SSH inloggning, och avlägsnande av <strong> \"No valid subscription\" popup</strong> som Proxmox visar på varje inloggning till webben UI."
+  },
+  "bashrc": {
+    "heading": "Anpassa bashrc",
+    "intro": "Injicerar ett curated block i <code>/root/.bashrc</code> med en färgad snabb, tidsstämplad historia, standard <code>ls</code> / <code>grep</code> alias och en <code>source</code> för bash slutförande. Gör att du arbetar över SSH märkbart trevligare och gör det uppenbart vilken värd du är på när du har många flikar öppna.",
+    "writesTitle": "Vad ProxMenux lägger till .bashrc",
+    "writesOutro": "Blocket är avgränsat av <code>PMX_CORE_BASHRC</code> markörer. Kör manuset igen ersätter det tidigare blocket istället för att duplicera det. Den ursprungliga <code>.bashrc</code> backas upp en gång till <code>/root/.bashrc.bak</code>, och en <code>source /root/.bashrc</code> linje är appended till <code>/root/.bash_profile</code> så snabben gäller också på inloggningsskal (t.ex. efter <code>su -</code>).",
+    "rootTitle": "Gäller för root endast",
+    "rootBody": "Anpassningen riktar rotkontots skal. Andra användare som du skapar på värden håller sina egna standarder. Om du administrerar Proxmox uteslutande via webben och aldrig använder skalet, är det här alternativet ren estetik och du kan hoppa över det."
+  },
+  "motd": {
+    "heading": "Konfigurera anpassad MOTD-banner",
+    "intro": "Prepends <em>\"Detta system optimeras av: ProxMenux\"</em> till <code>/etc/motd</code>, meddelandet som visas efter en framgångsrik SSH inloggning (ovan skalet uppmanas, innan någon <code>update-motd</code> skript körs). Skadlig och rent informationsmässig - användbar som en snabb visuell bekräftelse på att ProxMenux har tillämpats på denna värd.",
+    "writesTitle": "Vad ProxMenux skriver",
+    "writesOutro": "Vid första ansökan registrerar ProxMenux om <code>/etc/motd</code> fanns och lagrar dess ursprungliga innehåll under <code>/usr/local/share/proxmenux</code>. Operationen är idempotent: om markörlinjen redan finns, läggs ingenting till. Äldre installationer med en befintlig <code>/etc/motd.bak</code> migreras till samma reversibla tillstånd."
+  },
+  "banner": {
+    "heading": "Ta bort prenumerationsbanner",
+    "intro": "Ta bort <em>\"Du har inte en giltig prenumeration på den här servern\"</em>-modalen som dyker upp varje gång någon loggar in i Proxmox webb-UI utan företagsabonnemang. Patchen är versionsmedveten: olika Proxmox stora versioner har olika UI-paket, så ProxMenux-sändningar till rätt manus.",
+    "versionTitle": "Version-aware avsändning",
+    "versionItems": [
+      "<strong>PVE 9.x</strong> → runs <code>remove-banner-pve-v3.sh</code> (patchar både skrivbordet <code>proxmoxlib.js</code> Den nya Yew-baserade mobilen UI).",
+      "<strong>PVE 8.x</strong> → runs <code>remove-banner-pve8.sh</code> (endast skrivbordet)."
+    ],
+    "versionOutro": "Innan patchning backar ProxMenux upp de ursprungliga JS / mallfilerna till <code>/usr/local/share/proxmenux/backups/</code> med en tidsstämpel. Avinstallationsflödet använder dessa säkerhetskopior för att återställa de ursprungliga filerna och faller tillbaka för att installera om Proxmox UI-paketen om säkerhetskopieringen saknas eller korrupta.",
+    "breakTitle": "Kan bryta efter Proxmox uppdateringar",
+    "breakBody": "Proxmox skickar regelbundet UI-uppdateringar som överskriver <code>proxmoxlib.js</code>. När det händer kommer bannern tillbaka. Du kan återanvända det här alternativet efter varje Proxmox-uppdatering för att skicka om filen, eller bara acceptera nag tills du återanvänder. ProxMenux installerar också en APT hook som auto-re-patches på paketuppgraderingar - se <link>Uninstall Optimizations</link> för hur den kroken vänds.",
+    "legalTitle": "Juridisk anmärkning (alltid värt att upprepa)",
+    "legalBody": "Detta alternativ döljer bara UI nag. Det ger <strong>not</strong> dig företagsstöd, tillgång till företagsregister eller eventuella rättigheter att skicka Proxmox kommersiellt utan abonnemang. Om du kör Proxmox i en intäktsgenererande miljö, köp en prenumeration - det stöder projektet och får dig den stabila kanalen."
+  },
+  "verify": {
+    "heading": "Verifiering",
+    "intro": "Efter att ha applicerat alla tre:",
+    "reversibleTitle": "Alla tre anpassningsförändringar spåras",
+    "reversibleBody": "<link>Uninstall Optimizations</link> återställer <code>/root/.bashrc</code>, returnerar MOTD till dess exakta pre-ProxMenux-innehåll (eller tar bort filen om den inte tidigare fanns), och återställer de lappade UI-filerna från backup eller installerar de drabbade Proxmox-paketen när det behövs."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "label": "Valfritt",
+        "href": "/docs/post-install/optional",
+        "tail": " — Fastfetch och Figurine (andra visuella anpassningar)."
+      },
+      {
+        "label": "Visa versionsinformation",
+        "href": "/docs/settings/show-version-information",
+        "tail": " — bekräftar att anpassningarna spåras som installerade."
+      },
+      {
+        "label": "Avinstallera optimering",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — revertera bashrc, motd, abonnemang nag."
+      },
+      {
+        "label": "Anpassningsbar post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — tillbaka till föräldermenyn."
+      }
+    ]
+  }
+}

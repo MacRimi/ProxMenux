@@ -1,0 +1,162 @@
+{
+  "meta": {
+    "title": "Proxmox GPU Genomgående kommandon - lspciVFIO, IOMMU, qm set hostpci ProxMenux",
+    "description": "Referens för GPU passthrough på Proxmox VE: lspci enhet identifiering, VFIO moduler, IOMMU grupper (intel_iommu / amd_iommu), GRUB och initramfs uppdateringar, qm set hostpci0, NVIDIA / AMD / Intel passthrough setup.",
+    "ogTitle": "Proxmox GPU Genomgående kommandon - lspciVFIO, IOMMU, qm set hostpci",
+    "ogDescription": "Referens för inspektering och konfigurering av GPU passthrough på Proxmox VE - PCI-enheter, VFIO-moduler, IOMMU-grupper, kärnstartsparam, qm set hostpci.",
+    "twitterTitle": "Proxmox GPU Genomgångskommandon | ProxMenux",
+    "twitterDescription": "Inspektera PCI-enheter, konfigurera VFIO och IOMMU och bifoga GPUs till VMs på Proxmox VE."
+  },
+  "header": {
+    "title": "GPU-genomföring",
+    "description": "Referens för inspektion och konfigurering GPU / TPU genomgång på Proxmox: enhetsidentifiering (lspci), VFIO modul installation, IOMMU validering, initramfs / GRUB uppdateringar och per-VM passthrough config (qm set hostpci, maskin q35, bios ovmf).",
+    "section": "Hjälp och info"
+  },
+  "intro": {
+    "title": "IOMMU måste aktiveras i BIOS / UEFI",
+    "body": "Innan någon av dessa kommandon är viktiga, måste IOMMU aktiveras på firmwarenivå (se för <em>VT-d</em>, <em>AMD-Vi</em> eller <em>IOMMU</em> i BIOS / UEFI). Vanliga GRUB-parametrar för att aktivera den på Linux-sidan: <code>intel_iommu=on</code> (Intel) eller <code>amd_iommu=on</code> (AMD), ofta kombinerad med <code>iommu=pt video=efifb:off video=vesa:off</code>."
+  },
+  "commandGroups": [
+    {
+      "title": "Enhetsidentifiering",
+      "commands": [
+        {
+          "command": "lspci -nn | grep -i nvidia",
+          "description": "Lista NVIDIA PCI-enheter"
+        },
+        {
+          "command": "lspci -nn | grep -i vga",
+          "description": "Lista alla VGA kompatibla enheter"
+        },
+        {
+          "command": "lspci -nn | grep -i amd",
+          "description": "Lista AMD PCI-enheter"
+        },
+        {
+          "command": "lspci -nnk | grep -A3 VGA",
+          "description": "Lista VGA-enheter med kärndrivrutiner"
+        },
+        {
+          "command": "lspci -v -s <PCI_ID>",
+          "description": "Visa detaljerad information för specifik PCI-enhet"
+        }
+      ]
+    },
+    {
+      "title": "VFIO-konfiguration",
+      "commands": [
+        {
+          "command": "dmesg | grep -i vfio",
+          "description": "Kontrollera VFIO-modulmeddelanden"
+        },
+        {
+          "command": "cat /etc/modprobe.d/vfio.conf",
+          "description": "Granska VFIO genomgående konfiguration"
+        },
+        {
+          "command": "ls -la /etc/modprobe.d/",
+          "description": "Lista alla modprobe konfigurationsfiler"
+        },
+        {
+          "command": "cat /etc/modules",
+          "description": "Visa moduler laddade vid starttid"
+        },
+        {
+          "command": "lsmod | grep vfio",
+          "description": "Kontrollera om VFIO-moduler laddas"
+        }
+      ]
+    },
+    {
+      "title": "IOMMU Konfiguration",
+      "commands": [
+        {
+          "command": "cat /etc/default/grub",
+          "description": "Granska GRUB alternativ för IOMMU"
+        },
+        {
+          "command": "update-grub",
+          "description": "Applicera GRUB ändringar"
+        },
+        {
+          "command": "dmesg | grep -i iommu",
+          "description": "Kontrollera IOMMU-meddelanden i kärnlogg"
+        },
+        {
+          "command": "dmesg | grep -e DMAR -e IOMMU",
+          "description": "Kontrollera DMAR och IOMMU-meddelanden"
+        },
+        {
+          "command": "find /sys/kernel/iommu_groups/ -type l | sort -V",
+          "description": "Lista IOMMU-grupper"
+        }
+      ]
+    },
+    {
+      "title": "Systemuppdateringar",
+      "commands": [
+        {
+          "command": "update-initramfs -u",
+          "description": "Applicera initramfs förändringar (VFIO)"
+        },
+        {
+          "command": "update-initramfs -u -k all",
+          "description": "Uppdatera initramfer för alla kärnor"
+        },
+        {
+          "command": "cat /proc/cmdline",
+          "description": "Visa nuvarande kärnstartsparametrar"
+        }
+      ]
+    },
+    {
+      "title": "VM Konfiguration",
+      "commands": [
+        {
+          "command": "qm config <vmid> | grep hostpci",
+          "description": "Visa PCI genomgång konfig för en VM"
+        },
+        {
+          "command": "qm set <vmid> -hostpci0 <PCI_ID>,pcie=1,x-vga=1",
+          "description": "Lägg till GPU genomgång till en VM"
+        },
+        {
+          "command": "cat /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Visa VM konfigurationsfil"
+        },
+        {
+          "command": "qm set <vmid> -machine q35",
+          "description": "Ställ in VM för att använda Q35-chipset (rekommenderas för genomgång)"
+        },
+        {
+          "command": "qm set <vmid> -bios ovmf",
+          "description": "Ställ in VM för att använda UEFI/OVMF (krävs för GPU genomgång)"
+        }
+      ]
+    }
+  ],
+  "afterChangesTip": {
+    "title": "Efter att ha ändrat GRUB eller modprobe configs",
+    "bodyRich": "Kör <code>update-grub</code> + <code>update-initramfs -u</code>, starta om. Verifiera med <code>cat /proc/cmdline</code> (kärnparametrar), <code>dmesg | grep -i iommu</code> (IOMMU initialiserad) och <code>find /sys/kernel/iommu_groups/ -type l | sort -V</code> (grupper närvarande)."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Lägg till GPU till VM (Passthrough)",
+        "tail": " — interaktivt ProxMenux-flöde."
+      },
+      {
+        "href": "/docs/hardware/igpu-acceleration-lxc",
+        "label": "Lägg till GPU till LXC",
+        "tail": " — passerar till en behållare istället för en VM."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Hjälp och info översikt",
+        "tail": "."
+      }
+    ]
+  }
+}

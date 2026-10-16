@@ -1,0 +1,268 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Dashboard: Lagringsflik | ProxMenux Dokumentation",
+    "description": "Fliken Storage konsoliderar fyra vyer: Proxmox-managed storages with their state, ZFS pools, interna fysiska diskar med SMART data och externa (USB) enheter. Varje diskborrning avslöjar SMART attribut, slitage och livstid och den permanenta observationshistorien."
+  },
+  "header": {
+    "title": "Dashboard: Storage Tab",
+    "description": "Värdens lagringstillstånd i en skärm - Proxmox pooler (NFS / CIFS / LVM / ZFS / dir), ZFS pool hälsa, interna SATA / NVMe diskar med SMART och externa USB-enheter. Klicka på någon disk för att öppna en borr med hela SMART-attributbordet och per-disk observationshistoriken.",
+    "section": "ProxMenux Monitor Dashboard"
+  },
+  "intro": {
+    "title": "Uppbackad av tre källor",
+    "body": "Proxmox-lagringarna kommer från <code>pvesm status</code>; ZFS-status från <code>zpool status</code>; fysiska diskar från <code>lsblk</code> + <code>smartctl</code> (och <code>nvme</code> för NVMe-specifika fält). Fliken uppdaterar varje ~ 60 sekunder; per-disk borr-in utlöser en ny SMART läs på efterfrågan."
+  },
+  "thresholds": {
+    "title": "Statusfärger och trösklar som tillämpas här",
+    "intro": "Varje bar, chip och prick på denna flik följer samma trestatsklassificering - <green/> <strong>green</strong> under Varning, <amber/> <strong>amber</strong> från Varning till kritisk, <red/> <strong>red</strong> på kritisk och ovan. Rekommenderade standarder levererade med ProxMenux:",
+    "items": [
+      "<strong>Capacity</strong> (värdskivor, PVE-lagring, ZFS-pooler, LXC-fästen) - Varning 85%, kritisk 95%.",
+      "<strong>Disktemperatur</strong> HDD 60/65 °C · SSD 70/75 °C · NVMe 80/85 °C · SAS 55/65 °C (varning / kritisk)."
+    ],
+    "outro": "Varje värde är konfigurerbart per värd - <link>Settings → Health Monitor Thresholds</link> är den enda källan till sanningen och förklarar hur man stämmer över dem."
+  },
+  "topRow": {
+    "heading": "Top row: Förvaring på-a-glance",
+    "intro": "Öppna lagringsfliken landar dig på en fyra kort sammanfattning av värdens lagringstillstånd - total kapacitet, vad som används lokalt, vad som används på fjärrlagring och fysisk-disk inventering. Varje kort är ett one-line svar på en vanlig fråga; korten nedanför raden är där du borrar i detalj.",
+    "imageAlt": "Storage-fliken - topprad på fyra statskort: Total Storage, Local Used, Remote Used, Fysiska diskar",
+    "imageCaption": "Top raden av Storage-fliken - total kapacitet och diskräkning, som används byte delas in i lokala vs fjärrlagring, och en skriven nedbrytning av fysiska diskar med deras hälsosammanfattning.",
+    "headerCard": "Kort",
+    "headerWhat": "Vad det visar",
+    "totalLabel": "Total lagring",
+    "totalWhat": "Kombinerad rå kapacitet över varje fysisk disk. Footer line visar antalet fysiska diskar som upptäckts.",
+    "localLabel": "Lokalt använt",
+    "localWhat": "Bytes som används på lokala lagringar (LVM / LVM-tunna / ZFS / smuts på värdens egna skivor). Visar de använda byte framträdande, med en sidfotlinje av <em>X.XX% av Y TB</em> så att du ser fyllningsprocent samtidigt.",
+    "remoteLabel": "Fjärranvändning",
+    "remoteWhat": "Samma form som Local Used men för fjärrlagring (NFS / CIFS / PBS / Ceph / iSCSI). Räknas separat eftersom avlägsna avbrott inte påverkar lokala data och du vanligtvis storlek och övervaka dem annorlunda.",
+    "disksLabel": "Fysiska diskar",
+    "disksIntro": "Två rader av nedbrytning för inventeringen:",
+    "disksItems": [
+      "<strong>By type</strong> - räknar med NVMe (lila), SSD (blå) och HDD (blå) upptäckt. Mixed-disk värdar får alla tre; en all-NVMe värd visar bara NVMe räkna.",
+      "<strong>By health</strong> - räknar med <em>normal</em> (grön), <em>warning</em> (gul) och <em>critical</em> (röd) diskar. Den friska staten visar vanligtvis bara \"X normal\"; varningar och kritiska visas bara när något eskaleras."
+    ]
+  },
+  "pveStorage": {
+    "heading": "Proxmox Storage kort",
+    "intro": "En rad per lagring konfigurerad i <code>/etc/pve/storage.cfg</code>. Varje rad visar typmärket (<code>nfs</code> / <code>cifs</code> / <code>zfspool</code> / <code>lvm</code> / <code>lvmthin</code> / <code>dir</code> / <code>pbs</code>), lagringsnamnet, ett aktivt / fel / ej-monitorerat märke, användningsprocenten och en färgad progressbar:",
+    "items": [
+      "<strong>&lt; 75% </strong> - blå progress bar, värde i blått.",
+      "<strong>75 - 90% </strong> - gult framstegsfält, värde i gult (Hälsokontroll varnar vid denna tidpunkt).",
+      "<strong>> 90%</strong> - röd progress bar, värde i rött (Health Monitor eskalerar).",
+      "<strong>fel</strong> - Full rad som beskrivs i rött, används när lagringen är konfigurerad men oåtkomlig (NFS server ner, CIFS-krediter löpte ut).",
+      "<strong>exkluderad</strong> - lila kontur + märket \"inte övervakas\". Lagringar som uttryckligen exkluderas av användaren från hälsokontroller (handy för manuella / arkivvolymer som är avsiktligt offline)."
+    ],
+    "calloutTitle": "Exklusive en bullrig lagring",
+    "calloutBody": "Från lagringsraden kan menyn per lagring markera den som <em>exkluderad från övervakning</em>. Flaggan lagras i <code>excluded_storages</code>-bordet och respekteras av både instrumentpanelen och Health Monitor-cykeln - inga meddelanden brand för uteslutna lagringar, och de stöter inte på rubrikpiller."
+  },
+  "zfs": {
+    "heading": "ZFS Pools kort",
+    "intro": "Gör endast när ZFS installeras och minst en pool finns. En rad per pool med ett hälsomärke, storlek / allokerad / gratis, och en ikon som speglar hälsotillståndet:",
+    "items": [
+      "<strong>ONLINE</strong> - grön. Allt hälsosamt.",
+      "<strong>DEGRADED</strong> Gul. Pool Serverar data men minst en enhet är otillgänglig; bytesfönster startar.",
+      "<strong>FAULTED</strong> / <strong>UNAVAIL</strong> / <strong>SUSPENDED</strong> röd. Pool inte betjäna data; omedelbar ingripande krävs."
+    ],
+    "outro": "Både ZFS tillstånd och per-disk SMART status mata <em>Disks & I/O</em> kategorin av <link>Health Monitor</link>."
+  },
+  "physical": {
+    "heading": "Fysiska diskar och SMART-status",
+    "intro": "Interna diskar (SATA / NVMe). Varje rad kondenserar de mest användbara fälten vid en blick:",
+    "items": [
+      "<strong>Device path</strong> - <code>/dev/sda</code>, <code>/dev/nvme0n1</code>.",
+      "<strong>Type badge</strong> - SATA / NVMe (och relevant ikon).",
+      "<strong>System badge</strong> - orange tag som markerar diskar värdens OS körs från. Dashboarden härrör detta från montpoints av <code>/</code> och <code>/boot</code>: någon fysisk disk värd dem får <em>System</em> tag så att du inte råkar torka eller repurpose det. Disker utan taggen är rena dataenheter.",
+      "<strong>Model</strong> - leverantör + modellsträng från <code>smartctl -i</code>.",
+      "<strong>Capacity</strong> - formaterad mänskligt läsbar.",
+      "<strong>Temperature</strong> - aktuell °C, färgad av disk-typ tröskel (NVMe körs varmare än SATA).",
+      "<strong>SMART status</strong> - passerade / misslyckades / okänd.",
+      "<strong>Observations badge</strong> - när den permanenta <code>disk_observations</code>-historien har poster för den här skivan, visas ett blåmärke med räkningen (t.ex. <em>3 obs.</em>). Klicka på disken för att borra in och granska dem.",
+      "<strong>Health badge</strong> - Hälsosam / Varning / Kritisk, härrör från SMART kontroll + senaste observationer."
+    ],
+    "clickHint": "Hela raden är klickbar och öppnar per-disk borr-in som beskrivs nedan.",
+    "warningTitle": "Rör inte system-tagged diskar lätt",
+    "warningBody": "Disker med orange <strong>System</strong>-märket värd för OS. Dashboarden ytor taggen som en vakt järnväg - destruktiva åtgärder som lanserats från <link>ProxMenux → Disk Manager → Format / Wipe</link> uttryckligen vägrar att agera på dem. Om du verkligen behöver återanvända startskivan, gör det från en räddningsmiljö, inte inifrån Proxmox."
+  },
+  "external": {
+    "heading": "Extern lagring (USB)",
+    "body": "Ett separat kort för USB-anslutna enheter, gör bara när minst en är närvarande. Samma fält som interna diskar plus en orange <strong>USB</strong>-tagg. USB-enheter visas ofta och försvinner (kalla säkerhetskopior, tillfälliga offload-jobb), så Health Monitor är konservativ om dem - observationer behålls, men I / O-fel på en avkopplad USB-enhet eskalerar inte."
+  },
+  "drillIn": {
+    "heading": "Disk borr-in modal",
+    "intro": "Klicka på någon diskrad öppnar en fyrtabsmodal: <strong>Overview</strong> · <strong>SMART</strong> · <strong>History</strong> · <strong>Schedule</strong>. Rubriken visar alltid enhetsvägen, modell + kapacitet och orange <em>System</em>-märket om det är tillämpligt.",
+    "overviewTitle": "Tab 1 – Översikt",
+    "overviewImageAlt": "Disk borr-in modal - Översikt flik med hälsostatus, Wear & Lifetime ring och snabba SMART attribut",
+    "overviewImageCaption": "Översiktsfliken - identitet, hälsomärke, liv-remaining ring med nuvarande slitage och data skrivna, plus ett snabbt block av de mest tittade SMART attribut.",
+    "overviewIntro": "Standardlandningsfliken - allt du behöver för att svara \"är den här skivan OK?\" utan att köra ett test. Tre block:",
+    "overviewItems": [
+      "<strong>Identity</strong> - modell, seriell, kapacitet, Hälsomärke (Healthy / Varning / Kritisk).",
+      "<strong>Wear & Lifetime</strong> - stor livsresterande ring (97%, 50%, ...) med källattributet stavat (<em>Media Wearout Indicator</em>, <em>Percentage Used</em>, ...), en slitstång (strömförbrukningsprocent), en <em>Est. Life</em>-projektionen på flera år och den totala data skriven. NVMe-enheter visar också <em>Available Spare</em>.",
+      "<strong>SMART Attributes</strong> - sex rubrikfält på en 2-kolumn rutnät: Temperatur, Power On Hours (med humaniserad varaktighet som <em>3y 116d</em>), Rotation Rate (eller <em>SSD</em>), Power Cycles, SMART Status, Reallocated Sectors, PMXDOC. Det fullständiga attributbordet bor i fliken SMART."
+    ],
+    "smartTitle": "Tab 2 - SMART",
+    "smartImageAlt": "Disk borr-in modal - SMART-fliken med Run SMART Test-knappar (Short / Extended), sista testresultat och hela SMART-attributbordet",
+    "smartImageCaption": "SMART-fliken - kör ett kort eller utökat test, se det sista testresultatet, bläddra i hela SMART-attributbordet och generera hela PDF-hälsorapporten.",
+    "smartIntro": "Där handlingarna lever. Tre avsnitt:",
+    "smartItems": [
+      "<strong>Kör SMART Testa Testamentet</strong> Två knappar. <em>Kort test (~2 min)</em> körs synkront och visar resultatinlinet. <em>Utökat test (bakgrund)</em> kan ta timmar på stora enheter, kör server-side och skjuter en anmälan när den slutförs.",
+      "<strong>Last Test</strong> - typ, status märke (<em>passed</em> / <em>failed</em>) och tidsstämpel av den senaste körningen.",
+      "<strong>SMART Attributes</strong> - full attributtabellen (ID / namn / värde / värsta / status med OK / varning / kritiska ikoner). För SATA / SAS, den klassiska numrerade listan. För NVMe, de strukturerade fälten från <code>nvme smart-log</code> (temperatur, tillgänglig reserv, procentuell användning, dataenheter skrivna / läsa, värd läser / skriver, styrenhet upptagen tid, strömcykler, osäkra avstängningar, mediefel, felloggposter, varning / kritisk komposittemperaturtid)."
+    ],
+    "pdfTitle": "Visa fullständig SMART-rapport (PDF)",
+    "pdfIntro": "Längst ner på SMART-fliken genererar <strong>View Full SMART Report</strong>-knappen en tryckbar, arkivklar PDF - samma strukturerade rapport som du skulle skicka till en leverantör för en RMA.",
+    "pdfPreviewAlt": "Första sidan av den genererade SMART Health Report PDF - Executive Summary med PASSED ring + Disk Information block",
+    "pdfPreviewCaption": "Första sidan av SMART Health Report – Executive Summary med PASSED ringen och hela Disk Information block. Den fullständiga PDF-filen nedan har SSD-slitringen, varje SMART-attribut och testhistoriken.",
+    "pdfDownloadLabel": "Ladda ner prov SMART-rapport (PDF)",
+    "pdfSectionsIntro": "Rapporten har fem avsnitt på toppnivå:",
+    "pdfSections": [
+      "<strong>Verkställande Sammanfattning</strong> - stor PASSED / FAILED-verdict, klarspråkig diskhälsobedömning (\"din disk är frisk / visar tecken på slitage / misslyckande\"), och fyra snabba statistik (rapportera tidsstämpel, sista testtyp, testresultat, attribut kontrollerade).",
+      "<strong>Disk Information</strong> - modell, seriell, kapacitet, typ (HDD / SSD / NVMeFamilj, formfaktor, gränssnitt (SATA 3.3 · 6.0 Gb / s, ...), TRIM stöd, nuvarande temperatur med optimal tröskel, kraft-on-tid, strömcykler, SMART status, plus rubrikräknare (i väntan på sektorer, CRC-fel, omfördelade sektorer).",
+      "<strong>SSD Wear & Lifetime</strong> (SSD / NVMe endast) - liv-remaining ring, källattribut, nuvarande slitnivå, data skrivna, power-on timmar.",
+      "<strong>SMART Attribut (full)</strong> - varje attribut drivrapporterna, med ID, namn, värde, värsta, tröskelvärde, rå värde och ett statuspiller. De mest användarrelevanta (Reallocated Sector) Ct, Power On Hours, Reported Uncorrect, UDMA CRC Error Count, Media Wearout Indicator, ...) inkluderar en one-line plain-language förklaring under raden.",
+      "<strong>Sista självtestresultatet + fullständig självtesthistorik</strong> - det senaste testet (typ, resultat, slutförande meddelande, vid vilken effekt-på-timmar markerar) plus ett numrerat bord på varje behållet test.",
+      "<strong>Recommendations</strong> - åtgärdsartiklar baserade på domen: <em>Disk är hälsosam / schema periodiska tester / Backup strategi</em> för friska enheter, eskalerande språk med ersättningsvägledning när attribut är ur räckvidd."
+    ],
+    "pdfOutro": "PDF-filen produceras server-side och laddas ner med ett stabilt filnamnsmönster (<code>SMART-&lt;short-id&gt;.pdf</code>) så att flera ögonblicksbilder över tiden kan sitta sida vid sida i ditt arkiv. Användbart när du spårar nedbrytning över månader eller skickar bevis till leverantörsstöd.",
+    "historyTitle": "Tab 3 - Historia",
+    "historyImageAlt": "Disk borr-in modal - Historik flik som listar tidigare SMART tester med nedladdning och radera åtgärder",
+    "historyImageCaption": "Historikfliken - varje behållen SMART-test för den här skivan. Per rad: typ, timestamp, \"X dagar sedan\" -taggen, senaste markören, nedladdning (rå <code>smartctl</code>-utgång) och ta bort åtgärder.",
+    "historyIntro": "Den behållna poolen av SMART-test för den här disken - både korta och utökade körningar som slutförts. Varje post är den råa <code>smartctl</code>-utgången som fångas vid körtid, plus de strukturerade fälten som Monitorn parsed ut för instrumentbrädan. Per-row actions:",
+    "historyItems": [
+      "<strong>Download</strong> - sparar den råa <code>smartctl -a</code>-utgången som en textfil. Identisk med vad PDF-rapporten parses, användbar när du behöver den exakta linjen en leverantör begär.",
+      "<strong>Delete</strong> – tar bort testet från historien. Behållningsgränsen som anges i fliken Schema (Schema) (Schema).<em>Sista 5 / 10 / 20</em>) raderar äldsta-första automatiskt; denna åtgärd är manuell överskridande."
+    ],
+    "scheduleTitle": "Tab 4 – schema",
+    "scheduleImageAlt": "Disk borr-in modal - Schema flik med växeln för automatisk SMART Tester, konfigurerade scheman listan och Add Schedule-knappen",
+    "scheduleImageCaption": "Schema flik - plocka test typ, frekvens och retention; Monitor trådar det in <code>cron</code> Så tester körs obevakad.",
+    "scheduleIntro": "Krondrivna automatiska SMART-test, inget skal behövs. Sidan har tre områden:",
+    "scheduleItems": [
+      "<strong>Automatic SMART Tests toggle</strong> - global på / av-brytare för varje schema på denna disk. Användbart när du vill pausa allt under underhåll utan att förlora schemats definitioner.",
+      "<strong>Konfigurerade scheman</strong> en rad per befintligt schema med testtypskylten (testtypskylten)<em>kort kort kort kort</em> / <em>Långt</em>Kronuttrycket i mänsklig form (<em>\"Dag för dag 1 månad på 03:00\"</em>, <em>Varje söndag på 02:00\"</em>), de diskar som den täcker och lagringsinställningen.",
+      "<strong>Lägg till schema / redigera schema</strong> Formulär med: Test Type (<em>Kort ~2 Min Min Min Min Min Min Min Min Min Min Min Min Min Min Min Min Min Min Min Min Min Min Min Min Min</em> / <em>Långt lång 1-4 hh h h h h h h h h h h h h h h h h h h h h h h h h h h h h h h h h h h h h h h h h h</em>), Frekvens (frekvent)<em>Daglig / Veckovis / Månadsvis</em>Dag för månad / veckodag, tid, hålla resultat (<em>Sista 5 / 10 / 20</em>)."
+    ],
+    "scheduleOutro": "Schemat materialiseras som en cron-post på värden som ringer tillbaka till Monitor; resultat sparas till samma SMART-historik som visas i Tab 3 och lagringsinställningen auto-prunes det äldsta testet när en ny avslutas.",
+    "tempTitle": "Temperaturhistoria modal",
+    "tempIntro": "Varje disk som exponerar en temperatursensor har sina avläsningar provtagna kontinuerligt av Monitor och kvarstår till en lokal tidsserie. Det aktuella värdet visas som en av de sex rubriken SMART attribut i fliken Översikt; klicka på det blocket öppnar en dedikerad temperaturhistoria modal med hela bilden.",
+    "tempImageAlt": "Disk temperatur historia modal - rubrik med diskvägen och modell, en tidsram väljare (1 Hour / 24 Hours / 7 Days / 30 Days), en rad av fyra statskort (Current / Min / Avg / Max) och en linje diagram över det valda intervallet färgas av per-disk-typ trösklar",
+    "tempImageCaption": "Temperaturdetalj - öppnas från fliken Översikt på vilken disk vars sensor returnerar en icke-noll läsning. Diagrammet är färgat mot disk-typ tröskel (HDD / SSD / NVMe / SAS).",
+    "tempShowsTitle": "Vad modalen visar",
+    "tempShowsItems": [
+      "<strong>Timeframe-väljaren</strong> med fyra intervall: <em>1 Hour</em>, <em>24 Timmar</em> (default), <em>7 Dagar</em>, <em>30 Dagar</em>. Var och en frågar samma backend med en annan nedsampling så att diagrammet förblir läsbart vid varje horisont.",
+      "<strong>Fyra statskort</strong> högst upp i modalen: <em>Current</em>, <em>Min</em>, <em>Avg</em>, <em>Max</em> för det valda intervallet. <em>Current</em>-kortet är färgat av samma statuströsklar som Storage-fliken och meddelanden använder, så att du kan se en överblick om disken är i normalt / varmt / varmt territorium.",
+      "<strong>Line chart</strong> av temperaturen över tiden, med linjen och skuggat område färgat av disktyp:"
+    ],
+    "tempDiskTypes": [
+      "HDD - typiskt kallare trösklar.",
+      "SSD – måttliga trösklar.",
+      "NVMe högre trösklar (NVMe körs varmare av design).",
+      "SAS – samma standarder som HDD."
+    ],
+    "tempConfigurable": "Alla fyra är konfigurerbara från <em>Inställningar → Hälsokontroll tröskelvärden</em>.",
+    "tempWhyTitle": "Varför en historia betyder här",
+    "tempWhyItems": [
+      "<strong>Drift detection.</strong> Disker som successivt värmer upp över veckor (misslyckande fan, dammuppbyggnad, granndisk dör och trycker varm luft över) är osynliga för en enda \"strömtemperatur\" avläsning. 7-dagars och 30-dagars utsikt över driften.",
+      "<strong>Spik korrelation.</strong> När ett backupfönster eller en ombyggnad tryckte skivan kort över dess tröskel, 1-timme och 24timmars räckvidd visar om det var en engång eller ett återkommande mönster.",
+      "<strong>Threshold tuning.</strong> Innan du höjer eller sänker ett tröskelvärde i <em>Settings → Health Monitor Thresholds</em>, visar 30-dagars diagrammet diskens faktiska rörelseområde så att det nya värdet radar upp med vad hårdvaran verkligen gör snarare än en gissning."
+    ],
+    "obsTitle": "Observationshistoria (över flikar)",
+    "obsIntro": "Moderna diskar misslyckas gradvis. En disk kan rapportera SMART <strong>PASSED</strong> och fortfarande logga tillfälliga läsfel i dmesg, släppa SATA-länkar eller exponera pågående sektorer som kommer och går. Standarden Proxmox UI visar dig den nuvarande SMART-domen - den håller inte en historia av dessa <em>signals</em>. ProxMenux gör, och ytor dem rätt inuti diskmodalen.",
+    "obsImageAlt": "Disk Detaljer modal översikt flik visar en hälsosam disk med SMART status Passed, 0 reallocated / väntande / CRC fel, och en Observations sektion som listar en inspelad I / O Fel händelse med rå kärnan meddelande, en mänsklig översättning av ATA felkod, första och sista förekomst tidsstämplar och en förekomsträkning",
+    "obsImageCaption": "En disk som <strong>SMART säger är fin</strong> kan fortfarande ha en observationshistorik. Kortet är det historiska signalskiktet under domen SMART.",
+    "obsWhatTitle": "Vilken observation är",
+    "obsWhatIntro": "Allt ProxMenux-fångster i kärnloggen, dmesg eller SMART-utgången som ser ut som en disknivåhändelse - och det på egen hand skulle vara för granulärt för en anmälan - spelas in som en <strong>observation</strong>. Varje rad visar:",
+    "obsWhatItems": [
+      "<strong>Type badge</strong> (I/O Fel, SMART Fel, Filsystem Fel, ZFS Pool Fel, Anslutningsfel).",
+      "<strong>Raw kernel meddelande</strong> som det verkade i dmesg - användbart när kopiera-pasting i en sökmotor eller en supportbiljett.",
+      "<strong>En mänsklig one-liner</strong> under det råa meddelandet för kända ATA-koder (ATA-koder)<code>IDNF</code> \"Sektoradress som inte finns - möjlig dålig sektor eller kabelproblem\", <code>UNC</code> \"Okorrigerbart läsfel - dålig sektor\" och resten av standardkoderna.",
+      "<strong>Första och sista förekomst timestamps</strong>, plus en <strong>occurrence count</strong> deduplicerad av felsignatur."
+    ],
+    "obsWhyTitle": "Varför ProxMenux-poster och visar dem",
+    "obsWhyItems": [
+      "<strong>Disk misslyckande är sällan en enda händelse.</strong> Det börjar vanligtvis med sporadiska ATA bussfel, den udda UNC-sektorn, eller ett par medium fel veckor före SMART flips till <em>FAILED</em>. Utan uthållighet försvinner dessa tidiga varningar från dmesg på nästa stövel.",
+      "<strong>SMART kan ligga.</strong> En enhet kan visa alla attribut gröna och fortfarande vara på väg ut - observationsskiktet fångar symtomen SMART inte exponerar (särskilt ICRC, IDNF, länkåterställningar vid lägre SATA-hastigheter).",
+      "<strong>Det separerar \"händer nu\" från \"happened nyligen\" </strong> Hälsokontrollen löser automatiskt övergående fel så snart de slutar skjuta, vilket är bra för att hålla den aktiva varningslistan ren - men du vill fortfarande se, dagar senare, att denna disk hade tre I / O-fel den natten. Observationsbordet är svaret.",
+      "<strong>Det matar den tiered notification model.</strong> disk_io detektor läser observationshastigheten från denna tabell för att bestämma tyst / VARNING / CRITICAL (det glidande 24h-fönstret som infördes i 1.2.1.2). Historien är vad som gör den klassificeringen möjlig."
+    ],
+    "obsDedupTitle": "Hur Dedup och Re-notification Work",
+    "obsDedupBody1": "Observationer dedupliceras av deras <strong>signature</strong> - ett stabilt fingeravtryck av feltypen, enheten och nyckelfälten i kärnlinjen. Samma händelse upprepar stötar <code>occurrence_count</code> på den befintliga raden istället för att skapa en ny. En <strong> olika signatur</strong> på samma disk skapar en ny observation och behandlas som en ny händelse för meddelandeändamål.",
+    "obsDedupBody2": "Meddelanden följer en anti-kaskad regel: den första förekomsten av en given (disk, signatur, svårighetsgrad) kombinationssidor operatören, och ProxMenux sedan väntar 24 timmar innan pinging igen om samma kombination - även om räkningen håller klättring. Att trappa upp svårighetsgraden (WARNING → CRITICAL) bryter nedkylningen så att operatören får veta när det blir värre, inte bara när det händer.",
+    "obsDismissTitle": "Permanent historia vs aktiva fel",
+    "obsDismissBody1": "En observation kan inte avfärdas, döljas eller tas bort. Varje annan observation av en disk är ett kort, samma som återigen lägger till dess förekomsträkning och flyttar sitt sista datum istället för att skapa ett nytt kort. Historien hör till skivan, identifierad av sitt serienummer: en skiva ansluten där en annan startades med ingen, och en skiva kärnanames håller sin egen.",
+    "obsDismissBody2": "Lösning eller avfärdning på den aktiva spegelsidan (Health Monitor) är oberoende av observationerna - observationen kvarstår förbi det aktiva felet auto-upplöses. Det är hela poängen: det överlever, så en övergående varning från förra veckan är fortfarande synlig på skivkortet idag. Se <link>Health Monitor</link> för den aktiva felsidan av samma bild."
+  },
+  "dataCollected": {
+    "heading": "Hur data samlas in",
+    "headerSection": "Avsnitt av fliken",
+    "headerEndpoint": "Slutpunkt",
+    "headerSource": "Källa",
+    "rows": [
+      {
+        "section": "Topp sammanfattningskort",
+        "endpoint": "/api/storage/summary",
+        "source": "Aggregerad från <code>lsblk</code>, <code>zpool list</code>, <code>vgs</code> / <code>lvs</code>."
+      },
+      {
+        "section": "Per-disk inventering",
+        "endpoint": "/api/storage",
+        "source": "<code>lsblk -O</code> + <code>smartctl -i</code> per enhet, med stabil diskidentitet cache (cleared on hot-plug events)."
+      },
+      {
+        "section": "Proxmox förvaringar",
+        "endpoint": "/api/proxmox-storage",
+        "source": "<code>pvesh get /nodes/&lt;node&gt;/storage</code> med aktiv / online-tillståndet för varje."
+      },
+      {
+        "section": "SMART aktuella värden",
+        "endpoint": "/api/storage/smart/<disk>",
+        "source": "<code>smartctl -A &lt;dev&gt;</code> Uppfriskad efterfrågan, inte cachad."
+      },
+      {
+        "section": "SMART självtest historia",
+        "endpoint": "/api/storage/smart/<disk>/history",
+        "source": "Lagras under <code>/var/lib/proxmenux-monitor/smart/&lt;disk&gt;/</code> som JSON snapshots."
+      },
+      {
+        "section": "Permanenta observationer",
+        "endpoint": "/api/storage/observations",
+        "source": "SQLite-bordet som matas av hälsokontrollen varje cykel (skickat över auto-resolve)."
+      }
+    ],
+    "outro": "Verifiera samlingskedjan på värden:",
+    "codeComment1": "# Dra den aktuella ögonblicksbilden från ett manus",
+    "codeComment2": "# Cross-check vad instrumentpanelen ser mot den råa OS-vyn"
+  },
+  "whereNext": {
+    "heading": "Var till nästa",
+    "items": [
+      {
+        "label": "Hälsoövervakare",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " - disk-and-I/O-kategorin och förtrycksmodellen."
+      },
+      {
+        "label": "API Referens",
+        "href": "/docs/monitor/api",
+        "tail": " - lagring och SMART endpoints."
+      },
+      {
+        "label": "Aviseringar",
+        "href": "/docs/monitor/notifications",
+        "tailRich": " - vad <code>disk_io_error</code>, <code>storage_unavailable</code> och <code>smart_test_failed</code> utlöser nedströms."
+      },
+      {
+        "label": "Översiktsindex",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — de andra flikarna."
+      },
+      {
+        "label": "ProxMenux → Diskhanteraren",
+        "href": "/docs/disk-manager",
+        "tail": " - åtgärdssidan: format / torka / SMART tester / importskivor till VM och CT från TUI."
+      },
+      {
+        "label": "ProxMenux → SMART Disk hälsa och test",
+        "href": "/docs/disk-manager/smart-disk-test",
+        "tail": " - CLI-motsvarigheten till denna flik: schema SMART-test, exportera JSON instrumentbrädan och den djupare testtypen / tolkningsreferensen."
+      }
+    ]
+  }
+}

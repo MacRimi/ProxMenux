@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor | ProxMenux-dokumentation",
+    "description": "Aktivera eller inaktivera proxmenux-monitor.service systemd-enheten och inspektera dess nuvarande tillstånd. Monitorn avslöjar ett webb-UI på TCP 8008 för visuell värdövervakning.",
+    "ogTitle": "ProxMenux Monitor | ProxMenux-dokumentation",
+    "ogDescription": "Växla proxmenux-monitor systemd-tjänsten och kontrollera dess status från menyn Inställningar."
+  },
+  "header": {
+    "title": "ProxMenux-övervakning",
+    "description": "Två relaterade åtgärder inuti menyn Inställningar: växla proxmenux-monitor.service systemd-enheten (start / stopp och aktivera / inaktivera i ett klick) och se dess aktuella detaljerade status. Monitorn avslöjar ett webb-UI på TCP 8008 för visuell värdövervakning.",
+    "section": "Inställningar"
+  },
+  "intro": {
+    "title": "Vad är ProxMenux Monitor?",
+    "body": "ProxMenux Monitor är en integrerad web instrumentbräda som ger realtid synlighet i din Proxmox infrastruktur - tillgänglig från alla webbläsare på ditt nätverk, utan att behöva en terminal."
+  },
+  "offers": {
+    "heading": "Vad det erbjuder",
+    "items": [
+      "Realtidsövervakning av CPU, RAM, diskanvändning och nätverkstrafik.",
+      "Översikt över att köra VM och LXC-behållare med statusindikatorer.",
+      "Inloggningsautentisering för att skydda åtkomsten.",
+      "Tvåfaktorsautentisering (2FA) med TOTP-stöd.",
+      "Omvänd proxy stöd (Nginx / Traefik).",
+      "Designad för att arbeta över stationära och mobila enheter."
+    ]
+  },
+  "access": {
+    "heading": "Access Access",
+    "intro": "När den är installerad är instrumentbrädan tillgänglig på:",
+    "url": "http://<your-proxmox-ip>:8008",
+    "outro": "Monitorn installeras automatiskt som en del av standard ProxMenux-installationen och körs som en systemd-tjänst (<code>proxmenux-monitor.service</code>) som startar automatiskt på start."
+  },
+  "warnConditional": {
+    "title": "Inställningar endast synliga när Monitor är installerad",
+    "body": "De två menyposterna som beskrivs nedan visas endast i Inställningar om <code>proxmenux-monitor.service</code> är registrerad hos systemd. Om du inte ser dem installerades inte Monitor (det är valfritt under ProxMenux-installation). För att lägga till det senare, installera om ProxMenux med den senaste versionen och välj alternativet Monitor."
+  },
+  "toggle": {
+    "heading": "Aktivera / Deaktivera",
+    "intro": "Den första menyn är en enda växel som vänder mellan två stater baserat på om tjänsten för närvarande kör:",
+    "headerState": "Nuvarande stat",
+    "headerLabel": "Menu etikett visas",
+    "headerAction": "Åtgärder på bekräfta",
+    "rows": [
+      {
+        "state": "aktiv",
+        "label": "Inaktivera ProxMenux Monitor",
+        "action": "systemctl stop + disable"
+      },
+      {
+        "state": "Inaktiv",
+        "label": "Aktivera ProxMenux Monitor",
+        "action": "systemctl enable + start"
+      }
+    ],
+    "outro": "Varje växel kräver en explicit ja/ingen dialog innan du kör. Aktivera / Deaktivera är symmetrisk: deaktivera stoppar tjänsten <em>and</em> inaktiverar autostart vid start; aktivering möjliggör autostart <em>and</em> startar tjänsten omedelbart."
+  },
+  "status": {
+    "heading": "Visa Monitor Service Status",
+    "intro": "Den andra menyn posten är lättläst. Det rensar skärmen, visar ProxMenux-logotypen och titeln <em> \"ProxMenux Monitor Service Verification\"</em>, rapporterar sedan:",
+    "items": [
+      "<strong>Servicestatus:</strong> aktiv, inaktiv eller not_installed.",
+      "<strong>Web UI URL</strong> (endast när den är aktiv): <code>http://&lt;host_ip&gt;:8008</code> - härrör från <code>hostname -I | awk '''{print $1}'''</code>.",
+      "<strong>Detailed systemd-utgång:</strong> <code>systemctl status proxmenux-monitor.service --no-pager -l</code> - visar senaste logglinjer, ExecStart, MainPID, etc."
+    ]
+  },
+  "manual": {
+    "title": "Manuella motsvarigheter",
+    "intro": "Från varje skal:",
+    "code": "systemctl status proxmenux-monitor.service       # detailed status\nsystemctl is-active proxmenux-monitor.service    # one-word status\nsystemctl enable --now proxmenux-monitor.service # enable + start\nsystemctl disable --now proxmenux-monitor.service # stop + disable\njournalctl -u proxmenux-monitor.service -f       # follow live logs"
+  },
+  "reset": {
+    "heading": "Återställ lösenordet för ProxMenux Monitor",
+    "intro": "Återställningsväg för operatören som förlorade instrumentpanelens lösenord (eller 2FA-enhet). Alternativet visas endast när monitorn är installerad på värden. Välja det:",
+    "items": [
+      "Be om bekräftelse med en ja/nej dialog - åtgärden är destruktiv för inloggningsuppgifterna.",
+      "Backar upp den befintliga <code>/root/.config/proxmenux-monitor/auth.json</code> till <code>auth.json.bak-&lt;UTC timestamp&gt;</code> (läge <code>0600</code>) så att det tidigare tillståndet kan återställas manuellt om återställningen var ett misstag.",
+      "Stops <code>proxmenux-monitor</code>-tjänsten så att on-disk-redigeringen inte kan tävla med en in-flight-inloggning.",
+      "Tydliga identitetsfälten i <code>auth.json</code>: <code>enabled=false</code>, <code>configured=false</code>, tömmer <code>username</code>, <code>password_hash</code>, <code>totp_secret</code> och backup koder array.",
+      "<strong>Bevarar</strong> och <code>jwt_secret</code> och registrerade <code>api_tokens</code> / <code>revoked_tokens</code> Så långlivad API Tokens som används av Home Assistant eller andra skript <em>fortsätter att autentisera</em> Efter återställningen.",
+      "Startar om tjänsten. Nästa besök på <code>http://&lt;host&gt;:8008</code> visar den första lanseringsguiden så att ett nytt admin-konto kan skapas."
+    ],
+    "preservedTitle": "Vad som överlever återställningen, vad som inte",
+    "preservedBody": "<strong>Wiped:</strong> användarnamn, lösenord hash, 2FA TOTP hemlighet, backup koder. <strong>Bevarad:</strong> <code>jwt_secret</code>, <code>api_tokens</code> metadata, <code>revoked_tokens</code> lista. Om du aktivt vill ogiltigförklara varje befintlig API-token (full ren skiffer), ta bort <code>auth.json</code> manuellt istället för att använda den här menyn - nästa start av tjänsten regenererar JWT-hemligheten och allt annat från början.",
+    "trustTitle": "Fysisk åtkomst är förtroendeankaret",
+    "trustBody": "Denna återställningsväg kräver rot skal på värden. Den som kan köra <code>menu</code> kommandot som rot redan styr rutan, så att ge dem lösenord återhämtning är inte ett privilegium eskalering - det är förenligt med hur alla andra admin verktyg på Proxmox fungerar. Korollären: Monitor-inloggningen skyddar inte någonting från någon du redan har släppt in Proxmox-skalet.",
+    "seeAlso": "Se även <link>Monitor → Access &amp; Auth → Återställa ett förlorat lösenord</link> för samma flöde som beskrivs från instrumentpanelen sida, plus det bredare sammanhanget om hur lösenord hashed och hur JWT hemligheten genereras."
+  },
+  "files": {
+    "heading": "Filer involverade",
+    "code": "/etc/systemd/system/proxmenux-monitor.service       # systemd unit\n/root/.config/proxmenux-monitor/                    # runtime config dir\n/var/log/proxmenux-auth.log                         # Flask app auth log\n                                                    # (read by Fail2Ban [proxmenux] jail)"
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "missingTitle": "Båda menyalternativen saknas",
+    "missingBody": "Monitorn är inte registrerad hos systemd. Bekräfta med <code>systemctl list-unit-files | grep proxmenux-monitor</code> - om det inte finns någon utgång, installera om ProxMenux från den officiella installatören med den senaste versionen och välj alternativet Monitor under installationen.",
+    "unreachableTitle": "Service aktiverad men webbadressen är oåterkallelig",
+    "unreachableBody": "Inställningar status output ger dig IP. Bekräfta:",
+    "unreachableCmd": "ss -tlnp | grep 8008                # är något som lyssnar?\njournalctl -u proxmenuxMonitor -n 100 --no-pager  # senaste fel\ncurl -sI http://localhost:8008      # lokal tillgänglighet",
+    "unreachableOutro": "Om localhost fungerar men externt inte, kontrollera din värd brandvägg (<code>pve-firewall</code> eller nftables) för inkommande TCP 8008.",
+    "stopsTitle": "Aktiverade tjänsten men det stoppar sig några sekunder senare",
+    "stopsBody": "Oftast en hamnkonflikt (något annat på 8008) eller en beroendekontroll som misslyckas. Tidskriften säger som: <code>journalctl -u proxmenux-monitor.service -b</code>."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/security/fail2ban",
+        "label": "Fail2Ban",
+        "tailRich": " — <code>[proxmenux]</code>-fängelset skyddar Monitorn på TCP 8008."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Inställningar översikt",
+        "tail": "."
+      }
+    ]
+  }
+}

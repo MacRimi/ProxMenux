@@ -1,0 +1,161 @@
+{
+  "meta": {
+    "title": "UUP Dump ISO Creator | ProxMenux Dokumentation",
+    "description": "Skapa en uppdaterad Windows-installation ISO på din Proxmox-värd med ProxMenux UUP Dump ISO Creator. Automatiserar beroende installera, ladda ner och konvertera UUP-filer till en startbar ISO redo för VM skapande.",
+    "ogTitle": "UUP Dump ISO Creator | ProxMenux Dokumentation",
+    "ogDescription": "Skapa en uppdaterad Windows ISO från UUP Dump med ProxMenux. Beroende, nedladdning och omvandling är helt automatiserade.",
+    "ogImageAlt": "ProxMenux — UUP Dump ISO-skapare"
+  },
+  "header": {
+    "title": "UUP Dump ISO-skapare",
+    "description": "Bygg en uppdaterad Windows-installation ISO på din Proxmox-värd med UUP Dump. ProxMenux hanterar beroenden, laddar ner UUP-filerna parallellt, kör den officiella omvandlaren och släpper den slutliga ISO i Proxmox ISO-lagring - redo att fästa till en ny Windows VM.",
+    "section": "Verktyg"
+  },
+  "intro": {
+    "title": "Vad detta manus gör",
+    "body": "Du tillhandahåller en UUP Dump URL (en uupdump.net genererar efter att du väljer bygg, språk och utgåva) och manuset gör resten: installerar eventuella missade beroenden, hämtar UUP Dump-omvandlaren, hämtar varje UUP-belastningsfil med aria2, monterar en startbar Windows ISO och flyttar den till Proxmox ISO-lagring så att VM-kreatören kan montera den på första starten."
+  },
+  "hero": {
+    "imageAlt": "UUP Dump ISO Creator inträde i ProxMenux",
+    "caption": "UUP Dump ISO Creator inträde i ProxMenux"
+  },
+  "what": {
+    "heading": "Vad är UUP Dump?",
+    "intro": "UUP Dump är en samhällstjänst som låter dig ladda ner de råa Unified Update Platform (UUP) nyttolast som Windows Update själv använder för att leverera Windows. Dessa nyttolast kan monteras tillbaka till en standard startbar ISO. Det är sättet att få:",
+    "items": [
+      "Den senaste Windows-byggnaden (inklusive Insider Preview-kanaler).",
+      "En specifik historisk byggnad som inte längre anges på Microsofts nedladdningssida.",
+      "Rena, omodifierade filer som kommer direkt från Microsofts servrar.",
+      "Den exakta kombinationen av utgåvor och språk du vill ha i en enda ISO."
+    ],
+    "learnMore": "Läs mer på <extlink>UUP Dump-projektsidan</extlink>."
+  },
+  "automates": {
+    "heading": "Vad manuset automatiserar"
+  },
+  "dependencies": {
+    "heading": "Beroende",
+    "intro": "Det första manuset gör är att kontrollera de verktyg som behövs för att ladda ner UUP-belastningar och montera ISO. Alla som saknas installeras med <code>apt-get</code>:",
+    "headerPackage": "Paketpaket",
+    "headerRole": "Rollen",
+    "rows": [
+      {
+        "pkg": "curl",
+        "roleRich": "HTTP fetches (konverter bootstrap)."
+      },
+      {
+        "pkg": "aria2",
+        "roleRich": "Parallell downloader som används för varje UUP payload."
+      },
+      {
+        "pkg": "cabextract",
+        "roleRich": "Extraherar Microsoft CAB-paket."
+      },
+      {
+        "pkg": "wimtools",
+        "roleRich": "Bygger <code>install.wim</code> (wimlib-imagex)."
+      },
+      {
+        "pkg": "genisoimage",
+        "roleRich": "Skriver den slutliga startbara ISO (eller <code>mkisofs</code>)."
+      },
+      {
+        "pkg": "chntpw",
+        "roleRich": "Tweaks Windows registret bikupor under byggnaden."
+      }
+    ],
+    "manualIntro": "Manuell motsvarighet - om du någonsin behöver installera dem själv:",
+    "manualCode": "apt-get install curl aria2 cabextract wimtools genisoimage chntpw"
+  },
+  "flow": {
+    "heading": "Ladda ner och konvertering",
+    "steps": [
+      "Upptäck Proxmox ISO-lagring (via <code>pvesm status -content iso</code>) eller faller tillbaka till <code>/var/lib/vz/template/iso</code>.",
+      "Begär en basmapp för tillfälliga filer (standard <code>/root/uup-temp</code>).",
+      "Ladda ner UUP Dump-omvandlaren från <code>git.uupdump.net</code>.",
+      "Parses <code>id</code>, <code>pack</code> och <code>edition</code> ur webbadressen du klistrar in.",
+      "Ringer <code>https://uupdump.net/get.php?…&aria2=2</code> för att generera en aria2-nedladdningslista.",
+      "Nedladdningar varje UUP-belastning i <code>UUPs/</code> med aria2 (parallell, återupptagbar).",
+      "Kör <code>convert.sh wim UUPs 1</code> från omvandlaren för att producera den slutliga ISO.",
+      "Flytta ISO i Proxmox ISO-lagring och rensar upp tillfälliga filer."
+    ]
+  },
+  "aria2": {
+    "heading": "Aria2 nedladdningsflaggor som används",
+    "code": "aria2c --no-conf --console-log-level=warn --log-level=info \\\n  --log=aria2_download.log \\\n  -x16 -s16 -j5 -c -R \\\n  -d\"$destDir\" -i\"$tempScript\"",
+    "flags": [
+      "<code>-x16</code> - upp till 16-anslutningar per server.",
+      "<code>-s16</code> - delar upp varje fil i 16 segment.",
+      "<code>-j5</code> — 5 filer som laddats ned parallellt.",
+      "<code>-c</code> - återupptar partiella nedladdningar.",
+      "<code>-R</code> Retries on failure."
+    ],
+    "runtime": "Typisk runtime är runt 10 minuter, dominerad av din internetlänkhastighet och UUP Dumps spegelbelastning."
+  },
+  "step1": {
+    "heading": "Steg 1 · Få en UUP Dump URL",
+    "intro": "Innan du kör skriptet behöver du en UUP Dump URL som innehåller <code>id</code>, <code>pack</code> och <code>edition</code> frågeparametrar. Skapa den på <extlink>uupdump.net</extlink>:",
+    "stepBadge": "Steg",
+    "items": [
+      {
+        "title": "Välj en Windows-version",
+        "img": "/iso-creator/step-1-select-version-windows.png",
+        "caption": "UUP Dump huvudsida - välj en Windows-version",
+        "body": "Öppna UUP Dump hemsida och välj den Windows-version du vill ha."
+      },
+      {
+        "title": "Välj en specifik byggnad",
+        "img": "/iso-creator/step-2-select-version-windows.png",
+        "caption": "Välj en specifik byggnad",
+        "body": "Välj bygget: Senast, Insider Preview-kanal eller en specifik äldre byggnad som fortfarande är listad."
+      },
+      {
+        "title": "Välj ett språk",
+        "img": "/iso-creator/step-3-select-version-windows.png",
+        "caption": "Välj ett språk",
+        "body": "Välj det språk som ISO ska skicka med."
+      },
+      {
+        "title": "Pick Editions",
+        "img": "/iso-creator/step-4-select-version-windows.png",
+        "caption": "Välj utgåvorna att inkludera",
+        "body": "Välj utgåvor för att bunta i ISO (Home, Pro, Enterprise, ...). Du kan kombinera flera."
+      },
+      {
+        "title": "Kopiera URL",
+        "img": "/iso-creator/step-5-select-version-windows.png",
+        "caption": "Kopiera webbadressen från adressfältet",
+        "bodyRich": "På den sista sidan, kopiera URL <em>från webbläsarens adress bar</em>. Den måste innehålla <code>id=…</code>, <code>pack=…</code> och <code>edition=…</code>. Det är den sträng som manuset kommer att parse."
+      }
+    ]
+  },
+  "step2": {
+    "heading": "Steg 2 · Kör skaparen",
+    "intro": "Med webbadressen i handen, öppna ProxMenux och starta skaparen:",
+    "stepBadge": "Steg",
+    "items": [
+      {
+        "title": "Starta UUP Dump ISO Creator",
+        "img": "/iso-creator/start-uupdump-iso-creator.png",
+        "caption": "Starta UUP Dump ISO Creator från ProxMenux",
+        "bodyRich": "I ProxMenux gå till <strong>Utilities → UUP Dump ISO Creator</strong>. Skriptet kontrollerar beroenden och ISO-lagringskatalogen innan du ber om inmatning."
+      },
+      {
+        "title": "Klistra UUP Dump URL",
+        "img": "/iso-creator/add-url-iso-creator.png",
+        "caption": "Klistra på webbadressen du kopierade från uupdump.net",
+        "body": "Klistra på webbadressen i ingångsdialogen. Manuset bekräftar att de tre obligatoriska parametrarna är närvarande; om någon saknas det aborter rent."
+      },
+      {
+        "title": "Vänta på bygget för att avsluta",
+        "img": "/iso-creator/end-uupdump-iso-creator.png",
+        "caption": "Bygg färdig - ISO är redo i Proxmox ISO-lagring",
+        "bodyRich": "Konsolen visar aria2 framsteg och sedan konverteringsutgången. När den slutar landar ISO i den upptäckta Proxmox ISO-lagring och är redo att välja från <strong>Create VM → System Windows → Installera med ISO från UUP Dump</strong>."
+      }
+    ]
+  },
+  "tempFiles": {
+    "title": "Tillfälliga filer",
+    "body": "Som standard lever temporära filer under <code>/root/uup-temp</code> (<code>uup-temp/</code> för nedladdningar och <code>uup-converter/</code> för konverterskriptet). Skaparen rengör både efter en framgångsrik körning. På misslyckande det fortfarande rensar upp och returnerar dig till menyn så en retry börjar från början."
+  }
+}

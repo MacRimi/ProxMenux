@@ -1,0 +1,235 @@
+{
+  "meta": {
+    "title": "Proxmox Backup Commands - vzdump, qmrestore, pct restaurering | ProxMenux",
+    "description": "Referens av Proxmox VE backup och återställa kommandon: vzdump för VMs och LXC behållare, qmrestore för VMs, pct restaurering för behållare, schemalagda säkerhetskopior i /etc/pve/jobs.cfg, krokskript och utesluta vägar.",
+    "ogTitle": "Proxmox Backup Commands - vzdump, qmrestore, pct restaurering",
+    "ogDescription": "Referens av vzdump, qmrestore och pct återställa kommandon för att säkerhetskopiera och återställa Proxmox VMs och LXC behållare.",
+    "twitterTitle": "Proxmox Backup kommandon | ProxMenux",
+    "twitterDescription": "vzdump, qmrestore och pct återställa kommandon för att säkerhetskopiera och återställa Proxmox VM och behållare."
+  },
+  "header": {
+    "title": "Backup och återställ",
+    "description": "Curated referens av vzdump, qmrestore och pct återställa kommandon för Proxmox backup arbetsflöden. Inkluderar schemaläggning, avancerade alternativ som krokskript / utesluta vägar / I / O-prioritet och backup-filhantering.",
+    "section": "Hjälp och info"
+  },
+  "intro": {
+    "title": "Tre backup lägen",
+    "body": "<strong>Snapshot</strong> använder en live-snapshot - gästen stannar igång, kort pausar I / O. <strong>suspend</strong> fryser de VM under backup (säkert än snapshot för non-snapshot-aware FS). <strong>Stopp stopp</strong> Stänger ner VM, backar upp kallt, startar om. Välj med gästtolerans och lagringskapacitet."
+  },
+  "commandGroups": [
+    {
+      "title": "VM-säkerhetskopiering",
+      "commands": [
+        {
+          "command": "vzdump <vmid>",
+          "description": "Skapa en säkerhetskopia av en specifik VM/CT"
+        },
+        {
+          "command": "vzdump <vmid> --storage <storage>",
+          "description": "Backup VM till specifik lagring"
+        },
+        {
+          "command": "vzdump <vmid> --mode snapshot",
+          "description": "Skapa snapshot backup (för VM)"
+        },
+        {
+          "command": "vzdump <vmid> --mode suspend",
+          "description": "Avbryt VM under backup"
+        },
+        {
+          "command": "vzdump <vmid> --mode stop",
+          "description": "Stoppa VM under backup"
+        },
+        {
+          "command": "vzdump --all",
+          "description": "Säkerhetskopiera alla VM och behållare"
+        },
+        {
+          "command": "vzdump --exclude <vmid1>,<vmid2>",
+          "description": "Säkerhetskopiera alla utom specificerade VM"
+        }
+      ]
+    },
+    {
+      "title": "Backup alternativ",
+      "commands": [
+        {
+          "command": "vzdump <vmid> --compress zstd",
+          "description": "Använd zstd komprimering för backup"
+        },
+        {
+          "command": "vzdump <vmid> --pigz <threads>",
+          "description": "Använd pigz med flera trådar"
+        },
+        {
+          "command": "vzdump <vmid> --notes <text>",
+          "description": "Lägg till anteckningar till backup"
+        },
+        {
+          "command": "vzdump <vmid> --mailto <email>",
+          "description": "Skicka meddelande e-post"
+        },
+        {
+          "command": "vzdump <vmid> --maxfiles <n>",
+          "description": "Håll bara n backups per VM"
+        },
+        {
+          "command": "vzdump <vmid> --stdexcludes 0",
+          "description": "Undvik inte tillfälliga filer"
+        },
+        {
+          "command": "vzdump <vmid> --quiet 1",
+          "description": "Suppress output-meddelanden"
+        }
+      ]
+    },
+    {
+      "title": "Återställ säkerhetskopior",
+      "commands": [
+        {
+          "command": "qmrestore <backup-file> <vmid>",
+          "description": "Återställ VM från backup"
+        },
+        {
+          "command": "qmrestore <backup-file> <vmid> --storage <storage>",
+          "description": "Återställ till specifik lagring"
+        },
+        {
+          "command": "qmrestore <backup-file> <vmid> --unique",
+          "description": "Skapa en VM med unikt ID"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file>",
+          "description": "Återställ behållare från backup"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --storage <storage>",
+          "description": "Återställ behållare till specifik lagring"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --rootfs <storage>",
+          "description": "Återställ specifika rootfs"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --unprivileged 1",
+          "description": "Återställ som oprivilegierad CT"
+        }
+      ]
+    },
+    {
+      "title": "Hantering av säkerhetskopior",
+      "commands": [
+        {
+          "command": "ls -la /var/lib/vz/dump/",
+          "description": "Lista säkerhetskopior på standardplats"
+        },
+        {
+          "command": "find /var/lib/vz/dump/ -name \"*.vma*\"",
+          "description": "Hitta VM säkerhetskopior"
+        },
+        {
+          "command": "find /var/lib/vz/dump/ -name \"*.tar*\"",
+          "description": "Hitta container backups"
+        },
+        {
+          "command": "pvesm list <storage>",
+          "description": "Lista säkerhetskopior i specifik lagring"
+        },
+        {
+          "command": "rm /var/lib/vz/dump/<backup-file>",
+          "description": "Ta bort en backup-fil"
+        },
+        {
+          "command": "cat /etc/vzdump.conf",
+          "description": "Visa backup konfiguration"
+        }
+      ]
+    },
+    {
+      "title": "Schemalagda Backups",
+      "commands": [
+        {
+          "command": "cat /etc/cron.d/vzdump",
+          "description": "Visa backup schema"
+        },
+        {
+          "command": "nano /etc/vzdump.conf",
+          "description": "Edit backup konfiguration"
+        },
+        {
+          "command": "systemctl list-timers",
+          "description": "Lista alla schemalagda uppgifter"
+        },
+        {
+          "command": "systemctl status cron",
+          "description": "Kontrollera cron service status"
+        },
+        {
+          "command": "grep vzdump /var/log/syslog",
+          "description": "Kontrollera backup loggar i syslog"
+        },
+        {
+          "command": "tail -f /var/log/vzdump.log",
+          "description": "Monitor backup log i realtid"
+        }
+      ]
+    },
+    {
+      "title": "Avancerade verksamheter",
+      "commands": [
+        {
+          "command": "qmrestore <backup> <vmid> --force",
+          "description": "Force-återställning, överskrivning av befintlig VM"
+        },
+        {
+          "command": "vzdump <vmid> --dumpdir <directory>",
+          "description": "Ange anpassad backup katalog"
+        },
+        {
+          "command": "vzdump <vmid> --script <script>",
+          "description": "Kör hook script under backup"
+        },
+        {
+          "command": "vzdump <vmid> --exclude-path <path>",
+          "description": "Exkludera specifika vägar från backup"
+        },
+        {
+          "command": "vzdump <vmid> --ionice <priority>",
+          "description": "Ställ in I/O prioritet för backup process"
+        },
+        {
+          "command": "vzdump <vmid> --lockwait <minutes>",
+          "description": "Vänta på lås"
+        },
+        {
+          "command": "qm importdisk <vmid> <backup> <storage>",
+          "description": "Importera disk från backup"
+        }
+      ]
+    }
+  ],
+  "testRestores": {
+    "title": "Testa dina restaureringar",
+    "bodyRich": "En backup du aldrig har restaurerat är inte en backup. Periodiskt plocka en backup, återställa den till ett test VMID med <code>qmrestore --unique</code>, starta den resulterande VM och bekräfta innehållet är intakt. Samma idé för behållare via <code>pct restore</code>."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "VM och CT Management",
+        "tail": " — qm och pct livscykel kommandon."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Lagring och diskar",
+        "tail": " — pvesm lagringshantering."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Hjälp och info översikt",
+        "tail": "."
+      }
+    ]
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "meta": {
+    "title": "Proxmox NFS, Samba, iSCSI & LXC Mount Points - Storage & Share | ProxMenux",
+    "description": "Integrera extern och lokal lagring i Proxmox VE och dela mappar mellan värd och LXC behållare. Lägg till NFS-aktier, Samba (CIFS)-aktier och iSCSI-mål som Proxmox-lagring, konfigurera LXC-bindning (Mount Manager) och kör NFS / Samba-klienter och servrar inuti behållare.",
+    "ogTitle": "Proxmox NFS, Samba, iSCSI & LXC Mount Points - Lagring & Dela",
+    "ogDescription": "Integrera extern / lokal lagring i Proxmox VE - NFS, Samba, iSCSI registrering plus LXC binda fästen och nätverksdelning.",
+    "twitterTitle": "Proxmox NFS, Samba, iSCSI | ProxMenux",
+    "twitterDescription": "Lägg till NFS / Samba / iSCSI som Proxmox lagring och dela mappar mellan värd och LXC."
+  },
+  "header": {
+    "title": "Lagrings- och delningshanterare",
+    "description": "Integrera extern eller lokal lagring i Proxmox VE och dela mappar mellan värd och LXC behållare. Tre block av verktyg: Värd lagringsintegration (registrera lagring i Proxmox själv), LXC Mount Manager (bind montage med pragmatisk tillståndshantering) och LXC nätverksdelning (NFS / Samba klient och serverflöden för specifika användningsfall).",
+    "section": "Lagring och delning"
+  },
+  "intro": {
+    "title": "Vad denna meny är för",
+    "body": "Disk Manager fungerar på nivån av <em>individuella fysiska diskar</em>. Lagring &amp; Share Manager fungerar en nivå upp - det <strong>registers lagringspooler och nätverksaktier i Proxmox</strong> (så UI och VM-skaparen kan använda dem) och <strong>set upp fildelning mellan värden och din behållare</strong>."
+  },
+  "opening": {
+    "heading": "Öppna menyn",
+    "body": "Från ProxMenux huvudmenyn väljer du <strong>Storage &amp; Share Manager</strong>. Du kommer att se detta:",
+    "imageAlt": "Storage & Share Manager menyn med HOST och LXC block"
+  },
+  "groups": {
+    "heading": "Tre verktygsgrupper",
+    "intro": "Menyn delas in i tre block. <strong>Host storage integration</strong> registrerar extern eller lokal lagring i Proxmox själv. <strong>LXC Mount Manager</strong> är det primära verktyget för att dela mappar med behållare - ett pragmatiskt bind-mount-flöde som hanterar oprivilegierad UID-kartläggning på värdsidan. <strong>LXC nätverksdelning</strong> täcker fyra ytterligare scenarier där en behållare behöver <em>consume</em> eller <em>expose</em> NFS / Samba delar direkt.",
+    "hostTitle": "Värd lagring",
+    "hostBody": "Registrera extern och lokal lagring i Proxmox via <code>pvesm add …</code>. När den är registrerad visas lagringen i Proxmox UI och är tillgänglig för VM och CT skapare.",
+    "hostItems": [
+      "Extern NFS / Samba / iSCSI",
+      "Lokal disk → Proxmox katalog eller ZFS Lagring lagring",
+      "Lokal delad katalog (för kors-CT bindestänger)"
+    ],
+    "lxcMountTitle": "Monteringshanterare för LXC",
+    "lxcMountBody": "Den primära LXC delningsverktyg. Bind-mounts värdkataloger till behållare via <code>pct set -mpN</code> och hanterar tillståndskrav av oprivilegierade CT utan att skapa någon grupp eller användare i behållaren.",
+    "lxcMountItems": [
+      "Fungerar med privilegierade och oprivilegierade CT",
+      "Erbjudanden att ställa in <code>o+rwx</code> på värddir för oprivilegierade UIDs",
+      "Fixar befintliga CIFS / NFS-fästen om det behövs"
+    ],
+    "lxcNetTitle": "LXC nätverksdelning",
+    "lxcNetBody": "Fyra ytterligare flöden för scenarier där en behållare behöver konsumera eller exponera NFS / Samba delar direkt. Alla kräver en <strong>privileged</strong> behållare.",
+    "lxcNetItems": [
+      "NFS / Samba <strong>client</strong> (konsumerar externa aktier)",
+      "NFS / Samba <strong>server</strong> (förutsätter CT mappar)"
+    ]
+  },
+  "host": {
+    "heading": "Värd lagring integration",
+    "intro": "Registrera lagring i Proxmox. Varje alternativ kallar <code>pvesm add …</code> under huven, så lagringen visas i <strong>Datacenter → Storage</strong> och blir tillgänglig för VM / CT skapare.",
+    "options": [
+      {
+        "href": "/docs/storage-share/host-nfs",
+        "icon": "Network",
+        "title": "Lägg till NFS-aktien som Proxmox-lagring",
+        "description": "Registrera en extern NFS export som Proxmox lagring via pvesm lägga till nfs. Proxmox hanterar montering - inga fstab poster behövs."
+      },
+      {
+        "href": "/docs/storage-share/host-samba",
+        "icon": "Share2",
+        "title": "Lägg till Samba dela som Proxmox lagring",
+        "description": "Registrera en extern Samba / CIFS aktie som Proxmox lagring via pvesm lägga till cifs. Proxmox hanterar montering och referenser."
+      },
+      {
+        "href": "/docs/storage-share/host-iscsi",
+        "icon": "Database",
+        "title": "Lägg till iSCSI-mål som Proxmox-lagring",
+        "description": "Anslut till ett externt iSCSI-mål och registrera det som Proxmox-lagring (block-enhet) för VM-diskbilder."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "icon": "HardDrive",
+        "title": "Lägg till lokal disk som Proxmox lagring",
+        "description": "Formatera en lokal SATA / SAS / NVMe disk och registrera den som en Proxmox katalog eller ZFS pool lagring."
+      },
+      {
+        "href": "/docs/storage-share/host-local-shared",
+        "icon": "FolderOpen",
+        "title": "Lägg till delad katalog på värd",
+        "description": "Skapa en värdkatalog avsedd att vara bindmonterad i flera CT. Inte en Proxmox lagring - enbart en värd-sida resurs för LXC binda fästen."
+      }
+    ]
+  },
+  "lxcMount": {
+    "heading": "Monteringshanterare för LXC",
+    "intro": "Det primära verktyget för att dela mappar mellan Proxmox värd och LXC behållare. Den använder <code>pct set -mpN</code> för att binda samman en värdkatalog i behållaren, och hanterar tillståndskrav av oprivilegierade CT på värdsidan (inga grupper eller användare skapas inuti behållaren).",
+    "card": {
+      "title": "LXC monteringspunkter (Host = CT)",
+      "description": "Bind-mount någon värdkatalog till en LXC behållare via pct set -mpN. Fungerar med både privilegierade och oprivilegierade CTs; erbjuder chmod o + rwx / ACLs på värddir och fixar befintliga CIFS / NFS-fästen vid behov."
+    }
+  },
+  "lxcNet": {
+    "heading": "LXC nätverksdelning",
+    "intro": "Använd dessa flöden när en behållare behöver <em>be</em> en NFS / Samba endpoint - antingen konsumera en extern aktie (klient) eller exponera sina egna mappar (server). För de flesta fildelningsbehov (host = CT bindfästen), är <mountLink>LXC Mount Manager</mountLink> enklare och kräver inte privilegierade behållare.",
+    "options": [
+      {
+        "href": "/docs/storage-share/lxc-nfs-client",
+        "icon": "Download",
+        "title": "NFS klient i LXC",
+        "description": "Mount externa NFS-aktier inifrån en privilegierad LXC-behållare. Stöder auto-upptäckt, /etc/fstab persistens och rena avvikelser."
+      },
+      {
+        "href": "/docs/storage-share/lxc-samba-client",
+        "icon": "Download",
+        "title": "Samba klient i LXC",
+        "description": "Mount Samba / CIFS aktier inifrån en privilegierad LXC behållare. Behörigheter lagras säkert, automatisk upptäckt tillgänglig."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-server",
+        "icon": "Upload",
+        "title": "NFS server i LXC",
+        "description": "Exportmappar över NFS från en privilegierad LXC-behållare."
+      },
+      {
+        "href": "/docs/storage-share/lxc-samba-server",
+        "icon": "Upload",
+        "title": "Samba server i LXC",
+        "description": "Exponera mappar över SMB / CIFS inifrån en privilegierad LXC behållare."
+      }
+    ]
+  },
+  "privReq": {
+    "title": "Privilegierat containerkrav",
+    "body": "De fyra <strong>LXC-nätverksdelning</strong>-flödena ovan kräver en <strong>privileged</strong>-behållare - kärnmodulerna (<code>nfs-kernel-server</code>, <code>smbd</code>, <code>mount.nfs</code>, <code>mount.cifs</code>) behöver kapacitet som oprivileged CTs inte exponerar. Om du bara behöver dela filer mellan värden och en oprivilegierad CT, använd <mountLink>LXC Mount Manager</mountLink> istället - det binder gränser från värden och justerar behörigheter på värdsidan så att behållaren kan läsa och skriva utan någon kärnmodul magi."
+  },
+  "unprivExplain": {
+    "title": "Hur ProxMenux hanterar oprivilegierade CT behörigheter",
+    "body": "Oprivilegierade LXC behållare flytta sina UIDs av <strong> + 100000</strong> på värden (container UID 0 = värd UID 100000, container UID 1000 = värd UID 101000, ...). En fil som skapats av en containeranvändare visas därför på värden som <em>others</em> - inte tillhör någon riktig värdanvändare eller grupp. LXC Mount Manager adresserar detta pragmatiskt: istället för att försöka anpassa UIDs / GID mellan värd och CT, erbjuder det att tillämpa <code>chmod o+rwx</code> (plus matching ACLs) på värdkatalogen, så alla mappade UID kan läsa och skriva. För CIFS tar det bort med <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code>; för NFS sätter det en klibbig världsskrivbar katalog och, om servern squashes root, guidar dig till rätt server-side fix."
+  },
+  "scripts": {
+    "heading": "Skript involverade",
+    "intro": "Varje enskild sida länkar till manuset som driver dess flöde. Filen nedan är en delad hjälpare som inte dokumenteras som sin egen sida men används av flera av LXC nätverksdelningsflöden:",
+    "itemTail": " - CT validering, val av monteringspunkt, privilegierad kontroll och universella gruppuppställningshjälpare som delats över LXC-klienten / serverflödena."
+  }
+}

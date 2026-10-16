@@ -1,0 +1,251 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Dashboard: Nätverk flik | ProxMenux Dokumentation",
+    "description": "Nätverksfliken inventerar varje gränssnitt på värden: fysiska NIC, broar, obligationer, VLANs och VM/LXC virtuella gränssnitt. Per-interface borr-in visar IP / MAC / stat / obligationsmedlemmar / trafik sedan start och ett historiskt RRD-diagram."
+  },
+  "header": {
+    "title": "Dashboard: Nätverksflik",
+    "description": "Varje gränssnitt kärnan rapporterar - fysiska NIC, broar, obligationer, VLAN och VM / LXC virtuella portar - grupperade i tre kort. Varje rad är klickbar och öppnar en borrning med adressering, trafikräknare och historiska RRD-data.",
+    "section": "ProxMenux Monitor Dashboard"
+  },
+  "intro": {
+    "title": "Live + historisk, båda ingår",
+    "body": "Live state kommer från <code>psutil.net_if_stats()</code> och <code>ip</code>; historisk bandbredd från Proxmox RRD butik via <code>/api/network/&lt;interface&gt;/metrics</code>. Sidan uppdaterar varje ~ 5 sekunder för levande räknare och drar nya RRD-data på efterfrågan på diagrammet."
+  },
+  "topRow": {
+    "heading": "Top row: fyra statskort",
+    "headerCard": "Kort",
+    "headerWhat": "Vad det visar",
+    "rows": [
+      {
+        "card": "Nätverkstrafik",
+        "what": "Aggregerad RX / TX-hastighet över alla gränssnitt, formaterad i rätt enhet (bps / Kbps / Mbps / Gbps)."
+      },
+      {
+        "card": "Aktiva gränssnitt",
+        "what": "Två räknare: <em>Physical X / Y</em> och <em>Bridges X / Y</em> (aktiv över totalt). Den första räknaren du tittar på när något slutar fungera."
+      },
+      {
+        "card": "Nätverksstatus",
+        "what": "Snabb dom - Hälsosam / Varning / Kritisk baserad på länkstatus, gateway nåbarhet och bro integritet. Speglar <em>Network Interfaces</em>-kategorin Health Monitor."
+      },
+      {
+        "card": "Nätverkslatens",
+        "what": "Rundtur till porten med en gnista. Klicka på kortet öppnar <strong>Network Latency modal</strong> dokumenterad längre ner - historisk vy + on-demand ping test mot gateway / Cloudflare / Google med en nedladdningsbar PDF-rapport."
+      }
+    ]
+  },
+  "flow": {
+    "heading": "Nätverksflödesdiagram",
+    "intro": "Mellan den övre raden och de tre gruppkorten gör fliken en levande topologivy som heter <strong>Network Flow</strong>. Det drar varje väg ett paket kan ta genom värden - fysiska NICs i ena änden, broar i mitten, VM och behållare i den andra - med animerade pulser som visar realtidsrx / tx-trafik på varje länk.",
+    "imageAlt": "Nätverksflödesdiagram - NICs till vänster, värd och broar i mitten, VM och LXCs till höger, med animerade pulser på varje anslutning",
+    "imageCaption": "Nätverksflöde - färgkodade noder plus animerade kometer vars riktning och tjocklek återspeglar levande trafik.",
+    "elementsTitle": "Vad diagrammet visar",
+    "elementsIntro": "Varje nod är en enhet från samma lager som används av gruppkorten nedan, men ordnade som en topologi så relationer mellan dem är omedelbara:",
+    "elements": [
+      "<strong>NICs</strong> (amber) - varje fysiskt gränssnitt med länk upp. Gränssnitt som rapporteras som ner dras blekna.",
+      "<strong>Host</strong> (amber) - Proxmox värd själv, sitter mellan NIC och broarna. Återges som en fast ankare; inte klickbar.",
+      "<strong>Bridges</strong> (cyan) - Linux och OVS broar. Endast broar som bär minst en aktiv gäst dras; oanvända broar är dolda för att hålla diagrammet fokuserat på vad som faktiskt rör trafiken.",
+      "<strong>LXCs</strong> (cyan) - kör behållare fäst vid en bro.",
+      "<strong>VMs</strong> (lila) - kör virtuella maskiner fästa på en bro.",
+      "Offline gäster (stoppade VM / behållare) är dolda."
+    ],
+    "pulsesTitle": "Vad animationen kodar",
+    "pulsesBody": "De animerade kometer som reser längs varje kant representerar levande trafik:",
+    "pulses": [
+      "<strong>Direction</strong> - en puls som flyter mot NIC är <em>tx</em> från gästen; mot gästen är <em>rx</em>.",
+      "<strong>Stroke width</strong> skalor med gästens kombinerade rx + tx hastighet. En tom gäst drar fortfarande en svag animerad linje; en upptagen får en tjock en.",
+      "<strong>Comet head glow</strong> - varm vid ~ 1 MB / s, varm vid ≥30 MB / s. Användbart för att upptäcka en blick som gäst dominerar en NIC.",
+      "<strong>Click</strong> - varje nod förutom värden är klickbar och öppnar samma per-gränssnitt borr-i modal dokumenterad nedan. Att knacka på värden är avsiktligt en no-op - det finns ingen värd-nivå modal i denna uppfattning."
+    ],
+    "useTitle": "När det är användbart",
+    "useBody": "Gruppkorten nedan berättar <em>what</em> finns; diagrammet berättar <em>how det är anslutet</em> och där trafiken flödar just nu. Mönster som är lätta att upptäcka vid en blick: en bro utan aktiv gäst bifogad, två tunga gäster går igenom samma NIC (bottleneck kandidat), eller en enda VM mättar en länk medan allt annat är tyst."
+  },
+  "groups": {
+    "heading": "Tre gränssnittsgrupper",
+    "intro": "Under den övre raden delar tre kort inventeringen med roll. Varje kort har sitt eget aktiva räkningsmärke i rubriken. Interface <strong>type</strong> identifieras med en blick av ett färgat märke på varje rad:",
+    "badges": [
+      "Blå <strong>Physical</strong> - verklig NIC.",
+      "Grönt <strong>Bridge</strong> - Linux bridge eller OVS bridge (<code>vmbr*</code>).",
+      "Lila <strong>Bond</strong> - obligation / LACP / aktiv backup aggregator.",
+      "Cyan <strong>VLAN</strong> - VLAN sub-gränssnitt (<code>vmbr0.10</code>, <code>eno1.42</code>, ...)."
+    ],
+    "clickable": "<strong>Every rad är clickable</strong> - fysisk, virtuell, bro eller obligation - och öppnar per-gränssnitt borr-in beskrivs längre ner (grundläggande info, IPs, trafikräknare, historiska RX / TX diagram från Proxmox RRD butik).",
+    "physicalTitle": "Fysiska gränssnitt",
+    "physicalBody": "Varje NIC kärnan ser som en riktig enhet - <code>eno1</code>, <code>enp4s0</code>, <code>eth0</code>, <code>wlp3s0</code>, etc. En rad per enhet med det blå <strong>Physical</strong>-märket och länktillståndet. <em>Bond medlemmar</em> (NICs förslavade till en obligation) visas också här, med en antydan på föräldraobligationen.",
+    "bridgeTitle": "Bridge-gränssnitt",
+    "bridgeBody": "Linux broar (<code>vmbr0</code>, <code>vmbr1</code>, ...) och OVS broar Proxmox hanterar. Varje rad visar det gröna <strong>Bridge</strong>-märket, det underliggande fysiska gränssnittet (när det är en enportbro) och bronstatus. Obligationer synliga på detta lager får lila <strong>Bond</strong>-märke; VLAN sub-gränssnitt får cyan <strong>VLAN</strong>-märket.",
+    "vmTitle": "VM-/LXC-gränssnitt",
+    "vmBody": "<code>tap*</code> och <code>veth*</code>-gränssnitt skapade när gästerna börjar - en per virtuell NIC. Kortrubriken visar <em>X / Y Active</em>; rader är kopplade till VM / CT de tillhör så att du kan hoppa direkt till gästen i fliken VMs & LXC. Inaktiva poster hänger kort efter en gäststopp; de åldras inom en uppfriskande cykel."
+  },
+  "drillIn": {
+    "heading": "Per-interface borr-in",
+    "intro": "Klicka på någon rad öppnar en modal med fem block:",
+    "headerBlock": "Blockera",
+    "headerContents": "Innehåll",
+    "rows": [
+      {
+        "block": "Grundläggande information",
+        "contents": "Interface namn, typ (fysisk / bro / obligation / VLAN / vm), MAC-adress, stat (upp / ner), MTU och det underliggande fysiska gränssnittet för icke-fysiska typer."
+      },
+      {
+        "block": "Bondmedlemmar",
+        "contents": "Endast för obligationer. Listar varje förslavad NIC med den aktiva / misslyckade flaggan, obligationsläget (aktiv backup / 802.3ad / balansalb / ...) och det primära gränssnittet när det konfigureras."
+      },
+      {
+        "block": "IP-adresser",
+        "contents": "Varje IPv4 / IPv6-adress med prefixlängden. Autokonfigurerade länk-lokala adresser listas men gråtas ut."
+      },
+      {
+        "block": "Historiska diagram",
+        "contents": "RX / TX bandbredd över den valda tidsramen (1 timme / 24 timmar / 7 dagar / 30 dagar / 1 år), dras från <code>/api/network/&lt;interface&gt;/metrics</code> (Proxmox RRD)."
+      },
+      {
+        "block": "Trafik sedan senaste start",
+        "contents": "Total RX / TX byte och paket sedan värden senast startade, plus fel och drop counters."
+      }
+    ],
+    "inactiveTitle": "Inaktiva gränssnitt öppnar fortfarande borren",
+    "inactiveBody": "För ett gränssnitt som är <em>down</em>, gör modalen en liten \"Interface Inactive\" banner och hoppar över levande räknare. Konfiguration (adresser, obligationsmedlemmar) och historiska data visas fortfarande - användbar när du diagnostiserar varför något misslyckades och när."
+  },
+  "latency": {
+    "heading": "Dialogruta för nätverkslatens",
+    "intro": "Klicka på <em>Network Latency</em>-kortet i övre raden öppnar en dedikerad modal. Den har två lägen (historiskt och on-demand test), tre målalternativ och en nedladdningsbar PDF-rapport.",
+    "targetsTitle": "Mål",
+    "targetsIntro": "Ett mål nedgång på toppen av modalen väljer vad som blir pinged:",
+    "targets": [
+      "<strong>Gateway</strong> - din LAN-router. Testar det lokala nätverksbenet bara; användbart när du misstänker en växel / kabling fråga och vill utesluta WAN.",
+      "<strong>Cloudflare (1.1.1.1) </strong> - offentlig DNS beslutsfattare, anycast nätverk. Testar WAN-ben.",
+      "<strong>Google (8.8.8.8) </strong> - alternativt offentligt mål, användbart som en sanity check eller när Cloudflare är regionalt nedbrutet."
+    ],
+    "mode1Title": "Mode 1 - Historisk utsikt",
+    "mode1Alt": "Network Latency modal i historiskt läge - Gateway-mål med en 1-timmars tidsram och de tidigare proverna planerade",
+    "mode1Caption": "Historisk vy - Gateway mål under sista timmen, matad från latenshistoria databas skriven varje 60 sekunder med temperatur / latens samlartråd.",
+    "mode1Body1": "Standardläget när modalen öppnas. En andra dropdown plockar tidsramen (<em>1 Hour / 24 Hours / 7 Days / 30 Days / 1 Year</em>); dataupplösning sjunker med fönstret så att diagrammet förblir läsbar. Huvudstatistik - Aktuell / Min / Avg / Max - gör ovanför diagrammet, med ett statuspiller (Excellent / Good / Fair / Poor) som återspeglar det aktuella värdet mot trösklarna nedan.",
+    "mode1Body2": "Källa: samma latensprover som Health Monitor använder för att upptäcka ihållande nätverksavmattningar - provade varje 60 sekunder mot porten med bakgrunden <code>_temperature_collector_loop</code>-tråden, skriven till en lokal SQLite-historia.",
+    "mode2Title": "Mode 2 - Realtidstest",
+    "mode2Alt": "Network Latency modal kör en realtid ping test mot Cloudflare - framsteg bar på 50%, levande prover ackumuleras på diagrammet",
+    "mode2Caption": "Realtidstest mot Cloudflare - 2-minuters körning med en läsning varje 5 sekunder, prover planerade när de anländer. Klicka på <em>Stop</em> för att avsluta tidigt; <em>Test Again</em> appends more provs to the same dataset.",
+    "mode2Intro": "Växla målet till Cloudflare eller Google startar ett on-demand ping test. Beteende:",
+    "mode2Items": [
+      "<strong>Duration</strong> - 2 minuter per körning, med en progressiv bar och en återstående sekunder räknare.",
+      "<strong>Cadence</strong> - en som läser varje 5 sekunder (24 avläsningar per körning).",
+      "<strong>Method</strong> - ICMP Echo Request (<code>ping</code>), 3 på varandra följande pings per prov, latens i genomsnitt.",
+      "<strong>Stoppa</strong> slutar testet omedelbart; partiell data bevaras.",
+      "<strong>Test Again</strong> - appenderar nya prover till befintliga dataset snarare än att börja färska, så att du kan bygga en längre rekord över flera körningar.",
+      "<strong>Live status pill</strong> - omvärderar efter varje prov med samma Excellent / Bra / Fair / Dåliga trösklar."
+    ],
+    "thresholdsTitle": "Prestanda trösklar",
+    "headerStatus": "Status",
+    "headerRange": "Intervall",
+    "headerImpact": "Praktisk påverkan",
+    "thresholdRows": [
+      {
+        "status": "Utmärkt",
+        "range": "< 50 ms",
+        "impact": "Optimal för realtidsappar, spel och videosamtal."
+      },
+      {
+        "status": "Bra",
+        "range": "50 – 100 ms",
+        "impact": "Acceptabel för de flesta applikationer med minimal påverkan."
+      },
+      {
+        "status": "Rättvis",
+        "range": "100 – 200 ms",
+        "impact": "Noterbar fördröjning. Kan påverka VoIP och interaktiva appar."
+      },
+      {
+        "status": "Dålig",
+        "range": "> 200 ms",
+        "impact": "Betydande latens. Utredning rekommenderas."
+      }
+    ],
+    "reportTitle": "Rapport om nätverkslatens (PDF)",
+    "reportIntro": "Båda lägena har en <strong>Report</strong>-knapp bredvid målväljaren. Klicka på det genererar en PDF med allt du skulle skicka till din Internetleverantör om du ville göra ett ärende för dålig service.",
+    "reportPreviewAlt": "Första sidan i Network Latency Report PDF - Executive Sammanfattning med mätaren, latensstatistiken, latensgrafen och tröskelguiden",
+    "reportPreviewCaption": "Första sidan i Network Latency Report - Executive Sammanfattning med mättavlan och rubrikstatistik, per sekundens latensdiagram och tröskelguiden. Page 2 och framåt har per-sample tabell och metodik.",
+    "downloadLabel": "Ladda ner Sample Network Latency Report (PDF)",
+    "sectionsIntro": "Rapporten har sex avsnitt:",
+    "sections": [
+      "<strong>Verkställande Sammanfattning</strong> gauge dial (på engelska)0–300+ ms med gröna / gula / röda zoner), statusverdict (EXCELLENT / GOOD / FAIR / POOR), mål / läge / provräkning och en one-line paketförlust sammanfattning.",
+      "<strong>Latency Statistics</strong> - Aktuell / Min / Avg / Max som fyra stora plattor, plus Provräkning, Packet Loss (avg) och Test Period.",
+      "<strong>Latency Graph</strong> - område diagram över varje prov över testfönstret med en min / avg / max y-axel rutnät.",
+      "<strong>Performance Thresholds</strong> - samma fyrtiotalsskala dokumenterad ovan, med en färgad prick per nivå.",
+      "<strong>Detailed Test Results</strong> - numrerad tabell med timestamp, latens, paketförlust och status för varje prov. Användbart för att upptäcka mikroburst som rubriken genomsnitt gömmer sig.",
+      "<strong>Methodology</strong> - testmetod (ICMP Echo Request), prover per test (3 på varandra följande pings), målnamn, mål IP och en slutlig \"Performance Assessment\" -punkt som härrör från domen."
+    ],
+    "useCaseTitle": "Använd fall: påståenden till din ISP",
+    "useCaseBody": "Kör realtidstestet mot Cloudflare för 2 minuter under ett ögonblick av upplevd långsamhet, klicka sedan på <em>Test Again</em> några gånger för att förlänga datamängden och slutligen <em>Report</em>. PDF-filen bär hela per-sample-bordet plus metodikblocket - Internetleverantörer accepterar vanligtvis detta som bevis, särskilt när de korreleras med tidsstämplar från ett separat klagomål."
+  },
+  "excluding": {
+    "heading": "Exklusive bullriga gränssnitt",
+    "body1": "Liksom förvaringar kan enskilda gränssnitt uteslutas från hälsoövervakning - användbart för avsiktligt handikappade broar, testgränssnitt eller NIC som är fysiskt borttagna men fortfarande i konfig. Flaggan lagras i <code>excluded_interfaces</code>-bordet och respekteras av hälsokontrollcykeln: inga varningar, inga meddelanden, inget bidrag till rubrikstatuspiller.",
+    "body2": "Från radens kontextmeny, välj <em>Exkludera från övervakning</em>. Gränssnittet förblir synligt i instrumentbrädan med en lila <strong>exkluderad</strong>-märke, och du kan återaktivera övervakning från samma meny."
+  },
+  "dataCollected": {
+    "heading": "Hur data samlas in",
+    "headerSection": "Avsnitt av fliken",
+    "headerEndpoint": "Slutpunkt",
+    "headerSource": "Källa",
+    "rows": [
+      {
+        "section": "Interface Inventory",
+        "endpoint": "/api/network",
+        "source": "<code>ip -j addr</code> + <code>ip -j link</code> + obligation / bro introspektion."
+      },
+      {
+        "section": "Sammanfattningskort",
+        "endpoint": "/api/network/summary",
+        "source": "Aggregering över inventeringen plus per gränssnitt upp / nerräkningar."
+      },
+      {
+        "section": "Per-interface RX/TX tidsserie",
+        "endpoint": "/api/network/<iface>/metrics",
+        "source": "<code>/proc/net/dev</code> provtagen av Health Monitor med bytesberäkning."
+      },
+      {
+        "section": "Latency: nuvarande",
+        "endpoint": "/api/network/latency/current",
+        "source": "En kort <code>ping</code> spricka mot den konfigurerade gateway / mål."
+      },
+      {
+        "section": "latens: historisk",
+        "endpoint": "/api/network/latency/history",
+        "source": "Persisterade prover - varje 5 min av hälsokontrollcykeln."
+      }
+    ],
+    "codeComment1": "# Cross-check gränssnittet staten sett av instrumentbrädan",
+    "codeComment2": "Verifiera en nuvarande latens sond slut-to-end"
+  },
+  "whereNext": {
+    "heading": "Var till nästa",
+    "items": [
+      {
+        "label": "Hälsoövervakare",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — Nätverkskategorin och trösklarna för latenshistoria."
+      },
+      {
+        "label": "API Referens",
+        "href": "/docs/monitor/api",
+        "tail": " — Nätverk och latens endpoints."
+      },
+      {
+        "label": "Integrationer",
+        "href": "/docs/monitor/integrations",
+        "tail": " — Prometheus scrape avslöjar samma nätverksmetri."
+      },
+      {
+        "label": "Översiktsindex",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — de andra flikarna."
+      },
+      {
+        "label": "ProxMenux - Nätverk",
+        "href": "/docs/network",
+        "tail": " - Åtgärdssidan: broanalys, ihållande gränssnittsnamn, backup och omstart, iperf3."
+      }
+    ]
+  }
+}

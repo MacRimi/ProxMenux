@@ -1,0 +1,170 @@
+{
+  "meta": {
+    "title": "Cross-kernel restaurering - riktningsdetektering, säker-subset filter, hydrering | ProxMenux",
+    "description": "Hur ProxMenux återställer en värdbackup på ett mål som kör en annan stor kärnversion. Dokument hur riktningen av felmatchen detekteras, det säkra subsetfiltret som hoppar över boot-kritiska vägar när målet kör en nyare kärna än backupen, och den fyrfasiga kärnan-agnostiska hydrering som återanvänder användarjustering som IOMMU, VFIO IDs och anpassade cmdline tokens utan att kopiera kernel-tied filer verbatim.",
+    "ogTitle": "ProxMenux Backup - cross-kernel restaurering och hydrering",
+    "ogDescription": "Direction-aware cross-kernel återställning med en säker-subset filter och kärn-agnostisk hydrering.",
+    "twitterTitle": "Cross-kernel återställning | ProxMenux",
+    "twitterDescription": "Hur ProxMenux hanterar en återställning när målkärnan skiljer sig från säkerhetskopiorna."
+  },
+  "header": {
+    "title": "Cross-kernel återställer",
+    "description": "Hur ProxMenux hanterar en återställning när målvärden kör en annan kärna från den som spelas in i backupen - särskilt när målet kör en nyare kärna. Dokument hur skillnaden upptäcks, hur startkritiska vägar som kan bryta målet filtreras, och hur användarens egen konfiguration återanvänds utan att kopiera kärnbundna filer verbatim.",
+    "section": "Säkerhetskopiering och återställning"
+  },
+  "intro": {
+    "title": "Varje kärnhopp hanteras annorlunda",
+    "body": "En Proxmox värd kärna identifieras av en version sträng som <code>6.17.13-2-pve</code>. De två första siffrorna (<strong>6.17</strong> i det här exemplet) definierar den stora versionen: när de ändras kan vissa konfigurationsfiler skrivna för den tidigare kärnan inte vara giltiga på den nya. När återställningen upptäcker att backupen och målet har olika stora kärnversioner, flödesgrenarna baserat på hoppets riktning - oavsett om backupen är äldre eller nyare än målet - eftersom de två fallen har motsatta fellägen. Säkerhetskopior nyare än målet återställs rent as-is (bänk-verifierad över flera kärnhopp). Säkerhetskopior äldre än målet behöver ett filter för att undvika att bryta målets start med konfiguration skriven för en kärna som sedan dess har ändrats."
+  },
+  "directionCheck": {
+    "heading": "Riktningskontroll",
+    "intro": "Under kompatibilitetskontrollen jämför <code>hb_compat_check</code> kärnan registrerad i backupens manifest mot målets nuvarande kärna (<code>uname -r</code>) och klassificerar återställningen i ett av tre fall, lagrad i den interna variabla <code>HB_COMPAT_KERNEL_DIRECTION</code>:",
+    "rows": [
+      {
+        "direction": "samma",
+        "condition": "Den stora kärnversionen matchar mellan backup och mål.",
+        "behavior": "Det fullständiga återställningsflödet går oförändrat. Inget extra filter, ingen hydrering, inget särskilt meddelande i UI."
+      },
+      {
+        "direction": "bk_newer",
+        "condition": "Backup-kärnan är NYTTRE än målets (till exempel: backupen gjordes på kärnan 7.0 och målet körs kernel 6.17).",
+        "behavior": "Det fullständiga återställningsflödet går oförändrat, precis som <code>same</code>. Inget filter appliceras. Verifierad empiriskt: förare auto-reinstallera mot målets kärna, IOMMU konfig gäller rent, VM med GPU passthrough kommer upp utan problem."
+      },
+      {
+        "direction": "bk_older",
+        "condition": "Backup-kärnan är OLDER än målets (till exempel: backupen gjordes på kärnan 6.17 och målet körs kernel 7.0).",
+        "behavior": "Det säkra filtret och fyrfasens hydrering nedan aktiveras. Återställningen fortsätter - målet reproducerar källan, men startkritiska filer kopieras inte."
+      }
+    ]
+  },
+  "whyBkNewerIsSafe": {
+    "heading": "Varför en backup med en nyare kärna än målet återställer oförändrad",
+    "body": "När återställningen går mot ett mål med en <em>older</em>-kärna än den som spelas in i backupen, är varje mekanism som återställningen beror på oberoende av kärnversionen. GPU-drivrutininstallatörer och andra PCI-enhetsinstallatörer upptäcker körkärnan med <code>uname -r</code> och sammanställer DKMS mot vad målet har. APT-paketet installerar binärer byggda för målets distribution. IOMMU cmdline tokens som <code>intel_iommu=on</code> är stabila över stora kärnversioner. Backupen bär vägar skrivna under en nyare kärna, men de vägar (modul svartlistor, GRUB standarder, initramfs config) är fortfarande giltig syntax på den äldre - kärnor ignorerar tokens de inte känner igen i stället för att misslyckas. Detta fall är likvärdigt i praktiken med en återställning av samma kärna, och ProxMenux behandlar det som sådant."
+  },
+  "safeSubsetFilter": {
+    "heading": "Det säkra filtret (endast när målkärnan är nyare)",
+    "intro": "När målkärnan är nyare än backupen, tillägger kompatibilitetskontrollen 16 boot-kritiska vägar från <code>hb_unsafe_paths_cross_version</code> till <code>RS_SKIP_PATHS</code>. Dessa vägar är uteslutna från återställningen eftersom att skriva en version av dem från en äldre kärna över ett mål som kör en nyare har orsakat kärnpaniker i bänkprov. Vägarna täcker fyra kategorier:",
+    "categoryRows": [
+      {
+        "category": "Starthanterare",
+        "paths": "<code>/etc/default/grub</code>, <code>/etc/kernel</code>",
+        "reason": "GRUB standarder knutna till den tidigare kärnordern, och proxmox-boot-tool tillstånd (cmdline, ESP UUID, krokar) som refererar vägar och identifierare från den äldre installationen."
+      },
+      {
+        "category": "Kernel moduler och boot artefakter",
+        "paths": "<code>/etc/modules-load.d</code>, <code>/etc/modprobe.d</code>, <code>/etc/initramfs-tools</code>",
+        "reason": "Autoload listor som kan referera moduler döpt mellan kärn majors, modulalternativ som kanske inte gäller, initramfs krokar skrivna för den äldre kärnan."
+      },
+      {
+        "category": "Lagring stack och filsystem identitet",
+        "paths": "<code>/etc/fstab</code>, <code>/etc/multipath</code>, <code>/etc/iscsi</code>, <code>/etc/udev/rules.d</code>, <code>/etc/zfs</code>",
+        "reason": "UUID som kanske inte finns på denna installation, multipath drivrutiner som ändras mellan kärnor, iSCSI parametrar som utvecklas, udev regler som kan binda till icke-existerande delsystem, ZFS tillstånd (<code>zpool.cache</code> + <code>hostid</code>) som kan låsa poolen som främmande."
+      },
+      {
+        "category": "APT-källor",
+        "paths": "<code>/etc/apt</code>",
+        "reason": "APT-källor kan utlösa en nedgradering av kritiska paket på nästa uppgradering."
+      },
+      {
+        "category": "systemd",
+        "paths": "<code>/etc/systemd/system</code>, <code>/etc/systemd/journald.conf</code>, <code>/etc/systemd/logind.conf</code>, <code>/etc/systemd/system.conf</code>, <code>/etc/systemd/user.conf</code>",
+        "reason": "Unit åsidosätter och .wants knutna till den äldre systemd stora; konfigurationsnycklar som kanske inte liknar en nyare systemd."
+      }
+    ],
+    "outroBody": "Filtret kör BEFORE bekräftelsedialogen så att användaren ser den exakta listan över vägar som kommer att hoppas, kategoriseras av förnuftet. Återställningen fortsätter fortfarande - allt annat (VM, LXCs, nätverk, /etc/pve, användare, cron, ProxMenux tillstånd, paket, förare, /root) återställs normalt."
+  },
+  "hydration": {
+    "heading": "Kernel-agnostisk hydrering",
+    "intro": "Det säkra filtret ensam skulle lämna målet utan stämning användaren hade inuti dessa startkritiska filer: IOMMU cmdline för GPU passthrough, VFIO-enhet ID, anpassade <code>GRUB_TIMEOUT</code>, nvidia svartlistor. Hydrandet passerar åter tillämpar dessa bitar kernel-agnostically. Fyra faser körs när målkärnan är nyare än backupen, varje tillsats (aldrig överskriver ett värde som målet redan bär) och idempotent (kör två gånger är en no-op).",
+    "phaseRows": [
+      {
+        "phase": "1a - GRUB väg",
+        "detail": "För värdar som använder GRUB (ext4/lvm-installationer). <code>_rs_hyd_grub</code> sammanfogar varje token från backupens <code>manifest.kernel_params.cmdline_extra</code> till målets levande <code>GRUB_CMDLINE_LINUX_DEFAULT</code>, hoppar tokens vars nyckel målet redan bär. Sedan sammanfogar vitlistade <code>GRUB_*</code>-nycklar (<code>GRUB_TIMEOUT</code>, <code>GRUB_TIMEOUT_STYLE</code>, <code>GRUB_DEFAULT</code>, <code>GRUB_TERMINAL</code>, <code>GRUB_DISABLE_OS_PROBER</code>, <code>GRUB_SERIAL_COMMAND</code>, <code>GRUB_GFXMODE</code>, <code>GRUB_GFXPAYLOAD_LINUX</code>) från backupens <code>/etc/default/grub</code> om de skiljer sig från målet."
+      },
+      {
+        "phase": "1b - systemd-start / ZFS-väg",
+        "detail": "För värdar som använder systemd-start (typiskt ZFS-on-root). <code>_rs_hyd_kernel_cmdline</code> sammanfogar användartokens från <code>cmdline_extra</code> till målets <code>/etc/kernel/cmdline</code>, hålla målets egen <code>root=</code>, <code>boot=</code> och <code>rootflags=</code> panna intakt."
+      },
+      {
+        "phase": "2 — /etc/modules Sammanslagning",
+        "detail": "<code>_rs_hyd_modules</code> Appenderar moduler från <code>manifest.kernel_params.modules_loaded_at_boot</code> som finns i den vita listan (<code>vfio</code>, <code>vfio_pci</code>, <code>vfio_iommu_type1</code>, <code>vfio_virqfd</code>, <code>kvm</code>, <code>kvm_intel</code>, <code>kvm_amd</code>, <code>nvidia</code>, <code>nvidia_drm</code>, <code>nvidia_modeset</code>, <code>nvidia_uvm</code>, <code>i915</code>, <code>xe</code>Och inte redan närvarande i målets mål <code>/etc/modules</code>."
+      },
+      {
+        "phase": "3 Vitlistade filer kopiera",
+        "detail": "<code>_rs_hyd_files</code> kopierar användargodkända filer från staging rootfs till det levande målet när innehållet skiljer sig. Whitelist täcker VFIO/nvidia/blacklist-filer under <code>/etc/modprobe.d</code>, <code>/etc/modules-load.d</code> och ProxMenux VFIO bind regel + nvidia udev regler under <code>/etc/udev/rules.d</code>. Distro-ägda filer (<code>pve-blacklist.conf</code>, <code>mdadm.conf</code>, <code>nvme.conf</code>) är avsiktligt uteslutna - deras innehåll utvecklas mellan releaser."
+      },
+      {
+        "phase": "4 Force post-boot reflows",
+        "detail": "De fyra faserna skriver direkt till det levande målet OUTSIDE den normala återställningsledningen. För att göra de sammanslagna tokens/modulerna/filerna träder i kraft på nästa stövel, <code>HB_HYDRATION_APPLIED=1</code> förökar genom <code>plan.env</code> för att <code>apply_pending_restore.sh</code>, vilka krafter <code>NEEDS_INITRAMFS=1</code> och <code>NEEDS_GRUB=1</code> Oavsett vad som fanns i appliceringslistan. Post-boot dispatcher regenererar sedan initramfs och uppdaterar bootloader."
+      }
+    ]
+  },
+  "planCommit": {
+    "heading": "Plan vs begår - användaren ser en förhandsvisning först",
+    "body": "Vätskan körs i två lägen. Innan bekräftelsedialogen kör ProxMenux <code>_rs_apply_bk_older_hydration</code> i <code>plan</code>-läge: det beräknar exakt vad som skulle slås samman, fyller <code>RS_HYDRATION_SUMMARY</code> med ett grönt block som listar varje åtgärd och returnerar utan att skriva. Bekräftelsedialogen visar att grönt block tillsammans med bärnstenen säker-subset skip list, så användaren ser UPFRONT vad som kommer att återanvändas automatiskt. När användaren bekräftar, ProxMenux kör samma hjälpare i <code>commit</code> läge - samma faser, samma logik, men denna gång varje fas skriver till levande mål. Annullera bekräftelsedialogen lämnar målet orört."
+  },
+  "flowDiagram": {
+    "heading": "Flödet när målkärnan är nyare än backupens",
+    "intro": "Stegen som läggs till när målkärnan är nyare sitter inuti det normala återställningsflödet. Allt annat - varmt applicera, i väntan på förberedelse, paketinstallation, post-boot dispatcher - körs identiskt till en same-kernel restaurering.",
+    "diagram": "  ┌────────────────────────────────────────────────────────────┐\n  │ hb_compat_check                                             │\n  │   HB_COMPAT_KERNEL_DIRECTION = bk_older                     │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ Add 16 boot-critical paths to RS_SKIP_PATHS                 │\n  │   /etc/default/grub, /etc/kernel, /etc/modules-load.d, ...  │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ _rs_apply_bk_older_hydration \"plan\"                         │\n  │   Compute what would be merged                              │\n  │   Populate RS_HYDRATION_SUMMARY (green block)               │\n  │   No writes                                                 │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ Confirmation dialog                                         │\n  │   Amber: paths skipped by safe-subset filter                │\n  │   Green: tokens/files reapplied by hydration                │\n  │   User accepts or cancels                                   │\n  └───────────────────────────┬────────────────────────────────┘\n                              │ (accepted)\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ _rs_apply_bk_older_hydration \"commit\"                       │\n  │   Phase 1a/1b: merge cmdline tokens + GRUB keys             │\n  │   Phase 2: append modules to /etc/modules                   │\n  │   Phase 3: copy whitelisted vfio/nvidia files               │\n  │   Set HB_HYDRATION_APPLIED=1                                │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ Rest of the restore runs normally                           │\n  │   _rs_apply hot (skips RS_SKIP_PATHS)                       │\n  │   _rs_prepare_pending_restore (writes plan.env with         │\n  │     HB_HYDRATION_APPLIED=1)                                 │\n  │   packages.manual.list install                              │\n  │   Reboot                                                    │\n  │   apply_pending_restore.sh (forces NEEDS_INITRAMFS=1,       │\n  │     NEEDS_GRUB=1 because of the hydration flag)             │\n  │   apply_cluster_postboot.sh                                 │\n  │     update-initramfs -u -k all                              │\n  │     update-grub / proxmox-boot-tool refresh                 │\n  │     component --auto-reinstall                              │\n  └────────────────────────────────────────────────────────────┘"
+  },
+  "concreteExamples": {
+    "heading": "Konkreta exempel",
+    "intro": "Vätskepasset är inte abstrakt - det ger observerbara, korrekta resultat för vanliga scenarier. Två exempel som hydrering hanterar automatiskt:",
+    "rows": [
+      {
+        "scenario": "GPU-genomkoppling (VFIO)",
+        "detail": "Källan hade <code>intel_iommu=on iommu=pt</code> i cmdline, <code>vfio</code>/<code>vfio_pci</code>/<code>vfio_iommu_type1</code> i <code>/etc/modules</code>, en <code>/etc/modprobe.d/vfio.conf</code> med <code>options vfio-pci ids=10de:2216</code> och en <code>/etc/modprobe.d/blacklist-nvidia.conf</code>. Hydration sammanfogar cmdline-tokens i målets GRUB eller kernel cmdline, appends vfio-modulerna till <code>/etc/modules</code> och kopierar de två användargodkända modprobe-filerna. På nästa start är IOMMU aktiv, VFIO-moduler last, GPU är bunden till vfio-pci och VM kommer upp med genomgående arbete."
+      },
+      {
+        "scenario": "Anpassade GRUB standarder",
+        "detail": "Källan hade <code>GRUB_TIMEOUT=1</code> och <code>GRUB_DISABLE_OS_PROBER=true</code>. Hydration läser båda nycklarna från säkerhetskopieringens <code>/etc/default/grub</code>, ser att de skiljer sig från den färska installationens standarder och skriver om de två linjerna i målets fil (som lämnar allt annat, inklusive <code>GRUB_DISTRIBUTOR</code>, orörd)."
+      }
+    ]
+  },
+  "callout": {
+    "warningTitle": "Vilken hydrering återanvänds inte när målkärnan är nyare",
+    "warningBody": "Hydration återanvänder endast konfigurationen ProxMenux vet att vara säker över kärnversioner: IOMMU-tokens, VFIO-ID, vitlistade GRUB-nycklar och moduler från en fast lista (<code>vfio*</code>, <code>nvidia*</code>, <code>i915</code>, <code>xe</code>, <code>kvm*</code>). Allt utanför den uppsättningen - anpassade initramfs krokar under <code>/etc/initramfs-tools/hooks/</code>, icke-vitlistade filer under <code>/etc/modprobe.d/</code>, användargodkända systemd-enhet åsidosatte sig - förblir uteslutna. Anledningen är betong: dessa filer kan ringa kärnintern gränssnitt (modul API, <code>/sys</code> layout, <code>udev</code> krokar) som ändras mellan stora versioner och tillämpar dem verbatim över den nyare kärnan kan förhindra att målet startar. När exakt reproduktion av startkedjan krävs måste återställningen köras på en värd med samma stora kärnversion som backup."
+  },
+  "codeReference": {
+    "heading": "Där mekanismerna lever",
+    "intro": "För utvecklare som vill spåra eller förlänga cross-kernel beteende:",
+    "rows": [
+      {
+        "component": "Direktionsdetektering",
+        "location": "<code>hb_compat_check</code> i <code>lib_host_backup_common.sh</code>. Sätter <code>HB_COMPAT_KERNEL_DIRECTION</code>."
+      },
+      {
+        "component": "Safe-subset Path List",
+        "location": "<code>hb_unsafe_paths_cross_version</code> i <code>lib_host_backup_common.sh</code>. Emits <code>path\\treason</code>-linjer som används av både CLI-filtret och Web endpoint <code>/api/host-backups/restore/prepare</code>."
+      },
+      {
+        "component": "Hydrationsfaser",
+        "location": "<code>_rs_hyd_grub</code>, <code>_rs_hyd_kernel_cmdline</code>, <code>_rs_hyd_modules</code>, <code>_rs_hyd_files</code> i <code>backup_host.sh</code>. Orkestrerad av <code>_rs_apply_bk_older_hydration</code>."
+      },
+      {
+        "component": "Framtvingad ombyggnad efter uppstart",
+        "location": "<code>apply_pending_restore.sh</code> läser <code>HB_HYDRATION_APPLIED</code> från <code>plan.env</code> och tvingar <code>NEEDS_INITRAMFS=1</code>/<code>NEEDS_GRUB=1</code>."
+      },
+      {
+        "component": "Web Preview",
+        "location": "<code>/api/host-backups/restore/prepare</code> i <code>flask_server.py</code>. Källor hjälper biblioteket, kör <code>_rs_apply_bk_older_hydration</code> i planläge, returnerar åtgärderna till webbmodalen."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Vart ska man gå nästa",
+    "items": [
+      {
+        "label": "Återställande",
+        "href": "/docs/backup-restore/restoring",
+        "tail": " — Den fullständiga återställningspipeline denna sidas mekanismer ansluter till."
+      },
+      {
+        "label": "Hur det fungerar",
+        "href": "/docs/backup-restore/how-it-works",
+        "tail": " – manifestet och samlarna som producerar <code>kernel_params</code>-blockets hydrering läser från."
+      }
+    ]
+  }
+}

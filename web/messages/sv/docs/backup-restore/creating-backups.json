@@ -1,0 +1,220 @@
+{
+  "meta": {
+    "title": "Skapa säkerhetskopior - interaktiv backup flöde | ProxMenux",
+    "description": "Det interaktiva backupflödet i ProxMenux. Två ingångspunkter (Scripts TUI-menyn och Monitor Web UI), tre destinationer, två profillägen, ett steg och en bekräftelsedialog. Dokument sex alternativ matrix, standard och anpassade profiler, och vad användaren ser mellan att välja en säkerhetskopia och arkivlandningen på destinationen.",
+    "ogTitle": "ProxMenux Backup - skapa backup",
+    "ogDescription": "Det interaktiva backupflödet med tre destinationer, två profiler och ett gemensamt steg.",
+    "twitterTitle": "Skapa backups | ProxMenux",
+    "twitterDescription": "Interaktivt backupflöde med tre destinationer och två profillägen."
+  },
+  "header": {
+    "title": "Skapa backups",
+    "description": "Det interaktiva backupflödet: välj en destination och en profil, granska bekräftelsesammanfattningen, titta på arkivmarken. Två ingångspunkter delar samma backend och producerar identiska arkiv.",
+    "section": "Säkerhetskopiering och återställning"
+  },
+  "intro": {
+    "title": "Två postpunkter, identisk funktionalitet",
+    "body": "Scripts TUI och Monitor Web UI avslöjar <strong> exakt samma funktionalitet</strong>. Varje backup - manuell eller schemalagd - går igenom samma val matrix (tre destinationer × två profiler) och åberopar samma backendfunktion per cell (<code>_bk_pbs</code>, <code>_bk_borg</code> eller <code>_bk_local</code>). De arkiv som produceras från antingen ingångspunkt är oskiljaktiga. Vilken som ska användas är en fråga om preferens: TUI är SSH-vänlig och skriptbar; Monitor erbjuder point-and-klick och liv tillsammans med meddelandet och log tailvisningar."
+  },
+  "entryPoints": {
+    "heading": "De två ingångspunkterna",
+    "rows": [
+      {
+        "entry": "ProxMenux Scripts (TUI)",
+        "path": "menu → Utilities → Host Config Backup",
+        "detail": "Dialogbaserat flöde, SSH-vänligt. Huvudmenyn presenterar de sex alternativen direkt. Använder <code>backup_menu</code> i <code>backup_host.sh</code>."
+      },
+      {
+        "entry": "ProxMenux Monitor (Webb UI)",
+        "path": "Backups tab → Create backup",
+        "detail": "Wizard-style flöde. Samma sex alternativ som presenteras som en tvåstegsform (destination → profil). Samma backendfunktioner åberopas över Flask API."
+      }
+    ]
+  },
+  "modes": {
+    "heading": "Manuell vs schemalagda backups",
+    "body": "Säkerhetskopior kan produceras i två lägen: <strong>manual</strong> (det interaktiva flödet denna sida dokument - användaren plockar en destination och en profil från en meny och tittar på arkivmarken) eller <strong>scheduled</strong> (ett obevakat jobb som körs på en kronstil timer och tillämpar retentionentionen konfigurerad på jobbet). Båda lägena stöder samma tre destinationer och samma två profiler, och båda är tillgängliga från båda ingångspunkterna - fliken Scripts TUI och fliken Monitor Backups. Planerade jobb använder samma backendfunktioner som manuellt flöde genom <code>run_scheduled_backup.sh</code>; de arkiv som produceras är oskiljbara.",
+    "seeAlso": "Sidan schemalagda jobb täcker hela flödet, inklusive hur man skapar ett jobb, bifogar det till en befintlig PVE vzdump timer och konfigurerar retentionsvärdena.",
+    "monitorAlt": "ProxMenux Monitor Backups-fliken som visar den nya schemalagda backup-dialogen med destination, profil, schema och lagringsfält.",
+    "monitorCaption": "Planerad backup - ProxMenux Monitor. Samma guide-stil dialog som skapar en manuell säkerhetskopia bär schemat och lagringsfälten längst ner för den obevakade vägen."
+  },
+  "matrix": {
+    "heading": "6-alternativet matrix",
+    "intro": "Valet bestämmer både vilken backend körs och vilken strategi för vägval tillämpas. Korsreferens destinationsspecifika sidor för konfigurationsdetaljerna för varje cell.",
+    "rows": [
+      {
+        "combo": "1",
+        "destination": "PBS",
+        "profile": "Standard",
+        "action": "Laddar standardprofilen plus ihållande extrafunktioner till ett konfigurerat PBS-lager."
+      },
+      {
+        "combo": "2",
+        "destination": "Borg",
+        "profile": "Standard",
+        "action": "Skapar ett arkiv med standardprofilen plus ihållande extrafunktioner i det valda Borg-förvaret."
+      },
+      {
+        "combo": "3",
+        "destination": "Lokal",
+        "profile": "Standard",
+        "action": "Skriver ett <code>.tar.zst</code>-arkiv med standardprofilen plus ihållande extrafunktioner till det konfigurerade lokala målet."
+      },
+      {
+        "combo": "4",
+        "destination": "PBS",
+        "profile": "Anpassad",
+        "action": "Öppnar sökaren innan PBS uppladdning; användaren fäster stigar och kan lägga till nya."
+      },
+      {
+        "combo": "5",
+        "destination": "Borg",
+        "profile": "Anpassad",
+        "action": "Öppnar sökaren innan Borg arkivet skapar."
+      },
+      {
+        "combo": "6",
+        "destination": "Lokal",
+        "profile": "Anpassad",
+        "action": "Öppnar sökaren innan du skriver den lokala <code>.tar.zst</code>."
+      }
+    ]
+  },
+  "profiles": {
+    "heading": "Standard vs anpassad profil",
+    "defaultTitle": "Standardprofil",
+    "defaultBody": "Standardprofilen är den kurerade listan från <code>hb_default_profile_paths</code> (dokumenterad i <em>Hur det fungerar</em> under <em>Path kategorier</em>) plus varje post i den ihållande extrafilen <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code>. Användaren bekräftar destinationen och krypteringsalternativen och backupen fortsätter utan ytterligare vägval.",
+    "customTitle": "Anpassad profil",
+    "customBody": "Den anpassade profilen öppnar en checklista som visar varje väg i standardprofilen (okontrollerad) och varje ihållande extra (förkontrollerad, prefixerad med <code>[+]</code>). Användaren fäster inställningen för denna körning och kan trycka på <em>Lägg till anpassad sökväg</em> för att lägga till en ny absolut väg. Varje väg som läggs till inline kvarstår till <code>backup-extra-paths.txt</code> så framtida säkerhetskopior plocka upp det automatiskt utan att ändra det. Ta bort en ihållande extra unticks det för denna körning men tar inte bort den från filen - radering är en separat <em>Manage anpassade vägar</em> åtgärd utanför backup flödet.",
+    "customPickerAlt": "Anpassad profilkontrolllista som visar standardprofilvägarna (okontrollerade) och ihållande extrafunktioner (förkontrollerad med ett prefix på +), plus knappar för att lägga till en ny väg eller bekräfta valet.",
+    "customPickerCaption": "Anpassad profil - Path picker. Standardprofilvägar är okontrollerade; ihållande extrafunktioner visas förkontrollerade med ett prefix på +. Användaren fäster uppsättningen för denna körning.",
+    "manageCustomAlt": "Hantera anpassade vägar meny som visar listan över ihållande extrafunktioner och alternativ för att lägga till, ta bort eller redigera dem.",
+    "manageCustomCaption": "Hantera anpassade vägar - ingångspunkten där ihållande extras läggs till eller tas bort. Varje väg som anges här ingår automatiskt i Default-mode backups utan att behöva öppna Custom picker."
+  },
+  "commonPipeline": {
+    "heading": "Vad som går oavsett destination",
+    "intro": "Efter att profilen är löst, kör varje backend samma iscensättningspipeline innan den avviker till sin egen uppladdningsväg. <code>hb_prepare_staging</code> monterar arkivträdet i <code>/tmp/proxmenux-DESTINATION-stage.XXXXXX</code> och befolkar var och en av de tre nyttolasterna.",
+    "steps": [
+      {
+        "step": "1",
+        "name": "rootfs montering",
+        "detail": "Kör <code>rsync -a</code> för varje vald väg till <code>staging_root/rootfs/</code>. Pmxcfs-databasen på <code>/var/lib/pve-cluster/config.db</code> fångas separat via <code>sqlite3 .backup</code> för att producera en konsekvent ögonblicksbild utan att stoppa klustret, och <code>.db-wal</code> / <code>.db-shm</code> sidvagnar är uteslutna från rsync; när <code>sqlite3</code> inte är tillgänglig en <code>config.db.raw-fallback</code> tappas istället, och återställningen främjar den på import. Volatile subpaths (bash history, caches, trash) utesluts från <code>/root/</code>. Paths frånvarande från källan registreras i <code>metadata/missing_paths.txt</code> utan att stoppa backupen."
+      },
+      {
+        "step": "2",
+        "name": "Manifestgenerering",
+        "detail": "<code>build_manifest.sh</code> orkestrerar de sex samlarna och skriver <code>manifest.json</code> högst upp i staging. På samlarsvikt faller den drabbade sektionen tillbaka till en dokumenterad tom standard; manifestet är fortfarande giltigt."
+      },
+      {
+        "step": "3",
+        "name": "Package Inventory",
+        "detail": "<code>apt-mark showmanual</code> fångas verbatim i <code>metadata/packages.manual.list</code>. Komponentstatus är redan inne i de restaurerade rötterna (<code>components_status.json</code>) eftersom <code>/usr/local/share/proxmenux/</code> är en del av standardprofilen."
+      },
+      {
+        "step": "4",
+        "name": "Kör info",
+        "detail": "<code>metadata/run_info.env</code> registrerar backup kör identitet - värdnamn, tidsstämpel, kärnversion - som används av återställningens kompatibilitetskontroll för att bestämma cross-kernel riktning."
+      },
+      {
+        "step": "5",
+        "name": "Anmälan (start)",
+        "detail": "<code>hb_notify_lifecycle \"start\"</code> bränder. Om meddelanden är konfigurerade i Monitor, en användarvänlig <em>Host backup start</em> händelse avges. Tyst om inga kanaler är konfigurerade."
+      }
+    ]
+  },
+  "included": {
+    "heading": "Vad går in och vad stannar ut",
+    "intro": "Varje väg i den lösta profilen (standard + ihållande extras + custom-mode val) kopieras med <code>rsync -aAXH --numeric-ids</code>. En delad uteslutningslista gäller för varje väg, och två kataloger har ytterligare vägspecifika uteslutningar.",
+    "globalTitle": "Globala uteslutningar (tillämpas varje väg)",
+    "globalItems": [
+      "<code>images/</code> - bilddumpar.",
+      "<code>dump/</code> vzdump-utgångar.",
+      "<code>tmp/</code> - tillfälliga filer.",
+      "<code>*.log</code> loggfiler."
+    ],
+    "rootTitle": "<code>/root/</code>-uteslutningar",
+    "rootBody": "<code>/root/</code> är en del av standardprofilen så användarskript och konfig mark i arkivet. Volatile subpaths tappas:",
+    "rootItems": [
+      "<code>.bash_history</code>",
+      "<code>.cache/</code>",
+      "<code>tmp/</code>",
+      "<code>.local/share/Trash/</code>"
+    ],
+    "proxmenuxTitle": "<code>/usr/local/share/proxmenux/</code>-uteslutningar",
+    "proxmenuxBody": "Denna katalog skickar användarstatus endast - <code>components_status.json</code>, preferenser, post-install cache. Kod som destinationen redan har från sin egen ProxMenux-installation utesluts så att en återställning inte överskriver målets nuvarande binärer med äldre:",
+    "proxmenuxItems": [
+      "<code>restore-pending/</code>, <code>scripts/</code>, <code>web/</code>",
+      "<code>monitor-app/</code>, <code>monitor-app.*/</code>, <code>AppImage/</code>",
+      "<code>images/</code>, <code>json/</code>",
+      "<code>utils.sh</code>, <code>helpers_cache.json</code>",
+      "<code>ProxMenux-Monitor.AppImage*</code>, <code>install_proxmenux*.sh</code>"
+    ],
+    "notInProfileTitle": "Vägar utanför profilen",
+    "notInProfileBody": "Allt som inte anges i <code>hb_default_profile_paths</code> och inte läggs till som en anpassad eller ihållande extra är inte en del av backupen. Anmärkningsvärda exempel:",
+    "notInProfileItems": [
+      "<strong>VM och LXC disks</strong> - hanteras av <code>vzdump</code>, inte av denna funktion. Gästkonfigurationsfiler under <code>/etc/pve/nodes/*/qemu-server/*.conf</code> och <code>lxc/*.conf</code> fångas (de lever under <code>/etc/pve</code>) så återställningen reproducerar inventeringen; diskarna själva är återanslutna från en befintlig vzdump / PBS backup.",
+      "<strong><code>/boot</code> och <code>/boot/efi</code></strong> - kärnbinärer, initramfer och UEFI ESP-partitionen regenereras av målets egen <code>update-initramfs</code>, <code>update-grub</code> eller <code>proxmox-boot-tool refresh</code> efter återställningen. Bootloader kopieras aldrig verbatim.",
+      "<strong>Kernel och system runtime filsystems</strong> - <code>/proc</code>, <code>/sys</code>, <code>/dev</code> och <code>/run</code> är pseudo-filsystem som produceras av kärnan och udev; de är inte kvar någonstans.",
+      "<strong>Paketbinärer under <code>/usr/bin</code>, <code>/usr/lib</code>, <code>/lib</code>, <code>/sbin</code></strong> - ominstallerad av målets APT från <code>packages.manual.list</code>.",
+      "<strong><code>/var/log/</code>, <code>/var/tmp/</code>, <code>/var/cache/</code></strong> - per-värd runtime tillstånd, inte återställd.",
+      "<strong><code>/home/USER</code></strong> - inte i standardprofilen. Lägg till det som en anpassad väg när ett system bär hemkataloger som måste överleva en återställning."
+    ],
+    "customPathsTitle": "Hur anpassade vägar hanteras",
+    "customPathsBody": "En anpassad väg som läggs till i anpassat läge eller kvarstår i <code>backup-extra-paths.txt</code> går igenom samma <code>rsync</code>-pipeline som standardprofilvägar. Globala uteslutningar gäller. Om den anpassade vägen råkar vara under <code>/root/</code> eller <code>/usr/local/share/proxmenux/</code> gäller fortfarande de vägspecifika uteslutningarna ovan. Varje arkiverad väg - standard eller anpassad - registreras i <code>metadata/paths_archived.txt</code>. Paths som inte finns på källan registreras i <code>metadata/missing_paths.txt</code> utan att stoppa backupen."
+  },
+  "archiveStructure": {
+    "heading": "Arkivstruktur",
+    "intro": "Den staging katalog som produceras av varje backend följer samma layout oavsett destination. Tarball, PBS <code>.pxar</code> eller Borg arkiv butiker detta träd verbatim.",
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # output of apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, kernel version, pmxcfs method\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root without volatile subpaths\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (state only)\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/crontabs"
+  },
+  "confirmation": {
+    "heading": "Bekräftelse sammanfattning",
+    "body": "Innan backend skriver något till destinationen visar ProxMenux en sammanfattande dialog med destinationen, backup-ID eller arkivnamn, krypteringstillstånd och listan över vägar som kopieras. Avbokning här avbryter backupen rent - staging katalogen tas bort av <code>trap</code> kroken på backend funktionen och ingen partiell data når destinationen."
+  },
+  "writing": {
+    "heading": "Skriva till destinationen",
+    "intro": "När användaren bekräftar kör varje backend sitt eget skrivsteg. Mekaniken är täckta på destinationssidorna; den delade ytan är loggen, sidovagnen och slutförandet.",
+    "rows": [
+      {
+        "topic": "Loggfil",
+        "detail": "Varje backend skriver sin fulla utgång till <code>/tmp/proxmenux-DESTINATION-backup-YYYYMMDD_HHMMSS.log</code> och, på misslyckande, erbjuder att öppna den i en rullande dialog. Loggen är tryckt i slutförandet sammanfattning endast när filen har innehåll."
+      },
+      {
+        "topic": "Sidecar (endast lokal)",
+        "detail": "<code>hb_write_archive_sidecar</code> släpper en <code>*.proxmenux.json</code> bredvid det lokala arkivet så att Monitor identifierar det som en ProxMenux-värdbackup även efter rörelser eller renamer."
+      },
+      {
+        "topic": "Anmälan (komplett / fel)",
+        "detail": "<code>hb_notify_lifecycle \"complete\"</code> eller <code>\"fail\"</code>-bränder med varaktighet, arkivstorlek och - för misslyckanden - den sista felsökningslinjen från loggen."
+      }
+    ]
+  },
+  "finishedScreens": {
+    "heading": "Vad en färdig backup ser ut",
+    "intro": "Samma slutförandehändelse uppträder av båda ingångspunkterna. TUI skriver ett sammanfattande block till terminalen; Monitor's Backups-fliken visar körningen i arkivlistan med storlek, varaktighet och statusmärken.",
+    "scriptsAlt": "ProxMenux Scripts TUI visar en färdig värd backup — destination, backup ID, snapshot väg, data storlek, varaktighet och kryptering tillstånd.",
+    "scriptsCaption": "Avslutad backup - ProxMenux Scripts (TUI). Slutförande blocket trycker destinationen, backup-ID, vilket resulterar i snapshot eller arkivnamn, datastorlek, varaktighet och krypteringstillstånd.",
+    "monitorAlt": "ProxMenux Monitor Backups-fliken som visar en färdig värdbackuppost med storlek, varaktighet, metodmärke och krypteringsindikator.",
+    "monitorCaption": "Avslutad backup - ProxMenux Monitor Backups-fliken. Den nya säkerhetskopian visas i arkivlistan med destinationsmetodens märke, storlek, varaktighet och - när det är tillämpligt - krypteringslåsindikatorn."
+  },
+  "whereNext": {
+    "heading": "Vart ska man gå nästa",
+    "items": [
+      {
+        "label": "Destinationer",
+        "href": "/docs/backup-restore/destinations",
+        "tail": " - konfigurationsdetaljer för Local, PBS och Borg."
+      },
+      {
+        "label": "Planerade jobb",
+        "href": "/docs/backup-restore/scheduled-jobs",
+        "tail": " - kör samma backup obevakad på ett schema istället för interaktivt."
+      },
+      {
+        "label": "Återställande",
+        "href": "/docs/backup-restore/restoring",
+        "tail": " — flödet som förbrukar vad denna sida producerar."
+      }
+    ]
+  }
+}

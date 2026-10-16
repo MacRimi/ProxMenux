@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "Backup destinationer - Lokal, Proxmox Backup Server, Borg | ProxMenux",
+    "description": "Tre lagringsbackends får samma ProxMenux backup payload: en lokal .tar.zst arkiv på något skrivbart filsystem, en PBS backup i en Proxmox Backup Server databutik, eller ett Borg arkiv i ett lokalt eller avlägset Borg repository. Varje backend har sin egen komprimering, deduplicering, kryptering och nätverksegenskaper.",
+    "ogTitle": "ProxMenux mål för säkerhetskopior",
+    "ogDescription": "Lokal, Proxmox Backup Server och Borg - tre lagringsbackends för samma värdbackup payload.",
+    "twitterTitle": "ProxMenux Backup destinationer | ProxMenux",
+    "twitterDescription": "Lokal arkiv, Proxmox Backup Server och Borg backends för värdbackups."
+  },
+  "header": {
+    "title": "Destinationer",
+    "description": "Tre lagringsbackends som stöds av ProxMenux Backup: lokal arkiv, Proxmox Backup Server (rekommenderas) och Borg. Varje får samma tre-payload arkiv; de skiljer sig i lagringsformat, deduplicering, krypteringsmodell och nätverkskrav.",
+    "section": "Säkerhetskopiering och återställning"
+  },
+  "intro": {
+    "title": "Samma nyttolast, tre backends",
+    "body": "Varje backup producerar samma tre nyttolast (rootfs, manifest, applikationer). Vilka förändringar mellan destinationer är hur dessa nyttolast lagras och hur operatören hämtar dem för en återställning. Varje backend implementeras som en separat funktion i <code>backup_host.sh</code> - <code>_bk_local</code>, <code>_bk_pbs</code>, <code>_bk_borg</code> - men alla fyra delar samma steg (<code>hb_prepare_staging</code>) och samma återställningskodbana. Valet av destination påverkar bara skrivandet och hämtningen; den ändrar inte vad en återställning gör eller hur den förbrukar arkivet."
+  },
+  "comparison": {
+    "heading": "Funktion jämförelse",
+    "intro": "Följande tabell listar de konkreta skillnaderna mellan de tre backends som de beter sig i ProxMenux idag. Alla värden beskriver observerat beteende av backend själv, inte redaktionella rekommendationer.",
+    "rows": [
+      {
+        "feature": "Lagringsformat",
+        "local": "Enkel <code>.tar.zst</code>-fil (eller <code>.tar.gz</code> om <code>zstd</code> är frånvarande).",
+        "pbs": "PBS backup (<code>.pxar</code> bitar i databutiken).",
+        "borg": "Borg arkiv inuti ett Borg-förvar (segmentfiler)."
+      },
+      {
+        "feature": "Kompression",
+        "local": "zstd (standardnivå) via <code>tar --zstd</code>. gzip fallback.",
+        "pbs": "PBS hanteras. Kunden strömmar okomprimerad; servern bitar + komprimerar.",
+        "borg": "Borgs inbyggda (lz4 standard). Konfigurerbar på repo init."
+      },
+      {
+        "feature": "Deduplicering",
+        "local": "Ingen. Varje backup är ett fullt oberoende arkiv.",
+        "pbs": "Full chunk-nivå deduplicering över alla säkerhetskopior i databutiken.",
+        "borg": "Full chunk-nivå deduplicering över alla arkiv i förvaret."
+      },
+      {
+        "feature": "Kryptering i vila",
+        "local": "Ingen (förlitar sig på skydd av filsystemnivå).",
+        "pbs": "Valfri klient-side keyfile kryptering. Återställning blob laddas upp som separat backup grupp när det är aktiverat.",
+        "borg": "Valfri repokey kryptering (nyckel lagrad i repan, låst av en passfras)."
+      },
+      {
+        "feature": "Retention / beskärning",
+        "local": "Tillämpas per schemalagt jobb via <code>KEEP_LAST</code>. Gamla arkiv (och deras sidovagnar + löparloggar) raderas symmetriskt. Interaktiva säkerhetskopior inte beskär.",
+        "pbs": "Tillämpas per schemalagt jobb via <code>proxmox-backup-client prune --keep-last / --keep-daily / --keep-weekly</code>. Interaktiva säkerhetskopior inte beskär.",
+        "borg": "Tillämpas per schemalagt jobb via <code>borg prune --keep-last / --keep-daily / --keep-weekly</code>. Interaktiva säkerhetskopior inte beskär."
+      },
+      {
+        "feature": "Nätverk",
+        "local": "Ingen. Skriver till en lokal monteringspunkt (vanligtvis en intern disk eller en USB-enhet).",
+        "pbs": "TCP till PBS-servern (standardport 8007). Kräver PBS-uppgifter + fingeravtryck.",
+        "borg": "Lokal filsystemväg eller SSH tunnel till en avlägsen Borg värd."
+      },
+      {
+        "feature": "Beroende",
+        "local": "<code>tar</code>, <code>zstd</code> (på Proxmox som standard).",
+        "pbs": "<code>proxmox-backup-client</code>-paket (blandat med Proxmox VE 8+).",
+        "borg": "<code>borg</code> binär. Autotillhandahållen av ProxMenux från Monitor AppImage-paketet när det saknas."
+      },
+      {
+        "feature": "Återställ åtkomst",
+        "local": "Alla värdar med tar+zstd kan extrahera arkivet. Inget PBS/Borg behövde.",
+        "pbs": "Kräver <code>proxmox-backup-client</code> + PBS referenser + keyfile (om krypterad).",
+        "borg": "Kräver <code>borg</code> + förvaringsbanan + passfrasen (om krypterad)."
+      }
+    ],
+    "captionCode": "feature",
+    "captionLocal": "Lokal",
+    "captionPbs": "Proxmox Backup Server (rekommenderas)",
+    "captionBorg": "Borg"
+  },
+  "sameArchive": {
+    "heading": "Arkivlayouten ändras inte med destinationen",
+    "body": "Inuti någon av de tre destinationerna, samma <code>rootfs/</code> + <code>metadata/</code> + <code>manifest.json</code> layout som beskrivs i <em>Hur det fungerar</em> är närvarande. En <code>.tar.zst</code> extraherad från ett lokalt arkiv, en <code>.pxar</code> restaurerad från PBS, och ett Borg arkiv extraherad med <code>borg extract</code> alla ger en identisk katalog träd. Renoveringskodbanan (<code>_rs_check_layout</code>, <code>_rs_apply</code>, <code>_rs_prepare_pending_restore</code>) läser samma tre nyttolast utan att veta vilken destination de kom ifrån."
+  },
+  "extractStandalone": {
+    "heading": "Extrahera en backup utanför ProxMenux",
+    "intro": "Alla tre arkivformat kan läsas med standardverktyg utan ProxMenux installerat på läsvärden. Ledarna nedan producerar samma katalogträd som en återställning konsumerar internt.",
+    "localCmd": "# From a local .tar.zst archive:\ntar --zstd -xf hostcfg-HOST-TIMESTAMP.tar.zst\n\n# From a .tar.gz fallback:\ntar -xzf hostcfg-HOST-TIMESTAMP.tar.gz",
+    "pbsCmd": "# From a PBS backup (requires proxmox-backup-client):\nproxmox-backup-client restore \\\n    --repository USER@REALM@HOST:DATASTORE \\\n    host/hostcfg-HOST/BACKUP-TIME \\\n    hostcfg.pxar /tmp/hostcfg\n\n# Add --keyfile KEY-PATH when the backup is encrypted.",
+    "borgCmd": "Från ett Borg-arkiv (kräver borg binär + passfras för krypterade repos):\nborg utvinner REPO-PATH:ARCHIVE-NAME\n\nPå en avlägsen SSH-served repo:\nborg extrahera ssh://USER@HOST:PORT/REPO-PATH::ARCHIVE-NAME",
+    "note": "Det extraherade trädet kan sedan inspekteras manuellt eller matas till en manuell återställning. Se de enskilda destinationssidorna för det exakta hämtningsflödet ProxMenux använder under huven."
+  },
+  "whereNext": {
+    "heading": "Per-destination detalj",
+    "intro": "Varje destination har sin egen sida som täcker konfigurationsflödet, on-disk-formatet och hämtningskommandot som används av återställningen.",
+    "items": [
+      {
+        "label": "Lokalt arkiv",
+        "href": "/docs/backup-restore/destinations/local",
+        "tail": " - Förkonfigurera ett lokalt mål, USB-enhetsmontering, säkerhetskontrollen mot att skriva arkivet i sig, sidovagnen JSON som låter monitorn identifiera filen."
+      },
+      {
+        "label": "Proxmox Backup Server (rekommenderas)",
+        "href": "/docs/backup-restore/destinations/pbs",
+        "tail": " - databutiksval, referenser och fingeravtryck, krypteringsnyckelfil livscykel, återställningspassfras, laddar upp återställningsbloben till PBS för färskinstallerad återhämtning."
+      },
+      {
+        "label": "Borg",
+        "href": "/docs/backup-restore/destinations/borg",
+        "tail": " — lokala vs. SSH-served repositories, Borg binär sourcing (system / cache / Monitor AppImage bunt / GitHub nedladdning), förvarsinitiering, passfrashantering, SSH nyckelinställning för fjärr repos."
+      }
+    ]
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "meta": {
+    "title": "Proxmox Commands Reference - Qm, pct, vzdump, zpool, pveversion | ProxMenux",
+    "description": "Curated referens av viktiga Proxmox VE och Linux kommandon organiserade av ämne: systeminspektion, VM och LXC management (qm / pct), lagring och diskar, nätverk, uppdateringar, GPU genomgång, ZFS, backup och återställning, och dag till dag CLI verktyg.",
+    "ogTitle": "Proxmox Commands Reference - qm, pct, vzdump, zpool",
+    "ogDescription": "Curated referens av de mest användbara Proxmox VE och Linux kommandon, grupperade efter ämne - system, VM / CT, lagring, nätverk, uppdateringar, GPU genomgång, ZFS, backup och CLI verktyg.",
+    "twitterTitle": "Proxmox kommandon referens | ProxMenux",
+    "twitterDescription": "Curated referens av de mest användbara Proxmox VE och Linux kommandon, grupperade efter ämne."
+  },
+  "header": {
+    "title": "Hjälp och info",
+    "description": "Curated compendium av användbara Linux och Proxmox VE kommandon organiserade av ämnet. Nio kategorier täcker allt från en snabb pveversionskontroll till en multi-line zfs-sändning / mottagning - avsedd att leva tillsammans med GPU, disk och dela delar av ProxMenux som en enda referens.",
+    "section": "Hjälp och info"
+  },
+  "intro": {
+    "title": "Vad detta är",
+    "body": "En referenskatalog över de kommandon du faktiskt använder på en Proxmox-värd, grupperad efter ämne. Inuti ProxMenux kan du välja ett nummer för att köra ett kommando direkt eller klistra in din egen på prompten; på denna webbplats är varje kategori ett kopia-paste bord."
+  },
+  "opening": {
+    "heading": "Öppna menyn",
+    "body": "Från ProxMenux huvudmenyn, tryck på <kbd>h</kbd>. Du kommer att se detta:",
+    "imageAlt": "Hjälp och info-meny med 9-kategorier av kommandon"
+  },
+  "categories": {
+    "heading": "De nio kategorierna",
+    "options": [
+      {
+        "icon": "Terminal",
+        "href": "/docs/help-info/system-commands",
+        "title": "Användbara systemkommandon",
+        "description": "pveversion, uptime, gratis, journalctl, hostnamectl, nuvarande användarinformation, lynis revision, fastfetch."
+      },
+      {
+        "icon": "Cpu",
+        "href": "/docs/help-info/vm-ct-commands",
+        "title": "VM och CT Management",
+        "description": "qm list / config / start / stop / migrate, pct list / config / enter, snapshots, cloning."
+      },
+      {
+        "icon": "HardDrive",
+        "href": "/docs/help-info/storage-commands",
+        "title": "Lagring och diskar",
+        "description": "lsblk, blkid, smartctl, montering info, pvesm status, LVM kommandon."
+      },
+      {
+        "icon": "Network",
+        "href": "/docs/help-info/network-commands",
+        "title": "Nätverkskommandon",
+        "description": "ip / ss / nmcli, bridge inspection, ping / traceroute, DNS lookups, fail2ban-client."
+      },
+      {
+        "icon": "Package",
+        "href": "/docs/help-info/update-commands",
+        "title": "Uppdateringar och paket",
+        "description": "apt update / dist-upgrade, apt-cache policy, dpkg queries, repo file checks."
+      },
+      {
+        "icon": "Cpu",
+        "href": "/docs/help-info/gpu-commands",
+        "title": "GPU-genomföring",
+        "description": "lspci / dmesg checks, IOMMU enablement verification, vfio-pci binding, GPU usage from the host."
+      },
+      {
+        "icon": "Database",
+        "href": "/docs/help-info/zfs-commands",
+        "title": "ZFS-hantering",
+        "description": "zpool / zfs kommandon för status, datamängder, ögonblicksbilder, skicka / ta emot, ARC-tuning, trimning."
+      },
+      {
+        "icon": "Archive",
+        "href": "/docs/help-info/backup-commands",
+        "title": "Backup och återställ",
+        "description": "vzdump, qmrestore / pct restaurering, Proxmox Backup Server hjälpare, snapshot operationer."
+      },
+      {
+        "icon": "Wrench",
+        "href": "/docs/help-info/tools-commands",
+        "title": "System CLI-verktyg",
+        "description": "tmux, skärm, htop / btop, ncdu, jq, dig, lsof, klocka - dagdrivare admin verktyg."
+      }
+    ]
+  },
+  "tip": {
+    "title": "Sökbar från den globala sökningen",
+    "body": "Varje kommando på dessa sidor indexeras av dokumentationssökningen. Om du kommer ihåg en flagga eller fragment men inte vilken sida den är på, slå sökfältet på toppen - du landar direkt på rätt post."
+  }
+}

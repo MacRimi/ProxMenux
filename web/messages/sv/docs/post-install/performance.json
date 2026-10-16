@@ -1,0 +1,61 @@
+{
+  "meta": {
+    "title": "Post-Install: Prestanda | ProxMenux Dokumentation",
+    "description": "Prestandaalternativ i ProxMenux Customizable post-install script. Ersätter entrådig gzip med pigz (parallell gzip) för snabbare säkerhetskopior och komprimering på multi-core värdar."
+  },
+  "header": {
+    "title": "Efter installationen: prestanda",
+    "description": "Prestandaalternativ i Customizable post-install script. För närvarande innehåller denna kategori en enda optimering: ersätta gzip med pigz så säkerhetskopior och komprimering använder varje CPU kärna istället för en.",
+    "section": "Inställningar efter installation av Proxmox"
+  },
+  "intro": {
+    "title": "Vad denna kategori täcker",
+    "body": "Det enda prestandaalternativet här rewires systemets gzip till ett parallellt genomförande. Andra prestationsrelaterade tweaks (minnesjustering, I / O schemaläggning, ZFS ARC dimensionering, kärngränser) lever under sina egna kategorier (<em>System</em>, <em>Storage</em>) eftersom de påverkar olika delsystem."
+  },
+  "pigz": {
+    "heading": "Använd pigz för snabbare gzip-komprimering",
+    "intro": "Standard <code>gzip</code> komprimerar data med hjälp av en <strong>single CPU core</strong>. På moderna Proxmox värdar med 8, 16 eller 32 kärnor, som är en stor flaskhals under <code>vzdump</code> VM / CT backups, log rotation, och allt annat som rör genom <code>gzip</code>. <a>pigz</a> är en drop-in parallell ersättning: samma gzip-kompatibla produktion, men det sprider arbetet över varje kärna.",
+    "doesTitle": "Vad ProxMenux gör",
+    "doesIntro": "Fyra steg, all idempotent:",
+    "doesItems": [
+      "Ställ <code>pigz: 1</code> i <code>/etc/vzdump.conf</code> så Proxmox säkerhetskopieringsverktyg använder pigz infödd.",
+      "Installerar <code>pigz</code> apt-paketet om det inte redan finns.",
+      "Skriver ett wrapper-skript på <code>/bin/pigzwrapper</code> som vidarebefordrar varje argument till <code>/usr/bin/pigz</code>.",
+      "Registrerar en dpkg avledning för systemets <code>gzip</code> binär (<code>/usr/bin/gzip</code> på Proxmox VE 9, <code>/bin/gzip</code> på Proxmox VE 8): den verkliga binären hålls bredvid den som <code>gzip.distrib</code> och omslaget tar sin plats. Från och med nu använder <em>anything</em> som kallar <code>gzip</code> - logrotat, <code>tar czf</code>, skript, vzdump - pigz transparent.",
+      "Kontrollerar att filen som hålls som <code>gzip.distrib</code> är en fungerande gzip innan omslaget sätts på plats, och installerar om <code>gzip</code>-paketet först när det inte är det. En värd som fortfarande har den tidigare <code>/bin/gzip.original</code> swap flyttas till avledningen när alternativet appliceras igen."
+    ],
+    "replacesTitle": "Detta ersätter ett system binär",
+    "replacesBody": "Att sätta en wrapper på platsen för <code>gzip</code> är ovanligt. Det är säkert (vecklaren producerar gzip-kompatibel utgång), men värt att veta: skript som hårdkod vägar, kör inuti restriktiva kromar, eller verifiera binära hashar kan bete sig annorlunda. Den verkliga binären bevaras som <code>gzip.distrib</code>, och eftersom ersättningen är en dpkg avledning, en uppdatering av <code>gzip</code>-paketet - eller uppgraderingen från Proxmox VE 8 till 9 - uppdateringar som filen och lämnar omslaget på plats.",
+    "revertTitle": "Reversibel från Uninstall-menyn",
+    "revertBody": "Denna optimering spåras. <link>Uninstall Optimizations</link> kopierar den verkliga binären från <code>gzip.distrib</code> tillbaka över wrapper, tar bort avledningen och <code>pigzwrapper</code>, kommenterar <code>pigz</code>-linjen i <code>/etc/vzdump.conf</code>, och kör <code>apt purge pigz</code> när gzip verifieras till jobbet. Manuell motsvarighet på Proxmox VE 9:",
+    "verifyTitle": "Verifiering",
+    "verifyBody": "Efter applicering bör <code>gzip --version</code> nämna pigz. Ett snabbt riktmärke visar också hastighetsskillnaden på en multi-core värd:",
+    "whenTitle": "När detta betyder mest",
+    "whenBody": "Effekten skalor med <strong>how många kärnor värden has</strong> och <strong>how ofta du kör backups</strong>. På en 2-core home-lab box med en daglig vzdump, är fördelen marginell. På en 16-kärnproduktion värd backar upp ett dussin VMs varje natt, kan pigz skära backup fönstret till en bråkdel av vad enstaka gzip tar."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "label": "Backup och återställa kommandon",
+        "href": "/docs/help-info/backup-commands",
+        "tailRich": " — vzdump CLI referens, inklusive <code>--pigz</code> trådar alternativ."
+      },
+      {
+        "label": "Lagring",
+        "href": "/docs/post-install/storage",
+        "tail": " — vzdump hastighet gränser och ZFS ARC tuning."
+      },
+      {
+        "label": "Systemsystem",
+        "href": "/docs/post-install/system",
+        "tail": " — fil-descriptor och minnestuning."
+      },
+      {
+        "label": "Anpassningsbar post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — tillbaka till föräldermenyn."
+      }
+    ]
+  }
+}

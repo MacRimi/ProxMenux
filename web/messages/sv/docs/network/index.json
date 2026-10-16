@@ -1,0 +1,107 @@
+{
+  "meta": {
+    "title": "Proxmox Network Management - Bridges, Bonds, Diagnostics, Repair | ProxMenux",
+    "description": "Read-only diagnostik, analys-then-suggest arbetsflöden och guidade reparationer för Debian / Proxmox nätverk stack (/etc/network/interfaces). Inspektera broar och obligationer, köra levande övervakningsverktyg, kvarstår gränssnittsnamn, säkerhetskopiera och säkert starta om nätverk - med obligatoriska säkerhetskopior och steg-för-steg-förhandsvisningar.",
+    "ogTitle": "Proxmox Network Management - Bridges, Bonds, Diagnostics, Repair",
+    "ogDescription": "Diagnostik, analys och guidade reparationer för Proxmox nätverksstapel med obligatoriska säkerhetskopior och steg-för-steg förhandsvisningar.",
+    "twitterTitle": "Proxmox Network Management ProxMenux",
+    "twitterDescription": "Bryggor, obligationer, diagnostik och guidade reparationer för Proxmox nätverk stack med obligatoriska säkerhetskopior."
+  },
+  "header": {
+    "title": "Nätverkshantering",
+    "description": "Läs-bara diagnostik, analys-then-suggest rapporter och guidade reparationer för den klassiska Debian/Proxmox nätverk stack. Varje destruktivt flöde tar en säkerhetskopia först och förhandsgranskar exakta förändringar innan du tillämpar dem.",
+    "section": "Nätverk"
+  },
+  "intro": {
+    "title": "Vad denna meny är för",
+    "body": "Inspektera, diagnostisera och (när det behövs) reparera Proxmox värdnätverkskonfiguration utan att förlora fjärråtkomst. Verktygen är utformade kring en princip: <strong>00read först, föreslå, sedan tillämpa endast med uttryckligt samtycke och en säkerhets backup</strong>. Det finns ingen \"auto-fix allt\" -knapp."
+  },
+  "openingMenu": {
+    "heading": "Öppna menyn",
+    "intro": "Från ProxMenux huvudmenyn väljer du <strong>Network</strong>. Du kommer att se detta:",
+    "imageAlt": "Nätverkshanteringsmenyn med diagnostik, övervakning, analys, reparation, ihållande namn och backupalternativ"
+  },
+  "safety": {
+    "heading": "Säkerhetsmodellen",
+    "body": "Redigera nätverkskonfiguration på en fjärrproxmox värd är ett av de enklaste sätten att låsa dig. ProxMenux behandlar varje åtgärd i enlighet därmed. Verktygen faller i tre beteendenivåer - välj kortet som matchar din avsikt:"
+  },
+  "tiers": {
+    "readOnly": {
+      "title": "Skrivskyddad",
+      "body": "Ren inspektion. Kan inte ändra systemet under några omständigheter.",
+      "items": [
+        "Routing tabell, anslutningstester, avancerad statistik",
+        "Levande trafikövervakning (ovan, iptraf-ng)",
+        "Bandbreddstest (iperf3)"
+      ]
+    },
+    "analyze": {
+      "title": "Analysera, sedan föreslå",
+      "body": "Detekterar problem, skriver ut en rapport med föreslagna skalkommandon och slutar. Du bestämmer dig för att ange den guidade reparationen efteråt.",
+      "items": [
+        "Bridge konfigurationsanalys",
+        "Nätverkskonfigurationsanalys"
+      ]
+    },
+    "apply": {
+      "title": "Applicera med backup",
+      "body": "Ändra systemet. Ta alltid en tidsstämplad säkerhetskopia av den drabbade filen först och visar en förhandsvisning innan du skriver.",
+      "items": [
+        "Persistenta gränssnittsnamn (.länkfiler)",
+        "Manuell backup, återställning och service omstart"
+      ]
+    }
+  },
+  "classicTitle": "Klassisk stack endast",
+  "classicBody": "Varje analys och reparationsfunktion kontrollerar den aktiva nätverkshanteraren innan du rör något. Om värden kör <strong>netplan</strong>, <strong>systemd-networkd</strong> eller <strong>NetworkManager</strong>, aborterar verktyget omedelbart med ett tydligt meddelande - menyn stöder bara den klassiska Debian / Proxmox stack på <code>/etc/network/interfaces</code>. Detta är avsiktligt: redigera en netplan-fil med regler skrivna för <code>ifupdown</code> skulle tyst korrumpera konfigurationen.",
+  "backups": {
+    "heading": "Där backups går",
+    "intro": "Varje guidad reparation, återställning eller manuell säkerhetskopia skriver en tidsstämplad kopia av <code>/etc/network/interfaces</code> till <code>/var/backups/proxmenux/</code>:",
+    "rollbackIntro": "Att rulla tillbaka manuellt från en konsol:"
+  },
+  "readOnlySection": {
+    "heading": "Läs-bara inspektion",
+    "body": "Utgångspunkten när något känns av. Ren inspektion - skriver aldrig till <code>/etc/network/interfaces</code> och kör aldrig ett modifierande kommando (med ett uttryckligt, opt-in undantag för rensning av NetworkManager när det upptäcks). Säker att använda över SSH när som helst.",
+    "options": [
+      {
+        "title": "Diagnostik",
+        "description": "Tre en-shot läs-bara kontroller: Visa Routing Table, Test Connectivity och Advanced Diagnostics. Rena inspektioner – skriver aldrig till systemet."
+      },
+      {
+        "title": "Levande övervakningsverktyg",
+        "description": "Tre interaktiva launchers: iftop (realtid bandbredd per värdpar), iptraf-ng (multi-mode trafik monitor) och iperf3 (bandbredd test, server / klientläge)."
+      }
+    ]
+  },
+  "analyzeSection": {
+    "heading": "Analysera, sedan föreslå",
+    "body": "Används när en inspektion (eller ett verkligt avbrott) pekar på ett konfigurationsproblem. Varje verktyg går den relevanta delen av <code>/etc/network/interfaces</code>, skriver en detaljerad rapport med det exakta skalkommandot som skulle fixa varje upptäckt och <strong>stops</strong>. Om du accepterar den valfria guidade reparationen efteråt backas varje förändring upp och förhandsgranskas innan du skrivs.",
+    "options": [
+      {
+        "title": "Bridge analys och guidad reparation",
+        "description": "Upptäck vmbrX broar med försvunna eller ogiltiga portar (typisk efter PCI-omräkning). Visar en rapport först; bara reparerar när du accepterar 5-stegs guidade flöde."
+      },
+      {
+        "title": "Config analys och guidad rengöring",
+        "description": "Fysiska gränssnitt förklaras i /etc/network/interfaces som inte längre finns (föräldrakonfigs kvar av hårdvaruförändringar). Rapportera dem och erbjuder en guidad borttagning."
+      }
+    ]
+  },
+  "applySection": {
+    "heading": "Applicera med backup",
+    "body": "Verktyg som skriver till disk genom design. Var och en tar en tidsstämplad säkerhetskopia av den drabbade filen innan du skriver, och de destruktiva alternativen (återstart, omstart) kräver en explicit ja / ingen bekräftelse. <em>Persistent gränssnitt namn</em> träder i kraft vid nästa omstart, inte omedelbart, så det är säkert att schemalägga även på en avlägsen värd.",
+    "options": [
+      {
+        "title": "Persistenta gränssnitt namn",
+        "description": "Pins gränssnittsnamn (eno1, enp3s0, ...) till MAC-adresser via systemd .link-filer. Namnen överlever PCI slot förändringar, kärnuppgraderingar och lägger till / ta bort andra NIC."
+      },
+      {
+        "title": "Interfaces backup och omstart",
+        "description": "Manuell ögonblicksbild av /etc/network/interfaces, bläddra och återställa tidigare säkerhetskopior, se live config och starta om nätverkstjänsten när det behövs."
+      }
+    ]
+  },
+  "consoleTitle": "Ha konsol tillgång redo",
+  "consoleSubTitle": "Innan någon reparation på en fjärr värd",
+  "consoleBody": "Om du är ansluten över SSH och bara har en väg till värden, ha en nedgång innan du tillämpar nätverksändringar: fysisk / IPMI / iKVM konsol, eller en annan maskin på samma LAN. De guidade reparationerna är säkra och erbjuder alltid en rullback-kommando, men en felkonfigurerad bro eller en tappad länk kan fortfarande lämna dig låst tills du kan nå konsolen."
+}

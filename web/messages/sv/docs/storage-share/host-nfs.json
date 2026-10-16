@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Värd: Mount NFS andel på Värd | ProxMenux Dokumentation",
+    "description": "Montera en extern NFS-export på Proxmox-värden - antingen som Proxmox-lagring (pvesm lägger till nfs), som en vanlig värd fstab-fäste (Inte synlig i Datacenter > Lagring), eller båda. Fstab-metoden är idealisk för bindmontering av andelen i LXC-behållare utan att exponera den som en Proxmox-lagring.",
+    "ogTitle": "Värd: Mount NFS andel på Värd | ProxMenux Dokumentation",
+    "ogDescription": "Montera en extern NFS-export på Proxmox-värden via pvesm, fstab eller båda. fstab-väg är idealisk för LXC-bindning."
+  },
+  "header": {
+    "title": "Värd: Mount NFS aktie på Värd",
+    "description": "Montera en extern NFS export (från en NAS, en annan server, en homelab aktie ...) på Proxmox värd. Välj en eller båda metoderna: registrera den som Proxmox-lagring (synlig i Datacenter > Lagring) och / eller lägg till en vanlig /etc/fstab-montering på en väg du väljer (användbar för bindmontering av andelen i LXC-behållare utan att exponera den som en Proxmox-lagring).",
+    "section": "Storage & Share · Värd"
+  },
+  "intro": {
+    "title": "Vad detta gör",
+    "body": "ProxMenux erbjuder två monteringsmetoder för alla NFS export: <strong>(1) Proxmox förvaring</strong> via via via <code>pvesm add nfs</code> - aktien dyker upp i Datacenter > Lagring och Proxmox hanterar monteringen på <code>/mnt/pve/&lt;id&gt;</code>; <strong>(2Värd fstab montering</strong> På en väg du väljer - ihållande via <code>/etc/fstab</code>Inte synlig som Proxmox-lagring, idealisk för bindning till LXC behållare (Proxmox UI stannar rena). Du kan köra en metod, den andra, eller båda."
+  },
+  "opening": {
+    "heading": "Öppna verktyget",
+    "body": "Från ProxMenux: s huvudmeny, öppna <strong>Storage &amp; Share Manager → Mount NFS Dela på Host</strong>. Du kommer att se denna sub-meny med fyra alternativ:",
+    "imageAlt": "NFS Host Manager-menyn - Mount / View / Remove / Testanslutning"
+  },
+  "howRuns": {
+    "heading": "Hur manuset går",
+    "body": "Flödet har två faser med tydlig separation mellan \"upptäcka, validera och välja\" och \"faktiskt montering / skrivkonfig\". Efter att ha valt en export väljer du monteringsmetod (er) via en checklista; resten av dialogrutorna ber bara om param för de metoder du valde. Fram till den slutliga bekräftelsen berörs varken <code>/etc/pve/storage.cfg</code> eller <code>/etc/fstab</code>."
+  },
+  "modes": {
+    "heading": "Mount metod picker (två alternativ, markera en eller båda)",
+    "intro": "Efter att ha valt och validerat exporten visar ProxMenux en checklista med de två monteringsmetoderna. Du kan markera antingen, eller båda. Om du trycker på OK utan att markera något, återkommer dialogrutan tills du väljer minst ett alternativ eller trycker på Avbryt flödet.",
+    "imageAlt": "Mount metod checklista med pvesm och fstab alternativ",
+    "headerMethod": "Metod",
+    "headerMount": "Mount Path",
+    "headerUi": "Synlig i datacenter > Lagring",
+    "headerUseCase": "Typiskt användningsfall",
+    "rows": [
+      {
+        "method": "<strong>As Proxmox-lagring (pvesm) </strong>",
+        "mountRich": "<code>/mnt/pve/&lt;storage-id&gt;</code> (hanterad av Proxmox)",
+        "ui": "Ja",
+        "useCase": "VM diskbilder, säkerhetskopior, ISOs, LXC mallar - allt som behöver visas i Proxmox UI."
+      },
+      {
+        "method": "<strong>Endast värdens fstab</strong>",
+        "mountRich": "<code>/mnt/&lt;path&gt;</code> (du väljer vägen)",
+        "ui": "Nej",
+        "useCaseRich": "Bind-mounting andelen i en eller flera LXCs <em>without</em> exponerar den som en Proxmox lagring. Håller Datacenter UI ren."
+      },
+      {
+        "method": "<strong>Båda</strong>",
+        "mount": "Båda vägarna ovan (två oberoende NFS-anslutningar till servern)",
+        "ui": "Ja",
+        "useCase": "Du vill ha UI-integration och en stabil värdsida med öppna behörigheter för LXC-bindning. Server ser två anslutningar från värden."
+      }
+    ],
+    "bothTitle": "\"Både\" skapar två oberoende NFS-fästen",
+    "bothBody": "Markering av båda alternativen kör varje metod självständigt - pvesm-fästen på <code>/mnt/pve/&lt;id&gt;</code>, fstabfästen på <code>/mnt/&lt;path&gt;</code>. Servern ser två TCP-anslutningar från Proxmox värd. Detta är avsiktligt: det låter dig hålla pvesm lagring ren (standard Proxmox alternativ) samtidigt som du har en separat värd-side montage med öppna behörigheter för LXC bind-mounts."
+  },
+  "pvesmBranch": {
+    "heading": "Metod A - Som Proxmox lagring (pvesm)",
+    "intro": "Om <em>As Proxmox lagring</em> är markerad, ProxMenux kör den ursprungliga pvesm flöde:",
+    "items": [
+      "<strong>Lagring ID</strong> Vad Proxmox kallar detta lagringsutrymme Standard är <code>nfs-&lt;server-ip-with-dashes&gt;</code>. Endast brev, siffror, <code>-</code> och <code>_</code> accepteras.",
+      "<strong>Content typer</strong> - Proxmox binder innehållskategorier till lagringsvolymer; välj vad denna NFS är tillåtet att hålla:"
+    ],
+    "headerType": "Innehåll typ",
+    "headerAllows": "Vad det tillåter",
+    "rows": [
+      {
+        "type": "import",
+        "allowsRich": "Diskbildsimport (vald som standard). Behövs för <em>Import Disk Image till VM</em>."
+      },
+      {
+        "type": "backup",
+        "allowsRich": "VM och CT backup filer (<code>vzdump</code>)."
+      },
+      {
+        "type": "iso",
+        "allows": "Installation av ISO-bilder."
+      },
+      {
+        "type": "vztmpl",
+        "allows": "LXC mallar."
+      },
+      {
+        "type": "images",
+        "allows": "Live VM skivbilder (detta förvandlar NFS till en VM skivbutik)."
+      },
+      {
+        "type": "rootdir",
+        "allows": "LXC rotfilsystem (sällsynta för NFS - läs anteckningen nedan)."
+      },
+      {
+        "type": "snippets",
+        "allows": "Hook scripts och cloud-init snippets."
+      }
+    ],
+    "warnTitle": "bilder och rootdir på NFS",
+    "warnBody": "Markera <code>images</code> på en NFS lagring låter Proxmox placera live VM diskar där. Det fungerar, men NFS latens + dess lås semantik gör detta märkbart långsammare än lokal lagring (och ett nätverk avbrott pausar varje VM backas upp av den butiken). Markera <code>rootdir</code> betyder att du kommer att vara värd för LXC rotfilsystem över NFS, som historiskt har problem med oprivilegierade behållare (överföring / chown interaktioner). Föredrar att hålla <code>images</code> / <code>rootdir</code> på lokal eller iSCSI lagring och använda NFS för <code>backup</code> / <code>iso</code> / <code>vztmpl</code>.",
+    "result": "Resultatet är <code>pvesm add nfs &lt;id&gt; --server &lt;srv&gt; --export &lt;path&gt; --content &lt;csv&gt;</code> och Proxmox auto-mounts på <code>/mnt/pve/&lt;id&gt;</code>."
+  },
+  "fstabBranch": {
+    "heading": "Metod B - Värd fstab montering endast",
+    "intro": "Om <em>As värd fstab montering endast</em> är markerad, ProxMenux ber om en värd monteringsväg och ihållande alternativ, sedan monterar och skriver ingången till <code>/etc/fstab</code>:",
+    "items": [
+      "<strong>Host mount path</strong> - standard <code>/mnt/&lt;export-basename&gt;</code>. Måste vara en absolut väg. Om något redan är monterat där, eller en fstab ingång finns för samma väg, ProxMenux varnar dig och erbjuder att ersätta den.",
+      "<strong>Mount optioner</strong> – välj <em>Read/Write</em> (standard med <code>rw,hard,nofail,_netdev,rsize=131072,wsize=131072,timeo=600,retrans=2</code>), <em>Read-only</em>, eller <em>Custom</em> (typ din egen alternativsträng)."
+    ],
+    "appliesIntro": "När du bekräftar skriptet:",
+    "applies": [
+      "<code>mkdir -p</code> monteringsvägen.",
+      "<code>mount -t nfs -o &lt;opts&gt; &lt;srv&gt;:&lt;export&gt; &lt;path&gt;</code>.",
+      "Skriver en engångspost till <code>/etc/fstab</code>: <code>&lt;srv&gt;:&lt;export&gt; &lt;path&gt; nfs &lt;opts&gt; 0 0</code>.",
+      "Kör <code>systemctl daemon-reload</code> så systemd plockar upp den nya fstab inträde.",
+      "Försök <code>chmod 1777</code> + <code>setfacl o::rwx</code> på monteringspunkten (tyst bäst - lyckas bara om NFS-servern tillåter det; många NAS-exporter tjänar redan världsskrivbara vägar)."
+    ],
+    "lxcTitle": "Använda fstab montering från en LXC",
+    "lxcBody": "Skriptet trycker exakt <code>pct set</code> kommandot i slutet för att binda upp vägen till en behållare, t.ex. <code>pct set &lt;ctid&gt; -mp0 /mnt/&lt;path&gt;,mp=/mnt/&lt;ct-path&gt;,shared=1,backup=0</code>. Eller använd <mountLink>LXC Mount Manager</mountLink>, som upptäcker fstab montering automatiskt. <strong>Inga ändringar görs inuti container</strong> - för oprivilegierade LXCs att läsa / skriva NFS-data, skriptet förlitar sig på server-side världen skrivbara export semantik (typisk för Synology, TrueNAS, OMV-standarder). Om din NFS-server squashes root eller begränsar perms, se Felsökning.",
+    "noUiTitle": "Fstab montering är inte en Proxmox lagring",
+    "noUiBody": "Värd fstab montering är osynlig för Proxmox webb UI - genom design. Det visas inte i <em>Datacenter > Storage</em>, du kan inte välja det i VM / CT skapare, och Proxmox backup jobb kan inte rikta det. Det är bara en värd filsystem väg. Om du också vill ha UI integration, markera <em>both</em> metoder i väljaren."
+  },
+  "manual": {
+    "heading": "Manuell motsvarande",
+    "pvesmIntro": "Metod A (pvesm) kartor till:",
+    "fstabIntro": "Metod B (fstab) kartor till:"
+  },
+  "view": {
+    "heading": "Visa konfigurerade NFS lager",
+    "body": "Listar varje NFS-post i Proxmox (<code>pvesm status | awk ''$2 == \"nfs\"''</code>) med server, export, innehållstyper, monteringsväg och levande status. <strong>Note:</strong> visar endast pvesm-registrerade lager - fstab-bara fästen är inte listade här. Kontrollera dem med <code>findmnt -t nfs</code> eller <code>grep nfs /etc/fstab</code>."
+  },
+  "remove": {
+    "heading": "Ta bort NFS lagring",
+    "body": "Kör <code>pvesm remove &lt;storage-id&gt;</code> efter en bekräftelse som visar server / export / innehåll. Endast Proxmox-side-registreringen tas bort - <strong>Den avlägsna NFS-servern själv är aldrig rörd</strong>, inga filer raderas. För att ta bort en fstab-bara montering, redigera <code>/etc/fstab</code> för hand och kör <code>umount &lt;path&gt;</code>.",
+    "warnTitle": "Tillbaka upp beroenden först",
+    "warnBody": "Om VM, CT eller backup jobb fortfarande refererar till detta lagringsutrymme (genom ID), ta bort det lämnar dem pekar på en försvunnen butik. Proxmox kommer att flagga felet men inte städa upp. Flytta eller släppa dessa referenser först, sedan ta bort lagringen."
+  },
+  "test": {
+    "heading": "Test NFS-anslutning",
+    "body": "Kör ett diagnostiskt pass över varje NFS-lagring registrerad i Proxmox: kontrollerar att <code>showmount</code> är tillgänglig, att <code>rpcbind</code> körs, pings varje server, probes port 2049, kallar <code>showmount -e</code>, och slutligen rapporterar Proxmox egen vy (<code>pvesm status</code>). Bra första stopp när en förvaring visar som <em>inactive</em> i Proxmox UI."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "noServersTitle": "\"Inga NFS-servrar som finns på nätverket\"",
+    "noServersBody": "Auto-discover använder <code>nmap -p 2049 --open &lt;subnet&gt;/24</code>. Servern kanske inte svarar om: det är på en annan VLAN / subnet, dess brandvägg blockerar nmap-sonder (många gör) eller port 2049 är avsiktligt stängd på det gränssnittet. Använd alternativet <em>Manual</em> med serverns IP- eller värdnamn istället.",
+    "portTitle": "\"NFS port (2049) is not accessible\"",
+    "portBody": "Ping lyckades men <code>nc -z -w 3 &lt;server&gt; 2049</code> misslyckades. Kontrollera NFS tjänsten körs på servern (<code>systemctl status nfs-server</code> på Linux, Kontrollpanel → Filtjänster på Synology, NFS plugin på OMV / TrueNAS), och att brandväggen tillåter 2049 från Proxmox värd.",
+    "showmountTitle": "\"Fel att ansluta\" från showmount",
+    "showmountBody": "Servern vägrade exportlistafrågan. Vanliga orsaker: servern genomdriver strikta klient ACL (din Proxmox IP är inte på den tillåtna listan), <code>rpcbind</code> körs inte på servern, eller servern exponerar endast NFSv4 med <code>showmount</code> funktionshindrad. Exportvägen kan fortfarande läggas manuellt om du vet det.",
+    "inactiveTitle": "Lagring visar som inaktiv i Proxmox UI",
+    "inactiveBody": "Kör <em>Test NFS Connectivity</em> först - 99% av tiden detta flaggar exakt hopp som bryts (DNS, port, monteringsbehörigheter). Om anslutning är bra men Proxmox fortfarande flaggor inaktiv, kontrollera <code>journalctl -u pvestatd</code> på Proxmox-noden; intermittent DNS eller långsamma NFS-fästen på starten kan lämna lagring i ett inaktivt tillstånd tills <code>pvesm set &lt;id&gt; --disable 0</code> återanvänds.",
+    "lxcNoWriteTitle": "fstab montering fungerar men oprivilegierad LXC kan inte skriva genom en bind-mount",
+    "lxcNoWriteBody": "NFS behörigheter verkställs server-side, inte av värden. Fstab alternativ (<code>uid=</code>, <code>file_mode=</code>) som fungerar för CIFS gör <strong>not</strong> gäller för NFS. Om din oprivilegierade LXC (rot inuti CT = UID 100000 på värd, kartlagd till NFS som \"andra\") inte kan skriva, är NFS-servern antingen squashing rot eller har restriktiva perms. Fixa på servern: ändra exporten till <code>no_root_squash</code> om du litar på värden eller ställa in exporten världsskrivbar (Synologi, TrueNAS, OMV alla exponera detta i UI). Manuset försöker <code>chmod 1777</code> på fästet men det lyckas bara när servern tillåter det.",
+    "fstabBootTitle": "fstab montering kommer inte upp efter omstart",
+    "fstabBootBody": "Skriptet lägger till <code>nofail,_netdev</code> så en saknad andel på start blockerar inte start. Om fästet aldrig kommer upp: bekräfta att nätverket är tillgängligt (<code>ping &lt;server&gt;</code>), kontrollera <code>journalctl -u remote-fs.target</code> och verifiera att posten är giltig med <code>mount -fav | grep nfs</code>. <code>mount -a</code> efter start monterar allt som för närvarande saknas."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/storage-share/host-samba",
+        "label": "Samba / CIFS som Proxmox förvaring",
+        "tail": " - samma flödesmönster (Metod A pvesm + Metod B fstab) för SMB/CIFS-aktier."
+      },
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "Monteringshanterare för LXC",
+        "tailRich": " - bind-mount fstab-bara vägen <code>/mnt/&lt;path&gt;</code> i en eller flera behållare."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-client",
+        "label": "NFS klient i LXC",
+        "tail": " — alternativ: montering NFS direkt inifrån en privilegierad behållare (skippar värden)."
+      }
+    ]
+  }
+}

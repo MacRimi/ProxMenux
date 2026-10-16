@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Omfattning och garantier | Audit & Report",
+    "description": "När data från Audit & Report kommer från, vad som ligger utanför dess synpunkt, garanterar dess design och var dess data lagras."
+  },
+  "header": {
+    "title": "Scope och garantier",
+    "description": "Om data för en bedömning kommer från, vad som stannar utanför dess syn och där Audit & Report håller sina uppgifter.",
+    "section": "Granskning och rapporter"
+  },
+  "sections": [
+    {
+      "id": "sees",
+      "title": "Vad den observerar",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Konfiguration och tillstånd av den lokala noden.",
+              "Den deklarerade konfigurationen av VM och LXC.",
+              "Lagringstillståndet som Proxmox VE vet det.",
+              "Den tillgängliga historien om säkerhetskopior och verifieringar.",
+              "SMART data och de händelser som Monitor har samlat in.",
+              "Tjänster, kluster, HA och lokala källor."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "outside",
+      "title": "Vad är utanför dess syn",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Insidan av gästerna, bortom vad de förklarar för Proxmox VE.",
+              "Nätverksutrustning utanför värd.",
+              "Fjärrberoende som noden inte kan observera.",
+              "Fysiskt tillstånd hårdvaran inte exponeras.",
+              "Manuella åtgärder eller åtgärder av annan programvara, i förändringstidskriften."
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Missing bevis är inte bevis på frånvaro",
+            "body": "En källa som inte kan läsas ger ett ofullständigt eller ofullständigt resultat, aldrig en överensstämmelse. Rapporten listar de källor som inte fanns tillgängliga."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guarantees",
+      "title": "Garantier av designen",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Stabila identifierare för kontrollerna.",
+              "Historia av runs och fynd.",
+              "En validerad policy, sparad atomiskt.",
+              "Godtagna risker med en anledning, synliga.",
+              "Attribution av ändringar i manus och funktion.",
+              "Fånga före och efter, där den är tillgänglig.",
+              "Ett uttryckligt resultat när något inte kan mätas eller fångas."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Där data lagras",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Datadatadata data",
+              "Plats"
+            ],
+            "rows": [
+              [
+                "Policypolitik",
+                "<code>/usr/local/share/proxmenux/audit_policy.json</code>"
+              ],
+              [
+                "Bedömningar",
+                "Revisionsdatabasen för Monitor"
+              ],
+              [
+                "Fångade föremål",
+                "<code>/usr/local/share/proxmenux/changes/objects/</code>"
+              ],
+              [
+                "I väntan på poster",
+                "<code>/usr/local/share/proxmenux/changes/spool/</code>"
+              ],
+              [
+                "Konsoliderad tidskrift",
+                "<code>/usr/local/share/proxmenux/changes.db</code>"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Ett verktyg för att granska, inte en certifiering",
+            "body": "Audit & Report recensioner, jämför och dokumenterar noden. Resultaten läses tillsammans med syftet med systemet, den deklarerade policyn och de tillgängliga källorna."
+          }
+        }
+      ]
+    }
+  ]
+}

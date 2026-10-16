@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "Interfaces Backup & Restart | ProxMenux Dokumentation",
+    "description": "Manuell snapshot, bläddra och återställa /etc/network/interfaces-backupar som lagras under /var/backups/proxmenux/. Inkluderar en nätverkstjänststart med bekräftelse och en snabb bild av livekonfigurationen.",
+    "ogTitle": "Interfaces Backup & Restart | ProxMenux Dokumentation",
+    "ogDescription": "Snapshot och återställa Proxmox nätverkskonfiguration; starta om nätverkstjänsten med bekräftelse."
+  },
+  "header": {
+    "title": "Interfaces backup och omstart",
+    "description": "Fyra verktyg som kretsar kring /etc/network/interfaces: tar en manuell ögonblicksbild, se livekonfig, återställa en tidigare säkerhetskopia med valfri förhandsvisning och starta om nätverkstjänsten med uttryckligt samtycke. Samma backup katalog som används av de guidade reparationsflödena.",
+    "section": "Nätverk"
+  },
+  "intro": {
+    "title": "Vad detta gör",
+    "body": "Hanterar samma backupkatalog som används av de guidade reparationsflödena (<code>/var/backups/proxmenux/</code>). Låter du ta en extra ögonblicksbild innan någon manuell förändring, bläddra i alla befintliga säkerhetskopior och rulla tillbaka till någon av dem - alltid med en ny pre-restore backup som tas automatiskt som ett andra säkerhetsnät."
+  },
+  "shared": {
+    "heading": "Den delade backup katalogen",
+    "intro": "Varje säkerhetskopia som tas någonstans i nätverksmenyn landar på samma ställe:",
+    "outro": "Filenamer är tidsstämplade, sorterade efter datum och aldrig överskrivna. Katalogen skapas vid första användning."
+  },
+  "show": {
+    "heading": "Visa nätverkskonfigurationsfil",
+    "body": "Prints <code>/etc/network/interfaces</code> Verbatim till terminalen. Läs-bara. Användbart som en sanity check innan du tar en backup eller efter en återställning - det finns ingen separat \"diff med tidigare backup\" verktyg, så eyeballing live filen är det enklaste sättet att bekräfta vad du har."
+  },
+  "create": {
+    "heading": "Skapa nätverksbackup",
+    "body": "Kopierar den nuvarande <code>/etc/network/interfaces</code> i backupkatalogen med en ny tidsstämpel. Det är det - ingen analys, inga prompts, bara en ögonblicksbild.",
+    "whenTitle": "När man tar en manuell backup",
+    "whenBody": "Innan du redigerar <code>/etc/network/interfaces</code> för hand, innan du installerar ett paket som kan röra nätverksstapeln (t.ex. NetworkManager, Open vSwitch), eller innan någon hårdvara ändras. De guidade reparationerna snapshot automatiskt - det här alternativet är för <em>manual</em> ögonblick."
+  },
+  "restore": {
+    "heading": "Återställ nätverkssäkerhetskopiering",
+    "intro": "Listor varje backup i <code>/var/backups/proxmenux/</code> sorteras från nyaste till äldsta, och går genom en skyddad återställning:",
+    "steps": [
+      {
+        "title": "1. Välj en backup",
+        "body": "En meny listar varje backup med sin tidsstämpel. Om inga säkerhetskopior finns, utgår flödet med ett tydligt meddelande.",
+        "tone": "blue"
+      },
+      {
+        "title": "2. Valfri förhandsvisning",
+        "body": "Erbjudanden att öppna den valda säkerhetskopian i en rullande utsikt innan de begår. Ja som standard - hoppa inte över det på en avlägsen värd.",
+        "tone": "blue"
+      },
+      {
+        "title": "3. Säkerhetskopiering före återställning",
+        "body": "Innan du skriver <code>/etc/network/interfaces</code>, tar <strong>another</strong> backup av nuvarande tillstånd. Återställa en säkerhetskopia är själv en destruktiv åtgärd, så den nya förinställda ögonblicksbilden låter dig gå tillbaka om den valda säkerhetskopian visar sig vara fel.",
+        "tone": "amber"
+      },
+      {
+        "title": "4. Applicera återställningen",
+        "body": "Kopierar den valda säkerhetskopian över <code>/etc/network/interfaces</code>. Filändringen är på disken; den levande kärnstaten återspeglar fortfarande den tidigare konfigen.",
+        "tone": "amber"
+      },
+      {
+        "title": "5. Valfri omstart",
+        "body": "Ber om att köra <code>systemctl restart networking</code> nu. Decline att skjuta upp förändringen till nästa omstart.",
+        "tone": "emerald"
+      }
+    ],
+    "autoBackupTitle": "En återställning tar sin egen backup automatiskt",
+    "autoBackupBody": "Välja <em>Restore Network Backup</em> skapar alltid en ny ögonblicksbild av <em>current</em>-konfig innan du skriver över den. Om du återställer fel säkerhetskopiering är den senaste filen i <code>/var/backups/proxmenux/</code> det tillstånd du kom ifrån."
+  },
+  "restart": {
+    "heading": "Starta om nätverkstjänsten",
+    "body": "Kör <code>systemctl restart networking</code> efter en ja / ingen bekräftelse. Rapporterar resultatet med <code>msg_ok</code>/<code>msg_error</code>. De flesta flöden i denna meny erbjuder sin egen omstart snabb i slutet; detta alternativ är att starta om efter en manuell redigering eller efter att ha minskat inflödet omstart tidigare.",
+    "warnTitle": "Kort avkoppling garanterad; permanent avkoppling möjlig",
+    "warnBody": "Restarting <code>networking</code> tårar ner och applicerar varje gränssnitt som deklareras i <code>/etc/network/interfaces</code>. SSH sessioner värd på dessa gränssnitt sjunker. Om den nya konfigen är ogiltig kommer nätverket aldrig tillbaka. Kör detta endast när:",
+    "warnItems": [
+      "Du har konsol / IPMI / iKVM tillgång klar, <em>or</em>",
+      "Du är fysiskt bredvid maskinen, <em>or</em>",
+      "Du har bara framgångsrikt rullat tillbaka till en välkänd konfig och vill tillämpa den."
+    ]
+  },
+  "manualRollback": {
+    "heading": "Manuell återgång från en konsol",
+    "intro": "Om du inte kan nå menyn (ingen SSH, dialog kraschar, ...) men kan nå en konsol, är återgång två kommandon:",
+    "outro": "Detta är <em>same</em> operation menyn utför, bara skriven för hand. Om <code>networking</code> fortfarande inte startar, kontrollera <code>journalctl -u networking -b</code> för den underliggande syntaxen / förarfel."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "noneTitle": "Inga säkerhetskopior hittades i Restore",
+    "noneBody": "Katalogen <code>/var/backups/proxmenux/</code> finns inte eller innehåller inga <code>interfaces_backup_*</code>-filer. Kör <em>Create Network Backup</em> minst en gång, eller kör någon guidad reparation (som auto-skapar en). Bekräfta med <code>ls /var/backups/proxmenux/</code>.",
+    "unreachTitle": "Starta nätverk lyckas men värden är fortfarande oåterkallelig",
+    "unreachBody": "Antingen är den nya konfigen fel, eller om du startade om till en konfiguration som inte binder din hanterings IP. Rulla tillbaka från konsolen (se ovan). Efter rullning, använd <bridgeLink>bridge analys</bridgeLink> och <configLink>config analys</configLink> för att förstå vad som var fel innan återanvändning.",
+    "emptyTitle": "Återställ förhandsvisning visar en tom fil",
+    "emptyBody": "Backup-filen är tom (0 byte). Detta händer om en kopia misslyckades tyst under en tidigare körning. Välj en äldre säkerhetskopia eller kör <em>Create Network Backup</em> just nu om livekonfigen är frisk."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "label": "Bridge analys och guidad reparation",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — Den vanligaste orsaken till att en säkerhetskopia hamnar här."
+      },
+      {
+        "label": "Config analys och guidad rengöring",
+        "href": "/docs/network/config-analysis",
+        "tailRich": " - skriver också till <code>/var/backups/proxmenux/</code> automatiskt."
+      },
+      {
+        "label": "Diagnostik",
+        "href": "/docs/network/diagnostics",
+        "tail": " — verifiera den levande staten efter en återställning."
+      }
+    ]
+  }
+}

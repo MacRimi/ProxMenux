@@ -1,0 +1,106 @@
+{
+  "meta": {
+    "title": "Proxmox VE Post-Install Script - Automatiserad och anpassningsbar | ProxMenux",
+    "description": "Översikt över ProxMenux Post-Install skript för Proxmox VE. Kör det automatiska skriptet för sunda standarder med noll prompts, det Anpassningsbara skriptet för att välja exakt vad du vill ha över 10-kategorier, eller återställa stödda reversibla ändringar med Uninstall Optimizations.",
+    "ogTitle": "Proxmox VE Post-Install Script - Automatiserad och anpassningsbar",
+    "ogDescription": "Applicera vanliga Proxmox VE efterinstallation optimeringar över 10-kategorier - automatiserade eller à la carte, med reversibla alternativ.",
+    "twitterTitle": "Skript efter installation av Proxmox VE | ProxMenux",
+    "twitterDescription": "Automatiserade och anpassningsbara optimeringar efter installationen för Proxmox VE med reversibla alternativ."
+  },
+  "header": {
+    "title": "Skript efter installationen",
+    "description": "Konfigurera en ny Proxmox VE-värd med ProxMenuxs optimeringar efter installationen. Applicera baslinjen automatiskt, välj enskilda alternativ, uppdatera installerade funktioner eller återställa stödda reversibla ändringar. Paketuppgraderingar presenteras inte som reversibla.",
+    "section": "Inställningar efter installation av Proxmox"
+  },
+  "intro": {
+    "title": "Vad denna meny är för",
+    "body": "Strax efter att ha installerat Proxmox VE finns det dussintals små förändringar som gör värden snabbare och lättare att underhålla - fria repositorier, sunda tidskriftsgränser, förnuftiga TCP-buffertar, SSD-vänlig logglagring, bashrc-snyheter och mer. ProxMenux automatiserar dem och spårar de stödda reversibla konfigurationsändringarna."
+  },
+  "openingMenu": {
+    "heading": "Öppna menyn",
+    "body": "Från ProxMenux: s huvudmeny, välj <strong>Settings post-install Proxmox</strong>. Du kommer att se detta:",
+    "imageAlt": "Post-Installation Scripts-menyn - Automatiserad, Anpassningsbar, den villkorliga Apply Tillgängliga uppdateringar (endast när uppdateringar väntar) och Avinstallera, följt av avsnittet Community Scripts"
+  },
+  "threeWays": {
+    "heading": "Fyra sätt att tillämpa optimeringar",
+    "body": "De fyra ProxMenux-posterna delar samma underliggande kod och samma register över installerade verktyg - de ger dig bara olika nivåer av kontroll. <em>Apply Available Updates</em>-posten visar bara när minst en installerad optimering har en nyare version på disken än vad som är registrerat; på en ny applicerad värd förblir den dold."
+  },
+  "routes": [
+    {
+      "title": "Automatiserad",
+      "description": "En kurerad uppsättning 14 säker, alltid användbara optimeringar som tillämpas i sekvens med noll prompts. Bra standard för de flesta användare.",
+      "bullets": [
+        "Gratis repos + systemuppgradering",
+        "Minne, kärna, nätverkstuning",
+        "Log2RAM (auto-detekterad på SSD/NVMe)",
+        "Journalerad + logrotate size limits",
+        "Persistenta gränssnitt namn"
+      ]
+    },
+    {
+      "title": "Anpassningsbar",
+      "description": "~35 individuella optimeringar över 10 kategorier. Du väljer exakt vilka som ska tillämpas. Samma motor som Automated, men med full kontroll.",
+      "bullets": [
+        "Checklist UI per kategori",
+        "Inkluderar allt Automated gör, plus opt-in objekt (IOMMU, Fastfetch, Figurine, Ceph, HA, AMD fixes...)",
+        "Kör så många gånger du vill - förändringar är idempotent"
+      ]
+    },
+    {
+      "title": "Tillämpa tillgängliga uppdateringar",
+      "description": "När en optimering efter installationen (Log2Ram, Memory Settings, Logrotate...) får en nyare version på disken än vad som är registrerat på värden, ytor denna post endast de som flyttade. Re-runs motsvarande funktion och uppdaterar registret - berör inget annat.",
+      "bullets": [
+        "Per-optimization opt-in (endast vad som förändrats)",
+        "Samma picker tillgänglig från Monitor dashboard",
+        "En grupperad anmälan när nya uppdateringar landar"
+      ]
+    },
+    {
+      "title": "Avinstallera optimering",
+      "description": "Stödda reversibla ändringar spåras i ett JSON-register och paras ihop med en restaureringsfunktion. Åtgärder utan säker återgång, till exempel en fullständig paketuppgradering, är avsiktligt uteslutna.",
+      "bullets": [
+        "Detekterar tidigare tillämpade optimeringar automatiskt",
+        "Reversal plockar rätt väg för varje objekt - återställer från en .bak backup där man gjordes, tar bort sysctl.d snippet där ingenting behövde backa upp, eller installerar om vaniljpaketet med --force-confnew (t.ex. prenumerationsbanner)",
+        "Reboot prompt om det behövs (VFIO, ihållande namn, etc.)"
+      ]
+    }
+  ],
+  "whichTitle": "Vilken ska du välja?",
+  "whichBody": "Om detta är en ny Proxmox-installation och du vill ha den förnuftiga baslinjen utan beslut: <autoLink><strong>Automated</strong></autoLink>. Om du redan vet vilka tweaks du vill (eller som du definitivt inte vill): <customLink><strong>Customizable</strong></customLink>. Om något du redan tillämpat har en nyare version på disken och du vill bara lyfta det: <updatesLink><strong>Apply Available Updates</strong></updatesLink>. Om du applicerade något tidigare och vill backa ut det rent: <uninstallLink><strong>Uninstall Optimizations</strong></uninstallLink>. Du kan blanda dem - applicera Automated först, öppna sedan Anpassningsbar för att lägga till opt-ins som Fastfetch eller IOMMU, och återskapa något enskilt objekt senare.",
+  "mixing": {
+    "heading": "Blanda med andra post-install skript",
+    "stackTitle": "Stack inte flera post-install-skript",
+    "stackBody": "Kör flera post-install-skript på samma värd kan orsaka duplicerade konfigurationsfiler, motstridiga sysctl-poster eller värre - brutna nätverk efter omstart. Om du redan tillämpade <strong>Helper-Scripts Post Install</strong>, kan vissa ProxMenux optimeringar överlappa med vad den redan konfigurerade. Håll dig till ett post-install-verktyg per värd.",
+    "xshokTitle": "xshok-proxmox: föråldrad",
+    "xshokBody": "Tidigare versioner av ProxMenux refererade <a>xshok-proxmox</a> som ett kompanjon efterinstallationsverktyg. Projektet är nu avskrivet och erbjuds inte längre från ProxMenux. Om en tidigare körning av xshok-proxmox kvar markörer på värden, ProxMenux fortfarande upptäcker dem och kommer att varna dig - men det är inte något du bör installera tillsammans med ProxMenux idag."
+  },
+  "community": {
+    "heading": "Gemenskapens skript",
+    "body": "Menyn avslöjar också två tredjepartsskript från <a>community-scripts</a>-projektet: <em>Proxmox VE Post Install</em> och <em>Proxmox VE Microcode</em>. Dessa är wrappers som <code>wget | bash</code> originalförfattarnas skript. De upprätthålls inte av ProxMenux. Se <link>External Repositories</link> för detaljer och förtroende överväganden innan du kör dem."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "label": "Proxmox systemuppdatering",
+        "href": "/docs/utils/system-update",
+        "tail": " - håller värden uppdaterad när den har varit efterinstallerad."
+      },
+      {
+        "label": "Säkerhet",
+        "href": "/docs/security",
+        "tail": " — Fail2Ban + Lynis ovanpå efterinstalleringen."
+      },
+      {
+        "label": "Visa versionsinformation",
+        "href": "/docs/settings/show-version-information",
+        "tail": " - se vilka postinstallationskomponenter som spåras som installerade."
+      },
+      {
+        "label": "Uppdateringar och paketkommandon",
+        "href": "/docs/help-info/update-commands",
+        "tail": " — referens för apt / pveupgrade."
+      }
+    ]
+  }
+}

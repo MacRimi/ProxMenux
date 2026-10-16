@@ -1,0 +1,206 @@
+{
+  "meta": {
+    "title": "ProxMenux Menu-Driven Tool för Proxmox VE Förvaltning | Open Source",
+    "description": "Open-source, meny-driven verktyg för Proxmox VE Ledningen. ProxMenux är två delar som delar ett projekt: ett CLI/TUI för post-install tweaks, VM och LXC skapelse, GPU och Coral TPU genomgång, disk, lagring och nätverksarbetsflöden; och en självvärd webbdashboard med proaktiv hälsoövervakning, meddelanden till Telegram / Discord E-post, AI-rewrite och en REST API.",
+    "ogTitle": "ProxMenux Menu-Driven Tool för Proxmox VE Ledning Management Management Management",
+    "ogDescription": "Open-source CLI/TUI plus en web dashboard för Proxmox VE. Post-install, VM, GPU, diskar, nätverk, lagring, säkerhet - och en separat Monitor med hälsokontroller, meddelanden, AI omskrivning och REST API.",
+    "twitterTitle": "ProxMenux Menu-Driven Tool för Proxmox VE Ledning Management Management Management",
+    "twitterDescription": "Open-source CLI/TUI + web dashboard för Proxmox VE. Hälsokontroll, meddelanden, AI skriver om, REST API."
+  },
+  "header": {
+    "title": "Introduktion",
+    "description": "ProxMenux är ett open-source, meny-drivet verktyg för Proxmox VE. Två bitar delar samma projekt: en CLI / TUI som wraps den vanligaste värden, VM, behållare, lagring, nätverks- och säkerhetsflöden; och en egen värd web instrumentbräda med proaktiv hälsoövervakning, meddelanden, en AI-skrivare och en REST API.",
+    "section": "Introduktion"
+  },
+  "hero": {
+    "tagline": "<strong>En meny, varje workflow.</strong> Allt som normalt tar en flik öppen till wiki, två forumtrådar och en kopieringspasted kommandosekvens - utsatt som ett numrerat alternativ som du kan köra på några sekunder.",
+    "audience": "Byggd för <em>first-time</em> Proxmox-användare (säkert, omtvistade standarder) och <em>experienced</em>-administratörer (färre knapptryckningar för uppgifter som de har gjort hundra gånger). Fri och öppen källkod under ett aktivt samhälle på <github>GitHub</github>."
+  },
+  "twoProducts": {
+    "heading": "Två produkter, ett projekt",
+    "intro": "ProxMenux fartyg som två oberoende delar som delar samma källträd. Installationsprogrammet distribuerar båda - de lever sida vid sida på värden och beror inte på varandra:",
+    "scripts": {
+      "title": "ProxMenux Scripts",
+      "body": "Den ursprungliga CLI/TUI du lanserar med <code>menu</code>. Nio funktionella områden som täcker optimeringar efter installationen, VM och LXC skapande, GPU och Coral TPU genomgång, diskar, lagring, nätverk, säkerhet, verktyg, plus en curated kommandon referens. Körs i någon terminal - lokal, SSH eller webb."
+    },
+    "monitor": {
+      "title": "ProxMenux-övervakning",
+      "body": "Self-hosted web dashboard (AppImage). Realtid värdmetri, en proaktiv Health Monitor, meddelanden, en valfri AI-skrivare (sex leverantörer), en integrerad webbterminal och en REST API. Aktivera från Scripts-menyn (Inställningar → ProxMenux Monitor)."
+    },
+    "calloutTitle": "Vad ProxMenux agerar på",
+    "calloutIntro": "Tre lager, alla tillgängliga från samma projekt:",
+    "layers": [
+      "<strong>The Proxmox värd</strong> - repos, paket, nätverk, ZFS, Ceph, kärna, observerbarhet.",
+      "<strong>Virtual Machines (VMs)</strong> - skapande, GPU genomgång, OVA / OVF import / export, disk genomgång.",
+      "<strong>LXC containers</strong> - skapande, monteringspunkter, GPU / TPU genomgång, NFS / Samba klienter och servrar."
+    ]
+  },
+  "scriptsSection": {
+    "heading": "ProxMenux Scripts - vad du får",
+    "intro": "Nio funktionella områden, var och en med sin egen meny i <code>menu</code> och en detaljsida i dokumentationen. Klicka på vilket kort som helst för att hoppa direkt till det avsnittets översikt.",
+    "items": [
+      {
+        "title": "Efter installationen",
+        "description": "Optimeringar för en nyinstallerad Proxmox-installation: repos, kärna, tidssynkronisering, grundläggande säkerhet, prestanda, med reversibla alternativ.",
+        "icon": "Server",
+        "href": "/docs/post-install"
+      },
+      {
+        "title": "GPU & Coral TPU",
+        "description": "NVIDIA, Intel iGPU, AMD och Coral TPU passerar till VMs och LXC behållare, med läge växling mellan VM och LXC.",
+        "icon": "Cpu",
+        "href": "/docs/hardware/nvidia-host"
+      },
+      {
+        "title": "Skapa VM",
+        "description": "Trollkarlar för NAS-system, Windows och Linux - med förnuftiga standarder för hårdvara, lagring och nätverk.",
+        "icon": "Server",
+        "href": "/docs/create-vm"
+      },
+      {
+        "title": "Diskhanteraren",
+        "description": "Importera fysiska diskar till VMs och LXC, format och torka, SMART tester, qcow2 / vmdk / vdi bild import - från en meny.",
+        "icon": "HardDrive",
+        "href": "/docs/disk-manager"
+      },
+      {
+        "title": "Lagring och delning",
+        "description": "Registrera NFS, Samba (CIFS), iSCSI och lokal lagring i Proxmox; dela mappar mellan värd- och LXC-behållare via bindmonteringar eller nätverksprotokoll.",
+        "icon": "Boxes",
+        "href": "/docs/storage-share"
+      },
+      {
+        "title": "Nätverk",
+        "description": "Read-only diagnostik, analys-then-suggest arbetsflöden och guidade reparationer för /etc/network/interfaces. Obligatoriska säkerhetskopior innan någon förändring.",
+        "icon": "Network",
+        "href": "/docs/network"
+      },
+      {
+        "title": "Säkerhet",
+        "description": "Fail2Ban (intrångsförebyggande för SSH och webben UI) och Lynis (härdande revision) - installera och hantera med förnuftiga standarder.",
+        "icon": "Shield",
+        "href": "/docs/security"
+      },
+      {
+        "title": "Verktyg",
+        "description": "Bygga Windows ISOs från UUP Dump, installera CLI verktyg, kör en säker systemuppdatering, utföra PVE 8 → 9 uppgradering, export och import OVA / OVF VMs.",
+        "icon": "Wrench",
+        "href": "/docs/utils"
+      },
+      {
+        "title": "Kommando referens",
+        "description": "Curated katalog över Linux och Proxmox kommandon organiserade av ämne - system, VM / CT (qm, pct), lagring, nätverk, ZFS, GPU genomgång, backup, dag-till-dag CLI verktyg.",
+        "icon": "BookOpen",
+        "href": "/docs/help-info"
+      }
+    ]
+  },
+  "monitorSection": {
+    "heading": "ProxMenux Monitor - vad du får",
+    "intro": "Web Dashboard produkt. Självvärd på Proxmox värd på TCP 8008. Klicka på något kort för att hoppa direkt till det avsnittets sida, eller läs <link>Monitor översikt</link> först.",
+    "items": [
+      {
+        "title": "Hälsoövervakare",
+        "description": "Tio kategorier skannade varje 5 minuter (CPU, minne, lagring, diskar / SMART, nätverk, VMs, tjänster, loggar, uppdateringar, säkerhet) med svårighetsgrader och per kategori undertryckande.",
+        "icon": "Activity",
+        "href": "/docs/monitor/health-monitor"
+      },
+      {
+        "title": "Aviseringar",
+        "description": "Telegram, Discord, Email, Gotify, Pushover och Apprise (multi-kanal) - med deduplicering, nedkylning, brist aggregering, tysta timmar och en fullständig historia.",
+        "icon": "Bell",
+        "href": "/docs/monitor/notifications"
+      },
+      {
+        "title": "AI assistent",
+        "description": "Valfri omskrivning av anmälningar på vanligt språk. Sex leverantörer: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter, lokal Ollama. Tolv språk.",
+        "icon": "Sparkles",
+        "href": "/docs/monitor/ai-assistant"
+      },
+      {
+        "title": "Webbterminal",
+        "description": "Webbläsarbaserat interaktivt skal på Proxmox värd plus en separat ProxMenux Scripts-terminal som kör menyn via webben UI.",
+        "icon": "Terminal",
+        "href": "/docs/monitor/dashboard/terminal"
+      },
+      {
+        "title": "REST API",
+        "description": "HTTP endpoints för system, hälsa, lagring / SMART, nätverk, VMs, meddelanden och säkerhet - användbar för hemsida, Home Assistant, Prometheus eller anpassade skript.",
+        "icon": "Code2",
+        "href": "/docs/monitor/api"
+      },
+      {
+        "title": "Integrationer",
+        "description": "Native Proxmox VE webhook, Prometheus scrape, Uptime Kuma sond, hemsida / Home Assistant / Glance widgets, n8n / Zapier flöden, Tailscale Secure Gateway.",
+        "icon": "Plug",
+        "href": "/docs/monitor/integrations"
+      }
+    ]
+  },
+  "installPaths": {
+    "heading": "Installera vägar",
+    "intro": "Installationsprogrammet distribuerar Scripts och Monitor på en gång. Skript har två smaker - översättning eller lätt - och Monitor installeras som en fristående AppImage du aktiverar från menyn senare:",
+    "headerPath": "Install path",
+    "headerBundles": "Vad det buntar",
+    "headerWhen": "När du skulle välja det",
+    "rows": [
+      {
+        "pathRich": "<strong>Skript: översättning</strong>",
+        "bundles": "CLI/TUI + Python venv + googletrans (engelska, spanska, franska, tyska, italienska, portugisiska)",
+        "when": "Multispråkiga menyer, icke-engelska talare"
+      },
+      {
+        "pathRich": "<strong>Scripts: Normal (lätt) </strong>",
+        "bundles": "CLI/TUI engelska-bara, mindre fotavtryck, ingen Python venv",
+        "when": "De flesta användare - Proxmox docs är engelska ändå"
+      },
+      {
+        "pathRich": "<strong>Monitor</strong>",
+        "bundles": "Självinnehållen AppImage på TCP 8008. Oberoende installation - kan aktiveras från Script-menyn eller köra AppImage direkt.",
+        "when": "När en web dashboard för värden är användbar - telefon, surfplatta, webbläsare fliken"
+      }
+    ],
+    "outro": "Detaljerade installationskommandon och förutsättningar finns på <link>Installation page</link>."
+  },
+  "warnSource": {
+    "title": "Kontrollera alltid vilka skript du kör från internet",
+    "body": "ProxMenux är öppen källkod och varje manus granskas på GitHub. Innan du kör kommandot installera, titta på källan. Gör detsamma med något annat automationsverktyg.",
+    "sourceLabel": "Visa ProxMenux-källa",
+    "cocLabel": "Uppförandekod"
+  },
+  "next": {
+    "heading": "Vart ska man gå nästa",
+    "items": [
+      {
+        "lead": "<strong>Nytt för ProxMenux?</strong> ",
+        "linkHref": "/docs/installation",
+        "linkLabel": "Installera den i ett kommando",
+        "tailRich": " och kör <code>menu</code>."
+      },
+      {
+        "lead": "<strong>Just installerat Proxmox?</strong> Börja med ",
+        "linkHref": "/docs/post-install",
+        "linkLabel": "Skript efter installationen",
+        "tail": "."
+      },
+      {
+        "lead": "<strong>Vill du ha en web dashboard?</strong> ",
+        "linkHref": "/docs/monitor",
+        "linkLabel": "ProxMenux-övervakning",
+        "tail": " täcker vad det visar, hur det är byggt och hur man säkrar det."
+      },
+      {
+        "lead": "<strong>Letar du efter ett specifikt kommando?</strong> ",
+        "linkHref": "/docs/help-info",
+        "linkLabel": "Kommando referens",
+        "tail": " är en curated katalog organiserad av ämnet, med kopia knappar."
+      },
+      {
+        "lead": "<strong>Vill längre vägleda?</strong> ",
+        "linkHref": "/guides",
+        "linkLabel": "Guider avsnitt",
+        "tail": " täcker Coral TPU, NVIDIA genomgång, Kodi LXC och mer."
+      }
+    ]
+  }
+}

@@ -1,0 +1,177 @@
+{
+  "meta": {
+    "title": "ProxMenux Post-Install: Valfria inställningar",
+    "description": "Guide till valfria inställningar i ProxMenux post-install script för ytterligare Proxmox VE funktioner och optimeringar.",
+    "ogTitle": "ProxMenux Post-Install: Valfria inställningar",
+    "ogDescription": "Guide till valfria inställningar i ProxMenux post-install script för ytterligare Proxmox VE funktioner och optimeringar.",
+    "ogImageAlt": "ProxMenux Post-Install valfria inställningar"
+  },
+  "title": "Valfria inställningar",
+  "intro": "<strong>Optional Settings</strong>-kategorin ger ytterligare funktioner och optimeringar som du kan välja att tillämpa på din Proxmox VE-installation. Dessa inställningar är inte nödvändiga men kan förbättra systemets kapacitet i specifika scenarier.",
+  "available": "Tillgängliga valfria funktioner",
+  "stepLabel": "Steg",
+  "ceph": {
+    "title": "Lägg till senaste Ceph Support",
+    "intro": "Detta alternativ installerar den senaste Ceph lagringssystem stöd för Proxmox VE. Ceph är ett distribuerat lagringssystem som ger hög prestanda, tillförlitlighet och skalbarhet.",
+    "doesIntro": "Vad det gör:",
+    "doesItems": [
+      "Lägger till Ceph-förvaret i ditt system",
+      "Uppdateringar paketlistor",
+      "Installerar Ceph-paket med kommandot \"Pveceph install\"",
+      "Verifierar installationen"
+    ],
+    "howUse": "Hur man använder: Efter installationen kan du konfigurera och hantera Ceph lagring med Proxmox VE webbgränssnitt eller kommandoradsverktyg.",
+    "automates": "Denna justering automatiserar följande kommandon:"
+  },
+  "amd": {
+    "title": "Applicera AMD CPU Fixes",
+    "intro": "Detta alternativ tillämpar specifika fixar för AMD EPYC och Ryzen CPU för att förbättra stabiliteten och kompatibiliteten.",
+    "doesIntro": "Vad det gör:",
+    "doesItems": [
+      "Detekterar om en AMD EPYC eller Ryzen CPU är närvarande",
+      "Gäller kärnparameter \"idle=nomwait\" för att förhindra slumpmässiga kraschar (via /etc/kernel/cmdline på systemd-boot värdar, eller /etc/default/grub på GRUB värdar - med en .bak av originalet)",
+      "Konfigurerar KVM för att ignorera vissa MSR (Model Specific Register) för bättre Windows-gästkompatibilitet"
+    ],
+    "howUse": "Hur man använder: Dessa korrigeringar tillämpas automatiskt och kräver en omstart av systemet för att träda i kraft.",
+    "automates": "Denna justering automatiserar följande kommandon:"
+  },
+  "ha": {
+    "title": "Aktivera tjänster för hög tillgänglighet",
+    "intro": "Detta alternativ gör det möjligt för hög tillgänglighet (HA) tjänster i Proxmox VE, vilket möjliggör automatisk misslyckande av VM och behållare vid nodfel.",
+    "doesIntro": "Vad det gör:",
+    "doesItems": [
+      "Möjliggör och startar tjänsten pve-ha-lrm (Local Resource Manager)",
+      "Möjliggör och startar tjänsten pve-ha-crm (Cluster Resource Manager)",
+      "Möjliggör och startar corosync-tjänsten för klusterkommunikation"
+    ],
+    "howUse": "Hur man använder: Efter att ha aktiverat dessa tjänster kan du konfigurera HA-grupper och resurser i Proxmox VE-webbgränssnittet.",
+    "automates": "Denna justering automatiserar följande kommandon:"
+  },
+  "pveam": {
+    "title": "Uppdatera Proxmox VE Appliance Manager",
+    "intro": "Europaparlamentet betonar det lokala indexet för containermallar som <code>pveam</code> exponerar i Proxmox UI, så listan över tillgängliga apparater är uppdaterad nästa gång du skapar en LXC.",
+    "doesIntro": "Vad det gör:",
+    "doesItems": [
+      "Kör <code>pveam update</code> mot Proxmox speglar för att hämta den aktuella apparatkatalogen",
+      "Befolkar apparatlistan som visas av webb-UI när du skapar en behållare"
+    ],
+    "howUse": "Hur man använder: kör det en gång när apparatlistan i UI känner sig förföljd eller efter att ha bytt speglar. Det laddar inte ner mallarna själva - bara katalogindexet.",
+    "automates": "Denna justering automatiserar följande kommando:"
+  },
+  "fastfetch": {
+    "title": "Installera och konfigurera Fastfetch",
+    "intro": "Det här alternativet installerar tyst och konfigurerar Fastfetch, ett systeminformationsverktyg som visar systemspecifikationer och en anpassad logotyp vid inloggningen.",
+    "doesLabel": "Vad det gör:",
+    "doesItems": [
+      "Tyst laddar ner och installerar den senaste versionen av Fastfetch",
+      "Låter dig välja en anpassad logotyp (<strong>ProxMenux, Proxmox, Helper-Scripts, Home-Labs-Club, Proxmology</strong>, eller en anpassad)",
+      "Konfigurerar Fastfetch för att visa <em> \"System optimerad av ProxMenux\"</em>",
+      "Ställ in Fastfetch för att köra automatiskt vid konsolinloggning"
+    ],
+    "importantLabel": "Viktigt:",
+    "importantBody": "Om du ansluter till Proxmox via SSH, bör du välja <strong>Proxmox</strong> logotyp eller skapa en anpassad med <code>jp2a</code> eller <code>img2txt</code>. De andra logotyperna genereras med <code>chafa</code> och kan inte visas korrekt i en vanlig SSH-session.",
+    "customLabel": "Egna logotyper:",
+    "customBody1": "För att använda en anpassad logotyp, placera din ASCII art textfil i: <code>/usr/local/share/fastfetch/logos/</code>",
+    "customBody2": "Du kan skapa anpassade logotyper med verktyg som <code>chafa</code>, <code>jp2a</code> eller <code>img2txt</code>.",
+    "customBody3": "För bästa resultat:",
+    "customItems": [
+      "Håll logohöjden till 35-linjer eller mindre för att upprätthålla proportioner och passa i terminalen",
+      "Använd <code>chafa</code> för färglogotyper (kan inte visas korrekt i SSH-sessioner)",
+      "Använd <code>jp2a</code> eller <code>img2txt</code> för SSH-kompatibel logotyp"
+    ],
+    "examplesLabel": "Exempel Logos:",
+    "logos": [
+      {
+        "name": "ProxMenux",
+        "alt": "ProxMenux-logotyp",
+        "src": "https://macrimi.github.io/ProxMenux/fastfetch/proxmenux.png"
+      },
+      {
+        "name": "Proxmox",
+        "alt": "Proxmox-logotyp",
+        "src": "https://macrimi.github.io/ProxMenux/fastfetch/proxmox.png"
+      },
+      {
+        "name": "JC Channel",
+        "alt": "JC Channel-logotyp",
+        "src": "/fastfetch/jc-channel.png"
+      },
+      {
+        "name": "Helper-Scripts",
+        "alt": "Helper-Scripts-logotyp",
+        "src": "https://macrimi.github.io/ProxMenux/fastfetch/helper-scripts.png"
+      },
+      {
+        "name": "Home-Labs-Club",
+        "alt": "Home-Labs-Club-logotyp",
+        "src": "https://macrimi.github.io/ProxMenux/fastfetch/home-labs-club.png"
+      },
+      {
+        "name": "Proxmology",
+        "alt": "Proxmology-logotyp",
+        "src": "https://macrimi.github.io/ProxMenux/fastfetch/proxmology.png"
+      }
+    ],
+    "automates": "Denna justering automatiserar följande kommandon:"
+  },
+  "figurine": {
+    "title": "Installera och konfigurera Figurine",
+    "intro": "Det här alternativet installerar och konfigurerar Figurine, ett verktyg som skapar snygga ASCII-textbanners för din terminal och visar ditt värdnamn i ett visuellt tilltalande 3D-format.",
+    "doesLabel": "Vad det gör:",
+    "doesItems": [
+      "Nedladdningar och installerar Figurine v2.0.0 från GitHub",
+      "Skapa ett välkomstmeddelande som visar ditt värdnamn i 3D ASCII-konst när du loggar in",
+      "Automatiskt tar bort tidigare Figurine-installation om den finns",
+      "Ställ in välkomstmeddelandet för att köra automatiskt vid inloggningen"
+    ],
+    "practicalLabel": "Praktisk användning:",
+    "practicalBody": "När du hanterar flera Proxmox-noder i ett kluster ger Figurine en omedelbar visuell indikation på vilken nod du för närvarande är inloggad. Detta hjälper till att förhindra oavsiktliga kommandon på fel nod och förbättrar ditt arbetsflöde när du hanterar flera servrar.",
+    "exampleLabel": "Exempel Utgång:",
+    "imageAlt": "Figurine Exempel Utgång",
+    "automates": "Denna justering automatiserar följande process:",
+    "outro": "Efter installationen ser du ditt värdnamn som visas i 3D ASCII-konst varje gång du loggar in, vilket gör det omedelbart klart vilken Proxmox-nod du arbetar på."
+  },
+  "log2ram": {
+    "title": "Installera Log2RAM (SSD/NVMe slitage reduktion)",
+    "intro": "Log2RAM monterar <code>/var/log</code> på en tmpfs ramdisk och synkroniserar regelbundet innehållet tillbaka till den underliggande disken. På en hypervisor journald churn träffar roten SSD varannan sekunder; flytta skriver till RAM minskar slitage och disk I / O utan att förlora loggar - den periodiska synk spola dem till disk och en ren avstängning spola dem också.",
+    "upstreamLabel": "Upstream projekt:",
+    "upstreamUrl": "https://github.com/azlux/log2ram",
+    "upstreamLinkLabel": "azlux/log2ram på GitHub",
+    "doesLabel": "Vad ProxMenux gör:",
+    "doesItems": [
+      "Detekterar om rotskivan är SSD/NVMe genom att läsa <code>/sys/block/&lt;dev&gt;/queue/rotational</code>. På en rotationsdisk frågar det automatiska flödet först innan du installerar.",
+      "Kloner uppströms repository (<code>azlux/log2ram</code>) i <code>/tmp/log2ram</code> och patchar sin <code>install.sh</code>, ersätta <code>rsync -aAXv</code> med <code>rsync -aXv --no-acls</code>. Denna justering undviker <em>set_acl: Operation not supported</em> exit 23 misslyckande att vaniljskriptet utlöser när man flyttar /var/log på filsystem utan ACL stöd. <code>log2ram</code> systemd-enheten är aktiverad efter installation.",
+      "Storlekar ramdisken baserat på värd RAM: <code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>&gt; 16 GB → 512M</code>. Skriver värdet till <code>SIZE=</code> i <code>/etc/log2ram.conf</code>.",
+      "Planerar en periodisk disk synkroniseras via <code>/etc/cron.d/log2ram</code>: varje 1h / 3h / 6h enligt samma RAM-nivå.",
+      "Installerar en auto-sync vakt på <code>/usr/local/bin/log2ram-check.sh</code>, trådbunden till <code>/etc/cron.d/log2ram-auto-sync</code> för att köra varje 10 minuter. När <code>/var/log</code> når 80% av den ramdisk storlek vakuum tidskrifter vakuum, på 92% det först kör <code>logrotate -f /etc/logrotate.d/proxmox-backup-api</code> när den filen finns (tvinga rotation av PBS API loggar, vanligtvis den största konsumenten på en värd kör PBS) och sedan truncates <code>pveproxy access/error</code> och <code>pveam.log</code> före synkronisering. Den vanliga <code>log2ram write</code> kommandot kopierar tmpfs till disk men inte krymper tmpfs, så denna vakt hindrar PVE från att krascha med <em>Inget utrymme kvar på enhet</em> när loggar växer okontrollerad.",
+      "Detekterar om <code>proxmox-backup-server</code> körs som en tjänst på värden. När det är närvarande, släpper <code>/etc/logrotate.d/proxmox-backup-api</code> (20 MB × 3 rotation) och <code>/etc/cron.hourly/proxmox-backup-logrotate</code>, så PBS API loggar - den vanliga källan till tillväxt på en PBS värd - håll fast även mellan Log2RAMs periodiska synkroniseringar. På värdar utan PBS är detta steg en no-op.",
+      "Justerar systemd-journald gränser (<code>SystemMaxUse</code>, <code>RuntimeMaxUse</code>) för att passa in i ramdisken så att en enda burst inte kan fylla den.",
+      "Registrerar sig själv i <code>installed_tools.json</code> så att den kan återgå från Uninstall Optimizations."
+    ],
+    "howUseLabel": "Hur man använder:",
+    "howUseBody": "På Automated flow Log2RAM tillämpas obevakad när en SSD / NVMe rot upptäcks. På det Anpassningsbara flödet uppmanar manuset till storlek, synkroniseringsintervall och om du vill aktivera 90% autosynkvakt.",
+    "verifyLabel": "Verifiera och hantera från skalet:",
+    "verifyCode": "# Service state and configured timers\nsystemctl status log2ram\nsystemctl list-timers log2ram*\n\n# Current ramdisk usage — /var/log IS the tmpfs itself\ndf -h /var/log\n\n# Force a sync now (tmpfs → disk); does NOT shrink the tmpfs\nlog2ram write\n\n# Trigger the auto-sync guard on demand (vacuum + sync when usage is high)\n/usr/local/bin/log2ram-check.sh\n\n# Current config: SIZE, mail settings, path\ncat /etc/log2ram.conf\n\n# ProxMenux-specific cron jobs\ncat /etc/cron.d/log2ram /etc/cron.d/log2ram-auto-sync\n\n# Recent Log2RAM activity\njournalctl -u log2ram -n 50 --no-pager"
+  },
+  "zram": {
+    "title": "Aktivera ZRAM-bytesprofil",
+    "intro": "Skapar en komprimerad swap-enhet i RAM, <code>/dev/zram0</code>, med <code>systemd-zram-generator</code>. Sidor som kärnan flyttar till swap komprimeras med zstd och hålls i minnet, så de är skrivna till RAM innan de når swap på disken.",
+    "doesLabel": "Vad det gör:",
+    "doesItems": [
+      "Installerar <code>systemd-zram-generator</code> om det saknas och registrerar om ProxMenux installerade det.",
+      "Skriver <code>/etc/systemd/zram-generator.conf.d/90-proxmenux.conf</code>: en <code>zram0</code>-enhet som är dimensionerad till en tiondel av värden RAM, zstd komprimering (<code>zstd(level=9)</code> med systemd-zramgenerator 1.2.0 eller senare) och byta prioritet 32767.",
+      "Med denna prioritet fyller kärnan ZRAM först. En befintlig swap på disken håller sin egen prioritet och tar de sidor som inte längre passar i ZRAM.",
+      "Innan du ändrar något, letar efter en annan ZRAM-installation: en aktiv zram swap, en zramlinje i <code>/etc/fstab</code>, en systemd-enhet eller en annan generatorfil. Om det hittar en, stannar alternativet och lämnar den inställningen som den är.",
+      "Startar <code>dev-zram0.swap</code> och kontrollerar att den aktiva enheten matchar profilen. Om det inte gör det återställs det tidigare tillståndet.",
+      "Registrerar sig själv i <code>installed_tools.json</code> så att den kan återgå från Uninstall Optimizations."
+    ],
+    "howUseLabel": "Hur man använder:",
+    "howUseBody": "Alternativet är endast en del av det Anpassningsbara flödet; det automatiska flödet gäller inte det. Enheten skapas igen på varje start. Medan det är aktivt visar minneskortet för ProxMenux Monitor sin kapacitet, den byte som används, algoritmen, kompressionsförhållandet och det fysiska minnet som krävs.",
+    "verifyLabel": "Verifiera från skalet:",
+    "verifyCode": "# Active swap devices and their priority\nswapon --show\n\n# ZRAM device: algorithm, size and compressed data\nzramctl\n\n# Profile written by ProxMenux\ncat /etc/systemd/zram-generator.conf.d/90-proxmenux.conf\n\n# State of the swap unit\nsystemctl status dev-zram0.swap"
+  },
+  "autoApplication": {
+    "title": "Automatisk applikation",
+    "body": "Dessa valfria funktioner tillämpas endast när de är särskilt utvalda under efterinstallationsprocessen. Varje funktion kan väljas individuellt utifrån dina specifika behov och preferenser."
+  }
+}

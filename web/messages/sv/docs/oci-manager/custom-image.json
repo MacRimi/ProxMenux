@@ -1,0 +1,278 @@
+{
+  "meta": {
+    "title": "Installera en bild som inte finns i katalogen | ProxMenux",
+    "description": "Översätt en OCI-bild från en Compose-fil, en URL, en docker-körkommando eller en bildreferens och granska vad ProxMenux kan reproducera innan du installerar den."
+  },
+  "header": {
+    "title": "Installera en bild som inte finns i katalogen",
+    "description": "En bild av din egen översätts från sin Compose-fil, en docker-körkommando eller dess referens ensam, och resultatet visas för granskning innan någon LXC skapas.",
+    "section": "Appar i OCI-hanteraren"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Samma konverterare, samma installatör",
+            "body": "Alternativet <strong>Installera en bild som inte finns i katalogen</strong> använder omvandlaren och installatören av katalogmallarna. Skillnaden är att kontraktet genereras i det ögonblicket från definitionen, och valideras innan någon LXC skapas."
+          }
+        }
+      ]
+    },
+    {
+      "id": "sources",
+      "title": "Hur bilden beskrivs",
+      "intro": "Den första skärmen frågar hur bilden beskrivs. Fyra sätt ger en definition som översätts, en femte använder bara bildnamnet och tre tar en oci-komponering som redan är skriven.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Alternativ",
+              "Vad det läser"
+            ],
+            "rows": [
+              [
+                "Klistra på sin komponeringsfil i terminalen",
+                "YAML klistras in i terminalen och slutar med Ctrl+D."
+              ],
+              [
+                "Läs dess Compose-fil från en fil av denna värd",
+                "En väg på noden, <code>/root/docker-compose.yml</code> som standard. Filen måste finnas och vara högst 256 KiB."
+              ],
+              [
+                "Ladda ner sin Compose-fil från en adress",
+                "En <code>http://</code> eller <code>https://</code>-adress som tjänar den råa YAML. På de flesta 256 KiB laddas ner."
+              ],
+              [
+                "Klistra på docker körkommandot i terminalen",
+                "Kommandot publicerat av projektet. Hamnar, miljö, volymer, enheter, kapacitet, användare, delat minne och de andra stödda alternativen översätts."
+              ],
+              [
+                "Endast bildreferensen, utan Compose-fil",
+                "En referens som <code>ghcr.io/user/application:latest</code>. Registret är queried och OCI metadata av bilden hålls."
+              ],
+              [
+                "Klistra in en oci-compose i terminalen",
+                "JSON klistras in i terminalen och slutar med Ctrl+D. Det är inte översatt: det kontrolleras och installeras som det är skrivet."
+              ],
+              [
+                "Läs en oci-compose från en fil på denna värd",
+                "En JSON-fil på noden, <code>/root/oci-compose.json</code> som standard, på de flesta 2 MiB."
+              ],
+              [
+                "Ladda ner en oci-compose från en adress",
+                "En <code>http://</code> eller <code>https://</code>-adress som tjänar JSON-filen. På de flesta 2 MiB laddas ner."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/custom-source-menu.png",
+            "alt": "Menyn som frågar hur en bild som inte finns i katalogen beskrivs",
+            "caption": "De sätt att beskriva en bild som inte finns i katalogen."
+          }
+        }
+      ]
+    },
+    {
+      "id": "reference-only",
+      "title": "Vad en bild referens ensam ger",
+      "intro": "En bild bär sin process metadata, men inte allt en komponeringsfil brukar lägga till runt den.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Läs från bilden",
+              "Inte i bilden",
+              "Konsekvens"
+            ],
+            "rows": [
+              [
+                "<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>, <code>WorkingDir</code> och inbäddad miljö",
+                "Variabler som endast visas i dokumentationen",
+                "De läggs till under installationen eller med Modify"
+              ],
+              [
+                "Volymer som deklareras av bilden",
+                "Värd kataloger som bara en komponera filnamn",
+                "Ytterligare vägar läggs till innan du installerar"
+              ],
+              [
+                "<code>EXPOSE</code> portar",
+                "URL, protokoll eller funktionell hälsokontroll",
+                "Hamnen och hur tjänsten kontrolleras bekräftas"
+              ],
+              [
+                "Arkitekturer och smälta i registret",
+                "Enheter, privilegier eller externa beroenden",
+                "Ingen av dem är aktiverad utan en definition som ber om det"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "title": "Granska innan du installerar",
+      "intro": "Efter att ha översatt definitionen visar ProxMenux vad den förstod innan du ber om VMID, resurser eller lagring.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Analys",
+                "body": "Tjänster, bild, portar, vägar, miljö, enheter, säkerhet och hälsokontroll läses."
+              },
+              {
+                "title": "Query Registret",
+                "body": "Bilden måste finnas i dess register, och dess publicerade arkitekturer är listade. Ett privat register läses med det konto som sparats för det."
+              },
+              {
+                "title": "Lista vad som inte tillämpas",
+                "body": "Etiketter, Docker-nätverk, Swarm-inställningar och andra nycklar som inte påverkar en LXC listas."
+              },
+              {
+                "title": "Blockera vad som inte kan översättas",
+                "body": "En nyckel utan säker motsvarighet visas under <strong> Vad kan inte översättas</strong> och installationen fortsätter inte. Ingenting tappas tyst."
+              },
+              {
+                "title": "Be om hemligheter",
+                "body": "Variabler vars namn läses som lösenord, token eller nyckeln blir känsliga frågor om installationen."
+              }
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/custom-review.png",
+            "alt": "Sammanfattning av vad ProxMenux förstod från en Compose-fil",
+            "caption": "Den sammanfattning som visas innan installationen begär VMID och resurser."
+          }
+        },
+        {
+          "p": "Efter att ha accepterat sammanfattningen är flödet en av katalogen: namn, standard eller avancerade läge, VMID, CPU, minne, nätverk, börja med noden, ihållande vägar, ytterligare vägar, kompatibla enheter och en slutlig sammanfattning."
+        }
+      ]
+    },
+    {
+      "id": "examples",
+      "title": "Inmatningsexempel",
+      "blocks": [
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Komponera",
+                "code": "services:\n  app:\n    image: ghcr.io/example/app:latest\n    ports:\n      - \"8080:8080\"\n    volumes:\n      - ./config:/config\n      - /srv/media:/media\n    environment:\n      TZ: Europe/Madrid"
+              },
+              {
+                "title": "docker run",
+                "code": "docker run -d \\\n  --name app \\\n  -p 8080:8080 \\\n  -e TZ=Europe/Madrid \\\n  -v app-config:/config \\\n  -v /srv/media:/media \\\n  ghcr.io/example/app:latest"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "oci-compose",
+      "title": "En oci-compose skriven för hand",
+      "intro": "En oci-compose är JSON-filen som ett program installeras från. Katalogen håller en för var och en av sina applikationer, och samma format kan skrivas för hand och installeras med det här alternativet.",
+      "blocks": [
+        {
+          "p": "En skriven för hand anger vad författaren bestämmer: bilden, dess portar, variabler och volymer och vad installationen frågar. ProxMenux slutför resten när den läser filen. Det kan säga vad en komponeringsfil inte kan: texten i en fråga, ett lösenord som genereras under installationen, en GPU-profil, ägaren av varje volym, kontrollen av den första starten eller de referenser som visas i slutet."
+        },
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Kolla in",
+                "body": "En fil med fel är inte installerad. Varje fel namn på det fält som finns i, och en fil som inte är giltig JSON rapporterar linjen och kolumnen."
+              },
+              {
+                "title": "Granska",
+                "body": "En giltig fil visar vad den installerar: bild, webbadress, portar, ihållande vägar, de variabler som installationen begär och de filer som den skriver."
+              },
+              {
+                "title": "Installera",
+                "body": "Installationen är en av alla applikationer av katalogen, med standard eller avancerade inställningar."
+              }
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "En fil som bestämmer privilegier",
+            "body": "En oci-compose bestämmer vad som monteras i behållaren och med vilka privilegier. Granskningen säger det innan du installerar: installera bara filer som kommer från en källa du litar på."
+          }
+        },
+        {
+          "p": "Formatet beskrivs blockera med block, med två kompletta exempel, i <readmeLink>README av OCI-motorn</readmeLink>. Rekordet på en installation kan läsas på samma sätt: endast den mall som den installerades från används, och ingen av svaren på den installationen."
+        }
+      ]
+    },
+    {
+      "id": "private-registries",
+      "title": "Bilder i privata register",
+      "intro": "En bild i ett privat register, till exempel ett privat paket på GitHub eller ett privat förvar på Docker Hub, läses med ett konto som sparas i ProxMenux.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Registret vägrar bilden",
+                "body": "När registret svarar på att bilden behöver ett konto, erbjuder granskningen att logga in på det registret och läser bilden igen."
+              },
+              {
+                "title": "Logga in",
+                "body": "En användare och ett lösenord eller åtkomsttoken som kan dra bilden. Registret kontrollerar dem, och de sparas endast om det accepterar dem."
+              },
+              {
+                "title": "Installera och hålla dig uppdaterad",
+                "body": "Installationen hämtar bilden med det kontot, och så gör uppdateringar, Modify, Recreate, watchdog och uppdateringskontrollen av Monitor, på någon nod av klustret."
+              }
+            ]
+          }
+        },
+        {
+          "p": "<strong>Registry accounts</strong>, i huvudmenyn av OCI Manager Apps, listar sparade konton av registret och användaren, aldrig deras hemlighet. Från varje konto kan en bild kontrolleras, laddas ner eller installeras och kontot uppdateras eller tas bort."
+        },
+        {
+          "list": {
+            "items": [
+              "GitHub (<code>ghcr.io</code>): användaren är GitHub-kontot och lösenordet en personlig åtkomsttoken med <code>read:packages</code>-tillståndet.",
+              "Docker Hub (<code>docker.io</code>): användaren är Docker Hub-konto och lösenordet en åtkomsttoken med lästillstånd.",
+              "Andra register, inklusive en med sin egen port som <code>registry.example.com:5000</code>: användaren och lösenordet eller token som registret ger."
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Där kontona hålls",
+            "body": "I <code>/etc/pve/priv/proxmenux/registry-auth.json</code>, läsbar endast av rot, i samma mapp där Proxmox håller sina lagringslösenord. <code>/etc/pve</code> delas av varje nod av klustret, så ett konto som läggs på en nod används på dem alla. Värdbackupen innehåller den och avinstallera ProxMenux tar bort den från varje nod."
+          }
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Definitioner som inte är installerade",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "En Dockerfile utan en publicerad bild: bilden måste byggas och publiceras i ett OCI-register först.",
+              "En komponeringsfil med flera tjänster: den är blockerad eftersom den beskriver mer än en bild. Detta alternativ installerar en enda behållare.",
+              "<code>configs</code>, externa hemligheter eller enhetsformat som inte kan översättas entydigt.",
+              "Skalbyte som <code>$(command)</code>: det resulterande värdet måste skrivas istället.",
+              "<code>docker run</code> alternativ som inte är erkända, och <code>--env-file</code>: en explicit komponeringsfil läses istället."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "title": "Post-Install: Säkerhet | ProxMenux Dokumentation",
+    "description": "Säkerhetsalternativ som finns i ProxMenux Customizable post-install script. För närvarande ett enda alternativ: inaktivera portmapper / rpcbind service för att minska värdens attackyta."
+  },
+  "header": {
+    "title": "Post-Install: Säkerhet",
+    "section": "Inställningar efter installation av Proxmox"
+  },
+  "intro": {
+    "title": "Vad denna kategori täcker",
+    "body": "Post-install säkerheten är begränsad till <strong>host härdning som är säker att tillämpa obevakad</strong> - saker som inaktiverar tjänster nästan ingen behöver och som kan undgå från avinstallationsmenyn. Aktiv säkerhetsverktyg (Fail2Ban för intrångsförebyggande, Lynis för auditering) lever under den dedikerade <em>Security</em> inträde på ProxMenux huvudmenyn, inte här i efterinstallation."
+  },
+  "rpcbind": {
+    "heading": "Inaktivera Portmapper / rpcbind",
+    "intro": "<code>rpcbind</code> (tidigare <code>portmap</code>) är en tjänst som kartlägger RPC-programnummer till nätverksportar. Det är ett beroende av NFS och några äldre RPC-baserade verktyg. På en typisk Proxmox-värd som inte fungerar som en NFS-server använder <strong>nothing It</strong> - och lämnar den aktiverad håller port <code>111/tcp</code> lyssnar på varje gränssnitt.",
+    "whyTitle": "Varför det är värt att inaktivera",
+    "whyItems": [
+      "Minskar värdattackytan - en mindre lyssnande tjänst att oroa sig för.",
+      "Historiskt missbrukas som en reflektion/amplifieringsvektor i DDoS-attacker. Inaktivera <code>rpcbind</code> tar bort den förstärkningsfaktorn för din värd.",
+      "Ta bort ljudet som genereras i loggar och <code>netstat</code> / <code>ss</code>-utgång, vilket gör verklig aktivitet lättare att upptäcka."
+    ],
+    "nfsTitle": "Inaktivera inte detta om du använder NFS",
+    "nfsBody": "NFS server <strong>and</strong> NFS-klienten är beroende av <code>rpcbind</code> för att förhandla om de portar som används av <code>mountd</code>, <code>statd</code>, <code>lockd</code>, etc. Om din Proxmox värd antingen <em>exports</em> NFS aktier till andra maskiner eller <em>mounts</em> NFS aktier från en NAS, inte tillämpa detta alternativ. Mounts kommer att misslyckas med <code>mount.nfs: rpc.statd is not running</code> eller liknande.",
+    "runsTitle": "Vad ProxMenux körs",
+    "runsOutro": "Paketet stannar installerat. ProxMenux registrerar det ursprungliga aktiverade / aktiva tillståndet för både rpcbind.service och rpcbind.socket, sedan inaktiverar och stoppar båda enheterna så att uttagsaktivering inte kan föra tjänsten tillbaka.",
+    "verifyTitle": "Verifiering",
+    "verifyBody": "Efter applicering, bekräfta <code>rpcbind</code> är avstängd och ingenting lyssnar på port 111:",
+    "reversibleTitle": "Återställer den ursprungliga servicestaten",
+    "reversibleBody": "Denna förändring registreras i <code>installed_tools.json</code>. <link>Uninstall Optimizations</link> återställer varje rpcbind enhet till det aktiverade / inaktiverade och aktiva / inaktiva tillståndet som fångats innan ProxMenux ändrade det; det antar inte att rpcbind aktiverades på varje värd."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "label": "Säkerhetsmenyn",
+        "href": "/docs/security",
+        "tail": " - tyngre hitters: Fail2Ban (intrångsförebyggande) och Lynis (audit)."
+      },
+      {
+        "label": "Lynis",
+        "href": "/docs/security/lynis",
+        "tail": " - Granska värden för att hitta mer härdande möjligheter."
+      },
+      {
+        "label": "Användbara systemkommandon",
+        "href": "/docs/help-info/system-commands",
+        "tail": " — servicestatus, journalctl, lynis revision referens."
+      },
+      {
+        "label": "Anpassningsbar post-Install",
+        "href": "/docs/post-install/customizable",
+        "tail": " — tillbaka till föräldermenyn."
+      }
+    ]
+  }
+}

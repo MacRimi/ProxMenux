@@ -1,0 +1,136 @@
+{
+  "meta": {
+    "title": "Levande övervakningsverktyg | ProxMenux Dokumentation",
+    "description": "Tre interaktiva nätverksövervakare: iftop (real-time bandwidth per värdpar), iptraf-ng (multi-mode trafikövervakning) och iperf3 (bandbreddstest, server / klientläge). Varje installeras vid första användning.",
+    "ogTitle": "Levande övervakningsverktyg | ProxMenux Dokumentation",
+    "ogDescription": "Interaktiv nätverksövervakning och bandbreddstestning för Proxmox värd: iftop, iptraf-ng, iperf3."
+  },
+  "header": {
+    "title": "Levande övervakningsverktyg",
+    "description": "Tre interaktiva launchers för realtidsnätverksobservation och bandbreddsmätning: iftop, iptraf-ng och iperf3. Varje verktyg är auto-installerat från apt på första användning, körs i förgrunden, och lämnas med den dokumenterade knapptryckningen. Läs bara mot värdkonfigurationen - de observerar bara trafiken.",
+    "section": "Nätverk"
+  },
+  "intro": {
+    "title": "Vad detta gör",
+    "body": "Tre interaktiva övervakningsverktyg, var och en bakom sin egen meny. Första gången du startar ett installeras paketet tyst via <code>apt-get</code>. Efterföljande lanseringar börjar omedelbart. Inget av dessa verktyg ändrar värdnätverkskonfigurationen."
+  },
+  "when": {
+    "heading": "När du ska använda vilken",
+    "headerQuestion": "Fråga frågor",
+    "headerUse": "Använda",
+    "rows": [
+      {
+        "question": "Vem mättar länken <em>right nu</em>?",
+        "use": "iftop"
+      },
+      {
+        "question": "Vilka protokoll nedbrytning / paketstorlekar / TCP flöden strömmar?",
+        "use": "iptraf-ng"
+      },
+      {
+        "question": "Hur mycket bandbredd är faktiskt tillgänglig mellan två värdar?",
+        "use": "iperf3"
+      }
+    ]
+  },
+  "iftop": {
+    "heading": "Nätverksanvändning i realtid (iftop)",
+    "body": "Levande bandbredd per värdpar (källa ) - som <code>top</code> för trafik. Visar de tyngsta flödena på toppen, med rullande 2/10/40-sekunders genomsnitt. Bästa verktyget för frågan <em> \"varför är min upplänk mättad?\"</em>.",
+    "exit": "<strong>Exit:</strong> Tryckpress <kbd>q</kbd>. ProxMenux visar en påminnelsedialog innan du startar.",
+    "keysTitle": "Användbara nycklar inuti iftop",
+    "keysBody": "<kbd>n</kbd> toggle DNS lookup, <kbd>p</kbd> visar portnummer, <kbd>P</kbd> paus display, <kbd>t</kbd> toggle line riktning (sent / mottagen / båda), <kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd> sortera efter 2s / 10s / 40s genomsnitt. <code>man iftop</code> för full uppsättning."
+  },
+  "iptraf": {
+    "heading": "Nätverksövervakningsverktyg (iptraf-ng)",
+    "intro": "En meny-driven multi-mode trafik monitor. Där iftop svarar <em> \"som\" </em> svarar iptraf-ng <em> \"vad\" </em>: per-protokoll byte / packet counts, TCP anslutning statsspårning, paketstorlek histogram och per-station LAN aktivitet.",
+    "menuIntro": "På lanseringen får du en femoptionsmeny:",
+    "headerMode": "Läge",
+    "headerUseFor": "Använd den för",
+    "rows": [
+      {
+        "mode": "IP trafikövervakning",
+        "useFor": "Live TCP / UDP / ICMP / annan-IP-flödeslista med bytesräknare och anslutningstillstånd"
+      },
+      {
+        "mode": "Allmänt gränssnitt statistik",
+        "useFor": "Aggregat IPv4 / IPv6 / TCP / UDP / ICMP / icke-IP-paket räknas per NIC"
+      },
+      {
+        "mode": "Detaljerad gränssnitt statistik",
+        "useFor": "Samma som ovan men för ett gränssnitt, med paketstorlek och hastighetsdetalj"
+      },
+      {
+        "mode": "Statistiska sammanbrott",
+        "useFor": "Packet size distribution histogram, av TCP / UDP port"
+      },
+      {
+        "mode": "Övervakning av LAN-stationer",
+        "useFor": "Per-MAC trafikstatistik för den lokala sändningsdomänen"
+      }
+    ],
+    "exit": "<strong>Exit:</strong> Tryckpress <kbd>x</kbd> från någon syn (eller <kbd>Q</kbd> från huvudmenyn). ProxMenux visar en påminnelsedialog innan du startar.",
+    "logTitle": "Logging fångar till filen",
+    "logBody": "Varje läge erbjuder att logga fångad statistik till <code>/var/log/iptraf-ng/</code>. Användbart om du behöver ett register över en trafikspik - lämna den igång, logga in och fil, granska filen efteråt istället för att försöka läsa live-skärmen."
+  },
+  "iperf3": {
+    "heading": "Bandbreddstest (iperf3)",
+    "intro1": "Mäter faktiska TCP genomströmning mellan två värdar. Till skillnad från iftop / iptraf-ng (som observerar befintlig trafik) genererar iperf3 syntetisk trafik för att stresstesta länken. Oumbärlig för att svara på frågor som <em> \"är min 10 GbE faktiskt gör 10 GbE?\"</em> eller <em> \"är flaskhalsen NIC, växeln eller lagringen?\"</em>.",
+    "intro2": "iperf3 is a <strong>two-host tool</strong>: one side runs as server (listens on TCP port 5201), the other runs as client (connects, sends data, prints the rate). The ProxMenux launcher asks which mode you want:",
+    "headerMode": "Läge",
+    "headerBehaviour": "Beteende",
+    "headerCli": "Likvärdig CLI",
+    "rows": [
+      {
+        "mode": "Server Server",
+        "behaviour": "Lyssnar på TCP 5201 och skriver ut resultat för varje inkommande test. Slutar på Ctrl+C.",
+        "cli": "iperf3 -s"
+      },
+      {
+        "mode": "Kund",
+        "behaviour": "Begär för server IP / värdnamn, ansluter, kör en standard 10-sekunders test och skriver ut rapporten.",
+        "cli": "iperf3 -c <target>"
+      }
+    ],
+    "workflowIntro": "Typiskt arbetsflöde för att testa en 10 GbE länk mellan två Proxmox värdar:",
+    "workflow": [
+      "På värd A, öppna nätverksmenyn → <em>Bandwidth test (iperf3) </em> → välj <strong>Server</strong>.",
+      "På värd B, öppna samma menyinmatning → välj <strong>Client</strong> → ange värd A: s IP.",
+      "Vänta 10 sekunder. Jämför den rapporterade kursen till länkens teoretiska maximum."
+    ],
+    "sample": "Prova klientproduktion:",
+    "flagsTitle": "Användbara manuella flaggor (kör från ett skal)",
+    "flagsBody": "<code>-t 60</code> längre test (60 istället för standard 10s), <code>-P 4</code> 4 parallella strömmar (mättar snabbare), <code>-R</code> omvänd riktning (server → klient), <code>-u -b 100M</code> UDP test vid 100 Mbit/s (för jitter / packet förlust mätningar), <code>-p 5202</code> använder en annan port (multiple tester parallellt). <code>man iperf3</code> för full uppsättning.",
+    "firewallTitle": "Öppna brandväggen på servern",
+    "firewallBody": "Servern lyssnar på TCP <strong>5201</strong> som standard. Om du kör servern i en Proxmox-värd med en strikt brandvägg (datacenter eller värdnivå), låt inkommande TCP 5201 från klientens IP för testets varaktighet, stäng sedan den igen. Samma gäller för <code>nftables</code> / <code>iptables</code> på bara värdar."
+  },
+  "install": {
+    "heading": "Första lanseringen installerar paketet",
+    "body": "Alla tre launchers checkar för binären och kör <code>apt-get update -qq &amp;&amp; apt-get install -y &lt;pkg&gt;</code> om de saknas. Installationen är tyst: menyn kan visas fryst för 10-30 sekunder första gången. Efterföljande lanseringar börjar omedelbart."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "hangTitle": "Installera hängningar för alltid på första lanseringen",
+    "hangBody": "Värden har inget internet eller apt repos är oåtkomliga. Avbryt med <kbd>Ctrl</kbd>+<kbd>C</kbd>, kör <code>apt-get update</code> manuellt för att se det faktiska felet (DNS, repo signatur, proxy ...), sedan komma tillbaka till menyn.",
+    "refusedTitle": "iperf3 client: \"unable to connect to server: Connection refused\"",
+    "refusedBody": "Antingen kör servern inte, eller dess brandvägg blockerar TCP 5201. Bekräfta på servern: <code>ss -tlnp | grep 5201</code> - ska visa iperf3-lyssning. Om du lyssnar men klienten fortfarande misslyckas, kontrollera brandväggen mellan de två värdarna.",
+    "slowTitle": "iperf3 reports way less than the expected link speed",
+    "slowBody": "Vanliga orsaker, för sannolikhet: (1En av värdarna är flaskhalsad på CPU - Försök <code>iperf3 -c &lt;target&gt; -P 4</code> för att använda flera kärnor; (2Vägen går igenom en långsammare länk (gigabit switch i mitten av två 10 GbE NIC); (NIC); (NIC)3MTU felmatch - kontrollera <code>ip link show</code> i båda ändarna; ()4NIC offloading inaktiverad - se <em>Inaktivera NIC Offloading</em> Community script om du har ett Intel e1000e-kort.",
+    "noTrafficTitle": "iftop / iptraf-ng visar ingen trafik för en upptagen värd",
+    "noTrafficBody": "Standardfångst är på det första upptäckta gränssnittet. Ange rätt från skalet: <code>iftop -i vmbr0</code> eller <code>iptraf-ng -i vmbr0</code>. Menyn launcher använder standarden; för icke-standardgränssnitt, kör från en konsol."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "label": "Diagnostik",
+        "href": "/docs/network/diagnostics",
+        "tail": " - de läsbara en-shot-kontrollerna (routing, anslutning, avancerad statistik)."
+      },
+      {
+        "label": "Bridge analys och guidad reparation",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — När övervakning avslöjar ett gränssnitt eller en bro gör inte vad den ska."
+      }
+    ]
+  }
+}

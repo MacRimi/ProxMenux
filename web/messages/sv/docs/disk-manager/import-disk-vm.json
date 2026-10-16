@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "title": "Importera disk till VM | ProxMenux Dokumentation",
+    "description": "Bifoga en fysisk disk till en befintlig Proxmox VM med ProxMenux. Säker diskdetektering (exkluderar system, monterad, in-use, ZFS / RAID / LVM), ihållande /dev/disk/by-id vägar och SATA / SCSI / VirtIO / IDE gränssnitt.",
+    "ogTitle": "Importera disk till VM | ProxMenux Dokumentation",
+    "ogDescription": "Bifoga en fysisk disk till en befintlig Proxmox VM. Använder ihållande /dev/disk/by-id vägar och stöder SATA / SCSI / VirtIO / IDE."
+  },
+  "header": {
+    "title": "Importera disk till VM",
+    "description": "Bifoga en fysisk disk som redan finns på Proxmox-värden till en befintlig virtuell maskin. ProxMenux detekterar gratis diskar, låter dig välja målet VM, busstypen (SATA / SCSI / VirtIO / IDE) och fäster allt med ihållande /dev/disk/by-id-vägar så att kartläggningen överlever omstart och enhetsbeställningsändringar.",
+    "section": "Diskhanterare · VM"
+  },
+  "intro": {
+    "title": "Vad detta gör",
+    "body": "Detta är ett rå-disk genomgång: gäst OS ser enheten som en riktig block enhet (med sin SMART data och inhemska geometri). Skivan är bifogad via sin <code>/dev/disk/by-id/…</code>-väg - inte <code>/dev/sdX</code> - så uppdraget bryts inte om diskkontroller räknar upp enheter i en annan ordning på nästa start."
+  },
+  "howRuns": {
+    "heading": "Hur manuset går",
+    "body": "Flödet har två faser med tydlig åtskillnad mellan \"samla information och beslut\" och \"faktiskt fästa diskar till VM\". Fram till den slutliga bekräftelsen är VM-konfig orörd.",
+    "summary": "ProxMenux filtrerar ut allt som inte kan passera säkert: rotskivan, diskar monterade på värden, medlemmar av en aktiv ZFS / LVM / RAID pool och diskar som redan refereras av någon VM / LXC config. Disker med <em>stale</em> metadata (gamla ZFS / RAID / LVM signaturer som inte längre används) visas med en £ etikett men inte blockeras."
+  },
+  "prereqs": {
+    "heading": "Förutsättningar",
+    "items": [
+      "Minst en VM definierad på värden (skriptet skickar direkt till <code>qm list</code>).",
+      "<strong>target VM drivs off</strong>. Om det kör manuset aborter med ett meddelande - live disk varmtad är utanför omfattningen av detta flöde.",
+      "Minst en fysisk disk på värden som inte används av värden eller någon annan gäst."
+    ]
+  },
+  "steps": {
+    "heading": "Steg-för-steg",
+    "stepLabel": "Steg",
+    "list": [
+      {
+        "title": "Välj målet VM",
+        "bodyRich": "ProxMenux listar varje VM på värden (via <code>qm list</code>). Välj den som får disken. Om VM kör manuset aborter och ber dig att stänga ner det först."
+      },
+      {
+        "title": "Välj den fysiska disken (er) för att fästa",
+        "img": "/disk/disk-selection.png",
+        "caption": "Gratis diskar som upptäckts på värden (med 88 etiketter för stal metadata)",
+        "body": "Skriptet skannar varje värdskiva och visar bara de som är säkra att fästa. Checklistan låter dig välja en eller flera på en gång. Disker med gammal ZFS / LVM / RAID signaturer dyker fortfarande upp, märkt med 88 så du vet att de behöver en torka innan gästen kan formatera dem."
+      },
+      {
+        "title": "Välj bussgränssnittet",
+        "img": "/disk/disk-assigment.png",
+        "caption": "Buss gränssnitt val",
+        "intro": "Välj hur gästen ska se skivan:",
+        "items": [
+          "<strong>SCSI</strong> moderna standard för Linux och Windows med VirtIOSCSI-drivrutiner installerade.",
+          "<strong>SATA</strong> bred kompatibilitet, fungerar ur lådan på praktiskt taget alla gäster.",
+          "<strong>VirtIO</strong> - paravirtualiserad blockenhet, snabbast men kräver gästförare.",
+          "<strong>IDE</strong> - för äldre gäster som saknar någon av ovanstående förare."
+        ]
+      },
+      {
+        "title": "Bifoga och verifiera",
+        "bodyRich": "ProxMenux fäster varje vald disk med sin bästa <code>/dev/disk/by-id/</code>-väg, hoppar över slotindex som redan används i VM-konfig (<code>scsi0</code>, <code>sata0</code>, ...) och läser om konfigen för att bekräfta uppdraget. En sammanfattning trycks i slutet."
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Manuell motsvarande",
+    "body": "Manuset är en wrapper runt <code>qm set</code>. Det exakta kommandot för en enda disk ser ut så här:",
+    "migrationTitle": "Live migration är inte möjligt",
+    "migrationBody": "En VM med en genomgångsdisk är <strong>tied till värden som avslöjar den disk</strong>. Live migration till en annan Proxmox nod kommer att misslyckas eftersom målnoden inte ser samma <code>/dev/disk/by-id/…</code>-bana. Använd replikering eller backup/återställning istället, eller välj virtuella diskar på delad lagring om du behöver mobilitet.",
+    "shareTitle": "Dela inte en fysisk disk mellan VM",
+    "shareBody": "Att fästa samma fysiska disk till två VM samtidigt kommer att korrumpera data på nästa skriv. ProxMenux upptäcker denna situation och blockerar den, men om du kringgår manuset (direkt <code>qm set</code>), se till att endast en gäst någonsin monterar disken."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "noDisksTitle": "Inga diskar tillgängliga för denna VM",
+    "noDisksIntro": "Manuset hittade skivor, men varje kandidat filtrerades ut. Vanliga skäl:",
+    "noDisksItems": [
+      "Varje återstående disk refereras redan i målet VM-konfig.",
+      "Varje återstående disk monteras på värden eller är en del av en aktiv ZFS / LVM / RAID.",
+      "Värden har bara rotskivan installerad."
+    ],
+    "noDisksOutro": "Kör <code>lsblk -f</code> på värden för att granska tillståndet för varje disk.",
+    "noVisibleTitle": "VM ser inte disken efter start",
+    "noVisibleBody": "Om du valde <strong>SCSI</strong> eller <strong>VirtIO</strong>, behöver gästen den matchande föraren. På Linux som är kärninfödd; på Windows behöver du VirtIO ISO och en drivrutininstallation (se <winLink>Create VM: System Windows</winLink>-sida). Att byta till SATA i VMs hårdvaruflik är en snabb lösning för att bekräfta att disken är fysiskt fäst."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-image-vm",
+        "label": "Importera diskavbildning till virtuell dator",
+        "tail": " - samma flöde men för bildfiler (qcow2 / vmdk / rå / img)."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-lxc",
+        "label": "Importera disk till LXC",
+        "tail": " - motsvarande flöde för LXC behållare."
+      },
+      {
+        "href": "/docs/disk-manager/add-controller-nvme-vm",
+        "label": "Lägg till Controller eller NVMe till VM",
+        "tail": " — när du behöver full PCIe / NVMe passthrough snarare än disk bifoga."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Lagring och Disks kommandon",
+        "tail": " — qm importeradisk och relaterad skalreferens."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Disk Manager översikt",
+        "tail": "."
+      }
+    ]
+  }
+}

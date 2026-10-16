@@ -1,0 +1,276 @@
+{
+  "meta": {
+    "title": "Linux CLI Tools for Proxmox - htop, iftop, journalctl, rsync, tmux | ProxMenux",
+    "description": "Dagliga Linux CLI-verktyg för Proxmox VE-administration: övervakning (htop, atop, blickar, iotop), nätverk (ovan, nmap, mtr, ss), fil och text (hitta, grep, journalctl), prestanda (iostat, perf, strace), säkerhet (fail2ban, lynis, lsof) och fjärradmin (ssh, rsync, tm).",
+    "ogTitle": "Linux CLI Tools for Proxmox - htop, iftop, journalctl, rsync, tmux",
+    "ogDescription": "Dagliga CLI-verktyg för Proxmox VE-administration som grupperas efter ändamål: övervakning, nätverk, fil / text, prestanda, säkerhet och fjärradministration.",
+    "twitterTitle": "Linux CLI Verktyg för Proxmox ProxMenux",
+    "twitterDescription": "CLI-verktyg för Proxmox VE-administration grupperad efter ändamål."
+  },
+  "header": {
+    "title": "System CLI-verktyg",
+    "description": "Daily-driver CLI verktyg för Proxmox värdadministration, grupperad efter ändamål: övervakning, nätverk, fil och text, prestandaanalys, säkerhet, fjärradministration och systemkonfiguration.",
+    "section": "Hjälp och info"
+  },
+  "intro": {
+    "title": "De flesta är installerade av Post-Install",
+    "body": "Om du körde ProxMenux Post-Install-skriptet med standardvalen är de flesta av dessa verktyg redan installerade. För något som saknas, ProxMenux <utilsLink>System Utilities Installer</utilsLink> erbjuder dem som fördefinierade grupper (grundläggande, dev, nätverk, analys, ...)."
+  },
+  "commandGroups": [
+    {
+      "title": "Systemövervakning",
+      "commands": [
+        {
+          "command": "htop",
+          "description": "Interaktiv processtittare med CPU/minnesanvändning"
+        },
+        {
+          "command": "top",
+          "description": "Visa Linux-processer i realtid"
+        },
+        {
+          "command": "atop",
+          "description": "Avancerat system och processövervakning"
+        },
+        {
+          "command": "glances",
+          "description": "Systemövervakningsverktyg med webbgränssnitt"
+        },
+        {
+          "command": "nmon",
+          "description": "Prestanda övervakningsverktyg"
+        },
+        {
+          "command": "iotop",
+          "description": "Övervaka disk I/O-användning genom processer"
+        },
+        {
+          "command": "vmstat 1",
+          "description": "Rapportera virtuell minnesstatistik varje sekund"
+        }
+      ]
+    },
+    {
+      "title": "Nätverksverktyg",
+      "commands": [
+        {
+          "command": "iftop",
+          "description": "Visa bandbredd användning på ett gränssnitt"
+        },
+        {
+          "command": "nmap <host>",
+          "description": "Nätverksutforskning och säkerhetsskanning"
+        },
+        {
+          "command": "tcpdump -i <interface>",
+          "description": "Dumpa nätverkstrafik"
+        },
+        {
+          "command": "netstat -tuln",
+          "description": "Visa nätverksanslutningar"
+        },
+        {
+          "command": "ss -tuln",
+          "description": "Ett annat verktyg för att undersöka uttag"
+        },
+        {
+          "command": "mtr <host>",
+          "description": "Nätverk diagnostiskt verktyg som kombinerar ping och traceroute"
+        },
+        {
+          "command": "iperf3 -s",
+          "description": "Kör iperf server för bandbreddstestning"
+        }
+      ]
+    },
+    {
+      "title": "Fil och textverktyg",
+      "commands": [
+        {
+          "command": "find / -name <filename>",
+          "description": "Hitta filer efter namn"
+        },
+        {
+          "command": "grep -r 'pattern' /path",
+          "description": "Sök efter mönster i filer"
+        },
+        {
+          "command": "sed -i 's/old/new/g' file",
+          "description": "Ersätt text i filer"
+        },
+        {
+          "command": "awk '{print $1}' file",
+          "description": "Text processing verktyg"
+        },
+        {
+          "command": "tail -f /var/log/syslog",
+          "description": "Följ log file i realtid"
+        },
+        {
+          "command": "less /var/log/messages",
+          "description": "Visa fil med pagination"
+        },
+        {
+          "command": "journalctl -f",
+          "description": "Följ systemd journal loggar"
+        }
+      ]
+    },
+    {
+      "title": "Prestandaanalys",
+      "commands": [
+        {
+          "command": "iostat -x 1",
+          "description": "Rapportera CPU och I/O statistik"
+        },
+        {
+          "command": "mpstat -P ALL 1",
+          "description": "Rapportera CPU"
+        },
+        {
+          "command": "perf top",
+          "description": "Systemprofileringsverktyg"
+        },
+        {
+          "command": "strace <command>",
+          "description": "Trace system samtal och signaler"
+        },
+        {
+          "command": "lsof",
+          "description": "Lista öppna filer"
+        },
+        {
+          "command": "pstree",
+          "description": "Visa process träd"
+        },
+        {
+          "command": "slabtop",
+          "description": "Visa kernel slab cache information"
+        }
+      ]
+    },
+    {
+      "title": "Säkerhetsverktyg",
+      "commands": [
+        {
+          "command": "fail2ban-client status",
+          "description": "Visa fail2ban status"
+        },
+        {
+          "command": "chage -l <username>",
+          "description": "Visa lösenord utgångsinformation"
+        },
+        {
+          "command": "lastlog",
+          "description": "Visa sista inloggningen av alla användare"
+        },
+        {
+          "command": "last",
+          "description": "Visa notering av senast inloggad användare"
+        },
+        {
+          "command": "w",
+          "description": "Visa vem som är inloggad och vad de gör"
+        },
+        {
+          "command": "lynis audit system",
+          "description": "Säkerhetsrevisionsverktyg"
+        },
+        {
+          "command": "openssl s_client -connect host:port",
+          "description": "Test SSL/TLS-anslutningar"
+        }
+      ]
+    },
+    {
+      "title": "Fjärradministration",
+      "commands": [
+        {
+          "command": "ssh <user>@<host>",
+          "description": "Säker skalanslutning"
+        },
+        {
+          "command": "scp <file> <user>@<host>:<path>",
+          "description": "Säker kopia filer"
+        },
+        {
+          "command": "rsync -avz <src> <dest>",
+          "description": "Synkronisera filer / mappar"
+        },
+        {
+          "command": "screen",
+          "description": "Terminalmultiplexer"
+        },
+        {
+          "command": "tmux",
+          "description": "Terminal multiplexer alternativ"
+        },
+        {
+          "command": "ssh-keygen -t rsa -b 4096",
+          "description": "Generera SSH nyckelpar"
+        },
+        {
+          "command": "ssh-copy-id <user>@<host>",
+          "description": "Kopiera SSH-nyckeln till servern"
+        }
+      ]
+    },
+    {
+      "title": "Systemkonfiguration",
+      "commands": [
+        {
+          "command": "systemctl status <service>",
+          "description": "Kontrollera servicestatus"
+        },
+        {
+          "command": "journalctl -u <service>",
+          "description": "Visa serviceloggar"
+        },
+        {
+          "command": "timedatectl",
+          "description": "Kontrollsystem tid och datum"
+        },
+        {
+          "command": "hostnamectl",
+          "description": "Kontrollsystem värdnamn"
+        },
+        {
+          "command": "localectl",
+          "description": "Kontrollsystem lokal och tangentbord"
+        },
+        {
+          "command": "update-alternatives --config <name>",
+          "description": "Konfigurera systemalternativ"
+        },
+        {
+          "command": "dpkg-reconfigure <package>",
+          "description": "Konfigurera ett installerat paket"
+        }
+      ]
+    }
+  ],
+  "tmuxTip": {
+    "title": "Använd tmux / skärm för långvariga kommandon",
+    "bodyRich": "Allt som tar längre tid än en kaffepaus - en backup, en lång uppgradering, en stor rsync - ska köras inuti <code>tmux</code> eller <code>screen</code>. SSH-avkopplingar dödar inte sessionen, och du kan återfå från var som helst med <code>tmux attach</code>."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/utils/system-utils",
+        "label": "Installationsprogram för systemverktyg",
+        "tail": " - installera något av dessa verktyg som saknas."
+      },
+      {
+        "href": "/docs/help-info/system-commands",
+        "label": "Användbara systemkommandon",
+        "tail": " — Proxmox-specifika inspektionskommandon."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Hjälp och info översikt",
+        "tail": "."
+      }
+    ]
+  }
+}

@@ -1,0 +1,232 @@
+{
+  "meta": {
+    "title": "Proxmox Storage and Disk Commands – lsblk, LVM, pvesm, qm importdisk | ProxMenux",
+    "description": "Hänvisning av lagrings- och diskkommandon på Proxmox VE: lsblk, blkid, parted, lvdisplay, vgdisplay, pvs, montering, df, du, ncdu, pvesm status, qm importeradisk och qemu-img konvertera för VM diskoperationer.",
+    "ogTitle": "Proxmox Storage and Disk Commands – lsblk, LVM, pvesm, qm importdisk",
+    "ogDescription": "Referens av lagrings- och diskkommandon på Proxmox VE - diskinspektion, LVM, fästen, Proxmox lagringshantering, VM-disk import och bildkonvertering.",
+    "twitterTitle": "Proxmox lagringskommandon | ProxMenux",
+    "twitterDescription": "Disk inspektion, montering info, LVM management, Proxmox lagring och VM disk import / konverteringskommandon."
+  },
+  "header": {
+    "title": "Lagring och diskar",
+    "description": "Curated referens för lagring inspektion på Proxmox värdar: block enheter, partitioner, fästen, LVM volymer, Proxmox lagring konfiguration, och några VM disk operationer (importdisk, qemu-img konvertera).",
+    "section": "Hjälp och info"
+  },
+  "intro": {
+    "title": "Snabb disk inventering",
+    "body": "<code>lsblk</code> är det snabbaste sättet att se alla blockenheter och deras partitioner i en trädvy. För ihållande identifierare (som överlever mellan stövlar och hårdvaruförändringar) använder <code>ls -lh /dev/disk/by-id/</code>."
+  },
+  "commandGroups": [
+    {
+      "title": "Diskinformation",
+      "commands": [
+        {
+          "command": "lsblk",
+          "description": "Lista blockenheter och partitioner"
+        },
+        {
+          "command": "fdisk -l",
+          "description": "Lista diskar med detaljerad information"
+        },
+        {
+          "command": "blkid",
+          "description": "Visa UUID och filsystemtyp av blockenheter"
+        },
+        {
+          "command": "ls -lh /dev/disk/by-id/",
+          "description": "Lista diskbeständiga identifierare"
+        },
+        {
+          "command": "parted -l",
+          "description": "Detaljerad partitionslayout med GPT-information"
+        }
+      ]
+    },
+    {
+      "title": "Lagringsanvändning",
+      "commands": [
+        {
+          "command": "df -h",
+          "description": "Visa diskanvändning efter monteringspunkt"
+        },
+        {
+          "command": "du -sh /path",
+          "description": "Visa storleken på en katalog"
+        },
+        {
+          "command": "mount | grep ^/dev",
+          "description": "Visa monterade lagringsenheter"
+        },
+        {
+          "command": "cat /proc/mounts",
+          "description": "Visa alla aktiva monteringar från kärnan"
+        }
+      ]
+    },
+    {
+      "title": "LVM-hantering",
+      "commands": [
+        {
+          "command": "pvdisplay",
+          "description": "Visa fysiska volymer (LVM)"
+        },
+        {
+          "command": "vgdisplay",
+          "description": "Displayvolymgrupper (LVM)"
+        },
+        {
+          "command": "lvdisplay",
+          "description": "Visa logiska volymer (LVM)"
+        },
+        {
+          "command": "pvs",
+          "description": "Kortfattad utdata av fysiska volymer"
+        },
+        {
+          "command": "vgs",
+          "description": "Kortfattad utdata av volymgrupper"
+        },
+        {
+          "command": "lvs",
+          "description": "Kortfattad utdata av logiska volymer"
+        }
+      ]
+    },
+    {
+      "title": "Proxmox lagring",
+      "commands": [
+        {
+          "command": "cat /etc/pve/storage.cfg",
+          "description": "Visa Proxmox-lagringskonfiguration"
+        },
+        {
+          "command": "pvesm status",
+          "description": "Visa status för alla lagringspooler"
+        },
+        {
+          "command": "pvesm list",
+          "description": "Lista all tillgänglig lagring"
+        },
+        {
+          "command": "pvesm list <storage>",
+          "description": "Lista innehållet i specifik lagring"
+        },
+        {
+          "command": "pvesm scan <storage>",
+          "description": "Skanna lagring efter nytt innehåll"
+        }
+      ]
+    },
+    {
+      "title": "Disk åtgärder",
+      "commands": [
+        {
+          "command": "qm importdisk <vmid> <image_path> <storage>",
+          "description": "Bifoga diskbild till VM"
+        },
+        {
+          "command": "qm set <vmid> -<bus><index> <disk_path>",
+          "description": "Tilldela fysisk disk till VM (genomfångsläge)"
+        },
+        {
+          "command": "qemu-img convert -O <format> <input> <output>",
+          "description": "Konvertera skivavbildningsformat"
+        }
+      ]
+    },
+    {
+      "title": "SMART Disk Hälsa",
+      "commands": [
+        {
+          "command": "smartctl --scan",
+          "description": "Lista SMART-kompatibla enheter på värden"
+        },
+        {
+          "command": "smartctl -i /dev/<disk>",
+          "description": "Grundläggande enhet info (modell, firmware, seriell)"
+        },
+        {
+          "command": "smartctl -H /dev/<disk>",
+          "description": "Snabb hälsokontroll - övergripande PASSED / FAILED"
+        },
+        {
+          "command": "smartctl -A /dev/<disk>",
+          "description": "SMART attribut endast (råvärden, trösklar)"
+        },
+        {
+          "command": "smartctl -a /dev/<disk>",
+          "description": "Full SMART info — info + attribut + självtest logga"
+        },
+        {
+          "command": "smartctl -t short /dev/<disk>",
+          "description": "Starta kort självtest (~2 minuter, körs i bakgrunden)"
+        },
+        {
+          "command": "smartctl -t long /dev/<disk>",
+          "description": "Börja länge självtest (timmar, springer i bakgrunden)"
+        },
+        {
+          "command": "smartctl -l selftest /dev/<disk>",
+          "description": "Visa självtest log (resultat från tidigare tester)"
+        },
+        {
+          "command": "smartctl -X /dev/<disk>",
+          "description": "Abort the running självtest"
+        }
+      ]
+    },
+    {
+      "title": "NVMe Disk Hälsa",
+      "commands": [
+        {
+          "command": "nvme list",
+          "description": "Lista NVMe-enheter synliga för kärnan"
+        },
+        {
+          "command": "nvme smart-log /dev/<nvme>",
+          "description": "NVMe-specifik SMART-logg (temperatur, slitage, fel)"
+        },
+        {
+          "command": "nvme id-ctrl /dev/<nvme>",
+          "description": "Controller info (modell, firmware, kapacitet)"
+        },
+        {
+          "command": "nvme error-log /dev/<nvme>",
+          "description": "Nyligen NVMe felloggposter"
+        }
+      ]
+    }
+  ],
+  "lvmTip": {
+    "title": "LVM kort vs långa kommandon",
+    "bodyRich": "Båda formerna finns för kompatibilitet. <code>pvs</code> / <code>vgs</code> / <code>lvs</code> ger ett rent engångs-per-volymbord; <code>pvdisplay</code> / <code>vgdisplay</code> / <code>lvdisplay</code> ger en verbos multi-line dump per volym. För daglig användning föredrar de korta versionerna."
+  },
+  "smartInfo": {
+    "title": "SMART för spinning diskar vs NVMe",
+    "bodyRich": "<strong>Spinning / SATA / SAS diskar</strong> Använda <code>smartctl</code> Familj från <code>smartmontools</code> (installerad som standard på Proxmox). Passera enheten som <code>/dev/sda</code>, <code>/dev/sdb</code>osv. <strong>NVMe diskar</strong> har sitt eget inhemska protokoll <code>smartctl</code> fungerar mot dem (passerar mest data genom), men <code>nvme</code> Verktyg från <code>nvme-cli</code> Rapporter mer NVMe-specifika fält (klädsel, mediefel, namespace info). Installera med <code>apt install nvme-cli</code> Om inte närvarande."
+  },
+  "selfTestWarn": {
+    "title": "Självtester körs i bakgrunden",
+    "bodyRich": "<code>smartctl -t short</code> och <code>-t long</code> returnerar omedelbart - disken kör testet på egen hand. Kontrollera framsteg med <code>smartctl -a /dev/&lt;disk&gt;</code> (se \"Självtest rutin pågår\" linje) eller vänta på slutförande och läs <code>smartctl -l selftest /dev/&lt;disk&gt;</code>. Korta tester tar ~ 2 min; långa tester kan ta timmar på stora spinnare. Skivan är användbar under testet, men I/O-prestanda sjunker."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "ZFS-hantering",
+        "tail": " — zpool / zfs kommandon för ZFS-stödd lagring."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Diskhanteraren",
+        "tail": " - interaktiva ProxMenux-flöden för disk genomgång, import, formatering, SMART."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Hjälp och info översikt",
+        "tail": "."
+      }
+    ]
+  }
+}

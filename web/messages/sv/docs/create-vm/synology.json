@@ -1,0 +1,453 @@
+{
+  "title": "Synology VM Skapare Script",
+  "stepLabel": "Steg",
+  "intro": {
+    "heading": "Introduktion",
+    "intro": "ProxMenux ger ett automatiserat manus som skapar och konfigurerar en virtuell maskin (VM) för att installera Synology DSM (DiskStation Manager) på Proxmox VE. Detta skript förenklar processen genom att ladda ner och lägga till en av de tillgängliga laddarna till VM-starten, vilket ger dig möjlighet mellan fyra olika val:",
+    "loaders": [
+      {
+        "name": "AuxXxilium Arc",
+        "url": "https://github.com/AuxXxilium/arc",
+        "extra": ""
+      },
+      {
+        "name": "RedPill RR",
+        "url": "https://github.com/RROrg/rr",
+        "extra": ""
+      },
+      {
+        "name": "TinyCore RedPill M-shell",
+        "url": "https://github.com/PeterSuh-Q3/tinycore-redpill",
+        "extra": ""
+      }
+    ],
+    "customLoader": "Anpassad lastare - alternativ att använda en anpassad lastare om du föredrar att ändra eller skapa din egen konfiguration",
+    "simplifiesIntro": "Skriptet förenklar skapandet av VM genom att erbjuda följande alternativ:",
+    "simplifies": [
+      "Val av standard eller avancerad konfiguration",
+      "Konfiguration av CPU, RAM, BIOS och maskintyp",
+      "Val mellan virtuell disk eller fysisk disk genomgång"
+    ]
+  },
+  "config": {
+    "heading": "Standard och avancerad konfiguration",
+    "intro": "Skriptet erbjuder två konfigurationslägen:",
+    "defaultHeading": "Standardkonfiguration",
+    "defaultIntro": "Om du väljer standardkonfiguration kommer skriptet automatiskt att tillämpa följande värden:",
+    "headerParam": "Parameter",
+    "headerValue": "Standardvärde",
+    "defaultRows": [
+      {
+        "param": "Maskintyp",
+        "value": "q35"
+      },
+      {
+        "param": "BIOS-typ",
+        "value": "OVMF (UEFI)"
+      },
+      {
+        "param": "CPU-typ",
+        "value": "Värd"
+      },
+      {
+        "param": "Antal kärnor",
+        "value": "2"
+      },
+      {
+        "param": "RAM-storlek",
+        "value": "4096 MB"
+      },
+      {
+        "param": "Bro",
+        "value": "vmbr0"
+      },
+      {
+        "param": "MAC-adress",
+        "value": "Automatiskt genererad"
+      },
+      {
+        "param": "Starta VM på slutförande",
+        "value": "Nej"
+      }
+    ],
+    "defaultOutro": "Om du vill anpassa konfigurationen väljer du alternativet Avancerade inställningar i menyn.",
+    "advancedHeading": "Avancerad konfiguration",
+    "advancedIntro": "Om du väljer avancerad konfiguration tillåter skriptet dig att anpassa varje parameter:",
+    "headerOptions": "Alternativ",
+    "advancedRows": [
+      {
+        "param": "Maskintyp",
+        "options": "q35 eller i440fx"
+      },
+      {
+        "param": "BIOS-typ",
+        "options": "OVMF (UEFI) eller SeaBIOS (Legacy)"
+      },
+      {
+        "param": "CPU-typ",
+        "options": "Värd eller KVM64"
+      },
+      {
+        "param": "Antal kärnor",
+        "options": "Antal CPU-kärnor"
+      },
+      {
+        "param": "RAM-storlek",
+        "options": "Mängden minne som tilldelats VM"
+      },
+      {
+        "param": "Bro",
+        "options": "Nätverksbro för anslutning"
+      },
+      {
+        "param": "MAC-adress",
+        "options": "Anpassad MAC-adress"
+      },
+      {
+        "param": "VLAN",
+        "options": "VLAN-taggen (om den används)"
+      },
+      {
+        "param": "MTU",
+        "options": "Maximal överföringsenhet storlek"
+      }
+    ]
+  },
+  "diskSelection": {
+    "heading": "Diskval",
+    "intro": "När maskinen är konfigurerad kan manuset välja mellan två typer av diskar:",
+    "virtualHeading": "Virtuell Disk",
+    "virtualItems": [
+      "Skriptet listar de lagringsalternativ som finns i Proxmox",
+      "Användaren väljer disk och storlek i GB",
+      "Den virtuella disken tilldelas automatiskt till VM. Om fler diskar är konfigurerade kommer de att läggas till som <strong>SATA</strong> (t.ex. sata0, sata1, etc.), upp till högst 6 virtuella diskar."
+    ],
+    "physicalHeading": "Fysisk disk genomgång",
+    "physicalItems": [
+      "Skriptet upptäcker alla tillgängliga fysiska diskar",
+      "Användaren väljer fysiska diskar eller diskar som de vill använda.",
+      "Den fysiska disken är direkt tilldelad VM via genomgång. Om fler diskar är konfigurerade kommer de att läggas till som <strong>SATA</strong> (t.ex. sata0, sata1, etc.), upp till högst 6 fysiska diskar."
+    ]
+  },
+  "loaderInstall": {
+    "heading": "Installation av starthanterare",
+    "intro1": "Skriptet hämtar automatiskt och extraherar lastaren från utvecklarens förvar. Om nedladdningen misslyckas kommer skriptet att visa ett felmeddelande.",
+    "intro2Rich": "<strong>AuxXxilium Arc</strong>, <strong>RedPill RR</strong> och <strong>TinyCore RedPill M-shell</strong>. Nedladdningar och extrakt automatiskt.",
+    "customRich": "För <strong>Custom Loader</strong> söker manuset efter filer i <code>/var/lib/vz/template/iso</code>. Om flera filer finns kommer du att uppmanas att välja önskad fil.",
+    "uploadIntro": "Du kan ladda upp anpassade lastare från de lokala lagringsalternativen:",
+    "imageAlt": "Lägg till anpassad lastare",
+    "imageCaption": "Lägg till anpassad lastare"
+  },
+  "vmCreation": {
+    "heading": "VM Skapande",
+    "intro": "När lastaren laddas ner skapar manuset VM med följande kommandon:",
+    "items": [
+      "<code>qm create</code> Skapar den virtuella maskinen med de konfigurerade parametrarna",
+      "<code>qm importdisk</code> - Importera boot loader disk till VM. För större kompatibilitet importeras lastaren som en IDE-disk",
+      "<code>qm set</code> - Tilldelar konfigurationsvärden som CPU, RAMoch förvaring",
+      "<code>qm set -boot</code> - Konfigurerar startordern"
+    ]
+  },
+  "stepGuide": {
+    "heading": "Stegvis guide till konfiguration av starthanteraren",
+    "intro": "Medan alla lastare delar likheter, har var och en sin egen struktur och konfigurationsmetoder. Detta avsnitt ger en grundläggande guide som täcker 6-stegen som är inblandade i att inrätta en Synology DSM-laddare. De exakta stegen kan variera beroende på lastaren och eventuella förändringar som utvecklaren inför. Därför är förståelsen av dessa vanliga grundläggande steg avgörande för att korrekt bygga och konfigurera lastaren av ditt val för korrekt synologi DSM-funktionalitet.",
+    "selectorHeading": "Välj din loadertyp:",
+    "loaderButtons": {
+      "arc": "Arc Loader",
+      "rr": "RR Loader",
+      "tinycore": "TinyCore Loader"
+    }
+  },
+  "steps": [
+    {
+      "id": "step1",
+      "title": "Starta VM och komma åt huvudmenyn",
+      "intro": "När VM skapas, starta den. Första gången du startar VM får du tillgång till lastarens huvudmeny för att välja och konfigurera DSM-modellen du vill bygga. När lastaren är skapad kommer detta steg att hoppas om du inte manuellt tvingar en omkonfiguration från startskärmen. Alla lastare har också möjlighet att konfigurera lastaren via ett webbgränssnitt.",
+      "loaders": {
+        "arc": [
+          {
+            "htmlBefore": "<strong>Web interface</strong>, För att komma åt webbgränssnittet, öppna helt enkelt en webbläsare och ange IP-adressen som visas i VM konsolutgång. Till exempel: http://192.169.0.32.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_0_1.png",
+            "alt": "Arc-starthanterarens webbgränssnitt",
+            "caption": "Arc-starthanterarens webbgränssnitt"
+          },
+          {
+            "htmlBefore": "<strong>Terminal interface</strong>, Access direkt från VM konsolutgång.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_1_1.png",
+            "alt": "Arc-starthanterarens terminalgränssnitt",
+            "caption": "Arc-starthanterarens terminalgränssnitt"
+          }
+        ],
+        "rr": [
+          {
+            "htmlBefore": "<strong>Web interface</strong>, För att komma åt webbgränssnittet, öppna helt enkelt en webbläsare och ange IP-adressen som visas i VMs konsolutgång, följt av port <strong>7681</strong>. Till exempel: <code>http://192.169.0.33:7681</code>.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_0_2.png",
+            "alt": "RR Command Exempel",
+            "caption": "RR-starthanterarens webbgränssnitt"
+          },
+          {
+            "htmlBefore": "<strong>Terminal interface</strong>, Access direkt från VM konsolutgång genom att skriva <strong>menu.sh</strong> på skärmen",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_1_1.png",
+            "alt": "RR-starthanterarens gränssnitt",
+            "caption": "RR-starthanterarens terminalgränssnitt"
+          }
+        ],
+        "tinycore": [
+          {
+            "htmlBefore": "<strong>Web interface</strong>, För att komma åt webbgränssnittet, öppna helt enkelt en webbläsare och ange IP-adressen som visas i VMs konsolutgång, följt av port <strong>7681</strong>. Till exempel: <code>http://192.169.0.35:7681</code>.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_0_1.png",
+            "alt": "Gränssnitt för TinyCore Loader",
+            "caption": "TinyCore-starthanterarens webbgränssnitt"
+          },
+          {
+            "htmlBefore": "<strong>Terminal interface</strong>, Access direkt från VM konsolutgång. Håll ett öga på skärmen, eftersom det ibland kan uppmana dig att trycka på en nyckel för att fortsätta eller fråga om du vill ändra språket.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_1_1.png",
+            "alt": "Gränssnitt för TinyCore Loader",
+            "caption": "TinyCore Loader terminal gränssnitt"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "Välj modell",
+      "intro": "Efter att ha laddat menyn väljer du Synology DSM-modellen du vill installera. Beroende på lastaren kan du ibland behöva utöka alternativen för att se fler modeller.",
+      "outro": "Vi väljer SA6400-modellen.",
+      "loaders": {
+        "arc": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_2_1.png",
+            "alt": "Modellval i Arc",
+            "caption": "Modellval i Arc"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_2_1.png",
+            "alt": "RR Model Val",
+            "caption": "RR Model Val"
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_2_1.png",
+            "alt": "TinyCore Modell urval",
+            "caption": "TinyCore Modell urval"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "Välj DSM-version",
+      "intro": "När du har valt modellen måste du välja den DSM-version du vill installera.",
+      "loaders": {
+        "arc": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_3_1.png",
+            "alt": "Arc Version Selection - Steg 1",
+            "caption": "Arc Version Selection - Steg 1"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_3_2.png",
+            "alt": "Arc Version Selection - Steg 2",
+            "caption": "Arc Version Selection - Steg 2"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_3_1.png",
+            "alt": "RR Version Selection - Steg 1",
+            "caption": "RR Version Selection - Steg 1"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_3_2.png",
+            "alt": "RR Version Selection - Steg 2",
+            "caption": "RR Version Selection - Steg 2"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_3_3.png",
+            "alt": "RR Version Selection - Steg 3",
+            "caption": "RR Version Selection - Steg 3"
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_3_1.png",
+            "alt": "TinyCore Version Selection - Steg 1",
+            "caption": "TinyCore Version Selection - Steg 1"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_3_2.png",
+            "alt": "TinyCore Version Selection - Steg 2",
+            "caption": "TinyCore Version Selection - Steg 2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step4",
+      "title": "Välj Addons",
+      "intro": "Detta steg gör att du kan lägga till ytterligare funktioner eller anpassade konfigurationer till lastaren.",
+      "loaders": {
+        "arc": [
+          {
+            "htmlBefore": "<strong>Arc</strong> ger dig möjlighet att konfigurera automatiskt eller manuellt justera inställningarna. Om automatisk konfiguration väljs kommer lastaren att börja tillämpa nödvändiga inställningar och automatiskt startas om när processen är klar.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_1.png",
+            "alt": "Automatisk Arc-konfiguration",
+            "caption": "Automatisk Arc-konfiguration"
+          },
+          {
+            "htmlBefore": "Om vi väljer att inte använda automatisk läge anger vi menyn för att konfigurera olika alternativ som är nödvändiga för lastaren:",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_2.png",
+            "alt": "Manuell Arc-konfiguration",
+            "caption": "Manuell Arc-konfiguration"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_3.png",
+            "alt": "Konfiguration av serienummer och MAC i Arc",
+            "caption": "Konfiguration av serienummer och MAC i Arc"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_4.png",
+            "alt": "Arc Sata Portmap",
+            "caption": "Arc Sata Portmap (använd det rekommenderade alternativet)"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_5.png",
+            "alt": "Val av Arc-tillägg",
+            "caption": "Val av Arc-tillägg"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_4_1.png",
+            "alt": "RR-tillägg steg 1",
+            "caption": "RR-tillägg steg 1"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_4_2.png",
+            "alt": "RR-tillägg steg 2",
+            "caption": "RR Addon Step 2 - Tryck på tillägg"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_4_3.png",
+            "alt": "RR-tillägg steg 3",
+            "caption": "RR Addon Step 3 - Välj den du vill genom att klicka på den. Om du vill lägga till mer, upprepa processen från bilder 2.4.2 och 2.4.3"
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_1.png",
+            "alt": "TinyCore-konfiguration av serienummer",
+            "caption": "TinyCore-konfiguration av serienummer"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_2.png",
+            "alt": "TinyCore-slumpalternativ",
+            "caption": "TinyCore Random Option - Det slumpmässiga alternativet rekommenderas"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_3.png",
+            "alt": "TinyCore-MAC-konfiguration",
+            "caption": "TinyCore-MAC-konfiguration"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_4.png",
+            "alt": "TinyCore VM MAC",
+            "caption": "TinyCore VM MAC - Välj att använda din VM MAC eller en slumpmässig"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step5",
+      "title": "Bygga lastaren",
+      "intro": "När du har valt modellen, DSM-versionen och tilläggen, fortsätt att bygga lastaren. Denna process kan ta några minuter beroende på lastaren och den valda konfigurationen. För att börja, välj alternativet \"Build the Loader\".",
+      "loaders": {
+        "arc": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_5_1.png",
+            "alt": "Arc Build Loader",
+            "caption": "Arc Build Loader"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_5_1.png",
+            "alt": "RR Build Loader",
+            "caption": "RR Build Loader"
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_5_1.png",
+            "alt": "TinyCore Build Loader",
+            "caption": "TinyCore Build Loader"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step6",
+      "title": "Starta starthanteraren",
+      "intro": "När lastaren har byggts, kommer det att uppmana dig att starta. VM startar om med den konfiguration du har skapat och startar DSM-installationen.",
+      "loaders": {
+        "arc": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_6_1.png",
+            "alt": "Arc Boot Loader",
+            "caption": "Arc Boot Loader"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_6_1.png",
+            "alt": "RR Boot Loader",
+            "caption": "RR Boot Loader"
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_6_1.png",
+            "alt": "TinyCore Boot Loader",
+            "caption": "TinyCore Boot Loader"
+          }
+        ]
+      }
+    }
+  ],
+  "dsmInstall": {
+    "heading": "Starta DSM installation",
+    "intro": "När lastaren är startad kan du hitta din Synology-enhet med hjälp av:",
+    "afterCode": "Följ stegen på skärmen för att slutföra DSM-installationen.",
+    "setupAlt": "Konfiguration av DSM",
+    "setupCaption": "Konfigurationsskärm för DSM",
+    "patience": "Var tålmodig - Processen kan ta några minuter att slutföra. Progressprocenten uppdateras automatiskt när installationen fortskrider. En nedräkning börjar när installationen närmar sig slutförandet.",
+    "finishAlt": "Installationen är klar",
+    "finishCaption": "Installationen är klar"
+  },
+  "tips": {
+    "heading": "Tips",
+    "introItem": "Tänk på att tillgängliga alternativ kan ändras beroende på loader version och utvecklare uppdateringar. Om du stöter på problem under loader skapandeprocessen, konsultera loader dokumentation:",
+    "docLinks": [
+      {
+        "label": "Arc-dokumentation",
+        "url": "https://github.com/AuxXxilium/arc"
+      },
+      {
+        "label": "RR-dokumentation",
+        "url": "https://github.com/RROrg/rr"
+      },
+      {
+        "label": "TinyCore Dokumentation",
+        "url": "https://github.com/PeterSuh-Q3/tinycore-redpill"
+      }
+    ],
+    "olderModels": "Vissa äldre DSM-modeller kan ha problem med att känna igen diskar eller nätverkskortet. Det rekommenderas att använda nyare modeller.",
+    "updateLabel": "Uppdatering:",
+    "updateBody": "Vissa lastare erbjuder möjlighet att uppdatera lastaren direkt från menyn.",
+    "importantLabel": "Viktigt:",
+    "importantBody": "ProxMenux ger inte stöd för de olika lastarna."
+  }
+}

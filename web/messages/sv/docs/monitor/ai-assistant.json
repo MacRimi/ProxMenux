@@ -1,0 +1,342 @@
+{
+  "meta": {
+    "title": "Proxmox AI Assistant - OpenAI, Claude, Gemini, Groq, Ollama | ProxMenux Monitor",
+    "description": "ProxMenux Monitor:s valfria AI-assistent skriver om Proxmox VE-meddelandeorgan på vanligt språk. Sex leverantörer stödde: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter och lokala Ollama. Tolv språk, tre detaljnivåer per kanal, anpassat snabbläge med ett samhällsbibliotek och ett kontextberikningsskikt som lägger till upptid, återfall och SMART-data till diskhändelser.",
+    "ogTitle": "Proxmox AI Assistant - OpenAI, Claude, Gemini, Groq, Ollama",
+    "ogDescription": "Skriv Proxmox VE-meddelanden på vanligt språk med OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter eller lokal Ollama.",
+    "twitterTitle": "Proxmox AI Assistant ProxMenux Monitor",
+    "twitterDescription": "Skriv Proxmox VE-meddelanden på vanligt språk med OpenAI, Anthropic, Gemini, Groq, OpenRouter eller lokal Ollama."
+  },
+  "header": {
+    "title": "AI assistent",
+    "description": "Opt-in-rewriter som kör varje utgående meddelande genom en LLM före fan-out - förvandlar strukturerade mallar till enkla budskap, med per-kanal detaljnivåer, tolv språk, ett anpassat snabbläge med ett offentligt samhällsbibliotek och ett kontext-anrikningsskikt som lägger till upptid, återfall, SMART-data och kända spegelmatcher till prompten.",
+    "section": "ProxMenux-övervakning"
+  },
+  "intro": {
+    "title": "Off by default, single switch för att aktivera",
+    "body": "AI rewrite är opt-in. Tills du vänder huvudväxeln inuti <em>Settings → Meddelanden → Avancerad: AI Enhancement</em>, skickas varje händelse med den ursprungliga mallade kroppen. När växeln är på och en leverantör samtal misslyckas eller gånger ut, faller avsändaren tillbaka till den mallade kroppen tyst - dina meddelanden blockerar aldrig på LLM."
+  },
+  "howItWorks": {
+    "heading": "Hur det fungerar",
+    "intro": "Varje händelse går Monitor-sändningarna igenom samma pipeline. AI-rewriter är ett valfritt stadium som sitter mellan den mallade kroppen och kanalen skicka. Sluta, en enda händelse går igenom fyra steg:",
+    "steps": [
+      "<strong>Event + mall.</strong> En händelse kommer från en av de sex samlarna och görs till en strukturerad vanlig textkropp av <code>notification_templates.py</code>. Detta är den kropp som kanalen skulle skicka om AI skriver var avstängd.",
+      "<strong>Context enrichment.</strong> Dispatcher inspekterar händelsen och villkorligt godkänner de relevanta extra signalerna - systemupptid (endast för kritiska systemfel), händelsefrekvens, SMART-data (endast för diskhändelser), Known Errors-databasmatcher och journallogglinjer.",
+      "<strong>Prompt builder.</strong> Systemet snabb monteras från mallen plus per-kanal inställningar: målspråk, detaljnivå, emoji regler från <em>Rich meddelanden</em>, och AI Suggestions addon om det är möjligt. I anpassat snabbläge ersätter din prompt systemet helt och hållet. Användarmeddelandet är byggt från den mallade kroppen plus de berikade kontextblocken.",
+      "<strong>Provider call.</strong> Den konfigurerade leverantören (Groq, OpenAI, Anthropic, Gemini, Ollama eller OpenRouter) returnerar en omskriven titel och kropp. Avsändaren analyserar svaret, ersätter den ursprungliga titeln och kroppen för den kanalen, och lämnar den till kanaladaptern för leverans."
+    ],
+    "notesIntro": "Tre detaljer värda att hålla fast vid innan du läser resten av denna sida:",
+    "notes": [
+      "<strong>AI producerar inte händelser.</strong> Varje händelse föds från en riktig signal (Health Monitor scan, journal line, PVE webhook, etc.) och görs till en mallad kropp innan AI någonsin ser det. AI är en översättare och re-formatter, inte en väktare.",
+      "<strong>AI körs per-channel.</strong> Telegram och Discord kan använda en kort omskrivning medan e-post får en detaljerad rapport - samma händelse, olika form, allt från en leverantör samtal per kanal.",
+      "<strong>Failure är tyst.</strong> Om leverantören 5xx, gånger ut, returnerar missbildad utgång eller avvisar begäran, loggar dispatcher felet och faller tillbaka till den ursprungliga mallade kroppen för den kanalen. Du förlorar aldrig ett meddelande eftersom LLM hade en dålig dag."
+    ]
+  },
+  "enabling": {
+    "heading": "Gör panelen",
+    "intro": "AI-konfigurationen bor längst ner i meddelandepanelen i fliken Inställningar, som en kollapsbar <em>Advanced: AI Enhancement</em> block. Klicka på header för att expandera:",
+    "collapsedAlt": "Collapsed Advanced AI Enhancement header med chevron indikator",
+    "collapsedCaption": "Kollapsat som standard - ett klick utökar panelen.",
+    "panelAlt": "Expanderad AI-förbättringspanel som visar AI-förbättrade meddelanden huvudväxla, Provider Google Gemini, API Nyckeln maskerad, modell gemini-2.5Flash, Prompt Mode Default, Language English, Detail Level per Channel för Telegram Discord Gotify E-post, AI Förslag växlar och Test Connection-knappen",
+    "panelCaption": "Den fullständiga AI-förbättringspanelen - varje kontroll som dokumenteras på denna sida kartlägger till ett av fälten ovan.",
+    "outro": "Topp till botten, panelen exponerar: <em>AI-förbättrade meddelanden</em> Master toggle, leverantörsväljaren med en informationsmodal bredvid den, API nyckelingång (eller Ollama URL för lokalt läge), modellnedgången (laddad från leverantören efter att ha angett nyckeln), snabbläget (<em>Standard</em> / <em>Anpassad</em>), utgångsspråket, detaljnivån per kanal, <em>AI-förslag</em> opt-in och en <em>Testa anslutning</em> knappen som skickar ett sondmeddelande till leverantören för att validera referenserna."
+  },
+  "context": {
+    "heading": "Vilket sammanhang AI får",
+    "intro": "Innan prompten är byggd, går avsändaren en kontext-anrikningsrutin som bestämmer vilka extra signaler som är relevanta för händelsen till hands. Målet är att ge LLM tillräckligt med information för att producera ett användbart meddelande, utan att översvämma det (och din plånbok) med ljud som inte gäller. Fem kontextblock kan läggas till i användarmeddelandet:",
+    "headerBlock": "Blockera",
+    "headerWhen": "När den injiceras",
+    "headerWhat": "Vad den bär",
+    "rows": [
+      {
+        "block": "Systemuppetid",
+        "when": "Endast för kritiska systemnivåfel: <code>crash</code>, <code>panic</code>, <code>oom</code>, <code>kernel</code>, <code>split_brain</code>, <code>quorum_lost</code>, <code>node_offline</code>, <code>node_fail</code>, <code>system_fail</code>, <code>boot_fail</code>. Hoppade för diskfel, varningar och rutinoperationer för att hålla snabb.",
+        "what": "En linje som <code>System uptime: 14 days (stable system)</code>. Låt LLM skilja startproblem från långvariga misslyckanden."
+      },
+      {
+        "block": "Event frekvens",
+        "when": "När Övervakaren har sett samma fingeravtryck innan.",
+        "what": "Occurrence count, first-seen timestamp, valfritt mönster etikett (återkommande / en-off / spike). LLM använder detta för att uttrycka \"återkommande problem\" vs \"första gången sett\"."
+      },
+      {
+        "block": "SMART-data",
+        "when": "Endast för diskrelaterade händelser (händelse typ innehåller <code>disk</code>, <code>smart</code>, <code>storage</code>, <code>io_error</code>, eller kroppen nämner <code>/dev/sd</code>, <code>ata</code>, <code>i/o error</code>).",
+        "what": "Utgång av <code>smartctl</code> för den drabbade enheten - övergripande hälsa (PASSED / FAILED) plus relevanta attribut för felläget."
+      },
+      {
+        "block": "Kända fel DB",
+        "when": "När kropps- eller tidskriftskontexten matchar ett Proxmox-specifikt felmönster som skickas med Monitorn.",
+        "what": "Ett <code>KNOWN PROXMOX ERROR DETECTED</code>-block med den matchade orsaken och en konkret lösning. Prompten instruerar LLM att översätta detta verbatim - ingen parafrasering av den rekommenderade fixen."
+      },
+      {
+        "block": "Journal loggar",
+        "when": "När den ursprungliga samlaren fångade tidskriftslinjer för evenemanget (mestadels tidskriftsvakten och uppgiftsvakten).",
+        "what": "Raw <code>journalctl</code> utdrag. Prompten berättar LLM att extrahera ID, tidsstämplar och rot-orsaka tips och att ignorera orelaterade poster."
+      }
+    ],
+    "afterBlocks": "När dessa block är anslutna, användarmeddelandet skickas till LLM har denna form:",
+    "calloutTitle": "Ingen telemetri bortom själva händelsen",
+    "calloutBody": "Övervakaren skickar bara vad den har till hands för den aktuella händelsen - ingen systemomfattande telemetri, ingen historisk metrisk serie, inga lagerdumpar. De fem blocken ovan är den övre gränsen för vad som lämnar värden på en enda AI-rewrite."
+  },
+  "tokens": {
+    "heading": "Tokens - vad de är och hur de konsumeras",
+    "intro1": "Varje kommersiell leverantör avgifter per <em>token</em>, så det är värt att förstå vad en token är innan du väljer en plan. En token är ungefär fyra tecken på engelsk text eller cirka tre fjärdedelar av ett ord. Frasen <em> \"Backup slutförd på lagring lokal bak\" </em> är cirka åtta tokens. En kort tidskrift utdrag av tio rader kan vara 200-400 tokens beroende på teknisk densitet.",
+    "intro2": "Två saker faktureras på varje samtal:",
+    "items": [
+      "<strong>Input tokens</strong> - systemet snabb plus användarmeddelandet (allvar, titel, kropp, berikad kontext). För ProxMenux systemet omedelbart är på order av 1.5-2 KB (≈ 400-500 tokens) och användarmeddelandet varierar från 50 tokens (en ren backup-komplett) till ~ 1500 tokens (ett diskfel med 30 rader av journal kontext).",
+      "<strong>Output tokens</strong> - vad modellen skriver tillbaka. Övervakaren har detta med <code>max_tokens</code> (se tabellen nedan). Cap är en <em>limit</em>, inte en avgift: om modellen producerar 250 tokens med ett lock av 1500, betalar du för 250."
+    ],
+    "capsIntro": "Dessa är de faktiska kepsarna som avsändaren tillämpar, tagna direkt från <code>AI_DETAIL_TOKENS</code> i <code>notification_templates.py</code>:",
+    "headerLevel": "detaljnivå",
+    "headerCap": "Utdatagräns (token)",
+    "headerConsumption": "Typisk äkta konsumtion",
+    "capRows": [
+      {
+        "level": "kortfattad",
+        "cap": "500",
+        "consumption": "50-200 output tokens för korta händelser."
+      },
+      {
+        "level": "standard",
+        "cap": "1500",
+        "consumption": "200-700 output tokens för typiska händelser med ljusa sammanhang."
+      },
+      {
+        "level": "detaljerad",
+        "cap": "3000",
+        "consumption": "500-2000 output tokens för fullständiga e-postrapporter med loggar och SMART tabeller."
+      }
+    ],
+    "customNote": "Anpassat snabbläge använder ett fast lock av 500-utgångstokens oavsett detaljnivå - den anpassade prompten är i din kontroll och locket skyddar mot runaway-svar.",
+    "sizingTitle": "Praktisk storlek",
+    "sizingBody": "Ett homelab med 50-100 händelser per dag på <code>standard</code> förbrukar vanligtvis några tusen tokens per dag. Med de fria nivåerna som erbjuds av Groq och Gemini, som passar utan att röra en betald plan. Med OpenAI eller Anthropic, fakturerad per token, markerar kostnaden i cent per månad för den volymen. Om ditt evenemangsräkning är mycket högre, förklarar <link>Detail-nivån per kanal</link>-avsnittet hur du håller chattkanaler på <code>brief</code> medan du låter e-post ta hela rapporten."
+  },
+  "providers": {
+    "heading": "AI-leverantörer",
+    "intro": "Sex leverantörer är anslutna till Monitor. Leverantörens nedgång i UI visar dem alla; en informationsknapp bredvid den öppnar en modal med en enstaka beskrivning för varje. Nedan följer den fullständiga referensen, med URL för att få en API-nyckel, den beskrivning som visas i UI och relevanta anteckningar från kodbasen.",
+    "imageAlt": "AI-leverantörer Information modal listar de sex stödda leverantörerna - Groq, OpenAI, Anthropic Claude, Google Gemini, Ollama, OpenRouter - var och en med sin ikon och en-linje beskrivning, och en speciell OpenAI-Compatible API notera för OpenAI",
+    "imageCaption": "In-app modal - sex kort, en per leverantör, med samma beskrivningar dokumenterade nedan.",
+    "groq": {
+      "heading": "Groq",
+      "tagline": "Mycket snabb, generös fri nivå (30 req/min). Perfekt att börja.",
+      "items": [
+        "API-nyckel: <a>console.groq.com/keys</a>",
+        "Verifierade modeller: <code>llama-3.3-70b-versatile</code>, <code>llama-3.1-70b-versatile</code>, <code>llama-3.1-8b-instant</code>, <code>llama3-70b-8192</code>, <code>llama3-8b-8192</code>, <code>mixtral-8x7b-32768</code>, <code>gemma2-9b-it</code>.",
+        "Rekommenderas: <strong><code>llama-3.3-70b-versatile</code></strong> - bästa kvalitet vid full Groq-inferenshastighet."
+      ]
+    },
+    "openai": {
+      "heading": "OpenAI",
+      "tagline": "Industristandard. Mycket exakt och allmänt används.",
+      "items": [
+        "API-nyckel: <a>platform.openai.com/api-keys</a>",
+        "Verifierade modeller: <code>gpt-4.1-nano</code>, <code>gpt-4.1-mini</code>, <code>gpt-4o-mini</code>, <code>gpt-4.1</code>, <code>gpt-4o</code>, <code>gpt-5-chat-latest</code>, <code>gpt-5.4-nano</code>, <code>gpt-5.4-mini</code>.",
+        "Rekommenderas: <strong><code>gpt-4.1-nano</code></strong> - den billigaste medlemmen i chattfamiljen, tillräcklig kvalitet för översättning och omformatering. Anledningsmodeller (o-serie, gpt-5 non-chat) stöds av leverantörens VVS men hålls av den verifierade listan: högre latens utan mätbar kvalitetsvinst på denna arbetsbelastning."
+      ],
+      "baseUrlTitle": "OpenAI-kompatibel bas URL",
+      "baseUrlBody": "Den är OpenAI Leverantören accepterar också en anpassad <em>Base URL</em>, som låter dig peka på Monitorn på någon OpenAI-kompatibel endpoint. Bekräftad att arbeta med <strong>BytePlus / ByteDance (Kimi K2.5)</strong>, <strong>LocalAI</strong>, <strong>LM Studio</strong>, <strong>vLLM</strong>, <strong>Tillsammans AI</strong>, <strong>Fyrverkerier AI</strong>och alla andra tjänster som talar OpenAI <code>/v1/chat/completions</code> dialekt. Ställ in webbadressen i OpenAI Fliken bredvid API Nyckelfält."
+    },
+    "anthropic": {
+      "heading": "Anthropic (Claude)",
+      "tagline": "Utmärkt för att skriva och översätta. Snabb och ekonomisk.",
+      "items": [
+        "API-nyckel: <a>console.anthropic.com/settings/keys</a>",
+        "Verifierade modeller: <code>claude-3-5-haiku-latest</code>, <code>claude-3-5-sonnet-latest</code>, <code>claude-3-opus-latest</code>.",
+        "Rekommenderas: <strong><code>claude-3-5-haiku-latest</code></strong> - Claudes minsta, snabbaste modell med stark språkkvalitet för översättningsarbetet."
+      ]
+    },
+    "gemini": {
+      "heading": "Google Gemini",
+      "tagline": "Gratis nivå tillgänglig, bra kvalitet / priskvot.",
+      "items": [
+        "API-nyckel: <a>aistudio.google.com/app/apikey</a>",
+        "Verifierade modeller: <code>gemini-2.5-flash-lite</code>, <code>gemini-2.5-flash</code>, <code>gemini-3-flash-preview</code>.",
+        "Rekommenderas: <strong><code>gemini-2.5-flash-lite</code></strong> - flash och flash-lite passerar verifiern konsekvent. Pro-varianterna avvisar <code>thinkingBudget=0</code>-inställningen Monitor använder och är överkill för denna arbetsbelastning."
+      ]
+    },
+    "openrouter": {
+      "heading": "OpenRouter",
+      "tagline": "Aggregator med tillgång till 100+-modeller med en enda API-nyckel. maximal flexibilitet.",
+      "items": [
+        "API-nyckel: <a>openrouter.ai/keys</a>",
+        "Verifierade modeller: <code>meta-llama/llama-3.3-70b-instruct</code>, <code>meta-llama/llama-3.1-70b-instruct</code>, <code>meta-llama/llama-3.1-8b-instruct</code>, <code>anthropic/claude-3.5-haiku</code>, <code>anthropic/claude-3.5-sonnet</code>, <code>google/gemini-flash-1.5</code>, <code>openai/gpt-4o-mini</code>, <code>mistralai/mistral-7b-instruct</code>, <code>mistralai/mixtral-8x7b-instruct</code>.",
+        "Rekommenderas: <strong><code>meta-llama/llama-3.3-70b-instruct</code></strong> - samma modell som Groq-posten men dirigeras genom OpenRouter, vilket innebär en enda nyckel för alla listade modeller."
+      ]
+    },
+    "ollama": {
+      "heading": "Ollama (lokal)",
+      "tagline": "Använder modeller tillgängliga på din Ollama-server. 100% lokal, inga kostnader, total integritet.",
+      "items": [
+        "Ingen API nyckel. Ställ in <em>Ollama URL</em>-fältet till din server (standard <code>http://localhost:11434</code> eller vilken värd som helst kör din Ollama-instans).",
+        "Modeller: <strong>not filtered.</strong> Övervakaren läser vilka modeller du har dragit på Ollama-sidan via <code>ollama pull &lt;model&gt;</code>. Nedgången är befolkad från <code>GET /api/tags</code> på din Ollama-server.",
+        "Installera: <a>ollama.com/download</a> – körs på Linux, macOS, Windows. För bästa resultat väljer du en modell som passar i RAM med ett tillräckligt stort kontextfönster för tidskriften blockerar sändaren injektioner."
+      ]
+    }
+  },
+  "models": {
+    "heading": "Varför dessa specifika modeller",
+    "intro": "Modellnedgången för varje kommersiell leverantör är befolkad från en kurerad lista som levereras med Monitor (<code>verified_ai_models.json</code>). Modeller på denna lista har testats end-to-end med chatt / slutförande API-formatet Monitor använder, med den exakta <code>system_prompt + user_message + max_tokens</code>-formen AI Enhancer skickar. Listan uppdateras innan varje ProxMenux-utgåva med ett privat verifierverktyg som sonderar varje kandidatmodell och beskär de som misshandlar.",
+    "consequencesIntro": "Två konsekvenser värt att vara medveten om:",
+    "consequences": [
+      "<strong>Den rekommenderade modellen</strong> för varje leverantör är den som har den bästa balansen av kvalitet, latens och kostnad för anmälan översättning specifikt - inte den mest kapabla modell som leverantören säljer. Anmälan omskrivningar behöver inte gräns-modell resonemang; de behöver snabbt och billigt.",
+      "<strong>Du kan fortfarande välja en annan verifierad modell</strong> från nedgången - ibland har du en fri nivå kvot du vill spendera på en viss modell, eller du har en stark preferens. Välj någon av de listade posterna; de har alla passerat verifiern."
+    ],
+    "ollamaTitle": "Ollama är undantaget",
+    "ollamaBody": "Ollama modeller är lokala och Monitor filtrerar inte dem - nedgången återspeglar vad du har dragit. Välj en modell i 7B-13B-serien med minst ett 8K-kontextfönster för AI-rewrite för att bete sig rimligt med tidskriftskontextblocken."
+  },
+  "defaultPrompt": {
+    "heading": "Standardprompt",
+    "intro": "Med snabbläge inställd på <em>Default</em>, använder Monitor systemet prompt nedan. Prompten är mallad vid runtime: <code>'{'language'}'</code>, <code>'{'detail_level'}'</code>, <code>'{'emoji_instructions'}'</code> och <code>'{'suggestions_addon'}'</code> ersätts före samtalet. Varianterna för rika vs vanliga kanaler och AI Suggestions addon visas omedelbart efter.",
+    "showFullSummary": "Visa full standard system prompt",
+    "passagesIntro": "Två passager i prompten ovan är platshållare som byts ut beroende på per-kanal <em>Rich meddelanden</em> växel:",
+    "passages": [
+      "<strong>Rich on</strong> → ett emoji-block injiceras med att lista ikonerna som LLM kan använda, plus en värdnamnsregel (LLM måste hålla värdnamnet prefixet från titeln verbatim) och en handfull formaterade exempel (backup start, backup komplett, uppdateringar, VM start, hälsodegraderad). Detta är vad som producerar emoji-prefixerade meddelanden på Telegram och Discord.",
+      "<strong>Rich off</strong> → ett one-line block berättar LLM att använda vanlig ASCII bara - inga emojis, inga Unicode symboler. Används för e-post och någon kanal där formateringsljud gör ont i inkorgens regler eller läsbarhet."
+    ],
+    "suggestionsPlaceholder": "Och <code>'{'suggestions_addon'}'</code> platshållare är tom om du inte aktiverar AI-förslag (nästa avsnitt), i vilket fall detta block injiceras:",
+    "showAddonSummary": "Visa AI-förslag tillägg"
+  },
+  "customPrompt": {
+    "heading": "Anpassat uppmaningsläge",
+    "intro": "Byta snabbläget till <em>Custom</em> byter hela standardsystemet prompt för en du skriver själv. Den anpassade prompten lagras i Monitors SQLite-inställningar och skickas verbatim på varje AI-rewrite-samtal. Det är rätt flykt kläckning när du vill ha en helt annan röst, struktur eller fokus än de buntade snabberbjudanden.",
+    "imageAlt": "Custom Prompt-läge som visar en textarea med översättningsregler och Export Import-knappar plus en gemenskap uppmanar länk",
+    "imageCaption": "Custom Prompt - stor textarea med användarens prompt, plus <em>Export</em>, <em>Import</em> och en länk till gemenskapsgalleriet på GitHub.",
+    "changesTitle": "Vilka förändringar när tullen är på",
+    "changes": [
+      "<strong>The standard prompt ersätts helt.</strong> The Proxmox kartläggningar, kontexthantering regler och emoji instruktioner är alla borta. Om du vill behålla någon av dem, klistra in dem i din prompt - den buntade <code>EXAMPLE_CUSTOM_PROMPT</code> som visas nedan är en utgångspunkt.",
+      "<strong> Språkväljaren ignoreras.</strong> Standardprompten har en <code>'{'language'}'</code> platshållare; den anpassade prompten gör det inte. Om du vill ha produktion på ett visst språk, förklara det inuti din prompt (\"Översätt till spanska\", \"Output allt på franska\").",
+      "<strong>Detail-nivån gäller fortfarande </strong> i den meningen att den är tillgänglig som en inställning per kanal, men locket på output-tokens blir en fast 500 i anpassat läge (vs 500 / 1500 / 3000 ramp av standardprompten). Om din anpassade prompt frågar efter en lång rapport, höja locket genom att redigera prompten eller dela upp begäran.",
+      "<strong>Output Format-markörerna är fortfarande obligatoriska.</strong> Monitorn paraserar svaret genom att leta efter <code>[TITLE]</code> och <code>[BODY]</code> på sina egna linjer. En anpassad prompt som inte avger dessa markörer kommer att bryta parsern och falla tillbaka till den ursprungliga mallade kroppen.",
+      "<strong>Rich meddelanden emoji regler är inte auto-injicerade.</strong> Om du vill ha emojis, berätta för omgående att använda dem. Om du vill ha vanlig text, berätta det inte. Växeln portar bara de buntade blocken av standardprompten, inte din anpassade sträng."
+    ],
+    "starterTitle": "Startprompt",
+    "starterIntro": "Den är <em>Anpassad snabb</em> textarea fartyg förfyllda med ett minimalt exempel som du kan anpassa:",
+    "showStarterSummary": "Show Starter custom prompt",
+    "shareTitle": "Dela uppmaningar med samhället",
+    "shareIntro": "<em>Export</em>-knappen skriver din nuvarande anpassade prompt till en fil (<code>.txt</code> / <code>.md</code>) du kan hålla som en backup eller hand till någon annan. <em>Import</em> drar en tillbaka in. Den tredje knappen bredvid dem länkar till ett offentligt gemenskapsgalleri på GitHub:",
+    "shareLinkLabel": "github.com/MacRimi/ProxMenux/diskussioner – Dela anpassade instruktioner för AI-meddelanden",
+    "shareOutro": "Bläddra i diskussionen för att se vad andra operatörer har byggt - terse pager-stil varningar, verbose tekniska rapporter, språkspecifika varianter. Om du justerar din och gillar resultatet, posta den där: även en enpunktsbeskrivning av vad din prompt optimerar för hjälper människor att välja en bra utgångspunkt. Feedback om vad som fungerar och vad som inte är lika välkommet."
+  },
+  "suggestions": {
+    "heading": "AI-förslag (BETA)",
+    "intro": "AI Suggestions är en opt-in addon som låter LLM append <strong>one</strong> kort, användbart tips i slutet av kroppen. Det aktiveras bara när snabbläget är <em>Default</em>, mäster AI-tuggeln är på, och <em>AI Suggestions</em>-brytaren är vänd - och även då instruerar prompten modellen att hoppa över tipset när orsaken eller lösningen är oklar.",
+    "formatIntro": "När ett tips läggs till följer det detta exakta format:",
+    "rulesIntro": "Reglerna bakade i tillägget (synliga i det kollapsbara blocket under standardpromptavsnittet ovan):",
+    "rules": [
+      "Tipset ingår <em>only</em> om tidskriftskontexten eller databasen Known Errors tydligt pekar på en viss fix.",
+      "Spetsen är fångad på 100-tecken.",
+      "Det måste vara specifikt (konkret kommando eller väg) - generiska råd avvisas av prompten själv.",
+      "Om ett känt fel ger en lösning, måste LLM använda den lösningen, inte uppfinna en ny.",
+      "Om ingenting i ingången ger LLM tillräckligt med säkerhet för att föreslå en betongfix, är spetsen hoppad - ingen gissning."
+    ],
+    "betaTitle": "Varför BETA",
+    "betaBody": "Tipskvaliteten beror på två saker utanför ProxMenux: modellen plockade och hur rik tidskriften kontext för evenemanget var. Med en stark modell (Claude 3.5 Haiku, GPT-4.1 Mini, Llama 3.3 70B) och ett diskfel som kommer med smartctl + tidskriftslinjer, är tipset konsekvent användbart. Med en liten lokal Ollama-modell och en one-line-evenemang kan tipset falla platt eller hoppas helt. Inaktivera växeln om du hittar tipsen bullriga och aktivera den när du vill ha den tillbaka."
+  },
+  "detailLevel": {
+    "heading": "Detaljnivå per kanal",
+    "intro": "Var och en av de fyra kanalerna (Telegram, Discord, Gotify, Email) har en egen detaljnivå nedgång. Tre värden är tillgängliga, kartlagda till specifika output token caps och till specifika instruktioner i standardprompten:",
+    "headerLevel": "Nivå",
+    "headerLabel": "UI-märkning",
+    "headerCap": "Utdatagräns",
+    "headerProduce": "Vad snabb frågar LLM att producera",
+    "rows": [
+      {
+        "level": "kortfattad",
+        "label": "2-3-linjer, endast väsentliga",
+        "cap": "500 token",
+        "produce": "\"Vad hände + var\". Inget annat."
+      },
+      {
+        "level": "standard",
+        "label": "Koncis med grundläggande sammanhang",
+        "cap": "1500 token",
+        "produce": "3-6-linjer: vad, var, orsaka, drabbade enheter."
+      },
+      {
+        "level": "detaljerad",
+        "label": "Fullständiga tekniska detaljer",
+        "cap": "3000 token",
+        "produce": "Fullständig rapport: vad, var orsak, påverkad, loggar, SMART data, historia."
+      }
+    ],
+    "defaultsIntro": "Standarder som Monitorn tillämpar på första installationen:",
+    "defaults": [
+      "<strong>Telegram, Discord, Gotify</strong> — <code>standard</code>.",
+      "<strong>E-post</strong> — <code>detailed</code>. E-post är den kanal där du vanligtvis vill ha hela bilden för arkiv."
+    ],
+    "emailTitle": "E-postdetaljnivå appenderar originalet",
+    "emailBody": "När e-post är på <code>detailed</code> och den ursprungliga mallade kroppen har betydande innehåll (mer än 50-tecken), sänder avsändaren det ursprungliga meddelandet på botten av AI-rewrite, separerad av en 40-dash divider och en <code>Original message:</code>-etikett. Detta innebär att ett detaljerat e-postmeddelande alltid bär både AI-vänlig version och den maskinvänliga råmallen - användbar när du vill gråta en gammal varning senare."
+  },
+  "language": {
+    "heading": "Språk",
+    "intro": "Tolv språk stöds. Rullgardinsmenyn anger <code>ai_language</code> i konfigurationen och värdet infogas i systemprompten där det står <em>\"översätt aviseringar till '{'language'}'\"</em>. Hela listan:",
+    "list": "Engelska (<code>en</code>), spanska (<code>es</code>), franska (<code>fr</code>), tyska (<code>de</code>), portugisiska (<code>pt</code>), italienska (<code>it</code>), ryska (<code>ru</code>), svenska (<code>sv</code>), norska (<code>no</code>), japanska (<code>ja</code>), kinesiska (<code>zh</code>), Dutch (<code>nl</code>).",
+    "rulesIntro": "Två viktiga regler som tagits direkt från prompten:",
+    "rules": [
+      "<strong>Translate</strong>: etiketter, beskrivningar, statusord, enheter (t.ex. GB → Gå på franska.",
+      "<strong>Översätt inte</strong>värdnamn, IPs, vägar, VM/CT ID, enhetsnamn som <code>/dev/sdX</code>tekniska identifierare. Dessa förblir verbatima oavsett språk."
+    ],
+    "customNote": "Anpassat snabbläge <strong>does använder inte </strong> språkväljaren. Om du byter till Anpassad och vill ha ett specifikt utgångsspråk, förklara det inuti din prompt."
+  },
+  "templates": {
+    "heading": "En anteckning på mallar",
+    "body1": "Kroppen AI får är inte rå händelsedata - det är en förhandsrenderad mall. Varje händelsetyp (<code>backup_complete</code>, <code>vm_start</code>, <code>auth_fail</code>, <code>health_degraded</code>, etc.) har en mall i <code>notification_templates.py</code> som vet hur man formaterar den specifika händelsen till en strukturerad vanlig textkropp. AI skriver om den kroppen, det ersätter inte malling steg.",
+    "body2": "Två praktiska konsekvenser: AI ser aldrig ett värdnamn eller VMID det måste uppfinna - dessa fält placeras av mallen innan omskrivningen. Och om AI är inaktiverad är den mallade kroppen det som skickas direkt. <link>Notifications</link>-sidan dokumenterar sändningspipeline i sin helhet och är rätt korsreferens för allt som händer en händelse innan det når detta lager."
+  },
+  "privacy": {
+    "heading": "Integritet och dataflöde",
+    "intro": "Med AI-rewrite aktiverat skickar Monitorn det återgivna meddelandeorganet plus de berikade kontextblocken till den konfigurerade leverantören. Det kan inkludera värdnamn, IPs, användarnamn, enhetsvägar, tidskriftslogglinjer och SMART-attribut för den drabbade enheten. Oavsett om det lämnar värden beror på vilken leverantör du valde:",
+    "headerProvider": "Leverantör",
+    "headerDestination": "Datadestination",
+    "rows": [
+      {
+        "provider": "Ollama",
+        "destination": "Stannar på Ollama värd. Om Ollama körs på samma Proxmox-nod lämnar inget nätverket alls."
+      },
+      {
+        "provider": "OpenAI",
+        "destination": "<code>api.openai.com</code> (eller din anpassade Base URL-slutpunkt). Med förbehåll för OpenAIs datahanteringspolicy vid tidpunkten för samtalet."
+      },
+      {
+        "provider": "Antropisk",
+        "destination": "<code>api.anthropic.com</code>."
+      },
+      {
+        "provider": "Google Gemini",
+        "destination": "<code>generativelanguage.googleapis.com</code>."
+      },
+      {
+        "provider": "Groq",
+        "destination": "<code>api.groq.com</code>."
+      },
+      {
+        "provider": "OpenRouter",
+        "destination": "<code>openrouter.ai</code>, som vidarebefordrar den underliggande modellleverantören som valts i fältet <code>model</code>. Två hopp istället för en."
+      }
+    ],
+    "calloutTitle": "Om händelseinnehåll inte kan lämna nätverket",
+    "calloutBody": "Använd Ollama, eller inaktivera AI-skrivaren. Det finns ingen medelväg - avsändaren försöker inte att redigera värdnamn eller IP-adresser innan du skickar; snabben är byggd från den faktiska händelsen nyttolast som Monitor ser det."
+  },
+  "whereNext": {
+    "heading": "Var till nästa",
+    "items": [
+      {
+        "label": "Aviseringar",
+        "href": "/docs/monitor/notifications",
+        "tail": " - avsändning pipeline, kanaler, per-event toggles och PVE webhook integration som omger detta lager."
+      },
+      {
+        "label": "Hälsoövervakare",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " - den största enskilda producenten av händelser AI slutar skriva om, med sina egna förtrycksperioder per kategori."
+      },
+      {
+        "label": "Arkitektur",
+        "href": "/docs/monitor/architecture",
+        "tail": " - där AI Enhancer passar in i den bredare övervakningsprocessen (det är en modul, inte en separat tjänst)."
+      }
+    ],
+    "communityLabel": "Gemenskapen uppmanar GitHub",
+    "communityTail": " — Bläddra, dela, fråga."
+  }
+}

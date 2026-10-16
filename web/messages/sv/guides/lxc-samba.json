@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "title": "Lägg till en USB-enhet till en LXC och dela den med Samba | ProxMenux Guider",
+    "description": "Bifoga en USB-hårddisk eller minnesmärke till en privilegierad LXC-behållare på Proxmox VE, installera Samba i behållaren och dela innehållet över nätverket.",
+    "ogTitle": "Lägg till en USB-enhet till en LXC och dela den med Samba",
+    "ogDescription": "Bifoga en USB-enhet till en privilegierad LXC på Proxmox VE, installera Samba i behållaren och dela innehållet över LAN."
+  },
+  "header": {
+    "title": "Lägg till en USB-enhet eller minne till en LXC och dela den över nätverket med Samba",
+    "description": "Bifoga en USB-hårddisk eller minnesmärke till en privilegierad LXC-behållare på Proxmox VE, installera Samba i behållaren och dela innehållet över nätverket.",
+    "section": "Guider"
+  },
+  "recommended": {
+    "calloutTitle": "Rekommenderas",
+    "calloutIntro": "ProxMenux exponerar nu båda halvorna av detta arbetsflöde som guidade menyer:",
+    "items": [
+      "<strong>Disk Manager → Format / Wipe Physical Disk</strong> för formatet steg.",
+      "<strong>Storage & Share Manager LXC nätverksdelning → Samba server i LXC</strong> för de privilegierade -CT Installera + Samba config."
+    ],
+    "calloutOutro": "De guidade flödena hanterar de oprivilegierade-CT tillstånd quirks, share-mode presets (läs-skriv / läs-bara / anpassade) och sharedfiles gruppuppställning. Denna guide är den manuella motsvarigheten - användbar om du vill ha full synlighet i varje steg eller föredrar att tråda saker för hand."
+  },
+  "intro": {
+    "body": "Ibland är det användbart att lägga till en hårddisk eller USB-minnehåll till en Proxmox-värd, särskilt på en mini-dator med begränsad intern expansion. Denna guide går igenom:",
+    "stepsTitle": "Vad du ska göra",
+    "steps": [
+      "Bifoga USB-skivan till en privilegierad LXC.",
+      "Installera Samba i behållaren.",
+      "Dela disken innehåll över LAN."
+    ],
+    "useCasesTitle": "Använda fall",
+    "useCases": [
+      "Hosting Torrent-filer och serverar dem i nätverket.",
+      "Tillbaka till en mediaserver (Plex / Jellyfin / Emby).",
+      "Hålla dokument som blir auto-scanned av Paperless.",
+      "Generisk NAS-stil lagring för hemnätverket."
+    ],
+    "privilegedCalloutTitle": "Privilegierad behållare krävs",
+    "privilegedCalloutBody": "Direkt enhet genomgång (<code>mp0</code> med en värdväg) behöver en privilegierad LXC. Oprivilegierade CT kan inte binda blockeringsenheter direkt - för dem du behöver binda fästen av värdkataloger istället (se ProxMenux <strong>Storage & Share Manager → LXC Mount Points</strong>)."
+  },
+  "attach": {
+    "heading": "1. Bifoga USB-skivan till LXC",
+    "identifyHeading": "1.1 Identifiera enheten",
+    "identifyBody": "Jämför disklistan <strong>before</strong> och <strong>after</strong> anslutning i USB-enheten - den nya enheten är ditt mål.",
+    "beforeLabel": "Före:",
+    "afterLabel": "Efter:",
+    "imageBeforeAlt": "Disk lista innan du lägger till USB-enhet",
+    "imageAfterAlt": "Disk lista efter att ha lagt till USB-enhet",
+    "lsblkBody": "Du kan också använda <code>lsblk -o NAME,SIZE,MODEL,SERIAL</code> för att lista varje blockenhet med modell och seriell.",
+    "stableCalloutTitle": "Viktigt – använd en stabil identifierare",
+    "stableCalloutBody": "<code>/dev/sdb1</code> kan ändras mellan stövlar om du har flera USB-skivor. Hitta den ihållande identifieraren:",
+    "stableCalloutCode": "ls -l /dev/disk/by-id/ | grep -v part",
+    "stableCalloutAfter": "Använd <code>/dev/disk/by-id/usb-...</code>-vägen i LXC-konfigen nedan istället för <code>/dev/sdb1</code>. Den överlever omstarter och återkopplande.",
+    "formatHeading": "1.2 Formatera disken",
+    "formatBody": "ext4 är en förnuftig standard för Linux-stödda aktier (fallkänsliga, stöder POSIX ACL, inga filstorleksgränser). Kör från <strong>Proxmox värd</strong>, inte behållaren:",
+    "formatCode": "mkfs.ext4 /dev/sdb1",
+    "formatAfter": "Ersätt <code>/dev/sdb1</code> med den faktiska partitionsenheten - eller med den ihållande <code>/dev/disk/by-id/usb-...-part1</code>-vägen.",
+    "mkdirHeading": "1.3 Skapa monteringspunkten i LXC",
+    "mkdirBody": "Inuti LXC, skapa katalogen där disken kommer att visas (någon namn fungerar):",
+    "mkdirCode": "mkdir /mnt/lxc_USB",
+    "wireHeading": "1.4 Wire enheten i LXC",
+    "wireBody": "På <strong>Proxmox värd</strong> (inte i CT), redigera behållarens konfig. Ersätt <code>'<'CTID'>'</code> med container-ID:",
+    "wireEditCode": "nano /etc/pve/lxc/'<'CTID'>'.conf",
+    "wireAddLine": "Lägg till denna linje:",
+    "wireConfigCode": "mp0: /dev/disk/by-id/usb-VENDOR_MODEL_SERIAL-part1,mp=/mnt/lxc_USB,backup=0",
+    "wireShortForm": "(Eller, om du accepterar risken för att enhetsvägen ändras, kortare form: <code>mp0: /dev/sdb1,mp=/mnt/lxc_USB,backup=0</code>.)",
+    "wireBackupNote": "<code>backup=0</code>-flaggan utesluter denna monteringspunkt från <code>vzdump</code>-backupar - vanligtvis rätt samtal för stora externa enheter som är värdens mållagring snarare än dess data.",
+    "restartHeading": "1.5 Starta om LXC och ställ in behörigheter",
+    "restartBody": "Starta om CT för att tillämpa monteringspunkten:",
+    "restartCode": "pct restart '<'CTID'>'",
+    "permsBody": "Inne i LXC, ge katalogen behörigheter lämpliga för användaren som kommer att äga aktien:",
+    "permsCode": "# Inside the container\nmkdir -p /mnt/lxc_USB\nchown -R proxmenux:proxmenux /mnt/lxc_USB\nchmod 770 /mnt/lxc_USB",
+    "permsNoteTitle": "Notera",
+    "permsNote": "Ersätt <code>proxmenux</code> med användarnamnet du skapar i steg 2.2 nedan. <code>770</code> ger full tillgång till användaren och gruppen, ingen tillgång till andra - säkrare än den vidöppna <code>chmod -R 777</code> samtidigt som det fortfarande låter aktiearbetet."
+  },
+  "samba": {
+    "heading": "2. Installera Samba",
+    "installHeading": "2.1 Installera paketet inne i LXC",
+    "installCode": "apt-get update\napt-get install -y samba",
+    "confirmBody": "Bekräfta att tjänsten körs:",
+    "confirmCode": "systemctl status smbd.service",
+    "userHeading": "2.2 Skapa aktieanvändaren",
+    "userBody": "Välj ett användarnamn (här använder vi <code>proxmenux</code>; ersätta dina egna). Skapa den som systemanvändare utan skal:",
+    "userCode": "adduser proxmenux",
+    "passwordBody": "Ställ in Samba-lösenordet (separat från systemets lösenord - Samba upprätthåller sin egen referensaffär):",
+    "passwordCode": "smbpasswd -a proxmenux",
+    "aclHeading": "2.3 Set ägande / ACLs",
+    "aclBody": "Om den enkla <code>chown</code> från steg 1.5 är tillräckligt för ditt fall, är du klar med behörigheter. För finare kontroll (flera användare som delar samma väg med olika rättigheter), använd ACL:er:",
+    "aclCode": "apt-get install -y acl\nsetfacl -R -m \"u:proxmenux:rwx\" /mnt/lxc_USB\nsetfacl -d -R -m \"u:proxmenux:rwx\" /mnt/lxc_USB    # default ACL — applies to new files"
+  },
+  "configure": {
+    "heading": "3. Konfigurera Samba-aktien",
+    "editHeading": "3.1 Redigera smb.conf",
+    "editCode": "nano /etc/samba/smb.conf",
+    "appendBody": "Tillämpa en aktiedefinition i slutet:",
+    "shareCode": "[lxc_usb]\n    comment = Shared USB storage\n    path = /mnt/lxc_USB\n    read only = no\n    writable = yes\n    browseable = yes\n    guest ok = no\n    valid users = proxmenux\n    create mask = 0660\n    directory mask = 0770",
+    "validUsersNoteTitle": "Notera",
+    "validUsersNote": "<code>valid users = proxmenux</code>-linjen begränsar åtkomsten till den enda Samba-användaren. För gruppbaserad åtkomst, använd <code>valid users = @samba_users</code> efter att ha lagt till användaren till en grupp som heter <code>samba_users</code>.",
+    "reloadHeading": "3.2 Läs in Samba på nytt",
+    "reloadCode": "systemctl restart smbd"
+  },
+  "verify": {
+    "heading": "4. Verifiera åtkomst",
+    "body": "Från någon LAN-klient, bläddra till <code>\\\\'<'CT_IP'>'</code> (Windows) eller <code>smb://'<'CT_IP'>'</code> (macOS / Linux filhanterare). Autentisera med Samba-användaren (<code>proxmenux</code>) och lösenordet du ställer in med <code>smbpasswd</code>.",
+    "image1Alt": "Samba server åtkomst från en klient",
+    "image2Alt": "Samba autentisering snabb",
+    "usageBody": "Du kan använda andelen både inuti behållaren och över nätverket:",
+    "image3Alt": "Använda USB-enheten över aktien"
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "items": [
+      "<strong><code>pct restart</code> misslyckas med \"enhet som inte finns\":</strong> enhetsvägen i <code>mp0</code> finns inte på värden. Kontrollera med <code>ls -l /dev/disk/by-id/</code> och uppdatera vägen.",
+      "<strong>CT startar men <code>/mnt/lxc_USB</code> är tom:</strong> disken är inte monterad inuti CT. Kontrollera från värd: <code>pct exec '<'CTID'>' -- mount | grep lxc_USB</code>. Om det saknas är fästpunkten i konfigen fel.",
+      "<strong>Samba autentiserar men skriver fel med \"Permission nekas\":</strong> Linux behörigheter på katalogen tillåter inte Samba användare att skriva. Kontrollera <code>chown</code> / <code>setfacl</code> i avsnitt 1.5 / 2.3.",
+      "<strong>Dela visas inte i nätverkswebbläsare men <code>smb://'<'ip'>'/lxc_usb</code> Fungerar:</strong> browseability över LAN beror på NetBIOS WS-Discovery. Lägg till <code>nmbd</code>: <code>apt-get install -y samba-common-bin</code> och säkerställa <code>nmbd</code> är aktiverat.",
+      "<strong>Vill du lägga till en andra användare i samma andel:</strong> skapa användaren med <code>adduser</code>, registrera dig med <code>smbpasswd -a</code>Lägg till aktiens <code>valid users =</code> list comma-separat."
+    ]
+  }
+}

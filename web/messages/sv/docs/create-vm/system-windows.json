@@ -1,0 +1,259 @@
+{
+  "meta": {
+    "title": "Skapa VM: System Windows | ProxMenux Dokumentation",
+    "description": "Skapa och konfigurera Windows virtuella maskiner på Proxmox VE med ProxMenux. Inkluderar UUP Dump ISO och lokala ISO-vägar, standard / avancerad konfiguration, den enhetliga lagringsplanen, valfri GPU genomgång, TPM 2.0-installation och VirtIO-drivrutininstallation.",
+    "ogTitle": "Skapa VM: System Windows | ProxMenux Dokumentation",
+    "ogDescription": "Skapa Windows VMs på Proxmox VE med ProxMenux. UUP Dump eller lokal ISO, enhetlig lagringsplan, valfri GPU genomgång, TPM 2.0 och VirtIO förare.",
+    "ogImageAlt": "ProxMenux Windows VM-menyn"
+  },
+  "header": {
+    "title": "Skapa VM: System Windows",
+    "description": "Skapa en Windows VM på Proxmox VE. ProxMenux hanterar ISO-val (UUP Dump eller lokal), CPU / RAM / maskintyp konfiguration, enhetlig lagringsplan, valfri GPU genomgång, TPM 2.0 installation och VirtIO förare installera.",
+    "section": "Virtuella maskiner"
+  },
+  "intro": {
+    "title": "Vad detta manus gör",
+    "body": "Windows-flödet frågar var ISO kommer från (UUP Dump eller en lokal kopia redan i <code>/var/lib/vz/template/iso</code>) och kör sedan den delade VM-guiden. Det gäller Windows-vänliga standarder - <code>q35</code> + OVMF + TPM 2.0 - fäster VirtIO-drivrutinerna ISO till en andra CD-ROM-slot och lämnar dig med en VM redo att starta Windows-installationsprogrammet."
+  },
+  "image": {
+    "alt": "ProxMenux Windows installationsalternativ",
+    "caption": "Windows installationsalternativ"
+  },
+  "config": {
+    "heading": "Standard vs Avancerad konfiguration",
+    "intro": "När ISO väljs frågar ProxMenux om du vill använda standard VM-profilen eller öppna den avancerade guiden. Standardprofilen är inställd på moderna Windows-skrivbord och serverutgåvor.",
+    "defaultHeading": "Standardkonfiguration",
+    "headerParam": "Parameter",
+    "headerValue": "Standardvärde",
+    "defaultRows": [
+      {
+        "param": "maskintyp",
+        "valueRich": "<code>q35</code>"
+      },
+      {
+        "param": "BIOS",
+        "value": "OVMF (UEFI)"
+      },
+      {
+        "param": "CPU typ",
+        "value": "Värd"
+      },
+      {
+        "param": "Kärnor",
+        "value": "4"
+      },
+      {
+        "param": "RAM",
+        "value": "8192 MB"
+      },
+      {
+        "param": "Bro",
+        "valueRich": "<code>vmbr0</code>"
+      },
+      {
+        "param": "MAC-adress",
+        "value": "Autogenererad"
+      },
+      {
+        "param": "TPM",
+        "value": "Aktiverad (v2.0)"
+      },
+      {
+        "param": "Börja på slutförande",
+        "value": "Nej"
+      }
+    ],
+    "advancedHeading": "Avancerad konfiguration",
+    "advancedIntro": "Den avancerade trollkarlen avslöjar varje knopp individuellt:",
+    "headerOptions": "Alternativ",
+    "advancedRows": [
+      {
+        "param": "maskintyp",
+        "optionsRich": "<code>q35</code> eller <code>i440fx</code>"
+      },
+      {
+        "param": "BIOS",
+        "options": "OVMF (UEFI) eller SeaBIOS (Legacy)"
+      },
+      {
+        "param": "CPU typ",
+        "options": "Värd eller KVM64"
+      },
+      {
+        "param": "Kärnor",
+        "options": "Antal CPU-kärnor"
+      },
+      {
+        "param": "RAM",
+        "options": "Minne som tilldelats VM"
+      },
+      {
+        "param": "Bro",
+        "options": "Nätverksbro"
+      },
+      {
+        "param": "MAC-adress",
+        "options": "Egen MAC-adress"
+      },
+      {
+        "param": "VLAN",
+        "options": "VLAN tag (tillval)"
+      },
+      {
+        "param": "MTU",
+        "options": "MTU storlek"
+      },
+      {
+        "param": "TPM",
+        "options": "Aktivera eller inaktivera TPM 2.0"
+      }
+    ],
+    "tpmWarnTitle": "Windows 11 och Windows Server 2022 behöver TPM",
+    "tpmWarnBody": "Windows 11 och Windows Server 2022 vägrar att installera utan en TPM 2.0-enhet som är ansluten till VM. ProxMenux lägger till det som standard; endast inaktivera det i Avancerad om du vet att målupplagan inte kräver det."
+  },
+  "storagePlan": {
+    "heading": "Lagringsplan",
+    "body": "Efter CPU / RAM öppnar ProxMenux <strong>Storage Plan</strong>-menyn, där du kan kombinera virtuella diskar, importerade diskar och PCI genomgångsenheter i samma VM, lägga till objekt en i taget och avsluta när du är klar.",
+    "virtualDiskTitle": "a. Lägg till virtuell disk",
+    "virtualDiskItems": [
+      "Listar de Proxmox lagringsvolymer som finns på värden.",
+      "Du väljer mållagring och storleken på GB.",
+      "Skivan är fäst vid VM som SATA (<code>sata0</code>, <code>sata1</code>, ... upp till 6)."
+    ],
+    "importDiskTitle": "b. Lägg till import disk",
+    "importDiskItems": [
+      "Detekterar fysiska diskar som är säkra att importera (system och skyddade diskar är dolda).",
+      "Du väljer en eller flera diskar via en checklista.",
+      "Importerade diskar bifogas som SATA via <code>qm set</code>."
+    ],
+    "pciTitle": "c. Lägg till Controller eller NVMe (PCI genomgång)",
+    "pciItems": [
+      "Detekterar SATA / SAS HBAs och NVMe enheter på värden och låter dig passera en <em>entire controller</em> i VM. IOMMU måste aktiveras, skriptet erbjuder för att möjliggöra det och starta om vid behov.",
+      "Ett bekräftelsesteg varnar för kontrollörens hela risk (hela kortet, inklusive varje disk på det, lämnar värden).",
+      "De valda PCI-enheterna är anslutna via <code>qm set hostpciN: …</code>."
+    ],
+    "resetTitle": "Återställ och finish",
+    "resetBody": "Menyn erbjuder också <strong>r</strong> (återställ det aktuella urvalet och börja om) och <strong>d</strong> (slutför och fortsätt). Du kan inte avsluta med en tom plan."
+  },
+  "gpu": {
+    "heading": "Valfri GPU passthrough",
+    "body": "Efter lagringsplanen, om en kompatibel GPU detekteras på värd ProxMenux erbjudanden för att starta GPU passthrough assistent. Se <gpuLink>Lägg till GPU till en VM (Passthrough) </gpuLink> för hur assistenten fungerar - en värd omstart kan krävas."
+  },
+  "autoFeatures": {
+    "heading": "Automatiska VM-funktioner",
+    "efiTitle": "EFI-disk",
+    "efiBody": "När OVMF (UEFI) väljs, skapar ProxMenux en 4 MB EFI systemdisk på lagringen du väljer och fäster den på VM så UEFI firmware har en plats att lagra sina variabler.",
+    "tpmTitle": "TPM 2.0",
+    "tpmBody": "En virtuell TPM 2.0-enhet läggs till automatiskt så Windows 11 / Server 2022 installatörer passerar hårdvarukompatibilitetskontrollen.",
+    "isoTitle": "ISO montering",
+    "isoBody": "Installationen ISO är kopplad till <code>ide2</code>. VirtIO-drivrutinerna ISO laddas ner (om det behövs) och är knutna till <code>ide3</code>, redo för <em>Load-drivrutin</em>-steget.",
+    "guestTitle": "QEMU gästagent",
+    "guestBody": "Gästagentkanalen är aktiverad i VM-konfig. Själva agenten installeras i Windows genom att köra <code>virtio-win-guest-tools.exe</code> efter installationen."
+  },
+  "installOptions": {
+    "heading": "Windows installationsalternativ",
+    "intro": "ProxMenux erbjuder två metoder för att få Windows-installationsmedia:",
+    "uupTitle": "UUP Dump ISO-skapare",
+    "uupLogoAlt": "UUP Dump logotyp",
+    "uupBody": "Den är <strong>UUP Dump ISO Creator</strong> script är ett ProxMenux verktyg som bygger en Windows ISO på flygningen från Microsofts Windows Update-servrar. Det drar rena, officiella installationsfiler (inklusive Insider Preview bygger).",
+    "uupItems": [
+      "Tillgång till de senaste Windows-byggnaderna.",
+      "Stöder Insider Preview versioner.",
+      "Ren, officiell Microsoft installationsfiler.",
+      "Automatisk ISO-skapelse och montering i VM.",
+      "Stöder Home, Pro och Enterprise utgåvor."
+    ],
+    "uupLearnMore": "Läs mer om UUP Dump ISO Creator",
+    "localTitle": "Installera med lokal ISO",
+    "localBody": "Använder en Windows ISO du redan har laddat upp till värdens lokala lagring (<code>/var/lib/vz/template/iso</code>). Skriptet listar varje icke-VirtIO ISO det hittar och låter dig välja en.",
+    "localImageAlt": "Lokala ISO urvalsmenyn",
+    "localImageCaption": "Lokala ISO urvalsmenyn"
+  },
+  "endToEnd": {
+    "heading": "Vad manuset gör end-to-end",
+    "items": [
+      "Skaffa Windows ISO (UUUP Dump build eller lokal kopia).",
+      "Gäller standard eller avancerad CPU / RAM / BIOS / maskintyp konfiguration.",
+      "Öppnar lagringsplanen och fäster de valda virtuella diskarna, importerade diskar och PCI-enheter.",
+      "Skapar EFI-skivan (UEFI-installationer) och fäster TPM 2.0-enheten.",
+      "Monterar Windows ISO på <code>ide2</code>.",
+      "Nedladdningar och monterar VirtIO-förare ISO på <code>ide3</code>.",
+      "Ange startordern (disk först, sedan ISO).",
+      "Möjliggör QEMU Guest Agent-kanalen.",
+      "Alternativt kör GPU passthrough assistent.",
+      "Genererar en stilig HTML-beskrivning bifogad till VM.",
+      "Börjar VM om du väljer att."
+    ]
+  },
+  "virtio": {
+    "heading": "VirtIO förare under installation",
+    "body": "Om du lämnar lagring och nätverk på standarder (SATA + e1000), kommer Windows att installera utan extra steg. Emellertid, Proxmox lagringsplan alltid fäster virtuella diskar som SATA, som fungerar ur lådan. Om VirtIO blir relevant är om du under Advanced-guiden väljer VirtIO eller SCSI för diskar eller VirtIO för NIC - i så fall kommer Windows inte att se dessa enheter förrän den matchande drivrutinen är laddad från VirtIO ISO monterad på <code>ide3</code>.",
+    "warnTitle": "Utan VirtIO-nätverksdrivrutinen finns det inget internet vid installationen",
+    "warnBody": "Om du valde VirtIO (<code>virtio</code>) som nätverksgränssnittet och inte laddar föraren under installationen, kommer Windows inte att ha tillgång till internet. Det kan blockera aktivering och Windows Update steg under första starten.",
+    "stepLabel": "Steg",
+    "steps": [
+      {
+        "title": "Få tillgång till \"Var vill du installera Windows?\"",
+        "body": "Under Windows-installationen, om inga diskar visas, är lagringsdrivrutinen för ditt valda gränssnitt (SCSI eller VirtIO) inte laddad ännu. Ladda det manuellt från den monterade VirtIO ISO.",
+        "img": "/vm/windows/virtio-step-1.png",
+        "caption": "Windows-installation utan diskar som visas"
+      },
+      {
+        "title": "Klicka på \"Load driver\"",
+        "bodyRich": "Klicka på <strong>Load driver</strong> för att bläddra i den monterade VirtIO ISO och välj lagringsdrivrutinen som matchar gränssnittet du valde.",
+        "img": "/vm/windows/virtio-step-2.png",
+        "caption": "Klicka på lastförare för att bläddra i VirtIO ISO"
+      },
+      {
+        "title": "Bläddra till rätt förarmapp",
+        "bodyRich": "På VirtIO ISO navigera till mappen som matchar gränssnittet och Windows-versionen - till exempel <code>viostor</code> för VirtIO SCSI, med undermappar per Windows-utgåva (10 / 11 / Server).",
+        "img": "/vm/windows/virtio-step-3.png",
+        "caption": "Bläddra till lämplig förarmapp"
+      },
+      {
+        "title": "Välj föraren",
+        "bodyRich": "Windows listar tillgängliga drivrutiner. Välj den som matchar din inställning (typiskt <strong>Red Hat VirtIO SCSI controller</strong>) och klicka på <strong>Next</strong>.",
+        "img": "/vm/windows/virtio-step-4.png",
+        "caption": "Välj VirtIO-föraren som matchar ditt diskgränssnitt"
+      },
+      {
+        "title": "(Valfritt) Installera nätverksdrivrutinen",
+        "bodyRich": "Om du också valde VirtIO som nätverksgränssnitt, ladda nätverksdrivrutinen från <code>NetKVM</code>-mappen i samma ISO, väljer du undermappen för din Windows-version. Utan detta steg installerar Windows utan internetåtkomst.",
+        "img": "/vm/windows/virtio-step-5.png",
+        "caption": "Ladda VirtIO-nätverksdrivrutinen för att aktivera internet under installationen"
+      }
+    ],
+    "tipTitle": "Post-install: kör virtio-win-guest-tools.exe",
+    "tipBody": "När Windows är installerat, öppna VirtIO ISO från File Explorer och kör <code>virtio-win-guest-tools.exe</code>. Den installerar de återstående drivrutinerna (nätverk, display, inmatning, ballong, QEMU Gästagent) i ett skott."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/utils/UUp-Dump-ISO-Creator",
+        "label": "UUP Dump ISO-skapare",
+        "tail": " - generera uppdaterad Windows-installation ISOs på Proxmox-värden."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-image-vm",
+        "label": "Importera diskavbildning till virtuell dator",
+        "tail": " - bifoga en befintlig Windows .vhdx / .vmdk till en ny VM."
+      },
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Lägg till GPU till VM (Passthrough)",
+        "tail": " — för Windows VM med hårdvaruaccelererad GPU."
+      },
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "VM och CT Management kommandon",
+        "tail": " — QM CLI referens."
+      },
+      {
+        "href": "/docs/create-vm",
+        "label": "Skapa VM översikt",
+        "tail": "."
+      }
+    ]
+  }
+}

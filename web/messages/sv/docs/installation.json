@@ -1,0 +1,93 @@
+{
+  "meta": {
+    "title": "Installera ProxMenux | ProxMenux Dokumentation",
+    "description": "One-line installer för ProxMenux på Proxmox VE 8+ värdar. Fartyg förgenererade översättningsfiler för sex språk (engelska, spanska, franska, tyska, italienska, portugisiska) - språket plockas en gång under installationen. Beta-kanalen är också tillgänglig för tidig åtkomst till nya funktioner.",
+    "ogTitle": "Installera ProxMenux | ProxMenux Dokumentation",
+    "ogDescription": "Installera ProxMenux på Proxmox VE 8+ i ett kommando. Stabila och betakanaler tillgängliga."
+  },
+  "header": {
+    "title": "Installera ProxMenux",
+    "description": "One-line installer som körs på någon Proxmox VE 8+ värd. Auto-installerar de beroenden det behöver, laddar ner skripten, ställer in menyn launcher och (på första körningen) uppmanar dig att välja ett språk. Två installationskanaler: stabil (standard) och beta.",
+    "section": "Installation"
+  },
+  "stable": {
+    "heading": "Installera",
+    "intro": "Kör detta i din Proxmox värd terminal:",
+    "code": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)\""
+  },
+  "during": {
+    "heading": "Under installationen",
+    "intro": "ProxMenux installerar automatiskt och konfigurerar de beroenden det behöver:",
+    "tablePackage": "Paketpaket",
+    "tablePurpose": "syfte",
+    "rows": [
+      {
+        "package": "dialog",
+        "purpose": "Interaktiva terminalmenyer"
+      },
+      {
+        "package": "curl",
+        "purpose": "Nedladdningar och anslutningskontroller"
+      },
+      {
+        "package": "jq",
+        "purpose": "JSON bearbetning"
+      },
+      {
+        "package": "git",
+        "purpose": "Repository kloning och uppdateringar"
+      }
+    ],
+    "outro": "Installationsprogrammet drar också ner skriptträdet i <code>/usr/local/share/proxmenux/</code> och skapar lanseringen på <code>/usr/local/bin/menu</code>. <strong>ProxMenux Monitor</strong> webbdashboard är registrerad som <code>proxmenux-monitor.service</code>.",
+    "imageAlt": "ProxMenux installation pågår"
+  },
+  "first": {
+    "heading": "Första lanseringen",
+    "intro": "När installerat, kör:",
+    "code": "menu",
+    "outro": "ProxMenux lanseras och du landar på huvudmenyn. Härifrån kan du köra något av de arbetsflöden som dokumenteras på denna webbplats - <postlink>Post-Install</postlink> är ett bra första stopp på en ny Proxmox värd."
+  },
+  "beta": {
+    "heading": "Beta kanal",
+    "calloutTitle": "Vad är Beta-programmet?",
+    "calloutBody": "Vill du prova de senaste funktionerna innan den officiella versionen och hjälpa till att forma den slutliga versionen? ProxMenux Beta-programmet ger tidig tillgång till ny funktionalitet - inklusive de nyaste byggningarna av ProxMenux Monitor - direkt från <code>develop</code>-grenen. Beta bygger kan innehålla buggar eller ofullständiga funktioner. Din feedback hjälper till att fixa dem innan den stabila utgåvan.",
+    "intro": "Installera betaversionen istället för den stabila med:",
+    "code": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/develop/install_proxmenux_beta.sh)\"",
+    "outro": "Beta är opt-in - du måste uttryckligen köra beta installer. När en stabil utgåva publiceras, meddelar ProxMenux dig på nästa <code>menu</code>-lansering och erbjudanden för att växla automatiskt. För att välja bort tidigare, använd alternativet <betalink>Deaktiv Beta Program</betalink> i Inställningar."
+  },
+  "updating": {
+    "heading": "Uppdatering",
+    "body": "ProxMenux självuppdateringar. När en ny version är tillgänglig, erbjuder nästa <code>menu</code>-lansering uppdateringen; accepterar ersätter verktygsfiler och konfigurationer på plats. Ingen manuell nedladdning behövs. Stabila användare får stabila utgåvor; beta-användare får beta-utgåvor (och auto-switch-prompten ovan när en stabil skär över). Den snabba formen beror på var <code>menu</code> körs: över SSH eller Proxmox-konsolen är det en klassisk ja / ingen dialog och accepterar tillämpar uppdateringen omedelbart. Inuti WebSocket-terminalen av ProxMenux Monitor ersätts den av en informativ msgbox - den terminalen kan inte överleva en självuppdaterad mid-flight, så msgbox visar den kanoniska en-line installatören (<code>bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)\"</code> för stabil, eller motsvarande <code>install_proxmenux_beta.sh</code> URL för beta) att köra från SSH eller konsol."
+  },
+  "uninstall": {
+    "heading": "Avinstallera",
+    "body": "Inifrån ProxMenux: <strong>Settings → Avinstallera ProxMenux</strong>. Ta bort skriptträdet, startaren och Monitor-tjänsten, tar bort valda beroenden, återställer <code>/root/.bashrc</code> och <code>/etc/motd</code> säkerhetskopior som tagits vid installationstid. Full steg-för-steg: <uninstalllink>Uninstall ProxMenux</uninstalllink>."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "virustotalTitle": "VirusTotal flaggor installera URL",
+    "virustotalBody": "En 1/95-detektering av heuristiska motorer (t.ex. <em>Chong Lua Dao</em> är en känd false positiv. Installationsprogrammet använder standard <code>curl | bash</code>-mönster och hämtar legitima binärer (som <code>jq</code> från sin officiella GitHub-utgåva), som aggressiva skannrarflagga baserat på <em>behaviour</em> snarare än faktisk skadlig kod. Installationsprogrammet är 100% öppen källkod och granskas. Mer sammanhang i <issuelink>Issue #162</issuelink>.",
+    "aptTitle": "Installera fel med apt fel",
+    "aptBody": "Vanligtvis en saknad eller felkonfigurerad Proxmox repo. Installatören drar beroenden via apt; om repo config bryts (ofta fallet på nakna ben Proxmox 8 installerar som inte har uppdaterats ännu), apt misslyckas. Kör <code>apt-get update</code> manuellt först och lösa eventuella fel, kör sedan om installationsprogrammet.",
+    "menuTitle": "`menu: command not found` efter installation",
+    "menuBody": "Lanseringen bor på <code>/usr/local/bin/menu</code>. Kontrollera det: <code>ls -lh /usr/local/bin/menu</code>. Om det saknas slutade installationen tidigt - kör installationsprogrammet. Om det finns men inte finns, innehåller din PATH inte <code>/usr/local/bin</code>; antingen fixa PATH eller åberopa startaren direkt: <code>/usr/local/bin/menu</code>.",
+    "stuckTitle": "Installationen hänger eller inte utvecklas",
+    "stuckBody": "Om en installation, ominstallation eller uppdatering fastnar på grund av ett anslutningsproblem, annullera med <strong>Ctrl + C</strong> och kör om installationsprogrammet manuellt.",
+    "otherTitle": "Övriga frågor",
+    "otherBody": "Kontrollera <issueslink>GitHub Issues</issueslink> för kända problem eller öppna en ny med relevant loggutgång. Beta-användare: inkludera <code>journalctl -u proxmenux-monitor -n 50</code> om Monitor-relaterade."
+  },
+  "next": {
+    "heading": "Vad är nästa",
+    "postInstall": "<postlink>Post-Install Script</postlink> tweaks och härdning för en ny Proxmox värd.",
+    "introduction": "<introlink>Introduktion</introlink> - hela funktionen turné.",
+    "monitor": "<monitorlink>ProxMenux Monitor</monitorlink> - web instrumentpanel för värden (auto-installerad tillsammans med menyn)."
+  },
+  "requirements": {
+    "heading": "Krav och god praxis",
+    "reqTitle": "Krav",
+    "reqBody": "Proxmox VE <strong>8.x eller later</strong>. PVE 7 och tidigare stöds inte. Internetåtkomst från värden (installationsprogrammet laddar ner skript, beroenden och ProxMenux Monitor AppImage). Kör som <strong>root</strong> på Proxmox värd.",
+    "inspectTitle": "Inspektera alltid skript du kör från internet",
+    "inspectReview": "<sourcelink>Review installationskällan</sourcelink> innan du kör.",
+    "inspectCoc": "Alla körbara länkar följer <coclink>ProxMenux Code of Conduct</coclink>."
+  }
+}

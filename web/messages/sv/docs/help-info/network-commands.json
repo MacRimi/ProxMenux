@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Proxmox Network Commands - ip, ping, ss, pve-firewall, iptables | ProxMenux",
+    "description": "Hänvisning till Proxmox VE värdnätverkskommandon: ip / ip link / ip adder, ping, traceroute, mtr, ss, ethtool, dig, nslookup, plus pve-firewall, iptables och nftables för filtrering. Bridge, bond och VLAN inspektion.",
+    "ogTitle": "Proxmox Network Commands - ip, ping, ss, pve-firewall, iptables",
+    "ogDescription": "Referens av nätverkskommandon för Proxmox VE - gränssnittskontroll, anslutningstest, övervakning, brandvägg (pve-firewall, iptables, nftables) och DNS-uppslag.",
+    "twitterTitle": "Proxmox nätverkskommandon | ProxMenux",
+    "twitterDescription": "Nätverksinspektion, testning, konfiguration och brandväggskommandon för Proxmox VE."
+  },
+  "header": {
+    "title": "Nätverkskommandon",
+    "description": "Curated referens för Proxmox värdnätverk: gränssnitt info, anslutningstest, konfiguration, trafikövervakning och brandväggshantering. Kombinerar ip / ss / nmcli / ettool / tcpdump / pve-firewall.",
+    "section": "Hjälp och info"
+  },
+  "intro": {
+    "title": "Snabb gränssnitt inventering",
+    "body": "<code>ip a</code> visar varje gränssnitt med sina IPs och MAC. <code>ip r</code> visar routingbordet. Tillsammans svarar de mest \"är detta gränssnitt konfigurerat korrekt?\" frågor på några sekunder."
+  },
+  "commandGroups": [
+    {
+      "title": "Nätverksinformation",
+      "commands": [
+        {
+          "command": "ip a",
+          "description": "Visa nätverksgränssnitt och IP-adresser"
+        },
+        {
+          "command": "ip r",
+          "description": "Visa rutttabell"
+        },
+        {
+          "command": "ip -s link",
+          "description": "Visa trafikstatistik per gränssnitt"
+        },
+        {
+          "command": "brctl show",
+          "description": "Visa konfigurerade nätverksbryggor"
+        },
+        {
+          "command": "cat /etc/network/interfaces",
+          "description": "Visa rå nätverkskonfiguration"
+        }
+      ]
+    },
+    {
+      "title": "Nätverkstestning",
+      "commands": [
+        {
+          "command": "ping <host>",
+          "description": "Kontrollera anslutningen med en annan värd"
+        },
+        {
+          "command": "traceroute <host>",
+          "description": "Spårväg till en värd"
+        },
+        {
+          "command": "mtr <host>",
+          "description": "Kombinera ping och tracerout i realtid"
+        },
+        {
+          "command": "dig <domain>",
+          "description": "DNS-sökning för en domän"
+        },
+        {
+          "command": "nslookup <domain>",
+          "description": "Alternativ DNS lookup"
+        }
+      ]
+    },
+    {
+      "title": "Nätverkskonfiguration",
+      "commands": [
+        {
+          "command": "ifreload -a",
+          "description": "Ladda om nätverkskonfigurationen (ifupdown2)"
+        },
+        {
+          "command": "ethtool <iface>",
+          "description": "Visa Ethernet-enhetsinformation"
+        },
+        {
+          "command": "resolvectl status",
+          "description": "Visa DNS-upplösningsstatus"
+        },
+        {
+          "command": "nmcli device show",
+          "description": "Visa nätverksenhetsdetaljer (om NetworkManager används)"
+        },
+        {
+          "command": "ip link set <iface> up",
+          "description": "Ta nätverksgränssnitt upp"
+        },
+        {
+          "command": "ip link set <iface> down",
+          "description": "Ta nätverksgränssnitt ner"
+        }
+      ]
+    },
+    {
+      "title": "Nätverksövervakning",
+      "commands": [
+        {
+          "command": "ss -tuln",
+          "description": "Visa lyssningsportar (TCP/UDP)"
+        },
+        {
+          "command": "netstat -tuln",
+          "description": "Alternativ för att visa lyssnande portar"
+        },
+        {
+          "command": "lsof -i",
+          "description": "Lista öppna nätverksfiler och anslutningar"
+        },
+        {
+          "command": "tcpdump -i <iface>",
+          "description": "Fånga paket på gränssnitt"
+        },
+        {
+          "command": "iftop -i <iface>",
+          "description": "Monitor bandbredd användning på gränssnitt"
+        }
+      ]
+    },
+    {
+      "title": "Brandväggshantering",
+      "commands": [
+        {
+          "command": "iptables -L -n -v",
+          "description": "Visa aktiva brandväggsregler (iptables)"
+        },
+        {
+          "command": "nft list ruleset",
+          "description": "Visa nftables regler"
+        },
+        {
+          "command": "pve-firewall status",
+          "description": "Kontrollera status för Proxmox brandvägg"
+        },
+        {
+          "command": "pve-firewall compile",
+          "description": "Kompilera brandväggsregler för alla noder"
+        },
+        {
+          "command": "pve-firewall reload",
+          "description": "Ladda om Proxmox brandväggsregler"
+        }
+      ]
+    }
+  ],
+  "iptablesTip": {
+    "title": "iptables vs nftables",
+    "bodyRich": "Modern Debian / Proxmox använder <strong>nftables</strong> som den underliggande brandväggsmotorn. Det klassiska <code>iptables -L -n -v</code>-kommandot fungerar fortfarande som ett översättningsskikt, men sanningens källa är <code>nft list ruleset</code>. <code>pve-firewall</code> kommandon är Proxmoxs wrapper som avger nftables regler från kluster brandväggskonfig."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/network",
+        "label": "Nätverkshantering",
+        "tail": " - ProxMenux interaktiva nätverksverktyg (broanalys, ihållande namn, övervakning)."
+      },
+      {
+        "href": "/docs/help-info/tools-commands",
+        "label": "System CLI-verktyg",
+        "tail": " - fler nätverksövervakningsverktyg."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Hjälp och info översikt",
+        "tail": "."
+      }
+    ]
+  }
+}
