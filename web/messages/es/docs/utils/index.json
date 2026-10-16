@@ -61,7 +61,7 @@
     "body": "Crea una ISO de instalación de Windows actualizada directamente en el host Proxmox. El script automatiza todo el flujo de UUP Dump: instalación de dependencias (aria2c, cabextract, wimlib-imagex, …), descarga paralelizada de los archivos de actualización vía aria2 y conversión en una única ISO arrancable que aterriza en <code>/var/lib/vz/template/iso</code> lista para asociar a una VM.",
     "options": [
       {
-        "title": "UUP Dump ISO Creator",
+        "title": "Creador de ISO UUP Dump",
         "description": "Crea una ISO de instalación de Windows actualizada desde un enlace compartido de UUP Dump. Dependencias, descarga y conversión totalmente automatizadas; la ISO resultante aterriza en /var/lib/vz/template/iso lista para crear una VM.",
         "href": "/docs/utils/UUp-Dump-ISO-Creator"
       }

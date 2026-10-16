@@ -10,7 +10,7 @@
   "header": {
     "title": "Acceso y autenticación",
     "description": "Cómo llegar al panel, el flujo de seguridad de primer arranque y cada capa que puede situarse entre un atacante y el host: contraseña + TOTP, sesiones JWT, API tokens de larga duración, HTTPS, reverse proxies, Secure Gateway y el jail Fail2Ban opcional.",
-    "section": "ProxMenux Monitor"
+    "section": "Monitor de ProxMenux"
   },
   "intro": {
     "title": "La autenticación es opt-in",
@@ -50,7 +50,7 @@
     "headerNotes": "Notas",
     "fieldRows": [
       {
-        "field": "Username",
+        "field": "Nombre de usuario",
         "required": "Sí",
         "notes": "El identificador de login. No se puede cambiar después desde la UI; editarlo requiere tocar <code>auth.json</code> directamente."
       },
@@ -79,7 +79,7 @@
     "avatarBody2": "La página de perfil en sí es una pequeña tarjeta con una vista previa del avatar, el username (solo lectura) y el nombre visible con un botón de edición en línea. Las subidas, reemplazos y eliminaciones de avatar son atómicas — el avatar de la cabecera se refresca automáticamente cuando cualquiera tiene éxito, así que no hay necesidad de recargar la página. El mismo conjunto de endpoints documentado en la siguiente sección lo usan tanto el formulario de creación de usuario como la página de perfil.",
     "profileImageAlt": "Página de perfil con círculo de vista previa del avatar, botones Subir / Reemplazar / Eliminar, username de solo lectura y campo de nombre visible editable",
     "profileImageCaption": "La página de perfil dedicada. El username es solo lectura; el nombre visible y el avatar se pueden editar desde aquí sin tocar la pestaña Security.",
-    "headerEndpoint": "Endpoint",
+    "headerEndpoint": "Punto final",
     "headerEpWhat": "Qué hace",
     "endpointRows": [
       {
@@ -171,7 +171,7 @@
     "intro": "El 2FA añade un segundo factor encima de tu contraseña: un código de 6 dígitos que rota cada 30 segundos, generado en un móvil o gestor de contraseñas que controlas. Aunque alguien obtenga la contraseña, sigue sin poder entrar sin el código de tu dispositivo. ProxMenux Monitor implementa el protocolo estándar <strong>TOTP</strong> (RFC 6238), así que cualquier app autenticadora funciona.",
     "pickTitle": "Elige una app autenticadora",
     "pickIntro": "Si ya usas una para Google / GitHub / tu banco, esa funcionará — salta al walkthrough de setup. Si no, aquí tienes un repaso de opciones habituales. Todas son gratis; las diferencias son sobre todo en qué plataformas corren y cómo (o si) hacen backup de tus secrets.",
-    "headerApp": "App",
+    "headerApp": "Aplicación",
     "headerPlatforms": "Plataformas",
     "headerAppNotes": "Notas",
     "apps": [
@@ -257,7 +257,7 @@
       "<strong>Hecho.</strong> El 2FA está ahora activo. La próxima vez que te logues, el panel pide primero la contraseña; una vez aceptada pide el código actual de 6 dígitos."
     ],
     "setupStep4Sub": [
-      "<em>Camino fácil:</em> en la app, pulsa <em>Añadir cuenta</em> → <em>Escanear código QR</em>, apunta la cámara al QR en la pantalla. La app nombra la entrada automáticamente (algo como <code>ProxMenux Monitor (tu-usuario)</code>) y empieza a mostrar un código de 6 dígitos que se refresca cada 30 segundos.",
+      "<em>Camino fácil:</em> en la app, pulsa <em>Añadir cuenta</em> → <em>Escanear código QR</em>, apunta la cámara al QR en la pantalla. La app nombra la entrada automáticamente (algo como <code>ProxMenux Monitor (your-username)</code>) y empieza a mostrar un código de 6 dígitos que se refresca cada 30 segundos.",
       "<em>Plan B manual</em> (cuando escanear no es posible — p. ej. configurando en el mismo móvil con el que abriste el panel): pulsa <em>Añadir cuenta</em> → <em>Introducir clave de setup</em>. Escribe cualquier nombre (p. ej. <em>Proxmox Monitor</em>), pega la cadena Base32 del diálogo, deja <em>Tipo</em> como <em>Basado en tiempo</em>, guarda."
     ],
     "testTitle": "Prueba antes de hacer logout",
@@ -316,10 +316,10 @@
     "calloutBody": "La ruta gevent empaquetada es adecuada para certificados autofirmados o solo-LAN. Para Let's Encrypt / ACME y renovación automática, pon un reverse proxy real delante — Caddy autorrenueva y Traefik / Nginx tienen patrones bien conocidos. El Monitor no implementa ACME por sí mismo."
   },
   "gateway": {
-    "heading": "Secure Gateway (Tailscale)",
+    "heading": "Pasarela segura (Tailscale)",
     "intro": "Los reverse proxies son la respuesta clásica a \"llegar al panel desde fuera\" pero requieren un dominio público, certificado y un puerto abierto en el borde. <strong>Secure Gateway</strong> es la alternativa cero-puertos que viene dentro del propio Monitor — una app desplegable preconstruida que levanta un LXC Alpine ejecutando <a>Tailscale</a> como subnet router. Una vez unido a tu tailnet, cada dispositivo en él puede llegar al Monitor en la propia IP LAN del host — desde un portátil de vacaciones, un móvil con 5G u otro nodo — sin exponer TCP 8008 a internet.",
     "calloutTitle": "Por qué esto es cómodo",
-    "calloutBody": "La URL se mantiene igual que en la LAN — <code>http://&lt;ip-lan-proxmox&gt;:8008</code> funciona donde Tailscale funcione. Sin certificados, sin DNS, sin port forwarding. El propio Monitor ve la petición viniendo de una IP de tailnet (típicamente <code>100.x.y.z</code>), así que el log de auth y el hook de Fail2Ban siguen funcionando como en la LAN.",
+    "calloutBody": "La URL se mantiene igual que en la LAN — <code>http://&lt;proxmox-lan-ip&gt;:8008</code> funciona donde Tailscale funcione. Sin certificados, sin DNS, sin port forwarding. El propio Monitor ve la petición viniendo de una IP de tailnet (típicamente <code>100.x.y.z</code>), así que el log de auth y el hook de Fail2Ban siguen funcionando como en la LAN.",
     "deployBody": "El flujo de despliegue es una sola pantalla — elige el storage LXC del host, pega un auth-key de Tailscale (generado en <a>login.tailscale.com/admin/settings/keys</a>), elige qué subnets anunciar, pulsa Deploy. El LXC tarda ~30 segundos en arrancar y se registra en el tailnet automáticamente.",
     "outro": "El despliegue paso a paso, la configuración de subnet-routes, las ACLs de Tailscale y el modo Exit Node se documentan por separado en <link>Dashboard → Security → Secure Gateway</link> — ahí vive el wizard de despliegue en la UI del panel. Esta página solo cubre el patrón de acceso."
   },
@@ -328,7 +328,7 @@
     "intro": "La distribución más simple es un <strong>nombre de host dedicado</strong> para el Monitor (p. ej. <code>monitor.example.com</code>) apuntando al puerto 8008 del host Proxmox. Los snippets de abajo usan ese patrón. Los montajes en sub-path (<code>example.com/proxmenux-monitor/</code>) son posibles pero requieren reescritura extra y no son el valor por defecto — mira el callout al final.",
     "nginxTitle": "Nginx",
     "caddyTitle": "Caddy",
-    "traefikTitle": "Traefik (labels — Docker / Kubernetes)",
+    "traefikTitle": "Traefik (etiquetas: Docker / Kubernetes)",
     "subPathTitle": "Avanzado: montajes en sub-path bajo un dominio existente",
     "subPathBody": "Si no quieres un nombre de host dedicado, puedes montar el Monitor bajo un path de un dominio existente — por ejemplo <code>example.com/proxmenux-monitor/</code>. El build de Next.js usa rutas relativas para los assets así que los archivos estáticos resuelven, pero el proxy debe <strong>quitar el prefijo</strong> antes de reenviar para que el Monitor reciba URLs <code>/api/*</code> sin más. En Nginx eso es un <code>location /proxmenux-monitor/ &rbrace; proxy_pass http://127.0.0.1:8008/; &lbrace;</code> (la barra final en <code>proxy_pass</code> hace el strip). En Caddy, usa <code>handle_path /proxmenux-monitor/*</code>. Un nombre de host dedicado es más simple."
   },
@@ -367,17 +367,17 @@
     "heading": "Por dónde seguir",
     "items": [
       {
-        "label": "API Reference → Token Management",
+        "label": "API Referencia → Token Management",
         "href": "/docs/monitor/api",
         "tail": " — ciclo de vida completo de API tokens (generar / listar / revocar), mejores prácticas de seguridad, patrones de almacenamiento de secrets."
       },
       {
-        "label": "Integrations",
+        "label": "Integraciones",
         "href": "/docs/monitor/integrations",
         "tail": " — Homepage, Home Assistant, Grafana / Prometheus, Uptime Kuma, cURL genérico."
       },
       {
-        "label": "Dashboard → Security → Secure Gateway",
+        "label": "Dashboard → Seguridad → Secure Gateway",
         "href": "/docs/monitor/dashboard/security",
         "tail": " — despliega el LXC gateway Tailscale paso a paso (subnet routes, ACLs, modo Exit Node)."
       },
@@ -387,7 +387,7 @@
         "tail": " — cómo instalar y configurar el jail opcional."
       },
       {
-        "label": "Settings → ProxMenux Monitor",
+        "label": "Ajustes → ProxMenux Monitor",
         "href": "/docs/settings/proxmenux-monitor",
         "tail": " — arranca / para el servicio systemd desde la TUI de ProxMenux."
       }

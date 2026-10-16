@@ -10,7 +10,7 @@
   "header": {
     "title": "Crear copias",
     "description": "El flujo interactivo de copia: elegir un destino y un perfil, revisar el resumen de confirmación, y ver el archivo aterrizando. Dos puntos de entrada comparten el mismo backend y producen archivos idénticos.",
-    "section": "Backup & Restore"
+    "section": "Copias de seguridad y restauración"
   },
   "intro": {
     "title": "Dos puntos de entrada, funcionalidad idéntica",
@@ -26,7 +26,7 @@
       },
       {
         "entry": "ProxMenux Monitor (UI Web)",
-        "path": "Pestaña Backups → Create backup",
+        "path": "Backups tab → Create backup",
         "detail": "Flujo en estilo asistente. Las mismas seis opciones presentadas como formulario de dos pasos (destino → perfil). Se invocan las mismas funciones backend por la API Flask."
       }
     ]
@@ -45,37 +45,37 @@
       {
         "combo": "1",
         "destination": "PBS",
-        "profile": "Default",
+        "profile": "Por defecto",
         "action": "Sube el perfil por defecto más los extras persistentes a un repositorio PBS configurado."
       },
       {
         "combo": "2",
         "destination": "Borg",
-        "profile": "Default",
+        "profile": "Por defecto",
         "action": "Crea un archivo con el perfil por defecto más los extras persistentes en el repositorio Borg seleccionado."
       },
       {
         "combo": "3",
         "destination": "Local",
-        "profile": "Default",
+        "profile": "Por defecto",
         "action": "Escribe un archivo <code>.tar.zst</code> con el perfil por defecto más los extras persistentes en el destino local configurado."
       },
       {
         "combo": "4",
         "destination": "PBS",
-        "profile": "Custom",
+        "profile": "Aduanas",
         "action": "Abre el path picker antes de la subida a PBS; el usuario marca rutas y puede añadir nuevas."
       },
       {
         "combo": "5",
         "destination": "Borg",
-        "profile": "Custom",
+        "profile": "Aduanas",
         "action": "Abre el path picker antes de crear el archivo Borg."
       },
       {
         "combo": "6",
         "destination": "Local",
-        "profile": "Custom",
+        "profile": "Aduanas",
         "action": "Abre el path picker antes de escribir el <code>.tar.zst</code> local."
       }
     ]
@@ -157,7 +157,7 @@
       "<strong>Filesystems runtime del kernel y sistema</strong> — <code>/proc</code>, <code>/sys</code>, <code>/dev</code> y <code>/run</code> son pseudo-filesystems que produce el kernel y udev; no se persisten en ningún sitio.",
       "<strong>Binarios de paquetes bajo <code>/usr/bin</code>, <code>/usr/lib</code>, <code>/lib</code>, <code>/sbin</code></strong> — los reinstala el APT del destino a partir de <code>packages.manual.list</code>.",
       "<strong><code>/var/log/</code>, <code>/var/tmp/</code>, <code>/var/cache/</code></strong> — estado runtime por host, no se restaura.",
-      "<strong><code>/home/USUARIO</code></strong> — no está en el perfil por defecto. Añadirlo como ruta custom cuando un sistema tenga directorios home de usuario que deban sobrevivir a una restauración."
+      "<strong><code>/home/USER</code></strong> — no está en el perfil por defecto. Añadirlo como ruta custom cuando un sistema tenga directorios home de usuario que deban sobrevivir a una restauración."
     ],
     "customPathsTitle": "Cómo se tratan las rutas custom",
     "customPathsBody": "Una ruta custom añadida en línea en modo Custom o persistida en <code>backup-extra-paths.txt</code> pasa por el mismo pipeline de <code>rsync</code> que las rutas del perfil por defecto. Se aplican las exclusiones globales. Si la ruta custom está bajo <code>/root/</code> o <code>/usr/local/share/proxmenux/</code>, siguen aplicando las exclusiones específicas de arriba. Cada ruta archivada — default o custom — queda registrada en <code>metadata/paths_archived.txt</code>. Las rutas que no existen en el origen se registran en <code>metadata/missing_paths.txt</code> sin detener la copia."
@@ -165,7 +165,7 @@
   "archiveStructure": {
     "heading": "Estructura del archivo",
     "intro": "El directorio de staging que produce cada backend sigue el mismo layout con independencia del destino. El tarball, el <code>.pxar</code> de PBS o el archivo Borg almacenan este árbol verbatim.",
-    "tree": "backup-[timestamp]/\n├── manifest.json                  # estado estructurado del host (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # salida de apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, versión del kernel, método pmxcfs\n│   ├── paths_archived.txt         # lista exacta de rutas que llegaron a rootfs/\n│   └── missing_paths.txt          # rutas del perfil ausentes en el origen\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root sin subpaths volátiles\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (sólo estado)\n    └── var/                       # /var/lib/pve-cluster (config.db vía sqlite3 .backup), /var/spool/cron/crontabs"
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # output of apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, kernel version, pmxcfs method\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root without volatile subpaths\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (state only)\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/crontabs"
   },
   "confirmation": {
     "heading": "Resumen de confirmación",

@@ -8,9 +8,9 @@
     "twitterDescription": "Activación del Monitor, cambio de canal de release, idiomas, info de versión y desinstalación."
   },
   "header": {
-    "title": "Settings",
+    "title": "Ajustes",
     "description": "Menú de configuración de ProxMenux. Lista lo que está instalado, te deja conmutar el servicio del Monitor, restablecer la contraseña de login del Monitor, cambiar entre canales de release estable y beta en cualquier dirección, cambiar el idioma de la UI (solo instalación con traducción) y proporciona un desinstalador limpio. Las opciones aparecen condicionalmente — lo que ves depende de tu tipo de instalación y del estado actual.",
-    "section": "Settings"
+    "section": "Ajustes"
   },
   "intro": {
     "title": "Para qué sirve este menú",
@@ -49,7 +49,7 @@
       {
         "icon": "Activity",
         "href": "/docs/settings/proxmenux-monitor",
-        "title": "ProxMenux Monitor",
+        "title": "Monitor de ProxMenux",
         "description": "Activa / desactiva la unidad systemd proxmenux-monitor.service, comprueba su estado actual y restablece la contraseña de login del panel si se ha perdido. UI web disponible en TCP 8008.",
         "badge": "Condicional"
       },

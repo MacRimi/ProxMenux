@@ -46,7 +46,7 @@
         "notes": "Ejecuta el comando guardado dentro del LXC y reemplaza cualquier actualizador integrado de esa aplicación."
       },
       {
-        "source": "Docker Engine",
+        "source": "Motor de Docker",
         "action": "Actualizar Docker Engine",
         "notes": "Actualiza únicamente los paquetes Docker instalados y sus dependencias necesarias. No modifica otros paquetes ni los contenedores."
       },
@@ -111,7 +111,7 @@
     ],
     "exampleLead": "Ejemplo de procedimiento completo dentro del contenedor:",
     "example": "cd /opt/mi-app && ./update.sh",
-    "callout": "Un comando de versión como <code>miapp --version</code> solo lee una versión; no instala nada. Los comandos se ejecutan con privilegios administrativos y deben revisarse con el mismo cuidado que un comando de shell como root."
+    "callout": "Un comando de versión como <code>myapp --version</code> solo lee una versión; no instala nada. Los comandos se ejecutan con privilegios administrativos y deben revisarse con el mismo cuidado que un comando de shell como root."
   },
   "bulk": {
     "heading": "Actualización en bloque",
@@ -142,7 +142,7 @@
       "La espera tras una versión solo se aplica a las apps seleccionadas con seguimiento. Las apps sin seguimiento ejecutan su actualizador cuando vence la programación.",
       "El estado de la última ejecución diferencia entre éxito, finalización parcial, error, retención de seguridad y ausencia de elementos pendientes. Después de la primera ejecución programada, <strong>Actualizaciones → Actualizaciones programadas → Ver log</strong> abre la salida completa capturada del actualizador y de los scripts secundarios que haya ejecutado.",
       "Después de cada ejecución, ProxMenux comprueba el marcador estándar de Debian que indica si es necesario reiniciar. Cuando hace falta, la pestaña Actualizaciones y la notificación de finalización lo indican; el aviso se elimina cuando ese LXC se inicia o reinicia.",
-      "En el host Proxmox, los logs de las ejecuciones programadas se guardan en <code>/usr/local/share/proxmenux/logs/lxc-updates/</code> con el nombre <code>&lt;VMID&gt;-scheduled-&lt;id-de-ejecución&gt;.log</code>. Se conservan los diez últimos logs de cada LXC y los archivos más antiguos se eliminan automáticamente.",
+      "En el host Proxmox, los logs de las ejecuciones programadas se guardan en <code>/usr/local/share/proxmenux/logs/lxc-updates/</code> con el nombre <code>&lt;VMID&gt;-scheduled-&lt;run-id&gt;.log</code>. Se conservan los diez últimos logs de cada LXC y los archivos más antiguos se eliminan automáticamente.",
       "Este historial corresponde a las actualizaciones programadas. Una actualización manual muestra su salida en tiempo real en la ventana de ejecución del Monitor y no crea un log de ejecución programada en ese directorio.",
       "Las programaciones externas detectadas de Proxmox VE Helper-Scripts se muestran aparte para hacer visible cualquier automatización coincidente."
     ],
@@ -186,7 +186,7 @@
       },
       {
         "problem": "Una actualización programada indica que es necesario reiniciar",
-        "resolution": "Abre <strong>Ver log</strong> para revisar la ejecución completada y reinicia ese LXC. ProxMenux elimina el aviso mediante el evento de ciclo de vida existente cuando el contenedor vuelve a arrancar."
+        "resolution": "Abre Ver registro para revisar la ejecución completada y después reinicia ese LXC. ProxMenux elimina la advertencia del evento de ciclo de vida existente cuando el contenedor vuelve a arrancar."
       }
     ]
   },

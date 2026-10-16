@@ -26,7 +26,7 @@
       "term": "ACS",
       "aliases": [
         "Access Control Services",
-        "ACS override"
+        "Anulación de ACS"
       ],
       "category": "Virtualización",
       "definitionRich": "Extensión de PCIe que evita el tráfico peer-to-peer directo entre dispositivos, asegurando que cada dispositivo está en su propio grupo IOMMU. El parche del kernel <em>ACS override</em> afloja esto para que dispositivos del mismo grupo IOMMU puedan pasarse a VMs distintas — útil pero con compromiso de seguridad.",
@@ -56,7 +56,7 @@
       ]
     },
     {
-      "term": "Bind mount",
+      "term": "Montaje Bind",
       "category": "Linux",
       "definitionRich": "Función de Linux que expone una parte del sistema de archivos en otra ruta. ProxMenux usa bind mounts para compartir directorios del host con contenedores LXC vía <code>pct set -mpN</code>.",
       "seeAlso": [
@@ -67,20 +67,20 @@
       ]
     },
     {
-      "term": "Bond",
+      "term": "Vínculo",
       "aliases": [
-        "Network bond",
-        "Link aggregation"
+        "Lazos de red",
+        "Agregación de enlaces"
       ],
       "category": "Red",
       "definitionRich": "Combina múltiples interfaces de red físicas en una interfaz lógica — para redundancia (active-backup), throughput (LACP / 802.3ad) o ambas. Se configura en <code>/etc/network/interfaces</code>."
     },
     {
-      "term": "Bridge",
+      "term": "Puente",
       "aliases": [
         "vmbrX",
         "vmbr0",
-        "Linux bridge"
+        "Puente de Linux"
       ],
       "category": "Red",
       "definitionRich": "Un switch virtual de capa 2 en el host. <code>vmbr0</code> es el bridge por defecto de Proxmox que conecta VMs y contenedores a la red física. Múltiples bridges (<code>vmbr1</code>, <code>vmbr2</code>...) aíslan grupos de guests.",
@@ -105,8 +105,8 @@
     {
       "term": "CT",
       "aliases": [
-        "Container",
-        "LXC container"
+        "Contenedor",
+        "Contenedor LXC"
       ],
       "category": "Proxmox",
       "definitionRich": "Abreviatura de \"contenedor\" — terminología de Proxmox para una instancia LXC. Tiene un CTID numérico que mapea a <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>. Mira también <strong>LXC</strong>.",
@@ -131,7 +131,7 @@
     {
       "term": "dGPU",
       "aliases": [
-        "Discrete GPU"
+        "Discreta GPU"
       ],
       "category": "Virtualización",
       "definitionRich": "Una tarjeta gráfica independiente en su propio slot PCIe (p. ej. NVIDIA RTX, AMD Radeon). Contrasta con <strong>iGPU</strong>. Típicamente se usa para passthrough VFIO a una única VM, no para compartir entre LXCs.",
@@ -143,14 +143,14 @@
       ]
     },
     {
-      "term": "Dialog",
+      "term": "Diálogo",
       "category": "Linux",
       "definitionRich": "Herramienta basada en ncurses para dibujar menús, prompts y barras de progreso en un terminal. ProxMenux está construido alrededor de menús dialog."
     },
     {
       "term": "DKMS",
       "aliases": [
-        "Dynamic Kernel Module Support"
+        "Soporte de módulo de núcleo dinámico"
       ],
       "category": "Linux",
       "definitionRich": "Framework que reconstruye automáticamente los módulos del kernel fuera del árbol (NVIDIA, ZFS, drivers propios) cuando el kernel se actualiza. Evita que los módulos se queden atrás tras actualizaciones del kernel.",
@@ -200,7 +200,7 @@
     {
       "term": "iGPU",
       "aliases": [
-        "Integrated GPU"
+        "Integrado GPU"
       ],
       "category": "Virtualización",
       "definitionRich": "Procesador gráfico integrado en el paquete de CPU (Intel UHD / Iris, AMD Radeon Vega en APUs Ryzen). Típicamente compartido entre múltiples contenedores LXC vía <code>/dev/dri</code> en lugar de pasarse a una única VM.",
@@ -224,7 +224,7 @@
     {
       "term": "IOMMU",
       "aliases": [
-        "Input/Output Memory Management Unit",
+        "Dependencia de Gestión de la memoria de entrada y salida",
         "VT-d",
         "AMD-Vi"
       ],
@@ -242,7 +242,7 @@
       ]
     },
     {
-      "term": "IOMMU group",
+      "term": "Grupo IOMMU",
       "category": "Virtualización",
       "definitionRich": "La unidad más pequeña de dispositivos que el IOMMU puede aislar entre sí. Todos los dispositivos de un grupo deben pasarse juntos — normalmente un dispositivo, pero las tarjetas multi-función o los dispositivos que comparten root-port aterrizan en el mismo grupo. Se listan vía <code>find /sys/kernel/iommu_groups/ -type l | sort -V</code>."
     },
@@ -263,7 +263,7 @@
     {
       "term": "KVM",
       "aliases": [
-        "Kernel-based Virtual Machine"
+        "Máquina Virtual basada en kernel"
       ],
       "category": "Virtualización",
       "definitionRich": "Módulo del kernel de Linux que convierte el host en un hipervisor. Combinado con <strong>QEMU</strong> para emulación de dispositivos, es la base que Proxmox usa para ejecutar VMs."
@@ -308,9 +308,9 @@
       ]
     },
     {
-      "term": "MAC address",
+      "term": "Dirección del MAC",
       "aliases": [
-        "Hardware address"
+        "Dirección de hardware"
       ],
       "category": "Red",
       "definitionRich": "Identificador de 48 bits grabado en el firmware de una NIC. Usado por los <em>nombres de red persistentes</em> de Proxmox para fijar nombres de interfaz (<code>eno1</code>, <code>enp3s0</code>) para que sobrevivan a la reenumeración PCI.",
@@ -324,7 +324,7 @@
     {
       "term": "MOTD",
       "aliases": [
-        "Message of the Day"
+        "Mensaje del día"
       ],
       "category": "Linux",
       "definitionRich": "Texto mostrado tras el login SSH. Almacenado en <code>/etc/motd</code>. La post-instalación de ProxMenux puede añadir un banner aquí; el desinstalador restaura el backup si lo aplicaste."
@@ -332,7 +332,7 @@
     {
       "term": "NFS",
       "aliases": [
-        "Network File System"
+        "Sistema de archivos de red"
       ],
       "category": "Almacenamiento",
       "definitionRich": "Protocolo de compartición de archivos en red nativo de Unix. Se registra como almacenamiento de Proxmox vía <code>pvesm add nfs</code>; también usable como cliente / servidor LXC vía flujos dedicados de ProxMenux.",
@@ -366,7 +366,7 @@
       ]
     },
     {
-      "term": "no-subscription repo",
+      "term": "no subscripción repo",
       "category": "Proxmox",
       "definitionRich": "Repositorio gratuito de Proxmox para usuarios sin suscripción enterprise. QA menos pulido que el repo enterprise (ligeramente más arriesgado para producción) pero gratis. Se configura automáticamente por la post-instalación de ProxMenux.",
       "seeAlso": [
@@ -397,7 +397,7 @@
     {
       "term": "OVMF",
       "aliases": [
-        "UEFI firmware",
+        "Firmware UEFI",
         "Open Virtual Machine Firmware"
       ],
       "category": "Virtualización",
@@ -439,7 +439,7 @@
     {
       "term": "pveam",
       "aliases": [
-        "Proxmox VE Appliance Manager"
+        "Gestor de dispositivos virtuales de Proxmox VE"
       ],
       "category": "Proxmox",
       "definitionRich": "CLI para gestionar el catálogo local de plantillas de CT. <code>pveam update</code> refresca el índice; <code>pveam available</code> lista plantillas; <code>pveam download &lt;storage&gt; &lt;template&gt;</code> descarga una."
@@ -452,7 +452,7 @@
     {
       "term": "pvesm",
       "aliases": [
-        "Proxmox Storage Manager"
+        "Gestor de almacenamiento de Proxmox"
       ],
       "category": "Proxmox",
       "definitionRich": "Herramienta CLI para gestionar el almacenamiento de Proxmox. <code>pvesm status</code> muestra todos los almacenamientos configurados; <code>pvesm add &lt;type&gt;</code> registra nuevos (NFS, Samba, iSCSI, dir, ZFS, LVM, …).",
@@ -464,17 +464,17 @@
       ]
     },
     {
-      "term": "Privileged container",
+      "term": "Contenedor privilegiado",
       "category": "Linux",
       "definitionRich": "Contenedor LXC donde el usuario root dentro del contenedor <em>es</em> root en el host (UIDs no desplazados). Requerido para passthrough de hardware (dispositivos USB, compartición de GPU) y servidor Samba / NFS dentro del CT. Menos seguro que unprivileged — úsalo solo cuando sea necesario."
     },
     {
-      "term": "ProxMenux Monitor",
+      "term": "Monitor de ProxMenux",
       "category": "ProxMenux",
       "definitionRich": "Panel web opcional instalado junto a ProxMenux. Sirve estadísticas del host en tiempo real (CPU / RAM / disco / red), resumen de VMs y LXC, login + 2FA, en el puerto TCP <code>8008</code>.",
       "seeAlso": [
         {
-          "label": "ProxMenux Monitor",
+          "label": "Monitor de ProxMenux",
           "href": "/docs/settings/proxmenux-monitor"
         }
       ]
@@ -490,7 +490,7 @@
     {
       "term": "qm",
       "aliases": [
-        "QEMU Manager"
+        "Gestor de QEMU"
       ],
       "category": "Proxmox",
       "definitionRich": "Herramienta CLI para gestionar VMs en Proxmox: <code>qm list / start / stop / shutdown / config / set / destroy / importdisk / migrate</code>. Comando hermano de <code>pct</code> para contenedores.",
@@ -591,7 +591,7 @@
     {
       "term": "UID / GID idmap",
       "aliases": [
-        "UID shift"
+        "Cambio UID"
       ],
       "category": "Linux",
       "definitionRich": "En contenedores LXC <strong>unprivileged</strong>, los UIDs y GIDs se desplazan en <code>+100000</code> en el host. UID 0 del contenedor = UID 100000 del host, UID 1000 del contenedor = UID 101000 del host, etc. Afecta a la propiedad de archivos en bind mounts.",
@@ -603,14 +603,14 @@
       ]
     },
     {
-      "term": "Unprivileged container",
+      "term": "Contenedor sin privilegios",
       "category": "Linux",
       "definitionRich": "Contenedor LXC donde root dentro está mapeado a un UID sin privilegios en el host (desplazamiento de UID +100000). Más seguro que privileged pero no puede hacer passthrough de hardware ni ejecutar servicios a nivel de kernel. Por defecto para la mayoría de casos de uso."
     },
     {
       "term": "VFIO",
       "aliases": [
-        "Virtual Function I/O"
+        "Función Virtual I/O"
       ],
       "category": "Virtualización",
       "definitionRich": "Framework del kernel de Linux para drivers de dispositivo seguros en espacio de usuario — usado para asociar dispositivos PCIe a VMs para passthrough directo. Se habilita cargando los módulos del kernel <code>vfio</code>, <code>vfio_iommu_type1</code> y <code>vfio_pci</code>, configurados vía <code>/etc/modprobe.d/vfio.conf</code>.",
@@ -629,7 +629,7 @@
     {
       "term": "VLAN",
       "aliases": [
-        "Virtual LAN"
+        "Red de área local virtual"
       ],
       "category": "Red",
       "definitionRich": "Tags 802.1Q que segmentan una red física en múltiples redes lógicas. Se configura por bridge o por NIC en <code>/etc/network/interfaces</code>."
@@ -637,7 +637,7 @@
     {
       "term": "VM",
       "aliases": [
-        "Virtual Machine"
+        "Máquina virtual"
       ],
       "category": "Proxmox",
       "definitionRich": "Una emulación completa de máquina gestionada por Proxmox vía QEMU/KVM. Tiene un VMID numérico que mapea a <code>/etc/pve/qemu-server/&lt;VMID&gt;.conf</code>. Más pesada que los contenedores LXC pero totalmente aislada.",

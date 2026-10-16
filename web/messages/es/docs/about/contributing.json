@@ -25,11 +25,11 @@
         "purposeRich": "Código estable, listo para producción. Solo los merges de calidad de release aterrizan aquí. Esto es lo que reciben los usuarios finales cuando instalan ProxMenux normalmente."
       },
       {
-        "branch": "develop",
+        "branch": "desarrollo",
         "purposeRich": "Rama de desarrollo activo. Todo trabajo nuevo aterriza aquí primero; es el canal \"beta\". Los releases estables se cortan desde aquí hacia <code>main</code> cuando un release está listo."
       },
       {
-        "branch": "feature/*",
+        "branch": "característica*",
         "purposeRich": "Ramas de vida corta por función, arreglo o mejora. Creadas desde <code>develop</code>, mergeadas de vuelta a <code>develop</code> vía un Pull Request tras revisión."
       }
     ],
@@ -129,7 +129,7 @@
     "intro": "Todas definidas en <code>utils.sh</code>. Úsalas como el valor por defecto para cualquier salida visible para el usuario — visuales coherentes entre scripts es la idea. Si tu script necesita una función nueva que no encaja en el conjunto existente (un nuevo nivel de severidad, un nuevo helper de layout, etc.), propónla en tu Pull Request — se revisará y se añadirá a <code>utils.sh</code> si es útil de forma amplia.",
     "headerFunction": "Función",
     "headerWhen": "Cuándo usar",
-    "headerSpinner": "Spinner",
+    "headerSpinner": "Indicador de progreso",
     "rows": [
       {
         "function": "msg_info \"text\"",
@@ -265,25 +265,25 @@
     "heading": "Por dónde seguir",
     "items": [
       {
-        "kind": "external",
+        "kind": "externo",
         "url": "https://github.com/MacRimi/ProxMenux/blob/main/CONTRIBUTING.md",
         "label": "CONTRIBUTING.md (guía completa)",
         "tail": " — la fuente de verdad para cada convención, incluyendo los patrones avanzados de hardware."
       },
       {
-        "kind": "internal",
+        "kind": "interna",
         "href": "/docs/about/contributors",
         "label": "Colaboradores",
         "tail": " — las personas cuyo trabajo ha dado forma a los releases de ProxMenux. (Página distinta a esta.)"
       },
       {
-        "kind": "internal",
+        "kind": "interna",
         "href": "/docs/about/code-of-conduct",
         "label": "Código de conducta",
         "tail": " — los estándares que todo colaborador se compromete a seguir."
       },
       {
-        "kind": "external",
+        "kind": "externo",
         "url": "https://github.com/MacRimi/ProxMenux/discussions",
         "label": "GitHub Discussions",
         "tail": " — pregunta antes de construir si no estás seguro de si una idea encaja, o para encontrar colaboradores en una función más grande."

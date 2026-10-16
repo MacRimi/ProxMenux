@@ -6,7 +6,7 @@
     "ogDescription": "Guía de Optional Settings en el script post-instalación de ProxMenux para funcionalidades y optimizaciones adicionales de Proxmox VE.",
     "ogImageAlt": "ProxMenux Post-instalación Optional Settings"
   },
-  "title": "Optional Settings",
+  "title": "Ajustes opcionales",
   "intro": "La categoría <strong>Optional Settings</strong> ofrece funcionalidades y optimizaciones adicionales que puedes elegir aplicar a tu instalación de Proxmox VE. Estos ajustes no son esenciales pero pueden mejorar las capacidades de tu sistema en escenarios específicos.",
   "available": "Funcionalidades opcionales disponibles",
   "stepLabel": "Paso",
@@ -151,7 +151,7 @@
     "howUseLabel": "Cómo se usa:",
     "howUseBody": "En el flujo Automatizado Log2RAM se aplica sin intervención cuando se detecta un disco raíz SSD/NVMe. En el flujo Personalizable el script pregunta por el tamaño, el intervalo de sincronización y si activar el guardián de auto-sync al 90%.",
     "verifyLabel": "Verificar y gestionar desde la shell:",
-    "verifyCode": "# Estado del servicio y timers configurados\nsystemctl status log2ram\nsystemctl list-timers log2ram*\n\n# Uso actual de la ramdisk — /var/log ES la tmpfs\ndf -h /var/log\n\n# Forzar sincronización ahora (tmpfs → disco); NO reduce la tmpfs\nlog2ram write\n\n# Disparar el guardián de auto-sync manualmente (compacta + sincroniza si el uso es alto)\n/usr/local/bin/log2ram-check.sh\n\n# Configuración actual: SIZE, mail, path\ncat /etc/log2ram.conf\n\n# Crons específicos de ProxMenux\ncat /etc/cron.d/log2ram /etc/cron.d/log2ram-auto-sync\n\n# Actividad reciente de Log2RAM\njournalctl -u log2ram -n 50 --no-pager"
+    "verifyCode": "# Service state and configured timers\nsystemctl status log2ram\nsystemctl list-timers log2ram*\n\n# Current ramdisk usage — /var/log IS the tmpfs itself\ndf -h /var/log\n\n# Force a sync now (tmpfs → disk); does NOT shrink the tmpfs\nlog2ram write\n\n# Trigger the auto-sync guard on demand (vacuum + sync when usage is high)\n/usr/local/bin/log2ram-check.sh\n\n# Current config: SIZE, mail settings, path\ncat /etc/log2ram.conf\n\n# ProxMenux-specific cron jobs\ncat /etc/cron.d/log2ram /etc/cron.d/log2ram-auto-sync\n\n# Recent Log2RAM activity\njournalctl -u log2ram -n 50 --no-pager"
   },
   "zram": {
     "title": "Activar el perfil de swap con ZRAM",
@@ -168,7 +168,7 @@
     "howUseLabel": "Cómo se usa:",
     "howUseBody": "La opción solo forma parte del flujo Personalizable; el flujo Automatizado no la aplica. El dispositivo se crea de nuevo en cada arranque. Mientras está activo, la tarjeta de Memoria del ProxMenux Monitor muestra su capacidad, el swap usado, el algoritmo, la relación de compresión y la memoria física que ocupa.",
     "verifyLabel": "Verificar desde la shell:",
-    "verifyCode": "# Dispositivos de swap activos y su prioridad\nswapon --show\n\n# Dispositivo ZRAM: algoritmo, tamaño y datos comprimidos\nzramctl\n\n# Perfil escrito por ProxMenux\ncat /etc/systemd/zram-generator.conf.d/90-proxmenux.conf\n\n# Estado de la unidad de swap\nsystemctl status dev-zram0.swap"
+    "verifyCode": "# Active swap devices and their priority\nswapon --show\n\n# ZRAM device: algorithm, size and compressed data\nzramctl\n\n# Profile written by ProxMenux\ncat /etc/systemd/zram-generator.conf.d/90-proxmenux.conf\n\n# State of the swap unit\nsystemctl status dev-zram0.swap"
   },
   "autoApplication": {
     "title": "Aplicación automática",

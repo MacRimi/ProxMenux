@@ -1,14 +1,14 @@
 {
   "meta": {
-    "title": "ProxMenux Monitor | ProxMenux Documentation",
+    "title": "ProxMenux Monitor | Documentación de ProxMenux",
     "description": "Activa o desactiva la unidad systemd proxmenux-monitor.service e inspecciona su estado actual. El Monitor expone una UI web en TCP 8008 para monitorización visual del host.",
-    "ogTitle": "ProxMenux Monitor | ProxMenux Documentation",
+    "ogTitle": "ProxMenux Monitor | Documentación de ProxMenux",
     "ogDescription": "Conmuta el servicio systemd proxmenux-monitor y comprueba su estado desde el menú Settings."
   },
   "header": {
-    "title": "ProxMenux Monitor",
+    "title": "Monitor de ProxMenux",
     "description": "Dos acciones relacionadas dentro del menú Settings: conmutar la unidad systemd proxmenux-monitor.service (start / stop y enable / disable en un clic) y ver su estado detallado actual. El Monitor expone una UI web en TCP 8008 para monitorización visual del host.",
-    "section": "Settings"
+    "section": "Ajustes"
   },
   "intro": {
     "title": "¿Qué es ProxMenux Monitor?",
@@ -43,12 +43,12 @@
     "headerAction": "Acción al confirmar",
     "rows": [
       {
-        "state": "active",
+        "state": "activo",
         "label": "Desactivar ProxMenux Monitor",
         "action": "systemctl stop + disable"
       },
       {
-        "state": "inactive",
+        "state": "inactivo",
         "label": "Activar ProxMenux Monitor",
         "action": "systemctl enable + start"
       }
@@ -96,7 +96,7 @@
     "missingBody": "El Monitor no está registrado en systemd. Confirma con <code>systemctl list-unit-files | grep proxmenux-monitor</code> — si no hay salida, reinstala ProxMenux desde el instalador oficial con la última versión y elige la opción de Monitor durante la instalación.",
     "unreachableTitle": "Servicio activado pero la URL es inalcanzable",
     "unreachableBody": "La salida del estado en Settings te da la IP. Confirma:",
-    "unreachableCmd": "ss -tlnp | grep 8008                # is anything listening?\njournalctl -u proxmenux-monitor -n 100 --no-pager  # recent errors\ncurl -sI http://localhost:8008      # local reachability",
+    "unreachableCmd": "ss -tlnp tención Griep 8008 # es algo escuchando?\njournalctl -u proxmenux-monitor -n 100 --no-pager # errores recientes\ncurl -sI http://localhost:8008 # local reachability",
     "unreachableOutro": "Si localhost funciona pero el externo no, comprueba el firewall del host (<code>pve-firewall</code> o nftables) para TCP 8008 entrante.",
     "stopsTitle": "Activé el servicio pero se para solo unos segundos después",
     "stopsBody": "Lo más habitual es un conflicto de puerto (algo más en 8008) o una comprobación de dependencias fallando. El journal lo dirá: <code>journalctl -u proxmenux-monitor.service -b</code>."

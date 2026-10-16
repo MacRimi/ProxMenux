@@ -1,13 +1,13 @@
 {
   "meta": {
-    "title": "UUP Dump ISO Creator | ProxMenux Documentation",
+    "title": "UUP Dump ISO Creator ← ProxMenux Documentación",
     "description": "Crea una ISO de instalación de Windows actualizada en tu host Proxmox usando el UUP Dump ISO Creator de ProxMenux. Automatiza la instalación de dependencias, descarga y conversión de archivos UUP en una ISO arrancable lista para crear una VM.",
-    "ogTitle": "UUP Dump ISO Creator | ProxMenux Documentation",
+    "ogTitle": "UUP Dump ISO Creator ← ProxMenux Documentación",
     "ogDescription": "Crea una ISO de Windows actualizada desde UUP Dump usando ProxMenux. Dependencias, descarga y conversión totalmente automatizadas.",
     "ogImageAlt": "UUP Dump ISO Creator de ProxMenux"
   },
   "header": {
-    "title": "UUP Dump ISO Creator",
+    "title": "Creador de ISO UUP Dump",
     "description": "Crea una ISO de instalación de Windows actualizada en tu host Proxmox usando UUP Dump. ProxMenux se encarga de las dependencias, descarga los archivos UUP en paralelo, ejecuta el conversor oficial y deja la ISO final en el almacenamiento de ISOs de Proxmox — lista para asociar a una nueva VM Windows.",
     "section": "Utilidades"
   },

@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "FAQ | ProxMenux Documentation",
+    "title": "Preguntas Frecuentes ProxMenux Documentación",
     "description": "Preguntas frecuentes sobre ProxMenux: qué es, instalación, compatibilidad (solo PVE 8+), personalización, actualizaciones, seguridad, uso en producción, seguridad de archivos del sistema, contribuir, desinstalación.",
-    "ogTitle": "FAQ | ProxMenux Documentation",
+    "ogTitle": "Preguntas Frecuentes ProxMenux Documentación",
     "ogDescription": "Preguntas frecuentes sobre instalación, compatibilidad, seguridad y contribución a ProxMenux."
   },
   "header": {
@@ -18,8 +18,8 @@
     "introductionSuffix": " — qué hace ProxMenux, en 5 minutos.",
     "uninstallLabel": "Desinstalación",
     "uninstallSuffix": " — eliminación limpia.",
-    "issuesLabel": "GitHub Issues",
-    "discussionsLabel": "Discussions"
+    "issuesLabel": "Cuestiones de GitHub",
+    "discussionsLabel": "Discusiones"
   },
   "q1": {
     "question": "¿Qué es ProxMenux y para qué sirve?",
@@ -37,7 +37,7 @@
     "p1Rich": "Sigue la <installlink>guía de instalación</installlink>. En corto:",
     "stableInstall": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)\"",
     "p2": "Una vez instalado, simplemente arráncalo con:",
-    "menuCmd": "menu"
+    "menuCmd": "menú"
   },
   "q3": {
     "question": "¿ProxMenux es compatible con todas las versiones de Proxmox?",

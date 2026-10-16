@@ -6,7 +6,7 @@
   "header": {
     "title": "Post-instalación: Monitorización",
     "description": "Opciones de monitorización dentro del script post-instalación Customizable. Esta categoría es pequeña y específica del proveedor — instala el agente OVH Real-Time Monitoring en servidores dedicados de OVH y no hace nada en cualquier otro sitio.",
-    "section": "Settings post-install Proxmox"
+    "section": "Configuración post instalación de Proxmox"
   },
   "intro": {
     "title": "Alcance estrecho a propósito",
@@ -37,7 +37,7 @@
     "heading": "Relacionado",
     "items": [
       {
-        "label": "ProxMenux Monitor",
+        "label": "Monitor de ProxMenux",
         "href": "/docs/settings/proxmenux-monitor",
         "tail": " — panel web local para el host (funciona en cualquier proveedor, no solo OVH)."
       },
@@ -47,7 +47,7 @@
         "tail": " — referencia de monitorización del host local."
       },
       {
-        "label": "Customizable Post-Install",
+        "label": "Puesto de plantilla personalizable",
         "href": "/docs/post-install/customizable",
         "tail": " — volver al menú padre."
       }

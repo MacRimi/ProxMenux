@@ -10,7 +10,7 @@
   "header": {
     "title": "Scripts post-instalación",
     "description": "Configura un host de Proxmox VE recién instalado con las optimizaciones post-instalación de ProxMenux. Aplica la configuración base automáticamente, elige opciones individuales, actualiza funciones instaladas o restaura cambios reversibles compatibles. Las actualizaciones de paquetes no se presentan como reversibles.",
-    "section": "Settings post-install Proxmox"
+    "section": "Configuración post instalación de Proxmox"
   },
   "intro": {
     "title": "Para qué sirve este menú",
@@ -47,7 +47,7 @@
       ]
     },
     {
-      "title": "Apply Available Updates",
+      "title": "Aplicar actualizaciones disponibles",
       "description": "Cuando una optimización post-instalación (Log2Ram, Memory Settings, Logrotate…) tiene en disco una versión más nueva que la registrada en el host, esta entrada muestra solo las que se han movido. Re-ejecuta la función correspondiente y refresca el registro — no toca nada más.",
       "bullets": [
         "Opt-in por optimización (solo lo que ha cambiado)",
@@ -56,7 +56,7 @@
       ]
     },
     {
-      "title": "Uninstall Optimizations",
+      "title": "Optimizaciones de desinstalación",
       "description": "Los cambios reversibles compatibles quedan registrados en un JSON y asociados a una función de restauración. Las acciones sin reversión segura, como una actualización completa de paquetes, se excluyen deliberadamente.",
       "bullets": [
         "Detecta automáticamente las optimizaciones aplicadas previamente",
@@ -75,14 +75,14 @@
     "xshokBody": "Versiones anteriores de ProxMenux referenciaban <a>xshok-proxmox</a> como herramienta post-instalación complementaria. Ese proyecto ahora está deprecado y ya no se ofrece desde ProxMenux. Si una ejecución anterior de xshok-proxmox dejó marcadores en el host, ProxMenux todavía los detecta y te avisa — pero no es algo que debas instalar junto a ProxMenux hoy."
   },
   "community": {
-    "heading": "Community scripts",
+    "heading": "scripts comunitarios",
     "body": "El menú también expone dos scripts de terceros del proyecto <a>community-scripts</a>: <em>Proxmox VE Post Install</em> y <em>Proxmox VE Microcode</em>. Son wrappers que hacen <code>wget | bash</code> de los scripts de los autores originales. No los mantiene ProxMenux. Mira <link>External Repositories</link> para detalles y consideraciones de confianza antes de ejecutarlos."
   },
   "related": {
     "heading": "Relacionado",
     "items": [
       {
-        "label": "Proxmox System Update",
+        "label": "Actualización del sistema Proxmox",
         "href": "/docs/utils/system-update",
         "tail": " — mantiene el host actualizado una vez ya se ha hecho la post-instalación."
       },

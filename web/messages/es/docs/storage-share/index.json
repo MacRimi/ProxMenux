@@ -8,7 +8,7 @@
     "twitterDescription": "Añade NFS / Samba / iSCSI como almacenamiento de Proxmox y comparte carpetas entre el host y LXC."
   },
   "header": {
-    "title": "Storage & Share Manager",
+    "title": "Gestor de almacenamiento y recursos compartidos",
     "description": "Integra almacenamiento externo o local en Proxmox VE y comparte carpetas entre el host y los contenedores LXC. Tres bloques de herramientas: integración de almacenamiento en el host (registra almacenamiento en el propio Proxmox), el LXC Mount Manager (bind mounts con un manejo pragmático de permisos) y compartición por red en LXC (flujos de cliente y servidor NFS / Samba para casos de uso concretos).",
     "section": "Almacenamiento y compartición"
   },
@@ -31,7 +31,7 @@
       "Disco local → almacenamiento Proxmox directory o ZFS",
       "Directorio local compartido (para bind mounts entre CTs)"
     ],
-    "lxcMountTitle": "LXC Mount Manager",
+    "lxcMountTitle": "Gestor de montajes LXC",
     "lxcMountBody": "La herramienta principal de compartición LXC. Hace bind mount de directorios del host dentro de los contenedores vía <code>pct set -mpN</code> y gestiona las particularidades de permisos de los CTs unprivileged sin crear ningún grupo o usuario dentro del contenedor.",
     "lxcMountItems": [
       "Funciona con CTs privileged y unprivileged",
@@ -82,7 +82,7 @@
     ]
   },
   "lxcMount": {
-    "heading": "LXC Mount Manager",
+    "heading": "Gestor de montajes LXC",
     "intro": "La herramienta principal para compartir carpetas entre el host Proxmox y los contenedores LXC. Usa <code>pct set -mpN</code> para hacer bind mount de un directorio del host dentro del contenedor, y gestiona las particularidades de permisos de los CTs unprivileged en el lado del host (no se crea ningún grupo ni usuario dentro del contenedor).",
     "card": {
       "title": "Puntos de montaje LXC (host ↔ CT)",

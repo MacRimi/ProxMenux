@@ -24,7 +24,7 @@
       "body": "La CLI/TUI original que se lanza con <code>menu</code>. Nueve áreas funcionales que cubren optimizaciones post-instalación, creación de VMs y LXC, passthrough de GPU y Coral TPU, discos, almacenamiento, red, seguridad, utilidades, además de una referencia curada de comandos. Funciona en cualquier terminal — local, SSH o web."
     },
     "monitor": {
-      "title": "ProxMenux Monitor",
+      "title": "Monitor de ProxMenux",
       "body": "Panel web autoalojado (AppImage). Métricas del host en tiempo real, un monitor de salud proactivo, notificaciones, un gancho opcional de reescritura con IA (seis proveedores), un terminal web integrado y una API REST. Actívalo desde el menú de Scripts (Settings → ProxMenux Monitor)."
     },
     "calloutTitle": "Sobre qué actúa ProxMenux",
@@ -58,7 +58,7 @@
         "href": "/docs/create-vm"
       },
       {
-        "title": "Disk Manager",
+        "title": "Administrador de discos",
         "description": "Importar discos físicos a VMs y LXC, formatear y borrar, tests SMART, importación de imágenes qcow2 / vmdk / vdi — todo desde un menú.",
         "icon": "HardDrive",
         "href": "/docs/disk-manager"
@@ -140,7 +140,7 @@
   "installPaths": {
     "heading": "Rutas de instalación",
     "intro": "El instalador despliega Scripts y Monitor en un solo paso. Scripts tiene dos variantes — con traducción o ligera — y el Monitor se instala como AppImage independiente que se activa después desde el menú:",
-    "headerPath": "Ruta de instalación",
+    "headerPath": "Install path",
     "headerBundles": "Qué incluye",
     "headerWhen": "Cuándo elegirla",
     "rows": [
@@ -186,7 +186,7 @@
       {
         "lead": "<strong>¿Quieres un panel web?</strong> ",
         "linkHref": "/docs/monitor",
-        "linkLabel": "ProxMenux Monitor",
+        "linkLabel": "Monitor de ProxMenux",
         "tail": " cubre lo que muestra, cómo está construido y cómo asegurarlo."
       },
       {

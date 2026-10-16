@@ -51,7 +51,7 @@
       }
     ],
     "bothTitle": "\"Ambos\" crea dos conexiones CIFS independientes",
-    "bothBody": "pvesm y fstab montan el mismo share dos veces con opciones distintas. El montaje pvesm en <code>/mnt/pve/&lt;id&gt;</code> usa los valores por defecto de Proxmox (sin uid/gid abiertos) — la UI de Proxmox está contenta. El montaje fstab en <code>/mnt/&lt;path&gt;</code> usa <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> — los bind mounts LXC unprivileged a él pueden escribir. Dos conexiones TCP al servidor SMB desde el mismo host Proxmox."
+    "bothBody": "pvesm and fstab mount the same share twice with different options. The pvesm mount at <code>/mnt/pve/&lt;id&gt;</code> uses Proxmox defaults (no open uid/gid) — Proxmox UI is happy. The fstab mount at <code>/mnt/&lt;path&gt;</code> uses <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> — unprivileged LXC bind-mounts to it can write. Two TCP connections to the SMB server from the same Proxmox host."
   },
   "pvesmBranch": {
     "heading": "Método A — Como almacenamiento de Proxmox (pvesm)",
@@ -60,7 +60,7 @@
       "<strong>Storage ID</strong> — por defecto <code>cifs-&lt;server-ip-with-dashes&gt;</code>. Solo letras, dígitos, <code>-</code> y <code>_</code>.",
       "<strong>Content types</strong> — CIFS expone <strong>6</strong> opciones (las mismas que NFS menos <code>rootdir</code>, que Proxmox no permite en CIFS porque la semántica de locking no puede sostener un rootfs LXC en vivo):"
     ],
-    "headerType": "Content type",
+    "headerType": "Tipo de contenido",
     "headerAllows": "Qué permite",
     "rows": [
       {
@@ -136,9 +136,9 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "noServersTitle": "\"No Samba servers found on the network\"",
+    "noServersTitle": "\"No hay servidores Samba encontrados en la red\"",
     "noServersBody": "El auto-descubrimiento usa <code>nmap -p 139,445</code>. El servidor puede estar en una subnet diferente, con firewall o solo alcanzable por hostname (mDNS / WINS). Usa la opción <em>Manual</em> con la IP o hostname en su lugar.",
-    "noSharesTitle": "\"No accessible shares found\"",
+    "noSharesTitle": "\"No hay acciones accesibles encontradas\"",
     "noSharesBody": "<code>smbclient -L</code> no devolvió nada para estas credenciales. Causas: el usuario no tiene permiso para listar shares (prueba con credenciales de admin una vez, o escribe el nombre del share manualmente), el servidor tiene la visibilidad de shares deshabilitada o las credenciales son incorrectas. El script te permite escribir el nombre del share a mano en este caso.",
     "denyTitle": "El montaje de Proxmox falla con NT_STATUS_ACCESS_DENIED",
     "denyBody": "Las credenciales que pvesm guardó están desincronizadas con el servidor Samba (contraseña cambiada, cuenta deshabilitada, mismatch de domain / workgroup). Vuelve a introducir credenciales con <code>pvesm set &lt;id&gt; --username &lt;u&gt; --password &lt;p&gt;</code> o elimina y vuelve a añadir desde ProxMenux. Si el servidor está en un dominio AD, añade <code>--domain &lt;DOMAIN&gt;</code> a la llamada <code>pvesm set</code>.",
@@ -159,7 +159,7 @@
       },
       {
         "href": "/docs/storage-share/lxc-mount-points",
-        "label": "LXC Mount Manager",
+        "label": "Gestor de montajes LXC",
         "tailRich": " — hacer bind mount de la ruta solo en fstab <code>/mnt/&lt;path&gt;</code> en uno o más contenedores."
       },
       {

@@ -8,9 +8,9 @@
     "twitterDescription": "Panel autoalojado de Proxmox VE con Health Monitor, notificaciones, asistente IA y API REST."
   },
   "header": {
-    "title": "ProxMenux Monitor",
+    "title": "Monitor de ProxMenux",
     "description": "Un panel web autoalojado para Proxmox VE distribuido como AppImage. Se ejecuta en el host como un único servicio systemd, escucha en el puerto TCP 8008 y sirve tanto la API como la interfaz desde un único proceso.",
-    "section": "ProxMenux Monitor"
+    "section": "Monitor de ProxMenux"
   },
   "atGlance": {
     "title": "De un vistazo",
@@ -27,7 +27,7 @@
     "tableWhat": "Qué muestra",
     "sections": [
       {
-        "name": "Health Monitor",
+        "name": "Monitor de salud",
         "description": "Alertas activas y descartadas para CPU, memoria, almacenamiento, discos, red, servicios, logs, VMs, actualizaciones y seguridad. Alimenta el motor de notificaciones."
       },
       {
@@ -127,23 +127,23 @@
     "heading": "A dónde ir ahora",
     "items": [
       {
-        "label": "Architecture",
+        "label": "Arquitectura",
         "description": "— backend Flask, unidad systemd, esquema SQLite, proveedores IA, canales de notificación."
       },
       {
-        "label": "Access & Authentication",
+        "label": "Acceso y autenticación",
         "description": "— primer arranque, configuración de contraseña, TOTP 2FA, configuración de proxy inverso, integración con Fail2Ban."
       },
       {
-        "label": "Dashboard",
+        "label": "Panel",
         "description": "— cada sección de la interfaz, una página por cada una."
       },
       {
-        "label": "API Reference",
+        "label": "Referencia API",
         "description": "— cada endpoint, forma de petición / respuesta y gestión de tokens."
       },
       {
-        "label": "Integrations",
+        "label": "Integraciones",
         "description": "— Homepage, Home Assistant, Grafana / Prometheus, Uptime Kuma, patrón genérico de cURL."
       }
     ]

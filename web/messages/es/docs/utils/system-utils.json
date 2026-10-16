@@ -161,7 +161,7 @@
       },
       {
         "package": "plocate",
-        "verify": "locate",
+        "verify": "Localizar",
         "description": "Localizar archivos rápidamente"
       },
       {
@@ -223,7 +223,7 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "reposTitle": "\"Failed to configure repositories. Installation aborted.\"",
+    "reposTitle": "\"Failed to configure repositories. Instalación abortada.\"",
     "reposBody": "La comprobación de repositorios no se superó: se rechazó el cambio al repositorio sin suscripción, no se pudo leer el estado de la suscripción o una entrada de repositorio requiere atención. El mensaje impreso justo encima indica la causa. Los repositorios se listan en <em>Nodo → Actualizaciones → Repositorios</em>, y <code>apt-get update</code> desde una consola muestra el error que reporta apt.",
     "warningsTitle": "Un paquete se reporta como \"With warnings\" pero el comando funciona tras cerrar el menú",
     "warningsBody": "Esperado. Tras <code>apt-get install</code>, el nuevo binario está en disco pero la caché de PATH del shell actual (<code>hash -t</code>) aún no lo sabe. ProxMenux ejecuta <code>hash -r</code> tras cada instalación, pero en algunos shells el refresco solo surte efecto en el siguiente prompt. Abre un nuevo shell y el comando funcionará.",
@@ -232,7 +232,7 @@
   },
   "files": {
     "heading": "Archivos implicados",
-    "code": "scripts/utilities/system_utils.sh                    # este script\nscripts/global/utils-install-functions.sh            # PROXMENUX_UTILS, install_single_package\nscripts/global/repository-functions.sh               # ensure_repositories\nscripts/global/repository_policy.py                  # lee y cambia los repositorios a través de la API de Proxmox\n/etc/apt/sources.list.d/proxmox.sources              # fuente sin suscripción, escrita por Proxmox al aceptar el cambio"
+    "code": "scripts/utilities/system_utils.sh                    # this script\nscripts/global/utils-install-functions.sh            # PROXMENUX_UTILS, install_single_package\nscripts/global/repository-functions.sh               # ensure_repositories\nscripts/global/repository_policy.py                  # reads and switches repositories through the Proxmox API\n/etc/apt/sources.list.d/proxmox.sources              # no-subscription source, written by Proxmox when the switch is accepted"
   },
   "related": {
     "heading": "Relacionado",

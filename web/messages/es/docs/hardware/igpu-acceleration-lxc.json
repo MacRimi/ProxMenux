@@ -104,7 +104,7 @@
     "installDrivers": {
       "title": "Arranca el contenedor e instala los drivers dentro",
       "body": "Una vez escrita la config, el script arranca el contenedor, espera hasta ~30 segundos a que <code>pct exec</code> responda y luego detecta la distro del contenedor desde <code>/etc/os-release</code>. En base a eso, instala los paquetes userspace correctos.",
-      "headerDistro": "Distro",
+      "headerDistro": "Distribución",
       "headerInt": "Intel / AMD",
       "headerNvidia": "NVIDIA",
       "rows": [
@@ -171,7 +171,7 @@
         "tail": " — modelo alternativo cuando necesitas la GPU dedicada a una sola VM."
       },
       {
-        "label": "Switch GPU Mode (VM ↔ LXC)",
+        "label": "Cambiar modo GPU (VM ↔ LXC)",
         "href": "/docs/hardware/switch-gpu-mode",
         "tail": " — alterna la misma GPU entre compartición LXC y passthrough a VM."
       },

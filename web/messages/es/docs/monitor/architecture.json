@@ -10,7 +10,7 @@
   "header": {
     "title": "Arquitectura",
     "description": "Cómo se empaqueta ProxMenux Monitor, qué corre dentro del AppImage y cómo fluyen las peticiones desde el navegador a través del backend Flask hasta las herramientas del host y el almacén SQLite.",
-    "section": "ProxMenux Monitor"
+    "section": "Monitor de ProxMenux"
   },
   "intro": {
     "title": "Un proceso, muchas responsabilidades",
@@ -188,7 +188,7 @@
         "usedFor": "Topología PCIe, modelo y topología de CPU, información de placa y BIOS."
       },
       {
-        "source": "ipmitool · sensors",
+        "source": "ipmitool · sensores",
         "usedFor": "Sensores fuera de banda, velocidades de ventilador, temperaturas de placa (cuando son compatibles)."
       },
       {
@@ -202,7 +202,7 @@
   "persistence": {
     "heading": "Persistencia",
     "intro": "Dos ubicaciones del sistema de archivos separan el estado por sensibilidad:",
-    "headerPath": "Ruta",
+    "headerPath": "Path",
     "headerOwner": "Propietario",
     "headerContents": "Contenido",
     "rows": [
@@ -284,17 +284,17 @@
     "heading": "Por dónde seguir",
     "items": [
       {
-        "label": "Access & Authentication",
+        "label": "Acceso y autenticación",
         "href": "/docs/monitor/access-auth",
         "tail": " — configuración de primer arranque, contraseña + TOTP 2FA, snippets de reverse proxy, jail Fail2Ban."
       },
       {
-        "label": "API Reference",
+        "label": "Referencia API",
         "href": "/docs/monitor/api",
         "tail": " — cada endpoint, gestión de tokens, mejores prácticas de seguridad."
       },
       {
-        "label": "Settings → ProxMenux Monitor",
+        "label": "Ajustes → ProxMenux Monitor",
         "href": "/docs/settings/proxmenux-monitor",
         "tail": " — el toggle del servicio dentro del menú y el flujo de verificación del estado dentro de la TUI de ProxMenux."
       }

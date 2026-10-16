@@ -8,7 +8,7 @@
   "header": {
     "title": "Desinstalar ProxMenux",
     "description": "Elimina ProxMenux del host Proxmox con un flujo interactivo: confirmación, eliminación opcional de dependencias, limpieza del servicio ProxMenux Monitor, restauración de los backups de /root/.bashrc y /etc/motd. Muestra una barra de progreso todo el tiempo.",
-    "section": "Settings"
+    "section": "Ajustes"
   },
   "scopeWarn": {
     "title": "Afecta solo a la instalación de ProxMenux — no a tus VMs / CTs / almacenamiento",
@@ -69,7 +69,7 @@
     "heading": "Solución de problemas",
     "hangTitle": "La desinstalación se queda colgada en \"Removing googletrans and virtual environment\"",
     "hangBody": "<code>pip uninstall</code> puede atascarse si pip no responde. Desde otro shell: <code>rm -rf /opt/googletrans-env</code> directamente (el script hace lo mismo como fallback tras pip).",
-    "aptTitle": "apt avisa de paquetes aún en uso durante la eliminación de dependencias",
+    "aptTitle": "apt warns about packages still in use during dependency removal",
     "aptBody": "Esperado si marcaste <code>python3</code> o <code>jq</code> mientras otras cosas en el host dependen de ellos. El <code>autoremove</code> de apt se negará a eliminarlos en ese caso (que es el comportamiento seguro). Desmarca esa dependencia y vuelve a ejecutar.",
     "motdTitle": "El MOTD sigue mostrando la línea de ProxMenux tras desinstalar",
     "motdBody": "O no existía <code>/etc/motd.bak</code> y la limpieza con sed no coincidió (p. ej. la línea fue modificada). Edita <code>/etc/motd</code> a mano y elimina cualquier línea sobrante de ProxMenux."

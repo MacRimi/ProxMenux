@@ -10,7 +10,7 @@
   "header": {
     "title": "Trabajos programados",
     "description": "Trabajos de copia de host desatendidos. Dos modelos de creación: un trabajo nuevo e independiente con su propio horario, o un trabajo adjuntado a una tarea vzdump de PVE existente que hereda el horario y la retención de esa tarea. Ambos producen archivos idénticos al flujo interactivo.",
-    "section": "Backup & Restore"
+    "section": "Copias de seguridad y restauración"
   },
   "intro": {
     "title": "Los dos modelos de trabajo programado",
@@ -85,7 +85,7 @@
         "content": "Sólo modo Nuevo. El service invoca <code>run_scheduled_backup.sh JOB_ID</code>. El timer lo programa con <code>Persistent=true</code> (los disparos perdidos se ejecutan al siguiente arranque) y un pequeño <code>RandomizedDelaySec=120</code> para repartir carga cuando varios trabajos comparten la misma expresión OnCalendar."
       },
       {
-        "path": "script-hook de /etc/vzdump.conf",
+        "path": "/etc/vzdump.conf script-hook",
         "content": "Sólo modo adjunto. Lo instala una vez <code>hb_install_vzdump_hook</code>; casa el <code>PVE_STORAGE</code> de cada trabajo adjuntado contra el <code>$STOREID</code> que PVE pasa al script-hook."
       }
     ]
@@ -104,23 +104,23 @@
     "intro": "El menú del scheduler (TUI de Scripts) y la pestaña Backups del Monitor exponen las mismas acciones sobre cualquier trabajo.",
     "rows": [
       {
-        "action": "Run now",
+        "action": "Corre ahora",
         "detail": "Invoca el runner de inmediato, saltándose el timer / hook de vzdump. Útil para verificar una configuración de trabajo sin esperar al siguiente disparo programado."
       },
       {
-        "action": "Enable / Disable",
+        "action": "Activar / Desactivar",
         "detail": "Modo Nuevo: <code>systemctl enable/disable --now</code> sobre el timer. Modo adjunto: cambia el flag <code>ENABLED</code> en el env del trabajo — el script-hook lo respeta en el siguiente disparo de PVE."
       },
       {
-        "action": "Edit",
+        "action": "Editar",
         "detail": "Reabre los prompts de destino, horario, perfil y retención y reescribe los ficheros del trabajo. Preserva el ID del trabajo."
       },
       {
-        "action": "Delete",
+        "action": "Eliminar",
         "detail": "Elimina el env del trabajo, el fichero de rutas, el timer + service systemd (modo Nuevo) y desactiva el binding del hook (modo adjunto). No toca los archivos ya presentes en el destino."
       },
       {
-        "action": "View log",
+        "action": "Ver log",
         "detail": "Muestra en streaming <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — un fichero de log por ejecución. El runner también emite una línea de estado compacta a journald bajo el service systemd."
       }
     ]

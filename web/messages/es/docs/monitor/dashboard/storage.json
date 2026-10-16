@@ -28,13 +28,13 @@
     "imageCaption": "Fila superior de la pestaña Almacenamiento — capacidad total y recuento de discos, bytes usados separados en almacenamientos locales vs remotos y un desglose por tipo de discos físicos con su resumen de salud.",
     "headerCard": "Tarjeta",
     "headerWhat": "Qué muestra",
-    "totalLabel": "Total Storage",
+    "totalLabel": "Almacenamiento total",
     "totalWhat": "Capacidad bruta combinada de todos los discos físicos. La línea al pie muestra el recuento de discos físicos descubiertos.",
-    "localLabel": "Local Used",
+    "localLabel": "Local usado",
     "localWhat": "Bytes usados en almacenamientos locales (LVM / LVM-thin / ZFS / dir en los discos del propio host). Muestra los bytes usados de forma prominente, con una línea al pie <em>X.XX % de Y TB</em> para que veas el porcentaje de llenado al mismo tiempo.",
-    "remoteLabel": "Remote Used",
+    "remoteLabel": "Remoto usado",
     "remoteWhat": "La misma forma que Local Used pero para almacenamientos remotos (NFS / CIFS / PBS / Ceph / iSCSI). Se cuentan por separado porque las caídas remotas no afectan a los datos locales y normalmente los dimensionas y monitorizas de forma diferente.",
-    "disksLabel": "Physical Disks",
+    "disksLabel": "Discos físicos",
     "disksIntro": "Dos líneas de desglose para el inventario:",
     "disksItems": [
       "<strong>Por tipo</strong> — recuentos de NVMe (morado), SSD (azul) y HDD (azul) descubiertos. Los hosts con discos mixtos reciben los tres; un host todo-NVMe muestra solo el recuento NVMe.",
@@ -65,7 +65,7 @@
     "outro": "Tanto el estado ZFS como el estado SMART por disco alimentan la categoría <em>Disks & I/O</em> del <link>Monitor de salud</link>."
   },
   "physical": {
-    "heading": "Physical Disks & SMART Status",
+    "heading": "Discos físicos y estado SMART",
     "intro": "Discos internos (SATA / NVMe). Cada fila condensa los campos más útiles de un vistazo:",
     "items": [
       "<strong>Ruta del dispositivo</strong> — <code>/dev/sda</code>, <code>/dev/nvme0n1</code>.",
@@ -83,7 +83,7 @@
     "warningBody": "Los discos con la insignia naranja <strong>System</strong> alojan el SO en ejecución. El panel expone la etiqueta como guardarraíl — las acciones destructivas lanzadas desde <link>ProxMenux → Disk Manager → Format / Wipe</link> se niegan explícitamente a actuar sobre ellos. Si de verdad necesitas reasignar el disco de arranque, hazlo desde un entorno de rescate, no desde dentro de Proxmox."
   },
   "external": {
-    "heading": "External Storage (USB)",
+    "heading": "Almacenamiento externo (USB)",
     "body": "Una tarjeta separada para unidades conectadas por USB, solo se renderiza cuando hay al menos una presente. Los mismos campos que los discos internos más una etiqueta naranja <strong>USB</strong>. Las unidades USB suelen aparecer y desaparecer (backups en frío, jobs ocasionales de descarga), así que el Monitor de salud es conservador con ellas — las observaciones se retienen, pero los errores de E/S en una unidad USB desconectada no escalan."
   },
   "drillIn": {
@@ -107,7 +107,7 @@
       "<strong>Last Test</strong> — tipo, insignia de estado (<em>passed</em> / <em>failed</em>) y timestamp de la ejecución más reciente.",
       "<strong>SMART Attributes</strong> — la tabla completa de atributos (ID / nombre / valor / worst / estado con iconos OK / warning / critical). Para SATA / SAS, la lista numerada clásica. Para NVMe, los campos estructurados de <code>nvme smart-log</code> (temperatura, available spare, percentage used, data units written / read, host reads / writes, controller busy time, power cycles, unsafe shutdowns, media errors, error-log entries, warning / critical composite temperature time)."
     ],
-    "pdfTitle": "View Full SMART Report (PDF)",
+    "pdfTitle": "Ver informe SMART completo (PDF)",
     "pdfIntro": "Al pie de la pestaña SMART, el botón <strong>View Full SMART Report</strong> genera un PDF imprimible y listo para archivo — el mismo informe estructurado que enviarías a un fabricante para un RMA.",
     "pdfPreviewAlt": "Primera página del PDF SMART Health Report generado — Executive Summary con el anillo PASSED + bloque Disk Information",
     "pdfPreviewCaption": "Primera página del SMART Health Report — Executive Summary con el anillo PASSED y el bloque Disk Information completo. El PDF completo de abajo lleva el anillo de desgaste SSD, cada atributo SMART y el historial de tests.",
@@ -192,7 +192,7 @@
   "dataCollected": {
     "heading": "Cómo se recopilan los datos",
     "headerSection": "Sección de la pestaña",
-    "headerEndpoint": "Endpoint",
+    "headerEndpoint": "Punto final",
     "headerSource": "Fuente",
     "rows": [
       {
@@ -254,12 +254,12 @@
         "tail": " — el resto de pestañas."
       },
       {
-        "label": "ProxMenux → Disk Manager",
+        "label": "ProxMenux → Gestor de discos",
         "href": "/docs/disk-manager",
         "tail": " — la cara de las acciones: format / wipe / SMART tests / importar discos a VMs y CTs desde la TUI."
       },
       {
-        "label": "ProxMenux → SMART Disk Health & Test",
+        "label": "ProxMenux → SMART Prueba de salud de disco",
         "href": "/docs/disk-manager/smart-disk-test",
         "tail": " — la contraparte CLI de esta pestaña: programar tests SMART, exportar el JSON que renderiza el panel y la referencia más profunda de tipos de test / interpretación."
       }

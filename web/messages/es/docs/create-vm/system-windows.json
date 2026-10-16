@@ -27,7 +27,7 @@
     "headerValue": "Valor por defecto",
     "defaultRows": [
       {
-        "param": "Machine type",
+        "param": "Tipo de máquina",
         "valueRich": "<code>q35</code>"
       },
       {
@@ -35,11 +35,11 @@
         "value": "OVMF (UEFI)"
       },
       {
-        "param": "CPU type",
-        "value": "Host"
+        "param": "CPU tipo",
+        "value": "Anfitrión"
       },
       {
-        "param": "Cores",
+        "param": "Núcleos",
         "value": "4"
       },
       {
@@ -47,11 +47,11 @@
         "value": "8192 MB"
       },
       {
-        "param": "Bridge",
+        "param": "Puente",
         "valueRich": "<code>vmbr0</code>"
       },
       {
-        "param": "MAC address",
+        "param": "Dirección del MAC",
         "value": "Generada automáticamente"
       },
       {
@@ -59,7 +59,7 @@
         "value": "Habilitado (v2.0)"
       },
       {
-        "param": "Start on completion",
+        "param": "Comienzo de la terminación",
         "value": "No"
       }
     ],
@@ -68,7 +68,7 @@
     "headerOptions": "Opciones",
     "advancedRows": [
       {
-        "param": "Machine type",
+        "param": "Tipo de máquina",
         "optionsRich": "<code>q35</code> o <code>i440fx</code>"
       },
       {
@@ -76,11 +76,11 @@
         "options": "OVMF (UEFI) o SeaBIOS (Legacy)"
       },
       {
-        "param": "CPU type",
+        "param": "CPU tipo",
         "options": "Host o KVM64"
       },
       {
-        "param": "Cores",
+        "param": "Núcleos",
         "options": "Número de núcleos de CPU"
       },
       {
@@ -88,11 +88,11 @@
         "options": "Memoria asignada a la VM"
       },
       {
-        "param": "Bridge",
+        "param": "Puente",
         "options": "Bridge de red"
       },
       {
-        "param": "MAC address",
+        "param": "Dirección del MAC",
         "options": "MAC personalizada"
       },
       {
@@ -147,13 +147,13 @@
     "tpmBody": "Se añade automáticamente un dispositivo TPM 2.0 virtual para que los instaladores de Windows 11 / Server 2022 pasen el chequeo de compatibilidad de hardware.",
     "isoTitle": "Montaje de la ISO",
     "isoBody": "La ISO de instalación se adjunta a <code>ide2</code>. La ISO de drivers VirtIO se descarga (si hace falta) y se adjunta a <code>ide3</code>, lista para el paso <em>Load driver</em>.",
-    "guestTitle": "QEMU Guest Agent",
+    "guestTitle": "QEMU Agente invitado",
     "guestBody": "El canal del guest agent se habilita en la configuración de la VM. El agente como tal se instala dentro de Windows ejecutando <code>virtio-win-guest-tools.exe</code> después del setup."
   },
   "installOptions": {
     "heading": "Opciones de instalación de Windows",
     "intro": "ProxMenux ofrece dos métodos para obtener el medio de instalación de Windows:",
-    "uupTitle": "UUP Dump ISO Creator",
+    "uupTitle": "Creador de ISO UUP Dump",
     "uupLogoAlt": "Logo de UUP Dump",
     "uupBody": "El script <strong>UUP Dump ISO Creator</strong> es una utilidad de ProxMenux que construye una ISO de Windows al vuelo desde los servidores de Windows Update de Microsoft. Trae archivos de instalación oficiales y limpios (incluyendo builds Insider Preview).",
     "uupItems": [
@@ -231,7 +231,7 @@
     "items": [
       {
         "href": "/docs/utils/UUp-Dump-ISO-Creator",
-        "label": "UUP Dump ISO Creator",
+        "label": "Creador de ISO UUP Dump",
         "tail": " — genera ISOs de instalación de Windows actualizadas en el host Proxmox."
       },
       {

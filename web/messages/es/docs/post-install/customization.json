@@ -6,7 +6,7 @@
   "header": {
     "title": "Post-instalación: Customización",
     "description": "Ajustes estéticos y de comodidad para el host Proxmox. Hacen más agradable el uso de la consola y ocultan el aviso de suscripción de la interfaz web. Bashrc, MOTD y el banner de suscripción quedan registrados y son reversibles desde el menú Uninstall.",
-    "section": "Settings post-install Proxmox"
+    "section": "Configuración post instalación de Proxmox"
   },
   "intro": {
     "title": "Qué cubre esta categoría",
@@ -50,7 +50,7 @@
     "heading": "Relacionado",
     "items": [
       {
-        "label": "Optional",
+        "label": "Opcional",
         "href": "/docs/post-install/optional",
         "tail": " — Fastfetch y Figurine (otras customizaciones visuales)."
       },
@@ -60,12 +60,12 @@
         "tail": " — confirma que las customizaciones están registradas como instaladas."
       },
       {
-        "label": "Uninstall Optimizations",
+        "label": "Optimizaciones de desinstalación",
         "href": "/docs/post-install/uninstall",
         "tail": " — revierte bashrc, motd, aviso de suscripción."
       },
       {
-        "label": "Customizable Post-Install",
+        "label": "Puesto de plantilla personalizable",
         "href": "/docs/post-install/customizable",
         "tail": " — volver al menú padre."
       }

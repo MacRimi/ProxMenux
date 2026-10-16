@@ -21,7 +21,7 @@
     "sourceDetail": "/mnt/data\n(tu carpeta)",
     "targetLabel": "Contenedor LXC",
     "targetDetail": "/mnt/data\n(aparece aquí)",
-    "arrowLabel": "bind mount",
+    "arrowLabel": "Montaje de fijación",
     "outro": "La ruta del host a la izquierda y la ruta del contenedor a la derecha pueden ser diferentes — por ejemplo, <code>/mnt/nas-films</code> en el host puede convertirse en <code>/media/films</code> dentro del contenedor. El script añade la entrada a la config del contenedor (<code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>) usando el siguiente índice <code>mpN</code> libre, con dos valores por defecto seguros incorporados:",
     "items": [
       "<code>shared=1</code> — le dice a Proxmox que los datos son almacenamiento compartido, así que no intenta migrar el disco al migrar el contenedor.",
@@ -133,7 +133,7 @@
     "noMountBody": "Los bind mounts solo se adjuntan cuando el contenedor arranca. Si añadiste el montaje mientras el CT estaba corriendo, reinícialo (<code>pct reboot &lt;ctid&gt;</code>). Si ya está reiniciado y sigue faltando, comprueba <code>pct config &lt;ctid&gt;</code> para confirmar que la entrada existe y que la ruta del host realmente contiene un directorio.",
     "noWriteTitle": "El contenedor puede ver el directorio pero no puede escribir",
     "noWriteBody": "Casi siempre un problema de permisos. Para contenedores unprivileged, ejecuta de nuevo el fix de permisos del script — las ACLs del directorio del host pueden haber sido reseteadas por otra herramienta (rsync, restore desde backup, <code>chmod</code> manual). Para CIFS, revisa las opciones de montaje en el host: <code>findmnt /mnt/pve/cifs-…</code>, busca valores <code>uid=</code> / <code>gid=</code> / <code>file_mode=</code>.",
-    "alreadyTitle": "\"This path is already used as a mount point in this container\"",
+    "alreadyTitle": "\"Este camino ya se utiliza como punto de montaje en este contenedor\"",
     "alreadyBody": "Elegiste la misma ruta del contenedor que ya está cableada a un directorio del host distinto. O elige una ruta del contenedor diferente, o elimina el punto de montaje existente primero.",
     "nfsTitle": "El acceso NFS sigue bloqueado tras aplicar el fix del host",
     "nfsIntro": "Tu servidor NFS está aplicando squash a root o a todas las conexiones. El script puede detectar esto (intenta escribir un archivo de prueba desde el host) y muestra guía del lado del servidor. Dos arreglos comunes del lado del servidor para el export:",

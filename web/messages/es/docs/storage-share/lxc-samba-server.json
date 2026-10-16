@@ -20,7 +20,7 @@
     "diagramServerLabel": "LXC (privileged) — servidor Samba",
     "diagramServerDetail": "/mnt/data\n(carpeta que expones)\n\nsmbd + nmbd corriendo\n\nUsuario: <username>\n(vía smbpasswd)\n\nForce group:\nsharedfiles",
     "diagramClientLabel": "Cualquier cliente en la red",
-    "diagramClientDetail": "Windows: \\\\<ip>\\<share>\nmacOS:   smb://<ip>/<share>\nLinux:   mount.cifs",
+    "diagramClientDetail": "Windows: \\\\<ip>\\<share>\nmacOS: smb://<ip>/<share>\nLinux: mount.cifs",
     "diagramArrow": "SMB / CIFS"
   },
   "perms": {
@@ -50,9 +50,9 @@
     "intro": "Cada modo escribe una stanza diferente en <code>smb.conf</code>. Los tres incluyen <code>valid users = &lt;username&gt;</code> (sin anónimo), <code>force group = sharedfiles</code> (para que los archivos nuevos pertenezcan al grupo compartido) y <code>veto files = /lost+found/</code> (lo oculta a los clientes).",
     "headerMode": "Modo",
     "headerBlock": "Bloque escrito en smb.conf",
-    "rwMode": "Read-Write",
-    "roMode": "Read-Only",
-    "customMode": "Custom",
+    "rwMode": "Lectura y escritura",
+    "roMode": "Solo lectura",
+    "customMode": "Aduanas",
     "customBodyRich": "Tú escribes tus propias directivas en un cuadro de texto libre. ProxMenux igualmente las envuelve en un bloque <code>[share]</code> con los <code>path</code>, <code>valid users</code>, <code>force group</code> y <code>veto files</code> estándar."
   },
   "manual": {
@@ -92,7 +92,7 @@
     "heading": "Solución de problemas",
     "privTitle": "Contenedor privileged requerido (el script aborta)",
     "privBody": "El CT seleccionado es unprivileged y <code>smbd</code> no puede servir archivos ahí. Si te saltas el gate y configuras Samba a mano, <code>smbd</code> arranca y los puertos se abren, pero la primera conexión de cliente entra en pánico con <code>PANIC: sys_setgroups failed</code> en <code>/var/log/samba/log.&lt;client&gt;</code> y el cliente ve <code>NT_STATUS_CONNECTION_DISCONNECTED</code>. La causa es que el namespace de usuario unprivileged tiene <code>setgroups=deny</code>, lo que bloquea la impersonación por conexión de Samba. Ni <code>features=keyctl=1</code> ni eliminar <code>force user</code> / <code>force group</code> cambian esto. Las únicas opciones viables son: convertir el CT a privileged, o mover Samba a una VM.",
-    "aptTitle": "apt-get install falla",
+    "aptTitle": "apt-get install fails",
     "aptIntro": "El script asume un CT de la familia Debian. En Alpine / Arch / Rocky / Alma, instala Samba a mano:",
     "aptItems": [
       "Alpine: <code>apk add samba</code>",

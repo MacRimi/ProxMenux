@@ -156,7 +156,7 @@
     "bodyRich": "<code>qm destroy</code> y <code>pct destroy</code> eliminan la VM / CT y todos sus discos. No hay confirmación por defecto. Haz un backup primero si hay alguna posibilidad de que quieras recuperar los datos — ver <backupLink>Backup y restauración</backupLink>."
   },
   "qmConfigTip": {
-    "title": "qm config vs editar el fichero .conf directamente",
+    "title": "qm config vs editing the .conf file directly",
     "bodyRich": "<code>qm config &lt;vmid&gt;</code> y <code>pct config &lt;ctid&gt;</code> leen el fichero a través del parser de Proxmox — la salida está normalizada, sin comentarios, y los cambios pendientes se muestran aparte. Editar <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> o <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> directamente salta el parser. Útil para arreglar una config corrupta o aplicar un ajuste que <code>qm set</code> no acepte, pero detén antes el guest para evitar races. El sistema de ficheros del clúster (<code>pmxcfs</code>) se encarga de propagar el cambio a los demás nodos."
   },
   "related": {

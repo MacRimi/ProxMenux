@@ -5,7 +5,7 @@
   },
   "nav": {
     "home": "Inicio",
-    "docs": "Docs",
+    "docs": "Documentación",
     "documentation": "Documentación",
     "guides": "Guías",
     "changelog": "Cambios",
@@ -26,9 +26,14 @@
   },
   "language": {
     "switcher": "Idioma",
-    "en": "English",
+    "en": "Inglés",
     "es": "Español",
-    "sk": "Slovenčina"
+    "sk": "Slovenčina",
+    "de": "Deutsch",
+    "fr": "Français",
+    "it": "Italiano",
+    "pt": "Português",
+    "sv": "Svenska"
   },
   "resources": {
     "documentation": {
@@ -53,7 +58,7 @@
     "items": {
       "introduction": "Introducción",
       "installation": "Instalación",
-      "proxmenuxMonitor": "ProxMenux Monitor",
+      "proxmenuxMonitor": "Monitor de ProxMenux",
       "monitorOverview": "Resumen",
       "architecture": "Arquitectura",
       "accessAuth": "Acceso y autenticación",
@@ -63,8 +68,8 @@
       "dashboardStorage": "Pestaña Almacenamiento",
       "dashboardNetwork": "Pestaña Red",
       "dashboardVmsLxcs": "Pestaña VMs y LXCs",
-      "dashboardVmsLxcsApp": "App",
-      "dashboardVmsLxcsUpdates": "Updates",
+      "dashboardVmsLxcsApp": "Aplicación",
+      "dashboardVmsLxcsUpdates": "Actualizaciones",
       "dashboardHardware": "Pestaña Hardware",
       "dashboardSystemLogs": "Pestaña Logs del sistema",
       "dashboardTerminal": "Pestaña Terminal",
@@ -82,7 +87,7 @@
       "aiAssistant": "Asistente de IA",
       "apiReference": "Referencia API",
       "integrations": "Integraciones",
-      "ociManager": "OCI manager Apps",
+      "ociManager": "Aplicaciones del gestor OCI",
       "ociOverview": "Resumen",
       "ociArchitecture": "Cómo se traduce una imagen OCI",
       "ociCustomImage": "Imagen fuera del catálogo",
@@ -122,7 +127,7 @@
       "createVmNasOthers": "Otros sistemas NAS",
       "createVmSystemWindows": "Sistema Windows",
       "createVmSystemLinux": "Sistema Linux",
-      "diskManager": "Disk Manager",
+      "diskManager": "Administrador de discos",
       "diskManagerOverview": "Resumen",
       "diskImportVm": "Importar disco a VM",
       "diskImportImageVm": "Importar imagen de disco a VM",
@@ -164,9 +169,9 @@
       "utilsUpgradePve": "Upgrade PVE 8 a PVE 9",
       "utilsExportVm": "Exportar VM a OVA / OVF",
       "utilsImportVm": "Importar VM desde OVA / OVF",
-      "settingsProxmenux": "Settings ProxMenux",
+      "settingsProxmenux": "Ajustes ProxMenux",
       "settingsOverview": "Resumen",
-      "settingsMonitor": "ProxMenux Monitor",
+      "settingsMonitor": "Monitor de ProxMenux",
       "settingsBeta": "Cambiar canal de release",
       "settingsVersion": "Mostrar información de versión",
       "settingsUninstall": "Desinstalar ProxMenux",
@@ -177,7 +182,7 @@
       "commandsStorage": "Almacenamiento y discos",
       "commandsNetwork": "Comandos de red",
       "commandsUpdates": "Actualizaciones y paquetes",
-      "commandsGpu": "GPU Passthrough",
+      "commandsGpu": "Paso GPU",
       "commandsZfs": "Gestión de ZFS",
       "commandsBackup": "Backup y restauración",
       "commandsTools": "Herramientas CLI del sistema",
@@ -189,7 +194,7 @@
       "aboutContributing": "Contribuir",
       "aboutCodeOfConduct": "Código de conducta",
       "externalRepositories": "Repositorios externos",
-      "backupRestore": "Backup & Restore",
+      "backupRestore": "Copias de seguridad y restauración",
       "backupRestoreOverview": "Descripción general",
       "backupRestoreHowItWorks": "Cómo funciona",
       "backupRestoreDestinations": "Destinos",
@@ -234,7 +239,7 @@
     "openTitle": "Abrir feed RSS"
   },
   "changelog": {
-    "pageTitle": "Changelog",
+    "pageTitle": "Cambio",
     "meta": {
       "title": "Changelog de ProxMenux",
       "titleSuffix": "Notas de release",

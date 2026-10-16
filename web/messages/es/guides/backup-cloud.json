@@ -32,7 +32,7 @@
     "configIntro": "Configúralo así:",
     "configItems": [
       "<strong>ID:</strong> <code>gdrive</code> (o lo que hayas usado como nombre de directorio)",
-      "<strong>Directory:</strong> <code>/mnt/gdrive</code>",
+      "<strong>Directorio:</strong> <code>/mnt/gdrive</code>",
       "<strong>Content:</strong> selecciona <strong>VZDump backup file</strong>"
     ],
     "image2Alt": "Configurando nuevo almacenamiento en Proxmox",
@@ -96,7 +96,7 @@
   "retention": {
     "heading": "6. Retención — mantén la cuota de la nube bajo control",
     "body": "Los backups vzdump de Proxmox son <strong>snapshots completos, no incrementales</strong>. Una VM de 30 GB = 30 GB por backup. Sin retención, la nube se llena.",
-    "uiPath": "En la UI de Proxmox: <strong>Datacenter → Backup → [tu job] → Retention</strong>:",
+    "uiPath": "In the Proxmox UI: <strong>Datacenter → Backup → [your job] → Retention</strong>:",
     "image7Alt": "Ajustes de retención de backup en Proxmox",
     "starterIntro": "Valores iniciales razonables para un montaje doméstico / de laboratorio:",
     "starterItems": [

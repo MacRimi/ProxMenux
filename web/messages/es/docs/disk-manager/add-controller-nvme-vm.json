@@ -8,7 +8,7 @@
   "header": {
     "title": "Añadir controladora o NVMe a VM",
     "description": "Pasa un host bus adapter (HBA) SATA / SAS entero o un dispositivo NVMe a una VM Proxmox mediante PCI passthrough. ProxMenux comprueba — y, con tu consentimiento, habilita — IOMMU, enumera los dispositivos elegibles para passthrough, filtra los conflictos y conecta la asignación con qm set --hostpci.",
-    "section": "Disk Manager · VM"
+    "section": "Administrador de discos · VM"
   },
   "intro": {
     "title": "Qué hace (y qué no hace) esto",

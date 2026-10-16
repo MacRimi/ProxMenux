@@ -219,7 +219,7 @@
       },
       {
         "href": "/docs/disk-manager",
-        "label": "Disk Manager",
+        "label": "Administrador de discos",
         "tail": " — flujos interactivos de ProxMenux para passthrough de disco, importación, formateo y SMART."
       },
       {

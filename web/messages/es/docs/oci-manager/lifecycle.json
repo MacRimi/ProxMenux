@@ -6,7 +6,7 @@
   "header": {
     "title": "Instalar, actualizar y modificar",
     "description": "Cada instancia conserva un contrato reproducible, de modo que su rootfs puede sustituirse sin perder la configuración ni los datos persistentes.",
-    "section": "OCI manager Apps"
+    "section": "Aplicaciones del gestor OCI"
   },
   "sections": [
     {
@@ -18,7 +18,7 @@
         },
         {
           "code": {
-            "code": "instances/\n└── 105/\n    └── oci-compose.json\n        ├── imagen y digest resuelto\n        ├── recursos y red\n        ├── entorno (secretos protegidos)\n        ├── discos del contenedor y directorios del host\n        ├── perfil de hardware y dispositivos\n        ├── log de consola y modo de terminal\n        └── pertenencia a una pila y ciclo de vida"
+            "code": "instances/\n└── 105/\n    └── oci-compose.json\n        ├── image and resolved digest\n        ├── resources and network\n        ├── environment (secrets protected)\n        ├── container disks and host directories\n        ├── hardware profile and devices\n        ├── console log and terminal mode\n        └── stack membership and lifecycle"
           }
         },
         {

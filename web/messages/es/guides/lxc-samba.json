@@ -68,7 +68,7 @@
     "restartBody": "Reinicia el CT para aplicar el punto de montaje:",
     "restartCode": "pct restart '<'CTID'>'",
     "permsBody": "Dentro del LXC, dale al directorio los permisos apropiados para el usuario que será dueño del share:",
-    "permsCode": "# Dentro del contenedor\nmkdir -p /mnt/lxc_USB\nchown -R proxmenux:proxmenux /mnt/lxc_USB\nchmod 770 /mnt/lxc_USB",
+    "permsCode": "# Inside the container\nmkdir -p /mnt/lxc_USB\nchown -R proxmenux:proxmenux /mnt/lxc_USB\nchmod 770 /mnt/lxc_USB",
     "permsNoteTitle": "Nota",
     "permsNote": "Reemplaza <code>proxmenux</code> por el nombre de usuario que crearás en el paso 2.2 más abajo. <code>770</code> da acceso total al usuario y al grupo, sin acceso para el resto — más seguro que el <code>chmod -R 777</code> abierto a todos y aun así suficiente para que el share funcione."
   },
@@ -85,7 +85,7 @@
     "passwordCode": "smbpasswd -a proxmenux",
     "aclHeading": "2.3 Configurar la propiedad / ACLs",
     "aclBody": "Si el simple <code>chown</code> del paso 1.5 te basta, los permisos ya están listos. Para un control más fino (varios usuarios compartiendo la misma ruta con permisos distintos), usa ACLs:",
-    "aclCode": "apt-get install -y acl\nsetfacl -R -m \"u:proxmenux:rwx\" /mnt/lxc_USB\nsetfacl -d -R -m \"u:proxmenux:rwx\" /mnt/lxc_USB    # ACL por defecto — se aplica a los ficheros nuevos"
+    "aclCode": "apt-get install -y acl\nsetfacl -R -m \"u:proxmenux:rwx\" /mnt/lxc_USB\nsetfacl -d -R -m \"u:proxmenux:rwx\" /mnt/lxc_USB    # default ACL — applies to new files"
   },
   "configure": {
     "heading": "3. Configurar el share de Samba",

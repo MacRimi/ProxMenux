@@ -5,7 +5,7 @@
   },
   "header": {
     "title": "Post-instalación: Red",
-    "section": "Settings post-install Proxmox"
+    "section": "Configuración post instalación de Proxmox"
   },
   "intro": {
     "title": "Qué cubre esta categoría",
@@ -37,7 +37,7 @@
         "settings": "<code>accept_redirects=0</code>, <code>accept_source_route=0</code>, <code>secure_redirects=0</code>, <code>send_redirects=0</code>, <code>log_martians=0</code>"
       },
       {
-        "area": "Reverse path filter",
+        "area": "Filtro de ruta inversa",
         "settings": "<code>rp_filter=2</code> (modo loose, mira la nota abajo)"
       },
       {
@@ -114,12 +114,12 @@
         "tail": " — ip, ss, ethtool, sysctl."
       },
       {
-        "label": "Uninstall Optimizations",
+        "label": "Optimizaciones de desinstalación",
         "href": "/docs/post-install/uninstall",
         "tail": " — revierte cualquiera de estos cambios de red."
       },
       {
-        "label": "Customizable Post-Install",
+        "label": "Puesto de plantilla personalizable",
         "href": "/docs/post-install/customizable",
         "tail": " — volver al menú padre."
       }

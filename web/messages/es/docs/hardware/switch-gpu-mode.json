@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "Switch GPU Mode (VM ↔ LXC) | ProxMenux Documentation",
+    "title": "Cambio GPU Mode (Modo)VM ↔ LXC) | ProxMenux Documentación",
     "description": "Mueve una GPU ya asignada entre modo VM (vfio-pci) y modo LXC (driver nativo) en un host Proxmox. ProxMenux detecta el binding actual, pide políticas de conflicto por workload, gestiona la limpieza de audio huérfano y reconstruye initramfs solo cuando hace falta."
   },
   "header": {
-    "title": "Switch GPU Mode (VM ↔ LXC)",
+    "title": "Cambiar modo GPU (VM ↔ LXC)",
     "description": "Reasigna una GPU que ya está en uso — cambia de passthrough a VM a compartición con LXC o al revés. ProxMenux gestiona todos los cambios de binding del lado del host (vfio.conf, blacklist de drivers, módulos, initramfs) y ofrece una política limpia para cada VM o LXC que use la GPU actualmente, para que el cambio no deje config rota detrás.",
     "section": "Hardware: GPUs y Coral-TPU"
   },
@@ -110,7 +110,7 @@
     },
     "apply": {
       "title": "Aplicar cambios del host + workloads",
-      "body": "Una vez confirmas, el script escribe los cambios del lado del host — <code>vfio.conf</code>, blacklist, módulos y (para NVIDIA) la regla udev por BDF en <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> más el estado BDF en <code>/etc/proxmenux/vfio-bind.bdfs</code>. También aplica la política de conflicto elegida a cada VM/LXC afectada. Si la config del host realmente cambió, ejecuta <code>update-initramfs -u -k all</code> — si no, salta ese paso."
+      "body": "Tras confirmar, el script escribe los cambios en el host: <code>vfio.conf</code>, la lista de módulos bloqueados, los módulos y, para NVIDIA, la regla udev por BDF en <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> y el estado BDF en <code>/etc/proxmenux/vfio-bind.bdfs</code>. También aplica la política de conflictos elegida a cada VM/LXC afectado. Si la configuración del host ha cambiado, ejecuta <code>update-initramfs -u -k all</code> y después <code>proxmox-boot-tool refresh</code>; si no ha cambiado, omite ambos comandos."
     },
     "reboot": {
       "title": "Reiniciar",

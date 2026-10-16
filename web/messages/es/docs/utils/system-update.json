@@ -47,7 +47,7 @@
     "nodes": {
       "source": {
         "label": "proxmox_update.sh",
-        "detail": "pveversion |\ngrep -oP ''pve-manager/\\K[0-9]+''"
+        "detail": "pveversion ¦\ngrep -oP ''pve-manager/\\K[0-9]+''"
       },
       "bridge": {
         "label": "Único worker seguro",
@@ -55,7 +55,7 @@
       },
       "target": {
         "label": "Post-actualización",
-        "detail": "apt-get autoremove\napt-get autoclean\nPreguntar antes de reiniciar si toca"
+        "detail": "apt-get autoremove\napt-get autoclean\nReboot prompt if needed"
       }
     }
   },
@@ -124,7 +124,7 @@
     "heading": "Solución de problemas",
     "items": [
       {
-        "title": "apt update falla con 401 Unauthorized",
+        "title": "apt update fails with 401 Unauthorized",
         "body": "El repositorio Enterprise está habilitado y el host no tiene suscripción activa. El worker ofrece el cambio a sin suscripción antes de <code>apt-get update</code>; si se rechazó, ejecuta de nuevo la actualización y acéptalo, o deshabilita la fuente Enterprise en <em>Nodo → Actualizaciones → Repositorios</em> y habilita la de sin suscripción."
       },
       {
@@ -143,7 +143,7 @@
   },
   "files": {
     "heading": "Archivos implicados",
-    "code": "scripts/utilities/proxmox_update.sh              # este script (wrapper)\nscripts/global/update-pve-safe.sh                # único worker seguro (PVE 8 + PVE 9)\nscripts/global/repository-functions.sh           # ensure_repositories\nscripts/global/repository_policy.py              # lee y cambia los repositorios a través de la API de Proxmox\nscripts/global/utils-install-functions.sh        # pmx_rebuild_dkms_after_kernel\n/usr/local/share/proxmenux/components_status.json # registro de drivers DKMS gestionados por ProxMenux\n/etc/apt/sources.list.d/proxmox.sources          # fuente sin suscripción, escrita por Proxmox al aceptar el cambio\n/var/run/reboot-required                         # se lee para decidir el prompt de reinicio\n# Fallback de reinicio cuando needrestart no está instalado:\n# dpkg-query -W 'proxmox-kernel-*-pve-signed' 'pve-kernel-*-pve' vs. uname -r"
+    "code": "scripts/utilities/proxmox_update.sh              # this script (wrapper)\nscripts/global/update-pve-safe.sh                # single safe worker (PVE 8 + PVE 9)\nscripts/global/repository-functions.sh           # ensure_repositories\nscripts/global/repository_policy.py              # reads and switches repositories through the Proxmox API\nscripts/global/utils-install-functions.sh        # pmx_rebuild_dkms_after_kernel\n/usr/local/share/proxmenux/components_status.json # ProxMenux-managed DKMS driver registry\n/etc/apt/sources.list.d/proxmox.sources          # no-subscription source, written by Proxmox when the switch is accepted\n/var/run/reboot-required                         # read to decide on reboot prompt\n# Reboot fallback when needrestart isn't installed:\n# dpkg-query -W 'proxmox-kernel-*-pve-signed' 'pve-kernel-*-pve' vs. uname -r"
   },
   "related": {
     "heading": "Relacionado",

@@ -21,7 +21,7 @@
     "diagramServerDetail": "/export/data",
     "diagramHostLabel": "Host Proxmox",
     "diagramHostDetail": "(solo un\npuente de red)",
-    "diagramCtLabel": "LXC (privileged)",
+    "diagramCtLabel": "LXC (con privilegios)",
     "diagramCtDetail": "/mnt/data\nmount.nfs dentro del CT",
     "diagramArrow": "NFS",
     "twoWaysTitle": "Dos formas de dar acceso NFS a un CT — elige una",
@@ -39,11 +39,11 @@
   "fstabFlags": {
     "heading": "Por qué esos flags de fstab",
     "intro": "Para montajes permanentes el script añade tres flags más allá de las opciones NFS estándar: <code>_netdev,x-systemd.automount,noauto</code>. Cada uno resuelve un problema real de boot:",
-    "headerFlag": "Flag",
+    "headerFlag": "Bandera",
     "headerEffect": "Qué hace",
     "rows": [
       {
-        "flag": "_netdev",
+        "flag": "netdev",
         "effect": "Le dice al sistema init que este montaje necesita la red. El arranque no se bloquea esperándolo antes de que la red esté arriba."
       },
       {
@@ -80,7 +80,7 @@
     "heading": "Solución de problemas",
     "privTitle": "Contenedor privileged requerido (el script aborta)",
     "privBody": "El CT seleccionado es unprivileged. El cliente NFS del kernel necesita la capability <code>SYS_ADMIN</code> que los CTs unprivileged no exponen. O bien convierte el CT a privileged (la conversión &amp; Disk Manager está documentada en la página <importLink>Import Disk to LXC</importLink>) o usa la ruta alternativa descrita en el aviso al inicio de esta página.",
-    "aptTitle": "apt-get install nfs-common falla",
+    "aptTitle": "apt-get install nfs-common fails",
     "aptIntro": "El script asume un CT de la familia Debian (<code>apt-get</code>). Si el CT corre Alpine / Arch / Rocky / Alma, el paso de instalación falla silenciosamente. Instala el cliente NFS a mano para esa distro:",
     "aptItems": [
       "Alpine: <code>apk add nfs-utils</code>",

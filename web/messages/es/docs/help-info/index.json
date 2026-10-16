@@ -34,7 +34,7 @@
         "icon": "Cpu",
         "href": "/docs/help-info/vm-ct-commands",
         "title": "Gestión de VM y CT",
-        "description": "qm list / config / start / stop / migrate, pct list / config / enter, snapshots, clonación."
+        "description": "qm list / config / start / stop / migrate, pct list / config / enter, snapshots, cloning."
       },
       {
         "icon": "HardDrive",
@@ -52,13 +52,13 @@
         "icon": "Package",
         "href": "/docs/help-info/update-commands",
         "title": "Actualizaciones y paquetes",
-        "description": "apt update / dist-upgrade, apt-cache policy, consultas dpkg, comprobación de ficheros de repositorio."
+        "description": "apt update / dist-upgrade, apt-cache policy, dpkg queries, repo file checks."
       },
       {
         "icon": "Cpu",
         "href": "/docs/help-info/gpu-commands",
         "title": "Passthrough de GPU",
-        "description": "comprobaciones con lspci / dmesg, verificación de IOMMU, binding de vfio-pci, uso de GPU desde el host."
+        "description": "lspci / dmesg checks, IOMMU enablement verification, vfio-pci binding, GPU usage from the host."
       },
       {
         "icon": "Database",

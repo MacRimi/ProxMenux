@@ -10,7 +10,7 @@
   "header": {
     "title": "Monitor de salud",
     "description": "El auto-chequeo continuo que escanea diez categorías de estado del host en un ciclo de cinco minutos, muestrea signos vitales continuamente entre ciclos, deduplica hallazgos en un stream de eventos estructurado, y alimenta el panel, el motor de notificaciones y el reescritor opcional de IA desde una única fuente de verdad.",
-    "section": "ProxMenux Monitor"
+    "section": "Monitor de ProxMenux"
   },
   "intro": {
     "title": "Un escáner, tres consumidores",
@@ -43,7 +43,7 @@
       "templatesLabel": "Templates + reescritura con IA",
       "templatesDetail": "Template\npor evento\n→ reescritura\nopcional con IA\nen lenguaje natural",
       "channelsLabel": "Canales",
-      "channelsDetail": "Telegram\nDiscord\nGotify\nEmail (SMTP)"
+      "channelsDetail": "Telegram\nDiscord\nGotify\nCorreo electrónico (SMTP)"
     }
   },
   "categories": {
@@ -251,7 +251,7 @@
         "obs": "Audit trail permanente por disco."
       },
       {
-        "property": "Auto-resolve",
+        "property": "Resolver auto",
         "errors": "Sí — las filas se aclaran cuando la condición desaparece.",
         "obs": "No — las entradas persisten para siempre salvo que el usuario las descarte explícitamente."
       },
@@ -290,7 +290,7 @@
   "rest": {
     "heading": "Endpoints REST",
     "intro": "Todo lo que hace el modal se puede llamar desde la API — útil para scripts, paneles propios o tu propia integración de chat-bot. Cada llamada necesita un token de API; las que modifican algo — descartar una alerta, guardar los ajustes de supresión o limpiar huérfanos — requieren uno con scope full_admin, y un token read_only recibe 403.",
-    "headerEndpoint": "Endpoint",
+    "headerEndpoint": "Punto final",
     "headerMethod": "Método",
     "headerUse": "Uso",
     "rows": [
@@ -348,12 +348,12 @@
     "heading": "Por dónde seguir",
     "items": [
       {
-        "label": "Dashboard",
+        "label": "Panel",
         "href": "/docs/monitor/dashboard",
         "tail": " — desde donde se abre el modal del Monitor de salud en la UI."
       },
       {
-        "label": "Notifications",
+        "label": "Notificaciones",
         "href": "/docs/monitor/notifications",
         "tail": " — canales, toggles por evento, el hook de reescritura con IA, historial."
       },

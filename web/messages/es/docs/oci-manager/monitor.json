@@ -6,7 +6,7 @@
   "header": {
     "title": "En ProxMenux Monitor",
     "description": "Un contenedor instalado por OCI manager Apps aparece en VMs y LXCs como cualquier otro LXC. Su ventana lee el registro de la instalación: versiones de la aplicación y de la imagen, imágenes nuevas, salida de consola y terminal.",
-    "section": "OCI manager Apps"
+    "section": "Aplicaciones del gestor OCI"
   },
   "sections": [
     {
@@ -30,7 +30,7 @@
                 "Un interruptor <strong>Vigilancia</strong> bajo Iniciar al arrancar: la aplicación se inicia de nuevo cuando se detiene sola"
               ],
               [
-                "App",
+                "Aplicación",
                 "La aplicación se identifica desde el registro y sus actualizaciones se siguen por la imagen"
               ],
               [
@@ -42,7 +42,7 @@
                 "Discos del contenedor y directorios del host, con su uso"
               ],
               [
-                "Logs",
+                "Registros",
                 "Solo en contenedores OCI: la salida de consola de la aplicación"
               ]
             ]
@@ -52,7 +52,7 @@
     },
     {
       "id": "app",
-      "title": "App",
+      "title": "Aplicación",
       "intro": "La pestaña <appLink>App</appLink> ofrece la aplicación instalada como una detección, con el nombre, el logo, el puerto y el esquema del registro. Al registrarla se abre el editor con el método <strong>Imagen OCI (instalada por ProxMenux)</strong>, que no necesita configuración.",
       "blocks": [
         {
@@ -150,7 +150,7 @@
     },
     {
       "id": "logs",
-      "title": "Logs",
+      "title": "Registros",
       "intro": "La pestaña Logs solo aparece en los contenedores instalados por OCI manager Apps, entre Montajes y Backups. Muestra la salida estándar y de errores del proceso principal de la imagen, la misma que muestra <code>docker logs</code> en un contenedor Docker.",
       "blocks": [
         {

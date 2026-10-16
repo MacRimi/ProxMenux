@@ -8,7 +8,7 @@
   "header": {
     "title": "Script Automatizado post-instalación",
     "description": "Un clic, sin preguntas: ProxMenux aplica 14 optimizaciones seguras de las que se beneficia casi cualquier host Proxmox. Los cambios de configuración reversibles quedan registrados para Uninstall Optimizations; las actualizaciones de paquetes no se describen como reversibles.",
-    "section": "Post-Install · Automated"
+    "section": "Post-Install · Automatizado"
   },
   "intro": {
     "title": "Cuándo elegir Automatizado",
@@ -26,86 +26,86 @@
     {
       "tool": "Repositorios APT + full upgrade",
       "what": "Desactiva pve-enterprise.sources y ceph.sources enterprise, escribe una fuente limpia sin suscripción para el codename Debian del host, y luego ejecuta apt update && apt full-upgrade -y (el comando oficial de upgrade de Proxmox).",
-      "category": "Basic Settings",
-      "categorySlug": "basic-settings"
+      "category": "Ajustes básicos",
+      "categorySlug": "apuestas básicas"
     },
     {
       "tool": "Eliminación del banner de suscripción",
       "what": "Parchea la UI web para ocultar el banner 'No valid subscription'. Pide confirmación antes de aplicar; reversible desde Uninstall Optimizations.",
-      "category": "Customization",
-      "categorySlug": "customization"
+      "category": "Personalización",
+      "categorySlug": "personalización"
     },
     {
       "tool": "Forzar IPv4",
       "what": "Escribe /etc/apt/apt.conf.d/99-force-ipv4 para que apt use solo IPv4 — esquiva setups de mirror IPv6 inestables.",
-      "category": "Network",
-      "categorySlug": "network"
+      "category": "Red",
+      "categorySlug": "red"
     },
     {
       "tool": "Saltar paquetes de idioma",
       "what": "Escribe /etc/apt/apt.conf.d/99-disable-translations para dejar de descargar paquetes específicos de locale. Updates de apt más rápidos y ligeros.",
-      "category": "Basic Settings",
-      "categorySlug": "basic-settings"
+      "category": "Ajustes básicos",
+      "categorySlug": "apuestas básicas"
     },
     {
       "tool": "Aumentar límites del sistema",
       "what": "Sube los inotify watches, los límites nofile/nproc, los límites del keyring del kernel y fs.file-max en sysctl.d, limits.d, pam y systemd — lo bastante altos para hosts con muchos contenedores.",
-      "category": "System",
-      "categorySlug": "system"
+      "category": "Sistema",
+      "categorySlug": "sistema"
     },
     {
       "tool": "Tuning de memoria",
       "what": "Establece vm.swappiness=10, dirty ratios balanceados, vm.max_map_count=262144 y compaction proactiveness cuando es soportado. La política de memory-overcommit del kernel se deja en el valor por defecto de Proxmox.",
-      "category": "System",
-      "categorySlug": "system"
+      "category": "Sistema",
+      "categorySlug": "sistema"
     },
     {
       "tool": "Comportamiento ante kernel panic",
       "what": "Configura el host para reiniciar 10 segundos después de un panic / oops / hardlockup en lugar de quedarse congelado indefinidamente.",
-      "category": "System",
-      "categorySlug": "system"
+      "category": "Sistema",
+      "categorySlug": "sistema"
     },
     {
       "tool": "Tuning del stack de red",
       "what": "Dimensionado de buffers TCP, hardening IPv4 (redirects off, rp_filter=2, martian log off), rango de puertos locales 1024-65535, TCP MTU probing, RFC 1337, más un helper en /usr/local/sbin/proxmenux-fwbr-tune conectado a una unit systemd oneshot y a una regla udev, de forma que rp_filter=0 / log_martians=0 se reapliquen a las interfaces fwbr*/fwln*/fwpr*/tap* cada vez que Proxmox las recrea al iniciar/parar VMs, en reinicios o en migraciones en vivo.",
-      "category": "Network",
-      "categorySlug": "network"
+      "category": "Red",
+      "categorySlug": "red"
     },
     {
       "tool": "Customización de bashrc (root)",
       "what": "PS1 con colores, aliases comunes (l/la/ll/ls/grep), historial con marcas de tiempo y sourcing de bash-completion, todo dentro de un bloque PMX_CORE_BASHRC delimitado para que sea fácil de quitar.",
-      "category": "Customization",
-      "categorySlug": "customization"
+      "category": "Personalización",
+      "categorySlug": "personalización"
     },
     {
       "tool": "Log2RAM (consciente de SSD, automático)",
       "what": "Reduce el desgaste del SSD/NVMe moviendo /var/log a una ramdisk tmpfs con sync periódico al disco. Se instala desde el proyecto oficial cuando el disco raíz es SSD o NVMe. Dimensiona la ramdisk según la RAM (128M / 256M / 512M), programa el sync periódico y un guardián de auto-sync que compacta al 80% y trunca los logs calientes al 92% antes de escribir. Ajusta los límites de journald para caber en la ramdisk. Detalle completo en <link>Log2RAM</link>.",
-      "category": "Storage",
-      "categorySlug": "storage"
+      "category": "Almacenamiento",
+      "categorySlug": "almacenamiento"
     },
     {
       "tool": "ZFS autotrim (solo SSD)",
       "what": "Activa zpool autotrim=on en cada pool ZFS cuyos vdevs sean todos SSD/NVMe con soporte TRIM (comprueba /sys/block/[dev]/queue/rotational y discard_granularity). Los pools respaldados por HDDs se saltan automáticamente. Solo los pools realmente cambiados por ProxMenux quedan registrados para el uninstall — los pools en los que activaste autotrim a mano se dejan en paz.",
-      "category": "Storage",
-      "categorySlug": "storage"
+      "category": "Almacenamiento",
+      "categorySlug": "almacenamiento"
     },
     {
       "tool": "Límites de tamaño de journald",
       "what": "Fuerza almacenamiento persistente, capa SystemMaxUse=64M / RuntimeMaxUse=60M, activa compresión, logging a nivel info (requerido para el Monitor). Se salta automáticamente cuando Log2RAM está activo (hace su propio ajuste).",
-      "category": "System",
-      "categorySlug": "system"
+      "category": "Sistema",
+      "categorySlug": "sistema"
     },
     {
       "tool": "Tuning de logrotate",
       "what": "Rotación diaria con tope de tamaño 10M, 7 rotaciones, compresión y copytruncate — amigable con Log2RAM.",
-      "category": "System",
-      "categorySlug": "system"
+      "category": "Sistema",
+      "categorySlug": "sistema"
     },
     {
       "tool": "Nombres de interfaz persistentes",
       "what": "Escribe un <code>/etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code> por NIC física (cada uno comenzando con la cabecera 'Managed by ProxMenux') que fija el MAC al nombre actual, de forma que los nombres <code>eth0</code> / <code>enp…</code> se mantengan estables tras reinicios y al añadir nuevas NICs.",
-      "category": "Network",
-      "categorySlug": "network"
+      "category": "Red",
+      "categorySlug": "red"
     }
   ],
   "hardwareTitle": "Valores por defecto conscientes del hardware",
@@ -148,12 +148,12 @@
     "heading": "Relacionado",
     "items": [
       {
-        "label": "Customizable Post-Install",
+        "label": "Puesto de plantilla personalizable",
         "href": "/docs/post-install/customizable",
         "tail": " — elige exactamente qué quieres del mismo catálogo."
       },
       {
-        "label": "Uninstall Optimizations",
+        "label": "Optimizaciones de desinstalación",
         "href": "/docs/post-install/uninstall",
         "tail": " — revierte cualquier subconjunto de lo aplicado aquí."
       },

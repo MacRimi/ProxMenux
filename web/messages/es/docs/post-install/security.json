@@ -5,7 +5,7 @@
   },
   "header": {
     "title": "Post-instalación: Seguridad",
-    "section": "Settings post-install Proxmox"
+    "section": "Configuración post instalación de Proxmox"
   },
   "intro": {
     "title": "Qué cubre esta categoría",
@@ -48,7 +48,7 @@
         "tail": " — estado de servicios, journalctl, referencia de lynis audit."
       },
       {
-        "label": "Customizable Post-Install",
+        "label": "Puesto de plantilla personalizable",
         "href": "/docs/post-install/customizable",
         "tail": " — volver al menú padre."
       }

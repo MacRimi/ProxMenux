@@ -6,7 +6,7 @@
   "header": {
     "title": "Cómo se traduce una imagen OCI",
     "description": "Del repositorio de la imagen y su archivo Compose a una plantilla revisable, un plan de despliegue y un LXC nativo, sin instalar Docker dentro.",
-    "section": "OCI manager Apps"
+    "section": "Aplicaciones del gestor OCI"
   },
   "sections": [
     {
@@ -41,10 +41,26 @@
         {
           "cards": {
             "items": [
-              { "icon": "archive", "title": "Identidad de la imagen", "body": "Repositorio, etiqueta rolling, arquitectura, digest resuelto y revisión del origen." },
-              { "icon": "braces", "title": "Contrato del contenedor", "body": "Entrypoint, Cmd, entorno, usuario, directorio de trabajo, señal de parada, puertos y volúmenes." },
-              { "icon": "layers", "title": "Traducción a Proxmox VE", "body": "Recursos, seguridad, puntos de montaje, dispositivos, sysctls, healthchecks y las adaptaciones que necesita cada uno, con su motivo." },
-              { "icon": "shield", "title": "Compatibilidad", "body": "Claves admitidas, bloqueos sin traducir y el estado de cada validación." }
+              {
+                "icon": "archive",
+                "title": "Identidad de la imagen",
+                "body": "Repositorio, etiqueta rolling, arquitectura, digest resuelto y revisión del origen."
+              },
+              {
+                "icon": "braces",
+                "title": "Contrato del contenedor",
+                "body": "Entrypoint, Cmd, entorno, usuario, directorio de trabajo, señal de parada, puertos y volúmenes."
+              },
+              {
+                "icon": "layers",
+                "title": "Traducción a Proxmox VE",
+                "body": "Recursos, seguridad, puntos de montaje, dispositivos, sysctls, healthchecks y las adaptaciones que necesita cada uno, con su motivo."
+              },
+              {
+                "icon": "shield",
+                "title": "Compatibilidad",
+                "body": "Claves admitidas, bloqueos sin traducir y el estado de cada validación."
+              }
             ]
           }
         }
@@ -56,12 +72,32 @@
       "blocks": [
         {
           "table": {
-            "headers": ["Origen", "Ejemplo", "Resultado nativo"],
+            "headers": [
+              "Origen",
+              "Ejemplo",
+              "Resultado nativo"
+            ],
             "rows": [
-              ["Metadatos OCI", "<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>", "Proxmox VE los importa al crear el CT"],
-              ["Docker Compose", "<code>environment</code>, <code>volumes</code>, <code>devices</code>", "entradas de entorno del LXC, <code>mpN</code> y <code>devN</code>"],
-              ["Perfil de ProxMenux", "GPU, healthcheck, credenciales", "preguntas y adaptaciones revisadas"],
-              ["Usuario", "VMID, almacenamiento, red", "el contrato de la instancia"]
+              [
+                "Metadatos OCI",
+                "<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>",
+                "Proxmox VE los importa al crear el CT"
+              ],
+              [
+                "Docker Compose",
+                "<code>environment</code>, <code>volumes</code>, <code>devices</code>",
+                "entradas de entorno del LXC, <code>mpN</code> y <code>devN</code>"
+              ],
+              [
+                "Perfil de ProxMenux",
+                "GPU, healthcheck, credenciales",
+                "preguntas y adaptaciones revisadas"
+              ],
+              [
+                "Usuario",
+                "VMID, almacenamiento, red",
+                "el contrato de la instancia"
+              ]
             ]
           }
         }
@@ -74,13 +110,34 @@
         {
           "steps": {
             "items": [
-              { "title": "Resolver", "body": "Se consulta el registro, se selecciona la arquitectura del host y se fija el digest efectivo de la etiqueta rolling." },
-              { "title": "Descargar y verificar", "body": "Skopeo descarga la imagen como archivo OCI, y cada capa se comprueba contra su digest y se descomprime antes de crear nada. Una descarga dañada se repite una vez antes de detener la instalación." },
-              { "title": "Construir", "body": "<code>pct create</code> construye el rootfs a partir del archivo y conserva los metadatos oficiales de proceso de la imagen." },
-              { "title": "Conectar", "body": "Se añaden los volúmenes, la red, el entorno, los dispositivos y los perfiles de seguridad declarados." },
-              { "title": "Consola", "body": "La salida de consola del contenedor se guarda en el host, y la consola de Proxmox VE abre un shell cuando la imagen incluye uno." },
-              { "title": "Comprobar", "body": "El primer arranque espera una dirección y la respuesta del servicio; un fallo no se presenta como instalación correcta." },
-              { "title": "Registrar", "body": "La configuración efectiva se escribe en el contrato de la instancia que usan las actualizaciones y las recreaciones." }
+              {
+                "title": "Resolver",
+                "body": "Se consulta el registro, se selecciona la arquitectura del host y se fija el digest efectivo de la etiqueta rolling."
+              },
+              {
+                "title": "Descargar y verificar",
+                "body": "Skopeo descarga la imagen como archivo OCI, y cada capa se comprueba contra su digest y se descomprime antes de crear nada. Una descarga dañada se repite una vez antes de detener la instalación."
+              },
+              {
+                "title": "Construir",
+                "body": "<code>pct create</code> construye el rootfs a partir del archivo y conserva los metadatos oficiales de proceso de la imagen."
+              },
+              {
+                "title": "Conectar",
+                "body": "Se añaden los volúmenes, la red, el entorno, los dispositivos y los perfiles de seguridad declarados."
+              },
+              {
+                "title": "Consola",
+                "body": "La salida de consola del contenedor se guarda en el host, y la consola de Proxmox VE abre un shell cuando la imagen incluye uno."
+              },
+              {
+                "title": "Comprobar",
+                "body": "El primer arranque espera una dirección y la respuesta del servicio; un fallo no se presenta como instalación correcta."
+              },
+              {
+                "title": "Registrar",
+                "body": "La configuración efectiva se escribe en el contrato de la instancia que usan las actualizaciones y las recreaciones."
+              }
             ]
           }
         }
@@ -99,7 +156,7 @@
                 "code": "image: lscr.io/linuxserver/example:latest\nenvironment:\n  - PUID=1000\n  - PGID=1000\nvolumes:\n  - config:/config\n  - /srv/downloads:/downloads\nports:\n  - 8080:8080"
               },
               {
-                "title": "/etc/pve/lxc/VMID.conf (extracto)",
+                "title": "/etc/pve/lxc/VMID.conf (excerpt)",
                 "code": "entrypoint: /init\nmp0: local-lvm:vm-VMID-disk-1,mp=/config,backup=1,size=8G\nmp1: /srv/downloads,mp=/downloads\nnet0: name=eth0,bridge=vmbr0,ip=dhcp,type=veth\nlxc.environment.runtime: PUID=1000\nlxc.environment.runtime: PGID=1000"
               }
             ]

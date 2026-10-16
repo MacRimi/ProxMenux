@@ -156,7 +156,7 @@
         "tail": " — compartir la GPU NVIDIA con uno o más contenedores."
       },
       {
-        "label": "Switch GPU Mode (VM ↔ LXC)",
+        "label": "Cambiar modo GPU (VM ↔ LXC)",
         "href": "/docs/hardware/switch-gpu-mode",
         "tail": " — alternar la misma GPU entre modos passthrough (VM) y compartido (LXC)."
       },

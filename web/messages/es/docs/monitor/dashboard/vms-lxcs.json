@@ -19,18 +19,18 @@
     "imageCaption": "Fila superior de la pestaña VMs y LXCs — totales + insignias Running / Stopped, utilización actual de CPU, memoria desglosada en used / running-allocated / total-allocated (con una insignia Within Limits) y espacio de disco asignado.",
     "headerCard": "Tarjeta",
     "headerWhat": "Qué muestra",
-    "totalLabel": "Total VMs & LXCs",
+    "totalLabel": "Total de VM y LXC",
     "totalWhat": "Recuento total con dos insignias — <em>X Running</em> (verde) y <em>Y Stopped</em> (rojo, solo cuando > 0). El número que miras cuando algo no volvió tras un reinicio.",
-    "cpuLabel": "Total CPU",
+    "cpuLabel": "CPU total",
     "cpuWhat": "Utilización agregada de CPU en vivo a lo largo de todos los guests como porcentaje de la CPU física del host, con una línea al pie <em>\"Allocated CPU usage\"</em>.",
-    "memoryLabel": "Total Memory",
+    "memoryLabel": "Memoria Total",
     "memoryIntro": "Tres lecturas apiladas verticalmente:",
     "memoryItems": [
       "<strong>Currently used</strong> — valor grande (p. ej. <em>15.4 GB</em>) más <em>X.X % de Y GB</em> contra la RAM total del host. Una barra de progreso azul sigue al porcentaje.",
       "<strong>Running allocated</strong> + <strong>Total allocated</strong> — suma de <code>maxmem</code> a lo largo de los guests que están <em>actualmente up</em> junto a la misma suma a lo largo de <em>todos</em> los guests incluyendo los parados. El primero importa hoy; el segundo importa cuando arrancas todo a la vez.",
       "<strong>Insignia Within Limits</strong> (verde) — pasa a <em>Over-committed</em> si el total asignado excede la RAM del host. Un over-commit sano de memoria está bien en hosts con KSM, pero la insignia es el aviso temprano cuando ya no es cómodo."
     ],
-    "diskLabel": "Total Disk",
+    "diskLabel": "Disco total",
     "diskWhat": "Suma del espacio de disco asignado a lo largo de todos los guests, en la unidad adecuada (GB / TB), con la línea al pie <em>\"Allocated disk space\"</em>."
   },
   "inventory": {
@@ -75,7 +75,7 @@
       "<strong>Notes</strong> — el campo de descripción del guest. Editable: escribir aquí y guardar llama <code>PUT /api/vms/&lt;vmid&gt;/config</code> y escribe de vuelta en <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> o <code>/etc/pve/lxc/&lt;vmid&gt;.conf</code>.",
       "<strong>+ Info</strong> — campos extra que son demasiado verbosos para la vista por defecto: bios mode, machine type, agent state, entradas de hostpci passthrough, mount points (CT), boot order."
     ],
-    "ipsTitle": "4. IP Addresses",
+    "ipsTitle": "4. Direcciones IP",
     "ipsBody": "Lista de pastillas con cada dirección IPv4 / IPv6 que el guest expone actualmente — pastilla verde por dirección. Vacía cuando el guest está parado o cuando el QEMU agent no está instalado en una VM (los LXCs siempre reportan direcciones directamente).",
     "appTitle": "Pestaña 2 — App (solo LXC)",
     "appIntro": "Registra las aplicaciones que pertenecen al LXC, guarda enlaces web y, opcionalmente, compara las versiones instalada y disponible. Las sugerencias proceden de la caché de arranque; <strong>Buscar aplicaciones</strong> actualiza expresamente la detección de este LXC después de instalar software nuevo.",
@@ -137,28 +137,28 @@
     "headerAction": "Acción enviada al host",
     "lifecycleRows": [
       {
-        "button": "Start",
+        "button": "Comienzo",
         "color": "green",
         "enabled": "El guest está parado.",
         "action": "qm start / pct start"
       },
       {
-        "button": "Shutdown",
+        "button": "Apagar",
         "color": "blue",
         "enabled": "El guest está en ejecución.",
         "action": "qm shutdown / pct shutdown — graceful, ACPI"
       },
       {
-        "button": "Reboot",
+        "button": "Reiniciar",
         "color": "blue",
         "enabled": "El guest está en ejecución.",
-        "action": "qm reboot / pct reboot — reinicio graceful"
+        "action": "qm reboot / pct reboot — graceful restart"
       },
       {
-        "button": "Force Stop",
+        "button": "Parar",
         "color": "red",
         "enabled": "El guest está en ejecución.",
-        "action": "qm stop / pct stop — apagado en duro"
+        "action": "qm stop / pct stop — hard power-off"
       }
     ],
     "forceStopTitle": "Force Stop es el kill switch, no la opción educada",
@@ -167,7 +167,7 @@
   "dataCollected": {
     "heading": "Cómo se recopilan los datos",
     "headerSection": "Sección de la pestaña",
-    "headerEndpoint": "Endpoint",
+    "headerEndpoint": "Punto final",
     "headerSource": "Fuente",
     "rows": [
       {
@@ -235,7 +235,7 @@
         "tailRich": " — el resto de pestañas."
       },
       {
-        "label": "ProxMenux → Create VM",
+        "label": "ProxMenux → Crear VM",
         "href": "/docs/create-vm",
         "tailRich": " — la cara de provisión: plantillas de System NAS (Synology y otros), VMs Linux / Windows, valores por defecto pensados para Proxmox."
       }

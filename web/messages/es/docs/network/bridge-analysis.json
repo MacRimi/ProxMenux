@@ -31,7 +31,7 @@
       "arrowLabel": "paso 1",
       "nodes": {
         "sourceLabel": "/etc/network/interfaces",
-        "sourceDetail": "auto vmbr0\niface vmbr0 inet static\n  bridge-ports enp3s0",
+        "sourceDetail": "auto vmbr0\niface vmbr0 inet static\npuente-puertos enp3s0",
         "bridgeLabel": "Analizar (solo lectura)",
         "bridgeDetail": "ip link show enp3s0\n→ no existe",
         "targetLabel": "Informe + sugerencia",
@@ -43,8 +43,8 @@
       "nodes": {
         "sourceLabel": "Reparación guiada",
         "sourceDetail": "1. Backup\n2. Mostrar actual\n3. Previsualizar cambios\n4. Aplicar\n5. Verificar",
-        "targetLabel": "/etc/network/interfaces (nuevo)",
-        "targetDetail": "auto vmbr0\niface vmbr0 inet static\n  bridge-ports eno1"
+        "targetLabel": "/etc/network/interfaces (new)",
+        "targetDetail": "auto vmbr0\niface vmbr0 inet static\npuente-puertos eno1"
       }
     }
   },

@@ -24,15 +24,15 @@
   "sections": {
     "heading": "Secciones",
     "intro": "La pestaña renderiza de arriba abajo en este orden. Algunas secciones solo aparecen cuando el host tiene el hardware o la herramienta correspondiente instalada — se marcan <em>(condicional)</em> abajo.",
-    "systemInfoTitle": "System Information",
+    "systemInfoTitle": "Información del sistema",
     "systemInfoIntro": "Dos bloques uno al lado del otro, siempre presentes:",
     "systemInfoItems": [
       "<strong>CPU</strong> — nombre del modelo, microarquitectura, sockets / cores / threads, frecuencia base / boost, flags de virtualización (VT-x / AMD-V), topología de caché.",
       "<strong>Placa base</strong> — vendor, modelo, versión de BIOS, fecha de BIOS, UUID SMBIOS. Útil para emparejar con páginas de descarga del fabricante al buscar actualizaciones de firmware."
     ],
-    "memoryTitle": "Memory Modules",
+    "memoryTitle": "Módulos de memoria",
     "memoryBody": "Una fila por slot poblado desde <code>dmidecode</code>: etiqueta del slot, tamaño del módulo, tipo (DDR4 / DDR5 / variantes ECC), velocidad (configurada y nominal), fabricante, part number y serial. Los slots vacíos se listan atenuados para que veas de un vistazo el margen de ampliación.",
-    "thermalTitle": "Thermal Monitoring",
+    "thermalTitle": "Monitoreo Térmico",
     "thermalIntro": "Siete sub-bloques alimentados por <code>lm-sensors</code>, <code>sysfs</code> y scrapers específicos por herramienta. Los sensores hwmon de almacenamiento se correlacionan con el dispositivo de bloques físico, por lo que cada unidad detectada incluye su modelo y la ruta <code>/dev/...</code>. Un bloque permanece oculto cuando no hay sensores en esa categoría.",
     "thermalItems": [
       "<strong>CPU</strong> — temperaturas de package y por core.",
@@ -45,7 +45,7 @@
     ]
   },
   "graphics": {
-    "heading": "Graphics Cards",
+    "heading": "Tarjetas gráficas",
     "intro": "Cada controlador de vídeo detectado renderiza como su propia tarjeta con vendor, modelo, tipo (<em>Integrada</em> / <em>PCI</em> / BMC), slot PCI (BDF), kernel driver y lista de módulos. La tarjeta también expone un control inline <strong>Switch Mode</strong> que alterna la GPU entre compartición LXC (driver nativo) y passthrough a VM (<code>vfio-pci</code>) — mira <link>Switch GPU Mode (VM ↔ LXC)</link> para entender qué pasa en el host cuando lo pulsas.",
     "vfioImageAlt": "Sección Graphics Cards mostrando una GPU integrada Matrox G200EH atada a mgag200 (Ready for LXC) y una NVIDIA Quadro P400 atada a vfio-pci (Ready for VM passthrough)",
     "vfioImageCaption": "Dos GPUs detectadas: el chip BMC Matrox está en el driver nativo y listo para LXC; la NVIDIA Quadro P400 está atada a <code>vfio-pci</code>, lista para passthrough a VM.",
@@ -54,7 +54,7 @@
     "realtimeTitle": "Modal de monitorización en tiempo real",
     "realtimeBody": "Pulsar una tarjeta de GPU abre una modal de monitorización por slot que sondea la herramienta del vendor adecuada cada tres segundos. La modal expone vendor, tipo, slot PCI, driver, módulo(s) del kernel, utilización en vivo de motores (Render/3D, Video, Blitter, VideoEnhance), clocks de gráficos y memoria, temperatura, consumo de potencia (cuando se reporta), uso de VRAM y una tabla Active Processes con carga de motor por proceso. Los datos se sirven desde <code>/api/gpu/&lt;slot&gt;/realtime</code>.",
     "toolsIntro": "La herramienta de vendor usada por GPU:",
-    "headerVendor": "Vendor",
+    "headerVendor": "Proveedor",
     "headerTool": "Herramienta",
     "headerProject": "Proyecto",
     "tools": [
@@ -65,7 +65,7 @@
         "projectHref": "https://developer.nvidia.com/nvidia-system-management-interface"
       },
       {
-        "vendor": "Intel iGPU",
+        "vendor": "iGPU Intel",
         "tool": "intel_gpu_top (igt-gpu-tools)",
         "projectLabel": "gitlab.freedesktop.org",
         "projectHref": "https://gitlab.freedesktop.org/drm/igt-gpu-tools"
@@ -119,7 +119,7 @@
     "outro": "Ambas las gestiona una única entrada de ProxMenux — <installLink>Install Coral TPU on the Host</installLink> — que auto-detecta lo que tienes. El contexto y el runtime oficial viven en <a>coral.ai/docs</a>. Una vez listo el lado del host, entrega el dispositivo a un contenedor con <lxcLink>Add Coral TPU to LXC</lxcLink>."
   },
   "storage": {
-    "heading": "Storage Summary",
+    "heading": "Resumen de almacenamiento",
     "intro": "Cada dispositivo de bloque que conoce el kernel, agrupado por tipo. Para cada disco obtienes el nombre del kernel (<code>sda</code>, <code>nvme0n1</code>, <code>zram0</code> …), la etiqueta de tipo (<em>SSD</em>, <em>HDD</em>, <em>NVMe SSD</em>), la cadena del modelo y la información del enlace negociado. Pulsa cualquier disco para abrir una modal de info de hardware con modelo, serial, capacidad, interfaz y velocidad de enlace actual vs máxima.",
     "imageAlt": "Tarjeta Storage Summary listando once dispositivos de bloque (SSDs SATA, HDDs SATA, SSDs NVMe y zram) con cadenas de modelo y velocidades de enlace negociadas; los dos discos NVMe muestran 3.0 x4 con la velocidad actual resaltada",
     "imageCaption": "Once dispositivos en este nodo. Los enlaces SATA se imprimen como <em>SATA &lt;version&gt;, &lt;Gb/s&gt; (current: ...)</em>; los discos NVMe se imprimen como <em>&lt;PCIe gen&gt; x&lt;width&gt;</em>.",
@@ -129,7 +129,7 @@
     "outro": "Los datos SMART, los self-tests, el historial y el informe PDF de disco viven una pestaña a la derecha, en <storageLink>Panel: pestaña Almacenamiento</storageLink>. Los mismos datos alimentan el script en <smartLink>SMART Disk Health & Test</smartLink> — lanzar un test long desde el script escribe el JSON que el Monitor muestra en <em>Storage → History</em>."
   },
   "pci": {
-    "heading": "PCI Devices",
+    "heading": "Dispositivos PCI",
     "intro": "Cada dispositivo direccionable por PCI, identificado por su <strong>BDF PCI</strong> (Bus:Device.Function — p. ej. <code>03:00.0</code>) y su clase de dispositivo (<em>Storage Controller</em>, <em>USB Controller</em>, <em>Graphics Card</em>, <em>Network Controller</em>, <em>Audio Controller</em> …). Cada tarjeta muestra el fabricante, el nombre del dispositivo y el <strong>kernel driver actualmente atado</strong> — que es el campo que realmente quieres al diagnosticar passthrough, grupos IOMMU o una tarjeta que el host no esté manejando correctamente.",
     "imageAlt": "Sección PCI Devices listando quince dispositivos agrupados por clase: storage controllers en ahci/nvme, USB controllers, tarjetas gráficas (una en vfio-pci, otra en el driver nativo), network controllers en igb / tg3, un audio controller junto a una GPU pasada por passthrough",
     "imageCaption": "Quince dispositivos en este nodo. Fíjate en la GPU y su función de audio compañera, ambas atadas a <code>vfio-pci</code> — esa es una tarjeta preparada para passthrough a VM.",
@@ -137,13 +137,13 @@
     "bdfBody": "<code>03:00.0</code> significa bus PCI <code>03</code>, dispositivo <code>00</code>, función <code>0</code>. Los dispositivos multifunción como las GPUs discretas suelen reclamar <code>.0</code> para la GPU y <code>.1</code> para la función de audio HDMI — ambos hay que pasarlos por passthrough juntos, por eso <link>Switch GPU Mode</link> también gestiona la limpieza de la función de audio huérfana al salir del modo VM."
   },
   "usb": {
-    "heading": "USB Devices",
+    "heading": "Dispositivos USB",
     "intro": "Cada dispositivo USB que enumera el host, con cadenas de fabricante / producto, versión USB, la dirección <code>bus:device</code>, el par <code>vendor:product</code> y el kernel driver. El renderer también clasifica roles comunes — <em>Communications</em> (sticks Z-Wave / Zigbee), <em>UPS</em>, almacenamiento, HID — para que veas de un vistazo cuál de tus sticks es cuál sin cruzar IDs.",
     "imageAlt": "Tarjeta USB Devices listando tres dispositivos: un Z-Stick Z-Wave Aeotec, un coordinador Zigbee ConBee II y un UPS Ellipse ECO, cada uno con versión USB, dirección, vendor:product ID y driver atado",
     "imageCaption": "Tres dispositivos USB — dos radios de domótica en <code>usbfs</code> y un UPS en <code>usbfs</code> (NUT le habla a través de libusb)."
   },
   "power": {
-    "heading": "Power Consumption",
+    "heading": "Consumo de energía",
     "subHeading": "(condicional)",
     "intro": "Se renderiza solo cuando el host expone telemetría de energía. Se exponen dos fuentes independientes cuando están disponibles:",
     "items": [
@@ -156,24 +156,24 @@
     "cpuImageCaption": "Placa consumer sin sensor de todo el sistema — la sección cae a RAPL solo-CPU."
   },
   "psu": {
-    "heading": "Power Supplies",
+    "heading": "Fuentes de alimentación",
     "subHeading": "(condicional)",
     "body": "Máquinas con placa de servidor / PSU dual vía IPMI: presencia (PSU 1 / PSU 2 / …), voltaje de entrada, watios de salida, flag OK / failed. Lo primero que compruebas tras un parpadeo de luz en un nodo con PSUs redundantes."
   },
   "fans": {
-    "heading": "System Fans",
+    "heading": "Ventiladores del sistema",
     "subHeading": "(condicional)",
     "body": "RPM por ventilador con un pequeño sparkline (cuando se soporta). En placas sin reporte por ventilador la sección cae a una única lectura del ventilador de chasis."
   },
   "ups": {
-    "heading": "UPS Status",
+    "heading": "Estado del SAI",
     "subHeading": "(condicional)",
     "body": "Se renderiza cuando hay un servidor NUT (Network UPS Tools) configurado y accesible. Muestra: estado (online / on battery / charging / low battery), porcentaje de carga de batería, estimación de runtime, porcentaje de carga, voltaje de entrada, modelo y firmware. Los mismos datos alimentan la categoría <em>Security & Certificates</em> del Monitor de salud — un UPS que pasa a batería sale inmediatamente."
   },
   "dataCollected": {
     "heading": "Cómo se recopilan los datos",
     "headerSection": "Sección de la pestaña",
-    "headerEndpoint": "Endpoint",
+    "headerEndpoint": "Punto final",
     "headerSource": "Fuente",
     "rows": [
       {
@@ -204,22 +204,22 @@
     "heading": "Por dónde seguir",
     "items": [
       {
-        "label": "Install NVIDIA Drivers (Host)",
+        "label": "Instalar controladores NVIDIA (Host)",
         "href": "/docs/hardware/nvidia-host",
         "tail": " — lo que ejecuta el botón de instalación de la modal de GPU."
       },
       {
-        "label": "Switch GPU Mode (VM ↔ LXC)",
+        "label": "Cambiar modo GPU (VM ↔ LXC)",
         "href": "/docs/hardware/switch-gpu-mode",
         "tail": " — lo que el conmutador de modo inline en cada tarjeta de GPU le hace al host."
       },
       {
-        "label": "Install Coral TPU on the Host",
+        "label": "Instalar Coral TPU en el host",
         "href": "/docs/hardware/install-coral-tpu-host",
         "tail": " — la instalación del módulo de kernel / runtime de Coral."
       },
       {
-        "label": "SMART Disk Health & Test",
+        "label": "Prueba de salud de disco SMART",
         "href": "/docs/disk-manager/smart-disk-test",
         "tail": " — el script detrás de los datos SMART que muestra la vista en detalle de disco de la pestaña Almacenamiento."
       },

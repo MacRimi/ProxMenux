@@ -6,7 +6,7 @@
   "header": {
     "title": "Post-instalación: Rendimiento",
     "description": "Opciones de rendimiento dentro del script post-instalación Customizable. Por ahora esta categoría contiene una sola optimización: sustituir gzip por pigz para que los backups y la compresión usen todos los núcleos de la CPU en lugar de uno.",
-    "section": "Settings post-install Proxmox"
+    "section": "Configuración post instalación de Proxmox"
   },
   "intro": {
     "title": "Qué cubre esta categoría",
@@ -52,7 +52,7 @@
         "tail": " — tuning de descriptores de fichero y de memoria."
       },
       {
-        "label": "Customizable Post-Install",
+        "label": "Puesto de plantilla personalizable",
         "href": "/docs/post-install/customizable",
         "tail": " — volver al menú padre."
       }

@@ -8,7 +8,7 @@
   "header": {
     "title": "Importar imagen de disco a VM",
     "description": "Importa un archivo de imagen de disco (.img, .qcow2, .vmdk o .raw) a una VM Proxmox existente. ProxMenux recopila todas las decisiones por adelantado — VM destino, almacenamiento Proxmox, directorio origen, interfaz, emulación SSD, orden de arranque — y luego ejecuta qm importdisk para cada imagen seleccionada.",
-    "section": "Disk Manager · VM"
+    "section": "Administrador de discos · VM"
   },
   "intro": {
     "title": "Qué hace esto",
@@ -70,7 +70,7 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "noImagesTitle": "\"No compatible disk images found\"",
+    "noImagesTitle": "\"No se encuentran imágenes de disco compatibles\"",
     "noImagesBody": "El script escaneó el directorio pero no encontró ningún archivo <code>.img</code> / <code>.qcow2</code> / <code>.vmdk</code> / <code>.raw</code>. Comprueba la extensión (las mayúsculas importan), que el archivo esté directamente en el directorio seleccionado (no se buscan subdirectorios) y que los permisos permitan a root leerlo.",
     "slowTitle": "La importación va lenta",
     "slowBody": "Las conversiones VMDK → QCOW2 → raw están limitadas por CPU y E/S. La velocidad de importación depende de la velocidad de lectura del origen, la velocidad de escritura del almacenamiento destino y la CPU para descompresión. Prefiere orígenes raw o qcow2 cuando sea posible.",
@@ -92,7 +92,7 @@
       },
       {
         "href": "/docs/utils/UUp-Dump-ISO-Creator",
-        "label": "UUP Dump ISO Creator",
+        "label": "Creador de ISO UUP Dump",
         "tail": " — genera una ISO de Windows si necesitas una para una instalación nueva."
       },
       {

@@ -103,7 +103,7 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "noSmartTitle": "\"Could not read SMART data from /dev/sdX\"",
+    "noSmartTitle": "\"No debería leer los datos de SMART de /dev/sdX\"",
     "noSmartBody": "El disco está probablemente detrás de una controladora RAID / SAS que no pasa SMART. Con tarjetas basadas en megaraid, prueba <code>smartctl -d megaraid,N /dev/sdX</code>. Para HBAs en modo IT la invocación directa funciona.",
     "longTitle": "El test largo no termina nunca",
     "longBody": "El test se encola en el firmware de la unidad y pausa si el disco tiene carga pesada. Ejecutarlo de noche en un sistema en reposo suele funcionar. También puedes revisar <code>smartctl -c</code> para ver el porcentaje restante; si se queda atascado en un LBA fijo, el disco está fallando en ese sector."

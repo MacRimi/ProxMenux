@@ -10,7 +10,7 @@
   "header": {
     "title": "Asistente de IA",
     "description": "El reescritor opt-in que pasa cada notificación saliente por un LLM antes del fan-out — convirtiendo templates estructuradas en mensajes en lenguaje natural, con niveles de detalle por canal, doce idiomas, un modo de prompt personalizado con una biblioteca comunitaria pública y una capa de enriquecimiento de contexto que añade uptime, recurrencia, datos SMART y coincidencias con errores conocidos al prompt.",
-    "section": "ProxMenux Monitor"
+    "section": "Monitor de ProxMenux"
   },
   "intro": {
     "title": "Desactivado por defecto, un solo interruptor para activarlo",
@@ -92,17 +92,17 @@
     "headerConsumption": "Consumo real típico",
     "capRows": [
       {
-        "level": "brief",
+        "level": "breve",
         "cap": "500",
         "consumption": "50-200 tokens de salida para eventos cortos."
       },
       {
-        "level": "standard",
+        "level": "estándar",
         "cap": "1500",
         "consumption": "200-700 tokens de salida para eventos típicos con contexto ligero."
       },
       {
-        "level": "detailed",
+        "level": "detallado",
         "cap": "3000",
         "consumption": "500-2000 tokens de salida para reportes completos de email con logs y tablas SMART."
       }
@@ -120,7 +120,7 @@
       "heading": "Groq",
       "tagline": "Muy rápido, nivel gratuito generoso (30 req/min). Ideal para empezar.",
       "items": [
-        "API key: <a>console.groq.com/keys</a>",
+        "Clave API: <a>console.groq.com/keys</a>",
         "Modelos verificados: <code>llama-3.3-70b-versatile</code>, <code>llama-3.1-70b-versatile</code>, <code>llama-3.1-8b-instant</code>, <code>llama3-70b-8192</code>, <code>llama3-8b-8192</code>, <code>mixtral-8x7b-32768</code>, <code>gemma2-9b-it</code>.",
         "Recomendado: <strong><code>llama-3.3-70b-versatile</code></strong> — mejor calidad a la velocidad de inferencia completa de Groq."
       ]
@@ -129,7 +129,7 @@
       "heading": "OpenAI",
       "tagline": "Estándar de la industria. Muy preciso y ampliamente usado.",
       "items": [
-        "API key: <a>platform.openai.com/api-keys</a>",
+        "Clave API: <a>platform.openai.com/api-keys</a>",
         "Modelos verificados: <code>gpt-4.1-nano</code>, <code>gpt-4.1-mini</code>, <code>gpt-4o-mini</code>, <code>gpt-4.1</code>, <code>gpt-4o</code>, <code>gpt-5-chat-latest</code>, <code>gpt-5.4-nano</code>, <code>gpt-5.4-mini</code>.",
         "Recomendado: <strong><code>gpt-4.1-nano</code></strong> — el miembro más barato de la familia chat, calidad suficiente para traducción y reformateo. Los modelos de razonamiento (serie o, gpt-5 non-chat) están soportados por el plumbing del proveedor pero se mantienen fuera de la lista verificada: mayor latencia sin ganancia medible de calidad en esta carga de trabajo."
       ],
@@ -140,7 +140,7 @@
       "heading": "Anthropic (Claude)",
       "tagline": "Excelente para escritura y traducción. Rápido y económico.",
       "items": [
-        "API key: <a>console.anthropic.com/settings/keys</a>",
+        "Clave API: <a>console.anthropic.com/settings/keys</a>",
         "Modelos verificados: <code>claude-3-5-haiku-latest</code>, <code>claude-3-5-sonnet-latest</code>, <code>claude-3-opus-latest</code>.",
         "Recomendado: <strong><code>claude-3-5-haiku-latest</code></strong> — el modelo más pequeño y rápido de Claude, con calidad lingüística fuerte para la carga de traducción."
       ]
@@ -149,7 +149,7 @@
       "heading": "Google Gemini",
       "tagline": "Nivel gratuito disponible, gran ratio calidad/precio.",
       "items": [
-        "API key: <a>aistudio.google.com/app/apikey</a>",
+        "Clave API: <a>aistudio.google.com/app/apikey</a>",
         "Modelos verificados: <code>gemini-2.5-flash-lite</code>, <code>gemini-2.5-flash</code>, <code>gemini-3-flash-preview</code>.",
         "Recomendado: <strong><code>gemini-2.5-flash-lite</code></strong> — flash y flash-lite pasan el verificador consistentemente. Las variantes pro rechazan el ajuste <code>thinkingBudget=0</code> que usa el Monitor y son excesivas para esta carga."
       ]
@@ -158,13 +158,13 @@
       "heading": "OpenRouter",
       "tagline": "Agregador con acceso a más de 100 modelos usando una única API key. Máxima flexibilidad.",
       "items": [
-        "API key: <a>openrouter.ai/keys</a>",
+        "Clave API: <a>openrouter.ai/keys</a>",
         "Modelos verificados: <code>meta-llama/llama-3.3-70b-instruct</code>, <code>meta-llama/llama-3.1-70b-instruct</code>, <code>meta-llama/llama-3.1-8b-instruct</code>, <code>anthropic/claude-3.5-haiku</code>, <code>anthropic/claude-3.5-sonnet</code>, <code>google/gemini-flash-1.5</code>, <code>openai/gpt-4o-mini</code>, <code>mistralai/mistral-7b-instruct</code>, <code>mistralai/mixtral-8x7b-instruct</code>.",
         "Recomendado: <strong><code>meta-llama/llama-3.3-70b-instruct</code></strong> — mismo modelo que la entrada de Groq pero enrutado por OpenRouter, lo que significa una sola key para todos los modelos listados."
       ]
     },
     "ollama": {
-      "heading": "Ollama (Local)",
+      "heading": "Ollama (local)",
       "tagline": "Usa los modelos disponibles en tu servidor Ollama. 100% local, sin costes, privacidad total.",
       "items": [
         "Sin API key. Configura el campo <em>Ollama URL</em> a tu servidor (por defecto <code>http://localhost:11434</code> o el host que ejecute tu instancia de Ollama).",
@@ -218,7 +218,7 @@
     "shareOutro": "Navega la discusión para ver qué han construido otros operadores — alertas escuetas tipo pager, reportes técnicos verbosos, variantes específicas por idioma. Si tuneas el tuyo y te gusta el resultado, publícalo allí: incluso una descripción de un párrafo de para qué optimiza tu prompt ayuda a la gente a elegir un buen punto de partida. El feedback sobre lo que funciona y lo que no es igualmente bienvenido."
   },
   "suggestions": {
-    "heading": "AI Suggestions (BETA)",
+    "heading": "Sugerencias de IA (BETA)",
     "intro": "AI Suggestions es un addon opt-in que deja al LLM añadir <strong>un</strong> consejo corto y accionable al final del cuerpo. Solo se activa cuando el modo de prompt es <em>Default</em>, el toggle maestro de IA está activado y el switch <em>AI Suggestions</em> está pulsado — e incluso entonces, el prompt instruye al modelo a saltarse el consejo cuando la causa o solución no esté clara.",
     "formatIntro": "Cuando se añade un consejo, sigue este formato exacto:",
     "rulesIntro": "Las reglas integradas en el addon (visibles en el bloque colapsable bajo la sección Default prompt de arriba):",
@@ -241,21 +241,21 @@
     "headerProduce": "Qué le pide el prompt al LLM que produzca",
     "rows": [
       {
-        "level": "brief",
+        "level": "breve",
         "label": "2-3 líneas, solo esencial",
-        "cap": "500 tokens",
+        "cap": "tokens 500",
         "produce": "\"Qué pasó + dónde\". Nada más."
       },
       {
-        "level": "standard",
+        "level": "estándar",
         "label": "Conciso con contexto básico",
-        "cap": "1500 tokens",
+        "cap": "tokens 1500",
         "produce": "3-6 líneas: qué, dónde, causa, dispositivos afectados."
       },
       {
-        "level": "detailed",
+        "level": "detallado",
         "label": "Detalles técnicos completos",
-        "cap": "3000 tokens",
+        "cap": "tokens 3000",
         "produce": "Reporte completo: qué, dónde, causa, afectados, logs, datos SMART, historial."
       }
     ],
@@ -298,7 +298,7 @@
         "destination": "<code>api.openai.com</code> (o tu endpoint Base URL personalizado). Sujeto a la política de manejo de datos de OpenAI en el momento de la llamada."
       },
       {
-        "provider": "Anthropic",
+        "provider": "Antrópico",
         "destination": "<code>api.anthropic.com</code>."
       },
       {
@@ -321,7 +321,7 @@
     "heading": "Por dónde seguir",
     "items": [
       {
-        "label": "Notifications",
+        "label": "Notificaciones",
         "href": "/docs/monitor/notifications",
         "tail": " — la pipeline de despacho, canales, toggles por evento y la integración del webhook de PVE que rodea esta capa."
       },

@@ -22,7 +22,7 @@
     "tablePurpose": "Propósito",
     "rows": [
       {
-        "package": "dialog",
+        "package": "diálogo",
         "purpose": "Menús interactivos de terminal"
       },
       {

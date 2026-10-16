@@ -8,7 +8,7 @@
   "header": {
     "title": "Importar disco a VM",
     "description": "Adjunta un disco físico ya existente en el host Proxmox a una máquina virtual existente. ProxMenux detecta los discos libres, te deja elegir la VM destino y el tipo de bus (SATA / SCSI / VirtIO / IDE), y lo adjunta todo usando rutas persistentes /dev/disk/by-id para que el mapeo sobreviva a reinicios y cambios en el orden de los dispositivos.",
-    "section": "Disk Manager · VM"
+    "section": "Administrador de discos · VM"
   },
   "intro": {
     "title": "Qué hace esto",
@@ -69,7 +69,7 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "noDisksTitle": "\"No disks available for this VM\"",
+    "noDisksTitle": "\"No hay discos disponibles para este VM\"",
     "noDisksIntro": "El script encontró discos, pero todos los candidatos se filtraron. Razones comunes:",
     "noDisksItems": [
       "Cada disco restante ya está referenciado en la config de la VM destino.",

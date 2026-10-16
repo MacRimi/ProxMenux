@@ -5,7 +5,7 @@
   },
   "header": {
     "title": "Post-instalación: Basic Settings",
-    "section": "Settings post-install Proxmox"
+    "section": "Configuración post instalación de Proxmox"
   },
   "intro": {
     "title": "Qué cubre esta categoría",
@@ -216,12 +216,12 @@
     "heading": "Relacionado",
     "items": [
       {
-        "label": "Proxmox System Update",
+        "label": "Actualización del sistema Proxmox",
         "href": "/docs/utils/system-update",
         "tail": " — vuelve a ejecutar el ciclo apt update + dist-upgrade bajo demanda."
       },
       {
-        "label": "System Utilities Installer",
+        "label": "Instalador de utilidades del sistema",
         "href": "/docs/utils/system-utils",
         "tail": " — instala (o reinstala) utilidades individualmente tras la post-instalación."
       },
@@ -231,7 +231,7 @@
         "tail": " — referencia de apt."
       },
       {
-        "label": "Customizable Post-Install",
+        "label": "Puesto de plantilla personalizable",
         "href": "/docs/post-install/customizable",
         "tail": " — volver al menú padre."
       }

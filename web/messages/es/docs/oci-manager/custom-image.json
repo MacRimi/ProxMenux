@@ -6,7 +6,7 @@
   "header": {
     "title": "Instalar una imagen que no está en el catálogo",
     "description": "Una imagen propia se traduce desde su archivo Compose, un comando docker run o solo su referencia, y el resultado se presenta para revisión antes de crear ningún LXC.",
-    "section": "OCI manager Apps"
+    "section": "Aplicaciones del gestor OCI"
   },
   "sections": [
     {
@@ -27,16 +27,43 @@
       "blocks": [
         {
           "table": {
-            "headers": ["Opción", "Qué lee"],
+            "headers": [
+              "Opción",
+              "Qué lee"
+            ],
             "rows": [
-              ["Pegar su archivo Compose en la terminal", "El YAML se pega en la terminal y termina con Ctrl+D."],
-              ["Leer su archivo Compose desde un archivo de este host", "Una ruta del nodo, <code>/root/docker-compose.yml</code> por defecto. El archivo debe existir y ocupar como máximo 256 KiB."],
-              ["Descargar su archivo Compose desde una dirección", "Una dirección <code>http://</code> o <code>https://</code> que sirva el YAML sin procesar. Se descargan como máximo 256 KiB."],
-              ["Pegar su comando docker run en la terminal", "El comando que publica el proyecto. Se traducen puertos, entorno, volúmenes, dispositivos, capacidades, usuario, memoria compartida y el resto de opciones admitidas."],
-              ["Solo la referencia de la imagen, sin archivo Compose", "Una referencia como <code>ghcr.io/user/application:latest</code>. Se consulta el registro y se conservan los metadatos OCI de la imagen."],
-              ["Pegar un oci-compose en la terminal", "El JSON se pega en la terminal y termina con Ctrl+D. No se traduce: se comprueba y se instala tal como está escrito."],
-              ["Leer un oci-compose desde un archivo de este host", "Un archivo JSON del nodo, <code>/root/oci-compose.json</code> por defecto, de 2 MiB como máximo."],
-              ["Descargar un oci-compose desde una dirección", "Una dirección <code>http://</code> o <code>https://</code> que sirva el archivo JSON. Se descargan como máximo 2 MiB."]
+              [
+                "Pegar su archivo Compose en la terminal",
+                "El YAML se pega en la terminal y termina con Ctrl+D."
+              ],
+              [
+                "Leer su archivo Compose desde un archivo de este host",
+                "Una ruta del nodo, <code>/root/docker-compose.yml</code> por defecto. El archivo debe existir y ocupar como máximo 256 KiB."
+              ],
+              [
+                "Descargar su archivo Compose desde una dirección",
+                "Una dirección <code>http://</code> o <code>https://</code> que sirva el YAML sin procesar. Se descargan como máximo 256 KiB."
+              ],
+              [
+                "Pegar su comando docker run en la terminal",
+                "El comando que publica el proyecto. Se traducen puertos, entorno, volúmenes, dispositivos, capacidades, usuario, memoria compartida y el resto de opciones admitidas."
+              ],
+              [
+                "Solo la referencia de la imagen, sin archivo Compose",
+                "Una referencia como <code>ghcr.io/user/application:latest</code>. Se consulta el registro y se conservan los metadatos OCI de la imagen."
+              ],
+              [
+                "Pegar un oci-compose en la terminal",
+                "El JSON se pega en la terminal y termina con Ctrl+D. No se traduce: se comprueba y se instala tal como está escrito."
+              ],
+              [
+                "Leer un oci-compose desde un archivo de este host",
+                "Un archivo JSON del nodo, <code>/root/oci-compose.json</code> por defecto, de 2 MiB como máximo."
+              ],
+              [
+                "Descargar un oci-compose desde una dirección",
+                "Una dirección <code>http://</code> o <code>https://</code> que sirva el archivo JSON. Se descargan como máximo 2 MiB."
+              ]
             ]
           }
         },
@@ -56,12 +83,32 @@
       "blocks": [
         {
           "table": {
-            "headers": ["Se lee de la imagen", "No está en la imagen", "Consecuencia"],
+            "headers": [
+              "Se lee de la imagen",
+              "No está en la imagen",
+              "Consecuencia"
+            ],
             "rows": [
-              ["<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>, <code>WorkingDir</code> y entorno integrado", "Variables que solo aparecen en la documentación", "Se añaden durante la instalación o con Modificar"],
-              ["Volúmenes declarados por la imagen", "Directorios del host que solo nombra un archivo Compose", "Las rutas adicionales se añaden antes de instalar"],
-              ["Puertos <code>EXPOSE</code>", "La URL, el protocolo o un healthcheck funcional", "Se confirman el puerto y la forma de comprobar el servicio"],
-              ["Arquitecturas y digest del registro", "Dispositivos, privilegios o dependencias externas", "Ninguno se activa sin una definición que lo pida"]
+              [
+                "<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>, <code>WorkingDir</code> y entorno integrado",
+                "Variables que solo aparecen en la documentación",
+                "Se añaden durante la instalación o con Modificar"
+              ],
+              [
+                "Volúmenes declarados por la imagen",
+                "Directorios del host que solo nombra un archivo Compose",
+                "Las rutas adicionales se añaden antes de instalar"
+              ],
+              [
+                "Puertos <code>EXPOSE</code>",
+                "La URL, el protocolo o un healthcheck funcional",
+                "Se confirman el puerto y la forma de comprobar el servicio"
+              ],
+              [
+                "Arquitecturas y digest del registro",
+                "Dispositivos, privilegios o dependencias externas",
+                "Ninguno se activa sin una definición que lo pida"
+              ]
             ]
           }
         }
@@ -75,11 +122,26 @@
         {
           "steps": {
             "items": [
-              { "title": "Analizar", "body": "Se leen servicios, imagen, puertos, rutas, entorno, dispositivos, seguridad y healthcheck." },
-              { "title": "Consultar el registro", "body": "La imagen debe existir en su registro, y se enumeran las arquitecturas que publica. Un registro privado se lee con la cuenta guardada para él." },
-              { "title": "Enumerar lo que no se aplica", "body": "Se enumeran las etiquetas, las redes Docker, los ajustes de Swarm y el resto de claves que no tienen efecto en un LXC." },
-              { "title": "Bloquear lo que no puede traducirse", "body": "Una clave sin equivalencia segura aparece en <strong>Lo que no puede traducirse</strong> y la instalación no continúa. Nada se descarta en silencio." },
-              { "title": "Pedir los secretos", "body": "Las variables cuyo nombre corresponde a una contraseña, un token o una clave se convierten en preguntas sensibles de la instalación." }
+              {
+                "title": "Analizar",
+                "body": "Se leen servicios, imagen, puertos, rutas, entorno, dispositivos, seguridad y healthcheck."
+              },
+              {
+                "title": "Consultar el registro",
+                "body": "La imagen debe existir en su registro, y se enumeran las arquitecturas que publica. Un registro privado se lee con la cuenta guardada para él."
+              },
+              {
+                "title": "Enumerar lo que no se aplica",
+                "body": "Se enumeran las etiquetas, las redes Docker, los ajustes de Swarm y el resto de claves que no tienen efecto en un LXC."
+              },
+              {
+                "title": "Bloquear lo que no puede traducirse",
+                "body": "Una clave sin equivalencia segura aparece en <strong>Lo que no puede traducirse</strong> y la instalación no continúa. Nada se descarta en silencio."
+              },
+              {
+                "title": "Pedir los secretos",
+                "body": "Las variables cuyo nombre corresponde a una contraseña, un token o una clave se convierten en preguntas sensibles de la instalación."
+              }
             ]
           }
         },
@@ -103,7 +165,7 @@
           "codeGrid": {
             "items": [
               {
-                "title": "Compose",
+                "title": "Composición",
                 "code": "services:\n  app:\n    image: ghcr.io/example/app:latest\n    ports:\n      - \"8080:8080\"\n    volumes:\n      - ./config:/config\n      - /srv/media:/media\n    environment:\n      TZ: Europe/Madrid"
               },
               {
@@ -160,13 +222,24 @@
         {
           "steps": {
             "items": [
-              { "title": "El registro rechaza la imagen", "body": "Cuando el registro responde que la imagen necesita una cuenta, la revisión ofrece iniciar sesión en ese registro y vuelve a leer la imagen." },
-              { "title": "Iniciar sesión", "body": "Un usuario y una contraseña o un token de acceso que puedan descargar la imagen. El registro los comprueba y solo se guardan si los acepta." },
-              { "title": "Instalar y mantener al día", "body": "La instalación descarga la imagen con esa cuenta, y también las actualizaciones, Modificar, Recrear, la vigilancia y la comprobación de actualizaciones del Monitor, en cualquier nodo del clúster." }
+              {
+                "title": "El registro rechaza la imagen",
+                "body": "Cuando el registro responde que la imagen necesita una cuenta, la revisión ofrece iniciar sesión en ese registro y vuelve a leer la imagen."
+              },
+              {
+                "title": "Iniciar sesión",
+                "body": "Un usuario y una contraseña o un token de acceso que puedan descargar la imagen. El registro los comprueba y solo se guardan si los acepta."
+              },
+              {
+                "title": "Instalar y mantener al día",
+                "body": "La instalación descarga la imagen con esa cuenta, y también las actualizaciones, Modificar, Recrear, la vigilancia y la comprobación de actualizaciones del Monitor, en cualquier nodo del clúster."
+              }
             ]
           }
         },
-        { "p": "<strong>Cuentas de registro</strong>, en el menú principal de OCI manager Apps, lista las cuentas guardadas por registro y usuario, nunca su secreto. Desde cada cuenta se puede comprobar, descargar o instalar una imagen, y actualizar o eliminar la cuenta." },
+        {
+          "p": "<strong>Cuentas de registro</strong>, en el menú principal de OCI manager Apps, lista las cuentas guardadas por registro y usuario, nunca su secreto. Desde cada cuenta se puede comprobar, descargar o instalar una imagen, y actualizar o eliminar la cuenta."
+        },
         {
           "list": {
             "items": [

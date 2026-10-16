@@ -10,7 +10,7 @@
   "header": {
     "title": "Borg",
     "description": "El destino Borg escribe las copias del host en un repositorio Borg. Se soportan tres tipos de repositorio: ruta local de sistema de ficheros, disco externo montado o servidor remoto vía SSH. Deduplicación a nivel de chunk entre todos los archivos del repositorio y cifrado opcional repokey.",
-    "section": "Backup & Restore"
+    "section": "Copias de seguridad y restauración"
   },
   "aboutBorg": {
     "heading": "Qué es Borg",
@@ -62,7 +62,7 @@
       },
       {
         "type": "local",
-        "url": "/backup/borgbackup (cualquier ruta absoluta)",
+        "url": "/backup/borgbackup (any absolute path)",
         "detail": "El repositorio vive en un directorio local. Sólo tiene sentido cuando el directorio está en un disco físico distinto — un repositorio en el mismo disco que el origen protege contra error humano pero no contra fallo de disco."
       }
     ]
@@ -110,34 +110,34 @@
     "strategiesIntro": "Al añadir un destino remoto, ProxMenux pregunta por el usuario SSH, host y ruta remota, y a continuación pregunta cómo autenticar. Cuatro modos:",
     "strategyRows": [
       {
-        "mode": "generate-auto",
+        "mode": "genera-auto",
         "label": "Recomendado",
         "detail": "ProxMenux genera una nueva keypair ed25519 en <code>~/.ssh/borg_proxmenux_HOST_ed25519</code>, y a continuación usa <code>sshpass</code> para hacer login UNA VEZ en el servidor con la contraseña de admin y añadir la clave pública a <code>~borg/.ssh/authorized_keys</code>. La contraseña de admin se usa sólo para esa única llamada — nunca se almacena."
       },
       {
-        "mode": "generate-manual",
+        "mode": "genera-manual",
         "label": "Sin contraseña admin en este host",
         "detail": "ProxMenux genera la keypair como arriba pero muestra la línea completa de <code>authorized_keys</code> para que el usuario la pegue manualmente en el servidor. La contraseña de admin nunca sale del host ProxMenux porque nunca se pregunta."
       },
       {
-        "mode": "generate-pct",
+        "mode": "genera-pct",
         "label": "El servidor Borg es un LXC de PVE",
         "detail": "El servidor Borg se ejecuta dentro de un LXC en un nodo PVE. ProxMenux autoriza la clave vía <code>pct exec</code> desde el host PVE — root en el host PVE escribe en el <code>~borg/.ssh/authorized_keys</code> del LXC sin necesidad de hacer SSH al LXC."
       },
       {
-        "mode": "existing",
+        "mode": "existentes",
         "label": "Usar una clave existente",
         "detail": "ProxMenux escanea <code>/root/.ssh/</code> y <code>$HOME/.ssh/</code> buscando claves privadas ed25519/RSA parseables y las lista. El usuario elige una o navega manualmente a una ruta no estándar."
       },
       {
-        "mode": "none",
+        "mode": "ninguno",
         "label": "Configuración SSH por defecto",
         "detail": "Sin clave personalizada — Borg usa la configuración SSH por defecto del host (típicamente <code>~/.ssh/id_rsa</code> o un agente SSH)."
       }
     ],
     "restrictTitle": "La línea authorized_keys",
     "restrictBody": "Para cada clave generada, la línea de <code>authorized_keys</code> que ProxMenux escribe en el servidor bloquea la clave a una única invocación de borg-serve contra la ruta configurada del repositorio:",
-    "restrictLine": "command=\"/usr/bin/borg serve --restrict-to-path RPATH\",restrict PUBKEY",
+    "restrictLine": "comando=\"/usr/bin/borg servir --restrict-to-path RPATH\",restrict PUBKEY",
     "restrictNote": "El <code>command=</code> fuerza que cada sesión SSH que use esta clave ejecute sólo ese comando borg-serve; <code>restrict</code> desactiva port forwarding, agent forwarding, X11 forwarding y asignación de PTY. La clave no se puede usar para abrir una shell interactiva en el servidor ni para acceder a ninguna otra ruta de repositorio, aunque la cuenta tenga privilegios más amplios."
   },
   "savedTargets": {
@@ -175,17 +175,17 @@
       },
       {
         "var": "BORG_ENCRYPT_MODE",
-        "value": "repokey | none",
+        "value": "repokey ← ninguno",
         "purpose": "Lo usa <code>hb_borg_init_if_needed</code> al inicializar un repositorio que aún no existe. <code>borg create</code> lo ignora en repositorios existentes."
       },
       {
         "var": "BORG_RELOCATED_REPO_ACCESS_IS_OK",
-        "value": "yes",
+        "value": "sí",
         "purpose": "Suprime el prompt interactivo que Borg lanza cuando la URL del repositorio difiere de la URL desde la que se alcanzó originalmente (habitual tras un renombrado del punto de montaje o un cambio de dirección del host SSH)."
       },
       {
         "var": "BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK",
-        "value": "yes",
+        "value": "sí",
         "purpose": "Suprime el prompt interactivo que Borg lanza la primera vez que se accede a un repositorio sin cifrar desde un cliente nuevo."
       }
     ]

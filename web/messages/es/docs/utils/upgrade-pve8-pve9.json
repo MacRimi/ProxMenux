@@ -81,7 +81,7 @@
         },
         {
           "settingRich": "<code>DEBIAN_FRONTEND=noninteractive</code>",
-          "effectRich": "apt / dpkg corren sin abrir ningún prompt de debconf"
+          "effectRich": "apt / dpkg run without opening any debconf prompt"
         },
         {
           "settingRich": "<code>--force-confdef</code>",
@@ -246,7 +246,7 @@
         "bodyRich": "Bug conocido — la auto-reparación se refiere a una función (<code>configure_repositories</code>) que no existe en el código actual. Usa la opción 2 (mostrar comandos manuales) y ejecútalos desde un shell aparte, o ejecuta los arreglos canónicos a mano: <code>apt-get update</code>, después vuelve a ejecutar el upgrade."
       },
       {
-        "title": "La simulación de apt señala \"proxmox-ve will be REMOVED\"",
+        "title": "apt simulation flags \"proxmox-ve will be REMOVED\"",
         "bodyRich": "Los nuevos repos no son alcanzables o la sustitución de codename no surtió efecto. Comprueba <code>cat /etc/apt/sources.list.d/proxmox.sources</code> — la línea <code>Suites:</code> debe decir <code>trixie</code>, no <code>bookworm</code>. Confirma también que <code>apt-cache policy proxmox-ve</code> muestra un candidato 9.x del nuevo repo."
       },
       {
@@ -281,7 +281,7 @@
     "items": [
       {
         "href": "https://pve.proxmox.com/wiki/Upgrade_from_8_to_9",
-        "title": "Upgrade from 8 to 9",
+        "title": "Actualización de 8 a 9",
         "desc": "La página principal del wiki de Proxmox para el upgrade 8 → 9. Fuente de verdad de cada comando del procedimiento manual de arriba."
       },
       {

@@ -48,23 +48,23 @@
     "headerUseFor": "Úsalo para",
     "rows": [
       {
-        "mode": "IP traffic monitor",
+        "mode": "Monitor de tráfico IP",
         "useFor": "Lista en vivo de flujos TCP / UDP / ICMP / otro-IP con contadores de bytes y estado de conexión"
       },
       {
-        "mode": "General interface stats",
+        "mode": "Estadísticas de interfaz general",
         "useFor": "Conteos agregados de paquetes IPv4 / IPv6 / TCP / UDP / ICMP / no-IP por NIC"
       },
       {
-        "mode": "Detailed interface stats",
+        "mode": "Estadísticas de interfaz detalladas",
         "useFor": "Igual que arriba pero para una interfaz, con detalle de tamaño y tasa de paquetes"
       },
       {
-        "mode": "Statistical breakdowns",
+        "mode": "Desglose estadístico",
         "useFor": "Histograma de distribución de tamaño de paquete, por puerto TCP / UDP"
       },
       {
-        "mode": "LAN station monitor",
+        "mode": "Monitor de estación local",
         "useFor": "Estadísticas de tráfico por MAC del dominio de broadcast local"
       }
     ],
@@ -81,12 +81,12 @@
     "headerCli": "CLI equivalente",
     "rows": [
       {
-        "mode": "Server",
+        "mode": "Servidor",
         "behaviour": "Escucha en TCP 5201 e imprime resultados de cada test entrante. Se detiene con Ctrl+C.",
         "cli": "iperf3 -s"
       },
       {
-        "mode": "Client",
+        "mode": "Cliente",
         "behaviour": "Pide la IP / hostname del servidor, conecta, ejecuta un test por defecto de 10 segundos e imprime el informe.",
         "cli": "iperf3 -c <target>"
       }

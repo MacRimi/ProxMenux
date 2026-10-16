@@ -5,7 +5,7 @@
   },
   "header": {
     "title": "Post-instalación: Virtualización",
-    "section": "Settings post-install Proxmox"
+    "section": "Configuración post instalación de Proxmox"
   },
   "intro": {
     "title": "Qué cubre esta categoría",
@@ -57,7 +57,7 @@
       {
         "boot": "systemd-boot (ZFS)",
         "file": "/etc/kernel/cmdline",
-        "post": "proxmox-boot-tool refresh"
+        "post": "refresco proxmox-boot-tool"
       },
       {
         "boot": "GRUB (LVM/ext4)",
@@ -87,12 +87,12 @@
     "heading": "Relacionado",
     "items": [
       {
-        "label": "Add GPU to VM (Passthrough)",
+        "label": "Añadir GPU a VM (Passthrough)",
         "href": "/docs/hardware/gpu-vm-passthrough",
         "tail": " — siguiente paso natural una vez IOMMU + VFIO están activos."
       },
       {
-        "label": "Add Controller or NVMe to VM",
+        "label": "Añadir Controlador o NVMe a VM",
         "href": "/docs/disk-manager/add-controller-nvme-vm",
         "tail": " — misma infraestructura de passthrough para controladoras de almacenamiento."
       },
@@ -102,12 +102,12 @@
         "tail": " — referencia de verificación de IOMMU."
       },
       {
-        "label": "Uninstall Optimizations",
+        "label": "Optimizaciones de desinstalación",
         "href": "/docs/post-install/uninstall",
         "tail": " — revierte IOMMU / VFIO de forma limpia."
       },
       {
-        "label": "Customizable Post-Install",
+        "label": "Puesto de plantilla personalizable",
         "href": "/docs/post-install/customizable",
         "tail": " — volver al menú padre."
       }

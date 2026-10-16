@@ -23,7 +23,7 @@
   },
   "subtabs": {
     "heading": "Tres sub-pestañas",
-    "logsTitle": "Logs",
+    "logsTitle": "Registros",
     "logsIntro": "El journal del sistema, servido por <code>journalctl</code> en el backend. Filtros disponibles en la barra de herramientas:",
     "logsFilters": [
       "<strong>Severidad</strong> — emerg / alert / crit / err / warning / notice / info / debug, o cualquier combinación.",
@@ -49,16 +49,16 @@
     ],
     "maxLevelStoreTitle": "MaxLevelStore de journald",
     "maxLevelStoreBody": "En una instalación recién hecha de Proxmox, journald usa por defecto <code>MaxLevelStore=warning</code>, lo que descarta en silencio los mensajes de nivel info. El Monitor lo detecta en el arranque y añade un drop-in (<code>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</code>) que sube el umbral a <code>info</code> para que la pestaña Logs tenga algo que mostrar en todas las severidades.",
-    "backupsTitle": "Backups",
+    "backupsTitle": "Copias de seguridad",
     "backupsBody": "Historial de tareas de Proxmox filtrado a las entradas relacionadas con backup. Una fila por tarea (<code>vzdump</code>, transferencias PBS, Garbage Collect, Verify) con el estado (OK / WARNINGS / ERROR), el guest implicado, el almacenamiento de origen, la duración y el UPID. Pulsa una fila para cargar el log completo de la tarea vía <code>GET /api/task-log/&lt;upid&gt;</code> — los mismos datos que Proxmox expone a través de <em>Datacenter → Tasks</em>, acotado a backups.",
-    "notificationsTitle": "Notifications",
+    "notificationsTitle": "Notificaciones",
     "notificationsBody1": "Cada notificación enviada por el Monitor — Telegram, Discord, Email, Gotify, ntfy, Slack, Teams, webhook. Cada fila: timestamp, canal, tipo de evento, severidad, el título renderizado, el cuerpo renderizado y (si IA está activa) un conmutador para ver la reescritura con IA junto al original.",
     "notificationsBody2": "Usa esta pestaña para verificar que un canal está entregando de verdad y para comparar lo que produjo la reescritura con IA frente a la plantilla base. La configuración de canales vive en la página detallada de <link>Notificaciones</link>."
   },
   "dataCollected": {
     "heading": "Cómo se recopilan los datos",
     "headerSubtab": "Sub-pestaña",
-    "headerEndpoint": "Endpoint",
+    "headerEndpoint": "Punto final",
     "headerSource": "Fuente",
     "rows": [
       {
@@ -67,12 +67,12 @@
         "source": "<code>journalctl --output json --since &lt;range&gt;</code> con filtros de severidad / unidad / búsqueda aplicados en el servidor."
       },
       {
-        "subtab": "Download",
+        "subtab": "Descargar",
         "endpoint": "/api/logs/download",
         "source": "La misma consulta, devuelta como texto plano para grep / less."
       },
       {
-        "subtab": "Backups",
+        "subtab": "Copias de seguridad",
         "endpoint": "/api/backups",
         "source": "Historial de tareas PVE filtrado por <code>vzdump</code>, transferencias PBS, Garbage Collect, Verify."
       },

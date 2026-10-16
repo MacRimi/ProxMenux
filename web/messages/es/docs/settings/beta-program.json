@@ -8,7 +8,7 @@
   "header": {
     "title": "Cambiar canal de release",
     "description": "Una opción unificada de Settings para cambiar ProxMenux entre los canales estable (rama main) y beta (rama develop). La antigua \"Desactivar programa beta\" unidireccional se ha sustituido por un diálogo bidireccional que siempre ofrece ambas direcciones y ejecuta el instalador oficial del canal que elijas.",
-    "section": "Settings"
+    "section": "Ajustes"
   },
   "intro": {
     "title": "Qué ha cambiado",
@@ -100,7 +100,7 @@
       },
       {
         "href": "/docs/settings/proxmenux-monitor",
-        "label": "ProxMenux Monitor",
+        "label": "Monitor de ProxMenux",
         "tail": " — el servicio del Monitor que se reconstruye como parte del cambio."
       },
       {

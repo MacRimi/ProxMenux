@@ -22,24 +22,24 @@
     "headerSource": "Fuente",
     "rows": [
       {
-        "card": "CPU Usage",
+        "card": "Uso de CPU",
         "what": "Porcentaje actual con barra de progreso. Se actualiza cada ~1 s vía el sampler de signos vitales.",
         "source": "psutil.cpu_percent()"
       },
       {
-        "card": "Memory Usage",
+        "card": "Uso de la memoria",
         "what": "GB usados, porcentaje, GB totales. La barra de progreso sigue al porcentaje.",
         "source": "psutil.virtual_memory()"
       },
       {
-        "card": "Active VM & LXC",
+        "card": "VM y LXC activos",
         "what": "Recuento de guests actualmente en ejecución, con una insignia de desglose Running / Stopped y una línea al pie con los totales de VMs y LXCs.",
         "source": "/api/vms (consolidado)"
       },
       {
-        "card": "Temperature",
+        "card": "Temperatura",
         "what": "Temperatura de CPU en °C con insignia de estado (cool / warm / hot) y un sparkline de 5 minutos detrás. Muestra <em>N/A</em> cuando no se detecta sensor. Pulsa para abrir la modal de detalle de temperatura.",
-        "source": "sensors / coretemp"
+        "source": "sensores / temperatura central"
       }
     ],
     "thresholdsTitle": "Colores de estado y umbrales aplicados aquí",
@@ -111,7 +111,7 @@
   "dataCollected": {
     "heading": "Cómo se recopilan los datos",
     "headerCard": "Tarjeta",
-    "headerEndpoint": "Endpoint",
+    "headerEndpoint": "Punto final",
     "headerSource": "Fuente",
     "rows": [
       {
@@ -120,7 +120,7 @@
         "source": "El estado global cacheado que produce el Monitor de salud en cada ciclo."
       },
       {
-        "card": "CPU / RAM / Swap / Uptime",
+        "card": "CPU / RAM / Cambio / Tiempo de actualización",
         "endpoint": "/api/system",
         "source": "<code>/proc/stat</code>, <code>/proc/meminfo</code>, <code>/proc/uptime</code> con muestreo de CPU en ventana corta."
       },

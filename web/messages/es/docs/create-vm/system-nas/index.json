@@ -26,7 +26,7 @@
   },
   "labels": {
     "base": "Base",
-    "fileSystem": "Filesystem",
+    "fileSystem": "Sistema de archivos",
     "viewDetails": "Ver detalles"
   },
   "supported": {
@@ -36,7 +36,7 @@
         "name": "Synology DSM",
         "tagline": "DiskStation Manager con el loader ARC / RR. Requiere configurar el loader antes del primer arranque.",
         "icon": "HardDrive",
-        "base": "Linux (custom)",
+        "base": "Linux (costo)",
         "fileSystem": "Btrfs, ext4",
         "href": "/docs/create-vm/system-nas/synology",
         "flow": "loader"

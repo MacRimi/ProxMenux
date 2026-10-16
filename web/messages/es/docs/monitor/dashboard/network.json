@@ -18,19 +18,19 @@
     "headerWhat": "Qué muestra",
     "rows": [
       {
-        "card": "Network Traffic",
+        "card": "Tráfico de red",
         "what": "Tasa agregada RX / TX a lo largo de todas las interfaces, formateada en la unidad correcta (bps / Kbps / Mbps / Gbps)."
       },
       {
-        "card": "Active Interfaces",
+        "card": "Interfaces activas",
         "what": "Dos contadores: <em>Physical X / Y</em> y <em>Bridges X / Y</em> (activas sobre total). El primer contador que miras cuando algo deja de funcionar."
       },
       {
-        "card": "Network Status",
+        "card": "Estado de la red",
         "what": "Veredicto rápido — Healthy / Warning / Critical en función del estado del enlace, alcanzabilidad del gateway e integridad del bridge. Refleja la categoría <em>Network Interfaces</em> del Monitor de salud."
       },
       {
-        "card": "Network Latency",
+        "card": "Latencia de red",
         "what": "Round-trip time al gateway con un sparkline. Pulsar la tarjeta abre la <strong>modal Network Latency</strong> documentada más abajo — vista histórica + test de ping bajo demanda contra gateway / Cloudflare / Google con un informe PDF descargable."
       }
     ]
@@ -71,11 +71,11 @@
       "Cian <strong>VLAN</strong> — sub-interfaz VLAN (<code>vmbr0.10</code>, <code>eno1.42</code>, …)."
     ],
     "clickable": "<strong>Cada fila es pulsable</strong> — física, virtual, bridge o bond — y abre la vista en detalle por interfaz descrita más abajo (info básica, IPs, contadores de tráfico, gráfica RX/TX histórica del almacén RRD de Proxmox).",
-    "physicalTitle": "Physical Interfaces",
+    "physicalTitle": "Interfaces físicas",
     "physicalBody": "Cada NIC que el kernel ve como un dispositivo real — <code>eno1</code>, <code>enp4s0</code>, <code>eth0</code>, <code>wlp3s0</code>, etc. Una fila por dispositivo con la insignia azul <strong>Physical</strong> y el estado del enlace. Los <em>miembros del bond</em> (NICs esclavizadas a un bond) también se muestran aquí, con una pista que apunta al bond padre.",
-    "bridgeTitle": "Bridge Interfaces",
+    "bridgeTitle": "Interfaces de puente",
     "bridgeBody": "Bridges Linux (<code>vmbr0</code>, <code>vmbr1</code>, …) y los bridges OVS que gestiona Proxmox. Cada fila muestra la insignia verde <strong>Bridge</strong>, la interfaz física subyacente (cuando es un bridge de un solo puerto) y el estado del bridge. Los bonds visibles en esta capa reciben la insignia morada <strong>Bond</strong>; las sub-interfaces VLAN reciben la insignia cian <strong>VLAN</strong>.",
-    "vmTitle": "VM / LXC Interfaces",
+    "vmTitle": "Interfaces de VM / LXC",
     "vmBody": "Las interfaces <code>tap*</code> y <code>veth*</code> creadas cuando arrancan los guests — una por NIC virtual. La cabecera de la tarjeta muestra <em>X / Y Active</em>; las filas enlazan con el VM/CT al que pertenecen, así que puedes saltar directamente al guest en la pestaña VMs y LXCs. Las entradas inactivas quedan por un instante después de que un guest se pare; envejecen y se eliminan en el siguiente ciclo de refresco."
   },
   "drillIn": {
@@ -85,15 +85,15 @@
     "headerContents": "Contenido",
     "rows": [
       {
-        "block": "Basic Information",
+        "block": "Información básica",
         "contents": "Nombre de la interfaz, tipo (física / bridge / bond / VLAN / vm), dirección MAC, estado (up / down), MTU y la interfaz física subyacente para los tipos no físicos."
       },
       {
-        "block": "Bond Members",
+        "block": "Miembros de Bond",
         "contents": "Solo para bonds. Lista cada NIC esclavizada con el flag active / failed, el modo del bond (active-backup / 802.3ad / balance-alb / …) y la interfaz primaria cuando está configurada."
       },
       {
-        "block": "IP Addresses",
+        "block": "Direcciones IP",
         "contents": "Cada dirección IPv4 / IPv6 con su longitud de prefijo. Las direcciones link-local autoconfiguradas se listan pero salen atenuadas."
       },
       {
@@ -141,27 +141,27 @@
     "headerImpact": "Impacto práctico",
     "thresholdRows": [
       {
-        "status": "Excellent",
+        "status": "Excelente",
         "range": "< 50 ms",
         "impact": "Óptimo para apps en tiempo real, gaming y videollamadas."
       },
       {
-        "status": "Good",
+        "status": "Bien",
         "range": "50 – 100 ms",
         "impact": "Aceptable para la mayoría de aplicaciones con impacto mínimo."
       },
       {
-        "status": "Fair",
+        "status": "Justo",
         "range": "100 – 200 ms",
         "impact": "Retardo perceptible. Puede afectar a VoIP y apps interactivas."
       },
       {
-        "status": "Poor",
+        "status": "Pobre",
         "range": "> 200 ms",
         "impact": "Latencia significativa. Se recomienda investigar."
       }
     ],
-    "reportTitle": "Network Latency Report (PDF)",
+    "reportTitle": "Informe de latencia de red (PDF)",
     "reportIntro": "Ambos modos tienen un botón <strong>Report</strong> junto al selector de destino. Pulsarlo genera un PDF con todo lo que enviarías a tu ISP si quisieras argumentar un mal servicio.",
     "reportPreviewAlt": "Primera página del PDF Network Latency Report — Executive Summary con el gauge, estadísticas de latencia, la gráfica de latencia y la guía de umbrales",
     "reportPreviewCaption": "Primera página del Network Latency Report — Executive Summary con el dial del gauge y las estadísticas titulares, la gráfica de latencia por segundo y la guía de umbrales. De la página 2 en adelante está la tabla por muestra y la metodología.",
@@ -186,7 +186,7 @@
   "dataCollected": {
     "heading": "Cómo se recopilan los datos",
     "headerSection": "Sección de la pestaña",
-    "headerEndpoint": "Endpoint",
+    "headerEndpoint": "Punto final",
     "headerSource": "Fuente",
     "rows": [
       {

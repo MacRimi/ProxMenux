@@ -58,7 +58,7 @@
         "use": "Historial de la shell, movimiento del cursor, navegación de menús."
       },
       {
-        "button": "↵ Enter",
+        "button": "↵ Intro",
         "sends": "\\r",
         "use": "Confirmar. Algunos teclados en pantalla cambian Enter por Go/Done — este botón es inequívoco."
       },
@@ -89,7 +89,7 @@
     "headerSource": "Fuente",
     "headerWhen": "Cuándo se usa",
     "headerWhat": "Lo que ves",
-    "onlineLabel": "(online)",
+    "onlineLabel": "(en línea)",
     "onlineWhen": "Cuando el host tiene acceso a internet y el proxy de cheat.sh responde.",
     "onlineWhat": "Varios ejemplos del mundo real por comando, tipeados con su descripción encima. El punto de estado en la cabecera de la modal es <green>verde</green>.",
     "fallbackLabel": "Fallback local",

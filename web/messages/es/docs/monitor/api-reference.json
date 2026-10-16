@@ -8,15 +8,15 @@
     "twitterDescription": "Endpoints para Home Assistant, Homepage, Grafana, Prometheus, n8n y paneles propios."
   },
   "header": {
-    "title": "API Reference",
+    "title": "Referencia API",
     "description": "Los endpoints HTTP que usan los integradores para leer estado y disparar acciones seguras en ProxMenux Monitor — sensores de Home Assistant, tarjetas de Homepage, paneles de Grafana, scrapes de Prometheus, flujos de n8n y scripts propios. Cada categoría, más una lista completa de métricas Prometheus, con ejemplos en curl.",
-    "section": "ProxMenux Monitor"
+    "section": "Monitor de ProxMenux"
   },
   "intro": {
     "title": "Para qué es esta página",
     "body": "Esta página lista los endpoints que esperamos que usen las integraciones externas — exportación de datos en solo lectura para cada parte del Monitor, más el pequeño conjunto de operaciones de escritura que las automatizaciones necesitan legítimamente (disparar un backup, enviar una notificación personalizada, dar acknowledgement a una alerta). Toda la API corre desde el mismo proceso Flask que sirve la UI del panel en TCP <strong>8008</strong>; la dirección de bind y TLS se configuran en <link>Access & Authentication</link>."
   },
-  "headerEndpoint": "Endpoint",
+  "headerEndpoint": "Punto final",
   "headerMethod": "Método",
   "headerUse": "Uso",
   "auth": {
@@ -55,7 +55,7 @@
     "heading": "Convenciones",
     "items": [
       "Todas las peticiones y respuestas son JSON salvo que se indique explícitamente (la descarga de logs es texto plano, <code>/api/prometheus</code> es text/plain en formato OpenMetrics, el log de tareas es texto plano).",
-      "Los endpoints que modifican estado con éxito devuelven <code>'{'\"success\": true, ...'}'</code>. Las respuestas de error usan un estado HTTP no-2xx con <code>'{'\"success\": false, \"error\": \"'<'motivo'>'\"'}'</code>.",
+      "Los endpoints que modifican estado con éxito devuelven <code>'{'\"success\": true, ...'}'</code>. Las respuestas de error usan un estado HTTP no-2xx con <code>'{'\"success\": false, \"error\": \"'<'reason'>'\"'}'</code>.",
       "Los endpoints de listado aceptan <code>limit</code>, <code>offset</code>, <code>since</code> opcionales y filtros específicos por categoría vía query string.",
       "Los campos de tiempo se devuelven como segundos epoch Unix o ISO-8601 con zona horaria explícita, nunca como cadenas de locale."
     ]
@@ -174,10 +174,10 @@
     "syncVsAsyncBody": "Las acciones a nivel de sistema (power del host, PVE update, self-update de ProxMenux) pueden tardar minutos — corren en su propia unit systemd transitoria y exponen un endpoint <code>.../status</code> más un <code>DELETE</code> para cancelar. Las acciones VM / LXC (start, stop, shutdown, reboot, backup) son rápidas y usan el estilo fire-and-return que la UI del Monitor ya expone: el POST devuelve el resultado directo. Ambos estilos comparten el mismo modelo de autenticación (JWT o token de API de larga duración).",
     "curlTitle": "Ejemplo con curl",
     "curlBody": "Disparar una actualización de PVE y hacer polling hasta que termine — exactamente la misma secuencia que ejecutaría una automatización de Home Assistant o un playbook de Ansible:",
-    "curlCode": "TOKEN=<tu token full_admin>\n\ncurl -sSf -X POST \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  https://<host>:8008/api/system/pve-update/run\n\nwhile true; do\n  state=$(curl -sSf -H \"Authorization: Bearer $TOKEN\" \\\n    https://<host>:8008/api/system/pve-update/status | jq -r .state)\n  [ \"$state\" != \"running\" ] && break\n  sleep 30\ndone\necho \"estado final: $state\"",
+    "curlCode": "TOKEN=<your full_admin token>\n\ncurl -sSf -X POST \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  https://<host>:8008/api/system/pve-update/run\n\nwhile true; do\n  state=$(curl -sSf -H \"Authorization: Bearer $TOKEN\" \\\n    https://<host>:8008/api/system/pve-update/status | jq -r .state)\n  [ \"$state\" != \"running\" ] && break\n  sleep 30\ndone\necho \"final state: $state\"",
     "haTitle": "Snippet de integración con Home Assistant",
     "haBody": "Un sensor <code>rest</code> hace polling del estado y un <code>rest_command</code> dispara la actualización. Conecta ambos a un botón del dashboard y a las automatizaciones que quieras:",
-    "haCode": "# configuration.yaml\nsensor:\n  - platform: rest\n    resource: https://pve.local:8008/api/system/pve-update/status\n    name: pve_update_state\n    value_template: \"{{ value_json.state }}\"\n    scan_interval: 60\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\nrest_command:\n  pve_update:\n    url: https://pve.local:8008/api/system/pve-update/run\n    method: POST\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\n  # Encender VM 100 (funciona igual para LXC — mismo endpoint)\n  vm_100_start:\n    url: https://pve.local:8008/api/vms/100/control\n    method: POST\n    content_type: 'application/json'\n    payload: '{\"action\": \"start\"}'\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\n  # Backup de la VM 100 al storage 'pbs-main'\n  vm_100_backup:\n    url: https://pve.local:8008/api/vms/100/backup\n    method: POST\n    content_type: 'application/json'\n    payload: '{\"storage\": \"pbs-main\", \"mode\": \"snapshot\", \"compress\": \"zstd\"}'\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\""
+    "haCode": "# configuration.yaml\nsensor:\n  - platform: rest\n    resource: https://pve.local:8008/api/system/pve-update/status\n    name: pve_update_state\n    value_template: \"{{ value_json.state }}\"\n    scan_interval: 60\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\nrest_command:\n  pve_update:\n    url: https://pve.local:8008/api/system/pve-update/run\n    method: POST\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\n  # Start VM 100 (works for LXC too — same endpoint)\n  vm_100_start:\n    url: https://pve.local:8008/api/vms/100/control\n    method: POST\n    content_type: 'application/json'\n    payload: '{\"action\": \"start\"}'\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\n  # Backup VM 100 to the 'pbs-main' storage\n  vm_100_backup:\n    url: https://pve.local:8008/api/vms/100/backup\n    method: POST\n    content_type: 'application/json'\n    payload: '{\"storage\": \"pbs-main\", \"mode\": \"snapshot\", \"compress\": \"zstd\"}'\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\""
   },
   "health": {
     "heading": "Monitor de salud",
@@ -381,7 +381,7 @@
     ]
   },
   "backups": {
-    "heading": "Backups",
+    "heading": "Copias de seguridad",
     "rows": [
       {
         "endpoint": "/api/backups",
@@ -580,7 +580,7 @@
         ]
       },
       {
-        "group": "Uptime",
+        "group": "Hora",
         "metrics": [
           {
             "metric": "proxmox_uptime_seconds",
@@ -736,12 +736,12 @@
     "heading": "Por dónde seguir",
     "items": [
       {
-        "label": "Access & Authentication",
+        "label": "Acceso y autenticación",
         "href": "/docs/monitor/access-auth",
         "tail": " — emisión de tokens, log de auditoría, jail Fail2Ban opcional, configuración TLS."
       },
       {
-        "label": "Notifications",
+        "label": "Notificaciones",
         "href": "/docs/monitor/notifications",
         "tailRich": " — qué transporta cada tipo de evento en <code>data</code> cuando llamas a <code>/api/notifications/send</code>."
       },

@@ -21,12 +21,12 @@
   "connectivity": {
     "heading": "Test de conectividad",
     "intro": "Envía dos sondas ICMP a tres destinos en secuencia y reporta cada uno. Luego ejecuta un <code>nslookup google.com</code> para verificar la resolución DNS independientemente de ICMP.",
-    "headerTest": "Test",
+    "headerTest": "Prueba",
     "headerTarget": "Destino",
     "headerConfirms": "Qué confirma",
     "rows": [
       {
-        "test": "Google DNS",
+        "test": "DNS de Google",
         "target": "8.8.8.8",
         "confirms": "Alcanzabilidad externa por IP anycast conocida"
       },
@@ -36,7 +36,7 @@
         "confirms": "Segunda opinión independiente si Google bloquea ICMP"
       },
       {
-        "test": "Gateway",
+        "test": "Pasarela",
         "target": "(ruta por defecto)",
         "confirms": "Conectividad L2 / L3 con el router local"
       },

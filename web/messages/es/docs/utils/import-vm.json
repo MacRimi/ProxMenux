@@ -55,7 +55,7 @@
       {
         "field": "Nombre de VM",
         "source": "<Name> (primera coincidencia)",
-        "default": "imported-vm"
+        "default": "importado-vm"
       },
       {
         "field": "Número de vCPUs",
@@ -75,7 +75,7 @@
       {
         "field": "Tipo de SO",
         "source": "/Linux/ o /Windows/ en la descripción",
-        "default": "other"
+        "default": "otros"
       },
       {
         "field": "Referencias a discos",
@@ -138,8 +138,8 @@
         "recommended": "Igualar al firmware de la VM origen (desigualados = no arranca)"
       },
       {
-        "setting": "QEMU guest agent",
-        "default": "Off",
+        "setting": "QEMU Agente invitado",
+        "default": "Fuera.",
         "recommendedRich": "On + instalar <code>qemu-guest-agent</code> en el guest (mejores backups, reporte de IP)"
       },
       {
@@ -148,8 +148,8 @@
         "recommended": "Verificar contra el SO real del guest"
       },
       {
-        "setting": "Display",
-        "default": "Default",
+        "setting": "Presentación",
+        "default": "Por defecto",
         "recommended": "VirtIO-GPU o SPICE (mejor rendimiento de consola)"
       }
     ]

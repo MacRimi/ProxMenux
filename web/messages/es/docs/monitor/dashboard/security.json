@@ -13,7 +13,7 @@
     "body": "La pestaña Seguridad está dividida en dos secciones claramente separadas: <strong>ProxMenux Monitor</strong> (settings para el propio panel) y <strong>Proxmox VE</strong> (settings para el host de debajo). Las tarjetas se renderizan de forma condicional — Fail2Ban y Lynis solo aparecen una vez instalados."
   },
   "monitor": {
-    "heading": "ProxMenux Monitor",
+    "heading": "Monitor de ProxMenux",
     "intro": "Cuatro tarjetas controlan cómo se alcanza y autentica el propio panel."
   },
   "auth": {
@@ -29,7 +29,7 @@
     ]
   },
   "ssl": {
-    "heading": "SSL / HTTPS",
+    "heading": "SSL/HTTPS",
     "imageAlt": "Tarjeta SSL / HTTPS mostrando estado HTTP No SSL, certificado del host Proxmox detectado con Subject, Issuer, Expires, botón Use Proxmox Certificate y opción Use Custom Certificate",
     "imageCaption": "Tarjeta SSL / HTTPS con HTTPS apagado. El Monitor detecta el certificado ya instalado en el host Proxmox y lo ofrece como opción de un solo clic, con un fallback a <em>Use Custom Certificate</em> si tienes tus propios archivos en otro sitio.",
     "intro": "Sirve el panel sobre HTTPS sin ningún reverse proxy por delante. La tarjeta auto-detecta el certificado que usa el propio Proxmox (bajo <code>/etc/pve/local/</code>) y muestra el subject, issuer y expiración para que lo puedas verificar antes de activar. Dos rutas para activar HTTPS:",
@@ -57,7 +57,7 @@
     "outro": "La tarjeta muestra cada token activo con un botón <em>Revoke</em> por fila. Revocar invalida el token inmediatamente; cualquier integración que lo use deja de funcionar desde ese momento. Los cookbooks para Homepage, Home Assistant, n8n y Prometheus están en <link>Integraciones</link>."
   },
   "gateway": {
-    "heading": "Secure Gateway",
+    "heading": "Pasarela segura",
     "cardAlt": "Tarjeta Secure Gateway con botón Deploy Secure Gateway antes de que se haya desplegado ningún gateway",
     "cardCaption": "Tarjeta Secure Gateway en setup recién hecho — un botón arranca el asistente.",
     "intro": "Alcanza el panel, la UI web de Proxmox y cualquier guest desde cualquier sitio en tu tailnet de <a>Tailscale</a>, sin exponer ningún puerto a la internet pública. El Monitor despliega un contenedor LXC Alpine en el host corriendo <code>tailscaled</code> como subnet router; una vez aprobado en la consola de admin de Tailscale, tus dispositivos remotos alcanzan la IP de LAN del host desde cualquier sitio.",
@@ -71,11 +71,11 @@
     "step1Body": "De vuelta en la pestaña Seguridad, pulsa <em>Deploy Secure Gateway</em>. El primer paso es una intro con lo que vas a obtener y lo que necesitas.",
     "step1Alt": "Paso intro del asistente Secure Gateway Setup explicando qué provee el gateway: acceso VPN, sin port forwarding, cifrado de extremo a extremo",
     "step1Caption": "Paso 1 — resumen de lo que provee el Secure Gateway y recordatorio de que necesitarás una cuenta gratuita de Tailscale.",
-    "step2Title": "2. Tailscale Authentication",
+    "step2Title": "2. Autenticación de Tailscale",
     "step2Body": "Pega la auth key del paso 0 y elige un hostname (así es como aparecerá el gateway en la consola de admin de Tailscale — típicamente <code>proxmox-gateway</code> o el nombre de tu nodo).",
     "step2Alt": "Paso del asistente Secure Gateway pidiendo Tailscale Auth Key y Device Hostname con link para generar la key",
     "step2Caption": "Paso 2 — pega la pre-auth key y elige el hostname del dispositivo. El link debajo del campo abre la página de Tailscale del paso 0 si te lo saltaste.",
-    "step3Title": "3. Access Scope",
+    "step3Title": "3. Alcance de acceso",
     "step3Intro": "Elige a qué puede llegar tu tailnet a través del gateway:",
     "step3Items": [
       "<strong>Proxmox Only</strong> — solo la UI de Proxmox y el Monitor. La menor superficie de ataque.",
@@ -92,7 +92,7 @@
     ],
     "step4Alt": "Paso Advanced Options del asistente Secure Gateway con checkboxes Exit Node y Accept Routes",
     "step4Caption": "Paso 4 — Exit Node y Accept Routes. Salta ambos si lo único que quieres es acceso al panel desde tu móvil o portátil.",
-    "step5Title": "5. Review & Deploy",
+    "step5Title": "5. Review \" Deploy",
     "step5Body": "Resumen final antes de que arranque el deploy. El asistente te recuerda que aún queda un paso manual en el admin de Tailscale tras desplegar: <strong>aprobar la subnet route</strong>.",
     "step5Alt": "Paso Review and Deploy del asistente Secure Gateway con Configuration Summary mostrando hostname, access mode, networks, exit node, accept routes y un botón Deploy Gateway",
     "step5Caption": "Paso 5 — revisa la configuración y despliega. El aviso azul al pie señala la aprobación de ruta pendiente.",
@@ -139,7 +139,7 @@
     "calloutBody": "ProxMenux Monitor tiene su propio hook de ban a <em>nivel de aplicación</em> en el pipeline de peticiones de Flask — pero solo surte efecto si Fail2Ban está instalado y escribe a la tabla de bans. Sin Fail2Ban, el Monitor loguea los logins fallidos a <code>proxmenux-auth.log</code> para inspección futura pero no bloquea IPs activamente."
   },
   "lynis": {
-    "heading": "Lynis Security Audit",
+    "heading": "Auditoría de seguridad de Lynis",
     "subHeading": "(condicional)",
     "whatIs": "<strong>Qué es.</strong> Lynis es una herramienta open-source de auditoría de seguridad que ejecuta ~280 tests en el host (permisos de archivos, hardening del kernel, config SSH, vulnerabilidades de paquetes, política de cripto, tareas programadas, banner grabbing, etc.) y produce una puntuación de hardening 0–100, una lista de warnings y una lista de sugerencias. Es la baseline de facto para \"¿este servidor está en buena forma?\" en servidores basados en Debian.",
     "whyUseful": "<strong>Por qué es útil.</strong> Conocer la postura de seguridad de tu servidor es difícil de hacer leyendo archivos de config uno a uno. Lynis captura las cosas que rutinariamente se pasan por alto: flags de hardening del kernel ausentes, cifrados SSH débiles activos, journal no persistente, <code>NOPASSWD</code> en sudoers para cuentas por defecto, y muchas más. Volver a ejecutarlo tras aplicar los ajustes post-instalación de ProxMenux te da un número objetivo de la mejora.",
@@ -173,7 +173,7 @@
   "dataCollected": {
     "heading": "Cómo se recopilan los datos",
     "headerCard": "Tarjeta",
-    "headerEndpoint": "Endpoint",
+    "headerEndpoint": "Punto final",
     "headerSource": "Fuente",
     "rows": [
       {
@@ -182,7 +182,7 @@
         "source": "SQLite local + JWT emitido por el Monitor."
       },
       {
-        "card": "SSL / HTTPS",
+        "card": "SSL/HTTPS",
         "endpoint": "/api/auth/ssl/*",
         "source": "<code>openssl x509</code> sobre <code>/etc/pve/local/pve-ssl.pem</code> + <code>/etc/proxmenux/ssl_config.json</code>."
       },

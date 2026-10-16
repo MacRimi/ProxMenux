@@ -8,7 +8,7 @@
   "header": {
     "title": "Mostrar información de versión",
     "description": "Diagnóstico de solo lectura. Lee version.txt, config.json y unas pocas rutas de archivos conocidas, después renderiza un cuadro de texto desplazable con la versión, tipo de instalación, componentes instalados, presencia de archivos, estado del entorno virtual e idioma actual.",
-    "section": "Settings"
+    "section": "Ajustes"
   },
   "intro": {
     "title": "Qué es esto",

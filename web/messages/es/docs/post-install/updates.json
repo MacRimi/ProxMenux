@@ -4,9 +4,9 @@
     "description": "Cómo ProxMenux detecta cuándo una optimización post-instalación (Log2Ram, Memory Settings, System Limits, Logrotate, tuning de red…) se ha actualizado upstream, y cómo aplicar la nueva versión — desde el menú Post-Install o desde el panel del Monitor."
   },
   "header": {
-    "title": "Apply Available Updates",
+    "title": "Aplicar actualizaciones disponibles",
     "description": "Cuando una optimización post-instalación (Log2Ram, Memory Settings, System Limits, Logrotate…) tiene en disco una versión más nueva que la registrada actualmente en el host, ProxMenux la muestra como una actualización disponible. Puedes aplicarla desde el menú Post-Install (lado Scripts) o desde el panel del Monitor — ambas rutas vuelven a ejecutar la misma función post-instalación y refrescan el registro.",
-    "section": "Settings post-install Proxmox"
+    "section": "Configuración post instalación de Proxmox"
   },
   "intro": {
     "title": "Qué es esto",
@@ -77,7 +77,7 @@
   },
   "differs": {
     "heading": "En qué se diferencia de las otras rutas",
-    "headerPath": "Ruta",
+    "headerPath": "Path",
     "headerScope": "Alcance",
     "headerWhen": "Cuándo tiene sentido",
     "rows": [
@@ -94,13 +94,13 @@
         "when": "Selecciona qué optimizaciones están activas en el host."
       },
       {
-        "pathLabel": "Apply available updates",
+        "pathLabel": "Aplicar actualizaciones disponibles",
         "pathHref": null,
         "scope": "Solo las optimizaciones cuya versión ha subido en disco.",
         "when": "Mantén las optimizaciones ya instaladas al día sin tocar el resto."
       },
       {
-        "pathLabel": "Uninstall optimizations",
+        "pathLabel": "Desinstalar optimizaciones Post-Install",
         "pathHref": "/docs/post-install/uninstall",
         "scope": "Revierte la optimización y elimina su entrada del registro.",
         "when": "Hacer rollback de un cambio específico."

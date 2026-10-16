@@ -8,7 +8,7 @@
   "header": {
     "title": "Cambiar idioma",
     "description": "Cambia la UI de ProxMenux entre seis idiomas soportados. Guarda la elección en config.json y vuelve a ejecutar el menú con el nuevo idioma. Solo disponible en el tipo de instalación con traducción — la instalación normal (ligera) es solo en inglés por diseño.",
-    "section": "Settings"
+    "section": "Ajustes"
   },
   "intro": {
     "title": "Qué es esto",
@@ -20,7 +20,7 @@
   },
   "supported": {
     "heading": "Idiomas soportados",
-    "headerCode": "Código",
+    "headerCode": "Code",
     "headerLang": "Idioma",
     "headerNotes": "Notas",
     "rows": [

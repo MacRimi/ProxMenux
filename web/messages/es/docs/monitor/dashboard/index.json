@@ -6,7 +6,7 @@
   "header": {
     "title": "Panel",
     "description": "El panel es la vista diaria de ProxMenux Monitor: diez pestañas de contenido, incluido el lanzador Apps, además de una cabecera global y un orden de navegación configurable.",
-    "section": "ProxMenux Monitor"
+    "section": "Monitor de ProxMenux"
   },
   "oneHeader": {
     "title": "Una cabecera, diez pestañas",
@@ -24,7 +24,7 @@
         "owns": "Widgets de CPU, memoria y temperatura; contador de VMs y LXCs activos; gráficas históricas y resúmenes de almacenamiento y red. Es la pestaña inicial mientras no se personalice el orden de navegación."
       },
       {
-        "name": "Apps",
+        "name": "Aplicaciones",
         "linksTo": "/docs/monitor/dashboard/apps",
         "owns": "Lanzador unificado para enlaces web registrados en LXCs y enlaces personalizados, con categorías, búsqueda, acceso al invitado y señales de actualización por aplicación."
       },

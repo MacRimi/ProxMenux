@@ -20,7 +20,7 @@
   },
   "compare": {
     "heading": "Directory vs ZFS pool — cuál elegir",
-    "headerDir": "Directory (ext4 / xfs / btrfs)",
+    "headerDir": "Directorio (ext4 / xfs / btrfs)",
     "headerZfs": "ZFS pool",
     "rows": [
       {
@@ -34,12 +34,12 @@
         "zfs": "Dataset ZFS nativo (zvol) por disco"
       },
       {
-        "label": "Snapshots",
+        "label": "Juegos de rol",
         "dir": "Snapshots qcow2; snapshots btrfs si fs=btrfs",
         "zfs": "Nativos, instantáneos, copy-on-write"
       },
       {
-        "label": "Thin provisioning",
+        "label": "Aprovisionamiento fino",
         "dir": "Sí (qcow2 por defecto)",
         "zfs": "Sí (ZFS por defecto)"
       },
@@ -50,7 +50,7 @@
       },
       {
         "label": "Content types soportados",
-        "dir": "images, backup, iso, vztmpl, snippets, rootdir",
+        "dir": "imágenes, respaldo, iso, vztmpl, snippets, rootdir",
         "zfs": "images, rootdir solamente (almacenamiento de bloque)"
       },
       {
@@ -98,27 +98,27 @@
   "presets": {
     "heading": "Presets de content type",
     "intro": "En vez de una larga lista de verificación, ProxMenux ofrece 4 presets más una opción custom. La cadena del preset se pasa a <code>pvesm add … --content &lt;csv&gt;</code>:",
-    "headerPreset": "Preset",
+    "headerPreset": "Preajuste",
     "headerContent": "Cadena de contenido",
     "headerUse": "Caso de uso",
     "rows": [
       {
-        "preset": "VM Storage",
-        "content": "images,backup",
+        "preset": "Almacenamiento VM",
+        "content": "imágenes, respaldo",
         "use": "Un almacén de discos de VM dedicado que también guarda backups de esas VMs cerca."
       },
       {
-        "preset": "Standard NAS",
+        "preset": "NAS estándar",
         "content": "backup,iso,vztmpl",
         "use": "Un disco de archivo / media — backups, ISOs y templates LXC. Sin discos de VM en vivo aquí."
       },
       {
-        "preset": "All types",
+        "preset": "Todos los tipos",
         "content": "images,backup,iso,vztmpl,snippets",
         "use": "\"Que decida el host\" — permite todos los content types que Proxmox soporta en este almacenamiento."
       },
       {
-        "preset": "Custom",
+        "preset": "Aduanas",
         "content": "(entrada libre)",
         "useRich": "Escribe el CSV exacto tú mismo, p. ej. <code>images</code> solo, o <code>rootdir,images</code>."
       }
@@ -147,7 +147,7 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "noDisksTitle": "\"No available disks found\"",
+    "noDisksTitle": "\"No hay discos disponibles encontrados\"",
     "noDisksIntro": "El filtro de seguridad ocultó cada disco. Razones comunes:",
     "noDisksItems": [
       "Solo está presente el disco raíz.",
@@ -168,7 +168,7 @@
     "items": [
       {
         "href": "/docs/disk-manager/format-disk",
-        "label": "Disk Manager: Format / Wipe Physical Disk",
+        "label": "Administrador de discos: Formato / Diseño físico",
         "tail": " — alternativa de bajo nivel cuando solo quieres preparar un disco sin registrarlo como almacenamiento de Proxmox."
       },
       {

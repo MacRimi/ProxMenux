@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "Fail2Ban | ProxMenux Documentation",
+    "title": "Fail2Ban Silencio ProxMenux Documentación",
     "description": "Instala Fail2Ban con tres jails afinados para Proxmox (SSH agresivo, Proxmox UI 8006, ProxMenux Monitor 8008). Incluye el arreglo de journald MaxLevelStore, servicios de log propios para fiabilidad, backend nftables/iptables autodetectado y hardening de SSH MaxAuthTries.",
-    "ogTitle": "Fail2Ban | ProxMenux Documentation",
+    "ogTitle": "Fail2Ban Silencio ProxMenux Documentación",
     "ogDescription": "Protección contra fuerza bruta para SSH y las UIs web de Proxmox, con arreglos específicos de journald y backend para Proxmox."
   },
   "header": {
@@ -53,7 +53,7 @@
     "diagram": {
       "sshLabel": "SSH / PAM",
       "sshDetail": "fallo de autenticación\n(nivel info / notice)",
-      "journaldLabel": "journald",
+      "journaldLabel": "Diario",
       "journaldDetail": "MaxLevelStore=warning\n→ evento descartado en silencio",
       "fail2banLabel": "Fail2Ban",
       "fail2banDetail": "no ve nada\n→ nunca banea nada",
@@ -131,7 +131,7 @@
     "selfBanTitle": "Me he baneado a mí mismo",
     "selfBanIntro": "Desde una consola / IPMI / iKVM (u otra IP whitelisted):",
     "selfBanCode": "fail2ban-client unban '<'YOUR_IP'>'\n\n# To prevent it next time, edit /etc/fail2ban/jail.local and add your IP:\nignoreip = 127.0.0.1/8 ::1 192.168.1.0/24 203.0.113.42\n\n# Then reload\nfail2ban-client reload",
-    "aptFailTitle": "apt-get falla: ''Unable to locate package fail2ban''",
+    "aptFailTitle": "apt-get fails: ''Unable to locate package fail2ban''",
     "aptFailBody": "Al host le faltan los repos de Debian (común en instalaciones de Proxmox a pelo). El instalador detecta esto y escribe <code>/etc/apt/sources.list.d/debian.sources</code> con el codename correcto (<code>bookworm</code> / <code>trixie</code>) antes de reintentarlo. Si sigue fallando, comprueba <code>/etc/os-release</code> en busca de <code>VERSION_CODENAME</code> y confirma que la URL del repo es alcanzable.",
     "lockoutTitle": "SSH me bloquea el acceso tras la instalación",
     "lockoutBody": "El instalador establece <code>MaxAuthTries=3</code>. Si tu gestor de contraseñas / agente reintenta múltiples claves, puedes superar ese límite en un único intento de conexión. Limita las claves ofrecidas: <code>ssh -o IdentitiesOnly=yes -i ~/.ssh/specific_key user@host</code>. O sube temporalmente <code>MaxAuthTries</code> en <code>sshd_config</code> mientras depuras."

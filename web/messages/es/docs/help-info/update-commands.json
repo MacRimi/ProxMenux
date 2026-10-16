@@ -5,7 +5,7 @@
     "ogTitle": "Comandos de actualización y paquetes en Proxmox — apt, pveupgrade, dpkg",
     "ogDescription": "Comandos apt, pveupgrade y dpkg para mantener Proxmox VE al día — actualizaciones del sistema, gestión de paquetes, configuración de repositorios.",
     "twitterTitle": "Comandos de actualización de Proxmox | ProxMenux",
-    "twitterDescription": "Comandos apt y pveupgrade para gestionar actualizaciones y paquetes en hosts Proxmox VE."
+    "twitterDescription": "apt and pveupgrade commands for managing updates and packages on Proxmox VE hosts."
   },
   "header": {
     "title": "Actualizaciones y paquetes",

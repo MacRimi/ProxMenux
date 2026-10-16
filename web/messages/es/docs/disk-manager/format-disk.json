@@ -43,25 +43,25 @@
     "headerUseCase": "Caso de uso",
     "rows": [
       {
-        "mode": "1. Wipe all",
+        "mode": "1. ¡Tonterías!",
         "part": "Destruida",
         "data": "Firmas borradas",
         "useCase": "Empezar de cero: todo lo del disco se va, listo para una nueva distribución."
       },
       {
-        "mode": "2. Remove FS labels",
+        "mode": "2. Quitar etiquetas FS",
         "part": "Preservada",
         "data": "Preservados",
         "useCase": "Limpia firmas obsoletas de ZFS / LVM / RAID para que el disco deje de ser reclamado automáticamente, sin tocar los datos."
       },
       {
-        "mode": "3. Zero all data",
+        "mode": "3. Cero todos los datos",
         "part": "Preservada",
         "data": "Destruidos (zerados)",
         "useCase": "Sanear antes de entregar el disco, manteniendo la distribución de particiones existente."
       },
       {
-        "mode": "4. Full format",
+        "mode": "4. Formato completo",
         "part": "Nuevo GPT",
         "data": "Destruidos",
         "useCase": "Disco listo para usar con una única partición nueva y un filesystem fresco."

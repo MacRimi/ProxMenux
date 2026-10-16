@@ -5,7 +5,7 @@
   },
   "header": {
     "title": "Post-instalación: Almacenamiento",
-    "section": "Settings post-install Proxmox"
+    "section": "Configuración post instalación de Proxmox"
   },
   "intro": {
     "title": "Qué cubre esta categoría",
@@ -57,27 +57,27 @@
     "headerKept": "Snapshots conservadas",
     "rows": [
       {
-        "label": "frequent",
+        "label": "frecuentes",
         "runs": "cada 15 min",
         "kept": "4"
       },
       {
-        "label": "hourly",
+        "label": "horaria",
         "runs": "cada hora",
         "kept": "1"
       },
       {
-        "label": "daily",
+        "label": "diario",
         "runs": "una vez al día",
         "kept": "1"
       },
       {
-        "label": "weekly",
+        "label": "semanales",
         "runs": "una vez por semana",
         "kept": "1"
       },
       {
-        "label": "monthly",
+        "label": "mensual",
         "runs": "una vez al mes",
         "kept": "1"
       }
@@ -148,7 +148,7 @@
         "tail": " — referencia de la CLI de vzdump (ahora sin los caps legacy de bwlimit / ionice)."
       },
       {
-        "label": "Uninstall Optimizations",
+        "label": "Optimizaciones de desinstalación",
         "href": "/docs/post-install/uninstall",
         "tail": " — revierte cambios de ARC / vzdump."
       },
@@ -158,7 +158,7 @@
         "tail": " — reduce el desgaste del SSD/NVMe usando una ramdisk para /var/log; documentado en Optional."
       },
       {
-        "label": "Customizable Post-Install",
+        "label": "Puesto de plantilla personalizable",
         "href": "/docs/post-install/customizable",
         "tail": " — volver al menú padre."
       }

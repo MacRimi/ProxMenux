@@ -46,7 +46,7 @@
     "headerValue": "Valor por defecto",
     "defaultRowsRich": [
       {
-        "param": "Machine type",
+        "param": "Tipo de máquina",
         "valueRich": "<code>q35</code>"
       },
       {
@@ -54,11 +54,11 @@
         "valueRich": "OVMF (UEFI)"
       },
       {
-        "param": "CPU type",
-        "valueRich": "Host"
+        "param": "CPU tipo",
+        "valueRich": "Anfitrión"
       },
       {
-        "param": "Cores",
+        "param": "Núcleos",
         "valueRich": "2"
       },
       {
@@ -66,15 +66,15 @@
         "valueRich": "4096 MB"
       },
       {
-        "param": "Bridge",
+        "param": "Puente",
         "valueRich": "<code>vmbr0</code>"
       },
       {
-        "param": "MAC address",
+        "param": "Dirección del MAC",
         "valueRich": "Generada automáticamente"
       },
       {
-        "param": "Start on completion",
+        "param": "Comienzo de la terminación",
         "valueRich": "No"
       }
     ],
@@ -83,7 +83,7 @@
     "headerOptions": "Opciones",
     "advancedRowsRich": [
       {
-        "param": "Machine type",
+        "param": "Tipo de máquina",
         "optionsRich": "<code>q35</code> o <code>i440fx</code>"
       },
       {
@@ -91,11 +91,11 @@
         "optionsRich": "OVMF (UEFI) o SeaBIOS (Legacy)"
       },
       {
-        "param": "CPU type",
+        "param": "CPU tipo",
         "optionsRich": "Host o KVM64"
       },
       {
-        "param": "Cores",
+        "param": "Núcleos",
         "optionsRich": "Número de núcleos de CPU"
       },
       {
@@ -103,11 +103,11 @@
         "optionsRich": "Memoria asignada a la VM"
       },
       {
-        "param": "Bridge",
+        "param": "Puente",
         "optionsRich": "Bridge de red"
       },
       {
-        "param": "MAC address",
+        "param": "Dirección del MAC",
         "optionsRich": "MAC personalizada"
       },
       {
@@ -311,15 +311,15 @@
     "introRich": "Con el modelo, la versión de DSM y los addons elegidos, selecciona <strong>Build the Loader</strong>. Esto puede tardar unos minutos según el loader y las opciones elegidas.",
     "arc": {
       "alt": "Build loader en Arc",
-      "caption": "Arc — build loader"
+      "caption": "Arc — cargador de construcción"
     },
     "rr": {
       "alt": "Build loader en RR",
-      "caption": "RR — build loader"
+      "caption": "RR — cargador de construcción"
     },
     "tinycore": {
       "alt": "Build loader en TinyCore",
-      "caption": "TinyCore — build loader"
+      "caption": "TinyCore — cargador de construcción"
     }
   },
   "step6": {
@@ -327,15 +327,15 @@
     "intro": "Una vez construido el loader, la VM reinicia con la configuración que has creado y empieza la instalación de DSM.",
     "arc": {
       "alt": "Boot loader en Arc",
-      "caption": "Arc — boot loader"
+      "caption": "Cargador de arranque"
     },
     "rr": {
       "alt": "Boot loader en RR",
-      "caption": "RR — boot loader"
+      "caption": "RR - cargador de arranque"
     },
     "tinycore": {
       "alt": "Boot loader en TinyCore",
-      "caption": "TinyCore — boot loader"
+      "caption": "TinyCore — cargador de arranque"
     }
   },
   "dsmInstall": {

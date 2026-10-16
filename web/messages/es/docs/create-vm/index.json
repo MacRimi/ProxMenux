@@ -28,7 +28,7 @@
     "routes": [
       {
         "key": "nas",
-        "title": "System NAS",
+        "title": "Sistema NAS",
         "icon": "HardDrive",
         "href": "/docs/create-vm/system-nas",
         "accent": "border-emerald-300 bg-emerald-50",
@@ -43,8 +43,8 @@
         ]
       },
       {
-        "key": "windows",
-        "title": "System Windows",
+        "key": "ventanas",
+        "title": "Sistema Windows",
         "icon": "MonitorCog",
         "href": "/docs/create-vm/system-windows",
         "accent": "border-blue-300 bg-blue-50",
@@ -60,15 +60,15 @@
       },
       {
         "key": "linux",
-        "title": "System Linux",
+        "title": "Sistema Linux",
         "icon": "Laptop",
         "href": "/docs/create-vm/system-linux",
         "accent": "border-amber-300 bg-amber-50",
         "iconBg": "bg-amber-100 text-amber-700",
         "description": "Catálogo curado de ISOs oficiales de Linux descargadas automáticamente desde el upstream, más un selector de ISO local para cualquier otra cosa.",
         "bullets": [
-          "Ubuntu (Desktop / Server, 20.04–25.10)",
-          "Debian (Desktop / Netinst, 11–13)",
+          "Ubuntu (Escritorio / Servidor, 20.04–25.10)",
+          "Debian (Escritorio / Netinst, 11–13)",
           "Fedora, Arch, Rocky, Mint, openSUSE",
           "Alpine, Kali, Manjaro",
           "Ruta de ISO local para imágenes personalizadas"
@@ -147,12 +147,12 @@
     "items": [
       {
         "href": "/docs/disk-manager",
-        "label": "Disk Manager",
+        "label": "Administrador de discos",
         "tail": " — adjunta discos físicos existentes o importa imágenes de disco en VMs."
       },
       {
         "href": "/docs/utils/UUp-Dump-ISO-Creator",
-        "label": "UUP Dump ISO Creator",
+        "label": "Creador de ISO UUP Dump",
         "tail": " — genera ISOs de instalación de Windows listas para usar como medio de arranque."
       },
       {

@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "Lynis | ProxMenux Documentation",
+    "title": "Lynis vivieron ProxMenux Documentación",
     "description": "Instala Lynis desde el repositorio oficial de CISOfy en GitHub (siempre el último), ejecuta una auditoría del sistema con puntuación de hardening 0–100, actualiza vía git pull. De solo lectura por diseño — nunca modifica el sistema.",
-    "ogTitle": "Lynis | ProxMenux Documentation",
+    "ogTitle": "Lynis vivieron ProxMenux Documentación",
     "ogDescription": "Instala y ejecuta el auditor de seguridad Lynis en Proxmox VE. Instalación desde GitHub upstream, auditoría, actualización."
   },
   "header": {
@@ -23,7 +23,7 @@
     "heading": "Por qué GitHub upstream, no apt",
     "intro": "Debian entrega Lynis vía apt, pero el paquete suele ir varias versiones mayores por detrás de upstream. Los controles más nuevos, los arreglos para nuevos vectores de ataque y las recomendaciones refinadas solo aterrizan en el repo de GitHub. El propio Lynis es un script de shell autocontenido — sin compilación, sin dependencias más allá de <code>git</code> para la instalación — así que clonar el repo es el método de instalación canónico recomendado por la propia CISOfy.",
     "headerSource": "Origen",
-    "headerPath": "Ruta de instalación",
+    "headerPath": "Install path",
     "headerUpdate": "Método de actualización",
     "headerFresh": "Frescura de versión",
     "rows": [
@@ -48,7 +48,7 @@
     "node2Label": "/opt/lynis/",
     "node2Detail": "repo completo\nincluyendo script ./lynis",
     "node3Label": "/usr/local/bin/lynis",
-    "node3Detail": "wrapper:\ncd /opt/lynis && ./lynis $@",
+    "node3Detail": "Envoltorio:\ncd /opt/lynis \" ./lynis $@",
     "outro": "El wrapper es obligatorio — Lynis insiste en ejecutarse desde su propio directorio porque carga rutas relativas para plugins y datos de perfil. El wrapper oculta ese detalle para que <code>lynis audit system</code> simplemente funcione desde cualquier sitio."
   },
   "detection": {
@@ -66,7 +66,7 @@
     "intro": "Desde el menú de gestión, elige <strong>Ejecutar auditoría de seguridad ahora</strong>. Esto equivale a ejecutar:",
     "code": "lynis audit system --no-colors",
     "outro": "La auditoría tarda de 30 segundos a unos minutos según el tamaño del host. La salida fluye directamente al terminal — no hay spinner. Lynis imprime secciones por cada categoría de control, marcando cada test como <ok>[ OK ]</ok>, <warn>[ WARNING ]</warn> o <sugg>[ SUGGESTION ]</sugg>. El resumen al final tiene los números titulares:",
-    "summary": "================================================================================\n\n  Lynis security scan details:\n\n  Hardening index : 76 [############        ]\n  Tests performed : 247\n  Plugins enabled : 0\n\n  Components:\n  - Firewall               [V]\n  - Malware scanner        [X]\n\n  Lynis modules:\n  - Compliance status      [?]\n  - Security audit         [V]\n  - Vulnerability scan     [V]\n\n================================================================================"
+    "summary": "================================================================================\n\nDetalles del análisis de seguridad de Lynis:\n\nIndice de endurecimiento: 76 [###################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################\nPruebas realizadas : 247\nPlugins habilitados : 0\n\nComponentes:\n- Firewall [V]\n- Malware scanner [X]\n\nMódulos Lynis:\n- Estado de cumplimiento [?]\n- Auditoría de seguridad [V]\n- Escaneo de vulnerabilidad [V]\n\n================================================================================"
   },
   "report": {
     "heading": "Leer el informe",

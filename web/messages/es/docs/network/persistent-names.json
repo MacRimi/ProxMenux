@@ -56,12 +56,12 @@
         "why": "Tiene una MAC real y se beneficia de la estabilidad de nombre"
       },
       {
-        "type": "Bridges (vmbrX)",
+        "type": "Puentes (vmbrX)",
         "behaviour": "Se omite",
         "why": "Virtual; el nombre viene de <code>/etc/network/interfaces</code>"
       },
       {
-        "type": "Bonds (bondX)",
+        "type": "Bonos (bondX)",
         "behaviour": "Se omite",
         "why": "Virtual; el nombre del bond lo fija ifupdown"
       },

@@ -34,11 +34,27 @@
       "blocks": [
         {
           "table": {
-            "headers": ["Campo", "Valores", "Efecto en la evaluación"],
+            "headers": [
+              "Campo",
+              "Valores",
+              "Efecto en la evaluación"
+            ],
             "rows": [
-              ["Backup", "Obligatorio, No obligatorio, Sin especificar", "La falta de backup es una advertencia si es obligatorio, una observación si no se especifica, y queda fuera del recuento si no es obligatorio."],
-              ["Arranque", "Obligatorio, No obligatorio, Sin especificar", "Si el invitado debe arrancar con el host."],
-              ["Objetivo de recuperación", "Horas", "La antigüedad máxima aceptable del último backup."]
+              [
+                "Backups",
+                "Obligatorio, No obligatorio, Sin especificar",
+                "La falta de backup es una advertencia si es obligatorio, una observación si no se especifica, y queda fuera del recuento si no es obligatorio."
+              ],
+              [
+                "Arranque",
+                "Obligatorio, No obligatorio, Sin especificar",
+                "Si el invitado debe arrancar con el host."
+              ],
+              [
+                "Objetivo de recuperación",
+                "Horas",
+                "La antigüedad máxima aceptable del último backup."
+              ]
             ]
           }
         }
@@ -47,12 +63,12 @@
     {
       "id": "storage",
       "title": "Almacenamiento",
-      "intro": "Cada almacenamiento del nodo se declara Esencial, Opcional o Sin especificar.",
       "blocks": [
         {
           "p": "Un almacenamiento inaccesible se presenta como crítico cuando se declara esencial o sirve a un invitado en marcha, como advertencia cuando su papel no se especifica, y como observación cuando se declara opcional."
         }
-      ]
+      ],
+      "intro": "Cada almacenamiento del nodo se declara Esencial, Opcional o Sin especificar."
     },
     {
       "id": "thresholds",

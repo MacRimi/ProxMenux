@@ -78,7 +78,7 @@
         "effect": "Permitir acceso de lectura-escritura o solo lectura para los clientes que conecten."
       },
       {
-        "option": "sync",
+        "option": "sincronización",
         "effectRich": "Responder a las peticiones de escritura solo después de que los datos estén en disco. Más seguro que <code>async</code> a costa de throughput."
       },
       {
@@ -117,7 +117,7 @@
     "heading": "Solución de problemas",
     "privTitle": "Contenedor privileged requerido (el script aborta)",
     "privBody": "El CT seleccionado es unprivileged. <code>nfs-kernel-server</code> no puede arrancar ahí porque montar <code>/proc/fs/nfsd</code> necesita <code>CAP_SYS_ADMIN</code> en el namespace del kernel del host, y el módulo <code>nfsd</code> tampoco está expuesto al namespace del contenedor (<code>modprobe nfsd</code> desde dentro devuelve <code>FATAL: Module nfsd not found</code>). Si te saltas el gate, verás <code>rpc.nfsd: Unable to access /proc/fs/nfsd errno 2 (No such file or directory)</code> en el journal y ningún puerto NFS llegará a abrirse. Las únicas opciones viables son: convertir el CT a privileged, o mover el servidor NFS a una VM.",
-    "aptTitle": "apt-get install falla",
+    "aptTitle": "apt-get install fails",
     "aptIntro": "El script asume un CT de la familia Debian. En Alpine / Arch / Rocky / Alma, instala los paquetes del servidor NFS a mano:",
     "aptItems": [
       "Alpine: <code>apk add nfs-utils</code>",

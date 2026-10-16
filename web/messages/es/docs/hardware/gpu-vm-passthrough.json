@@ -164,7 +164,7 @@
         "tail": " — modelo alternativo: comparte la GPU con varios contenedores en lugar de dedicarla a una VM."
       },
       {
-        "label": "Switch GPU Mode (VM ↔ LXC)",
+        "label": "Cambiar modo GPU (VM ↔ LXC)",
         "href": "/docs/hardware/switch-gpu-mode",
         "tail": " — cambia la misma GPU entre modos sin rehacer todo el cableado."
       },

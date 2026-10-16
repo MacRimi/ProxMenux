@@ -61,7 +61,7 @@
       "<strong>Storage ID</strong> — cómo llamará Proxmox a este almacenamiento. Por defecto es <code>nfs-&lt;server-ip-with-dashes&gt;</code>. Solo se aceptan letras, dígitos, <code>-</code> y <code>_</code>.",
       "<strong>Content types</strong> — Proxmox vincula categorías de contenido a volúmenes de almacenamiento; elige qué se le permite a este NFS contener:"
     ],
-    "headerType": "Content type",
+    "headerType": "Tipo de contenido",
     "headerAllows": "Qué permite",
     "rows": [
       {
@@ -138,7 +138,7 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "noServersTitle": "\"No NFS servers found on the network\"",
+    "noServersTitle": "\"Ningún servidor NFS encontrado en la red\"",
     "noServersBody": "El auto-descubrimiento usa <code>nmap -p 2049 --open &lt;subnet&gt;/24</code>. El servidor puede no responder si: está en una VLAN / subnet diferente, su firewall bloquea las sondas nmap (muchos lo hacen) o el puerto 2049 está intencionalmente cerrado en esa interfaz. Usa la opción <em>Manual</em> con la IP o hostname del servidor en su lugar.",
     "portTitle": "\"NFS port (2049) is not accessible\"",
     "portBody": "El ping tuvo éxito pero <code>nc -z -w 3 &lt;server&gt; 2049</code> falló. Comprueba que el servicio NFS está corriendo en el servidor (<code>systemctl status nfs-server</code> en Linux, Panel de Control → File Services en Synology, plugin NFS en OMV / TrueNAS) y que el firewall permite el 2049 desde el host Proxmox.",
@@ -161,7 +161,7 @@
       },
       {
         "href": "/docs/storage-share/lxc-mount-points",
-        "label": "LXC Mount Manager",
+        "label": "Gestor de montajes LXC",
         "tailRich": " — hacer bind mount de la ruta solo en fstab <code>/mnt/&lt;path&gt;</code> en uno o más contenedores."
       },
       {

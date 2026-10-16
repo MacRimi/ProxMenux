@@ -8,9 +8,9 @@
     "twitterDescription": "Adjuntar discos a VMs / LXC, importar imágenes, PCI passthrough, wipe seguro y tests SMART."
   },
   "header": {
-    "title": "Disk Manager",
+    "title": "Administrador de discos",
     "description": "El menú Disk Manager agrupa las herramientas de ProxMenux para gestionar discos físicos en un host Proxmox: adjuntar discos a VMs y contenedores LXC, importar imágenes de disco, pasar una controladora entera o un dispositivo NVMe, borrar discos de forma segura y ejecutar tests de salud SMART.",
-    "section": "Disk Manager"
+    "section": "Administrador de discos"
   },
   "intro": {
     "title": "Para qué sirve este menú",
@@ -112,7 +112,7 @@
     "items": [
       {
         "href": "/docs/storage-share",
-        "label": "Storage & Share Manager",
+        "label": "Gestor de almacenamiento y recursos compartidos",
         "tail": " — registrar almacenamiento en el propio Proxmox (NFS / Samba / iSCSI / local) y compartir carpetas entre host y CTs."
       },
       {

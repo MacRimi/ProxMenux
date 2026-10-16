@@ -4,13 +4,13 @@
     "description": "ProxMenux Backup & Restore captura el estado completo de un host Proxmox — sistema de ficheros, manifiesto estructurado de configuración y paquetes/componentes instalados — y lo reproduce en el mismo host o en uno distinto. La copia y la restauración son autocontenidas: sin dependencias externas, y con soporte para restauraciones cross-kernel mediante un filtro direccional de subconjunto seguro y una hidratación kernel-agnóstica.",
     "ogTitle": "ProxMenux Backup & Restore — Descripción general",
     "ogDescription": "Copia y restauración completa del host Proxmox VE con manifiesto estructurado, lista de paquetes y reinstaladores de componentes.",
-    "twitterTitle": "ProxMenux Backup & Restore | ProxMenux",
+    "twitterTitle": "ProxMenux Copia de seguridad & Restaurar Silencio ProxMenux",
     "twitterDescription": "Copia y restauración completa del host Proxmox VE con manifiesto estructurado, lista de paquetes y reinstaladores de componentes."
   },
   "header": {
-    "title": "Backup & Restore",
+    "title": "Copias de seguridad y restauración",
     "description": "Copia y restauración a nivel de host para Proxmox VE. Captura el sistema de ficheros, la configuración y los componentes instalados en un único archivo y reproduce el host sobre la misma instalación de Proxmox o sobre una distinta, sin dependencias externas.",
-    "section": "Backup & Restore"
+    "section": "Copias de seguridad y restauración"
   },
   "intro": {
     "title": "Qué es, en un párrafo",
@@ -51,7 +51,7 @@
     "intro": "Cada paso del flujo de copia y restauración está disponible desde dos puntos de entrada. Ambos invocan la misma librería de shell, producen archivos idénticos y leen el mismo registro de trabajos.",
     "cliLabel": "ProxMenux Scripts (TUI)",
     "cliDetail": "menu → Utilities →\nHost Backup / Restore\n\nFlujo basado en diálogos,\namigable por SSH, admite\nejecución desatendida\ndesde scripts.",
-    "webLabel": "ProxMenux Monitor (Web UI)",
+    "webLabel": "ProxMenux Monitor (UI Web)",
     "webDetail": "Pestaña Backups en la\ninterfaz Web del Monitor.\n\nRestauración con un clic,\nlog en vivo, integrado con\nlas notificaciones y con\nel visor de rollback."
   },
   "whereNext": {
