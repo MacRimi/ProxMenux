@@ -1,3 +1,3 @@
 [
-  {"type":"node","name":"p3-01","nodeid":1,"online":1,"local":1,"ip":"node-one.invalid","level":""}
+  {"type":"node","name":"pve-01","nodeid":1,"online":1,"local":1,"ip":"node-one.invalid","level":""}
 ]

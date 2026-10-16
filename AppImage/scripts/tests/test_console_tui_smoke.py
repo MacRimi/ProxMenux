@@ -23,7 +23,7 @@ sys.path.insert(0, str(SCRIPTS))
 import console_tui  # noqa: E402
 
 
-def guest(vmid=101, node="p3-01", uptime=30, **counters):
+def guest(vmid=101, node="pve-01", uptime=30, **counters):
     return {"type": "qemu", "vmid": vmid, "node": node, "uptime": uptime,
             "netin": counters.get("netin", 100),
             "netout": counters.get("netout", 200),
@@ -43,9 +43,9 @@ class GuestRateTests(unittest.TestCase):
                          {"net_rx_bps": 10, "net_tx_bps": 4,
                           "disk_read_bps": 8, "disk_write_bps": 8})
         self.assertNotIn("net_rx_bps", rates.update([guest(netin=999)], 15)[0])
-        self.assertNotIn("net_rx_bps", rates.update([guest(node="p3-02")], 20)[0])
-        self.assertNotIn("net_rx_bps", rates.update([guest(node="p3-02", uptime=1)], 25)[0])
-        self.assertNotIn("net_rx_bps", rates.update([guest(node="p3-02", uptime=2,
+        self.assertNotIn("net_rx_bps", rates.update([guest(node="pve-02")], 20)[0])
+        self.assertNotIn("net_rx_bps", rates.update([guest(node="pve-02", uptime=1)], 25)[0])
+        self.assertNotIn("net_rx_bps", rates.update([guest(node="pve-02", uptime=2,
                                                             netin=1)], 30)[0])
 
     def test_missing_counter_resets_its_rate(self):
@@ -129,7 +129,7 @@ class TerminalSmokeTests(unittest.TestCase):
     def write_snapshot(self):
         document = {"schema": 1, "generator": {"name": "monitor", "version": "1"},
                     "observed_at": time.time(), "publish_interval_s": 5,
-                    "language": "en", "node": {"status": "ok", "name": "p3-01"},
+                    "language": "en", "node": {"status": "ok", "name": "pve-01"},
                     "cluster": {"status": "ok", "members": [], "is_cluster": False},
                     "resources": {"status": "ok", "observed_at": time.time(),
                                   "nodes": [], "guests": [], "storages": []}}

@@ -22,6 +22,7 @@ class LocalSamplerTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
+        self.write("proc/uptime", "60.5 12.0\n")
         self.write("proc/loadavg", "0.25 0.50 0.75 1/100 1\n")
         self.write("proc/meminfo", (
             "MemTotal: 10000 kB\nMemFree: 1000 kB\nMemAvailable: 4000 kB\n"
@@ -61,6 +62,7 @@ class LocalSamplerTests(unittest.TestCase):
         self.assertEqual(first["cpu_history"], [])
         self.assertEqual(first["net"]["rx_bps"], 0)
         self.assertEqual(first["disk"]["read_bps"], 0)
+        self.assertEqual(first["uptime"], 60.5)
 
         self.second_counters()
         second = sampler.sample(11.0)
@@ -74,6 +76,14 @@ class LocalSamplerTests(unittest.TestCase):
             "rx_bps": 1000, "tx_bps": 1000, "nic": "eno1", "speed_mbps": 2500,
         })
         self.assertEqual(second["disk"], {"read_bps": 4096, "write_bps": 6144})
+
+    def test_uptime_uses_injected_root_and_falls_back_to_zero(self):
+        sampler = self.sampler()
+        self.assertEqual(sampler.sample(1.0)["uptime"], 60.5)
+        self.write("proc/uptime", "invalid\n")
+        self.assertEqual(sampler.sample(2.0)["uptime"], 0.0)
+        (self.root / "proc/uptime").unlink()
+        self.assertEqual(sampler.sample(3.0)["uptime"], 0.0)
 
     def test_only_physical_nics_with_device_are_counted(self):
         for nic in ("fwbr1", "fwpr1", "fwln1", "tap1", "veth1", "wlan0"):
@@ -197,19 +207,19 @@ class HostOtherTests(unittest.TestCase):
     def test_arithmetic_filters_local_running_guests(self):
         local = {"cpu_total": 0.5, "threads": 8, "mem": {"used": 10_000, "arc": 1000}}
         guests = [
-            {"node": "p3-01", "status": "running", "cpu": 0.5, "maxcpu": 2, "mem": 3000},
-            {"node": "p3-01", "status": "stopped", "cpu": 0.5, "maxcpu": 2, "mem": 2000},
-            {"node": "p3-02", "status": "running", "cpu": 0.5, "maxcpu": 2, "mem": 4000},
+            {"node": "pve-01", "status": "running", "cpu": 0.5, "maxcpu": 2, "mem": 3000},
+            {"node": "pve-01", "status": "stopped", "cpu": 0.5, "maxcpu": 2, "mem": 2000},
+            {"node": "pve-02", "status": "running", "cpu": 0.5, "maxcpu": 2, "mem": 4000},
         ]
-        self.assertEqual(host_other(local, guests, "p3-01", snapshot_fresh=True),
+        self.assertEqual(host_other(local, guests, "pve-01", snapshot_fresh=True),
                          {"cpu": 3.0, "mem": 4000})
 
     def test_clamps_and_omits_stale_snapshot(self):
         local = {"cpu_total": 0.1, "threads": 2, "mem": {"used": 1000, "arc": 500}}
-        guests = [{"node": "p3-01", "status": "running", "cpu": 1, "maxcpu": 2, "mem": 2000}]
-        self.assertEqual(host_other(local, guests, "p3-01", snapshot_fresh=True),
+        guests = [{"node": "pve-01", "status": "running", "cpu": 1, "maxcpu": 2, "mem": 2000}]
+        self.assertEqual(host_other(local, guests, "pve-01", snapshot_fresh=True),
                          {"cpu": 0.0, "mem": 0})
-        self.assertEqual(host_other(local, guests, "p3-01", snapshot_fresh=False),
+        self.assertEqual(host_other(local, guests, "pve-01", snapshot_fresh=False),
                          {"cpu": None, "mem": None})
 
 

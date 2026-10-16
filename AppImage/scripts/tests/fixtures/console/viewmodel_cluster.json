@@ -25,19 +25,19 @@
     "schema": 1,
     "age_s": 2,
     "language": "en",
-    "node": {"name": "p3-01", "pve_version": "pve-manager/9.0.3/abc"},
-    "cluster": {"status": "ok", "is_cluster": true, "name": "p3", "quorate": true, "nodes_total": 3, "nodes_online": 2, "members": [{"name": "p3-01", "online": true, "local": true}, {"name": "p3-02", "online": true, "local": false}, {"name": "p3-03", "online": false, "local": false}]},
+    "node": {"name": "pve-01", "pve_version": "pve-manager/9.0.3/abc"},
+    "cluster": {"status": "ok", "is_cluster": true, "name": "lab", "quorate": true, "nodes_total": 3, "nodes_online": 2, "members": [{"name": "pve-01", "online": true, "local": true}, {"name": "pve-02", "online": true, "local": false}, {"name": "pve-03", "online": false, "local": false}]},
     "resources": {
       "status": "ok",
-      "nodes": [{"name": "p3-01", "status": "online", "cpu": 0.07, "maxcpu": 4, "mem": 17179869184, "maxmem": 34359738368, "disk": 21474836480, "maxdisk": 53687091200, "uptime": 619200}, {"name": "p3-02", "status": "online", "cpu": 0.09, "maxcpu": 8, "mem": 19327352832, "maxmem": 34359738368, "disk": 21474836480, "maxdisk": 53687091200, "uptime": 619200}],
+      "nodes": [{"name": "pve-01", "status": "online", "cpu": 0.07, "maxcpu": 4, "mem": 17179869184, "maxmem": 34359738368, "disk": 21474836480, "maxdisk": 53687091200, "uptime": 619200}, {"name": "pve-02", "status": "online", "cpu": 0.09, "maxcpu": 8, "mem": 19327352832, "maxmem": 34359738368, "disk": 21474836480, "maxdisk": 53687091200, "uptime": 619200}],
       "guests": [
-        {"vmid": 101, "type": "qemu", "name": "plex", "node": "p3-01", "status": "running", "cpu": 0.6, "maxcpu": 2, "mem": 4294967296, "maxmem": 8589934592, "uptime": 3600, "template": false, "tags": ["media"]},
-        {"vmid": 103, "type": "qemu", "name": "db", "node": "p3-02", "status": "running", "cpu": 0.05, "maxcpu": 2, "mem": 6442450944, "maxmem": 8589934592, "uptime": 7200, "template": false},
-        {"vmid": 205, "type": "lxc", "name": "nginx", "node": "p3-02", "status": "running", "cpu": 0.3, "maxcpu": 1, "mem": 858993459, "maxmem": 2147483648, "uptime": 1800, "template": false},
-        {"vmid": 110, "type": "qemu", "name": "win", "node": "p3-01", "status": "unknown", "cpu": 0, "maxcpu": 4, "mem": 2147483648, "maxmem": 4294967296, "uptime": 0, "template": false},
-        {"vmid": 999, "type": "lxc", "name": "template", "node": "p3-01", "status": "stopped", "cpu": 0.9, "maxcpu": 1, "mem": 4294967296, "template": true}
+        {"vmid": 101, "type": "qemu", "name": "plex", "node": "pve-01", "status": "running", "cpu": 0.6, "maxcpu": 2, "mem": 4294967296, "maxmem": 8589934592, "uptime": 3600, "template": false, "tags": ["media"]},
+        {"vmid": 103, "type": "qemu", "name": "db", "node": "pve-02", "status": "running", "cpu": 0.05, "maxcpu": 2, "mem": 6442450944, "maxmem": 8589934592, "uptime": 7200, "template": false},
+        {"vmid": 205, "type": "lxc", "name": "nginx", "node": "pve-02", "status": "running", "cpu": 0.3, "maxcpu": 1, "mem": 858993459, "maxmem": 2147483648, "uptime": 1800, "template": false},
+        {"vmid": 110, "type": "qemu", "name": "win", "node": "pve-01", "status": "unknown", "cpu": 0, "maxcpu": 4, "mem": 2147483648, "maxmem": 4294967296, "uptime": 0, "template": false},
+        {"vmid": 999, "type": "lxc", "name": "template", "node": "pve-01", "status": "stopped", "cpu": 0.9, "maxcpu": 1, "mem": 4294967296, "template": true}
       ],
-      "storages": [{"storage": "local-zfs", "node": "p3-01", "disk": 21474836480, "maxdisk": 53687091200, "status": "available"}]
+      "storages": [{"storage": "local-zfs", "node": "pve-01", "disk": 21474836480, "maxdisk": 53687091200, "status": "available"}]
     }
   }
 }

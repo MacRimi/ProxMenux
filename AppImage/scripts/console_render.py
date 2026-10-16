@@ -170,7 +170,9 @@ class Grid(list):
 
 
 def _label(vm, key, glyphs):
-    result = vm["tr"]("runtime.consoleTui." + key)
+    full_key = "runtime.consoleTui." + key
+    translator = vm.get("tr")
+    result = translator(full_key) if callable(translator) else full_key
     return str(result) if glyphs == "unicode" else sanitize(result, 200, glyphs)
 
 
@@ -200,8 +202,10 @@ def _remote_state(vm):
     resources = snapshot.get("resources") or {}
     age = _number(snapshot.get("age_s"))
     status = resources.get("status")
-    if status == "starting" and age <= 15:
-        return "starting"
+    if status == "starting":
+        return ("starting" if age <= 15 or
+                _number((vm.get("local") or {}).get("uptime"), 999999) < 120
+                else "unavailable")
     if not snapshot:
         return "starting" if _number((vm.get("local") or {}).get("uptime"), 999999) < 120 else "unavailable"
     if age > 60 or status in ("unavailable", "error"):
@@ -266,7 +270,7 @@ def _header(grid, vm, state, cluster_view):
         version = match.group(1) if match else version
         name = sanitize(node.get("name") or "", 20, grid.glyphs)
         info = (f"{name} {_separator(grid)} PVE {version} "
-                f"{_separator(grid)} {label('columns.up').lower()} {_uptime((vm.get('local') or {}).get('uptime'))}")
+                f"{_separator(grid)} {label('labels.uptime')} {_uptime((vm.get('local') or {}).get('uptime'))}")
         role = "title"
         if state == "ok" and not cluster.get("is_cluster", True):
             info = f"{name} {_separator(grid)} {label('labels.standalone')}"
@@ -315,9 +319,16 @@ def _cpu_memory(grid, vm, rows):
     memory_fraction = _number(mem.get("used")) / max(1, _number(mem.get("total")))
     left = 43 if grid.width == 80 else (grid.width + 1) // 2
     right = grid.width - left
-    grid.box(0, 1, left, rows, f"{label('panels.cpu')}  {_pct(cpu_fraction)}%")
-    grid.box(left, 1, right, rows,
-             f"{label('panels.memory')}  {_gib(mem.get('used')):.1f}/{_gib(mem.get('total')):.0f} GiB  {_pct(memory_fraction)}%")
+    cpu_title = f"{label('panels.cpu')}  {_pct(cpu_fraction)}%"
+    memory_title = (f"{label('panels.memory')}  {_gib(mem.get('used')):.1f}/"
+                    f"{_gib(mem.get('total')):.0f} GiB  {_pct(memory_fraction)}%")
+    grid.box(0, 1, left, rows, cpu_title)
+    grid.box(left, 1, right, rows, memory_title)
+    cpu_percent = f"{_pct(cpu_fraction)}%"
+    memory_percent = f"{_pct(memory_fraction)}%"
+    grid.put(2 + cpu_title.rfind(cpu_percent), 1, cpu_percent, "title", ("bold",), limit=left - 1)
+    grid.put(left + 2 + memory_title.rfind(memory_percent), 1,
+             memory_percent, "title", ("bold",), limit=grid.width - 1)
     grid.bar(2, 2, left - 4, cpu_fraction)
     grid.bar(left + 2, 2, right - 4, memory_fraction)
     load = " ".join(f"{_number(local.get('load' + str(i))):.2f}" for i in (1, 5, 15))

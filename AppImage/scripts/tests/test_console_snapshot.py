@@ -37,7 +37,7 @@ class ConsoleSnapshotTests(unittest.TestCase):
 
     def publisher(self, resources=None, status=None, version=None):
         return console_snapshot.Publisher(
-            get_node_name=lambda: "p3-01",
+            get_node_name=lambda: "pve-01",
             get_resources=lambda: self.resources if resources is None else resources(),
             run_pvesh=lambda: self.status if status is None else status(),
             read_language=lambda: "es",
@@ -57,7 +57,7 @@ class ConsoleSnapshotTests(unittest.TestCase):
     def test_normalizes_complete_resources_and_missing_fields(self):
         result = console_snapshot.normalize_resources(self.resources)
         self.assertEqual(set(result), {"nodes", "guests", "storages", "truncated"})
-        self.assertEqual(result["nodes"][0]["name"], "p3-01")
+        self.assertEqual(result["nodes"][0]["name"], "pve-01")
         self.assertEqual(result["nodes"][0]["cgroup_mode"], 2)
         self.assertIsNone(result["nodes"][1]["cpu"])
         self.assertEqual(result["guests"][0]["tags"], ["media", "prod"])
@@ -100,7 +100,7 @@ class ConsoleSnapshotTests(unittest.TestCase):
     def test_initial_snapshot_and_idempotent_ensure(self):
         with mock.patch.object(console_snapshot.threading, "Thread") as thread:
             first = console_snapshot.ensure_publisher(
-                lambda: "p3-01", lambda: self.resources, lambda: self.status,
+                lambda: "pve-01", lambda: self.resources, lambda: self.status,
                 lambda: "es", path=self.path, state_dir=self.state_dir,
                 clock=lambda: 100.0, version="9.9.9",
             )
@@ -113,7 +113,7 @@ class ConsoleSnapshotTests(unittest.TestCase):
         data = json.loads(self.path.read_text(encoding="utf-8"))
         self.assertEqual((data["cluster"]["status"], data["resources"]["status"]),
                          ("starting", "starting"))
-        self.assertEqual(data["node"]["name"], "p3-01")
+        self.assertEqual(data["node"]["name"], "pve-01")
         self.assertEqual(data["generator"]["version"], "9.9.9")
 
     def test_unwritable_snapshot_path_does_not_break_ensure_publisher(self):
@@ -121,7 +121,7 @@ class ConsoleSnapshotTests(unittest.TestCase):
         blocked.write_text("", encoding="utf-8")
         with mock.patch.object(console_snapshot.threading, "Thread") as thread:
             publisher = console_snapshot.ensure_publisher(
-                lambda: "p3-01", lambda: self.resources, lambda: self.status,
+                lambda: "pve-01", lambda: self.resources, lambda: self.status,
                 lambda: "es", path=blocked / "console.json", state_dir=self.state_dir,
                 clock=lambda: 100.0,
             )
@@ -274,7 +274,7 @@ class ConsoleSnapshotTests(unittest.TestCase):
             calls.append(1)
             return "pve-manager/9.0.3"
         publisher = console_snapshot.Publisher(
-            lambda: "p3-01", lambda: self.resources, lambda: self.status,
+            lambda: "pve-01", lambda: self.resources, lambda: self.status,
             lambda: "en", path=self.path, state_dir=self.state_dir,
             get_pve_version=version,
         )

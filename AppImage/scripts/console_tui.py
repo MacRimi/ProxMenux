@@ -90,14 +90,6 @@ def _configuration_language():
         return "en"
 
 
-def _uptime(proc_root):
-    try:
-        with (Path(proc_root) / "proc/uptime").open(encoding="ascii") as stream:
-            return max(0.0, float(stream.read().split()[0]))
-    except (OSError, UnicodeError, ValueError, IndexError):
-        return 0.0
-
-
 class GuestRates:
     """Derive guest byte rates only across consecutive valid observations."""
 
@@ -234,7 +226,6 @@ def _run(stdscr, args):
     while not _stop_requested:
         now = time.time()
         local = sampler.sample(time.monotonic())
-        local["uptime"] = _uptime(args.proc_root)
         try:
             console_snapshot.touch_lease(args.state_dir, now)
         except (OSError, ValueError):
@@ -267,8 +258,9 @@ def _run(stdscr, args):
         translator.set_language(language)
         resources = (data or {}).get("resources") or {}
         node = (data or {}).get("node") or {}
-        fresh = (resources.get("status") == "ok" and data["age_s"] is not None
-                 and data["age_s"] <= 10)
+        age = (data or {}).get("age_s")
+        fresh = (resources.get("status") == "ok" and age is not None
+                 and age <= 10)
         other = console_metrics.host_other(local, guests, node.get("name"), fresh)
         view_model = {"local": local, "snapshot": data, "host_other": other,
                       "glyphs": glyphs, "lang": translator.language, "tr": translator,

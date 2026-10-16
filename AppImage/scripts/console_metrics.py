@@ -224,6 +224,10 @@ class LocalSampler:
         return storages
 
     def sample(self, now):
+        try:
+            uptime = max(0.0, float(_read_text(self.root / "proc/uptime").split()[0]))
+        except (ValueError, IndexError):
+            uptime = 0.0
         cpu = _cpu_counters(self.root)
         net = _network(self.root)
         disk = _disk(self.root)
@@ -251,6 +255,7 @@ class LocalSampler:
         if len(loads) < 3:
             load1 = load5 = load15 = 0.0
         result = {
+            "uptime": uptime,
             "cpu_total": cpu_total,
             "cpu_history": list(self.cpu_history),
             "per_core": per_core,

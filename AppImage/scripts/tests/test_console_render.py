@@ -48,6 +48,25 @@ class ConsoleRenderTests(unittest.TestCase):
                     self.assertTrue(all(len(row) == width for row in grid))
                     self.assertTrue(all(len(cell) == 3 for row in grid for cell in row))
 
+    def test_json_only_viewmodel_renders_80x24_without_translator(self):
+        self.vm.pop("tr")
+        grid = render(self.vm, 80, 24)
+        self.assertEqual(len(grid), 24)
+        self.assertTrue(all(len(row) == 80 for row in grid))
+
+    def test_cpu_and_memory_title_percentages_are_bold(self):
+        grid = render(self.vm, 80, 24)
+        title = lines(grid)[1]
+        for value in ("70%", "50%"):
+            start = title.index(value)
+            self.assertTrue(all("bold" in grid[1][x][2]
+                                for x in range(start, start + len(value))))
+        self.assertNotIn("bold", grid[1][title.index("CPU")][2])
+
+    def test_node_header_uses_uptime_label(self):
+        self.vm["tr"] = lambda key: "uptime-label" if key.endswith("labels.uptime") else tr(key)
+        self.assertIn("uptime-label", lines(render(self.vm, 128, 48))[0])
+
     def test_node_80x24_panel_positions_and_collapse(self):
         rows = lines(render(self.vm, 80, 24))
         self.assertIn("[Node] Cluster", rows[0])
@@ -122,7 +141,7 @@ class ConsoleRenderTests(unittest.TestCase):
     def test_cluster_offline_first_and_coverage_suppresses_totals(self):
         self.vm["selected_view"] = "cluster"
         rows = lines(render(self.vm, 80, 24))
-        self.assertIn("p3-03", rows[2])
+        self.assertIn("pve-03", rows[2])
         self.assertIn("offline", rows[2])
         self.assertIn("coverage 2/3", rows[0])
         self.assertNotIn("64 GiB", rows[0])
@@ -146,7 +165,7 @@ class ConsoleRenderTests(unittest.TestCase):
         self.assertIn(".", lines(grid)[3])
         cluster = self.vm["snapshot"]["cluster"]
         for index in range(5):
-            cluster["members"].append({"name": f"p3-{index + 10}", "online": False})
+            cluster["members"].append({"name": f"pve-{index + 10}", "online": False})
         cluster["nodes_total"] = len(cluster["members"])
         guests = self.vm["snapshot"]["resources"]["guests"]
         for index in range(13):
@@ -205,7 +224,7 @@ class ConsoleRenderTests(unittest.TestCase):
         self.vm["selected_view"] = "cluster"
         self.vm["snapshot"]["cluster"]["members"] = []
         rows = lines(render(self.vm, 80, 24))
-        self.assertIn("p3-01", rows[2])
+        self.assertIn("pve-01", rows[2])
 
     def test_no_quorum_and_stale_roles(self):
         self.vm["selected_view"] = "cluster"
@@ -230,6 +249,22 @@ class ConsoleRenderTests(unittest.TestCase):
         grid = render(self.vm, 80, 24)
         self.assertIn("MONITOR UNAVAILABLE", lines(grid)[0])
         self.assertEqual(grid[0][lines(grid)[0].index("MONITOR UNAVAILABLE")][1], "crit")
+
+    def test_old_starting_snapshot_after_boot_is_unavailable(self):
+        self.vm["snapshot"]["resources"]["status"] = "starting"
+        self.vm["snapshot"]["age_s"] = 16
+        self.vm["local"]["uptime"] = 600
+        grid = render(self.vm, 80, 24)
+        self.assertIn("MONITOR UNAVAILABLE", lines(grid)[0])
+        self.assertEqual(grid[0][lines(grid)[0].index("MONITOR UNAVAILABLE")][1], "crit")
+
+    def test_old_starting_snapshot_during_boot_stays_warn(self):
+        self.vm["snapshot"]["resources"]["status"] = "starting"
+        self.vm["snapshot"]["age_s"] = 16
+        self.vm["local"]["uptime"] = 60
+        grid = render(self.vm, 80, 24)
+        self.assertIn("Monitor starting", lines(grid)[0])
+        self.assertEqual(grid[0][lines(grid)[0].index("Monitor starting")][1], "warn")
 
     def test_absent_snapshot_uses_local_uptime_for_starting(self):
         self.vm["snapshot"] = None
@@ -271,10 +306,10 @@ class ConsoleRenderTests(unittest.TestCase):
         self.assertIn(grid[2][2][0], ("█", "░"))
 
     def test_snapshot_and_nic_names_are_sanitized(self):
-        self.vm["snapshot"]["node"]["name"] = "p3\x1b[31m-01"
+        self.vm["snapshot"]["node"]["name"] = "pve\x1b[31m-01"
         self.vm["local"]["net"]["nic"] = "eno\n1"
         rows = lines(render(self.vm, 80, 24))
-        self.assertIn("p3-01", rows[0])
+        self.assertIn("pve-01", rows[0])
         self.assertIn("eno1", rows[6])
         self.assertNotIn("[31m", "\n".join(rows))
 

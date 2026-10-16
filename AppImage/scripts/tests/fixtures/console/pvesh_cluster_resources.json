@@ -1,8 +1,8 @@
 [
-  {"type":"node","node":"p3-01","status":"online","cpu":0.07,"maxcpu":16,"mem":1717986918,"maxmem":34359738368,"disk":21474836480,"maxdisk":53687091200,"uptime":612000,"level":"","cgroup-mode":2},
-  {"type":"node","node":"p3-02","status":"offline"},
-  {"type":"qemu","vmid":101,"name":"plex","node":"p3-01","status":"running","cpu":0.6,"maxcpu":2,"mem":4294967296,"maxmem":8589934592,"disk":0,"maxdisk":34359738368,"uptime":3600,"netin":123456789,"netout":98765432,"diskwrite":0,"tags":"media;prod","template":0},
-  {"type":"lxc","vmid":102,"name":"nginx","node":"p3-02","status":"unknown","tags":"edge;\u001b[31mred\nline","template":0},
-  {"type":"storage","id":"storage/p3-01/local-zfs","storage":"local-zfs","node":"p3-01","plugintype":"zfspool","shared":0,"status":"available","disk":21474836480,"maxdisk":53687091200,"content":"images,rootdir"},
+  {"type":"node","node":"pve-01","status":"online","cpu":0.07,"maxcpu":16,"mem":1717986918,"maxmem":34359738368,"disk":21474836480,"maxdisk":53687091200,"uptime":612000,"level":"","cgroup-mode":2},
+  {"type":"node","node":"pve-02","status":"offline"},
+  {"type":"qemu","vmid":101,"name":"plex","node":"pve-01","status":"running","cpu":0.6,"maxcpu":2,"mem":4294967296,"maxmem":8589934592,"disk":0,"maxdisk":34359738368,"uptime":3600,"netin":123456789,"netout":98765432,"diskwrite":0,"tags":"media;prod","template":0},
+  {"type":"lxc","vmid":102,"name":"nginx","node":"pve-02","status":"unknown","tags":"edge;\u001b[31mred\nline","template":0},
+  {"type":"storage","id":"storage/pve-01/local-zfs","storage":"local-zfs","node":"pve-01","plugintype":"zfspool","shared":0,"status":"available","disk":21474836480,"maxdisk":53687091200,"content":"images,rootdir"},
   {"type":"pool","pool":"unused"}
 ]

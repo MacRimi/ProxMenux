@@ -1,10 +1,10 @@
 [
-  {"id": "node/p3-01", "type": "node", "node": "p3-01", "status": "online", "cpu": 0.07, "maxcpu": 16},
-  {"id": "qemu/101", "type": "qemu", "vmid": 101, "name": "plex", "node": "p3-01", "status": "running", "cpu": 0.6, "maxcpu": 2, "mem": 4294967296, "maxmem": 8589934592, "tags": "media;prod"},
-  {"id": "storage/p3-01/local-zfs", "type": "storage", "storage": "local-zfs", "node": "p3-01", "status": "available"},
-  {"id": "lxc/205", "type": "lxc", "vmid": 205, "name": "nginx", "node": "p3-02", "status": "running", "cpu": 0.3, "maxcpu": 1, "mem": 858993459, "maxmem": 2147483648},
-  {"id": "node/p3-02", "type": "node", "node": "p3-02", "status": "online", "cpu": 0.09, "maxcpu": 16},
-  {"id": "qemu/103", "type": "qemu", "vmid": 103, "name": "db", "node": "p3-02", "status": "stopped", "cpu": 0, "maxcpu": 4, "mem": 0, "maxmem": 8589934592},
+  {"id": "node/pve-01", "type": "node", "node": "pve-01", "status": "online", "cpu": 0.07, "maxcpu": 16},
+  {"id": "qemu/101", "type": "qemu", "vmid": 101, "name": "plex", "node": "pve-01", "status": "running", "cpu": 0.6, "maxcpu": 2, "mem": 4294967296, "maxmem": 8589934592, "tags": "media;prod"},
+  {"id": "storage/pve-01/local-zfs", "type": "storage", "storage": "local-zfs", "node": "pve-01", "status": "available"},
+  {"id": "lxc/205", "type": "lxc", "vmid": 205, "name": "nginx", "node": "pve-02", "status": "running", "cpu": 0.3, "maxcpu": 1, "mem": 858993459, "maxmem": 2147483648},
+  {"id": "node/pve-02", "type": "node", "node": "pve-02", "status": "online", "cpu": 0.09, "maxcpu": 16},
+  {"id": "qemu/103", "type": "qemu", "vmid": 103, "name": "db", "node": "pve-02", "status": "stopped", "cpu": 0, "maxcpu": 4, "mem": 0, "maxmem": 8589934592},
   {"id": "pool/media", "type": "pool", "pool": "media"},
   {"id": "sdn/vnet/media", "type": "sdn", "sdn": "media"}
 ]
