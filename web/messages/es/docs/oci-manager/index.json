@@ -41,6 +41,7 @@
               "<strong>Buscar aplicaciones</strong>: búsqueda por nombre en todo el catálogo.",
               "<strong>Todas las aplicaciones</strong>: el catálogo completo, con el número de aplicaciones.",
               "<strong>Gestionar aplicaciones OCI instaladas</strong>: actualizar, modificar, eliminar o recuperar lo instalado.",
+              "<strong>Cuentas de registro</strong>: las cuentas con las que se instalan y actualizan imágenes de registros privados.",
               "<strong>Instalar una imagen que no está en el catálogo</strong>: traducción de un archivo Compose, un comando <code>docker run</code> o una referencia de imagen.",
               "Las categorías del catálogo, cada una con su número de aplicaciones."
             ]

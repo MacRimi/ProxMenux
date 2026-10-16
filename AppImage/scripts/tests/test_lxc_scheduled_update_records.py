@@ -33,6 +33,8 @@ class ScheduledUpdateRecordTests(unittest.TestCase):
             self.vmid,
             'success',
             'both',
+            reason='container is stopped; scheduled update was skipped',
+            reason_code='stopped_container',
             log_name='../9911-scheduled-' + ('a' * 32) + '.log',
             reboot_required=True,
             reboot_packages=['linux-image-amd64', 'libc6'],
@@ -43,10 +45,30 @@ class ScheduledUpdateRecordTests(unittest.TestCase):
             '9911-scheduled-' + ('a' * 32) + '.log',
         )
         self.assertTrue(schedule['last_run_reboot_required'])
+        self.assertEqual(schedule['last_run_reason_code'], 'stopped_container')
         self.assertEqual(
             schedule['last_run_reboot_packages'],
             ['linux-image-amd64', 'libc6'],
         )
+
+    def test_record_rejects_unknown_reason_code_and_clears_the_previous_one(self):
+        self.assertTrue(lxc_apps.record_schedule_run(
+            self.vmid,
+            'skipped',
+            'os',
+            reason='container is stopped; scheduled update was skipped',
+            reason_code='stopped_container',
+        ))
+        self.assertTrue(lxc_apps.record_schedule_run(
+            self.vmid,
+            'failure',
+            'os',
+            reason='update runner exited with code 9',
+            reason_code='untrusted_value',
+        ))
+        schedule = lxc_apps._read_sidecar(self.vmid)['schedule']
+        self.assertEqual(schedule['last_run_reason'], 'update runner exited with code 9')
+        self.assertNotIn('last_run_reason_code', schedule)
 
     def test_lifecycle_clear_preserves_run_and_log(self):
         lxc_apps.record_schedule_run(
