@@ -202,6 +202,30 @@ else
   exit 1
 fi
 '''
+HESTIA_PANEL_SCRIPT = r'''
+# The generic process collector intentionally stops after a bounded number of
+# records and ignores shared listener ownership.  Hestia's master/worker pair
+# can therefore be outside that generic result.  This narrow fallback never
+# accepts a name alone: it requires Hestia's exact executable and its panel
+# listener on the fixed local port.
+[ -x /usr/local/hestia/nginx/sbin/hestia-nginx ] || { printf 'END\n'; exit 0; }
+command -v pgrep >/dev/null && command -v readlink >/dev/null && command -v ss >/dev/null && command -v head >/dev/null || exit 1
+n=0
+for pid in $(pgrep -x hestia-nginx 2>/dev/null | head -n 9); do
+  case "$pid" in *[!0-9]*|'') continue;; esac
+  n=$((n+1)); [ "$n" -le 8 ] || { printf 'LIMIT\n'; exit 0; }
+  exe=$(timeout -s KILL 1 readlink "/proc/$pid/exe") || continue
+  [ "$exe" = /usr/local/hestia/nginx/sbin/hestia-nginx ] || continue
+  cwd=$(timeout -s KILL 1 readlink "/proc/$pid/cwd") || continue
+  if timeout -s KILL 1 ss -H -lntp | awk -v pid="$pid" '
+    {port=$4; sub(/^.*:/,"",port)
+     if (port == 8083 && index($0, "pid=" pid ",")) found=1}
+    END {exit(found ? 0 : 1)}'; then
+    printf 'H\t%s\t%s\t%s\t8083\n' "$pid" "$exe" "$cwd"
+  fi
+done
+printf 'END\n'
+'''
 FOOTPRINT_SCRIPT = r'''
 [ -f "$1" ] && [ -r "$1" ] || exit 1
 printf 'FILE\n'
@@ -393,6 +417,15 @@ def parse_records(text, kind):
                 records.append({'pid': pid, 'port': int(port)})
             else:
                 raise ProbeError('invalid_data')
+        elif kind == 'H' and len(parts) == 5 and parts[0] == 'H':
+            _, pid, exe, directory, port = parts
+            if (pid.isdigit() and exe == _HESTIA_NGINX
+                    and (directory == '/' or _path(directory))
+                    and port == str(_HESTIA_PANEL_PORT)):
+                records.append({'pid': pid, 'executable': exe, 'root': directory,
+                                'port': _HESTIA_PANEL_PORT})
+            else:
+                raise ProbeError('invalid_data')
         else:
             raise ProbeError('invalid_data')
     return records, lines[-1] == 'LIMIT', len(lines) - 1
@@ -487,7 +520,7 @@ def _guard(vmid, deadline, run):
 def scan(vmid, run=bounded_run):
     deadline = time.monotonic() + TOTAL_SECONDS
     _guard(vmid, deadline, run)
-    records, issues, consumed, processes, listeners = [], [], 0, [], []
+    records, issues, consumed, processes, listeners, hestia_panels = [], [], 0, [], [], []
     for kind, script in (('S', SERVICE_SCRIPT), ('P', PROCESS_SCRIPT), ('L', PORT_SCRIPT)):
         try:
             if consumed >= MAX_RECORDS:
@@ -512,6 +545,16 @@ def scan(vmid, run=bounded_run):
                 issues.append('metadata_limit')
         except ProbeError as exc:
             issues.append(str(exc))
+    try:
+        # This is outside the generic record budget: it returns only an exact,
+        # fixed Hestia signature, not additional arbitrary process metadata.
+        hestia_panels, limited, _ = parse_records(run(
+            ['pct', 'exec', str(vmid), '--', 'timeout', '-s', 'KILL', '2',
+             'sh', '-c', HESTIA_PANEL_SCRIPT, 'discovery'], deadline), 'H')
+        if limited:
+            issues.append('metadata_limit')
+    except ProbeError as exc:
+        issues.append(str(exc))
     for process in processes:
         exe, directory = process['executable'], process['root']
         related = [record for record in records if record['executable'] == exe and (
@@ -531,6 +574,11 @@ def scan(vmid, run=bounded_run):
                               and _NAME.fullmatch(Path(exe).name)):
             records.append({'name': Path(exe).name, 'path': exe, 'root': directory,
                             'process': exe, 'executable': exe, 'listening_ports': ports})
+    for panel in hestia_panels:
+        records.append({'name': 'Hestia', 'path': panel['executable'], 'root': _HESTIA_ROOT,
+                        'process': panel['executable'], 'process_root': panel['root'],
+                        'executable': panel['executable'],
+                        'listening_ports': [panel['port']]})
     items, seen = [], set()
     for record in records:
         key = (record['path'], record['root'])

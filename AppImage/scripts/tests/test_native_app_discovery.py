@@ -45,7 +45,7 @@ class DiscoveryFixtures(unittest.TestCase):
         self.calls = []
 
     def runner(self, services=None, processes='END\n', footprint='FILE\n', manifest=None,
-               status='status: running', ports='END\n'):
+               status='status: running', ports='END\n', hestia_panels='END\n'):
         def run(argv, deadline):
             self.calls.append(argv)
             self.assertLessEqual(deadline - time.monotonic(), native.TOTAL_SECONDS)
@@ -60,6 +60,8 @@ class DiscoveryFixtures(unittest.TestCase):
                 return processes
             if script == native.PORT_SCRIPT:
                 return ports
+            if script == native.HESTIA_PANEL_SCRIPT:
+                return hestia_panels
             if script == native.MANIFEST_FOOTPRINT_SCRIPT:
                 if manifest is not None:
                     return manifest
@@ -144,20 +146,24 @@ class DiscoveryFixtures(unittest.TestCase):
 
     def test_hestia_panel_is_recognized_only_from_its_exact_runtime_and_port(self):
         hestia = '/usr/local/hestia/nginx/sbin/hestia-nginx'
-        process = f'P\t391\t{hestia}\t/\nEND\n'
+        panel = f'H\t391\t{hestia}\t/\t8083\nEND\n'
         result = native.scan(101, self.runner(
-            services='END\n', processes=process, ports='L\t391\t8083\nEND\n'))
+            services='END\n', processes='LIMIT\n', ports='END\n', hestia_panels=panel))
         item, = result['candidates']
         self.assertEqual(item['name'], 'Hestia')
         self.assertEqual(item['installation_path'], hestia)
         self.assertEqual(item['listening_ports'], [8083])
         self.assertIn({'kind': 'working_directory', 'value': '/'}, item['evidence'])
+        self.assertIn('metadata_limit', result['issues'])
 
         self.calls.clear()
         result = native.scan(101, self.runner(
-            services='END\n', processes=process, ports='L\t391\t8443\nEND\n'))
+            services='END\n', processes='LIMIT\n', ports='END\n'))
         self.assertEqual(result['candidates'], [])
         self.assertFalse(any(native.FOOTPRINT_SCRIPT in call for call in self.calls))
+
+        with self.assertRaises(native.ProbeError):
+            native.parse_records(f'H\t391\t{hestia}\t/\t8443\nEND\n', 'H')
 
     def test_node_and_npm_wrappers_use_only_bounded_manifest_roots(self):
         cases = [
