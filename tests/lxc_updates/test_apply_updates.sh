@@ -164,7 +164,7 @@ run_case stopped_restore RUN_HELPER=0 UPDATE_COMMAND='update-custom' MOCK_INITIA
 
 run_case scheduled_stopped RUN_HELPER=0 UPDATE_COMMAND='update-custom' \
   EXECUTION_MODE=scheduled SCHEDULED_STOPPED_MARKER='fixture-stopped-marker' MOCK_INITIAL_STATE=stopped
-[[ $CASE_RC -eq 8 ]] || fail "scheduled_stopped returned $CASE_RC"
+[[ $CASE_RC -eq 9 ]] || fail "scheduled_stopped returned $CASE_RC"
 [[ $(count 'pct start 101') -eq 0 ]] || fail "scheduled update started a stopped CT"
 [[ $(count 'pct exec') -eq 0 ]] || fail "scheduled update executed inside a stopped CT"
 [[ $(count CUSTOM_EXEC) -eq 0 ]] || fail "scheduled update ran a custom updater"

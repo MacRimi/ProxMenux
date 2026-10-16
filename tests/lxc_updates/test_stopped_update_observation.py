@@ -135,7 +135,7 @@ raise SystemExit(h.main())
             "_json_list": lambda value: json.loads(value or '[]'),
             "_lxc_update_finalizations": {}, "_lxc_update_finalization_lock": threading.RLock(),
             "_LXC_UPDATE_FINALIZATION_TTL": 3600,
-            "_SCHEDULED_STOPPED_EXIT": 8,
+            "_SCHEDULED_STOPPED_EXIT": 9,
             "_fast_guest_status": lambda *_: self.state.read_text(),
             "_lxc_update_snapshot": lambda *_: {"ct_name": "fixture"},
             "_lxc_update_target_labels": lambda *_: ["OS"],

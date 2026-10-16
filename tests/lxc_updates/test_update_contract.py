@@ -362,17 +362,18 @@ class ScheduledStoppedContainerTests(unittest.TestCase):
 
     def test_stopped_marker_requires_the_scheduler_token_not_only_exit_code(self):
         marker = "PROXMENUX_SCHEDULED_STOPPED:fixture"
-        reader = self._stopped_marker_reader({"_SCHEDULED_STOPPED_EXIT": 8, "os": os})
-        self.assertTrue(reader(SimpleNamespace(returncode=8, stdout=marker, stderr=""), None, marker))
-        self.assertFalse(reader(SimpleNamespace(returncode=8, stdout="", stderr=""), None, marker))
+        reader = self._stopped_marker_reader({"_SCHEDULED_STOPPED_EXIT": 9, "os": os})
+        self.assertTrue(reader(SimpleNamespace(returncode=9, stdout=marker, stderr=""), None, marker))
+        self.assertFalse(reader(SimpleNamespace(returncode=9, stdout="", stderr=""), None, marker))
+        self.assertFalse(reader(SimpleNamespace(returncode=8, stdout=marker, stderr=""), None, marker))
         self.assertFalse(reader(SimpleNamespace(returncode=4, stdout=marker, stderr=""), None, marker))
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as log:
             log.write("prefix\\n" + marker + "\\n")
             log.flush()
-            self.assertTrue(reader(SimpleNamespace(returncode=8, stdout="", stderr=""), log.name, marker))
+            self.assertTrue(reader(SimpleNamespace(returncode=9, stdout="", stderr=""), log.name, marker))
 
     def test_runner_race_to_stopped_is_reported_as_skipped_without_reboot_probe(self):
-        runner = MagicMock(return_value=SimpleNamespace(returncode=8, stdout="", stderr=""))
+        runner = MagicMock(return_value=SimpleNamespace(returncode=9, stdout="", stderr=""))
         finalizer = MagicMock(return_value={"recorded": True})
         reboot_probe = MagicMock()
         stopped_marker = MagicMock(return_value=True)
@@ -388,7 +389,7 @@ class ScheduledStoppedContainerTests(unittest.TestCase):
             "os": os,
             "json": json,
             "_APPLY_UPDATES_SCRIPT": "/bin/true",
-            "_SCHEDULED_STOPPED_EXIT": 8,
+            "_SCHEDULED_STOPPED_EXIT": 9,
             "_DOCKER_ENGINE_INTEGRATED_COMMAND": "integrated-docker",
             "_create_lxc_update_log": lambda _vmid, _run_id: (None, None),
             "_fast_guest_status": MagicMock(return_value="running"),
@@ -420,6 +421,7 @@ class ScheduledStoppedContainerTests(unittest.TestCase):
 
         stopped_marker.reset_mock()
         stopped_marker.return_value = False
+        runner.return_value = SimpleNamespace(returncode=8, stdout="", stderr="")
         reboot_probe.return_value = (None, [], None)
         outcome = self._worker(scope)(101, {"target": "os"})
         self.assertEqual(outcome["status"], "failure")

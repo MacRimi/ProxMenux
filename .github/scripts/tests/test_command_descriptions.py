@@ -217,6 +217,10 @@ class CommandDescriptionsTests(unittest.TestCase):
                         "reasonStoppedContainer",
                         english["vmLxc"]["scheduled"]["reasonStoppedContainer"],
                     )
+                    messages["vmLxc"]["scheduled"].setdefault(
+                        "runSkippedStatus",
+                        english["vmLxc"]["scheduled"]["runSkippedStatus"],
+                    )
                     for key in ("noShell", "enterFailed"):
                         messages["lxcTerminal"]["errors"].setdefault(key, english["lxcTerminal"]["errors"][key])
                     # The notification history panel texts await the bot as well.

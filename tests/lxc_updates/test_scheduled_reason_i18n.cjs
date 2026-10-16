@@ -73,7 +73,9 @@ for (const locale of ['en', 'sk']) {
   const render = compile(context)
   const translated = flattenText(render(true))
   const expected = t('vmLxc.scheduled.reasonStoppedContainer')
+  const skippedLabel = t('vmLxc.scheduled.runSkippedStatus')
   assert(translated.includes(expected), `${locale}: known reason code must use the locale catalog`)
+  assert(translated.includes(skippedLabel), `${locale}: skipped run must not claim that no updates are pending`)
   assert(!translated.includes(context.scheduleLastRunReason), `${locale}: raw stopped reason must not leak into UI`)
 
   context.scheduleLastRunReasonCode = 'unknown_reason'

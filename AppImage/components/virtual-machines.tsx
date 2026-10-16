@@ -2465,7 +2465,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   : scheduleLastRunStatus === "deferred"
                     ? t("vmLxc.scheduled.runDeferred")
                     : scheduleLastRunStatus === "skipped"
-                      ? t("vmLxc.scheduled.runSkipped")
+                      ? t("vmLxc.scheduled.runSkippedStatus")
                       : t("vmLxc.scheduled.runFailed")}
             </span></>
           )}

@@ -1288,6 +1288,7 @@
       "runFailed": "✗ zlyhalo",
       "runDeferred": "odložené z bezpečnostných dôvodov",
       "runSkipped": "nič nečaká",
+      "runSkippedStatus": "spustenie bolo preskočené",
       "reasonStoppedContainer": "Kontajner je vypnutý; plánovaná aktualizácia sa preskočila.",
       "releaseDelaySummary": "odklad {days} deň/dní",
       "releaseDelayLabel": "Počkať po novej verzii aplikácie",

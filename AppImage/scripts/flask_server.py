@@ -22245,7 +22245,7 @@ def api_proxmenux_self_update_status():
 # so scheduled and manual applies cannot overlap.
 
 _APPLY_UPDATES_SCRIPT = _LXC_APPLY_UPDATES_SCRIPT
-_SCHEDULED_STOPPED_EXIT = 8
+_SCHEDULED_STOPPED_EXIT = 9
 _DOCKER_ENGINE_INTEGRATED_COMMAND = (
     'python3 /usr/local/share/proxmenux/monitor-app/usr/bin/'
     'update_docker_engine.py --vmid "$VMID"'
