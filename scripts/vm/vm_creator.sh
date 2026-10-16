@@ -259,6 +259,25 @@ function run_gpu_passthrough_wizard() {
 
 
 
+# Download beside the destination, publishing only a complete non-empty file.
+function download_vm_iso() {
+  local iso_url="$1" iso_path="$2"
+  local staging_dir download_status=1
+  local -a wget_options=(--no-verbose --show-progress)
+  [[ "$iso_url" == *"sourceforge.net"* ]] && wget_options+=(--content-disposition)
+
+  staging_dir=$(mktemp -d "${iso_path}.part.XXXXXX") || return 1
+  if wget "${wget_options[@]}" -O "$staging_dir/media.iso" "$iso_url" \
+    && [[ -s "$staging_dir/media.iso" ]] \
+    && { [[ ! -f "$iso_path" ]] || chmod --reference="$iso_path" "$staging_dir/media.iso"; } \
+    && mv -fT -- "$staging_dir/media.iso" "$iso_path"; then
+    download_status=0
+  fi
+  rm -f -- "$staging_dir/media.iso"
+  rmdir -- "$staging_dir" || return 1
+  return "$download_status"
+}
+
 # ==========================================================
 # Create VM
 # ==========================================================
@@ -269,18 +288,9 @@ function create_vm() {
   local ISO_DIR="/var/lib/vz/template/iso"
 
 
-  if [[ -n "$ISO_PATH" && -n "$ISO_URL" && ! -f "$ISO_PATH" ]]; then
+  if [[ -n "$ISO_PATH" && -n "$ISO_URL" ]] && [[ ! -f "$ISO_PATH" || ! -s "$ISO_PATH" ]]; then
   
-    if [[ "$ISO_URL" == *"sourceforge.net"* ]]; then
-   
-      wget --content-disposition --show-progress -O "$ISO_PATH" "$ISO_URL"
-    else
-  
-      wget --no-verbose --show-progress -O "$ISO_PATH" "$ISO_URL"
-    fi
-
-  
-    if [[ -f "$ISO_PATH" ]]; then
+    if download_vm_iso "$ISO_URL" "$ISO_PATH"; then
       ISO_VOLID="${ISO_VOLID:-local:iso/$(basename "$ISO_PATH")}"
       msg_ok "$(translate "ISO image downloaded")"
     else
@@ -662,21 +672,13 @@ fi
       case "$VIRTIO_OPTION" in
         1)
 
-          if [[ -f "$VIRTIO_DIR/virtio-win.iso" ]]; then
-            if whiptail --title "ProxMenux" --yesno "$(translate "A VirtIO ISO already exists. Do you want to overwrite it?")" 10 60; then
-              wget -q --show-progress -O "$VIRTIO_DIR/virtio-win.iso" "$VIRTIO_DOWNLOAD_URL"
-              if [[ -f "$VIRTIO_DIR/virtio-win.iso" ]]; then
-                msg_ok "$(translate "VirtIO driver ISO downloaded successfully.")"
-              else
-                msg_error "$(translate "Failed to download VirtIO driver ISO.")"
-              fi
-            fi
-          else
-            wget -q --show-progress -O "$VIRTIO_DIR/virtio-win.iso" "$VIRTIO_DOWNLOAD_URL"
-            if [[ -f "$VIRTIO_DIR/virtio-win.iso" ]]; then
+          if [[ ! -f "$VIRTIO_DIR/virtio-win.iso" || ! -s "$VIRTIO_DIR/virtio-win.iso" ]] \
+            || whiptail --title "ProxMenux" --yesno "$(translate "A VirtIO ISO already exists. Do you want to overwrite it?")" 10 60; then
+            if download_vm_iso "$VIRTIO_DOWNLOAD_URL" "$VIRTIO_DIR/virtio-win.iso"; then
               msg_ok "$(translate "VirtIO driver ISO downloaded successfully.")"
             else
               msg_error "$(translate "Failed to download VirtIO driver ISO.")"
+              continue
             fi
           fi
 
