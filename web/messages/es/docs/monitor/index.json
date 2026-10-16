@@ -56,14 +56,14 @@
       },
       {
         "name": "Seguridad",
-        "description": "Fallos de autenticación, estado de jails de Fail2Ban, eventos de bloqueo recientes, integración con el jail <code>[proxmenux]</code> del host."
+        "description": "Fallos de autenticación, estado de las jails de Fail2Ban, bloqueos recientes e integración con la jail <code>[proxmenux]</code> del host."
       }
     ],
     "footer": "Cada sección tiene su propia página de documentación bajo <link>Dashboard</link> en la barra lateral."
   },
   "howItRuns": {
     "heading": "Cómo se ejecuta",
-    "intro": "ProxMenux Monitor se distribuye como un AppImage autocontenido. Una única unidad systemd (<code>proxmenux-monitor.service</code>) arranca un proceso Flask que:",
+    "intro": "ProxMenux Monitor se distribuye como una AppImage autónoma. Una única unidad de systemd (<code>proxmenux-monitor.service</code>) inicia un proceso de Flask que:",
     "bullets": [
       "Escucha en <strong>TCP 8008</strong> en el host (HTTP).",
       "Sirve el panel Next.js como activos estáticos bajo <code>/</code> y la API bajo <code>/api/*</code> desde el mismo proceso.",
@@ -74,7 +74,7 @@
   },
   "noAgent": {
     "title": "Sin agente en los guests",
-    "body": "El Monitor lee todo desde el host. Las VMs y CTs no necesitan ningún agente instalado — los datos del guest provienen de la API de Proxmox y de la visibilidad a nivel de kernel del propio host sobre los guests en ejecución."
+    "body": "El Monitor obtiene los datos desde el host. No hace falta instalar un agente en las VM ni en los CT: los datos proceden de la API de Proxmox y de la información que el kernel del host ofrece sobre los invitados en ejecución."
   },
   "access": {
     "heading": "Acceder al panel",
@@ -95,8 +95,8 @@
     "androidLabel": "Android Chrome / Edge:",
     "androidBody": "menú de tres puntos → <em>Instalar app</em> (o <em>Añadir a pantalla de inicio</em> en versiones antiguas).",
     "afterInstall": "Una vez instalado, abrir el icono lanza el panel en modo standalone con su propia entrada en el conmutador de tareas.",
-    "onlineOnlyTitle": "Solo online",
-    "onlineOnlyBody": "La PWA es instalable pero <strong>no</strong> funciona sin conexión — no hay service worker. El lanzador se comporta como una app nativa, pero el dispositivo necesita poder llegar al host en TCP 8008 (LAN, VPN o HTTPS tras proxy inverso) para que el panel cargue."
+    "onlineOnlyTitle": "Requiere conexión",
+    "onlineOnlyBody": "La PWA se puede instalar, pero <strong>no</strong> funciona sin conexión: no incluye un service worker. El acceso directo se comporta como una aplicación nativa, pero el dispositivo debe poder conectar con el host por TCP 8008 (mediante LAN, VPN o HTTPS a través de un proxy inverso) para cargar el panel."
   },
   "health": {
     "heading": "El Health Monitor y las notificaciones",
@@ -112,7 +112,7 @@
   },
   "api": {
     "heading": "API REST e integraciones",
-    "intro": "Todo lo que muestra la interfaz está disponible como JSON sobre HTTP/HTTPS. Los mismos endpoints alimentan widgets de Homepage, sensores de Home Assistant, dashboards de Grafana (vía el exporter Prometheus en <code>/api/prometheus</code>), pruebas de Uptime Kuma y cualquier script personalizado que hable <code>curl</code>.",
+    "intro": "Todo lo que muestra la interfaz está disponible como JSON mediante HTTP/HTTPS. Los mismos endpoints alimentan los widgets de Homepage, los sensores de Home Assistant, los paneles de Grafana (mediante el exportador de Prometheus en <code>/api/prometheus</code>), las comprobaciones de Uptime Kuma y cualquier script que utilice <code>curl</code>.",
     "tokens": "Los tokens API de larga duración (365 días) se generan desde <strong>Settings → API Access Tokens</strong> o vía <code>POST /api/auth/generate-api-token</code>.",
     "bearer": "Los tokens viajan como <code>Authorization: Bearer …</code>. Los endpoints públicos (<code>/api/health</code>, <code>/api/auth/*</code>) funcionan sin token para que las pruebas externas de uptime puedan llegar al host sin entregar credenciales.",
     "catalog": "El catálogo completo de endpoints, la guía de rotación de tokens y las buenas prácticas de seguridad viven en <linkApi>API Reference</linkApi>; los ejemplos listos para Homepage, Home Assistant, Grafana, Uptime Kuma y un patrón genérico de cURL están en <linkIntegrations>Integrations</linkIntegrations>."
@@ -139,7 +139,7 @@
         "description": "— cada sección de la interfaz, una página por cada una."
       },
       {
-        "label": "Referencia API",
+        "label": "Referencia de la API",
         "description": "— cada endpoint, forma de petición / respuesta y gestión de tokens."
       },
       {

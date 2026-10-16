@@ -231,7 +231,7 @@
     "heading": "Por dónde seguir",
     "items": [
       {
-        "label": "Referencia API",
+        "label": "Referencia de la API",
         "href": "/docs/monitor/api",
         "tail": " — cada endpoint con método, path y el catálogo completo de métricas Prometheus."
       },

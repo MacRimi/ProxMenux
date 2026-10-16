@@ -116,7 +116,7 @@
         "title": "Registro",
         "items": [
           {
-            "tool": "Optimización de publicaciones",
+            "tool": "Optimización de journald",
             "restores": "Reescribe /etc/systemd/journald.conf con los valores por defecto vanilla y reinicia systemd-journald."
           },
           {

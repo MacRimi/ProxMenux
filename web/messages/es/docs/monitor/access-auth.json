@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "La autenticación es opt-in",
-    "body": "En el primer arranque el panel muestra un único diálogo — <em>\"¿Proteger tu panel?\"</em> — con dos botones: <strong>Sí, configurar contraseña</strong> y <strong>No, continuar sin protección</strong>. Decir que no deja todos los endpoints de la API abiertos en el puerto TCP 8008 — aceptable en una LAN de laboratorio aislada, peligroso en cualquier otro escenario. La autenticación de dos factores (2FA) <strong>no</strong> forma parte de esta elección inicial; se configura más tarde desde <strong>la pestaña Security</strong> una vez que hay una contraseña."
+    "body": "Al abrir el panel por primera vez aparece un diálogo: <em>«¿Proteger el panel?»</em>, con los botones <strong>Sí, configurar contraseña</strong> y <strong>No, continuar sin protección</strong>. Al elegir que no, los endpoints de la API quedan abiertos en TCP 8008: puede servir en una LAN de laboratorio aislada, pero resulta peligroso en otros entornos. La autenticación de dos factores (2FA) <strong>no</strong> forma parte de esta primera elección; se configura después desde <strong>la pestaña Seguridad</strong>, una vez establecida la contraseña."
   },
   "reaching": {
     "heading": "Cómo llegar al panel",
@@ -338,7 +338,7 @@
     "outro": "Sigue la cola con el método habitual: <code>tail -F /var/log/proxmenux-auth.log</code>. El archivo se rota con <code>logrotate</code> si se añade un drop-in de configuración; el Monitor no lo rota por sí mismo."
   },
   "fail2ban": {
-    "heading": "Opcional: jail Fail2Ban",
+    "heading": "Opcional: jail de Fail2Ban",
     "calloutTitle": "Fail2Ban no viene incluido con el Monitor",
     "calloutBody": "Fail2Ban <strong>no</strong> lo instala ProxMenux Monitor por sí mismo. Instálalo vía <link>Seguridad → Fail2Ban</link> en el menú de ProxMenux (o con el paquete estándar de Debian). Sin él, el Monitor sigue escribiendo el log de auditoría de arriba — simplemente no banea automáticamente a los repetidores.",
     "intro": "Cuando Fail2Ban está instalado, la integración de ProxMenux trae un jail <code>[proxmenux]</code> que:",

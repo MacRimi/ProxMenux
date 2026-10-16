@@ -119,7 +119,7 @@
     "heading": "Fail2Ban",
     "subHeading": "(condicional)",
     "whatIs": "<strong>Qué es.</strong> Fail2Ban es un daemon open-source de prevención de intrusiones que vigila archivos de log buscando intentos repetidos fallidos de login y banea la IP ofensora a nivel de firewall. Es la respuesta de facto a los escáneres de fuerza bruta que pegan SSH y formularios de login web 24/7. ProxMenux lo conecta a tres jails por defecto: SSH, el login de la UI web de Proxmox (puerto 8006) y el login del ProxMenux Monitor (puerto 8008).",
-    "notBundled": "Fail2Ban <strong>no viene de fábrica</strong>. La tarjeta detecta si está instalado y se adapta: cuando falta ofrece una instalación de un clic; una vez instalado muestra estado en vivo de jails, IPs baneadas y te deja ajustar retries / ban time por jail.",
+    "notBundled": "Fail2Ban <strong>no viene incluido</strong>. La tarjeta detecta si está instalado y adapta su contenido: si falta, ofrece instalarlo con un clic; una vez instalado, muestra el estado de las jails y las IP bloqueadas, y permite ajustar los reintentos y el tiempo de bloqueo de cada jail.",
     "notInstalledAlt": "Tarjeta Fail2Ban mostrando estado Not Installed con explicación de lo que configuraría: SSH, UI web de Proxmox y protección de ProxMenux Monitor con backend nftables, más un botón Install and Configure Fail2Ban",
     "notInstalledCaption": "Tarjeta Fail2Ban antes de instalar — la caja azul previsualiza lo que configuraría la instalación.",
     "clickBody": "Pulsa <em>Install and Configure Fail2Ban</em> y obtienes una modal de confirmación listando cada cambio que hará el script en el host:",

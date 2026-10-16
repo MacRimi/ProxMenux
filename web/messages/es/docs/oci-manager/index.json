@@ -5,7 +5,7 @@
   },
   "header": {
     "title": "Aplicaciones del gestor OCI",
-    "description": "Las imágenes OCI oficiales se ejecutan como contenedores LXC nativos de Proxmox VE. La imagen sigue siendo la que publica su responsable; ProxMenux reproduce el entorno que Docker Compose habría creado a su alrededor.",
+    "description": "Las imágenes OCI oficiales se ejecutan como contenedores LXC nativos de Proxmox VE. Se utiliza la misma imagen que publica su desarrollador; ProxMenux reproduce el entorno que Docker Compose habría creado a su alrededor.",
     "section": "Aplicaciones del gestor OCI"
   },
   "sections": [
@@ -15,7 +15,7 @@
         {
           "calloutInfo": {
             "title": "Una imagen OCI, un LXC nativo",
-            "body": "Dentro de los contenedores no se ejecuta ningún motor Docker. Proxmox VE importa el sistema de archivos de la imagen y sus metadatos OCI, y la aplicación pasa a ser el proceso principal de un LXC nativo, gestionado con las mismas herramientas que cualquier otro contenedor del nodo."
+            "body": "No se ejecuta Docker Engine dentro de los contenedores. Proxmox VE importa el sistema de archivos de la imagen y sus metadatos OCI; la aplicación pasa a ser el proceso principal de un LXC nativo, administrado con las mismas herramientas que cualquier otro contenedor del nodo."
           }
         },
         {
@@ -76,7 +76,7 @@
       "title": "Por qué es una Technology Preview",
       "blocks": [
         {
-          "p": "OCI manager Apps lleva la etiqueta <strong>Technology Preview</strong> que Proxmox VE da a los contenedores de aplicación creados a partir de imágenes OCI, introducidos en Proxmox VE 9.1. Se refiere a aquello sobre lo que funciona OCI manager Apps, no al motor de ProxMenux: el comportamiento de esos contenedores todavía puede cambiar entre versiones de Proxmox VE. La etiqueta se mantiene hasta que Proxmox VE dé ese soporte por estable."
+          "p": "OCI manager Apps mantiene la etiqueta <strong>Technology Preview</strong> que Proxmox VE asigna a los contenedores de aplicaciones creados a partir de imágenes OCI, cuyo soporte se introdujo en Proxmox VE 9.1. La etiqueta se refiere a la tecnología sobre la que funciona OCI manager Apps, no al motor de ProxMenux: el comportamiento de estos contenedores puede cambiar entre versiones de Proxmox VE. Se mantendrá hasta que Proxmox VE considere estable ese soporte."
         },
         {
           "p": "El motor de OCI manager Apps (instalación, actualización, modificación, recreación, backups, restauración, migración y vigilancia) está probado en el laboratorio de ProxMenux. Cada aplicación se prueba por separado: las que se han probado de verdad muestran <strong>Verified</strong> y llevan una ✓ en las listas."
@@ -190,7 +190,7 @@
                 "tail": "GPU, NVIDIA, Coral, USB y otros dispositivos."
               },
               {
-                "label": "Aplicaciones multicontenedor",
+                "label": "Aplicaciones con varios contenedores",
                 "href": "/docs/oci-manager/stacks",
                 "tail": "aplicación, base de datos y caché como LXC coordinados."
               },

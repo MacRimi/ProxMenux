@@ -8,7 +8,7 @@
     "twitterDescription": "Endpoints para Home Assistant, Homepage, Grafana, Prometheus, n8n y paneles propios."
   },
   "header": {
-    "title": "Referencia API",
+    "title": "Referencia de la API",
     "description": "Los endpoints HTTP que usan los integradores para leer estado y disparar acciones seguras en ProxMenux Monitor — sensores de Home Assistant, tarjetas de Homepage, paneles de Grafana, scrapes de Prometheus, flujos de n8n y scripts propios. Cada categoría, más una lista completa de métricas Prometheus, con ejemplos en curl.",
     "section": "Monitor de ProxMenux"
   },

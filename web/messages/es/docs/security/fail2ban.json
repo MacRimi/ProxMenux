@@ -53,7 +53,7 @@
     "diagram": {
       "sshLabel": "SSH / PAM",
       "sshDetail": "fallo de autenticación\n(nivel info / notice)",
-      "journaldLabel": "Diario",
+      "journaldLabel": "journald",
       "journaldDetail": "MaxLevelStore=warning\n→ evento descartado en silencio",
       "fail2banLabel": "Fail2Ban",
       "fail2banDetail": "no ve nada\n→ nunca banea nada",

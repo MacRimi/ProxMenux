@@ -289,7 +289,7 @@
         "tail": " — configuración de primer arranque, contraseña + TOTP 2FA, snippets de reverse proxy, jail Fail2Ban."
       },
       {
-        "label": "Referencia API",
+        "label": "Referencia de la API",
         "href": "/docs/monitor/api",
         "tail": " — cada endpoint, gestión de tokens, mejores prácticas de seguridad."
       },

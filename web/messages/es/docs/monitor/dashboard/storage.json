@@ -96,7 +96,7 @@
     "overviewItems": [
       "<strong>Identity</strong> — modelo, serial, capacidad, insignia Health (Healthy / Warning / Critical).",
       "<strong>Wear & Lifetime</strong> — anillo grande de vida restante (97 %, 50 %, …) con el atributo de origen explícito (<em>Media Wearout Indicator</em>, <em>Percentage Used</em>, …), una barra de desgaste (% de consumo actual), una proyección <em>Est. Life</em> en años y los Data Written totales. Los discos NVMe también muestran <em>Available Spare</em>.",
-      "<strong>SMART Attributes</strong> — seis campos titulares en una rejilla de 2 columnas: Temperature, Power On Hours (con duración humanizada como <em>3y 116d</em>), Rotation Rate (o <em>SSD</em>), Power Cycles, SMART Status, Reallocated Sectors, Pending Sectors, CRC Errors. La tabla de atributos completa vive en la pestaña SMART."
+      "<strong>Atributos SMART</strong>: los datos principales se muestran en dos columnas: temperatura, horas de encendido (con una duración legible, como <em>3 años y 116 días</em>), velocidad de rotación (o <em>SSD</em>), ciclos de encendido, estado SMART, sectores reasignados, sectores pendientes y errores CRC. La tabla completa de atributos se encuentra en la pestaña SMART."
     ],
     "smartTitle": "Pestaña 2 — SMART",
     "smartImageAlt": "Modal de vista en detalle de disco — pestaña SMART con botones Run SMART Test (Short / Extended), resultado del último test y la tabla completa de atributos SMART",
