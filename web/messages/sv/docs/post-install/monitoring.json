@@ -20,7 +20,7 @@
       "Få värdens offentliga IP via <code>curl ipinfo.io/ip</code>.",
       "Ser upp den ägande ISP med en <code>whois</code>-fråga till <code>v4.whois.cymru.com</code>.",
       "Om resultatet nämner OVH, hämtar <code>last-public-ovh-infra-yak.snap.mirrors.ovh.net/yak/archives/apply.sh</code> och rör den till <code>bash</code> med RTM v2-muppen manifest.",
-      "Om resultatet nämner <em>not</em> OVH installeras ingenting. Alternativet är en no-op."
+      "Om resultatet <em>inte</em> nämner OVH, är ingenting installerat. Alternativet är en no-op."
     ],
     "remoteTitle": "Remote script piped till bash",
     "remoteBody": "Installationen kör <code>wget -qO - https://…apply.sh | bash</code>. Om OVH-spegeln någonsin äventyras, kör manuset som rot på din värd. Innan du aktiverar det här alternativet bestämmer du om du litar på OVHs spegelkedja mer än den övervakning du får. För de flesta hem-labb eller icke-OVH-användare bör detta alternativ helt enkelt stanna.",

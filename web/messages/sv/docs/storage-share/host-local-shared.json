@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Vad detta är (och inte)",
-    "body": "Detta verktyg registrerar <strong>not</strong> något i Proxmox (ingen <code>pvesm add</code> här). Det förbereder bara en katalog på värden - <code>/mnt/shared</code>, som standard - med behörigheter att någon LXC behållare kan läsa och skriva, oavsett om CT är privilegierad eller oprivilegierad. Det vanliga nästa steget är att binda det till varje CT med <mountLink>LXC Mount Manager</mountLink>."
+    "body": "Det här verktyget registrerar <strong>inte</strong> något i Proxmox (ingen <code>pvesm add</code> här). Den förbereder bara en katalog på värden — <code>/mnt/shared</code>, som standard — med behörigheter som alla LXC-behållare kan läsa och skriva, oavsett om CT är privilegierad eller oprivilegierad. Det vanliga nästa steget är att bind-montera den i varje CT med <mountLink>LXC Mount Manager</mountLink>."
   },
   "why": {
     "heading": "Varför ett dedikerat verktyg för detta",
@@ -74,7 +74,7 @@
   },
   "next": {
     "heading": "Nästa steg: bind-mount i behållare",
-    "body": "Skapa katalogen förbereder den bara - ingen behållare ser den ännu. För att göra det synligt i en eller flera LXCs, använd <mountLink>LXC Mount Manager</mountLink> för att binda <code>/mnt/&lt;name&gt;</code> i CT. Eftersom behörigheterna redan är öppna, kommer Mount Manager <strong>not</strong> erbjuda att ändra dem - katalogen är redo att använda som-är."
+    "body": "Att skapa katalogen förbereder den bara – ingen behållare ser den ännu. För att göra det synligt inuti en eller flera LXC:er, använd <mountLink>LXC Mount Manager</mountLink> för att binda <code>/mnt/&lt;name&gt;</code> till CT:erna. Eftersom behörigheterna redan är öppna, kommer Mount Manager <strong>inte</strong> att erbjuda att ändra dem – katalogen är redo att användas som den är."
   },
   "troubleshoot": {
     "heading": "Felsökning",

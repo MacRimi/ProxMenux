@@ -30,7 +30,7 @@
     "heading": "Cached discovery och Hitta applikationer",
     "lead": "Ansökningsförslag är en del av per-LXC modal cache. Start Scan förbereder dem i bakgrunden så att öppna fliken App kan visa cachade resultat omedelbart.",
     "items": [
-      "Öppna App-fliken startar <strong>not</strong> en ny katalogskanning och frågar inte upprepade gånger LXC.",
+      "Om du öppnar fliken App startar <strong>inte</strong> en ny katalogsökning och frågar inte LXC upprepade gånger.",
       "<strong>Find applikationer</strong> driver uttryckligen ett nytt upptäcktspass för den LXC. Använd den efter att ha installerat ny programvara medan ProxMenux redan körs.",
       "Den tidigare listan är fortfarande synlig medan den explicita skanningen körs. Nya matcher läggs till när den slutar.",
       "Om ingen ny match hittas anges resultatet bredvid åtgärderna och <strong>Register-applikationen</strong> förblir tillgänglig för manuell inresa.",

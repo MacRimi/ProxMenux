@@ -4,7 +4,7 @@
     "description": "Hur OCI Manager Apps förvandlar en applikation med sin databas och cache i samordnade inhemska LXC: plan, privat nätverk, beroende krok, validering och transaktionsuppdateringar."
   },
   "header": {
-    "title": "Multi-container applikationer",
+    "title": "Program med flera containrar",
     "description": "En applikation med sin databas, cache och andra tjänster blir flera samordnade inhemska LXCs, installerade och uppdaterade som en.",
     "section": "Appar i OCI-hanteraren"
   },

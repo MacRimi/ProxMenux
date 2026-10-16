@@ -227,7 +227,7 @@
         "tail": " — Nätverkskategorin och trösklarna för latenshistoria."
       },
       {
-        "label": "API Referens",
+        "label": "API-referens",
         "href": "/docs/monitor/api",
         "tail": " — Nätverk och latens endpoints."
       },

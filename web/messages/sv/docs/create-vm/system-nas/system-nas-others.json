@@ -182,7 +182,7 @@
       "icon": "Database",
       "officialName": "TrueNAS CORE",
       "officialUrl": "https://www.truenas.com/truenas-core/",
-      "description": "FreeBSD-baserad TrueNAS (den tidigare FreeNAS). ZFS lagring med fängelser och plugins, men ingen Docker / Kubernetes. Att fasas ut till förmån för SCALE men fortfarande allmänt utplacerad.",
+      "description": "FreeBSD-baserad TrueNAS (det tidigare FreeNAS). Mogen ZFS lagring med jails och plugins, men ingen Docker / Kubernetes. Fasas ut till förmån för SCALE men har fortfarande stor spridning.",
       "specs": [
         "Rekommenderat gränssnitt: SATA",
         "Minsta RAM: 8 GB (16 GB+ rekommenderas)",

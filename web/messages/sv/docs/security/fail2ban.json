@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Fail2Ban | ProxMenux Dokumentation",
-    "description": "Installera Fail2Ban med tre fängelser inställda för Proxmox (SSH aggressiv, Proxmox UI 8006, ProxMenux Monitor 8008). Inkluderar den tidskrivna MaxLevelStore-fixen, anpassade logtjänster för tillförlitlighet, automatiska upptäckta nftables/iptables backend och SSH MaxAuthTries-härdning.",
+    "description": "Installera Fail2Ban med tre jails inställd för Proxmox (SSH aggressiv, Proxmox UI 8006, ProxMenux Monitor 8008). Inkluderar journald MaxLevelStore fix, anpassade loggtjänster för tillförlitlighet, automatiskt upptäckta nftables/iptables backend och SSH MaxAuthTries härdning.",
     "ogTitle": "Fail2Ban | ProxMenux Dokumentation",
     "ogDescription": "Brute-force skydd för SSH och Proxmox webb UIs, med Proxmox-specifika journald och backend fixar."
   },
   "header": {
     "title": "Fail2Ban",
-    "description": "Installationer Fail2Ban med en Proxmox-specifik konfiguration: tre fängelser (SSH aggressiv, proxmox UI på hamnen 8006, ProxMenux Monitor på hamnen 8008 + omvänd proxy), en journalad log-nivå fix så SSH auth-evenemang lagras faktiskt, två journal-to-fil logger-tjänster som arbetar runt en känd Fail2Ban systemdbackend fråga, automatisk upptäckt brandvägg backend och SSH MaxAuthTries Hardening.",
+    "description": "Installerar Fail2Ban med en Proxmox-specifik konfiguration: tre jails (SSH aggressiv, Proxmox UI på hamn 8006, ProxMenux Monitor på hamn 8008 + omvänd proxy), en journald logg-nivå fixa så SSH auth-händelser faktiskt lagras, två journal-till-fil-logger-tjänster som fungerar runt en känd Fail2Ban systemd-backend problem, automatiskt upptäckt brandvägg backend och SSH MaxAuthTries härdning.",
     "section": "Säkerhet"
   },
   "intro": {
@@ -17,10 +17,10 @@
   "firstLaunch": {
     "heading": "Första lanseringen dialog",
     "body": "På en värd utan Fail2Ban visar manuset en bekräftelsedialog som sammanfattar allt det handlar om att installera och konfigurera. Avboka avgångar utan ändringar; bekräfta startar installationsflödet.",
-    "imageAlt": "Fail2Ban installera bekräftelse dialogruta listar de tre fängelserna, journald fix och SSH härdning"
+    "imageAlt": "Fail2Ban installationsbekräftelsedialog som listar de tre jails, journald fix och SSH härdning"
   },
   "jails": {
-    "heading": "De tre fängelserna",
+    "heading": "De tre jails",
     "headerJail": "Jail",
     "headerProtects": "Skyddar",
     "headerRetries": "Retries / fönster",
@@ -45,15 +45,15 @@
         "ban": "1 timme"
       }
     ],
-    "outro": "Globala standarder från <code>jail.local</code>: <code>ignoreip = 127.0.0.1/8 ::1</code>, <code>ignoreself = true</code>, <code> bantime = 86400</code> (24h nedgång för fängelser som inte åsidosätter det), <code>maxretry = 2</code>, <code>findtime = 1800</code>."
+    "outro": "Globala standardinställningar från <code>jail.local</code>: <code>ignoreip = 127.0.0.1/8 ::1</code>, <code>ignoreself = true</code>,<code> bantime = 86400</code> (24h reserv för jails som inte åsidosätter det), <code>maxretry = 2</code>, <code>findtime = 1800</code>."
   },
   "journald": {
-    "heading": "Varför den journalade fixa frågor",
+    "heading": "Varför journald åtgärda frågor",
     "intro": "Proxmox fartyg <code>/etc/systemd/journald.conf</code> med <codeNw>MaxLevelStore=warning</codeNw>. journald droppar varje loggmeddelande <em>below</em> varning innan du lagrar den. SSH och PAM avger auth misslyckanden på <em>info</em> / <em>notice</em> nivåer, så:",
     "diagram": {
       "sshLabel": "SSH / PAM",
       "sshDetail": "auth misslyckande\n(info / noteringsnivå)",
-      "journaldLabel": "Journald",
+      "journaldLabel": "journald",
       "journaldDetail": "MaxLevelStore= Varning\n→ händelse tyst tappade",
       "fail2banLabel": "Fail2Ban",
       "fail2banDetail": "ser ingenting\naldrig förbjuder något",
@@ -82,7 +82,7 @@
         "output": "/var/log/ssh-auth.log"
       }
     ],
-    "outro": "Båda tjänsterna förklaras <code>PartOf=fail2ban.service</code> så de startar om med Fail2Ban och slutar med det. Mode 640 som ägs av <code>root:adm</code> på loggfilerna. Den tredje loggen som används av <code>[proxmenux]</code> fängelse (<code>/var/log/proxmenux-auth.log</code>) skrivs direkt av ProxMenux Monitor Flask-appen - ingen loggertjänst som behövs för den."
+    "outro": "Båda tjänsterna är deklarerade <code>PartOf=fail2ban.service</code> så de startar om med Fail2Ban och slutar med det. Läget 640 som ägs av <code>root:adm</code> på loggfilerna. Den tredje loggen som används av <code>[proxmenux]</code> jail (<code>/var/log/proxmenux-auth.log</code>) skrivs direkt av appen ProxMenux Monitor Flask – ingen loggertjänst behövs för den."
   },
   "backend": {
     "heading": "Automatisk identifiering av brandväggsbackend",
@@ -91,7 +91,7 @@
   },
   "hardening": {
     "heading": "SSH härdning: MaxAuthTries",
-    "intro": "Lynis styr <strong>SSH-7408</strong> rekommenderar <code>MaxAuthTries 3</code> i <code>sshd_config</code>. Med Fail2Bans <code>maxretry = 2</code> på SSH-fängelset når en skadlig klient aldrig tre försök ändå - men den explicita inställningen uppfyller revisionen och lägger till försvar på djupet (t.ex. om Fail2Ban stoppas för underhåll).",
+    "intro": "Lynis kontroll <strong>SSH-7408</strong> rekommenderar <code>MaxAuthTries 3</code> i <code>sshd_config</code>. Med Fail2Bans <code>maxretry = 2</code> på SSH jail, en skadlig klient når aldrig tre försök ändå - men den explicita inställningen tillfredsställer revisionen och lägger till försvar på djupet (t.ex. om Fail2Ban stoppas för underhåll).",
     "installerIntro": "Installationsprogrammet:",
     "items": [
       "Läser det aktuella <code>MaxAuthTries</code>-värdet (eller standarder till 6 om det saknas).",
@@ -109,11 +109,11 @@
     "rows": [
       {
         "action": "Reinstallera",
-        "what": "Re-runs full installatör - skriver om alla fängelser med de nuvarande ProxMenux-standarderna. Använd detta efter en ProxMenux-uppdatering stöter de rekommenderade värdena."
+        "what": "Kör hela installationsprogrammet igen — skriver om alla jails med nuvarande ProxMenux standardvärden. Använd detta efter att en ProxMenux uppdatering stöter på de rekommenderade värdena."
       },
       {
         "action": "Ta bort",
-        "what": "Stops fail2ban och de två logger-tjänsterna, rensar apt-paketet, tar bort alla fängelse / filterfiler, tar bort den journald drop-in (återställer Proxmox-standarden) och återställer den ursprungliga SSH MaxAuthTries."
+        "what": "Stoppar fail2ban och de två loggertjänsterna, rensar apt-paketet, tar bort alla jail / filtrera filer, tar bort journald drop-in (återställer Proxmox standard) och återställer originalet SSH MaxAuthTries."
       }
     ]
   },
@@ -125,9 +125,9 @@
   "troubleshoot": {
     "heading": "Felsökning",
     "neverBansTitle": "Fail2Ban körs men förbjuder aldrig något",
-    "neverBansBody": "Kontrollera auth loggfiler faktiskt få poster: <code>tail -f /var/log/ssh-auth.log</code> och prova ett fel lösenord SSH försök från en annan maskin. Om loggen stannar tom körs inte loggertjänsten: <code>systemctl status ssh-auth-logger.service</code>. Om det är aktivt men loggen är tom, kontrollera att den journalade drop-in trädde i kraft: <code>journalctl --dump-catalog | head</code> - händelser på <em>info</em> nivå bör vara synlig.",
-    "monitorEmptyTitle": "ProxMenux Monitor fängelse har inga poster även efter misslyckade inloggningar",
-    "monitorEmptyBody": "<code>[proxmenux]</code>-fängelset läser <code>/var/log/proxmenux-auth.log</code>, som skrivs av ProxMenux Monitor Flask-appen - inte av en tidskriftsloggare. Om du inte kör Monitor stannar filen tom och fängelset aldrig bränder. Det är förväntat, fängelse konfig är ofarlig. Om du kör Monitor och loggen är tom, kontrollera Flask-loggningskonfigen.",
+    "neverBansBody": "Kontrollera att autentiseringsloggfilerna faktiskt tar emot poster: <code>tail -f /var/log/ssh-auth.log</code> och försök med ett fellösenordsförsök SSH från en annan maskin. Om loggen förblir tom, körs inte loggertjänsten: <code>systemctl status ssh-auth-logger.service</code>. Om den är aktiv men loggen är tom, kontrollera att journald drop-in trädde i kraft: <code>journalctl --dump-catalog | head</code> — händelser på <em>info</em>-nivå bör vara synliga.",
+    "monitorEmptyTitle": "ProxMenux Monitor jail har inga poster även efter misslyckade inloggningar",
+    "monitorEmptyBody": "De <code>[proxmenux]</code> jail läser <code>/var/log/proxmenux-auth.log</code>, som är skriven av ProxMenux Monitor Flask app — inte av en journald logger. Om du inte kör monitorn förblir filen tom och jail aldrig eldar. Det är förväntat; de jail config är ofarligt. Om du kör monitorn och loggen är tom, kontrollera Flask loggningskonfiguration.",
     "selfBanTitle": "Jag förbjöd mig själv",
     "selfBanIntro": "Från en konsol / IPMI / iKVM (eller annan vitlistad IP):",
     "selfBanCode": "fail2ban-client unban '<'YOUR_IP'>'\n\n# To prevent it next time, edit /etc/fail2ban/jail.local and add your IP:\nignoreip = 127.0.0.1/8 ::1 192.168.1.0/24 203.0.113.42\n\n# Then reload\nfail2ban-client reload",

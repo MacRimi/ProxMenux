@@ -28,7 +28,7 @@
       "Om du minskar båda, är exporten aborterad - ingen data berörs."
     ],
     "warnTitle": "Force-stop är power-off",
-    "warnBody": "<code>qm stop</code> är likvärdigt med att ge kraften. Gästen kan behöva filsystem reparation på sin nästa start. Föredrar den graciösa avstängningen när det är möjligt; reservkraft stannar för oansvariga gäster."
+    "warnBody": "<code>qm stop</code> motsvarar att dra kraften. Gästen kan behöva reparera filsystemet vid nästa uppstart. Föredrar den graciösa avstängningen när det är möjligt; reservera tvångsstopp för gäster som inte svarar."
   },
   "format": {
     "heading": "Format väljare: OVA vs OVF",

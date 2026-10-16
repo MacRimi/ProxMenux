@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Vad detta gör",
-    "body": "Identifierar <code>iface</code>-deklarationer vars stöd NIC inte längre finns på värden (typiskt efter att ha ersatt eller tagit bort ett nätverkskort). Sedan erbjuder en guidad rengöring som tar bort <em>only</em> föräldralösa block, med en säkerhetskopia, en förhandsgranskning per avsnitt och en explicit slutlig bekräftelse."
+    "body": "Identifierar <code>iface</code>-deklarationer vars stödjande NIC inte längre finns på värden (vanligtvis efter att ett nätverkskort har bytts ut eller tagits bort). Erbjuder sedan en guidad rensning som <em>endast</em> tar bort de föräldralösa blocken, med en säkerhetskopia, en förhandsgranskning per sektion och en explicit slutlig bekräftelse."
   },
   "differs": {
     "heading": "Hur det skiljer sig från bridgeanalys",
@@ -75,7 +75,7 @@
       },
       {
         "title": "5. Verifiering",
-        "body": "Re-läser filen, listar vad som togs bort och kontrollerar återstående gränssnitt. Skriver rollback-kommandot. Gör <strong>not</strong> automatiskt starta om nätverk - ta bort ett oanvändt block är säkert att tillämpa på nästa omstart, och undviker att röra levande tillstånd.",
+        "body": "Läser filen igen, listar vad som togs bort och kontrollerar de återstående gränssnitten igen. Skriver ut återställningskommandot. Startar <strong>inte</strong> om nätverket automatiskt – att ta bort ett oanvänt block är säkert att tillämpa vid nästa omstart, och man undviker att vidröra livetillståndet.",
         "tone": "emerald"
       }
     ],

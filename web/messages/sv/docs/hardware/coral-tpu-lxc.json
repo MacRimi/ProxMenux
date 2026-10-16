@@ -87,7 +87,7 @@
   },
   "verification": {
     "heading": "Verifiering",
-    "body": "Ange behållaren och kontrollera Korallen är synlig:"
+    "body": "Ange behållaren och kontrollera att Coral är synlig:"
   },
   "troubleshoot": {
     "heading": "Felsökning",
@@ -95,7 +95,7 @@
     "apexBody": "Värd apex modul är inte laddad. På värden: <code>lsmod | grep apex</code> - om tomt, kör <code>modprobe apex</code> eller starta om om du bara installerade Coral-drivrutiner. När värden har <code>/dev/apex_0</code>, starta om behållaren: <code>pct stop &lt;ctid&gt; &amp;&amp; pct start &lt;ctid&gt;</code>.",
     "replugTitle": "USB Coral försvinner efter koppling i en annan hamn",
     "replugBody": "Det är just därför manuset monterar <code>/dev/bus/usb</code> istället för <code>/dev/coral</code>-symlink. Om du träffar detta, kontrollera din LXC konfig har <code>lxc.mount.entry: /dev/bus/usb dev/bus/usb ...</code> och inte en referens till <code>/dev/coral</code> direkt. Gamla konfigs från tidigare skriptversioner kan behöva uppdatera - kör skriptet på samma behållare och konfigen blir uppdaterad.",
-    "alpineTitle": "Alpin / Arch / RHEL / SUSE container - runtime inte installerad",
+    "alpineTitle": "Alpine / Arch / RHEL / SUSE-behållare — körtid inte installerad",
     "alpineBody": "Om du väljer <em>passthrough-only-läge</em> när manuset föranledde, LXC config är skriven och Coral-enheten är synlig i behållaren, men <code>libedgetpu</code> runtime är inte installerat. Det är genom design: Googles APT repo bara fartyg för Debian / Ubuntu. Installera runtime manuellt med din distro pakethanterare (Alpine: <code>apk add</code>; Arch: AUR; RHEL / SUSE: bygga från källan) efter Googles officiella guide, eller kör en app behållare som buntar i drifttiden - Frigate Docker bild är det kanoniska exemplet: bara exponera enheten med <code>--device /dev/apex_0:/dev/apex_0</code> (M.2) eller USB binda montage skriptet som redan skrevs (USB).",
     "frigateTitle": "Frigate säger \"Coral EdgeTPU upptäckt men inte tillgänglig\"",
     "frigateBody": "Nästan alltid ett behörighetsproblem i behållaren. Frigate körs som root som standard; kontrollera rotanvändaren är i <code>plugdev</code>-gruppen i behållaren (för USB), och att processen kan läsa <code>/dev/apex_0</code> (för M.2). <code>ls -l /dev/apex_0</code> inifrån behållaren bör visa grupp <code>apex</code> - om inte, lägga till GID-inriktningen till <code>/etc/group</code> eller byta behållaren till privilegierat läge.",

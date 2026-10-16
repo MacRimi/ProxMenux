@@ -45,7 +45,7 @@
     "body": "<rcloneLink>rclone</rcloneLink> är verktyget som pratar med molnlagringsleverantörer. Installera den från Debian repositories:",
     "installCode": "apt-get update\napt-get install -y rclone",
     "newerCalloutTitle": "Om du behöver en nyare rclone",
-    "newerCalloutBody": "Om du behöver en nyare klon än vad Debian fartyg, använd den officiella installatören:",
+    "newerCalloutBody": "Om du behöver en nyare rclone än vad Debian levererar, använd den officiella installationsprogrammet:",
     "newerCode": "curl https://rclone.org/install.sh | bash",
     "tunnelHeading": "2.1 Browser-baserad autentisering via SSH tunnel",
     "tunnelBody": "Rclones auth-flöde öppnar en lokal webbläsare. Eftersom Proxmox värd inte har ett skrivbord, <remoteSetupLink>rclones fjärrinstallationsprocedur</remoteSetupLink> sträcker auth callback genom en SSH tunnel tillbaka till din bärbara dators webbläsare.",
@@ -113,7 +113,7 @@
       "<strong>Backup är extremt långsam:</strong> bekräftar <code>--vfs-cache-mode writes</code> är på <code>ExecStart</code>-linjen. Utan det, varje skriv block på molnet. Kontrollera också din uppströms bandbredd - vzdump är bunden av den.",
       "<strong>Backup misslyckas med \"Inget utrymme kvar på enheten\": </strong> cache katalogen (<code>~/.cache/rclone/</code>) fylld upp innan uppladdningen fångas upp. Flytta det till ett större filsystem med <code>--cache-dir /var/cache/rclone</code> i systemd-enheten.",
       "<strong>rclone auth token löpte ut (typiskt på Google Drive efter en lång ledig period):</strong> SSH tillbaka in i tunneln (<code>ssh -L localhost:53682:localhost:53682 root@ip_proxmox</code>) och spring <code>rclone config reconnect gdrive:</code> för att uppdatera.",
-      "<strong>Backups land men är skadade på återställning: </strong> sluta använda molnlagring som <strong>only</strong> backup destination. Kombinera med lokal PBS / vzdump på en annan disk för motståndskraft."
+      "<strong>Säkerhetskopieringar landar men skadas vid återställning:</strong> sluta använda molnlagring som den <strong>enda</strong> säkerhetskopieringsdestinationen. Kombinera med lokal PBS / vzdump på en annan disk för motståndskraft."
     ]
   }
 }

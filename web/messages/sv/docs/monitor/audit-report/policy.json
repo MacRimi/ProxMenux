@@ -68,7 +68,7 @@
           "p": "En ouppnåelig lagring rapporteras som kritisk när den förklaras väsentlig eller tjänar en löpande gäst, som en varning när dess roll inte anges, och som en observation när den förklaras frivillig."
         }
       ],
-      "intro": "Varje lagring av noden förklaras Essential, Optional eller Not anges."
+      "intro": "Varje lagring av noden deklareras som väsentlig, valfri eller ej angiven."
     },
     {
       "id": "thresholds",

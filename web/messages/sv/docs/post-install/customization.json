@@ -38,7 +38,7 @@
     "breakTitle": "Kan bryta efter Proxmox uppdateringar",
     "breakBody": "Proxmox skickar regelbundet UI-uppdateringar som överskriver <code>proxmoxlib.js</code>. När det händer kommer bannern tillbaka. Du kan återanvända det här alternativet efter varje Proxmox-uppdatering för att skicka om filen, eller bara acceptera nag tills du återanvänder. ProxMenux installerar också en APT hook som auto-re-patches på paketuppgraderingar - se <link>Uninstall Optimizations</link> för hur den kroken vänds.",
     "legalTitle": "Juridisk anmärkning (alltid värt att upprepa)",
-    "legalBody": "Detta alternativ döljer bara UI nag. Det ger <strong>not</strong> dig företagsstöd, tillgång till företagsregister eller eventuella rättigheter att skicka Proxmox kommersiellt utan abonnemang. Om du kör Proxmox i en intäktsgenererande miljö, köp en prenumeration - det stöder projektet och får dig den stabila kanalen."
+    "legalBody": "Det här alternativet döljer bara UI tjatet. Den ger dig <strong>inte</strong> företagssupport, tillgång till företagets arkiv eller några rättigheter att skicka Proxmox kommersiellt utan prenumeration. Om du kör Proxmox i en intäktsgenererande miljö, köp ett abonnemang – det stödjer projektet och ger dig en stabil företagskanal."
   },
   "verify": {
     "heading": "Verifiering",

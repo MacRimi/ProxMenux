@@ -8,7 +8,7 @@
     "twitterDescription": "Slutpunkter för Home Assistant, Hemsida, Grafana, Prometheus, n8n och anpassade instrumentbrädor."
   },
   "header": {
-    "title": "API Referens",
+    "title": "API-referens",
     "description": "HTTP endpoints-integratörer använder för att läsa statliga och utlösa säkra åtgärder på ProxMenux Monitor - Home Assistant-sensorer, Homepage-kort, Grafana-dashboards, Prometheus-skrapor, n8n-flöden och anpassade skript. Varje kategori, plus en komplett lista över Prometheus mätvärden, med lock exempel.",
     "section": "ProxMenux-övervakning"
   },
@@ -502,12 +502,12 @@
       {
         "endpoint": "/api/security/fail2ban/details",
         "method": "GET",
-        "use": "Fail2Ban fängelse status - endast användbart när det valfria fängelset är installerat."
+        "use": "Fail2Ban jail status — endast användbar när den valfria jail är installerad."
       },
       {
         "endpoint": "/api/security/fail2ban/activity",
         "method": "GET",
-        "use": "Nyligen Fail2Ban händelser (banor, unbans, fängelse börjar)."
+        "use": "Senaste Fail2Ban händelser (förbud, avstängningar, jail startar)."
       },
       {
         "endpoint": "/api/security/lynis/status",
@@ -738,7 +738,7 @@
       {
         "label": "Åtkomst och autentisering",
         "href": "/docs/monitor/access-auth",
-        "tail": " - gruvtokens, revisionsloggen, den valfria Fail2Ban-fängelset, TLS-konfigurationen."
+        "tail": "— myntningstokens, granskningsloggen, den valfria Fail2Ban jail, TLS-konfigurationen."
       },
       {
         "label": "Aviseringar",
@@ -748,7 +748,7 @@
       {
         "label": "AI assistent",
         "href": "/docs/monitor/ai-assistant",
-        "tailRich": " — Hur <code>/api/notifications/test-ai</code> och <code>/api/notifications/provider-models</code> är trådbundna."
+        "tailRich": "— hur <code>/api/notifications/test-ai</code> och <code>/api/notifications/provider-models</code> är kopplade."
       },
       {
         "label": "Hälsoövervakare",

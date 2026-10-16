@@ -231,7 +231,7 @@
     "heading": "Var till nästa",
     "items": [
       {
-        "label": "API Referens",
+        "label": "API-referens",
         "href": "/docs/monitor/api",
         "tail": " — varje slutpunkt med metod, väg och hela Prometheus metriska katalog."
       },

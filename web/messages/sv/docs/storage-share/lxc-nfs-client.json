@@ -68,7 +68,7 @@
   },
   "unmount": {
     "heading": "Oberoende NFS-andel",
-    "body": "Kombinerar levande fästen och fstab poster i en lista, låter dig välja en, och <strong> tar bort motsvarande linje från <code>/etc/fstab</code></strong>. Skriptet gör <em>not</em> kör <code>umount</code> på levande montering - i stället berättar det att en CT omstart behövs för att det inte går att träda i kraft.",
+    "body": "Kombinerar live-monteringarna och fstab-posterna till en lista, låter dig välja en och <strong>tar bort motsvarande rad från <code>/etc/fstab</code></strong>. Skriptet kör <em>inte</em> <code>umount</code> på live-monteringen – istället talar om för dig att en CT omstart krävs för att avmonteringen ska träda i kraft.",
     "warnTitle": "Skriptet tar bort fstab-poster, inte levande fästen",
     "warnBody": "Detta är ett avsiktligt designval: <code>umount</code> på en upptagen montering misslyckas med \"enhet upptagen\" när något inuti CT fortfarande använder det. Ta bort fstab-posten garanterar att fästet försvinner rent på nästa CT-start. Om du vill att fästet gått <em>now</em> och du är säker på att ingenting använder det, kör <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> för hand efter skriptet avslutas."
   },

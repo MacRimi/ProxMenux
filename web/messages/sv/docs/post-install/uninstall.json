@@ -116,7 +116,7 @@
         "title": "Loggning",
         "items": [
           {
-            "tool": "Journalerad optimering",
+            "tool": "Optimering av journald",
             "restores": "Rewrites /etc/systemd/journald.conf med vaniljstandarder och startar om systemd-journald."
           },
           {

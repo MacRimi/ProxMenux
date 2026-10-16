@@ -168,7 +168,7 @@
       "tagline": "Använder modeller tillgängliga på din Ollama-server. 100% lokal, inga kostnader, total integritet.",
       "items": [
         "Ingen API nyckel. Ställ in <em>Ollama URL</em>-fältet till din server (standard <code>http://localhost:11434</code> eller vilken värd som helst kör din Ollama-instans).",
-        "Modeller: <strong>not filtered.</strong> Övervakaren läser vilka modeller du har dragit på Ollama-sidan via <code>ollama pull &lt;model&gt;</code>. Nedgången är befolkad från <code>GET /api/tags</code> på din Ollama-server.",
+        "Modeller: <strong>ej filtrerade.</strong> Monitorn läser av vilka modeller du har dragit på Ollama-sidan via <code>ollama pull &lt;model&gt;</code>. Listrutan fylls i från <code>GET /api/tags</code> på din Ollama-server.",
         "Installera: <a>ollama.com/download</a> – körs på Linux, macOS, Windows. För bästa resultat väljer du en modell som passar i RAM med ett tillräckligt stort kontextfönster för tidskriften blockerar sändaren injektioner."
       ]
     }
@@ -223,7 +223,7 @@
     "formatIntro": "När ett tips läggs till följer det detta exakta format:",
     "rulesIntro": "Reglerna bakade i tillägget (synliga i det kollapsbara blocket under standardpromptavsnittet ovan):",
     "rules": [
-      "Tipset ingår <em>only</em> om tidskriftskontexten eller databasen Known Errors tydligt pekar på en viss fix.",
+      "Tipset ingår <em>endast</em> om tidskriftskontexten eller databasen med kända fel tydligt pekar på en specifik fix.",
       "Spetsen är fångad på 100-tecken.",
       "Det måste vara specifikt (konkret kommando eller väg) - generiska råd avvisas av prompten själv.",
       "Om ett känt fel ger en lösning, måste LLM använda den lösningen, inte uppfinna en ny.",

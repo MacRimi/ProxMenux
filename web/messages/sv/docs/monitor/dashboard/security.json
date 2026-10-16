@@ -118,22 +118,22 @@
   "fail2ban": {
     "heading": "Fail2Ban",
     "subHeading": "(villkor)",
-    "whatIs": "<strong> Vad det är.</strong> Fail2Ban är en öppen källkod intrång-förebyggande daemon som tittar på loggfiler för upprepade misslyckade inloggningsförsök och förbjuder den förolämpande IP på brandväggsnivå. Det är de-facto svaret på brute-force-skannrar som träffar SSH och webbinloggning bildar 24 / 7. ProxMenux trådar det till tre fängelser som standard: SSH, Proxmox web UI inloggning (port 8006) och ProxMenux Monitor inloggning (port 8008).",
-    "notBundled": "Fail2Ban är <strong> inte bundled</strong>. Kortet upptäcker om det är installerat och anpassat: när det saknas erbjuder det en ettklicksinstallation; När den väl har installerats visar den levande fängelsestatus, förbjudna IP-adresser och låter dig ställa in retries / förbudstid per fängelse.",
+    "whatIs": "<strong>Vad det är.</strong> Fail2Ban är en intrångsförebyggande demon med öppen källkod som tittar på loggfiler för upprepade misslyckade inloggningsförsök och förbjuder den felande IP-adressen på brandväggsnivå. Det är de-facto svaret på brute-force skannrar som träffar SSH och webbinloggningsformulär 24/7. ProxMenux kopplar den till tre jails som standard: SSH, Proxmox-webben UI logga in (port 8006), och den ProxMenux Monitor logga in (port 8008).",
+    "notBundled": "Fail2Ban <strong>ingår inte</strong>. Kortet känner av om det är installerat och anpassas därefter: om det saknas erbjuds installation med ett klick. När det är installerat visas aktuell jail-status och blockerade IP-adresser, och antal försök samt blockeringstid kan ställas in för varje jail.",
     "notInstalledAlt": "Fail2Ban-kort som visar Inte installerat tillstånd med förklaring av vad det skulle konfigurera: SSH, Proxmox webb UI och ProxMenux Monitor skydd med nftables backend, plus en Installera och konfigurera fel2Ban-knappen",
     "notInstalledCaption": "Fail2Ban-kortet innan du installerar - den blå rutan förhandsgranskar vad installationen skulle konfigurera.",
     "clickBody": "Klicka på <em>Install and Configure Fail2Ban</em> och du får en bekräftelse modal listning varje ändring skriptet kommer att göra på värden:",
     "confirmAlt": "Installera Fail2Ban bekräftelse modal listning SSH skydd aggressivt läge, Proxmox webbgränssnitt skydd port 8006, ProxMenux Monitor skydd port 8008, automatisk upptäckt nftables backend, journald log nivå justering och SSH MaxAuthTries härdning",
-    "confirmCaption": "Installera bekräftelse - explicit lista över fängelser, tweaks till journalad loggnivå (så auth fängelse kan läsa SSH händelser) och en SSH-härdande bieffekt (<code>MaxAuthTries=3</code>).",
-    "confirmIntro": "Bekräftelse utlöser en streaming installera panel (apt + fängelse konfig + tester). Samma VVS som ProxMenux CLI installer.",
-    "progressAlt": "Fail2Ban Installationspanel som visar live installationslogg: paketinstallation, journald MaxLevelStore tuned för auth loggning, fängelser konfigurerade, nftables backend detekteras, MaxAuthTries härdning, fail2banKlientkommunikationstest, slutförandemeddelande",
+    "confirmCaption": "Installationsbekräftelse – explicit lista över jails, justeringar till journald loggnivå (så att autentiseringen jail kan läsa SSH händelser) och en SSH (<code>MaxAuthTries=3</code>).",
+    "confirmIntro": "Bekräftelse utlöser en strömmande installationspanel (apt + jail config + tester). Samma VVS som installationsprogrammet för ProxMenux CLI.",
+    "progressAlt": "Fail2Ban Installationspanel som visar liveinstallationslogg: paketinstallation, journald MaxLevelStore inställd för autentiseringsloggning, jails konfigurerad, nftables backend upptäckt, MaxAuthTries härdning, fail2ban-klientkommunikationstest, slutförandemeddelande",
     "progressCaption": "Installera pågående – varje steg är inloggat i panelen. Anslutningsstängt längst ner markerar slutet på streamingsessionen.",
-    "afterInstall": "Efter att ha installerat kortet vänder sig till live statusvyn: fängelser konfigurerade, förbjudna IP-räknare, senaste banevenemang. De stora flikarna dela <em>Jails & Banned IPs</em> från <em>Recent Activity</em> (de sista N-posterna från Fail2Ban-loggen).",
-    "activeAlt": "Fail2Ban kort efter installation med Active status, tre fängelser konfigurerade (proxmenux, proxmox, sshd), Banned IPs räknare, Total Bans, misslyckade försök och per-jail rader med retries, förbud tid, fönster och redskap ikon",
-    "activeCaption": "Fail2Ban aktiv - de tre standardfängelserna (<code>proxmenux</code>, <code>proxmox</code>, <code>sshd</code>) med sina retries / förbudstid / fönsterinställningar.",
-    "tuneBody": "<strong>Tune fängelse regler.</strong> Klicka på växelikonen på någon fängelse rad för att justera <em>Max Retries</em>, <em>Ban Time</em> (använd ett permanent förbud om du vill ha brottslingar blockerade tills du manuellt unban) och <em>Find Time</em> (rullningsfönstret för att räkna retries). Vanliga värden dokumenteras i formuläret.",
+    "afterInstall": "Efter installationen vänds kortet till livestatusvyn: jails konfigurerad, förbjudna IP-räknare, senaste förbudshändelser. De stora flikarna delar <em>Jails & förbjudna IP-adresser</em> från <em>Senaste aktivitet</em> (de sista N posterna från Fail2Ban-loggen).",
+    "activeAlt": "Fail2Ban kort efter installation med aktiv status, tre jails konfigurerad (proxmenux, proxmox, sshd), räknare för förbjudna IP-adresser, totala förbud, misslyckade försök och per-jail rader med återförsök, förbudstid, fönster och kugghjulsikon",
+    "activeCaption": "Fail2Ban aktiva — de tre standardinställningarna jails (<code>proxmenux</code>, <code>proxmox</code>, <code>sshd</code>) med sina inställningar för återförsök/förbudstid/fönster.",
+    "tuneBody": "<strong>Ställa in jail regler.</strong> Klicka på kugghjulsikonen på valfri jail rad för att justera <em>Max försöker igen</em>, <em>Förbudstid</em> (använd ett permanent förbud om du vill att brottslingar ska blockeras tills du avbryter förbudet manuellt) och <em>Hinna</em> (det rullande fönstret för att räkna omförsök). Vanliga värden finns dokumenterade i formuläret.",
     "configAlt": "Konfigurera sshd jail form med Max Retries, Ban Time på några sekunder med Permanent Ban alternativet, Hitta tid, vanliga värden påminnelse och Spara konfigurationsknapp",
-    "configCaption": "Redigera sshd-fängelset - välj en striktare <em>Max Retries</em> för SSH om du bara någonsin loggar in från ditt eget undernät, eller utöka <em>Ban Time</em> för det publika instrumentbrädet.",
+    "configCaption": "Redigera sshd jail — välj en striktare <em>Max Retries</em> för SSH om du bara loggar in från ditt eget undernät, eller förläng <em>Ban Time</em> för den offentliga dashboarden.",
     "outro": "Den fullständiga <em>Vad det installerar / hur det är konfigurerat / hur man avinstallerar</em> genomgång - inklusive manuell installationsväg, SSH MaxAuthTries biverkning, och förhållandet med <code>proxmenux-auth.log</code> journal - finns i <link>ProxMenux → Säkerhet → Fail2Ban</link>.",
     "calloutTitle": "Utan Fail2Ban är brute-force skydd bäst.",
     "calloutBody": "ProxMenux Monitor har sin egen <em>application-nivå</em> förbud krok i Flask begäran pipeline - men det tar bara effekt om Fail2Ban är installerad och skriver till förbud tabellen. Utan Fail2Ban misslyckades Monitor-loggarna med <code>proxmenux-auth.log</code> för framtida inspektioner, men blockerar inte aktivt IP."
@@ -227,14 +227,14 @@
         "tail": " — kokböcker för att använda API tokens med Homepage, Home Assistant, Prometheus, n8n och Secure Gateway end-to-end."
       },
       {
-        "label": "API Referens",
+        "label": "API-referens",
         "href": "/docs/monitor/api",
         "tailRich": " — varje <code>/api/auth</code>, <code>/api/security</code> och <code>/api/oci</code> endpoint med metod, kropp och curl exempel."
       },
       {
         "label": "ProxMenux → Säkerhet → Fail2Ban",
         "href": "/docs/security/fail2ban",
-        "tail": " - installera genomgång, fängelser konfigurerade, manuell installationsväg."
+        "tail": "— installationsgenomgång, jails konfigurerad, manuell installationssökväg."
       },
       {
         "label": "ProxMenux → Säkerhet → Lynis",

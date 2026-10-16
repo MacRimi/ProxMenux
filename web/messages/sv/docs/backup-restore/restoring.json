@@ -218,7 +218,7 @@
         "detail": "Ladda ner den inspelade förarversionen, sammanställer DKMS-modulerna mot den nuvarande kärnan, tillämpar ProxMenux-patchen om källan hade den. Längsta enskilda uppgift."
       },
       {
-        "stage": "Coral / andra komponentinstallationer",
+        "stage": "Ominstallation av Coral och andra komponenter",
         "time": "3–5 min",
         "detail": "DKMS kompilerar för Coral, apt installera för intel-gpu-verktyg, .deb nedladdning + installera för amdgpu_top."
       },
@@ -251,7 +251,7 @@
       },
       {
         "log": "/var/log/proxmenux/component-<name>-YYYYMMDD_HHMMSS.log",
-        "detail": "En logg per komponent installatör (nvidia, korall, etc.) som sprang i post-boot pass. Användbart när en viss komponents ominstallation misslyckades och användaren behöver verktygets egen utgång."
+        "detail": "En logg per komponentinstallationsprogram (nvidia, coral, etc.) som kördes i post-boot-passet. Användbart när en specifik komponents ominstallation misslyckades och användaren behöver verktygets egen utdata."
       },
       {
         "log": "/var/log/proxmenux/restore-datapools-YYYYMMDD_HHMMSS.log",

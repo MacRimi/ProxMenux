@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "När man väljer Automated",
-    "body": "Kör detta på en nyinstallerad Proxmox-värd när du vill ha den förnuftiga baslinjen utan att fatta beslut. Manuset är idempotent - kör det två gånger är säkert, det applicerar bara samma konfigurationer. Opt-in funktioner (Fastfetch, IOMMU, Ceph repo, HA, AMD fixes...) är avsiktligt <strong>not</strong> del av denna väg; plocka dem från <link>Customizable</link> om du behöver dem."
+    "body": "Kör detta på en nyinstallerad Proxmox-värd när du vill ha den vettiga baslinjen utan att ta beslut. Skriptet är idempotent - att köra det två gånger är säkert, det tillämpar bara samma konfigurationer igen. Opt-in-funktioner (Fastfetch, IOMMU, Ceph repo, HA, AMD-fixar...) är avsiktligt <strong>inte</strong> en del av denna väg; välj dem från <link>Anpassningsbara</link> om du behöver dem."
   },
   "applies": {
     "heading": "Vad skriptet gäller",
@@ -67,7 +67,7 @@
     },
     {
       "tool": "Network Stack Tuning",
-      "what": "TCP buffertstorlek, IPv4-härdning (omdirigerar, rp_filter=2, martian log off), lokal port intervall 1024-65535, TCP MTU probing, RFC 1337plus en hjälpare på /usr/local/sbin/proxmenux-fwbr-tune trådbunden till en oneshot systemd Enhet och en udevregel, så rp_filter=0 / log_martians=0 Re-applied till fwbr */fwln*/fwpr*/tap* gränssnitt varje gång Proxmox återskapar dem VM Starta/stoppa, starta om eller leva migration.",
+      "what": "TCP buffertstorlek, IPv4-härdning (omdirigerar av, rp_filter=2, logga ut på mars), lokalt hamnområde 1024-65535, TCP MTU-sondering, RFC 1337, plus en medhjälpare på /usr/local/sbin/proxmenux-fwbr-tune kopplad till ett oneshot systemd enhet och en udev-regel, alltså rp_filter=0 / log_martians=0 appliceras på nytt på fwbr*/fwln*/fwpr*/tap* gränssnitt varje gång Proxmox återskapar dem på VM starta/stoppa, starta om eller livemigrering.",
       "category": "Nätverk",
       "categorySlug": "nätverk"
     },
@@ -79,7 +79,7 @@
     },
     {
       "tool": "Log2RAM (SSD-medveten, auto)",
-      "what": "Minskar SSD / NVMe slitage genom att flytta /var/log till en tmpfs ramdisk med periodisk disksynkronisering. Installerad från uppströmsprojektet när rotskivan är SSD eller NVMe. Storleken på ramdisken av värd RAM (128M / 256M / 512M), scheman periodisk synkronisering och en auto-synkvakt som vakuum vid 80% och trunkerar varma loggar vid 92% innan du skriver. Justerar tidskriftsgränser för att passa in i ramdisken. Fullständiga detaljer om <link>Log2RAM</link>.",
+      "what": "Minskar SSD/NVMe slitage genom att flytta /var/log till en tmpfs ramdisk med periodisk disksynk. Installeras från uppströmsprojektet när rotdisken är SSD eller NVMe. Storlek på ramdisken efter värd RAM (128M / 256M / 512M), schemalägger periodisk synkronisering och en autosynkvakt som dammsuger kl. 80% och trunkerar heta stockar vid 92% innan du skriver. Justerar journald gränser för att passa i ramdisken. Fullständiga detaljer om <link>Log2RAM</link>.",
       "category": "Lagring",
       "categorySlug": "Lagring lagring"
     },
@@ -90,7 +90,7 @@
       "categorySlug": "Lagring lagring"
     },
     {
-      "tool": "Journalerade storleksgränser",
+      "tool": "Journald storleksgränser",
       "what": "Krafter ihållande lagring, caps SystemMaxUse = 64M / RuntimeMaxUse = 60M, sätter komprimering, info-nivå loggning (krävs för monitorn). Skippas automatiskt när Log2RAM är aktivt (det gör sin egen justering).",
       "category": "Systemsystem",
       "categorySlug": "Systemsystem"
@@ -109,7 +109,7 @@
     }
   ],
   "hardwareTitle": "Hardware-medvetna standarder",
-  "hardwareBody": "Skriptet läser värdhårdvaran innan du tillämpar inställningar. Log2RAM är endast installerat på SSD / NVMe rotskivor som standard (det uppmanar om detektering säger annat). Log2RAM ramdisk storlek plockas från total RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). De tidskriftsgränser matchas till ramdisk storlek när Log2RAM är aktiv, för att undvika att fylla den.",
+  "hardwareBody": "Skriptet läser värdhårdvaran innan inställningar tillämpas. Log2RAM är bara installerat på SSD / NVMe rotdiskar som standard (den frågar om upptäckten säger något annat). Log2RAM ramdiskstorlek väljs från totalt RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). De journald gränser matchas till ramdiskstorleken när Log2RAM är aktivt, för att undvika att fylla det.",
   "upgrade": {
     "heading": "Uppdatera och uppgradera systemet",
     "intro": "Det första steget i Automated-paketet är Proxmox-uppgraderingen. Proxmox egen uppgraderingsvägledning för en löpande värd (inom samma stora version) är att köra:",

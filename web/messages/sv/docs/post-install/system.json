@@ -9,10 +9,10 @@
   },
   "intro": {
     "title": "Vad denna kategori täcker",
-    "body": "Sex oberoende optimeringar på systemnivå. De tune <strong>Tidskrift</strong> och <strong>Logrotate</strong> för att stoppa loggar från att fylla disken, höja <strong>Kernel och filbeskrivningsgränser</strong> Så applikationer med många öppna filer slår inte tak, <strong>balans minnet</strong> för en virtualisering värd, lägg till <strong>Kexec</strong> För \"omstarter utan\" BIOSoch konfigurera <strong>Automatisk återhämtning</strong> på Kernel Panic. Alla sex spåras och reversibla från Uninstall-menyn."
+    "body": "Sex oberoende optimeringar på systemnivå. De ställer in <strong>journald</strong> och <strong>logrotera</strong> för att stoppa loggarna från att fylla disken, höja <strong>kärn- och filbeskrivningsgränserna</strong>, öppna filer med många öppna filer, så don'0000 <strong>balansminne</strong> för en virtualiseringsvärd, lägg till <strong>kexec</strong> för \"omstartar utan BIOS\", och konfigurera <strong>automatisk återställning</strong> på kernel panic. Alla sex spåras och kan vändas från menyn Avinstallera."
   },
   "journald": {
-    "heading": "Optimera journalförd",
+    "heading": "Optimera journald",
     "intro": "Rewrites <code>/etc/systemd/journald.conf</code> med sunda standarder så att systemd-tidskriften inte långsamt kan äta din rotpartition, sedan startar om <code>systemd-journald</code> och vakuum befintliga loggar.",
     "keyTitle": "Nyckelvärden",
     "keyItems": [

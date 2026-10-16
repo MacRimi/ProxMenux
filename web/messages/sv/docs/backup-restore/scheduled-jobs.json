@@ -22,7 +22,7 @@
   },
   "attachBadge": {
     "title": "Fäst läge - rekommenderas när en PVE vzdump uppgift redan finns",
-    "body": "När en PVE vzdump backup uppgift redan är konfigurerad för VM och LXCs på denna nod, bifoga värd backup till den uppgiften garanterar värd konfiguration fångas i <strong>same window</strong> som gästerna. På återställningen kommer gästkonfigerna från värdbackupen (de lever under <code>/etc/pve</code>), och gästdiskerna kommer från vzdump-backupen som tas tillsammans - båda uppsättningarna är förenliga med varandra, så en full-node återhämtning kan reproducera värden och återfästa varje gäst utan version drift."
+    "body": "När en säkerhetskopieringsuppgift för PVE vzdump redan är konfigurerad för virtuella datorer och LXC:er på den här noden, garanterar att värdsäkerhetskopieringen kopplas till den uppgiften att värdkonfigurationen fångas i <strong>samma fönster</strong> som gästerna. Vid återställning kommer gästkonfigurationerna från värdsäkerhetskopian (de lever under <code>/etc/pve</code>), och gästdiskarna kommer från vzdump-säkerhetskopian som tas vid sidan av — båda uppsättningarna är konsekventa med varandra, så en helnodsåterställning kan reproducera värden och återansluta varje gäst utan versionsdrift."
   },
   "frequencyBadge": {
     "title": "Rekommenderad frekvens",
@@ -121,7 +121,7 @@
       },
       {
         "action": "Visa logg",
-        "detail": "Streams <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> - en loggfil per körning. Löparen avger också en kompakt statuslinje till journalad under systemd-tjänsten."
+        "detail": "Strömmar <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — en loggfil per körning. Löparen sänder också ut en kompakt statusrad till journald under tjänsten systemd."
       }
     ]
   },

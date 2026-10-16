@@ -134,7 +134,7 @@
     "noWriteTitle": "Container kan se katalogen men kan inte skriva",
     "noWriteBody": "Nästan alltid ett behörighetsproblem. För oprivilegierade behållare, kör skriptets tillstånd fix igen - värdkatalogens ACLs kan ha återställts av ett annat verktyg (rsync, återställa från backup, manuell <code>chmod</code>). För CIFS, dubbelkolla monteringsalternativen på värden: <code>findmnt /mnt/pve/cifs-…</code>, leta efter <code>uid=</code> / <code>gid=</code> / <code>file_mode=</code> värden.",
     "alreadyTitle": "\"Denna väg används redan som en fästpunkt i denna behållare\"",
-    "alreadyBody": "Du valde samma containerväg som redan är trådbunden till en annan värdkatalog. Välj antingen en annan behållarväg eller ta bort den befintliga monteringspunkten först.",
+    "alreadyBody": "Du valde samma containersökväg som redan är kopplad till en annan värdkatalog. Välj antingen en annan containerbana eller ta bort den befintliga monteringspunkten först.",
     "nfsTitle": "NFS-åtkomst blockerad även efter applicering av värdfixen",
     "nfsIntro": "Din NFS-server squashing root eller alla anslutningar. Skriptet kan upptäcka detta (det försöker skriva en testfil från värden) och visar server-side-vägledning. Två vanliga serversidor för exporten:",
     "nfsItems": [

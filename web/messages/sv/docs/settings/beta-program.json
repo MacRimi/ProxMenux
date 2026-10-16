@@ -48,7 +48,7 @@
   },
   "switching": {
     "heading": "Växla fram och tillbaka",
-    "intro": "Båda riktningarna går igenom samma installatör - de är <strong>not</strong> specialkasserad avinstallera + ominstallera flöden. Varje riktning kör helt enkelt kanalens egen installatör, som är utformad för att vara idempotent och säker att åter utföra över en befintlig installation. Praktiska konsekvenser:",
+    "intro": "Båda riktningarna går igenom samma installationsprogram – de är <strong>inte</strong> specialcase avinstallations- + ominstallationsflöden. Varje riktning kör helt enkelt kanalens eget installationsprogram, som är designat för att vara idempotent och säkert att köra om över en befintlig installation. Praktiska konsekvenser:",
     "items": [
       "Din befintliga konfig, ProxMenux Monitor inloggning (<code>auth.json</code>), meddelandekanaler, post-install registret, anpassade trösklar - ingen av dem berörs. Kanalbrytaren byter bara skriptträdet och den binära AppImage.",
       "En Monitor som var aktiv innan växeln stannar aktiv efter; en som inaktiverades stannar inaktiverad.",

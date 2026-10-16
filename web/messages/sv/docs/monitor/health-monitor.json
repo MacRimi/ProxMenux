@@ -102,7 +102,7 @@
       },
       {
         "category": "Säkerhet och certifikat",
-        "checks": "Inloggningsförsök, certifikat som löper ut, valfritt Fail2Ban fängelse status",
+        "checks": "Inloggningsförsök, certifikat löper ut, valfri Fail2Ban jail status",
         "events": "Upprepad SSH / web auth misslyckanden; PVE certifikat < 30 dagar från utgången; Fail2Ban aktiva förbud."
       }
     ]
@@ -123,7 +123,7 @@
       {
         "status": "INFO",
         "colour": "Blå",
-        "meaning": "Övergående eller redan upplöst tillstånd värt att notera en gång. Används också för kategorier som har <em>only</em> avfärdade objekt kvar.",
+        "meaning": "Övergående eller redan löst tillstånd värt att notera en gång. Används även för kategorier som <em>endast</em> har avvisade objekt kvar.",
         "notification": "Valfritt. Varje händelsetyp kan väljas in eller ut per kanal."
       },
       {

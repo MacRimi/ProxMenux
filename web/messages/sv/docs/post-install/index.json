@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Vad denna meny är för",
-    "body": "Strax efter att ha installerat Proxmox VE finns det dussintals små förändringar som gör värden snabbare och lättare att underhålla - fria repositorier, sunda tidskriftsgränser, förnuftiga TCP-buffertar, SSD-vänlig logglagring, bashrc-snyheter och mer. ProxMenux automatiserar dem och spårar de stödda reversibla konfigurationsändringarna."
+    "body": "Streamt efter installation av Proxmox VE finns det dussintals små ändringar som gör värden snabbare och enklare att underhålla — gratis arkiv, sunda journald gränser, förnuftiga TCP buffertar, SSD-vänliga logglagringar, bashr. ProxMenux automatiserar dem och spårar de reversibla konfigurationsändringarna som stöds."
   },
   "openingMenu": {
     "heading": "Öppna menyn",
@@ -33,7 +33,7 @@
         "Gratis repos + systemuppgradering",
         "Minne, kärna, nätverkstuning",
         "Log2RAM (auto-detekterad på SSD/NVMe)",
-        "Journalerad + logrotate size limits",
+        "Journald + logrotate storleksgränser",
         "Persistenta gränssnitt namn"
       ]
     },

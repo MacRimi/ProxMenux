@@ -96,7 +96,7 @@
     "overviewItems": [
       "<strong>Identity</strong> - modell, seriell, kapacitet, Hälsomärke (Healthy / Varning / Kritisk).",
       "<strong>Wear & Lifetime</strong> - stor livsresterande ring (97%, 50%, ...) med källattributet stavat (<em>Media Wearout Indicator</em>, <em>Percentage Used</em>, ...), en slitstång (strömförbrukningsprocent), en <em>Est. Life</em>-projektionen på flera år och den totala data skriven. NVMe-enheter visar också <em>Available Spare</em>.",
-      "<strong>SMART Attributes</strong> - sex rubrikfält på en 2-kolumn rutnät: Temperatur, Power On Hours (med humaniserad varaktighet som <em>3y 116d</em>), Rotation Rate (eller <em>SSD</em>), Power Cycles, SMART Status, Reallocated Sectors, PMXDOC. Det fullständiga attributbordet bor i fliken SMART."
+      "<strong>SMART-attribut</strong>: de viktigaste värdena visas i två kolumner: temperatur, drifttimmar med en läsbar varaktighet som <em>3 år och 116 dagar</em>, varvtal eller <em>SSD</em>, antal starter, SMART-status, omallokerade sektorer, väntande sektorer och CRC-fel. Den fullständiga attributtabellen finns på fliken SMART."
     ],
     "smartTitle": "Tab 2 - SMART",
     "smartImageAlt": "Disk borr-in modal - SMART-fliken med Run SMART Test-knappar (Short / Extended), sista testresultat och hela SMART-attributbordet",
@@ -239,7 +239,7 @@
         "tail": " - disk-and-I/O-kategorin och förtrycksmodellen."
       },
       {
-        "label": "API Referens",
+        "label": "API-referens",
         "href": "/docs/monitor/api",
         "tail": " - lagring och SMART endpoints."
       },

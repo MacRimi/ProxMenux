@@ -53,7 +53,7 @@
     "heading": "Avancerad diagnostik",
     "intro": "Aggregerar nätverksövergripande statistik och driver ett batteri av kontroller för allmänt bruk. Rapporter aktiva anslutningar, lyssnande portar, totala gränssnitt och flaggar två anti-mönster uttryckligen:",
     "items": [
-      "<strong>NetworkManager kör på en Proxmox värd.</strong> NetworkManager och Proxmox <code>ifupdown</code>-konflikt - båda försöker hantera gränssnitt, vilket leder till broar som flikar eller vägrar att komma upp. Om detekteras erbjuder verktyget en interaktiv omgång för att stoppa, inaktivera och rensa det (detta är <em>only</em>-diagnostiken som kan ändra systemet, och först efter uttryckligt samtycke).",
+      "<strong>NetworkManager som körs på en Proxmox-värd.</strong> NetworkManager och Proxmox's <code>ifupdown</code>-konflikt – båda försöker hantera gränssnitt, vilket leder till att bryggor som flaps upp eller inte kommer upp. Om det upptäcks ger verktyget en interaktiv uppmaning att stoppa, inaktivera och rensa det (detta är den <em>enda</em> diagnostik som kan modifiera systemet, och endast efter uttryckligt medgivande).",
       "<strong>Duplicera IP-adresser på olika gränssnitt.</strong> Två gränssnitt som håller samma IPv4 orsakar intermittent anslutning som är extremt svårt att debug inifrån VM. Upptäckt via <code>ip -4 addr show | sort | uniq -d</code>."
     ],
     "nmTitle": "NetworkManager-prompten är den enda modifierande åtgärden här",

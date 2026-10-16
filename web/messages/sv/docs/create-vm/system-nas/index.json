@@ -52,7 +52,7 @@
       },
       {
         "name": "TrueNAS CORE",
-        "tagline": "FreeBSD-baserad TrueNAS. Enterprise-grade ZFS lagring med fängelser och plugins.",
+        "tagline": "FreeBSD-baserad TrueNAS. Enterprise-grade ZFS lagring med jails och plugins.",
         "icon": "Database",
         "base": "FreeBSD",
         "fileSystem": "ZFS",

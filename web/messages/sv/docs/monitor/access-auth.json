@@ -1,20 +1,20 @@
 {
   "meta": {
     "title": "Proxmox Dashboard Authentication 2FA, API Tokens, User Profile, Reverse Proxy ProxMenux Monitor",
-    "description": "Nå och säkra ProxMenux Monitor: först-lansera skydd-dashboard flöde, lösenord autentisering med display namn + avatar, profil sida, TOTP 2FA inskrivning, långlivade API tokens för skript, HTTPS konfiguration, omvänd proxy snippets för Nginx, Caddy och Traefik, revisionsloggen och den valfria Fail2Ban fängelse.",
+    "description": "Nå och säker ProxMenux Monitor: första-lansering skydda-din-dashboard-flöde, lösenordsautentisering med visningsnamn + avatar, profilsida, TOTP 2FA inskrivning, långlivad API tokens för skript, HTTPS konfiguration, omvänd proxy-kodavsnitt för Nginx, Caddy och Traefik, granskningsloggen och den valfria Fail2Ban jail.",
     "ogTitle": "Proxmox Dashboard Authentication - 2FA, API Tokens, Reverse Proxy",
-    "ogDescription": "Säkra ProxMenux Monitor med lösenord + TOTP 2FA, långlivade API tokens, HTTPS, reverse-proxy snippets och en valfri Fail2Ban fängelse.",
+    "ogDescription": "Säkra ProxMenux Monitor med lösenord + TOTP 2FA, långlivad API tokens, HTTPS, omvänd proxy-kodavsnitt och en valfri Fail2Ban jail.",
     "twitterTitle": "Proxmox Dashboardautentisering | ProxMenux Monitor",
     "twitterDescription": "Lösenord + TOTP 2FA, API tokens, HTTPS, Nginx/Caddy/Traefik snippets och revisionslogg."
   },
   "header": {
     "title": "Åtkomst och autentisering",
-    "description": "Nå instrumentbrädan, det första lanseringssäkerhetsflödet, och varje lager som kan sitta mellan en angripare och värd: lösenord + TOTP, JWT-sessioner, långlivade API-tokens, HTTPS, omvänd proxies, Secure Gateway och den valfria Fail2Ban fängelse.",
+    "description": "Att nå instrumentpanelen, säkerhetsflödet för första lanseringen och varje lager som kan sitta mellan en angripare och värden: lösenord + TOTP, JWT-sessioner, långlivade API tokens, HTTPS, omvända proxyservrar, Secure Gateway och den valfria Fail2Ban jail.",
     "section": "ProxMenux-övervakning"
   },
   "intro": {
     "title": "Autentisering är opt-in",
-    "body": "Vid första lanseringen visar instrumentbrädan en enda dialog <em>\"Skydda din Dashboard?\"</em> med två knappar: <strong>Ja, Setup Password</strong> och <strong>Nej, fortsätt utan skydd</strong>. Säger inga löv varje API Slutpunkt öppen på TCP 8008 böter för ett isolerat labb LAN, farligt på allt annat. Tvåfaktorsautentisering (2FA) är <strong>Inte inte</strong> en del av detta första val; det är konfigurerat senare från <strong>Säkerhetsfliken</strong> När ett lösenord är inställt."
+    "body": "Vid första starten visas dialogen <em>”Skydda instrumentpanelen?”</em> med knapparna <strong>Ja, ange lösenord</strong> och <strong>Nej, fortsätt utan skydd</strong>. Det andra alternativet lämnar API-ändpunkterna öppna på TCP 8008. Det kan fungera i ett isolerat labbnätverk men är farligt i andra miljöer. Tvåfaktorsautentisering (2FA) ingår <strong>inte</strong> i det första valet, utan ställs in senare på <strong>fliken Säkerhet</strong> när ett lösenord har angetts."
   },
   "reaching": {
     "heading": "Nå dashboard",
@@ -338,10 +338,10 @@
     "outro": "Smaka på det vanliga sättet: <code>tail -F /var/log/proxmenux-auth.log</code>. Filen roteras av <code>logrotate</code> om en config drop-in läggs till; Monitor själv roterar inte den."
   },
   "fail2ban": {
-    "heading": "Valfritt: Fail2Ban fängelse",
+    "heading": "Valfritt: Fail2Ban-jail",
     "calloutTitle": "Fail2Ban är inte buntad med Monitor",
-    "calloutBody": "Fail2Ban är <strong>not</strong> installerad av ProxMenux Monitor själv. Installera den via <link>Security → Fail2Ban</link> i ProxMenux-menyn (eller med standard Debian-paketet). Utan det skriver Monitor fortfarande revisionsloggen ovan - det gör bara inte auto-ban upprepa brottslingar.",
-    "intro": "När Fail2Ban installeras skickar ProxMenux-integrationen ett <code>[proxmenux]</code>-fängelse som:",
+    "calloutBody": "Fail2Ban är <strong>inte</strong> installerad av ProxMenux Monitor själv. Installera den via <link>Säkerhet → Fail2Ban</link> i menyn ProxMenux (eller med standardpaketet Debian). Utan den skriver monitorn fortfarande granskningsloggen ovan – den förbjuder helt enkelt inte återkommande brottslingar automatiskt.",
+    "intro": "När Fail2Ban är installerat, skickar ProxMenux-integrationen en <code>[proxmenux]</code> jail som:",
     "items": [
       "Läser <code>/var/log/proxmenux-auth.log</code>",
       "Matchar <code>authentication failure; rhost=&lt;ip&gt;</code> mönster med ett dedikerat filter.",
@@ -384,7 +384,7 @@
       {
         "label": "Säkerhet - Fail2Ban",
         "href": "/docs/security/fail2ban",
-        "tail": " — Hur man installerar och konfigurerar det valfria fängelset."
+        "tail": "— hur man installerar och konfigurerar den valfria jail."
       },
       {
         "label": "Inställningar → ProxMenux Monitor",

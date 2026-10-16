@@ -85,7 +85,7 @@
       "intro": "Baserat på det aktuella läget föreslår manuset motsatsen som mål:",
       "items": [
         "<strong>VM → LXC:</strong> unbind från <code>vfio-pci</code>, låt den infödda föraren (<code>nvidia</code>, <code>amdgpu</code>, <code>i915</code>) återta kortet så LXCs kan dela det. På NVIDIA tas per-BDF-posten bort från <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> så nvidia-modulen återtar GPU efter omstart.",
-        "<strong>LXC → VM:</strong> binder till <code>vfio-pci</code> så kortet är gratis för VFIO genomgång till en enda VM. På AMD / Intel betyder det att svartlista den infödda föraren och ställa in <code>options vfio-pci ids=…</code>. På NVIDIA <code>nvidia</code> modulen är <strong>not</strong> svartlistad - i stället en per-BDF udev regel gäller <code>driver_override=vfio-pci</code> endast till GPUs du väljer, så andra NVIDIA GPUs på värden hålla sin <code>nvidia</code> förare."
+        "<strong>LXC → VM:</strong> binda till <code>vfio-pci</code> så kortet är gratis för VFIO-överföring till en singel VM. På AMD/Intel innebär detta att svartlista den inbyggda drivrutinen och inställningen <code>options vfio-pci ids=…</code>. På NVIDIA de <code>nvidia</code> modul är <strong>inte</strong> svartlistad — istället gäller en per-BDF udev-regel <code>driver_override=vfio-pci</code> endast till de GPU:er du väljer, så andra NVIDIA GPU:er på värden behåller sina <code>nvidia</code> förare."
       ],
       "outro": "Bekräfta riktningen eller avbryta."
     },

@@ -90,7 +90,7 @@
       "Välj disken.",
       "Välj \"Använd befintliga filsystem\".",
       "Lagring ID, monteringsväg, innehållstyp förinställd.",
-      "ProxMenux rör <strong>not</strong> data: det skapar monteringspunkten, monterar disken, lägger till en UUID-post till <code>/etc/fstab</code> och registrerar den som en Proxmox <code>dir</code>-lagring."
+      "ProxMenux vidrör <strong>inte</strong> data: den skapar monteringspunkten, monterar disken, lägger till en UUID-post till <code>/etc/fstab</code> och registrerar den som en Proxmox <code>dir</code>-lagring."
     ],
     "warnTitle": "Återanvändningsväg hanterar inte ZFS pooler",
     "warnBody": "Om disken redan innehåller en ZFS pool, <em>reuse</em> väg här försöker bara montera den som ett vanligt filsystem - som misslyckas. För att importera en befintlig ZFS pool använda <code>zpool import &lt;name&gt;</code> på kommandoraden och sedan registrera den manuellt med <code>pvesm add zfspool</code>."
@@ -137,7 +137,7 @@
   },
   "remove": {
     "heading": "Ta bort disklagring",
-    "body": "Oregistrerar lagringen från Proxmox (<code>pvesm remove</code>) och erbjuder att rensa upp matchningsinmatningen i <code>/etc/fstab</code>. För ZFS pooler skriptet gör <strong>not</strong> automatiskt förstöra poolen - det är en separat <code>zpool destroy &lt;name&gt;</code> steg du gör för hand när du är säker.",
+    "body": "Avregistrerar lagringen från Proxmox (<code>pvesm remove</code>) och erbjuder att rensa upp den matchande posten i <code>/etc/fstab</code>. För ZFS pools förstör skriptet <strong>inte</strong> automatiskt pool – det är ett separat <code>zpool destroy &lt;name&gt;</code> steg du gör för hand när du är säker.",
     "warnTitle": "Data och befintliga VM beroenden",
     "warnBody": "Ta bort lagringen rör inte filsystemet eller poolen - data stannar på disken. Men VMs / CT som refererar till denna lagring av ID kommer inte att starta efter borttagning. Flytta dessa VM-skivor till en annan lagring (eller ta en säkerhetskopia) innan du tar bort."
   },

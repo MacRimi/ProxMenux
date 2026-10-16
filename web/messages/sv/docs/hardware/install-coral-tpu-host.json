@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Installera Coral TPU på Värden | ProxMenux Dokumentation",
-    "description": "Installera Google Coral TPU förare på en Proxmox VE värd. ProxMenux auto-detekterar om du har M.2 / Mini-PCIe eller USB Accelerator (eller båda) och kör bara den installationsväg som gäller - packning / apex kernel moduler via DKMS för PCIe, libedgetpu1-std runtime för USB."
+    "description": "Installera Google Coral TPU förare på en Proxmox VE värd. ProxMenux känner automatiskt av om du har M.2 / Mini-PCIe eller USB-acceleratorn (eller båda) och kör endast den installationssökväg som gäller — gasket/apex kärnmoduler via DKMS för PCIe, libedgetpu1-std runtime för USB."
   },
   "header": {
     "title": "Installera Coral TPU på värden",
@@ -13,7 +13,7 @@
     "body": "Coral installer är <strong>unified och hardware-aware</strong>: du kör en menyalternativ och det räknar ut vad du faktiskt har. M.2 / Mini-PCIe-kort behöver kärnmoduler (<code>gasket</code> + <code>apex</code>) byggda med DKMS så att de överlever kärnuppgraderingar. USB Accelerators behöver bara Google Edge TPU runtime (<code>libedgetpu1-std</code>) från Googles eget APT-register. Båda typerna anslutna? Båda banorna går i sekvens."
   },
   "which": {
-    "heading": "Vilken korall har jag?",
+    "heading": "Vilken Coral har jag?",
     "body": "De två typerna av Coral-enheter du kan ansluta till en Proxmox-värd ser mycket annorlunda ut och värd-side-installationen är också mycket annorlunda. Manuset hanterar båda, men det är bra att veta vad du har innan du kör något:",
     "headerForm": "Formfaktor",
     "headerDetect": "Detektering",
@@ -65,10 +65,10 @@
     "prompt": {
       "title": "Förinstallera prompt",
       "body": "Innan du rör någonting sammanfattar en enda dialog vad som upptäcktes och vad som kommer att installeras. Du kan avbryta här utan några biverkningar.",
-      "imageAlt": "Förinstallera dialog som visar upptäckt Korallhårdvara (M.2/PCIe count + USB count) och listan över steg som installeraren kommer att köra"
+      "imageAlt": "Förinstallationsdialog som visar upptäckt Coral hårdvara (M.2/PCIe-antal + USB-antal) och listan över steg som installationsprogrammet kommer att köra"
     },
     "pcie": {
-      "title": "PCIe-bana - packning + apex kärnmoduler via DKMS",
+      "title": "PCIe-sökväg — gasket + apex kärnmoduler via DKMS",
       "body": "Det går bara om manuset hittade en PCIe / M.2 Coral. Det är tyngre av de två vägarna eftersom det sammanställer en kärnmodul för din exakta körkärna.",
       "items": [
         "<strong>Cleanup.</strong> Om en tidigare <code>gasket-dkms</code> installera vänster dpkg i ett brutet tillstånd (typiskt efter en PVE 9 Kernel uppgradera där DKMS autoinstall misslyckades tyst), force-purge det.",
@@ -85,7 +85,7 @@
         "<strong>Skapa den <code>apex</code> grupp + udev regler</strong> (<code>/etc/udev/rules.d/99-coral-apex.rules</code>) Så <code>/dev/apex_*</code> noder får rätt grupp på nästa stövel.",
         "<strong>Load modulerna:</strong> <code>modprobe gasket</code> + <code>modprobe apex</code>."
       ],
-      "imageAlt": "DKMS bygga framsteg + modulbelastning utgång för packning / apex kärnmoduler"
+      "imageAlt": "DKMS byggförlopp + modulbelastningsutgång för kärnmodulerna gasket/apex"
     },
     "usb": {
       "title": "USB-bana - Edge TPU runtime från Google",
@@ -121,7 +121,7 @@
     "heading": "Reinstallera eller avinstallera",
     "intro": "Kör installationsprogrammet på en värd där Coral redan är installerad (PCIe via <code>gasket-dkms</code>, USB via <code>libedgetpu1-std</code>/<code>libedgetpu1-max</code>, eller båda) inte längre faller rakt in i en annan ny installation. Istället upptäcker ProxMenux den befintliga installationen och visar en åtgärdsmeny så att du kan bestämma vad du ska göra.",
     "imageAlt": "Korallåtgärdsmenyn med två val - Installera / uppdatera Koralldrivrutiner eller Avinstallera Koralldrivrutiner och konfiguration - visas när installationsprogrammet upptäcker en tidigare Coral-installation på värden",
-    "imageCaption": "Åtgärdsmenyn visas endast när minst en Korallkomponent redan är installerad (DKMS packning, <code>libedgetpu1-*</code>-paket eller live <code>/dev/apex_*</code>-enhetsnoder).",
+    "imageCaption": "Åtgärdsmenyn visas endast när minst en Coral komponenten är redan installerad (DKMS gasket inträde, <code>libedgetpu1-*</code> paket, eller live <code>/dev/apex_*</code> enhetsnoder).",
     "reinstallHeading": "Installera om / uppdatera",
     "reinstallBody": "Fortsätter med det normala installationsflödet - användbart efter en kärnuppgradering om DKMS-ombyggnaden inte inträffade automatiskt eller för att lyfta drifttiden till en nyare <code>libedgetpu1-*</code> från Google Coral apt repo. Det tidigare DKMS-tillståndet rengörs först så ett halvinstallerat paket från ett misslyckat tidigare försök blockerar inte den nya byggnaden.",
     "uninstallHeading": "Avinstallera - vad som tas bort",
@@ -154,7 +154,7 @@
     "antiTitle": "Antikaskad av design",
     "antiBody": "En anmälan per variant, bara när uppströmsversionen faktiskt ändras - aldrig på varje 24h-skanning. Om du ignorerar en uppdatering det inte re-ping dig förrän en nyare release landar.",
     "rebootTitle": "Reboot behövs bara för PCIe-banan",
-    "rebootBody": "packningen DKMS återuppbygger nya kärnmoduler - som behöver en omstart för att vara aktiv. USB runtime uppgradering är en användarrymd bibliotek swap, ingen omstart krävs."
+    "rebootBody": "gasket DKMS-ombyggnaden laddar nya kärnmoduler — som behöver en omstart för att vara aktiv. USB-runtime-uppgraderingen är ett biblioteksbyte mellan användarutrymme, ingen omstart krävs."
   },
   "manual": {
     "heading": "Manuell motsvarande",

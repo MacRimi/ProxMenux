@@ -30,7 +30,7 @@
       "title": "Fail2Ban",
       "body": "Aktiv intrångsförebyggande. SSH och webb UI auth loggar och förbjuder IPs efter upprepade misslyckanden.",
       "bullets": [
-        "Tre fängelser: SSH, Proxmox UI (8006), ProxMenux Monitor (8008)",
+        "Tre jails: SSH, Proxmox UI (8006), ProxMenux Monitor (8008)",
         "Fixes Proxmox journald defaults som blockerar auth loggar",
         "Auto-detekterar Nftables / Iptables",
         "SSH härdning: MaxAuthTries=3 (Lynis rekommendation)"
@@ -53,9 +53,9 @@
   },
   "fail2banSection": {
     "heading": "Fail2Ban",
-    "body": "ProxMenux installerar Fail2Ban med en konfiguration inställd för Proxmox specifikt. Utöver standard SSH fängelse, det lägger till skydd för Proxmox webb UI och ProxMenux Monitor, och arbetar runt två Proxmox-specifika quirks: en journald standard som droppar auth händelser, och systemd-backend frågan som förhindrar Fail2Ban från att läsa vissa tidskriftskällor tillförlitligt. Detaljsidan täcker hela installationsflödet, de tre fängelserna, den journalade fixen, SSH härdning förändring och felsökning cheatsheet.",
+    "body": "ProxMenux installerar Fail2Ban med en konfiguration anpassad för Proxmox specifikt. Utöver standarden SSH jail, lägger det till skydd för Proxmox-webben UI och den ProxMenux Monitor, och fungerar runt två Proxmox-specifika egenheter: a journald standard som tar bort auth-händelser, och systemd-backend problem som förhindrar Fail2Ban från att läsa vissa tidskriftskällor på ett tillförlitligt sätt. Detaljsidan täcker hela installationsflödet, de tre jails, den journald fixa, den SSH härdning förändring och felsökning cheatsheet.",
     "optionTitle": "Fail2Ban – installera och hantera",
-    "optionDescription": "Tre förkonfigurerade fängelser (sshd aggressiv, Proxmox UI-port 8006, ProxMenux Monitor-port 8008 + omvänd proxy), automatisk upptäckta nftables/iptables backend, journald fix och SSH MaxAuthTries härdning."
+    "optionDescription": "Tre förkonfigurerade jails (sshd aggressive, Proxmox UI port 8006, ProxMenux Monitor port 8008 + omvänd ipt-proxy, autodetekterbar backendtn journald fix och SSH MaxAuthTries härdning."
   },
   "lynisSection": {
     "heading": "Lynis",

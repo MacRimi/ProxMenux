@@ -60,7 +60,7 @@
       },
       {
         "collector": "Övervakning av systemjournalen",
-        "watches": "<code>journalctl --follow</code> med mönstermatchning för SSH / web auth misslyckanden, Fail2Ban förbud (när valfri fängelse är installerad), kärn I / O fel, OOM, smarta händelser.",
+        "watches": "<code>journalctl --follow</code> med mönstermatchning för SSH / webbautentiseringsfel, Fail2Ban förbud (när den valfria jail är installerad), kärn-I/O-fel, OOM, smarta händelser.",
         "events": "<code>auth_fail</code>, <code>ip_block</code>, <code>oom_kill</code>, <code>disk_io_error</code>, <code>service_fail</code>."
       },
       {

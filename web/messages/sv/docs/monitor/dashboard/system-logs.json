@@ -33,7 +33,7 @@
     ],
     "logsRowsAfter": "Varje rad visar tidsstämpel, svårighetsgrad, källenhet och meddelandet. Långa meddelanden kollapsar med en \"visa mer\" växel. Den är <strong>Ladda ner</strong> Åtgärder buntar det aktuella filtret i en enda <code>.txt</code> fil via <code>GET /api/logs/download</code> - användbar när du vill dela en bit av tidskrift med någon.",
     "logDetailsModalTitle": "Dialogruta för loggdetaljer",
-    "logDetailsBody": "Klicka på någon rad öppnar en <strong>Log Details</strong>-modal med varje strukturerad fält som registrerats fångad för den enda posten - samma vy du skulle bygga för hand som kör <code>journalctl --output=verbose</code> på värden.",
+    "logDetailsBody": "Genom att klicka på valfri rad öppnas en <strong>Loggdetaljer</strong> modal med varje strukturerat fält journald fångad för den enda ingången — samma vy som du skulle bygga för handspring <code>journalctl --output=verbose</code> på värden.",
     "logDetailsImageAlt": "Log Details modal - enstaka tidskriftspost utökad med Level, Service, Timestamp, Source, Systemd Enhet, Process ID, Hostname och hela meddelandet",
     "logDetailsImageCaption": "Log Details modal - varje strukturerad fält journald bär för denna post, med det fullständiga okontrollerade meddelandet längst ner. Användbart för cron och serviceloggar där den utförda kommandoraden är viktiga.",
     "fieldsIntro": "Fält som visas:",
@@ -47,7 +47,7 @@
       "<strong>Hostname</strong> - användbar när tidskrifter vidarebefordras över klusternoder.",
       "<strong>Message</strong> - det fullständiga okontrollerade meddelandet i ett monospace block, redo att kopiera."
     ],
-    "maxLevelStoreTitle": "Journalerad MaxLevelStore",
+    "maxLevelStoreTitle": "Journald MaxLevelStore",
     "maxLevelStoreBody": "På en ny Proxmox-installation, journalade standarder till <code>MaxLevelStore=warning</code>, som tyst släpper info-nivå meddelanden. Monitorn upptäcker detta vid start och lägger till en drop-in (<code>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</code>) höja tröskeln till <code>info</code> så fliken Logs faktiskt har något att visa över alla svårigheter.",
     "backupsTitle": "Säkerhetskopieringar",
     "backupsBody": "Proxmox aktivitetshistorik filtrerad till backup-relaterade poster. En rad per uppgift (<code>vzdump</code>, PBS överföringar, Garbage Collect, Verify) med status (OK / WARNINGS / ERROR), gäst involverad, källlagring, varaktighet och UPID. Klicka på en rad för att ladda hela uppgiftsloggen via <code>GET /api/task-log/&lt;upid&gt;</code> - samma data Proxmox exponerar genom <em>Datacenter → Tasks</em>, omfattad till säkerhetskopior.",
@@ -106,7 +106,7 @@
         "tail": " - Tidskriftsvaktaren läser samma källa och förvandlar matcher till meddelanden."
       },
       {
-        "label": "API Referens",
+        "label": "API-referens",
         "href": "/docs/monitor/api",
         "tail": " - loggar och uppgiftslogg slutpunkter med sina frågor parametrar."
       },

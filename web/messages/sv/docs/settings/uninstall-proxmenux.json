@@ -54,7 +54,7 @@
   },
   "othersCallout": {
     "title": "Andra ProxMenux-installerade komponenter stannar",
-    "body": "Allt ProxMenux installerat via andra menyer - Fail2Ban, Lynis, NVIDIA-drivrutiner, post-install tweaks - är <strong>not</strong> berörd av denna avinstallerare. Var och en har sitt eget avinstallationsflöde inuti sin respektive meny (eller du kan ta bort med apt direkt). Titta på <em>Show Version Information</em> först för att se vad som är registrerat."
+    "body": "Allt som ProxMenux installerat via andra menyer — Fail2Ban, Lynis, NVIDIA drivrutiner, justeringar efter installation — berörs <strong>inte</strong> av denna avinstallation. Var och en har sitt eget avinstallationsflöde i sin respektive meny (eller så kan du ta bort med apt direkt). Titta på <em>Visa versionsinformation</em> först för att se vad som är registrerat."
   },
   "manual": {
     "heading": "Manuell avinstallation",

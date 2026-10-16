@@ -96,7 +96,7 @@
       "<strong>PVE volym</strong> backas upp av en Proxmox-hanterad lagring (en ZFS subvol, en katalogpost, en Ceph RBD, ...). Kapacitet kommer från PVE lagring statistik så baren matchar vad Proxmox själv visar.",
       "<strong>Bind från PVE-lagring</strong> - <code>mpX</code> ingång pekar på en väg på en PVE-känd lagring.",
       "<strong>Bind från host</strong> - <code>mpX</code> ingång pekar på en godtycklig värdväg (<code>/mnt/something</code>). Kapacitet är <code>df</code> av värdvägen.",
-      "<strong>Ad-hoc inuti CT</strong> - montera att <em>only</em> finns i behållarens monteringsnamnrymd (t.ex. en NFS aktie som CT monterar på egen hand). Kapacitet läses via <code>pct exec &lt;vmid&gt; df</code>, vilket är det enda sättet att se det - <code>/proc/&lt;pid&gt;/root</code> från värden avslöjar inte fjärrfästets verkliga statistik."
+      "<strong>Ad hoc inuti CT</strong> – montera det <em>endast</em> finns i containerns monteringsnamnområde (t.ex. en NFS dela att CT monteras av sig själv). Kapacitet läses via <code>pct exec &lt;vmid&gt; df</code>, vilket är det enda sättet att se det - <code>/proc/&lt;pid&gt;/root</code> från värden avslöjar inte fjärrfästets verkliga statistik."
     ],
     "mountStateTitle": "Per-card State Dot och varningar",
     "mountStateItems": [
@@ -225,7 +225,7 @@
         "tailRich": " - vad <code>vm_*</code>, <code>ct_*</code>, <code>migration_*</code> och <code>backup_*</code> händelser utlöser nedströms."
       },
       {
-        "label": "API Referens",
+        "label": "API-referens",
         "href": "/docs/monitor/api",
         "tailRich": " - VM och backup endpoints."
       },

@@ -164,7 +164,7 @@
     {
       "term": "Fail2Ban",
       "category": "Linux",
-      "definitionRich": "Intrångsförebyggande tjänst som tittar på loggfiler för upprepade autentiseringsfel och förbjuder de förolämpande IP-erna i brandväggsskiktet. ProxMenux fartyg förkonfigurerade fängelser för SSH, Proxmox UI och Monitor.",
+      "definitionRich": "Intrångsförebyggande tjänst som tittar på loggfiler för upprepade autentiseringsfel och förbjuder de felande IP-adresserna i brandväggsskiktet. ProxMenux levereras förkonfigurerade jails för SSH, Proxmox UI och monitorn.",
       "seeAlso": [
         {
           "label": "Fail2Ban",

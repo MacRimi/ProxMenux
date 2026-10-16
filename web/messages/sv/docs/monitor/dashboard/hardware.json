@@ -108,8 +108,8 @@
   "coral": {
     "heading": "Coral TPU / AI-acceleratorer",
     "subHeading": "(villkor)",
-    "intro": "När värden har Google Coral eller andra AI-accelerator-enheter trådbundna. Varje enhet öppnar en modal med sin anslutningstyp (M.2 / mini-PCIe / USB), PCIe länkbredd, leverantör / produkt ID, kärndrivrutin (<code>apex</code> för PCIe, <code>libedgetpu</code> för USB), kärnmoduler (<code>gasket</code> + <code>apex</code>), enhetsnoder (<code>/dev/apex_*</code>), Edge TPU runtime status, live temperatur och hårdvarning.",
-    "imageAlt": "Coral Edge TPU detaljer modal: PCIe / M.2 anslutning, PCIe 5.0 GT / s x1 länk, leverantör 1ac1:089a, kärnföraren apex, packning och apex moduler laddade, /dev/apex_0 närvarande, Edge TPU Runtime inte installerad, temperatur 53.5 °C med hårdvarning trösklar",
+    "intro": "Återger när värden har Google Coral eller andra AI-acceleratorenheter anslutna. Varje enhet öppnar en modal med dess anslutningstyp (M.2 / mini-PCIe / USB), PCIe-länkbredd, leverantörs-/produkt-ID, kärndrivrutin (<code>apex</code> för PCIe, <code>libedgetpu</code> för USB), kärnmoduler (<code>gasket</code> + <code>apex</code>), enhetsnoder (<code>/dev/apex_*</code>), Edge TPU körtidsstatus, levande temperatur och tröskelvärden för varning för hårdvara för fast programvara.",
+    "imageAlt": "Coral Edge TPU detalj modal: PCIe / M.2 anslutning, PCIe 5.0 GT/s x1-länk, leverantör 1ac1:089a, kärndrivrutin apex, gasket och apex moduler laddade, /dev/apex_0 presentera, Edge TPU Körtid ej installerad, temperatur 53.5 °C med hårdvaruvarningsgränser",
     "imageCaption": "M.2 Coral med värdkärnan moduler laddade, enhetsnoden upp och firmware temperaturvarningar exponerade. Runtime line går grönt när matchningen Edge TPU runtime är installerad.",
     "pathsIntro": "Två installationsvägar finns beroende på formfaktorn:",
     "pathsItems": [
@@ -123,9 +123,9 @@
     "intro": "Varje block enhet kärnan vet om, grupperad efter typ. För varje disk får du kärnnamnet (<code>sda</code>, <code>nvme0n1</code>, <code>zram0</code> ...), typtaggen (<em>SSD</em>, <em>HD</em>, <em>NVMe SSD</em>), modellsträngen och förhandlad länkinformation. Klicka på någon disk för att öppna en hårdvara-info modal med modell, seriell, kapacitet, gränssnitt och nuvarande vs maximal länkhastighet.",
     "imageAlt": "Storage Sammanfattningskort som listar elva blockenheter (SATA SSDs, SATA HDDs, NVMe SSDs och zram) med modellsträngar och förhandlade länkhastigheter; de två NVMe-enheterna visar 3.0 x4 med den aktuella hastigheten markerad",
     "imageCaption": "Elva enheter på denna nod. SATA länkar utskrift som <em>SATA &lt;version version version version&gt;, &lt;Gb/s&gt; (nuvarande: ...)</em>; NVMe driver print som <em>&lt;PCIe gen&gt; x x x x x x x x&lt;bredd&gt;</em>.",
-    "nvmeBody": "För NVMe-enheter visar per-kortlinjen både den förhandlade länken och det maximala stödet för enheten. När de två inte matchar (t.ex. en Gen3 x4 SSD som körs på <strong>3.0 x1</strong> eftersom det sitter i en chipset-slot som är trådbunden till en enda körfält), den nuvarande hastigheten görs i bärnsten så nedgraderingen är synlig vid en blick - användbar när felsökning oväntat långsamma diskar eller efter en BIOS-uppdatering remappar körfälten.",
+    "nvmeBody": "För NVMe-enheter visar raden per kort både den förhandlade länken och det maximala som enheten stöder. När de två inte stämmer överens (t.ex. en Gen3 x4 SSD som körs på <strong>3.0 x1</strong> eftersom den sitter i en chipsetplats som är kopplad till ett enda körfält), renderas den aktuella hastigheten i gult så nedgraderingen är osynlig vid en överblick av felsökning eller felsökning av hårddisken. BIOS uppdatering mappar om körfälten.",
     "nvmeModalAlt": "NVMe-enhetsdetalj modal för nvme0n1: NVMe SSD-typ, 953.9 GB-kapacitet, nuvarande länkhastighet 3.0 x1 markerad i amber, maximal kopplingshastighet 3.0 x4, modell WDC CL SN720, serienummer, PCIe / NVMe gränssnitt",
-    "nvmeModalCaption": "NVMe-modalen som visar nedgraderingen av körfältet - stöder x4 men sloten är trådbunden x1.",
+    "nvmeModalCaption": "NVMe modal som visar körfältsnedgraderingen — enheten stöder x4 men kortplatsen är kopplad x1.",
     "outro": "SMART data, självtester, historia och PDF-skivan rapporterar alla live en flik över, i <storageLink>Dashboard: Lagring tab</storageLink>. Samma data matar manuset på <smartLink>SMART Disk Health & Test</smartLink> - kör ett långt test från manuset skriver JSON Monitorn visar i <em>Storage → History</em>."
   },
   "pci": {
@@ -234,7 +234,7 @@
         "tail": " – kategorin CPU & Temperatur som förbrukar samma sensorer."
       },
       {
-        "label": "API Referens",
+        "label": "API-referens",
         "href": "/docs/monitor/api",
         "tail": " — hårdvaran och GPU endpoints."
       },

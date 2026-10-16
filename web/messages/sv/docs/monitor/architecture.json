@@ -19,7 +19,7 @@
   "requestFlow": {
     "heading": "Begär flöde",
     "intro": "Från webbläsaren till kärnan följer varje instrumentpanelvy samma väg:",
-    "diagramCaption": "Varje begäran autentiseras av JWT (när auth är aktiverad), skickas till en ritning och besvaras med data som samlas in på begäran från värdverktyg. Om Fail2Ban är installerad och proxmenux-fängelset är aktivt, kontrollerar Midware också begäran mot fängelsets förbjudna IP-lista. Den valfria omvänd proxy är transparent för Flask - den vidarebefordrar X-Forwarded-* rubriker och appen återhämtar den verkliga klienten IP från dem. Staten som behöver överleva en förfrågan lever i SQLite.",
+    "diagramCaption": "Varje begäran autentiseras av JWT (när autentisering är aktiverad), skickas till en blueprint, och besvaras med data som samlas in på begäran från värdverktyg. Om Fail2Ban är installerat och proxmenux jail är aktiv, kontrollerar mellanvaran också begäran mot jail:s förbjudna IP-lista. Den valfria omvända proxyn är transparent för Flask — den vidarebefordrar X-Forwarded-*-rubriker och appen återställer den verkliga klientens IP från dem. Staten som behöver överleva en begäran lever i SQLite.",
     "diagramArrowLabel": "HTTP / WS",
     "nodes": {
       "clientLabel": "Kund",
@@ -95,7 +95,7 @@
           "/api/logs",
           "/api/prometheus"
         ],
-        "owns": "Kärndata endpoints + statisk instrumentpanel servering + valfri Fail2Ban app-nivå kontroll (aktiv endast när Fail2Ban är installerad på värden med <code>proxmenux</code> fängelse)."
+        "owns": "Kärndataslutpunkter + statisk instrumentpanelservering + valfri Fail2Ban kontroll på appnivå (aktiv endast när Fail2Ban är installerad på värden med <code>proxmenux</code> jail)."
       },
       {
         "blueprint": "flask_auth_routes.py",
@@ -130,7 +130,7 @@
         "prefix": [
           "/api/security/*"
         ],
-        "owns": "Autentiseringsfel och, när Fail2Ban installeras, fängelse status, förbjuda händelser och manuell unban."
+        "owns": "Autentiseringsfel och, när Fail2Ban är installerat, jail status, blockeringshändelser och manuell avbannelse."
       },
       {
         "blueprint": "flask_proxmenux_routes.py",
@@ -224,7 +224,7 @@
       {
         "path": "/var/log/proxmenux-auth.log",
         "owner": "root:root",
-        "contents": "Plain-text auth event log. Alltid skriven. Om Fail2Ban är installerad med <code>[proxmenux]</code>-fängelset, läser fängelset den här filen för att förbjuda brute-force-försök; om inte, ackumulerar filen helt enkelt loggposterna."
+        "contents": "Oformaterad autentiseringshändelselogg. Alltid skriven. Om Fail2Ban är installerad med <code>[proxmenux]</code> jail, läser jail den här filen för att förbjuda brute-force-försök; om inte, samlar filen helt enkelt loggposterna."
       }
     ],
     "backupTitle": "Säkerhetskopiera auth.json innan du installerar",
@@ -243,7 +243,7 @@
       "Loggar: ihållande / spik / kaskad mönsterdetektering i systemtidskriften.",
       "Minne: OOM-mördareaktivitet, upprätthöll högt tryck.",
       "Temperatur: CPU / chassi sensorer mot leverantör trösklar.",
-      "Säkerhet: autentiseringsfel, förbjuda händelser, fail2ban fängelse status."
+      "Säkerhet: autentiseringsfel, blockeringshändelser, fail2ban jail status."
     ],
     "afterIntro": "Varje upptäckt normaliseras till en stabil <code>error_key</code> + kategori + svårighetsgrad. Uthållighetsskiktet deduplicerar mot det befintliga <code>errors</code>-bordet - upprepade händelser uppdaterar <code>last_seen</code> och förekomsträknaren utan spamming-meddelanden.",
     "cycleEnd": "Cykeln löser också inställningen av stjäla fel med hjälp av per-kategori <em>Suppression Duration</em>, rensar upp fel för resurser som inte längre finns (raderade VM / bort diskar / omonterade lagringar) och beskär <code>events</code>-loggen äldre än 30 dagar. Den fullständiga katalogen av kategorier och instrumentpanelen visar att de är dokumenterade i <link>Dashboard → Health Monitor</link>."
@@ -274,11 +274,11 @@
     "intro": "Två skyddsåtgärder säkerställer att säkerheten fungerar på samma sätt om instrumentbrädan träffas direkt eller genom en omvänd proxy:",
     "items": [
       "<strong>Real klient IP recovery.</strong> En <code>before_request</code> krok läser <code>X-Forwarded-For</code> och <code>X-Real-IP</code> i den ordningen, som faller tillbaka till <code>request.remote_addr</code>. Den återställda adressen är vad auth-loggning och räntebegränsning ser. Detta är alltid på.",
-      "<strong>Application-nivå Fail2Ban check (valfritt).</strong> När instrumentbrädan sitter bakom en proxy, kan kärnbrandväggen inte blockera den verkliga angriparen IP - anslutningen kommer alltid från proxy. För att ansluta det gapet, samma krok ovanför frågor <code>proxmenux</code> Fail2Ban fängelse varje 30 sekunder, cachar den förbjudna IP-uppsättningen och kortslutningsförfrågningar från dessa IPs med HTTP 403 inuti Flask."
+      "<strong>Applikationsnivå Fail2Ban kontrollera (valfritt).</strong> När instrumentpanelen sitter bakom en proxy kan kärnans brandvägg inte blockera den riktiga angriparens IP - anslutningen kommer alltid från proxyn. För att täppa till det gapet, frågar samma krok ovan <code>proxmenux</code> Fail2Ban jail varje 30 sekunder, cachar den förbjudna IP-uppsättningen och kortsluter förfrågningar från de IP-adresserna med HTTP 403 inuti Flask."
     ],
     "calloutTitle": "Fail2Ban är inte buntad",
-    "calloutBody": "Fail2Ban är <strong>not</strong> installerad av ProxMenux Monitor själv. Programnivåkontrollen är en no-op tills du installerar Fail2Ban på värden (t.ex. via <link>Security → Fail2Ban</link> i ProxMenux-menyn). När <code>fail2ban-client</code>-binären eller <code>proxmenux</code>-fängelsen saknas, misslyckas samtalet tyst och förfrågningar gated - auth gäller fortfarande, men ingen IP-nivå förbud.",
-    "outro": "Reverse-proxy snippets (Nginx / Caddy / Traefik) och Fail2Ban fängelse genomgång är i <accessLink>Access & Authentication</accessLink> och <fail2banLink>Security → Fail2Ban</fail2banLink>."
+    "calloutBody": "Fail2Ban är <strong>inte</strong> installerad av ProxMenux Monitor själv. Kontrollen på applikationsnivå är en no-oper tills du installerar Fail2Ban på värden (t.ex. via <link>Säkerhet → Fail2Ban</link> i menyn ProxMenux). När <code>fail2ban-client</code> binär eller <code>proxmenux</code> jail är frånvarande, misslyckas samtalet tyst och förfrågningar är inte gated – auth gäller fortfarande, men ingen förbud på IP-nivå.",
+    "outro": "Omvänd proxykod (Nginx / Caddy / Traefik) och Fail2Ban jail genomgången finns i <accessLink>Åtkomst och autentisering</accessLink> och <fail2banLink>Säkerhet → Fail2Ban</fail2banLink>."
   },
   "whereNext": {
     "heading": "Var till nästa",
@@ -286,10 +286,10 @@
       {
         "label": "Åtkomst och autentisering",
         "href": "/docs/monitor/access-auth",
-        "tail": " - första lanseringen, lösenord + TOTP 2FA, reverse-proxy snippets, Fail2Ban fängelse."
+        "tail": "— första-lanseringsinställningar, lösenord + TOTP 2FA, omvänd proxykod, Fail2Ban jail."
       },
       {
-        "label": "API Referens",
+        "label": "API-referens",
         "href": "/docs/monitor/api",
         "tail": " — varje slutpunkt, token management, säkerhetsbestämmelser."
       },

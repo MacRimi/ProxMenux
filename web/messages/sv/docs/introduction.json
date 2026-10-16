@@ -88,7 +88,7 @@
         "href": "/docs/utils"
       },
       {
-        "title": "Kommando referens",
+        "title": "Kommandoreferens",
         "description": "Curated katalog över Linux och Proxmox kommandon organiserade av ämne - system, VM / CT (qm, pct), lagring, nätverk, ZFS, GPU genomgång, backup, dag-till-dag CLI verktyg.",
         "icon": "BookOpen",
         "href": "/docs/help-info"
@@ -192,7 +192,7 @@
       {
         "lead": "<strong>Letar du efter ett specifikt kommando?</strong> ",
         "linkHref": "/docs/help-info",
-        "linkLabel": "Kommando referens",
+        "linkLabel": "Kommandoreferens",
         "tail": " är en curated katalog organiserad av ämnet, med kopia knappar."
       },
       {
