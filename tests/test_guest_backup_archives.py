@@ -56,6 +56,19 @@ class DeletionTests(unittest.TestCase):
             ["delete", f"/nodes/pve1/storage/local/content/{VOLUME}", "--delay", "1"],
         ])
 
+    def test_a_deletion_that_ends_within_the_delay_prints_its_log_and_counts_as_deleted(self):
+        # Real pvesh output on a directory storage: the task log, not JSON.
+        run = subprocess.CompletedProcess([], 0, stdout=f"Removed volume '{VOLUME}'\n", stderr="")
+        with patch.object(archives.subprocess, "run", return_value=run):
+            self.assertEqual(archives._pvesh(["delete", f"/nodes/pve1/storage/local/content/{VOLUME}", "--delay", "1"]),
+                             f"Removed volume '{VOLUME}'")
+        self.response = f"Removed volume '{VOLUME}'"
+        self.assertEqual(self.delete()["results"][0]["status"], "deleted")
+        self.response = "Removed volume 'local:backup/another-archive.tar.zst'"
+        self.assertEqual(self.delete()["results"][0]["status"], "unconfirmed")
+        with patch.object(archives.subprocess, "run", return_value=run), self.assertRaises(archives.BackupArchiveError):
+            archives._pvesh(["get", "/nodes/pve1/storage/local/content"])
+
     def test_bad_payloads_and_paths_never_reach_proxmox(self):
         payloads = [None, [], {}, {"confirm": 1}, {"confirm": True, "backups": []},
                     {"confirm": True, "backups": [None]}, {"confirm": True, "backups": [VOLUME]},

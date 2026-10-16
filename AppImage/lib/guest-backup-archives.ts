@@ -25,7 +25,8 @@ export async function deleteGuestBackups(vmid: number, backups: GuestBackup[]): 
   const response = await fetchApi<{ results: BackupDeletionResult[] }>(`/api/vms/${vmid}/backups/delete`, {
     method: 'POST',
     body: JSON.stringify({ confirm: true, backups: backups.map(({ volid, storage }) => ({ volid, storage })) }),
-    signal: AbortSignal.timeout(120_000),
+    // Up to 20 archives, checked first and then deleted four at a time.
+    signal: AbortSignal.timeout(300_000),
   })
   if (!Array.isArray(response.results) || response.results.length !== backups.length ||
       response.results.some((result, index) => result.volid !== backups[index].volid ||

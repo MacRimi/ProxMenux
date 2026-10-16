@@ -9,11 +9,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useT } from "@/lib/i18n/provider"
 import { deleteGuestBackups, type GuestBackup } from "../lib/guest-backup-archives"
 
-export function GuestBackupList({ vmid, backups, loading, onRefresh }: {
+export function GuestBackupList({ vmid, backups, loading, onRefresh, storageColor }: {
   vmid: number
   backups: GuestBackup[]
   loading: boolean
   onRefresh: () => Promise<void>
+  storageColor?: (storage: string) => { bg: string; text: string; border: string }
 }) {
   const t = useT()
   const [selected, setSelected] = useState<string[]>([])
@@ -35,6 +36,10 @@ export function GuestBackupList({ vmid, backups, loading, onRefresh }: {
   const chosen = backups.filter(backup => selected.includes(backup.volid) && !backup.protected)
   const selectable = backups.filter(backup => !backup.protected)
   const disabled = loading || busy || refreshing
+  const storageClass = (storage: string) => {
+    const color = storageColor?.(storage)
+    return color ? `${color.bg} ${color.text} ${color.border}` : ""
+  }
 
   async function refresh() {
     setRefreshing(true)
@@ -99,10 +104,11 @@ export function GuestBackupList({ vmid, backups, loading, onRefresh }: {
           <Checkbox aria-label={`${t("vmLxc.backups.selectBackup")} ${backup.date} ${backup.storage}`} checked={selected.includes(backup.volid)}
             disabled={disabled || !!backup.protected || (chosen.length >= 20 && !selected.includes(backup.volid))}
             onCheckedChange={checked => setSelected(previous => checked ? [...previous, backup.volid] : previous.filter(id => id !== backup.volid))} />
+          <div className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
           <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
           <span className="text-sm min-w-0 truncate" title={backup.volid}>{backup.date}</span>
           {backup.protected && <Badge variant="secondary" className="gap-1 text-xs"><LockKeyhole className="h-3 w-3" />{t("vmLxc.backups.protected")}</Badge>}
-          <Badge variant="outline" className="text-xs ml-auto shrink-0">{backup.storage}</Badge>
+          <Badge variant="outline" className={`text-xs ml-auto shrink-0 ${storageClass(backup.storage)}`}>{backup.storage}</Badge>
           <Badge variant="outline" className="font-mono shrink-0">{backup.size_human}</Badge>
         </label>)}
       </div>

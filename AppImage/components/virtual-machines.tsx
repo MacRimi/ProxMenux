@@ -7499,6 +7499,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             vmModalCacheRef.current.backups.delete(selectedVM.vmid)
                             await fetchVmBackups(selectedVM.vmid, true)
                           }}
+                          storageColor={getStorageColor}
                         />
                       </CardContent>
                     </Card>

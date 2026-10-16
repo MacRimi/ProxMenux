@@ -25,6 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 
 MAX_SELECTION = 20
+REMOVED_RE = re.compile(r"Removed volume '[^'\n]+'")
 STORAGE_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}")
 NODE_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]{0,62}")
 _tasks = {}
@@ -45,10 +46,15 @@ def _pvesh(args, timeout=20):
         raise BackupArchiveError("Proxmox command unavailable or timed out; outcome unconfirmed", 502) from error
     if result.returncode:
         raise BackupArchiveError((result.stderr or "Proxmox command failed").strip()[:1000], 502)
+    output = result.stdout.strip()
     try:
         # pvesh can print no bytes for the API's successful null result.
-        return json.loads(result.stdout.strip() or "null")
+        return json.loads(output or "null")
     except (ValueError, TypeError) as error:
+        # With --delay, a deletion that ends in time prints the line of its
+        # task log instead of JSON. Only that exact line is accepted.
+        if args[0] == "delete" and REMOVED_RE.fullmatch(output):
+            return output
         raise BackupArchiveError("Invalid Proxmox response; outcome unconfirmed", 502) from error
 
 
@@ -134,10 +140,12 @@ def delete_guest_backups(vmid, data):
             # associated notes/log files and returns null only after success.
             task = _pvesh(["delete", f'/nodes/{node}/storage/{item["storage"]}/content/{item["volid"]}',
                             "--delay", "1"])
-            if task is None:
+            if isinstance(task, str) and task.startswith("UPID:"):
+                _remember_task(task, vmid, node, item["volid"])
+                return {**item, "status": "pending", "task": task}
+            if task is None or task == f"Removed volume '{item['volid']}'":
                 return {**item, "status": "deleted"}
-            _remember_task(task, vmid, node, item["volid"])
-            return {**item, "status": "pending", "task": task}
+            return {**item, "status": "unconfirmed", "error": "Invalid Proxmox response; outcome unconfirmed"}
         except BackupArchiveError as error:
             return {**item, "status": "unconfirmed", "error": str(error)}
 
