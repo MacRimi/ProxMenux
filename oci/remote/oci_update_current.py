@@ -16,6 +16,11 @@ import oci_work_backup as work_backup
 from oci_installation_state import image_from_archive, same_image
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2
 
+# A registry login saved by ProxMenux lets skopeo read private images.
+REGISTRY_AUTH_FILE = '/etc/pve/priv/proxmenux/registry-auth.json'
+if not os.environ.get('REGISTRY_AUTH_FILE') and os.path.isfile(REGISTRY_AUTH_FILE):
+    os.environ['REGISTRY_AUTH_FILE'] = REGISTRY_AUTH_FILE
+
 
 def repository(reference):
     repo = reference.split('@', 1)[0]

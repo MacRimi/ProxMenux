@@ -1,19 +1,19 @@
 {
   "meta": {
     "title": "Create VM: Other NAS Systems | ProxMenux Documentation",
-    "description": "Create TrueNAS SCALE, TrueNAS CORE, OpenMediaVault, XigmaNAS, Rockstor and ZimaOS virtual machines on Proxmox VE with ProxMenux. Covers default / advanced configuration, the new storage plan, optional GPU passthrough and per-system recommended specs.",
+    "description": "Create TrueNAS SCALE, TrueNAS CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS and FygoOS virtual machines on Proxmox VE with ProxMenux. Covers default / advanced configuration, the new storage plan, optional GPU passthrough and per-system recommended specs.",
     "ogTitle": "Create VM: Other NAS Systems | ProxMenux Documentation",
-    "ogDescription": "Create TrueNAS SCALE / CORE, OpenMediaVault, XigmaNAS, Rockstor and ZimaOS VMs on Proxmox VE with ProxMenux.",
+    "ogDescription": "Create TrueNAS SCALE / CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS and FygoOS VMs on Proxmox VE with ProxMenux.",
     "ogImageAlt": "ProxMenux NAS selector"
   },
   "header": {
     "title": "Create VM: Other NAS Systems",
-    "description": "ProxMenux can create a ready-to-install VM for TrueNAS SCALE, TrueNAS CORE, OpenMediaVault, XigmaNAS, Rockstor and ZimaOS. This page covers the shared creation flow (default / advanced configuration, the new storage plan, optional GPU passthrough) plus per-system notes and recommended specs.",
+    "description": "ProxMenux can create a ready-to-install VM for TrueNAS SCALE, TrueNAS CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS and FygoOS. This page covers the shared creation flow (default / advanced configuration, the new storage plan, optional GPU passthrough) plus per-system notes and recommended specs.",
     "section": "Virtual Machines · NAS"
   },
   "intro": {
     "title": "How these systems are created",
-    "bodyRich": "All six systems share the same ProxMenux wizard. The NAS selector picks the matching installer (auto-detecting the latest stable version for TrueNAS, OMV, XigmaNAS and Rockstor) and then hands over to the generic VM configurator and the storage plan. ZimaOS uses its own installer script (<code>vm/zimaos.sh</code>) but follows the same CPU / RAM / storage / optional-GPU sequence."
+    "bodyRich": "All seven systems share the same ProxMenux wizard. The NAS selector picks the matching installer (auto-detecting the latest stable version for TrueNAS, OMV, XigmaNAS, Rockstor and FygoOS) and then hands over to the generic VM configurator and the storage plan. ZimaOS uses its own installer script (<code>vm/zimaos.sh</code>) but follows the same CPU / RAM / storage / optional-GPU sequence."
   },
   "config": {
     "heading": "Default vs Advanced configuration",
@@ -260,6 +260,21 @@
         "Default RAM: 4 GB (enough for media / self-hosted apps)",
         "Minimum CPU cores: 2",
         "UEFI (OVMF) boot",
+        "VirtIO network adapter for best throughput"
+      ]
+    },
+    "fygoos": {
+      "id": "fygoos",
+      "title": "FygoOS",
+      "icon": "Server",
+      "officialName": "fygonas.com",
+      "officialUrl": "https://fygonas.com",
+      "description": "International edition of fnOS, a Debian-based NAS. ProxMenux downloads the latest installer ISO published on fygonas.com and mounts it in the VM. The installer puts the system on one disk; the space left on that disk can hold volumes for apps and files. After the installation, the console shows the address of the web interface, on port 5666 (port 80 redirects to it): open it in a browser to name the device and create the administrator account.",
+      "specs": [
+        "System disk: FygoOS proposes a 64 GB system partition, which can be smaller in a VM",
+        "Installation: Graphical Install, or Rescuing Install if the graphical one fails",
+        "UEFI (OVMF) boot without Secure Boot keys, as the installer requires",
+        "Network: Ethernet with DHCP by default",
         "VirtIO network adapter for best throughput"
       ]
     }

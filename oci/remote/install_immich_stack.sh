@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+# A registry login saved by ProxMenux lets skopeo read private images.
+if [[ -z ${REGISTRY_AUTH_FILE:-} && -f /etc/pve/priv/proxmenux/registry-auth.json ]]; then
+  export REGISTRY_AUTH_FILE=/etc/pve/priv/proxmenux/registry-auth.json
+fi
 
 TEMPLATE_FILE=${1:?template JSON required}
 DEPLOYMENT_FILE=${2:?deployment JSON required}

@@ -1355,7 +1355,10 @@
         "jueves",
         "viernes",
         "sábado"
-      ]
+      ],
+      "runSkippedStatus": "ejecución omitida",
+      "reasonStoppedContainer": "el contenedor está detenido;Se omitió la actualización programada.",
+      "reasonStoppedContainerHistorical": "el contenedor se detuvo a la hora de actualización programada."
     },
     "cronChip": {
       "detected": "cron del host detectado",

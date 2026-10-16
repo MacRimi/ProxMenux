@@ -1302,7 +1302,10 @@
         "Giovedì",
         "Venerdì",
         "Sabato"
-      ]
+      ],
+      "runSkippedStatus": "corsa saltata",
+      "reasonStoppedContainer": "il contenitore è fermo;l'aggiornamento pianificato è stato saltato.",
+      "reasonStoppedContainerHistorical": "il contenitore è stato arrestato all'ora di aggiornamento pianificata."
     },
     "cronChip": {
       "detected": "cron host rilevato",

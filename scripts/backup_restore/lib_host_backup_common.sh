@@ -607,6 +607,22 @@ hb_prepare_staging() {
         (( jobs_covered )) || paths+=("$HB_BACKUP_JOBS_DIR")
     fi
 
+    # The logins to private image registries are needed to update the
+    # applications installed from them, whatever the profile selects.
+    local registry_logins=/etc/pve/priv/proxmenux/registry-auth.json
+    if [[ -e "$registry_logins" ]]; then
+        local logins_covered=0 candidate normalized
+        for candidate in "${paths[@]}"; do
+            normalized="${candidate%/}"
+            [[ -z "$normalized" ]] && normalized="/"
+            if [[ "$registry_logins" == "$normalized" || "$registry_logins" == "$normalized"/* ]]; then
+                logins_covered=1
+                break
+            fi
+        done
+        (( logins_covered )) || paths+=("$registry_logins")
+    fi
+
     rm -rf "$staging_root"
     mkdir -p "$staging_root/rootfs" "$staging_root/metadata"
 

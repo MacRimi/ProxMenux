@@ -10,6 +10,7 @@ This document describes the engine in this directory: how it is organised, how a
 - [Structure](#structure)
 - [How a container is created](#how-a-container-is-created)
 - [Update, modify, recreate and remove](#update-modify-recreate-and-remove)
+- [Private image registries](#private-image-registries)
 - [From a Compose file or a docker run command to an oci-compose](#from-a-compose-file-or-a-docker-run-command-to-an-oci-compose)
 - [The oci-compose, block by block](#the-oci-compose-block-by-block)
 - [Writing and testing an oci-compose](#writing-and-testing-an-oci-compose)
@@ -59,6 +60,46 @@ There are three places an oci-compose comes from:
 - **A file written by hand**, read by the same option. It is described in [Writing and testing an oci-compose](#writing-and-testing-an-oci-compose).
 
 On a node, the engine is installed in `/usr/local/share/proxmenux/oci/engine/`. Every installation keeps its record in `/usr/local/share/proxmenux/oci/instances/<VMID>/oci-compose.json`: the oci-compose it was installed from, under `template`, together with the answers given during the installation and the configuration Proxmox VE ended with. Updates, changes and removals read that record.
+
+## Private image registries
+
+Open **OCI manager Apps → Registry accounts** on the Proxmox node. Sign in
+with a registry hostname (for example `ghcr.io` or `registry.example.com:5443`),
+a username and a password or token with image pull permission. Passwords are
+entered in hidden fields and confirmed before the registry is contacted.
+
+Select a saved account to check access to an image, download it to template
+storage, install it with the existing LXC wizard, update its credentials or
+remove them. Image references retain their tag or full `sha256` digest.
+The normal custom-image importer can also use the saved credentials, including
+Compose files whose services come from private registries. When a registry
+refuses an image there, the importer offers to sign in on the spot and reads
+the image again. Updates, Modify, Recreate, the watchdog and the update check
+of the Monitor use the saved accounts too.
+
+ProxMenux keeps the accounts in `/etc/pve/priv/proxmenux/registry-auth.json`,
+where Proxmox keeps its own storage passwords: readable only by root and shared
+by every node of the cluster. The host backup includes it, and uninstalling
+ProxMenux removes it. A `REGISTRY_AUTH_FILE` set by the user is respected;
+without the cluster filesystem, Skopeo's default `/root/.config/containers/auth.json`
+is used. The
+credential directory must be owned by root with mode `700`, and the file with
+mode `600`. Basic credentials are base64 encoded, not encrypted. Configured
+Skopeo credential helpers use their own stores. Failed sign-in attempts leave
+the previous file credentials intact; removing an account leaves running
+applications unchanged. Other Skopeo/Docker authentication files are managed
+separately and may still grant access.
+
+TLS verification remains enabled. Install a private registry CA in
+`/etc/containers/certs.d/REGISTRY[:PORT]/ca.crt` when required, on each node
+that pulls images. Registry credentials are not written into the application
+template or copied into its LXC.
+
+Image access checks have a 30-second timeout per request; sign-in has a 45-second
+timeout. Errors identify rejected credentials, missing images, incompatible
+architectures, network/TLS failures, rate limits and registry outages. Downloads
+reuse the native update cache and layer integrity checks. Damaged cached images
+are downloaded again, and storage failures leave existing applications alone.
 
 ## How a container is created
 
