@@ -23,6 +23,8 @@ import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { LxcAppPanel, ThemeAwareLogo, ociImageLabel } from "./lxc-app-panel"
+import { GuestBackupList } from "./guest-backup-list"
+import type { GuestBackup } from "../lib/guest-backup-archives"
 import { OciConsoleLogPanel } from "./oci-console-log-panel"
 import { AppUpdaterEditor, type AppUpdateMethod } from "./app-updater-editor"
 import { formatStorage } from "../lib/utils"
@@ -399,16 +401,7 @@ interface BackupStorage {
   avail_human?: string
 }
 
-interface VMBackup {
-  volid: string
-  storage: string
-  type: string
-  size: number
-  size_human: string
-  timestamp: number
-  date: string
-  notes?: string
-}
+type VMBackup = GuestBackup
 
 // Sprint 13.29: shape returned by /api/lxc/<vmid>/mount-points. Lives
 // next to VMBackup since both are LXC-modal data structures.
@@ -1615,7 +1608,7 @@ export function VirtualMachines() {
     }
   }
 
-  const fetchVmBackups = async (vmid: number) => {
+  const fetchVmBackups = async (vmid: number, force = false) => {
     // Stale-while-revalidate with a 6-hour freshness gate.
     //
     // 1. If we already have backups (bulk hydration or a previous
@@ -1632,15 +1625,16 @@ export function VirtualMachines() {
     // 3. Loading spinner only on the true first load.
     const GATE_MS = 6 * 60 * 60 * 1000
     const seed = vmModalCacheRef.current.backups.get(vmid)
-    const isStale = !seed || (Date.now() - seed.fetchedAt) > GATE_MS
+    const isStale = force || !seed || (Date.now() - seed.fetchedAt) > GATE_MS
     if (!seed) setLoadingBackups(true)
     try {
       const url = isStale
         ? `/api/vms/${vmid}/backups?fresh=1`
         : `/api/vms/${vmid}/backups`
-      const response = await fetchApi<{ backups?: VMBackup[] }>(url)
+      const response = await fetchApi<{ backups?: VMBackup[]; error?: string }>(url)
+      if (response.error || !Array.isArray(response.backups)) throw new Error(response.error || "Backup inventory unavailable")
       if (response.backups) {
-        setVmBackups(response.backups)
+        if (selectedVMRef.current?.vmid === vmid) setVmBackups(response.backups)
         vmModalCacheRef.current.backups.set(vmid, { backups: response.backups, fetchedAt: Date.now() })
       }
     } catch (error) {
@@ -1648,9 +1642,10 @@ export function VirtualMachines() {
       // Only clear the visible list if we had nothing to show
       // in the first place — a transient network hiccup must not
       // wipe the stale-but-useful view the user is looking at.
-      if (!seed) setVmBackups([])
+      if (!seed && selectedVMRef.current?.vmid === vmid) setVmBackups([])
+      if (force) throw error
     } finally {
-      if (!seed) setLoadingBackups(false)
+      if (!seed && selectedVMRef.current?.vmid === vmid) setLoadingBackups(false)
     }
   }
 
@@ -7460,7 +7455,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 )}
 
                 {/* Backups Tab */}
-                {activeModalTab === "backups" && (
+                {activeModalTab === "backups" && selectedVM && (
                   /* Backups tab layout: the Card fills the whole tab
                      body so the backup list can scroll inside its
                      bordered card instead of leaving empty space
@@ -7495,48 +7490,17 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         {/* Divider */}
                         <div className="border-t border-border/50 mb-4 shrink-0" />
 
-                        {/* Backup List */}
-                        <div className="flex items-center justify-between mb-3 shrink-0">
-                          <span className="text-xs text-muted-foreground">{t("vmLxc.backups.available")}</span>
-                          <Badge variant="secondary" className="text-xs h-5">{vmBackups.length}</Badge>
-                        </div>
-
-                        {loadingBackups ? (
-                          <div className="flex-1 flex items-center justify-center text-muted-foreground min-h-0">
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            <span className="text-sm">{t("vmLxc.backups.loading")}</span>
-                          </div>
-                        ) : vmBackups.length === 0 ? (
-                          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground min-h-0">
-                            <Archive className="h-12 w-12 mb-3 opacity-30" />
-                            <span className="text-sm">{t("vmLxc.backups.empty")}</span>
-                            <span className="text-xs mt-1">{t("vmLxc.backups.emptyHint")}</span>
-                          </div>
-                        ) : (
-                          <div className="space-y-2 flex-1 overflow-y-auto min-h-0 pr-1 -mr-1">
-                            {vmBackups.map((backup, index) => (
-                              <div 
-                                key={`backup-${backup.volid}-${index}`}
-                                className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                              >
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
-                                  <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                  <span className="text-sm text-foreground">{backup.date}</span>
-                                  <Badge 
-                                    variant="outline" 
-                                    className={`text-xs ml-auto flex-shrink-0 ${getStorageColor(backup.storage).bg} ${getStorageColor(backup.storage).text} ${getStorageColor(backup.storage).border}`}
-                                  >
-                                    {backup.storage}
-                                  </Badge>
-                                </div>
-                                <Badge variant="outline" className="font-mono ml-2 flex-shrink-0">
-                                  {backup.size_human}
-                                </Badge>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        <GuestBackupList
+                          key={selectedVM.vmid}
+                          vmid={selectedVM.vmid}
+                          backups={vmBackups}
+                          loading={loadingBackups}
+                          onRefresh={async () => {
+                            vmModalCacheRef.current.backups.delete(selectedVM.vmid)
+                            await fetchVmBackups(selectedVM.vmid, true)
+                          }}
+                          storageColor={getStorageColor}
+                        />
                       </CardContent>
                     </Card>
                   </div>

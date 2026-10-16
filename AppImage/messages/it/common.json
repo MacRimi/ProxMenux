@@ -1110,7 +1110,21 @@
       "available": "Backup disponibili",
       "loading": "Caricamento backup...",
       "empty": "Nessun backup trovato",
-      "emptyHint": "Crea il primo backup con il pulsante in alto"
+      "emptyHint": "Crea il primo backup con il pulsante in alto",
+      "refresh": "Aggiorna",
+      "refreshFailed": "Impossibile aggiornare i backup. Aggiorna di nuovo per confermarne lo stato attuale.",
+      "deleteSelected": "Elimina selezionati ({count})",
+      "deletedCount": "{count} backup eliminati.",
+      "unconfirmedCount": "L'eliminazione di {count} backup non è stata confermata. Aggiorna l'elenco e controlla le attività di Proxmox prima di riprovare.",
+      "deleteFailed": "Impossibile confermare l'eliminazione. Aggiorna l'elenco e controlla le attività di Proxmox prima di riprovare.",
+      "selectHint": "Seleziona i backup non protetti (fino a 20 per gruppo)",
+      "selectBackup": "Seleziona backup",
+      "protected": "Protetto",
+      "confirmTitle": "Eliminare {count} backup?",
+      "confirmDescription": "Questi archivi di backup della VM/CT {vmid} verranno eliminati definitivamente. I backup protetti sono esclusi. Questo non elimina l'ospite.",
+      "deleting": "In attesa che Proxmox termini l'eliminazione degli archivi selezionati…",
+      "cancel": "Annulla",
+      "confirmDelete": "Elimina backup"
     },
     "updatesPanel": {
       "pendingTitle": "Aggiornamenti pacchetti in sospeso",
@@ -1303,9 +1317,9 @@
         "Venerdì",
         "Sabato"
       ],
-      "runSkippedStatus": "corsa saltata",
-      "reasonStoppedContainer": "il contenitore è fermo;l'aggiornamento pianificato è stato saltato.",
-      "reasonStoppedContainerHistorical": "il contenitore è stato arrestato all'ora di aggiornamento pianificata."
+      "runSkippedStatus": "esecuzione saltata",
+      "reasonStoppedContainer": "Il contenitore è fermo; l'aggiornamento pianificato è stato saltato.",
+      "reasonStoppedContainerHistorical": "Il contenitore era fermo all'ora dell'aggiornamento pianificato."
     },
     "cronChip": {
       "detected": "cron host rilevato",
@@ -2111,7 +2125,13 @@
         "inactiveFooter": "Abilita le notifiche per ricevere avvisi di sistema, integrità e sicurezza attraverso i canali configurati.",
         "notificationLanguage": "Lingua notifiche",
         "selectNotificationLanguage": "Seleziona lingua notifiche",
-        "notificationLanguageHint": "Usata per le notifiche runtime deterministiche anche quando l’IA è disabilitata."
+        "notificationLanguageHint": "Usata per le notifiche runtime deterministiche anche quando l’IA è disabilitata.",
+        "appriseServiceHelp": "Configurazione di Slack e Matrix",
+        "appriseSlackSteps": "Crea un webhook in ingresso nell'app Slack per il canale di destinazione, quindi incolla il suo URL HTTPS completo nel campo URL di Apprise. Non è necessaria alcuna conversione.",
+        "appriseSlackDocs": "Formati URL e configurazione di Slack",
+        "appriseMatrixSteps": "Usa un account di notifica autorizzato a pubblicare nella stanza. Sostituisci utente, password, homeserver e ID completo della stanza dell'esempio; codifica per URL i caratteri speciali nelle credenziali. Lo schema matrixs usa HTTPS. Consulta la documentazione per il supporto di token, SSO e stanze cifrate nella versione di Apprise installata.",
+        "appriseMatrixDocs": "Formati URL e configurazione di Matrix",
+        "appriseServiceFinish": "Abilita Apprise, inserisci il tuo URL, scegli le categorie di notifica o i singoli eventi, salva e poi usa Invia test. Questi esempi non modificano l'URL salvato. Questo canale Apprise ha una sola destinazione; usa l'API Apprise per più servizi contemporaneamente."
       },
       "ai": {
         "title": "Miglioramento con IA",
@@ -4756,6 +4776,24 @@
       "thursday": "Giovedì",
       "tuesday": "Martedì",
       "wednesday": "Mercoledì"
+    },
+    "storageRetention": {
+      "title": "Conservazione dell'archiviazione",
+      "keepAll": "Mantieni tutti i backup",
+      "description": "Conservazione predefinita dei backup salvata in Proxmox. Le attività di backup con una politica esplicita hanno la precedenza su questo valore.",
+      "refresh": "Aggiorna",
+      "saved": "Politica di conservazione dell'archiviazione salvata. Non è stata eseguita alcuna pulizia.",
+      "choosePolicy": "Scegli Mantieni tutti oppure almeno un numero di conservazione maggiore di zero.",
+      "saveFailed": "Impossibile salvare la politica di conservazione dell'archiviazione. Aggiorna l'elenco se la configurazione è cambiata.",
+      "loadFailed": "Impossibile caricare la politica di conservazione dell'archiviazione.",
+      "empty": "Nessuno spazio di archiviazione dei backup trovato.",
+      "default": "Valore predefinito di Proxmox",
+      "edit": "Modifica",
+      "editTitle": "Conservazione per {storage}",
+      "effect": "Si applica alle future esecuzioni dei backup che ereditano questa politica di archiviazione. Il salvataggio non elimina i backup esistenti. I backup protetti rimangono protetti.",
+      "cancel": "Annulla",
+      "save": "Salva conservazione",
+      "useDefault": "Usa l'impostazione predefinita di Proxmox (nessuna policy su questo storage)"
     }
   },
   "healthStatus": {

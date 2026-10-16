@@ -7,6 +7,7 @@ import { useState } from "react"
 import { DatabaseBackup } from "lucide-react"
 import { HostBackup } from "./host-backup"
 import { VmBackupJobs } from "./vm-backup-jobs"
+import { BackupStorageRetention } from "./backup-storage-retention"
 import { useT } from "../lib/i18n/provider"
 
 type BackupView = "host" | "guests"
@@ -51,7 +52,7 @@ export function BackupTab() {
       <div className={view === "host" ? "" : "hidden"}>
         <HostBackup />
       </div>
-      {view === "guests" && <VmBackupJobs />}
+      {view === "guests" && <><VmBackupJobs /><BackupStorageRetention /></>}
     </div>
   )
 }

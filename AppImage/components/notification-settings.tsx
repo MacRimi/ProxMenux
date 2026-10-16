@@ -1,5 +1,6 @@
 "use client"
 
+import { AppriseServiceHelp } from "./apprise-service-help"
 import { useState, useEffect, useCallback } from "react"
 import { useTheme } from "next-themes"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
@@ -2061,6 +2062,7 @@ export function NotificationSettings() {
                     Enable toggle + Test button pattern as the other
                     channels. */}
                 <TabsContent value="apprise" className="space-y-3 pt-2">
+                  <AppriseServiceHelp />
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Label className="text-xs font-medium">{t("settings.notifications.ui.enableApprise")}</Label>
