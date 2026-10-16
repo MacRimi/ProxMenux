@@ -213,6 +213,10 @@ class CommandDescriptionsTests(unittest.TestCase):
                     # Model the bot's future output in temporary catalogs, just
                     # like the other pending keys above; never rewrite locales.
                     messages["scriptTerminal"].setdefault("endOfInput", english["scriptTerminal"]["endOfInput"])
+                    messages["vmLxc"]["scheduled"].setdefault(
+                        "reasonStoppedContainer",
+                        english["vmLxc"]["scheduled"]["reasonStoppedContainer"],
+                    )
                     for key in ("noShell", "enterFailed"):
                         messages["lxcTerminal"]["errors"].setdefault(key, english["lxcTerminal"]["errors"][key])
                     # The notification history panel texts await the bot as well.
