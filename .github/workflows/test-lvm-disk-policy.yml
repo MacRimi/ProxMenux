@@ -1,0 +1,55 @@
+name: Disk policy and host monitor regressions
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/test-lvm-disk-policy.yml'
+      - 'AppImage/scripts/lvm_device_scope.py'
+      - 'AppImage/scripts/disk_temperature_history.py'
+      - 'AppImage/scripts/flask_server.py'
+      - 'AppImage/scripts/health_monitor.py'
+      - 'AppImage/scripts/flask_notification_routes.py'
+      - 'AppImage/scripts/proxmox_storage_monitor.py'
+      - 'AppImage/scripts/build_appimage.sh'
+      - 'AppImage/scripts/tests/test_host_backup_node.py'
+      - 'AppImage/scripts/tests/test_proxmox_node_name.py'
+      - 'AppImage/scripts/tests/test_pve_notifications_cfg_writes.py'
+      - 'tests/test_lvm_disk_read_policy.py'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'AppImage/scripts/lvm_device_scope.py'
+      - 'AppImage/scripts/disk_temperature_history.py'
+      - 'AppImage/scripts/flask_server.py'
+      - 'AppImage/scripts/health_monitor.py'
+      - 'AppImage/scripts/flask_notification_routes.py'
+      - 'AppImage/scripts/proxmox_storage_monitor.py'
+      - 'AppImage/scripts/build_appimage.sh'
+      - 'AppImage/scripts/tests/test_host_backup_node.py'
+      - 'AppImage/scripts/tests/test_proxmox_node_name.py'
+      - 'AppImage/scripts/tests/test_pve_notifications_cfg_writes.py'
+      - 'tests/test_lvm_disk_read_policy.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  disk-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test automatic LVM readers with mocked inventory and policy
+        run: python -I -B -m unittest discover -s tests -p test_lvm_disk_read_policy.py -v
+      - name: Test backup node ownership and former jobs
+        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_host_backup_node.py -v
+      - name: Test local node lookup without Proxmox API commands
+        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_proxmox_node_name.py -v
+      - name: Test notification configuration writes against a cluster filesystem fixture
+        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_pve_notifications_cfg_writes.py -v

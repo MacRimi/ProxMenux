@@ -141,6 +141,7 @@ cp "$SCRIPT_DIR/oci_console_logs.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "�
 cp "$SCRIPT_DIR/oci_instance_info.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  oci_instance_info.py not found"
 cp "$SCRIPT_DIR/oci_operations.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  oci_operations.py not found"
 cp "$SCRIPT_DIR/disk_temperature_history.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  disk_temperature_history.py not found"
+cp "$SCRIPT_DIR/lvm_device_scope.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/smartctl_resolver.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  smartctl_resolver.py not found"
 cp "$SCRIPT_DIR/disk_identity.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  disk_identity.py not found"
 cp "$SCRIPT_DIR/health_thresholds.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  health_thresholds.py not found"

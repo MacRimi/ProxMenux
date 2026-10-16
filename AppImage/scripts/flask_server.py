@@ -4188,11 +4188,12 @@ def get_system_disks():
     try:
         # 4. Check LVM physical volumes. `--devices` (added when a disk
         # is parked) keeps pvs from scanning — and waking — standby HDDs.
+        dev_args = _lvm_device_args()
         result = subprocess.run(
-            ['pvs', *_lvm_device_args(), '--noheadings', '-o', 'pv_name,vg_name'],
+            ['pvs', *dev_args, '--noheadings', '-o', 'pv_name,vg_name'],
             capture_output=True, text=True, timeout=5
-        )
-        if result.returncode == 0:
+        ) if dev_args is not None else None
+        if result is not None and result.returncode == 0:
             for line in result.stdout.strip().split('\n'):
                 if line.strip():
                     parts = line.split()
@@ -5002,42 +5003,10 @@ def _hdd_in_standby(disk_name: str) -> bool:
     return parked
 
 
-def _lvm_device_args() -> list:
-    """Build the `--devices` argument that keeps an LVM tool (pvs/lvs/
-    vgs) off parked disks.
-
-    LVM tools scan every block device by default, which spins up a
-    standby HDD (issue #232). When any rotational disk is asleep, hand
-    LVM an explicit list of every block node EXCEPT those belonging to a
-    parked disk, so it never opens the sleeping drives. Each partition
-    must be listed too — `--devices /dev/sda` alone does not cover a PV
-    on /dev/sda3. Returns [] when nothing is parked, so hosts without
-    standby disks keep the plain pvs/lvs/vgs call unchanged.
-    """
-    try:
-        r = subprocess.run(
-            ['lsblk', '-rno', 'NAME,TYPE,PKNAME'],
-            capture_output=True, text=True, timeout=5)
-        if r.returncode != 0:
-            return []
-        nodes = []
-        for line in r.stdout.strip().split('\n'):
-            parts = line.split()
-            if len(parts) < 2 or parts[1] not in ('disk', 'part'):
-                continue
-            name = parts[0]
-            base = name if parts[1] == 'disk' else (parts[2] if len(parts) > 2 else name)
-            nodes.append((name, base))
-        standby_bases = {
-            name for name, base in nodes
-            if name == base and _hdd_in_standby(name)
-        }
-        if not standby_bases:
-            return []
-        devices = [f'/dev/{name}' for name, base in nodes if base not in standby_bases]
-        return ['--devices', ','.join(devices)] if devices else []
-    except (subprocess.SubprocessError, OSError):
-        return []
+def _lvm_device_args():
+    """None means no automatic scan; [] permits LVM's normal scan."""
+    from lvm_device_scope import lvm_device_args
+    return lvm_device_args(_hdd_in_standby)
 
 
 def get_smart_data(disk_name):
