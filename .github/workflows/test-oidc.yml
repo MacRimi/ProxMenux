@@ -1,0 +1,75 @@
+name: OIDC authentication
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/test-oidc.yml'
+      - 'AppImage/scripts/*oidc*.py'
+      - 'AppImage/scripts/auth_manager.py'
+      - 'AppImage/scripts/jwt_middleware.py'
+      - 'AppImage/scripts/flask_server.py'
+      - 'AppImage/scripts/build_appimage.sh'
+      - 'AppImage/scripts/tests/test_oidc.py'
+      - 'AppImage/components/oidc-settings.tsx'
+      - 'AppImage/components/login.tsx'
+      - 'AppImage/lib/oidc-login.ts'
+      - 'AppImage/tests/oidc-login.cjs'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'AppImage/scripts/*oidc*.py'
+      - 'AppImage/scripts/auth_manager.py'
+      - 'AppImage/scripts/build_appimage.sh'
+      - '.github/workflows/test-oidc.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  oidc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install pure Python application dependencies
+        run: python -m pip install Flask requests 'PyJWT==2.15.1' pyotp segno
+      - name: Exercise the AppImage cryptography installer for the actual host ABI
+        env:
+          APP_DIR: ${{ runner.temp }}/oidc-runtime
+        run: |
+          python - <<'PY'
+          import os, re, subprocess, sys
+          from pathlib import Path
+          source = Path('AppImage/scripts/build_appimage.sh').read_text()
+          version = re.search(r'^CRYPTOGRAPHY_VERSION="([^"]+)"', source, re.M).group(0)
+          function = re.search(r'^install_oidc_crypto_runtime\(\) \{\n.*?^\}', source, re.M | re.S).group(0)
+          abi = f'cp{sys.version_info.major}{sys.version_info.minor}'
+          subprocess.run(['bash', '-e', '-c', version + '\n' + function + '\ninstall_oidc_crypto_runtime "$1" "$2"',
+                          'oidc-runtime-test', f'{sys.version_info.major}.{sys.version_info.minor}', abi], check=True)
+          with open(os.environ['GITHUB_ENV'], 'a') as handle:
+              handle.write(f'PYTHONPATH={os.environ["APP_DIR"]}/usr/lib/python3/vendor/{abi}\n')
+          PY
+      - name: Verify signatures, protocol, browser binding, authorization and recovery
+        run: |
+          python -B -m unittest discover -s AppImage/scripts/tests -p test_oidc.py -v
+          python -B -m unittest discover -s AppImage/scripts/tests -p test_auth_manager_setup.py -v
+          bash -n AppImage/scripts/build_appimage.sh
+      - uses: actions/setup-node@v6
+        if: matrix.python == '3.11'
+        with:
+          node-version: '22.14.0'
+      - name: Verify browser completion and failed-login recovery
+        if: matrix.python == '3.11'
+        run: |
+          npm ci --prefix .github/ci/offline-node --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+          NODE_PATH="$PWD/.github/ci/offline-node/node_modules" node AppImage/tests/oidc-login.cjs

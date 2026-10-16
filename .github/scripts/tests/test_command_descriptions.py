@@ -97,6 +97,9 @@ class CommandDescriptionsTests(unittest.TestCase):
                 # test_storage_messages.cjs and test_health_text.cjs.
                 if lang != "en":
                     temporary = json.loads(path.read_text())
+                    # OIDC settings use English fallback until the translation
+                    # bot fills this new section. Seed only disposable catalogs.
+                    temporary.setdefault("oidc", catalog("en")["oidc"])
                     for section, key in (
                         ("archives", "emptyMessage"),
                         ("archives", "formerJob"),

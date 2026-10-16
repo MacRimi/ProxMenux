@@ -27,6 +27,7 @@ export function Login({ onLogin }: LoginProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [oidc, setOidc] = useState<{ provider_name: string; login_url: string } | null>(null)
   const lastAutoSubmittedTotp = useRef("")
 
   useEffect(() => {
@@ -41,6 +42,10 @@ export function Login({ onLogin }: LoginProps) {
     // sees a blank/stuck dashboard.
     try {
       sessionStorage.removeItem("proxmenux-auth-401-handled")
+      if (sessionStorage.getItem("proxmenux-oidc-error")) {
+        setError(t("oidc.loginFailed"))
+        sessionStorage.removeItem("proxmenux-oidc-error")
+      }
     } catch {
       // private browsing — best-effort
     }
@@ -53,6 +58,10 @@ export function Login({ onLogin }: LoginProps) {
       setPassword(savedPassword)
       setRememberMe(true)
     }
+    fetch(getApiUrl("/api/auth/oidc/status"), { cache: "no-store" })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => { if (data?.enabled) setOidc(data) })
+      .catch(() => {})
   }, [])
 
   const submitLogin = async (totpOverride?: string) => {
@@ -172,6 +181,9 @@ export function Login({ onLogin }: LoginProps) {
         </div>
 
         <div className="bg-card border border-border rounded-lg p-6 shadow-lg">
+          {oidc && !requiresTotp && <Button asChild variant="outline" className="w-full mb-4">
+            <a href={oidc.login_url}>{t("oidc.login", { provider: oidc.provider_name })}</a>
+          </Button>}
           <form onSubmit={handleLogin} className="space-y-4">
             {error && (
               <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-2">
