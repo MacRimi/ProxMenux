@@ -96,7 +96,7 @@
     "overviewItems": [
       "<strong>Identity</strong> — model, serial, capacity, Health badge (Healthy / Warning / Critical).",
       "<strong>Wear & Lifetime</strong> — large life-remaining ring (97 %, 50 %, …) with the source attribute spelled out (<em>Media Wearout Indicator</em>, <em>Percentage Used</em>, …), a wear bar (current consumption %), an <em>Est. Life</em> projection in years and the total Data Written. NVMe drives also show <em>Available Spare</em>.",
-      "<strong>SMART Attributes</strong> — six headline fields on a 2-column grid: Temperature, Power On Hours (with humanised duration like <em>3y 116d</em>), Rotation Rate (or <em>SSD</em>), Power Cycles, SMART Status, Reallocated Sectors, Pending Sectors, CRC Errors. The full attribute table lives in the SMART tab."
+      "<strong>SMART Attributes</strong> — key fields on a 2-column grid: Temperature, Power On Hours (with humanised duration like <em>3y 116d</em>), Rotation Rate (or <em>SSD</em>), Power Cycles, SMART Status, Reallocated Sectors, Pending Sectors, CRC Errors. The full attribute table lives in the SMART tab."
     ],
     "smartTitle": "Tab 2 — SMART",
     "smartImageAlt": "Disk drill-in modal — SMART tab with Run SMART Test buttons (Short / Extended), last-test result and the full SMART attribute table",
