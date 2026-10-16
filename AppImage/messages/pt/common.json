@@ -1110,7 +1110,21 @@
       "available": "Backups disponíveis",
       "loading": "Carregando backups...",
       "empty": "Nenhum backup encontrado",
-      "emptyHint": "Crie seu primeiro backup usando o botão acima"
+      "emptyHint": "Crie seu primeiro backup usando o botão acima",
+      "refresh": "Atualizar",
+      "refreshFailed": "Não foi possível atualizar as cópias de segurança. Atualize novamente para confirmar o seu estado atual.",
+      "deleteSelected": "Eliminar selecionadas ({count})",
+      "deletedCount": "{count} cópia(s) de segurança eliminada(s).",
+      "unconfirmedCount": "A eliminação de {count} cópia(s) de segurança não foi confirmada. Atualize a lista e verifique as tarefas do Proxmox antes de tentar novamente.",
+      "deleteFailed": "Não foi possível confirmar a eliminação. Atualize a lista e verifique as tarefas do Proxmox antes de tentar novamente.",
+      "selectHint": "Selecione cópias de segurança sem proteção (até 20 por lote)",
+      "selectBackup": "Selecionar cópia de segurança",
+      "protected": "Protegida",
+      "confirmTitle": "Eliminar {count} cópia(s) de segurança?",
+      "confirmDescription": "Estes arquivos de cópia de segurança da VM/CT {vmid} serão eliminados permanentemente. As cópias protegidas estão excluídas. Isto não elimina o convidado.",
+      "deleting": "À espera que o Proxmox termine de eliminar os arquivos selecionados…",
+      "cancel": "Cancelar",
+      "confirmDelete": "Eliminar cópias de segurança"
     },
     "updatesPanel": {
       "pendingTitle": "Atualizações de pacote pendentes",

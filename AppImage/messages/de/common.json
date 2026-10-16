@@ -1110,7 +1110,21 @@
       "available": "Verfügbare Backups",
       "loading": "Backups werden geladen...",
       "empty": "Keine Backups gefunden",
-      "emptyHint": "Erstellen Sie Ihr erstes Backup über die Schaltfläche oben"
+      "emptyHint": "Erstellen Sie Ihr erstes Backup über die Schaltfläche oben",
+      "refresh": "Aktualisieren",
+      "refreshFailed": "Sicherungen konnten nicht aktualisiert werden. Aktualisieren Sie erneut, um ihren aktuellen Zustand zu bestätigen.",
+      "deleteSelected": "Ausgewählte löschen ({count})",
+      "deletedCount": "{count} Sicherung(en) gelöscht.",
+      "unconfirmedCount": "Die Löschung von {count} Sicherung(en) wurde nicht bestätigt. Aktualisieren Sie die Liste und prüfen Sie die Proxmox-Aufgaben, bevor Sie es erneut versuchen.",
+      "deleteFailed": "Die Löschung konnte nicht bestätigt werden. Aktualisieren Sie die Liste und prüfen Sie die Proxmox-Aufgaben, bevor Sie es erneut versuchen.",
+      "selectHint": "Ungeschützte Sicherungen auswählen (bis zu 20 pro Durchgang)",
+      "selectBackup": "Sicherung auswählen",
+      "protected": "Geschützt",
+      "confirmTitle": "{count} Sicherung(en) löschen?",
+      "confirmDescription": "Diese Sicherungsarchive für VM/CT {vmid} werden dauerhaft gelöscht. Geschützte Sicherungen sind ausgeschlossen. Der Gast wird dadurch nicht gelöscht.",
+      "deleting": "Warten, bis Proxmox die ausgewählten Archive gelöscht hat…",
+      "cancel": "Abbrechen",
+      "confirmDelete": "Sicherungen löschen"
     },
     "updatesPanel": {
       "pendingTitle": "Ausstehende Paketaktualisierungen",

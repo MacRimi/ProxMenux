@@ -1110,7 +1110,21 @@
       "available": "Tillgängliga säkerhetskopior",
       "loading": "Laddar säkerhetskopior...",
       "empty": "Inga säkerhetskopior hittades",
-      "emptyHint": "Skapa din första säkerhetskopia med knappen ovan"
+      "emptyHint": "Skapa din första säkerhetskopia med knappen ovan",
+      "refresh": "Uppdatera",
+      "refreshFailed": "Det gick inte att uppdatera säkerhetskopiorna. Uppdatera igen för att bekräfta deras aktuella tillstånd.",
+      "deleteSelected": "Ta bort markerade ({count})",
+      "deletedCount": "{count} säkerhetskopior har tagits bort.",
+      "unconfirmedCount": "Borttagning av {count} säkerhetskopior har inte bekräftats. Uppdatera listan och kontrollera Proxmox uppgifter innan du försöker igen.",
+      "deleteFailed": "Borttagningen kunde inte bekräftas. Uppdatera listan och kontrollera Proxmox uppgifter innan du försöker igen.",
+      "selectHint": "Välj oskyddade säkerhetskopior (upp till 20 per omgång)",
+      "selectBackup": "Välj säkerhetskopia",
+      "protected": "Skyddad",
+      "confirmTitle": "Ta bort {count} säkerhetskopior?",
+      "confirmDescription": "Dessa säkerhetskopieringsarkiv för VM/CT {vmid} kommer att tas bort permanent. Skyddade säkerhetskopior är undantagna. Detta tar inte bort gästen.",
+      "deleting": "Väntar på att Proxmox ska slutföra borttagningen av de valda arkiven…",
+      "cancel": "Avbryt",
+      "confirmDelete": "Ta bort säkerhetskopior"
     },
     "updatesPanel": {
       "pendingTitle": "Väntande paketuppdateringar",

@@ -1110,7 +1110,21 @@
       "available": "Sauvegardes disponibles",
       "loading": "Chargement des sauvegardes...",
       "empty": "Aucune sauvegarde trouvée",
-      "emptyHint": "Créez votre première sauvegarde en utilisant le bouton ci-dessus"
+      "emptyHint": "Créez votre première sauvegarde en utilisant le bouton ci-dessus",
+      "refresh": "Actualiser",
+      "refreshFailed": "Impossible d'actualiser les sauvegardes. Actualisez à nouveau pour confirmer leur état actuel.",
+      "deleteSelected": "Supprimer la sélection ({count})",
+      "deletedCount": "{count} sauvegarde(s) supprimée(s).",
+      "unconfirmedCount": "La suppression de {count} sauvegarde(s) n'a pas été confirmée. Actualisez la liste et vérifiez les tâches Proxmox avant de réessayer.",
+      "deleteFailed": "La suppression n'a pas pu être confirmée. Actualisez la liste et vérifiez les tâches Proxmox avant de réessayer.",
+      "selectHint": "Sélectionnez les sauvegardes non protégées (jusqu'à 20 par lot)",
+      "selectBackup": "Sélectionner la sauvegarde",
+      "protected": "Protégée",
+      "confirmTitle": "Supprimer {count} sauvegarde(s) ?",
+      "confirmDescription": "Ces archives de sauvegarde de la VM/CT {vmid} seront définitivement supprimées. Les sauvegardes protégées sont exclues. Cela ne supprime pas l'invité.",
+      "deleting": "En attente de la fin de la suppression des archives sélectionnées par Proxmox…",
+      "cancel": "Annuler",
+      "confirmDelete": "Supprimer les sauvegardes"
     },
     "updatesPanel": {
       "pendingTitle": "Mises à jour des packages en attente",

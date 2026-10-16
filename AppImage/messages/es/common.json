@@ -1110,7 +1110,21 @@
       "available": "Backups disponibles",
       "loading": "Cargando backups...",
       "empty": "No se encontraron backups",
-      "emptyHint": "Crea tu primer backup con el botón de arriba"
+      "emptyHint": "Crea tu primer backup con el botón de arriba",
+      "refresh": "Actualizar",
+      "refreshFailed": "No se pudieron actualizar los backups. Vuelve a actualizar para confirmar su estado actual.",
+      "deleteSelected": "Eliminar los seleccionados ({count})",
+      "deletedCount": "{count} backup(s) eliminado(s).",
+      "unconfirmedCount": "No se ha confirmado la eliminación de {count} backup(s). Actualiza la lista y comprueba las tareas de Proxmox antes de volver a intentarlo.",
+      "deleteFailed": "No se pudo confirmar la eliminación. Actualiza la lista y comprueba las tareas de Proxmox antes de volver a intentarlo.",
+      "selectHint": "Selecciona backups sin protección (hasta 20 por lote)",
+      "selectBackup": "Seleccionar backup",
+      "protected": "Protegido",
+      "confirmTitle": "¿Eliminar {count} backup(s)?",
+      "confirmDescription": "Los archivos de backup de la VM/CT {vmid} se eliminarán de forma permanente. Los backups protegidos quedan fuera. La VM o el contenedor no se eliminan.",
+      "deleting": "Esperando a que Proxmox termine de eliminar los archivos seleccionados…",
+      "cancel": "Cancelar",
+      "confirmDelete": "Eliminar backups"
     },
     "updatesPanel": {
       "pendingTitle": "Actualizaciones de paquetes pendientes",

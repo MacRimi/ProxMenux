@@ -181,6 +181,7 @@ done
 cp "$SCRIPT_DIR/oci_manager.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  oci_manager.py not found"
 cp "$SCRIPT_DIR/flask_oci_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_oci_routes.py not found"
 cp "$SCRIPT_DIR/flask_vm_backup_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_vm_backup_routes.py not found"
+cp "$SCRIPT_DIR/guest_backup_archives.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/flask_audit_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_audit_routes.py not found"
 cp "$SCRIPT_DIR/audit_store.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  audit_store.py not found"
 cp "$SCRIPT_DIR/audit_checks.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  audit_checks.py not found"
