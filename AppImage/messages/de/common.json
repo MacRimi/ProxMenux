@@ -4779,7 +4779,7 @@
       "effect": "Gilt für zukünftige Sicherungsläufe, die diese Speicherrichtlinie übernehmen. Das Speichern löscht keine vorhandenen Sicherungen. Geschützte Sicherungen bleiben geschützt.",
       "cancel": "Abbrechen",
       "save": "Aufbewahrung speichern",
-      "useDefault": "Verwenden Sie die Proxmox-Standardeinstellung (keine Richtlinie für diesen Speicher)."
+      "useDefault": "Proxmox-Standard verwenden (keine Richtlinie für diesen Speicher)"
     }
   },
   "healthStatus": {
