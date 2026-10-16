@@ -7227,5 +7227,33 @@
         "diagnosticsOmitted": "Weitere Diagnosezeilen oder Text ausgelassen: {count}. Originalbericht bleibt erhalten."
       }
     }
+  },
+  "oidc": {
+    "title": "OpenID Connect (OIDC)",
+    "description": "Melden Sie sich mit einem externen Identitätsanbieter wie Authentik, Keycloak oder Pocket ID an.",
+    "localRequired": "Konfigurieren und aktivieren Sie die lokale Passwortauthentifizierung, bevor Sie OIDC einrichten.",
+    "enable": "OpenID Connect aktivieren",
+    "provider_name": "Anbietername",
+    "issuer": "Issuer-URL (exakter Wert aus der Discovery)",
+    "public_url": "Öffentliche HTTPS-URL dieses Monitor-Dashboards",
+    "client_id": "Client-ID",
+    "secret": "Client-Geheimnis",
+    "secretKept": "Bei leerem Feld bleibt das gespeicherte Geheimnis erhalten",
+    "authMethod": "Authentifizierungsmethode des Clients",
+    "publicClient": "Öffentlicher Client (PKCE, ohne Geheimnis)",
+    "urlHelp": "Verwenden Sie die exakte Issuer-URL einschließlich eines eventuellen abschließenden Schrägstrichs. Die öffentliche URL muss dieses Dashboard und seine /api-Routen über HTTPS bereitstellen, einschließlich eines eventuellen Proxy-Pfadpräfixes.",
+    "subjects": "Zugelassene Administrator-Subjects (sub), eines pro Zeile",
+    "subjectHelp": "Nur diese unveränderlichen Benutzer-IDs des Anbieters können auf Monitor zugreifen. Jede erhält vollständigen Administratorzugriff. Verwenden Sie den für diesen Client ausgestellten sub-Claim, keine E-Mail-Adresse und keinen Anzeigenamen.",
+    "callback": "Registrieren Sie exakt diese Weiterleitungs-URI bei Ihrem Identitätsanbieter:",
+    "mfaHelp": "OIDC verwendet die MFA-Richtlinie des Identitätsanbieters. Lokales Passwort und 2FA bleiben verfügbar. Das Speichern von Änderungen macht bestehende OIDC-Sitzungen ungültig.",
+    "unavailable": "Diese Monitor-Version enthält nicht die für OIDC erforderliche Kryptografie-Laufzeitumgebung.",
+    "save": "Anbieter speichern und prüfen",
+    "saving": "Anbieter wird geprüft…",
+    "saved": "OIDC-Einstellungen gespeichert. Die Discovery wurde geprüft; testen Sie die Anmeldung in einem anderen Browser, bevor Sie Ihre lokale Sitzung beenden.",
+    "saveFailed": "OIDC-Einstellungen konnten nicht gespeichert werden.",
+    "login": "Mit {provider} fortfahren",
+    "loginFailed": "OIDC-Anmeldung fehlgeschlagen oder abgelaufen. Versuchen Sie es erneut, prüfen Sie Ihr zugelassenes Subject oder verwenden Sie Ihre lokalen Zugangsdaten.",
+    "disabledSaved": "OIDC-Einstellungen gespeichert. Die externe Anmeldung ist deaktiviert.",
+    "saveDisabled": "Einstellungen speichern"
   }
 }

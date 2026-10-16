@@ -7227,5 +7227,33 @@
         "diagnosticsOmitted": "Linhas ou texto de diagnóstico omitidos: {count}. Relatório original preservado."
       }
     }
+  },
+  "oidc": {
+    "title": "OpenID Connect (OIDC)",
+    "description": "Inicie sessão com um fornecedor de identidade externo, como Authentik, Keycloak ou Pocket ID.",
+    "localRequired": "Configure e ative a autenticação local por palavra-passe antes de configurar OIDC.",
+    "enable": "Ativar OpenID Connect",
+    "provider_name": "Nome do fornecedor",
+    "issuer": "URL do emissor (valor exato da descoberta)",
+    "public_url": "URL HTTPS público deste painel Monitor",
+    "client_id": "ID do cliente",
+    "secret": "Segredo do cliente",
+    "secretKept": "O segredo guardado é mantido se o campo ficar vazio",
+    "authMethod": "Método de autenticação do cliente",
+    "publicClient": "Cliente público (PKCE, sem segredo)",
+    "urlHelp": "Utilize o URL exato do emissor, incluindo qualquer barra final. O URL público deve servir este painel e as suas rotas /api através de HTTPS, incluindo qualquer prefixo de caminho do proxy.",
+    "subjects": "Identificadores de sujeito dos administradores autorizados (sub), um por linha",
+    "subjectHelp": "Apenas estes IDs de utilizador imutáveis do fornecedor podem aceder ao Monitor. Cada um recebe acesso de administrador completo. Utilize a declaração sub emitida para este cliente, não um endereço de e-mail nem um nome de apresentação.",
+    "callback": "Registe exatamente este URI de redirecionamento no seu fornecedor de identidade:",
+    "mfaHelp": "OIDC usa a política MFA do fornecedor de identidade. A palavra-passe local e a 2FA continuam disponíveis. Guardar alterações invalida as sessões OIDC existentes.",
+    "unavailable": "Esta versão do Monitor não inclui o ambiente de execução criptográfico necessário para OIDC.",
+    "save": "Guardar e verificar o fornecedor",
+    "saving": "A verificar o fornecedor…",
+    "saved": "Definições OIDC guardadas. A descoberta foi verificada; teste o início de sessão noutro navegador antes de terminar a sessão local.",
+    "saveFailed": "Não foi possível guardar as definições OIDC.",
+    "login": "Continuar com {provider}",
+    "loginFailed": "O início de sessão OIDC falhou ou expirou. Tente novamente, verifique o seu identificador de sujeito autorizado ou utilize as credenciais locais.",
+    "disabledSaved": "Definições OIDC guardadas. O início de sessão externo está desativado.",
+    "saveDisabled": "Guardar definições"
   }
 }

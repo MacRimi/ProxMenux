@@ -7227,5 +7227,33 @@
         "diagnosticsOmitted": "Lignes ou texte de diagnostic omis : {count}. Rapport original conservé."
       }
     }
+  },
+  "oidc": {
+    "title": "OpenID Connect (OIDC)",
+    "description": "Connectez-vous avec un fournisseur d'identité externe, tel qu'Authentik, Keycloak ou Pocket ID.",
+    "localRequired": "Configurez et activez l'authentification locale par mot de passe avant de configurer OIDC.",
+    "enable": "Activer OpenID Connect",
+    "provider_name": "Nom du fournisseur",
+    "issuer": "URL de l'émetteur (valeur exacte issue de la découverte)",
+    "public_url": "URL HTTPS publique de ce tableau de bord Monitor",
+    "client_id": "Identifiant du client",
+    "secret": "Secret du client",
+    "secretKept": "Le secret enregistré est conservé si le champ reste vide",
+    "authMethod": "Méthode d'authentification du client",
+    "publicClient": "Client public (PKCE, sans secret)",
+    "urlHelp": "Utilisez l'URL exacte de l'émetteur, y compris toute barre oblique finale. L'URL publique doit desservir ce tableau de bord et ses routes /api en HTTPS, y compris tout préfixe de chemin du proxy.",
+    "subjects": "Identifiants de sujet administrateur autorisés (sub), un par ligne",
+    "subjectHelp": "Seuls ces identifiants utilisateur immuables du fournisseur peuvent accéder à Monitor. Chacun reçoit un accès administrateur complet. Utilisez la revendication sub émise pour ce client, et non une adresse e-mail ou un nom d'affichage.",
+    "callback": "Enregistrez exactement cette URI de redirection dans votre fournisseur d'identité :",
+    "mfaHelp": "OIDC utilise la politique MFA du fournisseur d'identité. Le mot de passe local et la 2FA restent disponibles. L'enregistrement des modifications invalide les sessions OIDC existantes.",
+    "unavailable": "Cette version de Monitor n'inclut pas l'environnement d'exécution cryptographique requis par OIDC.",
+    "save": "Enregistrer et vérifier le fournisseur",
+    "saving": "Vérification du fournisseur…",
+    "saved": "Paramètres OIDC enregistrés. La découverte a été vérifiée ; testez une connexion dans un autre navigateur avant de terminer votre session locale.",
+    "saveFailed": "Impossible d'enregistrer les paramètres OIDC.",
+    "login": "Continuer avec {provider}",
+    "loginFailed": "La connexion OIDC a échoué ou a expiré. Réessayez, vérifiez votre identifiant de sujet autorisé ou utilisez vos identifiants locaux.",
+    "disabledSaved": "Paramètres OIDC enregistrés. La connexion externe est désactivée.",
+    "saveDisabled": "Enregistrer les paramètres"
   }
 }
