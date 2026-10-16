@@ -163,6 +163,11 @@ fi
 # 2) CT must be running for pct exec. Auto-start stopped CTs, then
 #    restore their original stopped state on every exit path.
 STATE=$(pct status "$VMID" | awk '{print $2}')
+if [[ "$STATE" != "running" && "${EXECUTION_MODE:-}" == "scheduled" ]]; then
+  [[ -n "${SCHEDULED_STOPPED_MARKER:-}" ]] && printf '%s\n' "$SCHEDULED_STOPPED_MARKER"
+  echo "SKIPPED: CT $VMID is stopped; a scheduled update will not start it."
+  exit 8
+fi
 STARTED_BY_PROXMENUX=0
 OBSERVATION_ATTEMPTED=0
 capture_before_stop() {

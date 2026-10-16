@@ -22245,6 +22245,7 @@ def api_proxmenux_self_update_status():
 # so scheduled and manual applies cannot overlap.
 
 _APPLY_UPDATES_SCRIPT = _LXC_APPLY_UPDATES_SCRIPT
+_SCHEDULED_STOPPED_EXIT = 8
 _DOCKER_ENGINE_INTEGRATED_COMMAND = (
     'python3 /usr/local/share/proxmenux/monitor-app/usr/bin/'
     'update_docker_engine.py --vmid "$VMID"'
@@ -22284,6 +22285,23 @@ def _append_lxc_update_log(path: str | None, text: str) -> None:
             stream.write(text)
     except OSError as exc:
         print(f'[ProxMenux] scheduler: could not append update log: {exc}', flush=True)
+
+
+def _scheduled_runner_reported_stopped(result, log_path: str | None, marker: str) -> bool:
+    """Return true only for the scheduler's own pre-start stopped marker."""
+    if result.returncode != _SCHEDULED_STOPPED_EXIT or not marker:
+        return False
+    if log_path:
+        try:
+            with open(log_path, 'rb') as stream:
+                stream.seek(0, os.SEEK_END)
+                stream.seek(max(0, stream.tell() - 4096))
+                output = stream.read().decode('utf-8', errors='replace')
+        except OSError:
+            return False
+    else:
+        output = (result.stdout or '') + (result.stderr or '')
+    return marker in output
 
 
 def _prune_lxc_update_logs(vmid: int) -> None:
@@ -22679,6 +22697,7 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
     requested_targets = _normalise_schedule_targets(sched)
     targets = list(requested_targets)
     before = _lxc_update_snapshot(vmid)
+    requested_target = sched.get("target") or "both"
     deferred_targets: list[str] = []
     reasons: list[str] = []
     reboot_required: bool | None = None
@@ -22743,7 +22762,10 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
             'finalization': finalization,
         }
 
-    requested_target = sched.get("target") or "both"
+    if not originally_running:
+        reasons.append('container is stopped; scheduled update was skipped')
+        return finish('skipped', requested_target, [])
+
     if requested_targets == ['oci_image']:
         # A container installed by OCI manager Apps is updated by replacing
         # its image, through the same flow as the OCI menu, unattended.
@@ -22887,6 +22909,9 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
             target = "both" if has_os_target and has_app_targets else ("os" if has_os_target else "app")
     env = dict(os.environ)
     env["VMID"] = str(vmid)
+    env["EXECUTION_MODE"] = "scheduled"
+    scheduled_stopped_marker = f"PROXMENUX_SCHEDULED_STOPPED:{run_id}"
+    env["SCHEDULED_STOPPED_MARKER"] = scheduled_stopped_marker
     env["TARGET"] = target
     env["BACKUP"] = "1" if sched.get("backup") else "0"
     env["BACKUP_STORAGE"] = sched.get("backup_storage") or ""
@@ -22952,6 +22977,9 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
                 text=True,
                 timeout=60 * 60,
             )
+        if _scheduled_runner_reported_stopped(r, log_path, scheduled_stopped_marker):
+            reasons.append('container was stopped before scheduled update could begin')
+            return finish('skipped', target, [])
         reboot_required, reboot_packages, reboot_check_error = (
             _inspect_lxc_reboot_requirement(
                 vmid,
