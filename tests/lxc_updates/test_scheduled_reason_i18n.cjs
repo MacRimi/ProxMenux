@@ -79,8 +79,8 @@ for (const locale of ['en', 'sk']) {
     ? 'Kontajner je vypnutý; plánovaná aktualizácia sa preskočila.'
     : 'Container is stopped; scheduled update was skipped.'
   const expectedHistoricalText = locale === 'sk'
-    ? 'Kontajner bol vypnutý, keď sa mala spustiť plánovaná aktualizácia.'
-    : 'Container was stopped when the scheduled update was due to run.'
+    ? 'Kontajner bol v čase plánovanej aktualizácie vypnutý.'
+    : 'Container was stopped at the scheduled update time.'
   assert.equal(expectedCurrentReason, expectedCurrentText,
     `${locale}: stopped CT must describe its current stopped state`)
   assert.equal(expectedHistoricalReason, expectedHistoricalText,
