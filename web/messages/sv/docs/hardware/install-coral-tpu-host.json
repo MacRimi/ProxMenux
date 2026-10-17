@@ -1,0 +1,203 @@
+{
+  "meta": {
+    "title": "Installera Coral TPU på värden | ProxMenux-dokumentation",
+    "description": "Installerar Coral-komponenter på Proxmox VE efter upptäckt hårdvara: gasket/apex med DKMS för M.2 / Mini-PCIe och libedgetpu1-std för USB. Kör båda flödena om båda typerna hittas."
+  },
+  "header": {
+    "title": "Installera Coral TPU på värden",
+    "description": "Förbered Proxmox-värden för Coral och LXC-delning. Identifierar M.2 / Mini-PCIe, USB eller båda och kör rätt flöde: DKMS-moduler för PCIe och Google Edge TPU-körmiljö för USB.",
+    "section": "Hårdvara: GPU:er och Coral-TPU"
+  },
+  "intro": {
+    "title": "Vad det gör",
+    "body": "En <strong>gemensam installation med hårdvaruidentifiering</strong>. PCIe använder <code>gasket</code> och <code>apex</code> med DKMS; framtida byggen kräver kompatibel källkod och headers. USB använder <code>libedgetpu1-std</code>. Båda flödena körs om båda typerna hittas. USB-körmiljön ska finnas där appen körs; för enbart LXC behövs den inte nödvändigtvis även på värden."
+  },
+  "which": {
+    "heading": "Vilken Coral har jag?",
+    "body": "PCIe- och USB-modeller har olika format och krav. Skriptet stöder båda; identifiera din enhet före körning.",
+    "headerForm": "Formfaktor",
+    "headerDetect": "Detektering",
+    "headerInstall": "Installationstyp",
+    "headerReboot": "Starta om?",
+    "pcieForm": "M.2 / Mini-PCIe",
+    "pcieFormSub": "(M.2-kort finns med en eller två Edge TPU:er)",
+    "pcieDetect": "PCI-tillverkar-ID <code>1ac1</code>",
+    "pcieInstall": "Kernel modul (gasket + apex) via DKMS",
+    "pcieReboot": "Ja",
+    "usbForm": "USB-accelerator",
+    "usbFormSub": "(liten plastdongel)",
+    "usbDetect": "USB <code>1a6e:089a</code> (oprogrammerad) / <code>18d1:9302</code> (programmerad)",
+    "usbInstall": "Användarkörmiljö <code>libedgetpu1-std</code> från Googles APT-förråd",
+    "usbReboot": "Nej"
+  },
+  "prereqs": {
+    "title": "Innan du börjar",
+    "coral": "<strong>En ansluten Coral</strong> (M.2, Mini-PCIe eller USB) för installation. Utan upptäckt hårdvara kan skriptet städa eller ta bort befintliga komponenter, men installerar ingen ny hårdvaruväg.",
+    "coralCheck": "lspci -d 1ac1: ; lsusb | grep -E '1a6e:089a|18d1:9302'",
+    "internet": "<strong>Internetanslutning</strong> på värden för att klona PCIe-drivrutinen från GitHub eller hämta <code>libedgetpu1-std</code> från Googles APT-förråd för USB.",
+    "headers": "<strong>Kernelheaders tillgängliga via APT</strong>: <code>proxmox-headers-$(uname -r)</code>. Behövs bara för PCIe/M.2; skriptet installerar dem.",
+    "reboot": "<strong>Planera en omstart</strong> för PCIe. Skriptet försöker läsa in de byggda modulerna; en omstart kontrollerar även automatisk inläsning."
+  },
+  "hostPrepTip": {
+    "title": "Detta förbereder bara värden",
+    "body": "Förbereder värden för <em>åtkomst till enheten</em> utan att konfigurera eller testa appen. För att <em>använda</em> Coral i en kompatibel app som Frigate, följ <lxcLink>Lägg till Coral TPU i LXC</lxcLink>."
+  },
+  "running": {
+    "heading": "Kör installationen",
+    "body": "Öppna ProxMenux på värden och välj <strong>Hårdvara: GPU:er och Coral-TPU → Installera/uppdatera Coral TPU på värden</strong>.",
+    "imageAlt": "Menyval för att installera eller uppdatera Coral TPU på värden"
+  },
+  "howRuns": {
+    "heading": "Så fungerar skriptet",
+    "body": "Identifierar först hårdvaran och tar fram rätt plan. Installationen kräver bekräftelse."
+  },
+  "walkthrough": {
+    "heading": "Steg för steg",
+    "detect": {
+      "title": "Hårdvaruidentifiering",
+      "body": "Söker efter tillverkare <code>0x1ac1</code> i <code>/sys/bus/pci/devices/*/vendor</code> och använder <code>lsusb</code> för USB. Det finns <strong>två</strong> USB-ID:n beroende på firmwareläget:",
+      "items": [
+        "<code>1a6e:089a</code> — Global Unichip, <em>oprogrammerat</em> läge innan körmiljön läser in firmware.",
+        "<code>18d1:9302</code> — Google, <em>programmerat</em> läge efter att firmware lästs in."
+      ],
+      "outro": "Om varken Coral eller en befintlig installation hittas visas ett meddelande och skriptet avslutas. Befintliga komponenter kan fortfarande öppna menyn för rensning eller borttagning."
+    },
+    "prompt": {
+      "title": "Bekräfta installationen",
+      "body": "Före installationen visas en dialog med enheter och planerade komponenter. Avbryt för att hoppa över installationen. Valfri rensning av äldre komponenter har en egen tidigare bekräftelse.",
+      "imageAlt": "Översikt över Coral-enheter och installationssteg"
+    },
+    "pcie": {
+      "title": "PCIe: modulerna gasket och apex med DKMS",
+      "body": "Körs bara om en PCIe/M.2-Coral hittas. Bygger moduler för den kernel som värden kör.",
+      "items": [
+        "<strong>Rensning.</strong> Om en tidigare installation av <code>gasket-dkms</code> lämnat paketen i felaktigt tillstånd försöker skriptet rensa bort den före bygget.",
+        "<strong>Byggberoenden:</strong> <code>git</code>, <code>dkms</code>, <code>build-essential</code>, <code>proxmox-headers-$(uname -r)</code>."
+      ],
+      "cloneIntro": "<strong>Klonar drivrutinens källkod.</strong> Föredrar <feranickLink>feranick/gasket-driver</feranickLink>, annars används <googleLink>google/gasket-driver</googleLink>. Bygget kräver en kompatibel kernel. Google-koden får följande versionsberoende ändringar:",
+      "kernelPatches": [
+        "Från kernel 6.5 ersätter reservpatchen <code>no_llseek</code> med <code>noop_llseek</code>.",
+        "Kernel 6.13 eller senare: ändrar argumentet till <code>MODULE_IMPORT_NS(DMA_BUF)</code> till en strängliteral."
+      ],
+      "afterItems": [
+        "<strong>Kopierar källkoden till <code>/usr/src/gasket-1.0/</code>,</strong> skapar <code>dkms.conf</code> och registrerar med <code>dkms add</code>.",
+        "<strong>Bygger och installerar:</strong> <code>dkms build</code> följt av <code>dkms install</code>. Vid fel visas de sista 50 raderna i <code>make.log</code> om filen finns.",
+        "<strong>Skapar gruppen <code>apex</code> och udev-regler</strong> (<code>/etc/udev/rules.d/99-coral-apex.rules</code>) för att tilldela <code>/dev/apex_*</code> rätt grupp.",
+        "<strong>Försöker läsa in modulerna:</strong> <code>modprobe gasket</code> och <code>modprobe apex</code>."
+      ],
+      "imageAlt": "DKMS-bygge och inläsning av gasket/apex-moduler"
+    },
+    "usb": {
+      "title": "USB: Googles Edge TPU-körmiljö",
+      "body": "Det går bara om en USB-accelerator upptäcktes. Mycket enklare:",
+      "items": [
+        "<strong>Lägger till Googles GPG-nyckel</strong> i <code>/etc/apt/keyrings/coral-edgetpu.gpg</code>.",
+        "<strong>Lägger till APT-förrådet</strong> i <code>/etc/apt/sources.list.d/coral-edgetpu.list</code>; <code>signed-by=</code> begränsar verifieringen till dess nyckelring. Detta är enradsformatet .list, inte deb822-formatet .sources.",
+        "<strong>Installerar <code>libedgetpu1-std</code></strong>, Edge TPU-körmiljön med standardprestanda.",
+        "<strong>Läser om udev</strong> och tillämpar paketets regler på USB-enheten."
+      ],
+      "stdTitle": "Varför libedgetpu1-std och inte libedgetpu1-max?",
+      "stdBody": "Paketet <code>max</code> aktiverar högsta frekvens som stöds och ökar prestanda, effektförbrukning och värme. Kontrollera acceleratorns kylning och driftvillkor före bytet. Paketen kan inte vara installerade samtidigt; byt med <code>apt install libedgetpu1-max</code>."
+    },
+    "reboot": {
+      "title": "Valfri omstart efter PCIe-installationen",
+      "body": "Efter PCIe erbjuds omstart. Skriptet har försökt med <code>modprobe</code>; kontrollera modulerna och <code>/dev/apex_0</code> med gruppen <code>apex</code>. En planerad omstart testar automatisk inläsning. För enbart USB föreslås ingen omstart av värden.",
+      "imageAlt": "Sammanfattning och erbjudande om omstart efter PCIe-installation"
+    }
+  },
+  "legacyCleanup": {
+    "heading": "Rensa äldre gasket-dkms på värdar som bara använder USB",
+    "intro": "Om <strong>ingen PCIe/M.2-Coral hittas</strong> men en äldre installation av <code>gasket-dkms</code> finns erbjuds valfri rensning med bekräftelse.",
+    "items": [
+      "Om en PCIe/M.2-Coral hittas används det vanliga DKMS-bygget och denna rensning erbjuds inte.",
+      "Rensar bort <code>gasket-dkms</code>, gamla DKMS-registreringar och gasket-källkod samt reparerar väntande <code>dpkg</code>/APT-tillstånd.",
+      "USB-paketen <code>libedgetpu1-std</code> och <code>libedgetpu1-max</code> behålls så att USB-Coral har kvar sin körmiljö.",
+      "Manuset verifierar att arvspaketet är borta och att pakethanteringen är hälsosam innan rapporteringen av framgång."
+    ],
+    "warningTitle": "Bekräfta hårdvaran först",
+    "warningBody": "Om en förväntad PCIe/M.2-Coral saknas, avbryt rensningen och kontrollera kort, kortplats och firmware."
+  },
+  "reinstallUninstall": {
+    "heading": "Reinstallera eller avinstallera",
+    "intro": "Om en PCIe-installation med <code>gasket-dkms</code>, USB med <code>libedgetpu1-std</code>/<code>libedgetpu1-max</code> eller båda hittas visas en åtgärdsmeny.",
+    "imageAlt": "Meny för att installera om, uppdatera eller avinstallera Coral",
+    "imageCaption": "Menyn visas om någon komponent finns: en gasket-registrering i DKMS, paketet <code>libedgetpu1-*</code> eller enheter <code>/dev/apex_*</code>.",
+    "reinstallHeading": "Installera om / uppdatera",
+    "reinstallBody": "Kör den vanliga installationen: bygger om efter kernelbyte eller uppdaterar <code>libedgetpu1-*</code> från Google. Rensar först tidigare DKMS-tillstånd så att en misslyckad installation inte blockerar bygget.",
+    "uninstallHeading": "Avinstallera - vad som tas bort",
+    "uninstallIntro": "Kräver bekräftelse. LXC-appar som använder <code>/dev/apex_*</code> kan förlora åtkomsten under borttagningen eller efter omstart. Stegen är:",
+    "uninstallItems": [
+      "Försöker ta bort <code>apex</code> och <code>gasket</code> ur kerneln; aktiva användare kan förhindra detta.",
+      "Ta bort varje DKMS-registrerad <code>gasket/&lt;version&gt;</code>-post så att modulerna inte kommer tillbaka på nästa kärninstallation.",
+      "Rensar bort <code>gasket-dkms</code>, <code>libedgetpu1-std</code> och <code>libedgetpu1-max</code> och kör <code>apt-get autoremove --purge</code>.",
+      "Tar bort <code>/etc/udev/rules.d/99-coral-apex.rules</code> och återställer standardgruppen i <code>60-gasket-dkms.rules</code> om filen finns kvar.",
+      "Kontrollerar kompletterande medlemmar i <code>apex</code>. <strong>Om listan är tom</strong> försöker skriptet ta bort gruppen; annars behålls <code>apex</code> och medlemmarna listas. Användare med gruppen som primär grupp kontrolleras inte fullständigt.",
+      "Tar bort äldre förrådsfiler som <code>/etc/apt/sources.list.d/coral-edgetpu.list</code> och nyckelringar med namnet <code>coral-edgetpu-archive-keyring.gpg</code>. Den aktuella nyckelringen /etc/apt/keyrings/coral-edgetpu.gpg lämnas kvar.",
+      "Erbjuder omstart <strong>bara om PCIe var installerat</strong> för att ta bort kvarvarande moduler ur kerneln. Avinstallation av enbart USB kräver ingen omstart."
+    ],
+    "lxcWarnTitle": "LXC containrar med apex genomgång",
+    "lxcWarnBody": "Borttagning av värdens komponenter kan bryta LXC-åtkomsten. Planera underhåll om kompatibla appar som Frigate är beroende av denna Coral."
+  },
+  "updates": {
+    "heading": "Uppdateringsaviseringar",
+    "intro": "ProxMenux registrerar Coral-komponenter och kontrollerar PCIe/M.2 och USB separat. Om båda finns använder varje variant sin egen versionskälla:",
+    "headerVariant": "Variant",
+    "headerTracked": "Registrerad version",
+    "headerUpstream": "Versionskälla",
+    "pcieVariant": "PCIe / M.2",
+    "pcieTracked": "Först den registrerade versionstaggen från en lyckad installation, sedan versionen av ett fungerande <code>gasket-dkms</code>-paket, annars DKMS-modulens version. Den senare anger inte forkens patchnivå.",
+    "pcieUpstream": "Senaste GitHub-taggen för <code>feranick/gasket-driver</code>; sju dagars cache och jämförelse av byggnummer.",
+    "usbVariant": "USB",
+    "usbTracked": "<code>libedgetpu1-std</code> eller <code>libedgetpu1-max</code> apt version",
+    "usbUpstream": "Lokal <code>apt-cache policy</code> kandidat (Google Coral apt repo)",
+    "outro": "Om en ny version hittas skickar Monitor <code>coral_driver_update_available</code> via aktiverade kanaler. Aviseringen leder till installationen: välj <strong>Installera om / uppdatera</strong>.",
+    "antiTitle": "Inga upprepade aviseringar",
+    "antiBody": "En avisering per variant när den tillgängliga versionen ändras. Ingen upprepning vid varje daglig kontroll; nästa avisering kommer först vid en senare version.",
+    "rebootTitle": "PCIe-uppdateringar: planera en omstart",
+    "rebootBody": "Den ombyggda PCIe-modulen måste läsas in; en planerad omstart testar även automatisk inläsning. USB-biblioteket kräver ingen omstart av värden, men appar som använder den gamla versionen kan behöva startas om."
+  },
+  "manual": {
+    "heading": "Motsvarande manuella steg",
+    "intro": "Dessa kommandon visar huvudstegen i varje flöde för genomgång eller manuell körning.",
+    "pcieHeading": "PCIe / M.2 (gasket + apex via DKMS)",
+    "usbHeading": "USB (libedgetpu-körmiljö)"
+  },
+  "verification": {
+    "heading": "Verifiering",
+    "pcieHeading": "PCIe / M.2",
+    "usbHeading": "USB"
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "dkmsFailTitle": "DKMS-bygget misslyckas efter kerneluppdatering",
+    "dkmsFailBody": "Saknade headers är en möjlig orsak. Kontrollera <code>proxmox-headers-$(uname -r)</code> med <code>dpkg -l proxmox-headers-$(uname -r)</code> och installera vid behov. Läs byggloggen efter inkompatibilitet med kerneln. En ny körning anropar <code>cleanup_broken_gasket_dkms</code> men kan inte garantera stöd för varje kernel.",
+    "apexMissTitle": "/dev/apex_0 saknas efter omstart",
+    "apexMissBody": "Kontrollera PCIe-identifieringen och att modulen passar aktuell kernel. Prova <code>modprobe apex</code> och läs <code>dmesg | grep -iE \"apex|gasket\"</code>. Fel vid bygge, inläsning eller kortplats-/firmwareinställningar kan hindra att enheten skapas.",
+    "lxcMissTitle": "Värden ser /dev/apex_0 men inte LXC",
+    "lxcMissBody": "En synlig enhetsnod bevisar inte att enheten fungerar. Kontrollera åtkomst på värden, LXC-montering, cgroup-regler och numeriska UID/GID-rättigheter. Se <lxcLink>Lägg till Coral TPU i LXC</lxcLink>.",
+    "usbUnreachTitle": "USB Accelerator upptäckt men Frigate / TFLite kan inte nå den",
+    "usbUnreachBody": "Kontrollera reglerna från <code>libedgetpu1-std</code> och rättigheterna med <code>ls -l /dev/bus/usb/*/*</code>. Appens mappade användare/grupp behöver läs- och skrivåtkomst; root som ägare är inte ett fel i sig. Efter regeländringar, kör <code>udevadm control --reload-rules &amp;&amp; udevadm trigger</code> och återanslut vid behov.",
+    "logTitle": "Installationslogg",
+    "logBody": "Varje körning skriver <code>/tmp/coral_install.log</code>. Vid DKMS-fel läggs de sista 50 raderna från <code>/var/lib/dkms/gasket/1.0/build/make.log</code> till om filen finns. Bifoga loggen när du söker hjälp."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "label": "Lägg till Coral TPU i LXC",
+        "href": "/docs/hardware/coral-tpu-lxc",
+        "tail": " — ge en container med en kompatibel app åtkomst till värdens Coral."
+      },
+      {
+        "label": "Installera NVIDIA Drivers (Host)",
+        "href": "/docs/hardware/nvidia-host",
+        "tail": " - samma idé för NVIDIA GPU."
+      },
+      {
+        "label": "ProxMenux Monitor Hardware Tab",
+        "href": "/docs/monitor/dashboard/hardware",
+        "tail": " — Coral-panelen visar drivrutin, moduler, enheter och körmiljöstatus samt temperatur om en sensor som stöds tillhandahåller den."
+      }
+    ]
+  }
+}

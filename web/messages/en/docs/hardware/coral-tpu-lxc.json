@@ -14,18 +14,18 @@
   },
   "whenUse": {
     "heading": "When to use this",
-    "body": "Typical use case: running <frigateLink>Frigate</frigateLink>, Agent DVR, Blue Iris + CodeProject.AI, or any other object-detection app inside an LXC and wanting the Coral TPU to do the ML inference instead of the CPU. With Coral, inference latency drops from ~100 ms to ~5 ms per frame and CPU load stays near zero."
+    "body": "Use this for <frigateLink>Frigate</frigateLink> or another compatible Linux detection app in LXC. Coral runs supported ML inference instead of the CPU. Performance depends on the model and hardware; video decoding and other application work still consume resources."
   },
   "prereqs": {
     "title": "Before you start",
-    "drivers": "<strong>Coral drivers already installed on the host</strong>. This script does not install them; it only configures passthrough to the container. Run <hostLink>Install Coral TPU on the Host</hostLink> first if you haven't.",
+    "drivers": "<strong>Prepare the Coral device on the host</strong>. M.2 / PCIe needs the host driver loaded; USB needs device access and suitable permissions. See <hostLink>Install Coral TPU on the Host</hostLink>. The app runtime must be available inside the container.",
     "driversCheck": "ls /dev/apex_* 2>/dev/null ; lsusb | grep -E '1a6e:089a|18d1:9302'",
     "container": "<strong>An existing LXC container</strong>, ideally running a <strong>Debian / Ubuntu</strong>-based distro — the in-container runtime install uses <code>apt-get</code>. <strong>Non-Debian containers</strong> (Alpine, Arch, RHEL, SUSE…) are still supported in <strong>passthrough-only mode</strong>: the script detects the distro and offers a prompt to skip the <code>libedgetpu</code> APT install while still writing the device passthrough config — useful for app containers that bundle the runtime themselves (e.g. the Frigate Docker image).",
     "downtime": "<strong>Be OK with a brief downtime</strong> of the container. The script stops it to apply config changes, then starts it back up to install drivers inside. No host reboot needed."
   },
   "hostPrep": {
     "title": "Host must be prepared first",
-    "body": "If you run this script before installing Coral drivers on the host (the <code>gasket</code>/<code>apex</code> kernel module for M.2, the <code>libedgetpu</code> runtime for USB), the LXC config is still written but the container won't find the device at runtime. Order matters: <strong>host install → LXC passthrough → in-container app</strong>."
+    "body": "M.2 / PCIe needs the host <code>gasket</code>/<code>apex</code> driver and a working device node. USB needs the connected device and permissions; it does not require the host to run the app. The <code>libedgetpu</code> runtime must be available where the app runs. Follow <strong>host preparation → LXC device access → app setup</strong>."
   },
   "running": {
     "heading": "Running the script",
@@ -34,39 +34,39 @@
   },
   "howRuns": {
     "heading": "How the script runs",
-    "body": "One decision upfront (which container?), then the script handles USB and PCIe paths independently based on what it finds on the host. If both are present, both get passed."
+    "body": "Choose the target container. The script configures USB access even if no USB Coral is currently connected, then adds M.2 / PCIe access when the corresponding hardware is detected."
   },
   "walkthrough": {
     "heading": "Walking through the flow",
     "pick": {
       "title": "Pick the LXC container",
-      "body": "A dialog shows every LXC on the host (from <code>pct list</code>). Pick the one that should get the Coral. Running or stopped, it doesn't matter — the script handles both (stops it briefly to write config, then starts it back up to install drivers)."
+      "body": "The picker lists eligible containers from <code>pct list</code>; OCI-image containers are hidden and managed through OCI manager Apps. Choose the target, running or stopped. The script stops it if needed, writes configuration and starts it for runtime installation."
     },
     "gpuHint": {
       "title": "GPU passthrough suggestion (optional)",
-      "body": "If the host has a GPU (Intel iGPU, AMD, NVIDIA) and the chosen container does NOT have GPU passthrough configured, the script shows a one-time dialog suggesting you run <lxcGpuLink>Add GPU to LXC</lxcGpuLink> first. Coral is most often paired with hardware video decode (Quick Sync, VA-API, NVENC) for apps like Frigate. You can say yes (exits, run the GPU script, then come back) or no (continues with TPU-only setup)."
+      "body": "If a GPU is detected but not configured for this container, a dialog recommends <lxcGpuLink>Add GPU to LXC</lxcGpuLink> for hardware video decoding, such as Quick Sync, VA-API or NVDEC. It asks whether to continue with Coral only: Yes continues TPU setup; No exits so you can configure the GPU first."
     },
     "usb": {
       "title": "Write LXC config — USB path",
-      "body": "If a USB Accelerator is present, the script does two things: (1) writes a udev rule on the host so the device gets a stable name <code>/dev/coral</code> whatever USB port it's in, and (2) bind-mounts the <strong>whole</strong> <code>/dev/bus/usb</code> tree into the container.",
+      "body": "The script creates a host udev rule for the <code>/dev/coral</code> symlink and bind-mounts the <strong>whole</strong> <code>/dev/bus/usb</code> tree into the container. This USB configuration is written even when no Coral USB is currently connected; it exposes more than just that one device.",
       "whyTitle": "Why mount /dev/bus/usb instead of /dev/coral?",
-      "whyBody": "The USB device node path (e.g. <code>/dev/bus/usb/001/005</code>) changes when you replug the accelerator into a different port. Earlier versions of the script bind-mounted the <code>/dev/coral</code> symlink, which pointed at an old path and broke. Mounting the whole USB tree means the container sees whatever the current path is, so a replug just works."
+      "whyBody": "USB node paths such as <code>/dev/bus/usb/001/005</code> change on reconnect. Older versions bind-mounted the <code>/dev/coral</code> symlink and could retain a stale path. Mounting the whole USB tree makes the current device node visible; the app may still need to reopen it."
     },
     "pcie": {
       "title": "Write LXC config — M.2 / PCIe path",
       "body1": "If a M.2 / PCIe Coral is present on the host and <code>/dev/apex_0</code> exists (the apex kernel module is loaded), the script uses the modern Proxmox <code>dev</code> API which handles cgroup2 permissions automatically for both privileged and unprivileged containers:",
-      "body2": "If the host hasn't booted yet with the apex module loaded (you just ran <hostLink>Install Coral on Host</hostLink> and haven't rebooted), <code>/dev/apex_0</code> doesn't exist yet. The script falls back to classic cgroup2 + bind mount with <code>create=file</code> so the entries are valid even when the device hasn't materialised:",
+      "body2": "If <code>/dev/apex_0</code> is absent after <hostLink>Install Coral on Host</hostLink>, the script writes a classic cgroup2 configuration and optional bind mount with <code>create=file</code>. This does not itself create a working device:",
       "rebootTitle": "Reboot the host first if you just installed Coral drivers",
-      "rebootBody": "The fallback cgroup2 + mount will be written, but the device only actually exists after a host reboot loads the <code>apex</code> module. If you haven't rebooted, reboot now before starting the container."
+      "rebootBody": "The fallback mount does not load the host <code>apex</code> driver. Load the driver, or reboot after installation, and verify the host device exists. Re-run the script once the device is ready to apply the modern device entry, then restart the container."
     },
     "drivers": {
       "title": "Start the container + install Coral runtime inside",
-      "body": "Config changes in Proxmox LXC take effect on the next start — so the script starts the container, waits up to 15 seconds for <code>pct exec</code> to respond, then drops a bash script inside that:",
+      "body": "The script starts the container and waits up to 15 seconds for its running status, then uses <code>pct exec</code> to run the runtime installer inside. The installer:",
       "items": [
         "Runs <code>apt-get update</code>.",
         "Installs the Coral repository prerequisites: <code>gnupg</code>, <code>curl</code>, <code>ca-certificates</code>.",
         "Imports Google's Coral GPG key to <code>/etc/apt/keyrings/coral-edgetpu.gpg</code> (modern path, same as the host installer uses) and adds the <code>coral-edgetpu-stable</code> APT repository with <code>signed-by=</code>.",
-        "Installs the latest <code>libedgetpu1-std</code> (default). If you have a M.2 Coral, you'll be prompted to pick between <code>libedgetpu1-std</code> (standard) and <code>libedgetpu1-max</code> (max performance, runs hotter)."
+        "Installs <code>libedgetpu1-std</code> by default. When an M.2 Coral is detected, the script offers a choice of <code>libedgetpu1-std</code> or <code>libedgetpu1-max</code>. The choice of runtime package does not itself configure application detection settings."
       ],
       "noIgpuTitle": "Why no iGPU drivers here?",
       "noIgpuBody": "Earlier versions of this script also installed Intel <code>va-driver-all</code>, <code>intel-opencl-icd</code> and friends so the same container could do Quick Sync video decode alongside Coral inference. That doubled-up responsibility caused confusing failures when the user only wanted Coral. The iGPU side is now the exclusive job of <lxcGpuLink>Add GPU to LXC</lxcGpuLink> — run it first if you also want hardware video decode in the container.",
@@ -92,15 +92,15 @@
   "troubleshoot": {
     "heading": "Troubleshooting",
     "apexTitle": "Container started but /dev/apex_0 missing inside",
-    "apexBody": "Host apex module isn't loaded. On the host: <code>lsmod | grep apex</code> — if empty, run <code>modprobe apex</code>, or reboot if you just installed Coral drivers. Once the host has <code>/dev/apex_0</code>, restart the container: <code>pct stop &lt;ctid&gt; &amp;&amp; pct start &lt;ctid&gt;</code>.",
+    "apexBody": "Check the host driver first: <code>lsmod | grep apex</code>. If missing, try <code>modprobe apex</code> or reboot after driver installation. Once <code>/dev/apex_0</code> exists on the host, verify the LXC device entry and restart the container with <code>pct stop &lt;ctid&gt; &amp;&amp; pct start &lt;ctid&gt;</code>.",
     "replugTitle": "USB Coral disappears after replug in a different port",
     "replugBody": "This is exactly why the script mounts <code>/dev/bus/usb</code> instead of the <code>/dev/coral</code> symlink. If you're hitting this, check your LXC config has <code>lxc.mount.entry: /dev/bus/usb dev/bus/usb ...</code> and not a reference to <code>/dev/coral</code> directly. Old configs from earlier script versions may need updating — re-run the script on the same container and the config gets refreshed.",
     "alpineTitle": "Alpine / Arch / RHEL / SUSE container — runtime not installed",
-    "alpineBody": "If you chose <em>passthrough-only mode</em> when the script prompted, the LXC config is written and the Coral device is visible inside the container, but the <code>libedgetpu</code> runtime is not installed. That's by design: Google's APT repo only ships for Debian/Ubuntu. Install the runtime manually with your distro's package manager (Alpine: <code>apk add</code>; Arch: AUR; RHEL/SUSE: build from source) following Google's official guide, or run an app container that bundles the runtime — the Frigate Docker image is the canonical example: just expose the device with <code>--device /dev/apex_0:/dev/apex_0</code> (M.2) or the USB bind mount the script already wrote (USB).",
+    "alpineBody": "In <em>passthrough-only mode</em>, device configuration is written but <code>libedgetpu</code> is not installed. Use a compatible community package or build from source; check availability before using a package command such as Alpine <code>apk add</code>. An app image such as Frigate can bundle the runtime. With nested Docker, also forward the M.2 device using <code>--device /dev/apex_0:/dev/apex_0</code>, or mount the USB tree into that Docker container; the LXC mount alone does not forward it into Docker.",
     "frigateTitle": "Frigate says 'Coral EdgeTPU detected but not available'",
-    "frigateBody": "Almost always a permissions issue inside the container. Frigate runs as root by default; check the root user is in the <code>plugdev</code> group inside the container (for USB), and that the process can read <code>/dev/apex_0</code> (for M.2). <code>ls -l /dev/apex_0</code> from inside the container should show group <code>apex</code> — if not, add the GID alignment to <code>/etc/group</code> or switch the container to privileged mode.",
+    "frigateBody": "Check runtime availability, device visibility and read/write access for the actual app process. For USB, inspect permissions and any <code>plugdev</code> membership. For M.2, inspect <code>/dev/apex_0</code> with <code>ls -l /dev/apex_0</code>. A group name such as <code>apex</code> in <code>/etc/group</code> is not enough: numeric GIDs and LXC mappings must match. Also check whether another process already claims the TPU; do not switch to privileged mode as the first fix.",
     "logsTitle": "Check both host and container logs",
-    "logsBody": "On the host: <code>journalctl -u pvedaemon | grep -i coral</code>. Inside the container: check the app logs (Frigate: <code>/config/logs/</code>, CodeProject.AI: its own log directory). The classic error pattern is \"Coral detected, runtime loaded, but inference engine can't claim it\" — that's permissions 9 out of 10 times."
+    "logsBody": "On the host, inspect kernel device messages with <code>journalctl -k | grep -i -e apex -e gasket -e usb</code>. Inside the container, inspect the app logs; for nested Docker use <code>docker logs &lt;container&gt;</code>. Permissions, missing runtime, USB connectivity or another process claiming the TPU can all cause failures."
   },
   "related": {
     "heading": "Related",

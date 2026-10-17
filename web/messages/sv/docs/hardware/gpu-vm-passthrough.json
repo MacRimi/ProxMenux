@@ -1,0 +1,178 @@
+{
+  "meta": {
+    "title": "Lägg till GPU i VM | ProxMenux-dokumentation",
+    "description": "Tilldela en fysisk GPU till en Proxmox-VM. ProxMenux kontrollerar IOMMU, konfigurerar VFIO och VM-enheter samt upptäcker konflikter med andra VM:er eller LXC."
+  },
+  "header": {
+    "title": "Lägg till GPU till VM (Passthrough)",
+    "description": "Identifierar Intel-, AMD- eller NVIDIA-GPU:er för direkt åtkomst från en VM. Kontrollerar IOMMU och tillhörande enheter, konfigurerar VFIO och VM samt tillämpar kompatibilitetsregler. Kontrollera alla berörda enheter.",
+    "section": "Hårdvara: GPU:er och Coral-TPU"
+  },
+  "intro": {
+    "title": "Vad det gör",
+    "body": "Automatiserar värd- och <code>hostpci</code>-stegen i <pveLink>Proxmox-dokumentationen för PCI-passthrough</pveLink>. Kontrollerar tilldelningar i <em>andra</em> gäster och erbjuder konflikthantering. Garanterar inte stöd för varje GPU, återställningsmetod eller gästdrivrutin."
+  },
+  "who": {
+    "heading": "Vem är detta för?",
+    "body": "För direkt GPU-åtkomst från en <strong>virtuell maskin</strong> via VFIO. Så länge GPU:n är bunden till VFIO kan värdens drivrutin inte använda den, även med stoppad VM. För delning med <em>LXC</em>, använd <lxcLink>Lägg till GPU i LXC</lxcLink>."
+  },
+  "prereqs": {
+    "title": "Innan du börjar",
+    "gpu": "Fysiskt installerad <strong>kompatibel GPU</strong>. Skriptet hittar Intel, AMD och NVIDIA med <code>lspci</code>.",
+    "gpuCheck": "lspci | grep -iE 'VGA|3D|Display'",
+    "iommu": "<strong>IOMMU-stöd</strong> krävs i hårdvara och vid behov firmware (Intel VT-d eller AMD-Vi). Kontrollerar systemet och kan konfigurera Linux; ändrar inte BIOS/UEFI och bevisar inte att inaktiv IOMMU är avstängd där.",
+    "q35": "Guiden kräver <strong>q35</strong> och avvisar <code>i440fx</code>. Maskintyp och BIOS/UEFI är separata inställningar. Byte av chipset på en befintlig VM kräver planering och sker inte automatiskt.",
+    "q35Check": "qm config VMID | grep machine",
+    "moreGpus": "Förbered <strong>en annan GPU eller alternativ åtkomst</strong> via SSH, IPMI eller seriellt. Reserverad primär GPU kan släcka lokal bild. För <em>NVIDIA</em> kan ett kort utanför berörd IOMMU-grupp stanna på värden.",
+    "nvidiaInstalled": "Efter <nvidiaLink>NVIDIA-installation på värden</nvidiaLink> reserveras valda funktioner för <code>vfio-pci</code> i stället för <code>nvidia</code>. Modulen <code>nvidia</code> kan finnas kvar för <strong>andra</strong> kort utanför berörd IOMMU-grupp. Kontrollera med <code>nvidia-smi</code>."
+  },
+  "pickOne": {
+    "title": "Exklusiv VM-tilldelning eller LXC-delning",
+    "body": "En GPU bunden till <code>vfio-pci</code> för VM genomgång kan inte samtidigt användas av värden eller en LXC. Om du har två GPU kan du ägna en till varje väg. Om du bara har en, välj:",
+    "vmItem": "<strong>VM:</strong> direkt och exklusiv åtkomst för den VM:n.",
+    "lxcItem": "<strong>LXC (<lxcLink>Lägg till GPU i LXC</lxcLink>):</strong> delar enheten med värden och andra containrar via den vanliga drivrutinen."
+  },
+  "running": {
+    "heading": "Kör installationen",
+    "body": "Öppna ProxMenux och välj <strong>Hårdvara: GPU:er och Coral-TPU → Lägg till GPU i VM</strong>.",
+    "imageAlt": "Menyval för att lägga till GPU i VM"
+  },
+  "howRuns": {
+    "heading": "Så fungerar skriptet",
+    "body": "Identifiering och val föregår huvudändringarna, som bekräftas i en sammanfattning. Aktivering av IOMMU har en tidigare egen bekräftelse och kan redan ändra startkonfigurationen. Senare ljudrensning kan också kräva ett val."
+  },
+  "walkthrough": {
+    "heading": "Steg för steg",
+    "detect": {
+      "title": "Upptäck GPU och kontrollera IOMMU",
+      "body": "Kontrollerar aktiv IOMMU, inte bara parametrar. Separat bekräftelse kan lägga till <code>intel_iommu=on</code> eller <code>amd_iommu=on</code> med <code>iommu=pt</code>. Väljer <code>/etc/kernel/cmdline</code> vid ZFS-markör som <code>root=ZFS=</code>, annars <code>/etc/default/grub</code>. Heuristiken bevisar inte vilken starthanterare som används. Starta om och kontrollera faktiska grupper.",
+      "tipTitle": "Har du redan gjort efterinstallationen?",
+      "tipBody": "Om <postLink>VFIO IOMMU-stöd</postLink> redan är inställt och aktivt i kerneln godkänns kontrollen. En inställning för nästa start bevisar inte att det är aktivt nu.",
+      "imageAlt": "Lista över upptäckta GPU med leverantör och PCI-adress"
+    },
+    "preflight": {
+      "title": "Välj GPU och kör förkontroller",
+      "intro": "När du väljer GPU kör manuset en serie kontroller som kan varje blockera ytterligare framsteg:",
+      "items": [
+        "<strong>SR-IOV-kontroll.</strong> Avvisar VF:er och PF:er med aktiva VF:er eftersom flödet tilldelar hela enheter, inte konfigurerar SR-IOV. Ställ in SR-IOV separat på kompatibel hårdvara.",
+        "<strong>En enda GPU.</strong> Den lokala konsolen kan förlora bildutmatningen när VFIO reserverar GPU:n. Kontrollera först SSH- eller webbåtkomst från en annan dator.",
+        "<strong>AMD-policy för återställning.</strong> Läser <code>/sys/bus/pci/devices/&lt;pci&gt;/reset_method</code>. APU eller separat kort utan FLR <em>blockeras av guidens policy</em>; okänd undertyp utan FLR kräver bekräftelse. Det bevisar inte att funktionen är omöjlig i alla miljöer.",
+        "<strong>D3cold-läge.</strong> Guiden blockerar AMD-kort som rapporterar <code>D3cold</code> på grund av risk för aktiveringsfel. Kontrollera strömhantering och firmware.",
+        "<strong>IOMMU-grupp.</strong> Läser <code>/sys/kernel/iommu_groups/</code> och tar med <em>alla medlemmar utom bryggor</em>, även nätverks- eller lagringskontroller. Kontrollera före bekräftelse. Om IOMMU väntar på omstart planeras först bara GPU-funktionen; kontrollera isoleringen efteråt."
+      ],
+      "audioIntro": "<strong>Tillhörande ljud.</strong> Två fall beroende på var kontrollern finns:",
+      "audioDgpu": "<strong>Separat GPU:</strong> HDMI-ljud finns ofta på funktion <code>.1</code> i samma PCI-plats och tas med om det hittas. Om värden använde ljudet förlorar den åtkomsten när det reserveras för VM:n.",
+      "audioIgpu": "<strong>Utan ljudfunktion <code>.1</code>:</strong> kan ljudet finnas på en annan enhet som <code>00:1f.3</code>. Listar kontroller och drivrutiner, exempelvis <code>snd_hda_intel</code>. Som standard väljs <strong>ingen</strong>; välj bara de som behövs."
+    },
+    "pickVm": {
+      "title": "Välj mål-VM",
+      "body": "Välj VM i listan. Kräver q35 och återanvänder befintliga GPU-poster där det går. BIOS/UEFI är en separat inställning, inte en maskintyp. Chipset och gästsystemets startläge ändras inte automatiskt.",
+      "imageAlt": "Val av VM efter namn, ID och status"
+    },
+    "switchMode": {
+      "title": "Hantera befintliga tilldelningar",
+      "intro": "Manuset skannar varje VM-konfig och varje LXC-konfig på värden som letar efter GPU du valde. Tre möjliga resultat:",
+      "items": [
+        "<strong>GPU tillgänglig.</strong> Fortsätter utan att ta bort tilldelningar.",
+        "<strong>Tilldelad till en annan VM.</strong> Stoppa först källan. Välj <em>behåll poster och inaktivera automatisk start</em> eller <em>ta bort poster och behåll automatisk start</em>. Med aktiv <code>vfio-pci</code> utan nödvändiga värdändringar kan VM→VM ske utan omstart av värden.",
+        "<strong>Används av LXC.</strong> För vanliga containrar, <em>behåll konfigurationen och inaktivera automatisk start</em> eller <em>ta bort enheter och äldre <code>lxc.cgroup2.devices.allow</code>/<code>lxc.mount.entry</code>-regler men behåll automatisk start</em>. OCI behåller konfigurationen och stoppas utan automatisk start; ta bort dess GPU i Apps. Familjebaserad identifiering kan omfatta fler kort."
+      ],
+      "imageAlt": "Dialog erbjudande att ta bort GPU från en LXC innan tilldela den till VM",
+      "smartTitle": "Granska tillhörande ljud när GPU:n tas bort",
+      "smartBody": "Därefter kan en lista med <strong>möjligen oanvända ljudenheter</strong> i käll-VM:n visas. Avmarkera sådant som fortfarande behövs. Exempelvis kan <code>02:00.1</code> behållas medan <code>00:1f.3</code> föreslås tas bort. Valet styr borttagningen; alla ljud-/bildkopplingar är inte garanterade."
+    },
+    "audioPick": {
+      "title": "Välj nödvändiga kontroller om .1-ljud saknas",
+      "body": "Det händer bara för Intel iGPU och liknande uppsättningar av split-audio. En checklista visar varje PCI ljudkontroll på värden (exklusive någon redan i GPU IOMMU grupp), märkt med sin nuvarande drivrutin. Välj de du vill - eller ingen, om VM inte behöver ljud från värd hårdvaran.",
+      "imageAlt": "Checklista dialog med varje värd PCI ljudkontroller (BDF + förare) när GPU har ingen .1 syskon ljud",
+      "warnTitle": "Välj inte ljud som värden behöver",
+      "warnBody": "Ljudtilldelning kan ta bort värdens åtkomst; kontrollern kan inte samtidigt tillhöra en annan aktiv VM. Lämna onödigt ljud omarkerat och kontrollera tilldelningarna. Konsolens pip kommer inte nödvändigtvis från PCI-ljud."
+    },
+    "summary": {
+      "title": "Granska bekräftelse sammanfattning",
+      "body": "Granska slutplanen, särskilt varje IOMMU-medlem, och avbryt om något är fel. Stoppar huvudändringarna men återställer inte en tidigare separat bekräftad IOMMU-startändring.",
+      "imageAlt": "Översikt över planerade ändringar på värd och VM"
+    },
+    "hostApply": {
+      "title": "Värdförändringar tillämpas",
+      "intro": "Tillämpningsfasen ändrar värd och VM. Tillhörande ljudrensning kan fortfarande kräva ett val. Möjliga ändringar:",
+      "items": [
+        "<code>/etc/modules</code> - tillägg <code>vfio</code>, <code>vfio_iommu_type1</code>, <code>vfio_pci</code> (plus) <code>vfio_virqfd</code> på Kernels &lt; 6.2).",
+        "<code>/etc/modprobe.d/vfio.conf</code> — AMD/Intel: <code>options vfio-pci ids=&lt;vendor:device,...&gt; disable_vga=1</code>. NVIDIA: <code>softdep nvidia pre: vfio-pci</code> (<code>_drm</code>/<code>_modeset</code>/<code>_uvm</code>); den faktiska bindningen sker per BDF. AMD lägger till inläsningsordningen <code>softdep</code>: <code>vfio-pci</code> → <code>radeon</code>/<code>amdgpu</code>.",
+        "Skriver <code>/etc/modprobe.d/iommu_unsafe_interrupts.conf</code> och <code>kvm.conf</code> med <code>allow_unsafe_interrupts=1</code> och <code>ignore_msrs=1</code>. Detta är skriptets kompatibilitetsval, inga universella Windows/macOS-krav; osäkra avbrott försvagar avbrottsomappningens skydd.",
+        "<code>/etc/modprobe.d/blacklist.conf</code>: NVIDIA — <code>nouveau</code>/<code>lbm-nouveau</code>; AMD — <code>radeon</code> + <code>amdgpu</code>; Intel — <code>i915</code>. Dessa regler per tillverkare kan påverka andra kort med samma drivrutin. Modulen <code>nvidia</code> blockeras <strong>bara</strong> via <code>/etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf</code> när <em>alla</em> värdens NVIDIA-kort är registrerade för VFIO.",
+        "<code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> + <code>/etc/proxmenux/vfio-bind.bdfs</code> — <strong>Endast NVIDIA.</strong> Sätter <code>ATTR'{'driver_override'}'=\"vfio-pci\"</code> vid PCI ADD för registrerade BDF:er, inklusive berörda IOMMU-gruppfunktioner. Utanför grupperna kan <code>nvidia</code> behållas. BDF-policy delar inte upp hårdvarans IOMMU-grupp.",
+        "<strong>Endast AMD.</strong> Försöker läsa ROM från <code>/sys/bus/pci/.../rom</code> eller ACPI VFCT till <code>/usr/share/kvm/vbios_&lt;card&gt;.bin</code>. Vid framgång används <code>romfile=</code>. En giltig ROM garanterar inte GPU-initialisering.",
+        "<strong>Endast NVIDIA.</strong> Stoppar och inaktiverar <code>nvidia-persistenced</code>, <code>nvidia-powerd</code>, <code>nvidia-fabricmanager</code> bara när alla NVIDIA-kort reserverats för VFIO. Vid blandad användning behålls tjänsterna och <code>nvidia</code> för vanliga värdkort.",
+        "<code>update-initramfs -u -k all</code> - körs endast om något av ovanstående faktiskt ändrats."
+      ]
+    },
+    "vmApply": {
+      "title": "VM konfig appliceras via qm set",
+      "body": "VM-konfig på <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> uppdateras via <code>qm set</code> (aldrig via direkt <code>sed</code>):",
+      "after1": "Lägger till <code>x-vga=1</code> för AMD och NVIDIA, <strong>inte</strong> Intel. Det är skriptets policy, inget bevis för att alla Intel-iGPU:er saknar firmware eller att flaggan alltid orsakar låsningar.",
+      "after2": "Ytterligare <code>hostpciN</code>-linjer läggs till om GPUs IOMMU-grupp innehåller andra enheter du behöver för att passera tillsammans."
+    },
+    "reboot": {
+      "title": "Starta om när värdändringen kräver det",
+      "body": "Följ omstartsanvisningen vid ändringar av start eller drivrutiner och kontrollera aktiv GPU-bindning före VM-start. Sparad konfiguration bevisar inte att den är aktiv. VM→VM med rätt VFIO-läge kan slippa värdomstart.",
+      "imageAlt": "Sammanfattning skärmen visar vad som ändrades, följt av en omstart prompt"
+    }
+  },
+  "vendors": {
+    "heading": "Anmärkningar per tillverkare",
+    "nvidiaHeading": "NVIDIA",
+    "nvidiaBody": "Behåller en äldre lösning för <em>Code 43</em>: <code>hidden=1</code>, ID <code>NV43FIX</code> i <code>args</code> och <code>kvm=off</code>. Inget universellt krav för moderna GeForce-drivrutiner: NVIDIA aktiverade Windows-VM-passthrough i R465. Felet kan ha andra orsaker; kontrollera GPU och drivrutin.",
+    "nvidiaMultiHeading": "Multi-GPU NVIDIA stöd",
+    "nvidiaMultiBody": "Blandad NVIDIA-användning <strong>per BDF</strong>. Registrerar <code>vfio-pci</code>-funktioner efter adress, inte bara ID <code>vendor:device</code>. Utanför berörda grupper kan <code>nvidia</code> behållas; kontrollera med <code>nvidia-smi</code>. Isolerar inte två kort i samma grupp.",
+    "amdHeading": "AMD",
+    "amdBody": "Vissa AMD-GPU:er misslyckas med återställning efter VM-stopp. Guiden kontrollerar rapporterade egenskaper, inte alla verkliga cykler. <vendorResetLink>vendor-reset</vendorResetLink> stöder en begränsad lista och kräver kompatibel kernel samt tidig inläsning; installeras inte automatiskt. Även <em>RadeonResetBugFix</em> för Windows är hårdvaruberoende, utan allmän garanti.",
+    "intelHeading": "Intel iGPU",
+    "intelBody": "Full Intel-iGPU-passthrough och SR-IOV är skilda flöden. Guiden reserverar hela enheten för en VM utan <code>x-vga=1</code>. <sriovLink>i915-sriov-dkms</sriovLink> kräver kompatibel hårdvara och kernel; ”UHD 630+” är ingen kompatibilitetsregel. Planera alternativ värdåtkomst."
+  },
+  "verification": {
+    "heading": "Verifiering"
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "code43Title": "Kod 43 i Windows (NVIDIA)",
+    "code43Body": "Code 43 bevisar inte att KVM-döljning misslyckats. Granska <code>qm config VMID | grep -E \"cpu|args\"</code> med rätt VMID samt <code>hidden=1</code> och <code>hv_vendor_id=NV43FIX</code>. Kontrollera även gästdrivrutin, firmware och tilldelning. En ny körning kan avslutas direkt vid befintlig tilldelning.",
+    "amdResetTitle": "AMD GPU fungerar en gång, misslyckas på VM omstart",
+    "amdResetBody": "Ett återställningsfel är en möjlig orsak. Omstart eller av-/påslagning kan hjälpa tillfälligt. Kontrollera stöd och tidig inläsning av <code>vendor-reset</code>; enbart <code>softdep amdgpu pre: vendor-reset</code> garanterar inte inläsning före VFIO. Även <em>RadeonResetBugFix</em> kräver kompatibel GPU.",
+    "stuckBootTitle": "VM fastnade start / GPU inte upptäckt",
+    "stuckBootBody": "Kontrollera den verkliga adressen med <code>lspci -nnk -s PCI_ADDRESS</code>; förvänta <code>Kernel driver in use: vfio-pci</code>. Ersätt PCI_ADDRESS. Om vanlig drivrutin är aktiv, granska bindningspolicyn, inte bara <code>/etc/modprobe.d/blacklist.conf</code>; NVIDIA använder BDF-status. Läs <code>dmesg | grep vfio</code>. Efter rättning, kör <code>update-initramfs -u -k all</code> och följ omstartsplanen.",
+    "darkTitle": "Värd konsol går mörkt efter omstart och jag kan inte SSH",
+    "darkBody": "Svart bild bevisar inte att värden är avstängd. Om även SSH misslyckas, kontrollera nätverk och kontroller i IOMMU-gruppen. Återfå åtkomst via IPMI, seriell konsol eller räddningsmiljö; granska <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> och återställ bara berörda tilldelningar och regler. Radera inte annan konfiguration.",
+    "logTitle": "Kolla installationsloggen",
+    "logBody": "Varje körning skriver <code>/tmp/add_gpu_vm.log</code>. Bifoga loggen när du söker hjälp."
+  },
+  "revert": {
+    "heading": "Återställ ändringar manuellt",
+    "intro": "Stoppa VM:n och ta bara bort berörda PCI-tilldelningar under Hårdvara eller med det uttryckliga indexet nedan. Det lämnar inte tillbaka GPU:n till värdens drivrutin. Använd Byt GPU-läge för det steget och kontrollera berörda gäster före bekräftelse."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "label": "Installera NVIDIA Drivers (Host)",
+        "href": "/docs/hardware/nvidia-host",
+        "tail": " — förbered drivrutinen för kort som stannar på värden; en VFIO-bunden GPU kan inte använda den samtidigt."
+      },
+      {
+        "label": "Lägg till GPU i LXC",
+        "href": "/docs/hardware/igpu-acceleration-lxc",
+        "tail": " - alternativ modell: dela GPU med flera containrar istället för att dedikera den till en VM."
+      },
+      {
+        "label": "Byt GPU-läge (VM ↔ LXC)",
+        "href": "/docs/hardware/switch-gpu-mode",
+        "tail": " — växla samma GPU mellan delning och exklusiv tilldelning."
+      },
+      {
+        "label": "GPU Passthrough kommandon",
+        "href": "/docs/help-info/gpu-commands",
+        "tail": " - lspci, IOMMU-verifiering, qm set hostpci referens."
+      }
+    ]
+  }
+}

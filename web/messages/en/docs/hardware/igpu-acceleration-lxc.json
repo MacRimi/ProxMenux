@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "What this does",
-    "body": "Adds <code>dev&lt;N&gt;</code> entries to the LXC config (<code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>) so the container sees <code>/dev/dri/*</code>, <code>/dev/kfd</code> or <code>/dev/nvidia*</code> — whichever applies to your GPU. Then it boots the container, detects the distro inside, and installs the matching userspace drivers (Mesa, intel-media-driver, NVIDIA runtime…) so apps like Plex, Jellyfin or Frigate actually use the GPU for transcoding. GIDs (<code>video</code>, <code>render</code>) are aligned between host and container so permissions match."
+    "body": "Adds <code>dev&lt;N&gt;</code> entries to <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> for applicable <code>/dev/dri/*</code>, <code>/dev/kfd</code> or <code>/dev/nvidia*</code> nodes. It starts the container and installs userspace packages for its distribution, aligning <code>video</code> and <code>render</code> groups. Application acceleration still requires compatible hardware, libraries and app configuration."
   },
   "compare": {
     "heading": "LXC sharing vs VM passthrough",
@@ -37,12 +37,12 @@
       {
         "feature": "Reboot required?",
         "lxc": "Usually no (just restart the CT)",
-        "vm": "Yes, always"
+        "vm": "When host driver or IOMMU setup changes; not for every VM assignment"
       },
       {
-        "feature": "Supports running any OS?",
+        "feature": "Guest operating systems",
         "lxc": "Only Linux (LXC is Linux-only)",
-        "vm": "Windows, macOS, any Linux"
+        "vm": "Supported guest OS with a compatible GPU driver"
       }
     ]
   },
@@ -53,7 +53,7 @@
     "vfio": "<strong>The GPU is NOT bound to vfio-pci.</strong> If the GPU is currently assigned to a VM via passthrough, it's invisible to the host kernel driver and the LXC can't use it. The script detects this and offers to run <switchLink>Switch GPU Mode</switchLink> for you.",
     "nvidia": "<strong>For NVIDIA only:</strong> the NVIDIA host driver must already be installed — ProxMenux needs to match the container's userspace libs to the host version. If you haven't done it yet, run <nvidiaLink>Install NVIDIA Drivers on the Host</nvidiaLink> first.",
     "nvidiaCheck": "nvidia-smi",
-    "container": "<strong>An existing LXC container.</strong> The script operates on a container you already created — it doesn't create one. The container should ideally be <strong>privileged</strong> (unprivileged works but needs UID/GID mapping which the script does not configure)."
+    "container": "<strong>An existing LXC container.</strong> The script does not create one. Both privilege modes are supported; a <strong>privileged</strong> container is not universally required. Device entries and the application’s numeric group permissions still need to match."
   },
   "unpriv": {
     "title": "Works on both privileged and unprivileged containers",
@@ -66,7 +66,7 @@
   },
   "howRuns": {
     "heading": "How the script runs",
-    "body": "Two phases: all the decisions upfront, then all the changes in one go. Nothing on your container is touched until you confirm."
+    "body": "Select the container and GPU families, then pass the checks. Processing then stops the container and changes its configuration; there is no additional final confirmation. Optional VFIO cleanup has its own confirmation and can change the host earlier."
   },
   "walkthrough": {
     "heading": "Walking through the flow",
@@ -78,12 +78,12 @@
     },
     "pickCt": {
       "title": "Pick an LXC container",
-      "body": "You'll see a list of every LXC on the host with its ID and name. Pick the one that should get the GPU. The container can be running or stopped — the script handles both (stops it briefly during config, restarts it, and leaves it in its original state at the end).",
+      "body": "Lists eligible LXC containers by ID and name; OCI containers are excluded and use OCI manager Apps for devices. A running container is stopped for configuration, started for driver installation and normally returned to its original running/stopped state.",
       "imageAlt": "Dialog listing existing LXC containers to choose from"
     },
     "selectGpu": {
       "title": "Select the GPU(s) to add",
-      "body": "If more than one GPU is present, you get a checklist. You can add multiple to the same container (e.g. an Intel iGPU for Quick Sync + an AMD dGPU for ROCm). If only one GPU is detected, it's auto-selected.",
+      "body": "The checklist selects detected vendor families, not an isolated PCI device. Intel/AMD add the visible DRI nodes used by the script; NVIDIA adds its available device nodes, potentially covering multiple cards. One detected family is selected automatically. Verify the resulting device list, particularly on multi-GPU hosts.",
       "imageAlt": "Checklist showing detected GPUs (Intel / AMD / NVIDIA) with vendor and PCI address"
     },
     "preflight": {
@@ -91,14 +91,14 @@
       "imageAlt": "Dialog offering to run Switch GPU Mode when the selected GPU is still bound to vfio-pci for VM passthrough",
       "intro": "Three checks, any of which can block or redirect you:",
       "items": [
-        "<strong>SR-IOV.</strong> If the selected GPU is a Virtual Function (VF) or a Physical Function with active VFs, LXC passthrough doesn't apply — the device is managed by the SR-IOV driver. Blocked.",
+        "<strong>SR-IOV guard.</strong> This assistant blocks a selected VF or PF with active VFs. That is a limitation of its broad device selection, not a universal prohibition on SR-IOV with LXC; configure those devices separately.",
         "<strong>Bound to vfio-pci.</strong> If the GPU is currently held by VFIO for VM passthrough, the host kernel can't create <code>/dev/dri/*</code> or <code>/dev/nvidia*</code> nodes for it. The script offers to run <switchLink>Switch GPU Mode</switchLink> which undoes the VFIO binding; you'll likely need a reboot before re-running Add GPU to LXC.",
         "<strong>Already configured.</strong> If the container already has every dev node for the selected GPU, the script says so and exits cleanly. If it's partially configured, it continues with only the missing pieces."
       ]
     },
     "applyConfig": {
       "title": "Apply the LXC config changes",
-      "body1": "The script stops the container, edits <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>, and adds <code>dev&lt;N&gt;</code> entries with the right GIDs for the selected GPUs. Using <code>dev:</code> entries (over the older <code>lxc.mount.entry</code> lines) is the modern Proxmox way — group permissions are set at config parse time instead of at mount time.",
+      "body1": "Stops the container if running and edits <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>. Numbered <code>dev&lt;N&gt;</code> entries carry the chosen group IDs. The <code>dev:</code> device mechanism replaces manual <code>lxc.mount.entry</code> rules in this assistant; inspect the resulting configuration and permissions.",
       "body2": "Example after Intel + NVIDIA on the same container:"
     },
     "installDrivers": {
@@ -123,24 +123,24 @@
       "debianIntel": "apt-get install va-driver-all intel-opencl-icd vainfo",
       "debianNvidia": "extract host <code>.run</code> → <code>pct push</code> → run with <code>--no-kernel-modules --no-dkms</code>",
       "whyTitle": "Why the NVIDIA .run dance on Debian",
-      "whyBody": "Debian / Ubuntu don't ship NVIDIA packages with a version granular enough to match the host driver byte-for-byte. The userspace libs inside the container <strong>must match the kernel module version</strong> loaded on the host, or <code>nvidia-smi</code> fails with a version mismatch. ProxMenux solves this by using the exact same <code>.run</code> installer that was used for the host — extracted, tarred, pushed into the container with <code>pct push</code>, and run with <code>--no-kernel-modules --no-dkms</code> so only the userspace is touched."
+      "whyBody": "Repository packages may not match the host driver. Container libraries <strong>must match the loaded host module</strong> for NVML tools such as <code>nvidia-smi</code>. The Debian/glibc path uses the cached host-version <code>.run</code> installer, extracts and packs it on the host, transfers it with <code>pct push</code> and installs with <code>--no-kernel-modules --no-dkms</code>. Alpine and Arch use repository packages, whose versions still need checking."
     },
     "alignGids": {
       "title": "Align GIDs and restore state",
-      "body1": "Device files on the host are owned by group <code>video</code> (GID 44) or <code>render</code> (GID 104). The container's distro may ship different GID numbers for those groups, which would make the GPU nodes unreachable from inside. The script rewrites <code>/etc/group</code> in the container so <code>video:44</code> and <code>render:104</code> match exactly.",
-      "body2": "Finally, it restores the container to its original state — if it was stopped when you started, it gets stopped again. If it was running, it stays running."
+      "body1": "Reads the host GIDs for <code>video</code> and <code>render</code>, using 44/104 only as fallbacks, then edits <code>/etc/group</code> inside the container to match. Entries such as <code>video:44</code> and <code>render:104</code> are examples, not universal IDs. Verify app membership and effective device permissions.",
+      "body2": "On the normal completion path, a container that was initially stopped is stopped again; one that was running stays running. If startup or installation fails, verify its final state and the log."
     }
   },
   "vendors": {
     "heading": "Vendor-specific notes",
     "intelHeading": "Intel iGPU",
-    "intelBody": "Most common path — great for Plex / Jellyfin / Frigate hardware transcoding via <em>Quick Sync</em>. The container gets <code>/dev/dri/card0</code> (legacy) and <code>/dev/dri/renderD128</code> (modern render-only node — what apps actually use). No host-side changes needed; the <code>i915</code> driver on the host already created the nodes.",
+    "intelBody": "Intel media acceleration, including <em>Quick Sync</em>, depends on GPU generation, codecs and app configuration. The script shares existing nodes such as <code>/dev/dri/card0</code> and <code>/dev/dri/renderD128</code>; numbering can differ. The host must already provide them through its native driver, for example <code>i915</code>.",
     "amdHeading": "AMD",
-    "amdBody": "Same DRI nodes as Intel for graphics / VA-API. If <code>/dev/kfd</code> exists on the host (AMD compute / ROCm kernel support), the script also adds it so containers can do OpenCL / ROCm workloads. Mesa VA drivers cover the video decode side.",
+    "amdBody": "AMD uses DRI nodes for Mesa/VA-API. If the host exposes <code>/dev/kfd</code>, the script also shares it. ROCm/OpenCL workloads still require supported hardware and compatible userspace packages; sharing the device does not install a complete ROCm stack.",
     "nvidiaHeading": "NVIDIA",
-    "nvidiaBody": "Adds every <code>/dev/nvidia*</code> node the host exposes. The critical piece is <strong>driver-version matching</strong>: host module version and container userspace lib version must be identical, otherwise <code>nvidia-smi</code> inside the container fails. ProxMenux captures the host version at detection time and uses the same <code>.run</code> file to install the container userspace. For Debian containers the install bumps container memory to 2 GB temporarily (installer needs ~1.5 GB free to extract) and restores it afterwards.",
-    "updateTitle": "After you update the host NVIDIA driver, re-run this script",
-    "updateBody": "When you upgrade the NVIDIA driver on the host, the container's userspace libs stay on the old version and <code>nvidia-smi</code> inside the container breaks. ProxMenux's <nvidiaLink>NVIDIA host installer</nvidiaLink> detects containers with NVIDIA passthrough and offers to update them automatically — but if you skipped that prompt, just run Add GPU to LXC again on the same container and it'll refresh the userspace."
+    "nvidiaBody": "Shares available <code>/dev/nvidia*</code> nodes. <strong>Driver-version matching</strong> remains essential for <code>nvidia-smi</code>. Debian/glibc uses the cached host-version <code>.run</code>; Alpine/Arch use repository packages. If the Debian path finds less than 2048 MiB configured RAM, it offers a temporary increase and later restores it; it also requires at least 1500 MiB of free disk space.",
+    "updateTitle": "After a host NVIDIA update, check container library versions",
+    "updateBody": "Old container libraries can make <code>nvidia-smi</code> report a mismatch. The <nvidiaLink>NVIDIA host installer</nvidiaLink> offers container updates. Re-running Add GPU to LXC may exit when its device entries already exist, so it is not a guaranteed library-refresh command. Check the installed versions and update the appropriate container packages or userspace installer."
   },
   "verification": {
     "heading": "Verification",
@@ -149,11 +149,11 @@
   "troubleshoot": {
     "heading": "Troubleshooting",
     "mismatchTitle": "nvidia-smi: Failed to initialize NVML: Driver/library version mismatch",
-    "mismatchBody": "Container userspace version ≠ host module version. Run Add GPU to LXC again on that container — the script extracts the current host <code>.run</code> and re-installs userspace matching.",
+    "mismatchBody": "Container libraries do not match the loaded host module. Inspect versions and update the container userspace appropriately. The cached <code>.run</code> supports the Debian/glibc path, but Add GPU to LXC can exit early when all device entries already exist.",
     "denyTitle": "Permission denied on /dev/dri/renderD128 inside the container",
-    "denyBody": "Usually one of: (1) container is unprivileged without UID/GID mapping to host <code>render</code> group; (2) the user inside the container isn't in the <code>render</code> group. Fix: add the user to <code>render</code> inside the container (<code>usermod -aG render &lt;user&gt;</code>), or switch to privileged mode if the workload is trusted.",
+    "denyBody": "Check the device entry and numeric <code>render</code> group permissions, then whether the app user belongs to <code>render</code>. Where available, add that user to <code>render</code> with <code>usermod -aG render &lt;user&gt;</code>, replacing the placeholder with the actual account. Restart the application session to apply membership; changing privilege mode is not a general permissions fix.",
     "vainfoTitle": "vainfo says: VA-API version 1.xx; failed to initialize",
-    "vainfoBody": "The VA-API runtime is there but no suitable driver was installed. On Intel, install <code>intel-media-driver</code> (newer gens) or <code>i965-va-driver</code> (older gens). On AMD, <code>mesa-va-drivers</code>. Re-run the script if in doubt.",
+    "vainfoBody": "Check device access and the selected VA-API driver. Package names vary by distribution: examples include <code>intel-media-driver</code> for supported newer Intel GPUs, <code>i965-va-driver</code> for supported older ones, and <code>mesa-va-drivers</code> for AMD. The message alone does not prove a missing package.",
     "logTitle": "Install log",
     "logBody": "Every run writes to <code>/tmp/add_gpu_lxc.log</code> on the host. Include it when asking for help on GitHub."
   },
