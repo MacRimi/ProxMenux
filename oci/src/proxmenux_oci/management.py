@@ -332,7 +332,7 @@ def _work_backup_ready(project, ui, vmid):
     import oci_instances as instances
     import oci_work_backup
     try:
-        state = oci_work_backup.status(instances.ROOT, vmid)
+        state = oci_work_backup.status(instances.ROOT, vmid, only_needed=True)
     except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError):
         # What cannot be measured here is told by the engine when it stops.
         return True
@@ -416,8 +416,6 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
             return _toggle_watchdog(project, ui, row['vmid'], watched)
         if action == 'remove':
             return _remove(project, ui, row['vmid'])
-        if action != 'modify' and not _work_backup_ready(project, ui, row['vmid']):
-            return False
         record = instances.read(instances.ROOT, row['vmid'])
         import oci_instance_reconcile as reconcile
         try:
@@ -462,12 +460,12 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
                 wizard.close()
             if not approved:
                 return False
-            # Opening or cancelling the editor needs no disk/storage probes.
-            # Keep the existing backup checks after the user confirms edits.
-            if not _work_backup_ready(project, ui, row['vmid']):
-                return False
         elif not ui.review(translate('If the image channel has a new version, the CT is stopped, backed up and verified, and replaced with the new image to update the container. If the update fails after the container was changed, the backup is restored. An update that stops halfway is recovered from the OCI management menu.'),
                            translate('Update OCI'), question=translate('Update now?'), default=True):
+            return False
+        # Opening/cancelling a confirmation needs no disk or storage probes.
+        # Both accepted operations retain this check before the backend starts.
+        if not _work_backup_ready(project, ui, row['vmid']):
             return False
         command = [sys.executable, str(project / 'remote/oci_update_current.py'), str(row['vmid']),
                    *lifecycle_args]
@@ -518,7 +516,10 @@ def _removal_summary(project, vmid):
             record = instances.read(instances.ROOT, member)
         except (OSError, ValueError, KeyError):
             record = {}
-        config = oci_remove.guest_config(member)
+        try:
+            config = _selected_configuration(member)
+        except (OSError, RuntimeError, subprocess.SubprocessError):
+            config = None
         cfg = parse_config(config) if config else {}
         name = (cfg.get('hostname') or (record.get('stack_member') or {}).get('name')
                 or record.get('deployment', {}).get('hostname') or '')
