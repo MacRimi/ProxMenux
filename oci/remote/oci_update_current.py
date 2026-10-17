@@ -8,6 +8,7 @@ import re
 import shlex
 import subprocess
 import sys
+import tarfile
 import tempfile
 
 import oci_instances as instances
@@ -56,7 +57,7 @@ def run_quiet(args, error, capture=False):
                 process.wait()
 
 
-def resolve_archive(desired, config, current=None, check=None, required_digest=None):
+def resolve_archive(desired, config, current=None, check=None, required_digest=None, local_archives=()):
     # Shared by individual and coordinated operations; no guest mutation here.
     # When the registry still serves the current digest nothing is downloaded.
     reference = desired['template']['container_contract']['image']['reference']
@@ -83,6 +84,27 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
         return None, digest
     if check:
         check()
+    verifier = Path(__file__).with_name('verify_oci_archive.py')
+
+    def intact(path):
+        try:
+            run_quiet([sys.executable, str(verifier), str(path)],
+                      translate('The image did not pass the integrity check'))
+            return same_image(candidate, image_from_archive(str(path)))
+        except (RuntimeError, OSError, ValueError, KeyError, tarfile.TarError):
+            return False
+
+    # Initial installations and updates use different archive names. The
+    # instance record knows the actual archive; validate it before looking
+    # only for the deterministic update-cache name. Never delete a rejected
+    # recorded path: another instance may still refer to it.
+    for saved in local_archives:
+        path = Path(saved) if saved else None
+        if path and not path.is_symlink() and path.is_file():
+            msg_info(translate('Verifying the image integrity...'))
+            if intact(path):
+                msg_ok(translate('Using the verified image from the cache'))
+                return path, digest
     storage = desired['deployment']['template_storage']
     if not re.fullmatch(r'[A-Za-z0-9_-]+', storage):
         raise ValueError(translate('Invalid template storage'))
@@ -91,16 +113,6 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
     archive.parent.mkdir(parents=True, exist_ok=True)
     if archive.is_symlink():
         raise ValueError(translate('Unsafe OCI archive path'))
-    verifier = Path(__file__).with_name('verify_oci_archive.py')
-
-    def intact(path):
-        try:
-            run_quiet([sys.executable, str(verifier), str(path)],
-                      translate('The image did not pass the integrity check'))
-        except RuntimeError:
-            return False
-        return same_image(candidate, image_from_archive(str(path)))
-
     if archive.exists():
         msg_info(translate('Verifying the image integrity...'))
         if intact(archive):
@@ -181,10 +193,23 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
         changes = transaction.external_changes(record, config)
         transaction.preflight(record, desired, config)
         msg_ok(translate('Container checked'))
-        current = record['observed']['image'] if operation == 'update' else None
-        archive, digest = resolve_archive(desired, config, current, lambda: work_backup.locate(
-            instances.location(instances.ROOT, vmid).parent / 'transactions' / 'check', [vmid], record, vmid))
+        resource_changes = None
+        if operation == 'recreate' and not keep_backup:
+            import oci_resource_modify
+            resource_changes = oci_resource_modify.changes(record, desired, config)
+        current = record['observed']['image'] if operation == 'update' or resource_changes else None
+        check = lambda: work_backup.locate(
+            instances.location(instances.ROOT, vmid).parent / 'transactions' / 'check', [vmid], record, vmid)
+        if operation == 'recreate':
+            archive, digest = resolve_archive(desired, config, current, check,
+                local_archives=[record['observed'].get('archive_path')])
+        else:
+            archive, digest = resolve_archive(desired, config, current, check)
         if archive is None:
+            if resource_changes:
+                import oci_operation_notice
+                with oci_operation_notice.operation([vmid], 'modify', application_name(record, vmid)):
+                    return oci_resource_modify.apply(instances.ROOT, record, desired, config, resource_changes)
             msg_ok(translate('The image is already up to date; nothing was changed.'))
             return
         file_storage = None
