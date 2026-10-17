@@ -7,7 +7,7 @@
   },
   "header": {
     "title": "Host: Mount Samba condividere su Host",
-    "description": "Montare una quota Samba esterna (SMB / CIFS) — da un NAS, una scatola di Windows, un'esportazione TrueNAS SMB — sull'host Proxmox. Scegliere uno o entrambi i metodi: registrarlo come storage Proxmox (visibile in Datacenter > Storage) e/o aggiungere un semplice supporto /etc/fstab su un percorso che si sceglie, con uid/gid/file_mode così non privatizzati LXC possono legare-montare e scrivere senza alcuna modifica all'interno del contenitore.",
+    "description": "Monta sull’host Proxmox una condivisione Samba esterna (SMB / CIFS) proveniente da un NAS, un PC Windows o un’esportazione SMB TrueNAS. Puoi registrarla come storage Proxmox visibile in Datacenter > Storage, aggiungere un montaggio tramite /etc/fstab in un percorso a scelta oppure usare entrambi i metodi. Le opzioni uid/gid/file_mode aperte consentono agli LXC non privilegiati di leggere e scrivere tramite bind mount, senza modifiche nel container.",
     "section": "Archiviazione e condivisione · Host"
   },
   "intro": {
@@ -94,7 +94,7 @@
     "credsBody": "Quando si utilizza l'autenticazione utente, la password NON è scritta in <code>/etc/pve/storage.cfg</code>. Proxmox lo mantiene in <code>/etc/pve/priv/storage/&lt;storage-id&gt;.pw</code> — modalità <code>0600</code>, proprietario <code>root</code>, membro della sincronizzazione del cluster. Se successivamente si modifica la password sul server Samba, utilizzare <code>pvesm set &lt;id&gt; --password &lt;new&gt;</code> o rimuovere e ri-add tramite ProxMenux."
   },
   "fstabBranch": {
-    "heading": "Metodo B — Supporto per fstab ospitante",
+    "heading": "Metodo B — solo montaggio tramite fstab sull’host",
     "intro": "Se <em>As host fstab mount only</em> è contrassegnato, ProxMenux chiede un percorso di montaggio host e opzioni persistenti, scrive un file di credenziali di sola radice (modalità utente), quindi monta e scrive l'ingresso a <code>/etc/fstab</code>:",
     "items": [
       "<strong>Host mount path</strong> — default <code>/mnt/&lt;share-name&gt;</code>. Dev'essere un percorso assoluto. Se qualcosa è già montato là, o una voce fstab esiste, ProxMenux offre per sostituirla.",
@@ -111,7 +111,7 @@
     ],
     "lxcTitle": "Usare da un LXC non privilegiato il filesystem montato tramite fstab",
     "lxcBody": "Poiché il client CIFS applica <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code>, i file montati appartengono all’UID 0 dell’host con modalità 0777. Un LXC non privilegiato che accede al percorso tramite bind mount usa i permessi degli “altri”: root nel CT corrisponde all’UID 100000 sull’host. Questo consente lettura e scrittura. <strong>Non viene modificato nulla all’interno del container</strong>: nessun <code>chown</code> nel CT, nessuna configurazione di gruppi e nessuna modifica in <code>/etc/lxc</code> oltre alla singola voce di bind mount <code>mp</code>. Lo script mostra il comando <code>pct set</code> esatto alla fine; in alternativa usa <mountLink>LXC Mount Manager</mountLink> per collegare il percorso.",
-    "noUiTitle": "Il supporto fstab NON è un deposito Proxmox",
+    "noUiTitle": "Il montaggio tramite fstab NON è uno storage Proxmox",
     "noUiBody": "Il montaggio tramite fstab sull’host rimane intenzionalmente invisibile nell’interfaccia web Proxmox. Non compare in <em>Datacenter > Storage</em>, non è selezionabile durante la creazione di VM o CT e non può essere scelto come destinazione dei processi di backup Proxmox. È soltanto un percorso nel filesystem dell’host. Per avere anche l’integrazione nell’interfaccia, seleziona <em>entrambi</em> i metodi."
   },
   "manual": {

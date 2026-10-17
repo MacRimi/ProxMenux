@@ -104,7 +104,7 @@
     "credsBody": "Ak ste overili užívateľským menom + heslom, ProxMenux zapíše súbor s údajmi iba pre koreň na <code>/etc/samba/credentials/&lt;server&gt;_&lt;share&gt;.cred</code> (mode <code>0600</code>) s <code>username=</code> a <code>password=</code>, a odkazuje na to v zápise fstab cez možnosť pripojenia <code>credentials=</code>. Jednoduchý text nikdy nepristane v <code>/etc/fstab</code>. Pre režim Hosť je možnosť <code>guest</code> pripojená namiesto toho a nie je vytvorený žiadny súbor s údajmi.",
     "appliesIntro": "Keď potvrdíte, skript:",
     "applies": [
-      "<code>mkdir -p</code> cesta k montáži.",
+      "Vytvorí adresár bodu pripojenia pomocou <code>mkdir -p</code>.",
       "<code>mount -t cifs -o &lt;opts&gt;,credentials=&lt;file&gt;</code> (alebo <code>guest</code>) <code>//&lt;srv&gt;/&lt;share&gt; &lt;path&gt;</code>.",
       "Napíše jednoriadkový zápis do <code>/etc/fstab</code>: <code>//&lt;srv&gt;/&lt;share&gt; &lt;path&gt; cifs &lt;opts&gt; 0 0</code>.",
       "Spustí <code>systemctl daemon-reload</code> takže systemd zachytí novú fstab položku."

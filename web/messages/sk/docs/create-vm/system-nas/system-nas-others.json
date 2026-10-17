@@ -131,7 +131,7 @@
     "heading": "Automatické funkcie VM",
     "efiTitle": "disk EFI",
     "efiBody": "Keď je vybraté OVMF (UEFI), ProxMenux automaticky vytvorí 4 MB EFI disk na úložisku, ktoré si vyberiete, naformátovaný tak, aby zodpovedal typu úložiska (surový pre úložisko založené na adresároch).",
-    "isoTitle": "Montáž ISO",
+    "isoTitle": "Pripojenie ISO",
     "isoBodyRich": "Inštalácia ISO je stiahnutá (v prípade potreby) a pripojený k <code>ide2</code> ako CD-ROM, pripravený pre prvý štart.",
     "guestTitle": "QEMU agent",
     "guestBody": "Kanál hosťujúceho agenta je zapnutý v konfigurácii VM. Stále musíte nainštalovať agenta vnútri hosťa po NAS OS je hore."

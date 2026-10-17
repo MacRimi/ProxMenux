@@ -93,13 +93,13 @@
     "guestIntro": "variante ospite — nessun file di credenziali necessario:"
   },
   "view": {
-    "heading": "Visualizza i supporti correnti",
+    "heading": "Visualizzare i montaggi correnti",
     "body": "Elenca i punti di montaggio CIFS attivi nel CT tramite <code>mount -t cifs</code> e tutte le righe CIFS del suo <code>/etc/fstab</code>. Per ciascuna voce di fstab mostra se il montaggio è attivo, così puoi individuare quelli permanenti che non sono stati ripristinati all’avvio."
   },
   "unmount": {
     "heading": "Condividere Samba",
     "body": "Riunisce i montaggi attivi e le voci di fstab in un elenco. Per l’elemento scelto <strong>rimuove la riga corrispondente da <code>/etc/fstab</code></strong> e il relativo file delle credenziali. Lo script non esegue <code>umount</code> sul filesystem attivo: segnala che occorre riavviare il CT per completare lo smontaggio.",
-    "warnTitle": "Lo script rimuove le voci fstab, non i supporti dal vivo",
+    "warnTitle": "Lo script rimuove le voci da fstab, senza smontare i filesystem attivi",
     "warnBody": "Segue lo stesso criterio del client NFS: <code>umount</code> fallisce con “device busy” se il montaggio è ancora in uso. Rimuovere la voce da fstab impedisce che venga ripristinato al prossimo avvio del CT. Per smontarlo <em>subito</em>, esegui manualmente <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> dopo la fine dello script."
   },
   "test": {
@@ -124,7 +124,7 @@
     "denyBody": "Le credenziali sono state convalidate ma la quota nega l'accesso. Controllare sul lato server se l'utente ha autorizzazioni su quella specifica quota (validazione conferma solo il login, non per-share ACLs). Verificare anche se il server richiede una specifica versione del protocollo SMB: aggiungere <code>vers=3.0</code> (o <code>2.1</code>, <code>2.0</code>) alle opzioni di montaggio.",
     "utf8Title": "I nomi dei file UTF-8 / non-ASCII sono raggruppati",
     "utf8Body": "Le opzioni di default includono <code>iocharset=utf8</code>, ma alcune configurazioni del server segnalano una pagina di codice inaspettata. Se i nomi di file con accenti / simboli sembrano sbagliati, anche provare <code>nounix</code> (alcuni server Samba Linux ne hanno bisogno quando il client è anche Linux) o impostare il lato server a <code>unix extensions = no</code>.",
-    "bootTitle": "Il supporto permanente ha successo ma non arriva al boot",
+    "bootTitle": "Il montaggio permanente riesce, ma non viene ripristinato all’avvio",
     "bootBody": "Le cause più comuni sono la rete non ancora pronta quando il CT tenta il montaggio, il server non raggiungibile all’avvio oppure DNS non disponibile. Le opzioni <code>_netdev,x-systemd.automount,noauto</code> dello script risolvono il primo caso; automount attende normalmente il primo accesso. Per problemi DNS usa l’IP del server anziché il nome host."
   },
   "related": {

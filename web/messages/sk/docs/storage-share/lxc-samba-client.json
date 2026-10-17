@@ -124,7 +124,7 @@
     "denyBody": "Dôveryhodnosť bola potvrdená, ale podiel popiera prístup. Skontrolujte na strane servera, či užívateľ má na tejto konkrétnej akcii práva (validácia potvrdzuje len prihlásenie, nie na zdieľané ACL). Tiež skontrolujte, či server vyžaduje konkrétnu verziu protokolu SMB: pripojiť <code>vers=3.0</code> (alebo <code>2.1</code>, <code>2.0</code>) k možnosti pripojenia.",
     "utf8Title": "UTF-80 / non-ASCII názvy súborov sú rozpracované",
     "utf8Body": "Predvolené možnosti zahŕňajú <code>iocharset=utf8</code>, ale niektoré konfigurácie serverov hlásia neočakávanú stránku kódov. Ak mená súborov s akcentmi / symbolmi vyzerajú zle, skúste aj <code>nounix</code> (niektoré servery Linux Samba to potrebujú, keď je klient tiež Linux) alebo nastavte stranu servera na <code>unix extensions = no</code>.",
-    "bootTitle": "Trvalá montáž uspeje, ale nepríde na boot",
+    "bootTitle": "Trvalé pripojenie funguje, ale po štarte sa neobnoví",
     "bootBody": "Takmer vždy jeden z: sieť nie je pripravená, keď CT @ info: whatsthis <code>_netdev,x-systemd.automount,noauto</code> vlajky opraviť to), server je nedostupný na boot (auto-mount čakanie na prvý prístup, ktorý je normálny), alebo DNS je nevyriešený pri štarte (použi IP servera, nie jeho meno hostiteľa)."
   },
   "related": {

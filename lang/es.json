@@ -6419,7 +6419,7 @@
   "The host monitor does not share this host namespace:": "El monitor host no comparte este espacio de nombres de host:",
   "The host monitor include is unknown or differs from the saved record": "El include del monitor del host es desconocido o difiere del registro guardado",
   "The host monitor needs consent for privileged access to the host": "El monitor host necesita el consentimiento para el acceso privilegiado al host",
-  "The host monitor profile does not support another sysctl include": "El perfil de monitor host no soporta otro sísctl incluye",
+  "The host monitor profile does not support another sysctl include": "El perfil de monitor del host no admite otro archivo de inclusión de sysctl",
   "The host monitor uses the host network, without DHCP or its own gateway": "El monitor host utiliza la red host, sin DHCP o su propia puerta de entrada",
   "The host port is already in use:": "El puerto host ya está en uso:",
   "The host-monitor firewall bridge does not match the selected bridge": "El bridge del plan de cortafuegos no coincide con el bridge seleccionado",

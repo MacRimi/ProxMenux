@@ -94,7 +94,7 @@
     "credsBody": "Wenn Sie die Benutzerauthentifizierung verwenden, wird das Passwort NICHT in <code>/etc/pve/storage.cfg</code> geschrieben. Proxmox hält es in <code>/etc/pve/priv/storage/&lt;storage-id&gt;.pw</code> - Modus <code>0600</code>, Besitzer <code>root</code>, Mitglied der Cluster-Synchronisation. Wenn Sie später das Passwort auf dem Samba-Server ändern, verwenden Sie <code>pvesm set &lt;id&gt; --password &lt;new&gt;</code> oder entfernen und fügen Sie es über ProxMenux erneut hinzu."
   },
   "fstabBranch": {
-    "heading": "Methode B — nur Host-Fstab-Halterung",
+    "heading": "Methode B — nur ein fstab-Mount auf dem Host",
     "intro": "Wenn <em>As host fstab mount only</em> markiert ist, fragt ProxMenux nach einem Hostmount-Pfad und persistenten Optionen, schreibt eine Root-only-Anmeldedatendatei (Benutzermodus), dann mountet und schreibt den Eintrag in <code>/etc/fstab</code>:",
     "items": [
       "<strong>Host mount path</strong> — standardmäßig <code>/mnt/&lt;share-name&gt;</code>. Es muss ein absoluter Weg sein. Wenn dort bereits etwas montiert ist oder ein fstab-Eintrag vorhanden ist, bietet ProxMenux an, ihn zu ersetzen.",
@@ -112,7 +112,7 @@
     "lxcTitle": "Verwendung des fstab-Mounts aus einem unprivilegierten LXC",
     "lxcBody": "Da der CIFS-Client <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> anwendet, gehört jede Datei im Mount der Host-UID 0 mit dem Modus 0777. Ein unprivilegiertes LXC-Bind-Mounting des Pfades sieht \"andere\" Dauerwellen auf jedem Eintrag (CT root = Host UID 100000 = andere auf dem Host-Dateisystem), so dass Lesen und Schreiben erfolgreich sind. <strong>Es werden keine Änderungen innerhalb des Containers </strong> vorgenommen — kein <code>chown</code> im CT, kein Gruppenaufbau, nichts in <code>/etc/lxc</code> geändert über die einzelne <code>mp</code>-Bind-Mount-Linie hinaus. Das Skript druckt den exakten <code>pct set</code>-Befehl am Ende aus oder verwendet den <mountLink>LXC Mount Manager</mountLink>, um den Pfad anzubringen.",
     "noUiTitle": "Das fstab-Halter ist KEIN Proxmox-Speicher",
-    "noUiBody": "Die Host-Fstab-Halterung ist für die Proxmox-Web-Benutzeroberfläche unsichtbar - vom Design her. Es erscheint nicht in <em>Datacenter > Storage</em>, Sie können es nicht im VM / CT Creator auswählen, und Proxmox Backup-Jobs können es nicht anvisieren. Es ist ein reiner Host-Dateisystem-Pfad. Wenn Sie auch eine UI-Integration wünschen, markieren Sie die <em>both</em>-Methoden im Picker."
+    "noUiBody": "Der fstab-Mount auf dem Host erscheint bewusst nicht in der Proxmox-Weboberfläche. Er fehlt unter <em>Datacenter > Storage</em>, lässt sich beim Erstellen einer VM oder eines CT nicht auswählen und kann nicht als Ziel eines Proxmox-Sicherungsauftrags dienen. Er ist lediglich ein Pfad im Dateisystem des Hosts. Wünschen Sie zusätzlich die Integration in die Oberfläche, wählen Sie <em>beide</em> Methoden aus."
   },
   "manual": {
     "heading": "Manuelles Äquivalent",

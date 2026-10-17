@@ -145,7 +145,7 @@
     "efiBody": "Keď vyberiete OVMF (UEFI), ProxMenux vytvorí systémový disk 4 MB EFI na úložisku, ktoré vyberiete, a pripojí ho k VM, takže firmvér UEFI má miesto na uloženie svojich premenných.",
     "tpmTitle": "TPM 2.0",
     "tpmBody": "Virtuálne TPM 2.0 zariadenie je automaticky pridané, takže Windows 11 / Server 2022 inštalátory prejsť kontrolu kompatibility hardvéru.",
-    "isoTitle": "Montáž ISO",
+    "isoTitle": "Pripojenie ISO",
     "isoBody": "Inštalácia ISO je pripojená k <code>ide2</code>. Ovládače VirtIO ISO sú stiahnuté (v prípade potreby) a pripojené k <code>ide3</code>, pripravené pre <em>Load ovládač</em>.",
     "guestTitle": "QEMU agent",
     "guestBody": "Kanál hosťujúceho agenta je zapnutý v konfigurácii VM. Samotný agent je nainštalovaný vo Windows spustením <code>virtio-win-guest-tools.exe</code> po nastavení."
