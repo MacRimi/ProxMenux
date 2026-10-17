@@ -69,7 +69,7 @@
       },
       {
         "param": "CPU type",
-        "optionsRich": "Host or KVM64"
+        "optionsRich": "Host, KVM64 and other listed CPU models"
       },
       {
         "param": "Cores",
@@ -97,7 +97,7 @@
       }
     ],
     "zfsCalloutTitle": "ZFS and RAM",
-    "zfsCalloutBody": "TrueNAS SCALE / CORE and XigmaNAS are ZFS-based. ZFS uses free memory as ARC cache, so the 8 GB default is a minimum — bump it to 16 GB or more if you plan to store anything meaningful. OMV (ext4/XFS), Rockstor (Btrfs) and ZimaOS are far less memory-hungry."
+    "zfsCalloutBody": "TrueNAS SCALE / CORE and XigmaNAS use ZFS, whose ARC cache benefits from RAM. TrueNAS needs at least 8 GB for basic use; 16 GB or more can help with heavier services and apps. Size the VM for the chosen distribution and workload rather than treating 8 GB as a universal ZFS minimum. Lighter OMV, Rockstor or ZimaOS setups can need less."
   },
   "storagePlan": {
     "heading": "Storage plan",
@@ -106,19 +106,19 @@
     "virtualItemsRich": [
       "Lists the Proxmox storage volumes available on the host.",
       "You pick the target storage and the size in GB.",
-      "The disk is attached to the VM as SATA (<code>sata0</code>, <code>sata1</code>, … up to 6)."
+      "The disk uses the selected bus: SCSI (default), SATA, VirtIO or IDE. SATA slots are <code>sata0</code>, <code>sata1</code>, …, with six slots numbered 0–5."
     ],
     "importHeading": "b. Add import disk",
     "importItemsRich": [
       "Detects physical disks that are safe to import (system and protected disks are hidden).",
       "You select one or more disks via a checklist.",
-      "Imported disks are attached as SATA via <code>qm set</code>."
+      "Imported disks use the selected bus and are attached via <code>qm set</code>."
     ],
     "pciHeading": "c. Add Controller or NVMe (PCI passthrough)",
     "pciItemsRich": [
       "Detects SATA/SAS HBAs and NVMe devices on the host and lets you pass an <em>entire controller</em> into the VM. IOMMU must be enabled; the script offers to enable it and reboots if required.",
       "A confirmation step warns about controller-wide risk (the whole card, including every disk on it, leaves the host).",
-      "The selected PCI devices are attached via <code>qm set hostpciN: …</code>."
+      "The selected PCI devices are attached with commands such as <code>qm set VMID --hostpci0 PCI_ADDRESS,pcie=1</code>. Replace VMID and PCI_ADDRESS with the VM ID and PCI address, and use an unused hostpci index for each device."
     ],
     "resetCalloutTitle": "Reset and finish",
     "resetCalloutBodyRich": "The menu also offers <strong>r</strong> (reset the current selection and start over) and <strong>d</strong> (finish and continue). You cannot finish with an empty plan."
@@ -163,7 +163,7 @@
       "icon": "Database",
       "officialName": "TrueNAS SCALE",
       "officialUrl": "https://www.truenas.com/truenas-scale/",
-      "description": "Debian-based TrueNAS with Docker / Kubernetes apps, Linux KVM and ZFS as the primary filesystem. The modern successor to FreeNAS for users who want ZFS plus a container ecosystem.",
+      "description": "Debian-based TrueNAS with Docker apps in current releases, Linux KVM and ZFS as the primary filesystem. Older SCALE releases used Kubernetes. It combines ZFS storage with a container ecosystem.",
       "specs": [
         "Recommended interface: SATA or SCSI (both support discard/trim)",
         "Minimum RAM: 8 GB (16 GB+ recommended for real workloads)",
@@ -182,7 +182,7 @@
       "icon": "Database",
       "officialName": "TrueNAS CORE",
       "officialUrl": "https://www.truenas.com/truenas-core/",
-      "description": "FreeBSD-based TrueNAS (the former FreeNAS). Mature ZFS storage with jails and plugins, but no Docker / Kubernetes. Being phased out in favour of SCALE but still widely deployed.",
+      "description": "FreeBSD-based TrueNAS, formerly FreeNAS, focused on ZFS storage. CORE 13.3 jails, plugins and virtualization features are obsolete and unsupported; current development focuses on the Linux-based editions.",
       "specs": [
         "Recommended interface: SATA",
         "Minimum RAM: 8 GB (16 GB+ recommended)",
@@ -254,7 +254,7 @@
       "icon": "MonitorIcon",
       "officialName": "zimaspace.com",
       "officialUrl": "https://www.zimaspace.com/zimaos",
-      "description": "Lightweight NAS / home-server OS built on top of Debian, with a focus on media, Docker apps and home automation. ZimaOS uses a dedicated ProxMenux installer (vm/zimaos.sh) that downloads a pre-built image, but the VM profile follows the same flow as the other NAS systems.",
+      "description": "Lightweight NAS / home-server OS built with Buildroot, evolved from CasaOS, with a focus on media, Docker apps and home automation. ZimaOS uses a dedicated ProxMenux installer (vm/zimaos.sh) that downloads a pre-built image, while offering CPU, RAM and storage configuration.",
       "specs": [
         "Recommended interface: SATA or VirtIO",
         "Default RAM: 4 GB (enough for media / self-hosted apps)",

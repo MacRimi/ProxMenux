@@ -1,0 +1,259 @@
+{
+  "meta": {
+    "title": "Vytvoriť VM: systém Windows | Dokumentácia ProxMenux",
+    "description": "Vytvárajte a nastavujte virtuálne stroje Windows na Proxmox VE pomocou ProxMenux. ISO cez UUP Dump alebo lokálny súbor, predvolené či pokročilé nastavenia, spoločný plán úložiska, voliteľný GPU passthrough, TPM 2.0 a inštalácia ovládačov VirtIO.",
+    "ogTitle": "Vytvoriť VM: systém Windows | Dokumentácia ProxMenux",
+    "ogDescription": "Vytvárajte VM Windows na Proxmox VE pomocou ProxMenux: UUP Dump alebo lokálne ISO, spoločný plán úložiska, voliteľný GPU passthrough, TPM 2.0 a ovládače VirtIO.",
+    "ogImageAlt": "Menu VM Windows v ProxMenux"
+  },
+  "header": {
+    "title": "Vytvoriť VM: systém Windows",
+    "description": "Vytvorte VM Windows na Proxmox VE. ProxMenux zabezpečí výber ISO (UUP Dump alebo lokálne), CPU, RAM, typ stroja, spoločný plán úložiska, voliteľný GPU passthrough, TPM 2.0 a inštaláciu ovládačov VirtIO.",
+    "section": "Virtuálne stroje"
+  },
+  "intro": {
+    "title": "Čo tento skript robí",
+    "body": "Postup pre Windows sa opýta na zdroj ISO: UUP Dump alebo lokálna kópia v <code>/var/lib/vz/template/iso</code>. Potom spustí spoločného sprievodcu VM s nastaveniami pre Windows: <code>q35</code>, OVMF a TPM 2.0. ISO ovládačov VirtIO pripojí ako druhé CD-ROM a VM je pripravená spustiť inštalátor Windows."
+  },
+  "image": {
+    "alt": "Možnosti inštalácie ProxMenux Windows",
+    "caption": "Možnosti inštalácie Windows"
+  },
+  "config": {
+    "heading": "Štandardná vs Rozšírená konfigurácia",
+    "intro": "Po zvolení ISO sa ProxMenux pýta, či použiť štandardný VM profil alebo otvoriť pokročilého sprievodcu. Predvolený profil je ladený pre moderné Windows desktop a serverové edície.",
+    "defaultHeading": "Štandardná konfigurácia",
+    "headerParam": "Parameter",
+    "headerValue": "Štandardná hodnota",
+    "defaultRows": [
+      {
+        "param": "Typ stroja",
+        "valueRich": "<code>q35</code>"
+      },
+      {
+        "param": "BIOS",
+        "value": "OVMF (UEFI)"
+      },
+      {
+        "param": "Typ CPU",
+        "value": "Host"
+      },
+      {
+        "param": "Jadrá",
+        "value": "4"
+      },
+      {
+        "param": "RAM",
+        "value": "8192 MB"
+      },
+      {
+        "param": "Most",
+        "valueRich": "<code>vmbr0</code>"
+      },
+      {
+        "param": "Adresa MAC",
+        "value": "Automatické generovanie"
+      },
+      {
+        "param": "TPM",
+        "value": "Povolené (v2.0)"
+      },
+      {
+        "param": "Spustiť po dokončení",
+        "value": "Nie"
+      }
+    ],
+    "advancedHeading": "Pokročilá konfigurácia",
+    "advancedIntro": "Pokročilý sprievodca ponúkne každé nastavenie samostatne:",
+    "headerOptions": "Možnosti",
+    "advancedRows": [
+      {
+        "param": "Typ stroja",
+        "optionsRich": "<code>q35</code> alebo <code>i440fx</code>"
+      },
+      {
+        "param": "BIOS",
+        "options": "OVMF (UEFI) alebo SeaBIOS (staršie)"
+      },
+      {
+        "param": "Typ CPU",
+        "options": "Host, KVM64 a ďalšie modely CPU zo zoznamu"
+      },
+      {
+        "param": "Jadrá",
+        "options": "Počet jadier CPU"
+      },
+      {
+        "param": "RAM",
+        "options": "Pamäť pridelená VM"
+      },
+      {
+        "param": "Most",
+        "options": "Sieťový most"
+      },
+      {
+        "param": "Adresa MAC",
+        "options": "Vlastná MAC adresa"
+      },
+      {
+        "param": "VLAN",
+        "options": "Značka VLAN (voliteľné)"
+      },
+      {
+        "param": "MTU",
+        "options": "Veľkosť MTU"
+      },
+      {
+        "param": "TPM",
+        "options": "TPM 2.0 sa pre Windows pridáva automaticky; sprievodca nemá prepínač TPM."
+      }
+    ],
+    "tpmWarnTitle": "Požiadavky TPM závisia od edície Windows",
+    "tpmWarnBody": "Windows 11 zvyčajne vyžaduje TPM 2.0. Windows Server 2022 ho potrebuje na niektoré bezpečnostné funkcie, nie na každú inštaláciu. ProxMenux pridá virtuálne TPM pre Windows; pokročilý sprievodca nemá prepínač TPM."
+  },
+  "storagePlan": {
+    "heading": "Plán úložiska",
+    "body": "Po nastavení CPU a RAM otvorí ProxMenux menu <strong>Plán úložiska</strong>. V jednej VM môžete kombinovať virtuálne disky, importované disky a zariadenia PCI passthrough, pridávať ich po jednom a po dokončení pokračovať.",
+    "virtualDiskTitle": "a. Pridať virtuálny disk",
+    "virtualDiskItems": [
+      "Zobrazí úložiská Proxmox dostupné na hostiteľovi.",
+      "Vyberiete cieľové úložisko a veľkosť v GB.",
+      "Disk používa zvolenú zbernicu: SCSI (predvolená), SATA, VirtIO alebo IDE. SATA má šesť pozícií s číslami 0 až 5: <code>sata0</code>, <code>sata1</code>, …."
+    ],
+    "importDiskTitle": "b. Pridať importný disk",
+    "importDiskItems": [
+      "Detekuje fyzické disky, ktoré sú bezpečné pre import (systém a chránené disky sú skryté).",
+      "Vyberte jeden alebo viac diskov prostredníctvom kontrolného zoznamu.",
+      "Importované disky používajú zvolenú zbernicu a pripoja sa cez <code>qm set</code>."
+    ],
+    "pciTitle": "c. Pridať radič alebo NVMe (PCI passthrough)",
+    "pciItems": [
+      "Rozpozná HBA SATA/SAS a zariadenia NVMe a umožní priradiť VM <em>celý radič</em>. IOMMU musí byť zapnuté; skript ponúkne aktiváciu a podľa potreby reštart.",
+      "Potvrdenie upozorní na riziko pre celý radič: celá karta vrátane všetkých pripojených diskov prestane byť dostupná hostiteľovi.",
+      "Zariadenia PCI sa priradia príkazmi ako <code>qm set VMID --hostpci0 PCI_ADDRESS,pcie=1</code>. VMID a PCI_ADDRESS nahraďte ID virtuálneho stroja a adresou PCI a pre každé zariadenie použite voľný index hostpci."
+    ],
+    "resetTitle": "Resetovať a dokončiť",
+    "resetBody": "Menu tiež ponúka <strong>r</strong> (resetovať aktuálny výber a začať znova) a <strong>d</strong> (dokončiť a pokračovať). Nemôžeš dokončiť prázdny plán."
+  },
+  "gpu": {
+    "heading": "Voliteľný priechod GPU",
+    "body": "Ak sa po pláne úložiska nájde kompatibilná GPU, ProxMenux ponúkne sprievodcu GPU passthrough. Pozrite <gpuLink>Pridať GPU do VM (passthrough)</gpuLink>. Môže byť potrebný reštart hostiteľa."
+  },
+  "autoFeatures": {
+    "heading": "Automatické funkcie VM",
+    "efiTitle": "disk EFI",
+    "efiBody": "Keď vyberiete OVMF (UEFI), ProxMenux vytvorí systémový disk 4 MB EFI na úložisku, ktoré vyberiete, a pripojí ho k VM, takže firmvér UEFI má miesto na uloženie svojich premenných.",
+    "tpmTitle": "TPM 2.0",
+    "tpmBody": "ProxMenux pridá do VM Windows virtuálne zariadenie TPM 2.0. Spĺňa požiadavku TPM systému Windows 11 a podporuje funkcie Windows Server, ktoré závisia od TPM.",
+    "isoTitle": "Pripojenie ISO",
+    "isoBody": "Inštalačné ISO sa pripojí k <code>ide2</code>. ISO ovládačov VirtIO sa podľa potreby stiahne a pripojí k <code>ide3</code> pre krok <em>Načítať ovládač</em>.",
+    "guestTitle": "Hosťovský agent QEMU",
+    "guestBody": "Kanál hosťujúceho agenta je zapnutý v konfigurácii VM. Samotný agent je nainštalovaný vo Windows spustením <code>virtio-win-guest-tools.exe</code> po nastavení."
+  },
+  "installOptions": {
+    "heading": "Možnosti inštalácie Windows",
+    "intro": "ProxMenux ponúka dva spôsoby získania inštalačných médií systému Windows:",
+    "uupTitle": "Tvorba ISO cez UUP Dump",
+    "uupLogoAlt": "Logo UUP Dump",
+    "uupBody": "Skript <strong>UUP Dump ISO Creator</strong> je ProxMenux nástroj, ktorý vytvára Windows ISO za behu zo serverov Windows Update od spoločnosti Microsoft. Sťahuje čisté, oficiálne inštalačné súbory (vrátane zostavení Insider Preview).",
+    "uupItems": [
+      "Prístup k najnovším zostaveniam Windows.",
+      "Podporuje verzie náhľadu Insider.",
+      "Čisté oficiálne inštalačné súbory Microsoft.",
+      "Automatické vytvorenie ISO a jeho pripojenie k VM.",
+      "Podporuje edície Home, Pro a Enterprise."
+    ],
+    "uupLearnMore": "Zistite viac o UUP Dump ISO Creator",
+    "localTitle": "Inštalovať s lokálnou ISO",
+    "localBody": "Používa Windows ISO, ktorý ste už nahrali do miestneho úložiska hostiteľa (<code>/var/lib/vz/template/iso</code>). Skript obsahuje zoznam všetkých non-VirtIO ISO, ktoré nájde a umožní vám vybrať jeden.",
+    "localImageAlt": "Lokálne menu výberu ISO",
+    "localImageCaption": "Lokálne menu výberu ISO"
+  },
+  "endToEnd": {
+    "heading": "Čo skript vykoná od začiatku do konca",
+    "items": [
+      "Získa Windows ISO (UUP Dump build alebo lokálnu kópiu).",
+      "Uplatňuje štandardnú alebo pokročilú konfiguráciu typu CPU / RAM / BIOS / typ stroja.",
+      "Otvorí plán úložiska a pripojí vybrané virtuálne disky, importované disky a PCI zariadenia.",
+      "Pri inštalácii UEFI vytvorí disk EFI a pripojí zariadenie TPM 2.0.",
+      "Pripojí Windows ISO na <code>ide2</code>.",
+      "Stiahne a pripojí ovládače VirtIO ISO na <code>ide3</code>.",
+      "Nastaví poradie spúšťania: najprv disk, potom ISO.",
+      "Zapne kanál hosťovského agenta QEMU.",
+      "Voliteľne spustí sprievodcu GPU passthrough.",
+      "Generuje štýlový HTML popis pripojený k VM.",
+      "Spustí VM, ak ste to zvolili."
+    ]
+  },
+  "virtio": {
+    "heading": "Ovládače VirtIO počas inštalácie",
+    "body": "Tvorca VM predvolene používa disky SCSI s radičom VirtIO SCSI a sieťový adaptér VirtIO. Bežné ISO Windows môže potrebovať ich ovládače z ISO VirtIO pripojeného na <code>ide3</code>. Disky SATA zvyčajne fungujú s ovládačmi Windows; výber SATA nemení sieťový adaptér VirtIO.",
+    "warnTitle": "Ak Windows nemá sieť, načítajte sieťový ovládač VirtIO",
+    "warnBody": "VM používa sieťový adaptér VirtIO (<code>virtio</code>). Ak Windows neobsahuje jeho ovládač, načítajte ho počas inštalácie na získanie prístupu k sieti. Inak nemusí byť pri prvom spustení dostupná aktivácia ani Windows Update.",
+    "stepLabel": "Krok",
+    "steps": [
+      {
+        "title": "Otvorte obrazovku „Kde chcete nainštalovať Windows?“",
+        "body": "Ak sa počas inštalácie Windows nezobrazujú disky, ovládač úložiska pre zvolené rozhranie SCSI alebo VirtIO ešte nie je načítaný. Načítajte ho ručne z pripojeného ISO VirtIO.",
+        "img": "/vm/windows/virtio-step-1.png",
+        "caption": "Nastavenie Windows bez zobrazených diskov"
+      },
+      {
+        "title": "Kliknite na tlačidlo \"Load driver\"",
+        "bodyRich": "Kliknutím na <strong>Načítať ovládač</strong> si prehliadnite pripojený VirtIO ISO a vyberte ovládač úložiska, ktorý zodpovedá zvolenému rozhraniu.",
+        "img": "/vm/windows/virtio-step-2.png",
+        "caption": "Kliknite na tlačidlo Načítať ovládač pre prehliadanie VirtIO ISO"
+      },
+      {
+        "title": "Prechádzať do správneho priečinka ovládača",
+        "bodyRich": "Na ISO VirtIO vyberte <code>vioscsi</code> pre radič VirtIO SCSI alebo <code>viostor</code> pre blokové disky VirtIO. Potom zvoľte podpriečinok pre verziu Windows a architektúru.",
+        "img": "/vm/windows/virtio-step-3.png",
+        "caption": "Prechádzať do príslušného priečinku ovládača"
+      },
+      {
+        "title": "Vyberte ovládač",
+        "bodyRich": "Windows zobrazí dostupné ovládače. Vyberte vhodný ovládač pre svoju konfiguráciu, zvyčajne <strong>Red Hat VirtIO SCSI controller</strong>, a kliknite na <strong>Ďalej</strong>.",
+        "img": "/vm/windows/virtio-step-4.png",
+        "caption": "Vyberte ovládač VirtIO, ktorý zodpovedá vášmu diskovému rozhraniu"
+      },
+      {
+        "title": "(nepovinné) Inštalácia sieťového ovládača",
+        "bodyRich": "Ak ste si tiež vybrali VirtIO ako sieťové rozhranie, načítajte sieťový ovládač z <code>NetKVM</code> priečinka rovnakého ISO, pričom vyberte podpriečinok pre verziu Windows. Bez tohto kroku Windows inštaluje bez prístupu na internet.",
+        "img": "/vm/windows/virtio-step-5.png",
+        "caption": "Načítať sieťový ovládač VirtIO pre umožnenie internetu počas inštalácie"
+      }
+    ],
+    "tipTitle": "Po inštalácii: spustiť virtio-win-guest-tools.exe",
+    "tipBody": "Po inštalácii Windows otvorte ISO VirtIO v Prieskumníkovi a spustite <code>virtio-win-guest-tools.exe</code>. Naraz nainštaluje zostávajúce ovládače siete, displeja, vstupu a ballooningu aj hosťovského agenta QEMU."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/utils/UUp-Dump-ISO-Creator",
+        "label": "Tvorba ISO cez UUP Dump",
+        "tail": " — vytváranie aktuálnych inštalačných obrazov ISO systému Windows na hostiteľovi Proxmox."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-image-vm",
+        "label": "Importovať obraz disku do VM",
+        "tail": " — importovať existujúci Windows .vmdk do novej VM; obrazy .vhdx najprv previesť do podporovaného formátu."
+      },
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Pridať GPU do VM (passthrough)",
+        "tail": " — pre VM Windows s hardvérovo akcelerovanou GPU."
+      },
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "Príkazy na správu VM a CT",
+        "tail": " — Referencia qm CLI."
+      },
+      {
+        "href": "/docs/create-vm",
+        "label": "Prehľad vytvárania VM",
+        "tail": "."
+      }
+    ]
+  }
+}

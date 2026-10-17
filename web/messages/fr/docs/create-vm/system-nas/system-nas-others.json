@@ -1,0 +1,312 @@
+{
+  "meta": {
+    "title": "Créer une VM : autres systèmes NAS | Documentation ProxMenux",
+    "description": "Créez des VM TrueNAS SCALE, TrueNAS CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS et FygoOS sur Proxmox VE avec ProxMenux. Configuration par défaut ou avancée, plan de stockage, passthrough GPU facultatif et ressources conseillées pour chaque système.",
+    "ogTitle": "Créer une VM : autres systèmes NAS | Documentation ProxMenux",
+    "ogDescription": "Créez TrueNAS SCALE / CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS et FygoOS VMs sur Proxmox VE avec ProxMenux.",
+    "ogImageAlt": "Sélecteur de NAS ProxMenux"
+  },
+  "header": {
+    "title": "Créer VM: Autres systèmes NAS",
+    "description": "ProxMenux peut créer un VM prêt à installer pour TrueNAS SCALE, TrueNAS CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS et FygoOS. Cette page couvre le flux de création partagé (configuration par défaut / avancée, nouveau plan de stockage, passage optionnel GPU) plus les notes par système et les spécifications recommandées.",
+    "section": "Machines virtuelles · NAS"
+  },
+  "intro": {
+    "title": "Comment ces systèmes sont créés",
+    "bodyRich": "Les sept systèmes partagent le même assistant ProxMenux. Le sélecteur de NAS choisit l'installateur correspondant (détectant automatiquement la dernière version stable pour TrueNAS, OMV, XigmaNAS, Rockstor et FygoOS) et passe ensuite au configurateur générique VM et au plan de stockage. ZimaOS utilise son propre script d'installation (<code>vm/zimaos.sh</code>) mais suit la même séquence CPU / RAM / stockage / option-GPU."
+  },
+  "config": {
+    "heading": "Configuration par défaut vs Configuration avancée",
+    "intro": "Lorsqu'un NAS est sélectionné, ProxMenux demande s'il faut utiliser le profil VM par défaut ou ouvrir l'assistant avancé. Les valeurs par défaut sont adaptées aux charges de travail du NAS — plus de RAM qu'un simple Linux VM car les systèmes basés sur ZFS en ont besoin pour le cache ARC.",
+    "defaultHeading": "Configuration par défaut",
+    "headerParam": "Paramètre",
+    "headerValue": "Valeur par défaut",
+    "defaultRowsRich": [
+      {
+        "param": "Type de machine",
+        "valueRich": "<code>q35</code>"
+      },
+      {
+        "param": "BIOS",
+        "valueRich": "OVMF (UEFI)<note> — SeaBIOS pour OpenMediaVault</note>"
+      },
+      {
+        "param": "Type CPU",
+        "valueRich": "Host"
+      },
+      {
+        "param": "Noyaux",
+        "valueRich": "2"
+      },
+      {
+        "param": "RAM",
+        "valueRich": "8192 MB<note> — 4096 MB pour ZimaOS</note>"
+      },
+      {
+        "param": "Pont",
+        "valueRich": "<code>vmbr0</code>"
+      },
+      {
+        "param": "Adresse MAC",
+        "valueRich": "Généré automatiquement"
+      },
+      {
+        "param": "Démarrer à la fin",
+        "valueRich": "Non"
+      }
+    ],
+    "advancedHeading": "Configuration avancée",
+    "advancedIntro": "L'assistant avancé expose chaque paramètre individuellement :",
+    "headerOptions": "Possibilités",
+    "advancedRowsRich": [
+      {
+        "param": "Type de machine",
+        "optionsRich": "<code>q35</code> ou <code>i440fx</code>"
+      },
+      {
+        "param": "BIOS",
+        "optionsRich": "OVMF (UEFI) ou SeaBIOS (Légacy)"
+      },
+      {
+        "param": "Type CPU",
+        "optionsRich": "Host, KVM64 et autres modèles CPU proposés"
+      },
+      {
+        "param": "Noyaux",
+        "optionsRich": "Nombre de cœurs CPU"
+      },
+      {
+        "param": "RAM",
+        "optionsRich": "Mémoire attribuée au VM"
+      },
+      {
+        "param": "Pont",
+        "optionsRich": "Pont réseau"
+      },
+      {
+        "param": "Adresse MAC",
+        "optionsRich": "MAC personnalisée"
+      },
+      {
+        "param": "VLAN",
+        "optionsRich": "Étiquette VLAN (facultatif)"
+      },
+      {
+        "param": "MTU",
+        "optionsRich": "Taille MTU"
+      }
+    ],
+    "zfsCalloutTitle": "ZFS et RAM",
+    "zfsCalloutBody": "TrueNAS SCALE/CORE et XigmaNAS utilisent ZFS, dont le cache ARC profite de la RAM. TrueNAS nécessite au moins 8 Go pour un usage de base ; 16 Go ou plus peuvent aider pour des services et applications exigeants. Dimensionnez selon la distribution et la charge : 8 Go n’est pas un minimum universel de ZFS. Des configurations légères OMV, Rockstor ou ZimaOS peuvent demander moins."
+  },
+  "storagePlan": {
+    "heading": "Plan de stockage",
+    "intro": "Après CPU / RAM, ProxMenux ouvre le menu Plan de stockage, où vous pouvez combiner des disques virtuels, des disques importés et des périphériques PCI passants dans le même VM, ajoutant des éléments un à la fois et finissant lorsque vous avez terminé.",
+    "virtualHeading": "a. Ajouter un disque virtuel",
+    "virtualItemsRich": [
+      "Liste les volumes de stockage Proxmox disponibles sur l'hôte.",
+      "Vous choisissez le stockage cible et la taille en GB.",
+      "Le disque utilise le bus choisi : SCSI (par défaut), SATA, VirtIO ou IDE. SATA offre six emplacements numérotés de 0 à 5 : <code>sata0</code>, <code>sata1</code>, …."
+    ],
+    "importHeading": "b. Ajouter un disque d'importation",
+    "importItemsRich": [
+      "Détecte les disques physiques qui sont sûrs à importer (le système et les disques protégés sont cachés).",
+      "Vous sélectionnez un ou plusieurs disques via une liste de contrôle.",
+      "Les disques importés utilisent le bus choisi et sont connectés par <code>qm set</code>."
+    ],
+    "pciHeading": "c. Ajouter un contrôleur ou NVMe (passthrough PCI)",
+    "pciItemsRich": [
+      "Détecte les appareils HBA SATA/SAS et NVMe sur l'hôte et vous permet de passer un contrôleur <em>entier</em> dans le VM. IOMMU doit être activé ; le script offre de l'activer et de redémarrer si nécessaire.",
+      "Une étape de confirmation met en garde contre le risque à l'échelle du contrôleur (la carte entière, y compris chaque disque sur elle, quitte l'hôte).",
+      "Les périphériques PCI sont affectés avec des commandes comme <code>qm set VMID --hostpci0 PCI_ADDRESS,pcie=1</code>. Remplacez VMID et PCI_ADDRESS par l’ID de VM et l’adresse PCI, et utilisez un indice hostpci libre pour chaque périphérique."
+    ],
+    "resetCalloutTitle": "Réinitialiser et terminer",
+    "resetCalloutBodyRich": "Le menu offre également <strong>r</strong> (réinitialiser la sélection actuelle et recommencer) et <strong>d</strong> (finir et poursuivre). Vous ne pouvez pas finir avec un plan vide."
+  },
+  "gpu": {
+    "heading": "Passage facultatif de GPU",
+    "bodyRich": "Après le plan de stockage, si un GPU compatible est détecté sur l'hôte, ProxMenux propose de lancer l'assistant de passage GPU. Voir <link>Ajouter GPU à un VM (Passthrough)</link> pour savoir comment fonctionne l'assistant — un redémarrage d'hôte peut être nécessaire."
+  },
+  "autoFeatures": {
+    "heading": "Fonctions automatiques VM",
+    "efiTitle": "disque EFI",
+    "efiBody": "Lorsque OVMF (UEFI) est sélectionné, ProxMenux crée automatiquement un disque EFI 4 MB sur le stockage que vous choisissez, formaté pour correspondre au type de stockage (raw pour le stockage par répertoire).",
+    "isoTitle": "Montage ISO",
+    "isoBodyRich": "L'installation ISO est téléchargée (si nécessaire) et fixée à <code>ide2</code> sous forme de CD-ROM, prêt pour le premier démarrage.",
+    "guestTitle": "QEMU Agent invité",
+    "guestBody": "Le canal d'agent invité est activé dans la configuration VM. Vous devez toujours installer l'agent à l'intérieur de l'invité après la mise en place du NAS OS."
+  },
+  "endToEnd": {
+    "heading": "Ce que fait le script de bout en bout",
+    "itemsRich": [
+      "Détecte et télécharge la dernière ISO stable, ou utilise une version de secours si le projet d’origine est inaccessible.",
+      "Applique les réglages par défaut ou avancés de CPU, RAM, BIOS et type de machine.",
+      "Ouvre le plan de stockage et fixe les disques virtuels sélectionnés, les disques importés et les périphériques PCI.",
+      "Crée un disque EFI si UEFI est sélectionné.",
+      "Monte l'installation ISO sur <code>ide2</code>.",
+      "Définit l'ordre de démarrage (disque d'abord, puis ISO).",
+      "Active le canal QEMU Guest Agent.",
+      "En option, exécute l'assistant de passage GPU.",
+      "Génère une description HTML de style jointe au VM.",
+      "Démarre le VM si vous le souhaitez."
+    ]
+  },
+  "perSystem": {
+    "heading": "Notes par système",
+    "shellLabel": "Interface Shell",
+    "webLabel": "Interface Web"
+  },
+  "systems": {
+    "truenasScale": {
+      "id": "truenas-scale",
+      "title": "TrueNAS SCALE",
+      "icon": "Database",
+      "officialName": "TrueNAS SCALE",
+      "officialUrl": "https://www.truenas.com/truenas-scale/",
+      "description": "TrueNAS basé sur Debian avec des applications Docker dans les versions actuelles, Linux KVM et ZFS comme système de fichiers principal. Les anciennes versions SCALE utilisaient Kubernetes. Il associe stockage ZFS et écosystème de conteneurs.",
+      "specs": [
+        "Interface conseillée : SATA ou SCSI, avec prise en charge de discard/TRIM",
+        "Minimum RAM: 8 GB (16 GB+ recommandé pour les charges de travail réelles)",
+        "Cœurs CPU minimum : 2 (4 ou plus conseillés)",
+        "Démarrage UEFI (OVMF) recommandé",
+        "Adaptateur réseau VirtIO pour le meilleur débit"
+      ],
+      "shellImg": "/vm/truenas/truenas-scale-shell.png",
+      "webImg": "/vm/truenas/truenas-scale-web.png",
+      "shellAlt": "Interface shell SCALE TrueNAS",
+      "webAlt": "TrueNAS Interface web SCALE"
+    },
+    "truenasCore": {
+      "id": "truenas-core",
+      "title": "TrueNAS CORE",
+      "icon": "Database",
+      "officialName": "TrueNAS CORE",
+      "officialUrl": "https://www.truenas.com/truenas-core/",
+      "description": "TrueNAS basé sur FreeBSD, anciennement FreeNAS, axé sur ZFS. Les jails, plugins et fonctions de virtualisation de CORE 13.3 sont obsolètes et non pris en charge ; le développement se concentre sur les éditions Linux.",
+      "specs": [
+        "Interface recommandée: SATA",
+        "Minimum RAM: 8 GB (16 GB+ recommandé)",
+        "Cœurs CPU minimum : 2 (4 ou plus conseillés)",
+        "Démarrage UEFI (OVMF) recommandé",
+        "Adaptateur réseau VirtIO pour le meilleur débit"
+      ],
+      "shellImg": "/vm/truenas/truenas-core-shell.png",
+      "webImg": "/vm/truenas/truenas-core-web.png",
+      "shellAlt": "Interface shell TrueNAS CORE",
+      "webAlt": "TrueNAS Interface web CORE"
+    },
+    "openmediavault": {
+      "id": "openmediavault",
+      "title": "OpenMediaVault",
+      "icon": "Server",
+      "officialName": "openmediavault.org",
+      "officialUrl": "https://www.openmediavault.org",
+      "description": "NAS basé sur Debian avec plugins modulaires. Peu gourmand et facile à utiliser sur un matériel modeste lorsque ZFS n’est pas nécessaire.",
+      "specs": [
+        "Interface recommandée: SATA ou VirtIO",
+        "Minimum RAM: 2 GB (4 GB+ recommandé)",
+        "Cœurs CPU minimum : 1 (2 ou plus conseillés)",
+        "BIOS: ProxMenux par défaut vers SeaBIOS pour OMV (surpasser en Advanced si nécessaire)",
+        "Adaptateur réseau VirtIO pour le meilleur débit"
+      ],
+      "shellImg": "/vm/openmediavault/openmediavault-shell.png",
+      "webImg": "/vm/openmediavault/openmediavault-web.png",
+      "shellAlt": "Interface shell OpenMediaVault",
+      "webAlt": "Interface web OpenMediaVault"
+    },
+    "xigmanas": {
+      "id": "xigmanas",
+      "title": "XigmaNAS",
+      "icon": "Database",
+      "officialName": "xigmanas.com",
+      "officialUrl": "https://www.xigmanas.com",
+      "description": "NAS basé sur FreeBSD — la continuation directe de la base de codes FreeNAS originale (0.7). Concentré sur ZFS et la simplicité, avec une empreinte plus légère que TrueNAS.",
+      "specs": [
+        "Interface recommandée: SATA ou SCSI",
+        "Minimum RAM: 4 GB (8 GB+ recommandé pour ZFS)",
+        "Noyaux minimum CPU: 2",
+        "Démarrage UEFI (OVMF) recommandé",
+        "Adaptateur réseau VirtIO pour le meilleur débit"
+      ]
+    },
+    "rockstor": {
+      "id": "rockstor",
+      "title": "Rockstor",
+      "icon": "HardDrive",
+      "officialName": "rockstor.com",
+      "officialUrl": "https://rockstor.com",
+      "description": "openSUSE Leap-based NAS construit autour de Btrfs. Snapshots, sous-volumes et le framework de l'application Rock-ons (Docker) pour les médias, le partage de fichiers et la sauvegarde.",
+      "specs": [
+        "Interface recommandée: SATA ou VirtIO",
+        "Minimum RAM: 2 GB (4 GB+ recommandé)",
+        "Noyaux minimum CPU: 2",
+        "Démarrage UEFI (OVMF) recommandé",
+        "Adaptateur réseau VirtIO pour le meilleur débit"
+      ],
+      "shellImg": "/vm/rockstor/rockstor-shell.png",
+      "webImg": "/vm/rockstor/rockstor-web.png",
+      "shellAlt": "Interface shell Rockstor",
+      "webAlt": "Interface web Rockstor"
+    },
+    "zimaos": {
+      "id": "zimaos",
+      "title": "ZimaOS",
+      "icon": "MonitorIcon",
+      "officialName": "zimaspace.com",
+      "officialUrl": "https://www.zimaspace.com/zimaos",
+      "description": "Système NAS/serveur domestique léger construit avec Buildroot, issu de CasaOS, pour les médias, applications Docker et domotique. Son installateur ProxMenux dédié (vm/zimaos.sh) télécharge une image prête et propose les réglages CPU, RAM et stockage.",
+      "specs": [
+        "Interface recommandée: SATA ou VirtIO",
+        "RAM par défaut : 4 Go, pour médias et applications auto-hébergées",
+        "Noyaux minimum CPU: 2",
+        "Démarrage UEFI (OVMF)",
+        "Adaptateur réseau VirtIO pour le meilleur débit"
+      ]
+    },
+    "fygoos": {
+      "id": "fygoos",
+      "title": "FygoOS",
+      "icon": "Server",
+      "officialName": "fygonas.com",
+      "officialUrl": "https://fygonas.com",
+      "description": "Édition internationale de fnOS, un NAS basé sur Debian. ProxMenux télécharge le dernier installateur ISO publié sur fygonas.com et le monte dans le VM. L'installateur met le système sur un disque; l'espace laissé sur ce disque peut contenir des volumes pour les applications et les fichiers. Après l'installation, la console affiche l'adresse de l'interface web, sur le port 5666 (le port 80 redirige vers elle): ouvrez-le dans un navigateur pour nommer l'appareil et créer le compte administrateur.",
+      "specs": [
+        "Disque système: FygoOS propose une partition système 64 GB, qui peut être plus petite dans un VM",
+        "Installation : Graphical Install, ou Rescuing Install si le mode graphique échoue",
+        "Démarrage UEFI (OVMF) sans clés Secure Boot, comme l’exige l’installateur",
+        "Réseau: Ethernet avec DHCP par défaut",
+        "Adaptateur réseau VirtIO pour le meilleur débit"
+      ]
+    }
+  },
+  "related": {
+    "heading": "Voir aussi",
+    "itemsRich": [
+      {
+        "href": "/docs/create-vm/system-nas",
+        "label": "Aperçu du NAS système",
+        "tail": "— comparaison rapide entre toutes les options du NAS."
+      },
+      {
+        "href": "/docs/create-vm/system-nas/synology",
+        "label": "VM Synology",
+        "tail": " — procédure Synology DSM (Xpenology)."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importer le disque vers la VM",
+        "tail": "— recommandé pour les cas d'utilisation du NAS (vrais disques > disques virtuels)."
+      },
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "Commandes de gestion ZFS",
+        "tail": "— si vous choisissez TrueNAS ou une autre distribution appuyée par ZFS."
+      },
+      {
+        "href": "/docs/create-vm",
+        "label": "Vue d’ensemble de la création de VM",
+        "tail": "."
+      }
+    ]
+  }
+}
