@@ -96,7 +96,7 @@
     "items": [
       "Číta aktuálnu hodnotu <code>MaxAuthTries</code> (alebo predvolené hodnoty 6 v prípade neprítomnosti).",
       "Ukladá to na <code>/usr/local/share/proxmenux/sshd_maxauthtries_backup</code>.",
-      "Upravuje <code>sshd_config</code> in-place",
+      "Upraví <code>sshd_config</code> priamo: nahradí existujúci riadok, odkomentuje zakomentovaný alebo pridá nový.",
       "Znovu načíta <code>sshd</code> (načítať, nie reštartovať, aby existujúce sedenia nažive)."
     ],
     "outro": "Na odinštalovanie je uložená pôvodná hodnota obnovená a <code>sshd</code> je znovu načítaná."

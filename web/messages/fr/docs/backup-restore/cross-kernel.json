@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "Restaurer le cross-kernel — détection de direction, filtre sous-ensemble sûr, hydratation ProxMenux",
+    "title": "Restauration entre noyaux différents — détection, filtrage et adaptation | ProxMenux",
     "description": "Comment ProxMenux restaure une sauvegarde d'hôte sur une cible exécutant une version du noyau majeur différente. Documents comment la direction de l'anomalie est détectée, le filtre de sous-ensemble sûr qui saute les chemins critiques de démarrage lorsque la cible exécute un noyau plus récent que la sauvegarde, et l'hydratation quatre phases du noyau-agnostique qui réapplique l'accord de l'utilisateur comme IOMMU, VFIO IDs et jetons cmdline personnalisés sans copier les fichiers liés au noyau mot-clé.",
     "ogTitle": "ProxMenux Sauvegardes – restauration et hydratation de l'étrier croisé",
     "ogDescription": "Restaurer le cross-kernel avec un filtre sécurisé et une hydratation agnostique du noyau.",
-    "twitterTitle": "Restaurer les traverses ProxMenux",
+    "twitterTitle": "Restauration entre noyaux différents | ProxMenux",
     "twitterDescription": "Comment ProxMenux gère une restauration lorsque le noyau cible diffère de celui de la sauvegarde."
   },
   "header": {

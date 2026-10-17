@@ -66,7 +66,7 @@
     "wireBackupNote": "Príznak <code>backup=0</code> vylučuje tento bod pripojenia zo záloh <code>vzdump</code> – zvyčajne je to správne volanie pre veľké externé disky, ktoré sú cieľovým úložiskom hostiteľa a nie jeho dátami.",
     "restartHeading": "1.5 Reštart LXC a nastaviť práva",
     "restartBody": "Reštartovanie CT na použitie bodu pripojenia:",
-    "restartCode": "pct restart '<'CTID'>'",
+    "restartCode": "pct reboot '<'CTID'>'",
     "permsBody": "Vnútri LXC, dať práva adresára vhodné pre užívateľa, ktorý bude vlastniť podiel:",
     "permsCode": "# Inside the container\nmkdir -p /mnt/lxc_USB\nchown -R proxmenux:proxmenux /mnt/lxc_USB\nchmod 770 /mnt/lxc_USB",
     "permsNoteTitle": "Poznámka",
@@ -109,7 +109,7 @@
   "troubleshoot": {
     "heading": "Riešenie problémov",
     "items": [
-      "<strong>0<code>pct restart</code> zlyhá s \"zariadenie nenájdené\":</strong> cesta zariadenia v <code>mp0</code> neexistuje na hostiteľa. Skontrolovať pomocou <code>ls -l /dev/disk/by-id/</code> a aktualizovať cestu.",
+      "<strong><code>pct reboot</code> zlyhá s hlásením „device not found“:</strong> cesta zariadenia v <code>mp0</code> na hostiteľovi neexistuje. Skontrolujte ju pomocou <code>ls -l /dev/disk/by-id/</code> a opravte cestu.",
       "<strong>CT začína, ale <code>/mnt/lxc_USB</code> je prázdny:</strong> disk nie je namontovaný vo vnútri CT. Kontrola z hostiteľa: <code>pct exec '<'CTID'>' -- mount | grep lxc_USB</code>. Ak chýba, bod pripojenia v konfigurácii je nesprávny.",
       "<strong>Samba autentifikuje, ale píše zlyhať s \"Permission odmietnutý\":</strong> Linux oprávnenia na adresári neumožňujú používateľovi Samba písať. Znovu skontrolujte <code>chown</code> / <code>setfacl</code> v sekcii 1.5 / 2.3.",
       "<strong>Share sa neobjavuje v sieťových prehliadačoch, ale <code>smb://'<'ip'>'/lxc_usb</code> funguje:</strong> prehliadateľnosť cez LAN závisí od NetBIOS / WS-Discovery. Pridať <code>nmbd</code>: <code>apt-get install -y samba-common-bin</code> a zabezpečiť <code>nmbd</code> je povolená.",

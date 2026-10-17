@@ -610,15 +610,15 @@
         "metrics": [
           {
             "metric": "proxmox_disk_total_bytes",
-            "desc": "Celkový priestor na disk na montáž. Označte <code>mountpoint</code>."
+            "desc": "Celková kapacita disku pre každý bod pripojenia. Štítok <code>mountpoint</code>."
           },
           {
             "metric": "proxmox_disk_used_bytes",
-            "desc": "Použité miesto na disku na montáž."
+            "desc": "Použité miesto na disku pre každý bod pripojenia."
           },
           {
             "metric": "proxmox_disk_usage_percent",
-            "desc": "Percentuálny podiel použitia disku na montáž."
+            "desc": "Percento využitia disku pre každý bod pripojenia."
           }
         ]
       },

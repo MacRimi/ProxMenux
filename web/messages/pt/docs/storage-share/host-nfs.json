@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Máquina: Montar NFS compartilhamento no Host ProxMenux Documentação",
-    "description": "Montar uma exportação externa de NFS na máquina Proxmox — quer como armazenamento Proxmox (pvesm adicionar nfs), como uma montagem fstab de host simples (NÃO visível no Datacenter > Armazenamento), ou ambos. O método fstab é ideal para montar a parte em recipientes LXC sem expô-la como armazenamento Proxmox.",
+    "description": "Monte uma exportação NFS externa no host Proxmox como armazenamento Proxmox com pvesm add nfs, como montagem fstab independente que não aparece em Datacenter > Storage ou das duas formas. O método fstab é adequado para partilhar o caminho com contentores LXC por bind mount sem o registar como armazenamento Proxmox.",
     "ogTitle": "Máquina: Montar NFS compartilhamento no Host ProxMenux Documentação",
     "ogDescription": "Montar uma exportação externa de NFS no host Proxmox via pvesm, fstab, ou ambos. fstab caminho é ideal para LXC."
   },
@@ -93,7 +93,7 @@
         "allows": "Scripts de gancho e trechos de inicialização na nuvem."
       }
     ],
-    "warnTitle": "imagens e rootdir em NFS",
+    "warnTitle": "images e rootdir em NFS",
     "warnBody": "Marcando <code>images</code> em um armazenamento NFS permite Proxmox lugar vivo VM discos lá. Ele funciona, mas a latência do NFS + sua semântica de bloqueio tornam isso visivelmente mais lento do que o armazenamento local (e uma falha de rede pausa cada VM suportado por essa loja). Marcando <code>rootdir</code> significa que você irá hospedar sistemas de arquivos de raiz LXC sobre NFS, que historicamente tem problemas com contêineres não privilegiados (interações sobreposição / corado). Prefere manter <code>images</code> / <code>rootdir</code> no armazenamento local ou iSCSI e usando NFS para <code>backup</code> / <code>iso</code> / <code>vztmpl</code>.",
     "result": "O resultado é <code>pvesm add nfs &lt;id&gt; --server &lt;srv&gt; --export &lt;path&gt; --content &lt;csv&gt;</code> e Proxmox auto-montagens em <code>/mnt/pve/&lt;id&gt;</code>."
   },

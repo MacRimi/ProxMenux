@@ -116,7 +116,7 @@
     "imageCaption": "En grundläggande Grafana instrumentbräda byggd från ProxMenux Prometheus skrapa - CPU, minne, kör VMs, nätverksgenomströmning. Den fullständiga metriska katalogen bor i <link>API Reference → Prometheus metrics</link>.",
     "step1Title": "1 · Lägg till skrapan jobb till Prometheus",
     "step1Body": "Passera API token via Prometheus infödda <code>authorization</code> block (renare än anpassade rubriker och arbetar med hemliga butiker):",
-    "step1After": "Reload Prometheus (<code>kill -HUP</code> eller <code>systemctl reload prometheus</code>, eller <code>docker compose restart prometheus</code> om du kör det som en behållare) och kontrollera <em>Status → Targets</em> - proxmenux-jobbet ska bli grönt inom ett skrapintervall. Varje metrisk bär en <code>node=\"&lt;hostname&gt;\"</code>-etikett så att du kan skilja värdar i frågor.",
+    "step1After": "Reload Prometheus (<code>kill -HUP</code> eller <code>systemctl reload prometheus</code>, eller <code>docker compose restart prometheus</code> om du kör det som en container) och kontrollera <em>Status → Targets</em> - proxmenux-jobbet ska bli grönt inom ett skrapintervall. Varje metrisk bär en <code>node=\"&lt;hostname&gt;\"</code>-etikett så att du kan skilja värdar i frågor.",
     "tokenTipTitle": "Token via fil eller env, inte inline",
     "tokenTipBody": "För produktionsdistributioner undviker att luta token. Prometheus stöder <code>credentials_file: /etc/prometheus/secrets/proxmenux.token</code> som ett alternativ - hålla token i en 0600-fil och låt Prometheus läsa den.",
     "step2Title": "2 · Verifiera skrapan med ett par frågor",

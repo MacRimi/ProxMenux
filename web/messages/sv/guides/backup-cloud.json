@@ -95,7 +95,7 @@
   },
   "retention": {
     "heading": "6. Lagring - hålla molnkvoten under kontroll",
-    "body": "Proxmox vzdump säkerhetskopior är <strong>fulla ögonblicksbilder, inte inkremental</strong>. En 30 GB VM = 30 GB per backup. Utan retention fyller molnet upp.",
+    "body": "Proxmox vzdump-arkiv är <strong>fullständiga säkerhetskopior, inte inkrementella</strong>. Den faktiska storleken beror på vilka data som ingår och komprimeringen, inte bara på den virtuella diskens kapacitet. Om ett arkiv tar 30 GB kräver fem sparade arkiv ungefär 150 GB. Ange en gallringspolicy så att molnlagringen inte fylls.",
     "uiPath": "In the Proxmox UI: <strong>Datacenter → Backup → [your job] → Retention</strong>:",
     "image7Alt": "Backup retention inställningar i Proxmox",
     "starterIntro": "Rimliga startvärden för ett hem / lab setup:",

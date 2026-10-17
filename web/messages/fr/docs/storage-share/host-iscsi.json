@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Hôte : Ajouter iSCSI cible comme stockage Proxmox ProxMenux Documentation",
-    "description": "Enregistrer une cible iSCSI comme stockage Proxmox en utilisant ProxMenux. Gérez l'installation open-iscsi, la découverte du portail via sendtargets, la sélection des cibles et l'ajout de pvesm iscsi. Fournit des périphériques de blocs bruts pour les images de disque VM.",
+    "description": "Enregistrez une cible iSCSI comme stockage Proxmox avec ProxMenux. L’outil installe open-iscsi, découvre le portail via sendtargets, permet de choisir la cible et exécute pvesm add iscsi. Il fournit des périphériques bloc bruts pour les images disque des VM.",
     "ogTitle": "Hôte : Ajouter iSCSI cible comme stockage Proxmox ProxMenux Documentation",
     "ogDescription": "Enregistrer une cible iSCSI comme stockage Proxmox avec découverte guidée. Utilise pvesm add iscsi et fournit des périphériques de blocs bruts pour les disques VM."
   },

@@ -9,7 +9,7 @@
   },
   "header": {
     "title": "Introduktion",
-    "description": "ProxMenux är ett open-source, meny-drivet verktyg för Proxmox VE. Två bitar delar samma projekt: en CLI / TUI som wraps den vanligaste värden, VM, behållare, lagring, nätverks- och säkerhetsflöden; och en egen värd web instrumentbräda med proaktiv hälsoövervakning, meddelanden, en AI-skrivare och en REST API.",
+    "description": "ProxMenux är ett open-source, meny-drivet verktyg för Proxmox VE. Två bitar delar samma projekt: en CLI / TUI som wraps den vanligaste värden, VM, container, lagring, nätverks- och säkerhetsflöden; och en egen värd web instrumentbräda med proaktiv hälsoövervakning, meddelanden, en AI-skrivare och en REST API.",
     "section": "Introduktion"
   },
   "hero": {
@@ -47,7 +47,7 @@
       },
       {
         "title": "GPU & Coral TPU",
-        "description": "NVIDIA, Intel iGPU, AMD och Coral TPU passerar till VMs och LXC behållare, med läge växling mellan VM och LXC.",
+        "description": "NVIDIA, Intel iGPU, AMD och Coral TPU passerar till VMs och LXC containrar, med läge växling mellan VM och LXC.",
         "icon": "Cpu",
         "href": "/docs/hardware/nvidia-host"
       },
@@ -59,7 +59,7 @@
       },
       {
         "title": "Diskhanteraren",
-        "description": "Importera fysiska diskar till VMs och LXC, format och torka, SMART tester, qcow2 / vmdk / vdi bild import - från en meny.",
+        "description": "Importera fysiska diskar till VMs och LXC, format och torka, SMART tester, qcow2 / vmdk / vdi avbildning import - från en meny.",
         "icon": "HardDrive",
         "href": "/docs/disk-manager"
       },

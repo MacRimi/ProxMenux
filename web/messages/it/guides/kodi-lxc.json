@@ -38,7 +38,7 @@
     "configCode": "lxc.cgroup2.devices.allow = c 13:* rwm\nlxc.mount.entry: /dev/input dev/input none bind,optional,create=dir",
     "imageConfigAlt": "Configurazione LXC",
     "save": "Salvare (<code>Ctrl+X</code>) e riavviare <strong>solo il contenitore</strong>: non è necessario riavviare l'intero host Proxmox:",
-    "restartCode": "pct restart '<'CTID'>'",
+    "restartCode": "pct reboot '<'CTID'>'",
     "plug": "Collegare la tastiera / mouse / controller e Kodi dovrebbe rispondere ad esso."
   },
   "updateKodi": {

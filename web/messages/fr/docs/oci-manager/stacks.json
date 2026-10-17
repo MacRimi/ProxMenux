@@ -6,7 +6,7 @@
   "header": {
     "title": "Applications à plusieurs conteneurs",
     "description": "Une application avec sa base de données, cache et d'autres services devient plusieurs LXC natifs coordonnés, installés et mis à jour comme un seul.",
-    "section": "Applications du gestionnaire OCI"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -23,7 +23,7 @@
             "chartCode": "flowchart LR\n C[\"Docker Compose\"] --> O[\"{{plan}}\"]\n O --> A[\"{{app}}<br/>{{appNet}}\"]\n O --> D[\"{{db}}<br/>{{private}}\"]\n O --> R[\"{{cache}}<br/>{{private}}\"]\n V1[(\"config\")] --> A\n V2[(\"database\")] --> D\n V3[(\"cache\")] --> R\n D --> A\n R --> A",
             "labels": {
               "plan": "Plan d'arrêt",
-              "app": "Demande LXC",
+              "app": "Application LXC",
               "appNet": "LAN + privé",
               "db": "PostgreSQL LXC",
               "cache": "Valkey LXC",
@@ -56,7 +56,7 @@
               [
                 "Images",
                 "Référence roulante, architecture et digest résolu de chaque service",
-                "Tous existent, supportent l'architecture et passent la vérification d'intégrité du BEC"
+                "Toutes existent, prennent en charge l’architecture et réussissent la vérification d’intégrité OCI"
               ],
               [
                 "Réseau",
@@ -100,7 +100,7 @@
               },
               {
                 "title": "Créer chaque roofs",
-                "body": "Les métadonnées officielles du BEC sont importées, et l'identité d'instance ProxMenux et le rôle des membres sont ajoutés."
+                "body": "Les métadonnées OCI officielles sont importées, puis l’identité de l’instance ProxMenux et le rôle du membre sont ajoutés."
               },
               {
                 "title": "Réseau privé",
@@ -159,10 +159,10 @@
               [
                 "Paperless-ngx / Tandoor",
                 "HTTP sur l'adresse LAN et le port réel du service",
-                "La façade et ses dépendances servent la demande"
+                "La façade et ses dépendances servent la application"
               ],
               [
-                "Demande principale",
+                "Application principale",
                 "L'extrémité de son modèle, par exemple <code>/api/server/ping</code> dans Immich",
                 "La pile entière fonctionne à travers l'application qui utilise les dépendances"
               ]
@@ -263,7 +263,7 @@
                 "Aucun membre principal: chaque LXC suit son propre <code>onboot</code>"
               ],
               [
-                "Demande unique",
+                "Application unique",
                 "Jellyfin",
                 "Proxmox VE commence directement ce LXC"
               ]
@@ -284,7 +284,7 @@
               "Le membre principal est le dernier en <code>start_order</code> et le premier en <code>stop_order</code>.",
               "Aucune adaptation de membre, volume ou roofs n'est manquante.",
               "Le crochet pointe vers l'extrait officiel, son contenu est inchangé et son contrat correspond à la recette de la pile.",
-              "Les images et les digests observés correspondent aux archives du BEC préparées.",
+              "Les images et les digests observés correspondent aux archives OCI préparées.",
               "Les appareils, les profils GPU, les montages, les secrets et les paramètres correspondent encore aux contrats.",
               "Après chaque passage de dépendance, l'extrémité de l'application principale vérifie l'intégration entre les membres."
             ]

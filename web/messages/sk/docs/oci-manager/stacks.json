@@ -1,12 +1,12 @@
 {
   "meta": {
     "title": "Aplikácie pre viac kontajnerové lode ProxMenux",
-    "description": "Ako OCI manažér Apps zmení aplikáciu so svojou databázou a vyrovnávaciu pamäť na koordinované natívne LXC: plán, súkromná sieť, závislý hák, validácia a aktualizácie transakcií."
+    "description": "Ako OCI manager Apps mení aplikáciu s databázou a vyrovnávacou pamäťou na koordinované natívne LXC: plán, súkromná sieť, hook závislostí, overenie a transakčné aktualizácie."
   },
   "header": {
     "title": "Aplikácie s viacerými kontajnermi",
     "description": "Aplikácia so svojou databázou, vyrovnávacou pamäťou a ďalšími službami sa stáva niekoľkými koordinovanými LXC, nainštalovanými a aktualizovanými ako jedna.",
-    "section": "Správca OCI aplikácií"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -95,8 +95,8 @@
                 "body": "Súpis Proxmox VE a inštančný register sú kontrolované. Existujúce CT nie je prijaté a zmluva, ktorá stále patrí do inej inštancie, sa opätovne nepoužíva."
               },
               {
-                "title": "Pripravte každý obrázok",
-                "body": "Všetky obrázky sú vyriešené, stiahnuté a overené pred vytvorením prvého kontajnera."
+                "title": "Pripravte každý obraz",
+                "body": "Všetky obrazy sú vyriešené, stiahnuté a overené pred vytvorením prvého kontajnera."
               },
               {
                 "title": "Vytvoriť každý rootfs",
@@ -143,7 +143,7 @@
               ],
               [
                 "Redis / Valkey",
-                "<code>redis-cli</code>0 alebo <code>valkey-cli</code> <code>PING</code> proti jeho súkromnej adrese",
+                "<code>redis-cli</code> alebo <code>valkey-cli</code> s príkazom <code>PING</code> na jeho súkromnej adrese",
                 "Sprostredkovateľ počúva a odpovedá"
               ],
               [
@@ -309,7 +309,7 @@
                 "body": "Validujú sa identity, zmluvy, hák, úpravy a koordinovaná opakovaný záznam pre tento recept."
               },
               {
-                "title": "Prvé obrázky",
+                "title": "Prvé obrazy",
                 "body": "Aplikácia sa nezastaví, kým sa nevyrieši, nestiahne a nepreverí každá tráva."
               },
               {
@@ -364,13 +364,13 @@
           "p": "Počas inštalácie sa chyba zastaví a odstráni nedokončené kontajnery, ktoré boli vytvorené, a súkromný most, ak ho operácia vytvorila. Kôš nie je publikovaný ako platný, kým sa neskončí celá sekvencia."
         },
         {
-          "p": "Aktualizácia je transakčná: všetky obrázky sú pripravené ako prvé, potom stack zastaví, každý člen je zálohovaný a záloha overená, a len potom je každý rootfs nahradený. Členovia začínajú jeden po druhom so zdravotnou kontrolou; ak jeden zlyhá, každý člen je obnovený z rovnakého súboru záloh, takže databáza a aplikácia nikdy nepatria do rôznych momentov."
+          "p": "Aktualizácia je transakčná: všetky obrazy sú pripravené ako prvé, potom stack zastaví, každý člen je zálohovaný a záloha overená, a len potom je každý rootfs nahradený. Členovia začínajú jeden po druhom so zdravotnou kontrolou; ak jeden zlyhá, každý člen je obnovený z rovnakého súboru záloh, takže databáza a aplikácia nikdy nepatria do rôznych momentov."
         },
         {
           "mermaid": {
             "chartCode": "flowchart LR\n P[\"{{prepare}}\"] --> S[\"{{stop}}\"]\n S --> B[\"{{backup}}\"]\n B --> R[\"{{replace}}\"]\n R --> H{\"{{healthy}}\"}\n H -- \"{{yes}}\" --> C[\"{{commit}}\"]\n H -- \"{{no}}\" --> X[\"{{rollback}}\"]",
             "labels": {
-              "prepare": "Pripravte každý obrázok",
+              "prepare": "Pripravte každý obraz",
               "stop": "Stop, hlavný člen prvý",
               "backup": "Overená záloha každého CT",
               "replace": "Nahradiť rootfs",

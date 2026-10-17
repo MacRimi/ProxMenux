@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "Slovo ProxMenux",
+    "title": "Slovník — zálohovanie a obnova | ProxMenux",
     "description": "Slovník pojmov a definícií pre ProxMenux zálohovanie a obnovenie stohu: šifrovanie, súbor kľúčov, passfráza, obálka obnovy, PBS, kusy, rootfs, manifest, bežec a cross-kernel hydratácia.",
-    "ogTitle": "Zálohovanie a obnovenie slovníka ProxMenux",
+    "ogTitle": "Slovník zálohovania a obnovy | ProxMenux",
     "ogDescription": "Jasné definície slovnej zásoby použitej cez zálohovanie a obnovenie dokumentácie ProxMenux.",
-    "twitterTitle": "Zálohovanie a obnovenie slovníka ProxMenux",
+    "twitterTitle": "Slovník zálohovania a obnovy | ProxMenux",
     "twitterDescription": "Passfráza, súbor kľúčov, obálka pre obnovu, rootfs, manifest, PBS, kusy"
   },
   "header": {

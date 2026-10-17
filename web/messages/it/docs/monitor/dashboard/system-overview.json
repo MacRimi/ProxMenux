@@ -90,7 +90,7 @@
       "<strong>Total Node Capacity</strong> — somma di tutti gli storage VM/LXC più l'archiviazione locale del sistema, con una barra di avanzamento di gradiente del totale utilizzato / divisione gratuita.",
       "<strong>Total Capacity / Physical Disks</strong> — headline della capacità raw e il conteggio dei dischi fisici scoperti.",
       "<strong>VM/LXC Storage</strong> — usato / gratuito / percentuale per gli storage dove gli ospiti vivono, più un contatore quando più di uno è configurato.",
-      "<strong>Stoccaggio locale (Sistema)</strong> — il supporto root/sistema dell'host, separatamente dall'ospite pool."
+      "<strong>Storage locale (sistema)</strong> — il filesystem root o di sistema montato sull’host, separato dal pool dei sistemi guest."
     ],
     "storageDrillIn": "Il trapano vive nella <link>Scheda di archiviazione</link> — per dischetto SMART, ZFS pool dettagli, storia dell'osservazione, ecc.",
     "networkTitle": "Scheda panoramica della rete",

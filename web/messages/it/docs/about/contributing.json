@@ -252,7 +252,7 @@
   "submitting": {
     "heading": "Inviare il tuo contributo",
     "steps": [
-      "Forcella <code>MacRimi/ProxMenux</code> su GitHub e clonare la forcella.",
+      "Crea un fork di <code>MacRimi/ProxMenux</code> su GitHub e clonalo.",
       "Creare un ramo <code>feature/*</code> da <code>develop</code> (vedere sopra <em>Branching Model</em>).",
       "Segui questa guida per qualsiasi script nuovo o modificato. Scrivi l'intestazione con il tuo nome; aggiungi la linea di sponsor opzionale se vuoi.",
       "Prova il tuo script su un'istanza Proxmox VE reale — sia Phase 1 (ogni ramo di dialogo) che Phase 2 (ogni operazione riesce e torna pulitamente sull'errore).",

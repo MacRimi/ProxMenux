@@ -18,10 +18,10 @@
       "Vytvorte adresár na Proxmox host a zaregistrujte ho ako vzdump-kapable datastore.",
       "Nainštalujte a nakonfigurujte rclone pre svojho poskytovateľa cloudu.",
       "Pripojte priečinok cloud na adresár.",
-      "Urobiť montáž prežiť reboots (systemd jednotka"
+      "Zabezpečte obnovenie pripojenia po reštarte pomocou jednotky systemd, ktorá je spoľahlivejšia než crontab."
     ],
     "vzdumpCalloutTitle": "Hlavy hore o Proxmox vzdump zálohy",
-    "vzdumpCalloutBody": "Sú to <strong>0 nie prírastkové</strong>. Každá záloha obsahuje plný obraz VM disku (komprimovaný). Na limitovanom mraku sa to naplní rýchlo. Plánovať politiku zachovania od prvého dňa (pozri koniec príručky)."
+    "vzdumpCalloutBody": "Tieto zálohy <strong>nie sú prírastkové</strong>. Každá obsahuje úplný komprimovaný obraz disku VM. Cloudové úložisko s kvótou sa preto môže rýchlo zaplniť. Politiku uchovávania naplánujte od začiatku, ako je vysvetlené na konci návodu."
   },
   "createDir": {
     "heading": "1. Vytvoriť hostiteľský adresár a zaregistrovať ho ako datastore",
@@ -95,7 +95,7 @@
   },
   "retention": {
     "heading": "6. Retention",
-    "body": "Zálohy Proxmox vzdump sú <strong>0 plné snímky, nie prírastkové</strong>. 30 GB VM = 30 GB na zálohu. Bez zadržiavania sa oblak naplní.",
+    "body": "Archívy Proxmox vzdump sú <strong>úplné zálohy, nie prírastkové</strong>. Ich skutočná veľkosť závisí od zahrnutých údajov a kompresie, nie iba od kapacity virtuálneho disku. Ak jeden archív zaberá 30 GB, päť uchovaných archívov potrebuje približne 150 GB. Nastavte pravidlá uchovávania, aby sa cloudové úložisko nezaplnilo.",
     "uiPath": "In the Proxmox UI: <strong>Datacenter → Backup → [your job] → Retention</strong>:",
     "image7Alt": "Nastavenie zálohovania v Proxmoxe",
     "starterIntro": "Rozumné štartovacie hodnoty pre domáce / laboratórne nastavenie:",
@@ -109,7 +109,7 @@
   "troubleshoot": {
     "heading": "Riešenie problémov",
     "items": [
-      "<strong>0<code>Mount point /mnt/gdrive is itself on a fuse.rclone filesystem</code>:</strong> predchádzajúca montáž neodmontovala čisto. Force-ununt: <code>fusermount -uz /mnt/gdrive</code>, potom reštartujte jednotku systemd.",
+      "<strong><code>Mount point /mnt/gdrive is itself on a fuse.rclone filesystem</code>:</strong> predchádzajúce pripojenie sa neodpojilo správne. Vynúťte odpojenie príkazom <code>fusermount -uz /mnt/gdrive</code> a potom reštartujte jednotku systemd.",
       "<strong>Backup je extrémne pomalý:</strong> potvrdenie <code>--vfs-cache-mode writes</code> je na linke <code>ExecStart</code>. Bez neho, každý písať bloky na oblaku. Tiež skontrolujte svoje predné šírky pásma",
       "<strong>Backup zlyhá s ''No space left on device'':</strong> adresár vyrovnávacej pamäte (<code>~/.cache/rclone/</code>) vyplnený pred nahrávaním zachytené. Presuňte ho do väčšieho súborového systému s <code>--cache-dir /var/cache/rclone</code> v jednotke systemd.",
       "<strong>Rclone auth token exspiroval (typické na Google Drive po dlhej dobe nečinnosti):</strong> SSH späť do tunela (<code>ssh -L localhost:53682:localhost:53682 root@ip_proxmox</code>) a beh <code>rclone config reconnect gdrive:</code> na osvieženie.",

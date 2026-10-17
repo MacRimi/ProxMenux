@@ -6,7 +6,7 @@
   "header": {
     "title": "Inštalácia, aktualizácia a vytvorenie znova",
     "description": "Každá inštancia udržiava reprodukovateľnú zmluvu, takže jej rootfs môžu byť nahradené bez straty konfigurácie alebo trvalých dát.",
-    "section": "Správca OCI aplikácií"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -29,7 +29,7 @@
     {
       "id": "manage",
       "title": "Spravovať nainštalované aplikácie OCI",
-      "intro": "Táto možnosť hlavnej obrazovky uvádza registrované inštancie s ich aplikáciou a obrázkom. Každá z nich je kontrolovaná proti svojej zmluve pred akýmkoľvek opatrením; CT, ktorá už nezodpovedá jej záznamu, nie je ani upravená, ani vymazaná. Rovnaká aktualizácia a rovnaký editor sú ponúkané v záložke Aktualizácie <monitorLink>ProxMenux Monitor</monitorLink>.",
+      "intro": "Táto možnosť hlavnej obrazovky uvádza registrované inštancie s ich aplikáciou a obrazom. Každá z nich je kontrolovaná proti svojej zmluve pred akýmkoľvek opatrením; CT, ktorá už nezodpovedá jej záznamu, nie je ani upravená, ani vymazaná. Rovnaká aktualizácia a rovnaký editor sú ponúkané v záložke Aktualizácie <monitorLink>ProxMenux Monitor</monitorLink>.",
       "blocks": [
         {
           "table": {
@@ -40,8 +40,8 @@
             ],
             "rows": [
               [
-                "Aktualizovať obrázok pomocou uloženej konfigurácie",
-                "Rootfs je nahradený obrázkom uložený kanál publikuje dnes",
+                "Aktualizovať obraz pomocou uloženej konfigurácie",
+                "Rootfs je nahradený obrazom uložený kanál publikuje dnes",
                 "Zmluva, kontajnerové disky, hostiteľské adresáre, siete a zariadenia"
               ],
               [
@@ -63,7 +63,7 @@
           }
         },
         {
-          "p": "Pre viackontajnerovú aplikáciu ponúka menu <strong>0 Aktualizujte každý kontajner aplikácie</strong>, <strong>Upravte ďalšie cesty a zariadenia</strong>, <strong> Vytvorte každý kontajner s jeho uloženou konfiguráciou</strong>, strážny pes a odstránenie. Upraviť pridáva alebo odstraňuje ďalšie cesty a zariadenia aplikačného kontajnera bez prestavby niečo a, v Immich, zmení to, čo beží uznanie. Obnoviť prebuduje každý kontajner z obrazu, ktorý bol nainštalovaný, bez toho, aby hľadal novší."
+          "p": "Pre aplikáciu s viacerými kontajnermi menu ponúka <strong>Aktualizovať všetky kontajnery aplikácie</strong>, <strong>Upraviť ďalšie cesty a zariadenia</strong>, <strong>Znovu vytvoriť všetky kontajnery s uloženou konfiguráciou</strong>, watchdog a odstránenie. Úprava pridáva alebo odstraňuje ďalšie cesty a zariadenia aplikačného kontajnera bez opätovného vytvárania. V Immich tiež mení zariadenie, ktoré vykonáva rozpoznávanie. Opätovné vytvorenie zostaví každý kontajner z pôvodne nainštalovaného obrazu bez vyhľadávania novšieho."
         },
         {
           "figure": {
@@ -101,7 +101,7 @@
           "list": {
             "items": [
               "Keď register stále slúži nainštalovanému digest, nič sa nestiahne a inštancia sa nedotkne.",
-              "Nový obrázok je overená vrstva po vrstve pred zastavením CT. Stiahnutie, ktoré dorazí poškodené je stiahnuté druhýkrát; obrázok už cache, ktorý zlyhá kontrola je stiahnutý znova.",
+              "Nový obraz je overená vrstva po vrstve pred zastavením CT. Stiahnutie, ktoré dorazí poškodené je stiahnuté druhýkrát; obraz už cache, ktorý zlyhá kontrola je stiahnutý znova.",
               "Nastavenie zmenené v Proxmox VE po inštalácii (pamäť, výmena, jadrá, limit CPU, priorita CPU, štart s uzlom) sú uchovávané a prenesené do novej zmluvy.",
               "Rozhranie LAN, ktoré Arr apartmány a multi-kontajner aplikácie pridať (<code>net1</code>) a štart (<code>startup</code>) sú uvedené späť do nového kontajnera, ako sú.",
               "Akýkoľvek iný rozdiel medzi CT a jeho zmluvou zastaví aktualizáciu pred zastavením CT."
@@ -127,7 +127,7 @@
           }
         },
         {
-          "p": "Predtým ako sa niečo zastaví, operácia skontroluje, či záloha vyhovuje: údaje použité na objemoch, ktoré sú zálohované, plus rezerva. Je napísaný vedľa záznamu aplikácie, na systémovom disku hostiteľa. Keď sa tam nehodí, menu sa pýta na iný sklad hostiteľa, ktorý prijíma zálohy: záloha je vykonaná tam, je zmazaná, keď operácia skončí, a voľba je zapamätaná pre túto aplikáciu, plánované aktualizácie zahrnuté. Bez úložiska, ktoré má priestor, je operácia odmietnutá a žiadosť zostáva taká, aká bola. Nový obrázok je zaškrtnutý rovnakým spôsobom pred jeho stiahnutím."
+          "p": "Predtým ako sa niečo zastaví, operácia skontroluje, či záloha vyhovuje: údaje použité na objemoch, ktoré sú zálohované, plus rezerva. Je napísaný vedľa záznamu aplikácie, na systémovom disku hostiteľa. Keď sa tam nehodí, menu sa pýta na iný sklad hostiteľa, ktorý prijíma zálohy: záloha je vykonaná tam, je zmazaná, keď operácia skončí, a voľba je zapamätaná pre túto aplikáciu, plánované aktualizácie zahrnuté. Bez úložiska, ktoré má priestor, je operácia odmietnutá a žiadosť zostáva taká, aká bola. Nový obraz je zaškrtnutý rovnakým spôsobom pred jeho stiahnutím."
         }
       ]
     },
@@ -293,7 +293,7 @@
           }
         },
         {
-          "p": "Nádoba obnovená s iným ID udržuje svoju aplikáciu. Zmluva, jej konzolový log, jeho sieť sysctls, hákový skript montáže Rclone a spustenie objednávky viackontajnerovej aplikácie sú registrované na ID kontajnery majú na tomto hostiteľovi."
+          "p": "Kontajner obnovený s iným ID si zachová svoju aplikáciu. Kontrakt, záznam konzoly, sieťové nastavenia sysctl, hookscript pripojenia Rclone a poradie spúšťania viackontajnerovej aplikácie sa zaregistrujú s ID, ktoré majú kontajnery na tomto hostiteľovi."
         },
         {
           "table": {
@@ -418,7 +418,7 @@
     },
     {
       "id": "archives",
-      "title": "Stiahnuté obrázky a hostiteľský priestor",
+      "title": "Stiahnuté obrazy a hostiteľský priestor",
       "blocks": [
         {
           "p": "Archív OCI sa používa na vytvorenie korektúr; bežiaci CT ho nečíta. Po inštalácii alebo aktualizácii sú stiahnuté archívy tejto operácie uvedené s ich veľkosťou a ponúka sa ich vymazanie. Odstraňuje priestor bez toho, aby ovplyvnil kontajner alebo jeho údaje."
@@ -491,7 +491,7 @@
       "title": "Valcovací štítok nie je bez dozoru aktualizácia",
       "blocks": [
         {
-          "p": "Katalóg nainštaluje rolovaciu značku, ktorú zverejní jeho správca, ale efektívna digest je vyriešená, zaznamenaná a zmenená iba prostredníctvom explicitnej aktualizácie s predbežnou kontrolou a návratom späť. <monitorLink>ProxMenux Monitor</monitorLink> porovnáva nainštalovaný digest s tým, ktorý register publikuje a zobrazuje a upozorní, keď bude k dispozícii nový obrázok."
+          "p": "Katalóg nainštaluje rolovaciu značku, ktorú zverejní jeho správca, ale efektívna digest je vyriešená, zaznamenaná a zmenená iba prostredníctvom explicitnej aktualizácie s predbežnou kontrolou a návratom späť. <monitorLink>ProxMenux Monitor</monitorLink> porovnáva nainštalovaný digest s tým, ktorý register publikuje a zobrazuje a upozorní, keď bude k dispozícii nový obraz."
         }
       ]
     }

@@ -37,7 +37,7 @@
   },
   "flow": {
     "heading": "Nätverksflödesdiagram",
-    "intro": "Mellan den övre raden och de tre gruppkorten gör fliken en levande topologivy som heter <strong>Network Flow</strong>. Det drar varje väg ett paket kan ta genom värden - fysiska NICs i ena änden, broar i mitten, VM och behållare i den andra - med animerade pulser som visar realtidsrx / tx-trafik på varje länk.",
+    "intro": "Mellan den övre raden och de tre gruppkorten gör fliken en levande topologivy som heter <strong>Network Flow</strong>. Det drar varje väg ett paket kan ta genom värden - fysiska NICs i ena änden, broar i mitten, VM och containrar i den andra - med animerade pulser som visar realtidsrx / tx-trafik på varje länk.",
     "imageAlt": "Nätverksflödesdiagram - NICs till vänster, värd och broar i mitten, VM och LXCs till höger, med animerade pulser på varje anslutning",
     "imageCaption": "Nätverksflöde - färgkodade noder plus animerade kometer vars riktning och tjocklek återspeglar levande trafik.",
     "elementsTitle": "Vad diagrammet visar",
@@ -46,9 +46,9 @@
       "<strong>NICs</strong> (amber) - varje fysiskt gränssnitt med länk upp. Gränssnitt som rapporteras som ner dras blekna.",
       "<strong>Host</strong> (amber) - Proxmox värd själv, sitter mellan NIC och broarna. Återges som en fast ankare; inte klickbar.",
       "<strong>Bridges</strong> (cyan) - Linux och OVS broar. Endast broar som bär minst en aktiv gäst dras; oanvända broar är dolda för att hålla diagrammet fokuserat på vad som faktiskt rör trafiken.",
-      "<strong>LXCs</strong> (cyan) - kör behållare fäst vid en bro.",
+      "<strong>LXCs</strong> (cyan) - kör containrar fäst vid en bro.",
       "<strong>VMs</strong> (lila) - kör virtuella maskiner fästa på en bro.",
-      "Offline gäster (stoppade VM / behållare) är dolda."
+      "Offline gäster (stoppade VM / containrar) är dolda."
     ],
     "pulsesTitle": "Vad animationen kodar",
     "pulsesBody": "De animerade kometer som reser längs varje kant representerar levande trafik:",

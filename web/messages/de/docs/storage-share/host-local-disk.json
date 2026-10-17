@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Host: Lokale Festplatte als Proxmox-Speicher hinzufügen | ProxMenux Dokumentation",
-    "description": "Formatieren Sie eine lokale SATA / SAS / NVMe Festplatte auf einem Proxmox Host und registrieren Sie sie als Proxmox Verzeichnis oder ZFS Pool Storage. Sichere Festplattenerkennung, Destruktives-Op-Bestätigungsgate, UUID-basierter fstab, ZFS Poolerstellung und pvesm fügen dir / zfspool unter der Haube hinzu.",
+    "description": "Formatieren Sie einen lokalen SATA-, SAS- oder NVMe-Datenträger auf einem Proxmox-Host und registrieren Sie ihn als Verzeichnis- oder ZFS-Pool-Storage. Mit sicherer Datenträgerauswahl, Bestätigung vor destruktiven Schritten, UUID-basiertem fstab, ZFS-Pool-Erstellung und pvesm add dir / zfspool im Hintergrund.",
     "ogTitle": "Host: Lokale Festplatte als Proxmox-Speicher hinzufügen | ProxMenux Dokumentation",
     "ogDescription": "Formatieren Sie eine lokale Festplatte und registrieren Sie sie als Proxmox-Verzeichnis oder ZFS-Poolspeicher mit einem geführten, sicherheitsgefilterten Fluss."
   },
@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Was das macht",
-    "body": "Andere <em>Host</em>-Tools in diesem Abschnitt befassen sich mit <strong>network</strong> Speicher (NFS / Samba / iSCSI). Dieser befasst sich mit <strong>local</strong>-Festplatten - Ersatzlaufwerke, die physisch an Ihren Proxmox-Host angeschlossen sind und die Sie für VM-Festplatten, Backups, ISOs oder Vorlagen verwenden möchten. ProxMenux bereitet die Festplatte (Partition + Format + Halterung) vor und registriert sie in Proxmox, damit die Benutzeroberfläche Inhalte dort platzieren kann."
+    "body": "Andere <em>Host</em>-Tools in diesem Abschnitt befassen sich mit <strong>network</strong> Speicher (NFS / Samba / iSCSI). Dieser befasst sich mit <strong>local</strong>-Festplatten - Ersatzlaufwerke, die physisch an Ihren Proxmox-Host angeschlossen sind und die Sie für VM-Festplatten, Backups, ISOs oder Vorlagen verwenden möchten. ProxMenux bereitet die Festplatte (Partition + Format + Mount) vor und registriert sie in Proxmox, damit die Benutzeroberfläche Inhalte dort platzieren kann."
   },
   "destructive": {
     "title": "Zerstörendes Werkzeug für den \"Format\"-Pfad",
@@ -50,8 +50,8 @@
       },
       {
         "label": "Unterstützt Inhaltstypen",
-        "dir": "Bilder, Backup, iso, vztmpl, Snippets, rootdir",
-        "zfs": "Bilder, nur Rootdir (Block Storage)"
+        "dir": "images, backup, iso, vztmpl, snippets, rootdir",
+        "zfs": "nur images und rootdir (Blockspeicher)"
       },
       {
         "label": "Am besten für",
@@ -104,7 +104,7 @@
     "rows": [
       {
         "preset": "VM Speicherplatz",
-        "content": "Bilder, Backup",
+        "content": "images,backup",
         "use": "Ein dedizierter VM-Festplattenspeicher, der auch Backups dieser VMs in der Nähe hält."
       },
       {
@@ -157,11 +157,11 @@
     ],
     "noDisksOutro": "Verwenden Sie <em>List Available Disks</em> aus dem Menü, um die <code>lsblk</code>-Rohausgabe zu sehen und zu verstehen, was passiert.",
     "mountedTitle": "Format fehlschlägt mit \"Device is mount\"",
-    "mountedBody": "Etwas hat die Festplatte automatisch gemountet (udisksd, ein Desktop-Manager, eine anhaltende systemd-Einheit). Unmount: <code>umount /dev/sdX?*</code> oder <code>systemctl stop &lt;whatever-mounts-it&gt;</code>, dann wiederholen. Der Sicherheitsfilter des Skripts sollte versteckte montierte Festplatten haben, so dass, wenn Sie diesen Fehler erreicht haben, die Halterung zwischen dem angezeigten Menü und der Bestätigung stattgefunden hat.",
+    "mountedBody": "Etwas hat die Festplatte automatisch gemountet (udisksd, ein Desktop-Manager, eine anhaltende systemd-Einheit). Unmount: <code>umount /dev/sdX?*</code> oder <code>systemctl stop &lt;whatever-mounts-it&gt;</code>, dann wiederholen. Der Sicherheitsfilter des Skripts sollte versteckte montierte Festplatten haben, so dass, wenn Sie diesen Fehler erreicht haben, die Mount zwischen dem angezeigten Menü und der Bestätigung stattgefunden hat.",
     "zpoolTitle": "zpool create fehlschlägt \"ungültige vdev-spezifikation\"",
     "zpoolBody": "Normalerweise bedeutet dies, dass die Festplatte immer noch veraltete GPT / LVM / ZFS-Signaturen aufweist, die <code>zpool</code> nicht ohne Gewalt überschreiben möchte. Das Skript läuft <code>wipefs</code> und <code>sgdisk --zap-all</code> vor dem Format, aber eine sehr hartnäckige Festplatte kann immer noch ein veraltetes Label haben. Erzwingen Sie manuell ein sauberes Wischen: <code>zpool labelclear -f /dev/sdX</code> oder <code>dd if=/dev/zero of=/dev/sdX bs=1M count=10</code> und wiederholen Sie es.",
     "inactiveTitle": "Storage wird nach dem Neustart als inaktiv angezeigt",
-    "inactiveBody": "Überprüfen Sie <code>findmnt &lt;mount-path&gt;</code> - wenn die Halterung fehlt, ist etwas in <code>/etc/fstab</code> fehlgeschlagen. <code>dmesg | tail</code> zeigt normalerweise auf den Grund (UUID-Mismatch, Dateisystemkorruption, <code>nofail</code> ließ die Wiederholung fallen). Ein <code>mount -a</code> reaktiviert normalerweise den Speicher, sobald die Ursache behoben ist."
+    "inactiveBody": "Überprüfen Sie <code>findmnt &lt;mount-path&gt;</code> - wenn die Mount fehlt, ist etwas in <code>/etc/fstab</code> fehlgeschlagen. <code>dmesg | tail</code> zeigt normalerweise auf den Grund (UUID-Mismatch, Dateisystemkorruption, <code>nofail</code> ließ die Wiederholung fallen). Ein <code>mount -a</code> reaktiviert normalerweise den Speicher, sobald die Ursache behoben ist."
   },
   "related": {
     "heading": "Verwandte Themen",

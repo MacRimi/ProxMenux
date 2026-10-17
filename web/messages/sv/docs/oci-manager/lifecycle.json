@@ -6,7 +6,7 @@
   "header": {
     "title": "Installera, uppdatera och modifiera",
     "description": "Varje instans håller ett reproducerbart kontrakt, så dess rötter kan ersättas utan att förlora konfiguration eller ihållande data.",
-    "section": "Appar i OCI-hanteraren"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -22,14 +22,14 @@
           }
         },
         {
-          "p": "En kopia av kontraktet reser inuti behållaren, i <code>/.proxmenux/oci-record.json</code>, läsbar endast genom rot av behållaren, så en säkerhetskopia av behållaren bär alltid det kontrakt som den hade i det ögonblicket. En andra kopia hålls i <code>/etc/pve/priv/proxmenux/oci</code>, som varje nod av en kluster aktier och endast roten till värden läser. Båda är skrivna efter varje installation, uppdatering och förändring."
+          "p": "En kopia av kontraktet reser inuti containern, i <code>/.proxmenux/oci-record.json</code>, läsbar endast genom rot av containern, så en säkerhetskopia av containern bär alltid det kontrakt som den hade i det ögonblicket. En andra kopia hålls i <code>/etc/pve/priv/proxmenux/oci</code>, som varje nod av en kluster aktier och endast roten till värden läser. Båda är skrivna efter varje installation, uppdatering och förändring."
         }
       ]
     },
     {
       "id": "manage",
       "title": "Hantera installerade OCI-program",
-      "intro": "Det här alternativet på huvudskärmen listar de registrerade instanserna med deras applikation och bild. Var och en kontrolleras mot sitt kontrakt innan någon åtgärd; en CT som inte längre matchar dess rekord ändras eller tas bort. Samma uppdatering och samma redaktör erbjuds i fliken Uppdateringar av <monitorLink>ProxMenux Monitor</monitorLink>.",
+      "intro": "Det här alternativet på huvudskärmen listar de registrerade instanserna med deras applikation och avbildning. Var och en kontrolleras mot sitt kontrakt innan någon åtgärd; en CT som inte längre matchar dess rekord ändras eller tas bort. Samma uppdatering och samma redaktör erbjuds i fliken Uppdateringar av <monitorLink>ProxMenux Monitor</monitorLink>.",
       "blocks": [
         {
           "table": {
@@ -40,8 +40,8 @@
             ],
             "rows": [
               [
-                "Uppdatera bilden med sparad konfiguration",
-                "Rötterna ersätts av bilden som den sparade kanalen publicerar idag.",
+                "Uppdatera avbildningen med sparad konfiguration",
+                "Rötterna ersätts av avbildningen som den sparade kanalen publicerar idag.",
                 "Kontrakt, containerskivor, värdkataloger, nätverk och enheter"
               ],
               [
@@ -55,7 +55,7 @@
                 "Hela installationen; endast valet sparas i kontraktet"
               ],
               [
-                "Ta bort: ta bort programmet och dess behållare",
+                "Ta bort: ta bort programmet och dess containrar",
                 "LXC, eller varje medlem i en stack, och deras kontrakt raderas",
                 "Värdkataloger, med deras innehåll"
               ]
@@ -63,7 +63,7 @@
           }
         },
         {
-          "p": "För en multi-container applikation menyn erbjuder <strong>Update varje behållare av applikationen</strong>, <strong>Modify extra vägar och enheter</strong>, <strong> Återskapa varje behållare med sin sparade konfiguration</strong>, vakthunden och borttagningen. Modify lägger till eller tar bort de extra vägarna och enheterna i applikationsbehållaren utan att bygga om någonting och i Immich ändrar det som körs igenkänning. Återskapa återuppbygger varje behållare från bilden som den installerades med, utan att leta efter en nyare."
+          "p": "För en multi-container applikation menyn erbjuder <strong>Update varje container av applikationen</strong>, <strong>Modify extra vägar och enheter</strong>, <strong> Återskapa varje container med sin sparade konfiguration</strong>, vakthunden och borttagningen. Modify lägger till eller tar bort de extra vägarna och enheterna i applikationsbehållaren utan att bygga om någonting och i Immich ändrar det som körs igenkänning. Återskapa återuppbygger varje container från avbildningen som den installerades med, utan att leta efter en nyare."
         },
         {
           "figure": {
@@ -101,9 +101,9 @@
           "list": {
             "items": [
               "När registret fortfarande serverar den installerade smältningen laddas ingenting ner och instansen är inte rörd.",
-              "Den nya bilden är verifierat lager av lager innan CT stannar. En nedladdning som kommer skadad hämtas en andra gång; en bild som redan är cachad som misslyckas checken laddas ner igen.",
+              "Den nya avbildningen är verifierat lager av lager innan CT stannar. En nedladdning som kommer skadad hämtas en andra gång; en avbildning som redan är cachad som misslyckas checken laddas ner igen.",
               "Inställningar ändrade i Proxmox VE efter installationen (minne, byte, kärnor, CPU-gräns, CPU-prioritet, start med noden) hålls och transporteras in i det nya kontraktet.",
-              "LAN-gränssnittet som Arr-sviten och multi-container-applikationerna lägger till (<code>net1</code>) och startordern (<code>startup</code>) ges tillbaka till den nya behållaren som de är.",
+              "LAN-gränssnittet som Arr-sviten och multi-container-applikationerna lägger till (<code>net1</code>) och startordern (<code>startup</code>) ges tillbaka till den nya containern som de är.",
               "Alla andra skillnader mellan CT och dess kontrakt stoppar uppdateringen innan CT stoppas."
             ]
           }
@@ -127,7 +127,7 @@
           }
         },
         {
-          "p": "Innan något stoppas kontrollerar operationen att säkerhetskopieringen passar: data som används på de volymer som backas upp, plus en marginal. Det skrivs bredvid posten för programmet, på systemdisken för värden. När den inte passar där, frågar menyn för en annan lagring av värden som accepterar säkerhetskopior: säkerhetskopieringen görs där, raderas den när operationen slutar, och valet kommer ihåg för den applikationen, schemalagda uppdateringar ingår. Utan förvaring som har utrymme vägras operationen och ansökan stannar som den var. Den nya bilden kontrolleras på samma sätt innan den laddas ner."
+          "p": "Innan något stoppas kontrollerar operationen att säkerhetskopieringen passar: data som används på de volymer som backas upp, plus en marginal. Det skrivs bredvid posten för programmet, på systemdisken för värden. När den inte passar där, frågar menyn för en annan lagring av värden som accepterar säkerhetskopior: säkerhetskopieringen görs där, raderas den när operationen slutar, och valet kommer ihåg för den applikationen, schemalagda uppdateringar ingår. Utan förvaring som har utrymme vägras operationen och ansökan stannar som den var. Den nya avbildningen kontrolleras på samma sätt innan den laddas ner."
         }
       ]
     },
@@ -145,7 +145,7 @@
               },
               {
                 "title": "Visa status",
-                "body": "Visar den fas som uppnåddes utan att ändra behållare eller data."
+                "body": "Visar den fas som uppnåddes utan att ändra containrar eller data."
               },
               {
                 "title": "Återställ den tidigare installationen",
@@ -161,7 +161,7 @@
         {
           "calloutWarning": {
             "title": "Värdkataloger ligger utanför rullningen",
-            "body": "Backupen täcker rootfs och behållaren diskar som den innehåller. En värdkatalog återställs inte, eftersom andra LXC kan använda sina data."
+            "body": "Backupen täcker rootfs och containern diskar som den innehåller. En värdkatalog återställs inte, eftersom andra LXC kan använda sina data."
           }
         }
       ]
@@ -169,7 +169,7 @@
     {
       "id": "watchdog",
       "title": "Watchdog: starta om en applikation som slutar",
-      "intro": "Proxmox har ingen omstartpolicy: när processen för en applikationsbehållare slutar stannar behållaren. Med vakthunden på startas en applikation som stannar på egen hand igen. Det gör för en OCI-applikation vad <code>restart: unless-stopped</code> gör i en komponeringsfil.",
+      "intro": "Proxmox har ingen omstartpolicy: när processen för en applikationsbehållare slutar stannar containern. Med vakthunden på startas en applikation som stannar på egen hand igen. Det gör för en OCI-applikation vad <code>restart: unless-stopped</code> gör i en komponeringsfil.",
       "blocks": [
         {
           "table": {
@@ -180,7 +180,7 @@
             "rows": [
               [
                 "Ansökan kraschar eller dess process slutar",
-                "Behållaren startas igen inom några sekunder"
+                "Containern startas igen inom några sekunder"
               ],
               [
                 "Det stoppas eller stängs av från Proxmox, från Monitor eller med <code>pct</code>",
@@ -202,7 +202,7 @@
           }
         },
         {
-          "p": "Installationsprogrammet frågar det i både installationslägen och föreslår vad receptet på programmet förklarar. Det ändras senare från <strong>Manage installerade OCI applikationer</strong> eller med <strong>Watchdog</strong> switch av behållaren i <monitorLink>ProxMenux Monitor</monitorLink>, och det gäller för varje behållare av en multi-container applikation. En tjänst av värden, <code>proxmenux-oci-watchdog.service</code>, tittar på varje ansökan som bad om det; dess installation är listad i fliken Ändringar av Audit & Report."
+          "p": "Installationsprogrammet frågar det i både installationslägen och föreslår vad receptet på programmet förklarar. Det ändras senare från <strong>Manage installerade OCI applikationer</strong> eller med <strong>Watchdog</strong> switch av containern i <monitorLink>ProxMenux Monitor</monitorLink>, och det gäller för varje container av en multi-container applikation. En tjänst av värden, <code>proxmenux-oci-watchdog.service</code>, tittar på varje ansökan som bad om det; dess installation är listad i fliken Ändringar av Audit & Report."
         },
         {
           "calloutInfo": {
@@ -215,18 +215,18 @@
     {
       "id": "restore",
       "title": "Backup, restaurering och en annan värd",
-      "intro": "En backup gjord med vzdump eller Proxmox Backup Server innehåller behållaren, dess diskar och kopian av dess kontrakt. Vad installationen håller på värden är inte en del av det. <strong>Manage installerade OCI-program</strong> upptäcker behållarna återställda på en värd som inte har något kontrakt för dem, en ny Proxmox-installation eller annan värd och erbjuder att registrera dem igen.",
+      "intro": "En backup gjord med vzdump eller Proxmox Backup Server innehåller containern, dess diskar och kopian av dess kontrakt. Vad installationen håller på värden är inte en del av det. <strong>Manage installerade OCI-program</strong> upptäcker containrarna återställda på en värd som inte har något kontrakt för dem, en ny Proxmox-installation eller annan värd och erbjuder att registrera dem igen.",
       "blocks": [
         {
           "steps": {
             "items": [
               {
-                "title": "Återställ behållarna i Proxmox",
+                "title": "Återställ containrarna i Proxmox",
                 "body": "Från backup lagring, med det ursprungliga ID eller med någon gratis. En multi-container-applikation behöver alla sina behållare."
               },
               {
                 "title": "Open Manage installerade OCI-program",
-                "body": "De restaurerade behållarna är listade och återhämtningen erbjuds. <strong>Recover</strong>-knappen på fliken Uppdateringar av <monitorLink>ProxMenux Monitor</monitorLink> öppnar samma återhämtning."
+                "body": "De restaurerade containrarna är listade och återhämtningen erbjuds. <strong>Recover</strong>-knappen på fliken Uppdateringar av <monitorLink>ProxMenux Monitor</monitorLink> öppnar samma återhämtning."
               },
               {
                 "title": "Kontrollera innan du ändrar",
@@ -234,7 +234,7 @@
               },
               {
                 "title": "Registrera och starta",
-                "body": "Kontraktet är registrerat på denna värd och vad installationen hålls på det skrivs igen. Starta ansökningarna är en separat fråga, besvarad med Nej när de ursprungliga behållarna fortfarande körs på en annan värd."
+                "body": "Kontraktet är registrerat på denna värd och vad installationen hålls på det skrivs igen. Starta ansökningarna är en separat fråga, besvarad med Nej när de ursprungliga containrarna fortfarande körs på en annan värd."
               }
             ]
           }
@@ -242,7 +242,7 @@
         {
           "figure": {
             "src": "/oci-manager/restore-offer.png",
-            "alt": "Dialog som listar de restaurerade behållarna och erbjuder att återställa dem",
+            "alt": "Dialog som listar de restaurerade containrarna och erbjuder att återställa dem",
             "caption": "Återhämtningen som erbjuds när Manage installerade OCI-program öppnas."
           }
         },
@@ -255,11 +255,11 @@
             "rows": [
               [
                 "Instance Contrakt",
-                "Registrerad från kopian bär behållaren, kontrollerad mot konfigurationen Proxmox återställd"
+                "Registrerad från kopian bär containern, kontrollerad mot konfigurationen Proxmox återställd"
               ],
               [
                 "Privat nätverk av en multi-container-applikation",
-                "Skapad igen med samma bro och undernät; de fasta adresserna i behållarna ändras inte"
+                "Skapad igen med samma bro och undernät; de fasta adresserna i containrarna ändras inte"
               ],
               [
                 "Startorder för en multicontainer-applikation",
@@ -271,7 +271,7 @@
               ],
               [
                 "NVIDIA-körmiljö",
-                "En oprivilegierad behållare är installerad igen. En privilegierad behållare får drivrutinsfilerna i denna värd istället för värden den kommer från"
+                "En oprivilegierad container är installerad igen. En privilegierad container får drivrutinsfilerna i denna värd istället för värden den kommer från"
               ],
               [
                 "Rclone montering",
@@ -293,7 +293,7 @@
           }
         },
         {
-          "p": "En behållare återställd med ett annat ID håller sin ansökan. Kontraktet, dess konsollogg, dess nätverkssysktlar, hookscript av en Rclone-fäste och startorder för en multi-container-applikation registreras med ID: erna som behållarna har på denna värd."
+          "p": "En behållare återställd med ett annat ID håller sin ansökan. Kontraktet, dess konsollogg, dess nätverkssysktlar, hookscript av en Rclone-fäste och startorder för en multi-container-applikation registreras med ID: erna som containrarna har på denna värd."
         },
         {
           "table": {
@@ -303,20 +303,20 @@
             ],
             "rows": [
               [
-                "En behållare av en multicontainer-applikation saknas",
+                "En container av en multicontainer-applikation saknas",
                 "Återställ det också; ansökan återställs hela"
               ],
               [
                 "Det privata subnet används redan på denna värd",
-                "Återhämtningen avbryts och ingenting ändras: adresserna till behållarna är fasta och flyttas inte till ett annat undernät."
+                "Återhämtningen avbryts och ingenting ändras: adresserna till containrarna är fasta och flyttas inte till ett annat undernät."
               ],
               [
                 "En värdkatalog finns inte",
-                "Montera eller skapa den med dess data; en säkerhetskopia av behållaren inkluderar inte värdkataloger"
+                "Montera eller skapa den med dess data; en säkerhetskopia av containern inkluderar inte värdkataloger"
               ],
               [
                 "En enhet finns inte på denna värd",
-                "Anslut den eller ta bort den från behållaren i Proxmox"
+                "Anslut den eller ta bort den från containern i Proxmox"
               ],
               [
                 "En ansökan med NVIDIA på en värd utan föraren",
@@ -324,21 +324,21 @@
               ],
               [
                 "Backupen gjordes innan kopian av kontraktet fanns",
-                "Behållaren stannar som en vanlig LXC och erbjuds inte igen"
+                "Containern stannar som en vanlig LXC och erbjuds inte igen"
               ]
             ]
           }
         },
         {
           "calloutInfo": {
-            "title": "En behållare som kommer tillbaka",
-            "body": "En behållare restaurerad över sig själv från en äldre säkerhetskopia, rullade tillbaka till en ögonblicksbild eller återvände från en annan nod bär kontraktet av staten det är i. När det väljs ut för en operation och dess kontrakt skiljer sig från en av denna värd startar operationen inte och behållaren erbjuds för återhämtning."
+            "title": "En container som kommer tillbaka",
+            "body": "En container restaurerad över sig själv från en äldre säkerhetskopia, rullade tillbaka till en ögonblicksbild eller återvände från en annan nod bär kontraktet av staten det är i. När det väljs ut för en operation och dess kontrakt skiljer sig från en av denna värd startar operationen inte och containern erbjuds för återhämtning."
           }
         },
         {
           "figure": {
             "src": "/oci-manager/restore-result.png",
-            "alt": "Resultatet av återhämtningen med det privata nätverket, startordern och de registrerade behållarna",
+            "alt": "Resultatet av återhämtningen med det privata nätverket, startordern och de registrerade containrarna",
             "caption": "Resultatet av en återhämtning steg för steg."
           }
         }
@@ -349,7 +349,7 @@
       "title": "Ta bort en OCI-applikation",
       "blocks": [
         {
-          "p": "Innan bekräftelsen byggs en sammanfattning från den verkliga konfigurationen: de behållare som tas bort, de data som raderas med dem, det privata nätverket som släpps och värdkatalogerna som hålls. Bekräftelsen standarder till <strong>No</strong>, eftersom data från raderade diskar inte kan återställas efteråt."
+          "p": "Innan bekräftelsen byggs en sammanfattning från den verkliga konfigurationen: de containrar som tas bort, de data som raderas med dem, det privata nätverket som släpps och värdkatalogerna som hålls. Bekräftelsen standarder till <strong>No</strong>, eftersom data från raderade diskar inte kan återställas efteråt."
         },
         {
           "table": {
@@ -362,7 +362,7 @@
               [
                 "rootfs och container diskar",
                 "Raderad",
-                "De tillhör endast behållaren"
+                "De tillhör endast containern"
               ],
               [
                 "Värd katalog",
@@ -370,9 +370,9 @@
                 "Andra applikationer kan använda den"
               ],
               [
-                "Värd filer av behållaren",
+                "Värd filer av containern",
                 "Raderad",
-                "Dess konsollogg, nätverkssysctls, Rclone montering hookscript och dess registrering i App-fliken ProxMenux Monitor tjänar ingen annan behållare"
+                "Dess konsollogg, nätverkssysctls, Rclone montering hookscript och dess registrering i App-fliken ProxMenux Monitor tjänar ingen annan container"
               ],
               [
                 "Filer flera installationer delar",
@@ -400,7 +400,7 @@
                 "Hela applikationen tas bort, så ingen stack lämnas ofullständig"
               ],
               [
-                "En behållare på en annan nod av klustret",
+                "En container på en annan nod av klustret",
                 "Inte borttagen",
                 "Dess rekord och värdfiler är på noden där den installerades: den tas bort där, efter att ha migrerat den tillbaka."
               ]
@@ -410,7 +410,7 @@
         {
           "figure": {
             "src": "/oci-manager/remove-summary.png",
-            "alt": "Avlägsnande sammanfattning med behållare, data och värdkataloger som påverkas",
+            "alt": "Avlägsnande sammanfattning med containrar, data och värdkataloger som påverkas",
             "caption": "Ta bort sammanfattningen, byggd från den verkliga konfigurationen."
           }
         }
@@ -418,10 +418,10 @@
     },
     {
       "id": "archives",
-      "title": "Ladda ner bilder och värdutrymme",
+      "title": "Ladda ner avbildningar och värdutrymme",
       "blocks": [
         {
-          "p": "OCI-arkivet används för att bygga rötterna; den löpande CT läser den inte. Efter en installation eller en uppdatering, är de nedladdade arkiv av den operationen listade med sin storlek och deras radering erbjuds. Ta bort dem frigör utrymmet utan att påverka behållaren eller dess data."
+          "p": "OCI-arkivet används för att bygga rötterna; den löpande CT läser den inte. Efter en installation eller en uppdatering, är de nedladdade arkiv av den operationen listade med sin storlek och deras radering erbjuds. Ta bort dem frigör utrymmet utan att påverka containern eller dess data."
         },
         {
           "calloutInfo": {
@@ -454,15 +454,15 @@
             "rows": [
               [
                 "Konsol logga",
-                "Behållaren skapar <code>/var/log/proxmenux/oci</code> innan den börjar, oavsett vilken nod som kör den. Varje nod håller loggen på starten den sprang."
+                "Containern skapar <code>/var/log/proxmenux/oci</code> innan den börjar, oavsett vilken nod som kör den. Varje nod håller loggen på starten den sprang."
               ],
               [
                 "Network sysctls och värd monitor",
-                "Skickat i <code>/etc/pve/proxmenux</code>, som varje nod av klustret delar, så en migrerad behållare hittar dem."
+                "Skickat i <code>/etc/pve/proxmenux</code>, som varje nod av klustret delar, så en migrerad container hittar dem."
               ],
               [
                 "Container diskar",
-                "Proxmox flyttar dem med behållaren. HA behöver dem på delad lagring."
+                "Proxmox flyttar dem med containern. HA behöver dem på delad lagring."
               ],
               [
                 "Värd kataloger och enheter",
@@ -470,7 +470,7 @@
               ],
               [
                 "ProxMenux rekord",
-                "Kontraktet stannar på noden där programmet installerades, och varje nod läser kopian hålls i <code>/etc/pve/priv/proxmenux/oci</code>. En enda behållare applikation som migrerar är registrerad på noden den anländer till när <strong>Manage installerade OCI applikationer</strong> öppnas eller en operation lanseras för det. En multicontainer-applikation erbjuds för återhämtning där, eftersom dess privata nätverk måste skapas på den noden."
+                "Kontraktet stannar på noden där programmet installerades, och varje nod läser kopian hålls i <code>/etc/pve/priv/proxmenux/oci</code>. En enda container applikation som migrerar är registrerad på noden den anländer till när <strong>Manage installerade OCI applikationer</strong> öppnas eller en operation lanseras för det. En multicontainer-applikation erbjuds för återhämtning där, eftersom dess privata nätverk måste skapas på den noden."
               ]
             ]
           }
@@ -482,7 +482,7 @@
           }
         },
         {
-          "p": "En säkerhetskopia återställd utanför klustret får filer av <code>/etc/pve/proxmenux</code> behållaren använder när programmet återhämtas."
+          "p": "En säkerhetskopia återställd utanför klustret får filer av <code>/etc/pve/proxmenux</code> containern använder när programmet återhämtas."
         }
       ]
     },
@@ -491,7 +491,7 @@
       "title": "En rullande tag är inte en obevakad uppdatering",
       "blocks": [
         {
-          "p": "Katalogen installerar den rullande taggen sin underhållare publicerar, men den effektiva smältningen löses, registreras och ändras endast genom en explicit uppdatering med preflight och rollback. <monitorLink>ProxMenux Monitor</monitorLink> jämför den installerade smältan med den som registret publicerar och visar, och meddelar, när en ny bild är tillgänglig."
+          "p": "Katalogen installerar den rullande taggen sin underhållare publicerar, men den effektiva smältningen löses, registreras och ändras endast genom en explicit uppdatering med preflight och rollback. <monitorLink>ProxMenux Monitor</monitorLink> jämför den installerade smältan med den som registret publicerar och visar, och meddelar, när en ny avbildning är tillgänglig."
         }
       ]
     }

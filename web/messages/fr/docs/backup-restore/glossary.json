@@ -2,9 +2,9 @@
   "meta": {
     "title": "Glossaire — Sauvegarde et restauration ProxMenux",
     "description": "Glossaire des termes et définitions de la pile de sauvegarde et de restauration ProxMenux: chiffrement, fichier de clés, mots de passe, enveloppe de récupération, PBS, morceaux, rootfs, manifeste, hydratation coureur et cross-kernel.",
-    "ogTitle": "Backup & Restore glossaire ProxMenux",
+    "ogTitle": "Glossaire de la sauvegarde et de la restauration | ProxMenux",
     "ogDescription": "Effacer les définitions du vocabulaire utilisé dans la documentation de sauvegarde et de restauration ProxMenux.",
-    "twitterTitle": "Backup & Restore glossaire ProxMenux",
+    "twitterTitle": "Glossaire de la sauvegarde et de la restauration | ProxMenux",
     "twitterDescription": "Phrase de passe, fichier clé, enveloppe de récupération, rootfs, manifeste, PBS, morceaux — tous définis en un seul endroit."
   },
   "header": {

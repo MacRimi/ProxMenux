@@ -6,7 +6,7 @@
   "header": {
     "title": "Aplicaciones con varios contenedores",
     "description": "Una aplicación con su base de datos, su caché y otros servicios se convierte en varios LXC nativos coordinados, que se instalan y actualizan como uno solo.",
-    "section": "Aplicaciones del gestor OCI"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {

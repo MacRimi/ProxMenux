@@ -1,11 +1,11 @@
 {
   "meta": {
     "title": "Proxmox qm och pct Commands - VM och LXC Container Management | ProxMenux",
-    "description": "Hänvisning till Proxmox VE qm och pct kommandon för VMs och LXC containers: list, config, start, stop, shutdown, reboot, destroy, clone, migrate, snapshot, resize, plus pct exec / enter / push / pull för behållare.",
+    "description": "Hänvisning till Proxmox VE qm och pct kommandon för VMs och LXC containers: list, config, start, stop, shutdown, reboot, destroy, clone, migrate, snapshot, resize, plus pct exec / enter / push / pull för containrar.",
     "ogTitle": "Proxmox qm och pct Commands - VM och LXC Container Management",
-    "ogDescription": "Referens av Proxmox VE qm och pct kommandon - hantera virtuella maskiner och LXC behållare från CLI: start, stopp, konfigurera, ögonblicksbild, migrera, klon, förstöra.",
+    "ogDescription": "Referens av Proxmox VE qm och pct kommandon - hantera virtuella maskiner och LXC containrar från CLI: start, stopp, konfigurera, ögonblicksbild, migrera, klon, förstöra.",
     "twitterTitle": "Proxmox qm/pct Commands ProxMenux",
-    "twitterDescription": "Curated qm / pct kommandon för hantering av virtuella maskiner och LXC behållare i Proxmox VE."
+    "twitterDescription": "Curated qm / pct kommandon för hantering av virtuella maskiner och LXC containrar i Proxmox VE."
   },
   "header": {
     "title": "VM och CT Management",
@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Hitta ett VMID eller CTID först",
-    "body": "Nästan varje kommando behöver ett numeriskt ID. Använd <code>qm list</code> för VM och <code>pct list</code> för behållare. Ersätt <code>&lt;vmid&gt;</code> / <code>&lt;ctid&gt;</code> i snipporna med det faktiska ID innan du kör."
+    "body": "Nästan varje kommando behöver ett numeriskt ID. Använd <code>qm list</code> för VM och <code>pct list</code> för containrar. Ersätt <code>&lt;vmid&gt;</code> / <code>&lt;ctid&gt;</code> i snipporna med det faktiska ID innan du kör."
   },
   "commandGroups": [
     {
@@ -113,11 +113,11 @@
         },
         {
           "command": "pct shutdown <ctid>",
-          "description": "Gracefully shutdown en behållare"
+          "description": "Gracefully shutdown en container"
         },
         {
           "command": "pct restart <ctid>",
-          "description": "Starta en behållare"
+          "description": "Starta en container"
         },
         {
           "command": "pct destroy <ctid>",
@@ -165,7 +165,7 @@
       {
         "href": "/docs/help-info/backup-commands",
         "label": "Backup och återställ",
-        "tail": " — vzdump och qmrestore / pct restaurering."
+        "tail": " — vzdump och qmrestore / pct restore."
       },
       {
         "href": "/docs/help-info/storage-commands",

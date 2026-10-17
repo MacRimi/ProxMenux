@@ -7,7 +7,7 @@
   },
   "header": {
     "title": "Formato / Pulisci disco fisico",
-    "description": "Pulire o formattare in modo sicuro un disco fisico sull'host Proxmox. ProxMenux mostra solo dischi completamente liberi (nessun uso del sistema, nessun riferimento ospite, nessun supporto) e forza una doppia conferma — sì/no più digitando il percorso del disco completo — prima di distruggere qualsiasi dato.",
+    "description": "Cancella in modo sicuro o formatta un disco fisico sull’host Proxmox. ProxMenux mostra solo i dischi completamente liberi: nessun uso da parte del sistema, nessun riferimento nei guest e nessun filesystem montato. Prima di distruggere i dati richiede una doppia conferma: sì/no e inserimento del percorso completo del disco.",
     "section": "Disk Manager · Utilità"
   },
   "danger": {

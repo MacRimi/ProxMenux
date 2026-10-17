@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Qué hace",
-    "body": "ProxMenux ofrece dos métodos de montaje para cualquier share Samba: <strong>(1) Almacenamiento de Proxmox</strong> vía <code>pvesm add cifs</code> — visible en Datacenter > Storage, montado en <code>/mnt/pve/&lt;id&gt;</code>, credenciales guardadas cifradas en <code>/etc/pve/priv/storage/&lt;id&gt;.pw</code>; <strong>(2) Montaje fstab del host</strong> en una ruta que tú elijas — persistente vía <code>/etc/fstab</code>, montado con <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> para que los bind mounts LXC unprivileged puedan escribir, credenciales guardadas en un archivo solo para root en <code>/etc/samba/credentials/</code> (la contraseña nunca aparece en <code>fstab</code>). Puedes ejecutar un método, el otro o ambos."
+    "body": "ProxMenux ofrece dos métodos para montar un recurso Samba: <strong>(1) Almacenamiento de Proxmox</strong> mediante <code>pvesm add cifs</code>, visible en Datacenter > Storage y montado en <code>/mnt/pve/&lt;id&gt;</code>. La contraseña se guarda en texto claro en <code>/etc/pve/priv/storage/&lt;id&gt;.pw</code>, protegida por el directorio privado accesible solo por root: es control de acceso, no cifrado. <strong>(2) Montaje fstab del host</strong> en una ruta elegida, persistente mediante <code>/etc/fstab</code> y montada con <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> para permitir la escritura desde bind mounts de LXC sin privilegios. Sus credenciales se guardan en un archivo accesible solo por root dentro de <code>/etc/samba/credentials/</code>, nunca directamente en <code>fstab</code>. Puedes utilizar cualquiera de los métodos o ambos."
   },
   "opening": {
     "heading": "Abrir la herramienta",

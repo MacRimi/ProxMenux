@@ -3,7 +3,7 @@
     "title": "Proxmox Storage und Disk Commands — lsblk, LVM, pvesm, qm importdisk | ProxMenux",
     "description": "Referenz der Speicher- und Festplattenbefehle auf Proxmox VE: lsblk, blkid, parted, lvdisplay, vgdisplay, pvs, mount, df, du, ncdu, pvesm status, qm importdisk und qemu-img convert for VM Plattenoperationen.",
     "ogTitle": "Proxmox Storage und Disk Commands — lsblk, LVM, pvesm, qm importdisk",
-    "ogDescription": "Referenz von Speicher- und Festplattenbefehlen auf Proxmox VE — Festplatteninspektion, LVM, Halterungen, Proxmox Storage Management, VM Festplattenimport und Bildkonvertierung.",
+    "ogDescription": "Referenz von Speicher- und Festplattenbefehlen auf Proxmox VE — Festplatteninspektion, LVM, Mounts, Proxmox Storage Management, VM Festplattenimport und Bildkonvertierung.",
     "twitterTitle": "Proxmox Speicherbefehle | ProxMenux",
     "twitterDescription": "Festplatteninspektion, Mount-Info, LVM-Verwaltung, Proxmox-Speicher und VM-Festplattenimport- / -konvertierungsbefehle."
   },

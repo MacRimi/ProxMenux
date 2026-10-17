@@ -72,7 +72,7 @@
     ],
     "notTitle": "Che cosa NON è esportato",
     "notItems": [
-      "Supporti CD-ROM / ISO (esclusi dal design).",
+      "Montaggi CD-ROM e ISO, esclusi intenzionalmente.",
       "Unità cloud-init (escluse dal design).",
       "Ponte/modello NIC specifico (solo il conteggio è conservato).",
       "BIOS / UEFI scelta — deve essere ripristinata all'importazione.",

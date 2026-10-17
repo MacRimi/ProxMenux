@@ -107,7 +107,7 @@
     "notListedTitle": "Disk som inte anges i menyn",
     "notListedBody": "Det filtrerades för säkerhet. Vanliga skäl: det är monterat (även på <code>/mnt/tmp</code>), det är en aktiv ZFS / LVM / RAID-medlem, det refereras av en VM eller LXC config, eller det är din Proxmox root disk. Kör <code>lsblk -f</code> och <code>cat /proc/mdstat</code> på värden för att förstå varför.",
     "busyTitle": "\"Disk kan vara upptagen\" / oöverträffad misslyckad",
-    "busyBody": "Något håller fortfarande en öppen fil på en partition av den disken - oftast en behållare eller ett skal vars cwd är inuti en monteringspunkt. Identifiera det med <code>lsof | grep /dev/sdX</code> eller <code>fuser -vm /dev/sdX1</code>, stoppa det och sedan köra verktyget igen."
+    "busyBody": "Något håller fortfarande en öppen fil på en partition av den disken - oftast en container eller ett skal vars cwd är inuti en monteringspunkt. Identifiera det med <code>lsof | grep /dev/sdX</code> eller <code>fuser -vm /dev/sdX1</code>, stoppa det och sedan köra verktyget igen."
   },
   "related": {
     "heading": "Relaterad",

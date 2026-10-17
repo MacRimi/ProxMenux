@@ -18,7 +18,7 @@
     "heading": "Vyberač súborov",
     "intro": "Pri štarte skript ponúka dva prednastavené adresáre alebo manuálnu cestu:",
     "items": [
-      "<code>/var/lib/vz/dump</code>",
+      "<code>/var/lib/vz/dump</code> — predvolený adresár záloh vzdump v Proxmox.",
       "<code>/var/lib/vz/template/iso</code>",
       "Manuálna cesta pre OVA / OVF súbory kdekoľvek inde na hostiteľovi."
     ],

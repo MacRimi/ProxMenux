@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Comandi Proxmox per archiviazione e dischi — lsblk, LVM, pvesm, qm importdisk | ProxMenux",
-    "description": "Riferimento dei comandi di archiviazione e disco su Proxmox VE: lsblk, blkid, parted, lvdisplay, vgdisplay, pvs, mount, df, du, ncdu, pvesm stato, qm importdisk e qemu-img convertito per VM operazioni su disco.",
+    "description": "Riferimento dei comandi per storage e dischi in Proxmox VE: lsblk, blkid, parted, lvdisplay, vgdisplay, pvs, mount, df, du, ncdu e pvesm status, oltre a qm importdisk e qemu-img convert per i dischi delle VM.",
     "ogTitle": "Comandi Proxmox per archiviazione e dischi — lsblk, LVM, pvesm, qm importdisk",
     "ogDescription": "Riferimento dei comandi di archiviazione e disco su Proxmox VE — ispezione del disco, LVM, monta, gestione dell'archiviazione Proxmox, importazione del disco VM e conversione dell'immagine.",
     "twitterTitle": "Comandi di stoccaggio Proxmox | ProxMenux",
@@ -9,7 +9,7 @@
   },
   "header": {
     "title": "Archiviazione e dischi",
-    "description": "Riferimento curvo per l'ispezione di storage sugli host Proxmox: dispositivi di blocco, partizioni, supporti, volumi LVM, configurazione di archiviazione Proxmox e alcune operazioni su disco VM (importdisk, convertitore qemu-img).",
+    "description": "Riferimento ragionato per controllare lo storage sugli host Proxmox: dispositivi a blocchi, partizioni, filesystem montati, volumi LVM, configurazione dello storage Proxmox e alcune operazioni sui dischi delle VM (importdisk, qemu-img convert).",
     "section": "Aiuto e informazioni"
   },
   "intro": {

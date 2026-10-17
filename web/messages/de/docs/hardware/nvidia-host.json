@@ -113,7 +113,7 @@
   },
   "updates": {
     "heading": "Aktualisierungsmeldungen",
-    "body": "Der installierte NVIDIA-Treiber wird in der Managed-Installations-Registrierung von ProxMenux verfolgt. Beim Start und alle 24 Stunden überprüft der Monitor das Upstream-Listing bei <code>download.nvidia.com/XFree86/Linux-x86_64/</code> mit den <code>nvidia-smi</code>-Berichten und benachrichtigt nur, wenn eine neuere Wartungsfreigabe im installierten Branch vorhanden ist.",
+    "body": "Der installierte NVIDIA-Treiber wird im Verzeichnis der von ProxMenux verwalteten Installationen erfasst. Beim Start und alle 24 Stunden vergleicht der Monitor die unter <code>download.nvidia.com/XFree86/Linux-x86_64/</code> verfügbaren Versionen mit der von <code>nvidia-smi</code> gemeldeten Version. Er benachrichtigt nur, wenn im installierten Versionszweig ein neueres Wartungsrelease verfügbar ist.",
     "kindsHeading": "Aktualisierungsmeldung",
     "kindsItems": [
       "<strong>Same-branch maintenance.</strong> Ein neueres Release in Ihrem aktuellen Treiberzweig (z.B. installiert 580.65.06 → verfügbar 580.105.08). Der Monitor schließt keine branchenübergreifende Kernelkompatibilität ab."

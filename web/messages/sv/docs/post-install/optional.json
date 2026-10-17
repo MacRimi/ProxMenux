@@ -37,7 +37,7 @@
   },
   "ha": {
     "title": "Aktivera tjänster för hög tillgänglighet",
-    "intro": "Detta alternativ gör det möjligt för hög tillgänglighet (HA) tjänster i Proxmox VE, vilket möjliggör automatisk misslyckande av VM och behållare vid nodfel.",
+    "intro": "Detta alternativ gör det möjligt för hög tillgänglighet (HA) tjänster i Proxmox VE, vilket möjliggör automatisk misslyckande av VM och containrar vid nodfel.",
     "doesIntro": "Vad det gör:",
     "doesItems": [
       "Möjliggör och startar tjänsten pve-ha-lrm (Local Resource Manager)",
@@ -53,7 +53,7 @@
     "doesIntro": "Vad det gör:",
     "doesItems": [
       "Kör <code>pveam update</code> mot Proxmox speglar för att hämta den aktuella apparatkatalogen",
-      "Befolkar apparatlistan som visas av webb-UI när du skapar en behållare"
+      "Befolkar apparatlistan som visas av webb-UI när du skapar en container"
     ],
     "howUse": "Hur man använder: kör det en gång när apparatlistan i UI känner sig förföljd eller efter att ha bytt speglar. Det laddar inte ner mallarna själva - bara katalogindexet.",
     "automates": "Denna justering automatiserar följande kommando:"

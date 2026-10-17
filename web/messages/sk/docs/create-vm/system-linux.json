@@ -133,7 +133,7 @@
     "heading": "Automatické funkcie VM",
     "efiTitle": "disk EFI",
     "efiBody": "Keď je vybraný OVMF (UEFI), ProxMenux vytvorí na úložisku disk systému 4 MB EFI, ktorý vyberiete, takže firmware má miesto na ukladanie svojich premenných.",
-    "isoTitle": "Montáž ISO",
+    "isoTitle": "Pripojenie ISO",
     "isoBody": "Inštalácia ISO je pripojená k <code>ide2</code> ako CD-ROM, pripravený pre prvú topánku.",
     "guestTitle": "QEMU agent",
     "guestBody": "Kanál hosťujúceho agenta je zapnutý v konfigurácii VM. Stále musíte nainštalovať agenta vnútri hosťa"

@@ -79,7 +79,7 @@
     "step3Intro": "Vyberte si, čo môže vaša sieť dosiahnuť cez bránu:",
     "step3Items": [
       "<strong>Proxmox Only</strong> Najmenší útočný povrch.",
-      "<strong>0 Full Local Network</strong> Umožňuje osloviť NAS, tlačiarne, VMs a akékoľvek iné LAN zariadenie.",
+      "<strong>Celá lokálna sieť</strong> — celá podsieť LAN, automaticky zistená z hlavného rozhrania hostiteľa. Umožní prístup k NAS, tlačiarňam, VM a ostatným zariadeniam LAN.",
       "<strong>Custom Subnets</strong> Pre multi-VLAN nastavenia, kde chcete odhaliť niektoré segmenty, ale nie iné."
     ],
     "step3Alt": "Bezpečný sprievodca Gateway Access Scape krok s tromi možnosťami: Proxmox Iba, Full Local Network, Vlastné subnety",
@@ -97,7 +97,7 @@
     "step5Alt": "Bezpečný sprievodca Gateway Review a Deploy krok s Konfigurácia Súhrn zobrazujúci meno hostiteľa, prístupový režim, siete, výstupný uzol, prijať trasy a tlačidlo Deploy Gateway",
     "step5Caption": "Krok 5 Modré oznámenie v spodnej časti označuje schválenie trate v očakávaní.",
     "approvalTitle": "Posledný manuálny krok v Tailscale admin",
-    "approvalBody": "Po nasadení sa vráťte do <a>Prihlásiť sa.tailscale.com/admin/stroje</a> a schváliť podsieťovú trasu, brána je reklama. Kým to neurobíte, vzdialené zariadenia na chvostovej sieti sa cez bránu nedostanú k LAN IP. Tailscale značky nevybavené trasy so žltým upozornením na riadku zariadenia <em>Upraviť nastavenie trasy</em> a zaškrtnite route box."
+    "approvalBody": "Po nasadení otvorte <a>login.tailscale.com/admin/machines</a> a schváľte trasu podsiete, ktorú brána oznamuje. Dovtedy vzdialené zariadenia v sieti tailnet nedosiahnu cez bránu na IP adresy LAN. Tailscale označuje čakajúce trasy žltým upozornením v riadku zariadenia. Kliknite na <em>Upraviť nastavenia trás</em> a zaškrtnite príslušnú trasu."
   },
   "pve": {
     "heading": "Proxmox VE",

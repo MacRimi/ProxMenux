@@ -18,7 +18,7 @@
     "whyItems": [
       "Znižuje útok povrchu hostiteľa",
       "Historicky zneužívaný ako reflexný/zmrazujúci vektor pri útokoch DDoS. Vylúčenie <code>rpcbind</code> odstraňuje tento amplifikačný faktor pre vášho hostiteľa.",
-      "Odstráni hluk, ktorý generuje v logoch a <code>netstat</code>0 / <code>ss</code> výstup, čím sa skutočná aktivita ľahšie spot."
+      "Odstráni zbytočné hlásenia zo záznamov a výstupu <code>netstat</code> / <code>ss</code>, aby sa skutočná aktivita ľahšie rozpoznávala."
     ],
     "nfsTitle": "Nevypnite to, ak používate NFS",
     "nfsBody": "NFS server <strong>a</strong> NFS klient sa spolieha na <code>rpcbind</code> rokovať o prístavoch, ktoré používajú <code>mountd</code>, <code>statd</code>, <code>lockd</code>atď. Ak je váš Proxmox hostiteľ buď <em>vývoz</em> NFS akcie na iné stroje alebo <em>Prípojky</em> NFS akcie z NAS, neuplatňujú túto možnosť. Mounts zlyhá s <code>mount.nfs: rpc.statd is not running</code> alebo podobné.",

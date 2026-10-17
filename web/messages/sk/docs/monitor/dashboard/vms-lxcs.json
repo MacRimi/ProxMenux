@@ -52,7 +52,7 @@
   },
   "drillIn": {
     "heading": "Vrták na hosťa",
-    "intro": "Modálny sa otvorí s názvom hosťa, VMID, typom, stavom a dobou prevádzky. Jeho navigácia sa prispôsobuje hosťovi: <strong>Stav</strong>, <strong>App</strong> a <strong>Aktualizácie</strong> pre LXC správa aplikácií, <strong>Držiaky</strong> keď LXC má montážne body, <strong>Denníky</strong> pre kontajnery inštalované spoločnosťou OCI manager Apps, plus <strong>Zálohy</strong> a <strong>POŽARNE DVERE</strong>. Pevná lišta akcií udržuje ovládacie prvky životného cyklu a LXC terminál dostupný z každej karty.",
+    "intro": "Detail sa otvorí s názvom hosťovského systému, VMID, typom, stavom a dobou prevádzky. Karty sa prispôsobujú jeho typu: <strong>Stav</strong>, <strong>Aplikácia</strong> a <strong>Aktualizácie</strong> pre správu aplikácií LXC, <strong>Pripojenia</strong> pri LXC s bodmi pripojenia, <strong>Záznamy</strong> pri kontajneroch nainštalovaných cez OCI manager Apps a ďalej <strong>Zálohy</strong> a <strong>Firewall</strong>. Pevný panel akcií sprístupňuje ovládanie prevádzky a terminál LXC na každej karte.",
     "statusTitle": "Záložka 1",
     "statusImageAlt": "Vrták pre každého hosťa s CPU / Pamäťové / Diskové živé karty, Disk a sieťové I/O súčty, logo OS distro a blok zdrojov / IP adresy",
     "statusImageCaption": "Stavová záložka CPU / Pamäť / Disk s výstupmi v hornej časti, nahromadené I/O súčty (čítanie/zapísanie disku, zníženie/up siete) nižšie, potom statické zdroje blok s poznámkami a + Info expanzie a zoznam IP adries pilulky.",
@@ -89,7 +89,7 @@
     "updatesLinkTail": "pre integrované a vlastné aktualizácie, Docker rekreácia, hromadný výber, bezpečnostné možnosti a plánovanie.",
     "mountsTitle": "Karta 4 Vrchy (LXC iba v prípade prítomnosti)",
     "mountsImageAlt": "LXC Vrták-in modale NFS/CIFS namontuje operátora zvnútra CT. Každá karta obsahuje typový odznak, kapacitnú tyč, použité/celkové bajty, možnosti pripojenia a farebne zakódovanú bodku (zelená zdravá, jantárová čítaná len/divírna, červená bodka)",
-    "mountsImageCaption": "Záložka je určená iba pre LXC kontajnery a len vtedy, ak je prítomný aspoň jeden bod pripojenia alebo ad-hoc vzdialená montáž. CT bez držiakov nedostane žiadnu kartu.",
+    "mountsImageCaption": "Karta Pripojenia sa zobrazuje iba pri kontajneroch LXC s aspoň jedným bodom pripojenia alebo dodatočne pripojeným vzdialeným súborovým systémom. CT bez pripojení túto kartu nemá.",
     "mountsIntro": "Proxmoxova vlastná UI zobrazí položky bodov pripojenia definované v kontajneri (<code>mpX</code>), ale zastavuje tam čokoľvek sa pripojíte zvnútra CT neskôr (<code>mount.cifs</code>, NFS via <code>autofs</code>, ...) je neviditeľný. Táto karta sa spojí <strong>obidva pohľady</strong>: konfigurované pripojenia <strong>a</strong> @ info: tooltip ProxMenux sondy zvnútra kontajnera s per-mount zdravotným stavom a kapacitnou tyčou, kde backend môže vyriešiť jeden.",
     "mountTypesTitle": "Typy zisteného pripojenia",
     "mountTypesItems": [
@@ -102,12 +102,12 @@
     "mountStateItems": [
       "<green/> <strong>Zelená</strong> Kopnutie je zdravé a dosiahnuteľné.",
       "<amber/> <strong>Oranžová</strong> Odchýlky (konfigurované, ale v skutočnosti nemontované), iba na čítanie, alebo <em>zombie viazanie</em> (hostiteľ zdroj bol odstránený, ale CT stále vidí viazanie ako namontovaná <code>umount</code> sa stalo na hostiteľa).",
-      "<red/> <strong>Červená</strong> chlopňa: sonda Runtime nemohol dosiahnuť na montáž (spoločné s NFS exportuje, ktorého server je vypnutý)."
+      "<red/> <strong>Červená</strong> — nedostupné pripojenie: kontrola za behu sa k nemu nedokázala dostať. Bežným príkladom je export NFS, ktorého server je vypnutý."
     ],
     "mountsCalloutTitle": "Čo ti to dáva cez prirodzené UI?",
-    "mountsCalloutBody": "Pravdivý, kapacitne uvedomelý pohľad na každé miesto, ktoré kontajner číta alebo píše. NFS alebo CIFS akcie namontované zvnútra CT Stale vzdialené držiaky a zombie viaže sú označené pred uhryznutie počas zálohy.",
-    "logsTitle": "Tab 5",
-    "logsBody": "Objavuje sa len pre kontajnery nainštalované Apps správcu OCI. Zobrazuje výstup konzoly hlavného procesu obrazu, ktorý sa uchovával na hostiteľa v <code>/var/log/proxmenux/oci/VMID.console.log</code>: posledný 100, 500 alebo 1000 linky, nasledoval naživo, zatiaľ čo kontajner beží, s filtrom a sťahovanie. Číta súbor na každom otvorenom, takže to tiež funguje s kontajnerom zastavil. Podrobnosti sú v <ociLink>OCI kontajneroch v ProxMenux Monitor</ociLink>.",
+    "mountsCalloutBody": "Prehľad všetkých miest, z ktorých kontajner číta alebo do ktorých zapisuje, vrátane ich kapacity. Zdieľania NFS alebo CIFS pripojené zvnútra CT, ktoré webové rozhranie Proxmox nevidí, sa tu zobrazujú s rovnakým vzhľadom a kontrolou stavu ako nakonfigurované prípojné body. Nefunkčné vzdialené pripojenia a neplatné bind mounty sa označia skôr, než spôsobia problém pri zálohovaní.",
+    "logsTitle": "Karta 5 — Záznamy (iba kontajnery OCI)",
+    "logsBody": "Zobrazuje sa iba pri kontajneroch nainštalovaných cez OCI manager Apps. Zobrazuje výstup konzoly hlavného procesu obrazu uložený na hostiteľovi v <code>/var/log/proxmenux/oci/VMID.console.log</code>: posledných 100, 500 alebo 1000 riadkov, priebežné sledovanie počas behu kontajnera, filter a stiahnutie. Súbor sa načíta pri každom otvorení, takže zobrazenie funguje aj pri zastavenom kontajneri. Podrobnosti nájdete v časti <ociLink>Kontajnery OCI v ProxMenux Monitor</ociLink>.",
     "backupsTitle": "Tab 6",
     "backupsImageAlt": "Modul na hĺbkovú analýzu pre každého hosťa – karta Zálohy so zoznamom dostupných záloh, cieľovou značkou, veľkosťami a tlačidlom Vytvoriť zálohu",
     "backupsImageCaption": "Karta Zálohy – každá záloha uložená na nakonfigurovaných úložiskách Proxmox pre tohto hosťa, zoradená ako posledná. Hlavička karty obsahuje odznak počtu.",
@@ -121,7 +121,7 @@
     "firewallTitle": "Záložka 7",
     "firewallIntro": "Číta per-hostiteľ Proxmox firewall log priamo od hostiteľa (žiadna extra služba, žiadny prieskum). Záložka je vždy prítomná v navigačnom páse; panel sa rozhodne, čo urobiť v závislosti od toho, či je firewall pre tohto hosťa povolený a či sa nejaké pravidlo skutočne prihlasuje:",
     "firewallItems": [
-      "<strong>Firewall vypnutý</strong> Výpoveď z jantáru presne vysvetľuje, kde je možné ju v Proxmoxe UI (<em>&lt;KontajnerVM&gt; → Firewall → Možnosti</em>) a pripomína vám, že aspoň jedno pravidlo potrebuje <code>log: info</code> (alebo vyššie) predtým, ako sa objavia balíčky.",
+      "<strong>Firewall je vypnutý</strong> — oranžové upozornenie ukáže, kde ho zapnúť v Proxmoxe (<em>&lt;Container|VM&gt; → Firewall → Options</em>), a pripomenie, že aspoň jedno pravidlo musí mať <code>log: info</code> alebo vyššiu úroveň, aby sa pakety zobrazovali.",
       "<strong>Firewall povolený, zatiaľ žiadne udalosti</strong> — nápoveda v prázdnom stave s rovnakou požiadavkou na protokolovanie, užitočná, keď ste práve zapli bránu firewall.",
       "<strong>Súčasné udalosti</strong> Priehľadná monopriestorová tabuľa so surovými položkami zafarbenými akciou: <green>ACCEPT</green> (zelená), <orange>ZAMIETNUTIE</orange> (oranžová), <red>DROP</red> (červená). Počítací odznak v hlavičke ukazuje, koľko položiek je momentálne načítaných."
     ],

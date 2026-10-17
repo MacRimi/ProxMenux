@@ -1,9 +1,9 @@
 {
   "meta": {
     "title": "Proxmox NFSSamba, iSCSI & LXC Punti di montaggio — Storage & Share | ProxMenux",
-    "description": "Integrare lo storage esterno e locale in Proxmox VE e condividere cartelle tra host e contenitori LXC. Aggiungere le azioni NFS, le azioni Samba (CIFS) e gli obiettivi iSCSI come storage Proxmox, impostare i supporti di legame LXC (Mount Manager) ed eseguire client e server NFS / Samba all'interno dei container.",
+    "description": "Integra lo storage esterno e locale in Proxmox VE e condividi cartelle fra l’host e i container LXC. Aggiungi condivisioni NFS, Samba (CIFS) e target iSCSI come storage Proxmox, configura i bind mount LXC con Mount Manager ed esegui client e server NFS o Samba all’interno dei container.",
     "ogTitle": "Punti di montaggio Proxmox NFS, Samba, iSCSI & LXC — Storage & Share",
-    "ogDescription": "Integrare lo storage esterno / locale in Proxmox VE — NFS, Samba, registrazione iSCSI più i supporti leganti LXC e la condivisione di rete.",
+    "ogDescription": "Integra storage esterno o locale in Proxmox VE: registrazione di NFS, Samba e iSCSI, bind mount LXC e condivisione in rete.",
     "twitterTitle": "Proxmox NFS, Samba, iSCSI | ProxMenux",
     "twitterDescription": "Aggiungere NFS / Samba / iSCSI come Proxmox storage e condividere cartelle tra host e LXC."
   },
@@ -29,14 +29,14 @@
     "hostItems": [
       "NFS esterno / Samba / iSCSI → storage Proxmox",
       "Disco locale → Proxmox directory o archiviazione ZFS",
-      "directory condivisa locale (per i supporti di legame cross-CT)"
+      "Directory locale condivisa per bind mount fra più CT"
     ],
     "lxcMountTitle": "Gestore montaggi LXC",
     "lxcMountBody": "Lo strumento principale di condivisione LXC. Le directory host Bind-mounts in contenitori tramite <code>pct set -mpN</code> e gestisce le autorizzazioni di TAC non private senza creare alcun gruppo o utente all'interno del contenitore.",
     "lxcMountItems": [
       "Opere con TAC privilegiate e non private",
       "Offerte per impostare <code>o+rwx</code> sul dir host per UID non privati",
-      "Corregge i supporti CIFS / NFS esistenti se necessario"
+      "Corregge, se necessario, i montaggi CIFS e NFS esistenti"
     ],
     "lxcNetTitle": "condivisione di rete LXC",
     "lxcNetBody": "Quattro flussi aggiuntivi per scenari in cui un contenitore deve consumare o esporre le azioni NFS / Samba direttamente. Tutti richiedono un contenitore <strong>privileged</strong>.",
@@ -53,13 +53,13 @@
         "href": "/docs/storage-share/host-nfs",
         "icon": "Network",
         "title": "Aggiungere NFS condividere come storage Proxmox",
-        "description": "Registrare un'esportazione NFS esterna come storage Proxmox tramite pvesm aggiungere nfs. Proxmox gestisce il supporto — nessuna voce fstab necessaria."
+        "description": "Registra un’esportazione NFS esterna come storage Proxmox tramite pvesm add nfs. Proxmox gestisce il montaggio, senza voci aggiuntive in fstab."
       },
       {
         "href": "/docs/storage-share/host-samba",
         "icon": "Share2",
         "title": "Aggiungi Samba share come storage Proxmox",
-        "description": "Registrare una quota esterna Samba / CIFS come storage Proxmox tramite pvesm aggiungere cifs. Proxmox gestisce il supporto e le credenziali."
+        "description": "Registra una condivisione Samba o CIFS esterna come storage Proxmox tramite pvesm add cifs. Proxmox gestisce il montaggio e le credenziali."
       },
       {
         "href": "/docs/storage-share/host-iscsi",
@@ -77,7 +77,7 @@
         "href": "/docs/storage-share/host-local-shared",
         "icon": "FolderOpen",
         "title": "Aggiungi directory condivisa su Host",
-        "description": "Creare una directory host destinata ad essere incollata in più CT. Non un deposito Proxmox — puramente una risorsa lato host per i supporti di legatura LXC."
+        "description": "Crea una directory sull’host da rendere accessibile in più CT tramite bind mount. È una risorsa dell’host per i container LXC e non viene registrata come storage Proxmox."
       }
     ]
   },
@@ -86,12 +86,12 @@
     "intro": "Lo strumento principale per la condivisione di cartelle tra l'host Proxmox e i contenitori LXC. Utilizza <code>pct set -mpN</code> per legare-montare una directory host nel contenitore, e gestisce il permesso quirk di TC non private sul lato host (nessun gruppo o utenti sono creati all'interno del contenitore).",
     "card": {
       "title": "Punti di montaggio LXC (Host ↔ CT)",
-      "description": "Blod-mount qualsiasi directory host in un contenitore LXC tramite set pct -mpN. Funziona con TC privilegiate e non private; offre chmod o+rwx / ACL sul dir host e fissa i supporti CIFS / NFS esistenti quando necessario."
+      "description": "Rendi accessibile una directory dell’host in un container LXC tramite bind mount con pct set -mpN. Funziona con CT privilegiati e non privilegiati; propone chmod o+rwx e ACL per la directory sull’host e corregge, se necessario, i montaggi CIFS o NFS esistenti."
     }
   },
   "lxcNet": {
     "heading": "condivisione di rete LXC",
-    "intro": "Utilizzare questi flussi quando un contenitore ha bisogno di <em>be</em> un punto finale NFS / Samba — o consumare una parte esterna (cliente) o esporre le proprie cartelle (server). Per la maggior parte delle esigenze di condivisione dei file (host ↔ CT supporti di lega), il <mountLink>LXC Mount Manager</mountLink> è più semplice e non richiede contenitori privilegiati.",
+    "intro": "Usa queste procedure quando il container deve <em>essere</em> un endpoint NFS o Samba: può usare una condivisione esterna come client oppure esporre le proprie cartelle come server. Per le comuni esigenze di condivisione tramite bind mount fra host e CT, <mountLink>LXC Mount Manager</mountLink> è più semplice e non richiede container privilegiati.",
     "options": [
       {
         "href": "/docs/storage-share/lxc-nfs-client",

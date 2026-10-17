@@ -5,7 +5,7 @@
   },
   "header": {
     "title": "Applica aggiornamenti disponibili",
-    "description": "Quando un'ottimizzazione post-installazione (Log2Ram, Impostazioni di memoria, Limiti di sistema, Logrotate...) ottiene una versione più recente sul disco rispetto a quella attualmente registrata sull'host, ProxMenux lo supera come aggiornamento disponibile. È possibile applicarlo dal menu Post-Install (Sceneggiatura laterale) o dal cruscotto Monitor — entrambi i percorsi eseguire la stessa funzione post-installazione e aggiornare il registro di sistema.",
+    "description": "Quando sul disco è presente una versione di un’ottimizzazione post-installazione (Log2Ram, impostazioni della memoria, limiti di sistema, Logrotate …) più recente di quella registrata sull’host, ProxMenux la segnala come aggiornamento disponibile. Puoi applicarla dal menu di post-installazione nell’interfaccia degli script oppure dalla dashboard del Monitor. Entrambi i percorsi rieseguono la stessa funzione di post-installazione e ne aggiornano la versione registrata.",
     "section": "Impostazioni post-installazione Proxmox"
   },
   "intro": {
@@ -44,7 +44,7 @@
     "menuCaption": "L'ingresso <em>Apply disponibile (N)</em> rende solo quando almeno un'ottimizzazione ha un aggiornamento in sospeso — si nasconde quando l'host è corrente.",
     "checklistBody": "Selezionando la voce si apre una lista di controllo con ogni aggiornamento in attesa, ogni riga formattata come <code>name (vX → vY)</code>. Tutte le righe sono pre-controllate per impostazione predefinita; deselezionare qualsiasi non si desidera applicare questo round.",
     "checklistAlt": "Applicare la finestra di dialogo Aggiornamenti disponibili con una riga per ottimizzazione in attesa, ciascuna etichettata con il nome di ottimizzazione e la transizione della versione (corrente → disponibile). Tutte le righe pre-controllate.",
-    "checklistCaption": "Per-optimizzazione opt-in: scegliere esattamente quali versioni per sollevare. Lo stesso motore che alimenta Automated e Customizable post-install funziona in background per riapplicare ogni funzione e aggiornare la sua versione del Registro di sistema."
+    "checklistCaption": "Seleziona le singole ottimizzazioni da aggiornare. Lo stesso motore usato per la post-installazione automatica e personalizzabile riesegue in background ogni funzione selezionata e ne aggiorna la versione registrata."
   },
   "pathB": {
     "heading": "Percorso B — Dal cruscotto Monitor",

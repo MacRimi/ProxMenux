@@ -65,7 +65,7 @@
       },
       {
         "title": "Stoccaggio e condivisione",
-        "description": "Registrare NFS, Samba (CIFS), iSCSI e storage locale in Proxmox; condividere cartelle tra host e contenitori LXC tramite supporti leganti o protocolli di rete.",
+        "description": "Registra NFS, Samba (CIFS), iSCSI e storage locale in Proxmox; condividi cartelle fra l’host e i container LXC tramite bind mount o protocolli di rete.",
         "icon": "Boxes",
         "href": "/docs/storage-share"
       },

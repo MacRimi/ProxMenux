@@ -81,7 +81,7 @@
         "events": "Brygga eller binda ner; gateway unreachable; ihållande latens spikar."
       },
       {
-        "category": "virtuella datorer och behållare",
+        "category": "virtuella datorer och containrar",
         "checks": "QMP-kommunikation, VM start, containerstart",
         "events": "Misslyckades VM boot; CT avstängningsfel; QMP socket timeout; saknas konfig / disk efter en klon."
       },

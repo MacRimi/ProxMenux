@@ -66,7 +66,7 @@
     "wireBackupNote": "Das <code>backup=0</code>-Flag schließt diesen Einhängepunkt von <code>vzdump</code>-Backups aus - normalerweise der richtige Aufruf für große externe Laufwerke, die eher der Zielspeicher des Hosts als seine Daten sind.",
     "restartHeading": "1.5 Starten Sie den LXC neu und setzen Sie Berechtigungen",
     "restartBody": "Starten Sie den CT neu, um den Mount Point anzuwenden:",
-    "restartCode": "pct restart '<'CTID'>'",
+    "restartCode": "pct reboot '<'CTID'>'",
     "permsBody": "Geben Sie im LXC die Verzeichnisberechtigungen an, die für den Benutzer geeignet sind, der die Freigabe besitzt:",
     "permsCode": "# Inside the container\nmkdir -p /mnt/lxc_USB\nchown -R proxmenux:proxmenux /mnt/lxc_USB\nchmod 770 /mnt/lxc_USB",
     "permsNoteTitle": "Notiz",
@@ -109,7 +109,7 @@
   "troubleshoot": {
     "heading": "Fehlerbehebung",
     "items": [
-      "<strong><code>pct restart</code> schlägt mit \"Gerät nicht gefunden\" fehl: </strong> der Gerätepfad in <code>mp0</code> existiert nicht auf dem Host. Überprüfen Sie mit <code>ls -l /dev/disk/by-id/</code> und aktualisieren Sie den Pfad.",
+      "<strong><code>pct reboot</code> schlägt mit \"Gerät nicht gefunden\" fehl: </strong> der Gerätepfad in <code>mp0</code> existiert nicht auf dem Host. Überprüfen Sie mit <code>ls -l /dev/disk/by-id/</code> und aktualisieren Sie den Pfad.",
       "<strong>CT startet, aber <code>/mnt/lxc_USB</code> ist leer: </strong> die Festplatte ist nicht im CT montiert. Check vom Host: <code>pct exec '<'CTID'>' -- mount | grep lxc_USB</code>. Wenn nicht vorhanden, ist der Einhängepunkt in der Konfiguration falsch.",
       "<strong>Samba authentifiziert, schreibt aber fehlgeschlagen mit \"Permission denied\": </strong> Linux-Berechtigungen im Verzeichnis erlauben dem Samba-Benutzer nicht zu schreiben. Überprüfen Sie erneut <code>chown</code> / <code>setfacl</code> im Abschnitt 1.5 / 2.3.",
       "<strong>Share erscheint nicht in Netzwerkbrowsern, aber <code>smb://'<'ip'>'/lxc_usb</code> funktioniert: </strong> Browseability über das LAN hängt von NetBIOS / WS-Discovery ab. Hinzufügen von <code>nmbd</code>: <code>apt-get install -y samba-common-bin</code> und sicherstellen, dass <code>nmbd</code> aktiviert ist.",

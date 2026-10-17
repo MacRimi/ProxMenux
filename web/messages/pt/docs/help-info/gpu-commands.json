@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Proxmox GPU Comandos de passagem — lspci, VFIO, IOMMU, qm set hostpci ProxMenux",
-    "description": "Referência para a passagem GPU em Proxmox VE: identificação do dispositivo lspci, módulos VFIO, grupos IOMMU (intel_iommu / amd_iommu), atualizações GRUB e initramfs, set qm hostpci0, NVIDIA / AMD / Intel passththrough setup.",
+    "description": "Referência para passthrough de GPU no Proxmox VE: identificação de dispositivos com lspci, módulos VFIO, grupos IOMMU (intel_iommu / amd_iommu), atualizações de GRUB e initramfs, qm set hostpci0 e configuração de GPUs NVIDIA, AMD e Intel.",
     "ogTitle": "Comandos de passagem Proxmox GPU — lspci, VFIO, IOMMU, qm set hostpci",
     "ogDescription": "Referência para inspecionar e configurar a passagem de GPU em Proxmox VE — dispositivos PCI, módulos VFIO, grupos IOMMU, parâmetros de inicialização do kernel, qm set hostpci.",
     "twitterTitle": "Proxmox GPU Comandos de passagem ProxMenux",

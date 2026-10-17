@@ -102,7 +102,7 @@
       {
         "collector": "collect_storage.sh",
         "produces": "storage_inventory",
-        "content": "ZFS pools (con pool tipo + dischi membri risolti per <code>/dev/disk/by-id/*</code>, <code>/dev/disk/by-partuuid/*</code> o grezzo <code>/dev/sdX</code> percorsi a seconda di come ogni pool è stato originariamente creato), LVM gruppi di volume + sottile pools, dischi fisici con SMART capacità, PVE <code>storage.cfg</code> entrate, supporti esterni."
+        "content": "Pool ZFS con relativo tipo e dischi membri identificati tramite <code>/dev/disk/by-id/*</code>, <code>/dev/disk/by-partuuid/*</code> o percorsi diretti <code>/dev/sdX</code>, a seconda di come il pool è stato creato; gruppi di volumi e thin pool LVM; dischi fisici con supporto SMART; voci PVE di <code>storage.cfg</code>; montaggi esterni."
       },
       {
         "collector": "collect_kernel.sh",

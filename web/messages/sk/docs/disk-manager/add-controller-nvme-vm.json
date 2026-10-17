@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Pridať Controller alebo NVMe do VM | ProxMenux Dokumentácia",
-    "description": "PCI priechodný pamäťovým ovládačom (SATA / SAS HBA) alebo NVMe zariadenie na Proxmox VM použitie ProxMenux. Umožňuje IOMMU, odhaľovanie konfliktov a qm sada --hostpci elektrické vedenie.",
+    "description": "Sprístupnenie radiča úložiska SATA/SAS HBA alebo zariadenia NVMe virtuálnemu stroju Proxmox cez PCI passthrough pomocou ProxMenuxu. Nástroj zabezpečuje aktiváciu IOMMU, rozpoznanie konfliktov a priradenie cez qm set --hostpci.",
     "ogTitle": "Pridať Controller alebo NVMe do VM | ProxMenux Dokumentácia",
     "ogDescription": "Prejdite celým zariadením SATA / SAS HBA alebo NVMe do zariadenia Proxmox VM. ProxMenux manipuluje s IOMMU, detekciou konfliktov a hospci pripojením."
   },
   "header": {
     "title": "Pridať radič alebo NVMe do VM",
-    "description": "Pass a whole SATA / SAS host bus adapter (HBA) alebo NVMe zariadenie do Proxmoxu VM prechodom cez PCI. ProxMenux kontroly a s vaším súhlasom umožňuje IOMMU, vyčísľuje priechod-oprávnené zariadenia, filtre von konflikty a drôty priradenie s qm nastaviť --hostpci.",
+    "description": "Priraďte celý adaptér SATA/SAS HBA alebo zariadenie NVMe virtuálnemu stroju Proxmox cez PCI passthrough. ProxMenux skontroluje IOMMU a s vaším súhlasom ho aktivuje, vyhľadá vhodné zariadenia, vylúči konflikty a zapíše priradenie pomocou qm set --hostpci.",
     "section": "Správca disku · VM"
   },
   "intro": {

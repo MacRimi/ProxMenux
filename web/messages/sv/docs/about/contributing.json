@@ -233,7 +233,7 @@
       "Använd <code>msg_ok</code> för framgångsrikt aktiverade funktioner - även om en omstart krävs.",
       "Använd <code>whiptail</code> (inte <code>dialog</code>) för någon post-exekveringsprompt som måste visas i Fas 2.",
       "Inkludera alltid en \"nej\" filial i omstartdialoger som varnar användaren för att inte starta den drabbade resursen förrän omstartade.",
-      "Bevakning VM-bara logik genom att kontrollera <code>[[ -f \"/etc/pve/qemu-server/$'{'vmid'}'.conf\" ]]</code> - controllers och NVMe PCIe kan inte läggas till LXC behållare.",
+      "Bevakning VM-bara logik genom att kontrollera <code>[[ -f \"/etc/pve/qemu-server/$'{'vmid'}'.conf\" ]]</code> - controllers och NVMe PCIe kan inte läggas till LXC containrar.",
       "Använd <code>ensure_repositories</code> från <code>utils-install-functions.sh</code> istället för ovillkorlig <code>apt-get update</code>.",
       "Använd parallella arrayer i Fas 1 när varje objekt behöver flera dialoger."
     ],

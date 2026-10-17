@@ -57,7 +57,7 @@
       "body1": "Ak M.2 / PCIe Coral je prítomný na hostiteľovi a <code>/dev/apex_0</code> existuje (modul jadra apex je načítaný), skript používa moderný Proxmox <code>dev</code> API, ktorý spracováva povolenia cgroup2 automaticky pre privilegované aj neprivilegované kontajnery:",
       "body2": "Ak host ešte nenaštartoval s načítaným modulom Apex (len ste bežali) <hostLink>Inštalovať Coral na hostiteľa</hostLink> a nezreštartoval), <code>/dev/apex_0</code> ešte neexistuje. Skript spadá späť do klasickej cgroup2 + pripojiť <code>create=file</code> Takže položky sú platné aj vtedy, keď zariadenie nebolo zhmotnené:",
       "rebootTitle": "Reštartovať hostiteľa ako prvý, ak ste práve nainštalovali Coral ovládače",
-      "rebootBody": "Záložná cgroup2 + montáž bude napísaná, ale zariadenie skutočne existuje len po reštarte hostiteľa načíta <code>apex</code> modul. Ak ste nereštartovali, reštartujte teraz pred spustením kontajnera."
+      "rebootBody": "Náhradná konfigurácia cgroup2 a pripojenia sa zapíše, ale zariadenie bude skutočne dostupné až po reštarte hostiteľa, keď sa načíta modul <code>apex</code>. Ak ste ešte nereštartovali, urobte to pred spustením kontajnera."
     },
     "drivers": {
       "title": "Spustiť kontajner + nainštalovať Coral čas vnútri",

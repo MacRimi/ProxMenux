@@ -129,7 +129,7 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "noMountTitle": "El montaje aparece en la config del pct pero no dentro del contenedor",
+    "noMountTitle": "El montaje aparece en pct config, pero no dentro del contenedor",
     "noMountBody": "Los bind mounts solo se adjuntan cuando el contenedor arranca. Si añadiste el montaje mientras el CT estaba corriendo, reinícialo (<code>pct reboot &lt;ctid&gt;</code>). Si ya está reiniciado y sigue faltando, comprueba <code>pct config &lt;ctid&gt;</code> para confirmar que la entrada existe y que la ruta del host realmente contiene un directorio.",
     "noWriteTitle": "El contenedor puede ver el directorio pero no puede escribir",
     "noWriteBody": "Casi siempre un problema de permisos. Para contenedores unprivileged, ejecuta de nuevo el fix de permisos del script — las ACLs del directorio del host pueden haber sido reseteadas por otra herramienta (rsync, restore desde backup, <code>chmod</code> manual). Para CIFS, revisa las opciones de montaje en el host: <code>findmnt /mnt/pve/cifs-…</code>, busca valores <code>uid=</code> / <code>gid=</code> / <code>file_mode=</code>.",

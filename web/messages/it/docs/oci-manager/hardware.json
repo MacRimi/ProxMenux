@@ -6,7 +6,7 @@
   "header": {
     "title": "Dispositivi e accelerazione",
     "description": "I dispositivi GPU, NVIDIA, Coral, USB, FUSE e block diventano risorse native Proxmox VE del contenitore.",
-    "section": "App del gestore OCI"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -14,7 +14,7 @@
       "title": "Il dispositivo di cui l'applicazione ha bisogno, non l'intero host",
       "blocks": [
         {
-          "p": "Un dispositivo richiesto dal file Compose o dal profilo dell'applicazione diventa un ingresso <code>devN</code> in calcestruzzo o un supporto LXC. Chiedere un GPU, un dispositivo USB o un Coral non rende il contenitore privilegiato."
+          "p": "Un dispositivo richiesto dal file Compose o dal profilo dell’applicazione viene configurato come voce <code>devN</code> specifica o come montaggio LXC. Richiedere una GPU, un dispositivo USB o un acceleratore Coral non rende il container privilegiato."
         },
         {
           "flow": {
@@ -305,7 +305,7 @@
               },
               {
                 "icon": "shield",
-                "title": "Supporti di sola lettura",
+                "title": "Montaggi in sola lettura",
                 "body": "Le librerie ospitanti sono montate in sola lettura invece di essere copiate nel contenitore."
               },
               {
@@ -362,7 +362,7 @@
               [
                 "<code>/dev/fuse</code>",
                 "Il nodo e, quando il profilo ne ha bisogno, la funzione <code>fuse=1</code>",
-                "FUSE da solo non pubblica supporti ad altri LXC"
+                "FUSE da solo non rende disponibili i montaggi agli altri LXC"
               ],
               [
                 "<code>/dev/net/tun</code>",

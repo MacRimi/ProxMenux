@@ -7,7 +7,7 @@
   },
   "header": {
     "title": "Aktualizácia systému Proxmox",
-    "description": "Wrapper, ktorý deleguje na jedného bezpečného pracovníka (<code>update-pve-safe.sh</code>0), ktorý detekuje bežiaci Proxmox hlavnej verzie sám. Nakonfigurované úložiská sa prečítajú cez Proxmox API a uchovávajú sa tak, ako sú; hostiteľ bez aktívneho predplatného, ktorého jediným úložiskom Proxmox je Enterprise, je požiadaný pred prechodom na zákaz predplatné. Všetky balíčky sú modernizované, ovládače ProxMenux riadené DKMS sú prestavané, ak pristálo nové jadro a pohotovo vystrelí iba vtedy, keď sa jadro skutočne zmenilo. Tiež spustené z <em>Aktualizované Now</em> v hlavičke palubnej dosky ProxMenux Monitor, keď sú zistené nevybavené aktualizácie.",
+    "description": "Obalový skript deleguje prácu na jediný bezpečný skript (<code>update-pve-safe.sh</code>), ktorý sám zistí hlavnú verziu spusteného Proxmox. Nakonfigurované repozitáre načíta cez API Proxmox a zachová ich. Ak hostiteľ nemá aktívne predplatné a jeho jediný repozitár Proxmox je Enterprise, pred prepnutím na repozitár bez predplatného sa vyžiada potvrdenie. Aktualizujú sa všetky balíky a pri inštalácii nového jadra sa znovu zostavia ovládače DKMS spravované ProxMenux. Výzva na reštart sa zobrazí iba pri skutočnej zmene jadra. Ak sú zistené čakajúce aktualizácie, postup možno spustiť aj tlačidlom <em>Aktualizovať teraz</em> v hlavičke panela ProxMenux Monitor.",
     "section": "Nástroje"
   },
   "calloutWhat": {
@@ -27,7 +27,7 @@
       "<strong>Detekuje hlavnú verziu PVE</strong> zvnútra pracovníka (<code>pveversion | grep -oP ''pve-manager/\\K[0-9]+''</code>) a prispôsobuje základ Proxmox / Debian repo URL (bookworm na PVE 8, trixie na PVE 9). Neexistuje žiadny fan-out per-version pracovník skripty",
       "<strong>Udržuje konfigurované úložiská.</strong> <code>ensure_repositories</code> číta úložiská prostredníctvom úložiska Proxmox API spolu so stavom predplatného. Hostiteľ s aktívnym predplatením, alebo ten, ktorý už nepoužíva žiadne predplatné alebo úložisko skúšok, zostáva nezmenený. Hostiteľ bez aktívneho predplatného, ktorého jediným úložiskom Proxmoxu je Enterprise, je požiadaný o to, či prepnúť na zákaz predplatného; pokles zastaví aktualizáciu bez zmeny zdroja.",
       "<strong>Spustí inováciu neinteraktívne</strong> s <code>DEBIAN_FRONTEND=noninteractive</code> a <code>--force-confdef --force-confold</code> — ak sa konfiguračný súbor, ktorý ste už upravili, zmenil aj proti prúdu, vaša verzia zostane na svojom mieste. Žiadne tiché prepisovanie vlastných konfigurácií.",
-      "<strong>Lyžiarske balíčky, ktoré nútia voliteľné inžinierske siete.</strong> Bezpečný pracovník netlačí <code>zfsutils-linux</code>, <code>chrony</code>, <code>ifupdown2</code> alebo podobné balíčky na hostiteľa Chýbajúce balíčky sú vynorené tokmi inštalátora vyššej úrovne, nie cestou aktualizácie.",
+      "<strong>Nevynucuje voliteľné nástroje.</strong> Bezpečný skript nevnucuje hostiteľovi <code>zfsutils-linux</code>, <code>chrony</code>, <code>ifupdown2</code> ani podobné balíky. Ak sa inštalácia Proxmox rozhodla niektorý z nich nepoužiť, táto voľba sa zachová. Chýbajúce balíky oznamujú nadradené inštalačné postupy, nie aktualizačný postup.",
       "<strong>LVM kontrola čistoty metadát</strong> proti strateným hlavičkám PV z priechodných diskov (iba varovanie, žiadna automatická oprava).",
       "<strong>Potom vyčistí:</strong> <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>.",
       "<strong>DKMS prestavať pred reštartom.</strong> Keď upgrade zinscenoval nové jadro, obal volá <code>pmx_rebuild_dkms_after_kernel</code> prestavať každý vodič, ktorý ProxMenux nainštalovaný cez DKMS proti prichádzajúcemu verzie jadra chemikálií, takže moduly sú pripravené pred tým, než pole príde späť. Použitie detekcie reštartov <code>/var/run/reboot-required</code> keď <code>needrestart</code> je prítomný, a spadne späť do <code>dpkg-query</code> porovnanie medzi bežiacim jadrom a najnovším nainštalovaným <code>proxmox-kernel-*-pve-signed</code> / <code>pve-kernel-*-pve</code> balíček, keď to nie je signál, ktorý prežíva veľa Proxmox hostí, že loď bez <code>needrestart</code>."
@@ -47,7 +47,7 @@
     "nodes": {
       "source": {
         "label": "proxmox_update.sh",
-        "detail": "pveverzia\ngrep -oP ''pve-manager/\\K[0-9]+'\""
+        "detail": "pveversion |\ngrep -oP ''pve-manager/\\K[0-9]+''"
       },
       "bridge": {
         "label": "Jediný bezpečný pracovník",
@@ -137,7 +137,7 @@
       },
       {
         "title": "Reštart sa neobjavil, ale som si istý, že jadro sa zmenilo.",
-        "body": "Dva signály musia súhlasiť (<code>/var/run/reboot-required</code>0 a <code>linux-image</code> v loge aktualizácie). Ak bol súbor značky vymazaný, ale log je spracovaný zle, reštartovať ručne s <code>shutdown -r now</code>. Pre potvrdenie aktualizácie jadra došlo: <code>grep linux-image /var/log/apt/history.log</code>."
+        "body": "Musia sa zhodovať dva signály: <code>/var/run/reboot-required</code> a <code>linux-image</code> v zázname aktualizácie. Ak sa súbor značky vymazal, ale záznam sa spracúva nesprávne, reštartujte systém ručne pomocou <code>shutdown -r now</code>. Aktualizáciu jadra overíte príkazom <code>grep linux-image /var/log/apt/history.log</code>."
       }
     ]
   },

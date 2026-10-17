@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Création de VMs sur Proxmox VE — Synologie, Windows, Linux, Assistant NAS ProxMenux",
+    "title": "Créer des VM dans Proxmox VE — assistants Synology, Windows, Linux et NAS | ProxMenux",
     "description": "Créer et configurer des machines virtuelles sur Proxmox VE avec ProxMenux. Assistants dédiés aux appareils NAS (Synologie DSM, TrueNAS, OpenMediaVault, UnRAID, etc.), Windows, les distros Linux et un installateur macOS externe. Sensible par défaut pour le matériel, le stockage et le réseau VM.",
     "ogTitle": "Créer des VMs sur Proxmox VE — Synologie, Windows, Linux, Assistants NAS",
     "ogDescription": "Les assistants ProxMenux pour la création de Synology DSM, TrueNAS, OMV, UnRAID, Windows et Linux VMs sur Proxmox VE.",

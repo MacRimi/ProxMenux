@@ -43,7 +43,7 @@
         "Adaptive Replacement Cache"
       ],
       "category": "Úložisko",
-      "definitionRich": "ZFS je pamäťová pamäť. Drží nedávno a často používané dátové bloky; veľkostné stupnice s dostupným hostiteľom RAM. Defaults are agresive",
+      "definitionRich": "Čítacia vyrovnávacia pamäť ZFS v operačnej pamäti. Uchováva nedávno a často používané dátové bloky; jej veľkosť sa prispôsobuje dostupnej RAM hostiteľa. Predvolené hodnoty sú vysoké — poinštalačný skript Proxmox umožňuje nastaviť horný limit.",
       "seeAlso": [
         {
           "label": "Po inštalácii: Skladovanie",
@@ -219,7 +219,7 @@
     {
       "term": "initramfs",
       "category": "Linux",
-      "definitionRich": "Počiatočný RAM súborový systém, ktorý jadro používa pri štarte pred montážou skutočného koreňového súborového systému. Obsahuje ovládače potrebné včas (skladovanie, šifrovanie, RAID). Prestavaný s <code>update-initramfs -u -k all</code> po zmenách VFIO, IOMMU alebo pamäťového ovládača."
+      "definitionRich": "Počiatočný súborový systém v RAM, ktorý jadro používa pri štarte pred pripojením skutočného koreňového súborového systému. Obsahuje ovládače potrebné už v tejto fáze, napríklad pre úložiská, šifrovanie a RAID. Po zmenách VFIO, IOMMU alebo ovládačov úložiska sa znovu vytvára príkazom <code>update-initramfs -u -k all</code>."
     },
     {
       "term": "IOMMU",
@@ -544,7 +544,7 @@
         "Self-Monitoring, Analysis and Reporting Technology"
       ],
       "category": "Úložisko",
-      "definitionRich": "Zabudovaná diagnostika disku, ktorá hlási zdravie pohonu, počíta chyby a výsledky vlastných testov. <code>smartctl</code>0 (z <code>smartmontools</code>) je CLI; pre NVMe disky, balík <code>nvme-cli</code> pridáva NVMe-špecifické príkazy.",
+      "definitionRich": "Vstavaná diagnostika diskov, ktorá hlási ich stav, počty chýb a výsledky vlastných testov. Rozhranie príkazového riadka poskytuje <code>smartctl</code> (z balíka <code>smartmontools</code>); pre disky NVMe pridáva balík <code>nvme-cli</code> príkazy špecifické pre NVMe.",
       "seeAlso": [
         {
           "label": "SMART Zdravie a test disku",
@@ -575,7 +575,7 @@
     {
       "term": "trixie",
       "category": "Linux",
-      "definitionRich": "Názov kódu pre Debian 13, základ OS pre Proxmox VE 9. Predchodca: <em>knihomoľ</em> (Debian 12 / PVE 8).",
+      "definitionRich": "Kódový názov Debianu 13, základného operačného systému pre Proxmox VE 9. Predchodca: <em>bookworm</em> (Debian 12 / PVE 8).",
       "seeAlso": [
         {
           "label": "Upgrade PVE 8 na PVE 9",
@@ -594,7 +594,7 @@
         "UID posun"
       ],
       "category": "Linux",
-      "definitionRich": "V <strong>neprivilegovaný</strong> LXC kontajnery, UID a GID sú presunuté <code>+100000</code> na hostiteľa. UID kontajnera 0 = UID hostiteľa 100000, UID kontajnera 1000 = UID hostiteľa 101000atď. Ovplyvňuje vlastníctvo súboru na viazanie mounts.",
+      "definitionRich": "V <strong>neprivilegovaných</strong> kontajneroch LXC sa UID a GID na hostiteľovi posúvajú o <code>+100000</code>. UID 0 v kontajneri zodpovedá UID 100000 na hostiteľovi, UID 1000 zodpovedá UID 101000 atď. Ovplyvňuje to vlastníctvo súborov v bind mountoch.",
       "seeAlso": [
         {
           "label": "LXC Mount Body",

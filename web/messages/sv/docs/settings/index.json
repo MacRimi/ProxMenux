@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Vad denna meny är för",
-    "body": "Självadministrering av ProxMenux själv: övervaka service, betakanal opt-out, språk, version diagnostik och avinstallationen. Ingenting i den här menyn rör dina VM, behållare eller lagring."
+    "body": "Självadministrering av ProxMenux själv: övervaka service, betakanal opt-out, språk, version diagnostik och avinstallationen. Ingenting i den här menyn rör dina VM, containrar eller lagring."
   },
   "opening": {
     "heading": "Öppna menyn",

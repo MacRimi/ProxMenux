@@ -66,7 +66,7 @@
     "wireBackupNote": "A bandeira <code>backup=0</code> exclui este ponto de montagem dos backups <code>vzdump</code> — geralmente a chamada certa para grandes unidades externas que são o armazenamento alvo do host em vez de seus dados.",
     "restartHeading": "1.5 Reinicie o LXC e defina permissões",
     "restartBody": "Reinicie o CT para aplicar o ponto de montagem:",
-    "restartCode": "pct restart '<'CTID'>'",
+    "restartCode": "pct reboot '<'CTID'>'",
     "permsBody": "Dentro do LXC, dê as permissões de diretório apropriadas para o usuário que possuirá o compartilhamento:",
     "permsCode": "# Inside the container\nmkdir -p /mnt/lxc_USB\nchown -R proxmenux:proxmenux /mnt/lxc_USB\nchmod 770 /mnt/lxc_USB",
     "permsNoteTitle": "Observação",
@@ -109,7 +109,7 @@
   "troubleshoot": {
     "heading": "Resolução de Problemas",
     "items": [
-      "<strong><code>pct restart</code> falha com \"dispositivo não encontrado\":</strong> o caminho do dispositivo em <code>mp0</code> não existe no host. Verifique com <code>ls -l /dev/disk/by-id/</code> e atualize o caminho.",
+      "<strong><code>pct reboot</code> falha com \"dispositivo não encontrado\":</strong> o caminho do dispositivo em <code>mp0</code> não existe no host. Verifique com <code>ls -l /dev/disk/by-id/</code> e atualize o caminho.",
       "<strong>CT começa mas <code>/mnt/lxc_USB</code> está vazio:</strong> o disco não é montado dentro do CT. Verifique a partir do hospedeiro: <code>pct exec '<'CTID'>' -- mount | grep lxc_USB</code>. Se ausente, o ponto de montagem na configuração está errado.",
       "<strong>Samba autentica mas escreve falha com \"Permissão negada\":</strong> As permissões Linux no diretório não permitem que o usuário do Samba escreva. Verifique novamente o <code>chown</code> / <code>setfacl</code> na secção 1.5 / 2.3.",
       "<strong>Share não aparece em navegadores de rede, mas o <code>smb://'<'ip'>'/lxc_usb</code> funciona:A navegabilidade do </strong> na LAN depende do NetBIOS / WS-Discovery. Adicionar <code>nmbd</code>: <code>apt-get install -y samba-common-bin</code> e garantir que o <code>nmbd</code> está ativado.",

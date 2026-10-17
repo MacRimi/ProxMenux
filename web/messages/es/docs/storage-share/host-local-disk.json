@@ -50,8 +50,8 @@
       },
       {
         "label": "Content types soportados",
-        "dir": "imágenes, respaldo, iso, vztmpl, snippets, rootdir",
-        "zfs": "images, rootdir solamente (almacenamiento de bloque)"
+        "dir": "images, backup, iso, vztmpl, snippets, rootdir",
+        "zfs": "solo images y rootdir (almacenamiento de bloques)"
       },
       {
         "label": "Mejor para",
@@ -104,7 +104,7 @@
     "rows": [
       {
         "preset": "Almacenamiento VM",
-        "content": "imágenes, respaldo",
+        "content": "images,backup",
         "use": "Un almacén de discos de VM dedicado que también guarda backups de esas VMs cerca."
       },
       {

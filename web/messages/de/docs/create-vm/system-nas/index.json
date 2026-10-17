@@ -13,7 +13,7 @@
   },
   "intro": {
     "title": "Wie der NAS-Selektor funktioniert",
-    "body": "Der NAS-Selektor erkennt die neueste stabile Version jeder Appliance (Abfrage des Upstream-Spiegels), lädt die ISO herunter oder erstellt die VM aus einem vorgefertigten Bild und übergibt dann den generischen ProxMenux VM-Assistenten für CPU, RAM, Festplatten- und Netzwerkkonfiguration."
+    "body": "Der NAS-Selektor erkennt die neueste stabile Version jeder Appliance (Abfrage des Upstream-Spiegels), lädt die ISO herunter oder erstellt die VM aus einem vorgefertigten Image und übergibt dann den generischen ProxMenux VM-Assistenten für CPU, RAM, Festplatten- und Netzwerkkonfiguration."
   },
   "image": {
     "alt": "ProxMenux System NAS-Selektor",

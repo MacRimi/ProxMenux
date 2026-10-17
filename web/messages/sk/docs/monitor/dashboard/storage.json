@@ -5,12 +5,12 @@
   },
   "header": {
     "title": "Dashboard: Záložka úložiska",
-    "description": "Stav úložiska hostiteľa v jednej obrazovke pools (NFS / CIFS / LVM / ZFS / dir), ZFS pool zdravie, interná SATA / NVMe disky s SMART, a externé USB disky. Kliknite na akýkoľvek disk pre otvorenie vrták s plnou SMART tabuľka atribútov a história pozorovania na disku.",
+    "description": "Stav úložísk hostiteľa na jednej obrazovke: úložiská Proxmox (NFS / CIFS / LVM / ZFS / dir), stav poolov ZFS, interné disky SATA / NVMe s údajmi SMART a externé disky USB. Kliknutím na disk otvoríte podrobnosti s úplnou tabuľkou atribútov SMART a históriou pozorovaní daného disku.",
     "section": "ProxMenux Monitor · Prehľad"
   },
   "intro": {
     "title": "Podporované tromi zdrojmi",
-    "body": "Proxmoxové úložiská pochádzajú z <code>pvesm status</code>0; ZFS stav z <code>zpool status</code>; fyzikálne disky z <code>lsblk</code> + <code>smartctl</code> (a <code>nvme</code> pre NVMe-špecifické polia). Karta osvieži každý ~60 sekúnd; na-disk vrták spustí čerstvé SMART čítať na požiadanie."
+    "body": "Úložiská Proxmox sa načítavajú z <code>pvesm status</code>, stav ZFS zo <code>zpool status</code> a fyzické disky z <code>lsblk</code> + <code>smartctl</code> (pre údaje špecifické pre NVMe aj z <code>nvme</code>). Karta sa obnovuje približne každých 60 sekúnd; otvorenie podrobností disku spustí nové načítanie SMART údajov."
   },
   "thresholds": {
     "title": "Farby stavu a prahové hodnoty, ktoré sa tu uplatňujú",
@@ -70,7 +70,7 @@
     "items": [
       "<strong>Trasa zariadenia</strong> — <code>/dev/sda</code>, <code>/dev/nvme0n1</code>.",
       "<strong>Typový preukaz</strong> SATA / NVMe (a príslušná ikona).",
-      "<strong>System bed</strong> Palubná doska je odvodená z montážnych bodov <code>/</code> a <code>/boot</code>: akýkoľvek fyzický disk, ktorý ich usporadúva, dostane značku <em>System</em>, aby ste ho náhodou neutierali alebo neprerobili. Disky bez značky sú čisté dátové disky.",
+      "<strong>Označenie systémového disku</strong> — oranžový štítok označuje disky, z ktorých beží operačný systém hostiteľa. Panel ich určuje podľa bodov pripojenia <code>/</code> a <code>/boot</code>. Každý fyzický disk, ktorý ich obsahuje, dostane štítok <em>Systém</em>, aby ste ho omylom nevymazali alebo nepoužili na iný účel. Disky bez tohto štítka slúžia iba na dáta.",
       "<strong>Vzor</strong> Predávajúci + reťazec modelu od <code>smartctl -i</code>.",
       "<strong>Kapacita</strong>",
       "<strong>Teplota</strong> Priebežné °C, farebné podľa prahu typu disku (NVMe beží teplejšie ako SATA).",

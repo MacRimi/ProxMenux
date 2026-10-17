@@ -38,7 +38,7 @@
     "configCode": "lxc.cgroup2.devices.allow = c 13:* rwm\nlxc.mount.entry: /dev/input dev/input none bind,optional,create=dir",
     "imageConfigAlt": "Konfigurácia LXC",
     "save": "Uložiť (<code>Ctrl+X</code>) a znovu začať <strong>iba nádoba</strong> Nie je potrebné reštartovať celý Proxmox host:",
-    "restartCode": "pct restart '<'CTID'>'",
+    "restartCode": "pct reboot '<'CTID'>'",
     "plug": "Plug in the keyboard / mouse / radič and Kodi should response to it."
   },
   "updateKodi": {
@@ -60,11 +60,11 @@
       "<strong>Kodi LXC začína, ale nič v televízii:</strong> a) CT možno nezdedili iGPU. Potvrďte <code>ls /dev/dri</code> Vnútri kontajnera (treba vidieť <code>card0</code>, <code>renderD128</code>). Ak je prázdny, GPU passhow wasn't appliced ProxMenux <strong>Pridať GPU do LXC</strong> menu.",
       "<strong>Klávesnica / myš nebola zistená po reštarte:</strong> hlavné číslo pre <code>/dev/input</code> zmenené (zriedkavé, ale stane sa po aktualizáciách jadra). Znovu spustiť <code>ls -l /dev/input</code> na hostiteľa a aktualizovať <code>lxc.cgroup2.devices.allow</code>.",
       "<strong>Hardware-zrýchlené prehrávanie používa CPU namiesto GPU:</strong> inštalovať alebo aktualizovať VA-API ovládače vnútri kontajnera (<code>intel-media-va-driver</code> pre novšie Intel iGPUs, <code>i965-va-driver</code> pre staršie, <code>mesa-va-drivers</code> na AMD).",
-      "<strong>0<code>add-apt-repository: command not found</code>:</strong> kontajner je Debian, nie Ubuntu. Buď použite balíky Debian Kodi (staršie, ale stabilné) alebo vytvorte CT zo šablóny Ubuntu."
+      "<strong><code>add-apt-repository: command not found</code>:</strong> kontajner používa Debian, nie Ubuntu. Použite balíky Kodi pre Debian (staršie, ale stabilné) alebo vytvorte CT znova zo šablóny Ubuntu."
     ]
   },
   "further": {
     "heading": "Ďalšie informácie",
-    "konpatRich": "<konpatLink>Kopatský blog</konpatLink> Ďalšie súvislosti týkajúce sa informácií iGPU prechod do LXC."
+    "konpatRich": "<konpatLink>Konpatov blogový príspevok</konpatLink> — ďalšie súvislosti o sprístupnení Intel iGPU v LXC."
   }
 }

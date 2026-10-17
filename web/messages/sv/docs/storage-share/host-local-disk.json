@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Värd: Lägg till lokal disk som Proxmox lagring | ProxMenux Dokumentation",
-    "description": "Formatera en lokal SATA / SAS / NVMe disk på en Proxmox värd och registrera den som Proxmox katalog eller ZFS pool lagring. Säker diskdetektering, destruktiv-op bekräftelse gate, UUID-baserad fstab, ZFS pool skapande och pvesm lägga dir / zfspool under huven.",
+    "description": "Formatera en lokal SATA-, SAS- eller NVMe-disk på en Proxmox-värd och registrera den som katalog- eller ZFS-poollagring. Verktyget väljer diskar säkert, kräver bekräftelse före destruktiva steg, använder UUID i fstab, skapar ZFS-pooler och kör pvesm add dir / zfspool.",
     "ogTitle": "Värd: Lägg till lokal disk som Proxmox lagring | ProxMenux Dokumentation",
     "ogDescription": "Formatera en lokal disk och registrera den som Proxmox katalog eller ZFS pool lagring med en guidad, säkerhetsfiltrerad flöde."
   },
   "header": {
     "title": "Värd: Lägg till lokal disk som Proxmox lagring",
-    "description": "Ta en fysisk disk på Proxmox värd, valfritt formatera den (ext4 / xfs / btrfs / zfs) och registrera den som Proxmox lagring - antingen som en katalog (pvesm lägga till smuts) eller en ZFS pool (pvesm lägga till zfspool). ProxMenux filtrerar disklistan så att du inte kan välja rotskivan eller något i bruk, och gör varje destruktivt steg explicit innan du kör den.",
+    "description": "Välj en fysisk disk på Proxmox-värden, formatera den vid behov som ext4, xfs, btrfs eller zfs och registrera den som kataloglagring med pvesm add dir eller som ZFS-pool med pvesm add zfspool. ProxMenux filtrerar bort systemdisken och diskar som används och beskriver varje destruktivt steg innan det körs.",
     "section": "Storage & Share · Värd"
   },
   "intro": {
@@ -50,8 +50,8 @@
       },
       {
         "label": "Stöder innehållstyper",
-        "dir": "bilder, backup, iso, vztmpl, snippets, rootdir",
-        "zfs": "bilder, rootdir (blockslagring)"
+        "dir": "images, backup, iso, vztmpl, snippets, rootdir",
+        "zfs": "endast images och rootdir (blocklagring)"
       },
       {
         "label": "Bäst för",
@@ -104,7 +104,7 @@
     "rows": [
       {
         "preset": "VM-lagring",
-        "content": "Bilder,backup",
+        "content": "images,backup",
         "use": "En dedikerad VM-diskbutik som också håller säkerhetskopior av de VM i närheten."
       },
       {

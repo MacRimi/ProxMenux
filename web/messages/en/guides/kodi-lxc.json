@@ -38,7 +38,7 @@
     "configCode": "lxc.cgroup2.devices.allow = c 13:* rwm\nlxc.mount.entry: /dev/input dev/input none bind,optional,create=dir",
     "imageConfigAlt": "LXC configuration",
     "save": "Save (<code>Ctrl+X</code>) and restart <strong>only the container</strong> — no need to reboot the whole Proxmox host:",
-    "restartCode": "pct restart '<'CTID'>'",
+    "restartCode": "pct reboot '<'CTID'>'",
     "plug": "Plug in the keyboard / mouse / controller and Kodi should respond to it."
   },
   "updateKodi": {

@@ -87,7 +87,7 @@
       },
       {
         "option": "no_root_squash",
-        "effectRich": "<strong>Dôvera klientovi koreň.</strong> Klient montáž ako root píše ako koreň na serveri. Dobré pre dôveryhodné LAN (napr. záložné náradie musí zachovať vlastníctvo). Nahradiť pomocou <code>root_squash</code> ak úplne neveríte každému stroju v sieti ACL."
+        "effectRich": "<strong>Dôverovať používateľovi root na klientovi.</strong> Klient pripájajúci zdieľanie ako root zapisuje aj na serveri ako root. Hodí sa do dôveryhodnej LAN, napríklad ak zálohovací nástroj musí zachovať vlastníkov súborov. Ak úplne nedôverujete každému zariadeniu povolenému sieťovým ACL, použite namiesto toho <code>root_squash</code>."
       }
     ]
   },
@@ -105,7 +105,7 @@
   },
   "status": {
     "heading": "Kontrola stavu NFS",
-    "body": "Diagnostický pas: potvrdzuje <code>nfs-kernel-server</code>0 a <code>rpcbind</code> sú nainštalované a aktívne, tlače <code>exportfs -v</code> výstup, zoznam aktívnych NFS sedení (<code>showmount -a</code>) a aktuálne klientske pripojenia."
+    "body": "Diagnostika overí, či sú <code>nfs-kernel-server</code> a <code>rpcbind</code> nainštalované a aktívne, vypíše výstup <code>exportfs -v</code>, aktívne relácie NFS (<code>showmount -a</code>) a aktuálne pripojenia klientov."
   },
   "uninstall": {
     "heading": "Odinštalovať server NFS",
@@ -116,7 +116,7 @@
   "troubleshoot": {
     "heading": "Riešenie problémov",
     "privTitle": "Požadovaná privilegovaná nádoba (potraty skriptu)",
-    "privBody": "Vybrané CT je neprivilegované. <code>nfs-kernel-server</code> tam nemôže začať, pretože montáž <code>/proc/fs/nfsd</code> potrebuje <code>CAP_SYS_ADMIN</code> v menovom priestore hostiteľského jadra a modul <code>nfsd</code> nie je vystavený ani názvu kontajnera (<code>modprobe nfsd</code> zvnútra vracia <code>FATAL: Module nfsd not found</code>). Ak obídete bránu, uvidíte <code>rpc.nfsd: Unable to access /proc/fs/nfsd errno 2 (No such file or directory)</code> v denníku a žiadne porty NFS sa nikdy otvoria. Jediné funkčné možnosti sú: previesť CT na privilegovaný, alebo presunúť NFS server na VM.",
+    "privBody": "Vybraný CT je neprivilegovaný. <code>nfs-kernel-server</code> v ňom nemôže bežať, pretože pripojenie <code>/proc/fs/nfsd</code> vyžaduje <code>CAP_SYS_ADMIN</code> v mennom priestore jadra hostiteľa. Ani modul <code>nfsd</code> nie je sprístupnený v mennom priestore kontajnera: <code>modprobe nfsd</code> zvnútra vráti <code>FATAL: Module nfsd not found</code>. Ak obídete kontrolu, v denníku sa objaví <code>rpc.nfsd: Unable to access /proc/fs/nfsd errno 2 (No such file or directory)</code> a porty NFS sa neotvoria. Možnosti sú previesť CT na privilegovaný alebo presunúť server NFS do VM.",
     "aptTitle": "apt-get install fails",
     "aptIntro": "Skript predpokladá rodinu Debianu CT. Na Alpine / Arch / Rocky / Alma, inštalujte NFS balíčky serverov ručne:",
     "aptItems": [

@@ -288,8 +288,8 @@
               ],
               [
                 "Instanskontrakt",
-                "Nej",
-                "<code>/usr/local/share/proxmenux/oci/instances/VMID/</code> på värden"
+                "Ja, kopian som finns i CT:n",
+                "<code>/.proxmenux/oci-record.json</code> i CT:n; ytterligare kopior på värden och i klustret sparas separat"
               ],
               [
                 "Program med flera containrar",

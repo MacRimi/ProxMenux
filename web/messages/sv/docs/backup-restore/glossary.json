@@ -74,7 +74,7 @@
         {
           "id": "rootfs",
           "term": "rootfs / rotfilsystem",
-          "def": "En platt kopia av källvärdens filsystem, producerad av <code>rsync</code> över <a href=\"#perfil-defecto\">default profile</a> plus alla <a href=\"#rutas-personalizadas\">custom paths</a>. Det är inte en hel-disk bild: endast vägar som innehåller konfiguration eller statlig Proxmox kan inte regenerera på egen hand kopieras."
+          "def": "En platt kopia av källvärdens filsystem, producerad av <code>rsync</code> över <a href=\"#perfil-defecto\">default profile</a> plus alla <a href=\"#rutas-personalizadas\">custom paths</a>. Det är inte en hel-disk avbildning: endast vägar som innehåller konfiguration eller statlig Proxmox kan inte regenerera på egen hand kopieras."
         },
         {
           "id": "manifiesto",
@@ -125,7 +125,7 @@
         {
           "id": "grupo-copia",
           "term": "Säkerhetskopia grupp",
-          "def": "Logisk behållare inuti PBS under vilken successiva säkerhetskopior av samma tillgång ackumuleras. Varje ny backup delar deduplicering med tidigare i samma grupp. ProxMenux använder två grupper per värd när kryptering är aktiverad: en för värdbackupen och en med ett <code>-keyrecovery</code>-suffix för <a href=\"#sobre-recuperacion\">recovery-kuvert</a>."
+          "def": "Logisk container inuti PBS under vilken successiva säkerhetskopior av samma tillgång ackumuleras. Varje ny backup delar deduplicering med tidigare i samma grupp. ProxMenux använder två grupper per värd när kryptering är aktiverad: en för värdbackupen och en med ett <code>-keyrecovery</code>-suffix för <a href=\"#sobre-recuperacion\">recovery-kuvert</a>."
         },
         {
           "id": "backup-id",

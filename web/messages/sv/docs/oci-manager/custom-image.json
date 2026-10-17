@@ -1,12 +1,12 @@
 {
   "meta": {
-    "title": "Installera en bild som inte finns i katalogen | ProxMenux",
-    "description": "Översätt en OCI-bild från en Compose-fil, en URL, en docker-körkommando eller en bildreferens och granska vad ProxMenux kan reproducera innan du installerar den."
+    "title": "Installera en avbildning utanför katalogen | ProxMenux",
+    "description": "Anpassa en OCI-avbildning från en Compose-fil, en URL, ett docker run-kommando eller en avbildningsreferens och granska vad ProxMenux kan återskapa före installationen."
   },
   "header": {
-    "title": "Installera en bild som inte finns i katalogen",
-    "description": "En bild av din egen översätts från sin Compose-fil, en docker-körkommando eller dess referens ensam, och resultatet visas för granskning innan någon LXC skapas.",
-    "section": "Appar i OCI-hanteraren"
+    "title": "Installera en avbildning utanför katalogen",
+    "description": "Din avbildning anpassas från sin Compose-fil, ett docker run-kommando eller enbart referensen. Resultatet visas för granskning innan någon LXC-container skapas.",
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -14,55 +14,55 @@
       "blocks": [
         {
           "calloutInfo": {
-            "title": "Samma konverterare, samma installatör",
-            "body": "Alternativet <strong>Installera en bild som inte finns i katalogen</strong> använder omvandlaren och installatören av katalogmallarna. Skillnaden är att kontraktet genereras i det ögonblicket från definitionen, och valideras innan någon LXC skapas."
+            "title": "Samma konverterare och installationsflöde",
+            "body": "Alternativet <strong>Installera en avbildning utanför katalogen</strong> använder samma konverterare och installationsflöde som katalogmallarna. Skillnaden är att kontraktet skapas vid det tillfället från den angivna definitionen och valideras innan någon LXC-container skapas."
           }
         }
       ]
     },
     {
       "id": "sources",
-      "title": "Hur bilden beskrivs",
-      "intro": "Den första skärmen frågar hur bilden beskrivs. Fyra sätt ger en definition som översätts, en femte använder bara bildnamnet och tre tar en oci-komponering som redan är skriven.",
+      "title": "Så beskrivs avbildningen",
+      "intro": "Första vyn frågar hur avbildningen beskrivs. Fyra alternativ läser en definition som anpassas, ett femte använder bara avbildningens namn och tre andra läser en färdig oci-compose-fil.",
       "blocks": [
         {
           "table": {
             "headers": [
               "Alternativ",
-              "Vad det läser"
+              "Vad som läses"
             ],
             "rows": [
               [
-                "Klistra på sin komponeringsfil i terminalen",
-                "YAML klistras in i terminalen och slutar med Ctrl+D."
+                "Klistra in Compose-filen i terminalen",
+                "Klistra in YAML-innehållet i terminalen och avsluta med Ctrl+D."
               ],
               [
-                "Läs dess Compose-fil från en fil av denna värd",
-                "En väg på noden, <code>/root/docker-compose.yml</code> som standard. Filen måste finnas och vara högst 256 KiB."
+                "Läs Compose-filen från värden",
+                "En sökväg på noden, som standard <code>/root/docker-compose.yml</code>. Filen måste finnas och får vara högst 256 KiB."
               ],
               [
-                "Ladda ner sin Compose-fil från en adress",
-                "En <code>http://</code> eller <code>https://</code>-adress som tjänar den råa YAML. På de flesta 256 KiB laddas ner."
+                "Hämta Compose-filen från en adress",
+                "En <code>http://</code>- eller <code>https://</code>-adress som tillhandahåller rå YAML. Högst 256 KiB hämtas."
               ],
               [
-                "Klistra på docker körkommandot i terminalen",
-                "Kommandot publicerat av projektet. Hamnar, miljö, volymer, enheter, kapacitet, användare, delat minne och de andra stödda alternativen översätts."
+                "Klistra in docker run-kommandot i terminalen",
+                "Kommandot som projektet publicerar. Portar, miljö, volymer, enheter, capabilities, användare, delat minne och andra alternativ som stöds anpassas."
               ],
               [
-                "Endast bildreferensen, utan Compose-fil",
-                "En referens som <code>ghcr.io/user/application:latest</code>. Registret är queried och OCI metadata av bilden hålls."
+                "Bara avbildningsreferensen, utan Compose-fil",
+                "En referens som <code>ghcr.io/user/application:latest</code>. Registret frågas och avbildningens OCI-metadata bevaras."
               ],
               [
                 "Klistra in en oci-compose i terminalen",
-                "JSON klistras in i terminalen och slutar med Ctrl+D. Det är inte översatt: det kontrolleras och installeras som det är skrivet."
+                "Klistra in JSON-innehållet i terminalen och avsluta med Ctrl+D. Det konverteras inte utan kontrolleras och installeras som det är skrivet."
               ],
               [
-                "Läs en oci-compose från en fil på denna värd",
-                "En JSON-fil på noden, <code>/root/oci-compose.json</code> som standard, på de flesta 2 MiB."
+                "Läs en oci-compose-fil från värden",
+                "En JSON-fil på noden, som standard <code>/root/oci-compose.json</code>, på högst 2 MiB."
               ],
               [
-                "Ladda ner en oci-compose från en adress",
-                "En <code>http://</code> eller <code>https://</code>-adress som tjänar JSON-filen. På de flesta 2 MiB laddas ner."
+                "Hämta en oci-compose från en adress",
+                "En <code>http://</code>- eller <code>https://</code>-adress som tillhandahåller JSON-filen. Högst 2 MiB hämtas."
               ]
             ]
           }
@@ -70,44 +70,44 @@
         {
           "figure": {
             "src": "/oci-manager/custom-source-menu.png",
-            "alt": "Menyn som frågar hur en bild som inte finns i katalogen beskrivs",
-            "caption": "De sätt att beskriva en bild som inte finns i katalogen."
+            "alt": "Meny för att välja hur en avbildning utanför katalogen ska beskrivas",
+            "caption": "Olika sätt att beskriva en avbildning utanför katalogen."
           }
         }
       ]
     },
     {
       "id": "reference-only",
-      "title": "Vad en bild referens ensam ger",
-      "intro": "En bild bär sin process metadata, men inte allt en komponeringsfil brukar lägga till runt den.",
+      "title": "Vad enbart avbildningsreferensen ger",
+      "intro": "Avbildningen innehåller processens metadata, men inte allt som en Compose-fil brukar lägga till runt den.",
       "blocks": [
         {
           "table": {
             "headers": [
-              "Läs från bilden",
-              "Inte i bilden",
+              "Läses från avbildningen",
+              "Finns inte i avbildningen",
               "Konsekvens"
             ],
             "rows": [
               [
-                "<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>, <code>WorkingDir</code> och inbäddad miljö",
-                "Variabler som endast visas i dokumentationen",
-                "De läggs till under installationen eller med Modify"
+                "<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>, <code>WorkingDir</code> och den inbyggda miljön",
+                "Variabler som bara finns i dokumentationen",
+                "Läggs till under installationen eller via Ändra"
               ],
               [
-                "Volymer som deklareras av bilden",
-                "Värd kataloger som bara en komponera filnamn",
-                "Ytterligare vägar läggs till innan du installerar"
+                "Volymer som avbildningen deklarerar",
+                "Kataloger på värden som bara anges i Compose-filen",
+                "Ytterligare sökvägar läggs till före installationen"
               ],
               [
-                "<code>EXPOSE</code> portar",
+                "<code>EXPOSE</code>-portar",
                 "URL, protokoll eller funktionell hälsokontroll",
-                "Hamnen och hur tjänsten kontrolleras bekräftas"
+                "Porten och sättet att kontrollera tjänsten bekräftas"
               ],
               [
-                "Arkitekturer och smälta i registret",
+                "Arkitekturer och digest i registret",
                 "Enheter, privilegier eller externa beroenden",
-                "Ingen av dem är aktiverad utan en definition som ber om det"
+                "Aktiveras inte utan en definition som begär dem"
               ]
             ]
           }
@@ -116,31 +116,31 @@
     },
     {
       "id": "review",
-      "title": "Granska innan du installerar",
-      "intro": "Efter att ha översatt definitionen visar ProxMenux vad den förstod innan du ber om VMID, resurser eller lagring.",
+      "title": "Granska före installationen",
+      "intro": "Efter att definitionen anpassats visar ProxMenux hur den har tolkats, innan VMID, resurser eller lagring efterfrågas.",
       "blocks": [
         {
           "steps": {
             "items": [
               {
-                "title": "Analys",
-                "body": "Tjänster, bild, portar, vägar, miljö, enheter, säkerhet och hälsokontroll läses."
+                "title": "Analysera",
+                "body": "Tjänster, avbildning, portar, sökvägar, miljö, enheter, säkerhet och hälsokontroll läses in."
               },
               {
-                "title": "Query Registret",
-                "body": "Bilden måste finnas i dess register, och dess publicerade arkitekturer är listade. Ett privat register läses med det konto som sparats för det."
+                "title": "Fråga registret",
+                "body": "Avbildningen måste finnas i registret och de publicerade arkitekturerna listas. Ett privat register läses med kontot som sparats för det."
               },
               {
-                "title": "Lista vad som inte tillämpas",
-                "body": "Etiketter, Docker-nätverk, Swarm-inställningar och andra nycklar som inte påverkar en LXC listas."
+                "title": "Lista det som inte tillämpas",
+                "body": "Etiketter, Docker-nätverk, Swarm-inställningar och andra nycklar som inte påverkar en LXC-container listas."
               },
               {
-                "title": "Blockera vad som inte kan översättas",
-                "body": "En nyckel utan säker motsvarighet visas under <strong> Vad kan inte översättas</strong> och installationen fortsätter inte. Ingenting tappas tyst."
+                "title": "Blockera alternativ utan säker motsvarighet",
+                "body": "Nycklar utan säker motsvarighet visas under <strong>Alternativ utan motsvarighet</strong> och installationen fortsätter inte. Inget ignoreras utan besked."
               },
               {
-                "title": "Be om hemligheter",
-                "body": "Variabler vars namn läses som lösenord, token eller nyckeln blir känsliga frågor om installationen."
+                "title": "Fråga efter hemliga uppgifter",
+                "body": "Variabler vars namn tyder på lösenord, token eller nyckel efterfrågas som känsliga uppgifter under installationen."
               }
             ]
           }
@@ -148,24 +148,24 @@
         {
           "figure": {
             "src": "/oci-manager/custom-review.png",
-            "alt": "Sammanfattning av vad ProxMenux förstod från en Compose-fil",
-            "caption": "Den sammanfattning som visas innan installationen begär VMID och resurser."
+            "alt": "Sammanfattning av hur ProxMenux har tolkat Compose-filen",
+            "caption": "Sammanfattningen som visas innan installationen frågar efter VMID och resurser."
           }
         },
         {
-          "p": "Efter att ha accepterat sammanfattningen är flödet en av katalogen: namn, standard eller avancerade läge, VMID, CPU, minne, nätverk, börja med noden, ihållande vägar, ytterligare vägar, kompatibla enheter och en slutlig sammanfattning."
+          "p": "Efter att sammanfattningen godkänts följer samma flöde som i katalogen: namn, standardläge eller avancerat läge, VMID, CPU, minne, nätverk, start med noden, beständiga och extra sökvägar, kompatibla enheter och en slutlig sammanfattning."
         }
       ]
     },
     {
       "id": "examples",
-      "title": "Inmatningsexempel",
+      "title": "Exempel på indata",
       "blocks": [
         {
           "codeGrid": {
             "items": [
               {
-                "title": "Komponera",
+                "title": "Compose",
                 "code": "services:\n  app:\n    image: ghcr.io/example/app:latest\n    ports:\n      - \"8080:8080\"\n    volumes:\n      - ./config:/config\n      - /srv/media:/media\n    environment:\n      TZ: Europe/Madrid"
               },
               {
@@ -180,95 +180,95 @@
     {
       "id": "oci-compose",
       "title": "En oci-compose skriven för hand",
-      "intro": "En oci-compose är JSON-filen som ett program installeras från. Katalogen håller en för var och en av sina applikationer, och samma format kan skrivas för hand och installeras med det här alternativet.",
+      "intro": "En oci-compose är JSON-filen som ett program installeras från. Katalogen innehåller en sådan fil per program. Samma format kan skrivas för hand och installeras med det här alternativet.",
       "blocks": [
         {
-          "p": "En skriven för hand anger vad författaren bestämmer: bilden, dess portar, variabler och volymer och vad installationen frågar. ProxMenux slutför resten när den läser filen. Det kan säga vad en komponeringsfil inte kan: texten i en fråga, ett lösenord som genereras under installationen, en GPU-profil, ägaren av varje volym, kontrollen av den första starten eller de referenser som visas i slutet."
+          "p": "I en handskriven fil bestämmer författaren avbildning, portar, variabler, volymer och installationsfrågor. ProxMenux kompletterar resten när filen läses. Formatet kan ange sådant som Compose inte kan: frågetexter, ett lösenord som skapas under installationen, en GPU-profil, ägaren till varje volym, kontrollen vid första starten eller inloggningsuppgifterna som visas till sist."
         },
         {
           "steps": {
             "items": [
               {
-                "title": "Kolla in",
-                "body": "En fil med fel är inte installerad. Varje fel namn på det fält som finns i, och en fil som inte är giltig JSON rapporterar linjen och kolumnen."
+                "title": "Kontrollera",
+                "body": "En fil med fel installeras inte. Varje fel anger vilket fält det gäller; vid ogiltig JSON visas rad och kolumn."
               },
               {
                 "title": "Granska",
-                "body": "En giltig fil visar vad den installerar: bild, webbadress, portar, ihållande vägar, de variabler som installationen begär och de filer som den skriver."
+                "body": "En giltig fil visar vad den installerar: avbildning, webbadress, portar, beständiga sökvägar, variabler som efterfrågas och filer som skrivs."
               },
               {
                 "title": "Installera",
-                "body": "Installationen är en av alla applikationer av katalogen, med standard eller avancerade inställningar."
+                "body": "Installationen är densamma som för katalogens program, med standardinställningar eller avancerade inställningar."
               }
             ]
           }
         },
         {
           "calloutWarning": {
-            "title": "En fil som bestämmer privilegier",
-            "body": "En oci-compose bestämmer vad som monteras i behållaren och med vilka privilegier. Granskningen säger det innan du installerar: installera bara filer som kommer från en källa du litar på."
+            "title": "En fil som bestämmer privilegierna",
+            "body": "En oci-compose bestämmer vad som monteras i containern och med vilka privilegier. Granskningen visar detta före installationen: installera bara filer från betrodda källor."
           }
         },
         {
-          "p": "Formatet beskrivs blockera med block, med två kompletta exempel, i <readmeLink>README av OCI-motorn</readmeLink>. Rekordet på en installation kan läsas på samma sätt: endast den mall som den installerades från används, och ingen av svaren på den installationen."
+          "p": "Formatet beskrivs block för block med två fullständiga exempel i <readmeLink>OCI-motorns README</readmeLink>. Även en installationspost kan läsas på samma sätt: bara den ursprungliga mallen används, inga av svaren från den installationen."
         }
       ]
     },
     {
       "id": "private-registries",
-      "title": "Bilder i privata register",
-      "intro": "En bild i ett privat register, till exempel ett privat paket på GitHub eller ett privat förvar på Docker Hub, läses med ett konto som sparas i ProxMenux.",
+      "title": "Avbildningar i privata register",
+      "intro": "En avbildning i ett privat register, till exempel ett privat GitHub-paket eller ett privat Docker Hub-arkiv, läses med ett konto som sparats i ProxMenux.",
       "blocks": [
         {
           "steps": {
             "items": [
               {
-                "title": "Registret vägrar bilden",
-                "body": "När registret svarar på att bilden behöver ett konto, erbjuder granskningen att logga in på det registret och läser bilden igen."
+                "title": "Registret nekar åtkomst till avbildningen",
+                "body": "Om registret svarar att avbildningen kräver ett konto erbjuder granskningen inloggning och läser sedan avbildningen igen."
               },
               {
                 "title": "Logga in",
-                "body": "En användare och ett lösenord eller åtkomsttoken som kan dra bilden. Registret kontrollerar dem, och de sparas endast om det accepterar dem."
+                "body": "Ett användarnamn och ett lösenord eller en token som får hämta avbildningen. Registret kontrollerar uppgifterna och de sparas bara om de godkänns."
               },
               {
-                "title": "Installera och hålla dig uppdaterad",
-                "body": "Installationen hämtar bilden med det kontot, och så gör uppdateringar, Modify, Recreate, watchdog och uppdateringskontrollen av Monitor, på någon nod av klustret."
+                "title": "Installera och håll uppdaterat",
+                "body": "Kontot används för att hämta avbildningen under installationen och även vid uppdatering, Ändra, Återskapa, watchdog och Monitors uppdateringskontroll, på alla noder i klustret."
               }
             ]
           }
         },
         {
-          "p": "<strong>Registry accounts</strong>, i huvudmenyn av OCI Manager Apps, listar sparade konton av registret och användaren, aldrig deras hemlighet. Från varje konto kan en bild kontrolleras, laddas ner eller installeras och kontot uppdateras eller tas bort."
+          "p": "<strong>Registerkonton</strong> i huvudmenyn för OCI manager Apps visar sparade konton per register och användare, aldrig deras hemliga uppgifter. Från varje konto kan du kontrollera, hämta eller installera en avbildning samt uppdatera eller ta bort inloggningsuppgifterna."
         },
         {
           "list": {
             "items": [
-              "GitHub (<code>ghcr.io</code>): användaren är GitHub-kontot och lösenordet en personlig åtkomsttoken med <code>read:packages</code>-tillståndet.",
-              "Docker Hub (<code>docker.io</code>): användaren är Docker Hub-konto och lösenordet en åtkomsttoken med lästillstånd.",
-              "Andra register, inklusive en med sin egen port som <code>registry.example.com:5000</code>: användaren och lösenordet eller token som registret ger."
+              "GitHub (<code>ghcr.io</code>): användaren är GitHub-kontot och lösenordet en personlig åtkomsttoken med behörigheten <code>read:packages</code>.",
+              "Docker Hub (<code>docker.io</code>): användaren är Docker Hub-kontot och lösenordet en åtkomsttoken med läsbehörighet.",
+              "Andra register, även med egen port som <code>registry.example.com:5000</code>: användarnamn och lösenord eller token som registret tillhandahåller."
             ]
           }
         },
         {
           "calloutInfo": {
-            "title": "Där kontona hålls",
-            "body": "I <code>/etc/pve/priv/proxmenux/registry-auth.json</code>, läsbar endast av rot, i samma mapp där Proxmox håller sina lagringslösenord. <code>/etc/pve</code> delas av varje nod av klustret, så ett konto som läggs på en nod används på dem alla. Värdbackupen innehåller den och avinstallera ProxMenux tar bort den från varje nod."
+            "title": "Var kontona sparas",
+            "body": "I <code>/etc/pve/priv/proxmenux/registry-auth.json</code>, läsbar bara av root, i samma mapp där Proxmox sparar lagringslösenord. <code>/etc/pve</code> delas mellan alla noder i klustret, så ett konto som läggs till på en nod används på alla. Värdens säkerhetskopia innehåller filen och avinstallation av ProxMenux tar bort den från alla noder."
           }
         }
       ]
     },
     {
       "id": "limits",
-      "title": "Definitioner som inte är installerade",
+      "title": "Definitioner som inte installeras",
       "blocks": [
         {
           "list": {
             "items": [
-              "En Dockerfile utan en publicerad bild: bilden måste byggas och publiceras i ett OCI-register först.",
-              "En komponeringsfil med flera tjänster: den är blockerad eftersom den beskriver mer än en bild. Detta alternativ installerar en enda behållare.",
-              "<code>configs</code>, externa hemligheter eller enhetsformat som inte kan översättas entydigt.",
-              "Skalbyte som <code>$(command)</code>: det resulterande värdet måste skrivas istället.",
-              "<code>docker run</code> alternativ som inte är erkända, och <code>--env-file</code>: en explicit komponeringsfil läses istället."
+              "En Dockerfile utan publicerad avbildning: avbildningen måste först byggas och publiceras i ett OCI-register.",
+              "En Compose-fil med flera tjänster blockeras eftersom det här alternativet installerar en tjänst i en container, även om flera tjänster använder samma avbildning.",
+              "<code>configs</code>, externa hemligheter eller enhetsformat som inte kan anpassas entydigt.",
+              "Skalsubstitutioner som <code>$(command)</code>: ange det resulterande värdet direkt i stället.",
+              "Okända <code>docker run</code>-alternativ och <code>--env-file</code>: använd en Compose-fil med uttryckliga värden i stället."
             ]
           }
         }

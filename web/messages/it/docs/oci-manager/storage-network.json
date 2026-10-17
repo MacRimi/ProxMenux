@@ -288,8 +288,8 @@
               ],
               [
                 "Contratto dell’istanza",
-                "No",
-                "<code>/usr/local/share/proxmenux/oci/instances/VMID/</code> sull’host"
+                "Sì, la copia conservata nel CT",
+                "<code>/.proxmenux/oci-record.json</code> nel CT; le copie aggiuntive dell’host e del cluster sono conservate separatamente"
               ],
               [
                 "Applicazione con più container",

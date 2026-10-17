@@ -254,7 +254,7 @@
       "icon": "MonitorIcon",
       "officialName": "zimaspace.com",
       "officialUrl": "https://www.zimaspace.com/zimaos",
-      "description": "Lightweight NAS / Home-Server OS basiert auf Debian, mit einem Fokus auf Medien, Docker Apps und Home Automation. ZimaOS verwendet ein dediziertes ProxMenux-Installationsprogramm (vm/zimaos.sh), das ein vorgefertigtes Bild herunterlädt, aber das VM-Profil folgt dem gleichen Ablauf wie die anderen NAS-Systeme.",
+      "description": "Lightweight NAS / Home-Server OS basiert auf Debian, mit einem Fokus auf Medien, Docker Apps und Home Automation. ZimaOS verwendet ein dediziertes ProxMenux-Installationsprogramm (vm/zimaos.sh), das ein vorgefertigtes Image herunterlädt, aber das VM-Profil folgt dem gleichen Ablauf wie die anderen NAS-Systeme.",
       "specs": [
         "Empfohlene Schnittstelle: SATA oder VirtIO",
         "Standard RAM: 4 GB (genug für Medien / selbst gehostete Apps)",

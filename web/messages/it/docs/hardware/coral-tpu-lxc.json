@@ -57,7 +57,7 @@
       "body1": "Se un M.2 / PCIe Coral è presente sull'host e <code>/dev/apex_0</code> esiste (il modulo del kernel apex è caricato), lo script utilizza il moderno Proxmox <code>dev</code> API che gestisce automaticamente le autorizzazioni cgroup2 per contenitori privilegiati e non privati:",
       "body2": "Se l'host non è ancora stato avviato con il modulo apex caricato (è sufficiente eseguire <hostLink>Install Coral su Host</hostLink> e non è stato riavviato), <code>/dev/apex_0</code> non esiste ancora. Lo script rientra nel classico cgroup2 + montaggio a lega con <code>create=file</code> così le voci sono valide anche quando il dispositivo non si è materializzato:",
       "rebootTitle": "Riavviare l'host prima se hai appena installato i driver Coral",
-      "rebootBody": "Il supporto cgroup2 + fallback sarà scritto, ma il dispositivo esiste solo in realtà dopo che un reboot host carica il modulo <code>apex</code>. Se non hai riavviato, riavvia subito prima di iniziare il contenitore."
+      "rebootBody": "Viene scritta la configurazione alternativa cgroup2 con il relativo montaggio, ma il dispositivo sarà effettivamente disponibile solo dopo un riavvio dell’host che carichi il modulo <code>apex</code>. Se non hai ancora riavviato, fallo prima di avviare il container."
     },
     "drivers": {
       "title": "Avviare il contenitore + installare Coral runtime all'interno",

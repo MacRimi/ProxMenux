@@ -61,7 +61,7 @@
         "title": "Pripojiť a overiť",
         "img": "/disk/assignment-ct.png",
         "caption": "Pridelenie CT",
-        "bodyRich": "ProxMenux pridá čerstvý <code>mpN:</code> vstup do kontajnera konfigurovať, preskočiť indexy už v prevádzke, a znovu prečíta konfiguráciu potvrdiť. Ak je kontajner beží, montáž je exec'd žiť; inak to má vplyv na ďalší začiatok.",
+        "bodyRich": "ProxMenux pridá do konfigurácie kontajnera nový záznam <code>mpN:</code>, pričom preskočí už použité indexy. Potom konfiguráciu znovu načíta a overí. Ak kontajner beží, pripojenie sa vykoná za behu; inak sa uplatní pri ďalšom spustení.",
         "extraImg": "/disk/result-point.png",
         "extraAlt": "Bod pripojenia vytvorený úspešne",
         "extraCaption": "Pripojiť bod vytvorený a overený"
@@ -85,7 +85,7 @@
     "unprivTitle": "\"Nemôže pokračovať s neprivilegovaným kontajnerom\"",
     "unprivBody": "Odmietli ste ponuku na konverziu. Buď znovu spustiť a prijať konverziu, alebo previesť kontajner ručne editáciou <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> a nahradiť <code>unprivileged: 1</code> s <code>unprivileged: 0</code>. Môžete tiež prestavať kontajner ako privilegovaný, ak radšej nepremieňate na mieste.",
     "permsTitle": "Práva vnútri kontajnera sú nesprávne",
-    "permsBody": "Pripojí sa z hostiteľa do privilegovanej kontajnerovej pôdy ako <code>root:root</code>. Ak služba vnútri CT beží ako iný užívateľ (napr. <code>www-data</code> pre Nextcloud), <code>chown</code>/<code>chmod</code> vo vnútri kontajnera, aby zodpovedal jeho UID/GID po prvej montáži."
+    "permsBody": "Cesty pripojené z hostiteľa do privilegovaného kontajnera sa zobrazia s vlastníkom <code>root:root</code>. Ak služba v CT beží pod iným používateľom, napríklad <code>www-data</code> pri Nextcloude, po prvom pripojení upravte vlastníka a oprávnenia v kontajneri pomocou <code>chown</code>/<code>chmod</code> podľa UID a GID služby."
   },
   "related": {
     "heading": "Súvisiace",
@@ -103,7 +103,7 @@
       {
         "href": "/docs/help-info/vm-ct-commands",
         "label": "VM a CT Riadiace príkazy",
-        "tail": " — "
+        "tail": " — prehľad príkazov pct config / push / pull."
       },
       {
         "href": "/docs/disk-manager",

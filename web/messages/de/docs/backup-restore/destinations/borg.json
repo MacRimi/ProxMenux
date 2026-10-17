@@ -58,7 +58,7 @@
       {
         "type": "usb",
         "url": "/mnt/MOUNTPOINT/borgbackup",
-        "detail": "Repository lebt auf einer montierten externen Festplatte (normalerweise USB). Die Halterung wird über <code>hb_prompt_mounted_path</code> aufgelöst, das USB-Partitionen nach Bedarf erkennt, einhängt oder formatiert."
+        "detail": "Repository lebt auf einer montierten externen Festplatte (normalerweise USB). Die Mount wird über <code>hb_prompt_mounted_path</code> aufgelöst, das USB-Partitionen nach Bedarf erkennt, einhängt oder formatiert."
       },
       {
         "type": "local",

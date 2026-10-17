@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "UP Dump, PVE 8 do 9 Upgrade, OVA Export/Import ProxMenux",
+    "title": "Nástroje Proxmox — UUP Dump, aktualizácia PVE 8 na 9, export/import OVA | ProxMenux",
     "description": "Denné Proxmox VE inžinierske siete: stavať systémy Windows ISO z UUP Dump, nainštalovať vykurované nástroje CLI, spustiť bezpečnú aktualizáciu systému Proxmox, vykonávať hlavnú verziu PVE 8 PVE 9, export VMs do OVA / OVF a import OVA / OVF VMs z VMware alebo VirtualBox.",
-    "ogTitle": "UP Dump, PVE 8 do 9 Aktualizácia, vývoz/dovoz OVA",
+    "ogTitle": "Nástroje Proxmox — UUP Dump, aktualizácia PVE 8 na 9, export/import OVA",
     "ogDescription": "Zostrojte Windows ISO, nainštalujte nástroje CLI, spustite bezpečnú aktualizáciu, upgrade PVE 8 na PVE 9, export / import OVA / OVF VMs.",
-    "twitterTitle": "Proxmox Utilities ProxMenux",
+    "twitterTitle": "Nástroje Proxmox | ProxMenux",
     "twitterDescription": "Tvorba ISO, nástroje CLI, aktualizácia Proxmoxu, PVE 8→9 upgrade, OVA / OVF VM prenosnosť."
   },
   "header": {
@@ -54,7 +54,7 @@
   },
   "upgradeWarn": {
     "title": "PVE 8 → Upgrade 9 je deštruktívna a nie reverzibilná",
-    "body": "Aktualizácia hlavnej verzie prepíše základňu Debianu (Bookworm → Trixie) a komín Proxmox na mieste. Neexistuje žiadna spiatočná cesta, potrebujete <strong>0 Overené zálohy</strong> každého VM a CT a <strong>console / IPMI / iKVM prístup</strong> pred začatím. Nástroj na aktualizáciu z tohto dôvodu odmieta spustiť z webového terminálu Proxmox."
+    "body": "Aktualizácia hlavnej verzie prepíše základ Debianu (Bookworm → Trixie) aj súčasti Proxmox priamo na mieste. Nie je k dispozícii automatický návrat: pred začiatkom potrebujete <strong>overené zálohy</strong> každej VM a CT a <strong>prístup ku konzole / IPMI / iKVM</strong>. Preto sa aktualizačný nástroj odmietne spustiť vo webovom termináli Proxmox."
   },
   "isoSection": {
     "heading": "Tvorba ISO",

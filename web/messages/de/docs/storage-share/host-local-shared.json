@@ -3,7 +3,7 @@
     "title": "Host: Hinzufügen von Shared Directory auf Host | ProxMenux Dokumentation",
     "description": "Erstellen Sie ein Hostverzeichnis, das für LXC-Bind-Mounts bereit ist, mit Berechtigungen, die für privilegierte und unprivilegierte Container gleichzeitig funktionieren. Sticky Bit + World-Rwx + ACLs für die Standardvererbung.",
     "ogTitle": "Host: Hinzufügen von Shared Directory auf Host | ProxMenux Dokumentation",
-    "ogDescription": "Bereiten Sie ein Hostverzeichnis für LXC-Bind-Halterungen mit Berechtigungen vor, die mit privilegierten und unprivilegierten CTs kompatibel sind."
+    "ogDescription": "Bereiten Sie ein Hostverzeichnis für LXC-Bind-Mounts vor, dessen Berechtigungen mit privilegierten und unprivilegierten CTs kompatibel sind."
   },
   "header": {
     "title": "Host: Shared Directory auf Host hinzufügen",

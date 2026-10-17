@@ -70,7 +70,7 @@
         "icon": "Archive",
         "href": "/docs/help-info/backup-commands",
         "title": "Backup och återställ",
-        "description": "vzdump, qmrestore / pct restaurering, Proxmox Backup Server hjälpare, snapshot operationer."
+        "description": "vzdump, qmrestore / pct restore, verktyg för Proxmox Backup Server och snapshot-åtgärder."
       },
       {
         "icon": "Wrench",

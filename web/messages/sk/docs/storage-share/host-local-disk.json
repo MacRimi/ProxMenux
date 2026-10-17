@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Host: Pridať lokálny disk ako Proxmox úložisko ProxMenux Dokumentácia",
-    "description": "Naformátujte lokálny disk SATA / SAS / NVMe na hostiteľovi Proxmox a zaregistrujte ho ako adresár Proxmox alebo úložisko ZFS pool. Bezpečná detekcia disku, potvrdzovacia brána deštruktívnej operácie, fstab založený na UUID, vytvorenie ZFS pool a pvesm pridanie dir / zfspool pod kapotou.",
+    "description": "Naformátujte lokálny disk SATA, SAS alebo NVMe na hostiteľovi Proxmox a zaregistrujte ho ako adresárové úložisko alebo pool ZFS. Postup zahŕňa bezpečný výber disku, potvrdenie deštruktívnych operácií, fstab podľa UUID, vytvorenie poolu ZFS a príkazy pvesm add dir / zfspool.",
     "ogTitle": "Host: Pridať lokálny disk ako Proxmox úložisko ProxMenux Dokumentácia",
     "ogDescription": "Naformátujte lokálny disk a zaregistrujte ho ako adresár Proxmox alebo ZFS pool pomocou riadeného, bezpečnostne filtrovaného postupu."
   },
@@ -50,8 +50,8 @@
       },
       {
         "label": "Podporuje typy obsahu",
-        "dir": "obrázky, zálohy, izo, vztmpl, útržky, rootdir",
-        "zfs": "obrázky, len rootdir (blok úložisko)"
+        "dir": "images, backup, iso, vztmpl, snippets, rootdir",
+        "zfs": "iba images a rootdir (blokové úložisko)"
       },
       {
         "label": "Najlepšie pre",
@@ -104,7 +104,7 @@
     "rows": [
       {
         "preset": "Uskladnenie VM",
-        "content": "obrázky, záloha",
+        "content": "images,backup",
         "use": "Dedikovaný obchod s diskami VM, ktorý tiež udržiava zálohy tých VM v blízkosti."
       },
       {
@@ -115,7 +115,7 @@
       {
         "preset": "Všetky typy",
         "content": "images,backup,iso,vztmpl,snippets",
-        "use": "\"Nech sa hostiteľ rozhodne\""
+        "use": "„Nechať rozhodnúť hostiteľa“ — povolí všetky typy obsahu, ktoré Proxmox na tomto úložisku podporuje."
       },
       {
         "preset": "Vlastné",
@@ -161,7 +161,7 @@
     "zpoolTitle": "zpool create zlyhá s hlásením \"invalid vdev specification\"",
     "zpoolBody": "Zvyčajne to znamená, že disk má stále zastarané GPT / LVM / ZFS podpisy, ktoré <code>zpool</code> odmieta bez sily prepísať. Skript pred formátovaním spustí <code>wipefs</code> a <code>sgdisk --zap-all</code>, ale veľmi tvrdohlavý disk môže mať stále zastaraný štítok. Manuálne vynútenie čistého vymazania: <code>zpool labelclear -f /dev/sdX</code> alebo <code>dd if=/dev/zero of=/dev/sdX bs=1M count=10</code> a skúste to znova.",
     "inactiveTitle": "Skladovanie ukazuje ako neaktívne po reštarte",
-    "inactiveBody": "Skontrolovať <code>findmnt &lt;mount-path&gt;</code> Ak chýba montáž, niečo v <code>/etc/fstab</code> zlyhal. <code>dmesg | tail</code> zvyčajne poukazuje na dôvod (nesúlad UUID, korupcia súborového systému, <code>nofail</code> vysadila opakovanie). A <code>mount -a</code> zvyčajne reaktivuje úložisko po stanovení príčiny."
+    "inactiveBody": "Skontrolujte <code>findmnt &lt;mount-path&gt;</code>. Ak pripojenie chýba, zlyhalo niečo v <code>/etc/fstab</code>. Výstup <code>dmesg | tail</code> zvyčajne ukáže príčinu, napríklad nesúlad UUID, poškodenie súborového systému alebo vynechanie ďalšieho pokusu v súvislosti s <code>nofail</code>. Po odstránení príčiny príkaz <code>mount -a</code> zvyčajne úložisko znovu pripojí."
   },
   "related": {
     "heading": "Súvisiace",

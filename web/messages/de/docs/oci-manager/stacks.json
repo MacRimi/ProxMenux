@@ -1,12 +1,12 @@
 {
   "meta": {
     "title": "Multicontainer-Anwendungen | ProxMenux",
-    "description": "Wie OCI-Manager Apps eine Anwendung mit Datenbank und Cache in koordinierte native LXCs umwandelt: Plan, privates Netzwerk, Abhängigkeitshaken, Validierung und Transaktionsaktualisierungen."
+    "description": "Wie OCI manager Apps eine Anwendung mit Datenbank und Cache als koordinierte native LXCs umsetzt: Planung, privates Netzwerk, Abhängigkeits-Hook, Validierung und transaktionale Aktualisierungen."
   },
   "header": {
     "title": "Anwendungen mit mehreren Containern",
     "description": "Eine Anwendung mit Datenbank, Cache und anderen Diensten wird zu mehreren koordinierten nativen LXCs, die als eine installiert und aktualisiert werden.",
-    "section": "Apps des OCI-Managers"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -38,7 +38,7 @@
       "title": "1. Der Plan, bevor ein Container existiert",
       "blocks": [
         {
-          "p": "Es wird kein LXC erstellt, während die Compose-Definition interpretiert wird. Ein vollständiger Plan steht an erster Stelle, mit jedem Mitglied, Bild, VMID, Netzwerk, Pfad, Geheimnis, Ordnung und Gesundheitscheck. Wenn der Plan nicht konsistent ist, wird die Installation nicht gestartet."
+          "p": "Es wird kein LXC erstellt, während die Compose-Definition interpretiert wird. Ein vollständiger Plan steht an erster Stelle, mit jedem Mitglied, Image, VMID, Netzwerk, Pfad, Geheimnis, Ordnung und Gesundheitscheck. Wenn der Plan nicht konsistent ist, wird die Installation nicht gestartet."
         },
         {
           "table": {
@@ -54,7 +54,7 @@
                 "Einzigartige VMIDs, bekannte Rollen und genau ein Hauptmitglied"
               ],
               [
-                "Bilder",
+                "Images",
                 "Rollende Referenz, Architektur und aufgelöster Digest jedes Dienstes",
                 "Alle existieren, unterstützen die Architektur und bestehen die OCI-Integritätsprüfung"
               ],
@@ -92,11 +92,11 @@
             "items": [
               {
                 "title": "Reservieren Sie jeden VMID",
-                "body": "Das Proxmox VE-Inventar und die Instanzregistrierung werden überprüft. Ein bestehendes CT wird nicht übernommen und ein Vertrag, der noch zu einer anderen Instanz gehört, wird nicht wiederverwendet."
+                "body": "Das Proxmox-VE-Inventar und das Instanzverzeichnis werden geprüft. Ein vorhandener CT wird nicht übernommen; ein Vertrag, der noch zu einer anderen Instanz gehört, wird nicht wiederverwendet."
               },
               {
-                "title": "Bereiten Sie jedes Bild",
-                "body": "Alle Bilder werden aufgelöst, heruntergeladen und verifiziert, bevor der erste Container erstellt wird."
+                "title": "Bereiten Sie jedes Image",
+                "body": "Alle Images werden aufgelöst, heruntergeladen und verifiziert, bevor der erste Container erstellt wird."
               },
               {
                 "title": "Erstellen Sie alle Rootfs",
@@ -284,8 +284,8 @@
               "Das Hauptmitglied ist das letzte in <code>start_order</code> und das erste in <code>stop_order</code>.",
               "Es fehlt keine Member-, Volume- oder Rootfs-Adaption.",
               "Der Haken zeigt auf das offizielle Snippet, sein Inhalt ist unverändert und sein Vertrag entspricht dem Stapelrezept.",
-              "Die beobachteten Bilder und Digests stimmen mit den vorbereiteten OCI-Archiven überein.",
-              "Geräte, GPU-Profile, Halterungen, Geheimnisse und Endpunkte stimmen immer noch mit den Verträgen überein.",
+              "Die beobachteten Images und Digests stimmen mit den vorbereiteten OCI-Archiven überein.",
+              "Geräte, GPU-Profile, Mounts, Geheimnisse und Endpunkte stimmen immer noch mit den Verträgen überein.",
               "Nachdem jede Abhängigkeit verstrichen ist, überprüft der Endpunkt der Hauptanwendung die Integration zwischen den Mitgliedern."
             ]
           }
@@ -295,7 +295,7 @@
     {
       "id": "manage",
       "title": "Verwalten eines installierten Stapels",
-      "intro": "In <strong>Manage installierte OCI-Anwendungen</strong> führt jedes Mitglied zum gesamten Stack. Das Menü eines Stacks bietet <strong>Update jeden Container der Anwendung</strong>, <strong>Modify zusätzliche Pfade und Geräte</strong>, <strong>Erstellen Sie jeden Container mit seiner gespeicherten Konfiguration</strong> und <strong>Entfernen Sie die Anwendung und ihre Container</strong>. Recreat rekonstruiert jeden Container aus dem Bild, mit dem er installiert wurde, durch seinen gespeicherten Digest und ohne nach einem neueren zu suchen, mit den gleichen Schritten wie ein Update; Es wird für die Stapel angeboten, die aktualisiert werden können.",
+      "intro": "In <strong>Manage installierte OCI-Anwendungen</strong> führt jedes Mitglied zum gesamten Stack. Das Menü eines Stacks bietet <strong>Update jeden Container der Anwendung</strong>, <strong>Modify zusätzliche Pfade und Geräte</strong>, <strong>Erstellen Sie jeden Container mit seiner gespeicherten Konfiguration</strong> und <strong>Entfernen Sie die Anwendung und ihre Container</strong>. Recreat rekonstruiert jeden Container aus dem Image, mit dem er installiert wurde, durch seinen gespeicherten Digest und ohne nach einem neueren zu suchen, mit den gleichen Schritten wie ein Update; Es wird für die Stapel angeboten, die aktualisiert werden können.",
       "blocks": [
         {
           "steps": {
@@ -309,7 +309,7 @@
                 "body": "Identitäten, Verträge, Hook, Anpassungen und eine koordinierte Wiederholung für dieses Rezept werden validiert."
               },
               {
-                "title": "Bilder zuerst",
+                "title": "Images zuerst",
                 "body": "Die Anwendung wird nicht gestoppt, bis jeder Digest gelöst, heruntergeladen und verifiziert wurde."
               },
               {
@@ -318,7 +318,7 @@
               },
               {
                 "title": "Aktualisieren und überprüfen Sie jedes Mitglied",
-                "body": "Anpassung, Netzwerk, Halterungen, Geheimnisse und Geräte werden vor dem Gesundheitscheck jedes Mitglieds erneut angewendet."
+                "body": "Anpassung, Netzwerk, Mounts, Geheimnisse und Geräte werden vor dem Gesundheitscheck jedes Mitglieds erneut angewendet."
               },
               {
                 "title": "Veröffentlichen oder erholen Sie alles",
@@ -342,7 +342,7 @@
               ],
               [
                 "Was läuft Erkennung (Immich)",
-                "Der Machine Learning Container nimmt das Bild und die Geräte des CPU oder eines GPU des Hosts auf. Die gesamte Anwendung wird gestoppt und aktualisiert, wie in einem Update",
+                "Der Machine Learning Container nimmt das Image und die Geräte des CPU oder eines GPU des Hosts auf. Die gesamte Anwendung wird gestoppt und aktualisiert, wie in einem Update",
                 "Der Modell-Cache, die Bibliothek und die Datenbank. Wenn etwas fehlschlägt, werden die vorherigen Container und die vorherige Auswahl wiederhergestellt"
               ]
             ]
@@ -364,13 +364,13 @@
           "p": "Während einer Installation stoppt und entfernt ein Fehler die unvollständigen Container, die die Operation erstellt hat, und die private Bridge, wenn die Operation sie erstellt hat. Ein Stack wird nicht als gültig veröffentlicht, bis die gesamte Sequenz beendet ist."
         },
         {
-          "p": "Ein Update ist transaktional: Alle Bilder werden zuerst vorbereitet, dann stoppt der Stapel, jedes Mitglied wird gesichert und das Backup verifiziert, und nur dann werden alle Rootfs ersetzt. Mitglieder beginnen eins nach dem anderen mit ihrem Gesundheitscheck; Wenn einer fehlschlägt, wird jedes Mitglied aus dem gleichen Backup-Satz wiederhergestellt, so dass die Datenbank und die Anwendung niemals zu verschiedenen Momenten gehören."
+          "p": "Ein Update ist transaktional: Alle Images werden zuerst vorbereitet, dann stoppt der Stapel, jedes Mitglied wird gesichert und das Backup verifiziert, und nur dann werden alle Rootfs ersetzt. Mitglieder beginnen eins nach dem anderen mit ihrem Gesundheitscheck; Wenn einer fehlschlägt, wird jedes Mitglied aus dem gleichen Backup-Satz wiederhergestellt, so dass die Datenbank und die Anwendung niemals zu verschiedenen Momenten gehören."
         },
         {
           "mermaid": {
             "chartCode": "flowchart LR\n P[\"{{prepare}}\"] --> S[\"{{stop}}\"]\n S --> B[\"{{backup}}\"]\n B --> R[\"{{replace}}\"]\n R --> H{\"{{healthy}}\"}\n H -- \"{{yes}}\" --> C[\"{{commit}}\"]\n H -- \"{{no}}\" --> X[\"{{rollback}}\"]",
             "labels": {
-              "prepare": "Bereiten Sie jedes Bild",
+              "prepare": "Bereiten Sie jedes Image",
               "stop": "Stop, Hauptelement zuerst",
               "backup": "Verifiziertes Backup jedes CT",
               "replace": "Rooter ersetzen",

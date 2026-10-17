@@ -1,15 +1,15 @@
 {
   "meta": {
     "title": "Comandi di backup Proxmox — vzdump, qmrestore, pct restore | ProxMenux",
-    "description": "Riferimento dei comandi di backup e ripristino Proxmox VE: vzdump per VM e contenitori LXC, qmrestore per VM, ripristino pct per contenitori, backup programmati in script /etc/pve/jobs.cfg, aggancio ed esclusione dei percorsi.",
-    "ogTitle": "Comandi di backup Proxmox — vzdump, qmrestore, ripristino pct",
-    "ogDescription": "Riferimento dei comandi vzdump, qmrestore e pct ripristino per il backup e il ripristino dei contenitori Proxmox VMs e LXC.",
+    "description": "Riferimento dei comandi di backup e ripristino Proxmox VE: vzdump per VM e container LXC, qmrestore per VM, pct restore per container, backup pianificati in /etc/pve/jobs.cfg, hook script e percorsi da escludere.",
+    "ogTitle": "Comandi di backup Proxmox — vzdump, qmrestore, pct restore",
+    "ogDescription": "Riferimento dei comandi vzdump, qmrestore e pct restore per salvare e ripristinare VM e container LXC Proxmox.",
     "twitterTitle": "Comandi di backup Proxmox | ProxMenux",
-    "twitterDescription": "vzdump, qmrestore e pct ripristinano i comandi per il backup e il ripristino di VM Proxmox e contenitori."
+    "twitterDescription": "Comandi vzdump, qmrestore e pct restore per salvare e ripristinare VM e container Proxmox."
   },
   "header": {
     "title": "Backup e ripristino",
-    "description": "Riferimento curato dei comandi di ripristino vzdump, qmrestore e pct per i flussi di lavoro di backup Proxmox. Include la pianificazione, opzioni avanzate come script di gancio / escludere i percorsi / priorità I / O e la gestione dei file di backup.",
+    "description": "Riferimento ragionato dei comandi vzdump, qmrestore e pct restore per i backup Proxmox. Include pianificazione, opzioni avanzate come hook script, percorsi da escludere e priorità I/O, oltre alla gestione dei file di backup.",
     "section": "Aiuto e informazioni"
   },
   "intro": {

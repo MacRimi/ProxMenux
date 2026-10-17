@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Destinos de reserva — Local, Proxmox Backup Server, Borg □ ProxMenux",
+    "title": "Destinos das cópias de segurança — arquivo local, Proxmox Backup Server e Borg | ProxMenux",
     "description": "Três backends de armazenamento recebem a mesma carga útil de backup ProxMenux: um arquivo .tar.zst local em qualquer sistema de arquivos writeable, um backup PBS em uma loja de dados Proxmox Backup Server, ou um arquivo Borg em um repositório Borg local ou remoto. Cada infra-estrutura tem suas próprias características de compressão, desduplicação, criptografia e rede.",
     "ogTitle": "Destinos de backup do ProxMenux",
     "ogDescription": "Local, Proxmox Backup Server e Borg — três backends de armazenamento para a mesma carga útil de backup do host.",

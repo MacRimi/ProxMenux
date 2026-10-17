@@ -29,7 +29,7 @@
     },
     {
       "name": "Systemsystem",
-      "description": "Ställ in logga delsystem och kärngränser för en värd som bär många VM och behållare. Covers journald, logrotate, sysctl (minne, filgränser), kärnpanik beteende och snabba omstarter."
+      "description": "Ställ in logga delsystem och kärngränser för en värd som bär många VM och containrar. Covers journald, logrotate, sysctl (minne, filgränser), kärnpanik beteende och snabba omstarter."
     },
     {
       "name": "Virtualisering",

@@ -163,7 +163,7 @@
       "Öppna <a>myaccount.google.com/security</a> och slå på <em>2-Step Verification</em> om det inte redan är på.",
       "Gå till <a>myaccount.google.com/apppasswords</a>.",
       "Skriv ett namn (t.ex. <em>ProxMenux</em>) och klicka på <em>Create</em>. Google visar ett 16-karaktärslösenord - kopiera det.",
-      "Fyll e-postfliken med: <em>Värd</em> <code>smtp.gmail.com</code>, <em>Port Port Port Port Port</em> <code>587</code>, <em>TLS Mode</em> <code>STARTTLS</code>, <em>Användarnamn</em> din Gmail-adress, <em>Lösenord</em> och 16Karaktär app lösenord."
+      "Fyll i fliken E-post med <em>Värd</em> <code>smtp.gmail.com</code>, <em>Port</em> <code>587</code>, <em>TLS-läge</em> <code>STARTTLS</code>, <em>Användarnamn</em> din Gmail-adress och <em>Lösenord</em> applösenordet på 16 tecken."
     ],
     "outlookTitle": "Microsoft / Outlook app lösenord",
     "outlookIntro": "Microsoft kräver nu <strong>two-step verification</strong> på det personliga kontot innan ett applösenord kan skapas. Enterprise hyresgäster där administratören har inaktiverat SMTP grundläggande auth behöver en annan väg (OAuth2) som för närvarande inte stöds av Monitor - peka dem på ett SMTP-relä du styr istället.",
@@ -183,7 +183,7 @@
     "steps": [
       "Skapa en <a>Pushover konto</a>, installera den officiella appen på de enheter som ska få varningar och logga in.",
       "Kopiera <em>User Key</em> visas på din Pushover instrumentbräda. En gruppnyckel kan användas istället när flera personer eller enheter måste få samma varning.",
-      "Öppet Öppet Öppet Öppet Öppet <a>Skapa en applikation/API Token</a>Skapa en applikation som heter <em>ProxMenux</em> och kopiera dess 30Karaktär API Token.",
+      "Öppna <a>Create an Application/API Token</a>, skapa ett program med namnet <em>ProxMenux</em> och kopiera dess API-token på 30 tecken.",
       "I <em>Inställningar → Meddelanden → Pushover</em>, klistra in användaren eller gruppnyckeln och applikationen API token. Enheten och ljudfälten är valfria.",
       "Spara inställningarna och tryck på <em>Send test</em>. Pushover-appen ska få meddelandet omedelbart."
     ],
@@ -282,7 +282,7 @@
   "displayName": {
     "heading": "Visa namn",
     "intro": "Varje meddelande bär en <em>Display Name</em> - etiketten som identifierar vilken värd som producerade varningen. Det är det värde du ser längst ner på de rika meddelanden exemplet ovan (<code>🏠 home-lab</code>) och inuti e-post ämne prefixet.",
-    "imageAlt": "Visa fältet Namn med värdet som visas som exempel, etikettnamn som visas i meddelanden - redigera för att anpassa eller lämna tomt för att använda systemets värdnamn",
+    "imageAlt": "Fältet Visningsnamn med amd som exempelvärde och etiketten Namn som visas i aviseringar. Ändra värdet för ett eget namn eller lämna det tomt för att använda systemets värdnamn.",
     "imageCaption": "Display Name-fältet - lämna tomt för att använda systemets värdnamn eller åsidosätta dig med allt du vill ha.",
     "outro": "Om fältet är tomt faller Monitor tillbaka till systemvärdnamnet. Överridningen är mest användbar när du kör flera ProxMenux-värdar som skickar till samma Telegram-chatt eller inkorg - en vänligare etikett (<em>home-lab</em>, <em>office-pve</em>) är lättare att läsa än <code>pve01.lan</code> eller <code>pmx-prod-01</code>."
   },

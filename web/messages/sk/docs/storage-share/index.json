@@ -3,7 +3,7 @@
     "title": "Proxmox NFS, Samba iSCSI & LXC Mount Points ProxMenux",
     "description": "Integrovať externé a lokálne úložisko do Proxmox VE a zdieľať priečinky medzi hostiteľom a LXC kontajnery. Pridať NFS akcie, Samba (CIFS) akcie a iSCSI ciele ako Proxmox úložisko, nastaviť LXC viazanie pripojiť (Mount Manager) a spustiť NFS / Samba klienti a servery vnútri kontajnerov.",
     "ogTitle": "Proxmox NFS, Samba, iSCSI & LXC Mount Points",
-    "ogDescription": "Integrovať externé / lokálne skladovanie do Proxmox VE — NFS, Samba iSCSI registrácia plus LXC viazanie montáží a zdieľanie siete.",
+    "ogDescription": "Integrácia externých a lokálnych úložísk do Proxmox VE: registrácia NFS, Samba a iSCSI, bind mounty LXC a zdieľanie cez sieť.",
     "twitterTitle": "Proxmox NFS, Samba, iSCSI | ProxMenux",
     "twitterDescription": "Pridajte NFS / Samba / iSCSI ako úložisko Proxmox a zdieľajte priečinky medzi hostiteľom a LXC."
   },
@@ -36,7 +36,7 @@
     "lxcMountItems": [
       "Pracuje s privilegovanými a neprivilegovanými CT",
       "Ponúka nastaviť <code>o+rwx</code> na hostiteľa dir pre unprivileged UIDs",
-      "Fixuje existujúce CIFS / NFS montáže v prípade potreby"
+      "V prípade potreby opraví existujúce pripojenia CIFS a NFS"
     ],
     "lxcNetTitle": "Sieťové zdieľanie v LXC",
     "lxcNetBody": "Štyri dodatočné toky pre scenáre, pri ktorých kontajner potrebuje priamo spotrebovať alebo vystaviť akcie NFS / Samba. Všetky vyžadujú <strong>privileged</strong> kontajner.",
@@ -53,13 +53,13 @@
         "href": "/docs/storage-share/host-nfs",
         "icon": "Network",
         "title": "Pridať NFS zdieľanie ako Proxmox úložisko",
-        "description": "Zaregistrujte externý NFS exportovať ako Proxmox skladovanie cez pvesm Pridať nfs. Proxmox manipuluje s montážou bez fstab položky potrebné."
+        "description": "Zaregistruje externý export NFS ako úložisko Proxmox pomocou pvesm add nfs. Pripojenie spravuje Proxmox, bez ďalších záznamov vo fstab."
       },
       {
         "href": "/docs/storage-share/host-samba",
         "icon": "Share2",
         "title": "Pridať Samba zdieľanie ako Proxmox úložisko",
-        "description": "Zaregistrujte externú Samba / CIFS zdieľať ako Proxmox úložisko cez pvesm pridať cifs. Proxmox manipuluje s montážou a údajmi."
+        "description": "Zaregistruje externé zdieľanie Samba alebo CIFS ako úložisko Proxmox pomocou pvesm add cifs. Proxmox spravuje pripojenie aj prihlasovacie údaje."
       },
       {
         "href": "/docs/storage-share/host-iscsi",
@@ -85,8 +85,8 @@
     "heading": "Správca LXC mountov",
     "intro": "Primárny nástroj pre zdieľanie priečinkov medzi počítačom Proxmox a kontajnermi LXC. Používa <code>pct set -mpN</code> pre viazanie-mount hostiteľskom adresári do kontajnera, a spracováva povolenie variácie neprivilegovaných CT na hostiteľskej strane (žiadny skupiny alebo používatelia sú vytvorené vo vnútri kontajnera).",
     "card": {
-      "title": "LXC montážne body (Host ↔ CT)",
-      "description": "Bind-mount akýkoľvek adresár do LXC kontajnera cez pct sadu -mpN. Pracuje s privilegovanými aj neprivilegovanými CTs; ponúka chmod o+rwx / ACL na host dir a opravy existujúce CIFS / NFS sa pripojí v prípade potreby."
+      "title": "Body pripojenia LXC (hostiteľ ↔ CT)",
+      "description": "Sprístupnite ľubovoľný adresár hostiteľa kontajneru LXC cez bind mount pomocou pct set -mpN. Funguje s privilegovanými aj neprivilegovanými CT, ponúka chmod o+rwx a ACL pre adresár na hostiteľovi a podľa potreby opraví existujúce pripojenia CIFS alebo NFS."
     }
   },
   "lxcNet": {

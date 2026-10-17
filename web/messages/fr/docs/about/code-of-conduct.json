@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "Code de conduite Documentation ProxMenux",
+    "title": "Code de conduite | Documentation ProxMenux",
     "description": "ProxMenux Code de conduite et pratiques exemplaires pour les contributeurs, les testeurs et les utilisateurs.",
-    "ogTitle": "Code de conduite Documentation ProxMenux",
+    "ogTitle": "Code de conduite | Documentation ProxMenux",
     "ogDescription": "Attentes concernant la responsabilité du code, la divulgation de la sécurité et la portée du PR pour le projet ProxMenux."
   },
   "errors": {

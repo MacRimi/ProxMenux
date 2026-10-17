@@ -6,7 +6,7 @@
   "header": {
     "title": "Program med flera containrar",
     "description": "En applikation med sin databas, cache och andra tjänster blir flera samordnade inhemska LXCs, installerade och uppdaterade som en.",
-    "section": "Appar i OCI-hanteraren"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -35,10 +35,10 @@
     },
     {
       "id": "plan",
-      "title": "1. Planen, innan någon behållare finns",
+      "title": "1. Planen, innan någon container finns",
       "blocks": [
         {
-          "p": "Inget LXC skapas medan Compose definitionen tolkas. En komplett plan kommer först, med varje medlem, bild, VMID, nätverk, väg, hemlighet, ordning och hälsokontroll. Om planen inte är konsekvent startar installationen inte."
+          "p": "Inget LXC skapas medan Compose definitionen tolkas. En komplett plan kommer först, med varje medlem, avbildning, VMID, nätverk, väg, hemlighet, ordning och hälsokontroll. Om planen inte är konsekvent startar installationen inte."
         },
         {
           "table": {
@@ -95,8 +95,8 @@
                 "body": "Proxmox VE-inventeringen och instansregistret kontrolleras. En befintlig CT antas inte och ett kontrakt som fortfarande tillhör en annan instans återanvänds inte."
               },
               {
-                "title": "Förbered varje bild",
-                "body": "Alla bilder löses, laddas ner och verifieras innan den första behållaren skapas."
+                "title": "Förbered varje avbildning",
+                "body": "Alla avbildningar löses, laddas ner och verifieras innan den första containern skapas."
               },
               {
                 "title": "Skapa varje rootfs",
@@ -125,7 +125,7 @@
     },
     {
       "id": "checks",
-      "title": "3. Börja och kontrollera varje behållare",
+      "title": "3. Börja och kontrollera varje container",
       "intro": "En skapad LXC betyder inte en färdig tjänst. Beroende börjar i ordning och var och en passerar en check specifik för sin tjänst.",
       "blocks": [
         {
@@ -284,7 +284,7 @@
               "Huvudmedlemmen är senast i <code>start_order</code> och först i <code>stop_order</code>.",
               "Ingen medlem, volym eller rootfs anpassning saknas.",
               "Kroken pekar på den officiella snippet, dess innehåll är oförändrat och dess kontrakt matchar stack receptet.",
-              "De observerade bilderna och smältorna matchar de förberedda OCI-arkiven.",
+              "De observerade avbildningarna och smältorna matchar de förberedda OCI-arkiven.",
               "Enheter, GPU profiler, fästen, hemligheter och slutpunkter fortfarande matcha kontrakten.",
               "Efter varje beroende passerar, kontrollerar slutpunkten för huvudapplikationen integrationen mellan medlemmarna."
             ]
@@ -295,7 +295,7 @@
     {
       "id": "manage",
       "title": "Hantera en installerad stack",
-      "intro": "I <strong>Manage installerade OCI-program</strong> leder alla medlemmar till hela stacken. Menyn på en stack erbjuder <strong>Uppdatera varje behållare av programmet</strong>, <strong>Modify extra vägar och enheter</strong>, <strong>Skapa varje behållare med sin sparade konfiguration</strong> och <strong>Ta bort: ta bort programmet och dess behållare</strong>. Återskapa återuppbygger varje behållare från bilden den installerades med, genom sin sparade smälta och utan att leta efter en nyare, med samma steg som en uppdatering; den erbjuds för staplarna som kan uppdateras.",
+      "intro": "I <strong>Manage installerade OCI-program</strong> leder alla medlemmar till hela stacken. Menyn på en stack erbjuder <strong>Uppdatera varje behållare av programmet</strong>, <strong>Modify extra vägar och enheter</strong>, <strong>Skapa varje behållare med sin sparade konfiguration</strong> och <strong>Ta bort: ta bort programmet och dess behållare</strong>. Återskapa återuppbygger varje behållare från avbildningen den installerades med, genom sin sparade smälta och utan att leta efter en nyare, med samma steg som en uppdatering; den erbjuds för staplarna som kan uppdateras.",
       "blocks": [
         {
           "steps": {
@@ -309,7 +309,7 @@
                 "body": "Identiteter, kontrakt, krok, anpassningar och en samordnad replay för det receptet valideras."
               },
               {
-                "title": "Bilder först",
+                "title": "Avbildningar först",
                 "body": "Ansökan stoppas inte förrän varje smälta har lösts, laddats ner och verifierats."
               },
               {
@@ -338,12 +338,12 @@
               [
                 "Extra vägar och enheter",
                 "De läggs till eller tas bort från applikationsbehållaren, som startar om. Ingenting byggs om",
-                "Uppgifterna för programmet, dess databas och andra behållare"
+                "Uppgifterna för programmet, dess databas och andra containrar"
               ],
               [
                 "Vad som driver erkännande (Immich)",
-                "Maskininlärningsbehållaren tar bilden och enheterna i CPU eller en GPU av värden. Hela programmet stoppas och uppdateras, som i en uppdatering",
-                "Modellen cache, biblioteket och databasen. Om något misslyckas, återställs tidigare behållare och tidigare val"
+                "Maskininlärningsbehållaren tar avbildningen och enheterna i CPU eller en GPU av värden. Hela programmet stoppas och uppdateras, som i en uppdatering",
+                "Modellen cache, biblioteket och databasen. Om något misslyckas, återställs tidigare containrar och tidigare val"
               ]
             ]
           }
@@ -361,16 +361,16 @@
       "title": "6. När något misslyckas",
       "blocks": [
         {
-          "p": "Under en installation stannar ett fel och tar bort de ofullständiga behållarna som skapats och den privata broen om operationen skapade den. En stack publiceras inte som giltig tills hela sekvensen avslutas."
+          "p": "Under en installation stannar ett fel och tar bort de ofullständiga containrarna som skapats och den privata broen om operationen skapade den. En stack publiceras inte som giltig tills hela sekvensen avslutas."
         },
         {
-          "p": "En uppdatering är transaktionell: alla bilder är förberedda först, sedan stacken stannar, varje medlem backas upp och backup verifieras, och först då är varje rootfs ersatt. Medlemmar startar en efter en med sin hälsokontroll; om man misslyckas återställs varje medlem från samma uppsättning säkerhetskopior, så databasen och ansökan hör aldrig till olika ögonblick."
+          "p": "En uppdatering är transaktionell: alla avbildningar är förberedda först, sedan stacken stannar, varje medlem backas upp och backup verifieras, och först då är varje rootfs ersatt. Medlemmar startar en efter en med sin hälsokontroll; om man misslyckas återställs varje medlem från samma uppsättning säkerhetskopior, så databasen och ansökan hör aldrig till olika ögonblick."
         },
         {
           "mermaid": {
             "chartCode": "flowchart LR\n P[\"{{prepare}}\"] --> S[\"{{stop}}\"]\n S --> B[\"{{backup}}\"]\n B --> R[\"{{replace}}\"]\n R --> H{\"{{healthy}}\"}\n H -- \"{{yes}}\" --> C[\"{{commit}}\"]\n H -- \"{{no}}\" --> X[\"{{rollback}}\"]",
             "labels": {
-              "prepare": "Förbered varje bild",
+              "prepare": "Förbered varje avbildning",
               "stop": "Sluta, huvudmedlem först",
               "backup": "Verifierad säkerhetskopia av varje CT",
               "replace": "Ersätt rootfs",
@@ -391,7 +391,7 @@
         {
           "list": {
             "items": [
-              "En svit installerad i ett flöde, till exempel Arr-sviten, är inte en beroende stack: dess behållare har ingen startordning mellan dem.",
+              "En svit installerad i ett flöde, till exempel Arr-sviten, är inte en beroende stack: dess containrar har ingen startordning mellan dem.",
               "Det privata nätverket ersätter inte autentisering, TLS eller konfigurationen av varje applikation.",
               "Säkerhetskopieringen av en LXC innehåller inte bron, kroken eller kontrakten i resten av stacken.",
               "Prowlarr, Sonarr eller Radarr får inga indexerare, profiler eller leverantörer från ProxMenux."

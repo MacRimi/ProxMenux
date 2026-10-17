@@ -6,7 +6,7 @@
   "header": {
     "title": "Aplicações com vários contentores",
     "description": "Uma aplicação com seu banco de dados, cache e outros serviços torna-se vários LXCs nativos coordenados, instalados e atualizados como um.",
-    "section": "Aplicações do gestor OCI"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -338,7 +338,7 @@
               [
                 "Caminhos e dispositivos adicionais",
                 "Eles são adicionados ou removidos do recipiente de aplicação, que reinicia. Nada é reconstruído.",
-                "Os dados do pedido, da sua base de dados e dos outros contentores"
+                "Os dados do aplicação, da sua base de dados e dos outros contentores"
               ],
               [
                 "O que executa o reconhecimento (Immich)",

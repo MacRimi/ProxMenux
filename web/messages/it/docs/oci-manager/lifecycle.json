@@ -6,7 +6,7 @@
   "header": {
     "title": "Installare, aggiornare e modificare",
     "description": "Ogni istanza mantiene un contratto riproducibile, quindi i suoi rootf possono essere sostituiti senza perdere la configurazione o dati persistenti.",
-    "section": "App del gestore OCI"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -293,7 +293,7 @@
           }
         },
         {
-          "p": "Un contenitore restaurato con un altro ID mantiene la sua applicazione. Il contratto, il suo registro console, i suoi sisctls di rete, il gancioscript di un supporto Rclone e l'ordine di partenza di un'applicazione multi-container sono registrati con gli ID che i contenitori hanno su questo host."
+          "p": "Un container ripristinato con un ID diverso conserva la propria applicazione. Il contratto, il log della console, i parametri sysctl di rete, lo hookscript del montaggio Rclone e l’ordine di avvio di un’applicazione composta da più container vengono registrati usando gli ID assegnati ai container su questo host."
         },
         {
           "table": {

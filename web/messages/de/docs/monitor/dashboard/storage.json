@@ -16,7 +16,7 @@
     "title": "Hier angewendete Statusfarben und -schwellen",
     "intro": "Jeder Balken, Chip und Punkt auf dieser Registerkarte folgt der gleichen Drei-Staaten-Klassifizierung - <green/> <strong>green</strong> unter Warning, <amber/> <strong>amber</strong> von Warning zu Critical, <red/> <strong>red</strong> bei Critical und höher. Empfohlene Standardversionen, die mit ProxMenux ausgeliefert wurden:",
     "items": [
-      "<strong>Capacity</strong> (Host Disks, PVE Storages, ZFS Pools, LXC Halterungen) — Warnung 85 %, Critical 95 %.",
+      "<strong>Capacity</strong> (Host Disks, PVE Storages, ZFS Pools, LXC Mounts) — Warnung 85 %, Critical 95 %.",
       "<strong>Disk Temperatur</strong> — HDD 60/65 °C · SSD 70/75 °C · NVMe 80/85 °C · SAS 55/65 °C (Warnung/kritisch)."
     ],
     "outro": "Jeder Wert ist pro Host konfigurierbar — <link>Settings → Health Monitor Thresholds</link> ist die einzige Quelle der Wahrheit und erklärt, wie man sie abstimmt."

@@ -5,7 +5,7 @@
   },
   "header": {
     "title": "Verfügbare Updates anwenden",
-    "description": "Wenn eine Optimierung nach der Installation (Log2Ram, Memory Settings, System Limits, Logrotate...) eine neuere Version auf der Festplatte erhält als die, die derzeit auf dem Host registriert ist, taucht ProxMenux als verfügbares Update auf. Sie können es über das Menü Post-Installieren (Skriptseite) oder über das Monitor-Dashboard anwenden - beide Pfade führen dieselbe Funktion nach der Installation erneut aus und aktualisieren die Registrierung.",
+    "description": "Liegt eine Nachinstallationsoptimierung (Log2Ram, Speichereinstellungen, Systemlimits, Logrotate …) auf dem Datenträger in einer neueren Version vor als der auf dem Host erfassten, zeigt ProxMenux ein verfügbares Update an. Sie können es im Nachinstallationsmenü der Skriptoberfläche oder im Monitor-Dashboard anwenden. Beide Wege führen dieselbe Nachinstallationsfunktion erneut aus und aktualisieren den gespeicherten Versionsstand.",
     "section": "Einstellungen nach der Installation von Proxmox"
   },
   "intro": {

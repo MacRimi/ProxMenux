@@ -243,7 +243,7 @@
       }
     ],
     "backupTitle": "Wofür \"Backup\" wirklich wichtig ist",
-    "backupBody": "Wenn Sie das Gerät verlieren, auf dem sich der Authentifikator befindet, sind die einzigen Wege zurück in ()1Ein Backup-Code, der gespeichert wurde, wenn Sie aktiviert haben 2FAoder ( )2) ein Backup des Authentifikators. Apps mit Cloud-Synchronisierung (Google Auth, Microsoft Auth, Authy, Apple Passwords, Ente, 2FAS, Bitwarden, 1Password) können auf einem neuen Gerät wiederhergestellt werden. Apps ohne Cloud (Aegis, Raivo), FreeOTP+) benötigen eine verschlüsselte Exportdatei, die Sie irgendwo sicher kopiert haben. Beide Ansätze funktionieren - der schlechte Fall ist \"überhaupt kein Backup\".",
+    "backupBody": "Wenn Sie das Gerät mit Ihrer Authenticator-App verlieren, benötigen Sie entweder (1) einen beim Aktivieren von 2FA gesicherten Wiederherstellungscode oder (2) eine Sicherung des Authenticator-Tresors. Apps mit Cloud-Synchronisierung, etwa Google Auth, Microsoft Auth, Authy, Apple Passwords, Ente, 2FAS, Bitwarden oder 1Password, können ihre Daten auf einem neuen Gerät wiederherstellen. Bei Apps ohne Cloud wie Aegis, Raivo oder FreeOTP+ benötigen Sie eine verschlüsselte Exportdatei, die Sie sicher aufbewahrt haben. Beide Verfahren sind geeignet; problematisch ist, gar keine Sicherung zu haben.",
     "setupTitle": "Schritt-für-Schritt-Setup aus dem Dashboard",
     "setupImageAlt": "Einrichtungsbildschirm 2FA mit QR-Code und Backup-Codes",
     "setupImageCaption": "Der 2FA-Setup-Dialog - QR-Code, Base32 Secret (für manuelle Eingabe) und die zehn einmaligen Backup-Codes. Die codes werden nur hier angezeigt; wenn sie den dialog schließen, ohne sie zu kopieren, sind sie weg.",
@@ -325,7 +325,7 @@
   },
   "proxy": {
     "heading": "Reverse Proxy-Schnipsel",
-    "intro": "Das einfachste Layout ist ein <strong>dedizierter Hostname</strong> für den Monitor (z.B. <code>monitor.example.com</code> zeigt auf Port 8008 auf dem Proxmox-Host. Snippets unten verwenden dieses Muster. Sub-Pfad-Halterungen (<code>example.com/proxmenux-monitor/</code>) sind möglich, erfordern jedoch ein zusätzliches Umschreiben und sind nicht standardmäßig - siehe Aufruf am Ende.",
+    "intro": "Am einfachsten verwenden Sie einen <strong>eigenen Hostnamen</strong> für den Monitor, etwa <code>monitor.example.com</code>, der auf Port 8008 des Proxmox-Hosts verweist. Die folgenden Beispiele verwenden dieses Schema. Eine Bereitstellung unter einem Unterpfad (<code>example.com/proxmenux-monitor/</code>) ist möglich, erfordert aber zusätzliche URL-Umschreibungen und ist nicht die Standardeinstellung. Beachten Sie dazu den Hinweis am Ende.",
     "nginxTitle": "Nginx",
     "caddyTitle": "Caddy",
     "traefikTitle": "Traefik (Etiketten) Docker / Kubernetes",

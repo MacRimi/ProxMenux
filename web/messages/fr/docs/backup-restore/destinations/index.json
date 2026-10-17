@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Destinations de secours — Local, Proxmox Backup Server, Borg ProxMenux",
+    "title": "Destinations des sauvegardes — archive locale, Proxmox Backup Server et Borg | ProxMenux",
     "description": "Trois moteurs de stockage reçoivent la même charge utile de sauvegarde ProxMenux : une archive locale .tar.zst sur tout système de fichiers lisible, une sauvegarde PBS dans un datastore Proxmox Backup Server ou une archive Borg dans un dépôt Borg local ou distant. Chaque moteur a ses propres caractéristiques de compression, de déduplication, de chiffrement et de réseau.",
     "ogTitle": "Destinations de sauvegarde ProxMenux",
     "ogDescription": "Local, Proxmox Backup Server et Borg — trois moteurs de stockage pour la même charge utile de sauvegarde d'hôte.",

@@ -103,8 +103,8 @@
     "uninstallIntro": "Potvrdí to najskôr s dialógom áno/nie. Potom vykoná úplný, nevedomý návrat:",
     "uninstallItems": [
       "Beží <code>nvidia-uninstall --silent</code> prvá (protiklad k <code>.run</code> inštalátor), potom sa zastaví a vypne <code>nvidia-persistenced</code> a <code>nvidia-powerd</code>a vykladá moduly jadra (<code>nvidia_uvm</code>, <code>nvidia_drm</code>, <code>nvidia_modeset</code>, <code>nvidia</code>y) LXC nádoba NVIDIA Prejazd bude čisto odrezaný.",
-      "Spustí <code>apt purge</code>0 na <code>nvidia-*</code>, <code>libnvidia-*</code>, <code>cuda-*</code> a <code>libcudnn*</code>, odstráni zdrojový strom DKMS a inštalačnú vyrovnávaciu pamäť <code>/opt/nvidia</code> .run.",
-      "Odstráni konfiguráciu s modulmi (<code>/etc/modules-load.d/nvidia-vfio.conf</code>) a položky s čiernymi zoznamami, ktoré vlastní ProxMenux. Legacy dva-line ProxMenux Blacklist súbory sú migrované a odstránené príliš; modifikované alebo nesúvisiace administrátor súbory sú zachované.",
+      "Spustí <code>apt purge</code> pre <code>nvidia-*</code>, <code>libnvidia-*</code>, <code>cuda-*</code> a <code>libcudnn*</code>, odstráni zdrojový strom DKMS a vyrovnávaciu pamäť inštalátora .run v <code>/opt/nvidia</code>.",
+      "Odstráni konfiguráciu načítavania modulov (<code>/etc/modules-load.d/nvidia-vfio.conf</code>) a položky blokovania ovládača nouveau spravované ProxMenux. Staré dvojriadkové súbory blokovania ProxMenux sa tiež migrujú a odstránia. Upravené alebo nesúvisiace súbory správcu sa zachovajú.",
       "Odstráni pravidlá udev (<code>/etc/udev/rules.d/70-nvidia.rules</code>) a odstráni stav patchu NVENC (pole v registri ProxMenux riadených inštalácií, nastavené na <em>removed</em>",
       "Prestavuje <code>initramfs</code> pre všetky jadrá, beží <code>proxmox-boot-tool refresh</code> na systemd-boot hosts, a vyzýva na reštart dokončiť."
     ],

@@ -1,11 +1,11 @@
 {
   "meta": {
     "title": "Proxmox Storage and Disk Commands lsblk, LVM, pvesm, qm importdisk ProxMenux",
-    "description": "Odkaz na úložisko a diskové príkazy na Proxmox VE: lsblk, blkid, parted, lvdisplay, vgdisplay, pvs, mount, df, du, ncdu, pvesm stav, qm importdisk a qemu-img konvertovať pre VM operácie na disku.",
+    "description": "Prehľad príkazov úložísk a diskov v Proxmox VE: lsblk, blkid, parted, lvdisplay, vgdisplay, pvs, mount, df, du, ncdu a pvesm status; pre disky VM aj qm importdisk a qemu-img convert.",
     "ogTitle": "Proxmox Storage and Disk Commands lsblk, LVM, pvesm, qm importdisk",
     "ogDescription": "Odkaz na úložisko a diskové príkazy na Proxmox VE Na disku, LVM, mounts, Proxmox úložný manažment, VM import disku a prevod obrazu.",
     "twitterTitle": "Príkazy úložiska Proxmox ProxMenux",
-    "twitterDescription": "Kontrola disku, informácie o montáži, správa LVM, úložisko Proxmox a príkazy na import / konverziu VM disku."
+    "twitterDescription": "Príkazy na kontrolu diskov a pripojení, správu LVM a úložísk Proxmox a import alebo konverziu diskov VM."
   },
   "header": {
     "title": "Úložiská a disky",
@@ -199,7 +199,7 @@
   ],
   "lvmTip": {
     "title": "LVM krátke vs dlhé príkazy",
-    "bodyRich": "Obe formy existujú pre zlučiteľnosť. <code>pvs</code>0 / <code>vgs</code> / <code>lvs</code> dávajú čistý single-line-per-objemová tabuľka; <code>pvdisplay</code> / <code>vgdisplay</code> / <code>lvdisplay</code> dať doslova multi-line skládka na objem. Pre každodenné použitie preferujte krátke verzie."
+    "bodyRich": "Obe podoby existujú kvôli kompatibilite. <code>pvs</code> / <code>vgs</code> / <code>lvs</code> vytvoria prehľadnú tabuľku s jedným riadkom na zväzok; <code>pvdisplay</code> / <code>vgdisplay</code> / <code>lvdisplay</code> vypíšu pre každý zväzok podrobnosti na viacerých riadkoch. Na bežné používanie uprednostnite krátke verzie."
   },
   "smartInfo": {
     "title": "SMART pre spinning disky vs NVMe",

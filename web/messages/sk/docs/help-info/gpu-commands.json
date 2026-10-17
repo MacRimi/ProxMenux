@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Proxmox GPU Passhrough Commands lspci, VFIO, IOMMU, qm set hospci ProxMenux",
-    "description": "Referencia pre GPU priechod na Proxmox VE: Identifikácia zariadenia lspci, moduly VFIO, IOMMU skupiny (intel_iommu / amd_iommu), GRUB a aktualizácií initramfs, qm sada hospci0, NVIDIA / AMD / Intel passough up.",
+    "description": "Prehľad GPU passthrough v Proxmox VE: identifikácia zariadení cez lspci, moduly VFIO, skupiny IOMMU (intel_iommu / amd_iommu), aktualizácie GRUB a initramfs, qm set hostpci0 a nastavenie GPU NVIDIA, AMD a Intel.",
     "ogTitle": "Proxmox GPU Passhrough Commands lspci, VFIO, IOMMU, qm set hospci",
     "ogDescription": "Odkaz na kontrolu a konfiguráciu GPU priechodu na Proxmox VE — PCI zariadenia, VFIO moduly, IOMMU skupiny, parametre zavádzania jadra, qm set hostpci.",
     "twitterTitle": "Proxmox GPU Passhrough Commands ProxMenux",
@@ -137,7 +137,7 @@
   ],
   "afterChangesTip": {
     "title": "Po zmene GRUB alebo modprobe konfigurácie",
-    "bodyRich": "Spustite <code>update-grub</code>0 + <code>update-initramfs -u</code>, potom reštartujte. Overiť pomocou <code>cat /proc/cmdline</code> (kernové parametre), <code>dmesg | grep -i iommu</code> (IOMMU inicializované) a <code>find /sys/kernel/iommu_groups/ -type l | sort -V</code> (prezentované skupiny)."
+    "bodyRich": "Spustite <code>update-grub</code> + <code>update-initramfs -u</code> a potom reštartujte systém. Overte výsledok pomocou <code>cat /proc/cmdline</code> (parametre jadra), <code>dmesg | grep -i iommu</code> (inicializácia IOMMU) a <code>find /sys/kernel/iommu_groups/ -type l | sort -V</code> (existujúce skupiny)."
   },
   "related": {
     "heading": "Súvisiace",

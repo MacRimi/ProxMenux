@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Värd: Lägg till delad katalog på Värd | ProxMenux Dokumentation",
-    "description": "Skapa en värdkatalog redo för LXC binda fästen, med behörigheter som fungerar för privilegierade och oprivilegierade behållare samtidigt. Sticky bit + world-rwx + ACLs för standard arv.",
+    "description": "Skapa en värdkatalog redo för LXC binda fästen, med behörigheter som fungerar för privilegierade och oprivilegierade containrar samtidigt. Sticky bit + world-rwx + ACLs för standard arv.",
     "ogTitle": "Värd: Lägg till delad katalog på Värd | ProxMenux Dokumentation",
     "ogDescription": "Förbered en värdkatalog för LXC binda fästen med behörigheter som är kompatibla med privilegierade och oprivilegierade CT."
   },
@@ -73,8 +73,8 @@
     "body": "Hela flödet kan återspelas för hand:"
   },
   "next": {
-    "heading": "Nästa steg: bind-mount i behållare",
-    "body": "Att skapa katalogen förbereder den bara – ingen behållare ser den ännu. För att göra det synligt inuti en eller flera LXC:er, använd <mountLink>LXC Mount Manager</mountLink> för att binda <code>/mnt/&lt;name&gt;</code> till CT:erna. Eftersom behörigheterna redan är öppna, kommer Mount Manager <strong>inte</strong> att erbjuda att ändra dem – katalogen är redo att användas som den är."
+    "heading": "Nästa steg: bind-mount i containrar",
+    "body": "Att skapa katalogen förbereder den bara – ingen container ser den ännu. För att göra det synligt inuti en eller flera LXC:er, använd <mountLink>LXC Mount Manager</mountLink> för att binda <code>/mnt/&lt;name&gt;</code> till CT:erna. Eftersom behörigheterna redan är öppna, kommer Mount Manager <strong>inte</strong> att erbjuda att ändra dem – katalogen är redo att användas som den är."
   },
   "troubleshoot": {
     "heading": "Felsökning",
@@ -91,7 +91,7 @@
       {
         "href": "/docs/storage-share/lxc-mount-points",
         "label": "Monteringshanterare för LXC",
-        "tail": " - det naturliga nästa steget: binda samman denna katalog till en eller flera behållare."
+        "tail": " - det naturliga nästa steget: binda samman denna katalog till en eller flera containrar."
       },
       {
         "href": "/docs/storage-share/host-local-disk",

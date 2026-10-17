@@ -120,7 +120,7 @@
       },
       {
         "method": "OCI image",
-        "use": "För behållare installerade av OCI Manager Apps. Läser applikations- och bildversionerna från installationsposten och jämför den installerade smältningen med den som registret publicerar; den behöver ingen konfiguration."
+        "use": "För containrar installerade av OCI Manager Apps. Läser applikations- och bildversionerna från installationsposten och jämför den installerade smältningen med den som registret publicerar; den behöver ingen konfiguration."
       }
     ],
     "sourcesHeading": "Tillgängliga källor",
@@ -128,7 +128,7 @@
       "<strong>GitHub repository</strong>: senaste utgåvan eller taggen från en offentlig <code>owner/name</code> repository.",
       "<strong>HTTP JSON</strong>: en offentlig slutpunkt plus en prickad väg som <code>data.version</code> eller <code>releases[0].tag_name</code>.",
       "<strong>Docker Hub</strong>: versionerade taggar filtrerade av ett vanligt uttryck. En live förhandsvisning visar riktiga matchande taggar innan rekordet sparas.",
-      "Flytta taggar som <code>latest</code>, <code>stable</code> eller <code>lts</code> innehåller inte en version. Spåra dessa bilder genom att smälta från Docker bilduppdateringar istället."
+      "Flytta taggar som <code>latest</code>, <code>stable</code> eller <code>lts</code> innehåller inte en version. Spåra dessa avbildningar genom att smälta från Docker bilduppdateringar istället."
     ],
     "regexHeading": "Skriva fånga uttryck",
     "regexLead": "En detektor regelbundet uttryck måste returnera versionen i sin <strong>första inspelningsgruppen</strong>.",

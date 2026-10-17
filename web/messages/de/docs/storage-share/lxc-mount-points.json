@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "LXC Mount Points (Host ↔ Container) | ProxMenux Dokumentation",
-    "description": "Der LXC Mount Manager – bind-mount jedes Hostverzeichnis in einen oder mehrere LXC-Container über pct set -mpN. Behandelt Berechtigungsfehler von unprivilegierten Containern, behebt vorhandene CIFS / NFS-Halterungen auf der Hostseite und ändert niemals etwas im Container.",
+    "description": "Der LXC Mount Manager bindet ein beliebiges Hostverzeichnis mit pct set -mpN in einen oder mehrere LXC-Container ein. Er berücksichtigt Besonderheiten der Berechtigungen unprivilegierter Container, korrigiert vorhandene CIFS- und NFS-Mounts auf dem Host und verändert nichts im Container.",
     "ogTitle": "LXC Mount Points (Host ↔ Container) | ProxMenux Dokumentation",
     "ogDescription": "Bind-Mount-Hostverzeichnisse in LXC-Containern. Behandelt unprivilegiertes UID-Mapping pragmatisch, behebt CIFS / NFS-Zugriff auf der Hostseite."
   },
@@ -41,7 +41,7 @@
     "cifsActionRich": "Remount mit <code>uid=0, gid=0, file_mode=0777, dir_mode=0777</code>, damit die CT (jede UID) die Aktie lesen und schreiben kann. <code>/etc/fstab</code> wird aktualisiert.",
     "nfsType": "Befestigte NFS",
     "nfsTypeSub": "z.B. /mnt/pve/nfs-…",
-    "nfsActionRich": "<code>chmod 1777</code> + <code>setfacl o::rwx</code> auf der NFS-Halterung. Das serverseitige Squashing kann nicht außer Kraft gesetzt werden - wenn selbst Host-Root nicht schreiben kann, können Sie den Export auf dem NFS-Server beheben.",
+    "nfsActionRich": "<code>chmod 1777</code> und <code>setfacl o::rwx</code> auf dem NFS-Mount. Serverseitiges Squashing lässt sich damit nicht umgehen. Kann selbst root auf dem Host nicht schreiben, werden Sie zur Korrektur des Exports auf dem NFS-Server angeleitet.",
     "privTitle": "Privilegierte Container benötigen nichts davon",
     "privBody": "Für privilegierte Container ist UID 0 im CT UID 0 auf dem Host - root im CT kann das Hostverzeichnis direkt ohne Berechtigungstricks lesen und schreiben. Das Skript erkennt dies und überspringt den Schritt \"Öffnen von Berechtigungen\" vollständig.",
     "noCtTitle": "Das Skript ändert niemals etwas im Container",
@@ -88,7 +88,7 @@
         "labelRich": "<code>NFS [used/size]</code> oder <code>CIFS/SMB [used/size]</code>"
       },
       {
-        "source": "Inaktive Fstab-Halterungen",
+        "source": "Inaktive fstab-Mounts",
         "whereRich": "Definiert in <code>/etc/fstab</code>, aber derzeit nicht montiert.",
         "labelRich": "<code>fstab(off)-NFS</code> / <code>fstab(off)-CIFS/SMB</code>"
       },
@@ -130,7 +130,7 @@
   "troubleshoot": {
     "heading": "Fehlerbehebung",
     "noMountTitle": "Mount erscheint in pct config, aber nicht im Container",
-    "noMountBody": "Bindehalterungen werden nur dann angebracht, wenn der Container startet. Wenn Sie die Halterung hinzugefügt haben, während die CT ausgeführt wurde, starten Sie sie neu (<code>pct reboot &lt;ctid&gt;</code>). Wenn es bereits neu gestartet wurde und immer noch fehlt, überprüfen Sie <code>pct config &lt;ctid&gt;</code>, um zu bestätigen, dass der Eintrag existiert und der Hostpfad tatsächlich ein Verzeichnis enthält.",
+    "noMountBody": "Bindehalterungen werden nur dann angebracht, wenn der Container startet. Wenn Sie die Mount hinzugefügt haben, während die CT ausgeführt wurde, starten Sie sie neu (<code>pct reboot &lt;ctid&gt;</code>). Wenn es bereits neu gestartet wurde und immer noch fehlt, überprüfen Sie <code>pct config &lt;ctid&gt;</code>, um zu bestätigen, dass der Eintrag existiert und der Hostpfad tatsächlich ein Verzeichnis enthält.",
     "noWriteTitle": "Container kann das Verzeichnis sehen, aber nicht schreiben",
     "noWriteBody": "Fast immer ein Berechtigungsproblem. Führen Sie bei unprivilegierten Containern die Berechtigungskorrektur des Skripts erneut aus - die ACLs des Hostverzeichnisses wurden möglicherweise von einem anderen Tool zurückgesetzt (rsync, Wiederherstellen aus dem Backup, manuelles <code>chmod</code>). Überprüfen Sie für CIFS die Mount-Optionen auf dem Host: <code>findmnt /mnt/pve/cifs-…</code>, suchen Sie nach <code>uid=</code> / <code>gid=</code> / <code>file_mode=</code> Werten.",
     "alreadyTitle": "\"Dieser Pfad wird bereits als Einhängepunkt in diesem Container verwendet\"",

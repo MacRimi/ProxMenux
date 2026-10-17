@@ -85,7 +85,7 @@
     },
     {
       "tool": "ZFS autotrim (SSD seulement)",
-      "what": "Active zpool autotrim=on sur chaque ZFS pool dont les vdevs sont tous SSD/NVMe avec le support TRIM (contrôles /sys/block[dev]/queue/rotational et discard_granularity). Pools soutenu par les DDH sont automatiquement ignorés. Seulement pools en fait changé par ProxMenux sont enregistrés pour désinstaller — pools vous définissez autotrim sur manuellement sont laissés seuls.",
+      "what": "Active zpool autotrim=on sur chaque pool ZFS dont tous les vdevs sont des SSD ou NVMe compatibles TRIM, après vérification de /sys/block/[dev]/queue/rotational et discard_granularity. Les pools sur HDD sont ignorés. Seuls les pools effectivement modifiés par ProxMenux sont mémorisés pour la désinstallation ; ceux sur lesquels vous avez activé autotrim manuellement restent inchangés.",
       "category": "Stockage",
       "categorySlug": "stockage"
     },

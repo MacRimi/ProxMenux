@@ -83,7 +83,7 @@
     "writeTitle": "Kontajner nemôže písať napriek otvoreným povoleniam",
     "writeBody": "Dvojitú kontrolu CT je v skutočnosti pomocou viazania (<code>pct config &lt;ctid&gt; | grep ^mp</code>). Vnútri CT, beh <code>touch /mnt/data/test-$(date +%s)</code> Ak to zlyhá s povolením odmietnuté, može byť na hostiteľskom súborovom systéme, ktorý neuznáva ACL (niektoré staršie <code>ext3</code> alebo <code>vfat</code> pripevňovacie zariadenia). Presunúť zdieľaný adresár do ext4 / xfs / btrfs / zfs záloha.",
     "aclTitle": "ACL príkazy ticho nedostupné",
-    "aclBody": "Na minimálnej inštalácii Proxmox <code>setfacl</code>0 / <code>getfacl</code> nemusia byť nainštalované. Skript padá späť elegantne (<code>command -v setfacl</code> kontrola) a uplatňuje POSIX oprávnenia len Nainštalujte <code>acl</code> s <code>apt-get install -y acl</code> a znovu spustite skript na adresári."
+    "aclBody": "Na minimálnej inštalácii Proxmox nemusia byť <code>setfacl</code> / <code>getfacl</code> nainštalované. Skript to overí cez <code>command -v setfacl</code> a použije iba oprávnenia POSIX. Tie často stačia, no nové súbory automaticky nezdedia otvorené oprávnenia. Nainštalujte <code>acl</code> pomocou <code>apt-get install -y acl</code> a spustite skript pre daný adresár znova."
   },
   "related": {
     "heading": "Súvisiace",

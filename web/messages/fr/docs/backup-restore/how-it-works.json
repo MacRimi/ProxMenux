@@ -4,7 +4,7 @@
     "description": "Description détaillée de ce qu'une sauvegarde ProxMenux contient : les rootfs produits par rsync du profil de chemin par défaut, le manifeste structuré construit par six collecteurs indépendants, et l'inventaire d'applications qui entraîne la réinstallation automatique des paquets et des composants après une restauration.",
     "ogTitle": "Comment la sauvegarde ProxMenux fonctionne en interne",
     "ogDescription": "Les trois charges utiles d'une sauvegarde ProxMenux ont expliqué : rootfs, manifeste et applications.",
-    "twitterTitle": "Comment ProxMenux Travaux de sauvegarde ProxMenux",
+    "twitterTitle": "Fonctionnement des sauvegardes ProxMenux | ProxMenux",
     "twitterDescription": "Les trois charges utiles d'une sauvegarde ProxMenux et comment la restauration reproduit l'hôte source à partir d'eux."
   },
   "header": {
@@ -124,7 +124,7 @@
     "schemaBody": "Le manifeste valide contre <code>scripts/backup_restore/schema/manifest.schema.json</code>. L'exécution du <code>build_manifest.sh --validate</code> déclenche une validation de schéma côté Python JSON (exige <code>python3</code> + <code>jsonschema</code>). Si le module n'est pas présent, la vérification est ignorée silencieusement — la validation est principalement une aide au développeur, et non une dépendance à l'exécution."
   },
   "applications": {
-    "heading": "L'inventaire des demandes",
+    "heading": "L'inventaire des applications",
     "intro": "Deux fichiers sous <code>metadata/</code> cataloguent tout ce qui est installé sur la source qui ne fait pas partie du paquetage de base Proxmox VE. La restauration les utilise pour reproduire l'ensemble exact de logiciels installés par l'utilisateur sur la cible, en utilisant soit APT ou ProxMenux propres installateurs selon la façon dont le logiciel a été initialement installé.",
     "packagesTitle": "packages.manual.list",
     "packagesBody": "Une liste en texte clair produite par <code>apt-mark showmanual</code> : chaque paquet APT qui était <em> explicitement installé</em> sur l'hôte source, trié alphabétiquement. Ceci exclut les paquets installés en tant que dépendances de la base Proxmox VE ISO (ils sont repoussés automatiquement par le propre APT de la cible). Lire par <code>_rs_run_complete_extras</code> lors de la restauration, filtré à travers un filtre à trois passages <em>cascade-safe</em> (<code>dpkg -s</code> pour la détection de grands frères et soeurs déjà installé pour les paquets de bibliothèque, <code>apt-get install --simulate</code> pour le risque de retrait de cascade), puis installé avec <code>apt-get install -y</code>.",

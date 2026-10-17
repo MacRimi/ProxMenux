@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Čo to robí?",
-    "body": "Inštalátor Coral je <strong>0 unified a hardware-aware</strong>: spustíte jednu možnosť menu a zistíte, čo vlastne máte. M.2 / Mini-PCIe karty potrebujú moduly jadra (<code>gasket</code> + <code>apex</code>) vyrobené s DKMS tak, aby prežili upgrade jadra. Akcelerátory USB len potrebujú bežiaci čas Google Edge TPU (<code>libedgetpu1-std</code>) z vlastného APT úložiska Google. Oba typy zapojené? Obe cesty bežia postupne."
+    "body": "Inštalátor Coral je <strong>jednotný a rozpoznáva hardvér</strong>: spustíte jednu položku menu a nástroj zistí, aké zariadenia máte. Karty M.2 / Mini-PCIe potrebujú moduly jadra (<code>gasket</code> + <code>apex</code>) zostavené pomocou DKMS, aby fungovali aj po aktualizácii jadra. Akcelerátory USB potrebujú iba prostredie Google Edge TPU (<code>libedgetpu1-std</code>) z oficiálneho repozitára APT spoločnosti Google. Ak sú pripojené oba typy, oba postupy sa vykonajú za sebou."
   },
   "which": {
     "heading": "Ktorý Coral mám?",
@@ -74,7 +74,7 @@
         "<strong>Cleanup.</strong> Ak predchádzajúca <code>gasket-dkms</code> nainštalovať ľavý dpkg v zlom stave (typické po PVE 9 upgrade jadra, kde DKMS autoinštalácia zlyhala ticho), silový očistiť.",
         "<strong>Nainštalujte depy pre stavbu:</strong> <code>git</code>, <code>dkms</code>, <code>build-essential</code>, <code>proxmox-headers-$(uname -r)</code>."
       ],
-      "cloneIntro": "<strong>Naklonujte zdroj ovládača.</strong> Preferuje <feranickLink>Feranick/gasket-vodič</feranickLink> komunitná vidlica (aktívne udržiavaná, jadro 6.12+ pripravený). Spadá späť do <googleLink>google/gasket-vodič</googleLink> ak je feranick nedostupný, použite záplaty špecifické pre jadro:",
+      "cloneIntro": "<strong>Naklonovať zdrojový kód ovládača.</strong> Uprednostní sa komunitný fork <feranickLink>feranick/gasket-driver</feranickLink>, ktorý sa aktívne udržiava a podporuje jadrá 6.12+. Ak nie je dostupný, použije sa <googleLink>google/gasket-driver</googleLink> a aplikujú sa záplaty pre konkrétne jadro:",
       "kernelPatches": [
         "Kernel 6.5+: <code>no_llseek</code> odstránený proti prúdu → substitúcia <code>noop_llseek</code>",
         "Kernel 6.13+: <code>MODULE_IMPORT_NS(DMA_BUF)</code> vyžaduje doslovný reťazec"
@@ -111,7 +111,7 @@
     "items": [
       "Ak je prítomný PCIe / M.2 Coral, toto vyčistenie sa nikdy neponúkne; namiesto toho sa použije normálna cesta obnovy DKMS.",
       "Čistenie čistiareň <code>gasket-dkms</code>, odstraňuje zastavený tesnenie DKMS registrácie a zdrojové stromy, a opravy až do stavu <code>dpkg</code> / APT.",
-      "USB runtime balíčky <code>libedgetpu1-std</code>0 a <code>libedgetpu1-max</code> sú ponechané nedotknuté, takže USB Coral udržuje svoj čas.",
+      "Balíky prostredia pre USB <code>libedgetpu1-std</code> a <code>libedgetpu1-max</code> sa nemenia, takže USB Coral si zachová svoje behové prostredie.",
       "Skript potvrdzuje, že starý balík je preč a že správa balíkov je pred nahlásením úspechu zdravá."
     ],
     "warningTitle": "Potvrdiť najprv hardvér",
@@ -133,7 +133,7 @@
       "Odstráni pravidlo udev <code>/etc/udev/rules.d/99-coral-apex.rules</code> ProxMenux napísal; obnovuje skupinu <code>60-gasket-dkms.rules</code> proti prúdu do svojho predvoleného stavu, ak je stále prítomná.",
       "Odstráni <code>apex</code> systémová skupina <strong>iba ak k nej stále nepatria žiadni používatelia</strong> Ak ste zmapovali vlastného užívateľa do <code>apex</code> pre LXC Passover, skupina je ponechaná na mieste a varovanie vytlačí súčasných členov.",
       "Čistí položku Google Coral apt úložiska a klávesnicu (<code>/etc/apt/sources.list.d/coral-edgetpu.list</code> + <code>coral-edgetpu-archive-keyring.gpg</code>).",
-      "Prompty pre reštart na konci <strong>0 iba v prípade, že PCIe cesta bola nainštalovaná </strong> USB-iba odinštalovať nepotrebuje žiadne."
+      "Na konci vyžiada reštart <strong>iba vtedy, ak bola nainštalovaná podpora PCIe</strong>, pretože tak sa najspoľahlivejšie uvoľnia moduly jadra. Odinštalovanie samotnej podpory USB reštart nevyžaduje."
     ],
     "lxcWarnTitle": "Nádoby LXC s priechodom apex",
     "lxcWarnBody": "Odinštalácia na hostiteľovi znehodnocuje cestu zariadenia mapovanú do akéhokoľvek LXC kontajnera nakonfigurovaného pre apex passhrough. Naplánujte prevádzku počas okna údržby, ak Frigate / DeepStack / podobné pracovné zaťaženie závisí od neho."

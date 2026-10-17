@@ -5,7 +5,7 @@
     "ogTitle": "Proxmox Disk Manager — Befestigen von Datenträgern an VMs / LXC, SMART Tests, Wipe",
     "ogDescription": "Befestigen Sie Festplatten an VMs / LXC, importieren Sie Festplattenbilder, PCI-Durchgang für Controller, sicheres Wischen und SMART-Tests auf Proxmox VE.",
     "twitterTitle": "Proxmox Disk Manager ProxMenux",
-    "twitterDescription": "Befestigen Sie Festplatten an VMs / LXC, importieren Sie Bilder, PCI-Durchlauf, sicheres Wischen und SMART-Tests."
+    "twitterDescription": "Befestigen Sie Festplatten an VMs / LXC, importieren Sie Images, PCI-Durchlauf, sicheres Wischen und SMART-Tests."
   },
   "header": {
     "title": "Festplattenmanager",
@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Wofür dieses Menü ist",
-    "body": "Jede Option funktioniert hier auf <strong>physischen Festplatten, die bereits für den Proxmox-Host </strong> sichtbar sind. Das Menü ist in drei Gruppen unterteilt: <strong>VM</strong> (Festplatten anhängen oder Bilder in eine virtuelle Maschine importieren), <strong>LXC</strong> (Festplatten an einen Container anhängen) und <strong>Utilities</strong> (sicheres Format, SMART-Gesundheit). Sicherheitskontrollen gelten überall: Systemplatten und bereits verwendete Platten werden ausgeblendet oder blockiert."
+    "body": "Jede Option funktioniert hier auf <strong>physischen Festplatten, die bereits für den Proxmox-Host </strong> sichtbar sind. Das Menü ist in drei Gruppen unterteilt: <strong>VM</strong> (Festplatten anhängen oder Images in eine virtuelle Maschine importieren), <strong>LXC</strong> (Festplatten an einen Container anhängen) und <strong>Utilities</strong> (sicheres Format, SMART-Gesundheit). Sicherheitskontrollen gelten überall: Systemplatten und bereits verwendete Platten werden ausgeblendet oder blockiert."
   },
   "opening": {
     "heading": "Öffnen des Menüs",

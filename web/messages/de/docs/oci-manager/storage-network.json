@@ -288,8 +288,8 @@
               ],
               [
                 "Instanzvertrag",
-                "Nein",
-                "<code>/usr/local/share/proxmenux/oci/instances/VMID/</code> auf dem Host"
+                "Ja, die im CT mitgeführte Kopie",
+                "<code>/.proxmenux/oci-record.json</code> im CT; weitere Host- und Cluster-Kopien werden separat gespeichert"
               ],
               [
                 "Anwendung mit mehreren Containern",

@@ -71,7 +71,7 @@
           "Debian (Desktop / Netinst, 11–13)",
           "Fedora, Arch, Rocky, Mint, openSUSE",
           "Alpine, Kali, Manjaro",
-          "Lokaler ISO Pfad für benutzerdefinierte Bilder"
+          "Lokaler ISO Pfad für benutzerdefinierte Images"
         ]
       }
     ]
@@ -122,7 +122,7 @@
       },
       {
         "path": "vm/zimaos.sh",
-        "role": "ZimaOS flow: lädt das Bild herunter und verbindet es mit der VM-Definition."
+        "role": "ZimaOS flow: lädt das Image herunter und verbindet es mit der VM-Definition."
       },
       {
         "path": "vm/vm_configurator.sh",

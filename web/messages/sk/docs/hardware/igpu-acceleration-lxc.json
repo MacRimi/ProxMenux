@@ -50,7 +50,7 @@
     "title": "Skôr ako začnete",
     "gpu": "<strong>A GPU o hostiteľovi</strong> Intel iGPU, AMD dGPU alebo APU, alebo NVIDIA kartu. Skript automaticky detekuje všetky tri cez <code>lspci</code>.",
     "gpuCheck": "lspci | grep -iE 'VGA|3D|Display'",
-    "vfio": "<strong>0 GPU nie je viazaný na vfio-pci.</strong> Ak je GPU v súčasnosti priradená k VM, je neviditeľná pre ovládač jadra hostiteľa a LXC ho nemôže použiť. Skript detekuje toto a ponúka spustenie <switchLink>Switch GPU Mode</switchLink> pre vás.",
+    "vfio": "<strong>GPU nesmie byť priradená ovládaču vfio-pci.</strong> Ak je GPU práve odovzdaná VM cez passthrough, ovládač jadra hostiteľa ju nevidí a LXC ju nemôže používať. Skript to zistí a ponúkne spustenie <switchLink>Zmeny režimu GPU</switchLink>.",
     "nvidia": "<strong>Za NVIDIA iba:</strong> , NVIDIA hostiteľ už musí byť nainštalovaný ProxMenux musí zodpovedať libs používateľského priestoru kontajnera podľa hostiteľskej verzie. Ak ste to ešte neurobili, bežte. <nvidiaLink>Inštalovať NVIDIA Ovládače hostiteľa</nvidiaLink> Najprv.",
     "nvidiaCheck": "nvidia-smi",
     "container": "<strong>Existujúci LXC kontajner.</strong> Skript pracuje na kontajneri, ktorý ste už vytvorili, nevytvorí. Kontajner by mal byť v ideálnom prípade <strong>privileged</strong> (neprivilegované práce, ale potrebuje UID/GID mapovanie, ktoré skript nenakonfiguruje)."

@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Inštalácia NVIDIA Ovládače zapnuté Proxmox VE 9 (manuálny postup) ProxMenux Príručky",
+    "title": "Inštalácia ovládačov NVIDIA v Proxmox VE 9 — ručný postup | Príručky ProxMenux",
     "description": "Manuálna inštalácia a konfigurácia ovládačov NVIDIA na Proxmox VE 9 hostiteľa, plus zapojenia LXC potrebné na vystavenie GPU jednému alebo viacerým kontajnerom. Zahŕňa inštaláciu ovládača, vytrvalosť služby, voliteľné NVENC patch a nastavovanie na kontajner.",
     "ogTitle": "Inštalácia ovládačov NVIDIA na Proxmox VE 9 (manuálny postup)",
     "ogDescription": "Ručne NVIDIA inštalácia ovládača na PVE 9 chápateľ, údržba, voliteľná patch NVENC a na jednom kontajneri LXC elektrické vedenie."
@@ -13,7 +13,7 @@
   "intro": {
     "calloutTitle": "Poznámka",
     "calloutBody": "Toto je manuálny postup zachovaný ako referencia. Pre väčšinu používateľov je odporúčaná cesta automatizovaná ProxMenux tok: <strong>Inštalovať NVIDIA Ovládače (hostiteľ)</strong> v <em>GPU a Coral-TPU</em> menu a <strong>Pridať GPU do LXC</strong> (alebo <strong>Pridať GPU do VM</strong>) pre kabeláž pre každého hosťa. Automatizovaný tok spracováva rovnaké kroky, ktoré sú tu zdokumentované (s dodatočnými bezpečnostnými kontrolami: kompatibilita hlavičiek jadra, overenie IOMMU, riešenie konfliktov VFIO). Táto stránka je určená pre operátorov, ktorí chcú porozumieť jednotlivým príkazom alebo ktorí sa potrebujú odchýliť od štandardného postupu.",
-    "targetNote": "Zamerané na <strong>Proxmox VE 9</strong> (Debian Trixie). PVE 7 (Bullseye) a PVE 8 (knihomoľ) už nie sú zahrnuté.",
+    "targetNote": "Návod je určený pre <strong>Proxmox VE 9</strong> (Debian Trixie). PVE 7 (Bullseye) a PVE 8 (Bookworm) už nie sú zahrnuté.",
     "stepsTitle": "Čo urobíš",
     "steps": [
       "Pripravte Proxmox VE 9 hostiteľa (čierny nouveau, repo, predpoklady).",

@@ -34,7 +34,7 @@
   },
   "limits": {
     "heading": "Öka olika systemgränser",
-    "intro": "Höjer en massa kärna, systemd och PAM gränser som standard för värden för låg för en värd som kör många VM, behållare och nätverkstjänster.",
+    "intro": "Höjer en massa kärna, systemd och PAM gränser som standard för värden för låg för en värd som kör många VM, containrar och nätverkstjänster.",
     "headerFile": "Arkiv",
     "headerSets": "Vad det sätter",
     "rows": [

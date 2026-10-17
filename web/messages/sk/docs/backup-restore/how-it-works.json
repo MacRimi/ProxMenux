@@ -4,7 +4,7 @@
     "description": "Detailné členenie toho, čo obsahuje záloha ProxMenux: korektúry vytvorené rsync štandardného profilu trasy, štruktúrovaný manifest vytvorený šiestimi nezávislými kolektormi a inventár aplikácie, ktorý riadi automatickú reinštaláciu balíkov a komponentov po obnovení.",
     "ogTitle": "Ako ProxMenux Backup funguje interne",
     "ogDescription": "Tri užitočné zaťaženie zálohy ProxMenux vysvetlil: rootfs, manifest a aplikácie.",
-    "twitterTitle": "Ako ProxMenux Zálohové práce ProxMenux",
+    "twitterTitle": "Ako funguje zálohovanie ProxMenux | ProxMenux",
     "twitterDescription": "Tri užitočné zaťaženie zálohy ProxMenux a ako obnova reprodukuje zdroj hostiteľa z nich."
   },
   "header": {
@@ -92,7 +92,7 @@
       {
         "collector": "collect_source_host.sh",
         "produces": "source_host",
-        "content": "Hostname, PVE verzia (<code>pveversion</code>0), PBS verzia, ak hostiteľ spustí záložný server role, jadro (<code>uname -r</code>), režim boot (efi/bios), typ koreňového súborového systému, model CPU + architektúra, pamäť v KB."
+        "content": "Názov hostiteľa, verzia PVE (<code>pveversion</code>), verzia PBS, ak hostiteľ plní úlohu zálohovacieho servera, jadro (<code>uname -r</code>), režim zavádzania (efi/bios), typ koreňového súborového systému, model a architektúra CPU, pamäť v KB."
       },
       {
         "collector": "collect_hardware.sh",
@@ -107,7 +107,7 @@
       {
         "collector": "collect_kernel.sh",
         "produces": "kernel_params",
-        "content": "Operátorom povolené žetóny z <code>/proc/cmdline</code>0 (strúhanie kotolne ako <code>BOOT_IMAGE=</code>, <code>root=</code>, <code>ro/rw</code>, <code>quiet</code>, <code>splash</code>), moduly naložené pri štarte z <code>/etc/modules</code>, a trasy súborov <code>/etc/modprobe.d/*.conf</code> s aktuálnymi smernicami (<code>options</code>, <code>blacklist</code>, <code>install</code>, <code>alias</code>, <code>softdep</code>)."
+        "content": "Parametre pridané správcom do <code>/proc/cmdline</code> bez bežných predvolených položiek, ako sú <code>BOOT_IMAGE=</code>, <code>root=</code>, <code>ro/rw</code>, <code>quiet</code> a <code>splash</code>; moduly načítavané pri štarte z <code>/etc/modules</code>; a cesty súborov <code>/etc/modprobe.d/*.conf</code>, ktoré obsahujú skutočné direktívy (<code>options</code>, <code>blacklist</code>, <code>install</code>, <code>alias</code>, <code>softdep</code>)."
       },
       {
         "collector": "collect_proxmenux_state.sh",

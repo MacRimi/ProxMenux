@@ -81,7 +81,7 @@
     "rebootBody": "I moduli IOMMU, VFIO e la lista nera hanno effetto solo dopo un riavvio + initramfs rigenerazione. Lo script attiva <code>update-initramfs -u -k all</code> e il boot-loader rinfrescano, e imposta la bandiera \"riavvio richiesto\" così Personalizzabile richiede alla fine.",
     "verifyTitle": "Verifica dopo il riavvio",
     "revertTitle": "Reversibile dal menu Disinstalla",
-    "revertBody": "<link>Uninstall Optimizations</link> ripristina tutte le modifiche: rimuove i token IOMMU da <code>/etc/kernel/cmdline</code> o GRUB, rimuove i moduli VFIO da <code>/etc/modules</code>, rimuove le voci della lista nera del driver e ricostruisce initramf. Un riavvio è necessario per applicare effettivamente la conversione."
+    "revertBody": "<link>Rimuovi le ottimizzazioni</link> annulla tutte le modifiche: elimina i parametri IOMMU da <code>/etc/kernel/cmdline</code> o da GRUB, rimuove i moduli VFIO da <code>/etc/modules</code>, elimina le voci della blacklist dei driver e ricostruisce initramfs. Per applicare effettivamente il ripristino è necessario riavviare."
   },
   "related": {
     "heading": "Correlati",

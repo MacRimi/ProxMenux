@@ -53,13 +53,13 @@
         "href": "/docs/storage-share/host-nfs",
         "icon": "Network",
         "title": "Ajouter une part de NFS comme stockage Proxmox",
-        "description": "Enregistrer une exportation externe NFS comme stockage Proxmox via pvesm ajouter nfs. Proxmox gère le montage — pas d'entrées fstab nécessaires."
+        "description": "Enregistrez un export NFS externe comme stockage Proxmox avec pvesm add nfs. Proxmox gère le montage, sans ajout dans fstab."
       },
       {
         "href": "/docs/storage-share/host-samba",
         "icon": "Share2",
         "title": "Ajouter Samba share comme stockage Proxmox",
-        "description": "Enregistrer une part externe Samba / CIFS comme stockage Proxmox via pvesm ajouter des cifs. Proxmox gère le montage et les identifiants."
+        "description": "Enregistrez une part Samba ou CIFS externe comme stockage Proxmox avec pvesm add cifs. Proxmox gère le montage et les identifiants."
       },
       {
         "href": "/docs/storage-share/host-iscsi",

@@ -45,7 +45,7 @@
       },
       {
         "title": "Vyberte si jeden alebo niekoľko obrázkov",
-        "bodyRich": "Adresár je skenovaný pre <code>.img</code>0 / <code>.qcow2</code> / <code>.vmdk</code> / <code>.raw</code> súbory. Môžete si vybrať niekoľko naraz; každý bude prejsť per-image možnosti v ďalšom kroku."
+        "bodyRich": "V adresári sa vyhľadajú súbory <code>.img</code> / <code>.qcow2</code> / <code>.vmdk</code> / <code>.raw</code>. Možno ich vybrať viac naraz; v ďalšom kroku sa pre každý obraz nastavia samostatné voľby."
       },
       {
         "title": "Možnosti na zobrazenie",
@@ -71,7 +71,7 @@
   "troubleshoot": {
     "heading": "Riešenie problémov",
     "noImagesTitle": "\"Nenájdené žiadne kompatibilné obrazy disku\"",
-    "noImagesBody": "Skript skenoval adresár, ale nenašiel súbor <code>.img</code>0 / <code>.qcow2</code> / <code>.vmdk</code> / <code>.raw</code>. Skontrolujte rozšírenie (prípadové otázky), že súbor sedí priamo vo vybranom adresári (nevyhľadávajú sa žiadne sub-adresáre) a že oprávnenia umožňujú koreň čítať.",
+    "noImagesBody": "Skript prehľadal adresár, ale nenašiel žiadny súbor <code>.img</code> / <code>.qcow2</code> / <code>.vmdk</code> / <code>.raw</code>. Skontrolujte príponu (rozlišujú sa veľké a malé písmená), či je súbor priamo vo vybranom adresári (podadresáre sa neprehľadávajú) a či ho root môže čítať.",
     "slowTitle": "Import je pomalý",
     "slowBody": "VMDK → QCOW2 → surové konverzie sú CPU- a I/O-viazané. Rýchlosť importu závisí od rýchlosti čítania zdroja, cieľovej rýchlosti zápisu a CPU pre dekompresiu. Ak je to možné, uprednostnite surové alebo qkow2 zdroje.",
     "uefiTitle": "Importované diskové topánky do UEFI shellu",

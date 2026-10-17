@@ -72,7 +72,7 @@
     ],
     "notTitle": "Was nicht exportiert wird",
     "notItems": [
-      "CD-ROM / ISO-Halterungen (ausgenommen durch Design).",
+      "CD-ROM- und ISO-Mounts (bewusst ausgeschlossen).",
       "Cloud-init-Laufwerke (ausgenommen durch Design).",
       "Spezifische NIC-Brücke / Modell (nur die Zählung bleibt erhalten).",
       "BIOS / UEFI Wahl — muss beim Import zurückgesetzt werden.",
@@ -123,7 +123,7 @@
     "nicTitle": "Importierte VM in VMware hat e1000 NIC, aber ich möchte VirtIO",
     "nicBody": "Erwartet - der OVF speichert nur die NIC-Zählung, nicht das Modell. Bearbeiten Sie die NIC-Einstellungen der importierten VM in VMware nach dem Import. Gleiches gilt für SCSI-Controller (Export verwendet lsilogic für VMware-Kompatibilität; Wechsel zu <code>VirtIO SCSI</code>, wenn Ihr Gast es unterstützt).",
     "runningTitle": "VM lief und ich lehnte es ab, es zu stoppen - Export abgebrochen",
-    "runningBody": "Das Skript kann kein konsistentes Bild erzeugen, während Festplatten geschrieben werden. Akzeptieren Sie entweder die Abschaltaufforderung beim nächsten Mal oder stoppen Sie den VM zuerst manuell (<code>qm shutdown $VMID</code>) und wiederholen Sie ihn erneut.",
+    "runningBody": "Das Skript kann kein konsistentes Image erzeugen, während Festplatten geschrieben werden. Akzeptieren Sie entweder die Abschaltaufforderung beim nächsten Mal oder stoppen Sie den VM zuerst manuell (<code>qm shutdown $VMID</code>) und wiederholen Sie ihn erneut.",
     "slowTitle": "Disk Conversion ist langsam",
     "slowBody": "<code>qemu-img convert</code> ist single-threaded und liest die Quelle mit voller Geschwindigkeit. Für eine 100 GB Festplatte auf rotierendem Rost erwarten Sie 15-30 Minuten. NVMe bis NVMe ist 5-10x schneller. Multi-Disk-VMs konvertieren sequentiell - Zeitskalen linear mit der gesamten virtuellen Größe."
   },

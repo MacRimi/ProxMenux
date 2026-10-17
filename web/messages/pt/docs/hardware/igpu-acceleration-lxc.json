@@ -88,7 +88,7 @@
     },
     "preflight": {
       "title": "Controlos antes do voo",
-      "imageAlt": "A janela que oferece para executar o modo Mudar GPU quando o GPU seleccionado ainda estiver ligado ao vfio- pci para a passagem do VM",
+      "imageAlt": "Janela que propõe executar a opção Mudar modo da GPU quando a GPU selecionada ainda está associada a vfio-pci para passthrough a uma VM",
       "intro": "Três verificações, qualquer uma das quais pode bloqueá-lo ou redirecioná-lo:",
       "items": [
         "<strong>SR-IOV.</strong> Se o GPU selecionado for uma Função Virtual (VF) ou uma Função Física com VFs ativos, a passagem LXC não se aplica – o dispositivo é gerenciado pelo controlador SR-IOV. Bloqueado.",

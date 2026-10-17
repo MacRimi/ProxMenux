@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Commandes de stockage et de disque Proxmox — lsblk, LVM, pvesm, qm importdisk ProxMenux",
-    "description": "Référence des commandes de stockage et de disque sur Proxmox VE: lsblk, blkid, parti, lvdisplay, vgdisplay, pvs, monture, df, du, ncdu, pvesm statut, qm importdisk et qemu-img convertir pour VM opérations sur disque dur.",
+    "description": "Référence des commandes de stockage et de disque sous Proxmox VE : lsblk, blkid, parted, lvdisplay, vgdisplay, pvs, mount, df, du, ncdu et pvesm status, ainsi que qm importdisk et qemu-img convert pour les disques de VM.",
     "ogTitle": "Commandes de stockage et de disque Proxmox — lsblk, LVM, pvesm, qm importdisk",
     "ogDescription": "Référence des commandes de stockage et de disque sur Proxmox VE — inspection du disque, LVM, montages, gestion du stockage Proxmox, importation de disque VM et conversion d'image.",
     "twitterTitle": "Commandes de stockage Proxmox ProxMenux",

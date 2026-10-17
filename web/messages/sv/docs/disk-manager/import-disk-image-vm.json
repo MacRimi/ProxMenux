@@ -3,11 +3,11 @@
     "title": "Importera diskbild till VM | ProxMenux Dokumentation",
     "description": "Importera en disk bildfil (.img / .qcow2 / .vmdk / .raw) till en befintlig Proxmox VM med ProxMenux. Per-image gränssnitt, SSD emulering och startbar flagga, med qm importdisk under huven.",
     "ogTitle": "Importera diskbild till VM | ProxMenux Dokumentation",
-    "ogDescription": "Importera .img / .qcow2 / .vmdk / .raw disk bilder i en befintlig VM med ProxMenux. Använder qm importeradisk under huven."
+    "ogDescription": "Importera .img / .qcow2 / .vmdk / .raw disk avbildningar i en befintlig VM med ProxMenux. Använder qm importeradisk under huven."
   },
   "header": {
     "title": "Importera diskavbildning till virtuell dator",
-    "description": "Importera en diskbildfil (.img, .qcow2, .vmdk eller .raw) till en befintlig Proxmox VM. ProxMenux samlar varje beslut up-front - mål VM, Proxmox lagring, källkatalog, gränssnitt, SSD emulering, startorder - och sedan kör qm importdisk för varje vald bild.",
+    "description": "Importera en diskbildfil (.img, .qcow2, .vmdk eller .raw) till en befintlig Proxmox VM. ProxMenux samlar varje beslut up-front - mål VM, Proxmox lagring, källkatalog, gränssnitt, SSD emulering, startorder - och sedan kör qm importdisk för varje vald avbildning.",
     "section": "Diskhanterare · VM"
   },
   "intro": {
@@ -16,7 +16,7 @@
   },
   "howRuns": {
     "heading": "Hur manuset går",
-    "body": "Flödet har två faser. Fas 1 samlar varje beslut (VM, lagring, källkatalog, bilder, per-image alternativ) uppåt via dialogrutor. Fas 2 kör <code>qm importdisk</code> för varje vald bild. Tills fas 2 börjar, är ingenting kopierat och VM konfig inte berörs."
+    "body": "Flödet har två faser. Fas 1 samlar varje beslut (VM, lagring, källkatalog, avbildningar, per-image alternativ) uppåt via dialogrutor. Fas 2 kör <code>qm importdisk</code> för varje vald avbildning. Tills fas 2 börjar, är ingenting kopierat och VM konfig inte berörs."
   },
   "prereqs": {
     "heading": "Förutsättningar",
@@ -24,7 +24,7 @@
       "Minst en VM definierad på värden. Målet VM bör vara <strong>powered off</strong>.",
       "Minst en bildfil av ett stöd format i källkatalogen. Stöd: <code>.img</code>, <code>.qcow2</code>, <code>.vmdk</code>, <code>.raw</code>.",
       "Tillräckligt med ledigt utrymme på målet Proxmox lagring för att hålla varje importerad disk.",
-      "ProxMenux letar efter bilder i <code>/var/lib/vz/template/iso</code> som standard. Du kan peka det på någon annan katalog på värden när den frågar."
+      "ProxMenux letar efter avbildningar i <code>/var/lib/vz/template/iso</code> som standard. Du kan peka det på någon annan katalog på värden när den frågar."
     ]
   },
   "steps": {
@@ -41,15 +41,15 @@
       },
       {
         "title": "Välj källkatalogen",
-        "bodyRich": "Välj standardkatalogen (<code>/var/lib/vz/template/iso</code>) eller skriv en anpassad väg - vanligtvis där du laddade ner / laddade upp bilden. Skriptet avvisar vägar som inte existerar."
+        "bodyRich": "Välj standardkatalogen (<code>/var/lib/vz/template/iso</code>) eller skriv en anpassad väg - vanligtvis där du laddade ner / laddade upp avbildningen. Skriptet avvisar vägar som inte existerar."
       },
       {
-        "title": "Välj en eller flera bilder",
-        "bodyRich": "Katalogen skannas för <code>.img</code> / <code>.qcow2</code> / <code>.vmdk</code> / <code>.raw</code> filer. Du kan välja flera samtidigt; var och en kommer att gå igenom alternativen per bild i nästa steg."
+        "title": "Välj en eller flera avbildningar",
+        "bodyRich": "Katalogen skannas för <code>.img</code> / <code>.qcow2</code> / <code>.vmdk</code> / <code>.raw</code> filer. Du kan välja flera samtidigt; var och en kommer att gå igenom alternativen per avbildning i nästa steg."
       },
       {
         "title": "Per-image alternativ",
-        "intro": "För varje vald bild frågar ProxMenux:",
+        "intro": "För varje vald avbildning frågar ProxMenux:",
         "items": [
           "<strong>Interface</strong> - <code>scsi</code> (standard), <code>virtio</code>, <code>sata</code> eller <code>ide</code>. Matchar hur gästen kommer att se skivan.",
           "<strong>SSD emulation</strong> - endast erbjuds för icke-VirtIO gränssnitt. Lägger till <code>ssd=1</code> så att gästen annonserar disken som solid state (användbar för OS-nivå TRIM / anpassning).",
@@ -58,7 +58,7 @@
       },
       {
         "title": "Importera och fästa",
-        "bodyRich": "ProxMenux kör <code>qm importdisk</code> för varje bild (omvandlingsformat på flugan där det behövs), fäster den resulterande disken till nästa gratis slot (<code>scsiN</code>, <code>sataN</code>, ...) med dina valda alternativ och - om du markerade någon skiva som startbar - uppdaterar startordern. Framsteg visar i terminalen."
+        "bodyRich": "ProxMenux kör <code>qm importdisk</code> för varje avbildning (omvandlingsformat på flugan där det behövs), fäster den resulterande disken till nästa gratis slot (<code>scsiN</code>, <code>sataN</code>, ...) med dina valda alternativ och - om du markerade någon skiva som startbar - uppdaterar startordern. Framsteg visar i terminalen."
       }
     ]
   },
@@ -66,7 +66,7 @@
     "heading": "Manuell motsvarande",
     "body": "En ensidig importkartor till tre <code>qm</code>-kommandon:",
     "warnTitle": "Bildformat konvertering",
-    "warnBody": "När mållagringen inte kan hålla källformatet inbyggt (till exempel kan LVM-lagring inte hålla <code>.qcow2</code>), konverterar <code>qm importdisk</code> bilden transparent. Detta kan ta flera minuter för multi-GB bilder; planera därefter och inte avbryta manuset."
+    "warnBody": "När mållagringen inte kan hålla källformatet inbyggt (till exempel kan LVM-lagring inte hålla <code>.qcow2</code>), konverterar <code>qm importdisk</code> avbildningen transparent. Detta kan ta flera minuter för multi-GB avbildningar; planera därefter och inte avbryta manuset."
   },
   "troubleshoot": {
     "heading": "Felsökning",
@@ -75,7 +75,7 @@
     "slowTitle": "Importen är långsam",
     "slowBody": "VMDK → QCOW2 → råa omvandlingar är CPU- och I/O-bundna. Importhastigheten beror på källläsningshastigheten, mållagringsutrymmet skriver hastighet och CPU för dekompression. Föredrar råa eller qcow2-källor när det är möjligt.",
     "uefiTitle": "Importerade skivstövlar i UEFI skal",
-    "uefiBody": "Bilden byggdes för arv (SeaBIOS) men VM använder OVMF (eller vice versa). Antingen byt VM BIOS i Proxmox för att matcha bilden, eller bygga om bilden i rätt läge innan du importerar."
+    "uefiBody": "Avbildningen byggdes för arv (SeaBIOS) men VM använder OVMF (eller vice versa). Antingen byt VM BIOS i Proxmox för att matcha avbildningen, eller bygga om avbildningen i rätt läge innan du importerar."
   },
   "related": {
     "heading": "Relaterad",

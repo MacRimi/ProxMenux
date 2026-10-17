@@ -153,11 +153,11 @@
   ],
   "destroyWarn": {
     "title": "Zničiť je nezvratné",
-    "bodyRich": "<code>qm destroy</code>0 a <code>pct destroy</code> zmazať VM / CT a všetky jeho disky. Neexistuje žiadne potvrdenie prompt v predvolenom nastavení. Vezmite zálohu prvý, ak je nejaká šanca, že by ste mohli chcieť dáta späť, pozri <backupLink>Backup a Obnoviť</backupLink>."
+    "bodyRich": "<code>qm destroy</code> a <code>pct destroy</code> odstránia VM / CT aj všetky ich disky. Predvolene sa nežiada potvrdenie. Ak môžete údaje ešte potrebovať, najprv vytvorte zálohu — pozrite <backupLink>Zálohovanie a obnova</backupLink>."
   },
   "qmConfigTip": {
     "title": "qm config vs editing the .conf file directly",
-    "bodyRich": "<code>qm config &lt;vmid&gt;</code>0 a <code>pct config &lt;ctid&gt;</code> si prečítal súbor pomocou vlastného parsera Proxmox je normalizovaný, komentáre vyzlečený, až do zmien zobrazených samostatne. Úprava <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> alebo <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> priamo obíde parser. Užitočné pre opravu poškodené konfig alebo použitie nastavenia <code>qm set</code> nebude akceptovať, ale zastaviť hosťa ako prvý, aby sa zabránilo pretekom. Súborový systém zoskupenia (<code>pmxcfs</code>) sa stará o šírenie zmeny na iné uzly."
+    "bodyRich": "<code>qm config &lt;vmid&gt;</code> a <code>pct config &lt;ctid&gt;</code> načítajú súbor parserom Proxmox: výstup je normalizovaný, komentáre odstránené a čakajúce zmeny zobrazené samostatne. Priama úprava <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> alebo <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> parser obíde. Hodí sa pri oprave poškodenej konfigurácie alebo nastavení, ktoré <code>qm set</code> neprijme. Najprv však hosťa zastavte, aby nedošlo k súbežným zmenám. Klastrový súborový systém (<code>pmxcfs</code>) zabezpečí rozšírenie zmeny na ostatné uzly."
   },
   "related": {
     "heading": "Súvisiace",
@@ -165,7 +165,7 @@
       {
         "href": "/docs/help-info/backup-commands",
         "label": "Zálohovanie a obnova",
-        "tail": " — "
+        "tail": " — vzdump a qmrestore / pct restore."
       },
       {
         "href": "/docs/help-info/storage-commands",

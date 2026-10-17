@@ -48,7 +48,7 @@
     },
     {
       "title": "Verfügbare Updates anwenden",
-      "description": "Wenn eine Optimierung nach der Installation (Log2Ram, Memory Settings, Logrotate...) eine neuere Version auf der Festplatte erhält als das, was auf dem Host registriert ist, taucht dieser Eintrag nur auf, die sich bewegt haben. Führt die entsprechende Funktion erneut aus und aktualisiert die Registrierung - berührt nichts anderes.",
+      "description": "Liegt eine Nachinstallationsoptimierung (Log2Ram, Speichereinstellungen, Logrotate …) auf dem Datenträger in einer neueren Version vor als der auf dem Host erfassten, zeigt dieser Menüpunkt nur die betroffenen Optimierungen an. Er führt die jeweilige Funktion erneut aus und aktualisiert den gespeicherten Versionsstand. Alles andere bleibt unverändert.",
       "bullets": [
         "Per-Optimierung Opt-in (nur was sich geändert hat)",
         "Derselbe Picker ist über das Monitor-Dashboard verfügbar",
@@ -57,7 +57,7 @@
     },
     {
       "title": "Optimierungen deinstallieren",
-      "description": "Unterstützte reversible Änderungen werden in einer JSON-Registrierung verfolgt und mit einer Wiederherstellungsfunktion gepaart. Aktionen ohne sicheres Rollback, wie ein Full Package Upgrade, sind absichtlich ausgeschlossen.",
+      "description": "Unterstützte rückgängig machbare Änderungen werden in einer JSON-Datei erfasst und mit einer Wiederherstellungsfunktion verknüpft. Aktionen ohne sichere Rückkehrmöglichkeit, etwa ein vollständiges Paketupgrade, sind bewusst ausgeschlossen.",
       "bullets": [
         "Erkennt zuvor angewendete Optimierungen automatisch",
         "Reversal wählt den richtigen Pfad für jedes Element aus – stellt es aus einem .bak-Backup wieder her, löscht den sysctl.d-Snippet, wo nichts gesichert werden musste, oder installiert das Vanille-Paket mit --force-confnew neu (z. B. Abonnementbanner)",

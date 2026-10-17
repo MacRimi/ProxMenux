@@ -6,7 +6,7 @@
   "header": {
     "title": "En ProxMenux Monitor",
     "description": "Un contenedor instalado por OCI manager Apps aparece en VMs y LXCs como cualquier otro LXC. Su ventana lee el registro de la instalación: versiones de la aplicación y de la imagen, imágenes nuevas, salida de consola y terminal.",
-    "section": "Aplicaciones del gestor OCI"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {

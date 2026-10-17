@@ -115,7 +115,7 @@
     "intro": "Prvým krokom automatizovaného balíka je aktualizácia systému Proxmox. Proxmox vlastné upgrade návod pre bežiaci hostiteľ (v rámci rovnakej hlavnej verzie) je spustiť:",
     "after": "Tento jeden riadok je oficiálnym príkazom na akomkoľvek aktuálnom vydaní Proxmox. Automatizovaný skript spustí <strong>presne</strong> a zabalí ho do hygieny repo a čistenia po aktualizácii, ktorú odporúča aj oficiálna príručka aktualizácie – rovnaké kroky ako pri samostatnom nástroji <link>Proxmox System Update</link>:",
     "items": [
-      "Zakáže podnik <code>pve-enterprise.sources</code>0 / <code>ceph.sources</code>, odstráni pôvodné repo súbory, zapíše čistý zdroj bez predplatného pre meno hostiteľa.",
+      "Zakáže podnikové zdroje <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, odstráni staré súbory repozitárov a zapíše čistý zdroj bez predplatného pre kódový názov distribúcie hostiteľa.",
       "Spustí inováciu neinteraktívne pomocou <code>DEBIAN_FRONTEND=noninteractive</code> a <code>--force-confdef --force-confold</code> – konfiguračné súbory, ktoré ste si prispôsobili, zostanú vaše, aj keď ich upstream zmení.",
       "Inštaluje základné Proxmox balíčky, ak chýba (<code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>).",
       "LVM metadata sanity check, <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code> a reštart len v prípade, že jadro sa skutočne zmenilo."

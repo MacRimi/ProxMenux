@@ -6,7 +6,7 @@
   "header": {
     "title": "Installer, mettre à jour et modifier",
     "description": "Chaque instance conserve un contrat reproductible, de sorte que ses rootfs peuvent être remplacés sans perdre de configuration ou de données persistantes.",
-    "section": "Applications du gestionnaire OCI"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -68,7 +68,7 @@
         {
           "figure": {
             "src": "/oci-manager/manage-menu.png",
-            "alt": "Liste des applications du BEC installées et mise à jour, modification et suppression des options",
+            "alt": "Liste des applications OCI installées, avec les options de mise à jour, de modification et de suppression",
             "caption": "Gérer les applications OCI installées."
           }
         }
@@ -83,7 +83,7 @@
             "chartCode": "sequenceDiagram\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: digest\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n X-->>P: healthcheck\n alt {{healthy}}\n  P-->>U: {{commit}}\n else {{failure}}\n  P->>X: Rollback\n  P-->>U: {{restored}}\n end",
             "labels": {
               "user": "Utilisateur",
-              "registry": "Registre du BEC",
+              "registry": "Registre OCI",
               "update": "Mettre à jour l'instance",
               "resolve": "Résoudre la balise",
               "verify": "Vérifier les archives et prévol",
@@ -127,7 +127,7 @@
           }
         },
         {
-          "p": "Avant que rien ne soit arrêté, l'opération vérifie que la sauvegarde s'adapte : les données utilisées sur les volumes sauvegardés, plus une marge. Il est écrit à côté de l'enregistrement de l'application, sur le disque système de l'hôte. Lorsqu'il ne s'y adapte pas, le menu demande un autre stockage de l'hôte qui accepte les sauvegardes : la sauvegarde y est faite, elle est supprimée à la fin de l'opération, et le choix est rappelé pour cette application, mises à jour programmées incluses. Sans stockage qui a de place, l'opération est refusée et l'application reste telle qu'elle était. La nouvelle image est cochée de la même manière avant son téléchargement."
+          "p": "Avant que rien ne soit arrêté, l'opération vérifie que la sauvegarde s'adapte : les données utilisées sur les volumes sauvegardés, plus une marge. Il est écrit à côté de l'enregistrement de l'application, sur le disque système de l'hôte. Lorsqu'il ne s'y adapte pas, le menu application un autre stockage de l'hôte qui accepte les sauvegardes : la sauvegarde y est faite, elle est supprimée à la fin de l'opération, et le choix est rappelé pour cette application, mises à jour programmées incluses. Sans stockage qui a de place, l'opération est refusée et l'application reste telle qu'elle était. La nouvelle image est cochée de la même manière avant son téléchargement."
         }
       ]
     },
@@ -202,7 +202,7 @@
           }
         },
         {
-          "p": "L'installateur le demande dans les deux modes d'installation et propose ce que la recette de l'application déclare. Il est modifié plus tard à partir de <strong>Manage installé OCI applications</strong> ou avec le commutateur <strong>Watchdog</strong> du conteneur dans <monitorLink>ProxMenux Monitor</monitorLink>, et il s'applique à chaque conteneur d'une application multiconteneurs. Un service de l'hôte, <code>proxmenux-oci-watchdog.service</code>, surveille chaque application qui l'a demandée; son installation est répertoriée dans l'onglet Modifications de Audit & Report."
+          "p": "L'installateur le application dans les deux modes d'installation et propose ce que la recette de l'application déclare. Il est modifié plus tard à partir de <strong>Manage installé OCI applications</strong> ou avec le commutateur <strong>Watchdog</strong> du conteneur dans <monitorLink>ProxMenux Monitor</monitorLink>, et il s'applique à chaque conteneur d'une application multiconteneurs. Un service de l'hôte, <code>proxmenux-oci-watchdog.service</code>, surveille chaque application qui l'a demandée; son installation est répertoriée dans l'onglet Modifications de Audit & Report."
         },
         {
           "calloutInfo": {
@@ -346,7 +346,7 @@
     },
     {
       "id": "remove",
-      "title": "Suppression d'une demande du BEC",
+      "title": "Supprimer une application OCI",
       "blocks": [
         {
           "p": "Avant la confirmation, un résumé est construit à partir de la configuration réelle : les conteneurs qui sont supprimés, les données supprimées avec eux, le réseau privé qui est libéré et les répertoires hôtes qui sont conservés. La confirmation est par défaut <strong>No</strong>, car les données des disques supprimés ne peuvent pas être récupérées par la suite."

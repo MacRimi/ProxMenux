@@ -1,9 +1,9 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Webbinstrumentpanel för Proxmox VE | ProxMenux",
-    "description": "ProxMenux Monitor är en webbinstrumentpanel för självvärd Proxmox VE: värdmätningar i realtid, lagring och SMART data, nätverk, virtuella datorer och behållare, hårdvara, loggar, en integrerad webbterminal, en proaktiv hälsomonitor, aviseringar till Telegram / Discord / E-post, en valfri AI-assistent, en REST API och integrationer med verktyg som Hemsida och Home Assistant.",
+    "description": "ProxMenux Monitor är en webbinstrumentpanel för självvärd Proxmox VE: värdmätningar i realtid, lagring och SMART data, nätverk, virtuella datorer och containrar, hårdvara, loggar, en integrerad webbterminal, en proaktiv hälsomonitor, aviseringar till Telegram / Discord / E-post, en valfri AI-assistent, en REST API och integrationer med verktyg som Hemsida och Home Assistant.",
     "ogTitle": "ProxMenux Monitor — Webbinstrumentpanel som är värd för Proxmox VE",
-    "ogDescription": "Instrumentpanel i realtid Proxmox VE: värdmätningar, lagring SMART, nätverk, virtuella datorer och behållare, hårdvara, loggar, webbterminal, Health Monitor, aviseringar, AI-assistent, REST API.",
+    "ogDescription": "Instrumentpanel i realtid Proxmox VE: värdmätningar, lagring SMART, nätverk, virtuella datorer och containrar, hårdvara, loggar, webbterminal, Health Monitor, aviseringar, AI-assistent, REST API.",
     "twitterTitle": "ProxMenux Monitor | ProxMenux",
     "twitterDescription": "Självvärd Proxmox VE instrumentpanel med Health Monitor, aviseringar, AI-assistent och REST API."
   },
@@ -39,7 +39,7 @@
         "description": "Alla gränssnitt (fysiska, bindningar, broar, OVS), IP/MAC/tillstånd, realtids RX/TX-grafer, historiska RRD-data per gränssnitt."
       },
       {
-        "name": "VM och behållare",
+        "name": "VM och containrar",
         "description": "Inventering av alla virtuella datorer och LXC:er med status, resurser och drifttid. Drill-in visar konfiguration, historisk statistik, fullständiga gästloggar och start/stopp/omstart/avstängningsåtgärder."
       },
       {

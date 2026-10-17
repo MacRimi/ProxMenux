@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "Contributions Documentation ProxMenux",
+    "title": "Contributeurs | Documentation ProxMenux",
     "description": "Reconnaissance pour les personnes qui rendent ProxMenux possible — testeurs, évaluateurs et développeurs qui façonnent chaque version.",
-    "ogTitle": "Contributions Documentation ProxMenux",
+    "ogTitle": "Contributeurs | Documentation ProxMenux",
     "ogDescription": "Rencontrez les contributeurs derrière ProxMenux."
   },
   "header": {
@@ -12,7 +12,7 @@
   },
   "beyond": {
     "title": "Au-delà de cette liste",
-    "body": "Beaucoup plus de personnes contribuent via des rapports de bogues, des idées de fonctionnalités dans Discussions, bêta tests et traductions. La liste complète des contributeurs de code vit sur le graphique des contributeurs <extlink>GitHub</extlink>. La page ci-dessous met en évidence les personnes qui ont été les plus actives dans les tests et l'examen des rejets de ProxMenux."
+    "body": "De nombreuses autres personnes contribuent en signalant des bugs, en proposant des fonctionnalités dans Discussions, en testant les versions bêta ou en traduisant le projet. La liste complète des contributeurs au code figure dans le <extlink>graphique des contributeurs GitHub</extlink>. La page ci-dessous met en avant les personnes les plus actives dans les tests et la vérification des versions de ProxMenux."
   },
   "testers": {
     "heading": "Testeurs et évaluateurs",

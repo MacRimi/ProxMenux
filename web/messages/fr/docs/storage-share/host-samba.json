@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Ce que ça fait",
-    "body": "ProxMenux propose deux méthodes de montage pour n'importe quelle part de Samba : <strong>(1) Stockage Proxmox</strong> via <code>pvesm add cifs</code> — visible dans Datacenter > Stockage, monté à <code>/mnt/pve/&lt;id&gt;</code>, identifications stockées cryptées dans <code>/etc/pve/priv/storage/&lt;id&gt;.pw</code>; <strong>(2) Montage Fstab d'hôte</strong> sur un chemin que vous choisissez — persistant via <code>/etc/fstab</code>, monté avec <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> si non privilégié LXC reli-mounts peuvent écrire, identifications stockées dans un fichier <code>/etc/samba/credentials/</code> (mot de passe jamais dans <code>fstab</code>). Vous pouvez exécuter une méthode, l'autre, ou les deux."
+    "body": "ProxMenux propose deux méthodes pour un partage Samba : <strong>(1) Stockage Proxmox</strong> via <code>pvesm add cifs</code>, visible dans Datacenter > Storage et monté sur <code>/mnt/pve/&lt;id&gt;</code>. Le mot de passe est conservé en clair dans <code>/etc/pve/priv/storage/&lt;id&gt;.pw</code>, protégé par le répertoire privé accessible uniquement à root : il s’agit d’un contrôle d’accès, pas d’un chiffrement. <strong>(2) Montage fstab de l’hôte</strong> à un chemin choisi, persistant via <code>/etc/fstab</code> avec <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> pour permettre l’écriture depuis les montages liés des LXC non privilégiés. Les identifiants se trouvent dans un fichier réservé à root sous <code>/etc/samba/credentials/</code>, jamais directement dans <code>fstab</code>. Vous pouvez utiliser l’une des méthodes ou les deux."
   },
   "opening": {
     "heading": "Ouverture de l'outil",

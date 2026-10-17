@@ -1,9 +1,9 @@
 {
   "meta": {
     "title": "Host: Aggiungi directory condivisa su Host | ProxMenux Documentazione",
-    "description": "Creare una directory host pronta per i supporti di legatura LXC, con autorizzazioni che lavorano per contenitori privilegiati e non privati contemporaneamente. Sticky bit + world-rwx + ACL per eredità predefinita.",
+    "description": "Crea una directory sull’host pronta per i bind mount LXC, con permessi compatibili sia con i container privilegiati sia con quelli non privilegiati. Usa sticky bit, permessi rwx per tutti e ACL per l’ereditarietà predefinita.",
     "ogTitle": "Host: Aggiungi directory condivisa su Host | ProxMenux Documentazione",
-    "ogDescription": "Prepara una directory host per i supporti di legatura LXC con autorizzazioni compatibili con le TAC privilegiate e non private."
+    "ogDescription": "Prepara una directory sull’host per i bind mount LXC con permessi compatibili con CT privilegiati e non privilegiati."
   },
   "header": {
     "title": "Host: Aggiungi directory condivisa su Host",
@@ -81,7 +81,7 @@
     "mkdirTitle": "\"Failed to create directory\"",
     "mkdirBody": "Di solito un problema filesystem: <code>/mnt</code> è su un filesystem di sola lettura, il percorso contiene un componente che non è una directory (ad esempio digitato <code>/etc/passwd/sub</code>), o disco è pieno. Controllare con <code>df -h /mnt</code> e <code>mount | grep /mnt</code>.",
     "writeTitle": "Container non può scrivere nonostante le autorizzazioni aperte",
-    "writeBody": "Doppio controllo CT è in realtà utilizzando il supporto di lega (<code>pct config &lt;ctid&gt; | grep ^mp</code>). All'interno del CT, eseguire <code>touch /mnt/data/test-$(date +%s)</code> — se questo non riesce con il permesso negato, il montaggio può essere su un filesystem host che non onora ACL (alcuni montatori <code>ext3</code> o <code>vfat</code> più vecchi). Spostare la directory condivisa su un supporto ext4 / xfs / btrfs / zfs.",
+    "writeBody": "Verifica che il CT stia realmente usando il bind mount con <code>pct config &lt;ctid&gt; | grep ^mp</code>. Nel CT esegui <code>touch /mnt/data/test-$(date +%s)</code>. Se ricevi un errore di accesso negato, la directory potrebbe trovarsi su un filesystem dell’host che non rispetta le ACL, come alcune vecchie configurazioni <code>ext3</code> o <code>vfat</code>. Sposta la directory condivisa su un filesystem ext4, xfs, btrfs o zfs.",
     "aclTitle": "ACL comanda silenziosamente non disponibile",
     "aclBody": "Su un minimo Proxmox installare <code>setfacl</code> / <code>getfacl</code> non può essere installato. Lo script ricade con grazia (controllo <code>command -v setfacl</code>) e applica solo le autorizzazioni POSIX — che è spesso abbastanza, ma i nuovi file non erediteranno automaticamente il profilo permissivo. Installare <code>acl</code> con <code>apt-get install -y acl</code> e eseguire nuovamente lo script nella directory."
   },

@@ -1,12 +1,12 @@
 {
   "meta": {
     "title": "OCI-behållare i ProxMenux Monitor | ProxMenux",
-    "description": "Vad ProxMenux Monitor visar för en behållare installerad av OCI Manager Apps: applikations- och bildversioner, nya bilder, konsolutgång och Proxmox VE-terminalen."
+    "description": "Vad ProxMenux Monitor visar för en container installerad av OCI Manager Apps: applikations- och bildversioner, nya avbildningar, konsolutgång och Proxmox VE-terminalen."
   },
   "header": {
     "title": "I ProxMenux Monitor",
-    "description": "En behållare installerad av OCI Manager Apps visas i VMs & LXCs som alla andra LXC. Dess modal läser installationsrekordet: applikations- och bildversioner, nya bilder, konsolutgång och terminal.",
-    "section": "Appar i OCI-hanteraren"
+    "description": "En container installerad av OCI Manager Apps visas i VMs & LXCs som alla andra LXC. Dess modal läser installationsrekordet: applikations- och bildversioner, nya avbildningar, konsolutgång och terminal.",
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -15,14 +15,14 @@
         {
           "calloutInfo": {
             "title": "Skivan är källan",
-            "body": "OCI Manager Apps vet vad den installerade och var den kom ifrån. Monitorn läser det installationsrekordet istället för att prova behållaren, så data är detsamma om behållaren körs eller stoppas."
+            "body": "OCI Manager Apps vet vad den installerade och var den kom ifrån. Monitorn läser det installationsrekordet istället för att prova containern, så data är detsamma om containern körs eller stoppas."
           }
         },
         {
           "table": {
             "headers": [
               "Flik",
-              "Vilka förändringar för en OCI behållare"
+              "Vilka förändringar för en OCI container"
             ],
             "rows": [
               [
@@ -31,11 +31,11 @@
               ],
               [
                 "App",
-                "Ansökan identifieras från posten och uppdateringar spåras av bild"
+                "Ansökan identifieras från posten och uppdateringar spåras av avbildning"
               ],
               [
                 "Uppdateringar",
-                "Bilden uppdateras eller programmet ändras, med samma flöde som OCI-menyn"
+                "Avbildningen uppdateras eller programmet ändras, med samma flöde som OCI-menyn"
               ],
               [
                 "Monteringr",
@@ -61,12 +61,12 @@
               {
                 "icon": "boxes",
                 "title": "Ansökan",
-                "body": "Versionen av applikationen i bilden, läs från själva bilden: dess miljö eller <code>org.opencontainers.image.version</code>-etiketten. Det är informativt."
+                "body": "Versionen av applikationen i avbildningen, läs från själva avbildningen: dess miljö eller <code>org.opencontainers.image.version</code>-etiketten. Det är informativt."
               },
               {
                 "icon": "archive",
-                "title": "Bild",
-                "body": "Byggdatum och smält av den installerade bilden. Uppdateringen bestäms här: den installerade smältan jämförs med den som registret publicerar idag för samma tagg."
+                "title": "Avbildning",
+                "body": "Byggdatum och smält av den installerade avbildningen. Uppdateringen bestäms här: den installerade smältan jämförs med den som registret publicerar idag för samma tagg."
               }
             ]
           }
@@ -76,28 +76,28 @@
             "items": [
               "När registret publicerar en ny smältning visar kortet <strong>New image</strong> med sitt datum och smälter, även om applikationsversionen inte ändrades: en ombyggnad på en uppdaterad bas är en uppdatering.",
               "När smältorna matchar läser kortet <strong>Version</strong>.",
-              "Kortet länkar till bildförvaret: dess GitHub-projekt, eller dess Docker Hub-sida för en officiell bild.",
-              "Tillgångslänken använder behållarens LAN-adress, även för huvudmedlemmen i en multi-container-applikation, som har en andra adress på sitt privata nätverk.",
-              "Knappen <strong>Refresh data</strong> läser rekordet och registret igen. Alternativen för att söka efter ansökningar eller registrera en annan erbjuds inte: behållaren håller exakt tillämpningen av sin post."
+              "Kortet länkar till bildförvaret: dess GitHub-projekt, eller dess Docker Hub-sida för en officiell avbildning.",
+              "Tillgångslänken använder containerns LAN-adress, även för huvudmedlemmen i en multi-container-applikation, som har en andra adress på sitt privata nätverk.",
+              "Knappen <strong>Refresh data</strong> läser rekordet och registret igen. Alternativen för att söka efter ansökningar eller registrera en annan erbjuds inte: containern håller exakt tillämpningen av sin post."
             ]
           }
         },
         {
           "figure": {
             "src": "/oci-manager/monitor-app-tab.png",
-            "alt": "App-fliken för en OCI-behållare med applikationsversionen, bilden och förvaringslänken",
-            "caption": "App-fliken för en behållare installerad av OCI Manager Apps."
+            "alt": "App-fliken för en OCI-behållare med applikationsversionen, avbildningen och förvaringslänken",
+            "caption": "App-fliken för en container installerad av OCI Manager Apps."
           }
         },
         {
-          "p": "Kontrollen körs en gång om dagen med uppdateringskontrollerna av Monitor, och <strong>Refresh data</strong> kör den samtidigt. En ny bild skickas som ett meddelande via de kanaler som konfigureras i <notificationsLink>Notifications</notificationsLink>. Uppdateringen tillämpas från fliken Uppdateringar."
+          "p": "Kontrollen körs en gång om dagen med uppdateringskontrollerna av Monitor, och <strong>Refresh data</strong> kör den samtidigt. En ny avbildning skickas som ett meddelande via de kanaler som konfigureras i <notificationsLink>Notifications</notificationsLink>. Uppdateringen tillämpas från fliken Uppdateringar."
         }
       ]
     },
     {
       "id": "updates",
       "title": "Uppdateringar",
-      "intro": "För en behållare installerad av OCI Manager Apps visar fliken Uppdateringar programmet med sin installerade bild och när registret publicerar en, den nya bilden, i samma format som alla andra program. Paketet och applikationsuppdateringarna av en vanlig LXC visas inte.",
+      "intro": "För en container installerad av OCI Manager Apps visar fliken Uppdateringar programmet med sin installerade avbildning och när registret publicerar en, den nya avbildningen, i samma format som alla andra program. Paketet och applikationsuppdateringarna av en vanlig LXC visas inte.",
       "blocks": [
         {
           "table": {
@@ -108,7 +108,7 @@
             "rows": [
               [
                 "Uppdatering",
-                "Uppdateringen av <lifecycleLink>Manage installerade OCI-program</lifecycleLink> för denna behållare, i Monitor-terminalen. Det kan köra om det finns en ny bild, med ingen, ingenting ändras. I en multicontainer-applikation uppdaterar den varje medlem."
+                "Uppdateringen av <lifecycleLink>Manage installerade OCI-program</lifecycleLink> för denna container, i Monitor-terminalen. Det kan köra om det finns en ny avbildning, med ingen, ingenting ändras. I en multicontainer-applikation uppdaterar den varje medlem."
               ],
               [
                 "Ändra",
@@ -116,17 +116,17 @@
               ],
               [
                 "Återställ",
-                "Ersätter uppdatering när en operation på behållaren avbröts och öppnar sin återhämtning."
+                "Ersätter uppdatering när en operation på containern avbröts och öppnar sin återhämtning."
               ],
               [
-                "Återställ (återställd behållare)",
-                "Visas för en behållare återställd från en säkerhetskopia som inte har något kontrakt på denna värd, under <strong>Restored OCI applikation</strong>. Öppnar <lifecycleLink>recovery</lifecycleLink> i Monitor-terminalen; Uppdatera och ändra visas när den är registrerad."
+                "Återställ (återställd container)",
+                "Visas för en container återställd från en säkerhetskopia som inte har något kontrakt på denna värd, under <strong>Restored OCI applikation</strong>. Öppnar <lifecycleLink>recovery</lifecycleLink> i Monitor-terminalen; Uppdatera och ändra visas när den är registrerad."
               ]
             ]
           }
         },
         {
-          "p": "Externa förändringar, värdkataloger och multi-container-applikationer hanteras som i OCI-menyn. I en multi-container-applikation visas knapparna och alternativen endast på huvudbehållaren; de andra medlemmarna visar sin bild, en anteckning om att de uppdateras från huvudbehållaren och en knapp som öppnar den. När terminalen stängs läser bilden, rekordet och fästen igen."
+          "p": "Externa förändringar, värdkataloger och multi-container-applikationer hanteras som i OCI-menyn. I en multi-container-applikation visas knapparna och alternativen endast på huvudbehållaren; de andra medlemmarna visar sin avbildning, en anteckning om att de uppdateras från huvudbehållaren och en knapp som öppnar den. När terminalen stängs läser avbildningen, rekordet och fästen igen."
         },
         {
           "table": {
@@ -137,11 +137,11 @@
             "rows": [
               [
                 "Behåll säkerhetskopian som tas före uppdateringen",
-                "Varje uppdatering backar upp behållaren för att återställa den om uppdateringen misslyckas. Med det här alternativet hålls samma säkerhetskopiering i den valda lagringen och visas bland säkerhetskopiorna i CT; på Proxmox Backup Server skrivs en säkerhetskopia före uppdateringen."
+                "Varje uppdatering backar upp containern för att återställa den om uppdateringen misslyckas. Med det här alternativet hålls samma säkerhetskopiering i den valda lagringen och visas bland säkerhetskopiorna i CT; på Proxmox Backup Server skrivs en säkerhetskopia före uppdateringen."
               ],
               [
                 "Schemalagda uppdateringar",
-                "Bilden uppdateras vid vald tidpunkt endast när registret publicerar en ny, och endast när den är 1, 3, 7 eller 14 dagar gammal. En behållare med ändringar som gjorts utanför ProxMenux hoppas och rapporteras."
+                "Avbildningen uppdateras vid vald tidpunkt endast när registret publicerar en ny, och endast när den är 1, 3, 7 eller 14 dagar gammal. En container med ändringar som gjorts utanför ProxMenux hoppas och rapporteras."
               ]
             ]
           }
@@ -151,16 +151,16 @@
     {
       "id": "logs",
       "title": "Loggar",
-      "intro": "Fliken Logs visas endast för behållare installerade av OCI Manager Apps, mellan Mounts och Backups. Det visar standardutgången och felet i den huvudsakliga processen av bilden, samma utgång <code>docker logs</code> visar för en Docker behållare.",
+      "intro": "Fliken Logs visas endast för behållare installerade av OCI Manager Apps, mellan Mounts och Backups. Det visar standardutgången och felet i den huvudsakliga processen av avbildningen, samma utgång <code>docker logs</code> visar för en Docker behållare.",
       "blocks": [
         {
           "list": {
             "items": [
-              "Utgången hålls på värden i <code>/var/log/proxmenux/oci/VMID.console.log</code> (läge 0600), från första början och över omstart, så det kan läsas med behållaren stoppas.",
+              "Utgången hålls på värden i <code>/var/log/proxmenux/oci/VMID.console.log</code> (läge 0600), från första början och över omstart, så det kan läsas med containern stoppas.",
               "Filen roteras på 10 MB och håller tre komprimerade kopior (<code>/etc/logrotate.d/proxmenux-oci</code>).",
-              "Varje start av behållaren är markerad i utgången. Fliken visar utgången sedan den sista starten som standard; <strong>Full historia</strong> visar också de tidigare.",
+              "Varje start av containern är markerad i utgången. Fliken visar utgången sedan den sista starten som standard; <strong>Full historia</strong> visar också de tidigare.",
               "När ansökan tas bort avlägsnas dess utgång med den.",
-              "De sista 100, 500 eller 1000-linjerna visas. Medan behållaren körs, nya linjer följs live; bläddra upp pausar följande, och <strong>Follow</strong> återupptar det.",
+              "De sista 100, 500 eller 1000-linjerna visas. Medan containern körs, nya linjer följs live; bläddra upp pausar följande, och <strong>Follow</strong> återupptar det.",
               "Ett filter visar endast linjer som innehåller en text, och <strong>Download</strong> sparar linjerna laddade.",
               "Färgkoder tas bort och en linje som en progress bar redraws visas i sitt slutliga tillstånd.",
               "Fliken läser filen på varje öppen; den är inte cachad."
@@ -170,7 +170,7 @@
         {
           "calloutInfo": {
             "title": "Inloggningsuppgifter vid första starten",
-            "body": "Bilder som skriver ut ett genererat lösenord på sin första start lämnar det i denna utgång, som <code>docker logs</code> gör. Installatören läser den därifrån för att visa den i sin sammanfattning."
+            "body": "Avbildningar som skriver ut ett genererat lösenord på sin första start lämnar det i denna utgång, som <code>docker logs</code> gör. Installatören läser den därifrån för att visa den i sin sammanfattning."
           }
         },
         {
@@ -192,9 +192,9 @@
         {
           "list": {
             "items": [
-              "Skalet är en <code>/etc/passwd</code> ger rot i bilden. En bild vars rot inte har något skal eller fartyg ingen, håller standardkonsolen.",
-              "Skalet är rot i behållaren, utan ett lösenord. Vem kan öppna det beslutas av <code>VM.Console</code> tillstånd av Proxmox VE.",
-              "Monitorns terminal går in i behållaren med <code>pct enter</code>, som fungerar på samma sätt."
+              "Skalet är en <code>/etc/passwd</code> ger rot i avbildningen. En avbildning vars rot inte har något skal eller fartyg ingen, håller standardkonsolen.",
+              "Skalet är rot i containern, utan ett lösenord. Vem kan öppna det beslutas av <code>VM.Console</code> tillstånd av Proxmox VE.",
+              "Monitorns terminal går in i containern med <code>pct enter</code>, som fungerar på samma sätt."
             ]
           }
         }
@@ -205,7 +205,7 @@
       "title": "Monteringr",
       "blocks": [
         {
-          "p": "<mountsLink>Mounts</mountsLink>-fliken listar containerskivor och värdkataloger av behållaren. Användningen av en containerskiva på blocklagring som LVM-tunna läses från filsystemet på disken, som endast monteras inuti behållaren."
+          "p": "<mountsLink>Mounts</mountsLink>-fliken listar containerskivor och värdkataloger av containern. Användningen av en containerskiva på blocklagring som LVM-tunna läses från filsystemet på disken, som endast monteras inuti containern."
         }
       ]
     }

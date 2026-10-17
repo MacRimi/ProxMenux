@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "Sobre a Documentação ProxMenux",
+    "title": "Sobre o projeto | Documentação ProxMenux",
     "description": "Sobre o ProxMenux: objetivos do projeto, colaboradores, FAQ e Código de Conduta. Ferramenta de gerenciamento orientada por menus de código aberto para Proxmox VE 8+, construída e mantida pela MacRimi com uma pequena equipe de testadores e colaboradores.",
-    "ogTitle": "Sobre a Documentação ProxMenux",
+    "ogTitle": "Sobre o projeto | Documentação ProxMenux",
     "ogDescription": "Sobre ProxMenux — ferramenta de gestão orientada por menus de código aberto para Proxmox VE 8+."
   },
   "header": {

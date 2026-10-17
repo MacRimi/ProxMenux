@@ -53,13 +53,13 @@
         "href": "/docs/storage-share/host-nfs",
         "icon": "Network",
         "title": "Adicionar a partilha NFS como armazenamento Proxmox",
-        "description": "Registre uma exportação externa de NFS como armazenamento Proxmox via pvesm adicione nfs. O Proxmox lida com a montagem — não são necessárias entradas fstab."
+        "description": "Registe uma exportação NFS externa como armazenamento Proxmox com pvesm add nfs. O Proxmox trata da montagem, sem entradas adicionais em fstab."
       },
       {
         "href": "/docs/storage-share/host-samba",
         "icon": "Share2",
         "title": "Adicionar a partilha Samba como armazenamento Proxmox",
-        "description": "Registre um compartilhamento externo de Samba / CIFS como armazenamento Proxmox via pvesm adicionar cifs. Proxmox lida com a montagem e credenciais."
+        "description": "Registe uma partilha Samba ou CIFS externa como armazenamento Proxmox com pvesm add cifs. O Proxmox trata da montagem e das credenciais."
       },
       {
         "href": "/docs/storage-share/host-iscsi",
@@ -86,7 +86,7 @@
     "intro": "A principal ferramenta para compartilhar pastas entre o host Proxmox e os recipientes LXC. Ele usa <code>pct set -mpN</code> para vincular-montar um diretório host no recipiente, e lida com as peculiaridades de permissão de CTs sem privilégios no lado host (nenhum grupo ou usuários são criados dentro do recipiente).",
     "card": {
       "title": "LXC pontos de montagem (Host ↔ CT)",
-      "description": "Montar qualquer diretório host em um container LXC através do conjunto pct -mpN. Funciona com CTs privilegiadas e desprivilegiadas; oferece chmod o+rwx / ACLs na pasta host e corrige as montagens CIFS / NFS existentes quando necessário."
+      "description": "Disponibilize qualquer diretório do host num contentor LXC por bind mount com pct set -mpN. Funciona com CT com ou sem privilégios, oferece chmod o+rwx e ACL para o diretório no host e corrige montagens CIFS ou NFS existentes quando necessário."
     }
   },
   "lxcNet": {

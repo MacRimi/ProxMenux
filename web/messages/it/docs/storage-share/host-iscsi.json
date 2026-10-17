@@ -1,9 +1,9 @@
 {
   "meta": {
     "title": "Host: Aggiungi il target iSCSI come storage Proxmox | Documentazione ProxMenux",
-    "description": "Registrare un obiettivo iSCSI come storage Proxmox utilizzando ProxMenux. Maniglie installazione open-iscsi, scoperta portale tramite sendtargets, selezione target e pvesm aggiungere iscsi. Fornisce dispositivi di blocco raw per immagini disco VM.",
+    "description": "Registra un target iSCSI come storage Proxmox con ProxMenux. La procedura installa open-iscsi, rileva il portale tramite sendtargets, consente di scegliere il target ed esegue pvesm add iscsi. Fornisce dispositivi a blocchi raw per le immagini disco delle VM.",
     "ogTitle": "Host: Aggiungi il target iSCSI come storage Proxmox | Documentazione ProxMenux",
-    "ogDescription": "Registrare un obiettivo iSCSI come storage Proxmox con scoperta guidata. Utilizza pvesm aggiungere iscsi e fornisce dispositivi di blocco grezzi per dischi VM."
+    "ogDescription": "Registra un target iSCSI come storage Proxmox con rilevamento guidato. Usa pvesm add iscsi e fornisce dispositivi a blocchi raw per i dischi delle VM."
   },
   "header": {
     "title": "Host: Aggiungi il target iSCSI come storage Proxmox",

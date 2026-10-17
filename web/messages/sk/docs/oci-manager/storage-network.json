@@ -288,8 +288,8 @@
               ],
               [
                 "Kontrakt inštancie",
-                "Nie",
-                "<code>/usr/local/share/proxmenux/oci/instances/VMID/</code> na hostiteľovi"
+                "Áno, kópia uložená v CT",
+                "<code>/.proxmenux/oci-record.json</code> v CT; ďalšie kópie hostiteľa a klastra sa uchovávajú samostatne"
               ],
               [
                 "Aplikácia s viacerými kontajnermi",

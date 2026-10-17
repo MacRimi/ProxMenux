@@ -110,7 +110,7 @@
       "Kataloggestützte LXC-Registrierung kann eine Kategorie vorfüllen, bleibt aber editierbar.",
       "Benutzerdefinierte Kategorienamen können aus dem gleichen Selektor erstellt und dann vom Filter wiederverwendet werden.",
       "Kategoriefarben sind deterministisch und passen sich dem hellen oder dunklen Thema an. Lila und rote Bereiche sind für Update- und Gefahrenzustände reserviert.",
-      "Bei Docker-Weblinks stimmt ProxMenux die Karte mit ihrem Container oder Bild überein und meldet den Aktualisierungsstatus dieses Bildes. Ein Docker Engine-Update verbleibt im LXC <updatesLink>Updates tab</updatesLink>."
+      "Bei Docker-Weblinks stimmt ProxMenux die Karte mit ihrem Container oder Image überein und meldet den Aktualisierungsstatus dieses Images. Ein Docker Engine-Update verbleibt im LXC <updatesLink>Updates tab</updatesLink>."
     ]
   },
   "persistence": {
@@ -143,7 +143,7 @@
       },
       {
         "problem": "Der lila Pfeil bezieht sich auf das falsche Docker Update",
-        "resolution": "Überprüfen Sie den Weblink-Namen und die Beschreibung, damit sie mit dem beabsichtigten Container oder Bild übereinstimmen können."
+        "resolution": "Überprüfen Sie den Weblink-Namen und die Beschreibung, damit sie mit dem beabsichtigten Container oder Image übereinstimmen können."
       },
       {
         "problem": "Apps öffnen sich zuerst statt Systemübersicht",

@@ -14,7 +14,7 @@
   },
   "why": {
     "heading": "Pourquoi cela existe",
-    "body": "Les optimisations post-installation obtiennent parfois des améliorations — un meilleur réglage du système, une limite plus stricte de Logrotate, une nouvelle taille de Log2RAM heuristique, un correctif pour un cas de bord rapporté par un testeur. Sans un chemin de mise à jour, l'opérateur n'avait que deux options : ré-exécuter manuellement le script post-installation (qui ré-applique <em>chaque optimisation</em>) ou sauter complètement l'amélioration. Appliquer les mises à jour disponibles est le milieu de terrain: une per-optimisation, opt-in re-run qui soulève seulement les versions qui ont réellement déplacé."
+    "body": "Les optimisations après installation peuvent être améliorées : meilleur réglage sysctl, limite Logrotate plus stricte, nouvelle méthode de dimensionnement de Log2RAM ou correction d’un cas particulier signalé par un testeur. Sans mécanisme de mise à jour, il fallait relancer manuellement le script après installation, qui réapplique <em>toutes</em> les optimisations, ou renoncer à l’amélioration. Appliquer les mises à jour disponibles permet de relancer volontairement chaque optimisation dont la version a changé."
   },
   "detection": {
     "heading": "Comment les mises à jour sont détectées",
@@ -57,7 +57,7 @@
     "steps": [
       {
         "title": "Réexécute la fonction post-installation",
-        "body": "La fonction d'optimisation choisie est ré-exécutée contre l'hôte. Parce que chaque fonction post-installation est <strong>idempotent</strong>, ré-exécutant il ne duplique pas la configuration — il écrase la version précédente avec la nouvelle (fichiers systèmes, drop-ins, unités de service, etc.)."
+        "body": "La fonction de l’optimisation sélectionnée est réexécutée sur l’hôte. Comme chaque fonction après installation est <strong>idempotente</strong>, la relancer ne duplique pas la configuration : elle remplace la version précédente par la nouvelle, notamment les fichiers sysctl, les fichiers complémentaires et les unités de service."
       },
       {
         "title": "Rénove le registre",

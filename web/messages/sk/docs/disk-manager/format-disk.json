@@ -67,7 +67,7 @@
         "useCase": "Disk pripravený na použitie s jednou novou partíciou a novým súborovým systémom."
       }
     ],
-    "fullFormatOutro": "<strong>0 Celý formát</strong> pokračuje dvoma ďalšími dialógmi:",
+    "fullFormatOutro": "<strong>Úplné formátovanie</strong> pokračuje dvoma ďalšími dialógmi:",
     "fullFormatItems": [
       "<strong>Súborový systém</strong> — <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (prenosné) alebo <code>btrfs</code>. Chýbajúce nástroje (napríklad <code>mkfs.btrfs</code>) zrušiť jasným odkazom.",
       "<strong>Label</strong>"

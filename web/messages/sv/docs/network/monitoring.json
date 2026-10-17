@@ -114,7 +114,7 @@
     "refusedTitle": "iperf3 client: \"unable to connect to server: Connection refused\"",
     "refusedBody": "Antingen kör servern inte, eller dess brandvägg blockerar TCP 5201. Bekräfta på servern: <code>ss -tlnp | grep 5201</code> - ska visa iperf3-lyssning. Om du lyssnar men klienten fortfarande misslyckas, kontrollera brandväggen mellan de två värdarna.",
     "slowTitle": "iperf3 reports way less than the expected link speed",
-    "slowBody": "Vanliga orsaker, för sannolikhet: (1En av värdarna är flaskhalsad på CPU - Försök <code>iperf3 -c &lt;target&gt; -P 4</code> för att använda flera kärnor; (2Vägen går igenom en långsammare länk (gigabit switch i mitten av två 10 GbE NIC); (NIC); (NIC)3MTU felmatch - kontrollera <code>ip link show</code> i båda ändarna; ()4NIC offloading inaktiverad - se <em>Inaktivera NIC Offloading</em> Community script om du har ett Intel e1000e-kort.",
+    "slowBody": "Vanliga orsaker i sannolikhetsordning: (1) en av värdarnas CPU begränsar hastigheten — prova <code>iperf3 -c &lt;target&gt; -P 4</code> för att använda flera kärnor; (2) trafiken passerar en långsammare länk, till exempel en gigabitswitch mellan två 10 GbE-kort; (3) olika MTU — kontrollera <code>ip link show</code> i båda ändarna; (4) avstängd NIC offloading — se communityskriptet <em>Disable NIC Offloading</em> om du har ett Intel e1000e-kort.",
     "noTrafficTitle": "iftop / iptraf-ng visar ingen trafik för en upptagen värd",
     "noTrafficBody": "Standardfångst är på det första upptäckta gränssnittet. Ange rätt från skalet: <code>iftop -i vmbr0</code> eller <code>iptraf-ng -i vmbr0</code>. Menyn launcher använder standarden; för icke-standardgränssnitt, kör från en konsol."
   },

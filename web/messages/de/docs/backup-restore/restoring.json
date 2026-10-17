@@ -85,7 +85,7 @@
       },
       {
         "class": "gefährlich",
-        "detail": "Pfade, die <strong>NOT auf dem laufenden System</strong> angewendet werden - ein Live-Schreiben könnte den Zustand verfälschen oder die aktive Verbindung abbrechen. Diese werden im ausstehenden Set inszeniert und vom Post-Boot-Dispatcher nach dem Neustart geschrieben, wenn der Cluster aktiviert ist, das System jedoch noch nicht vollständig in Gebrauch ist. Beispiele: <code>/etc/pve</code> (pmxcfs ist eine Live-FUSE-Halterung; direkt in sie schreiben umgeht sie), <code>/var/lib/pve-cluster</code> (Live-Clusterdaten), <code>/etc/network</code> (könnte die Schnittstelle, an die der Benutzer über SSH angeschlossen ist, neu konfigurieren und die Sitzung ablegen)."
+        "detail": "Pfade, die <strong>NICHT im laufenden System wiederhergestellt werden</strong>: Ein Schreibzugriff könnte dort den Zustand beschädigen oder die aktive Verbindung unterbrechen. Sie werden vorgemerkt und nach dem Neustart vom Post-Boot-Dispatcher geschrieben, wenn der Cluster verfügbar ist, das System aber noch nicht vollständig genutzt wird. Beispiele sind <code>/etc/pve</code> (pmxcfs ist ein aktiver FUSE-Mount; direktes Schreiben würde ihn umgehen), <code>/var/lib/pve-cluster</code> (aktive Clusterdaten) und <code>/etc/network</code> (könnte die für die SSH-Verbindung verwendete Schnittstelle neu konfigurieren und dadurch die Sitzung trennen)."
       }
     ]
   },

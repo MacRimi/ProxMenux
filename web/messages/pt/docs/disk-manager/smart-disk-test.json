@@ -124,7 +124,7 @@
       {
         "href": "/docs/help-info/zfs-commands",
         "label": "Comandos de gerenciamento ZFS",
-        "tail": " — limpeza em zpool para a camada de armazenamento equivalente aos ensaios de SMART."
+        "tail": " — zpool scrub, o equivalente aos testes SMART ao nível do armazenamento."
       },
       {
         "href": "/docs/monitor/dashboard/storage",

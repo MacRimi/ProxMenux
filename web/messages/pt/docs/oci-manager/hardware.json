@@ -6,7 +6,7 @@
   "header": {
     "title": "Dispositivos e aceleração",
     "description": "GPU, NVIDIA, Coral, USB, FUSE e dispositivos de bloqueio tornam-se os recursos de Proxmox VE nativos validados do recipiente.",
-    "section": "Aplicações do gestor OCI"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {

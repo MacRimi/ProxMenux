@@ -63,7 +63,7 @@
     "intro": "Inštalátor pustí jednotku na <code>/etc/systemd/system/proxmenux-monitor.service</code>. Štandardný obsah:",
     "items": [
       "<strong><code>User=root</code></strong> Vyžadované: SMART, <code>pvesh</code>, rozsahy časopisov, ZFS príkazy a webový terminál všetky potrebujú koreň.",
-      "<strong>0<code>Restart=on-failure</code></strong> s 10-sekundový spätný-off",
+      "<strong><code>Restart=on-failure</code></strong> s 10-sekundovým odstupom — po ukončení s nenulovým návratovým kódom sa služba automaticky spustí znova.",
       "<strong><code>After=network.target</code></strong> A čaká na host sieť stack byť on-line."
     ],
     "inspectTitle": "Skontrolujte živé jednotky"
@@ -255,7 +255,7 @@
       "<strong>Strážcovia</strong> push eventy: <code>JournalWatcher</code> chvosty systémového časopisu, <code>TaskWatcher</code> prieskumy Zoznam úloh Proxmox, <code>ProxmoxHookWatcher</code> reaguje na zálohovanie / replikácia / snímky háčiky, a <code>PollingCollector</code> spracováva pomalé zdroje dát.",
       "<strong>Templates</strong> premeniť udalosť na (titul, telo) pár. Rovnaká šablóna môže bežať cez nakonfigurovaného poskytovateľa AI (OpenAI / Antropic / Gemini / Groq / Ollama / OpenRouter), aby vytvoril prepis v jednoduchom jazyku; obe verzie sú uložené v <code>notification_history</code>.",
       "<strong>Kanály</strong> doručovanie správ: Telegram, Discord, e-mail, Gotify, Pushover a Apprise (viackanálové). Každý je implementovaný v <code>notification_channels.py</code> za to isté <code>create_channel()</code> / <code>send()</code> rozhranie, takže pridanie nového kanála je jedna trieda.",
-      "<strong>0 šifrovanie.</strong> Citlivé nastavenia (<code>telegram.bot_token</code>, <code>discord.webhook_url</code>, <code>pushover.user_key</code>, <code>pushover.api_token</code>, <code>ai_api_key_*</code>, <code>email.password</code>) sú zašifrované kľúčom v <code>.notification_key</code> pred napísaním do DB a sú maskované v rozhraní."
+      "<strong>Šifrovanie.</strong> Citlivé nastavenia (<code>telegram.bot_token</code>, <code>discord.webhook_url</code>, <code>pushover.user_key</code>, <code>pushover.api_token</code>, <code>ai_api_key_*</code>, <code>email.password</code>) sa pred zápisom do databázy zašifrujú kľúčom z <code>.notification_key</code> a v rozhraní sa zobrazujú maskované."
     ],
     "linksFooter": "Prepínače pre jednotlivé udalosti, prepisy kanálov a konfigurácia AI sú uvedené v <notifLink>Nastavenia → Upozornenia</notifLink> a <aiLink>Nastavenia → Asistent AI</aiLink>."
   },

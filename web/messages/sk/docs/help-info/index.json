@@ -40,7 +40,7 @@
         "icon": "HardDrive",
         "href": "/docs/help-info/storage-commands",
         "title": "Úložiská a disky",
-        "description": "lsblk, blkid, smartctl, informácie o montáži, stav pvesm, príkazy LVM."
+        "description": "lsblk, blkid, smartctl, informácie o pripojených súborových systémoch, pvesm status a príkazy LVM."
       },
       {
         "icon": "Network",
@@ -70,7 +70,7 @@
         "icon": "Archive",
         "href": "/docs/help-info/backup-commands",
         "title": "Zálohovanie a obnova",
-        "description": "vzdump, qmrestore / pct obnoviť, Proxmox Backup Server pomocníci, snímkové operácie."
+        "description": "vzdump, qmrestore / pct restore, nástroje Proxmox Backup Server a operácie so snímkami."
       },
       {
         "icon": "Wrench",

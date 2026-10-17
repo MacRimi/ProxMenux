@@ -66,7 +66,7 @@
     "wireBackupNote": "The <code>backup=0</code> flag excludes this mount point from <code>vzdump</code> backups — usually the right call for large external drives that are the host's target storage rather than its data.",
     "restartHeading": "1.5 Restart the LXC and set permissions",
     "restartBody": "Restart the CT to apply the mount point:",
-    "restartCode": "pct restart '<'CTID'>'",
+    "restartCode": "pct reboot '<'CTID'>'",
     "permsBody": "Inside the LXC, give the directory permissions appropriate for the user that will own the share:",
     "permsCode": "# Inside the container\nmkdir -p /mnt/lxc_USB\nchown -R proxmenux:proxmenux /mnt/lxc_USB\nchmod 770 /mnt/lxc_USB",
     "permsNoteTitle": "Note",
@@ -109,7 +109,7 @@
   "troubleshoot": {
     "heading": "Troubleshooting",
     "items": [
-      "<strong><code>pct restart</code> fails with \"device not found\":</strong> the device path in <code>mp0</code> doesn't exist on the host. Check with <code>ls -l /dev/disk/by-id/</code> and update the path.",
+      "<strong><code>pct reboot</code> fails with \"device not found\":</strong> the device path in <code>mp0</code> doesn't exist on the host. Check with <code>ls -l /dev/disk/by-id/</code> and update the path.",
       "<strong>CT starts but <code>/mnt/lxc_USB</code> is empty:</strong> the disk isn't mounted inside the CT. Check from the host: <code>pct exec '<'CTID'>' -- mount | grep lxc_USB</code>. If absent, the mount point in the config is wrong.",
       "<strong>Samba authenticates but writes fail with \"Permission denied\":</strong> Linux permissions on the directory don't allow the Samba user to write. Re-check <code>chown</code> / <code>setfacl</code> in section 1.5 / 2.3.",
       "<strong>Share doesn't appear in network browsers but <code>smb://'<'ip'>'/lxc_usb</code> works:</strong> browseability over the LAN depends on NetBIOS / WS-Discovery. Add <code>nmbd</code>: <code>apt-get install -y samba-common-bin</code> and ensure <code>nmbd</code> is enabled.",

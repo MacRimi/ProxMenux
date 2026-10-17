@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Installation NVIDIA Chauffeurs allumés Proxmox VE 9 (procédure manuelle) ProxMenux Guides",
+    "title": "Installer les pilotes NVIDIA sur Proxmox VE 9 — procédure manuelle | Guides ProxMenux",
     "description": "Installation et configuration manuelles des pilotes NVIDIA sur un hôte Proxmox VE 9, ainsi que le câblage LXC nécessaire pour exposer le GPU à un ou plusieurs conteneurs. Couvre l'installation du pilote, le service de persistance, le patch optionnel NVENC et la configuration par conteneur.",
     "ogTitle": "Installation des pilotes NVIDIA sur Proxmox VE 9 (procédure manuelle)",
     "ogDescription": "Pilote manuel NVIDIA installé sur PVE 9 — pilote hôte, service de persistance, correctif NVENC optionnel et câblage par conteneur LXC."

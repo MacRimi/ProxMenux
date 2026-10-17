@@ -18,7 +18,7 @@
     "writesTitle": "Ciò che ProxMenux aggiunge a .bashrc",
     "writesOutro": "Il blocco è delimitato dai marcatori <code>PMX_CORE_BASHRC</code>. Eseguire nuovamente lo script sostituisce il blocco precedente invece di duplicarlo. L'originale <code>.bashrc</code> è supportato una volta a <code>/root/.bashrc.bak</code>, e una linea <code>source /root/.bashrc</code> è aggiunta a <code>/root/.bash_profile</code> così il prompt si applica anche sulle shell di login (ad esempio dopo <code>su -</code>).",
     "rootTitle": "Riguarda solo la radice",
-    "rootBody": "La personalizzazione mira alla shell del conto root. Altri utenti che crei sull'host mantengono i propri default. Se si amministra Proxmox esclusivamente sul web UI e non utilizzare mai il guscio, questa opzione è pura estetica e si può saltare."
+    "rootBody": "La personalizzazione si applica alla shell dell’account root. Gli altri utenti creati sull’host mantengono le proprie impostazioni predefinite. Se amministri Proxmox esclusivamente dall’interfaccia web e non usi mai la shell, questa opzione ha solo un effetto estetico e puoi saltarla."
   },
   "motd": {
     "heading": "Imposta un banner MOTD personalizzato",

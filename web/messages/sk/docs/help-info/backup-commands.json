@@ -1,15 +1,15 @@
 {
   "meta": {
-    "title": "Proxmox Backup Commands Vzdump, qmrestore, pct obnoviť ProxMenux",
-    "description": "Referencie Proxmox VE zálohovanie a obnovenie príkazov: vzdump pre VMs a LXC kontajnery, qmrestore pre VMs, PCT obnovenie pre kontajnery, plánované zálohy v /etc/pve/jobs.cfg, hákové skripty a vylúčiť cesty.",
-    "ogTitle": "Proxmox Backup Commands",
-    "ogDescription": "Odkaz na vzdump, qmrestore a pct obnoviť príkazy pre zálohovanie a obnovenie Proxmox VMs a LXC kontajnery.",
+    "title": "Príkazy zálohovania Proxmox — vzdump, qmrestore, pct restore | ProxMenux",
+    "description": "Prehľad príkazov zálohovania a obnovy v Proxmox VE: vzdump pre VM a kontajnery LXC, qmrestore pre VM, pct restore pre kontajnery, plánované zálohy v /etc/pve/jobs.cfg, hook skripty a vylúčené cesty.",
+    "ogTitle": "Príkazy zálohovania Proxmox — vzdump, qmrestore, pct restore",
+    "ogDescription": "Prehľad príkazov vzdump, qmrestore a pct restore na zálohovanie a obnovu VM a kontajnerov LXC v Proxmoxe.",
     "twitterTitle": "Príkazy pre zálohovanie Proxmox ProxMenux",
-    "twitterDescription": "vzdump, qmrestore a pct obnoviť príkazy pre zálohovanie a obnovenie Proxmox VMs a kontajnery."
+    "twitterDescription": "Príkazy vzdump, qmrestore a pct restore na zálohovanie a obnovu VM a kontajnerov Proxmox."
   },
   "header": {
     "title": "Zálohovanie a obnova",
-    "description": "Cured reference of vzdump, qmrestore and pct return commands for Proxmox backup workflows. Zahŕňa plánovanie, pokročilé možnosti, ako sú hákové skripty / vylúčiť cesty / I/O priority, a správu zálohovania súborov.",
+    "description": "Prehľad príkazov vzdump, qmrestore a pct restore pre zálohovanie v Proxmoxe. Obsahuje plánovanie, pokročilé možnosti ako hook skripty, vylúčené cesty a prioritu I/O, ako aj správu súborov záloh.",
     "section": "Pomoc a informácie"
   },
   "intro": {

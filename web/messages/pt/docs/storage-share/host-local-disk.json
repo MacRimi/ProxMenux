@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Máquina: Adicionar o disco local como armazenamento Proxmox ProxMenux Documentação",
-    "description": "Formatar um SATA local / SAS / NVMe disco em uma máquina Proxmox e registrá- lo como diretório Proxmox ou ZFS pool armazenamento. Detecção segura de disco, entrada de confirmação destrutiva-op, fstab baseado em UUID, ZFS pool criação e pvesm adicionar dir / zfspool sob o capô.",
+    "description": "Formate um disco SATA, SAS ou NVMe local num host Proxmox e registe-o como armazenamento de tipo diretório ou pool ZFS. Inclui seleção segura do disco, confirmação das operações destrutivas, fstab por UUID, criação do pool ZFS e utilização de pvesm add dir / zfspool.",
     "ogTitle": "Máquina: Adicionar o disco local como armazenamento Proxmox ProxMenux Documentação",
     "ogDescription": "Formatar um disco local e registrá- lo como diretório Proxmox ou ZFS pool armazenamento com um fluxo guiado e filtrado por segurança."
   },
@@ -50,8 +50,8 @@
       },
       {
         "label": "Suporta tipos de conteúdo",
-        "dir": "imagens, backup, iso, vztmpl, trechos, rootdir",
-        "zfs": "imagens, somente rootdir (armazenamento de blocos)"
+        "dir": "images, backup, iso, vztmpl, snippets, rootdir",
+        "zfs": "apenas images e rootdir (armazenamento em blocos)"
       },
       {
         "label": "Melhor para",
@@ -104,7 +104,7 @@
     "rows": [
       {
         "preset": "Armazenamento VM",
-        "content": "imagens, backup",
+        "content": "images,backup",
         "use": "Uma loja de disco dedicada VM que também mantém backups dessas VMs nas proximidades."
       },
       {

@@ -185,7 +185,7 @@
         "name": "Microsoft Authenticator",
         "href": "https://www.microsoft.com/en-us/security/mobile-authenticator-app",
         "platforms": "iOS, Android",
-        "notes": "Backup del conto Microsoft. Inoltre gestisce le notifiche push MS se li usi al lavoro."
+        "notes": "Backup tramite account Microsoft. Gestisce anche le notifiche push Microsoft, se le usi al lavoro."
       },
       {
         "name": "Authy",
@@ -243,7 +243,7 @@
       }
     ],
     "backupTitle": "Quale \"backup\" conta davvero per",
-    "backupBody": "Se si perde il dispositivo che ha l'autenticazione su di esso, gli unici modi indietro sono (1) un codice di backup salvato quando è abilitato 2FA, o2) un backup della volta dell'autentico. Le applicazioni con sincronizzazione cloud (Google Auth, Microsoft Auth, Authy, Apple Passwords, Ente, 2FAS, Bitwarden, 1Password) possono ripristinare su un nuovo dispositivo. App senza cloud (Aegis, Raivo, FreeOTP+) bisogno di un file di esportazione crittografato che hai copiato in un posto sicuro. O lavori di avvicinamento — il caso cattivo è \"nessun backup affatto\".",
+    "backupBody": "Se perdi il dispositivo con l’app di autenticazione, puoi rientrare solo con (1) un codice di recupero salvato quando hai attivato 2FA oppure (2) un backup dell’archivio dell’app di autenticazione. Le app con sincronizzazione cloud, come Google Auth, Microsoft Auth, Authy, Apple Passwords, Ente, 2FAS, Bitwarden e 1Password, possono ripristinare i dati su un nuovo dispositivo. Le app senza cloud, come Aegis, Raivo e FreeOTP+, richiedono un’esportazione cifrata che hai conservato in un luogo sicuro. Entrambi i metodi vanno bene; il problema è non avere alcun backup.",
     "setupTitle": "Impostazione passo passo dal cruscotto",
     "setupImageAlt": "Schermo di configurazione 2FA con codice QR e codici di backup",
     "setupImageCaption": "La finestra di dialogo di configurazione 2FA — codice QR, segreto Base32 (per l'ingresso manuale), e i dieci codici di backup una volta. I codici sono visualizzati solo qui; se si chiude la finestra di dialogo senza copiarli, sono andati.",

@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "Cross-kernel obnoviť smerovú detekciu, bezpečné-subset filter, hydratácia ProxMenux",
+    "title": "Obnova medzi rôznymi jadrami — rozpoznanie smeru, bezpečný výber a prispôsobenie | ProxMenux",
     "description": "Ako ProxMenux obnovuje zálohovanie hostiteľa na cieľ bežiaci inú hlavnú verziu jadra. Dokumenty o tom, ako sa zistí smer nesúladu, bezpečný subsetový filter, ktorý preskočí cesty kritické pre topánku, keď cieľ spustí novšie jadro ako záloha, a štvorfázová agnostikovaná hydratácia jadra, ktorá oživuje užívateľské ladenie ako IOMMU, ID VFIO a vlastné cmdline žetóny bez kopírovania jadra viazanej doslova.",
     "ogTitle": "ProxMenux Zálohovanie",
     "ogDescription": "Smer-aware cross-kernel obnoviť s bezpečným subsetovým filtrom a jadra-agnostická hydratácia.",
-    "twitterTitle": "Cross-kernel restoria ProxMenux",
+    "twitterTitle": "Obnova medzi rôznymi jadrami | ProxMenux",
     "twitterDescription": "Ako ProxMenux spracováva obnovenie, keď sa cieľové jadro líši od zálohy."
   },
   "header": {

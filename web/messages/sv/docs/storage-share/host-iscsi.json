@@ -1,9 +1,9 @@
 {
   "meta": {
     "title": "Värd: Lägg till iSCSI-mål som Proxmox-lagring | ProxMenux Dokumentation",
-    "description": "Registrera ett iSCSI-mål som Proxmox-lagring med ProxMenux. Handles open-iscsi installera, portal upptäckt via sendtargets, målval och pvesm lägga till iscsi. Ger rå block enheter för VM disk bilder.",
+    "description": "Registrera ett iSCSI-mål som Proxmox-lagring med ProxMenux. Verktyget installerar open-iscsi, hittar portalen via sendtargets, låter dig välja mål och kör pvesm add iscsi. Det ger råa blockenheter för VM-diskavbildningar.",
     "ogTitle": "Värd: Lägg till iSCSI-mål som Proxmox-lagring | ProxMenux Dokumentation",
-    "ogDescription": "Registrera ett iSCSI-mål som Proxmox-lagring med guidad upptäckt. Använder pvesm lägga till iscsi och ger rå block enheter för VM diskar."
+    "ogDescription": "Registrera ett iSCSI-mål som Proxmox-lagring med guidad upptäckt. Använder pvesm add iscsi och ger råa blockenheter för VM-diskar."
   },
   "header": {
     "title": "Värd: Lägg till iSCSI-mål som Proxmox-lagring",
@@ -106,7 +106,7 @@
       {
         "href": "/docs/storage-share/host-nfs",
         "label": "NFS delas som Proxmox lagring",
-        "tail": " — fil-nivå alternativ. Enkelt att ställa in, mer flexibel (backup / ISO / tmpl / bilder), något långsammare för levande VM-skivor."
+        "tail": " — fil-nivå alternativ. Enkelt att ställa in, mer flexibel (backup / ISO / tmpl / avbildningar), något långsammare för levande VM-skivor."
       },
       {
         "href": "/docs/storage-share/host-samba",

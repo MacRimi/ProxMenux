@@ -159,7 +159,7 @@
         "items": [
           {
             "tool": "IOMMU / VFIO",
-            "restores": "Remove módulos vfio de /etc/modules, os novos / radeon / nvidia entradas da lista negra, e intel_iommu=on / amd_iommu=on / iommu=pt / pcie_acs_override parâmetros de /etc/kernel/cmdline (ZFS) ou GRUB. Reconstrui initramfs."
+            "restores": "Remove os módulos vfio de /etc/modules, as entradas de bloqueio dos controladores nouveau / radeon / nvidia e os parâmetros intel_iommu=on / amd_iommu=on / iommu=pt / pcie_acs_override de /etc/kernel/cmdline (ZFS) ou do GRUB. Reconstrói initramfs."
           },
           {
             "tool": "Correcções AMD CPU (Ryzen/EPYC)",

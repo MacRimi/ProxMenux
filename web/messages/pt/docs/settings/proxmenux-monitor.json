@@ -96,7 +96,7 @@
     "missingBody": "O Monitor não está registado na systemd. Confirme com <code>systemctl list-unit-files | grep proxmenux-monitor</code> — se não houver saída, reinstale o ProxMenux do instalador oficial com a versão mais recente e escolha a opção Monitor durante a instalação.",
     "unreachableTitle": "Serviço ativado, mas o URL não é acessível",
     "unreachableBody": "A saída de status Configurações lhe dá o IP. Confirmar:",
-    "unreachableCmd": "ss - tlnp 8008                Alguma coisa está a ouvir?\njournalctl - u proxmenux- monitor - n 100 --no-pager  # erros recentes\ncacho -sI http://localhost:8008      # Alcance local",
+    "unreachableCmd": "ss -tlnp | grep 8008                # is anything listening?\njournalctl -u proxmenux-monitor -n 100 --no-pager  # recent errors\ncurl -sI http://localhost:8008      # local reachability",
     "unreachableOutro": "Se o localhost funcionar mas o externo não funcionar, verifique o firewall do seu host (<code>pve-firewall</code> ou nftables) para TCP 8008.",
     "stopsTitle": "Ativado o serviço, mas pára alguns segundos depois",
     "stopsBody": "Na maioria das vezes, um conflito de portas (algo mais no 8008) ou uma verificação de dependência falhando. A revista dirá qual: <code>journalctl -u proxmenux-monitor.service -b</code>."

@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "Restauração transversal — detecção de direção, filtro seguro, hidratação ProxMenux",
+    "title": "Restauro entre kernels diferentes — deteção, filtragem segura e adaptação | ProxMenux",
     "description": "Como ProxMenux restaura um backup de host em um alvo executando uma versão diferente do kernel principal. Documenta como a direção do descompasso é detectada, o filtro seguro-subset que salta caminhos de inicialização-críticos quando o alvo executa um kernel mais novo do que o backup, e a hidratação quatro fases do kernel-agnóstico que reaplica a sintonia do usuário como IOMMU, IDs VFIO e tokens personalizados cmdline sem copiar arquivos de kernel-ligados verbatim.",
     "ogTitle": "ProxMenux Backup – restauração e hidratação do kernel cruzado",
     "ogDescription": "Direção-consciente cross-kernel restaurar com um filtro seguro-subset e hidratação kernel-agnóstico.",
-    "twitterTitle": "Restauração do kernel cruzado (ProxMenux)",
+    "twitterTitle": "Restauro entre kernels diferentes | ProxMenux",
     "twitterDescription": "Como ProxMenux lida com uma restauração quando o kernel alvo difere do backup."
   },
   "header": {

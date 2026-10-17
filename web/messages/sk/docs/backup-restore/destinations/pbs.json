@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Proxmox Backup Server destinácia, checking, recovery ProxMenux",
+    "title": "Cieľ Proxmox Backup Server — repozitár, šifrovanie a obnova | ProxMenux",
     "description": "Cieľ PBS píše zálohy ProxMenux ako zálohy PBS. Archív dokumentov auto-objav z /etc/pve/storage.cfg, manuálna konfigurácia PBS, príkaz .pxar nahrávanie, model šifrovania súborov na strane klienta s voliteľnou passphrase-wrapped escrow, a viaczdrojový súbor obnovenie na čerstvom hostiteľovi.",
     "ogTitle": "ProxMenux Zálohovanie Proxmox Backup Server Miesto určenia",
     "ogDescription": "Ako ProxMenux píše zálohovanie hostiteľa na Proxmox Backup Server s šifrovaním a obnovou súborov na strane klienta.",

@@ -223,7 +223,7 @@
   "storageExclusions": {
     "heading": "Ausschlüsse von Remote-Speicher",
     "imageAlt": "Remote Storage Exclusions-Karte mit PBS-Cloud-, PBS- und PBS2-Speichern mit Health and Alerts-Schaltern pro Zeile",
-    "imageCaption": "Per-Lager <em>Health</em> und <em>Alerts</em> umschalten. Speicher mit beiden Umschaltern hören auf, gegen den Gesundheitsmonitor zu zählen, und hören auf, Benachrichtigungen zu erzeugen - werden aber immer noch auf der Speicherkarte als ausgeschlossen angezeigt.",
+    "imageCaption": "Schalter für <em>Zustand</em> und <em>Warnungen</em> pro Storage. Sind beide ausgeschaltet, wird dieser Storage bei der Zustandsbewertung nicht berücksichtigt und erzeugt keine Benachrichtigungen mehr. Auf der Registerkarte Speicher erscheint er weiterhin und ist als ausgeschlossen gekennzeichnet.",
     "intro": "Markieren Sie von Proxmox verwaltete Speicher (NFS / CIFS / PBS / Ceph / iSCSI / usw.) als von der Überwachung ausgeschlossen. Zwei unabhängige Toggles pro Speicher:",
     "items": [
       "<strong>Health</strong> — Wenn der Speicher ausgeschaltet ist, wird der Beitrag zur Speicherkategorie des Gesundheitsmonitors eingestellt. Nützlich für Archiv-Volumes, die die meiste Zeit absichtlich offline sind oder Remote-Backup-Ziele, die nur pünktlich eingeschaltet werden.",

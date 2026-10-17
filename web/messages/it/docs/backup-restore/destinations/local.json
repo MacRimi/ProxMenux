@@ -9,7 +9,7 @@
   },
   "header": {
     "title": "Archivio locale",
-    "description": "La destinazione locale scrive un singolo archivio di catrame compresso a qualsiasi directory scrivibile sull'host: un disco interno, un supporto NFS o SMB o un'unità USB.",
+    "description": "La destinazione locale scrive un unico archivio tar compresso in una directory scrivibile sull’host: su un disco interno, un filesystem NFS o SMB montato oppure un’unità USB.",
     "section": "Backup e ripristino"
   },
   "intro": {
@@ -21,7 +21,7 @@
     "intro": "La destinazione locale è una directory di destinazione <strong>single perseverata</strong> — non un elenco. ProxMenux memorizza la scelta dell'operatore su <code>/usr/local/share/proxmenux/local-target.conf</code> e la legge su ogni backup. Quando non è stato configurato alcun obiettivo, viene utilizzato il <code>HB_LOCAL_TARGET_DEFAULT = /var/lib/vz/dump</code> predefinito (la stessa directory Proxmox utilizza per le proprie uscite <code>vzdump</code>). L'obiettivo è configurato da destinazioni di backup <em>Configure → Destinazioni locali</em>:",
     "options": [
       "<strong>Utilizzo predefinito (<code>/var/lib/vz/dump</code>).</strong> Lo storage locale Proxmox. Presente su ogni installazione Proxmox; l'archivio si trova accanto alle uscite vzdump e viene ritirato dalla scheda Monitor Backups automaticamente.",
-      "<strong>Inserisci un percorso personalizzato.</strong> Qualsiasi percorso filesystem assoluto può essere utilizzato: un supporto NFS, una quota SMB montata tramite <code>fstab</code>, un dataset dedicato ZFS, un secondo disco interno. ProxMenux convalida che il percorso esiste ed è una directory prima di insisterlo.",
+      "<strong>Inserisci un percorso personalizzato.</strong> Puoi usare qualsiasi percorso assoluto del filesystem: un montaggio NFS, una condivisione SMB montata tramite <code>fstab</code>, un dataset ZFS dedicato o un secondo disco interno. Prima di salvarlo, ProxMenux verifica che il percorso esista e sia una directory.",
       "<strong>Pick a USB drive.</strong> Apre il sottomenu USB (basso), che rileva dispositivi rimovibili e offre di montare o formattare uno."
     ]
   },

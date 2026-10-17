@@ -1,12 +1,12 @@
 {
   "meta": {
     "title": "Dispositifs et accélération ProxMenux",
-    "description": "Comment le gestionnaire d'applications d'OCI transmet GPU, NVIDIA, Coral, USB, FUSE et d'autres appareils à un conteneur d'OCI comme ressources natives validées Proxmox VE."
+    "description": "Comment OCI manager Apps rend les GPU, NVIDIA, Coral, USB, FUSE et autres périphériques accessibles à un conteneur OCI sous forme de ressources natives Proxmox VE validées."
   },
   "header": {
     "title": "Dispositifs et accélération",
     "description": "GPU, NVIDIA, Coral, USB, FUSE et les dispositifs de blocs deviennent des ressources natives validées Proxmox VE du conteneur.",
-    "section": "Applications du gestionnaire OCI"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -105,7 +105,7 @@
               [
                 "AMD ROCm",
                 "Le nœud de rendu, <code>/dev/kfd</code> et la génération des rapports du pilote de calcul dans <code>/sys/class/kfd/kfd/topology/nodes/*/properties</code>",
-                "Une génération de l'image ROCm de l'application porte des noyaux pour, les GPU RDNA2 qu'il nomme et les plus récents, est offerte telle quelle. Les autres GPU de ces familles, telles que le Radeon 680M et le 780M, sont proposés à titre expérimental et ne sont jamais l'option proposée : ROCm ne les supporte pas officiellement, l'application les présente comme la génération de leur famille (<code>HSA_OVERRIDE_GFX_VERSION</code>) et l'installateur demande confirmation avant le téléchargement de l'image. Un ancien GPU, tel que le graphisme intégré d'un Ryzen 5000U, n'est pas offert et Immich garde la reconnaissance sur le CPU"
+                "Une génération de l'image ROCm de l'application porte des noyaux pour, les GPU RDNA2 qu'il nomme et les plus récents, est offerte telle quelle. Les autres GPU de ces familles, telles que le Radeon 680M et le 780M, sont proposés à titre expérimental et ne sont jamais l'option proposée : ROCm ne les supporte pas officiellement, l'application les présente comme la génération de leur famille (<code>HSA_OVERRIDE_GFX_VERSION</code>) et l'installateur application confirmation avant le téléchargement de l'image. Un ancien GPU, tel que le graphisme intégré d'un Ryzen 5000U, n'est pas offert et Immich garde la reconnaissance sur le CPU"
               ],
               [
                 "NVIDIA",
@@ -277,7 +277,7 @@
           }
         },
         {
-          "p": "L'inventaire utilisé par le gestionnaire de BEC Apps est la sortie de:"
+          "p": "L’inventaire utilisé par OCI manager Apps provient de la sortie de :"
         },
         {
           "shell": {

@@ -151,7 +151,7 @@
       },
       {
         "asset": "Zrušenie",
-        "algorithm": "Keď je token alebo relácia zrušená, jeho SHA-2560 sa pridá do zoznamu popierajúcich kontrol na každom overení (mem-cached pre ~30 s, aby sa zabránilo disku číta na horúcej ceste).",
+        "algorithm": "Pri odvolaní tokenu alebo relácie sa ich SHA-256 pridá do zoznamu zablokovaných hodnôt, ktorý sa kontroluje pri každom overení. Zoznam sa uchováva v pamäti približne 30 s, aby sa pri častých požiadavkách zbytočne nečítal disk.",
         "where": "<code>auth.json</code> → <code>revoked_tokens[]</code>"
       }
     ],
@@ -243,7 +243,7 @@
       }
     ],
     "backupTitle": "Na čom \"záloha\" naozaj záleží",
-    "backupBody": "Ak stratíte zariadenie, ktoré má autentifikátor na ňom, jediný spôsob, ako späť sú (1) uložený záložný kód, keď ste povolili 2FAalebo (2Posily autentifikátorovho trezoru. Aplikácie so synchronizáciou cloud (Google Auth, Microsoft Auth, Authy, Apple Passwords, Ente, 2FAS, Bitwarden, 1Heslo) môžu obnoviť na novom zariadení. Apps without cloud (Agis, Raivo, FreeOTP+) potrebujete zašifrovaný exportný súbor, ktorý ste skopírovali niekde v bezpečí. Buď prístup funguje, a zlý prípad je \"žiadna záloha vôbec.\"",
+    "backupBody": "Ak stratíte zariadenie s autentifikačnou aplikáciou, prístup obnovíte iba pomocou (1) záložného kódu uloženého pri zapnutí 2FA alebo (2) zálohy trezoru autentifikačnej aplikácie. Aplikácie so synchronizáciou s cloudom, ako Google Auth, Microsoft Auth, Authy, Apple Passwords, Ente, 2FAS, Bitwarden a 1Password, umožňujú obnovu na novom zariadení. Pri aplikáciách bez cloudu, ako Aegis, Raivo a FreeOTP+, potrebujete zašifrovaný export bezpečne uložený na inom mieste. Oba prístupy fungujú; problémom je nemať žiadnu zálohu.",
     "setupTitle": "Nastavenie krok za krokom z prístrojovej dosky",
     "setupImageAlt": "Nastavovacia obrazovka 2FA s QR kódom a záložnými kódmi",
     "setupImageCaption": "Nastavovací dialóg 2FA QR kód, Base32 tajomstvo (pre manuálny vstup), a desať jednorazových zálohovacích kódov. Kódy sú zobrazené len tu; ak zavriete dialóg bez ich kopírovania, sú preč.",
@@ -320,7 +320,7 @@
     "intro": "Reverzné proxy sú klasickou odpoveďou na „dosiahnutie palubnej dosky zvonku“, ale vyžadujú verejnú doménu, certifikát a otvorený port na okraji. <strong>Bezpečná brána</strong> je alternatíva s nulovým portom dodávaná v samotnom monitore – vopred zostavená nasaditeľná aplikácia, ktorá sa otáča Alpine LXC beh <a>Tailscale</a> ako smerovač podsiete. Po pripojení k vášmu tailnetu môže každé zariadenie na ňom zasiahnuť monitor cez vlastnú IP LAN hostiteľa – z notebooku na dovolenke, telefónu na 5G alebo iného uzla – bez odhalenia TCP 8008 na internet.",
     "calloutTitle": "Prečo je to pohodlné",
     "calloutBody": "URL zostáva rovnaká ako na LAN <code>http://&lt;proxmox-lan-ip&gt;:8008</code> pracuje všade Tailscale Funguje to. Žiadne certifikáty, nie DNS, žiadny port forwarding. Samotný monitor vníma žiadosť ako žiadosť vychádzajúcu z IP siete (zvyčajne <code>100.x.y.z</code>), takže auth log a Fail2Ban hák stále funguje ako na LAN.",
-    "deployBody": "Nasadiť tok je jedna obrazovka LXC skladovanie, pasta a Tailscale unit description in lists <a>Prihlásiť sa.tailscale.com/admin/sadzby/kľúče</a>), vyberte, ktoré subnety inzerovať, kliknite na položku Nasadiť. • LXC takes ~30 sekundy do pasce na topánky a automaticky sa zaregistruje do chvostovej siete.",
+    "deployBody": "Celé nasadenie sa nastavuje na jednej obrazovke: vyberte úložisko LXC na hostiteľovi, vložte kľúč Tailscale auth-key vytvorený na <a>login.tailscale.com/admin/settings/keys</a>, určte podsiete, ktoré má brána oznamovať, a kliknite na Nasadiť. Inicializácia LXC trvá približne 30 sekúnd a kontajner sa automaticky zaregistruje do siete tailnet.",
     "outro": "postupné nasadenie, konfigurácia podsieťových trás, Tailscale Režim ACL a Uzol ukončenia sú zdokumentované samostatne v <link>Dashboard → Bezpečnosť → Bezpečná brána</link> To je miesto, kde nasadenie sprievodca žije v prístrojovej doske UI. Táto stránka pokrýva iba prístupový vzor."
   },
   "proxy": {

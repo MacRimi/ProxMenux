@@ -4,7 +4,7 @@
     "description": "Descrição detalhada do que um backup ProxMenux contém: os rootfs produzidos pelo rsync do perfil de caminho padrão, o manifesto estruturado construído por seis coletores independentes e o inventário de aplicativos que impulsiona a reinstalação automática de pacotes e componentes após uma restauração.",
     "ogTitle": "Como o backup ProxMenux funciona internamente",
     "ogDescription": "As três cargas de um backup ProxMenux explicaram: rootfs, manifesto e aplicações.",
-    "twitterTitle": "Como ProxMenux A cópia de segurança funciona ProxMenux",
+    "twitterTitle": "Como funcionam as cópias de segurança ProxMenux | ProxMenux",
     "twitterDescription": "As três cargas de um backup ProxMenux e como a restauração reproduz o host fonte deles."
   },
   "header": {

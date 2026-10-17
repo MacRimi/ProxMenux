@@ -121,7 +121,7 @@
     "firewallTitle": "Página 7 — Firewall",
     "firewallIntro": "Lê o log de firewall do Proxmox direto do host (sem serviço extra, sem votação). A aba está sempre presente na faixa de navegação; o painel decide o que renderizar dependendo se o firewall está habilitado para esse hóspede e se alguma regra está realmente logando:",
     "firewallItems": [
-      "<strong>Firewall desactivado</strong> — um aviso de âmbar explica exatamente onde habilitá-lo na interface Proxmox (<em>&lt;Contentor;VM&gt; → Firewall → Opções</em>) e lembra que pelo menos uma regra precisa de <code>log: info</code> (ou superior) antes que os pacotes apareçam.",
+      "<strong>Firewall desativado</strong> — um aviso a laranja indica onde o ativar no Proxmox (<em>&lt;Container|VM&gt; → Firewall → Options</em>) e recorda que pelo menos uma regra precisa de <code>log: info</code> ou nível superior para os pacotes aparecerem.",
       "<strong>Firewall ativado, nenhum evento ainda</strong> — dica de estado vazio com o mesmo requisito de registro, útil quando você apenas ligou o firewall.",
       "<strong>Eventos presentes</strong> — um painel monoespacial rolável com as entradas em bruto coloridas por acção: <green>ACCEPT</green> (verde), <orange>REJECT</orange> (laranja), <red>DROP</red> (vermelho). Um crachá de contagem no cabeçalho mostra quantos itens estão atualmente carregados."
     ],

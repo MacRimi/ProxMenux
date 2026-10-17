@@ -159,7 +159,7 @@
         "items": [
           {
             "tool": "IOMMU / VFIO",
-            "restores": "Odstráni vfio moduly z /etc/modules, noveau / radeon / nvidia položky na čiernej listine a intel_iommu=on / amd_iommu=on / iommu=pt / pcie_acs_override parametre od /etc/kernel/cmdline (ZFS) alebo GRUB. Prestavuje initramfs."
+            "restores": "Odstráni moduly vfio z /etc/modules, položky blokovania ovládačov nouveau / radeon / nvidia a parametre intel_iommu=on / amd_iommu=on / iommu=pt / pcie_acs_override z /etc/kernel/cmdline (ZFS) alebo GRUB. Znovu vytvorí initramfs."
           },
           {
             "tool": "Opravy AMD CPU (Ryzen/EPYC)",

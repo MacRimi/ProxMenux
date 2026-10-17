@@ -136,7 +136,7 @@
     "configCaption": "Modifier la prison sshd — choisissez un <em>Max Retries</em> pour SSH si vous ne vous connectez jamais à partir de votre propre sous-net, ou prolongez <em>Ban Time</em> pour le tableau de bord public.",
     "outro": "Le <em> completCe qu'il installe / comment il est configuré / comment désinstaller</em> passage — y compris le chemin d'installation manuelle, l'effet secondaire SSH MaxAuthTries, et la relation avec le journal <code>proxmenux-auth.log</code> — est dans <link>ProxMenux → Sécurité → Fail2Ban</link>.",
     "calloutTitle": "Sans Fail2Ban, la protection de la force brute est le meilleur effort",
-    "calloutBody": "ProxMenux Monitor a son propre crochet d'interdiction <em>niveau d'application</em> dans le pipeline de demande de Flask — mais il ne prend effet que si Fail2Ban est installé et écrit à la table des interdictions. Sans Fail2Ban, les journaux Moniteur ont échoué les connexions au <code>proxmenux-auth.log</code> pour une inspection future, mais ne bloque pas activement les IP."
+    "calloutBody": "ProxMenux Monitor possède son propre hook de blocage au <em>niveau applicatif</em>, dans le traitement des requêtes Flask. Il ne prend effet que si Fail2Ban est installé et alimente la table des blocages. Sans Fail2Ban, le Monitor consigne les échecs de connexion dans <code>proxmenux-auth.log</code> pour une consultation ultérieure, mais ne bloque pas activement les adresses IP."
   },
   "lynis": {
     "heading": "Audit de sécurité Lynis",

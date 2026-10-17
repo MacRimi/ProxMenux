@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "Miesto určenia Borg SSH auth, šifrovanie ProxMenux",
+    "title": "Cieľ Borg — typy repozitárov, overenie SSH a šifrovanie | ProxMenux",
     "description": "Destinácia Borg píše ProxMenux hostiť zálohy do úložiska Borg, lokálne, na inštalovanom externom disku, alebo na vzdialenom serveri prístupnom cez SSH. Pokrýva reťazec binárneho rozlíšeniaborg, štyri SSH kľúčové stratégie, šifrovanie repokey, uchovaná konfigurácia cieľa a ponechanie na plánovanú prácu.",
-    "ogTitle": "ProxMenux Backup",
+    "ogTitle": "ProxMenux Backup — cieľ Borg",
     "ogDescription": "Ako ProxMenux píše zálohovanie hostiteľa do úložiska Borg, s SSH auth stratégie a repokey šifrovanie.",
-    "twitterTitle": "Borg backup destination ProxMenux",
+    "twitterTitle": "Cieľ záloh Borg | ProxMenux",
     "twitterDescription": "Local, USB a SSH-served Borg archívy pre zálohovanie hostiteľov."
   },
   "header": {
@@ -42,7 +42,7 @@
       {
         "priority": "4",
         "source": "GitHub stiahnuť",
-        "detail": "<code>wget</code>0 proti <code>borg-linux64</code> URL pri <code>github.com/borgbackup/borg/releases/</code>, overené na konštantné SHA-256 v <code>lib_host_backup_common.sh</code> (<code>HB_BORG_LINUX64_SHA256</code>). Pri nesúlade kontrolného čísla sa binárny kód vyradí a záloha sa zruší. Stiahnutý súbor je cacheed v stave dir, takže následné zálohovanie použiť cestu 2."
+        "detail": "Stiahnutie pomocou <code>wget</code> z pevne určenej URL súboru <code>borg-linux64</code> v <code>github.com/borgbackup/borg/releases/</code>, overené oproti konštante SHA-256 v <code>lib_host_backup_common.sh</code> (<code>HB_BORG_LINUX64_SHA256</code>). Pri nesúlade kontrolného súčtu sa binárny súbor odstráni a zálohovanie sa preruší. Stiahnutý súbor sa uchová v stavovom adresári, takže ďalšie zálohovania použijú postup 2."
       }
     ]
   },
@@ -157,7 +157,7 @@
   },
   "encryption": {
     "heading": "Šifrovanie",
-    "body": "Repozície sú inicializované s šifrovacím režimom cez <code>hb_borg_init_if_needed</code>0: moderný <code>borg repo-create -e MODE</code> ak je k dispozícii, alebo odkaz <code>borg init --encryption=MODE</code>. ProxMenux vystavuje dva režimy: <code>repokey</code> (default) a <code>none</code>. V režime <code>repokey</code> Borg ukladá šifrovací kľúč v samotnom úložisku; prístup vyžaduje heslo, ktoré ProxMenux vyzýva na dvojnásobné overenie zhody a ukladá na <code>borg-pass-NAME.txt</code>. Po uložení passfrázy sa zobrazí povinný dialóg s potvrdením: passfráza je jediný spôsob, ako sa dostať k zašifrovaným archívom a jej strata robí každý archív v úložisku neobjaviteľným."
+    "body": "Repozitáre sa inicializujú so zvoleným režimom šifrovania cez <code>hb_borg_init_if_needed</code>: ak je dostupný novší príkaz <code>borg repo-create -e MODE</code>, použije sa ten, inak starší <code>borg init --encryption=MODE</code>. ProxMenux ponúka dva režimy: <code>repokey</code> (predvolený) a <code>none</code>. V režime <code>repokey</code> Borg ukladá šifrovací kľúč priamo do repozitára. Prístup vyžaduje heslovú frázu, ktorú ProxMenux žiada zadať dvakrát, overí zhodu a uloží ju do <code>borg-pass-NAME.txt</code>. Po uložení sa zobrazí povinné potvrdenie: heslová fráza je jedinou cestou k zašifrovaným archívom a jej strata znemožní obnovu všetkých archívov v repozitári."
   },
   "runtimeEnv": {
     "heading": "Runtime prostredie",
@@ -175,7 +175,7 @@
       },
       {
         "var": "BORG_ENCRYPT_MODE",
-        "value": "repokey",
+        "value": "repokey | none",
         "purpose": "Použité <code>hb_borg_init_if_needed</code> pri inicializácii úložiska, ktoré ešte neexistuje. Ignorované <code>borg create</code> na existujúcich archívoch."
       },
       {

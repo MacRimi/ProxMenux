@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Živý + historický, oba zahrnuté",
-    "body": "Živý stav pochádza z <code>psutil.net_if_stats()</code>0 a <code>ip</code>; historická šírka pásma z predajne Proxmox RRD cez <code>/api/network/&lt;interface&gt;/metrics</code>. Stránka obnovuje každý ~5 sekúnd pre živé počítače a vytiahne čerstvé RRD dáta na dopyt po grafe."
+    "body": "Aktuálny stav pochádza z <code>psutil.net_if_stats()</code> a <code>ip</code>; historické údaje o prenosoch z úložiska RRD Proxmox cez <code>/api/network/&lt;interface&gt;/metrics</code>. Živé počítadlá sa obnovujú približne každých 5 sekúnd. Graf si nové údaje RRD načíta podľa potreby."
   },
   "topRow": {
     "heading": "Horný riadok: štyri stat karty",
@@ -44,7 +44,7 @@
     "elementsIntro": "Každý uzol je jeden subjekt z rovnakého inventára, ktorý používajú nižšie uvedené skupinové karty, ale usporiadané ako topológia, takže vzťahy medzi nimi sú okamžité:",
     "elements": [
       "<strong>NIC</strong> (jantárová) – každé fyzické rozhranie s prepojením. Rozhrania označené ako nefunkčné sú vykreslené ako vyblednuté.",
-      "<strong>Host</strong> (amber) Kreslený ako pevná kotva; nie je možné kliknúť.",
+      "<strong>Hostiteľ</strong> (jantárová farba) — samotný hostiteľ Proxmox medzi sieťovými kartami a mostmi. Zobrazuje sa ako pevný oporný bod a nemožno naň kliknúť.",
       "<strong>Bridges</strong> (kyan) Nakreslia sa len mosty, ktoré nesú aspoň jedného aktívneho hosťa; nepoužité mosty sú skryté, aby sa diagram zameral na to, čo skutočne hýbe dopravou.",
       "<strong>LXCs</strong> (kyan)",
       "<strong>VMs</strong> (fialové)",

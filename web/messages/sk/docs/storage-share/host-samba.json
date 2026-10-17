@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Čo to robí?",
-    "body": "ProxMenux ponúka dve metódy montáže pre akýkoľvek podiel Samba: <strong>(1) Proxmox uchovávanie</strong> via <code>pvesm add cifs</code> Viditeľné v datacentre > úložisku, namontované <code>/mnt/pve/&lt;id&gt;</code>, údaje uložené zašifrované v <code>/etc/pve/priv/storage/&lt;id&gt;.pw</code>; <strong>(2) Host fstab mount</strong> na ceste, ktorú si vyberiete <code>/etc/fstab</code>na použitie pri výrobe motorových vozidiel [1] <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> tak neprivilegovaný LXC @ info: tooltip <code>/etc/samba/credentials/</code> súbor (heslo nikdy v <code>fstab</code>). Môžete spustiť jednu metódu, druhú, alebo oboje."
+    "body": "ProxMenux ponúka dva spôsoby pripojenia zdieľania Samba: <strong>(1) Úložisko Proxmox</strong> cez <code>pvesm add cifs</code>, viditeľné v Datacenter > Storage a pripojené do <code>/mnt/pve/&lt;id&gt;</code>. Heslo sa uchováva v otvorenom texte v <code>/etc/pve/priv/storage/&lt;id&gt;.pw</code>, chránené súkromným adresárom prístupným iba root. Ide o riadenie prístupu, nie šifrovanie. <strong>(2) Pripojenie fstab na hostiteľovi</strong> do zvolenej cesty, trvalé cez <code>/etc/fstab</code> a s voľbami <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code>, aby neprivilegované LXC mohli zapisovať cez bind mounty. Prihlasovacie údaje sú v súbore pre root v <code>/etc/samba/credentials/</code>, nikdy priamo vo <code>fstab</code>. Možno použiť jeden spôsob alebo oba."
   },
   "opening": {
     "heading": "Otvorenie nástroja",
@@ -25,7 +25,7 @@
   },
   "modes": {
     "heading": "Pripojiť zberateľ metódy (dve možnosti, označiť jednu alebo obe)",
-    "intro": "Po výbere zdieľania a validácii údajov ProxMenux zobrazuje kontrolný zoznam s dvoma metódami montáže. Môžete označiť buď, alebo oboje. Ak stlačíte OK bez toho, aby ste niečo označili, dialóg sa znovu objaví, až kým nevyberiete aspoň jednu možnosť alebo nestlačíte Zrušiť, aby ste ukončili tok.",
+    "intro": "Po výbere zdieľania a overení prihlasovacích údajov zobrazí ProxMenux zoznam dvoch spôsobov pripojenia. Môžete označiť jeden alebo oba. Ak stlačíte OK bez výberu, dialóg sa otvorí znovu. Vyberte aspoň jednu možnosť alebo postup ukončite tlačidlom Zrušiť.",
     "headerMethod": "Metóda",
     "headerMount": "Pripojiť cestu",
     "headerUi": "Viditeľné v datacentre > Úložisko",
@@ -35,7 +35,7 @@
         "method": "<strong>Ako Proxmox uchovávanie (pvesm)</strong>",
         "mountRich": "<code>/mnt/pve/&lt;storage-id&gt;</code> (manažovaný spoločnosťou Proxmox)",
         "ui": "Áno",
-        "useCase": "Zálohy, ISOs, LXC šablóny Živé disky VM sú technicky podporované, ale odrádzajú od CIFS (blokovanie sémantiky)."
+        "useCase": "Zálohy, obrazy ISO a šablóny LXC — všetko, čo má byť viditeľné v rozhraní Proxmox. Aktívne disky VM sú technicky podporované, ale pri CIFS sa neodporúčajú pre odlišné správanie zámkov."
       },
       {
         "method": "<strong>Iba fstab hostiteľa</strong>",
@@ -140,14 +140,14 @@
     "noServersBody": "Automatické vyhľadávanie používa <code>nmap -p 139,445</code>. Server môže byť na inej podsiete, firewalled, alebo len dosiahnuteľný podľa mena hostiteľa (mDNS / WINS). Použite možnosť <em>Manual</em> s IP alebo názov hostiteľa.",
     "noSharesTitle": "\"Nijaké dostupné akcie\"",
     "noSharesBody": "<code>smbclient -L</code> nevrátil nič za tieto poverovacie listiny. Príčiny: Užívateľ nemá žiadne povolenie uvádzať akcie (skúste s administrátorskými údajmi raz, alebo zadajte meno akcie ručne), server zdieľanie viditeľnosť vypnuté, alebo poverenia sú zlé. Skript vám umožní zadať názov zdieľania ručne v tomto prípade.",
-    "denyTitle": "Montáž Proxmoxu zlyhá s NT_STATUS_ACCESS_DENIED",
+    "denyTitle": "Pripojenie v Proxmoxe zlyhá s NT_STATUS_ACCESS_DENIED",
     "denyBody": "Poverenia pvesm uložené sú mimo synchronizáciu so serverom Samba (zmenilo sa heslo, účet vypnutý, nesúlad domény / pracovnej skupiny). Opätovne zadať údaje <code>pvesm set &lt;id&gt; --username &lt;u&gt; --password &lt;p&gt;</code> alebo odstrániť a opätovne pridať z ProxMenux. Ak je server v doméne AD, pripojte <code>--domain &lt;DOMAIN&gt;</code> k hovoru <code>pvesm set</code>.",
     "sleepTitle": "\"host je dole\" alebo stav úložiska je neaktívny v noci",
     "sleepBody": "Niektoré NAS spotrebiče dali SMB do agresívneho spánku. <code>pvestatd</code> potom vidí úložisko ako neaktívne, kým prvý prístup prebudí NAS. Ak je to kozmetické, nič nie je pokazené. Ak to spôsobí poruchy zálohovania, zakázať SMB vypnuté odpojenie na NAS alebo plán záloh mimo okna spánku.",
     "lxcNoWriteTitle": "Privilegovaný LXC back-mount nemôže písať na cestu fstab",
-    "lxcNoWriteBody": "Potvrdiť montáž používa otvorené možnosti: <code>findmnt /mnt/&lt;path&gt;</code> by mal zobraziť <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code>. Ak Vlastná voľba reťazec vynechá tie, neprivilegované LXC dostane povolenie odmietnutý (CT UID mapa host \"ostatné,\" ktoré bez otvorenia file_mode nemajú žiadny zápis bit). Re-mount s predvoleným RW alebo pridať štyri možnosti späť do svojho vlastného reťazca.",
+    "lxcNoWriteBody": "Overte, že pripojenie používa otvorené oprávnenia: <code>findmnt /mnt/&lt;path&gt;</code> má zobraziť <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code>. Ak ich vlastný zoznam volieb neobsahuje, neprivilegovaný LXC dostane chybu odmietnutého prístupu. UID kontajnera sa na hostiteľovi posudzujú ako „ostatní“, ktorí bez otvoreného file_mode nemajú právo zápisu. Pripojte zdieľanie znovu s predvoleným profilom RW alebo tieto štyri voľby doplňte.",
     "fstabBootTitle": "fstab mount nepríde po reštarte",
-    "fstabBootBody": "Skript pridáva <code>nofail,_netdev</code>, takže chýbajúci podiel pri štarte neblokuje. Ak sa montáž nikdy nepríde: potvrďte, že sieť je dosiahnuteľná (<code>ping &lt;server&gt;</code>), skontrolujte <code>journalctl -u remote-fs.target</code>, preverte, či súbor s údajmi stále existuje (<code>ls -l /etc/samba/credentials/</code>) a je čitateľný, a skúste <code>mount -a</code> ručne."
+    "fstabBootBody": "Skript pridáva <code>nofail,_netdev</code>, aby nedostupné zdieľanie pri štarte neblokovalo spúšťanie systému. Ak sa nepripojí vôbec, overte sieť pomocou <code>ping &lt;server&gt;</code>, skontrolujte <code>journalctl -u remote-fs.target</code>, existenciu a čitateľnosť súboru s údajmi pomocou <code>ls -l /etc/samba/credentials/</code> a skúste ručne spustiť <code>mount -a</code>."
   },
   "related": {
     "heading": "Súvisiace",

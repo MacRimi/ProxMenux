@@ -1,9 +1,9 @@
 {
   "meta": {
     "title": "Máquina: Adicionar iSCSI alvo como armazenamento Proxmox ProxMenux Documentação",
-    "description": "Registre um alvo iSCSI como armazenamento Proxmox usando ProxMenux. Lida com instalação de iscsi aberto, descoberta de portal via sendtargets, seleção de alvo e pvesm adicionar iscsi. Fornece dispositivos de bloco bruto para imagens de disco VM.",
+    "description": "Registe um alvo iSCSI como armazenamento Proxmox com o ProxMenux. A ferramenta instala open-iscsi, descobre o portal através de sendtargets, permite escolher o alvo e executa pvesm add iscsi. Fornece dispositivos de blocos raw para as imagens de disco das VM.",
     "ogTitle": "Máquina: Adicionar iSCSI alvo como armazenamento Proxmox ProxMenux Documentação",
-    "ogDescription": "Registre um alvo iSCSI como armazenamento Proxmox com descoberta guiada. Utiliza pvesm adicionar iscsi e fornece dispositivos de bloco bruto para discos VM."
+    "ogDescription": "Registe um alvo iSCSI como armazenamento Proxmox com descoberta guiada. Usa pvesm add iscsi e fornece dispositivos de blocos raw para os discos das VM."
   },
   "header": {
     "title": "Máquina: Adicionar iSCSI alvo como armazenamento Proxmox",

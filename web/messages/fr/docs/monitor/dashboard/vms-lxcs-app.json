@@ -15,14 +15,14 @@
     "dashboard": "Chaque lien Web enregistré ici est également présenté sous forme de carte dans l'onglet <appsLink>Apps de haut niveau</appsLink>. Cette page LXC reste la source de vérité pour le nom, le logo, les liens et le suivi de la version de l'application."
   },
   "overview": {
-    "heading": "Ce qu'un dossier de demande peut fournir",
+    "heading": "Ce qu'un dossier de application peut fournir",
     "lead": "Un seul enregistrement enregistré peut inclure:",
     "items": [
       "Un nom d'affichage et un logo à thème.",
       "Un ou plusieurs liens Web cliquables construits à partir de l'adresse LXC, le schéma et le port sauvegardé.",
       "Un détecteur optionnel pour la version actuellement installée dans le LXC.",
       "Une source optionnelle GitHub, HTTP JSON ou Docker Hub pour la dernière version disponible.",
-      "Notifications par demande de mainlevée et préférences d'inclusion de mise à jour-compteur.",
+      "Notifications par application de mainlevée et préférences d'inclusion de mise à jour-compteur.",
       "Une section correspondante de l'onglet Mises à jour, même lorsque le suivi des versions est désactivé."
     ]
   },
@@ -39,7 +39,7 @@
     "callout": "Une suggestion n'est pas un enregistrement. Il reste en lecture seule jusqu'à ce que <strong>Register</strong> soit pressé et que le formulaire soit enregistré."
   },
   "registration": {
-    "heading": "Enregistrement d'une demande",
+    "heading": "Enregistrement d'une application",
     "lead": "Une suggestion détectée et un enregistrement manuel utilisent le même éditeur:",
     "steps": [
       "Appuyez sur <strong>Inscription</strong> sur une suggestion ou <strong>Inscription de l'application</strong> au choix dans le catalogue ou entrez un nom personnalisé.",
@@ -63,7 +63,7 @@
   },
   "docker": {
     "heading": "Comment les Docker LXC sont représentés",
-    "lead": "Pour un LXC dont la plate-forme primaire est Docker, <strong>Docker</strong> est la demande enregistrée au niveau LXC.",
+    "lead": "Pour un LXC dont la plate-forme primaire est Docker, <strong>Docker</strong> est la application enregistrée au niveau LXC.",
     "items": [
       "Une charge de travail conteneurisée telle que Portainer, Frigate ou Vaultwarden n'est pas suggérée en tant qu'application native indépendante LXC.",
       "Les services Docker avec les ports TCP publiés sont proposés dans l'éditeur Docker en option.",

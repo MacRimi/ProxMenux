@@ -95,7 +95,7 @@
   },
   "retention": {
     "heading": "6. Conservation — contrôle du quota de nuages",
-    "body": "Proxmox vzdump sauvegardes sont <strong> instantanés complets, pas incrémental</strong>. A 30 GB VM = 30 GB par sauvegarde. Sans rétention, le nuage se remplit.",
+    "body": "Les archives vzdump de Proxmox sont des <strong>sauvegardes complètes, pas incrémentielles</strong>. Leur taille dépend des données incluses et de la compression, pas seulement de la capacité du disque virtuel. Si une archive occupe 30 GB, en conserver cinq nécessite environ 150 GB. Définissez une politique de rétention pour éviter de remplir le cloud.",
     "uiPath": "In the Proxmox UI: <strong>Datacenter → Backup → [your job] → Retention</strong>:",
     "image7Alt": "Paramètres de rétention de sauvegarde dans Proxmox",
     "starterIntro": "Valeurs de départ raisonnables pour une configuration maison / laboratoire:",

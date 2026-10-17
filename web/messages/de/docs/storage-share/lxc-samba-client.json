@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Samba-Client in LXC | ProxMenux Dokumentation",
-    "description": "Mount Samba / CIFS teilt sich direkt aus einem Proxmox LXC Container mit ProxMenux. Auto-installiert cifs-utils + smbclient, unterstützt Auto-Discovery, sichere Anmeldeinformationen und persistente Halterungen über /etc/fstab. Erfordert einen privilegierten Container.",
+    "description": "Mount Samba / CIFS teilt sich direkt aus einem Proxmox LXC Container mit ProxMenux. Auto-installiert cifs-utils + smbclient, unterstützt Auto-Discovery, sichere Anmeldeinformationen und persistente Mounts über /etc/fstab. Erfordert einen privilegierten Container.",
     "ogTitle": "Samba-Client in LXC | ProxMenux Dokumentation",
     "ogDescription": "Mount Samba / CIFS teilt sich aus einem privilegierten LXC-Container. Auto-Discovery, Secure Credential File, /etc/fstab Persistenz."
   },
@@ -81,7 +81,7 @@
       },
       {
         "option": "noauto",
-        "effect": "Skip eifriges mounten beim boot. In Kombination mit der Automount-Einheit wird die Halterung faul aufgebaut."
+        "effect": "Skip eifriges mounten beim boot. In Kombination mit der Automount-Einheit wird die Mount faul aufgebaut."
       }
     ],
     "netEffectTitle": "Nettoeffekt der Fstab Flags",
@@ -98,13 +98,13 @@
   },
   "unmount": {
     "heading": "Unmount Samba Aktie",
-    "body": "Kombiniert die Live-Halterungen und die Fstab-Einträge in einer Liste, können Sie eine auswählen, und <strong> entfernt die entsprechende Zeile aus <code>/etc/fstab</code></strong> plus die passende Anmeldedatendatei. Das Skript führt <code>umount</code> nicht auf dem Live-Mount aus - stattdessen wird ein CT-Neustart benötigt, damit das Unmount wirksam wird.",
+    "body": "Fasst aktive Mounts und fstab-Einträge in einer Auswahlliste zusammen. Für den gewählten Eintrag <strong>wird die entsprechende Zeile aus <code>/etc/fstab</code> entfernt</strong>, zusammen mit der zugehörigen Datei mit Zugangsdaten. Das Skript führt kein <code>umount</code> auf dem aktiven Mount aus, sondern weist darauf hin, dass zum Aushängen ein CT-Neustart nötig ist.",
     "warnTitle": "Das Skript entfernt fstab-Einträge, nicht Live-Mounts",
-    "warnBody": "Gleiches Design wie der NFS-Client: <code>umount</code> auf einem Besetzt-Halter schlägt mit \"Device Besetzt\" fehl. Das Entfernen des Fstab-Eingangs garantiert, dass die Halterung beim nächsten CT-Start sauber verschwindet. Wenn Sie möchten, dass die Halterung <em>now</em> verschwunden ist, führen Sie <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> nach Abschluss des Skripts von Hand aus."
+    "warnBody": "Gleiches Design wie der NFS-Client: <code>umount</code> auf einem Besetzt-Halter schlägt mit \"Device Besetzt\" fehl. Das Entfernen des Fstab-Eingangs garantiert, dass die Mount beim nächsten CT-Start sauber verschwindet. Wenn Sie möchten, dass die Mount <em>now</em> verschwunden ist, führen Sie <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> nach Abschluss des Skripts von Hand aus."
   },
   "test": {
     "heading": "Samba Konnektivität testen",
-    "body": "Diagnosepass innerhalb des CT: bestätigt, dass <code>cifs-utils</code> installiert ist, listet aktuelle CIFS-Halterungen auf, dann für jeden Server, auf den in fstab verwiesen wird, ping → Ports 139/445 → Gastliste. \"Erfordert Authentifizierung\" im Gasttest ist normal für jeden Server, der keine öffentlichen Anteile freigibt."
+    "body": "Diagnose im CT: Prüft, ob <code>cifs-utils</code> installiert ist, listet aktive CIFS-Mounts auf und prüft für jeden in fstab eingetragenen Server Ping → Ports 139/445 → Freigabenliste als Gast. „Authentifizierung erforderlich“ beim Gasttest ist normal, wenn der Server keine öffentlichen Freigaben anbietet."
   },
   "troubleshoot": {
     "heading": "Fehlerbehebung",

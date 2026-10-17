@@ -28,7 +28,7 @@
   },
   "threeWays": {
     "heading": "Tri spôsoby aktualizácie",
-    "intro": "Rovnaký konečný stav, rôzna úroveň zapojenia operátora. Žiaden z nich vám umožní preskočiť predletové záruky alebo po-upgrade overenie <code>dist-upgrade</code> sa s nimi zaobchádza a či sledujete každý krok, alebo to všetko odovzdajte.",
+    "intro": "Rovnaký konečný stav, odlišná miera zapojenia správcu. Žiadny režim neumožní preskočiť bezpečnostné kontroly pred aktualizáciou ani overenie po nej. Líšia sa iba tým, ako sa spracujú výzvy dpkg počas <code>dist-upgrade</code> a či sledujete každý krok alebo celý postup zveríte skriptu.",
     "auto": {
       "title": "Automatické / bez dozoru",
       "summary": "Jedna rana. Nastavenia <code>ASSUME_YES=1</code> + <code>DEBIAN_FRONTEND=noninteractive</code>; dpkg konflikt konfiguračného súboru default na <strong>keeve current</strong> (<code>--force-confold</code>).",
@@ -63,7 +63,7 @@
   },
   "webTerminal": {
     "heading": "Prečo je webový terminál zablokovaný?",
-    "body": "Všetky tri režimy aktualizácie detekovať <code>termproxy</code>0 / <code>vncshell</code> v materskom procesnom reťazci a odmietnuť spustiť. Dôvod: webový terminál Proxmox poskytuje <code>pveproxy</code>, čo je jedna zo služieb, ktorá sa aktualizuje v polovici toku. Akonáhle <code>pveproxy</code> reštartuje, vaše terminálne relácie zomrie a tak sa upgrade skript, ktorý bol beží vnútri neho. Hostiteľ je napoly zmodernizovaný, nie je dobrý spôsob, ako pokračovať.",
+    "body": "Všetky tri režimy aktualizácie zisťujú <code>termproxy</code> / <code>vncshell</code> v reťazci nadradených procesov a odmietnu sa spustiť. Webový terminál Proxmox totiž poskytuje <code>pveproxy</code>, jedna zo služieb aktualizovaných počas postupu. Po reštarte <code>pveproxy</code> zanikne terminálová relácia aj aktualizačný skript, ktorý v nej beží. Hostiteľ zostane aktualizovaný iba čiastočne a bez spoľahlivého spôsobu pokračovania.",
     "warningTitle": "Používanie konzoly SSH alebo fyzickej / IPMI / iKVM",
     "warningBody": "SSH je najčastejšou voľbou. Otvorte ho vo vnútri <code>tmux</code> alebo <code>screen</code> tak upgrade prežije krátky sieťový blip. Prvá vec, ktorú skript urobí, je vytlačiť smux/screen pripomenutie, ak zistí, že ste v plain SSH shell."
   },
@@ -158,7 +158,7 @@
   },
   "manual": {
     "heading": "Postup manuálnej aktualizácie",
-    "intro": "To je to, čo <strong>0 Manual upgrade sprievodca</strong> možnosť zobrazí verné zrkadlo <wikilink> oficiálny Proxmox 8-na-9 upgrade wiki</wikilink> organizované vo fázach 4. Skript <em>shows</em> tieto príkazy; napíšete ich sami do samostatného koreňového shellu. Žiadna automatizácia, plná viditeľnosť.",
+    "intro": "Toto zobrazuje položka <strong>Sprievodca manuálnou aktualizáciou</strong>: verný obsah <wikilink>oficiálnej wiki aktualizácie Proxmox 8 na 9</wikilink>, rozdelený do 4 fáz. Skript tieto príkazy <em>zobrazuje</em>; zadávate ich sami v samostatnom shelli root. Postup nie je automatizovaný a všetky kroky vidíte.",
     "rootCalloutTitle": "Všetky príkazy potrebujú koreň",
     "rootCalloutBody": "Spustiť ako koreň alebo predpona každý príkaz s <code>sudo</code>. Proxmox host sám beží ako koreň predvolene; len relevantné, ak ste ho zamknúť.",
     "phase1Heading": "Fáza 1",
@@ -168,7 +168,7 @@
     "phase2Intro": "Prepnite každý repozitár Debianu a Proxmoxu z kódového označenia Bookworm na Trixie a skonvertujte zdroje Proxmox do nového formátu deb822. <strong>Vyberte krok 7 ALEBO krok 8</strong> v závislosti od toho, či máte predplatné Enterprise. Preskočte krok 9, ak nespustíte Ceph.",
     "phase2Code": "# Step 5 — Debian: bookworm → trixie\nsed -i 's/bookworm/trixie/g' /etc/apt/sources.list\n\n# Step 6 — Same for the legacy enterprise list (only if you use enterprise)\nsed -i 's/bookworm/trixie/g' /etc/apt/sources.list.d/pve-enterprise.list\n\n# Step 7 — Add the new PVE 9 enterprise repo (deb822) — Enterprise users only\ncat > /etc/apt/sources.list.d/pve-enterprise.sources << EOF\nTypes: deb\nURIs: https://enterprise.proxmox.com/debian/pve\nSuites: trixie\nComponents: pve-enterprise\nSigned-By: /usr/share/keyrings/proxmox-archive-keyring.gpg\nEOF\n\n# Step 8 — OR add the no-subscription repo (most home / lab users)\ncat > /etc/apt/sources.list.d/proxmox.sources << EOF\nTypes: deb\nURIs: http://download.proxmox.com/debian/pve\nSuites: trixie\nComponents: pve-no-subscription\nSigned-By: /usr/share/keyrings/proxmox-archive-keyring.gpg\nEOF\n\n# Step 8.1 — Refresh and verify proxmox-ve candidate is 9.x\napt update && apt policy | sed -n '1,120p'\n\n# Step 9 — Update Ceph repo (only if you run Ceph)\ncat > /etc/apt/sources.list.d/ceph.sources << EOF\nTypes: deb\nURIs: http://download.proxmox.com/debian/ceph-squid\nSuites: trixie\nComponents: no-subscription\nSigned-By: /usr/share/keyrings/proxmox-archive-keyring.gpg\nEOF\n\n# Step 10 — Remove old .list files now superseded by deb822 .sources\nrm -f /etc/apt/sources.list.d/pve-enterprise.list /etc/apt/sources.list.d/ceph.list\n\n# Step 11 — Final apt update\napt update",
     "phase3Heading": "Fáza 3",
-    "phase3Intro": "Skutočné vylepšenie. Krok 12 je voliteľný, ale odporúča sa (silný torrent audítorských správ počas aktualizácie). Krok 13 je dlhá jedna Krok 13.1 je iba EFI a podľa oficiálnych známych problémov.",
+    "phase3Intro": "Samotná aktualizácia. Krok 12 je voliteľný, ale odporúčaný: potlačí množstvo auditných hlásení počas aktualizácie. Krok 13 trvá najdlhšie — na každú výzvu dpkg odpovedajte podľa nasledujúcej tabuľky. Krok 13.1 platí iba pre EFI a vychádza z oficiálneho zoznamu známych problémov.",
     "phase3Code": "# Step 12 — Disable kernel audit messages (optional)\nsystemctl disable --now systemd-journald-audit.socket\n\n# Step 13 — The main upgrade (this takes a while)\napt dist-upgrade\n# (answer prompts using the table below)\n\n# Step 13.1 — EFI hosts: install grub for EFI (per known issues)\n[ -d /sys/firmware/efi ] && apt install grub-efi-amd64",
     "dpkgHeading": "Odporúčané odpovede pre dpkg podnety",
     "dpkgIntro": "Toto sú odpovede, ktoré odporúča oficiálna príručka Proxmox. <strong>Y</strong> = nainštalovať novú verziu správcu (prepíše váš súbor); <strong>N</strong> = ponechať aktuálny súbor. V prípade pochybností vždy najprv skontrolujte rozdiel:",
@@ -267,7 +267,7 @@
       },
       {
         "title": "Zoskupenie rozdelený mozog po zlepšení jedného uzla",
-        "bodyRich": "Mixed PVE 80 / PVE 9 cluster je podporovaný počas okna aktualizácie, ale migrácia je len studená. Ak klaster zobrazí aktualizovaný uzol ako offline, skontrolujte <code>corosync</code> na oboch: QDevice / sieťová konfig mohla byť presunutá. Spustite <code>pvecm status</code> na každom uzle pre potvrdenie uznášaniaschopnosti."
+        "bodyRich": "Zmiešaný klaster PVE 8 / PVE 9 je podporovaný počas aktualizácie, ale migrácia je možná iba pri vypnutých hosťoch. Ak klaster zobrazuje aktualizovaný uzol ako offline, skontrolujte <code>corosync</code> na oboch uzloch: konfigurácia QDevice alebo siete sa mohla zmeniť. Na každom uzle spustite <code>pvecm status</code> a overte kvórum."
       }
     ]
   },

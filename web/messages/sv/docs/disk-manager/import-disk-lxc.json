@@ -7,12 +7,12 @@
   },
   "header": {
     "title": "Importera disk till LXC",
-    "description": "Bifoga en fysisk disk till en befintlig LXC-behållare på Proxmox-värden. ProxMenux upptäcker fria diskar, valfritt formaterar dem med ett stöd filsystem, och trådar partitionen till en monteringspunkt inuti behållaren med ihållande enhetsvägar.",
+    "description": "Bifoga en fysisk disk till en befintlig LXC-behållare på Proxmox-värden. ProxMenux upptäcker fria diskar, valfritt formaterar dem med ett stöd filsystem, och trådar partitionen till en monteringspunkt inuti containern med ihållande enhetsvägar.",
     "section": "Diskhanterare · LXC"
   },
   "intro": {
     "title": "VM passthrough vs LXC genomgång",
-    "body": "LXC passthrough är <strong> inte en rå block enhet</strong>. Behållaren får en <em>mount point</em> - dvs en katalog som stöds av en partition du väljer på värden. Till skillnad från en VM är gästkärnan värdkärnan, så filsystemet (ext4 / xfs / btrfs) läses och hanteras av Proxmox själv och sedan exponeras för behållaren."
+    "body": "LXC passthrough är <strong> inte en rå block enhet</strong>. Containern får en <em>mount point</em> - dvs en katalog som stöds av en partition du väljer på värden. Till skillnad från en VM är gästkärnan värdkärnan, så filsystemet (ext4 / xfs / btrfs) läses och hanteras av Proxmox själv och sedan exponeras för containern."
   },
   "howRuns": {
     "heading": "Hur manuset går",
@@ -23,11 +23,11 @@
     "heading": "Förutsättningar",
     "items": [
       "Minst en LXC-container definierad på värden.",
-      "Behållaren är <strong>privileged</strong>, eller du accepterar skriptets erbjudande att konvertera det.",
+      "Containern är <strong>privileged</strong>, eller du accepterar skriptets erbjudande att konvertera det.",
       "Minst en fysisk disk som inte används av värden eller någon annan gäst."
     ],
-    "warnTitle": "Privilegierad behållare krävs",
-    "warnBody": "Direkt enhet passerar till en LXC-behållare fungerar endast om behållaren är <strong>privileged</strong>. Om manuset upptäcker <code>unprivileged: 1</code> i konfigen erbjuder det att konvertera det på plats (redigerar <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>). Annullera om du inte kan acceptera säkerhetsavvägning av en privilegierad behållare."
+    "warnTitle": "Privilegierad container krävs",
+    "warnBody": "Direkt enhet passerar till en LXC-behållare fungerar endast om containern är <strong>privileged</strong>. Om manuset upptäcker <code>unprivileged: 1</code> i konfigen erbjuder det att konvertera det på plats (redigerar <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>). Annullera om du inte kan acceptera säkerhetsavvägning av en privilegierad container."
   },
   "steps": {
     "heading": "Steg-för-steg",
@@ -37,7 +37,7 @@
         "title": "Välj målbehållaren",
         "img": "/disk/select-container.png",
         "caption": "Container urvalsmenyn",
-        "bodyRich": "ProxMenux listar varje LXC-container på värden (<code>pct list</code>). Välj den som får disken. Om behållaren är oprivilegierad erbjuds du att konvertera den nu."
+        "bodyRich": "ProxMenux listar varje LXC-container på värden (<code>pct list</code>). Välj den som får disken. Om containern är oprivilegierad erbjuds du att konvertera den nu."
       },
       {
         "title": "Välj den fysiska disken",
@@ -55,13 +55,13 @@
       },
       {
         "title": "Välj monteringspunkten",
-        "bodyRich": "Skriv den väg där behållaren ska se disken, t.ex. <code>/mnt/data</code> eller <code>/mnt/disk_passthrough</code>. Detta är vägen <em>inside</em> behållaren; värden ser redan partitionen under <code>/dev/disk/by-id/…</code>."
+        "bodyRich": "Skriv den väg där containern ska se disken, t.ex. <code>/mnt/data</code> eller <code>/mnt/disk_passthrough</code>. Detta är vägen <em>inside</em> containern; värden ser redan partitionen under <code>/dev/disk/by-id/…</code>."
       },
       {
         "title": "Bifoga och verifiera",
         "img": "/disk/assignment-ct.png",
         "caption": "Uppdrag till CT",
-        "bodyRich": "ProxMenux appends a fresh <code>mpN:</code> inträde till behållaren konfig, hoppa över index som redan används, och återläser konfigen för att bekräfta. Om behållaren kör montet är exec'd live; annars tar det effekt på nästa start.",
+        "bodyRich": "ProxMenux appends a fresh <code>mpN:</code> inträde till containern konfig, hoppa över index som redan används, och återläser konfigen för att bekräfta. Om containern kör montet är exec'd live; annars tar det effekt på nästa start.",
         "extraImg": "/disk/result-point.png",
         "extraAlt": "Mount Point skapade framgångsrikt",
         "extraCaption": "Mount Point skapad och verifierad"
@@ -76,16 +76,16 @@
     "heading": "Viktiga överväganden",
     "items": [
       "<strong>En disk per run</strong>. Kör skriptet för varje ytterligare disk.",
-      "Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do <strong>Inte inte</strong> Bifoga samma partition till flera behållare som kan montera den samtidigt - samtidig skriver korrupt filsystemet.",
+      "Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do Do <strong>Inte inte</strong> Bifoga samma partition till flera containrar som kan montera den samtidigt - samtidig skriver korrupt filsystemet.",
       "<strong>Old metadata</strong> (RAID / ZFS / LVM signaturer) måste rensas manuellt innan manuset låter dig formatera, annars <code>mkfs</code> vägrar att skriva över. Använd <wipeLink>Format / Wipe Physical Disk</wipeLink> verktyg för det."
     ]
   },
   "troubleshoot": {
     "heading": "Felsökning",
-    "unprivTitle": "\"Kan inte fortsätta med en oprivilegierad behållare\"",
-    "unprivBody": "Du avböjde konverteringserbjudandet. Antingen re-run och acceptera konvertering, eller konvertera behållaren manuellt genom att redigera <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> och ersätta <code>unprivileged: 1</code> med <code>unprivileged: 0</code>. Du kan också bygga om behållaren som privilegierad om du föredrar att inte konvertera på plats.",
-    "permsTitle": "Behörigheter inne i behållaren är fel",
-    "permsBody": "Mounts from the host in a privileged container land as <code>root:root</code>. Om tjänsten i CT körs som en annan användare (t.ex. <code>www-data</code> för Nextcloud), <code>chown</code> / <code>chmod</code> inuti behållaren för att matcha sin UID / GID efter den första monteringen."
+    "unprivTitle": "\"Kan inte fortsätta med en oprivilegierad container\"",
+    "unprivBody": "Du avböjde konverteringserbjudandet. Antingen re-run och acceptera konvertering, eller konvertera containern manuellt genom att redigera <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> och ersätta <code>unprivileged: 1</code> med <code>unprivileged: 0</code>. Du kan också bygga om containern som privilegierad om du föredrar att inte konvertera på plats.",
+    "permsTitle": "Behörigheter inne i containern är fel",
+    "permsBody": "Mounts from the host in a privileged container land as <code>root:root</code>. Om tjänsten i CT körs som en annan användare (t.ex. <code>www-data</code> för Nextcloud), <code>chown</code> / <code>chmod</code> inuti containern för att matcha sin UID / GID efter den första monteringen."
   },
   "related": {
     "heading": "Relaterad",

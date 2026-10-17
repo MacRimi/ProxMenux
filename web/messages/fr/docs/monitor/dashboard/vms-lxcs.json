@@ -52,7 +52,7 @@
   },
   "drillIn": {
     "heading": "Perceuse par invité en mode",
-    "intro": "Le modal s'ouvre avec le nom de l'invité, le VMID, le type, l'état et la disponibilité. Sa navigation s'adapte à l'invité : <strong>Status</strong>, <strong>App</strong> et <strong>Mise à jour</strong> pour la gestion des applications LXC, <strong>Montants</strong> lorsqu'un LXC a des points de montage, <strong>Logs</strong> pour les conteneurs installés par le gestionnaire OCI Apps, plus <strong>Backups</strong> et <strong>Firewall</strong>. La barre d'action fixe maintient les commandes du cycle de vie et le terminal LXC disponible dans chaque onglet.",
+    "intro": "La fenêtre de détail affiche le nom de l’invité, son VMID, son type, son état et sa durée de fonctionnement. Sa navigation s’adapte à l’invité : <strong>État</strong>, <strong>Application</strong> et <strong>Mises à jour</strong> pour la gestion des applications LXC, <strong>Montages</strong> lorsqu’un LXC possède des points de montage, <strong>Journaux</strong> pour les conteneurs installés par OCI manager Apps, ainsi que <strong>Sauvegardes</strong> et <strong>Pare-feu</strong>. La barre d’actions fixe conserve les commandes de démarrage et d’arrêt et le terminal LXC dans chaque onglet.",
     "statusTitle": "Onglet 1 — État",
     "statusImageAlt": "Per-invité fore-in modal — Onglet Status avec CPU / Memory / Disk live Cards, les totaux d'E/S disque et réseau, le logo OS distro et le bloc Ressources / adresses IP",
     "statusImageCaption": "Onglet État — en direct CPU / Mémoire / Disque avec barres de progression en haut, totaux d'E/S accumulés (lire/écrire le disque, descendre/monter le réseau) ci-dessous, puis le bloc de ressources statiques avec Notes et + Extensions Info et la liste des pilules IP Addresses.",
@@ -121,7 +121,7 @@
     "firewallTitle": "Onglet 7 — Pare-feu",
     "firewallIntro": "Lit le journal du pare-feu Proxmox par invité directement depuis l'hôte (pas de service supplémentaire, pas de sondage). L'onglet est toujours présent dans la bande de navigation; le panneau décide ce qu'il faut rendre selon que le pare-feu est activé pour cet invité et si une règle est en fait logging:",
     "firewallItems": [
-      "<strong>Firewall désactivé</strong> — un avis ambre explique exactement où l'activer dans l'interface utilisateur Proxmox (<em>&lt;Container=\"VM&gt; → Firewall → Options</em>) et vous rappelle qu'au moins une règle a besoin de <code>log: info</code> (ou plus) avant que les paquets n'apparaissent.",
+      "<strong>Firewall désactivé</strong> — un avertissement orange indique où l’activer dans Proxmox (<em>&lt;Container|VM&gt; → Firewall → Options</em>) et rappelle qu’au moins une règle doit utiliser <code>log: info</code> ou un niveau supérieur pour afficher les paquets.",
       "<strong>Firewall activé, pas d'événements encore</strong> — indice d'état vide avec la même exigence de journalisation, utile lorsque vous venez d'allumer le pare-feu.",
       "<strong>Les événements présentent</strong> — un panneau monospace scrollable avec les entrées brutes colorées par action: <green>ACCEPT</green> (vert), <orange>REJECT</orange> (orange), <red>DROP</red> (rouge). Un badge de comptage dans l'en-tête montre combien d'entrées sont actuellement chargées."
     ],

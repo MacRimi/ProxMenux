@@ -39,7 +39,7 @@
     "callout": "Uma sugestão não é um registo. Ele permanece somente leitura até <strong>Register</strong> é pressionado e o formulário é salvo."
   },
   "registration": {
-    "heading": "Registo de um pedido",
+    "heading": "Registo de um aplicação",
     "lead": "Uma sugestão detectada e um registro manual usam o mesmo editor:",
     "steps": [
       "Pressione <strong>Registar</strong> em uma sugestão ou <strong>Registar aplicativo</strong> para escolher do catálogo ou digitar um nome personalizado.",

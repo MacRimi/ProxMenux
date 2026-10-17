@@ -31,7 +31,7 @@
       "<strong>Zobrazenie kariet</strong> Jeden terminál viditeľný naraz, ostatné ako pomenované záložky na vrchu (<em>Terminál 1</em>, <em>Terminál 2</em>…). Najlepšie pre prácu na jednej úlohe s ostatnými ako pozadia.",
       "<strong>Pohľad do siete</strong> Všetky otvorené terminály viditeľné naraz 2×2 mriežka. Užitočné na sledovanie <code>htop</code> na jednom paneli, <code>iftop</code> na druhej, a editovanie na tretej bez prepínania tam a späť."
     ],
-    "outro": "Panel nástrojov zobrazuje aktuálny počet (<em>01/4 terminály</em>, <em>4/4 terminály</em>). Nové karty sa otvárajú pomocou <strong>+ New</strong> a jednotlivé karty sa zatvárajú z malej <code>×</code> na hlavičke karty. Veľké červené tlačidlo <strong>Close</strong> v hornej časti trhá všetky terminály naraz."
+    "outro": "Panel nástrojov zobrazuje aktuálny počet (<em>1/4 terminálov</em>, <em>4/4 terminálov</em>). Nové karty otvoríte pomocou <strong>+ Nový</strong>; jednotlivé karty zatvoríte malým <code>×</code> v ich hlavičke. Veľké červené tlačidlo <strong>Zavrieť</strong> hore ukončí všetky terminály naraz."
   },
   "gridAlt": "ProxMenux Monitor Terminálna záložka chápanie siete so štyrmi hostiteľskými terminálmi bežiacimi ls, konfig siete, iftop a ProxMenux hlavné menu vedľa seba",
   "gridCaption": "Pohľad do mriežky (4 / 4 terminály) 4 nezávislé host PTY bežiace paralelne: zoznam adresárov, <code>/etc/network/interfaces</code> na jednej strane, <code>iftop</code> na ďalšie, a ProxMenux hlavné menu na štvrtom. Prepínanie medzi mriežkou a kartami s prepínaním rozloženia v paneli nástrojov.",

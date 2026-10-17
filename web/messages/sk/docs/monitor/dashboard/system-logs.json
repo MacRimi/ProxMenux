@@ -38,7 +38,7 @@
     "logDetailsImageCaption": "Modálne Podrobnosti denníka — každé štruktúrované pole journald obsahuje pre tento záznam s úplnou neskrátenou správou v spodnej časti. Užitočné pre cron a servisné protokoly, kde záleží na vykonanom príkazovom riadku.",
     "fieldsIntro": "Zobrazené polia:",
     "fields": [
-      "<strong>0 Level</strong>",
+      "<strong>Úroveň</strong> — farebný štítok závažnosti (INFO / WARNING / ERROR / CRITICAL).",
       "<strong>Service</strong>",
       "<strong>Timestamp</strong>",
       "<strong>Source</strong>",

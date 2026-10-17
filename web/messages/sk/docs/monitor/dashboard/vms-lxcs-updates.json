@@ -110,7 +110,7 @@
       "Nepridávajte <code>pct exec</code>; ProxMenux už vstupuje do kontajnera a príkaz spúšťa ako root."
     ],
     "exampleLead": "Príklad úplného postupu v kontajneri:",
-    "example": "cd /opt/moja-aplikacia && ./update.sh",
+    "example": "cd /opt/my-app && ./update.sh",
     "callout": "Príkaz ako <code>myapp --version</code> iba číta verziu a nič neaktualizuje. Príkazy sa spúšťajú s oprávneniami správcu a musia sa kontrolovať ako príkazy shellu root."
   },
   "bulk": {
@@ -141,7 +141,7 @@
       "Vyberte predvoľbu alebo cron výraz a potom presné ciele: balíky OS, jednotlivé aplikácie, Docker Engine, samostatné jednotky Dockeru alebo skupiny služieb Compose.",
       "Oneskorenie po vydaní platí iba pre vybrané aplikácie so sledovaním verzie. Aplikácie bez sledovania spustia aktualizátor pri každom termíne.",
       "Stav posledného spustenia rozlišuje úspech, čiastočné dokončenie, zlyhanie, bezpečnostné pozastavenie a spustenie bez čakajúcich aktualizácií. Po prvom plánovanom spustení otvorí <strong>Aktualizácie → Plánované aktualizácie → Zobraziť záznam</strong> úplný výstup zachytený z aktualizačného nástroja a všetkých podradených skriptov, ktoré spustil.",
-      "Zistené externé plány Proxmox VE Helper-Scripts sa zobrazia samostatne, aby bola viditeľná prekrývajúca sa automatizácia.",
+      "Po každom spustení ProxMenux skontroluje štandardnú značku Debianu oznamujúcu potrebu reštartu. Ak je reštart potrebný, karta Aktualizácie aj záverečné upozornenie to oznámia. Varovanie sa zruší pri spustení alebo reštarte daného LXC.",
       "Na počítači Proxmox sa v <code>/usr/local/share/proxmenux/logs/lxc-updates/</code> ukladajú záznamy plánovaného priebehu pomocou mena <code>&lt;VMID&gt;-scheduled-&lt;run-id&gt;.log</code>. Posledných desať protokolov je zachovaných na LXC a staršie súbory sú automaticky odstránené.",
       "Táto zachovaná história sa vzťahuje na plánované aktualizácie. Manuálna aktualizácia zobrazuje svoj výstup naživo v okne vykonávania monitora a v tomto adresári nevytvára plánovaný záznam.",
       "Externé programy host detekované z Proxmox VE Helper-Scripts sú zobrazené samostatne, takže je viditeľná prekrývajúca sa automatizácia."
@@ -155,7 +155,7 @@
       "Rovnaký beh uloží konečný výsledok a podľa potreby obnoví stav balíkov OS, verzie aplikácií a inventár Dockeru.",
       "Vyrovnávacia pamäť LXC sa nahradí overeným stavom po aktualizácii, takže odznaky a tlačidlá nezostanú v starom stave.",
       "Po spustení zastaveného alebo obnoveného LXC existujúca udalosť životného cyklu znova obnoví tento LXC. Inventár Dockeru čaká na pripravenosť démona a dočasne prázdny výsledok nepovažuje za konečný.",
-      "Povolené upozornenia sa odošlú z dokončeného behu vrátane čiastočných zlyhaní a zoskupených výsledkov Docker obrazov.",
+      "Ak sa spustí zastavený alebo obnovený LXC, existujúca udalosť životného cyklu znova obnoví jeho údaje. Inventarizácia Dockeru počká na pripravenosť démona, aby sa prázdny výsledok pri štarte neuložil ako konečný.",
       "Povolené oznámenia sú vysielané z dokončeného chodu, vrátane čiastočných porúch a zoskupených Docker obrazových výsledkov."
     ]
   },

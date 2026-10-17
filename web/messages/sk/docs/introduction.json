@@ -32,7 +32,7 @@
     "layers": [
       "<strong>Proxmoxov hostiteľ</strong> Repo obchody, balíky, sieť, ZFS, Ceph, jadro, všímateľnosť.",
       "<strong>Virtuálne stroje (VM)</strong> Vytváranie, GPU passmough, OVA / OVF import / export, disk passmough.",
-      "<strong>LXC kontajnery</strong> Vytváranie, montáž bodov, GPU / TPU priechod, NFS / Samba klienti a servery."
+      "<strong>Kontajnery LXC</strong> — vytváranie, body pripojenia, sprístupnenie GPU a TPU, klienti a servery NFS a Samba."
     ]
   },
   "scriptsSection": {
@@ -152,7 +152,7 @@
       {
         "pathRich": "<strong>Skripty: Normálne (ľahké)</strong>",
         "bundles": "CLI/TUI iba pre angličtinu, menšia stopa, žiadna Python venv",
-        "when": "Väčšina užívateľov"
+        "when": "Väčšina používateľov — dokumentácia Proxmox je aj tak v angličtine"
       },
       {
         "pathRich": "<strong>Monitor</strong>",

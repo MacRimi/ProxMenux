@@ -101,7 +101,7 @@
         },
         {
           "command": "update-initramfs -u -k all",
-          "description": "Uppdatera initramfer för alla kärnor"
+          "description": "Uppdatera initramfs för alla kärnor"
         },
         {
           "command": "cat /proc/cmdline",
@@ -150,7 +150,7 @@
       {
         "href": "/docs/hardware/igpu-acceleration-lxc",
         "label": "Lägg till GPU till LXC",
-        "tail": " — passerar till en behållare istället för en VM."
+        "tail": " — passerar till en container istället för en VM."
       },
       {
         "href": "/docs/help-info",

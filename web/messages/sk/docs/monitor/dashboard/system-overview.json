@@ -46,7 +46,7 @@
     "thresholdsIntro": "Každý prsteň, tyč a iskra na štyroch metrických kartách sa riadi rovnakou klasifikáciou <green/> <strong>zelená</strong> pod Upozornenie: <amber/> <strong>oranžová</strong> od varovania ku kritickému, <red/> <strong>červená</strong> v kritickej a vyššej miere. Odporúčané predvolené dodávané s ProxMenux:",
     "thresholdsItems": [
       "<strong>CPU použitie</strong> ooo 85 %, kritická 95 %.",
-      "<strong>Pamäť</strong> ooo 85 %, kritická 95 % (Swap tiež požiare Kritické 5 % použitého",
+      "<strong>Pamäť</strong> — varovanie pri 85 %, kritický stav pri 95 % (swap tiež vyvolá kritický stav pri 5 % využitia — správne fungujúci hostiteľ Proxmox by mal swap používať len zriedka).",
       "<strong>CPU teplota</strong> ooo 80 °C, kritické 90 °C."
     ],
     "thresholdsOutro": "Každá hodnota je konfigurovateľná na hostiteľa <link>Nastavenia → Prahové hodnoty monitorovania zdravia</link> je jediným zdrojom pravdy a vysvetľuje, ako ich naladiť.",

@@ -2,7 +2,7 @@
   "meta": {
     "title": "Proxmox Update and Package Commands Apt, pveupgrade, dpkg ProxMenux",
     "description": "Odkaz na príkazy aktualizácie a balíčka pre Proxmox VE: apt update, apt upgrade, apt dist-upgrade, pveupgrade, dpkg -l, balíčky informácií, konfigurácia úložiska v /etc/apt/sources.list.d/.",
-    "ogTitle": "Proxmox Update and Package Commands",
+    "ogTitle": "Príkazy na aktualizáciu Proxmox a správu balíkov — apt, pveupgrade, dpkg",
     "ogDescription": "apt, pveupgrade a dpkg príkazy pre udržanie Proxmox VE upgrade systému, správa balíkov, konfigurácia úložiska.",
     "twitterTitle": "Proxmox Update Commands ProxMenux",
     "twitterDescription": "apt and pveupgrade commands for managing updates and packages on Proxmox VE hosts."

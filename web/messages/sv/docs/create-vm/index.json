@@ -71,7 +71,7 @@
           "Debian (Skrivbord / Netinst, 11–13)",
           "Fedora, Arch, Rocky, Mint, openSUSE",
           "Alpine, Kali, Manjaro",
-          "Lokal ISO-väg för anpassade bilder"
+          "Lokal ISO-väg för anpassade avbildningar"
         ]
       }
     ]
@@ -118,11 +118,11 @@
       },
       {
         "path": "vm/synology.sh",
-        "role": "Synology DSM flöde: hämtar lastare och DSM bild och förbereder VM-profilen."
+        "role": "Synology DSM flöde: hämtar lastare och DSM avbildning och förbereder VM-profilen."
       },
       {
         "path": "vm/zimaos.sh",
-        "role": "ZimaOS-flödet: laddar ner bilden och kopplar den till VM-definitionen."
+        "role": "ZimaOS-flödet: laddar ner avbildningen och kopplar den till VM-definitionen."
       },
       {
         "path": "vm/vm_configurator.sh",

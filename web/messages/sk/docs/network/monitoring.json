@@ -36,9 +36,9 @@
   "iftop": {
     "heading": "Sieťová prevádzka v reálnom čase (iftop)",
     "body": "Živá šírka pásma na pár hostiteľov (source ↔ destination) <code>top</code> pre dopravu. Zobrazí najťažšie prúdy na vrchole, s rolovanie 2/10/40- Druhé priemery. Najlepší nástroj na otázku <em>\"Prečo je moje spojenie nasýtené?\"</em>.",
-    "exit": "<strong>0 Exit:</strong> stlačte <kbd>q</kbd>. ProxMenux pred spustením zobrazí úvodný dialóg.",
+    "exit": "<strong>Ukončenie:</strong> stlačte <kbd>q</kbd>. ProxMenux pred spustením zobrazí pripomenutie.",
     "keysTitle": "Užitočné kľúče vnútri iftop",
-    "keysBody": "<kbd>n</kbd>0 prepnúť DNS vyhľadávanie, <kbd>p</kbd> Zobraziť čísla portov, <kbd>P</kbd> pauza displej, <kbd>t</kbd> prepnúť smer linky (poslané / prijaté / oboje), <kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd> triediť podľa 2s / 10s / 40s priemer. <code>man iftop</code> pre celú sadu."
+    "keysBody": "<kbd>n</kbd> prepína vyhľadávanie DNS, <kbd>p</kbd> zobrazuje čísla portov, <kbd>P</kbd> pozastaví zobrazenie, <kbd>t</kbd> prepína smer riadku (odoslané / prijaté / oboje), <kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd> zoradí podľa priemeru za 2 s / 10 s / 40 s. Úplný zoznam nájdete v <code>man iftop</code>."
   },
   "iptraf": {
     "heading": "Nástroj na sledovanie siete (iptraf-ng)",
@@ -68,7 +68,7 @@
         "useFor": "Per-MAC dopravné štatistiky pre miestne vysielacie domény"
       }
     ],
-    "exit": "<strong>0 Exit:</strong> stlačte <kbd>x</kbd> z ľubovoľného pohľadu (alebo <kbd>Q</kbd> z hlavného menu). ProxMenux zobrazí pred spustením úvodný dialóg.",
+    "exit": "<strong>Ukončenie:</strong> stlačte <kbd>x</kbd> v ľubovoľnom zobrazení alebo <kbd>Q</kbd> v hlavnom menu. ProxMenux pred spustením zobrazí pripomenutie.",
     "logTitle": "Zachytávanie záznamu do súboru",
     "logBody": "Každý režim ponúka logovať zachytené štatistiky <code>/var/log/iptraf-ng/</code>. Užitočné, ak budete potrebovať záznam o dopravnej špice"
   },
@@ -114,7 +114,7 @@
     "refusedTitle": "iperf3 client: \"unable to connect to server: Connection refused\"",
     "refusedBody": "Buď server nebeží, alebo jeho firewall bloky TCP 5201. Potvrďte na serveri: <code>ss -tlnp | grep 5201</code> Mal by ukázať iperf3 počúvanie. Ak počúvanie, ale klient stále zlyhá, skontrolujte cestu firewallu medzi dvoma hostiteľmi.",
     "slowTitle": "iperf3 reports way less than the expected link speed",
-    "slowBody": "Bežné príčiny, v poradí pravdepodobnosti: (1) jeden z hostiteľov je preťažený CPU Skúste. <code>iperf3 -c &lt;target&gt; -P 4</code> na použitie viacerých jadier; (2) cesta prechádza pomalším spojením (gigabitový spínač uprostred dvoch 10 GbE NIC); (3Kontrola nesúladu s MTU <code>ip link show</code> na oboch koncoch; (4) NIC offloading zdravotne postihnutých <em>Zakázať vylodenie NIC</em> Community skript, ak máte kartu Intel e1000e.",
+    "slowBody": "Bežné príčiny v poradí pravdepodobnosti: (1) CPU jedného hostiteľa je úzkym miestom — skúste <code>iperf3 -c &lt;target&gt; -P 4</code> na využitie viacerých jadier; (2) prenos prechádza pomalším spojom, napríklad gigabitovým prepínačom medzi dvoma kartami 10 GbE; (3) nezhodné MTU — skontrolujte <code>ip link show</code> na oboch koncoch; (4) vypnutý NIC offloading — pri karte Intel e1000e pozrite komunitný skript <em>Disable NIC Offloading</em>.",
     "noTrafficTitle": "iftop / iptraf-ng nevykazujú žiadnu prevádzku pre rušného hostiteľa",
     "noTrafficBody": "Štandardné zachytenie je na prvom detekovanom rozhraní. Špecifikujte ten správny explicitne zo shellu: <code>iftop -i vmbr0</code> alebo <code>iptraf-ng -i vmbr0</code>. Spúšťač menu používa predvolené; pre predvolené rozhrania beží z konzoly."
   },

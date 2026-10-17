@@ -48,7 +48,7 @@
   },
   "twoInterfaces": {
     "heading": "Zwei Schnittstellen, ein Backend",
-    "intro": "Jeder Schritt des Sicherungs- und Wiederherstellungsworkflows ist über zwei Einstiegspunkte verfügbar. Beide rufen dieselbe Shell-Bibliothek auf, erzeugen identische Archive und lesen dieselbe Job-Registrierung.",
+    "intro": "Alle Schritte der Sicherung und Wiederherstellung sind über zwei Oberflächen erreichbar. Beide rufen dieselbe Shell-Bibliothek auf, erstellen identische Archive und verwenden dasselbe Auftragsverzeichnis.",
     "cliLabel": "ProxMenux Scripts (TUI)",
     "cliDetail": "Menü → Dienstprogramme →\nHost-Sicherung/Wiederherstellung\n\nDialogbasierter Ablauf,\nSSH-freundlich, skriptfähig\nzur unbeaufsichtigten Nutzung.",
     "webLabel": "ProxMenux Monitor (Web UI)",

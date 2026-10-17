@@ -124,7 +124,7 @@
       {
         "href": "/docs/help-info/zfs-commands",
         "label": "Commandes de gestion ZFS",
-        "tail": "— gommage zpool pour l'équivalent-couche de stockage des tests SMART."
+        "tail": " — zpool scrub, l’équivalent des tests SMART au niveau du stockage."
       },
       {
         "href": "/docs/monitor/dashboard/storage",

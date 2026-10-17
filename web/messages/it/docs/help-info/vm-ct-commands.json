@@ -165,7 +165,7 @@
       {
         "href": "/docs/help-info/backup-commands",
         "label": "Backup e ripristino",
-        "tail": "— vzdump e qmrestore / pct ripristino."
+        "tail": " — vzdump e qmrestore / pct restore."
       },
       {
         "href": "/docs/help-info/storage-commands",

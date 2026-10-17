@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "What this does",
-    "body": "ProxMenux offers two mount methods for any Samba share: <strong>(1) Proxmox storage</strong> via <code>pvesm add cifs</code> — visible in Datacenter > Storage, mounted at <code>/mnt/pve/&lt;id&gt;</code>, credentials stored encrypted in <code>/etc/pve/priv/storage/&lt;id&gt;.pw</code>; <strong>(2) Host fstab mount</strong> at a path you pick — persistent via <code>/etc/fstab</code>, mounted with <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> so unprivileged LXC bind-mounts can write, credentials stored in a root-only <code>/etc/samba/credentials/</code> file (password never in <code>fstab</code>). You can run one method, the other, or both."
+    "body": "ProxMenux offers two mount methods for a Samba share: <strong>(1) Proxmox storage</strong> via <code>pvesm add cifs</code>, visible in Datacenter > Storage and mounted at <code>/mnt/pve/&lt;id&gt;</code>. The password is stored as plaintext in <code>/etc/pve/priv/storage/&lt;id&gt;.pw</code>, protected by the root-only private directory; this is access control, not encryption. <strong>(2) Host fstab mount</strong> at a chosen path, persistent through <code>/etc/fstab</code> and mounted with <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> so unprivileged LXC bind mounts can write. Its credentials are in a root-only file under <code>/etc/samba/credentials/</code>, never directly in <code>fstab</code>. Either or both methods can be used."
   },
   "opening": {
     "heading": "Opening the tool",

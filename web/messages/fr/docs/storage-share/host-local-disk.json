@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Hôte : Ajouter le disque local comme stockage Proxmox ProxMenux Documentation",
-    "description": "Formater un SATA local / SAS / NVMe disque dur sur un hôte Proxmox et l'enregistrer comme répertoire Proxmox ou ZFS pool stockage. Détection sûre du disque, porte de confirmation de l'op destructive, base UUID fstab, ZFS pool création et pvesm ajouter dir / zfspool sous le capot.",
+    "description": "Formatez un disque SATA, SAS ou NVMe local sur un hôte Proxmox et enregistrez-le comme stockage de type répertoire ou pool ZFS. L’outil vérifie les disques, exige une confirmation avant les opérations destructives, configure fstab par UUID, crée les pools ZFS et utilise pvesm add dir / zfspool.",
     "ogTitle": "Hôte : Ajouter le disque local comme stockage Proxmox ProxMenux Documentation",
     "ogDescription": "Formater un disque local et l'enregistrer comme répertoire Proxmox ou ZFS pool stockage avec un flux guidé, filtré par sécurité."
   },
   "header": {
     "title": "Hôte : Ajouter un disque local comme stockage Proxmox",
-    "description": "Prenez un disque physique sur l'hôte Proxmox, en option le formater (ext4 / xfs / btrfs / zfs) et l'enregistrer en tant que stockage Proxmox — soit comme répertoire (pvesm ajouter dir) ou ZFS pool (pvesm ajouter zfspool). ProxMenux filtre la liste de disques de sorte que vous ne pouvez pas choisir le disque racine ou quelque chose en cours d'utilisation, et rend chaque étape destructrice explicite avant de l'exécuter.",
+    "description": "Choisissez un disque physique sur l’hôte Proxmox, formatez-le si nécessaire en ext4, xfs, btrfs ou zfs, puis enregistrez-le comme stockage répertoire avec pvesm add dir ou comme pool ZFS avec pvesm add zfspool. ProxMenux écarte le disque système et les disques utilisés, et annonce chaque opération destructive avant de l’exécuter.",
     "section": "Stockage et partage · Hôte"
   },
   "intro": {
@@ -20,7 +20,7 @@
   },
   "compare": {
     "heading": "Directory vs ZFS pool — qui choisir",
-    "headerDir": "Répertoire (poste 4 / xfs / btrfs)",
+    "headerDir": "Répertoire (ext4 / xfs / btrfs)",
     "headerZfs": "Pool ZFS",
     "rows": [
       {
@@ -50,8 +50,8 @@
       },
       {
         "label": "Prend en charge les types de contenu",
-        "dir": "images, sauvegarde, iso, vztmpl, extraits, rootdir",
-        "zfs": "images, rootdir seulement (stockage en bloc)"
+        "dir": "images, backup, iso, vztmpl, snippets, rootdir",
+        "zfs": "images et rootdir uniquement (stockage en blocs)"
       },
       {
         "label": "Meilleur pour",
@@ -104,7 +104,7 @@
     "rows": [
       {
         "preset": "Stockage VM",
-        "content": "images, sauvegarde",
+        "content": "images,backup",
         "use": "Un magasin de disques VM dédié qui conserve également les sauvegardes de ces VMs à proximité."
       },
       {

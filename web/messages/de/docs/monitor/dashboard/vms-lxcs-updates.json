@@ -18,7 +18,7 @@
     "items": [
       "<strong>OS Packages</strong> für Debian, Ubuntu und Alpine Container.",
       "Ein Abschnitt für jede <strong> registrierte Anwendung</strong>, einschließlich Link-only-Records.",
-      "Ein <strong>Docker</strong>-Abschnitt, wenn Docker registriert ist, wobei Docker Engine und getaggte Bilder gruppiert sind.",
+      "Ein <strong>Docker</strong>-Abschnitt, wenn Docker registriert ist, wobei Docker Engine und getaggte Images gruppiert sind.",
       "Ein konfigurierbarer Abschnitt <strong>Bulk update</strong>, gefolgt von Backup-, Neustart- und Planungsoptionen."
     ]
   },
@@ -53,20 +53,20 @@
       {
         "source": "Docker-Image",
         "action": "Image aktualisieren",
-        "notes": "Zieht das ausgewählte Bild und erstellt die Compose-Servicegruppe oder den geschützten eigenständigen Container neu."
+        "notes": "Zieht das ausgewählte Image und erstellt die Compose-Servicegruppe oder den geschützten eigenständigen Container neu."
       }
     ],
     "callout": "Ein benutzerdefinierter Befehl <strong>ersetzt </strong> Helper-Scripts für diese Anwendung. Manuelle, Bulk- und Planläufe respektieren alle die gespeicherte Auswahl. Vorhandene benutzerdefinierte Befehle und Vermächtnisse, die explizit gespeichert wurden, werden beibehalten; neu registrierte Anwendungen werden niemals durch einen alten Zeitplan aktiviert."
   },
   "docker": {
-    "heading": "Docker Engine und Docker Bilder",
+    "heading": "Docker Engine und Docker Images",
     "lead": "Nachdem Docker auf der Registerkarte App registriert wurde, erscheinen Motor und Bildbestand im selben <strong>Docker</strong> Abschnitt.",
     "items": [
       "Die Docker Engine-Versionsverfolgung ist vom OS-Paketzähler getrennt und verfügt über einen eigenen Update-Button.",
-      "Verschlagwortete lokale Bilder werden mit ihrem Register durch unveränderlichen Digest verglichen. <strong>Check now</strong> aktualisiert dieses Inventar, ohne Bilder zu ziehen oder Container neu zu starten.",
-      "Compose-Dienste werden von ihrem deklarierten Projekt aktualisiert. Bilder, die zur gleichen Servicegruppe gehören, werden zusammen bearbeitet, damit das Projekt nicht wiederholt neu erstellt wird.",
+      "Verschlagwortete lokale Images werden mit ihrem Register durch unveränderlichen Digest verglichen. <strong>Check now</strong> aktualisiert dieses Inventar, ohne Images zu ziehen oder Container neu zu starten.",
+      "Compose-Dienste werden von ihrem deklarierten Projekt aktualisiert. Images, die zur gleichen Servicegruppe gehören, werden zusammen bearbeitet, damit das Projekt nicht wiederholt neu erstellt wird.",
       "Ein eigenständiger Container wird aus seiner aktuellen Konfiguration neu erstellt. Der geschützte Fluss behält Rollback-Daten und stellt den vorherigen Container wieder her, wenn das Spiel fehlschlägt.",
-      "Jedes Bild kann separat in manuellen, massenhaften und geplanten Updates ausgewählt werden, mit Ausnahme deklarierter Compose-Abhängigkeiten, die dem übergeordneten Service folgen müssen."
+      "Jedes Image kann separat in manuellen, massenhaften und geplanten Updates ausgewählt werden, mit Ausnahme deklarierter Compose-Abhängigkeiten, die dem übergeordneten Service folgen müssen."
     ],
     "callout": "Container, die innerhalb von Docker laufen, werden nicht als unabhängige LXC-Anwendungen angezeigt. Ihre veröffentlichten Webports können als Links unter der Docker-Registrierung gespeichert werden, während Bildaktualisierungen im Docker-Bereich verbleiben."
   },
@@ -77,7 +77,7 @@
       "<strong>Configure</strong> öffnet den Updater-Selektor, wenn keine Methode ausgewählt ist; <strong>Edit</strong> ändert eine gespeicherte Auswahl. Die Informationsschaltflächen erklären jede Option, verlinken auf die offizielle Dokumentation und zeigen ein benutzerdefiniertes Skriptbeispiel an. Die Auswahl einer Option führt sie nicht aus.",
       "Wenn die Versionsverfolgung deaktiviert ist, aber ein Updater vorhanden ist, wird die neutrale Aktion <strong>Run updater</strong> angezeigt. ProxMenux behauptet nicht, dass ein Update anhängig ist.",
       "Konfigurieren Sie ohne einen verfügbaren Helper-Scripts-Updater einen benutzerdefinierten Befehl. Das Deaktivieren einer Methode wählt nicht stillschweigend eine andere aus; bestehende Plan-/Zeitplanauswahlen bleiben gespeichert und nicht verfügbare Ziele werden gemeldet.",
-      "Die Aktion <strong>Update image</strong> gilt nur für die ausgewählte Docker-Einheit; sie aktualisiert weder Docker Engine noch nicht verwandte Bilder."
+      "Die Aktion <strong>Update image</strong> gilt nur für die ausgewählte Docker-Einheit; sie aktualisiert weder Docker Engine noch nicht verwandte Images."
     ],
     "statusColState": "Bekannter Staat",
     "statusColAppearance": "Aussehen",

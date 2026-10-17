@@ -1,22 +1,22 @@
 {
   "meta": {
     "title": "Samba server i LXC | ProxMenux Dokumentation",
-    "description": "Kör en Samba (SMB / CIFS) server i en Proxmox LXC behållare med ProxMenux. Auto-installerar samba, hanterar /etc/samba/smb.conf, smbpasswd-användare, sharedfiles grupp för bindmonterade mappar. Kräver en privilegierad behållare.",
+    "description": "Kör en Samba (SMB / CIFS) server i en Proxmox LXC container med ProxMenux. Auto-installerar samba, hanterar /etc/samba/smb.conf, smbpasswd-användare, sharedfiles grupp för bindmonterade mappar. Kräver en privilegierad container.",
     "ogTitle": "Samba server i LXC | ProxMenux Dokumentation",
     "ogDescription": "Exponera mappar över SMB/CIFS inifrån en privilegierad LXC-behållare. Auto-install, smbpasswd användare, bind-mount medvetna behörigheter."
   },
   "header": {
     "title": "Samba server i LXC",
-    "description": "Kör en Samba (SMB / CIFS) server i en Proxmox LXC behållare och exponera mappar till Windows / macOS / Linux klienter på nätverket. ProxMenux installerar samba, skapar en Samba användare med smbpasswd, hanterar /etc/samba/smb.conf, och tillämpar bind-mount medvetna behörigheter när den delade mappen kommer från värden.",
+    "description": "Kör en Samba (SMB / CIFS) server i en Proxmox LXC container och exponera mappar till Windows / macOS / Linux klienter på nätverket. ProxMenux installerar samba, skapar en Samba användare med smbpasswd, hanterar /etc/samba/smb.conf, och tillämpar bind-mount medvetna behörigheter när den delade mappen kommer från värden.",
     "section": "Lagring & Dela · LXC"
   },
   "privReq": {
-    "title": "Privilegierad behållare krävs",
-    "body": "Samba impersonates den anslutande användaren med <code>setgroups()</code> på varje trädanslutning (det ögonblick en klient öppnar en aktie). I en oprivilegierad LXC avvisar kärnan det syscall eftersom behållarens användarnamnrymd skapas med <code>setgroups=deny</code> - och <code>smbd</code> svarar genom att abortera arbetarprocessen med <code>PANIC: sys_setgroups failed</code>. Resultatet är att <code>smbd</code> startar och binder portar 139/445, men varje klientanslutning misslyckas med <code>NT_STATUS_CONNECTION_DISCONNECTED</code>. Skriptet genomdriver en privilegierad CT av denna anledning och <strong>aborts om det är oprivileged</strong>. Det finns ingen ren fix på serversidan; använd en privilegierad CT eller kör Samba i en VM."
+    "title": "Privilegierad container krävs",
+    "body": "Samba impersonates den anslutande användaren med <code>setgroups()</code> på varje trädanslutning (det ögonblick en klient öppnar en aktie). I en oprivilegierad LXC avvisar kärnan det syscall eftersom containerns användarnamnrymd skapas med <code>setgroups=deny</code> - och <code>smbd</code> svarar genom att abortera arbetarprocessen med <code>PANIC: sys_setgroups failed</code>. Resultatet är att <code>smbd</code> startar och binder portar 139/445, men varje klientanslutning misslyckas med <code>NT_STATUS_CONNECTION_DISCONNECTED</code>. Skriptet genomdriver en privilegierad CT av denna anledning och <strong>aborts om det är oprivileged</strong>. Det finns ingen ren fix på serversidan; använd en privilegierad CT eller kör Samba i en VM."
   },
   "what": {
     "heading": "Vad detta gör",
-    "body": "Behållaren blir en SMB/CIFS-server: den kör <code>smbd</code>, exponerar en mapp via <code>/etc/samba/smb.conf</code> och accepterar klientanslutningar på portar <code>139</code>/<code>445</code>. Kunder ser andelen på <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code> i Windows Explorer, <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code> i macOS Finder, eller via <code>mount.cifs</code> på Linux.",
+    "body": "Containern blir en SMB/CIFS-server: den kör <code>smbd</code>, exponerar en mapp via <code>/etc/samba/smb.conf</code> och accepterar klientanslutningar på portar <code>139</code>/<code>445</code>. Kunder ser andelen på <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code> i Windows Explorer, <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code> i macOS Finder, eller via <code>mount.cifs</code> på Linux.",
     "diagramServerLabel": "LXC (privilegierad) - Samba server",
     "diagramServerDetail": "/mnt/data\n(mapp du exponerar)\n\nsmbd + nmbd running\n\nAnvändare: <username>\n(via smbpasswd)\n\nForce Group:\nsharedfiles",
     "diagramClientLabel": "Alla kunder i nätverket",
@@ -90,7 +90,7 @@
   },
   "troubleshoot": {
     "heading": "Felsökning",
-    "privTitle": "Privilegierad behållare krävs (skript aborter)",
+    "privTitle": "Privilegierad container krävs (skript aborter)",
     "privBody": "Den valda CT är oprivilegierad och <code>smbd</code> kan inte servera filer där. Om du kringgår porten och konfigurerar Samba för hand börjar <code>smbd</code> och portarna öppna, men de första klientanslutningspanikerna med <code>PANIC: sys_setgroups failed</code> i <code>/var/log/samba/log.&lt;client&gt;</code> och klienten ser <code>NT_STATUS_CONNECTION_DISCONNECTED</code>. Orsaken är det oprivilegierade användarnamnsutrymmet med <code>setgroups=deny</code>, som blockerar Sambas per-anslutning impersonation. Varken <code>features=keyctl=1</code> eller ta bort <code>force user</code>/<code>force group</code> ändrar detta. De enda användbara alternativen är: konvertera CT till privilegierad, eller flytta Samba till en VM.",
     "aptTitle": "apt-get install fails",
     "aptIntro": "Manuset antar en Debian-familj CT. På Alpine / Arch / Rocky / Alma, installera Samba för hand:",

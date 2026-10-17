@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Vad detta gör",
-    "body": "ProxMenux automatiserar helheten NVIDIA Förarens livscykel på värden: detekterar din GPUerbjudanden underhållna NVIDIA grenar som listar sitt PCI-enhets-ID, svartlistor <code>nouveau</code>, nedladdningar och kör officiell NVIDIA <code>.run</code> installatör med DKMS, installerar <code>nvidia-persistenced</code> service och udev regler, och erbjudanden för att tillämpa den valfria NVENC patch. Den är DKMS bygga är den slutliga kompatibilitetskontrollen mot den löpande kärnan. Om du redan har LXC behållare med NVIDIA genomgång, det kan uppdatera sina användarpace bibliotek för att matcha värden."
+    "body": "ProxMenux automatiserar helheten NVIDIA Förarens livscykel på värden: detekterar din GPUerbjudanden underhållna NVIDIA grenar som listar sitt PCI-enhets-ID, svartlistor <code>nouveau</code>, nedladdningar och kör officiell NVIDIA <code>.run</code> installatör med DKMS, installerar <code>nvidia-persistenced</code> service och udev regler, och erbjudanden för att tillämpa den valfria NVENC patch. Den är DKMS bygga är den slutliga kompatibilitetskontrollen mot den löpande kärnan. Om du redan har LXC containrar med NVIDIA genomgång, det kan uppdatera sina användarpace bibliotek för att matcha värden."
   },
   "who": {
     "heading": "Vem är detta för?",
@@ -22,7 +22,7 @@
     "gpuCheck": "lspci | grep -i nvidia",
     "notVm": "GPU <strong> tilldelas för närvarande inte en VM via VFIO passthrough</strong>. Om det är, kommer manuset vägra att installera värddrivrutinen för att undvika att bryta igenom konfig.",
     "internet": "Internetåtkomst på värden. Installationsprogrammet hämtar föraren från <code>download.nvidia.com</code> och, valfritt, kloner <code>nvidia-persistenced</code> och <code>nvidia-patch</code> från GitHub.",
-    "space": "Vissa gratis utrymme i <code>/opt/nvidia</code> för <code>.run</code> installatör plus RAM som används under bygget. När du propagerar för LXCs på icke-Arch distros, varje behållare behöver minst 1.5 GB gratis; ProxMenux tillfälligt höjer behållaren RAM till 2 GB och återställer det efter. En omstart krävs i slutet av värdinstallationen."
+    "space": "Vissa gratis utrymme i <code>/opt/nvidia</code> för <code>.run</code> installatör plus RAM som används under bygget. När du propagerar för LXCs på icke-Arch distros, varje container behöver minst 1.5 GB gratis; ProxMenux tillfälligt höjer containern RAM till 2 GB och återställer det efter. En omstart krävs i slutet av värdinstallationen."
   },
   "vmWarn": {
     "title": "GPU tilldelas en VM? Stanna här",
@@ -40,8 +40,8 @@
   "walkthrough": {
     "detect": {
       "title": "GPU upptäckt och översikt",
-      "body1": "Skriptet skannar PCI-bussen och visar varje NVIDIA video controller det finner, den nuvarande förarstatus (eller <em> \"No NVIDIA-drivrutin installerad\" </em>), och alla LXC behållare som redan har NVIDIA passthrough konfigurerad (driver version inuti varje).",
-      "body2": "Granska översikten noggrant. Om den upptäckta GPU inte är vad du förväntar dig, eller om en behållare version redan matchar värden, kan du avbryta här utan biverkningar.",
+      "body1": "Skriptet skannar PCI-bussen och visar varje NVIDIA video controller det finner, den nuvarande förarstatus (eller <em> \"No NVIDIA-drivrutin installerad\" </em>), och alla LXC container som redan har NVIDIA passthrough konfigurerad (driver version inuti varje).",
+      "body2": "Granska översikten noggrant. Om den upptäckta GPU inte är vad du förväntar dig, eller om en container version redan matchar värden, kan du avbryta här utan biverkningar.",
       "imageAlt": "Förinstallera översikt som visar upptäckta GPU, nuvarande förarstatus och LXC-behållare med NVIDIA genomgång"
     },
     "version": {
@@ -73,7 +73,7 @@
     },
     "persist": {
       "title": "Persistens service och udev regler",
-      "body": "ProxMenux sedan installerar <persistLink>nvidia-persistenced</persistLink> och skriver udev regler på <code>/etc/udev/rules.d/70-nvidia.rules</code> så <code>/dev/nvidia*</code> enhetsnoder verkar tillförlitligt på start. Utan dessa kan LXC passthrough tävla på containerstart och sluta med en behållare som inte kan se GPU."
+      "body": "ProxMenux sedan installerar <persistLink>nvidia-persistenced</persistLink> och skriver udev regler på <code>/etc/udev/rules.d/70-nvidia.rules</code> så <code>/dev/nvidia*</code> enhetsnoder verkar tillförlitligt på start. Utan dessa kan LXC passthrough tävla på containerstart och sluta med en container som inte kan se GPU."
     },
     "nvenc": {
       "title": "Valfritt: tillämpa NVENC-patchen",
@@ -82,9 +82,9 @@
       "supportBody": "Patchen täcker inte varje förarversion. Innan du förlitar dig på den i produktionen, verifiera din version är listad i <patchTableLink>patch table</patchTableLink>. Om det inte stöds ännu, välj en närliggande äldre förare som är."
     },
     "propagate": {
-      "title": "Valfritt: propagera föraren till LXC behållare",
-      "body1": "Om översiktsskärmen listade behållare med NVIDIA passthrough, erbjuder ProxMenux nu att uppdatera användarrymdens bibliotek inom var och en för att matcha värden. Värd kärnmodul och containeranvändarepace <strong> måste vara exakt samma version</strong> - annars <code>nvidia-smi</code> inuti behållaren kommer att misslyckas med en \"version felmatch\" fel.",
-      "body2": "Uppdateringen är distro-medveten. För Debian / Ubuntu och andra glibc distros, samma <code>.run</code> installatör (med <code>--no-kernel-modules --no-dkms --no-install-compat32-libs</code>) skjuts in i behållaren och utförs; behållaren RAM höjs tillfälligt till 2 GB om lägre och återställs efter. För <strong>Arch, Manjaro och EndeavourOS</strong> är uppdateringen en <code>pacman -Syu nvidia-utils</code> knuten till värdens förarfilial. <strong>Alpine</strong> använder en annan väg - <code>.run</code> extraheras på värden, endast användarpace bibliotek paketeras som en tarball och trycks med <code>pct push</code>, sedan <code>gcompat</code> + <code>binutils</code> shims installeras via <code>apk</code> och SONAME symlinks återskapas med <code>readelf</code> så glibc-länkade bibliotek load på mur.",
+      "title": "Valfritt: propagera föraren till LXC containrar",
+      "body1": "Om översiktsskärmen listade behållare med NVIDIA passthrough, erbjuder ProxMenux nu att uppdatera användarrymdens bibliotek inom var och en för att matcha värden. Värd kärnmodul och containeranvändarepace <strong> måste vara exakt samma version</strong> - annars <code>nvidia-smi</code> inuti containern kommer att misslyckas med en \"version felmatch\" fel.",
+      "body2": "Uppdateringen är distro-medveten. För Debian / Ubuntu och andra glibc distros, samma <code>.run</code> installatör (med <code>--no-kernel-modules --no-dkms --no-install-compat32-libs</code>) skjuts in i containern och utförs; containern RAM höjs tillfälligt till 2 GB om lägre och återställs efter. För <strong>Arch, Manjaro och EndeavourOS</strong> är uppdateringen en <code>pacman -Syu nvidia-utils</code> knuten till värdens förarfilial. <strong>Alpine</strong> använder en annan väg - <code>.run</code> extraheras på värden, endast användarpace bibliotek paketeras som en tarball och trycks med <code>pct push</code>, sedan <code>gcompat</code> + <code>binutils</code> shims installeras via <code>apk</code> och SONAME symlinks återskapas med <code>readelf</code> så glibc-länkade bibliotek load på mur.",
       "imageAlt": "Prompt listning LXCs med NVIDIA passthrough och aktuell förarversion, med Ja/Nej för att uppdatera dem alla"
     },
     "reboot": {
@@ -108,7 +108,7 @@
       "Ta bort udevreglerna (<code>/etc/udev/rules.d/70-nvidia.rules</code>) och rensar NVENC-patchstatus (ett fält i ProxMenux-hanterade registret, inställt på <em>removed</em> - ingen separat fil att ta bort).",
       "Rebuilds <code>initramfs</code> för alla kärnor, kör <code>proxmox-boot-tool refresh</code> på systemd-boot värdar, och uppmanar till en omstart för att slutföra."
     ],
-    "lxcWarnTitle": "LXC behållare med NVIDIA genomgång",
+    "lxcWarnTitle": "LXC containrar med NVIDIA genomgång",
     "lxcWarnBody": "Ta bort värddrivrutinen ogiltigförklarar enhetsvägarna och CUDA-bibliotek som kartlagts till någon LXC med NVIDIA genomgång. Planera driften under ett underhållsfönster om Frigate / Plex / Jellyfin / Ollama (eller något annat) beror på det."
   },
   "updates": {
@@ -134,7 +134,7 @@
     "smiFailTitle": "`nvidia-smi` säger \"NVIDIA-SMI har misslyckats\"",
     "smiFailBody": "Nästan alltid en <strong>nouveau</strong> fortfarande laddad eller en <strong>kernel header mismatch</strong>. Efter omstart, kör <code>lsmod | grep nouveau</code> - om det returnerar något, kontrollera <code>/etc/modprobe.d/proxmenux-nouveau-blacklist.conf</code>, bygga om initramfer med <code>update-initramfs -u -k all</code> och starta om. Om nouveau är borta, kontrollera <code>dmesg | grep -i nvidia</code> - DKMS bygga fel brukar innebära att rubrikerna inte matchar löparkärnan.",
     "lxcMissTitle": "LXC-container kan inte se GPU efter värduppdatering",
-    "lxcMissBody": "Behållarens användarrymdbibliotek sitter fast vid den tidigare förarversionen. Antingen åter kör NVIDIA-installationsprogrammet och acceptera LXC-promptet eller installera samma förarversion manuellt i behållaren med <code>--no-kernel-modules</code>.",
+    "lxcMissBody": "Containerns användarrymdbibliotek sitter fast vid den tidigare förarversionen. Antingen åter kör NVIDIA-installationsprogrammet och acceptera LXC-promptet eller installera samma förarversion manuellt i containern med <code>--no-kernel-modules</code>.",
     "logTitle": "Kolla installationsloggen",
     "logBody": "Varje installation skriver till <code>/tmp/nvidia_install.log</code>. Om något misslyckas tyst, har den filen full effekt (nedladdningar, DKMS-byggnad, serviceinstallationer). Bifoga det när du rapporterar problem på GitHub."
   },
@@ -153,7 +153,7 @@
       {
         "label": "Lägg till GPU till LXC",
         "href": "/docs/hardware/igpu-acceleration-lxc",
-        "tail": " — dela NVIDIA GPU med en eller flera behållare."
+        "tail": " — dela NVIDIA GPU med en eller flera containrar."
       },
       {
         "label": "Switch GPU Mode (VM | LXC)",

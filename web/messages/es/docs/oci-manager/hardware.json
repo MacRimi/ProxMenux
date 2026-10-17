@@ -6,7 +6,7 @@
   "header": {
     "title": "Dispositivos y aceleración",
     "description": "GPU, NVIDIA, Coral, USB, FUSE y dispositivos de bloques se convierten en recursos nativos y validados de Proxmox VE del contenedor.",
-    "section": "Aplicaciones del gestor OCI"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {

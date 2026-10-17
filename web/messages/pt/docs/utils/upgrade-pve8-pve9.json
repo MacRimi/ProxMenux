@@ -158,7 +158,7 @@
   },
   "manual": {
     "heading": "Procedimento de actualização manual",
-    "intro": "Isto é o que o <strong>Guia de atualização manual</strong> a opção menu exibe — um espelho fiel de <wikilink>o Proxmox oficial 8- Para...9 atualizar wiki</wikilink> organizado em 4 fases. O script <em>mostra</em> estes comandos; você mesmo os digita em uma shell de raiz separada. Sem automação — visibilidade total.",
+    "intro": "É isto que a opção <strong>Guia de atualização manual</strong> apresenta: uma reprodução fiel da <wikilink>wiki oficial de atualização do Proxmox 8 para 9</wikilink>, organizada em 4 fases. O script <em>mostra</em> os comandos; é o utilizador que os executa numa shell root separada. Não há automatização e todos os passos ficam visíveis.",
     "rootCalloutTitle": "Todos os comandos precisam de root",
     "rootCalloutBody": "Executar como root ou prefixo todos os comandos com <code>sudo</code>. A máquina Proxmox em si é executada como root por padrão; somente relevante se você bloqueá- la.",
     "phase1Heading": "Fase 1 — Preparação",

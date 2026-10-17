@@ -1,22 +1,22 @@
 {
   "meta": {
     "title": "NFS klient i LXC | ProxMenux Dokumentation",
-    "description": "Mount NFS aktier direkt inifrån en Proxmox LXC behållare med ProxMenux. Auto-installerar nfs-vanligt, stöder auto-upptäckt på LAN, ihållande fästen via /etc/fstab och säker startbeteende. Kräver en privilegierad behållare.",
+    "description": "Mount NFS aktier direkt inifrån en Proxmox LXC container med ProxMenux. Auto-installerar nfs-vanligt, stöder auto-upptäckt på LAN, ihållande fästen via /etc/fstab och säker startbeteende. Kräver en privilegierad container.",
     "ogTitle": "NFS klient i LXC | ProxMenux Dokumentation",
-    "ogDescription": "Mount NFS aktier inifrån en privilegierad LXC behållare. Auto-upptäckt, /etc/fstab uthållighet, säkra start standarder."
+    "ogDescription": "Mount NFS aktier inifrån en privilegierad LXC container. Auto-upptäckt, /etc/fstab uthållighet, säkra start standarder."
   },
   "header": {
     "title": "NFS klient i LXC",
-    "description": "Mount NFS aktier direkt inifrån en Proxmox LXC behållare. Behållaren blir en riktig NFS-klient - pratar med NFS-servern över nätverket, kör mont.nfs, skriver till /etc/fstab. ProxMenux installerar nfs-gemensamt för dig, hjälper dig att hitta servrar och exporterar, och tillämpar säkra startstandarder.",
+    "description": "Mount NFS aktier direkt inifrån en Proxmox LXC container. Containern blir en riktig NFS-klient - pratar med NFS-servern över nätverket, kör mont.nfs, skriver till /etc/fstab. ProxMenux installerar nfs-gemensamt för dig, hjälper dig att hitta servrar och exporterar, och tillämpar säkra startstandarder.",
     "section": "Lagring & Dela · LXC"
   },
   "privReq": {
-    "title": "Privilegierad behållare krävs",
+    "title": "Privilegierad container krävs",
     "body": "Kernel <code>mount.nfs</code>-klientens behovsfunktioner (<code>SYS_ADMIN</code> åtminstone) som oprivilegierade LXC-behållare inte exponerar. Skriptet genomdriver detta - det ber dig att välja en CT och <strong>aborts om det är oprivileged</strong>. Om du behöver andelen inuti en oprivilegierad CT, montera den på Proxmox värd först (med <hostNfsLink>NFS dela som Proxmox lagring</hostNfsLink>) och binda det till CT med <mountLink>LXC Mount Manager</mountLink>."
   },
   "what": {
     "heading": "Vad detta gör",
-    "body": "Till skillnad från LXC Mount Manager - vilket gör CT se något <em>via</em> Proxmox-värden - detta skript ger behållaren sin <strong>own NFS klient</strong>: det talar NFS över nätverket, monterar aktier direkt från NFS-servern och lagrar montet i behållarens <code>/etc/fstab</code>. Proxmox-värden ligger inte i datavägen.",
+    "body": "Till skillnad från LXC Mount Manager - vilket gör CT se något <em>via</em> Proxmox-värden - detta skript ger containern sin <strong>own NFS klient</strong>: det talar NFS över nätverket, monterar aktier direkt från NFS-servern och lagrar montet i containerns <code>/etc/fstab</code>. Proxmox-värden ligger inte i datavägen.",
     "diagramServerLabel": "NFS-server",
     "diagramServerDetail": "/export/data",
     "diagramHostLabel": "Proxmox-värd",
@@ -56,7 +56,7 @@
       }
     ],
     "netEffectTitle": "Nettoeffekt",
-    "netEffectBody": "Din behållare startar alltid, även om NFS-servern är offline. Första gången något rör monteringsvägen, systemd monterar den tyst. Om servern fortfarande är nere, att en åtkomst misslyckas med <em>resource tillfälligt otillgänglig</em> - men inget annat i CT påverkas."
+    "netEffectBody": "Din container startar alltid, även om NFS-servern är offline. Första gången något rör monteringsvägen, systemd monterar den tyst. Om servern fortfarande är nere, att en åtkomst misslyckas med <em>resource tillfälligt otillgänglig</em> - men inget annat i CT påverkas."
   },
   "manual": {
     "heading": "Manuell motsvarande",
@@ -78,7 +78,7 @@
   },
   "troubleshoot": {
     "heading": "Felsökning",
-    "privTitle": "Privilegierad behållare krävs (skript aborter)",
+    "privTitle": "Privilegierad container krävs (skript aborter)",
     "privBody": "Den valda CT är oprivilegierad. Kernel NFS-klienten behöver <code>SYS_ADMIN</code>-kapacitet som oprivilegierade CT inte exponerar. Antingen konvertera CT till privilegierad (Disk Manager &amp; konvertering dokumenteras i <importLink>Import Disk till LXC</importLink> sida) eller använd den alternativa vägen som beskrivs i varningen högst upp på denna sida.",
     "aptTitle": "apt-get install nfs-common fails",
     "aptIntro": "Manuset antar en Debian-familj CT (<code>apt-get</code>). Om CT kör Alpine / Arch / Rocky / Alma misslyckas installationssteget tyst. Installera NFS-klienten för den distroen:",

@@ -78,7 +78,7 @@
       "En annan Proxmox värd på samma LAN, eller en VM var som helst nås över SSH."
     ],
     "lxcWarningTitle": "LXC som Borg server",
-    "lxcWarningBody": "Om Borg-servern körs inuti en LXC måste behållaren ha ett användarkonto med ett lösenord.",
+    "lxcWarningBody": "Om Borg-servern körs inuti en LXC måste containern ha ett användarkonto med ett lösenord.",
     "requirementsTitle": "Krav på servern",
     "requirementsRows": [
       {

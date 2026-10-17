@@ -171,7 +171,7 @@
       {
         "label": "GPU Durchgangsbefehle",
         "href": "/docs/help-info/gpu-commands",
-        "tail": "— lspci, IOMMU-Verifikation, qm gesetzte Hostpci-Referenz."
+        "tail": " — lspci, IOMMU-Prüfung und Referenz zu qm set hostpci."
       }
     ]
   }

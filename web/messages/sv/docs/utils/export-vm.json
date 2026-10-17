@@ -123,7 +123,7 @@
     "nicTitle": "Importerad VM i VMware har e1000 NIC men jag vill ha VirtIO",
     "nicBody": "Förväntad - OVF lagrar bara NIC-talet, inte modellen. Redigera de importerade VM NIC-inställningarna i VMware efter import. Samma gäller för SCSI controller (export använder Lsilogic för VMware kompatibilitet; ändra till <code>VirtIO SCSI</code> om din gäst stöder det).",
     "runningTitle": "VM var igång och jag avböjde att stoppa det - exportera aborterad",
-    "runningBody": "Manuset kan inte producera en konsekvent bild medan diskar skrivs. Antingen accepterar avstängningsprompten nästa gång, eller stoppar VM manuellt först (<code>qm shutdown $VMID</code>) och re-run.",
+    "runningBody": "Manuset kan inte producera en konsekvent avbildning medan diskar skrivs. Antingen accepterar avstängningsprompten nästa gång, eller stoppar VM manuellt först (<code>qm shutdown $VMID</code>) och re-run.",
     "slowTitle": "Disk konvertering är långsam",
     "slowBody": "<code>qemu-img convert</code> är enstaka och läser källan i full fart. För en 100 GB disk på spinning rost, förvänta 15-30 minuter. NVMe till NVMe är 5-10x snabbare. Multi-disk VM konverterar sekventiellt - tidsskalor linjärt med total virtuell storlek."
   },

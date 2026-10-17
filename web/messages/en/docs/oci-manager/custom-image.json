@@ -192,7 +192,7 @@
           "list": {
             "items": [
               "A Dockerfile without a published image: the image has to be built and published in an OCI registry first.",
-              "A Compose file with several services: it is blocked because it describes more than one image. This option installs a single container.",
+              "A Compose file with several services is blocked: this option installs one service in one container at a time, even when several services use the same image.",
               "<code>configs</code>, external secrets or device formats that cannot be translated unambiguously.",
               "Shell substitutions such as <code>$(command)</code>: the resulting value has to be written instead.",
               "<code>docker run</code> options that are not recognised, and <code>--env-file</code>: an explicit Compose file is read instead."

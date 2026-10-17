@@ -110,7 +110,7 @@
       "Katalogstödd LXC-registrering kan fylla i en kategori, men den är fortfarande redigerbar.",
       "Anpassade kategorinamn kan skapas från samma väljare och sedan återanvändas av filtret.",
       "Kategorifärger är deterministiska och anpassar sig till ljus eller mörkt tema. Lila och röda intervall är reserverade för uppdatering och farliga tillstånd.",
-      "För Docker Web Links matchar ProxMenux kortet till sin behållare eller bild och rapporterar att bildens uppdateringstillstånd. En Docker Engine-uppdatering kvarstår i LXC <updatesLink>Updates-fliken</updatesLink>."
+      "För Docker Web Links matchar ProxMenux kortet till sin container eller avbildning och rapporterar att avbildningens uppdateringstillstånd. En Docker Engine-uppdatering kvarstår i LXC <updatesLink>Updates-fliken</updatesLink>."
     ]
   },
   "persistence": {
@@ -143,7 +143,7 @@
       },
       {
         "problem": "Den lila pilen hänvisar till fel Docker-uppdatering",
-        "resolution": "Granska webblänkens namn och beskrivning så att de kan matchas till den avsedda behållaren eller bilden."
+        "resolution": "Granska webblänkens namn och beskrivning så att de kan matchas till den avsedda containern eller avbildningen."
       },
       {
         "problem": "Appar öppnar först istället för Systemöversikt",

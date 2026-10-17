@@ -1,15 +1,15 @@
 {
   "meta": {
-    "title": "Comandos de Cópia de Segurança do Proxmox — vzdump, qmrestore, pct restaure ProxMenux",
-    "description": "Referência de comandos de backup e restauração Proxmox VE: vzdump para recipientes VMs e LXC, qmrestore para VMs, restauração pct para recipientes, backups programados em /etc/pve/jobs.cfg, scripts de gancho e excluir caminhos.",
-    "ogTitle": "Comandos de Cópia de Segurança Proxmox — vzdump, qmrestore, pct restauration",
-    "ogDescription": "Referência dos comandos de restauração vzdump, qmrestore e pct para backup e restauração de VMs Proxmox e LXC.",
+    "title": "Comandos de cópia de segurança Proxmox — vzdump, qmrestore, pct restore | ProxMenux",
+    "description": "Referência dos comandos de cópia de segurança e restauro do Proxmox VE: vzdump para VM e contentores LXC, qmrestore para VM, pct restore para contentores, cópias agendadas em /etc/pve/jobs.cfg, scripts de hook e caminhos a excluir.",
+    "ogTitle": "Comandos de cópia de segurança Proxmox — vzdump, qmrestore, pct restore",
+    "ogDescription": "Referência dos comandos vzdump, qmrestore e pct restore para criar e restaurar cópias de VM e contentores LXC Proxmox.",
     "twitterTitle": "Comandos de Cópia de Segurança do Proxmox ProxMenux",
-    "twitterDescription": "comandos de restauração vzdump, qmrestore e pct para backup e restauração de VMs e contêineres Proxmox."
+    "twitterDescription": "Comandos vzdump, qmrestore e pct restore para criar e restaurar cópias de VM e contentores Proxmox."
   },
   "header": {
     "title": "Backup e Restauração",
-    "description": "Referência cuidada de comandos de restauração vzdump, qmrestore e pct para fluxos de trabalho de backup Proxmox. Inclui agendamento, opções avançadas como scripts de gancho / excluir caminhos / prioridade de E/S, e gerenciamento de arquivos de backup.",
+    "description": "Referência comentada dos comandos vzdump, qmrestore e pct restore para as cópias de segurança Proxmox. Inclui agendamento, opções avançadas como scripts de hook, caminhos a excluir e prioridade de E/S, além da gestão dos ficheiros de cópia.",
     "section": "Ajuda e informações"
   },
   "intro": {

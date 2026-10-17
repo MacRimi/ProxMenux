@@ -56,9 +56,9 @@
       ]
     },
     {
-      "term": "Supporto binario",
+      "term": "Bind mount",
       "category": "Linux",
-      "definitionRich": "Una funzionalità Linux che espone una parte del filesystem in un altro percorso. ProxMenux utilizza supporti di legame per condividere directory host con contenitori LXC tramite <code>pct set -mpN</code>.",
+      "definitionRich": "Una funzionalità Linux che rende accessibile una parte del filesystem anche da un altro percorso. ProxMenux usa i bind mount per condividere directory dell’host con i container LXC tramite <code>pct set -mpN</code>.",
       "seeAlso": [
         {
           "label": "Punti di montaggio LXC",

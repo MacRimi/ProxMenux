@@ -18,7 +18,7 @@
       "Erstellen Sie ein Verzeichnis auf dem Proxmox-Host und registrieren Sie es als vzdump-fähigen Datenspeicher.",
       "Installieren und konfigurieren Sie rclone für Ihren Cloud-Anbieter.",
       "Montieren Sie den Cloud-Ordner in das Verzeichnis.",
-      "Lassen Sie die Halterung Reboots überleben (systemd-Einheit - robuster als Crontab)."
+      "Lassen Sie die Mount Reboots überleben (systemd-Einheit - robuster als Crontab)."
     ],
     "vzdumpCalloutTitle": "Heads up über Proxmox vzdump Backups",
     "vzdumpCalloutBody": "Sie sind <strong>nicht inkremental</strong>. Jedes Backup enthält das vollständige VM-Disk-Image (komprimiert). In einer quotenbegrenzten Wolke füllt sich dies schnell. Planen Sie eine Aufbewahrungsrichtlinie vom ersten Tag an (siehe Ende des Leitfadens)."
@@ -95,7 +95,7 @@
   },
   "retention": {
     "heading": "6. Aufbewahrung — Wolkenquote unter Kontrolle halten",
-    "body": "Proxmox vzdump Backups sind <strong>full Snapshots, nicht inkrementelle </strong>. A 30 GB VM = 30 GB pro Backup. Ohne Retention füllt sich die Cloud.",
+    "body": "Proxmox-vzdump-Archive sind <strong>Vollsicherungen, keine inkrementellen Sicherungen</strong>. Ihre tatsächliche Größe hängt von den enthaltenen Daten und der Komprimierung ab, nicht allein von der Kapazität des virtuellen Datenträgers. Belegt ein Archiv 30 GB, benötigen fünf aufbewahrte Archive ungefähr 150 GB. Legen Sie eine Aufbewahrungsrichtlinie fest, damit der Cloud-Speicher nicht vollläuft.",
     "uiPath": "In the Proxmox UI: <strong>Datacenter → Backup → [your job] → Retention</strong>:",
     "image7Alt": "Sicherungseinstellungen in Proxmox",
     "starterIntro": "Angemessene Starterwerte für ein Home / Lab Setup:",
@@ -109,7 +109,7 @@
   "troubleshoot": {
     "heading": "Fehlerbehebung",
     "items": [
-      "<strong><code>Mount point /mnt/gdrive is itself on a fuse.rclone filesystem</code>:</strong> die vorherige Halterung nicht sauber abmontiert. Force-unmount: <code>fusermount -uz /mnt/gdrive</code>, dann starten Sie die systemd-Einheit neu.",
+      "<strong><code>Mount point /mnt/gdrive is itself on a fuse.rclone filesystem</code>:</strong> die vorherige Mount nicht sauber abmontiert. Force-unmount: <code>fusermount -uz /mnt/gdrive</code>, dann starten Sie die systemd-Einheit neu.",
       "<strong>Backup ist extrem langsam: </strong> bestätigt <code>--vfs-cache-mode writes</code> ist auf der <code>ExecStart</code> Linie. Ohne sie blockiert jedes Schreiben in der Cloud. Überprüfen Sie auch Ihre Upstream-Bandbreite - vzdump ist daran gebunden.",
       "<strong>Backup schlägt fehl mit \"Kein Speicherplatz auf dem Gerät\": </strong> das Cache-Verzeichnis (<code>~/.cache/rclone/</code>) gefüllt, bevor der Upload aufgeholt. Verschieben Sie es in ein größeres Dateisystem mit <code>--cache-dir /var/cache/rclone</code> in der systemd-Einheit.",
       "<strong>rclone auth-Token abgelaufen (typisch auf Google Drive nach einer langen Leerlaufphase): </strong> SSH zurück in den Tunnel (<code>ssh -L localhost:53682:localhost:53682 root@ip_proxmox</code>) und laufen <code>rclone config reconnect gdrive:</code> zum Aktualisieren.",

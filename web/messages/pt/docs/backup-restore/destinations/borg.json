@@ -175,7 +175,7 @@
       },
       {
         "var": "BORG_ENCRYPT_MODE",
-        "value": "repokey □ nenhum",
+        "value": "repokey | none",
         "purpose": "Usado pelo <code>hb_borg_init_if_needed</code> ao inicializar um repositório que ainda não existe. Ignorado pelo <code>borg create</code> nos repositórios existentes."
       },
       {

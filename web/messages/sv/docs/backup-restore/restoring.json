@@ -205,7 +205,7 @@
       {
         "stage": "Rebuild initramfs över kärnor",
         "time": "3–5 min",
-        "detail": "<code>update-initramfs -u -k all</code> bygger en initramfs bild per installerad kärna. Bulk av väntan."
+        "detail": "<code>update-initramfs -u -k all</code> bygger en initramfs avbildning per installerad kärna. Bulk av väntan."
       },
       {
         "stage": "Bygg om starthanterarens konfiguration",

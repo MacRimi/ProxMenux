@@ -160,7 +160,7 @@
     "tempWhyTitle": "Varför en historia betyder här",
     "tempWhyItems": [
       "<strong>Drift detection.</strong> Disker som successivt värmer upp över veckor (misslyckande fan, dammuppbyggnad, granndisk dör och trycker varm luft över) är osynliga för en enda \"strömtemperatur\" avläsning. 7-dagars och 30-dagars utsikt över driften.",
-      "<strong>Spik korrelation.</strong> När ett backupfönster eller en ombyggnad tryckte skivan kort över dess tröskel, 1-timme och 24timmars räckvidd visar om det var en engång eller ett återkommande mönster.",
+      "<strong>Samband med temperaturtoppar.</strong> Om en säkerhetskopiering eller återuppbyggnad kortvarigt höjde diskens temperatur över tröskeln visar intervallen på 1 timme och 24 timmar om det var en engångshändelse eller ett återkommande mönster.",
       "<strong>Threshold tuning.</strong> Innan du höjer eller sänker ett tröskelvärde i <em>Settings → Health Monitor Thresholds</em>, visar 30-dagars diagrammet diskens faktiska rörelseområde så att det nya värdet radar upp med vad hårdvaran verkligen gör snarare än en gissning."
     ],
     "obsTitle": "Observationshistoria (över flikar)",

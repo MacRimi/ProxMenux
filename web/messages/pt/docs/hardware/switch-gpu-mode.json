@@ -130,7 +130,7 @@
   },
   "troubleshoot": {
     "heading": "Resolução de Problemas",
-    "stillVfioTitle": "GPU ainda mostra vfio- pci após a mudança para o modo LXC",
+    "stillVfioTitle": "A GPU continua a mostrar vfio-pci após a mudança para o modo LXC",
     "stillVfioBody": "<code>update-initramfs</code> não foi executado (ou o reinício não aconteceu). Verifique <code>lsmod | grep vfio</code> — se vfio-pci for carregado, reexecute <code>update-initramfs -u -k all</code> e reinicie. Para AMD/Intel: verificar <code>vfio.conf</code> não contém mais o fornecedor do GPU: ID do dispositivo. Para NVIDIA: verificar se o BDF já não está em <code>/etc/proxmenux/vfio-bind.bdfs</code> e que o <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> não o lista.",
     "vmFailTitle": "Um VM não começa depois de mudar um GPU para o modo LXC",
     "vmFailBody": "O VM ainda tem entradas <code>hostpci</code> apontando para um GPU que não pode reivindicar. Execute o script novamente e escolha o <em>Remova o GPU da política config</em> ou limpe a configuração à mão:",

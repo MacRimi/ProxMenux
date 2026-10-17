@@ -610,15 +610,15 @@
         "metrics": [
           {
             "metric": "proxmox_disk_total_bytes",
-            "desc": "Gesamtspeicherplatz pro Halterung. Kennzeichnung <code>mountpoint</code>."
+            "desc": "Gesamtspeicherplatz pro Mount. Kennzeichnung <code>mountpoint</code>."
           },
           {
             "metric": "proxmox_disk_used_bytes",
-            "desc": "Verwendeter Plattenraum pro Halterung."
+            "desc": "Verwendeter Plattenraum pro Mount."
           },
           {
             "metric": "proxmox_disk_usage_percent",
-            "desc": "Prozentsatz des Plattenverbrauchs pro Halterung."
+            "desc": "Prozentsatz des Plattenverbrauchs pro Mount."
           }
         ]
       },

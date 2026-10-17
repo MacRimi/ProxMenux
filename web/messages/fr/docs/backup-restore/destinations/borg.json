@@ -175,7 +175,7 @@
       },
       {
         "var": "BORG_ENCRYPT_MODE",
-        "value": "Aucun",
+        "value": "repokey | none",
         "purpose": "Utilisé par <code>hb_borg_init_if_needed</code> lors de l'initialisation d'un dépôt qui n'existe pas encore. Ignoré par <code>borg create</code> sur les dépôts existants."
       },
       {

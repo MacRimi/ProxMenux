@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Host: Mount Samba share on Host □ ProxMenux Documentação",
-    "description": "Montar uma partilha externa de Samba / CIFS na máquina Proxmox — quer como armazenamento Proxmox (pvesm adicionar cifs), como uma montagem fstab de máquina simples com uid/gid/file_mode aberto (NOT visible in Datacenter > Storage), ou ambos. O método fstab abre permissões para que um LXC desprivilegiado que monta o caminho possa ler/escrever sem quaisquer alterações dentro do recipiente.",
+    "description": "Monte uma partilha Samba ou CIFS externa no host Proxmox como armazenamento Proxmox com pvesm add cifs, como montagem fstab com opções uid/gid/file_mode abertas, invisível em Datacenter > Storage, ou das duas formas. O método fstab permite que um LXC sem privilégios leia e escreva por bind mount sem alterações dentro do contentor.",
     "ogTitle": "Host: Mount Samba share on Host □ ProxMenux Documentação",
     "ogDescription": "Montar um compartilhamento externo de Samba / CIFS no host Proxmox via pvesm, fstab com perms abertos (ideal para LXC binding-mounts), ou ambos."
   },
@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "O que isto faz",
-    "body": "ProxMenux oferece dois métodos de montagem para qualquer compartilhamento Samba: <strong>(1) Armazenamento de Proxmox</strong> via <code>pvesm add cifs</code> — visível no Datacenter > Armazenamento, montado em <code>/mnt/pve/&lt;id&gt;</code>, credenciais armazenadas criptografadas em <code>/etc/pve/priv/storage/&lt;id&gt;.pw</code>; <strong>(2) Montagem de fstab da máquina</strong> em um caminho que você escolhe – persistente via <code>/etc/fstab</code>, montado com <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> tão sem privilégios LXC abind-mounts pode escrever, credenciais armazenadas em uma raiz-only <code>/etc/samba/credentials/</code> arquivo (senha nunca entra <code>fstab</code>). Você pode executar um método, o outro, ou ambos."
+    "body": "O ProxMenux oferece dois métodos para uma partilha Samba: <strong>(1) Armazenamento Proxmox</strong> através de <code>pvesm add cifs</code>, visível em Datacenter > Storage e montado em <code>/mnt/pve/&lt;id&gt;</code>. A palavra-passe é guardada em texto simples em <code>/etc/pve/priv/storage/&lt;id&gt;.pw</code>, protegida pelo diretório privado acessível apenas a root: é controlo de acesso, não encriptação. <strong>(2) Montagem fstab do host</strong> num caminho escolhido, persistente através de <code>/etc/fstab</code> e montada com <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> para permitir a escrita através de bind mounts de LXC sem privilégios. As credenciais ficam num ficheiro exclusivo de root em <code>/etc/samba/credentials/</code>, nunca diretamente em <code>fstab</code>. Pode utilizar um método ou ambos."
   },
   "opening": {
     "heading": "Abrir a ferramenta",

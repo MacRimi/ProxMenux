@@ -74,7 +74,7 @@
         "<strong>Pulisciti.</strong> Se un precedente <code>gasket-dkms</code> installare dpkg sinistro in uno stato rotto (tipico dopo un PVE 9 aggiornamento del kernel dove DKMS autoinstall fallito silenziosamente), forza-purge esso.",
         "<strong>Installare deps build:</strong> <code>git</code>, <code>dkms</code>, <code>build-essential</code>, <code>proxmox-headers-$(uname -r)</code>."
       ],
-      "cloneIntro": "<strong>Clone the driver source.</strong> Preferisce la forcella comunitaria <feranickLink>feranick/gasket-driver</feranickLink> (attivamente mantenuta, kernel 6.12+ pronto). Torna a <googleLink>google/gasket-driver</googleLink> se feranick è irraggiungibile, applicando patch specifici del kernel:",
+      "cloneIntro": "<strong>Clonazione del codice sorgente del driver.</strong> Lo script preferisce il fork della comunità <feranickLink>feranick/gasket-driver</feranickLink>, mantenuto attivamente e compatibile con i kernel 6.12 e successivi. Se il repository non è raggiungibile, usa <googleLink>google/gasket-driver</googleLink> e applica le patch specifiche per il kernel:",
       "kernelPatches": [
         "Kernel 6.5+: <code>no_llseek</code> rimosso a monte → sostituzione <code>noop_llseek</code>",
         "Kernel 6.13+: <code>MODULE_IMPORT_NS(DMA_BUF)</code> richiede una stringa"

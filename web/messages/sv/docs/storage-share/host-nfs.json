@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Värd: Mount NFS andel på Värd | ProxMenux Dokumentation",
-    "description": "Montera en extern NFS-export på Proxmox-värden - antingen som Proxmox-lagring (pvesm lägger till nfs), som en vanlig värd fstab-fäste (Inte synlig i Datacenter > Lagring), eller båda. Fstab-metoden är idealisk för bindmontering av andelen i LXC-behållare utan att exponera den som en Proxmox-lagring.",
+    "description": "Montera en extern NFS-export på Proxmox-värden som Proxmox-lagring med pvesm add nfs, som ett separat fstab-montage som inte visas i Datacenter > Storage eller på båda sätten. Fstab passar när sökvägen ska delas med LXC-containrar via bind mount utan att registreras som Proxmox-lagring.",
     "ogTitle": "Värd: Mount NFS andel på Värd | ProxMenux Dokumentation",
     "ogDescription": "Montera en extern NFS-export på Proxmox-värden via pvesm, fstab eller båda. fstab-väg är idealisk för LXC-bindning."
   },
@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Vad detta gör",
-    "body": "ProxMenux erbjuder två monteringsmetoder för alla NFS export: <strong>(1) Proxmox förvaring</strong> via via via <code>pvesm add nfs</code> - aktien dyker upp i Datacenter > Lagring och Proxmox hanterar monteringen på <code>/mnt/pve/&lt;id&gt;</code>; <strong>(2Värd fstab montering</strong> På en väg du väljer - ihållande via <code>/etc/fstab</code>Inte synlig som Proxmox-lagring, idealisk för bindning till LXC behållare (Proxmox UI stannar rena). Du kan köra en metod, den andra, eller båda."
+    "body": "ProxMenux erbjuder två sätt att montera en NFS-export: <strong>(1) Proxmox-lagring</strong> via <code>pvesm add nfs</code>, där resursen visas i Datacenter > Lagring och Proxmox hanterar monteringen på <code>/mnt/pve/&lt;id&gt;</code>; <strong>(2) fstab-montering på värden</strong> på en sökväg du väljer, beständig genom <code>/etc/fstab</code> och inte synlig som Proxmox-lagring. Det senare passar för bind-montering till LXC-containrar utan extra poster i Proxmox-gränssnittet. Du kan använda endera metoden eller båda."
   },
   "opening": {
     "heading": "Öppna verktyget",
@@ -93,8 +93,8 @@
         "allows": "Hook scripts och cloud-init snippets."
       }
     ],
-    "warnTitle": "bilder och rootdir på NFS",
-    "warnBody": "Markera <code>images</code> på en NFS lagring låter Proxmox placera live VM diskar där. Det fungerar, men NFS latens + dess lås semantik gör detta märkbart långsammare än lokal lagring (och ett nätverk avbrott pausar varje VM backas upp av den butiken). Markera <code>rootdir</code> betyder att du kommer att vara värd för LXC rotfilsystem över NFS, som historiskt har problem med oprivilegierade behållare (överföring / chown interaktioner). Föredrar att hålla <code>images</code> / <code>rootdir</code> på lokal eller iSCSI lagring och använda NFS för <code>backup</code> / <code>iso</code> / <code>vztmpl</code>.",
+    "warnTitle": "images och rootdir på NFS",
+    "warnBody": "Markera <code>images</code> på en NFS lagring låter Proxmox placera live VM diskar där. Det fungerar, men NFS latens + dess lås semantik gör detta märkbart långsammare än lokal lagring (och ett nätverk avbrott pausar varje VM backas upp av den butiken). Markera <code>rootdir</code> betyder att du kommer att vara värd för LXC rotfilsystem över NFS, som historiskt har problem med oprivilegierade containrar (överföring / chown interaktioner). Föredrar att hålla <code>images</code> / <code>rootdir</code> på lokal eller iSCSI lagring och använda NFS för <code>backup</code> / <code>iso</code> / <code>vztmpl</code>.",
     "result": "Resultatet är <code>pvesm add nfs &lt;id&gt; --server &lt;srv&gt; --export &lt;path&gt; --content &lt;csv&gt;</code> och Proxmox auto-mounts på <code>/mnt/pve/&lt;id&gt;</code>."
   },
   "fstabBranch": {
@@ -113,7 +113,7 @@
       "Försök <code>chmod 1777</code> + <code>setfacl o::rwx</code> på monteringspunkten (tyst bäst - lyckas bara om NFS-servern tillåter det; många NAS-exporter tjänar redan världsskrivbara vägar)."
     ],
     "lxcTitle": "Använda fstab montering från en LXC",
-    "lxcBody": "Skriptet trycker exakt <code>pct set</code> kommandot i slutet för att binda upp vägen till en behållare, t.ex. <code>pct set &lt;ctid&gt; -mp0 /mnt/&lt;path&gt;,mp=/mnt/&lt;ct-path&gt;,shared=1,backup=0</code>. Eller använd <mountLink>LXC Mount Manager</mountLink>, som upptäcker fstab montering automatiskt. <strong>Inga ändringar görs inuti container</strong> - för oprivilegierade LXCs att läsa / skriva NFS-data, skriptet förlitar sig på server-side världen skrivbara export semantik (typisk för Synology, TrueNAS, OMV-standarder). Om din NFS-server squashes root eller begränsar perms, se Felsökning.",
+    "lxcBody": "Skriptet trycker exakt <code>pct set</code> kommandot i slutet för att binda upp vägen till en container, t.ex. <code>pct set &lt;ctid&gt; -mp0 /mnt/&lt;path&gt;,mp=/mnt/&lt;ct-path&gt;,shared=1,backup=0</code>. Eller använd <mountLink>LXC Mount Manager</mountLink>, som upptäcker fstab montering automatiskt. <strong>Inga ändringar görs inuti container</strong> - för oprivilegierade LXCs att läsa / skriva NFS-data, skriptet förlitar sig på server-side världen skrivbara export semantik (typisk för Synology, TrueNAS, OMV-standarder). Om din NFS-server squashes root eller begränsar perms, se Felsökning.",
     "noUiTitle": "Fstab montering är inte en Proxmox lagring",
     "noUiBody": "Värd fstab montering är osynlig för Proxmox webb UI - genom design. Det visas inte i <em>Datacenter > Storage</em>, du kan inte välja det i VM / CT skapare, och Proxmox backup jobb kan inte rikta det. Det är bara en värd filsystem väg. Om du också vill ha UI integration, markera <em>both</em> metoder i väljaren."
   },
@@ -162,12 +162,12 @@
       {
         "href": "/docs/storage-share/lxc-mount-points",
         "label": "Monteringshanterare för LXC",
-        "tailRich": " - bind-mount fstab-bara vägen <code>/mnt/&lt;path&gt;</code> i en eller flera behållare."
+        "tailRich": " - bind-mount fstab-bara vägen <code>/mnt/&lt;path&gt;</code> i en eller flera containrar."
       },
       {
         "href": "/docs/storage-share/lxc-nfs-client",
         "label": "NFS klient i LXC",
-        "tail": " — alternativ: montering NFS direkt inifrån en privilegierad behållare (skippar värden)."
+        "tail": " — alternativ: montering NFS direkt inifrån en privilegierad container (skippar värden)."
       }
     ]
   }

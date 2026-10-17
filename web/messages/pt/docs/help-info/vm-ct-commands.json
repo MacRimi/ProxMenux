@@ -165,7 +165,7 @@
       {
         "href": "/docs/help-info/backup-commands",
         "label": "Backup e Restauração",
-        "tail": " — a restauração do vzdump e do qmrestore/pct."
+        "tail": " — vzdump e qmrestore / pct restore."
       },
       {
         "href": "/docs/help-info/storage-commands",

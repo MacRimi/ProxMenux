@@ -75,7 +75,7 @@
       "<code>Ctrl+R</code> omvänd historia sök i bash (<code>\\x12</code>)."
     ],
     "modalTitle": "Samma verktygsfält i LXC-konsolen modal",
-    "modalBody": "Console du lanserar från <link>VMs & LXCs → Console</link> gör samma tangentbordshjälpare under modalen. Modalen också auto-typer <code>pct enter &lt;vmid&gt;</code> på anslutning, så du landar direkt inuti behållaren."
+    "modalBody": "Console du lanserar från <link>VMs & LXCs → Console</link> gör samma tangentbordshjälpare under modalen. Modalen också auto-typer <code>pct enter &lt;vmid&gt;</code> på anslutning, så du landar direkt inuti containern."
   },
   "lxcAlt": "ProxMenux Monitor LXC konsol modal - Terminal: ubuntu (ID: 103) med samma mobilvänliga verktygsfält (ESC, TAB, pilar, Enter, Ctrl) under terminalen",
   "lxcCaption": "LXC-konsolen modal - öppnad från <em>VMs & LXCs → Console</em>. Huvudet visar målbehållaren (<em>Terminal: ubuntu (ID: 103)</em>) och samma touch-vänliga verktygsfält visas under terminalen.",

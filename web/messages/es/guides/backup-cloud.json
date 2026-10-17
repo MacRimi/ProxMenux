@@ -95,7 +95,7 @@
   },
   "retention": {
     "heading": "6. Retención — mantén la cuota de la nube bajo control",
-    "body": "Los backups vzdump de Proxmox son <strong>snapshots completos, no incrementales</strong>. Una VM de 30 GB = 30 GB por backup. Sin retención, la nube se llena.",
+    "body": "Los archivos vzdump de Proxmox son <strong>copias completas, no incrementales</strong>. Su tamaño real depende de los datos incluidos y de la compresión, no solo de la capacidad del disco virtual. Si un archivo ocupa 30 GB, conservar cinco requiere unos 150 GB. Configura una política de retención para evitar que la nube se llene.",
     "uiPath": "In the Proxmox UI: <strong>Datacenter → Backup → [your job] → Retention</strong>:",
     "image7Alt": "Ajustes de retención de backup en Proxmox",
     "starterIntro": "Valores iniciales razonables para un montaje doméstico / de laboratorio:",

@@ -5,7 +5,7 @@
   },
   "header": {
     "title": "Installera Coral TPU på värden",
-    "description": "Förbered Proxmox värd så en Coral TPU kan senare skickas till en LXC behållare. ProxMenux auto-detekterar om du har en M.2 / Mini-PCIe-kort, en USB Accelerator, eller båda, och kör bara den installationsväg som gäller - kärnmodul bygga via DKMS för PCIe, Googles Edge TPU runtime för USB.",
+    "description": "Förbered Proxmox värd så en Coral TPU kan senare skickas till en LXC container. ProxMenux auto-detekterar om du har en M.2 / Mini-PCIe-kort, en USB Accelerator, eller båda, och kör bara den installationsväg som gäller - kärnmodul bygga via DKMS för PCIe, Googles Edge TPU runtime för USB.",
     "section": "Hårdvara: GPU:er och Coral-TPU"
   },
   "intro": {
@@ -40,7 +40,7 @@
   },
   "hostPrepTip": {
     "title": "Detta förbereder bara värden",
-    "body": "Installera Coral här gör värd <em>ready</em> - TPU är synlig för värdkärneln och kan överlämnas till en LXC. För att faktiskt <em>use</em> den från en behållare (Frigate, DeepStack, etc.), nästa steg är <lxcLink>Add Coral TPU till en LXC</lxcLink>."
+    "body": "Installera Coral här gör värd <em>ready</em> - TPU är synlig för värdkärneln och kan överlämnas till en LXC. För att faktiskt <em>use</em> den från en container (Frigate, DeepStack, etc.), nästa steg är <lxcLink>Add Coral TPU till en LXC</lxcLink>."
   },
   "running": {
     "heading": "Kör installatören",
@@ -74,7 +74,7 @@
         "<strong>Cleanup.</strong> Om en tidigare <code>gasket-dkms</code> installera vänster dpkg i ett brutet tillstånd (typiskt efter en PVE 9 Kernel uppgradera där DKMS autoinstall misslyckades tyst), force-purge det.",
         "<strong>Install bygga deps:</strong> <code>git</code>, <code>dkms</code>, <code>build-essential</code>, <code>proxmox-headers-$(uname -r)</code>."
       ],
-      "cloneIntro": "<strong>Klona förarkällan.</strong> Föredrar <feranickLink>Feranick/gasket-driver</feranickLink> gemenskap gaffel (aktivt underhållen, kärna 6.12+ färdigt). Falls tillbaka till <googleLink>google/gasket-driver</googleLink> om feranick är oåtkomlig, tillämpa kärnspecifika fläckar:",
+      "cloneIntro": "<strong>Klona drivrutinens källkod.</strong> Skriptet väljer i första hand communityns fork <feranickLink>feranick/gasket-driver</feranickLink>, som underhålls aktivt och stöder kärna 6.12 och senare. Om det förrådet inte går att nå används <googleLink>google/gasket-driver</googleLink> med följande kärnspecifika patchar:",
       "kernelPatches": [
         "Kernel 6.5+: <code>no_llseek</code> bortströms → <code>noop_llseek</code> substitution",
         "Kernel 6.13+: <code>MODULE_IMPORT_NS(DMA_BUF)</code> kräver sträng bokstavlig"
@@ -135,7 +135,7 @@
       "Rengör Google Coral apt repository inmatning och keyring (<code>/etc/apt/sources.list.d/coral-edgetpu.list</code> + <code>coral-edgetpu-archive-keyring.gpg</code>).",
       "Prompts för en omstart i slutet <strong>only om PCIe-banan installerades</strong> - det renaste sättet att spola kärnmodulerna. USB-bara avinstallationer behöver inte en."
     ],
-    "lxcWarnTitle": "LXC behållare med apex genomgång",
+    "lxcWarnTitle": "LXC containrar med apex genomgång",
     "lxcWarnBody": "Avinstallera på värden ogiltigförklarar enhetsvägen kartlagd till någon LXC-container konfigurerad för apex passthrough. Planera driften under ett underhållsfönster om Frigate / DeepStack / liknande arbetsbelastning beror på det."
   },
   "updates": {
@@ -186,7 +186,7 @@
       {
         "label": "Lägg till Coral TPU till LXC",
         "href": "/docs/hardware/coral-tpu-lxc",
-        "tail": " — passera värd Coral-enheten i en behållare (Frigate, CodeProject.AI ...)."
+        "tail": " — passera värd Coral-enheten i en container (Frigate, CodeProject.AI ...)."
       },
       {
         "label": "Installera NVIDIA Drivers (Host)",

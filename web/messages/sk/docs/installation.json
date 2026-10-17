@@ -78,7 +78,7 @@
   },
   "next": {
     "heading": "Čo ďalej?",
-    "postInstall": "<postlink>Post-Install Script</postlink>",
+    "postInstall": "<postlink>Skript po inštalácii</postlink> — úpravy a posilnenie zabezpečenia čerstvo nainštalovaného hostiteľa Proxmox.",
     "introduction": "<introlink>Úvod</introlink> — úplná prehliadka funkcií.",
     "monitor": "<monitorlink>ProxMenux Monitor</monitorlink> Web dashboard pre hostiteľa (auto-inštalovaný vedľa menu)."
   },

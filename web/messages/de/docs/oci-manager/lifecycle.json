@@ -6,7 +6,7 @@
   "header": {
     "title": "Installation, Aktualisierung und Änderung",
     "description": "Jede Instanz behält einen reproduzierbaren Vertrag, so dass ihre Rootfs ersetzt werden können, ohne die Konfiguration oder persistente Daten zu verlieren.",
-    "section": "Apps des OCI-Managers"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -29,7 +29,7 @@
     {
       "id": "manage",
       "title": "Verwalten installierter OCI-Anwendungen",
-      "intro": "Diese Option des Hauptbildschirms listet die registrierten Instanzen mit ihrer Anwendung und ihrem Bild auf. Jeder wird vor jeder Aktion gegen seinen Vertrag geprüft; ein CT, der nicht mehr mit seinem Datensatz übereinstimmt, wird weder geändert noch gelöscht. Das gleiche Update und der gleiche Editor werden auf der Registerkarte Updates von <monitorLink>ProxMenux Monitor</monitorLink> angeboten.",
+      "intro": "Diese Option des Hauptbildschirms listet die registrierten Instanzen mit ihrer Anwendung und ihrem Image auf. Jeder wird vor jeder Aktion gegen seinen Vertrag geprüft; ein CT, der nicht mehr mit seinem Datensatz übereinstimmt, wird weder geändert noch gelöscht. Das gleiche Update und der gleiche Editor werden auf der Registerkarte Updates von <monitorLink>ProxMenux Monitor</monitorLink> angeboten.",
       "blocks": [
         {
           "table": {
@@ -40,8 +40,8 @@
             ],
             "rows": [
               [
-                "Aktualisieren Sie das Bild mit der gespeicherten Konfiguration",
-                "Die Rootfs werden durch das Bild ersetzt, das der gespeicherte Kanal heute veröffentlicht",
+                "Aktualisieren Sie das Image mit der gespeicherten Konfiguration",
+                "Die Rootfs werden durch das Image ersetzt, das der gespeicherte Kanal heute veröffentlicht",
                 "Vertrag, Containerplatten, Hostverzeichnisse, Netzwerk und Geräte"
               ],
               [
@@ -63,7 +63,7 @@
           }
         },
         {
-          "p": "Für eine Multicontainer-Anwendung bietet das Menü <strong>Update jeden Container der Anwendung</strong>, <strong>Modify zusätzliche Pfade und Geräte</strong>, <strong>Erstellen Sie jeden Container mit seiner gespeicherten Konfiguration</strong>, dem Watchdog und dem Entfernen. Modify fügt oder entfernt die zusätzlichen Pfade und Geräte des Anwendungscontainers, ohne etwas neu zu erstellen, und ändert in Immich, was die Erkennung ausführt. Recreate rekonstruiert jeden Container aus dem Bild, mit dem er installiert wurde, ohne nach einem neueren zu suchen."
+          "p": "Für eine Multicontainer-Anwendung bietet das Menü <strong>Update jeden Container der Anwendung</strong>, <strong>Modify zusätzliche Pfade und Geräte</strong>, <strong>Erstellen Sie jeden Container mit seiner gespeicherten Konfiguration</strong>, dem Watchdog und dem Entfernen. Modify fügt oder entfernt die zusätzlichen Pfade und Geräte des Anwendungscontainers, ohne etwas neu zu erstellen, und ändert in Immich, was die Erkennung ausführt. Recreate rekonstruiert jeden Container aus dem Image, mit dem er installiert wurde, ohne nach einem neueren zu suchen."
         },
         {
           "figure": {
@@ -101,7 +101,7 @@
           "list": {
             "items": [
               "Wenn die Registry weiterhin den installierten Digest bedient, wird nichts heruntergeladen und die Instanz nicht berührt.",
-              "Das neue Bild wird Schicht für Schicht verifiziert, bevor der CT stoppt. Ein Download, der beschädigt ankommt, wird ein zweites Mal abgerufen; ein bereits zwischengespeichertes Bild, das den Check nicht besteht, wird erneut heruntergeladen.",
+              "Das neue Image wird Schicht für Schicht verifiziert, bevor der CT stoppt. Ein Download, der beschädigt ankommt, wird ein zweites Mal abgerufen; ein bereits zwischengespeichertes Image, das den Check nicht besteht, wird erneut heruntergeladen.",
               "Einstellungen, die nach der Installation in Proxmox VE geändert wurden (Speicher, Swap, Kerne, CPU-Limit, CPU-Priorität, Beginn mit dem Knoten), werden beibehalten und in den neuen Vertrag übernommen.",
               "Die LAN-Schnittstelle, die die Arr-Suite und Multi-Container-Anwendungen hinzufügen (<code>net1</code>) und die Startreihenfolge (<code>startup</code>) werden an den neuen Container zurückgegeben.",
               "Jeder andere Unterschied zwischen dem CT und seinem Vertrag stoppt das Update, bevor der CT gestoppt wird."
@@ -127,7 +127,7 @@
           }
         },
         {
-          "p": "Bevor etwas gestoppt wird, überprüft der Vorgang, ob das Backup passt: die Daten, die auf den gesicherten Volumes verwendet werden, plus eine Marge. Es wird neben dem Datensatz der Anwendung auf der Systemdiskette des Hosts geschrieben. Wenn es dort nicht passt, fragt das Menü nach einem anderen Speicher des Hosts, der Backups akzeptiert: Das Backup wird dort gemacht, es wird gelöscht, wenn der Vorgang endet, und die Auswahl wird für diese Anwendung gespeichert, geplante Updates enthalten. Ohne Speicherplatz wird der Vorgang abgelehnt und die Anwendung bleibt so, wie sie war. Das neue Bild wird auf die gleiche Weise überprüft, bevor es heruntergeladen wird."
+          "p": "Bevor etwas gestoppt wird, überprüft der Vorgang, ob das Backup passt: die Daten, die auf den gesicherten Volumes verwendet werden, plus eine Marge. Es wird neben dem Datensatz der Anwendung auf der Systemdiskette des Hosts geschrieben. Wenn es dort nicht passt, fragt das Menü nach einem anderen Speicher des Hosts, der Backups akzeptiert: Das Backup wird dort gemacht, es wird gelöscht, wenn der Vorgang endet, und die Auswahl wird für diese Anwendung gespeichert, geplante Updates enthalten. Ohne Speicherplatz wird der Vorgang abgelehnt und die Anwendung bleibt so, wie sie war. Das neue Image wird auf die gleiche Weise überprüft, bevor es heruntergeladen wird."
         }
       ]
     },
@@ -418,7 +418,7 @@
     },
     {
       "id": "archives",
-      "title": "Heruntergeladene Bilder und Host Space",
+      "title": "Heruntergeladene Images und Host Space",
       "blocks": [
         {
           "p": "Das OCI-Archiv wird zum Erstellen der Rootfs verwendet; das laufende CT liest es nicht. Nach einer Installation oder einem Update werden die heruntergeladenen Archive dieser Operation mit ihrer Größe aufgelistet und ihre Löschung wird angeboten. Das Löschen gibt den Raum frei, ohne den Container oder seine Daten zu beeinträchtigen."
@@ -433,7 +433,7 @@
     },
     {
       "id": "registry",
-      "title": "Registrierung und Bereinigung",
+      "title": "Einträge und Bereinigung",
       "blocks": [
         {
           "p": "Wenn <strong>Manage installierte OCI-Anwendungen</strong> geöffnet wird, wird zuerst das entfernt, was von Containern übrig ist, die auf keinem Knoten des Clusters vorhanden sind: der gespeicherte Datensatz eines Containers, der von der Proxmox-Schnittstelle gelöscht wurde, was als Historie beibehalten wird, und der Host archiviert eine zurückgelassene Entfernung. Ein Datensatz mit einer halben Operation wird beibehalten, da dessen Backup möglicherweise noch benötigt wird. Volumes und Hostverzeichnisse werden niemals durch Inferenz gelöscht."
@@ -491,7 +491,7 @@
       "title": "Ein Rolling Tag ist kein unbeaufsichtigtes Update",
       "blocks": [
         {
-          "p": "Der Katalog installiert das Rolling-Tag, das sein Maintainer veröffentlicht, aber der effektive Digest wird nur durch ein explizites Update mit Preflight und Rollback gelöst, aufgezeichnet und geändert. <monitorLink>ProxMenux Monitor</monitorLink> vergleicht den installierten Digest mit dem, den die Registry veröffentlicht und anzeigt und benachrichtigt, wenn ein neues Bild verfügbar ist."
+          "p": "Der Katalog installiert das Rolling-Tag, das sein Maintainer veröffentlicht, aber der effektive Digest wird nur durch ein explizites Update mit Preflight und Rollback gelöst, aufgezeichnet und geändert. <monitorLink>ProxMenux Monitor</monitorLink> vergleicht den installierten Digest mit dem, den die Registry veröffentlicht und anzeigt und benachrichtigt, wenn ein neues Image verfügbar ist."
         }
       ]
     }

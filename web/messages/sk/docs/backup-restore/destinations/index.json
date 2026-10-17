@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Backup destinations Proxmox Backup Server, Borg ProxMenux",
+    "title": "Ciele záloh — lokálny archív, Proxmox Backup Server a Borg | ProxMenux",
     "description": "Tri úložné backendy dostávajú rovnaký ProxMenux zálohovací užitočné zaťaženie: miestny .tar.zst archív na akomkoľvek napísanom súborovom systéme, zálohu PBS v obchode s údajmi Proxmox Backup Server alebo archív Borg v miestnom alebo vzdialenom úložisku Borg. Každý backend má svoje vlastné kompresie, deduplikácie, šifrovanie a sieťové charakteristiky.",
     "ogTitle": "ProxMenux Zálohovacie miesta",
     "ogDescription": "Local, Proxmox Backup Server a Borg — tri backendy úložiska pre rovnakú užitočnú záťaž hostiteľa.",
@@ -93,7 +93,7 @@
       {
         "label": "Lokálny archív",
         "href": "/docs/backup-restore/destinations/local",
-        "tail": " Pre-konfigurácia miestneho cieľa, USB pohon montáž, bezpečnostná kontrola proti písaniu archívu do seba, sidecar JSON ktorý umožní monitoru identifikovať súbor."
+        "tail": " — prednastavenie lokálneho cieľa, pripojenie USB disku, ochrana pred uložením archívu do jeho vlastného zdroja a sprievodný súbor JSON, pomocou ktorého Monitor rozpozná zálohu."
       },
       {
         "label": "Proxmox Backup Server (odporúčané)",

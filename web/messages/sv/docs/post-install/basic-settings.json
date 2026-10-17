@@ -35,7 +35,7 @@
     "doesTitle": "Vad ProxMenux-alternativet gör - verifierad mot skriptet",
     "doesIntro": "ProxMenux-uppdateringen omsluter de exakta apt-kommandona ovan och lägger till ett antal pre/post-steg som du annars skulle behöva komma ihåg för hand. Varje objekt nedan är vad avsändaren skript faktiskt gör (se <link>Proxmox System Update</link> för full uppdelning):",
     "doesItems": [
-      "<strong>Repository hygien först.</strong> Inaktiverar företaget <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, tar bort äldre repofiler kvar från tidigare PVE-versioner, och skriver en ren <code>proxmox.sources</code> pekar på det fria <em>pve-no-subscription</em> kanal (matchning av värdens Debian-kodnamn: trixie för PVE 9Bokmask för PVE 8).",
+      "<strong>Städa först i paketarkiven.</strong> Inaktiverar Enterprise-källorna <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, tar bort gamla arkivfiler från tidigare PVE-versioner och skriver en ren <code>proxmox.sources</code> som pekar på den kostnadsfria kanalen <em>pve-no-subscription</em>, anpassad till värdens Debian-kodnamn: trixie för PVE 9, bookworm för PVE 8.",
       "<strong>Debian repos omskriven</strong> med huvud/uppdateringar/säkerhet, inklusive <code>non-free-firmware</code>, så firmware varning under uppgradering går bort.",
       "<strong>Kör den officiella uppgraderingen.</strong> <code>apt-get update</code> Följt av <code>apt full-upgrade -y</code> (PVE) 9) eller <code>apt dist-upgrade -y</code> (PVE) 8), båda lanserades icke-interaktivt med <code>--force-confdef --force-confold</code> Så alla konfigurationsfiler du anpassade förblir din.",
       "<strong>Installs väsentliga paket</strong> om de saknas: <code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>.",
@@ -147,7 +147,7 @@
           },
           {
             "pkg": "genisoimage",
-            "desc": "Bygg ISO 9660 bilder från ett katalogträd"
+            "desc": "Bygg ISO 9660 avbildningar från ett katalogträd"
           }
         ]
       },

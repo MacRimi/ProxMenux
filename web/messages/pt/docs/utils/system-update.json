@@ -47,7 +47,7 @@
     "nodes": {
       "source": {
         "label": "proxmox_update.sh",
-        "detail": "pveversion\ngrep -oP ''pve-manager/\\K[0-9]+''"
+        "detail": "pveversion |\ngrep -oP ''pve-manager/\\K[0-9]+''"
       },
       "bridge": {
         "label": "Trabalhador seguro único",

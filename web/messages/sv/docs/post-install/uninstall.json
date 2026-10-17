@@ -176,7 +176,7 @@
         "items": [
           {
             "tool": "Dimensionering av ZFS ARC",
-            "restores": "Removes /etc/modprobe.d/99-zfsarc.conf, återställer alla motstridiga externa *.conf som iscensattes i /usr/local/share/proxmenux/backups/zfs_arc /, återuppbygger initramfs och kör proxmox-boot-tool uppfriskningar på systemd-boot värdar."
+            "restores": "Tar bort /etc/modprobe.d/99-zfsarc.conf, återställer eventuella externa *.conf-filer som tillfälligt flyttats till /usr/local/share/proxmenux/backups/zfs_arc/, bygger om initramfs och kör proxmox-boot-tool refresh på värdar med systemd-boot."
           },
           {
             "tool": "Automatiska ZFS-ögonblicksbilder",

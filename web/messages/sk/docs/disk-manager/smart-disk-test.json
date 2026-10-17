@@ -20,7 +20,7 @@
   },
   "deps": {
     "heading": "Závislosti",
-    "body": "Nástroj automaticky nainštaluje to, čo potrebuje pri prvom spustení. SATA / SAS disky sa spoliehajú na <code>smartmontools</code>0; NVMe disky sa spoliehajú na <code>nvme-cli</code>. Obaja:"
+    "body": "Nástroj pri prvom spustení automaticky nainštaluje potrebné závislosti. Disky SATA / SAS používajú <code>smartmontools</code>, disky NVMe používajú <code>nvme-cli</code>. Oba balíky:"
   },
   "actions": {
     "heading": "Dostupné opatrenia",
@@ -92,7 +92,7 @@
         "bodyRich": "Stav a správa sú vytlačené na terminál a napísané JSON. Pre dlhé testy, vrátiť neskôr a spustiť <strong> Check test progress</strong> na rovnakom disku vidieť výsledok.",
         "img": "/disk/smart/quick-status.png",
         "alt": "Rýchly výkon zdravotného stavu",
-        "caption": "Rýchly výkon zdravotného stavu (SATA smartctl - H + - A)"
+        "caption": "Rýchly prehľad stavu disku (SATA — smartctl -H + -A)"
       }
     ]
   },
@@ -124,7 +124,7 @@
       {
         "href": "/docs/help-info/zfs-commands",
         "label": "ZFS Riadiace príkazy",
-        "tail": " Vydrhnutie z cievky pre skladovaciu vrstvu ekvivalentu SMART testy."
+        "tail": " — zpool scrub ako obdoba testov SMART na úrovni úložiska."
       },
       {
         "href": "/docs/monitor/dashboard/storage",

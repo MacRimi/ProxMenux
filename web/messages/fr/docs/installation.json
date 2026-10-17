@@ -66,7 +66,7 @@
   "troubleshoot": {
     "heading": "Dépannage",
     "virustotalTitle": "VirusTotal affiche l'URL d'installation",
-    "virustotalBody": "A 1/95 détection par des moteurs heuristiques (par exemple <em>Chong Lua Dao</em>) est connu false positif. L'installateur utilise la norme <code>curl | bash</code> modèle et téléchargements binaires légitimes (comme <code>jq</code> de ses fonctionnaires GitHub libération), qui scanners agressifs drapeau basé sur <em>comportement</em> plutôt que le vrai code malveillant. L'installateur est 100% open source et revisible. Plus de contexte dans <issuelink>Numéro162</issuelink>.",
+    "virustotalBody": "Une détection sur 95 par un moteur heuristique, par exemple <em>Chong Lua Dao</em>, correspond ici à un faux positif connu. L’installateur utilise le schéma habituel <code>curl | bash</code> et télécharge des binaires légitimes, comme <code>jq</code> depuis sa version officielle sur GitHub. Les scanners les plus agressifs peuvent les signaler d’après leur <em>comportement</em>, plutôt qu’après la présence de code malveillant. Le code de l’installateur est 100 % ouvert et vérifiable. Plus de contexte dans le <issuelink>ticket nº 162</issuelink>.",
     "aptTitle": "L'installation échoue avec les erreurs apt",
     "aptBody": "Habituellement, une repo Proxmox manquante ou mal configurée. L'installateur tire les dépendances via apt; si la configuration de repo est cassée (souvent le cas sur les installateurs nu-bones Proxmox 8 qui n'ont pas encore été mis à jour), apt échoue. Exécutez d'abord manuellement <code>apt-get update</code> et corrigez toutes les erreurs, puis réexécutez l'installateur.",
     "menuTitle": "`menu: command not found` après installation",

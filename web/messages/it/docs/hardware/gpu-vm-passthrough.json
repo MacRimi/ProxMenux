@@ -108,7 +108,7 @@
       ]
     },
     "vmApply": {
-      "title": "VM config viene applicata tramite set qm",
+      "title": "La configurazione della VM viene applicata tramite qm set",
       "body": "The VM config a <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> è aggiornato via <code>qm set</code> (mai direttamente) <code>sed</code>):",
       "after1": "Viene aggiunta una bandiera <code>x-vga=1</code> per ogni fornitore <strong>except</strong> Intel iGPU — Le GPU integrate Intel non hanno dedicato VRAM per una console pre-boot, in modo che le cause della bandiera si impicchino.",
       "after2": "Ulteriori linee <code>hostpciN</code> sono allegate se il gruppo IOMMU di GPU contiene altri dispositivi che è necessario passare insieme."

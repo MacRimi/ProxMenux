@@ -21,7 +21,7 @@
       "Rimuove il rumore che genera nei registri e nell'uscita <code>netstat</code> / <code>ss</code>, facilitando l'attività reale."
     ],
     "nfsTitle": "Non disabilitarlo se si utilizza NFS",
-    "nfsBody": "Il client NFS server <strong> e </strong> NFS si affida a <code>rpcbind</code> per negoziare le porte utilizzate da <code>mountd</code>, <code>statd</code>, <code>lockd</code>, ecc. Se il vostro host Proxmox o <em>exports</em> NFS condivide ad altre macchine o <em>mounts</em> NFS azioni da un NAS, non applicare questa opzione. I supporti falliranno con <code>mount.nfs: rpc.statd is not running</code> o simili.",
+    "nfsBody": "Sia il server NFS <strong>sia</strong> il client NFS dipendono da <code>rpcbind</code> per negoziare le porte usate da <code>mountd</code>, <code>statd</code>, <code>lockd</code> e altri servizi. Se il tuo host Proxmox <em>esporta</em> condivisioni NFS verso altri dispositivi oppure <em>monta</em> condivisioni NFS da un NAS, non applicare questa opzione. I montaggi fallirebbero con <code>mount.nfs: rpc.statd is not running</code> o errori simili.",
     "runsTitle": "Cosa funziona ProxMenux",
     "runsOutro": "Il pacchetto rimane installato. ProxMenux registra lo stato originale abilitato/attivo sia di rpcbind.service che di rpcbind.socket, quindi disabilita e arresta entrambe le unità in modo da l'attivazione dell'orbita non può portare il servizio indietro.",
     "verifyTitle": "Verifica",

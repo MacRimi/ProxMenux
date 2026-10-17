@@ -48,7 +48,7 @@
     "node2Label": "/opt/lynis/",
     "node2Detail": "repo completo\nincluyendo script ./lynis",
     "node3Label": "/usr/local/bin/lynis",
-    "node3Detail": "Envoltorio:\ncd /opt/lynis \" ./lynis $@",
+    "node3Detail": "wrapper:\ncd /opt/lynis && ./lynis $@",
     "outro": "El wrapper es obligatorio — Lynis insiste en ejecutarse desde su propio directorio porque carga rutas relativas para plugins y datos de perfil. El wrapper oculta ese detalle para que <code>lynis audit system</code> simplemente funcione desde cualquier sitio."
   },
   "detection": {

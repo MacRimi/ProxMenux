@@ -270,7 +270,7 @@
   "language": {
     "heading": "Jazyk",
     "intro": "Dvanásť jazykov je pripojených. Dropdown nastaví <code>ai_language</code> v konfigurácii a hodnota je interpolovaná do systémového promptu na mieste, kde prompt hovorí <em> \"preložiť upozornenia do '{'language'}'\"</em>. Úplný zoznam:",
-    "list": "Angličtina (<code>en</code>0), španielčina (<code>es</code>), francúzština (<code>fr</code>), nemčina (<code>de</code>), portugalčina (<code>pt</code>), taliančina (<code>it</code>), ruština (<code>ru</code>), švédčina (<code>sv</code>), nórčina (<code>no</code>), japončina (<code>ja</code>), čínština (<code>zh</code>), holandčina (<code>nl</code>).",
+    "list": "Angličtina (<code>en</code>), španielčina (<code>es</code>), francúzština (<code>fr</code>), nemčina (<code>de</code>), portugalčina (<code>pt</code>), taliančina (<code>it</code>), ruština (<code>ru</code>), švédčina (<code>sv</code>), nórčina (<code>no</code>), japončina (<code>ja</code>), čínština (<code>zh</code>), holandčina (<code>nl</code>).",
     "rulesIntro": "Dve dôležité pravidlá priamo z pohody:",
     "rules": [
       "<strong>Translate</strong>: etikety, popisy, stavové slová, jednotky (napr. GB → Choď po francúzsky).",

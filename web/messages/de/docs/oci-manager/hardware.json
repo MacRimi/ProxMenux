@@ -1,12 +1,12 @@
 {
   "meta": {
     "title": "Geräte und Beschleunigung | ProxMenux",
-    "description": "Wie OCI-Manager-Apps GPU, NVIDIA, Coral, USB, FUSE und andere Geräte als validierte native Proxmox VE-Ressourcen an einen OCI-Container übergeben."
+    "description": "Wie OCI manager Apps GPU, NVIDIA, Coral, USB, FUSE und weitere Geräte als geprüfte native Proxmox-VE-Ressourcen für einen OCI-Container bereitstellt."
   },
   "header": {
     "title": "Einrichtungen und Beschleunigung",
     "description": "GPU, NVIDIA, Coral, USB, FUSE und Blockgeräte werden validierte native Proxmox VE-Ressourcen des Containers.",
-    "section": "Apps des OCI-Managers"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -14,7 +14,7 @@
       "title": "Das Gerät, das die Anwendung benötigt, nicht der gesamte Host",
       "blocks": [
         {
-          "p": "Ein von der Compose-Datei oder dem Anwendungsprofil angefordertes Gerät wird zu einem konkreten <code>devN</code>-Eintrag oder LXC-Halterung. Wenn Sie nach einem GPU fragen, macht ein USB-Gerät oder eine Coral den Container nicht privilegiert."
+          "p": "Ein in der Compose-Datei oder im Anwendungsprofil angefordertes Gerät wird als konkreter <code>devN</code>-Eintrag oder LXC-Mount eingerichtet. Das Anfordern einer GPU, eines USB-Geräts oder eines Coral-Beschleunigers macht den Container nicht privilegiert."
         },
         {
           "flow": {
@@ -56,7 +56,7 @@
               [
                 "Katalogprofil",
                 "GPU, Coral, OpenCL, USB oder FUSE unterstützen die Anwendung tatsächlich",
-                "Es werden nur die für dieses Bild validierten Optionen angeboten"
+                "Es werden nur die für dieses Image validierten Optionen angeboten"
               ],
               [
                 "Bildmetadaten und Dokumentation",
@@ -105,7 +105,7 @@
               [
                 "AMD ROCm",
                 "Der Renderknoten, <code>/dev/kfd</code> und die Generation, die der Compute-Treiber in <code>/sys/class/kfd/kfd/topology/nodes/*/properties</code> meldet",
-                "Eine Generation, für die das ROCm-Image der Anwendung Kernel trägt, die von ihr benannten RDNA2-GPUs und neuere, wird so angeboten, wie sie ist. Die anderen GPUs dieser Familien, wie die Radeon 680M und 780M, werden als experimentelle angeboten und sind nie die vorgeschlagene Option: ROCm unterstützt sie nicht offiziell, die Anwendung präsentiert sie als Generation ihrer Familie (<code>HSA_OVERRIDE_GFX_VERSION</code>) und der Installateur bittet um Bestätigung, bevor das größere Bild heruntergeladen wird. Ein älterer GPU, wie die integrierte Grafik eines Ryzen 5000U, wird nicht angeboten und Immich behält die Erkennung auf dem CPU"
+                "Eine Generation, für die das ROCm-Image der Anwendung Kernel trägt, die von ihr benannten RDNA2-GPUs und neuere, wird so angeboten, wie sie ist. Die anderen GPUs dieser Familien, wie die Radeon 680M und 780M, werden als experimentelle angeboten und sind nie die vorgeschlagene Option: ROCm unterstützt sie nicht offiziell, die Anwendung präsentiert sie als Generation ihrer Familie (<code>HSA_OVERRIDE_GFX_VERSION</code>) und der Installateur bittet um Bestätigung, bevor das größere Image heruntergeladen wird. Ein älterer GPU, wie die integrierte Grafik eines Ryzen 5000U, wird nicht angeboten und Immich behält die Erkennung auf dem CPU"
               ],
               [
                 "NVIDIA",
@@ -146,7 +146,7 @@
             "items": [
               {
                 "title": "Das Template bietet seine Profile",
-                "body": "Nur CPU, Intel/AMD VA-API, AMD OpenCL, Intel OpenCL oder NVIDIA. Die Optionen gehören zum Bild, nicht zu einem gemeinsamen Menü."
+                "body": "Nur CPU, Intel/AMD VA-API, AMD OpenCL, Intel OpenCL oder NVIDIA. Die Optionen gehören zum Image, nicht zu einem gemeinsamen Menü."
               },
               {
                 "title": "Ein Profil wird gewählt",
@@ -207,7 +207,7 @@
     },
     {
       "id": "profiles",
-      "title": "Profile, die ein Bild bieten kann",
+      "title": "Profile, die ein Image bieten kann",
       "blocks": [
         {
           "table": {
@@ -225,7 +225,7 @@
               [
                 "OpenCL",
                 "Renderknoten, <code>/dev/kfd</code> bei Bedarf und der offizielle Mod",
-                "Das Bild oder Profil dokumentiert es"
+                "Das Image oder Profil dokumentiert es"
               ],
               [
                 "NVIDIA",
@@ -277,7 +277,7 @@
           }
         },
         {
-          "p": "Das Inventar, das OCI-Manager Apps verwendet, ist die Ausgabe von:"
+          "p": "Das von OCI manager Apps verwendete Inventar stammt aus der Ausgabe von:"
         },
         {
           "shell": {
@@ -287,7 +287,7 @@
         {
           "calloutInfo": {
             "title": "Docker Laufzeitkonfiguration ist nicht beteiligt",
-            "body": "Die Container sind native LXCs und es wird kein Docker-Daemon verwendet, sodass <code>nvidia-ctk runtime configure --runtime=docker</code> keine Rolle spielt: ProxMenux fragt <code>nvidia-container-cli</code> direkt ab und schreibt die LXC-Geräte und -Halterungen. Die Befehle und unterstützten Plattformen werden in der <toolkitLink>NVIDIA Container Toolkit Installationsanleitung </toolkitLink> gepflegt."
+            "body": "Die Container sind native LXCs ohne Docker-Daemon. Daher spielt <code>nvidia-ctk runtime configure --runtime=docker</code> keine Rolle: ProxMenux fragt <code>nvidia-container-cli</code> direkt ab und trägt Geräte und Mounts in die LXC-Konfiguration ein. Die aktuellen Befehle und unterstützten Plattformen stehen in der <toolkitLink>Installationsanleitung zum NVIDIA Container Toolkit</toolkitLink>."
           }
         },
         {
@@ -305,7 +305,7 @@
               },
               {
                 "icon": "shield",
-                "title": "Nur lesbare Halterungen",
+                "title": "Nur lesbare Mounts",
                 "body": "Die Hostbibliotheken werden schreibgeschützt montiert, anstatt in den Container kopiert zu werden."
               },
               {

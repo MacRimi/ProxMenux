@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "Kódex správania a dokumentácia ProxMenux",
+    "title": "Pravidlá správania | Dokumentácia ProxMenux",
     "description": "Kódex správania ProxMenux a najlepšie postupy pre prispievateľov, testerov a používateľov.",
-    "ogTitle": "Kódex správania a dokumentácia ProxMenux",
+    "ogTitle": "Pravidlá správania | Dokumentácia ProxMenux",
     "ogDescription": "Očakávania týkajúce sa zodpovednosti za kód, zabezpečenia zverejnenia a PR rozsahu projektu ProxMenux."
   },
   "errors": {

@@ -80,7 +80,7 @@
     "whatForTitle": "Načo to je?",
     "whatForIntro": "Štandardy, ktoré loď s ProxMenux sú rozumné pre priemerný Proxmox hostiteľa, ale každé prostredie má svoj vlastný obal:",
     "whatForItems": [
-      "Malý homelab s jedným diskom SSD môže chcieť stránku skôr na kapacitu (750 / 90 %) opustiť priestor pre snímky.",
+      "V menšom homelabe s jediným SSD môže byť vhodné upozorniť na zaplnenie skôr, napríklad pri 75 / 90 %, aby zostalo miesto na snapshoty.",
       "Datacentrum hostiteľa s nadbytočnou Ceph uzliny môžu byť uvoľnenejšie s upozorneniami na pamäť (a 90 % pracovnej sady je normálne pod ZFS ARC).",
       "pasívne chladená mini-PC potrebuje nižšie teplotné prahy ako server s núteným ochladzovaním vzduchu",
       "Ťažko-virtuálny hostiteľ, ktorý kolíky CPU počas budovania by nemal Stránka na každom 80 % špice, ale musí stále pozor na trvalý tlak."
@@ -202,7 +202,7 @@
   "lxcDetection": {
     "heading": "Kontrola aktualizácií v LXC",
     "imageAlt": "LXC Update Detection card with a single switch Ak je povolené, Monitor pravidelne skenuje spustenie Debian/Ubuntu/Alpine LXC kontajnery pre prebiehajúce aktualizácie balíčkov.",
-    "imageCaption": "Prepnúť pre periodické skenovanie <code>apt list --upgradable</code>0 / <code>apk list -u</code> cez každý bežiaci CT. Štandard je zapnutý. Zodpovedajúce oznámenie prepnúť v notifikáciách → Služby sa objaví iba pri detekcii je povolená.",
+    "imageCaption": "Prepínač pravidelného skenovania <code>apt list --upgradable</code> / <code>apk list -u</code> vo všetkých spustených CT. Predvolene je zapnutý. Súvisiaci prepínač upozornení v časti Upozornenia → Služby sa zobrazuje iba pri zapnutej detekcii.",
     "intro": "Vyhradená prepnutie pre LXC aktualizácie sken, sedí medzi prahmi zdravotného monitora a notifikačnej karty. Keď ON, ProxMenux prechádzky každý beží CT na hostiteľa a otázky in-kontajner balíček manažér pre prebiehajúce aktualizácie; výsledky pristáť v záložke Hardware odznak počíta a nakŕmiť <code>lxc_updates_available</code> oznámenia. Keď OFF, sken zastaví úplne (bez <code>pct exec</code>) a všetky existujúce LXC položky v <code>managed_installs.json</code> sú vyčistené okamžite, takže prístrojová doska a <code>/api/managed-installs</code> koncový bod zastaviť hlásenie LXC stav aktualizácie bez čakania na ďalší 24h cyklus.",
     "whatRunsTitle": "Čo ten sken vlastne beží",
     "whatRunsIntro": "Pre každý CT v <code>running</code> stave s podporou správcu balíkov:",
@@ -254,10 +254,10 @@
     ]
   },
   "optimizations": {
-    "heading": "Systémové optimalizácie",
+    "heading": "Optimalizácie ProxMenux",
     "intro": "Živý, transparentný inventár každého ProxMenux optimalizácia po inštalácii v súčasnosti aktívna na hostiteľa. Zakaždým, keď použijete možnosť post-inštalovať zo strany Scripts <autoLink>Automatizované po inštalácii</autoLink> alebo prostredníctvom à-la-carte <customLink>Prispôsobiteľné po inštalácii</customLink> chápajúce skriptové registre v <code>/usr/local/share/proxmenux/installed_tools.json</code>. Monitor číta tento súbor a vystaví túto kartu, aby ste mohli na prvý pohľad vidieť, čo sa zmenilo na vašom serveri.",
     "imageAlt": "ProxMenux Optimalizácia karty s mriežkou nainštalovaných nástrojov, každý riadok zobrazuje zelenú bodku, názov nástroja a verziu. Príkladmi sú APT IPv4 Force, Bashrc Prispôsobenie, Fastfetch, Log2ram SSD ochrana, Memory Nastavenia Optimalizácia, Nastavenie trvalých sieťových rozhraní, Systémové limity Zvýšenie, APT Language Skip, Entropy Generation haveged with Legacy bed, Kernel Panic Configuration, Logrotate Optimization, Optimizations Network, Subscription Banner Design, VFIO IOMMU Pass through 14 celkový aktívny",
-    "imageCaption": "Karta uvádza každú aktívnu optimalizáciu so svojím názvom, verziou, farebnou bodkou a oranžovým pultom <em>014 active</em> v pravom hornom rohu. Nástroje, ktorých zdroj je dosiahnuteľný sú klikateľné.",
+    "imageCaption": "Karta zobrazuje všetky aktívne optimalizácie s názvom, verziou a farebným bodom. Vpravo hore je oranžový počítadlový údaj <em>14 aktívnych</em>. Na nástroje s dostupným zdrojom možno kliknúť.",
     "dotsTitle": "Čo znamenajú tie bodky?",
     "dotsItems": [
       "<green/> <strong>Zelená bodka</strong> V súčasnosti optimalizácia, registrovaná v aktívnej verzii ProxMenux. Zdrojový kód je dosiahnuteľný: kliknite na riadok pre jeho otvorenie.",

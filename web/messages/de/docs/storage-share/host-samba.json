@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Was das macht",
-    "body": "ProxMenux bietet zwei Mount-Methoden für jede Samba-Freigabe: <strong>(1) Proxmox-Speicher</strong> über <code>pvesm add cifs</code> – sichtbar in Datacenter > Speicher, gemountet unter <code>/mnt/pve/&lt;id&gt;</code>, Anmeldeinformationen werden verschlüsselt gespeichert <code>/etc/pve/priv/storage/&lt;id&gt;.pw</code>; <strong>(2) Host-fstab-Mount</strong> unter einem von Ihnen gewählten Pfad – dauerhaft über <code>/etc/fstab</code>, gemountet mit <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code>, sodass unprivilegierte LXC Bind-Mounts schreiben können, Anmeldeinformationen nur im Root gespeichert <code>/etc/samba/credentials/</code>-Datei (Passwort niemals in <code>fstab</code>). Sie können eine Methode, die andere oder beide ausführen."
+    "body": "ProxMenux bietet zwei Methoden für Samba-Freigaben: <strong>(1) Proxmox-Speicher</strong> über <code>pvesm add cifs</code>, sichtbar unter Datacenter > Storage und eingehängt unter <code>/mnt/pve/&lt;id&gt;</code>. Das Passwort liegt im Klartext in <code>/etc/pve/priv/storage/&lt;id&gt;.pw</code>, geschützt durch das nur für root zugängliche private Verzeichnis. Das ist Zugriffsschutz, keine Verschlüsselung. <strong>(2) fstab-Mount auf dem Host</strong> an einem gewählten Pfad, dauerhaft über <code>/etc/fstab</code> und mit <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code>, damit unprivilegierte LXCs über Bind-Mounts schreiben können. Die Zugangsdaten liegen in einer nur für root lesbaren Datei unter <code>/etc/samba/credentials/</code>, nie direkt in <code>fstab</code>. Beide Methoden sind einzeln oder gemeinsam nutzbar."
   },
   "opening": {
     "heading": "Öffnen des Tools",

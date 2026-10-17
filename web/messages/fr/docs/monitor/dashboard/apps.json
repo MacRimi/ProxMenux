@@ -20,7 +20,7 @@
     "colManagedFrom": "Où elle est gérée",
     "rows": [
       {
-        "source": "Demande de LXC enregistrée",
+        "source": "Application de LXC enregistrée",
         "appears": "Une carte pour chaque lien Web enregistré sur l'enregistrement de l'application.",
         "managedFrom": "VMs & LXCs → modale LXC → App"
       },
@@ -130,7 +130,7 @@
     "colResolution": "Résolution",
     "rows": [
       {
-        "problem": "Une demande LXC est enregistrée mais aucune carte n'apparaît",
+        "problem": "Une application LXC est enregistrée mais aucune carte n'apparaît",
         "resolution": "Ouvrez son onglet App et ajoutez au moins un lien Web. Le suivi des versions ne crée pas à lui seul une carte de lanceur."
       },
       {

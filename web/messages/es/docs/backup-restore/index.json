@@ -4,7 +4,7 @@
     "description": "ProxMenux Backup & Restore captura el estado completo de un host Proxmox — sistema de ficheros, manifiesto estructurado de configuración y paquetes/componentes instalados — y lo reproduce en el mismo host o en uno distinto. La copia y la restauración son autocontenidas: sin dependencias externas, y con soporte para restauraciones cross-kernel mediante un filtro direccional de subconjunto seguro y una hidratación kernel-agnóstica.",
     "ogTitle": "ProxMenux Backup & Restore — Descripción general",
     "ogDescription": "Copia y restauración completa del host Proxmox VE con manifiesto estructurado, lista de paquetes y reinstaladores de componentes.",
-    "twitterTitle": "ProxMenux Copia de seguridad & Restaurar Silencio ProxMenux",
+    "twitterTitle": "Copia de seguridad y restauración de ProxMenux | ProxMenux",
     "twitterDescription": "Copia y restauración completa del host Proxmox VE con manifiesto estructurado, lista de paquetes y reinstaladores de componentes."
   },
   "header": {

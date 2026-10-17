@@ -120,7 +120,7 @@
       {
         "href": "/docs/create-vm/system-nas/synology",
         "label": "Synológia VM",
-        "tail": " — "
+        "tail": " — samostatný inštalátor Synology DSM (Xpenology) na Proxmox."
       },
       {
         "href": "/docs/create-vm/system-nas/system-nas-others",

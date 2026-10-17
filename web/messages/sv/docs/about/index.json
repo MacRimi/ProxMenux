@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "ProxMenux Dokumentation",
+    "title": "Om projektet | ProxMenux-dokumentation",
     "description": "Om ProxMenux: projektmål, bidragsgivare, FAQ och uppförandekod. Open-source meny-driven hanteringsverktyg för Proxmox VE 8+, byggd och underhållen av MacRimi med ett litet team av testare och bidragsgivare.",
-    "ogTitle": "ProxMenux Dokumentation",
+    "ogTitle": "Om projektet | ProxMenux-dokumentation",
     "ogDescription": "Om ProxMenux - open-source meny-driven hanteringsverktyg för Proxmox VE 8 +."
   },
   "header": {

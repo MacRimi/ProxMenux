@@ -102,7 +102,7 @@
       {
         "collector": "collect_storage.sh",
         "produces": "storage_inventory",
-        "content": "ZFS-Pools (mit Pooltyp + Mitglieds-Festplatten, die nach <code>/dev/disk/by-id/*</code>, <code>/dev/disk/by-partuuid/*</code> oder rohen <code>/dev/sdX</code>-Pfaden aufgelöst wurden, je nachdem, wie jeder Pool ursprünglich erstellt wurde), LVM-Volumengruppen + dünne Pools, physische Festplatten mit SMART-Fähigkeit, PVE <code>storage.cfg</code>-Einträge, externe Halterungen."
+        "content": "ZFS-Pools (mit Pooltyp + Mitglieds-Festplatten, die nach <code>/dev/disk/by-id/*</code>, <code>/dev/disk/by-partuuid/*</code> oder rohen <code>/dev/sdX</code>-Pfaden aufgelöst wurden, je nachdem, wie jeder Pool ursprünglich erstellt wurde), LVM-Volumengruppen + dünne Pools, physische Festplatten mit SMART-Fähigkeit, PVE <code>storage.cfg</code>-Einträge, externe Mounts."
       },
       {
         "collector": "collect_kernel.sh",
@@ -129,7 +129,7 @@
     "packagesTitle": "packages.manual.list",
     "packagesBody": "Eine Plain-Text-Liste produziert von <code>apt-mark showmanual</code>: jedes APT-Paket, das <em>explizit installiert</em> auf dem Quellhost, alphabetisch sortiert. Dies schließt Pakete aus, die als Abhängigkeiten der Basis installiert sind. Proxmox VE ISO (sie werden automatisch von der eigenen APT des Ziels neu gezogen). Lesen Sie von <code>_rs_run_complete_extras</code> während der Wiederherstellung, gefiltert durch einen Drei-Pass <em>kaskadensicher</em> Filter ()<code>dpkg -s</code> für bereits installierte, geschwistergroße Erkennung für Bibliothekspakete, <code>apt-get install --simulate</code> für Kaskaden-Entfernungsrisiko), dann installiert mit <code>apt-get install -y</code>.",
     "componentsTitle": "components_status.json (Teil der Wurzelwurzeln)",
-    "componentsBody": "Eine JSON-Registrierung unter <code>/usr/local/share/proxmenux/</code>, die jede Komponente ProxMenux aufzeichnet, wurde mit dem genauen Status: Version, ProxMenux-spezifischen Flags installiert (für NVIDIA: <code>patched</code> boolean; für Coral: DKMS Version). Diese Datei befindet sich in den Rootfs - nicht in <code>metadata/</code> - weil es <em>read ist, nachdem </em> die Rootfs auf das Ziel kopiert wurden. Der Post-Boot-Dispatcher (<code>apply_cluster_postboot.sh</code>) wiederholt seine Einträge und führt den <code>--auto-reinstall</code>-Hook jeder Komponente aus, der den aufgezeichneten Zustand liest und die Installation gegen den aktuellen Kernel des Ziels reproduziert.",
+    "componentsBody": "Ein JSON-Verzeichnis unter <code>/usr/local/share/proxmenux/</code> erfasst jede von ProxMenux installierte Komponente mit ihrem genauen Zustand: Version und ProxMenux-spezifische Merkmale (bei NVIDIA der boolesche Wert <code>patched</code>, bei Coral die DKMS-Version). Die Datei liegt im rootfs und nicht unter <code>metadata/</code>, weil sie <em>erst gelesen wird, nachdem</em> das rootfs auf das Ziel kopiert wurde. Der nach dem Start ausgeführte Dispatcher (<code>apply_cluster_postboot.sh</code>) geht alle Einträge durch und ruft den <code>--auto-reinstall</code>-Hook der jeweiligen Komponente auf. Dieser liest den gespeicherten Zustand und stellt die Installation für den aktuellen Kernel des Zielsystems wieder her.",
     "componentInstallersTitle": "Komponenteninstallateure",
     "componentInstallersBody": "Vier ProxMenux-Installateure stellen derzeit einen <code>--auto-reinstall</code>-Einstiegspunkt frei:",
     "installerRows": [

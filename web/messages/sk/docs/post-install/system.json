@@ -17,11 +17,11 @@
     "keyTitle": "Kľúčové hodnoty",
     "keyItems": [
       "<code>Storage=persistent</code>",
-      "<code>SystemMaxUse=64M</code>0 / <code>RuntimeMaxUse=60M</code>",
+      "<code>SystemMaxUse=64M</code> / <code>RuntimeMaxUse=60M</code> — pevné limity využitia disku a pamäte systémovým denníkom.",
       "<code>Compress=yes</code>, <code>Seal=no</code> Compress logs, preskočiť dopredu-zabezpečené tesnenie (uložiť CPU).",
       "<code>MaxLevelStore=info</code> (vyžaduje sa ProxMenux Monitor@ info: tooltip Fail2Ban detekcia SSH/Proxmox auth zlyhanie z denníka).",
       "Rate-limity: <code>1000 events / 30 s</code>, aby sa zabránilo zaplaveniu prihlásením.",
-      "<code>ForwardToSyslog=no</code>, <code>ForwardToWall=no</code>"
+      "<code>ForwardToSyslog=no</code>, <code>ForwardToWall=no</code> — neduplikovať hlásenia do syslogu ani ich nerozosielať na konzoly."
     ],
     "tipTitle": "Prečo MaxLevelStore = info záleží",
     "tipBody": "Použitie vyššej úrovne, ako je <code>warning</code> makes ProxMenux Monitor's log prehliadač ukazuje takmer rovnaké záznamy vo všetkých rozsahoch dátumov (pretože väčšina aktivity je info-level), a to zabraňuje Fail2Ban z pohľadu neúspešných prihlásení. Ak chcete menej log hlasitosti, spoľahnite sa na <code>SystemMaxUse</code> viečko a <code>RateLimitBurst</code> namiesto zníženia skladovanej úrovne."
@@ -56,7 +56,7 @@
       },
       {
         "file": "/etc/security/limits.d/99-limits.conf",
-        "sets": "<code>nofile</code>0 a <code>nproc</code> až 1,048,576 (neobmedzená na koreň)"
+        "sets": "<code>nofile</code> a <code>nproc</code> na 1,048,576 (pre root bez obmedzenia)"
       },
       {
         "file": "/etc/systemd/system.conf + user.conf",
@@ -87,7 +87,7 @@
     "installsItems": [
       "Balíček <code>kexec-tools</code> (debconf pre-odpovedá s <code>kexec-tools/load_kexec boolean false</code>, takže apt nie je rýchly a automatické zaťaženie pri vypnutí zostáva vypnuté).",
       "Jednotka Systemd <code>/etc/systemd/system/kexec-pve.service</code> — načíta jadro Proxmox a initrd do pamäte pri zavádzaní, pričom opätovne použije aktuálny cmdline.",
-      "Prezývka v <code>/root/.bash_profile</code>0: <code>reboot-quick</code> → <code>systemctl kexec</code>."
+      "Alias v <code>/root/.bash_profile</code>: <code>reboot-quick</code> → <code>systemctl kexec</code>."
     ],
     "usageIntro": "Použitie po ďalšom reštarte (alebo manuálnom <code>systemctl start kexec-pve</code>):",
     "warnTitle": "Kedy nepoužívať kexec",

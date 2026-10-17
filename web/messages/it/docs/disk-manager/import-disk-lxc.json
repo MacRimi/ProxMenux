@@ -61,7 +61,7 @@
         "title": "Attaccare e verificare",
         "img": "/disk/assignment-ct.png",
         "caption": "Assegnazione a CT",
-        "bodyRich": "ProxMenux aggiunge una nuova voce <code>mpN:</code> alla configurazione del contenitore, saltando gli indici già in uso e rilegge la configurazione per confermare. Se il contenitore è in esecuzione il supporto è espulso dal vivo; altrimenti prende effetto sul prossimo inizio.",
+        "bodyRich": "ProxMenux aggiunge una nuova voce <code>mpN:</code> alla configurazione del container, evitando gli indici già in uso, quindi rilegge la configurazione per verificarla. Se il container è in esecuzione, il montaggio viene applicato subito; altrimenti entrerà in funzione al prossimo avvio.",
         "extraImg": "/disk/result-point.png",
         "extraAlt": "Punto di montaggio creato con successo",
         "extraCaption": "Punto di montaggio creato e verificato"

@@ -124,7 +124,7 @@
       {
         "href": "/docs/help-info/zfs-commands",
         "label": "Comandi di gestione ZFS",
-        "tail": "— lavaggio a zpool per l'equivalente di stoccaggio di test SMART."
+        "tail": " — zpool scrub, l’equivalente dei test SMART al livello dello storage."
       },
       {
         "href": "/docs/monitor/dashboard/storage",

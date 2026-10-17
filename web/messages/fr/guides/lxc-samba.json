@@ -66,7 +66,7 @@
     "wireBackupNote": "Le drapeau <code>backup=0</code> exclut ce point de montage des sauvegardes <code>vzdump</code> — généralement le bon appel pour les gros disques externes qui sont le stockage cible de l'hôte plutôt que ses données.",
     "restartHeading": "1.5 Redémarrez le LXC et définissez les permissions",
     "restartBody": "Redémarrer le CT pour appliquer le point de montage:",
-    "restartCode": "pct restart '<'CTID'>'",
+    "restartCode": "pct reboot '<'CTID'>'",
     "permsBody": "À l'intérieur du LXC, donnez les permissions de répertoire appropriées pour l'utilisateur qui sera propriétaire du partage:",
     "permsCode": "# Inside the container\nmkdir -p /mnt/lxc_USB\nchown -R proxmenux:proxmenux /mnt/lxc_USB\nchmod 770 /mnt/lxc_USB",
     "permsNoteTitle": "Remarque",
@@ -109,7 +109,7 @@
   "troubleshoot": {
     "heading": "Dépannage",
     "items": [
-      "<strong><code>pct restart</code> échoue avec \"dispositif non trouvé\":</strong> le chemin du périphérique dans <code>mp0</code> n'existe pas sur l'hôte. Vérifiez avec <code>ls -l /dev/disk/by-id/</code> et mettez à jour le chemin.",
+      "<strong><code>pct reboot</code> échoue avec \"dispositif non trouvé\":</strong> le chemin du périphérique dans <code>mp0</code> n'existe pas sur l'hôte. Vérifiez avec <code>ls -l /dev/disk/by-id/</code> et mettez à jour le chemin.",
       "<strong>CT commence mais <code>/mnt/lxc_USB</code> est vide :</strong> le disque n'est pas monté à l'intérieur du CT. Vérifiez depuis l'hôte : <code>pct exec '<'CTID'>' -- mount | grep lxc_USB</code>. En cas d'absence, le point de montage dans la configuration est incorrect.",
       "<strong>Samba authentifie mais écrit un échec avec \"Permission nied\":</strong> Les permissions Linux sur le répertoire ne permettent pas à l'utilisateur Samba d'écrire. Revérifier <code>chown</code> / <code>setfacl</code> dans la section 1.5 / 2.3.",
       "<strong>Share n'apparaît pas dans les navigateurs réseau mais <code>smb://'<'ip'>'/lxc_usb</code> fonctionne:</strong> browseability over the LAN dépend de NetBIOS / WS-Discovery. Ajoutez <code>nmbd</code> : <code>apt-get install -y samba-common-bin</code> et assurez-vous que <code>nmbd</code> est activé.",

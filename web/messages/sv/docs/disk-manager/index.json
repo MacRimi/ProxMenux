@@ -1,20 +1,20 @@
 {
   "meta": {
     "title": "Proxmox Disk Manager - Bifoga diskar till VMs / LXC, SMART Tests, Wipe | ProxMenux",
-    "description": "Hantera fysiska diskar på en Proxmox VE värd med ProxMenux: passera diskar till VMs eller LXC behållare (qm set scsi/sata/virtio, pct mp), import qcow2 / vmdk / vdi disk bilder, passera genom hela HBA eller NVMe styrenheter, säkert torka diskar och kör SMART självtester.",
+    "description": "Hantera fysiska diskar på en Proxmox VE värd med ProxMenux: passera diskar till VMs eller LXC containrar (qm set scsi/sata/virtio, pct mp), import qcow2 / vmdk / vdi disk avbildningar, passera genom hela HBA eller NVMe styrenheter, säkert torka diskar och kör SMART självtester.",
     "ogTitle": "Proxmox Disk Manager - Bifoga diskar till VMs / LXC, SMART Tester, Wipe",
-    "ogDescription": "Bifoga skivor till VM / LXC, import disk bilder, PCI genomgång för controllers, säker torka och SMART tester på Proxmox VE.",
+    "ogDescription": "Bifoga skivor till VM / LXC, import disk avbildningar, PCI genomgång för controllers, säker torka och SMART tester på Proxmox VE.",
     "twitterTitle": "Proxmox diskhanterare | ProxMenux",
-    "twitterDescription": "Bifoga skivor till VM / LXC, import bilder, PCI genomgång, säker torka och SMART tester."
+    "twitterDescription": "Bifoga skivor till VM / LXC, import avbildningar, PCI genomgång, säker torka och SMART tester."
   },
   "header": {
     "title": "Diskhanteraren",
-    "description": "Menyn Disk Manager grupper ProxMenux verktyg för att hantera fysiska diskar på en Proxmox värd: bifoga diskar till VMs och LXC behållare, import disk bilder, passera genom en hel kontroller eller NVMe-enhet, torka diskar säkert och köra SMART hälsotester.",
+    "description": "Menyn Disk Manager grupper ProxMenux verktyg för att hantera fysiska diskar på en Proxmox värd: bifoga diskar till VMs och LXC containrar, import disk avbildningar, passera genom en hel kontroller eller NVMe-enhet, torka diskar säkert och köra SMART hälsotester.",
     "section": "Diskhanteraren"
   },
   "intro": {
     "title": "Vad denna meny är för",
-    "body": "Varje alternativ här fungerar på <strong>physical diskar som redan är synliga för Proxmox värd</strong>. Menyn är uppdelad i tre grupper - <strong>VM</strong> (fäst diskar eller importera bilder till en virtuell maskin), <strong>LXC</strong> (fäst diskar till en behållare) och <strong>Utilities</strong> (säkert format, SMART hälsa). Säkerhetskontroller gäller överallt: systemdisker och diskar som redan används är dolda eller blockerade."
+    "body": "Varje alternativ här fungerar på <strong>physical diskar som redan är synliga för Proxmox värd</strong>. Menyn är uppdelad i tre grupper - <strong>VM</strong> (fäst diskar eller importera avbildningar till en virtuell maskin), <strong>LXC</strong> (fäst diskar till en container) och <strong>Utilities</strong> (säkert format, SMART hälsa). Säkerhetskontroller gäller överallt: systemdisker och diskar som redan används är dolda eller blockerade."
   },
   "opening": {
     "heading": "Öppna menyn",
@@ -37,7 +37,7 @@
       "Importera disk till LXC"
     ],
     "utilitiesTitle": "Verktyg",
-    "utilitiesBody": "Värdsida verktyg som fungerar på diskarna själva, oberoende av någon VM eller behållare.",
+    "utilitiesBody": "Värdsida verktyg som fungerar på diskarna själva, oberoende av någon VM eller container.",
     "utilitiesItems": [
       "Formatera / radera fysisk disk",
       "SMART-status och disktest"
@@ -69,7 +69,7 @@
   },
   "lxc": {
     "heading": "LXC",
-    "intro": "Verktyg som verkar på befintliga LXC-behållare. Direkt enhet genomgång kräver en privilegierad behållare; skriptet erbjuder att konvertera behållaren om det behövs.",
+    "intro": "Verktyg som verkar på befintliga LXC-behållare. Direkt enhet genomgång kräver en privilegierad behållare; skriptet erbjuder att konvertera containern om det behövs.",
     "options": [
       {
         "icon": "Boxes",
@@ -81,7 +81,7 @@
   },
   "utilities": {
     "heading": "Verktyg",
-    "intro": "Värdsida verktyg som fungerar på diskarna själva, oberoende av någon VM eller behållare.",
+    "intro": "Värdsida verktyg som fungerar på diskarna själva, oberoende av någon VM eller container.",
     "options": [
       {
         "icon": "Eraser",

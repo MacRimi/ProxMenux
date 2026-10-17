@@ -76,7 +76,7 @@
       "Požiada o potvrdenie pomocou dialógového okna áno/nie – akcia je deštruktívna pre prihlasovacie údaje.",
       "Zálohuje existujúci <code>/root/.config/proxmenux-monitor/auth.json</code> na <code>auth.json.bak-&lt;UTC timestamp&gt;</code> (režim <code>0600</code>), takže predchádzajúci stav môže byť obnovený manuálne, ak reset bol chyba.",
       "Zastaví službu <code>proxmenux-monitor</code>, takže on-disk editácia nemôže pretekať s prihlásením počas letu.",
-      "Vyčistí pole identity v <code>auth.json</code>0: <code>enabled=false</code>, <code>configured=false</code>, vyprázdni <code>username</code>, <code>password_hash</code>, <code>totp_secret</code> a pole zálohovacích kódov.",
+      "Vymaže údaje identity v <code>auth.json</code>: nastaví <code>enabled=false</code>, <code>configured=false</code> a vyprázdni <code>username</code>, <code>password_hash</code>, <code>totp_secret</code> aj pole záložných kódov.",
       "<strong>Konzervované</strong> , <code>jwt_secret</code> a registrovaného <code>api_tokens</code> / <code>revoked_tokens</code> Tak dlho-žil API tokeny použité Home Assistant alebo iné skripty <em>pokračovať v overovaní pravosti</em> po resete.",
       "Reštartuje službu. Ďalšia návšteva <code>http://&lt;host&gt;:8008</code> ukazuje sprievodcu nastavením prvého štartu, aby bolo možné vytvoriť nový účet admin."
     ],
@@ -96,7 +96,7 @@
     "missingBody": "Monitor nie je registrovaný na systemd. Potvrďte <code>systemctl list-unit-files | grep proxmenux-monitor</code> Ak nie je výstup, preinštalujte ProxMenux od oficiálneho inštalátora s najnovšou verziou a vyberte možnosť Monitor počas inštalácie.",
     "unreachableTitle": "Služba aktivovaná, ale URL je nedostupná",
     "unreachableBody": "Stavový výstup Nastavenia vám dáva IP. Potvrdiť:",
-    "unreachableCmd": "ss-tlnp 8008                # Je niečo, čo počúvaš?\njournalctl - u proxmenux-Dôstojník -n 100 --no-pager  # nedávne chyby\ncurl -sI http://localhost:8008      # lokálna dosiahnuteľnosť",
+    "unreachableCmd": "ss -tlnp | grep 8008                # is anything listening?\njournalctl -u proxmenux-monitor -n 100 --no-pager  # recent errors\ncurl -sI http://localhost:8008      # local reachability",
     "unreachableOutro": "Ak miestnehostiteľ pracuje, ale externá nefunguje, skontrolujte svojho hostiteľa firewall (<code>pve-firewall</code> alebo nftables) pre vstup TCP 8008.",
     "stopsTitle": "Aktivoval službu, ale zastaví sa o pár sekúnd neskôr",
     "stopsBody": "Najčastejšie konflikt prístavu (niečo iné na 8008) alebo kontrola závislosti zlyháva. Časopis povie, ktoré: <code>journalctl -u proxmenux-monitor.service -b</code>."

@@ -37,7 +37,7 @@
     "intro": "AI-konfigurationen bor längst ner i meddelandepanelen i fliken Inställningar, som en kollapsbar <em>Advanced: AI Enhancement</em> block. Klicka på header för att expandera:",
     "collapsedAlt": "Collapsed Advanced AI Enhancement header med chevron indikator",
     "collapsedCaption": "Kollapsat som standard - ett klick utökar panelen.",
-    "panelAlt": "Expanderad AI-förbättringspanel som visar AI-förbättrade meddelanden huvudväxla, Provider Google Gemini, API Nyckeln maskerad, modell gemini-2.5Flash, Prompt Mode Default, Language English, Detail Level per Channel för Telegram Discord Gotify E-post, AI Förslag växlar och Test Connection-knappen",
+    "panelAlt": "Utökad panel för AI-förbättringar med huvudreglage för AI-förbättrade meddelanden, leverantören Google Gemini, dold API-nyckel, modellen gemini-2.5-flash, standardläge för prompten, engelska som språk, detaljnivå per kanal för Telegram, Discord, Gotify och e-post samt reglage för AI-förslag och knappen Testa anslutning",
     "panelCaption": "Den fullständiga AI-förbättringspanelen - varje kontroll som dokumenteras på denna sida kartlägger till ett av fälten ovan.",
     "outro": "Topp till botten, panelen exponerar: <em>AI-förbättrade meddelanden</em> Master toggle, leverantörsväljaren med en informationsmodal bredvid den, API nyckelingång (eller Ollama URL för lokalt läge), modellnedgången (laddad från leverantören efter att ha angett nyckeln), snabbläget (<em>Standard</em> / <em>Anpassad</em>), utgångsspråket, detaljnivån per kanal, <em>AI-förslag</em> opt-in och en <em>Testa anslutning</em> knappen som skickar ett sondmeddelande till leverantören för att validera referenserna."
   },

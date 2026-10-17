@@ -4,7 +4,7 @@
     "description": "Utilitaires au jour le jour Proxmox VE: construire des ISO Windows à partir de UUP Dump, installer des outils CLI, exécuter une mise à jour sûre du système Proxmox, effectuer la version majeure PVE 8 à PVE 9, exporter des VM vers OVA / OVF et importer des VM OVA / OVF de VMware ou VirtualBox.",
     "ogTitle": "Services publics Proxmox — UUP Dump, PVE 8 à 9 Mise à niveau, OVA Export/Import",
     "ogDescription": "Créez des ISO Windows, installez des outils CLI, lancez une mise à jour sûre, mettez à jour PVE 8 vers PVE 9, export / importation OVA / OVF VMs.",
-    "twitterTitle": "Services publics Proxmox ProxMenux",
+    "twitterTitle": "Utilitaires Proxmox | ProxMenux",
     "twitterDescription": "Création ISO, outils CLI, mise à jour Proxmox, PVE 8→Mise à jour 9, portabilité OVA / OVF VM."
   },
   "header": {

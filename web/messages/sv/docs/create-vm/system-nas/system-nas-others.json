@@ -254,7 +254,7 @@
       "icon": "MonitorIcon",
       "officialName": "zimaspace.com",
       "officialUrl": "https://www.zimaspace.com/zimaos",
-      "description": "Lightweight NAS / hem-server OS byggd ovanpå Debian, med fokus på media, Docker appar och hemautomatisering. ZimaOS använder en dedikerad ProxMenux installer (vm/zimaos.sh) som laddar ner en förbyggd bild, men VM-profilen följer samma flöde som de andra NAS-systemen.",
+      "description": "Lightweight NAS / hem-server OS byggd ovanpå Debian, med fokus på media, Docker appar och hemautomatisering. ZimaOS använder en dedikerad ProxMenux installer (vm/zimaos.sh) som laddar ner en förbyggd avbildning, men VM-profilen följer samma flöde som de andra NAS-systemen.",
       "specs": [
         "Rekommenderat gränssnitt: SATA eller VirtIO",
         "Standard RAM: 4 GB (tillräckligt för media/självvärda appar)",

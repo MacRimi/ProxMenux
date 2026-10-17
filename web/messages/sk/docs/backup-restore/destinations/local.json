@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "Local archive destination char.zst on a filesystem or USB drive ProxMenux",
-    "description": "Miestny záložný cieľ napíše jeden .tar.zst archív do akéhokoľvek zapisovateľného adresára: interný disk, bod pripojenia Proxmoxu, podiel NFS, alebo USB disk. Dokumenty konfiguračný tok, USB detekcia a montáž logika, bezpečnostná kontrola proti zápisu archívu do cesty sú zálohované, a sidecar JSON, ktorý identifikuje súbor.",
+    "title": "Lokálny archív — tar.zst na súborovom systéme alebo USB disku | ProxMenux",
+    "description": "Lokálny cieľ zálohy vytvorí jediný archív .tar.zst v ľubovoľnom zapisovateľnom adresári: na internom disku, v bode pripojenia Proxmoxu, na zdieľaní NFS alebo na USB disku. Stránka opisuje nastavenie, rozpoznanie a pripojenie USB diskov, ochranu pred uložením archívu do zálohovanej cesty a sprievodný súbor JSON, ktorý zálohu identifikuje.",
     "ogTitle": "ProxMenux Backup",
     "ogDescription": "Ako ProxMenux píše lokálne zálohy ako .tar.zst archívy a ako nastaviť cieľový adresár alebo USB disk.",
     "twitterTitle": "Lokálne záložné miesto ProxMenux",
@@ -26,14 +26,14 @@
     ]
   },
   "usbFlow": {
-    "heading": "Detekcia a montáž USB pohonu",
+    "heading": "Rozpoznanie a pripojenie USB disku",
     "intro": "USB podmenu uvádza oddiely na odnímateľné zariadenia hlásené <code>lsblk</code>. Každá partícia je prezentovaná s jeho veľkosťou, štítkom súborového systému a aktuálnym stavom. Štát určuje akciu ProxMenux ponúka.",
     "statesTitle": "Tri zariadenia uvádzajú",
     "stateRows": [
       {
         "state": "pripojené",
         "shown": "Veľkosť · štítok · [fstype] · → /mount/point",
-        "action": "Divízia je už niekde pripojená. Výber trvá na aktuálnom bode pripojenia ako miestny cieľ. Nerealizuje sa žiadna montáž."
+        "action": "Oddiel je už pripojený. Jeho výber uloží aktuálny bod pripojenia ako lokálny cieľ zálohy. Žiadne nové pripojenie sa nevykoná."
       },
       {
         "state": "odmontované",

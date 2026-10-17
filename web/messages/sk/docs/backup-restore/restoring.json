@@ -48,7 +48,7 @@
       },
       {
         "output": "Plán na obnovu národného preukazu totožnosti",
-        "detail": "Keď NIC na cieľ má rovnaký MAC ako jeden na zdroji, ale iný názov (typický po výmene základnej dosky), kontrola kompatibility zaznamená plán premenovania (<code>HB_NIC_REMAP</code>0), ktorý prepíše <code>/etc/network/interfaces</code> počas obnovy."
+        "detail": "Ak má sieťová karta na cieľovom hostiteľovi rovnakú MAC adresu ako na zdrojovom, ale iný názov (bežné po výmene základnej dosky), kontrola kompatibility zaznamená plán premenovania (<code>HB_NIC_REMAP</code>). Ten počas obnovy upraví <code>/etc/network/interfaces</code>."
       },
       {
         "output": "Plán vrátenia zmien",
@@ -126,7 +126,7 @@
         "detail": "<code>/etc/pve</code> je živý pmxcfs FUSE mount Expeditor kopíruje súbory z čakajúcich rootfs do živého <code>/etc/pve</code> akonáhle sa zhromaždí súborový systém, jeden súbor naraz, bez reštartovania pve-cluster. Zajatý <code>/var/lib/pve-cluster/config.db</code> zo zálohy (alebo podporovaný <code>config.db.raw-fallback</code>) je zhmotnený <code>systemctl stop pve-cluster</code> → atómová kópia súboru → <code>systemctl start pve-cluster</code> vzor, takže pmxcfs znovu prečíta obnovený stav na ceste späť."
       },
       {
-        "task": "Prestavba initramfov a bootloader",
+        "task": "Znovu vytvoriť initramfs a zavádzač",
         "detail": "Spustí <code>update-initramfs -u -k all</code> cez každé nainštalované jadro, potom buď <code>update-grub</code> (GRUB inštaluje) alebo <code>proxmox-boot-tool refresh</code> (systemd-boot / ZFS inštaluje). Preskočené, ak interaktívny krok určiť nič sa nezmenilo v chodníkoch, ktoré ovplyvňujú tieto nástroje."
       },
       {
@@ -203,7 +203,7 @@
         "detail": "Rýchle"
       },
       {
-        "stage": "Prestavba initramfov na semenách",
+        "stage": "Znovu vytvoriť initramfs pre všetky jadrá",
         "time": "3–5 min",
         "detail": "<code>update-initramfs -u -k all</code> prestavuje jeden obrázok initramfs na nainštalované jadro. Veľa čakania."
       },

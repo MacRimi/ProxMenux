@@ -24,7 +24,7 @@
     "optAbody2": "Da quel punto ogni richiesta è solo:",
     "optBtitle": "Opzione B — flusso di login (username + password)",
     "optBbody": "Utile per gli script che autenticano come utente umano. Il gettone restituito è di breve durata; la maggior parte delle integrazioni dovrebbe preferire l'opzione A.",
-    "outro": "Il campo TOTP è richiesto solo quando 2FA è abilitato sul conto. Rotazione di token, revoca, password policy e log di audit dal vivo in <link>Access & Authentication</link>.",
+    "outro": "Il campo TOTP è obbligatorio solo se sull’account è attiva la 2FA. Rotazione e revoca dei token, criteri delle password e registro di controllo sono descritti in <link>Accesso e autenticazione</link>.",
     "httpsTitle": "Utilizzando HTTPS invece di HTTP",
     "httpsIntro": "Ogni ricetta qui sotto utilizza <code>http://</code> negli URL per tenere gli esempi brevi. Se hai abilitato TLS sul Monitor (<strong>Impostazioni → Sicurezza → SSL/HTTPS</strong>), swap <code>http://</code> per <code>https://</code> in ogni URL — questa è l'unica modifica. Due note specifiche per alcuni strumenti:",
     "httpsItems": [

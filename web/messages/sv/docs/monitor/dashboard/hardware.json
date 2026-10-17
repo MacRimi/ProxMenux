@@ -49,7 +49,7 @@
     "intro": "Varje upptäckt video controller gör som sitt eget kort med leverantör, modell, typ (<em>Integrated</em> / <em>PCI</em> / BMC), PCI slot (BDF), kärndrivrutin och modullista. Kortet exponerar också en inline <strong>Switch Mode</strong>-kontroll som vänder GPU mellan LXC-delning (infödd förare) och VM-genomgång (<code>vfio-pci</code>) - se <link>Switch GPU Mode (VM LXC) </link> för vad som händer på värden när du trycker den.",
     "vfioImageAlt": "Grafikkort sektion visar en Matrox G200EH integrerad GPU bunden till mgag200 (Ready for LXC) och en NVIDIA Quadro P400 bunden till vfio-pci (Ready for VM passthrough)",
     "vfioImageCaption": "Två GPU upptäckt: Matrox BMC chip är på den infödda drivrutinen och redo för LXC; NVIDIA Quadro P400 är bunden till <code>vfio-pci</code>, redo för VM genomgång.",
-    "lxcImageAlt": "Grafikkort sektion som visar en Intel UHD Graphics iGPU på i915 och en NVIDIA Quadro P1000 på nvidia förare, både märkt Redo för LXC behållare",
+    "lxcImageAlt": "Grafikkort sektion som visar en Intel UHD Graphics iGPU på i915 och en NVIDIA Quadro P1000 på nvidia förare, både märkt Redo för LXC containrar",
     "lxcImageCaption": "Samma nod efter att ha bytt NVIDIA-kortet tillbaka till den infödda drivrutinen - både GPU: er nu redo för LXC-containrar.",
     "realtimeTitle": "Realtidsövervakning modal",
     "realtimeBody": "Att klicka på ett GPU-kort öppnar en per-slot övervakningsmodal som omröstar lämpligt leverantörsverktyg var tredje sekund. Modalen exponerar leverantör, typ, PCI-slot, förare, kärnmoduler (er), levande motorutnyttjande (Render / 3D, Video, Blitter, VideoEnhance), grafik och minnesklockor, temperatur, strömdragning (när rapporterade), VRAM-användning och en Active Processes-tabell med per processmotorbelastning. Data serveras från <code>/api/gpu/&lt;slot&gt;/realtime</code>.",
@@ -92,8 +92,8 @@
     "installBody": "När en NVIDIA GPU är bunden till <code>nouveau</code> / <code>nvidiafb</code> (ingen egenutvecklad drivrutin installerad), kan realtidsblocket inte läsa klockor, kraft eller processbelastning. Modalen ersätter sedan metriken med en <strong>Install NVIDIA Drivers</strong>-knapp som trådar rakt in i samma manus dokumenterade på <link>Install NVIDIA Drivers (Host) </link>.",
     "noDriverAlt": "GPU Övervaka modal för en NVIDIA Quadro P620 med kärnmoduler nvidiafb och nouveau laddade, en utökad övervakning inte tillgänglig callout och en blå installation NVIDIA Drivers knapp",
     "noDriverCaption": "Ingen egenutvecklad drivrutin installerad ännu - modalen visar en enklicksinstallatör.",
-    "promptAlt": "NVIDIA GPU Driver Installation Bekräftelse dialogruta upptäcks GPUs, LXC behållare med NVIDIA passthrough och ett ja / Cancel par",
-    "promptCaption": "Förinstallera sammanfattning: upptäckt GPU, LXC behållare som redan har NVIDIA genomgång, och vad manuset kommer att göra. Ingenting rörs tills du bekräftar.",
+    "promptAlt": "NVIDIA GPU Driver Installation Bekräftelse dialogruta upptäcks GPUs, LXC containrar med NVIDIA passthrough och ett ja / Cancel par",
+    "promptCaption": "Förinstallera sammanfattning: upptäckt GPU, LXC containrar som redan har NVIDIA genomgång, och vad manuset kommer att göra. Ingenting rörs tills du bekräftar.",
     "successAlt": "Terminalproduktion som visar NVIDIA-drivrutinen 580.105.08 installerad framgångsrikt och nvidia-smi rapporterar en Quadro P620",
     "successCaption": "Framgångsrik installation - NVIDIA <code>.run</code> byggd via DKMS, uthållighetstjänsten är på plats, och <code>nvidia-smi</code> rapporterar GPU.",
     "warningTitle": "Välj en förare version din GPU faktiskt stöder",
@@ -116,7 +116,7 @@
       "<strong>M. M.2 Mini-PCIe</strong> Värden behöver värden <code>gasket</code> + <code>apex</code> Kernelmoduler byggda via DKMS Så enhetens nod <code>/dev/apex_0</code> visas på boot.",
       "<strong>USB Accelerator</strong> värden behöver bara värden Edge TPU användar-rymden runtime (<code>libedgetpu1-std</code>) från Googles APT-förvar."
     ],
-    "outro": "Båda hanteras av en enda ProxMenux-post - <installLink>Install Coral TPU på Host</installLink> - som automatiskt upptäcker vad du har. Bakgrund och den officiella runtime live på <a>coral.ai/docs</a>. När värdsidan är klar, lämna enheten till en behållare med <lxcLink>Add Coral TPU till LXC</lxcLink>."
+    "outro": "Båda hanteras av en enda ProxMenux-post - <installLink>Install Coral TPU på Host</installLink> - som automatiskt upptäcker vad du har. Bakgrund och den officiella runtime live på <a>coral.ai/docs</a>. När värdsidan är klar, lämna enheten till en container med <lxcLink>Add Coral TPU till LXC</lxcLink>."
   },
   "storage": {
     "heading": "Lagringssammanfattning",

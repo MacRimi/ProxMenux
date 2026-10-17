@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "Vytváranie zálohovanie interaktívny záložný tok ProxMenux",
+    "title": "Vytváranie záloh — interaktívny postup zálohovania | ProxMenux",
     "description": "Interaktívny záložný tok v ProxMenux. Dva vstupné body (skripty TUI menu a monitor Web UI), tri destinácie, dva režimy profilu, jeden krok inscenácie a jeden dialóg s potvrdením. Dokumenty šesť-možnosť matrix, predvolené a vlastné profily, a čo užívateľ vidí medzi výberom zálohy a pristátie archívu na mieste určenia.",
     "ogTitle": "ProxMenux Zálohovanie",
     "ogDescription": "Interaktívny záložný tok s tromi destináciami, dvoma profilmi a spoločným inscenačným krokom.",
-    "twitterTitle": "Vytváranie záloh ProxMenux",
+    "twitterTitle": "Vytváranie záloh | ProxMenux",
     "twitterDescription": "Interaktívny záložný tok s tromi destináciami a dvoma režimami profilu."
   },
   "header": {
@@ -156,7 +156,7 @@
       "<strong><code>/boot</code> a <code>/boot/efi</code></strong> Binári, initramfs a UEFI ESP partície sú regenerované cieľovej vlastnej <code>update-initramfs</code>, <code>update-grub</code> alebo <code>proxmox-boot-tool refresh</code> po obnove. Bootloader sa nikdy neskopíruje doslova.",
       "<strong>Kernel a systémové systémy na spracovanie súborov</strong> — <code>/proc</code>, <code>/sys</code>, <code>/dev</code> a <code>/run</code> sú pseudosúborové systémy produkované jadrom a udev; nikde sa nepretrvajú.",
       "<strong>Binárne balíky pod <code>/usr/bin</code>, <code>/usr/lib</code>, <code>/lib</code>, <code>/sbin</code></strong> APT cieľa od <code>packages.manual.list</code>.",
-      "<strong>0<code>/var/log/</code>, <code>/var/tmp/</code>, <code>/var/cache/</code></strong>",
+      "<strong><code>/var/log/</code>, <code>/var/tmp/</code>, <code>/var/cache/</code></strong> — priebežný stav konkrétneho hostiteľa, ktorý sa neobnovuje.",
       "<strong><code>/home/USER</code></strong> Nie v štandardnom profile. Pridať ako vlastnú cestu, keď systém nesie užívateľské domovské adresáre, ktoré musia prežiť obnovenie."
     ],
     "customPathsTitle": "Ako sa zaobchádza s vlastnou cestou",

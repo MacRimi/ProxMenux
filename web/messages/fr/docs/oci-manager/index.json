@@ -64,7 +64,7 @@
           }
         },
         {
-          "p": "La sélection d’une application affiche sa description, l’image utilisée et deux modes d’installation. <strong>Installer avec les paramètres par défaut</strong> ne demande que les choix essentiels : stockage, emplacement des données, adresse et démarrage. <strong>Installer avec les paramètres avancés</strong> présente toutes les décisions dans l’ordre : VMID et ressources, stockage de chaque chemin, pont réseau et périphériques."
+          "p": "La sélection d’une application affiche sa description, l’image utilisée et deux modes d’installation. <strong>Installer avec les paramètres par défaut</strong> ne application que les choix essentiels : stockage, emplacement des données, adresse et démarrage. <strong>Installer avec les paramètres avancés</strong> présente toutes les décisions dans l’ordre : VMID et ressources, stockage de chaque chemin, pont réseau et périphériques."
         },
         {
           "p": "Les applications effectivement testées affichent <strong>Vérifié</strong> dans cette vue et portent un ✓ dans les listes, que le test ait été effectué dans le laboratoire ProxMenux ou par la communauté."

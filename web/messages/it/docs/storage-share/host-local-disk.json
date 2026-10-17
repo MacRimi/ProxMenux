@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Host: Aggiungere disco locale come archiviazione Proxmox | Documentazione ProxMenux",
-    "description": "Formattare un SATA locale / SAS / NVMe disco su un host Proxmox e registrarlo come directory Proxmox o ZFS pool deposito. rilevamento sicuro del disco, cancello di conferma distruttivo-op, fstab basato su UUID, ZFS pool creazione e pvesm aggiungere dir / zfspool sotto il cofano.",
+    "description": "Formatta un disco SATA, SAS o NVMe locale sull’host Proxmox e registralo come storage di tipo directory o pool ZFS. Include selezione sicura del disco, conferma delle operazioni distruttive, fstab basato su UUID, creazione del pool ZFS e uso di pvesm add dir / zfspool.",
     "ogTitle": "Host: Aggiungere disco locale come archiviazione Proxmox | Documentazione ProxMenux",
     "ogDescription": "Formattare un disco locale e registrarlo come directory Proxmox o ZFS pool stoccaggio con un flusso guidato e filtrato in sicurezza."
   },
   "header": {
     "title": "Host: Aggiungi disco locale come archiviazione Proxmox",
-    "description": "Prendere un disco fisico sull'host Proxmox, in modo facoltativo formattarlo (ext4 / xfs / btrfs / zfs) e registrarlo come storage Proxmox — sia come directory (pvesm aggiungere dir) o un ZFS pool (pvesm aggiungere zfspool). ProxMenux filtra l'elenco del disco in modo da non poter scegliere il disco radice o qualsiasi cosa in uso, e rende ogni passo distruttivo esplicito prima di eseguirlo.",
+    "description": "Scegli un disco fisico sull’host Proxmox, formattalo se necessario in ext4, xfs, btrfs o zfs e registralo come storage directory con pvesm add dir oppure come pool ZFS con pvesm add zfspool. ProxMenux esclude il disco di sistema e quelli in uso e descrive ogni operazione distruttiva prima di eseguirla.",
     "section": "Archiviazione e condivisione · Host"
   },
   "intro": {
@@ -50,8 +50,8 @@
       },
       {
         "label": "Supporta i tipi di contenuti",
-        "dir": "immagini, backup, iso, vztmpl, snippets, rootdir",
-        "zfs": "immagini, rootdir solo (blocco di archiviazione)"
+        "dir": "images, backup, iso, vztmpl, snippets, rootdir",
+        "zfs": "solo images e rootdir (storage a blocchi)"
       },
       {
         "label": "Il meglio per",
@@ -104,7 +104,7 @@
     "rows": [
       {
         "preset": "Conservazione VM",
-        "content": "immagini, backup",
+        "content": "images,backup",
         "use": "Un negozio dedicato di dischi VM che mantiene anche i backup di quelle VM nelle vicinanze."
       },
       {
@@ -161,7 +161,7 @@
     "zpoolTitle": "zpool creare fallisce \"invalid vdev specificazione\"",
     "zpoolBody": "Di solito significa che il disco ha ancora le firme GPT / LVM / ZFS stanti che <code>zpool</code> rifiuta di sovrascrivere senza forza. Lo script esegue <code>wipefs</code> e <code>sgdisk --zap-all</code> prima del formato, ma un disco molto testardo può ancora avere un'etichetta stante. Forzare una pulizia pulita manualmente: <code>zpool labelclear -f /dev/sdX</code> o <code>dd if=/dev/zero of=/dev/sdX bs=1M count=10</code> e riprovare.",
     "inactiveTitle": "Mostra come inattivo dopo il riavvio",
-    "inactiveBody": "Controllare <code>findmnt &lt;mount-path&gt;</code> — se il supporto è mancante, qualcosa in <code>/etc/fstab</code> fallito. <code>dmesg | tail</code> di solito punti al motivo (UUID mismatch, la corruzione del filesystem, <code>nofail</code> ha abbandonato la retry). Un <code>mount -a</code> di solito reagisce allo storage una volta che la causa è fissa."
+    "inactiveBody": "Controlla <code>findmnt &lt;mount-path&gt;</code>. Se il montaggio manca, qualcosa in <code>/etc/fstab</code> non ha funzionato. <code>dmesg | tail</code> di solito indica la causa: UUID non corrispondente, filesystem danneggiato o tentativo saltato in presenza di <code>nofail</code>. Dopo aver corretto la causa, <code>mount -a</code> in genere rende nuovamente disponibile lo storage."
   },
   "related": {
     "heading": "Correlati",
@@ -179,7 +179,7 @@
       {
         "href": "/docs/storage-share/host-local-shared",
         "label": "Aggiungi Directory condivisa su host",
-        "tail": "— preparare una directory sull'host per i supporti leganti LXC (non registra una memoria Proxmox)."
+        "tail": " — prepara una directory sull’host per i bind mount LXC, senza registrarla come storage Proxmox."
       }
     ]
   }

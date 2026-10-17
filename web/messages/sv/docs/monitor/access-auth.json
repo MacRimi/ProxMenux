@@ -243,7 +243,7 @@
       }
     ],
     "backupTitle": "Vad \"backup\" verkligen betyder för",
-    "backupBody": "Om du förlorar enheten som har autentiseringen på den, är de enda sätten tillbaka i (1) en säkerhetskopia som sparats när du aktiverat 2FAeller (eller)2En säkerhetskopia av autentiseringens valv. Appar med molnsynkronisering (Google Auth, Microsoft Auth, Authy, Apple Passwords, Ente, 2FAS, Bitwarden, 1Password) kan återställas på en ny enhet. Appar utan moln (Aegis, Raivo, FreeOTP+) behöver en krypterad exportfil som du har kopierat någonstans säkert. Antingen tillvägagångssätt fungerar - det dåliga fallet är \"ingen backup alls\".",
+    "backupBody": "Om du förlorar enheten med din autentiseringsapp kan du bara komma in igen med (1) en återställningskod som sparades när 2FA aktiverades eller (2) en säkerhetskopia av autentiseringsappens valv. Appar med molnsynkronisering, som Google Auth, Microsoft Auth, Authy, Apple Passwords, Ente, 2FAS, Bitwarden och 1Password, kan återställa uppgifterna på en ny enhet. Appar utan moln, som Aegis, Raivo och FreeOTP+, kräver en krypterad exportfil som du har sparat på en säker plats. Båda metoderna fungerar; problemet är att sakna säkerhetskopia helt.",
     "setupTitle": "Steg-för-steg-inställning från instrumentbrädan",
     "setupImageAlt": "2FA Installera skärm med QR-kod och säkerhetskopieringskoder",
     "setupImageCaption": "2FA-inställningsdialogen - QR-kod, Base32-hemlighet (för manuell inmatning) och de tio engångs säkerhetskopieringskoderna. Koderna visas bara här, om du stänger dialogrutan utan att kopiera dem är de borta.",

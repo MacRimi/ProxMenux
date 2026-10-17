@@ -25,7 +25,7 @@
   "optimizations": [
     {
       "tool": "APT-repositorier + full uppgradering",
-      "what": "Inaktiverar företaget pve-enterprise.sources och ceph.sources, skriver en ren no-subscription-källa för värdens Debian-kodnamn, kör sedan apt-uppdatering & & & apt full-upgrade -y (Proxmox officiella uppgraderingskommando).",
+      "what": "Inaktiverar företagsförråden pve-enterprise.sources och ceph.sources, skriver en no-subscription-källa för värdens Debian-kodnamn och kör sedan apt update && apt full-upgrade -y, Proxmox officiella uppgraderingskommando.",
       "category": "Grundinställningar",
       "categorySlug": "grundläggande inställningar"
     },
@@ -85,7 +85,7 @@
     },
     {
       "tool": "ZFS autotrim (SSD-bara)",
-      "what": "Möjliggör zpool autotrim = på varje ZFS pool vars vdevs är alla SSD / NVMe med TRIM stöd (kontrollerar /sys/block / [dev] /queue/rotational och discard_granularity). Pooler som stöds av HDDs hoppas automatiskt. Endast pooler som faktiskt ändrats av ProxMenux registreras för avinstallation - pooler du ställer in autotrim på manuellt lämnas ensam.",
+      "what": "Aktiverar zpool autotrim=on för varje ZFS-pool där alla vdevs är SSD- eller NVMe-enheter med TRIM-stöd. Kontrollerar /sys/block/[dev]/queue/rotational och discard_granularity. Pooler med hårddiskar hoppas över. Endast pooler som ProxMenux faktiskt ändrar registreras för återställning vid avinstallation; manuellt aktiverad autotrim lämnas oförändrad.",
       "category": "Lagring",
       "categorySlug": "Lagring lagring"
     },

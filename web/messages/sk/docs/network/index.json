@@ -53,7 +53,7 @@
     }
   },
   "classicTitle": "Iba klasický zásobník",
-  "classicBody": "Každá analýza a oprava funkcie skontroluje aktívneho manažéra siete predtým, než sa niečoho dotkne. Ak host beží <strong>netplan</strong>, <strong>systemd-sieťované</strong> alebo <strong>NetworkManager</strong>, nástroj okamžite preruší s jasnou správou <code>/etc/network/interfaces</code>. Toto je úmyselné: editovanie netplan súbor s pravidlami napísanými pre <code>ifupdown</code> potichu by skazila konfiguráciu.",
+  "classicBody": "Každá funkcia analýzy a opravy pred zásahom skontroluje aktívneho správcu siete. Ak hostiteľ používa <strong>netplan</strong>, <strong>systemd-networkd</strong> alebo <strong>NetworkManager</strong>, nástroj sa ihneď zastaví s jasným hlásením. Menu podporuje iba klasickú sieťovú konfiguráciu Debian/Proxmox v <code>/etc/network/interfaces</code>. Je to zámerné: úprava súboru netplan podľa pravidiel pre <code>ifupdown</code> by mohla konfiguráciu nepozorovane poškodiť.",
   "backups": {
     "heading": "Kde idú zálohy",
     "intro": "Každý sprievodca opravy, obnoviť alebo manuálne zálohovanie zapíše časovú pečiatku kópiu <code>/etc/network/interfaces</code> <code>/var/backups/proxmenux/</code>:",

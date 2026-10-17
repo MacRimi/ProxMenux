@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Cosa succede?",
-    "body": "ProxMenux automatizza l'intero ciclo di vita del driver NVIDIA sull'host: rileva il tuo GPU, offre i rami NVIDIA mantenuti che elencano il suo ID del dispositivo PCI, le liste nere <code>nouveau</code>, scarica e gestisce l'installatore ufficiale NVIDIA <code>.run</code> con DKMS, installa il servizio <code>nvidia-persistenced</code> e le regole di applicazione udev La build DKMS è il controllo di compatibilità finale contro il kernel in esecuzione. Se si dispone già di contenitori LXC con passthrough NVIDIA, può aggiornare le librerie userspace per abbinare l'host."
+    "body": "ProxMenux automatizza l’intero ciclo di vita dei driver NVIDIA sull’host: rileva la GPU, propone i rami NVIDIA mantenuti che includono il suo ID dispositivo PCI, inserisce <code>nouveau</code> nella blacklist, scarica ed esegue l’installer ufficiale NVIDIA <code>.run</code> con DKMS, installa il servizio <code>nvidia-persistenced</code> e le regole udev e propone la patch NVENC facoltativa. La compilazione DKMS è la verifica finale della compatibilità con il kernel in esecuzione. Se esistono già container LXC con passthrough NVIDIA, può aggiornarne le librerie userspace per allinearle all’host."
   },
   "who": {
     "heading": "Per chi è questo?",
@@ -105,7 +105,7 @@
       "Esegue <code>nvidia-uninstall --silent</code> prima (la controparte dell'installatore <code>.run</code>), poi si ferma e disabilita <code>nvidia-persistenced</code> e <code>nvidia-powerd</code>, e scarica i moduli del kernel (<code>nvidia_uvm</code>, <code>nvidia_drm</code>, <code>nvidia_modeset</code>, <code>nvidia</code>) — qualsiasi contenitore LXC con passante NVIDIA sarà tagliato in modo pulito.",
       "Esegue <code>apt purge</code> su <code>nvidia-*</code>, <code>libnvidia-*</code>, <code>cuda-*</code> e <code>libcudnn*</code>, rimuove l'albero sorgente DKMS e la cache dell'installatore <code>/opt/nvidia</code> .run.",
       "Rimuove la configurazione di carico dei moduli (<code>/etc/modules-load.d/nvidia-vfio.conf</code>) e le voci della lista nera nouveau di proprietà ProxMenux. Legacy due-line ProxMenux i file della lista nera sono migrati e rimossi troppo; i file di amministratore modificati o non correlati sono conservati.",
-      "Rimuove le regole udev (<code>/etc/udev/rules.d/70-nvidia.rules</code>) e cancella lo stato di patch NVENC (un campo nel ProxMenux Registro di sistema gestito-installs, impostato su <em>rimosso</em> — nessun file separato da eliminare).",
+      "Rimuove le regole udev (<code>/etc/udev/rules.d/70-nvidia.rules</code>) e azzera lo stato della patch NVENC: il relativo campo nell’elenco delle installazioni gestite da ProxMenux viene impostato su <em>rimosso</em>. Non esiste un file separato da eliminare.",
       "Ricostruisce <code>initramfs</code> per tutti i kernel, esegue <code>proxmox-boot-tool refresh</code> su host systemd-boot e richiede un riavvio per finalizzare."
     ],
     "lxcWarnTitle": "Contenitori LXC con passante NVIDIA",
@@ -113,7 +113,7 @@
   },
   "updates": {
     "heading": "Notifiche di aggiornamento",
-    "body": "Il driver NVIDIA installato è rintracciato nel registro di sistema di installazione gestito di ProxMenux. All'avvio e ogni 24h il Monitor controlla l'elenco a monte di <code>download.nvidia.com/XFree86/Linux-x86_64/</code> contro i rapporti della versione <code>nvidia-smi</code> e nota solo quando esiste un nuovo rilascio di manutenzione nel ramo installato.",
+    "body": "Il driver NVIDIA installato viene registrato nell’elenco delle installazioni gestite da ProxMenux. All’avvio e ogni 24 ore, il Monitor confronta le versioni disponibili su <code>download.nvidia.com/XFree86/Linux-x86_64/</code> con la versione indicata da <code>nvidia-smi</code>. La notifica viene inviata solo quando è disponibile una versione di manutenzione più recente nello stesso ramo del driver installato.",
     "kindsHeading": "Messaggio di aggiornamento",
     "kindsItems": [
       "<strong>Same-branch Maintenance.</strong> Un nuovo rilascio nel vostro attuale ramo driver (ad esempio installato 580.65.06 → disponibile 580.105.08). Il Monitor non differisce la compatibilità del kernel cross-branch."

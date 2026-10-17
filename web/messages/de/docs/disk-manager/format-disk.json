@@ -7,7 +7,7 @@
   },
   "header": {
     "title": "Physischen Datenträger formatieren / löschen",
-    "description": "Wischen oder formatieren Sie sicher eine physische Festplatte auf dem Proxmox-Host. ProxMenux zeigt nur Festplatten an, die völlig frei sind (keine Systemnutzung, keine Gastreferenz, keine Halterungen) und erzwingt eine doppelte Bestätigung - ja / nein plus Eingabe des vollständigen Festplattenpfads -, bevor Daten zerstört werden.",
+    "description": "Wischen oder formatieren Sie sicher eine physische Festplatte auf dem Proxmox-Host. ProxMenux zeigt nur Festplatten an, die völlig frei sind (keine Systemnutzung, keine Gastreferenz, keine Mounts) und erzwingt eine doppelte Bestätigung - ja / nein plus Eingabe des vollständigen Festplattenpfads -, bevor Daten zerstört werden.",
     "section": "Disk Manager · Dienstprogramme"
   },
   "danger": {

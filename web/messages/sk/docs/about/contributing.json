@@ -26,7 +26,7 @@
       },
       {
         "branch": "vyvinúť",
-        "purposeRich": "Aktívny vývojový odbor. Všetky nové pracovné pozemky tu ako prvý, je to kanál. Stabilné vydania sú prestrihnuté odtiaľto do <code>main</code>, keď je vydanie pripravené."
+        "purposeRich": "Aktívna vývojová vetva. Všetky nové zmeny sa najskôr začleňujú sem; ide o kanál „beta“. Keď je stabilné vydanie pripravené, z tejto vetvy sa prenesie do <code>main</code>."
       },
       {
         "branch": "vlastnosť/*",
@@ -83,10 +83,10 @@
       {
         "phaseRich": "<strong>Fáza 2 chôdza</strong>",
         "purposeRich": "Popravte každú operáciu. Zobrazí celú históriu pokroku, ktorá sa hromadí na obrazovke.",
-        "screenRich": "Visible <code>msg_info</code>0 / <code>msg_ok</code> správy; nikdy <code>dialog</code>."
+        "screenRich": "Viditeľné hlásenia <code>msg_info</code> / <code>msg_ok</code>; nikdy nie <code>dialog</code>."
       }
     ],
-    "principle": "Princíp: <strong>0 najprv zhromaždiť všetko, potom vykonať všetko</strong>. Užívateľ vidí čisté dialógové menu (Phase 1), potom čistý log-style prevedenie (Phase 2). Žiadne miešanie",
+    "principle": "Zásada: <strong>najprv zhromaždiť všetky voľby, potom všetko vykonať</strong>. Používateľ najprv pracuje s prehľadným dialógovým menu (fáza 1) a potom sleduje vykonávanie vo forme záznamu (fáza 2). Fázy sa nemiešajú: počas vykonávania sa neotvárajú dialógy a počas výberu sa nevypisuje priebeh.",
     "phase1Heading": "Fáza 1",
     "phase1Code": "# Silent preparatory work between dialogs\nmsg_info \"$(translate \"Checking disk assignments...\")\"\nASSIGNED_TO=$(check_assignments \"$DISK\")\nstop_spinner   # ← clears line silently, result saved in variable\n\n# Next dialog can now use ASSIGNED_TO\nif [ -n \"$ASSIGNED_TO\" ]; then\n    dialog --yesno \"$(translate \"Disk already assigned. Continue?\")\" $UI_YESNO_H $UI_YESNO_W\nfi\n\n# Collect multiple decisions per item with parallel arrays\ndeclare -a DISK_LIST=()\ndeclare -a DISK_FORMAT_TYPES=()\ndeclare -a DISK_MOUNT_POINTS=()\nfor DISK in $SELECTED; do\n    msg_info \"$(translate \"Analyzing disk...\")\"\n    CURRENT_FS=$(lsblk -no FSTYPE \"$DISK\" | xargs)\n    stop_spinner\n\n    FORMAT=$(dialog --backtitle \"$BACKTITLE\" \\\n        --title \"$(translate \"Select Filesystem\")\" \\\n        --menu \"...\" $UI_SHORT_MENU_H $UI_SHORT_MENU_W $UI_SHORT_MENU_LIST_H \\\n        \"ext4\" \"...\" \"xfs\" \"...\" \"btrfs\" \"...\" \\\n        2>&1 >/dev/tty)\n    [ -z \"$FORMAT\" ] && continue\n\n    DISK_LIST+=(\"$DISK\")\n    DISK_FORMAT_TYPES+=(\"$FORMAT\")\ndone",
     "phase1RulesIntro": "<strong>Pravidlá pre fázu 1:</strong>",
@@ -119,7 +119,7 @@
       }
     ],
     "calloutTitle": "Prečo je rozdelenie dôležité",
-    "calloutBody": "Ak zavoláte <code>dialog</code>0 uprostred fázy 2, každý riadok <code>msg_ok</code> užívateľ sleduje zmizne. Vymažeš audit trail. <code>whiptail</code> sa tomu vyhýba. Takže pravidlo nie je svojvoľné",
+    "calloutBody": "Ak zavoláte <code>dialog</code> uprostred fázy 2, zmiznú všetky riadky <code>msg_ok</code>, ktoré používateľ dovtedy sledoval. Vymažete tým viditeľný záznam vykonaných krokov. <code>whiptail</code> tomu zabráni. Pravidlo teda nie je svojvoľné: zachováva používateľovi prehľad o tom, čo skript doteraz urobil.",
     "rebootHeading": "Reboot prompt 2 chocholatka bielochvostá",
     "rebootIntro": "Keď skript skončí a reštart môže byť potrebné (napr. IOMMU aktivovaná, zmenené parametre jadra), prompt na konci fázy 2 používa <code>whiptail</code>. Vždy zahŕňajú",
     "rebootCode": "if [[ \"$HOST_REBOOT_REQUIRED\" == \"yes\" ]]; then\n  echo \"\"\n  if whiptail --title \"$(translate \"Reboot Required\")\" --yesno \\\n    \"\\n$(translate \"A host reboot is required before starting the VM. Reboot now?\")\" \\\n    13 78; then\n      msg_warn \"$(translate \"Rebooting the system...\")\"\n      reboot\n  else\n      echo \"\"\n      msg_info2 \"$(translate \"Do not start the VM until the system has been rebooted.\")\"\n  fi\nfi\n\nmsg_success \"$(translate \"Press Enter to return to menu...\")\"\nread -r"
@@ -244,7 +244,7 @@
       "Volanie <code>show_proxmenux_logo</code> druhýkrát chápa všetko. 2 má vytlačené.",
       "Použite <code>dialog</code> vo fáze 2 (použite <code>whiptail</code> pre zriedkavý nevyhnutný prípad).",
       "Použite holý <code>clear</code>.",
-      "Zabaľte <code>msg_title</code>0 v <code>echo \"\"</code> prázdne riadky",
+      "Obaľovať <code>msg_title</code> prázdnymi riadkami <code>echo \"\"</code> — potrebné medzery už obsahuje.",
       "Použiť <code>msg_warn</code> pre hlásenie úspešne zapnutej funkcie, ktorá je <code>msg_ok</code>.",
       "Spustiť nepodmienečne <code>apt-get update</code>  <code>ensure_repositories</code>."
     ]
@@ -252,11 +252,11 @@
   "submitting": {
     "heading": "Predloženie príspevku",
     "steps": [
-      "Vidlica <code>MacRimi/ProxMenux</code> na GitHub a klon vidlička.",
+      "Vytvorte fork repozitára <code>MacRimi/ProxMenux</code> na GitHube a potom svoj fork naklonujte.",
       "Vytvoriť pobočku <code>feature/*</code> z <code>develop</code> (pozri <em>Branching model</em> vyššie).",
       "Postupujte podľa tejto príručky pre akékoľvek nové alebo zmenené skripty. Napíšte hlavičku s Vaším menom; pridajte voliteľný riadok sponzora, ak chcete.",
       "Otestujte si scenár na skutočnom Proxmox VE Iriste 1 (každá dialógová zložka) a fáza 2 (každá operácia uspeje a vracia sa čisto na chybu).",
-      "Otvorte Pull požiadavku <strong>0 proti <code>develop</code></strong> s jasným popisom: čo skript robí, čo sa zmenilo, ktorá verzia Proxmox VE bola testovaná.",
+      "Otvorte pull request <strong>do vetvy <code>develop</code></strong> s jasným opisom: čo skript robí, čo sa zmenilo a na ktorej verzii Proxmox VE bol otestovaný.",
       "Uistite sa, že váš príspevok rešpektuje kódex správania <cocLink></cocLink>."
     ],
     "securityOutro": "Pokiaľ ide o otázky citlivé na bezpečnosť, postupujte podľa toku zverejnenia v <securityLink>SECURITY.md</securityLink> namiesto otvárania verejnej otázky."

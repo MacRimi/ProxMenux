@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Vytvoriť VMs na Proxmox VE Synológia, Windows, Linux, NAS Čarodejníci ProxMenux",
+    "title": "Vytváranie VM v Proxmox VE — sprievodcovia pre Synology, Windows, Linux a NAS | ProxMenux",
     "description": "Vytvoriť a konfigurovať virtuálne stroje na Proxmox VE s ProxMenux. Vyhradení sprievodcovia pre spotrebiče NAS (Synology DSM, TrueNAS, OpenMediaVault, UnRAID, atď.), Windows, Linux distros a externý inštalátor macOS. Citlivé predvolené zariadenia pre hardvér VM, úložisko a vytváranie sietí.",
     "ogTitle": "Vytvoriť VM na Proxmox VE",
     "ogDescription": "ProxMenux sprievodcovia na vytváranie Synology DSM, TrueNAS, OMV, UnRAID, Windows a Linux VM na Proxmox VE.",

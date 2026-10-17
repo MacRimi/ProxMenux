@@ -6,7 +6,7 @@
   "header": {
     "title": "In ProxMenux Monitor",
     "description": "Un contenitore installato da OCI manager Apps appare in VMs & LXCs come qualsiasi altro LXC. Il suo modal legge il record di installazione: versioni di applicazione e immagine, nuove immagini, uscita console e terminale.",
-    "section": "App del gestore OCI"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -78,7 +78,7 @@
               "Quando la partita digestiva, la scheda legge <strong>Version</strong>.",
               "La scheda si collega al repository dell'immagine: il suo progetto GitHub, o la sua pagina Hub Docker per un'immagine ufficiale.",
               "Il collegamento di accesso utilizza l'indirizzo LAN del contenitore, anche per il membro principale di un'applicazione multi-container, che ha un secondo indirizzo sulla sua rete privata.",
-              "Il pulsante <strong>Refresh data</strong> legge nuovamente il record e il registro di sistema. Le opzioni per cercare applicazioni o registrarne un altro non sono offerte: il contenitore detiene esattamente l'applicazione del suo record."
+              "Il pulsante <strong>Aggiorna dati</strong> rilegge il record dell’installazione e il registro delle immagini. Non vengono proposte opzioni per cercare o registrare altre applicazioni: il container contiene esattamente l’applicazione descritta nel suo record."
             ]
           }
         },
@@ -126,7 +126,7 @@
           }
         },
         {
-          "p": "Le modifiche esterne, le directory host e le applicazioni multi-container vengono gestite come nel menu OCI. In un'applicazione multi-container, i pulsanti e le opzioni appaiono solo sul contenitore principale; gli altri membri mostrano la loro immagine, una nota che sono aggiornati dal contenitore principale e un pulsante che lo apre. Quando il terminale si chiude, l'immagine, il record e i supporti vengono letti di nuovo."
+          "p": "Modifiche esterne, directory dell’host e applicazioni composte da più container vengono gestite come nel menu OCI. Per queste applicazioni, pulsanti e opzioni compaiono solo nel container principale. Gli altri membri mostrano la propria immagine, una nota che rimanda al principale per gli aggiornamenti e un pulsante per aprirlo. Alla chiusura del terminale vengono riletti l’immagine, il record e i montaggi."
         },
         {
           "table": {

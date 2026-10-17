@@ -1,22 +1,22 @@
 {
   "meta": {
     "title": "NFS server i LXC | ProxMenux Dokumentation",
-    "description": "Exponera mappar över NFS inifrån en Proxmox LXC behållare med ProxMenux. Auto-installerar nfs-kernel-server, sätter upp en universell sharedfiles gruppkonvention, hanterar /etc/exports, nätverk ACL och avinstallera. Kräver en privilegierad behållare.",
+    "description": "Exponera mappar över NFS inifrån en Proxmox LXC container med ProxMenux. Auto-installerar nfs-kernel-server, sätter upp en universell sharedfiles gruppkonvention, hanterar /etc/exports, nätverk ACL och avinstallera. Kräver en privilegierad container.",
     "ogTitle": "NFS server i LXC | ProxMenux Dokumentation",
     "ogDescription": "Kör en NFS-server i en privilegierad LXC-behållare. Universal sharedfiles group, network ACL och full avinstallation."
   },
   "header": {
     "title": "NFS server i LXC",
-    "description": "Kör en NFS kernel server inuti en Proxmox LXC behållare och exponera mappar till andra maskiner i nätverket. ProxMenux installerar nfs-kernel-server, sätter upp en universell sharedfiles gruppkonvention så att flera privilegierade CT kan dela filer rent, hanterar /etc/exports och erbjuder en fullständig avinstallationsväg.",
+    "description": "Kör en NFS kernel server inuti en Proxmox LXC container och exponera mappar till andra maskiner i nätverket. ProxMenux installerar nfs-kernel-server, sätter upp en universell sharedfiles gruppkonvention så att flera privilegierade CT kan dela filer rent, hanterar /etc/exports och erbjuder en fullständig avinstallationsväg.",
     "section": "Lagring & Dela · LXC"
   },
   "privReq": {
-    "title": "Privilegierad behållare krävs",
-    "body": "<code>nfs-kernel-server</code> måste montera kärnfilsystemet <code>nfsd</code> på <code>/proc/fs/nfsd</code>, vilket kräver <code>CAP_SYS_ADMIN</code> i värdkärnans namnrymd - inte bara i behållarens användarnamnrymd. Oprivilegierad LXC avslöjar inte denna förmåga. I praktiken misslyckas tjänsten helt enkelt med <code>rpc.nfsd: Unable to access /proc/fs/nfsd errno 2 (No such file or directory)</code> och systemd markerar <code>nfs-server.service</code> som ett misslyckat beroende. Manuset genomdriver ett privilegierat CT och <strong>aborts om det är oprivileged</strong>. Om du inte kan använda en privilegierad CT, kör NFS-servern i en VM."
+    "title": "Privilegierad container krävs",
+    "body": "<code>nfs-kernel-server</code> måste montera kärnfilsystemet <code>nfsd</code> på <code>/proc/fs/nfsd</code>, vilket kräver <code>CAP_SYS_ADMIN</code> i värdkärnans namnrymd - inte bara i containerns användarnamnrymd. Oprivilegierad LXC avslöjar inte denna förmåga. I praktiken misslyckas tjänsten helt enkelt med <code>rpc.nfsd: Unable to access /proc/fs/nfsd errno 2 (No such file or directory)</code> och systemd markerar <code>nfs-server.service</code> som ett misslyckat beroende. Manuset genomdriver ett privilegierat CT och <strong>aborts om det är oprivileged</strong>. Om du inte kan använda en privilegierad CT, kör NFS-servern i en VM."
   },
   "what": {
     "heading": "Vad detta gör",
-    "body": "Detta är <em>opposite</em> av NFS klientsida. Behållaren blir en NFS <strong>server</strong>: den exponerar en mapp av filsystemet till kunder i nätverket. Andra CT, Proxmox värd, VM eller fysiska maskiner kan sedan montera den mappen.",
+    "body": "Detta är <em>opposite</em> av NFS klientsida. Containern blir en NFS <strong>server</strong>: den exponerar en mapp av filsystemet till kunder i nätverket. Andra CT, Proxmox värd, VM eller fysiska maskiner kan sedan montera den mappen.",
     "diagramServerLabel": "LXC (privilegierad) - NFS server",
     "diagramServerDetail": "/mnt/data\n(mapp du exponerar)\n\nchown root:sharedfiles\nchmod 2775 (SGID)\n\nnfs-kernel-server\n+ rpcbind löpning",
     "diagramClientLabel": "Alla kunder i nätverket",
@@ -25,9 +25,9 @@
   },
   "shared": {
     "heading": "\"Sharedfiles\" gruppkonvention",
-    "body": "Innan du exporterar mappen skapar ProxMenux en grupp som heter <code>sharedfiles</code> med <strong>GID 101000</strong> inuti behållaren, lägger till varje vanlig användare till den och ställer sedan in exportkatalogen till <code>root:sharedfiles</code> med läge <code>2775</code>. <code>2</code> på framsidan är SGID-biten - varje fil eller mapp som skapas inuti ärver automatiskt <code>sharedfiles</code>-gruppen.",
+    "body": "Innan du exporterar mappen skapar ProxMenux en grupp som heter <code>sharedfiles</code> med <strong>GID 101000</strong> inuti containern, lägger till varje vanlig användare till den och ställer sedan in exportkatalogen till <code>root:sharedfiles</code> med läge <code>2775</code>. <code>2</code> på framsidan är SGID-biten - varje fil eller mapp som skapas inuti ärver automatiskt <code>sharedfiles</code>-gruppen.",
     "gidTitle": "Varför GID 101000",
-    "gidBody": "Den kartlägger till värd GID <strong>1000</strong> när en oprivilegierad behållare läser samma fil (LXC standard idmap skiftar allt med + 100000). I det nuvarande ProxMenux-flödet går NFS-servern själv i en <strong>privileged</strong> CT (ingen skift på sidan), men konventionen håller grupp-ID numeriskt konsekvent med oprivilegierade klient-CT som kan montera denna andel senare. Två privilegierade CTs som båda använder <code>sharedfiles</code> på GID 101000 kan läsa / skriva varandras filer rent eftersom GID-nummer matchar end-to-end.",
+    "gidBody": "Den kartlägger till värd GID <strong>1000</strong> när en oprivilegierad container läser samma fil (LXC standard idmap skiftar allt med + 100000). I det nuvarande ProxMenux-flödet går NFS-servern själv i en <strong>privileged</strong> CT (ingen skift på sidan), men konventionen håller grupp-ID numeriskt konsekvent med oprivilegierade klient-CT som kan montera denna andel senare. Två privilegierade CTs som båda använder <code>sharedfiles</code> på GID 101000 kan läsa / skriva varandras filer rent eftersom GID-nummer matchar end-to-end.",
     "remapTitle": "Manuset skapar också \"remap *\" -användare - de är vestigiala här",
     "remapBody": "För varje vanlig användare i CT (och för vanliga UID som 33 = www-data, 1000, 1001, 1002) skapar manuset en parallell <code>remap_&lt;uid&gt;</code>-användare med UID = <code>&lt;uid&gt; + 100000</code>, alla medlemmar i <code>sharedfiles</code>. <code>+100000</code> skift efterliknar LXC oprivilegierad idmap, men eftersom detta manus genomdriver en <strong>privileged</strong> CT (inget skift), dessa <code>remap_*</code> användare är skuggkonton utan verkliga motsvarighet på värden. De är ofarliga rester från en mer ambitiös design avsikt. Om du inte ser dem i <code>getent passwd</code> bryter ingenting."
   },
@@ -115,8 +115,8 @@
   },
   "troubleshoot": {
     "heading": "Felsökning",
-    "privTitle": "Privilegierad behållare krävs (skript aborter)",
-    "privBody": "Den valda CT är oprivilegierad. <code>nfs-kernel-server</code> kan inte börja där eftersom montering <code>/proc/fs/nfsd</code> behöver <code>CAP_SYS_ADMIN</code> i värdkärnans namnrymd, och <code>nfsd</code>-modulen inte utsätts för behållarens namnrymd antingen (<code>modprobe nfsd</code> inifrån returnerar <code>FATAL: Module nfsd not found</code>). Om du kringgår porten ser du <code>rpc.nfsd: Unable to access /proc/fs/nfsd errno 2 (No such file or directory)</code> i tidskriften och inga NFS-portar kommer någonsin att öppnas. De enda användbara alternativen är: konvertera CT till privilegierad, eller flytta NFS-servern till en VM.",
+    "privTitle": "Privilegierad container krävs (skript aborter)",
+    "privBody": "Den valda CT är oprivilegierad. <code>nfs-kernel-server</code> kan inte börja där eftersom montering <code>/proc/fs/nfsd</code> behöver <code>CAP_SYS_ADMIN</code> i värdkärnans namnrymd, och <code>nfsd</code>-modulen inte utsätts för containerns namnrymd antingen (<code>modprobe nfsd</code> inifrån returnerar <code>FATAL: Module nfsd not found</code>). Om du kringgår porten ser du <code>rpc.nfsd: Unable to access /proc/fs/nfsd errno 2 (No such file or directory)</code> i tidskriften och inga NFS-portar kommer någonsin att öppnas. De enda användbara alternativen är: konvertera CT till privilegierad, eller flytta NFS-servern till en VM.",
     "aptTitle": "apt-get install fails",
     "aptIntro": "Manuset antar en Debian-familj CT. På Alpine / Arch / Rocky / Alma, installera NFS serverpaket för hand:",
     "aptItems": [

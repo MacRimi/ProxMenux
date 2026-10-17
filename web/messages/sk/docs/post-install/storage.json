@@ -12,7 +12,7 @@
     "body": "Štyri optimalizácie týkajúce sa úložiska: naladiť <strong>ZFS ARC</strong> veľkosť vyrovnávacej pamäte na rozumnú časť hostiteľa RAM, inštalácia a harmonogram <strong>ZFS automatické snímky</strong>, povoliť <strong>ZFS autotrim</strong> o SSD/NVMe poolsa odstraňovať škrtiace klapky <strong>vzdump</strong> Takže zálohy bežia plnou rýchlosťou. Všetky štyri sú nezávislé a vybrať tie, ktoré zodpovedajú vášmu nastaveniu. Piata optimalizácia úložiska, <link>Log2RAM</link>, znižuje SSD/NVMe opotrebenie pohybom <code>/var/log</code> na ramdisku, ktorý žije na Voliteľnej stránke, pretože ProxMenux Prispôsobiteľné menu to tam združuje."
   },
   "trackedTitle": "Všetky štyri sú sledované v menu Odinštalovať",
-  "trackedBody": "Každá z týchto možností registruje nástroj v <code>installed_tools.json</code>, takže sa objavia v <link>Odinštalovať optimalizáciu</link>. Vrátenie <code>zfs_arc</code> odstraňuje <code>/etc/modprobe.d/99-zfsarc.conf</code> a obnovu initramfov; <code>zfs_auto_snapshot</code> zvráti časový rozvrh kronov a ponúkne vyčistenie balíka; <code>zfs_autotrim</code> sady <code>autotrim=off</code> na tému pools bolo povolené; <code>vzdump_speed</code> obnovu <code>/etc/vzdump.conf</code> z <code>.bak</code> vytvorená inštalácia.",
+  "trackedBody": "Každá z týchto možností zaregistruje nástroj v <code>installed_tools.json</code>, takže sa zobrazí v časti <link>Odstrániť optimalizácie</link>. Vrátenie <code>zfs_arc</code> odstráni <code>/etc/modprobe.d/99-zfsarc.conf</code> a znovu vytvorí initramfs. <code>zfs_auto_snapshot</code> zruší plán cron a ponúkne úplné odstránenie balíka; <code>zfs_autotrim</code> nastaví <code>autotrim=off</code> v pooloch, v ktorých ho zaplo; <code>vzdump_speed</code> obnoví <code>/etc/vzdump.conf</code> zo súboru <code>.bak</code> vytvoreného pri inštalácii.",
   "arc": {
     "heading": "Optimalizovať veľkosť ZFS ARC",
     "intro": "<strong>Adaptive Replacement Cache (ARC)</strong> je ZFS in-memory read cache. Bez explicitného ladenia, ZFS šťastne chytí až polovicu hostiteľa RAM pre seba, čo je nadmerné na Proxmox hostiteľa, ktorý tiež potrebuje pamäť pre VMs a LXCs. Táto možnosť zapína ARC na normálny zlomok celkového RAM podľa veľkosti stroja.",
@@ -140,7 +140,7 @@
       {
         "label": "Príkazy na ukladanie a disky",
         "href": "/docs/help-info/storage-commands",
-        "tail": " — "
+        "tail": " — všeobecná príručka blokových zariadení a úložísk Proxmox."
       },
       {
         "label": "Zálohovanie a obnovenie príkazov",

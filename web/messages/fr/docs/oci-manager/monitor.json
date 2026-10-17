@@ -6,7 +6,7 @@
   "header": {
     "title": "Dans ProxMenux Monitor",
     "description": "Un conteneur installé par OCI Manager Apps apparaît dans VMs & LXCs comme n'importe quel autre LXC. Son modale lit l'enregistrement d'installation : versions d'application et d'image, nouvelles images, sortie console et terminal.",
-    "section": "Applications du gestionnaire OCI"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -15,7 +15,7 @@
         {
           "calloutInfo": {
             "title": "L'enregistrement est la source",
-            "body": "Le gestionnaire de l'OCI Apps sait ce qu'il a installé et d'où il vient. Le moniteur lit que l'enregistrement d'installation au lieu d'examiner le conteneur, de sorte que les données sont les mêmes que le conteneur est en cours d'exécution ou arrêté."
+            "body": "OCI manager Apps connaît l’application installée et sa provenance. Le Monitor lit cet enregistrement d’installation au lieu de rechercher l’application dans le conteneur. Ces informations restent donc disponibles que le conteneur fonctionne ou soit arrêté."
           }
         },
         {
@@ -60,7 +60,7 @@
             "items": [
               {
                 "icon": "boxes",
-                "title": "Demande",
+                "title": "Application",
                 "body": "La version de l'application à l'intérieur de l'image, lue à partir de l'image elle-même : son environnement ou son étiquette <code>org.opencontainers.image.version</code>. C'est instructif."
               },
               {
@@ -78,7 +78,7 @@
               "Lorsque les digests correspondent, la carte lit <strong>Version</strong>.",
               "La carte relie au dépôt de l'image : son projet GitHub, ou sa page centrale Docker pour une image officielle.",
               "Le lien d'accès utilise l'adresse LAN du conteneur, également pour le membre principal d'une application multi-conteneurs, qui a une deuxième adresse sur son réseau privé.",
-              "Le bouton <strong>Données fraîches</strong> lit à nouveau l'enregistrement et le registre. Les options pour rechercher des demandes ou en enregistrer une autre ne sont pas proposées : le conteneur contient exactement l'application de son enregistrement."
+              "Le bouton <strong>Données fraîches</strong> lit à nouveau l'enregistrement et le registre. Les options pour rechercher des applications ou en enregistrer une autre ne sont pas proposées : le conteneur contient exactement l'application de son enregistrement."
             ]
           }
         },
@@ -86,7 +86,7 @@
           "figure": {
             "src": "/oci-manager/monitor-app-tab.png",
             "alt": "Onglet App d'un conteneur OCI avec la version de l'application, l'image et le lien du dépôt",
-            "caption": "Onglet App d'un conteneur installé par le gestionnaire d'OCI Apps."
+            "caption": "Onglet Application d’un conteneur installé par OCI manager Apps."
           }
         },
         {
@@ -97,7 +97,7 @@
     {
       "id": "updates",
       "title": "Mises à jour",
-      "intro": "Pour un conteneur installé par le gestionnaire de l'OCI, l'onglet Mises à jour affiche l'application avec son image installée et, lorsque le registre en publie une, la nouvelle image, dans le même format que toute autre application. Les mises à jour du paquet et de l'application d'un LXC ordinaire n'apparaissent pas.",
+      "intro": "Pour un conteneur installé par OCI manager Apps, l’onglet Mises à jour présente l’application avec son image installée et, si le registre en publie une, la nouvelle image, au même format que les autres applications. Les outils de mise à jour des paquets et applications d’un LXC ordinaire ne sont pas proposés.",
       "blocks": [
         {
           "table": {

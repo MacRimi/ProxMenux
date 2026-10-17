@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "Plánované pracovné miesta: časovače, attache mode, retention ProxMenux",
+    "title": "Plánované úlohy — časovače, režim attach a uchovávanie záloh | ProxMenux",
     "description": "Plánované ProxMenux záložné úlohy. Dva režimy vytvárania (vlastný časovač systemd alebo pripojiť k existujúcej práci PVE vzdump), retenčné hodnoty použité na prácu prostredníctvom proxmox-backup-client/borg/lokálny sliv, rozloženie úložiska pod /var/lib/proxmenux/backup-jobs a skript bežca, ktorý produkuje archívy identické s interaktívnym tokom.",
     "ogTitle": "ProxMenux Zálohovanie",
     "ogDescription": "Bez dozoru plánované zálohovanie hostiteľa s pripojiť režim, uchovávanie, a rovnaké tri destinácie ako interaktívny tok.",
-    "twitterTitle": "Plánované pracovné miesta ProxMenux",
+    "twitterTitle": "Plánované úlohy | ProxMenux",
     "twitterDescription": "Bez dozoru plánované záložné úlohy hostiteľa s pripojeným režimom a zachovanie."
   },
   "header": {

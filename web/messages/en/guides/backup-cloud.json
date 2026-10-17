@@ -95,7 +95,7 @@
   },
   "retention": {
     "heading": "6. Retention — keep cloud quota under control",
-    "body": "Proxmox vzdump backups are <strong>full snapshots, not incremental</strong>. A 30 GB VM = 30 GB per backup. Without retention, the cloud fills up.",
+    "body": "Proxmox vzdump archives are <strong>full backups, not incremental</strong>. Their actual size depends on the data included and compression, not just the virtual disk capacity. If one archive occupies 30 GB, five retained archives need roughly 150 GB. Set a retention policy so the cloud does not fill up.",
     "uiPath": "In the Proxmox UI: <strong>Datacenter → Backup → [your job] → Retention</strong>:",
     "image7Alt": "Backup retention settings in Proxmox",
     "starterIntro": "Reasonable starter values for a home / lab setup:",

@@ -6,7 +6,7 @@
   "header": {
     "title": "Instalar, actualizar y modificar",
     "description": "Cada instancia conserva un contrato reproducible, de modo que su rootfs puede sustituirse sin perder la configuración ni los datos persistentes.",
-    "section": "Aplicaciones del gestor OCI"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {

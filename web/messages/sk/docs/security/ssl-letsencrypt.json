@@ -2,7 +2,7 @@
   "meta": {
     "title": "HTTPS namiesto ProxMenux Monitor Proxmox host certificate alebo vlastné cesty ProxMenux",
     "description": "Slúžiť ProxMenux Monitor cez HTTPS pomocou buď Proxmox host certificate (auto-detected, vrátane Let's Encrypt cert uploaded prostredníctvom karty Proxmox ACME) alebo vlastné certifikát na akejkoľvek ceste na disku.",
-    "ogTitle": "HTTPS pre ProxMenux Monitor",
+    "ogTitle": "HTTPS pre ProxMenux Monitor — certifikát hostiteľa Proxmox alebo vlastný certifikát",
     "ogDescription": "Povoliť HTTPS na porte 8008 s certifikátom Proxmox hostiteľa alebo akýkoľvek vlastný .pum / .key pár."
   },
   "header": {
@@ -33,7 +33,7 @@
     },
     "custom": {
       "title": "Použiť vlastný certifikát",
-      "summaryRich": "Nasmerujte monitor na <code>.pem</code>0 / <code>.key</code> pár kdekoľvek na disku.",
+      "summaryRich": "Nastavte Monitor tak, aby používal dvojicu <code>.pem</code> / <code>.key</code> uloženú kdekoľvek na disku.",
       "items": [
         "Iba absolútne cesty (proces monitora musí byť schopný čítať oboje)",
         "Užitočné, keď certy pochádzajú z <code>certbot</code>, <code>acme.sh</code> alebo divokej karty",

@@ -161,7 +161,7 @@
         "section": "Disk temp - SAS",
         "warning": "55 °C",
         "critical": "65 °C",
-        "gates": "Enterprise SAS-enheter delar samma65 °C-tillverkaren begränsas som HDD, men används normalt i rackchassi med aktiv kylning. En läsning vid 55 °C signalerar redan ett kylproblem (misslyckad fan, HVAC-problem) <em>innan innan innan</em> själva enheten är i fara - därför en lägre varning än HDD, inte för att SAS är mindre värmetolerant."
+        "gates": "SAS-diskar för företagsbruk har ungefär samma tillverkargräns på 65 °C som andra hårddiskar, men används normalt i rackchassin med aktiv kylning. Redan 55 °C tyder på ett kylproblem, som en trasig fläkt eller bristande klimatanläggning, <em>innan</em> själva disken riskerar skada. Därför är varningsgränsen lägre än för vanliga hårddiskar, inte för att SAS tål värme sämre."
       },
       {
         "section": "Disk utrymme - värd",
@@ -173,7 +173,7 @@
         "section": "Diskutrymme - LXC rootfs",
         "warning": "85 %",
         "critical": "95 %",
-        "gates": "Rotskiva per behållare, utvärderad mot rootfs-storleken från PVE."
+        "gates": "Rotskiva per container, utvärderad mot rootfs-storleken från PVE."
       },
       {
         "section": "LXC fästpunkter",

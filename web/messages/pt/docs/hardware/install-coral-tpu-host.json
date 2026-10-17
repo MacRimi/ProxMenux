@@ -74,7 +74,7 @@
         "<strong>Cleanup.</strong> Se um anterior <code>gasket-dkms</code> instalar dpkg esquerdo em um estado quebrado (típico após uma atualização do kernel PVE 9 onde a autoinstalação DKMS falhou silenciosamente), force-purge-lo.",
         "<strong>Instalar deps de construção:</strong> <code>git</code>, <code>dkms</code>, <code>build-essential</code>, <code>proxmox-headers-$(uname -r)</code>."
       ],
-      "cloneIntro": "<strong>Clone a fonte do driver.</strong> Prefere o <feranickLink>feranick/driver-gasket</feranickLink> fork comunitário (activamente mantido, o kernel 6.12+ pronto). Regressa a <googleLink>google/gasket-driver</googleLink> se o feranick não for acessível, aplicando patches específicos do kernel:",
+      "cloneIntro": "<strong>Clonar o código-fonte do controlador.</strong> Dá preferência ao fork da comunidade <feranickLink>feranick/gasket-driver</feranickLink>, ativamente mantido e preparado para kernels 6.12+. Se não estiver acessível, utiliza <googleLink>google/gasket-driver</googleLink> e aplica as correções específicas do kernel:",
       "kernelPatches": [
         "Kernel 6.5+ : <code>no_llseek</code> removido a montante → substituição <code>noop_llseek</code>",
         "Kernel 6.13+ : <code>MODULE_IMPORT_NS(DMA_BUF)</code> requer string literal"
@@ -96,7 +96,7 @@
         "<strong>Instalar <code>libedgetpu1-std</code></strong> — o desempenho normalizado Edge TPU Hora de correr.",
         "<strong>Recarregar udev</strong> para que as regras enviadas com o pacote se apliquem ao dispositivo USB sem ter que desconectar/replugar."
       ],
-      "stdTitle": "Por que libedgetpu1- std e não libedgetpu1- max?",
+      "stdTitle": "Porquê libedgetpu1-std em vez de libedgetpu1-max?",
       "stdBody": "A variante <code>max</code> overclocks o Coral e funciona mais quente. Fine para uso no desktop com fluxo de ar; não recomendado dentro de pequenas construções NUC / Mini-PC ou hosts Proxmox refrigerados passivamente. Se você realmente quer, instale à mão depois: <code>apt install libedgetpu1-max</code>."
     },
     "reboot": {

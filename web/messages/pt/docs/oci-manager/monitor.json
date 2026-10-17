@@ -6,7 +6,7 @@
   "header": {
     "title": "No ProxMenux Monitor",
     "description": "Um recipiente instalado pelo OCI Manager Apps aparece em VMs & LXCs como qualquer outro LXC. Seu modal lê o registro de instalação: versões de aplicação e imagem, novas imagens, saída de console e terminal.",
-    "section": "Aplicações do gestor OCI"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {

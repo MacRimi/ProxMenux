@@ -1,20 +1,20 @@
 {
   "meta": {
     "title": "Lägg till GPU till LXC | ProxMenux Dokumentation",
-    "description": "Dela en Intel, AMD eller NVIDIA GPU med en LXC behållare för hårdvaruaccelererad transkodning (Plex / Jellyfin / Frigate), OpenCL / CUDA arbetsbelastning och Mesa video acceleration. ProxMenux hanterar enhetsnoder, GID-justering och distrospecifik drivrutininstallation i behållaren."
+    "description": "Dela en Intel, AMD eller NVIDIA GPU med en LXC container för hårdvaruaccelererad transkodning (Plex / Jellyfin / Frigate), OpenCL / CUDA arbetsbelastning och Mesa video acceleration. ProxMenux hanterar enhetsnoder, GID-justering och distrospecifik drivrutininstallation i containern."
   },
   "header": {
     "title": "Lägg till GPU till LXC",
-    "description": "Dela en eller flera GPU med en Proxmox LXC-behållare. Värden fortsätter att använda GPU normalt - behållaren får bara tillgång via enhetsnoder. Fungerar med Intel iGPUs (Quick Sync / VA-API), AMD-kort (Mesa / ROCm) och NVIDIA (CUDA / NVENC).",
+    "description": "Dela en eller flera GPU med en Proxmox LXC-behållare. Värden fortsätter att använda GPU normalt - containern får bara tillgång via enhetsnoder. Fungerar med Intel iGPUs (Quick Sync / VA-API), AMD-kort (Mesa / ROCm) och NVIDIA (CUDA / NVENC).",
     "section": "Hårdvara: GPU:er och Coral-TPU"
   },
   "intro": {
     "title": "Vad detta gör",
-    "body": "Lägger till <code>dev&lt;N&gt;</code>-poster till LXC-konfig (<code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>) så att behållaren ser <code>/dev/dri/*</code>, <code>/dev/kfd</code> eller <code>/dev/nvidia*</code> - beroende på din GPU. Sedan startar den behållaren, upptäcker distro inuti, och installerar matchande användarepace drivrutiner (Mesa, intel-media-driver, NVIDIA runtime ...) så appar som Plex, Jellyfin eller Frigate faktiskt använder GPU för överkodning. GID (<code>video</code>, <code>render</code>) är anpassade mellan värd och behållare så behörighet match."
+    "body": "Lägger till <code>dev&lt;N&gt;</code>-poster till LXC-konfig (<code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>) så att containern ser <code>/dev/dri/*</code>, <code>/dev/kfd</code> eller <code>/dev/nvidia*</code> - beroende på din GPU. Sedan startar den containern, upptäcker distro inuti, och installerar matchande användarepace drivrutiner (Mesa, intel-media-driver, NVIDIA runtime ...) så appar som Plex, Jellyfin eller Frigate faktiskt använder GPU för överkodning. GID (<code>video</code>, <code>render</code>) är anpassade mellan värd och container så behörighet match."
   },
   "compare": {
     "heading": "LXC delning vs VM genomgång",
-    "intro": "LXC-containrar delar värdkärneln, så att de kan <em>share</em> värdens GPU utan att ta över den. Det är en stor skillnad från VM: med <vmLink>VM passthrough</vmLink> GPU är exklusivt för en VM och värden kan inte använda den. Med LXC kan flera behållare plus värden alla träffa samma GPU samtidigt.",
+    "intro": "LXC-containrar delar värdkärneln, så att de kan <em>share</em> värdens GPU utan att ta över den. Det är en stor skillnad från VM: med <vmLink>VM passthrough</vmLink> GPU är exklusivt för en VM och värden kan inte använda den. Med LXC kan flera containrar plus värden alla träffa samma GPU samtidigt.",
     "headerFeature": "Funktion",
     "headerLxc": "LXC (denna sida)",
     "headerVm": "VM",
@@ -25,7 +25,7 @@
         "vm": "Nej – exklusivt för VM"
       },
       {
-        "feature": "Flera behållare som delar en GPU?",
+        "feature": "Flera containrar som delar en GPU?",
         "lxc": "Ja",
         "vm": "Nej"
       },
@@ -51,12 +51,12 @@
     "gpu": "<strong>Ett GPU på värden</strong> Intel iGPUAMD dGPU eller APU, eller NVIDIA kort. Skriptet automatiskt upptäcker alla tre via <code>lspci</code>.",
     "gpuCheck": "lspci | grep -iE 'VGA|3D|Display'",
     "vfio": "<strong>GPU är INTE bunden till vfio-pci.</strong> Om GPU för närvarande tilldelas till en VM via genomgång, är det osynligt för värdkärnor förare och LXC inte kan använda den. Manuset upptäcker detta och erbjuder att köra <switchLink>Switch GPU Mode</switchLink> för dig.",
-    "nvidia": "<strong>For NVIDIA endast:</strong> NVIDIA-värddrivrutinen måste redan installeras - ProxMenux måste matcha behållarens användarrymder till värdversionen. Om du inte har gjort det ännu, kör <nvidiaLink>Install NVIDIA Drivers på Host</nvidiaLink> först.",
+    "nvidia": "<strong>For NVIDIA endast:</strong> NVIDIA-värddrivrutinen måste redan installeras - ProxMenux måste matcha containerns användarrymder till värdversionen. Om du inte har gjort det ännu, kör <nvidiaLink>Install NVIDIA Drivers på Host</nvidiaLink> först.",
     "nvidiaCheck": "nvidia-smi",
-    "container": "<strong>An befintlig LXC container.</strong> Skriptet fungerar på en behållare du redan skapat - det skapar inte en. Behållaren bör helst vara <strong>privileged</strong> (oprivilegierade verk men behöver UID / GID-kartläggning som manuset inte konfigurerar)."
+    "container": "<strong>An befintlig LXC container.</strong> Skriptet fungerar på en container du redan skapat - det skapar inte en. Containern bör helst vara <strong>privileged</strong> (oprivilegierade verk men behöver UID / GID-kartläggning som manuset inte konfigurerar)."
   },
   "unpriv": {
-    "title": "Fungerar på både privilegierade och oprivilegierade behållare",
+    "title": "Fungerar på både privilegierade och oprivilegierade containrar",
     "body": "Skriptet skriver <code>dev&lt;N&gt;</code>-poster till LXC-konfigen och på oprivilegierade behållare anpassar <code>video</code> och <code>render</code> GID mellan värd och behållare så att GPU-enhetsnoderna nås inifrån utan att du behöver handredigera <code>lxc.idmap</code>."
   },
   "running": {
@@ -66,24 +66,24 @@
   },
   "howRuns": {
     "heading": "Hur manuset går",
-    "body": "Två faser: alla beslut i förväg, sedan alla förändringar i en gång. Ingenting på din behållare berörs tills du bekräftar."
+    "body": "Två faser: alla beslut i förväg, sedan alla förändringar i en gång. Ingenting på din container berörs tills du bekräftar."
   },
   "walkthrough": {
     "heading": "Walking genom flödet",
     "detect": {
       "title": "Identifiera värdens GPU:er",
-      "body": "Skriptet skannar <code>lspci</code> för VGA / 3D / Display controllers matchande Intel, AMD eller NVIDIA. För NVIDIA verifieras också <code>nvidia</code>-kärnans modul laddas och <code>nvidia-smi</code>-funktioner - värddrivrutinsversionen som den rapporterar kommer att användas för att välja rätt <code>.run</code>-installatör för behållaren.",
+      "body": "Skriptet skannar <code>lspci</code> för VGA / 3D / Display controllers matchande Intel, AMD eller NVIDIA. För NVIDIA verifieras också <code>nvidia</code>-kärnans modul laddas och <code>nvidia-smi</code>-funktioner - värddrivrutinsversionen som den rapporterar kommer att användas för att välja rätt <code>.run</code>-installatör för containern.",
       "tipTitle": "NVIDIA är inte redo?",
       "tipBody": "Om NVIDIA detekteras men modulen inte är laddad, kommer manuset inte att erbjuda NVIDIA-vägen. Kör <nvidiaLink>Install NVIDIA Förare på Host</nvidiaLink> först (och starta om), sedan komma tillbaka."
     },
     "pickCt": {
-      "title": "Välj en LXC behållare",
-      "body": "Du ser en lista över varje LXC på värden med dess ID och namn. Välj den som ska få GPU. Behållaren kan springa eller stoppas - manuset hanterar båda (slutar det kort under konfig, startar om det och lämnar det i sitt ursprungliga tillstånd i slutet).",
+      "title": "Välj en LXC container",
+      "body": "Du ser en lista över varje LXC på värden med dess ID och namn. Välj den som ska få GPU. Containern kan springa eller stoppas - manuset hanterar båda (slutar det kort under konfig, startar om det och lämnar det i sitt ursprungliga tillstånd i slutet).",
       "imageAlt": "Dialog listning befintliga LXC-behållare att välja mellan"
     },
     "selectGpu": {
       "title": "Välj GPU(s) för att lägga till",
-      "body": "Om mer än en GPU är närvarande får du en checklista. Du kan lägga till flera till samma behållare (t.ex. en Intel iGPU för Quick Sync + en AMD dGPU för ROCm). Om endast en GPU upptäcks, är den automatisk vald.",
+      "body": "Om mer än en GPU är närvarande får du en checklista. Du kan lägga till flera till samma container (t.ex. en Intel iGPU för Quick Sync + en AMD dGPU för ROCm). Om endast en GPU upptäcks, är den automatisk vald.",
       "imageAlt": "Checklista som visar upptäckt GPU (Intel / AMD / NVIDIA) med leverantör och PCI-adress"
     },
     "preflight": {
@@ -93,17 +93,17 @@
       "items": [
         "<strong>SR-IOV.</strong> Om den valda GPU är en virtuell funktion (VF) eller en fysisk funktion med aktiva VF:er, LXC genomgång gäller inte - enheten hanteras av SR-IOV-drivrutinen. Blockerad.",
         "<strong>Bound to vfio-pci.</strong> Om GPU för närvarande hålls av VFIO för VM genomgång, kan värdkärnan inte skapa <code>/dev/dri/*</code> eller <code>/dev/nvidia*</code> noder för det. Manuset erbjuder att köra <switchLink>Switch GPU Mode</switchLink> som ångrar VFIO bindningen; du kommer sannolikt att behöva en omstart innan du kör Add GPU till LXC.",
-        "<strong>Already konfigurerad.</strong> Om behållaren redan har varje dev-nod för den valda GPU, säger manuset så och lämnar rent. Om den är delvis konfigurerad, fortsätter den med endast de saknade bitarna."
+        "<strong>Already konfigurerad.</strong> Om containern redan har varje dev-nod för den valda GPU, säger manuset så och lämnar rent. Om den är delvis konfigurerad, fortsätter den med endast de saknade bitarna."
       ]
     },
     "applyConfig": {
       "title": "Applicera LXC config förändringar",
-      "body1": "Skriptet stoppar behållaren, redigerar <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> och lägger till <code>dev&lt;N&gt;</code>-poster med rätt GID för de valda GPU. Med <code>dev:</code>-poster (över de äldre <code>lxc.mount.entry</code>-linjerna) är det moderna Proxmox-sättet - gruppbehörigheter sätts på konfig parsetid istället för vid monteringstid.",
-      "body2": "Exempel efter Intel + NVIDIA på samma behållare:"
+      "body1": "Skriptet stoppar containern, redigerar <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> och lägger till <code>dev&lt;N&gt;</code>-poster med rätt GID för de valda GPU. Med <code>dev:</code>-poster (över de äldre <code>lxc.mount.entry</code>-linjerna) är det moderna Proxmox-sättet - gruppbehörigheter sätts på konfig parsetid istället för vid monteringstid.",
+      "body2": "Exempel efter Intel + NVIDIA på samma container:"
     },
     "installDrivers": {
-      "title": "Starta behållaren och installera drivrutiner inuti",
-      "body": "När konfigen är skriven, börjar manuset behållaren, väntar upp till ~ 30 sekunder för <code>pct exec</code> att svara, och sedan upptäcker behållarens distro från <code>/etc/os-release</code>. Baserat på det installerar det rätt användarpace-paket.",
+      "title": "Starta containern och installera drivrutiner inuti",
+      "body": "När konfigen är skriven, börjar manuset containern, väntar upp till ~ 30 sekunder för <code>pct exec</code> att svara, och sedan upptäcker containerns distro från <code>/etc/os-release</code>. Baserat på det installerar det rätt användarpace-paket.",
       "headerDistro": "Distribution",
       "headerInt": "Intel / AMD",
       "headerNvidia": "NVIDIA",
@@ -123,35 +123,35 @@
       "debianIntel": "apt-get install va-driver-all intel-opencl-icd vainfo",
       "debianNvidia": "extrahera värd <code>.run</code> → <code>pct push</code> → spring med <code>--no-kernel-modules --no-dkms</code>",
       "whyTitle": "Varför NVIDIA .run dans på Debian",
-      "whyBody": "Debian / Ubuntu skickar inte NVIDIA-paket med en version granulär nog för att matcha värdföraren byte för byte. Användarrymden libs inuti behållaren <strong>must matchar kärnmodulen version</strong> laddad på värden, eller <code>nvidia-smi</code> misslyckas med en version felmatch. ProxMenux löser detta genom att använda samma <code>.run</code>-installatör som användes för värden - extraherad, tjärad, tryckt in i behållaren med <code>pct push</code> och körs med <code>--no-kernel-modules --no-dkms</code> så att endast användarutrymmet rörs."
+      "whyBody": "Debian / Ubuntu skickar inte NVIDIA-paket med en version granulär nog för att matcha värdföraren byte för byte. Användarrymden libs inuti containern <strong>must matchar kärnmodulen version</strong> laddad på värden, eller <code>nvidia-smi</code> misslyckas med en version felmatch. ProxMenux löser detta genom att använda samma <code>.run</code>-installatör som användes för värden - extraherad, tjärad, tryckt in i containern med <code>pct push</code> och körs med <code>--no-kernel-modules --no-dkms</code> så att endast användarutrymmet rörs."
     },
     "alignGids": {
       "title": "Align GID och återställa staten",
-      "body1": "Enhetsfiler på värden ägs av grupp <code>video</code> (GID 44) eller <code>render</code> (GID 104). Behållarens distro kan skicka olika GID-nummer för dessa grupper, vilket skulle göra GPU-noder oåtkomliga inifrån. Manuset skriver om <code>/etc/group</code> i behållaren så <code>video:44</code> och <code>render:104</code> matchar exakt.",
-      "body2": "Slutligen återställer den behållaren till sitt ursprungliga tillstånd - om den stoppades när du började, blir den stoppad igen. Om det var igång, stannar det igång."
+      "body1": "Enhetsfiler på värden ägs av grupp <code>video</code> (GID 44) eller <code>render</code> (GID 104). Containerns distro kan skicka olika GID-nummer för dessa grupper, vilket skulle göra GPU-noder oåtkomliga inifrån. Manuset skriver om <code>/etc/group</code> i containern så <code>video:44</code> och <code>render:104</code> matchar exakt.",
+      "body2": "Slutligen återställer den containern till sitt ursprungliga tillstånd - om den stoppades när du började, blir den stoppad igen. Om det var igång, stannar det igång."
     }
   },
   "vendors": {
     "heading": "Leverantörsspecifika noter",
     "intelHeading": "Intel iGPU",
-    "intelBody": "Den vanligaste vägen - bra för Plex / Jellyfin / Frigate hårdvaruöverföring via <em>Quick Sync</em>. Behållaren får <code>/dev/dri/card0</code> (legacy) och <code>/dev/dri/renderD128</code> (modern render-only nod - vilka appar faktiskt använder). Inga värdbytesförändringar behövs; <code>i915</code>-föraren på värden skapade redan noderna.",
+    "intelBody": "Den vanligaste vägen - bra för Plex / Jellyfin / Frigate hårdvaruöverföring via <em>Quick Sync</em>. Containern får <code>/dev/dri/card0</code> (legacy) och <code>/dev/dri/renderD128</code> (modern render-only nod - vilka appar faktiskt använder). Inga värdbytesförändringar behövs; <code>i915</code>-föraren på värden skapade redan noderna.",
     "amdHeading": "AMD",
-    "amdBody": "Samma DRI-noder som Intel för grafik / VA-API. Om <code>/dev/kfd</code> finns på värden (AMD compute / ROCm kernel stöd), skriptet lägger också till det så behållare kan göra OpenCL / ROCm arbetsbelastningar. Mesa VA-drivrutiner täcker videoavkodningssidan.",
+    "amdBody": "Samma DRI-noder som Intel för grafik / VA-API. Om <code>/dev/kfd</code> finns på värden (AMD compute / ROCm kernel stöd), skriptet lägger också till det så containrar kan göra OpenCL / ROCm arbetsbelastningar. Mesa VA-drivrutiner täcker videoavkodningssidan.",
     "nvidiaHeading": "NVIDIA",
-    "nvidiaBody": "Lägger till varje <code>/dev/nvidia*</code> nod värd exponerar. Det kritiska stycket är <strong>driver-version matching</strong>: värdmodul version och container användarpace lib version måste vara identisk, annars <code>nvidia-smi</code> inuti behållaren misslyckas. ProxMenux fångar värdversionen vid detekteringstid och använder samma <code>.run</code>-fil för att installera behållarens användarrymd. För Debian behållare installerar installationen stötar behållare minne till 2 GB tillfälligt (installer behöver ~ 1.5 GB gratis att extrahera) och återställer det efteråt.",
+    "nvidiaBody": "Lägger till varje <code>/dev/nvidia*</code> nod värd exponerar. Det kritiska stycket är <strong>driver-version matching</strong>: värdmodul version och container användarpace lib version måste vara identisk, annars <code>nvidia-smi</code> inuti containern misslyckas. ProxMenux fångar värdversionen vid detekteringstid och använder samma <code>.run</code>-fil för att installera containerns användarrymd. För Debian behållare installerar installationen stötar behållare minne till 2 GB tillfälligt (installer behöver ~ 1.5 GB gratis att extrahera) och återställer det efteråt.",
     "updateTitle": "När du har uppdaterat värd NVIDIA-drivrutinen, kör det här skriptet",
-    "updateBody": "När du uppgraderar NVIDIA-drivrutinen på värden stannar behållarens användarrymder på den gamla versionen och <code>nvidia-smi</code> inuti behållaren bryter. ProxMenux: s <nvidiaLink>NVIDIA värd installer</nvidiaLink> detekterar behållare med NVIDIA genomgång och erbjuder att uppdatera dem automatiskt - men om du hoppade över den prompten, kör bara Lägg till GPU till LXC igen på samma behållare och det kommer att uppdatera användarrymden."
+    "updateBody": "När du uppgraderar NVIDIA-drivrutinen på värden stannar containerns användarrymder på den gamla versionen och <code>nvidia-smi</code> inuti containern bryter. ProxMenux: s <nvidiaLink>NVIDIA värd installer</nvidiaLink> detekterar behållare med NVIDIA genomgång och erbjuder att uppdatera dem automatiskt - men om du hoppade över den prompten, kör bara Lägg till GPU till LXC igen på samma behållare och det kommer att uppdatera användarrymden."
   },
   "verification": {
     "heading": "Verifiering",
-    "body": "När skriptet avslutas, logga in i behållaren och kontrollera GPU är synlig:"
+    "body": "När skriptet avslutas, logga in i containern och kontrollera GPU är synlig:"
   },
   "troubleshoot": {
     "heading": "Felsökning",
     "mismatchTitle": "nvidia-smi: Failed to initialize NVML: Driver/library version mismatch",
-    "mismatchBody": "Container Userpace version TC värdmodul version. Kör Lägg till GPU till LXC igen på den behållaren - manuset extraherar den aktuella värden <code>.run</code> och ominstallerar användarrymden matchning.",
-    "denyTitle": "Tillstånd nekas på /dev/dri/renderD128 inuti behållaren",
-    "denyBody": "Vanligtvis är en av: (1) behållare oprivilegierad utan UID / GID-kartläggning till värd <code>render</code>-grupp; (2) användaren i behållaren är inte i <code>render</code>-gruppen. Fix: lägg till användaren till <code>render</code> inuti behållaren (<code>usermod -aG render &lt;user&gt;</code>), eller byta till privilegierat läge om arbetsbelastningen är betrodd.",
+    "mismatchBody": "Container Userpace version TC värdmodul version. Kör Lägg till GPU till LXC igen på den containern - manuset extraherar den aktuella värden <code>.run</code> och ominstallerar användarrymden matchning.",
+    "denyTitle": "Tillstånd nekas på /dev/dri/renderD128 inuti containern",
+    "denyBody": "Vanligtvis är en av: (1) container oprivilegierad utan UID / GID-kartläggning till värd <code>render</code>-grupp; (2) användaren i containern är inte i <code>render</code>-gruppen. Fix: lägg till användaren till <code>render</code> inuti containern (<code>usermod -aG render &lt;user&gt;</code>), eller byta till privilegierat läge om arbetsbelastningen är betrodd.",
     "vainfoTitle": "vainfo säger: VA-API version 1.xx; misslyckades med att initialisera",
     "vainfoBody": "VA-API runtime är där men ingen lämplig drivrutin installerades. På Intel, installera <code>intel-media-driver</code> (nyare gens) eller <code>i965-va-driver</code> (äldre gens). AMD, <code>mesa-va-drivers</code>. Re-run the script om du är osäker.",
     "logTitle": "Installera logga",
@@ -163,7 +163,7 @@
       {
         "label": "Installera NVIDIA Drivers (Host)",
         "href": "/docs/hardware/nvidia-host",
-        "tail": " - krävs förutsättning för NVIDIA GPU innan de passerar dem till en behållare."
+        "tail": " - krävs förutsättning för NVIDIA GPU innan de passerar dem till en container."
       },
       {
         "label": "Lägg till GPU till VM (Passthrough)",

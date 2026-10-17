@@ -171,7 +171,7 @@
       {
         "label": "commandes GPU Passthrough",
         "href": "/docs/help-info/gpu-commands",
-        "tail": "— lspci, vérification IOMMU, référence hostpci."
+        "tail": " — lspci, vérification d’IOMMU et référence de qm set hostpci."
       }
     ]
   }

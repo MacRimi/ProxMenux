@@ -48,7 +48,7 @@
       {
         "section": "Aktuálny jazyk",
         "source": "config.json",
-        "contentRich": "Preklad: Jazykový kód z <code>.language</code>0; Normálny: <code>English (Fixed)</code>"
+        "contentRich": "Preklad: kód jazyka z <code>.language</code>; bežná verzia: <code>English (Fixed)</code>"
       }
     ]
   },

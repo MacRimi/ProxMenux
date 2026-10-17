@@ -7,7 +7,7 @@
   },
   "header": {
     "title": "Samba klient v LXC",
-    "description": "Mount Samba (SMB / CIFS) akcie priamo z vnútra Proxmoxu LXC kontajner. Kontajner sa stáva skutočným CIFS klientom /etc/fstab. ProxMenux nainštaluje CIFs-utils + smbclient pre vás a potvrdí osvedčenia proti serveru pred montážou.",
+    "description": "Pripájajte zdieľania Samba (SMB / CIFS) priamo zvnútra kontajnera Proxmox LXC. Kontajner funguje ako skutočný klient CIFS: komunikuje so serverom Samba cez sieť, používa mount.cifs, chráni prihlasovacie údaje a zapisuje pripojenia do /etc/fstab. ProxMenux nainštaluje cifs-utils a smbclient a pred pripojením overí prihlasovacie údaje na serveri.",
     "section": "Úložisko & Share · LXC"
   },
   "privReq": {
@@ -38,9 +38,9 @@
   },
   "creds": {
     "heading": "Kde býva heslo",
-    "body": "ProxMenux <strong>nikdy neukladá heslo v jednoduchom texte</strong> v príkaze o montáži alebo <code>/etc/fstab</code>. Namiesto toho píše súbor s údajmi vo vnútri CT:",
+    "body": "ProxMenux <strong>nikdy neukladá heslo ako obyčajný text</strong> do príkazu na pripojenie ani do <code>/etc/fstab</code>. Namiesto toho vytvorí súbor s prihlasovacími údajmi vnútri CT:",
     "whyTitle": "Prečo samostatný súbor skôr než fstab",
-    "whyBody": "Modul CIFS prijíma <code>username=</code>0 / <code>password=</code> možnosti inline v fstab, ale každý, kto môže čítať <code>/etc/fstab</code> vidí heslo v prehľadnom. Uvedenie údajov do koreňového súboru a ukazovanie fstab na neho (<code>credentials=</code>) udržuje heslo mimo svet-čitateľné konfig."
+    "whyBody": "Modul CIFS podporuje voľby <code>username=</code> / <code>password=</code> priamo vo fstab. Každý, kto môže čítať <code>/etc/fstab</code>, by však videl heslo v otvorenom texte. Uloženie prihlasovacích údajov do súboru prístupného iba root a odkaz z fstab pomocou <code>credentials=</code> zabráni tomu, aby bolo heslo v konfigurácii čitateľnej pre všetkých."
   },
   "options": {
     "heading": "Vysvetlenie možností pripojenia",
@@ -49,7 +49,7 @@
     "rows": [
       {
         "option": "rw / ro",
-        "effect": "Režim na čítanie alebo čítanie pre celú montáž."
+        "effect": "Režim čítania a zápisu alebo iba čítania pre celé pripojenie."
       },
       {
         "option": "file_mode=0664",
@@ -73,15 +73,15 @@
       },
       {
         "option": "netdev",
-        "effect": "Podľa init systému potrebuje táto montáž sieť. Čižma neblokuje čakanie."
+        "effect": "Oznámi inicializačnému systému, že toto pripojenie potrebuje sieť. Spúšťanie systému sa nezablokuje čakaním naň."
       },
       {
         "option": "x-systemd.automount",
-        "effect": "Lenivý montáž: iba pripojiť na prvý prístup. CIFS server nedostupný na boot nemá zastaviť CT."
+        "effect": "Pripojenie až pri prvom prístupe: súborový systém sa pripojí, keď sa začne používať. Nedostupný server CIFS pri štarte nezablokuje CT."
       },
       {
         "option": "noauto",
-        "effect": "Preskočiť horiace mount na boot. V kombinácii s automountovou jednotkou je montáž založená lazicky."
+        "effect": "Vynechá okamžité pripojenie pri štarte. V kombinácii s jednotkou automount sa súborový systém pripojí až vtedy, keď je potrebný."
       }
     ],
     "netEffectTitle": "Čistý účinok indikátorov fstab",
@@ -100,7 +100,7 @@
     "heading": "Odpojiť podiel Samba",
     "body": "Kombinuje live mounts a fstab položky do jedného zoznamu, umožňuje vybrať jeden, a <strong>removeves zodpovedajúci riadok z <code>/etc/fstab</code></strong> plus zodpovedajúceho súboru údajov. Skript nebeží <code>umount</code> na live mount namiesto toho vám povie, že reštart CT je potrebný pre odpojení, aby sa účinok.",
     "warnTitle": "Skript odstraňuje fstab položky, nie live pripojiť",
-    "warnBody": "Rovnaký dizajn ako NFS klient: <code>umount</code> na rušnej mount zlyhá s \"device rušný\" . Odstránenie vstupu fstab zaručuje, že montáž zmizne čisto pri ďalšom štarte CT. Ak chcete pripojiť preč <em>now</em>, spustite <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> ručne po skončení skriptu."
+    "warnBody": "Rovnaký princíp ako pri klientovi NFS: <code>umount</code> na používanom pripojení zlyhá s „device busy“. Odstránenie záznamu z fstab zabezpečí, že sa pripojenie pri ďalšom spustení CT neobnoví. Ak ho chcete odpojiť <em>hneď</em>, po skončení skriptu ručne vykonajte <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code>."
   },
   "test": {
     "heading": "Testovať Samba konektivitu",
@@ -120,7 +120,7 @@
     "aptOutro": "Potom znova spustite skript ProxMenux — krok inštalácie preskočí, keď už sú nástroje k dispozícii.",
     "guestFallbackTitle": "\"Server vás spájal ako hosť namiesto zadaného užívateľa\"",
     "guestFallbackBody": "Aktívna validácia skriptu chytil skutočný problém. Server prijal pripojenie, ale znížil hostí, pretože poverovacie listiny sú zlé. Bežné príčiny: preklep v užívateľskom mene / heslo, užívateľ neexistuje na serveri, užívateľ je zamknutý, alebo pracovná skupina / doména je nesúlad. Znovu spustiť tok a znovu zadať osvedčenia starostlivo (heslo je skryté v dialógu).",
-    "denyTitle": "\"NT_STATUS_ACCESS_DENIED\" pri montáži",
+    "denyTitle": "„NT_STATUS_ACCESS_DENIED“ pri pripájaní",
     "denyBody": "Dôveryhodnosť bola potvrdená, ale podiel popiera prístup. Skontrolujte na strane servera, či užívateľ má na tejto konkrétnej akcii práva (validácia potvrdzuje len prihlásenie, nie na zdieľané ACL). Tiež skontrolujte, či server vyžaduje konkrétnu verziu protokolu SMB: pripojiť <code>vers=3.0</code> (alebo <code>2.1</code>, <code>2.0</code>) k možnosti pripojenia.",
     "utf8Title": "UTF-80 / non-ASCII názvy súborov sú rozpracované",
     "utf8Body": "Predvolené možnosti zahŕňajú <code>iocharset=utf8</code>, ale niektoré konfigurácie serverov hlásia neočakávanú stránku kódov. Ak mená súborov s akcentmi / symbolmi vyzerajú zle, skúste aj <code>nounix</code> (niektoré servery Linux Samba to potrebujú, keď je klient tiež Linux) alebo nastavte stranu servera na <code>unix extensions = no</code>.",

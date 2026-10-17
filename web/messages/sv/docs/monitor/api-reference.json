@@ -157,7 +157,7 @@
       {
         "endpoint": "/api/vms/<vmid>/control",
         "method": "POST",
-        "use": "Start / stopp / avstängning / starta om en VM eller LXC behållare (samma operationer Monitor's VM & LXC modal exponeringar). Kroppen bär <code>action</code>: <code>start</code>, <code>stop</code>, <code>shutdown</code> eller <code>reboot</code>. Synkron - returnerar resultatet direkt utan att det behövs någon omröstning."
+        "use": "Start / stopp / avstängning / starta om en VM eller LXC container (samma operationer Monitor's VM & LXC modal exponeringar). Kroppen bär <code>action</code>: <code>start</code>, <code>stop</code>, <code>shutdown</code> eller <code>reboot</code>. Synkron - returnerar resultatet direkt utan att det behövs någon omröstning."
       },
       {
         "endpoint": "/api/vms/<vmid>/backup",
@@ -331,7 +331,7 @@
     ]
   },
   "vms": {
-    "heading": "VM och behållare",
+    "heading": "VM och containrar",
     "rows": [
       {
         "endpoint": "/api/vms",

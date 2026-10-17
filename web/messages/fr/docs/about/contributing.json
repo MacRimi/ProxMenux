@@ -26,7 +26,7 @@
       },
       {
         "branch": "développement",
-        "purposeRich": "Direction du développement actif. Tous les nouveaux travaux atterrissent ici d'abord; c'est le canal de la Bêta. Les versions stables sont coupées d'ici en <code>main</code> quand une version est prête."
+        "purposeRich": "Branche de développement actif : tous les nouveaux changements y sont intégrés en premier. Elle correspond au canal « bêta ». Lorsqu’une version stable est prête, elle est publiée dans <code>main</code> à partir de cette branche."
       },
       {
         "branch": "Caractéristique/*",
@@ -252,7 +252,7 @@
   "submitting": {
     "heading": "Soumettre votre contribution",
     "steps": [
-      "Fourche <code>MacRimi/ProxMenux</code> sur GitHub et clonez votre fourche.",
+      "Créez un fork de <code>MacRimi/ProxMenux</code> sur GitHub, puis clonez votre fork.",
       "Créer une branche <code>feature/*</code> à partir de <code>develop</code> (voir <em>Modèle de branchage</em> ci-dessus).",
       "Suivez ce guide pour tout script nouveau ou modifié. Écrivez l'en-tête avec votre nom; ajoutez la ligne de sponsor optionnelle si vous voulez.",
       "Testez votre script sur une instance réelle Proxmox VE — à la fois Phase 1 (toutes les branches de dialogue) et Phase 2 (toutes les opérations réussissent et retournent proprement sur erreur).",

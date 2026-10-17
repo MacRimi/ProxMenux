@@ -13,7 +13,7 @@
   },
   "intro": {
     "title": "Hur NAS-väljaren fungerar",
-    "body": "NAS-väljaren upptäcker den senaste stabila utgåvan av varje apparat (frågar sin uppströmspegel), laddar ner ISO - eller bygger VM från en förpackad bild - och sedan händerna över till den generiska ProxMenux VM-guiden för CPU, RAM, disk och nätverkskonfiguration."
+    "body": "NAS-väljaren upptäcker den senaste stabila utgåvan av varje apparat (frågar sin uppströmspegel), laddar ner ISO - eller bygger VM från en förpackad avbildning - och sedan händerna över till den generiska ProxMenux VM-guiden för CPU, RAM, disk och nätverkskonfiguration."
   },
   "image": {
     "alt": "ProxMenux System NAS-väljaren",

@@ -126,7 +126,7 @@
         "detail": "<code>/etc/pve</code> è un live pmxcfs FUSE mount — non può essere scritto su avvio precoce. Il dispacciatore copia i file dai rootf in sospeso al live <code>/etc/pve</code> una volta che il filesystem del cluster è in funzione, un file alla volta, senza riavviare pve-cluster. Il <code>/var/lib/pve-cluster/config.db</code> catturato dal backup (o il <code>config.db.raw-fallback</code>) promosso è materializzato con il <code>systemctl stop pve-cluster</code> → copia di file atomico → modello <code>systemctl start pve-cluster</code>, quindi pmxcfs rilegge lo stato ripristinato sulla via del ritorno."
       },
       {
-        "task": "Ricostruire initramf e bootloader",
+        "task": "Ricostruire initramfs e bootloader",
         "detail": "Esegue <code>update-initramfs -u -k all</code> in ogni kernel installato, quindi sia <code>update-grub</code> (GRUB installs) che <code>proxmox-boot-tool refresh</code> (systemd-boot/ZFS installs). Abilitato se il passo interattivo determinato nulla è cambiato nei percorsi che interessano questi strumenti."
       },
       {

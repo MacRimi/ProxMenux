@@ -165,7 +165,7 @@
       {
         "href": "/docs/help-info/backup-commands",
         "label": "Sauvegarde et restauration",
-        "tail": "— restauration vzdump et qmrestore / pct."
+        "tail": " — vzdump et qmrestore / pct restore."
       },
       {
         "href": "/docs/help-info/storage-commands",

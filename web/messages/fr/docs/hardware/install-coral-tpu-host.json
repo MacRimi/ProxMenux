@@ -74,7 +74,7 @@
         "<strong>Cleanup.</strong> Si une installation précédente <code>gasket-dkms</code> a laissé dpkg à l'état cassé (typique après une mise à niveau du noyau PVE 9 où l'installation automatique DKMS a échoué silencieusement), force-purge.",
         "<strong>Dépôts intégrés de construction:</strong> <code>git</code>, <code>dkms</code>, <code>build-essential</code>, <code>proxmox-headers-$(uname -r)</code>."
       ],
-      "cloneIntro": "<strong>Clone la source du pilote.</strong> Préfère la fourche communautaire <feranickLink>feranick/gasket-driver</feranickLink> (conservée activement, le noyau 6.12+ est prêt). Retourner à <googleLink>google/gasket-driver</googleLink> si le feranick est inaccessible, en appliquant des correctifs spécifiques au noyau:",
+      "cloneIntro": "<strong>Clonage du code source du pilote.</strong> Le script privilégie le fork communautaire <feranickLink>feranick/gasket-driver</feranickLink>, activement maintenu et compatible avec les noyaux 6.12 et suivants. Si ce dépôt est inaccessible, il utilise <googleLink>google/gasket-driver</googleLink> et applique les correctifs adaptés au noyau :",
       "kernelPatches": [
         "Amandes 6.5+ : <code>no_llseek</code> enlevées en amont → substitution <code>noop_llseek</code>",
         "Kernel 6.13+ : <code>MODULE_IMPORT_NS(DMA_BUF)</code> nécessite une chaîne littérale"

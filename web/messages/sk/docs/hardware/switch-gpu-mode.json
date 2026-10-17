@@ -91,7 +91,7 @@
     },
     "conflict": {
       "title": "Politika konfliktu na postihnuté pracovné zaťaženie",
-      "body": "Skript skenuje každý <code>/etc/pve/lxc/*.conf</code>0 a <code>/etc/pve/qemu-server/*.conf</code> a hľadá odkazy na PCI slot GPU. Pre každú postihnutú pracovnú záťaž si vyberiete politiku:",
+      "body": "Skript prehľadá všetky súbory <code>/etc/pve/lxc/*.conf</code> a <code>/etc/pve/qemu-server/*.conf</code> a vyhľadá odkazy na PCI slot GPU. Pre každú dotknutú VM alebo LXC vyberiete postup:",
       "headerPolicy": "Politika",
       "headerEffect": "Účinok",
       "headerWhen": "Kedy vybrať",
@@ -99,7 +99,7 @@
       "keepEffect": "<code>pct set -onboot 0</code> (alebo <code>qm set</code>). Linky GPU zostávajú v konfigurácii.",
       "keepWhen": "Plánujete sa vrátiť k tomuto VM/LXC akonáhle je GPU späť v pôvodnom režime. Bezpečné predvolené.",
       "removePolicy": "Odstrániť GPU z konfigurácie",
-      "removeEffect": "<code>hostpci</code>0 / <code>dev</code> linky pre tento GPU je sed'd von.",
+      "removeEffect": "Riadky <code>hostpci</code> / <code>dev</code> odkazujúce na slot tejto GPU sa odstránia pomocou sed.",
       "removeWhen": "VM/LXC bude fungovať bez GPU (CPU-iba transkódovanie atď.). Čistý pracovný postup.",
       "imageAlt": "Dialógové okno s otázkou pre VM / pre LXC politiku konfliktu pri prepínaní GPU, ktorá je momentálne priradená"
     },

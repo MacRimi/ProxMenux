@@ -14,7 +14,7 @@
   },
   "why": {
     "heading": "Prečo to existuje?",
-    "body": "Po inštalácii optimalizácia občas získať zlepšenie Bez cesty aktualizácie mal operátor len dve možnosti: manuálne re-spustiť post-inštalovať skript (ktorý znovu napája <em>ever</em>) optimalizácia) alebo úplne preskočiť zlepšenie. Aplikujte dostupné aktualizácie je stredná pôda: na optimalizáciu, opt-in re-run, ktorý dvíha iba verzie, ktoré skutočne presunuli."
+    "body": "Optimalizácie po inštalácii sa priebežne zlepšujú: vhodnejšie nastavenia sysctl, prísnejšie limity Logrotate, nový odhad veľkosti Log2RAM alebo oprava okrajového prípadu nahláseného testerom. Bez aktualizačného postupu mal správca len dve možnosti: znovu spustiť celý poinštalačný skript, ktorý opäť použije <em>všetky</em> optimalizácie, alebo sa zlepšenia vzdať. Použiť dostupné aktualizácie umožňuje dobrovoľne znovu spustiť iba tie optimalizácie, ktorých verzia sa skutočne zmenila."
   },
   "detection": {
     "heading": "Spôsob zistenia aktualizácií",
@@ -57,7 +57,7 @@
     "steps": [
       {
         "title": "Znovu spustí funkciu po inštalácii",
-        "body": "Vybraná optimalizácia funkcie je znovu vykonávaná proti hostiteľovi. Pretože každá funkcia po inštalácii je <strong>idempotent</strong>, re-running to nie je duplicitné config"
+        "body": "Funkcia vybranej optimalizácie sa znovu spustí na hostiteľovi. Keďže každá poinštalačná funkcia je <strong>idempotentná</strong>, opakovanie nevytvára duplicitnú konfiguráciu: nahradí predchádzajúcu verziu novou, napríklad súbory sysctl, doplnkové konfigurácie a jednotky služieb."
       },
       {
         "title": "Obnovuje register",

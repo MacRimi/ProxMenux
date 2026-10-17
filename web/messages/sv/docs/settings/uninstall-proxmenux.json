@@ -12,7 +12,7 @@
   },
   "scopeWarn": {
     "title": "Påverkar ProxMenux-installationen bara - inte dina VM / CT / lagringsutrymme",
-    "body": "Avinstallera ProxMenux tar bort ProxMenux scripts, menyn launcher, den valfria Monitor-tjänsten och eventuella säkerhetskopior ProxMenux tog av systemfiler när du installerade den. <strong>Det rör inte dina VM, behållare, lagring, nätverkskonfiguration, Fail2Ban, NVIDIA-drivrutin eller något annat du installerade via ProxMenux.</strong> De stannar som de är."
+    "body": "Avinstallera ProxMenux tar bort ProxMenux scripts, menyn launcher, den valfria Monitor-tjänsten och eventuella säkerhetskopior ProxMenux tog av systemfiler när du installerade den. <strong>Det rör inte dina VM, containrar, lagring, nätverkskonfiguration, Fail2Ban, NVIDIA-drivrutin eller något annat du installerade via ProxMenux.</strong> De stannar som de är."
   },
   "flow": {
     "heading": "Avinstallera flöde",

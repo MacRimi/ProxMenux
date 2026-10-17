@@ -40,7 +40,7 @@
         "icon": "HardDrive",
         "href": "/docs/help-info/storage-commands",
         "title": "Armazenamento e Discos",
-        "description": "lsblk, blkid, smartctl, informações de montagem, estado pvesm, comandos LVM."
+        "description": "lsblk, blkid, smartctl, informações de montagem, pvesm status e comandos LVM."
       },
       {
         "icon": "Network",
@@ -70,7 +70,7 @@
         "icon": "Archive",
         "href": "/docs/help-info/backup-commands",
         "title": "Backup e Restauração",
-        "description": "vzdump, qmrestore / restauração pct, ajudadores Proxmox Backup Server, operações de instantâneo."
+        "description": "vzdump, qmrestore / pct restore, ferramentas do Proxmox Backup Server e operações com snapshots."
       },
       {
         "icon": "Wrench",

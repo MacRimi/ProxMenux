@@ -102,8 +102,8 @@
     "intro": "ProxMenux filtruje čokoľvek, čo by mohlo poškodiť hostiteľa:",
     "items": [
       "<strong>systémový disk</strong> (koreňový pool, swap, aktívny ZFS / LVM členovia RAID) je vždy skrytý.",
-      "Disky <strong>0 namontované </strong> kdekoľvek na hostiteľovi sú skryté alebo blokované pri vykonávaní.",
-      "Disky <strong>0 preferované spustením VM alebo LXC</strong> nemožno preradiť ani vymazať.",
+      "Disky <strong>pripojené</strong> kdekoľvek na hostiteľovi sa nezobrazia alebo sa ich použitie pri vykonávaní zablokuje.",
+      "Disky, na ktoré <strong>odkazuje spustená VM alebo LXC</strong>, nemožno priradiť inému hosťovi ani vymazať.",
       "Operácie, ktoré môžu zmeniť hostiteľský stav (IOMMU povoliť, vymazať) vyžadujú explicitné potvrdenie."
     ]
   },

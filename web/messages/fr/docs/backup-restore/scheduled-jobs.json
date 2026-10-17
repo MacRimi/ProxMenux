@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "Emplois programmés — minuteries, mode de fixation, rétention ProxMenux",
+    "title": "Tâches planifiées — temporisateurs, mode attach et rétention | ProxMenux",
     "description": "Prévu ProxMenux des tâches de sauvegarde d'hôte. Deux modes de création systemd minuterie ou fixation à un emploi existant PVE vzdump), valeurs de rétention appliquées par emploi via proxmox-backup-client/borg/prune locale, mise en page de stockage sous /var/lib/proxmenux/backup-jobs, et le script coureur qui produit des archives identiques au flux interactif.",
     "ogTitle": "ProxMenux Sauvegarde — emplois prévus",
     "ogDescription": "Sauvegardes d'hôte programmées non surveillées avec mode de fixation, conservation, et les mêmes trois destinations que le flux interactif.",
-    "twitterTitle": "Emplois prévus ProxMenux",
+    "twitterTitle": "Tâches planifiées | ProxMenux",
     "twitterDescription": "Fonctions de sauvegarde d'hôte programmées sans surveillance avec mode de fixation et conservation."
   },
   "header": {

@@ -40,7 +40,7 @@
         "icon": "HardDrive",
         "href": "/docs/help-info/storage-commands",
         "title": "Stockage et disques",
-        "description": "lsblk, blkid, smartctl, informations de montage, état pvesm, commandes LVM."
+        "description": "lsblk, blkid, smartctl, informations sur les montages, pvesm status et commandes LVM."
       },
       {
         "icon": "Network",

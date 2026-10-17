@@ -288,8 +288,8 @@
               ],
               [
                 "Contrato de la instancia",
-                "No",
-                "<code>/usr/local/share/proxmenux/oci/instances/VMID/</code> en el host"
+                "Sí, la copia que guarda el CT",
+                "<code>/.proxmenux/oci-record.json</code> dentro del CT; las copias adicionales del host y del clúster se guardan por separado"
               ],
               [
                 "Aplicación con varios contenedores",

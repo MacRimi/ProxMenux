@@ -25,14 +25,14 @@
   },
   "perms": {
     "heading": "Due percorsi di autorizzazione a seconda del tipo di cartella",
-    "body": "Prima di aggiungere la quota a <code>smb.conf</code>, lo script verifica se la cartella scelta è un supporto <strong>bind dall'host</strong> o una normale cartella <strong>local all'interno del CT</strong> — e applica di conseguenza proprietà / autorizzazioni diverse:",
+    "body": "Prima di aggiungere la condivisione a <code>smb.conf</code>, lo script verifica se la cartella scelta è un <strong>bind mount proveniente dall’host</strong> oppure una normale <strong>cartella locale nel CT</strong>. Imposta quindi proprietario e permessi in modo diverso:",
     "headerType": "Tipo di cartella",
     "headerAction": "Cosa fa lo script",
     "bindType": "Bind-mount da host",
     "bindTypeSubRich": "rilevato tramite uscita <code>mount</code>",
     "bindActionRich": "Crea gruppo <code>sharedfiles</code> (default GID 999, dinamico se assunto), aggiunge l'utente Samba ad esso, poi <code>chown root:sharedfiles</code> + <code>chmod 2775</code> (SGID — nuovi file ereditano il gruppo). Se l'utente non può ancora scrivere, applica <code>setfacl -m u:&lt;user&gt;:rwx</code>.",
     "localType": "Cartella locale dentro CT",
-    "localTypeSub": "nessun supporto di lega rilevato",
+    "localTypeSub": "nessun bind mount rilevato",
     "localActionRich": "Proprietà standard: <code>chown -R &lt;user&gt;:&lt;user&gt;</code> + <code>chmod -R 755</code>. Nessun gruppo condiviso necessario perché nessun altro CT scrive a questa cartella. Torna a <code>setfacl</code> se manca ancora l'accesso alla scrittura.",
     "gidTitle": "GID per 'sharedfiles' differisce dal flusso server NFS",
     "gidBody": "Lo script del server Samba utilizza GID <strong>999</strong> per <code>sharedfiles</code>, mentre il <nfsLink>NFS flusso server</nfsLink> utilizza GID <strong>101000</strong>. Se si esegue entrambi i server nello stesso CT e desiderare un singolo gruppo condiviso su entrambi i protocolli, modificare uno di loro per abbinare l'altro dopo l'installazione (ad es. <code>groupmod -g 101000 sharedfiles</code>) e riapplicare la proprietà sulle cartelle interessate. Questa è una nota incoerenza negli script attuali."

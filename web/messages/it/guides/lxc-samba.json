@@ -66,7 +66,7 @@
     "wireBackupNote": "La bandiera <code>backup=0</code> esclude questo punto di montaggio da backup <code>vzdump</code> — di solito la chiamata giusta per grandi unità esterne che sono la memoria di destinazione dell'host piuttosto che i suoi dati.",
     "restartHeading": "1.5 Riavviare il LXC e impostare le autorizzazioni",
     "restartBody": "Riavviare il CT per applicare il punto di montaggio:",
-    "restartCode": "pct restart '<'CTID'>'",
+    "restartCode": "pct reboot '<'CTID'>'",
     "permsBody": "All'interno del LXC, dare le autorizzazioni di directory appropriate per l'utente che possederà la quota:",
     "permsCode": "# Inside the container\nmkdir -p /mnt/lxc_USB\nchown -R proxmenux:proxmenux /mnt/lxc_USB\nchmod 770 /mnt/lxc_USB",
     "permsNoteTitle": "Nota",
@@ -109,7 +109,7 @@
   "troubleshoot": {
     "heading": "Risoluzione dei problemi",
     "items": [
-      "<strong><code>pct restart</code> non riesce a \"dispositivo non trovato\":</strong> il percorso del dispositivo in <code>mp0</code> non esiste sull'host. Controllare con <code>ls -l /dev/disk/by-id/</code> e aggiornare il percorso.",
+      "<strong><code>pct reboot</code> non riesce a \"dispositivo non trovato\":</strong> il percorso del dispositivo in <code>mp0</code> non esiste sull'host. Controllare con <code>ls -l /dev/disk/by-id/</code> e aggiornare il percorso.",
       "<strong>CT inizia ma <code>/mnt/lxc_USB</code> è vuoto: </strong> il disco non è montato all'interno del CT. Controlla dall'host: <code>pct exec '<'CTID'>' -- mount | grep lxc_USB</code>. Se assente, il punto di montaggio nella configurazione è sbagliato.",
       "<strong>Samba autentica ma scrive fallisce con \"Permesso negato\": le autorizzazioni Linux </strong> nella directory non consentono all'utente Samba di scrivere. Ricontrollare <code>chown</code> / <code>setfacl</code> nella sezione 1.5 / 2.3.",
       "<strong>Share non appare nei browser di rete ma funziona <code>smb://'<'ip'>'/lxc_usb</code>: la navigabilità </strong> sulla LAN dipende da NetBIOS / WS-Discovery. Aggiungi <code>nmbd</code>: <code>apt-get install -y samba-common-bin</code> e assicurati che <code>nmbd</code> sia abilitato.",

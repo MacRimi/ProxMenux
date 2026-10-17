@@ -70,7 +70,7 @@
     "hangTitle": "Odinštalovať visí na",
     "hangBody": "<code>pip uninstall</code> môže zastaviť, ak Pip nereaguje. Z iného shellu: <code>rm -rf /opt/googletrans-env</code> priamo (skript robí to isté ako pád po pipe).",
     "aptTitle": "apt warns about packages still in use during dependency removal",
-    "aptBody": "Očakáva sa, ak ste zaškrtli <code>python3</code>0 alebo <code>jq</code>, zatiaľ čo iné veci na hostiteľa závisí na nich. apt <code>autoremove</code> odmietne odstrániť v tomto prípade (čo je bezpečné správanie). Odškrtnite tú závislosť a znovu utečte.",
+    "aptBody": "Očakávané, ak ste vybrali <code>python3</code> alebo <code>jq</code>, no závisia od nich ďalšie súčasti hostiteľa. Príkaz <code>autoremove</code> nástroja apt ich vtedy odmietne odstrániť, čo je bezpečné správanie. Zrušte výber tejto závislosti a spustite postup znova.",
     "motdTitle": "MOTD stále ukazuje čiaru ProxMenux po odinštalovaní",
     "motdBody": "Buď neexistoval <code>/etc/motd.bak</code> a sed pás sa nezhodoval (napr. riadok bol upravený). Upraviť <code>/etc/motd</code> ručne a odstrániť všetky zvyšky ProxMenux riadok."
   },

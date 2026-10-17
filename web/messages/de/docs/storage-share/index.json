@@ -36,7 +36,7 @@
     "lxcMountItems": [
       "Arbeitet mit privilegierten und unprivilegierten CTs",
       "Angebote, <code>o+rwx</code> für unprivilegierte UIDs auf den Host zu setzen",
-      "Behebt vorhandene CIFS / NFS Halterungen bei Bedarf"
+      "Behebt vorhandene CIFS / NFS Mounts bei Bedarf"
     ],
     "lxcNetTitle": "LXC Netzwerkfreigabe",
     "lxcNetBody": "Vier zusätzliche Flüsse für Szenarien, in denen ein Container NFS / Samba-Aktien direkt konsumieren oder aussetzen muss. Alle benötigen einen <strong>privileged</strong> Container.",
@@ -86,7 +86,7 @@
     "intro": "Das primäre Tool zum Teilen von Ordnern zwischen dem Proxmox-Host und LXC-Containern. Es verwendet <code>pct set -mpN</code>, um ein Host-Verzeichnis in den Container zu binden, und behandelt die Berechtigungs Macken von unprivilegierten CTs auf der Hostseite (es werden keine Gruppen oder Benutzer innerhalb des Containers erstellt).",
     "card": {
       "title": "LXC Befestigungspunkte (Host ↔ CT)",
-      "description": "Binden Sie ein beliebiges Hostverzeichnis in einen LXC-Container über pct set -mpN. Funktioniert sowohl mit privilegierten als auch mit unprivilegierten CTs; bietet chmod o+rwx / ACLs auf dem Host-Dir und behebt bei Bedarf vorhandene CIFS / NFS-Halterungen."
+      "description": "Binden Sie ein beliebiges Hostverzeichnis mit pct set -mpN in einen LXC-Container ein. Dies funktioniert mit privilegierten und unprivilegierten CTs. Das Werkzeug bietet chmod o+rwx und ACLs für das Hostverzeichnis an und korrigiert bei Bedarf vorhandene CIFS- oder NFS-Mounts."
     }
   },
   "lxcNet": {

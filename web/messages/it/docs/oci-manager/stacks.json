@@ -6,7 +6,7 @@
   "header": {
     "title": "Applicazioni con più container",
     "description": "Un'applicazione con il suo database, la cache e altri servizi diventa diversi LXC nativi coordinati, installati e aggiornati come uno.",
-    "section": "App del gestore OCI"
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -285,7 +285,7 @@
               "Nessun membro, volume o adattamento rootfs manca.",
               "Il gancio punta al cecchino ufficiale, il suo contenuto è invariato e il suo contratto corrisponde alla ricetta stack.",
               "Le immagini e i digestivi osservati corrispondono agli archivi OCI preparati.",
-              "Dispositivi, profili GPU, supporti, segreti e endpoint corrispondono ancora ai contratti.",
+              "Dispositivi, profili GPU, montaggi, segreti ed endpoint corrispondono ancora ai contratti.",
               "Dopo ogni passaggio di dipendenza, il punto finale dell'applicazione principale controlla l'integrazione tra i membri."
             ]
           }
@@ -318,7 +318,7 @@
               },
               {
                 "title": "Aggiornare e controllare ogni membro",
-                "body": "Adattamento, rete, supporti, segreti e dispositivi vengono applicati di nuovo prima del controllo sanitario di ogni membro."
+                "body": "Adattamento, rete, montaggi, segreti e dispositivi vengono applicati nuovamente prima del controllo di integrità di ciascun membro."
               },
               {
                 "title": "Pubblica o recupera tutto",

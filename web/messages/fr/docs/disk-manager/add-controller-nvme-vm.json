@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Ajouter un contrôleur ou NVMe à VM | ProxMenux Documentation",
-    "description": "Passage PCI d'un contrôleur de stockage (SATA / SAS HBA) ou NVMe périphérique vers un Proxmox VM utilisant ProxMenux. Prise en charge de l'activation IOMMU, détection des conflits et jeu de qm --hostpci câblage.",
+    "description": "Attribuez un contrôleur de stockage SATA/SAS HBA ou un périphérique NVMe à une VM Proxmox par passthrough PCI avec ProxMenux. L’outil gère l’activation d’IOMMU, la détection des conflits et l’affectation avec qm set --hostpci.",
     "ogTitle": "Ajouter un contrôleur ou NVMe à VM | ProxMenux Documentation",
     "ogDescription": "Passez tout un appareil SATA/SAS HBA ou NVMe dans un Proxmox VM. ProxMenux gère IOMMU, détection de conflits et câblage hostpci."
   },
   "header": {
     "title": "Ajouter le contrôleur ou NVMe au VM",
-    "description": "Passez un adaptateur de bus hôte SATA/SAS (HBA) ou NVMe dans un Proxmox VM via PCI passthrough. ProxMenux vérifie et - avec votre consentement - permet IOMMU, énumére les appareils éligibles à la transmission, filtre les conflits et file l'assignation avec le jeu de qm --hostpci.",
+    "description": "Attribuez un adaptateur de bus SATA/SAS (HBA) complet ou un périphérique NVMe à une VM Proxmox par passthrough PCI. ProxMenux vérifie IOMMU et l’active avec votre accord, recense les périphériques compatibles, écarte les conflits et configure l’affectation avec qm set --hostpci.",
     "section": "Gestionnaire de disque · VM"
   },
   "intro": {

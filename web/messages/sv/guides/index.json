@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Proxmox VE Guider - Coral TPU, NVIDIA, Kodi LXC, Samba, Cloud Backup | ProxMenux",
-    "description": "Handskrivna handledningar för Proxmox VE: installera Kodi inuti en LXC med GPU acceleration, NVIDIA förarinstallation på PVE 9, USB-enhet över Samba i en behållare, vzdump backups till personligt moln (Google Drive, Mega, Dropbox, OneDrive). Plus curated community resurser, ordlista och kommando referens.",
+    "description": "Handskrivna handledningar för Proxmox VE: installera Kodi inuti en LXC med GPU acceleration, NVIDIA förarinstallation på PVE 9, USB-enhet över Samba i en container, vzdump backups till personligt moln (Google Drive, Mega, Dropbox, OneDrive). Plus curated community resurser, ordlista och kommando referens.",
     "ogTitle": "Proxmox VE Guider - Coral TPU, NVIDIA, Kodi LXC, Samba, Cloud Backup",
     "ogDescription": "Handskrivna Proxmox VE tutorials: GPU passthrough, Kodi LXC mediacenter, Samba över USB, cloud backup med rclone och curated community resurser.",
     "twitterTitle": "Proxmox VE Guider | ProxMenux",
@@ -29,7 +29,7 @@
       {
         "slug": "lxc-samba",
         "title": "Lägg till en USB-enhet eller minne till en LXC och dela den över nätverket med Samba",
-        "description": "Bifoga en USB-hårddisk eller minnesmärke till en privilegierad LXC-behållare på Proxmox VE, installera Samba i behållaren och dela innehållet över nätverket."
+        "description": "Bifoga en USB-hårddisk eller minnesmärke till en privilegierad LXC-behållare på Proxmox VE, installera Samba i containern och dela innehållet över nätverket."
       },
       {
         "slug": "nvidia-manual",

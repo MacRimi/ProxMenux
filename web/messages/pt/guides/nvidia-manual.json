@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Instalar NVIDIA Condutores ligados Proxmox VE 9 (procedimento manual) ProxMenux Guias",
+    "title": "Instalar controladores NVIDIA no Proxmox VE 9 — procedimento manual | Guias ProxMenux",
     "description": "Instalação manual e configuração de drivers NVIDIA em um host Proxmox VE 9, além da fiação LXC necessária para expor o GPU a um ou mais recipientes. Cobre a instalação do driver, o serviço de persistência, o patch opcional NVENC e a configuração por container.",
     "ogTitle": "Instalação de drivers NVIDIA no Proxmox VE 9 (procedimento manual)",
     "ogDescription": "Instalação manual do driver NVIDIA no PVE 9 — controlador de host, serviço de persistência, remendo opcional NVENC e fiação LXC."
@@ -13,7 +13,7 @@
   "intro": {
     "calloutTitle": "Observação",
     "calloutBody": "Este é o procedimento manual preservado como referência. Para a maioria dos usuários, o caminho recomendado é o fluxo automatizado ProxMenux: <strong>Instalar o menu NVIDIA Drivers (Host)</strong> no <em>GPUs e Coral-TPU</em>, e <strong>Adicionar GPU ao LXC</strong> (ou <strong>Adicionar GPU ao VM</strong>) para a fiação por hóspedes. O fluxo automatizado manuseia os mesmos passos documentados aqui (com verificações de segurança extras: compatibilidade com o kernel-headers, validação IOMMU, resolução de conflitos VFIO). Esta página é para operadores que querem entender cada comando, ou que precisam se desviar do fluxo padrão.",
-    "targetNote": "Alvo em <strong>Proxmox VE 9</strong> (Debian Trixie). O PVE 7 (Bullseye) e o PVE 8 (Liverworm) já não estão cobertos.",
+    "targetNote": "Destina-se ao <strong>Proxmox VE 9</strong> (Debian Trixie). O PVE 7 (Bullseye) e o PVE 8 (Bookworm) já não são abrangidos.",
     "stepsTitle": "O que vais fazer?",
     "steps": [
       "Preparar o host Proxmox VE 9 (nouveau da lista negra, repos, pré-requisitos).",

@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Proxmox-Sicherungsbefehle — vzdump, qmrestore, pct restore | ProxMenux",
-    "description": "Referenz von Proxmox VE-Backup- und Wiederherstellungsbefehlen: vzdump für VMs und LXC-Container, qmrestore für VMs, pct-Restore für Container, geplante Backups in /etc/pve/jobs.cfg, Hook-Skripts und Ausschlusspfade.",
+    "description": "Referenz der Sicherungs- und Wiederherstellungsbefehle von Proxmox VE: vzdump für VMs und LXC-Container, qmrestore für VMs, pct restore für Container, geplante Sicherungen in /etc/pve/jobs.cfg, Hook-Skripte und auszuschließende Pfade.",
     "ogTitle": "Proxmox-Sicherungsbefehle — vzdump, qmrestore, pct restore",
     "ogDescription": "Referenz der Befehle vzdump, qmrestore und pct restore zum Sichern und Wiederherstellen von Proxmox VMs und LXC Containern.",
     "twitterTitle": "Proxmox Backup Befehle | ProxMenux",

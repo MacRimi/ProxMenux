@@ -21,9 +21,9 @@
     "heading": "Wie die Umkehrung funktioniert",
     "steps": [
       {
-        "title": "Registrierung und automatische Erkennung",
+        "title": "Gespeicherte Einträge und automatische Erkennung",
         "body1": "Beim ersten Durchlauf geht ProxMenux den Host auf der Suche nach Fingerabdruckdateien (z.B.) <code>/etc/sysctl.d/99-memory.conf</code>, <code>/etc/apt/apt.conf.d/99-force-ipv4</code>, <code>haveged</code>-Paket installiert, Log2RAM-Dienst aktiv... Alles, was gefunden wurde, wird der Registry als reversibel hinzugefügt, auch wenn es von einer älteren ProxMenux-Version angewendet wurde, die vor der Registry existiert.",
-        "body2": "Diese Migration läuft nur einmal. Danach aktualisiert jedes Anwenden / Zurücksetzen die Registrierung direkt."
+        "body2": "Diese Migration wird nur einmal ausgeführt. Anschließend aktualisiert jeder Anwenden- oder Rückgängig-Vorgang den gespeicherten Eintrag direkt."
       },
       {
         "title": "Wählen Sie, was Sie zurückgeben",

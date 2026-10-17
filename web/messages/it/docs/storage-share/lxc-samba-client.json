@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "client Samba in LXC | Documentazione ProxMenux",
-    "description": "Mount Samba / CIFS condivide direttamente dall'interno di un contenitore Proxmox LXC con ProxMenux. Auto-installa cifs-utils + smbclient, supporta l'auto-scoprimento, l'archiviazione delle credenziali sicura e i supporti persistenti tramite /etc/fstab. Richiede un contenitore privilegiato.",
+    "description": "Monta le condivisioni Samba o CIFS direttamente da un container Proxmox LXC con ProxMenux. Lo script installa cifs-utils e smbclient, rileva automaticamente i server, protegge le credenziali e configura montaggi permanenti tramite /etc/fstab. Richiede un container privilegiato.",
     "ogTitle": "client Samba in LXC | Documentazione ProxMenux",
     "ogDescription": "Mount Samba / CIFS condivide dall'interno di un contenitore LXC privilegiato. Auto-scoprimento, file di credenziali sicuro, persistenza /etc/fstab."
   },
@@ -25,7 +25,7 @@
     "diagramCtDetail": "/mnt/share\nmount.cifs all'interno di CT",
     "diagramArrow": "CIFS",
     "twoWaysTitle": "Due modi per dare un CT una quota Samba — scegliere uno",
-    "twoWaysBind": "<strong>Supporto binario tramite host</strong> (<mountLink>LXC Gestione del montaggio</mountLink>): host monta il CIFS una volta, ogni CT legare-monta lo stesso percorso. Funziona con le TAC non private. Raccomandato quando diverse TAC hanno bisogno della stessa quota.",
+    "twoWaysBind": "<strong>Bind mount tramite host</strong> (<mountLink>LXC Mount Manager</mountLink>): l’host monta la condivisione CIFS una volta e ogni CT accede allo stesso percorso tramite bind mount. Funziona con CT non privilegiati ed è consigliato quando più CT usano la stessa condivisione.",
     "twoWaysDirect": "<strong>Direct CIFS monta all'interno del CT</strong> (questa pagina): il CT monta il CIFS stesso. Richiede privilegi. Utile quando il CT deve possedere le proprie credenziali, o quando ogni CT parla a un server diverso."
   },
   "opening": {
@@ -73,15 +73,15 @@
       },
       {
         "option": "netdev",
-        "effect": "Indica al sistema di init che questo supporto ha bisogno della rete. Boot non blocca l'attesa."
+        "effect": "Segnala al sistema di inizializzazione che questo montaggio richiede la rete. L’avvio non resta bloccato in attesa del montaggio."
       },
       {
         "option": "x-systemd.automount",
-        "effect": "Supporto pigro: monta solo sul primo accesso. Il server CIFS non raggiungibile all'avvio non blocca il CT."
+        "effect": "Montaggio al primo accesso: il filesystem viene montato solo quando viene usato. Se il server CIFS non è raggiungibile all’avvio, il CT non resta bloccato."
       },
       {
         "option": "noauto",
-        "effect": "Salta il supporto impaziente al boot. Combinato con l'unità di automount, il supporto è stabilito pigramente."
+        "effect": "Evita il montaggio immediato all’avvio. In combinazione con l’unità automount, il filesystem viene montato solo quando serve."
       }
     ],
     "netEffectTitle": "Effetto netto delle bandiere fstab",
@@ -94,17 +94,17 @@
   },
   "view": {
     "heading": "Visualizza i supporti correnti",
-    "body": "Elenca ogni punto di montaggio CIFS attivo all'interno del CT (<code>mount -t cifs</code>) più ogni linea CIFS nel CT's <code>/etc/fstab</code>. Per ogni entrata fstab è mostrato lo stato del live mount — utile per individuare i supporti permanenti che non sono arrivati al boot."
+    "body": "Elenca i punti di montaggio CIFS attivi nel CT tramite <code>mount -t cifs</code> e tutte le righe CIFS del suo <code>/etc/fstab</code>. Per ciascuna voce di fstab mostra se il montaggio è attivo, così puoi individuare quelli permanenti che non sono stati ripristinati all’avvio."
   },
   "unmount": {
     "heading": "Condividere Samba",
-    "body": "Combina i supporti dal vivo e le voci fstab in un unico elenco, ti consente di scegliere uno, e <strong>removes la linea corrispondente da <code>/etc/fstab</code></strong> più il file di credenziali corrispondenti. Lo script non esegue <code>umount</code> sul supporto live — invece vi dice che è necessario un riavvio CT per il smontaggio di prendere effetto.",
+    "body": "Riunisce i montaggi attivi e le voci di fstab in un elenco. Per l’elemento scelto <strong>rimuove la riga corrispondente da <code>/etc/fstab</code></strong> e il relativo file delle credenziali. Lo script non esegue <code>umount</code> sul filesystem attivo: segnala che occorre riavviare il CT per completare lo smontaggio.",
     "warnTitle": "Lo script rimuove le voci fstab, non i supporti dal vivo",
-    "warnBody": "Lo stesso design del client NFS: <code>umount</code> su un supporto occupato fallisce con \"dispositivo occupato\". La rimozione dell'ingresso fstab garantisce che il montaggio sparisca in modo pulito sul prossimo inizio CT. Se si desidera che il montaggio sia andato <em>now</em>, eseguire <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> a mano dopo la fine dello script."
+    "warnBody": "Segue lo stesso criterio del client NFS: <code>umount</code> fallisce con “device busy” se il montaggio è ancora in uso. Rimuovere la voce da fstab impedisce che venga ripristinato al prossimo avvio del CT. Per smontarlo <em>subito</em>, esegui manualmente <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> dopo la fine dello script."
   },
   "test": {
     "heading": "Prova la connettività Samba",
-    "body": "Il pass diagnostico all'interno del CT: conferma l'installazione di <code>cifs-utils</code>, elenca i supporti CIFS attuali, quindi per ogni server di riferimento nei controlli fstab ping → porte 139/445 → lista degli ospiti."
+    "body": "La diagnostica nel CT verifica l’installazione di <code>cifs-utils</code>, elenca i montaggi CIFS attivi e controlla per ogni server indicato in fstab ping, porte 139/445 ed elenco delle condivisioni accessibili come guest. “Autenticazione richiesta” nel test guest è normale se il server non espone condivisioni pubbliche."
   },
   "troubleshoot": {
     "heading": "Risoluzione dei problemi",
@@ -125,7 +125,7 @@
     "utf8Title": "I nomi dei file UTF-8 / non-ASCII sono raggruppati",
     "utf8Body": "Le opzioni di default includono <code>iocharset=utf8</code>, ma alcune configurazioni del server segnalano una pagina di codice inaspettata. Se i nomi di file con accenti / simboli sembrano sbagliati, anche provare <code>nounix</code> (alcuni server Samba Linux ne hanno bisogno quando il client è anche Linux) o impostare il lato server a <code>unix extensions = no</code>.",
     "bootTitle": "Il supporto permanente ha successo ma non arriva al boot",
-    "bootBody": "Quasi sempre una di: la rete non è pronta quando i supporti CT (le bandiere <code>_netdev,x-systemd.automount,noauto</code> dello script lo risolvono), il server è irraggiungibile all'avvio (l'auto-mount aspetta il primo accesso — questo è normale), o DNS è irrisolto al boot (usare l'IP del server, non il suo hostname)."
+    "bootBody": "Le cause più comuni sono la rete non ancora pronta quando il CT tenta il montaggio, il server non raggiungibile all’avvio oppure DNS non disponibile. Le opzioni <code>_netdev,x-systemd.automount,noauto</code> dello script risolvono il primo caso; automount attende normalmente il primo accesso. Per problemi DNS usa l’IP del server anziché il nome host."
   },
   "related": {
     "heading": "Correlati",

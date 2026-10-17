@@ -166,9 +166,9 @@
       "Compila la scheda Email con: <em>Host Host</em> <code>smtp.gmail.com</code>, <em>Porto di Porto</em> <code>587</code>, <em>TLS Modalità</em> <code>STARTTLS</code>, <em>Nome utente</em> il tuo indirizzo Gmail, <em>Password</em> il 16- password dell'app di caratteri."
     ],
     "outlookTitle": "Microsoft / password app Outlook",
-    "outlookIntro": "Microsoft richiede ora <strong>two-step verifica</strong> sul conto personale prima che una password dell'app possa essere creata. Gli inquilini Enterprise in cui l'amministratore ha disabilitato SMTP basic auth hanno bisogno di un percorso diverso (OAuth2) che non è attualmente supportato dal Monitor — puntare quelli in un relè SMTP si controlla invece.",
+    "outlookIntro": "Microsoft richiede di attivare la <strong>verifica in due passaggi</strong> sull’account personale prima di creare una password per l’app. Nei tenant aziendali in cui l’amministratore ha disabilitato l’autenticazione di base SMTP occorre usare un altro metodo, OAuth2, attualmente non supportato dal Monitor. In questi casi, configura un relay SMTP sotto il tuo controllo.",
     "outlookItems": [
-      "Apri account <a>.microsoft.com/security</a> e abilita la verifica a due fasi.",
+      "Apri <a>account.microsoft.com/security</a> e attiva la verifica in due passaggi.",
       "Aprire <em>Opzioni di sicurezza avanzate</em>, scorrere a <em>App passwords</em> e fare clic su <em>Crea una nuova password app</em>.",
       "Microsoft mostra una lunga password casuale — copiarlo.",
       "Compila la scheda Email con: <em>Host Host</em> <code>smtp-mail.outlook.com</code>, <em>Porto di Porto</em> <code>587</code>, <em>TLS Modalità</em> <code>STARTTLS</code>, <em>Nome utente</em> il tuo Outlook / Microsoft 365 indirizzo, <em>Password</em> la password dell'app generata."

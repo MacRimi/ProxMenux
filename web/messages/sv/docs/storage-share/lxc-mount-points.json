@@ -1,36 +1,36 @@
 {
   "meta": {
     "title": "LXC Mount Points (Host = Container) | ProxMenux Dokumentation",
-    "description": "LXC Mount Manager - bindmontera alla värdkataloger till en eller flera LXC-containrar via pct set -mpN. Hanterar tillståndskrav av oprivilegierade behållare, fixar befintliga CIFS / NFS-fästen på värdsidan, och ändrar aldrig något inuti behållaren.",
+    "description": "LXC Mount Manager - bindmontera alla värdkataloger till en eller flera LXC-containrar via pct set -mpN. Hanterar tillståndskrav av oprivilegierade behållare, fixar befintliga CIFS / NFS-fästen på värdsidan, och ändrar aldrig något inuti containern.",
     "ogTitle": "LXC Mount Points (Host = Container) | ProxMenux Dokumentation",
-    "ogDescription": "Bind-mount värdkataloger till LXC behållare. Hanterar oprivilegierad UID-kartläggning pragmatiskt, fixar CIFS / NFS-åtkomst på värdsidan."
+    "ogDescription": "Bind-mount värdkataloger till LXC containrar. Hanterar oprivilegierad UID-kartläggning pragmatiskt, fixar CIFS / NFS-åtkomst på värdsidan."
   },
   "header": {
     "title": "LXC Mount Points (Host = Container)",
-    "description": "Det primära verktyget för att dela mappar mellan Proxmox värd och LXC behållare. Bind-mounts någon värdkatalog till en eller flera behållare med Proxmox infödda pct set -mpN syntax. smart bit: det löser tillstånd huvudvärk av oprivilegierade behållare på värdsidan - det ändrar aldrig något inuti behållaren.",
+    "description": "Det primära verktyget för att dela mappar mellan Proxmox värd och LXC behållare. Bind-mounts någon värdkatalog till en eller flera behållare med Proxmox infödda pct set -mpN syntax. smart bit: det löser tillstånd huvudvärk av oprivilegierade behållare på värdsidan - det ändrar aldrig något inuti containern.",
     "section": "Lagring & Dela · LXC"
   },
   "intro": {
     "title": "Vad detta gör",
-    "body": "Ta en katalog som bor på Proxmox-värden (en lokal mapp, en monterad NAS-andel, en Proxmox-managed lagring ...) och gör att den visas inuti en LXC-behållare på en väg du väljer, med behörigheter som fungerar även för oprivilegierade behållare - utan att röra något inuti behållaren."
+    "body": "Ta en katalog som bor på Proxmox-värden (en lokal mapp, en monterad NAS-andel, en Proxmox-managed lagring ...) och gör att den visas inuti en LXC-behållare på en väg du väljer, med behörigheter som fungerar även för oprivilegierade behållare - utan att röra något inuti containern."
   },
   "bigPicture": {
     "heading": "Hur det fungerar (den stora bilden)",
-    "intro": "Ett bindfäste är exakt vad namnet säger: Proxmox berättar för kärnan \"värdkatalogen <code>X</code> bör också visas på vägen <code>Y</code> inuti denna behållare\". Det finns ingen kopia, ingen synkronisering, inget nätverk - båda sidor ser <em>same filer</em> samtidigt.",
+    "intro": "Ett bindfäste är exakt vad namnet säger: Proxmox berättar för kärnan \"värdkatalogen <code>X</code> bör också visas på vägen <code>Y</code> inuti denna container\". Det finns ingen kopia, ingen synkronisering, inget nätverk - båda sidor ser <em>same filer</em> samtidigt.",
     "sourceLabel": "Proxmox-värd",
     "sourceDetail": "/mnt/data\n(din mapp)",
     "targetLabel": "LXC-container",
     "targetDetail": "/mnt/data\n(visar upp här)",
     "arrowLabel": "binda montering",
-    "outro": "Värdvägen till vänster och containervägen till höger kan vara annorlunda - till exempel kan <code>/mnt/nas-films</code> på värden bli <code>/media/films</code> inuti behållaren. Skriptet lägger till posten till behållaren konfig (<code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>) med nästa gratis <code>mpN</code> index, med två säkra standarder bakade i:",
+    "outro": "Värdvägen till vänster och containervägen till höger kan vara annorlunda - till exempel kan <code>/mnt/nas-films</code> på värden bli <code>/media/films</code> inuti containern. Skriptet lägger till posten till containern konfig (<code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>) med nästa gratis <code>mpN</code> index, med två säkra standarder bakade i:",
     "items": [
-      "<code>shared=1</code> - berättar för Proxmox att data delas lagring, så det försöker inte migrera disken när du migrerar behållaren.",
+      "<code>shared=1</code> - berättar för Proxmox att data delas lagring, så det försöker inte migrera disken när du migrerar containern.",
       "<code>backup=0</code> - utesluter bindfästet från <code>vzdump</code> säkerhetskopior (data lever på värden, du backar upp det separat)."
     ]
   },
   "perms": {
     "heading": "Tillståndshantering – smart",
-    "intro": "Bind fästen är lätta i princip. Den hårda delen är behörigheter: en <strong>unprivileged</strong> LXC behållare skiftar varje UID av <strong> + 100000</strong>, så en fil som skapats inuti behållaren av användaren 1000 visas på värden som UID 101000 - en UID ingen på värden äger. För att göra detta arbete utan att anpassa UIDs över värdar och behållare, ProxMenux tillämpar rätt \"öppna upp behörigheter\" trick på <em>host</em> sida, beroende på vilken typ av katalog du valde:",
+    "intro": "Bind fästen är lätta i princip. Den hårda delen är behörigheter: en <strong>unprivileged</strong> LXC behållare skiftar varje UID av <strong> + 100000</strong>, så en fil som skapats inuti containern av användaren 1000 visas på värden som UID 101000 - en UID ingen på värden äger. För att göra detta arbete utan att anpassa UIDs över värdar och behållare, ProxMenux tillämpar rätt \"öppna upp behörigheter\" trick på <em>host</em> sida, beroende på vilken typ av katalog du valde:",
     "headerType": "Värd katalog typ",
     "headerAction": "Vad skriptet erbjuder att göra",
     "localType": "Lokal mapp",
@@ -42,15 +42,15 @@
     "nfsType": "Monterad NFS",
     "nfsTypeSub": "t.ex. /mnt/pve/nfs-…",
     "nfsActionRich": "<code>chmod 1777</code> + <code>setfacl o::rwx</code> på NFS montering. Kan inte åsidosätta server-side squashing - om ens värdrot inte kan skriva, är du vägledd att fixa exporten på NFS-servern.",
-    "privTitle": "Privilegierade behållare behöver inte något av detta",
-    "privBody": "För privilegierade behållare, UID 0 i CT är UID 0 på värden - rot inuti CT kan läsa och skriva värdkatalogen direkt utan tillstånd tricks. Skriptet upptäcker detta och hoppar över \"öppna upp behörigheter\" steg helt.",
-    "noCtTitle": "Skriptet ändrar aldrig något inuti behållaren",
-    "noCtBody": "Alla tillstånd tweaks händer på <strong>host filsystem</strong>. Inga <code>pct exec</code> chowner, inga grupper skapade i CT, ingen fstab inuti behållaren. Om du återanvänder den bindmonterade katalogen i en annan CT senare gäller samma behörigheter automatiskt - ingen kontaineruppsättning."
+    "privTitle": "Privilegierade containrar behöver inte något av detta",
+    "privBody": "För privilegierade containrar, UID 0 i CT är UID 0 på värden - rot inuti CT kan läsa och skriva värdkatalogen direkt utan tillstånd tricks. Skriptet upptäcker detta och hoppar över \"öppna upp behörigheter\" steg helt.",
+    "noCtTitle": "Skriptet ändrar aldrig något inuti containern",
+    "noCtBody": "Alla tillstånd tweaks händer på <strong>host filsystem</strong>. Inga <code>pct exec</code> chowner, inga grupper skapade i CT, ingen fstab inuti containern. Om du återanvänder den bindmonterade katalogen i en annan CT senare gäller samma behörigheter automatiskt - ingen kontaineruppsättning."
   },
   "writes": {
     "heading": "Vad ProxMenux skriver - och vad det inte gör",
     "intro": "En vanlig förvirring när bindning till en oprivilegierad CT: människor antar ProxMenux måste skriva <code>lxc.idmap</code> poster i <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>. <strong>Det gör inte.</strong> Endast en rad är appenderad till den filen - bindfästet själv:",
-    "outro": "Utgångslinjen du ser i slutet av körningen, <em> \"Unprivileged behållare - UID-kompensation: 100000\"</em>, är helt informativ - det berättar bara att CT använder Proxmox standard oprivileged kartläggning (rot i CT = UID 100000 på värd). Skriptet konfigurerar inte något runt det.",
+    "outro": "Utgångslinjen du ser i slutet av körningen, <em> \"Unprivileged container - UID-kompensation: 100000\"</em>, är helt informativ - det berättar bara att CT använder Proxmox standard oprivileged kartläggning (rot i CT = UID 100000 på värd). Skriptet konfigurerar inte något runt det.",
     "twoWaysHeading": "De två sätten att få behörigheter att fungera - och varför ProxMenux väljer en",
     "headerApproach": "Förhållande",
     "headerChanges": "Vad det förändras",
@@ -113,27 +113,27 @@
   },
   "manual": {
     "heading": "Manuell motsvarande",
-    "privIntro": "För en privilegierad behållare - det enklaste fallet, inga tillståndstrick:",
-    "unprivLocalIntro": "För en oprivilegierad behållare med en lokal värdkatalog - öppna upp behörigheter på värden först:",
-    "unprivCifsIntro": "För en oprivilegierad behållare med en CIFS-andel som redan är monterad på värden:"
+    "privIntro": "För en privilegierad container - det enklaste fallet, inga tillståndstrick:",
+    "unprivLocalIntro": "För en oprivilegierad container med en lokal värdkatalog - öppna upp behörigheter på värden först:",
+    "unprivCifsIntro": "För en oprivilegierad container med en CIFS-andel som redan är monterad på värden:"
   },
   "view": {
     "heading": "Visa fästpunkter",
-    "body": "Listar varje <code>mpN</code>-ingång över varje behållare på denna Proxmox-värd, grupperad av CT-id och visar värdväg → containerväg plus eventuella extra alternativ. Läs bara - användbar som en sanity check innan du lägger till eller tar bort något."
+    "body": "Listar varje <code>mpN</code>-ingång över varje container på denna Proxmox-värd, grupperad av CT-id och visar värdväg → containerväg plus eventuella extra alternativ. Läs bara - användbar som en sanity check innan du lägger till eller tar bort något."
   },
   "remove": {
     "heading": "Ta bort en monteringspunkt",
-    "body": "Välj behållaren, välj <code>mpN</code>-inmatningen, bekräfta. Manuset kör <code>pct set --delete mpN</code> för att släppa inträdet från CT konfig och erbjuder att starta om behållaren om den körs. Värdkatalogen och dess innehåll är <strong>not touched</strong> - du kan återföra fästet senare (eller bifoga samma katalog till en annan CT).",
-    "warnTitle": "Levande behållare behöver en omstart för förändringar för att träda i kraft",
-    "warnBody": "Både att lägga till och ta bort monteringspunkter blir bara synliga inuti behållaren efter en omstart. Manuset erbjuder ett enklick <code>pct reboot</code> vid slutet av varje operation; du kan avböja och starta om manuellt senare."
+    "body": "Välj containern, välj <code>mpN</code>-inmatningen, bekräfta. Manuset kör <code>pct set --delete mpN</code> för att släppa inträdet från CT konfig och erbjuder att starta om containern om den körs. Värdkatalogen och dess innehåll är <strong>not touched</strong> - du kan återföra fästet senare (eller bifoga samma katalog till en annan CT).",
+    "warnTitle": "Levande containrar behöver en omstart för förändringar för att träda i kraft",
+    "warnBody": "Både att lägga till och ta bort monteringspunkter blir bara synliga inuti containern efter en omstart. Manuset erbjuder ett enklick <code>pct reboot</code> vid slutet av varje operation; du kan avböja och starta om manuellt senare."
   },
   "troubleshoot": {
     "heading": "Felsökning",
-    "noMountTitle": "Mount visas i pct config men inte i behållaren",
-    "noMountBody": "Bind monterar bara när behållaren börjar. Om du lade till fästet medan CT kördes, starta om det (<code>pct reboot &lt;ctid&gt;</code>). Om det redan har startats om och fortfarande saknas, kontrollera <code>pct config &lt;ctid&gt;</code> för att bekräfta att posten finns och värdvägen faktiskt innehåller en katalog.",
+    "noMountTitle": "Mount visas i pct config men inte i containern",
+    "noMountBody": "Bind monterar bara när containern börjar. Om du lade till fästet medan CT kördes, starta om det (<code>pct reboot &lt;ctid&gt;</code>). Om det redan har startats om och fortfarande saknas, kontrollera <code>pct config &lt;ctid&gt;</code> för att bekräfta att posten finns och värdvägen faktiskt innehåller en katalog.",
     "noWriteTitle": "Container kan se katalogen men kan inte skriva",
-    "noWriteBody": "Nästan alltid ett behörighetsproblem. För oprivilegierade behållare, kör skriptets tillstånd fix igen - värdkatalogens ACLs kan ha återställts av ett annat verktyg (rsync, återställa från backup, manuell <code>chmod</code>). För CIFS, dubbelkolla monteringsalternativen på värden: <code>findmnt /mnt/pve/cifs-…</code>, leta efter <code>uid=</code> / <code>gid=</code> / <code>file_mode=</code> värden.",
-    "alreadyTitle": "\"Denna väg används redan som en fästpunkt i denna behållare\"",
+    "noWriteBody": "Nästan alltid ett behörighetsproblem. För oprivilegierade containrar, kör skriptets tillstånd fix igen - värdkatalogens ACLs kan ha återställts av ett annat verktyg (rsync, återställa från backup, manuell <code>chmod</code>). För CIFS, dubbelkolla monteringsalternativen på värden: <code>findmnt /mnt/pve/cifs-…</code>, leta efter <code>uid=</code> / <code>gid=</code> / <code>file_mode=</code> värden.",
+    "alreadyTitle": "\"Denna väg används redan som en fästpunkt i denna container\"",
     "alreadyBody": "Du valde samma containersökväg som redan är kopplad till en annan värdkatalog. Välj antingen en annan containerbana eller ta bort den befintliga monteringspunkten först.",
     "nfsTitle": "NFS-åtkomst blockerad även efter applicering av värdfixen",
     "nfsIntro": "Din NFS-server squashing root eller alla anslutningar. Skriptet kan upptäcka detta (det försöker skriva en testfil från värden) och visar server-side-vägledning. Två vanliga serversidor för exporten:",
@@ -167,7 +167,7 @@
         "extraHref": "/docs/storage-share/lxc-samba-client",
         "extraLabel": "Samba klient i LXC",
         "joiner": " / ",
-        "tail": " — alternativet när du vill att CT själv ska montera aktien (kräver en privilegierad behållare)."
+        "tail": " — alternativet när du vill att CT själv ska montera aktien (kräver en privilegierad container)."
       }
     ]
   }

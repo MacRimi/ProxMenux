@@ -5,8 +5,8 @@
   },
   "header": {
     "title": "Enheter och acceleration",
-    "description": "GPU, NVIDIA, Coral, USB, FUSE och block enheter blir validerade inhemska Proxmox VE resurser av behållaren.",
-    "section": "Appar i OCI-hanteraren"
+    "description": "GPU, NVIDIA, Coral, USB, FUSE och block enheter blir validerade inhemska Proxmox VE resurser av containern.",
+    "section": "OCI manager Apps"
   },
   "sections": [
     {
@@ -14,7 +14,7 @@
       "title": "Enheten som programmet behöver, inte hela värden",
       "blocks": [
         {
-          "p": "En enhet som begärs av Compose-filen eller av applikationsprofilen blir en betong <code>devN</code>-post eller LXC-fäste. Be om en GPU, en USB-enhet eller en Coral gör inte behållaren privilegierad."
+          "p": "En enhet som begärs av Compose-filen eller av applikationsprofilen blir en betong <code>devN</code>-post eller LXC-fäste. Be om en GPU, en USB-enhet eller en Coral gör inte containern privilegierad."
         },
         {
           "flow": {
@@ -56,10 +56,10 @@
               [
                 "Katalogprofil",
                 "GPU, Coral, OpenCL, USB eller FUSE stöd ansökan faktiskt har",
-                "Endast de alternativ som valideras för den bilden erbjuds"
+                "Endast de alternativ som valideras för den avbildningen erbjuds"
               ],
               [
-                "Bild metadata och dokumentation",
+                "Avbildning metadata och dokumentation",
                 "VA-API, Selkies, LinuxServer mods eller NVIDIA runtime",
                 "Dokumenterade variabler och förberedelser läggs till"
               ],
@@ -105,7 +105,7 @@
               [
                 "AMD ROCm",
                 "Render nod, <code>/dev/kfd</code> och generationen beräkningsförare rapporter i <code>/sys/class/kfd/kfd/topology/nodes/*/properties</code>",
-                "En generation ROCm bild av programmet bär kärnor för, RDNA2 GPUs det namn och nyare, erbjuds som det är. De andra GPU:erna i dessa familjer, som Radeon 680M och 780M, erbjuds som experimentella och är aldrig det föreslagna alternativet: ROCm stöder dem inte officiellt, programmet presenterar dem som generationen av deras familj (<code>HSA_OVERRIDE_GFX_VERSION</code>) och installationsprogrammet begär bekräftelse innan den större bilden laddas ner. En äldre GPU, som den integrerade grafiken i en Ryzen 5000U, erbjuds inte och Immich håller erkännande på CPU"
+                "En generation ROCm avbildning av programmet bär kärnor för, RDNA2 GPUs det namn och nyare, erbjuds som det är. De andra GPU:erna i dessa familjer, som Radeon 680M och 780M, erbjuds som experimentella och är aldrig det föreslagna alternativet: ROCm stöder dem inte officiellt, programmet presenterar dem som generationen av deras familj (<code>HSA_OVERRIDE_GFX_VERSION</code>) och installationsprogrammet begär bekräftelse innan den större avbildningen laddas ner. En äldre GPU, som den integrerade grafiken i en Ryzen 5000U, erbjuds inte och Immich håller erkännande på CPU"
               ],
               [
                 "NVIDIA",
@@ -146,7 +146,7 @@
             "items": [
               {
                 "title": "Mallen erbjuder sina profiler",
-                "body": "Till exempel CPU endast, Intel/AMD VA-API, AMD OpenCL, Intel OpenCL eller NVIDIA. Alternativen hör till bilden, inte till en vanlig meny."
+                "body": "Till exempel CPU endast, Intel/AMD VA-API, AMD OpenCL, Intel OpenCL eller NVIDIA. Alternativen hör till avbildningen, inte till en vanlig meny."
               },
               {
                 "title": "En profil väljs",
@@ -166,7 +166,7 @@
               },
               {
                 "title": "Bifoga och testa",
-                "body": "<code>pct set</code> lägger till <code>devN</code> inträde och åtkomst kontrolleras sedan inuti LXC. LinuxServer bilder kontrolleras också som användare <code>abc</code>."
+                "body": "<code>pct set</code> lägger till <code>devN</code> inträde och åtkomst kontrolleras sedan inuti LXC. LinuxServer avbildningar kontrolleras också som användare <code>abc</code>."
               }
             ]
           }
@@ -207,7 +207,7 @@
     },
     {
       "id": "profiles",
-      "title": "Profiler en bild kan erbjuda",
+      "title": "Profiler en avbildning kan erbjuda",
       "blocks": [
         {
           "table": {
@@ -225,7 +225,7 @@
               [
                 "OpenCL",
                 "Gör nod, <code>/dev/kfd</code> när det behövs och den officiella mod",
-                "Bilden eller profilen dokumenterar den"
+                "Avbildningen eller profilen dokumenterar den"
               ],
               [
                 "NVIDIA",
@@ -287,7 +287,7 @@
         {
           "calloutInfo": {
             "title": "Docker runtime konfiguration är inte involverad",
-            "body": "Behållarna är infödda LXCs och ingen Docker daemon används, så <code>nvidia-ctk runtime configure --runtime=docker</code> spelar ingen roll: ProxMenux frågor <code>nvidia-container-cli</code> direkt och skriver LXC enheter och fästen. Kommandon och stödda plattformar upprätthålls i <toolkitLink>NVIDIA Container Toolkit installationsguide</toolkitLink>."
+            "body": "Containrarna är infödda LXCs och ingen Docker daemon används, så <code>nvidia-ctk runtime configure --runtime=docker</code> spelar ingen roll: ProxMenux frågor <code>nvidia-container-cli</code> direkt och skriver LXC enheter och fästen. Kommandon och stödda plattformar upprätthålls i <toolkitLink>NVIDIA Container Toolkit installationsguide</toolkitLink>."
           }
         },
         {
@@ -306,7 +306,7 @@
               {
                 "icon": "shield",
                 "title": "Läs-bara fästen",
-                "body": "Värdbiblioteken är monterade lätta istället för att kopieras i behållaren."
+                "body": "Värdbiblioteken är monterade lätta istället för att kopieras i containern."
               },
               {
                 "icon": "hardDrive",

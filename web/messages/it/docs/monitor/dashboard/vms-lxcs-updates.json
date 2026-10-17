@@ -63,7 +63,7 @@
     "lead": "Dopo che Docker è registrato sulla scheda App, il suo motore e l'inventario delle immagini appaiono all'interno della stessa sezione <strong>Docker</strong>.",
     "items": [
       "Il monitoraggio della versione Docker Engine è separato dal contatore del pacchetto OS e ha il suo pulsante di aggiornamento.",
-      "Contrassegnate immagini locali sono confrontate con il loro registro di sistema da digeribili immutabili. <strong>Check ora</strong> aggiorna questo inventario senza tirare immagini o riavviare contenitori.",
+      "Le immagini locali dotate di tag vengono confrontate con quelle del rispettivo registro tramite il digest immutabile. <strong>Controlla ora</strong> aggiorna questo inventario senza scaricare immagini né riavviare i container.",
       "I servizi completi sono aggiornati dal loro progetto dichiarato. Le immagini che appartengono allo stesso gruppo di servizi vengono gestite insieme in modo che il progetto non venga ricreato ripetutamente.",
       "Un contenitore standalone è ricreato dalla sua configurazione attuale. Il flusso protetto mantiene i dati di rollback e ripristina il contenitore precedente se la ricreazione fallisce.",
       "Ogni immagine può essere selezionata separatamente in aggiornamenti manuali, ingombranti e programmati, salvo dichiarate dipendenze Compose che devono seguire il loro servizio genitore."

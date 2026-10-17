@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Lokales Archivziel — tar.zst auf einem Dateisystem oder USB-Laufwerk | ProxMenux",
-    "description": "Das lokale Backup-Ziel schreibt ein einzelnes .tar.zst-Archiv in ein beliebiges beschreibbares Verzeichnis: eine interne Festplatte, einen Proxmox-Halterungspunkt, eine NFS-Freigabe oder ein USB-Laufwerk. Dokumentiert den Konfigurationsfluss, die USB-Erkennungs- und Montagelogik, die Sicherheitsüberprüfung gegen das Schreiben des Archivs in einen gesicherten Pfad und das Sidecar JSON, das die Datei identifiziert.",
+    "description": "Das lokale Sicherungsziel schreibt ein einzelnes .tar.zst-Archiv in ein beliebiges beschreibbares Verzeichnis: auf eine interne Festplatte, einen Proxmox-Mountpoint, eine NFS-Freigabe oder ein USB-Laufwerk. Diese Seite beschreibt die Einrichtung, das Erkennen und Einbinden von USB-Laufwerken, den Schutz vor dem Speichern des Archivs in einem selbst gesicherten Pfad und die zugehörige JSON-Datei zur Identifizierung der Sicherung.",
     "ogTitle": "ProxMenux Backup — Ziel des lokalen Archivs",
     "ogDescription": "Wie ProxMenux lokale Backups als .tar.zst-Archive schreibt und wie man das Zielverzeichnis oder das USB-Laufwerk konfiguriert.",
     "twitterTitle": "Lokales Backup-Ziel | ProxMenux",
@@ -9,7 +9,7 @@
   },
   "header": {
     "title": "Lokales Archiv",
-    "description": "Das lokale Ziel schreibt ein einzelnes komprimiertes Tar-Archiv in ein beliebiges beschreibbares Verzeichnis auf dem Host: eine interne Festplatte, eine NFS- oder SMB-Halterung oder ein USB-Laufwerk.",
+    "description": "Das lokale Sicherungsziel schreibt ein einzelnes komprimiertes tar-Archiv in ein beliebiges beschreibbares Verzeichnis auf dem Host: auf eine interne Festplatte, einen NFS- oder SMB-Mount oder ein USB-Laufwerk.",
     "section": "Sicherung und Wiederherstellung"
   },
   "intro": {

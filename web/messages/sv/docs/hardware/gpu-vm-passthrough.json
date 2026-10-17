@@ -30,7 +30,7 @@
     "title": "VM passthrough vs LXC delning - välj en per GPU",
     "body": "En GPU bunden till <code>vfio-pci</code> för VM genomgång kan inte samtidigt användas av värden eller en LXC. Om du har två GPU kan du ägna en till varje väg. Om du bara har en, välj:",
     "vmItem": "<strong>VM-rutten (denna sida):</strong> full hårdvaruåtkomst, men uteslutande för VM som äger GPU medan den körs.",
-    "lxcItem": "<strong>LXC-rutten (<lxcLink>Lägg till GPU till LXC</lxcLink>):</strong> delade med värden och andra behållare, bra för transkodning, ingen VFIO-magi behövs."
+    "lxcItem": "<strong>LXC-rutten (<lxcLink>Lägg till GPU till LXC</lxcLink>):</strong> delade med värden och andra containrar, bra för transkodning, ingen VFIO-magi behövs."
   },
   "running": {
     "heading": "Kör installatören",
@@ -138,7 +138,7 @@
     "code43Title": "Kod 43 i Windows (NVIDIA)",
     "code43Body": "KVM gömda argument inte tillämpas. Kontrollera <code>qm config &lt;vmid&gt; | grep -E \"cpu|args\"</code> - du bör se <code>hidden=1</code> och <code>hv_vendor_id=NV43FIX</code>. Om du saknas, kör skriptet och återvälj samma VM.",
     "amdResetTitle": "AMD GPU fungerar en gång, misslyckas på VM omstart",
-    "amdResetBody": "AMD återställer bug. Lösningar (i ordning): (1) starta om värden — GPU kommer att vara användbar igen för ytterligare en VM cykel; (f)2) installera <code>vendor-reset</code> DKMS modul och addera <code>softdep amdgpu pre: vendor-reset</code>; (3Inuti Windows, installera <em>RadeonResetBugFix</em> service.",
+    "amdResetBody": "AMD:s återställningsbugg. Prova i följande ordning: (1) starta om värden, så fungerar GPU:n under ytterligare en VM-cykel; (2) installera DKMS-modulen <code>vendor-reset</code> och lägg till <code>softdep amdgpu pre: vendor-reset</code>; (3) installera tjänsten <em>RadeonResetBugFix</em> i Windows.",
     "stuckBootTitle": "VM fastnade start / GPU inte upptäckt",
     "stuckBootBody": "Bekräfta VFIO faktiskt håller GPU på start: <code>lspci -nnk -d vendor:device</code> måste visa <code>Kernel driver in use: vfio-pci</code>. Om det fortfarande visar leverantörsdrivrutinen trädde svartlistan inte i kraft - kontrollera <code>/etc/modprobe.d/blacklist.conf</code> och <code>dmesg | grep vfio</code> och regenerera initramfs: <code>update-initramfs -u -k all</code> och starta om.",
     "darkTitle": "Värd konsol går mörkt efter omstart och jag kan inte SSH",
@@ -161,7 +161,7 @@
       {
         "label": "Lägg till GPU till LXC",
         "href": "/docs/hardware/igpu-acceleration-lxc",
-        "tail": " - alternativ modell: dela GPU med flera behållare istället för att dedikera den till en VM."
+        "tail": " - alternativ modell: dela GPU med flera containrar istället för att dedikera den till en VM."
       },
       {
         "label": "Switch GPU Mode (VM | LXC)",

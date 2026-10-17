@@ -1,15 +1,15 @@
 {
   "meta": {
-    "title": "Commandes de sauvegarde Proxmox — vzdump, qmrestore, pct restauration ProxMenux",
+    "title": "Commandes de sauvegarde Proxmox — vzdump, qmrestore, pct restore | ProxMenux",
     "description": "Référence des commandes de sauvegarde et de restauration Proxmox VE : vzdump pour les conteneurs VM et LXC, qmrestore pour les conteneurs VM, pct restore pour les conteneurs, sauvegardes programmées dans /etc/pve/jobs.cfg, scripts d'hameçonnage et exclusion des chemins.",
-    "ogTitle": "Commandes de sauvegarde Proxmox — vzdump, qmrestore, pct restaurer",
-    "ogDescription": "Référence des commandes de restauration vzdump, qmrestore et pct pour sauvegarder et restaurer les conteneurs VM Proxmox et LXC.",
+    "ogTitle": "Commandes de sauvegarde Proxmox — vzdump, qmrestore, pct restore",
+    "ogDescription": "Référence des commandes vzdump, qmrestore et pct restore pour sauvegarder et restaurer les VM et conteneurs LXC de Proxmox.",
     "twitterTitle": "Commandes de sauvegarde Proxmox ProxMenux",
-    "twitterDescription": "vzdump, qmrestore et pct restaurent les commandes pour sauvegarder et restaurer les VM et conteneurs Proxmox."
+    "twitterDescription": "Commandes vzdump, qmrestore et pct restore pour sauvegarder et restaurer les VM et conteneurs Proxmox."
   },
   "header": {
     "title": "Sauvegarde et restauration",
-    "description": "Référence sécurisée des commandes vzdump, qmrestore et pct restaure pour les workflows de sauvegarde Proxmox. Comprend la programmation, les options avancées comme les scripts de crochet / exclure les chemins / priorité d'E/S, et la gestion de fichiers de sauvegarde.",
+    "description": "Référence commentée des commandes vzdump, qmrestore et pct restore pour les sauvegardes Proxmox. Comprend la planification, les options avancées comme les hook scripts, les chemins à exclure et la priorité des E/S, ainsi que la gestion des fichiers de sauvegarde.",
     "section": "Aide et informations"
   },
   "intro": {

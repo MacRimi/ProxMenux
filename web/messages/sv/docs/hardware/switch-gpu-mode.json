@@ -5,7 +5,7 @@
   },
   "header": {
     "title": "Switch GPU Mode (VM | LXC)",
-    "description": "Anpassa en GPU som redan används - vända den från VM genomgång till LXC delning eller tvärtom. ProxMenux hanterar alla värd-side bindande förändringar (vfio.conf, chaufför svartlista, moduler, initramfer) och erbjuder en ren politik för varje VM eller LXC som för närvarande använder GPU, så växeln lämnar inte bruten konfig bakom.",
+    "description": "Ändra hur en GPU som redan används tilldelas: byt från passthrough till en VM till delning med LXC, eller tvärtom. ProxMenux hanterar ändringarna på värden, inklusive vfio.conf, drivrutinsblockering, moduler och initramfs. För varje VM eller LXC som använder GPU:n väljer du hur tilldelningen ska hanteras, så att bytet inte lämnar en trasig konfiguration.",
     "section": "Hårdvara: GPU:er och Coral-TPU"
   },
   "intro": {

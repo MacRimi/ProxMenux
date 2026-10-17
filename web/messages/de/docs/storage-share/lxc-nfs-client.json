@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "NFS Client in LXC | ProxMenux Dokumentation",
-    "description": "Mount NFS teilt sich direkt aus einem Proxmox LXC-Container mit ProxMenux. Autoinstalliert nfs-common, unterstützt Auto-Discovery im LAN, persistente Halterungen über /etc/fstab und sicheres Bootverhalten. Erfordert einen privilegierten Container.",
+    "description": "Mount NFS teilt sich direkt aus einem Proxmox LXC-Container mit ProxMenux. Autoinstalliert nfs-common, unterstützt Auto-Discovery im LAN, persistente Mounts über /etc/fstab und sicheres Bootverhalten. Erfordert einen privilegierten Container.",
     "ogTitle": "NFS Client in LXC | ProxMenux Dokumentation",
     "ogDescription": "Befestigen Sie NFS-Anteile aus einem privilegierten LXC-Container. Auto-Discovery, /etc/fstab Persistenz, sichere Boot-Standards."
   },
@@ -25,8 +25,8 @@
     "diagramCtDetail": "/mnt/data\nmount.nfs im CT",
     "diagramArrow": "NFS",
     "twoWaysTitle": "Zwei Möglichkeiten, einem CT NFS Zugang zu gewähren - wählen Sie einen",
-    "twoWaysBind": "<strong>Bind-Halterung über host</strong> (<mountLink>LXC Mount Manager</mountLink>): Host-Halterung des NFS einmal, jeder CT bindet den gleichen Pfad. Funktioniert mit nicht privilegierten CTs. Empfohlen, wenn mehrere CTs den gleichen Anteil benötigen.",
-    "twoWaysDirect": "<strong>Direct NFS Halterung im CT</strong> (diese Seite): Der CT montiert den NFS selbst. Erfordert Privilegien. Nützlich, wenn der CT seine Verbindung / Anmeldeinformationen besitzen muss, oder für Setups, bei denen jeder CT mit einem anderen Server spricht."
+    "twoWaysBind": "<strong>Bind-Mount über den Host</strong> (<mountLink>LXC Mount Manager</mountLink>): Der Host bindet die NFS-Freigabe einmal ein; jeder CT erhält denselben Pfad als Bind-Mount. Funktioniert mit unprivilegierten CTs und empfiehlt sich, wenn mehrere CTs dieselbe Freigabe benötigen.",
+    "twoWaysDirect": "<strong>Direct NFS Mount im CT</strong> (diese Seite): Der CT montiert den NFS selbst. Erfordert Privilegien. Nützlich, wenn der CT seine Verbindung / Anmeldeinformationen besitzen muss, oder für Setups, bei denen jeder CT mit einem anderen Server spricht."
   },
   "opening": {
     "heading": "Öffnen des Tools",
@@ -38,7 +38,7 @@
   },
   "fstabFlags": {
     "heading": "Warum diese Fstab Flags",
-    "intro": "Für permanente Halterungen fügt das Skript drei Flags hinzu, die über die Standard-NFS-Optionen hinausgehen: <code>_netdev,x-systemd.automount,noauto</code>. Jeder löst ein echtes Boot-Time-Problem:",
+    "intro": "Für permanente Mounts fügt das Skript drei Flags hinzu, die über die Standard-NFS-Optionen hinausgehen: <code>_netdev,x-systemd.automount,noauto</code>. Jeder löst ein echtes Boot-Time-Problem:",
     "headerFlag": "Flagge",
     "headerEffect": "Was es tut",
     "rows": [
@@ -48,11 +48,11 @@
       },
       {
         "flag": "x-systemd.automount",
-        "effectRich": "Erstellt eine automatische systemd-Einheit: Die Halterung erfolgt nur beim ersten Zugriff auf <code>/mnt/&lt;path&gt;</code>. NFS-Server, der beim Booten nicht erreichbar ist, stoppt den CT nicht."
+        "effectRich": "Erstellt eine automatische systemd-Einheit: Die Mount erfolgt nur beim ersten Zugriff auf <code>/mnt/&lt;path&gt;</code>. NFS-Server, der beim Booten nicht erreichbar ist, stoppt den CT nicht."
       },
       {
         "flag": "noauto",
-        "effect": "Überspringen Sie den eifrigen Mount beim Boot. Kombiniert mit der Automount-Einheit oben wird die Halterung beim ersten Zugriff faul aufgebaut."
+        "effect": "Überspringen Sie den eifrigen Mount beim Boot. Kombiniert mit der Automount-Einheit oben wird die Mount beim ersten Zugriff faul aufgebaut."
       }
     ],
     "netEffectTitle": "Nettoeffekt",
@@ -70,11 +70,11 @@
     "heading": "Unmount NFS Anteil",
     "body": "Kombiniert die Live-Mounts und die fstab-Einträge in einer Liste, lässt Sie einen auswählen und <strong>entfernt die entsprechende Zeile aus <code>/etc/fstab</code></strong>. Das Skript führt <em>nicht</em> <code>umount</code> auf dem Live-Mount aus – stattdessen teilt es Ihnen mit, dass ein CT Neustart erforderlich ist, damit das Unmounten wirksam wird.",
     "warnTitle": "Das Skript entfernt fstab-Einträge, nicht Live-Mounts",
-    "warnBody": "Dies ist eine bewusste Designentscheidung: <code>umount</code> auf einer Besetzt-Halterung schlägt mit \"Gerät beschäftigt\" fehl, wenn etwas im CT es noch verwendet. Das Entfernen des Fstab-Eingangs garantiert, dass die Halterung beim nächsten CT-Start sauber verschwindet. Wenn Sie möchten, dass die Halterung <em>now</em> verschwunden ist und Sie sicher sind, dass sie nicht verwendet wird, führen Sie <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> nach Beendigung des Skripts von Hand aus."
+    "warnBody": "Dies ist eine bewusste Entscheidung: <code>umount</code> schlägt bei einem noch verwendeten Mount mit „device busy“ fehl, wenn ein Prozess im CT darauf zugreift. Ohne den fstab-Eintrag wird der Mount beim nächsten CT-Start nicht erneut eingerichtet. Soll er <em>sofort</em> verschwinden und sind Sie sicher, dass nichts mehr darauf zugreift, führen Sie nach Abschluss des Skripts <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> manuell aus."
   },
   "test": {
     "heading": "NFS-Verbindung testen",
-    "body": "Diagnosepass innerhalb des CT: bestätigt, dass <code>nfs-common</code> installiert ist, <code>rpcbind</code> läuft, listet aktuelle NFS-Halterungen auf, iteriert dann über jeden NFS-Server, auf den in fstab verwiesen wird, und überprüft Ping → Port 2049 → <code>showmount -e</code>. Guter erster Stopp, wenn ein permanentes Reittier nicht hochkommt."
+    "body": "Diagnose im CT: Prüft, ob <code>nfs-common</code> installiert ist und <code>rpcbind</code> läuft, und listet die aktuellen NFS-Mounts auf. Anschließend wird für jeden in fstab eingetragenen NFS-Server die Folge Ping → Port 2049 → <code>showmount -e</code> geprüft. Ein sinnvoller erster Schritt, wenn ein dauerhafter Mount nicht verfügbar wird."
   },
   "troubleshoot": {
     "heading": "Fehlerbehebung",

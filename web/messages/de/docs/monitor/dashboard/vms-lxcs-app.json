@@ -128,7 +128,7 @@
       "<strong>GitHub-Repository</strong>: neueste Version oder Tag aus einem öffentlichen <code>owner/name</code>-Repository.",
       "<strong>HTTP JSON</strong>: ein öffentlicher Endpunkt plus ein gepunkteter Pfad wie <code>data.version</code> oder <code>releases[0].tag_name</code>.",
       "<strong>Docker Hub</strong>: versionierte Tags, die durch einen regulären Ausdruck gefiltert werden. Eine Live-Vorschau zeigt echte übereinstimmende Tags, bevor der Datensatz gespeichert wird.",
-      "Tags wie <code>latest</code>, <code>stable</code> oder <code>lts</code> enthalten keine Version. Verfolgen Sie diese Bilder, indem Sie stattdessen aus Docker-Bildaktualisierungen verdauen."
+      "Tags wie <code>latest</code>, <code>stable</code> oder <code>lts</code> enthalten keine Version. Verfolgen Sie diese Images, indem Sie stattdessen aus Docker-Bildaktualisierungen verdauen."
     ],
     "regexHeading": "Schreiben des Capture-Ausdrucks",
     "regexLead": "Ein regulärer Detektorausdruck muss die Version in seiner <strong>first capture group</strong> zurückgeben.",

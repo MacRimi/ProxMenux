@@ -91,7 +91,7 @@
       {
         "href": "/docs/disk-manager/import-disk-lxc",
         "label": "Importera disk till LXC",
-        "tail": " - motsvarande flöde för LXC behållare."
+        "tail": " - motsvarande flöde för LXC containrar."
       },
       {
         "href": "/docs/disk-manager/add-controller-nvme-vm",

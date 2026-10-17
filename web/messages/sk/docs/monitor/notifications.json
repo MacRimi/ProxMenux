@@ -158,7 +158,7 @@
     "imageCaption": "E-mail: SMTP host / port / TLS režim, voliteľné užívateľské meno + heslo, adresa odosielateľa, čiarkovo oddeľovaní príjemcovia a predpona predmetu, aby sa upozornenia dali ľahko filtrovať do schránky.",
     "appNote": "Ak používate osobný Gmail alebo Microsoft 365 účet, pole hesla nemôže byť váš bežný účet heslo <strong>heslo aplikácie</strong> generované špeciálne pre klientov tretích strán. Tieto dva prúdy sú nižšie.",
     "gmailTitle": "Heslo aplikácie Gmail",
-    "gmailIntro": "Heslá aplikácie Gmail vyžadujú, aby <strong>02-krok overenie</strong> bol aktívny na účte Google. Ak to nie je, <em>App hesla</em> stránka nebude existovať.",
+    "gmailIntro": "Heslá aplikácií Gmail vyžadujú zapnuté <strong>dvojstupňové overenie (2-Step Verification)</strong> v účte Google. Bez neho stránka <em>Heslá aplikácií</em> nebude dostupná.",
     "gmailItems": [
       "Otvorte <a>myaccount.google.com/security</a> a zapnite <em>2-Step Verification</em> ak ešte nie je zapnutý.",
       "Prejsť na <a>myaccount.google.com/apppwords</a>.",

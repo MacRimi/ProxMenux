@@ -149,7 +149,7 @@
       {
         "title": "Čakať na dokončenie stavby",
         "img": "/iso-creator/end-uupdump-iso-creator.png",
-        "caption": "Zostrojiť dokončené",
+        "caption": "Vytváranie je dokončené — obraz ISO je pripravený v úložisku ISO Proxmox",
         "bodyRich": "Konzola zobrazuje priebeh aria2 a potom výstup prevodníka. Keď skončí, ISO pristane v zistenom úložisku ISO Proxmox a je pripravené na výber z <strong>Vytvoriť VM → Systém Windows → Inštalovať pomocou ISO z UUP Dump</strong>."
       }
     ]

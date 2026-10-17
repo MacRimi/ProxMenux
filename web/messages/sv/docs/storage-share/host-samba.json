@@ -1,18 +1,18 @@
 {
   "meta": {
     "title": "Värd: Mount Samba dela på värd | ProxMenux Dokumentation",
-    "description": "Montera en extern Samba / CIFS-andel på Proxmox-värden - antingen som Proxmox-lagring (pvesm addera cifs), som en vanlig värd fstab-fäste med öppen uid / gig / file_mode (Inte synlig i Datacenter > Lagring), eller båda. Fstab-metoden öppnar behörigheter så att en oprivilegierad LXC-bindning kan läsa / skriva utan några ändringar i behållaren.",
+    "description": "Montera en extern Samba / CIFS-andel på Proxmox-värden - antingen som Proxmox-lagring (pvesm addera cifs), som en vanlig värd fstab-fäste med öppen uid / gig / file_mode (Inte synlig i Datacenter > Lagring), eller båda. Fstab-metoden öppnar behörigheter så att en oprivilegierad LXC-bindning kan läsa / skriva utan några ändringar i containern.",
     "ogTitle": "Värd: Mount Samba dela på värd | ProxMenux Dokumentation",
     "ogDescription": "Montera en extern Samba / CIFS-andel på Proxmox-värden via pvesm, fstab med öppna perms (ideal för LXC bindmonteringar), eller båda."
   },
   "header": {
     "title": "Värd: Mount Samba dela på värd",
-    "description": "Montera en extern Samba (SMB / CIFS) andel - från en NAS, en Windows-box, en TrueNAS SMB export - på Proxmox värd. Välj en eller båda metoderna: registrera den som Proxmox-lagring (synlig i Datacenter > Lagring) och / eller lägg till en vanlig /etc/fstab-fäste på en väg du väljer, med öppen uid / gid / file_mode så oprivilegierade LXCs kan binda-mount och skriva utan några ändringar i behållaren.",
+    "description": "Montera en extern Samba (SMB / CIFS) andel - från en NAS, en Windows-box, en TrueNAS SMB export - på Proxmox värd. Välj en eller båda metoderna: registrera den som Proxmox-lagring (synlig i Datacenter > Lagring) och / eller lägg till en vanlig /etc/fstab-fäste på en väg du väljer, med öppen uid / gid / file_mode så oprivilegierade LXCs kan binda-mount och skriva utan några ändringar i containern.",
     "section": "Storage & Share · Värd"
   },
   "intro": {
     "title": "Vad detta gör",
-    "body": "ProxMenux erbjuder två monteringsmetoder för alla Samba-aktier: <strong>(1) Proxmox förvaring</strong> via via via <code>pvesm add cifs</code> synlig i Datacenter > Lagring, monterad på <code>/mnt/pve/&lt;id&gt;</code>credentials lagras krypterad i <code>/etc/pve/priv/storage/&lt;id&gt;.pw</code>; <strong>(2Värd fstab montering</strong> På en väg du väljer - ihållande via <code>/etc/fstab</code>, monterad med <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> Så oprivilegierad LXC bind-mounts kan skriva, referenser som lagras i en root-bara <code>/etc/samba/credentials/</code> fil (lösenord aldrig i <code>fstab</code>). Du kan köra en metod, den andra, eller båda."
+    "body": "ProxMenux erbjuder två sätt att montera en Samba-resurs: <strong>(1) Proxmox-lagring</strong> via <code>pvesm add cifs</code>, synlig i Datacenter > Storage och monterad på <code>/mnt/pve/&lt;id&gt;</code>. Lösenordet sparas i klartext i <code>/etc/pve/priv/storage/&lt;id&gt;.pw</code>, skyddat av den privata katalog som bara root kan komma åt. Det är åtkomstkontroll, inte kryptering. <strong>(2) fstab-montering på värden</strong> på en vald sökväg, beständig via <code>/etc/fstab</code> med <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> så att oprivilegierade LXC-containrar kan skriva via bind-monteringar. Uppgifterna finns i en fil som bara root kan läsa under <code>/etc/samba/credentials/</code>, aldrig direkt i <code>fstab</code>. Du kan använda endera metoden eller båda."
   },
   "opening": {
     "heading": "Öppna verktyget",
@@ -110,7 +110,7 @@
       "Kör <code>systemctl daemon-reload</code> så systemd plockar upp den nya fstab inträde."
     ],
     "lxcTitle": "Använda fstab montering från en oprivilegierad LXC",
-    "lxcBody": "Eftersom CIFS-klienten tillämpar <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> ägs varje fil i montern av värd UID 0 med läge 0777. En oprivilegierad LXC-bindmonteringsväg ser \"andra\" perms på varje post (CT-rot = värd UID 100000 = andra på värdfilsystemet), så läser och skriver lyckas. <strong>Inga ändringar görs inuti behållaren</strong> - ingen <code>chown</code> i CT, ingen gruppuppsättning, inget modifierat i <code>/etc/lxc</code> bortom den enda <code>mp</code>-bindningslinjen. Skriptet trycker exakt <code>pct set</code> kommandot i slutet, eller använder <mountLink>LXC Mount Manager</mountLink> för att fästa vägen.",
+    "lxcBody": "Eftersom CIFS-klienten tillämpar <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> ägs varje fil i montern av värd UID 0 med läge 0777. En oprivilegierad LXC-bindmonteringsväg ser \"andra\" perms på varje post (CT-rot = värd UID 100000 = andra på värdfilsystemet), så läser och skriver lyckas. <strong>Inga ändringar görs inuti containern</strong> - ingen <code>chown</code> i CT, ingen gruppuppsättning, inget modifierat i <code>/etc/lxc</code> bortom den enda <code>mp</code>-bindningslinjen. Skriptet trycker exakt <code>pct set</code> kommandot i slutet, eller använder <mountLink>LXC Mount Manager</mountLink> för att fästa vägen.",
     "noUiTitle": "Fstab montering är inte en Proxmox lagring",
     "noUiBody": "Värd fstab montering är osynlig för Proxmox webb UI - genom design. Det visas inte i <em>Datacenter > Storage</em>, du kan inte välja det i VM / CT skapare, och Proxmox backup jobb kan inte rikta det. Det är bara en värd filsystem väg. Om du också vill ha UI integration, markera <em>both</em> metoder i väljaren."
   },
@@ -160,12 +160,12 @@
       {
         "href": "/docs/storage-share/lxc-mount-points",
         "label": "Monteringshanterare för LXC",
-        "tailRich": " - bind-mount fstab-bara vägen <code>/mnt/&lt;path&gt;</code> i en eller flera behållare."
+        "tailRich": " - bind-mount fstab-bara vägen <code>/mnt/&lt;path&gt;</code> i en eller flera containrar."
       },
       {
         "href": "/docs/storage-share/lxc-samba-client",
         "label": "Samba klient i LXC",
-        "tail": " — alternativ: montera Samba direkt inifrån en privilegierad behållare (skippar värden)."
+        "tail": " — alternativ: montera Samba direkt inifrån en privilegierad container (skippar värden)."
       }
     ]
   }

@@ -2,9 +2,9 @@
   "meta": {
     "title": "Glossário — Cópia de segurança e restauração ProxMenux",
     "description": "Glossário de termos e definições para o ProxMenux backup e restaurar pilha: criptografia, arquivo de chaves, senha, envelope de recuperação, PBS, pedaços, rootfs, manifesto, corredor e hidratação cross-kernel.",
-    "ogTitle": "Backup e Restaurar glossário ProxMenux",
+    "ogTitle": "Glossário das cópias de segurança e do restauro | ProxMenux",
     "ogDescription": "Limpar definições para o vocabulário usado na documentação de backup e restauração do ProxMenux.",
-    "twitterTitle": "Backup e Restaurar glossário ProxMenux",
+    "twitterTitle": "Glossário das cópias de segurança e do restauro | ProxMenux",
     "twitterDescription": "Senha, arquivo de chaves, envelope de recuperação, rootfs, manifesto, PBS, blocos — todos definidos em um só lugar."
   },
   "header": {
@@ -38,7 +38,7 @@
         {
           "id": "sobre-recuperacion",
           "term": "Envelope de recuperação",
-          "def": "A <a href=\"#clave-cifrado\">arquivo de teclas</a> envolto numa camada extra: está encriptado com o <a href=\"#passphrase-recuperacion\">frase- senha da recuperação</a> usando <a href=\"#aes-256-cbc\">AES...256- CBC</a> e <a href=\"#pbkdf2\">PBKDF2</a> antes de deixar o hospedeiro. É para isso que é enviado PBS como a <code>-keyrecovery</code> grupo. Sem a frase- senha, o envelope é opaco: PBS não revela o ficheiro de chaves."
+          "def": "O <a href=\"#clave-cifrado\">ficheiro de chaves</a> protegido por uma camada adicional: é encriptado com a <a href=\"#passphrase-recuperacion\">frase-passe de recuperação</a> através de <a href=\"#aes-256-cbc\">AES-256-CBC</a> e <a href=\"#pbkdf2\">PBKDF2</a> antes de sair do host. É esta versão protegida que é enviada para o PBS no grupo <code>-keyrecovery</code>. Sem a frase-passe, o conteúdo permanece inacessível: descarregá-lo do PBS não revela o ficheiro de chaves."
         },
         {
           "id": "cifrado-cliente",

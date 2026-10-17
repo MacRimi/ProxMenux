@@ -24,7 +24,7 @@
     "heading": "Ce que ProxMenux fonctionne en haut — vérifié par rapport au script",
     "intro": "Cette option exécute <strong>exactement</strong> la commande apt ci-dessus, enveloppée avec l'hygiène repo, DKMS reconstruction pour les pilotes gérés ProxMenux et le nettoyage post-mise à niveau le guide officiel de mise à niveau recommande également. Tout au-dessous des cartes 1:1 à <code>scripts/utilities/proxmox_update.sh</code> et le seul travailleur sûr <code>scripts/global/update-pve-safe.sh</code> — rien n'implique, chaque étape est dans le code:",
     "items": [
-      "<strong>Détecte la version majeure de PVE</strong> à l'intérieur du travailleur (<code>pveversion | grep -oP ''pve-manager/\\K[0-9]+''</code>) et adapte les URL de base Proxmox / Debian repo (ver de livre sur PVE 8, trixie sur PVE 9). Il n'y a aucun fan-out pour les scripts de travailleurs per-version — un seul travailleur sécuritaire gère les deux.",
+      "<strong>Détecte la version majeure de PVE</strong> dans le script d’exécution (<code>pveversion | grep -oP ''pve-manager/\\K[0-9]+''</code>) et adapte les URL des dépôts Proxmox / Debian : bookworm pour PVE 8, trixie pour PVE 9. Il n’y a pas de script distinct par version : un seul script sécurisé gère les deux.",
       "<strong>Garde les dépôts configurés.</strong> <code>ensure_repositories</code> lit les dépôts via le dépôt Proxmox API, ainsi que le statut d'abonnement. Un hôte avec un abonnement actif, ou celui qui utilise déjà le dépôt sans abonnement ou test, reste inchangé. Un hôte sans abonnement actif dont seul le dépôt Proxmox est Enterprise est demandé s'il faut passer à la non-abonnement ; le déclin arrête la mise à jour sans changement de source.",
       "<strong>Run la mise à jour non-interactive</strong> avec <code>DEBIAN_FRONTEND=noninteractive</code> et <code>--force-confdef --force-confold</code> — si un fichier de configuration que vous avez déjà modifié a également changé en amont, votre version reste en place. Pas d'écrasement silencieux des configs personnalisés.",
       "<strong>Skips forçant les utilitaires optionnels.</strong> Le travailleur sûr ne pousse pas <code>zfsutils-linux</code>, <code>chrony</code>, <code>ifupdown2</code> ou des paquets similaires sur l'hôte — une installation Proxmox qui a choisi de sortir de l'un d'entre eux garde son choix. Les paquets manquants sont mis en évidence par les flux d'installation de niveau supérieur, et non par le chemin de mise à jour.",
@@ -47,7 +47,7 @@
     "nodes": {
       "source": {
         "label": "proxmox_update.sh",
-        "detail": "pveversion\n-oP ''pve-manager/\\K[0-9]+'"
+        "detail": "pveversion |\ngrep -oP ''pve-manager/\\K[0-9]+''"
       },
       "bridge": {
         "label": "Un seul travailleur sûr",

@@ -1,15 +1,15 @@
 {
   "meta": {
-    "title": "Proxmox Backup Commands - vzdump, qmrestore, pct restaurering | ProxMenux",
-    "description": "Referens av Proxmox VE backup och återställa kommandon: vzdump för VMs och LXC behållare, qmrestore för VMs, pct restaurering för behållare, schemalagda säkerhetskopior i /etc/pve/jobs.cfg, krokskript och utesluta vägar.",
-    "ogTitle": "Proxmox Backup Commands - vzdump, qmrestore, pct restaurering",
-    "ogDescription": "Referens av vzdump, qmrestore och pct återställa kommandon för att säkerhetskopiera och återställa Proxmox VMs och LXC behållare.",
+    "title": "Proxmox-kommandon för säkerhetskopiering — vzdump, qmrestore, pct restore | ProxMenux",
+    "description": "Referens för säkerhetskopiering och återställning i Proxmox VE: vzdump för VM:ar och LXC-containrar, qmrestore för VM:ar, pct restore för containrar, schemalagda säkerhetskopior i /etc/pve/jobs.cfg, hookskript och sökvägar som ska undantas.",
+    "ogTitle": "Proxmox-kommandon för säkerhetskopiering — vzdump, qmrestore, pct restore",
+    "ogDescription": "Referens för vzdump, qmrestore och pct restore vid säkerhetskopiering och återställning av Proxmox-VM:ar och LXC-containrar.",
     "twitterTitle": "Proxmox Backup kommandon | ProxMenux",
-    "twitterDescription": "vzdump, qmrestore och pct återställa kommandon för att säkerhetskopiera och återställa Proxmox VM och behållare."
+    "twitterDescription": "Kommandona vzdump, qmrestore och pct restore för säkerhetskopiering och återställning av Proxmox-VM:ar och containrar."
   },
   "header": {
     "title": "Backup och återställ",
-    "description": "Curated referens av vzdump, qmrestore och pct återställa kommandon för Proxmox backup arbetsflöden. Inkluderar schemaläggning, avancerade alternativ som krokskript / utesluta vägar / I / O-prioritet och backup-filhantering.",
+    "description": "Kommenterad referens för vzdump, qmrestore och pct restore i Proxmox arbetsflöden för säkerhetskopiering. Omfattar schemaläggning, avancerade alternativ som hookskript, undantagna sökvägar och I/O-prioritet samt hantering av säkerhetskopieringsfiler.",
     "section": "Hjälp och info"
   },
   "intro": {
@@ -42,7 +42,7 @@
         },
         {
           "command": "vzdump --all",
-          "description": "Säkerhetskopiera alla VM och behållare"
+          "description": "Säkerhetskopiera alla VM och containrar"
         },
         {
           "command": "vzdump --exclude <vmid1>,<vmid2>",
@@ -100,11 +100,11 @@
         },
         {
           "command": "pct restore <vmid> <backup-file>",
-          "description": "Återställ behållare från backup"
+          "description": "Återställ container från backup"
         },
         {
           "command": "pct restore <vmid> <backup-file> --storage <storage>",
-          "description": "Återställ behållare till specifik lagring"
+          "description": "Återställ container till specifik lagring"
         },
         {
           "command": "pct restore <vmid> <backup-file> --rootfs <storage>",
@@ -210,7 +210,7 @@
   ],
   "testRestores": {
     "title": "Testa dina restaureringar",
-    "bodyRich": "En backup du aldrig har restaurerat är inte en backup. Periodiskt plocka en backup, återställa den till ett test VMID med <code>qmrestore --unique</code>, starta den resulterande VM och bekräfta innehållet är intakt. Samma idé för behållare via <code>pct restore</code>."
+    "bodyRich": "En backup du aldrig har restaurerat är inte en backup. Periodiskt plocka en backup, återställa den till ett test VMID med <code>qmrestore --unique</code>, starta den resulterande VM och bekräfta innehållet är intakt. Samma idé för containrar via <code>pct restore</code>."
   },
   "related": {
     "heading": "Relaterad",

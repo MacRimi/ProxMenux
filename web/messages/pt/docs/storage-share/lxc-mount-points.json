@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "LXC Mount Points (Host ↔ Container) □ ProxMenux Documentação",
-    "description": "O gestor de montagem LXC — aglutinar-montar qualquer diretório host em um ou mais containers LXC através do conjunto pct -mpN. Lida com peculiaridades de permissão de contêineres sem privilégios, corrige as montagens CIFS / NFS existentes no lado do host e nunca modifica nada dentro do contêiner.",
+    "description": "O LXC Mount Manager disponibiliza um diretório do host num ou mais contentores LXC por bind mount com pct set -mpN. Trata das particularidades dos contentores sem privilégios, corrige montagens CIFS e NFS no host e não altera nada dentro do contentor.",
     "ogTitle": "LXC Mount Points (Host ↔ Container) □ ProxMenux Documentação",
     "ogDescription": "Diretórios de host de montagem em recipientes LXC. Lida com mapeamento de UID sem privilégios pragmático, corrige o acesso CIFS / NFS no lado do host."
   },
   "header": {
     "title": "Pontos de montagem LXC (Host ↔ Container)",
-    "description": "A principal ferramenta para compartilhar pastas entre o host Proxmox e os recipientes LXC. O Bind-mounts qualquer diretório host em um ou mais containers usando o conjunto pct nativo do Proxmox -mpN. O smart bit: resolve as dores de cabeça de permissão de contêineres não privilegiados do lado do hospedeiro — nunca modifica nada dentro do contêiner.",
+    "description": "A ferramenta principal para partilhar pastas entre o host Proxmox e os contentores LXC. Disponibiliza um diretório do host num ou mais contentores por bind mount com a sintaxe nativa pct set -mpN. Resolve as particularidades dos privilégios no lado do host, sem alterar nada dentro dos contentores.",
     "section": "Armazenamento e Compartilhamento · LXC"
   },
   "intro": {
@@ -129,7 +129,7 @@
   },
   "troubleshoot": {
     "heading": "Resolução de Problemas",
-    "noMountTitle": "A montagem aparece na configuração do pct, mas não dentro do recipiente",
+    "noMountTitle": "A montagem aparece em pct config, mas não dentro do contentor",
     "noMountBody": "As montagens de ligação só se ligam quando o contentor começa. Se você adicionou a montagem enquanto o CT estava em execução, reinicie-a (<code>pct reboot &lt;ctid&gt;</code>). Se já estiver reiniciado e ainda estiver em falta, verifique <code>pct config &lt;ctid&gt;</code> para confirmar que o item existe e o caminho da máquina contém um diretório.",
     "noWriteTitle": "Container pode ver o diretório, mas não pode escrever",
     "noWriteBody": "Quase sempre uma questão de permissões. Para contêineres não privilegiados, execute a correção de permissão do script novamente — os ACLs do diretório host podem ter sido reiniciados por outra ferramenta (rsync, restaure from backup, manual <code>chmod</code>). Para o CIFS, verifique novamente as opções de montagem no host: <code>findmnt /mnt/pve/cifs-…</code>, procure por valores <code>uid=</code> / <code>gid=</code> / <code>file_mode=</code>.",

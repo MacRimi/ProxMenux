@@ -12,7 +12,7 @@
   },
   "intro": {
     "calloutTitle": "Observera",
-    "calloutBody": "Denna guide använder ett externt gemenskapskript för att starta Kodi LXC. GPU-sidan av installationen (passerar värden iGPU i behållaren) omfattas också av ProxMenux automatiserat flöde: <strong>GPUs och Coral-TPU → Lägg till GPU till LXC</strong> i ProxMenux-menyn - hanterar <code>/dev/dri</code>-trådarna + installera inuti CT. Skriptet nedanför dessutom bootstraps Kodi själv och autostart på <code>tty7</code>. Använd den om du vill ha en nyckelfärdig media-center LXC; använd <gpuLink>ProxMenux-flöde</gpuLink> om du bara behöver GPU-åtkomst för en CT du ställer in för hand.",
+    "calloutBody": "Denna guide använder ett externt gemenskapskript för att starta Kodi LXC. GPU-sidan av installationen (passerar värden iGPU i containern) omfattas också av ProxMenux automatiserat flöde: <strong>GPUs och Coral-TPU → Lägg till GPU till LXC</strong> i ProxMenux-menyn - hanterar <code>/dev/dri</code>-trådarna + installera inuti CT. Skriptet nedanför dessutom bootstraps Kodi själv och autostart på <code>tty7</code>. Använd den om du vill ha en nyckelfärdig media-center LXC; använd <gpuLink>ProxMenux-flöde</gpuLink> om du bara behöver GPU-åtkomst för en CT du ställer in för hand.",
     "credit": "Original Kodi LXC skript skapat av <authorLink>mrrudy</authorLink>.",
     "stepsTitle": "Vad du ska göra",
     "steps": [
@@ -32,22 +32,22 @@
     "body": "Inmatningsenheter lever under <code>/dev/input/</code> på värden. Identifiera huvudnumret:",
     "listCode": "ls -l /dev/input",
     "imageAlt": "Input-enheter lista",
-    "afterList": "Ta första kolumnnummer (i exemplet: <code>13</code>). Stoppa Kodi LXC, sedan redigera sin konfig (ersätt <code>'<'CTID'>'</code> med behållaren ID - till exempel <code>102</code>):",
+    "afterList": "Ta första kolumnnummer (i exemplet: <code>13</code>). Stoppa Kodi LXC, sedan redigera sin konfig (ersätt <code>'<'CTID'>'</code> med containern ID - till exempel <code>102</code>):",
     "editCode": "nano /etc/pve/lxc/'<'CTID'>'.conf",
     "addLines": "Lägg till (justera <code>13</code> till vad du såg på <strong>your</strong> värd):",
     "configCode": "lxc.cgroup2.devices.allow = c 13:* rwm\nlxc.mount.entry: /dev/input dev/input none bind,optional,create=dir",
     "imageConfigAlt": "LXC konfiguration",
     "save": "Spara (<code>Ctrl+X</code>) och starta om <strong>only container</strong> - inget behov av att starta om hela Proxmox-värden:",
-    "restartCode": "pct restart '<'CTID'>'",
+    "restartCode": "pct reboot '<'CTID'>'",
     "plug": "Anslut i tangentbordet / musen / kontrollern och Kodi ska svara på det."
   },
   "updateKodi": {
     "heading": "3. (Optional) Update Kodi till den senaste utgåvan",
     "calloutTitle": "Viktig",
-    "calloutBody": "Team-xbmc PPA är <strong>Ubuntu-only</strong>. Om Kodi LXC är baserat på en Debian mall, kommer <code>add-apt-repository</code> inte att vara tillgänglig och PPA kommer inte att fungera. Mrrudy script standarder till en Ubuntu mall, så detta bör normalt tillämpas. För att verifiera: <code>cat /etc/os-release</code> inuti behållaren - leta efter <code>NAME=\"Ubuntu\"</code>.",
-    "body": "Inne i behållaren (<code>pct enter '<'CTID'>'</code>):",
+    "calloutBody": "Team-xbmc PPA är <strong>Ubuntu-only</strong>. Om Kodi LXC är baserat på en Debian mall, kommer <code>add-apt-repository</code> inte att vara tillgänglig och PPA kommer inte att fungera. Mrrudy script standarder till en Ubuntu mall, så detta bör normalt tillämpas. För att verifiera: <code>cat /etc/os-release</code> inuti containern - leta efter <code>NAME=\"Ubuntu\"</code>.",
+    "body": "Inne i containern (<code>pct enter '<'CTID'>'</code>):",
     "code": "sudo add-apt-repository ppa:team-xbmc/ppa\nsudo apt update\nsudo apt install kodi kodi-bin",
-    "after": "Starta om behållaren när den slutar; på start har du den senaste Kodi."
+    "after": "Starta om containern när den slutar; på start har du den senaste Kodi."
   },
   "screenshots": {
     "heading": "Skärmdumpar",
@@ -57,10 +57,10 @@
   "troubleshoot": {
     "heading": "Felsökning",
     "items": [
-      "<strong>Kodi LXC startar men ingenting på TV: </strong> CT kanske inte har ärvt iGPU. Bekräfta med <code>ls /dev/dri</code> inuti behållaren (du bör se <code>card0</code>, <code>renderD128</code>). Om tomt applicerades GPU-genomgången inte - kör manuset eller använd ProxMenux <strong>Add GPU till LXC</strong>-menyn.",
+      "<strong>Kodi LXC startar men ingenting på TV: </strong> CT kanske inte har ärvt iGPU. Bekräfta med <code>ls /dev/dri</code> inuti containern (du bör se <code>card0</code>, <code>renderD128</code>). Om tomt applicerades GPU-genomgången inte - kör manuset eller använd ProxMenux <strong>Add GPU till LXC</strong>-menyn.",
       "<strong>Keyboard / mus som inte upptäckts efter omstart: </strong> det stora numret för <code>/dev/input</code> ändras (sällsynta, men händer efter kärnuppdateringar). Re-run <code>ls -l /dev/input</code> på värden och uppdatera <code>lxc.cgroup2.devices.allow</code>-linjen.",
-      "<strong>Hardware-accelererad uppspelning använder CPU istället för GPU:</strong> installera eller uppdatera VA-API-drivrutiner inuti behållaren (<code>intel-media-va-driver</code> för nyare Intel iGPUs, <code>i965-va-driver</code> för äldre, <code>mesa-va-drivers</code> på AMD).",
-      "<strong><code>add-apt-repository: command not found</code>:</strong> behållaren är Debian, inte Ubuntu. Använd antingen Debian Kodi-paketen (äldre men stabil) eller återskapa CT från en Ubuntu-mall."
+      "<strong>Hardware-accelererad uppspelning använder CPU istället för GPU:</strong> installera eller uppdatera VA-API-drivrutiner inuti containern (<code>intel-media-va-driver</code> för nyare Intel iGPUs, <code>i965-va-driver</code> för äldre, <code>mesa-va-drivers</code> på AMD).",
+      "<strong><code>add-apt-repository: command not found</code>:</strong> containern är Debian, inte Ubuntu. Använd antingen Debian Kodi-paketen (äldre men stabil) eller återskapa CT från en Ubuntu-mall."
     ]
   },
   "further": {

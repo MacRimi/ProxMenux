@@ -108,7 +108,7 @@
       ]
     },
     "vmApply": {
-      "title": "Konfigurácia VM sa používa pomocou qm sady",
+      "title": "Konfigurácia VM sa aplikuje pomocou qm set",
       "body": "VM konfig na <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> je aktualizovaný prostredníctvom <code>qm set</code> (nikdy priamo <code>sed</code>):",
       "after1": "Príznak <code>x-vga=1</code> je pridaný pre každého dodávateľa <strong>okrem</strong> Intel iGPU — Integrované GPU Intel nemajú vyhradenú VRAM pre konzolu pred spustením, takže tento príznak spôsobuje zamrznutie.",
       "after2": "Dodatočné linky <code>hostpciN</code> sú pripojené, ak skupina IOMMU GPU obsahuje ďalšie zariadenia, ktoré potrebujete spoločne prechádzať."

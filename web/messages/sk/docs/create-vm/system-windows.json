@@ -160,7 +160,7 @@
       "Prístup k najnovším Windows stavia.",
       "Podporuje verzie náhľadu Insider.",
       "Čisté oficiálne inštalačné súbory Microsoft.",
-      "Automatická tvorba a montáž ISO v VM.",
+      "Automatické vytvorenie ISO a jeho pripojenie k VM.",
       "Podporuje domáce, Pro a Enterprise edície."
     ],
     "uupLearnMore": "Zistite viac o UUP Dump ISO Creator",
@@ -232,7 +232,7 @@
       {
         "href": "/docs/utils/UUp-Dump-ISO-Creator",
         "label": "Tvorba ISO cez UUP Dump",
-        "tail": " — "
+        "tail": " — vytváranie aktuálnych inštalačných obrazov ISO systému Windows na hostiteľovi Proxmox."
       },
       {
         "href": "/docs/disk-manager/import-disk-image-vm",
