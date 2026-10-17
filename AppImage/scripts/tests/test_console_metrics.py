@@ -54,6 +54,13 @@ class LocalSamplerTests(unittest.TestCase):
                                 ("proc/diskstats", "proc_disk_2")):
             self.write(target, (FIXTURES / fixture).read_text())
 
+    def set_rx_counter(self, received):
+        self.write("proc/net/dev", (
+            "Inter-|   Receive                                                |  Transmit\n"
+            " face |bytes packets errs drop fifo frame compressed multicast|bytes packets errs drop fifo colls carrier compressed\n"
+            f"  eno1: {received} 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n"
+        ))
+
     def test_two_samples_give_exact_cpu_network_and_whole_disk_rates(self):
         sampler = self.sampler()
         first = sampler.sample(10.0)
@@ -76,6 +83,11 @@ class LocalSamplerTests(unittest.TestCase):
             "rx_bps": 1000, "tx_bps": 1000, "nic": "eno1", "speed_mbps": 2500,
         })
         self.assertEqual(second["disk"], {"read_bps": 4096, "write_bps": 6144})
+        self.assertEqual({name: sampler.window(name, 1, 1) for name in (
+            "rx", "tx", "read", "write", "cpu_total", "mem_used")}, {
+                "rx": [8000], "tx": [8000], "read": [4096], "write": [6144],
+                "cpu_total": [0.3], "mem_used": [0.6],
+            })
 
     def test_uptime_uses_injected_root_and_falls_back_to_zero(self):
         sampler = self.sampler()
@@ -126,6 +138,13 @@ class LocalSamplerTests(unittest.TestCase):
         self.assertEqual(without_arc["arc"], 0)
         self.assertEqual(without_arc["used"], result["used"])
 
+    def test_memory_history_is_fraction_bounded_to_one(self):
+        sampler = self.sampler()
+        sampler.sample(1.0)
+        self.write("proc/meminfo", "MemTotal: 10000 kB\nMemAvailable: -1000 kB\n")
+        sampler.sample(2.0)
+        self.assertEqual(sampler.window("mem_used", 1, 1), [1.0])
+
     def test_hwmon_priority_and_thermal_fallback(self):
         self.write("sys/class/hwmon/hwmon0/name", "other\n")
         self.write("sys/class/hwmon/hwmon0/temp1_input", "42000\n")
@@ -172,6 +191,9 @@ class LocalSamplerTests(unittest.TestCase):
         self.assertIsNone(reset["cpu_total"])
         self.assertEqual(reset["net"]["rx_bps"], 0)
         self.assertEqual(reset["disk"]["read_bps"], 0)
+        self.assertEqual(sampler.window("cpu_total", 1, 1), [None])
+        self.assertEqual(sampler.window("rx", 1, 1), [0])
+        self.assertEqual(sampler.window("read", 1, 1), [0])
         self.second_counters()
         later = sampler.sample(3.0)
         self.assertIsNotNone(later["cpu_total"])
@@ -186,6 +208,88 @@ class LocalSamplerTests(unittest.TestCase):
             sample = sampler.sample(float(index))
         self.assertEqual(len(sample["cpu_history"]), 60)
         self.assertEqual(sample["cpu_history"][-1], 1.0)
+
+    def test_window_repeats_samples_when_columns_exceed_seconds(self):
+        sampler = self.sampler()
+        self.set_rx_counter(0)
+        sampler.sample(0.0)
+        self.set_rx_counter(2)
+        sampler.sample(1.0)
+        self.set_rx_counter(7)
+        sampler.sample(2.0)
+        self.assertEqual(sampler.window("rx", 2, 4), [16, 16, 40, 40])
+
+    def test_window_takes_maximum_per_column_with_newest_at_right(self):
+        sampler = self.sampler()
+        self.set_rx_counter(0)
+        sampler.sample(0.0)
+        for second, increment in enumerate((1, 9, 2, 3), 1):
+            self.set_rx_counter(sum((1, 9, 2, 3)[:second]))
+            sampler.sample(float(second))
+        self.assertEqual(sampler.window("rx", 4, 2), [72, 24])
+        self.assertEqual(sampler.window("rx", 4, 4), [8, 72, 16, 24])
+
+    def test_window_pads_missing_past_with_none(self):
+        sampler = self.sampler()
+        self.set_rx_counter(0)
+        sampler.sample(0.0)
+        self.assertEqual(sampler.window("rx", 4, 4), [None, None, None, None])
+        self.set_rx_counter(3)
+        sampler.sample(1.0)
+        self.assertEqual(sampler.window("rx", 4, 4), [None, None, None, 24])
+        self.assertEqual(sampler.window("rx", 2, 4), [None, None, 24, 24])
+
+    def test_nonincreasing_time_does_not_add_samples_or_move_baseline(self):
+        sampler = self.sampler()
+        self.set_rx_counter(0)
+        sampler.sample(10.0)
+        self.set_rx_counter(2)
+        sampler.sample(10.0)
+        sampler.sample(9.0)
+        self.assertEqual(sampler.window("rx", 1, 1), [None])
+        self.set_rx_counter(4)
+        sampler.sample(11.0)
+        self.assertEqual(sampler.window("rx", 1, 1), [32])
+        self.assertEqual(len(sampler.history["rx"]), 1)
+
+    def test_stats_uses_previous_complete_window_and_current_peak(self):
+        sampler = self.sampler()
+        self.set_rx_counter(0)
+        sampler.sample(0.0)
+        received = 0
+        for second in range(1, 121):
+            received += 2 if second <= 60 else (10 if second == 100 else 4)
+            self.set_rx_counter(received)
+            sampler.sample(float(second))
+            if second == 119:
+                self.assertIsNone(sampler.stats("rx", 60)["prev"])
+        self.assertEqual(sampler.stats("rx", 60), {"now": 32, "prev": 16, "peak": 80})
+
+    def test_six_series_are_bounded_at_six_hundred_samples(self):
+        sampler = self.sampler()
+        self.set_rx_counter(0)
+        sampler.sample(0.0)
+        for second in range(1, 602):
+            self.set_rx_counter(second)
+            self.write("proc/stat", f"cpu {second} 0 0 100 0 0 0 0\n")
+            sampler.sample(float(second))
+        for series in ("rx", "tx", "read", "write", "cpu_total", "mem_used"):
+            with self.subTest(series=series):
+                self.assertEqual(len(sampler.history[series]), 600)
+        self.assertEqual(sampler.window("rx", 600, 600)[0], 8)
+        self.assertEqual(len(sampler.cpu_history), 60)
+
+    def test_counter_reset_never_puts_negative_rate_in_window(self):
+        sampler = self.sampler()
+        self.set_rx_counter(100)
+        sampler.sample(0.0)
+        self.set_rx_counter(110)
+        sampler.sample(1.0)
+        self.set_rx_counter(1)
+        reset = sampler.sample(2.0)
+        self.assertEqual(reset["net"]["rx_bps"], 0)
+        self.assertEqual(sampler.window("rx", 2, 2), [80, 0])
+        self.assertEqual(sampler.stats("rx", 2), {"now": 0, "prev": None, "peak": 80})
 
     def test_statvfs_is_injectable(self):
         seen = []

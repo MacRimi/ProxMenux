@@ -204,7 +204,41 @@ class LocalSampler:
         self.previous_cpu = None
         self.previous_net = None
         self.previous_disk = None
-        self.cpu_history = deque(maxlen=60)
+        self.history = {name: deque(maxlen=600) for name in (
+            "rx", "tx", "read", "write", "cpu_total", "mem_used")}
+
+    @property
+    def cpu_history(self):
+        """Keep the existing renderer's 60 valid CPU values available."""
+        return [value for value in self.history["cpu_total"] if value is not None][-60:]
+
+    def window(self, series, seconds, columns):
+        """Return oldest-to-newest column maxima, leaving unknown time empty."""
+        if seconds <= 0 or columns <= 0:
+            raise ValueError("seconds and columns must be positive")
+        samples = list(self.history[series])[-seconds:]
+        samples = [None] * (seconds - len(samples)) + samples
+        values = []
+        for column in range(columns):
+            start = column * seconds // columns
+            end = max(start + 1, (column + 1) * seconds // columns)
+            present = [value for value in samples[start:end] if value is not None]
+            values.append(max(present) if present else None)
+        return values
+
+    def stats(self, series, seconds):
+        """Return the latest value and peak, plus the prior full-window mean."""
+        if seconds <= 0:
+            raise ValueError("seconds must be positive")
+        samples = list(self.history[series])
+        current = [value for value in samples[-seconds:] if value is not None]
+        previous = samples[-2 * seconds:-seconds]
+        return {
+            "now": samples[-1] if samples else None,
+            "prev": (sum(previous) / seconds if len(previous) == seconds and
+                     all(value is not None for value in previous) else None),
+            "peak": max(current) if current else None,
+        }
 
     def _storages(self):
         storages = []
@@ -240,8 +274,6 @@ class LocalSampler:
             for name in sorted((name for name in cpu if name != "cpu"),
                                key=lambda name: int(name[3:]) if name[3:].isdigit() else name)
         ]
-        if cpu_total is not None:
-            self.cpu_history.append(cpu_total)
         rx_bps, tx_bps = _rates(self.previous_net, net, dt)
         read_bps, write_bps = _rates(self.previous_disk, disk, dt)
         nic = next((name for name in sorted(net)
@@ -254,6 +286,16 @@ class LocalSampler:
             load1 = load5 = load15 = 0.0
         if len(loads) < 3:
             load1 = load5 = load15 = 0.0
+        memory = _memory(self.root)
+        if dt > 0:
+            for name, value in (
+                ("rx", rx_bps * 8), ("tx", tx_bps * 8),
+                ("read", read_bps), ("write", write_bps),
+                ("cpu_total", cpu_total),
+                ("mem_used", min(1.0, memory["used"] / memory["total"])
+                 if memory["total"] > 0 else None),
+            ):
+                self.history[name].append(value)
         result = {
             "uptime": uptime,
             "cpu_total": cpu_total,
@@ -262,7 +304,7 @@ class LocalSampler:
             "load1": load1, "load5": load5, "load15": load15,
             "threads": len(per_core),
             "temp_c": _temperature(self.root),
-            "mem": _memory(self.root),
+            "mem": memory,
             "zram": _zram(self.root),
             "net": {"rx_bps": rx_bps, "tx_bps": tx_bps, "nic": nic,
                     "speed_mbps": _speed(self.root, nic)},
