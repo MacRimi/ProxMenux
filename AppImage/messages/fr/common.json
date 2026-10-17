@@ -2,7 +2,7 @@
   "_meta": "Community translation target. Copy keys from ../en/common.json and translate the values.",
   "app": {
     "title": "ProxMenux Monitor",
-    "description": "Proxmox System Dashboard",
+    "description": "Tableau de bord du système Proxmox",
     "loading": "Chargement...",
     "connecting": "Connexion au ProxMenux Monitor",
     "unknown": "Inconnu",
@@ -1318,8 +1318,8 @@
         "Samedi"
       ],
       "runSkippedStatus": "exécution ignorée",
-      "reasonStoppedContainer": "Le conteneur est arrêté ; la mise à jour programmée a été ignorée.",
-      "reasonStoppedContainerHistorical": "Le conteneur était arrêté à l'heure de la mise à jour programmée."
+      "reasonStoppedContainer": "Le conteneur est arrêté ; la mise à jour planifiée a été ignorée.",
+      "reasonStoppedContainerHistorical": "Le conteneur était arrêté à l'heure de la mise à jour planifiée."
     },
     "cronChip": {
       "detected": "cron hôte détecté",
@@ -5336,7 +5336,7 @@
     "customLinkDeleteError": "Delete failed",
     "categoryLabels": {
       "arrSuite": "*Arr Suite",
-      "aiCodingDevTools": "AI / Coding & Dev-Tools",
+      "aiCodingDevTools": "IA / Programmation et outils de développement",
       "adblockDns": "Adblock & DNS",
       "authenticationSecurity": "Authentication & Security",
       "automationScheduling": "Automation & Scheduling",
@@ -5351,18 +5351,18 @@
       "financeBudgeting": "Finance & Budgeting",
       "gamingLeisure": "Gaming & Leisure",
       "hostManagement": "Host Management",
-      "iotSmartHome": "IoT & Smart Home",
+      "iotSmartHome": "IoT et maison connectée",
       "mediaStreaming": "Media & Streaming",
       "messagingNotifications": "Messaging & Notifications",
       "miscellaneous": "Miscellaneous",
       "monitoringAnalytics": "Monitoring & Analytics",
       "nvrCameras": "NVR & Cameras",
       "networkFirewall": "Network & Firewall",
-      "operatingSystemsAppliances": "Operating Systems & Appliances",
+      "operatingSystemsAppliances": "Systèmes d'exploitation et appliances virtuelles",
       "productivityWorkflows": "Productivity & Workflows",
-      "remoteAccessVpn": "Remote Access & VPN",
+      "remoteAccessVpn": "Accès à distance et VPN",
       "webserversProxies": "Webservers & Proxies",
-      "zigbeeZwaveMatter": "ZigBee, Z-Wave & Matter"
+      "zigbeeZwaveMatter": "ZigBee, Z-Wave et Matter"
     },
     "emptyTitle": "Pas encore d'applications avec un lien web.",
     "emptyHint": "Enregistrez un lien Web pour toute application (onglet App d'un CT) pour le voir ici.",
