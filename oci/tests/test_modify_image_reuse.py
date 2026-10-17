@@ -287,6 +287,7 @@ class UpdateRoutingTests(unittest.TestCase):
         candidate['deployment']['resources']['memory_mb'] = 768
         if not resource_edit:
             candidate['deployment']['environment'][0]['value'] = 'changed'
+            candidate['template']['container_contract']['image']['reference'] = 'example/app:other'
         proposal = {'operation': 'recreate', 'candidate': candidate}
         import contextlib, oci_operation_notice
         with patch.object(instances, 'locked', return_value=contextlib.nullcontext()), \

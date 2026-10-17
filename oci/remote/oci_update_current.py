@@ -180,6 +180,16 @@ def application_name(record, vmid):
     return f'CT {vmid}'
 
 
+def backup_native_settings(vmid, storage):
+    """An optional retained backup does not require rebuilding the guest."""
+    if storage:
+        import oci_keep_backup
+        oci_keep_backup.validate(storage)
+        transaction.run('vzdump', str(vmid), '--storage', storage, '--mode', 'snapshot',
+                        '--compress', 'zstd', '--notes-template',
+                        'ProxMenux OCI: before modifying container settings')
+
+
 def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=None):
     operation = 'recreate' if proposal is not None else 'update'
     msg_info(translate('Checking the container before the update...') if operation == 'update'
@@ -192,7 +202,7 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
         desired = transaction.candidate_contract(record, operation, proposal)
         changes = transaction.external_changes(record, config)
         resource_changes = None
-        if operation == 'recreate' and not keep_backup and not changes:
+        if operation == 'recreate' and not changes:
             import oci_resource_modify
             resource_changes = oci_resource_modify.changes(record, desired, config)
         # CPU/RAM edits retain the installed image and all unrelated native
@@ -202,7 +212,22 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
             msg_ok(translate('Container checked'))
             import oci_operation_notice
             with oci_operation_notice.operation([vmid], 'modify', application_name(record, vmid)):
+                backup_native_settings(vmid, keep_backup)
                 return oci_resource_modify.apply(instances.ROOT, record, desired, config, resource_changes)
+        if operation == 'recreate' and not changes:
+            import oci_native_modify
+            if oci_native_modify.changes(record, desired, config):
+                import oci_operation_notice
+                with oci_operation_notice.operation([vmid], 'modify', application_name(record, vmid)):
+                    # Validate the native plan before an optional full backup.
+                    oci_native_modify.plan(record, desired, config)
+                    backup_native_settings(vmid, keep_backup)
+                    return oci_native_modify.apply(instances.ROOT, record, desired, config,
+                                                   acknowledge_external_data=acknowledge_external_data)
+        if (operation == 'recreate'
+                and record['template']['container_contract']['image']['reference']
+                == desired['template']['container_contract']['image']['reference']):
+            raise ValueError(translate('These settings require an application-specific adaptation. The image was not downloaded and the container was not recreated.'))
         transaction.preflight(record, desired, config)
         msg_ok(translate('Container checked'))
         current = record['observed']['image'] if operation == 'update' else None

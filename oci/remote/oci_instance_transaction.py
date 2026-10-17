@@ -453,7 +453,7 @@ def external_changes(record, config, adopt=True):
     return values
 
 
-def preflight(record, candidate, config, coordinated=None):
+def preflight(record, candidate, config, coordinated=None, in_place=False, baseline=True):
     deployment = record['deployment']
     desired = candidate['deployment']
     if coordinated and (record.get('native_stack_intent') or deployment.get('rootfs_adaptation_replay_required')):
@@ -462,7 +462,7 @@ def preflight(record, candidate, config, coordinated=None):
         raise ValueError(translate('Stack members are updated together with their stack'))
     if instances.identity(config) != record['installation_id']:
         raise ValueError(translate('The container identity changed; the container is not replaced'))
-    for key, value in external_changes(record, config, adopt=not coordinated).items():
+    for key, value in (external_changes(record, config, adopt=not coordinated) if baseline else {}).items():
         section, name = ADOPTABLE[key]
         recorded = deployment.get(section, {}) if section else deployment
         target = desired.setdefault(section, {}) if section else desired
@@ -491,7 +491,8 @@ def preflight(record, candidate, config, coordinated=None):
         runtime_keys.add('lxc.mount.entry')
     runtime_settings.check(config, deployment, record['vmid'])
     coordinated_keys = {'hookscript', *KEPT_AS_IS} if coordinated else set(KEPT_AS_IS)
-    if '[' in config.decode() or keys - BASIC - runtime_keys - coordinated_keys - {k for k in keys if re.fullmatch(r'(mp|dev)[0-9]+', k)}:
+    preserved_keys = {'nameserver', 'searchdomain', 'timezone', 'protection'} if in_place else set()
+    if '[' in config.decode() or keys - BASIC - runtime_keys - coordinated_keys - preserved_keys - {k for k in keys if re.fullmatch(r'(mp|dev)[0-9]+', k) or (in_place and re.fullmatch(r'unused[0-9]+', k))}:
         raise ValueError(translate('The container has advanced Proxmox settings outside the supported profile'))
     unprivileged = deployment.get('security', {}).get('unprivileged', True) is not False
     if (desired.get('security', {}).get('unprivileged', True) is not False) != unprivileged \
@@ -532,7 +533,8 @@ def preflight(record, candidate, config, coordinated=None):
         raise ValueError(translate('Changing the rootfs or its storage requires a separate migration'))
     actual = mounts(config)
     gpu_devices.check(config, deployment)
-    gpu_devices.verify_baseline(record['observed'].get('gpu_devices', {}), deployment)
+    if baseline:
+        gpu_devices.verify_baseline(record['observed'].get('gpu_devices', {}), deployment)
     recorded_files = {m['source']: bool(m.get('read_only')) for m in deployment.get('mounts', []) if is_file_bind(m, files)}
     if files != recorded_files:
         raise ValueError(translate('A container mount has a source, backup or permission different from the saved record'))
@@ -1273,6 +1275,9 @@ def complete_recovery(root, journal, state):
 
 def recover(root, journal):
     state = json.loads(journal.read_text())
+    if state.get('kind') == 'native-modify':
+        import oci_native_modify
+        return oci_native_modify.recover(root, journal)
     vmid = state['vmid']
     show = not state.get('coordinated')
     if show:
