@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Three backup modes",
-    "body": "<strong>snapshot</strong> uses a live snapshot — guest stays running, briefly pauses I/O. <strong>suspend</strong> freezes the VM during backup (safer than snapshot for non-snapshot-aware FS). <strong>stop</strong> shuts down the VM, backs up cold, restarts. Pick by guest tolerance and storage capability."
+    "body": "For VMs, <strong>snapshot</strong> is a live backup and does not require storage snapshots. <strong>suspend</strong> pauses the VM before the live backup and does not necessarily improve consistency. <strong>stop</strong> shuts the VM down first; a previously running VM can resume once backup has started. LXC differs: snapshot mode requires snapshot-capable storage, suspend uses two rsync passes, and stop keeps the container stopped during backup."
   },
   "commandGroups": [
     {
@@ -34,18 +34,18 @@
         },
         {
           "command": "vzdump <vmid> --mode suspend",
-          "description": "Suspend VM during backup"
+          "description": "Pause VM before the live backup (legacy suspend mode)"
         },
         {
           "command": "vzdump <vmid> --mode stop",
-          "description": "Stop VM during backup"
+          "description": "Shut down VM before starting the backup"
         },
         {
           "command": "vzdump --all",
           "description": "Backup all VMs and containers"
         },
         {
-          "command": "vzdump --exclude <vmid1>,<vmid2>",
+          "command": "vzdump --all --exclude <vmid1>,<vmid2>",
           "description": "Backup all except specified VMs"
         }
       ]
@@ -58,11 +58,11 @@
           "description": "Use zstd compression for backup"
         },
         {
-          "command": "vzdump <vmid> --pigz <threads>",
+          "command": "vzdump <vmid> --compress gzip --pigz <threads>",
           "description": "Use pigz with multiple threads"
         },
         {
-          "command": "vzdump <vmid> --notes <text>",
+          "command": "vzdump <vmid> --storage <storage> --notes-template <text>",
           "description": "Add notes to backup"
         },
         {
@@ -70,7 +70,7 @@
           "description": "Send notification email"
         },
         {
-          "command": "vzdump <vmid> --maxfiles <n>",
+          "command": "vzdump <vmid> --prune-backups keep-last=<n>",
           "description": "Keep only n backups per VM"
         },
         {
@@ -96,7 +96,7 @@
         },
         {
           "command": "qmrestore <backup-file> <vmid> --unique",
-          "description": "Create a VM with unique ID"
+          "description": "Restore VM with newly generated random MAC addresses"
         },
         {
           "command": "pct restore <vmid> <backup-file>",
@@ -107,8 +107,8 @@
           "description": "Restore container to specific storage"
         },
         {
-          "command": "pct restore <vmid> <backup-file> --rootfs <storage>",
-          "description": "Restore to specific rootfs"
+          "command": "pct restore <vmid> <backup-file> --rootfs <storage>:<size-GiB>",
+          "description": "Restore with a root disk allocated on the chosen storage and size"
         },
         {
           "command": "pct restore <vmid> <backup-file> --unprivileged 1",
@@ -132,7 +132,7 @@
           "description": "Find container backups"
         },
         {
-          "command": "pvesm list <storage>",
+          "command": "pvesm list <storage> --content backup",
           "description": "List backups in specific storage"
         },
         {
@@ -149,7 +149,7 @@
       "title": "Scheduled Backups",
       "commands": [
         {
-          "command": "cat /etc/cron.d/vzdump",
+          "command": "cat /etc/pve/jobs.cfg",
           "description": "Show backup schedule"
         },
         {
@@ -158,19 +158,19 @@
         },
         {
           "command": "systemctl list-timers",
-          "description": "List all scheduled tasks"
+          "description": "List systemd timers"
         },
         {
           "command": "systemctl status cron",
           "description": "Check cron service status"
         },
         {
-          "command": "grep vzdump /var/log/syslog",
-          "description": "Check backup logs in syslog"
+          "command": "pvenode task list --typefilter vzdump",
+          "description": "List completed backup tasks"
         },
         {
-          "command": "tail -f /var/log/vzdump.log",
-          "description": "Monitor backup log in real-time"
+          "command": "pvenode task log <upid>",
+          "description": "Show the log for a backup task UPID"
         }
       ]
     },
@@ -202,15 +202,15 @@
           "description": "Wait for lock"
         },
         {
-          "command": "qm importdisk <vmid> <backup> <storage>",
-          "description": "Import disk from backup"
+          "command": "qm importdisk <vmid> <disk-image> <storage>",
+          "description": "Import an extracted raw or qcow2 disk image, not a backup archive"
         }
       ]
     }
   ],
   "testRestores": {
     "title": "Test your restores",
-    "bodyRich": "A backup you've never restored isn't a backup. Periodically pick a backup, restore it to a test VMID with <code>qmrestore --unique</code>, boot the resulting VM and confirm the contents are intact. Same idea for containers via <code>pct restore</code>."
+    "bodyRich": "Periodically restore a backup to an unused test VMID with <code>qmrestore --unique</code>, start the VM on an isolated test network and check its contents. The unique option generates new MAC addresses; it does not change static IPs or application settings. Test container restores with <code>pct restore</code> in the same way."
   },
   "related": {
     "heading": "Related",

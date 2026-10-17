@@ -1,0 +1,232 @@
+{
+  "meta": {
+    "title": "Comandos de armazenamento e discos Proxmox — lsblk, LVM, pvesm, qm importdisk | ProxMenux",
+    "description": "Comandos de armazenamento e discos no Proxmox VE: lsblk, blkid, parted, lvdisplay, vgdisplay, pvs, mount, df, du, ncdu, pvesm status, qm importdisk e qemu-img convert para operações em discos de VM.",
+    "ogTitle": "Comandos de armazenamento e discos Proxmox — lsblk, LVM, pvesm, qm importdisk",
+    "ogDescription": "Referência de comandos de armazenamento e disco em Proxmox VE — inspeção de disco, LVM, montagens, gerenciamento de armazenamento Proxmox, importação de disco VM e conversão de imagem.",
+    "twitterTitle": "Comandos de armazenamento Proxmox | ProxMenux",
+    "twitterDescription": "Inspeção de disco, informações de montagem, gerenciamento LVM, armazenamento Proxmox e comandos de importação / conversão de disco VM."
+  },
+  "header": {
+    "title": "Armazenamento e Discos",
+    "description": "Referência para inspeção de armazenamento em hosts Proxmox: dispositivos de bloco, partições, montagens, volumes LVM, configuração de armazenamento Proxmox e algumas operações de disco VM (importdisk, qemu-img convert).",
+    "section": "Ajuda e informações"
+  },
+  "intro": {
+    "title": "Inventário rápido do disco",
+    "body": "<code>lsblk</code> mostra os dispositivos de bloco e partições em árvore. Consulte os identificadores persistentes com <code>ls -lh /dev/disk/by-id/</code>: no mesmo disco, mantêm-se normalmente após reinícios ou alterações na ordem dos dispositivos. Substituir o disco ou alterar como o controlador expõe a identidade pode mudar o caminho by-id."
+  },
+  "commandGroups": [
+    {
+      "title": "Informações do disco",
+      "commands": [
+        {
+          "command": "lsblk",
+          "description": "Listar dispositivos e partições de bloco"
+        },
+        {
+          "command": "fdisk -l",
+          "description": "Listar discos com informações detalhadas"
+        },
+        {
+          "command": "blkid",
+          "description": "Mostrar UUID e tipo de sistema de arquivos de dispositivos de bloco"
+        },
+        {
+          "command": "ls -lh /dev/disk/by-id/",
+          "description": "Listar identificadores persistentes de disco"
+        },
+        {
+          "command": "parted -l",
+          "description": "Layout detalhado da partição com informações GPT"
+        }
+      ]
+    },
+    {
+      "title": "Utilização do Armazenamento",
+      "commands": [
+        {
+          "command": "df -h",
+          "description": "Mostrar o uso do disco por ponto de montagem"
+        },
+        {
+          "command": "du -sh /path",
+          "description": "Mostrar tamanho de um diretório"
+        },
+        {
+          "command": "mount | grep ^/dev",
+          "description": "Mostrar dispositivos de armazenamento montados"
+        },
+        {
+          "command": "cat /proc/mounts",
+          "description": "Mostrar todas as montagens ativas do kernel"
+        }
+      ]
+    },
+    {
+      "title": "Gestão de LVM",
+      "commands": [
+        {
+          "command": "pvdisplay",
+          "description": "Exibir volumes físicos (LVM)"
+        },
+        {
+          "command": "vgdisplay",
+          "description": "Exibir grupos de volumes (LVM)"
+        },
+        {
+          "command": "lvdisplay",
+          "description": "Exibir volumes lógicos (LVM)"
+        },
+        {
+          "command": "pvs",
+          "description": "Saída concisa de volumes físicos"
+        },
+        {
+          "command": "vgs",
+          "description": "Saída concisa de grupos de volumes"
+        },
+        {
+          "command": "lvs",
+          "description": "Saída concisa de volumes lógicos"
+        }
+      ]
+    },
+    {
+      "title": "Armazenamento Proxmox",
+      "commands": [
+        {
+          "command": "cat /etc/pve/storage.cfg",
+          "description": "Mostrar configuração de armazenamento Proxmox"
+        },
+        {
+          "command": "pvesm status",
+          "description": "Mostrar o status de todos os pools de armazenamento"
+        },
+        {
+          "command": "pvesm status --enabled 1",
+          "description": "Listar armazenamentos configurados e ativos"
+        },
+        {
+          "command": "pvesm list <storage>",
+          "description": "Listar o conteúdo do armazenamento específico"
+        },
+        {
+          "command": "pvesm scan nfs <server>",
+          "description": "Descobrir as exportações NFS de um servidor"
+        }
+      ]
+    },
+    {
+      "title": "Acções do Disco",
+      "commands": [
+        {
+          "command": "qm importdisk <vmid> <image_path> <storage>",
+          "description": "Importar a imagem como disco não utilizado da VM e ligá-lo depois"
+        },
+        {
+          "command": "qm set <vmid> -<bus><index> <disk_path>",
+          "description": "Atribuir disco físico ao VM (modo de passagem)"
+        },
+        {
+          "command": "qemu-img convert -O <format> <input> <output>",
+          "description": "Converter o formato de uma imagem de disco sem uso ativo"
+        }
+      ]
+    },
+    {
+      "title": "Estado SMART do disco",
+      "commands": [
+        {
+          "command": "smartctl --scan",
+          "description": "Listar os dispositivos com capacidade SMART na máquina"
+        },
+        {
+          "command": "smartctl -i /dev/<disk>",
+          "description": "Informações básicas do dispositivo (modelo, firmware, série)"
+        },
+        {
+          "command": "smartctl -H /dev/<disk>",
+          "description": "Verificação rápida do estado geral: PASSED / FAILED"
+        },
+        {
+          "command": "smartctl -A /dev/<disk>",
+          "description": "Apenas atributos SMART (valores brutos, limiares)"
+        },
+        {
+          "command": "smartctl -a /dev/<disk>",
+          "description": "Informação SMART completa — info + atributos + log de auto-teste"
+        },
+        {
+          "command": "smartctl -t short /dev/<disk>",
+          "description": "Iniciar o auto-teste curto (~2 minutos, é executado em segundo plano)"
+        },
+        {
+          "command": "smartctl -t long /dev/<disk>",
+          "description": "Iniciar um autoteste longo, que pode demorar horas em segundo plano"
+        },
+        {
+          "command": "smartctl -l selftest /dev/<disk>",
+          "description": "Ver log de auto-teste (resultados de testes anteriores)"
+        },
+        {
+          "command": "smartctl -X /dev/<disk>",
+          "description": "Interromper o auto-teste em execução"
+        }
+      ]
+    },
+    {
+      "title": "Estado do disco NVMe",
+      "commands": [
+        {
+          "command": "nvme list",
+          "description": "Listar os dispositivos NVMe visíveis para o kernel"
+        },
+        {
+          "command": "nvme smart-log /dev/<nvme>",
+          "description": "Log NVMe específico para SMART (temperatura, desgaste, erros)"
+        },
+        {
+          "command": "nvme id-ctrl /dev/<nvme>",
+          "description": "Informação do controlador (modelo, firmware, capacidades)"
+        },
+        {
+          "command": "nvme error-log /dev/<nvme>",
+          "description": "Registro de erro recente do NVMe"
+        }
+      ]
+    }
+  ],
+  "lvmTip": {
+    "title": "LVM comandos curtos vs longos",
+    "bodyRich": "Ambas as formas estão disponíveis. <code>pvs</code> / <code>vgs</code> / <code>lvs</code> apresentam tabelas compactas com uma linha por volume físico, grupo de volumes ou volume lógico, respetivamente. <code>pvdisplay</code> / <code>vgdisplay</code> / <code>lvdisplay</code> mostram mais detalhes em várias linhas. As formas curtas são práticas nas consultas diárias."
+  },
+  "smartInfo": {
+    "title": "SMART em SATA/SAS e NVMe",
+    "bodyRich": "<strong>Os discos SATA / SAS, incluindo SSD,</strong> podem ser inspecionados com <code>smartctl</code> de <code>smartmontools</code>, instalado por predefinição no Proxmox. Indique o dispositivo, por exemplo <code>/dev/sda</code> ou <code>/dev/sdb</code>. <strong>Os discos NVMe</strong> usam outro protocolo nativo. O <code>smartctl</code> também os suporta; o <code>nvme</code> de <code>nvme-cli</code> oferece consultas específicas a controladores, namespaces e estado NVMe. Instale-o com <code>apt install nvme-cli</code> se faltar."
+  },
+  "selfTestWarn": {
+    "title": "Auto-testes executados em segundo plano",
+    "bodyRich": "Em discos compatíveis, <code>smartctl -t short /dev/&lt;disk&gt;</code> e <code>smartctl -t long /dev/&lt;disk&gt;</code> iniciam testes em segundo plano e devolvem logo o controlo. Verifique o progresso com <code>smartctl -a /dev/&lt;disk&gt;</code>, procurando \"Self-test routine in progress\", ou aguarde e leia <code>smartctl -l selftest /dev/&lt;disk&gt;</code>. Os testes curtos costumam demorar dois minutos; os longos podem levar horas. O disco permanece utilizável, mas o desempenho de E/S pode diminuir."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "Gestão de ZFS",
+        "tail": " — comandos zpool / zfs para armazenamento com suporte ZFS."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Gerenciador de disco",
+        "tail": " — fluxos interativos ProxMenux para passagem de disco, importação, formatação, SMART."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Visão geral de ajuda e informações",
+        "tail": "."
+      }
+    ]
+  }
+}

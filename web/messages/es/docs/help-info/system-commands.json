@@ -1,20 +1,20 @@
 {
   "meta": {
     "title": "Comandos de sistema de Proxmox VE — pveversion, uptime, journalctl, systemctl | ProxMenux",
-    "description": "Referencia de comandos esenciales de Proxmox VE y Linux: pveversion, pveperf, uptime, journalctl, systemctl, lscpu, lsblk, df, free, last, who. Todos son de solo lectura y seguros de ejecutar en cualquier host.",
+    "description": "Comandos de Proxmox VE y Linux para versiones, tiempo de actividad, memoria, servicios, registros y usuarios, además de herramientas de auditoría y resumen. Incluye un comando de reinicio de servicio; los ejemplos no son todos de solo lectura.",
     "ogTitle": "Comandos de sistema de Proxmox VE — pveversion, uptime, journalctl, systemctl",
-    "ogDescription": "Referencia de comandos esenciales de Proxmox VE y Linux — versión, uptime, servicios, logs, información de usuarios, exploración de hardware. Todos de solo lectura.",
+    "ogDescription": "Comandos de Proxmox VE y Linux para versión, tiempo de actividad, servicios, registros y usuarios, con gestión de servicios y herramientas de auditoría.",
     "twitterTitle": "Comandos de sistema de Proxmox VE | ProxMenux",
     "twitterDescription": "Comandos esenciales de inspección del sistema para Proxmox VE — versión, estado, servicios, logs, información de usuarios."
   },
   "header": {
     "title": "Comandos de sistema útiles",
-    "description": "Comandos de solo lectura para inspeccionar el host Proxmox: versión, kernel, uptime, memoria, estado de la interfaz web, últimas líneas de log, usuarios conectados y un par de herramientas de auditoría y resumen. Ninguno modifica el sistema.",
+    "description": "Comandos para inspeccionar el host Proxmox: versión, kernel, tiempo de actividad, memoria, estado de la interfaz web, registros recientes y usuarios conectados, además de herramientas de auditoría y resumen. La mayoría consultan el estado, pero systemctl restart pveproxy reinicia el proxy web y las auditorías pueden escribir informes y registros.",
     "section": "Ayuda e información"
   },
   "intro": {
     "title": "Qué es esto",
-    "body": "La misma lista numerada que ProxMenux muestra cuando eliges <em>Comandos de sistema útiles</em>. Usa el botón Copiar para llevarte cualquier comando, o consúltalo para recordar el flag exacto."
+    "body": "Es la misma lista numerada que ProxMenux muestra al elegir <em>Comandos de sistema útiles</em>. Usa el botón Copiar para copiar un comando o consulta la lista para recordar la opción exacta."
   },
   "commandGroups": [
     {
@@ -141,12 +141,12 @@
       {
         "href": "/docs/help-info/update-commands",
         "label": "Actualizaciones y paquetes",
-        "tail": " — comandos de apt y de actualización de pve."
+        "tail": " — comandos de apt y de actualización de PVE."
       },
       {
         "href": "/docs/help-info/tools-commands",
         "label": "Herramientas CLI del sistema",
-        "tail": " — htop, btop, ncdu y similares."
+        "tail": " — htop, btop, ncdu y herramientas similares."
       },
       {
         "href": "/docs/help-info",

@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Sieťové príkazy Proxmoxu — ip, ping, ss, pve-firewall, iptables | ProxMenux",
+    "description": "Prehľad sieťových príkazov hostiteľa Proxmox VE: ip / ip link / ip addr, ping, traceroute, mtr, ss, ethtool, dig, nslookup a na filtrovanie pve-firewall, iptables a nftables. Kontrola sieťových mostov, bondov a VLAN.",
+    "ogTitle": "Sieťové príkazy Proxmoxu — ip, ping, ss, pve-firewall, iptables",
+    "ogDescription": "Sieťové príkazy pre Proxmox VE: kontrola rozhraní, testy pripojenia, monitorovanie, firewall (pve-firewall, iptables, nftables) a dotazy DNS.",
+    "twitterTitle": "Sieťové príkazy Proxmoxu | ProxMenux",
+    "twitterDescription": "Príkazy sieťovej kontroly, testovania, konfigurácie a firewallu pre Proxmox VE."
+  },
+  "header": {
+    "title": "Sieťové príkazy",
+    "description": "Výber sieťových príkazov hostiteľa Proxmox: informácie o rozhraniach, testy pripojenia, konfigurácia, monitorovanie prevádzky a správa firewallu. Zahŕňa ip / ss / nmcli / ethtool / tcpdump / pve-firewall.",
+    "section": "Pomoc a informácie"
+  },
+  "intro": {
+    "title": "Rýchly prehľad rozhraní",
+    "body": "<code>ip a</code> zobrazuje každé rozhranie s jeho IP adresami a MAC adresou. <code>ip r</code> zobrazuje smerovaciu tabuľku. Spolu za pár sekúnd zodpovedajú väčšinu otázok o správnom nastavení rozhrania."
+  },
+  "commandGroups": [
+    {
+      "title": "Sieťové informácie",
+      "commands": [
+        {
+          "command": "ip a",
+          "description": "Zobraziť sieťové rozhrania a IP adresy"
+        },
+        {
+          "command": "ip r",
+          "description": "Zobraziť smerovaciu tabuľku"
+        },
+        {
+          "command": "ip -s link",
+          "description": "Zobraziť štatistiky prenosu podľa rozhrania"
+        },
+        {
+          "command": "brctl show",
+          "description": "Zobraziť nastavené sieťové bridge"
+        },
+        {
+          "command": "cat /etc/network/interfaces",
+          "description": "Zobraziť surové sieťové nastavenie"
+        }
+      ]
+    },
+    {
+      "title": "Testovanie siete",
+      "commands": [
+        {
+          "command": "ping <host>",
+          "description": "Skontrolovať spojenie s iným hostom"
+        },
+        {
+          "command": "traceroute <host>",
+          "description": "Sledovať trasu k hostiteľovi"
+        },
+        {
+          "command": "mtr <host>",
+          "description": "Kombinácia ping a traceroute v reálnom čase"
+        },
+        {
+          "command": "dig <domain>",
+          "description": "DNS vyhľadanie domény"
+        },
+        {
+          "command": "nslookup <domain>",
+          "description": "Alternatívne vyhľadávanie DNS"
+        }
+      ]
+    },
+    {
+      "title": "Nastavenie siete",
+      "commands": [
+        {
+          "command": "ifreload -a",
+          "description": "Znovu načítať sieťové nastavenie (ifupdown2)"
+        },
+        {
+          "command": "ethtool <iface>",
+          "description": "Zobraziť informácie o ethernetovom zariadení"
+        },
+        {
+          "command": "resolvectl status",
+          "description": "Zobraziť stav DNS prekladu"
+        },
+        {
+          "command": "nmcli device show",
+          "description": "Zobraziť detaily sieťového zariadenia (ak sa použije NetworkManager)"
+        },
+        {
+          "command": "ip link set <iface> up",
+          "description": "Zapnúť sieťové rozhranie"
+        },
+        {
+          "command": "ip link set <iface> down",
+          "description": "Vypnúť sieťové rozhranie"
+        }
+      ]
+    },
+    {
+      "title": "Monitorovanie siete",
+      "commands": [
+        {
+          "command": "ss -tuln",
+          "description": "Zobraziť počúvajúce porty (TCP/UDP)"
+        },
+        {
+          "command": "netstat -tuln",
+          "description": "Alternatíva k zobrazeniu počúvacích portov"
+        },
+        {
+          "command": "lsof -i",
+          "description": "Zoznam otvorených sieťových súborov a pripojení"
+        },
+        {
+          "command": "tcpdump -i <iface>",
+          "description": "Zachytiť pakety na rozhraní"
+        },
+        {
+          "command": "iftop -i <iface>",
+          "description": "Monitorovať využívanie šírky pásma na rozhraní"
+        }
+      ]
+    },
+    {
+      "title": "Správa firewallu",
+      "commands": [
+        {
+          "command": "iptables -L -n -v",
+          "description": "Zobraziť aktívne pravidlá firewallu (iptables)"
+        },
+        {
+          "command": "nft list ruleset",
+          "description": "Zobraziť pravidlá nftables"
+        },
+        {
+          "command": "pve-firewall status",
+          "description": "Skontrolovať stav Proxmox firewallu"
+        },
+        {
+          "command": "pve-firewall compile",
+          "description": "Zostaviť pravidlá firewallu pre všetky uzly"
+        },
+        {
+          "command": "pve-firewall reload",
+          "description": "Znovu načítať pravidlá Proxmox firewallu"
+        }
+      ]
+    }
+  ],
+  "iptablesTip": {
+    "title": "iptables vs nftables",
+    "bodyRich": "Klasická služba <code>pve-firewall</code> vytvára pravidlá iptables. Alternatívna služba proxmox-firewall používa <strong>nftables</strong>. Backend iptables skontrolujete cez <code>iptables -L -n -v</code> a backend nftables cez <code>nft list ruleset</code>. Používajte nástroje aktívneho backendu; tieto výpisy nie sú zameniteľné."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/network",
+        "label": "Správa siete",
+        "tail": " — ProxMenux interaktívne sieťové nástroje (analýza mosta, trvalé názvy, monitorovanie)."
+      },
+      {
+        "href": "/docs/help-info/tools-commands",
+        "label": "Systémové CLI nástroje",
+        "tail": " — Viac nástrojov na monitorovanie sietí."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Prehľad pomoci a informácií",
+        "tail": "."
+      }
+    ]
+  }
+}
