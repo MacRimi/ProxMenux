@@ -277,6 +277,51 @@ class ConsoleRenderTests(unittest.TestCase):
         self.assertIn("MONITOR UNAVAILABLE", lines(grid)[0])
         self.assertEqual(grid[0][lines(grid)[0].index("MONITOR UNAVAILABLE")][1], "crit")
 
+    def test_memory_row_without_zram_shows_only_swap(self):
+        for zram in (None, {"capacity_bytes": 0, "swap_used_bytes": 0, "compression_ratio": 0}):
+            with self.subTest(zram=zram):
+                self.vm["local"]["zram"] = zram
+                row = lines(render(self.vm, 80, 24))[4]
+                self.assertNotIn("ZRAM", row)
+                self.assertIn("swap 0 MiB/8.0 GiB", row)
+
+    def test_memory_row_with_zram_keeps_zram_and_swap(self):
+        row = lines(render(self.vm, 80, 24))[4]
+        self.assertIn("ZRAM", row)
+        self.assertIn("swap", row)
+
+    def test_cluster_strip_without_data_has_no_quorum_title(self):
+        self.vm["snapshot"] = None
+        self.vm["local"]["uptime"] = 180
+        grid = render(self.vm, 80, 24)
+        rows = lines(grid)
+        self.assertIn("CLUSTER", rows[6])
+        self.assertNotIn("QUORUM", rows[6])
+        self.assertNotIn("0/0", rows[6])
+        start = rows[7].index("no data")
+        self.assertTrue(all(grid[7][x][1] == "dim" for x in range(start, start + len("no data"))))
+
+    def test_cluster_strip_quorate_unknown_has_no_quorum_title(self):
+        self.vm["snapshot"]["cluster"]["quorate"] = None
+        rows = lines(render(self.vm, 80, 24))
+        self.assertNotIn("QUORUM", rows[6])
+        self.assertIn("no data", rows[7])
+
+    def test_cluster_strip_with_quorum_false_still_shows_no_quorum(self):
+        self.vm["snapshot"]["cluster"]["quorate"] = False
+        rows = lines(render(self.vm, 80, 24))
+        self.assertIn("NO QUORUM", rows[6])
+
+    def test_top_panels_without_snapshot_show_no_data(self):
+        self.vm["snapshot"] = None
+        self.vm["local"]["uptime"] = 180
+        grid = render(self.vm, 80, 24)
+        rows = lines(grid)
+        self.assertIn("no data", rows[11][:40])
+        self.assertIn("no data", rows[11][40:])
+        start = rows[11].index("no data")
+        self.assertTrue(all(grid[11][x][1] == "dim" for x in range(start, start + len("no data"))))
+
     def test_small_terminal_message(self):
         for width, height in ((79, 24), (80, 23)):
             rows = lines(render(self.vm, width, height))

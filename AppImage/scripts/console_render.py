@@ -341,8 +341,9 @@ def _cpu_memory(grid, vm, rows):
     zram_used = zram.get("swap_used_bytes", zram.get("used", 0))
     zram_total = zram.get("capacity_bytes", zram.get("total", 0))
     ratio = _number(zram.get("compression_ratio"))
-    _text(grid, left + 2, 4,
-          f"{label('labels.zram')} {_size(zram_used)}/{_size(zram_total)} {ratio:.1f}x {_separator(grid)} {label('labels.swap')} {_size(mem.get('swap_used'))}/{_size(mem.get('swap_total'))}", right - 4)
+    swap = f"{label('labels.swap')} {_size(mem.get('swap_used'))}/{_size(mem.get('swap_total'))}"
+    zram_part = f"{label('labels.zram')} {_size(zram_used)}/{_size(zram_total)} {ratio:.1f}x {_separator(grid)} " if _number(zram_total) > 0 else ""
+    _text(grid, left + 2, 4, zram_part + swap, right - 4)
     history = local.get("cpu_history") or []
     history_start = 4
     history_rows = 1 if rows == 5 else 4
@@ -399,11 +400,17 @@ def _strip(grid, vm, y, rows, state):
     cluster_width = grid.width - cluster_x
     up = int(_number(cluster.get("nodes_online")))
     total = int(_number(cluster.get("nodes_total")))
-    title = f"{label('panels.cluster')} {sanitize(cluster.get('name'), 15, grid.glyphs)}"
-    title += f" {_separator(grid)} {label('labels.quorumOk') if cluster.get('quorate') else label('labels.noQuorum')} {up}/{total}"
+    quorate = cluster.get("quorate")
+    title = label("panels.cluster")
+    name = sanitize(cluster.get("name"), 15, grid.glyphs)
+    if name:
+        title += f" {name}"
+    if quorate is not None:
+        title += f" {_separator(grid)} {label('labels.quorumOk') if quorate else label('labels.noQuorum')} {up}/{total}"
     grid.box(cluster_x, y, cluster_width, rows, title)
-    if state == "starting":
-        _text(grid, cluster_x + 2, y + 1, label("status.waitingForData"), cluster_width - 4, "dim")
+    if state == "starting" or quorate is None:
+        text = label("status.waitingForData") if state == "starting" else label("status.noData")
+        _text(grid, cluster_x + 2, y + 1, text, cluster_width - 4, "dim")
         return
     members = cluster.get("members") or []
     visible = max(0, rows - 2)
@@ -484,9 +491,10 @@ def _top(grid, vm, y, rows, state):
         memory_title += f" ({stale})"
     grid.box(0, y, midpoint, rows, cpu_title)
     grid.box(midpoint, y, grid.width - midpoint, rows, memory_title)
-    if state == "starting":
+    if state == "starting" or not snapshot:
+        text = label("status.waitingForData") if state == "starting" else label("status.noData")
         for x, width in ((0, midpoint), (midpoint, grid.width - midpoint)):
-            _text(grid, x + 2, y + 1, label("status.waitingForData"), width - 4, "dim")
+            _text(grid, x + 2, y + 1, text, width - 4, "dim")
         return
     if not snapshot or not guests:
         return
