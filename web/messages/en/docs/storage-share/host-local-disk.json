@@ -16,7 +16,7 @@
   },
   "destructive": {
     "title": "Destructive tool for the 'format' path",
-    "body": "The <em>Format</em> path <strong>erases every partition and byte on the selected disk</strong>. ProxMenux shows the disk list with a warning banner, filters out disks already in use, and requires an explicit confirmation before any <code>wipefs</code> / <code>sgdisk</code> / <code>mkfs</code> runs. Still — read the device path aloud twice before typing \"yes\"."
+    "body": "The <em>Format</em> path <strong>destroys the existing partitions and data on the selected disk</strong>. ProxMenux shows the disk list with a warning banner, filters out disks already in use, and requires confirmation before any <code>wipefs</code> / <code>sgdisk</code> / <code>mkfs</code> runs. This is not a secure overwrite of every byte. Double-check the device path before confirming."
   },
   "compare": {
     "heading": "Directory vs ZFS pool — which to pick",
@@ -78,7 +78,7 @@
       "Pick the filesystem — see the table above for trade-offs.",
       "Storage ID (default <code>disk-&lt;device&gt;</code>), mount path, content-type preset.",
       "Confirm at the <strong>FINAL CONFIRMATION — DATA WILL BE ERASED</strong> dialog.",
-      "ProxMenux wipes the partition table, creates one partition spanning the whole disk, runs <code>mkfs.&lt;fs&gt;</code> (or <code>zpool create</code>), mounts it, adds it to <code>/etc/fstab</code> by UUID with <code>defaults,nofail</code>, and registers it in Proxmox via <code>pvesm add dir</code> or <code>pvesm add zfspool</code>."
+      "ProxMenux clears the partition table and creates one partition spanning the disk. It runs <code>mkfs.&lt;fs&gt;</code> or <code>zpool create</code> and mounts the result. Regular filesystems get an entry in <code>/etc/fstab</code> by UUID with <code>defaults,nofail</code>; ZFS uses its pool mount configuration instead. Registration uses <code>pvesm add dir</code> or <code>pvesm add zfspool</code>."
     ],
     "tipTitle": "Why UUID + nofail in /etc/fstab",
     "tipBody": "The script writes <code>UUID=… /mnt/&lt;id&gt; &lt;fs&gt; defaults,nofail 0 2</code>. UUID survives device reordering across reboots (so <code>/dev/sdc</code> becoming <code>/dev/sdd</code> does not break boot). <code>nofail</code> means that if the disk ever disappears (hardware failure, unplugged), Proxmox still boots — storage will just show as inactive until the disk comes back."
@@ -97,7 +97,7 @@
   },
   "presets": {
     "heading": "Content-type presets",
-    "intro": "Instead of a long checklist, ProxMenux offers 4 presets plus a custom option. The preset string is passed to <code>pvesm add … --content &lt;csv&gt;</code>:",
+    "intro": "ProxMenux offers three presets plus a custom option. The selected content string is passed to <code>pvesm add … --content &lt;csv&gt;</code>:",
     "headerPreset": "Preset",
     "headerContent": "Content string",
     "headerUse": "Use case",
@@ -115,7 +115,7 @@
       {
         "preset": "All types",
         "content": "images,backup,iso,vztmpl,snippets",
-        "use": "\"Let the host decide\" — allows every content type Proxmox supports on this storage."
+        "use": "The broad preset shown here enables images, backups, ISOs, LXC templates and snippets. Add other supported types, such as rootdir, through Custom if needed."
       },
       {
         "preset": "Custom",
@@ -124,7 +124,7 @@
       }
     ],
     "zfsTitle": "ZFS pool content is narrower",
-    "zfsBody": "If you picked <strong>zfs</strong> as the filesystem, Proxmox only accepts <code>images</code> and <code>rootdir</code> as content types on a <code>zfspool</code> (it is block storage, not a filesystem for ISOs). The presets above will still work but Proxmox silently drops the content types it cannot use — check <code>pvesm status</code> afterwards."
+    "zfsBody": "If you picked <strong>zfs</strong>, a <code>zfspool</code> supports only <code>images</code> and <code>rootdir</code>, not ISO or backup files. Use Custom to enter a supported content list. The script forwards your selection unchanged; unsupported types may make registration fail. Check <code>pvesm status</code> afterwards."
   },
   "manual": {
     "heading": "Manual equivalent",
