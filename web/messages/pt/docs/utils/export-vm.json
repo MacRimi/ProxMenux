@@ -1,0 +1,145 @@
+{
+  "meta": {
+    "title": "Exportar VM para OVA / OVF | Documentação ProxMenux",
+    "description": "Exporte uma VM Proxmox para um arquivo OVA portátil ou um diretório OVF com o esquema padrão DMTF. Discos VMDK no formato streamOptimized e manifesto SHA1. Importável no VMware ESXi / Workstation / Fusion, VirtualBox e novamente no Proxmox.",
+    "ogTitle": "Exportar VM para OVA / OVF | Documentação ProxMenux",
+    "ogDescription": "Converta uma VM Proxmox num pacote OVA / OVF portátil compatível com VMware e VirtualBox."
+  },
+  "header": {
+    "title": "Exportar VM para OVA / OVF",
+    "description": "Converte uma VM Proxmox num pacote OVA portátil (um único arquivo TAR) ou OVF (descritor e ficheiros VMDK) com o esquema OVF padrão DMTF. Os discos são convertidos com qemu-img para VMDK streamOptimized. O resultado pode ser importado no VMware (ESXi / Workstation / Fusion), VirtualBox e novamente no Proxmox através da ferramenta de importação.",
+    "section": "Utilitários"
+  },
+  "intro": {
+    "title": "O que isto faz",
+    "body": "Lê a configuração de uma VM parada, converte cada disco para VMDK streamOptimized, gera um descritor OVF e um manifesto SHA1 e reúne tudo num único ficheiro <code>.ova</code> ou num diretório <code>-ovf</code>. A VM de origem nunca é modificada."
+  },
+  "picker": {
+    "heading": "Seletor de VM",
+    "body": "Ao iniciar, o script lista todas as VMs de <code>qm list</code> com VMID, nome e estado. Escolha a que pretende exportar:",
+    "imgAlt": "Janela de seleção da VM a exportar com a lista de todas as VMs"
+  },
+  "stopped": {
+    "heading": "A VM tem de estar parada",
+    "intro": "Uma imagem de disco consistente exige uma VM parada. Se a VM selecionada estiver em execução, o ProxMenux propõe desligá-la:",
+    "items": [
+      "Encerramento normal através de <code>qm shutdown $VMID --timeout 120</code> (aguarda 2 minutos pelo encerramento ACPI do sistema convidado).",
+      "Se o tempo de espera terminar, propõe uma paragem forçada: <code>qm stop $VMID</code> (equivale a cortar a alimentação).",
+      "Se você recusar ambos, a exportação é interrompida — nenhum dado é tocado."
+    ],
+    "warnTitle": "A paragem forçada equivale a cortar a alimentação",
+    "warnBody": "<code>qm stop</code> equivale a desligar a alimentação à força. O sistema convidado pode precisar de reparar o sistema de ficheiros no arranque seguinte. Prefira o encerramento normal e reserve a paragem forçada para sistemas convidados que não respondem."
+  },
+  "format": {
+    "heading": "Selector de formato: OVA vs OVF",
+    "headerFormat": "Formato",
+    "headerOutput": "Saída",
+    "headerPros": "Vantagens",
+    "headerCons": "Desvantagens",
+    "rows": [
+      {
+        "format": "OVA",
+        "output": "name-vmid-ts.ova",
+        "pros": "Um único ficheiro autónomo, fácil de mover, transferir por sftp ou anexar a um pedido de suporte.",
+        "cons": "Requer ~220% do tamanho virtual do disco (espaço adicional para o arquivo TAR durante a criação)."
+      },
+      {
+        "format": "OVF",
+        "output": "name-vmid-ts-ovf/",
+        "pros": "~120% do tamanho virtual do disco. Mais fácil de inspecionar, pois o descritor é XML em texto. Pode ser editado antes da importação.",
+        "cons": "Vários ficheiros, que têm de ser transferidos em conjunto."
+      }
+    ]
+  },
+  "destination": {
+    "heading": "Diretório de destino",
+    "body": "Escolha um caminho predefinido (<code>/var/lib/vz/dump</code>, <code>/var/lib/vz/template/iso</code>) ou introduza um caminho personalizado. O script verifica se o diretório permite escrita e avisa se o espaço livre parecer insuficiente antes de começar.",
+    "calloutTitle": "Estimativa do espaço livre necessário",
+    "calloutBody": "Para exportar em OVF uma VM cujos discos somam 100 GB virtuais, reserve ~120 GB livres; para OVA, ~220 GB. A utilização real pode ser menor para discos quase vazios. O arquivo OVA é criado com TAR sem compressão enquanto os ficheiros VMDK temporários ainda existem, pelo que deve reservar espaço para ambos. Se o espaço acabar durante a exportação, o gestor de EXIT limpa o diretório temporário e terá de recomeçar."
+  },
+  "package": {
+    "heading": "O que acaba no pacote",
+    "intro": "Para um OVA/OVF denominado <code>myvm-100-2026-04-26_18-30-15</code>:",
+    "code": "# OVA mode (single .ova file is a TAR of):\nmyvm-100-2026-04-26_18-30-15.ovf      # XML descriptor (DMTF OVF 1.0 + RASD + VSSD)\nmyvm-100-2026-04-26_18-30-15.mf       # SHA1 manifest\nmyvm-100-2026-04-26_18-30-15-disk0.vmdk\nmyvm-100-2026-04-26_18-30-15-disk1.vmdk\n...\n\n# OVF mode (a directory):\nmyvm-100-2026-04-26_18-30-15-ovf/\n├── myvm-100-2026-04-26_18-30-15.ovf\n├── myvm-100-2026-04-26_18-30-15.mf\n├── myvm-100-2026-04-26_18-30-15-disk0.vmdk\n└── myvm-100-2026-04-26_18-30-15-disk1.vmdk"
+  },
+  "exported": {
+    "heading": "O que é exportado",
+    "items": [
+      "<strong>Discos:</strong> todas as entradas <code>scsi*</code>, <code>sata*</code>, <code>virtio*</code> e <code>ide*</code> da configuração da VM, convertidas para VMDK streamOptimized.",
+      "<strong>Número de vCPUs</strong> (RASD ResourceType 3) e <strong>memória</strong> em MiB (ResourceType 4).",
+      "<strong>Número de placas de rede</strong> (ResourceType 10: apenas o número, sem a bridge ou o modelo).",
+      "<strong>Nome da VM</strong> e indicação do tipo de sistema operativo."
+    ],
+    "notTitle": "O que não é exportado",
+    "notItems": [
+      "Montagens CD-ROM / ISO (excluídas intencionalmente).",
+      "Unidades cloud-init (excluídas intencionalmente).",
+      "Bridge e modelo específicos da placa de rede (apenas o número é conservado).",
+      "Escolha BIOS / UEFI, a configurar novamente na importação.",
+      "Configuração de passthrough PCI.",
+      "Instantâneos — apenas o estado atual é capturado.",
+      "Opções de nível VM (NUMA, páginas enormes, hotplug, ...)."
+    ]
+  },
+  "conversion": {
+    "heading": "Conversão de disco",
+    "intro": "Cada disco é convertido com:",
+    "code": "qemu-img convert -p -O vmdk -o subformat=streamOptimized \\\n    \"$source_path\" \\\n    \"$work_dir/<base_name>-disk<N>.vmdk\"",
+    "outro": "<code>streamOptimized</code> é o formato VMware legível numa única passagem, suportado pelo ESXi 6.7+, VMware Workstation, VirtualBox e pelo próprio Proxmox. É o subformato VMDK com maior compatibilidade e adequado à portabilidade. A desvantagem é não permitir acesso aleatório, pelo que não pode ser montado diretamente sem conversão."
+  },
+  "manifest": {
+    "heading": "Manifesto SHA1",
+    "intro": "Cada pacote inclui um ficheiro <code>.mf</code> com os hashes SHA1 do descritor OVF e de cada VMDK:",
+    "code": "SHA1(myvm-100-2026-04-26_18-30-15.ovf)= 3a7bd3e2360a3d29eea436fcfb7e44c735d117c9\nSHA1(myvm-100-2026-04-26_18-30-15-disk0.vmdk)= b7e23ec29af22b0b4e41da31e868d57226121c84\nSHA1(myvm-100-2026-04-26_18-30-15-disk1.vmdk)= a87ff679a2f3e71d9181a67b7542122c",
+    "outro": "É opcional na especificação OVF e muitos programas ignoram-no, mas permite verificar se o pacote foi transferido intacto. Verifique manualmente com <code>sha1sum -c file.mf</code>."
+  },
+  "import": {
+    "heading": "Importar o resultado",
+    "intro": "O pacote exportado pode ser importado em:",
+    "items": [
+      {
+        "href": "/docs/utils/import-vm",
+        "preRich": "<strong>Proxmox</strong> — use a ferramenta correspondente ",
+        "linkLabel": "Importar VM de OVA / OVF",
+        "tailRich": "."
+      },
+      {
+        "tailRich": "<strong>VMware ESXi</strong> — Datacenter → Deploy OVF Template; selecione o ficheiro .ova ou .ovf."
+      },
+      {
+        "tailRich": "<strong>VMware Workstation / Fusion</strong> — File → Open; selecione o ficheiro .ova ou .ovf."
+      },
+      {
+        "tailRich": "<strong>VirtualBox</strong> — File → Import Appliance; selecione o ficheiro .ova ou .ovf."
+      }
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Resolução de Problemas",
+    "noSpaceTitle": "qemu-img convert falha durante a conversão com \"No space left on device\"",
+    "noSpaceBody": "O destino ficou sem espaço livre. O gestor de EXIT limpa automaticamente o diretório temporário. Escolha um destino com mais espaço livre (consulte a estimativa acima) e repita a exportação.",
+    "unsupportedHwTitle": "A exportação termina, mas o VMware recusa a importação: \"Unsupported hardware family\"",
+    "unsupportedHwBody": "Algumas versões do ESXi rejeitam descritores OVF que declaram uma família de hardware desconhecida. Abra o .ovf num editor de texto, ou extraia primeiro o .ova, procure <code>&lt;vssd:VirtualSystemType&gt;</code> e defina um valor aceite pelo ESXi, como <code>vmx-13</code> para ESXi 6.5+. Para contornar rapidamente o problema, experimente o VirtualBox, que é mais permissivo.",
+    "nicTitle": "A VM importada usa uma placa de rede ou um controlador SCSI diferente",
+    "nicBody": "O OVF conserva o número de placas de rede, mas não o modelo original. Reveja as definições de rede da VM importada no hipervisor de destino. A exportação declara um controlador SCSI lsilogic para compatibilidade com o VMware. Ao importar novamente no Proxmox, pode escolher <code>VirtIO SCSI</code> se o sistema convidado tiver os controladores adequados.",
+    "runningTitle": "A VM estava em execução e recusei pará-la: exportação cancelada",
+    "runningBody": "O script não consegue produzir uma imagem consistente enquanto há escrita nos discos. Aceite o pedido de encerramento na próxima vez, ou desligue primeiro a VM manualmente (<code>qm shutdown $VMID</code>) e repita a exportação.",
+    "slowTitle": "A conversão do disco é lenta",
+    "slowBody": "<code>qemu-img convert</code> usa uma única thread e lê a origem à velocidade máxima. Para um disco de 100 GB num disco rígido mecânico, conte com 15–30 minutos. De NVMe para NVMe é 5–10 vezes mais rápido. Os discos de uma VM são convertidos em sequência; o tempo aumenta linearmente com o tamanho virtual total."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/utils/import-vm",
+        "label": "Importar VM de OVA / OVF",
+        "tail": " — a ferramenta complementar para voltar a importar a VM."
+      },
+      {
+        "href": "/docs/utils",
+        "label": "Visão geral dos utilitários",
+        "tail": " — voltar ao panorama da secção."
+      }
+    ]
+  }
+}

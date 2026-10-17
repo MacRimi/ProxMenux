@@ -1,0 +1,145 @@
+{
+  "meta": {
+    "title": "Exportera VM till OVA / OVF | ProxMenux-dokumentation",
+    "description": "Exportera en Proxmox-VM till ett portabelt OVA-arkiv eller en OVF-katalog med DMTF-standardschemat. VMDK-diskar i formatet streamOptimized och SHA1-manifest. Kan importeras i VMware ESXi / Workstation / Fusion, VirtualBox och tillbaka i Proxmox.",
+    "ogTitle": "Exportera VM till OVA / OVF | ProxMenux-dokumentation",
+    "ogDescription": "Konvertera en Proxmox-VM till ett portabelt OVA- / OVF-paket som är kompatibelt med VMware och VirtualBox."
+  },
+  "header": {
+    "title": "Exportera VM till OVA / OVF",
+    "description": "Konverterar en Proxmox-VM till ett portabelt OVA-paket (ett enda TAR-arkiv) eller OVF-paket (beskrivningsfil och VMDK-filer) med DMTF:s OVF-standardschema. Diskarna konverteras med qemu-img till VMDK i formatet streamOptimized. Resultatet kan importeras i VMware (ESXi / Workstation / Fusion), VirtualBox och tillbaka i Proxmox med importverktyget.",
+    "section": "Verktyg"
+  },
+  "intro": {
+    "title": "Vad detta gör",
+    "body": "Läser konfigurationen för en stoppad VM, konverterar varje disk till VMDK i formatet streamOptimized, skapar en OVF-beskrivningsfil och ett SHA1-manifest och paketerar allt som en enda <code>.ova</code>-fil eller en <code>-ovf</code>-katalog. Den ursprungliga virtuella maskinen ändras aldrig."
+  },
+  "picker": {
+    "heading": "VM-väljare",
+    "body": "Vid start visar skriptet alla virtuella maskiner från <code>qm list</code> med VMID, namn och status. Välj den som ska exporteras:",
+    "imgAlt": "Dialog för att välja en VM att exportera, med en lista över alla virtuella maskiner"
+  },
+  "stopped": {
+    "heading": "Den virtuella maskinen måste vara stoppad",
+    "intro": "En konsekvent diskavbildning kräver en stoppad VM. Om den valda virtuella maskinen körs erbjuder ProxMenux att stänga av den:",
+    "items": [
+      "Normal avstängning med <code>qm shutdown $VMID --timeout 120</code> (väntar 2 minuter på gästens ACPI-avstängning).",
+      "Om väntetiden löper ut erbjuds ett tvångsstopp: <code>qm stop $VMID</code> (motsvarar att bryta strömmen).",
+      "Om du avböjer båda avbryts exporten utan att några data ändras."
+    ],
+    "warnTitle": "Ett tvångsstopp motsvarar att bryta strömmen",
+    "warnBody": "<code>qm stop</code> motsvarar att dra ur strömkabeln. Gästens filsystem kan behöva repareras vid nästa start. Använd normal avstängning när det går och reservera tvångsstopp för gäster som inte svarar."
+  },
+  "format": {
+    "heading": "Formatval: OVA eller OVF",
+    "headerFormat": "Format",
+    "headerOutput": "Utdata",
+    "headerPros": "Fördelar",
+    "headerCons": "Nackdelar",
+    "rows": [
+      {
+        "format": "OVA",
+        "output": "name-vmid-ts.ova",
+        "pros": "En enda fristående fil som är lätt att flytta, överföra med sftp eller bifoga till ett supportärende.",
+        "cons": "Kräver ~220% av den virtuella diskstorleken (extra utrymme för TAR-arkivet medan det skapas)."
+      },
+      {
+        "format": "OVF",
+        "output": "name-vmid-ts-ovf/",
+        "pros": "~120% av den virtuella diskstorleken. Lättare att granska eftersom beskrivningsfilen är vanlig XML-text. Kan redigeras före import.",
+        "cons": "Flera filer som måste överföras tillsammans."
+      }
+    ]
+  },
+  "destination": {
+    "heading": "Destinationskatalog",
+    "body": "Välj en förinställd sökväg (<code>/var/lib/vz/dump</code>, <code>/var/lib/vz/template/iso</code>) eller ange en egen. Skriptet kontrollerar att katalogen är skrivbar och varnar om det lediga utrymmet verkar otillräckligt innan du börjar.",
+    "calloutTitle": "Tumregel för ledigt utrymme",
+    "calloutBody": "För OVF-export av en VM med totalt 100 GB virtuell diskstorlek bör du ha ~120 GB ledigt; för OVA, ~220 GB. Den faktiska användningen kan bli lägre för nästan tomma diskar. OVA-arkivet skapas med okomprimerad TAR medan de tillfälliga VMDK-filerna finns kvar, så det behövs plats för båda. Om utrymmet tar slut under exporten städar EXIT-hanteraren den tillfälliga katalogen och du måste börja om."
+  },
+  "package": {
+    "heading": "Vad som hamnar i paketet",
+    "intro": "För en OVA / OVF som heter <code>myvm-100-2026-04-26_18-30-15</code>:",
+    "code": "# OVA mode (single .ova file is a TAR of):\nmyvm-100-2026-04-26_18-30-15.ovf      # XML descriptor (DMTF OVF 1.0 + RASD + VSSD)\nmyvm-100-2026-04-26_18-30-15.mf       # SHA1 manifest\nmyvm-100-2026-04-26_18-30-15-disk0.vmdk\nmyvm-100-2026-04-26_18-30-15-disk1.vmdk\n...\n\n# OVF mode (a directory):\nmyvm-100-2026-04-26_18-30-15-ovf/\n├── myvm-100-2026-04-26_18-30-15.ovf\n├── myvm-100-2026-04-26_18-30-15.mf\n├── myvm-100-2026-04-26_18-30-15-disk0.vmdk\n└── myvm-100-2026-04-26_18-30-15-disk1.vmdk"
+  },
+  "exported": {
+    "heading": "Vad blir exporterat",
+    "items": [
+      "<strong>Diskar:</strong> alla poster av typen <code>scsi*</code>, <code>sata*</code>, <code>virtio*</code> och <code>ide*</code> i VM-konfigurationen, konverterade till VMDK i formatet streamOptimized.",
+      "<strong>Antal vCPU:er</strong> (RASD ResourceType 3) och <strong>minne</strong> i MiB (ResourceType 4).",
+      "<strong>Antal nätverkskort</strong> (ResourceType 10: endast antalet, inte bryggan eller modellen).",
+      "<strong>VM-namn</strong> och en uppgift om typen av operativsystem."
+    ],
+    "notTitle": "Vad exporteras INTE",
+    "notItems": [
+      "CD-ROM- / ISO-anslutningar (avsiktligt uteslutna).",
+      "Cloud-init-enheter (avsiktligt uteslutna).",
+      "Nätverkskortets specifika brygga och modell (endast antalet bevaras).",
+      "Valet av BIOS / UEFI, som måste ställas in igen vid import.",
+      "Konfiguration av PCI-genomkoppling.",
+      "Snapshots - endast det nuvarande tillståndet fångas.",
+      "Inställningar på VM-nivå (NUMA, hugepages, hotplug, …)."
+    ]
+  },
+  "conversion": {
+    "heading": "Diskkonvertering",
+    "intro": "Varje disk konverteras med:",
+    "code": "qemu-img convert -p -O vmdk -o subformat=streamOptimized \\\n    \"$source_path\" \\\n    \"$work_dir/<base_name>-disk<N>.vmdk\"",
+    "outro": "<code>streamOptimized</code> är VMwares format som kan läsas i en enda genomgång. Det stöds av ESXi 6.7+, VMware Workstation, VirtualBox och Proxmox självt. Det är det VMDK-underformat som har bredast kompatibilitet och passar för flytt mellan system. Nackdelen är att det saknar direktåtkomst till godtyckliga positioner och därför inte kan monteras direkt utan konvertering."
+  },
+  "manifest": {
+    "heading": "SHA1-manifest",
+    "intro": "Varje paket innehåller en <code>.mf</code>-fil med SHA1-hashar för OVF-beskrivningsfilen och varje VMDK:",
+    "code": "SHA1(myvm-100-2026-04-26_18-30-15.ovf)= 3a7bd3e2360a3d29eea436fcfb7e44c735d117c9\nSHA1(myvm-100-2026-04-26_18-30-15-disk0.vmdk)= b7e23ec29af22b0b4e41da31e868d57226121c84\nSHA1(myvm-100-2026-04-26_18-30-15-disk1.vmdk)= a87ff679a2f3e71d9181a67b7542122c",
+    "outro": "Manifestet är valfritt i OVF-specifikationen och många program ignorerar det, men det kan användas för att kontrollera att paketet överfördes oskadat. Verifiera manuellt med <code>sha1sum -c file.mf</code>."
+  },
+  "import": {
+    "heading": "Importera resultatet",
+    "intro": "Det exporterade paketet kan importeras i:",
+    "items": [
+      {
+        "href": "/docs/utils/import-vm",
+        "preRich": "<strong>Proxmox</strong> — använd det tillhörande verktyget ",
+        "linkLabel": "Importera VM från OVA / OVF",
+        "tailRich": "."
+      },
+      {
+        "tailRich": "<strong>VMware ESXi</strong> — Datacenter → Deploy OVF Template; välj .ova- eller .ovf-filen."
+      },
+      {
+        "tailRich": "<strong>VMware Workstation / Fusion</strong> — File → Open; välj .ova- eller .ovf-filen."
+      },
+      {
+        "tailRich": "<strong>VirtualBox</strong> — File → Import Appliance; välj .ova- eller .ovf-filen."
+      }
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "noSpaceTitle": "qemu-img convert misslyckas under konverteringen med \"No space left on device\"",
+    "noSpaceBody": "Utrymmet tog slut på destinationen. EXIT-hanteraren städar automatiskt den tillfälliga katalogen. Välj en destination med mer ledigt utrymme (se tumregeln ovan) och kör exporten igen.",
+    "unsupportedHwTitle": "Exporten slutförs men VMware vägrar importera: \"Unsupported hardware family\"",
+    "unsupportedHwBody": "Vissa ESXi-versioner avvisar OVF-beskrivningsfiler som anger en okänd maskinvarufamilj. Öppna .ovf-filen i en textredigerare, eller packa först upp .ova-filen, leta efter <code>&lt;vssd:VirtualSystemType&gt;</code> och ange ett värde som ESXi godtar, till exempel <code>vmx-13</code> för ESXi 6.5+. Prova VirtualBox som en snabb lösning; det är mindre strikt.",
+    "nicTitle": "Den importerade virtuella maskinen använder ett annat nätverkskort eller en annan SCSI-styrenhet",
+    "nicBody": "OVF bevarar antalet nätverkskort, men inte deras ursprungliga modell. Granska nätverksinställningarna för den importerade virtuella maskinen i destinationshypervisorn. Exporten anger en lsilogic-SCSI-styrenhet för VMware-kompatibilitet. Vid återimport i Proxmox kan du välja <code>VirtIO SCSI</code> om gästen har lämpliga drivrutiner.",
+    "runningTitle": "Den virtuella maskinen kördes och jag avböjde avstängning: exporten avbröts",
+    "runningBody": "Skriptet kan inte skapa en konsekvent avbildning medan data skrivs till diskarna. Acceptera avstängningsfrågan nästa gång, eller stäng först av den virtuella maskinen manuellt (<code>qm shutdown $VMID</code>) och kör exporten igen.",
+    "slowTitle": "Diskkonverteringen är långsam",
+    "slowBody": "<code>qemu-img convert</code> använder en tråd och läser källan med full hastighet. Räkna med 15–30 minuter för en disk på 100 GB på en mekanisk hårddisk. Från NVMe till NVMe går det 5–10 gånger snabbare. Diskarna i en VM konverteras i följd; tiden ökar linjärt med den totala virtuella storleken."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "href": "/docs/utils/import-vm",
+        "label": "Importera VM från OVA / OVF",
+        "tail": " — det kompletterande verktyget för återimport."
+      },
+      {
+        "href": "/docs/utils",
+        "label": "Verktygsöversikt",
+        "tail": " — tillbaka till avsnittsöversikten."
+      }
+    ]
+  }
+}

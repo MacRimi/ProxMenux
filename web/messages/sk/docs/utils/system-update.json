@@ -1,0 +1,168 @@
+{
+  "meta": {
+    "title": "Aktualizácia systému Proxmox | Dokumentácia ProxMenux",
+    "description": "Aktualizuje balíky v rámci aktuálnej hlavnej verzie Proxmox pomocou apt-get update a apt full-upgrade -y. Kontroluje miesto na disku a repozitáre, skúša obnoviť kľúče GPG, kontroluje a opravuje staré hlavičky PV v LVM, podľa potreby znovu zostaví spravované ovládače DKMS, spustí autoremove/autoclean a ponúkne potrebný reštart.",
+    "ogTitle": "Aktualizácia systému Proxmox | Dokumentácia ProxMenux",
+    "ogDescription": "apt full-upgrade s kontrolou repozitárov, autoremove/autoclean a výzvou na reštart podľa potreby."
+  },
+  "header": {
+    "title": "Aktualizácia systému Proxmox",
+    "description": "Volá jediný pracovný skript (<code>update-pve-safe.sh</code>), ktorý rozpozná hlavnú verziu Proxmox. Nakonfigurované repozitáre načíta cez API Proxmox a zachová ich. Hostiteľ bez predplatného, ktorý používa iba Enterprise, musí potvrdiť prechod na no-subscription. Skript aktualizuje balíky a znovu zostaví ovládače DKMS spravované ProxMenux pre jadro pripravené na ďalší štart. Hlavný skript ponúkne reštart, ak existuje systémová značka alebo sa najnovšie nainštalované jadro líši od spusteného. Pri čakajúcich aktualizáciách možno postup spustiť aj cez <em>Update Now</em> v hlavičke ProxMenux Monitor.",
+    "section": "Nástroje"
+  },
+  "calloutWhat": {
+    "title": "Čo to robí?",
+    "body": "Aktualizuje hostiteľa na najnovšiu úroveň opráv jeho aktuálnej hlavnej verzie. <strong>Neprechádza</strong> na inú hlavnú verziu; pre PVE 8 → PVE 9 pozrite <link>Prechod z PVE 8 na PVE 9</link>."
+  },
+  "official": {
+    "heading": "Oficiálne odporúčanie pre Proxmox",
+    "intro": "Proxmox pri aktualizácii bežiaceho hostiteľa v rámci rovnakej hlavnej verzie odporúča spustiť:",
+    "code": "apt update && apt full-upgrade -y",
+    "outro": "Tento riadok je oficiálnym príkazom pre aktuálne vydania Proxmox. Treba tiež overiť správnosť repozitárov, zapnutie vhodných zdrojov a dobrý stav hostiteľa po aktualizácii."
+  },
+  "onTop": {
+    "heading": "Čo ProxMenux pridáva: overené v skripte",
+    "intro": "Používa <strong>rovnakú operáciu apt full-upgrade</strong> s kontrolou repozitárov, opätovným zostavením DKMS a následným čistením. Nasledujúce kroky zodpovedajú <code>scripts/utilities/proxmox_update.sh</code> a jeho jedinému pracovnému skriptu <code>scripts/global/update-pve-safe.sh</code>:",
+    "items": [
+      "<strong>Rozpozná hlavnú verziu PVE</strong> v pracovnom skripte (<code>pveversion | grep -oP ''pve-manager/\\K[0-9]+''</code>). Jeden skript obsluhuje PVE 8 aj PVE 9. Repozitáre sa zachovajú, ak hostiteľ bez predplatného nepotvrdí ponúknutú zmenu.",
+      "<strong>Zachová nakonfigurované repozitáre.</strong> <code>ensure_repositories</code> cez API Proxmox načíta repozitáre a stav predplatného. Pri aktívnom predplatnom alebo už používanom repozitári no-subscription či test nič nemení. Hostiteľ bez aktívneho predplatného s jediným repozitárom Enterprise musí potvrdiť prechod na no-subscription. Pri odmietnutí sa aktualizácia skončí bez zmeny zdrojov.",
+      "<strong>Spustí aktualizáciu neinteraktívne</strong> s <code>DEBIAN_FRONTEND=noninteractive</code> a <code>--force-confdef --force-confold</code>. Pri rozhodovaní o konfiguračných súboroch dpkg prijme predvolenú akciu, ak existuje; inak zachová aktuálny súbor.",
+      "<strong>Nevynucuje voliteľné nástroje.</strong> Bezpečný skript nevnucuje hostiteľovi <code>zfsutils-linux</code>, <code>chrony</code>, <code>ifupdown2</code> ani podobné balíky. Ak sa inštalácia Proxmox rozhodla niektorý z nich nepoužiť, táto voľba sa zachová. Chýbajúce balíky oznamujú nadradené inštalačné postupy, nie aktualizačný postup.",
+      "<strong>Kontrola a oprava metadát LVM.</strong> Rozpozná staré hlavičky PV a pre dotknuté skupiny zväzkov spustí vgck --updatemetadata a vgchange -ay. Môže zmeniť metadáta LVM; nejde iba o kontrolu s upozorneniami.",
+      "<strong>Potom vyčistí:</strong> <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>.",
+      "<strong>Opätovné zostavenie DKMS pred výzvou na reštart.</strong> Pracovný skript volá <code>pmx_rebuild_dkms_after_kernel</code>, keď je pripravené novšie nainštalované jadro. Hlavný skript kontroluje <code>/var/run/reboot-required</code> a pomocou <code>dpkg-query</code> porovná jadro uvedené v <code>uname -r</code> s najnovšie nainštalovaným balíkom <code>proxmox-kernel-*-pve-signed</code> / <code>pve-kernel-*-pve</code>. Na hostiteľoch bez <code>needrestart</code> môže značka chýbať; porovnanie jadier funguje aj vtedy."
+    ]
+  },
+  "calloutOneSentence": {
+    "title": "V jednej vete",
+    "body": "Aktualizuje balíky hostiteľa, zachová repozitáre bez potvrdenej zmeny, skontroluje metadáta LVM, znovu zostaví spravované ovládače DKMS, vyčistí systém cez autoremove/autoclean a podľa potreby ponúkne reštart."
+  },
+  "confirm": {
+    "heading": "Potvrdzovací dialóg",
+    "intro": "Výber možnosti otvorí súhrn plánovaných krokov a vyžaduje výslovné potvrdenie:",
+    "imageAlt": "Potvrdzovací dialóg aktualizácie Proxmox s kontrolou repozitárov, aktualizáciou balíkov a čistením"
+  },
+  "routes": {
+    "heading": "Ako hlavný skript odovzdáva prácu",
+    "nodes": {
+      "source": {
+        "label": "proxmox_update.sh",
+        "detail": "pveversion |\ngrep -oP ''pve-manager/\\K[0-9]+''"
+      },
+      "bridge": {
+        "label": "Jediný pracovný skript",
+        "detail": "update-pve-safe.sh\n(rozpozná PVE 8 / 9\ninterne)"
+      },
+      "target": {
+        "label": "Po aktualizácii",
+        "detail": "apt-get autoremove\napt-get autoclean\nVýzva na reštart podľa potreby"
+      }
+    }
+  },
+  "worker": {
+    "heading": "Čo robí pracovný skript",
+    "intro": "Jeden pracovný skript (<code>scripts/global/update-pve-safe.sh</code>) obsluhuje PVE 8 (<code>bookworm</code>) aj PVE 9 (<code>trixie</code>). Interne rozpozná hlavnú verziu a kontroluje existujúce repozitáre bez prepísania základných zdrojov Debianu. Kroky sú:",
+    "items": [
+      "<strong>Kontroly pred začiatkom.</strong> Overí aspoň ~1 GB voľného miesta v <code>/var/cache/apt/archives</code>. Pri nedostatku miesta sa včas zastaví s jasnou správou, aby nezlyhal uprostred operácie apt.",
+      "<strong>Kontrola repozitárov.</strong> <code>ensure_repositories</code> načíta repozitáre a stav predplatného. Pri použiteľnom repozitári Proxmox nič nemení. Hostiteľ bez aktívneho predplatného s jediným repozitárom Enterprise musí potvrdiť prechod na no-subscription; pri odmietnutí sa aktualizácia skončí.",
+      "<strong>apt update s automatickou obnovou GPG.</strong> Pri <code>NO_PUBKEY</code> pre ľubovoľný repozitár vrátane zdroja tretej strany skript importuje chýbajúci kľúč a automaticky zopakuje pokus pred ohlásením chyby.",
+      "<strong>Čakajúce a bezpečnostné aktualizácie.</strong> Uvedie počet menených balíkov a počet balíkov z bezpečnostnej vetvy, aby potvrdzovací dialóg zobrazoval konkrétne čísla.",
+      "<strong>Potvrdzovací dialóg.</strong> Po obnovení zoznamov balíkov pracovný skript vyžaduje výslovné áno pred aktualizáciou balíkov.",
+      "<strong>apt full-upgrade.</strong> Používa <code>DEBIAN_FRONTEND=noninteractive</code> a <code>--force-confdef --force-confold</code>. Dpkg pri rozhodovaní o konfiguračných súboroch použije predvolenú akciu, ak existuje; inak zachová aktuálny súbor.",
+      "<strong>Kontrola LVM.</strong> <code>lvm_repair_check</code> obnoví metadáta skupín zväzkov, keď sa disky priamo priradené hosťovským VM (DSM, TrueNAS alebo úložné zariadenia) vrátia so starými hlavičkami PV.",
+      "<strong>Opätovné zostavenie ovládačov DKMS spravovaných ProxMenux.</strong> Keď je pripravené nové jadro, <code>pmx_rebuild_dkms_after_kernel</code> načíta ovládače nainštalované ProxMenux zo súboru <code>components_status.json</code> (aktuálne <code>nvidia_driver</code> → modul <code>nvidia</code> a <code>coral_driver</code> → modul <code>gasket</code>), nainštaluje príslušné hlavičky jadra (<code>proxmox-headers-&lt;newkver&gt;</code>, ak sú dostupné, inak <code>pve-headers-&lt;newkver&gt;</code>) a spustí <code>dkms autoinstall -k &lt;newkver&gt;</code>. Ak <code>dkms status</code> nezobrazuje moduly zostavené pre nové jadro, znovu spustí jednotlivé inštalátory s <code>--auto-reinstall</code>. Chyby sa zaznamenajú, ale aktualizáciu nezrušia; postup sa dostane k výzve na reštart.",
+      "<strong>Záverečné čistenie.</strong> <code>apt-get autoremove</code> + <code>apt-get autoclean</code> pred odovzdaním riadenia hlavnému skriptu."
+    ]
+  },
+  "post": {
+    "heading": "Čistenie a reštart po aktualizácii",
+    "intro": "Po dokončení pracovného skriptu hlavný skript spustí:",
+    "code": "apt-get autoremove -y    # drop unused dependencies pulled in by old packages\napt-get autoclean        # drop downloaded .deb files no longer in the index",
+    "afterCode": "Hlavný skript tiež kontroluje potrebu reštartu. Ktorýkoľvek z týchto signálov vyvolá výzvu:",
+    "items": [
+      "Existuje <code>/var/run/reboot-required</code>: balík alebo systémový nástroj označil potrebu reštartovať hostiteľa.",
+      "Najnovšie nainštalovaný balík jadra Proxmox sa líši od spusteného jadra podľa <code>dpkg-query</code> a uname -r."
+    ],
+    "outro": "Ak platí niektorá podmienka, dialóg whiptail sa opýta <em>„Niektoré zmeny vyžadujú reštart. Chcete reštartovať teraz?“</em>. Odmietnutím môžete pokračovať s aktuálnym jadrom až do ručného reštartu, napríklad v plánovanom okne údržby."
+  },
+  "end": {
+    "heading": "Čo vidíte na konci",
+    "intro": "Po dokončení pracovného skriptu terminál zobrazí výsledok čistenia a podľa potreby aj výzvu na reštart:",
+    "imageAlt": "Záverečný súhrn aktualizácie Proxmox s výsledkom čistenia a výzvou na reštart"
+  },
+  "calloutDeclineReboot": {
+    "title": "Reštart odložte iba z konkrétneho dôvodu",
+    "body": "Inštalácia nového balíka <code>proxmox-kernel-*</code> nahradí spustené jadro až po reštarte. Nové jadro a zodpovedajúce moduly sa aktivujú pri ďalšom štarte. Naplánujte vhodné okno údržby a predtým skontrolujte upozornenia na chyby zostavenia DKMS."
+  },
+  "noSub": {
+    "heading": "Ako pracovný skript zaobchádza s repozitárom Enterprise",
+    "intro": "Proxmox predvolene zapína repozitár Enterprise. Bez aktívneho predplatného vráti pri <code>apt-get update</code> chybu 401. Pracovný skript mení repozitáre iba v tomto prípade a po potvrdení, cez API Proxmox používané v <em>Node → Updates → Repositories</em>. Jednotlivé prípady:",
+    "items": [
+      "Pri <strong>aktívnom predplatnom</strong> sa repozitáre nemenia a aktualizácie poskytuje Enterprise.",
+      "Ak je <strong>repozitár no-subscription alebo test už zapnutý</strong>, repozitáre sa nemenia bez ohľadu na ďalšie nakonfigurované zdroje.",
+      "Pri <strong>chýbajúcom aktívnom predplatnom a jedinom repozitári Enterprise</strong> dialóg ponúkne zmenu. Potvrdenie vypne zdroj Enterprise, zapne no-subscription a obnoví zoznamy balíkov. Zmena sa zaznamená v zobrazení <em>Changes</em> v Audit & Report. Odmietnutie ukončí aktualizáciu bez zmeny zdrojov.",
+      "Prítomné <strong>zdroje Ceph Enterprise</strong> sa vypnú pri rovnakej zmene bez výberu iného kanála Ceph. Hostiteľ používajúci Ceph si jeho kanál nastavuje samostatne.",
+      "Ak <strong>nie je dostupný terminál na potvrdenie</strong>, žiadny zdroj sa nezmení a aktualizácia sa skončí správou s odkazom na <em>Node → Updates → Repositories</em>."
+    ],
+    "outro": "Zdroje Debianu ani ostatné súbory repozitárov tento postup nikdy neupravuje. Položku kombinujúcu Enterprise s inými komponentmi neprepne: aktualizácia sa zastaví a požiada o rozdelenie položky v zobrazení repozitárov Proxmox."
+  },
+  "cluster": {
+    "heading": "Čo zohľadniť v klastri",
+    "calloutTitle": "V klastri aktualizujte vždy iba jeden uzol",
+    "calloutBody": "V klastri Proxmox spúšťajte túto možnosť vždy na <strong>jednom uzle</strong> a pred prechodom na ďalší počkajte na dokončenie reštartu. Najprv migrujte hosťovské systémy z uzla, aby nevznikol výpadok služieb celého klastra. Rôzne vedľajšie verzie, napríklad 8.4.1 a 8.4.5, môžu dočasne fungovať spolu niekoľko hodín; rôzne spustené jadrá môžu spôsobiť neočakávané správanie hosťovských systémov spravovaných HA."
+  },
+  "doesnt": {
+    "heading": "Čo to nerobí",
+    "items": [
+      "<strong>Prechod na novú hlavnú verziu.</strong> 8 → 9 je samostatná operácia; pozrite <link>Prechod z PVE 8 na PVE 9</link>.",
+      "<strong>Zálohovanie.</strong> Žiadne snímky ani návrat späť. Operácie apt nie sú transakčné. Zachovajte bežný postup zálohovania (PBS, vzdump, snímky ZFS).",
+      "<strong>Aktualizácie kontajnerov / VM.</strong> Aktualizuje sa iba hostiteľ; hosťovské systémy sa nemenia.",
+      "<strong>Samostatné nahrávanie firmvéru.</strong> Toto nie je nástroj na nahrávanie BIOS alebo firmvéru zariadení. Už nainštalované balíky firmvéru alebo mikrokódu CPU môžu byť aktualizované cez apt."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Riešenie problémov",
+    "items": [
+      {
+        "title": "apt update zlyhá s chybou 401 Unauthorized",
+        "body": "Repozitár Enterprise je zapnutý, ale hostiteľ nemá aktívne predplatné. Pred <code>apt-get update</code> skript ponúkne prechod na no-subscription. Ak ste ho odmietli, spustite aktualizáciu znova a potvrďte ho, alebo vypnite Enterprise v <em>Node → Updates → Repositories</em> a zapnite no-subscription."
+      },
+      {
+        "title": "dist-upgrade sa zastaví pri \"Configuring grub-pc\"",
+        "body": "Ak sa zobrazuje interaktívna otázka GRUB, žiada zariadenia na inštaláciu zavádzača. Voľba <code>--force-confold</code> platí pre konfiguračné súbory, nie pre tento výber zariadení. Pomocou <kbd>Tab</kbd> + <kbd>Space</kbd> vyberte príslušné zavádzacie disky a potom OK. Výber možno nastaviť vopred pomocou <code>dpkg-reconfigure grub-pc</code>."
+      },
+      {
+        "title": "Jadro sa aktualizovalo, ale chýbajú nové moduly externého ovládača",
+        "body": "Pre spravované ovládače (<code>nvidia_driver</code> a <code>coral_driver</code>) funkcia spustí <code>dkms autoinstall -k &lt;newkver&gt;</code> a môže zopakovať ich inštalátory s <code>--auto-reinstall</code>. Výsledok skontrolujte cez <code>dkms status</code>. Príkaz autoinstall môže znovu zostaviť aj iné registrované moduly DKMS; náhradné spustenie inštalátorov je obmedzené na spravované položky v <code>components_status.json</code>. Skontrolujte chýbajúce moduly tretích strán a podľa potreby ich zostavte pomocou <code>dkms autoinstall</code>."
+      },
+      {
+        "title": "Výzva na reštart sa nezobrazila, hoci sa nainštalovalo nové jadro",
+        "body": "Signály sú alternatívy: <code>/var/run/reboot-required</code> alebo rozdiel medzi spusteným a najnovšie nainštalovaným jadrom Proxmox. Hlavný skript neanalyzuje položky linux-image v zázname apt. Spustenú verziu overte cez <code>uname -r</code> a nainštalované balíky jadra cez <code>dpkg-query</code>. Potrebný reštart naplánujte alebo vo vhodnom čase spustite <code>shutdown -r now</code>."
+      }
+    ]
+  },
+  "files": {
+    "heading": "Príslušné súbory",
+    "code": "scripts/utilities/proxmox_update.sh              # this script (wrapper)\nscripts/global/update-pve-safe.sh                # single safe worker (PVE 8 + PVE 9)\nscripts/global/repository-functions.sh           # ensure_repositories\nscripts/global/repository_policy.py              # reads and switches repositories through the Proxmox API\nscripts/global/utils-install-functions.sh        # pmx_rebuild_dkms_after_kernel\n/usr/local/share/proxmenux/components_status.json # ProxMenux-managed DKMS driver registry\n/etc/apt/sources.list.d/proxmox.sources          # no-subscription source, written by Proxmox when the switch is accepted\n/var/run/reboot-required                         # read to decide on reboot prompt\n# Reboot fallback when needrestart isn't installed:\n# dpkg-query -W 'proxmox-kernel-*-pve-signed' 'pve-kernel-*-pve' vs. uname -r"
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/utils/upgrade-pve8-pve9",
+        "label": "Prechod z PVE 8 na PVE 9",
+        "tail": " — pre prechod na novú hlavnú verziu s iným nástrojom a bezpečnostným postupom."
+      },
+      {
+        "href": "/docs/utils/system-utils",
+        "label": "Inštalátor systémových nástrojov",
+        "tail": " — na inštaláciu užitočných nástrojov CLI pre aktualizácie (htop / btop / ncdu)."
+      },
+      {
+        "href": "/docs/utils",
+        "label": "Prehľad pomocných nástrojov",
+        "tail": " — Späť na prehľad sekcie."
+      }
+    ]
+  }
+}
