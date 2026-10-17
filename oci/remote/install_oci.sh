@@ -1233,6 +1233,17 @@ apply_installer_profile() {
       fi
       [[ -d ${rootfs}${target} ]] \
         || { oci_log "The volume to prepare does not exist: $target"; failed=1; break; }
+      # A reused volume may intentionally be mounted read-only (for example,
+      # /run/secrets). Do not remove files or change ownership/mode on it.
+      # Use the most specific containing mount: an RW child can override RO.
+      if [[ $(jq -r --arg target "$target" '
+        [.mounts[]? | select(.container_path as $path |
+          $target == $path or ($target | startswith($path + "/")))]
+        | sort_by(.container_path | length) | last | .read_only // false' \
+        "$DEPLOYMENT_FILE") == true ]]; then
+        oci_log "Skipping preparation of read-only volume: $target"
+        continue
+      fi
       if [[ $remove_lost_found == true ]]; then
         rm -rf "${rootfs}${target}/lost+found" || { failed=1; break; }
       fi

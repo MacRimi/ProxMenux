@@ -28,6 +28,13 @@ jobs:
           python-version: '3.13'
       - name: Install OCI test dependencies
         run: python3 -m pip install -r oci/requirements.txt
+      - name: Run read-only volume preparation regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          test -x /bin/bash
+          test -x /usr/bin/jq
+          python3 -m unittest discover -s oci/tests -p test_readonly_volume_preparation.py -v
       - name: Run offline registry account tests
         env:
           PYTHONDONTWRITEBYTECODE: '1'
