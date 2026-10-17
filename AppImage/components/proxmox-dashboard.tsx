@@ -18,6 +18,7 @@ import { Security } from "./security"
 import { Profile } from "./profile"
 import { About } from "./about"
 import { BackupTab } from "./backup-tab"
+import { PBSDashboard } from "./pbs-dashboard"
 import { OnboardingCarousel } from "./onboarding-carousel"
 import { HealthStatusModal } from "./health-status-modal"
 import { ReleaseNotesModal, useVersionCheck } from "./release-notes-modal"
@@ -96,6 +97,14 @@ interface FlaskSystemInfo {
 const _dashboardPrefetchFetcher = (url: string) => fetchApi(url)
 
 export function ProxmoxDashboard() {
+  const t = useT()
+  const { data, error } = useSWR<{ product: string }>("/api/platform", url => fetchApi<{ product: string }>(url), { revalidateOnFocus: false })
+  if (!data && !error) return <p role="status" className="p-8">{t("app.loading")}</p>
+  if (data?.product === "pbs") return <PBSDashboard />
+  return <PVEDashboard />
+}
+
+function PVEDashboard() {
   const t = useT()
   useSWR("/api/apps/custom-links", _dashboardPrefetchFetcher, { revalidateOnFocus: false })
   useSWR("/api/apps/categories",   _dashboardPrefetchFetcher, { revalidateOnFocus: false })

@@ -3851,6 +3851,13 @@ class PollingCollector:
         self._last_managed_check = now
 
         try:
+            from pbs_manager import is_pbs_host
+            if is_pbs_host():
+                return  # a Proxmox Backup Server has no guests or integrations to track
+        except Exception:
+            pass
+
+        try:
             import managed_installs
         except Exception:
             return  # registry module unavailable
