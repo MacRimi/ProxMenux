@@ -1,0 +1,175 @@
+{
+  "meta": {
+    "title": "Instalar NVIDIA no anfitrião | Documentação ProxMenux",
+    "description": "Instale controladores proprietários NVIDIA no Proxmox VE com ProxMenux: filtragem GPU, verificações de compilação e DKMS, persistência, patch NVENC opcional e atualização de bibliotecas LXC."
+  },
+  "header": {
+    "title": "Instalar controladores NVIDIA no anfitrião",
+    "description": "Instale NVIDIA no anfitrião Proxmox VE. Filtra ramos mantidos pelo ID PCI do GPU, verifica a compilação, utiliza DKMS, gere nouveau e instala persistência. Pode também atualizar bibliotecas dos LXC com acesso NVIDIA.",
+    "section": "Hardware: GPUs e Coral-TPU"
+  },
+  "intro": {
+    "title": "O que faz",
+    "body": "Deteta o GPU e oferece ramos mantidos que incluem o ID PCI. Bloqueia <code>nouveau</code>, descarrega o instalador oficial <code>.run</code>, utiliza DKMS e instala <code>nvidia-persistenced</code> com regras udev; patch NVENC opcional. A compilação verifica o kernel atual sem garantir todas as aplicações. Os LXC NVIDIA podem receber bibliotecas correspondentes."
+  },
+  "who": {
+    "heading": "Para quem é isto?",
+    "body": "Para vídeo ou cálculo acelerado com Plex, Jellyfin, Frigate, Immich ou Stable Diffusion <strong>em LXC</strong>, instale primeiro NVIDIA no <em>anfitrião</em> Proxmox. A atribuição direta a uma <strong>VM</strong> utiliza o procedimento VFIO separado."
+  },
+  "prereqs": {
+    "title": "Antes de começar",
+    "gpu": "<strong>Um GPU NVIDIA</strong> instalado no anfitrião. É detetado automaticamente; esta opção não gere AMD nem Intel.",
+    "gpuCheck": "lspci | grep -i nvidia",
+    "notVm": "O GPU <strong>não deve estar reservado para VM através de VFIO</strong>. O instalador recusa esse caso para não interferir na atribuição.",
+    "internet": "Acesso à Internet no host. O instalador baixa o driver de <code>download.nvidia.com</code> e, opcionalmente, clona <code>nvidia-persistenced</code> e <code>nvidia-patch</code> de GitHub.",
+    "space": "Reserve espaço em <code>/opt/nvidia</code> para <code>.run</code> e RAM para compilar. O percurso LXC não-Arch verifica 1500 MiB livres e pode pedir aumento temporário para 2048 MiB de RAM se inferior, restaurando depois o limite anterior. Preveja o reinício do anfitrião."
+  },
+  "vmWarn": {
+    "title": "GPU reservado para VM? Pare aqui",
+    "body": "Se algum dispositivo NVIDIA estiver associado a <code>vfio-pci</code>, o instalador sai mesmo com a VM parada. Estar reservado não implica utilização ativa. Planeie o regresso ao controlador do anfitrião e remova atribuições VM/VFIO antigas antes de reiniciar e instalar."
+  },
+  "running": {
+    "heading": "Executar o instalador",
+    "body": "Abra <strong>Hardware Graphics → NVIDIA GPU Driver Installer</strong> no ProxMenux. O menu depende de existir um controlador ativo.",
+    "imageAlt": "Menu de hardware com o instalador NVIDIA destacado"
+  },
+  "howRuns": {
+    "heading": "Como funciona o script",
+    "body": "Deteta dispositivos, escolhe uma versão e instala. Uma limpeza VFIO com confirmação separada pode ocorrer antes do resumo. Preparação de repositórios/cabeçalhos e descarga precedem a substituição do controlador; nem todas as alterações começam após uma única confirmação final."
+  },
+  "walkthrough": {
+    "detect": {
+      "title": "Detecção e visão geral do GPU",
+      "body1": "Apresenta controladores de vídeo NVIDIA, estado do controlador ou <em>«Nenhum controlador NVIDIA instalado»</em> e os LXC configurados para NVIDIA com a versão interna.",
+      "body2": "Reveja GPU e versões do anfitrião/contentores. Cancele no resumo se a seleção for inesperada; uma limpeza VFIO confirmada anteriormente já terá sido aplicada.",
+      "imageAlt": "Resumo pré-instalação: GPU, controlador e LXC NVIDIA"
+    },
+    "version": {
+      "title": "Escolha a versão do controlador",
+      "body1": "Filtra versões de <code>nvidia.com</code> que <strong>incluem o ID PCI do GPU na tabela de chips suportados</strong> e exclui versões beta/desenvolvimento por heurísticas. <em>&lt;versão&gt; — Recomendada</em> prioriza a última do ramo instalado, depois Production Branch e, por fim, o número de versão compatível mais elevado.",
+      "body2": "Se o controlador estiver registado com patch keylase, o seletor limita as versões à tabela NVENC. <em>Reinstalar / atualizar</em> mantém confirmações e opção de patch; verifique o resultado final.",
+      "whyTitle": "Como a compatibilidade do kernel é validada",
+      "whyBody": "Filtra por ramos mantidos e ID PCI, sem matriz fixa de kernel/controlador. Uma compilação prévia verifica o kernel atual. Uma falha confirmada volta ao seletor; se a verificação não estiver disponível, pode avisar e continuar. Instalação final e testes de funcionamento continuam necessários.",
+      "imageAlt": "Seletor de ramos compatíveis com GPU e recomendação no topo"
+    },
+    "uninstall": {
+      "title": "Remover o controlador anterior ao reinstalar",
+      "body": "Após descarregar e verificar o instalador escolhido, remove o controlador anterior. Para serviços NVIDIA, descarrega módulos, remove entradas DKMS e purga <code>nvidia-*</code> / <code>libnvidia-*</code> / <code>cuda-*</code>. Aplica-se também à reinstalação confirmada da mesma versão."
+    },
+    "prepare": {
+      "title": "Preparar o sistema",
+      "body": "Durante a preparação, o script:",
+      "items": [
+        "Verifica repositórios antes de remover ou instalar componentes. Sem subscrição e apenas com Enterprise, pede autorização para mudar para no-subscription; a recusa para a instalação.",
+        "Instala <code>pve-headers-$(uname -r)</code> (ou <code>proxmox-headers-$(uname -r)</code>), <code>build-essential</code> e <code>dkms</code>.",
+        "Cria o ficheiro gerido pelo ProxMenux <code>/etc/modprobe.d/proxmenux-nouveau-blacklist.conf</code> com <code>blacklist nouveau</code> e <code>options nouveau modeset=0</code>. Regista a eventual linha adicionada a <code>blacklist.conf</code> e tenta descarregar nouveau.",
+        "Escreve <code>/etc/modules-load.d/nvidia-vfio.conf</code> com <code>nvidia</code> e <code>nvidia_uvm</code> para que os módulos carreguem precocemente no arranque."
+      ]
+    },
+    "download": {
+      "title": "Baixe e execute o instalador NVIDIA",
+      "body": "Descarrega <code>NVIDIA-Linux-x86_64-&lt;version&gt;.run</code> para <code>/opt/nvidia</code> e verifica tamanho e tipo executável. São verificações de formato, não de assinatura criptográfica. Regista DKMS para recompilar com alterações do kernel; código e kernel devem continuar compatíveis.",
+      "imageAlt": "Progresso de descarga e compilação DKMS do instalador NVIDIA"
+    },
+    "persist": {
+      "title": "Serviço de persistência e regras de udev",
+      "body": "Instala <persistLink>nvidia-persistenced</persistLink> e escreve <code>/etc/udev/rules.d/70-nvidia.rules</code> para criar <code>/dev/nvidia*</code> no arranque. Evita que um LXC procure o GPU antes de os dispositivos estarem disponíveis."
+    },
+    "nvenc": {
+      "title": "Opcional: aplicar patch NVENC",
+      "body": "Os limites de sessões NVENC dependem do GPU e controlador. <patchLink>keylase/nvidia-patch</patchLink> pode remover o limite do controlador nas versões suportadas. Escolha <strong>Sim</strong> se precisar desta alteração de codificação e a versão for compatível. Não acelera descodificação nem elimina limites físicos.",
+      "supportTitle": "Verificar compatibilidade do patch",
+      "supportBody": "Procure a versão exata na <patchTableLink>tabela de patches</patchTableLink>. Se faltar, use o controlador sem patch ou outra versão mantida compatível com GPU, kernel e patch; a proximidade na lista não basta."
+    },
+    "propagate": {
+      "title": "Opcional: atualizar bibliotecas NVIDIA em LXC",
+      "body1": "Propõe atualizar bibliotecas do controlador nos LXC detetados. Estas e o módulo do anfitrião <strong>devem ter versões correspondentes</strong>; caso contrário <code>nvidia-smi</code> pode indicar «version mismatch».",
+      "body2": "Debian / Ubuntu e outros contentores glibc recebem o instalador <code>.run</code> extraído com <code>--no-kernel-modules --no-dkms --no-install-compat32-libs</code>; a RAM pode subir temporariamente para 2 GiB e ser depois restaurada. <strong>Arch, Manjaro e EndeavourOS</strong> utilizam <code>pacman -Syu nvidia-utils</code> dos repositórios, sem fixar a versão do anfitrião: verifique o resultado. <strong>Alpine</strong> recebe o conteúdo <code>.run</code> extraído por <code>pct push</code>, instala <code>gcompat</code> e <code>binutils</code> com <code>apk</code> e cria ligações SONAME com <code>readelf</code>. Verifique o funcionamento; a compatibilidade não garante todas as bibliotecas sobre musl.",
+      "imageAlt": "Diálogo com LXC NVIDIA e versões para confirmar a atualização"
+    },
+    "reboot": {
+      "title": "Reiniciar",
+      "body": "Regenera <code>initramfs</code> para todos os kernels e oferece reiniciar. <strong>Preveja esse reinício</strong> para verificar módulos e configuração nouveau no arranque, mesmo que o controlador já responda antes."
+    }
+  },
+  "reinstallUninstall": {
+    "heading": "Reinstalar ou desinstalar",
+    "intro": "Se <code>nvidia</code> estiver carregado e <code>nvidia-smi</code> devolver uma versão, apresenta um menu de ações. O critério deteta um controlador ativo; pode haver ficheiros instalados sem o módulo carregado.",
+    "imageAlt": "NVIDIA menu de ação oferecido quando um driver já está instalado — duas opções: Reinstalar / atualizar driver, ou desinstalar o driver NVIDIA completamente",
+    "imageCaption": "O menu de ação só aparece quando um driver NVIDIA está atualmente ativo na máquina.",
+    "reinstallHeading": "Reinstalar / atualizar",
+    "reinstallBody": "Escolhe versão, prepara repositórios/cabeçalhos, descarrega e verifica a compilação antes de substituir o controlador. Permite atualizar no ramo mantido ou escolher outro suportado. Depois reapresenta as opções de bibliotecas LXC e patch NVENC.",
+    "uninstallHeading": "Desinstalar — o que é removido",
+    "uninstallIntro": "Após confirmação Sim/Não, remove os seguintes componentes:",
+    "uninstallItems": [
+      "Executa <code>nvidia-uninstall --silent</code> para a instalação <code>.run</code>, para e desativa <code>nvidia-persistenced</code> e <code>nvidia-powerd</code> e tenta descarregar <code>nvidia_uvm</code>, <code>nvidia_drm</code>, <code>nvidia_modeset</code> e <code>nvidia</code>. Afeta aplicações LXC NVIDIA; clientes ativos podem impedir a descarga.",
+      "Executa <code>apt purge</code> em <code>nvidia-*</code>, <code>libnvidia-*</code>, <code>cuda-*</code> e <code>libcudnn*</code>, remove a árvore fonte DKMS e o cache do instalador <code>/opt/nvidia</code>.run.",
+      "Remove a configuração de carregamento <code>/etc/modules-load.d/nvidia-vfio.conf</code> e regras nouveau geridas pelo ProxMenux. Migra e remove também os antigos ficheiros ProxMenux com as duas linhas conhecidas; preserva ficheiros modificados ou não relacionados do administrador.",
+      "Remove <code>/etc/udev/rules.d/70-nvidia.rules</code> e marca NVENC como <em>removed</em> no registo de instalações geridas; não existe ficheiro de estado separado.",
+      "Regenera <code>initramfs</code> para todos os kernels, executa <code>proxmox-boot-tool refresh</code> conforme o arranque e pede reinício."
+    ],
+    "lxcWarnTitle": "LXC com acesso NVIDIA",
+    "lxcWarnBody": "Remover o controlador do anfitrião interrompe aplicações LXC NVIDIA mesmo mantendo as bibliotecas instaladas. Agende manutenção para Frigate, Plex, Jellyfin, Ollama e outras aplicações GPU."
+  },
+  "updates": {
+    "heading": "Notificações de atualizações",
+    "body": "O controlador NVIDIA é acompanhado no registo de instalações geridas. No arranque e a cada 24 horas, o Monitor compara as versões em <code>download.nvidia.com/XFree86/Linux-x86_64/</code> com a indicada por <code>nvidia-smi</code>. Notifica apenas novas versões de manutenção do ramo instalado.",
+    "kindsHeading": "Mensagem de atualização",
+    "kindsItems": [
+      "<strong>Manutenção no mesmo ramo.</strong> Exemplo: 580.65.06 instalada → 580.105.08 disponível. O Monitor não deduz compatibilidade do kernel entre ramos."
+    ],
+    "antiTitle": "Evitar notificações repetidas",
+    "antiBody": "Uma notificação por nova versão, não em cada verificação diária. Sem versão mais recente no ramo instalado, não notifica.",
+    "applyTitle": "Aplicando a atualização",
+    "applyBody": "O Monitor avisa sem instalar automaticamente. Abra o instalador, escolha <strong>Reinstalar / atualizar</strong> e uma versão suportada, e conclua compilação e instalação. Preveja o reinício proposto e verifique depois anfitrião e bibliotecas LXC."
+  },
+  "verify": {
+    "heading": "Verificando a instalação",
+    "intro": "Após reiniciar o anfitrião, entre por SSH ou pela consola Proxmox e execute:",
+    "after": "Confirme GPU e versão esperada. Podem existir processos se serviços do anfitrião ou contentores iniciados automaticamente utilizarem o GPU. Depois verifique a persistência:",
+    "imageAlt": "Saída de nvidia-smi no anfitrião com GPU detetado e versão do controlador instalada"
+  },
+  "troubleshoot": {
+    "heading": "Resolução de problemas",
+    "smiFailTitle": "nvidia-smi apresenta «NVIDIA-SMI has failed»",
+    "smiFailBody": "Causas possíveis: <strong>nouveau</strong>, <strong>cabeçalhos ausentes ou incompatíveis</strong>, código do controlador incompatível ou outros erros de carregamento. Veja <code>lsmod | grep nouveau</code>, <code>dmesg | grep -i nvidia</code> e registos do instalador/DKMS. Se precisar de corrigir nouveau, verifique <code>/etc/modprobe.d/proxmenux-nouveau-blacklist.conf</code> antes de <code>update-initramfs -u -k all</code> e reinicie. Nem toda a falha de compilação é de cabeçalhos.",
+    "lxcMissTitle": "O LXC não vê o GPU após a atualização do anfitrião",
+    "lxcMissBody": "Antes de reinstalar, verifique dispositivos do anfitrião, permissões LXC e versão das bibliotecas. Um conflito pode exigir o controlador de utilizador correspondente pelo método suportado da distribuição; em glibc usa <code>--no-kernel-modules</code>. Reinstalar bibliotecas não corrige montagens ou permissões ausentes.",
+    "logTitle": "Verificar o registo de instalação",
+    "logBody": "A instalação escreve em <code>/tmp/nvidia_install.log</code>. Em caso de falha, reveja descarga, compilação DKMS e serviços. Anexe o registo ao comunicar o problema no GitHub."
+  },
+  "manualSteps": {
+    "heading": "Procurando os passos manuais?",
+    "body": "Consulte <guideLink>Guias → NVIDIA</guideLink> para os passos manuais, incluindo <code>wget</code> e <code>./NVIDIA-Linux-...run</code>. Explica componentes sem reproduzir exatamente o instalador. O processo mantido do ProxMenux oferece filtragem GPU, verificação de compilação, atualizações LXC e controlos VFIO."
+  },
+  "related": {
+    "heading": "Relacionados",
+    "items": [
+      {
+        "label": "Adicionar GPU a VM (passagem direta)",
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "tail": " — atribuir NVIDIA diretamente a uma VM através de VFIO."
+      },
+      {
+        "label": "Adicionar GPU ao LXC",
+        "href": "/docs/hardware/igpu-acceleration-lxc",
+        "tail": " — partilhar NVIDIA com um ou vários contentores."
+      },
+      {
+        "label": "Mudar modo GPU (VM ↔ LXC)",
+        "href": "/docs/hardware/switch-gpu-mode",
+        "tail": " — alternar entre passagem direta para VM e partilha LXC."
+      },
+      {
+        "label": "ProxMenux Monitor — Página de hardware",
+        "href": "/docs/monitor/dashboard/hardware",
+        "tail": " — janela GPU que abre este instalador e mostra monitorização em tempo real."
+      },
+      {
+        "label": "Comandos de passagem direta GPU",
+        "href": "/docs/help-info/gpu-commands",
+        "tail": " — referência lspci / dmesg / IOMMU / nvidia-smi."
+      }
+    ]
+  }
+}

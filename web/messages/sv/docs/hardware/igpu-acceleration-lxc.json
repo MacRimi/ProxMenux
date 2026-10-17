@@ -1,0 +1,185 @@
+{
+  "meta": {
+    "title": "Lägg till GPU i LXC | ProxMenux-dokumentation",
+    "description": "Dela Intel-, AMD- eller NVIDIA-GPU med LXC. ProxMenux konfigurerar enheter, grupper och bibliotek efter distribution; appen måste stödja och vara inställd för acceleration."
+  },
+  "header": {
+    "title": "Lägg till GPU i LXC",
+    "description": "Delar GPU-åtkomst med LXC via värdens enheter. Drivrutinen finns kvar på värden; apparna behöver kompatibla bibliotek och egna inställningar.",
+    "section": "Hårdvara: GPU:er och Coral-TPU"
+  },
+  "intro": {
+    "title": "Vad det gör",
+    "body": "Lägger till <code>dev&lt;N&gt;</code> i <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> för tillämpliga <code>/dev/dri/*</code>-, <code>/dev/kfd</code>- eller <code>/dev/nvidia*</code>-enheter. Startar containern, installerar distributionspaket och anpassar <code>video</code> och <code>render</code>. Acceleration kräver kompatibel hårdvara, bibliotek och appinställningar."
+  },
+  "compare": {
+    "heading": "LXC-delning jämfört med VM-passthrough",
+    "intro": "LXC delar kerneln och kan <em>dela</em> GPU:n mellan värd och containrar. Med <vmLink>fullständig VM-passthrough</vmLink> tillhör enheten bara den VM:n och är inte tillgänglig för värdens drivrutin.",
+    "headerFeature": "Funktion",
+    "headerLxc": "LXC (denna sida)",
+    "headerVm": "VM",
+    "rows": [
+      {
+        "feature": "Värd fortsätter att använda GPU?",
+        "lxc": "Ja",
+        "vm": "Nej – exklusivt för VM"
+      },
+      {
+        "feature": "Flera containrar som delar en GPU?",
+        "lxc": "Ja",
+        "vm": "Nej"
+      },
+      {
+        "feature": "Kräver IOMMU/VFIO på värden?",
+        "lxc": "Nej",
+        "vm": "Ja"
+      },
+      {
+        "feature": "Reboot krävs?",
+        "lxc": "Normalt nej (bara starta om CT)",
+        "vm": "När värdens drivrutin eller IOMMU ändras; inte för varje tilldelning"
+      },
+      {
+        "feature": "Gästoperativsystem",
+        "lxc": "Endast Linux (LXC är Linux-bara)",
+        "vm": "Gästsystem som stöds med en kompatibel GPU-drivrutin"
+      }
+    ]
+  },
+  "prereqs": {
+    "title": "Innan du börjar",
+    "gpu": "<strong>GPU på värden</strong> från Intel, AMD eller NVIDIA, identifierad med <code>lspci</code>.",
+    "gpuCheck": "lspci | grep -iE 'VGA|3D|Display'",
+    "vfio": "<strong>GPU:n får inte vara bunden till vfio-pci.</strong> Den behöver värdens vanliga drivrutin. Vid VM-tilldelning erbjuder skriptet <switchLink>Byt GPU-läge</switchLink>.",
+    "nvidia": "<strong>För NVIDIA:</strong> installera först värdens drivrutin. Containerns bibliotek måste passa versionen. Använd <nvidiaLink>Installera NVIDIA-drivrutiner på värden</nvidiaLink>.",
+    "nvidiaCheck": "nvidia-smi",
+    "container": "<strong>En befintlig LXC-container.</strong> Skriptet skapar ingen. Båda lägena stöds; en <strong>privilegierad</strong> container krävs inte alltid. Enhetsposter och appens numeriska grupprättigheter måste passa."
+  },
+  "unpriv": {
+    "title": "Stöder privilegierade och oprivilegierade containrar",
+    "body": "Skriptet skriver <code>dev&lt;N&gt;</code>-poster till LXC-konfigen och på oprivilegierade behållare anpassar <code>video</code> och <code>render</code> GID mellan värd och behållare så att GPU-enhetsnoderna nås inifrån utan att du behöver handredigera <code>lxc.idmap</code>."
+  },
+  "running": {
+    "heading": "Kör installationen",
+    "body": "Öppna ProxMenux och välj <strong>Hårdvara: GPU:er och Coral-TPU → Lägg till GPU i LXC</strong>.",
+    "imageAlt": "Menyval för att lägga till GPU i LXC"
+  },
+  "howRuns": {
+    "heading": "Så fungerar skriptet",
+    "body": "Välj container och GPU-familjer och gå igenom kontrollerna. Därefter stoppas och ändras containern utan ytterligare slutbekräftelse. Valfri VFIO-rensning bekräftas separat och kan ändra värden tidigare."
+  },
+  "walkthrough": {
+    "heading": "Steg för steg",
+    "detect": {
+      "title": "Identifiera värdens GPU:er",
+      "body": "Söker GPU-kontroller med <code>lspci</code>. För NVIDIA kontrolleras modulen <code>nvidia</code> och <code>nvidia-smi</code>; den upptäckta versionen styr containerns <code>.run</code>-installation.",
+      "tipTitle": "NVIDIA är inte redo?",
+      "tipBody": "Om modulen saknas eller NVIDIA inte fungerar på värden, använd först <nvidiaLink>Installera NVIDIA-drivrutiner på värden</nvidiaLink> och kontrollera drivrutinen."
+    },
+    "pickCt": {
+      "title": "Välj en LXC-container",
+      "body": "Listar lämpliga LXC-containrar med ID och namn. OCI undantas; enheterna ändras under Apps i OCI-hanteraren. Containern stoppas för konfigurering, startas för installation och återgår normalt till ursprungligt läge.",
+      "imageAlt": "Val av en befintlig LXC-container"
+    },
+    "selectGpu": {
+      "title": "Välj GPU-familjer",
+      "body": "Listan väljer tillverkarfamiljer, inte en isolerad PCI-enhet. Intel/AMD lägger till avsedda DRI-noder och NVIDIA sina tillgängliga enheter, ibland för flera kort. En enda familj väljs automatiskt. Kontrollera resultatet, särskilt med flera GPU:er.",
+      "imageAlt": "Lista över upptäckta GPU-familjer med namn och PCI-adress"
+    },
+    "preflight": {
+      "title": "Förkontroller",
+      "imageAlt": "Erbjudande om lägesbyte för en GPU bunden till vfio-pci",
+      "intro": "Tre kontroller, som alla kan blockera eller omdirigera dig:",
+      "items": [
+        "<strong>SR-IOV-kontroll.</strong> Guiden blockerar en VF eller PF med aktiva VF:er. Det beror på dess breda enhetsval och är inget allmänt förbud i LXC. Konfigurera dessa enheter separat.",
+        "<strong>Bunden till vfio-pci.</strong> Den vanliga drivrutinen kan inte skapa <code>/dev/dri/*</code> eller <code>/dev/nvidia*</code>. <switchLink>Byt GPU-läge</switchLink> erbjuds; följ anvisningarna om omstart och återkom sedan.",
+        "<strong>Redan konfigurerad.</strong> Om alla enheter finns avslutas skriptet utan att installera om bibliotek. Fortsätter bara med valda familjer som saknas."
+      ]
+    },
+    "applyConfig": {
+      "title": "Tillämpa ändringarna i LXC-konfigurationen",
+      "body1": "Stoppar containern och ändrar <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>. Poster av typen <code>dev&lt;N&gt;</code> innehåller valda GID:n. Mekanismen <code>dev:</code> ersätter här manuella <code>lxc.mount.entry</code>-regler. Kontrollera slutlig konfiguration och rättigheter.",
+      "body2": "Exempel efter Intel + NVIDIA på samma container:"
+    },
+    "installDrivers": {
+      "title": "Starta containern och installera drivrutiner inuti",
+      "body": "Startar containern och väntar högst cirka 30 sekunder på att <code>pct exec</code> svarar. Läser distributionen från <code>/etc/os-release</code> och installerar lämpliga paket.",
+      "headerDistro": "Distribution",
+      "headerInt": "Intel / AMD",
+      "headerNvidia": "NVIDIA",
+      "rows": [
+        {
+          "distro": "Alpine",
+          "intel": "apk add mesa-va-gallium intel-media-driver libva-utils",
+          "nvidia": "apk add nvidia-utils"
+        },
+        {
+          "distro": "Arch / Manjaro",
+          "intel": "pacman -Sy intel-media-driver mesa libva-utils",
+          "nvidia": "pacman -Sy nvidia-utils"
+        }
+      ],
+      "debianDistro": "Debian / Ubuntu / andra",
+      "debianIntel": "apt-get install va-driver-all intel-opencl-icd vainfo",
+      "debianNvidia": "Packar upp <code>.run</code> på värden → <code>pct push</code> → installerar med <code>--no-kernel-modules --no-dkms</code>.",
+      "whyTitle": "Varför NVIDIA-installationen med .run används på Debian",
+      "whyBody": "Paketen kan avvika från värdens version. Biblioteken <strong>måste passa värdens inlästa modul</strong> för NVML och <code>nvidia-smi</code>. Debian/glibc använder cachad <code>.run</code> för värdversionen, packar upp och arkiverar på värden, överför med <code>pct push</code> och installerar med <code>--no-kernel-modules --no-dkms</code>. Alpine och Arch använder förrådspaket; kontrollera versionerna."
+    },
+    "alignGids": {
+      "title": "Anpassa GID:n och återställ tillståndet",
+      "body1": "Läser värdens GID:n för <code>video</code> och <code>render</code>, med 44/104 som reservvärden, och ändrar <code>/etc/group</code> i containern. <code>video:44</code> och <code>render:104</code> är exempel, inte universella ID:n. Kontrollera appens grupper och faktiska rättigheter.",
+      "body2": "Vid normal avslutning stoppas en från början stoppad container igen; en som kördes fortsätter köra. Vid start- eller installationsfel, kontrollera slutläget och loggen."
+    }
+  },
+  "vendors": {
+    "heading": "Anmärkningar per tillverkare",
+    "intelHeading": "Intel iGPU",
+    "intelBody": "Intel-acceleration med <em>Quick Sync</em> beror på generation, kodekar och appinställningar. Delar befintliga noder som <code>/dev/dri/card0</code> och <code>/dev/dri/renderD128</code>; numreringen kan variera. Värdens vanliga drivrutin, exempelvis <code>i915</code>, måste tillhandahålla dem.",
+    "amdHeading": "AMD",
+    "amdBody": "AMD använder DRI för Mesa/VA-API. Om värden har <code>/dev/kfd</code> delas även den. ROCm/OpenCL kräver kompatibel hårdvara och bibliotek; enhetsdelning installerar inte hela ROCm-miljön.",
+    "nvidiaHeading": "NVIDIA",
+    "nvidiaBody": "Delar tillgängliga <code>/dev/nvidia*</code>-enheter. <strong>Matchande drivrutinsversioner</strong> krävs för <code>nvidia-smi</code>. Debian/glibc använder värdversionens <code>.run</code>, Alpine/Arch förrådspaket. Under 2048 MiB inställt RAM erbjuds en tillfällig höjning med återställning; dessutom krävs 1500 MiB ledigt diskutrymme.",
+    "updateTitle": "Efter NVIDIA-uppdatering på värden, kontrollera LXC-biblioteken",
+    "updateBody": "Gamla bibliotek kan ge versionsfel i <code>nvidia-smi</code>. <nvidiaLink>Värdens NVIDIA-installation</nvidiaLink> erbjuder containeruppdateringar. En ny enhetstilldelning kan avslutas direkt om posterna redan finns och garanterar ingen biblioteksuppdatering. Kontrollera versioner och uppdatera lämpliga paket eller användarinstallation."
+  },
+  "verification": {
+    "heading": "Verifiering",
+    "body": "Kontrollera i containern att GPU:n syns och går att använda."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "mismatchTitle": "nvidia-smi: Failed to initialize NVML: Driver/library version mismatch",
+    "mismatchBody": "Biblioteken passar inte den inlästa modulen. Kontrollera versionerna och uppdatera containerns användarmiljö. Cachad <code>.run</code> används för Debian/glibc, men enhetstilldelningen kan avslutas tidigt om alla poster redan finns.",
+    "denyTitle": "Tillstånd nekas på /dev/dri/renderD128 inuti containern",
+    "denyBody": "Kontrollera enhetsposten och numeriska rättigheter för <code>render</code>, sedan att appens användare tillhör <code>render</code>. Lägg vid behov till användaren i <code>render</code> med <code>usermod -aG render &lt;user&gt;</code>; ersätt platshållaren med kontot. Starta om sessionen. Byte av privilegieläge är ingen generell lösning.",
+    "vainfoTitle": "vainfo säger: VA-API version 1.xx; misslyckades med att initialisera",
+    "vainfoBody": "Kontrollera åtkomst och VA-API-drivrutin. Paketnamn varierar per distribution: exempelvis <code>intel-media-driver</code> för nyare Intel-GPU:er som stöds, <code>i965-va-driver</code> för äldre och <code>mesa-va-drivers</code> för AMD. Meddelandet bevisar inte ensamt ett saknat paket.",
+    "logTitle": "Installationslogg",
+    "logBody": "Varje körning skriver <code>/tmp/add_gpu_lxc.log</code> på värden. Bifoga loggen när du söker hjälp."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "label": "Installera NVIDIA Drivers (Host)",
+        "href": "/docs/hardware/nvidia-host",
+        "tail": " — installera värdens drivrutin före NVIDIA-delning."
+      },
+      {
+        "label": "Lägg till GPU till VM (Passthrough)",
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "tail": " — alternativ för att reservera en GPU för en VM."
+      },
+      {
+        "label": "Byt GPU-läge (VM ↔ LXC)",
+        "href": "/docs/hardware/switch-gpu-mode",
+        "tail": " — växla GPU:n mellan LXC-delning och VM-tilldelning."
+      },
+      {
+        "label": "GPU Passthrough kommandon",
+        "href": "/docs/help-info/gpu-commands",
+        "tail": " — snabb referens för relaterade skalkommandon."
+      }
+    ]
+  }
+}
