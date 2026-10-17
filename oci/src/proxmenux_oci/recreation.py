@@ -120,7 +120,8 @@ def modification_options(candidate):
         ('memory', row(translate('RAM in MiB'), resources['memory_mb'])),
         ('network', row(translate('Network'),
                         f"{network.get('bridge', '-')} · {'DHCP' if address == 'dhcp' else address}")),
-        ('paths', row(translate('Extra paths'), len(deployment.get('mounts', [])))),
+        # Only the paths added by hand: the application's own volumes are not extra.
+        ('paths', row(translate('Extra paths'), sum(1 for m in deployment.get('mounts', []) if m.get('custom')))),
     ]
     if profile.get('shared_directories'):
         options.append(('shares', translate('Shared directories')))
