@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "Instalar una imagen que no está en el catálogo | ProxMenux",
-    "description": "Traducción de una imagen OCI desde un archivo Compose, una URL, un comando docker run o una referencia de imagen, con revisión de lo que ProxMenux puede reproducir antes de instalarla."
+    "title": "Instalar una imagen fuera del catálogo | ProxMenux",
+    "description": "Adapta una imagen OCI a partir de un archivo Compose, una URL, un comando docker run o una referencia de imagen, y revisa qué puede reproducir ProxMenux antes de instalarla."
   },
   "header": {
-    "title": "Instalar una imagen que no está en el catálogo",
-    "description": "Una imagen propia se traduce desde su archivo Compose, un comando docker run o solo su referencia, y el resultado se presenta para revisión antes de crear ningún LXC.",
+    "title": "Instalar una imagen que no esté en el catálogo",
+    "description": "Tu imagen se adapta a partir de su archivo Compose, de un comando docker run o de su referencia. El resultado se muestra para que lo revises antes de crear ningún LXC.",
     "section": "OCI manager Apps"
   },
   "sections": [
@@ -14,8 +14,8 @@
       "blocks": [
         {
           "calloutInfo": {
-            "title": "El mismo conversor, el mismo instalador",
-            "body": "La opción <strong>Instalar una imagen que no está en el catálogo</strong> utiliza el conversor y el instalador de las plantillas del catálogo. La diferencia es que el contrato se genera en ese momento a partir de la definición aportada y se valida antes de crear ningún LXC."
+            "title": "El mismo conversor y el mismo instalador",
+            "body": "La opción <strong>Instalar una imagen que no esté en el catálogo</strong> utiliza el mismo conversor y el mismo instalador que las plantillas del catálogo. La diferencia es que el contrato se genera en ese momento a partir de la definición proporcionada y se valida antes de crear ningún LXC."
           }
         }
       ]
@@ -23,45 +23,92 @@
     {
       "id": "sources",
       "title": "Cómo se describe la imagen",
-      "intro": "La primera pantalla pregunta cómo se describe la imagen. Cuatro formas aportan una definición que se traduce, una quinta usa solo el nombre de la imagen y tres reciben un oci-compose ya escrito.",
+      "intro": "La primera pantalla pregunta cómo vas a describir la imagen. Cuatro opciones reciben una definición que se adapta, una quinta usa solo el nombre de la imagen y otras tres leen un oci-compose ya escrito.",
       "blocks": [
         {
           "table": {
-            "headers": ["Opción", "Qué lee"],
+            "headers": [
+              "Opción",
+              "Qué lee"
+            ],
             "rows": [
-              ["Pegar su archivo Compose en la terminal", "El YAML se pega en la terminal y termina con Ctrl+D."],
-              ["Leer su archivo Compose desde un archivo de este host", "Una ruta del nodo, <code>/root/docker-compose.yml</code> por defecto. El archivo debe existir y ocupar como máximo 256 KiB."],
-              ["Descargar su archivo Compose desde una dirección", "Una dirección <code>http://</code> o <code>https://</code> que sirva el YAML sin procesar. Se descargan como máximo 256 KiB."],
-              ["Pegar su comando docker run en la terminal", "El comando que publica el proyecto. Se traducen puertos, entorno, volúmenes, dispositivos, capacidades, usuario, memoria compartida y el resto de opciones admitidas."],
-              ["Solo la referencia de la imagen, sin archivo Compose", "Una referencia como <code>ghcr.io/user/application:latest</code>. Se consulta el registro y se conservan los metadatos OCI de la imagen."],
-              ["Pegar un oci-compose en la terminal", "El JSON se pega en la terminal y termina con Ctrl+D. No se traduce: se comprueba y se instala tal como está escrito."],
-              ["Leer un oci-compose desde un archivo de este host", "Un archivo JSON del nodo, <code>/root/oci-compose.json</code> por defecto, de 2 MiB como máximo."],
-              ["Descargar un oci-compose desde una dirección", "Una dirección <code>http://</code> o <code>https://</code> que sirva el archivo JSON. Se descargan como máximo 2 MiB."]
+              [
+                "Pegar su archivo Compose en la terminal",
+                "Pega el YAML en la terminal y termina con Ctrl+D."
+              ],
+              [
+                "Leer su archivo Compose desde este host",
+                "Una ruta del nodo; la predeterminada es <code>/root/docker-compose.yml</code>. El archivo debe existir y no superar los 256 KiB."
+              ],
+              [
+                "Descargar su archivo Compose desde una dirección",
+                "Una dirección <code>http://</code> o <code>https://</code> que sirva el YAML sin procesar. Se descargan como máximo 256 KiB."
+              ],
+              [
+                "Pegar su comando docker run en la terminal",
+                "El comando publicado por el proyecto. Se adaptan los puertos, el entorno, los volúmenes, los dispositivos, las capabilities, el usuario, la memoria compartida y las demás opciones compatibles."
+              ],
+              [
+                "Solo la referencia de imagen, sin archivo Compose",
+                "Una referencia como <code>ghcr.io/user/application:latest</code>. Se consulta el registro y se conservan los metadatos OCI de la imagen."
+              ],
+              [
+                "Pegar un oci-compose en la terminal",
+                "Pega el JSON en la terminal y termina con Ctrl+D. No se convierte: se valida y se instala tal como está escrito."
+              ],
+              [
+                "Leer un oci-compose desde este host",
+                "Un archivo JSON del nodo, <code>/root/oci-compose.json</code> por defecto, de un máximo de 2 MiB."
+              ],
+              [
+                "Descargar un oci-compose desde una dirección",
+                "Una dirección <code>http://</code> o <code>https://</code> que sirva el archivo JSON. Se descargan como máximo 2 MiB."
+              ]
             ]
           }
         },
         {
           "figure": {
             "src": "/oci-manager/custom-source-menu.png",
-            "alt": "Menú que pregunta cómo se describe una imagen que no está en el catálogo",
-            "caption": "Las formas de describir una imagen que no está en el catálogo."
+            "alt": "Menú para elegir cómo describir una imagen que no está en el catálogo",
+            "caption": "Formas de describir una imagen fuera del catálogo."
           }
         }
       ]
     },
     {
       "id": "reference-only",
-      "title": "Qué aporta solo la referencia de la imagen",
-      "intro": "Una imagen lleva sus metadatos de proceso, pero no todo lo que un archivo Compose suele añadir a su alrededor.",
+      "title": "Qué aporta una referencia de imagen por sí sola",
+      "intro": "La imagen contiene los metadatos de su proceso, pero no todo el entorno que suele añadir un archivo Compose.",
       "blocks": [
         {
           "table": {
-            "headers": ["Se lee de la imagen", "No está en la imagen", "Consecuencia"],
+            "headers": [
+              "Se lee de la imagen",
+              "No está en la imagen",
+              "Consecuencia"
+            ],
             "rows": [
-              ["<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>, <code>WorkingDir</code> y entorno integrado", "Variables que solo aparecen en la documentación", "Se añaden durante la instalación o con Modificar"],
-              ["Volúmenes declarados por la imagen", "Directorios del host que solo nombra un archivo Compose", "Las rutas adicionales se añaden antes de instalar"],
-              ["Puertos <code>EXPOSE</code>", "La URL, el protocolo o un healthcheck funcional", "Se confirman el puerto y la forma de comprobar el servicio"],
-              ["Arquitecturas y digest del registro", "Dispositivos, privilegios o dependencias externas", "Ninguno se activa sin una definición que lo pida"]
+              [
+                "<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>, <code>WorkingDir</code> y el entorno incorporado",
+                "Variables que solo figuran en la documentación",
+                "Se añaden durante la instalación o desde Modificar"
+              ],
+              [
+                "Volúmenes declarados por la imagen",
+                "Directorios del host que solo se indican en Compose",
+                "Las rutas adicionales se añaden antes de instalar"
+              ],
+              [
+                "Puertos <code>EXPOSE</code>",
+                "La URL, el protocolo o la comprobación funcional del servicio",
+                "Se confirman el puerto y la forma de comprobar el servicio"
+              ],
+              [
+                "Arquitecturas y digest del registro",
+                "Dispositivos, privilegios o dependencias externas",
+                "No se habilitan sin una definición que los solicite"
+              ]
             ]
           }
         }
@@ -69,29 +116,44 @@
     },
     {
       "id": "review",
-      "title": "Revisión antes de instalar",
-      "intro": "Tras traducir la definición, ProxMenux muestra lo que ha entendido antes de pedir VMID, recursos o almacenamiento.",
+      "title": "Revisar antes de instalar",
+      "intro": "Tras adaptar la definición, ProxMenux muestra cómo la ha interpretado antes de preguntar el VMID, los recursos o el almacenamiento.",
       "blocks": [
         {
           "steps": {
             "items": [
-              { "title": "Analizar", "body": "Se leen servicios, imagen, puertos, rutas, entorno, dispositivos, seguridad y healthcheck." },
-              { "title": "Consultar el registro", "body": "La imagen debe existir en su registro, y se enumeran las arquitecturas que publica. Un registro privado se lee con la cuenta guardada para él." },
-              { "title": "Enumerar lo que no se aplica", "body": "Se enumeran las etiquetas, las redes Docker, los ajustes de Swarm y el resto de claves que no tienen efecto en un LXC." },
-              { "title": "Bloquear lo que no puede traducirse", "body": "Una clave sin equivalencia segura aparece en <strong>Lo que no puede traducirse</strong> y la instalación no continúa. Nada se descarta en silencio." },
-              { "title": "Pedir los secretos", "body": "Las variables cuyo nombre corresponde a una contraseña, un token o una clave se convierten en preguntas sensibles de la instalación." }
+              {
+                "title": "Analizar",
+                "body": "Se leen servicios, imagen, puertos, rutas, entorno, dispositivos, seguridad y comprobaciones de estado."
+              },
+              {
+                "title": "Consultar el registro",
+                "body": "La imagen debe existir en el registro y se muestran las arquitecturas publicadas. Si el registro es privado, se utiliza la cuenta guardada para él."
+              },
+              {
+                "title": "Enumerar lo que no se aplica",
+                "body": "Se enumeran las etiquetas, redes de Docker, ajustes de Swarm y otras claves que no tienen efecto en un LXC."
+              },
+              {
+                "title": "Bloquear opciones sin equivalente seguro",
+                "body": "Las claves sin equivalente seguro aparecen en <strong>Opciones sin equivalente</strong> e impiden continuar con la instalación. No se descartan silenciosamente."
+              },
+              {
+                "title": "Solicitar secretos",
+                "body": "Las variables cuyo nombre indica una contraseña, token o clave se solicitan como datos sensibles durante la instalación."
+              }
             ]
           }
         },
         {
           "figure": {
             "src": "/oci-manager/custom-review.png",
-            "alt": "Resumen de lo que ProxMenux ha entendido de un archivo Compose",
-            "caption": "El resumen que se muestra antes de que la instalación pida VMID y recursos."
+            "alt": "Resumen de cómo ProxMenux ha interpretado el archivo Compose",
+            "caption": "Resumen mostrado antes de que el instalador pregunte el VMID y los recursos."
           }
         },
         {
-          "p": "Tras aceptar el resumen, el recorrido es el del catálogo: nombre, modo predeterminado o avanzado, VMID, CPU, memoria, red, arranque con el nodo, rutas persistentes, rutas adicionales, dispositivos compatibles y resumen final."
+          "p": "Tras aceptar el resumen se sigue el mismo asistente que en el catálogo: nombre, modo predeterminado o avanzado, VMID, CPU, memoria, red, arranque con el nodo, rutas persistentes, rutas adicionales, dispositivos compatibles y resumen final."
         }
       ]
     },
@@ -118,68 +180,79 @@
     {
       "id": "oci-compose",
       "title": "Un oci-compose escrito a mano",
-      "intro": "Un oci-compose es el archivo JSON desde el que se instala una aplicación. El catálogo guarda uno por cada aplicación, y el mismo formato puede escribirse a mano e instalarse con esta opción.",
+      "intro": "Un oci-compose es el archivo JSON a partir del cual se instala una aplicación. El catálogo conserva uno por aplicación. Puedes escribir el mismo formato a mano e instalarlo con esta opción.",
       "blocks": [
         {
-          "p": "El que se escribe a mano indica lo que decide su autor: la imagen, sus puertos, variables y volúmenes, y lo que pregunta la instalación. ProxMenux completa el resto al leer el archivo. Puede decir lo que un archivo Compose no puede: el texto de una pregunta, una contraseña generada durante la instalación, un perfil de GPU, el propietario de cada volumen, la comprobación del primer arranque o las credenciales que se muestran al terminar."
+          "p": "Al escribirlo a mano, el autor decide la imagen, los puertos, las variables, los volúmenes y las preguntas de la instalación. ProxMenux completa el resto al leer el archivo. Permite expresar lo que Compose no incluye: el texto de una pregunta, una contraseña generada durante la instalación, un perfil de GPU, el propietario de cada volumen, la comprobación del primer arranque o las credenciales mostradas al final."
         },
         {
           "steps": {
             "items": [
               {
                 "title": "Comprobar",
-                "body": "Un archivo con errores no se instala. Cada error indica el campo en el que está, y un archivo que no es JSON válido indica la línea y la columna."
+                "body": "Los archivos con errores no se instalan. Cada error indica el campo afectado; si el JSON no es válido, se muestran la línea y la columna."
               },
               {
                 "title": "Revisar",
-                "body": "Un archivo válido muestra lo que instala: imagen, dirección web, puertos, rutas persistentes, las variables que pide la instalación y los archivos que escribe."
+                "body": "Si el archivo es válido, se muestra lo que instalará: imagen, dirección web, puertos, rutas persistentes, variables que solicitará el instalador y archivos que escribirá."
               },
               {
                 "title": "Instalar",
-                "body": "La instalación es la de cualquier aplicación del catálogo, con ajustes por defecto o avanzados."
+                "body": "Se utiliza el mismo instalador que para cualquier aplicación del catálogo, con ajustes predeterminados o avanzados."
               }
             ]
           }
         },
         {
           "calloutWarning": {
-            "title": "Un archivo que decide privilegios",
-            "body": "Un oci-compose decide qué se monta en el contenedor y con qué privilegios. El resumen lo indica antes de instalar: instala solo archivos que vengan de una fuente de confianza."
+            "title": "Un archivo que decide los privilegios",
+            "body": "El oci-compose determina qué se monta dentro del contenedor y con qué privilegios. La revisión lo muestra antes de instalar: utiliza únicamente archivos de fuentes de confianza."
           }
         },
         {
-          "p": "El formato se describe bloque a bloque, con dos ejemplos completos, en el <readmeLink>README del motor OCI</readmeLink>. El registro de una instalación se lee de la misma forma: solo se usa la plantilla con la que se instaló, y ninguna de las respuestas de esa instalación."
+          "p": "El <readmeLink>README del motor OCI</readmeLink> explica el formato bloque a bloque e incluye dos ejemplos completos. También se puede leer el registro de una instalación: solo se utiliza la plantilla original, sin incorporar ninguna de las respuestas de aquella instalación."
         }
       ]
     },
     {
       "id": "private-registries",
-      "title": "Imágenes en registros privados",
-      "intro": "Una imagen en un registro privado, como un paquete privado de GitHub o un repositorio privado de Docker Hub, se lee con una cuenta guardada en ProxMenux.",
+      "title": "Imágenes de registros privados",
+      "intro": "Las imágenes de registros privados, como un paquete privado de GitHub o un repositorio privado de Docker Hub, se consultan con una cuenta guardada en ProxMenux.",
       "blocks": [
         {
           "steps": {
             "items": [
-              { "title": "El registro rechaza la imagen", "body": "Cuando el registro responde que la imagen necesita una cuenta, la revisión ofrece iniciar sesión en ese registro y vuelve a leer la imagen." },
-              { "title": "Iniciar sesión", "body": "Un usuario y una contraseña o un token de acceso que puedan descargar la imagen. El registro los comprueba y solo se guardan si los acepta." },
-              { "title": "Instalar y mantener al día", "body": "La instalación descarga la imagen con esa cuenta, y también las actualizaciones, Modificar, Recrear, la vigilancia y la comprobación de actualizaciones del Monitor, en cualquier nodo del clúster." }
+              {
+                "title": "El registro deniega el acceso a la imagen",
+                "body": "Si el registro indica que la imagen requiere una cuenta, la revisión ofrece iniciar sesión en ese registro y vuelve a consultar la imagen."
+              },
+              {
+                "title": "Iniciar sesión",
+                "body": "Un usuario y una contraseña o token con permiso para descargar la imagen. El registro los comprueba y solo se guardan si los acepta."
+              },
+              {
+                "title": "Instalar y mantener al día",
+                "body": "Esa cuenta se utiliza para descargar la imagen durante la instalación y también en las actualizaciones, Modificar, Recrear, el watchdog y la comprobación de actualizaciones del Monitor, en cualquier nodo del clúster."
+              }
             ]
           }
         },
-        { "p": "<strong>Cuentas de registro</strong>, en el menú principal de OCI manager Apps, lista las cuentas guardadas por registro y usuario, nunca su secreto. Desde cada cuenta se puede comprobar, descargar o instalar una imagen, y actualizar o eliminar la cuenta." },
+        {
+          "p": "<strong>Cuentas de registros</strong>, en el menú principal de OCI manager Apps, muestra las cuentas guardadas por registro y usuario, nunca sus secretos. Desde cada cuenta puedes comprobar, descargar o instalar una imagen, actualizar las credenciales o eliminarlas."
+        },
         {
           "list": {
             "items": [
-              "GitHub (<code>ghcr.io</code>): el usuario es la cuenta de GitHub, y la contraseña un token de acceso personal con el permiso <code>read:packages</code>.",
-              "Docker Hub (<code>docker.io</code>): el usuario es la cuenta de Docker Hub, y la contraseña un token de acceso con permiso de lectura.",
-              "Otros registros, también uno con su propio puerto como <code>registry.example.com:5000</code>: el usuario y la contraseña o token que da ese registro."
+              "GitHub (<code>ghcr.io</code>): el usuario es la cuenta de GitHub y la contraseña es un token de acceso personal con permiso <code>read:packages</code>.",
+              "Docker Hub (<code>docker.io</code>): el usuario es la cuenta de Docker Hub y la contraseña es un token con permiso de lectura.",
+              "Otros registros, incluidos los que usan un puerto propio como <code>registry.example.com:5000</code>: el usuario y la contraseña o token que proporcione ese registro."
             ]
           }
         },
         {
           "calloutInfo": {
-            "title": "Dónde se guardan",
-            "body": "En <code>/etc/pve/priv/proxmenux/registry-auth.json</code>, legible solo por root, en la misma carpeta donde Proxmox guarda las contraseñas de sus almacenamientos. <code>/etc/pve</code> lo comparten todos los nodos del clúster, así que una cuenta añadida en un nodo se usa en todos. El backup del host lo incluye, y al desinstalar ProxMenux se elimina de todos los nodos."
+            "title": "Dónde se guardan las cuentas",
+            "body": "En <code>/etc/pve/priv/proxmenux/registry-auth.json</code>, accesible solo por root, en la misma carpeta donde Proxmox guarda las contraseñas de almacenamiento. <code>/etc/pve</code> se comparte entre los nodos del clúster, de modo que una cuenta añadida en un nodo se utiliza en todos. La copia del host incluye ese archivo y desinstalar ProxMenux lo elimina de todos los nodos."
           }
         }
       ]
@@ -191,11 +264,11 @@
         {
           "list": {
             "items": [
-              "Un Dockerfile sin imagen publicada: la imagen debe construirse y publicarse antes en un registro OCI.",
-              "Un archivo Compose con varios servicios: queda bloqueado porque describe más de una imagen. Esta opción instala un único contenedor.",
-              "<code>configs</code>, secretos externos o formatos de dispositivo que no pueden traducirse sin ambigüedad.",
-              "Sustituciones del shell como <code>$(command)</code>: debe escribirse el valor resultante.",
-              "Opciones de <code>docker run</code> no reconocidas y <code>--env-file</code>: se lee en su lugar un archivo Compose explícito."
+              "Un Dockerfile sin imagen publicada: primero hay que construir la imagen y publicarla en un registro OCI.",
+              "Un archivo Compose con varios servicios: se bloquea porque esta opción instala un único servicio por contenedor, aunque varios servicios utilicen la misma imagen.",
+              "<code>configs</code>, secretos externos o formatos de dispositivo que no puedan adaptarse de forma inequívoca.",
+              "Sustituciones de shell como <code>$(command)</code>: hay que escribir directamente el valor resultante.",
+              "Opciones de <code>docker run</code> no reconocidas y <code>--env-file</code>: utiliza un archivo Compose con los valores explícitos."
             ]
           }
         }
