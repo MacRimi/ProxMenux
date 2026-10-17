@@ -32,3 +32,11 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: '1'
         run: python3 -m unittest discover -s oci/tests -p 'test_registry_*.py' -v
+      - name: Run OCI modification menu regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p test_modify_menu.py -v
+          python3 -m unittest discover -s oci/tests -p test_recreation.py -v
+          python3 -m unittest discover -s oci/tests -p test_shared_directories.py -v
+          python3 -m unittest discover -s oci/tests -p 'test_wizard*.py' -v

@@ -423,25 +423,8 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
         proposal = None
         if action == 'modify':
             from .recreation import edit_recreation
-            from .cli import _deployment_summary_text
-            from .ui import BacktrackUI, RestartWizard
-            wizard = BacktrackUI(ui)
-            try:
-                while True:
-                    try:
-                        proposal = edit_recreation(record, wizard)
-                        approved = wizard.review(_deployment_summary_text(proposal['candidate']['template'],
-                                                 proposal['candidate']['deployment']), translate('Modify OCI'),
-                                                 question=translate('Apply these changes?'), default=True)
-                        break
-                    except RestartWizard:
-                        wizard.restart()
-                    except ValueError as error:
-                        if not wizard.retry_last(error):
-                            raise
-            finally:
-                wizard.close()
-            if not approved:
+            proposal = edit_recreation(record, ui)
+            if proposal is None:
                 return False
         elif not ui.review(translate('If the image channel has a new version, the CT is stopped, backed up and verified, and replaced with the new image to update the container. If the update fails after the container was changed, the backup is restored. An update that stops halfway is recovered from the OCI management menu.'),
                            translate('Update OCI'), question=translate('Update now?'), default=True):
