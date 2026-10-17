@@ -84,7 +84,7 @@
     "downloadCmd": "curl -fsSL -o /tmp/test https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh && head -1 /tmp/test",
     "downloadOutro": "If this fails outside ProxMenux, it's a network / proxy issue on the host.",
     "errorsTitle": "“Installer finished with errors”",
-    "errorsBody": "The installer surfaced a non-zero exit code. The previous channel and any already-installed components are left as they were before the switch. Re-run the action; if it keeps failing, run the installer manually from a shell (see the manual equivalent above) — that gives you the full output instead of the dialog summary.",
+    "errorsBody": "The installer returned a non-zero exit code. There is no automatic rollback: some files or components may already have changed. Inspect the output and current state before retrying. Run the installer manually from SSH or the host console for the full output.",
     "configTitle": "“Could not update config file” after switching to Stable",
     "configBody": "The post-install cleanup of beta metadata failed — usually because <code>config.json</code> has a syntax error from a manual edit. Validate it:",
     "configCmd": "jq . /usr/local/share/proxmenux/config.json",
