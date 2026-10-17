@@ -1,0 +1,677 @@
+{
+  "meta": {
+    "title": "Ordlista | ProxMenux-dokumentation",
+    "description": "Definitioner av termer som används i ProxMenux-dokumentationen om Proxmox, lagring, nätverk och virtualisering.",
+    "ogTitle": "Ordlista | ProxMenux-dokumentation",
+    "ogDescription": "Snabb referens för de tekniska termer som används i ProxMenux-dokumentationen."
+  },
+  "header": {
+    "title": "Ordlista",
+    "description": "Korta definitioner av termer som används i ProxMenux och för att beskriva hur Proxmox fungerar.",
+    "section": "Ordlista"
+  },
+  "callout": {
+    "title": "Hur man använder denna sida",
+    "bodyRich": "Varje post har en kategori och en kort definition. Länkarna <em>Se även</em> öppnar relevant dokumentation. Använd A–Z-navigeringen för att gå direkt till en bokstav."
+  },
+  "jumpHeading": "Gå till bokstav",
+  "seeAlsoLabel": "Se även:",
+  "aliasesLabel": "också:",
+  "missingCallout": {
+    "title": "Saknar en term?",
+    "leadRich": "Om en term saknas öppnar du en issue eller PR på <ext>GitHub</ext>. Ordlistan finns i <code>web/messages/en/docs/glossary.json</code> med motsvarande kataloger för varje språk."
+  },
+  "entries": [
+    {
+      "term": "ACS",
+      "aliases": [
+        "Access Control Services",
+        "Åsidosättning av ACS"
+      ],
+      "category": "Virtualisering",
+      "definitionRich": "PCIe-funktioner för åtkomstkontroll som hjälper till att isolera enheternas trafik. IOMMU-grupper beror på hårdvara och topologi. Kernelpatchen <em>ACS override</em> kan dela grupperna som Linux rapporterar, men tillför ingen hårdvaruisolering; tilldelning till separata VM innebär en säkerhetsrisk.",
+      "seeAlso": [
+        {
+          "label": "Lägg till Controller eller NVMe till VM",
+          "href": "/docs/disk-manager/add-controller-nvme-vm"
+        }
+      ]
+    },
+    {
+      "term": "ARC",
+      "aliases": [
+        "Adaptive Replacement Cache"
+      ],
+      "category": "Lagring",
+      "definitionRich": "ZFS läscache i värdens RAM för nyligen och ofta använda datablock. Standardgränsen beror på Proxmox-versionen och installationsinställningarna. ProxMenux erbjuder en gränsinställning i efterinstallationen.",
+      "seeAlso": [
+        {
+          "label": "Efterinstallation: lagring",
+          "href": "/docs/post-install/storage"
+        },
+        {
+          "label": "ZFS kommandon",
+          "href": "/docs/help-info/zfs-commands"
+        }
+      ]
+    },
+    {
+      "term": "Bind-montering",
+      "category": "Linux",
+      "definitionRich": "Linux-funktion som gör en del av filsystemet tillgänglig på ytterligare en sökväg. ProxMenux använder bind-monteringar för att dela värdkataloger med LXC-containrar via <code>pct set -mpN</code>.",
+      "seeAlso": [
+        {
+          "label": "LXC-monteringspunkter",
+          "href": "/docs/storage-share/lxc-mount-points"
+        }
+      ]
+    },
+    {
+      "term": "Nätverksbond",
+      "aliases": [
+        "Aggregering av nätverksgränssnitt",
+        "Länkaggregering"
+      ],
+      "category": "Nätverk",
+      "definitionRich": "Samlar flera fysiska nätverksgränssnitt i ett logiskt för redundans (active-backup), högre sammanlagd kapacitet (LACP / 802.3ad) eller båda. Konfigureras i <code>/etc/network/interfaces</code>."
+    },
+    {
+      "term": "Bro",
+      "aliases": [
+        "vmbrX",
+        "vmbr0",
+        "Linux-brygga"
+      ],
+      "category": "Nätverk",
+      "definitionRich": "Virtuell lager 2-switch på värden. <code>vmbr0</code> ansluter vanligen gäster till det fysiska nätverket. Fler bryggor (<code>vmbr1</code>, <code>vmbr2</code>...) kan separera gästnät beroende på fysiska anslutningar och konfiguration.",
+      "seeAlso": [
+        {
+          "label": "Bridge analys och guidad reparation",
+          "href": "/docs/network/bridge-analysis"
+        }
+      ]
+    },
+    {
+      "term": "Ceph",
+      "category": "Lagring",
+      "definitionRich": "Distribuerad lagring integrerad med Proxmox för hyperkonvergerade kluster. OSD:er (Object Storage Daemons) ligger till grund för objekt-, block- och fillagring. Kraven på Ceph-version beror på Proxmox-versionen och uppgraderingsvägen; se motsvarande uppgraderingsguide.",
+      "seeAlso": [
+        {
+          "label": "Uppgradera PVE 8 till PVE 9",
+          "href": "/docs/utils/upgrade-pve8-pve9"
+        }
+      ]
+    },
+    {
+      "term": "CT",
+      "aliases": [
+        "Container",
+        "LXC-container"
+      ],
+      "category": "Proxmox",
+      "definitionRich": "Proxmox förkortning för en LXC-container. Dess numeriska CTID motsvarar <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>. Se även <strong>LXC</strong>.",
+      "seeAlso": [
+        {
+          "label": "Hantera virtuella maskiner och containrar",
+          "href": "/docs/help-info/vm-ct-commands"
+        }
+      ]
+    },
+    {
+      "term": "deb822",
+      "category": "Linux",
+      "definitionRich": "Modernt format för APT-paketkällor: <code>.sources</code>-filer med strukturerade block och fälten Types, URIs, Suites, Components och Signed-By. Ersätter det enradiga <code>.list</code>-formatet; standard från PVE 9 / Debian Trixie.",
+      "seeAlso": [
+        {
+          "label": "Uppgradera PVE 8 till PVE 9",
+          "href": "/docs/utils/upgrade-pve8-pve9"
+        }
+      ]
+    },
+    {
+      "term": "dGPU",
+      "aliases": [
+        "Dedikerad GPU"
+      ],
+      "category": "Virtualisering",
+      "definitionRich": "Separat grafikkort, vanligen anslutet via PCIe, till skillnad från en <strong>iGPU</strong>. Det kan tilldelas en VM med VFIO eller användas av flera LXC-containrar via enhetsnoder och värdens drivrutin, om hårdvara och program stöder det.",
+      "seeAlso": [
+        {
+          "label": "Koppla GPU till VM (genomkoppling)",
+          "href": "/docs/hardware/gpu-vm-passthrough"
+        }
+      ]
+    },
+    {
+      "term": "Dialog",
+      "category": "Linux",
+      "definitionRich": "Verktyg baserat på ncurses för menyer, inmatningsfrågor och förloppsindikatorer i terminalen. ProxMenux menyer använder dialog."
+    },
+    {
+      "term": "DKMS",
+      "aliases": [
+        "Dynamisk Kernel Modulstöd"
+      ],
+      "category": "Linux",
+      "definitionRich": "Ramverk som bygger om registrerade externa kärnmoduler, som NVIDIA eller ZFS, när kärnan ändras. Det kräver kompatibel modulkällkod och matchande kärnheaders.",
+      "seeAlso": [
+        {
+          "label": "Installera Coral TPU (Host)",
+          "href": "/docs/hardware/install-coral-tpu-host"
+        }
+      ]
+    },
+    {
+      "term": "Fail2Ban",
+      "category": "Linux",
+      "definitionRich": "Tjänst som söker efter upprepade autentiseringsfel i loggar och blockerar berörda IP-adresser i brandväggen. ProxMenux har förkonfigurerade jails för SSH, Proxmox-gränssnittet och Monitor.",
+      "seeAlso": [
+        {
+          "label": "Fail2Ban",
+          "href": "/docs/security/fail2ban"
+        }
+      ]
+    },
+    {
+      "term": "Fastfetch",
+      "category": "Linux",
+      "definitionRich": "Verktyg som visar systeminformation med ASCII-grafik vid inloggning i skalet. Ersätter <code>neofetch</code> och kan aktiveras i ProxMenux efterinstallation.",
+      "seeAlso": [
+        {
+          "label": "Efter installationen: valfria åtgärder",
+          "href": "/docs/post-install/optional"
+        }
+      ]
+    },
+    {
+      "term": "GRUB",
+      "aliases": [
+        "GRand Unified Bootloader"
+      ],
+      "category": "Linux",
+      "definitionRich": "Starthanterare för Linux-installationer som använder GRUB. Konfiguration finns i <code>/etc/default/grub</code> och <code>/boot/grub/</code>; tillämpa ändringar med <code>update-grub</code>. Proxmox kan även använda systemd-boot: kontrollera aktiv starthanterare innan du ändrar kärnparametrar.",
+      "seeAlso": [
+        {
+          "label": "GPU Passthrough kommandon",
+          "href": "/docs/help-info/gpu-commands"
+        }
+      ]
+    },
+    {
+      "term": "iGPU",
+      "aliases": [
+        "Integrerad GPU"
+      ],
+      "category": "Virtualisering",
+      "definitionRich": "Grafikprocessor integrerad i CPU-kapseln, som Intel UHD / Iris eller Radeon i Ryzen-APU:er. Delas ofta mellan flera LXC-containrar via <code>/dev/dri</code> i stället för att tilldelas en enda VM.",
+      "seeAlso": [
+        {
+          "label": "Lägg till GPU till LXC",
+          "href": "/docs/hardware/igpu-acceleration-lxc"
+        }
+      ]
+    },
+    {
+      "term": "ifupdown / ifupdown2",
+      "category": "Nätverk",
+      "definitionRich": "Debians klassiska nätverkskonfiguration via <code>/etc/network/interfaces</code>. Proxmox använder normalt den omskrivna versionen <code>ifupdown2</code>, som kan läsa om konfigurationen under drift med <code>ifreload -a</code>."
+    },
+    {
+      "term": "initramfs",
+      "category": "Linux",
+      "definitionRich": "Inledande RAM-filsystem som kärnan använder innan det riktiga rotfilsystemet monteras. Innehåller drivrutiner som behövs tidigt. Byggs om med <code>update-initramfs -u -k all</code> efter ändringar av VFIO, IOMMU eller lagringsdrivrutiner."
+    },
+    {
+      "term": "IOMMU",
+      "aliases": [
+        "Minneshanteringsenhet för in- och utmatning",
+        "VT-d",
+        "AMD-Vi"
+      ],
+      "category": "Virtualisering",
+      "definitionRich": "Hårdvarufunktion (Intel VT-d / AMD-Vi) som behövs för PCIe-genomkoppling till VM. Aktivera den i firmware och kontrollera stödet i kärnan. Beroende på plattform och kärnans standardvärden kan <code>intel_iommu=on</code> eller <code>amd_iommu=on</code> behövas.",
+      "seeAlso": [
+        {
+          "label": "Post-Install: Virtualisering",
+          "href": "/docs/post-install/virtualization"
+        },
+        {
+          "label": "Koppla GPU till VM (genomkoppling)",
+          "href": "/docs/hardware/gpu-vm-passthrough"
+        }
+      ]
+    },
+    {
+      "term": "IOMMU-grupp",
+      "category": "Virtualisering",
+      "definitionRich": "Grupp av enheter som utgör den minsta IOMMU-isoleringsgränsen. Enheter inom gruppen är inte nödvändigtvis isolerade från varandra; kontrollera alla före VFIO-tilldelning. Lista med <code>find /sys/kernel/iommu_groups/ -type l | sort -V</code>."
+    },
+    {
+      "term": "iSCSI",
+      "aliases": [
+        "Internet SCSI"
+      ],
+      "category": "Lagring",
+      "definitionRich": "Protokoll för blocklagring över IP: en fjärrdisk visas som en lokal SCSI-enhet. Läggs till i Proxmox med <code>pvesm add iscsi</code>.",
+      "seeAlso": [
+        {
+          "label": "Lägg till iSCSI-mål som Proxmox-lagring",
+          "href": "/docs/storage-share/host-iscsi"
+        }
+      ]
+    },
+    {
+      "term": "KVM",
+      "aliases": [
+        "Kernelbaserad virtuell maskin"
+      ],
+      "category": "Virtualisering",
+      "definitionRich": "Linux-kärnmodul som gör värden till en hypervisor. Tillsammans med <strong>QEMU</strong> för enhetsemulering utgör den grunden för Proxmox virtuella maskiner."
+    },
+    {
+      "term": "LVM",
+      "aliases": [
+        "Logical Volume Manager"
+      ],
+      "category": "Lagring",
+      "definitionRich": "Linux volymhantering som samlar fysisk lagring i volymgrupper (VG) med logiska volymer (LV). LVM-baserade Proxmox-installationer använder ofta LVM-thin för gästdiskar; andra lagringslösningar finns. Verktyg: <code>pvs</code>, <code>vgs</code> och <code>lvs</code>.",
+      "seeAlso": [
+        {
+          "label": "Kommandon för lagring och diskar",
+          "href": "/docs/help-info/storage-commands"
+        }
+      ]
+    },
+    {
+      "term": "LXC",
+      "aliases": [
+        "Linux Containers"
+      ],
+      "category": "Linux",
+      "definitionRich": "Virtualisering på operativsystemnivå där isolerade användarmiljöer delar värdens kärna. Har vanligen lägre overhead än VM, men en annan isoleringsgräns. Proxmox hanterar LXC-containrar med <code>pct</code>.",
+      "seeAlso": [
+        {
+          "label": "Hantera virtuella maskiner och containrar",
+          "href": "/docs/help-info/vm-ct-commands"
+        }
+      ]
+    },
+    {
+      "term": "Lynis",
+      "category": "Linux",
+      "definitionRich": "Säkerhetsgranskare med öppen källkod från CISOfy. Analyserar värden och ger ett härdningsvärde samt konkreta förbättringsförslag. ProxMenux installerar versionen från projektets GitHub-förråd i stället för det äldre Debian-paketet.",
+      "seeAlso": [
+        {
+          "label": "Lynis",
+          "href": "/docs/security/lynis"
+        }
+      ]
+    },
+    {
+      "term": "MAC-adress",
+      "aliases": [
+        "Hårdvaruadress"
+      ],
+      "category": "Nätverk",
+      "definitionRich": "Vanligen en 48-bitars identifierare för ett Ethernet-gränssnitt, tilldelad av hårdvara eller programvara. ProxMenux <em>Beständiga nätverksnamn</em> kopplar MAC-adresser till fasta namn (<code>eno1</code>, <code>enp3s0</code>) som består efter ändrad PCI-uppräkning.",
+      "seeAlso": [
+        {
+          "label": "Persistenta gränssnitt namn",
+          "href": "/docs/network/persistent-names"
+        }
+      ]
+    },
+    {
+      "term": "MOTD",
+      "aliases": [
+        "Dagens budskap"
+      ],
+      "category": "Linux",
+      "definitionRich": "Text som visas efter SSH-inloggning, lagrad i <code>/etc/motd</code>. ProxMenux kan lägga till en banner efter installationen; avinstallationen återställer föregående fil om en säkerhetskopia finns."
+    },
+    {
+      "term": "NFS",
+      "aliases": [
+        "Nätverksfilsystem"
+      ],
+      "category": "Lagring",
+      "definitionRich": "Protokoll för fildelning i nätverk med ursprung i Unix. Läggs till som Proxmox-lagring med <code>pvesm add nfs</code>; ProxMenux har även guider för NFS-klienter och -servrar i LXC.",
+      "seeAlso": [
+        {
+          "label": "Lagrings- och delningshanterare",
+          "href": "/docs/storage-share"
+        }
+      ]
+    },
+    {
+      "term": "nftables / iptables",
+      "category": "Nätverk",
+      "definitionRich": "Brandväggsverktyg för Linux. <code>nftables</code> är det moderna ramverket; <code>iptables</code> kan använda äldre eller nft-kompatibla bakändar. Klassiska <code>pve-firewall</code> använder iptables, medan alternativet proxmox-firewall använder nftables.",
+      "seeAlso": [
+        {
+          "label": "Nätverkskommandon",
+          "href": "/docs/help-info/network-commands"
+        }
+      ]
+    },
+    {
+      "term": "nouveau",
+      "category": "Linux",
+      "definitionRich": "Öppen NVIDIA-grafikdrivrutin som ingår i Linux-kärnan. Vid installation av den proprietära drivrutinen måste nouveau hindras från att binda samma GPU, vanligen genom blockering av modulen och ombyggnad av initramfs.",
+      "seeAlso": [
+        {
+          "label": "NVIDIA installationsguide",
+          "href": "/guides/nvidia"
+        }
+      ]
+    },
+    {
+      "term": "No-subscription-paketförråd",
+      "category": "Proxmox",
+      "definitionRich": "Proxmox paketförråd utan enterprise-prenumeration. Paketen valideras mindre omfattande än i enterprise-förrådet, som Proxmox rekommenderar för produktion. ProxMenux erbjuder konfiguration av paketförråd i efterinstallationen.",
+      "seeAlso": [
+        {
+          "label": "Post-Install: Grundläggande inställningar",
+          "href": "/docs/post-install/basic-settings"
+        }
+      ]
+    },
+    {
+      "term": "OVA / OVF",
+      "aliases": [
+        "Open Virtualization Format"
+      ],
+      "category": "Virtualisering",
+      "definitionRich": "DMTF-format för att paketera flyttbara VM. <strong>OVA</strong> samlar filerna i ett TAR-arkiv; <strong>OVF</strong> beskriver VM i XML med tillhörande diskfiler, ofta VMDK. Importstödet beror på målhypervisorn och konfigurationen.",
+      "seeAlso": [
+        {
+          "label": "Exportera VM till OVA / OVF",
+          "href": "/docs/utils/export-vm"
+        },
+        {
+          "label": "Importera VM från OVA / OVF",
+          "href": "/docs/utils/import-vm"
+        }
+      ]
+    },
+    {
+      "term": "OVMF",
+      "aliases": [
+        "UEFI-programvara",
+        "Open Virtual Machine Firmware"
+      ],
+      "category": "Virtualisering",
+      "definitionRich": "UEFI-firmware för VM, valt med <code>qm set &lt;vmid&gt; -bios ovmf</code>. Används för UEFI-gäster, inklusive Windows 11 och Secure Boot-konfigurationer. <code>efidisk0</code> lagrar beständiga EFI-variabler; många andra gäster kan fortfarande använda äldre BIOS.",
+      "seeAlso": [
+        {
+          "label": "Koppla GPU till VM (genomkoppling)",
+          "href": "/docs/hardware/gpu-vm-passthrough"
+        }
+      ]
+    },
+    {
+      "term": "PBS",
+      "aliases": [
+        "Proxmox Backup Server"
+      ],
+      "category": "Proxmox",
+      "definitionRich": "Separat säkerhetskopieringsprodukt från Proxmox med inkrementella överföringar, deduplicering och valfri klientkryptering för VM och CT. Kan användas som vzdump-mål; en separat backupserver är att föredra framför kopior på den skyddade värden."
+    },
+    {
+      "term": "pct",
+      "category": "Proxmox",
+      "definitionRich": "Kommandoradsverktyg för LXC-containrar i Proxmox: <code>pct list / start / stop / shutdown / config / enter / exec / push / pull / destroy</code>.",
+      "seeAlso": [
+        {
+          "label": "Hantera virtuella maskiner och containrar",
+          "href": "/docs/help-info/vm-ct-commands"
+        }
+      ]
+    },
+    {
+      "term": "pmxcfs",
+      "aliases": [
+        "Proxmox Cluster Filesystem"
+      ],
+      "category": "Proxmox",
+      "definitionRich": "FUSE-baserat virtuellt filsystem monterat på <code>/etc/pve/</code>. Replikerar konfigurationsändringar mellan klusternoder: ändringar under <code>/etc/pve/</code> sprids automatiskt."
+    },
+    {
+      "term": "pveam",
+      "aliases": [
+        "Hanterare för virtuella apparater i Proxmox VE"
+      ],
+      "category": "Proxmox",
+      "definitionRich": "Verktyg för den lokala katalogen med CT-mallar. <code>pveam update</code> uppdaterar indexet; <code>pveam available</code> listar mallar och <code>pveam download &lt;storage&gt; &lt;template&gt;</code> hämtar en mall."
+    },
+    {
+      "term": "pveproxy",
+      "category": "Proxmox",
+      "definitionRich": "HTTPS-tjänst för Proxmox webbgränssnitt och webbterminal på port 8006. Startas om vid större uppgraderingar; därför tillåter ProxMenux inte uppgraderingen PVE 8 → 9 från webbterminalen."
+    },
+    {
+      "term": "pvesm",
+      "aliases": [
+        "Proxmox lagringshanterare"
+      ],
+      "category": "Proxmox",
+      "definitionRich": "CLI verktyg för hantering av Proxmox lagring. <code>pvesm status</code> visar alla konfigurerade lagringar; <code>pvesm add &lt;type&gt;</code> registrerar nya (NFS, Samba, iSCSI, dir, ZFS, LVM, ...).",
+      "seeAlso": [
+        {
+          "label": "Kommandon för lagring och diskar",
+          "href": "/docs/help-info/storage-commands"
+        }
+      ]
+    },
+    {
+      "term": "Privilegerad container",
+      "category": "Linux",
+      "definitionRich": "LXC-container vars root <em>mappas till värdens UID 0</em>, medan namnrymder och andra begränsningar fortfarande gäller. Mindre isolerad än en oprivilegierad container. GPU, USB och Samba kräver inte alltid detta läge; behörigheter och UID-mappning spelar roll."
+    },
+    {
+      "term": "ProxMenux Monitor",
+      "category": "ProxMenux",
+      "definitionRich": "Valfri webbpanel för ProxMenux. Visar värdstatistik i realtid (CPU, RAM, diskar och nätverk), VM- och LXC-översikt samt inloggning med 2FA på TCP-port <code>8008</code>.",
+      "seeAlso": [
+        {
+          "label": "ProxMenux Monitor",
+          "href": "/docs/settings/proxmenux-monitor"
+        }
+      ]
+    },
+    {
+      "term": "qcow2",
+      "aliases": [
+        "QEMU Copy-On-Write v2"
+      ],
+      "category": "Lagring",
+      "definitionRich": "Format för VM-diskavbilder som ofta används på kataloglagring. Stöder tilldelning vid behov, ögonblicksbilder och copy-on-write. Konvertera med <code>qemu-img convert -O qcow2 ...</code>."
+    },
+    {
+      "term": "qm",
+      "aliases": [
+        "QEMU-hanterare"
+      ],
+      "category": "Proxmox",
+      "definitionRich": "Verktyg för att hantera VM i Proxmox: <code>qm list / start / stop / shutdown / config / set / destroy / importdisk / migrate</code>. Motsvarar <code>pct</code> för containrar.",
+      "seeAlso": [
+        {
+          "label": "Hantera virtuella maskiner och containrar",
+          "href": "/docs/help-info/vm-ct-commands"
+        }
+      ]
+    },
+    {
+      "term": "Q35",
+      "category": "Virtualisering",
+      "definitionRich": "QEMU-maskintyp som emulerar Intel Q35 med PCIe-stöd. Rekommenderas framför i440FX för PCIe-genomkoppling och moderna gästsystem. Ställs in med <code>qm set &lt;vmid&gt; -machine q35</code>."
+    },
+    {
+      "term": "QEMU",
+      "category": "Virtualisering",
+      "definitionRich": "Maskinemulator och virtualiserare med öppen källkod. Proxmox kombinerar den med KVM för att köra VM med prestanda nära den fysiska maskinens."
+    },
+    {
+      "term": "rclone",
+      "category": "Linux",
+      "definitionRich": "Kommandoradsverktyg med stöd för många molnlagringstjänster, bland annat Google Drive, Dropbox, OneDrive, Mega och S3. Molnbackupguiden använder det för att montera fjärrlagring som en katalog för vzdump-arkiv.",
+      "seeAlso": [
+        {
+          "label": "Säkerhetskopiera till personlig molnlagring",
+          "href": "/guides/backup_cloud"
+        }
+      ]
+    },
+    {
+      "term": "Samba / SMB / CIFS",
+      "category": "Lagring",
+      "definitionRich": "Microsofts protokollfamilj för fildelning. <strong>SMB</strong> är protokollet, <strong>Samba</strong> den öppna Linux-implementationen och <strong>CIFS</strong> en äldre SMB-dialekt. Läggs till i Proxmox med <code>pvesm add cifs</code>.",
+      "seeAlso": [
+        {
+          "label": "Lagrings- och delningshanterare",
+          "href": "/docs/storage-share"
+        }
+      ]
+    },
+    {
+      "term": "SeaBIOS",
+      "category": "Virtualisering",
+      "definitionRich": "Öppen implementation av äldre BIOS som används av QEMU. Standardfirmware för nya VM om du inte väljer OVMF. Passar äldre system och Linux-installationer utan UEFI-krav."
+    },
+    {
+      "term": "smartctl / SMART",
+      "aliases": [
+        "Self-Monitoring, Analysis and Reporting Technology"
+      ],
+      "category": "Lagring",
+      "definitionRich": "Inbyggd diskdiagnostik för hälsostatus, felräknare och självtestresultat. Verktyget är <code>smartctl</code> från <code>smartmontools</code>; <code>nvme-cli</code> lägger till NVMe-specifika kommandon.",
+      "seeAlso": [
+        {
+          "label": "SMART-status och disktest",
+          "href": "/docs/disk-manager/smart-disk-test"
+        },
+        {
+          "label": "Lagringskommandon → SMART sektion",
+          "href": "/docs/help-info/storage-commands"
+        }
+      ]
+    },
+    {
+      "term": "systemd / systemctl / journalctl",
+      "category": "Linux",
+      "definitionRich": "Init-system i Debian / Proxmox. <code>systemctl</code> hanterar tjänster: start, stopp, aktivering och status. <code>journalctl</code> läser binärloggen som skrivs av <code>systemd-journald</code>."
+    },
+    {
+      "term": "sysctl",
+      "category": "Linux",
+      "definitionRich": "Verktyg för att läsa och ändra kärnparametrar. Beständiga inställningar placeras vanligen i <code>/etc/sysctl.d/*.conf</code>; stödet för <code>/etc/sysctl.conf</code> beror på laddningstjänsten. ProxMenux erbjuder en sysctl-profil i efterinstallationen.",
+      "seeAlso": [
+        {
+          "label": "Post-Install: Nätverk",
+          "href": "/docs/post-install/network"
+        }
+      ]
+    },
+    {
+      "term": "trixie",
+      "category": "Linux",
+      "definitionRich": "Kodnamn för Debian 13, OS-basen för Proxmox VE 9. Föregångare: <em>bookworm</em> (Debian 12 / PVE 8).",
+      "seeAlso": [
+        {
+          "label": "Uppgradera PVE 8 till PVE 9",
+          "href": "/docs/utils/upgrade-pve8-pve9"
+        }
+      ]
+    },
+    {
+      "term": "udev",
+      "category": "Linux",
+      "definitionRich": "Linux enhetshanterare. Reagerar på hårdvaruhändelser och skapar eller tar bort poster under <code>/dev</code>. Regler i <code>/etc/udev/rules.d/</code> kan binda gränssnittsnamn till MAC-adresser, skapa NVIDIA-enhetsnoder när drivrutinen laddas och annat."
+    },
+    {
+      "term": "UID / GID idmap",
+      "aliases": [
+        "UID skift"
+      ],
+      "category": "Linux",
+      "definitionRich": "Med standardmappningen i <strong>oprivilegierade</strong> LXC förskjuts UID och GID på värden med <code>+100000</code>: UID 0 motsvarar 100000 och 1000 motsvarar 101000. Anpassade mappningar kan skilja sig; filägarskap i bind-monteringar måste stämma med mappningen.",
+      "seeAlso": [
+        {
+          "label": "LXC-monteringspunkter",
+          "href": "/docs/storage-share/lxc-mount-points"
+        }
+      ]
+    },
+    {
+      "term": "Oprivilegierad container",
+      "category": "Linux",
+      "definitionRich": "LXC-container vars root mappas till ett oprivilegierat UID på värden, normalt 100000. Det minskar värdprivilegierna medan kärnan delas. Hårdvaruåtkomst kan konfigureras med lämpliga behörigheter och mappningar; privilegierat läge krävs inte alltid."
+    },
+    {
+      "term": "VFIO",
+      "aliases": [
+        "Virtuell funktion I/O"
+      ],
+      "category": "Virtualisering",
+      "definitionRich": "Linux-kärnramverk för säkra enhetsdrivrutiner i användarutrymme, använt för direkt PCIe-tilldelning till VM. Använder <code>vfio</code>, <code>vfio_iommu_type1</code> och <code>vfio_pci</code> med konfiguration i <code>/etc/modprobe.d/vfio.conf</code>.",
+      "seeAlso": [
+        {
+          "label": "Post-Install: Virtualisering",
+          "href": "/docs/post-install/virtualization"
+        }
+      ]
+    },
+    {
+      "term": "VirtIO",
+      "category": "Virtualisering",
+      "definitionRich": "Familj av paravirtualiserade drivrutiner för nätverk, lagring, dynamisk minneshantering och GPU. Undviker overhead från emulerad äldre hårdvara som e1000 eller IDE. Gästen behöver motsvarande drivrutiner: inbyggda i Linux och tillgängliga som separat ISO för Windows."
+    },
+    {
+      "term": "VLAN",
+      "aliases": [
+        "Virtuellt LAN"
+      ],
+      "category": "Nätverk",
+      "definitionRich": "802.1Q-taggar som delar ett fysiskt nätverk i flera logiska nät. Konfigureras per brygga eller nätverksgränssnitt i <code>/etc/network/interfaces</code>."
+    },
+    {
+      "term": "VM",
+      "aliases": [
+        "Virtuell maskin"
+      ],
+      "category": "Proxmox",
+      "definitionRich": "Virtuell maskin som Proxmox hanterar med QEMU/KVM och som kör en egen gästkärna. Dess numeriska VMID motsvarar <code>/etc/pve/qemu-server/&lt;VMID&gt;.conf</code>. Har vanligen högre overhead än LXC, med isolering genom en separat kärna.",
+      "seeAlso": [
+        {
+          "label": "Hantera virtuella maskiner och containrar",
+          "href": "/docs/help-info/vm-ct-commands"
+        }
+      ]
+    },
+    {
+      "term": "vzdump",
+      "category": "Proxmox",
+      "definitionRich": "Proxmox säkerhetskopieringsverktyg för VM och CT. Filarkiv är <strong>inte inkrementella</strong>; PBS-mål stöder inkrementella överföringar. Jobb konfigurerar läge (snapshot / suspend / stop), komprimering (som zstd, gzip eller lzo), bevarande och aviseringar.",
+      "seeAlso": [
+        {
+          "label": "Kommandon för säkerhetskopiering och återställning",
+          "href": "/docs/help-info/backup-commands"
+        }
+      ]
+    },
+    {
+      "term": "ZFS",
+      "aliases": [
+        "Zettabyte File System"
+      ],
+      "category": "Lagring",
+      "definitionRich": "Filsystem och volymhanterare med ögonblicksbilder, send/receive-replikering, kontrollsummor och komprimering. Kan reparera skadade data om en giltig redundant kopia finns. Läscachen <strong>ARC</strong> använder RAM och kan begränsas.",
+      "seeAlso": [
+        {
+          "label": "Kommandon för ZFS-hantering",
+          "href": "/docs/help-info/zfs-commands"
+        }
+      ]
+    }
+  ]
+}

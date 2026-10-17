@@ -1,0 +1,206 @@
+{
+  "meta": {
+    "title": "ProxMenux — Gestão do Proxmox VE através de menus | Código aberto",
+    "description": "Ferramenta de código aberto para gerir o Proxmox VE através de menus. O ProxMenux reúne dois componentes: uma CLI/TUI para ajustes após a instalação, VM e contentores LXC, passagem direta de GPU e Coral TPU, discos, armazenamento e rede; e um painel web alojado no próprio servidor, com monitorização proativa, notificações por Telegram, Discord ou e-mail, reformulação por IA e API REST.",
+    "ogTitle": "ProxMenux — Gestão do Proxmox VE através de menus",
+    "ogDescription": "CLI/TUI de código aberto e painel web para Proxmox VE: ajustes após a instalação, VM, GPU, discos, rede, armazenamento e segurança. O Monitor acrescenta verificações de estado, notificações, reformulação por IA e uma API REST.",
+    "twitterTitle": "ProxMenux — Gestão do Proxmox VE através de menus",
+    "twitterDescription": "CLI/TUI de código aberto e painel web para Proxmox VE. Monitorização, notificações, reformulação por IA e API REST."
+  },
+  "header": {
+    "title": "Introdução",
+    "description": "O ProxMenux é uma ferramenta de código aberto para gerir o Proxmox VE através de menus. O projeto inclui uma CLI/TUI para tarefas comuns do anfitrião, VM, contentores, armazenamento, rede e segurança, e um painel web alojado no próprio servidor, com monitorização proativa, notificações, reformulação opcional por IA e API REST.",
+    "section": "Introdução"
+  },
+  "hero": {
+    "tagline": "<strong>Um menu para todas as tarefas.</strong> O que normalmente exige consultar a wiki, duas discussões no fórum e uma sequência de comandos copiada fica disponível numa opção numerada, que pode iniciar em segundos.",
+    "audience": "Concebido para utilizadores <em>principiantes</em> de Proxmox, com predefinições seguras já selecionadas, e administradores <em>experientes</em>, que podem executar tarefas habituais com menos comandos. Gratuito e de código aberto, com uma comunidade ativa no <github>GitHub</github>."
+  },
+  "twoProducts": {
+    "heading": "Dois produtos, um projecto",
+    "intro": "O ProxMenux tem dois componentes na mesma árvore de código-fonte. O instalador coloca ambos no anfitrião: Scripts fornece a interface de terminal e Monitor o painel web:",
+    "scripts": {
+      "title": "ProxMenux Scripts",
+      "body": "A CLI/TUI original, iniciada com <code>menu</code>. Nove áreas abrangem otimizações após a instalação, VM e contentores LXC, passagem direta de GPU e Coral TPU, discos, armazenamento, rede, segurança e utilitários, com uma seleção de comandos de referência. Funciona em terminais locais, por SSH ou na web."
+    },
+    "monitor": {
+      "title": "ProxMenux Monitor",
+      "body": "Painel web alojado no próprio servidor, distribuído como AppImage. Métricas do anfitrião em tempo real, monitorização proativa, notificações, reformulação opcional por IA com seis fornecedores, terminal web integrado e API REST. Ative-o no menu Scripts, em Definições → ProxMenux Monitor."
+    },
+    "calloutTitle": "O que o ProxMenux gere",
+    "calloutIntro": "Três camadas, todas acessíveis a partir do mesmo projeto:",
+    "layers": [
+      "<strong>O anfitrião Proxmox</strong> — repositórios, pacotes, rede, ZFS, Ceph, kernel e observabilidade.",
+      "<strong>As máquinas virtuais (VM)</strong> — criação, passagem direta de GPU, importação e exportação OVA/OVF e acesso direto a discos.",
+      "<strong>Os contentores LXC</strong> — criação, pontos de montagem, passagem direta de GPU/TPU e clientes e servidores NFS/Samba."
+    ]
+  },
+  "scriptsSection": {
+    "heading": "ProxMenux Scripts — o que se obtém",
+    "intro": "Nove áreas funcionais, cada uma com o seu submenu em <code>menu</code> e uma página própria na documentação. Selecione um cartão para abrir diretamente a visão geral dessa secção.",
+    "items": [
+      {
+        "title": "Após a instalação",
+        "description": "Otimizações para uma instalação recente do Proxmox: repositórios, kernel, sincronização horária, segurança básica e desempenho, com opções reversíveis.",
+        "icon": "Server",
+        "href": "/docs/post-install"
+      },
+      {
+        "title": "GPUs e Coral TPU",
+        "description": "Passagem direta de NVIDIA, iGPU Intel, AMD e Coral TPU para VM e contentores LXC, com alternância entre os modos VM e LXC.",
+        "icon": "Cpu",
+        "href": "/docs/hardware/nvidia-host"
+      },
+      {
+        "title": "Criar VM",
+        "description": "Assistentes para sistemas NAS, Windows e Linux, com predefinições adequadas para hardware, armazenamento e rede.",
+        "icon": "Server",
+        "href": "/docs/create-vm"
+      },
+      {
+        "title": "Gerenciador de disco",
+        "description": "Disponibilize discos físicos a VM e LXC, formate e apague discos, execute testes SMART e importe imagens qcow2, vmdk ou vdi, tudo através de um menu.",
+        "icon": "HardDrive",
+        "href": "/docs/disk-manager"
+      },
+      {
+        "title": "Armazenamento e partilha",
+        "description": "Registe armazenamento NFS, Samba/CIFS, iSCSI e local no Proxmox e partilhe pastas entre o anfitrião e os contentores LXC através de bind mounts ou protocolos de rede.",
+        "icon": "Boxes",
+        "href": "/docs/storage-share"
+      },
+      {
+        "title": "Rede",
+        "description": "Diagnóstico sem alterações, análise com sugestões e reparações guiadas de /etc/network/interfaces. São criadas cópias de segurança antes das alterações.",
+        "icon": "Network",
+        "href": "/docs/network"
+      },
+      {
+        "title": "Segurança",
+        "description": "Fail2Ban para prevenir intrusões por SSH e interfaces web e Lynis para auditar o reforço da segurança, com instalação e gestão através de predefinições adequadas.",
+        "icon": "Shield",
+        "href": "/docs/security"
+      },
+      {
+        "title": "Utilitários",
+        "description": "Crie ISO do Windows com o UUP Dump, instale ferramentas CLI, execute atualizações guiadas do sistema ou passe do PVE 8 para o 9 e exporte e importe VM OVA/OVF.",
+        "icon": "Wrench",
+        "href": "/docs/utils"
+      },
+      {
+        "title": "Referência de comandos",
+        "description": "Uma seleção de comandos Linux e Proxmox organizada por tema: sistema, VM/CT com qm e pct, armazenamento, rede, ZFS, passagem direta de GPU, cópias de segurança e ferramentas CLI do dia a dia.",
+        "icon": "BookOpen",
+        "href": "/docs/help-info"
+      }
+    ]
+  },
+  "monitorSection": {
+    "heading": "ProxMenux Monitor — o que se obtém",
+    "intro": "O painel web é alojado no anfitrião Proxmox, na porta TCP 8008. Selecione um cartão para abrir a página da respetiva secção ou leia primeiro a <link>visão geral do Monitor</link>.",
+    "items": [
+      {
+        "title": "Monitorização do estado do sistema",
+        "description": "Dez categorias verificadas a cada cinco minutos: CPU, memória, armazenamento, discos/SMART, rede, VM, serviços, registos, atualizações e segurança. Com níveis de gravidade e supressão de alertas por categoria.",
+        "icon": "Activity",
+        "href": "/docs/monitor/health-monitor"
+      },
+      {
+        "title": "Notificações",
+        "description": "Telegram, Discord, e-mail, Gotify, Pushover e Apprise multicanal, com eliminação de duplicados, intervalo mínimo entre envios, agrupamento de alertas próximos, horários de silêncio e histórico completo.",
+        "icon": "Bell",
+        "href": "/docs/monitor/notifications"
+      },
+      {
+        "title": "Assistente de IA",
+        "description": "Reformulação opcional das notificações em linguagem clara. Seis fornecedores: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter e Ollama local. Treze idiomas no seletor das notificações.",
+        "icon": "Sparkles",
+        "href": "/docs/monitor/ai-assistant"
+      },
+      {
+        "title": "Terminal Web",
+        "description": "Uma shell interativa no anfitrião Proxmox através do navegador e um terminal ProxMenux Scripts separado que executa o menu na interface web.",
+        "icon": "Terminal",
+        "href": "/docs/monitor/dashboard/terminal"
+      },
+      {
+        "title": "REST API",
+        "description": "Endpoints HTTP para sistema, estado, armazenamento/SMART, rede, VM, notificações e segurança, úteis para Homepage, Home Assistant, Prometheus ou scripts personalizados.",
+        "icon": "Code2",
+        "href": "/docs/monitor/api"
+      },
+      {
+        "title": "Integrações",
+        "description": "Webhook nativo do Proxmox VE, recolha de métricas pelo Prometheus, sondas Uptime Kuma, widgets Homepage, Home Assistant e Glance, fluxos n8n/Zapier e Tailscale Secure Gateway.",
+        "icon": "Plug",
+        "href": "/docs/monitor/integrations"
+      }
+    ]
+  },
+  "installPaths": {
+    "heading": "Opções de instalação",
+    "intro": "Ambos os instaladores disponibilizam Scripts e Monitor. Scripts utiliza catálogos JSON previamente preparados em oito idiomas, sem tradução online. Pode escolher o canal estável ou beta; Monitor é distribuído como AppImage e executado a partir do seu ambiente extraído:",
+    "headerPath": "Install path",
+    "headerBundles": "O que inclui",
+    "headerWhen": "Quando escolher",
+    "rows": [
+      {
+        "pathRich": "<strong>Scripts: estável</strong>",
+        "bundles": "CLI/TUI com traduções JSON previamente preparadas em oito idiomas, sem ambiente virtual ou serviço de tradução online.",
+        "when": "Utilização habitual com o canal de versões estáveis."
+      },
+      {
+        "pathRich": "<strong>Scripts: beta</strong>",
+        "bundles": "A mesma interface multilingue, instalada a partir do ramo develop para testar as próximas alterações.",
+        "when": "Teste antecipado de novas funcionalidades, com maior risco de erros."
+      },
+      {
+        "pathRich": "<strong>Monitor</strong>",
+        "bundles": "AppImage autónoma com painel web na porta TCP 8008. O instalador extrai o ambiente de execução e gere o serviço; Monitor pode ser controlado nas definições.",
+        "when": "Quando é útil consultar o anfitrião num painel web, através de telemóvel, tablet ou navegador."
+      }
+    ],
+    "outro": "Os comandos e requisitos detalhados estão na <link>página de instalação</link>."
+  },
+  "warnSource": {
+    "title": "Verifique sempre os scripts da Internet antes de os executar",
+    "body": "O ProxMenux é de código aberto e pode consultar cada script no GitHub. Leia o código-fonte antes de executar o comando de instalação. Faça o mesmo com qualquer outra ferramenta de automação.",
+    "sourceLabel": "Ver fonte ProxMenux",
+    "cocLabel": "Código de Conduta"
+  },
+  "next": {
+    "heading": "Por onde continuar",
+    "items": [
+      {
+        "lead": "<strong>É a primeira vez que utiliza o ProxMenux?</strong> ",
+        "linkHref": "/docs/installation",
+        "linkLabel": "Instale-o com um único comando",
+        "tailRich": " e execute <code>menu</code>."
+      },
+      {
+        "lead": "<strong>Acabou de instalar o Proxmox?</strong> Comece pelo ",
+        "linkHref": "/docs/post-install",
+        "linkLabel": "script de pós-instalação",
+        "tail": "."
+      },
+      {
+        "lead": "<strong>Pretende um painel web?</strong> ",
+        "linkHref": "/docs/monitor",
+        "linkLabel": "ProxMenux Monitor",
+        "tail": " tem documentação que explica o que apresenta, como foi desenvolvido e como o proteger."
+      },
+      {
+        "lead": "<strong>Procura um comando específico?</strong> A ",
+        "linkHref": "/docs/help-info",
+        "linkLabel": "referência de comandos",
+        "tail": " reúne uma seleção organizada por tema, com botões para copiar."
+      },
+      {
+        "lead": "<strong>Pretende guias mais detalhados?</strong> A ",
+        "linkHref": "/guides",
+        "linkLabel": "secção de guias",
+        "tail": " aborda Coral TPU, passagem direta de NVIDIA, Kodi em LXC e outros temas."
+      }
+    ]
+  }
+}
