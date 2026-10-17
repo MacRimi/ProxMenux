@@ -16,6 +16,7 @@ import { Input } from "./ui/input"
 import { getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
 import { SUPPORTED_LANGUAGES, useI18n } from "../lib/i18n/provider"
+import { useIsPbs } from "../lib/use-platform"
 import type { LanguageCode } from "../lib/i18n/languages"
 import { NavTabOrderCard } from "./nav-tab-order-card"
 
@@ -312,6 +313,7 @@ interface NetworkInterface {
 
 export function Settings() {
   const { language, setLanguage, t } = useI18n()
+  const isPbs = useIsPbs()
   const tFallback = (key: string, fallback: string) => {
     const translated = t(key)
     return translated === key ? fallback : translated
@@ -1124,7 +1126,7 @@ export function Settings() {
       </Card>
 
       {/* Navigation Tab Order — user-orderable top-level tabs */}
-      <NavTabOrderCard />
+      {!isPbs && <NavTabOrderCard />}
 
       {/* Network Units Settings */}
       <Card>
@@ -1280,7 +1282,7 @@ export function Settings() {
               
               {/* Per-category rows */}
               <div className="divide-y divide-border/50">
-                {suppressionCategories.map((cat) => {
+                {suppressionCategories.filter(cat => !isPbs || healthCategoryKey(cat) !== "vms").map((cat) => {
                   const IconComp = CATEGORY_ICONS[cat.icon] || HeartPulse
                   const effectiveHours = getEffectiveHours(cat)
                   const isCustomMode = effectiveHours === -2 || (cat.key in customValues)
@@ -1288,7 +1290,8 @@ export function Settings() {
                   const isLong = effectiveHours >= 720 && effectiveHours !== -1 && effectiveHours !== -2
                   const hasChanged = cat.key in pendingChanges && pendingChanges[cat.key] !== cat.hours
                   const selectVal = isCustomMode ? "custom" : getSelectValue(effectiveHours, cat.key)
-                  const catLabel = tFallback(`settings.healthMonitor.categories.${healthCategoryKey(cat)}`, cat.label)
+                  const categoryKey = isPbs && healthCategoryKey(cat) === "services" ? "pbsServices" : healthCategoryKey(cat)
+                  const catLabel = tFallback(`settings.healthMonitor.categories.${categoryKey}`, cat.label)
                   
                   return (
                     <div key={cat.key}>
@@ -1496,6 +1499,7 @@ export function Settings() {
         </CardContent>
       </Card>
 
+      {!isPbs && <>
       {/* Remote Storage Exclusions */}
       <Card>
         <CardHeader>
@@ -1678,6 +1682,7 @@ export function Settings() {
           )}
         </CardContent>
       </Card>
+      </>}
 
       {/* Network Interface Exclusions */}
       <Card>
@@ -1875,6 +1880,7 @@ export function Settings() {
           is re-enabled). */}
       <LxcUpdateDetection />
 
+      {!isPbs && <>
       {/* GitHub API — optional authentication for app upstream checks. */}
       <Card>
         <CardHeader>
@@ -1981,15 +1987,16 @@ export function Settings() {
           )}
         </CardContent>
       </Card>
+      </>}
 
-      {/* Notification Settings */}
-      <NotificationSettings />
+      {/* Notification Settings (PVE only for now) */}
+      {!isPbs && <NotificationSettings />}
 
       {/* Issue #195: snippets storage selector. Only renders when more
           than one storage advertises content=snippets — on a typical
           standalone host with just `local` there's nothing to choose,
           so showing an empty selector would be noise. */}
-      {snippetsCandidates.length > 1 && (
+      {!isPbs && snippetsCandidates.length > 1 && (
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">

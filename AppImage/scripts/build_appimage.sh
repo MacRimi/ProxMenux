@@ -163,6 +163,8 @@ cp "$SCRIPT_DIR/temperature_sensor_resolver.py" "$APP_DIR/usr/bin/" 2>/dev/null 
 cp "$SCRIPT_DIR/proxmox_storage_monitor.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  proxmox_storage_monitor.py not found"
 cp "$SCRIPT_DIR/pbs_manager.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/flask_pbs_routes.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/monitor_links.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/flask_monitor_links_routes.py" "$APP_DIR/usr/bin/"
 cp "$APPIMAGE_ROOT/../scripts/global/proxmox_platform.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/flask_script_runner.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_script_runner.py not found"
 cp "$SCRIPT_DIR/security_manager.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  security_manager.py not found"
