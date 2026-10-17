@@ -102,8 +102,8 @@ class LocalSamplerTests(unittest.TestCase):
         sampler = self.sampler()
         sampler.sample(1.0)
         second = (self.root / "proc/net/dev").read_text()
-        second = second.replace("wlan0: 10", "wlan0: 110").replace(
-            "0 0 0 0 0 0 0 20", "0 0 0 0 0 0 0 220")
+        second = second.replace("wlan0: 10 0 0 0 0 0 0 0 20 ",
+                                "wlan0: 110 0 0 0 0 0 0 0 220 ")
         second = second.replace("eno2: 3000", "eno2: 10000")
         for nic in ("fwbr1", "fwpr1", "fwln1", "tap1", "veth1"):
             second = second.replace(f"{nic}: 1", f"{nic}: 1001")
