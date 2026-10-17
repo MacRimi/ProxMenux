@@ -5,7 +5,7 @@
   },
   "header": {
     "title": "Dashboard: System Overview tab",
-    "description": "The first tab the dashboard opens on. Four live metric cards across the top, the historical-metrics chart in the middle, and condensed storage / network panels at the bottom — all derived from the same APIs that drive the dedicated tabs.",
+    "description": "The tab the dashboard opens on by default. Four live metric cards across the top, the historical-metrics chart in the middle, and condensed storage / network panels at the bottom — all derived from the same APIs that drive the dedicated tabs.",
     "section": "ProxMenux Monitor · Dashboard"
   },
   "readOnly": {
@@ -13,7 +13,7 @@
     "body": "Nothing on this tab is a control surface — every panel is informational. Actions live in the dedicated tabs they link to: drill into Storage to manage disks, into VMs & LXCs to start / stop guests, into the Security tab to configure auth, and so on."
   },
   "captureAlt": "System Overview tab — four metric cards (CPU, Memory, Active VMs, Temperature), node metrics chart, and Storage / Network summary cards",
-  "captureCaption": "The System Overview tab — what the dashboard opens on. The four cards are live, the chart below is historical, and the two cards at the bottom summarise Storage and Network.",
+  "captureCaption": "The System Overview tab — the default landing tab. The four cards are live, the chart below is historical, and the two cards at the bottom summarise Storage and Network.",
   "topRow": {
     "heading": "Top row: live metric cards",
     "intro": "Four cards in a 2×2 grid on mobile, single row on desktop. Each updates from <code>/api/system</code> every few seconds.",
@@ -102,9 +102,9 @@
     "intro": "Each panel manages its own loading state (<code>loadingStates.cpu</code>, <code>loadingStates.storage</code>, …) so a slow source doesn't block the rest. While a panel is fetching, it shows a pulse-animated skeleton; failed fetches degrade gracefully — for example, a missing temperature sensor renders the card as <em>N/A</em> instead of an error.",
     "items": [
       "<strong>Top metric cards</strong> — refresh every ~5 s. The CPU and temperature panels also receive a 1 s push from the vital-signs sampler.",
-      "<strong>Node metrics chart</strong> — refresh every 30 s, or on timeframe change.",
+      "<strong>Node metrics chart</strong> — loads when opened and when the timeframe or language changes. When a retry is needed, it waits 60 s.",
       "<strong>Storage card</strong> — refresh every 60 s. SMART data is cached longer (the Storage tab triggers a fresh read on demand).",
-      "<strong>Network card</strong> — refresh every 5 s on the active timeframe.",
+      "<strong>Network card</strong> — summary refreshes every 59 s and the traffic chart every 60 s on the active timeframe.",
       "<strong>Manual refresh</strong> — the Refresh button in the header forces all panels to re-fetch immediately."
     ]
   },
@@ -137,7 +137,7 @@
       {
         "card": "Refresh cadence",
         "endpoint": "—",
-        "source": "CPU / network 5 s; storage / VMs 30 s; static info every 5 min. The Refresh button in the header forces an immediate re-fetch on every panel."
+        "source": "System data every 5 s; storage, VMs and network summary every 59 s. The Refresh button in the header forces an immediate re-fetch on every panel."
       }
     ],
     "codeComment1": "# Single call that backs the header pill",
@@ -165,7 +165,7 @@
       {
         "label": "Dashboard index",
         "href": "/docs/monitor/dashboard",
-        "tail": " — the other eight tabs at a glance."
+        "tail": " — the other dashboard tabs at a glance."
       },
       {
         "label": "Architecture",

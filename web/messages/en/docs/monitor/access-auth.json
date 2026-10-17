@@ -19,7 +19,7 @@
   "reaching": {
     "heading": "Reaching the dashboard",
     "intro": "ProxMenux Monitor binds to <code>0.0.0.0:8008</code>. There are three common ways to reach it:",
-    "outro": "Direct access matches what the systemd unit ships out of the box. The reverse-proxy and Secure Gateway sections below cover the other two. The Monitor honours <code>X-Forwarded-For</code>, <code>X-Forwarded-Proto</code> and <code>X-Forwarded-Host</code> so URLs and CORS work behind any of them without manual configuration."
+    "outro": "Direct access matches the default systemd unit. Reverse-proxy and Secure Gateway access are described below. Trust for client IPs in <code>X-Forwarded-For</code> requires PROXMENUX_TRUST_PROXY=1 and a proxy you control. The presence of <code>X-Forwarded-Proto</code> or <code>X-Forwarded-Host</code> alone does not enable proxy trust; the frontend builds API URLs from the browser’s origin."
   },
   "firstLaunch": {
     "heading": "First-launch flow",
@@ -32,7 +32,7 @@
     "rows": [
       {
         "button": "Yes, Setup Password",
-        "what": "Opens a form with the mandatory username + password and an optional <em>display name</em> + <em>avatar image</em>. Stores them in <code>auth.json</code> with <code>enabled: true</code>. Returns a JWT so you're logged in immediately. The form is documented in detail below.",
+        "what": "Opens a form requiring a username and password, with optional <em>display name</em> and <em>avatar image</em>. Enables authentication in <code>auth.json</code> with <code>enabled: true</code> and returns a JWT to log you in. Optional profile fields are saved by subsequent calls, as documented below.",
         "api": "POST /api/auth/setup"
       },
       {
@@ -103,12 +103,12 @@
         "what": "Removes the avatar. The header falls back to the initial-on-coloured-circle placeholder."
       }
     ],
-    "reversibleTitle": "Continuing without protection is reversible — but only from the host",
+    "reversibleTitle": "Continuing without protection is reversible",
     "reversibleBody": "Once you click <em>No, Continue Without Protection</em>, the welcome dialog never appears again. You can re-enable authentication from <strong>the Security tab</strong> inside the dashboard, or by editing <code>/root/.config/proxmenux-monitor/auth.json</code> and removing the <code>declined</code> flag, then restarting the service."
   },
   "password": {
     "heading": "Password authentication",
-    "intro": "After Set up, every API call (except the few public endpoints listed below) requires a JWT in <code>Authorization: Bearer &lt;token&gt;</code>:",
+    "intro": "After setup, protected API calls require a JWT in <code>Authorization: Bearer &lt;token&gt;</code>:",
     "items": [
       "<strong>Session token (login):</strong> 24-hour expiration. Issued by <code>POST /api/auth/login</code>.",
       "<strong>API token (integrations):</strong> 365-day expiration. Issued by <code>POST /api/auth/generate-api-token</code>. Documented separately in the next section."
@@ -117,11 +117,11 @@
     "loginImageCaption": "Once authentication is configured, every visit to the dashboard starts here. With 2FA enabled, the screen asks for the 6-digit code in a second step after the password is accepted.",
     "loginFlowTitle": "Login flow",
     "twofaIntro": "With 2FA enabled, the same call returns <code>requires_totp: true</code> first. Re-issue with the 6-digit code:",
-    "publicTitle": "Public endpoints (no token)",
-    "publicIntro": "These are the only endpoints that work without authentication, even when auth is enabled:",
+    "publicTitle": "Public access and protected probes",
+    "publicIntro": "Login and authentication status are public. Initial setup is available while no username and password are stored, including after declining protection. System-data probes require authentication when protection is enabled:",
     "publicItems": [
-      "<code>/api/auth/login</code>, <code>/api/auth/status</code>, <code>/api/auth/setup</code> — the auth flow itself, by necessity.",
-      "<code>/api/system-info</code> — lightweight system snapshot (hostname, uptime, <code>health.status</code>). The right endpoint for external probes (Uptime Kuma, load-balancer health checks, status pages)."
+      "<code>/api/auth/login</code> and <code>/api/auth/status</code> are public. <code>/api/auth/setup</code> creates the initial account and rejects attempts to overwrite existing credentials.",
+      "<code>/api/system-info</code> is a public lightweight system-information endpoint, including <code>health.status</code>. It is not decorated with the token requirement. /api/auth/status is another public endpoint suitable for a reachability check."
     ],
     "cryptoTitle": "Cryptography and storage",
     "cryptoIntro": "ProxMenux Monitor is open source — none of this is secret. Documenting the stack here explicitly is a deliberate choice: operators who store credentials on their host deserve to know how those credentials are protected before they decide to trust them. The algorithms below are the same ones the code in <code>scripts/auth_manager.py</code> uses; this section is a contract, not a marketing promise.",
@@ -146,7 +146,7 @@
       },
       {
         "asset": "2FA TOTP secret",
-        "algorithm": "Standard TOTP (RFC 6238) base32-encoded. Backup codes are pre-generated, single-use, hashed with the same PBKDF2 scheme as the password.",
+        "algorithm": "Standard TOTP (RFC 6238), with a base32-encoded secret. The eight recovery codes are single-use and stored as SHA-256 hashes.",
         "where": "<code>auth.json</code> → <code>totp_secret</code> + <code>backup_codes[]</code>"
       },
       {
@@ -170,7 +170,7 @@
     "heading": "Two-Factor Authentication (TOTP)",
     "intro": "2FA adds a second factor on top of your password: a 6-digit code that rotates every 30 seconds, generated on a phone or password manager you control. Even if someone obtains the password, they still can't log in without the code from your device. ProxMenux Monitor implements the standard <strong>TOTP</strong> protocol (RFC 6238), so any authenticator app works.",
     "pickTitle": "Pick an authenticator app",
-    "pickIntro": "If you already use one for Google / GitHub / your bank, that one will work — skip to the setup walkthrough. If not, here's a survey of common options. All of them are free; the differences are mainly about which platforms they run on and how (or whether) they back up your secrets.",
+    "pickIntro": "If you already have a TOTP app, you can use it here. Common choices are listed below. Some are free and others require a subscription; supported platforms and backup methods also differ.",
     "headerApp": "App",
     "headerPlatforms": "Platforms",
     "headerAppNotes": "Notes",
@@ -190,8 +190,8 @@
       {
         "name": "Authy",
         "href": "https://authy.com/",
-        "platforms": "iOS, Android, desktop",
-        "notes": "Multi-device encrypted sync (the desktop app is being phased out — check the latest status)."
+        "platforms": "iOS, Android",
+        "notes": "Encrypted sync across devices. The desktop app reached end of life on 19 March 2024 and is no longer supported."
       },
       {
         "name": "Apple Passwords",
@@ -203,7 +203,7 @@
         "name": "Bitwarden",
         "href": "https://bitwarden.com/",
         "platforms": "iOS, Android, desktop, browser",
-        "notes": "Open source. TOTP lives next to the password it protects (handy if you also use BW for passwords; defeats \"separate device\" if you don't)."
+        "notes": "Open source. TOTP can be stored alongside passwords in the vault. Keeping both in the same vault is convenient, but does not provide separation onto a second device."
       },
       {
         "name": "1Password",
@@ -238,21 +238,21 @@
       {
         "name": "FreeOTP+",
         "href": "https://github.com/helloworld1/FreeOTPPlus",
-        "platforms": "Android, iOS",
-        "notes": "Open source (Red Hat-led). Minimal — no cloud, no account."
+        "platforms": "Android",
+        "notes": "Open-source fork of FreeOTP for Android, with import/export features. No account required."
       }
     ],
     "backupTitle": "What \"backup\" really matters for",
-    "backupBody": "If you lose the device that has the authenticator on it, the only ways back in are (1) a backup code saved when you enabled 2FA, or (2) a backup of the authenticator's vault. Apps with cloud sync (Google Auth, Microsoft Auth, Authy, Apple Passwords, Ente, 2FAS, Bitwarden, 1Password) can restore on a new device. Apps without cloud (Aegis, Raivo, FreeOTP+) need an encrypted export file you've copied somewhere safe. Either approach works — the bad case is \"no backup at all\".",
+    "backupBody": "If you lose the authenticator device, use a saved recovery code or restore the app from a backup you configured beforehand. Cloud sync and local exports differ by app; check that your chosen method actually restores the TOTP secrets. Root access to the host also allows recovery, as explained below. Keep a separate, secure backup.",
     "setupTitle": "Step-by-step setup from the dashboard",
     "setupImageAlt": "2FA setup screen with QR code and backup codes",
-    "setupImageCaption": "The 2FA setup dialog — QR code, Base32 secret (for manual entry), and the ten one-time backup codes. The codes are only displayed here; if you close the dialog without copying them, they're gone.",
+    "setupImageCaption": "The 2FA setup dialog shows a QR code, a Base32 secret for manual entry, and eight one-time recovery codes. Copy the codes before closing the dialog; they are not displayed again.",
     "setupSteps": [
       "<strong>Install the authenticator app on your phone</strong> (or open your password manager). One of the apps from the table above. You only need to do this once — the same app will hold codes for every service you protect.",
       "<strong>Log into the dashboard</strong> with your username and password.",
-      "<strong>Open the Security tab</strong> in the dashboard sidebar, then click <strong>Enable 2FA</strong>. A dialog opens with a QR code, a long string in Base32 format and ten short codes labelled \"backup codes\".",
+      "<strong>Open the Security tab</strong> in the dashboard sidebar, then click <strong>Enable 2FA</strong>. A dialog shows a QR code, the Base32 secret and eight recovery codes.",
       "<strong>Add the entry to the authenticator app:</strong>",
-      "<strong>Save the backup codes.</strong> Copy the ten codes somewhere safe — a password manager, an encrypted note, a printed copy in a drawer. Treat them like spare keys: each works exactly once and gets you in if your phone is gone or broken.",
+      "<strong>Save the recovery codes.</strong> Store all eight safely in a password manager, encrypted note or secure printed copy. Each works once if your authenticator is unavailable.",
       "<strong>Confirm by typing the current 6-digit code</strong> from the app into the \"Verification code\" field of the setup dialog and submit. Codes refresh every 30 seconds, so if it expires while you're typing, just enter the next one.",
       "<strong>Done.</strong> 2FA is now active. Next time you log in, the dashboard asks for the password first; once it's accepted it asks for the current 6-digit code."
     ],
@@ -261,17 +261,17 @@
       "<em>Manual fallback</em> (when scanning isn't possible — e.g. setting up on the same phone you opened the dashboard with): tap <em>Add account</em> → <em>Enter setup key</em>. Type any name (e.g. <em>Proxmox Monitor</em>), paste the Base32 string from the dialog, leave <em>Type</em> as <em>Time-based</em>, save."
     ],
     "testTitle": "Test before logging out",
-    "testBody": "Once you click Save, log out and log back in <em>immediately</em>, while the setup dialog is still fresh in your mind. If the code is rejected (clock-skew between server and phone is the most common cause), you can still fix it from the open session. Logging out without testing first means a one-trip-no-return — at that point only a backup code or editing <code>auth.json</code> on the host gets you back in.",
+    "testBody": "Keep your current session open and test a new login in a private window <em>immediately</em> after setup. If the code is rejected, check the server and phone clocks before logging out of the working session. If access is already lost, use a recovery code or edit <code>auth.json</code> from the host shell.",
     "lostTitle": "Lost authenticator",
     "lostIntro": "Three escape hatches, in order of how disruptive they are:",
     "lostItems": [
-      "<strong>Use a backup code.</strong> At the login screen, in the TOTP field, type one of the ten codes you saved at setup time. Each works once and is then consumed; the remaining codes still work. Once you're in, regenerate 2FA from Settings to get a fresh ten.",
+      "<strong>Use a recovery code.</strong> Enter one of the eight saved codes in the TOTP field. It works once; unused codes remain valid. After logging in, set up 2FA again from Settings to obtain eight new codes.",
       "<strong>Restore the authenticator from cloud / backup.</strong> If your app has a cloud sync (Google, Microsoft, Authy, Apple Passwords via iCloud Keychain, Ente, 2FAS) install it on a new device, sign in, and the entries reappear. If your app uses an encrypted export file (Aegis, Raivo, FreeOTP+), install the app on the new device and import the file.",
       "<strong>Disable 2FA from the host shell.</strong> When the previous options aren't available, edit <code>/root/.config/proxmenux-monitor/auth.json</code> on the Proxmox host (you need root SSH or console access), set <code>totp_enabled</code> to <code>false</code>, save, and restart the service:"
     ],
     "lostShellOutro": "You can log in with username + password only, then re-enable 2FA from Settings.",
     "disableTitle": "Disable 2FA",
-    "disableBody": "From the dashboard, open the <strong>Security</strong> tab and click <strong>Disable 2FA</strong>. The endpoint <code>POST /api/auth/totp/disable</code> requires the current password as confirmation, then deletes the TOTP secret and clears the backup codes. Remember to also remove the entry in the authenticator app — the app doesn't know the server side is gone, so the dead entry will sit there forever otherwise.",
+    "disableBody": "Open <strong>Security</strong> and choose <strong>Disable 2FA</strong>. <code>POST /api/auth/totp/disable</code> requires the current password and a valid TOTP or recovery code. It removes the TOTP secret and recovery codes. Remove the old entry from your authenticator app too.",
     "rejectedTitle": "The 6-digit code is always rejected",
     "rejectedIntro": "TOTP is time-based — server clock and phone clock must agree to within ~30 s. Two checks:",
     "rejectedItems": [
@@ -310,31 +310,31 @@
     "intro": "Two paths to TLS:",
     "items": [
       "<strong>Reverse proxy (recommended).</strong> Terminate TLS on Nginx / Caddy / Traefik and forward HTTP on port 8008 to the Flask process. Snippets below.",
-      "<strong>Direct HTTPS in the AppImage.</strong> Configure a certificate via <code>POST /api/ssl/configure</code> (UI: <strong>Settings → SSL</strong>). When SSL is configured the process switches from Flask's dev server to <code>gevent.pywsgi</code> with the gevent-websocket handler so WebSocket terminal also works over WSS. The cert files live wherever you point them; the paths are stored in the SSL config."
+      "<strong>Direct HTTPS in the AppImage.</strong> Configure a certificate with <code>POST /api/ssl/configure</code> (UI: <strong>Settings → SSL</strong>). The HTTPS path uses <code>gevent.pywsgi</code> with its standard handler; flask-sock handles WebSocket upgrades for WSS. Certificate paths are stored in the SSL configuration."
     ],
     "calloutTitle": "Direct HTTPS limitations",
-    "calloutBody": "The bundled gevent path is suitable for self-signed or LAN-only certificates. For Let's Encrypt / ACME and automatic renewal, run a real reverse proxy in front — Caddy auto-renews and Traefik / Nginx have well-known patterns. The Monitor doesn't implement ACME on its own."
+    "calloutBody": "The Monitor can use a Proxmox-managed certificate or custom certificate files. It does not issue ACME certificates itself. For automatic issuance and renewal, use Proxmox ACME or a reverse proxy such as Caddy, Traefik or Nginx, and ensure renewed certificates are loaded."
   },
   "gateway": {
     "heading": "Secure Gateway (Tailscale)",
-    "intro": "Reverse proxies are the classic answer to \"reach the dashboard from outside\" but they require a public domain, certificate, and an open port on the edge. <strong>Secure Gateway</strong> is the zero-port alternative shipped inside the Monitor itself — a pre-built deployable app that spins up an Alpine LXC running <a>Tailscale</a> as a subnet router. Once joined to your tailnet, every device on it can hit the Monitor at the host's own LAN IP — from a laptop on holiday, a phone on 5G, or another node — without exposing TCP 8008 to the internet.",
+    "intro": "A reverse proxy is one way to provide remote access. <strong>Secure Gateway</strong> offers access without exposing TCP 8008: it deploys an Alpine LXC running <a>Tailscale</a> as a subnet router. Access to the host’s LAN IP depends on approved subnet routes and tailnet access rules.",
     "calloutTitle": "Why this is convenient",
-    "calloutBody": "The URL stays the same as on the LAN — <code>http://&lt;proxmox-lan-ip&gt;:8008</code> works everywhere Tailscale works. No certificates, no DNS, no port forwarding. The Monitor itself sees the request as coming from a tailnet IP (typically <code>100.x.y.z</code>), so the auth log and the Fail2Ban hook still function as on the LAN.",
+    "calloutBody": "Use the LAN URL <code>http://&lt;proxmox-lan-ip&gt;:8008</code> through the approved subnet route. Tailscale subnet routers use SNAT by default, so the Monitor normally sees the gateway’s LAN address, not the client’s <code>100.x.y.z</code> address. Logs and Fail2Ban therefore identify the source address the host actually receives.",
     "deployBody": "The deploy flow is one screen — pick the host LXC storage, paste a Tailscale auth-key (generated at <a>login.tailscale.com/admin/settings/keys</a>), choose which subnets to advertise, click Deploy. The LXC takes ~30 seconds to bootstrap and registers in the tailnet automatically.",
     "outro": "Step-by-step deployment, subnet-routes configuration, Tailscale ACLs and Exit Node mode are documented separately in <link>Dashboard → Security → Secure Gateway</link> — that's where the deploy wizard lives in the dashboard UI. This page only covers the access pattern."
   },
   "proxy": {
     "heading": "Reverse proxy snippets",
-    "intro": "The simplest layout is a <strong>dedicated host name</strong> for the Monitor (e.g. <code>monitor.example.com</code>) pointing at port 8008 on the Proxmox host. Snippets below use that pattern. Sub-path mounts (<code>example.com/proxmenux-monitor/</code>) are possible but require extra rewriting and are not the default — see the callout at the end.",
+    "intro": "Use a <strong>dedicated host name</strong> such as <code>monitor.example.com</code> forwarding to port 8008 on the Proxmox host. The examples follow this pattern. A sub-path such as <code>example.com/proxmenux-monitor/</code> needs additional frontend and proxy work; it is not supported by prefix stripping alone.",
     "nginxTitle": "Nginx",
     "caddyTitle": "Caddy",
     "traefikTitle": "Traefik (labels — Docker / Kubernetes)",
     "subPathTitle": "Advanced: sub-path mounts under an existing domain",
-    "subPathBody": "If you don't want a dedicated host name, you can mount the Monitor under a path on an existing domain — for example <code>example.com/proxmenux-monitor/</code>. The Next.js build uses relative asset paths so static files resolve, but the proxy must <strong>strip the prefix</strong> before forwarding so the Monitor still receives plain <code>/api/*</code> URLs. On Nginx that's a <code>location /proxmenux-monitor/ &rbrace; proxy_pass http://127.0.0.1:8008/; &lbrace;</code> (the trailing slash on <code>proxy_pass</code> does the strip). On Caddy, use <code>handle_path /proxmenux-monitor/*</code>. A dedicated host name is simpler."
+    "subPathBody": "The current frontend has no configured sub-path base and builds API calls from root-relative <code>/api/*</code> URLs. Merely stripping a prefix such as <code>example.com/proxmenux-monitor/</code> does not handle those API calls or all frontend assets. Use a dedicated host name. A sub-path deployment requires coordinated frontend and proxy changes and separate testing."
   },
   "audit": {
     "heading": "Audit log",
-    "intro": "Every authentication event (success and failure) is appended to <code>/var/log/proxmenux-auth.log</code> in a single line, syslog-style format:",
+    "intro": "Login failures and rate-limit warnings are written to <code>/var/log/proxmenux-auth.log</code> in a single-line format. Successful logins are not recorded by this logger:",
     "outro": "Tail it the usual way: <code>tail -F /var/log/proxmenux-auth.log</code>. The file is rotated by <code>logrotate</code> if a config drop-in is added; the Monitor itself does not rotate it."
   },
   "fail2ban": {
@@ -346,7 +346,7 @@
       "Reads <code>/var/log/proxmenux-auth.log</code>.",
       "Matches the <code>authentication failure; rhost=&lt;ip&gt;</code> pattern with a dedicated filter.",
       "Bans the offending IP at the kernel firewall level by default.",
-      "Is queried by the Flask <code>before_request</code> hook every 30 s — so even when the firewall can't block (because the connection comes from the reverse proxy), the application returns HTTP 403 to banned IPs based on what Fail2Ban knows."
+      "The Flask <code>before_request</code> hook checks requests against the ban list, cached for 30 s. Behind a reverse proxy, client-IP blocking also requires PROXMENUX_TRUST_PROXY=1 and a controlled proxy that sets trustworthy forwarding headers."
     ],
     "outro": "Configuration, ban time tuning and unban procedures are in <link>Security → Fail2Ban</link>."
   },

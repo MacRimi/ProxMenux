@@ -1,0 +1,111 @@
+{
+  "meta": {
+    "title": "Política | Auditoria e relatórios",
+    "description": "Política do nó em Auditoria e relatórios: cópia de segurança, arranque automático e objetivo de recuperação de cada sistema convidado, função de cada armazenamento e limiares das verificações."
+  },
+  "header": {
+    "title": "Política",
+    "description": "A política declara o que uma inspeção não pode deduzir: a finalidade de cada sistema convidado e armazenamento e os limiares aplicados pelas verificações.",
+    "section": "Auditoria e relatórios"
+  },
+  "sections": [
+    {
+      "id": "principle",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Sem declaração o relatório descreve; com ela avalia",
+            "body": "Uma avaliação vê o que o anfitrião faz, não para que serve. Um convidado sem backup cuja finalidade não é declarada é relatado como uma observação. Caso seu backup seja declarado necessário, a mesma ausência é reportada como advertência. Nada precisa ser declarado."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/policy-view.png",
+            "alt": "Vista Política com os sistemas convidados, armazenamento e limiares do nó",
+            "caption": "A vista Política."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guests",
+      "title": "Convidados",
+      "intro": "Cada VM e LXC do nó tem três campos. Um valor deixado como padrão toma o valor geral, mostrado ao lado dele.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Campo",
+              "Valores",
+              "Efeito na avaliação"
+            ],
+            "rows": [
+              [
+                "Cópia de Segurança",
+                "Necessário, Não exigido, Não indicado",
+                "Um backup ausente é um aviso quando é necessário, uma observação quando não é indicado, e é deixado fora da contagem quando não é necessário."
+              ],
+              [
+                "Arranque automático",
+                "Necessário, Não exigido, Não indicado",
+                "Indica se o sistema convidado deve arrancar com o anfitrião."
+              ],
+              [
+                "Objetivo de recuperação",
+                "Horas",
+                "A idade máxima aceitável do último backup."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Armazenamento",
+      "blocks": [
+        {
+          "p": "Um armazenamento inalcançável é relatado como crítico quando é declarado essencial ou serve um hóspede em execução, como um aviso quando seu papel não é declarado, e como uma observação quando é declarado opcional."
+        }
+      ],
+      "intro": "Cada armazenamento do nó é declarado Essencial, Opcional ou Não indicado."
+    },
+    {
+      "id": "thresholds",
+      "title": "Limiares",
+      "intro": "Um limiar vazio utiliza o valor predefinido incluído, apresentado como texto indicativo.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Verificação da capacidade de armazenamento (%) e do preenchimento do thin pool (%).",
+              "Rácio de sobreaprovisionamento thin e rácio de sobrealocação de memória.",
+              "Intervalo de scrub ZFS (dias).",
+              "Limite de recurso para a antiguidade das cópias de segurança (dias) e margem sobre o calendário (rácio).",
+              "Aviso de validade do certificado (dias).",
+              "Vida útil do disco (horas) e janela de erro do disco recente (dias).",
+              "Antiguidade do relatório Lynis (dias) e do índice de pacotes (dias).",
+              "Utilização do journal face ao seu limite (%).",
+              "Verificação do espaço (%) e dos inodes (%) do sistema de ficheiros."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "save",
+      "title": "Como a política é salva",
+      "blocks": [
+        {
+          "p": "A declaração é validada e guardada atomicamente em <code>/usr/local/share/proxmenux/audit_policy.json</code>. Cada gravação inclui uma revisão: se outra sessão tiver alterado a declaração, o rascunho não é guardado e a vista propõe recarregar a versão gravada."
+        },
+        {
+          "calloutWarning": {
+            "title": "A política nunca é inferida",
+            "body": "O ProxMenux não acrescenta requisitos por iniciativa própria. Um campo vazio mantém o valor predefinido ou fica não indicado; uma declaração parcial só afeta os elementos que menciona."
+          }
+        }
+      ]
+    }
+  ]
+}

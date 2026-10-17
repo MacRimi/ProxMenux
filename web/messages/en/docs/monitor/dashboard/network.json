@@ -59,7 +59,7 @@
       "<strong>Click</strong> — every node except the host is clickable and opens the same per-interface drill-in modal documented below. Tapping the host is intentionally a no-op — there is no host-level modal in this view."
     ],
     "useTitle": "When it's useful",
-    "useBody": "The group cards below tell you <em>what</em> exists; the diagram tells you <em>how it's connected</em> and where the traffic is flowing right now. Patterns easy to spot at a glance: a bridge with no active guest attached, two heavy guests going through the same NIC (bottleneck candidate), or a single VM saturating a link while everything else is quiet."
+    "useBody": "The group cards show <em>what</em> exists; the diagram shows <em>how it is connected</em> and where traffic is flowing. You can spot guests sharing a bridge, two busy guests sharing a NIC (a possible bottleneck), or one VM saturating a link while others are quiet."
   },
   "groups": {
     "heading": "Three interface groups",
@@ -121,7 +121,7 @@
     "mode1Title": "Mode 1 — Historical view",
     "mode1Alt": "Network Latency modal in historical mode — Gateway target with a 1-hour timeframe and the past samples plotted",
     "mode1Caption": "Historical view — Gateway target over the last hour, fed from the latency-history database written every 60 seconds by the temperature/latency collector thread.",
-    "mode1Body1": "The default mode when the modal opens. A second dropdown picks the timeframe (<em>1 Hour / 24 Hours / 7 Days / 30 Days / 1 Year</em>); data resolution drops with the window so the chart stays readable. Headline stats — Current / Min / Avg / Max — render above the chart, with a status pill (Excellent / Good / Fair / Poor) reflecting the current value against the thresholds below.",
+    "mode1Body1": "The default mode when the dialog opens. A second dropdown selects the timeframe (<em>1 Hour / 6 Hours / 24 Hours / 3 Days / 7 Days</em>). Current / Min / Avg / Max appear above the chart, with an Excellent / Good / Fair / Poor status indicator based on the thresholds below.",
     "mode1Body2": "Source: the same latency samples the Health Monitor uses to detect persistent network slowdowns — sampled every 60 seconds against the gateway by the background <code>_temperature_collector_loop</code> thread, written to a local SQLite history.",
     "mode2Title": "Mode 2 — Real-time test",
     "mode2Alt": "Network Latency modal running a real-time ping test against Cloudflare — progress bar at 50%, live samples accumulating on the chart",
@@ -162,9 +162,9 @@
       }
     ],
     "reportTitle": "Network Latency Report (PDF)",
-    "reportIntro": "Both modes have a <strong>Report</strong> button next to the target selector. Clicking it generates a PDF with everything you'd send to your ISP if you wanted to make a case for poor service.",
+    "reportIntro": "Both modes have a <strong>Report</strong> button beside the target selector. It generates a PDF of the measurements that you can attach to a troubleshooting request to your ISP.",
     "reportPreviewAlt": "First page of the Network Latency Report PDF — Executive Summary with the gauge, latency statistics, the latency graph and the threshold guide",
-    "reportPreviewCaption": "First page of the Network Latency Report — Executive Summary with the gauge dial and headline stats, the per-second latency graph, and the threshold guide. Page 2 onwards has the per-sample table and methodology.",
+    "reportPreviewCaption": "The first page of the Network Latency Report contains the executive summary, gauge, main statistics, time-series latency graph and threshold guide. Page 2 onwards contains the per-sample table and methodology.",
     "downloadLabel": "Download sample Network Latency report (PDF)",
     "sectionsIntro": "The report has six sections:",
     "sections": [
@@ -173,10 +173,10 @@
       "<strong>Latency Graph</strong> — area chart of every sample over the test window with a min/avg/max y-axis grid.",
       "<strong>Performance Thresholds</strong> — the same four-tier scale documented above, with a coloured dot per tier.",
       "<strong>Detailed Test Results</strong> — numbered table with timestamp, latency, packet loss and status for every sample. Useful for spotting micro-bursts that the headline averages hide.",
-      "<strong>Methodology</strong> — test method (ICMP Echo Request), samples per test (3 consecutive pings), target name, target IP and a final \"Performance Assessment\" paragraph derived from the verdict."
+      "<strong>Methodology</strong> — ICMP Echo Request, 3 consecutive pings per sample, target name and IP, and a final performance assessment derived from the status."
     ],
-    "useCaseTitle": "Use case: claims to your ISP",
-    "useCaseBody": "Run the real-time test against Cloudflare for 2 minutes during a moment of perceived slowness, then click <em>Test Again</em> a few times to extend the dataset, and finally <em>Report</em>. The PDF carries the full per-sample table plus the methodology block — ISPs typically accept this as evidence, especially when correlated with timestamps from a separate complaint."
+    "useCaseTitle": "Use case: support from your ISP",
+    "useCaseBody": "Run the real-time Cloudflare test for 2 minutes while the connection feels slow, use <em>Test Again</em> to extend the record, then select <em>Report</em>. The PDF includes all samples and the methodology. You can attach it to a support request with the incident timestamps; your ISP decides what evidence it requires."
   },
   "excluding": {
     "heading": "Excluding noisy interfaces",
@@ -202,7 +202,7 @@
       {
         "section": "Per-interface RX/TX time series",
         "endpoint": "/api/network/<iface>/metrics",
-        "source": "<code>/proc/net/dev</code> sampled by the Health Monitor with byte-rate calculation."
+        "source": "Live counters use <code>/proc/net/dev</code>; chart history comes from Proxmox RRD through pvesh. VM/LXC interfaces use guest RRD data; physical and bridge interfaces use node-level RRD data."
       },
       {
         "section": "Latency: current",
@@ -212,7 +212,7 @@
       {
         "section": "Latency: historical",
         "endpoint": "/api/network/latency/history",
-        "source": "Persisted samples — every 5 min by the Health Monitor cycle."
+        "source": "Samples persisted about every 60 seconds by the background temperature/latency collector."
       }
     ],
     "codeComment1": "# Cross-check the interface state seen by the dashboard",

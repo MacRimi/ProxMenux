@@ -1,0 +1,303 @@
+{
+  "meta": {
+    "title": "Architektúra ProxMenux Monitor — AppImage, Flask, SQLite, WebSocket | ProxMenux",
+    "description": "Ako je postavený ProxMenux Monitor: štruktúra AppImage, blueprinty Flask, úlohy na pozadí, údaje psutil, pvesh, smartctl a journalctl, ukladanie SQLite, terminál WebSocket, poskytovatelia AI, kanály oznámení, reverzný proxy a voliteľný Fail2Ban.",
+    "ogTitle": "Architektúra ProxMenux Monitor",
+    "ogDescription": "Vnútri ProxMenux Monitor: AppImage, blueprinty Flask, úlohy na pozadí, SQLite, WebSocket, poskytovatelia AI a kanály oznámení.",
+    "twitterTitle": "Architektúra ProxMenux Monitor",
+    "twitterDescription": "AppImage, Flask, SQLite, WebSocket, poskytovatelia AI a kanály oznámení vo vnútri Monitora."
+  },
+  "header": {
+    "title": "Architektúra",
+    "description": "Ako sa distribuuje ProxMenux Monitor, čo obsahuje AppImage a ako požiadavky prehliadača prechádzajú cez Flask k nástrojom hostiteľa a úložisku SQLite.",
+    "section": "ProxMenux Monitor"
+  },
+  "intro": {
+    "title": "Jeden proces, veľa povinností",
+    "body": "Proces Python počúva na TCP 8008. Poskytuje statický web Next.js a REST API, spravuje terminál WebSocket, spúšťa Health Monitor a posiela oznámenia. Nepotrebuje samostatný webový server, sprostredkovateľa správ ani externú databázu."
+  },
+  "requestFlow": {
+    "heading": "Priebeh požiadavky",
+    "intro": "Typická požiadavka na údaje prechádza touto cestou; nastavenia prehliadača sa môžu spracovať lokálne:",
+    "diagramCaption": "Chránené cesty overujú JWT pri zapnutom overovaní. Hlavné cesty a blueprinty vracajú údaje z cache alebo čerstvého zberu. Voliteľná kontrola Fail2Ban používa zoznam blokovaní z cache. Preposlaným IP hlavičkám dôveruje iba pri PROXMENUX_TRUST_PROXY=1; inak použije adresu spojenia. Trvalý stav zahŕňa SQLite aj JSON súbory, napríklad auth.json.",
+    "diagramArrowLabel": "HTTP / WS",
+    "nodes": {
+      "clientLabel": "Klient",
+      "clientDetail": "Prehliadač alebo PWA\n+ voliteľný proxy\nNginx / Caddy /\nTraefik",
+      "flaskLabel": "Flask :8008",
+      "flaskDetail": "Blueprinty\nMiddleware JWT\nKontrola Fail2Ban\n(ak je nainštalovaný)",
+      "hostLabel": "Hostiteľské nástroje",
+      "hostDetail": "psutil\npvesh\nsmartctl\njournalctl",
+      "stateLabel": "Lokálny stav",
+      "stateDetail": "SQLite DB\n+ auth.json"
+    },
+    "threadsIntro": "Proces spúšťa aj <strong>vlákna na pozadí</strong>. Tieto príklady zbierajú údaje, aktualizujú cache a SQLite a posielajú oznámenia. Existujú aj ďalšie úlohy; odosielanie musí byť zapnuté:",
+    "headerThread": "Vlákno",
+    "headerCadence": "Interval",
+    "headerJob": "Plánovaná úloha",
+    "rows": [
+      {
+        "thread": "_temperature_collector_loop",
+        "cadence": "60 s",
+        "job": "Ukladá teplotu CPU a vzorky latencie do databázy histórie, aby mali grafy údaje aj bez pripojeného prehliadača."
+      },
+      {
+        "thread": "_health_collector_loop",
+        "cadence": "5 min",
+        "job": "Spúšťa cyklus Health Monitor s desiatimi kategóriami, ukladá chyby a pozorovania diskov, zohľadňuje potlačenia a odovzdáva nové udalosti oznamovaciemu systému."
+      },
+      {
+        "thread": "_vital_signs_sampler",
+        "cadence": "CPU 5 s; teplota 15 s; pamäť 30 s",
+        "job": "Vzorkuje využitie CPU, pamäť a teplotu CPU pre ukazovatele a trvalé podmienky, nezávisle od päťminútovej celkovej kontroly."
+      },
+      {
+        "thread": "notification_manager.start()",
+        "cadence": "riadené udalosťami",
+        "job": "Spustí sledovanie denníka, úloh a hookov (<code>JournalWatcher</code>, <code>TaskWatcher</code>, <code>ProxmoxHookWatcher</code>) a odosiela do nastavených kanálov s voliteľným preformulovaním AI."
+      }
+    ]
+  },
+  "systemd": {
+    "heading": "Jednotka systemd",
+    "intro": "Inštalátor vytvorí jednotku <code>/etc/systemd/system/proxmenux-monitor.service</code>. Predvolená konfigurácia:",
+    "items": [
+      "<strong><code>User=root</code></strong>: služba používa oprávnenia root na SMART, <code>pvesh</code> a správu ZFS. Procesy webového terminálu dedia tieto oprávnenia.",
+      "<strong><code>Restart=on-failure</code></strong> s odstupom desať sekúnd: po chybovom ukončení sa služba automaticky reštartuje.",
+      "<strong><code>After=network.target</code></strong>: zaradí štart po tomto cieli; nezaručuje pridelenú IP, DNS ani vonkajšie spojenie."
+    ],
+    "inspectTitle": "Kontrola aktuálnej jednotky"
+  },
+  "appimage": {
+    "heading": "Čo AppImage obsahuje",
+    "intro": "AppImage obsahuje súborový systém pripojený pri spustení. <code>AppRun</code> v koreni pripraví prostredie a spustí <code>flask_server.py</code>:",
+    "consequencesIntro": "Dva dôsledky tohto usporiadania:",
+    "consequences": [
+      "<strong>Pribalené prostredie Python.</strong> Interpret a balíky sú v AppImage, bez inštalácie do systémového Pythonu. Aplikácia naďalej používa rozhrania jadra a externé nástroje hostiteľa.",
+      "<strong>Pribalení klienti hardvéru.</strong> Obsahuje <code>ipmitool</code>, <code>lm-sensors</code> a <code>upsc</code>. Merania vyžadujú podporovaný hardvér, prístup k senzorom a pre UPS nastavený server NUT."
+    ]
+  },
+  "flask": {
+    "heading": "Štruktúra aplikácie Flask",
+    "intro": "<code>flask_server.py</code> vytvorí inštanciu <code>Flask(__name__)</code> s obmedzeným CORS, priamo registruje deväť blueprintov a inicializuje terminál. Tabuľka uvádza hlavné moduly; registrované sú aj audit, zálohy VM a PBS. Prednačítavanie PVE beží iba na hostiteľoch PVE.",
+    "headerBlueprint": "Blueprint / modul",
+    "headerPrefix": "Predpona ciest",
+    "headerOwns": "Zodpovednosť",
+    "rows": [
+      {
+        "blueprint": "flask_server.py",
+        "prefix": [
+          "/api/system",
+          "/api/storage",
+          "/api/network",
+          "/api/vms",
+          "/api/hardware",
+          "/api/logs",
+          "/api/prometheus"
+        ],
+        "owns": "Hlavné koncové body, statický web a voliteľná kontrola Fail2Ban, ak je na hostiteľovi jail <code>proxmenux</code>."
+      },
+      {
+        "blueprint": "flask_auth_routes.py",
+        "prefix": [
+          "/api/auth/*"
+        ],
+        "owns": "Prihlásenie, vydávanie JWT, nastavenie a overenie TOTP, zmena hesla a tokeny API."
+      },
+      {
+        "blueprint": "flask_health_routes.py",
+        "prefix": [
+          "/api/health/*"
+        ],
+        "owns": "Kontroly stavu, podrobnosti, aktívne a potlačené chyby a nastavenia potlačenia. Chránené cesty vyžadujú overenie, ak je zapnuté."
+      },
+      {
+        "blueprint": "flask_terminal_routes.py",
+        "prefix": [
+          "/api/terminal/* + WS"
+        ],
+        "owns": "Pridelí PTY každej relácii a cez WebSocket ho prepojí s <code>xterm.js</code> v prehliadači."
+      },
+      {
+        "blueprint": "flask_notification_routes.py",
+        "prefix": [
+          "/api/notifications/*"
+        ],
+        "owns": "Vytváranie, čítanie, úprava a odstránenie kanálov; testy, AI, história a ručné odosielanie."
+      },
+      {
+        "blueprint": "flask_security_routes.py",
+        "prefix": [
+          "/api/security/*"
+        ],
+        "owns": "Zlyhania prihlásenia a pri nainštalovanom Fail2Ban stav jailu, blokovania a ručné odblokovanie."
+      },
+      {
+        "blueprint": "flask_proxmenux_routes.py",
+        "prefix": [
+          "/api/proxmenux/*"
+        ],
+        "owns": "Číta optimalizácie ProxMenux zaznamenané na hostiteľovi."
+      },
+      {
+        "blueprint": "flask_oci_routes.py",
+        "prefix": [
+          "/api/oci/*"
+        ],
+        "owns": "Funkcie nasadenia aplikácií OCI a kontajnerov na Proxmox VE 9.1+."
+      }
+    ],
+    "endpointsLink": "Koncové body integrácií a ich formáty opisuje <link>Referenčná príručka API</link>."
+  },
+  "dataSources": {
+    "heading": "Zdroje údajov",
+    "intro": "Údaje hostiteľa pochádzajú najmä zo štandardných knižníc, súborov a správcovských príkazov. Niektoré údaje hostí vyžadujú aj QEMU Guest Agent alebo príkazy v CT:",
+    "headerSource": "Zdroj",
+    "headerUsedFor": "Používa sa na",
+    "rows": [
+      {
+        "source": "psutil",
+        "usedFor": "Záťaž CPU, pamäť, swap, využitie pripojených systémov, sieťové počítadlá a procesy."
+      },
+      {
+        "source": "pvesh / qm / pct",
+        "usedFor": "Informácie uzla Proxmox, inventár a konfigurácia VM/CT, úložiská a história úloh."
+      },
+      {
+        "source": "smartctl",
+        "usedFor": "Atribúty SATA/NVMe, stav SMART, opotrebenie, životnosť, model a sériové číslo."
+      },
+      {
+        "source": "zpool / zfs",
+        "usedFor": "Stav fondu (ONLINE / DEGRADED / FAULTED / UNAVAIL), priebeh kontroly scrub a využitie datasetov."
+      },
+      {
+        "source": "journalctl",
+        "usedFor": "Systémové protokoly, procesy ukončené pre OOM, chyby ATA/NVMe/dm, bezpečnostné udalosti a vlastné jednotky služieb."
+      },
+      {
+        "source": "ip / iproute2",
+        "usedFor": "Rozhrania, adresy, mosty, agregácie spojení a zariadenia spravované OVS."
+      },
+      {
+        "source": "nvidia-smi · intel_gpu_top",
+        "usedFor": "Dostupné údaje GPU o využití, VRAM, teplote a kódovaní/dekódovaní. Polia závisia od výrobcu, nástroja a ovládača."
+      },
+      {
+        "source": "lspci · lscpu · dmidecode",
+        "usedFor": "Topológia PCIe, model a topológia CPU, základná doska a BIOS."
+      },
+      {
+        "source": "ipmitool · sensors",
+        "usedFor": "Mimopásmové senzory, ventilátory a teploty základnej dosky, ak ich hardvér podporuje."
+      },
+      {
+        "source": "upsc (NUT)",
+        "usedFor": "Stav batérie, záťaž a výdrž UPS pri nastavenom serveri NUT."
+      }
+    ],
+    "cacheTitle": "Cache obmedzuje požiadavky na hostiteľa",
+    "cacheBody": "Náročné výsledky <code>smartctl -a</code> a <code>pvesh get</code> sa dočasne ukladajú v procese Flask, čím sa znižuje počet volaní diskov a API klastra. Trvanie závisí od zdroja: sekundy pre metriky a minúty pre SMART."
+  },
+  "persistence": {
+    "heading": "Perzistencia",
+    "intro": "Viaceré stavové súbory majú odlišný obsah a požiadavky na prístup:",
+    "headerPath": "Path",
+    "headerOwner": "Vlastník",
+    "headerContents": "Obsah",
+    "rows": [
+      {
+        "path": "/usr/local/share/proxmenux/health_monitor.db",
+        "owner": "root:root",
+        "contents": "Databáza SQLite. Tabuľky: <code>errors</code>, <code>events</code>, <code>disk_registry</code>, <code>disk_observations</code>, <code>user_settings</code>, <code>notification_history</code>, <code>excluded_storages</code>, <code>excluded_interfaces</code>. Režim denníka WAL."
+      },
+      {
+        "path": "/usr/local/share/proxmenux/.notification_key",
+        "owner": "root <code>0600</code>",
+        "contents": "Hlavný 32-bajtový kľúč pre tajné nastavenia oznámení ENC2. Používa náhodnú soľ pre každú hodnotu, odvodené kľúče a MAC. Staré hodnoty XOR podporuje na migráciu."
+      },
+      {
+        "path": "/root/.config/proxmenux-monitor/auth.json",
+        "owner": "root:root",
+        "contents": "Konfigurácia prístupu: zapnutie, meno, osolený hash hesla PBKDF2-HMAC-SHA256, tajomstvo TOTP, obnovovacie kódy, kľúč JWT inštalácie, metadáta tokenov API a hashe odvolania. Staré hashe SHA-256 sa migrujú po úspešnom prihlásení."
+      },
+      {
+        "path": "/var/log/proxmenux-auth.log",
+        "owner": "root:root",
+        "contents": "Textový protokol overovania nezávislý od Fail2Ban. Ak je jail <code>[proxmenux]</code> nainštalovaný a aktívny, číta ho na detekciu opakovaných zlyhaní prihlásenia. Bez jailu zostáva protokol dostupný na kontrolu."
+      }
+    ],
+    "backupTitle": "Zálohujte auth.json pred reinštaláciou",
+    "backupBody": "Výmena AppImage zvyčajne zachová <code>/root/.config/proxmenux-monitor/auth.json</code> a <code>/usr/local/share/proxmenux/health_monitor.db</code>. Zachovajte <code>auth.json</code> s jwt_secret pre platnosť a metadáta tokenov. Databáza nezávisle ukladá stav a oznámenia. S ňou zálohujte <code>.notification_key</code> na obnovu tajných nastavení kanálov; samotná databáza neobnoví overovanie API."
+  },
+  "health": {
+    "heading": "Cyklus Health Monitor",
+    "intro": "Približne každých päť minút zberač na pozadí volá <code>health_monitor.py</code> na kontroly desiatich kategórií panela:",
+    "items": [
+      "Kritické služby PVE (<code>pveproxy</code>, <code>pvedaemon</code>, <code>pvestatd</code>, <code>pve-cluster</code>).",
+      "Úložiská Proxmox: <code>pvesh get /storage</code> a dostupnosť každého úložiska.",
+      "Disky a súborové systémy: SMART, chyby I/O v dmesg, stav ZFS a kapacita pripojených systémov.",
+      "VM a CT: zlyhania štartu, pády, chyby QMP a zlyhania vypnutia.",
+      "Sieť: stav mostov a agregácií spojení, stav liniek a latencia k bráne.",
+      "Aktualizácie: čakajúce balíky a bezpečnostné opravy.",
+      "Protokoly: trvalé vzory, špičky a kaskády v systémovom denníku.",
+      "Pamäť: zásahy OOM killer a dlhodobý tlak na RAM.",
+      "Teplota: hodnoty CPU a diskov sa porovnávajú s monitorovacími prahmi; dostupné senzory závisia od hardvéru.",
+      "Bezpečnosť: zlyhania prihlásenia, blokovania a stav jailu Fail2Ban."
+    ],
+    "afterIntro": "Nálezy používajú stabilné <code>error_key</code>, kategóriu a závažnosť. Riadky v <code>errors</code> sa aktualizujú cez <code>last_seen</code> a počty bez duplicít. Odosielanie oznámení má aj vlastné odtlačky a časové odstupy.",
+    "cycleEnd": "Čistenie môže vyriešiť staré chyby podľa <em>trvania potlačenia</em> kategórie a stavových pravidiel, odstrániť osirelé záznamy zrušených prostriedkov a vymazať <code>events</code> staršie než 30 dní. Kategórie opisuje <link>Panel → Health Monitor</link>."
+  },
+  "notifications": {
+    "heading": "Systém oznámení",
+    "intro": "<code>notification_manager.py</code> riadi odosielanie: načíta kanály, spravuje rad a poskytuje Python API pre Flask a Health Monitor aj vstup CLI pre hooky <code>.sh</code> ProxMenux.",
+    "items": [
+      "<strong>Sledovacie komponenty</strong> vytvárajú udalosti: <code>JournalWatcher</code> sleduje denník, <code>TaskWatcher</code> zisťuje úlohy Proxmox, <code>ProxmoxHookWatcher</code> prijíma hooky záloh, replikácie a snímok a <code>PollingCollector</code> spracúva pomalé zdroje.",
+      "<strong>Šablóny</strong> prevedú udalosti na názov a text. Nastavený poskytovateľ AI (OpenAI / Anthropic / Gemini / Groq / Ollama / OpenRouter) ich môže preformulovať bežným jazykom. Obe verzie sa ukladajú do <code>notification_history</code>.",
+      "<strong>Kanály</strong> odosielajú cez služby ako Telegram, Discord, email, Gotify, Pushover a Apprise. Implementácie v <code>notification_channels.py</code> používajú spoločné rozhranie <code>create_channel()</code> / <code>send()</code>.",
+      "<strong>Šifrovanie.</strong> Citlivé nastavenia (<code>telegram.bot_token</code>, <code>discord.webhook_url</code>, <code>pushover.user_key</code>, <code>pushover.api_token</code>, <code>ai_api_key_*</code>, <code>email.password</code>) sa pred uložením šifrujú kľúčom z <code>.notification_key</code> a v rozhraní sa zobrazujú maskované."
+    ],
+    "linksFooter": "Prepínače udalostí, nastavenia kanálov a AI opisujú <notifLink>Nastavenia → Oznámenia</notifLink> a <aiLink>Nastavenia → Asistent AI</aiLink>."
+  },
+  "websocket": {
+    "heading": "Terminál WebSocket",
+    "intro": "Karta <em>Terminál</em> prepája ľahkého klienta <code>xterm.js</code> s PTY servera cez WebSocket. Existujú dva režimy:",
+    "items": [
+      "<strong>Režim HTTP, predvolený:</strong> vstavaný server Flask s <code>flask-sock</code> spracúva prechod na protokol WebSocket.",
+      "<strong>Režim HTTPS / WSS:</strong> používa <code>gevent.pywsgi.WSGIServer</code> s <code>geventwebsocket.handler.WebSocketHandler</code> na spojenia WebSocket cez TLS."
+    ],
+    "outro": "Procesy terminálu dedia <code>User=root</code>. Pri zapnutom overovaní WebSocket vyžaduje krátkodobý jednorazový lístok získaný z overeného koncového bodu so správcovským oprávnením. Pri vypnutom alebo odmietnutom overovaní spojenie používa tento neoverovaný režim.",
+    "proxyNote": "Pri reverznom proxy povoľte WebSocket a hlavičky <code>Upgrade</code> a <code>Connection</code>. Terminál potrebuje toto preposielanie."
+  },
+  "proxy": {
+    "heading": "Reverzný proxy a Fail2Ban",
+    "intro": "Výber IP klienta a voliteľné blokovanie v aplikácii závisia od týchto nastavení a komponentov:",
+    "items": [
+      "<strong>Výber IP klienta.</strong> Kontrola <code>before_request</code> a protokol prístupu dôverujú <code>X-Forwarded-For</code> a potom <code>X-Real-IP</code> iba pri PROXMENUX_TRUST_PROXY=1. Inak použijú <code>request.remote_addr</code>. Preposlané hlavičky sa neprijímajú automaticky.",
+      "<strong>Voliteľný Fail2Ban v aplikácii.</strong> Spojenie cez proxy môže mať IP proxy ako TCP protistranu. Pri dôveryhodnej IP klienta a aktívnom jaile <code>proxmenux</code> Flask odmietne blokované IP stavom HTTP 403. Zoznam je v cache 30 sekúnd a obnoví ho spracovanie požiadavky po vypršaní, nie samostatný časovač."
+    ],
+    "calloutTitle": "Fail2Ban nie je pribalený",
+    "calloutBody": "Fail2Ban <strong>nie je</strong> pribalený ani automaticky inštalovaný. Nainštalujete ho v Zabezpečení Monitora alebo cez <link>Zabezpečenie → Fail2Ban</link> v ProxMenux Scripts. Bez <code>fail2ban-client</code> či jailu <code>proxmenux</code> táto kontrola neblokuje požiadavky. Nastavená politika overovania zostáva v platnosti.",
+    "outro": "Príklady Nginx/Caddy/Traefik a návod na jail sú v <accessLink>Prístup a overenie</accessLink> a <fail2banLink>Zabezpečenie → Fail2Ban</fail2banLink>."
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "Prístup a overenie",
+        "href": "/docs/monitor/access-auth",
+        "tail": " — prvé spustenie, heslo a TOTP 2FA, príklady reverzného proxy a jail Fail2Ban."
+      },
+      {
+        "label": "Referenčná príručka API",
+        "href": "/docs/monitor/api",
+        "tail": " — koncové body integrácií, správa tokenov a pravidlá overovania."
+      },
+      {
+        "label": "Nastavenie → ProxMenux Monitor",
+        "href": "/docs/settings/proxmenux-monitor",
+        "tail": " — ovládanie služby a kontrola stavu v textovej ponuke ProxMenux."
+      }
+    ]
+  }
+}

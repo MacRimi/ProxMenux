@@ -1,0 +1,372 @@
+{
+  "meta": {
+    "title": "Proxmox-Zustandsüberwachung — CPU, Arbeitsspeicher, Datenspeicher, SMART, ZFS, Protokolle | ProxMenux",
+    "description": "Proaktive Zustandsüberwachung für Proxmox VE: zehn Kategorien alle fünf Minuten (CPU und Temperatur, Arbeitsspeicher und Swap, Datenspeicher, Laufwerke/SMART, Netzwerk, VMs, Dienste, Protokolle, Updates und Sicherheit), vier Schweregrade, Unterdrückungsdauer je Kategorie, automatische Bereinigung behobener Fehler, dauerhafter Laufwerksverlauf und Meldungen über Telegram, Discord, Gotify oder E-Mail.",
+    "ogTitle": "Proxmox-Zustandsüberwachung — CPU, Arbeitsspeicher, Datenspeicher, SMART, ZFS, Protokolle",
+    "ogDescription": "Proaktive Zustandsüberwachung für Proxmox VE in zehn Kategorien, mit Schweregraden, Unterdrückungsdauer und ereignisbasierten Benachrichtigungen.",
+    "twitterTitle": "Proxmox Gesundheitsmonitor | ProxMenux",
+    "twitterDescription": "Proaktive Zustandsüberwachung für Proxmox VE in zehn Kategorien mit Schweregraden und Benachrichtigungen."
+  },
+  "header": {
+    "title": "Gesundheitsmonitor",
+    "description": "Die fortlaufende Selbstprüfung untersucht zehn Kategorien des Hostzustands im Fünfminutentakt. Dazwischen erfasst sie Messwerte, fasst doppelte Befunde zu strukturierten Ereignissen zusammen und versorgt Dashboard, Benachrichtigungen und optionale KI-Überarbeitung aus derselben Datenquelle.",
+    "section": "ProxMenux-Monitor"
+  },
+  "intro": {
+    "title": "Ein Scanner, drei Verbraucher",
+    "body": "Ein Hintergrundthread führt alle fünf Minuten die vollständige Prüfung aus und speichert jeden Befund unter einem stabilen <code>error_key</code> in SQLite. Damit kann <strong>(1)</strong> das Dashboard den aktuellen Zustand anzeigen, <strong>(2)</strong> das Benachrichtigungssystem neue Ereignisse an die eingerichteten Kanäle verteilen und <strong>(3)</strong> der optionale KI-Assistent Warnungen verständlich umformulieren. Eine Konfiguration versorgt alle nachfolgenden Komponenten."
+  },
+  "howItWorks": {
+    "heading": "Wie es funktioniert",
+    "intro": "Die Zustandsüberwachung nutzt zwei parallele Threads. Ein leichter <strong>Messwertsammler</strong> füllt Verlaufspuffer für CPU, Arbeitsspeicher und Temperatur. Der <strong>vollständige Prüfzyklus</strong> liest die Puffer, bewertet anhaltende Zustände und führt etwa alle fünf Minuten die übrigen Prüfungen aus. Anschließend speichert er Befunde für Dashboard und Benachrichtigungen in SQLite.",
+    "scannerTitle": "Von der Probe zum gespeicherten Befund",
+    "scannerCaption": "Der Sammler füllt zwischen den Prüfzyklen Verlaufspuffer: CPU alle 5 s, Arbeitsspeicher alle 30 s und Temperatur alle 15 s. Er wertet selbst keine Warnungen aus. Der vollständige Zyklus bewertet die Puffer und führt aufwendigere Prüfungen für SMART, ZFS, Protokolle und Dienste aus, bevor er Befunde in SQLite speichert.",
+    "scannerArrowLabel": "Schritt",
+    "scannerNodes": {
+      "samplerLabel": "Messwertsammler",
+      "samplerDetail": "CPU-Auslastung 5 s\nArbeitsspeicher 30 s\nTemperatur 15 s\n→ Verlaufspuffer",
+      "cycleLabel": "Vollständiger Gesundheitszyklus",
+      "cycleDetail": "Alle 5 min\nLiest Puffer\n+ aktuelle Prüfungen\n(SMART, ZFS,\nDienste, Journal …)",
+      "checksLabel": "Prüfungen nach Kategorien",
+      "checksDetail": "Zehn Kategorien\n(CPU, Arbeitsspeicher,\nDatenspeicher, Laufwerke,\nNetzwerk, VMs,\nDienste, Protokolle,\nUpdates, Sicherheit)",
+      "sqliteLabel": "SQLite",
+      "sqliteDetail": "Tabelle errors\n(aktiv +\nunterdrückt)\n+ disk_observations\n(dauerhafter Verlauf\nje Laufwerk)"
+    },
+    "notifTitle": "Vom gespeicherten Befund zum Benutzer",
+    "notifCaption": "Der Meldepfad. Die gleiche Fehlertabelle steuert auch die Dashboard-Ansicht (Active / Dismissed-Listen live gerendert) und wird von der Bereinigungsroutine am Ende jedes Zyklus verbraucht, um veraltete Einträge automatisch aufzulösen - beide laufen aus den gleichen Daten, ohne den Dispatcher zu durchlaufen.",
+    "notifArrowLabel": "Ereignis",
+    "notifNodes": {
+      "errorsLabel": "Fehlertabelle",
+      "errorsDetail": "Aktive +\nunterdrückte Zeilen\nmit Schlüssel\nerror_key",
+      "dispatcherLabel": "Benachrichtigungsversender",
+      "dispatcherDetail": "Neue + verschärfte\nEreignisse einreihen\nNach Schaltern\n+ Sperrzeit",
+      "templatesLabel": "Vorlagen + KI-Überarbeitung",
+      "templatesDetail": "Vorlage\nje Ereignis\n→ optionale KI-\nÜberarbeitung in\nverständliche Sprache",
+      "channelsLabel": "Kanäle",
+      "channelsDetail": "Telegram\nDiscord\nGotify\nE-Mail (SMTP)"
+    }
+  },
+  "categories": {
+    "heading": "Die zehn Kategorien",
+    "imageAlt": "Zustandsüberwachung mit zehn Kategorien und aktuellem Status: CPU, Arbeitsspeicher, Datenspeicher, Laufwerke, Netzwerk, VMs, Dienste, Protokolle, Updates und Sicherheit",
+    "imageCaption": "Health Monitor Ansicht - die zehn Kategorien mit ihrem aktuellen Status. Kategorien auf einem gesunden Host zeigen alle OK; Warnungen und kritische Ereignisse erscheinen inline mit den Zeilen, die sie erzeugt haben.",
+    "intro": "Jeder Zyklus führt zehn unabhängige Prüfungen aus. Jede liefert einen von vier Zuständen (<strong>OK</strong>, <strong>INFO</strong>, <strong>WARNING</strong>, <strong>CRITICAL</strong>) und strukturierte Daten wie Gerätenamen, Protokollauszüge und genaue Schwellenwerte. Diese erscheinen im Dashboard und im Benachrichtigungstext.",
+    "headerCategory": "Kategorie",
+    "headerChecks": "Sub-Kontrollen",
+    "headerEvents": "Typische Ereignisse",
+    "rows": [
+      {
+        "category": "CPU & Temperatur",
+        "checks": "CPU Nutzung mit Hysterese, Sensortemperatur",
+        "events": "Anhaltend hohe CPU-Auslastung; Temperaturwarnungen anhand gesammelter Sensormesswerte."
+      },
+      {
+        "category": "Arbeitsspeicher & Swap",
+        "checks": "RAM Nutzung, Swap Nutzung",
+        "events": "Anhaltender Speicherdruck; Aktivität des OOM-Killers; ausgeschöpfter Swap."
+      },
+      {
+        "category": "Speicher",
+        "checks": "Proxmox-Speicher, Root-Dateisystem",
+        "events": "Konfigurierte Belegungsschwellen auf Root oder anderen überwachten Dateisystemen überschritten (standardmäßig 85% Warnung / 95% kritisch); NFS-Freigabe offline; CIFS-Anmeldung fehlgeschlagen; LVM-thin-Pool voll."
+      },
+      {
+        "category": "Platten und SMART",
+        "checks": "SMART, dmesg I/O-Fehler, ZFS Pools, LVM, Dateisystemfehler",
+        "events": "SMART-Gesundheit fehlgeschlagen; neu zugewiesene / ausstehende Sektoren; ATA-I / O-Fehler; ZFS-Pool DEGRADED / FAULTED; ext4-Read-only-Remount."
+      },
+      {
+        "category": "Netzwerk",
+        "checks": "Konnektivität, Verbindungszustand, Gateway-Latenz",
+        "events": "Brücken- oder Bond-Down; Gateway nicht erreichbar; persistente Latenzspitzen."
+      },
+      {
+        "category": "VMs und Container",
+        "checks": "QMP Kommunikation, VM Startup, Container Startup",
+        "events": "Fehlgeschlagener VM-Boot; CT-Abschaltungsfehler; QMP-Sockel-Timeout; fehlende Konfiguration / Festplatte nach einem Klon."
+      },
+      {
+        "category": "PVE-Dienste",
+        "checks": "<code>pveproxy</code>, <code>pvedaemon</code>, <code>pvestatd</code>, <code>pve-cluster</code>, Cluster-Modus",
+        "events": "Dienst abgestürzt; Cluster-Quorum verloren; <code>pmxcfs</code> hängt."
+      },
+      {
+        "category": "Systemprotokolle",
+        "checks": "Persistente Fehler, Fehlerspitzen, Fehlerkaskaden, kritische Kernelmeldungen",
+        "events": "Wiederholte identische Fehler; plötzliches Warnsignal (Kaskadenmuster); <code>BUG:</code> / <code>OOPS:</code> / <code>oom-killer</code> in dmesg."
+      },
+      {
+        "category": "Systemaktualisierungen",
+        "checks": "Ausstehende Updates, Sicherheitsupdates, Kernel / PVE-Version, Systemalter",
+        "events": "Ausstehende Sicherheits- oder Kernelupdates; lange nicht aktualisiertes System. Bei verfügbaren Updates erscheint in der Übersicht <em>Jetzt aktualisieren</em>. Die Schaltfläche startet den vollständigen ProxMenux-Updateablauf. Beim Schließen wird der Zustand mit <code>?refresh=1</code> neu abgefragt, damit die Anzeige ohne Warten auf den nächsten Zyklus aktualisiert wird."
+      },
+      {
+        "category": "Sicherheit & Zertifikate",
+        "checks": "Anmeldeversuche, Zertifikate laufen ab, optionaler Fail2Ban jail Status",
+        "events": "Wiederholte fehlgeschlagene SSH- oder Webanmeldungen; PVE-Zertifikat läuft in weniger als 30 Tagen ab; aktive Fail2Ban-Sperren."
+      }
+    ]
+  },
+  "severity": {
+    "heading": "Schweregradmodell",
+    "headerStatus": "Status",
+    "headerColour": "Farbe",
+    "headerMeaning": "Bedeutung",
+    "headerNotification": "Benachrichtigung",
+    "rows": [
+      {
+        "status": "OK",
+        "colour": "Grün",
+        "meaning": "Gesund. Keine Befunde in dieser Kategorie.",
+        "notification": "Keine Benachrichtigung."
+      },
+      {
+        "status": "INFO",
+        "colour": "Blau",
+        "meaning": "Vorübergehender oder bereits behobener Zustand, der es wert ist, einmal notiert zu werden. Wird auch für Kategorien verwendet, die <em>nur noch</em> verworfene Elemente übrig haben.",
+        "notification": "Fakultativ. Jeder Ereignistyp kann pro Kanal ein- oder ausgeschaltet werden."
+      },
+      {
+        "status": "WARNING",
+        "colour": "Gelb",
+        "meaning": "Aufmerksamkeit ist erforderlich, aber der Host ist immer noch funktionsfähig. Ursache ist nicht trivial - lesen Sie die Details.",
+        "notification": "Wird gesendet, wenn der Ereignisschalter für diesen Kanal aktiv ist."
+      },
+      {
+        "status": "CRITICAL",
+        "colour": "rot",
+        "meaning": "Funktionalität gebrochen oder Datenverlust möglich. Erforderliche Maßnahmen.",
+        "notification": "Wird gesendet, wenn der Ereignisschalter für den Kanal aktiv ist. Eine CPU-Temperaturmeldung mit CRITICAL löst als Sicherheitswarnung auch nach vorheriger Bestätigung erneut aus."
+      }
+    ],
+    "infoNote": "Eine Kategorie mit <strong>OK</strong>, die noch unterdrückte Ereignisse mit laufender Frist enthält, erscheint als <strong>INFO</strong>. So bleibt sichtbar, dass Meldungen unterdrückt werden.",
+    "unknownTitle": "UNKNOWN, wenn eine Prüfung nicht abgeschlossen werden kann",
+    "unknownBody": "Eine nicht verfügbare Prüfung liefert <code>UNKNOWN</code>. Nach drei aufeinanderfolgenden Zyklen wird ein dauerhafter Befund gespeichert. Das Dashboard zeigt die Prüfung gelb an. Im Gesamtzustand ist <code>UNKNOWN</code> auf <strong>WARNING</strong> begrenzt; eine fehlende Prüfung allein macht den Host nicht kritisch."
+  },
+  "dashboardView": {
+    "heading": "Die Dashboard-Ansicht",
+    "intro": "Die Zustandsüberwachung befindet sich auf der Registerkarte <strong>Übersicht</strong>. Die Statusanzeige im Kopfbereich (Gesund / Warnung / Kritisch) öffnet ein Dialogfenster mit zwei Listen:",
+    "items": [
+      "<strong>Aktiv</strong> — Kategorien mit ungelösten Befunden. Aufgeklappte Zeilen zeigen die auslösenden Einzelprüfungen, den ursprünglichen Text in <code>reason</code>, die Geräte- oder VM-ID und gegebenenfalls einen Link zu Datenspeicher, Netzwerk, VMs, Protokollen oder Hardware.",
+      "<strong>Unterdrückt</strong> — vom Benutzer bestätigte Einträge mit noch laufender Unterdrückungsfrist. Jede Zeile zeigt Restzeit und eingestellte Dauer. Nach Ablauf verschwindet sie aus dieser Liste. Besteht die Ursache weiter und unterstützt die Kategorie erneutes Auslösen, erscheint der Eintrag wieder unter <em>Aktiv</em>."
+    ],
+    "pillTitle": "Die Statusanzeige folgt der schwerwiegendsten Kategorie",
+    "pillBody": "Die Farbe im Dashboard-Kopf folgt dem höchsten Schweregrad: CRITICAL → rot, sonst WARNING → gelb, sonst INFO → blau, sonst grün. Dieselbe Logik steuert den Punkt im Favicon und das PWA-Symbol.",
+    "updateNowTitle": "Schaltfläche Jetzt Aktualisieren im Overview-Header",
+    "updateNowBody1": "Meldet <em>Systemupdates</em> ausstehende Updates, erscheint neben der Statusanzeige <strong>Jetzt aktualisieren</strong>. Der Dialog startet denselben Hostablauf wie <em>ProxMenux → Settings post-install Proxmox → Proxmox System Update</em>: Repository-Bereinigung, <code>apt full-upgrade</code> über <code>update-pve-safe.sh</code>, DKMS-Neubau verwalteter Treiber bei neuem Kernel, autoremove/autoclean und gegebenenfalls eine Neustartabfrage. Der Fortschritt wird laufend angezeigt.",
+    "updateNowBody2": "Nach Abschluss ruft das Schließen des Dialogs <code>GET /api/health/details?refresh=1</code> auf und verwirft damit den Cache dieses Endpunkts. Ausstehende Updates und Statusanzeige werden anhand des neuen Paketstands neu berechnet. Der Hinweis verschwindet ohne Warten auf den nächsten Zyklus. Auf einem aktuellen Host bleibt die Schaltfläche verborgen."
+  },
+  "dismiss": {
+    "heading": "Warnungen bestätigen und die Unterdrückungsdauer",
+    "intro": "Manche Ereignisse bleiben lange bestehen: <em>Systemupdates: Updates verfügbar</em> gilt bis zur Aktualisierung des Hosts. Dafür ist nicht alle fünf Minuten eine neue Nachricht nötig. <em>Jetzt aktualisieren</em> in der Übersicht behebt diesen Fall direkt. Für andere Fälle oder aufgeschobene Updates bietet die Zustandsüberwachung zwei verbundene Möglichkeiten zum Unterdrücken von Meldungen:",
+    "step1": "<strong>Einzelnes Ereignis bestätigen</strong> im Dialog. Das Menü bietet <strong>24 Stunden</strong>, <strong>7 Tage</strong> oder <strong>Dauerhaft</strong>, unabhängig vom Kategoriestandard. Die Auswahl sendet <code>POST /api/health/acknowledge</code> mit <code>error_key</code> und gewählten <code>suppression_hours</code> (<code>-1</code> für dauerhaft). Das Ereignis wechselt mit Zeitstempel <code>acknowledged_at</code> in die unterdrückte Liste.",
+    "dropdownImageAlt": "Menü zum Unterdrücken einer Warnung: 24 Stunden, 7 Tage oder dauerhaft",
+    "dropdownImageCaption": "Die gewählte Dauer gilt nur für diese Warnung; ohne Einzelauswahl greift der Kategoriestandard. Dauerhafte Bestätigungen erhalten die bernsteinfarbene Markierung <em>Dauerhaft</em> und lösen normalerweise nicht erneut aus. Eine Ausnahme ist die unten beschriebene kritische CPU-Temperatur.",
+    "step2": "<strong>Unterdrückungsdauer je Kategorie</strong>. Unter Einstellungen → Zustandsüberwachung oder über <code>POST /api/health/settings</code> lässt sich für jede der zehn Kategorien die Standarddauer ohne Einzelauswahl festlegen:",
+    "imageAlt": "Einstellung der Unterdrückungsdauer je Kategorie unter Einstellungen → Zustandsüberwachung",
+    "imageCaption": "Ein Auswahlmenü je Kategorie. Für häufige Meldungen wie ausstehende Updates eignet sich eine längere Dauer, für schnell neu zu bewertende Ereignisse eine kürzere. Darunter stehen die aktiven Unterdrückungen.",
+    "outro": "Während der Unterdrückung läuft die Prüfung weiter und aktualisiert <code>last_seen</code>, ohne neue Meldung. Nach Ablauf bewertet der nächste Zyklus die Ursache erneut: Er löst gegebenenfalls wieder aus oder entfernt den Eintrag, wenn der Zustand behoben ist.",
+    "activeSuppressionsTitle": "Bestätigungen prüfen und aufheben — Aktive Unterdrückungen",
+    "activeSuppressionsBody": "Alle zeitweise oder dauerhaft unterdrückten Warnungen stehen unter <strong>Einstellungen → Zustandsüberwachung → Aktive Unterdrückungen</strong>. Jede Zeile zeigt Kennung, Kategorie, Schweregrad, Bestätigungszeit und Restzeit. <strong>Wieder aktivieren</strong> hebt die Bestätigung für den nächsten Scan auf. Dauerhafte Bestätigungen lassen sich hier zurücknehmen, zeitlich begrenzte vorzeitig beenden. Aktivieren Sie <em>Bearbeiten</em>, wählen Sie die gewünschten Zeilen (grüner Rand und durchgestrichen) und speichern Sie. Abbrechen verwirft die Auswahl.",
+    "autoTitle": "Automatische Unterdrückung nach Änderung der Dauer",
+    "autoBody": "Ein anderer Wert als die standardmäßigen 24 Stunden hat eine zweite Wirkung: <strong>Neue Befunde der Kategorie werden bereits bestätigt gespeichert</strong>. Eine eingestellte Woche für Laufwerksmeldungen gilt damit auch für neue Meldungen, ohne jede einzeln zu bestätigen. Sie erscheinen direkt unter Unterdrückt mit der gewählten Restzeit. Kategorien mit 24 Stunden behalten das normale Verhalten: Neue Befunde bleiben aktiv, bis Sie handeln.",
+    "tempTitle": "Ausnahme für CPU-Temperatur CRITICAL",
+    "tempBody": "Die Persistenzschicht besitzt eine Sonderregel für <strong>CPU-Temperatur CRITICAL</strong>: Ein solcher Datensatz umgeht frühere Bestätigung und automatische Unterdrückung. Daraus folgt nicht, dass jede Temperaturprüfung beim Überschreiten eines konfigurierten kritischen Werts einen kritischen Datensatz erzeugt.",
+    "nonDismissableTitle": "Welche Befunde lassen sich bestätigen?",
+    "nonDismissableBody": "Der Dialog zeigt Bestätigen nur, wenn die Einzelprüfung ausdrücklich dismissable = true liefert. Bei false oder fehlendem Feld bleibt die Schaltfläche verborgen. Der Schweregrad bestimmt diese Erlaubnis nicht: Mehrere kritische Prüfungen erlauben eine Bestätigung. Die Beispiele beschreiben aktuelle Daten; Unterdrücken behebt keine Ursache.",
+    "headerFinding": "Feststellung",
+    "headerWhy": "Verhalten beim Bestätigen",
+    "rows": [
+      {
+        "finding": "CPU-Temperatur: Warnung / kritisch",
+        "why": "Die aus Messwerten ermittelte Temperaturwarnung erlaubt ausdrücklich die Bestätigung. Eine separate Persistenzregel umgeht sie, wenn ein CPU-Temperaturdatensatz mit CRITICAL eintrifft."
+      },
+      {
+        "finding": "Kritische Belegung des Root-Dateisystems",
+        "why": "Die Belegungsprüfungen erlauben ausdrücklich die Bestätigung, auch bei kritischer Auslastung. Sie schafft weder Platz noch beseitigt sie das Risiko fehlgeschlagener Schreibzugriffe."
+      },
+      {
+        "finding": "ZFS pool DEGRADED / FAULTED",
+        "why": "ZFS-Poolbelegungsprüfungen erlauben ausdrücklich die Bestätigung. Andere Poolbefunde folgen ihrem eigenen Kennzeichen. Bestätigen repariert keinen beeinträchtigten oder ausgefallenen Pool."
+      },
+      {
+        "finding": "Festplatten-I/O-Fehler mit SMART FAILED",
+        "why": "Gespeicherte Laufwerksbefunde aus dem Journal können eine Bestätigung erlauben. SMART FAILED muss trotzdem untersucht werden; die Schaltfläche hängt vom Kennzeichen der Einzelprüfung ab, nicht nur vom Warntext."
+      },
+      {
+        "finding": "Netzschnittstelle DOWN",
+        "why": "Gespeicherte Schnittstellenprüfungen mit DOWN erlauben ausdrücklich die Bestätigung. Das stellt weder Bridge, Bond noch physische Verbindung oder Fernzugriff wieder her."
+      },
+      {
+        "finding": "I/O-Ereignisse auf gesunden Festplatten (INFO)",
+        "why": "Vorübergehende ATA- oder dmesg-Ereignisse bei gesundem SMART können rein informativ sein und sich selbst auflösen. Solche Zeilen brauchen keine Bestätigungsschaltfläche; die Prüfung bestimmt, wann der Zustand behoben ist."
+      }
+    ],
+    "principle": "Nutzen Sie die beim tatsächlichen Befund angebotene Schaltfläche, statt ihre Verfügbarkeit aus Kategorie oder Schweregrad abzuleiten. Die Bestätigung steuert Anzeige und Meldungen. Wiederherstellungsprüfungen und Laufwerksverlauf bleiben davon getrennt."
+  },
+  "autoresolve": {
+    "heading": "Autoauflösung und Reinigung",
+    "intro": "Viele Warnungen sollen verschwinden, wenn die Ursache entfällt: eine VM startet wieder, ein Laufwerk wurde entfernt oder die Temperatur ist wieder normal. Die Bereinigung am Ende jedes Fünfminutenzyklus wendet diese Regeln an:",
+    "headerTrigger": "Trigger",
+    "headerAction": "Aktion",
+    "rows": [
+      {
+        "trigger": "CPU-Auslastung / Temperatur wieder normal.",
+        "action": "Als behoben markiert; verschwindet aus der aktiven Liste."
+      },
+      {
+        "trigger": "Speicherdruck wieder unterhalb der Warnschwelle nach einer OOM / Memory Warnung.",
+        "action": "Als behoben markiert."
+      },
+      {
+        "trigger": "VM / CT, auf den der Fehler verweist, existiert nicht mehr (<code>qm status</code> / <code>pct status</code> ungleich Null).",
+        "action": "Aufgelöst als entfernte Ressource markiert."
+      },
+      {
+        "trigger": "Disk, auf den der Fehler verwiesen wird, ist in <code>/dev/</code> nicht mehr vorhanden.",
+        "action": "Markiert aufgelöst als entferntes Gerät. Die permanente Beobachtungsgeschichte bleibt erhalten (siehe nächster Abschnitt)."
+      },
+      {
+        "trigger": "Befunde aus dem Systemjournal (Kategorie <code>logs</code>, SMART-Einträge, ATA-/I/O-Fehler), deren Unterdrückungsfrist abläuft.",
+        "action": "Werden entfernt. Jeder Scan prüft ab diesem Zeitpunkt neue Journaleinträge; dieselbe historische Zeile wird nicht erneut ausgegeben."
+      },
+      {
+        "trigger": "Seit mehr als sieben Tagen behobene Fehler.",
+        "action": "Aus der Datenbank gelöscht, um die Tabelle klein zu halten. Die Benachrichtigungshistorie ist unabhängig und wird länger aufbewahrt."
+      }
+    ],
+    "permanentTitle": "Dauerhaft unterdrückt bedeutet nicht behoben",
+    "permanentBody": "Die Kategoriedauer <code>-1</code> (<em>dauerhaft</em>) unterdrückt weitere Warnungen für bestätigte Einträge, überspringt aber nicht die automatische Prüfung. Entfällt die Ursache, etwa nach Löschen der Ressource oder Unterschreiten des Schwellenwerts, wird der Eintrag weiterhin automatisch bereinigt."
+  },
+  "observations": {
+    "heading": "Laufwerksbeobachtungen — der dauerhafte Verlauf",
+    "intro": "Laufwerksereignisse sollen erhalten bleiben. Eine SMART-Warnung auf <code>/dev/sdh</code> um 02:14 Uhr bleibt wichtig, auch wenn die I/O-Störung vorbei und der Fehler automatisch behoben ist. Das Laufwerk hat nun eine Vorgeschichte. Dafür führt die Zustandsüberwachung eine separate <strong>dauerhafte</strong> Tabelle: <code>disk_observations</code>.",
+    "headerProperty": "Eigenschaft",
+    "headerErrors": "Tabelle <code>errors</code> (Aktiv)",
+    "headerObs": "Tabelle <code>disk_observations</code>",
+    "rows": [
+      {
+        "property": "Zweck",
+        "errors": "Versorgt die <em>aktuelle</em> Zustandsansicht und den Benachrichtigungsversand.",
+        "obs": "Dauerhaftes Prüfprotokoll je Laufwerk."
+      },
+      {
+        "property": "Automatische Auflösung",
+        "errors": "Ja — Zeilen werden gelöscht, wenn die Bedingung verschwindet.",
+        "obs": "Nein - Einträge bleiben für immer bestehen, es sei denn, der Benutzer weist sie ausdrücklich ab."
+      },
+      {
+        "property": "Deduplizierungsschlüssel",
+        "errors": "<code>error_key</code> (z.B. <code>smart_sdh</code>).",
+        "obs": "<code>(disk_registry_id, error_type, error_signature)</code> mit stabilen Signaturen, die von flüchtigen Daten befreit sind."
+      },
+      {
+        "property": "Wo gezeigt",
+        "errors": "Dialog der Zustandsüberwachung (Listen Aktiv / Unterdrückt).",
+        "obs": "Laufwerksdetailkarte auf der Registerkarte <strong>Datenspeicher</strong>, mit „X obs.“ je Laufwerk."
+      },
+      {
+        "property": "Was es aufzeichnet",
+        "errors": "Was auch immer derzeit scheitert.",
+        "obs": "SMART-Warnungen (Sektorprobleme / Temperatur / CRC / fehlgeschlagene Selbsttests), I/O-Fehler (ATA / NVMe/dm), Dateisystemfehler, ZFS-Poolereignisse."
+      }
+    ],
+    "outro": "Eine Warnung kann aus dem Dashboard verschwinden, während der Vorfall im Laufwerksverlauf bleibt. Die Detailkarte unter Datenspeicher zeigt die Anzahl offener Beobachtungen sowie Zeitstempel, Schweregrad und ursprünglichen Rohtext. Das hilft bei der Entscheidung über einen Austausch.",
+    "renameTitle": "Geänderte Gerätenamen werden automatisch zusammengeführt",
+    "renameBody": "Laufwerke können zunächst unter vorläufigen Namen wie <code>ata8</code> oder <code>nvme0n1p3</code> erscheinen. Die Beobachtungsschicht ordnet Einträge anhand bekannter Seriennummern zu: Wird derselbe Datenträger später als <code>sdh</code> erkannt, werden frühere Beobachtungen zu <code>ata8</code> im nächsten Zyklus an <code>sdh</code> angehängt. Der Verlauf bleibt zusammenhängend."
+  },
+  "notification": {
+    "heading": "Vom Befund zur Benachrichtigung",
+    "intro": "Jeder aktive Fehler ist auch ein Kandidat für die Benachrichtigungsmaschine. Der Fluss:",
+    "items": [
+      "Der Scanner zeichnet den Befund mit Kategorie + Schweregrad + strukturierten Details auf.",
+      "Ist der Ereignistyp in den globalen Benachrichtigungen <strong>aktiviert</strong> und hat der Kanal die Kategorie nicht stummgeschaltet, wird ein Ereignis eingereiht.",
+      "Die Vorlagenlogik erzeugt aus den strukturierten Daten Titel und Text. Bei aktivierter KI-Überarbeitung erhält der eingerichtete Anbieter dieses Paar für eine verständliche Fassung.",
+      "Die Kanalimplementierung versendet es: Telegram Nachricht, Discord Einbettung, Gotify Push oder E-Mail. Das Versandergebnis wird in <code>notification_history</code> gespeichert.",
+      "Bestätigen startet die Unterdrückungsfrist. Weitere Erkennungen desselben <code>error_key</code> erzeugen währenddessen normalerweise keine Meldung und werden nicht automatisch für das Fristende eingereiht. Die Ausnahme für kritische CPU-Temperatur bleibt bestehen."
+    ],
+    "outro": "Die Kanalkonfiguration mit Telegram-Bot-Token, Webhook-URLs, KI-Schlüsseln, Ereignisschaltern und Kanalanpassungen ist unter <notifLink>Benachrichtigungen</notifLink> und <aiLink>KI-Assistent</aiLink> beschrieben."
+  },
+  "rest": {
+    "heading": "REST-Endpunkte",
+    "intro": "Die Dialogaktionen sind per API für Skripte, Dashboards und Chatbots verfügbar. Bei aktiver Monitor-Authentifizierung benötigen Aufrufe ein gültiges Bearer-Token aus Anmeldung oder API-Tokenverwaltung. Änderungen wie Bestätigen, Speichern oder Bereinigen verwaister Fehler erfordern full_admin; read_only erhält 403. Bei deaktivierter oder abgelehnter Authentifizierung erlauben diese Prüfungen Zugriff ohne Token.",
+    "headerEndpoint": "Endpunkt",
+    "headerMethod": "Methode",
+    "headerUse": "Verwendung",
+    "rows": [
+      {
+        "endpoint": "/api/health",
+        "method": "GET",
+        "use": "Leichte Zustandsabfrage mit JSON-Feldern <code>status</code>, <code>timestamp</code> und <code>version</code>. Für Schlüsselwortprüfungen in Uptime Kuma geeignet; bei aktiver Monitor-Authentifizierung muss der Client einen Bearer-Header senden."
+      },
+      {
+        "endpoint": "/api/health/status",
+        "method": "GET",
+        "use": "Gesamtzustand mit einem Schweregrad und einer Zusammenfassung. Authentifiziert."
+      },
+      {
+        "endpoint": "/api/health/details",
+        "method": "GET",
+        "use": "Alle zehn Kategorien mit jeweiligem Status und den zugrunde liegenden strukturierten Daten."
+      },
+      {
+        "endpoint": "/api/health/full",
+        "method": "GET",
+        "use": "Vollständige Momentaufnahme: Kategorien, aktive und unterdrückte Fehler sowie eigene Unterdrückungsdauer. Versorgt den Dialog mit einer Anfrage und nutzt für schnelle Antworten einen sechs Minuten gültigen Hintergrundcache."
+      },
+      {
+        "endpoint": "/api/health/active-errors",
+        "method": "GET",
+        "use": "Nur die aktive Liste. Filterbar durch <code>?category=&lt;name&gt;</code>."
+      },
+      {
+        "endpoint": "/api/health/dismissed",
+        "method": "GET",
+        "use": "Nur die unterdrückten Einträge mit verbleibenden Stunden."
+      },
+      {
+        "endpoint": "/api/health/acknowledge",
+        "method": "POST",
+        "use": "Körper: <code>'{'\"error_key\":\"smart_sdh\"'}'</code>. Deaktivieren Sie eine Warnung mit dem konfigurierten Fenster der Kategorie."
+      },
+      {
+        "endpoint": "/api/health/settings",
+        "method": "GET / POST",
+        "use": "Lesen oder schreiben Sie die Werte für die Unterdrückungsdauer pro Kategorie."
+      },
+      {
+        "endpoint": "/api/health/cleanup-orphans",
+        "method": "POST",
+        "use": "Manuelle Bereinigung von Fehlern, deren zugrunde liegendes Gerät / VM verschwunden ist. Idempotent."
+      }
+    ],
+    "codeComment1": "# Aktuellen Zustand für ein Skript abrufen",
+    "codeComment2": "# Verwerfen Sie einen bestimmten Fehler",
+    "codeComment3": "# Setzen Sie die Unterdrückung der Festplatten-Kategorie auf eine Woche"
+  },
+  "whereNext": {
+    "heading": "Wohin als nächstes",
+    "items": [
+      {
+        "label": "Dashboard",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — hier lässt sich der Dialog der Zustandsüberwachung öffnen."
+      },
+      {
+        "label": "Benachrichtigungen",
+        "href": "/docs/monitor/notifications",
+        "tail": " — Kanäle, Ereignisschalter, KI-Überarbeitung und Verlauf."
+      },
+      {
+        "label": "KI-Assistent",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": " — Anbieter (OpenAI / Anthropic / Gemini / Groq / Ollama / OpenRouter), Promptmodus, Detailgrad je Kanal und Sprache."
+      },
+      {
+        "label": "Architektur",
+        "href": "/docs/monitor/architecture",
+        "tailRich": "— das SQLite-Schema (<code>errors</code>, <code>disk_observations</code>, <code>events</code>) und die Hintergrund-Thread-Kadenz."
+      }
+    ]
+  }
+}

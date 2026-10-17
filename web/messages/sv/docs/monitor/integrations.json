@@ -1,0 +1,255 @@
+{
+  "meta": {
+    "title": "Proxmox-integrationer — Homepage, Home Assistant, Grafana, Prometheus | ProxMenux Monitor",
+    "description": "Exempel att kopiera för att ansluta ProxMenux Monitor till Homepage, Home Assistant, Grafana via Prometheus och Uptime Kuma, med rätt konfiguration, API-endpoints och autentiseringsheader.",
+    "ogTitle": "Proxmox-integrationer — Homepage, Home Assistant, Grafana, Prometheus",
+    "ogDescription": "Guide för att ansluta ProxMenux Monitor till Homepage, Home Assistant, Grafana, Prometheus och Uptime Kuma.",
+    "twitterTitle": "Proxmox-integrationer | ProxMenux Monitor",
+    "twitterDescription": "Anvisningar för Homepage, Home Assistant, Grafana, Prometheus och Uptime Kuma."
+  },
+  "header": {
+    "title": "Integrationer",
+    "description": "Exempel att kopiera för verktygen i ditt hemlabb: Homepage, Home Assistant, Grafana via Prometheus och Uptime Kuma. Varje exempel visar förväntad konfiguration, vilken Monitor-endpoint som används och rätt autentiseringsheader.",
+    "section": "ProxMenux-övervakning"
+  },
+  "intro": {
+    "title": "Vad du kan bygga från denna sida",
+    "body": "Kopiera respektive exempel till valt verktyg. Endpoints beskrivs i <link>API-referensen</link>; denna sida visar hur de används i Homepage, Home Assistant och Grafana. Skärmbilderna visar resultatet av konfigurationerna."
+  },
+  "auth": {
+    "heading": "Autentisering: det enda varje recept behöver",
+    "intro": "De flesta endpoints som används av dessa integrationer är autentiserade. Du har två sätt att tillfredsställa detta krav.",
+    "optAtitle": "Alternativ A – API token (rekommenderas för integrationer)",
+    "optAbody1": "Öppna <strong>Inställningar → Säkerhet → API-token</strong>. Välj <em>Skapa token</em>, ge den ett namn som <em>homepage</em>, <em>home-assistant</em> eller <em>prometheus</em> och kopiera den: den visas <em>bara en gång</em>. Den gäller ett år som standard och kan återkallas separat. Använd den för klienter utanför webbläsaren.",
+    "optAbody2": "Från den punkten är varje begäran bara:",
+    "optBtitle": "Alternativ B – inloggningsflöde (användarnamn + lösenord)",
+    "optBbody": "Användbart för skript som autentiserar som en mänsklig användare. Den returnerade token är kortlivad; de flesta integrationer bör föredra Alternativ A.",
+    "outro": "TOTP-fältet behövs bara med tvåfaktorsautentisering påslagen. Rotation och återkallande av token, lösenordsregler och granskningslogg beskrivs i <link>Åtkomst och autentisering</link>.",
+    "httpsTitle": "Använda HTTPS istället för HTTP",
+    "httpsIntro": "Exemplen använder <code>http://</code> för korthet. Om TLS är påslaget i Monitor (<strong>Inställningar → Säkerhet → SSL/HTTPS</strong>), byt <code>http://</code> mot <code>https://</code> i varje URL. Två verktygsspecifika anmärkningar:",
+    "httpsItems": [
+      "<strong>Självsignerade certifikat.</strong> Home Assistants <code>rest:</code>-integration verifierar TLS som standard. Med Monitors självsignerade certifikat kan du lägga till <code>verify_ssl: false</code> i varje REST-block bredvid <code>scan_interval:</code> eller importera dess CA i betrodda certifikat. Detsamma gäller andra verktyg som verifierar certifikat.",
+      "<strong>Prometheus</strong> har redan <code>scheme: https</code> i exemplet nedan. Aktivera eller behåll <code>https</code> när TLS är påslaget i Monitor."
+    ]
+  },
+  "homepage": {
+    "heading": "Homepage",
+    "headingHref": "https://gethomepage.dev",
+    "intro": "Homepage är en statisk och anpassningsbar appöversikt. ProxMenux Monitor ansluts via den inbyggda widgeten <code>customapi</code>: lägg till en tjänst i <code>services.yaml</code>, starta om Homepage och kortet visar aktuella värden.",
+    "iconCalloutTitle": "Den officiella ProxMenux logotypen är på dashboardicons.com",
+    "iconCalloutBody": "Exemplen använder <code>icon: proxmenux.png</code>. Homepage slår upp enkla filnamn på <a1>dashboardicons.com</a1>, ett ikonbibliotek för självhostade översikter. ProxMenux finns på <a2>dashboardicons.com/icons/external/proxmenux</a2> och hämtas vid första visningen. Samma sak fungerar för tusentals verktyg som Telegram, Discord, Grafana och Tailscale: ange <code>icon: &lt;name&gt;.png</code> i tjänsten.",
+    "imageAlt": "Homepage-översikt med tre ProxMenux Monitor-kort (EDGE, VOID, DREAM) som visar upptid, CPU, RAM och temperatur per värd",
+    "imageCaption": "Tre ProxMenux Monitor-instanser som Homepage-kort: upptid, CPU, RAM och CPU-temperatur läses från <code>/api/system</code> på varje värd var 10:e s.",
+    "basicTitle": "Grundläggande widget - ingen autentisering",
+    "basicIntro": "Använd detta när ProxMenux Monitor är på ett pålitligt nätverk och du har inte aktiverat autentisering på Monitor sidan ännu. Den enklaste möjliga <code>services.yaml</code>-posten:",
+    "authedTitle": "Autentiserad widget",
+    "authedIntro": "Skapa en API-token under <strong>Inställningar → Säkerhet → API-token</strong> i Monitor. Kopiera den till headern <code>Authorization</code> nedan och ersätt exempeltoken efter <code>Bearer</code>.",
+    "authedOutro": "Starta om Homepage så visar kortet aktuella värden. Återanvänd token i widgetar som läser samma Monitor-instans.",
+    "multiTitle": "Multi-widget setup – system, lagring, nätverk",
+    "multiIntro": "För fler detaljer skapar du tre kort med olika endpoints: system, lagring och nätverk. Använd samma token för denna Monitor-instans.",
+    "multiCalloutTitle": "Flera Proxmox-värdar",
+    "multiCalloutBody": "Upprepa blocket per värd för att få korten på bilden. Varje post använder <code>http://&lt;host&gt;:8008</code> för sin instans. Skapa och spara en token per värd: separata installationer har egna signeringsnycklar, så en token fungerar inte automatiskt på andra värdar."
+  },
+  "homeAssistant": {
+    "heading": "Home Assistant",
+    "headingHref": "https://www.home-assistant.io",
+    "intro": "Exemplen använder Home Assistants inbyggda <code>rest</code>-integration utan särskild HACS-komponent. Den läser endpoints i <link>API-referensen</link> och skapar sensorer och attribut för automationer. Konfigurationen ger ungefär 25 sensorer för resurser, hälsa, VM/CT, lagring, nätverk och uppdateringar. Lägg till den i <code>configuration.yaml</code> och ladda om eller starta om HA.",
+    "imageAlt": "Home Assistant-översikt med hälsostatus, CPU-/RAM-/temperaturmätare, VM-antal, lagringsanvändning och räknare för aktiva fel",
+    "imageCaption": "ProxMenux Monitor som en förstklassig Home Assistant-integration - sensorer byggda från YAML-receptet nedan.",
+    "step1Title": "1 · Spara API-token",
+    "step1Body": "Spara token i <code>secrets.yaml</code> separat från huvudkonfigurationen. Lägg Bearer-prefix och token i ett värde som kan användas som header. Filen är inte krypterad och måste också hållas privat. Platsen beror på installationen, oftast <code>/config/secrets.yaml</code> i HA OS eller Container.",
+    "step2Title": "2 · Lägg till REST-konfigurationen",
+    "step2Body": "Sex REST-block täcker huvudområdena. Deras <code>scan_interval</code> följer ändringstakten: resurser var 30:e s, hälsa var 60:e s och inventeringar var 5–10:e minut. Klistra in i <code>configuration.yaml</code>:",
+    "step3Title": "3 · Lägg till binära sensorer och mallhjälpare",
+    "step3Body": "Två binära sensorer och två mallsensorer kompletterar integrationen. De förenklar automationer och villkorade Lovelace-kort utan att upprepa Jinja-uttryck överallt.",
+    "step4Title": "4 · Ladda om och kontrollera",
+    "step4Body": "Kontrollera först syntaxen under <em>Utvecklarverktyg → YAML → Kontrollera konfiguration</em>. Ladda sedan om <em>All YAML-konfiguration</em> eller starta om HA. Filtrera <em>Inställningar → Enheter och tjänster → Entiteter</em> efter <em>proxmenux</em>. De ungefär 25 entiteterna bör få värden inom ett avläsningsintervall.",
+    "replaceTitle": "Ersätter en tidigare version av detta recept?",
+    "replaceBody": "Efter en äldre version kan registret behålla gamla ID:n och kort visa <em>Entiteten hittades inte</em>. Ta bort tidigare <code>rest:</code>- och <code>template:</code>-block från <code>configuration.yaml</code> och ladda om. Filtrera <em>Inställningar → Enheter och tjänster → Entiteter</em> efter <em>proxmenux</em> och ta bort gamla återställda eller otillgängliga poster. Lägg in aktuellt YAML och ladda om för att registrera nya entiteter.",
+    "step5Title": "5 · Lovelace-översikt",
+    "step5Body": "YAML skapar ett <strong>vertical-stack</strong>-kort med logotyp, nyckeltal, system, VM, lagring, nätverk och ett villkorat problemkort. Öppna översikten, välj pennan, <em>Lägg till kort</em> och sedan <em>Manuellt</em> längst ned och klistra in:",
+    "viewTipTitle": "Vill du ha det som en fullständig instrumentpanelvy istället för ett enda kort?",
+    "viewTipBody": "Öppna trepunktsmenyn → <em>Redigerare för råkonfiguration</em> och lägg till en vy med denna rubrik ovanför listan <code>cards:</code>:",
+    "viewTipOutro": "Det ger dig en dedikerad flik / bild i din instrumentpanel med sin egen ikon och titel, istället för ett långt kort på en befintlig vy.",
+    "altViewTitle": "Alternativ - en dedikerad instrumentpanelvy",
+    "altViewIntro": "Lägg till en vy med YAML nedan för en egen flik i en befintlig översikt. En vy är en flik i översikten och skapar ingen ny post i sidofältet. Steg:",
+    "altViewSteps": [
+      "Öppna instrumentbrädan där du vill ha den nya fliken.",
+      "Klicka på pennan för att redigera översikten uppe till höger.",
+      "Klicka på fliken <em>+</em> i slutet av de befintliga flikarna för att skapa en ny vy.",
+      "Välj <em>Kodredigerare</em> uppe till höger i dialogen för att växla mellan visuell redigering och YAML.",
+      "Klistra YAML nedanför.",
+      "Spara. Vyn <em>ProxMenux Monitor</em> visas som flik i översikten med sina kort."
+    ],
+    "twoEditorsTitle": "Två YAML-redigerare i HA - välj rätt",
+    "twoEditorsIntro": "Home Assistant har två YAML-redigerare som ser lika ut men förväntar sig olika format:",
+    "twoEditorsItems": [
+      "<strong>Redigerare för en vy</strong> — via <em>+</em> eller <em>Redigera vy → Kodredigerare</em>. Tar en vy med <code>title:</code>, <code>path:</code> och <code>cards:</code> på högsta nivån utan inledande bindestreck.",
+      "<strong>Råredigerare för hela översikten</strong> — via trepunktsmenyn. Tar hela listan <code>views:</code>, med varje vy som listpost med inledande <code>-</code>."
+    ],
+    "twoEditorsOutro": "Fel format kan ge en <em>Namnlös vy</em> och <code>cards: []</code>. YAML nedan är för redigeraren av en enskild vy; kopiera det som det visas.",
+    "viewImageAlt": "Egen Home Assistant-vy för ProxMenux Monitor: picture-entity-huvud, glance-nyckeltal och entitetskort för system, VM, lagring och nätverk i flera kolumner",
+    "viewImageCaption": "Vyn <em>ProxMenux Monitor</em> på bred skärm. Masonry placerar kort i kolumner automatiskt; layouten beror på inställd vytyp.",
+    "twoColTipTitle": "Vill du ha en fast tvåkolumnlayout istället för auto layout?",
+    "twoColTipBody": "Lägg två kort, som <em>System</em> + <em>VM</em> eller <em>Lagring</em> + <em>Nätverk</em>, i en gemensam <code>horizontal-stack</code> så att de visas bredvid varandra vid alla skärmbredder:",
+    "twoColTipOutro": "På mobilen förblir raden hoptryckt. HA:s automatiska layout utan horizontal-stack anpassar sig bättre till smala skärmar.",
+    "step6Title": "6 · Automationer",
+    "step6Body": "Tre automationer för vanliga reaktioner: ersätt <code>notify.mobile_app_&lt;your_phone&gt;</code> med den aviseringstjänst du använder.",
+    "logoTitle": "Om ProxMenux logotyp",
+    "logoBody": "picture-entity-kortet hämtar den officiella logotypen från <a1>dashboardicons.com</a1>, ett gratis ikonbibliotek för självhostade översikter. Posten finns på <a2>dashboardicons.com/icons/external/proxmenux</a2>. Home Assistant hämtar SVG:n via HTTPS vid första visningen och cachar den.",
+    "logoBrokenTitle": "Om logokortet visar en bruten bild",
+    "logoBrokenIntro": "Vissa HA-installationer (brandväggade nätverk, innehållsblockerare, värdar utan offentligt internet) kan inte nå jsdelivr.net vid rendertid. Fixen är en lokal kopia:",
+    "logoBrokenSteps": [
+      "Ladda ner SVG från <a>cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmenux.svg</a>.",
+      "Spara det till <code>/config/www/icons/proxmenux.svg</code> på din HA-värd.",
+      "I Lovelace YAML, ersätt <code>image:</code> URL med <code>/local/icons/proxmenux.svg</code>. Spara och ladda - bilden görs från den lokala filen, inget internet behövs."
+    ],
+    "scanTipTitle": "scan_interval tumregel",
+    "scanTipBody": "Börja med att läsa <code>/api/system</code> var 30:e s. <code>/api/health/full</code> läser normalt ett bakgrundsresultat giltigt i upp till sex minuter; avläsning var 60:e s kringgår inte cachen. Prova fem minuter för <code>/api/storage/summary</code> och en timme för <code>/api/proxmenux/update-status</code>. Anpassa efter hårdvara och antal värdar."
+  },
+  "grafana": {
+    "heading": "Prometheus + Grafana",
+    "promHref": "https://prometheus.io",
+    "grafanaHref": "https://grafana.com",
+    "intro": "ProxMenux Monitor erbjuder <code>GET /api/prometheus</code> i Prometheus textformat 0.0.4. Med autentisering påslagen krävs en Bearer-token. Låt Prometheus samla mätvärden och Grafana visualisera tidsseriedatabasen.",
+    "imageAlt": "Grafana-översikt med ProxMenux-mätvärden: CPU-mätare, minneshistorik, antal startade VM och nätverkstrafik",
+    "imageCaption": "En enkel Grafana-översikt av ProxMenux-data samlade av Prometheus: CPU, minne, startade VM och nätverkstrafik. Hela katalogen finns i <link>API-referens → Prometheus-mätvärden</link>.",
+    "step1Title": "1 · Lägg till insamlingsjobbet i Prometheus",
+    "step1Body": "Skicka API-token via Prometheus inbyggda <code>authorization</code>-block, som också stöder inläsning från fil.",
+    "step1After": "Ladda om Prometheus med <code>kill -HUP &lt;PID&gt;</code> (ersätt PID med dess process-ID), <code>systemctl reload prometheus</code> om tjänsten stöder det eller <code>docker compose restart prometheus</code> för containern. Under <em>Status → Targets</em> bör proxmenux bli UP inom ett intervall. Etiketten <code>node=\"&lt;hostname&gt;\"</code> skiljer värdar åt.",
+    "tokenTipTitle": "Spara token i en separat fil",
+    "tokenTipBody": "Håll token separat från konfigurationen i produktion. Med <code>credentials_file: /etc/prometheus/secrets/proxmenux.token</code> läser Prometheus den ur en fil med rättigheterna 0600.",
+    "step2Title": "2 · Kontrollera insamlingen med några frågor",
+    "step2Body": "Kontrollera före Grafana att Prometheus har data. Öppna <code>http://&lt;prometheus-host&gt;:9090</code>, välj <em>Query</em> och kör någon av frågorna nedan. Du bör få aktuella värden från Proxmox-värden:",
+    "headerQuery": "Fråga",
+    "headerConfirms": "Vad den bekräftar",
+    "verifyRows": [
+      {
+        "query": "up{job=\"proxmenux\"}",
+        "confirms": "Ger <code>1</code> om Prometheus lyckas samla data från Monitor, annars <code>0</code>. Den snabbaste första kontrollen."
+      },
+      {
+        "query": "proxmox_cpu_usage",
+        "confirms": "Aktuell CPU-belastning på Proxmox-värden i procent. Värdet bör ändras när frågan uppdateras med några sekunders mellanrum."
+      },
+      {
+        "query": "proxmox_vms_running",
+        "confirms": "Antal startade gästmaskiner. Jämför med Proxmox-gränssnittet."
+      },
+      {
+        "query": "proxmox_uptime_seconds / 86400",
+        "confirms": "Värdens upptid i dagar. Bör motsvara <code>uptime</code> i Proxmox-terminalen."
+      }
+    ],
+    "calloutTitle": "401 när endpointens URL öppnas direkt kan vara normalt",
+    "calloutBody": "Med autentisering påslagen öppnar länken under <em>Status → Targets</em> <code>/api/prometheus</code> i webbläsaren utan Prometheus Bearer-header. Svaret kan innehålla <code>'{'\"error\":\"Authentication required\"'}'</code>. Kontrollera målets verkliga <em>State: UP</em> för att bekräfta insamlingen via Prometheus.",
+    "step3Title": "3 · Lägg till Prometheus som en Grafana datakälla",
+    "step3Body": "Öppna <em>Connections → Data sources → Add new → Prometheus</em> i Grafana. Ange URL, till exempel <code>http://prometheus.lan:9090</code>, spara och testa. Om Prometheus kräver autentisering ställs den in separat här. Monitors token hör till Prometheus insamlingsjobb.",
+    "step4Title": "4 · Bygg paneler med dessa PromQL-frågor",
+    "step4Body": "Ett starturval av mätvärden som brukar övervakas på en Proxmox-värd:",
+    "headerPanel": "Panelidé",
+    "headerPromql": "PromQL-fråga",
+    "panelRows": [
+      {
+        "panel": "CPU-mätare per värd",
+        "promql": "proxmox_cpu_usage"
+      },
+      {
+        "panel": "Minnesanvändningsmätare per värd",
+        "promql": "proxmox_memory_usage_percent"
+      },
+      {
+        "panel": "Använt och totalt minne (tidsserie)",
+        "promql": "proxmox_memory_used_bytes / 1024 / 1024 / 1024"
+      },
+      {
+        "panel": "Startade VM/CT per värd",
+        "promql": "proxmox_vms_running"
+      },
+      {
+        "panel": "CPU-temperatur",
+        "promql": "proxmox_cpu_temperature_celsius"
+      },
+      {
+        "panel": "Nätverksgenomströmning RX (byte/s)",
+        "promql": "rate(proxmox_interface_bytes_received_total[5m])"
+      },
+      {
+        "panel": "Nätverksgenomströmning TX (byte/s)",
+        "promql": "rate(proxmox_interface_bytes_sent_total[5m])"
+      },
+      {
+        "panel": "Genomsnittlig belastning (1m)",
+        "promql": "proxmox_load_average{period=\"1m\"}"
+      },
+      {
+        "panel": "Använt diskutrymme i procent per monteringspunkt",
+        "promql": "proxmox_disk_usage_percent"
+      },
+      {
+        "panel": "UPS-batteriets laddningsnivå",
+        "promql": "proxmox_ups_battery_charge_percent"
+      },
+      {
+        "panel": "GPU-temperatur per kortplats",
+        "promql": "proxmox_gpu_temperature_celsius"
+      }
+    ],
+    "outro": "Lägg till varje fråga som Grafana-panel med <em>Stat</em> för värden och <em>Time series</em> för trender och gruppera efter kategori. Använd <code>node</code> som översiktsvariabel (<em>Settings → Variables → New → Query → label_values(proxmox_cpu_usage, node)</em>) för att filtrera per värd."
+  },
+  "uptimeKuma": {
+    "heading": "Uptime Kuma och andra statuskontroller",
+    "href": "https://github.com/louislam/uptime-kuma",
+    "intro": "Använd <code>GET /api/system-info</code> för en nyckelordskontroll. Denna route kräver ingen token och ger värdnamn, upptid och hälsa som <code>healthy</code>, <code>warning</code> eller <code>critical</code>. Den är offentlig, till skillnad från de skyddade detaljerade hälsoendpoints.",
+    "kumaTitle": "Uptime Kuma - HTTP nyckelordsövervakning",
+    "kumaSteps": [
+      "I Uptime Kuma klickar du på <em>+ Lägg till ny Monitor</em>.",
+      "Monitor Typ: <em>HTTP(s) - Keyword</em>.",
+      "Visningsnamn: <em>ProxMenux Monitor — pve01</em>.",
+      "URL: <code>http://pve01.lan:8008/api/system-info</code>.",
+      "Nyckelord: <code>healthy</code> (värdet av <code>health.status</code> när värden är OK).",
+      "Heartbeat Interval: 60 sekunder är tillräckligt.",
+      "Spara. Routen system-info kräver ingen Bearer-header."
+    ],
+    "healthchecksTitle": "healthchecks.io / pingar från cronjobb",
+    "healthchecksBody": "Ett cronjobb kan läsa <code>/api/system-info</code> och testa <code>.health.status == \"healthy\"</code>. Först efter lyckat test skickar det en framgångsping till sin unika Healthchecks.io-URL. Tjänsten tar emot jobbpingar och frågar inte Monitor själv. Enbart HTTP 2xx bevisar inte god värdhälsa.",
+    "richTitle": "Vill du ha mer detaljerade hälsodata?",
+    "richBody": "Använd <code>GET /api/health/full</code> för hela tillståndet med tio kategorier, aktiva och avfärdade fel. Svaret innehåller översiktsfönstrets data och kräver Bearer-token när autentisering är påslagen."
+  },
+  "workflows": {
+    "heading": "n8n, Zapier och anpassade skript",
+    "intro": "Arbetsflöden och skript kan <em>skicka</em> aviseringar med POST till <code>/api/notifications/send</code>, exempelvis vid CI-fel eller långa cronjobb. Direktsändning kringgår händelsekö och spärrtid per händelseavtryck. Kanalformatering, valfri AI och leverans finns kvar. Hantera eventuella dubbletter i anroparen.",
+    "n8nBody": "Använd en <em>HTTP Request</em>-nod i n8n med POST, URL ovan och samma JSON som curl. Välj generiska Header Auth-uppgifter: namn <em>Authorization</em> och värde <code>Bearer YOUR_API_TOKEN</code>, och ersätt platshållaren. Anslut ett schema, en webhook eller en föregående nod som utlösare.",
+    "severityBody": "Allvarlighetsgrad anges som <code>INFO</code>, <code>WARNING</code> eller <code>CRITICAL</code> med versaler. Objektet <code>data</code> ger sammanhang. AI använder renderad titel och text samt stödd berikning; godtyckliga fält ingår inte säkert i prompt eller resultat. Se <link>Aviseringar → Händelsekatalog</link>."
+  },
+  "pveWebhook": {
+    "heading": "Inbyggd Proxmox VE-webhook (inkommande)",
+    "intro1": "PVE fick aviseringssystemet i 8.1; inbyggda webhookmål kräver Proxmox VE 8.3 eller senare. <em>Aktivera aviseringar</em> i Inställningar försöker registrera Monitor som mål. PVE-meddelanden som skickas dit, som backup- eller replikeringsrapporter, går in i dess sändningsflöde. Konfigurationen måste vara tillgänglig och skrivbar.",
+    "intro2": "Förlopp, PVE:s meddelandemall, poster i <code>/etc/pve/notifications.cfg</code> och klusterbeteende beskrivs i <link>Aviseringar → PVE-webhookintegration</link>."
+  },
+  "whereNext": {
+    "heading": "Gå vidare",
+    "items": [
+      {
+        "label": "API-referens",
+        "href": "/docs/monitor/api",
+        "tail": " — endpoints med metod, sökväg och fullständig Prometheus-mätvärdeskatalog."
+      },
+      {
+        "label": "Aviseringar",
+        "href": "/docs/monitor/notifications",
+        "tail": " — händelsekällor, kanaler, sändningsflöde och PVE-webhookintegration i detalj."
+      },
+      {
+        "label": "AI-assistent",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": " — valfri omskrivning av malltexter till begripligt språk före sändning till Telegram, Discord, e-post eller Gotify."
+      },
+      {
+        "label": "Åtkomst och autentisering",
+        "href": "/docs/monitor/access-auth",
+        "tail": " — skapa och återkalla API-token för exemplen, granskningslogg och TLS-inställningar."
+      }
+    ]
+  }
+}

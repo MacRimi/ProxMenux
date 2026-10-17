@@ -1,0 +1,136 @@
+{
+  "meta": {
+    "title": "Granskning och rapporter | ProxMenux Monitor",
+    "description": "Bedöm en Proxmox VE-nod, registrera ProxMenux ändringar och ange förväntningar på gäster och lagring, med utskrivbara rapporter."
+  },
+  "header": {
+    "title": "Granskning och rapporter",
+    "description": "Bedömning av noden, logg över ProxMenux ändringar och angivna förväntningar, med dokument som kan skrivas ut eller sparas som PDF.",
+    "section": "ProxMenux Monitor"
+  },
+  "sections": [
+    {
+      "id": "views",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Tre vyer, tre frågor",
+            "body": "Granskning och rapporter skiljer mellan fakta om noden, ProxMenux ingrepp och angivna förväntningar. En konfiguration som inte kan bedömas mot ett angivet syfte beskrivs utan att rapporteras som ett fel."
+          }
+        },
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "shield",
+                "title": "Bedömning - hur är noden?",
+                "body": "Kör kontrollerna av den valda profilen, komponerar inventeringen och klassificerar vad som behöver uppmärksamhet, med bevis på varje resultat."
+              },
+              {
+                "icon": "refresh",
+                "title": "Förändringar – vad gjorde ProxMenux?",
+                "body": "Listar filer, paket, tjänster och kommandon som ändrats av instrumenterade ProxMenux-skript, med tidigare tillstånd när det har registrerats."
+              },
+              {
+                "icon": "fileText",
+                "title": "Policy – vad förväntas?",
+                "body": "Anger vilka gäster som behöver säkerhetskopieras eller startas med värden, vilken lagring som är nödvändig och kontrollernas tröskelvärden."
+              }
+            ]
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Bedömning",
+                "detail": "Fakta"
+              },
+              {
+                "label": "Policy",
+                "detail": "kontext"
+              },
+              {
+                "label": "Ändringar",
+                "detail": "interventioner"
+              }
+            ],
+            "caption": "Bedömningen ger fakta, policyn ger dem sammanhang och loggen registrerar ProxMenux åtgärder."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/assessment-view.png",
+            "alt": "Granskning och rapporter i ProxMenux Monitor med vyerna Bedömning, Ändringar och Policy",
+            "caption": "Audit & Report, med bedömningsvyn öppen."
+          }
+        }
+      ]
+    },
+    {
+      "id": "boundaries",
+      "title": "Tre olika funktioner",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Funktion",
+              "Vad det gör"
+            ],
+            "rows": [
+              [
+                "<healthLink>Hälsoövervakning</healthLink>",
+                "Bevakar mätvärden och händelser kontinuerligt och kan utlösa aviseringar."
+              ],
+              [
+                "Granskning och rapporter",
+                "Kör en bedömning på begäran, dokumenterar noden och jämför körningar med varandra."
+              ],
+              [
+                "Ändringslogg",
+                "Registrerar åtgärder som ProxMenux utför genom sina grundläggande granskningsfunktioner."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "pages",
+      "title": "Sidor i detta avsnitt",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Bedömning och inventering",
+                "href": "/docs/monitor/audit-report/assessment",
+                "tail": "profiler, resultat, accepterade risker och inventering."
+              },
+              {
+                "label": "Ändringar",
+                "href": "/docs/monitor/audit-report/changes",
+                "tail": "loggen över vad ProxMenux ändrat på värden."
+              },
+              {
+                "label": "Policy",
+                "href": "/docs/monitor/audit-report/policy",
+                "tail": "gäster, lagring och tröskelvärden."
+              },
+              {
+                "label": "Rapporter och jämförelser",
+                "href": "/docs/monitor/audit-report/reports",
+                "tail": "de sex dokumenten och referenskörningen."
+              },
+              {
+                "label": "Omfattning och garantier",
+                "href": "/docs/monitor/audit-report/scope",
+                "tail": "källor, gränser och lagrade data."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

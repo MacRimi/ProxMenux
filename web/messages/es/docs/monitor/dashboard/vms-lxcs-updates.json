@@ -56,7 +56,7 @@
         "notes": "Descarga la imagen seleccionada y recrea su grupo de servicios Compose o su contenedor independiente protegido."
       }
     ],
-    "callout": "El comando personalizado <strong>reemplaza</strong> a Helper-Scripts para esa aplicación. Las ejecuciones manuales, en bloque y programadas respetan la elección guardada. Se conservan los comandos existentes y las selecciones antiguas guardadas en planes o programaciones activadas; una programación antigua nunca activa el actualizador de una app recién registrada."
+    "callout": "Un comando personalizado <strong>reemplaza</strong> Helper-Scripts para esa app. Las ejecuciones manuales, en bloque y programadas respetan la elección. Se conservan los comandos existentes y las selecciones antiguas guardadas expresamente en planes o programaciones activadas; una programación antigua nunca incorpora una app recién registrada."
   },
   "docker": {
     "heading": "Docker Engine e imágenes Docker",
@@ -84,13 +84,13 @@
     "statusColMeaning": "Significado",
     "statusRows": [
       {
-        "state": "Actualización verificada",
+        "state": "Actualización verificada disponible",
         "appearance": "Texto morado, icono de flecha ascendente y acción morada",
         "meaning": "La versión instalada y la disponible, o los digests de imagen, son diferentes."
       },
       {
         "state": "Actualizado y verificado",
-        "appearance": "Comprobación verde y acción Actualizado en verde",
+        "appearance": "Marca de verificación verde y acción Actualizado en verde",
         "meaning": "La última comprobación terminada confirma que el objetivo está actualizado."
       },
       {
@@ -110,8 +110,8 @@
       "No incluyas <code>pct exec</code>; ProxMenux ya entra en el contenedor y ejecuta el comando como root."
     ],
     "exampleLead": "Ejemplo de procedimiento completo dentro del contenedor:",
-    "example": "cd /opt/mi-app && ./update.sh",
-    "callout": "Un comando de versión como <code>miapp --version</code> solo lee una versión; no instala nada. Los comandos se ejecutan con privilegios administrativos y deben revisarse con el mismo cuidado que un comando de shell como root."
+    "example": "cd /opt/my-app && ./update.sh",
+    "callout": "Un comando de versión como <code>myapp --version</code> solo lee una versión; no instala nada. Los comandos se ejecutan con privilegios administrativos y deben revisarse con el mismo cuidado que un comando de shell como root."
   },
   "bulk": {
     "heading": "Actualización en bloque",
@@ -120,7 +120,7 @@
       "Los paquetes del SO son obligatorios. Debe seleccionarse al menos una app, Docker Engine o unidad de imagen Docker adicional.",
       "Las aplicaciones y unidades Docker se seleccionan individualmente. Un servicio principal de Compose muestra las dependencias que se actualizarán con él.",
       "Los objetivos eliminados o no disponibles se marcan como obsoletos y deben retirarse antes de guardar la configuración.",
-      "El botón <strong>Aplicar actualizaciones</strong> es morado si algún objetivo seleccionado tiene una actualización verificada, verde si todos están verificados como actualizados y neutro cuando el resultado es desconocido.",
+      "<strong>Aplicar actualizaciones</strong> es morado si algún objetivo tiene una actualización verificada, verde si todos están verificados como actualizados y neutro si el resultado es desconocido.",
       "Eliminar la configuración en bloque no borra los métodos individuales ni la programación."
     ],
     "callout": "La actualización en bloque no reemplaza los botones individuales. Es un acceso opcional para una selección que debe ejecutarse junta."
@@ -140,9 +140,9 @@
     "items": [
       "Selecciona una frecuencia o expresión cron y después objetivos exactos: paquetes del SO, apps individuales, Docker Engine, unidades Docker independientes o grupos de servicios Compose.",
       "La espera tras una versión solo se aplica a las apps seleccionadas con seguimiento. Las apps sin seguimiento ejecutan su actualizador cuando vence la programación.",
-      "El estado de la última ejecución diferencia entre éxito, finalización parcial, error, retención de seguridad y ausencia de elementos pendientes. Después de la primera ejecución programada, <strong>Actualizaciones → Actualizaciones programadas → Ver log</strong> abre la salida completa capturada del actualizador y de los scripts secundarios que haya ejecutado.",
+      "El estado de la última ejecución distingue éxito, finalización parcial, fallo, retención de seguridad y ausencia de actualizaciones pendientes. Tras la primera ejecución programada, <strong>Actualizaciones → Actualizaciones programadas → Ver registro</strong> abre toda la salida del actualizador y de los scripts secundarios invocados.",
       "Después de cada ejecución, ProxMenux comprueba el marcador estándar de Debian que indica si es necesario reiniciar. Cuando hace falta, la pestaña Actualizaciones y la notificación de finalización lo indican; el aviso se elimina cuando ese LXC se inicia o reinicia.",
-      "En el host Proxmox, los logs de las ejecuciones programadas se guardan en <code>/usr/local/share/proxmenux/logs/lxc-updates/</code> con el nombre <code>&lt;VMID&gt;-scheduled-&lt;id-de-ejecución&gt;.log</code>. Se conservan los diez últimos logs de cada LXC y los archivos más antiguos se eliminan automáticamente.",
+      "En el host Proxmox, los logs de las ejecuciones programadas se guardan en <code>/usr/local/share/proxmenux/logs/lxc-updates/</code> con el nombre <code>&lt;VMID&gt;-scheduled-&lt;run-id&gt;.log</code>. Se conservan los diez últimos logs de cada LXC y los archivos más antiguos se eliminan automáticamente.",
       "Este historial corresponde a las actualizaciones programadas. Una actualización manual muestra su salida en tiempo real en la ventana de ejecución del Monitor y no crea un log de ejecución programada en ese directorio.",
       "Las programaciones externas detectadas de Proxmox VE Helper-Scripts se muestran aparte para hacer visible cualquier automatización coincidente."
     ],
@@ -186,7 +186,7 @@
       },
       {
         "problem": "Una actualización programada indica que es necesario reiniciar",
-        "resolution": "Abre <strong>Ver log</strong> para revisar la ejecución completada y reinicia ese LXC. ProxMenux elimina el aviso mediante el evento de ciclo de vida existente cuando el contenedor vuelve a arrancar."
+        "resolution": "Abre Ver registro para revisar la ejecución completada y después reinicia ese LXC. ProxMenux borra el aviso cuando el evento de ciclo de vida detecta el nuevo arranque."
       }
     ]
   },

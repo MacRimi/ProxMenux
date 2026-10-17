@@ -580,7 +580,7 @@ template:
   - binary_sensor:
       - name: "ProxMenux Healthy"
         default_entity_id: binary_sensor.proxmenux_is_healthy
-        device_class: problem
+        device_class: connectivity
         delay_off: 30
         state: "{{ states('sensor.proxmenux_health') == 'OK' }}"
       - name: "ProxMenux Critical"
@@ -1087,12 +1087,12 @@ scrape_configs:
       </ol>
 
       <CopyableCode
-        code={`# Verify the response shape — no token required
-curl http://pve01.lan:8008/api/system-info | jq
+        code={`# Verify the public system-info response shape
+curl -fsS http://pve01.lan:8008/api/system-info | jq
 # → { "hostname": "...", "uptime": "...", "health": { "status": "healthy", ... }, ... }
 
 # A failing scriptable check (non-zero when the Monitor isn't reporting healthy)
-curl -s http://pve01.lan:8008/api/system-info | jq -e '.health.status == "healthy"'`}
+curl -fsS http://pve01.lan:8008/api/system-info | jq -e '.health.status == "healthy"'`}
         className="my-4"
       />
 
@@ -1121,7 +1121,7 @@ curl -X POST http://proxmox.example.tld:8008/api/notifications/send \\
     "event_type":"system_problem",
     "severity":"WARNING",
     "title":"Nightly rsync took 4h27m",
-    "body":"The nightly-rsync job exceeded the 2h alert threshold. Check the source storage.",
+    "message":"The nightly-rsync job exceeded the 2h alert threshold. Check the source storage.",
     "data":{
       "service_name":"nightly-rsync",
       "hostname":"backup-host"

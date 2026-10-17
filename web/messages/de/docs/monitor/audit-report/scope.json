@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Umfang und Garantien | Prüfung und Bericht",
+    "description": "Herkunft der Daten von Prüfung und Bericht, Grenzen des Prüfbereichs, Entwurfsgarantien und Speicherorte."
+  },
+  "header": {
+    "title": "Umfang und Garantien",
+    "description": "Woher Bewertungsdaten stammen, was außerhalb des Prüfbereichs liegt und wo Prüfung und Bericht seine Daten speichert.",
+    "section": "Prüfung und Bericht"
+  },
+  "sections": [
+    {
+      "id": "sees",
+      "title": "Was er beobachtet",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Konfiguration und Zustand des lokalen Knotens.",
+              "Die deklarierte Konfiguration der VMs und LXCs.",
+              "Der Speicherzustand, wie ihn Proxmox VE erfasst.",
+              "Die verfügbare Historie von Backups und Verifizierungen.",
+              "SMART-Daten und die Ereignisse, die der Monitor gesammelt hat.",
+              "Der Zustand von Diensten, Cluster, HA und lokalen Quellen."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "outside",
+      "title": "Was außerhalb seiner Sicht ist",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Das Innere der Gäste, über das hinaus, was sie Proxmox VE erklären.",
+              "Netzwerkausrüstung außerhalb des Hosts.",
+              "Fernabhängigkeiten, die der Knoten nicht beobachten kann.",
+              "Physischer Zustand, den die Hardware nicht bereitstellt.",
+              "Das Änderungsprotokoll erfasst keine manuellen Aktionen oder Aktionen anderer Software."
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Fehlende Beweise sind keine Beweise für Abwesenheit",
+            "body": "Eine Quelle, die nicht gelesen werden kann, liefert ein nicht verifiziertes oder unvollständiges Ergebnis, niemals ein konformes. Der Bericht listet die Quellen auf, die nicht verfügbar waren."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guarantees",
+      "title": "Garantien für das Design",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Stabile Kennzeichen für die Kontrollen.",
+              "Verlauf der Durchläufe und Befunde.",
+              "Eine validierte, atomar gespeicherte Richtlinie.",
+              "Akzeptierte Risiken mit einem Grund, sichtbar.",
+              "Zuweisung von Änderungen an Skript und Funktion.",
+              "Erfassung des Zustands vor und nach der Änderung, soweit verfügbar.",
+              "Ein explizites Ergebnis, wenn etwas nicht gemessen oder erfasst werden kann."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Wo die Daten gespeichert werden",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Daten",
+              "Ort"
+            ],
+            "rows": [
+              [
+                "Richtlinie",
+                "<code>/usr/local/share/proxmenux/audit_policy.json</code>"
+              ],
+              [
+                "Bewertungen",
+                "Die Prüfdatenbank des Monitors"
+              ],
+              [
+                "Erfasste Objekte",
+                "<code>/usr/local/share/proxmenux/changes/objects/</code>"
+              ],
+              [
+                "Ausstehende Einträge",
+                "<code>/usr/local/share/proxmenux/changes/spool/</code>"
+              ],
+              [
+                "Zusammengeführtes Änderungsprotokoll",
+                "<code>/usr/local/share/proxmenux/changes.db</code>"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Ein Tool zur Überprüfung, keine Zertifizierung",
+            "body": "Prüfung und Bericht prüft, vergleicht und dokumentiert den Knoten. Die Ergebnisse werden im Kontext des Systemzwecks, der festgelegten Richtlinie und der verfügbaren Quellen bewertet."
+          }
+        }
+      ]
+    }
+  ]
+}

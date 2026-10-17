@@ -1,0 +1,247 @@
+{
+  "meta": {
+    "title": "Rapporti e confronti | Audit e report",
+    "description": "I sei documenti di Audit e report, la stampa o il salvataggio in PDF e il confronto delle esecuzioni con un'esecuzione di riferimento."
+  },
+  "header": {
+    "title": "Rapporti e confronti",
+    "description": "Sei documenti per domande diverse e il confronto di ogni esecuzione con un'esecuzione di riferimento.",
+    "section": "Audit e report"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Sei documenti, non sei stili",
+            "body": "Il motore seleziona i controlli e le sezioni prima di comporre il documento. Una diagnosi rapida non è un controllo completo con meno pagine, e un inventario non presenta risultati di valutazione. I documenti del campione qui sotto usano i dati fittizi."
+          }
+        }
+      ]
+    },
+    {
+      "id": "documents",
+      "title": "I sei documenti",
+      "blocks": [
+        {
+          "downloads": {
+            "items": [
+              {
+                "title": "Audit completo",
+                "body": "Documenta tutto il nodo come registro tecnico.",
+                "href": "/monitor/audit/sample-audit-full-report.pdf",
+                "facts": [
+                  {
+                    "label": "Controlli",
+                    "value": "Tutti i controlli disponibili."
+                  },
+                  {
+                    "label": "Contenuto",
+                    "value": "Sintesi; identità e cluster; hardware; rete e latenza; archiviazione; guest; passthrough; applicazioni; risultati con evidenze; fonti e ambito."
+                  }
+                ]
+              },
+              {
+                "title": "Diagnosi rapida",
+                "body": "Mostra ciò che ha bisogno di attenzione senza l'inventario completo.",
+                "href": "/monitor/audit/sample-audit-diagnostic-report.pdf",
+                "facts": [
+                  {
+                    "label": "Controlli",
+                    "value": "Gli stessi controlli dell'audit completo."
+                  },
+                  {
+                    "label": "Contenuto",
+                    "value": "Identità minima; risultati critici; avvisi; osservazioni pertinenti; letture non verificate e azioni prioritarie. Diagrammi, inventario e allegati lunghi sono esclusi."
+                  }
+                ]
+              },
+              {
+                "title": "Inventario",
+                "body": "Descrive ciò che esiste sul nodo senza valutarlo.",
+                "href": "/monitor/audit/sample-audit-inventory-report.pdf",
+                "facts": [
+                  {
+                    "label": "Controlli",
+                    "value": "Nessuno; nessun risultato è classificato."
+                  },
+                  {
+                    "label": "Contenuto",
+                    "value": "Identità; cluster; CPU e memoria; scheda, BIOS e controller; rete; storage; VM e LXC; passthrough; applicazioni ed elementi gestiti da ProxMenux."
+                  }
+                ]
+              },
+              {
+                "title": "Verifica sicurezza",
+                "body": "Copre l'esposizione e i controlli sull'accesso al nodo.",
+                "href": "/monitor/audit/sample-audit-security-report.pdf",
+                "facts": [
+                  {
+                    "label": "Controlli",
+                    "value": "L'area di sicurezza, oltre ai privilegi dei container, agli aggiornamenti, ai repository e alla catena APT."
+                  },
+                  {
+                    "label": "Contenuto",
+                    "value": "Identità e cluster; rete e latenza; accesso; firewall; 2FA; certificati; privilegi; aggiornamenti; repository; stato ed età del rapporto Lynis."
+                  }
+                ]
+              },
+              {
+                "title": "Affidabilità backup",
+                "body": "Controlla che la protezione dichiarata esista e che i suoi backup siano utilizzabili.",
+                "href": "/monitor/audit/sample-audit-backup-report.pdf",
+                "facts": [
+                  {
+                    "label": "Controlli",
+                    "value": "L'area di backup, oltre alla connettività di archiviazione e alla consegna delle notifiche."
+                  },
+                  {
+                    "label": "Contenuto",
+                    "value": "Copertura per ospite; obiettivo dichiarato di recupero; età e risultato; destinazione; conservazione; verifica; lavori falliti; recupero e fonti incomplete."
+                  }
+                ]
+              },
+              {
+                "title": "Capacità e usura",
+                "body": "Misura il margine di crescita e i segni di esaurimento o invecchiamento.",
+                "href": "/monitor/audit/sample-audit-capacity-report.pdf",
+                "facts": [
+                  {
+                    "label": "Controlli",
+                    "value": "Le aree di archiviazione e hardware, oltre a memoria, swap, journal e il filesystem host."
+                  },
+                  {
+                    "label": "Contenuto",
+                    "value": "Utilizzo e soglie; thin pool; overprovisioning; memoria; inode; ZFS; temperature; ore di funzionamento; errori SMART e vita utile NVMe/SSD."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/audit-report-preview.png",
+            "alt": "Prima pagina di un rapporto completo di audit",
+            "caption": "Ogni documento condivide l'identificatore del rapporto, le sezioni numerate, la data, il nodo, il profilo e il piè di pagina."
+          }
+        },
+        {
+          "p": "In base al profilo, il documento include identità del nodo e data della valutazione, sintesi, riepilogo per area, struttura di hardware, rete e archiviazione, protezione dei guest, risultati con evidenze, fonti illeggibili e ambito e politica applicati."
+        }
+      ]
+    },
+    {
+      "id": "print",
+      "title": "Stampa o salvataggio come PDF",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Esegui",
+                "body": "La valutazione usa il profilo selezionato in <strong>Rapporto</strong>."
+              },
+              {
+                "title": "Verifica",
+                "body": "L'esecuzione completata mostra risultati, fonti non leggibili e politica applicata."
+              },
+              {
+                "title": "Genera report",
+                "body": "<strong>Genera rapporto</strong> apre la vista preparata come documento."
+              },
+              {
+                "title": "Stampa",
+                "body": "<strong>Stampa o salva come PDF</strong> apre la finestra di stampa del browser per scegliere una stampante o <em>Salva come PDF</em>."
+              }
+            ]
+          }
+        },
+        {
+          "calloutTip": {
+            "title": "La stampa è un documento, non uno screenshot",
+            "body": "La barra delle azioni è nascosta, le tabelle che continuano sulla pagina successiva ripetono l'intestazione, i blocchi evitano interruzioni inutili e ogni pagina conserva identificazione e numerazione."
+          }
+        }
+      ]
+    },
+    {
+      "id": "compare",
+      "title": "Confronto con un'esecuzione di riferimento",
+      "intro": "<strong>Usa come riferimento</strong> contrassegna un'esecuzione completata. Le successive vengono confrontate con essa e i risultati vengono raggruppati in:",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Gruppo",
+              "Significato"
+            ],
+            "rows": [
+              [
+                "Nuovo",
+                "Segnalato ora e non prima."
+              ],
+              [
+                "Peggiorati",
+                "Ancora segnalati, ma più gravi o con effetti più estesi di prima."
+              ],
+              [
+                "Migliorati",
+                "Ancora segnalati, ma meno gravi o con effetti meno estesi di prima."
+              ],
+              [
+                "Risolto",
+                "Non sono più segnalati e nessuno li ha accettati."
+              ],
+              [
+                "Accettati",
+                "Non più contato perché è stato accettato un rischio, non perché l'host è cambiato."
+              ],
+              [
+                "Non più valutati",
+                "Presenti prima ma assenti da questa esecuzione; non è stato verificato che siano scomparsi."
+              ]
+            ]
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Esecuzione di riferimento",
+              "Comportamento"
+            ],
+            "rows": [
+              [
+                "Impostarlo",
+                "Qualsiasi esecuzione terminata può essere contrassegnata; nessuna è contrassegnata automaticamente."
+              ],
+              [
+                "Cambiarlo",
+                "Contrassegnare un'altra esecuzione cambia il riferimento senza eliminare la cronologia."
+              ],
+              [
+                "Comparazione",
+                "Se non vengono selezionate due esecuzioni, il confronto usa quella di riferimento e quella selezionata o più recente."
+              ],
+              [
+                "Conservazione delle esecuzioni",
+                "Vengono conservate le 30 esecuzioni più recenti; quella di riferimento non viene mai eliminata."
+              ],
+              [
+                "Senza un riferimento",
+                "La vista indica che non è ancora stata scelta un'esecuzione di riferimento, quindi manca una base per il confronto."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Un rapporto descrive un momento",
+            "body": "Una valutazione non certifica un intero periodo. I risultati vecchi non descrivono più lo stato attuale; la vista mostra l'età dell'ultima esecuzione e ogni fonte conserva il momento della raccolta."
+          }
+        }
+      ]
+    }
+  ]
+}

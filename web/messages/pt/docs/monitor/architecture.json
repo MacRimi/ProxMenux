@@ -1,0 +1,303 @@
+{
+  "meta": {
+    "title": "Arquitetura do ProxMenux Monitor — AppImage, Flask, SQLite, WebSocket | ProxMenux",
+    "description": "Construção do ProxMenux Monitor: estrutura AppImage, blueprints Flask, tarefas de fundo, dados de psutil, pvesh, smartctl e journalctl, armazenamento SQLite, terminal WebSocket, fornecedores IA, canais de notificação, proxy inverso e Fail2Ban opcional.",
+    "ogTitle": "Arquitetura ProxMenux Monitor",
+    "ogDescription": "Dentro do ProxMenux Monitor: AppImage, blueprints Flask, tarefas de fundo, SQLite, WebSocket, fornecedores IA e canais de notificação.",
+    "twitterTitle": "Arquitetura ProxMenux Monitor",
+    "twitterDescription": "AppImage, Flask, SQLite, WebSocket, fornecedores de IA e canais de notificação — dentro do Monitor."
+  },
+  "header": {
+    "title": "Arquitetura",
+    "description": "Como se distribui o ProxMenux Monitor, o que contém o AppImage e como os pedidos do navegador passam pelo Flask até às ferramentas do anfitrião e ao armazenamento SQLite.",
+    "section": "ProxMenux Monitor"
+  },
+  "intro": {
+    "title": "Um processo, muitas responsabilidades",
+    "body": "Um processo Python escuta em TCP 8008. Serve a versão estática Next.js, disponibiliza a API REST, gere o terminal WebSocket, executa Health Monitor e envia notificações. Não exige servidor web separado, intermediário de mensagens ou base de dados externa."
+  },
+  "requestFlow": {
+    "heading": "Percurso de um pedido",
+    "intro": "Um pedido de dados típico segue este percurso; as preferências do navegador podem ser tratadas localmente:",
+    "diagramCaption": "As rotas protegidas validam JWT com autenticação ativa. Rotas principais e blueprints devolvem dados em cache ou acabados de recolher. A verificação Fail2Ban opcional consulta a lista de bloqueios em cache. Cabeçalhos IP reencaminhados só são aceites com PROXMENUX_TRUST_PROXY=1; caso contrário, usa-se o endereço da ligação. O estado persistente inclui SQLite e ficheiros JSON como auth.json.",
+    "diagramArrowLabel": "HTTP / WS",
+    "nodes": {
+      "clientLabel": "Cliente",
+      "clientDetail": "Navegador ou PWA\n+ proxy opcional\nNginx / Caddy /\nTraefik",
+      "flaskLabel": "Flask :8008",
+      "flaskDetail": "Blueprints\nMiddleware JWT\nVerificação Fail2Ban\n(se instalado)",
+      "hostLabel": "Ferramentas do anfitrião",
+      "hostDetail": "psutil\npvesh\nsmartctl\njournalctl",
+      "stateLabel": "Estado local",
+      "stateDetail": "SQLite DB\n+ auth.json"
+    },
+    "threadsIntro": "O processo executa também <strong>threads em segundo plano</strong>. Estes exemplos recolhem dados, atualizam caches e SQLite e enviam notificações. Existem outras tarefas; o envio depende de estar ativado:",
+    "headerThread": "Thread",
+    "headerCadence": "Cadência",
+    "headerJob": "Tarefa agendada",
+    "rows": [
+      {
+        "thread": "_temperature_collector_loop",
+        "cadence": "60 s",
+        "job": "Guarda temperatura CPU e amostras de latência na base histórica, mantendo dados para os gráficos sem navegador ligado."
+      },
+      {
+        "thread": "_health_collector_loop",
+        "cadence": "5 min",
+        "job": "Executa o ciclo Health Monitor de dez categorias, guarda erros e observações de discos, mantém as dispensas e passa novos eventos ao motor de notificações."
+      },
+      {
+        "thread": "_vital_signs_sampler",
+        "cadence": "CPU 5 s; temperatura 15 s; memória 30 s",
+        "job": "Recolhe CPU, memória e temperatura CPU para indicadores e deteção de condições prolongadas, independentemente da análise geral de cinco minutos."
+      },
+      {
+        "thread": "notification_manager.start()",
+        "cadence": "orientado por eventos",
+        "job": "Inicia os observadores de journal, tarefas e hooks (<code>JournalWatcher</code>, <code>TaskWatcher</code>, <code>ProxmoxHookWatcher</code>) e envia para os canais configurados, com reformulação IA opcional."
+      }
+    ]
+  },
+  "systemd": {
+    "heading": "Unidade systemd",
+    "intro": "O instalador cria a unidade <code>/etc/systemd/system/proxmenux-monitor.service</code>. Configuração predefinida:",
+    "items": [
+      "<strong><code>User=root</code></strong>: o serviço usa privilégios root para SMART, <code>pvesh</code> e gestão ZFS. Os processos do terminal web herdam estas permissões.",
+      "<strong><code>Restart=on-failure</code></strong> com espera de dez segundos: o serviço reinicia automaticamente após uma saída com erro.",
+      "<strong><code>After=network.target</code></strong>: ordena o arranque após esse alvo; não garante IP atribuído, DNS ou ligação externa."
+    ],
+    "inspectTitle": "Consultar a unidade atual"
+  },
+  "appimage": {
+    "heading": "Qual a composição de AppImage",
+    "intro": "O AppImage contém um sistema de ficheiros montado ao executar. <code>AppRun</code> na raiz prepara o ambiente e inicia <code>flask_server.py</code>:",
+    "consequencesIntro": "Duas consequências deste layout:",
+    "consequences": [
+      "<strong>Ambiente Python incluído.</strong> O interpretador e os pacotes estão no AppImage, sem instalação no Python do sistema. A aplicação continua a usar interfaces do kernel e ferramentas externas do anfitrião.",
+      "<strong>Clientes de hardware incluídos.</strong> Contém <code>ipmitool</code>, <code>lm-sensors</code> e <code>upsc</code>. As leituras dependem do hardware compatível, acesso aos sensores e, para a UPS, de um servidor NUT configurado."
+    ]
+  },
+  "flask": {
+    "heading": "Estrutura da aplicação Flask",
+    "intro": "<code>flask_server.py</code> cria uma instância <code>Flask(__name__)</code> com CORS limitado, regista diretamente nove blueprints e inicia o terminal. A tabela destaca módulos principais; regista também auditoria, cópias VM e PBS. As pré-cargas PVE só funcionam em anfitriões PVE.",
+    "headerBlueprint": "Blueprint / módulo",
+    "headerPrefix": "Prefixo das rotas",
+    "headerOwns": "Responsabilidade",
+    "rows": [
+      {
+        "blueprint": "flask_server.py",
+        "prefix": [
+          "/api/system",
+          "/api/storage",
+          "/api/network",
+          "/api/vms",
+          "/api/hardware",
+          "/api/logs",
+          "/api/prometheus"
+        ],
+        "owns": "Endpoints principais, web estática e verificação Fail2Ban opcional quando o jail <code>proxmenux</code> existe no anfitrião."
+      },
+      {
+        "blueprint": "flask_auth_routes.py",
+        "prefix": [
+          "/api/auth/*"
+        ],
+        "owns": "Início de sessão, emissão JWT, configuração e verificação TOTP, alteração de palavra-passe e tokens API."
+      },
+      {
+        "blueprint": "flask_health_routes.py",
+        "prefix": [
+          "/api/health/*"
+        ],
+        "owns": "Verificações de estado, detalhes, erros ativos e dispensados e definições de silenciamento. As rotas protegidas exigem autenticação quando ativa."
+      },
+      {
+        "blueprint": "flask_terminal_routes.py",
+        "prefix": [
+          "/api/terminal/* + WS"
+        ],
+        "owns": "Atribui um PTY por sessão e liga-o por WebSocket ao <code>xterm.js</code> do navegador."
+      },
+      {
+        "blueprint": "flask_notification_routes.py",
+        "prefix": [
+          "/api/notifications/*"
+        ],
+        "owns": "Criar, consultar, editar e remover canais; testes, IA, histórico e envios manuais."
+      },
+      {
+        "blueprint": "flask_security_routes.py",
+        "prefix": [
+          "/api/security/*"
+        ],
+        "owns": "Falhas de acesso e, com Fail2Ban instalado, estado do jail, bloqueios e desbloqueio manual."
+      },
+      {
+        "blueprint": "flask_proxmenux_routes.py",
+        "prefix": [
+          "/api/proxmenux/*"
+        ],
+        "owns": "Lê as otimizações ProxMenux registadas no anfitrião."
+      },
+      {
+        "blueprint": "flask_oci_routes.py",
+        "prefix": [
+          "/api/oci/*"
+        ],
+        "owns": "Funções de implementação de aplicações OCI e contentores no Proxmox VE 9.1+."
+      }
+    ],
+    "endpointsLink": "Os endpoints de integração e os formatos são descritos em <link>Referência da API</link>."
+  },
+  "dataSources": {
+    "heading": "Fontes de dados",
+    "intro": "Os dados do anfitrião vêm sobretudo de bibliotecas padrão, ficheiros e comandos de administração. Alguns dados dos sistemas convidados dependem também do QEMU Guest Agent ou de comandos no CT:",
+    "headerSource": "Origem",
+    "headerUsedFor": "Usado para",
+    "rows": [
+      {
+        "source": "psutil",
+        "usedFor": "Carga CPU, memória, swap, ocupação das montagens, contadores de rede e processos."
+      },
+      {
+        "source": "pvesh / qm / pct",
+        "usedFor": "Informações do nó Proxmox, inventário e configuração VM/CT, armazenamento e histórico de tarefas."
+      },
+      {
+        "source": "smartctl",
+        "usedFor": "Atributos SATA/NVMe, estado SMART, desgaste, vida útil, modelo e número de série."
+      },
+      {
+        "source": "zpool / zfs",
+        "usedFor": "Estado do pool (ONLINE / DEGRADED / FAULTED / UNAVAIL), progresso do scrub e utilização dos datasets."
+      },
+      {
+        "source": "journalctl",
+        "usedFor": "Registos do sistema, processos terminados por OOM, erros ATA/NVMe/dm, segurança e unidades de serviço próprias."
+      },
+      {
+        "source": "ip / iproute2",
+        "usedFor": "Interfaces, endereços, bridges, bonds e dispositivos geridos por OVS."
+      },
+      {
+        "source": "nvidia-smi · intel_gpu_top",
+        "usedFor": "Dados GPU disponíveis de utilização, VRAM, temperatura e codificação/descodificação. Os campos dependem do fabricante, ferramenta e controlador."
+      },
+      {
+        "source": "lspci · lscpu · dmidecode",
+        "usedFor": "Topologia PCIe, modelo e topologia CPU, placa principal e BIOS."
+      },
+      {
+        "source": "ipmitool · sensors",
+        "usedFor": "Sensores fora de banda, ventoinhas e temperaturas da placa, quando o hardware permite."
+      },
+      {
+        "source": "upsc (NUT)",
+        "usedFor": "Estado da bateria, carga e autonomia UPS com um servidor NUT configurado."
+      }
+    ],
+    "cacheTitle": "Cache para reduzir consultas ao anfitrião",
+    "cacheBody": "Os resultados dispendiosos de <code>smartctl -a</code> e <code>pvesh get</code> ficam temporariamente no processo Flask para reduzir consultas aos discos e à API do cluster. A duração depende da fonte: segundos para métricas e minutos para SMART."
+  },
+  "persistence": {
+    "heading": "Persistência",
+    "intro": "Vários ficheiros de estado têm conteúdos e requisitos de acesso diferentes:",
+    "headerPath": "Path",
+    "headerOwner": "Proprietário",
+    "headerContents": "Conteúdo",
+    "rows": [
+      {
+        "path": "/usr/local/share/proxmenux/health_monitor.db",
+        "owner": "root:root",
+        "contents": "Base SQLite. Tabelas: <code>errors</code>, <code>events</code>, <code>disk_registry</code>, <code>disk_observations</code>, <code>user_settings</code>, <code>notification_history</code>, <code>excluded_storages</code>, <code>excluded_interfaces</code>. Registo em modo WAL."
+      },
+      {
+        "path": "/usr/local/share/proxmenux/.notification_key",
+        "owner": "root <code>0600</code>",
+        "contents": "Chave principal de 32 bytes para segredos de notificação ENC2. Usa salt aleatório por valor, chaves derivadas e MAC. Os valores XOR antigos são suportados para migração."
+      },
+      {
+        "path": "/root/.config/proxmenux-monitor/auth.json",
+        "owner": "root:root",
+        "contents": "Configuração de acesso: ativação, utilizador, hash PBKDF2-HMAC-SHA256 da palavra-passe com salt, segredo TOTP, códigos de recuperação, chave JWT da instalação, metadados dos tokens API e hashes de revogação. Hashes SHA-256 antigos migram após um início de sessão bem-sucedido."
+      },
+      {
+        "path": "/var/log/proxmenux-auth.log",
+        "owner": "root:root",
+        "contents": "Registo de autenticação em texto simples, independente do Fail2Ban. Se o jail <code>[proxmenux]</code> estiver instalado e ativo, lê o ficheiro para detetar falhas repetidas. Sem esse jail, o registo continua disponível para consulta."
+      }
+    ],
+    "backupTitle": "Guardar auth.json antes de reinstalar",
+    "backupBody": "Substituir o AppImage normalmente preserva <code>/root/.config/proxmenux-monitor/auth.json</code> e <code>/usr/local/share/proxmenux/health_monitor.db</code>. Guarde <code>auth.json</code> com jwt_secret para manter validade e metadados dos tokens. A base guarda separadamente estado e notificações. Guarde <code>.notification_key</code> com ela para restaurar segredos dos canais; a base isolada não restaura a autenticação API."
+  },
+  "health": {
+    "heading": "Ciclo Health Monitor",
+    "intro": "Aproximadamente a cada cinco minutos, o processo de fundo chama <code>health_monitor.py</code> para verificar as dez categorias do painel:",
+    "items": [
+      "Serviços PVE críticos (<code>pveproxy</code>, <code>pvedaemon</code>, <code>pvestatd</code>, <code>pve-cluster</code>).",
+      "Armazenamentos Proxmox: <code>pvesh get /storage</code> e disponibilidade de cada um.",
+      "Discos e sistemas de ficheiros: SMART, erros de E/S no dmesg, estado ZFS e capacidade das montagens.",
+      "VM e CT: falhas de arranque, paragens inesperadas, erros QMP e falhas de encerramento.",
+      "Rede: estado de bridges e bonds, ligações e latência até ao gateway.",
+      "Atualizações: pacotes pendentes e correções de segurança.",
+      "Registos: padrões persistentes, picos e cascatas no journal do sistema.",
+      "Memória: intervenções do OOM killer e pressão RAM prolongada.",
+      "Temperatura: leituras CPU e discos face aos limites de monitorização; os sensores disponíveis dependem do hardware.",
+      "Segurança: falhas de acesso, bloqueios e estado do jail Fail2Ban."
+    ],
+    "afterIntro": "Os resultados usam <code>error_key</code>, categoria e gravidade estáveis. As linhas de <code>errors</code> recebem <code>last_seen</code> e contagens, sem duplicação. O envio de notificações tem também impressões e intervalos próprios.",
+    "cycleEnd": "A limpeza pode resolver erros antigos com a <em>duração de silenciamento</em> por categoria e regras de estado, retirar registos órfãos de recursos removidos e apagar <code>events</code> com mais de 30 dias. As categorias estão em <link>Painel → Health Monitor</link>."
+  },
+  "notifications": {
+    "heading": "Motor de notificação",
+    "intro": "<code>notification_manager.py</code> coordena o envio: carrega canais, gere a fila e disponibiliza uma API Python para Flask e Health Monitor e uma entrada CLI para os hooks <code>.sh</code> do ProxMenux.",
+    "items": [
+      "Os <strong>observadores</strong> geram eventos: <code>JournalWatcher</code> acompanha o journal, <code>TaskWatcher</code> consulta tarefas Proxmox, <code>ProxmoxHookWatcher</code> recebe hooks de cópias, replicação e snapshots e <code>PollingCollector</code> gere fontes lentas.",
+      "Os <strong>modelos</strong> convertem eventos em título e texto. O fornecedor IA configurado (OpenAI / Anthropic / Gemini / Groq / Ollama / OpenRouter) pode reformulá-los em linguagem natural. Ambas as versões ficam em <code>notification_history</code>.",
+      "Os <strong>canais</strong> enviam por serviços como Telegram, Discord, email, Gotify, Pushover e Apprise. As implementações em <code>notification_channels.py</code> partilham <code>create_channel()</code> / <code>send()</code>.",
+      "<strong>Cifragem.</strong> As definições sensíveis (<code>telegram.bot_token</code>, <code>discord.webhook_url</code>, <code>pushover.user_key</code>, <code>pushover.api_token</code>, <code>ai_api_key_*</code>, <code>email.password</code>) são cifradas com a chave de <code>.notification_key</code> antes de guardar e apresentadas de forma mascarada."
+    ],
+    "linksFooter": "Controlos por evento, opções dos canais e IA são descritos em <notifLink>Definições → Notificações</notifLink> e <aiLink>Definições → Assistente de IA</aiLink>."
+  },
+  "websocket": {
+    "heading": "Terminal WebSocket",
+    "intro": "A aba <em>Terminal</em> liga um cliente leve <code>xterm.js</code> a um PTY do servidor por WebSocket. Existem dois modos:",
+    "items": [
+      "<strong>Modo HTTP, predefinido:</strong> o servidor Flask incluído e <code>flask-sock</code> tratam a mudança de protocolo para WebSocket.",
+      "<strong>Modo HTTPS / WSS:</strong> usa <code>gevent.pywsgi.WSGIServer</code> com <code>geventwebsocket.handler.WebSocketHandler</code> para WebSocket sobre TLS."
+    ],
+    "outro": "Os processos do terminal herdam <code>User=root</code>. Com autenticação ativa, WebSocket exige um ticket breve de uso único obtido pelo endpoint autenticado com permissões administrativas. Se a autenticação estiver desativada ou recusada, a ligação segue esse modo sem autenticação.",
+    "proxyNote": "Num proxy inverso, permita WebSocket e os cabeçalhos <code>Upgrade</code> e <code>Connection</code>. O terminal precisa desse encaminhamento."
+  },
+  "proxy": {
+    "heading": "Proxy inverso e Fail2Ban",
+    "intro": "A escolha do IP do cliente e o bloqueio opcional na aplicação dependem destas definições e componentes:",
+    "items": [
+      "<strong>Escolha do IP do cliente.</strong> A verificação <code>before_request</code> e o registo de acesso só aceitam <code>X-Forwarded-For</code>, depois <code>X-Real-IP</code>, com PROXMENUX_TRUST_PROXY=1. Caso contrário, usam <code>request.remote_addr</code>. Cabeçalhos reencaminhados não são aceites automaticamente.",
+      "<strong>Fail2Ban opcional na aplicação.</strong> Uma ligação proxy pode apresentar o IP do proxy como origem TCP. Com o IP fiável do cliente e o jail <code>proxmenux</code> ativo, Flask rejeita IP bloqueados com HTTP 403. A lista fica em cache por 30 segundos e renova-se ao processar pedidos após expirar, sem temporizador dedicado."
+    ],
+    "calloutTitle": "Fail2Ban não está incluído",
+    "calloutBody": "Fail2Ban <strong>não</strong> está incluído nem se instala automaticamente. Pode ser instalado em Segurança do Monitor ou <link>Segurança → Fail2Ban</link> no ProxMenux Scripts. Sem <code>fail2ban-client</code> ou o jail <code>proxmenux</code>, esta verificação não bloqueia pedidos. A autenticação segue a política configurada.",
+    "outro": "Os exemplos Nginx/Caddy/Traefik e o guia do jail estão em <accessLink>Acesso e autenticação</accessLink> e <fail2banLink>Segurança → Fail2Ban</fail2banLink>."
+  },
+  "whereNext": {
+    "heading": "Para continuar",
+    "items": [
+      {
+        "label": "Acesso e autenticação",
+        "href": "/docs/monitor/access-auth",
+        "tail": " — primeiro arranque, palavra-passe e TOTP 2FA, exemplos de proxy inverso e jail Fail2Ban."
+      },
+      {
+        "label": "Referência da API",
+        "href": "/docs/monitor/api",
+        "tail": " — endpoints de integração, gestão de tokens e convenções de autenticação."
+      },
+      {
+        "label": "Configurações → ProxMenux Monitor",
+        "href": "/docs/settings/proxmenux-monitor",
+        "tail": " — controlo do serviço e verificação do estado no menu de texto ProxMenux."
+      }
+    ]
+  }
+}

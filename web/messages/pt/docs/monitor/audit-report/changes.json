@@ -1,0 +1,208 @@
+{
+  "meta": {
+    "title": "Alterações | Auditoria e relatórios",
+    "description": "Registo de alterações de Auditoria e relatórios: o que o ProxMenux alterou no anfitrião, estado anterior, diferenças e possibilidade de anular."
+  },
+  "header": {
+    "title": "Alterações",
+    "description": "Registo das operações realizadas pelo ProxMenux no anfitrião e, quando capturado, do estado anterior e posterior de cada uma.",
+    "section": "Auditoria e relatórios"
+  },
+  "sections": [
+    {
+      "id": "purpose",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Do script executado à alteração efetuada",
+            "body": "Uma função longa pode alterar apenas duas linhas. O registo guarda cada operação concreta com o script, função e versão responsáveis, recurso afetado, diferenças e possibilidade de anular."
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Script",
+                "detail": "função + versão"
+              },
+              {
+                "label": "Capturar",
+                "detail": "conteúdo antes"
+              },
+              {
+                "label": "Operação",
+                "detail": "arquivo · pacote · serviço"
+              },
+              {
+                "label": "Registo",
+                "detail": "atribuição + diferença"
+              }
+            ],
+            "caption": "A captura é feita durante a operação e é consolidada quando o Monitor lê o registo."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/changes-view.png",
+            "alt": "Vista Alterações de Auditoria e relatórios com entradas agrupadas por opção pós-instalação e script",
+            "caption": "A visão Mudanças, com a diferença de um arquivo editado por ProxMenux."
+          }
+        }
+      ]
+    },
+    {
+      "id": "types",
+      "title": "Tipos de entrada",
+      "intro": "O filtro no topo separa as entradas por tipo.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Tipo",
+              "O que grava"
+            ],
+            "rows": [
+              [
+                "Configuração",
+                "ProxMenux escreveu, editou ou removeu um arquivo, alterou uma configuração ou alterou um serviço."
+              ],
+              [
+                "Instalações",
+                "ProxMenux adicionou um pacote ou componente, e os pacotes que realmente apareceram são gravados."
+              ],
+              [
+                "Execuções",
+                "O ProxMenux executou um comando; as alterações dependem do próprio comando."
+              ],
+              [
+                "Aplicado",
+                "Uma função foi aplicada antes de existir o registo; o estado anterior não foi capturado."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "groups",
+      "title": "Como se organiza a visão",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Secção",
+              "Conteúdo"
+            ],
+            "rows": [
+              [
+                "Otimizações pós-instalação",
+                "Agrupado pela opção pós-instalação selecionada pelo usuário."
+              ],
+              [
+                "Scripts do ProxMenux",
+                "GPU, Coral, rede, armazenamento, segurança, utilitários e os outros scripts instrumentados, incluindo o instalador ProxMenux e ProxMenux Monitor."
+              ],
+              [
+                "Pacotes e utilitários instalados",
+                "Software instalado pelo ProxMenux no anfitrião."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Dentro de cada seção, <strong>Por função</strong> agrupa as entradas sob a função que as fez."
+        }
+      ]
+    },
+    {
+      "id": "entry",
+      "title": "O que cada item mostra",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "O script, função e versão responsável.",
+              "A data e o recurso afetado.",
+              "O estado conhecido antes e depois da mudança.",
+              "As linhas adicionadas e removidas.",
+              "Os pacotes que foram realmente adicionados.",
+              "A transição de estado de um serviço.",
+              "<strong>Anular esta alteração</strong>: <em>Repõe exatamente o estado anterior</em>, <em>Elimina o ficheiro (não existia antes)</em>, <em>O pacote pode ser desinstalado</em>, uma anulação parcial ou <em>Não pode ser anulado a partir do registo</em>."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "before",
+      "title": "O que significa o estado anterior",
+      "blocks": [
+        {
+          "p": "O estado anterior pode ser conteúdo capturado, um ficheiro criado pela primeira vez ou um estado desconhecido. As alterações anteriores ao registo não podem ser reconstruídas; voltar a executar a função captura primeiro o estado encontrado nesse momento."
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Âmbito do registo",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "As alterações manuais e feitas por outros softwares não são gravadas.",
+              "Apenas as operações que passam pelos primitivos de auditoria ProxMenux estão cobertas.",
+              "A gravação nunca bloqueia a operação que descreve: se a entrada não puder ser escrita, a operação continua.",
+              "Mudanças sucessivas em um recurso são mostradas como a origem conhecida contra o estado atual."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "retention",
+      "title": "Provas armazenadas",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Elemento",
+              "Comportamento"
+            ],
+            "rows": [
+              [
+                "Entradas",
+                "As entradas são guardadas no anfitrião; nada é removido automaticamente do registo."
+              ],
+              [
+                "Conteúdo capturado",
+                "Um objeto capturado é mantido enquanto uma entrada se refere a ele."
+              ],
+              [
+                "Tamanho de uma captura",
+                "O conteúdo com mais de 1 MiB não é guardado na totalidade; a entrada regista que a captura foi omitida devido ao tamanho."
+              ],
+              [
+                "Leitura",
+                "O Monitor não carrega objetos armazenados acima de 2 MiB."
+              ],
+              [
+                "Diferença",
+                "São apresentadas no máximo 400 linhas; uma diferença maior é assinalada como truncada."
+              ],
+              [
+                "Listagem",
+                "A API devolve por predefinição 200 entradas por pedido, até um máximo de 1000."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Guardar o conteúdo não implica anular automaticamente",
+            "body": "O conteúdo anterior pode ser consultado e reposto manualmente, mas a vista Alterações não anula operações. Uma entrada de execução regista o comando sem conhecer todos os efeitos da ferramenta executada."
+          }
+        }
+      ]
+    }
+  ]
+}

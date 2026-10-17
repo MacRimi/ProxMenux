@@ -1,0 +1,535 @@
+{
+  "meta": {
+    "title": "Notifications Proxmox — Telegram, Discord, courrier électronique, Gotify, Pushover, Apprise | ProxMenux Monitor",
+    "description": "Envoyez les notifications Proxmox VE vers Telegram, Discord, e-mail, Gotify, Pushover et environ 80 services via Apprise. Les événements du Health Monitor, des journaux et du webhook PVE deviennent des messages avec déduplication, délai de répétition, regroupement, IA facultative et historique.",
+    "ogTitle": "Notifications Proxmox — Telegram, Discord, courriel, Gotify, Pushover, Apprise",
+    "ogDescription": "Alertes Proxmox vers Telegram, Discord, e-mail, Gotify, Pushover et environ 80 services via Apprise, avec déduplication, délais de répétition, regroupement et IA facultative.",
+    "twitterTitle": "Notifications Proxmox | ProxMenux Monitor",
+    "twitterDescription": "Envoyer des alertes Proxmox VE à Telegram, Discord, Courriel, Gotify, Pushover et ~80 services supplémentaires via Apprise."
+  },
+  "header": {
+    "title": "Notifications",
+    "description": "Distribue les événements du Monitor vers Telegram, Discord, e-mail, Gotify, Pushover et environ 80 services via Apprise. Déduplication, délais de répétition, regroupement, filtres par événement/canal, IA facultative et historique consultable.",
+    "section": "Moniteur ProxMenux"
+  },
+  "intro": {
+    "title": "D'où viennent les messages",
+    "body": "Les notifications distribuent les événements des sources du Monitor : <link>Health Monitor</link>, surveillance du journal et des tâches, webhook PVE, interrogations périodiques et appels internes des scripts ProxMenux. Tous suivent le même traitement avant livraison au téléphone ou par e-mail."
+  },
+  "howItWorks": {
+    "heading": "Comment ça marche",
+    "intro": "Les collecteurs produisent des événements structurés. Le traitement décide de leur envoi et de leur présentation, l’IA peut les réécrire, puis ils sont distribués aux canaux configurés.",
+    "arrowLabel": "événement",
+    "caption": "Vue générale. Les tentatives d’envoi réussies, regroupées ou échouées sont enregistrées dans SQLite. Les événements supprimés par le délai de répétition ne sont pas enregistrés.",
+    "nodes": {
+      "sourcesLabel": "Sources",
+      "sourcesDetail": "Health Monitor\nSurveillance du journal\nSurveillance des tâches\nWebhook PVE\nInterrogations périodiques\nSources internes",
+      "dispatchLabel": "Traitement de l’envoi",
+      "dispatchDetail": "Regroupement des rafales\nVérification empreinte / délai\nLimites par groupe\nContrôles par canal",
+      "aiLabel": "Réécriture par IA (facultatif)",
+      "aiDetail": "OpenAI / Anthropic\nGemini / Groq\nOpenRouter / Ollama\n(désactivé par défaut)",
+      "channelsLabel": "Canaux",
+      "channelsDetail": "Telegram\nDiscord\nCourriel (SMTP)\nGotify\nPushover\nApprise (~80 services)"
+    }
+  },
+  "enabling": {
+    "heading": "Activer le panneau",
+    "intro": "Après installation, la carte affiche <em>Désactivé</em> et <em>Activer les notifications</em>. Avant ce clic, rien n’est envoyé et la configuration PVE n’est pas modifiée.",
+    "disabledAlt": "Carte initiale avec statut Désactivé et bouton Activer les notifications",
+    "disabledCaption": "Le premier état — un clic pour activer.",
+    "stepsIntro": "Le bouton effectue trois actions successives :",
+    "steps": [
+      "Passe à l’état <em>Actif</em> et affiche le formulaire des canaux.",
+      "Enregistre une cible webhook dans <code>/etc/pve/notifications.cfg</code>. Sans HTTPS, elle utilise <code>POST http://127.0.0.1:8008/api/notifications/webhook</code> ; avec HTTPS, le récepteur HTTP local du port 8009. Les notifications PVE entrent dans le traitement du Monitor. Voir <pvelink>Intégration webhook PVE</pvelink>.",
+      "Lance le thread d’envoi en arrière-plan, qui consulte la file et traite chaque événement."
+    ],
+    "activeAlt": "Carte active avec onglets des canaux, nom d’affichage et options avancées d’IA repliables",
+    "activeCaption": "État actif : canaux Telegram / Gotify / Discord / e-mail / Pushover / Apprise, nom d’affichage, catégories par canal et section <em>Avancé : amélioration par IA</em>."
+  },
+  "sources": {
+    "heading": "Sources des événements",
+    "intro": "Six types de sources alimentent le moteur : collecteurs en arrière-plan, récepteur webhook et sources internes. Ils produisent des objets structurés <code>NotificationEvent</code>.",
+    "headerCollector": "Collecteur",
+    "headerWatches": "Surveille",
+    "headerEvents": "Événements typiques",
+    "rows": [
+      {
+        "collector": "Moniteur de santé",
+        "watches": "Dix catégories, toutes les 5 minutes",
+        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>."
+      },
+      {
+        "collector": "Surveillance du journal système",
+        "watches": "<code>journalctl --follow</code> avec motifs pour les échecs SSH/web, blocages Fail2Ban si la jail est installée, erreurs d’E/S du noyau, OOM et événements smartd.",
+        "events": "<code>auth_fail</code>, <code>ip_block</code>, <code>oom_kill</code>, <code>disk_io_error</code>, <code>service_fail</code>."
+      },
+      {
+        "collector": "Surveillance des tâches",
+        "watches": "Consulte <code>/var/log/pve/tasks/index</code> pour trouver les nouveaux UPID et suivre leurs fichiers journaux.",
+        "events": "<code>backup_start</code>, <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>migration_*</code>, <code>snapshot_complete</code>."
+      },
+      {
+        "collector": "Récepteur webhook Proxmox",
+        "watches": "Reçoit <code>POST /api/notifications/webhook</code>. Les versions PVE compatibles avec les cibles webhook peuvent y transmettre leurs notifications après configuration ; voir <pvelink>ci-dessous</pvelink>.",
+        "events": "Tout ce que PVE émet — y compris les événements que le moniteur manquerait autrement (HA, réplication, vzdump de l'interface graphique)."
+      },
+      {
+        "collector": "Collecteur par interrogation périodique",
+        "watches": "Compare régulièrement les nœuds du cluster, l’expiration des certificats, le passthrough GPU et les mises à jour PVE/ProxMenux.",
+        "events": "<code>node_disconnect</code>, <code>node_reconnect</code>, <code>pve_update</code>, <code>proxmenux_update</code>, <code>gpu_mode_switch</code>, <code>pci_passthrough_conflict</code>."
+      },
+      {
+        "collector": "Sources internes au processus",
+        "watches": "Appels directs des scripts ProxMenux et du Monitor (<code>notification_manager.emit_event(...)</code>).",
+        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>ai_model_migrated</code>, événements de test personnalisés."
+      }
+    ],
+    "after1": "Chaque événement porte un <code>event_type</code> stable (le catalogue est ci-dessous), un <code>severity</code> (<code>INFO</code>, <code>WARNING</code>, <code>CRITICAL</code>), un <code>category</code> (utilisé pour l'enrichissement émoji et les filtres par groupe) et une charge utile <code>data</code> avec tout ce dont le modèle a besoin (<code>vmid</code>, <code>device</code>, <code>source_ip</code>, <code>reason</code>...).",
+    "after2": "Chaque <code>event_type</code> utilise un modèle de <code>notification_templates.py</code> pour produire le texte. Ce texte suit le traitement d’envoi et peut être réécrit par l’IA. La page <ailink>Assistant IA</ailink> décrit cette interaction."
+  },
+  "channels": {
+    "heading": "Configurer les canaux",
+    "intro": "Six canaux : Telegram, Discord, Gotify, e-mail SMTP, Pushover et Apprise. Les cinq premiers ont leurs champs dédiés. Apprise ajoute environ 80 services via une URL, notamment ntfy, Matrix, Slack, Teams, Pushbullet, AWS SNS et Mattermost. Configuration ci-dessous.",
+    "credsTitle": "Stockage des identifiants",
+    "credsBody": "Les jetons, les clés, les URL webhook et les mots de passe SMTP sont stockés localement dans la base de données SQLite de Monitor sous <code>/usr/local/share/proxmenux/</code>. Les valeurs sensibles sont protégées et masquées dans l'interface. Ils ne quittent jamais l'hôte que pour atteindre leurs services respectifs. Une sauvegarde de ce répertoire suffit pour récupérer les canaux configurés."
+  },
+  "telegram": {
+    "heading": "Telegram",
+    "intro": "Il faut un <strong>jeton de bot</strong>, réutilisable entre conversations, et un <strong>ID de conversation</strong> pour la destination privée, le groupe ou le sujet de supergroupe. Le guide intégré détaille la configuration ; les deux formes d’ID sont expliquées ici.",
+    "guideAlt": "Guide Telegram en quatre sections : BotFather, jeton, ID de conversation, groupes et canaux",
+    "guideCaption": "Le lien <em>+ guide de configuration</em> ouvre quatre étapes pour créer le bot et configurer le canal en environ deux minutes.",
+    "step1Title": "1 · Créer un robot avec BotFather",
+    "step1Items": [
+      "Ouvrez Telegram et contactez <a>@BotFather</a> avec la coche bleue de vérification ; attention aux copies.",
+      "Envoyer <code>/newbot</code>.",
+      "Choisissez un nom d'affichage (p. ex. <em>ProxMenux Lab</em>). Il peut être changé plus tard.",
+      "Choisissez un nom d'utilisateur se terminant par <code>bot</code> (p. ex. <em>proxmenux_lab_bot</em>). Il doit être unique à travers Telegram.",
+      "BotFather fournit un jeton tel que <code>123456789:ABCdef…</code>. Il s’agit du jeton de bot : protégez-le comme un mot de passe."
+    ],
+    "step2Title": "2 · Obtenir l'identifiant de discussion",
+    "step2Intro": "L’ID indique <em>où</em> le bot publie. Sa forme dépend de la destination.",
+    "privateLabel": "Chat privé (vous recevez les alertes pour votre propre compte):",
+    "privateItems": [
+      "Démarrez une conversation avec votre nouveau robot et envoyez tout message (par exemple : <code>/start</code>).",
+      "Ouvrez une conversation avec <a1>@userinfobot</a1> (ou <a2>@myidbot</a2>) et envoyez <code>/start</code>. Il répond avec votre ID d'utilisateur numérique — c'est-à-dire l'ID de chat. C'est un nombre positif."
+    ],
+    "privateAlt": "Formulaire de canal Telegram rempli de jeton Bot (masqué), code de discussion positif pour un chat privé et un champ d'identification du sujet en option vide",
+    "privateCaption": "Chat privé avec le bot — Chat ID est un nombre positif (votre identifiant utilisateur personnel).",
+    "groupLabel": "Groupe ou supergroupe avec des sujets:",
+    "groupItems": [
+      "Ajouter le bot au groupe en tant que membre (et le rendre administrateur si le groupe l'exige pour poster).",
+      "Envoyez tout message dans le groupe.",
+      "Ouvrez <code>https://api.telegram.org/bot&lt;YOUR_TOKEN&gt;/getUpdates</code> dans un navigateur. Recherchez le <code>chat.id</code> dans la réponse JSON — pour les groupes, c'est un nombre négatif, pour les supergroupes, il commence par <code>-100</code>.",
+      "Pour un supergroupe avec <em>Sujets</em>, relevez le <code>message_thread_id</code> voulu et placez-le dans le champ facultatif <em>ID du sujet</em>."
+    ],
+    "groupAlt": "Formulaire Telegram avec jeton masqué, ID négatif commençant par -100 pour un supergroupe et ID de sujet 3",
+    "groupCaption": "Supergroupe — Chat ID commence par <code>-100…</code> et l'option <em>Topic ID</em> cible un thread spécifique.",
+    "step3Title": "3 · Enregistrer et tester",
+    "step3Body": "Collez jeton et ID, enregistrez, puis <em>Envoyer un test</em>. Le message devrait arriver en une seconde. Sinon, l’Historique indique la cause : jeton invalide, bot absent du groupe ou bloqué par l’utilisateur."
+  },
+  "discord": {
+    "heading": "Discord",
+    "intro": "Discord reçoit les messages via une <em>URL de webhook</em> associée au canal. Monitor a besoin de cette URL.",
+    "items": [
+      "Dans Discord, ouvrez <em>Paramètres du serveur → Intégrations → Webhooks</em>.",
+      "Choisissez <em>Nouveau webhook</em>, nommez-le par exemple <em>ProxMenux</em> et choisissez le canal. L’avatar est facultatif.",
+      "Choisissez <em>Copier l’URL du webhook</em>. Format : <code>https://discord.com/api/webhooks/&lt;id&gt;/&lt;token&gt;</code>.",
+      "Coller dans le champ URL Webhook de l'onglet Discord dans le panneau Notifications et enregistrer."
+    ],
+    "imageAlt": "Formulaire de canal Discord avec champ URL Webhook commençant par https://discord.com/api/webhooks/",
+    "imageCaption": "Discord : collez l’URL obtenue dans <em>Paramètres du serveur → Intégrations → Webhooks</em>."
+  },
+  "gotify": {
+    "heading": "Gotify",
+    "intro": "Gotify est un serveur de notifications auto-hébergé. Il faut son URL de base et un <em>jeton d’application</em> créé dans son administration.",
+    "items": [
+      "Si nécessaire, installez Gotify selon le <a>guide officiel d’installation</a>.",
+      "Connectez-vous comme administrateur et ouvrez <em>Applications</em> → <em>Créer une application</em>. Nommez-la par exemple <em>ProxMenux</em> et copiez le jeton.",
+      "Dans Gotify, définissez <em>URL du serveur</em>, par exemple <code>https://gotify.example.com</code>, et collez le jeton.",
+      "Enregistrez et choisissez <em>Envoyer un test</em>."
+    ],
+    "imageAlt": "Formulaire Gotify avec URL https://gotify.example.com et champ de jeton avec exemple A_valid_gotify_token",
+    "imageCaption": "Gotify — URL du serveur de votre instance auto-installée plus le token App de l'interface utilisateur d'administration Gotify."
+  },
+  "email": {
+    "heading": "E-mail (SMTP)",
+    "intro": "L’e-mail nécessite serveur SMTP, port, mode TLS, identifiant et mot de passe facultatifs, adresse d’envoi et au moins un destinataire.",
+    "imageAlt": "Formulaire SMTP : serveur, port, TLS, identifiant, mot de passe, expéditeur, destinataires séparés par des virgules et préfixe d’objet",
+    "imageCaption": "SMTP : serveur, port, TLS, identifiant et mot de passe facultatifs, expéditeur, destinataires et préfixe d’objet pour le filtrage.",
+    "appNote": "Monitor utilise SMTP avec mot de passe. Gmail peut demander un <strong>mot de passe d’application</strong>. Chez Microsoft, cela dépend du service et des règles du tenant ; un tel mot de passe ne contourne pas l’interdiction de l’authentification de base. Vérifiez la compatibilité du service.",
+    "gmailTitle": "Mot de passe de l'application Gmail",
+    "gmailIntro": "Gmail exige la <strong>validation en deux étapes</strong> pour créer un mot de passe d’application. Sinon, <em>Mots de passe d’application</em> n’est pas disponible.",
+    "gmailItems": [
+      "Ouvrez <a>myaccount.google.com/security</a> et activez la <em>validation en deux étapes</em>.",
+      "Allez sur <a>myaccount.google.com/apppasswords</a>.",
+      "Saisissez un nom comme <em>ProxMenux</em> et choisissez <em>Créer</em>. Copiez le mot de passe de 16 caractères.",
+      "Renseignez <em>Serveur</em> <code>smtp.gmail.com</code>, <em>Port</em> <code>587</code>, <em>Mode TLS</em> <code>STARTTLS</code>, <em>Identifiant</em> votre adresse Gmail et <em>Mot de passe</em> celui d’application de 16 caractères."
+    ],
+    "outlookTitle": "Mot de passe de l'application Microsoft / Outlook",
+    "outlookIntro": "Les mots de passe d’application Microsoft exigent la <strong>vérification en deux étapes</strong>, sans garantir la compatibilité SMTP. Si le service ou tenant exige OAuth2, le client SMTP du Monitor ne peut pas s’authentifier. Utilisez un relais adapté à cette authentification.",
+    "outlookItems": [
+      "Ouvrez <a>account.microsoft.com/security</a> et activez la vérification en deux étapes.",
+      "Si votre compte propose <em>Options de sécurité avancées</em> → <em>Mots de passe d’application</em>, choisissez <em>Créer un mot de passe d’application</em>. Cela ne garantit pas l’acceptation de SMTP avec mot de passe.",
+      "Si Microsoft crée ce mot de passe, copiez-le et vérifiez son acceptation par le service SMTP.",
+      "Uniquement si SMTP avec mot de passe est autorisé, utilisez les paramètres approuvés : <em>Serveur</em> <code>smtp.office365.com</code> pour Exchange Online, <em>Port</em> <code>587</code>, <em>Mode TLS</em> <code>STARTTLS</code>, <em>Identifiant</em> votre adresse et <em>Mot de passe</em> la valeur autorisée. Outlook.com personnel a d’autres paramètres et exigences."
+    ],
+    "relayTitle": "Relais SMTP auto-hébergé",
+    "relayBody": "Dirigez Monitor vers un relais SMTP contrôlé, par exemple Postfix. Le relais gère l’authentification du fournisseur. Configurez authentification et TLS selon le relais ; son caractère local ne désactive pas le chiffrement."
+  },
+  "pushover": {
+    "heading": "Pushover",
+    "intro": "Pushover est un service de push mobile avec des applications officielles pour iOS, Android et les navigateurs de bureau. Le canal ProxMenux dédié parle directement au <a>Pushover API</a>, donc aucune URL Apprise n'est requise.",
+    "stepsTitle": "Configuration",
+    "steps": [
+      "Créer un compte <a>Pushover</a>, installer l'application officielle sur les appareils qui devraient recevoir des alertes et se connecter.",
+      "Copiez la <em>clé utilisateur</em> du tableau de bord Pushover. Une clé de groupe permet de servir plusieurs personnes ou appareils.",
+      "Ouvrez <a>Créer une application/un jeton API</a>, créez <em>ProxMenux</em> et copiez son jeton API de 30 caractères.",
+      "Dans <em>Paramètres → Notifications → Pushover</em>, collez la clé utilisateur ou de groupe et le jeton de l'application API. Les champs périphériques et sonores sont optionnels.",
+      "Enregistrer les paramètres et appuyez sur <em>Envoyer test</em>. L'application Pushover devrait recevoir le message immédiatement."
+    ],
+    "priorityTitle": "Correspondance des priorités",
+    "priorityBody": "Les messages ordinaires utilisent la priorité 0. Avec <strong>Priorité haute pour les alertes critiques</strong>, les événements CRITICAL utilisent la priorité 1 et contournent les heures de silence Pushover. La priorité d’urgence 2 avec répétition et accusé de réception n’est pas utilisée.",
+    "secretTitle": "Protéger les deux valeurs",
+    "secretBody": "Clé utilisateur ou groupe et jeton API autorisent l’envoi. Monitor les protège et les masque dans l’interface. Ne publiez aucune des deux valeurs dans les captures ou journaux de support."
+  },
+  "apprise": {
+    "heading": "Apprise (hub générique pour les services ~80)",
+    "intro": "Apprise gère environ 80 services via des URL : ntfy, Matrix, Slack, Microsoft Teams, Mattermost, Pushbullet, AWS SNS, Pushsafer, Rocket.Chat, Signal API et d’autres, sans intégration dédiée dans Monitor. Pushover est aussi possible ; son propre onglet reste plus simple pour une destination unique.",
+    "listIntro": "La liste complète des services pris en charge et le format exact d'URL pour chacun d'eux sont disponibles dans la documentation officielle Apprise:",
+    "listItems": [
+      "<a>Documentation des services Apprise</a> — index complet.",
+      "<a>Principes des URL</a> — structure des URL Apprise."
+    ],
+    "stepsTitle": "Étapes",
+    "steps": [
+      "Choisissez le service cible dans le wiki <a>Apprise</a> et copiez le modèle d'URL. Chaque page de service affiche le schéma exact à utiliser (<code>ntfy://</code>, <code>matrix://</code>, <code>pover://</code>, <code>slack://</code>...) plus les jetons, canaux ou noms d'hôte requis.",
+      "Remplacez les paramètres par vos identifiants. Exemples : ntfy.sh <code>ntfy://ntfy.sh/my-topic</code>, Pushover <code>pover://user@token</code>, Matrix <code>matrix://user:pass@host:port/#room</code>.",
+      "Coller l'URL finale dans le champ <em>Apprise URL</em> dans l'onglet Apprise du panneau Notifications et enregistrer.",
+      "Appuyez sur <em>Envoyer Test</em> pour vérifier que l'URL est accessible et que les identifiants sont acceptés."
+    ],
+    "deliveredTitle": "Ce qui est livré",
+    "deliveredBody": "Apprise reçoit titre, texte et gravité, adaptée aux possibilités du service (icône, priorité, couleur). Le formatage et l’IA s’exécutent avant l’envoi, comme pour Telegram ou l’e-mail.",
+    "fanoutTitle": "Une URL par canal Apprise",
+    "fanoutBody": "Un champ URL par canal Apprise. Pour plusieurs services, tels ntfy.sh et Matrix, hébergez un <a>serveur API Apprise</a> avec configuration étiquetée. Il distribue l’appel du Monitor aux URL de l’étiquette."
+  },
+  "rich": {
+    "heading": "Messages riches, catégories et filtrage par canal",
+    "intro": "Trois contrôles par canal : <em>Messages enrichis</em>, onze <em>Catégories de notification</em> repliables avec interrupteurs d’événements, puis <em>Envoyer un test</em>.",
+    "imageAlt": "Catégories avec Messages enrichis en haut, sections VM/CT, sauvegardes, ressources, stockage, réseau, sécurité, cluster, services, santé et mises à jour, compteurs et bouton de test",
+    "imageCaption": "La flèche indique <em>Messages enrichis</em>. Dessous : onze catégories et leurs événements. <em>Envoyer un test</em> est en bas.",
+    "richTitle": "Messages enrichis",
+    "richIntro": "Avec <em>Messages enrichis</em>, chaque événement reçoit un emoji de catégorie et le format natif du canal, tel HTML Telegram ou carte Discord colorée. Sans cela, le même contenu part en texte simple :",
+    "plainHeader": "Texte simple — format enrichi désactivé",
+    "richHeader": "Texte enrichi — format activé",
+    "richOutro": "Réglage indépendant par canal : e-mail simple, Telegram et Discord enrichis, par exemple. Les canaux sans ce format, comme l’e-mail simple ou Gotify, reçoivent du texte.",
+    "togglesTitle": "Catégories par événement",
+    "togglesIntro": "Chaque canal contrôle séparément ses catégories et événements. Une catégorie désactivée supprime ses événements pour ce canal. Les réglages individuels s’appliquent aux catégories actives ; aucun interrupteur global d’événement n’existe dans le répartiteur.",
+    "togglesItems": [
+      "<strong>Contrôle de catégorie par canal.</strong> Désactiver VM/CT supprime <code>vm_start</code> et ses équivalents. Stockage : <code>&lt;channel&gt;.events.&lt;group&gt;</code>.",
+      "<strong>Contrôle d’événement par canal.</strong> Dans une catégorie active, choisissez par exemple <em>envoyer <code>backup_complete</code> à Discord, pas à Telegram</em>. Stockage : <code>&lt;channel&gt;.event.&lt;event_type&gt;</code>."
+    ],
+    "togglesOutro": "Chaque catégorie affiche <em>activés</em> / <em>total</em> et un interrupteur pour tout le groupe, tel les sauvegardes <code>info</code> ou mises à jour, sans l’ouvrir."
+  },
+  "quiet": {
+    "heading": "Heures de silence",
+    "intro": "Pendant ce créneau propre au canal, seuls les événements <strong>CRITICAL</strong> passent. INFO, WARNING et actions sont conservés sur disque puis livrés dans un résumé à la fin.",
+    "imageAlt": "Réglages du canal : heures de silence 22:00–07:00 et aperçu du prochain changement, puis résumé quotidien à 09:00 avec note indiquant que ce résumé ne retarde ni CRITICAL ni WARNING",
+    "imageCaption": "Deux réglages indépendants par canal : heures de silence en haut, résumé quotidien dessous.",
+    "purposeTitle": "C'est pour quoi ?",
+    "purposeItems": [
+      "<strong>Pas d’avis de mise à jour à 03:00.</strong> Sauvegardes, mises à jour, optimisations et autres INFO ne font pas sonner le téléphone la nuit.",
+      "<strong>Les événements critiques restent immédiats.</strong> Seuls ceux classés CRITICAL contournent le silence. Le nom ne fixe pas la gravité : la surveillance du journal émet les blocages Fail2Ban et les arrêts/redémarrages de l’hôte en INFO, donc ils peuvent attendre.",
+      "<strong>Conserver les avis différés.</strong> Ils restent dans un tampon SQLite jusqu’à la fin du créneau."
+    ],
+    "howTitle": "Comment ça marche",
+    "howItems": [
+      "<strong>Réglage par canal.</strong> Telegram peut rester silencieux de 22:00 à 07:00 tandis que l’e-mail reçoit tout, jour et nuit.",
+      "<strong>Début et fin</strong> dans le fuseau local : début inclus, fin exclue. Le créneau peut traverser minuit, par exemple 22:00–07:00.",
+      "<strong>Aperçu immédiat.</strong> Sous les champs apparaissent l’état actif et l’heure du prochain changement.",
+      "<strong>Pendant le créneau :</strong> CRITICAL suit l’envoi normal ; INFO et WARNING sont stockés dans la table SQLite <code>quiet_pending</code>.",
+      "<strong>À la fin :</strong> un résumé chronologique est envoyé, une ligne par événement. Le tampon n’est vidé qu’après confirmation de livraison, afin de résister aux pannes temporaires Telegram ou SMTP.",
+      "<strong>Résiste aux redémarrages.</strong> Le tampon reste sur disque. Le cycle suivant détecte les lignes en attente et envoie au besoin un résumé de récupération."
+    ],
+    "criticalTitle": "Ce qui compte comme CRITIQUE",
+    "criticalBody": "Le producteur fixe la gravité à la création. Un événement de disque, arrêt ou sécurité n’est pas automatiquement CRITICAL. La surveillance du journal émet ip_block, system_shutdown et system_reboot en INFO. Le <link>Catalogue des événements</link> énumère les types ; consultez le producteur et l’événement reçu pour sa gravité réelle."
+  },
+  "digest": {
+    "heading": "Résumé quotidien des événements INFO",
+    "intro1": "Le résumé quotidien est <strong>facultatif</strong> : il rassemble les INFO admissibles, comme les mises à jour, à 09:00 ou à l’heure choisie. Résultats de sauvegarde/réplication et actions directes sont exclus. Les heures de silence diffèrent : elles retardent les messages non critiques durant un créneau.",
+    "intro2": "Le réglage est sous les heures de silence, dans la même carte ; voir <link>Heures de silence</link>. Chacun s’active séparément.",
+    "purposeTitle": "C'est pour quoi ?",
+    "purposeItems": [
+      "<strong>Un bilan matinal.</strong> Un résumé à 09:00 rassemble les informations de 20 messages de la veille, sans lire 20 bulles Telegram.",
+      "<strong>Distinguer activité et urgence.</strong> INFO décrit les faits ; CRITICAL et WARNING appellent une action. Les INFO admissibles sont regroupés, les autres gardent leur livraison directe."
+    ],
+    "howTitle": "Comment ça marche",
+    "howItems": [
+      "<strong>Activation par canal.</strong> Désactivé par défaut. Activez-le seulement là où vous voulez un résumé ; les autres canaux restent en direct.",
+      "<strong>Heure de livraison</strong> locale, 09:00 par défaut. L’envoi se déclenche à environ 60 s près.",
+      "<strong>Inclus :</strong> événements génériques admissibles de niveau <strong>INFO</strong>, comme <em>mise à jour d’application disponible</em>, <em>mise à jour Tailscale disponible</em>, <em>mise à jour d’optimisation ProxMenux disponible</em>, <em>mises à jour de sécurité APT en attente</em> et <em>avis de limitation d’envoi</em>. Résultats de sauvegarde et actions exemptées restent en direct.",
+      "<strong>Ce qui n'est jamais retardé:</strong>",
+      "<strong>Persistance.</strong> Les événements restent dans SQLite, table <code>digest_pending</code>, jusqu’à l’heure prévue, même après redémarrage.",
+      "<strong>Sans événement, sans résumé.</strong> Aucun résumé vide n’est envoyé si aucun INFO n’attend."
+    ],
+    "neverDelayedSub": [
+      "Les événements <strong>CRITICAL</strong> passent toujours immédiatement.",
+      "Les événements <strong>WARNING</strong> passent toujours immédiatement.",
+      "Les actions et échecs VM/CT, débuts et résultats de sauvegarde, résultats de réplication et arrêts/redémarrages de l’hôte contournent le résumé même en INFO. Le silence peut encore retarder les événements non critiques."
+    ],
+    "comboTitle": "Combiner les heures tranquilles et le digest quotidien",
+    "comboBody": "Un canal peut activer <em>les deux</em> : silence 22:00–07:00 et résumé à 09:00. Les événements non critiques du créneau arrivent au résumé de07:00 ; les INFO admissibles hors créneau vont au résumé quotidien. CRITICAL contourne les deux ; WARNING contourne le quotidien mais attend pendant le silence. Choisissez un <em>créneau silencieux</em>, un <em>résumé à heure fixe</em>, ou les deux."
+  },
+  "displayName": {
+    "heading": "Nom d’affichage",
+    "intro": "Chaque avis porte un <em>nom d’affichage</em> identifiant l’hôte, tel <code>🏠 home-lab</code> au bas de l’exemple et dans le préfixe d’objet.",
+    "imageAlt": "Champ Nom d’affichage avec exemple amd ; un champ vide utilise le nom d’hôte système",
+    "imageCaption": "Laissez le nom vide pour utiliser celui du système ou saisissez un nom personnalisé.",
+    "outro": "Si le champ est vide, le moniteur revient au nom d'hôte du système. La redéfinition est surtout utile lorsque vous exécutez plusieurs hôtes ProxMenux qui envoient à la même discussion ou boîte de réception Telegram, une étiquette plus conviviale (<em>home-lab</em>, <em>office-pve</em>) est plus facile à lire que <code>pve01.lan</code> ou <code>pmx-prod-01</code>."
+  },
+  "dispatch": {
+    "heading": "Traitement de l’envoi",
+    "intro": "Trois mécanismes liés sont décrits ci-dessous. L’ordre réel est regroupement, réservation/vérification du délai, limite par groupe, rendu puis contrôles de livraison par canal :",
+    "headerStage": "Étape",
+    "headerWhat": "Ce qu'il fait",
+    "headerTunable": "Réglable ?",
+    "rows": [
+      {
+        "stage": "Déduplication par empreinte",
+        "what": "Une empreinte est calculée pour chaque événement (<code>event_type + key fields from data</code>). Les empreintes identiques sur un intervalle court sont considérées comme des doublons.",
+        "tunable": "Non — logique du répartiteur interne."
+      },
+      {
+        "stage": "Délai de répétition",
+        "what": "Après livraison réussie, les répétitions sont supprimées ; l’état est dans <code>notification_last_sent</code>. Base pour <code>CRITICAL</code>, <code>WARNING</code>, <code>INFO</code>, <code>resources</code> et <code>updates</code> : 86400 s. Exceptions : 5 s pour actions VM/CT et arrêt/redémarrage, 10 s pour résultats sauvegarde/réplication, 1800–3600 s pour plusieurs états de santé. Les réglages explicites d’événement/groupe prévalent.",
+        "tunable": "Oui : des valeurs explicites par événement ou groupe remplacent les valeurs du répartiteur."
+      },
+      {
+        "stage": "Regroupement des rafales",
+        "what": "Une rafale d’événements semblables, comme des tentatives SSH, devient un message <code>burst_*</code> avec compteur et échantillon.",
+        "tunable": "Non — la fenêtre et le seuil sont codés en dur par type d'événement."
+      }
+    ],
+    "calloutTitle": "Envoi dans un thread en arrière-plan",
+    "calloutBody": "La requête HTTP se termine à la mise en file ; le thread attend les réponses Telegram, SMTP ou webhook et inscrit les résultats dans l’historique."
+  },
+  "aiRewrite": {
+    "heading": "Réécriture optionnelle de l'IA",
+    "body1": "Les événements admissibles peuvent être réécrits par un LLM. backup_complete et backup_fail sont exclus. L’IA est désactivée par défaut et s’exécute dans le thread d’envoi. En cas d’erreur ou délai dépassé, le texte du modèle est utilisé.",
+    "body2": "OpenAI, Anthropic, Google Gemini, Groq, OpenRouter et Ollama local sont disponibles. Par canal : détail (<code>brief</code>, <code>standard</code>, <code>detailed</code>), langue, mode d’instructions (<code>default</code> ou <code>custom</code>) et instructions propres. Guide et exemples : <link>Assistant IA</link>.",
+    "privacyTitle": "Note de confidentialité",
+    "privacyBody": "La requête IA peut inclure titre, gravité, texte, instructions système/personnelles et contexte : noms d’hôte, IP, utilisateurs, erreurs et journaux. Elle part vers le serveur choisi. Ollama reste local seulement avec serveur et modèle locaux ; serveur distant ou modèle cloud transmettent les données hors de l’hôte. Désactivez l’IA ou utilisez serveur et modèle locaux contrôlés si le contenu doit rester dans le réseau."
+  },
+  "pveWebhook": {
+    "heading": "Intégration PVE webhook",
+    "intro1": "Proxmox utilise des <em>cibles de notification</em> sendmail, Gotify, SMTP et, sur les versions compatibles, webhook. Monitor enregistre une cible <code>webhook</code>. Les avis PVE, tels HA, réplication et sauvegardes de l’interface, rejoignent le même traitement.",
+    "intro2": "La cible est visible à partir du GUI Proxmox à <em>Datacenter → Notifications → Objectifs de notification</em> :",
+    "imageAlt": "Proxmox VE Modifier la boîte de dialogue Webhook montrant la cible de proxmenux-webhook créée automatiquement avec la méthode POST, URL http://127.0.0.1:8008/api/notifications/webhook et un modèle de corps JSON utilisant le titre d'échappement, message d'échappement, gravité d'échappement, horodatage d'échappement et champs json",
+    "imageCaption": "La cible webhook côté PVE comme Proxmox la voit (l'interface graphique se trouve dans le local configuré de l'hôte — espagnol dans cet exemple). Les mêmes champs s'appliquent dans n'importe quelle langue.",
+    "registeredIntro": "Ce qui est enregistré:",
+    "registeredItems": [
+      "<strong>Méthode et URL.</strong> <code>POST http://127.0.0.1:8008/api/notifications/webhook</code> sans HTTPS Monitor ; avec HTTPS, récepteur HTTP local séparé sur 8009. Les deux restent sur l’hôte.",
+      "<strong>Modèle du corps.</strong> JSON avec aides Handlebars natives de PVE, stocké en base64 dans la configuration. Une fois décodé :",
+      "<strong>Matcher.</strong> Un bloc d'accompagnement <code>matcher: proxmenux-matcher</code> avec <code>mode all</code> afin que chaque notification PVE atteigne la cible.",
+      "<strong>Configuration privée.</strong> La configuration écrit <code>webhook: proxmenux-webhook</code> dans <code>/etc/pve/priv/notifications.cfg</code> avec le secret partagé en base64. La cible publique le référence pour envoyer X-Webhook-Secret. Le bloc n’est pas vide."
+    ],
+    "securityTitle": "Comment le récepteur est sécurisé",
+    "securityIntro": "Le récepteur webhook de <code>POST /api/notifications/webhook</code> applique différentes couches de sécurité selon l'origine de la demande:",
+    "securityItems": [
+      "<strong>Sources locales (<code>127.0.0.1</code> / <code>::1</code>).</strong> Limitation du nombre de requêtes, sans contrôles distants du secret, de l’heure et des répétitions. Les adresses des interfaces de l’hôte sont aussi locales. La cible PVE automatique utilise loopback.",
+      "<strong>Appels distants.</strong> En plus des limites, contrôles du secret <code>X-Webhook-Secret</code>, de l’heure dans <code>X-ProxMenux-Timestamp</code> ou le JSON, des répétitions et d’une liste IP facultative. Le secret est dans SQLite et copié en base64 dans <code>/etc/pve/priv/notifications.cfg</code> pour l’en-tête PVE."
+    ],
+    "practiceTitle": "En pratique",
+    "practiceBody": "PVE utilise <code>http://127.0.0.1:8008</code> sans HTTPS, sinon HTTP 8009. Les intégrations externes sur <code>https://&lt;monitor-host&gt;:&lt;port&gt;/api/notifications/webhook</code> doivent fournir <code>X-Webhook-Secret</code> et une heure actuelle, puis passer les contrôles de répétition et IP. Le secret seul ne suffit pas.",
+    "actionsIntro": "Le moniteur gère cette cible par trois actions sur l'onglet Paramètres :",
+    "actionsItems": [
+      "<strong>Configurer</strong> crée l’entrée dans <code>/etc/pve/notifications.cfg</code>. Seules les modifications sont écrites ; les trois sauvegardes récentes restent dans <code>/usr/local/share/proxmenux/backups/pve-notifications/</code>. Aucune écriture sans montage de <code>/etc/pve</code> ; la cible est inscrite au retour de <code>pve-cluster</code>.",
+      "<strong>Nettoyer</strong> retire l’entrée en gardant la sauvegarde précédente.",
+      "<strong>Lire la configuration</strong> affiche cibles et règles de correspondance pour vérifier les routes PVE."
+    ],
+    "clusterTitle": "Nœuds du cluster",
+    "clusterBody": "<code>/etc/pve/</code>, URL et secret sont partagés dans le cluster. Chaque nœud appelle son <em>propre</em> récepteur : <code>127.0.0.1:8008</code> sans HTTPS, sinon HTTP 8009. Exécutez Monitor sur les nœuds concernés et assurez la cohérence de la cible avec chaque récepteur."
+  },
+  "catalogue": {
+    "heading": "Catalogue des événements",
+    "intro": "Environ 70 types sont regroupés en onze catégories repliables. Chaque événement possède un interrupteur et est activé par défaut, sauf indication contraire.",
+    "headerGroup": "Groupe",
+    "headerEvents": "Événements",
+    "rows": [
+      {
+        "group": "VM/CT",
+        "events": "<code>vm_start</code>, <code>vm_start_warning</code>, <code>vm_stop</code>, <code>vm_shutdown</code>, <code>vm_fail</code>, <code>vm_restart</code>, plus les équivalents <code>ct_*</code>, <code>migration_start</code>, <code>migration_complete</code>, <code>migration_warning</code>, <code>migration_fail</code>, <code>replication_complete</code>, <code>replication_fail</code>."
+      },
+      {
+        "group": "Sauvegardes",
+        "events": "<code>backup_start</code>, <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>snapshot_complete</code>, <code>snapshot_fail</code>."
+      },
+      {
+        "group": "Ressources",
+        "events": "<code>cpu_high</code>, <code>ram_high</code>, <code>temp_high</code>, <code>load_high</code>."
+      },
+      {
+        "group": "Stockage",
+        "events": "<code>disk_space_low</code>, <code>disk_io_error</code>, <code>storage_unavailable</code>, <code>smart_test_complete</code>, <code>smart_test_failed</code>."
+      },
+      {
+        "group": "Réseau",
+        "events": "<code>network_down</code>, <code>network_latency</code>."
+      },
+      {
+        "group": "Sécurité",
+        "events": "<code>auth_fail</code>, <code>ip_block</code>, <code>firewall_issue</code>, <code>user_permission_change</code>."
+      },
+      {
+        "group": "Cluster",
+        "events": "<code>split_brain</code>, <code>node_disconnect</code>, <code>node_reconnect</code>."
+      },
+      {
+        "group": "Services",
+        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>system_problem</code>, <code>service_fail</code>, <code>oom_kill</code>, <code>system_mail</code>."
+      },
+      {
+        "group": "Moniteur de santé",
+        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>, <code>health_issue_new</code>, <code>health_issue_resolved</code>."
+      },
+      {
+        "group": "Mises à jour",
+        "events": "<code>update_summary</code>, <code>update_available</code>, <code>pve_update</code>, <code>update_complete</code>, <code>proxmenux_update</code>."
+      },
+      {
+        "group": "Matériel / GPU",
+        "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>, <code>ai_model_migrated</code>."
+      }
+    ],
+    "burstNote": "Les types <code>burst_*</code> (<code>burst_auth_fail</code>, <code>burst_ip_block</code>, <code>burst_disk_io</code>, etc.) remplacent les rafales par un résumé. Sans interrupteur propre, ils héritent du réglage de l’événement source.",
+    "backupResults": {
+      "heading": "Résultats de sauvegarde",
+      "intro": "Le rapport du travail de sauvegarde fixe résultat, titre, icône avec <em>Messages enrichis</em> et ligne d’état de l’e-mail.",
+      "headerIcon": "Icon",
+      "headerResult": "Résultat",
+      "headerWhen": "Quand",
+      "rows": [
+        {
+          "icon": "💾✅",
+          "result": "Sauvegarde terminée",
+          "when": "Tous les invités ont terminé, sans avertissement dans le rapport."
+        },
+        {
+          "icon": "💾⚠️",
+          "result": "Sauvegarde terminée avec des avertissements",
+          "when": "Tous les invités ont terminé, avec au moins un avertissement."
+        },
+        {
+          "icon": "💾❌",
+          "result": "Erreur de sauvegarde signalée",
+          "when": "Un invité a échoué, ou le travail s'est arrêté avec une erreur."
+        },
+        {
+          "icon": "💾❔",
+          "result": "Résultat de sauvegarde non confirmé",
+          "when": "Le rapport est incomplet ou n'indique pas de résultat pour chaque invité."
+        }
+      ],
+      "items": [
+        "<strong>Le titre identifie le travail.</strong> Il indique le stockage et, pour un invité unique, son type, nom et ID. En cas d’échec, l’invité concerné est nommé.",
+        "<strong>Le texte détaille chaque invité</strong> : résultat, taille, durée et archive, puis totaux du travail.",
+        "<strong>Les mises en garde et les erreurs sont listées une fois.</strong> Les lignes répétées sont montrées une seule fois avec la cause principale d'abord; après huit lignes, le reste est compté dans une ligne de fermeture et reste dans le journal des tâches Proxmox.",
+        "<strong>Un travail qui échoue avant son premier invité</strong> montre la cause donnée par Proxmox, par exemple un stockage qui n'existe pas.",
+        "<strong>Les résumés gardent le résultat.</strong> Une sauvegarde dans le résumé du silence garde son icône. Les résultats de sauvegarde contournent le résumé quotidien."
+      ]
+    }
+  },
+  "history": {
+    "heading": "Historique",
+    "body1": "Chaque <em>tentative d’envoi</em> réelle est dans <code>notification_history</code> : date <code>sent_at</code>, canal, événement, gravité, titre, texte, <code>success</code> et, en cas d’échec, <code>error_message</code>. Les rafales ont un type <code>burst_*</code>. Les événements supprimés par le délai ne sont pas enregistrés.",
+    "body2": "Paramètres → Notifications contient <em>Historique des notifications</em>, fermé par défaut, avec les 20 dernières entrées : résultat, canal, date, erreur et état de chaque résumé quotidien. La page ne propose pas la suppression ; Audit & Report lit les mêmes livraisons.",
+    "body3": "Les mêmes données sont exposées aux paramètres de requête <code>GET /api/notifications/history</code> avec les paramètres de requête <code>limit</code>, <code>offset</code>, <code>severity</code> et <code>channel</code>, et peuvent être effacées avec <code>DELETE /api/notifications/history</code>."
+  },
+  "api": {
+    "heading": "Points d’accès API",
+    "headerEndpoint": "Point d’accès",
+    "headerMethod": "Méthode",
+    "headerUse": "Utiliser",
+    "rows": [
+      {
+        "endpoint": "/api/notifications/settings",
+        "method": "GET / POST",
+        "use": "Lit ou écrit la configuration : canaux, événements, IA et nom d’affichage."
+      },
+      {
+        "endpoint": "/api/notifications/test",
+        "method": "POST",
+        "use": "Envoyer une notification de test à un canal : <code>'{'\"channel\":\"telegram\"'}'</code>."
+      },
+      {
+        "endpoint": "/api/notifications/test-ai",
+        "method": "POST",
+        "use": "Produit et réécrit un événement de test sans l’envoyer."
+      },
+      {
+        "endpoint": "/api/notifications/provider-models",
+        "method": "POST",
+        "use": "Liste des modèles disponibles pour le fournisseur d'IA sélectionné."
+      },
+      {
+        "endpoint": "/api/notifications/send",
+        "method": "POST",
+        "use": "Émettre un événement de l'extérieur (intégrations personnalisées)."
+      },
+      {
+        "endpoint": "/api/notifications/history",
+        "method": "GET / DELETE",
+        "use": "Consulte l’historique avec filtres ou le supprime."
+      },
+      {
+        "endpoint": "/api/notifications/webhook",
+        "method": "POST",
+        "use": "Reçoit les avis Proxmox. Les sources locales évitent les contrôles distants mais gardent la limitation. Les requêtes distantes passent <code>X-Webhook-Secret</code>, l’heure dans <code>X-ProxMenux-Timestamp</code> ou JSON, les contrôles de répétition et la liste IP configurée."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/setup-webhook",
+        "method": "POST",
+        "use": "Enregistrer le moniteur comme cible dans <code>/etc/pve/notifications.cfg</code>."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/cleanup-webhook",
+        "method": "POST",
+        "use": "Supprimer la cible Monitor de la configuration de notification de PVE."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/read-cfg",
+        "method": "GET",
+        "use": "Affiche la configuration actuelle de la notification PVE comme PVE la voit."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Où aller ensuite",
+    "items": [
+      {
+        "label": "Assistant AI",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": " — fournisseurs, modèles, modes d’instructions, langues et détail par canal."
+      },
+      {
+        "label": "Moniteur de santé",
+        "href": "/docs/monitor/health-monitor",
+        "tail": "— le plus grand producteur d'événements, avec ses propres durées de suppression par catégorie."
+      },
+      {
+        "label": "Architecture",
+        "href": "/docs/monitor/architecture",
+        "tailRich": " — rôle des tables SQLite <code>notification_last_sent</code>, <code>notification_history</code> et du thread d’envoi dans Monitor."
+      },
+      {
+        "label": "Accès et authentification",
+        "href": "/docs/monitor/access-auth",
+        "tailRich": " — création des jetons API pour les scripts appelant <code>/api/notifications/send</code>."
+      },
+      {
+        "label": "Tableau de bord → Logs système",
+        "href": "/docs/monitor/dashboard/system-logs",
+        "tail": " — vue directe du journal système exploité par la surveillance des événements."
+      }
+    ]
+  }
+}

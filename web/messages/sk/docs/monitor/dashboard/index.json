@@ -1,0 +1,101 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Panel | Dokumentácia ProxMenux",
+    "description": "Panel je hlavným rozhraním ProxMenux Monitor: desať kariet vrátane spúšťača Apps, spoločná hlavička a nastaviteľné poradie hlavnej navigácie."
+  },
+  "header": {
+    "title": "Panel",
+    "description": "Každodenný pohľad na ProxMenux Monitor: desať kariet vrátane spúšťača Apps, spoločná hlavička a nastaviteľné poradie hlavnej navigácie.",
+    "section": "ProxMenux Monitor"
+  },
+  "oneHeader": {
+    "title": "Jedna hlavička, desať kariet",
+    "body": "Hlavička s logom, názvom uzla, indikátorom stavu, dobou prevádzky, obnovením a témou zostáva viditeľná. Aktívna karta mení celý obsah pod ňou. Farba indikátora zodpovedá najhoršej kategórii <link>monitora stavu</link>; panel zobrazuje ten istý údaj."
+  },
+  "tabs": {
+    "heading": "Desať kariet",
+    "intro": "Každá karta má svoju vlastnú vyhradenú stránku. Stránky sa pridávajú postupne pri vypĺňaní dokumentácie; nižšie je úplný zoznam a za čo je zodpovedný každý z nich.",
+    "headerTab": "Karta",
+    "headerOwns": "Čo pokrýva",
+    "rows": [
+      {
+        "name": "Prehľad systému",
+        "linksTo": "/docs/monitor/dashboard/system-overview",
+        "owns": "CPU / widgety pamäte / teploty, aktívny počet VM a LXC, grafy historických metrík, súhrny úložiska a siete. Predvolená vstupná karta, kým sa neprispôsobí poradie navigácie."
+      },
+      {
+        "name": "Aplikácie",
+        "linksTo": "/docs/monitor/dashboard/apps",
+        "owns": "Spoločný spúšťač registrovaných webových odkazov LXC a vlastných odkazov s kategóriami, vyhľadávaním, skratkami k hosťovským systémom a indikátormi aktualizácií aplikácií."
+      },
+      {
+        "name": "Úložisko",
+        "owns": "Proxmox pools, fyzické disky, SMART údaje, ZFS stav, opotrebovanie a životnosť, história pozorovania."
+      },
+      {
+        "name": "Sieť",
+        "owns": "Fyzické rozhrania, bondy, mosty a OVS, adresy IP/MAC, grafy RX/TX a história RRD každého rozhrania."
+      },
+      {
+        "name": "VM a LXC",
+        "owns": "Inventár hosťovských systémov, podrobnosti konfigurácie, metrík a denníkov a akcie spustenia, zastavenia, reštartu a vypnutia."
+      },
+      {
+        "name": "Hardvér",
+        "owns": "Model a topológia CPU, rozloženie pamäte, topológia PCIe a GPU s monitorovaním každého slotu v reálnom čase."
+      },
+      {
+        "name": "Systémové záznamy",
+        "owns": "Živé <code>journalctl</code> s filtrami, História úloh Proxmox, protokol upozornení, sťahovacie log zväzky."
+      },
+      {
+        "name": "Terminál",
+        "owns": "Shell hostiteľa alebo ľubovoľnej VM/CT v prehliadači pomocou <code>xterm.js</code> cez WebSockets."
+      },
+      {
+        "name": "Zabezpečenie",
+        "owns": "Nastavenie overovania, heslo, 2FA a tokeny API, denník auditu, voliteľný panel Fail2Ban a nasadenie Secure Gateway."
+      },
+      {
+        "name": "Nastavenia",
+        "owns": "Jazyk Monitora, poradie navigácie, kanály oznámení, poskytovateľ AI, prahové hodnoty stavu, výnimky a inventár úprav po inštalácii."
+      }
+    ]
+  },
+  "headerAnatomy": {
+    "heading": "Anatómia hlavičky",
+    "items": [
+      "<strong>Logo + názov produktu</strong> vľavo. Keď sa zistí novšie vydanie monitora, logo sa zmení na variant „dostupná aktualizácia“.",
+      "<strong>Identita uzla</strong>: názov z <code>pvesh get /nodes</code>, prípadne z <code>hostname</code>.",
+      "<strong>Indikátor stavu</strong>: V poriadku (zelená), Varovanie (žltá), Kritický (červená). Kliknutie otvorí monitor stavu. Modré označenie <em>info</em> sa zobrazí, ak sú skryté položky ešte v období potlačenia.",
+      "<strong>Doba prevádzky</strong>: čas behu hostiteľa v čitateľnom formáte.",
+      "<strong>Tlačidlo Obnoviť</strong>: zopakuje volania API pre živé údaje bez načítania celej stránky.",
+      "<strong>Výber témy</strong>: svetlá, tmavá alebo systémová. Ukladá sa do <code>localStorage</code>."
+    ]
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "Záložka aplikácií",
+        "href": "/docs/monitor/dashboard/apps",
+        "tail": " — spoločný spúšťač webových odkazov a jeho vzťah k registrovaným aplikáciám LXC."
+      },
+      {
+        "label": "Karta Prehľad systému",
+        "href": "/docs/monitor/dashboard/system-overview",
+        "tail": " — úvodná karta s úplnou dokumentáciou."
+      },
+      {
+        "label": "Monitor zdravia",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — okno indikátora stavu s podrobnosťami desiatich kategórií."
+      },
+      {
+        "label": "Architektúra",
+        "href": "/docs/monitor/architecture",
+        "tail": " — ako panel komunikuje s backendom Flask."
+      }
+    ]
+  }
+}

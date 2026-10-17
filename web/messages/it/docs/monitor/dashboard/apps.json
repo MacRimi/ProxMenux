@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Pannello Apps: un lanciatore per tutti i collegamenti web | ProxMenux",
+    "description": "Utilizzare il cruscotto Apps per aprire i Link Web registrati LXC e link personalizzati, organizzarli per categoria, e saltare indietro all'ospite che possiede ogni servizio."
+  },
+  "header": {
+    "title": "Dashboard: scheda Apps",
+    "description": "Un singolo lanciatore per le interfacce web che si utilizzano attraverso il nodo, se provengono da un'applicazione LXC registrata o da un collegamento Web personalizzato.",
+    "section": "ProxMenux Monitor · Dashboard"
+  },
+  "intro": {
+    "title": "Un lanciatore, non un installatore di applicazione",
+    "body": "La scheda <strong>Apps</strong> non installa software né scopre servizi. Raggruppa i collegamenti salvati in una griglia ricercabile. I link LXC si configurano nella <appTabLink>scheda App</appTabLink> del guest; i link personalizzati includono servizi VM, proxy inversi e pannelli esterni."
+  },
+  "sources": {
+    "heading": "Cosa appare in Apps",
+    "intro": "Ogni URL avviabile diventa la propria carta. La fonte determina dove la carta viene modificata, ma non come sembra durante l'uso normale.",
+    "colSource": "Fonte",
+    "colAppears": "Che cosa appare",
+    "colManagedFrom": "Dove è gestito",
+    "rows": [
+      {
+        "source": "Applicazione registrata LXC",
+        "appears": "Una scheda per ogni collegamento Web salvato sul record di applicazione.",
+        "managedFrom": "VM & LXCs → LXC modal → App"
+      },
+      {
+        "source": "Collegamento personalizzato legato ad un ospite",
+        "appears": "Un URL di servizio associato a una specifica VM o LXC.",
+        "managedFrom": "Apps → Modifica"
+      },
+      {
+        "source": "Collegamento personalizzato senza associazione",
+        "appears": "Qualsiasi destinazione HTTP(S), incluso un servizio esterno o pubblicato tramite proxy inverso.",
+        "managedFrom": "Apps → Modifica"
+      }
+    ],
+    "relationshipTitle": "App e la scheda App LXC hanno diversi lavori",
+    "relationshipBody": "La <appTabLink>scheda App</appTabLink> del LXC gestisce identità, link web e tracciamento opzionale della versione. <strong>Apps</strong> usa questi link per aprirli rapidamente. Modificare una scheda LXC riporta quindi al record del guest senza duplicare la configurazione."
+  },
+  "cards": {
+    "heading": "Come utilizzare una carta",
+    "intro": "L'intera carta è l'obiettivo di lancio, mentre i suoi controlli più piccoli forniscono contesto senza aprire il servizio.",
+    "items": [
+      "Fare clic sulla scheda per aprire il suo URL in una nuova scheda del browser.",
+      "Il logo utilizza prima il logo Web Link e torna al logo dell'applicazione quando necessario.",
+      "Il chip di categoria utilizza lo stesso colore ed etichetta del corrispondente collegamento Web nella scheda App LXC.",
+      "L'etichetta del guest identifica la VM o il LXC associato. Un clic apre la sua finestra: i link LXC aprono <strong>App</strong>, quelli VM <strong>Stato</strong>.",
+      "Una freccia verso l'alto viola significa che l'applicazione specifica o l'immagine Docker ha un aggiornamento disponibile. Non è un numero di aggiornamento generale per l'intero ospite."
+    ]
+  },
+  "toolbar": {
+    "heading": "Cerca, filtra e ordina",
+    "intro": "La barra degli strumenti restringe una grande collezione di applicazioni senza cambiare i record salvati.",
+    "items": [
+      "La ricerca corrisponde al nome dell'applicazione, al nome degli ospiti, alla VMID e alla categoria.",
+      "Il filtro categoria mostra una categoria alla volta o tutte le applicazioni.",
+      "Ordina per <strong>Nome</strong>, <strong>ID</strong> o <strong>Categoria</strong>. L'ordinazione per categoria aggiunge titoli tra i gruppi di schede.",
+      "L'ordine viene ricordato in questo browser. Testo di ricerca e filtro categoria vengono azzerati tornando alla pagina.",
+      "La scheda App rimane disponibile quando la griglia è vuota, quindi il primo link personalizzato può essere aggiunto senza prima registrare un'applicazione LXC."
+    ]
+  },
+  "customLinks": {
+    "heading": "Aggiungere e modificare link web personalizzati",
+    "intro": "Utilizzare un link personalizzato quando il servizio non è rappresentato da un'applicazione LXC registrata.",
+    "steps": [
+      "Premi <strong>Aggiungi link</strong> nella barra degli strumenti o nella vista vuota.",
+      "Inserisci un nome e un URL completo <code>http://</code> o <code>https://</code>.",
+      "A richiesta aggiungere un logo, scegliere o creare una categoria, e legare il link a un VM o LXC.",
+      "Salva il collegamento. La scheda appare subito nella griglia.",
+      "Per modificare o rimuovere un link personalizzato scegli <strong>Modifica</strong> e usa la matita sulla scheda."
+    ],
+    "colField": "Campo",
+    "colRequired": "Obbligatorio",
+    "colPurpose": "Scopo",
+    "fields": [
+      {
+        "field": "Nome",
+        "required": "Sì",
+        "purpose": "Il titolo della carta e il termine di ricerca."
+      },
+      {
+        "field": "URL",
+        "required": "Sì",
+        "purpose": "La destinazione completa HTTP(S) aperta dalla scheda."
+      },
+      {
+        "field": "URL logo",
+        "required": "No",
+        "purpose": "Un'immagine remota mostrata sulla scheda."
+      },
+      {
+        "field": "Categoria",
+        "required": "No",
+        "purpose": "Aggiunge un badge condiviso e consente di filtrare la categoria."
+      },
+      {
+        "field": "Associazione al guest",
+        "required": "No",
+        "purpose": "Associa il collegamento con un VM o LXC e consente la scorciatoia degli ospiti."
+      }
+    ],
+    "editTitle": "Modificare la fonte della verità",
+    "editBody": "La modalità modifica mostra matite solo per i link personalizzati. Per una scheda di applicazione LXC apri la <appTabLink>scheda App</appTabLink> del guest e modifica il link salvato."
+  },
+  "categories": {
+    "heading": "Categorie e segnali di aggiornamento",
+    "intro": "Le categorie organizzano i link; gli indicatori di aggiornamento descrivono lo stato del software. Sono intenzionalmente separati.",
+    "items": [
+      "La registrazione LXC, assistita da un catalogo, può preriempire una categoria, ma rimane modificabile.",
+      "I nomi di categoria personalizzati possono essere creati dallo stesso selettore e poi riutilizzati dal filtro.",
+      "I colori della categoria sono deterministici e si adattano al tema chiaro o scuro. Gamma viola e rossa sono riservati per gli stati di aggiornamento e pericolo.",
+      "Per Docker, ProxMenux associa la scheda al container o all'immagine e mostra gli aggiornamenti dell'immagine. Quelli di Docker Engine rimangono nella <updatesLink>scheda Aggiornamenti</updatesLink> del LXC."
+    ]
+  },
+  "persistence": {
+    "heading": "Persistenza e comportamento della cache",
+    "intro": "Il pannello usa i dati già disponibili di Monitor senza analizzare di nuovo ogni guest.",
+    "items": [
+      "I link personalizzati vengono salvati atomicamente in <code>/etc/proxmenux/custom_links.json</code> e caricati in memoria all'avvio di Monitor.",
+      "I link LXC registrati rimangono parte del record Monitor salvato della loro applicazione; il cruscotto Apps non li duplica nel file di collegamento personalizzato.",
+      "Creare, modificare o cancellare un link personalizzato aggiorna immediatamente la lista in memoria.",
+      "La preferenza di ordinamento è locale al browser e non si sincronizza tra dispositivi o utenti.",
+      "La posizione di Apps nella navigazione principale si configura separatamente in <settingsLink>Impostazioni → Ordine di navigazione</settingsLink>."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Situazioni comuni",
+    "colProblem": "Situazione",
+    "colResolution": "Risoluzione",
+    "rows": [
+      {
+        "problem": "Un'applicazione LXC è registrata ma nessuna scheda appare",
+        "resolution": "Aprire la scheda App e aggiungere almeno un collegamento Web. Il tracciamento della versione da solo non crea una carta di lancio."
+      },
+      {
+        "problem": "L'URL o il logo è sbagliato",
+        "resolution": "Modificare il link personalizzato in Apps, o modificare il collegamento Web nella scheda app LXC."
+      },
+      {
+        "problem": "Manca un servizio Docker",
+        "resolution": "Modificare l'applicazione Docker registrata e salvare la porta web pubblicata del servizio come Web Link."
+      },
+      {
+        "problem": "La freccia viola si riferisce all'aggiornamento sbagliato Docker",
+        "resolution": "Rivedere il nome e la descrizione del Web Link in modo che possano essere abbinati al contenitore o all'immagine."
+      },
+      {
+        "problem": "Apps si apre prima di Panoramica del sistema",
+        "resolution": "Il primo elemento salvato in Impostazioni → ordine di navigazione diventa la scheda di atterraggio. Ripristinare l'ordine predefinito o spostare Panoramica prima."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Dove proseguire",
+    "items": [
+      {
+        "label": "scheda App LXC",
+        "href": "/docs/monitor/dashboard/vms-lxcs/app",
+        "tail": "— registrare le applicazioni, i Link Web e il monitoraggio delle versioni facoltative."
+      },
+      {
+        "label": "scheda Aggiornamenti LXC",
+        "href": "/docs/monitor/dashboard/vms-lxcs/updates",
+        "tail": " — configura ed esegui aggiornamenti di applicazioni, Docker Engine e immagini."
+      },
+      {
+        "label": "Scheda delle impostazioni",
+        "href": "/docs/monitor/dashboard/settings#navigation-order",
+        "tail": " — cambia l'ordine di navigazione e la scheda iniziale."
+      }
+    ]
+  }
+}
