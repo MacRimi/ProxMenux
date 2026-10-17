@@ -352,6 +352,22 @@ def profile_keys(deployment):
     return keys
 
 
+GUESSED_ENDPOINT = 'compose-first-tcp-port-fallback'
+# curl exit codes for a port that accepted the connection and answered in a
+# protocol other than HTTP: HTTP/0.9 refused, weird reply, empty reply, reset.
+NON_HTTP_ANSWER = (1, 8, 52, 56)
+
+
+def probe_http(args):
+    """Run one curl probe and return its output and exit code."""
+    log('$ ' + shlex.join(str(arg) for arg in args))
+    try:
+        result = subprocess.run(args, capture_output=True, timeout=60, close_fds=True)
+    except subprocess.TimeoutExpired:
+        return b'', -1
+    return result.stdout, result.returncode
+
+
 def effective_healthcheck(template):
     """The template's own health check or, when it has none, one derived from
     its web address: any HTTP answer below 500 means the application is up."""
@@ -367,9 +383,14 @@ def effective_healthcheck(template):
         path = str(endpoint.get('path') or '/')
         if (endpoint.get('scheme') in ('http', 'https') and str(endpoint.get('port', '')).isdigit()
                 and path.startswith('/') and not any(c.isspace() for c in path)):
-            return {'scheme': endpoint['scheme'], 'port': int(endpoint['port']), 'path': path,
-                    'timeout_seconds': 300, 'request_timeout_seconds': 10, 'stability_seconds': 4,
-                    'verify_tls': False, 'accept_any_status': True}
+            check = {'scheme': endpoint['scheme'], 'port': int(endpoint['port']), 'path': path,
+                     'timeout_seconds': 300, 'request_timeout_seconds': 10, 'stability_seconds': 4,
+                     'verify_tls': False, 'accept_any_status': True}
+            # A port taken from the compose file because the recipe names no
+            # web address may serve a database or SSH: any answer counts.
+            if endpoint.get('source') == GUESSED_ENDPOINT:
+                check['accept_non_http'] = True
+            return check
     # Without a web address, the new image must at least keep the container running.
     return {'type': 'running', 'timeout_seconds': 90, 'stability_seconds': 20}
 
@@ -733,11 +754,10 @@ def healthcheck(vmid, template):
                 args += ['-w', '%{http_code}']
             if not check.get('verify_tls', False):
                 args.append('-k')
-            try:
-                answer = run(*args, f'{scheme}://{ip}:{port}{path}')
-                ok = not any_status or re.fullmatch(rb'[1-4][0-9][0-9]', answer.strip()) is not None
-            except RuntimeError:
-                pass
+            answer, status = probe_http([*args, f'{scheme}://{ip}:{port}{path}'])
+            ok = status == 0 and (not any_status or re.fullmatch(rb'[1-4][0-9][0-9]', answer.strip()) is not None)
+            if not ok and check.get('accept_non_http') and status in NON_HTTP_ANSWER:
+                ok = True
         if ok:
             stable_since = stable_since or time.monotonic()
             if time.monotonic() - stable_since >= stability:

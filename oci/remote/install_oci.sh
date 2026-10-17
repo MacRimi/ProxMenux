@@ -359,13 +359,18 @@ cleanup_canonical_inputs() {
 # A derived check accepts any HTTP answer below 500: the application is up,
 # even when its first page is a redirect or asks for a login.
 healthcheck_probe() {
+  local code status=0
   if [[ ${HC_ANY_STATUS:-false} == true ]]; then
-    local code
-    code=$(curl "${CURL_ARGS[@]}" "$HC_URL" 2>/dev/null) || return 1
-    [[ $code =~ ^[1-4][0-9][0-9]$ ]]
+    code=$(curl "${CURL_ARGS[@]}" "$HC_URL" 2>/dev/null) || status=$?
+    (( status == 0 )) && [[ $code =~ ^[1-4][0-9][0-9]$ ]] && return 0
   else
-    curl "${CURL_ARGS[@]}" "$HC_URL" 2>/dev/null
+    curl "${CURL_ARGS[@]}" "$HC_URL" >/dev/null 2>&1 || status=$?
+    (( status == 0 )) && return 0
   fi
+  # A port taken from the compose file may serve a database or SSH: an answer
+  # in another protocol (HTTP/0.9, weird or empty reply, reset) means it is up.
+  [[ ${HC_ACCEPT_NON_HTTP:-false} == true ]] \
+    && (( status == 1 || status == 8 || status == 52 || status == 56 ))
 }
 
 cleanup_failed_install() {
@@ -2267,6 +2272,7 @@ if [[ $START_AFTER == 1 && $HAS_STARTUP_HEALTHCHECK == 1 ]]; then
   [[ -n $IP ]] || die "$(translate "The healthcheck cannot run without an IP address")"
   HC_URL="${HC_SCHEME}://${IP}:${HC_PORT}${HC_PATH}"
   HC_ANY_STATUS=$(jq -r '.accept_any_status // false' <<<"$STARTUP_HEALTHCHECK")
+  HC_ACCEPT_NON_HTTP=$(jq -r '.accept_non_http // false' <<<"$STARTUP_HEALTHCHECK")
   if [[ $HC_ANY_STATUS == true ]]; then
     CURL_ARGS=(-sS --noproxy '*' -o /dev/null -w '%{http_code}' --max-time "$HC_REQUEST_TIMEOUT")
   else
