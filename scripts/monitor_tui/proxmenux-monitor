@@ -1,0 +1,15 @@
+#!/bin/sh
+# ProxMenux-owned
+# ProxMenux-owned Monitor console launcher.
+APP_RUN=/usr/local/share/proxmenux/monitor-app/AppRun
+if [ "$(id -u)" -eq 0 ]; then
+  if command -v setpriv >/dev/null 2>&1 &&
+     setpriv --no-new-privs --reuid=65534 --regid=65534 --groups=proxmenux-monitor \
+       --inh-caps=-all --bounding-set=-all -- /bin/true; then
+    exec setpriv --no-new-privs --reuid=65534 --regid=65534 --groups=proxmenux-monitor \
+      --inh-caps=-all --bounding-set=-all -- "$APP_RUN" --tui
+  fi
+  echo "ProxMenux Monitor TUI needs setpriv with --no-new-privs to run safely as root." >&2
+  exit 1
+fi
+exec "$APP_RUN" --tui

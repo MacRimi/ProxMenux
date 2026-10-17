@@ -1,0 +1,56 @@
+#!/bin/sh
+# ProxMenux-owned
+# ProxMenux-owned getty pre-start hook. ExecStart remains systemd's original
+# getty command, so login behavior and distro overrides are preserved.
+set -u
+STATE=${PROXMENUX_TUI_STATE:-/usr/local/share/proxmenux/monitor-tui.disabled}
+SEEN=${PROXMENUX_TUI_SEEN_STATE:-/run/proxmenux-monitor/tty1-seen}
+TUI=${PROXMENUX_TUI_LAUNCHER:-/usr/local/bin/proxmenux-monitor}
+SETPRIV=${PROXMENUX_TUI_SETPRIV:-setpriv}
+mark_attempt() {
+  if [ -e "$SEEN" ] && ! attempted; then
+    echo "Refusing to overwrite unowned TTY1 attempt state: $SEEN" >&2
+    return 1
+  fi
+  install -d -m 0750 "$(dirname "$SEEN")" || return 1
+  temporary="$SEEN.$$"
+  (umask 077; printf '%s\n' 'ProxMenux TTY1 attempted this boot.' > "$temporary") || {
+    rm -f "$temporary"
+    return 1
+  }
+  chmod 0600 "$temporary" || { rm -f "$temporary"; return 1; }
+  mv -f "$temporary" "$SEEN" || { rm -f "$temporary"; return 1; }
+}
+opted_out() {
+  [ -f "$STATE" ] && [ ! -L "$STATE" ] &&
+    [ "$(head -n 1 "$STATE")" = '# ProxMenux-owned TTY1 opt-out state.' ]
+}
+attempted() {
+  [ -f "$SEEN" ] && [ ! -L "$SEEN" ] &&
+    [ "$(head -n 1 "$SEEN")" = 'ProxMenux TTY1 attempted this boot.' ]
+}
+if opted_out || attempted; then
+  exit 0
+fi
+if [ ! -x "$TUI" ]; then
+  exit 0
+fi
+if command -v "$SETPRIV" >/dev/null 2>&1 &&
+   "$SETPRIV" --no-new-privs --reuid=65534 --regid=65534 --groups=proxmenux-monitor \
+     --inh-caps=-all --bounding-set=-all -- /bin/true; then
+  if ! mark_attempt; then
+    echo "ProxMenux Monitor TUI skipped because its per-boot attempt state could not be recorded." >&2
+    exit 0
+  fi
+  # Ctrl-C is delivered to the foreground process group. Keep this ExecStartPre
+  # shell alive so systemd can continue to getty after curses restores the TTY.
+  trap ':' INT
+  "$SETPRIV" --no-new-privs --reuid=65534 --regid=65534 --groups=proxmenux-monitor \
+    --inh-caps=-all --bounding-set=-all -- "$TUI" --tui || true
+  trap - INT
+else
+  echo "ProxMenux Monitor TUI needs setpriv with --no-new-privs; starting normal getty." >&2
+fi
+# The marker is written after a privilege-drop probe and immediately before
+# launch, so q, a crash, or a later getty activation cannot relaunch it.
+exit 0

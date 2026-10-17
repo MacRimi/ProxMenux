@@ -1729,6 +1729,43 @@ def _vital_signs_sampler():
             time.sleep(10)
 
 
+def _console_snapshot_loop():
+    """Publish a minimal cluster snapshot for the local read-only TUI."""
+    from monitor_console import refresh_snapshot
+
+    while True:
+        try:
+            if not is_pbs_host():
+                expected_nodes = None
+                try:
+                    with open('/etc/pve/.members', encoding='utf-8') as stream:
+                        membership = json.load(stream)
+                    nodelist = membership.get('nodelist', {})
+                    if isinstance(nodelist, dict) and nodelist:
+                        expected_nodes = sorted(str(name) for name in nodelist)
+                except (OSError, ValueError, AttributeError):
+                    pass
+
+                def read_json(args):
+                    result = subprocess.run(args, capture_output=True, text=True, timeout=8)
+                    if result.returncode != 0:
+                        raise RuntimeError("Proxmox sampling failed")
+                    value = json.loads(result.stdout)
+                    if not isinstance(value, list):
+                        raise RuntimeError("Unexpected Proxmox sampling response")
+                    return value
+
+                refresh_snapshot(
+                    lambda: read_json(['pvesh', 'get', '/cluster/resources', '--output-format', 'json']),
+                    lambda: read_json(['pvesh', 'get', '/cluster/status', '--output-format', 'json']),
+                    expected_nodes=expected_nodes,
+                )
+        except Exception as exc:
+            # Keep observed_at unchanged so the TUI can identify stale data.
+            print(f"[ProxMenux] Console snapshot unavailable: {exc}")
+        time.sleep(15)
+
+
 def get_uptime():
     """Get system uptime in a human-readable format."""
     try:
@@ -23112,6 +23149,13 @@ if __name__ == '__main__':
         vital_thread.start()
     except Exception as e:
         print(f"[ProxMenux] Vital signs sampler failed to start: {e}")
+
+    try:
+        console_thread = threading.Thread(target=_console_snapshot_loop, daemon=True,
+                                          name='console-snapshot')
+        console_thread.start()
+    except Exception as e:
+        print(f"[ProxMenux] Console snapshot sampler failed to start: {e}")
 
     # ── Fire pending app-update notifications on startup ──
     # Piggy-backs on any pre-existing update_available flag in the

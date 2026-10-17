@@ -35,6 +35,31 @@ esac
 # Change to the AppImage directory
 cd "${APPDIR}"
 
+# The console view is a local, read-only curses client. It never passes
+# through the authenticated web API and has no administrative actions.
+if [[ "${1:-}" == "--tui" ]]; then
+    # The read-only renderer must never run with root privileges, including
+    # when AppRun is invoked directly instead of through the installed wrapper.
+    if [ "$(id -u)" -eq 0 ]; then
+        if command -v setpriv >/dev/null 2>&1 && \
+           setpriv --no-new-privs --reuid=65534 --regid=65534 --groups=proxmenux-monitor \
+             --inh-caps=-all --bounding-set=-all -- /bin/true; then
+            exec setpriv --no-new-privs --reuid=65534 --regid=65534 --groups=proxmenux-monitor \
+                --inh-caps=-all --bounding-set=-all -- "${APPDIR}/AppRun" --tui
+        fi
+        echo "ProxMenux Monitor TUI needs setpriv with --no-new-privs to run safely as root." >&2
+        exit 1
+    fi
+    # Preserve a host terminfo database for SSH terminals. Use the bundled
+    # Linux-console entry only when the host lacks that specific capability.
+    if [ -z "${TERMINFO:-}" ] && [ "${TERM:-}" = "linux" ] && \
+       [ ! -r /lib/terminfo/l/linux ] && [ ! -r /usr/share/terminfo/l/linux ] && \
+       [ -d "${APPDIR}/usr/share/terminfo" ]; then
+        export TERMINFO="${APPDIR}/usr/share/terminfo"
+    fi
+    exec python3 "${APPDIR}/usr/bin/proxmenux_monitor_tui.py"
+fi
+
 # Check for translation argument
 if [[ "$1" == "--translate" ]]; then
     echo "🌐 Starting ProxMenux Translation Service..."
