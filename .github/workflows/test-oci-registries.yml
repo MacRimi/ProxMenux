@@ -32,3 +32,7 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: '1'
         run: python3 -m unittest discover -s oci/tests -p 'test_registry_*.py' -v
+      - name: Run OCI Modify latency regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -m unittest discover -s oci/tests -p test_modify_latency.py -v

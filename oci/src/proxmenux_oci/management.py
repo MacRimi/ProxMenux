@@ -106,13 +106,32 @@ def _config_hostname(vmid):
     return ''
 
 
+def _selected_configuration(vmid):
+    """Reuse pct's output only while its complete native source is unchanged.
+
+    The forced carried-record verification has just fetched a fresh config.
+    Older installations without that source-keyed cache still query pct.
+    The lifecycle backend independently validates again before any mutation.
+    """
+    import oci_instances as instances
+    try:
+        import oci_carried_record
+        reader = getattr(oci_carried_record, 'configuration', None)
+        config = reader(instances.ROOT, vmid) if reader else None
+        if isinstance(config, str) and config:
+            return config.encode()
+    except (ImportError, OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+        pass
+    return instances.command('pct', 'config', str(vmid))
+
+
 def check_selected(project, row):
     """Validate only the chosen container; lifecycle backends validate its stack."""
     sys.path.insert(0, str(project / 'remote'))
     import oci_instances as instances
     with instances.locked(instances.ROOT):
         record = instances.read(instances.ROOT, row['vmid'])
-        config = instances.command('pct', 'config', str(row['vmid']))
+        config = _selected_configuration(row['vmid'])
         marker = instances.identity(config)
         reason = 'matched' if marker == record['installation_id'] else 'identity-unconfirmed'
         return public_row(record, {'reason': reason})
@@ -397,12 +416,12 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
             return _toggle_watchdog(project, ui, row['vmid'], watched)
         if action == 'remove':
             return _remove(project, ui, row['vmid'])
-        if not _work_backup_ready(project, ui, row['vmid']):
+        if action != 'modify' and not _work_backup_ready(project, ui, row['vmid']):
             return False
         record = instances.read(instances.ROOT, row['vmid'])
         import oci_instance_reconcile as reconcile
         try:
-            current_config = instances.command('pct', 'config', str(row['vmid']))
+            current_config = _selected_configuration(row['vmid'])
             adoption = reconcile.propose(record, current_config)
         except (OSError, ValueError, RuntimeError) as error:
             ui.message(str(error), translate('Review external OCI changes'))
@@ -442,6 +461,10 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
             finally:
                 wizard.close()
             if not approved:
+                return False
+            # Opening or cancelling the editor needs no disk/storage probes.
+            # Keep the existing backup checks after the user confirms edits.
+            if not _work_backup_ready(project, ui, row['vmid']):
                 return False
         elif not ui.review(translate('If the image channel has a new version, the CT is stopped, backed up and verified, and replaced with the new image to update the container. If the update fails after the container was changed, the backup is restored. An update that stops halfway is recovered from the OCI management menu.'),
                            translate('Update OCI'), question=translate('Update now?'), default=True):
