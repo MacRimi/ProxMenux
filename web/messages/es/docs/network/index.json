@@ -1,15 +1,15 @@
 {
   "meta": {
     "title": "Gestión de red en Proxmox — bridges, bonds, diagnóstico, reparación | ProxMenux",
-    "description": "Diagnóstico de solo lectura, flujos de analizar-y-sugerir y reparaciones guiadas para la stack de red Debian / Proxmox (/etc/network/interfaces). Inspecciona bridges y bonds, ejecuta herramientas de monitorización en vivo, persiste nombres de interfaz, hace backup y reinicia la red de forma segura — con backups obligatorios y previsualizaciones paso a paso.",
+    "description": "Diagnóstico de solo lectura, análisis con propuestas y reparaciones guiadas para la pila de red Debian / Proxmox (/etc/network/interfaces). Inspecciona bridges y bonds, ejecuta herramientas de monitorización en vivo, fija nombres de interfaz, crea copias de seguridad y reinicia la red de forma segura, con copias obligatorias y vistas previas paso a paso.",
     "ogTitle": "Gestión de red en Proxmox — bridges, bonds, diagnóstico, reparación",
-    "ogDescription": "Diagnóstico, análisis y reparaciones guiadas para la stack de red de Proxmox con backups obligatorios y previsualizaciones paso a paso.",
+    "ogDescription": "Diagnóstico, análisis y reparaciones guiadas para la pila de red de Proxmox con copias de seguridad obligatorias y vistas previas paso a paso.",
     "twitterTitle": "Gestión de red en Proxmox | ProxMenux",
-    "twitterDescription": "Bridges, bonds, diagnóstico y reparaciones guiadas para la stack de red de Proxmox con backups obligatorios."
+    "twitterDescription": "Bridges, bonds, diagnóstico y reparaciones guiadas para la pila de red de Proxmox con copias de seguridad obligatorias."
   },
   "header": {
     "title": "Gestión de red",
-    "description": "Diagnóstico de solo lectura, informes de analizar-y-sugerir y reparaciones guiadas para la stack clásica de red Debian/Proxmox. Cada flujo destructivo hace primero un backup y previsualiza los cambios exactos antes de aplicarlos.",
+    "description": "Diagnóstico de solo lectura, informes de análisis con propuestas y reparaciones guiadas para la pila de red clásica de Debian/Proxmox. Cada operación destructiva crea primero una copia de seguridad y muestra los cambios exactos antes de aplicarlos.",
     "section": "Red"
   },
   "intro": {
@@ -52,8 +52,8 @@
       ]
     }
   },
-  "classicTitle": "Solo stack clásica",
-  "classicBody": "Cada función de análisis y reparación comprueba el gestor de red activo antes de tocar nada. Si el host usa <strong>netplan</strong>, <strong>systemd-networkd</strong> o <strong>NetworkManager</strong>, la herramienta aborta inmediatamente con un mensaje claro — el menú solo soporta la stack clásica de Debian/Proxmox en <code>/etc/network/interfaces</code>. Es intencional: editar un fichero de netplan con reglas escritas para <code>ifupdown</code> corrompería silenciosamente la configuración.",
+  "classicTitle": "Solo la pila de red clásica",
+  "classicBody": "Cada función de análisis y reparación comprueba el gestor de red activo antes de tocar nada. Si el host usa <strong>netplan</strong>, <strong>systemd-networkd</strong> o <strong>NetworkManager</strong>, la herramienta se detiene inmediatamente con un mensaje claro: el menú solo admite la pila clásica de Debian/Proxmox en <code>/etc/network/interfaces</code>. Es intencional: editar un fichero de netplan con reglas escritas para <code>ifupdown</code> corrompería silenciosamente la configuración.",
   "backups": {
     "heading": "Dónde van los backups",
     "intro": "Cada reparación guiada, restauración o backup manual escribe una copia con timestamp de <code>/etc/network/interfaces</code> en <code>/var/backups/proxmenux/</code>:",
@@ -61,7 +61,7 @@
   },
   "readOnlySection": {
     "heading": "Inspección de solo lectura",
-    "body": "El punto de partida cuando algo huele raro. Pura inspección — nunca escribe en <code>/etc/network/interfaces</code> y nunca ejecuta un comando modificador (con una única excepción explícita y opt-in para purgar NetworkManager cuando se detecta). Seguro de usar por SSH en cualquier momento.",
+    "body": "El punto de partida cuando algo parece ir mal. Pura inspección: nunca escribe en <code>/etc/network/interfaces</code> ni ejecuta comandos que modifiquen el sistema (con una única excepción explícita, que requiere tu aceptación, para purgar NetworkManager cuando se detecta). Se puede usar por SSH en cualquier momento de forma segura.",
     "options": [
       {
         "title": "Diagnóstico",
@@ -82,7 +82,7 @@
         "description": "Detecta bridges vmbrX con puertos ausentes o inválidos (típico tras una re-enumeración PCI). Muestra primero un informe; solo repara cuando aceptas el flujo guiado de 5 pasos."
       },
       {
-        "title": "Análisis de config y limpieza guiada",
+        "title": "Análisis de configuración y limpieza guiada",
         "description": "Encuentra interfaces físicas declaradas en /etc/network/interfaces que ya no existen (configs huérfanas que dejan cambios de hardware). Las reporta y ofrece una eliminación guiada."
       }
     ]

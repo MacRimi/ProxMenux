@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "Análisis de bridges y reparación guiada | ProxMenux Documentation",
+    "title": "Análisis de bridges y reparación guiada | Documentación de ProxMenux",
     "description": "Detecta bridges vmbrX con puertos físicos ausentes o inválidos (típico tras una re-enumeración PCI), los reporta con comandos de shell propuestos y ofrece una reparación guiada de 5 pasos con backup obligatorio.",
-    "ogTitle": "Análisis de bridges y reparación guiada | ProxMenux Documentation",
+    "ogTitle": "Análisis de bridges y reparación guiada | Documentación de ProxMenux",
     "ogDescription": "Auditar y reparar los puertos de bridge de Proxmox tras cambios de hardware, con flujo guiado y rollback seguro."
   },
   "header": {
@@ -35,7 +35,7 @@
         "bridgeLabel": "Analizar (solo lectura)",
         "bridgeDetail": "ip link show enp3s0\n→ no existe",
         "targetLabel": "Informe + sugerencia",
-        "targetDetail": "❌ enp3s0: NOT FOUND\nReemplazar por: eno1\n(aún sin cambios)"
+        "targetDetail": "❌ enp3s0: NO ENCONTRADA\nReemplazar por: eno1\n(aún sin cambios)"
       }
     },
     "diagram2": {
@@ -50,7 +50,7 @@
   },
   "step1": {
     "heading": "Paso 1: análisis (solo lectura)",
-    "intro": "Seleccionar <strong>Analizar configuración de bridges</strong> aborta inmediatamente si el host no usa la stack clásica de Debian/Proxmox. Si no, recorre cada bridge y reporta:",
+    "intro": "Al seleccionar <strong>Analizar configuración de bridges</strong>, la herramienta se detiene inmediatamente si el host no usa la pila clásica de Debian/Proxmox. En caso contrario, recorre todos los bridges e informa de:",
     "items": [
       "Nombre del bridge, estado actual (UP / DOWN), IP asignada.",
       "Cada puerto declarado y si existe actualmente (<code>ip link show &lt;port&gt;</code>).",
@@ -76,7 +76,7 @@
       },
       {
         "title": "3. Previsualizar los cambios propuestos",
-        "body": "Lista exactamente qué bridges se van a tocar y qué sustituciones de puerto se van a hacer. Si el análisis decide que en realidad no hay que arreglar nada (race condition: el puerto volvió), el flujo sale limpio con <em>\"No changes needed.\"</em>",
+        "body": "Lista exactamente qué bridges se modificarán y qué sustituciones de puertos se harán. Si el análisis determina que no hay nada que reparar porque el puerto ha reaparecido entre las comprobaciones, el proceso termina con <em>«No es necesario realizar cambios»</em>.",
         "tone": "blue"
       },
       {
@@ -90,7 +90,7 @@
         "tone": "emerald"
       }
     ],
-    "restartTitle": "Reiniciar networking ≠ un undo gratis",
+    "restartTitle": "Reiniciar la red ≠ deshacer los cambios sin riesgo",
     "restartBody": "La reparación se escribe en disco independientemente de si reinicias el servicio. <code>systemctl restart networking</code> aplica el cambio <em>ahora</em>, lo que puede cortar tu sesión SSH si el nuevo puerto es incorrecto. Si rechazas el reinicio, el cambio sigue surtiendo efecto en el siguiente reinicio — confirma antes la nueva config o haz rollback con el comando impreso."
   },
   "edits": {
@@ -99,8 +99,8 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "unsupportedTitle": "El análisis aborta con \"Unsupported Network Stack\"",
-    "unsupportedBody": "El host usa netplan, systemd-networkd o NetworkManager. La herramienta solo soporta <code>/etc/network/interfaces</code>. Cambia el host a la stack clásica primero, o edita la configuración con las herramientas nativas del gestor (p. ej. <code>netplan apply</code>).",
+    "unsupportedTitle": "El análisis se detiene con «Pila de red no compatible»",
+    "unsupportedBody": "El host usa netplan, systemd-networkd o NetworkManager. La herramienta solo admite <code>/etc/network/interfaces</code>. Cambia primero el host a la pila clásica o edita la configuración con las herramientas nativas del gestor (p. ej. <code>netplan apply</code>).",
     "noSuggestTitle": "No se imprime sugerencia para un puerto inválido",
     "noSuggestBody": "El host no tiene ninguna interfaz física libre (todas están ya en otro bridge o no existen). El análisis cae a sugerir <code>bridge-ports none</code> para que el bridge al menos pueda levantar sin puerto. Añade una NIC o migra puertos entre bridges manualmente antes de volver a ejecutar.",
     "stillDownTitle": "La reparación termina pero el bridge sigue DOWN",
@@ -118,7 +118,7 @@
         "tail": " — fija los nombres a direcciones MAC para que esto deje de pasar."
       },
       {
-        "label": "Análisis de config y limpieza guiada",
+        "label": "Análisis de configuración y limpieza guiada",
         "href": "/docs/network/config-analysis",
         "tailRich": " — para bloques <code>iface</code> huérfanos (la otra mitad del mismo problema)."
       },

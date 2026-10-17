@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Diagnostica | Documentazione ProxMenux",
+    "description": "Tre controlli diagnostici puntuali di sola lettura: Mostra tabella di routing, Test di connettività e Diagnostica avanzata. Semplice ispezione: non scrive mai in /etc/network/interfaces e non esegue comandi di modifica, con un’unica eccezione esplicita: la rimozione completa di NetworkManager, se rilevato, richiede il tuo consenso.",
+    "ogTitle": "Diagnostica | Documentazione ProxMenux",
+    "ogDescription": "Diagnostica di rete di sola lettura per l'host Proxmox: routing, raggiungibilità, statistiche avanzate."
+  },
+  "header": {
+    "title": "Diagnostica",
+    "description": "Tre controlli puntuali di sola lettura dello stato attuale della rete: tabella di routing, test di connettività e statistiche avanzate. Nessuno scrive in /etc/network/interfaces: sono utilizzabili in sicurezza in qualsiasi momento, anche via SSH. Per il monitoraggio interattivo in tempo reale, vedi Strumenti di monitoraggio in tempo reale.",
+    "section": "Rete"
+  },
+  "intro": {
+    "title": "Cosa fa",
+    "body": "Mostra informazioni su routing, raggiungibilità e statistiche aggregate <strong>senza modificare nulla</strong>. Usalo per verificare che la rete funzioni o individuare IP duplicati. Per osservare il traffico in modo continuo, vedi <monitoringLink>Strumenti di monitoraggio in tempo reale</monitoringLink>; per visualizzare il file di configurazione grezzo, vedi <backupLink>Backup e riavvio delle interfacce</backupLink>."
+  },
+  "routing": {
+    "heading": "Mostra tabella di routing",
+    "body": "Elenca tutte le rotte attualmente usate dal kernel (<code>ip route show</code>) ed evidenzia il gateway predefinito. Utile per verificare che il traffico verso Internet esca dall’interfaccia prevista e che nessuna vecchia rotta abbia la precedenza."
+  },
+  "connectivity": {
+    "heading": "Test connettività",
+    "intro": "Invia due sonde ICMP a tre obiettivi in sequenza e segnala ciascuno. Poi viene eseguito un <code>nslookup google.com</code> per verificare la risoluzione DNS indipendentemente da ICMP.",
+    "headerTest": "Test",
+    "headerTarget": "Destinazione",
+    "headerConfirms": "Cosa conferma",
+    "rows": [
+      {
+        "test": "DNS Google",
+        "target": "8.8.8.8",
+        "confirms": "Raggiungibilità esterna tramite un indirizzo IP anycast noto"
+      },
+      {
+        "test": "Cloudflare DNS",
+        "target": "1.1.1.1",
+        "confirms": "Seconda opzione indipendente se Google blocca ICMP"
+      },
+      {
+        "test": "Gateway",
+        "target": "(percorso di default)",
+        "confirms": "Connettività L2 / L3 al router locale"
+      },
+      {
+        "test": "Risoluzione DNS",
+        "target": "google.com",
+        "confirms": "Il server DNS è raggiungibile e risponde"
+      }
+    ],
+    "readingTitle": "Leggere il risultato",
+    "readingBody": "Se il test del gateway riesce ma i server DNS pubblici non rispondono, la connettività locale funziona ma non hai accesso a Internet: controlla la connessione a monte del gateway. Se la risoluzione DNS fallisce ma i ping verso <code>8.8.8.8</code> riescono, il problema è il resolver, non la rete: controlla <code>/etc/resolv.conf</code>."
+  },
+  "advanced": {
+    "heading": "Diagnostica avanzata",
+    "intro": "Aggrega le statistiche dell’intera rete ed esegue una serie di controlli sui problemi comuni. Mostra il numero di connessioni attive, le porte in ascolto e il totale delle interfacce, e segnala esplicitamente due configurazioni problematiche:",
+    "items": [
+      "<strong>NetworkManager in esecuzione su un host Proxmox.</strong> NetworkManager e <code>ifupdown</code> di Proxmox entrano in conflitto: entrambi tentano di gestire le interfacce, rendendo i bridge instabili o impedendone l’attivazione. Se viene rilevato, lo strumento propone una conferma interattiva per arrestarlo, disabilitarlo e rimuoverlo completamente (è l’<em>unica</em> diagnostica che può modificare il sistema, e solo dopo un consenso esplicito).",
+      "<strong>Indirizzi IP duplicati su interfacce diverse.</strong> Due interfacce con lo stesso indirizzo IPv4 causano problemi di connettività intermittenti molto difficili da diagnosticare dall’interno della VM. Rilevamento tramite <code>ip -4 addr show | sort | uniq -d</code>."
+    ],
+    "nmTitle": "Il prompt NetworkManager è l'unica azione di modifica qui",
+    "nmBody": "Tutti gli altri controlli della diagnostica avanzata sono di sola lettura. La rimozione di NetworkManager richiede una conferma sì/no ed esegue <code>systemctl stop / disable</code> + <code>apt-get purge -y network-manager</code>. Se rifiuti, non cambia nulla."
+  },
+  "troubleshoot": {
+    "heading": "Risoluzione dei problemi",
+    "gwTitle": "Il test di connettività segnala un errore del gateway, ma l’host ha accesso a Internet",
+    "gwBody": "Alcuni router non rispondono a ICMP sulla loro interfaccia interna anche se inoltrano correttamente il traffico. Prova <code>traceroute 8.8.8.8</code> da una console: se il secondo hop è il tuo ISP e il test del DNS pubblico è riuscito, il gateway funziona nonostante il ping fallito.",
+    "dupTitle": "La diagnostica avanzata continua a segnalare IP duplicati dopo che ne ho rimosso uno",
+    "dupBody": "Il controllo guarda lo stato del kernel dal vivo, non il file di configurazione. Eseguire <code>ip -4 addr show</code> per confermare; se il duplicato è ancora presente, un'interfaccia lo tiene ancora. Utilizzare <code>ip addr del &lt;IP&gt;/&lt;mask&gt; dev &lt;iface&gt;</code> per rimuoverlo dallo stato in tempo reale, quindi modificare <code>/etc/network/interfaces</code> se è anche persistente."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "label": "Strumenti di monitoraggio dal vivo",
+        "href": "/docs/network/monitoring",
+        "tail": "— lanciatori interattivi iftop / iptraf-ng / iperf3."
+      },
+      {
+        "label": "Analisi dei bridge e riparazione guidata",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — quando a un vmbrX manca la porta fisica."
+      },
+      {
+        "label": "Analisi della configurazione e pulizia guidata",
+        "href": "/docs/network/config-analysis",
+        "tail": " — quando una vecchia scheda di rete è ancora dichiarata ma non è più presente."
+      },
+      {
+        "label": "Backup e riavvio delle interfacce",
+        "href": "/docs/network/backup-restore",
+        "tail": " — per creare un’istantanea della configurazione prima di qualsiasi modifica."
+      }
+    ]
+  }
+}

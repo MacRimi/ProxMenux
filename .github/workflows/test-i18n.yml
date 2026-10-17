@@ -9,15 +9,20 @@ on:
       - 'AppImage/messages/**'
       - 'AppImage/lib/i18n/**'
       - 'AppImage/components/terminal-panel.tsx'
+      - 'web/**'
       - 'CONTRIBUTING.md'
       # Scheduler consumers and the offline extractor's .sh/.func inputs.
       - 'scripts/**/*.sh'
       - 'scripts/**/*.func'
       - 'scripts/**/*.py'
       - 'lang/*.json'
+      - 'menu'
+      - 'install_proxmenux.sh'
+      - 'install_proxmenux_beta.sh'
       - 'oci/src/**/*.py'
       - 'oci/catalog/**/*.json'
       - 'oci/remote/**/*.sh'
+      - 'oci/remote/**/*.py'
   push:
     branches: [main, develop]
     paths:
@@ -27,15 +32,20 @@ on:
       - 'AppImage/messages/**'
       - 'AppImage/lib/i18n/**'
       - 'AppImage/components/terminal-panel.tsx'
+      - 'web/**'
       - 'CONTRIBUTING.md'
       # Scheduler consumers and the offline extractor's .sh/.func inputs.
       - 'scripts/**/*.sh'
       - 'scripts/**/*.func'
       - 'scripts/**/*.py'
       - 'lang/*.json'
+      - 'menu'
+      - 'install_proxmenux.sh'
+      - 'install_proxmenux_beta.sh'
       - 'oci/src/**/*.py'
       - 'oci/catalog/**/*.json'
       - 'oci/remote/**/*.sh'
+      - 'oci/remote/**/*.py'
   workflow_dispatch:
 
 permissions:

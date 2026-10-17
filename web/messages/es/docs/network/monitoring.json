@@ -1,13 +1,13 @@
 {
   "meta": {
-    "title": "Herramientas de monitorización en vivo | ProxMenux Documentation",
+    "title": "Herramientas de monitorización en vivo | Documentación de ProxMenux",
     "description": "Tres lanzadores interactivos de monitorización de red: iftop (ancho de banda en tiempo real por par de hosts), iptraf-ng (monitor de tráfico multimodo) e iperf3 (test de ancho de banda, modo servidor / cliente). Cada uno se instala la primera vez que se usa.",
-    "ogTitle": "Herramientas de monitorización en vivo | ProxMenux Documentation",
+    "ogTitle": "Herramientas de monitorización en vivo | Documentación de ProxMenux",
     "ogDescription": "Monitorización interactiva de red y test de ancho de banda para el host Proxmox: iftop, iptraf-ng, iperf3."
   },
   "header": {
     "title": "Herramientas de monitorización en vivo",
-    "description": "Tres lanzadores interactivos para observación de red en tiempo real y medición de ancho de banda: iftop, iptraf-ng e iperf3. Cada herramienta se autoinstala desde apt la primera vez que se usa, corre en primer plano y se sale con la tecla documentada. De solo lectura sobre la configuración del host — solo observan el tráfico.",
+    "description": "Tres lanzadores interactivos para observar la red en tiempo real y medir el ancho de banda: iftop, iptraf-ng e iperf3. Cada herramienta se instala automáticamente desde apt la primera vez que se usa, se ejecuta en primer plano y se cierra con la tecla indicada. No cambian la configuración de red del host; iperf3 genera tráfico de prueba.",
     "section": "Red"
   },
   "intro": {
@@ -48,28 +48,28 @@
     "headerUseFor": "Úsalo para",
     "rows": [
       {
-        "mode": "IP traffic monitor",
+        "mode": "Monitor de tráfico IP",
         "useFor": "Lista en vivo de flujos TCP / UDP / ICMP / otro-IP con contadores de bytes y estado de conexión"
       },
       {
-        "mode": "General interface stats",
+        "mode": "Estadísticas generales de interfaces",
         "useFor": "Conteos agregados de paquetes IPv4 / IPv6 / TCP / UDP / ICMP / no-IP por NIC"
       },
       {
-        "mode": "Detailed interface stats",
+        "mode": "Estadísticas de interfaz detalladas",
         "useFor": "Igual que arriba pero para una interfaz, con detalle de tamaño y tasa de paquetes"
       },
       {
-        "mode": "Statistical breakdowns",
+        "mode": "Desglose estadístico",
         "useFor": "Histograma de distribución de tamaño de paquete, por puerto TCP / UDP"
       },
       {
-        "mode": "LAN station monitor",
+        "mode": "Monitor de estaciones LAN",
         "useFor": "Estadísticas de tráfico por MAC del dominio de broadcast local"
       }
     ],
     "exit": "<strong>Salir:</strong> pulsa <kbd>x</kbd> desde cualquier vista (o <kbd>Q</kbd> desde el menú principal). ProxMenux muestra un diálogo recordatorio antes de lanzarlo.",
-    "logTitle": "El logging captura a fichero",
+    "logTitle": "Guardar las capturas en un fichero",
     "logBody": "Cada modo ofrece registrar las estadísticas capturadas en <code>/var/log/iptraf-ng/</code>. Útil si necesitas un registro de un pico de tráfico — déjalo corriendo, vuelca al fichero, revisa el fichero después en lugar de intentar leer la pantalla en vivo."
   },
   "iperf3": {
@@ -81,24 +81,24 @@
     "headerCli": "CLI equivalente",
     "rows": [
       {
-        "mode": "Server",
+        "mode": "Servidor",
         "behaviour": "Escucha en TCP 5201 e imprime resultados de cada test entrante. Se detiene con Ctrl+C.",
         "cli": "iperf3 -s"
       },
       {
-        "mode": "Client",
+        "mode": "Cliente",
         "behaviour": "Pide la IP / hostname del servidor, conecta, ejecuta un test por defecto de 10 segundos e imprime el informe.",
         "cli": "iperf3 -c <target>"
       }
     ],
     "workflowIntro": "Flujo típico para probar un enlace 10 GbE entre dos hosts Proxmox:",
     "workflow": [
-      "En el host A, abre el menú Red → <em>Test de ancho de banda (iperf3)</em> → elige <strong>Server</strong>.",
-      "En el host B, abre la misma entrada de menú → elige <strong>Client</strong> → introduce la IP del host A.",
+      "En el host A, abre el menú Red → <em>Test de ancho de banda (iperf3)</em> → elige <strong>Servidor</strong>.",
+      "En el host B, abre la misma entrada de menú → elige <strong>Cliente</strong> → introduce la IP del host A.",
       "Espera 10 segundos. Compara la tasa reportada con el máximo teórico del enlace."
     ],
     "sample": "Salida de ejemplo del cliente:",
-    "flagsTitle": "Flags útiles a mano (desde una shell)",
+    "flagsTitle": "Opciones útiles para ejecutar a mano desde una shell",
     "flagsBody": "<code>-t 60</code> test más largo (60s en lugar de los 10s por defecto), <code>-P 4</code> 4 streams en paralelo (satura más rápido), <code>-R</code> dirección inversa (servidor → cliente), <code>-u -b 100M</code> test UDP a 100 Mbit/s (para mediciones de jitter / pérdida de paquetes), <code>-p 5202</code> usa un puerto distinto (varios tests en paralelo). <code>man iperf3</code> para el set completo.",
     "firewallTitle": "Abre el puerto del firewall en el servidor",
     "firewallBody": "El servidor escucha en TCP <strong>5201</strong> por defecto. Si corres el servidor dentro de un host Proxmox con un firewall estricto (a nivel de datacenter o de host), permite entrada TCP 5201 desde la IP del cliente durante el test y luego ciérralo. Lo mismo aplica a <code>nftables</code> / <code>iptables</code> en hosts bare metal."
