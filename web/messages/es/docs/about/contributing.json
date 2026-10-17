@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Contribuir a ProxMenux | ProxMenux Documentation",
+    "title": "Contribuir a ProxMenux | Documentación de ProxMenux",
     "description": "Cómo contribuir a ProxMenux — modelo de ramas (main / develop / feature/*), flujo de pull requests, plantilla de cabecera de script con atribución de autor y enlace opcional de patrocinio, política de diseño UI en dos fases, funciones de mensajes y el camino desde una rama de función hasta un release estable.",
     "ogTitle": "Contribuir a ProxMenux",
     "ogDescription": "Modelo de ramas, flujo de trabajo, atribución en la cabecera del script y política de diseño UI en dos fases que los colaboradores deben seguir."
@@ -129,7 +129,7 @@
     "intro": "Todas definidas en <code>utils.sh</code>. Úsalas como el valor por defecto para cualquier salida visible para el usuario — visuales coherentes entre scripts es la idea. Si tu script necesita una función nueva que no encaja en el conjunto existente (un nuevo nivel de severidad, un nuevo helper de layout, etc.), propónla en tu Pull Request — se revisará y se añadirá a <code>utils.sh</code> si es útil de forma amplia.",
     "headerFunction": "Función",
     "headerWhen": "Cuándo usar",
-    "headerSpinner": "Spinner",
+    "headerSpinner": "Indicador de progreso",
     "rows": [
       {
         "function": "msg_info \"text\"",
@@ -163,7 +163,7 @@
       },
       {
         "function": "msg_success \"text\"",
-        "whenRich": "Prompt final \"Press Enter to return\" al final de la fase 2.",
+        "whenRich": "Mensaje final «Pulsa Intro para volver» al terminar la fase 2.",
         "spinner": "Para"
       },
       {
