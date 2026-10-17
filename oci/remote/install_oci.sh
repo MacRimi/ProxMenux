@@ -1091,7 +1091,7 @@ ensure_runtime_home() {
   passwd_file="${rootfs}/etc/passwd"
   mount_ct_rootfs
   if ! home=$(python3 "$OCI_RUNTIME_RESOLVER" --home "$passwd_file" "$uid" 2>>"${OCI_LOG:-/dev/stderr}"); then
-    oci_quiet pct unmount "$VMID" || true
+    oci_quiet pct unmount "$VMID" || die "$(translate "Could not unmount the container filesystem")"
     return 0
   fi
   oci_quiet pct unmount "$VMID" || die "$(translate "Could not unmount the container filesystem")"
