@@ -88,17 +88,38 @@
     "colMethod": "Metóda nainštalovanej verzie",
     "colUse": "Použitie",
     "detectorRows": [
-      { "method": "dpkg / apk", "use": "Číta verziu nainštalovaného balíka z metadát Debianu, Ubuntu alebo Alpine." },
-      { "method": "binary", "use": "Spustí absolútnu cestu binárneho súboru alebo názov príkazu s parametrami verzie." },
-      { "method": "file + regex", "use": "Číta skutočný súbor a extrahuje verziu pomocou jednej zachytávacej skupiny." },
-      { "method": "docker label / docker exec", "use": "Číta OCI značku verzie alebo spustí príkaz verzie v Docker kontajneri." },
-      { "method": "python distribution", "use": "Používa importlib.metadata cez vybraný interpreter Pythonu." },
-      { "method": "command", "use": "Spustí pokročilý príkaz vo formáte argv bez shellu a extrahuje verziu z výstupu." },
-      { "method": "manual", "use": "Uloží manuálne zadanú verziu; po aktualizácii aplikácie ju treba zmeniť." }
+      {
+        "method": "dpkg / apk",
+        "use": "Číta verziu nainštalovaného balíka z metadát Debianu, Ubuntu alebo Alpine."
+      },
+      {
+        "method": "binary",
+        "use": "Spustí absolútnu cestu binárneho súboru alebo názov príkazu s parametrami verzie."
+      },
+      {
+        "method": "file + regex",
+        "use": "Číta skutočný súbor a extrahuje verziu pomocou jednej zachytávacej skupiny."
+      },
+      {
+        "method": "docker label / docker exec",
+        "use": "Číta OCI značku verzie alebo spustí príkaz verzie v Docker kontajneri."
+      },
+      {
+        "method": "python distribution",
+        "use": "Používa importlib.metadata cez vybraný interpreter Pythonu."
+      },
+      {
+        "method": "command",
+        "use": "Spustí pokročilý príkaz vo formáte argv bez shellu a extrahuje verziu z výstupu."
+      },
+      {
+        "method": "manual",
+        "use": "Uloží manuálne zadanú verziu; po aktualizácii aplikácie ju treba zmeniť."
+      }
     ],
     "sourcesHeading": "Zdroje dostupnej verzie",
     "sources": [
-      "<strong>GitHub repozitár</strong>: najnovšie vydanie alebo značka verejného repozitára <code>vlastník/názov</code>.",
+      "<strong>GitHub repozitár</strong>: najnovšie vydanie alebo značka verejného repozitára <code>owner/name</code>.",
       "<strong>HTTP JSON</strong>: verejný koncový bod a cesta ako <code>data.version</code> alebo <code>releases[0].tag_name</code>.",
       "<strong>Docker Hub</strong>: verzované značky filtrované regulárnym výrazom. Živý náhľad pred uložením ukáže skutočné zodpovedajúce značky.",
       "Pohyblivé značky ako <code>latest</code>, <code>stable</code> alebo <code>lts</code> neobsahujú verziu. Tieto obrazy sledujte podľa digestu v aktualizáciách Docker obrazov."
@@ -132,11 +153,31 @@
     "colDisplay": "Zobrazenie",
     "colMeaning": "Význam",
     "rows": [
-      { "state": "Dostupná aktualizácia", "display": "Dostupná verzia fialovo s ikonou šípky nahor", "meaning": "Nainštalovaná a dostupná verzia sa líšia." },
-      { "state": "Aktuálne", "display": "Nainštalovaná a dostupná verzia bez fialového upozornenia", "meaning": "Posledná kontrola nenašla novšiu verziu." },
-      { "state": "Sledovanie čaká", "display": "Stav kontroly alebo čakania", "meaning": "Záznam je nastavený, ale ešte nedokončil obe kontroly." },
-      { "state": "Sledovanie vypnuté", "display": "Iba webové odkazy bez porovnania verzií", "meaning": "Záznam zostáva platný a môže mať aktualizátor." },
-      { "state": "Chyba kontroly", "display": "Jantárové vysvetlenie na karte", "meaning": "Predchádzajúci uložený stav zostane viditeľný a zobrazí sa chyba detektora alebo zdroja." }
+      {
+        "state": "Dostupná aktualizácia",
+        "display": "Dostupná verzia fialovo s ikonou šípky nahor",
+        "meaning": "Nainštalovaná a dostupná verzia sa líšia."
+      },
+      {
+        "state": "Aktuálne",
+        "display": "Nainštalovaná a dostupná verzia bez fialového upozornenia",
+        "meaning": "Posledná kontrola nenašla novšiu verziu."
+      },
+      {
+        "state": "Sledovanie čaká",
+        "display": "Stav kontroly alebo čakania",
+        "meaning": "Záznam je nastavený, ale ešte nedokončil obe kontroly."
+      },
+      {
+        "state": "Sledovanie vypnuté",
+        "display": "Iba webové odkazy bez porovnania verzií",
+        "meaning": "Záznam zostáva platný a môže mať aktualizátor."
+      },
+      {
+        "state": "Chyba kontroly",
+        "display": "Jantárové vysvetlenie na karte",
+        "meaning": "Predchádzajúci uložený stav zostane viditeľný a zobrazí sa chyba detektora alebo zdroja."
+      }
     ]
   },
   "management": {
@@ -155,11 +196,26 @@
     "colProblem": "Situácia",
     "colResolution": "Riešenie",
     "rows": [
-      { "problem": "Softvér bol nainštalovaný po štarte ProxMenux", "resolution": "Stlačte Hľadať aplikácie. Výslovné skenovanie aktualizuje návrhy v pamäti daného LXC." },
-      { "problem": "Aplikácia nebola zistená", "resolution": "Zaregistrujte ju manuálne. Stačí názov a jeden webový odkaz; sledovanie možno pridať neskôr." },
-      { "problem": "Navrhnutý detektor vracia nesprávnu verziu", "resolution": "Otvorte Upraviť polia, vyberte skutočný balík, binárny súbor alebo súbor a pred uložením otestujte detektor." },
-      { "problem": "Služba Dockeru sa neponúka ako aplikácia LXC", "resolution": "Zaregistrujte Docker a pridajte publikované rozhranie služby ako webový odkaz Dockeru. Aktualizácie obrazov zostanú v sekcii Docker." },
-      { "problem": "Uložená aplikácia nemá tlačidlo aktualizácie", "resolution": "Otvorte Aktualizácie a nastavte jej metódu. Samotné sledovanie verzie neurčuje, ako sa aktualizácia nainštaluje." }
+      {
+        "problem": "Softvér bol nainštalovaný po štarte ProxMenux",
+        "resolution": "Stlačte Hľadať aplikácie. Výslovné skenovanie aktualizuje návrhy v pamäti daného LXC."
+      },
+      {
+        "problem": "Aplikácia nebola zistená",
+        "resolution": "Zaregistrujte ju manuálne. Stačí názov a jeden webový odkaz; sledovanie možno pridať neskôr."
+      },
+      {
+        "problem": "Navrhnutý detektor vracia nesprávnu verziu",
+        "resolution": "Otvorte Upraviť polia, vyberte skutočný balík, binárny súbor alebo súbor a pred uložením otestujte detektor."
+      },
+      {
+        "problem": "Služba Dockeru sa neponúka ako aplikácia LXC",
+        "resolution": "Zaregistrujte Docker a pridajte publikované rozhranie služby ako webový odkaz Dockeru. Aktualizácie obrazov zostanú v sekcii Docker."
+      },
+      {
+        "problem": "Uložená aplikácia nemá tlačidlo aktualizácie",
+        "resolution": "Otvorte Aktualizácie a nastavte jej metódu. Samotné sledovanie verzie neurčuje, ako sa aktualizácia nainštaluje."
+      }
     ]
   },
   "figures": {

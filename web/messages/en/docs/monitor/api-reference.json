@@ -55,7 +55,7 @@
     "heading": "Conventions",
     "items": [
       "All requests and responses are JSON unless explicitly noted (log download is plain text, <code>/api/prometheus</code> is text/plain in the OpenMetrics format, task log is plain text).",
-      "Successful mutating endpoints return <code>'{'\"success\": true, ...'}'</code>. Error responses use a non-2xx HTTP status with <code>'{'\"success\": false, \"error\": \"'<'reason'>'\"'}'</code>.",
+      "Many write endpoints return <code>'{'\"success\": true, ...'}'</code>. Error formats vary; a common form is <code>'{'\"success\": false, \"error\": \"'<'reason'>'\"'}'</code>. Check both HTTP status and response fields: some authentication challenges return HTTP 200 with success false.",
       "List endpoints accept optional <code>limit</code>, <code>offset</code>, <code>since</code> and category-specific filters via query string.",
       "Time fields are returned as Unix epoch seconds or ISO-8601 with explicit timezone, never as locale strings."
     ]
