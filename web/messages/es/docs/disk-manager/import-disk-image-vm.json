@@ -1,14 +1,14 @@
 {
   "meta": {
-    "title": "Importar imagen de disco a VM | ProxMenux Documentation",
+    "title": "Importar imagen de disco a una VM | Documentación de ProxMenux",
     "description": "Importa un archivo de imagen de disco (.img / .qcow2 / .vmdk / .raw) a una VM Proxmox existente usando ProxMenux. Interfaz por imagen, emulación SSD y flag bootable, con qm importdisk por debajo.",
-    "ogTitle": "Importar imagen de disco a VM | ProxMenux Documentation",
+    "ogTitle": "Importar imagen de disco a una VM | Documentación de ProxMenux",
     "ogDescription": "Importa imágenes de disco .img / .qcow2 / .vmdk / .raw a una VM existente con ProxMenux. Usa qm importdisk por debajo."
   },
   "header": {
     "title": "Importar imagen de disco a VM",
     "description": "Importa un archivo de imagen de disco (.img, .qcow2, .vmdk o .raw) a una VM Proxmox existente. ProxMenux recopila todas las decisiones por adelantado — VM destino, almacenamiento Proxmox, directorio origen, interfaz, emulación SSD, orden de arranque — y luego ejecuta qm importdisk para cada imagen seleccionada.",
-    "section": "Disk Manager · VM"
+    "section": "Administrador de discos · VM"
   },
   "intro": {
     "title": "Qué hace esto",
@@ -52,8 +52,8 @@
         "intro": "Para cada imagen seleccionada ProxMenux pregunta:",
         "items": [
           "<strong>Interfaz</strong> — <code>scsi</code> (por defecto), <code>virtio</code>, <code>sata</code> o <code>ide</code>. Determina cómo verá el disco el guest.",
-          "<strong>Emulación SSD</strong> — solo se ofrece para interfaces no-VirtIO. Añade <code>ssd=1</code> para que el guest anuncie el disco como solid-state (útil para TRIM / alineación a nivel de SO).",
-          "<strong>Bootable</strong> — si es sí, ProxMenux añade el disco al orden de arranque para que se convierta en el dispositivo de arranque primario de la VM."
+          "<strong>Emulación SSD</strong>: solo se ofrece para interfaces que no sean VirtIO. Añade <code>ssd=1</code> para que el invitado reconozca un disco de estado sólido. La compatibilidad con discard/TRIM debe configurarse aparte.",
+          "<strong>De arranque</strong>: si eliges sí, ProxMenux añade el disco al orden de arranque como dispositivo principal de la VM."
         ]
       },
       {
@@ -70,10 +70,10 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "noImagesTitle": "\"No compatible disk images found\"",
+    "noImagesTitle": "\"No se encuentran imágenes de disco compatibles\"",
     "noImagesBody": "El script escaneó el directorio pero no encontró ningún archivo <code>.img</code> / <code>.qcow2</code> / <code>.vmdk</code> / <code>.raw</code>. Comprueba la extensión (las mayúsculas importan), que el archivo esté directamente en el directorio seleccionado (no se buscan subdirectorios) y que los permisos permitan a root leerlo.",
     "slowTitle": "La importación va lenta",
-    "slowBody": "Las conversiones VMDK → QCOW2 → raw están limitadas por CPU y E/S. La velocidad de importación depende de la velocidad de lectura del origen, la velocidad de escritura del almacenamiento destino y la CPU para descompresión. Prefiere orígenes raw o qcow2 cuando sea posible.",
+    "slowBody": "Las conversiones entre VMDK, QCOW2 y raw pueden estar limitadas por CPU y E/S. La velocidad depende de la lectura del origen, la escritura del destino y la descompresión necesaria. Prefiere fuentes raw o qcow2 cuando sea posible.",
     "uefiTitle": "El disco importado arranca en la UEFI shell",
     "uefiBody": "La imagen se construyó para legacy (SeaBIOS) pero la VM usa OVMF (o al revés). O bien cambia la BIOS de la VM en Proxmox para que coincida con la imagen, o reconstruye la imagen en el modo correcto antes de importar."
   },
@@ -92,7 +92,7 @@
       },
       {
         "href": "/docs/utils/UUp-Dump-ISO-Creator",
-        "label": "UUP Dump ISO Creator",
+        "label": "Creador de ISO UUP Dump",
         "tail": " — genera una ISO de Windows si necesitas una para una instalación nueva."
       },
       {

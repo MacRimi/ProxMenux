@@ -1,0 +1,142 @@
+{
+  "meta": {
+    "title": "Formátovať alebo vymazať fyzický disk | Dokumentácia ProxMenux",
+    "description": "Mazanie a formátovanie fyzických diskov v Proxmox VE pomocou ProxMenux. Štyri režimy, prísne filtre blokujúce systémové, pripojené a používané disky a dvojité potvrdenie vrátane zadania celej cesty.",
+    "ogTitle": "Formátovať alebo vymazať fyzický disk | Dokumentácia ProxMenux",
+    "ogDescription": "Vymažte alebo naformátujte fyzický disk v Proxmox. Bezpečnostné filtre, štyri režimy a dvojité potvrdenie."
+  },
+  "header": {
+    "title": "Formátovať / vymazať fyzický disk",
+    "description": "Vymažte alebo naformátujte fyzický disk na hostiteľovi Proxmox. ProxMenux zobrazí iba úplne voľné disky, ktoré nepoužíva systém, nie sú uvedené v konfigurácii hosťa a nemajú pripojené súborové systémy. Pred zničením dát vyžaduje dvojité potvrdenie: áno/nie a presné zadanie celej cesty k disku.",
+    "section": "Správca diskov · Nástroje"
+  },
+  "danger": {
+    "title": "Deštrukčný nástroj",
+    "body": "Každá operácia zapisuje na disk. Nedá sa vrátiť späť. ProxMenux používa prísne bezpečnostné filtre a potvrdenia, no za výber správneho disku zodpovedáte vy. Pred zadaním si cestu k disku dvakrát prečítajte nahlas."
+  },
+  "howRuns": {
+    "heading": "Ako beží skript",
+    "body": "Postup má dve fázy s trojitou bezpečnostnou kontrolou medzi nimi. V prvej fáze sa zhromaždí výber disku, režim operácie a údaje súborového systému. Nič sa nezapíše, kým druhá fáza neprejde záverečným opätovným overením tesne pred vykonaním."
+  },
+  "visibility": {
+    "heading": "Pravidlá viditeľnosti",
+    "intro": "Pred tým, ako sa zobrazí menu, ProxMenux filtruje zoznam diskov. Zobrazujú sa iba kandidáti, ktorí sú preukázateľne v bezpečí:",
+    "items": [
+      "<strong>Zobrazené</strong>: disky, ktoré <em>nepoužíva</em> hostiteľ (koreňový pool, swap, pripojené systémy, aktívne ZFS/LVM/RAID) a <em>nie sú</em> uvedené v konfigurácii žiadnej VM/LXC, spustenej ani zastavenej.",
+      "<strong>Skryté</strong>: disky hostiteľa a systému.",
+      "<strong>Skryté</strong>: disky uvedené v konfigurácii VM/LXC."
+    ],
+    "safetyTitle": "Bezpečnosť pri potvrdení a vykonávaní",
+    "safetyItems": [
+      "Disky so zastaranými alebo aktívnymi metadátami zobrazia podrobné upozornenia <em>pred</em> potvrdením.",
+      "Disky používané <strong>spustenou</strong> VM sa pri potvrdení <strong>bez výnimky zablokujú</strong>.",
+      "Disky s pripojenými oddielmi sú <strong>pevne zablokované</strong> pri spustení (tesne predtým, ako sa čokoľvek zapíše, sa spustí nové overenie).",
+      "Vždy sa vyžadujú dve potvrdenia: <em>áno/nie</em> dialógové okno + presné napísanie celej cesty k disku."
+    ]
+  },
+  "modes": {
+    "heading": "Režimy prevádzky",
+    "intro": "Po vybratí disku si vyberiete jeden zo štyroch režimov. Odlišujú sa v tom, čo ničia a čo za sebou zanechávajú:",
+    "headerMode": "Režim",
+    "headerPart": "Tabuľka oddielov",
+    "headerData": "Údaje",
+    "headerUseCase": "Prípad použitia",
+    "rows": [
+      {
+        "mode": "1. Vymazať všetko",
+        "part": "Zničené",
+        "data": "Vymazané podpisy",
+        "useCase": "Odstráni rozdelenie na oddiely a metadáta pre nové usporiadanie. Neprepíše všetky používateľské dáta."
+      },
+      {
+        "mode": "2. Odstrániť značky FS",
+        "part": "Zachované",
+        "data": "Zachované",
+        "useCase": "Odstráni staré podpisy ZFS / LVM / RAID, aby sa disk automaticky nepreberal. Používateľské dáta sa plošne neprepisujú, no odstránenie podpisov ich môže zneprístupniť."
+      },
+      {
+        "mode": "3. Prepísať dáta nulami",
+        "part": "Zachované",
+        "data": "Zničené (prepísané nulami)",
+        "useCase": "Prepíše existujúce oddiely nulami a zachová tabuľku oddielov. Nezahŕňa nepridelené miesto ani rezervné oblasti SSD; nezaručuje úplné bezpečné vymazanie zariadenia."
+      },
+      {
+        "mode": "4. Úplné formátovanie",
+        "part": "Nová GPT",
+        "data": "Zničené",
+        "useCase": "Disk pripravený na použitie s jednou novou partíciou a novým súborovým systémom."
+      }
+    ],
+    "fullFormatOutro": "<strong>Úplné formátovanie</strong> pokračuje dvoma ďalšími dialógmi:",
+    "fullFormatItems": [
+      "<strong>Súborový systém</strong>: <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (prenosný) alebo <code>btrfs</code>. Ak chýbajú nástroje, napríklad <code>mkfs.btrfs</code>, operácia sa preruší s jasnou správou.",
+      "<strong>Menovka</strong>: voliteľná menovka súborového systému na jeho identifikáciu."
+    ]
+  },
+  "steps": {
+    "heading": "Krok za krokom",
+    "stepLabel": "Krok",
+    "list": [
+      {
+        "title": "Vyberte si voľný disk",
+        "body": "ProxMenux uvádza zoznam všetkých diskov, ktoré vyhovujú vyššie uvedeným filtrom viditeľnosti. Disky so značkami ⚠ nesú neaktuálne metadáta a zobrazujú sa s podrobnosťami, aby ste vedeli, čo sa chystáte prepísať."
+      },
+      {
+        "title": "Vybrať operačný režim",
+        "bodyRich": "Podľa tabuľky vyberte <strong>Vymazať všetko</strong>, <strong>Odstrániť značky FS</strong>, <strong>Prepísať dáta nulami</strong> alebo <strong>Úplné formátovanie</strong>."
+      },
+      {
+        "title": "(iba celý formát) Vyberte súborový systém a popis",
+        "body": "ext4 / xfs / exfat / btrfs, plus voliteľný štítok."
+      },
+      {
+        "title": "Potvrdiť dvakrát",
+        "bodyRich": "ProxMenux zobrazí prehľad plánovanej operácie. Potvrdíte dialóg áno/nie a <strong>zadáte celú cestu k disku</strong> presne podľa zobrazenia, napríklad <code>/dev/sdc</code>. Iný vstup operáciu zruší."
+      },
+      {
+        "title": "Opätovné overenie a vykonanie",
+        "body": "Tesne pred zápisom skript znova overí stav disku. Ak sa medzitým pripojil oddiel alebo spustila VM, vykonávanie sa preruší. Inak prebehne zvolená operácia a na konci sa zobrazí prehľad."
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Ručné ekvivalenty",
+    "body": "Ak chcete spustiť rovnocenné príkazy ručne:"
+  },
+  "troubleshoot": {
+    "notListedTitle": "Disk nie je uvedený v menu",
+    "notListedBody": "Disk bol z bezpečnostných dôvodov skrytý. Časté dôvody: je pripojený, aj pod <code>/mnt/tmp</code>, je aktívnym členom ZFS/LVM/RAID, je uvedený v konfigurácii VM/LXC alebo ide o koreňový disk Proxmox. Na hostiteľovi spustite <code>lsblk -f</code> a <code>cat /proc/mdstat</code> na zistenie dôvodu.",
+    "busyTitle": "\"Disk may be busy\" / odpojenie zlyhalo",
+    "busyBody": "Niektorý proces stále drží otvorený súbor na oddiele tohto disku, najčastejšie kontajner alebo shell s pracovným adresárom v bode pripojenia. Zistite ho pomocou <code>lsof | grep /dev/sdX</code> alebo <code>fuser -vm /dev/sdX1</code>, zastavte ho a znova spustite nástroj."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/disk-manager/smart-disk-test",
+        "label": "SMART Zdravie a test disku",
+        "tail": " — skontrolovať stav disku pred vymazaním alebo po ňom."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importovať disk do VM",
+        "tail": " — priradiť čerstvo naformátovaný disk VM."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "label": "Pridať lokálny disk ako Proxmox úložisko",
+        "tail": "— zaregistrujte vymazaný disk ako úložisko Proxmox pool."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Príkazy pre úložiská a disky",
+        "tail": " — prehľad príkazov lsblk, blkid a parted."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Prehľad správcu diskov",
+        "tail": "."
+      }
+    ]
+  }
+}

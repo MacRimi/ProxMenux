@@ -1,0 +1,142 @@
+{
+  "meta": {
+    "title": "Physischen Datenträger formatieren oder löschen | ProxMenux-Dokumentation",
+    "description": "Physische Datenträger auf Proxmox VE mit ProxMenux löschen und formatieren. Vier Betriebsarten, strenge Sicherheitsfilter gegen Systemlaufwerke, eingehängte oder verwendete Laufwerke und doppelte Bestätigung mit Eingabe des vollständigen Pfads.",
+    "ogTitle": "Physischen Datenträger formatieren oder löschen | ProxMenux-Dokumentation",
+    "ogDescription": "Physische Datenträger auf Proxmox löschen oder formatieren. Sicherheitsfilter, vier Betriebsarten und doppelte Bestätigung."
+  },
+  "header": {
+    "title": "Physischen Datenträger formatieren / löschen",
+    "description": "Wischen oder formatieren Sie sicher eine physische Festplatte auf dem Proxmox-Host. ProxMenux zeigt nur Festplatten an, die völlig frei sind (keine Systemnutzung, keine Gastreferenz, keine Mounts) und erzwingt eine doppelte Bestätigung - ja / nein plus Eingabe des vollständigen Festplattenpfads -, bevor Daten zerstört werden.",
+    "section": "Disk Manager · Dienstprogramme"
+  },
+  "danger": {
+    "title": "Zerstörendes Werkzeug",
+    "body": "Jede Operation hier schreibt auf die Festplatte. Es gibt kein Rückgängigmachen. ProxMenux wendet strenge Sicherheitsfilter und Bestätigungen an, aber die Verantwortung für die Auswahl der richtigen Festplatte liegt bei Ihnen. Lesen Sie den Festplattenpfad zweimal laut aus, bevor Sie ihn eingeben."
+  },
+  "howRuns": {
+    "heading": "Wie das Skript läuft",
+    "body": "Der Ablauf hat zwei Phasen mit einer dreifachen Sicherheitsprüfung dazwischen. In Phase 1 werden Laufwerksauswahl, Betriebsart und Dateisystemdetails erfasst. Geschrieben wird erst, wenn Phase 2 unmittelbar vor der Ausführung eine abschließende erneute Prüfung bestanden hat."
+  },
+  "visibility": {
+    "heading": "Sichtbarkeitsregeln",
+    "intro": "Bevor das Menü überhaupt erscheint, filtert ProxMenux die Festplattenliste. Es werden nur Kandidaten gezeigt, die nachweislich sicher sind:",
+    "items": [
+      "<strong>Angezeigt</strong> werden Laufwerke, die <em>nicht</em> vom Host genutzt werden (Root-Pool, Swap, eingehängte Dateisysteme, aktives ZFS/LVM/RAID) und <em>nicht</em> in einer VM-/LXC-Konfiguration referenziert sind, unabhängig vom Betriebszustand des Gasts.",
+      "<strong>Ausgeblendet</strong>: Host- und Systemlaufwerke.",
+      "<strong>Ausgeblendet</strong>: in VM-/LXC-Konfigurationen referenzierte Laufwerke."
+    ],
+    "safetyTitle": "Sicherheit bei Bestätigung und Ausführung",
+    "safetyItems": [
+      "Bei Laufwerken mit veralteten oder aktiven Metadaten erscheinen detaillierte Warnungen <em>vor</em> der Bestätigung.",
+      "Von einer <strong>laufenden</strong> VM genutzte Laufwerke werden bei der Bestätigung <strong>vollständig gesperrt</strong>.",
+      "Laufwerke mit eingehängten Partitionen werden bei der Ausführung <strong>vollständig gesperrt</strong>. Unmittelbar vor dem Schreiben erfolgt eine neue Prüfung.",
+      "Zwei Bestätigungen sind immer erforderlich: ein <em>Ja/Nein</em>-Dialog und die exakte Eingabe des vollständigen Laufwerkspfads."
+    ]
+  },
+  "modes": {
+    "heading": "Betriebsarten",
+    "intro": "Nachdem Sie eine Festplatte ausgewählt haben, wählen Sie einen von vier Modi. Sie unterscheiden sich darin, was sie zerstören und was sie zurücklassen.",
+    "headerMode": "Modus",
+    "headerPart": "Partitionstabelle",
+    "headerData": "Daten",
+    "headerUseCase": "Anwendungsfall",
+    "rows": [
+      {
+        "mode": "1. Alles löschen",
+        "part": "Zerstört",
+        "data": "Signaturen gelöscht",
+        "useCase": "Partitionierung und Metadaten für ein neues Layout entfernen. Dabei werden nicht alle Nutzdaten überschrieben."
+      },
+      {
+        "mode": "2. FS-Etiketten entfernen",
+        "part": "Erhalten",
+        "data": "Erhalten",
+        "useCase": "Entfernt alte ZFS-/LVM-/RAID-Signaturen, damit das Laufwerk nicht mehr automatisch eingebunden wird. Nutzdaten werden nicht flächig überschrieben, können durch das Entfernen der Signaturen aber unzugänglich werden."
+      },
+      {
+        "mode": "3. Daten mit Nullen überschreiben",
+        "part": "Erhalten",
+        "data": "Zerstört (mit Nullen überschrieben)",
+        "useCase": "Bestehende Partitionen mit Nullen überschreiben und die Partitionstabelle erhalten. Nicht zugewiesener Speicher und SSD-Reservebereiche sind nicht erfasst; dies garantiert keine vollständige Gerätesanitisierung."
+      },
+      {
+        "mode": "4. Vollformat",
+        "part": "Neue GPT",
+        "data": "Zerstört",
+        "useCase": "Einsatzbereites Laufwerk mit einer neuen Partition und einem neuen Dateisystem."
+      }
+    ],
+    "fullFormatOutro": "<strong>Vollständiges Formatieren</strong> führt zu zwei weiteren Dialogen:",
+    "fullFormatItems": [
+      "<strong>Dateisystem</strong>: <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (portabel) oder <code>btrfs</code>. Fehlen Werkzeuge wie <code>mkfs.btrfs</code>, wird mit einer klaren Meldung abgebrochen.",
+      "<strong>Label</strong> — optionales Dateisystem-Etikett zur Identifizierung."
+    ]
+  },
+  "steps": {
+    "heading": "Schritt für Schritt",
+    "stepLabel": "Schritt",
+    "list": [
+      {
+        "title": "Freies Laufwerk wählen",
+        "body": "ProxMenux listet jede Festplatte auf, die die oben genannten Sichtbarkeitsfilter passiert. Festplatten mit ⚠-Markern tragen veraltete Metadaten und werden mit den Details angezeigt, damit Sie wissen, was Sie überschreiben möchten."
+      },
+      {
+        "title": "Wählen Sie einen Betriebsmodus",
+        "bodyRich": "Wählen Sie gemäß obiger Tabelle <strong>Alles löschen</strong>, <strong>FS-Etiketten entfernen</strong>, <strong>Daten mit Nullen überschreiben</strong> oder <strong>Vollständiges Formatieren</strong>."
+      },
+      {
+        "title": "(Nur Vollformat) Dateisystem und Label auswählen",
+        "body": "ext4 / xfs / exfat / btrfs, plus ein optionales Etikett."
+      },
+      {
+        "title": "Zweimal bestätigen",
+        "bodyRich": "ProxMenux zeigt eine Zusammenfassung der geplanten Aktion. Sie bestätigen im Ja/Nein-Dialog und <strong>geben den vollständigen Laufwerkspfad</strong> exakt wie angezeigt ein, etwa <code>/dev/sdc</code>. Jede andere Eingabe bricht ab."
+      },
+      {
+        "title": "Revalidierung und Ausführung",
+        "body": "Kurz vor dem Schreiben überprüft das Skript den Festplattenzustand erneut. Wurde zwischenzeitlich eine Partition gemountet oder ein VM gestartet, wird die Ausführung abgebrochen. Ansonsten läuft die gewählte Operation und eine Zusammenfassung wird am Ende gedruckt."
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Manuelle Äquivalente",
+    "body": "Wenn Sie es vorziehen, die entsprechenden Befehle von Hand auszuführen:"
+  },
+  "troubleshoot": {
+    "notListedTitle": "Disk nicht im Menü aufgeführt",
+    "notListedBody": "Das Laufwerk wurde aus Sicherheitsgründen ausgeblendet. Häufige Gründe: Es ist eingehängt, auch unter <code>/mnt/tmp</code>, aktives Mitglied von ZFS/LVM/RAID, in einer VM-/LXC-Konfiguration referenziert oder das Proxmox-Root-Laufwerk. Prüfen Sie auf dem Host <code>lsblk -f</code> und <code>cat /proc/mdstat</code>, um den Grund zu ermitteln.",
+    "busyTitle": "\"Disk may be busy\" / Unmount fehlgeschlagen",
+    "busyBody": "Etwas hält immer noch eine offene Datei auf einer Partition dieser Festplatte - meistens ein Container oder eine Shell, deren cwd sich in einem Mountpoint befindet. Identifizieren Sie es mit <code>lsof | grep /dev/sdX</code> oder <code>fuser -vm /dev/sdX1</code>, stoppen Sie es und führen Sie das Tool erneut aus."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/disk-manager/smart-disk-test",
+        "label": "SMART-Festplattenstatus und -test",
+        "tail": "Überprüfen Sie eine Festplatte vor / nach dem Wischen, um zu bestätigen, dass sie gesund ist."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Datenträger in VM importieren",
+        "tail": "Übergeben Sie eine frisch formatierte Festplatte an eine VM."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "label": "Lokale Festplatte als Proxmox-Speicher hinzufügen",
+        "tail": "Registrieren Sie eine gelöschte Festplatte als Proxmox-Speicherpool."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Speicher- und Festplattenbefehle",
+        "tail": " — Referenz für lsblk, blkid und parted."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Übersicht Disk Manager",
+        "tail": "."
+      }
+    ]
+  }
+}

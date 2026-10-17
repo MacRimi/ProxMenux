@@ -1,0 +1,146 @@
+{
+  "meta": {
+    "title": "Stav a testy diskov SMART | Dokumentácia ProxMenux",
+    "description": "Kontroly stavu SMART a testy diskov v Proxmox VE pomocou ProxMenux. Podporuje SATA/SAS cez smartmontools a NVMe cez nvme-cli, krátke aj dlhé testy a export JSON pre ProxMenux Monitor.",
+    "ogTitle": "Stav a testy diskov SMART | Dokumentácia ProxMenux",
+    "ogDescription": "Kontroly stavu SMART a testy diskov SATA/SAS a NVMe v Proxmox. Export JSON pre Monitor."
+  },
+  "header": {
+    "title": "SMART Zdravie a test disku",
+    "description": "Čítajte dáta SMART a spúšťajte testy fyzických diskov hostiteľa Proxmox. ProxMenux automaticky nainštaluje smartmontools pre SATA/SAS a nvme-cli pre NVMe, spustí test vo firmvéri disku (dlhé testy pokračujú aj po zatvorení terminálu) a exportuje výsledky JSON pre ProxMenux Monitor.",
+    "section": "Správca diskov · Nástroje"
+  },
+  "intro": {
+    "title": "Načo to je?",
+    "body": "SMART (Self-Monitoring, Analysis and Reporting Technology) umožňuje disku hlásiť svoj stav a vykonávať vlastné testy. Nástroj zobrazí tieto dáta bez potreby pamätať si správne volanie <code>smartctl</code> alebo <code>nvme</code> a uloží výstup ako JSON, aby Monitor mohol zobrazovať vývoj v čase."
+  },
+  "howRuns": {
+    "heading": "Ako beží skript",
+    "body": "Všetky akcie sú nedeštruktívne: SMART číta počítadlá firmvéru disku a testy prebiehajú v samotnom disku. Nie je potrebné oddeľovať fázy. Postup: kontrola závislostí → výber disku → výber akcie → volanie nástroja smartctl alebo nvme-cli podľa typu disku → zobrazenie výstupu a export JSON pre Monitor."
+  },
+  "deps": {
+    "heading": "Závislosti",
+    "body": "Nástroj pri prvom spustení automaticky nainštaluje potrebné závislosti. Disky SATA / SAS používajú <code>smartmontools</code>, disky NVMe používajú <code>nvme-cli</code>. Oba balíky:"
+  },
+  "actions": {
+    "heading": "Dostupné opatrenia",
+    "headerAction": "Akcia",
+    "headerWhat": "Čo číta alebo spúšťa",
+    "headerDur": "Trvanie",
+    "rows": [
+      {
+        "action": "Rýchly zdravotný stav",
+        "whatRich": "Celkový stav PASSED/FAILED a kľúčové atribúty.<br /><code>smartctl -H</code> + <code>-A</code> (SATA/SAS) alebo <code>nvme smart-log</code> (NVMe).",
+        "dur": "Okamžite"
+      },
+      {
+        "action": "Úplná správa",
+        "whatRich": "Kompletné dáta SMART, posuvné. <code>smartctl -x</code> pre SATA/SAS alebo <code>nvme smart-log</code> + <code>id-ctrl</code> pre NVMe.",
+        "dur": "Okamžite"
+      },
+      {
+        "action": "Krátky test",
+        "what": "Základná kontrola povrchu a elektroniky vo firmvéri disku.",
+        "dur": "~2 minút"
+      },
+      {
+        "action": "Dlhá skúška",
+        "what": "Úplná kontrola povrchu. Beží na hardvéri disku a pokračuje aj po zatvorení terminálu.",
+        "dur": "Hodiny (od veľkosti disku závisí)"
+      },
+      {
+        "action": "Skontrolovať priebeh testu",
+        "what": "Stav aktívneho alebo posledného samotestu.",
+        "dur": "Okamžite"
+      }
+    ],
+    "tipTitle": "Dlhé testy pokračujú po zatvorení terminálu",
+    "tipBody": "Dlhý test beží <em>vnútri disku</em> a nezávisí od bežiaceho procesu ProxMenux. Terminál môžete zavrieť a neskôr použiť <strong>Skontrolovať priebeh testu</strong>. Reštart hostiteľa, reset radiča alebo výpadok napájania môže prerušiť test aj zber výsledkov; nepredpokladajte automatické pokračovanie."
+  },
+  "json": {
+    "heading": "Export JSON pre monitor",
+    "intro": "Akcie stavu, krátkeho testu a priebehu zapisujú JSON s časovou pečiatkou do <code>/usr/local/share/proxmenux/smart/&lt;disk&gt;/</code>; výsledky dlhého testu sa zbierajú na pozadí. Úplná správa sa iba zobrazí. Štruktúra je:",
+    "outro": "ProxMenux Monitor používa tieto súbory na zobrazenie vývoja stavu diskov. Staré súbory sa po dosiahnutí limitu uchovávania automaticky odstránia."
+  },
+  "steps": {
+    "heading": "Krok za krokom",
+    "stepLabel": "Krok",
+    "list": [
+      {
+        "title": "Vybrať disk",
+        "body": "ProxMenux vypíše všetky fyzické disky hostiteľa s modelom a veľkosťou. Na rozdiel od nástroja formátovania sa tu bezpečnostné filtre nepoužívajú, pretože čítanie SMART je nedeštruktívne.",
+        "img": "/disk/smart/disk-selection.png",
+        "alt": "Menu výberu disku SMART",
+        "caption": "Menu výberu disku SMART"
+      },
+      {
+        "title": "Vybrať akciu",
+        "body": "Vyberte rýchly stav, úplnú správu, krátky test, dlhý test alebo kontrolu priebehu. Ponuka zostane po každej akcii otvorená, aby ste mohli vykonať viac kontrol toho istého disku.",
+        "img": "/disk/smart/action-menu.png",
+        "alt": "Akčné menu SMART",
+        "caption": "Akčné menu SMART (5 akcie + zrušiť)"
+      },
+      {
+        "title": "(Iba dlhý test) Potvrdiť vykonávanie na pozadí",
+        "body": "ProxMenux upozorní, že test bude pokračovať po zatvorení terminálu, a zobrazí miesto uloženia výsledku JSON. Potvrdením spustíte test.",
+        "img": "/disk/smart/long-test-warning.png",
+        "alt": "Dialóg potvrdenia dlhého testu",
+        "caption": "Potvrdenie dlhého testu: beží na pozadí a výsledok sa uloží do JSON"
+      },
+      {
+        "title": "Skontrolovať výsledky",
+        "bodyRich": "Stav a správy sa zobrazia v termináli; JSON sa exportuje pri vyššie opísaných akciách, nie pri úplnej správe. Pri dlhých testoch neskôr použite <strong>Skontrolovať priebeh testu</strong> na rovnakom disku.",
+        "img": "/disk/smart/quick-status.png",
+        "alt": "Výstup rýchlej kontroly stavu",
+        "caption": "Rýchly prehľad stavu disku (SATA — smartctl -H + -A)"
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Ručné ekvivalenty",
+    "nvmeWarnTitle": "Testy NVMe závisia od firmvéru disku",
+    "nvmeWarnBody": "Nie každý NVMe disk podporuje krátky/dlhý samotestový príkaz. Ak pohon odmietne test, log SMART a dáta ovládača ID (<code>nvme smart-log</code> + <code>id-ctrl</code>) sú stále najspoľahlivejším zdravotným signálom."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "noSmartTitle": "\"Nepodarilo sa prečítať dáta SMART z /dev/sdX\"",
+    "noSmartBody": "Disk je pravdepodobne za radičom RAID/SAS, ktorý nesprístupňuje SMART. Pri kartách megaraid skúste <code>smartctl -d megaraid,N /dev/sdX</code>. Pri HBA v režime IT funguje priame volanie.",
+    "longTitle": "Dlhý test sa nikdy nedokončil",
+    "longBody": "Test beží vo firmvéri disku a vysoká záťaž ho môže spomaliť. Skúste pokojné obdobie, napríklad noc. Pri SATA/SAS zobrazí <code>smartctl -c</code> zostávajúce percento; výsledok a prípadné chybné LBA nájdete v zázname testov. Chybu čítania treba preskúmať; pomalý priebeh sám osebe nedokazuje chybný sektor."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/disk-manager/format-disk",
+        "label": "Formátovať / vymazať fyzický disk",
+        "tail": " — znova použiť disk po overení jeho stavu."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Príkazy pre úložiská a disky → Stav SMART",
+        "tail": " — prehľad smartctl/nvme s príkazmi na skopírovanie."
+      },
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "Príkazy na správu ZFS",
+        "tail": " — zpool scrub overuje kontrolné súčty dát ZFS a dopĺňa hardvérové testy SMART."
+      },
+      {
+        "href": "/docs/monitor/dashboard/storage",
+        "label": "ProxMenux Monitor — karta Úložisko",
+        "tail": " — podrobný pohľad na disk využívajúci exportovaný JSON: úplná tabuľka SMART, história a správa PDF."
+      },
+      {
+        "href": "/docs/monitor/dashboard/hardware",
+        "label": "ProxMenux Monitor — karta Hardvér",
+        "tail": " — prehľad úložiska s modelom, kapacitou a dohodnutou rýchlosťou spojenia (aktuálna a maximálna pri NVMe)."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Prehľad správcu diskov",
+        "tail": "."
+      }
+    ]
+  }
+}
