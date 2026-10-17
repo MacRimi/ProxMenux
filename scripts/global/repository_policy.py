@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Proxmox repository policy via its own parsed APT repository API.
+"""Proxmox VE and Proxmox Backup Server repository policy via their own parsed APT
+repository API.
 
 Only `notfound` or `expired` permits an offered switch. Never print raw subscription or
 repository API responses: they can contain subscription keys or credentials.
@@ -12,6 +13,19 @@ import sys
 
 ENDPOINT = '/nodes/localhost/apt/repositories'
 PVE_CHANNELS = {'pve-enterprise', 'pve-no-subscription', 'pve-test', 'pvetest'}
+# Proxmox VE and Proxmox Backup Server share the repository API; each has its
+# own command line, channels and place in the web interface.
+PRODUCTS = {
+    'pve': {'api': ['pvesh'], 'name': 'Proxmox VE', 'short': 'PVE',
+            'channels': PVE_CHANNELS, 'enterprise': 'pve-enterprise', 'public': 'pve-no-subscription',
+            'test': {'pve-no-subscription', 'pve-test', 'pvetest'},
+            'ui': 'Node > Updates > Repositories', 'ceph': True},
+    'pbs': {'api': ['proxmox-backup-debug', 'api'], 'name': 'Proxmox Backup Server', 'short': 'PBS',
+            'channels': {'pbs-enterprise', 'pbs-no-subscription', 'pbs-test', 'pbstest'},
+            'enterprise': 'pbs-enterprise', 'public': 'pbs-no-subscription',
+            'test': {'pbs-no-subscription', 'pbs-test', 'pbstest'},
+            'ui': 'Administration > Repositories', 'ceph': False},
+}
 
 
 def run(args):
@@ -21,7 +35,16 @@ def run(args):
         raise ValueError(f'Unable to query or change Proxmox repository state ({args[0]}). Check the service and retry.') from exc
 
 
-def subscription_status():
+def subscription_status(product='pve'):
+    if product == 'pbs':
+        # Only the status field is read; the answer also carries the server ID.
+        try:
+            status = json.loads(run(['proxmox-backup-manager', 'subscription', 'get', '--output-format', 'json'])).get('status')
+        except (ValueError, AttributeError):
+            status = None
+        if status not in ('active', 'notfound', 'expired'):
+            raise ValueError('Subscription status is not unambiguously active, notfound or expired. Check proxmox-backup-manager subscription get locally; no repository changed.')
+        return status
     # pvesubscription's CLI get printer emits sorted "key: value" lines,
     # including a secret key and server ID. Only parse the exact status line.
     output = run(['pvesubscription', 'get'])
@@ -31,9 +54,10 @@ def subscription_status():
     return statuses[0]
 
 
-def repository_state(suite):
+def repository_state(suite, product='pve'):
+    p = PRODUCTS[product]
     try:
-        data = json.loads(run(['pvesh', 'get', ENDPOINT, '--output-format', 'json']))
+        data = json.loads(run([*p['api'], 'get', ENDPOINT, '--output-format', 'json']))
         if not isinstance(data, dict) or not isinstance(data['files'], list) or not isinstance(data['errors'], list) or not isinstance(data['digest'], str) or not isinstance(data['standard-repos'], list):
             raise ValueError()
         if data['errors']:
@@ -86,13 +110,14 @@ def repository_state(suite):
                 entries.append((file['path'], index, row))
         return data, entries
     except (KeyError, TypeError, ValueError, IndexError) as exc:
-        raise ValueError('Proxmox APT repository inventory is invalid or reports parse errors. Fix sources in Node > Updates > Repositories; no repository changed.') from exc
+        raise ValueError(f"Proxmox APT repository inventory is invalid or reports parse errors. Fix sources in {p['ui']}; no repository changed.") from exc
 
 
-def evaluate(suite, apply=False):
+def evaluate(suite, apply=False, product='pve'):
     if suite not in ('bookworm', 'trixie'):
         raise ValueError('Unsupported Proxmox suite; no repository changed.')
-    data, entries = repository_state(suite)
+    p = PRODUCTS[product]
+    data, entries = repository_state(suite, product)
     pve = []
     ceph = []
     debian = False
@@ -102,40 +127,40 @@ def evaluate(suite, apply=False):
         if not row['Enabled'] or 'deb' not in row['Types']:
             continue
         components = set(row['Components'])
-        if components & PVE_CHANNELS:
+        if components & p['channels']:
             if suite not in row['Suites']:
-                wrong_pve.append(f"{' '.join(sorted(components & PVE_CHANNELS))} in {path} (suite {' '.join(row['Suites'])})")
+                wrong_pve.append(f"{' '.join(sorted(components & p['channels']))} in {path} (suite {' '.join(row['Suites'])})")
             pve.append((path, index, row))
-        if 'main' in components and suite in row['Suites'] and not components & PVE_CHANNELS:
+        if 'main' in components and suite in row['Suites'] and not components & p['channels']:
             debian = True
-        if 'enterprise' in components and any('/ceph-' in uri for uri in row['URIs']):
+        if p['ceph'] and 'enterprise' in components and any('/ceph-' in uri for uri in row['URIs']):
             if suite not in row['Suites']:
                 wrong_ceph.append(f"{path} (suite {' '.join(row['Suites'])})")
             ceph.append((path, index, row))
     # Name the stale sources, never their URIs: those can carry credentials.
     if wrong_pve:
-        raise ValueError(f"This host runs Proxmox VE on {suite}, but these Proxmox VE repositories are for another suite: "
-                         f"{'; '.join(wrong_pve)}. Disable or remove them in Node > Updates > Repositories and run the update again; no repository changed.")
+        raise ValueError(f"This host runs {p['name']} on {suite}, but these {p['name']} repositories are for another suite: "
+                         f"{'; '.join(wrong_pve)}. Disable or remove them in {p['ui']} and run the update again; no repository changed.")
     if wrong_ceph:
         raise ValueError(f"This host runs Proxmox VE on {suite}, but these Enterprise Ceph repositories are for another suite: "
                          f"{'; '.join(wrong_ceph)}. Correct them in Node > Updates > Repositories before switching; no repository changed.")
 
-    if any(set(row['Components']) & {'pve-no-subscription', 'pve-test', 'pvetest'} for _, _, row in pve):
+    if any(set(row['Components']) & p['test'] for _, _, row in pve):
         return 'preserve'
     # Entitlement lookup is only needed when considering a switch. Existing
     # public/test channels are the operator's choice, even if lookup fails.
-    status = subscription_status()  # fail closed before any write
+    status = subscription_status(product)  # fail closed before any write
     if status == 'active':
         if not pve:
-            raise ValueError('Host has an active subscription but no active PVE repository. Configure its Enterprise source in Node > Updates > Repositories; no repository changed.')
+            raise ValueError(f"Host has an active subscription but no active {p['short']} repository. Configure its Enterprise source in {p['ui']}; no repository changed.")
         return 'preserve'
     if not debian:
         raise ValueError('No active Debian base repository for this suite; configure it in the Proxmox repository UI before continuing.')
-    # No active PVE source or only inaccessible Enterprise. A mixed stanza
+    # No active product source or only inaccessible Enterprise. A mixed stanza
     # cannot be disabled without also disabling an unrelated component.
-    disable = [item for item in pve if 'pve-enterprise' in item[2]['Components']] + ceph
+    disable = [item for item in pve if p['enterprise'] in item[2]['Components']] + ceph
     for _, _, row in disable:
-        expected = {'pve-enterprise'} if 'pve-enterprise' in row['Components'] else {'enterprise'}
+        expected = {p['enterprise']} if p['enterprise'] in row['Components'] else {'enterprise'}
         if set(row['Components']) != expected:
             raise ValueError('Enterprise shares an APT stanza with other components. Split it in the Proxmox repository UI; no repository changed.')
     handles = [r.get('handle') for r in data['standard-repos'] if r.get('handle') == 'no-subscription']
@@ -149,9 +174,9 @@ def evaluate(suite, apply=False):
     try:
         for path, index, original in disable:
             next(file for file in expected if file['path'] == path)['repositories'][index]['Enabled'] = False
-            run(['pvesh', 'create', ENDPOINT, '--path', path, '--index', str(index),
+            run([*p['api'], 'create', ENDPOINT, '--path', path, '--index', str(index),
                  '--enabled', '0', '--digest', data['digest']])
-            refreshed, current = repository_state(suite)
+            refreshed, current = repository_state(suite, product)
             # Per-file digests change when Proxmox serializes the disabled entry.
             inventory = lambda files: sorted(
                 ({key: value for key, value in file.items() if key != 'digest'} for file in files),
@@ -159,23 +184,25 @@ def evaluate(suite, apply=False):
             if inventory(refreshed['files']) != inventory(expected):
                 raise ValueError('Could not verify the expected repository inventory after Enterprise disable; possible concurrent edit. Inspect the Proxmox repository UI before retrying.')
             data = refreshed
-        run(['pvesh', 'set', ENDPOINT, '--handle', 'no-subscription', '--digest', data['digest']])
-        _, current = repository_state(suite)
+        run([*p['api'], 'set', ENDPOINT, '--handle', 'no-subscription', '--digest', data['digest']])
+        _, current = repository_state(suite, product)
         if not any(row['Enabled'] and 'deb' in row['Types'] and suite in row['Suites']
-                   and 'pve-no-subscription' in row['Components'] for _, _, row in current) \
+                   and p['public'] in row['Components'] for _, _, row in current) \
            or any(p == path and i == index and row['Enabled']
                   for path, index, _ in disable for p, i, row in current):
             raise ValueError('Could not verify the switched repositories; inspect the Proxmox repository UI before retrying.')
     except ValueError as exc:
-        raise ValueError('Could not complete or verify the repository switch; changes may be partial and repository state is unknown. Inspect Node > Updates > Repositories before retrying; no automatic rollback was attempted.') from exc
+        raise ValueError(f"Could not complete or verify the repository switch; changes may be partial and repository state is unknown. Inspect {p['ui']} before retrying; no automatic rollback was attempted.") from exc
     return 'changed'
 
 
 def main():
     try:
-        if len(sys.argv) != 3 or sys.argv[1] not in ('plan', 'apply'):
-            raise ValueError('Usage: repository_policy.py plan|apply bookworm|trixie')
-        print(evaluate(sys.argv[2], apply=sys.argv[1] == 'apply'))
+        if len(sys.argv) not in (3, 4) or sys.argv[1] not in ('plan', 'apply') \
+                or (len(sys.argv) == 4 and sys.argv[3] not in PRODUCTS):
+            raise ValueError('Usage: repository_policy.py plan|apply bookworm|trixie [pve|pbs]')
+        product = sys.argv[3] if len(sys.argv) == 4 else 'pve'
+        print(evaluate(sys.argv[2], apply=sys.argv[1] == 'apply', product=product))
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         return 1
