@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Importa disco in LXC | Documentazione ProxMenux",
+    "description": "Collega un disco fisico a un contenitore LXC esistente su Proxmox VE con ProxMenux. Gestisce rilevamento e formattazione del filesystem, punto di mount, conversione da non privilegiato a privilegiato e percorsi persistenti dei dispositivi.",
+    "ogTitle": "Importa disco in LXC | Documentazione ProxMenux",
+    "ogDescription": "Collega un disco fisico a un contenitore LXC esistente. Gestisce filesystem, punto di mount e conversione da non privilegiato a privilegiato."
+  },
+  "header": {
+    "title": "Importa disco su LXC",
+    "description": "Collegare un disco fisico a un contenitore LXC esistente sull'host Proxmox. ProxMenux rileva dischi liberi, li formatta facoltativamente con un filesystem supportato, e collega la partizione a un punto di montaggio all'interno del contenitore utilizzando percorsi di dispositivo persistenti.",
+    "section": "Gestione del disco · LXC"
+  },
+  "intro": {
+    "title": "Passthrough VM e passthrough LXC",
+    "body": "Questo passthrough LXC <strong>non fornisce un dispositivo a blocchi grezzo</strong>. Il contenitore riceve un <em>punto di mount</em>, cioè una directory su una partizione scelta nell’host. A differenza di una VM, usa il kernel dell’host: il filesystem (ext4/xfs/btrfs) viene quindi letto e gestito dall’host Proxmox ed esposto al contenitore."
+  },
+  "howRuns": {
+    "heading": "Come funziona lo script",
+    "body": "Il flusso ha due fasi distinte: raccolta di informazioni e scelte, poi modifica effettiva della configurazione del contenitore. Fino alla conferma finale non viene montato nulla nel CT.",
+    "summary": "ProxMenux esclude il disco root, i dischi montati e quelli citati in configurazioni VM/LXC. I membri attivi ZFS/LVM/RAID sono nascosti; le vecchie firme sono segnalate con ⚠ per poterle cancellare prima della formattazione."
+  },
+  "prereqs": {
+    "heading": "Prerequisiti",
+    "items": [
+      "Almeno un contenitore LXC definito sull'host.",
+      "Il contenitore è <strong>privilegiato</strong> oppure accetti la conversione proposta dallo script.",
+      "Almeno un disco fisico non in uso dall'host o da qualsiasi altro ospite."
+    ],
+    "warnTitle": "Contenitore privilegiato richiesto",
+    "warnBody": "Questo script richiede un contenitore <strong>privilegiato</strong> per collegare direttamente il disco. Se rileva <code>unprivileged: 1</code>, propone di modificare <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> sul posto. Ciò cambia il modello di sicurezza senza rimappare i proprietari dei file esistenti. Salva un backup e verifica i proprietari prima di accettare, oppure ricrea il contenitore come privilegiato."
+  },
+  "steps": {
+    "heading": "Passo dopo passo",
+    "stepLabel": "Passaggio",
+    "list": [
+      {
+        "title": "Scegli il contenitore di destinazione",
+        "img": "/disk/select-container.png",
+        "caption": "Menu di selezione del contenitore",
+        "bodyRich": "ProxMenux elenca tutti i contenitori LXC sull’host (<code>pct list</code>). Scegli quello che riceverà il disco. Se non è privilegiato, viene proposta la conversione."
+      },
+      {
+        "title": "Scegli il disco fisico",
+        "img": "/disk/disk-selection-ct.png",
+        "caption": "Dischi liberi rilevati sull’host, con ⚠ per i metadati obsoleti",
+        "bodyRich": "Vengono mostrati solo candidati sicuri. A differenza della procedura per VM, questo script collega <strong>un disco per esecuzione</strong>. Rieseguilo per ogni disco aggiuntivo."
+      },
+      {
+        "title": "Formatta o riutilizza",
+        "intro": "Lo script ispeziona il disco:",
+        "items": [
+          "Se già trasporta un filesystem supportato (ext4 / xfs / btrfs) è possibile riutilizzarlo come-è (i file esistenti sono conservati).",
+          "Se non ha un filesystem supportato, ti viene offerto di formattarlo. Scegli ext4 / xfs / btrfs."
+        ]
+      },
+      {
+        "title": "Scegli il punto di montaggio",
+        "bodyRich": "Inserisci il percorso in cui il contenitore vedrà il disco, ad esempio <code>/mnt/data</code> o <code>/mnt/disk_passthrough</code>. È il percorso <em>all’interno</em> del contenitore; l’host vede già la partizione in <code>/dev/disk/by-id/…</code>."
+      },
+      {
+        "title": "Collega e verifica",
+        "img": "/disk/assignment-ct.png",
+        "caption": "Assegnazione a CT",
+        "bodyRich": "ProxMenux aggiunge una nuova voce <code>mpN:</code> alla configurazione del container, evitando gli indici già in uso, quindi rilegge la configurazione per verificarla. Se il container è in esecuzione, il montaggio viene applicato subito; altrimenti entrerà in funzione al prossimo avvio.",
+        "extraImg": "/disk/result-point.png",
+        "extraAlt": "Punto di montaggio creato con successo",
+        "extraCaption": "Punto di montaggio creato e verificato"
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Equivalente manuale",
+    "body": "Lo script avvolge <code>pct set</code>. Un'invocazione diretta per un singolo disco sembra:"
+  },
+  "important": {
+    "heading": "Considerazioni importanti",
+    "items": [
+      "<strong>Un disco per esecuzione</strong>. Riesegui lo script per ogni disco aggiuntivo.",
+      "<strong>non</strong> collegare la stessa partizione a diversi contenitori che potrebbero montarla simultaneamente: le scritture simultanee corrompono il filesystem.",
+      "<strong>I vecchi metadati</strong> (firme RAID/ZFS/LVM) vanno cancellati manualmente prima che lo script consenta di formattare, altrimenti <code>mkfs</code> rifiuta di sovrascrivere. Usa <wipeLink>Formatta o cancella un disco fisico</wipeLink>."
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Risoluzione dei problemi",
+    "unprivTitle": "\"Impossibile proseguire con un contenitore non privilegiato\"",
+    "unprivBody": "Hai rifiutato la conversione. In <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> il valore passa da <code>unprivileged: 1</code> a <code>unprivileged: 0</code>, ma questo da solo non converte la proprietà UID/GID esistente. Salva un backup e gestisci la mappatura dei proprietari prima della conversione sul posto; in alternativa, ripristina o ricrea il contenitore come privilegiato.",
+    "permsTitle": "Le autorizzazioni all'interno del contenitore sono sbagliate",
+    "permsBody": "Montare una partizione in un contenitore privilegiato conserva i proprietari esistenti; un filesystem appena formattato appartiene spesso a <code>root:root</code>. Se il servizio usa un altro utente, ad esempio <code>www-data</code> per Nextcloud, controlla UID/GID e modifica i file necessari con <code>chown</code>/<code>chmod</code>. Le modifiche agiscono anche sul disco sottostante."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importa disco nella VM",
+        "tail": "— flusso equivalente per le VM."
+      },
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "Punti di montaggio LXC (Host ↔ CT)",
+        "tail": "— condividere directory host con un CT invece di allegare un disco intero."
+      },
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "Comandi di gestione VM e CT",
+        "tail": "— pct config / push / pull reference."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Panoramica di Disk Manager",
+        "tail": "."
+      }
+    ]
+  }
+}

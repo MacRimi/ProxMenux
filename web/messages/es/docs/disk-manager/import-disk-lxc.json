@@ -1,14 +1,14 @@
 {
   "meta": {
-    "title": "Importar disco a LXC | ProxMenux Documentation",
+    "title": "Importar disco a LXC | Documentación de ProxMenux",
     "description": "Adjunta un disco físico a un contenedor LXC existente en Proxmox VE usando ProxMenux. Gestiona la detección / formateo del filesystem, el mount point, la conversión unprivileged → privilegiado y rutas de dispositivo persistentes.",
-    "ogTitle": "Importar disco a LXC | ProxMenux Documentation",
+    "ogTitle": "Importar disco a LXC | Documentación de ProxMenux",
     "ogDescription": "Adjunta un disco físico a un contenedor LXC existente. Gestiona el filesystem, el mount point y la conversión unprivileged → privilegiado."
   },
   "header": {
     "title": "Importar disco a LXC",
     "description": "Adjunta un disco físico a un contenedor LXC existente en el host Proxmox. ProxMenux detecta los discos libres, opcionalmente los formatea con un filesystem soportado y conecta la partición a un mount point dentro del contenedor usando rutas de dispositivo persistentes.",
-    "section": "Disk Manager · LXC"
+    "section": "Administrador de discos · LXC"
   },
   "intro": {
     "title": "Passthrough en VM vs passthrough en LXC",
@@ -27,7 +27,7 @@
       "Al menos un disco físico que no esté en uso por el host ni por ningún otro guest."
     ],
     "warnTitle": "Se requiere contenedor privilegiado",
-    "warnBody": "El passthrough directo de dispositivos a un contenedor LXC solo funciona si el contenedor es <strong>privilegiado</strong>. Si el script detecta <code>unprivileged: 1</code> en la config, se ofrece a convertirlo in situ (edita <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>). Cancela si no puedes aceptar el compromiso de seguridad de un contenedor privilegiado."
+    "warnBody": "Este script requiere un contenedor <strong>privilegiado</strong> para conectar el disco directamente. Si detecta <code>unprivileged: 1</code>, ofrece editar <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> in situ. Esto cambia el modelo de seguridad y no reasigna la propiedad de los archivos existentes. Haz una copia del contenedor y comprueba la propiedad antes de aceptar, o recréalo como privilegiado."
   },
   "steps": {
     "heading": "Paso a paso",
@@ -82,10 +82,10 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "unprivTitle": "\"Cannot continue with an unprivileged container\"",
-    "unprivBody": "Rechazaste la oferta de conversión. O bien vuelves a ejecutar y aceptas la conversión, o conviertes el contenedor manualmente editando <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> y reemplazando <code>unprivileged: 1</code> por <code>unprivileged: 0</code>. También puedes reconstruir el contenedor como privilegiado si prefieres no convertirlo in situ.",
+    "unprivTitle": "\"No puede continuar con un contenedor no privilegiado\"",
+    "unprivBody": "Rechazaste la conversión. La opción de <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> cambia de <code>unprivileged: 1</code> a <code>unprivileged: 0</code>, pero eso por sí solo no convierte los UID/GID de los archivos existentes. Haz una copia y resuelve el mapeo de propietarios antes de aceptar una conversión in situ; como alternativa, restaura o recrea el contenedor como privilegiado.",
     "permsTitle": "Los permisos dentro del contenedor están mal",
-    "permsBody": "Los mounts del host hacia un contenedor privilegiado entran como <code>root:root</code>. Si el servicio dentro del CT corre como otro usuario (p. ej. <code>www-data</code> para Nextcloud), haz <code>chown</code>/<code>chmod</code> dentro del contenedor para que coincida con su UID/GID después del primer mount."
+    "permsBody": "Al montar una partición en un contenedor privilegiado se conserva la propiedad existente; un sistema de archivos recién formateado suele pertenecer a <code>root:root</code>. Si el servicio usa otro usuario, por ejemplo <code>www-data</code> para Nextcloud, comprueba su UID/GID y ajusta los archivos necesarios con <code>chown</code>/<code>chmod</code>. Los cambios afectan también al disco subyacente."
   },
   "related": {
     "heading": "Relacionado",

@@ -1,0 +1,142 @@
+{
+  "meta": {
+    "title": "Formatta o cancella un disco fisico | Documentazione ProxMenux",
+    "description": "Cancella e formatta dischi fisici su Proxmox VE con ProxMenux. Quattro modalità, filtri rigorosi che escludono i dischi di sistema, montati o in uso e doppia conferma con inserimento del percorso completo.",
+    "ogTitle": "Formatta o cancella un disco fisico | Documentazione ProxMenux",
+    "ogDescription": "Pulire in modo sicuro o formattare un disco fisico su Proxmox. Regole di visibilità sicure, modalità di funzionamento 4, doppia conferma."
+  },
+  "header": {
+    "title": "Formatta o cancella un disco fisico",
+    "description": "Cancella in modo sicuro o formatta un disco fisico sull’host Proxmox. ProxMenux mostra solo i dischi completamente liberi: nessun uso da parte del sistema, nessun riferimento nei guest e nessun filesystem montato. Prima di distruggere i dati richiede una doppia conferma: sì/no e inserimento del percorso completo del disco.",
+    "section": "Disk Manager · Utilità"
+  },
+  "danger": {
+    "title": "Strumento distruttivo",
+    "body": "Ogni operazione scrive sul disco e non può essere annullata. ProxMenux applica filtri e conferme rigorosi, ma la responsabilità di scegliere il disco corretto è tua. Leggi il percorso del disco ad alta voce due volte prima di digitarlo."
+  },
+  "howRuns": {
+    "heading": "Come funziona lo script",
+    "body": "Il flusso ha due fasi con un filtro di sicurezza a tripla porta in mezzo. L'elenco dei dischi, la modalità di funzionamento e i dettagli del file system sono tutti raccolti in Fase 1; nulla è scritto fino a quando la Fase 2 passa una ri-validazione finale prima di eseguire."
+  },
+  "visibility": {
+    "heading": "Regole di visibilità",
+    "intro": "Prima che il menu venga visualizzato, ProxMenux filtra l'elenco dei dischi. Solo i candidati che sono provabilmente sicuri sono mostrati:",
+    "items": [
+      "<strong>Mostrati</strong>: dischi <em>non</em> usati dall’host (pool root, swap, filesystem montati, ZFS/LVM/RAID attivi) e <em>non</em> citati in configurazioni VM/LXC, sia avviate sia arrestate.",
+      "<strong>Nascosti</strong>: dischi dell’host e di sistema.",
+      "<strong>Nascosti</strong>: dischi citati in una configurazione VM/LXC."
+    ],
+    "safetyTitle": "Sicurezza alla conferma e all'esecuzione",
+    "safetyItems": [
+      "I dischi con metadati obsoleti o attivi mostrano avvisi dettagliati <em>prima</em> della conferma.",
+      "I dischi usati da una VM <strong>in esecuzione</strong> sono <strong>bloccati senza possibilità di procedere</strong> alla conferma.",
+      "I dischi con partizioni montate sono <strong>bloccati senza possibilità di procedere</strong> all’esecuzione. Una nuova verifica avviene subito prima di qualsiasi scrittura.",
+      "Sono sempre necessarie due conferme: una finestra <em>sì/no</em> e l’inserimento esatto del percorso completo del disco."
+    ]
+  },
+  "modes": {
+    "heading": "Modalità di funzionamento",
+    "intro": "Dopo aver scelto un disco si sceglie una delle quattro modalità. Essi differiscono in quello che distruggono e ciò che lasciano dietro:",
+    "headerMode": "Modalità",
+    "headerPart": "Tabella delle partizioni",
+    "headerData": "Dati",
+    "headerUseCase": "Caso di utilizzo",
+    "rows": [
+      {
+        "mode": "1. Pulisci tutto",
+        "part": "Distrutto",
+        "data": "Firme cancellate",
+        "useCase": "Rimuove partizionamento e metadati per preparare una nuova struttura. Non sovrascrive tutti i dati utente."
+      },
+      {
+        "mode": "2. Rimuovere le etichette FS",
+        "part": "Conservato",
+        "data": "Conservato",
+        "useCase": "Rimuove le vecchie firme ZFS / LVM / RAID per evitare l’acquisizione automatica del disco. I dati utente non vengono sovrascritti in massa, ma la rimozione delle firme può renderli inaccessibili."
+      },
+      {
+        "mode": "3. Sovrascrivi i dati con zeri",
+        "part": "Conservato",
+        "data": "Distrutti (sovrascritti con zeri)",
+        "useCase": "Sovrascrive con zeri le partizioni esistenti conservando la tabella delle partizioni. Non comprende lo spazio non allocato e le aree di riserva degli SSD; non garantisce una sanificazione completa del dispositivo."
+      },
+      {
+        "mode": "4. Formattazione completa",
+        "part": "Nuovo GPT",
+        "data": "Distrutto",
+        "useCase": "Disco pronto all'uso con una singola nuova partizione e un filesystem fresco."
+      }
+    ],
+    "fullFormatOutro": "<strong>Formattazione completa</strong> prosegue con altre due finestre:",
+    "fullFormatItems": [
+      "<strong>Filesystem</strong>: <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (portabile) o <code>btrfs</code>. Se mancano strumenti come <code>mkfs.btrfs</code>, l’operazione si interrompe con un messaggio chiaro.",
+      "<strong>Etichetta</strong>: etichetta facoltativa del filesystem per identificarlo."
+    ]
+  },
+  "steps": {
+    "heading": "Passo dopo passo",
+    "stepLabel": "Passaggio",
+    "list": [
+      {
+        "title": "Scegli un disco libero",
+        "body": "ProxMenux elenca ogni disco che passa i filtri di visibilità sopra. I dischi con marcatori ⚠ portano metadati stanti e vengono mostrati con i dettagli in modo da sapere cosa stai per sovrascrivere."
+      },
+      {
+        "title": "Scegli una modalità di funzionamento",
+        "bodyRich": "Scegli <strong>Pulisci tutto</strong>, <strong>Rimuovere le etichette FS</strong>, <strong>Sovrascrivi i dati con zeri</strong> o <strong>Formattazione completa</strong> secondo la tabella sopra."
+      },
+      {
+        "title": "(Solo formattazione completa) Scegli filesystem ed etichetta",
+        "body": "ext4 / xfs / exfat / btrfs, più un'etichetta opzionale."
+      },
+      {
+        "title": "Confermare due volte",
+        "bodyRich": "ProxMenux mostra un riassunto di ciò che accadrà. Si accetta con una finestra di dialogo sì/no e <strong> digitare il percorso completo del disco</strong> esattamente come mostrato (ad esempio <code>/dev/sdc</code>). Tutto il resto si interrompe."
+      },
+      {
+        "title": "Nuova verifica ed esecuzione",
+        "body": "Subito prima di scrivere, lo script ricontrolla lo stato del disco. Se nel frattempo è stata montata una partizione o avviata una VM, l’esecuzione viene annullata. Altrimenti viene eseguita l’operazione scelta e mostrato un riepilogo finale."
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Equivalenti manuali",
+    "body": "Se si preferisce eseguire i comandi equivalenti a mano:"
+  },
+  "troubleshoot": {
+    "notListedTitle": "Disco non elencato nel menu",
+    "notListedBody": "È stato filtrato per la sicurezza. Motivi comuni: è montato (anche a <code>/mnt/tmp</code>), è un membro attivo ZFS / LVM / RAID, è riferito da una configurazione VM o LXC, o è il disco radice Proxmox. Eseguire <code>lsblk -f</code> e <code>cat /proc/mdstat</code> sull'host per capire perché.",
+    "busyTitle": "\"Disk may be busy\" / smontaggio non riuscito",
+    "busyBody": "Un processo mantiene aperto un file in una partizione del disco, spesso un contenitore o una shell la cui directory corrente si trova nel punto di mount. Identificalo con <code>lsof | grep /dev/sdX</code> o <code>fuser -vm /dev/sdX1</code>, arrestalo e riesegui lo strumento."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "href": "/docs/disk-manager/smart-disk-test",
+        "label": "Integrità e test disco SMART",
+        "tail": "— controllare un disco prima / dopo aver pulito per confermare che è sano."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importa disco nella VM",
+        "tail": "— passare un disco appena formattato a un VM."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "label": "Aggiungere disco locale come archiviazione Proxmox",
+        "tail": "— registrare un disco cancellato come un pool di archiviazione Proxmox."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Comandi di archiviazione e dischi",
+        "tail": " — riferimento per lsblk, blkid e parted."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Panoramica di Disk Manager",
+        "tail": "."
+      }
+    ]
+  }
+}

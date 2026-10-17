@@ -46,19 +46,19 @@
         "mode": "1. Wipe all",
         "part": "Destroyed",
         "data": "Signatures wiped",
-        "useCase": "Starting fresh: everything on the disk goes, ready for a new layout."
+        "useCase": "Remove partitioning and metadata to prepare a new layout. This does not overwrite all user data."
       },
       {
         "mode": "2. Remove FS labels",
         "part": "Preserved",
         "data": "Preserved",
-        "useCase": "Clears stale ZFS / LVM / RAID signatures so the disk stops being auto-claimed, without touching the data."
+        "useCase": "Removes stale ZFS / LVM / RAID signatures so the disk is no longer auto-claimed. Bulk user data is not overwritten, but removing signatures can make it inaccessible."
       },
       {
         "mode": "3. Zero all data",
         "part": "Preserved",
         "data": "Destroyed (zeroed)",
-        "useCase": "Sanitise before handing the disk over, keeping the existing partition layout."
+        "useCase": "Overwrite the existing partitions with zeros while keeping the partition table. Unallocated space and SSD spare areas are not covered; this is not a complete device sanitization guarantee."
       },
       {
         "mode": "4. Full format",

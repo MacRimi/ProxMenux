@@ -55,11 +55,11 @@
       }
     ],
     "tipTitle": "Long tests survive terminal close",
-    "tipBody": "A long test is queued <em>inside the drive</em> — it does not depend on the ProxMenux process staying alive. You can close the terminal, reboot the Proxmox host (the test picks up where it left off on some drives) or just come back later and use <strong>Check test progress</strong> to see the result."
+    "tipBody": "A long test runs <em>inside the drive</em> and does not depend on the ProxMenux process staying alive. You can close the terminal and return later to <strong>Check test progress</strong>. A host reboot, controller reset or power loss may interrupt the test and its result collector; do not assume it will resume automatically."
   },
   "json": {
     "heading": "JSON export for the Monitor",
-    "intro": "Every run writes a timestamped JSON file to <code>/usr/local/share/proxmenux/smart/&lt;disk&gt;/</code>. The structure is:",
+    "intro": "Status, short-test and progress actions write a timestamped JSON file to <code>/usr/local/share/proxmenux/smart/&lt;disk&gt;/</code>; long-test results are collected in the background. The full-report action only displays its report. The structure is:",
     "outro": "The ProxMenux Monitor picks these up to render health trends per disk; old files are rotated out automatically once the retention limit is reached."
   },
   "steps": {
@@ -89,7 +89,7 @@
       },
       {
         "title": "Review results",
-        "bodyRich": "Status and report are printed to the terminal and written to JSON. For long tests, return later and run <strong>Check test progress</strong> on the same disk to see the outcome.",
+        "bodyRich": "Status and reports are shown in the terminal; JSON export is performed for supported actions as described above, not for Full report. For long tests, return later and run <strong>Check test progress</strong> on the same disk to see the outcome.",
         "img": "/disk/smart/quick-status.png",
         "alt": "Quick health status output",
         "caption": "Quick health status output (SATA — smartctl -H + -A)"
@@ -106,7 +106,7 @@
     "noSmartTitle": "\"Could not read SMART data from /dev/sdX\"",
     "noSmartBody": "The disk is probably behind a RAID / SAS controller that does not pass SMART through. With megaraid-based cards, try <code>smartctl -d megaraid,N /dev/sdX</code>. For HBAs in IT mode the direct invocation works.",
     "longTitle": "Long test never completes",
-    "longBody": "The test is queued on the drive firmware and pauses if the disk is under heavy load. Running it overnight on an idle system usually works. You can also check <code>smartctl -c</code> to see percentage remaining; if it is stuck at a fixed LBA, the disk is failing at that sector."
+    "longBody": "The drive runs the test in firmware, and heavy I/O can delay completion. Try an idle period such as overnight. For SATA/SAS, <code>smartctl -c</code> shows the remaining percentage; inspect the self-test log for completion status and any failing LBA. A reported read failure needs investigation; slow progress alone does not prove a bad sector."
   },
   "related": {
     "heading": "Related",
@@ -124,7 +124,7 @@
       {
         "href": "/docs/help-info/zfs-commands",
         "label": "ZFS Management commands",
-        "tail": " — zpool scrub for the storage-layer equivalent of SMART tests."
+        "tail": " — zpool scrub verifies ZFS data checksums and complements hardware SMART tests."
       },
       {
         "href": "/docs/monitor/dashboard/storage",

@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Importar o Disco para LXC | ProxMenux Documentação",
+    "description": "Anexar um disco físico a um recipiente LXC existente em Proxmox VE usando ProxMenux. Lida com detecção / formatação do sistema de arquivos, ponto de montagem, sem privilégios → conversões privilegiadas e caminhos persistentes do dispositivo.",
+    "ogTitle": "Importar o Disco para LXC | ProxMenux Documentação",
+    "ogDescription": "Anexar um disco físico a um recipiente LXC existente. Lida com sistema de arquivos, ponto de montagem e sem privilégios → conversão privilegiada."
+  },
+  "header": {
+    "title": "Importar disco para LXC",
+    "description": "Ligue um disco físico a um contentor LXC existente no host Proxmox. O ProxMenux deteta discos livres, permite formatá-los com um sistema de ficheiros suportado e liga a partição a um ponto de montagem dentro do contentor através de caminhos persistentes do dispositivo.",
+    "section": "Gerenciador de disco · LXC"
+  },
+  "intro": {
+    "title": "Passthrough em VM e em LXC",
+    "body": "Este passthrough LXC <strong>não fornece um dispositivo de bloco bruto</strong>. O contentor recebe um <em>ponto de montagem</em>, ou seja, um diretório numa partição escolhida no host. Ao contrário de uma VM, utiliza o kernel do host: o sistema de ficheiros (ext4/xfs/btrfs) é lido e gerido pelo host Proxmox e depois disponibilizado ao contentor."
+  },
+  "howRuns": {
+    "heading": "Como o script é executado",
+    "body": "O fluxo tem duas fases com separação clara entre \"coletar informações e decisões\" e \"na verdade mudar a configuração do recipiente\". Até à confirmação final, nada é montado no CT.",
+    "summary": "O ProxMenux exclui o disco raiz, os discos montados e os referenciados em configurações VM/LXC. Os membros ativos de ZFS/LVM/RAID são ocultos; as assinaturas antigas aparecem com ⚠ para poderem ser apagadas antes da formatação."
+  },
+  "prereqs": {
+    "heading": "Pré-requisitos",
+    "items": [
+      "Pelo menos um recipiente LXC definido no hospedeiro.",
+      "O contentor é <strong>privilegiado</strong> ou aceita a conversão proposta pelo script.",
+      "Pelo menos um disco físico que não está em uso pelo host ou por qualquer outro convidado."
+    ],
+    "warnTitle": "Recipiente privilegiado necessário",
+    "warnBody": "Este script exige um contentor <strong>privilegiado</strong> para ligar diretamente o disco. Se detetar <code>unprivileged: 1</code>, oferece editar <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> no local. Isso altera o modelo de segurança sem remapear os proprietários dos ficheiros existentes. Faça uma cópia de segurança e verifique os proprietários antes de aceitar, ou recrie o contentor como privilegiado."
+  },
+  "steps": {
+    "heading": "Passo a passo",
+    "stepLabel": "Etapa",
+    "list": [
+      {
+        "title": "Escolher o contentor de destino",
+        "img": "/disk/select-container.png",
+        "caption": "Menu de seleção do contentor",
+        "bodyRich": "ProxMenux lista cada recipiente LXC no host (<code>pct list</code>). Escolha o que vai receber o disco. Se o recipiente não tiver privilégios, é-lhe oferecido converter agora."
+      },
+      {
+        "title": "Escolha o disco físico",
+        "img": "/disk/disk-selection-ct.png",
+        "caption": "Discos livres detetados no host, com ⚠ para metadados antigos",
+        "bodyRich": "Só são mostrados candidatos seguros. Ao contrário do processo para VM, este script liga <strong>um disco por execução</strong>. Execute-o novamente para cada disco adicional."
+      },
+      {
+        "title": "Formatar ou reutilizar",
+        "intro": "O script inspeciona o disco:",
+        "items": [
+          "Se ele já carrega um sistema de arquivos suportado (ext4 / xfs / btrfs) você pode reutilizá-lo como está (os arquivos existentes são preservados).",
+          "Se não tiver nenhum sistema de arquivos suportado, você é oferecido para formatá-lo. Escolha ext4 / xfs / btrfs."
+        ]
+      },
+      {
+        "title": "Escolha o ponto de montagem",
+        "bodyRich": "Introduza o caminho onde o contentor verá o disco, por exemplo <code>/mnt/data</code> ou <code>/mnt/disk_passthrough</code>. É o caminho <em>dentro</em> do contentor; o host já vê a partição em <code>/dev/disk/by-id/…</code>."
+      },
+      {
+        "title": "Anexar e verificar",
+        "img": "/disk/assignment-ct.png",
+        "caption": "Atribuição a CT",
+        "bodyRich": "O ProxMenux adiciona uma entrada <code>mpN:</code> nova à configuração do recipiente, ignorando índices já em uso e re-leia a configuração para confirmar. Se o recipiente estiver rodando, a montagem será executada ao vivo; caso contrário, fará efeito no próximo início.",
+        "extraImg": "/disk/result-point.png",
+        "extraAlt": "Ponto de montagem criado com sucesso",
+        "extraCaption": "Ponto de montagem criado e verificado"
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Equivalente manual",
+    "body": "O script envolve <code>pct set</code>. Uma invocação direta para um único disco parece:"
+  },
+  "important": {
+    "heading": "Considerações importantes",
+    "items": [
+      "<strong>Um disco por execução</strong>. Repita o script para cada disco adicional.",
+      "<strong>Não</strong> ligue a mesma partição a vários contentores que a possam montar simultaneamente: escritas concorrentes corrompem o sistema de ficheiros.",
+      "<strong>Os metadados antigos</strong> (assinaturas RAID/ZFS/LVM) têm de ser apagados manualmente antes de o script permitir a formatação; caso contrário, <code>mkfs</code> recusa sobrescrever. Utilize <wipeLink>Formatar ou apagar um disco físico</wipeLink>."
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Resolução de Problemas",
+    "unprivTitle": "\"Não posso continuar com um contentor sem privilégios\"",
+    "unprivBody": "Recusou a conversão. Em <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>, a opção passa de <code>unprivileged: 1</code> para <code>unprivileged: 0</code>, mas isso não converte por si só os UID/GID dos ficheiros existentes. Faça uma cópia de segurança e trate do mapeamento de proprietários antes da conversão no local; em alternativa, restaure ou recrie o contentor como privilegiado.",
+    "permsTitle": "Permissões dentro do recipiente estão erradas",
+    "permsBody": "Montar uma partição num contentor privilegiado mantém os proprietários existentes; um sistema de ficheiros novo pertence frequentemente a <code>root:root</code>. Se o serviço usar outro utilizador, por exemplo <code>www-data</code> para Nextcloud, verifique o UID/GID e ajuste os ficheiros necessários com <code>chown</code>/<code>chmod</code>. As alterações também afetam o disco subjacente."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importar disco para VM",
+        "tail": " — fluxo equivalente para VMs."
+      },
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "Pontos de montagem LXC (Host ↔ CT)",
+        "tail": " — compartilhar diretórios de host com um CT em vez de anexar um disco inteiro."
+      },
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "Comandos de gestão VM e CT",
+        "tail": " — pct config / push / pull referência."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Visão geral do Gerenciador de Discos",
+        "tail": "."
+      }
+    ]
+  }
+}
