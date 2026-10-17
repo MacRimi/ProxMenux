@@ -151,7 +151,7 @@ def _run_lifecycle(command, title):
     return completed.returncode == 0
 
 
-def carry_records(project, mount_stopped=True, vmids=None, verify=False, shown=False):
+def carry_records(project, mount_stopped=True, vmids=None, verify=False, shown=False, heading=None):
     """Leave inside each container the copy of its record that a restore on
     another host needs. It is refreshed after every operation. Returns what
     was found for each container. Every installed application is looked at,
@@ -159,6 +159,9 @@ def carry_records(project, mount_stopped=True, vmids=None, verify=False, shown=F
     from . import console
     sys.path.insert(0, str(project / 'remote'))
     if shown:
+        if heading:
+            console.show_logo()
+            console.msg_title(heading)
         console.msg_info(translate('Updating the copy of the record...'))
     try:
         import oci_carried_record
@@ -253,6 +256,17 @@ def interactive_management(project, ui):
         ui.message(translate('OCI management could not be completed. Check the backend status; no additional cleanup has been authorized.'), translate('OCI management'))
 
 
+def _records_unread(project):
+    """Whether an installed application has no cached configuration yet; only
+    then does the first sync read every container and take a while."""
+    sys.path.insert(0, str(project / 'remote'))
+    import oci_carried_record as carried
+    return any(not (carried.instances.location(carried.instances.ROOT, row['vmid']).parent
+                    / carried.CONFIG_CACHE).exists()
+               for row in saved_inventory(project)
+               if row.get('status') == 'installed' and not row.get('pending'))
+
+
 def _clean_orphans(project):
     """Remove, silently, what is left of containers that exist on no node of the cluster."""
     sys.path.insert(0, str(project / 'remote'))
@@ -272,7 +286,8 @@ def _interactive_management(project, ui):
     _clean_orphans(project)
     recover_automatically(project)
     offer_recovery(project, ui)
-    carry_records(project, mount_stopped=False, shown=True)
+    carry_records(project, mount_stopped=False, shown=_records_unread(project),
+                  heading=translate('Manage installed OCI applications'))
     # After each operation the list is shown again. Every operation leaves
     # the copies of the records up to date, so they are not all refreshed again.
     first = True
@@ -440,25 +455,8 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
         proposal = None
         if action == 'modify':
             from .recreation import edit_recreation
-            from .cli import _deployment_summary_text
-            from .ui import BacktrackUI, RestartWizard
-            wizard = BacktrackUI(ui)
-            try:
-                while True:
-                    try:
-                        proposal = edit_recreation(record, wizard)
-                        approved = wizard.review(_deployment_summary_text(proposal['candidate']['template'],
-                                                 proposal['candidate']['deployment']), translate('Modify OCI'),
-                                                 question=translate('Apply these changes?'), default=True)
-                        break
-                    except RestartWizard:
-                        wizard.restart()
-                    except ValueError as error:
-                        if not wizard.retry_last(error):
-                            raise
-            finally:
-                wizard.close()
-            if not approved:
+            proposal = edit_recreation(record, ui)
+            if proposal is None:
                 return False
         elif not ui.review(translate('If the image channel has a new version, the CT is stopped, backed up and verified, and replaced with the new image to update the container. If the update fails after the container was changed, the backup is restored. An update that stops halfway is recovered from the OCI management menu.'),
                            translate('Update OCI'), question=translate('Update now?'), default=True):

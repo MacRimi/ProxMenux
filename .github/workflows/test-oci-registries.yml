@@ -28,6 +28,19 @@ jobs:
           python-version: '3.13'
       - name: Install OCI test dependencies
         run: python3 -m pip install -r oci/requirements.txt
+      - name: Run carried record, recovery and configuration cache regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p 'test_carried*.py' -v
+          python3 -m unittest discover -s oci/tests -p test_restore_recovery.py -v
+      - name: Run read-only volume preparation regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          test -x /bin/bash
+          test -x /usr/bin/jq
+          python3 -m unittest discover -s oci/tests -p test_readonly_volume_preparation.py -v
       - name: Run offline registry account tests
         env:
           PYTHONDONTWRITEBYTECODE: '1'
@@ -41,3 +54,20 @@ jobs:
           python3 -m unittest discover -s oci/tests -p test_dialog_escape.py -v
           python3 -m unittest discover -s oci/tests -p test_work_backup.py -v
           python3 -m unittest discover -s oci/tests -p test_recreation.py -v
+      - name: Run OCI modification menu regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p test_modify_menu.py -v
+          python3 -m unittest discover -s oci/tests -p test_manage_sync_notice.py -v
+          python3 -m unittest discover -s oci/tests -p test_recreation.py -v
+          python3 -m unittest discover -s oci/tests -p test_shared_directories.py -v
+          python3 -m unittest discover -s oci/tests -p 'test_wizard*.py' -v
+      - name: Run external OCI settings regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p 'test_external_tags.py' -v
+          python3 -m unittest discover -s oci/tests -p 'test_instance_reconcile.py' -v
+          python3 -m unittest discover -s oci/tests -p 'test_guessed_endpoint_healthcheck.py' -v
+          python3 -m unittest discover -s oci/tests -p 'test_runtime_home_*.py' -v
