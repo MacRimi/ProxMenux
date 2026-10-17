@@ -17,6 +17,9 @@ on:
       - 'scripts/global/repository-functions.sh'
       - 'scripts/menus/pbs_menu.sh'
       - 'scripts/utilities/pbs_update.sh'
+      - 'scripts/global/update-pbs.sh'
+      - 'scripts/menus/menu_post_install.sh'
+      - 'scripts/post_install/*.sh'
   push:
     branches: [main, develop]
     paths:
@@ -49,7 +52,7 @@ jobs:
         run: |
           python -B -m unittest discover -s AppImage/scripts/tests -p test_pbs.py -v
           python -B -m unittest discover -s AppImage/scripts/tests -p test_auth_manager_ssl_reload.py -v
-          for script in scripts/global/platform-functions.sh scripts/global/repository-functions.sh scripts/menus/pbs_menu.sh scripts/utilities/pbs_update.sh scripts/menus/main_menu.sh scripts/post_install/auto_post_install.sh scripts/post_install/customizable_post_install.sh; do
+          for script in scripts/global/platform-functions.sh scripts/global/repository-functions.sh scripts/menus/pbs_menu.sh scripts/utilities/pbs_update.sh scripts/menus/main_menu.sh scripts/post_install/auto_post_install.sh scripts/post_install/customizable_post_install.sh scripts/post_install/uninstall-tools.sh scripts/global/update-pbs.sh scripts/menus/menu_post_install.sh; do
             bash -n "$script"
           done
       - uses: actions/setup-node@v6

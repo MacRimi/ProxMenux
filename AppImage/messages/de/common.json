@@ -8,7 +8,8 @@
     "unknown": "Unbekannt",
     "notAvailable": "N/A",
     "serverOffline": "Server offline",
-    "supportProject": "Unterstützen Sie das Projekt und tragen Sie dazu bei"
+    "supportProject": "Unterstützen Sie das Projekt und tragen Sie dazu bei",
+    "descriptionPbs": "Proxmox Backup Server Dashboard"
   },
   "common": {
     "notAvailable": "N/A",
@@ -165,7 +166,8 @@
     },
     "runningCountOne": "{count} läuft",
     "runningCountFew": "{count} laufen",
-    "runningCountMany": "{count} laufen"
+    "runningCountMany": "{count} laufen",
+    "pbsVersion": "PBS-Version:"
   },
   "storage": {
     "loadingTitle": "Speicherdaten werden geladen...",
@@ -1831,7 +1833,8 @@
         "logs": "Systemprotokolle",
         "updates": "Systemaktualisierungen",
         "security": "Sicherheit & Zertifikate",
-        "temperature": "Temperatur"
+        "temperature": "Temperatur",
+        "pbsServices": "PBS Services"
       }
     },
     "remoteStorage": {
@@ -4824,7 +4827,8 @@
       "services": "PVE-Dienste",
       "logs": "Systemprotokolle",
       "updates": "Systemaktualisierungen",
-      "security": "Sicherheit & Zertifikate"
+      "security": "Sicherheit & Zertifikate",
+      "pbsServices": "PBS-Dienste"
     },
     "checks": {
       "cpu_usage": "CPU-Auslastung",
@@ -7320,6 +7324,47 @@
     "navigation": "PBS-Navigation",
     "cpu": "CPU",
     "memory": "Arbeitsspeicher",
-    "uptime": "Betriebszeit"
+    "uptime": "Betriebszeit",
+    "capacityUnavailable": "Kapazität nicht verfügbar.",
+    "datastoresUnavailable": "{count} nicht verfügbar",
+    "datastoresOnline": "Alle verfügbar",
+    "moreDatastores": "+{count} weitere Datenspeicher",
+    "estimatedFull": "Voraussichtlich voll",
+    "estimatedFullUnknown": "Noch nicht genügend Daten",
+    "duration": "Dauer",
+    "noJobs": "Es sind keine Synchronisierungs-, Überprüfungs- oder Löschzeitpläne konfiguriert."
+  },
+  "monitorLinks": {
+    "groups": {
+      "cluster": "Cluster",
+      "standalone": "Eigenständige Knoten",
+      "pbs": "Proxmox Backup Server"
+    },
+    "thisNode": "Dieser Knoten",
+    "checking": "Knoten werden überprüft…",
+    "loadFailed": "Die Knotenliste konnte nicht geladen werden.",
+    "empty": "Noch keine anderen Knoten. Fügen Sie einen hinzu, um seinen Monitor von hier aus zu öffnen.",
+    "noResponse": "Keine Antwort",
+    "pbsInterface": "PBS-Schnittstelle",
+    "openNewTab": "In einem neuen Tab öffnen",
+    "manage": "Knoten hinzufügen oder verwalten…",
+    "dialogTitle": "Verknüpfte Knoten",
+    "dialogDescription": "Clusterknoten und konfigurierte Proxmox Backup Server werden automatisch erkannt. Jeder Monitor behält seine eigene Anmeldung.",
+    "addTitle": "Einen Knoten hinzufügen",
+    "name": "Name",
+    "address": "Adresse überwachen",
+    "type": "Geben Sie ein",
+    "add": "Hinzufügen",
+    "save": "Speichern",
+    "remove": "Entfernen",
+    "visible": "Sichtbar",
+    "autoAddress": "Automatisch",
+    "detected": "Erkannt",
+    "added": "Hinzugefügt",
+    "saveFailed": "Die Knotenliste konnte nicht gespeichert werden.",
+    "backTo": "Zurück zu {name}",
+    "cameFromTitle": "Monitorknoten hinzufügen?",
+    "cameFromBody": "{name} zu den verknüpften Knoten dieses Monitors hinzufügen.",
+    "notNow": "Nicht jetzt"
   }
 }

@@ -8,7 +8,8 @@
     "unknown": "Desconhecido",
     "notAvailable": "N/D",
     "serverOffline": "Servidor off-line",
-    "supportProject": "Apoie e contribua para o projeto"
+    "supportProject": "Apoie e contribua para o projeto",
+    "descriptionPbs": "Painel do Proxmox Backup Server"
   },
   "common": {
     "notAvailable": "N/D",
@@ -165,7 +166,8 @@
     },
     "runningCountOne": "{count} em execução",
     "runningCountFew": "{count} em execução",
-    "runningCountMany": "{count} em execução"
+    "runningCountMany": "{count} em execução",
+    "pbsVersion": "Versão PBS:"
   },
   "storage": {
     "loadingTitle": "Carregando dados de armazenamento...",
@@ -1831,7 +1833,8 @@
         "logs": "Registros do sistema",
         "updates": "Atualizações do sistema",
         "security": "Segurança e Certificados",
-        "temperature": "Temperatura"
+        "temperature": "Temperatura",
+        "pbsServices": "Serviços PBS"
       }
     },
     "remoteStorage": {
@@ -4824,7 +4827,8 @@
       "services": "Serviços PVE",
       "logs": "Registros do sistema",
       "updates": "Atualizações do sistema",
-      "security": "Segurança e certificados"
+      "security": "Segurança e certificados",
+      "pbsServices": "serviços PBS"
     },
     "checks": {
       "cpu_usage": "Uso da CPU",
@@ -7320,6 +7324,47 @@
     "navigation": "Navegação PBS",
     "cpu": "CPU",
     "memory": "Memória",
-    "uptime": "Tempo de atividade"
+    "uptime": "Tempo de atividade",
+    "capacityUnavailable": "Capacidade não disponível.",
+    "datastoresUnavailable": "{count} indisponível",
+    "datastoresOnline": "Todos disponíveis",
+    "moreDatastores": "+{count} mais armazenamentos de dados",
+    "estimatedFull": "estimativa completa",
+    "estimatedFullUnknown": "Not enough data yet",
+    "duration": "Duração",
+    "noJobs": "nenhuma programação de sincronização, verificação ou remoção está configurada."
+  },
+  "monitorLinks": {
+    "groups": {
+      "cluster": "Cluster",
+      "standalone": "nós autônomos",
+      "pbs": "Proxmox Backup Server"
+    },
+    "thisNode": "Este nó",
+    "checking": "Verificando nós…",
+    "loadFailed": "não foi possível carregar a lista de nós.",
+    "empty": "Ainda não há outros nós. Adicione um para abrir o seu Monitor a partir daqui.",
+    "noResponse": "Sem resposta",
+    "pbsInterface": "interface PBS",
+    "openNewTab": "abrir em uma nova guia",
+    "manage": "Adicionar ou gerenciar nós…",
+    "dialogTitle": "nós vinculados",
+    "dialogDescription": "Os nós do cluster e os Proxmox Backup Server configurados são detectados automaticamente. Cada Monitor mantém o seu próprio login.",
+    "addTitle": "Adicionar um nó",
+    "name": "Nome",
+    "address": "endereço do monitor",
+    "type": "Tipo",
+    "add": "Adicionar",
+    "save": "Salvar",
+    "remove": "Remover",
+    "visible": "Visível",
+    "autoAddress": "Automático",
+    "detected": "Detectado",
+    "added": "Adicionado",
+    "saveFailed": "não foi possível salvar a lista de nós.",
+    "backTo": "Voltar para {name}",
+    "cameFromTitle": "Adicionar nó Monitor?",
+    "cameFromBody": "Adicione {name} aos nós vinculados deste Monitor.",
+    "notNow": "agora não"
   }
 }
