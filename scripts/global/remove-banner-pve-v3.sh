@@ -283,6 +283,10 @@ reload_services() {
     systemctl is-active --quiet pvedaemon 2>/dev/null && {
         systemctl reload pvedaemon 2>/dev/null || true
     }
+    # Proxmox Backup Server serves the same toolkit from its own proxy.
+    systemctl is-active --quiet proxmox-backup-proxy 2>/dev/null && {
+        systemctl reload proxmox-backup-proxy 2>/dev/null || systemctl restart proxmox-backup-proxy 2>/dev/null || true
+    }
 }
 
 main() {
@@ -316,9 +320,12 @@ EOFAPT
 # Main function to remove subscription banner
 remove_subscription_banner_v3() {
     local pve_version
-    pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+\.[0-9]+' | head -1 || echo "unknown")
-    
-    msg_info "$(translate "Detected Proxmox VE") ${pve_version} - $(translate "applying minimal banner patch")"
+    if command -v pveversion >/dev/null 2>&1; then
+        pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+\.[0-9]+' | head -1 || echo "unknown")
+        msg_info "$(translate "Detected Proxmox VE") ${pve_version} - $(translate "applying minimal banner patch")"
+    else
+        msg_info "$(translate "Detected Proxmox Backup Server") - $(translate "applying minimal banner patch")"
+    fi
     
 
     

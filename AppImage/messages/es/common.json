@@ -50,12 +50,21 @@
     "navigation": "Navegación de PBS",
     "cpu": "CPU",
     "memory": "Memoria",
-    "uptime": "Tiempo de actividad"
+    "uptime": "Tiempo de actividad",
+    "capacityUnavailable": "Capacidad no disponible.",
+    "datastoresUnavailable": "{count} no disponibles",
+    "datastoresOnline": "Todos disponibles",
+    "moreDatastores": "+{count} datastores más",
+    "estimatedFull": "Lleno previsto",
+    "estimatedFullUnknown": "Aún no hay datos suficientes",
+    "duration": "Duración",
+    "noJobs": "No hay programaciones de sincronización, verificación ni prune."
   },
   "_meta": "Community translation target. Copy keys from ../en/common.json and translate the values.",
   "app": {
     "title": "ProxMenux Monitor",
     "description": "Proxmox System Dashboard",
+    "descriptionPbs": "Proxmox Backup Server Dashboard",
     "loading": "Cargando...",
     "connecting": "Conexión al ProxMenux Monitor",
     "unknown": "Desconocido",
@@ -193,6 +202,7 @@
       "dayMany": "{count} días"
     },
     "proxmoxVersion": "Versión Proxmox:",
+    "pbsVersion": "Versión PBS:",
     "kernel": "Núcleo:",
     "availableUpdates": "Actualizaciones disponibles:",
     "packages": "paquetes",
@@ -1881,6 +1891,7 @@
         "network": "Interfaces de red",
         "vms": "Máquinas virtuales y contenedores",
         "services": "Servicios PVE",
+        "pbsServices": "Servicios PBS",
         "logs": "Registros del sistema",
         "updates": "Actualizaciones del sistema",
         "security": "Seguridad y certificados",
@@ -4874,7 +4885,8 @@
       "disks": "E/S de disco y errores",
       "network": "Interfaces de red",
       "vms": "Máquinas virtuales y contenedores",
-      "services": "servicios PVE",
+      "services": "Servicios PVE",
+      "pbsServices": "Servicios PBS",
       "logs": "Registros del sistema",
       "updates": "Actualizaciones del sistema",
       "security": "Seguridad y certificados"
@@ -7321,5 +7333,38 @@
         "diagnosticsOmitted": "Líneas o texto de diagnóstico omitidos: {count}. Se conserva el informe original."
       }
     }
+  },
+  "monitorLinks": {
+    "thisNode": "Este nodo",
+    "checking": "Comprobando nodos…",
+    "loadFailed": "No se pudo cargar la lista de nodos.",
+    "empty": "Aún no hay otros nodos. Añade uno para abrir su Monitor desde aquí.",
+    "groups": {
+      "cluster": "Clúster",
+      "standalone": "Nodos independientes",
+      "pbs": "Proxmox Backup Server"
+    },
+    "noResponse": "Sin respuesta",
+    "pbsInterface": "Interfaz de PBS",
+    "openNewTab": "Abrir en una pestaña nueva",
+    "manage": "Añadir o gestionar nodos…",
+    "dialogTitle": "Nodos enlazados",
+    "dialogDescription": "Los nodos del clúster y los Proxmox Backup Server configurados se detectan automáticamente. Cada Monitor mantiene su propio inicio de sesión.",
+    "addTitle": "Añadir un nodo",
+    "name": "Nombre",
+    "address": "Dirección del Monitor",
+    "type": "Tipo",
+    "add": "Añadir",
+    "save": "Guardar",
+    "remove": "Eliminar",
+    "visible": "Visible",
+    "autoAddress": "Automática",
+    "detected": "Detectado",
+    "added": "Añadido",
+    "saveFailed": "No se pudo guardar la lista de nodos.",
+    "backTo": "Volver a {name}",
+    "cameFromTitle": "¿Añadir nodo Monitor?",
+    "cameFromBody": "Añade {name} a los nodos enlazados de este Monitor.",
+    "notNow": "Ahora no"
   }
 }
