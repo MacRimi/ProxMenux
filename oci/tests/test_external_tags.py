@@ -166,6 +166,20 @@ die() { printf '%s\\n' "$*" >&2; exit 1; }
                     self.assertEqual(state['preserved_stack_config']['tags'], tags or '')
 
     @unittest.skipUnless(shutil.which('bash') and shutil.which('jq'), 'bash and jq are needed')
+    def test_native_stack_check_accepts_tag_edits_and_nothing_else(self):
+        saved = record()
+        instances = transaction.instances
+        for new in ('homelab;oci;proxmenux', 'proxmenux;oci', '', None):
+            with self.subTest(new=new):
+                self.assertTrue(instances.same_config_except_notes(saved, config(new), ignore_tags=True))
+                self.assertFalse(instances.same_config_except_notes(saved, config(new)))
+        changed = config('homelab').replace(b'cores: 2', b'cores: 4')
+        self.assertFalse(instances.same_config_except_notes(saved, changed, ignore_tags=True))
+        other = config('homelab').replace(MARKER.encode(), b'22222222-2222-4222-8222-222222222222')
+        self.assertFalse(instances.same_config_except_notes(saved, other, ignore_tags=True))
+        source = (ROOT / 'remote/oci_stack_native.py').read_text()
+        self.assertIn('same_config_except_notes(record, config, ignore_tags=True)', source)
+
     def test_installer_still_refuses_unsupported_kept_settings(self):
         installer = (ROOT / 'remote/install_oci.sh').read_text()
         function = re.search(r'^apply_kept_settings\(\) \{\n.*?^\}\n', installer, re.M | re.S).group(0)
