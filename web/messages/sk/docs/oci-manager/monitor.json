@@ -1,0 +1,213 @@
+{
+  "meta": {
+    "title": "Kontajnery OCI v ProxMenux Monitor | ProxMenux",
+    "description": "Čo ProxMenux Monitor zobrazuje pre kontajner nainštalovaný cez OCI manager Apps: verzie aplikácie a obrazu, nové obrazy, výstup konzoly a terminál Proxmox VE."
+  },
+  "header": {
+    "title": "V ProxMenux Monitore",
+    "description": "Kontajner nainštalovaný cez OCI manager Apps sa zobrazuje v časti VM a LXC ako každý iný LXC. Jeho detail načíta záznam inštalácie: verzie aplikácie a obrazu, nové obrazy, výstup konzoly a terminál.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Záznam je zdroj",
+            "body": "OCI manager Apps vie, čo nainštaloval a odkiaľ to pochádza. Monitor načíta tento záznam inštalácie namiesto vyhľadávania aplikácie v kontajneri. Tieto údaje sú preto rovnaké pri spustenom aj zastavenom kontajneri."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Karta",
+              "Čo sa mení pri kontajneri OCI"
+            ],
+            "rows": [
+              [
+                "Stav",
+                "Prepínač <strong>Watchdog</strong> pod Start at boot: aplikácia sa znova spustí, keď sa sama zastaví"
+              ],
+              [
+                "Aplikácia",
+                "Aplikácia je identifikovaná zo záznamu a aktualizácie sú sledované obrazom"
+              ],
+              [
+                "Aktualizácie",
+                "Obraz je aktualizovaný alebo aplikácia upravená s rovnakým tokom ako OCI menu"
+              ],
+              [
+                "Pripojenia",
+                "Kontajnerové disky a hostiteľské adresáre s ich použitím"
+              ],
+              [
+                "Logy",
+                "Len pre kontajnery OCI: výstup konzoly aplikácie"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "app",
+      "title": "Aplikácia",
+      "intro": "Záložka <appLink>App</appLink> ponúka nainštalovanú aplikáciu ako detekciu s názvom, logom, portom a schémou záznamu. Zaregistrovanie otvára editor metódou <strong>Obraz OCI (nainštalovaný ProxMenux)</strong>, ktorá nepotrebuje konfiguráciu.",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "boxes",
+                "title": "Aplikácia",
+                "body": "Verzia aplikácie v obraze, načítaná zo samotného obrazu: z jeho prostredia alebo štítku <code>org.opencontainers.image.version</code>. Je to informatívny údaj."
+              },
+              {
+                "icon": "archive",
+                "title": "Obraz",
+                "body": "Dátum zostavenia a digest nainštalovaného obrazu. O aktualizácii sa rozhoduje tu: nainštalovaný digest sa porovná s tým, ktorý register dnes publikuje pre rovnakú značku."
+              }
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Keď register zverejní nový digest, na karte sa zobrazí <strong>Nový obraz</strong> s jeho dátumom a digest, aj keď sa verzia aplikácie vo vnútri nezmenila: prestavba na aktualizovanej báze je aktualizáciou.",
+              "Keď sa hodnoty digest zhodujú, karta zobrazí <strong>Verzia</strong>.",
+              "Karta odkazuje na úložisko obrazu: jeho projekt GitHub alebo jeho stránku Docker Hub pre oficiálny obraz.",
+              "Prístupové spojenie používa LAN adresu kontajnera, aj pre hlavného člena viackontajnerovej aplikácie, ktorá má druhú adresu vo svojej súkromnej sieti.",
+              "Tlačidlo <strong>Obnoviť údaje</strong> znovu načíta záznam aj register obrazov. Možnosti vyhľadávania alebo registrácie ďalších aplikácií sa neponúkajú: kontajner obsahuje presne aplikáciu zo svojho záznamu."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/monitor-app-tab.png",
+            "alt": "App záložka kontajnera OCI s verziou aplikácie, obrazom a odkazom na úložisko",
+            "caption": "Karta Aplikácia kontajnera nainštalovaného cez OCI manager Apps."
+          }
+        },
+        {
+          "p": "Kontrola prebieha raz denne s kontrolami aktualizácií monitora a <strong>Obnoviť údaje</strong> ju spustí okamžite. Nový obraz sa odošle ako upozornenie prostredníctvom kanálov nakonfigurovaných v <notificationsLink>Upozornenia</notificationsLink>. Aktualizácia sa aplikuje na karte Aktualizácie."
+        }
+      ]
+    },
+    {
+      "id": "updates",
+      "title": "Aktualizácie",
+      "intro": "Pri kontajneri nainštalovanom cez OCI manager Apps zobrazuje karta Aktualizácie aplikáciu s nainštalovaným obrazom a prípadným novým obrazom z registra, rovnako ako pri ostatných aplikáciách. Nástroje na aktualizáciu balíkov a aplikácií bežného LXC sa nezobrazujú.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Tlačidlo",
+              "Čo to otvára?"
+            ],
+            "rows": [
+              [
+                "Aktualizácia",
+                "Aktualizácia z časti <lifecycleLink>Spravovať nainštalované aplikácie OCI</lifecycleLink> pre tento kontajner v termináli Monitor. Možno ju spustiť aj bez nového obrazu; vtedy sa nič nezmení. Vo viackontajnerovej aplikácii aktualizuje všetkých členov."
+              ],
+              [
+                "Upraviť",
+                "Editor aplikácie (zdroje, sieť, cesty a GPU). Vo viackontajnerovej aplikácii pridáva alebo odstraňuje ďalšie cesty a zariadenia aplikačného kontajnera a v Immich mení, čo vykonáva rozpoznávanie."
+              ],
+              [
+                "Obnoviť",
+                "Nahradí Aktualizáciu po prerušení operácie na kontajneri a otvorí jeho obnovu."
+              ],
+              [
+                "Obnoviť (obnovený kontajner)",
+                "Zobrazí sa pri kontajneri obnovenom zo zálohy, ktorý na tomto hostiteľovi nemá kontrakt, v časti <strong>Obnovená aplikácia OCI</strong>. Otvorí <lifecycleLink>obnovu</lifecycleLink> v termináli Monitor; po registrácii sa zobrazia možnosti Aktualizovať a Upraviť."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Externé zmeny, hostiteľské adresáre a multikontajnerové aplikácie sú spracované ako v ponuke OCI. Vo viackontajnerovej aplikácii sa tlačidlá a možnosti zobrazia len na hlavnom kontajneri; ostatní členovia zobrazujú svoj obraz, poznámku, že sú aktualizované z hlavného kontajnera a tlačidlo, ktoré ho otvára. Keď sa terminál uzavrie, obraz, záznam a pripojenia sa znovu prečítajú."
+        },
+        {
+          "table": {
+            "headers": [
+              "Možnosť",
+              "Správanie"
+            ],
+            "rows": [
+              [
+                "Ponechať zálohu vytvorenú pred aktualizáciou",
+                "Každá aktualizácia zálohuje kontajner, aby ho bolo možné obnoviť pri zlyhaní aktualizácie. Pri tejto voľbe sa tá istá záloha ponechá vo vybranom úložisku a zobrazí medzi zálohami CT; pri Proxmox Backup Server sa záloha zapíše pred aktualizáciou."
+              ],
+              [
+                "Plánované aktualizácie",
+                "Obraz sa aktualizuje v zvolenom čase iba vtedy, keď register publikuje nový obraz; voliteľne až po jeho dosiahnutí veku 1, 3, 7 alebo 14 dní. Kontajner so zmenami mimo ProxMenux sa preskočí a nahlási."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "logs",
+      "title": "Logy",
+      "intro": "Karta Záznamy sa zobrazuje iba pri kontajneroch nainštalovaných cez OCI manager Apps, medzi kartami Pripojenia a Zálohy. Zobrazuje štandardný a chybový výstup hlavného procesu obrazu, teda rovnaký výstup ako <code>docker logs</code> pri kontajneri Docker.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Výstup sa uchováva na hostiteľovi v <code>/var/log/proxmenux/oci/VMID.console.log</code> (režim 0600) od prvého spustenia aj cez reštarty, takže ho možno čítať pri zastavenom kontajneri.",
+              "Súbor sa otáča na 10 MB, pričom sa uchovávajú tri komprimované kópie (<code>/etc/logrotate.d/proxmenux-oci</code>).",
+              "Každý začiatok kontajnera je označený vo výstupe. Karta štandardne zobrazuje výstup od posledného spustenia; <strong>Úplná história</strong> zobrazuje aj predchádzajúce.",
+              "Po odstránení aplikácie sa odstráni jej výstup.",
+              "Zobrazuje sa posledných 100, 500 alebo 1000 riadkov. Počas behu kontajnera sa nové riadky sledujú naživo; posunutie nahor sledovanie pozastaví a tlačidlo <strong>Sledovať</strong> ho obnoví.",
+              "Filter zobrazí iba riadky, ktoré obsahujú text a <strong>Stiahnuť</strong> uloží načítané riadky.",
+              "Farebné kódy sa odstránia a riadok opakovane prekresľovaný ukazovateľom priebehu sa zobrazí v konečnom stave.",
+              "Karta načíta súbor pri každom otvorení; nepoužíva vyrovnávaciu pamäť."
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Prihlasovacie údaje pri prvom spustení",
+            "body": "Obrazy, ktoré vytlačia vygenerované heslo na ich prvom štarte, to nechajú v tomto výstupe, ako to robí <code>docker logs</code>. Inštalátor ho odtiaľ prečíta, aby ju ukázal v súhrne."
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/monitor-logs-tab.png",
+            "alt": "Karta záznamov s výstupom konzoly kontajnera OCI, výberom počtu riadkov, filtrom a tlačidlom sledovania",
+            "caption": "Konzolový výstup kontajnera OCI."
+          }
+        }
+      ]
+    },
+    {
+      "id": "terminal",
+      "title": "konzola Proxmox VE",
+      "blocks": [
+        {
+          "p": "Obraz OCI spúšťa vlastný proces ako PID 1 a neobsahuje prihlasovaciu službu. Predvolená konzola LXC by preto otvorila terminál bez procesu, ktorý by odpovedal na prihlásenie. Kontajnery nainštalované cez OCI manager Apps sa vytvárajú s <code>cmode: shell</code>: konzola Proxmox VE otvorí shell pomocou <code>lxc-attach</code>, čo zodpovedá <code>docker exec</code>. Spustená aplikácia zostáva nedotknutá."
+        },
+        {
+          "list": {
+            "items": [
+              "Shell je ten, ktorý súbor <code>/etc/passwd</code> v obraze priraďuje používateľovi root. Ak root nemá shell alebo obraz žiadny neobsahuje, zostane predvolená konzola.",
+              "Shell beží ako root vnútri kontajnera, bez hesla. O tom, kto ho môže otvoriť, rozhoduje <code>VM.Console</code> povolenie Proxmox VE.",
+              "Terminál monitora vstupuje do kontajnera s <code>pct enter</code>, ktorý funguje rovnako."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "mounts",
+      "title": "Pripojenia",
+      "blocks": [
+        {
+          "p": "Karta <mountsLink>Pripojenia</mountsLink> uvádza disky kontajnera a jeho adresáre hostiteľa. Využitie disku kontajnera na blokovom úložisku, napríklad LVM-thin, sa číta zo súborového systému disku, ktorý je pripojený iba v kontajneri."
+        }
+      ]
+    }
+  ]
+}
