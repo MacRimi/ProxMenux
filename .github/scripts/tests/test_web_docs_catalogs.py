@@ -45,6 +45,42 @@ class WebDocsCatalogTests(unittest.TestCase):
                     result = self.run_check(root, *options)
                     self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
 
+    def test_bare_commands_and_operators_are_not_prose(self):
+        examples = [
+            ("Restore with pct restore.", "Mit pct restart wiederherstellen."),
+            ("pveversion | grep pve-manager", "pveversion grep pve-manager"),
+            ("cd /opt/my-app && ./update.sh", "cd /opt/meine-app && ./update.sh"),
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for source, target in examples:
+                with self.subTest(source=source):
+                    self.write_catalog(root, "en", {"body": source})
+                    self.write_catalog(root, "de", {"body": target})
+                    result = self.run_check(root)
+                    self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                    self.assertIn("literal command or identifier", result.stdout)
+
+    def test_title_separator_can_change_without_relaxing_body_pipes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.write_catalog(root, "en", {"meta": {"title": "Storage | ProxMenux"}})
+            self.write_catalog(root, "de", {"meta": {"title": "Speicher — ProxMenux"}})
+            result = self.run_check(root, "--require-complete")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.write_catalog(root, "en", {"meta": {"description": "pveversion | grep pve-manager"}})
+            self.write_catalog(root, "de", {"meta": {"description": "pveversion grep pve-manager"}})
+            result = self.run_check(root)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+
+    def test_shipped_web_catalogs_keep_literal_contracts(self):
+        messages = SCRIPT.parents[2] / "web" / "messages"
+        result = subprocess.run(
+            [sys.executable, "-B", str(SCRIPT), "--messages-dir", str(messages)],
+            capture_output=True, text=True, timeout=60,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_literal_metadata_is_required_but_labels_can_be_localized(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

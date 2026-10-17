@@ -18,8 +18,8 @@ from build_web_docs_i18n import (
     read_json,
     schema_matches,
     source_files,
-    validate_contract,
 )
+from check_terminal_catalogs import validate_message
 
 
 def main() -> int:
@@ -51,7 +51,13 @@ def main() -> int:
                     missing += 1
                     continue
                 try:
-                    validate_contract(leaf.source, localized)
+                    validate_message(
+                        leaf.source, localized,
+                        title_separator=bool(
+                            leaf.path and leaf.path[0] == "meta"
+                            and leaf.path[-1] in ("title", "ogTitle", "twitterTitle")
+                        ),
+                    )
                 except ValueError as exc:
                     print(f"[{language}] {relative}:{'.'.join(map(str, leaf.path))}: {exc}")
                     errors += 1

@@ -102,6 +102,19 @@ class WebDocsI18nTests(unittest.TestCase):
             MODULE.restore_text(protected.replace(token, token + "0"), mapping)
         self.assertEqual(MODULE.restore_text(protected, mapping), "ProxMenux collects metrics.")
 
+    def test_numeric_residue_outside_intact_literal_is_rejected(self):
+        examples = [
+            ('Run <code>pct config</code> first.', 'Spustite <code>pct config</code>0 najprv.'),
+            ('<strong><code>Restart=on-failure</code></strong> restarts the service.',
+             '<strong>0<code>Restart=on-failure</code></strong> reštartuje službu.'),
+        ]
+        for source, target in examples:
+            with self.subTest(source=source):
+                with self.assertRaisesRegex(ValueError, 'numeric residue'):
+                    MODULE.validate_contract(source, target)
+        MODULE.validate_contract('The result is <code>echo</code>0.',
+                                 'Výsledok je <code>echo</code>0.')
+
     def test_product_and_kernel_module_names_are_protected(self):
         source = "Flask uses SQLite and journald; rclone works with Coral, gasket, apex and Alpine."
         protected, mapping = MODULE.protect_text(source)

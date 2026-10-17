@@ -397,6 +397,11 @@ def validate_contract(source: str, target: str) -> None:
         raise ValueError("literal code changed")
     if sorted(PLACEHOLDER_RE.findall(source)) != sorted(PLACEHOLDER_RE.findall(target)):
         raise ValueError("placeholder contract changed")
+    # Bare numeric protection markers once leaked a trailing zero just
+    # outside an otherwise intact code span. Literal/ICU checks cannot see it.
+    residue = re.compile(r'(?:</(?:code|pre|kbd)>|<strong>)(0+)(?=\s|[;:/<().,-]|$)')
+    if len(residue.findall(target)) > len(residue.findall(source)):
+        raise ValueError("unexpected numeric residue next to literal markup")
 
 
 def provider_function(args: argparse.Namespace) -> Callable[[str, str], str]:

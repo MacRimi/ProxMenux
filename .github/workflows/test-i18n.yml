@@ -15,9 +15,13 @@ on:
       - 'scripts/**/*.func'
       - 'scripts/**/*.py'
       - 'lang/*.json'
+      - 'menu'
+      - 'install_proxmenux.sh'
+      - 'install_proxmenux_beta.sh'
       - 'oci/src/**/*.py'
       - 'oci/catalog/**/*.json'
       - 'oci/remote/**/*.sh'
+      - 'oci/remote/**/*.py'
   push:
     branches: [main, develop]
     paths:
@@ -33,9 +37,13 @@ on:
       - 'scripts/**/*.func'
       - 'scripts/**/*.py'
       - 'lang/*.json'
+      - 'menu'
+      - 'install_proxmenux.sh'
+      - 'install_proxmenux_beta.sh'
       - 'oci/src/**/*.py'
       - 'oci/catalog/**/*.json'
       - 'oci/remote/**/*.sh'
+      - 'oci/remote/**/*.py'
   workflow_dispatch:
 
 permissions:
