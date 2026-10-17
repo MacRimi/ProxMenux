@@ -1,0 +1,170 @@
+{
+  "meta": {
+    "title": "Lynis | Dokumentácia ProxMenux",
+    "description": "Nainštalujte najnovší Lynis z oficiálneho repozitára CISOfy na GitHube, vykonajte audit so skóre zabezpečenia 0–100 a aktualizujte cez git pull. Audítor iba na čítanie: nemení systém.",
+    "ogTitle": "Lynis | Dokumentácia ProxMenux",
+    "ogDescription": "Nainštalujte a spustite bezpečnostný audítor Lynis na Proxmox VE. Inštalácia z pôvodného repozitára GitHub, audit a aktualizácia."
+  },
+  "header": {
+    "title": "Lynis",
+    "description": "Klonuje najnovší Lynis z oficiálneho repozitára CISOfy na GitHube, sprístupní ho ako /usr/local/bin/lynis a v menu ponúka audit, aktualizáciu, preinštalovanie a odinštalovanie. Audítor iba číta a vytvára správy bez zmeny systému.",
+    "section": "Zabezpečenie"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "Nainštaluje Lynis, bezpečnostný audítor s otvoreným zdrojovým kódom od CISOfy, z jeho repozitára GitHub do <code>/opt/lynis</code> a vytvorí spúšťací skript <code>/usr/local/bin/lynis</code>, aby bol dostupný cez <code>PATH</code>. Ak rozpozná existujúcu inštaláciu, zobrazí menu auditu, aktualizácie, preinštalovania alebo odstránenia."
+  },
+  "manageMenu": {
+    "heading": "Menu správy (po inštalácii)",
+    "intro": "Keď je Lynis nainštalovaný, každé následné vyvolanie otvorí menu správy namiesto opätovného spustenia inštalátora. Odtiaľ spustíte audit, aktualizáciu prostredníctvom git pull, preinštalovať alebo odinštalovať:",
+    "imageAlt": "Lynis management menu s auditom, aktualizácia, preinštalovať a odstrániť možnosti"
+  },
+  "whyUpstream": {
+    "heading": "Prečo pôvodný repozitár GitHub namiesto apt",
+    "intro": "Debian poskytuje Lynis cez apt, ale balík zvyčajne zaostáva o viacero hlavných verzií. Nové kontroly, opravy nových vektorov útoku a vylepšené odporúčania prichádzajú najprv na GitHub. Lynis je samostatný shellový skript bez kompilácie a inštalačných závislostí okrem <code>git</code>; klonovanie repozitára je preto metóda odporúčaná CISOfy.",
+    "headerSource": "Zdroj",
+    "headerPath": "Install path",
+    "headerUpdate": "Spôsob aktualizácie",
+    "headerFresh": "Aktuálnosť verzie",
+    "rows": [
+      {
+        "sourceRich": "<strong>ProxMenux (tento skript)</strong>",
+        "path": "/opt/lynis/",
+        "update": "git pull (v menu)",
+        "fresh": "Najnovšia verzia pôvodného projektu"
+      },
+      {
+        "sourceRich": "<strong>Debian apt</strong>",
+        "path": "/usr/bin/lynis",
+        "update": "apt upgrade",
+        "fresh": "Často mesiace / roky pozadu"
+      }
+    ]
+  },
+  "install": {
+    "heading": "Ako funguje inštalácia",
+    "node1Label": "github.com/CISOfy/lynis",
+    "node1Detail": "git clone\n(najprv nainštaluje git, ak chýba)",
+    "node2Label": "/opt/lynis/",
+    "node2Detail": "celý repozitár\nvrátane skriptu ./lynis",
+    "node3Label": "/usr/local/bin/lynis",
+    "node3Detail": "obal:\ncd /opt/lynis && ./lynis $@",
+    "outro": "Balíčk je povinný – Lynis trvá na tom, aby bol spustený z vlastného adresára, pretože načítava relatívne cesty pre zásuvné moduly a údaje profilu. Obal tento detail skrýva, takže <code>lynis audit system</code> jednoducho funguje odkiaľkoľvek."
+  },
+  "detection": {
+    "heading": "Zisťovacie cesty",
+    "intro": "Pred zobrazením menu skript kontroluje tri miesta, aby rozhodol, či je Lynis už prítomný:",
+    "items": [
+      "<code>/usr/local/bin/lynis</code> Wrapper nainštalovaný ProxMenux",
+      "<code>/opt/lynis/lynis</code> — priama cesta, ak bol spúšťací skript odstránený",
+      "<code>/usr/bin/lynis</code> — verzia nainštalovaná cez apt, ak ju používateľ nainštaloval týmto spôsobom"
+    ],
+    "outro": "Ak sa nájde niektorá z ciest, otvorí sa menu správy. Skript <strong>neodinštaluje</strong> Lynis nainštalovaný cez apt; odstráni iba vlastnú inštaláciu v <code>/opt/lynis</code> a jej spúšťací skript."
+  },
+  "audit": {
+    "heading": "Spustiť audit",
+    "intro": "V menu správy vyberte <strong>Spustiť bezpečnostný audit teraz</strong>. Zodpovedá to spusteniu:",
+    "code": "lynis audit system --no-colors",
+    "outro": "Audit trvá od 30 sekúnd do niekoľkých minút podľa veľkosti hostiteľa. Výstup ide priamo do terminálu bez animácie čakania. Lynis člení kontroly podľa kategórií a každý test označí ako <ok>[ OK ]</ok>, <warn>[ WARNING ]</warn> alebo <sugg>[ SUGGESTION ]</sugg>. Záverečné zhrnutie ukazuje hlavné údaje:",
+    "summary": "================================================================================\n\n  Podrobnosti bezpečnostného auditu Lynis:\n\n  Index zabezpečenia : 76 [############        ]\n  Vykonané testy : 247\n  Povolené doplnky : 0\n\n  Komponenty:\n  - Firewall [V]\n  - Skener škodlivého softvéru [X]\n\n  Moduly Lynis:\n  - Stav súladu [?]\n  - Bezpečnostný audit [V]\n  - Kontrola zraniteľností [V]\n\n================================================================================"
+  },
+  "report": {
+    "heading": "Čítanie správy",
+    "intro": "Dve dôležité časti sú <strong>Upozornenia</strong> (veci, ktoré by ste mali čoskoro opraviť) a <strong>Návrhy</strong> (odporúčania na zlepšenie vytvrdzovania). Každá položka nesie kontrolné ID ako <code>SSH-7408</code> – užitočné pri hľadaní zdôvodnenia a opravy v dokumentoch Lynis.",
+    "headerMarker": "Značka",
+    "headerMeaning": "Význam",
+    "headerAction": "Akcia",
+    "rows": [
+      {
+        "markerRich": "<strong>OK</strong>",
+        "meaning": "Skúška prešla",
+        "action": "Nič."
+      },
+      {
+        "markerRich": "<strong>WARNING</strong>",
+        "meaning": "Skutočný problém; odporúčaná oprava",
+        "action": "Prečítajte si kontrolný popis, naplánujte opravu"
+      },
+      {
+        "markerRich": "<strong>SUGGESTION</strong>",
+        "meaning": "Možné zlepšenie zabezpečenia",
+        "action": "Aplikujte, ak vyhovuje vášmu modelu hrozby"
+      }
+    ],
+    "outro": "Kompletná správa a strojovo čitateľné údaje sú napísané <code>/var/log/lynis.log</code> a <code>/var/log/lynis-report.dat</code> samotným Lynisom."
+  },
+  "pairFail2ban": {
+    "title": "Používajte spolu s Fail2Ban",
+    "body": "SSH-7408 (MaxAuthTries) je jedným z najčastejších varovaní. Inštalácia <link>Fail2Ban</link> od ProxMenux automaticky ho vymaže, pretože inštalátor nastaví <code>MaxAuthTries=3</code> ako súčasť SSH tvrdnúci krok. Spustite znova Lynis potom potvrdiť, že varovanie je preč."
+  },
+  "update": {
+    "heading": "Aktualizácia Lynis",
+    "body": "V menu možnosť <strong>Aktualizovať Lynis na najnovšiu verziu</strong> spustí <code>git pull --quiet</code> v <code>/opt/lynis</code>. Ak adresár existuje, ale nie je pracovnou kópiou Git, napríklad po ručnom kopírovaní súborov, skript vykoná úplnú preinštaláciu."
+  },
+  "reinstall": {
+    "heading": "Preinštalovať/odinštalovať",
+    "headerAction": "Akcia",
+    "headerWhat": "Čo to robí?",
+    "rows": [
+      {
+        "actionRich": "<strong>Preinštalovať</strong>",
+        "whatRich": "Odstráni <code>/opt/lynis</code>, znova klonuje z GitHubu a vytvorí spúšťací skript. Použite pri poškodenej miestnej pracovnej kópii."
+      },
+      {
+        "actionRich": "<strong>Odstrániť</strong>",
+        "whatRich": "Odstráni <code>/opt/lynis</code> a <code>/usr/local/bin/lynis</code>. Záznamy na <code>/var/log/lynis*</code> sú vedené (sú audit histórie). Apt-inštalovaný Lynis na <code>/usr/bin/lynis</code> zostáva nedotknutý."
+      }
+    ]
+  },
+  "cli": {
+    "heading": "Užitočné možnosti CLI",
+    "intro": "Po nainštalovaní sa Lynis môže použiť priamo z shellu s extra možnosťami, ktoré nie sú vystavené menu:",
+    "code": "lynis show version            # version + build date\nlynis show commands           # list every available command\nlynis show details TEST-ID    # explain a specific control\nlynis audit system --quick    # skip slow tests (e.g. malware scan)\nlynis audit system --pentest  # treat host as untrusted (more aggressive)\nlynis update info             # check if a newer Lynis is available\n\n# Filter the report log for just the warnings\ngrep \"Warning\" /var/log/lynis.log\n\n# Same, for suggestions only\ngrep \"Suggestion\" /var/log/lynis.log"
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "cloneTitle": "git clone počas inštalácie zlyhá",
+    "cloneBody": "Hostiteľ potrebuje prístup k sieti a DNS dosiahnuť <code>github.com</code>. Z konzoly: <code>curl -sI https://github.com</code> a <code>git ls-remote https://github.com/CISOfy/lynis.git</code> odhalí skutočnú chybu (DNS, TLS, proxy, repo URL). Ak sa vyžaduje proxy, nastavte <code>https_proxy</code> v prostredí pred opätovným spustením menu.",
+    "notFoundTitle": "lynis: príkaz nenájdený po inštalácii",
+    "notFoundIntro": "Obal na <code>/usr/local/bin/lynis</code> buď nebol vytvorený, alebo bol odstránený. Najrýchlejšia oprava: preinštalovať z menu. Ručné nastavenie:",
+    "notFoundCode": "cat > /usr/local/bin/lynis <<'EOF'\n#!/bin/bash\ncd /opt/lynis && ./lynis \"$@\"\nEOF\nchmod +x /usr/local/bin/lynis",
+    "sshTitle": "Audit zobrazuje \"Warning: Test SSH-7408 — MaxAuthTries set incorrectly\"",
+    "sshIntro": "Démon SSH umožňuje príliš veľa auth pokusov na pripojenie. Buď nainštalujte <link>Fail2Ban</link> z ProxMenux (ktorý nastaví <code>MaxAuthTries=3</code>), alebo editujte <code>/etc/ssh/sshd_config</code> ručne:",
+    "sshCode": "sed -i 's/^#?MaxAuthTries.*/MaxAuthTries 3/' /etc/ssh/sshd_config\nsystemctl reload sshd",
+    "scoreTitle": "Skóre klesol po upgrade Proxmox",
+    "scoreBody": "Najprv spustite <code>lynis update info</code>; aktualizácia Lynis mohla pridať kontroly, ktoré upozorňujú na existujúcu konfiguráciu. Aktualizujte Lynis z menu, zopakujte audit a riešte nové zistenia."
+  },
+  "files": {
+    "heading": "Súbory napísané",
+    "code": "/opt/lynis/                   # full Lynis git checkout\n/usr/local/bin/lynis          # wrapper script (cd + exec)\n/var/log/lynis.log            # human-readable audit log (Lynis itself)\n/var/log/lynis-report.dat     # machine-readable report (Lynis itself)"
+  },
+  "sample": {
+    "heading": "Ukážková správa",
+    "intro": "ProxMenux Monitor vytvorí pre každé spustenie Lynis viacstranové PDF dostupné na <link>karte Zabezpečenie</link>. Prvá strana obsahuje skóre zabezpečenia, údaje o systéme a prehľad bezpečnostného stavu. Ďalšie strany vysvetľujú každé upozornenie, zoradia návrhy podľa vplyvu a uvedú inventár balíkov použitý pri audite.",
+    "imageAlt": "Prvá strana PDF bezpečnostného auditu Lynis: zhrnutie so skóre zabezpečenia 71/100, systémovými informáciami a prehľadom firewallu, skenera škodlivého softvéru a počtu nainštalovaných balíkov",
+    "captionPrefix": "Prvá strana ukážkovej správy. Úplné PDF (",
+    "captionLink": "vzorka",
+    "captionSuffix": ") pokračuje podrobnými upozorneniami, návrhmi a zoznamom nainštalovaných balíkov.",
+    "cli": "Rovnaké údaje sú v CLI v súbore <code>/var/log/lynis-report.dat</code> (strojovo čitateľný textový súbor) a <code>/var/log/lynis.log</code> (čitateľný denník spustenia). PDF vytvára na požiadanie ProxMenux Monitor; spustenie <code>lynis</code> z príkazového riadka PDF nevytvorí."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/monitor/dashboard/security",
+        "label": "ProxMenux Monitor → Bezpečnostná karta",
+        "tail": "— spustite audit, prezerajte historické správy a stiahnite si PDF priamo z hlavného panela."
+      },
+      {
+        "href": "/docs/security/fail2ban",
+        "label": "Fail2Ban",
+        "tailRich": " — zavádza ochranu SSH pred hrubou silou, ktorú odporúča Lynis."
+      },
+      {
+        "href": "/docs/security",
+        "label": "Prehľad bezpečnosti",
+        "tail": " — Späť na prehľad sekcie."
+      }
+    ]
+  }
+}
