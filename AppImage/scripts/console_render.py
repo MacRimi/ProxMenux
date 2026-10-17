@@ -267,7 +267,7 @@ def _header(grid, vm, state, cluster_view):
     else:
         version = sanitize(node.get("pve_version") or "n/d", 40, grid.glyphs)
         match = re.search(r"\d+\.\d+", version)
-        version = match.group(1) if match else version
+        version = match.group(0) if match else version
         name = sanitize(node.get("name") or "", 20, grid.glyphs)
         info = (f"{name} {_separator(grid)} PVE {version} "
                 f"{_separator(grid)} {label('labels.uptime')} {_uptime((vm.get('local') or {}).get('uptime'))}")
