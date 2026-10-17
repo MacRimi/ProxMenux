@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "Backup y reinicio de interfaces | ProxMenux Documentation",
+    "title": "Backup y reinicio de interfaces | Documentación de ProxMenux",
     "description": "Snapshot manual, navegación y restauración de backups de /etc/network/interfaces almacenados en /var/backups/proxmenux/. Incluye un reinicio del servicio de red con confirmación y una vista rápida de la configuración en vivo.",
-    "ogTitle": "Backup y reinicio de interfaces | ProxMenux Documentation",
+    "ogTitle": "Backup y reinicio de interfaces | Documentación de ProxMenux",
     "ogDescription": "Snapshot y restauración de la configuración de red de Proxmox; reinicia el servicio de red con confirmación."
   },
   "header": {
@@ -27,7 +27,7 @@
     "heading": "Crear backup de red",
     "body": "Copia el <code>/etc/network/interfaces</code> actual al directorio de backups con un timestamp nuevo. Ya está — sin análisis, sin prompts, solo un snapshot.",
     "whenTitle": "Cuándo hacer un backup manual",
-    "whenBody": "Antes de editar <code>/etc/network/interfaces</code> a mano, antes de instalar un paquete que pueda tocar la stack de red (p. ej. NetworkManager, Open vSwitch) o antes de cualquier cambio de hardware. Las reparaciones guiadas ya hacen snapshot automáticamente — esta opción es para los momentos <em>manuales</em>."
+    "whenBody": "Antes de editar <code>/etc/network/interfaces</code> a mano, antes de instalar un paquete que pueda modificar la pila de red (p. ej. NetworkManager, Open vSwitch) o antes de cualquier cambio de hardware. Las reparaciones guiadas ya crean una copia automáticamente; esta opción es para las operaciones <em>manuales</em>."
   },
   "restore": {
     "heading": "Restaurar backup de red",
@@ -96,7 +96,7 @@
         "tail": " — la razón más habitual por la que un backup acaba aquí."
       },
       {
-        "label": "Análisis de config y limpieza guiada",
+        "label": "Análisis de configuración y limpieza guiada",
         "href": "/docs/network/config-analysis",
         "tailRich": " — también escribe en <code>/var/backups/proxmenux/</code> automáticamente."
       },
