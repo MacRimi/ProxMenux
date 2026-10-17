@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Apps-Dashboard: ein Starter für alle Weblinks | ProxMenux",
+    "description": "Verwenden Sie das Apps-Dashboard, um registrierte LXC-Weblinks und benutzerdefinierte Links zu öffnen, sie nach Kategorie zu ordnen und zu dem Gast zurückzukehren, der jeden Dienst besitzt."
+  },
+  "header": {
+    "title": "Dashboard: Apps Tab",
+    "description": "Ein einzelner Launcher für die Web-Schnittstellen, die Sie über den Knoten verwenden, unabhängig davon, ob sie von einer registrierten LXC-Anwendung oder einem benutzerdefinierten Weblink stammen.",
+    "section": "ProxMenux Monitor · Übersicht"
+  },
+  "intro": {
+    "title": "Ein Launcher, kein Application Installer",
+    "body": "Der Reiter <strong>Apps</strong> installiert keine Software und sucht nicht selbst nach Diensten. Er zeigt gespeicherte Weblinks in einem durchsuchbaren Raster. LXC-Links werden im <appTabLink>App-Reiter</appTabLink> des Gastsystems konfiguriert; eigene Links ergänzen VM-Dienste, Reverse Proxys und externe Dashboards."
+  },
+  "sources": {
+    "heading": "Was in Apps erscheint",
+    "intro": "Jede startbare URL wird zu einer eigenen Karte. Die Quelle bestimmt, wo diese Karte bearbeitet wird, aber nicht, wie sie während des normalen Gebrauchs aussieht.",
+    "colSource": "Quelle",
+    "colAppears": "Was erscheint",
+    "colManagedFrom": "Wo es verwaltet wird",
+    "rows": [
+      {
+        "source": "Registrierte LXC-Anwendung",
+        "appears": "Eine Karte für jeden Weblink, der im Anwendungsprotokoll gespeichert ist.",
+        "managedFrom": "VMs und LXCs → LXC-Dialog → App"
+      },
+      {
+        "source": "Benutzerdefinierter Link an einen Gast gebunden",
+        "appears": "Eine Service-URL, die mit einem bestimmten VM oder LXC verknüpft ist.",
+        "managedFrom": "Apps → Bearbeiten"
+      },
+      {
+        "source": "Eigener Link ohne Gastzuordnung",
+        "appears": "Beliebiges HTTP(S)-Ziel, einschließlich externer Dienste und Dienste hinter einem Reverse Proxy.",
+        "managedFrom": "Apps → Bearbeiten"
+      }
+    ],
+    "relationshipTitle": "Apps und der LXC App-Tab haben unterschiedliche Jobs",
+    "relationshipBody": "Der <appTabLink>App-Reiter</appTabLink> des LXC verwaltet Anwendungsidentität, Weblinks und optionales Versionstracking. <strong>Apps</strong> verwendet diese Links als Schnellzugriff. Die Bearbeitung einer LXC-Karte öffnet daher den Gastdatensatz, ohne die Konfiguration zu duplizieren."
+  },
+  "cards": {
+    "heading": "Wie man eine Karte benutzt",
+    "intro": "Die gesamte Karte ist das Startziel, während ihre kleineren Kontrollen einen Kontext bieten, ohne den Dienst zu öffnen.",
+    "items": [
+      "Klicken Sie auf die Karte, um ihre URL in einem neuen Browser-Tab zu öffnen.",
+      "Das Logo verwendet zuerst das Web Link-Logo und fällt gegebenenfalls auf das Anwendungslogo zurück.",
+      "Der Kategoriechip verwendet die gleiche Farbe und Beschriftung wie der entsprechende Weblink im LXC App-Tab.",
+      "Die Gastanzeige nennt die zugeordnete VM oder den LXC. Ein Klick öffnet dessen Dialog: LXC-Links öffnen <strong>App</strong>, VM-Links <strong>Status</strong>.",
+      "Ein violetter Aufwärtspfeil kennzeichnet ein verfügbares Update der betreffenden Anwendung oder des Docker-Images. Er ist keine Gesamtzahl aller Updates des Gastsystems."
+    ]
+  },
+  "toolbar": {
+    "heading": "Suche, Filter und Sortierung",
+    "intro": "Die Symbolleiste verengt eine große Anwendungssammlung, ohne die gespeicherten Datensätze zu ändern.",
+    "items": [
+      "Die Suche entspricht dem Anwendungsnamen, dem Gastnamen, dem VMID und der Kategorie.",
+      "Der Kategoriefilter zeigt jeweils eine Kategorie oder alle Anwendungen an.",
+      "Sortieren Sie nach <strong>Name</strong>, <strong>ID</strong> oder <strong>Kategorie</strong>. Die Kategoriesortierung fügt Überschriften zwischen Kartengruppen ein.",
+      "Die Sortierung wird in diesem Browser gespeichert. Suchtext und Kategoriefilter werden beim erneuten Seitenaufruf zurückgesetzt.",
+      "Die Registerkarte Apps bleibt verfügbar, wenn das Raster leer ist, so dass der erste benutzerdefinierte Link hinzugefügt werden kann, ohne zuerst eine LXC-Anwendung zu registrieren."
+    ]
+  },
+  "customLinks": {
+    "heading": "Hinzufügen und Bearbeiten von benutzerdefinierten Weblinks",
+    "intro": "Verwenden Sie einen benutzerdefinierten Link, wenn der Dienst nicht durch eine registrierte LXC-Anwendung dargestellt wird.",
+    "steps": [
+      "Wählen Sie <strong>Link hinzufügen</strong> in der Werkzeugleiste oder der leeren Ansicht.",
+      "Geben Sie einen Namen und eine vollständige <code>http://</code> oder <code>https://</code> URL ein.",
+      "Optional ein Logo hinzufügen, eine Kategorie auswählen oder erstellen und den Link an einen VM oder LXC binden.",
+      "Speichern Sie den Link. Seine Karte erscheint sofort im Raster.",
+      "Zum Ändern oder Entfernen eines eigenen Links wählen Sie <strong>Bearbeiten</strong> und den Stift auf seiner Karte."
+    ],
+    "colField": "Feld",
+    "colRequired": "Erforderlich",
+    "colPurpose": "Zweck",
+    "fields": [
+      {
+        "field": "Name",
+        "required": "Ja",
+        "purpose": "Der kartentitel und der suchbegriff."
+      },
+      {
+        "field": "URL",
+        "required": "Ja",
+        "purpose": "Das vollständige HTTP(S) Ziel, das von der Karte geöffnet wird."
+      },
+      {
+        "field": "Logo-URL",
+        "required": "Nein",
+        "purpose": "Ein Fernbild, das auf der Karte angezeigt wird."
+      },
+      {
+        "field": "Kategorie",
+        "required": "Nein",
+        "purpose": "Fügt ein gemeinsames Badge hinzu und ermöglicht die Kategoriefilterung."
+      },
+      {
+        "field": "Gastzuordnung",
+        "required": "Nein",
+        "purpose": "Verbindet den Link mit einem VM oder LXC und aktiviert die Gastverknüpfung."
+      }
+    ],
+    "editTitle": "Bearbeiten der Quelle der Wahrheit",
+    "editBody": "Stifte erscheinen im Bearbeitungsmodus nur bei eigenen Links. Für eine LXC-Anwendungskarte öffnen Sie den <appTabLink>App-Reiter</appTabLink> des Gastsystems und ändern dort den gespeicherten Weblink."
+  },
+  "categories": {
+    "heading": "Kategorien und Aktualisierungssignale",
+    "intro": "Kategorien organisieren Links; Updatesignale melden den Softwarezustand. Sie sind absichtlich getrennt.",
+    "items": [
+      "Kataloggestützte LXC-Registrierung kann eine Kategorie vorfüllen, bleibt aber editierbar.",
+      "Benutzerdefinierte Kategorienamen können aus dem gleichen Selektor erstellt und dann vom Filter wiederverwendet werden.",
+      "Kategoriefarben sind deterministisch und passen sich dem hellen oder dunklen Thema an. Lila und rote Bereiche sind für Update- und Gefahrenzustände reserviert.",
+      "Bei Docker-Weblinks ordnet ProxMenux die Karte einem Container oder Image zu und zeigt dessen Image-Updatezustand. Docker-Engine-Updates bleiben im <updatesLink>Reiter Aktualisierungen</updatesLink> des LXC."
+    ]
+  },
+  "persistence": {
+    "heading": "Persistenz und Cache-Verhalten",
+    "intro": "Das Dashboard ist so konzipiert, dass es sich von bereits verfügbaren Monitordaten öffnet, anstatt jeden Gast neu zu scannen.",
+    "items": [
+      "Eigene Links werden atomar in <code>/etc/proxmenux/custom_links.json</code> gespeichert und beim Start von Monitor in den Arbeitsspeicher geladen.",
+      "Registrierte LXC-Links bleiben Teil des gespeicherten Monitor-Datensatzes ihrer Anwendung; das Apps-Dashboard dupliziert sie nicht in die benutzerdefinierte Link-Datei.",
+      "Das Erstellen, Bearbeiten oder Löschen eines benutzerdefinierten Links aktualisiert die In-Memory-Liste sofort.",
+      "Die Sortierpräferenz gilt nur für diesen Browser und wird nicht zwischen Geräten oder Benutzern synchronisiert.",
+      "Die Position von Apps in der Hauptnavigation wird unter <settingsLink>Einstellungen → Navigationsreihenfolge</settingsLink> festgelegt."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Häufige Situationen",
+    "colProblem": "Lage",
+    "colResolution": "Lösung",
+    "rows": [
+      {
+        "problem": "Eine LXC-Anwendung ist registriert, aber keine Karte erscheint",
+        "resolution": "Öffnen Sie den Tab App und fügen Sie mindestens einen Weblink hinzu. Versions-Tracking allein erstellt keine Launcher-Karte."
+      },
+      {
+        "problem": "URL oder Logo ist falsch",
+        "resolution": "Bearbeiten Sie den benutzerdefinierten Link in Apps oder bearbeiten Sie den Weblink im LXC App-Tab."
+      },
+      {
+        "problem": "Ein Docker-Service fehlt",
+        "resolution": "Bearbeiten Sie die registrierte Docker-Anwendung und speichern Sie den veröffentlichten Webport des Dienstes als Weblink."
+      },
+      {
+        "problem": "Der lila Pfeil bezieht sich auf das falsche Docker Update",
+        "resolution": "Überprüfen Sie den Weblink-Namen und die Beschreibung, damit sie mit dem beabsichtigten Container oder Image übereinstimmen können."
+      },
+      {
+        "problem": "Apps öffnen sich zuerst statt Systemübersicht",
+        "resolution": "Der erste gespeicherte Eintrag unter Einstellungen → Navigationsreihenfolge wird zum Startreiter. Stellen Sie die Standardreihenfolge wieder her oder verschieben Sie Übersicht an die erste Stelle."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Wohin als nächstes",
+    "items": [
+      {
+        "label": "LXC App Tab",
+        "href": "/docs/monitor/dashboard/vms-lxcs/app",
+        "tail": "— Anwendungen registrieren, Weblinks und optionales Versions-Tracking."
+      },
+      {
+        "label": "LXC Updates Tab",
+        "href": "/docs/monitor/dashboard/vms-lxcs/updates",
+        "tail": " — Aktualisierungen für Anwendungen, Docker Engine und Images konfigurieren und ausführen."
+      },
+      {
+        "label": "Tab Einstellungen",
+        "href": "/docs/monitor/dashboard/settings#navigation-order",
+        "tail": " — Navigationsreihenfolge und Startreiter ändern."
+      }
+    ]
+  }
+}

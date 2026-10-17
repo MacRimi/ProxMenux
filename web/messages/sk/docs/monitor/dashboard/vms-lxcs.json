@@ -1,0 +1,244 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Panel: VM a LXC | Dokumentácia ProxMenux",
+    "description": "Inventár hosťovských systémov so živými údajmi CPU, pamäte a disku. Podrobnosti obsahujú konfiguráciu, zdroje, zálohy, nedávne výsledky záznamu Proxmox, poznámky a Spustiť / Vypnúť / Reštartovať / Vynútiť vypnutie."
+  },
+  "header": {
+    "title": "Panel: VM a LXC",
+    "description": "Úplný inventár hosťovských systémov uzla: štyri metriky hore, triediteľný zoznam VM a LXC a podrobnosti s konfiguráciou, zdrojmi, zálohami, záznamami a ovládaním Spustiť / Vypnúť / Reštartovať / Vynútiť vypnutie.",
+    "section": "ProxMenux Monitor · Prehľad"
+  },
+  "intro": {
+    "title": "Ovládanie hosťovských systémov",
+    "body": "Táto karta ovláda životný cyklus hosťovských systémov. Akcie idú cez <code>POST /api/vms/&lt;vmid&gt;/control</code> s výslovným potvrdením a aktualizujú riadok systému. Nútené vypnutie vyžaduje samostatné tlačidlo Vynútiť vypnutie."
+  },
+  "topRow": {
+    "heading": "Horný riadok: štyri štatistické karty",
+    "intro": "Štyri karty sumarizujú stav systémov: celkové počty, využitie CPU, pridelenú pamäť oproti kapacite hostiteľa a pridelený diskový priestor.",
+    "imageAlt": "VMs & LXCs záložka Vrchný rad štyroch stat kariet: Celkom VMs & LXCs, Spolu CPU, celková pamäť, celkový disk",
+    "imageCaption": "Horný riadok: celkové počty a stavy Spustené / Zastavené, využitie CPU, použitá pamäť / pridelená bežiacim systémom / celkovo pridelená pamäť s označením V rámci limitov a pridelené miesto na disku.",
+    "headerCard": "Karta",
+    "headerWhat": "Čo ukazuje",
+    "totalLabel": "VM a LXC spolu",
+    "totalWhat": "Celkový počet s dvoma odznakmi <em>X Beh</em> (zelená) a <em>Y zastavená</em> (červená, len ak > 0). Číslo, ktoré pozeráš, keď sa po reštarte niečo nevrátilo.",
+    "cpuLabel": "CPU celkom",
+    "cpuWhat": "Celkové živé využitie CPU všetkých systémov ako percento fyzického CPU hostiteľa s textom <em>„Využitie pridelenej CPU“</em>.",
+    "memoryLabel": "Pamäť spolu",
+    "memoryIntro": "Tri hodnoty nastavené vertikálne:",
+    "memoryItems": [
+      "<strong>Aktuálne použitá</strong> — hlavná hodnota, napríklad <em>15.4 GB</em>, a <em>X.X % z Y GB</em> vzhľadom na RAM hostiteľa. Modrý ukazovateľ zobrazuje percento.",
+      "<strong>Pridelená bežiacim</strong> + <strong>Celkovo pridelená</strong> — súčet <code>maxmem</code> pre <em>bežiace</em> systémy a pre <em>všetky</em> vrátane zastavených. Prvý je dôležitý teraz, druhý pri spustení všetkých naraz.",
+      "<strong>V rámci limitov</strong>, zelené, sa zmení na <em>Nadmerne pridelené</em>, ak súčet prekročí RAM hostiteľa. Kontrolované nadmerné prideľovanie môže fungovať s KSM; označenie včas upozorní na malú rezervu."
+    ],
+    "diskLabel": "Disk spolu",
+    "diskWhat": "Súčet miesta na disku prideleného všetkým systémom v GB alebo TB s textom <em>„Pridelené miesto na disku“</em>."
+  },
+  "inventory": {
+    "heading": "Zoznam virtuálnych strojov a kontajnerov",
+    "intro": "Jeden riadok na systém. Zoznam pochádza z <code>/api/vms</code>, ktoré spája <code>qm list</code> + <code>pct list</code> + <code>pvesh /cluster/resources</code> na hostiteľovi.",
+    "imageAlt": "Virtuálne stroje & Kontajnery Zoznam 1 riadok na hosťa so statusom, typovým odznakom, menom, ID a inline CPU / pamäť / percento disku",
+    "imageCaption": "Rozloženie inventára optimalizované pre mobilné zariadenia – rovnaké údaje, aké zobrazuje zobrazenie na počítači, preskupené do jedného stĺpca, pričom percentá a indikátory stavu sú kompaktné.",
+    "rowsIntro": "Každý riadok zobrazuje:",
+    "rows": [
+      "<strong>Ikona stavu</strong> — zelený trojuholník pri spustenom systéme alebo červený štvorec pri zastavenom. Zvyšok riadka zastaveného systému sa stlmí.",
+      "<strong>Typ</strong> — <em>LXC</em> azúrovou pre kontajnery, <em>VM</em> fialovou pre virtuálne stroje.",
+      "<strong>Názov</strong> — názov hostiteľa alebo zobrazovaný názov hosťovského systému.",
+      "<strong>VMID</strong> — číselné ID Proxmox pod názvom.",
+      "<strong>Vložené metriky</strong> 3 percentá s ikonou (CPU %, % pamäte, % disku). Každá ikona sa zmení na oranžovú, keď metrika prekročí prah pozornosti (napr. pamäť nad 90 %), takže rýchly sken vám povie, ktorý hosť je pod tlakom bez otvorenia."
+    ],
+    "clickHint": "Kliknutie na riadok otvorí podrobnosti, či systém beží alebo je zastavený.",
+    "mobileTitle": "Zoznam navrhnutý pre mobilné zariadenia",
+    "mobileBody": "Na telefónoch a v úzkych oknách sa typ, názov, ID a tri percentá ukladajú do jedného stĺpca ako na snímke. Široké zobrazenie ich rozloží vodorovne. V oboch prípadoch celý riadok otvorí podrobnosti."
+  },
+  "drillIn": {
+    "heading": "Okno podrobností hosťovského systému",
+    "intro": "Detail sa otvorí s názvom hosťovského systému, VMID, typom, stavom a dobou prevádzky. Karty sa prispôsobujú jeho typu: <strong>Stav</strong>, <strong>Aplikácia</strong> a <strong>Aktualizácie</strong> pre správu aplikácií LXC, <strong>Pripojenia</strong> pri LXC s bodmi pripojenia, <strong>Záznamy</strong> pri kontajneroch nainštalovaných cez OCI manager Apps a ďalej <strong>Zálohy</strong> a <strong>Firewall</strong>. Pevný panel akcií sprístupňuje ovládanie prevádzky a terminál LXC na každej karte.",
+    "statusTitle": "Karta 1 — Stav",
+    "statusImageAlt": "Podrobnosti systému — Stav so živými údajmi CPU, pamäte a disku, diskovým a sieťovým I/O, logom systému a blokom Zdroje / IP adresy",
+    "statusImageCaption": "Stav: CPU, pamäť a disk s ukazovateľmi hore; celkové I/O (disk čítanie/zápis, sieť príjem/odoslanie); potom Zdroje s Poznámkami, + Info a zoznamom IP adries.",
+    "statusIntro": "Predvolená karta na overenie stavu systému. Tri bloky:",
+    "liveTitle": "1. Riadok živých metrík",
+    "liveItems": [
+      "<strong>Využitie CPU (X jadier)</strong> — percento s ukazovateľom. Nastavený počet jadier v hlavičke vysvetľuje, čo znamená 100 %.",
+      "<strong>Pamäť</strong> — <em>použitá / maximum</em> v GB s ukazovateľom.",
+      "<strong>Disk</strong> — <em>použité / maximum</em> pre hlavný obraz disku v rovnakom formáte."
+    ],
+    "ioTitle": "2. I/O celkový počet + logo OS",
+    "ioItems": [
+      "<strong>Diskové I/O</strong> — celkové čítanie (↓) a zápis (↑) od štartu. Pomáha odhaliť náhly nárast I/O oproti bežnej aktivite systému.",
+      "<strong>Sieťové I/O</strong> — celkové prijaté (↓) a odoslané (↑) dáta, na rovnakom princípe.",
+      "<strong>Logo systému</strong> — ikona Debian / Ubuntu / Alpine / Windows / atď. podľa zisteného systému. Pomáha pri rozlišovaní otvorených okien."
+    ],
+    "resourcesTitle": "3. Blok zdrojov",
+    "resourcesIntro": "Konfigurácia podľa Proxmoxu: jadrá CPU, pamäť (nastavené <code>maxmem</code>) a swap. Dve rozbaľovacie sekcie v hlavičke:",
+    "resourcesItems": [
+      "<strong>Poznámky</strong> — upraviteľný popis systému. Uloženie zavolá <code>PUT /api/vms/&lt;vmid&gt;/config</code> a zapíše do <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> alebo <code>/etc/pve/lxc/&lt;vmid&gt;.conf</code>.",
+      "<strong>+ Info</strong> — režim BIOS, typ stroja, stav agenta, položky passthrough hostpci, body pripojenia CT a poradie štartu."
+    ],
+    "ipsTitle": "4. IP adresy",
+    "ipsBody": "Každá adresa IPv4 alebo IPv6 má zelené označenie. Zoznam je prázdny pri zastavenom systéme alebo VM bez agenta QEMU; LXC hlásia adresy priamo.",
+    "appTitle": "Karta 2 — App (iba LXC)",
+    "appIntro": "Registruje aplikácie LXC, ukladá webové odkazy a voliteľne porovnáva verzie. Návrhy pochádzajú zo štartovacej pamäte; <strong>Hľadať aplikácie</strong> zopakuje zisťovanie v tomto LXC po novej inštalácii.",
+    "appLinkLead": "Pozrite si",
+    "appLinkLabel": "vyhradená stránka aplikácie",
+    "appLinkTail": "pre zisťovanie v pamäti, registráciu s pomocou katalógu, webové odkazy Dockeru a detektory verzie.",
+    "updatesTitle": "Karta 3 — Aktualizácie (iba LXC)",
+    "updatesIntro": "Oddeľuje <strong>balíky OS</strong>, aplikácie, <strong>Docker Engine</strong> a Docker obrazy. Každý cieľ sa spúšťa samostatne alebo sa presne vyberie pre hromadnú či plánovanú akciu.",
+    "updatesLinkLead": "Pozrite si",
+    "updatesLinkLabel": "podrobná stránka Aktualizácie",
+    "updatesLinkTail": "pre integrované a vlastné aktualizátory, opätovné vytvorenie Docker kontajnerov, hromadný výber, bezpečnostné možnosti a plánovanie.",
+    "mountsTitle": "Karta 4 — Pripojenia (iba LXC, ak existujú)",
+    "mountsImageAlt": "Podrobnosti LXC, Pripojenia: zväzky PVE, bind mounty hostiteľa či úložiska PVE a NFS/CIFS pripojené v CT. Karta obsahuje typ, kapacitu, použité/celkové bajty, možnosti a stav: zelený funkčný, jantárový iba čítanie/odchýlka, červený nedostupný.",
+    "mountsImageCaption": "Karta Pripojenia sa zobrazuje iba pri kontajneroch LXC s aspoň jedným bodom pripojenia alebo dodatočne pripojeným vzdialeným súborovým systémom. CT bez pripojení túto kartu nemá.",
+    "mountsIntro": "Proxmox zobrazuje pripojenia nakonfigurované ako <code>mpX</code>, nie však pridané neskôr v CT cez <code>mount.cifs</code>, NFS cez <code>autofs</code> a podobne. Karta spája <strong>oba pohľady</strong>: nakonfigurované pripojenia <strong>a</strong> pripojenia zistené v kontajneri, so stavom a kapacitou, ak ju server vie získať.",
+    "mountTypesTitle": "Typy zisteného pripojenia",
+    "mountTypesItems": [
+      "<strong>Zväzok PVE</strong> — úložisko spravované Proxmoxom, napríklad podzväzok ZFS, adresár alebo Ceph RBD. Kapacita pochádza zo štatistík PVE a zodpovedá Proxmoxu.",
+      "<strong>Bind z úložiska PVE</strong> — položka <code>mpX</code> smerujúca na cestu úložiska známeho PVE.",
+      "<strong>Bind z hostiteľa</strong> — položka <code>mpX</code> s ľubovoľnou cestou hostiteľa (<code>/mnt/something</code>). Kapacitu poskytuje <code>df</code> pre túto cestu.",
+      "<strong>Pripojenie pridané v CT</strong> — existuje <em>iba</em> v mennom priestore kontajnera, napríklad NFS zdieľanie pripojené samotným CT. Kapacita sa číta cez <code>pct exec &lt;vmid&gt; df</code>; <code>/proc/&lt;pid&gt;/root</code> z hostiteľa neukazuje skutočné štatistiky vzdialeného pripojenia."
+    ],
+    "mountStateTitle": "Bodka na karte a upozornenia",
+    "mountStateItems": [
+      "<green/> <strong>Zelená</strong> — pripojenie je funkčné a dostupné.",
+      "<amber/> <strong>Jantárová</strong> — nastavené, ale nepripojené, iba na čítanie alebo <em>zombie bind</em>. Zdroj na hostiteľovi bol odstránený, ale CT ho stále vidí pripojený, napríklad po odpojení USB disku alebo <code>umount</code> na hostiteľovi.",
+      "<red/> <strong>Červená</strong> — nedostupné: kontrola sa nedostala k pripojeniu, napríklad NFS zdieľanie s vypnutým serverom."
+    ],
+    "mountsCalloutTitle": "Ďalšie informácie oproti Proxmoxu",
+    "mountsCalloutBody": "Prehľad všetkých miest, z ktorých kontajner číta alebo do ktorých zapisuje, vrátane ich kapacity. Zdieľania NFS alebo CIFS pripojené zvnútra CT, ktoré webové rozhranie Proxmox nevidí, sa tu zobrazujú s rovnakým vzhľadom a kontrolou stavu ako nakonfigurované prípojné body. Nefunkčné vzdialené pripojenia a neplatné bind mounty sa označia skôr, než spôsobia problém pri zálohovaní.",
+    "logsTitle": "Karta 5 — Záznamy (iba kontajnery OCI)",
+    "logsBody": "Iba pre kontajnery OCI manager Apps. Ukazuje konzolu hlavného procesu obrazu z <code>/var/log/proxmenux/oci/VMID.console.log</code>: posledných 100, 500 alebo 1000 riadkov, živé sledovanie počas behu, filter a stiahnutie. Súbor znovu načíta pri otvorení aj pri zastavenom kontajneri. Podrobnosti: <ociLink>Kontajnery OCI v ProxMenux Monitor</ociLink>.",
+    "backupsTitle": "Karta 6 — Zálohy",
+    "backupsImageAlt": "Podrobnosti systému — karta Zálohy so zoznamom dostupných záloh, cieľmi, veľkosťami a tlačidlom Vytvoriť zálohu",
+    "backupsImageCaption": "Všetky zálohy systému na nastavených úložiskách Proxmox, od najnovšej. Hlavička uvádza ich počet.",
+    "backupsIntro": "Uvádza zálohy systému na úložiskách Proxmox, od najnovšej. Počítadlo v názve ukazuje, či zálohy existujú. Každý riadok obsahuje:",
+    "backupsItems": [
+      "<strong>Časová pečiatka</strong> — dátum a čas behu.",
+      "<strong>Cieľ</strong> — úložisko (PBS-Cloud, PBS-Local, NFS-Backup, …), farebne podľa stavu.",
+      "<strong>Veľkosť</strong> — konečná veľkosť zálohy na disku."
+    ],
+    "backupsOutro": "<strong>+ Vytvoriť zálohu</strong> spustí zálohu na úložisku označenom „Backup target“ v Proxmoxe. Obnova sa vykonáva vo webovom rozhraní Proxmox; Monitor ukazuje nedávne zálohy systému a umožňuje vytvoriť nové.",
+    "firewallTitle": "Karta 7 — Firewall",
+    "firewallIntro": "Číta záznam firewallu Proxmox daného systému priamo z hostiteľa, bez ďalšej služby a pravidelných dotazov. Karta je vždy prítomná; obsah závisí od zapnutia firewallu a od toho, či pravidlo zaznamenáva pakety.",
+    "firewallItems": [
+      "<strong>Firewall je vypnutý</strong> — oranžové upozornenie ukáže, kde ho zapnúť v Proxmoxe (<em>&lt;Container|VM&gt; → Firewall → Options</em>), a pripomenie, že aspoň jedno pravidlo musí mať <code>log: info</code> alebo vyššiu úroveň, aby sa pakety zobrazovali.",
+      "<strong>Firewall povolený, zatiaľ žiadne udalosti</strong> — nápoveda v prázdnom stave s rovnakou požiadavkou na protokolovanie, užitočná, keď ste práve zapli bránu firewall.",
+      "<strong>Udalosti sú dostupné</strong> — posúvateľný panel s neproporcionálnym písmom a pôvodnými položkami podľa akcie: <green>ACCEPT</green> zelená, <orange>REJECT</orange> oranžová, <red>DROP</red> červená. Počítadlo v hlavičke ukazuje počet načítaných položiek."
+    ],
+    "firewallRefresh": "<em>Obnoviť</em> načíta najnovšie položky na požiadanie. Automatické obnovenie neprebieha; zoznam zachytáva otvorenie alebo posledné obnovenie. Zdroj je <code>/var/log/pve-firewall.log</code>, filtrovaný podľa VMID cez <code>GET /api/vms/&lt;vmid&gt;/firewall/log</code>.",
+    "firewallCalloutTitle": "Prečo ho tu máme, keď ho už ukazuje UI Proxmox?",
+    "firewallCalloutBody": "Odpadá prepínanie do Proxmoxu a pohľad zostáva na rovnakom VMID: spustite systém, skontrolujte pripojenia a udalosti firewallu a znova ho zastavte v paneli. Pravidlá sa upravujú v Proxmoxe; Monitor ich nemení.",
+    "actionBarTitle": "Akčný panel dole",
+    "actionBarIntro": "Vždy viditeľné dole v okne bez ohľadu na aktívnu kartu:",
+    "consoleItem": "<strong>Konzola</strong>, iba pre bežiace LXC, otvorí <code>pct enter &lt;vmid&gt;</code> v kontajneri. Používa xterm.js a WebSocket ako <link>karta Terminál</link> s <strong>mobilným panelom nástrojov</strong>: ESC, TAB, šípky, Enter a Ctrl+C / Ctrl+X / Ctrl+R. Funguje z telefónu či tabletu. Pre VM použite konzolu Proxmox noVNC.",
+    "lifecycleIntro": "Štyri tlačidlá v mriežke 2×2 posielajú <code>POST /api/vms/&lt;vmid&gt;/control</code> s príslušnou <code>action</code>. Dostupnosť závisí od stavu systému.",
+    "headerButton": "Tlačidlo",
+    "headerEnabled": "Povolené, keď",
+    "headerAction": "Akcia zaslaná hostiteľovi",
+    "lifecycleRows": [
+      {
+        "button": "Spustiť",
+        "color": "green",
+        "enabled": "Hosť je zastavený.",
+        "action": "qm start / pct start"
+      },
+      {
+        "button": "Vypnúť",
+        "color": "blue",
+        "enabled": "Hosťovský systém beží.",
+        "action": "qm shutdown / pct shutdown — riadne vypnutie, ACPI"
+      },
+      {
+        "button": "Reštartovať",
+        "color": "blue",
+        "enabled": "Hosťovský systém beží.",
+        "action": "qm reboot / pct reboot — riadny reštart"
+      },
+      {
+        "button": "Vynútiť vypnutie",
+        "color": "red",
+        "enabled": "Hosťovský systém beží.",
+        "action": "qm stop / pct stop — vynútené vypnutie"
+      }
+    ],
+    "forceStopTitle": "Vynútené vypnutie okamžite ukončí beh",
+    "forceStopBody": "<strong>Vynútiť vypnutie</strong> obíde vypínanie ako odpojenie napájania. Použite <strong>Vypnúť</strong>, ak systém reaguje. Vynútenie použite len pri zablokovanom vypínaní a ak prijímate riziko straty dát. Červená farba a označenie bránia náhodnému kliknutiu."
+  },
+  "dataCollected": {
+    "heading": "Spôsob zberu údajov",
+    "headerSection": "Sekcia karty",
+    "headerEndpoint": "Koncový bod",
+    "headerSource": "Zdroj",
+    "rows": [
+      {
+        "section": "Zoznam inventára",
+        "endpoint": "/api/vms",
+        "source": "<code>pvesh get /cluster/resources --type vm</code> pre VM a CT."
+      },
+      {
+        "section": "Detailný panel (config, sieť, disky)",
+        "endpoint": "/api/vms/<vmid>",
+        "source": "<code>qm config &lt;id&gt;</code> pre VM / <code>pct config &lt;id&gt;</code> pre CT."
+      },
+      {
+        "section": "Graf metrík hosťovského systému",
+        "endpoint": "/api/vms/<vmid>/metrics",
+        "source": "Dáta RRD PVE (<code>pvesh get /nodes/&lt;node&gt;/qemu/&lt;id&gt;/rrddata</code>) upravené do formátu pre graf."
+      },
+      {
+        "section": "Nedávne výsledky záznamu Proxmox",
+        "endpoint": "/api/vms/<vmid>/logs",
+        "source": "<code>pvesh get /nodes/&lt;node&gt;/&lt;qemu|lxc&gt;/&lt;vmid&gt;/log --start 0 --limit 1000</code>. Pri zlyhaní príkazu vráti prázdny zoznam; nejde o úplné systémové záznamy vnútri hosťovského systému."
+      },
+      {
+        "section": "Zálohy k dispozícii pre hostí",
+        "endpoint": "/api/vms/<vmid>/backups",
+        "source": "<code>pvesm list &lt;storage&gt;</code> filtrované VMID."
+      },
+      {
+        "section": "Záznam firewallu hosťovského systému (karta Firewall)",
+        "endpoint": "/api/vms/<vmid>/firewall/log",
+        "source": "<code>/var/log/pve-firewall.log</code> filtrované VMID."
+      },
+      {
+        "section": "Ovládanie napájania (Spustiť / Vynútiť vypnutie / Reštartovať / Vypnúť)",
+        "endpoint": "/api/vms/<vmid>/control",
+        "source": "ekvivalenty <code>qm start|stop|reboot|shutdown</code> alebo <code>pct</code>."
+      }
+    ],
+    "codeComment1": "# Porovnať údaje panela s PVE",
+    "codeComment2": "# Skontrolovať konfiguráciu systému presne ako v okne podrobností",
+    "codeComment3": "# VM",
+    "codeComment4": "# CT"
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "Monitor zdravia",
+        "href": "/docs/monitor/health-monitor",
+        "tailRich": " — Kategória VMs & Containers (neúspešné spustenie, timeouty QMP, zlyhania vypnutia CT)."
+      },
+      {
+        "label": "Oznámenia",
+        "href": "/docs/monitor/notifications",
+        "tailRich": " — čo následne spúšťajú udalosti <code>vm_*</code>, <code>ct_*</code>, <code>migration_*</code> a <code>backup_*</code>."
+      },
+      {
+        "label": "Referenčná príručka API",
+        "href": "/docs/monitor/api",
+        "tailRich": " — koncové body VM a záloh."
+      },
+      {
+        "label": "Index panela",
+        "href": "/docs/monitor/dashboard",
+        "tailRich": " — Ostatné karty."
+      },
+      {
+        "label": "ProxMenux → Vytvoriť VM",
+        "href": "/docs/create-vm",
+        "tailRich": " — vytváranie systémov: šablóny NAS (Synology a ďalšie), VM Linux/Windows a predvoľby prispôsobené Proxmoxu."
+      }
+    ]
+  }
+}

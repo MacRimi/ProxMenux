@@ -40,7 +40,7 @@
       },
       {
         "name": "VMs & Containers",
-        "description": "Inventory of all VMs and LXCs with status, resources and uptime. Drill-in shows config, historical metrics, full guest logs and start/stop/reboot/shutdown actions."
+        "description": "Inventory of VMs and LXCs with status, resources and uptime. The detail view shows configuration, historical metrics, Proxmox log downloads and start/stop/reboot/shutdown actions. Log availability is limited by the Proxmox endpoint; this is not a complete guest OS log archive."
       },
       {
         "name": "Hardware",
@@ -52,7 +52,7 @@
       },
       {
         "name": "Terminal",
-        "description": "Browser shell to the host or to any VM/CT, powered by <code>xterm.js</code> over WebSockets. Authenticated and audited like the rest of the API."
+        "description": "Browser shell for the host and supported VM/CT console access, powered by <code>xterm.js</code> over WebSockets. It follows the configured authentication mode: when authentication is disabled or declined, reachable clients can open a session without login. This description does not imply per-command auditing."
       },
       {
         "name": "Security",
@@ -81,7 +81,7 @@
     "intro": "Two access patterns are supported and the application detects which one is in use:",
     "codeComment1": "# 1) Direct access on the host",
     "codeComment2": "# 2) Via reverse proxy (Nginx / Caddy / Traefik)",
-    "afterCode": "When fronted by a reverse proxy, the Monitor honours <code>X-Forwarded-For</code>, <code>X-Forwarded-Proto</code> and <code>X-Forwarded-Host</code> so URLs and CORS behave correctly without manual configuration.",
+    "afterCode": "A reverse proxy should set <code>X-Forwarded-For</code>, <code>X-Forwarded-Proto</code> and <code>X-Forwarded-Host</code> appropriately and forward WebSocket upgrades. The browser uses its current origin for standard proxy ports. For backend client-IP handling, forwarded addresses are trusted only when PROXMENUX_TRUST_PROXY=1 is explicitly set; restrict direct access to the backend when enabling that trust.",
     "footer": "First-launch setup, password + TOTP 2FA, and reverse-proxy snippets are covered in <link>Access & Authentication</link>."
   },
   "mobile": {
@@ -112,9 +112,9 @@
   },
   "api": {
     "heading": "REST API and integrations",
-    "intro": "Everything the UI shows is available as JSON over HTTP/HTTPS. The same endpoints power Homepage widgets, Home Assistant sensors, Grafana dashboards (via the Prometheus exporter at <code>/api/prometheus</code>), Uptime Kuma probes and any custom script that speaks <code>curl</code>.",
+    "intro": "The dashboard’s REST endpoints expose monitoring data as JSON over HTTP/HTTPS for Homepage widgets, Home Assistant sensors, Uptime Kuma probes and custom scripts. Grafana can use the separate Prometheus text exporter at <code>/api/prometheus</code>. Requests can be made with <code>curl</code>.",
     "tokens": "Long-lived API tokens (365 days) are generated from <strong>Settings → API Access Tokens</strong> or via <code>POST /api/auth/generate-api-token</code>.",
-    "bearer": "Tokens travel as <code>Authorization: Bearer …</code>. Public endpoints (<code>/api/health</code>, <code>/api/auth/*</code>) work without a token so external uptime probes can hit the host without handing out credentials.",
+    "bearer": "Send tokens as <code>Authorization: Bearer …</code>. The public <code>/api/health</code> endpoint is suitable for external uptime probes without credentials. Routes under <code>/api/auth/*</code> include both public setup/login/status routes and protected account/token management routes; they are not all anonymous.",
     "catalog": "The full endpoint catalog, token rotation guidance and security best-practices live in <linkApi>API Reference</linkApi>; ready-made examples for Homepage, Home Assistant, Grafana, Uptime Kuma and a generic cURL pattern are in <linkIntegrations>Integrations</linkIntegrations>."
   },
   "serviceControl": {

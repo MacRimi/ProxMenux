@@ -1,0 +1,760 @@
+{
+  "meta": {
+    "title": "Proxmox Monitor-API — Integrationsreferens | ProxMenux",
+    "description": "HTTP-slutpunkter i ProxMenux Monitor för Home Assistant, Homepage, Grafana, Prometheus, n8n och egna paneler. Läs status och anropa dokumenterade åtgärder: VM-styrning, säkerhetskopiering, aviseringar och bekräftelse av varningar.",
+    "ogTitle": "Proxmox Monitor-API — Integrationsreferens",
+    "ogDescription": "ProxMenux Monitor-slutpunkter för Home Assistant, Homepage, Grafana, Prometheus, n8n och egna paneler.",
+    "twitterTitle": "Proxmox Monitor-API | ProxMenux",
+    "twitterDescription": "Slutpunkter för Home Assistant, Homepage, Grafana, Prometheus, n8n och egna paneler."
+  },
+  "header": {
+    "title": "API-referens",
+    "description": "HTTP-slutpunkter för att läsa status och anropa dokumenterade åtgärder: Home Assistant-sensorer, Homepage-kort, Grafana-paneler, Prometheus-insamling, n8n-flöden och egna skript. Med kategorier, exporterade mätvärden och curl-exempel.",
+    "section": "ProxMenux Monitor"
+  },
+  "intro": {
+    "title": "Vad sidan används till",
+    "body": "Sidan samlar slutpunkter för integrationer: dataläsning, start av säkerhetskopiering, egna aviseringar och bekräftelse av varningar. API:t körs i panelens Flask-process på TCP <strong>8008</strong>. Bindningsadress och TLS beskrivs i <link>Åtkomst och autentisering</link>."
+  },
+  "headerEndpoint": "Slutpunkt",
+  "headerMethod": "Metod",
+  "headerUse": "Användning",
+  "auth": {
+    "heading": "Autentisering",
+    "intro": "När autentisering är på väntar skyddade slutpunkter ett JWT Bearer-token i begärans header:",
+    "tokensIntro": "Två sätt att få token:",
+    "items": [
+      "<strong>API-token, rekommenderade för integrationer.</strong> Giltiga i 365 dagar, skapade under <strong>Säkerhet → API-token</strong>. De namnges och kan återkallas var för sig. Använd read_only för data och full_admin bara för nödvändiga administrationsåtgärder.",
+      "<strong>Inloggning, JWT i 24 timmar.</strong> <code>POST /api/auth/login</code> med användarnamn, lösenord och TOTP när 2FA kräver det. JWT:t går ut efter 24 timmar; skript måste då autentisera igen."
+    ],
+    "flowLink": "Inloggning, lösenord, 2FA, granskningslogg och TLS beskrivs i <link>Åtkomst och autentisering</link>.",
+    "rows": [
+      {
+        "endpoint": "/api/auth/login",
+        "method": "POST",
+        "use": "Fält i begäran (schema): <code>'{'\"username\",\"password\",\"totp_token?\"'}'</code>. Returnerar ett JWT för 24 timmar."
+      },
+      {
+        "endpoint": "/api/auth/api-tokens",
+        "method": "GET",
+        "use": "Lista API tokens (endast metadata - namn, prefix, datum; aldrig den faktiska hemligheten)."
+      },
+      {
+        "endpoint": "/api/auth/generate-api-token",
+        "method": "POST",
+        "use": "Skapar ett API-token för 365 dagar i en autentiserad session. Fält: <code>password, token_name?, totp_token?, scope?</code>. Lösenord och krävd TOTP kontrolleras igen. scope är read_only som standard; full_admin måste väljas uttryckligen. Hemligheten returneras bara en gång."
+      },
+      {
+        "endpoint": "/api/auth/api-tokens/<id>",
+        "method": "DELETE",
+        "use": "Återkalla en specifik API token av dess ID."
+      }
+    ]
+  },
+  "conventions": {
+    "heading": "Konventioner",
+    "items": [
+      "De flesta använder JSON. Nedladdningar kan ge vanlig text; <code>/api/prometheus</code> använder Prometheus textformat 0.0.4 i stället för OpenMetrics. Kontrollera svarstypen för den aktuella slutpunkten.",
+      "Många skrivningar returnerar <code>'{'\"success\": true, ...'}'</code>. Felformat varierar; ett vanligt format är <code>'{'\"success\": false, \"error\": \"'<'reason'>'\"'}'</code>. Kontrollera HTTP-status och fält: vissa autentiseringsutmaningar använder HTTP 200 med success false.",
+      "Frågeparametrar varierar per slutpunkt. Använd <code>limit</code>, <code>offset</code>, <code>since</code> och kategorifilter bara där de stöds.",
+      "Tidsformat varierar: Unix-tidsstämplar, ISO-8601-strängar och systemd-datum förekommer. Anta inte samma enhet eller uttrycklig tidszon för alla fält."
+    ]
+  },
+  "system": {
+    "heading": "System & hårdvara",
+    "rows": [
+      {
+        "endpoint": "/api/system",
+        "method": "GET",
+        "use": "Aktuella värden för CPU, minne, swap, drifttid och belastning."
+      },
+      {
+        "endpoint": "/api/info",
+        "method": "GET",
+        "use": "Statisk värdinformation: värdnamn, kärna, PVE-version, CPU-modell och distribution."
+      },
+      {
+        "endpoint": "/api/system-info",
+        "method": "GET",
+        "use": "Utökade systemdata för panelens sidhuvud: övergripande mätvärden och starttid."
+      },
+      {
+        "endpoint": "/api/hardware",
+        "method": "GET",
+        "use": "Detaljerad maskinvaruinventering: PCI-enheter, GPU:er och sensorer."
+      },
+      {
+        "endpoint": "/api/hardware/live",
+        "method": "GET",
+        "use": "Aktuella värden från sensorer som ändras snabbt."
+      },
+      {
+        "endpoint": "/api/temperature/history",
+        "method": "GET",
+        "use": "Tidsserier för CPU- och kapslingstemperatur."
+      },
+      {
+        "endpoint": "/api/gpu/<slot>/realtime",
+        "method": "GET",
+        "use": "Aktuella GPU-mätvärden för NVIDIA, Intel och AMD per PCI-plats."
+      }
+    ]
+  },
+  "actions": {
+    "heading": "Systemåtgärder",
+    "intro": "Dessa asynkrona systemåtgärder körs i tillfälliga systemd-enheter. Med autentisering på kräver skrivningar <code>full_admin</code>; <code>read_only</code> kan läsa <code>.../status</code>. Godkänd start ger HTTP 202 och status; läs <code>.../status</code> för förloppet. Gäststyrning och säkerhetskopiering har andra svar som beskrivs nedan.",
+    "shapeTitle": "Vanlig svarsform",
+    "shapeIntro": "Asynkrona systemåtgärder delar JSON-statusobjektet nedan. Gäststyrning och säkerhetskopiering har andra format:",
+    "shapeCode": "{\n  \"unit\": \"proxmenux-action-pve-update.service\",\n  \"state\": \"idle | running | success | failed | cancelled\",\n  \"started_at\": \"Sat 2026-08-01 11:01:32 CEST\",\n  \"finished_at\": null,\n  \"exit_code\": null,\n  \"result\": null\n}",
+    "concurrencyTitle": "Samtidig körning och avbrott",
+    "concurrencyBody": "En ny start av samma aktiva åtgärd ger HTTP 409. Avbrott finns bara med dokumenterad DELETE-slutpunkt, som för PVE-uppdatering. Status blir <code>cancelled</code> med bevarade tidsstämplar. Slutstatus ligger i processminnet och kan försvinna när Monitor startas om.",
+    "rows": [
+      {
+        "endpoint": "/api/system/power/reboot",
+        "method": "POST",
+        "use": "Startar om Proxmox-värden. HTTP-anslutningen kan stängas när systemd börjar avstängningen."
+      },
+      {
+        "endpoint": "/api/system/power/reboot/status",
+        "method": "GET",
+        "use": "Status för aktuell eller senaste omstart."
+      },
+      {
+        "endpoint": "/api/system/power/shutdown",
+        "method": "POST",
+        "use": "Stänger av Proxmox-värden, exempelvis som svar på en avstängningssignal från UPS."
+      },
+      {
+        "endpoint": "/api/system/power/shutdown/status",
+        "method": "GET",
+        "use": "Status för aktuell eller senaste avstängning."
+      },
+      {
+        "endpoint": "/api/system/pve-update/run",
+        "method": "POST",
+        "use": "Startar samma PVE-uppdatering som Uppdatera nu i Health Monitor och skalmenyn; anropar update-pve-safe.sh."
+      },
+      {
+        "endpoint": "/api/system/pve-update/status",
+        "method": "GET",
+        "use": "Status för aktuell eller senaste PVE-uppdatering."
+      },
+      {
+        "endpoint": "/api/system/pve-update",
+        "method": "DELETE",
+        "use": "Avbryter en pågående PVE-uppdatering med SIGTERM."
+      },
+      {
+        "endpoint": "/api/proxmenux/self-update/run",
+        "method": "POST",
+        "use": "Uppdaterar ProxMenux med installationsprogrammet för vald stabil- eller betakanal. En egen systemd-enhet låter jobbet fortsätta när installationsprogrammet startar om proxmenux-monitor."
+      },
+      {
+        "endpoint": "/api/proxmenux/self-update/status",
+        "method": "GET",
+        "use": "Status för aktuell eller senaste ProxMenux-uppdatering."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/control",
+        "method": "POST",
+        "use": "Skickar en styrorder för VM eller LXC. Fältet <code>action</code> accepterar <code>start</code>, <code>stop</code>, <code>shutdown</code> eller <code>reboot</code>. Ett lyckat svar ger en bekräftad PVE-uppgift, men betyder inte att den är klar. Läs gästens control-task-slutpunkt för resultatet."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/backup",
+        "method": "POST",
+        "use": "Skapar en vzdump-säkerhetskopia av VM eller LXC. Valfria fält att anpassa till lagringen: <code>storage</code> (PVE-mål), <code>mode</code> (<code>snapshot</code>, <code>suspend</code> eller <code>stop</code>), <code>compress</code> (<code>zstd</code>, <code>lzo</code>, <code>gzip</code> eller <code>none</code>), <code>protected</code> (<code>true</code> eller <code>false</code>), <code>notes</code>, <code>notification</code> (<code>auto</code>, <code>always</code>, <code>failure</code> eller <code>never</code>) och <code>pbs_change_detection</code> (<code>default</code>, <code>legacy</code> eller <code>data</code>). Returnerar PVE-uppgiftens UPID."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/backups",
+        "method": "GET",
+        "use": "Lista tidigare säkerhetskopior för en VM eller LXC över alla tillgängliga lager."
+      }
+    ],
+    "syncVsAsyncTitle": "Två typer av åtgärder",
+    "syncVsAsyncBody": "Värdens strömstyrning och uppdateringar använder tillfälliga systemd-enheter med <code>.../status</code>. Bara PVE-uppdatering har här en <code>DELETE</code>-slutpunkt för avbrott. VM/LXC-styrning ger en uppgift att följa; säkerhetskopiering ger ett UPID för ett bakgrundsjobb. Godkännande betyder inte slutförande. Autentisering och behörighet beror på slutpunkten.",
+    "curlTitle": "curl-exempel",
+    "curlBody": "Startar en PVE-uppdatering och följer den tills den är klar, som en Home Assistant-automation eller en Ansible-playbook.",
+    "curlCode": "TOKEN=<your full_admin token>\n\ncurl -sSf -X POST \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  https://<host>:8008/api/system/pve-update/run\n\nwhile true; do\n  state=$(curl -sSf -H \"Authorization: Bearer $TOKEN\" \\\n    https://<host>:8008/api/system/pve-update/status | jq -r .state)\n  [ \"$state\" != \"running\" ] && break\n  sleep 30\ndone\necho \"final state: $state\"",
+    "haTitle": "Exempel för Home Assistant",
+    "haBody": "En <code>rest</code>-sensor läser status och <code>rest_command</code> startar uppdateringen. Koppla dem till en panelknapp och önskade automationer:",
+    "haCode": "# configuration.yaml\nsensor:\n  - platform: rest\n    resource: https://pve.local:8008/api/system/pve-update/status\n    name: pve_update_state\n    value_template: \"{{ value_json.state }}\"\n    scan_interval: 60\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\nrest_command:\n  pve_update:\n    url: https://pve.local:8008/api/system/pve-update/run\n    method: POST\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\n  # Start VM 100 (works for LXC too — same endpoint)\n  vm_100_start:\n    url: https://pve.local:8008/api/vms/100/control\n    method: POST\n    content_type: 'application/json'\n    payload: '{\"action\": \"start\"}'\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\"\n\n  # Backup VM 100 to the 'pbs-main' storage\n  vm_100_backup:\n    url: https://pve.local:8008/api/vms/100/backup\n    method: POST\n    content_type: 'application/json'\n    payload: '{\"storage\": \"pbs-main\", \"mode\": \"snapshot\", \"compress\": \"zstd\"}'\n    headers:\n      Authorization: \"Bearer !secret proxmenux_token\""
+  },
+  "health": {
+    "heading": "Hälsoövervakare",
+    "rows": [
+      {
+        "endpoint": "/api/health",
+        "method": "GET",
+        "use": "Lätt kontroll som ger JSON med <code>status</code>, <code>timestamp</code> och <code>version</code>. Lämplig för nyckelordskontroll i Uptime Kuma; med autentisering på måste klienten skicka Bearer-headern."
+      },
+      {
+        "endpoint": "/api/health/status",
+        "method": "GET",
+        "use": "Övergripande status: en allvarlighetsgrad och en sammanfattning."
+      },
+      {
+        "endpoint": "/api/health/details",
+        "method": "GET",
+        "use": "Alla tio kategorier med status och strukturerade data från varje kontroll."
+      },
+      {
+        "endpoint": "/api/health/full",
+        "method": "GET",
+        "use": "Fullständiga data: kategorier, aktiva fel, avfärdade varningar och inställningar för undertryckning. Använder bakgrundsresultat yngre än sex minuter; annars eller vid tvingad uppdatering körs en ny kontroll."
+      },
+      {
+        "endpoint": "/api/health/active-errors",
+        "method": "GET",
+        "use": "Aktiv lista, filtrerad av <code>?category=&lt;name&gt;</code>."
+      },
+      {
+        "endpoint": "/api/health/dismissed",
+        "method": "GET",
+        "use": "Avfärdade varningar med återstående timmar av undertryckning."
+      },
+      {
+        "endpoint": "/api/health/settings",
+        "method": "GET",
+        "use": "Konfigurerad tid för undertryckning per kategori."
+      },
+      {
+        "endpoint": "/api/health/remote-storages",
+        "method": "GET",
+        "use": "Inventering av fjärrlagring definierad i Proxmox, med tillgänglighetsstatus."
+      },
+      {
+        "endpoint": "/api/health/interfaces",
+        "method": "GET",
+        "use": "Nätverksgränssnitt med typ (brygga / bond / fysiskt), IP och länkhastighet."
+      },
+      {
+        "endpoint": "/api/health/acknowledge",
+        "method": "POST",
+        "use": "Begärans innehåll: <code>'{'\"error_key\":\"smart_sdh\"'}'</code>. Undertrycker en varning under kategorins inställda tid."
+      },
+      {
+        "endpoint": "/api/health/cleanup-orphans",
+        "method": "POST",
+        "use": "Manuell rensning av fel vars underliggande enhet eller VM är borta. Idempotent."
+      }
+    ],
+    "outro": "Svarsformat och kategorier beskrivs i <link>Health Monitor</link>."
+  },
+  "storage": {
+    "heading": "Lagring",
+    "rows": [
+      {
+        "endpoint": "/api/storage",
+        "method": "GET",
+        "use": "Diskar som är synliga för värden: blockenheter, ZFS-pooler och LVM."
+      },
+      {
+        "endpoint": "/api/storage/summary",
+        "method": "GET",
+        "use": "Kompakt sammanfattning som används av instrumentpanelkort."
+      },
+      {
+        "endpoint": "/api/proxmox-storage",
+        "method": "GET",
+        "use": "Lagring definierad i <code>/etc/pve/storage.cfg</code>, med tillgänglighetsstatus och ledigt utrymme."
+      },
+      {
+        "endpoint": "/api/storage/observations",
+        "method": "GET",
+        "use": "Beständig observationshistorik: SMART-varningar, I/O-fel och ZFS-händelser. Bevaras efter automatisk lösning av varningar."
+      },
+      {
+        "endpoint": "/api/storage/smart/<disk>",
+        "method": "GET",
+        "use": "Nuvarande SMART attribut för en disk."
+      },
+      {
+        "endpoint": "/api/storage/smart/<disk>/latest",
+        "method": "GET",
+        "use": "Senaste SMART självtest för disken."
+      },
+      {
+        "endpoint": "/api/storage/smart/<disk>/history",
+        "method": "GET",
+        "use": "Lista över lagrade SMART-rapporter för disken."
+      },
+      {
+        "endpoint": "/api/storage/smart/<disk>/history/<file>",
+        "method": "GET",
+        "use": "Läs en specifik lagrad SMART-rapport."
+      },
+      {
+        "endpoint": "/api/storage/smart/<disk>/test",
+        "method": "POST",
+        "use": "Startar ett SMART-självtest. Schema för begäran: <code>'{'\"type\":\"short\"|\"long\"'}'</code>."
+      },
+      {
+        "endpoint": "/api/storage/smart/schedules",
+        "method": "GET",
+        "use": "Lista de schemalagda SMART-testerna."
+      },
+      {
+        "endpoint": "/api/storage/smart/tools",
+        "method": "GET",
+        "use": "Kontrollerar om <code>smartctl</code> och relaterade verktyg är installerade."
+      }
+    ]
+  },
+  "network": {
+    "heading": "Nätverk",
+    "rows": [
+      {
+        "endpoint": "/api/network",
+        "method": "GET",
+        "use": "Alla gränssnitt med länkstatus och adresser."
+      },
+      {
+        "endpoint": "/api/network/summary",
+        "method": "GET",
+        "use": "Kompakt vy för panelen."
+      },
+      {
+        "endpoint": "/api/network/<iface>/metrics",
+        "method": "GET",
+        "use": "RX/TX per gränssnitt, felräknare och RRD-tidsserier."
+      },
+      {
+        "endpoint": "/api/network/latency/current",
+        "method": "GET",
+        "use": "Senaste latensmätning till gatewayen."
+      },
+      {
+        "endpoint": "/api/network/latency/history",
+        "method": "GET",
+        "use": "Tidsserie av gateway latens."
+      }
+    ]
+  },
+  "vms": {
+    "heading": "VM och containrar",
+    "rows": [
+      {
+        "endpoint": "/api/vms",
+        "method": "GET",
+        "use": "VM och CT på den lokala noden med status, vmid och namn."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>",
+        "method": "GET",
+        "use": "Full detalj för en gäst (konfig, nätverk, diskar)."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/metrics",
+        "method": "GET",
+        "use": "CPU / minne / disk I / O tidsserie för en gäst (RRD)."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/logs",
+        "method": "GET",
+        "use": "Loggar för gästens senaste uppgifter."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/backups",
+        "method": "GET",
+        "use": "Säkerhetskopior som sparats för den här gästen."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/control",
+        "method": "POST",
+        "use": "Välj en åtgärd i schemat: <code>'{'\"action\":\"start|stop|reboot|shutdown\"'}'</code>. Styr gästens strömtillstånd."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/backup",
+        "method": "POST",
+        "use": "Startar <code>vzdump</code> för gästen. Innehållet väljer lagring och läge (<code>snapshot</code> / <code>suspend</code> / <code>stop</code>)."
+      },
+      {
+        "endpoint": "/api/vms/<vmid>/config",
+        "method": "PUT",
+        "use": "Uppdatera beskrivningsfältet (noter) av en VM / CT. Andra konfignycklar är inte modifierbara från denna slutpunkt."
+      },
+      {
+        "endpoint": "/api/node/metrics",
+        "method": "GET",
+        "use": "Aggregerade nodmätvärden som RRD-tidsserier."
+      }
+    ]
+  },
+  "backups": {
+    "heading": "Säkerhetskopieringar",
+    "rows": [
+      {
+        "endpoint": "/api/backups",
+        "method": "GET",
+        "use": "Säkerhetskopior i dir-, NFS-, CIFS- och PBS-lagring som frågas via den lokala noden. Ingen fullständig genomsökning av alla klusternoder."
+      },
+      {
+        "endpoint": "/api/backup-storages",
+        "method": "GET",
+        "use": "Lagring markerad som mål för säkerhetskopiering, med ledigt utrymme."
+      }
+    ]
+  },
+  "logs": {
+    "heading": "Loggar, uppgifter, händelser",
+    "rows": [
+      {
+        "endpoint": "/api/logs",
+        "method": "GET",
+        "use": "Filtrerade journalposter. Query: <code>?level=&service=&limit=</code>"
+      },
+      {
+        "endpoint": "/api/logs/download",
+        "method": "GET",
+        "use": "Exporterar det filtrerade intervallet som vanlig text."
+      },
+      {
+        "endpoint": "/api/events",
+        "method": "GET",
+        "use": "Intern händelseström - samma som matar meddelanden."
+      },
+      {
+        "endpoint": "/api/task-log/<upid>",
+        "method": "GET",
+        "use": "Fullständig logg i vanlig text för en Proxmox-uppgift identifierad med UPID."
+      }
+    ]
+  },
+  "notifications": {
+    "heading": "Aviseringar och AI",
+    "intro": "Sändning, kanaler och AI-omformulering beskrivs i <notifLink>Aviseringar</notifLink> och <aiLink>AI-assistent</aiLink>.",
+    "rows": [
+      {
+        "endpoint": "/api/notifications",
+        "method": "GET",
+        "use": "Senaste aviseringar som visas på panelen."
+      },
+      {
+        "endpoint": "/api/notifications/download",
+        "method": "GET",
+        "use": "Exporterar aviseringar som text."
+      },
+      {
+        "endpoint": "/api/notifications/status",
+        "method": "GET",
+        "use": "Sändningsstatus: aktiv bakgrundsprocess, kölängd och senaste sändning."
+      },
+      {
+        "endpoint": "/api/notifications/settings",
+        "method": "GET",
+        "use": "Läser aviseringsinställningar: kanaler, händelsereglage, AI-omformulering och visningsnamn."
+      },
+      {
+        "endpoint": "/api/notifications/history",
+        "method": "GET",
+        "use": "Sändningshistorik. Parametrar: <code>?limit=&offset=&severity=&channel=</code>."
+      },
+      {
+        "endpoint": "/api/notifications/history",
+        "method": "DELETE",
+        "use": "Tömmer tabellen för sändningshistorik."
+      },
+      {
+        "endpoint": "/api/notifications/test",
+        "method": "POST",
+        "use": "Skickar en testavisering till en kanal. Begärans innehåll: <code>'{'\"channel\":\"telegram\"'}'</code>."
+      },
+      {
+        "endpoint": "/api/notifications/send",
+        "method": "POST",
+        "use": "Skapar en egen händelse. Begärans innehåll: <code>'{'\"event_type\":\"custom\",\"severity\":\"WARNING\",\"title\":\"...\",\"body\":\"...\",\"data\":'{''}''}'</code>."
+      },
+      {
+        "endpoint": "/api/notifications/test-ai",
+        "method": "POST",
+        "use": "Testar anslutningen till AI-leverantören. Fält i begäran (schema): <code>'{'\"provider\",\"api_key\",\"model\",\"ollama_url?\"'}'</code>."
+      },
+      {
+        "endpoint": "/api/notifications/provider-models",
+        "method": "POST",
+        "use": "Lista tillgängliga modeller för den valda AI-leverantören."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/setup-webhook",
+        "method": "POST",
+        "use": "Registrera Monitor som ett webhook-mål i <code>/etc/pve/notifications.cfg</code>."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/cleanup-webhook",
+        "method": "POST",
+        "use": "Tar bort Monitor-målet från PVE:s aviseringsinställningar."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/read-cfg",
+        "method": "GET",
+        "use": "Läs PVE: s nuvarande <code>notifications.cfg</code> som PVE ser det."
+      }
+    ]
+  },
+  "security": {
+    "heading": "Säkerhet (läs)",
+    "rows": [
+      {
+        "endpoint": "/api/security/firewall/status",
+        "method": "GET",
+        "use": "PVE brandvägg och aktiva regler."
+      },
+      {
+        "endpoint": "/api/security/fail2ban/details",
+        "method": "GET",
+        "use": "Status för Fail2Ban-jail; kräver att den valfria komponenten är installerad."
+      },
+      {
+        "endpoint": "/api/security/fail2ban/activity",
+        "method": "GET",
+        "use": "Senaste Fail2Ban-händelser: blockeringar, hävda blockeringar och jailstarter."
+      },
+      {
+        "endpoint": "/api/security/lynis/status",
+        "method": "GET",
+        "use": "Lynis-status: installation och tidpunkt för senaste kontroll."
+      },
+      {
+        "endpoint": "/api/security/lynis/report",
+        "method": "GET",
+        "use": "Senaste Lynis-rapport: varningar, förslag och härdningsindex."
+      },
+      {
+        "endpoint": "/api/security/tools",
+        "method": "GET",
+        "use": "Upptäck vilka valfria säkerhetsverktyg (Fail2Ban, Lynis) som är installerade."
+      }
+    ]
+  },
+  "proxmenuxIntegration": {
+    "heading": "ProxMenux-integration",
+    "rows": [
+      {
+        "endpoint": "/api/proxmenux/update-status",
+        "method": "GET",
+        "use": "Tillgänglig ProxMenux Monitor-uppdatering samt installerad och senaste version."
+      },
+      {
+        "endpoint": "/api/proxmenux/installed-tools",
+        "method": "GET",
+        "use": "Lista över varje ProxMenux efterinstallationsoptimering som för närvarande är registrerad på värden (från <code>/usr/local/share/proxmenux/installed_tools.json</code>)."
+      },
+      {
+        "endpoint": "/api/proxmenux/tool-source/<key>",
+        "method": "GET",
+        "use": "Källkod för den kopplade efterinstallationsfunktionen från aktuella värdskript eller bevarad äldre kod. Ingen garanterad kopia av exakt den kod som ursprungligen kördes."
+      }
+    ]
+  },
+  "prometheus": {
+    "heading": "Prometheus-mätvärden",
+    "intro": "Den autentiserade slutpunkten <code>GET /api/prometheus</code> ger Prometheus textformat 0.0.4. Varje mätvärde innehåller <code>node=\"&lt;hostname&gt;\"</code> och en uttrycklig tidsstämpel. Samla med Prometheus eller en kompatibel tidsseriedatabas.",
+    "exportedTitle": "Exporterade mätvärden",
+    "headerGroup": "Grupp",
+    "headerMetric": "Mätvärde",
+    "headerDesc": "Beskrivning",
+    "groups": [
+      {
+        "group": "System",
+        "metrics": [
+          {
+            "metric": "proxmox_cpu_usage",
+            "desc": "CPU-användning i procent, typen gauge."
+          },
+          {
+            "metric": "proxmox_memory_total_bytes",
+            "desc": "Totalt fysiskt minne i byte."
+          },
+          {
+            "metric": "proxmox_memory_used_bytes",
+            "desc": "Använt minne i byte."
+          },
+          {
+            "metric": "proxmox_memory_usage_percent",
+            "desc": "Minnesanvändningsprocent."
+          },
+          {
+            "metric": "proxmox_load_average",
+            "desc": "Genomsnittlig systembelastning. Etikett <code>period=\"1m\" | \"5m\" | \"15m\"</code>."
+          }
+        ]
+      },
+      {
+        "group": "Drifttid",
+        "metrics": [
+          {
+            "metric": "proxmox_uptime_seconds",
+            "desc": "Sekunder sedan senaste start."
+          }
+        ]
+      },
+      {
+        "group": "Hårdvara",
+        "metrics": [
+          {
+            "metric": "proxmox_cpu_temperature_celsius",
+            "desc": "CPU:ns kapslingstemperatur."
+          },
+          {
+            "metric": "proxmox_disk_temperature_celsius",
+            "desc": "Temperatur per disk. Etikett <code>disk</code>."
+          },
+          {
+            "metric": "proxmox_fan_speed_rpm",
+            "desc": "Fläkthastigheter. Etikett <code>fan</code>."
+          }
+        ]
+      },
+      {
+        "group": "Diskutrymme",
+        "metrics": [
+          {
+            "metric": "proxmox_disk_total_bytes",
+            "desc": "Total kapacitet per exporterad diskpost. Etikett <code>disk</code>."
+          },
+          {
+            "metric": "proxmox_disk_used_bytes",
+            "desc": "Använd kapacitet per exporterad diskpost."
+          },
+          {
+            "metric": "proxmox_disk_usage_percent",
+            "desc": "Använd kapacitet i procent per exporterad diskpost."
+          }
+        ]
+      },
+      {
+        "group": "Nätverk",
+        "metrics": [
+          {
+            "metric": "proxmox_network_bytes_sent_total",
+            "desc": "Totalt antal skickade byte, typen counter."
+          },
+          {
+            "metric": "proxmox_network_bytes_received_total",
+            "desc": "Totalt antal mottagna byte, typen counter."
+          },
+          {
+            "metric": "proxmox_interface_bytes_sent_total",
+            "desc": "Skickade byte per gränssnitt. Etikett <code>interface</code>."
+          },
+          {
+            "metric": "proxmox_interface_bytes_received_total",
+            "desc": "Mottagna byte per gränssnitt."
+          }
+        ]
+      },
+      {
+        "group": "VMs / CTs",
+        "metrics": [
+          {
+            "metric": "proxmox_vms_total",
+            "desc": "Totalt antal VM och LXC."
+          },
+          {
+            "metric": "proxmox_vms_running",
+            "desc": "Antal körande gäster."
+          },
+          {
+            "metric": "proxmox_vms_stopped",
+            "desc": "Antal stoppade gäster."
+          },
+          {
+            "metric": "proxmox_vm_status",
+            "desc": "Status per VM/CT: 1 körs, 0 annars. Etiketter <code>node</code>, <code>vmid</code> och <code>name</code>."
+          },
+          {
+            "metric": "proxmox_vm_cpu_usage",
+            "desc": "CPU-användning per VM/CT, med samma etiketter."
+          },
+          {
+            "metric": "proxmox_vm_memory_used_bytes / _max_bytes",
+            "desc": "Använt minne och konfigurerat maximum per VM/CT."
+          }
+        ]
+      },
+      {
+        "group": "GPU",
+        "metrics": [
+          {
+            "metric": "proxmox_gpu_temperature_celsius",
+            "desc": "GPU-temperatur. Etiketter <code>slot</code> och <code>vendor</code>; gpu innehåller även GPU-namnet."
+          },
+          {
+            "metric": "proxmox_gpu_utilization_percent",
+            "desc": "GPU-användning i procent."
+          },
+          {
+            "metric": "proxmox_gpu_memory_total_bytes",
+            "desc": "Totalt GPU-minne."
+          },
+          {
+            "metric": "proxmox_gpu_power_draw_watts",
+            "desc": "GPU:ns effektförbrukning i watt."
+          },
+          {
+            "metric": "proxmox_gpu_clock_speed_mhz",
+            "desc": "GPU:ns kärnklockfrekvens."
+          },
+          {
+            "metric": "proxmox_gpu_memory_clock_mhz",
+            "desc": "GPU:ns minnesklockfrekvens."
+          }
+        ]
+      },
+      {
+        "group": "UPS",
+        "metrics": [
+          {
+            "metric": "proxmox_ups_battery_charge_percent",
+            "desc": "Batteriets laddning i procent."
+          },
+          {
+            "metric": "proxmox_ups_load_percent",
+            "desc": "Nuvarande belastning på UPS."
+          },
+          {
+            "metric": "proxmox_ups_runtime_seconds",
+            "desc": "Beräknad drifttid på batteri."
+          },
+          {
+            "metric": "proxmox_ups_input_voltage_volts",
+            "desc": "Ingångsspänning"
+          }
+        ]
+      }
+    ],
+    "scrapeTitle": "Insamlingskonfiguration för Prometheus",
+    "scrapeIntro": "Med autentisering på anger du ett API-token i Bearer-headern för Prometheus insamlingskonfiguration:",
+    "perHostTitle": "Insamling per värd",
+    "perHostBody": "Varje instans exporterar mätvärden för sin egen värd. Låt Prometheus samla från varje nod i ett kluster. Etiketten <code>node</code> skiljer serierna i Grafana (<code>proxmox_vms_running'{'node=\"pve01\"'}'</code>)."
+  },
+  "puttingItTogether": {
+    "heading": "Kombinera integrationerna",
+    "body": "Se <link>Integrationer</link> för att ansluta slutpunkterna till Home Assistant-sensorer, Homepage-kort, Grafana-paneler, n8n-flöden och fler verktyg. Där finns vanliga konfigurationer att kopiera. Den här sidan samlar slutpunktskatalogen."
+  },
+  "whereNext": {
+    "heading": "Gå vidare",
+    "items": [
+      {
+        "label": "Åtkomst och autentisering",
+        "href": "/docs/monitor/access-auth",
+        "tail": " — skapande av token, granskningslogg, valfri Fail2Ban-jail och TLS."
+      },
+      {
+        "label": "Aviseringar",
+        "href": "/docs/monitor/notifications",
+        "tailRich": " — innehåll i <code>data</code> per händelsetyp vid anrop till <code>/api/notifications/send</code>."
+      },
+      {
+        "label": "AI-assistent",
+        "href": "/docs/monitor/ai-assistant",
+        "tailRich": " — hur <code>/api/notifications/test-ai</code> och <code>/api/notifications/provider-models</code> fungerar."
+      },
+      {
+        "label": "Hälsoövervakare",
+        "href": "/docs/monitor/health-monitor",
+        "tailRich": " — svarsformat för <code>/api/health/*</code> och betydelsen av de tio kategorierna."
+      }
+    ]
+  }
+}

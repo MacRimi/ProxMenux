@@ -1,0 +1,111 @@
+{
+  "meta": {
+    "title": "Richtlinie | Prüfung und Bericht",
+    "description": "Knotenrichtlinie von Prüfung und Bericht: Sicherung, Autostart und Wiederherstellungsziel jedes Gastsystems, Rolle jedes Speichers und Prüfschwellenwerte."
+  },
+  "header": {
+    "title": "Richtlinie",
+    "description": "Die Richtlinie legt fest, was keine Prüfung ableiten kann: Zweck jedes Gastsystems und Speichers sowie die Schwellenwerte der Prüfungen.",
+    "section": "Prüfung und Bericht"
+  },
+  "sections": [
+    {
+      "id": "principle",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Ohne Festlegung beschreibt der Bericht; mit ihr bewertet er",
+            "body": "Eine Bewertung sieht, was der Host tut, nicht, wozu er dient. Ein Gast ohne Backup, dessen Verwendungszweck nicht angegeben ist, wird als Beobachtung gemeldet. Wenn dessen Sicherung als erforderlich erklärt wird, wird die gleiche Abwesenheit als Warnung gemeldet. Es muss nichts deklariert werden."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/policy-view.png",
+            "alt": "Richtlinienansicht mit Gastsystemen, Speicher und Schwellenwerten des Knotens",
+            "caption": "Die Richtlinienansicht."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guests",
+      "title": "Gäste",
+      "intro": "Jede VM und jeder LXC des Knotens hat drei Felder. Ein auf Standard belassenes Feld übernimmt den daneben angezeigten allgemeinen Wert.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Feld",
+              "Werte",
+              "Auswirkungen auf die Bewertung"
+            ],
+            "rows": [
+              [
+                "Sicherung",
+                "Erforderlich, Nicht erforderlich, Nicht angegeben",
+                "Ein fehlendes Backup ist eine Warnung, wenn es erforderlich ist, eine Beobachtung, wenn es nicht angegeben ist, und es wird aus der Zählung ausgelassen, wenn es nicht erforderlich ist."
+              ],
+              [
+                "Autostart",
+                "Erforderlich, Nicht erforderlich, Nicht angegeben",
+                "Ob das Gastsystem mit dem Host starten muss."
+              ],
+              [
+                "Wiederherstellungsziel",
+                "Std",
+                "Das maximal akzeptable Alter des letzten Backups."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Speicher",
+      "blocks": [
+        {
+          "p": "Ein nicht erreichbarer Speicher wird als kritisch gemeldet, wenn er für wesentlich erklärt wird oder einem laufenden Gast dient, als Warnung, wenn seine Rolle nicht angegeben wird, und als Beobachtung, wenn er für optional erklärt wird."
+        }
+      ],
+      "intro": "Jeder Speicher des Knotens wird als wesentlich, optional oder nicht angegeben deklariert."
+    },
+    {
+      "id": "thresholds",
+      "title": "Schwellenwerte",
+      "intro": "Ein leeres Schwellenwertfeld verwendet den mitgelieferten Standardwert, der als Platzhalter angezeigt wird.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Prüfung von Speicherkapazität (%) und Thin-Pool-Füllstand (%).",
+              "Verhältnis der Thin-Überprovisionierung und der Speicherüberbelegung.",
+              "ZFS-Scrub-Intervall (Tage).",
+              "Ersatzgrenze für das Sicherungsalter (Tage) und Toleranz des Zeitplans (Verhältnis).",
+              "Hinweis vor Zertifikatsablauf (Tage).",
+              "Festplattendienstdauer (Stunden) und letztes Festplattenfehlerfenster (Tage).",
+              "Alter des Lynis-Berichts (Tage) und der Paketindizes (Tage).",
+              "Journal-Belegung im Verhältnis zur Obergrenze (%).",
+              "Prüfung des Dateisystem-Speicherplatzes (%) und der Inodes (%)."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "save",
+      "title": "Wie die Richtlinie gespeichert wird",
+      "blocks": [
+        {
+          "p": "Die Festlegung wird geprüft und atomar in <code>/usr/local/share/proxmenux/audit_policy.json</code> gespeichert. Jeder Speichervorgang enthält eine Revision: Hat eine andere Sitzung die Festlegung geändert, wird der Entwurf nicht gespeichert und die Ansicht bietet an, die gespeicherte Fassung neu zu laden."
+        },
+        {
+          "calloutWarning": {
+            "title": "Die Richtlinie wird nie automatisch abgeleitet",
+            "body": "ProxMenux fügt keine eigenen Anforderungen hinzu. Ein leeres Feld behält den mitgelieferten Standardwert oder bleibt nicht angegeben; eine teilweise Festlegung betrifft nur die benannten Elemente."
+          }
+        }
+      ]
+    }
+  ]
+}

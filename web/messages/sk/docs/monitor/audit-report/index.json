@@ -1,0 +1,136 @@
+{
+  "meta": {
+    "title": "Audit a správy | ProxMenux Monitor",
+    "description": "Posúďte uzol Proxmox VE, zaznamenajte zmeny ProxMenux a určte očakávania pre hosťovské systémy a úložisko s možnosťou tlače správ."
+  },
+  "header": {
+    "title": "Audit a správy",
+    "description": "Posúdenie uzla, denník zmien ProxMenux a deklarované očakávania s dokumentmi, ktoré možno vytlačiť alebo uložiť ako PDF.",
+    "section": "ProxMenux Monitor"
+  },
+  "sections": [
+    {
+      "id": "views",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Tri zobrazenia, tri otázky",
+            "body": "Audit a správy oddeľuje fakty o uzle, zásahy ProxMenux a deklarované očakávania. Konfigurácia, ktorú nemožno porovnať s deklarovaným účelom, sa opíše bez označenia za chybu."
+          }
+        },
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "shield",
+                "title": "Hodnotenie — v akom stave je uzol?",
+                "body": "Spustí kontroly vybraného profilu, zloží inventár a klasifikuje, čo potrebuje pozornosť, s dôkazmi o každom výsledku."
+              },
+              {
+                "icon": "refresh",
+                "title": "Zmeny — čo urobil ProxMenux?",
+                "body": "Uvádza súbory, balíky, služby a príkazy zmenené skriptmi ProxMenux s auditným zaznamenávaním, vrátane predchádzajúceho stavu, ak bol zachytený."
+              },
+              {
+                "icon": "fileText",
+                "title": "Politika — čo sa očakáva?",
+                "body": "Určuje, ktoré hosťovské systémy potrebujú zálohu alebo sa musia spustiť s hostiteľom, ktoré úložisko je nevyhnutné a aké sú prahové hodnoty kontrol."
+              }
+            ]
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Hodnotenie",
+                "detail": "fakty"
+              },
+              {
+                "label": "Politika",
+                "detail": "kontext"
+              },
+              {
+                "label": "Zmeny",
+                "detail": "intervencie"
+              }
+            ],
+            "caption": "Hodnotenie poskytuje fakty, politika im dáva kontext a denník zaznamenáva zásahy ProxMenux."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/assessment-view.png",
+            "alt": "Audit a správy v ProxMenux Monitor so zobrazeniami Hodnotenie, Zmeny a Politika",
+            "caption": "Audit a správy s otvoreným zobrazením Hodnotenie."
+          }
+        }
+      ]
+    },
+    {
+      "id": "boundaries",
+      "title": "Tri rôzne funkcie",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Funkcia",
+              "Čo to robí?"
+            ],
+            "rows": [
+              [
+                "<healthLink>Monitor stavu</healthLink>",
+                "Nepretržite sleduje metriky a udalosti a môže vytvárať oznámenia."
+              ],
+              [
+                "Audit a správy",
+                "Na požiadanie vykoná hodnotenie, zdokumentuje uzol a porovná jednotlivé spustenia."
+              ],
+              [
+                "Denník zmien",
+                "Zaznamenáva operácie ProxMenux vykonané cez jeho základné auditné funkcie."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "pages",
+      "title": "Strany tejto sekcie",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Hodnotenie a súpis",
+                "href": "/docs/monitor/audit-report/assessment",
+                "tail": "profily, výsledky, akceptované riziká a inventár."
+              },
+              {
+                "label": "Zmeny",
+                "href": "/docs/monitor/audit-report/changes",
+                "tail": "denník toho, čo ProxMenux zmenil na hostiteľa."
+              },
+              {
+                "label": "Politika",
+                "href": "/docs/monitor/audit-report/policy",
+                "tail": "hosťovské systémy, úložisko a prahové hodnoty."
+              },
+              {
+                "label": "Správy a porovnania",
+                "href": "/docs/monitor/audit-report/reports",
+                "tail": "šesť dokumentov a referenčné spustenie."
+              },
+              {
+                "label": "Rozsah pôsobnosti a záruky",
+                "href": "/docs/monitor/audit-report/scope",
+                "tail": "zdroje, obmedzenia a uložené údaje."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

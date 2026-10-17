@@ -1,0 +1,248 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Översikt: Hårdvara | ProxMenux-dokumentation",
+    "description": "Fliken Hårdvara inventerar den fysiska maskinen: CPU och moderkort, minnesmoduler, temperatursensorer, GPU:er med realtidsövervakning per plats och drivrutinsinstallation med ett klick, Coral TPU-acceleratorer, lagringssammanfattning med länkhastigheter, PCI- och USB-listor, effekt, nätaggregat, fläktar och UPS-status."
+  },
+  "header": {
+    "title": "Översikt: Hårdvara",
+    "description": "Den fysiska maskinen i en skärm - CPU och moderkortsidentitet, varje minnesmodul, termiska sensorer över alla delsystem, GPU med levande utnyttjande och en inbyggd drivrutininstallatör, Coral TPU, varje PCI och USB-enhet med sin kärndrivrutin, hela diskinventeringen med förhandlade länkhastigheter, plus ström, kylning och UPS.",
+    "section": "ProxMenux Monitor · Översikt"
+  },
+  "intro": {
+    "title": "Byggd av standardverktyg",
+    "body": "De flesta data kommer från <code>lscpu</code>, <code>dmidecode</code>, <code>lspci</code>, <code>lsusb</code>, <code>lsblk</code>, <code>smartctl</code>, <code>nvme</code>, <code>sensors</code>, <code>nvidia-smi</code>, <code>intel_gpu_top</code>, <code>amdgpu_top</code>, <code>ipmitool</code> och <code>upsc</code>. Avsnitten visas bara när verktyget ger data: utan UPS visas inget UPS-kort och utan IPMI saknas effektvärden från separat maskinvaruövervakning."
+  },
+  "thresholds": {
+    "title": "Statusfärger och trösklar som tillämpas här",
+    "intro": "Alla temperaturindikatorer och värden använder samma skala: <green/> <strong>grön</strong> under Varning, <amber/> <strong>bärnstensfärgad</strong> mellan Varning och Kritisk, <red/> <strong>röd</strong> från Kritisk och uppåt. Rekommenderade standardvärden i ProxMenux:",
+    "items": [
+      "<strong>CPU-temperatur</strong> — varning 80 °C, kritisk 90 °C.",
+      "<strong>Disktemperatur</strong> HDD 60/65 °C · SSD 70/75 °C · NVMe 80/85 °C · SAS 55/65 °C (varning / kritisk)."
+    ],
+    "outro": "Alla värden kan ställas in per värd. <link>Inställningar → Tröskelvärden för hälsokontrollen</link> är den centrala referensen och förklarar hur de anpassas."
+  },
+  "sections": {
+    "heading": "Avsnitt",
+    "intro": "Avsnitten visas i den här ordningen uppifrån och ner. Vissa kräver motsvarande hårdvara eller verktyg och markeras med <em>(villkorligt)</em>.",
+    "systemInfoTitle": "Systeminformation",
+    "systemInfoIntro": "Två sida vid sida block, alltid närvarande:",
+    "systemInfoItems": [
+      "<strong>CPU</strong> — modell, mikroarkitektur, socklar/kärnor/trådar, bas- och boostfrekvens, virtualiseringsstöd (VT-x / AMD-V) och cachetopologi.",
+      "<strong>Moderkort</strong> — tillverkare, modell, BIOS-version och datum samt SMBIOS-UUID. Hjälper dig hitta rätt nedladdningssida för firmware hos tillverkaren."
+    ],
+    "memoryTitle": "Minnesmoduler",
+    "memoryBody": "En rad per upptagen plats från <code>dmidecode</code>: platsnamn, modulstorlek, typ (DDR4 / DDR5 / ECC-varianter), inställd och nominell hastighet, tillverkare, artikelnummer och serienummer. Tomma platser är nedtonade för att visa möjligheten till utbyggnad.",
+    "thermalTitle": "Termisk övervakning",
+    "thermalIntro": "Sju block med data från <code>lm-sensors</code>, <code>sysfs</code> och verktygsspecifika insamlare. Lagringens hwmon-sensorer kopplas till den fysiska blockenheten med modell och sökväg <code>/dev/...</code>. Ett block döljs om kategorin saknar sensorer.",
+    "thermalItems": [
+      "<strong>CPU</strong> — temperatur för CPU-paketet och varje kärna.",
+      "<strong>GPU</strong> — sensorer för dedikerade GPU:er via <code>nvidia-smi</code> / <code>amdgpu_top</code> samt Intel iGPU. Visar hetaste punkt och minnesövergångens temperatur när drivrutinen tillhandahåller dem.",
+      "<strong>NVME</strong> — styrenhetens sammansatta temperatur kopplad till dess exakta NVMe-namnrymd.",
+      "<strong>HDD</strong> - <code>drivetemp</code>-avläsningar för rotationsblockenheter.",
+      "<strong>SSD</strong> - <code>drivetemp</code>-avläsningar för icke-rotationella SATA / SAS-blockenheter.",
+      "<strong>PCI</strong> - sensorer som dyker upp som PCI-fästa enheter (HBA, nätverkskort med interna sensorer).",
+      "<strong>OTHER</strong> - chipset, VRM, omgivande sensorer som inte passar någon annanstans."
+    ]
+  },
+  "graphics": {
+    "heading": "Grafikkort",
+    "intro": "Varje videokontroller visas som ett kort med tillverkare, modell, typ (<em>Integrerad</em> / <em>PCI</em> / BMC), PCI-adress (BDF), kärndrivrutin och moduler. <strong>Byt läge</strong> växlar mellan LXC-delning med inbyggd drivrutin och VM-passthrough (<code>vfio-pci</code>). <link>Byt GPU-läge (VM ↔ LXC)</link> beskriver ändringarna på värden.",
+    "vfioImageAlt": "Grafikkort: integrerad Matrox G200EH kopplad till mgag200, redo för LXC, och NVIDIA Quadro P400 kopplad till vfio-pci, redo för VM-passthrough",
+    "vfioImageCaption": "Två GPU:er: Matrox BMC-kretsen använder sin vanliga drivrutin och är redo för LXC; NVIDIA Quadro P400 är kopplad till <code>vfio-pci</code>, redo för VM-passthrough.",
+    "lxcImageAlt": "Grafikkort: Intel UHD Graphics iGPU med i915 och NVIDIA Quadro P1000 med nvidia, båda redo för LXC-containrar",
+    "lxcImageCaption": "Samma nod efter att ha bytt NVIDIA-kortet tillbaka till den infödda drivrutinen - både GPU: er nu redo för LXC-containrar.",
+    "realtimeTitle": "Dialogruta för realtidsövervakning",
+    "realtimeBody": "Ett klick öppnar övervakning per GPU-plats och hämtar data med tillverkarens verktyg var tredje sekund. Den visar tillverkare, typ, PCI-plats, drivrutin, kärnmoduler, motorbelastning (Render/3D, Video, Blitter, VideoEnhance), grafik- och minnesfrekvenser, temperatur, rapporterad effekt, VRAM och aktiva processer med belastning per process. Data från <code>/api/gpu/&lt;slot&gt;/realtime</code>.",
+    "toolsIntro": "Tillverkarverktyget som används för varje GPU:",
+    "headerVendor": "Tillverkare",
+    "headerTool": "Verktyg",
+    "headerProject": "Projekt",
+    "tools": [
+      {
+        "vendor": "NVIDIA",
+        "tool": "nvidia-smi",
+        "projectLabel": "developer.nvidia.com",
+        "projectHref": "https://developer.nvidia.com/nvidia-system-management-interface"
+      },
+      {
+        "vendor": "Intel iGPU",
+        "tool": "intel_gpu_top (igt-gpu-tools)",
+        "projectLabel": "gitlab.freedesktop.org",
+        "projectHref": "https://gitlab.freedesktop.org/drm/igt-gpu-tools"
+      },
+      {
+        "vendor": "AMD",
+        "tool": "amdgpu_top",
+        "projectLabel": "github.com/Umio-Yasuno/amdgpu_top",
+        "projectHref": "https://github.com/Umio-Yasuno/amdgpu_top"
+      },
+      {
+        "vendor": "Matrox / ASPEED (BMC)",
+        "tool": "— (endast visning)",
+        "projectLabel": "Upptäckt och märkt som BMC; inget realtidsblock."
+      }
+    ],
+    "nvidiaImageAlt": "Övervakning av NVIDIA Quadro P1000: tillverkare NVIDIA, drivrutinen nvidia laddad, grafikfrekvens 1.26 GHz, minnesfrekvens 2.50 GHz, temperatur 50 °C, alla motorer på 0 %, inga aktiva processer, totalt 4096 MiB minne",
+    "nvidiaImageCaption": "NVIDIA Quadro P1000 med proprietär drivrutin: frekvenser, temperatur, belastningsstaplar för motorerna och aktiva processer.",
+    "intelImageAlt": "Övervakning av Intel UHD Graphics iGPU med i915: effekt 11.31 W, videobelastning 1 % och en ffmpeg-process som använder 8 MB",
+    "intelImageCaption": "Intel iGPU med <code>i915</code> aktiv. Tabellen Aktiva Processer plockar upp ett ffmpeg jobb med hjälp av videomotorn.",
+    "amdImageAlt": "Övervakning av integrerad AMD Lucienne GPU med amdgpu: motorbelastning 0 % och amdgpu_top som aktiv process",
+    "amdImageCaption": "AMD iGPU övervakas med <code>amdgpu_top</code>. Verktyget visas som aktiv process eftersom det samlar in livevärdena.",
+    "installTitle": "Installera NVIDIA-drivrutinen från dialogrutan",
+    "installBody": "Med <code>nouveau</code>/<code>nvidiafb</code> utan proprietär NVIDIA-drivrutin saknas frekvenser, effekt och processbelastning. Dialogrutan visar <strong>Installera NVIDIA-drivrutiner</strong>, som kör skriptet i <link>Installera NVIDIA-drivrutiner på värden</link>.",
+    "noDriverAlt": "Övervakning av NVIDIA Quadro P620 med nvidiafb och nouveau laddade, meddelandet Utökad övervakning saknas och en blå knapp Installera NVIDIA-drivrutiner",
+    "noDriverCaption": "Ingen proprietär drivrutin installerad ännu — dialogrutan erbjuder installation med ett klick.",
+    "promptAlt": "Bekräftelse på installation av NVIDIA-drivrutin med upptäckta GPU:er, LXC-containrar med NVIDIA-passthrough och knapparna Ja/Avbryt",
+    "promptCaption": "Sammanfattning före installation: upptäckta GPU:er, LXC-containrar med NVIDIA-passthrough och skriptets åtgärder. Inget ändras före bekräftelsen.",
+    "successAlt": "Terminalutdata med NVIDIA-drivrutinen 580.105.08 installerad och nvidia-smi som visar en Quadro P620",
+    "successCaption": "Framgångsrik installation - NVIDIA <code>.run</code> byggd via DKMS, uthållighetstjänsten är på plats, och <code>nvidia-smi</code> rapporterar GPU.",
+    "warningTitle": "Välj en drivrutinsversion som din GPU stöder",
+    "warningBody": "Nyare NVIDIA-grenar slutar stödja äldre GPU-familjer som Maxwell och Kepler. Om <code>nvidia-smi</code> visar <em>\"No devices were found\"</em> efter installationen eller DKMS misslyckas kan grenen sakna stöd för din GPU. Kör igen med en äldre gren, exempelvis legacy 470.x för Kepler. Kontrollera stödet på <a>den officiella sidan för drivrutinssökning</a>.",
+    "whereGoIntro": "Vart ska man gå härifrån:",
+    "whereGoItems": [
+      "<link1>Installera NVIDIA-drivrutiner på värden</link1> — fullständig guide, kompatibilitetsmatris för kärnan, valfri NVENC-patch och överföring till LXC.",
+      "<link2>Byt GPU-läge (VM ↔ LXC)</link2> — vad reglaget <em>Byt läge</em> på kortet gör.",
+      "<link3>Lägg till GPU i VM (passthrough)</link3> och <link4>Lägg till GPU i LXC</link4> — första tilldelning av en obunden GPU."
+    ]
+  },
+  "coral": {
+    "heading": "Coral TPU / AI-acceleratorer",
+    "subHeading": "(villkorligt)",
+    "intro": "Visas när Google Coral eller andra AI-acceleratorer är anslutna. Enhetsdialogrutan visar anslutning (M.2 / mini-PCIe / USB), PCIe-bredd, tillverkar-/produkt-ID, programstöd (<code>apex</code> i kärnan för PCIe, <code>libedgetpu</code> i användarrymden för USB), moduler (<code>gasket</code> + <code>apex</code>), enhetsnoder (<code>/dev/apex_*</code>), Edge TPU-runtime-status, aktuell temperatur och firmwaregränser för varningar.",
+    "imageAlt": "Coral Edge TPU-detaljer: PCIe/M.2, länk 5.0 GT/s x1, ID 1ac1:089a, kärndrivrutin apex, gasket och apex laddade, /dev/apex_0 finns, Edge TPU Runtime ej installerad, 53.5 °C och maskinvarugränser för temperaturvarningar",
+    "imageCaption": "M.2 Coral med värdens kärnmoduler laddade, enhetsnoden tillgänglig och firmwaregränser för temperaturvarningar synliga. Runtime-raden blir grön när rätt Edge TPU Runtime är installerad.",
+    "pathsIntro": "Två installationsvägar finns beroende på formfaktorn:",
+    "pathsItems": [
+      "<strong>M.2 / Mini-PCIe</strong> — värden behöver kärnmodulerna <code>gasket</code> + <code>apex</code> byggda med DKMS så att enhetsnoden <code>/dev/apex_0</code> finns vid start.",
+      "<strong>USB-accelerator</strong> — värden behöver bara Edge TPU-runtime i användarrymden (<code>libedgetpu1-std</code>) från Googles APT-förråd."
+    ],
+    "outro": "<installLink>Installera Coral TPU på värden</installLink> upptäcker och hanterar båda varianterna. Bakgrund och officiell runtime finns på <a>coral.ai/docs</a>. Tilldela sedan enheten till en container med <lxcLink>Lägg till Coral TPU i LXC</lxcLink>."
+  },
+  "storage": {
+    "heading": "Lagringssammanfattning",
+    "intro": "Alla blockenheter som kärnan känner till, grupperade efter typ. Varje disk visar namn (<code>sda</code>, <code>nvme0n1</code>, <code>zram0</code>…), typ (<em>SSD</em>, <em>HDD</em>, <em>NVMe SSD</em>), modell och förhandlad länk. Klicka för modell, serienummer, kapacitet, gränssnitt samt aktuell och maximal länkhastighet.",
+    "imageAlt": "Storage Sammanfattningskort som listar elva blockenheter (SATA SSDs, SATA HDDs, NVMe SSDs och zram) med modellsträngar och förhandlade länkhastigheter; de två NVMe-enheterna visar 3.0 x4 med den aktuella hastigheten markerad",
+    "imageCaption": "Elva enheter på noden. SATA-länkar visas som <em>SATA &lt;version&gt;, &lt;Gb/s&gt; (current: ...)</em>; NVMe som <em>&lt;PCIe gen&gt; x&lt;width&gt;</em>.",
+    "nvmeBody": "För varje NVMe jämförs den förhandlade länken med enhetens maximum. Vid skillnad, exempelvis en Gen3 x4 SSD på <strong>3.0 x1</strong> i en plats med en enda bana, visas aktuellt värde i bärnstensfärg. Det hjälper vid felsökning av långsamma diskar eller ändrad bantilldelning efter en BIOS-uppdatering.",
+    "nvmeModalAlt": "NVMe-enhetsdetalj modal för nvme0n1: NVMe SSD-typ, 953.9 GB-kapacitet, nuvarande länkhastighet 3.0 x1 markerad i amber, maximal kopplingshastighet 3.0 x4, modell WDC CL SN720, serienummer, PCIe / NVMe gränssnitt",
+    "nvmeModalCaption": "NVMe-detaljer med färre banor: enheten stöder x4 men platsen är kopplad som x1.",
+    "outro": "SMART-data, självtester, historik och PDF-rapport finns under <storageLink>Översikt: Lagring</storageLink>. Samma data används av <smartLink>SMART-diskstatus och tester</smartLink>. Ett långt test från skriptet skriver den JSON som Monitor visar under <em>Lagring → Historik</em>."
+  },
+  "pci": {
+    "heading": "PCI-enheter",
+    "intro": "PCI-enheter identifieras med <strong>PCI BDF</strong> (Bus:Device.Function, exempelvis <code>03:00.0</code>) och klass (<em>Lagringskontroller</em>, <em>USB-kontroller</em>, <em>Grafikkort</em>, <em>Nätverkskontroller</em>, <em>Ljudkontroller</em>…). Varje kort visar tillverkare, namn och <strong>kopplad kärndrivrutin</strong>, användbart för felsökning av passthrough, IOMMU-grupper och fel drivrutin.",
+    "imageAlt": "PCI-enheter sektion som listar femton enheter grupperade av klass: lagringskontroller på ahci / nvme, USB-kontroller, grafikkort (en på vfio-pci, en på den infödda drivrutinen), nätverkskontroller på igb / tg3, en ljudkontroller tillsammans med en genomgående GPU",
+    "imageCaption": "Femton enheter på denna nod. Notera GPU och dess följeslagare ljudfunktion både bunden till <code>vfio-pci</code> - det är ett kort förberedt för VM genomgång.",
+    "bdfTitle": "Läsa BDF",
+    "bdfBody": "<code>03:00.0</code> betyder PCI-buss <code>03</code>, enhet <code>00</code>, funktion <code>0</code>. Dedikerade GPU:er använder oftast <code>.0</code> för grafik och <code>.1</code> för HDMI-ljud. Båda funktionerna förs vidare till VM:n tillsammans; därför rensar <link>Byt GPU-läge</link> även överblivna ljudkopplingar när VM-läget lämnas."
+  },
+  "usb": {
+    "heading": "USB-enheter",
+    "intro": "USB-enheter med tillverkare och produkt, USB-version, adress <code>bus:device</code>, ID <code>vendor:product</code> och kärndrivrutin. De grupperas efter roll: <em>Kommunikation</em> (Z-Wave-/Zigbee-adaptrar), <em>UPS</em>, lagring och HID. Då kan du identifiera adaptrarna utan att jämföra deras ID.",
+    "imageAlt": "USB-enheter kort som listar tre enheter: en Aeotec Z-Wave Z-Stick, en ConBee II Zigbee koordinator och en Ellipse ECO UPS, var och en med USB-version, adress, leverantör: produkt ID och bunden drivrutin",
+    "imageCaption": "Tre USB-enheter - två hemautomationsradio på <code>usbfs</code> och en UPS på <code>usbfs</code> (NUT talar med det genom libusb)."
+  },
+  "power": {
+    "heading": "Energiförbrukning",
+    "subHeading": "(villkorligt)",
+    "intro": "Visas om värden tillhandahåller effektdata. Två oberoende källor visas när de finns:",
+    "items": [
+      "<strong>Total effekt ACPI / IPMI</strong> — hela systemets effekt från en moderkortssensor eller BMC. Vanligt på serverkort.",
+      "<strong>CPU-paketets effekt</strong> — Intel RAPL-räknare eller AMD:s motsvarighet. Skiljer CPU-effekten från resten på konsumentkort utan totalmätning."
+    ],
+    "supplyImageAlt": "Effekt: 198 W totalt via ACPI och två nätaggregat med status OK och uteffekt 185 W respektive 5 W",
+    "supplyImageCaption": "Serverkort med en ACPI-effektsensor och två nätaggregat via IPMI: det andra är redundant och ger 5 W i viloläge.",
+    "cpuImageAlt": "Effekt på konsumentkort: endast CPU-effekt 8.7 W via Intel RAPL",
+    "cpuImageCaption": "Konsumentkort utan totalsensor — endast CPU-effekt via RAPL visas."
+  },
+  "psu": {
+    "heading": "Strömförsörjning",
+    "subHeading": "(villkorligt)",
+    "body": "På servrar med dubbla nätaggregat visar IPMI närvaro (PSU 1 / PSU 2 / …), ingångsspänning, uteffekt och status OK/fel. Kontrollera detta efter ett strömavbrott på en nod med redundanta nätaggregat."
+  },
+  "fans": {
+    "heading": "Systemfläktar",
+    "subHeading": "(villkorligt)",
+    "body": "Varvtal per fläkt med minidiagram när det stöds. Utan individuella värden visas en enda avläsning för chassifläkten."
+  },
+  "ups": {
+    "heading": "UPS-status",
+    "subHeading": "(villkorligt)",
+    "body": "Visas när en NUT-server (Network UPS Tools) är konfigurerad och nåbar. Visar status (nät / batteri / laddning / låg batterinivå), batterinivå, uppskattad drifttid, belastningsprocent, ingångsspänning, modell och firmware. Samma data används i <em>Säkerhet och certifikat</em> i hälsokontrollen; batteridrift uppmärksammas direkt."
+  },
+  "dataCollected": {
+    "heading": "Hur data samlas in",
+    "headerSection": "Avsnitt av fliken",
+    "headerEndpoint": "Slutpunkt",
+    "headerSource": "Källa",
+    "rows": [
+      {
+        "section": "Statisk inventering (PCI, CPU, BIOS)",
+        "endpoint": "/api/hardware",
+        "source": "<code>lspci -vmm</code>, <code>/proc/cpuinfo</code>, <code>dmidecode</code>; cachad för livslängden av processen."
+      },
+      {
+        "section": "Live sensor värden",
+        "endpoint": "/api/hardware/live",
+        "source": "<code>sensors</code> (lm-sensors), <code>/sys/class/hwmon</code> och <code>/sys/block</code> identifierar lagringsenheterna. Temperaturerna är aktuella; endast kopplingen mellan hwmon och enheter cachas i 60 sekunder."
+      },
+      {
+        "section": "CPU temperaturhistoria",
+        "endpoint": "/api/temperature/history",
+        "source": "Tidsserie som temperaturinsamlaren registrerar var 60:e sekund och sparar i SQLite."
+      },
+      {
+        "section": "GPU-mätvärden i realtid",
+        "endpoint": "/api/gpu/<slot>/realtime",
+        "source": "NVIDIA: <code>nvidia-smi --query-gpu=...</code>. Intel: <code>intel_gpu_top</code>. AMD: sysfs <code>/sys/class/drm/cardN</code>."
+      }
+    ],
+    "codeComment1": "# Jämför inventeringen med operativsystemets vy",
+    "codeComment2": "# Bekräfta GPU-kortet instrumentpanelen ser"
+  },
+  "whereNext": {
+    "heading": "Nästa steg",
+    "items": [
+      {
+        "label": "Installera NVIDIA-drivrutiner på värden",
+        "href": "/docs/hardware/nvidia-host",
+        "tail": " — skriptet som installationsknappen i GPU-dialogrutan kör."
+      },
+      {
+        "label": "Byt GPU-läge (VM ↔ LXC)",
+        "href": "/docs/hardware/switch-gpu-mode",
+        "tail": " — ändringarna på värden när läget växlas på ett GPU-kort."
+      },
+      {
+        "label": "Installera Coral TPU på värden",
+        "href": "/docs/hardware/install-coral-tpu-host",
+        "tail": " — installation av Coral-kärnmodul och runtime."
+      },
+      {
+        "label": "SMART-status och disktest",
+        "href": "/docs/disk-manager/smart-disk-test",
+        "tail": " — skriptet bakom SMART-data i diskdetaljerna på fliken Lagring."
+      },
+      {
+        "label": "Dashboard: Storage Tab",
+        "href": "/docs/monitor/dashboard/storage",
+        "tail": " - Full SMART attributtabell, självtesthistoria och PDF-rapport."
+      },
+      {
+        "label": "Hälsoövervakare",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — kategorin CPU och temperatur, som använder samma sensorer."
+      },
+      {
+        "label": "API-referens",
+        "href": "/docs/monitor/api",
+        "tail": " — slutpunkterna för hårdvara och GPU."
+      },
+      {
+        "label": "Översiktsindex",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — de andra flikarna."
+      }
+    ]
+  }
+}

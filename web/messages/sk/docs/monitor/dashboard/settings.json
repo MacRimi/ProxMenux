@@ -1,0 +1,367 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Prehľad: karta Nastavenia | Dokumentácia ProxMenux",
+    "description": "Karta Nastavenia spravuje jazyk, poradie navigácie, predvoľby prehľadu, prahy a vylúčenia monitorovania, oznámenia, AI a inventár úprav po inštalácii."
+  },
+  "header": {
+    "title": "Prehľad: karta Nastavenia",
+    "description": "Jazyk Monitora, poradie navigácie, predvoľby prehľadu, vylúčenia monitorovania, oznámenia, nastavenia AI a aktuálny inventár optimalizácií ProxMenux.",
+    "section": "ProxMenux Monitor · Prehľad"
+  },
+  "intro": {
+    "title": "Kde sa ukladá každé nastavenie",
+    "body": "Nastavenia spájajú zobrazenie prehľadu, monitorovanie Health Monitor, odosielanie výstrah a zmeny už vykonané ProxMenuxom na hostiteľovi. Karty odkazujú na podrobnú dokumentáciu; tu nájdete vstupný bod."
+  },
+  "interfaceLanguage": {
+    "heading": "Jazyk rozhrania",
+    "intro": "Vyberte jazyk <strong>webového rozhrania Monitora</strong>. Zmena platí ihneď, bez reštartu služby či zmeny jazyka terminálových ponúk ProxMenux.",
+    "items": [
+      "ProxMenux Monitor v súčasnosti ponúka angličtinu, nemčinu, španielčinu, francúzštinu, taliančinu, portugalčinu, slovenčinu a švédčinu.",
+      "Pri prvej návšteve použije jazyk prehliadača, ak je podporovaný; inak angličtinu.",
+      "Zmena výberu upraví jazyk stránky a zosúladí ostatné otvorené karty rovnakého profilu prehliadača.",
+      "Ak chýba preklad, iba daný text sa zobrazí v angličtine namiesto chybného kľúča alebo zástupného textu."
+    ],
+    "scopeTitle": "Lokálna predvoľba prehliadača",
+    "scopeBody": "Výber je uložený v <code>localStorage</code> pod <code>proxmenux-ui-language</code>. Platí pre tento profil prehliadača a zariadenie, nie pre celý uzol. Každý správca si môže vybrať vlastný jazyk."
+  },
+  "navigationOrder": {
+    "heading": "Poradie navigácie",
+    "intro": "Usporiadajte sedem hlavných položiek: <strong>Prehľad, Aplikácie, VM a LXC, Uzol, Záloha, Terminál a Správa</strong>. Stlačte <strong>Upraviť</strong>, presuňte riadky a uložte.",
+    "items": [
+      "Myšou sa presúvanie začne stlačením. Dotyková obrazovka vyžaduje podržanie 250 ms, aby sa odlíšilo od rolovania.",
+      "Skupiny <strong>Uzol</strong> a <strong>Správa</strong> sa presúvajú celé; ich vnútorné stránky si zachovajú určené poradie.",
+      "Mobilná ponuka používa rovnaké uložené poradie.",
+      "<strong>Obnoviť predvolené</strong> obnoví upravované poradie. Zmenu použijete uložením.",
+      "Nové hlavné karty budúcich verzií sa pridajú na koniec vlastného poradia a zachovajú vaše usporiadanie."
+    ],
+    "landingTitle": "Prvá položka sa stane úvodnou kartou",
+    "landingBody": "Monitor otvorí prvú uloženú položku. Pri <strong>Uzol</strong> otvorí Úložisko, pri <strong>Správa</strong> Systémové záznamy. Poradie je v tomto prehliadači pod <code>proxmenux-nav-order</code>, takže každé zariadenie môže mať vlastné usporiadanie."
+  },
+  "networkUnits": {
+    "heading": "Jednotky siete",
+    "imageAlt": "Karta Jednotky siete s výberom zobrazenia na Bajty",
+    "imageCaption": "Vyberte bity alebo bajty za sekundu pre všetky sieťové rýchlosti v prehľade.",
+    "body": "Zobrazuje priepustnosť v <strong>bitoch za sekundu</strong> (Mbps/Gbps) alebo <strong>bajtoch za sekundu</strong> (MB/s/GB/s). Predvolené sú bity ako v špecifikáciách kariet a poskytovateľov; prenosy súborov často používajú bajty. Grafy, štítky a pomôcky sa zmenia ihneď bez obnovenia."
+  },
+  "health": {
+    "heading": "Monitor zdravia",
+    "intro": "Karta nastavuje <strong>trvanie potlačenia</strong>: ako dlho čakať pred opätovným oznámením zamietnutej výstrahy. Každá kategória — CPU, pamäť, úložisko, disky, sieť, VM, služby PVE, záznamy, aktualizácie a zabezpečenie — má vlastný zoznam:",
+    "items": [
+      "<strong>24 h</strong> Predvolené pre väčšinu prechodných kategórií.",
+      "<strong>72 h</strong> — na stíšenie týchto udalostí na niekoľko dní.",
+      "<strong>168 h</strong> (1 týždeň) a <strong>720 h</strong> (1 mesiac) — pravidelné kontroly.",
+      "<strong>8760 h</strong> (1 rok) — stíšenie na dlhé obdobie.",
+      "<strong>-1</strong> — trvalé stíšenie až do ručného opätovného zapnutia.",
+      "<strong>Vlastný počet hodín</strong> — celé číslo pre inú požadovanú hodnotu."
+    ],
+    "imageAlt": "Nastavenia, karta Health Monitor s trvaním podľa kategórie a aktívnymi potlačeniami",
+    "imageCaption": "Zoznamy určujú trvanie budúcich potlačení. Dolná časť zobrazuje stíšené výstrahy a umožňuje ich znova zapnúť.",
+    "editTitle": "Režim úprav",
+    "editBody": "Karta je najprv iba na čítanie. <strong>Upraviť</strong> vpravo hore zapne zoznamy a tlačidlá obnovenia. <strong>Uložiť</strong> naraz použije čakajúce zmeny trvania a obnovenia; <strong>Zrušiť</strong> ich zahodí. Uložiť sa zapne až pri zmenách.",
+    "activeTitle": "Aktívne potlačenia",
+    "activeIntro": "Pod trvaním časť <strong>Aktívne potlačenia</strong> uvádza dočasne stíšené výstrahy —24 h, 7 dní alebo iné obdobie— aj <em>trvalé</em>. Každý riadok zobrazuje:",
+    "activeItems": [
+      "Farebný odznak: <strong>Trvalo</strong> v jantárovej farbe alebo odpočet, napríklad <strong>zostáva 24 h</strong> / <strong>zostáva 7 dní</strong>, v modrej.",
+      "Identifikátor výstrahy v čitateľnej forme (napr. <code>pve_storage_full_PBS-Cloud</code> → <em>Plné úložisko PVE: PBS-Cloud</em>).",
+      "Kategória, závažnosť a čas zamietnutia výstrahy.",
+      "Tlačidlo <strong>Znova zapnúť</strong> v režime úprav pripraví zrušenie potlačenia pri uložení."
+    ],
+    "activeReenableTitle": "Ako znova zapnúť výstrahu",
+    "activeReenableBody": "<strong>Znova zapnúť</strong> pri úprave označí riadok zeleno a prečiarkne identifikátor, ale zmena ešte neplatí. Opätovné kliknutie umožní <strong>Vrátiť späť</strong>. <strong>Uložiť</strong> odošle súbežne <code>POST /api/health/un-acknowledge</code> pre každé obnovenie a odstráni riadky. Ak problém trvá a kategória povoľuje opakovanie, výstraha sa vráti medzi aktívne pri ďalšej kontrole.",
+    "activePermanentNote": "Trvalé potlačenia cez <em>Natrvalo</em> alebo predvolené trvanie <code>-1</code> <strong>možno zrušiť iba tu</strong>. Hlavné okno toto tlačidlo nemá; táto časť spája zoznam a obnovenie.",
+    "activeAutoRefreshTitle": "Automatické obnovenie",
+    "activeAutoRefreshBody": "Zoznam sa obnoví pri zamietnutí alebo zapnutí výstrahy v Health Monitor, pri návrate na kartu a pri zmene viditeľnosti. Stránku netreba načítať znova.",
+    "calloutTitle": "Podrobnosti na stránke Health Monitor",
+    "calloutBody": "Eskaláciu, automatické vyriešenie pri zmiznutí zariadenia a rozdiel medzi zamietnutím a vyriešením opisuje <link>Health Monitor → Zamietnutie výstrah a trvanie potlačenia</link>. Táto karta ponúka zoznamy a aktívne potlačenia."
+  },
+  "thresholds": {
+    "heading": "Prahy Health Monitor",
+    "intro": "Predchádzajúca karta určuje <em>trvanie stíšenia po potlačení</em>; táto nastavuje <strong>hodnotu spustenia výstrahy</strong>. Väčšina kontrol má nastaviteľný <strong>varovný</strong> a <strong>kritický</strong> prah. Tabuľka vysvetľuje výnimky, napríklad kombinované pravidlo swapu a aktuálny detektor RAM.",
+    "whatForTitle": "Na čo slúži",
+    "whatForIntro": "Predvolené hodnoty sú východiskom, ale každé prostredie má vlastné podmienky:",
+    "whatForItems": [
+      "Homelab s jediným SSD môže varovať skôr, napríklad pri 75/90 %, aby zostalo miesto na snímky.",
+      "Prahy pamäte majú vychádzať z meraní a záťaže hostiteľa. Redundancia Ceph sama neodôvodňuje miernejšie varovania a vysoké využitie ARC ZFS neznamená neuvoľniteľnú pracovnú pamäť.",
+      "Teplotné prahy vyberte podľa špecifikácií disku a skutočných podmienok. Pasívne alebo nútené chladenie samo neurčuje univerzálne nižší či vyšší bezpečný limit.",
+      "Silne virtualizovaný hostiteľ môže pri zostavovaní dosiahnuť špičky CPU bez výstrahy pri každom 80 % výkyve, ale musí upozorniť na trvalé preťaženie."
+    ],
+    "whatForOutro": "Podporované zmeny platia <strong>pri ďalšej kontrole</strong>. Health Monitor číta <code>/usr/local/share/proxmenux/health_thresholds.json</code> v každom cykle bez reštartu. Niektoré ukazovatele, napríklad teplota diskov, používajú tieto hodnoty; niektoré kapacitné pruhy majú vlastné hranice. Riadok RAM vysvetľuje aktuálnu výnimku.",
+    "coloursTitle": "Farby stavov Varovanie a Kritické",
+    "coloursIntro": "Widgety s nastavenou dvojicou Varovanie/Kritické používajú tri stavy nižšie. Iné ukazovatele, napríklad kapacitné pruhy PVE, majú vlastné hranice; samotná farba nedokazuje výstrahu Health Monitor.",
+    "headerColour": "Farba",
+    "headerRange": "Rozsah",
+    "headerMeaning": "Význam",
+    "colourRows": [
+      {
+        "colour": "Zelená",
+        "range": "Hodnota < varovný prah",
+        "meaning": "Normálny rozsah. Nevzniká výstraha."
+      },
+      {
+        "colour": "Oranžová",
+        "range": "Varovný prah ≤ hodnota < kritický prah",
+        "meaning": "Varovný stav. Health Monitor vytvorí udalosť WARNING; oznámenia rešpektujú filtre kanála a tiché hodiny."
+      },
+      {
+        "colour": "Červená",
+        "range": "Hodnota ≥ kritický prah",
+        "meaning": "Kritický stav. Health Monitor vytvorí udalosť CRITICAL, ktorá obíde tiché hodiny. Nastavenia kategórií a udalostí kanála stále platia; doručenie závisí aj od dostupnosti kanála."
+      }
+    ],
+    "sectionsTitle": "Časti a odporúčané predvolené hodnoty",
+    "sectionsIntro": "Sú to úvodné hodnoty ProxMenux, kým ich nezmeníte. Časti nasledujú <em>výpočtovú záťaž</em>, <em>teplotu</em> a <em>kapacitu úložiska</em>, od aktuálnej záťaže po obsadené miesto.",
+    "headerSection": "Oddiel",
+    "headerWarning": "Varovný prah",
+    "headerCritical": "Kritický prah",
+    "headerGates": "Riadená kontrola",
+    "thresholdRows": [
+      {
+        "section": "Využitie CPU",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Výstraha trvalej záťaže, keď priemerné využitie CPU prekročí prah počas kontrolného obdobia."
+      },
+      {
+        "section": "Pamäť",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Tlak na RAM hostiteľa. Nastavenie uvádza kritický prah 95 %, ale aktuálny detektor používa pevné pravidlo trvalých 90 %; zmena nastavenia teraz nemení túto vetvu."
+      },
+      {
+        "section": "Swap (iba kritická hranica)",
+        "warning": "—",
+        "critical": "80 %",
+        "gates": "Swap CRITICAL vyžaduje súčasne viac než 80 % swapu a menej než 15 % dostupnej RAM počas viacerých meraní. Samotný obsadený swap pravidlo nespustí."
+      },
+      {
+        "section": "Teplota CPU",
+        "warning": "80 °C",
+        "critical": "90 °C",
+        "gates": "Teplota puzdra CPU alebo jadier z <code>lm-sensors</code>."
+      },
+      {
+        "section": "Teplota disku — HDD",
+        "warning": "60 °C",
+        "critical": "65 °C",
+        "gates": "Teplota HDD. Predvolene varovanie pri 60 °C a kritické pri 65 °C. Sú to hodnoty monitorovania, nie univerzálny limit výrobcu; overte špecifikácie modelu."
+      },
+      {
+        "section": "Teplota disku — SSD",
+        "warning": "70 °C",
+        "critical": "75 °C",
+        "gates": "SATA SSD vo formáte 2,5 palca alebo M.2. Táto trieda používa predvolene 70/75 °C; skutočné limity závisia od modelu."
+      },
+      {
+        "section": "Teplota disku NVMe",
+        "warning": "80 °C",
+        "critical": "85 °C",
+        "gates": "Teplota NVMe. Táto trieda používa predvolene 80/85 °C. Teplota obmedzovania radiča závisí od modelu a nie je vždy 85 °C."
+      },
+      {
+        "section": "Teplota disku — SAS",
+        "warning": "55 °C",
+        "critical": "65 °C",
+        "gates": "Teplota SAS. Táto trieda používa varovanie pri 55 °C a kritické pri 65 °C. Sú to <em>predvoľby monitorovania</em>, nie dôkaz poruchy chladenia pri 55 °C ani univerzálny limit výrobcu."
+      },
+      {
+        "section": "Miesto na disku — hostiteľ",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Kapacita <code>/</code> a každého bodu pripojenia hostiteľa (<code>/var/lib/vz</code>, <code>/mnt/*</code>…)."
+      },
+      {
+        "section": "Miesto na disku LXC rootfs",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Koreňový disk každého kontajnera, hodnotený podľa veľkosti rootfs z PVE."
+      },
+      {
+        "section": "Prípojné body LXC",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Kapacita pripojení v spustených CT: mp0, mp1, NFS a bind mount. Bez rootfs."
+      },
+      {
+        "section": "PVE úložisko",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Úložiská spravované PVE: LVM, LVM-thin, ZFS-pool, RBD/Ceph a PBS. Nie všetky sú blokové úložiská."
+      },
+      {
+        "section": "ZFS pool",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Fondy ZFS na hostiteľovi, nezávisle od registrácie v PVE."
+      }
+    ],
+    "defaultsTitle": "Predvolené hodnoty, zmeny a obnovenie",
+    "defaultsBody": "Každá časť začína predvolenými hodnotami; ukladáte iba želané zmeny. Karta ukazuje <em>platnú</em> hodnotu: vašu zmenu alebo predvoľbu. <strong>Obnoviť</strong> odstráni všetky zmeny vo všetkých častiach.",
+    "validationTitle": "Overenie",
+    "validationBody": "Pri ukladaní sa kontrolujú povolené rozsahy a odmietne sa kritický prah pod varovným. Rozhranie zobrazuje chyby a server pred uložením znovu overí požiadavky API."
+  },
+  "lxcDetection": {
+    "heading": "Kontrola aktualizácií v LXC",
+    "imageAlt": "Karta zisťovania aktualizácií LXC s prepínačom hľadania balíkov v spustených kontajneroch Debian, Ubuntu a Alpine",
+    "imageCaption": "Prepínač pravidelnej kontroly cez <code>apt list --upgradable</code> / <code>apk list -u</code> v spustených CT. Predvolene zapnutý. Súvisiaci prepínač v Oznámenia → Služby sa zobrazuje pri zapnutej detekcii.",
+    "intro": "Prepínač medzi Prahmi a Oznámeniami riadi kontrolu LXC. Zapnutý zisťuje balíky spustených CT; Hardvér zobrazuje výsledky a vstupujú do <code>lxc_updates_available</code>. Vypnutý zastaví volania <code>pct exec</code> a odstráni záznamy LXC z <code>managed_installs.json</code>; <code>/api/managed-installs</code> prestane hlásiť stav bez čakania 24 hodín.",
+    "whatRunsTitle": "Čo kontrola spúšťa",
+    "whatRunsIntro": "Pre každý CT v stave <code>running</code> s podporovaným správcom balíkov:",
+    "whatRunsItems": [
+      "<strong>Aktuálnosť metadát.</strong> Ak je cache apt/apk staršia než <strong>24 hodín</strong>, pokúsi sa o <code>apt-get update -qq</code> na Debian/Ubuntu alebo <code>apk update</code> na Alpine s limitom 60 s. Pri zlyhaní zoznam použije dostupnú, možno zastaranú cache.",
+      "<strong>Zoznam.</strong> Spustí <code>apt list --upgradable</code> / <code>apk list -u</code> a získa počet balíkov a niekoľko názvov.",
+      "<strong>Odstránenie duplicít pre CT.</strong> Odtlačok počtu, bezpečnostných aktualizácií a zoradených názvov zabráni dennému opakovaniu rovnakej sady. Významná zmena vyvolá nové oznámenie."
+    ],
+    "selfUpdateTitle": "CT aktualizované mimo apt môžu hlásiť 0",
+    "selfUpdateBody": "Detekcia pokrýva iba správcu balíkov CT. Softvér aktualizovaný mimo apt, napríklad nastavená úloha <code>plexupdate</code> alebo obrazy získané cez <code>docker pull</code>, sa nepočíta. Nula aktualizácií apt nedokazuje aktuálnosť všetkých aplikácií. Balíky základného systému sa naďalej zisťujú.",
+    "refreshTitle": "Prečo obnovovať metadáta po 24 hodinách",
+    "refreshBody": "Dlho bežiaci CT môže mať staré metadáta apt, ak nikto nespúšťa <code>apt update</code>. <code>apt list --upgradable</code> potom môže prehliadnuť nové aktualizácie. ProxMenux skúsi obnovu po 24 hodinách a pri novšej cache ju vynechá.",
+    "toggleTitle": "Prepínač oznámení pri zapnutej detekcii",
+    "toggleBody": "Prepínač <code>lxc_updates_available</code> pre každý kanál v <strong>Oznámenia → Služby</strong> sa zobrazuje iba pri zapnutej detekcii. Vypnutie skryje riadok vo všetkých kanáloch. Voľba zostáva v databáze a po zapnutí sa obnoví pôvodná hodnota.",
+    "purgeTitle": "Čo sa odstráni pri vypnutí detekcie",
+    "purgeBody": "Vypnutie ihneď odstráni záznamy <code>type=lxc</code> z <code>/usr/local/share/proxmenux/managed_installs.json</code>. Po obnovení Hardvér prestane zobrazovať počty aktualizácií LXC. Po zapnutí register naplní ďalší cyklus, prípadne skoršie ručné obnovenie cez API."
+  },
+  "storageExclusions": {
+    "heading": "Vylúčené vzdialené úložiská",
+    "imageAlt": "Karta vylúčení vzdialených úložísk PBS-Cloud, PBS a PBS2 s prepínačmi Stav a Výstrahy pre každý riadok",
+    "imageCaption": "Prepínače <em>Stav</em> a <em>Výstrahy</em> pre každé úložisko. Ak sú oba vypnuté, úložisko sa nehodnotí v Health Monitor a neposiela oznámenia. Na karte Úložisko zostáva viditeľné ako vylúčené.",
+    "intro": "Úložiská spravované Proxmoxom (NFS / CIFS / PBS / Ceph / iSCSI / atď.) môžete vylúčiť dvoma nezávislými prepínačmi:",
+    "items": [
+      "<strong>Stav</strong> — vypnutie prepínača vyradí úložisko z kategórie Úložisko v Health Monitor. Užitočné pre zväzky archívu, ktoré bývajú offline, alebo vzdialené ciele záloh zapínané iba podľa plánu.",
+      "<strong>Výstrahy</strong> — vypnutie zastaví oznámenia o tomto úložisku cez nastavené kanály, aj pri zapnutých kontrolách stavu. Užitočné, ak chcete sledovať stav na paneli bez oznámení."
+    ],
+    "outro": "Vylúčené úložiská zostávajú na <link>karte Úložisko</link> s fialovým odznakom <em>vylúčené</em>, aby nezmizli z inventára. Stav sa ukladá do tabuľky SQLite <code>excluded_storages</code>."
+  },
+  "interfaceExclusions": {
+    "heading": "Vylúčené sieťové rozhrania",
+    "imageAlt": "Karta vylúčení rozhraní vmbr0, vmbr1, vmbr2, bond0 a eno1 s prepínačmi Stav a Výstrahy pre každé rozhranie",
+    "imageCaption": "Rovnako ako pri úložisku má každé rozhranie prepínače <em>Stav</em> a <em>Výstrahy</em>. Riadok zobrazuje názov, typ (most / agregácia / fyzické), IP a rýchlosť spojenia.",
+    "intro": "Rovnaký princíp platí pre rozhrania: každé možno vylúčiť z kontrol stavu, oznámení alebo oboch. Bežné príklady:",
+    "items": [
+      "Zámerne vypnutý záložný most.",
+      "Fyzicky odstránená sieťová karta, ktorá zostáva uvedená v <code>/etc/network/interfaces</code>.",
+      "Podrozhranie VLAN používané iba počas údržby.",
+      "Správcovský most so známymi opakovanými zmenami stavu spojenia počas údržby."
+    ],
+    "outro": "Stav sa ukladá do tabuľky SQLite <code>excluded_interfaces</code>. Fialový odznak <em>vylúčené</em> na <link>karte Sieť</link> ponechá vylúčené rozhrania viditeľné."
+  },
+  "notifications": {
+    "heading": "Oznámenia a AI",
+    "body1": "Tu zapnete oznámenia ProxMenux Monitor a preformulovanie pomocou AI. <em>Zapnúť oznámenia</em> spustí odosielanie na pozadí, zaregistruje cieľ webhooku Proxmox VE na príjem jeho udalostí a otvorí nastavenia kanálov Telegram, Discord, email, Gotify a ďalších. AI je v rozbaľovacej rozšírenej časti toho istého panela.",
+    "body2": "Možnosti vysvetľujú samostatné stránky: kanály, prepínače udalostí, formátované správy, zobrazované meno, odosielanie s odstránením duplicít, odstupom, zoskupením a tichým časom, webhook PVE, poskytovatelia AI a režimy pokynov:",
+    "items": [
+      "<notifLink>Oznámenia</notifLink>: nastavenie kanálov (Telegram, Discord, Gotify, email a heslá aplikácií Gmail / Microsoft, ntfy, Slack, Teams a všeobecný webhook), kategórie udalostí, formátované správy, zobrazované meno, odosielanie, webhook PVE, história a API.",
+      "<aiLink>Asistent AI</aiLink>: poskytovatelia (OpenAI, Anthropic, Gemini, Groq, OpenRouter, Ollama), modely, predvolené alebo vlastné pokyny, jazyk výstupu, podrobnosť pre kanály a návrhy AI."
+    ]
+  },
+  "optimizations": {
+    "heading": "Optimalizácie ProxMenux",
+    "intro": "Inventár optimalizácií po inštalácii zaznamenaných ProxMenuxom na hostiteľovi. Voľby z <autoLink>Automatizované úpravy po inštalácii</autoLink> a <customLink>Prispôsobiteľné úpravy po inštalácii</customLink> zaznamenajú použitie v <code>/usr/local/share/proxmenux/installed_tools.json</code>. Monitor číta tento register. Záznam znovu nekontroluje, či všetky nastavenia zostali nezmenené.",
+    "imageAlt": "Karta optimalizácií ProxMenux so 14 záznamami: farebná bodka, názov a verzia. Obsahuje APT IPv4 Force, Bashrc Customization, Fastfetch, Log2ram SSD Protection, Memory Settings Optimization, Setting persistent network interfaces, System Limits Increase, APT Language Skip, Entropy Generation haveged s Legacy, Kernel Panic Configuration, Logrotate Optimization, Network Optimizations, Subscription Banner Removal a VFIO IOMMU Passthrough.",
+    "imageCaption": "Každá optimalizácia zobrazuje názov, verziu a farebnú bodku. Vpravo hore je oranžový počet <em>14 aktívnych</em>. Nástroje s dostupným zdrojovým kódom možno otvoriť.",
+    "dotsTitle": "Čo znamenajú bodky",
+    "dotsItems": [
+      "<green/> <strong>Zelená bodka</strong>: zaznamenaná optimalizácia bez označenia Legacy a dostupnej aktualizácie. Kliknite na riadok, ak je dostupný zdrojový kód.",
+      "<amber/> <strong>Jantárová bodka a odznak <em>legacy</em></strong>: zaznamenaná optimalizácia, ktorej skript bol premenovaný alebo nahradený. Zachovaný kód sa otvorí v režime Legacy s jantárovým zvýraznením. Aktuálnu konfiguráciu hostiteľa znovu neoveruje."
+    ],
+    "clickTitle": "Otvorenie zdrojového kódu",
+    "clickBody": "Kliknutie otvorí priradenú funkciu bash a názov skriptu (<code>auto_post_install.sh</code> alebo <code>customizable_post_install.sh</code>). Aktuálne nástroje sa získavajú zo súborov hostiteľa, staršie môžu používať zachovaný kód. Pomáha zvýraznenie syntaxe a Kopírovať. Nejde o zaručenú snímku presného kódu spusteného pri inštalácii.",
+    "detailAlt": "Okno kódu APT IPv4 Force s funkciou bash force_apt_ipv4 z customizable_post_install.sh verzie 1.0. Zvýraznený kód nastavuje /etc/apt/apt.conf.d/99-force-ipv4 pomocou Acquire ForceIPv4 true, registruje nástroj a zobrazuje preloženú správu o dokončení konfigurácie APT IPv4.",
+    "detailCaption": "Kód <em>APT IPv4 Force</em>: funkcia <code>force_apt_ipv4()</code> z <code>customizable_post_install.sh v1.0</code> so zvýraznením syntaxe a kopírovaním jedným kliknutím.",
+    "whyTitle": "Prečo na tom záleží",
+    "whyBody": "ProxMenux môže meniť parametre jadra, repozitáre, sieť, rotáciu protokolov a odovzdanie GPU. Pred ručnými zmenami si pozrite zaznamenané optimalizácie, najmä ak hostiteľa nastavil iný správca. Karta ukazuje register a dostupný kód; neoveruje všetky aktuálne nastavenia ani neuchováva presnú históriu vykonania.",
+    "updatesTitle": "Oznam dostupných aktualizácií",
+    "updatesBody": "Ak je verzia optimalizácie na disku novšia než zaznamenaná na hostiteľovi, zobrazí sa oznam s počtom a <strong>Použiť</strong>. <strong>Použiť</strong> otvorí výber optimalizácií, rovnako ako <em>Použiť dostupné aktualizácie</em> v ponuke po inštalácii. Vyberte aktualizácie; ProxMenux znova spustí funkcie a upraví register. Keď je všetko aktuálne, oznam zmizne.",
+    "updatesAlt": "Karta optimalizácií ProxMenux s oznamom dostupných aktualizácií, ich počtom a tlačidlom Použiť na otvorenie výberu",
+    "updatesCaption": "Oznam sa objaví, ak má aspoň jedna optimalizácia novšiu verziu na disku. Pozrite <link>Použiť dostupné aktualizácie</link> pre celý postup a zodpovedajúcu voľbu Path-A v ponuke shellu.",
+    "revertTitle": "Vrátenie optimalizácie späť",
+    "revertBody": "Optimalizáciu vrátite späť príslušnou voľbou <link>Odinštalovať optimalizácie</link> v ponuke ProxMenux Scripts. Odinštalovanie odstráni záznam z <code>installed_tools.json</code> a pri ďalšom obnovení zmizne z karty."
+  },
+  "dataCollected": {
+    "heading": "Spôsob zberu údajov",
+    "headerCard": "Karta",
+    "headerEndpoint": "Koncový bod",
+    "headerSource": "Zdroj",
+    "rows": [
+      {
+        "card": "Jazyk rozhrania",
+        "endpoint": "localStorage",
+        "source": "Voľba prehliadača <code>proxmenux-ui-language</code>; ak nie je uložený výber, najprv sa použije jazyk prehliadača."
+      },
+      {
+        "card": "Poradie navigácie",
+        "endpoint": "localStorage",
+        "source": "Voľba prehliadača <code>proxmenux-nav-order</code>; určuje aj úvodnú kartu."
+      },
+      {
+        "card": "Jednotky siete",
+        "endpoint": "/api/settings",
+        "source": "Uložené v tabuľke nastavení SQLite panela."
+      },
+      {
+        "card": "Trvanie v Health Monitor",
+        "endpoint": "/api/health/settings",
+        "source": "Trvanie potlačenia podľa kategórie v databáze Health Monitor."
+      },
+      {
+        "card": "Vylúčenie úložiska / rozhrania",
+        "endpoint": "/api/storage/exclusions, /api/network/exclusions",
+        "source": "SQLite tabuľky <code>excluded_storages</code> a <code>excluded_interfaces</code>."
+      },
+      {
+        "card": "Panel Oznámenia a AI",
+        "endpoint": "/api/notifications/*",
+        "source": "Pozrite <notifLink>Oznámenia</notifLink> a <aiLink>Asistent AI</aiLink>."
+      },
+      {
+        "card": "Zoznam optimalizácií ProxMenux",
+        "endpoint": "/api/proxmenux/installed-tools",
+        "source": "Číta <code>/usr/local/share/proxmenux/installed_tools.json</code>, kam zapisujú volania <code>register_tool</code> v skriptoch po inštalácii."
+      },
+      {
+        "card": "Okno kódu optimalizácie",
+        "endpoint": "/api/proxmenux/tool-source",
+        "source": "Získa priradenú funkciu bash z <code>auto_post_install.sh</code> alebo <code>customizable_post_install.sh</code> na hostiteľovi; staršie nástroje môžu používať zachovaný kód."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "Záložka aplikácií",
+        "href": "/docs/monitor/dashboard/apps",
+        "tail": " — spúšťač, ktorého polohu určíte v poradí navigácie."
+      },
+      {
+        "label": "Oznámenia",
+        "href": "/docs/monitor/notifications",
+        "tail": " — kanály, prepínače udalostí, vlastné nastavenia kanálov, história a skúšobné odoslanie."
+      },
+      {
+        "label": "AI asistent",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": " — poskytovatelia, modely, režimy pokynov, jazyky a podrobnosť pre kanály."
+      },
+      {
+        "label": "Health Monitor → Potlačenie výstrah a jeho trvanie",
+        "href": "/docs/monitor/health-monitor#dismissing-alerts-and-the-suppression-duration",
+        "tail": " — ako fungujú vyššie uvedené zoznamy trvania podľa kategórie."
+      },
+      {
+        "label": "ProxMenux Scripts → Automatizované úpravy po inštalácii",
+        "href": "/docs/post-install/automated",
+        "tailRich": " a <customLink>Prispôsobiteľné úpravy po inštalácii</customLink> — skripty, ktoré zapisujú optimalizácie do vyššie uvedeného zoznamu."
+      },
+      {
+        "label": "Odinštalovať optimalizácie",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — ako vrátiť späť vyššie zaznamenanú optimalizáciu."
+      },
+      {
+        "label": "Prehľad panela",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — späť na prehľad kariet."
+      }
+    ]
+  }
+}

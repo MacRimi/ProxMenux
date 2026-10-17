@@ -1,16 +1,16 @@
 {
   "meta": {
-    "title": "ProxMenux Monitor — Panel: pestaña Red | ProxMenux Documentation",
-    "description": "La pestaña Red inventaría cada interfaz del host: NICs físicas, bridges, bonds, VLANs y las interfaces virtuales de VM/LXC. La vista en detalle por interfaz muestra IP / MAC / estado / miembros del bond / tráfico desde el arranque y una gráfica RRD histórica."
+    "title": "ProxMenux Monitor — Panel: pestaña Red | Documentación de ProxMenux",
+    "description": "La pestaña Red enumera todas las interfaces del host: físicas, puentes, enlaces agrupados, VLAN e interfaces virtuales VM/LXC. El detalle muestra IP, MAC, estado, miembros del enlace agrupado, tráfico desde el arranque e historial RRD."
   },
   "header": {
     "title": "Panel: pestaña Red",
-    "description": "Cada interfaz que reporta el kernel — NICs físicas, bridges, bonds, VLANs y puertos virtuales de VM/LXC — agrupadas en tres tarjetas. Cada fila es pulsable y abre una vista en detalle con direccionamiento, contadores de tráfico y datos RRD históricos.",
+    "description": "Todas las interfaces que detecta el kernel —físicas, puentes, enlaces agrupados, VLAN y puertos virtuales VM/LXC— se agrupan en tres tarjetas. Pulsa una fila para ver direcciones, contadores de tráfico e historial RRD.",
     "section": "ProxMenux Monitor · Panel"
   },
   "intro": {
-    "title": "En vivo + histórico, ambos incluidos",
-    "body": "El estado en vivo viene de <code>psutil.net_if_stats()</code> y <code>ip</code>; el ancho de banda histórico del almacén RRD de Proxmox vía <code>/api/network/&lt;interface&gt;/metrics</code>. La página refresca cada ~5 segundos los contadores en vivo y obtiene datos RRD frescos bajo demanda para la gráfica."
+    "title": "Datos actuales e históricos",
+    "body": "El estado actual procede de <code>psutil.net_if_stats()</code> e <code>ip</code>; el historial de ancho de banda, del almacén RRD de Proxmox mediante <code>/api/network/&lt;interface&gt;/metrics</code>. Los contadores se actualizan cada 5 segundos aproximadamente y el gráfico obtiene datos RRD cuando se solicitan."
   },
   "topRow": {
     "heading": "Fila superior: cuatro tarjetas de estadísticas",
@@ -18,122 +18,122 @@
     "headerWhat": "Qué muestra",
     "rows": [
       {
-        "card": "Network Traffic",
+        "card": "Tráfico de red",
         "what": "Tasa agregada RX / TX a lo largo de todas las interfaces, formateada en la unidad correcta (bps / Kbps / Mbps / Gbps)."
       },
       {
-        "card": "Active Interfaces",
-        "what": "Dos contadores: <em>Physical X / Y</em> y <em>Bridges X / Y</em> (activas sobre total). El primer contador que miras cuando algo deja de funcionar."
+        "card": "Interfaces activas",
+        "what": "Dos contadores: <em>Physical X / Y</em> y <em>Bridges X / Y</em>, con interfaces activas respecto al total. Es un primer punto de comprobación cuando algo deja de funcionar."
       },
       {
-        "card": "Network Status",
-        "what": "Veredicto rápido — Healthy / Warning / Critical en función del estado del enlace, alcanzabilidad del gateway e integridad del bridge. Refleja la categoría <em>Network Interfaces</em> del Monitor de salud."
+        "card": "Estado de la red",
+        "what": "Estado rápido: Correcto / Aviso / Crítico según el enlace, la accesibilidad de la puerta de enlace y la integridad del puente. Refleja la categoría <em>Interfaces de red</em> de Health Monitor."
       },
       {
-        "card": "Network Latency",
-        "what": "Round-trip time al gateway con un sparkline. Pulsar la tarjeta abre la <strong>modal Network Latency</strong> documentada más abajo — vista histórica + test de ping bajo demanda contra gateway / Cloudflare / Google con un informe PDF descargable."
+        "card": "Latencia de red",
+        "what": "Tiempo de ida y vuelta a la puerta de enlace con un minigráfico. Al pulsar, abre el <strong>diálogo Latencia de red</strong> descrito más abajo: historial y prueba de ping a petición contra la puerta de enlace, Cloudflare o Google, con informe PDF descargable."
       }
     ]
   },
   "flow": {
     "heading": "Diagrama Network Flow",
-    "intro": "Entre la fila superior y las tres tarjetas de grupos, la pestaña renderiza una vista de topología en vivo llamada <strong>Network Flow</strong>. Dibuja cada camino que un paquete puede tomar a través del host — NICs físicas en un extremo, bridges en el medio, VMs y contenedores en el otro — con pulsos animados que muestran el tráfico rx/tx en tiempo real sobre cada enlace.",
+    "intro": "Entre la fila superior y las tres tarjetas aparece la topología en directo <strong>Network Flow</strong>. Muestra los recorridos de los paquetes: interfaces físicas en un extremo, puentes en medio y máquinas virtuales y contenedores en el otro. Los pulsos animados representan el tráfico rx/tx actual de cada enlace.",
     "imageAlt": "Diagrama Network Flow — NICs a la izquierda, host y bridges en el medio, VMs y LXCs a la derecha, con pulsos animados en cada conexión",
     "imageCaption": "Network Flow — nodos con código de color más cometas animados cuya dirección y grosor reflejan el tráfico en vivo.",
     "elementsTitle": "Qué muestra el diagrama",
-    "elementsIntro": "Cada nodo es una entidad del mismo inventario que usan las tarjetas de abajo, pero organizadas como topología para que las relaciones se vean de un vistazo:",
+    "elementsIntro": "Cada nodo representa una entidad del mismo inventario que las tarjetas inferiores. La disposición como topología permite ver sus relaciones de un vistazo:",
     "elements": [
-      "<strong>NICs</strong> (ámbar) — cada interfaz física con enlace activo. Las interfaces reportadas como down se dibujan atenuadas.",
-      "<strong>Host</strong> (ámbar) — el propio host Proxmox, situado entre las NICs y los bridges. Renderizado como anclaje fijo; no clicable.",
-      "<strong>Bridges</strong> (cian) — bridges Linux y OVS. Sólo se dibujan los bridges que llevan al menos un guest activo; los bridges sin uso se ocultan para que el diagrama muestre lo que realmente mueve tráfico.",
-      "<strong>LXCs</strong> (cian) — contenedores en ejecución conectados a un bridge.",
-      "<strong>VMs</strong> (púrpura) — máquinas virtuales en ejecución conectadas a un bridge.",
-      "Los guests offline (VMs / contenedores parados) se ocultan."
+      "<strong>NIC</strong> (ámbar): interfaces físicas con enlace activo; las inactivas aparecen atenuadas.",
+      "<strong>Host</strong> (ámbar): el host Proxmox entre las interfaces físicas y los puentes. Es un punto fijo y no se puede pulsar.",
+      "<strong>Puentes</strong> (cian): puentes Linux y OVS con al menos una máquina invitada activa. Los que no se usan se ocultan para centrar el diagrama en el tráfico actual.",
+      "<strong>LXC</strong> (cian): contenedores en ejecución conectados a un puente.",
+      "<strong>VM</strong> (morado): máquinas virtuales en ejecución conectadas a un puente.",
+      "Las máquinas virtuales y los contenedores detenidos se ocultan."
     ],
     "pulsesTitle": "Qué codifica la animación",
     "pulsesBody": "Los cometas animados que viajan por cada arista representan tráfico en vivo:",
     "pulses": [
-      "<strong>Dirección</strong> — un pulso que fluye hacia la NIC es <em>tx</em> del guest; hacia el guest es <em>rx</em>.",
-      "<strong>Grosor de trazo</strong> escala con el rate combinado rx+tx del guest. Un guest inactivo dibuja una línea animada tenue; uno con carga la dibuja gruesa.",
-      "<strong>Halo de la cabeza del cometa</strong> — templado hacia ~1 MB/s, caliente a ≥30 MB/s. Útil para detectar de un vistazo qué guest está dominando una NIC.",
-      "<strong>Click</strong> — cada nodo excepto el host es clicable y abre el mismo modal de detalle por interfaz documentado más abajo. Pulsar el host es intencionadamente un no-op — no hay modal a nivel de host en esta vista."
+      "<strong>Dirección</strong>: hacia la NIC significa <em>tx</em> de la máquina invitada; hacia la máquina, <em>rx</em>.",
+      "El <strong>grosor del trazo</strong> aumenta con la tasa rx+tx de la máquina invitada. Sin tráfico se mantiene una línea animada tenue; con mucho tráfico, la línea es gruesa.",
+      "<strong>Brillo de la cabeza del cometa</strong>: tono cálido hacia 1 MB/s e intenso a partir de 30 MB/s. Permite identificar qué máquina invitada concentra el tráfico de una NIC.",
+      "<strong>Clic</strong>: todos los nodos salvo el host abren el diálogo de detalle por interfaz descrito más abajo. Pulsar el host no tiene efecto; esta vista no incluye un diálogo para él."
     ],
     "useTitle": "Cuándo es útil",
-    "useBody": "Las tarjetas de grupos de abajo te dicen <em>qué</em> existe; el diagrama te dice <em>cómo está conectado</em> y por dónde fluye el tráfico ahora mismo. Patrones fáciles de ver de un vistazo: un bridge sin ningún guest activo conectado, dos guests pesados usando la misma NIC (candidato a cuello de botella), o una única VM saturando un enlace mientras el resto está tranquilo."
+    "useBody": "Las tarjetas muestran <em>qué</em> existe; el diagrama, <em>cómo está conectado</em> y por dónde fluye el tráfico. Permite detectar máquinas que comparten un puente, dos máquinas con mucho tráfico en una misma NIC —posible cuello de botella— o una VM que satura un enlace mientras las demás apenas transmiten."
   },
   "groups": {
     "heading": "Tres grupos de interfaces",
-    "intro": "Bajo la fila superior, tres tarjetas dividen el inventario por rol. Cada tarjeta tiene su propia insignia de recuento de activas en la cabecera. El <strong>tipo</strong> de interfaz se identifica de un vistazo mediante una insignia coloreada en cada fila:",
+    "intro": "Tres tarjetas agrupan las interfaces por función. La cabecera de cada una indica cuántas están activas. Una etiqueta de color identifica el <strong>tipo</strong> de cada interfaz:",
     "badges": [
       "Azul <strong>Physical</strong> — NIC real.",
       "Verde <strong>Bridge</strong> — bridge Linux o bridge OVS (<code>vmbr*</code>).",
       "Morado <strong>Bond</strong> — agregador bond / LACP / active-backup.",
-      "Cian <strong>VLAN</strong> — sub-interfaz VLAN (<code>vmbr0.10</code>, <code>eno1.42</code>, …)."
+      "Cian <strong>VLAN</strong>: subinterfaz VLAN (<code>vmbr0.10</code>, <code>eno1.42</code>, …)."
     ],
-    "clickable": "<strong>Cada fila es pulsable</strong> — física, virtual, bridge o bond — y abre la vista en detalle por interfaz descrita más abajo (info básica, IPs, contadores de tráfico, gráfica RX/TX histórica del almacén RRD de Proxmox).",
-    "physicalTitle": "Physical Interfaces",
-    "physicalBody": "Cada NIC que el kernel ve como un dispositivo real — <code>eno1</code>, <code>enp4s0</code>, <code>eth0</code>, <code>wlp3s0</code>, etc. Una fila por dispositivo con la insignia azul <strong>Physical</strong> y el estado del enlace. Los <em>miembros del bond</em> (NICs esclavizadas a un bond) también se muestran aquí, con una pista que apunta al bond padre.",
-    "bridgeTitle": "Bridge Interfaces",
-    "bridgeBody": "Bridges Linux (<code>vmbr0</code>, <code>vmbr1</code>, …) y los bridges OVS que gestiona Proxmox. Cada fila muestra la insignia verde <strong>Bridge</strong>, la interfaz física subyacente (cuando es un bridge de un solo puerto) y el estado del bridge. Los bonds visibles en esta capa reciben la insignia morada <strong>Bond</strong>; las sub-interfaces VLAN reciben la insignia cian <strong>VLAN</strong>.",
-    "vmTitle": "VM / LXC Interfaces",
-    "vmBody": "Las interfaces <code>tap*</code> y <code>veth*</code> creadas cuando arrancan los guests — una por NIC virtual. La cabecera de la tarjeta muestra <em>X / Y Active</em>; las filas enlazan con el VM/CT al que pertenecen, así que puedes saltar directamente al guest en la pestaña VMs y LXCs. Las entradas inactivas quedan por un instante después de que un guest se pare; envejecen y se eliminan en el siguiente ciclo de refresco."
+    "clickable": "<strong>Todas las filas se pueden pulsar</strong>: físicas, virtuales, puentes y bonds. Abren el detalle descrito más abajo: información básica, IP, contadores y gráfico histórico RX/TX del almacén RRD Proxmox.",
+    "physicalTitle": "Interfaces físicas",
+    "physicalBody": "Interfaces físicas reconocidas por el kernel: <code>eno1</code>, <code>enp4s0</code>, <code>eth0</code>, <code>wlp3s0</code>, etc. Cada dispositivo tiene una fila con etiqueta azul <strong>Physical</strong> y estado del enlace. Los <em>miembros de un bond</em> también aparecen, con una referencia al bond al que pertenecen.",
+    "bridgeTitle": "Interfaces de puente",
+    "bridgeBody": "Puentes Linux (<code>vmbr0</code>, <code>vmbr1</code>, …) y OVS gestionados por Proxmox. Cada fila muestra la etiqueta verde <strong>Bridge</strong>, la interfaz física subyacente si tiene un solo puerto y su estado. Los enlaces agrupados llevan la etiqueta morada <strong>Bond</strong>; las subinterfaces VLAN, la cian <strong>VLAN</strong>.",
+    "vmTitle": "Interfaces de VM / LXC",
+    "vmBody": "Interfaces <code>tap*</code> y <code>veth*</code> creadas al arrancar las máquinas invitadas, una por NIC virtual. La cabecera muestra <em>X / Y Active</em> y las filas enlazan a su VM/CT en la pestaña VMs y LXCs. Tras detener una máquina, las entradas inactivas desaparecen en el siguiente ciclo de actualización."
   },
   "drillIn": {
-    "heading": "Vista en detalle por interfaz",
-    "intro": "Pulsar cualquier fila abre una modal con cinco bloques:",
+    "heading": "Detalle por interfaz",
+    "intro": "Al pulsar una fila, se abre un diálogo con cinco bloques:",
     "headerBlock": "Bloque",
     "headerContents": "Contenido",
     "rows": [
       {
-        "block": "Basic Information",
-        "contents": "Nombre de la interfaz, tipo (física / bridge / bond / VLAN / vm), dirección MAC, estado (up / down), MTU y la interfaz física subyacente para los tipos no físicos."
+        "block": "Información básica",
+        "contents": "Nombre, tipo (física / puente / bond / VLAN / vm), MAC, estado (activo / inactivo), MTU e interfaz física subyacente para los tipos virtuales."
       },
       {
-        "block": "Bond Members",
-        "contents": "Solo para bonds. Lista cada NIC esclavizada con el flag active / failed, el modo del bond (active-backup / 802.3ad / balance-alb / …) y la interfaz primaria cuando está configurada."
+        "block": "Miembros del bond",
+        "contents": "Solo para bonds: cada NIC integrante con estado activo o fallido, modo del bond (active-backup / 802.3ad / balance-alb / …) e interfaz principal si está configurada."
       },
       {
-        "block": "IP Addresses",
+        "block": "Direcciones IP",
         "contents": "Cada dirección IPv4 / IPv6 con su longitud de prefijo. Las direcciones link-local autoconfiguradas se listan pero salen atenuadas."
       },
       {
         "block": "Gráfica histórica",
-        "contents": "Ancho de banda RX / TX sobre el timeframe seleccionado (1 hora / 24 horas / 7 días / 30 días / 1 año), traído de <code>/api/network/&lt;interface&gt;/metrics</code> (RRD de Proxmox)."
+        "contents": "Ancho de banda RX/TX durante el periodo elegido (1 hora / 24 horas / 7 días / 30 días / 1 año), obtenido de <code>/api/network/&lt;interface&gt;/metrics</code> (RRD Proxmox)."
       },
       {
         "block": "Tráfico desde el último arranque",
-        "contents": "Bytes y paquetes totales RX / TX desde el último arranque del host, más contadores de errores y descartes."
+        "contents": "Total de bytes y paquetes RX/TX desde el último arranque del host, con contadores de errores y descartes."
       }
     ],
-    "inactiveTitle": "Las interfaces inactivas siguen abriendo la vista en detalle",
-    "inactiveBody": "Para una interfaz <em>down</em>, la modal renderiza un pequeño banner \"Interface Inactive\" y omite los contadores en vivo. La configuración (direcciones, miembros del bond) y los datos históricos siguen mostrándose — útil al diagnosticar por qué falló algo y cuándo."
+    "inactiveTitle": "También puedes ver el detalle de las interfaces inactivas",
+    "inactiveBody": "Si la interfaz está <em>inactiva</em>, el diálogo muestra el aviso «Interfaz inactiva» y omite los contadores actuales. Conserva la configuración —direcciones y miembros del bond— y el historial para diagnosticar qué falló y cuándo."
   },
   "latency": {
-    "heading": "Modal Network Latency",
-    "intro": "Pulsar la tarjeta <em>Network Latency</em> de la fila superior abre una modal dedicada. Tiene dos modos (histórico y test bajo demanda), tres opciones de destino y un informe PDF descargable.",
+    "heading": "Diálogo Latencia de red",
+    "intro": "Pulsa <em>Latencia de red</em> en la fila superior para abrir su diálogo. Incluye historial, pruebas a petición, tres destinos y un informe PDF descargable.",
     "targetsTitle": "Destinos",
-    "targetsIntro": "Un desplegable de destino en lo alto de la modal selecciona contra qué se hace ping:",
+    "targetsIntro": "El desplegable de la parte superior selecciona el destino del ping:",
     "targets": [
-      "<strong>Gateway</strong> — tu router de la LAN. Solo testea el tramo de red local; útil cuando sospechas de un problema de switch / cableado y quieres descartar la WAN.",
-      "<strong>Cloudflare (1.1.1.1)</strong> — resolutor DNS público, red anycast. Testea el tramo WAN.",
-      "<strong>Google (8.8.8.8)</strong> — destino público alternativo, útil como verificación sanity o cuando Cloudflare está degradado regionalmente."
+      "<strong>Puerta de enlace</strong>: tu router LAN. Comprueba solo el tramo local para investigar problemas del switch o del cableado sin incluir la WAN.",
+      "<strong>Cloudflare (1.1.1.1)</strong>: resolutor DNS público en una red anycast. Comprueba el tramo WAN.",
+      "<strong>Google (8.8.8.8)</strong>: destino público alternativo para contrastar resultados o comprobar incidencias regionales de Cloudflare."
     ],
     "mode1Title": "Modo 1 — Vista histórica",
-    "mode1Alt": "Modal Network Latency en modo histórico — destino Gateway con un timeframe de 1 hora y las muestras pasadas ploteadas",
-    "mode1Caption": "Vista histórica — destino Gateway sobre la última hora, alimentada desde la base de datos de historial de latencia que el hilo recolector de temperatura/latencia escribe cada 60 segundos.",
-    "mode1Body1": "El modo por defecto al abrir la modal. Un segundo desplegable elige el timeframe (<em>1 Hour / 24 Hours / 7 Days / 30 Days / 1 Year</em>); la resolución de los datos baja con la ventana para que la gráfica se mantenga legible. Las estadísticas titulares — Current / Min / Avg / Max — se renderizan encima de la gráfica, con una pastilla de estado (Excellent / Good / Fair / Poor) que refleja el valor actual frente a los umbrales de abajo.",
-    "mode1Body2": "Fuente: las mismas muestras de latencia que usa el Monitor de salud para detectar ralentizaciones persistentes de red — muestreadas cada 60 segundos contra el gateway por el hilo en background <code>_temperature_collector_loop</code>, escritas a un historial SQLite local.",
+    "mode1Alt": "Diálogo de latencia en modo histórico, con destino Puerta de enlace, periodo de una hora y muestras anteriores representadas",
+    "mode1Caption": "Historial de la puerta de enlace durante la última hora. El recolector de temperatura y latencia guarda las muestras en la base de datos cada 60 segundos.",
+    "mode1Body1": "Es el modo inicial del diálogo. Un segundo desplegable elige el periodo (<em>1 hora / 6 horas / 24 horas / 3 días / 7 días</em>). Encima aparecen Actual / Mínimo / Media / Máximo y un indicador Excelente / Bueno / Regular / Malo según los umbrales siguientes.",
+    "mode1Body2": "Fuente: las muestras que usa Health Monitor para detectar ralentizaciones persistentes. El hilo <code>_temperature_collector_loop</code> mide la latencia de la puerta de enlace cada 60 segundos y la guarda en un historial SQLite local.",
     "mode2Title": "Modo 2 — Test en tiempo real",
-    "mode2Alt": "Modal Network Latency ejecutando un test de ping en tiempo real contra Cloudflare — barra de progreso al 50%, muestras en vivo acumulándose en la gráfica",
-    "mode2Caption": "Test en tiempo real contra Cloudflare — ejecución de 2 minutos con una lectura cada 5 segundos, muestras ploteadas según llegan. Pulsa <em>Stop</em> para terminar antes; <em>Test Again</em> añade más muestras al mismo dataset.",
+    "mode2Alt": "Diálogo de latencia ejecutando un ping a Cloudflare en tiempo real, con progreso al 50 % y nuevas muestras en el gráfico",
+    "mode2Caption": "Prueba de dos minutos contra Cloudflare, con una lectura cada cinco segundos que se añade al gráfico al llegar. Pulsa <em>Detener</em> para finalizar antes; <em>Repetir prueba</em> añade muestras al mismo conjunto de datos.",
     "mode2Intro": "Cambiar el destino a Cloudflare o Google arranca un test de ping bajo demanda. Comportamiento:",
     "mode2Items": [
-      "<strong>Duración</strong> — 2 minutos por ejecución, con barra de progreso y un contador de segundos restantes.",
-      "<strong>Cadencia</strong> — una lectura cada 5 segundos (24 lecturas por ejecución).",
-      "<strong>Método</strong> — ICMP Echo Request (<code>ping</code>), 3 pings consecutivos por muestra, latencia promediada.",
+      "<strong>Duración</strong>: dos minutos por ejecución, con barra de progreso y segundos restantes.",
+      "<strong>Frecuencia</strong>: una lectura cada cinco segundos, 24 por ejecución.",
+      "<strong>Método</strong>: ICMP Echo Request (<code>ping</code>), con tres pings seguidos por muestra y su latencia media.",
       "<strong>Stop</strong> — termina el test inmediatamente; los datos parciales se preservan.",
-      "<strong>Test Again</strong> — añade nuevas muestras al dataset existente en lugar de empezar de cero, así puedes construir un registro más largo a lo largo de varias ejecuciones.",
-      "<strong>Pastilla de estado en vivo</strong> — se reevalúa tras cada muestra con los mismos umbrales Excellent / Good / Fair / Poor."
+      "<strong>Repetir prueba</strong>: añade muestras a los datos existentes para construir un registro más largo con varias ejecuciones.",
+      "<strong>Indicador de estado actual</strong>: se recalcula tras cada muestra con los mismos umbrales Excelente / Bueno / Regular / Malo."
     ],
     "thresholdsTitle": "Umbrales de rendimiento",
     "headerStatus": "Estado",
@@ -141,47 +141,47 @@
     "headerImpact": "Impacto práctico",
     "thresholdRows": [
       {
-        "status": "Excellent",
+        "status": "Excelente",
         "range": "< 50 ms",
         "impact": "Óptimo para apps en tiempo real, gaming y videollamadas."
       },
       {
-        "status": "Good",
+        "status": "Bueno",
         "range": "50 – 100 ms",
         "impact": "Aceptable para la mayoría de aplicaciones con impacto mínimo."
       },
       {
-        "status": "Fair",
+        "status": "Regular",
         "range": "100 – 200 ms",
         "impact": "Retardo perceptible. Puede afectar a VoIP y apps interactivas."
       },
       {
-        "status": "Poor",
+        "status": "Malo",
         "range": "> 200 ms",
         "impact": "Latencia significativa. Se recomienda investigar."
       }
     ],
-    "reportTitle": "Network Latency Report (PDF)",
-    "reportIntro": "Ambos modos tienen un botón <strong>Report</strong> junto al selector de destino. Pulsarlo genera un PDF con todo lo que enviarías a tu ISP si quisieras argumentar un mal servicio.",
-    "reportPreviewAlt": "Primera página del PDF Network Latency Report — Executive Summary con el gauge, estadísticas de latencia, la gráfica de latencia y la guía de umbrales",
-    "reportPreviewCaption": "Primera página del Network Latency Report — Executive Summary con el dial del gauge y las estadísticas titulares, la gráfica de latencia por segundo y la guía de umbrales. De la página 2 en adelante está la tabla por muestra y la metodología.",
-    "downloadLabel": "Descargar informe de ejemplo Network Latency (PDF)",
+    "reportTitle": "Informe de latencia de red (PDF)",
+    "reportIntro": "Ambos modos tienen un botón <strong>Informe</strong> junto al selector de destino. Genera un PDF de las mediciones que puedes adjuntar a una solicitud de asistencia a tu proveedor de Internet.",
+    "reportPreviewAlt": "Primera página del informe PDF de latencia: resumen ejecutivo, indicador, estadísticas, gráfico y guía de umbrales",
+    "reportPreviewCaption": "La primera página contiene resumen ejecutivo, indicador, estadísticas principales, serie temporal de latencia y guía de umbrales. Desde la página 2 aparecen la tabla de muestras y la metodología.",
+    "downloadLabel": "Descargar informe de ejemplo de latencia (PDF)",
     "sectionsIntro": "El informe tiene seis secciones:",
     "sections": [
-      "<strong>Executive Summary</strong> — dial del gauge (0–300+ ms con zonas verde / amarilla / roja), el veredicto de estado (EXCELLENT / GOOD / FAIR / POOR), el destino / modo / recuento de muestras y un resumen de una línea sobre packet loss.",
-      "<strong>Latency Statistics</strong> — Current / Min / Avg / Max como cuatro tiles grandes, más Sample Count, Packet Loss (avg) y Test Period.",
-      "<strong>Latency Graph</strong> — gráfica de área de cada muestra a lo largo de la ventana del test con una rejilla en el eje y de min/avg/max.",
-      "<strong>Performance Thresholds</strong> — la misma escala de cuatro niveles documentada arriba, con un punto coloreado por nivel.",
-      "<strong>Detailed Test Results</strong> — tabla numerada con timestamp, latencia, packet loss y estado para cada muestra. Útil para detectar micro-ráfagas que esconden los promedios titulares.",
-      "<strong>Methodology</strong> — método del test (ICMP Echo Request), muestras por test (3 pings consecutivos), nombre del destino, IP del destino y un párrafo final \"Performance Assessment\" derivado del veredicto."
+      "<strong>Resumen ejecutivo</strong>: indicador de 0 a más de 300 ms con zonas verde, amarilla y roja; estado Excelente / Bueno / Regular / Malo; destino, modo, número de muestras y resumen de pérdida de paquetes.",
+      "<strong>Estadísticas de latencia</strong>: cuatro indicadores con valor actual, mínimo, media y máximo, además del número de muestras, pérdida media de paquetes y periodo de prueba.",
+      "<strong>Gráfico de latencia</strong>: gráfico de área de las muestras durante la prueba, con referencias de mínimo, media y máximo en el eje vertical.",
+      "<strong>Umbrales de rendimiento</strong>: la misma escala de cuatro niveles anterior, con un punto de color por nivel.",
+      "<strong>Resultados detallados</strong>: tabla numerada con fecha y hora, latencia, pérdida de paquetes y estado de cada muestra. Permite detectar picos breves ocultos por las medias.",
+      "<strong>Metodología</strong>: ICMP Echo Request, tres pings consecutivos por muestra, nombre e IP del destino y evaluación final derivada del estado."
     ],
-    "useCaseTitle": "Caso de uso: reclamaciones a tu ISP",
-    "useCaseBody": "Ejecuta el test en tiempo real contra Cloudflare durante 2 minutos en un momento de lentitud percibida, después pulsa <em>Test Again</em> unas cuantas veces para extender el dataset y finalmente <em>Report</em>. El PDF lleva la tabla completa por muestra más el bloque de metodología — los ISPs suelen aceptar esto como evidencia, sobre todo si está correlacionado con timestamps de una reclamación aparte."
+    "useCaseTitle": "Caso de uso: asistencia de tu proveedor de Internet",
+    "useCaseBody": "Ejecuta dos minutos de prueba contra Cloudflare cuando notes lentitud, usa <em>Repetir prueba</em> para ampliar el registro y selecciona <em>Informe</em>. El PDF incluye todas las muestras y la metodología. Puedes adjuntarlo a una solicitud de asistencia con las horas de la incidencia; tu proveedor decide qué pruebas necesita."
   },
   "excluding": {
-    "heading": "Excluir interfaces ruidosas",
-    "body1": "Igual que los almacenamientos, las interfaces individuales se pueden excluir de la monitorización de salud — útil para bridges deshabilitados a propósito, interfaces de test o NICs físicamente retiradas pero que siguen en la configuración. El flag se guarda en la tabla <code>excluded_interfaces</code> y lo respeta el ciclo del Monitor de salud: sin warnings, sin notificaciones, sin contribución a la pastilla de estado de la cabecera.",
-    "body2": "Desde el menú contextual de la fila, elige <em>Exclude from monitoring</em>. La interfaz sigue visible en el panel con una insignia morada <strong>excluded</strong>, y puedes reactivar la monitorización desde el mismo menú."
+    "heading": "Excluir interfaces de la supervisión",
+    "body1": "Puedes excluir interfaces de la supervisión, por ejemplo puentes desactivados a propósito, interfaces de prueba o NIC retiradas que siguen en la configuración. El ajuste se guarda en <code>excluded_interfaces</code>: Health Monitor no genera avisos ni notificaciones ni incluye esas interfaces en el indicador general.",
+    "body2": "En el menú contextual de la fila, elige <em>Excluir de la supervisión</em>. La interfaz sigue visible con una etiqueta morada <strong>excluida</strong>. Puedes reactivar la supervisión desde el mismo menú."
   },
   "dataCollected": {
     "heading": "Cómo se recopilan los datos",
@@ -192,31 +192,31 @@
       {
         "section": "Inventario de interfaces",
         "endpoint": "/api/network",
-        "source": "<code>ip -j addr</code> + <code>ip -j link</code> + introspección de bond / bridge."
+        "source": "<code>ip -j addr</code> + <code>ip -j link</code> y consulta de bonds y puentes."
       },
       {
         "section": "Tarjetas resumen",
         "endpoint": "/api/network/summary",
-        "source": "Agregación sobre el inventario más recuentos up/down por interfaz."
+        "source": "Resumen del inventario y recuento de interfaces activas e inactivas."
       },
       {
         "section": "Serie temporal RX/TX por interfaz",
         "endpoint": "/api/network/<iface>/metrics",
-        "source": "<code>/proc/net/dev</code> muestreado por el Monitor de salud con cálculo de byte-rate."
+        "source": "Los contadores actuales usan <code>/proc/net/dev</code>; el historial del gráfico procede de RRD Proxmox mediante pvesh. Las interfaces VM/LXC usan datos del invitado; las físicas y los puentes, datos del nodo."
       },
       {
         "section": "Latencia: actual",
         "endpoint": "/api/network/latency/current",
-        "source": "Una ráfaga corta de <code>ping</code> contra el gateway / destino configurado."
+        "source": "Serie corta de <code>ping</code> a la puerta de enlace o al destino configurado."
       },
       {
         "section": "Latencia: histórica",
         "endpoint": "/api/network/latency/history",
-        "source": "Muestras persistidas — cada 5 min por el ciclo del Monitor de salud."
+        "source": "Muestras guardadas aproximadamente cada 60 segundos por el recolector de temperatura y latencia en segundo plano."
       }
     ],
-    "codeComment1": "# Cross-check del estado de interfaz que ve el panel",
-    "codeComment2": "# Verificar una sonda de latencia actual de extremo a extremo"
+    "codeComment1": "# Contrastar el estado de las interfaces que muestra el panel",
+    "codeComment2": "# Comprobar una medición actual de latencia de extremo a extremo"
   },
   "whereNext": {
     "heading": "Por dónde seguir",
@@ -224,17 +224,17 @@
       {
         "label": "Monitor de salud",
         "href": "/docs/monitor/health-monitor",
-        "tail": " — la categoría Red y los umbrales del historial de latencia."
+        "tail": " — categoría Red y umbrales del historial de latencia."
       },
       {
         "label": "Referencia de la API",
         "href": "/docs/monitor/api",
-        "tail": " — los endpoints de red y latencia."
+        "tail": " — endpoints de red y latencia."
       },
       {
         "label": "Integraciones",
         "href": "/docs/monitor/integrations",
-        "tail": " — el scrape de Prometheus expone las mismas métricas de red."
+        "tail": " — la recopilación de Prometheus ofrece las mismas métricas de red."
       },
       {
         "label": "Índice del panel",

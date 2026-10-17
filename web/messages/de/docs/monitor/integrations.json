@@ -1,0 +1,255 @@
+{
+  "meta": {
+    "title": "Proxmox-Integrationen — Homepage, Home Assistant, Grafana, Prometheus | ProxMenux Monitor",
+    "description": "Konfigurationsbeispiele zum Kopieren für Homepage, Home Assistant, Grafana über Prometheus und Uptime Kuma. Jedes Beispiel zeigt die benötigte Konfiguration, die Monitor-API-Endpunkte und den Authentifizierungsheader.",
+    "ogTitle": "Proxmox-Integrationen — Homepage, Home Assistant, Grafana, Prometheus",
+    "ogDescription": "Anleitungen zur Verbindung von ProxMenux Monitor mit Homepage, Home Assistant, Grafana, Prometheus und Uptime Kuma.",
+    "twitterTitle": "Proxmox Integrationen | ProxMenux Monitor",
+    "twitterDescription": "Rezepte für Homepage, Home Assistant, Grafana, Prometheus und Uptime Kuma."
+  },
+  "header": {
+    "title": "Integrationen",
+    "description": "Beispiele zum Kopieren für die Werkzeuge Ihres Homelabs: Homepage, Home Assistant, Grafana über Prometheus und Uptime Kuma. Jedes Beispiel zeigt die vom Zielwerkzeug erwartete Konfiguration, den verwendeten Monitor-Endpunkt und den nötigen Authentifizierungsheader.",
+    "section": "ProxMenux-Monitor"
+  },
+  "intro": {
+    "title": "Was Sie von dieser Seite aus erstellen können",
+    "body": "Kopieren Sie das jeweilige Beispiel in Ihr Werkzeug. Die Endpunkte sind in der <link>API-Referenz</link> beschrieben; diese Seite zeigt ihre Verwendung in Homepage, Home Assistant und Grafana. Die Screenshots zeigen die Ausgabe der Beispiele."
+  },
+  "auth": {
+    "heading": "Authentifizierung: Das Einzige, was jedes Rezept braucht",
+    "intro": "Die meisten von diesen Integrationen verwendeten Endpunkte werden authentifiziert. Sie haben zwei Möglichkeiten, diese Anforderung zu erfüllen.",
+    "optAtitle": "Option A — API-Token (für Integrationen empfohlen)",
+    "optAbody1": "Öffnen Sie <strong>Einstellungen → Sicherheit → API-Token</strong>. Wählen Sie <em>Token erzeugen</em>, vergeben Sie einen Namen wie <em>homepage</em>, <em>home-assistant</em> oder <em>prometheus</em> und kopieren Sie das Token: Es erscheint <em>nur einmal</em>. Es läuft standardmäßig nach einem Jahr ab und ist einzeln widerrufbar. Nutzen Sie es für Clients außerhalb des Browsers.",
+    "optAbody2": "Ab diesem Zeitpunkt ist jede Anfrage nur noch:",
+    "optBtitle": "Option B — Login-Flow (Benutzername + Passwort)",
+    "optBbody": "Nützlich für Skripte, die sich als menschlicher Benutzer authentifizieren. Das zurückgegebene Token ist kurzlebig; die meisten Integrationen sollten Option A bevorzugen.",
+    "outro": "Das TOTP-Feld ist nur bei aktivierter Zwei-Faktor-Authentifizierung nötig. Tokenwechsel, Widerruf, Passwortrichtlinien und Prüfprotokoll sind unter <link>Zugriff und Authentifizierung</link> beschrieben.",
+    "httpsTitle": "Verwendung von HTTPS anstelle von HTTP",
+    "httpsIntro": "Jedes Rezept unten verwendet <code>http://</code> in den URLs, um die Beispiele kurz zu halten. Wenn Sie TLS auf dem Monitor aktiviert haben (<strong>Settings → Security → SSL/HTTPS</strong>), tauschen Sie <code>http://</code> in jeder URL gegen <code>https://</code> aus – das ist die einzige Änderung. Zwei spezielle Anmerkungen zu bestimmten Werkzeugen:",
+    "httpsItems": [
+      "<strong>Selbstsignierte Zertifikate.</strong> Die Home-Assistant-Integration <code>rest:</code> prüft TLS standardmäßig. Für ein selbstsigniertes Monitor-Zertifikat setzen Sie <code>verify_ssl: false</code> in jeden REST-Block neben <code>scan_interval:</code> oder nehmen die Monitor-CA in den Vertrauensspeicher auf. Entsprechendes gilt für andere Werkzeuge mit Zertifikatsprüfung.",
+      "<strong>Prometheus</strong> enthält unten bereits <code>scheme: https</code>. Aktivieren oder behalten Sie <code>https</code>, wenn TLS im Monitor aktiv ist."
+    ]
+  },
+  "homepage": {
+    "heading": "Homepage",
+    "headingHref": "https://gethomepage.dev",
+    "intro": "Homepage ist ein vollständig statisches, anpassbares Anwendungs-Dashboard. ProxMenux Monitor wird über das eingebaute <code>customapi</code>-Widget angeschlossen - fügen Sie einen Diensteintrag in <code>services.yaml</code> ein, starten Sie die Homepage neu und die Karte erscheint mit Live-Nummern.",
+    "iconCalloutTitle": "Das offizielle ProxMenux-Logo ist auf dashboardicons.com",
+    "iconCalloutBody": "Die Beispiele nutzen <code>icon: proxmenux.png</code>. Homepage sucht einfache Dateinamen automatisch bei <a1>dashboardicons.com</a1>, einer Symbolsammlung für selbst gehostete Dashboards. Der ProxMenux-Eintrag steht unter <a2>dashboardicons.com/icons/external/proxmenux</a2> und wird beim ersten Anzeigen geladen. Dasselbe funktioniert für Tausende anderer Werkzeuge wie Telegram, Discord, Grafana oder Tailscale: <code>icon: &lt;name&gt;.png</code> genügt im Diensteintrag.",
+    "imageAlt": "Homepage Dashboard mit drei ProxMenux Monitor Karten (EDGE, VOID, DREAM) mit Uptime, CPU, RAM und Temperatur für jeden Proxmox Host",
+    "imageCaption": "Drei ProxMenux Monitor-Instanzen, die als Homepage-Karten gerendert wurden – Uptime, CPU, RAM und CPU Temperatur live von <code>/api/system</code> auf jedem Host alle 10 s gelesen.",
+    "basicTitle": "Grundlegendes Widget — keine Authentifizierung",
+    "basicIntro": "Verwenden Sie dies, wenn sich ProxMenux Monitor in einem vertrauenswürdigen Netzwerk befindet und Sie die Authentifizierung auf der Monitorseite noch nicht aktiviert haben. Der einfachste mögliche <code>services.yaml</code>-Eintrag:",
+    "authedTitle": "Authentifiziertes Widget",
+    "authedIntro": "Generieren Sie ein API-Token in <strong>Settings → Security → API Tokens</strong> auf dem Monitor, kopieren Sie es und fügen Sie es in den <code>Authorization</code>-Header unten ein - ersetzen Sie das Beispiel-Token, das nach <code>Bearer</code> angezeigt wird, durch das, das Sie gerade kopiert haben:",
+    "authedOutro": "Starten Sie die Homepage neu und die Karte leuchtet mit Live-Werten auf. Verwenden Sie das gleiche Token für alle Homepage-Widgets, die auf denselben ProxMenux Monitor-Host zeigen.",
+    "multiTitle": "Einrichtung von Multiwidgets — System, Speicher, Netzwerk",
+    "multiIntro": "Für mehr Details nutzen Sie drei Karten mit unterschiedlichen Endpunkten: Systemmetriken, Datenspeicher und Netzwerk. Für dieselbe Monitor-Instanz verwenden alle dasselbe Token.",
+    "multiCalloutTitle": "Mehrere Proxmox Hosts",
+    "multiCalloutBody": "Wiederholen Sie den Block je Host für die gezeigten Karten. Jeder Eintrag nutzt <code>http://&lt;host&gt;:8008</code> seiner Monitor-Instanz. Erzeugen und speichern Sie ein Token je Host: Getrennte Installationen besitzen eigene Signierschlüssel, daher gilt ein fremdes Token nicht automatisch."
+  },
+  "homeAssistant": {
+    "heading": "Home Assistant",
+    "headingHref": "https://www.home-assistant.io",
+    "intro": "Die Beispiele nutzen Home Assistants integrierte <code>rest</code>-Integration; eine eigene HACS-Komponente ist nicht nötig. Sie liest Monitor-Endpunkte aus der <link>API-Referenz</link> und erzeugt Sensoren und Attribute für Automatisierungen. Die Konfiguration liefert ungefähr 25 Sensoren für Ressourcen, Zustand, VMs/CTs, Datenspeicher, Netzwerk und Updates. Fügen Sie sie in <code>configuration.yaml</code> ein und laden oder starten Sie HA neu.",
+    "imageAlt": "Home-Assistant-Übersicht mit ProxMenux-Entitäten: Zustandsanzeige, CPU-/RAM-/Temperaturanzeigen, VM-Anzahl, Datenspeicherbelegung und aktive Fehler",
+    "imageCaption": "ProxMenux Monitor als erstklassige Home Assistant-Integration - Sensoren, die aus dem untenstehenden YAML-Rezept aufgebaut sind.",
+    "step1Title": "1 · Speichern Sie den API-Token",
+    "step1Body": "Speichern Sie das Token getrennt von der Hauptkonfiguration in <code>secrets.yaml</code>. Bearer-Präfix und Token stehen in einem Wert, der als Header referenziert wird. Die Datei ist nicht verschlüsselt und muss ebenfalls privat bleiben. Ihr Ort hängt von der Installation ab, meist <code>/config/secrets.yaml</code> unter HA OS oder Container.",
+    "step2Title": "2 · REST-Konfiguration einfügen",
+    "step2Body": "Sechs REST-Blöcke decken die Hauptbereiche ab. Ihr <code>scan_interval</code> passt zur Änderungsrate: Systemressourcen alle 30 s, Zustand alle 60 s, langsam veränderliche Bestände alle 5–10 Minuten. In <code>configuration.yaml</code> einfügen:",
+    "step3Title": "3 · Hinzufügen von binären Sensoren und Vorlagenhelfern",
+    "step3Body": "Zwei binäre Sensoren und zwei Vorlagensensoren ergänzen die Integration. Damit werden Automatisierungen und bedingte Lovelace-Karten übersichtlicher, ohne überall Jinja-Ausdrücke zu wiederholen.",
+    "step4Title": "4 · Neu laden und prüfen",
+    "step4Body": "Prüfen Sie zuerst die Syntax unter <em>Entwicklerwerkzeuge → YAML → Konfiguration prüfen</em>. Laden Sie dann <em>Gesamte YAML-Konfiguration</em> neu oder starten Sie HA neu. Filtern Sie unter <em>Einstellungen → Geräte & Dienste → Entitäten</em> nach <em>proxmenux</em>. Die ungefähr 25 Entitäten sollten sich innerhalb eines Abfrageintervalls füllen.",
+    "replaceTitle": "Ersetzen einer früheren Version dieses Rezepts?",
+    "replaceBody": "Falls Sie eine ältere Version dieser YAML-Blöcke verwendet haben, kann die Entitätsregistrierung von Home Assistant noch alte Entitäts-IDs enthalten. Veraltete Entitäten erscheinen dann weiterhin; Lovelace-Karten melden beispielsweise <em>Entität nicht gefunden</em>. Bereinigen Sie die Konfiguration in zwei Schritten: Entfernen Sie zunächst die bisherigen Blöcke <code>rest:</code> und <code>template:</code> aus <code>configuration.yaml</code> und laden Sie die Konfiguration neu. Filtern Sie anschließend unter <em>Einstellungen → Geräte & Dienste → Entitäten</em> nach <em>proxmenux</em> und entfernen Sie Einträge, die als „Wiederhergestellt“ oder nicht verfügbar angezeigt werden. Fügen Sie danach das aktuelle YAML ein und laden Sie die Konfiguration erneut. Die neuen Entitäten werden dann ohne die alten Einträge registriert.",
+    "step5Title": "5 · Lovelace-Dashboard",
+    "step5Body": "Das YAML bildet eine <strong>vertical-stack</strong>-Karte mit Logo, Kennzahlen, System, VMs, Datenspeicher, Netzwerk und einer bedingten Problemkarte. Öffnen Sie Ihr Dashboard, wählen Sie den Stift, dann <em>Karte hinzufügen</em> und unten <em>Manuell</em>. Fügen Sie Folgendes ein:",
+    "viewTipTitle": "Möchten Sie es als vollständige Dashboard-Ansicht anstelle einer einzelnen Karte?",
+    "viewTipBody": "Öffnen Sie das Dreipunktmenü → <em>Rohkonfigurationseditor</em> und ergänzen Sie eine Ansicht mit diesem Kopf über der <code>cards:</code>-Liste:",
+    "viewTipOutro": "Das gibt Ihnen eine dedizierte Registerkarte / Ansicht in Ihrem Dashboard mit einem eigenen Symbol und Titel anstelle einer langen Karte in einer vorhandenen Ansicht.",
+    "altViewTitle": "Alternative — eine dedizierte Dashboard-Ansicht",
+    "altViewIntro": "Für eine eigene Registerkarte innerhalb eines bestehenden Dashboards fügen Sie eine Ansicht mit dem folgenden YAML hinzu. Eine Ansicht ist ein Dashboard-Tab und kein neuer Eintrag in der Seitenleiste. Schritte:",
+    "altViewSteps": [
+      "Öffnen Sie das Dashboard, wo Sie den neuen Tab möchten.",
+      "Klicken Sie oben rechts auf den Bleistift (Dashboard bearbeiten).",
+      "Klicken Sie auf die Registerkarte <em>+</em> am Ende der vorhandenen Registerkarten, um eine neue Ansicht zu erstellen.",
+      "Wechseln Sie im Dialog oben rechts zu <em>Code-Editor</em>, um zwischen visueller Ansicht und YAML umzuschalten.",
+      "Fügen Sie die YAML unten ein.",
+      "Speichern Sie. Die Ansicht <em>ProxMenux Monitor</em> erscheint als Registerkarte im Dashboard mit ihren Karten."
+    ],
+    "twoEditorsTitle": "Zwei YAML-Editoren in HA - wählen Sie den richtigen",
+    "twoEditorsIntro": "Home Assistant hat zwei YAML-Editoren, die ähnlich aussehen, aber unterschiedliche Formate erwarten:",
+    "twoEditorsItems": [
+      "<strong>Editor für eine Ansicht</strong> — über <em>+</em> oder <em>Ansicht bearbeiten → Code-Editor</em>. Erwartet eine einzelne Ansicht mit <code>title:</code>, <code>path:</code> und <code>cards:</code> auf oberster Ebene, ohne führenden Bindestrich.",
+      "<strong>Rohkonfigurationseditor für das ganze Dashboard</strong> — über das Dreipunktmenü. Erwartet die vollständige <code>views:</code>-Liste mit jeder Ansicht als Listeneintrag, beginnend mit <code>-</code>."
+    ],
+    "twoEditorsOutro": "Das falsche Format kann eine <em>Unbenannte Ansicht</em> und <code>cards: []</code> erzeugen. Das folgende YAML ist für den Editor einer einzelnen Ansicht; kopieren Sie es unverändert.",
+    "viewImageAlt": "Eigene Home-Assistant-Ansicht für ProxMenux Monitor: picture-entity-Kopf, glance-Kennzahlen und Entitätskarten für System, VMs, Datenspeicher und Netzwerk in mehreren Spalten",
+    "viewImageCaption": "Die Ansicht <em>ProxMenux Monitor</em> auf einem breiten Bildschirm. Masonry ordnet Karten automatisch in Spalten an; das Layout hängt vom eingestellten Ansichtstyp ab.",
+    "twoColTipTitle": "Möchten Sie ein festes zweispaltiges Layout anstelle des Autolayouts?",
+    "twoColTipBody": "Ersetzen Sie ein Kartenpaar, etwa <em>System</em> + <em>VMs</em> oder <em>Datenspeicher</em> + <em>Netzwerk</em>, durch einen gemeinsamen <code>horizontal-stack</code>. So stehen die Karten unabhängig von der Bildschirmbreite nebeneinander:",
+    "twoColTipOutro": "Auf Mobilgeräten bleibt die Zeile zusammengedrückt. Das automatische HA-Layout ohne horizontal-stack passt sich schmalen Bildschirmen besser an.",
+    "step6Title": "6 · Automatisierungen",
+    "step6Body": "Drei Automatisierungen, die die häufigsten reaktiven Szenarien abdecken - ersetzen Sie <code>notify.mobile_app_&lt;your_phone&gt;</code> durch den von Ihnen verwendeten Benachrichtigungsdienst:",
+    "logoTitle": "Über das ProxMenux Logo",
+    "logoBody": "Die picture-entity-Karte lädt das offizielle Logo von <a1>dashboardicons.com</a1>, einer kostenlosen Symbolsammlung für selbst gehostete Dashboards. Der Eintrag steht unter <a2>dashboardicons.com/icons/external/proxmenux</a2>. Home Assistant lädt die SVG beim ersten Anzeigen per HTTPS und speichert sie im Cache.",
+    "logoBrokenTitle": "Wenn die Logokarte ein defektes Bild zeigt",
+    "logoBrokenIntro": "Einige HA-Installationen (Firewalled-Netzwerke, Inhaltsblocker, Hosts ohne öffentliches Internet) können jsdelivr.net zum Renderzeitpunkt nicht erreichen. Der Fix ist eine lokale Kopie:",
+    "logoBrokenSteps": [
+      "Laden Sie die SVG von <a>cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmenux.svg</a>.",
+      "Speichern Sie es in <code>/config/www/icons/proxmenux.svg</code> auf Ihrem HA-Host.",
+      "Ersetzen Sie im Lovelace YAML die <code>image:</code> URL durch <code>/local/icons/proxmenux.svg</code>. Speichern und neu laden - das Bild rendert aus der lokalen Datei, kein Internet erforderlich."
+    ],
+    "scanTipTitle": "scan_interval Faustregel",
+    "scanTipBody": "Für <code>/api/system</code> sind 30 s ein sinnvoller Startwert. <code>/api/health/full</code> liest normalerweise bis zu sechs Minuten gültige Hintergrunddaten; Abfragen alle 60 s umgehen diesen Cache nicht. Versuchen Sie fünf Minuten für <code>/api/storage/summary</code> und eine Stunde für <code>/api/proxmenux/update-status</code>. Passen Sie die Zeiten an Hardware und Hostanzahl an."
+  },
+  "grafana": {
+    "heading": "Prometheus + Grafana",
+    "promHref": "https://prometheus.io",
+    "grafanaHref": "https://grafana.com",
+    "intro": "ProxMenux Monitor stellt <code>GET /api/prometheus</code> im Prometheus-Textformat 0.0.4 bereit. Bei aktiver Authentifizierung ist ein Bearer-Token nötig. Lassen Sie Prometheus die Metriken sammeln und Grafana die Zeitreihendatenbank visualisieren.",
+    "imageAlt": "Grafana-Dashboard mit ProxMenux-Metriken: CPU-Anzeige, Arbeitsspeicherverlauf, Anzahl laufender VMs und Netzwerkdurchsatz",
+    "imageCaption": "Ein einfaches Grafana-Dashboard aus den von Prometheus gesammelten ProxMenux-Daten: CPU, Arbeitsspeicher, laufende VMs und Netzwerkdurchsatz. Den vollständigen Katalog finden Sie unter <link>API-Referenz → Prometheus-Metriken</link>.",
+    "step1Title": "1 · Fügen Sie den Scrape Job zu Prometheus hinzu",
+    "step1Body": "Geben Sie den API-Token über den nativen <code>authorization</code>-Block von Prometheus weiter (sauberer als benutzerdefinierte Header und funktioniert mit Secret Stores):",
+    "step1After": "Laden Sie Prometheus mit <code>kill -HUP &lt;PID&gt;</code> neu (PID durch seine Prozess-ID ersetzen), mit <code>systemctl reload prometheus</code>, sofern unterstützt, oder im Container mit <code>docker compose restart prometheus</code>. Unter <em>Status → Targets</em> sollte proxmenux innerhalb eines Intervalls UP zeigen. Das Label <code>node=\"&lt;hostname&gt;\"</code> unterscheidet Hosts.",
+    "tokenTipTitle": "Token in einer separaten Datei speichern",
+    "tokenTipBody": "Speichern Sie das Token im Produktivbetrieb getrennt von der Konfiguration. Mit <code>credentials_file: /etc/prometheus/secrets/proxmenux.token</code> liest Prometheus es aus einer Datei mit Berechtigung 0600.",
+    "step2Title": "2 · Überprüfen Sie den Scrape mit ein paar Abfragen",
+    "step2Body": "Prüfen Sie vor Grafana, ob Prometheus Daten enthält. Öffnen Sie <code>http://&lt;prometheus-host&gt;:9090</code>, wählen Sie <em>Query</em> und führen Sie eine der folgenden Abfragen aus. Sie sollten aktuelle Werte des Proxmox-Hosts erhalten:",
+    "headerQuery": "Abfrage",
+    "headerConfirms": "Was es bestätigt",
+    "verifyRows": [
+      {
+        "query": "up{job=\"proxmenux\"}",
+        "confirms": "Liefert <code>1</code>, wenn Prometheus erfolgreich Daten abruft, sonst <code>0</code>. Die schnellste erste Prüfung."
+      },
+      {
+        "query": "proxmox_cpu_usage",
+        "confirms": "Aktuelle CPU-Auslastung des Proxmox-Hosts in Prozent. Der Wert sollte sich bei Abfragen im Abstand einiger Sekunden ändern."
+      },
+      {
+        "query": "proxmox_vms_running",
+        "confirms": "Anzahl der laufenden Gäste. Vergleichen Sie mit dem, was Sie in der Proxmox UI sehen."
+      },
+      {
+        "query": "proxmox_uptime_seconds / 86400",
+        "confirms": "Host Uptime in Tagen. Sollte dem Wert entsprechen, den Sie in <code>uptime</code> auf der Proxmox-Shell sehen würden."
+      }
+    ],
+    "calloutTitle": "Die 401, die Sie beim Klicken auf die Endpunkt-URL sehen können, ist in Ordnung",
+    "calloutBody": "Bei aktiver Authentifizierung ruft der Browser über <em>Status → Targets</em> den Endpunkt <code>/api/prometheus</code> ohne Prometheus-Bearer-Header ab. Die Antwort kann <code>'{'\"error\":\"Authentication required\"'}'</code> enthalten. Prüfen Sie den tatsächlichen <em>State: UP</em>, um den erfolgreichen Abruf durch Prometheus zu bestätigen.",
+    "step3Title": "3 · Hinzufügen von Prometheus als Grafana-Datenquelle",
+    "step3Body": "Öffnen Sie in Grafana <em>Connections → Data sources → Add new → Prometheus</em>. Tragen Sie die Prometheus-URL ein, etwa <code>http://prometheus.lan:9090</code>, speichern und testen Sie. Eine vom Prometheus-Server verlangte Anmeldung wird hier separat eingerichtet. Das Monitor-Token gehört in den Prometheus-Abrufauftrag.",
+    "step4Title": "4 · Erstellen Sie Panels mit diesen PromQL-Abfragen",
+    "step4Body": "Ein Einstieg mit den typischen Kennzahlen eines Proxmox-Hosts:",
+    "headerPanel": "Panel-Idee",
+    "headerPromql": "PromQL-Abfrage",
+    "panelRows": [
+      {
+        "panel": "CPU-Auslastungsanzeige je Host",
+        "promql": "proxmox_cpu_usage"
+      },
+      {
+        "panel": "Speichernutzungsmessgerät pro Host",
+        "promql": "proxmox_memory_usage_percent"
+      },
+      {
+        "panel": "Genutzter und gesamter Arbeitsspeicher (Zeitreihen)",
+        "promql": "proxmox_memory_used_bytes / 1024 / 1024 / 1024"
+      },
+      {
+        "panel": "Laufende VMs / CTs pro Host",
+        "promql": "proxmox_vms_running"
+      },
+      {
+        "panel": "CPU-Temperatur",
+        "promql": "proxmox_cpu_temperature_celsius"
+      },
+      {
+        "panel": "Netzdurchsatz RX (Bytes/s)",
+        "promql": "rate(proxmox_interface_bytes_received_total[5m])"
+      },
+      {
+        "panel": "Netzdurchsatz TX (Bytes/s)",
+        "promql": "rate(proxmox_interface_bytes_sent_total[5m])"
+      },
+      {
+        "panel": "Lastmittelwert (1 m)",
+        "promql": "proxmox_load_average{period=\"1m\"}"
+      },
+      {
+        "panel": "Belegter Speicherplatz je Einhängepunkt in Prozent",
+        "promql": "proxmox_disk_usage_percent"
+      },
+      {
+        "panel": "UPS Batterieladung",
+        "promql": "proxmox_ups_battery_charge_percent"
+      },
+      {
+        "panel": "GPU Temperatur pro Slot",
+        "promql": "proxmox_gpu_temperature_celsius"
+      }
+    ],
+    "outro": "Fügen Sie jede Abfrage als Grafana-Panel hinzu, legen Sie die richtige Visualisierung fest (<em>Stat</em> für Messgeräte, <em>Time series</em> für Trends) und gruppieren Sie Panels in Zeilen nach Kategorie. Verwenden Sie das <code>node</code>-Label als Dashboard-Variable (<em>Settings → Variables → New → Query → label_values(proxmox_cpu_usage, node)</em>), um alle Panels nach Host zu filtern."
+  },
+  "uptimeKuma": {
+    "heading": "Uptime Kuma und andere Statuschecker",
+    "href": "https://github.com/louislam/uptime-kuma",
+    "intro": "Für Schlüsselwortprüfungen nutzen Sie <code>GET /api/system-info</code>. Diese Route verlangt kein Token und liefert Hostname, Laufzeit und Zustand als <code>healthy</code>, <code>warning</code> oder <code>critical</code>. Sie ist öffentlich, anders als die geschützten detaillierten Zustandsendpunkte.",
+    "kumaTitle": "Uptime Kuma — HTTP Keyword Monitor",
+    "kumaSteps": [
+      "Klicken Sie in Uptime Kuma auf <em>+ Neuen Monitor hinzufügen</em>.",
+      "Monitortyp: <em>HTTP(s) - Keyword</em>.",
+      "Freundlicher Name: <em>ProxMenux Monitor — pve01</em>.",
+      "URL: <code>http://pve01.lan:8008/api/system-info</code>.",
+      "Schlüsselwort: <code>healthy</code> (der Wert von <code>health.status</code>, wenn der Host in Ordnung ist).",
+      "Heartbeat Intervall: 60 Sekunden sind genug.",
+      "Speichern Sie. Die Route system-info benötigt keinen Bearer-Header."
+    ],
+    "healthchecksTitle": "healthchecks.io / Pings nach Cron-Zeitplan",
+    "healthchecksBody": "Ein Cronjob kann <code>/api/system-info</code> abfragen und <code>.health.status == \"healthy\"</code> prüfen. Erst nach erfolgreicher Prüfung sendet er einen Erfolgsping an seine Healthchecks.io-URL. Der Dienst empfängt Job-Pings und fragt den Monitor nicht selbst ab. HTTP 2xx allein beweist keinen gesunden Host.",
+    "richTitle": "Möchten Sie reichhaltige Gesundheitsdaten",
+    "richBody": "Für den vollständigen Zustand mit zehn Kategorien, aktiven und unterdrückten Fehlern nutzen Sie <code>GET /api/health/full</code>. Die Antwort enthält die Daten des Dashboard-Dialogs. Bei aktiver Authentifizierung ist ein Bearer-Token nötig."
+  },
+  "workflows": {
+    "heading": "n8n, Zapier und eigene Skripte",
+    "intro": "Workflow-Werkzeuge und Skripte können mit POST an <code>/api/notifications/send</code> Meldungen <em>senden</em>, etwa bei CI-Fehlern oder langen Cronjobs. Der direkte Versand umgeht Ereigniswarteschlange und Fingerprint-Sperrzeit. Kanalformatierung, optionale KI und Versand bleiben erhalten. Erforderliche Duplikatkontrolle übernimmt der Aufrufer.",
+    "n8nBody": "Nutzen Sie in n8n einen <em>HTTP Request</em>-Knoten mit POST, obiger URL und demselben JSON wie curl. Wählen Sie generische Header-Auth-Zugangsdaten mit <em>Authorization</em> und <code>Bearer YOUR_API_TOKEN</code>; ersetzen Sie den Platzhalter. Ein Zeitplan, Webhook oder vorheriger Knoten löst die Anfrage aus.",
+    "severityBody": "Schweregrade sind <code>INFO</code>, <code>WARNING</code> oder <code>CRITICAL</code> in Großbuchstaben. <code>data</code> liefert Kontext. Die KI nutzt gerenderten Titel und Text sowie unterstützte Ergänzungen; beliebige Felder erscheinen nicht garantiert in Prompt oder Ausgabe. Siehe <link>Benachrichtigungen → Ereigniskatalog</link>."
+  },
+  "pveWebhook": {
+    "heading": "Nativer Proxmox-VE-Webhook (eingehend)",
+    "intro1": "PVE erhielt sein Benachrichtigungssystem mit 8.1; native Webhook-Ziele erfordern Proxmox VE 8.3 oder neuer. <em>Benachrichtigungen aktivieren</em> in Einstellungen versucht, den Monitor als Ziel einzutragen. Dorthin geleitete PVE-Meldungen wie Sicherungs- oder Replikationsberichte gelangen in seinen Versandablauf. Die Einrichtung benötigt eine verfügbare, beschreibbare Konfiguration.",
+    "intro2": "Ablauf, PVE-Nachrichtenvorlage, Einträge in <code>/etc/pve/notifications.cfg</code> und Clusterverhalten beschreibt <link>Benachrichtigungen → PVE-Webhook-Integration</link>."
+  },
+  "whereNext": {
+    "heading": "Wohin als nächstes",
+    "items": [
+      {
+        "label": "API-Referenz",
+        "href": "/docs/monitor/api",
+        "tail": " — alle Endpunkte mit Methode, Pfad und vollständigem Prometheus-Metrikkatalog."
+      },
+      {
+        "label": "Benachrichtigungen",
+        "href": "/docs/monitor/notifications",
+        "tail": " — Ereignisquellen, Kanäle, Versandablauf und PVE-Webhook-Integration im Detail."
+      },
+      {
+        "label": "KI-Assistent",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": " — optionale Überarbeitung von Vorlagentexten in verständliche Sprache vor dem Versand an Telegram, Discord, E-Mail oder Gotify."
+      },
+      {
+        "label": "Zugriff und Authentifizierung",
+        "href": "/docs/monitor/access-auth",
+        "tail": " — Erzeugen und Widerrufen der API-Token für diese Beispiele, Prüfprotokoll und TLS-Konfiguration."
+      }
+    ]
+  }
+}

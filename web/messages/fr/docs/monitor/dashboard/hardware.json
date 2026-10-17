@@ -1,0 +1,248 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Tableau de bord : Matériel | Documentation ProxMenux",
+    "description": "L'onglet Matériel inventorie la machine physique : CPU, carte mère, modules mémoire, capteurs thermiques, GPU avec surveillance par emplacement et installation du pilote en un clic, accélérateurs Coral TPU, résumé du stockage avec vitesses de liaison, listes PCI et USB, consommation, alimentations, ventilateurs et état de l'onduleur."
+  },
+  "header": {
+    "title": "Tableau de bord : onglet matériel",
+    "description": "La machine physique en un seul écran — CPU et identité carte mère, chaque module de mémoire, capteurs thermiques dans tous les sous-systèmes, GPU avec utilisation en direct et un installateur de pilote intégré, Coral TPU, chaque PCI et périphérique USB avec son pilote de noyau, l'inventaire du disque complet avec des vitesses de liaison négociées, plus la puissance, le refroidissement et l'UPS.",
+    "section": "ProxMenux Monitor · Tableau de bord"
+  },
+  "intro": {
+    "title": "Construit à partir d'outils standard",
+    "body": "La plupart de cet onglet est analysé à partir de <code>lscpu</code>, <code>dmidecode</code>, <code>lspci</code>, <code>lsusb</code>, <code>lsblk</code>, <code>smartctl</code>, <code>nvme</code>, <code>sensors</code>, <code>nvidia-smi</code>, <code>intel_gpu_top</code>, <code>amdgpu_top</code>, <code>ipmitool</code> et <code>upsc</code>. Les sections ne rendent que lorsque l'outil concerné renvoie des données, de sorte qu'un hôte sans UPS n'affiche pas la carte UPS et qu'un hôte sans IPMI n'affiche pas de chiffres de puissance hors bande."
+  },
+  "thresholds": {
+    "title": "Couleurs et seuils appliqués ici",
+    "intro": "Chaque indicateur et mesure de température suit la même échelle : <green/> <strong>vert</strong> sous Avertissement, <amber/> <strong>ambre</strong> entre Avertissement et Critique, <red/> <strong>rouge</strong> à partir de Critique. Valeurs recommandées fournies avec ProxMenux :",
+    "items": [
+      "<strong>Température CPU</strong> — avertissement 80 °C, critique 90 °C.",
+      "<strong>Température du disque</strong> — HDD 60/65 °C · SSD 70/75 °C · NVMe 80/85 °C · SAS 55/65 °C (avertissement / critique)."
+    ],
+    "outro": "Les valeurs sont configurables par hôte. <link>Paramètres → Seuils du moniteur de santé</link> centralise leur réglage et explique comment les adapter."
+  },
+  "sections": {
+    "heading": "Sections",
+    "intro": "Les sections apparaissent dans cet ordre, de haut en bas. Certaines exigent le matériel ou l'outil correspondant et sont indiquées <em>(conditionnel)</em> ci-dessous.",
+    "systemInfoTitle": "Informations système",
+    "systemInfoIntro": "Deux blocs côte à côte, toujours présents:",
+    "systemInfoItems": [
+      "<strong>CPU</strong> — modèle, microarchitecture, sockets/cœurs/threads, fréquences de base et boost, capacités de virtualisation (VT-x / AMD-V) et topologie du cache.",
+      "<strong>Carte mère</strong> — fabricant, modèle, version et date du BIOS, UUID SMBIOS. Permet de trouver la bonne page de téléchargement du fabricant pour le firmware."
+    ],
+    "memoryTitle": "Modules de mémoire",
+    "memoryBody": "Une ligne par emplacement occupé selon <code>dmidecode</code> : étiquette, capacité du module, type (DDR4 / DDR5 / variantes ECC), vitesse configurée et nominale, fabricant, référence et numéro de série. Les emplacements vides sont grisés pour montrer les possibilités d'extension.",
+    "thermalTitle": "Surveillance thermique",
+    "thermalIntro": "Sept blocs alimentés par <code>lm-sensors</code>, <code>sysfs</code> et des collecteurs propres à chaque outil. Les capteurs hwmon de stockage sont associés au périphérique bloc physique, avec son modèle et son chemin <code>/dev/...</code>. Un bloc est masqué si sa catégorie ne contient aucun capteur.",
+    "thermalItems": [
+      "<strong>CPU</strong> — température du boîtier du processeur et de chaque cœur.",
+      "<strong>GPU</strong> — capteurs de GPU dédié via <code>nvidia-smi</code> / <code>amdgpu_top</code> et d'iGPU Intel. Inclut le point chaud et la température de jonction mémoire si le pilote les fournit.",
+      "<strong>NVME</strong> — température composite du contrôleur associée à son espace de noms NVMe exact.",
+      "<strong>HDD</strong> — <code>drivetemp</code> lectures pour les dispositifs de blocs rotatifs.",
+      "<strong>SSD</strong> — lectures <code>drivetemp</code> pour les dispositifs de blocs SATA/SAS non rotatifs.",
+      "<strong>PCI</strong> — capteurs qui se présentent comme des dispositifs fixés par PCI (HBA, cartes réseau avec capteurs internes).",
+      "<strong>OTHER</strong> — chipset, VRM, capteurs ambiants qui ne s'adaptent pas ailleurs."
+    ]
+  },
+  "graphics": {
+    "heading": "Cartes graphiques",
+    "intro": "Chaque contrôleur vidéo apparaît dans une carte avec fabricant, modèle, type (<em>Intégré</em> / <em>PCI</em> / BMC), adresse PCI (BDF), pilote noyau et modules. <strong>Changer de mode</strong> bascule entre partage LXC avec pilote natif et passthrough VM (<code>vfio-pci</code>). <link>Changer le mode GPU (VM ↔ LXC)</link> explique les effets sur l'hôte.",
+    "vfioImageAlt": "Section des cartes graphiques montrant un GPU intégré à Matrox G200EH lié à mgag200 (Ready pour LXC) et un NVIDIA Quadro P400 lié à vfio-pci (Ready pour VM passthrough)",
+    "vfioImageCaption": "Deux GPU détectés : la puce Matrox BMC est sur le pilote natif et prête pour LXC ; le NVIDIA Quadro P400 est lié à <code>vfio-pci</code>, prêt pour le passage VM.",
+    "lxcImageAlt": "Cartes graphiques : iGPU Intel UHD Graphics avec i915 et NVIDIA Quadro P1000 avec nvidia, toutes deux prêtes pour les conteneurs LXC",
+    "lxcImageCaption": "Même noeud après avoir retourné la carte NVIDIA au pilote natif — les deux GPU sont maintenant prêts pour les conteneurs LXC.",
+    "realtimeTitle": "Fenêtre de surveillance en temps réel",
+    "realtimeBody": "Un clic ouvre la surveillance du GPU par emplacement, avec une requête à l'outil du fabricant toutes les trois secondes. Elle affiche fabricant, type, emplacement PCI, pilote, modules noyau, utilisation des moteurs (Render/3D, Video, Blitter, VideoEnhance), fréquences graphique et mémoire, température, consommation si disponible, VRAM et processus actifs avec leur charge moteur. Données de <code>/api/gpu/&lt;slot&gt;/realtime</code>.",
+    "toolsIntro": "L'outil fournisseur utilisé par GPU:",
+    "headerVendor": "Fournisseur",
+    "headerTool": "Outil",
+    "headerProject": "Projet",
+    "tools": [
+      {
+        "vendor": "NVIDIA",
+        "tool": "nvidia-smi",
+        "projectLabel": "developer.nvidia.com",
+        "projectHref": "https://developer.nvidia.com/nvidia-system-management-interface"
+      },
+      {
+        "vendor": "Intel iGPU",
+        "tool": "intel_gpu_top (igt-gpu-tools)",
+        "projectLabel": "gitlab.freedesktop.org",
+        "projectHref": "https://gitlab.freedesktop.org/drm/igt-gpu-tools"
+      },
+      {
+        "vendor": "AMD",
+        "tool": "amdgpu_top",
+        "projectLabel": "github.com/Umio-Yasuno/amdgpu_top",
+        "projectHref": "https://github.com/Umio-Yasuno/amdgpu_top"
+      },
+      {
+        "vendor": "Matrox / ASPEED (BMC)",
+        "tool": "— (affichage uniquement)",
+        "projectLabel": "Détecté et étiqueté comme BMC; aucun bloc en temps réel."
+      }
+    ],
+    "nvidiaImageAlt": "Surveillance NVIDIA Quadro P1000 : fabricant NVIDIA, pilote nvidia chargé, fréquence graphique 1.26 GHz, mémoire 2.50 GHz, température 50 °C, moteurs à 0 %, aucun processus actif, mémoire totale 4096 MiB",
+    "nvidiaImageCaption": "NVIDIA Quadro P1000 avec pilote propriétaire : fréquences, température, barres d'utilisation des moteurs et processus actifs.",
+    "intelImageAlt": "Surveillance d'une iGPU Intel UHD Graphics avec i915 : consommation 11.31 W, charge vidéo 1 % et processus ffmpeg utilisant 8 MB",
+    "intelImageCaption": "Intel iGPU avec <code>i915</code> actif. La table Active Processes reprend un travail ffmpeg en utilisant le moteur vidéo.",
+    "amdImageAlt": "Surveillance du GPU intégré AMD Lucienne avec amdgpu : moteurs à 0 % et amdgpu_top comme processus actif",
+    "amdImageCaption": "iGPU AMD surveillée avec <code>amdgpu_top</code>. L'outil apparaît lui-même comme processus actif car il collecte les données en direct.",
+    "installTitle": "Installer le pilote NVIDIA depuis la fenêtre",
+    "installBody": "Avec <code>nouveau</code>/<code>nvidiafb</code> sans pilote propriétaire NVIDIA, les fréquences, la consommation et la charge par processus ne sont pas disponibles. La fenêtre propose <strong>Installer les pilotes NVIDIA</strong>, qui lance le script décrit dans <link>Installer les pilotes NVIDIA (hôte)</link>.",
+    "noDriverAlt": "Surveillance NVIDIA Quadro P620 avec nvidiafb et nouveau chargés, avertissement Surveillance étendue indisponible et bouton bleu Installer les pilotes NVIDIA",
+    "noDriverCaption": "Aucun pilote propriétaire installé : la fenêtre propose un installateur en un clic.",
+    "promptAlt": "Confirmation d'installation du pilote NVIDIA, avec GPU détectés, conteneurs LXC utilisant le passthrough NVIDIA et boutons Oui/Annuler",
+    "promptCaption": "Résumé avant installation : GPU détectés, conteneurs LXC avec passthrough NVIDIA et actions prévues. Aucune modification avant confirmation.",
+    "successAlt": "Sortie terminale montrant le pilote NVIDIA 580.105.08 installé avec succès et nvidia-smi signalant un Quadro P620",
+    "successCaption": "Installation réussie — le NVIDIA <code>.run</code> construit via DKMS, le service de persistance est en place, et <code>nvidia-smi</code> rapporte le GPU.",
+    "warningTitle": "Choisissez une version de pilote que votre GPU prend en charge",
+    "warningBody": "Les nouvelles branches NVIDIA abandonnent certaines anciennes familles GPU, comme Maxwell ou Kepler. Si <code>nvidia-smi</code> affiche <em>\"No devices were found\"</em> après l'installation ou si DKMS échoue, la branche peut être incompatible. Relancez avec une branche plus ancienne, comme legacy 470.x pour Kepler. Vérifiez la compatibilité sur la <a>page officielle de recherche des pilotes</a>.",
+    "whereGoIntro": "Où aller d'ici :",
+    "whereGoItems": [
+      "<link1>Installer les pilotes NVIDIA (hôte)</link1> — guide complet, matrice de compatibilité du noyau, correctif NVENC facultatif et propagation aux LXC.",
+      "<link2>Changer le mode GPU (VM ↔ LXC)</link2> — effets de la commande <em>Changer de mode</em> de la carte.",
+      "<link3>Ajouter un GPU à une VM (passthrough)</link3> et <link4>Ajouter un GPU à un LXC</link4> — première affectation d'un GPU non associé."
+    ]
+  },
+  "coral": {
+    "heading": "Accélérateurs Coral TPU / AI",
+    "subHeading": "(conditionnel)",
+    "intro": "Apparaît avec des appareils Google Coral ou d'autres accélérateurs IA connectés. La fenêtre affiche connexion (M.2 / mini-PCIe / USB), largeur PCIe, ID fabricant/produit, support logiciel (<code>apex</code> dans le noyau pour PCIe, <code>libedgetpu</code> en espace utilisateur pour USB), modules (<code>gasket</code> + <code>apex</code>), nœuds (<code>/dev/apex_*</code>), état du runtime Edge TPU, température en direct et seuils d'alerte du firmware.",
+    "imageAlt": "Coral Edge TPU détail modal : connexion PCIe / M.2, PCIe 5.0 lien GT/s x1, fournisseur 1ac1:089a, pilote noyau apex, gasket et apex modules chargés, /dev/apex_0 présents, Edge TPU Runtime non installé, température 53.5 °C avec seuils d'avertissement matériels",
+    "imageCaption": "M.2 Coral avec les modules du noyau hôte chargés, le nœud du périphérique activé et les avertissements de température du micrologiciel exposés. La ligne d'exécution devient verte une fois que le runtime Edge TPU correspondant est installé.",
+    "pathsIntro": "Deux chemins d'installation existent selon le facteur de forme :",
+    "pathsItems": [
+      "<strong>M.2 / Mini-PCIe</strong> — l'hôte a besoin des modules du noyau <code>gasket</code> + <code>apex</code> construits via DKMS afin que le noeud du périphérique <code>/dev/apex_0</code> apparaisse au démarrage.",
+      "<strong>USB Accélérateur</strong> — l'hôte n'a besoin que de l'espace utilisateur Edge TPU (<code>libedgetpu1-std</code>) du dépôt APT de Google."
+    ],
+    "outro": "<installLink>Installer Coral TPU sur l'hôte</installLink> détecte et gère les deux variantes. Contexte et runtime officiel sur <a>coral.ai/docs</a>. Ensuite, affectez l'appareil à un conteneur avec <lxcLink>Ajouter Coral TPU à un LXC</lxcLink>."
+  },
+  "storage": {
+    "heading": "Résumé du stockage",
+    "intro": "Tous les périphériques bloc connus du noyau, regroupés par type. Chaque disque montre son nom (<code>sda</code>, <code>nvme0n1</code>, <code>zram0</code>…), type (<em>SSD</em>, <em>HDD</em>, <em>NVMe SSD</em>), modèle et lien négocié. Un clic ouvre modèle, numéro de série, capacité, interface et vitesse de liaison actuelle et maximale.",
+    "imageAlt": "Résumé du stockage avec onze périphériques bloc (SSD SATA, HDD SATA, SSD NVMe et zram), modèles et liens négociés ; deux NVMe en 3.0 x4 avec vitesse actuelle surlignée",
+    "imageCaption": "Onze appareils sur ce nœud. Les liens SATA sont affichés sous la forme <em>SATA &lt;version&gt;, &lt;Gb/s&gt; (current: ...)</em> ; les NVMe sous la forme <em>&lt;PCIe gen&gt; x&lt;width&gt;</em>.",
+    "nvmeBody": "Pour chaque NVMe, la ligne compare le lien négocié au maximum pris en charge. S'ils diffèrent, par exemple un SSD Gen3 x4 à <strong>3.0 x1</strong> dans un emplacement câblé sur une voie, la valeur actuelle apparaît en ambre. Utile pour diagnostiquer un disque lent ou une réaffectation des voies après une mise à jour BIOS.",
+    "nvmeModalAlt": "NVMe drive detail modal pour nvme0n1: NVMe type SSD, 953.9 capacité GB, vitesse de liaison actuelle 3.0 x1 mis en évidence en ambre, vitesse de liaison maximale 3.0 x4, modèle WDC CL SN720, numéro de série, interface PCIe/NVMe",
+    "nvmeModalCaption": "Détails NVMe avec lien réduit : le disque prend en charge x4, mais l'emplacement est câblé en x1.",
+    "outro": "Données SMART, autotests, historique et rapport PDF sont dans <storageLink>Tableau de bord : Stockage</storageLink>. Les mêmes données alimentent <smartLink>Santé et tests SMART des disques</smartLink>. Un test long lancé par le script écrit le JSON affiché dans <em>Stockage → Historique</em>."
+  },
+  "pci": {
+    "heading": "Périphériques PCI",
+    "intro": "Appareils PCI identifiés par leur <strong>BDF PCI</strong> (Bus:Device.Function, par exemple <code>03:00.0</code>) et classe (<em>Contrôleur de stockage</em>, <em>Contrôleur USB</em>, <em>Carte graphique</em>, <em>Contrôleur réseau</em>, <em>Contrôleur audio</em>…). Chaque carte montre fabricant, nom et <strong>pilote noyau associé</strong>, utiles pour diagnostiquer passthrough, groupes IOMMU ou mauvais pilote.",
+    "imageAlt": "PCI Devices section énumérant quinze périphériques regroupés par classe: contrôleurs de stockage sur ahci/nvme, contrôleurs USB, cartes graphiques (un sur vfio-pci, un sur le pilote natif), contrôleurs réseau sur igb / tg3, un contrôleur audio à côté d'un GPU passé",
+    "imageCaption": "Quinze appareils sur ce nœud. Notez que le GPU et sa fonction audio associée sont liés au <code>vfio-pci</code> — c'est-à-dire une carte préparée pour la transmission du VM.",
+    "bdfTitle": "Lecture du BDF",
+    "bdfBody": "<code>03:00.0</code> signifie bus PCI <code>03</code>, périphérique <code>00</code>, fonction <code>0</code>. Les GPU dédiés utilisent généralement <code>.0</code> pour le GPU et <code>.1</code> pour l'audio HDMI. Les deux fonctions sont transmises ensemble à la VM ; <link>Changer le mode GPU</link> nettoie donc aussi les associations audio orphelines en quittant le mode VM."
+  },
+  "usb": {
+    "heading": "Périphériques USB",
+    "intro": "Appareils USB avec fabricant et produit, version USB, adresse <code>bus:device</code>, ID <code>vendor:product</code> et pilote noyau. Classement par rôle : <em>Communications</em> (adaptateurs Z-Wave / Zigbee), <em>Onduleur</em>, stockage ou HID. Les appareils sont ainsi identifiables sans comparer leurs ID.",
+    "imageAlt": "Appareils USB : Aeotec Z-Wave Z-Stick, coordinateur Zigbee ConBee II et onduleur Ellipse ECO, avec version USB, adresse, ID vendor:product et pilote associé",
+    "imageCaption": "Trois appareils USB – deux radios d'automation sur <code>usbfs</code> et un UPS sur <code>usbfs</code> (NUT lui parle par libusb)."
+  },
+  "power": {
+    "heading": "Consommation d'énergie",
+    "subHeading": "(conditionnel)",
+    "intro": "Apparaît si l'hôte fournit des mesures de puissance. Deux sources indépendantes sont affichées lorsqu'elles sont disponibles :",
+    "items": [
+      "<strong>Consommation totale ACPI / IPMI</strong> — puissance de tout le système mesurée par un capteur de carte mère ou le BMC. Courant sur les cartes serveur.",
+      "<strong>Puissance du processeur</strong> — compteurs Intel RAPL ou équivalent AMD. Distingue la consommation CPU du reste sur les cartes grand public sans mesure globale."
+    ],
+    "supplyImageAlt": "Consommation : 198 W au total via ACPI et deux alimentations à l'état OK, délivrant 185 W et 5 W",
+    "supplyImageCaption": "Carte serveur avec un capteur de puissance ACPI unique et deux PSU signalés par IPMI — le deuxième PSU est le redondant, au ralenti à 5 W.",
+    "cpuImageAlt": "Consommation sur une carte grand public : seulement 8.7 W de CPU via Intel RAPL",
+    "cpuImageCaption": "Carte grand public sans capteur global : seule la consommation CPU via RAPL est affichée."
+  },
+  "psu": {
+    "heading": "Alimentations",
+    "subHeading": "(conditionnel)",
+    "body": "Sur les machines serveur à double alimentation, IPMI montre présence (PSU 1 / PSU 2 / …), tension d'entrée, puissance de sortie et état OK/défaillant. À vérifier après une coupure électrique sur un nœud à alimentations redondantes."
+  },
+  "fans": {
+    "heading": "Ventilateurs système",
+    "subHeading": "(conditionnel)",
+    "body": "Vitesse de chaque ventilateur en tr/min avec mini-courbe si disponible. Sans mesures individuelles, une seule valeur de ventilateur du châssis est affichée."
+  },
+  "ups": {
+    "heading": "Statut UPS",
+    "subHeading": "(conditionnel)",
+    "body": "Apparaît avec un serveur NUT (Network UPS Tools) configuré et joignable. Affiche état (secteur / batterie / charge / batterie faible), niveau de batterie, autonomie estimée, taux de charge de l'onduleur, tension d'entrée, modèle et firmware. Les données alimentent aussi <em>Sécurité et certificats</em> du moniteur de santé : le passage sur batterie est immédiatement signalé."
+  },
+  "dataCollected": {
+    "heading": "Comment les données sont collectées",
+    "headerSection": "Section de l'onglet",
+    "headerEndpoint": "Point de terminaison",
+    "headerSource": "Source",
+    "rows": [
+      {
+        "section": "Inventaire statique (PCI, CPU, BIOS)",
+        "endpoint": "/api/hardware",
+        "source": "<code>lspci -vmm</code>, <code>/proc/cpuinfo</code>, <code>dmidecode</code>; mis en cache pendant toute la durée du processus."
+      },
+      {
+        "section": "Valeurs réelles du capteur",
+        "endpoint": "/api/hardware/live",
+        "source": "<code>sensors</code> (lm-sensors), <code>/sys/class/hwmon</code> et <code>/sys/block</code> identifient les périphériques de stockage. Les températures restent en direct ; seule la correspondance hwmon-appareil est mise en cache 60 secondes."
+      },
+      {
+        "section": "Historique de température CPU",
+        "endpoint": "/api/temperature/history",
+        "source": "Série temporelle enregistrée toutes les 60 secondes par le collecteur de température et stockée dans SQLite."
+      },
+      {
+        "section": "GPU métriques vivantes",
+        "endpoint": "/api/gpu/<slot>/realtime",
+        "source": "NVIDIA: <code>nvidia-smi --query-gpu=...</code>. Intel: <code>intel_gpu_top</code>. AMD: sysfs <code>/sys/class/drm/cardN</code>."
+      }
+    ],
+    "codeComment1": "# Comparer l'inventaire à la vue du système d'exploitation",
+    "codeComment2": "# Confirmer la carte GPU que le tableau de bord voit"
+  },
+  "whereNext": {
+    "heading": "Où aller ensuite",
+    "items": [
+      {
+        "label": "Installer les pilotes NVIDIA (host)",
+        "href": "/docs/hardware/nvidia-host",
+        "tail": " — script lancé par le bouton d'installation de la fenêtre GPU."
+      },
+      {
+        "label": "Changer le mode GPU (VM ↔ LXC)",
+        "href": "/docs/hardware/switch-gpu-mode",
+        "tail": " — effets sur l'hôte du changement de mode dans chaque carte GPU."
+      },
+      {
+        "label": "Installez Coral TPU sur l'hôte",
+        "href": "/docs/hardware/install-coral-tpu-host",
+        "tail": " — installation du module noyau et du runtime Coral."
+      },
+      {
+        "label": "Santé et test du disque SMART",
+        "href": "/docs/disk-manager/smart-disk-test",
+        "tail": " — script qui produit les données SMART affichées dans les détails du disque sous Stockage."
+      },
+      {
+        "label": "Tableau de bord : onglet de stockage",
+        "href": "/docs/monitor/dashboard/storage",
+        "tail": "— tableau complet des attributs SMART, historique d'auto-test et rapport PDF."
+      },
+      {
+        "label": "Moniteur de santé",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — catégorie CPU et température, qui utilise les mêmes capteurs."
+      },
+      {
+        "label": "Référence de l’API",
+        "href": "/docs/monitor/api",
+        "tail": " — points de terminaison matériel et GPU."
+      },
+      {
+        "label": "Index du tableau de bord",
+        "href": "/docs/monitor/dashboard",
+        "tail": "— les autres onglets."
+      }
+    ]
+  }
+}

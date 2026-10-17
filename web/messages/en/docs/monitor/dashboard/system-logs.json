@@ -48,7 +48,7 @@
       "<strong>Message</strong> — the full untruncated message in a monospace block, ready to copy."
     ],
     "maxLevelStoreTitle": "Journald MaxLevelStore",
-    "maxLevelStoreBody": "On a fresh Proxmox install, journald defaults to <code>MaxLevelStore=warning</code>, which silently drops info-level messages. The Monitor detects this on startup and adds a drop-in (<code>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</code>) raising the threshold to <code>info</code> so the Logs tab actually has something to show across all severities.",
+    "maxLevelStoreBody": "On a fresh Proxmox install, journald defaults to <code>MaxLevelStore=warning</code>, which silently drops info-level messages. The Monitor detects this on startup and adds a drop-in (<code>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</code>) raising the threshold to <code>info</code> so informational and more severe messages are stored. This does not include debug messages.",
     "backupsTitle": "Backups",
     "backupsBody": "Proxmox task history filtered to backup-related entries. One row per task (<code>vzdump</code>, PBS transfers, Garbage Collect, Verify) with the status (OK / WARNINGS / ERROR), guest involved, source storage, duration and the UPID. Click a row to load the full task log via <code>GET /api/task-log/&lt;upid&gt;</code> — the same data Proxmox exposes through <em>Datacenter → Tasks</em>, scoped to backups.",
     "notificationsTitle": "Notifications",
