@@ -10,7 +10,7 @@
   "header": {
     "title": "Glosario",
     "description": "Términos que aparecen a lo largo de la documentación de copia y restauración, con su definición.",
-    "section": "Backup & Restore"
+    "section": "Copias de seguridad y restauración"
   },
   "intro": {
     "body": "Los términos están agrupados por temas. Cada entrada incluye una definición breve."
@@ -23,43 +23,36 @@
         {
           "id": "passphrase-recuperacion",
           "term": "Passphrase de recuperación",
-          "also": "recovery passphrase",
           "def": "Contraseña de texto que elige el usuario para proteger el <a href=\"#sobre-recuperacion\">sobre de recuperación</a>. Se pide dos veces con validación de coincidencia y solo se usa para cifrar el sobre y para descifrarlo si algún día hay que recuperar la clave. <strong>No sirve para desbloquear la clave del keyfile</strong> ni se envía nunca a PBS. Nunca sale del host durante una copia normal."
         },
         {
           "id": "clave-cifrado",
           "term": "Clave de cifrado (keyfile)",
-          "also": "keyfile, PBS encryption key",
-          "def": "Fichero binario que Proxmox Backup Server utiliza para cifrar los <a href=\"#chunk\">chunks</a> de la copia antes de subirlos. Sin ese fichero, ninguna copia cifrada puede leerse. ProxMenux lo guarda en <code>/usr/local/share/proxmenux/pbs-key.conf</code> con permisos <code>600</code>. Es el activo que hay que proteger; el <a href=\"#sobre-recuperacion\">sobre de recuperación</a> existe precisamente para poder rescatar este fichero si se pierde."
+          "def": "Archivo de clave que proxmox-backup-client usa para cifrar los <a href=\"#chunk\">chunks</a> antes de subirlos a PBS. Sin la clave correspondiente no se leen los datos cifrados. ProxMenux lo guarda en <code>/usr/local/share/proxmenux/pbs-key.conf</code> con modo <code>600</code>. Protégelo: el <a href=\"#sobre-recuperacion\">sobre de recuperación</a> permite recuperarlo si se pierde."
         },
         {
           "id": "contrasena-keyfile",
           "term": "Contraseña de la clave (KDF passphrase)",
-          "also": "keyfile passphrase, scrypt passphrase",
           "def": "Contraseña opcional que puede llevar la propia clave, distinta de la <a href=\"#passphrase-recuperacion\">passphrase de recuperación</a>. Solo aparece si la clave se creó con <code>--kdf scrypt</code> (una clave importada de otro sitio, por ejemplo). Sin ella, la clave no se puede desbloquear en cada uso. ProxMenux la persiste cifrada en el host para que las copias programadas puedan ejecutarse sin diálogo interactivo."
         },
         {
           "id": "sobre-recuperacion",
           "term": "Sobre de recuperación",
-          "also": "recovery envelope, escrow blob, pbs-key.recovery.enc",
           "def": "La propia <a href=\"#clave-cifrado\">clave de cifrado</a> envuelta en una capa adicional: se cifra con la <a href=\"#passphrase-recuperacion\">passphrase de recuperación</a> mediante <a href=\"#aes-256-cbc\">AES-256-CBC</a> y <a href=\"#pbkdf2\">PBKDF2</a> antes de salir del host. Es lo que se sube a PBS en el grupo <code>-keyrecovery</code>. Sin la passphrase, el sobre es opaco: descargarlo desde PBS no revela la clave."
         },
         {
           "id": "cifrado-cliente",
           "term": "Cifrado del lado del cliente",
-          "also": "client-side encryption",
           "def": "Modelo en el que los datos se cifran en el host de origen antes de subirse. PBS solo recibe y almacena datos cifrados; ni siquiera un administrador de PBS con acceso al datastore puede leerlos sin la clave. ProxMenux se apoya en este modelo y añade el <a href=\"#sobre-recuperacion\">sobre de recuperación</a> encima."
         },
         {
           "id": "kdf-none",
           "term": "--kdf none",
-          "also": "clave sin contraseña",
           "def": "Opción de <code>proxmox-backup-client key create</code> que genera una clave sin contraseña asociada. La clave se puede usar directamente sin ningún diálogo, lo que es imprescindible para que los trabajos programados corran de forma desatendida. Es lo que ProxMenux usa por defecto al generar una clave nueva."
         },
         {
           "id": "kdf-scrypt",
           "term": "--kdf scrypt",
-          "also": "clave con contraseña",
           "def": "Opción de <code>proxmox-backup-client key create</code> que genera una clave protegida con una <a href=\"#contrasena-keyfile\">contraseña de la clave</a>. Cada vez que se usa la clave hay que desbloquearla con esa contraseña. ProxMenux acepta este tipo de claves al importarlas y guarda la contraseña cifrada para que las copias programadas puedan correr sin intervención."
         },
         {
@@ -112,11 +105,11 @@
         {
           "id": "repositorio-pbs",
           "term": "Repositorio PBS",
-          "def": "Combinación de servidor Proxmox Backup Server + <a href=\"#datastore\">datastore</a> + usuario al que se suben las copias. Se identifica con el formato <code>usuario@realm@host:datastore</code>. Un mismo servidor PBS puede alojar varios repositorios."
+          "def": "Combinación de servidor Proxmox Backup Server + <a href=\"#datastore\">datastore</a> + usuario al que se suben las copias. Se identifica con el formato <code>user@realm@host:datastore</code>. Un mismo servidor PBS puede alojar varios repositorios."
         },
         {
           "id": "datastore",
-          "term": "Datastore",
+          "term": "almacén de datos",
           "def": "Almacén concreto dentro de un servidor PBS donde se guardan las copias y sus chunks. Cada datastore vive sobre un sistema de ficheros del servidor PBS y tiene sus propios permisos y políticas."
         },
         {
@@ -136,7 +129,7 @@
         },
         {
           "id": "backup-id",
-          "term": "Backup ID",
+          "term": "ID del backup",
           "def": "Nombre del <a href=\"#grupo-copia\">grupo de copia</a>. ProxMenux propone por defecto <code>hostcfg-HOSTNAME</code> y permite editarlo antes de la subida; los caracteres no admitidos se limpian automáticamente."
         },
         {
@@ -152,8 +145,8 @@
       "entries": [
         {
           "id": "runner",
-          "term": "Runner",
-          "def": "Script <code>run_scheduled_backup.sh</code> que ejecuta una copia programada. Lee la configuración del trabajo, lanza el backend correspondiente (Local, PBS o Borg), aplica la retención al terminar y envía las notificaciones configuradas."
+          "term": "Ejecutor",
+          "def": "Script <code>run_scheduled_backup.sh</code> que ejecuta una copia programada. Lee la configuración del trabajo, lanza el backend correspondiente (Local, PBS o Borg), aplica la retención tras completarse con éxito y envía las notificaciones configuradas."
         },
         {
           "id": "trabajo-programado",
@@ -163,7 +156,7 @@
         {
           "id": "modo-adjunto",
           "term": "Modo adjunto (attach mode)",
-          "def": "Trabajo programado que no lleva horario propio; se dispara automáticamente cada vez que una tarea <code>vzdump</code> de PVE existente se ejecuta. Hereda el horario y la retención de esa tarea padre. Solo compatible con destinos Local y PBS."
+          "def": "Trabajo sin timer propio. Un hook job-end de <code>vzdump</code> lo ejecuta después de las copias de invitados cuando coincide el almacenamiento. El padre seleccionado aporta destino y retención inicial, pero el hook compara almacenamiento, no ID de tarea padre; otra tarea con el mismo destino también puede activarlo. Solo para Local y PBS."
         },
         {
           "id": "timer-systemd",
@@ -203,13 +196,12 @@
         },
         {
           "id": "compatibility-check",
-          "term": "Compatibility check",
+          "term": "Verificación de compatibilidad",
           "def": "Comparación entre el manifiesto del origen y el estado del destino que ProxMenux realiza al principio de la restauración. Decide qué partes se copian verbatim, cuáles necesitan hidratación y cuáles se recrean desde el instalador."
         },
         {
           "id": "equipo-recien-instalado",
           "term": "Equipo recién instalado",
-          "also": "fresh install",
           "def": "Host acabado de reinstalar desde cero, sin la <a href=\"#clave-cifrado\">clave de cifrado</a> local. Para restaurar copias cifradas hace falta primero recuperar la clave desde el <a href=\"#sobre-recuperacion\">sobre</a> almacenado en PBS, con la <a href=\"#passphrase-recuperacion\">passphrase de recuperación</a>."
         }
       ]
