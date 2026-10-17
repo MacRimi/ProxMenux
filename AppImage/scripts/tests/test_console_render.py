@@ -394,6 +394,36 @@ class ConsoleRenderTests(unittest.TestCase):
         self.assertEqual(len(edges), 1)
         self.assertIn("0.1c    5%", rows[13][:40])
 
+    def test_top_cpu_cores_and_percentages_align_for_wide_and_narrow_values(self):
+        self.vm["snapshot"]["resources"]["guests"] = [
+            {"type": "qemu", "vmid": 101, "name": "big", "node": "pve-01", "status": "running",
+             "cpu": 1.0, "maxcpu": 12, "mem": 0},
+            {"type": "lxc", "vmid": 102, "name": "small", "node": "pve-01", "status": "running",
+             "cpu": 0.1, "maxcpu": 12, "mem": 0},
+        ]
+        rows = lines(render(self.vm, 80, 24))
+        self.assertIn("12.0c", rows[11][:40])
+        self.assertIn("1.2c", rows[12][:40])
+        edges = {rows[y][:40].index("%") for y in (11, 12)}
+        self.assertEqual(len(edges), 1)
+
+    def test_standalone_strip_keeps_standalone_layout_when_resources_are_stale(self):
+        self.vm["snapshot"]["cluster"]["is_cluster"] = False
+        self.vm["snapshot"]["resources"]["status"] = "stale"
+        rows = lines(render(self.vm, 80, 24))
+        self.assertNotIn("CLUSTER", rows[6])
+        self.assertIn("DISK", rows[6])
+        self.assertIn("STANDALONE", rows[6])
+
+    def test_footer_names_the_other_view_in_each_view(self):
+        self.vm["selected_view"] = "cluster"
+        footer = lines(render(self.vm, 80, 24))[-1]
+        self.assertIn("Tab node", footer)
+        self.assertNotIn("Tab cluster", footer)
+        self.vm["selected_view"] = "node"
+        footer = lines(render(self.vm, 80, 24))[-1]
+        self.assertIn("Tab cluster", footer)
+
 
 if __name__ == "__main__":
     unittest.main()

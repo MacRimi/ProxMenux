@@ -318,7 +318,7 @@ def _coverage(snapshot):
 
 def _footer(grid, vm, state, cluster_view):
     label = lambda key: _label(vm, key, grid.glyphs)
-    parts = [label("footer.quit"), label("footer.switch")]
+    parts = [label("footer.quit"), label("footer.switchNode" if cluster_view else "footer.switch")]
     if cluster_view:
         parts.append(label("footer.sort"))
     parts.extend((label("footer.refresh"), label("footer.glyphs")))
@@ -398,7 +398,7 @@ def _strip(grid, vm, y, rows, state):
     local = vm.get("local") or {}
     snapshot = vm.get("snapshot") or {}
     cluster = snapshot.get("cluster") or {}
-    standalone = not cluster.get("is_cluster", True) and state == "ok"
+    standalone = not cluster.get("is_cluster", True)
     net_width = 23 if grid.width == 80 else round(grid.width * .28)
     disk_width = (grid.width - net_width if standalone else 28) if grid.width == 80 else round(grid.width * (.72 if standalone else .34))
     cluster_x = net_width + disk_width
