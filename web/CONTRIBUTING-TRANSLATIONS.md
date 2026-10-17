@@ -5,7 +5,12 @@ serves every published page under locale-prefixed URLs:
 
 - `/en/<path>` — English, the source of truth
 - `/es/<path>` — Spanish
+- `/de/<path>` — German
+- `/fr/<path>` — French
+- `/it/<path>` — Italian
+- `/pt/<path>` — Portuguese
 - `/sk/<path>` — Slovak, with English fallback where needed
+- `/sv/<path>` — Swedish
 
 We use [`next-intl`](https://next-intl.dev) for the i18n plumbing. Anyone
 can translate the docs without writing TypeScript: most of the work is
@@ -147,6 +152,18 @@ Example:
 ```
 
 ### 4. Test locally
+
+From the repository root, check the available catalogs without using a
+translation provider:
+
+```bash
+python3 .github/scripts/check_web_docs_catalogs.py
+```
+
+For a full locale-completion change, add `--require-complete` to also require
+every English file and leaf. This validates schema, placeholders, rich-text
+tags, literal code and rendering metadata; it does not replace linguistic
+review. Partial translations can continue to use the English fallback.
 
 ```bash
 cd web

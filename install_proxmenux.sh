@@ -21,7 +21,7 @@
 #     • whiptail (interactive terminal menus)
 #     • curl (downloads and connectivity checks)
 #     • jq (JSON parsing)
-#     • Python 3 + venv (for translation support)
+# - Installs pre-generated JSON language catalogs (no translation runtime).
 # - Creates the ProxMenux base directories and configuration files:
 #     • $BASE_DIR/config.json
 #     • $BASE_DIR/cache.json
@@ -396,7 +396,8 @@ select_language() {
         "de" "German" \
         "it" "Italian" \
         "pt" "Portuguese" \
-        "sk" "Slovenčina" 3>&1 1>&2 2>&3)
+        "sk" "Slovenčina" \
+        "sv" "Svenska" 3>&1 1>&2 2>&3)
     
     if [ -z "$LANGUAGE" ]; then
         msg_error "No language selected. Exiting."
