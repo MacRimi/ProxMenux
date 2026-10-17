@@ -1,12 +1,12 @@
 {
   "meta": {
-    "title": "Post-instalación: Rendimiento | ProxMenux Documentation",
-    "description": "Opciones de rendimiento en el script post-instalación Customizable de ProxMenux. Sustituye gzip de un solo hilo por pigz (gzip paralelo) para backups y compresión más rápidos en hosts multinúcleo."
+    "title": "Post-instalación: Rendimiento | Documentación de ProxMenux",
+    "description": "Opciones de rendimiento en el script post-instalación Personalizable de ProxMenux. Sustituye gzip de un solo hilo por pigz (gzip paralelo) para copias de seguridad y compresión más rápidas en hosts multinúcleo."
   },
   "header": {
     "title": "Post-instalación: Rendimiento",
-    "description": "Opciones de rendimiento dentro del script post-instalación Customizable. Por ahora esta categoría contiene una sola optimización: sustituir gzip por pigz para que los backups y la compresión usen todos los núcleos de la CPU en lugar de uno.",
-    "section": "Settings post-install Proxmox"
+    "description": "Opciones de rendimiento del script post-instalación Personalizable. Esta categoría contiene una sola optimización: sustituir gzip por pigz para que las copias de seguridad y la compresión usen todos los núcleos de la CPU en lugar de uno.",
+    "section": "Configuración post instalación de Proxmox"
   },
   "intro": {
     "title": "Qué cubre esta categoría",
@@ -16,7 +16,7 @@
     "heading": "Usar pigz para compresión gzip más rápida",
     "intro": "El <code>gzip</code> estándar comprime datos usando <strong>un solo núcleo de CPU</strong>. En hosts Proxmox modernos con 8, 16 o 32 núcleos, eso es un cuello de botella enorme durante backups <code>vzdump</code> de VM/CT, rotación de logs y cualquier otra cosa que pase por <code>gzip</code>. <a>pigz</a> es un reemplazo paralelo drop-in: misma salida compatible con gzip, pero reparte el trabajo entre todos los núcleos.",
     "doesTitle": "Qué hace ProxMenux",
-    "doesIntro": "Cuatro pasos, todos idempotentes:",
+    "doesIntro": "Cinco pasos, todos idempotentes:",
     "doesItems": [
       "Establece <code>pigz: 1</code> en <code>/etc/vzdump.conf</code> para que la herramienta de backup de Proxmox use pigz de forma nativa.",
       "Instala el paquete apt <code>pigz</code> si no está presente.",
@@ -26,8 +26,8 @@
     ],
     "replacesTitle": "Esto sustituye un binario del sistema",
     "replacesBody": "Colocar un wrapper en el lugar de <code>gzip</code> es inusual. Es seguro (el wrapper produce salida compatible con gzip), pero conviene saberlo: scripts que tengan paths hardcodeados, que se ejecuten dentro de chroots restrictivos o que verifiquen hashes de binarios pueden comportarse de forma distinta. El binario real se conserva como <code>gzip.distrib</code> y, al ser una desviación de dpkg, una actualización del paquete <code>gzip</code> — o la actualización de Proxmox VE 8 a 9 — actualiza ese fichero y deja el wrapper en su sitio.",
-    "revertTitle": "Reversible desde el menú Uninstall",
-    "revertBody": "Esta optimización está registrada. <link>Uninstall Optimizations</link> copia el binario real desde <code>gzip.distrib</code> sobre el wrapper, elimina la desviación y el <code>pigzwrapper</code>, comenta la línea <code>pigz</code> de <code>/etc/vzdump.conf</code> y ejecuta <code>apt purge pigz</code> una vez verificado que gzip funciona. Equivalente manual en Proxmox VE 9:",
+    "revertTitle": "Reversible desde el menú Desinstalar",
+    "revertBody": "Esta optimización está registrada. <link>Desinstalar optimizaciones</link> copia el binario real desde <code>gzip.distrib</code> sobre el wrapper, elimina la desviación y el <code>pigzwrapper</code>, comenta la línea <code>pigz</code> de <code>/etc/vzdump.conf</code> y ejecuta <code>apt purge pigz</code> tras verificar que gzip funciona. Equivalente manual en Proxmox VE 9:",
     "verifyTitle": "Verificación",
     "verifyBody": "Tras aplicar, <code>gzip --version</code> debería mencionar pigz. Un benchmark rápido también muestra la diferencia de velocidad en un host multinúcleo:",
     "whenTitle": "Cuándo importa más",
@@ -52,7 +52,7 @@
         "tail": " — tuning de descriptores de fichero y de memoria."
       },
       {
-        "label": "Customizable Post-Install",
+        "label": "Post-instalación personalizable",
         "href": "/docs/post-install/customizable",
         "tail": " — volver al menú padre."
       }

@@ -28,9 +28,9 @@
   },
   "logrotate": {
     "heading": "Optimize logrotate",
-    "intro": "Rewrites <code>/etc/logrotate.conf</code> with a tighter policy suitable for a host that's also part of an SSD-protecting Log2RAM setup: daily rotation, 7-day retention, 10 MB size trigger, compression, and <code>copytruncate</code> so active services keep writing without reopening their log files. Original <code>logrotate.conf</code> is backed up to <code>.bak</code> on first apply.",
+    "intro": "Rewrites <code>/etc/logrotate.conf</code> with global daily and size settings, 7 retained rotations, compression and <code>copytruncate</code>, so active services can keep writing without reopening their log files. The size setting follows daily and takes precedence unless a per-log rule overrides it. Original <code>logrotate.conf</code> is backed up to <code>.bak</code> on first apply.",
     "tipTitle": "Log2RAM-friendly",
-    "tipBody": "The <code>size 10M</code> trigger means logs rotate on size <em>or</em> daily, whichever comes first. Combined with Log2RAM's RAM-backed <code>/var/log</code>, this keeps the working set small so flushes to disk stay cheap."
+    "tipBody": "The <code>size 10M</code> directive takes precedence over the earlier daily setting; it does <em>not</em> mean whichever comes first. Logrotate checks the threshold when it runs, and per-log rules may override the global settings. With Log2RAM’s RAM-backed <code>/var/log</code>, review both the rules and the timer frequency to control disk usage."
   },
   "limits": {
     "heading": "Increase various system limits",
@@ -72,7 +72,7 @@
       }
     ],
     "tipTitle": "Why inotify matters",
-    "tipBody": "Applications like Docker, Syncthing, Node.js watchers, Plex's library scanner and many more hit <code>max_user_watches</code> quickly. Default on Debian is 8192 — a single running Plex can exhaust it. 1M is generous and costs ~1 KB of RAM per watch, which is negligible."
+    "tipBody": "Docker, Syncthing, Node.js file watchers and Plex library scans can exhaust <code>max_user_watches</code>. The default depends on the kernel and host memory; it is not always 8192. Raising the limit to 1M allows more watches, but does not preallocate them. Active watches consume kernel memory, so monitor actual usage on memory-constrained hosts."
   },
   "memory": {
     "heading": "Optimize memory settings",
@@ -102,8 +102,8 @@
   "verify": {
     "heading": "Verification",
     "intro": "After applying the System optimizations:",
-    "tipTitle": "Fully reversible",
-    "tipBody": "All six options are tracked in <code>installed_tools.json</code>, so they appear in <link>Uninstall Optimizations</link> if you want to back any of them out. Reverts restore the sysctl files' defaults, drop the systemd unit and alias for kexec, and reset journald/logrotate to stock Debian configs."
+    "tipTitle": "Restoration and limitations",
+    "tipBody": "All six options are tracked in <code>installed_tools.json</code> and offered in <link>Uninstall Optimizations</link>. Restoration removes configuration files, the kexec unit and alias, and restores journald/logrotate configuration. Some live limits need a new session or reboot. The system-limits cleanup removes the legacy ulimit -n 256000 line from /root/.profile; the current ulimit -n 1048576 line can remain and may need manual removal."
   },
   "related": {
     "heading": "Related",

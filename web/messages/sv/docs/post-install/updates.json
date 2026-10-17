@@ -1,0 +1,112 @@
+{
+  "meta": {
+    "title": "Tillämpa tillgängliga uppdateringar — Optimeringar efter installation | ProxMenux-dokumentation",
+    "description": "Hur ProxMenux upptäcker nya versioner av optimeringar efter installationen (Log2Ram, minnesinställningar, systemgränser, Logrotate, nätverk …) och hur du tillämpar dem via efterinstallationsmenyn eller Monitors instrumentpanel."
+  },
+  "header": {
+    "title": "Tillämpa tillgängliga uppdateringar",
+    "description": "När en optimering efter installationen (Log2Ram, minnesinställningar, systemgränser, Logrotate …) har en nyare version på disk än den registrerade visar ProxMenux den som en tillgänglig uppdatering. Du kan tillämpa den via skriptens efterinstallationsmeny eller Monitors instrumentpanel. Båda kör samma funktion igen och uppdaterar registret.",
+    "section": "Inställningar efter installation av Proxmox"
+  },
+  "intro": {
+    "title": "Vad detta är",
+    "body": "ProxMenux optimeringar efter installationen har versionsnummer, till exempel <code>Log2ram SSD Protection v1.2</code>. Värden registrerar aktiva optimeringar och deras versioner i <code>/usr/local/share/proxmenux/installed_tools.json</code>. När en ny ProxMenux-version levererar en uppdaterad optimering upptäcks skillnaden och bara den erbjuds för ny tillämpning utan att köra hela efterinstallationen."
+  },
+  "why": {
+    "heading": "Varför detta existerar",
+    "body": "Optimeringar efter installationen förbättras ibland med bättre sysctl-inställningar, striktare Logrotate-gränser, nya storleksregler för Log2RAM eller korrigeringar av specialfall. Utan uppdateringsvägen behövde administratören köra hela skriptet med <em>alla</em> optimeringar igen eller avstå förbättringen. Tillämpa tillgängliga uppdateringar låter dig välja omkörning för endast de optimeringar vars version har ändrats."
+  },
+  "detection": {
+    "heading": "Hur uppdateringar upptäcks",
+    "steps": [
+      {
+        "title": "Versionerade skript på disk",
+        "body": "Varje post-install-funktion förklarar sin version i skriptet (<code>scripts/post_install/auto_post_install.sh</code> och <code>scripts/post_install/customizable_post_install.sh</code>). En scanner extraherar dessa versioner från källan på disken."
+      },
+      {
+        "title": "Versionsregister på värden",
+        "body": "När administratören tillämpade varje optimering skrev motsvarande <code>register_tool</code>-anrop den aktiva versionen till <code>/usr/local/share/proxmenux/installed_tools.json</code>. Filen är den auktoritativa uppgiften om vad som är aktivt på värden just nu."
+      },
+      {
+        "title": "Monitor jämför båda sidor",
+        "body": "Vid start och var 24:e timme jämför Monitor versionerna på disk med registret. Varje skillnad ger en post i <code>/usr/local/share/proxmenux/updates_available.json</code>. Filen styr både efterinstallationsmenyns alternativ och kortet i Monitors instrumentpanel."
+      },
+      {
+        "title": "En avisering per ny version",
+        "body": "När minst en uppdatering väntar skickar Monitor en samlad avisering, till exempel <em>”4 uppdateringar av ProxMenux-optimeringar tillgängliga”</em>, med en rad per verktyg i formatet <code>name (vX → vY)</code>, som för Proxmox-paket. Den upprepas inte dagligen för samma uppsättning; bara en ny version eller ett nytt verktyg i listan utlöser den igen."
+      }
+    ]
+  },
+  "pathA": {
+    "heading": "Väg A — Från efterinstallationsmenyn",
+    "intro": "Öppna <strong>Inställningar efter installation av Proxmox</strong> i huvudmenyn. När uppdateringar väntar visas <strong>Tillämpa tillgängliga uppdateringar (N)</strong> ovanför <em>Avinstallera optimeringar</em>. Antalet visar optimeringar med nyare version på disk än i registret. När allt är aktuellt döljs alternativet.",
+    "menuAlt": "Efterinstallationsmenyn med det villkorliga alternativet Tillämpa tillgängliga uppdateringar (N) ovanför Avinstallera optimeringar; antalet visar optimeringar med nyare version på disk",
+    "menuCaption": "<em>Tillämpa tillgängliga uppdateringar (N)</em> visas bara när en optimering har en väntande uppdatering och döljs när värden är aktuell.",
+    "checklistBody": "Öppnar en lista med alla väntande uppdateringar i formatet <code>name (vX → vY)</code>. Alla är valda som standard; avmarkera dem du inte vill tillämpa nu.",
+    "checklistAlt": "Dialogen Tillämpa tillgängliga uppdateringar med en rad per väntande optimering, namn och versionsövergång (aktuell → tillgänglig). Alla rader är valda.",
+    "checklistCaption": "Välj enskilda optimeringar att uppdatera. Samma motor som Automatiserad och Anpassningsbar tillämpar funktionerna igen i bakgrunden och uppdaterar deras registerversioner."
+  },
+  "pathB": {
+    "heading": "Väg B — Från Monitors instrumentpanel",
+    "intro": "Samma uppdateringar finns i Monitor under <link>Inställningar → ProxMenux-optimeringar</link>. Kortet visar en <strong>räknare för väntande uppdateringar</strong> som öppnar väljaren per optimering. Varje verktyg har också en egen uppdateringsåtgärd.",
+    "imageAlt": "Kortet ProxMenux-optimeringar i Monitors inställningar med räknare som öppnar väljaren och uppdateringsåtgärder per verktyg",
+    "imageCaption": "Optimeringskortet i Monitor gör uppdateringarna tillgängliga via räknaren när en nyare version finns på disk, utan skalåtkomst."
+  },
+  "applying": {
+    "heading": "Vad som händer när du tillämpar uppdateringen",
+    "steps": [
+      {
+        "title": "Kör efterinstallationsfunktionen igen",
+        "body": "Den valda funktionen körs igen på värden. Eftersom den är <strong>idempotent</strong> dupliceras inte konfigurationen utan den gamla versionen ersätts av den nya, inklusive sysctl-filer, tilläggskonfigurationer och tjänsteenheter."
+      },
+      {
+        "title": "Uppdaterar registret",
+        "body": "<code>register_tool</code>-anropet i funktionen skriver den nya versionen till <code>installed_tools.json</code>. Nästa skanning ser inte längre en felmatch och uppdateringsinmatningen försvinner från både menyn och Monitor-kortet."
+      },
+      {
+        "title": "Ingen omstart om inte funktionen säger så",
+        "body": "De flesta uppdateringar gäller omedelbart. De som ändrar kärnmoduler, beständiga gränssnittsnamn eller VFIO visar samma fråga om omstart som vid en ny installation."
+      },
+      {
+        "title": "Registreringsuppdatering skickas till Monitor",
+        "body": "När omgången är klar skickar menyn en POST-begäran till <code>http://127.0.0.1:8008/api/updates/post-install/scan</code> för att återskapa <code>/usr/local/share/proxmenux/updates_available.json</code>. När alla väntande uppdateringar tillämpats försvinner räknaren och det villkorliga skalmenyalternativet utan att invänta nästa skanning. Optimeringskortet finns kvar."
+      }
+    ],
+    "jqTitle": "jq krävs",
+    "jqBody": "Listan i väg A använder <code>jq</code> för att läsa JSON med väntande uppdateringar. Om <code>jq</code> saknas avslutas flödet tyst: menyn visar antalet men inget händer efter valet. På en modern Proxmox-installation finns <code>jq</code>; kör annars <code>apt install -y jq</code>."
+  },
+  "differs": {
+    "heading": "Hur det skiljer sig från de andra vägarna",
+    "headerPath": "Path",
+    "headerScope": "Omfattning",
+    "headerWhen": "När det är meningsfullt",
+    "rows": [
+      {
+        "pathLabel": "Automatiserad",
+        "pathHref": "/docs/post-install/automated",
+        "scope": "Tillämpar <em>alla</em> optimeringar i paketet igen.",
+        "when": "Ny värd eller fullständig återtillämpning av grundinställningarna för en helt hanterad nod."
+      },
+      {
+        "pathLabel": "Anpassningsbar",
+        "pathHref": "/docs/post-install/customizable",
+        "scope": "Välj från hela katalogen.",
+        "when": "Välja exakt vilka optimeringar som är aktiva på värden."
+      },
+      {
+        "pathLabel": "Tillämpa tillgängliga uppdateringar",
+        "pathHref": null,
+        "scope": "Bara optimeringar med nyare version på disk.",
+        "when": "Hålla installerade optimeringar aktuella utan att ändra resten."
+      },
+      {
+        "pathLabel": "Avinstallera optimeringar",
+        "pathHref": "/docs/post-install/uninstall",
+        "scope": "Omvänd optimering och ta bort dess registerpost.",
+        "when": "Rulla tillbaka en specifik förändring."
+      }
+    ]
+  },
+  "notifTitle": "Styrning av aviseringen",
+  "notifBody": "Händelsen <em>Uppdateringar av ProxMenux-optimeringar tillgängliga</em> meddelar väntande uppdateringar. Den är aktiverad som standard på varje kanal och kan tystas per kanal under <link>Inställningar → Aviseringar</link>. Den utlöses bara en gång per unik uppsättning uppdateringar, inte vid varje skanning var 24:e timme."
+}

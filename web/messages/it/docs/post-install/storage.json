@@ -1,0 +1,167 @@
+{
+  "meta": {
+    "title": "Post-installazione: Archiviazione | Documentazione ProxMenux",
+    "description": "Ottimizzazioni di archiviazione dello script post-installazione personalizzabile ProxMenux: dimensione ZFS ARC in base alla RAM, snapshot periodici con zfs-auto-snapshot e rimozione dei limiti di velocità dei backup vzdump."
+  },
+  "header": {
+    "title": "Post-installazione: Archiviazione",
+    "section": "Impostazioni post-installazione Proxmox"
+  },
+  "intro": {
+    "title": "Che cosa copre questa categoria",
+    "body": "Quattro ottimizzazioni di archiviazione: regolare <strong>ZFS ARC</strong> su una parte ragionevole della RAM, installare e pianificare <strong>snapshot automatici ZFS</strong>, abilitare <strong>ZFS autotrim</strong> su pool SSD/NVMe e rimuovere i limiti di <strong>vzdump</strong> per velocizzare i backup. Le opzioni sono indipendenti: scegli quelle adatte al sistema. Una quinta, <link>Log2RAM</link>, riduce l’usura SSD/NVMe spostando <code>/var/log</code> su ramdisk. È nella pagina Opzionali perché il menu personalizzabile la raggruppa lì."
+  },
+  "trackedTitle": "Tutti e quattro sono tracciati nel menu Disinstalla",
+  "trackedBody": "Ogni opzione si registra in <code>installed_tools.json</code> per <link>Disinstalla ottimizzazioni</link>. <code>zfs_arc</code> rimuove <code>/etc/modprobe.d/99-zfsarc.conf</code> e ricrea initramfs; <code>zfs_auto_snapshot</code> annulla la pianificazione cron e offre la rimozione completa del pacchetto; <code>zfs_autotrim</code> imposta <code>autotrim=off</code> sui pool che ha abilitato; <code>vzdump_speed</code> ripristina <code>/etc/vzdump.conf</code> dal <code>.bak</code> creato all’installazione.",
+  "arc": {
+    "heading": "Ottimizza dimensione ZFS ARC",
+    "intro": "La <strong>Adaptive Replacement Cache (ARC)</strong> è la cache di lettura ZFS in RAM. Le installazioni Proxmox VE dalla 8.1 impostano il 10% di RAM, massimo 16 GiB; host precedenti o aggiornati possono differire. Questa opzione scrive un proprio limite in base alla RAM. Controlla impostazioni e carico: una cache più piccola non è sempre più veloce.",
+    "sizingTitle": "Regole di dimensionamento",
+    "headerRam": "RAM dell'host",
+    "headerMax": "Limite ARC",
+    "rows": [
+      {
+        "ram": "Formula",
+        "max": "RAM / 10, massimo 16 GiB e minimo 64 MiB"
+      },
+      {
+        "ram": "host 8 GB",
+        "max": "≈ 819 MiB (RAM/10)"
+      },
+      {
+        "ram": "host 16 GB",
+        "max": "≈ 1.6 GiB (RAM/10)"
+      },
+      {
+        "ram": "host 64 GB",
+        "max": "≈ 6.4 GiB (RAM/10)"
+      },
+      {
+        "ram": "≥ host 160 GB",
+        "max": "16 GiB (limite)"
+      }
+    ],
+    "after": "Il file <code>/etc/modprobe.d/99-zfsarc.conf</code> contiene solo <code>options zfs zfs_arc_max=…</code>. Gli altri parametri ZFS (<code>zfs_arc_min</code>, prelettura/limite scritture L2ARC, timeout TXG) non vengono regolati. Prima, una verifica cerca altri <code>*.conf</code> in <code>/etc/modprobe.d/</code> che impostano <code>zfs_arc_min</code> / <code>zfs_arc_max</code>, li salva con manifesto in <code>/usr/local/share/proxmenux/backups/zfs_arc/</code> ed elimina le righe in conflitto, lasciando attivo solo il file ARC ProxMenux. Poi <code>update-initramfs -u -k all</code> e, se necessario, <code>proxmox-boot-tool refresh</code> portano il limite nell’initramfs dei sistemi con root ZFS.",
+    "rebootTitle": "Richiede un riavvio per prendere effetto",
+    "rebootBody": "Le impostazioni ARC vengono lette caricando il modulo <code>zfs</code>. Per gli host con root ZFS, ProxMenux rigenera initramfs con <code>update-initramfs -u -k all</code> e aggiorna se necessario il bootloader con <code>proxmox-boot-tool refresh</code>. Il nuovo parametro richiede comunque un riavvio, segnalato automaticamente.",
+    "safeTitle": "Sicuro su host non-ZFS",
+    "safeBody": "La funzione scrive la configurazione solo se <code>zpool list</code> segnala almeno un pool ZFS importato. Su host Proxmox con solo ext4/LVM o con strumenti ZFS ma nessun pool importato, selezionare questa opzione non modifica nulla.",
+    "verifyTitle": "Verifica e rollback manuale"
+  },
+  "autoSnap": {
+    "heading": "Installa ZFS auto-snapshot",
+    "intro": "Installa il pacchetto <a>zfs-auto-snapshot</a> e riscrive i suoi programmi di cron in modo che le snapshot vengano prese automaticamente a diversi intervalli. Una grande rete di sicurezza senza sforzo sopra i vostri backup vzdump regolari.",
+    "cadenceTitle": "Frequenza degli snapshot configurata da ProxMenux",
+    "headerLabel": "Etichetta",
+    "headerRuns": "Esecuzione",
+    "headerKept": "Istantanee tenute",
+    "rows": [
+      {
+        "label": "frequente",
+        "runs": "ogni 15 min",
+        "kept": "4"
+      },
+      {
+        "label": "oraria",
+        "runs": "ogni ora",
+        "kept": "1"
+      },
+      {
+        "label": "ogni giorno",
+        "runs": "una volta al giorno",
+        "kept": "1"
+      },
+      {
+        "label": "settimanale",
+        "runs": "una volta alla settimana",
+        "kept": "1"
+      },
+      {
+        "label": "mensile",
+        "runs": "una volta al mese",
+        "kept": "1"
+      }
+    ],
+    "conservativeTitle": "Conservazione limitata",
+    "conservativeBody": "ProxMenux mantiene una conservazione limitata: 4 snapshot frequenti e 1 per ciascun intervallo più lungo, per contenere lo spazio ZFS. Per conservarne di più modifica i numeri in <code>/etc/cron.d/zfs-auto-snapshot</code>, <code>/etc/cron.hourly/zfs-auto-snapshot</code> ecc. dopo lo script.",
+    "onlyZfsTitle": "Utile solo sui pool ZFS",
+    "onlyZfsBody": "Installare il pacchetto su un host ext4-solo è innocuo ma inutile — non ci sono set di dati ZFS per esso di snapshot. Salta questa opzione se non si utilizza ZFS.",
+    "verifyTitle": "Verifica e rollback manuale"
+  },
+  "autotrim": {
+    "heading": "Abilita ZFS autotrim (pool SSD/NVMe)",
+    "intro": "Abilita <code>autotrim</code> sui pool ZFS composti solo da SSD o NVMe con supporto TRIM. Per prudenza salta i pool con dispositivi rotanti. Quelli già impostati su <code>autotrim=on</code> restano invariati.",
+    "trimTitle": "Cosa fa TRIM e perché conta su ZFS",
+    "trimBody1": "SSD e NVMe gestiscono blocchi interni di cancellazione più grandi dei settori logici del filesystem. Quando si elimina un file, l’unità non sa ancora che i settori sono liberi e la pulizia interna può continuare a spostare dati obsoleti per liberare blocchi. <strong>TRIM</strong> indica all’unità i settori liberi per consentirne la cancellazione anticipata.",
+    "trimBody2": "Senza TRIM, esaurire i blocchi già cancellati può degradare le prestazioni SSD e aumentare le scritture interne, riducendo la vita utile. Con TRIM, l’unità può mantenere blocchi vuoti pronti alla scrittura.",
+    "trimBody3": "Con <code>autotrim=on</code>, ZFS esegue TRIM in background sullo spazio liberato di recente, raggruppando gli intervalli. Un <code>zpool trim &lt;pool&gt;</code> periodico è un’alternativa. Autotrim evita una pianificazione separata, ma l’impatto dipende dai dispositivi; il TRIM manuale periodico può essere migliore su alcune unità economiche.",
+    "practicalTitle": "Perché questo è pratico da abilitare?",
+    "practicalItems": [
+      "<strong>Prestazioni di scrittura sostenute.</strong> TRIM può aiutare a recuperare blocchi inutilizzati. Benefici e impatto sulla latenza dipendono da dispositivo e carico.",
+      "<strong>Durata dell’unità.</strong> Evitare copie interne inutili può ridurre amplificazione di scrittura e usura NAND, senza garantire una durata aggiuntiva specifica.",
+      "<strong>Nessun processo cron da pianificare.</strong> A differenza di un <code>zpool trim</code> periodico, autotrim viene gestito automaticamente dal pool."
+    ],
+    "whenTitle": "Quando è necessario?",
+    "whenIntro1": "<strong>Valuta l’attivazione</strong> sui pool ZFS solo con SSD/NVMe compatibili TRIM. Controlla comportamento e latenza; su alcuni dispositivi è preferibile TRIM manuale pianificato.",
+    "whenIntro2": "<strong>Lo script lo ignora automaticamente</strong> su:",
+    "whenSkipItems": [
+      "Pool con vdev HDD rotanti: filtro hardware prudente di questo script.",
+      "Drive senza <code>discard_granularity</code> esposti in sysfs — solitamente vecchi SSD senza TRIM, o percorsi passanti dove il sistema operativo non può vedere il dispositivo sottostante.",
+      "Pools dove ZFS riporta la proprietà non supportato (raro; molto vecchio pools).",
+      "Pools già predisposto per <code>autotrim=on</code> (no-op)."
+    ],
+    "whenIntro3": "<strong>Non pertinente su host ext4-solo</strong> — non c'è nulla per ZFS da tagliare. La funzione esce con un messaggio amichevole in quel caso.",
+    "recordedTitle": "Perché vengono registrati solo i pool modificati da ProxMenux",
+    "recordedBody": "La funzione registra un pool nel file di stato interno (<code>/usr/local/share/proxmenux/zfs_autotrim_pools</code>) solo se lo ha cambiato da <code>off</code> a <code>on</code>. I pool già con autotrim prima dello script restano fuori elenco: una futura disinstallazione annulla solo le modifiche di ProxMenux, non quelle impostate da te.",
+    "manualTitle": "Equivalente manuale (in esecuzione sul server)",
+    "manualIntro": "La sequenza completa che lo script corre contro ogni pool è replicabile a mano. Questo è quello che si digiterebbe se si desidera fare la stessa cosa su un singolo pool senza ProxMenux:",
+    "verifyTitle": "Verifica e rollback manuale",
+    "oneShotTitle": "Preferisci un TRIM singolo invece di quello continuo?",
+    "oneShotBody": "Alcuni amministratori preferiscono TRIM manuale nelle ore di minor carico. Disabilita autotrim e pianifica un processo cron con <code>zpool trim &lt;pool&gt;</code>: stesso obiettivo, frequenza diversa."
+  },
+  "vzdump": {
+    "heading": "Aumenta la velocità di backup di vzdump",
+    "intro": "Scrive bwlimit: 0 e ionice: 5 nella configurazione globale vzdump. Proxmox non ha già limiti di banda predefiniti: rimuove un limite solo se configurato. Rispetto a ionice: 7, il valore 5 aumenta la priorità I/O best-effort se lo scheduler la rispetta. Può influire sugli ospiti e non garantisce backup più rapidi.",
+    "changedTitle": "Cosa cambia in /etc/vzdump.conf",
+    "backupTitle": "Prima esecuzione crea un .bak di vzdump.conf",
+    "backupBody": "Alla prima esecuzione ProxMenux copia <code>/etc/vzdump.conf</code> in <code>/etc/vzdump.conf.bak</code> prima di modificarlo. Le esecuzioni successive non sovrascrivono la copia, lasciando recuperabile la configurazione precedente. <code>bwlimit</code> e <code>ionice</code> vengono modificati con <code>sed</code>; altre opzioni come compress, pigz, tmpdir ed exclude-path sono conservate.",
+    "skipTitle": "Quando saltare questo",
+    "skipBody": "Su un host con storage locale lento e VM sensibili alla latenza, togliere il limite di banda può causare rallentamenti durante i backup. Se hai impostato un <code>bwlimit</code> per questo motivo, conservalo e salta questa opzione.",
+    "verifyTitle": "Verifica e rollback manuale"
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "label": "Comandi di gestione ZFS",
+        "href": "/docs/help-info/zfs-commands",
+        "tail": "— zpool / zfs riferimento per ARC, snapshot, scrub."
+      },
+      {
+        "label": "Comandi di archiviazione e dischi",
+        "href": "/docs/help-info/storage-commands",
+        "tail": "— riferimento generico di blocco-dispositivo e di stoccaggio Proxmox."
+      },
+      {
+        "label": "Comandi di backup e ripristino",
+        "href": "/docs/help-info/backup-commands",
+        "tail": " — riferimento CLI vzdump per banda e priorità I/O."
+      },
+      {
+        "label": "Disinstalla ottimizzazioni",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — annulla le modifiche ARC / vzdump."
+      },
+      {
+        "label": "Log2RAM",
+        "href": "/docs/post-install/optional#log2ram",
+        "tail": " — riduce l’usura SSD/NVMe tenendo /var/log su ramdisk; documentato in Opzionali."
+      },
+      {
+        "label": "Post-installazione personalizzabile",
+        "href": "/docs/post-install/customizable",
+        "tail": " — torna al menu superiore."
+      }
+    ]
+  }
+}
