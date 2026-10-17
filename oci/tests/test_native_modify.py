@@ -236,14 +236,18 @@ class NativeApplyTests(unittest.TestCase):
             update.update(115,proposal={'operation':'recreate','candidate':self.candidate})
         self.assertEqual(instances.read(self.root,115)['deployment']['environment'],self.candidate['deployment']['environment'])
 
-    def test_unsupported_same_image_adaptation_never_silently_recreates(self):
+    def test_unsupported_same_image_adaptation_uses_the_existing_recreation_flow(self):
         self.candidate['deployment']['post_start_configurations']=[{'id':'unsupported-adapter'}]
         with patch.object(instances,'ROOT',self.root),patch.object(instances,'locked',return_value=contextlib.nullcontext()), \
                 patch.object(native.transaction,'external_changes',return_value={}), \
-                patch.object(update,'resolve_archive',side_effect=AssertionError('registry path')), \
-                patch.object(native.transaction,'apply',side_effect=AssertionError('recreation')):
-            with self.assertRaisesRegex(ValueError,'application-specific adaptation'):
-                update.update(115,proposal={'operation':'recreate','candidate':self.candidate})
+                patch.object(update,'resolve_archive',return_value=(Path('/verified.tar'),'sha256:test')) as resolve, \
+                patch.object(native.transaction,'apply') as recreate, \
+                patch.object(native,'apply',side_effect=AssertionError('partial native edit')), \
+                patch.object(oci_operation_notice,'operation',return_value=contextlib.nullcontext()):
+            update.update(115,proposal={'operation':'recreate','candidate':self.candidate})
+        resolve.assert_called_once()
+        recreate.assert_called_once()
+        self.assertEqual(recreate.call_args.args[3],'recreate')
 
     def test_optional_backup_does_not_force_recreation(self):
         with patch.object(instances,'ROOT',self.root),patch.object(instances,'locked',return_value=contextlib.nullcontext()), \

@@ -86,6 +86,24 @@ def changes(record, candidate, config):
     if 'mounts' in changed:
         if any(transaction.is_file_bind(m) for plan in (before, after) for m in plan.get('mounts', [])):
             return None
+        if transaction.nested_mounts.without(config) != config:
+            # The installer also regenerates the recursive bind entries and
+            # hooks associated with these mounts.
+            return None
+        old_mounts = {m['container_path']: m for m in before.get('mounts', [])}
+        for mount in after.get('mounts', []):
+            original = old_mounts.get(mount['container_path'])
+            # Permission grants and installer-specific mount attributes need
+            # their normal installer, including when only their source changes.
+            if mount.get('grant_access'):
+                return None
+            if original:
+                fields = {k for k in original.keys() | mount.keys() if original.get(k) != mount.get(k)}
+                native_fields = {'read_only', 'backup', 'create_if_missing'}
+                if original['type'] == mount['type'] == 'host-bind':
+                    native_fields.add('source')
+                if fields - native_fields:
+                    return None
     return changed
 
 
@@ -174,8 +192,14 @@ def plan(record, candidate, config):
                 original = next(m for m in old['mounts'] if m['container_path'] == target)
                 if mount == original: continue
                 fields = dict(p.split('=', 1) for p in actual[target]['value'].split(',')[1:] if '=' in p)
-                fields['ro'] = '1' if mount.get('read_only') else '0'
-                values[actual[target]['key']] = actual[target]['volume']+','+','.join(k+'='+v for k, v in fields.items())
+                source = actual[target]['volume']
+                if mount['type'] == 'host-bind':
+                    source = host_mounts.valid_path(mount['source'])
+                    if not Path(source).is_dir() and not mount.get('create_if_missing'):
+                        raise ValueError(translate('The host directory does not exist'))
+                fields.update(mp=target, backup='1' if mount['backup'] else '0',
+                              ro='1' if mount.get('read_only') else '0')
+                values[actual[target]['key']] = source+','+','.join(k+'='+v for k, v in fields.items())
                 continue
             key = next('mp'+str(n) for n in range(256) if 'mp'+str(n) not in used)
             used.add(key)
@@ -203,6 +227,12 @@ def verify_values(config, operation):
             if environment(config) != dict(item.split('=', 1) for item in value.split('\0')):
                 raise ValueError(translate('Proxmox could not apply the container settings'))
         elif re.fullmatch(r'(mp|dev|net)[0-9]+', key):
+            if re.fullmatch(r'mp[0-9]+', key):
+                source = value.split(',', 1)[0]
+                actual_source = cfg.get(key, '').split(',', 1)[0]
+                allocating = re.fullmatch(r'[A-Za-z0-9_-]+:[0-9]+', source)
+                if (not allocating and actual_source != source) or (allocating and not actual_source.startswith(source.split(':')[0]+':')):
+                    raise ValueError(translate('Proxmox could not apply the container settings'))
             desired = dict(p.split('=', 1) for p in value.split(',') if '=' in p)
             actual = dict(p.split('=', 1) for p in cfg.get(key, '').split(',') if '=' in p)
             defaults = {'uid': '0', 'gid': '0', 'deny-write': '0', 'ro': '0', 'backup': '0', 'mode': '0660', 'firewall': '0'}

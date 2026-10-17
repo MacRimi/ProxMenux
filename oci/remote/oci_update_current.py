@@ -224,10 +224,9 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
                     backup_native_settings(vmid, keep_backup)
                     return oci_native_modify.apply(instances.ROOT, record, desired, config,
                                                    acknowledge_external_data=acknowledge_external_data)
-        if (operation == 'recreate'
-                and record['template']['container_contract']['image']['reference']
-                == desired['template']['container_contract']['image']['reference']):
-            raise ValueError(translate('These settings require an application-specific adaptation. The image was not downloaded and the container was not recreated.'))
+        # An unsupported native edit still uses the existing installer. Decide
+        # the route before changing anything; actual validation/API failures
+        # must not silently switch to a destructive fallback.
         transaction.preflight(record, desired, config)
         msg_ok(translate('Container checked'))
         current = record['observed']['image'] if operation == 'update' else None

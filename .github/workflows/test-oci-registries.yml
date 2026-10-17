@@ -34,6 +34,9 @@ jobs:
         run: |
           python3 -m unittest discover -s oci/tests -p test_modify_image_reuse.py -v
           python3 -m unittest discover -s oci/tests -p test_native_modify.py -v
+          python3 -m unittest discover -s oci/tests -p test_modify_review.py -v
+          python3 -m unittest discover -s oci/tests -p test_modify_review_transaction.py -v
+          python3 -m unittest discover -s oci/tests -p test_stage_release.py -v
       - name: Run offline registry account tests
         env:
           PYTHONDONTWRITEBYTECODE: '1'

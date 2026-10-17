@@ -142,7 +142,7 @@ An application made of several images is one entry of the catalog and one instal
 | Operation | What changes | What is kept |
 |---|---|---|
 | **Update** | The rootfs is replaced by the image the saved tag publishes today | Record, container disks, host directories, network and devices |
-| **Modify** | Choose a setting, review it, then apply native LXC changes to the existing container; runtime settings may require a restart | Installed image, rootfs, persistent data and unrelated Proxmox settings |
+| **Modify** | Edit and confirm the configuration; supported native settings apply directly, while other changes use the existing recreation flow | Native edits keep the installed image and rootfs; both paths preserve persistent data |
 | **Recreate** (multi-container) | Every container is rebuilt from the image it was installed with | Data, network and devices |
 | **Watchdog** | Whether the application is started again when it stops on its own | Everything; only the choice is saved |
 | **Remove** | The LXC, or every container of the application, its disks and its record | Host directories, with their content |
@@ -159,20 +159,9 @@ Settings changed in Proxmox VE after the installation, such as memory, cores or 
 
 A rolling tag is not an unattended update: the digest changes only through an explicit update.
 
-For standalone applications, CPU and RAM changes apply live. Network settings,
-environment overrides, directory mounts, additional managed volumes and supported
-native devices use a controlled stop/start when needed. Modify does not query the
-registry or download an image for these edits, even if the cached archive has
-already been cleaned. Removing a managed mount detaches its disk without deleting
-its data. An optional retained backup does not force recreation.
+For standalone applications, CPU and RAM changes apply live. Supported network settings, environment overrides, directory mounts, additional managed volumes and native devices use a controlled stop/start when needed. Modify does not query the registry or download an image for these native edits, even if the cached archive has already been cleaned. Removing a managed mount detaches its disk without deleting its data; subsequent image updates park that unused disk and return it to the container. An optional retained backup does not force recreation.
 
-The native path checks the saved configuration and installation identity, keeps a
-private before/after journal, and restores the original settings if applying them
-or checking the restarted service fails. It refuses to overwrite concurrent edits.
-Application-specific installer adaptations (such as changing an NVIDIA runtime or
-post-start configuration) are not silently converted into a full recreation:
-unsupported same-image changes stop with an explanation before modifying the CT.
-Image changes and coordinated stack operations retain their separate update flow.
+The native path checks the saved configuration and installation identity, keeps a private before/after journal, and restores the original settings if applying them or checking the restarted service fails. It refuses to overwrite concurrent edits. Changes that require installer adaptations, such as NVIDIA runtime changes, GPU permission/environment setup, file mounts, completion notes or a refreshed catalog template, use the existing validated recreation flow. The route is chosen before applying any settings, so one proposal is not partially applied by both paths. The recreation flow reuses a verified cached archive when it matches the resolved image; it downloads an image when a suitable archive is unavailable. Image changes and coordinated stack operations retain their separate update flow.
 
 ## From a Compose file or a docker run command to an oci-compose
 
