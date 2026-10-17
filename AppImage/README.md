@@ -10,6 +10,7 @@ A modern, responsive dashboard for monitoring Proxmox VE systems built with Next
 - [Features](#features)
 - [Technology Stack](#technology-stack)
 - [Installation](#installation)
+- [Console Monitor (TUI)](#console-monitor-tui)
 - [Authentication & Security](#authentication--security)
   - [Setup Authentication](#setup-authentication)
   - [Two-Factor Authentication (2FA)](#two-factor-authentication-2fa)
@@ -172,6 +173,28 @@ ProxMenux Monitor includes built-in support for reverse proxy configurations. If
 - Detect the proxy headers (`X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Host`)
 - Adjust API endpoints to work correctly through the proxy
 - Maintain full functionality for all features including authentication and API access
+
+## Console Monitor (TUI)
+
+A read-only text dashboard for the node's physical console or any root shell. It shows the node and cluster state: CPU, memory, network, disks, quorum and coverage, the top guests by CPU and memory, and a guest table. On an installed node, run `proxmenux-console` as root.
+
+```bash
+./ProxMenux-<version>.AppImage --tui                  # interactive
+./ProxMenux-<version>.AppImage --tui --once           # render one frame and exit
+./ProxMenux-<version>.AppImage --tui --glyphs ascii   # acs | unicode | ascii
+```
+
+It reads the snapshot published by the Monitor in `/run/proxmenux-monitor/console.json`. It does not call `pvesh` and does not change any configuration.
+
+| Key | Action |
+|---|---|
+| `q` | Quit |
+| `Tab` | Switch between Node and Cluster views |
+| `r` | Refresh now |
+| `a` | Cycle glyph set (`acs` → `ascii` → `unicode`) |
+| `c` / `m` | Sort the guest table by CPU or memory (Cluster view) |
+
+The text is sanitized before it is drawn, so guest names and tags cannot inject terminal escape sequences. Labels follow the language set in ProxMenux.
 
 
 

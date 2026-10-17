@@ -458,6 +458,10 @@ install_proxmenux_monitor() {
         return 1
     fi
 
+    if [ -f "$TEMP_DIR/scripts/console/proxmenux-console" ]; then
+        install -m 0755 "$TEMP_DIR/scripts/console/proxmenux-console" /usr/local/bin/proxmenux-console
+    fi
+
     # Copy shutdown-notify.sh script for systemd ExecStop
     local shutdown_script_src="$TEMP_DIR/scripts/shutdown-notify.sh"
     local shutdown_script_dst="$MONITOR_INSTALL_DIR/scripts/shutdown-notify.sh"

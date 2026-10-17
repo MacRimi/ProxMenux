@@ -1,0 +1,77 @@
+name: Console TUI tests
+
+# Not in CI: AppImage/scripts/tests/test_console_tui_smoke.py drives the TUI
+# through a pty with real curses and runs on a QA host instead.
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/test-console-tui.yml'
+      - 'AppImage/scripts/console_*.py'
+      - 'AppImage/scripts/flask_server.py'
+      - 'AppImage/scripts/tests/test_console_metrics.py'
+      - 'AppImage/scripts/tests/test_console_snapshot.py'
+      - 'AppImage/scripts/tests/test_console_render.py'
+      - 'AppImage/scripts/tests/test_console_graphs.py'
+      - 'AppImage/scripts/tests/test_cluster_resources_cache.py'
+      - 'AppImage/scripts/tests/test_console_monitor_hook.py'
+      - 'AppImage/scripts/tests/test_cluster_guest_storage_ownership.py'
+      - 'AppImage/scripts/tests/test_lxc_vm_ip_inventory.py'
+      - 'AppImage/scripts/tests/fixtures/console/**'
+      - 'tests/test_console_installer.py'
+      - 'scripts/console/**'
+  push:
+    branches: [main, develop]
+    paths:
+      - '.github/workflows/test-console-tui.yml'
+      - 'AppImage/scripts/console_*.py'
+      - 'AppImage/scripts/flask_server.py'
+      - 'AppImage/scripts/tests/test_console_metrics.py'
+      - 'AppImage/scripts/tests/test_console_snapshot.py'
+      - 'AppImage/scripts/tests/test_console_render.py'
+      - 'AppImage/scripts/tests/test_console_graphs.py'
+      - 'AppImage/scripts/tests/test_cluster_resources_cache.py'
+      - 'AppImage/scripts/tests/test_console_monitor_hook.py'
+      - 'AppImage/scripts/tests/test_cluster_guest_storage_ownership.py'
+      - 'AppImage/scripts/tests/test_lxc_vm_ip_inventory.py'
+      - 'AppImage/scripts/tests/fixtures/console/**'
+      - 'tests/test_console_installer.py'
+      - 'scripts/console/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  console-tui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Test console metrics sampler
+        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_console_metrics.py -v
+      - name: Test console snapshot publisher
+        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_console_snapshot.py -v
+      - name: Test console renderer
+        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_console_render.py -v
+      - name: Test console graphs
+        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_console_graphs.py -v
+      - name: Test cluster resources cache
+        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_cluster_resources_cache.py -v
+      - name: Test the Monitor hook that starts the console publisher
+        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_console_monitor_hook.py -v
+      - name: Test console installer
+        run: python -I -B -m unittest discover -s tests -p test_console_installer.py -v
+      - name: Test cluster guest storage ownership guard
+        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_cluster_guest_storage_ownership.py -v
+      - name: Test LXC/VM IP inventory guard
+        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_lxc_vm_ip_inventory.py -v
