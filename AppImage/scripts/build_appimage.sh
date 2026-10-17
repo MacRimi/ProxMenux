@@ -190,9 +190,6 @@ cd "$SCRIPT_DIR"
 echo "📋 Copying Flask server..."
 cp "$SCRIPT_DIR/flask_server.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/zram_metrics.py" "$APP_DIR/usr/bin/"
-cp "$SCRIPT_DIR/monitor_console.py" "$APP_DIR/usr/bin/"
-cp "$SCRIPT_DIR/proxmenux_monitor_tui.py" "$APP_DIR/usr/bin/"
-chmod 0755 "$APP_DIR/usr/bin/proxmenux_monitor_tui.py"
 cp "$SCRIPT_DIR/flask_auth_routes.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  flask_auth_routes.py not found"
 cp "$SCRIPT_DIR/auth_manager.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  auth_manager.py not found"
 cp "$SCRIPT_DIR/jwt_middleware.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  jwt_middleware.py not found"
@@ -401,6 +398,11 @@ fi
 if [ -f "$APP_DIR/proxmenux-monitor.png" ]; then
     cp "$APP_DIR/proxmenux-monitor.png" "$APP_DIR/usr/share/icons/hicolor/256x256/apps/"
 fi
+
+# Install the local, read-only curses renderer alongside the Monitor backend.
+cp "$SCRIPT_DIR/monitor_console.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/proxmenux_monitor_tui.py" "$APP_DIR/usr/bin/"
+chmod 0755 "$APP_DIR/usr/bin/proxmenux_monitor_tui.py"
 
 echo "📦 Installing Python dependencies..."
 # Install the complete hash-locked runtime separately for each supported ABI.
