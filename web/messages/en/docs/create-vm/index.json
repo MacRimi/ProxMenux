@@ -1,12 +1,12 @@
 {
   "meta": {
     "title": "Create VMs on Proxmox VE — Synology, Windows, Linux, NAS Wizards | ProxMenux",
-    "description": "Create and configure virtual machines on Proxmox VE with ProxMenux. Dedicated wizards for NAS appliances (Synology DSM, TrueNAS, OpenMediaVault, UnRAID, etc.), Windows, Linux distros, and an external macOS installer. Sensible defaults for VM hardware, storage and networking.",
+    "description": "Create and configure virtual machines on Proxmox VE with ProxMenux. Dedicated wizards for NAS appliances (Synology DSM, TrueNAS, OpenMediaVault, XigmaNAS, etc.), Windows, Linux distros, and an external macOS installer. Sensible defaults for VM hardware, storage and networking.",
     "ogTitle": "Create VMs on Proxmox VE — Synology, Windows, Linux, NAS Wizards",
-    "ogDescription": "ProxMenux wizards for creating Synology DSM, TrueNAS, OMV, UnRAID, Windows and Linux VMs on Proxmox VE.",
+    "ogDescription": "ProxMenux wizards for creating Synology DSM, TrueNAS, OMV, XigmaNAS, Windows and Linux VMs on Proxmox VE.",
     "ogImageAlt": "ProxMenux Create VM Menu",
     "twitterTitle": "Create VMs on Proxmox VE | ProxMenux",
-    "twitterDescription": "Wizards for Synology, TrueNAS, OMV, UnRAID, Windows and Linux VMs on Proxmox VE."
+    "twitterDescription": "Wizards for Synology, TrueNAS, OMV, XigmaNAS, Windows and Linux VMs on Proxmox VE."
   },
   "header": {
     "title": "Create VM",
@@ -33,13 +33,13 @@
         "href": "/docs/create-vm/system-nas",
         "accent": "border-emerald-300 bg-emerald-50",
         "iconBg": "bg-emerald-100 text-emerald-700",
-        "description": "Seven NAS operating systems as dedicated VMs. Most use the auto-ISO flow; Synology DSM runs the specialised loader wizard.",
+        "description": "Eight NAS operating systems as dedicated VMs. Most use the auto-ISO flow; Synology DSM runs the specialised loader wizard.",
         "bullets": [
           "Synology DSM (ARC / RR / TinyCore loaders)",
           "TrueNAS SCALE and CORE (ZFS)",
           "OpenMediaVault (Debian-based)",
           "XigmaNAS (FreeBSD ZFS)",
-          "Rockstor (openSUSE / Btrfs), ZimaOS"
+          "Rockstor (openSUSE / Btrfs), ZimaOS, FygoOS"
         ]
       },
       {

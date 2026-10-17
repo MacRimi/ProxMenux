@@ -1,13 +1,13 @@
 {
   "meta": {
-    "title": "Crear VM: Synology DSM | ProxMenux Documentation",
-    "description": "Crea una máquina virtual Synology DSM en Proxmox VE. ProxMenux descarga el loader que elijas (Arc, RR, TinyCore M-shell o uno personalizado), lo importa como disco de arranque de la VM y prepara CPU, RAM y almacenamiento mediante el asistente por defecto o avanzado.",
-    "ogTitle": "Crear VM: Synology DSM | ProxMenux Documentation",
+    "title": "Crear VM: Synology DSM | Documentación de ProxMenux",
+    "description": "Crea una máquina virtual Synology DSM en Proxmox VE. ProxMenux descarga el loader elegido (Arc, RR, Alpine RedPill M-shell o una imagen propia), lo importa como disco de arranque de la VM y configura CPU, RAM y almacenamiento mediante el asistente predeterminado o avanzado.",
+    "ogTitle": "Crear VM: Synology DSM | Documentación de ProxMenux",
     "ogDescription": "Crea una máquina virtual Synology DSM en Proxmox VE con ProxMenux."
   },
   "header": {
     "title": "Crear VM: Synology DSM",
-    "description": "Crea una máquina virtual Synology DSM en Proxmox VE. ProxMenux descarga el loader que elijas (Arc, RR, TinyCore M-shell o uno personalizado), lo importa como disco de arranque de la VM y prepara CPU, RAM y almacenamiento mediante el asistente por defecto o avanzado.",
+    "description": "Crea una máquina virtual Synology DSM en Proxmox VE. ProxMenux descarga el loader elegido (Arc, RR, Alpine RedPill M-shell o una imagen propia), lo importa como disco de arranque de la VM y configura CPU, RAM y almacenamiento mediante el asistente predeterminado o avanzado.",
     "section": "Máquinas virtuales · NAS"
   },
   "loaderLabels": {
@@ -32,7 +32,7 @@
         "url": "https://github.com/RROrg/rr"
       },
       {
-        "name": "TinyCore RedPill M-shell",
+        "name": "Alpine RedPill M-shell (proyecto TinyCore)",
         "url": "https://github.com/PeterSuh-Q3/tinycore-redpill"
       }
     ],
@@ -46,7 +46,7 @@
     "headerValue": "Valor por defecto",
     "defaultRowsRich": [
       {
-        "param": "Machine type",
+        "param": "Tipo de máquina",
         "valueRich": "<code>q35</code>"
       },
       {
@@ -54,11 +54,11 @@
         "valueRich": "OVMF (UEFI)"
       },
       {
-        "param": "CPU type",
+        "param": "Tipo de CPU",
         "valueRich": "Host"
       },
       {
-        "param": "Cores",
+        "param": "Núcleos",
         "valueRich": "2"
       },
       {
@@ -66,15 +66,15 @@
         "valueRich": "4096 MB"
       },
       {
-        "param": "Bridge",
+        "param": "Puente",
         "valueRich": "<code>vmbr0</code>"
       },
       {
-        "param": "MAC address",
+        "param": "Dirección MAC",
         "valueRich": "Generada automáticamente"
       },
       {
-        "param": "Start on completion",
+        "param": "Arrancar al terminar",
         "valueRich": "No"
       }
     ],
@@ -83,7 +83,7 @@
     "headerOptions": "Opciones",
     "advancedRowsRich": [
       {
-        "param": "Machine type",
+        "param": "Tipo de máquina",
         "optionsRich": "<code>q35</code> o <code>i440fx</code>"
       },
       {
@@ -91,11 +91,11 @@
         "optionsRich": "OVMF (UEFI) o SeaBIOS (Legacy)"
       },
       {
-        "param": "CPU type",
+        "param": "Tipo de CPU",
         "optionsRich": "Host o KVM64"
       },
       {
-        "param": "Cores",
+        "param": "Núcleos",
         "optionsRich": "Número de núcleos de CPU"
       },
       {
@@ -103,11 +103,11 @@
         "optionsRich": "Memoria asignada a la VM"
       },
       {
-        "param": "Bridge",
+        "param": "Puente",
         "optionsRich": "Bridge de red"
       },
       {
-        "param": "MAC address",
+        "param": "Dirección MAC",
         "optionsRich": "MAC personalizada"
       },
       {
@@ -127,7 +127,7 @@
     "virtualItemsRich": [
       "Lista los volúmenes de almacenamiento Proxmox disponibles en el host.",
       "Eliges el almacenamiento destino y el tamaño en GB.",
-      "El disco se adjunta a la VM como SATA (<code>sata0</code>, <code>sata1</code>, … hasta 6)."
+      "El disco se conecta como SATA (<code>sata0</code>, <code>sata1</code>, …). Los discos de datos virtuales y físicos comparten los seis puertos SATA numerados del 0 al 5."
     ],
     "importHeading": "b. Añadir disco importado",
     "importItemsRich": [
@@ -139,7 +139,7 @@
     "pciItemsRich": [
       "Detecta HBAs SATA/SAS y dispositivos NVMe del host y te deja pasar una <em>controladora entera</em> a la VM. IOMMU debe estar habilitado; el script se ofrece a habilitarlo y reinicia si hace falta.",
       "Un paso de confirmación advierte del riesgo a nivel de controladora (la tarjeta completa, incluidos todos los discos que tenga, deja de estar en el host).",
-      "Los dispositivos PCI seleccionados se adjuntan mediante <code>qm set hostpciN: …</code>."
+      "Los dispositivos PCI se conectan con comandos como <code>qm set VMID --hostpci0 PCI_ADDRESS,pcie=1</code>. Sustituye VMID y PCI_ADDRESS por el ID de la VM y la dirección PCI y usa un índice hostpci libre para cada dispositivo."
     ],
     "resetCalloutTitle": "Resetear y terminar",
     "resetCalloutBodyRich": "El menú también ofrece <strong>r</strong> (resetear la selección actual y empezar de nuevo) y <strong>d</strong> (terminar y continuar). No puedes terminar con un plan vacío — Synology necesita al menos un disco para instalar DSM."
@@ -150,7 +150,7 @@
   },
   "loaderInstall": {
     "heading": "Instalación del loader",
-    "intro1Rich": "<strong>Arc</strong>, <strong>RR</strong> y <strong>TinyCore M-shell</strong> se descargan y extraen automáticamente desde sus repositorios upstream de GitHub. Si la descarga falla, el script aborta con un mensaje claro.",
+    "intro1Rich": "<strong>Arc</strong>, <strong>RR</strong> y <strong>Alpine RedPill M-shell</strong> se descargan y extraen automáticamente desde sus repositorios originales de GitHub. Si la descarga falla, el script se detiene con un mensaje claro.",
     "intro2Rich": "Para la opción <strong>Custom Loader</strong>, el script escanea <code>/var/lib/vz/template/iso</code>. Si hay más de un candidato te pedirá que elijas el que quieres.",
     "uploadIntro": "Puedes subir loaders personalizados desde el almacenamiento local de Proxmox:",
     "imageAlt": "Añadir custom loader",
@@ -160,16 +160,16 @@
     "heading": "Creación de la VM — qué ejecuta el script",
     "introRich": "Una vez confirmas el loader, ProxMenux ejecuta el equivalente a estos comandos <code>qm</code>:",
     "itemsRich": [
-      "<code>qm create</code> — crea la VM con la CPU, RAM, BIOS y machine type seleccionados.",
-      "<code>qm importdisk</code> — importa el loader como disco <strong>IDE</strong> (máxima compatibilidad).",
-      "<code>qm set sataN: …</code> — adjunta los discos virtuales y discos importados del plan de almacenamiento, más la interfaz de red.",
-      "<code>qm set hostpciN: …</code> — adjunta cualquier dispositivo controladora / NVMe seleccionado para PCI passthrough.",
-      "<code>qm set --boot</code> — pone el loader como primer dispositivo de arranque."
+      "<code>qm create</code> — crea la VM con la CPU, RAM, BIOS y tipo de máquina elegidos.",
+      "<code>qm importdisk</code> importa la imagen del loader al almacenamiento Proxmox. Después el script la conecta a la VM como disco <strong>IDE</strong> en ide0 para mejorar la compatibilidad.",
+      "<code>qm set VMID --sata0 DISK_REFERENCE</code> conecta un disco de datos del plan. Sustituye VMID y DISK_REFERENCE por el ID de la VM y la referencia del disco; usa un índice SATA libre del 0 al 5. La red se configura mediante qm create.",
+      "<code>qm set VMID --hostpci0 PCI_ADDRESS,pcie=1</code> conecta una controladora PCI o un dispositivo NVMe seleccionado. Sustituye VMID y PCI_ADDRESS por el ID de la VM y la dirección PCI y usa un índice hostpci libre para cada dispositivo.",
+      "<code>qm set VMID --boot order=ide0</code> configura el loader como dispositivo de arranque. Sustituye VMID por el ID de la VM."
     ]
   },
   "stepByStep": {
     "heading": "Configuración del loader paso a paso",
-    "intro": "Todos los loaders siguen el mismo patrón general — arrancar la VM, elegir un modelo, elegir una versión de DSM, elegir add-ons, construir, arrancar — pero las pantallas y los menús difieren. La guía siguiente recorre los seis pasos comunes con capturas de cada loader. Las opciones exactas pueden cambiar con nuevas releases del loader.",
+    "intro": "Los seis pasos comunes son: arrancar la VM, elegir modelo, versión de DSM y complementos, construir y arrancar. Los menús y las opciones varían según la versión. Las capturas de M-shell muestran una interfaz anterior de TinyCore; el script actual descarga Alpine RedPill M-shell, por lo que debes seguir sus indicaciones actuales.",
     "warnCalloutTitle": "Los loaders no los mantiene ProxMenux",
     "warnCalloutBody": "Arc, RR y TinyCore son proyectos de la comunidad con su propia cadencia de release. Si un paso se ve distinto a las capturas de abajo, lo más probable es que el loader se haya actualizado — consulta la documentación del propio loader (enlaces al final de esta página)."
   },
@@ -310,32 +310,32 @@
     "title": "Construye el loader",
     "introRich": "Con el modelo, la versión de DSM y los addons elegidos, selecciona <strong>Build the Loader</strong>. Esto puede tardar unos minutos según el loader y las opciones elegidas.",
     "arc": {
-      "alt": "Build loader en Arc",
-      "caption": "Arc — build loader"
+      "alt": "Construcción del loader en Arc",
+      "caption": "Construcción del loader en Arc"
     },
     "rr": {
-      "alt": "Build loader en RR",
-      "caption": "RR — build loader"
+      "alt": "Construcción del loader en RR",
+      "caption": "Construcción del loader en RR"
     },
     "tinycore": {
-      "alt": "Build loader en TinyCore",
-      "caption": "TinyCore — build loader"
+      "alt": "Construcción del loader en TinyCore",
+      "caption": "Construcción del loader en TinyCore"
     }
   },
   "step6": {
     "title": "Arranca el loader",
     "intro": "Una vez construido el loader, la VM reinicia con la configuración que has creado y empieza la instalación de DSM.",
     "arc": {
-      "alt": "Boot loader en Arc",
-      "caption": "Arc — boot loader"
+      "alt": "Arranque del loader en Arc",
+      "caption": "Arranque del loader en Arc"
     },
     "rr": {
-      "alt": "Boot loader en RR",
-      "caption": "RR — boot loader"
+      "alt": "Arranque del loader en RR",
+      "caption": "Arranque del loader en RR"
     },
     "tinycore": {
-      "alt": "Boot loader en TinyCore",
-      "caption": "TinyCore — boot loader"
+      "alt": "Arranque del loader en TinyCore",
+      "caption": "Arranque del loader en TinyCore"
     }
   },
   "dsmInstall": {
@@ -377,12 +377,12 @@
     "itemsRich": [
       {
         "href": "/docs/create-vm/system-nas",
-        "label": "Resumen de System NAS",
+        "label": "Resumen de sistemas NAS",
         "tail": " — comparativa entre Synology y TrueNAS / OMV / Rockstor / XigmaNAS."
       },
       {
         "href": "/docs/create-vm/system-nas/system-nas-others",
-        "label": "Otros System NAS",
+        "label": "Otros sistemas NAS",
         "tail": " — distribuciones NAS no-Synology."
       },
       {
