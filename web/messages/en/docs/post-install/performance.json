@@ -16,7 +16,7 @@
     "heading": "Use pigz for faster gzip compression",
     "intro": "Standard <code>gzip</code> compresses data using a <strong>single CPU core</strong>. On modern Proxmox hosts with 8, 16 or 32 cores, that is a huge bottleneck during <code>vzdump</code> VM/CT backups, log rotation, and anything else that pipes through <code>gzip</code>. <a>pigz</a> is a drop-in parallel replacement: same gzip-compatible output, but it spreads the work across every core.",
     "doesTitle": "What ProxMenux does",
-    "doesIntro": "Four steps, all idempotent:",
+    "doesIntro": "Five steps, all idempotent:",
     "doesItems": [
       "Sets <code>pigz: 1</code> in <code>/etc/vzdump.conf</code> so Proxmox's backup tool uses pigz natively.",
       "Installs the <code>pigz</code> apt package if not already present.",
