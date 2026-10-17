@@ -28,6 +28,7 @@ function fixture({nativeCandidate = candidate} = {}) {
   const calls = [], cachedWrites = []
   let native = {vmid: 101, status: 'not_scanned', candidates: [], stale: false}
   let holdScan, scanGate, holdSave, saveGate, scanStatus = 'complete'
+  let cacheGate, resolveCache, cachePending = false
   const seed = {sidecar: {vmid: 101, apps: []}, suggestions: {extras: [], port_suggestions: []}}
   const react = {
     useState(initial) {
@@ -47,6 +48,12 @@ function fixture({nativeCandidate = candidate} = {}) {
   const api = async (url, options = {}) => {
     calls.push({url, ...options})
     if (url.endsWith('/native-discovery')) {
+      if (options.method !== 'POST' && cachePending) {
+        cachePending = false
+        const oldSnapshot = structuredClone(native)
+        await cacheGate
+        return oldSnapshot
+      }
       if (options.method === 'POST') {
         if (scanGate) await scanGate
         native = {...native, status: scanStatus, candidates: [nativeCandidate]}
@@ -92,6 +99,8 @@ function fixture({nativeCandidate = candidate} = {}) {
   }
   return {render, settle, calls, cachedWrites, button, tree: () => tree,
     setNative: value => {native = value},
+    holdInitialCache: () => {cachePending = true; cacheGate = new Promise(resolve => {resolveCache = resolve})},
+    resolveInitialCache: () => resolveCache(),
     setScanStatus: value => {scanStatus = value},
     holdScan: () => {scanGate = new Promise(resolve => {holdScan = resolve})}, resolveScan: () => holdScan(),
     holdSave: () => {saveGate = new Promise(resolve => {holdSave = resolve})}, resolveSave: () => holdSave(),
@@ -133,6 +142,15 @@ async function main() {
   const hestiaPayload = JSON.parse(hestia.calls.find(c => /\/apps$/.test(c.url) && c.method === 'POST').body)
   assert.deepEqual(hestiaPayload.ports, [{port: 8083, scheme: 'https', web_path: ''}],
     'a verified Hestia panel pre-fills only its fixed HTTPS endpoint')
+  const delayedCache = fixture()
+  delayedCache.holdInitialCache()
+  delayedCache.render(); await delayedCache.settle()
+  await delayedCache.button('searchApplications').props.onClick(); delayedCache.render()
+  assert.ok(text(delayedCache.tree()).includes('/opt/handmade/server'))
+  delayedCache.resolveInitialCache(); await delayedCache.settle()
+  assert.ok(text(delayedCache.tree()).includes('/opt/handmade/server'),
+    'a delayed initial cache read must not erase a completed explicit search')
+
   const partial = fixture()
   partial.render(); await partial.settle(); partial.setScanStatus('partial')
   await partial.button('searchApplications').props.onClick(); partial.render()

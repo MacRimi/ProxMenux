@@ -475,6 +475,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
   const [sidecar, setSidecar] = useState<SidecarResponse | null>(seed?.sidecar ?? null)
   const [suggestions, setSuggestions] = useState<Suggestions | null>(seed?.suggestions ?? null)
   const [nativeDiscovery, setNativeDiscovery] = useState<NativeDiscovery | null>(null)
+  const nativeRequest = useRef(0)
   const targetRef = useRef(vmid)
   targetRef.current = vmid
   const targetGeneration = useRef(0)
@@ -485,6 +486,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
   }
   useEffect(() => {
     const generation = targetGeneration.current
+    const request = ++nativeRequest.current
     setNativeDiscovery(null)
     setEditing(null)
     setDetectionNotice(null)
@@ -492,7 +494,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
     setSaving(false)
     if (managed) return
     fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/native-discovery`).then(result => {
-      if (targetRef.current === vmid && targetGeneration.current === generation) setNativeDiscovery(result)
+      if (targetRef.current === vmid && targetGeneration.current === generation
+          && nativeRequest.current === request) setNativeDiscovery(result)
     }).catch(() => { /* cached metadata is optional; never initiate a scan */ })
     return () => { targetGeneration.current += 1 }
   }, [vmid, managed])
@@ -787,7 +790,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
 
   const searchInstalledApplications = async () => {
     const generation = targetGeneration.current
+    const request = ++nativeRequest.current
     const isCurrent = () => targetRef.current === vmid && targetGeneration.current === generation
+      && nativeRequest.current === request
     const before = new Set([...visibleDetected, ...visibleWorkloads].map((item) => item.slug))
     setSearchingApplications(true)
     setDetectionNotice(null)
