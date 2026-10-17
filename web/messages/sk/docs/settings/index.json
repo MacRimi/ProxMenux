@@ -1,0 +1,81 @@
+{
+  "meta": {
+    "title": "Nastavenia ProxMenux — Aktivácia Monitora, kanál vydaní, jazyky | ProxMenux",
+    "description": "Nastavenia ProxMenux: služba Monitor a obnovenie hesla, kanál Stable/Beta, osem jazykov rozhrania, diagnostika verzie a odinštalovanie. Možnosti Monitora sa zobrazujú, keď je služba nainštalovaná.",
+    "ogTitle": "Nastavenia ProxMenux — Aktivácia Monitora, kanál vydaní, jazyky",
+    "ogDescription": "Konfigurácia ProxMenux: služba Monitor, kanál vydaní, jazyk, informácie o verzii a odinštalovanie.",
+    "twitterTitle": "Nastavenie ProxMenux",
+    "twitterDescription": "Aktivácia Monitora, prepínanie kanála vydaní, jazyky, informácie o verzii a odinštalovanie."
+  },
+  "header": {
+    "title": "Nastavenia",
+    "description": "Konfigurujte ProxMenux: aktivujte alebo deaktivujte Monitor, obnovte prihlasovacie údaje, prepínajte medzi Stable a Beta v oboch smeroch, vyberte jeden z ôsmich jazykov, zobrazte diagnostiku verzie a odinštalujte. Akcie Monitora vyžadujú nainštalovanú službu; výber jazyka je vždy dostupný.",
+    "section": "Nastavenia"
+  },
+  "intro": {
+    "title": "Na čo je toto menu",
+    "body": "Správa samotného ProxMenux: služba Monitor, opustenie beta kanála, jazyk, diagnostika verzie a odinštalovanie. Žiadna možnosť v tomto menu nemení vaše VM, kontajnery ani úložisko."
+  },
+  "opening": {
+    "heading": "Otvorenie menu",
+    "body": "V hlavnom menu ProxMenux stlačte <kbd>s</kbd>. Akcie Monitora sa zobrazia, ak je služba nainštalovaná; ostatné nastavenia sú vždy dostupné:",
+    "imageAlt": "Menu Nastavenia ProxMenux s podmienenými akciami Monitora"
+  },
+  "installTypes": {
+    "heading": "Jedna inštalácia, všetky jazyky",
+    "intro": "Aktuálne vydania obsahujú statické prekladové katalógy JSON v každej inštalácii. Staršie vydania ponúkali samostatné režimy s prekladom a normálny režim:",
+    "headerType": "Typ inštalácie",
+    "headerBundles": "Čo obsahuje",
+    "headerMenu": "Zobrazené možnosti menu",
+    "rows": [
+      {
+        "type": "Aktuálna inštalácia",
+        "bundles": "Statické katalógy JSON pre osem jazykov; bez prekladového prostredia Python",
+        "menuRich": "<strong>Zmeniť jazyk</strong> + Zobraziť verziu + Odinštalovať"
+      },
+      {
+        "type": "Staršie režimy s prekladom / normálny",
+        "bundles": "Zastarané rozdelenie na prekladové prostredie a inštaláciu iba v angličtine",
+        "menu": "Aktualizujte oficiálnym inštalátorom a používajte aktuálne jednotné menu"
+      }
+    ],
+    "detectionTitle": "Výber jazyka je vždy dostupný",
+    "detectionBody": "Menu už nekontroluje prekladové prostredie. Každá inštalácia obsahuje <code>/usr/local/share/proxmenux/lang/</code> a ukladá zvolenú hodnotu <code>language</code> do <code>config.json</code>."
+  },
+  "options": {
+    "heading": "Možnosti menu",
+    "intro": "Tieto nástroje spravujú samotný ProxMenux. <em>Podmienené</em> znamená, že akcie Monitora sa zobrazia iba pri nainštalovanej službe systemd. Kanál vydaní, jazyk, diagnostika verzie a odinštalovanie sú vždy dostupné.",
+    "list": [
+      {
+        "icon": "Activity",
+        "href": "/docs/settings/proxmenux-monitor",
+        "title": "ProxMenux Monitor",
+        "description": "Aktivujte alebo deaktivujte jednotku systemd proxmenux-monitor.service, skontrolujte jej aktuálny stav a v prípade straty obnovte prihlasovacie heslo ovládacieho panela. Webové rozhranie je dostupné na porte TCP 8008.",
+        "badge": "Podmienené"
+      },
+      {
+        "icon": "TestTube",
+        "href": "/docs/settings/beta-program",
+        "title": "Zmeniť kanál vydaní",
+        "description": "Prepínajte medzi Stable (main) a Beta (develop) v oboch smeroch v jednom dialógu. Spustí oficiálny inštalátor zvoleného kanála; je idempotentný a vždy viditeľný.",
+        "badge": "Vždy k dispozícii"
+      },
+      {
+        "icon": "Info",
+        "href": "/docs/settings/show-version-information",
+        "title": "Zobraziť informácie o verzii",
+        "description": "Verzia ProxMenux, kanál vydaní, nainštalované komponenty, cesty k súborom, prekladové súbory a aktuálny jazyk."
+      },
+      {
+        "icon": "Trash2",
+        "href": "/docs/settings/uninstall-proxmenux",
+        "title": "Odinštalovať ProxMenux",
+        "description": "Odstrániť ProxMenux a (voliteľne) jeho závislosti. Tiež obnovuje zálohy /root/.bashrc a /etc/motd vytvorené v čase inštalácie."
+      }
+    ]
+  },
+  "configTip": {
+    "title": "Kde je uložená konfigurácia",
+    "bodyRich": "Väčšina stavu spravovaného týmto menu je uložená v <code>/usr/local/share/proxmenux/config.json</code>: <code>language</code>, <code>beta_program.status</code> a príznaky inštalácie jednotlivých komponentov. Stav služby Monitor spravuje systemd (<code>proxmenux-monitor.service</code>), nie tento súbor. Verzia sa načítava z <code>/usr/local/share/proxmenux/version.txt</code>."
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "meta": {
+    "title": "Visa versionsinformation | ProxMenux-dokumentation",
+    "description": "ProxMenux-diagnostik med enbart läsning: version, versionskanal, komponenter registrerade i config.json, filvägar, översättningskataloger och aktuellt språk.",
+    "ogTitle": "Visa versionsinformation | ProxMenux-dokumentation",
+    "ogDescription": "Diagnostisk utskrift av ProxMenux-version, versionskanal, komponenter, filer och språk."
+  },
+  "header": {
+    "title": "Visa versionsinformation",
+    "description": "Diagnostik med enbart läsning. Läser version.txt, config.json och kända filvägar och visar en rullbar textruta med version, versionskanal, installerade komponenter, filernas närvaro, översättningsfiler och aktuellt språk.",
+    "section": "Inställningar"
+  },
+  "intro": {
+    "title": "Vad detta är",
+    "body": "Självdiagnostik. Användbar när du rapporterar ett problem (klistra in dialogens innehåll i felrapporten) eller för att bekräfta att en installation slutfördes korrekt. Ändrar ingenting."
+  },
+  "reports": {
+    "heading": "Vad det rapporterar",
+    "headerSection": "Avsnitt",
+    "headerSource": "Källa",
+    "headerContent": "Innehåll",
+    "rows": [
+      {
+        "section": "Nuvarande version",
+        "source": "version.txt",
+        "contentRich": "Versionsnummer på en rad; <code>Unknown</code> om filen saknas"
+      },
+      {
+        "section": "Versionskanal",
+        "source": "Betaprogrammets status i config.json",
+        "content": "Stable (main) eller Beta (develop); betaversion om tillgänglig"
+      },
+      {
+        "section": "Installerade komponenter",
+        "source": "config.json",
+        "content": "Status per komponent (✓ installerad / skapad / uppgraderad, ✗ saknas)"
+      },
+      {
+        "section": "ProxMenux-filer",
+        "source": "Filsystemkontroller",
+        "contentRich": "<code>menu</code>, <code>utils.sh</code>, <code>config.json</code>, <code>version.txt</code> närvaro + vägar"
+      },
+      {
+        "section": "Översättningsfiler",
+        "source": "/usr/local/share/proxmenux/lang/",
+        "content": "Närvaro av katalogen lang/ som ingår i varje installation"
+      },
+      {
+        "section": "Nuvarande språk",
+        "source": "config.json",
+        "contentRich": "Språkkod från <code>.language</code>; använder <code>en</code> om inget är inställt"
+      }
+    ]
+  },
+  "sampleHeading": "Exempel på utdata",
+  "manualHeading": "Manuella motsvarigheter",
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "unknownTitle": "Versionen visar \"Unknown\"",
+    "unknownBody": "<code>/usr/local/share/proxmenux/version.txt</code> saknas eller är oläslig. Oftast orsakad av en partiell installation. Installera från den officiella ProxMenux-källan.",
+    "noConfigTitle": "Ingen installationsinformation tillgänglig",
+    "noConfigBody": "<code>config.json</code> saknas. Skriptet kan inte lista komponenter utan den filen. Installera om för att återskapa den.",
+    "wrongStatusTitle": "En komponent visar ✗ trots att jag är säker på att jag installerat den",
+    "wrongStatusBody": "<code>config.json</code> spårar inte den komponenten som installerad - kan vara ett manus som inte registrerar sig ännu, eller en manuell installation som kringgick ProxMenux. Dialogen speglar vad <code>config.json</code> säger, inte vad som faktiskt finns på disken."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/settings/uninstall-proxmenux",
+        "label": "Avinstallera ProxMenux",
+        "tail": " — ta bort alla dessa filer."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Översikt över inställningar",
+        "tail": "."
+      }
+    ]
+  }
+}

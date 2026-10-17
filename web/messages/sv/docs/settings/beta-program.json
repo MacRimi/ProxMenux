@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "title": "Byt versionskanal | ProxMenux-dokumentation",
+    "description": "Växla mellan ProxMenux-kanalerna Stable (main) och Beta (develop) i en dialogruta. Dubbelriktat och idempotent; kör den officiella installeraren för vald kanal och normaliserar Monitor-tjänsten.",
+    "ogTitle": "Byt versionskanal | ProxMenux-dokumentation",
+    "ogDescription": "Ett alternativ i Inställningar för att växla mellan Stable och Beta utan att köra installerare manuellt."
+  },
+  "header": {
+    "title": "Byt versionskanal",
+    "description": "Ett gemensamt alternativ i Inställningar växlar ProxMenux mellan Stable (grenen main) och Beta (grenen develop). Det tidigare enkelriktade ”Inaktivera betaprogram” har ersatts av en dubbelriktad dialog som erbjuder båda riktningarna och kör den officiella installeraren för vald kanal.",
+    "section": "Inställningar"
+  },
+  "intro": {
+    "title": "Vad förändrats",
+    "body": "Tidigare fanns två flöden: ”Inaktivera betaprogram”, bara synligt med aktiv beta, och en manuell omkörning av betainstalleraren för att gå med igen. De har slagits ihop till <strong>Byt versionskanal</strong>, som alltid visas, anger aktuell kanal och låter dig växla mellan Stable och Beta i båda riktningarna."
+  },
+  "why": {
+    "heading": "Varför det här alternativet finns",
+    "intro": "ProxMenux distribueras från två Git-grenar:",
+    "items": [
+      "<strong>Stable</strong>: grenen <code>main</code>, som README länkar till och som de flesta administratörer föredrar. Versionerna släpps mer sällan och innehåller bara ändringar som redan validerats i beta.",
+      "<strong>Beta</strong>: grenen <code>develop</code>. Nyare funktioner och Monitor-byggen med taggen som nästa stabila version ärver. Vissa saker kan fungera bristfälligt; genom att välja kanalen deltar du i testerna före lansering."
+    ],
+    "outro": "Tidigare behövde du hitta rätt installationsadress i README och redigera <code>config.json</code> manuellt om något blev osynkroniserat. Det gemensamma alternativet utför hela flödet som en enda guidad åtgärd."
+  },
+  "dialog": {
+    "heading": "Dialogen",
+    "intro": "I huvudmenyn: <strong>Inställningar → Byt versionskanal</strong>. En meny med två rader visas:",
+    "options": [
+      "<code>stable</code> — Stable (grenen main)",
+      "<code>beta</code> — Beta (grenen develop)"
+    ],
+    "behaviour": "Aktuell kanal är förvald och visas högst upp. Samma val visar ”Den här versionskanalen är redan aktiv”; dialogen är idempotent. En annan kanal visar en bekräftelse med kanalspecifik text:",
+    "directions": [
+      "<strong>Stable → Beta:</strong> varnar för att betaversioner kan innehålla fel eller ofullständiga funktioner.",
+      "<strong>Beta → Stable:</strong> varnar för att beta-uppdateringskontroller kommer att sluta och den stabila installatören kommer att installera om Stable-kanalkomponenterna."
+    ]
+  },
+  "confirm": {
+    "heading": "Vad händer när du bekräftar",
+    "items": [
+      "<strong>Laddar ned den officiella installeraren</strong> för målkanalen:<ul><li>Stable: <code>install_proxmenux.sh</code> från <code>main</code></li><li>Beta: <code>install_proxmenux_beta.sh</code> från <code>develop</code></li></ul>Kontrollerar att filen finns och gör den körbar före nästa steg.",
+      "<strong>Kör hela installeraren</strong>, samma som README länkar till. Komponentdetektering, säkerhetskopior, installation av beroenden och bevarande av språk följer målkanalens officiella installationsflöde.",
+      "När du byter till <strong>Stable</strong>, menyn sedan beskär någon överbliven beta metadata från <code>config.json</code>: <code>beta_program</code>, <code>beta_version</code>, <code>install_branch</code>, <code>update_available.beta*</code> raderas, och <code>proxmenux_monitor.status = beta_updated</code> normaliseras till <code>updated</code>. Den överblivna <code>beta_version.txt</code>-filen och alla nedladdade beta-installatörer tas bort.",
+      "Vid byte till Stable skrivs Monitors systemd-enhet om från Stable-mallen: ”Beta” tas bort ur beskrivningen och <code>ExecStart</code> pekar åter på körningskatalogen. En ny <code>systemctl status</code> visar då aktuell kanal.",
+      "Laddar om konfigurationsmenyn. <em>Visa versionsinformation</em> visar sedan den nya kanalen."
+    ]
+  },
+  "switching": {
+    "heading": "Växla fram och tillbaka",
+    "intro": "Båda riktningarna går igenom samma installationsprogram – de är <strong>inte</strong> specialcase avinstallations- + ominstallationsflöden. Varje riktning kör helt enkelt kanalens eget installationsprogram, som är designat för att vara idempotent och säkert att köra om över en befintlig installation. Praktiska konsekvenser:",
+    "items": [
+      "Din befintliga konfig, ProxMenux Monitor inloggning (<code>auth.json</code>), meddelandekanaler, post-install registret, anpassade trösklar - ingen av dem berörs. Kanalbrytaren byter bara skriptträdet och den binära AppImage.",
+      "En Monitor som var aktiv före bytet är aktiv även efteråt; en inaktiverad Monitor förblir inaktiverad.",
+      "ProxMenux Monitors <code>auth.json</code>, API-token och JWT-hemlighet bevaras vid kanalbyten. Sessionerna loggas inte ut.",
+      "Du kan vända kanaler så många gånger du vill - dialogrutan accepterar det varje gång och kör installationsprogrammet. Ingen omstart av Proxmox krävs.",
+      "Kanalbytet ersätter ProxMenux-skripten och kan inte köras i Monitors webbläsarterminal: PTY:n skulle stängas mitt i uppdateringen och lämna dialogen avbruten. Där visas i stället ett informationsfönster med det officiella enradsinstallationskommandot för målkanalen. Kör det via SSH eller Proxmox-värdens konsol."
+    ]
+  },
+  "feedback": {
+    "heading": "Rapportera problem i beta",
+    "intro": "Om något beter sig oväntat medan du är på Beta-kanalen, öppnar ett problem med tillräckligt sammanhang är det som stänger klyftan till en stabil release. Den mest användbara rapporten inkluderar:",
+    "items": [
+      "Vad du gjorde och vad du förväntade dig att hända.",
+      "Alla felmeddelanden som visas på skärmen.",
+      "De relevanta övervakningsloggarna:"
+    ],
+    "logsCommand": "journalctl -u proxmenux-monitor -n 50 --no-pager",
+    "versionLine": "Aktuell ProxMenux-version (Inställningar → <link>Visa versionsinformation</link>).",
+    "issueLine": "Öppna en <ghlink>GitHub Issue</ghlink> med den informationen och vi kommer till rätta snabbare."
+  },
+  "manual": {
+    "heading": "Manuell motsvarighet",
+    "intro": "Om du föredrar skalet eller automatiserar kanalbytet är det dessa kommandon dialogen kör:"
+  },
+  "unifiedCallout": {
+    "title": "Varför båda riktningarna nu är ett alternativ",
+    "body": "Det tidigare ”Inaktivera betaprogram” visades bara efter att värden gått med i beta. För att <em>gå med</em> fick man söka installeraren någon annanstans; för att <em>lämna</em> behövde man ibland rensa <code>beta_*</code>-metadata manuellt. <strong>Byt versionskanal</strong> visas alltid, anger aktuell kanal och hanterar båda riktningarna som en körbar, upprepningsbar och idempotent operation."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "downloadTitle": "\"Kan inte ladda ner installationsprogrammet\"",
+    "downloadBody": "Utgående HTTPS till <code>raw.githubusercontent.com</code> misslyckades. Kontrollera anslutning och DNS från värden:",
+    "downloadCmd": "curl -fsSL -o /tmp/test https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh && head -1 /tmp/test",
+    "downloadOutro": "Om detta misslyckas utanför ProxMenux är det ett nätverk / proxyproblem på värden.",
+    "errorsTitle": "\"Installer slutade med fel\"",
+    "errorsBody": "Installeraren returnerade en slutkod som inte är noll. Ingen automatisk återställning sker; vissa filer eller komponenter kan redan ha ändrats. Granska utdata och aktuellt tillstånd innan du försöker igen. Kör installeraren manuellt via SSH eller värdkonsolen för fullständiga utdata.",
+    "configTitle": "\"Kan inte uppdatera konfigfil\" efter att ha bytt till Stable",
+    "configBody": "Post-install rensningen av beta metadata misslyckades - vanligtvis eftersom <code>config.json</code> har ett syntaxfel från en manuell redigering. Validera det:",
+    "configCmd": "jq . /usr/local/share/proxmenux/config.json",
+    "configOutro": "Rätta eller återställ filen och kör alternativet igen."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/settings/show-version-information",
+        "label": "Visa versionsinformation",
+        "tail": " — bekräfta vilken kanal som är aktiv nu."
+      },
+      {
+        "href": "/docs/settings/proxmenux-monitor",
+        "label": "ProxMenux Monitor",
+        "tail": " — Monitor-tjänsten som skapas om vid kanalbytet."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Översikt över inställningar",
+        "tail": "."
+      }
+    ]
+  }
+}

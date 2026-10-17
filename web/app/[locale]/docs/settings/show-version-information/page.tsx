@@ -85,10 +85,8 @@ export default async function ShowVersionInformationPage({
       </div>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("sampleHeading")}</h2>
-      <pre className="rounded-md bg-gray-100 p-4 overflow-x-auto text-xs font-mono text-gray-800 leading-relaxed border border-gray-200">{`Current ProxMenux version: 1.2.4
-
-Installation type:
-✓ Translation Version (Multi-language support)
+      <pre className="rounded-md bg-gray-100 p-4 overflow-x-auto text-xs font-mono text-gray-800 leading-relaxed border border-gray-200">{`Current ProxMenux version: VERSION
+Release channel: Stable (main)
 
 Installed components:
 ✓ post_install_settings: installed
@@ -100,31 +98,27 @@ Installed components:
 
 ProxMenux files:
 ✓ menu → /usr/local/bin/menu
-✓ utils.sh → /usr/local/share/proxmenux/utils.sh
+✓ utils.sh → /usr/local/share/proxmenux/scripts/utils.sh
 ✓ config.json → /usr/local/share/proxmenux/config.json
 ✓ version.txt → /usr/local/share/proxmenux/version.txt
-✓ cache.json → /usr/local/share/proxmenux/cache.json
-
-Virtual Environment:
-✓ Installed → /opt/googletrans-env
-✓ pip: Installed → /opt/googletrans-env/bin/pip
 
 Current language:
-es`}</pre>
+en
+✓ Translation files: /usr/local/share/proxmenux/lang/`}</pre>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("manualHeading")}</h2>
       <pre className="rounded-md bg-gray-100 p-4 overflow-x-auto text-xs font-mono text-gray-800 leading-relaxed border border-gray-200">{`# Version
 cat /usr/local/share/proxmenux/version.txt
 
-# Install type detection (replicates the script's logic)
-[[ -d /opt/googletrans-env ]] && echo "venv: yes" || echo "venv: no"
-jq -r '.language // "missing"' /usr/local/share/proxmenux/config.json
+# Release channel metadata and installed translation catalogs
+jq '{beta_program, install_branch}' /usr/local/share/proxmenux/config.json
+ls /usr/local/share/proxmenux/lang/*.json
 
 # All component statuses
 jq 'to_entries[] | "\\(.key): \\(.value)"' /usr/local/share/proxmenux/config.json
 
 # Current language
-jq -r '.language' /usr/local/share/proxmenux/config.json`}</pre>
+jq -r '.language // "en"' /usr/local/share/proxmenux/config.json`}</pre>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("troubleshoot.heading")}</h2>
 
