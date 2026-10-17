@@ -37,7 +37,7 @@
       "title": "System maintenance",
       "body": "Keep the host healthy: CLI tooling, regular updates, and the major-version upgrade when it's time.",
       "bullets": [
-        "System Utilities Installer (26 CLI tools)",
+        "System Utilities Installer (25 CLI tools)",
         "Proxmox System Update (apt + dist-upgrade)",
         "PVE 8 → PVE 9 major upgrade"
       ]
@@ -73,7 +73,7 @@
     "options": [
       {
         "title": "System Utilities Installer",
-        "description": "Curated picker for 26 CLI tools (htop, btop, iperf3, jq, tmux, ncdu, ...) with custom selection or predefined groups (basic, dev, compression, multiplexers, analysis, network). Uses the canonical repo + verify-command flow.",
+        "description": "Curated picker for 25 CLI tools (htop, btop, iperf3, jq, tmux, ncdu, ...) with custom selection or predefined groups (basic, dev, compression, multiplexers, analysis, network). Uses the canonical repo + verify-command flow.",
         "href": "/docs/utils/system-utils"
       },
       {
@@ -106,10 +106,10 @@
   },
   "diskSpaceCallout": {
     "title": "A note on disk space for export / import",
-    "body": "Both tools convert disk formats: export uses <code>qemu-img convert -O vmdk -o subformat=streamOptimized</code>; import uses <code>qm importdisk</code> to convert back to the storage-native format (qcow2 / raw). Plan for <strong>~120% of virtual disk size</strong> for OVF and <strong>~220%</strong> for OVA — the conversion writes the full disk before any compression. Check the destination directory has the headroom before you start."
+    "body": "Both tools convert disk formats: export uses <code>qemu-img convert -O vmdk -o subformat=streamOptimized</code>; import uses <code>qm importdisk</code> to convert back to the storage-native format (qcow2 / raw). For export, plan for <strong>~120% of virtual disk size</strong> for OVF and <strong>~220%</strong> for OVA. The OVA archive uses uncompressed TAR and is created while the temporary VMDK files still exist. Check the destination directory has the headroom before you start."
   },
   "fitsTogether": {
     "heading": "How the menu fits together",
-    "body": "Each tool has a dedicated script under <code>scripts/utilities/</code>. The Proxmox System Update is a wrapper that delegates to one of two worker scripts in <code>scripts/global/</code> depending on the detected major version (PVE 8 or PVE 9). The PVE 8 → 9 upgrade exposes two extra menu actions inside its own flow — a stand-alone <em>Pre-upgrade check</em> (runs <code>pve8to9 --full</code>) and a read-only <em>Manual upgrade guide</em> (17-step runbook) — for users who want to inspect or operate by hand instead of the automated path."
+    "body": "Each tool has a dedicated script under <code>scripts/utilities/</code>. Proxmox System Update calls one safe worker in <code>scripts/global/</code>, update-pve-safe.sh, which detects the major version and handles both PVE 8 and PVE 9. The PVE 8 → 9 upgrade offers two extra actions in its own menu: a stand-alone <em>Pre-upgrade check</em> (runs <code>pve8to9 --full</code>) and a read-only <em>Manual upgrade guide</em> (17-step runbook), for users who want to inspect the process or carry it out by hand."
   }
 }

@@ -1,0 +1,161 @@
+{
+  "meta": {
+    "title": "UUP-Dump-ISO-Erstellung | ProxMenux-Dokumentation",
+    "description": "Erstellen Sie mit der ProxMenux-UUP-Dump-ISO-Erstellung eine aktuelle Windows-Installations-ISO auf Ihrem Proxmox-Host. Installation der Abhängigkeiten, Download und Umwandlung der UUP-Dateien in eine bootfähige ISO für die VM-Erstellung werden automatisiert.",
+    "ogTitle": "UUP-Dump-ISO-Erstellung | ProxMenux-Dokumentation",
+    "ogDescription": "Erstellen Sie mit ProxMenux eine aktuelle Windows-ISO aus UUP Dump. Abhängigkeiten, Download und Umwandlung werden vollständig automatisiert.",
+    "ogImageAlt": "ProxMenux — UUP-Dump-ISO-Erstellung"
+  },
+  "header": {
+    "title": "UUP-Dump-ISO-Erstellung",
+    "description": "Erstellen Sie mit UUP Dump eine aktuelle Windows-Installations-ISO auf Ihrem Proxmox-Host. ProxMenux verwaltet die Abhängigkeiten, lädt UUP-Dateien parallel herunter, führt den UUP-Dump-Konverter aus und verschiebt die ISO in das gewählte Ausgabeverzeichnis. Voreingestellt ist der erkannte Proxmox-ISO-Speicher.",
+    "section": "Dienstprogramme"
+  },
+  "intro": {
+    "title": "Was dieses Skript macht",
+    "body": "Geben Sie eine von uupdump.net nach Auswahl von Build, Sprache und Edition erzeugte URL an. Das Skript installiert fehlende Abhängigkeiten, lädt den UUP-Dump-Konverter und die UUP-Dateien herunter, erstellt eine bootfähige Windows-ISO und verschiebt sie in das gewählte Ausgabeverzeichnis. Als Standardziel wird der erkannte Proxmox-ISO-Speicher angeboten."
+  },
+  "hero": {
+    "imageAlt": "UUP Dump ISO Creator Eintrag in ProxMenux",
+    "caption": "UUP Dump ISO Creator Eintrag in ProxMenux"
+  },
+  "what": {
+    "heading": "Was ist UUP Dump?",
+    "intro": "UUP Dump ist ein Community-Dienst zum Herunterladen der ursprünglichen Unified-Update-Platform-Dateien (UUP), mit denen Windows Update Windows bereitstellt. Daraus lässt sich eine normale bootfähige ISO erstellen. So erhalten Sie:",
+    "items": [
+      "Der neueste Windows-Build (einschließlich Insider Preview-Kanäle).",
+      "Ein spezifischer historischer Build, der nicht mehr auf der Download-Seite von Microsoft aufgeführt ist.",
+      "Saubere, unveränderte Dateien, die direkt von den Servern von Microsoft stammen.",
+      "Die genaue Kombination von Editionen und Sprachen, die Sie in einer einzigen ISO wünschen."
+    ],
+    "learnMore": "Erfahren Sie mehr auf der <extlink>UUP Dump Projektseite</extlink>."
+  },
+  "automates": {
+    "heading": "Was das Skript automatisiert"
+  },
+  "dependencies": {
+    "heading": "Abhängigkeiten",
+    "intro": "Das erste, was das Skript tut, ist die Suche nach den Tools, die zum Herunterladen von UUP-Nutzlasten und zum Zusammenbauen der ISO erforderlich sind. Alle, die fehlen, werden mit <code>apt-get</code> installiert:",
+    "headerPackage": "Paket",
+    "headerRole": "Rolle",
+    "rows": [
+      {
+        "pkg": "curl",
+        "roleRich": "HTTP-Downloads für den Start des Konverters."
+      },
+      {
+        "pkg": "aria2",
+        "roleRich": "Paralleler Downloader für alle UUP-Dateien."
+      },
+      {
+        "pkg": "cabextract",
+        "roleRich": "Extrahiert Microsoft CAB-Pakete."
+      },
+      {
+        "pkg": "wimtools",
+        "roleRich": "Erstellt <code>install.wim</code> (wimlib-imagex)."
+      },
+      {
+        "pkg": "genisoimage",
+        "roleRich": "Schreibt die endgültige bootfähige ISO (oder <code>mkisofs</code>)."
+      },
+      {
+        "pkg": "chntpw",
+        "roleRich": "Passt Windows-Registrierungsstrukturen während der Erstellung an."
+      }
+    ],
+    "manualIntro": "Manuelles Äquivalent - wenn Sie sie jemals selbst installieren müssen:",
+    "manualCode": "apt-get install curl aria2 cabextract wimtools genisoimage chntpw"
+  },
+  "flow": {
+    "heading": "Download und Konvertierung",
+    "steps": [
+      "Erkennt den Proxmox ISO-Speicher (über <code>pvesm status -content iso</code>) oder fällt auf <code>/var/lib/vz/template/iso</code> zurück.",
+      "Bittet um einen Basisordner für temporäre Dateien (Standard <code>/root/uup-temp</code>).",
+      "Lädt den UUP-Dump-Konverter von <code>git.uupdump.net</code> herunter.",
+      "Liest <code>id</code>, <code>pack</code> und <code>edition</code> aus der eingefügten URL.",
+      "Ruft <code>https://uupdump.net/get.php?…&aria2=2</code> auf, um eine aria2-Downloadliste zu erstellen.",
+      "Lädt alle UUP-Dateien mit aria2 nach <code>UUPs/</code> herunter, parallel und fortsetzbar.",
+      "Führt <code>convert.sh wim UUPs 1</code> aus dem Konverter aus, um die fertige ISO zu erstellen.",
+      "Verschiebt die ISO in das gewählte Ausgabeverzeichnis und entfernt temporäre Dateien."
+    ]
+  },
+  "aria2": {
+    "heading": "Verwendete aria2-Downloadoptionen",
+    "code": "aria2c --no-conf --console-log-level=warn --log-level=info \\\n  --log=aria2_download.log \\\n  -x16 -s16 -j5 -c -R \\\n  -d\"$destDir\" -i\"$tempScript\"",
+    "flags": [
+      "<code>-x16</code> — bis zu 16 Verbindungen pro Server.",
+      "<code>-s16</code> — teilt jede Datei in 16 Segmente.",
+      "<code>-j5</code> — 5 Dateien, die parallel heruntergeladen wurden.",
+      "<code>-c</code> — nimmt teilweise Downloads wieder auf.",
+      "<code>-R</code> — übernimmt den Zeitstempel der entfernten Datei für die heruntergeladene Datei, falls verfügbar."
+    ],
+    "runtime": "Die typische Laufzeit beträgt etwa 10 Minuten und hängt vor allem von der Internetgeschwindigkeit und der Auslastung der UUP-Dump-Downloadserver ab."
+  },
+  "step1": {
+    "heading": "Schritt 1 · Erhalten Sie eine UUP Dump URL",
+    "intro": "Bevor Sie das Skript ausführen, benötigen Sie eine UUP-Dump-URL, die die Abfrageparameter <code>id</code>, <code>pack</code> und <code>edition</code> enthält. Generieren Sie es auf <extlink>uupdump.net</extlink>:",
+    "stepBadge": "Schritt",
+    "items": [
+      {
+        "title": "Wählen Sie eine Windows-Version",
+        "img": "/iso-creator/step-1-select-version-windows.png",
+        "caption": "UUP Dump Hauptseite - Wählen Sie eine Windows-Version",
+        "body": "Öffnen Sie die UUP Dump-Homepage und wählen Sie die gewünschte Windows-Version aus."
+      },
+      {
+        "title": "Wählen Sie einen bestimmten Build",
+        "img": "/iso-creator/step-2-select-version-windows.png",
+        "caption": "Wählen Sie einen bestimmten Build",
+        "body": "Wählen Sie den gewünschten Build: den neuesten, einen aus einem Insider-Preview-Kanal oder einen noch aufgeführten älteren Build."
+      },
+      {
+        "title": "Wählen Sie eine Sprache",
+        "img": "/iso-creator/step-3-select-version-windows.png",
+        "caption": "Wählen Sie eine Sprache",
+        "body": "Wählen Sie die Sprache für die ISO."
+      },
+      {
+        "title": "Editionen auswählen",
+        "img": "/iso-creator/step-4-select-version-windows.png",
+        "caption": "Wählen Sie die aufzunehmenden Editionen",
+        "body": "Wählen Sie die Editionen aus, um sie in die ISO zu bündeln (Home, Pro, Enterprise, ...). Sie können mehrere kombinieren."
+      },
+      {
+        "title": "Kopieren der URL",
+        "img": "/iso-creator/step-5-select-version-windows.png",
+        "caption": "Kopieren der URL aus der Adressleiste",
+        "bodyRich": "Kopieren Sie auf der letzten Seite die URL <em>aus der Adressleiste des Browsers</em>. Sie muss <code>id=…</code>, <code>pack=…</code> und <code>edition=…</code> enthalten. Das Skript liest diese Zeichenfolge aus."
+      }
+    ]
+  },
+  "step2": {
+    "heading": "Schritt 2 · ISO-Erstellung starten",
+    "intro": "Mit der URL in der Hand, öffnen Sie ProxMenux und starten Sie den Creator:",
+    "stepBadge": "Schritt",
+    "items": [
+      {
+        "title": "Starten Sie UUP Dump ISO Creator",
+        "img": "/iso-creator/start-uupdump-iso-creator.png",
+        "caption": "Starten Sie UUP Dump ISO Creator von ProxMenux",
+        "bodyRich": "Öffnen Sie in ProxMenux <strong>Utilities → UUP Dump ISO Creator</strong>. Das Skript prüft vor der Eingabeaufforderung die Abhängigkeiten und das ISO-Speicherverzeichnis."
+      },
+      {
+        "title": "Fügen Sie die UUP Dump URL ein",
+        "img": "/iso-creator/add-url-iso-creator.png",
+        "caption": "Fügen Sie die von uupdump.net kopierte URL ein",
+        "body": "Fügen Sie die URL in den Eingabedialog ein. Das Skript bestätigt, dass die drei erforderlichen Parameter vorhanden sind; wenn eines fehlt, wird es sauber abgebrochen."
+      },
+      {
+        "title": "Warten Sie, bis der Build fertig ist",
+        "img": "/iso-creator/end-uupdump-iso-creator.png",
+        "caption": "Build fertig - ISO ist bereit im Proxmox ISO-Speicher",
+        "bodyRich": "Die Konsole zeigt den aria2-Fortschritt und anschließend die Ausgabe des Konverters. Die fertige ISO wird in das gewählte Ausgabeverzeichnis verschoben. Liegt sie in einem konfigurierten Proxmox-ISO-Speicher, lässt sie sich unter <strong>Create VM → System Windows → Install with ISO from UUP Dump</strong> auswählen."
+      }
+    ]
+  },
+  "tempFiles": {
+    "title": "Temporäre Dateien",
+    "body": "Der temporäre Standardordner ist <code>/root/uup-temp</code>. Downloads liegen in <code>UUPs/</code>, der Konverter in <code>converter/</code>. Bei einem eigenen Basispfad wird ein separates Sitzungsunterverzeichnis angelegt. Nach erfolgreicher Erstellung oder im Zweig ohne erzeugte ISO wird die temporäre Sitzung entfernt. Bei früheren Fehlern oder einem Abbruch können temporäre Dateien zurückbleiben."
+  }
+}
