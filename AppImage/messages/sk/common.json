@@ -7,7 +7,8 @@
     "unknown": "Neznáme",
     "notAvailable": "Nedostupné",
     "serverOffline": "Server je offline",
-    "supportProject": "Podporte projekt alebo prispejte vlastnými úpravami"
+    "supportProject": "Podporte projekt alebo prispejte vlastnými úpravami",
+    "descriptionPbs": "Proxmox Backup Server Dashboard"
   },
   "common": {
     "notAvailable": "Nedostupné",
@@ -164,7 +165,8 @@
     "errors": {
       "serverUnavailableTitle": "Server Monitora nie je dostupný",
       "serverUnavailableDescription": "Nedá sa pripojiť k serveru Monitora. Skontrolujte, či služba beží, a skúste to znova."
-    }
+    },
+    "pbsVersion": "Verzia PBS:"
   },
   "storage": {
     "loadingTitle": "Načítavam úložiská...",
@@ -1830,7 +1832,8 @@
         "logs": "Systémové záznamy",
         "updates": "Aktualizácie systému",
         "security": "Bezpečnosť a certifikáty",
-        "temperature": "Teplota"
+        "temperature": "Teplota",
+        "pbsServices": "Služby PBS"
       }
     },
     "remoteStorage": {
@@ -4823,7 +4826,8 @@
       "services": "Služby PVE",
       "logs": "Systémové záznamy",
       "updates": "Aktualizácie systému",
-      "security": "Bezpečnosť a certifikáty"
+      "security": "Bezpečnosť a certifikáty",
+      "pbsServices": "Služby PBS"
     },
     "checks": {
       "cpu_usage": "Využitie CPU",
@@ -7319,6 +7323,47 @@
     "navigation": "Navigácia PBS",
     "cpu": "CPU",
     "memory": "Pamäť",
-    "uptime": "Čas prevádzky"
+    "uptime": "Čas prevádzky",
+    "capacityUnavailable": "Kapacita nie je k dispozícii.",
+    "datastoresUnavailable": "{count} nie je k dispozícii",
+    "datastoresOnline": "Všetky dostupné",
+    "moreDatastores": "+{count} ďalších dátových úložísk",
+    "estimatedFull": "Odhadovaný plný",
+    "estimatedFullUnknown": "Zatiaľ nie je dostatok údajov",
+    "duration": "Trvanie",
+    "noJobs": "Nie sú nakonfigurované žiadne plány synchronizácie, overovania ani odstraňovania."
+  },
+  "monitorLinks": {
+    "groups": {
+      "cluster": "Cluster",
+      "standalone": "Samostatné uzly",
+      "pbs": "Proxmox Backup Server"
+    },
+    "thisNode": "Tento uzol",
+    "checking": "Kontrolujú sa uzly…",
+    "loadFailed": "Nepodarilo sa načítať zoznam uzlov.",
+    "empty": "Zatiaľ žiadne ďalšie uzly. Pridajte jeden, aby ste odtiaľto otvorili jeho Monitor.",
+    "noResponse": "Žiadna odpoveď",
+    "pbsInterface": "rozhranie PBS",
+    "openNewTab": "Otvoriť na novej karte",
+    "manage": "Pridať alebo spravovať uzly…",
+    "dialogTitle": "Prepojené uzly",
+    "dialogDescription": "Uzly klastra a nakonfigurované Proxmox Backup Server sa zisťujú automaticky. Každý Monitor má vlastné prihlásenie.",
+    "addTitle": "Pridať uzol",
+    "name": "Meno",
+    "address": "Adresa monitora",
+    "type": "Typ",
+    "add": "Pridať",
+    "save": "Uložiť",
+    "remove": "Odstrániť",
+    "visible": "Viditeľné",
+    "autoAddress": "Automaticky",
+    "detected": "Zistené",
+    "added": "Pridané",
+    "saveFailed": "Nepodarilo sa uložiť zoznam uzlov.",
+    "backTo": "Späť na {name}",
+    "cameFromTitle": "Pridať uzol monitora?",
+    "cameFromBody": "Pridajte {name} do prepojených uzlov tohto monitora.",
+    "notNow": "Teraz nie"
   }
 }

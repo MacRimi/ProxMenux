@@ -8,7 +8,8 @@
     "unknown": "Inconnu",
     "notAvailable": "N/A",
     "serverOffline": "Serveur hors ligne",
-    "supportProject": "Soutenir et contribuer au projet"
+    "supportProject": "Soutenir et contribuer au projet",
+    "descriptionPbs": "Tableau de bord Proxmox Backup Server"
   },
   "common": {
     "notAvailable": "N/A",
@@ -165,7 +166,8 @@
     },
     "runningCountOne": "{count} en cours d'exécution",
     "runningCountFew": "{count} en cours d'exécution",
-    "runningCountMany": "{count} en cours d'exécution"
+    "runningCountMany": "{count} en cours d'exécution",
+    "pbsVersion": "Version PBS :"
   },
   "storage": {
     "loadingTitle": "Chargement des données de stockage...",
@@ -1831,7 +1833,8 @@
         "logs": "Journaux système",
         "updates": "Mises à jour du système",
         "security": "Sécurité et certificats",
-        "temperature": "Température"
+        "temperature": "Température",
+        "pbsServices": "Services PBS"
       }
     },
     "remoteStorage": {
@@ -4824,7 +4827,8 @@
       "services": "Services PVE",
       "logs": "Journaux système",
       "updates": "Mises à jour du système",
-      "security": "Sécurité et certificats"
+      "security": "Sécurité et certificats",
+      "pbsServices": "services PBS"
     },
     "checks": {
       "cpu_usage": "Utilisation du processeur",
@@ -7320,6 +7324,47 @@
     "navigation": "Navigation PBS",
     "cpu": "CPU",
     "memory": "Mémoire",
-    "uptime": "Durée de fonctionnement"
+    "uptime": "Durée de fonctionnement",
+    "capacityUnavailable": "Capacité non disponible.",
+    "datastoresUnavailable": "{count} indisponible",
+    "datastoresOnline": "Tous disponibles",
+    "moreDatastores": "+{count} banques de données supplémentaires",
+    "estimatedFull": "Estimé complet",
+    "estimatedFullUnknown": "Pas encore assez de données",
+    "duration": "Durée",
+    "noJobs": "Aucune planification de synchronisation, de vérification ou d'élagage n'est configurée."
+  },
+  "monitorLinks": {
+    "groups": {
+      "cluster": "Cluster",
+      "standalone": "nœuds autonomes",
+      "pbs": "Proxmox Backup Server"
+    },
+    "thisNode": "Ce nœud",
+    "checking": "Vérification des nœuds…",
+    "loadFailed": "Impossible de charger la liste des nœuds.",
+    "empty": "Aucun autre nœud pour l'instant. Ajoutez-en un pour ouvrir son Monitor depuis ici.",
+    "noResponse": "Pas de réponse",
+    "pbsInterface": "interface PBS",
+    "openNewTab": "Ouvrir dans un nouvel onglet",
+    "manage": "Ajouter ou gérer des nœuds…",
+    "dialogTitle": "nœuds liés",
+    "dialogDescription": "Les nœuds du cluster et les Proxmox Backup Server configurés sont détectés automatiquement. Chaque Monitor conserve sa propre connexion.",
+    "addTitle": "ajouter un nœud",
+    "name": "Nom",
+    "address": "Adresse du moniteur",
+    "type": "Type",
+    "add": "Ajouter",
+    "save": "Enregistrer",
+    "remove": "Supprimer",
+    "visible": "Visible",
+    "autoAddress": "Automatique",
+    "detected": "Détecté",
+    "added": "ajouté",
+    "saveFailed": "Impossible d'enregistrer la liste des nœuds.",
+    "backTo": "Retour à {name}",
+    "cameFromTitle": "Ajouter un nœud Moniteur ?",
+    "cameFromBody": "Ajoutez {name} aux nœuds liés de ce moniteur.",
+    "notNow": "Pas maintenant"
   }
 }

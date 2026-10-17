@@ -2,29 +2,74 @@
 
 import { useEffect, useState } from "react"
 import useSWR from "swr"
+import {
+  Activity, ArchiveRestore, Database, DatabaseBackup, Download, ListChecks,
+  RefreshCw, Scissors, Server, Settings2, ShieldCheck, Terminal, Trash2,
+} from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { PBSDatastoreCard, type PBSDatastore } from "./pbs-datastore-usage"
 import { fetchApi } from "../lib/api-config"
-import { formatBytes } from "../lib/utils"
 import { useT } from "../lib/i18n/provider"
 
 interface Connection { id: string; name: string; url: string; token_id: string; fingerprint: string; has_token: boolean }
 interface Connections { local_available: boolean; servers: Connection[] }
-interface Datastore { name: string; path?: string; total?: number | null; used?: number | null; avail?: number | null; error?: string }
 interface Task { upid: string; worker_type?: string; worker_id?: string; starttime?: number; endtime?: number; status?: string }
 interface Job { id: string; store?: string; schedule?: string; "last-run-state"?: string }
 interface PBSStatus {
   name: string; version: string | null; fetched_at: number; services: Record<string, string>;
-  datastores: Datastore[] | null; tasks: Task[] | null;
+  datastores: PBSDatastore[] | null; tasks: Task[] | null;
   sync: Job[] | null; verify: Job[] | null; prune: Job[] | null; errors: Record<string, string>;
 }
 
 const emptyForm = { id: "", name: "", url: "", token_id: "", fingerprint: "", token_secret: "" }
-const selectClass = "h-10 rounded-md border bg-background px-3 text-sm"
+const NEW_CONNECTION = "__new__"
+const badgeTone = {
+  ok: "bg-green-500/10 text-green-500 border-green-500/20",
+  warn: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+  error: "bg-red-500/10 text-red-500 border-red-500/20",
+  running: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  muted: "bg-muted text-muted-foreground border-border",
+}
 
-export function PBSPanel() {
+const TASK_ICONS: Record<string, typeof Activity> = {
+  backup: DatabaseBackup, reader: ArchiveRestore, verify: ShieldCheck, verificationjob: ShieldCheck,
+  verify_group: ShieldCheck, verify_snapshot: ShieldCheck, prune: Scissors, prunejob: Scissors,
+  garbage_collection: Trash2, sync: RefreshCw, syncjob: RefreshCw, aptupdate: Download,
+  termproxy: Terminal, dircreate: Database, "create-datastore": Database,
+}
+
+// PBS reports "OK", "WARNINGS: n" or the error text; a task without one is still running.
+function taskState(task: Task): keyof typeof badgeTone {
+  if (!task.status) return task.endtime ? "muted" : "running"
+  if (task.status === "OK") return "ok"
+  if (task.status.startsWith("WARNINGS")) return "warn"
+  return "error"
+}
+
+function jobState(state?: string): keyof typeof badgeTone {
+  if (!state) return "muted"
+  if (state === "ok") return "ok"
+  if (state.toLowerCase().startsWith("warn")) return "warn"
+  return "error"
+}
+
+function formatDuration(seconds: number) {
+  if (!Number.isFinite(seconds) || seconds < 0) return "—"
+  if (seconds < 60) return `${Math.round(seconds)}s`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ${Math.round(seconds % 60)}s`
+  const hours = Math.floor(minutes / 60)
+  return hours < 24 ? `${hours}h ${minutes % 60}m` : `${Math.floor(hours / 24)}d ${hours % 24}h`
+}
+
+// `localOnly` is the PBS host's own Monitor: no connection picker, the
+// header Refresh already reloads the page data.
+export function PBSPanel({ localOnly = false }: { localOnly?: boolean } = {}) {
   const t = useT()
   const { data: connections, error: connectionError, mutate: reloadConnections } = useSWR<Connections>(
     "/api/pbs/servers", url => fetchApi<Connections>(url), { revalidateOnFocus: false })
@@ -69,36 +114,43 @@ export function PBSPanel() {
     } catch (err) { setError(err instanceof Error ? err.message : t("pbs.saveFailed")) }
     finally { setBusy(false) }
   }
-  const capacity = (value?: number | null) => value == null ? "—" : formatBytes(value)
+  const now = Date.now() / 1000
 
-  return <div className="space-y-4">
-    <div className="flex flex-wrap items-center gap-3">
-      <h2 className="text-xl font-semibold">{t("pbs.title")}</h2>
-      <select aria-label={t("pbs.server")} className={`${selectClass} sm:ml-auto`} value={selected}
-        onChange={event => setSelected(event.target.value)}>
-        {!selected && <option value="">{t("pbs.chooseServer")}</option>}
-        {connections?.local_available && <option value="local">{t("pbs.local")}</option>}
-        {connections?.servers.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}
-      </select>
-      <Button variant="outline" disabled={isLoading || !selected} onClick={() => mutate()}>{t("pbs.refresh")}</Button>
-      <Button variant="outline" onClick={() => setManage(!manage)}>{t("pbs.manage")}</Button>
-    </div>
+  return <div className="space-y-4 md:space-y-6">
+    {!localOnly && <div className="flex flex-wrap items-center gap-3">
+      <h2 className="flex items-center text-2xl font-semibold text-foreground"><Server className="mr-2 h-5 w-5" />{t("pbs.title")}</h2>
+      <Select value={selected || undefined} onValueChange={setSelected}>
+        <SelectTrigger aria-label={t("pbs.server")} className="w-full sm:ml-auto sm:w-56"><SelectValue placeholder={t("pbs.chooseServer")} /></SelectTrigger>
+        <SelectContent>
+          {connections?.local_available && <SelectItem value="local">{t("pbs.local")}</SelectItem>}
+          {connections?.servers.map(row => <SelectItem key={row.id} value={row.id}>{row.name}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Button variant="outline" size="sm" disabled={isLoading || !selected} onClick={() => mutate()}>
+        <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />{t("pbs.refresh")}
+      </Button>
+      <Button variant="outline" size="sm" onClick={() => setManage(!manage)}>
+        <Settings2 className="mr-2 h-4 w-4" />{t("pbs.manage")}
+      </Button>
+    </div>}
     {(connectionError || statusError) && <p role="alert" className="text-sm text-red-500">
       {String((connectionError || statusError)?.message || t("pbs.loadFailed"))}</p>}
     {isLoading && <p role="status" className="text-sm text-muted-foreground">{t("pbs.loading")}</p>}
     {!selected && !connectionError && connections && <p className="text-sm text-muted-foreground">{t("pbs.noServer")}</p>}
-    {manage && <Card>
+    {manage && !localOnly && <Card>
       <CardHeader><CardTitle>{t("pbs.manage")}</CardTitle></CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">{t("pbs.permissionsHelp")}</p>
-        <select aria-label={t("pbs.editConnection")} className={`${selectClass} w-full`} value={form.id}
-          onChange={event => {
-            const row = connections?.servers.find(item => item.id === event.target.value)
-            setForm(row ? { ...row, token_secret: "" } : emptyForm)
-          }}>
-          <option value="">{t("pbs.add")}</option>
-          {connections?.servers.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}
-        </select>
+        <Select value={form.id || NEW_CONNECTION} onValueChange={value => {
+          const row = connections?.servers.find(item => item.id === value)
+          setForm(row ? { ...row, token_secret: "" } : emptyForm)
+        }}>
+          <SelectTrigger aria-label={t("pbs.editConnection")} className="w-full"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NEW_CONNECTION}>{t("pbs.add")}</SelectItem>
+            {connections?.servers.map(row => <SelectItem key={row.id} value={row.id}>{row.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <div className="grid gap-4 md:grid-cols-2">
           {(["name", "url", "token_id", "token_secret", "fingerprint"] as const).map(field =>
             <div key={field} className="space-y-2">
@@ -118,32 +170,78 @@ export function PBSPanel() {
       </CardContent>
     </Card>}
     {data && <>
-      <p className="text-sm text-muted-foreground">{data.name} · PBS {data.version || "—"} · {t("pbs.sampled")} {new Date(data.fetched_at * 1000).toLocaleTimeString()}</p>
-      {Object.keys(data.services).length > 0 && <div className="flex flex-wrap gap-3 text-sm">
-        {Object.entries(data.services).map(([service, state]) => <span key={service} className={state === "active" ? "text-green-500" : "text-red-500"}>{service}: {state}</span>)}
-      </div>}
+      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+        <span>{data.name} · PBS {data.version || "—"} · {t("pbs.sampled")} {new Date(data.fetched_at * 1000).toLocaleTimeString()}</span>
+        {Object.entries(data.services).map(([service, state]) =>
+          <Badge key={service} variant="outline" className={state === "active" ? badgeTone.ok : badgeTone.error}>{service}: {state}</Badge>)}
+      </div>
       {Object.entries(data.errors).map(([section, detail]) => <p key={section} role="alert" className="text-sm text-amber-500">{t(`pbs.${section}`)}: {detail}</p>)}
-      <Card><CardHeader><CardTitle>{t("pbs.datastores")}</CardTitle></CardHeader><CardContent>
-        {data.datastores?.length === 0 && <p className="text-sm text-muted-foreground">{t("pbs.noDatastores")}</p>}
-        {data.datastores && data.datastores.length > 0 && <div className="overflow-x-auto"><table className="w-full text-sm">
-          <thead><tr className="border-b text-left"><th className="p-2">{t("pbs.name")}</th><th>{t("pbs.total")}</th><th>{t("pbs.used")}</th><th>{t("pbs.free")}</th></tr></thead>
-          <tbody>{data.datastores.map(row => <tr key={row.name} className="border-b"><td className="p-2 font-medium">{row.name}{row.error && <p className="font-normal text-xs text-amber-500">{row.error}</p>}</td><td>{capacity(row.total)}</td><td>{capacity(row.used)}</td><td>{capacity(row.avail)}</td></tr>)}</tbody>
-        </table></div>}
-      </CardContent></Card>
-      <Card><CardHeader><CardTitle>{t("pbs.tasks")}</CardTitle></CardHeader><CardContent>
-        {data.tasks?.length === 0 && <p className="text-sm text-muted-foreground">{t("pbs.noTasks")}</p>}
-        {data.tasks && data.tasks.length > 0 && <div className="overflow-x-auto"><table className="w-full text-sm">
-          <thead><tr className="border-b text-left"><th className="p-2">{t("pbs.task")}</th><th>{t("pbs.started")}</th><th>{t("pbs.status")}</th></tr></thead>
-          <tbody>{data.tasks.map(row => <tr key={row.upid} className="border-b"><td className="p-2">{row.worker_type} {row.worker_id}</td><td>{row.starttime ? new Date(row.starttime * 1000).toLocaleString() : "—"}</td><td>{row.status || (row.endtime ? "—" : t("pbs.running"))}</td></tr>)}</tbody>
-        </table></div>}
-      </CardContent></Card>
-      <Card><CardHeader><CardTitle>{t("pbs.jobs")}</CardTitle></CardHeader><CardContent>
-        <div className="overflow-x-auto"><table className="w-full text-sm">
-          <thead><tr className="border-b text-left"><th className="p-2">{t("pbs.job")}</th><th>{t("pbs.datastores")}</th><th>{t("pbs.schedule")}</th><th>{t("pbs.status")}</th></tr></thead>
-          <tbody>{(["sync", "verify", "prune"] as const).flatMap(kind => (data[kind] || []).map(row =>
-            <tr key={`${kind}-${row.id}`} className="border-b"><td className="p-2">{t(`pbs.${kind}`)} · {row.id}</td><td>{row.store || "—"}</td><td>{row.schedule || "—"}</td><td>{row["last-run-state"] || "—"}</td></tr>))}</tbody>
-        </table></div>
-      </CardContent></Card>
+
+      <Card className="bg-card border-border">
+        <CardHeader><CardTitle className="flex items-center text-foreground"><Database className="mr-2 h-5 w-5" />{t("pbs.datastores")}</CardTitle></CardHeader>
+        <CardContent>
+          {data.datastores?.length === 0 && <p className="text-sm text-muted-foreground">{t("pbs.noDatastores")}</p>}
+          {data.datastores && data.datastores.length > 0 && <div className="space-y-4">
+            {data.datastores.map(store => <PBSDatastoreCard key={store.name} store={store} />)}
+          </div>}
+        </CardContent>
+      </Card>
+
+      <Card className="bg-card border-border">
+        <CardHeader><CardTitle className="flex items-center text-foreground"><Activity className="mr-2 h-5 w-5" />{t("pbs.tasks")}</CardTitle></CardHeader>
+        <CardContent>
+          {data.tasks?.length === 0 && <p className="text-sm text-muted-foreground">{t("pbs.noTasks")}</p>}
+          {data.tasks && data.tasks.length > 0 && <div className="overflow-x-auto"><table className="w-full text-sm">
+            <thead><tr className="border-b border-border text-left text-xs text-muted-foreground">
+              <th className="py-2 pr-3 font-medium">{t("pbs.task")}</th>
+              <th className="py-2 pr-3 font-medium">{t("pbs.started")}</th>
+              <th className="py-2 pr-3 font-medium">{t("pbs.duration")}</th>
+              <th className="py-2 font-medium">{t("pbs.status")}</th>
+            </tr></thead>
+            <tbody>{data.tasks.map(row => {
+              const Icon = TASK_ICONS[row.worker_type || ""] || Activity
+              const state = taskState(row)
+              const end = row.endtime ?? (state === "running" ? now : undefined)
+              return <tr key={row.upid} className="border-b border-border/60 last:border-0">
+                <td className="py-2 pr-3"><span className="flex items-center gap-2">
+                  <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="text-foreground">{row.worker_type}</span>
+                  {row.worker_id && <span className="truncate text-muted-foreground">{row.worker_id}</span>}
+                </span></td>
+                <td className="whitespace-nowrap py-2 pr-3 tabular-nums text-muted-foreground">{row.starttime ? new Date(row.starttime * 1000).toLocaleString() : "—"}</td>
+                <td className="whitespace-nowrap py-2 pr-3 tabular-nums text-muted-foreground">{row.starttime && end ? formatDuration(end - row.starttime) : "—"}</td>
+                <td className="py-2"><Badge variant="outline" className={`${badgeTone[state]} max-w-[16rem] truncate`} title={row.status}>
+                  {state === "running" ? t("pbs.running") : row.status || "—"}
+                </Badge></td>
+              </tr>
+            })}</tbody>
+          </table></div>}
+        </CardContent>
+      </Card>
+
+      <Card className="bg-card border-border">
+        <CardHeader><CardTitle className="flex items-center text-foreground"><ListChecks className="mr-2 h-5 w-5" />{t("pbs.jobs")}</CardTitle></CardHeader>
+        <CardContent>
+          {(() => {
+            const jobs = (["sync", "verify", "prune"] as const).flatMap(kind => (data[kind] || []).map(row => ({ kind, row })))
+            if (jobs.length === 0) return <p className="text-sm text-muted-foreground">{t("pbs.noJobs")}</p>
+            return <div className="overflow-x-auto"><table className="w-full text-sm">
+              <thead><tr className="border-b border-border text-left text-xs text-muted-foreground">
+                <th className="py-2 pr-3 font-medium">{t("pbs.job")}</th>
+                <th className="py-2 pr-3 font-medium">{t("pbs.datastores")}</th>
+                <th className="py-2 pr-3 font-medium">{t("pbs.schedule")}</th>
+                <th className="py-2 font-medium">{t("pbs.status")}</th>
+              </tr></thead>
+              <tbody>{jobs.map(({ kind, row }) => <tr key={`${kind}-${row.id}`} className="border-b border-border/60 last:border-0">
+                <td className="py-2 pr-3"><span className="text-foreground">{t(`pbs.${kind}`)}</span> <span className="text-muted-foreground">· {row.id}</span></td>
+                <td className="py-2 pr-3 text-muted-foreground">{row.store || "—"}</td>
+                <td className="py-2 pr-3 font-mono text-xs text-muted-foreground">{row.schedule || "—"}</td>
+                <td className="py-2"><Badge variant="outline" className={badgeTone[jobState(row["last-run-state"])]}>{row["last-run-state"] || "—"}</Badge></td>
+              </tr>)}</tbody>
+            </table></div>
+          })()}
+        </CardContent>
+      </Card>
     </>}
   </div>
 }
