@@ -130,6 +130,7 @@ class UpdateWording(unittest.TestCase):
         reconcile.propose = lambda *args: None
         scope = {'sys': SimpleNamespace(path=[], executable='python3'),
                  'translate': lambda text: text, 'check_selected': lambda project, row: row,
+                 '_selected_configuration': lambda vmid: instances.command('pct', 'config', str(vmid)),
                  'images': SimpleNamespace(offer_removal=lambda *args: None),
                  'carry_records': lambda project, **options: {},
                  '_work_backup_ready': lambda project, ui, vmid: True,

@@ -56,7 +56,8 @@ class RemovalWordings(unittest.TestCase):
         state = ModuleType('oci_installation_state')
         state.parse_config = lambda raw: {}
         scope = {'sys': SimpleNamespace(path=[]), 'source_text': lambda value: value or '',
-                 'translate': translated or (lambda value: value), 're': re}
+                 'translate': translated or (lambda value: value), 're': re,
+                 '_selected_configuration': remover.guest_config, 'subprocess': subprocess}
         with patch.dict(sys.modules, {'oci_instances': instances, 'oci_remove': remover,
                                       'oci_installation_state': state}):
             return extract(MENU, '_removal_summary', scope)(Path('/inert'), 101)
@@ -87,7 +88,8 @@ class RemovalWordings(unittest.TestCase):
         with patch.dict(sys.modules, {'oci_instances': instances, 'oci_remove': remover,
                                       'oci_installation_state': state}):
             scope = {'sys': SimpleNamespace(path=[]), 'source_text': lambda value: value or '',
-                     'translate': lambda value: value, 're': re}
+                     'translate': lambda value: value, 're': re,
+                     '_selected_configuration': remover.guest_config, 'subprocess': subprocess}
             preview = extract(MENU, '_removal_summary', scope)(Path('/inert'), 102)
         self.assertIn(WHOLE, preview)
 
