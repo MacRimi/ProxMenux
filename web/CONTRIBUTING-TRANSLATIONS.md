@@ -328,7 +328,10 @@ registers a renderer for them.
 If you want to add a language that isn't in the project yet:
 
 1. Create `messages/<locale>/common.json` and the page catalogs. The automated
-   builder can provide the initial baseline.
+   builder can provide the initial baseline when explicitly dispatched. It
+   does not run on merge: changing English and its translations together must
+   not trigger machine retranslation of the reviewed text. Offline validation
+   still runs automatically for website changes.
 2. Review the shared navigation and a representative set of documentation
    pages with a native speaker.
 3. Add the locale code to `routing.ts` only when the locale is ready to be
