@@ -1,0 +1,50 @@
+name: USB/IP over SSH tests
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/devices/**'
+      - 'scripts/menus/hw_grafics_menu.sh'
+      - 'scripts/menus/main_menu.sh'
+      - 'scripts/menus/search_index.json'
+      - '.github/scripts/tests/test_usbip.py'
+      - '.github/scripts/check_usbip_transport.py'
+      - '.github/workflows/test-usbip.yml'
+      - 'docs/usbip.md'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'scripts/devices/**'
+      - '.github/scripts/tests/test_usbip.py'
+      - '.github/scripts/check_usbip_transport.py'
+      - '.github/workflows/test-usbip.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  usbip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Device ownership, reconnect and systemd validation
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -B -m unittest discover -s .github/scripts/tests -p test_usbip.py -v
+      - name: Install fixture-only transport dependencies
+        run: |
+          sudo apt-get update -o APT::Update::Error-Mode=any
+          sudo apt-get install -y socat openssh-client openssh-server iproute2 util-linux
+      - name: Real SSH and private namespace transport, without USB hardware
+        run: sudo "$(command -v python3)" -B .github/scripts/check_usbip_transport.py
