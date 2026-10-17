@@ -28,6 +28,12 @@ jobs:
           python-version: '3.13'
       - name: Install OCI test dependencies
         run: python3 -m pip install -r oci/requirements.txt
+      - name: Run carried record, recovery and configuration cache regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p 'test_carried*.py' -v
+          python3 -m unittest discover -s oci/tests -p test_restore_recovery.py -v
       - name: Run offline registry account tests
         env:
           PYTHONDONTWRITEBYTECODE: '1'
