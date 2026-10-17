@@ -9,7 +9,7 @@
     "notAvailable": "N/D",
     "serverOffline": "Servidor off-line",
     "supportProject": "Apoie e contribua para o projeto",
-    "descriptionPbs": "Painel do servidor de backup Proxmox"
+    "descriptionPbs": "Painel do Proxmox Backup Server"
   },
   "common": {
     "notAvailable": "N/D",
@@ -7338,18 +7338,18 @@
     "groups": {
       "cluster": "Cluster",
       "standalone": "nós autônomos",
-      "pbs": "Servidor de backup Proxmox"
+      "pbs": "Proxmox Backup Server"
     },
     "thisNode": "Este nó",
     "checking": "Verificando nós…",
     "loadFailed": "não foi possível carregar a lista de nós.",
-    "empty": "Nenhum outro nó ainda.Adicione um para abrir seu Monitor aqui.",
+    "empty": "Ainda não há outros nós. Adicione um para abrir o seu Monitor a partir daqui.",
     "noResponse": "Sem resposta",
     "pbsInterface": "interface PBS",
     "openNewTab": "abrir em uma nova guia",
     "manage": "Adicionar ou gerenciar nós…",
     "dialogTitle": "nós vinculados",
-    "dialogDescription": "os nós do cluster e os servidores de backup Proxmox configurados são detectados automaticamente.Cada monitor mantém seu próprio login.",
+    "dialogDescription": "Os nós do cluster e os Proxmox Backup Server configurados são detectados automaticamente. Cada Monitor mantém o seu próprio login.",
     "addTitle": "Adicionar um nó",
     "name": "Nome",
     "address": "endereço do monitor",

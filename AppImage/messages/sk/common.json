@@ -7337,18 +7337,18 @@
     "groups": {
       "cluster": "Cluster",
       "standalone": "Samostatné uzly",
-      "pbs": "Záložný server Proxmox"
+      "pbs": "Proxmox Backup Server"
     },
     "thisNode": "Tento uzol",
     "checking": "Kontrolujú sa uzly…",
     "loadFailed": "Nepodarilo sa načítať zoznam uzlov.",
-    "empty": "Zatiaľ žiadne ďalšie uzly.Pridajte jeden, aby ste odtiaľto otvorili jeho monitor.",
+    "empty": "Zatiaľ žiadne ďalšie uzly. Pridajte jeden, aby ste odtiaľto otvorili jeho Monitor.",
     "noResponse": "Žiadna odpoveď",
     "pbsInterface": "rozhranie PBS",
     "openNewTab": "Otvoriť na novej karte",
     "manage": "Pridať alebo spravovať uzly…",
     "dialogTitle": "Prepojené uzly",
-    "dialogDescription": "Uzly klastra a nakonfigurované záložné servery Proxmox sa detegujú automaticky.Každý monitor si uchováva svoje vlastné prihlásenie.",
+    "dialogDescription": "Uzly klastra a nakonfigurované Proxmox Backup Server sa zisťujú automaticky. Každý Monitor má vlastné prihlásenie.",
     "addTitle": "Pridať uzol",
     "name": "Meno",
     "address": "Adresa monitora",

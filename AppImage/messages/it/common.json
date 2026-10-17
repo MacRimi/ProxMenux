@@ -9,7 +9,7 @@
     "notAvailable": "N/A",
     "serverOffline": "Server offline",
     "supportProject": "Sostieni e contribuisci al progetto",
-    "descriptionPbs": "Dashboard del server di backup Proxmox"
+    "descriptionPbs": "Dashboard di Proxmox Backup Server"
   },
   "common": {
     "notAvailable": "N/A",
@@ -7338,18 +7338,18 @@
     "groups": {
       "cluster": "cluster",
       "standalone": "nodi autonomi",
-      "pbs": "Server di backup Proxmox"
+      "pbs": "Proxmox Backup Server"
     },
     "thisNode": "questo nodo",
     "checking": "Controllo dei nodi…",
     "loadFailed": "impossibile caricare l'elenco dei nodi.",
-    "empty": "ancora nessun altro nodo.Aggiungine uno per aprire il suo Monitor da qui.",
+    "empty": "Ancora nessun altro nodo. Aggiungine uno per aprire il suo Monitor da qui.",
     "noResponse": "Nessuna risposta",
     "pbsInterface": "interfaccia PBS",
     "openNewTab": "apri in una nuova scheda",
     "manage": "aggiungi o gestisci nodi...",
     "dialogTitle": "nodi collegati",
-    "dialogDescription": "i nodi del cluster e i server di backup Proxmox configurati vengono rilevati automaticamente.Ogni monitor mantiene il proprio accesso.",
+    "dialogDescription": "I nodi del cluster e i Proxmox Backup Server configurati vengono rilevati automaticamente. Ogni Monitor mantiene il proprio accesso.",
     "addTitle": "aggiungi un nodo",
     "name": "Nome",
     "address": "monitora l'indirizzo",

@@ -7338,18 +7338,18 @@
     "groups": {
       "cluster": "Cluster",
       "standalone": "Eigenständige Knoten",
-      "pbs": "Proxmox Sicherungsserver"
+      "pbs": "Proxmox Backup Server"
     },
     "thisNode": "Dieser Knoten",
     "checking": "Knoten werden überprüft…",
     "loadFailed": "Die Knotenliste konnte nicht geladen werden.",
-    "empty": "Noch keine anderen Knoten.Fügen Sie einen hinzu, um den Monitor von hier aus zu öffnen.",
+    "empty": "Noch keine anderen Knoten. Fügen Sie einen hinzu, um seinen Monitor von hier aus zu öffnen.",
     "noResponse": "Keine Antwort",
     "pbsInterface": "PBS-Schnittstelle",
     "openNewTab": "In einem neuen Tab öffnen",
     "manage": "Knoten hinzufügen oder verwalten…",
     "dialogTitle": "Verknüpfte Knoten",
-    "dialogDescription": "Clusterknoten und konfigurierte Proxmox-Sicherungsserver werden automatisch erkannt.Jeder Monitor behält seine eigene Anmeldung.",
+    "dialogDescription": "Clusterknoten und konfigurierte Proxmox Backup Server werden automatisch erkannt. Jeder Monitor behält seine eigene Anmeldung.",
     "addTitle": "Einen Knoten hinzufügen",
     "name": "Name",
     "address": "Adresse überwachen",
