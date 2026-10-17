@@ -46,6 +46,8 @@ _NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.+@-]{0,63}\Z')
 _VERSION = re.compile(r'v?\d+(?:\.\d+){1,4}(?:[-+._][A-Za-z0-9.-]+)?\Z')
 _SYSTEM = {
     'ssh', 'sshd', 'cron', 'crond', 'postfix', 'rsyslog', 'syslog', 'syslog-ng',
+    # Alpine/OpenRC system logging and service supervision are not apps.
+    'klogd', 'syslogd', 'openrc-user', 'runit', 'runsvdir', 'runsv', 'supervise-daemon',
     'dbus', 'dbus-broker', 'systemd', 'udev', 'networking', 'network', 'networkmanager',
     'dhcpcd', 'dhclient', 'chrony', 'chronyd', 'ntp', 'ntpd', 'openntpd', 'agetty',
     'getty', 'login', 'polkit', 'polkitd', 'accounts-daemon', 'acpid', 'anacron',

@@ -126,6 +126,24 @@ class DiscoveryFixtures(unittest.TestCase):
                 self.assertEqual(result['candidates'], [])
                 self.assertFalse(any(native.FOOTPRINT_SCRIPT in call for call in self.calls))
 
+    def test_alpine_openrc_infrastructure_has_zero_footprint_probes(self):
+        # Actual Alpine 3.24.1 CT217 init metadata: klogd, user and runsvdir.
+        # The runsvdir definition can exist without /usr/bin/runsvdir installed;
+        # rejecting it must precede probing, not turn the scan into partial.
+        for name, executable in (
+            ('klogd', '/sbin/klogd'),
+            ('user', '/usr/libexec/rc/bin/openrc-user'),
+            ('runsvdir', '/usr/bin/runsvdir'),
+            ('renamed-system-service', '/usr/libexec/rc/bin/openrc-user'),
+        ):
+            with self.subTest(name=name):
+                self.calls.clear()
+                result = native.scan(101, self.runner(
+                    service(name=name, exe=executable, directory='', manager='openrc')))
+                self.assertEqual(result['status'], 'complete')
+                self.assertEqual(result['candidates'], [])
+                self.assertFalse(any(native.FOOTPRINT_SCRIPT in call for call in self.calls))
+
     def test_helper_services_and_templates_have_zero_footprint_probes(self):
         cases = [
             ('netpulse-stable-update', '/bin/bash', '/opt/netpulse', '/opt/netpulse/stable-apply.sh'),
