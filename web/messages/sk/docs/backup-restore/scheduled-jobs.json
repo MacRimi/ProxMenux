@@ -1,0 +1,152 @@
+{
+  "meta": {
+    "title": "Plánované úlohy — časovače, režim attach a uchovávanie záloh | ProxMenux",
+    "description": "Plánované úlohy zálohovania hostiteľa ProxMenux. Dva režimy vytvorenia (vlastný časovač systemd alebo pripojenie k existujúcej úlohe vzdump PVE), pravidlá uchovávania pre jednotlivé úlohy cez proxmox-backup-client, Borg alebo lokálne čistenie, súbory v /var/lib/proxmenux/backup-jobs a spúšťací skript vytvárajúci rovnaké archívy ako interaktívny postup.",
+    "ogTitle": "Zálohovanie ProxMenux — plánované úlohy",
+    "ogDescription": "Plánované zálohy hostiteľa bez obsluhy s režimom pripojenia, pravidlami uchovávania a rovnakými tromi cieľmi ako interaktívny postup.",
+    "twitterTitle": "Plánované úlohy | ProxMenux",
+    "twitterDescription": "Plánované úlohy zálohovania hostiteľa bez obsluhy s režimom pripojenia a uchovávaním."
+  },
+  "header": {
+    "title": "Plánované úlohy",
+    "description": "Úlohy zálohovania hostiteľa bez obsluhy. Dva modely vytvorenia: nová nezávislá úloha s vlastným plánom alebo úloha pripojená k existujúcej úlohe vzdump PVE, z ktorej preberá plán a pravidlá uchovávania. Oba modely vytvárajú rovnaké archívy ako interaktívny postup.",
+    "section": "Záloha a obnova"
+  },
+  "intro": {
+    "title": "Dva modely plánovaných úloh",
+    "body": "Plánovanú úlohu možno vytvoriť podľa jedného z dvoch modelov:",
+    "modelsList": [
+      "<strong>Nová nezávislá úloha</strong> — ProxMenux nastaví vlastný plán pomocou samostatného časovača systemd, nezávisle od ostatných úloh na hostiteľovi. Podporuje všetky tri ciele: lokálny, PBS a Borg.",
+      "<strong>Pripojenie k existujúcej úlohe vzdump PVE</strong> — úloha nemá vlastný plán; spúšťa sa automaticky pri nadradenej úlohe vzdump PVE, ktorá už zálohuje VM a LXC na hostiteľovi. Preberá jej plán a pravidlá uchovávania. Podporuje lokálny cieľ a PBS (Borg nie je podporovaný, pretože PVE preň nemá natívny plánovač)."
+    ]
+  },
+  "attachBadge": {
+    "title": "Režim pripojenia — odporúčaný, ak už existuje úloha vzdump PVE",
+    "body": "Ak už existuje úloha vzdump PVE pre VM a LXC na uzle, pripojená záloha hostiteľa sa vykoná po zálohe hostí v <strong>rovnakom zálohovacom cykle</strong>. Pri obnove pochádzajú konfigurácie hostí zo zálohy hostiteľa (v <code>/etc/pve</code>) a ich disky zo záloh vzdump daného cyklu. To pomáha koordinovať obnovu celého uzla, ale nejde o atómovú snímku: zmeny počas cyklu môžu zanechať rozdiely medzi konfiguráciou hostiteľa a stavom diskov hostí."
+  },
+  "frequencyBadge": {
+    "title": "Odporúčaná frekvencia",
+    "body": "Ak chcete maximalizovať kompatibilitu zálohy hostiteľa s budúcou obnovou, zálohujte často. Čím bližšie je záloha aktuálnemu stavu hostiteľa, tým menej rozdielov v konfigurácii, balíkoch a komponentoch musí obnova zosúladiť."
+  },
+  "modes": {
+    "heading": "Dva režimy",
+    "rows": [
+      {
+        "mode": "Nová plánovaná úloha",
+        "backends": "Miestne, PBS, Borg",
+        "schedule": "Vlastný výraz <code>OnCalendar</code> (syntax kalendára systemd, napr. <code>daily</code> alebo <code>Mon..Fri 03:00</code>).",
+        "retention": "Zadáva sa samostatne: <code>keep-last</code>, <code>keep-hourly</code>, <code>keep-daily</code>, <code>keep-weekly</code>, <code>keep-monthly</code>, <code>keep-yearly</code>. Použije spúšťací skript po každej úspešnej zálohe."
+      },
+      {
+        "mode": "Pripojiť k úlohe vzdump PVE",
+        "backends": "Local, PBS (Borg nemá plánovač na strane PVE)",
+        "schedule": "Preberá sa z nadradenej úlohy PVE. Na strane ProxMenux sa neinštaluje žiadny časovač systemd.",
+        "retention": "Preberá sa z konfigurácie <code>prune-backups</code> nadradenej úlohy (pomocou <code>hb_pve_prune_to_keep_env</code> mapovanej jedna k jednej na premenné <code>KEEP_*</code> spúšťacieho skriptu)."
+      }
+    ]
+  },
+  "attachDetail": {
+    "heading": "Ako funguje režim pripojenia",
+    "intro": "PVE zapisuje úlohy <code>vzdump</code> do <code>/etc/pve/jobs.cfg</code> — jednu sekciu pre každú úlohu s úložiskom záloh VM a LXC. Režim pripojenia vyžaduje backend podporovaný ProxMenux (lokálny alebo PBS). Záloha hostiteľa sa spustí cez hook job-end po dokončení úlohy zálohovania hostí.",
+    "steps": [
+      {
+        "step": "1",
+        "detail": "Počas vytvárania úlohy ProxMenux uvádza kompatibilné rodičovské PVE úlohy prostredníctvom <code>hb_pve_list_vzdump_jobs_for_backend</code>. Užívateľ si vyberie jednu."
+      },
+      {
+        "step": "2",
+        "detail": "Súbor <code>.env</code> úlohy sa zapíše s <code>PVE_PARENT_JOB</code>, <code>PVE_STORAGE</code> a prevzatými hodnotami <code>KEEP_*</code>; časovač systemd sa nevytvorí."
+      },
+      {
+        "step": "3",
+        "detail": "<code>hb_install_vzdump_hook</code> zaregistruje hook v <code>/etc/vzdump.conf</code>. Vo fáze job-end ľubovoľnej úlohy vzdump porovná prijaté <code>$STOREID</code> s <code>PVE_STORAGE</code> každej povolenej pripojenej úlohy a pri zhode zavolá spúšťací skript. Zhoda sa určuje podľa úložiska, nie podľa ID vybranej nadradenej úlohy."
+      },
+      {
+        "step": "4",
+        "detail": "Archív sa uloží do rovnakého úložiska ako zálohy vzdump: <code>path/dump/</code> pri lokálnom cieli alebo repozitár PBS nastavený v úložisku PVE."
+      }
+    ],
+    "outroBody": "Režim pripojenia nemá vlastný časovač. Vypnutie alebo odstránenie vybranej nadradenej úlohy PVE zastaví jej spúšťanie, ale iná úloha vzdump s rovnakým úložiskom môže pripojenú zálohu hostiteľa stále spustiť. Ak tomu chcete zabrániť, vypnite alebo odstráňte samotnú úlohu ProxMenux. Pri vypnutí zostane záznam na disku a možno ho neskôr povoliť alebo znovu pripojiť."
+  },
+  "storageLayout": {
+    "heading": "Súbory, ktoré tvoria prácu",
+    "intro": "Každá plánovaná úloha je plne popísaná tromi alebo štyrmi súbormi na disku. Čítanie im dáva plnú konfiguráciu úlohy bez spoliehania sa na rozhranie.",
+    "rows": [
+      {
+        "path": "/var/lib/proxmenux/backup-jobs/JOB_ID.env",
+        "content": "Backend, ID zálohy alebo cieľ, plán (nový režim) alebo nadradená úloha PVE (režim pripojenia), príznak povolenia, hodnoty uchovávania <code>KEEP_*</code> a odkazy na prihlasovacie údaje."
+      },
+      {
+        "path": "/var/lib/proxmenux/backup-jobs/JOB_ID.paths",
+        "content": "Jedna absolútna cesta na riadok — výber odvodený z profilu a uložený pri vytvorení úlohy. Po úprave súboru sa pri ďalšom spustení časovačom použije nový výber."
+      },
+      {
+        "path": "/etc/systemd/system/proxmenux-backup-JOB_ID.timer + .service",
+        "content": "Iba nový režim. Služba vyvoláva <code>run_scheduled_backup.sh JOB_ID</code>. Časovač ho naplánuje s <code>Persistent=true</code> (zmeškané spustenia sa vykonajú pri ďalšom štarte) a malým <code>RandomizedDelaySec=120</code> rozložiť zaťaženie, keď viaceré úlohy zdieľa rovnaký OnCalendar výraz."
+      },
+      {
+        "path": "/etc/vzdump.conf script-hook",
+        "content": "Iba režim pripojenia. Raz ho nainštaluje <code>hb_install_vzdump_hook</code>; porovnáva <code>PVE_STORAGE</code> každej pripojenej úlohy s <code>$STOREID</code>, ktoré PVE odovzdáva hooku."
+      }
+    ]
+  },
+  "runner": {
+    "heading": "Čo úloha vykoná pri spustení",
+    "intro": "Každá práca, či je nový model alebo pripojený, má rovnakú trojstupňovú sekvenciu:",
+    "steps": [
+      "<strong>Pripraví zálohu.</strong> Načíta konfiguráciu úlohy (cieľ, profil, cesty) a zostaví strom archívu rovnako ako interaktívny postup. Výsledkom je rovnaký archív, aký by vytvorila manuálna záloha s týmito nastaveniami.",
+      "<strong>Zapíše do cieľa.</strong> Odošle alebo zapíše archív do nastaveného cieľa — lokálny súbor <code>.tar.zst</code>, záloha PBS alebo archív Borg — s presne rovnakými nástrojmi a prihlasovacími údajmi ako manuálna záloha do rovnakého cieľa.",
+      "<strong>Použije pravidlá uchovávania.</strong> Odstráni staré zálohy z cieľa a ponechá počty nastavené v úlohe cez <code>keep-last</code> / <code>keep-daily</code> / <code>keep-weekly</code>. Čistenie vykonáva príslušný backend: PBS používa svoje pravidlá uchovávania, Borg spustí <code>borg prune</code> a pri lokálnom cieli ProxMenux odstráni súbory mimo rozsahu <code>keep-last</code>."
+    ]
+  },
+  "management": {
+    "heading": "Správa úloh",
+    "intro": "Menu rozvrhu (Scripts TUI) a záložka Monitor Backup odhaľujú rovnaké akcie na akejkoľvek práci.",
+    "rows": [
+      {
+        "action": "Spustiť teraz",
+        "detail": "Okamžite zavolá spúšťací skript bez čakania na časovač alebo hook vzdump. Umožní overiť konfiguráciu úlohy bez čakania na ďalšie plánované spustenie."
+      },
+      {
+        "action": "Povoliť / zakázať",
+        "detail": "Nový režim: časovač sa ovláda cez <code>systemctl enable/disable --now</code>. Režim pripojenia: zmení príznak <code>ENABLED</code> v súbore env úlohy — hook ho zohľadní pri ďalšom spustení PVE."
+      },
+      {
+        "action": "Upraviť",
+        "detail": "Znovu otvorí destináciu, rozvrh, profil a retenčný postup a prepíše pracovné súbory. Zachováva ID práce."
+      },
+      {
+        "action": "Odstrániť",
+        "detail": "Odstráni súbor env úlohy, súbor ciest, časovač a službu systemd (nový režim) a vypne pripojenie k hooku (režim pripojenia). Existujúce archívy v cieli nemení."
+      },
+      {
+        "action": "Zobraziť záznam",
+        "detail": "Priebežne zobrazuje <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — jeden protokolový súbor na beh. Spúšťací skript tiež vydáva kompaktný stavový riadok na journald pod systemd služby."
+      }
+    ]
+  },
+  "notifications": {
+    "heading": "Oznámenia",
+    "body": "Každé plánované spustenie vyvolá rovnaké udalosti <code>hb_notify_lifecycle</code> ako interaktívny postup (<code>start</code>, <code>complete</code>, <code>fail</code>). Ak sú v Monitore nastavené kanály upozornení, úlohy bez obsluhy oznámia výsledky rovnako ako manuálne zálohy — používateľ nemusí kontrolovať záznam, aby zistil úspech úlohy."
+  },
+  "whereNext": {
+    "heading": "Kam ísť ďalej",
+    "items": [
+      {
+        "label": "Vytváranie záloh",
+        "href": "/docs/backup-restore/creating-backups",
+        "tail": " — interaktívny postup, ktorý zdieľa backend s plánovačom."
+      },
+      {
+        "label": "Ciele",
+        "href": "/docs/backup-restore/destinations",
+        "tail": " — konfigurácia jednotlivých backendov používaná interaktívnym postupom aj plánovačom."
+      },
+      {
+        "label": "Obnovenie",
+        "href": "/docs/backup-restore/restoring",
+        "tail": " — postup používajúci zálohy vytvorené úlohami."
+      }
+    ]
+  }
+}

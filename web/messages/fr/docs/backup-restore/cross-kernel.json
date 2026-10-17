@@ -1,0 +1,170 @@
+{
+  "meta": {
+    "title": "Restauration entre noyaux différents — détection, filtrage et adaptation | ProxMenux",
+    "description": "Comment ProxMenux restaure une sauvegarde d’hôte sur une version principale différente du noyau. Détection du sens de l’écart, filtre des chemins critiques si la cible utilise un noyau plus récent et adaptation en quatre phases pour réappliquer IOMMU, ID VFIO et paramètres de ligne de commande sans recopier tels quels les fichiers liés au noyau.",
+    "ogTitle": "ProxMenux Backup — restauration entre versions du noyau et adaptation",
+    "ogDescription": "Restauration entre versions du noyau tenant compte du sens du changement, avec filtrage sûr et adaptation indépendante du noyau.",
+    "twitterTitle": "Restauration entre noyaux différents | ProxMenux",
+    "twitterDescription": "Comment ProxMenux gère une restauration lorsque le noyau cible diffère de celui de la sauvegarde."
+  },
+  "header": {
+    "title": "Restauration entre versions du noyau",
+    "description": "Comment ProxMenux gère une restauration lorsque l'hôte cible exécute un noyau différent de celui enregistré dans la sauvegarde, surtout lorsque la cible exécute un noyau plus récent. Explique comment la différence est détectée, comment les chemins critiques de démarrage qui pourraient briser la cible sont filtrés, et comment la configuration propre de l'utilisateur est réappliquée sans copier les fichiers liés au noyau mot pour mot.",
+    "section": "Sauvegarde et restauration"
+  },
+  "intro": {
+    "title": "Chaque saut du noyau est géré différemment",
+    "body": "Le noyau d'un hôte Proxmox est identifié par une chaîne de version comme <code>6.17.13-2-pve</code>. Les deux premiers nombres (<strong>6.17</strong> dans cet exemple) définissent la version principale : lorsqu'ils changent, certains fichiers de configuration écrits pour le noyau précédent peuvent ne pas être valides sur le nouveau. Lorsque la restauration détecte que la sauvegarde et la cible ont différentes versions majeures du noyau, les branches de flux basées sur la direction du saut — que la sauvegarde soit plus ancienne ou plus récente que la cible — parce que les deux cas ont des modes de défaillance opposés. Les sauvegardes plus récentes que la cible restaurent proprement comme-est (vérifiées sur plusieurs sauts du noyau). Les sauvegardes plus anciennes que la cible ont besoin d'un filtre pour éviter de casser le démarrage de la cible avec une configuration écrite pour un noyau qui a depuis changé."
+  },
+  "directionCheck": {
+    "heading": "Le contrôle de direction",
+    "intro": "Lors de la vérification de compatibilité, <code>hb_compat_check</code> compare le noyau enregistré dans le manifeste de sauvegarde au noyau courant de la cible (<code>uname -r</code>) et classifie la restauration dans l'un des trois cas, stockés dans la variable interne <code>HB_COMPAT_KERNEL_DIRECTION</code>:",
+    "rows": [
+      {
+        "direction": "same",
+        "condition": "La version principale du noyau correspond entre la sauvegarde et la cible.",
+        "behavior": "Le flux complet de restauration est inchangé. Pas de filtre supplémentaire, pas d'hydratation, pas de notice spéciale dans l'interface utilisateur."
+      },
+      {
+        "direction": "bk_newer",
+        "condition": "Le noyau de la sauvegarde est PLUS RÉCENT que celui de la cible (exemple : sauvegarde sous 7.0, cible sous 6.17).",
+        "behavior": "Le processus complet reste inchangé, comme pour <code>same</code>, sans filtre. Les essais rapportés ont montré la réinstallation des pilotes pour le noyau cible, l’application de la configuration IOMMU et le démarrage des VM avec passthrough GPU."
+      },
+      {
+        "direction": "bk_older",
+        "condition": "Le noyau de la sauvegarde est PLUS ANCIEN que celui de la cible (exemple : sauvegarde sous 6.17, cible sous 7.0).",
+        "behavior": "Le filtre sous-ensemble et l'hydratation en quatre phases ci-dessous sont activés. Le processus de restauration — la cible reproduit la source, mais les fichiers critiques de démarrage ne sont pas copiés mot à mot."
+      }
+    ]
+  },
+  "whyBkNewerIsSafe": {
+    "heading": "Pourquoi une sauvegarde avec un noyau plus récent que la cible restaure inchangé",
+    "body": "Lorsque la restauration s'exécute contre une cible avec un noyau <em>plus ancien</em> que celui enregistré dans la sauvegarde, chaque mécanisme dont dépend la restauration est indépendant de la version du noyau. Les installateurs de pilotes GPU et d'autres installateurs PCI détectent le noyau en cours d'exécution avec <code>uname -r</code> et compilent DKMS contre tout ce que la cible a. Le paquet APT installe tire des binaires construits pour la distribution de la cible. Les jetons IOMMU cmdline comme <code>intel_iommu=on</code> sont stables dans les principales versions du noyau. La sauvegarde porte des chemins écrits sous un noyau plus récent, mais ces chemins (module blacklists, GRUB par défaut, initramfs config) sont toujours valides sur l'ancien — les noyaux ignorent les jetons qu'ils ne reconnaissent pas au lieu d'échouer. Ce cas est équivalent en pratique à une restauration du même noyau, et ProxMenux le traite comme tel."
+  },
+  "safeSubsetFilter": {
+    "heading": "Le filtre de sous-ensemble de sécurité (uniquement lorsque le noyau cible est plus récent)",
+    "intro": "Lorsque le noyau cible est plus récent que celui de la sauvegarde, la vérification de compatibilité ajoute des chemins critiques de démarrage 16 de <code>hb_unsafe_paths_cross_version</code> à <code>RS_SKIP_PATHS</code>. Ces chemins sont exclus de la restauration parce que l'écriture d'une version d'un noyau plus ancien sur une cible en cours d'exécution d'un nouveau a causé des paniques du noyau dans les tests de banc. Les chemins couvrent cinq catégories:",
+    "categoryRows": [
+      {
+        "category": "Chargeur d'amorçage",
+        "paths": "<code>/etc/default/grub</code>, <code>/etc/kernel</code>",
+        "reason": "GRUB est lié à l'ordre du noyau précédent, et à l'état proxmox-boot-tool (cmdline, ESP UUIDs, crochets) qui fait référence aux chemins et aux identifiants de l'ancienne installation."
+      },
+      {
+        "category": "Modules de noyau et artefacts de démarrage",
+        "paths": "<code>/etc/modules-load.d</code>, <code>/etc/modprobe.d</code>, <code>/etc/initramfs-tools</code>",
+        "reason": "Autoload listes qui peuvent renvoyer des modules rebaptisés entre les majors du noyau, options de module qui peuvent ne pas s'appliquer, initramfs crochets écrits pour l'ancien noyau."
+      },
+      {
+        "category": "Empilement de stockage et identité du système de fichiers",
+        "paths": "<code>/etc/fstab</code>, <code>/etc/multipath</code>, <code>/etc/iscsi</code>, <code>/etc/udev/rules.d</code>, <code>/etc/zfs</code>",
+        "reason": "UUID qui peuvent ne pas exister sur cette installation, pilotes multipath qui changent entre les noyaux, paramètres iSCSI qui évoluent, règles udev qui peuvent se lier à des sous-systèmes inexistants, état ZFS (<code>zpool.cache</code> + <code>hostid</code>) qui peuvent verrouiller le pool comme étranger."
+      },
+      {
+        "category": "Sources APT",
+        "paths": "<code>/etc/apt</code>",
+        "reason": "Les suites sources APT peuvent déclencher une dégradation des paquets critiques lors de la prochaine mise à jour."
+      },
+      {
+        "category": "systemd",
+        "paths": "<code>/etc/systemd/system</code>, <code>/etc/systemd/journald.conf</code>, <code>/etc/systemd/logind.conf</code>, <code>/etc/systemd/system.conf</code>, <code>/etc/systemd/user.conf</code>",
+        "reason": "Surcharges d’unités et liens .wants liés à une ancienne version majeure de systemd ; clés de configuration pouvant être invalides pour une version plus récente."
+      }
+    ],
+    "outroBody": "Le filtre fonctionne AVANT la boîte de dialogue de confirmation afin que l'utilisateur voit la liste exacte des chemins qui seront ignorés, catégorisé par la raison. La restauration continue — tout le reste (configuration VM/LXC, réseau, /etc/pve, utilisateurs, cron, état ProxMenux, paquets, pilotes, /root) est restauré normalement."
+  },
+  "hydration": {
+    "heading": "Hydratation du noyau-agnostique",
+    "intro": "Le filtre omet les fichiers critiques ; l’adaptation réapplique certains réglages : paramètres IOMMU, ID VFIO, <code>GRUB_TIMEOUT</code> personnalisé et listes de blocage nvidia. Elle s’exécute si le noyau cible est plus récent. La fusion cmdline conserve les clés de la cible et ajoute les modules manquants. Les valeurs GRUB et fichiers autorisés peuvent remplacer un contenu cible différent. Répéter les mêmes entrées est idempotent.",
+    "phaseRows": [
+      {
+        "phase": "1a — Voie GRUB",
+        "detail": "Pour les hôtes GRUB (installations ext4/lvm). <code>_rs_hyd_grub</code> fusionne les paramètres de <code>manifest.kernel_params.cmdline_extra</code> de la sauvegarde dans <code>GRUB_CMDLINE_LINUX_DEFAULT</code> de la cible, en ignorant les clés déjà présentes. Il reprend ensuite les clés autorisées <code>GRUB_*</code> (<code>GRUB_TIMEOUT</code>, <code>GRUB_TIMEOUT_STYLE</code>, <code>GRUB_DEFAULT</code>, <code>GRUB_TERMINAL</code>, <code>GRUB_DISABLE_OS_PROBER</code>, <code>GRUB_SERIAL_COMMAND</code>, <code>GRUB_GFXMODE</code>, <code>GRUB_GFXPAYLOAD_LINUX</code>) depuis <code>/etc/default/grub</code> de la sauvegarde si leurs valeurs diffèrent de la cible."
+      },
+      {
+        "phase": "1b — systemd-boot / ZFS",
+        "detail": "Pour systemd-boot (souvent ZFS à la racine). <code>_rs_hyd_kernel_cmdline</code> fusionne les paramètres utilisateur de <code>cmdline_extra</code> dans <code>/etc/kernel/cmdline</code> de la cible tout en préservant ses paramètres de démarrage <code>root=</code>, <code>boot=</code> et <code>rootflags=</code>."
+      },
+      {
+        "phase": "2 — Fusion /etc/modules",
+        "detail": "<code>_rs_hyd_modules</code> ajoute des modules de <code>manifest.kernel_params.modules_loaded_at_boot</code> qui sont dans la liste blanche (<code>vfio</code>, <code>vfio_pci</code>, <code>vfio_iommu_type1</code>, <code>vfio_virqfd</code>, <code>kvm</code>, <code>kvm_intel</code>, <code>kvm_amd</code>, <code>nvidia</code>, <code>nvidia_drm</code>, <code>nvidia_modeset</code>, <code>nvidia_uvm</code>, <code>i915</code>, <code>xe</code>) ET n'est pas déjà présent dans la cible <code>/etc/modules</code>."
+      },
+      {
+        "phase": "3 — Copie des fichiers figurant sur la liste blanche",
+        "detail": "<code>_rs_hyd_files</code> copie les fichiers rédigés par l’utilisateur depuis les rootfs jusqu'à la cible en direct lorsque le contenu diffère. La liste blanche couvre les fichiers VFIO/nvidia/blacklist sous <code>/etc/modprobe.d</code>, <code>/etc/modules-load.d</code>, et la règle de liaison ProxMenux VFIO + règles nvidia udev sous <code>/etc/udev/rules.d</code>. Les fichiers appartenant à des Distro (<code>pve-blacklist.conf</code>, <code>mdadm.conf</code>, <code>nvme.conf</code>) sont délibérément exclus — leur contenu évolue entre les versions."
+      },
+      {
+        "phase": "4 — Forcer la régénération après démarrage",
+        "detail": "Les quatre phases écrivent directement à la cible en direct EN DEHORS DE le pipeline normal de restauration. Pour que les paramètres/modules/fichiers fusionnés prennent effet sur le prochain boot, <code>HB_HYDRATION_APPLIED=1</code> se propage via <code>plan.env</code> vers <code>apply_pending_restore.sh</code>, ce qui force <code>NEEDS_INITRAMFS=1</code> et <code>NEEDS_GRUB=1</code> indépendamment de ce qui était dans la liste d'application. Le répartiteur post-démarrage régénère ensuite les initramfs et rafraîchit le chargeur."
+      }
+    ]
+  },
+  "planCommit": {
+    "heading": "Plan vs commit — l'utilisateur voit d'abord un aperçu",
+    "body": "L'hydratation fonctionne en deux modes. Avant la boîte de dialogue de confirmation, ProxMenux exécute <code>_rs_apply_bk_older_hydration</code> en mode <code>plan</code> : il calcule exactement ce qui serait fusionné, peuple <code>RS_HYDRATION_SUMMARY</code> avec un bloc vert listant chaque action, et retourne sans écrire. La boîte de dialogue de confirmation montre que le bloc vert à côté de la liste orange des chemins exclus, de sorte que l'utilisateur voit À L’AVANCE ce qui sera ré-appliqué automatiquement. Après que l'utilisateur ait confirmé, ProxMenux réexécute le même helper en mode <code>commit</code> — mêmes phases, même logique, mais cette fois chaque phase écrit à la cible en direct. L'annulation de la boîte de dialogue de confirmation laisse la cible intacte."
+  },
+  "flowDiagram": {
+    "heading": "Le flux lorsque le noyau cible est plus récent que celui de la sauvegarde",
+    "intro": "Les étapes ajoutées lorsque le noyau cible est plus récent s'assoient à l'intérieur du flux normal de restauration. Tout le reste — application chaude, préparation en attente, installation de paquets, répartiteur post-démarrage — fonctionne identiquement à une restauration du même noyau.",
+    "diagram": "  ┌────────────────────────────────────────────────────────────┐\n  │ hb_compat_check                                             │\n  │   HB_COMPAT_KERNEL_DIRECTION = bk_older                     │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ Add 16 boot-critical paths to RS_SKIP_PATHS                 │\n  │   /etc/default/grub, /etc/kernel, /etc/modules-load.d, ...  │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ _rs_apply_bk_older_hydration \"plan\"                         │\n  │   Compute what would be merged                              │\n  │   Populate RS_HYDRATION_SUMMARY (green block)               │\n  │   No writes                                                 │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ Confirmation dialog                                         │\n  │   Amber: paths skipped by safe-subset filter                │\n  │   Green: tokens/files reapplied by hydration                │\n  │   User accepts or cancels                                   │\n  └───────────────────────────┬────────────────────────────────┘\n                              │ (accepted)\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ _rs_apply_bk_older_hydration \"commit\"                       │\n  │   Phase 1a/1b: merge cmdline tokens + GRUB keys             │\n  │   Phase 2: append modules to /etc/modules                   │\n  │   Phase 3: copy whitelisted vfio/nvidia files               │\n  │   Set HB_HYDRATION_APPLIED=1                                │\n  └───────────────────────────┬────────────────────────────────┘\n                              │\n                              ▼\n  ┌────────────────────────────────────────────────────────────┐\n  │ Rest of the restore runs normally                           │\n  │   _rs_apply hot (skips RS_SKIP_PATHS)                       │\n  │   _rs_prepare_pending_restore (writes plan.env with         │\n  │     HB_HYDRATION_APPLIED=1)                                 │\n  │   packages.manual.list install                              │\n  │   Reboot                                                    │\n  │   apply_pending_restore.sh (forces NEEDS_INITRAMFS=1,       │\n  │     NEEDS_GRUB=1 because of the hydration flag)             │\n  │   apply_cluster_postboot.sh                                 │\n  │     update-initramfs -u -k all                              │\n  │     update-grub / proxmox-boot-tool refresh                 │\n  │     component --auto-reinstall                              │\n  └────────────────────────────────────────────────────────────┘"
+  },
+  "concreteExamples": {
+    "heading": "Exemples concrets",
+    "intro": "Le passe d'hydratation n'est pas abstrait — il produit des résultats observables et corrects pour des scénarios communs. Deux exemples que l'hydratation gère automatiquement :",
+    "rows": [
+      {
+        "scenario": "Passage de GPU (VFIO)",
+        "detail": "La source avait le <code>intel_iommu=on iommu=pt</code> dans la ligne cmd, le <code>vfio</code>/<code>vfio_pci</code>/<code>vfio_iommu_type1</code> dans le <code>/etc/modules</code>, un <code>/etc/modprobe.d/vfio.conf</code> avec le <code>options vfio-pci ids=10de:2216</code> et un <code>/etc/modprobe.d/blacklist-nvidia.conf</code>. L'hydratation fusionne les jetons cmdline dans le GRUB de la cible ou le noyau cmdline, ajoute les modules vfio au <code>/etc/modules</code>, et copie les deux fichiers modprobe rédigés par l’utilisateur. Sur le prochain démarrage, IOMMU est actif, les modules VFIO chargent, le GPU est lié à vfio-pci et le VM est livré avec le travail de passage."
+      },
+      {
+        "scenario": "Par défaut du GRUB personnalisé",
+        "detail": "Source : <code>GRUB_TIMEOUT=1</code> et <code>GRUB_DISABLE_OS_PROBER=true</code>. L'hydratation lit les deux clés de la sauvegarde <code>/etc/default/grub</code>, voit qu'elles diffèrent des valeurs par défaut de la nouvelle installation, et réécrit ces deux lignes dans le fichier de la cible (en laissant tout le reste, y compris <code>GRUB_DISTRIBUTOR</code>, intact)."
+      }
+    ]
+  },
+  "callout": {
+    "warningTitle": "Ce que l'hydratation ne réapplique pas lorsque le noyau cible est plus récent",
+    "warningBody": "L'hydratation ne réapplique que la configuration ProxMenux sait être sûre dans toutes les versions du noyau : jetons IOMMU, ID VFIO, clés GRUB sur liste blanche et modules d'une liste fixe (<code>vfio*</code>, <code>nvidia*</code>, <code>i915</code>, <code>xe</code>, <code>kvm*</code>). Tout ce qui se trouve à l'extérieur de cet ensemble — les crochets initramfs personnalisés sous <code>/etc/initramfs-tools/hooks/</code>, les fichiers non inscrits sur la liste blanche sous <code>/etc/modprobe.d/</code>, les surcharges d’unités systemd rédigées par l’utilisateur — reste exclu. La raison en est concrète : ces fichiers peuvent appeler des interfaces internes au noyau (API modulaires, mise en page <code>/sys</code>, crochets <code>udev</code>) qui changent entre les versions principales, et les appliquer mot à mot sur le nouveau noyau peut empêcher la cible de démarrer. Lorsque la reproduction exacte de la chaîne de démarrage est requise, la restauration doit être exécutée sur un hôte avec la même version principale du noyau que la sauvegarde."
+  },
+  "codeReference": {
+    "heading": "Où vivent les mécanismes",
+    "intro": "Pour les développeurs qui cherchent à tracer ou à étendre le comportement du cross-kernel:",
+    "rows": [
+      {
+        "component": "Détection de la direction",
+        "location": "<code>hb_compat_check</code> dans <code>lib_host_backup_common.sh</code>. Définit <code>HB_COMPAT_KERNEL_DIRECTION</code>."
+      },
+      {
+        "component": "Liste des chemins de sous-ensembles sécurisés",
+        "location": "<code>hb_unsafe_paths_cross_version</code> dans <code>lib_host_backup_common.sh</code>. Émet <code>path\\treason</code> lignes utilisées à la fois par le filtre CLI et le point de terminaison Web <code>/api/host-backups/restore/prepare</code>."
+      },
+      {
+        "component": "Phases d'hydratation",
+        "location": "<code>_rs_hyd_grub</code>, <code>_rs_hyd_kernel_cmdline</code>, <code>_rs_hyd_modules</code>, <code>_rs_hyd_files</code> dans <code>backup_host.sh</code>. Ordonné par <code>_rs_apply_bk_older_hydration</code>."
+      },
+      {
+        "component": "Régénération forcée après démarrage",
+        "location": "<code>apply_pending_restore.sh</code> lit <code>HB_HYDRATION_APPLIED</code> de <code>plan.env</code> et force <code>NEEDS_INITRAMFS=1</code>/<code>NEEDS_GRUB=1</code>."
+      },
+      {
+        "component": "Aperçu du Web",
+        "location": "<code>/api/host-backups/restore/prepare</code> dans <code>flask_server.py</code>. Charge la bibliothèque d'aide, exécute <code>_rs_apply_bk_older_hydration</code> en mode plan, renvoie les actions au mode Web."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Où aller ensuite?",
+    "items": [
+      {
+        "label": "Restauration",
+        "href": "/docs/backup-restore/restoring",
+        "tail": " — le processus complet de restauration qui intègre les mécanismes de cette page."
+      },
+      {
+        "label": "Comment ça marche",
+        "href": "/docs/backup-restore/how-it-works",
+        "tail": " — le manifeste et les collecteurs qui produisent le bloc <code>kernel_params</code> lu par l’adaptation."
+      }
+    ]
+  }
+}

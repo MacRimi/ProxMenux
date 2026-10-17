@@ -10,7 +10,7 @@
   "header": {
     "title": "Trabajos programados",
     "description": "Trabajos de copia de host desatendidos. Dos modelos de creación: un trabajo nuevo e independiente con su propio horario, o un trabajo adjuntado a una tarea vzdump de PVE existente que hereda el horario y la retención de esa tarea. Ambos producen archivos idénticos al flujo interactivo.",
-    "section": "Backup & Restore"
+    "section": "Copias de seguridad y restauración"
   },
   "intro": {
     "title": "Los dos modelos de trabajo programado",
@@ -22,7 +22,7 @@
   },
   "attachBadge": {
     "title": "Modo adjunto — recomendado cuando ya existe una tarea vzdump de PVE",
-    "body": "Cuando ya hay una tarea de copia vzdump de PVE configurada para las VMs y los LXCs de este nodo, adjuntar la copia de host a esa tarea garantiza que la configuración del host se captura en la <strong>misma ventana</strong> que los invitados. En la restauración, las configuraciones de los invitados vienen de la copia de host (viven bajo <code>/etc/pve</code>), y los discos de los invitados vienen de la copia vzdump tomada al mismo tiempo — ambos conjuntos son consistentes entre sí, por lo que una recuperación completa del nodo puede reproducir el host y re-adjuntar cada invitado sin drift de versiones."
+    "body": "Si ya existe una tarea vzdump de PVE para las VM y los LXC de este nodo, adjuntar la copia del host hace que se ejecute después de la copia de los invitados, en el <strong>mismo ciclo de copia</strong>. Al restaurar, las configuraciones de los invitados proceden de la copia del host (bajo <code>/etc/pve</code>) y sus discos de las copias vzdump de ese ciclo. Esto facilita coordinar la recuperación de todo el nodo, pero no es una instantánea atómica: los cambios durante el ciclo pueden dejar diferencias entre la configuración del host y el estado de los discos de los invitados."
   },
   "frequencyBadge": {
     "title": "Frecuencia recomendada",
@@ -47,7 +47,7 @@
   },
   "attachDetail": {
     "heading": "Cómo funciona el modo adjunto",
-    "intro": "PVE escribe las tareas <code>vzdump</code> en <code>/etc/pve/jobs.cfg</code> — una entrada por tarea, cada una apuntando a un storage donde caen los dumps de VMs y LXCs. El modo adjunto requiere que ese storage sea un backend que ProxMenux entienda (Local o PBS); cuando la tarea dispara, ProxMenux se ejecuta al mismo tiempo.",
+    "intro": "PVE guarda las tareas <code>vzdump</code> en <code>/etc/pve/jobs.cfg</code>: una sección por tarea, con el almacenamiento de las copias de VM y LXC. El modo adjunto requiere un backend compatible con ProxMenux (Local o PBS). La copia del host se ejecuta desde el hook job-end cuando termina la tarea de copia de los invitados.",
     "steps": [
       {
         "step": "1",
@@ -59,14 +59,14 @@
       },
       {
         "step": "3",
-        "detail": "<code>hb_install_vzdump_hook</code> registra un script-hook en <code>/etc/vzdump.conf</code>. Cuando PVE ejecuta cualquier tarea vzdump, el script-hook dispara; si el <code>$STOREID</code> que se le pasa coincide con el <code>PVE_STORAGE</code> de un trabajo adjuntado, el runner se invoca para ese trabajo."
+        "detail": "<code>hb_install_vzdump_hook</code> registra un hook en <code>/etc/vzdump.conf</code>. En la fase job-end de cualquier tarea vzdump, compara el <code>$STOREID</code> recibido con el <code>PVE_STORAGE</code> de cada trabajo adjunto habilitado y ejecuta el script correspondiente si coincide. La asociación se basa en el almacenamiento, no en el ID de la tarea padre seleccionada."
       },
       {
         "step": "4",
         "detail": "El archivo aterriza en el mismo storage donde los dumps de vzdump acaban de escribirse: <code>path/dump/</code> para Local, o el repositorio PBS configurado en la entrada de storage de PVE."
       }
     ],
-    "outroBody": "El modo adjunto tiene una implicación operativa: desactivar o eliminar la tarea padre de PVE también desactiva la copia de host — no hay timer propio al que recurrir. La entrada del trabajo permanece en disco para poder re-adjuntarla más tarde."
+    "outroBody": "El modo adjunto no tiene temporizador propio. Desactivar o eliminar la tarea padre seleccionada detiene ese disparador, pero otra tarea vzdump con el mismo almacenamiento aún puede activar la copia del host. Para impedirlo, desactiva o elimina el propio trabajo de ProxMenux. Al desactivarlo, su entrada sigue en disco para poder reactivarla o volver a adjuntarla."
   },
   "storageLayout": {
     "heading": "Ficheros que componen un trabajo",
@@ -85,7 +85,7 @@
         "content": "Sólo modo Nuevo. El service invoca <code>run_scheduled_backup.sh JOB_ID</code>. El timer lo programa con <code>Persistent=true</code> (los disparos perdidos se ejecutan al siguiente arranque) y un pequeño <code>RandomizedDelaySec=120</code> para repartir carga cuando varios trabajos comparten la misma expresión OnCalendar."
       },
       {
-        "path": "script-hook de /etc/vzdump.conf",
+        "path": "/etc/vzdump.conf script-hook",
         "content": "Sólo modo adjunto. Lo instala una vez <code>hb_install_vzdump_hook</code>; casa el <code>PVE_STORAGE</code> de cada trabajo adjuntado contra el <code>$STOREID</code> que PVE pasa al script-hook."
       }
     ]
@@ -104,23 +104,23 @@
     "intro": "El menú del scheduler (TUI de Scripts) y la pestaña Backups del Monitor exponen las mismas acciones sobre cualquier trabajo.",
     "rows": [
       {
-        "action": "Run now",
+        "action": "Ejecutar ahora",
         "detail": "Invoca el runner de inmediato, saltándose el timer / hook de vzdump. Útil para verificar una configuración de trabajo sin esperar al siguiente disparo programado."
       },
       {
-        "action": "Enable / Disable",
+        "action": "Activar / Desactivar",
         "detail": "Modo Nuevo: <code>systemctl enable/disable --now</code> sobre el timer. Modo adjunto: cambia el flag <code>ENABLED</code> en el env del trabajo — el script-hook lo respeta en el siguiente disparo de PVE."
       },
       {
-        "action": "Edit",
+        "action": "Editar",
         "detail": "Reabre los prompts de destino, horario, perfil y retención y reescribe los ficheros del trabajo. Preserva el ID del trabajo."
       },
       {
-        "action": "Delete",
+        "action": "Eliminar",
         "detail": "Elimina el env del trabajo, el fichero de rutas, el timer + service systemd (modo Nuevo) y desactiva el binding del hook (modo adjunto). No toca los archivos ya presentes en el destino."
       },
       {
-        "action": "View log",
+        "action": "Ver log",
         "detail": "Muestra en streaming <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — un fichero de log por ejecución. El runner también emite una línea de estado compacta a journald bajo el service systemd."
       }
     ]

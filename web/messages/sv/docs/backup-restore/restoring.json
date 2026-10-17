@@ -1,0 +1,282 @@
+{
+  "meta": {
+    "title": "Återställ en backup - full och anpassade flöden | ProxMenux",
+    "description": "Hela återställningsflödet: visa, ladda ner eller återställa en säkerhetskopia, kompatibilitetskontroll och resultat, fullständigt eller anpassat läge, sökvägar som tillämpas direkt eller efter omstart samt startskriptet och ominstallation av komponenter efter start.",
+    "ogTitle": "ProxMenux Backup - återställande",
+    "ogDescription": "Fullständiga och anpassade återställningsflöden med kompatibilitetskontrollen, banklassificering, on-boot dispatcher och post-boot ominstallation.",
+    "twitterTitle": "Återställ en backup | ProxMenux",
+    "twitterDescription": "Hur en ProxMenux värd backup förvandlas tillbaka till en fungerande Proxmox värd."
+  },
+  "header": {
+    "title": "Återställ en backup",
+    "description": "Det fullständiga återställningsflödet: från att välja ett arkiv till en fungerande värd. Dokument kompatibilitetskontrollen, de två återställningslägena, on-boot-avsändaren, post-boot-ominstallationspasset och de mekanismer som gör cross-host och cross-kernel-återställningar förutsägbara.",
+    "section": "Säkerhetskopiering och återställning"
+  },
+  "intro": {
+    "title": "Återställningen reproducerar källan, inte bara filerna",
+    "body": "Att återställa en ProxMenux-säkerhetskopia innebär mer än att packa upp filer. Före ändringar läses manifestet för att hitta skillnader mellan källa och mål, sökvägar som kan hindra starten utesluts och användarinställningar som inte kan kopieras direkt anpassas. Efter den nödvändiga omstarten försöker processen installera om de registrerade komponenter som stöds (NVIDIA-drivrutin, Coral TPU och GPU-verktyg) för målets aktiva kärna. Ett enda arkiv styr kompatibilitetskontroll, sökvägsklassificering och arbetet under och efter start. Kontrollera resultaten per komponent och loggarna för att bekräfta utfallet."
+  },
+  "threeActions": {
+    "heading": "Tre åtgärder på en backup",
+    "intro": "Välja en säkerhetskopia från listan öppnar en meny med tre åtgärder.",
+    "actionRows": [
+      {
+        "action": "Visa",
+        "detail": "Öppnar en skrivskyddad vy av arkivet: manifest.json-innehåll (källvärdnamn, PVE-version, kärna, hårdvara, installerade komponenter), listan över vägar inuti <code>rootfs/</code> och en diff av vad som skulle förändras på den aktuella värden om säkerhetskopieringen tillämpades."
+      },
+      {
+        "action": "Ladda ner",
+        "detail": "Exporterar arkivet som en bärbar <code>.tar.zst</code>-fil (tar komprimerad med zstd). Det kan extraheras på alla Linux-system med <code>tar --zstd -xf FILE.tar.zst</code>, eller på macOS / Windows med något verktyg som stöder zstd (7-Zip, PeaZip, Keka ...). Det extraherade trädet innehåller <code>manifest.json</code>, <code>metadata/</code> och <code>rootfs/</code> - exakt samma layout som återställningen förbrukar. Användbar för offline inspektion eller för att återställa på en värd utan tillgång till den ursprungliga destinationen (PBS, Borg)."
+      },
+      {
+        "action": "Återställa",
+        "detail": "Åtgärden som skriver till systemet. Packar upp arkivet i en förberedelsekatalog, kör kompatibilitetskontrollen och visar valet mellan fullständig och anpassad återställning."
+      }
+    ]
+  },
+  "compatibilityCheck": {
+    "heading": "Kompatibilitetskontrollen",
+    "intro": "Innan någon fil skrivs jämför <code>hb_compat_check</code> det tillstånd som beskrivs i manifestet mot målvärden. Kontrollen läser endast data och producerar fyra oberoende utgångar som driver resten av återställningen.",
+    "outputRows": [
+      {
+        "output": "Riktningsflaggan",
+        "detail": "<code>HB_COMPAT_KERNEL_DIRECTION</code> är <code>same</code>, <code>bk_newer</code> eller <code>bk_older</code> efter jämförelse av kärnans huvudversion i säkerhetskopian och på målet. Det styr filtret för säkra sökvägar mellan kärnor, som bara används vid <code>bk_older</code>, och anpassningen av inställningar som beskrivs på sidan om återställning mellan kärnversioner."
+      },
+      {
+        "output": "Lista över undantagna sökvägar",
+        "detail": "<code>RS_SKIP_PATHS</code> varje väg som restaureringen inte får tillämpa. Befolkad av två mekanismer: hårdvarudrift (saknas NIC, saknas lagrings-ID, utländsk ZFS pool) och — när riktningen är <code>bk_older</code> - cross-kernel unsafe-paths lista."
+      },
+      {
+        "output": "Plan för ommappning av nätverkskort",
+        "detail": "När en NIC på målet har samma MAC som en på källan men ett annat namn (typiskt efter en moderkortsbyte), registrerar kompatibilitetskontrollen en bytesplan (<code>HB_NIC_REMAP</code>) som kommer att skriva om <code>/etc/network/interfaces</code> under återställningen."
+      },
+      {
+        "output": "Återställningsplan",
+        "detail": "Beräknas av <code>compute_rollback_plan.sh</code>. Listar VM, LXC och komponenter som finns på målet men saknas i säkerhetskopian. Bekräftelsen erbjuder valfri borttagning av extra gäster före omstart. Komponenter tas bort manuellt och gästborttagning kan misslyckas; en exakt matchning garanteras därför inte."
+      }
+    ],
+    "reportBody": "Kontrollen avger också en strukturerad rapport (<code>HB_COMPAT_RESULTS</code>) som kategoriseras som PASS / INFO / WARN / FAIL. WARN och FAIL-poster dyker upp i panelen före återställningen; återställningen vägrar att fortsätta först när en FAIL är närvarande att användaren inte kan lösa genom att klicka på Fortsätt."
+  },
+  "twoModes": {
+    "heading": "Full återställning vs Anpassad återställning",
+    "intro": "Efter kompatibilitetskontrollen visas lägesvalet. Det avgör <em>vad</em> som tillämpas och inte <em>hur</em>: båda lägena använder samma process.",
+    "modeRows": [
+      {
+        "mode": "Full återställning",
+        "detail": "Gäller varje väg i arkivet som överlever drift och cross-kernel filter. Kör också paketet installera och komponenten auto-reinstall pass. Detta är standarden och det rekommenderade valet - målet är att reproducera källan, inte plocka bitar."
+      },
+      {
+        "mode": "Anpassad återställning",
+        "detail": "Öppnar en checklista med alla sökvägar i arkivet. Användaren väljer en delmängd. Sökvägar som blockeras av filtret mellan kärnor är grå och kan inte väljas. Paketinstallation och automatisk ominstallation av komponenter hoppas över som standard i anpassat läge, eftersom användaren begär en partiell återställning."
+      }
+    ]
+  },
+  "pathClassification": {
+    "heading": "Hur vägar klassificeras",
+    "intro": "Varje väg som valts för återställningen klassificeras av <code>hb_classify_path</code> i en av tre kategorier. Kategorin bestämmer när vägen tillämpas på systemet och varför.",
+    "rows": [
+      {
+        "class": "hot",
+        "detail": "Paths tillämpade <strong>omedelbart</strong> till körsystemet. Tjänsten som förbrukar dem plockar upp förändringen på egen hand eller vid nästa reload - ingen omstart krävs. Dessa är huvuddelen av en säkerhetskopia: <code>/etc/ssh</code>, <code>/etc/apt</code>, <code>/etc/cron.*</code>, <code>/root</code>, <code>/usr/local/bin</code>, allmänna servicekonfigurationsfiler etc."
+      },
+      {
+        "class": "reboot",
+        "detail": "Sökvägar som skjuts upp till <strong>nästa start</strong> i stället för att tillämpas <strong>omedelbart</strong> av återställningen. De påverkar startkonfigurationen: genereringen av starthanteraren läser <code>/etc/default/grub</code>, monteringar använder <code>/etc/fstab</code> och modulladdning <code>/etc/modules</code>. De väntande filerna tillämpas efter omstart och nödvändiga startfiler genereras sedan om. Exempel: <code>/etc/default/grub</code>, <code>/etc/kernel</code>, <code>/etc/modules</code>, <code>/etc/fstab</code>, <code>/etc/zfs</code>, <code>/etc/initramfs-tools</code>."
+      },
+      {
+        "class": "dangerous",
+        "detail": "Paths som är <strong>INTE tillämpas på löpningssystem</strong> - en levande skriva kan korrumpera tillstånd eller släppa den aktiva anslutningen. Dessa är iscensatta i den väntande uppsättningen och skrivna av post-boot-sändaren efter omstarten, när klustret är upp men systemet är ännu inte helt i bruk. Exempel: <code>/etc/pve</code> (pmxcfs är en FUSE-montering med aktiv klusterkonfiguration), <code>/var/lib/pve-cluster</code> (levande klusterdata), <code>/etc/network</code> (kan omkonfigurera själva gränssnittet som användaren är ansluten på över SSH och släppa sessionen)."
+      }
+    ]
+  },
+  "fullFlow": {
+    "heading": "Fullständig återställning arbetsflöde",
+    "intro": "Den kompletta pipeline från arkivval till en återställd arbetsvärd. Varje steg matar nästa, staten skriven av tidigare stadier konsumeras av senare.",
+    "diagram": "┌─────────────────────────────────────────────────────────────────┐\n│  Archive → staging_root/                                        │\n│    manifest.json   metadata/   rootfs/                          │\n└──────────────────────────────┬──────────────────────────────────┘\n                               │\n                               ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  1. hb_compat_check                                     │\n   │     · hardware drift → RS_SKIP_PATHS                    │\n   │     · kernel direction → same / bk_newer / bk_older     │\n   │     · NIC remap plan                                    │\n   │     · hydration plan (bk_older only)                    │\n   │     · rollback plan                                     │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  2. Confirmation dialog                                 │\n   │     Shows: hot count, pending count, drift, hydration,  │\n   │     NIC remap, cross-kernel note, reinstalls preview    │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │ (accepted)\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  3. Apply hot paths → LIVE                              │\n   │     _rs_apply rsyncs each hot path                      │\n   │     from staging_root/rootfs to /                       │\n   │     (skips paths in RS_SKIP_PATHS)                      │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  4. _rs_prepare_pending_restore                         │\n   │     /var/lib/proxmenux/pending-restore/                 │\n   │       ├── apply-on-boot.list                            │\n   │       ├── plan.env                                      │\n   │       ├── rs-skip-paths.txt                             │\n   │       └── rootfs/ (deferred paths)                      │\n   │     Enable proxmenux-restore-onboot.service             │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  4b. _rs_import_data_pools                              │\n   │      Imports non-root ZFS pools whose disks are all     │\n   │      present; retries with -f on foreign hostid;        │\n   │      skips with a warning when disks are missing.       │\n   │      Log: /var/log/proxmenux/restore-datapools-*.log    │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  5. _rs_run_complete_extras                             │\n   │     packages.manual.list                                │\n   │       → cascade-safe filter                             │\n   │       → apt-get install                                 │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  6. REBOOT                                              │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  7. apply_pending_restore.sh (on early boot)            │\n   │     Reads plan.env                                      │\n   │     Applies apply-on-boot.list (filtered)               │\n   │     Installs the postboot systemd unit                  │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  8. apply_cluster_postboot.sh (~10 minutes)             │\n   │     Runs after pve-cluster is up                        │\n   │     · Applies /etc/pve entries to pmxcfs                │\n   │     · update-initramfs -u -k all                        │\n   │     · update-grub / proxmox-boot-tool refresh           │\n   │     · component --auto-reinstall (nvidia, coral, ...)   │\n   │     · Boot sanity check                                 │\n   │     · Notification: \"Host restore finished\"             │\n   └─────────────────────────────────────────────────────────┘"
+  },
+  "pendingMachinery": {
+    "heading": "Mekanismen för uppskjuten återställning",
+    "intro": "Paths som klassificeras som <code>reboot</code> eller <code>dangerous</code>, och hydrering skriver, iscensätts för nästa start istället för att appliceras live. Detta görs genom en liten, självinnehållen uppsättning filer under <code>/var/lib/proxmenux/pending-restore/</code>:",
+    "rows": [
+      {
+        "file": "apply-on-boot.list",
+        "content": "En relativ sökväg per rad: exakt de sökvägar som <code>apply_pending_restore.sh</code> tillämpar från förberett rootfs. Filen visar vad som ändras vid nästa start."
+      },
+      {
+        "file": "plan.env",
+        "content": "Miljövariabler som hämtats från on-boot script: restaurera ID, kompatibilitetsflaggor (<code>HB_COMPAT_CROSS_VERSION</code>, <code>HB_COMPAT_KERNEL_DIRECTION</code>, <code>HB_HYDRATION_APPLIED</code>), Rollback opt-in flagga, kluster alternativ."
+      },
+      {
+        "file": "rs-skip-paths.txt",
+        "content": "Den slutliga <code>RS_SKIP_PATHS</code>-listan, kvarstår så <code>apply_pending_restore.sh</code> tillämpar samma uteslutningar efter omstart som beräknades under det interaktiva steget. Förhindrar driftdrabbade eller kors-kernel-osäkra vägar från att återställas vid starttid."
+      },
+      {
+        "file": "rootfs/",
+        "content": "Själva förberedda filerna: exakt de byte som ska skrivas. De lagras på samma filsystem som <code>/</code> så att rsync vid start går snabbt och inte kräver åtkomst till extern lagring."
+      }
+    ],
+    "unitBody": "Systemd-enheten <code>proxmenux-restore-onboot.service</code> aktiveras i slutet av det interaktiva steget. Engångstjänsten körs tidigt vid nästa start, anropar <code>apply_pending_restore.sh</code> och inaktiverar sedan sig själv. Villkoret <code>ConditionPathExists=/var/lib/proxmenux/pending-restore/state</code> gör att inget körs vid starter utan väntande återställning."
+  },
+  "postbootDispatcher": {
+    "heading": "Post-boot dispatcher - apply_cluster_postboot.sh",
+    "intro": "Där det interaktiva steget slutar och där den faktiska värdreproduktionen sker. <code>apply_cluster_postboot.sh</code> installeras som en andra one-shot systemd-enhet (<code>proxmenux-apply-cluster-postboot.service</code>) vars <code>After=</code>/<code>Wants=</code>-mål säkerställer att det körs först efter att pve-cluster och nätverk-online är uppe. Det är här värdsynliga återställningsåtgärder landar.",
+    "tasks": [
+      {
+        "task": "Applicera /etc/pve",
+        "detail": "<code>/etc/pve</code> är ett levande pmxcfs FUSE-fäste - det kan inte skrivas till på tidig start. Dispatcher kopierar filer från de förberedda rootfs till live <code>/etc/pve</code> när klusterfilsystemet är upp, en fil i taget, utan att starta om pve-kluster. Den fångade <code>/var/lib/pve-cluster/config.db</code> från backupen (eller den befordrade <code>config.db.raw-fallback</code>) materialiseras med <code>systemctl stop pve-cluster</code> → atomfilkopia → <code>systemctl start pve-cluster</code> mönster, så pmxcfs återläser det återställda tillståndet på vägen tillbaka upp."
+      },
+      {
+        "task": "Rebuild initramfs och bootloader",
+        "detail": "Kör <code>update-initramfs -u -k all</code> över varje installerad kärna, sedan antingen <code>update-grub</code> (GRUB-installationer) eller <code>proxmox-boot-tool refresh</code> (systemd-start / ZFS-installationer). Skippades om det interaktiva steget fastställde ingenting förändrades i de vägar som påverkar dessa verktyg."
+      },
+      {
+        "task": "Komponent auto-reinstallation",
+        "detail": "Läser återställd <code>components_status.json</code> och går igenom de installationsprogram som stöds (nvidia_driver, coral_driver, amdgpu_top, intel_gpu_tools). Varje valt program körs med <code>--auto-reinstall</code>, läser registrerat tillstånd och installerar för målmiljön, med ombyggnad av kärnmoduler där det behövs. Arbetet väntar till efter omstart för att använda målets då aktiva kärna. Enskilda fel loggas och stoppar inte nästa komponent."
+      },
+      {
+        "task": "Rimlighetskontroll vid uppstart",
+        "detail": "Innan du skjuter slutförandet av meddelandet, verifierar att <code>proxmox-boot-tool status</code> visar en konfigurerad ESP, har varje <code>/boot/vmlinuz-*</code> en matchande <code>/lib/modules/&lt;ver&gt;</code>-katalog och <code>/vmlinuz</code> löser. Varje inkonsistens dyker upp i meddelandet istället för att vara dold."
+      },
+      {
+        "task": "Slutförande anmälan",
+        "detail": "Skickar <code>Host restore finished</code>-eventet genom <code>hb_notify_lifecycle</code>. Inkluderar total varaktighet, tillämpad vägräkning, sanity-check varningar om någon, och en länk till loggen på <code>/var/log/proxmenux/proxmenux-cluster-postboot-*.log</code>. Om meddelanden inte är konfigurerade är händelsen tyst - loggen registrerar fortfarande allt."
+      }
+    ]
+  },
+  "liveProgress": {
+    "heading": "Aktuellt förlopp på fliken Säkerhetskopior i Monitor",
+    "body": "Efter omstarten av Backups-fliken ProxMenux Monitor gör ett live post-restore-kort som återspeglar tillståndet <code>proxmenux-apply-cluster-postboot.service</code> som det körs. Kortet drivs av <code>/var/lib/proxmenux/restore-state.json</code>, som avsändaren uppdaterar på varje milstolpe (tillämplig klusterkonfig, återuppbygga initramfs, uppdatera bootloader, per-component ominstallera, start sanity check, slutföra).",
+    "fields": [
+      {
+        "name": "Statusmärke",
+        "detail": "Något av tillstånden <em>Återställning pågår</em>, <em>Återställning klar</em> eller <em>Återställning misslyckades</em>. Kortet läser tillståndsfilen varannan sekund under körning och var 30:e sekund efter avslut."
+      },
+      {
+        "name": "Förloppsindikator och stegräknare",
+        "detail": "Visar <code>N/M steps</code> med namnet på det aktuella steget. Under återställningen beräknas en <em>uppskattad tid</em> från slutförda steg och förfluten tid."
+      },
+      {
+        "name": "Komponentlista",
+        "detail": "En rad per drivrutin installeras om (NVIDIA, Intel GPU verktyg, AMD verktyg, Coral TPU) med <code>installing</code> / <code>ok</code> / <code>failed</code> plus en länk till per-komponent logga på <code>/var/log/proxmenux/component-*.log</code>."
+      },
+      {
+        "name": "Datapool import",
+        "detail": "Blocket <code>data_pools_import</code> visar fem färgade rader: <em>Importerade</em>, <em>Tvingade</em> (med <code>-f</code> för ett annat hostid), <em>Överhoppade, delvis närvarande</em> (bara vissa diskar finns), <em>Överhoppade, saknade</em> (inga diskar finns) och <em>Misslyckade</em>. Tillståndet sparas i <code>/var/lib/proxmenux/restore-state.json</code> och hela körningsloggen i <code>/var/log/proxmenux/restore-datapools-&lt;timestamp&gt;.log</code>."
+      },
+      {
+        "name": "Varningar om startkonfigurationen",
+        "detail": "Processen kontrollerar saknade <code>/lib/modules/&lt;kernel&gt;</code>-kataloger, saknad ESP-konfiguration och <code>/vmlinuz</code>-länkar utan giltigt mål. Varningar visas här i en färgad ruta."
+      },
+      {
+        "name": "Återställningsdelta",
+        "detail": "Listor VMs, LXCs och komponenter som finns på målet men inte var i den återställda backupen - samma poster som uppstod i förväg destruktiv återgångsdialog. Varje rad bär manuell rensning kommandot."
+      },
+      {
+        "name": "Loggens slut",
+        "detail": "De sista 600-linjerna i <code>proxmenux-cluster-postboot-&lt;ts&gt;.log</code>, med ett <em>Endast problem</em>-filter som håller bara linjer som matchar <code>error</code>, <code>warning</code>, <code>failed</code>, <code>✗</code> eller <code>traceback</code>."
+      }
+    ],
+    "dismissBody": "När återställningen är <em>klar</em> eller <em>misslyckad</em> fäller knappen Dölj ihop kortet. Tillståndsfilen bevaras och Historik öppnar denna och tidigare återställningar igen. De senaste 20 körningarna arkiveras under <code>/var/lib/proxmenux/restore-history/</code>.",
+    "imageAlt": "Detaljdialogen för återställning i ProxMenux Monitor under körning: blå statusmarkering, aktuellt steg Bygger om initramfs, uppskattad återstående tid, delvis fylld förloppsindikator och aktuella loggrader.",
+    "imageCaption": "Detaljerna modal medan post-boot-avsändaren fortfarande kör - emblem, aktuellt steg, tid kvar och levande loggsvans.",
+    "detailsImageAlt": "Samma detaljer modal efter återställningen har avslutats, med den gröna återställningen fullständiga märket, den totala löptiden (0m53s), en fullt fylld 6 / 6 framstegsfältet, den tomma Rollback delta och den arkiverade postboot log.",
+    "detailsImageCaption": "Samma modal när körningen har avslutats - emblem, total varaktighet, fylld progress bar och arkiverad postboot logg."
+  },
+  "postbootExample": {
+    "heading": "Hur post-boot ser ut på konsolen",
+    "body": "På den fysiska konsolen avslutas en process som lyckas med <code>[ OK ] Finished proxmenux-apply-cluster-postboot.service</code>, ofta nära <code>OK</code> för <code>multi-user.target</code> och <code>graphical.target</code>. Detta markerar att processen har avslutats. Enskilda komponentfel eller startvarningar kan ändå ha registrerats. Kontrollera komponenternas tillstånd och loggarna i Monitor innan värden betraktas som helt återställd.",
+    "imageAlt": "Proxmox fysiska konsol med '[ OK ] Finished proxmenux-apply-cluster-postboot.service - ProxMenux Apply Cluster Configs (post-boot).', följt av OK för multi-user.target och graphical.target och med inloggningsraden ovanför.",
+    "imageCaption": "Fysisk konsol när processen avslutats. 'Finished proxmenux-apply-cluster-postboot.service' markerar slutet, vilket även 'Host restore finished' visar i Monitor. Komponentresultat och varningar behöver fortfarande granskas."
+  },
+  "tenMinutes": {
+    "heading": "Varför de senaste tio minuterna är viktigt",
+    "intro": "Omstarten själv tar sekunder, men post-boot-avsändaren spenderar cirka tio minuter efter återställningen. Under detta fönster är värden nåbara och inloggningsarbeten, men vissa tjänster (främst GPU-drivrutinberoende) är ännu inte tillgängliga. Tidsuppdelning för en typisk Proxmox-värd med NVIDIA + Coral installerad:",
+    "rows": [
+      {
+        "stage": "Boot + pve-cluster redo",
+        "time": "~30 s",
+        "detail": "Standard Proxmox boot. SSH, webb-UI och inloggning är tillgängliga i slutet av detta skede."
+      },
+      {
+        "stage": "Applicera /etc/pve till pmxcfs",
+        "time": "~10 s",
+        "detail": "Snabba - små konfigfiler kopierade en efter en till live klusterfilsystemet."
+      },
+      {
+        "stage": "Rebuild initramfs över kärnor",
+        "time": "3–5 min",
+        "detail": "<code>update-initramfs -u -k all</code> bygger en initramfs avbildning per installerad kärna. Större delen av väntetiden."
+      },
+      {
+        "stage": "Bygg om starthanterarens konfiguration",
+        "time": "10–30 s",
+        "detail": "<code>update-grub</code> eller <code>proxmox-boot-tool refresh</code>. Snabbt även på ZFS."
+      },
+      {
+        "stage": "NVIDIA ominstallation av drivrutin (om tillämpligt)",
+        "time": "5–10 min",
+        "detail": "Ladda ner den inspelade drivrutinsversionen, sammanställer DKMS-modulerna mot den nuvarande kärnan, tillämpar ProxMenux-patchen om källan hade den. Längsta enskilda uppgift."
+      },
+      {
+        "stage": "Ominstallation av Coral och andra komponenter",
+        "time": "3–5 min",
+        "detail": "DKMS-kompilering för Coral, apt install för intel-gpu-tools samt nedladdning och installation av .deb för amdgpu_top."
+      },
+      {
+        "stage": "Startkontroll och meddelande",
+        "time": "~2 s",
+        "detail": "Kräver få resurser. Meddelandet informerar användaren så snart körningen har avslutats."
+      }
+    ],
+    "outroBody": "Under denna tid kan verktyg saknas efter inloggning (<code>nvidia-smi</code> hittas inte, <code>coral</code> identifieras inte), eftersom ominstallationen fortfarande körs i bakgrunden. Slutmeddelandet markerar arbetets slut; kontrollera komponentresultat, varningar och loggar för att skilja lyckade åtgärder från enskilda fel."
+  },
+  "destructiveRollback": {
+    "heading": "Den valfria destruktiva rollback",
+    "body": "Återställningen är additiv som standard: extra VM, LXC och komponenter blir kvar. Vid skillnader erbjuder bekräftelsen <em>Kör destruktiv återställning?</em>, med Nej som standard. Ja anropar <code>_rs_execute_rollback</code> före omstart för att försöka ta bort de listade extra VM:erna och LXC:erna. Komponenter markeras för manuell avinstallation eftersom automatisk avinstallation saknas. Fel vid borttagning rapporteras och processen fortsätter, så en exakt matchning garanteras inte. Granska namn och VMID/CTID före detta destruktiva val."
+  },
+  "logs": {
+    "heading": "Var loggarna finns",
+    "rows": [
+      {
+        "log": "/var/log/proxmenux/restore-YYYYMMDD_HHMMSS.log",
+        "detail": "Skrivs under det interaktiva steget: kompatibilitetsresultat, avvikelsefilter, anpassningsplan, utdata från direkt tillämpning och förberedelse av uppskjutna ändringar samt paketinstallation."
+      },
+      {
+        "log": "/var/log/proxmenux/apply-pending-YYYYMMDD_HHMMSS.log",
+        "detail": "Skrivs av <code>apply_pending_restore.sh</code> tidigt vid start: inläsning av plan.env, genomgång av apply-on-boot och filtrering av undantagna sökvägar."
+      },
+      {
+        "log": "/var/log/proxmenux/proxmenux-cluster-postboot-YYYYMMDD_HHMMSS.log",
+        "detail": "Skrivs av <code>apply_cluster_postboot.sh</code>: tillämpning av pve-cluster-konfiguration, utdata från initramfs och starthanterare, komponenternas installationsutdata, startkontroll och meddelandeinnehåll."
+      },
+      {
+        "log": "/var/log/proxmenux/component-<name>-YYYYMMDD_HHMMSS.log",
+        "detail": "En logg per komponentinstallationsprogram (nvidia, coral, etc.) som kördes i post-boot-passet. Användbart när en specifik komponents ominstallation misslyckades och användaren behöver verktygets egen utdata."
+      },
+      {
+        "log": "/var/log/proxmenux/restore-datapools-YYYYMMDD_HHMMSS.log",
+        "detail": "Skriven av <code>_rs_import_data_pools</code>. Innehåller: uppräkning av icke-rotpooler från det manifesterade, perpoolresultatet (importerad rent, importerad med <code>-f</code> för ett annat hostid, hoppad på grund av saknade diskar eller misslyckades), och råutdata av varje <code>zpool import</code> samtal."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Vart ska man gå nästa",
+    "items": [
+      {
+        "label": "Återställning mellan kärnversioner",
+        "href": "/docs/backup-restore/cross-kernel",
+        "tail": " - det riktningsmedvetna säkra filtret och det hydreringspass som åberopats när målkärnan skiljer sig från säkerhetskopieringen."
+      },
+      {
+        "label": "Hur det fungerar",
+        "href": "/docs/backup-restore/how-it-works",
+        "tail": " - arkivlayouten, manifestet och appliceringsinventeringen som återställningen förbrukar."
+      },
+      {
+        "label": "Planerade jobb",
+        "href": "/docs/backup-restore/scheduled-jobs",
+        "tail": " - det obevakade flödet som producerar arkiven denna sida förbrukar."
+      }
+    ]
+  }
+}

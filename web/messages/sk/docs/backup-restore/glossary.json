@@ -1,0 +1,230 @@
+{
+  "meta": {
+    "title": "Slovník — zálohovanie a obnova | ProxMenux",
+    "description": "Slovník systému zálohovania a obnovy ProxMenux: šifrovanie, súbor kľúčov, prístupová fráza, obálka obnovy, PBS, bloky, rootfs, manifest, vykonávací proces a doplnenie medzi verziami jadra.",
+    "ogTitle": "Slovník zálohovania a obnovy | ProxMenux",
+    "ogDescription": "Jasné definície slovnej zásoby použitej cez zálohovanie a obnovenie dokumentácie ProxMenux.",
+    "twitterTitle": "Slovník zálohovania a obnovy | ProxMenux",
+    "twitterDescription": "Prístupová fráza, súbor kľúčov, obálka obnovy, rootfs, manifest, PBS a bloky — všetko vysvetlené na jednom mieste."
+  },
+  "header": {
+    "title": "Slovník pojmov",
+    "description": "Pojmy z dokumentácie zálohovania a obnovy spolu s definíciami.",
+    "section": "Záloha a obnova"
+  },
+  "intro": {
+    "body": "Pojmy sú zoskupené podľa témy. Každý záznam dáva termín a krátku definíciu."
+  },
+  "groups": [
+    {
+      "title": "Šifrovanie a obnovenie kľúča",
+      "intro": "Slovník pre šifrovací blok PBS. Zahŕňa dve odlišné tajomstvá: binárny súbor kľúčov a písomné heslo.",
+      "entries": [
+        {
+          "id": "passphrase-recuperacion",
+          "term": "Prístupová fráza na obnovu",
+          "def": "Textové heslo, ktoré užívateľ vyberá na ochranu obálky <a href=\"#sobre-recuperacion\">obnovenie </a>. Vyžaduje sa dvakrát s kontrolou zhody a používa sa len na šifrovanie obálky a dešifrovanie súboru, ak je niekedy potrebné obnoviť súbor kľúčov. <strong>Nie je to heslo, ktoré odomkne samotný súbor kľúčov </strong> a nikdy sa nepošle PBS. Počas normálnej zálohy nikdy neopustí hostiteľa."
+        },
+        {
+          "id": "clave-cifrado",
+          "term": "Súbor kľúčov (šifrovací kľúč)",
+          "def": "Súbor kľúča používaný proxmox-backup-client na šifrovanie <a href=\"#chunk\">blokov</a> pred odoslaním do PBS. Bez príslušného kľúča sa šifrované dáta nedajú čítať. ProxMenux ho uloží do <code>/usr/local/share/proxmenux/pbs-key.conf</code> s režimom <code>600</code>. Chráňte ho; <a href=\"#sobre-recuperacion\">obálka obnovy</a> slúži na jeho získanie pri strate."
+        },
+        {
+          "id": "contrasena-keyfile",
+          "term": "Heslo súboru kľúčov (KDF heslo)",
+          "def": "Voliteľné heslo, ktoré môže byť prenášané samotným súborom kľúčov, odlišné od <a href=\"#passphrase-recuperacion\">prístupovej frázy na obnovu</a>. Existuje len vtedy, keď bol súbor s kľúčom vytvorený <code>--kdf scrypt</code> (zvyčajne importovaný súbor kľúčov). Bez neho nie je možné súbor kľúčov odomknúť pre použitie. ProxMenux pretrváva v zašifrovanej forme na hostiteľa, takže plánované zálohy môžu bežať bez interaktívneho promptu."
+        },
+        {
+          "id": "sobre-recuperacion",
+          "term": "Obálka obnovy",
+          "def": "Súbor <a href=\"#clave-cifrado\">súbor kľúčov</a> zabalený do ďalšej vrstvy: je zašifrovaný <a href=\"#passphrase-recuperacion\">prístupovou frázou na obnovu</a> použitie <a href=\"#aes-256-cbc\">AES-256-CBC</a> a <a href=\"#pbkdf2\">PBKDF2</a> predtým, než opustí hostiteľa. Nahrá sa do PBS ako <code>-keyrecovery</code> skupina. Bez passfrázy je obálka nepriehľadná: sťahovanie z PBS neodhaľuje súbor kľúčov."
+        },
+        {
+          "id": "cifrado-cliente",
+          "term": "Šifrovanie na strane klienta",
+          "def": "Model šifrovania, pri ktorom sa dáta zašifrujú na zdrojovom hostiteľovi pred odoslaním. PBS prijíma a ukladá iba šifrované dáta; bez súboru kľúča ich neprečíta ani správca PBS s prístupom k dátovému úložisku. ProxMenux na tomto modeli stavia a pridáva <a href=\"#sobre-recuperacion\">obálku obnovy</a>."
+        },
+        {
+          "id": "kdf-none",
+          "term": "--kdf none",
+          "def": "Možnosť <code>proxmox-backup-client key create</code>, ktorá vytvára súbor kľúčov bez pripojenej pasovej frázy. Súbor kľúčov možno použiť priamo bez promptu, ktorý je nevyhnutný pre plánované pracovné miesta bez dozoru. Toto ProxMenux používa štandardne pri generovaní nového súboru kľúčov."
+        },
+        {
+          "id": "kdf-scrypt",
+          "term": "--kdf scrypt",
+          "def": "Možnosť <code>proxmox-backup-client key create</code>, ktorá vytvára súbor kľúčov chránený pomocou <a href=\"#contrasena-keyfile\">prístupovej frázy súboru kľúča</a>. Každé použitie súboru kľúčov si vyžaduje odomknutie s touto passfrázou. ProxMenux akceptuje tento štýl súboru kľúčov pri importe a ukladá heslo šifrované, takže plánované zálohy môžu spustiť bez dozoru."
+        },
+        {
+          "id": "aes-256-cbc",
+          "term": "AES-256-CBC",
+          "def": "Štandardné symetrické šifrovanie. ProxMenux ju používa (prostredníctvom <code>openssl enc -aes-256-cbc</code>) na zabalenie <a href=\"#clave-cifrado\">súboru kľúča</a> s <a href=\"#passphrase-recuperacion\"> prístupovou frázou na obnovu</a> a výrobu <a href=\"#sobre-recuperacion\">obálky</a>."
+        },
+        {
+          "id": "pbkdf2",
+          "term": "PBKDF2",
+          "def": "Kryptografická funkcia, ktorá z prístupovej frázy zadanej človekom odvodí binárny šifrovací kľúč. Mnohými iteráciami spomaľuje útoky hrubou silou. Pri šifrovaní obálky obnovy ju ProxMenux používa so 600 000 iteráciami a náhodnou soľou."
+        }
+      ]
+    },
+    {
+      "title": "Štruktúra zálohy",
+      "intro": "Pojmy popisujúce, čo žije v zálohe, bez ohľadu na cieľ.",
+      "entries": [
+        {
+          "id": "rootfs",
+          "term": "rootfs / koreňový súborový systém",
+          "def": "Súborová kópia systému zdrojového hostiteľa vytvorená pomocou <code>rsync</code> podľa <a href=\"#perfil-defecto\">predvoleného profilu</a> a <a href=\"#rutas-personalizadas\">vlastných ciest</a>. Nie je to obraz celého disku: kopírujú sa iba cesty s konfiguráciou alebo stavom, ktoré Proxmox nedokáže sám obnoviť."
+        },
+        {
+          "id": "manifiesto",
+          "term": "Manifest (manifest.json)",
+          "def": "Štruktúrovaný dokument JSON opisujúci zdrojový hostiteľ v čase zálohovania: hardvér, úložisko, jadro, ProxMenux-inštalované komponenty a inventár VM a LXC. Vyrába ho šesť nezávislých zberateľov. Obnoviteľný tok ho využíva na porovnanie zdroja a cieľa."
+        },
+        {
+          "id": "staging",
+          "term": "Staging adresár",
+          "def": "Dočasný adresár, kde ProxMenux zhromažďuje tri bloky (rootfs, metaúdaje a manifest) pred ich zabalením a nahrávanie do cieľa. Po dokončení zálohy sa automaticky odstráni, a to aj po prerušení."
+        },
+        {
+          "id": "perfil-defecto",
+          "term": "Predvolený profil",
+          "def": "Vybraná sada ciest, ktoré ProxMenux predvolene kopíruje v každej zálohe. Zahŕňa konfiguráciu PVE, sieť, SSH, jadro, apt, nástroje ProxMenux a ďalšie. Je definovaná v kóde a opísaná na stránke <em>Ako to funguje</em>."
+        },
+        {
+          "id": "rutas-personalizadas",
+          "term": "Vlastné cesty",
+          "def": "Extra cesty, ktoré užívateľ pridáva na vrchol <a href=\"#perfil-defecto\">predvoleného profilu</a>. Buď perzistentné (uložené v <code>backup-extra-paths.txt</code>) alebo iba pre dané spustenie (vybrané vo vlastnom režime)."
+        }
+      ]
+    },
+    {
+      "title": "Miesta určenia a skladovanie",
+      "intro": "Pojmy súvisiace s cieľom zálohy — server PBS, lokálny archív alebo repozitár Borg — a usporiadaním dát v PBS.",
+      "entries": [
+        {
+          "id": "repositorio-pbs",
+          "term": "PBS repozitár",
+          "def": "Kombinácia Proxmox Backup Server + <a href=\"#datastore\">úložisko údajov</a> + používateľ, ktorý prijíma zálohu. Identifikované podľa reťazca <code>user@realm@host:datastore</code>. Jeden PBS server môže hostiť niekoľko úložísk."
+        },
+        {
+          "id": "datastore",
+          "term": "Dátové úložisko",
+          "def": "Konkrétne dátové úložisko na serveri PBS so zálohami a ich blokmi. Každé je na súborovom systéme servera PBS a má vlastné oprávnenia a pravidlá."
+        },
+        {
+          "id": "chunk",
+          "term": "Chunk / chunk deduplikácia",
+          "def": "PBS rozdelí zálohu na bloky premenlivej veľkosti, každý identifikuje hashom a uloží ho iba raz, aj keď sa vyskytuje vo viacerých zálohách. Následné zálohy rovnakého alebo podobných hostiteľov tak vyžadujú málo ďalšieho miesta."
+        },
+        {
+          "id": "fingerprint",
+          "term": "Odtlačok prsta",
+          "def": "Kryptografický odtlačok certifikátu PBS servera TLS. Umožňuje klientovi overiť, či sa rozpráva s plánovaným serverom bez toho, aby sa spoliehal na verejný certifikačný orgán. ProxMenux ho prenáša na <code>proxmox-backup-client</code> prostredníctvom premennej prostredia <code>PBS_FINGERPRINT</code>."
+        },
+        {
+          "id": "grupo-copia",
+          "term": "Skupina zálohy",
+          "def": "Logická skupina v PBS pre postupné zálohy toho istého zdroja. Nové zálohy využívajú deduplikáciu s predchádzajúcimi. Pri zapnutom šifrovaní používa ProxMenux dve skupiny na hostiteľa: jednu pre jeho zálohu a druhú s príponou <code>-keyrecovery</code> pre <a href=\"#sobre-recuperacion\">obálku obnovy</a>."
+        },
+        {
+          "id": "backup-id",
+          "term": "ID zálohy",
+          "def": "Názov skupiny <a href=\"#grupo-copia\">backup</a>. ProxMenux predvolený <code>hostcfg-HOSTNAME</code> a umožňuje užívateľovi upraviť pred nahrávaním; nepodporované znaky sú automaticky odstránené."
+        },
+        {
+          "id": "pxar",
+          "term": ".pxar",
+          "def": "PBS-native archív formát pre adresáre. Správa sa ako archív tar optimalizovaný pre deduplikáciu kúskov: PBS namiesto ukladania nepriehľadného súboru rozbije svoj obsah na opakovane použiteľné kúsky."
+        }
+      ]
+    },
+    {
+      "title": "Vykonávanie a plánovanie",
+      "intro": "Pojmy systému plánovaných úloh ProxMenux.",
+      "entries": [
+        {
+          "id": "runner",
+          "term": "Vykonávací proces",
+          "def": "Skript <code>run_scheduled_backup.sh</code> vykonávajúci plánovanú zálohu. Prečíta konfiguráciu úlohy, spustí príslušný backend (Local, PBS alebo Borg), po úspechu uplatní pravidlá uchovávania a odošle nastavené oznámenia."
+        },
+        {
+          "id": "trabajo-programado",
+          "term": "Plánovaná úloha",
+          "def": "Pretrvávajúca konfigurácia opakovaného zálohovania. Drží cieľ, poverovacie listiny, šifrovanie, harmonogram a uchovávanie. Žije na <code>/var/lib/proxmenux/backup-jobs/&lt;id&gt;.env</code>."
+        },
+        {
+          "id": "modo-adjunto",
+          "term": "Pripojený režim",
+          "def": "Úloha bez vlastného časovača. Hook job-end PVE <code>vzdump</code> ju spustí po zálohách hostí pri zhodnom úložisku. Vybraná nadradená úloha poskytne cieľ a počiatočné uchovávanie, ale hook porovnáva úložisko, nie ID nadradenej úlohy. Spustiť ju môže aj iná úloha s tým istým úložiskom. Iba Local a PBS."
+        },
+        {
+          "id": "timer-systemd",
+          "term": "Časovač Systemd",
+          "def": "Štandardný mechanizmus systemd, ktorý spúšťa príkaz podľa kalendára. ProxMenux vytvára časovač pre každú <em>nezávislú</em> plánovanú úlohu. Úlohy v <a href=\"#modo-adjunto\">pripojenom režime</a> časovač nemajú; spúšťa ich hook PVE."
+        },
+        {
+          "id": "retencion",
+          "term": "Uchovávanie (keep-last, keep-daily…)",
+          "def": "Politika, ktorá rozhodne, ktoré staršie zálohy udržať a ktoré prerezávať. Definované podľa úloh s parametrami ako <code>keep-last</code>, <code>keep-daily</code>, <code>keep-weekly</code>, <code>keep-monthly</code>. Aplikuje vykonávací proces po každej úspešnej zálohe."
+        }
+      ]
+    },
+    {
+      "title": "Obnoviť",
+      "intro": "Pojmy z postupu obnovy.",
+      "entries": [
+        {
+          "id": "restauracion-universal",
+          "term": "Všeobecná obnova",
+          "def": "Tok obnovy ProxMenux neextrahuje iba súborový systém: prečíta manifest, aby zistil rozdiely medzi zdrojom a cieľom, reprodukuje konfiguráciu systému a znova spustí inštalačné programy pre komponenty spravované ProxMenux. Cieľom je reprodukovať hostiteľa zdroja, nielen archív."
+        },
+        {
+          "id": "hidratacion",
+          "term": "Hydratácia (cross-kernel)",
+          "def": "Krok obnovy, ktorý zlúči používateľské nastavenia zo zdroja (parametre IOMMU, ID zariadení VFIO, vlastné úpravy a kľúče GRUB) s novou konfiguráciou štartu cieľa bez doslovného kopírovania súborov viazaných na zdrojové jadro. Beží, ak je jadro cieľa novšie než v zálohe."
+        },
+        {
+          "id": "cross-kernel",
+          "term": "Obnova medzi kernelmi",
+          "def": "Obnovte tam, kde sa jadro cieľa líši od jadra zdroja (zvyčajne je novšie). Vyžaduje sa prechod <a href=\"#hidratacion\">hydratácia</a>, aby sa predišlo presúvaniu súborov nekompatibilných s jadrom cieľa."
+        },
+        {
+          "id": "instalador-postboot",
+          "term": "Inštalátor post-boot",
+          "def": "Komponenty reinštalované po prvom štarte obnoveného hostiteľa (ovládače NVIDIA, ovládače Coral TPU, nástroje AMD GPU, nástroje Intel GPU). Každý inštalátor beží proti jadru cieľa, takže obnovený hostiteľ nezávisí od prítomnosti jadra zdroja."
+        },
+        {
+          "id": "compatibility-check",
+          "term": "Kontrola kompatibility",
+          "def": "Porovnanie medzi zdrojovým manifestom a cieľovým stavom, ktorý ProxMenux vykonáva na začiatku obnovy. Rozhoduje, ktoré časti sú skopírované doslovne, ktoré potrebujú hydratáciu a ktoré sú znovu vytvorené inštalátorom."
+        },
+        {
+          "id": "equipo-recien-instalado",
+          "term": "Čerstvá inštalácia",
+          "def": "Hostiteľ preinštalovaný od nuly bez lokálneho <a href=\"#clave-cifrado\">súboru kľúča</a>. Obnova šifrovanej zálohy vyžaduje najprv získať kľúč z <a href=\"#sobre-recuperacion\">obálky</a> uloženej v PBS pomocou <a href=\"#passphrase-recuperacion\">prístupovej frázy na obnovu</a>."
+        }
+      ]
+    }
+  ],
+  "whereNext": {
+    "heading": "Kde ďalej",
+    "items": [
+      {
+        "label": "Ako to funguje",
+        "href": "/docs/backup-restore/how-it-works",
+        "tail": " — kde sa v zálohe nachádza rootfs, manifest a inventár aplikácií."
+      },
+      {
+        "label": "Cieľ Proxmox Backup Server",
+        "href": "/docs/backup-restore/destinations/pbs",
+        "tail": "— kde sú do hĺbky zdokumentované šifrovanie na strane klienta, súbor kľúčov, prístupová fráza na obnovenie a obálka."
+      },
+      {
+        "label": "Obnovenie",
+        "href": "/docs/backup-restore/restoring",
+        "tail": " — postup obnovy a použitie manifestu."
+      }
+    ]
+  }
+}

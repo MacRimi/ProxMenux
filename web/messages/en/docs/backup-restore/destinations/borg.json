@@ -24,19 +24,47 @@
     "heading": "The borg binary",
     "intro": "Borg is not a base dependency of the ProxMenux installer. When a backup runs, <code>hb_ensure_borg</code> resolves the binary from four sources in order and returns the first that works:",
     "rows": [
-      { "priority": "1", "source": "System <code>borg</code>", "detail": "If the host already has <code>borg</code> installed via APT (<code>which borg</code> resolves), that binary is used." },
-      { "priority": "2", "source": "State-dir cache", "detail": "<code>/usr/local/share/proxmenux/borg</code> — kept from a prior GitHub download on this host." },
-      { "priority": "3", "source": "Monitor AppImage bundle", "detail": "<code>/usr/local/share/proxmenux/monitor-app/usr/bin/borg</code> — the AppImage bundles a signed borg-linux64. This is the offline-safe path: a host with no internet still has a working <code>borg</code>." },
-      { "priority": "4", "source": "GitHub download", "detail": "<code>wget</code> against the pinned <code>borg-linux64</code> URL under <code>github.com/borgbackup/borg/releases/</code>, verified against a constant SHA-256 in <code>lib_host_backup_common.sh</code> (<code>HB_BORG_LINUX64_SHA256</code>). On checksum mismatch the binary is discarded and the backup aborts. The downloaded file is cached in the state dir so subsequent backups use path 2." }
+      {
+        "priority": "1",
+        "source": "System <code>borg</code>",
+        "detail": "If the host already has <code>borg</code> installed via APT (<code>which borg</code> resolves), that binary is used."
+      },
+      {
+        "priority": "2",
+        "source": "State-dir cache",
+        "detail": "<code>/usr/local/share/proxmenux/borg</code> — kept from a prior GitHub download on this host."
+      },
+      {
+        "priority": "3",
+        "source": "Monitor AppImage bundle",
+        "detail": "<code>/usr/local/share/proxmenux/monitor-app/usr/bin/borg</code> — the AppImage bundles a signed borg-linux64. This is the offline-safe path: a host with no internet still has a working <code>borg</code>."
+      },
+      {
+        "priority": "4",
+        "source": "GitHub download",
+        "detail": "<code>wget</code> against the pinned <code>borg-linux64</code> URL under <code>github.com/borgbackup/borg/releases/</code>, verified against a constant SHA-256 in <code>lib_host_backup_common.sh</code> (<code>HB_BORG_LINUX64_SHA256</code>). On checksum mismatch the binary is discarded and the backup aborts. The downloaded file is cached in the state dir so subsequent backups use path 2."
+      }
     ]
   },
   "repoTypes": {
     "heading": "Repository types",
     "intro": "The repository type is chosen when a target is added. Each type resolves to a different repository URL that Borg understands.",
     "rows": [
-      { "type": "remote", "url": "ssh://USER@HOST/RPATH", "detail": "Repository lives on a remote server that runs <code>borg serve</code>. Requires an SSH connection to that server." },
-      { "type": "usb", "url": "/mnt/MOUNTPOINT/borgbackup", "detail": "Repository lives on a mounted external disk (typically USB). The mount is resolved via <code>hb_prompt_mounted_path</code>, which detects, mounts or formats USB partitions as needed." },
-      { "type": "local", "url": "/backup/borgbackup (any absolute path)", "detail": "Repository lives on a local directory. Meaningful only when the target directory is on a separate physical disk — a repository on the same disk as the source protects against operator error but not against disk failure." }
+      {
+        "type": "remote",
+        "url": "ssh://USER@HOST/RPATH",
+        "detail": "Repository lives on a remote server that runs <code>borg serve</code>. Requires an SSH connection to that server."
+      },
+      {
+        "type": "usb",
+        "url": "/mnt/MOUNTPOINT/borgbackup",
+        "detail": "Repository lives on a mounted external disk (typically USB). The mount is resolved via <code>hb_prompt_mounted_path</code>, which detects, mounts or formats USB partitions as needed."
+      },
+      {
+        "type": "local",
+        "url": "/backup/borgbackup (any absolute path)",
+        "detail": "Repository lives on a local directory. Meaningful only when the target directory is on a separate physical disk — a repository on the same disk as the source protects against operator error but not against disk failure."
+      }
     ]
   },
   "serverSetup": {
@@ -50,30 +78,62 @@
       "Another Proxmox host on the same LAN, or a VM anywhere reachable over SSH."
     ],
     "lxcWarningTitle": "LXC as Borg server",
-    "lxcWarningBody": "If the Borg server runs inside an LXC, the container must have a user account with a password.",
+    "lxcWarningBody": "If the Borg server runs inside an LXC, generate-auto requires an account that accepts SSH password authentication during key installation. If password login is unavailable, use manual key installation or the generate-pct alternative through the PVE host.",
     "requirementsTitle": "Requirements on the server",
     "requirementsRows": [
-      { "requirement": "borg binary at <code>/usr/bin/borg</code>", "detail": "The <code>command=\"/usr/bin/borg serve ...\"</code> line ProxMenux writes into <code>authorized_keys</code> hard-codes that path. Installing via APT (<code>apt install borgbackup</code>) puts it there. A standalone binary must be symlinked to <code>/usr/bin/borg</code>." },
-      { "requirement": "A dedicated user account (typically <code>borg</code>)", "detail": "Owns the repository directory and receives incoming SSH connections. Does not need sudo or shell access — the authorized_keys line disables interactive shells anyway." },
-      { "requirement": "A writable repository directory", "detail": "The path the operator gives ProxMenux (for example <code>/backup/borgbackup</code>) must exist on the server and be owned by the borg user." },
-      { "requirement": "SSH daemon accepting the borg user", "detail": "<code>PubkeyAuthentication yes</code> (default). Password authentication is only needed for the one-shot <em>generate-auto</em> flow — after the key is installed, the server can disable password auth entirely." }
+      {
+        "requirement": "borg binary at <code>/usr/bin/borg</code>",
+        "detail": "The <code>command=\"/usr/bin/borg serve ...\"</code> line ProxMenux writes into <code>authorized_keys</code> hard-codes that path. Installing via APT (<code>apt install borgbackup</code>) puts it there. A standalone binary must be symlinked to <code>/usr/bin/borg</code>."
+      },
+      {
+        "requirement": "A dedicated user account (typically <code>borg</code>)",
+        "detail": "Owns the repository directory and receives incoming SSH connections. Does not need sudo or shell access — the authorized_keys line disables interactive shells anyway."
+      },
+      {
+        "requirement": "A writable repository directory",
+        "detail": "The path the operator gives ProxMenux (for example <code>/backup/borgbackup</code>) must exist on the server and be owned by the borg user."
+      },
+      {
+        "requirement": "SSH daemon accepting the borg user",
+        "detail": "<code>PubkeyAuthentication yes</code> (default). Password authentication is only needed for the one-shot <em>generate-auto</em> flow — after the key is installed, the server can disable password auth entirely."
+      }
     ],
     "minimalSetupTitle": "Minimal server setup",
     "minimalSetupBody": "On a Debian or Ubuntu Borg server, a working baseline is four commands as root:",
     "minimalSetupCmd": "apt install borgbackup\nuseradd -m -d /home/borg -s /bin/bash borg\nmkdir -p /backup/borgbackup\nchown borg:borg /backup/borgbackup",
-    "minimalSetupNote": "After this, ProxMenux's <code>generate-auto</code> mode can connect using the borg user's password once, install its own SSH key, and every subsequent backup uses that key. No further server-side configuration is needed — the key restricts itself to <code>borg serve</code> on that path."
+    "minimalSetupNote": "With the server prepared and SSH password authentication available, ProxMenux’s <code>generate-auto</code> mode can install its SSH key using an account permitted to write the borg user’s authorized_keys file. Subsequent backups use that key, restricted to <code>borg serve</code> on the configured path. Without password login, install the key manually or use the PVE-host alternative."
   },
   "sshAuth": {
     "heading": "SSH authentication (client side)",
     "intro": "Remote Borg repositories are accessed over SSH. The connection runs from the ProxMenux host to a user account on the Borg server that runs <code>borg serve</code>. This user is typically named <code>borg</code>, NOT the admin/root user of the server — the borg-serve command line locks the connection to that specific repository path (see the key strategies below).",
-    "strategiesTitle": "The four key strategies",
-    "strategiesIntro": "When a remote target is added, ProxMenux prompts for the SSH user, host and remote path, then asks how to authenticate. Four modes:",
+    "strategiesTitle": "SSH key strategies",
+    "strategiesIntro": "When a remote target is added, ProxMenux asks for the SSH user, host and remote path, then offers four authentication choices. The additional generate-pct path is offered when password authentication is refused. The modes are described below:",
     "strategyRows": [
-      { "mode": "generate-auto", "label": "Recommended", "detail": "ProxMenux generates a new ed25519 keypair at <code>~/.ssh/borg_proxmenux_HOST_ed25519</code>, then uses <code>sshpass</code> to log in ONCE to the server with the admin password and append the public key to <code>~borg/.ssh/authorized_keys</code>. The admin password is only used for this one call — it is never stored." },
-      { "mode": "generate-manual", "label": "No admin password on this host", "detail": "ProxMenux generates the keypair as above but displays the full <code>authorized_keys</code> line for the operator to paste manually into the server. The admin password never leaves the ProxMenux host because it is never asked for." },
-      { "mode": "generate-pct", "label": "Borg server is a PVE LXC", "detail": "The Borg server runs inside an LXC on a PVE node. ProxMenux authorises the key via <code>pct exec</code> from the PVE host — root on the PVE host writes into the LXC's <code>~borg/.ssh/authorized_keys</code> without needing SSH into the LXC itself." },
-      { "mode": "existing", "label": "Use an existing key", "detail": "ProxMenux scans <code>/root/.ssh/</code> and <code>$HOME/.ssh/</code> for parseable ed25519/RSA private keys and lists them. The operator picks one or browses manually to a non-standard path." },
-      { "mode": "none", "label": "Default SSH config", "detail": "No custom key — Borg relies on the host's default SSH configuration (typically <code>~/.ssh/id_rsa</code> or an SSH agent)." }
+      {
+        "mode": "generate-auto",
+        "label": "Recommended",
+        "detail": "ProxMenux generates or reuses an ed25519 keypair at <code>~/.ssh/borg_proxmenux_HOST_ed25519</code>, then uses <code>sshpass</code> for a login probe and installation of the public key in <code>~borg/.ssh/authorized_keys</code>. The password belongs to an account allowed to write that file, usually root or the borg user. It is used during setup and is not saved."
+      },
+      {
+        "mode": "generate-manual",
+        "label": "No admin password on this host",
+        "detail": "ProxMenux generates the keypair as above but displays the full <code>authorized_keys</code> line for the operator to paste manually into the server. The admin password never leaves the ProxMenux host because it is never asked for."
+      },
+      {
+        "mode": "generate-pct",
+        "label": "Borg server is a PVE LXC",
+        "detail": "The Borg server runs inside an LXC on a PVE node. ProxMenux authorises the key via <code>pct exec</code> from the PVE host — root on the PVE host writes into the LXC's <code>~borg/.ssh/authorized_keys</code> without needing SSH into the LXC itself."
+      },
+      {
+        "mode": "existing",
+        "label": "Use an existing key",
+        "detail": "ProxMenux scans <code>/root/.ssh/</code> and <code>$HOME/.ssh/</code> for parseable ed25519/RSA private keys and lists them. The operator picks one or browses manually to a non-standard path."
+      },
+      {
+        "mode": "none",
+        "label": "Default SSH config",
+        "detail": "No custom key — Borg relies on the host's default SSH configuration (typically <code>~/.ssh/id_rsa</code> or an SSH agent)."
+      }
     ],
     "restrictTitle": "The authorized_keys line",
     "restrictBody": "For every generated key, the <code>authorized_keys</code> line ProxMenux writes on the server locks the key to a single borg-serve invocation against the configured repository path:",
@@ -84,24 +144,50 @@
     "heading": "Saved targets",
     "intro": "A saved target persists the repository configuration under a friendly name so the details do not have to be re-entered. Storage layout in the ProxMenux state directory:",
     "rows": [
-      { "file": "borg-targets.txt", "content": "One line per target: <code>NAME|REPO|SSH_KEY_PATH|ENCRYPT_MODE</code>. Read by <code>hb_collect_borg_configs</code> to populate the target-selection menu." },
-      { "file": "borg-pass-NAME.txt", "content": "Passphrase for the target NAMEd above (<code>chmod 600</code>). Only present when the operator chose repokey encryption." }
+      {
+        "file": "borg-targets.txt",
+        "content": "One line per target: <code>NAME|REPO|SSH_KEY_PATH|ENCRYPT_MODE</code>. Read by <code>hb_collect_borg_configs</code> to populate the target-selection menu."
+      },
+      {
+        "file": "borg-pass-NAME.txt",
+        "content": "Passphrase for the target NAMEd above (<code>chmod 600</code>). Only present when the operator chose repokey encryption."
+      }
     ],
-    "outro": "Saving is optional — the operator can decline the save prompt for a one-shot backup that leaves no credentials on the host."
+    "outro": "Saving the target is optional. Declining the save prompt omits the named target configuration, but does not remove a generated SSH key. If repokey encryption is enabled without a saved target, ProxMenux still saves the passphrase in the legacy borg-pass.txt file."
   },
   "encryption": {
     "heading": "Encryption",
-    "body": "Repositories are initialised with an encryption mode via <code>hb_borg_init_if_needed</code>: the modern <code>borg repo-create -e MODE</code> when available, or the legacy <code>borg init --encryption=MODE</code>. ProxMenux exposes two modes: <code>repokey</code> (default) and <code>none</code>. In <code>repokey</code> mode Borg stores the encryption key inside the repository itself; access requires a passphrase, which ProxMenux prompts for twice with match validation and stores at <code>borg-pass-NAME.txt</code>. A mandatory acknowledgement dialog is shown after the passphrase is saved: the passphrase is the only way to access the encrypted archives, and losing it makes every archive in the repository unrecoverable."
+    "body": "Repositories are initialised with an encryption mode via <code>hb_borg_init_if_needed</code>: the modern <code>borg repo-create -e MODE</code> when available, or the legacy <code>borg init --encryption=MODE</code>. ProxMenux exposes two modes: <code>repokey</code> (default) and <code>none</code>. In <code>repokey</code> mode Borg stores the encryption key inside the repository itself; access requires a passphrase, which ProxMenux prompts for twice with match validation and stores at <code>borg-pass-NAME.txt</code> for saved targets (or in the legacy file described above). A mandatory acknowledgement dialog is shown after the passphrase is saved: the passphrase is the only way to access the encrypted archives, and losing it makes every archive in the repository unrecoverable."
   },
   "runtimeEnv": {
     "heading": "Runtime environment",
     "intro": "ProxMenux exports the following environment variables before invoking <code>borg</code>. They configure the connection and unlock the repository without embedding secrets in the command line.",
     "rows": [
-      { "var": "BORG_RSH", "value": "ssh -i SSH_KEY_PATH -o StrictHostKeyChecking=accept-new", "purpose": "The remote-shell command Borg uses for SSH-served repositories. Set only when a custom key was selected; otherwise unset so Borg uses the default SSH configuration." },
-      { "var": "BORG_PASSPHRASE", "value": "(passphrase from borg-pass-NAME.txt)", "purpose": "Unlocks the repokey. Set only when the target uses <code>repokey</code> encryption. Never appears in the process argument list." },
-      { "var": "BORG_ENCRYPT_MODE", "value": "repokey | none", "purpose": "Used by <code>hb_borg_init_if_needed</code> when initialising a repository that does not yet exist. Ignored by <code>borg create</code> on existing repositories." },
-      { "var": "BORG_RELOCATED_REPO_ACCESS_IS_OK", "value": "yes", "purpose": "Suppresses the interactive prompt Borg raises when the repository URL differs from the URL it was originally reached from (common after a mount-point rename or SSH-host reachable via new address)." },
-      { "var": "BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK", "value": "yes", "purpose": "Suppresses the interactive prompt Borg raises the first time an unencrypted repository is accessed from a new client." }
+      {
+        "var": "BORG_RSH",
+        "value": "ssh -i SSH_KEY_PATH -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new [-p PORT]",
+        "purpose": "The remote-shell command Borg uses for SSH repositories. A selected key adds the identity options; a non-default port adds -p PORT. With no custom key and the default port, the variable is unset so Borg uses the host’s default SSH configuration."
+      },
+      {
+        "var": "BORG_PASSPHRASE",
+        "value": "(passphrase from borg-pass-NAME.txt)",
+        "purpose": "Unlocks the repokey. Set only when the target uses <code>repokey</code> encryption. Never appears in the process argument list."
+      },
+      {
+        "var": "BORG_ENCRYPT_MODE",
+        "value": "repokey | none",
+        "purpose": "Used by <code>hb_borg_init_if_needed</code> when initialising a repository that does not yet exist. Ignored by <code>borg create</code> on existing repositories."
+      },
+      {
+        "var": "BORG_RELOCATED_REPO_ACCESS_IS_OK",
+        "value": "yes",
+        "purpose": "Suppresses the interactive prompt Borg raises when the repository URL differs from the URL it was originally reached from (common after a mount-point rename or SSH-host reachable via new address)."
+      },
+      {
+        "var": "BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK",
+        "value": "yes",
+        "purpose": "Suppresses the interactive prompt Borg raises the first time an unencrypted repository is accessed from a new client."
+      }
     ]
   },
   "archiveFormat": {

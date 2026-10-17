@@ -10,7 +10,7 @@
   "header": {
     "title": "Archivo local",
     "description": "El destino local escribe un único archivo tar comprimido en cualquier directorio escribible del host: un disco interno, un montaje NFS o SMB, o una unidad USB.",
-    "section": "Backup & Restore"
+    "section": "Copias de seguridad y restauración"
   },
   "intro": {
     "title": "Un solo fichero, autocontenido",
@@ -31,17 +31,17 @@
     "statesTitle": "Los tres estados del dispositivo",
     "stateRows": [
       {
-        "state": "mounted",
-        "shown": "Tamaño · label · [fstype] · → /punto/de/montaje",
+        "state": "montado",
+        "shown": "Tamaño · etiqueta · [fstype] · → /mount/point",
         "action": "La partición ya está montada en algún sitio. Seleccionarla persiste ese punto de montaje como destino local. No se realiza ningún montaje."
       },
       {
-        "state": "unmounted",
+        "state": "sin montar",
         "shown": "Tamaño · label · [fstype] · (no montada — se montará)",
         "action": "Hay un filesystem pero no está montado. Al confirmar, ProxMenux ejecuta <code>hb_mount_usb_partition</code>: crea <code>/mnt/backup-LABEL</code> (o una ruta basada en UUID si no hay label), monta la partición y persiste el punto de montaje como destino local."
       },
       {
-        "state": "empty",
+        "state": "vacía",
         "shown": "Tamaño · disco USB en crudo — sin filesystem (se FORMATEARÁ)",
         "action": "El dispositivo no tiene filesystem. Camino destructivo — protegido por dos confirmaciones. Primero un diálogo Yes/No explica que la operación borrará el disco. Después una caja de entrada obliga al usuario a <strong>escribir la ruta exacta del dispositivo</strong> (por ejemplo <code>/dev/sdb</code>) antes de que ProxMenux cree una partición GPT + ext4 fresca y la monte."
       }
@@ -50,7 +50,7 @@
   },
   "safetyCheck": {
     "heading": "Chequeo de seguridad — destino dentro de una ruta copiada",
-    "body": "Antes de escribir el archivo, <code>_bk_local</code> verifica que el directorio de destino <strong>no</strong> sea un subcamino de ninguno de los directorios que se están copiando. Un footgun habitual sería añadir <code>/root</code> al perfil y elegir <code>/root/backups</code> como destino — el archivo se incluiría a sí mismo, produciendo o bien un archivo corrupto o bien crecimiento sin límite hasta llenar el disco. El chequeo resuelve ambos caminos con <code>readlink -m</code>, los compara y, si hay conflicto, aborta la copia con un diálogo que nombra la ruta en conflicto y lista tres formas de resolverlo: elegir un destino fuera de la ruta en conflicto, eliminar la entrada personalizada que contiene el destino, o usar modo Custom para desmarcar la ruta en conflicto en esa ejecución."
+    "body": "Antes de escribir el archivo, <code>_bk_local</code> verifica que el directorio de destino <strong>no</strong> sea un subcamino de ninguno de los directorios que se están copiando. Un error habitual sería añadir <code>/root</code> al perfil y elegir <code>/root/backups</code> como destino — el archivo se incluiría a sí mismo, produciendo o bien un archivo corrupto o bien crecimiento sin límite hasta llenar el disco. El chequeo resuelve ambos caminos con <code>readlink -m</code>, los compara y, si hay conflicto, aborta la copia con un diálogo que nombra la ruta en conflicto y lista tres formas de resolverlo: elegir un destino fuera de la ruta en conflicto, eliminar la entrada personalizada que contiene el destino, o usar modo Custom para desmarcar la ruta en conflicto en esa ejecución."
   },
   "archiveFormat": {
     "heading": "Formato de archivo y compresión",

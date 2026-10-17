@@ -1,0 +1,282 @@
+{
+  "meta": {
+    "title": "Obnovenie zálohy — úplný a vlastný postup | ProxMenux",
+    "description": "Úplný postup obnovy: tri akcie pri každej zálohe (zobraziť, stiahnuť, obnoviť), kontrola kompatibility a jej výsledky, úplný a vlastný režim, klasifikácia ciest na použitie za behu alebo po reštarte a dispečer so záverečnou reinštaláciou komponentov po štarte.",
+    "ogTitle": "ProxMenux Backup — obnova",
+    "ogDescription": "Úplná a vlastná obnova s kontrolou kompatibility, klasifikáciou ciest, dispečerom pri štarte a reinštaláciou po štarte.",
+    "twitterTitle": "Obnovenie zálohy ProxMenux",
+    "twitterDescription": "Ako ProxMenux zálohovanie hostiteľa je premenený späť do fungujúceho Proxmox hostiteľa."
+  },
+  "header": {
+    "title": "Obnovenie zálohy",
+    "description": "Úplný postup od výberu archívu po funkčného hostiteľa. Opisuje kontrolu kompatibility, dva režimy obnovy, dispečer pri štarte, reinštaláciu po štarte a mechanizmy predvídateľnej obnovy medzi rôznymi hostiteľmi a jadrami.",
+    "section": "Záloha a obnova"
+  },
+  "intro": {
+    "title": "Obnovenie reprodukuje zdroj, nielen súbory",
+    "body": "Obnova zálohy ProxMenux znamená viac než rozbalenie súborov. Pred zmenami prečíta manifest, zistí rozdiely medzi zdrojom a cieľom, vylúči cesty ohrozujúce štart a prispôsobí nastavenia používateľa, ktoré nemožno skopírovať doslova. Po potrebnom reštarte sa pokúsi preinštalovať zaznamenané podporované komponenty (ovládač NVIDIA, Coral TPU a nástroje GPU) pre bežiace jadro cieľa. Jeden archív riadi kontrolu kompatibility, klasifikáciu ciest a prácu pri štarte aj po ňom. Výsledok overte v stavoch jednotlivých komponentov a protokoloch."
+  },
+  "threeActions": {
+    "heading": "Tri akcie na zálohe",
+    "intro": "Výberom zálohy zo zoznamu sa otvorí menu s tromi akciami.",
+    "actionRows": [
+      {
+        "action": "Zobraziť",
+        "detail": "Otvorí zobrazenie archívu len na čítanie: obsah manifest.json (source hostname, PVE verzia, jadra, hardvér, nainštalované komponenty), zoznam ciest vnútri <code>rootfs/</code> a rozlíšenie toho, čo by sa zmenilo na aktuálnom hostiteľovi, ak by bola použitá záloha."
+      },
+      {
+        "action": "Stiahnuť",
+        "detail": "Exportuje archív ako prenosný súbor <code>.tar.zst</code> (tar skomprimovaný zstd). Je možné extrahovať na ľubovoľnom systéme Linux s <code>tar --zstd -xf FILE.tar.zst</code>, alebo na macOS/Windows s akýmkoľvek nástrojom, ktorý podporuje zstd (7-Zip, PeaZip, Keka...). Extrahovaný strom obsahuje <code>manifest.json</code>, <code>metadata/</code> a <code>rootfs/</code>, teda rovnakú štruktúru, akú používa obnova. Užitočné pre offline kontrolu alebo obnovenie na hostiteľa bez prístupu k pôvodnému cieľu (PBS, Borg)."
+      },
+      {
+        "action": "Obnoviť",
+        "detail": "Akcia zapisujúca do systému: rozbalí archív do prípravného adresára, spustí kontrolu kompatibility a ponúkne výber úplného alebo vlastného režimu."
+      }
+    ]
+  },
+  "compatibilityCheck": {
+    "heading": "Kontrola zlučiteľnosti",
+    "intro": "Pred napísaním akéhokoľvek súboru <code>hb_compat_check</code> porovnáva stav opísaný v manifeste s cieľovým hostiteľom. Kontrola beží iba na čítanie a vytvára štyri nezávislé výstupy, ktoré poháňajú zvyšok obnovy.",
+    "outputRows": [
+      {
+        "output": "Príznak smeru",
+        "detail": "<code>HB_COMPAT_KERNEL_DIRECTION</code> má hodnotu <code>same</code>, <code>bk_newer</code> alebo <code>bk_older</code> podľa porovnania hlavných verzií jadra zálohy a cieľa. Riadi filter bezpečných ciest medzi jadrami, ktorý sa zapne iba pri <code>bk_older</code>, a prispôsobenie nastavení opísané na príslušnej stránke."
+      },
+      {
+        "output": "Zoznam preskočených ciest",
+        "detail": "<code>RS_SKIP_PATHS</code> obsahuje cesty, ktoré obnova NESMIE použiť. Plnia ho dva mechanizmy: rozdiely hardvéru (chýbajúca sieťová karta, ID úložiska alebo cudzí pool ZFS) a pri smere <code>bk_older</code> zoznam ciest nebezpečných medzi rôznymi jadrami."
+      },
+      {
+        "output": "Plán premapovania sieťových kariet",
+        "detail": "Ak má sieťová karta na cieľovom hostiteľovi rovnakú MAC adresu ako na zdrojovom, ale iný názov (bežné po výmene základnej dosky), kontrola kompatibility zaznamená plán premenovania (<code>HB_NIC_REMAP</code>). Ten počas obnovy upraví <code>/etc/network/interfaces</code>."
+      },
+      {
+        "output": "Plán vrátenia zmien",
+        "detail": "Vypočíta ho <code>compute_rollback_plan.sh</code>. Vypíše VM, LXC a komponenty, ktoré sú na cieli, ale nie v zálohe. Potvrdenie ponúkne voliteľné odstránenie dodatočných hostí pred reštartom. Komponenty treba odstrániť ručne a zmazanie hostí môže zlyhať, takže presná zhoda so zálohou nie je zaručená."
+      }
+    ],
+    "reportBody": "Kontrola tiež vydáva štruktúrované správy (<code>HB_COMPAT_RESULTS</code>) kategorizované ako PASS / INFO / WARN / FAIL. WARN a FAIL vstupy povrch v paneli pre-restore; obnovenie odmieta pokračovať len vtedy, keď je prítomný FAIL, že užívateľ nemôže vyriešiť kliknutím Pokračovať."
+  },
+  "twoModes": {
+    "heading": "Úplné obnovenie vs Vlastné obnovenie",
+    "intro": "Po kontrole kompatibility sa zobrazí výber režimu. Určuje, <em>čo</em> sa použije, nie <em>ako</em>: oba režimy používajú rovnaký postup.",
+    "modeRows": [
+      {
+        "mode": "Úplná obnova",
+        "detail": "Použije každú cestu v archíve, ktorá prežije filtre drift a cross-kernel. Tiež spustí inštaláciu balíka a automatickú reinštaláciu komponentov. Toto je predvolená a odporúčaná voľba – cieľom je reprodukovať zdroj, nie vyberať kúsky."
+      },
+      {
+        "mode": "Vlastné obnovenie",
+        "detail": "Otvorí zoznam všetkých ciest v archíve, z ktorých používateľ vyberie požadovanú časť. Cesty blokované filtrom medzi jadrami sú sivé a nemožno ich vybrať. Vlastný režim predvolene preskočí inštaláciu balíkov a automatickú reinštaláciu komponentov: používateľ požaduje čiastočnú obnovu, nie úplné zopakovanie zdroja."
+      }
+    ]
+  },
+  "pathClassification": {
+    "heading": "Ako sú cesty klasifikované",
+    "intro": "Každá cesta vybraná pre obnovenie je zaradená <code>hb_classify_path</code> do jednej z troch kategórií. Kategória určuje, kedy sa cesta aplikuje na systém a prečo.",
+    "rows": [
+      {
+        "class": "hot",
+        "detail": "Cesta aplikovaná <strong>okamžite</strong> do bežiaceho systému. Služba, ktorá ich konzumuje, vyzdvihne zmenu na vlastnú päsť alebo na ďalšiu reload Jedná sa o väčšinu zálohy: <code>/etc/ssh</code>, <code>/etc/apt</code>, <code>/etc/cron.*</code>, <code>/root</code>, <code>/usr/local/bin</code>, všeobecné konfiguračné súbory služieb, atď."
+      },
+      {
+        "class": "reboot",
+        "detail": "Cesty odložené na <strong>ďalší štart</strong>, nie použité <strong>okamžite</strong> týmto postupom. Ovplyvňujú konfiguráciu štartu: tvorba zavádzača číta <code>/etc/default/grub</code>, pripájanie systémov používa <code>/etc/fstab</code> a načítanie modulov <code>/etc/modules</code>. Odložené súbory sa použijú po reštarte a potom sa znovu vytvoria potrebné zavádzacie súbory. Príklady: <code>/etc/default/grub</code>, <code>/etc/kernel</code>, <code>/etc/modules</code>, <code>/etc/fstab</code>, <code>/etc/zfs</code>, <code>/etc/initramfs-tools</code>."
+      },
+      {
+        "class": "dangerous",
+        "detail": "Cesty, ktoré sa <strong>NEPOUŽÍVAJÚ na bežiacom systéme</strong>, pretože zápis by mohol poškodiť stav alebo prerušiť aktívne spojenie. Pripravia sa medzi odloženými súbormi a zapíšu sa po reštarte, keď je klaster spustený a systém ešte nie je plne používaný. Príklady: <code>/etc/pve</code> (pmxcfs je pripojenie FUSE s aktívnou konfiguráciou klastra), <code>/var/lib/pve-cluster</code> (aktívne údaje klastra) a <code>/etc/network</code> (zmena môže prekonfigurovať rozhranie používané na SSH a prerušiť reláciu)."
+      }
+    ]
+  },
+  "fullFlow": {
+    "heading": "Úplné obnovenie pracovného postupu",
+    "intro": "Celý postup od výberu archívu po obnoveného funkčného hostiteľa. Každá fáza pripraví vstup ďalšej: stav zapísaný skoršími fázami používajú neskoršie.",
+    "diagram": "┌─────────────────────────────────────────────────────────────────┐\n│  Archive → staging_root/                                        │\n│    manifest.json   metadata/   rootfs/                          │\n└──────────────────────────────┬──────────────────────────────────┘\n                               │\n                               ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  1. hb_compat_check                                     │\n   │     · hardware drift → RS_SKIP_PATHS                    │\n   │     · kernel direction → same / bk_newer / bk_older     │\n   │     · NIC remap plan                                    │\n   │     · hydration plan (bk_older only)                    │\n   │     · rollback plan                                     │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  2. Confirmation dialog                                 │\n   │     Shows: hot count, pending count, drift, hydration,  │\n   │     NIC remap, cross-kernel note, reinstalls preview    │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │ (accepted)\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  3. Apply hot paths → LIVE                              │\n   │     _rs_apply rsyncs each hot path                      │\n   │     from staging_root/rootfs to /                       │\n   │     (skips paths in RS_SKIP_PATHS)                      │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  4. _rs_prepare_pending_restore                         │\n   │     /var/lib/proxmenux/pending-restore/                 │\n   │       ├── apply-on-boot.list                            │\n   │       ├── plan.env                                      │\n   │       ├── rs-skip-paths.txt                             │\n   │       └── rootfs/ (deferred paths)                      │\n   │     Enable proxmenux-restore-onboot.service             │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  4b. _rs_import_data_pools                              │\n   │      Imports non-root ZFS pools whose disks are all     │\n   │      present; retries with -f on foreign hostid;        │\n   │      skips with a warning when disks are missing.       │\n   │      Log: /var/log/proxmenux/restore-datapools-*.log    │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  5. _rs_run_complete_extras                             │\n   │     packages.manual.list                                │\n   │       → cascade-safe filter                             │\n   │       → apt-get install                                 │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  6. REBOOT                                              │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  7. apply_pending_restore.sh (on early boot)            │\n   │     Reads plan.env                                      │\n   │     Applies apply-on-boot.list (filtered)               │\n   │     Installs the postboot systemd unit                  │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  8. apply_cluster_postboot.sh (~10 minutes)             │\n   │     Runs after pve-cluster is up                        │\n   │     · Applies /etc/pve entries to pmxcfs                │\n   │     · update-initramfs -u -k all                        │\n   │     · update-grub / proxmox-boot-tool refresh           │\n   │     · component --auto-reinstall (nvidia, coral, ...)   │\n   │     · Boot sanity check                                 │\n   │     · Notification: \"Host restore finished\"             │\n   └─────────────────────────────────────────────────────────┘"
+  },
+  "pendingMachinery": {
+    "heading": "Mechanizmus odloženej obnovy",
+    "intro": "Cesty klasifikované ako <code>reboot</code> alebo <code>dangerous</code>, a hydratačné zápisy, sú fázované pre ďalšie boot miesto aplikácie naživo. To sa vykonáva prostredníctvom malého, samostatného súboru súborov v <code>/var/lib/proxmenux/pending-restore/</code>:",
+    "rows": [
+      {
+        "file": "apply-on-boot.list",
+        "content": "Jedna relatívna cesta na riadok: presná množina ciest, ktoré <code>apply_pending_restore.sh</code> použije z pripraveného rootfs. Súbor ukazuje, čo sa zmení pri ďalšom štarte."
+      },
+      {
+        "file": "plan.env",
+        "content": "Premenné prostredia načítané skriptom pri štarte: ID obnovy, príznaky kompatibility (<code>HB_COMPAT_CROSS_VERSION</code>, <code>HB_COMPAT_KERNEL_DIRECTION</code>, <code>HB_HYDRATION_APPLIED</code>), súhlas s vrátením stavu a voľby klastra."
+      },
+      {
+        "file": "rs-skip-paths.txt",
+        "content": "Konečný zoznam <code>RS_SKIP_PATHS</code>, uložený pre <code>apply_pending_restore.sh</code>, aby po reštarte zachoval výnimky vypočítané v interaktívnej fáze. Bráni obnoveniu ciest nevhodných pre hardvér alebo rozdielne jadro pri štarte."
+      },
+      {
+        "file": "rootfs/",
+        "content": "Samotné pripravené súbory – presné bajty, ktoré sa zapíšu. Zostávajú na rovnakom súborovom systéme ako <code>/</code>, aby bol rsync pri štarte rýchly a nezávisel od dostupnosti externého úložiska počas štartu."
+      }
+    ],
+    "unitBody": "Jednotka systemd <code>proxmenux-restore-onboot.service</code> sa povolí na konci interaktívnej fázy. Táto jednorazová služba sa spustí na začiatku ďalšieho štartu, zavolá <code>apply_pending_restore.sh</code> a potom sa zakáže. Podmienka <code>ConditionPathExists=/var/lib/proxmenux/pending-restore/state</code> zabezpečí, že bez čakajúcej obnovy nevykoná nič."
+  },
+  "postbootDispatcher": {
+    "heading": "Post-boot dispečer apply_cluster_postboot.sh",
+    "intro": "Kde sa končí interaktívny krok a kde dochádza k skutočnej reprodukcii hostiteľa. <code>apply_cluster_postboot.sh</code> je nainštalovaný ako druhá jednorázová jednotka systemd (<code>proxmenux-apply-cluster-postboot.service</code>), ktorej ciele <code>After=</code>/<code>Wants=</code> zabezpečujú, že beží až po pve-cluster a network-online sú hore. To je miesto, kde hostiteľ-viditeľné obnoviť akcie pozemky.",
+    "tasks": [
+      {
+        "task": "Použiť /etc/pve",
+        "detail": "<code>/etc/pve</code> je aktívne pripojenie FUSE systému pmxcfs, do ktorého nemožno zapisovať v skorej fáze štartu. Dispečer po spustení klastrového systému kopíruje súbory z pripraveného rootfs do živého <code>/etc/pve</code>, po jednom a bez reštartu pve-cluster. Zachytený <code>/var/lib/pve-cluster/config.db</code> alebo náhradný <code>config.db.raw-fallback</code> sa obnoví postupom <code>systemctl stop pve-cluster</code> → atómové kopírovanie súboru → <code>systemctl start pve-cluster</code>, aby pmxcfs po spustení načítal obnovený stav."
+      },
+      {
+        "task": "Znovu vytvoriť initramfs a zavádzač",
+        "detail": "Spustí <code>update-initramfs -u -k all</code> cez každé nainštalované jadro, potom buď <code>update-grub</code> (GRUB inštaluje) alebo <code>proxmox-boot-tool refresh</code> (systemd-boot / ZFS inštaluje). Preskočené, ak interaktívny krok určiť nič sa nezmenilo v chodníkoch, ktoré ovplyvňujú tieto nástroje."
+      },
+      {
+        "task": "Automatická inštalácia komponentov",
+        "detail": "Číta obnovený <code>components_status.json</code> a prejde podporované inštalátory (nvidia_driver, coral_driver, amdgpu_top, intel_gpu_tools). Každý vybraný inštalátor použije <code>--auto-reinstall</code>, načíta uložený stav a zopakuje inštaláciu pre cieľové prostredie, prípadne zostaví moduly jadra. Čaká sa na reštart, aby sa použilo potom bežiace jadro cieľa. Jednotlivé chyby sa zaznamenajú a nezastavia ďalší komponent."
+      },
+      {
+        "task": "Kontrola štartu systému",
+        "detail": "Pred spustením oznámenia o dokončení overíte, či <code>proxmox-boot-tool status</code> zobrazuje nakonfigurovaný ESP, každý <code>/boot/vmlinuz-*</code> má zodpovedajúci <code>/lib/modules/&lt;ver&gt;</code> adresár a <code>/vmlinuz</code> rieši. Akýkoľvek nesúlad sa vynorí v oznámení namiesto toho, aby bol skrytý."
+      },
+      {
+        "task": "Oznámenie o dokončení",
+        "detail": "Posiela udalosť <code>Host restore finished</code> prostredníctvom <code>hb_notify_lifecycle</code>. Zahŕňa celkovú dĺžku trvania, použitý počet ciest, prípadné upozornenia na kontrolu zdravotného stavu a odkaz na log pri <code>/var/log/proxmenux/proxmenux-cluster-postboot-*.log</code>. Ak notifikácie nie sú konfigurované, udalosť sa neodošle; protokol aj tak zaznamená všetko"
+      }
+    ]
+  },
+  "liveProgress": {
+    "heading": "Živý priebeh na karte Zálohy v Monitore",
+    "body": "Po reštarte zobrazuje karta Zálohy v ProxMenux Monitor živý priebeh služby <code>proxmenux-apply-cluster-postboot.service</code>. Číta <code>/var/lib/proxmenux/restore-state.json</code>, ktorý sa aktualizuje pri každej fáze: konfigurácia klastra, initramfs, zavádzač, reinštalácia jednotlivých komponentov, kontrola štartu a dokončenie.",
+    "fields": [
+      {
+        "name": "Označenie stavu",
+        "detail": "Jeden zo stavov <em>Prebieha obnova</em>, <em>Obnova dokončená</em> alebo <em>Obnova zlyhala</em>. Karta číta stavový súbor každé 2 sekundy počas behu a každých 30 sekúnd po skončení."
+      },
+      {
+        "name": "Panel pokroku + počítadlo krokov",
+        "detail": "Zobrazí <code>N/M steps</code> a názov aktuálneho kroku. Počas obnovy sa <em>odhadovaný čas</em> vypočíta z dokončených krokov a uplynutého času."
+      },
+      {
+        "name": "Zoznam komponentov",
+        "detail": "Jeden riadok na jedného ovládača, ktorý bol preinštalovaný (NVIDIA, nástroje Intel GPU, nástroje AMD, Coral TPU) s <code>installing</code> / <code>ok</code> / <code>failed</code> plus odkaz na jednotlivé komponenty pri <code>/var/log/proxmenux/component-*.log</code>."
+      },
+      {
+        "name": "Import dátových poolov",
+        "detail": "Blok <code>data_pools_import</code> má päť farebných riadkov: <em>Importované</em>, <em>Vynútené</em> (s <code>-f</code> pre cudzí hostid), <em>Preskočené, neúplné disky</em> (prítomné iba niektoré disky), <em>Preskočené, chýbajúce disky</em> (žiadny disk prítomný) a <em>Zlyhané</em>. Stav sa ukladá do <code>/var/lib/proxmenux/restore-state.json</code> a úplný protokol behu do <code>/var/log/proxmenux/restore-datapools-&lt;timestamp&gt;.log</code>."
+      },
+      {
+        "name": "Upozornenia pri kontrole štartu",
+        "detail": "Dispečer kontroluje chýbajúce adresáre <code>/lib/modules/&lt;kernel&gt;</code>, chýbajúcu konfiguráciu ESP a symbolické odkazy <code>/vmlinuz</code> bez existujúceho cieľa. Upozornenia sa zobrazia vo farebnom paneli."
+      },
+      {
+        "name": "Rozdiely po obnove",
+        "detail": "Vypíše VM, LXC a komponenty prítomné na cieli, ale nie v obnovenej zálohe: tie isté položky ako v dialógu deštruktívneho vrátenia stavu pred obnovou. Každý riadok obsahuje príkaz na ručné odstránenie."
+      },
+      {
+        "name": "Koniec záznamu",
+        "detail": "Posledné línie 600 <code>proxmenux-cluster-postboot-&lt;ts&gt;.log</code>, s <em>Iba problémy</em>, ktorý udržuje len línie zodpovedajúce <code>error</code>, <code>warning</code>, <code>failed</code>, <code>✗</code> alebo <code>traceback</code>."
+      }
+    ],
+    "dismissBody": "Keď je obnova <em>dokončená</em> alebo <em>zlyhá</em>, tlačidlo Skryť zbalí kartu. Stavový súbor zostane uložený a História znovu otvorí túto aj predošlé obnovy. Posledných 20 behov je archivovaných v <code>/var/lib/proxmenux/restore-history/</code>.",
+    "imageAlt": "Okno Podrobnosti priebehu po obnove v ProxMenux Monitor otvorené počas obnovy. Zobrazuje modrý odznak Prebieha obnova, aktuálny krok Obnovenie initramfs, odhad zostávajúceho času, čiastočne vyplnený ukazovateľ priebehu a živý koniec záznamu po štarte systému.",
+    "imageCaption": "Okno Podrobnosti počas spracovania po štarte: stav, aktuálny krok, zostávajúci čas a živý výpis posledných riadkov protokolu.",
+    "detailsImageAlt": "Rovnaké okno Podrobnosti po skončení obnovy: zelený stav Obnova dokončená, celkový čas 0m53s, plný ukazovateľ 6/6, prázdna časť rozdielov vrátenia stavu a archivovaný protokol po štarte.",
+    "detailsImageCaption": "Rovnaké okno po skončení: stav, celkový čas, plný ukazovateľ priebehu a archivovaný protokol po štarte."
+  },
+  "postbootExample": {
+    "heading": "Ako vyzerá post-boot na konzole",
+    "body": "Na fyzickej konzole skončí úspešne ukončený proces riadkom <code>[ OK ] Finished proxmenux-apply-cluster-postboot.service</code>, často pri hláseniach <code>OK</code> pre <code>multi-user.target</code> a <code>graphical.target</code>. Označuje koniec procesu. Napriek tomu môžu byť zaznamenané chyby komponentov alebo upozornenia na štart. Pred vyhlásením hostiteľa za úplne obnoveného skontrolujte stavy komponentov a protokoly v Monitore.",
+    "imageAlt": "Fyzická konzola Proxmox s hlásením '[ OK ] Finished proxmenux-apply-cluster-postboot.service - ProxMenux Apply Cluster Configs (post-boot).', za ktorým nasleduje OK pre multi-user.target a graphical.target; vyššie je výzva na prihlásenie.",
+    "imageCaption": "Fyzická konzola po skončení procesu. 'Finished proxmenux-apply-cluster-postboot.service' označuje jeho koniec, ktorý Monitor hlási aj ako 'Host restore finished'. Výsledky komponentov a upozornenia treba ešte skontrolovať."
+  },
+  "tenMinutes": {
+    "heading": "Prečo na posledných 10 minútach záleží",
+    "intro": "Reštart sám trvá sekundy, ale post-boot dispečer strávi asi desať minút dokončenie obnovy. Počas tohto okna je hostiteľ dosiahnuteľný a prihlásenie funguje, ale niektoré služby (najmä služby závislé od ovládača GPU) ešte nie sú k dispozícii. Časový rozpis typického hostiteľa Proxmoxu s NVIDIA + nainštalovaným Coralom:",
+    "rows": [
+      {
+        "stage": "Boot + pve-cluster pripravený",
+        "time": "~30 s",
+        "detail": "Standard Proxmox boot. SSH, web UI a login sú k dispozícii na konci tejto etapy."
+      },
+      {
+        "stage": "Použiť /etc/pve na pmxcfs",
+        "time": "~10 s",
+        "detail": "Rýchle: malé konfiguračné súbory sa kopírujú po jednom do aktívneho klastrového súborového systému."
+      },
+      {
+        "stage": "Znovu vytvoriť initramfs pre všetky jadrá",
+        "time": "3–5 min",
+        "detail": "<code>update-initramfs -u -k all</code> prestavuje jeden obrázok initramfs na nainštalované jadro. Veľa čakania."
+      },
+      {
+        "stage": "Znovu vytvoriť bootloader konfigur",
+        "time": "10–30 s",
+        "detail": "<code>update-grub</code> alebo <code>proxmox-boot-tool refresh</code>. Rýchle aj na ZFS."
+      },
+      {
+        "stage": "Preinštalovať ovládač NVIDIA (ak je to vhodné)",
+        "time": "5–10 min",
+        "detail": "Stiahne nahranú verziu ovládača, kompiluje moduly DKMS oproti aktuálnemu jadru, použije opravu ProxMenux ak ju mal zdroj. Najdlhšia jediná úloha."
+      },
+      {
+        "stage": "Opätovná inštalácia Coral a ďalších komponentov",
+        "time": "3–5 min",
+        "detail": "Kompilácia DKMS pre Coral, apt install pre intel-gpu-tools a stiahnutie a inštalácia .deb pre amdgpu_top."
+      },
+      {
+        "stage": "Kontrola štartu a oznámenie",
+        "time": "~2 s",
+        "detail": "Nenáročné. Oznámenie informuje používateľa hneď po skončení behu."
+      }
+    ],
+    "outroBody": "Počas tohto času môžu po prihlásení chýbať nástroje (<code>nvidia-smi</code> sa nenašiel, <code>coral</code> sa nezistil), pretože reinštalácia stále beží na pozadí. Oznámenie označuje jej koniec. Výsledky komponentov, upozornenia a protokoly odlíšia úspech od jednotlivých zlyhaní."
+  },
+  "destructiveRollback": {
+    "heading": "Voliteľný deštruktívny spätný chod",
+    "body": "Obnova je predvolene aditívna: dodatočné VM, LXC a komponenty zostanú zachované. Pri rozdieloch ponúkne potvrdenie <em>Vykonať deštruktívne vrátenie stavu?</em> s predvoleným Nie. Súhlas pred reštartom zavolá <code>_rs_execute_rollback</code> a pokúsi sa odstrániť vypísané dodatočné VM a LXC. Komponenty sa označia na ručné odinštalovanie, pretože automatické nie je implementované. Chyby odstránenia sa oznámia a spracovanie pokračuje, takže presná zhoda nie je zaručená. Pred touto deštruktívnou voľbou skontrolujte názvy a VMID/CTID."
+  },
+  "logs": {
+    "heading": "Kde záznamy žijú",
+    "rows": [
+      {
+        "log": "/var/log/proxmenux/restore-YYYYMMDD_HHMMSS.log",
+        "detail": "Zapisuje sa v interaktívnej fáze: výsledky kompatibility, filter rozdielov, plán prispôsobenia, výstup použitia za behu a prípravy odložených zmien, inštalácia balíkov."
+      },
+      {
+        "log": "/var/log/proxmenux/apply-pending-YYYYMMDD_HHMMSS.log",
+        "detail": "Zapisuje ho <code>apply_pending_restore.sh</code> na začiatku štartu: načítanie plan.env, spracovanie apply-on-boot a filtrovanie vylúčených ciest."
+      },
+      {
+        "log": "/var/log/proxmenux/proxmenux-cluster-postboot-YYYYMMDD_HHMMSS.log",
+        "detail": "Zapisuje ho <code>apply_cluster_postboot.sh</code>: použitie konfigurácie pve-cluster, výstup initramfs a zavádzača, výstup inštalátorov komponentov, kontrola štartu a obsah oznámenia."
+      },
+      {
+        "log": "/var/log/proxmenux/component-<name>-YYYYMMDD_HHMMSS.log",
+        "detail": "Jeden protokol na inštalačný program komponentu (nvidia, coral, atď.), ktorý bol spustený v prechode po spustení. Užitočné, keď preinštalovanie konkrétneho komponentu zlyhalo a používateľ potrebuje vlastný výstup nástroja."
+      },
+      {
+        "log": "/var/log/proxmenux/restore-datapools-YYYYMMDD_HHMMSS.log",
+        "detail": "Napísal <code>_rs_import_data_pools</code>. Obsahuje: sčítanie nekoreňových poolov z manifestu, na-pool výsledok (dovážané čisto, importované s <code>-f</code> pre zahraničné hostid, preskočené kvôli chýbajúce disky, alebo zlyhal), a surový výstup každého <code>zpool import</code> hovoru."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Kam ísť ďalej",
+    "items": [
+      {
+        "label": "Obnova medzi kernelmi",
+        "href": "/docs/backup-restore/cross-kernel",
+        "tail": "— filter bezpečnej podmnožiny zohľadňujúci smer a prechod na hydratáciu vyvolaný, keď sa cieľové jadro líši od záložného."
+      },
+      {
+        "label": "Ako to funguje",
+        "href": "/docs/backup-restore/how-it-works",
+        "tail": " — štruktúra archívu, manifest a inventár aplikácií, ktoré používa obnova."
+      },
+      {
+        "label": "Plánované úlohy",
+        "href": "/docs/backup-restore/scheduled-jobs",
+        "tail": " — bezobslužný postup, ktorý vytvára archívy používané pri tejto obnove."
+      }
+    ]
+  }
+}

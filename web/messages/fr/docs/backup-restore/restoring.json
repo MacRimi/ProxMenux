@@ -1,0 +1,282 @@
+{
+  "meta": {
+    "title": "Restaurer une sauvegarde — flux complets et personnalisés ProxMenux",
+    "description": "Le processus complet de restauration : consulter, télécharger ou restaurer une sauvegarde, vérifier la compatibilité, choisir le mode complet ou personnalisé, classer les chemins appliqués à chaud ou après redémarrage, puis réinstaller les composants après le démarrage.",
+    "ogTitle": "Sauvegarde ProxMenux — restauration",
+    "ogDescription": "Restauration complète ou personnalisée avec contrôle de compatibilité, classification des chemins, traitement au démarrage et réinstallation après démarrage.",
+    "twitterTitle": "Restaurer une sauvegarde ProxMenux",
+    "twitterDescription": "Comment une sauvegarde d'hôte ProxMenux est transformée en un hôte Proxmox fonctionnant."
+  },
+  "header": {
+    "title": "Restaurer une sauvegarde",
+    "description": "Le workflow complet de restauration : de la sélection d'une archive à un hôte de travail. Documente la vérification de compatibilité, les deux modes de restauration, le répartiteur sur le démarrage, le passe de réinstallation post-démarrage, et les mécanismes qui rendent prévisible la restauration cross-host et cross-kernel.",
+    "section": "Sauvegarde et restauration"
+  },
+  "intro": {
+    "title": "La restauration reproduit la source, pas seulement les fichiers",
+    "body": "Restaurer une sauvegarde ProxMenux va au-delà de l’extraction des fichiers. Avant les modifications, la restauration consulte le manifeste pour détecter les différences, écarte les chemins pouvant compromettre le démarrage et adapte les réglages de l’utilisateur qui ne peuvent pas être copiés tels quels. Après le redémarrage nécessaire, elle tente de réinstaller les composants pris en charge enregistrés (pilote NVIDIA, Coral TPU, outils GPU) pour le noyau actif de la destination. Une seule archive pilote le contrôle de compatibilité, la classification des chemins et les traitements au démarrage puis après démarrage. Consultez les résultats par composant et les journaux pour vérifier le résultat."
+  },
+  "threeActions": {
+    "heading": "Trois actions sur une sauvegarde",
+    "intro": "La sélection d'une sauvegarde dans la liste ouvre un menu avec trois actions.",
+    "actionRows": [
+      {
+        "action": "Affichage",
+        "detail": "Ouvre une vue en lecture seule de l'archive : le contenu de manifest.json (nom d'hôte source, version PVE, noyau, matériel, composants installés), la liste des chemins à l'intérieur de <code>rootfs/</code>, et un diff de ce qui changerait sur l'hôte actuel si la sauvegarde était appliquée."
+      },
+      {
+        "action": "Télécharger",
+        "detail": "Exporte l'archive comme un fichier portable <code>.tar.zst</code> (tar compressé avec zstd). Il peut être extrait sur n'importe quel système Linux avec <code>tar --zstd -xf FILE.tar.zst</code>, ou sur macOS/Windows avec n'importe quel outil qui supporte zstd (7-Zip, PeaZip, Keka...). L'arbre extrait contient <code>manifest.json</code>, <code>metadata/</code> et <code>rootfs/</code> — exactement la même disposition que la restauration consomme. Utile pour une inspection hors ligne ou pour la restauration sur un hôte sans accès à la destination originale (PBS, Borg)."
+      },
+      {
+        "action": "Restaurer",
+        "detail": "Le chemin de l'écriture. Extrait l'archive dans un répertoire de mise en scène, effectue la vérification de compatibilité et présente le mode de sélection (complète ou personnalisée)."
+      }
+    ]
+  },
+  "compatibilityCheck": {
+    "heading": "Le contrôle de compatibilité",
+    "intro": "Avant d'écrire un fichier, <code>hb_compat_check</code> compare l'état décrit dans le manifeste avec l'hôte cible. La vérification fonctionne en lecture seule et produit quatre sorties indépendantes qui conduisent le reste de la restauration.",
+    "outputRows": [
+      {
+        "output": "Drapeau de direction",
+        "detail": "<code>HB_COMPAT_KERNEL_DIRECTION</code> vaut <code>same</code>, <code>bk_newer</code> ou <code>bk_older</code> selon la comparaison des versions majeures du noyau de la sauvegarde et de la destination. Il pilote le filtre de chemins compatibles entre noyaux, actif uniquement pour <code>bk_older</code>, et l’adaptation des réglages décrite sur la page correspondante."
+      },
+      {
+        "output": "Liste des chemins exclus",
+        "detail": "<code>RS_SKIP_PATHS</code> — chaque chemin de restauration ne doit PAS s'appliquer. Populé par deux mécanismes : la dérive matérielle (manque de NIC, défaut d'identification de stockage, pool étranger ZFS) et — lorsque la direction est <code>bk_older</code> — la liste des sentiers dangereux à travers le noyau."
+      },
+      {
+        "output": "Plan de réaffectation des interfaces réseau",
+        "detail": "Lorsqu'un NIC sur la cible a le même MAC que celui sur la source mais un nom différent (typique après un swap de carte mère), la vérification de compatibilité enregistre un plan de renommer (<code>HB_NIC_REMAP</code>) qui réécrirea <code>/etc/network/interfaces</code> pendant la restauration."
+      },
+      {
+        "output": "Plan de restauration",
+        "detail": "Calculé par <code>compute_rollback_plan.sh</code>. Liste les VM, LXC et composants présents sur la destination mais absents de la sauvegarde. Le dialogue propose de supprimer les invités supplémentaires avant redémarrage. La suppression des composants reste manuelle et celle des invités peut échouer ; une correspondance exacte n’est donc pas garantie."
+      }
+    ],
+    "reportBody": "Le contrôle émet également un rapport structuré (<code>HB_COMPAT_RESULTS</code>) classé PASS / INFO / WARN / FAIL. Les entrées WARN et FAIL sont présentes dans le panneau pré-restauration ; la restauration refuse de procéder seulement lorsqu'une FAIL est présente et que l'utilisateur ne peut pas résoudre en cliquant sur Continuer."
+  },
+  "twoModes": {
+    "heading": "Restauration complète vs restauration personnalisée",
+    "intro": "Après le contrôle de compatibilité, le menu de mode apparaît. Le choix détermine <em>ce qui</em> est appliqué, pas <em>comment</em> : les deux modes utilisent le même processus.",
+    "modeRows": [
+      {
+        "mode": "Restauration complète",
+        "detail": "Applique tous les chemins de l'archive qui survivent à la dérive et aux filtres de cross-kernel. Exécute également l'installation du paquet et le passe de réinstallation automatique du composant. C'est le choix par défaut et le choix recommandé — le but est de reproduire la source, pas de choisir des morceaux."
+      },
+      {
+        "mode": "Restauration personnalisée",
+        "detail": "Ouvre une liste de contrôle montrant chaque chemin que porte l'archive. L'utilisateur coche un sous-ensemble. Les chemins bloqués par le filtre croisé apparaissent grisés et ne peuvent être sélectionnés. L'installation du paquet et l'auto-réinstallation du composant sont ignorées par défaut en mode Custom — l'utilisateur indique qu'il veut une application partielle, pas une reproduction complète."
+      }
+    ]
+  },
+  "pathClassification": {
+    "heading": "Comment les chemins sont classés",
+    "intro": "Chaque chemin sélectionné pour la restauration est classé par <code>hb_classify_path</code> dans l'une des trois catégories. La catégorie détermine quand le chemin est appliqué au système et pourquoi.",
+    "rows": [
+      {
+        "class": "hot",
+        "detail": "Voies appliquées <strong>immédiatement</strong> au système d'exécution. Le service qui les consomme ramasse le changement seul ou au prochain rechargement — aucun redémarrage n'est nécessaire. Ce sont l'essentiel d'une sauvegarde: <code>/etc/ssh</code>, <code>/etc/apt</code>, <code>/etc/cron.*</code>, <code>/root</code>, <code>/usr/local/bin</code>, fichiers de configuration de service général, etc."
+      },
+      {
+        "class": "reboot",
+        "detail": "Chemins reportés au <strong>prochain démarrage</strong>, au lieu d’être appliqués <strong>immédiatement</strong> par ce processus. Ils concernent la configuration de démarrage : la génération du chargeur lit <code>/etc/default/grub</code>, les montages utilisent <code>/etc/fstab</code> et le chargement des modules utilise <code>/etc/modules</code>. Les fichiers en attente sont appliqués après redémarrage, puis les éléments de démarrage nécessaires sont régénérés. Exemples : <code>/etc/default/grub</code>, <code>/etc/kernel</code>, <code>/etc/modules</code>, <code>/etc/fstab</code>, <code>/etc/zfs</code>, <code>/etc/initramfs-tools</code>."
+      },
+      {
+        "class": "dangerous",
+        "detail": "Les chemins qui sont <strong>NON appliqués sur le système en cours d'exécution</strong> — une écriture en direct pourrait corrompre l'état ou abandonner la connexion active. Ceux-ci sont mis en scène dans le jeu en attente et écrits par le répartiteur post-démarrage après le redémarrage, lorsque le cluster est en place mais le système n'est pas encore pleinement utilisé. Exemples : <code>/etc/pve</code> (pmxcfs est un montage FUSE contenant la configuration active du cluster), <code>/var/lib/pve-cluster</code> (données de cluster en direct), <code>/etc/network</code> (pourrait reconfigurer l'interface même que l'utilisateur est connecté sur SSH et laisser tomber la session)."
+      }
+    ]
+  },
+  "fullFlow": {
+    "heading": "Le workflow complet de restauration",
+    "intro": "Le pipeline complet de la sélection des archives à un hôte opérationnel restauré. Chaque étape alimente la suivante; l'état écrit par les étapes précédentes est consommé par les suivantes.",
+    "diagram": "┌─────────────────────────────────────────────────────────────────┐\n│  Archive → staging_root/                                        │\n│    manifest.json   metadata/   rootfs/                          │\n└──────────────────────────────┬──────────────────────────────────┘\n                               │\n                               ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  1. hb_compat_check                                     │\n   │     · hardware drift → RS_SKIP_PATHS                    │\n   │     · kernel direction → same / bk_newer / bk_older     │\n   │     · NIC remap plan                                    │\n   │     · hydration plan (bk_older only)                    │\n   │     · rollback plan                                     │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  2. Confirmation dialog                                 │\n   │     Shows: hot count, pending count, drift, hydration,  │\n   │     NIC remap, cross-kernel note, reinstalls preview    │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │ (accepted)\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  3. Apply hot paths → LIVE                              │\n   │     _rs_apply rsyncs each hot path                      │\n   │     from staging_root/rootfs to /                       │\n   │     (skips paths in RS_SKIP_PATHS)                      │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  4. _rs_prepare_pending_restore                         │\n   │     /var/lib/proxmenux/pending-restore/                 │\n   │       ├── apply-on-boot.list                            │\n   │       ├── plan.env                                      │\n   │       ├── rs-skip-paths.txt                             │\n   │       └── rootfs/ (deferred paths)                      │\n   │     Enable proxmenux-restore-onboot.service             │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  4b. _rs_import_data_pools                              │\n   │      Imports non-root ZFS pools whose disks are all     │\n   │      present; retries with -f on foreign hostid;        │\n   │      skips with a warning when disks are missing.       │\n   │      Log: /var/log/proxmenux/restore-datapools-*.log    │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  5. _rs_run_complete_extras                             │\n   │     packages.manual.list                                │\n   │       → cascade-safe filter                             │\n   │       → apt-get install                                 │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  6. REBOOT                                              │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  7. apply_pending_restore.sh (on early boot)            │\n   │     Reads plan.env                                      │\n   │     Applies apply-on-boot.list (filtered)               │\n   │     Installs the postboot systemd unit                  │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  8. apply_cluster_postboot.sh (~10 minutes)             │\n   │     Runs after pve-cluster is up                        │\n   │     · Applies /etc/pve entries to pmxcfs                │\n   │     · update-initramfs -u -k all                        │\n   │     · update-grub / proxmox-boot-tool refresh           │\n   │     · component --auto-reinstall (nvidia, coral, ...)   │\n   │     · Boot sanity check                                 │\n   │     · Notification: \"Host restore finished\"             │\n   └─────────────────────────────────────────────────────────┘"
+  },
+  "pendingMachinery": {
+    "heading": "Mécanisme de restauration différée",
+    "intro": "Les chemins classés comme <code>reboot</code> ou <code>dangerous</code>, et l'hydratation écrit, sont mis en scène pour le prochain démarrage au lieu d'être appliqués en direct. Cela se fait par le biais d'un petit ensemble autonome de fichiers sous <code>/var/lib/proxmenux/pending-restore/</code> :",
+    "rows": [
+      {
+        "file": "apply-on-boot.list",
+        "content": "Un chemin relatif par ligne : les chemins exacts que <code>apply_pending_restore.sh</code> appliquera depuis rootfs préparé. Le fichier permet de voir les changements prévus au prochain démarrage."
+      },
+      {
+        "file": "plan.env",
+        "content": "Variables d’environnement chargées par le script de démarrage : identifiant de restauration, indicateurs de compatibilité (<code>HB_COMPAT_CROSS_VERSION</code>, <code>HB_COMPAT_KERNEL_DIRECTION</code>, <code>HB_HYDRATION_APPLIED</code>), accord pour le rollback et options du cluster."
+      },
+      {
+        "file": "rs-skip-paths.txt",
+        "content": "La liste finale <code>RS_SKIP_PATHS</code>, enregistrée pour que <code>apply_pending_restore.sh</code> conserve après redémarrage les exclusions calculées lors de l’étape interactive. Elle empêche de restaurer au démarrage les chemins incompatibles avec le matériel ou le noyau."
+      },
+      {
+        "file": "rootfs/",
+        "content": "Les fichiers mis en scène eux-mêmes — les octets exacts qui seront établis. Conservé sur le même système de fichiers que <code>/</code> de sorte que le rsync on-boot est rapide et ne dépend pas du stockage externe encore accessible au démarrage."
+      }
+    ],
+    "unitBody": "L’unité systemd <code>proxmenux-restore-onboot.service</code> est activée à la fin de l’étape interactive. Ce service ponctuel démarre tôt au prochain démarrage, appelle <code>apply_pending_restore.sh</code> puis se désactive. La condition <code>ConditionPathExists=/var/lib/proxmenux/pending-restore/state</code> empêche toute exécution lorsqu’aucune restauration n’est en attente."
+  },
+  "postbootDispatcher": {
+    "heading": "Le répartiteur après démarrage — apply_cluster_postboot.sh",
+    "intro": "Où l'étape interactive se termine et où se produit la reproduction réelle de l'hôte. <code>apply_cluster_postboot.sh</code> est installé sous la forme d'une seconde unité systemd (<code>proxmenux-apply-cluster-postboot.service</code>) dont les cibles <code>After=</code>/<code>Wants=</code> s'assurent qu'elle ne fonctionne qu'après la mise en place du pve-cluster et de network-online. C'est là que les actions de restauration visible de l'hôte atterrissent.",
+    "tasks": [
+      {
+        "task": "Appliquer /etc/pve",
+        "detail": "<code>/etc/pve</code> est un montage en direct pmxcfs FUSE — il ne peut pas être écrit sur le démarrage précoce. Le répartiteur copie les fichiers des rootfs en attente vers le <code>/etc/pve</code> en direct une fois le système de fichiers cluster mis en place, un fichier à la fois, sans redémarrer pve-cluster. Le <code>/var/lib/pve-cluster/config.db</code> capturé de la sauvegarde (ou le <code>config.db.raw-fallback</code>) promu est matérialisé avec le <code>systemctl stop pve-cluster</code> → copie de fichier atomique → modèle <code>systemctl start pve-cluster</code>, de sorte que pmxcfs relise l'état restauré sur le chemin du retour."
+      },
+      {
+        "task": "Reconstruction initramfs et bootloader",
+        "detail": "Exécute <code>update-initramfs -u -k all</code> dans chaque noyau installé, puis soit <code>update-grub</code> (installations GRUB) soit <code>proxmox-boot-tool refresh</code> (installations systemd-boot / ZFS). Passé si l'étape interactive n'a rien déterminé dans les chemins qui affectent ces outils."
+      },
+      {
+        "task": "Réinstallation automatique du composant",
+        "detail": "Lit <code>components_status.json</code> restauré et parcourt les installateurs pris en charge (nvidia_driver, coral_driver, amdgpu_top, intel_gpu_tools). Chacun est lancé en mode <code>--auto-reinstall</code>, lit l’état enregistré et réinstalle pour l’environnement de destination, en recompilant les modules si nécessaire. L’opération attend le redémarrage pour utiliser le noyau alors actif. Les échecs individuels sont enregistrés sans arrêter le composant suivant."
+      },
+      {
+        "task": "Vérification du démarrage",
+        "detail": "Avant de lancer la notification d'achèvement, vérifie que <code>proxmox-boot-tool status</code> affiche un ESP configuré, chaque <code>/boot/vmlinuz-*</code> possède un répertoire <code>/lib/modules/&lt;ver&gt;</code> correspondant, et <code>/vmlinuz</code> résout. Toute incohérence apparaît dans la notification au lieu d'être cachée."
+      },
+      {
+        "task": "Avis d'achèvement",
+        "detail": "Envoie l'événement <code>Host restore finished</code> via <code>hb_notify_lifecycle</code>. Comprend la durée totale, le nombre de chemins appliqués, les avertissements de vérification de la santé, le cas échéant, et un lien vers le journal à <code>/var/log/proxmenux/proxmenux-cluster-postboot-*.log</code>. Si les notifications ne sont pas configurées, l'événement est silencieux — le journal enregistre toujours tout."
+      }
+    ]
+  },
+  "liveProgress": {
+    "heading": "Progrès en direct dans l'onglet Sauvegardes du moniteur",
+    "body": "Après le redémarrage, l’onglet Sauvegardes de ProxMenux Monitor affiche une carte de progression reflétant l’état de <code>proxmenux-apply-cluster-postboot.service</code>. Elle lit <code>/var/lib/proxmenux/restore-state.json</code>, mis à jour à chaque étape : configuration du cluster, initramfs, chargeur de démarrage, réinstallation de chaque composant, contrôle du démarrage et finalisation.",
+    "fields": [
+      {
+        "name": "Insigne d'état",
+        "detail": "Un des <em>Restaurer en cours</em>, <em>Restaurer complet</em> ou <em>Restaurer échoué</em>. La carte permet de vérifier le fichier d'état toutes les 2 secondes en cours d'exécution et toutes les 30 secondes après la fin."
+      },
+      {
+        "name": "Barre de progression + compteur de pas",
+        "detail": "Affiche <code>N/M steps</code> avec l'étiquette de l'étape actuelle. Pendant que la restauration exécute un <em> temps estimé</em> est dérivé des étapes terminées et du temps écoulé."
+      },
+      {
+        "name": "Liste des composants",
+        "detail": "Une ligne par pilote étant réinstallée (NVIDIA, outils Intel GPU, outils AMD, Coral TPU) avec <code>installing</code> / <code>ok</code> / <code>failed</code> plus un lien vers le journal par composant à <code>/var/log/proxmenux/component-*.log</code>."
+      },
+      {
+        "name": "Importation des pools de données",
+        "detail": "Le bloc <code>data_pools_import</code> montre cinq lignes colorées : <em>Importés</em>, <em>Forcés</em> (avec <code>-f</code> pour un hostid étranger), <em>Ignorés, disques partiels</em> (seuls certains disques sont présents), <em>Ignorés, disques absents</em> (aucun disque présent) et <em>Échecs</em>. L’état est conservé dans <code>/var/lib/proxmenux/restore-state.json</code> et le journal brut de l’exécution dans <code>/var/log/proxmenux/restore-datapools-&lt;timestamp&gt;.log</code>."
+      },
+      {
+        "name": "Avertissements relatifs au bon fonctionnement du démarrage",
+        "detail": "Le traitement vérifie les répertoires <code>/lib/modules/&lt;kernel&gt;</code> manquants, l’absence de configuration ESP et les liens symboliques <code>/vmlinuz</code> pointant vers une cible absente. Les avertissements apparaissent ici dans une bannière colorée."
+      },
+      {
+        "name": "Delta de restauration",
+        "detail": "Listes VMs, LXCs et composants qui existent sur la cible mais n'étaient pas dans la sauvegarde restaurée — les mêmes entrées sont apparues dans la boîte de dialogue de rappel destructive pré-restauration. Chaque ligne porte la commande de nettoyage manuel."
+      },
+      {
+        "name": "Fin du journal",
+        "detail": "Les dernières lignes 600 de <code>proxmenux-cluster-postboot-&lt;ts&gt;.log</code>, avec un filtre <em>Problèmes uniquement</em> qui maintient juste des lignes correspondant à <code>error</code>, <code>warning</code>, <code>failed</code>, <code>✗</code> ou <code>traceback</code>."
+      }
+    ],
+    "dismissBody": "Une fois la restauration <em>terminée</em> ou <em>en échec</em>, le bouton Masquer replie la carte. Le fichier d’état est conservé ; Historique rouvre cette restauration et les précédentes. Les 20 dernières exécutions sont archivées dans <code>/var/lib/proxmenux/restore-history/</code>.",
+    "imageAlt": "Fenêtre Détails du suivi de restauration dans ProxMenux Monitor pendant l’exécution : badge bleu, étape « Reconstruction initramfs », temps restant estimé, barre partiellement remplie et dernières lignes du journal en direct.",
+    "imageCaption": "Le mode Détails pendant que le répartiteur post-démarrage est toujours en marche — badge, étape actuelle, temps restant et queue de log en direct.",
+    "detailsImageAlt": "Le même détail modal après la restauration a terminé, avec le badge vert Restore complet, la durée totale d'exécution (0m53s), une barre de progression 6/6, le delta Rollback vide et le journal de post-démarrage archivé.",
+    "detailsImageCaption": "Le même modal une fois la exécution terminée — badge, durée totale, barre de progression remplie et le journal de post-démarrage archivé."
+  },
+  "postbootExample": {
+    "heading": "A quoi ressemble le post-boot sur la console",
+    "body": "Sur la console physique, un traitement qui se termine sans erreur de processus affiche <code>[ OK ] Finished proxmenux-apply-cluster-postboot.service</code>, souvent près des <code>OK</code> de <code>multi-user.target</code> et <code>graphical.target</code>. Cela marque la fin du processus. Des échecs de composants ou avertissements de démarrage peuvent néanmoins avoir été enregistrés ; vérifiez leurs états et les journaux du moniteur avant de considérer l’hôte comme entièrement restauré.",
+    "imageAlt": "Console physique Proxmox affichant '[ OK ] Finished proxmenux-apply-cluster-postboot.service - ProxMenux Apply Cluster Configs (post-boot).', puis OK pour multi-user.target et graphical.target, avec l’invite de connexion au-dessus.",
+    "imageCaption": "Console physique à la fin du processus. 'Finished proxmenux-apply-cluster-postboot.service' marque sa fin, également signalée par 'Host restore finished' dans le moniteur. Les résultats des composants et les avertissements restent à vérifier."
+  },
+  "tenMinutes": {
+    "heading": "Pourquoi les dix dernières minutes comptent",
+    "intro": "Le redémarrage lui-même prend des secondes, mais le répartiteur post-démarrage passe environ dix minutes à terminer la restauration. Pendant cette fenêtre, l'hôte est accessible et la connexion fonctionne, mais certains services (principalement dépendants des pilotes GPU) ne sont pas encore disponibles. Répartition du temps d'un hôte Proxmox typique avec NVIDIA + Coral installé:",
+    "rows": [
+      {
+        "stage": "Boot + pve-cluster prêt",
+        "time": "~30 s",
+        "detail": "Démarrage standard de Proxmox. SSH, interface web et connexion sont disponibles à la fin de cette étape."
+      },
+      {
+        "stage": "Appliquer /etc/pve à pmxcfs",
+        "time": "~10 s",
+        "detail": "Rapide — petits fichiers de configuration copiés un par un dans le système de fichiers cluster live."
+      },
+      {
+        "stage": "Reconstruire les initramfs à travers les noyaux",
+        "time": "3–5 min",
+        "detail": "<code>update-initramfs -u -k all</code> reconstruit une image initramfs par noyau installé. Le gros de l'attente."
+      },
+      {
+        "stage": "Reconstruire la configuration du chargeur de démarrage",
+        "time": "10–30 s",
+        "detail": "<code>update-grub</code> ou <code>proxmox-boot-tool refresh</code>. Rapide même sur ZFS."
+      },
+      {
+        "stage": "Réinstallation du pilote NVIDIA (le cas échéant)",
+        "time": "5–10 min",
+        "detail": "Télécharger la version du pilote enregistrée, compiler les modules DKMS contre le noyau actuel, applique le correctif ProxMenux si la source l'avait. La tâche la plus longue."
+      },
+      {
+        "stage": "Réinstallation de Coral et des autres composants",
+        "time": "3–5 min",
+        "detail": "DKMS compile pour Coral, apt install pour intel-gpu-tools, .deb download + install pour amdgpu_top."
+      },
+      {
+        "stage": "Vérification du démarrage et notification",
+        "time": "~2 s",
+        "detail": "Très rapide. La notification informe l’utilisateur dès la fin de l’exécution."
+      }
+    ],
+    "outroBody": "Pendant cette période, certains outils peuvent manquer après connexion (<code>nvidia-smi</code> introuvable, <code>coral</code> non détecté), car la réinstallation continue en arrière-plan. La notification marque la fin du traitement ; vérifiez résultats des composants, avertissements et journaux pour distinguer succès et échecs individuels."
+  },
+  "destructiveRollback": {
+    "heading": "Le renversement destructeur facultatif",
+    "body": "La restauration est additive par défaut : VM, LXC et composants supplémentaires restent présents. En cas de différences, le dialogue propose <em>Exécuter le rollback destructif ?</em>, avec Non par défaut. Accepter appelle <code>_rs_execute_rollback</code> avant redémarrage pour tenter de supprimer les VM et LXC supplémentaires listés. Les composants sont signalés pour désinstallation manuelle, faute de désinstallation automatique. Les échecs de suppression sont rapportés sans arrêter la suite ; une correspondance exacte n’est pas garantie. Vérifiez noms et VMID/CTID avant ce choix destructif."
+  },
+  "logs": {
+    "heading": "Emplacement des journaux",
+    "rows": [
+      {
+        "log": "/var/log/proxmenux/restore-YYYYMMDD_HHMMSS.log",
+        "detail": "Écrit lors de l’étape interactive : résultats de compatibilité, filtre des différences, plan d’adaptation, sorties de l’application à chaud et de la préparation différée, installation des paquets."
+      },
+      {
+        "log": "/var/log/proxmenux/apply-pending-YYYYMMDD_HHMMSS.log",
+        "detail": "Écrit par <code>apply_pending_restore.sh</code> au début du démarrage : chargement de plan.env, parcours de apply-on-boot et filtrage des chemins exclus."
+      },
+      {
+        "log": "/var/log/proxmenux/proxmenux-cluster-postboot-YYYYMMDD_HHMMSS.log",
+        "detail": "Écrit par <code>apply_cluster_postboot.sh</code>. Contient: pve-cluster appliquer, initramfs et sortie de chargeur d'amorçage, sortie d'installation par composant, vérification de la santé, charge utile de notification."
+      },
+      {
+        "log": "/var/log/proxmenux/component-<name>-YYYYMMDD_HHMMSS.log",
+        "detail": "Un journal par programme d'installation de composant (nvidia, coral, etc.) exécuté lors de la passe post-démarrage. Utile lorsque la réinstallation d'un composant spécifique a échoué et que l'utilisateur a besoin de la propre sortie de l'outil."
+      },
+      {
+        "log": "/var/log/proxmenux/restore-datapools-YYYYMMDD_HHMMSS.log",
+        "detail": "Écrit par <code>_rs_import_data_pools</code>. Contient : le dénombrement de pools non-racines à partir du manifeste, le résultat par pool (importé proprement, importé avec <code>-f</code> pour un hôte étranger, ignoré en raison de disques absents, ou échoué), et la sortie brute de chaque appel <code>zpool import</code>."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Où aller ensuite?",
+    "items": [
+      {
+        "label": "Restauration entre versions du noyau",
+        "href": "/docs/backup-restore/cross-kernel",
+        "tail": " — le filtre de chemins sûrs tenant compte du sens du changement de noyau et l’adaptation des réglages lorsque le noyau de destination diffère de celui de la sauvegarde."
+      },
+      {
+        "label": "Comment ça marche",
+        "href": "/docs/backup-restore/how-it-works",
+        "tail": "— la mise en page des archives, le manifeste et l'inventaire des applications que la restauration consomme."
+      },
+      {
+        "label": "Tâches planifiées",
+        "href": "/docs/backup-restore/scheduled-jobs",
+        "tail": "— le flux sans surveillance qui produit les archives que cette page consomme."
+      }
+    ]
+  }
+}
