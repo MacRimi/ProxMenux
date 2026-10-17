@@ -415,10 +415,9 @@ def candidate_contract(record, operation, proposal=None):
     return with_default_healthcheck(result)
 
 
-# Resource settings edited in Proxmox that the new container keeps.
 # Proxmox settings the rebuilt container gets back exactly as they are: the
-# LAN leg ProxMenux adds to a suite or stack member, and the start order.
-KEPT_AS_IS = ('net1', 'startup')
+# LAN leg ProxMenux adds to a suite or stack member, the start order and tags.
+KEPT_AS_IS = ('net1', 'startup', 'tags')
 ADOPTABLE = {'memory': ('resources', 'memory_mb'), 'swap': ('resources', 'swap_mb'),
              'cores': ('resources', 'cores'), 'cpulimit': ('resources', 'cores'),
              'cpuunits': ('resources', 'cpu_units'), 'onboot': (None, 'onboot')}
@@ -1051,6 +1050,9 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
              'original_gpu_devices': original_gpu, 'desired_gpu_devices': desired_gpu,
              'was_running': run('pct', 'status', str(vmid)).strip() == b'status: running'}
     state['kept_config'] = {key: cfg[key] for key in KEPT_AS_IS if key in cfg}
+    # The installer adds default tags. Preserve an explicit absence too, so
+    # deleting all tags in Proxmox does not bring them back on the next update.
+    state['kept_config']['tags'] = cfg.get('tags', '')
     if not coordinated and state['kept_config']:
         # Applied by the installer before the new container starts, so the
         # application has its LAN leg from the first second.
@@ -1058,9 +1060,10 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     if coordinated:
         state['coordinated'] = coordinated
         state['preserved_stack_config'] = {key: cfg[key] for key in ('net1', 'startup', 'hookscript') if key in cfg}
+        state['preserved_stack_config']['tags'] = cfg.get('tags', '')
         if operation == 'update':
             state['preserved_stack_config'].update({key: cfg[key] for key in
-                ('net0', 'features', 'cmode', 'console', 'tty', 'cpuunits', 'tags') if key in cfg})
+                ('net0', 'features', 'cmode', 'console', 'tty', 'cpuunits') if key in cfg})
     checkpoint(journal, state, 'prepared')
     pending = copy.deepcopy(record)
     pending.update(status='updating', pending_transaction=str(journal), transaction_id=state['id'])
@@ -1141,7 +1144,10 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     restore_firewall(vmid, state)
     if coordinated:
         for key, value in state['preserved_stack_config'].items():
-            run('pct', 'set', str(vmid), '--' + key, value)
+            if key == 'tags' and not value:
+                run('pct', 'set', str(vmid), '--delete', 'tags')
+            else:
+                run('pct', 'set', str(vmid), '--' + key, value)
         check_runtime_mounts(run('pct', 'config', str(vmid)), candidate['deployment'])
         gpu_devices.check(run('pct', 'config', str(vmid)), candidate['deployment'])
         state['staged_config_sha256'] = sha(owned(vmid, record['installation_id']))

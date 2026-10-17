@@ -1025,15 +1025,18 @@ apply_extra_hosts() {
 }
 
 # Settings an update gives back to the rebuilt container before it starts:
-# the LAN leg of a suite or stack member and its start order.
+# the LAN leg of a suite or stack member, its start order and current tags.
 apply_kept_settings() {
   local key value
   while IFS=$'\t' read -r key value; do
     [[ -n $key ]] || continue
-    [[ $key == net1 || $key == startup ]] \
+    [[ $key == net1 || $key == startup || $key == tags ]] \
       || die "$(translate "Unsupported kept setting:") $key"
-    oci_quiet pct set "$VMID" "--$key" "$value" \
-      || die "$(translate "Could not restore the container setting:") $key"
+    if [[ $key == tags && -z $value ]]; then
+      oci_quiet pct set "$VMID" --delete tags
+    else
+      oci_quiet pct set "$VMID" "--$key" "$value"
+    fi || die "$(translate "Could not restore the container setting:") $key"
   done < <(jq -r '.kept_proxmox_settings // {} | to_entries[] | [.key, .value] | @tsv' "$DEPLOYMENT_FILE")
 }
 

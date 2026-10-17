@@ -32,3 +32,9 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: '1'
         run: python3 -m unittest discover -s oci/tests -p 'test_registry_*.py' -v
+      - name: Run external OCI settings regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p 'test_external_tags.py' -v
+          python3 -m unittest discover -s oci/tests -p 'test_instance_reconcile.py' -v
