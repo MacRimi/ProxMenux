@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "title": "Kodi in LXC mit GPU-Beschleunigung installieren | ProxMenux-Anleitungen",
+    "description": "Kodi in einem privilegierten LXC-Container unter Proxmox VE ausführen, die iGPU und USB-Eingabegeräte des Hosts zugänglich machen und den Server als Mediacenter direkt an einen Fernseher anschließen.",
+    "ogTitle": "Kodi in LXC mit GPU-Beschleunigung installieren",
+    "ogDescription": "Kodi in einem privilegierten LXC-Container unter Proxmox VE mit Zugriff auf iGPU und USB-Eingabegeräte des Hosts ausführen und den Server zum Mediacenter machen."
+  },
+  "header": {
+    "title": "Kodi in LXC mit GPU-Beschleunigung installieren und an Monitor oder Fernseher anschließen",
+    "description": "Kodi in einem privilegierten LXC-Container unter Proxmox VE ausführen, die iGPU und USB-Eingabegeräte des Hosts zugänglich machen und den Server als Mediacenter direkt an einen Fernseher anschließen.",
+    "section": "Leitfäden"
+  },
+  "intro": {
+    "calloutTitle": "Hinweis",
+    "calloutBody": "Diese Anleitung verwendet ein externes Community-Skript zur Einrichtung des Kodi-LXC-Containers. Den Zugriff auf die iGPU des Hosts können Sie auch mit ProxMenux einrichten: <strong>GPUs und Coral-TPU → GPU zu LXC hinzufügen</strong> konfiguriert <code>/dev/dri</code> und installiert die Treiber im Container. Das folgende Skript richtet zusätzlich Kodi und den Autostart auf <code>tty7</code> ein. Verwenden Sie es für ein fertig eingerichtetes LXC-Mediacenter; den <gpuLink>ProxMenux-Ablauf</gpuLink> nutzen Sie, wenn Sie nur GPU-Zugriff für einen selbst eingerichteten Container benötigen.",
+    "credit": "Das ursprüngliche Kodi-LXC-Skript stammt von <authorLink>mrrudy</authorLink>.",
+    "stepsTitle": "Was Sie einrichten",
+    "steps": [
+      "Mit dem Skript einen privilegierten LXC-Container mit Kodi erstellen.",
+      "USB-Tastatur, Maus oder Controller im Container zugänglich machen.",
+      "(Optional) Kodi aus den im Container eingerichteten Paketquellen aktualisieren."
+    ]
+  },
+  "createCt": {
+    "heading": "1. Erstellen Sie den Kodi LXC",
+    "body": "Wählen Sie für diese Anleitung <strong>Privileged</strong> in den erweiterten Skripteinstellungen. Standardmäßig erstellt das Skript unprivilegierte Container, die passende Geräteberechtigungen und ID-Zuordnungen benötigen. Es konfiguriert GPU-Zugriff, Kodi und den Autostart auf <code>tty7</code>:",
+    "code": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/mrrudy/proxmoxHelper/main/ct/kodi-v1.sh)\"",
+    "after": "Die Installation dauert etwas. Sobald Kodi auf <code>tty7</code> startet, schließen Sie Monitor oder Fernseher an den HDMI-/DisplayPort-Ausgang des Hosts an. Dort sollte die Kodi-Oberfläche erscheinen."
+  },
+  "addInput": {
+    "heading": "2. Tastatur, Maus oder USB-Controller hinzufügen",
+    "body": "Eingabegeräte finden Sie auf dem Host unter <code>/dev/input/</code>. Ermitteln Sie deren Major-Nummer:",
+    "listCode": "ls -l /dev/input",
+    "imageAlt": "Liste der Eingabegeräte",
+    "afterList": "Verwenden Sie bei Zeichengeräten die Major-Nummer vor dem Komma, im Beispiel <code>13</code>. Stoppen Sie den Kodi-LXC-Container und bearbeiten Sie seine Konfiguration. Ersetzen Sie <code>'<'CTID'>'</code> durch seine ID, etwa <code>102</code>:",
+    "editCode": "nano /etc/pve/lxc/CTID.conf",
+    "addLines": "Fügen Sie Folgendes hinzu und passen Sie <code>13</code> an die Nummer auf <strong>Ihrem</strong> Host an:",
+    "configCode": "lxc.cgroup2.devices.allow: c 13:* rwm\nlxc.mount.entry: /dev/input dev/input none bind,optional,create=dir",
+    "imageConfigAlt": "LXC Konfiguration",
+    "save": "Speichern Sie die Datei, beenden Sie den Editor mit <code>Ctrl+X</code> und starten Sie <strong>nur den Container</strong> neu. Ein Neustart des Proxmox-Hosts ist nicht nötig:",
+    "restartCode": "pct reboot CTID",
+    "plug": "Schließen Sie Tastatur, Maus oder Controller an. Kodi sollte nun darauf reagieren."
+  },
+  "updateKodi": {
+    "heading": "3. (Optional) Kodi aus den eingerichteten Paketquellen aktualisieren",
+    "calloutTitle": "Wichtig",
+    "calloutBody": "Das team-xbmc-PPA ist <strong>nur für Ubuntu</strong> vorgesehen und wird laut Kodi derzeit nicht gepflegt. Ein fehlendes <code>add-apt-repository</code> identifiziert nicht die Distribution. Prüfen Sie <code>cat /etc/os-release</code> auf <code>NAME=\"Ubuntu\"</code>; fügen Sie Debian keine Ubuntu-PPAs hinzu. Die folgenden Befehle aktualisieren Pakete aus den eingerichteten Paketquellen des Containers.",
+    "body": "Im Container (<code>pct enter '<'CTID'>'</code>):",
+    "code": "apt update\napt install --only-upgrade kodi kodi-bin",
+    "after": "Starten Sie den Container nach dem Update neu. Kodi verwendet die Version aus den eingerichteten Paketquellen; diese kann von der neuesten Projektversion abweichen."
+  },
+  "screenshots": {
+    "heading": "Bildschirmfotos",
+    "image1Alt": "Kodi-Schnittstelle 1",
+    "image2Alt": "Kodi-Schnittstelle 2"
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "items": [
+      "<strong>Der Kodi-LXC-Container startet, aber der Fernseher bleibt leer:</strong> Möglicherweise fehlt der Zugriff auf die iGPU. Prüfen Sie im Container <code>ls /dev/dri</code>; dort sollten <code>card0</code> und <code>renderD128</code> erscheinen. Falls das Verzeichnis leer ist, prüfen Sie die GPU-Durchreichung oder verwenden Sie in ProxMenux <strong>GPU zu LXC hinzufügen</strong>.",
+      "<strong>Tastatur oder Maus nach Neustart nicht erkannt:</strong> Prüfen Sie, ob <code>/dev/input</code> eingehängt ist und Kodi Leserechte auf die Geräte hat. Führen Sie <code>ls -l /dev/input</code> auf Host und Container aus und prüfen Sie die Regel <code>lxc.cgroup2.devices.allow</code>.",
+      "<strong>Hardwarebeschleunigte Wiedergabe nutzt CPU statt GPU:</strong> Installieren oder aktualisieren Sie die VA-API-Treiber im Container: <code>intel-media-va-driver</code> für neuere Intel-iGPUs, <code>i965-va-driver</code> für ältere und <code>mesa-va-drivers</code> für AMD.",
+      "<strong><code>add-apt-repository: command not found</code>:</strong> Der Befehl ist nicht installiert; das beweist nicht, dass der Container Debian verwendet. Prüfen Sie Distribution und verfügbare Pakete. Verwenden Sie unter Debian die Debian-Pakete für Kodi und kein Ubuntu-PPA."
+    ]
+  },
+  "further": {
+    "heading": "Weiterführende Informationen",
+    "konpatRich": "<konpatLink>Konpats Blogbeitrag</konpatLink> mit weiterem Hintergrund zur Intel-iGPU-Durchreichung an LXC."
+  }
+}
