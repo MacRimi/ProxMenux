@@ -1070,8 +1070,8 @@ scrape_configs:
 
       <h2 id="uptime-kuma" className="text-2xl font-semibold mt-10 mb-4 text-gray-900">
         <a href={t("uptimeKuma.href")} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline inline-flex items-center gap-1">
-          Uptime Kuma<ExternalLink className="w-5 h-5" />
-        </a>{" "}and other status checkers
+          {t("uptimeKuma.heading")}<ExternalLink className="w-5 h-5" />
+        </a>
       </h2>
 
       <p className="mb-4 text-gray-800 leading-relaxed">
