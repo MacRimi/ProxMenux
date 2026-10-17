@@ -2276,6 +2276,8 @@ def _handle_guest_lifecycle(vmid: str, vm_type: str, action: str) -> None:
     # or stops; drop the cached IP so the next /api/vms poll re-reads
     # it via `lxc-info`. QEMU guests do not touch this cache.
     if guest_type == 'lxc':
+        import native_app_discovery
+        native_app_discovery.mark_stale(guest_id)
         _invalidate_lxc_ip(guest_id)
     if action in ('start', 'reboot'):
         if guest_type == 'lxc':
@@ -14088,6 +14090,20 @@ def api_vm_apps_suggestions(vmid):
         return jsonify(payload)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps/native-discovery', methods=['GET', 'POST'])
+@require_auth
+def api_vm_apps_native_discovery(vmid):
+    """Only the Find applications button requests POST. GET never probes."""
+    import native_app_discovery
+    import lxc_apps
+    result = (native_app_discovery.discover(vmid) if request.method == 'POST'
+              else native_app_discovery.cached(vmid))
+    suggestions = _vm_cache_get(_vm_app_suggestions_cache, vmid, _VM_APP_SUGGESTIONS_TTL) or {}
+    sidecar = lxc_apps.load_sidecar(vmid) or {}
+    return jsonify(native_app_discovery.filter_candidates(
+        result, suggestions, sidecar.get('apps') or []))
 
 
 @app.route('/api/vms/<int:vmid>/apps/adguard-setup', methods=['GET'])
