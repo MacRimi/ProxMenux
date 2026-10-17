@@ -79,6 +79,28 @@ def _size(value):
     return f"{_gib(value):.1f} GiB"
 
 
+def _decimal(value):
+    text = f"{value:.1f}"
+    return f"{value:.0f}" if float(text) >= 10 else text
+
+
+def _short_size(value):
+    value = max(0, _number(value))
+    if value == 0:
+        return "0"
+    if value < 1073741824:
+        return f"{_decimal(value / 1048576)}M"
+    return f"{_decimal(_gib(value))}G"
+
+
+def _fit(width, *candidates):
+    """Return the first candidate that fits ``width`` cells, else the last one."""
+    for text in candidates:
+        if len(text) <= width:
+            return text
+    return candidates[-1]
+
+
 def _uptime(seconds):
     seconds = max(0, int(_number(seconds)))
     days, hours = divmod(seconds // 3600, 24)
@@ -100,7 +122,7 @@ def _rate(value, bits=False):
     for unit in units:
         base = 1000 if bits else 1024
         if value < base or unit == units[-1]:
-            return f"{value:.1f} {unit}"
+            return f"{_decimal(value)} {unit}"
         value /= base
 
 
@@ -342,8 +364,14 @@ def _cpu_memory(grid, vm, rows):
     zram_total = zram.get("capacity_bytes", zram.get("total", 0))
     ratio = _number(zram.get("compression_ratio"))
     swap = f"{label('labels.swap')} {_size(mem.get('swap_used'))}/{_size(mem.get('swap_total'))}"
-    zram_part = f"{label('labels.zram')} {_size(zram_used)}/{_size(zram_total)} {ratio:.1f}x {_separator(grid)} " if _number(zram_total) > 0 else ""
-    _text(grid, left + 2, 4, zram_part + swap, right - 4)
+    if _number(zram_total) > 0:
+        zram_part = f"{label('labels.zram')} {_size(zram_used)}/{_size(zram_total)} {ratio:.1f}x {_separator(grid)} "
+        compact_zram = f"{label('labels.zram')} {_short_size(zram_used)}/{_short_size(zram_total)} {ratio:.1f}x {_separator(grid)} "
+        compact_swap = f"{label('labels.swap')} {_short_size(mem.get('swap_used'))}/{_short_size(mem.get('swap_total'))}"
+        row = _fit(right - 4, zram_part + swap, compact_zram + compact_swap)
+    else:
+        row = swap
+    _text(grid, left + 2, 4, row, right - 4)
     history = local.get("cpu_history") or []
     history_start = 4
     history_rows = 1 if rows == 5 else 4
@@ -401,12 +429,16 @@ def _strip(grid, vm, y, rows, state):
     up = int(_number(cluster.get("nodes_online")))
     total = int(_number(cluster.get("nodes_total")))
     quorate = cluster.get("quorate")
-    title = label("panels.cluster")
+    head = label("panels.cluster")
     name = sanitize(cluster.get("name"), 15, grid.glyphs)
-    if name:
-        title += f" {name}"
-    if quorate is not None:
-        title += f" {_separator(grid)} {label('labels.quorumOk') if quorate else label('labels.noQuorum')} {up}/{total}"
+    named = f"{head} {name}" if name else head
+    separator = _separator(grid)
+    if quorate is None:
+        title = _fit(cluster_width - 4, named, head)
+    else:
+        quorum_text = f"{label('labels.quorumOk') if quorate else label('labels.noQuorum')} {up}/{total}"
+        title = _fit(cluster_width - 4, f"{named} {separator} {quorum_text}",
+                     f"{head} {separator} {quorum_text}", f"{head} {separator} {up}/{total}")
     grid.box(cluster_x, y, cluster_width, rows, title)
     if state == "starting" or quorate is None:
         text = label("status.waitingForData") if state == "starting" else label("status.noData")
@@ -444,7 +476,7 @@ def _top_row(grid, guest, x, y, width, mode, standalone):
     identity = f"{kind} {guest.get('vmid', '')} "
     name_width = max(8, min(24 if grid.width >= 160 else 13, width - (39 if not standalone else 30)))
     node = "" if standalone else sanitize(guest.get("node"), 10, grid.glyphs)
-    value = (f"{_cpu_key(guest):.1f}c  {_pct(guest.get('cpu'))}%" if mode == "cpu"
+    value = (f"{_cpu_key(guest):.1f}c  {_pct(guest.get('cpu')):>3}%" if mode == "cpu"
              else _size(guest.get("mem")))
     right = x + width - 2
     status = (sanitize(guest.get("status"), 7, grid.glyphs)
@@ -476,19 +508,22 @@ def _top(grid, vm, y, rows, state):
     standalone = not cluster.get("is_cluster", True)
     guests = _guests(snapshot)
     midpoint = grid.width // 2
-    cpu_title = label("panels.topCpu")
+    cpu_name = label("panels.topCpu")
+    cpu_short = label("panels.topCpuShort")
     memory_title = label("panels.topMemory")
+    cpu_suffix = ""
     if state == "ok":
         host_other = vm.get("host_other") or {}
         if host_other.get("cpu") is not None:
-            cpu_title += f" {_separator(grid)} {label('labels.hostOther')} {_number(host_other['cpu']):.1f}c"
+            cpu_suffix = f" {_separator(grid)} {label('labels.hostOther')} {_number(host_other['cpu']):.1f}c"
         if host_other.get("mem") is not None:
             memory_title += f" {_separator(grid)} {label('labels.hostOther')} {_size(host_other['mem'])}"
     elif snapshot and state in ("stale", "unavailable"):
         stale = _label_with(vm, "status.stale", grid.glyphs,
                             age=_age(snapshot.get("age_s")))
-        cpu_title += f" ({stale})"
+        cpu_suffix = f" ({stale})"
         memory_title += f" ({stale})"
+    cpu_title = _fit(midpoint - 4, cpu_name + cpu_suffix, cpu_short + cpu_suffix, cpu_short)
     grid.box(0, y, midpoint, rows, cpu_title)
     grid.box(midpoint, y, grid.width - midpoint, rows, memory_title)
     if state == "starting" or not snapshot:

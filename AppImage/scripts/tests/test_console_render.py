@@ -11,7 +11,7 @@ SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from console_render import ACS_TOKENS, render, sanitize
+from console_render import ACS_TOKENS, _rate, render, sanitize
 
 
 CATALOG = json.loads((SCRIPTS_DIR.parent / "messages" / "en" / "common.json")
@@ -83,8 +83,8 @@ class ConsoleRenderTests(unittest.TestCase):
         self.assertIn("q login", rows[23])
         self.assertIn("data 2s", rows[23])
         self.assertIn("+2 nodes", "\n".join(rows[6:10]))
-        self.assertIn("TOP CPU (host cores)", rows[10])
-        self.assertEqual(rows[10].count("(host cores)"), 1)
+        self.assertIn("host other 1.6c", rows[10][:40])
+        self.assertNotIn("(host cores)", rows[10][:40])
 
     def test_selected_tab_uses_selected_role(self):
         grid = render(self.vm, 80, 24)
@@ -357,6 +357,42 @@ class ConsoleRenderTests(unittest.TestCase):
         self.assertIn("pve-01", rows[0])
         self.assertIn("eno1", rows[6])
         self.assertNotIn("[31m", "\n".join(rows))
+
+    def test_rate_keeps_one_decimal_only_below_ten(self):
+        self.assertEqual(_rate(400000, True), "3.2 Mb/s")
+        self.assertEqual(_rate(100000, True), "800 Kb/s")
+        self.assertEqual(_rate(44040192), "42 MiB/s")
+        self.assertEqual(_rate(8388608), "8.0 MiB/s")
+        self.assertEqual(_rate(9.94), "9.9 B/s")
+        self.assertEqual(_rate(9.96), "10 B/s")
+
+    def test_disk_and_network_rates_fit_at_80x24(self):
+        rows = lines(render(self.vm, 80, 24))
+        self.assertIn("RX 3.2 Mb/s", rows[7])
+        self.assertIn("TX 800 Kb/s", rows[8])
+        self.assertIn("R 42 MiB/s  W 8.0 MiB/s", rows[7])
+
+    def test_top_cpu_title_falls_back_to_short_name_then_drops_suffix(self):
+        self.vm["tr"] = lambda key: ("a very long host other label"
+                                     if key.endswith("labels.hostOther") else tr(key))
+        rows = lines(render(self.vm, 80, 24))
+        self.assertEqual(rows[10][2:9], "TOP CPU")
+
+    def test_zram_row_uses_compact_sizes_when_full_row_does_not_fit(self):
+        row = lines(render(self.vm, 80, 24))[4]
+        self.assertIn("ZRAM 143M/3.2G 1.8x . swap 0/8.0G", row)
+        self.assertNotIn("MiB", row)
+
+    def test_cluster_strip_title_drops_name_before_counts(self):
+        rows = lines(render(self.vm, 80, 24))
+        self.assertIn("CLUSTER . QUORUM OK 2/3", rows[6])
+        self.assertNotIn("lab", rows[6])
+
+    def test_top_cpu_percentages_share_one_right_edge(self):
+        rows = lines(render(self.vm, 80, 24))
+        edges = {rows[y][:40].index("%") for y in (11, 12, 13)}
+        self.assertEqual(len(edges), 1)
+        self.assertIn("0.1c    5%", rows[13][:40])
 
 
 if __name__ == "__main__":
