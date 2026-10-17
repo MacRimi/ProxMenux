@@ -53,11 +53,12 @@ class SelectedConfigTests(unittest.TestCase):
 
 
 class EditorLatencyTests(unittest.TestCase):
-    def run_editor(self,proposal=None,backup_ready=True,stale=False,adoption_error=False,approved=True):
+    def run_editor(self,proposal=None,backup_ready=True,stale=False,adoption_error=False,approved=True,declined=False):
         events=[];saved=record()
         row={'vmid':115,'reason':'matched','stack':False,'pending':False,'status':'installed'}
         def edit(*a,**kw):
             events.append('editor')
+            if declined:return None
             if proposal is None:raise UserCancelled()
             return proposal
         def backup(*a,**kw):events.append('backup');return backup_ready
@@ -80,7 +81,9 @@ class EditorLatencyTests(unittest.TestCase):
         self.assertFalse(result);self.assertEqual(events,['editor'])
 
     def test_declining_the_review_has_no_backup_or_storage_probes(self):
-        result,events=self.run_editor({'operation':'recreate','candidate':record()},approved=False)
+        # The review is part of the Modify menu: declining it and leaving the
+        # menu returns no proposal, so no probe or operation follows.
+        result,events=self.run_editor(declined=True)
         self.assertFalse(result);self.assertEqual(events,['editor'])
 
     def test_confirmed_edit_keeps_backup_check_before_the_lifecycle(self):
