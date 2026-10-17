@@ -1,15 +1,15 @@
 {
   "meta": {
     "title": "Referencia de comandos de Proxmox — qm, pct, vzdump, zpool, pveversion | ProxMenux",
-    "description": "Referencia curada de comandos esenciales de Proxmox VE y Linux organizados por tema: inspección del sistema, gestión de VMs y LXC (qm / pct), almacenamiento y discos, red, actualizaciones, passthrough de GPU, ZFS, backup y restauración, y herramientas CLI del día a día.",
+    "description": "Selección de comandos esenciales de Proxmox VE y Linux por tema: inspección del sistema, gestión de VM y LXC (qm / pct), almacenamiento y discos, red, actualizaciones, passthrough de GPU, ZFS, copias de seguridad y restauración, y herramientas de terminal para el día a día.",
     "ogTitle": "Referencia de comandos de Proxmox — qm, pct, vzdump, zpool",
-    "ogDescription": "Referencia curada de los comandos más útiles de Proxmox VE y Linux, agrupados por tema — sistema, VM/CT, almacenamiento, red, actualizaciones, passthrough de GPU, ZFS, backup y herramientas CLI.",
+    "ogDescription": "Selección de comandos útiles de Proxmox VE y Linux por tema: sistema, VM/CT, almacenamiento, red, actualizaciones, passthrough de GPU, ZFS, copias de seguridad y herramientas CLI.",
     "twitterTitle": "Referencia de comandos de Proxmox | ProxMenux",
-    "twitterDescription": "Referencia curada de los comandos más útiles de Proxmox VE y Linux, agrupados por tema."
+    "twitterDescription": "Selección de comandos útiles de Proxmox VE y Linux, agrupados por tema."
   },
   "header": {
     "title": "Ayuda e información",
-    "description": "Compendio curado de comandos útiles de Linux y Proxmox VE organizados por tema. Nueve categorías — cubre desde una comprobación rápida con pveversion hasta un zfs send/receive multilínea — pensado para convivir con las secciones de GPU, disco y compartición de ProxMenux como una referencia única.",
+    "description": "Selección de comandos útiles de Linux y Proxmox VE organizados por tema. Las nueve categorías abarcan desde una consulta rápida con pveversion hasta una secuencia de zfs send/receive en varias líneas. Sirve de referencia junto a las secciones de GPU, discos y recursos compartidos de ProxMenux.",
     "section": "Ayuda e información"
   },
   "intro": {
@@ -28,13 +28,13 @@
         "icon": "Terminal",
         "href": "/docs/help-info/system-commands",
         "title": "Comandos de sistema útiles",
-        "description": "pveversion, uptime, free, journalctl, hostnamectl, información del usuario actual, auditoría de lynis, fastfetch."
+        "description": "pveversion, uptime, free, journalctl, hostnamectl, información del usuario actual, auditoría con lynis y fastfetch."
       },
       {
         "icon": "Cpu",
         "href": "/docs/help-info/vm-ct-commands",
         "title": "Gestión de VM y CT",
-        "description": "qm list / config / start / stop / migrate, pct list / config / enter, snapshots, clonación."
+        "description": "qm list / config / start / stop / migrate, pct list / config / enter, snapshots y clonación."
       },
       {
         "icon": "HardDrive",
@@ -46,37 +46,37 @@
         "icon": "Network",
         "href": "/docs/help-info/network-commands",
         "title": "Comandos de red",
-        "description": "ip / ss / nmcli, inspección de bridges, ping / traceroute, consultas DNS, fail2ban-client."
+        "description": "ip / ss / nmcli, inspección de bridges, ping / traceroute, consultas DNS y fail2ban-client."
       },
       {
         "icon": "Package",
         "href": "/docs/help-info/update-commands",
         "title": "Actualizaciones y paquetes",
-        "description": "apt update / dist-upgrade, apt-cache policy, consultas dpkg, comprobación de ficheros de repositorio."
+        "description": "apt update / dist-upgrade, apt-cache policy, consultas con dpkg y revisión de archivos de repositorios."
       },
       {
         "icon": "Cpu",
         "href": "/docs/help-info/gpu-commands",
         "title": "Passthrough de GPU",
-        "description": "comprobaciones con lspci / dmesg, verificación de IOMMU, binding de vfio-pci, uso de GPU desde el host."
+        "description": "Comprobaciones con lspci / dmesg, verificación de IOMMU, vinculación a vfio-pci y uso de GPU desde el host."
       },
       {
         "icon": "Database",
         "href": "/docs/help-info/zfs-commands",
         "title": "Gestión de ZFS",
-        "description": "comandos zpool / zfs para estado, datasets, snapshots, send/receive, ajuste de ARC, trimming."
+        "description": "Comandos zpool / zfs para estado, datasets, snapshots, send/receive, ajuste de ARC y TRIM."
       },
       {
         "icon": "Archive",
         "href": "/docs/help-info/backup-commands",
-        "title": "Backup y restauración",
+        "title": "Copias de seguridad y restauración",
         "description": "vzdump, qmrestore / pct restore, ayudas para Proxmox Backup Server, operaciones de snapshot."
       },
       {
         "icon": "Wrench",
         "href": "/docs/help-info/tools-commands",
         "title": "Herramientas CLI del sistema",
-        "description": "tmux, screen, htop / btop, ncdu, jq, dig, lsof, watch — herramientas de administración del día a día."
+        "description": "tmux, screen, htop / btop, ncdu, jq, dig, lsof, watch: herramientas de administración para el día a día."
       }
     ]
   },

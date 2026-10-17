@@ -5,11 +5,11 @@
     "ogTitle": "Comandos qm y pct de Proxmox — gestión de VM y contenedores LXC",
     "ogDescription": "Referencia de comandos qm y pct de Proxmox VE — gestiona máquinas virtuales y contenedores LXC desde la CLI: arrancar, parar, configurar, snapshot, migrar, clonar, destruir.",
     "twitterTitle": "Comandos qm / pct de Proxmox | ProxMenux",
-    "twitterDescription": "Comandos qm / pct curados para gestionar máquinas virtuales y contenedores LXC en Proxmox VE."
+    "twitterDescription": "Selección de comandos qm / pct para gestionar VM y contenedores LXC en Proxmox VE."
   },
   "header": {
     "title": "Gestión de VM y CT",
-    "description": "Referencia curada de los comandos qm (VMs) y pct (contenedores LXC). Listado, ciclo de vida (start / stop / shutdown / destroy), inspección de configuración y operaciones específicas de contenedor como exec, enter, push y pull.",
+    "description": "Selección de comandos qm para VM y pct para contenedores LXC. Listados, ciclo de vida (start / stop / shutdown / destroy), consulta de configuración y operaciones de contenedor como exec, enter, push y pull.",
     "section": "Ayuda e información"
   },
   "intro": {
@@ -30,11 +30,11 @@
         },
         {
           "command": "qm config <vmid>",
-          "description": "Mostrar la configuración de la VM (parseada por qm)"
+          "description": "Mostrar la configuración de la VM interpretada por qm"
         },
         {
           "command": "pct config <ctid>",
-          "description": "Mostrar la configuración del contenedor (parseada por pct)"
+          "description": "Mostrar la configuración del contenedor interpretada por pct"
         }
       ]
     },
@@ -84,7 +84,7 @@
         },
         {
           "command": "qm reset <vmid>",
-          "description": "Resetear una máquina virtual (reinicio en caliente)"
+          "description": "Forzar un reinicio de la máquina virtual (reset)"
         },
         {
           "command": "qm suspend <vmid>",
@@ -116,7 +116,7 @@
           "description": "Apagar un contenedor de forma ordenada"
         },
         {
-          "command": "pct restart <ctid>",
+          "command": "pct reboot <ctid>",
           "description": "Reiniciar un contenedor"
         },
         {
@@ -153,18 +153,18 @@
   ],
   "destroyWarn": {
     "title": "Destroy es irreversible",
-    "bodyRich": "<code>qm destroy</code> y <code>pct destroy</code> eliminan la VM / CT y todos sus discos. No hay confirmación por defecto. Haz un backup primero si hay alguna posibilidad de que quieras recuperar los datos — ver <backupLink>Backup y restauración</backupLink>."
+    "bodyRich": "<code>qm destroy</code> y <code>pct destroy</code> eliminan la configuración del guest y sus volúmenes de disco gestionados. No supongas que borran los datos externos o montados por bind mount. La CLI no pide confirmación por defecto. Guarda antes cualquier dato que puedas necesitar; consulta <backupLink>Copias de seguridad y restauración</backupLink>."
   },
   "qmConfigTip": {
-    "title": "qm config vs editar el fichero .conf directamente",
-    "bodyRich": "<code>qm config &lt;vmid&gt;</code> y <code>pct config &lt;ctid&gt;</code> leen el fichero a través del parser de Proxmox — la salida está normalizada, sin comentarios, y los cambios pendientes se muestran aparte. Editar <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> o <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> directamente salta el parser. Útil para arreglar una config corrupta o aplicar un ajuste que <code>qm set</code> no acepte, pero detén antes el guest para evitar races. El sistema de ficheros del clúster (<code>pmxcfs</code>) se encarga de propagar el cambio a los demás nodos."
+    "title": "qm config frente a editar directamente el archivo .conf",
+    "bodyRich": "<code>qm config &lt;vmid&gt;</code> y <code>pct config &lt;ctid&gt;</code> muestran la configuración mediante los analizadores de Proxmox. Para cambios normales, usa <code>qm set</code> o su equivalente de pct. Editar directamente <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> o <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> evita la validación y los bloqueos de los comandos de gestión; el archivo debe seguir siendo válido. Detén el guest y guarda una copia antes de repararlo a mano. <code>pmxcfs</code> sincroniza la configuración entre nodos del clúster, no el contenido de sus discos."
   },
   "related": {
     "heading": "Relacionado",
     "items": [
       {
         "href": "/docs/help-info/backup-commands",
-        "label": "Backup y restauración",
+        "label": "Copias de seguridad y restauración",
         "tail": " — vzdump y qmrestore / pct restore."
       },
       {
