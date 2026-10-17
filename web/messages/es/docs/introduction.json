@@ -9,7 +9,7 @@
   },
   "header": {
     "title": "Introducción",
-    "description": "ProxMenux es una herramienta de código abierto basada en menús para Proxmox VE. Dos piezas comparten el mismo proyecto: una CLI/TUI que envuelve los flujos más comunes del host, VMs, contenedores, almacenamiento, red y seguridad; y un panel web autoalojado con monitor de salud proactivo, notificaciones, un gancho de reescritura con IA y una API REST.",
+    "description": "ProxMenux es una herramienta de código abierto para Proxmox VE que se maneja mediante menús. El proyecto reúne dos componentes: una CLI/TUI para las tareas habituales del host, las VM, los contenedores, el almacenamiento, la red y la seguridad; y un panel web autoalojado con supervisión proactiva, notificaciones, reformulación opcional mediante IA y una API REST.",
     "section": "Introducción"
   },
   "hero": {
@@ -18,7 +18,7 @@
   },
   "twoProducts": {
     "heading": "Dos productos, un solo proyecto",
-    "intro": "ProxMenux se distribuye como dos piezas independientes que comparten el mismo árbol de código. El instalador despliega ambas — conviven en el host y no dependen entre sí:",
+    "intro": "ProxMenux tiene dos componentes en el mismo árbol de código fuente. El instalador despliega ambos en el host: Scripts ofrece la interfaz de terminal y Monitor el panel web:",
     "scripts": {
       "title": "ProxMenux Scripts",
       "body": "La CLI/TUI original que se lanza con <code>menu</code>. Nueve áreas funcionales que cubren optimizaciones post-instalación, creación de VMs y LXC, passthrough de GPU y Coral TPU, discos, almacenamiento, red, seguridad, utilidades, además de una referencia curada de comandos. Funciona en cualquier terminal — local, SSH o web."
@@ -58,7 +58,7 @@
         "href": "/docs/create-vm"
       },
       {
-        "title": "Disk Manager",
+        "title": "Administrador de discos",
         "description": "Importar discos físicos a VMs y LXC, formatear y borrar, tests SMART, importación de imágenes qcow2 / vmdk / vdi — todo desde un menú.",
         "icon": "HardDrive",
         "href": "/docs/disk-manager"
@@ -77,7 +77,7 @@
       },
       {
         "title": "Seguridad",
-        "description": "Fail2Ban (prevención de intrusiones para SSH y las interfaces web) y Lynis (auditoría de hardening) — instalación y gestión con valores por defecto sensatos.",
+        "description": "Fail2Ban para prevenir intrusiones por SSH y las interfaces web, y Lynis para auditar el refuerzo de la seguridad: instalación y gestión con valores predeterminados adecuados.",
         "icon": "Shield",
         "href": "/docs/security"
       },
@@ -89,7 +89,7 @@
       },
       {
         "title": "Referencia de comandos",
-        "description": "Catálogo curado de comandos de Linux y Proxmox organizados por tema — sistema, VM/CT (qm, pct), almacenamiento, red, ZFS, passthrough de GPU, backup, herramientas CLI del día a día.",
+        "description": "Selección de comandos de Linux y Proxmox organizada por temas: sistema, VM/CT con qm y pct, almacenamiento, red, ZFS, acceso directo a GPU, copias de seguridad y herramientas CLI de uso diario.",
         "icon": "BookOpen",
         "href": "/docs/help-info"
       }
@@ -113,7 +113,7 @@
       },
       {
         "title": "Asistente de IA",
-        "description": "Reescritura opcional de notificaciones en lenguaje natural. Seis proveedores: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter, Ollama local. Doce idiomas.",
+        "description": "Reescritura opcional de notificaciones en lenguaje natural. Seis proveedores: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter, Ollama local. Trece idiomas en el selector de notificaciones.",
         "icon": "Sparkles",
         "href": "/docs/monitor/ai-assistant"
       },
@@ -138,32 +138,32 @@
     ]
   },
   "installPaths": {
-    "heading": "Rutas de instalación",
-    "intro": "El instalador despliega Scripts y Monitor en un solo paso. Scripts tiene dos variantes — con traducción o ligera — y el Monitor se instala como AppImage independiente que se activa después desde el menú:",
-    "headerPath": "Ruta de instalación",
+    "heading": "Opciones de instalación",
+    "intro": "Los dos instaladores despliegan Scripts y Monitor. Scripts utiliza catálogos JSON pregenerados en ocho idiomas, sin traducción en línea. Puedes elegir el canal estable o beta; Monitor se distribuye como AppImage y se ejecuta desde su entorno extraído:",
+    "headerPath": "Install path",
     "headerBundles": "Qué incluye",
-    "headerWhen": "Cuándo elegirla",
+    "headerWhen": "Cuándo elegirlo",
     "rows": [
       {
-        "pathRich": "<strong>Scripts: con traducción</strong>",
-        "bundles": "CLI/TUI + entorno virtual de Python + googletrans (inglés, español, francés, alemán, italiano, portugués)",
-        "when": "Menús multi-idioma, usuarios no anglófonos"
+        "pathRich": "<strong>Scripts: estable</strong>",
+        "bundles": "CLI/TUI con traducciones JSON pregeneradas en ocho idiomas, sin entorno virtual ni servicio de traducción en línea.",
+        "when": "Uso habitual con el canal de versiones estables."
       },
       {
-        "pathRich": "<strong>Scripts: normal (ligera)</strong>",
-        "bundles": "CLI/TUI solo en inglés, huella menor, sin entorno virtual de Python",
-        "when": "La mayoría de usuarios — la documentación de Proxmox está en inglés de todos modos"
+        "pathRich": "<strong>Scripts: beta</strong>",
+        "bundles": "La misma interfaz multilingüe, instalada desde la rama develop para probar los próximos cambios.",
+        "when": "Pruebas anticipadas de nuevas funciones, con mayor riesgo de errores."
       },
       {
         "pathRich": "<strong>Monitor</strong>",
-        "bundles": "AppImage autocontenido en el puerto TCP 8008. Instalación independiente — se puede activar desde el menú de Scripts o ejecutar el AppImage directamente.",
-        "when": "Cuando un panel web del host resulta útil — móvil, tablet, pestaña del navegador"
+        "bundles": "AppImage autónoma con panel web en el puerto TCP 8008. El instalador extrae su entorno de ejecución y gestiona el servicio; Monitor se controla desde Ajustes.",
+        "when": "Cuando te resulte útil consultar el host desde un panel web: móvil, tableta o navegador."
       }
     ],
-    "outro": "Los comandos de instalación detallados y los requisitos están en la <link>página de instalación</link>."
+    "outro": "Los comandos y requisitos detallados están en la <link>página de instalación</link>."
   },
   "warnSource": {
-    "title": "Revisa siempre los scripts que ejecutas desde internet",
+    "title": "Revisa siempre los scripts de Internet antes de ejecutarlos",
     "body": "ProxMenux es de código abierto y cada script se puede revisar en GitHub. Antes de ejecutar el comando de instalación, mira el código fuente. Haz lo mismo con cualquier otra herramienta de automatización.",
     "sourceLabel": "Ver el código fuente de ProxMenux",
     "cocLabel": "Código de conducta"
@@ -172,34 +172,34 @@
     "heading": "Por dónde seguir",
     "items": [
       {
-        "lead": "<strong>¿Nuevo en ProxMenux?</strong> ",
+        "lead": "<strong>¿Es tu primera vez con ProxMenux?</strong> ",
         "linkHref": "/docs/installation",
-        "linkLabel": "Instálalo con un solo comando",
+        "linkLabel": "Instálalo con un comando",
         "tailRich": " y ejecuta <code>menu</code>."
       },
       {
         "lead": "<strong>¿Acabas de instalar Proxmox?</strong> Empieza por el ",
         "linkHref": "/docs/post-install",
-        "linkLabel": "script Post-Install",
+        "linkLabel": "script de postinstalación",
         "tail": "."
       },
       {
         "lead": "<strong>¿Quieres un panel web?</strong> ",
         "linkHref": "/docs/monitor",
         "linkLabel": "ProxMenux Monitor",
-        "tail": " cubre lo que muestra, cómo está construido y cómo asegurarlo."
+        "tail": " tiene una documentación que explica qué muestra, cómo está construido y cómo protegerlo."
       },
       {
-        "lead": "<strong>¿Buscas un comando concreto?</strong> ",
+        "lead": "<strong>¿Buscas un comando concreto?</strong> La ",
         "linkHref": "/docs/help-info",
-        "linkLabel": "Referencia de comandos",
-        "tail": " es un catálogo curado organizado por tema, con botones de copia."
+        "linkLabel": "referencia de comandos",
+        "tail": " reúne una selección organizada por temas, con botones para copiar."
       },
       {
-        "lead": "<strong>¿Quieres guías más largas paso a paso?</strong> La ",
+        "lead": "<strong>¿Quieres guías más detalladas?</strong> La ",
         "linkHref": "/guides",
-        "linkLabel": "sección de Guías",
-        "tail": " cubre Coral TPU, passthrough de NVIDIA, Kodi en LXC y más."
+        "linkLabel": "sección de guías",
+        "tail": " trata Coral TPU, acceso directo a NVIDIA, Kodi en LXC y mucho más."
       }
     ]
   }

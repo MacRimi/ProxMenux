@@ -18,7 +18,7 @@
   },
   "twoProducts": {
     "heading": "Two products, one project",
-    "intro": "ProxMenux ships as two independent pieces sharing the same source tree. The installer deploys both — they live side by side on the host and don't depend on each other:",
+    "intro": "ProxMenux has two components in the same source tree. The installer deploys both on the host: Scripts provides the terminal interface, and Monitor provides the web dashboard:",
     "scripts": {
       "title": "ProxMenux Scripts",
       "body": "The original CLI/TUI you launch with <code>menu</code>. Nine functional areas covering post-install optimizations, VM and LXC creation, GPU and Coral TPU passthrough, disks, storage, network, security, utilities, plus a curated commands reference. Runs in any terminal — local, SSH or web."
@@ -113,7 +113,7 @@
       },
       {
         "title": "AI Assistant",
-        "description": "Optional rewrite of notifications in plain language. Six providers: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter, local Ollama. Twelve languages.",
+        "description": "Optional rewrite of notifications in plain language. Six providers: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter, local Ollama. Thirteen languages in the notification-language selector.",
         "icon": "Sparkles",
         "href": "/docs/monitor/ai-assistant"
       },
@@ -139,24 +139,24 @@
   },
   "installPaths": {
     "heading": "Install paths",
-    "intro": "The installer deploys Scripts and Monitor in one go. Scripts has two flavours — translation or lightweight — and the Monitor is installed as a standalone AppImage you enable from the menu later:",
+    "intro": "Both installers deploy Scripts and Monitor. Scripts uses pre-generated JSON catalogs in eight languages, without online translation. Choose the stable or beta channel; Monitor is packaged as an AppImage and runs from its extracted runtime:",
     "headerPath": "Install path",
     "headerBundles": "What it bundles",
     "headerWhen": "When you'd pick it",
     "rows": [
       {
-        "pathRich": "<strong>Scripts: Translation</strong>",
-        "bundles": "CLI/TUI + Python venv + googletrans (English, Spanish, French, German, Italian, Portuguese)",
-        "when": "Multi-language menus, non-English speakers"
+        "pathRich": "<strong>Scripts: stable</strong>",
+        "bundles": "CLI/TUI with pre-generated JSON translations in eight languages; no translation venv or online translation service.",
+        "when": "Normal use with the stable release channel."
       },
       {
-        "pathRich": "<strong>Scripts: Normal (lightweight)</strong>",
-        "bundles": "CLI/TUI English-only, smaller footprint, no Python venv",
-        "when": "Most users — Proxmox docs are English anyway"
+        "pathRich": "<strong>Scripts: beta</strong>",
+        "bundles": "The same multilingual interface, installed from the develop branch for testing upcoming changes.",
+        "when": "Early testing of new features, with a greater risk of bugs."
       },
       {
         "pathRich": "<strong>Monitor</strong>",
-        "bundles": "Self-contained AppImage on TCP 8008. Independent install — can be enabled from the Scripts menu, or run the AppImage directly.",
+        "bundles": "Self-contained AppImage with a web dashboard on TCP 8008. The installer extracts its runtime and manages the service; Monitor can be controlled from Settings.",
         "when": "When a web dashboard for the host is useful — phone, tablet, browser tab"
       }
     ],
@@ -187,7 +187,7 @@
         "lead": "<strong>Want a web dashboard?</strong> ",
         "linkHref": "/docs/monitor",
         "linkLabel": "ProxMenux Monitor",
-        "tail": " covers what it shows, how it's built and how to secure it."
+        "tail": " documentation explains what it shows, how it is built and how to secure it."
       },
       {
         "lead": "<strong>Looking for a specific command?</strong> ",
