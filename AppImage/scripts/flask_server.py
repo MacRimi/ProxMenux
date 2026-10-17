@@ -23193,9 +23193,11 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f"[ProxMenux] Disk temperature history init failed: {e}")
             try:
-                import managed_installs
-                managed_installs.detect_and_register()
-                print("[ProxMenux] Managed-installs registry initialised")
+                # A PBS host has no guests whose applications could be tracked.
+                if not is_pbs_host():
+                    import managed_installs
+                    managed_installs.detect_and_register()
+                    print("[ProxMenux] Managed-installs registry initialised")
             except Exception as e:
                 print(f"[ProxMenux] managed_installs init failed: {e}")
             # Docker inventories are derived runtime data and intentionally
@@ -23337,6 +23339,9 @@ if __name__ == '__main__':
     # the 24 h PollingCollector cycle. Runs in a daemon thread with
     # a delay so it doesn't block startup — notification_manager needs
     # a moment to bind channels before we emit.
+    # The guest services below read VMs, LXCs and the PVE node metrics,
+    # none of which exist on a Proxmox Backup Server.
+    pve_host = not is_pbs_host()
     try:
         def _startup_emit_pending_app_updates():
             time.sleep(15)  # let channels bind + first metrics collect
@@ -23346,16 +23351,18 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f"[ProxMenux] startup emit_all_pending_updates failed: {e}",
                       file=sys.stderr, flush=True)
-        threading.Thread(target=_startup_emit_pending_app_updates, daemon=True,
-                         name='app-updates-startup-emit').start()
+        if pve_host:
+            threading.Thread(target=_startup_emit_pending_app_updates, daemon=True,
+                             name='app-updates-startup-emit').start()
     except Exception as e:
         print(f"[ProxMenux] app-updates startup emitter failed to arm: {e}")
 
     # Prewarm only the Overview's default day range; other ranges are lazy.
     try:
-        metrics_thread = threading.Thread(target=_node_metrics_prewarmer_loop, daemon=True, name='node-metrics-prewarmer')
-        metrics_thread.start()
-        print("[ProxMenux] Node-metrics prewarmer started (day range, 90s interval)")
+        if pve_host:
+            metrics_thread = threading.Thread(target=_node_metrics_prewarmer_loop, daemon=True, name='node-metrics-prewarmer')
+            metrics_thread.start()
+            print("[ProxMenux] Node-metrics prewarmer started (day range, 90s interval)")
     except Exception as e:
         print(f"[ProxMenux] Node-metrics prewarmer failed to start: {e}")
 
@@ -23366,9 +23373,10 @@ if __name__ == '__main__':
     # after the tab has been closed for minutes. The React-side
     # prefetcher only ran while the page was open.
     try:
-        vm_modal_thread = threading.Thread(target=_vm_modal_prewarmer_loop, daemon=True, name='vm-modal-prewarmer')
-        vm_modal_thread.start()
-        print("[ProxMenux] VM-modal prewarmer started (one-shot warm-up; caches refreshed by event invalidation only)")
+        if pve_host:
+            vm_modal_thread = threading.Thread(target=_vm_modal_prewarmer_loop, daemon=True, name='vm-modal-prewarmer')
+            vm_modal_thread.start()
+            print("[ProxMenux] VM-modal prewarmer started (one-shot warm-up; caches refreshed by event invalidation only)")
     except Exception as e:
         print(f"[ProxMenux] VM-modal prewarmer failed to start: {e}")
 
@@ -23392,8 +23400,9 @@ if __name__ == '__main__':
     # identical (backup, restart, /usr/bin/update + custom command
     # chain) between manual and scheduled invocations.
     try:
-        scheduler_thread = threading.Thread(target=_scheduler_loop, daemon=True)
-        scheduler_thread.start()
+        if pve_host:
+            scheduler_thread = threading.Thread(target=_scheduler_loop, daemon=True)
+            scheduler_thread.start()
     except Exception as e:
         print(f"[ProxMenux] LXC update scheduler failed to start: {e}")
 

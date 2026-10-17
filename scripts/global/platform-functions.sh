@@ -8,8 +8,10 @@ pmx_is_pbs() {
     [[ "$(pmx_platform_field product)" == pbs ]]
 }
 
+# Only a host known to be PBS is refused: if the package list cannot be read,
+# the PVE scripts keep working as they did before PBS support.
 pmx_require_pve() {
-    if [[ "$(pmx_platform_field product)" != pve ]]; then
+    if pmx_is_pbs; then
         msg_error "$(translate 'This operation requires a Proxmox VE host. Use the PBS menu on Proxmox Backup Server.')"
         return 1
     fi

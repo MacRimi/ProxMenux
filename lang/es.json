@@ -8132,7 +8132,7 @@
   "Apply PBS package upgrade": "Aplicar la actualización de paquetes de PBS",
   "Apply the reviewed package upgrade now? Services may restart and packages listed for removal will be removed.": "¿Aplicar ahora la actualización de paquetes revisada? Los servicios podrían reiniciarse y se eliminarán los paquetes indicados para su eliminación.",
   "Command failed": "El comando ha fallado",
-  "PBS datastores": "Almacenes de datos de PBS",
+  "PBS datastores": "Datastores de PBS",
   "PBS package update": "Actualización de paquetes de PBS",
   "PBS package upgrade completed. Check whether a reboot is required before your next backup window.": "Actualización de paquetes de PBS completada. Comprueba si es necesario reiniciar antes del próximo período de copias de seguridad.",
   "PBS package upgrade failed. Review the APT output before retrying.": "La actualización de paquetes de PBS ha fallado. Revisa la salida de APT antes de volver a intentarlo.",
