@@ -191,13 +191,21 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
         config = instances.command('pct', 'config', str(vmid))
         desired = transaction.candidate_contract(record, operation, proposal)
         changes = transaction.external_changes(record, config)
-        transaction.preflight(record, desired, config)
-        msg_ok(translate('Container checked'))
         resource_changes = None
-        if operation == 'recreate' and not keep_backup:
+        if operation == 'recreate' and not keep_backup and not changes:
             import oci_resource_modify
             resource_changes = oci_resource_modify.changes(record, desired, config)
-        current = record['observed']['image'] if operation == 'update' or resource_changes else None
+        # CPU/RAM edits retain the installed image and all unrelated native
+        # settings. They do not implicitly update the application or depend
+        # on the registry and the narrower recreation profile.
+        if resource_changes:
+            msg_ok(translate('Container checked'))
+            import oci_operation_notice
+            with oci_operation_notice.operation([vmid], 'modify', application_name(record, vmid)):
+                return oci_resource_modify.apply(instances.ROOT, record, desired, config, resource_changes)
+        transaction.preflight(record, desired, config)
+        msg_ok(translate('Container checked'))
+        current = record['observed']['image'] if operation == 'update' else None
         check = lambda: work_backup.locate(
             instances.location(instances.ROOT, vmid).parent / 'transactions' / 'check', [vmid], record, vmid)
         if operation == 'recreate':
@@ -206,10 +214,6 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
         else:
             archive, digest = resolve_archive(desired, config, current, check)
         if archive is None:
-            if resource_changes:
-                import oci_operation_notice
-                with oci_operation_notice.operation([vmid], 'modify', application_name(record, vmid)):
-                    return oci_resource_modify.apply(instances.ROOT, record, desired, config, resource_changes)
             msg_ok(translate('The image is already up to date; nothing was changed.'))
             return
         file_storage = None

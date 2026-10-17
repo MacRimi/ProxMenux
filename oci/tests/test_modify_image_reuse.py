@@ -163,6 +163,19 @@ class ResourceModifyTests(unittest.TestCase):
         self.assertTrue(resources.expected_config(CONFIG, changed, self.params))
         self.assertFalse(resources.expected_config(CONFIG, changed.replace(b'A=one', b'A=foreign'), self.params))
 
+    def test_cpu_change_preserves_homepage_dns_timezone_and_cpu_priority(self):
+        extra = b'nameserver: 10.0.1.1\ntimezone: Europe/Madrid\ncpuunits: 100\n'
+        config = CONFIG + extra
+        self.file.write_bytes(config)
+        self.saved['observed'].update(config=config.decode(), config_sha256=resources.sha(config))
+        self.saved['deployment']['resources']['cpu_units'] = 100
+        self.candidate = copy.deepcopy(self.saved)
+        self.candidate['deployment']['resources']['cores'] = 3
+        instances.write(instances.location(self.root,115),self.saved)
+        resources.apply(self.root,self.saved,self.candidate,config,{'cores':'3'})
+        self.assertEqual(self.file.read_bytes(), config.replace(b'cores: 2',b'cores: 3'))
+        self.assertEqual(instances.read(self.root,115)['deployment']['resources']['cpu_units'],100)
+
     def test_a_concurrent_unrelated_change_is_not_overwritten_during_rollback(self):
         def observe(*args):
             self.file.write_bytes(self.file.read_bytes().replace(b'A=one', b'A=foreign'))
@@ -268,7 +281,7 @@ class CachedArchiveTests(unittest.TestCase):
 
 
 class UpdateRoutingTests(unittest.TestCase):
-    def run_update(self, new_image=False, resource_edit=True):
+    def run_update(self, new_image=False, resource_edit=True, reject_recreation=False):
         saved = record()
         candidate = copy.deepcopy(saved)
         candidate['deployment']['resources']['memory_mb'] = 768
@@ -281,7 +294,7 @@ class UpdateRoutingTests(unittest.TestCase):
                 patch.object(instances, 'command', return_value=CONFIG), \
                 patch.object(update.transaction, 'candidate_contract', return_value=candidate), \
                 patch.object(update.transaction, 'external_changes', return_value={}), \
-                patch.object(update.transaction, 'preflight'), \
+                patch.object(update.transaction, 'preflight', side_effect=ValueError('advanced Proxmox settings') if reject_recreation else None), \
                 patch.object(update, 'resolve_archive', return_value=(Path('/new.tar') if new_image or not resource_edit else None, NEW if new_image else DIGEST)) as resolve, \
                 patch.object(resources, 'apply') as apply_resources, \
                 patch.object(update.transaction, 'apply') as apply_image, \
@@ -291,14 +304,26 @@ class UpdateRoutingTests(unittest.TestCase):
 
     def test_unchanged_image_routes_cpu_ram_edits_to_the_existing_guest(self):
         resolve, native, image = self.run_update()
-        self.assertEqual(resolve.call_args.args[2]['manifest_digest'], DIGEST)
+        resolve.assert_not_called()
         native.assert_called_once()
         image.assert_not_called()
 
-    def test_a_new_image_still_uses_the_normal_verified_recreation(self):
-        _resolve, native, image = self.run_update(new_image=True)
+    def test_a_new_image_for_other_configuration_changes_uses_verified_recreation(self):
+        _resolve, native, image = self.run_update(new_image=True,resource_edit=False)
         native.assert_not_called()
         image.assert_called_once()
+
+    def test_cpu_edits_do_not_implicitly_upgrade_the_image(self):
+        resolve,native,image=self.run_update(new_image=True)
+        resolve.assert_not_called()
+        native.assert_called_once()
+        image.assert_not_called()
+
+    def test_homepage_resource_edit_does_not_run_the_recreation_preflight(self):
+        resolve,native,image=self.run_update(reject_recreation=True)
+        resolve.assert_not_called()
+        native.assert_called_once()
+        image.assert_not_called()
 
     def test_other_modifications_offer_the_recorded_archive_to_the_resolver(self):
         resolve, native, image = self.run_update(resource_edit=False)

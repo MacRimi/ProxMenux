@@ -14,6 +14,10 @@ CONFIG_DIR = Path('/etc/pve/lxc')
 
 def changes(record, candidate, config):
     """Return a narrow native edit, or None when the normal installer is needed."""
+    if (any(key in record for key in ('stack', 'stack_member', 'native_stack_intent'))
+            or record['deployment'].get('stack_managed')
+            or instances.identity(config) != record['installation_id']):
+        return None
     previous = transaction.with_default_healthcheck(copy.deepcopy(record))
     candidate = transaction.with_default_healthcheck(copy.deepcopy(candidate))
     old, new = previous['deployment'], candidate['deployment']
@@ -65,6 +69,8 @@ def expected_config(before, after, parameters):
 def apply(root, record, candidate, config, parameters):
     """The caller holds the instance lock and has checked image identity/preflight."""
     if changes(record, candidate, config) != parameters:
+        raise ValueError(translate('The instance changed while it was being edited; open Modify again'))
+    if transaction.external_changes(record, config):
         raise ValueError(translate('The instance changed while it was being edited; open Modify again'))
     vmid = record['vmid']
     directory = instances.location(root, vmid).parent / 'modifications' / uuid.uuid4().hex
