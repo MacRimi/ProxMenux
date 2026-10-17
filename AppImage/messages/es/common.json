@@ -6478,6 +6478,99 @@
     "readOnlyNotice": "La evaluación inspecciona la configuración y el estado del host. Puede escribir informes y logs; las comprobaciones del estado de arranque pueden montar temporalmente las particiones de sistema EFI."
   },
   "runtime": {
+    "consoleTui": {
+      "title": "PROXMENUX MONITOR",
+      "tabs": {
+        "node": "Nodo",
+        "cluster": "Cluster"
+      },
+      "panels": {
+        "cpu": "CPU",
+        "memory": "MEMORIA",
+        "network": "RED",
+        "disk": "DISCO",
+        "cluster": "CLUSTER",
+        "topCpu": "TOP CPU (núcleos host)",
+        "topCpuShort": "TOP CPU",
+        "topMemory": "TOP MEMORIA",
+        "nodes": "NODOS",
+        "guests": "INVITADOS"
+      },
+      "labels": {
+        "load": "load",
+        "threads": "hilos",
+        "temp": "temp",
+        "arc": "ARC",
+        "available": "disp.",
+        "zram": "ZRAM",
+        "swap": "swap",
+        "rx": "RX",
+        "tx": "TX",
+        "read": "L",
+        "write": "E",
+        "used": "usada",
+        "uptime": "up",
+        "hostCores": "núcleos host",
+        "quorumOk": "QUORUM OK",
+        "noQuorum": "SIN QUORUM",
+        "standalone": "INDEPENDIENTE",
+        "coverage": "cobertura",
+        "online": "online",
+        "offline": "offline",
+        "unknown": "desconocido",
+        "running": "activo",
+        "stopped": "detenido",
+        "sort": "orden",
+        "moreNodes": "+{count} nodos",
+        "moreGuests": "+{count} invitados",
+        "hostOther": "resto host",
+        "prev": "prev",
+        "peak": "pico",
+        "max": "max",
+        "window": "ventana {window} (w)"
+      },
+      "status": {
+        "data": "datos {age}",
+        "noData": "sin datos",
+        "stale": "hace {age}",
+        "starting": "Iniciando monitor...",
+        "waitingForData": "esperando datos",
+        "monitorUnavailable": "MONITOR NO DISPONIBLE",
+        "terminalTooSmall": "Terminal demasiado pequeña (80x24)"
+      },
+      "columns": {
+        "type": "TIPO",
+        "id": "ID",
+        "name": "NOMBRE",
+        "node": "NODO",
+        "status": "ESTADO",
+        "cpu": "CPU",
+        "mem": "MEM",
+        "root": "RAIZ",
+        "guests": "INVITADOS",
+        "up": "UP",
+        "cores": "NUCLEOS",
+        "uptime": "UPTIME",
+        "ha": "HA",
+        "tags": "ETIQUETAS",
+        "usedAssigned": "USADO/ASIGN",
+        "cpuPercent": "CPU%",
+        "vcpu": "vCPU",
+        "hostCores": "HOST",
+        "memUsed": "MEM USADA",
+        "load": "LOAD"
+      },
+      "footer": {
+        "quit": "q login",
+        "switch": "Tab cluster",
+        "switchNode": "Tab nodo",
+        "refresh": "r actualizar",
+        "glyphs": "a glifos",
+        "otherTty": "Ctrl+Alt+F2",
+        "sort": "c/m orden",
+        "window": "w 1m/5m"
+      }
+    },
     "notifications": {
       "templates": {
         "state_change": {
