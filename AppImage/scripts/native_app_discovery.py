@@ -17,6 +17,7 @@
 """Separate from catalog detection: callers must explicitly request a scan."""
 
 import copy
+from contextlib import contextmanager
 import fcntl
 import hashlib
 import json
@@ -25,6 +26,7 @@ from pathlib import Path
 import re
 import selectors
 import signal
+import stat
 import subprocess
 import threading
 import time
@@ -40,6 +42,7 @@ OCI_ROOT = Path('/usr/local/share/proxmenux/oci/instances')
 UPDATE_LOCK_ROOT = Path('/run/lock')
 _cache = {}
 _locks = {}
+_generations = {}
 _mutex = threading.Lock()
 _PATH = re.compile(r'/[A-Za-z0-9_.+/@-]{1,510}\Z')
 _NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.+@-]{0,63}\Z')
@@ -509,7 +512,13 @@ def _guard(vmid, deadline, run):
         raise ProbeError('guest_busy')
     update_lock = UPDATE_LOCK_ROOT / f'proxmenux-lxc-update-{vmid}.lock'
     try:
-        with update_lock.open('rb') as handle:
+        fd = os.open(update_lock, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(fd, 'rb') as handle:
+            info = os.fstat(handle.fileno())
+            if not stat.S_ISREG(info.st_mode):
+                raise ProbeError('lock_unavailable')
+            if info.st_size:
+                raise ProbeError('guest_busy')
             try:
                 fcntl.flock(handle, fcntl.LOCK_SH | fcntl.LOCK_NB)
             except BlockingIOError:
@@ -529,9 +538,45 @@ def _guard(vmid, deadline, run):
         raise ProbeError('guest_stopped' if status == 'status: stopped' else 'status_unknown')
 
 
+@contextmanager
+def _scan_reservation(vmid):
+    """Exclude cooperating updates/control tasks for this bounded scan only.
+
+    Keep an empty lock inode after first use, as the update runner does.
+    Never truncate a pending control-task reservation or unlink its inode.
+    """
+    path = UPDATE_LOCK_ROOT / f'proxmenux-lxc-update-{vmid}.lock'
+    fd = None
+    try:
+        fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600)
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise ProbeError('lock_unavailable')
+        try:
+            fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise ProbeError('guest_busy') from None
+        if os.fstat(fd).st_size:
+            raise ProbeError('guest_busy')
+        yield
+    except OSError:
+        raise ProbeError('lock_unavailable') from None
+    finally:
+        if fd is not None:
+            os.close(fd)
+
+
 def scan(vmid, run=bounded_run):
     deadline = time.monotonic() + TOTAL_SECONDS
     _guard(vmid, deadline, run)
+    with _scan_reservation(vmid):
+        result = _scan_metadata(vmid, deadline, run)
+        # External PVE lifecycle operations do not share our flock. Fail closed
+        # if the guest stopped, changed ownership or became locked meanwhile.
+        _guard(vmid, deadline, run)
+        return result
+
+
+def _scan_metadata(vmid, deadline, run):
     records, issues, consumed, processes, listeners, hestia_panels = [], [], 0, [], [], []
     for kind, script in (('S', SERVICE_SCRIPT), ('P', PROCESS_SCRIPT), ('L', PORT_SCRIPT)):
         try:
@@ -637,6 +682,7 @@ def cached(vmid):
 def mark_stale(vmid):
     """Lifecycle events retire freshness, never collect new guest metadata."""
     with _mutex:
+        _generations[int(vmid)] = _generations.get(int(vmid), 0) + 1
         if int(vmid) in _cache:
             _cache[int(vmid)]['stale'] = True
 
@@ -648,23 +694,28 @@ def discover(vmid):
     if not lock.acquire(blocking=False):
         return {**cached(vmid), 'status': 'busy', 'stale': True}
     try:
+        with _mutex:
+            generation = _generations.get(vmid, 0)
         try:
             result = scan(vmid)
         except ProbeError as exc:
             result = {**cached(vmid), 'status': 'error', 'issues': [str(exc)], 'stale': True}
             result.setdefault('scanned_at', time.time())
-            with _mutex:
-                _cache[vmid] = copy.deepcopy(result)
-            return result
-        previous = cached(vmid)
-        if result['status'] != 'complete' and previous['candidates']:
-            # Partial output cannot prove that previously seen apps disappeared.
-            ids = {item['discovery_id'] for item in result['candidates']}
-            result['candidates'].extend(item for item in previous['candidates']
-                                        if item['discovery_id'] not in ids)
-            result['candidates'] = result['candidates'][:MAX_CANDIDATES]
-            result['stale'] = True
+        # Comparing the generation and publishing must be atomic with lifecycle
+        # invalidation, including the first scan when no cache exists yet.
         with _mutex:
+            previous = copy.deepcopy(_cache.get(vmid))
+            if _generations.get(vmid, 0) != generation:
+                result = {**(previous or {'vmid': vmid, 'candidates': [],
+                                         'scanned_at': time.time()}),
+                          'status': 'error', 'issues': ['guest_changed'], 'stale': True}
+            elif result['status'] != 'complete' and previous and previous['candidates']:
+                # Partial output cannot prove that previously seen apps disappeared.
+                ids = {item['discovery_id'] for item in result['candidates']}
+                result['candidates'].extend(item for item in previous['candidates']
+                                            if item['discovery_id'] not in ids)
+                result['candidates'] = result['candidates'][:MAX_CANDIDATES]
+                result['stale'] = True
             _cache[vmid] = copy.deepcopy(result)
         return result
     finally:

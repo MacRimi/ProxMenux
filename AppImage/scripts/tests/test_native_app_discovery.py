@@ -42,6 +42,7 @@ class DiscoveryFixtures(unittest.TestCase):
             self.addCleanup(context.stop)
         native._cache.clear()
         native._locks.clear()
+        native._generations.clear()
         self.calls = []
 
     def runner(self, services=None, processes='END\n', footprint='FILE\n', manifest=None,
@@ -375,6 +376,142 @@ class DiscoveryFixtures(unittest.TestCase):
         with patch.object(native, 'scan', return_value={**complete, 'candidates': []}):
             self.assertEqual(native.discover(101)['candidates'], [])
 
+    def test_lifecycle_during_first_or_cached_scan_cannot_publish_fresh_result(self):
+        complete = native.scan(101, self.runner())
+        for prior in (None, complete):
+            with self.subTest(cached=prior is not None):
+                native._cache.clear()
+                if prior:
+                    native._cache[101] = copy.deepcopy(prior)
+                entered, release = threading.Event(), threading.Event()
+                results = []
+                def delayed(vmid):
+                    entered.set()
+                    if not release.wait(3):
+                        raise AssertionError('scan release timed out')
+                    return copy.deepcopy(complete)
+                with patch.object(native, 'scan', side_effect=delayed):
+                    worker = threading.Thread(target=lambda: results.append(native.discover(101)))
+                    worker.start()
+                    try:
+                        self.assertTrue(entered.wait(3))
+                        native.mark_stale(101)
+                    finally:
+                        release.set()
+                        worker.join(3)
+                self.assertFalse(worker.is_alive())
+                self.assertEqual(len(results), 1)
+                self.assertTrue(results[0]['stale'])
+                self.assertIn('guest_changed', results[0]['issues'])
+                self.assertEqual(results[0]['candidates'], prior['candidates'] if prior else [])
+                self.assertTrue(native.cached(101)['stale'])
+                with patch.object(native, 'scan', return_value=copy.deepcopy(complete)):
+                    self.assertFalse(native.discover(101)['stale'])
+        with patch.object(native, 'scan', side_effect=lambda vmid: (
+                native.mark_stale(102), copy.deepcopy(complete))[1]):
+            self.assertFalse(native.discover(101)['stale'])
+
+    def test_scan_excludes_later_updater_and_releases_lock_after_success_or_failure(self):
+        path = self.root / 'proxmenux-lxc-update-101.lock'
+        for fail in (False, True):
+            with self.subTest(fail=fail):
+                runner = self.runner()
+                probes = []
+                def checked(argv, deadline):
+                    if argv[1] == 'exec':
+                        attempt = subprocess.run(['flock', '-n', str(path), 'true'])
+                        self.assertEqual(attempt.returncode, 1)
+                        probes.append(argv)
+                        if fail:
+                            raise native.ProbeError('timeout')
+                    return runner(argv, deadline)
+                native.scan(101, checked)
+                self.assertTrue(probes)
+                self.assertEqual(subprocess.run(['flock', '-n', str(path), 'true']).returncode, 0)
+                self.assertEqual(path.read_bytes(), b'')
+
+    def test_pending_control_reservation_blocks_scan_without_touching_it(self):
+        path = self.root / 'proxmenux-lxc-update-101.lock'
+        original = b'{"task":"pending-control"}'
+        path.write_bytes(original)
+        with self.assertRaisesRegex(native.ProbeError, 'guest_busy'):
+            native.scan(101, self.runner())
+        self.assertFalse(any(call[1] == 'exec' for call in self.calls))
+        self.assertEqual(path.read_bytes(), original)
+
+    def test_guest_stop_during_scan_never_returns_complete(self):
+        runner = self.runner()
+        statuses = iter(['status: running', 'status: stopped'])
+        def stopped(argv, deadline):
+            return next(statuses) if argv[1] == 'status' else runner(argv, deadline)
+        with self.assertRaisesRegex(native.ProbeError, 'guest_stopped'):
+            native.scan(101, stopped)
+        self.assertTrue(all(call[1] == 'exec' for call in self.calls))
+
+    def test_scan_reservation_closes_race_after_guard_and_releases_after_exception(self):
+        import lxc_check_job
+        path = self.root / 'proxmenux-lxc-update-101.lock'
+        runner = self.runner()
+        handles = []
+        def starts_update(argv, deadline):
+            if argv[1] == 'status':
+                handles.append(lxc_check_job.acquire(101))
+            return runner(argv, deadline)
+        with patch.object(lxc_check_job, 'LOCK_DIR', self.root):
+            try:
+                with self.assertRaisesRegex(native.ProbeError, 'guest_busy'):
+                    native.scan(101, starts_update)
+                self.assertFalse(any(call[1] == 'exec' for call in self.calls))
+            finally:
+                for handle in handles:
+                    handle.close()
+            def crash(argv, deadline):
+                if argv[1] == 'exec':
+                    with self.assertRaises(BlockingIOError):
+                        lxc_check_job.acquire(101)
+                    # Another CT must remain available.
+                    lxc_check_job.acquire(102).close()
+                    raise RuntimeError('unexpected probe failure')
+                return runner(argv, deadline)
+            with self.assertRaisesRegex(RuntimeError, 'unexpected'):
+                native.scan(101, crash)
+            lxc_check_job.acquire(101).close()
+        self.assertEqual(path.read_bytes(), b'')
+
+    def test_failed_scan_releases_discovery_lock_and_keeps_prior_evidence(self):
+        complete = native.scan(101, self.runner())
+        native._cache[101] = copy.deepcopy(complete)
+        with patch.object(native, 'scan', side_effect=RuntimeError('unexpected')):
+            with self.assertRaises(RuntimeError):
+                native.discover(101)
+        self.assertFalse(native._locks[101].locked())
+        self.assertEqual(native.cached(101)['candidates'], complete['candidates'])
+
+    def test_invalid_lock_inode_and_unreadable_config_fail_before_any_probe(self):
+        import os
+        path = self.root / 'proxmenux-lxc-update-101.lock'
+        target = self.root / 'unrelated'
+        target.write_bytes(b'keep')
+        for kind in ('symlink', 'fifo', 'directory'):
+            with self.subTest(kind=kind):
+                if kind == 'symlink':
+                    path.symlink_to(target)
+                elif kind == 'fifo':
+                    os.mkfifo(path)
+                else:
+                    path.mkdir()
+                try:
+                    with self.assertRaisesRegex(native.ProbeError, 'lock_unavailable'):
+                        native.scan(101, self.runner())
+                    self.assertEqual(self.calls, [])
+                    self.assertEqual(target.read_bytes(), b'keep')
+                finally:
+                    path.rmdir() if kind == 'directory' else path.unlink()
+        with patch.object(Path, 'open', side_effect=PermissionError):
+            with self.assertRaisesRegex(native.ProbeError, 'config_unavailable'):
+                native.scan(101, self.runner())
+        self.assertEqual(self.calls, [])
+
     def test_same_ct_busy_and_different_ct_cache_isolation(self):
         lock = threading.Lock()
         lock.acquire()
@@ -546,7 +683,7 @@ class Routes(unittest.TestCase):
                         '_VM_APP_SUGGESTIONS_TTL': 300,
                         '_vm_cache_get': lambda cache, vmid, ttl: cache.get(vmid),
                         '_vm_cache_put': lambda cache, vmid, value: cache.update({vmid: value}),
-                        '_pvesh_cache': {}, '_vm_disk_cache': {}, '_vm_cache_invalidate': Mock(),
+                        '_pvesh_cache': {}, '_vm_disk_cache': {}, '_vm_schedule_cache': {}, '_vm_cache_invalidate': Mock(),
                         '_invalidate_lxc_ip': Mock(), '_schedule_started_guest_refresh': Mock(),
                         '_publish_guest_modal_cache_revision': Mock()}
         tree = ast.parse((SCRIPTS / 'flask_server.py').read_text())
