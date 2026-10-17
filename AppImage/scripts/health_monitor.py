@@ -154,36 +154,10 @@ def _hdd_in_standby(disk_name: str) -> bool:
     return parked
 
 
-def _lvm_device_args() -> list:
-    """`--devices` list scoping pvs/lvs/vgs off parked disks so they
-    aren't spun up by the LVM scan (issue #232). Empty when nothing is
-    parked, so the plain command runs unchanged. Each partition is
-    listed too — a whole-disk path alone doesn't cover a PV on a
-    partition."""
-    try:
-        r = subprocess.run(
-            ['lsblk', '-rno', 'NAME,TYPE,PKNAME'],
-            capture_output=True, text=True, timeout=5)
-        if r.returncode != 0:
-            return []
-        nodes = []
-        for line in r.stdout.strip().split('\n'):
-            parts = line.split()
-            if len(parts) < 2 or parts[1] not in ('disk', 'part'):
-                continue
-            name = parts[0]
-            base = name if parts[1] == 'disk' else (parts[2] if len(parts) > 2 else name)
-            nodes.append((name, base))
-        standby_bases = {
-            name for name, base in nodes
-            if name == base and _hdd_in_standby(name)
-        }
-        if not standby_bases:
-            return []
-        devices = [f'/dev/{name}' for name, base in nodes if base not in standby_bases]
-        return ['--devices', ','.join(devices)] if devices else []
-    except Exception:
-        return []
+def _lvm_device_args():
+    """None means no automatic scan; [] permits LVM's normal scan."""
+    from lvm_device_scope import lvm_device_args
+    return lvm_device_args(_hdd_in_standby)
 
 
 def _is_disk_removable(disk_name: str) -> bool:
@@ -2305,12 +2279,17 @@ class HealthMonitor:
 
             # `--devices` keeps lvs from scanning parked HDDs (issue #232).
             dev_args = _lvm_device_args()
+            if dev_args is None:
+                return {'status': 'INFO', 'skipped': True,
+                        'reason': 'Automatic LVM scan skipped by disk read policy or unavailable inventory'}
             result = subprocess.run(
                 ['lvs', *dev_args, '--noheadings', '--options', 'lv_name,vg_name,lv_attr'],
                 capture_output=True,
                 text=True,
                 timeout=3
             )
+            from lvm_device_scope import settle_scan_reads
+            settle_scan_reads()
             
             if result.returncode != 0:
                 return {'status': 'WARNING', 'reason': 'lvs command failed'}
@@ -2335,6 +2314,7 @@ class HealthMonitor:
                     text=True,
                     timeout=3
                 )
+                settle_scan_reads()
                 if vg_result.returncode == 0 and vg_result.stdout.strip():
                     return {'status': 'WARNING', 'reason': 'No active LVM volumes detected'}
                 else:
