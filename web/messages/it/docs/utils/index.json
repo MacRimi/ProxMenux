@@ -73,7 +73,7 @@
     "options": [
       {
         "title": "Installatore di utilità di sistema",
-        "description": "Selettore di 25 strumenti CLI scelti (htop, btop, iperf3, jq, tmux, ncdu, ...) con selezione personalizzata o gruppi predefiniti (base, sviluppo, compressione, multiplexer, analisi, rete). Usa il flusso standard con repository e comando di verifica.",
+        "description": "Selettore di 25 strumenti CLI scelti (htop, btop, iperf3, tmux, ...) con selezione personalizzata o gruppi predefiniti (base, sviluppo, compressione, multiplexer, analisi, rete). Usa il flusso standard con repository e comando di verifica.",
         "href": "/docs/utils/system-utils"
       },
       {

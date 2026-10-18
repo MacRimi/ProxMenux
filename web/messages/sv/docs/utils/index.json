@@ -73,7 +73,7 @@
     "options": [
       {
         "title": "Installationsprogram för systemverktyg",
-        "description": "Välj bland 25 utvalda CLI-verktyg (htop, btop, iperf3, jq, tmux, ncdu, ...) med eget urval eller fördefinierade grupper (grundläggande, utveckling, komprimering, multiplexrar, analys och nätverk). Använder standardflödet med paketförråd och verifieringskommando.",
+        "description": "Välj bland 25 utvalda CLI-verktyg (htop, btop, iperf3, tmux, ...) med eget urval eller fördefinierade grupper (grundläggande, utveckling, komprimering, multiplexrar, analys och nätverk). Använder standardflödet med paketförråd och verifieringskommando.",
         "href": "/docs/utils/system-utils"
       },
       {

@@ -150,7 +150,7 @@
         "title": "Vänta tills ISO-filen är klar",
         "img": "/iso-creator/end-uupdump-iso-creator.png",
         "caption": "Skapandet är klart: ISO-filen finns i Proxmox ISO-lagring",
-        "bodyRich": "Konsolen visar aria2-förloppet och sedan konverterarens utdata. Den färdiga ISO-filen flyttas till den valda utdatakatalogen. Om den ligger i konfigurerad Proxmox ISO-lagring kan du välja den via <strong>Create VM → System Windows → Install with ISO from UUP Dump</strong>."
+        "bodyRich": "Konsolen visar aria2-förloppet och sedan konverterarens utdata. Den färdiga ISO-filen flyttas till den valda utdatakatalogen. Om den ligger i konfigurerad Proxmox ISO-lagring kan du välja den via <strong>Skapa VM System Windows → Installera med personlig ISO</strong>."
       }
     ]
   },

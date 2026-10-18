@@ -150,7 +150,7 @@
         "title": "Espera a que termine la creación",
         "img": "/iso-creator/end-uupdump-iso-creator.png",
         "caption": "Creación terminada: la ISO está lista en el almacenamiento de ISOs de Proxmox",
-        "bodyRich": "La consola muestra el progreso de aria2 y después la salida del conversor. La ISO terminada se mueve al directorio de salida elegido. Si está en un almacenamiento de ISOs configurado en Proxmox, se puede seleccionar desde <strong>Crear VM con Windows → Instalar con ISO desde UUP Dump</strong>."
+        "bodyRich": "La consola muestra el progreso de aria2 y después la salida del conversor. La ISO terminada se mueve al directorio de salida elegido. Si está en un almacenamiento de ISOs configurado en Proxmox, se puede seleccionar desde <strong>Crear VM con Windows → Instalar con ISO personal</strong>."
       }
     ]
   },

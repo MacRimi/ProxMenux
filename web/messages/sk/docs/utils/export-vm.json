@@ -121,7 +121,7 @@
     "unsupportedHwTitle": "Export sa dokončí, ale VMware odmietne import: \"Unsupported hardware family\"",
     "unsupportedHwBody": "Niektoré verzie ESXi odmietajú deskriptory OVF, ktoré deklarujú neznámu rodinu hardvéru. Otvorte .ovf v textovom editore alebo najprv rozbaľte .ova. Nájdite <code>&lt;vssd:VirtualSystemType&gt;</code> a zmeňte hodnotu na takú, ktorú ESXi prijme, napríklad <code>vmx-13</code> pre ESXi 6.5+. Ako rýchle obídenie problému skúste VirtualBox, ktorý je menej prísny.",
     "nicTitle": "Importovaná VM používa inú sieťovú kartu alebo radič SCSI",
-    "nicBody": "OVF zachováva počet sieťových kariet, nie ich pôvodný model. Skontrolujte sieťové nastavenia importovanej VM v cieľovom hypervízore. Export deklaruje radič SCSI lsilogic pre kompatibilitu s VMware. Pri spätnom importe do Proxmoxu môžete vybrať <code>VirtIO SCSI</code>, ak má hosťovský systém vhodné ovládače.",
+    "nicBody": "OVF zachováva počet sieťových kariet, nie ich pôvodný model. Skontrolujte sieťové nastavenia importovanej VM v cieľovom hypervízore. Export deklaruje radič SCSI lsilogic pre kompatibilitu s VMware. Pri spätnom importe do Proxmoxu cez ProxMenux sa VM vytvorí s radičom LSI a kartami e1000; ak má hosťovský systém vhodné ovládače, prepnite potom na <code>VirtIO SCSI</code> a VirtIO.",
     "runningTitle": "VM bežala a odmietol som jej vypnutie: export sa zrušil",
     "runningBody": "Skript nemôže vytvoriť konzistentný obraz, keď sa na disky zapisuje. Nabudúce potvrďte vypnutie alebo najprv vypnite VM ručne (<code>qm shutdown $VMID</code>) a export spustite znova.",
     "slowTitle": "Konverzia disku je pomalá",

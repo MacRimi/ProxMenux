@@ -150,7 +150,7 @@
         "title": "Warten Sie, bis der Build fertig ist",
         "img": "/iso-creator/end-uupdump-iso-creator.png",
         "caption": "Build fertig - ISO ist bereit im Proxmox ISO-Speicher",
-        "bodyRich": "Die Konsole zeigt den aria2-Fortschritt und anschließend die Ausgabe des Konverters. Die fertige ISO wird in das gewählte Ausgabeverzeichnis verschoben. Liegt sie in einem konfigurierten Proxmox-ISO-Speicher, lässt sie sich unter <strong>Create VM → System Windows → Install with ISO from UUP Dump</strong> auswählen."
+        "bodyRich": "Die Konsole zeigt den aria2-Fortschritt und anschließend die Ausgabe des Konverters. Die fertige ISO wird in das gewählte Ausgabeverzeichnis verschoben. Liegt sie in einem konfigurierten Proxmox-ISO-Speicher, lässt sie sich unter <strong>Windows-VM erstellen → Mit persönlicher ISO installieren</strong> auswählen."
       }
     ]
   },

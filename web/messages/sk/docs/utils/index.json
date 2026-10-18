@@ -73,7 +73,7 @@
     "options": [
       {
         "title": "Inštalátor systémových nástrojov",
-        "description": "Výber 25 osvedčených nástrojov CLI (htop, btop, iperf3, jq, tmux, ncdu, ...) s vlastným výberom alebo preddefinovanými skupinami (základné, vývoj, kompresia, multiplexery, analýza, sieť). Používa štandardný postup s repozitárom a overovacím príkazom.",
+        "description": "Výber 25 osvedčených nástrojov CLI (htop, btop, iperf3, tmux, ...) s vlastným výberom alebo preddefinovanými skupinami (základné, vývoj, kompresia, multiplexery, analýza, sieť). Používa štandardný postup s repozitárom a overovacím príkazom.",
         "href": "/docs/utils/system-utils"
       },
       {

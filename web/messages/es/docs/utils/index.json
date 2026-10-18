@@ -73,7 +73,7 @@
     "options": [
       {
         "title": "Instalador de utilidades del sistema",
-        "description": "Selector de 25 herramientas CLI escogidas (htop, btop, iperf3, jq, tmux, ncdu, ...) con selección personalizada o grupos predefinidos (básico, desarrollo, compresión, multiplexores, análisis y red). Usa el flujo estándar de repositorio y comando de verificación.",
+        "description": "Selector de 25 herramientas CLI escogidas (htop, btop, iperf3, tmux, ...) con selección personalizada o grupos predefinidos (básico, desarrollo, compresión, multiplexores, análisis y red). Usa el flujo estándar de repositorio y comando de verificación.",
         "href": "/docs/utils/system-utils"
       },
       {

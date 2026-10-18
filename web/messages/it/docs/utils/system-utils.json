@@ -213,7 +213,7 @@
   "verify": {
     "heading": "Verifica installazioni",
     "intro": "L’opzione 9 è in sola lettura: esamina <code>PROXMENUX_UTILS</code> ed esegue <code>command -v</code> per ogni comando di verifica. L’output è simile al seguente:",
-    "code": "Total: 26\nAvailable: 18\nMissing: 8\n\n✓ axel - Download accelerator\n✓ aria2c - Multi-source downloader\n✓ btop - Modern resource monitor\n✗ cabextract - Extract CAB files\n✓ dos2unix - Convert DOS / Unix text files\n✗ genisoimage - Create ISO images\n✓ grc - Generic log colorizer\n...",
+    "code": "Total: 25\nAvailable: 18\nMissing: 8\n\n✓ axel - Download accelerator\n✓ aria2c - Multi-source downloader\n✓ btop - Modern resource monitor\n✗ cabextract - Extract CAB files\n✓ dos2unix - Convert DOS / Unix text files\n✗ genisoimage - Create ISO images\n✓ grc - Generic log colorizer\n...",
     "outro": "Utile prima di eseguire script che dipendono da questi strumenti (ad es. <code>uup_dump_iso_creator.sh</code> ha bisogno di <code>aria2c</code> + <code>cabextract</code> + <code>wimlib-imagex</code>). Se manca qualcosa, eseguire l'installazione del gruppo corrispondente o selezionare i pacchetti mancanti tramite selezione personalizzata."
   },
   "troubleshoot": {

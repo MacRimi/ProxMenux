@@ -73,7 +73,7 @@
     "options": [
       {
         "title": "System Utilities Installer",
-        "description": "Curated picker for 25 CLI tools (htop, btop, iperf3, jq, tmux, ncdu, ...) with custom selection or predefined groups (basic, dev, compression, multiplexers, analysis, network). Uses the canonical repo + verify-command flow.",
+        "description": "Curated picker for 25 CLI tools (htop, btop, iperf3, tmux, ...) with custom selection or predefined groups (basic, dev, compression, multiplexers, analysis, network). Uses the canonical repo + verify-command flow.",
         "href": "/docs/utils/system-utils"
       },
       {

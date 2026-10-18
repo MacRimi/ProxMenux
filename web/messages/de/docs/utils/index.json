@@ -73,7 +73,7 @@
     "options": [
       {
         "title": "Installationsprogramm für Systemdienstprogramme",
-        "description": "Auswahl von 25 bewährten CLI-Werkzeugen (htop, btop, iperf3, jq, tmux, ncdu, ...) mit individueller Auswahl oder vordefinierten Gruppen (Basis, Entwicklung, Komprimierung, Multiplexer, Analyse, Netzwerk). Verwendet den standardisierten Ablauf mit Repository und Prüfbefehl.",
+        "description": "Auswahl von 25 bewährten CLI-Werkzeugen (htop, btop, iperf3, tmux, ...) mit individueller Auswahl oder vordefinierten Gruppen (Basis, Entwicklung, Komprimierung, Multiplexer, Analyse, Netzwerk). Verwendet den standardisierten Ablauf mit Repository und Prüfbefehl.",
         "href": "/docs/utils/system-utils"
       },
       {

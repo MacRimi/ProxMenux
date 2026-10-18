@@ -213,7 +213,7 @@
   "verify": {
     "heading": "Verifiera installationer",
     "intro": "Alternativ 9 är skrivskyddat: det går igenom <code>PROXMENUX_UTILS</code> och kör <code>command -v</code> för varje verifieringskommando. Utdata ser ut så här:",
-    "code": "Total: 26\nAvailable: 18\nMissing: 8\n\n✓ axel - Download accelerator\n✓ aria2c - Multi-source downloader\n✓ btop - Modern resource monitor\n✗ cabextract - Extract CAB files\n✓ dos2unix - Convert DOS / Unix text files\n✗ genisoimage - Create ISO images\n✓ grc - Generic log colorizer\n...",
+    "code": "Total: 25\nAvailable: 18\nMissing: 8\n\n✓ axel - Download accelerator\n✓ aria2c - Multi-source downloader\n✓ btop - Modern resource monitor\n✗ cabextract - Extract CAB files\n✓ dos2unix - Convert DOS / Unix text files\n✗ genisoimage - Create ISO images\n✓ grc - Generic log colorizer\n...",
     "outro": "Användbart innan du kör skript som behöver verktygen. Till exempel kräver <code>uup_dump_iso_creator.sh</code> kommandona <code>aria2c</code> + <code>cabextract</code> + <code>wimlib-imagex</code>. Om något saknas kan du installera motsvarande grupp eller välja de saknade paketen själv."
   },
   "troubleshoot": {
