@@ -1,0 +1,175 @@
+{
+  "meta": {
+    "title": "Inštalácia NVIDIA na hostiteľa | Dokumentácia ProxMenux",
+    "description": "Inštalujte proprietárne ovládače NVIDIA na Proxmox VE cez ProxMenux: filtrovanie GPU, kontrola zostavenia a DKMS, perzistencia, voliteľný patch NVENC a aktualizácia knižníc LXC."
+  },
+  "header": {
+    "title": "Inštalovať ovládače NVIDIA na hostiteľa",
+    "description": "Inštalácia NVIDIA na hostiteľa Proxmox VE. Filtruje udržiavané vetvy podľa PCI ID GPU, kontroluje zostavenie, používa DKMS, spravuje nouveau a inštaluje perzistenciu. Môže aktualizovať knižnice LXC s prístupom k NVIDIA.",
+    "section": "Hardvér: grafické karty a Coral TPU"
+  },
+  "intro": {
+    "title": "Čo robí",
+    "body": "ProxMenux zistí GPU a ponúkne udržiavané vetvy NVIDIA, ktoré uvádzajú jeho PCI ID. Zablokuje <code>nouveau</code>, stiahne oficiálny inštalátor <code>.run</code>, používa DKMS, nainštaluje <code>nvidia-persistenced</code>, pravidlá udev a NVIDIA Container Toolkit a ponúkne voliteľný patch NVENC. Kontroly zostavenia overujú bežiace jadro; úspešná kompilácia nezaručuje, že bude fungovať každá aplikácia. Existujúcim LXC NVIDIA sa ponúkne aktualizácia knižníc používateľského priestoru so zodpovedajúcou verziou, okrem Arch."
+  },
+  "who": {
+    "heading": "Pre koho je toto?",
+    "body": "Pre GPU akcelerované video alebo výpočty v Plex, Jellyfin, Frigate, Immich či Stable Diffusion <strong>v LXC</strong> najprv nainštalujte NVIDIA na <em>hostiteľa</em> Proxmox. Priame priradenie do <strong>VM</strong> používa samostatný postup VFIO."
+  },
+  "prereqs": {
+    "title": "Skôr ako začnete",
+    "gpu": "<strong>GPU NVIDIA</strong> nainštalovaný v hostiteľovi. Zistí sa automaticky; táto voľba nespravuje AMD ani Intel.",
+    "gpuCheck": "lspci | grep -i nvidia",
+    "notVm": "GPU <strong>nesmie byť vyhradený pre VM cez VFIO</strong>. Inštalátor tento prípad odmietne, aby nenarušil priradenie.",
+    "internet": "Internetové pripojenie hostiteľa. Stiahne ovládač z <code>download.nvidia.com</code> a môže klonovať <code>nvidia-persistenced</code> a <code>nvidia-patch</code> z GitHubu.",
+    "space": "Vyhraďte miesto v <code>/opt/nvidia</code> pre <code>.run</code> a RAM na kompiláciu. Aktualizácia LXC mimo Arch overuje 1500 MiB voľného miesta a pri nižšej RAM môže žiadať dočasné zvýšenie na 2048 MiB; potom obnoví pôvodný limit. Počítajte s reštartom hostiteľa."
+  },
+  "vmWarn": {
+    "title": "GPU vyhradený pre VM? Tu sa zastavte",
+    "body": "Ak je zariadenie NVIDIA pripojené k <code>vfio-pci</code>, inštalátor skončí aj pri zastavenej VM. Vyhradenie neznamená aktívne používanie. Naplánujte návrat k ovládaču hostiteľa a odstráňte staré priradenia VM/VFIO pred reštartom a inštaláciou."
+  },
+  "running": {
+    "heading": "Spustenie inštalátora",
+    "body": "V ProxMenuxe otvorte <strong>Hardware Graphics → NVIDIA GPU Driver Installer</strong>. Ponuka závisí od prítomnosti aktívneho ovládača.",
+    "imageAlt": "Ponuka hardvéru so zvýrazneným inštalátorom NVIDIA"
+  },
+  "howRuns": {
+    "heading": "Ako skript funguje",
+    "body": "Zistí zariadenia, vyberie verziu a inštaluje. Samostatne potvrdené čistenie VFIO môže predchádzať prehľadu. Príprava repozitárov/hlavičiek a sťahovanie predchádzajú výmene ovládača; všetky zmeny nezačínajú až po jednom záverečnom potvrdení."
+  },
+  "walkthrough": {
+    "detect": {
+      "title": "Detekcia a prehľad GPU",
+      "body1": "Zobrazí grafické radiče NVIDIA, stav ovládača alebo <em>„Ovládač NVIDIA nie je nainštalovaný“</em> a LXC s nastaveným prístupom k NVIDIA s ich verziou ovládača.",
+      "body2": "Overte GPU a verzie hostiteľa/kontajnerov. Pri neočakávanom výbere zrušte v prehľade; predtým samostatne potvrdené čistenie VFIO už bolo vykonané.",
+      "imageAlt": "Prehľad pred inštaláciou: GPU, ovládač a LXC NVIDIA"
+    },
+    "version": {
+      "title": "Vyberte verziu ovládača",
+      "body1": "Filtruje verzie z <code>nvidia.com</code>, ktoré <strong>uvádzajú PCI ID GPU v tabuľke podporovaných čipov</strong>, a heuristicky vyraďuje beta/vývojové verzie. <em>&lt;verzia&gt; — Odporúčaná</em> uprednostní najnovšiu verziu nainštalovanej vetvy, potom Production Branch a napokon najvyššie podporované číslo verzie.",
+      "body2": "Ak je ovládač evidovaný s patchom keylase, výber sa obmedzí na tabuľku NVENC. <em>Preinštalovať / aktualizovať</em> naďalej obsahuje potvrdenia a výber patchu; overte konečný výsledok.",
+      "whyTitle": "Ako je validovaná kompatibilita jadra",
+      "whyBody": "Filtruje podľa udržiavaných vetiev a PCI ID, bez pevnej matice jadro/ovládač. Predbežné zostavenie skúša aktuálne jadro. Potvrdená chyba vráti výber verzie; nedostupný test môže len varovať a pokračovať. Konečná inštalácia a overenie funkčnosti sú naďalej potrebné.",
+      "imageAlt": "Výber vetiev podporujúcich GPU s odporúčanou verziou navrchu"
+    },
+    "uninstall": {
+      "title": "Odstránenie starého ovládača pri preinštalovaní",
+      "body": "Po stiahnutí a overení inštalátora odstráni predchádzajúci ovládač. Zastaví služby NVIDIA, odpojí moduly, odstráni záznamy DKMS a balíky <code>nvidia-*</code> / <code>libnvidia-*</code> / <code>cuda-*</code>. Platí aj pri potvrdenej preinštalácii rovnakej verzie."
+    },
+    "prepare": {
+      "title": "Pripravte systém",
+      "body": "Počas prípravy skript:",
+      "items": [
+        "Overí repozitáre pred odstránením alebo inštaláciou. Bez predplatného a iba s Enterprise žiada súhlas s no-subscription; odmietnutie zastaví inštaláciu.",
+        "Inštaluje <code>pve-headers-$(uname -r)</code> (alebo <code>proxmox-headers-$(uname -r)</code>), <code>build-essential</code> a <code>dkms</code>.",
+        "Vytvorí súbor spravovaný ProxMenuxom <code>/etc/modprobe.d/proxmenux-nouveau-blacklist.conf</code> s <code>blacklist nouveau</code> a <code>options nouveau modeset=0</code>. Zaznamená prípadný riadok pridaný do <code>blacklist.conf</code> a skúsi odpojiť nouveau.",
+        "Zapíše <code>nvidia</code> a <code>nvidia_uvm</code> do <code>/etc/modules-load.d/nvidia-vfio.conf</code>, aby sa moduly načítali pri štarte."
+      ]
+    },
+    "download": {
+      "title": "Stiahnite a spustite inštalátor NVIDIA",
+      "body": "Stiahne <code>NVIDIA-Linux-x86_64-&lt;version&gt;.run</code> do <code>/opt/nvidia</code> a overí veľkosť a spustiteľný typ. Ide o kontrolu formátu, nie kryptografického podpisu. Zaregistruje DKMS na zostavenie pri zmene jadra; zdrojový kód a jadro musia zostať kompatibilné.",
+      "imageAlt": "Priebeh sťahovania a zostavenia DKMS inštalátora NVIDIA"
+    },
+    "persist": {
+      "title": "Pretrvávajúce služby a udev pravidlá",
+      "body": "Nainštaluje <persistLink>nvidia-persistenced</persistLink> a zapíše <code>/etc/udev/rules.d/70-nvidia.rules</code> na vytvorenie <code>/dev/nvidia*</code> pri štarte. Pomáha predísť prístupu LXC ku GPU skôr, než existujú zariadenia."
+    },
+    "nvenc": {
+      "title": "Voliteľné: použiť patch NVENC",
+      "body": "Limity relácií NVENC závisia od GPU a ovládača. <patchLink>keylase/nvidia-patch</patchLink> môže odstrániť limit ovládača pre podporované verzie. Vyberte <strong>Áno</strong>, ak túto zmenu kódovania potrebujete a verzia je podporovaná. Nezrýchľuje dekódovanie ani neodstraňuje kapacitu hardvéru.",
+      "supportTitle": "Overenie podpory patchu",
+      "supportBody": "Overte presnú verziu v <patchTableLink>tabuľke patchov</patchTableLink>. Ak chýba, použite ovládač bez patchu alebo inú udržiavanú verziu podporujúcu GPU, jadro aj patch; nevyberajte iba podľa blízkosti v zozname."
+    },
+    "propagate": {
+      "title": "Voliteľné: aktualizovať knižnice NVIDIA v LXC",
+      "body1": "Ponúkne aktualizáciu knižníc ovládača v zistených LXC. Tie a modul hostiteľa <strong>musia mať zodpovedajúce verzie</strong>; inak môže <code>nvidia-smi</code> hlásiť „version mismatch“.",
+      "body2": "Debian / Ubuntu a ďalšie glibc kontajnery dostanú rozbalený inštalátor <code>.run</code> s <code>--no-kernel-modules --no-dkms --no-install-compat32-libs</code>; RAM sa môže dočasne zvýšiť na 2 GiB a potom obnoviť. <strong>Arch, Manjaro a EndeavourOS</strong> používajú <code>pacman -Syu nvidia-utils</code> z repozitárov bez pripnutia na verziu hostiteľa: overte výsledok. <strong>Alpine</strong> dostane rozbalený obsah <code>.run</code> cez <code>pct push</code>, inštaluje <code>gcompat</code> a <code>binutils</code> cez <code>apk</code> a vytvorí odkazy SONAME cez <code>readelf</code>. Overte funkčnosť; kompatibilná vrstva nezaručuje všetky knižnice na musl.",
+      "imageAlt": "Dialóg LXC NVIDIA a verzií na potvrdenie aktualizácie"
+    },
+    "reboot": {
+      "title": "Reštartovať",
+      "body": "Po inštalácii ovládača skript obnoví <code>initramfs</code> pre všetky jadrá; jeho posledný krok ponúkne reštart. <strong>Naplánujte tento reštart</strong> na overenie trvalej konfigurácie modulov a nouveau pri novom štarte, aj keď nový ovládač odpovedá už pred reštartom."
+    }
+  },
+  "reinstallUninstall": {
+    "heading": "Preinštalovať alebo odinštalovať",
+    "intro": "Ak je <code>nvidia</code> načítaný a <code>nvidia-smi</code> vráti verziu, zobrazí ponuku akcií. Takto zisťuje aktívny ovládač; súbory môžu byť nainštalované aj bez načítaného modulu.",
+    "imageAlt": "Ponuka NVIDIA s voľbami preinštalovať/aktualizovať ovládač alebo úplne odinštalovať ovládač",
+    "imageCaption": "Akčné menu sa zobrazí iba vtedy, keď je ovládač NVIDIA momentálne aktívny na hostiteľovi.",
+    "reinstallHeading": "Preinštalovať/aktualizovať",
+    "reinstallBody": "Vyberie verziu, pripraví repozitáre/hlavičky, stiahne a overí zostavenie pred výmenou ovládača. Umožní aktualizáciu v udržiavanej vetve alebo výber inej podporovanej. Potom znova ponúkne knižnice LXC a patch NVENC.",
+    "uninstallHeading": "Odinštalovať čo sa odstráni",
+    "uninstallIntro": "Po potvrdení Áno/Nie odstráni nasledujúce komponenty:",
+    "uninstallItems": [
+      "Zastaví a zakáže <code>nvidia-persistenced</code> a <code>nvidia-powerd</code>, skúsi odpojiť <code>nvidia_uvm</code>, <code>nvidia_drm</code>, <code>nvidia_modeset</code> a <code>nvidia</code> a potom spustí <code>nvidia-uninstall --silent</code> pre inštaláciu <code>.run</code>. Ovplyvní záťaže LXC závislé od NVIDIA; aktívni klienti môžu odpojenie blokovať.",
+      "Spustí <code>apt purge</code> pre <code>nvidia-*</code>, <code>libnvidia-*</code>, <code>cuda-*</code> a <code>libcudnn*</code>, odstráni zdrojový strom DKMS a priečinky <code>nvidia-persistenced</code> a <code>nvidia-patch</code> v <code>/opt/nvidia</code>.",
+      "Odstráni konfiguráciu načítavania modulov (<code>/etc/modules-load.d/nvidia-vfio.conf</code>) a položky blokovania ovládača nouveau spravované ProxMenux. Staré dvojriadkové súbory blokovania ProxMenux sa tiež migrujú a odstránia. Upravené alebo nesúvisiace súbory správcu sa zachovajú.",
+      "Odstráni <code>/etc/udev/rules.d/70-nvidia.rules</code> a nastaví stav NVENC na <em>removed</em> v registri spravovaných inštalácií; samostatný stavový súbor neexistuje.",
+      "Obnoví <code>initramfs</code> pre všetky jadrá, podľa konfigurácie zavádzania spustí <code>proxmox-boot-tool refresh</code> a vyzve na reštart."
+    ],
+    "lxcWarnTitle": "LXC s prístupom k NVIDIA",
+    "lxcWarnBody": "Odstránenie ovládača hostiteľa preruší aplikácie LXC používajúce NVIDIA, aj keď knižnice zostanú nainštalované. Naplánujte údržbu pre Frigate, Plex, Jellyfin, Ollama a ďalšie GPU aplikácie."
+  },
+  "updates": {
+    "heading": "Upozornenia na aktualizácie",
+    "body": "Ovládač NVIDIA sa sleduje v registri spravovaných inštalácií. Pri štarte a každých 24 hodín Monitor porovná verzie z <code>download.nvidia.com/XFree86/Linux-x86_64/</code> s verziou hlásenou cez <code>nvidia-smi</code>. Upozorní iba na nové vydania údržby nainštalovanej vetvy.",
+    "kindsHeading": "Správa o aktualizácii",
+    "kindsItems": [
+      "<strong>Údržba v rovnakej vetve.</strong> Napríklad nainštalované 580.65.06 → dostupné 580.105.08. Monitor nevyvodzuje kompatibilitu jadra medzi vetvami."
+    ],
+    "antiTitle": "Zabránenie opakovaným upozorneniam",
+    "antiBody": "Jedno upozornenie na novú verziu, nie pri každej dennej kontrole. Bez novšej verzie v nainštalovanej vetve neupozorňuje.",
+    "applyTitle": "Uplatňovanie aktualizácie",
+    "applyBody": "Monitor upozorní bez automatickej inštalácie. Otvorte inštalátor, vyberte <strong>Preinštalovať / aktualizovať</strong> a podporovanú verziu, potom dokončite zostavenie a inštaláciu. Naplánujte ponúknutý reštart a overte hostiteľa aj knižnice LXC."
+  },
+  "verify": {
+    "heading": "Overenie inštalácie",
+    "intro": "Po reštarte hostiteľa sa prihláste cez SSH alebo shell Proxmoxu a spustite:",
+    "after": "Overte GPU a očakávanú verziu. Procesy už môžu byť zobrazené, ak GPU používajú služby hostiteľa alebo automaticky spustené kontajnery. Potom overte perzistenciu:",
+    "imageAlt": "Výstup nvidia-smi na hostiteľa zobrazujúci detekované GPU a nainštalovanú verziu ovládača"
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "smiFailTitle": "nvidia-smi hlási „NVIDIA-SMI has failed“",
+    "smiFailBody": "Možné príčiny sú <strong>nouveau</strong>, <strong>chýbajúce alebo nesprávne hlavičky jadra</strong>, nekompatibilné zdroje ovládača alebo iné chyby načítania. Pozrite <code>lsmod | grep nouveau</code>, <code>dmesg | grep -i nvidia</code> a protokoly inštalátora/DKMS. Pri oprave nouveau overte <code>/etc/modprobe.d/proxmenux-nouveau-blacklist.conf</code> pred <code>update-initramfs -u -k all</code> a reštartom. Nie každá chyba zostavenia súvisí s hlavičkami.",
+    "lxcMissTitle": "LXC kontajner nemôže vidieť GPU po aktualizácii hostiteľa",
+    "lxcMissBody": "Pred preinštalovaním overte zariadenia hostiteľa, oprávnenia LXC a verziu knižníc. Nesúlad môže vyžadovať zodpovedajúci používateľský ovládač podporovaným postupom distribúcie; na glibc používa <code>--no-kernel-modules</code>. Knižnice neopravia chýbajúce pripojenia či oprávnenia.",
+    "logTitle": "Skontrolujte protokol inštalácie",
+    "logBody": "Inštalácia zapisuje do <code>/tmp/nvidia_install.log</code>. Pri chybe overte sťahovanie, zostavenie DKMS a služby. Priložte protokol k hláseniu na GitHube."
+  },
+  "manualSteps": {
+    "heading": "Hľadáte ručné kroky?",
+    "body": "Pozrite <guideLink>Príručky → NVIDIA</guideLink> pre ručné postupy vrátane <code>wget</code> a <code>./NVIDIA-Linux-...run</code>. Vysvetľuje komponenty, nie je však presným prepisom inštalátora. Udržiavaný postup ProxMenuxu poskytuje filtrovanie GPU, kontrolu zostavenia, aktualizácie LXC a overenie VFIO."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Pridať GPU do VM (passthrough)",
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "tail": " — priame priradenie NVIDIA do VM cez VFIO."
+      },
+      {
+        "label": "Pridať GPU do LXC",
+        "href": "/docs/hardware/igpu-acceleration-lxc",
+        "tail": " — zdieľanie NVIDIA s jedným alebo viacerými kontajnermi."
+      },
+      {
+        "label": "Zmeniť režim GPU (VM ↔ LXC)",
+        "href": "/docs/hardware/switch-gpu-mode",
+        "tail": " — prepínanie medzi priamym prístupom VM a zdieľaním LXC."
+      },
+      {
+        "label": "ProxMenux Monitor — karta Hardvér",
+        "href": "/docs/monitor/dashboard/hardware",
+        "tail": " — okno GPU, ktoré otvorí inštalátor a zobrazuje sledovanie v reálnom čase."
+      },
+      {
+        "label": "Príkazy priameho priradenia GPU",
+        "href": "/docs/help-info/gpu-commands",
+        "tail": " — prehľad príkazov lspci / dmesg / IOMMU / nvidia-smi."
+      }
+    ]
+  }
+}
