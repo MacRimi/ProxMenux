@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Body pripojenia LXC (hostiteľ ↔ kontajner) | Dokumentácia ProxMenux",
+    "description": "LXC Mount Manager sprístupní adresár hostiteľa jednému alebo viacerým kontajnerom LXC cez bind mount pomocou pct set -mpN. Rieši osobitosti oprávnení neprivilegovaných kontajnerov, opravuje pripojenia CIFS a NFS na hostiteľovi a vnútri kontajnera nič nemení.",
+    "ogTitle": "Body pripojenia LXC (hostiteľ ↔ kontajner) | Dokumentácia ProxMenux",
+    "ogDescription": "Sprístupnite adresáre hostiteľa kontajnerom LXC cez bind mount. Prakticky rieši mapovanie UID neprivilegovaných kontajnerov a opravuje prístup CIFS / NFS na hostiteľovi."
+  },
+  "header": {
+    "title": "Body pripojenia LXC (hostiteľ ↔ kontajner)",
+    "description": "Hlavný nástroj na zdieľanie priečinkov medzi hostiteľom Proxmox a kontajnermi LXC. Sprístupní ľubovoľný adresár hostiteľa jednému alebo viacerým kontajnerom cez bind mount pomocou natívnej syntaxe pct set -mpN. Oprávnenia neprivilegovaných kontajnerov rieši na hostiteľovi a vnútri kontajnera nič nemení.",
+    "section": "Úložisko a zdieľanie · LXC"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "Vyberte adresár na hostiteľovi Proxmox (lokálny priečinok, pripojené zdieľanie NAS alebo úložisko spravované Proxmoxom) a sprístupnite ho v kontajneri LXC na zvolenej ceste. Oprávnenia fungujú aj pre neprivilegované kontajnery bez zmien vnútri kontajnera."
+  },
+  "bigPicture": {
+    "heading": "Ako to funguje (veľký obraz)",
+    "intro": "Pri bind mounte Proxmox požiada jadro, aby adresár <code>X</code> hostiteľa zobrazovalo aj na ceste <code>Y</code> v kontajneri. Bez kopírovania, synchronizácie či siete: obe strany vidia súčasne <em>tie isté súbory</em>.",
+    "sourceLabel": "Hostiteľ Proxmox",
+    "sourceDetail": "/mnt/data\n(váš priečinok)",
+    "targetLabel": "Kontajner LXC",
+    "targetDetail": "/mnt/data\n(Ukazuje sa tu)",
+    "arrowLabel": "bind mount",
+    "outro": "Cesta hostiteľa vľavo a cesta kontajnera vpravo sa môžu líšiť. Napríklad <code>/mnt/nas-films</code> na hostiteľovi môže byť <code>/media/films</code> v kontajneri. Skript pridá položku do konfigurácie kontajnera (<code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>) s ďalším voľným indexom <code>mpN</code> a dvoma predvolenými nastaveniami:",
+    "items": [
+      "<code>shared=1</code> — označí dáta ako zdieľané, takže ich Proxmox nemigruje s CT. Tento príznak dáta nereplikuje: rovnaká cesta a dáta už musia byť dostupné na cieľovom uzle.",
+      "<code>backup=0</code> — vylúči bind mount zo záloh <code>vzdump</code>. Dáta sú na hostiteľovi a zálohujete ich samostatne."
+    ]
+  },
+  "perms": {
+    "heading": "Spracovanie oprávnení",
+    "intro": "Bind mounty sú v princípe jednoduché. Náročné sú oprávnenia: <strong>neprivilegovaný</strong> kontajner LXC posúva UID o <strong>+100000</strong>, takže súbor vytvorený používateľom 1000 v CT má na hostiteľovi UID 101000, ktoré nepatrí bežnému účtu hostiteľa. ProxMenux namiesto zjednocovania UID hostiteľa a kontajnerov upraví oprávnenia na strane <em>hostiteľa</em> podľa typu adresára:",
+    "headerType": "Typ adresára hostiteľa",
+    "headerAction": "Čo skript ponúka vykonať",
+    "localType": "Lokálny priečinok",
+    "localTypeSub": "napr. /mnt/data",
+    "localActionRich": "<code>chmod o+rwx</code> + <code>setfacl o::rwx</code> v adresári hostiteľa. Ponúka sa len vtedy, ak CT nie je privilegované a aktuálne práva sú nedostatočné.",
+    "cifsType": "Pripojené CIFS / SMB",
+    "cifsTypeSub": "napr. /mnt/pve/cifs-…",
+    "cifsActionRich": "Znova pripojiť s <code>uid=0, gid=0, file_mode=0777, dir_mode=0777</code>, takže CT (akékoľvek UID) môže čítať a zapisovať do zdieľania. <code>/etc/fstab</code> je aktualizovaný.",
+    "nfsType": "Pripojená NFS",
+    "nfsTypeSub": "napr. /mnt/pve/nfs-…",
+    "nfsActionRich": "<code>chmod 1777</code> a <code>setfacl o::rwx</code> na pripojení NFS. Neobídu squashing na serveri: ak nemôže zapisovať ani root hostiteľa, skript poradí upraviť export na serveri NFS.",
+    "privTitle": "Privilegované kontajnery nepotrebujú nič z toho.",
+    "privBody": "V privilegovanom CT je UID 0 rovnaké ako UID 0 hostiteľa. Používateľ root v CT preto môže priamo čítať a zapisovať do adresára hostiteľa bez úprav oprávnení. Skript to rozpozná a úpravu oprávnení úplne preskočí.",
+    "noCtTitle": "Skript nikdy nemení nič vnútri kontajnera",
+    "noCtBody": "Všetky úpravy oprávnení prebiehajú na <strong>súborovom systéme hostiteľa</strong>. Žiadne zmeny vlastníkov cez <code>pct exec</code>, vytváranie skupín v CT ani fstab v kontajneri. Pri neskoršom použití toho istého adresára v inom CT platia rovnaké oprávnenia automaticky, bez nastavovania každého kontajnera."
+  },
+  "writes": {
+    "heading": "Čo ProxMenux píše a čo nie",
+    "intro": "Bežný zmätok pri pripájaní väzby do neprivilegovaného CT: ľudia predpokladajú, že ProxMenux musí zapisovať <code>lxc.idmap</code> položky do <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>. <strong>Nie.</strong> K tomuto súboru je pripojený iba jeden riadok – samotný bind mount:",
+    "outro": "Výstupný riadok na konci <em>„Neprivilegovaný kontajner — posun UID: 100000“</em> je len informačný. Oznamuje predvolené neprivilegované mapovanie Proxmoxu (root v CT = UID 100000 hostiteľa). Skript toto mapovanie nijako nenastavuje.",
+    "twoWaysHeading": "Dva spôsoby riešenia oprávnení — a prečo si ProxMenux vyberá jeden",
+    "headerApproach": "Prístup",
+    "headerChanges": "Čo to mení",
+    "headerWhen": "Kedy je vhodný",
+    "hostType": "Oprávnenia na hostiteľovi",
+    "hostTypeSub": "(čo tento scenár robí)",
+    "hostChangesRich": "<code>chmod o+rwx</code> + <code>setfacl o::rwx</code> v adresári hostiteľa. CT zmapované UID (100000+) spadajú do \"ostatných\" vedra, takže otvorenie <em>ostatní</em> je dosť.",
+    "hostWhen": "Všeobecný prístup k zdieľanému priečinku z ľubovoľného CT. Viaceré CT používajú rovnaký adresár hostiteľa. Jednoduché a opakovane použiteľné.",
+    "idmapTypeRich": "<code>lxc.idmap</code>",
+    "idmapTypeSub": "(nepoužitý týmto skriptom)",
+    "idmapChangesRich": "Vlastné UID/GID mapovanie v <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> plus zodpovedajúce <code>/etc/subuid</code> + <code>/etc/subgid</code> položky na hostiteľa. CT sa musí reštartovať pri každej zmene.",
+    "idmapWhenRich": "Potrebujete <em>špecifickú</em> UID vnútri CT mapovať na <em>špecifickú</em> UID na hostiteľa (napr. <code>media:1000</code> v CT musí vlastniť súbory ako <code>media:1000</code> na hostiteľa, takže NFS nemá squash). Pevnejšie nastavenie, zvyčajne stojí za to len pre tento presný scenár.",
+    "idmapTipTitle": "Keď skutočne potrebujete lxc.idmap",
+    "idmapTipBody": "Ručné mapovanie použite, ak majú súbory z CT na hostiteľovi patriť konkrétnemu číselnému UID/GID, napríklad spoločnému vlastníkovi s používateľom hostiteľa. Neobíde NFS <code>all_squash</code>; anonymnú identitu a oprávnenia stále určuje server. Podľa potreby ručne pridajte položky <code>lxc.idmap</code>. Riadok bind mountu je od nich nezávislý."
+  },
+  "opening": {
+    "heading": "Otvorenie nástroja",
+    "body": "V hlavnej ponuke ProxMenux otvorte <strong>Storage &amp; Share Manager → Configure LXC Mount Points (Host ↔ Container)</strong>. Zobrazí sa podponuka s tromi možnosťami:",
+    "imageAlt": "Ponuka LXC Mount Manager — Pridať / Zobraziť / Odstrániť"
+  },
+  "addFlow": {
+    "heading": "Pridať pripojenie — celý postup",
+    "intro": "Technický pohľad, pre kedy chcete presne vedieť, čo robí každý dialóg:"
+  },
+  "sources": {
+    "heading": "Čo si môžete vybrať ako hostiteľský adresár",
+    "intro": "Výber adresára hostiteľa je najpodrobnejší v časti Úložisko a zdieľanie. Prehľadá štyri zdroje a ponúkne zoznam bez duplicít:",
+    "headerSource": "Zdroj",
+    "headerWhere": "Odkiaľ pochádza",
+    "headerLabel": "Štítok v menu",
+    "rows": [
+      {
+        "source": "Aktívne sieťové pripojenia",
+        "whereRich": "Aktuálne pripojené zdieľania CIFS / NFS načítané z <code>/proc/mounts</code>.",
+        "labelRich": "<code>NFS [used/size]</code> alebo <code>CIFS/SMB [used/size]</code>"
+      },
+      {
+        "source": "Neaktívne pripojenia fstab",
+        "whereRich": "Definované v <code>/etc/fstab</code>, ale momentálne nie sú namontované.",
+        "labelRich": "<code>fstab(off)-NFS</code> / <code>fstab(off)-CIFS/SMB</code>"
+      },
+      {
+        "source": "Miestne adresáre",
+        "whereRich": "Sub-adresáre pod <code>/mnt</code>, ktoré nie sú sieťové pripojenia.",
+        "labelRich": "<code>Local [size]</code>"
+      },
+      {
+        "source": "Úložiská Proxmox",
+        "whereRich": "Skladovacie cesty pod <code>/mnt/pve/*</code> (NFS / CIFS registrované cez <code>pvesm</code>).",
+        "labelRich": "<code>PVE-NFS</code> / <code>PVE-CIFS/SMB</code> / <code>Proxmox-Storage</code>"
+      },
+      {
+        "source": "Ručný záznam",
+        "where": "Čokoľvek iné, zadajte absolútnu cestu.",
+        "labelRich": "<em>Zadajte cestu manuálne</em>"
+      }
+    ],
+    "tipTitle": "Interné cesty Proxmox sú filtrované",
+    "tipBody": "Výber vynechá interné cesty Proxmoxu (<code>/mnt/pve/local</code>, <code>/mnt/pve/local-lvm</code>, <code>/mnt/pve/backup</code> atď.). Sú vyhradené pre interné použitie a nemali by sa sprístupňovať cez bind mount. Zobrazia sa iba úložiská pridané používateľom."
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent",
+    "privIntro": "Pre privilegovaný kontajner — najjednoduchší prípad bez úprav oprávnení:",
+    "unprivLocalIntro": "Pre neprivilegovaný kontajner s lokálnym adresárom hostiteľa — najprv otvorte oprávnenia na hostiteľovi:",
+    "unprivCifsIntro": "Pre neprivilegovaný kontajner s zdieľaním CIFS už namontovaný na hostiteľa:"
+  },
+  "view": {
+    "heading": "Zobraziť body pripojenia",
+    "body": "Vypíše všetky položky <code>mpN</code> všetkých kontajnerov na hostiteľovi Proxmox, zoskupené podľa ID CT. Zobrazí cestu hostiteľa → cestu kontajnera aj ďalšie voľby. Je to pohľad iba na čítanie, vhodný na kontrolu pred pridaním či odstránením."
+  },
+  "remove": {
+    "heading": "Odstrániť bod pripojenia",
+    "body": "Vyberte kontajner, položku <code>mpN</code> a potvrďte. Skript pomocou <code>pct set --delete mpN</code> odstráni položku z konfigurácie CT a ponúkne reštart bežiaceho kontajnera. Adresár hostiteľa a jeho obsah <strong>zostanú nedotknuté</strong>. Pripojenie môžete neskôr pridať znova alebo ten istý adresár pripojiť inému CT.",
+    "warnTitle": "Bežiace kontajnery potrebujú reštart, aby sa zmeny prejavili",
+    "warnBody": "Pridanie aj odstránenie bodov pripojenia sa zobrazí vo vnútri kontajnera až po reštarte. Skript ponúka jedno kliknutie <code>pct reboot</code> na konci každej operácie; môžete odmietnuť a reštartovať neskôr."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "noMountTitle": "Pripojenie sa zobrazuje v pct config, ale nie v kontajneri",
+    "noMountBody": "Bind mounty sa pripájajú pri spustení kontajnera. Ak ste pripojenie pridali počas behu CT, reštartujte ho pomocou <code>pct reboot &lt;ctid&gt;</code>. Ak stále chýba aj po reštarte, príkazom <code>pct config &lt;ctid&gt;</code> overte, že záznam existuje a cesta na hostiteľovi skutočne obsahuje adresár.",
+    "noWriteTitle": "Kontajner môže vidieť adresár, ale nemôže písať",
+    "noWriteBody": "Takmer vždy ide o oprávnenia. Pri neprivilegovanom CT zopakujte opravu oprávnení v skripte; ACL adresára hostiteľa mohol zmeniť rsync, obnova zálohy alebo ručné <code>chmod</code>. Pri CIFS overte voľby na hostiteľovi pomocou <code>findmnt /mnt/pve/cifs-…</code> a hodnoty <code>uid=</code> / <code>gid=</code> / <code>file_mode=</code>.",
+    "alreadyTitle": "\"Táto cesta sa už používa ako bod pripojenia v tomto kontajneri\"",
+    "alreadyBody": "Vybrali ste si rovnakú cestu kontajnera, ktorá je už pripojená k inému adresáru. Buď vyberiete inú cestu kontajnera, alebo najprv odstráňte existujúci bod pripojenia.",
+    "nfsTitle": "NFS prístup zablokovaný aj po použití hostiteľa fix",
+    "nfsIntro": "Váš NFS server je squashing koreň alebo všetky spojenia. Skript to môže detekovať (snaží sa napísať testovací súbor z hostiteľa) a zobrazí usmernenie na strane servera. Dve spoločné serverové opravy pre export:",
+    "nfsItems": [
+      "<code>no_root_squash</code> — privilegované CT môžu zapisovať priamo.",
+      "<code>all_squash,anonuid=65534,anongid=65534</code> pre neprivilegované CT."
+    ],
+    "nfsOutro": "Tieto zmeny sa dejú na serveri NFS (TrueNAS, Synology, váš vlastný export, ...), nie na serveri Proxmox.",
+    "fstabOffTitle": "Pripojenie \"fstab(off) \" položky nič nerobí",
+    "fstabOffBody": "Zoznam zobrazuje položky <code>fstab(off)-</code>, ak je sieťové pripojenie definované vo fstab, ale momentálne nie je pripojené. Skript umožní sprístupniť cestu cez bind mount, no adresár zostane prázdny, kým zdieľanie skutočne nepripojíte príkazom <code>mount &lt;path&gt;</code> na hostiteľovi. Najskôr pripojte zdieľanie a až potom ho sprístupnite CT."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/storage-share/host-local-shared",
+        "label": "Pridať zdieľaný adresár na hostiteľa",
+        "tailRich": " — Typický prvý krok: pripraviť <code>/mnt/shared</code> na hostiteľa pred viazaním-pripojiť ho do jedného alebo viacerých CT tu."
+      },
+      {
+        "href": "/docs/storage-share/host-nfs",
+        "label": "Pridať NFS zdieľanie ako Proxmox úložisko",
+        "extraHref": "/docs/storage-share/host-samba",
+        "extraLabel": "Pridať Samba zdieľanie ako Proxmox úložisko",
+        "joiner": " / ",
+        "tailRich": " — Najskôr zaregistrujte externé zdieľanie v Proxmoxe, potom priviažte jeho cestu <code>/mnt/pve/&lt;id&gt;</code> do CT tu."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-client",
+        "label": "NFS klient v LXC",
+        "extraHref": "/docs/storage-share/lxc-samba-client",
+        "extraLabel": "Samba klient v LXC",
+        "joiner": " / ",
+        "tail": " - Alternatíva, keď chcete CT sám pripojiť zdieľanie (vyžaduje privilegovaný kontajner)."
+      }
+    ]
+  }
+}

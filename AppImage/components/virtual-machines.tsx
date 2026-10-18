@@ -11,7 +11,7 @@ import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, PlusCircle, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Trash2, Check, X, AlertTriangle, AlertCircle, Search, Pin, Tag as TagIcon } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, PlusCircle, Loader2, Database, Shield, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Trash2, Check, X, AlertTriangle, AlertCircle, Search, Pin, Tag as TagIcon } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Checkbox } from "./ui/checkbox"
 import { Switch } from "./ui/switch"
@@ -23,6 +23,8 @@ import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { LxcAppPanel, ThemeAwareLogo, ociImageLabel } from "./lxc-app-panel"
+import { GuestBackupList } from "./guest-backup-list"
+import type { GuestBackup } from "../lib/guest-backup-archives"
 import { OciConsoleLogPanel } from "./oci-console-log-panel"
 import { AppUpdaterEditor, type AppUpdateMethod } from "./app-updater-editor"
 import { formatStorage } from "../lib/utils"
@@ -34,6 +36,23 @@ import { refreshCheckLxcUpdates, getLxcOsUpdateState, isLxcUpdateStale } from ".
 import DOMPurify from "dompurify"
 import { marked } from "marked"
 import { getCountFormKey, useI18n, useT } from "@/lib/i18n/provider"
+
+// A schedule record predating the structured reason code still contains one
+// of these exact diagnostic messages. Recognise only those known historical
+// values so an already-recorded safe skip localizes after an upgrade, while
+// unrelated freeform diagnostics remain verbatim for troubleshooting.
+const LEGACY_STOPPED_SCHEDULE_REASONS = new Set([
+  "container is stopped; scheduled update was skipped",
+  "container was stopped before scheduled update could begin",
+])
+
+const scheduleReasonCodeFromPersisted = (reasonCode: unknown, reason: unknown): string | null => {
+  if (typeof reasonCode === "string" && reasonCode) return reasonCode
+  if (typeof reason === "string" && LEGACY_STOPPED_SCHEDULE_REASONS.has(reason.toLowerCase())) {
+    return "stopped_container"
+  }
+  return null
+}
 
 // Sent by /api/vms only for LXC rows, only when the user has enabled
 // `lxc_updates_available` notifications. The Monitor populates this
@@ -382,16 +401,7 @@ interface BackupStorage {
   avail_human?: string
 }
 
-interface VMBackup {
-  volid: string
-  storage: string
-  type: string
-  size: number
-  size_human: string
-  timestamp: number
-  date: string
-  notes?: string
-}
+type VMBackup = GuestBackup
 
 // Sprint 13.29: shape returned by /api/lxc/<vmid>/mount-points. Lives
 // next to VMBackup since both are LXC-modal data structures.
@@ -953,7 +963,6 @@ export function VirtualMachines() {
   const [showBackupModal, setShowBackupModal] = useState(false)
   const [backupMode, setBackupMode] = useState<string>("snapshot")
   const [backupProtected, setBackupProtected] = useState(false)
-  const [backupNotification, setBackupNotification] = useState<string>("auto")
   const [backupNotes, setBackupNotes] = useState<string>("{{guestname}}")
   const [backupPbsChangeMode, setBackupPbsChangeMode] = useState<string>("default")
   
@@ -1598,7 +1607,7 @@ export function VirtualMachines() {
     }
   }
 
-  const fetchVmBackups = async (vmid: number) => {
+  const fetchVmBackups = async (vmid: number, force = false) => {
     // Stale-while-revalidate with a 6-hour freshness gate.
     //
     // 1. If we already have backups (bulk hydration or a previous
@@ -1615,15 +1624,16 @@ export function VirtualMachines() {
     // 3. Loading spinner only on the true first load.
     const GATE_MS = 6 * 60 * 60 * 1000
     const seed = vmModalCacheRef.current.backups.get(vmid)
-    const isStale = !seed || (Date.now() - seed.fetchedAt) > GATE_MS
+    const isStale = force || !seed || (Date.now() - seed.fetchedAt) > GATE_MS
     if (!seed) setLoadingBackups(true)
     try {
       const url = isStale
         ? `/api/vms/${vmid}/backups?fresh=1`
         : `/api/vms/${vmid}/backups`
-      const response = await fetchApi<{ backups?: VMBackup[] }>(url)
+      const response = await fetchApi<{ backups?: VMBackup[]; error?: string }>(url)
+      if (response.error || !Array.isArray(response.backups)) throw new Error(response.error || "Backup inventory unavailable")
       if (response.backups) {
-        setVmBackups(response.backups)
+        if (selectedVMRef.current?.vmid === vmid) setVmBackups(response.backups)
         vmModalCacheRef.current.backups.set(vmid, { backups: response.backups, fetchedAt: Date.now() })
       }
     } catch (error) {
@@ -1631,9 +1641,10 @@ export function VirtualMachines() {
       // Only clear the visible list if we had nothing to show
       // in the first place — a transient network hiccup must not
       // wipe the stale-but-useful view the user is looking at.
-      if (!seed) setVmBackups([])
+      if (!seed && selectedVMRef.current?.vmid === vmid) setVmBackups([])
+      if (force) throw error
     } finally {
-      if (!seed) setLoadingBackups(false)
+      if (!seed && selectedVMRef.current?.vmid === vmid) setLoadingBackups(false)
     }
   }
 
@@ -1686,7 +1697,6 @@ export function VirtualMachines() {
     // Reset modal to defaults
     setBackupMode("snapshot")
     setBackupProtected(false)
-    setBackupNotification("auto")
     setBackupNotes("{{guestname}}")
     setBackupPbsChangeMode("default")
     // Auto-select first storage if none selected
@@ -1710,7 +1720,6 @@ export function VirtualMachines() {
           mode: backupMode,
           compress: "zstd",
           protected: backupProtected,
-          notification: backupNotification,
           notes: backupNotes,
           pbs_change_detection: backupPbsChangeMode
         }),
@@ -1867,40 +1876,6 @@ export function VirtualMachines() {
     setTerminalOpen(true)
   }
   
-const handleDownloadLogs = async (vmid: number, vmName: string) => {
-    try {
-      const data = await fetchApi(`/api/vms/${vmid}/logs`)
-
-      // Format logs as plain text
-      let logText = `=== ${t("vmLxc.logs.header", { name: vmName, vmid })} ===\n`
-      logText += `${t("vmLxc.logs.node")}: ${data.node}\n`
-      logText += `${t("vmLxc.logs.type")}: ${data.type}\n`
-      logText += `${t("vmLxc.logs.totalLines")}: ${data.log_lines}\n`
-      logText += `${t("vmLxc.logs.generated")}: ${new Date().toISOString()}\n`
-      logText += `\n${"=".repeat(80)}\n\n`
-
-      if (data.logs && Array.isArray(data.logs)) {
-        data.logs.forEach((log: any) => {
-          if (typeof log === "object" && log.t) {
-            logText += `${log.t}\n`
-          } else if (typeof log === "string") {
-            logText += `${log}\n`
-          }
-        })
-      }
-
-      const blob = new Blob([logText], { type: "text/plain" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `${vmName}-${vmid}-logs.txt`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error("Error downloading logs:", error)
-    }
-  }
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "running":
@@ -2077,6 +2052,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const [scheduleLastRunAt, setScheduleLastRunAt] = useState<string | null>(null)
   const [scheduleLastRunStatus, setScheduleLastRunStatus] = useState<string | null>(null)
   const [scheduleLastRunReason, setScheduleLastRunReason] = useState<string | null>(null)
+  const [scheduleLastRunReasonCode, setScheduleLastRunReasonCode] = useState<string | null>(null)
   const [scheduleLastRunLog, setScheduleLastRunLog] = useState<string | null>(null)
   const [scheduleLastRunRebootRequired, setScheduleLastRunRebootRequired] = useState(false)
   const [scheduleLastRunRebootPackages, setScheduleLastRunRebootPackages] = useState<string[]>([])
@@ -2153,6 +2129,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     setScheduleLastRunAt(s.last_run_at || null)
     setScheduleLastRunStatus(s.last_run_status || null)
     setScheduleLastRunReason(s.last_run_reason || null)
+    setScheduleLastRunReasonCode(scheduleReasonCodeFromPersisted(s.last_run_reason_code, s.last_run_reason))
     setScheduleLastRunLog(s.last_run_log || null)
     setScheduleLastRunRebootRequired(s.last_run_reboot_required === true)
     setScheduleLastRunRebootPackages(Array.isArray(s.last_run_reboot_packages)
@@ -2430,6 +2407,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const renderScheduleRunDetails = (indented = false) => {
     if (!scheduleLastRunAt || !selectedVM) return null
     const spacing = indented ? "pl-4" : ""
+    const scheduleLastRunReasonText = scheduleLastRunReasonCode === "stopped_container"
+      ? selectedVM.status === "stopped"
+        ? t("vmLxc.scheduled.reasonStoppedContainer")
+        : t("vmLxc.scheduled.reasonStoppedContainerHistorical")
+      : scheduleLastRunReason
     return (
       <div className={`space-y-1.5 ${spacing}`}>
         <div className="text-xs text-muted-foreground">
@@ -2443,14 +2425,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   : scheduleLastRunStatus === "deferred"
                     ? t("vmLxc.scheduled.runDeferred")
                     : scheduleLastRunStatus === "skipped"
-                      ? t("vmLxc.scheduled.runSkipped")
+                      ? t("vmLxc.scheduled.runSkippedStatus")
                       : t("vmLxc.scheduled.runFailed")}
             </span></>
           )}
         </div>
-        {scheduleLastRunReason && (
+        {scheduleLastRunReasonText && (
           <div className="text-xs text-muted-foreground break-words">
-            {scheduleLastRunReason}
+            {scheduleLastRunReasonText}
           </div>
         )}
         {scheduleLastRunRebootRequired && (
@@ -2844,8 +2826,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     onClick?: () => void,
   ) => {
     if (!uc) return null
-    const stale = uc.stale === true || (!!uc.last_check && isLxcUpdateStale(uc))
-    if (!stale && (!uc.available || !uc.count || uc.count <= 0)) return null
+    if (!uc.available || !uc.count || uc.count <= 0) return null
     const last = uc.last_check
       ? new Date(uc.last_check).toLocaleString()
       : "—"
@@ -2893,8 +2874,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
             space — matters most on the LXC card row where uptime,
             IP and other chips compete for width. Count alone with
             the up-arrow reads unambiguously as "pending updates". */}
-        {stale ? <Clock className={iconSize} /> : <ArrowUpCircle className={iconSize} />}
-        {stale ? t("vmLxc.updates.checkStale") : uc.count}
+        <ArrowUpCircle className={iconSize} />
+        {uc.count}
         {/* Chevron only when the badge is wired up as a clickable
             shortcut — its absence on the dashboard card avoids
             implying interactivity where there isn't any (the whole
@@ -7436,7 +7417,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 )}
 
                 {/* Backups Tab */}
-                {activeModalTab === "backups" && (
+                {activeModalTab === "backups" && selectedVM && (
                   /* Backups tab layout: the Card fills the whole tab
                      body so the backup list can scroll inside its
                      bordered card instead of leaving empty space
@@ -7471,48 +7452,17 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         {/* Divider */}
                         <div className="border-t border-border/50 mb-4 shrink-0" />
 
-                        {/* Backup List */}
-                        <div className="flex items-center justify-between mb-3 shrink-0">
-                          <span className="text-xs text-muted-foreground">{t("vmLxc.backups.available")}</span>
-                          <Badge variant="secondary" className="text-xs h-5">{vmBackups.length}</Badge>
-                        </div>
-
-                        {loadingBackups ? (
-                          <div className="flex-1 flex items-center justify-center text-muted-foreground min-h-0">
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            <span className="text-sm">{t("vmLxc.backups.loading")}</span>
-                          </div>
-                        ) : vmBackups.length === 0 ? (
-                          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground min-h-0">
-                            <Archive className="h-12 w-12 mb-3 opacity-30" />
-                            <span className="text-sm">{t("vmLxc.backups.empty")}</span>
-                            <span className="text-xs mt-1">{t("vmLxc.backups.emptyHint")}</span>
-                          </div>
-                        ) : (
-                          <div className="space-y-2 flex-1 overflow-y-auto min-h-0 pr-1 -mr-1">
-                            {vmBackups.map((backup, index) => (
-                              <div 
-                                key={`backup-${backup.volid}-${index}`}
-                                className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                              >
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
-                                  <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                  <span className="text-sm text-foreground">{backup.date}</span>
-                                  <Badge 
-                                    variant="outline" 
-                                    className={`text-xs ml-auto flex-shrink-0 ${getStorageColor(backup.storage).bg} ${getStorageColor(backup.storage).text} ${getStorageColor(backup.storage).border}`}
-                                  >
-                                    {backup.storage}
-                                  </Badge>
-                                </div>
-                                <Badge variant="outline" className="font-mono ml-2 flex-shrink-0">
-                                  {backup.size_human}
-                                </Badge>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        <GuestBackupList
+                          key={selectedVM.vmid}
+                          vmid={selectedVM.vmid}
+                          backups={vmBackups}
+                          loading={loadingBackups}
+                          onRefresh={async () => {
+                            vmModalCacheRef.current.backups.delete(selectedVM.vmid)
+                            await fetchVmBackups(selectedVM.vmid, true)
+                          }}
+                          storageColor={getStorageColor}
+                        />
                       </CardContent>
                     </Card>
                   </div>
@@ -7863,25 +7813,6 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            
-            {/* Notification Row */}
-            <div className="space-y-2">
-                <Label className="text-sm flex items-center gap-1.5">
-                  <Bell className="h-3.5 w-3.5" />
-                  {t("vmLxc.backupModal.notification")}
-                </Label>
-              <Select value={backupNotification} onValueChange={setBackupNotification}>
-                <SelectTrigger className="bg-background">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="auto">{t("vmLxc.backupModal.useGlobalSettings")}</SelectItem>
-                  <SelectItem value="always">{t("vmLxc.backupModal.alwaysNotify")}</SelectItem>
-                  <SelectItem value="failure">{t("vmLxc.backupModal.notifyOnFailure")}</SelectItem>
-                  <SelectItem value="never">{t("vmLxc.backupModal.neverNotify")}</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             
             {/* Protected Checkbox */}

@@ -1,0 +1,185 @@
+{
+  "meta": {
+    "title": "Pridanie GPU do LXC | Dokumentácia ProxMenux",
+    "description": "Zdieľajte GPU Intel, AMD alebo NVIDIA s LXC. ProxMenux nastaví zariadenia, skupiny a knižnice podľa distribúcie; aplikácia musí akceleráciu podporovať a mať nastavenú."
+  },
+  "header": {
+    "title": "Pridať GPU do LXC",
+    "description": "Zdieľa prístup ku GPU s LXC cez zariadenia hostiteľa. Ovládač zostáva na hostiteľovi; aplikácie potrebujú kompatibilné knižnice a vlastné nastavenie.",
+    "section": "Hardvér: grafické karty a Coral TPU"
+  },
+  "intro": {
+    "title": "Čo robí",
+    "body": "Pridá položky <code>dev&lt;N&gt;</code> do <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> pre príslušné uzly <code>/dev/dri/*</code>, <code>/dev/kfd</code> alebo <code>/dev/nvidia*</code>. Spustí kontajner, nainštaluje balíky používateľského priestoru pre jeho distribúciu a pri Intel/AMD zosúladí skupiny <code>video</code> a <code>render</code>. Akcelerácia aplikácií naďalej vyžaduje kompatibilný hardvér, knižnice a nastavenie aplikácie."
+  },
+  "compare": {
+    "heading": "Zdieľanie LXC a priame priradenie VM",
+    "intro": "LXC zdieľa jadro a môže GPU <em>zdieľať</em> medzi hostiteľom a kontajnermi. Pri <vmLink>úplnom priradení VM</vmLink> je zariadenie vyhradené tejto VM a ovládač hostiteľa ho nemôže používať.",
+    "headerFeature": "Funkcia",
+    "headerLxc": "LXC (táto stránka)",
+    "headerVm": "VM",
+    "rows": [
+      {
+        "feature": "Hostiteľ stále používa GPU?",
+        "lxc": "Áno",
+        "vm": "Nie, exkluzívny pre VM"
+      },
+      {
+        "feature": "Viac kontajnerov zdieľajúcich jednu GPU?",
+        "lxc": "Áno",
+        "vm": "Nie"
+      },
+      {
+        "feature": "Vyžaduje IOMMU / VFIO na hostiteľovi?",
+        "lxc": "Nie",
+        "vm": "Áno"
+      },
+      {
+        "feature": "Požaduje sa reštart?",
+        "lxc": "Zvyčajne nie (len reštart CT)",
+        "vm": "Pri zmene ovládača alebo IOMMU hostiteľa; nie pri každom priradení"
+      },
+      {
+        "feature": "Hosťovské operačné systémy",
+        "lxc": "Iba Linux (LXC je iba Linux)",
+        "vm": "Podporovaný hosťovský OS s kompatibilným ovládačom GPU"
+      }
+    ]
+  },
+  "prereqs": {
+    "title": "Skôr ako začnete",
+    "gpu": "<strong>GPU na hostiteľovi</strong> Intel, AMD alebo NVIDIA zistená cez <code>lspci</code>.",
+    "gpuCheck": "lspci | grep -iE 'VGA|3D|Display'",
+    "vfio": "<strong>GPU nesmie byť priradená vfio-pci.</strong> Potrebuje natívny ovládač hostiteľa. Pri priradení VM skript ponúkne <switchLink>Zmeniť režim GPU</switchLink>.",
+    "nvidia": "<strong>Pre NVIDIA:</strong> najprv nainštalujte ovládač hostiteľa. Knižnice kontajnera musia zodpovedať jeho verzii. Pozrite <nvidiaLink>Inštalácia ovládačov NVIDIA na hostiteľa</nvidiaLink>.",
+    "nvidiaCheck": "nvidia-smi",
+    "container": "<strong>Existujúci LXC.</strong> Skript ho nevytvorí. Podporuje oba režimy; <strong>privilegovaný</strong> kontajner nie je vždy nutný. Zariadenia a číselné skupinové oprávnenia aplikácie musia súhlasiť."
+  },
+  "unpriv": {
+    "title": "Podporuje privilegované aj neprivilegované kontajnery",
+    "body": "Skript píše položky <code>dev&lt;N&gt;</code> na LXC config a, na neprivilegovaných kontajneroch, zarovná <code>video</code> a <code>render</code> GIDs medzi hostiteľom a kontajnerom, takže uzly zariadenia GPU sú dosiahnuteľné zvnútra bez toho, aby ste museli ručne editovať <code>lxc.idmap</code>."
+  },
+  "running": {
+    "heading": "Spustenie inštalátora",
+    "body": "Otvorte ProxMenux a vyberte <strong>Hardvér: GPU a Coral-TPU → Pridať GPU do LXC</strong>.",
+    "imageAlt": "Položka ponuky na pridanie GPU do LXC"
+  },
+  "howRuns": {
+    "heading": "Ako skript funguje",
+    "body": "Vyberte kontajner a rodiny GPU a prejdite kontrolami. Potom spracovanie zastaví a zmení kontajner bez ďalšieho konečného potvrdenia. Voliteľné čistenie VFIO má vlastné potvrdenie a môže skôr zmeniť hostiteľa."
+  },
+  "walkthrough": {
+    "heading": "Postup krok za krokom",
+    "detect": {
+      "title": "Zistenie GPU hostiteľa",
+      "body": "Hľadá radiče GPU cez <code>lspci</code>. Pre NVIDIA overí modul <code>nvidia</code> a <code>nvidia-smi</code>; zistená verzia určuje inštalátor <code>.run</code> pre kontajner.",
+      "tipTitle": "NVIDIA nie je pripravený?",
+      "tipBody": "Ak chýba modul alebo NVIDIA na hostiteľovi nefunguje, najprv použite <nvidiaLink>Inštalácia ovládačov NVIDIA na hostiteľa</nvidiaLink> a ovládač overte."
+    },
+    "pickCt": {
+      "title": "Vyberte kontajner LXC",
+      "body": "Zobrazí vhodné kontajnery LXC podľa ID a názvu; kontajnery OCI sú vylúčené a pre zariadenia používajú OCI manager Apps. Kontajner sa zastaví, ak beží, spustí sa na inštaláciu ovládačov a bežne sa vráti do pôvodného stavu (spustený/zastavený).",
+      "imageAlt": "Výber existujúceho kontajnera LXC"
+    },
+    "selectGpu": {
+      "title": "Vyberte rodiny GPU",
+      "body": "Zoznam vyberá rodiny výrobcov, nie izolované PCI zariadenie. Intel/AMD pridajú určené uzly DRI; NVIDIA dostupné zariadenia, prípadne z viacerých kariet. Jediná rodina sa vyberie automaticky. Overte výsledný zoznam najmä pri viacerých GPU.",
+      "imageAlt": "Zoznam zistených rodín GPU s názvom a PCI adresou"
+    },
+    "preflight": {
+      "title": "Predbežné kontroly",
+      "imageAlt": "Ponuka zmeny režimu GPU priradenej vfio-pci",
+      "intro": "Tri kontroly, ktoré vás môžu blokovať alebo presmerovať:",
+      "items": [
+        "<strong>Ochrana SR-IOV.</strong> Sprievodca blokuje VF alebo PF s aktívnymi VF. Je to obmedzenie širokého výberu zariadení, nie všeobecný zákaz v LXC. Tieto zariadenia nastavte samostatne.",
+        "<strong>Priradená vfio-pci.</strong> Natívny ovládač nevytvorí <code>/dev/dri/*</code> ani <code>/dev/nvidia*</code>. Ponúkne <switchLink>Zmeniť režim GPU</switchLink>; postupujte podľa pokynov na reštart a vráťte sa.",
+        "<strong>Už nastavená.</strong> Ak sú všetky zariadenia prítomné, skončí bez preinštalovania knižníc. Pokračuje iba s chýbajúcimi vybranými rodinami."
+      ]
+    },
+    "applyConfig": {
+      "title": "Použiť zmeny konfigurácie LXC",
+      "body1": "Zastaví kontajner, ak beží, a upraví <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>. Číslované položky <code>dev&lt;N&gt;</code> obsahujú GID hostiteľa pre <code>video</code> alebo <code>render</code>. Existujúce riadky bind <code>lxc.mount.entry</code> pre <code>/dev/dri</code> sa nahradia položkami <code>dev:</code>; overte výslednú konfiguráciu a oprávnenia.",
+      "body2": "Príklad po Intel + NVIDIA na tom istom kontajneri:"
+    },
+    "installDrivers": {
+      "title": "Spustiť kontajner a inštalovať ovládače vnútri",
+      "body": "Spustí kontajner a čaká približne 30 sekúnd na odpoveď <code>pct exec</code>. Zistí distribúciu cez <code>/etc/os-release</code> a nainštaluje príslušné balíky.",
+      "headerDistro": "Distribúcia",
+      "headerInt": "Intel / AMD",
+      "headerNvidia": "NVIDIA",
+      "rows": [
+        {
+          "distro": "Alpine",
+          "intel": "apk add mesa-va-gallium intel-media-driver libva-utils",
+          "nvidia": "apk add nvidia-utils"
+        },
+        {
+          "distro": "Arch / Manjaro",
+          "intel": "pacman -Sy intel-media-driver mesa libva-utils",
+          "nvidia": "pacman -Sy nvidia-utils"
+        }
+      ],
+      "debianDistro": "Debian / Ubuntu / ostatné",
+      "debianIntel": "apt-get install va-driver-all intel-opencl-icd vainfo",
+      "debianNvidia": "Rozbalí <code>.run</code> na hostiteľovi → <code>pct push</code> → inštaluje s <code>--no-kernel-modules --no-dkms</code>.",
+      "whyTitle": "Prečo na Debiane používa inštalátor NVIDIA .run",
+      "whyBody": "Balíky nemusia zodpovedať hostiteľovi. Knižnice <strong>musia zodpovedať načítanému modulu hostiteľa</strong> pre NVML a <code>nvidia-smi</code>. Debian/glibc použije uložený <code>.run</code> verzie hostiteľa, rozbalí a zabalí ho na hostiteľovi, prenesie cez <code>pct push</code> a inštaluje s <code>--no-kernel-modules --no-dkms</code>. Alpine a Arch používajú repozitáre; overte verzie."
+    },
+    "alignGids": {
+      "title": "Zarovnať GID a obnoviť stav",
+      "body1": "Pri Intel/AMD načíta GID hostiteľa pre <code>video</code> a <code>render</code>, pričom 44/104 použije iba ako náhradné hodnoty, a potom upraví <code>/etc/group</code> v kontajneri tak, aby zodpovedali; pri behu iba s NVIDIA sa tento krok preskočí. Položky ako <code>video:44</code> a <code>render:104</code> sú príklady, nie univerzálne ID. Overte členstvo aplikácie a účinné oprávnenia k zariadeniam.",
+      "body2": "Pri bežnom dokončení pôvodne zastavený kontajner znovu zastaví; pôvodne spustený nechá bežať. Pri chybe spustenia alebo inštalácie overte konečný stav a záznam."
+    }
+  },
+  "vendors": {
+    "heading": "Poznámky podľa výrobcu",
+    "intelHeading": "Intel iGPU",
+    "intelBody": "Akcelerácia médií Intel vrátane <em>Quick Sync</em> závisí od generácie GPU, kodekov a nastavenia aplikácie. Skript zdieľa tie z <code>/dev/dri/card0</code>, <code>card1</code>, <code>renderD128</code> a <code>renderD129</code>, ktoré existujú; iné čísla uzlov sa nepridajú. Hostiteľ ich už musí poskytovať prostredníctvom natívneho ovládača, napríklad <code>i915</code>.",
+    "amdHeading": "AMD",
+    "amdBody": "AMD používa DRI pre Mesa/VA-API. Ak hostiteľ poskytuje <code>/dev/kfd</code>, zdieľa aj ten. ROCm/OpenCL potrebuje podporovaný hardvér a kompatibilné knižnice; zdieľanie zariadenia nenainštaluje celé prostredie ROCm.",
+    "nvidiaHeading": "NVIDIA",
+    "nvidiaBody": "Zdieľa dostupné <code>/dev/nvidia*</code>. <strong>Zhoda verzií ovládača</strong> je dôležitá pre <code>nvidia-smi</code>. Debian/glibc používa <code>.run</code> verzie hostiteľa, Alpine/Arch repozitáre. Pod 2048 MiB nastavenej RAM ponúkne dočasné zvýšenie a potom obnoví hodnotu; vyžaduje aj 1500 MiB voľného disku.",
+    "updateTitle": "Po aktualizácii NVIDIA hostiteľa overte knižnice LXC",
+    "updateBody": "Staré knižnice môžu vyvolať chybu <code>nvidia-smi</code>. <nvidiaLink>Inštalátor NVIDIA hostiteľa</nvidiaLink> ponúka aktualizáciu kontajnerov. Opätovné pridanie môže pri existujúcich zariadeniach skončiť a aktualizáciu knižníc nezaručuje. Overte verzie a aktualizujte príslušné balíky alebo používateľský inštalátor."
+  },
+  "verification": {
+    "heading": "Overenie",
+    "body": "V kontajneri overte, či je GPU viditeľná a použiteľná."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "mismatchTitle": "nvidia-smi: Failed to initialize NVML: Driver/library version mismatch",
+    "mismatchBody": "Knižnice nezodpovedajú načítanému modulu. Overte verzie a aktualizujte používateľský priestor LXC. Uložený <code>.run</code> slúži pre Debian/glibc, no pridanie môže skončiť, ak už všetky zariadenia existujú.",
+    "denyTitle": "Povolenie zamietnuté na /dev/dri/renderD128 vnútri kontajnera",
+    "denyBody": "Overte zariadenie a číselné oprávnenia <code>render</code>, potom členstvo používateľa v <code>render</code>. Ak je príkaz dostupný, pridajte ho do <code>render</code> cez <code>usermod -aG render &lt;user&gt;</code>; zástupný text nahraďte skutočným účtom. Reštartujte reláciu. Zmena privilégií nie je všeobecná oprava.",
+    "vainfoTitle": "vainfo hovorí: VA-API verzia 1.xx; nepodarilo sa inicializovať",
+    "vainfoBody": "Overte prístup a ovládač VA-API. Názvy balíkov závisia od distribúcie: napríklad <code>intel-media-driver</code> pre podporované novšie Intel GPU, <code>i965-va-driver</code> pre staršie a <code>mesa-va-drivers</code> pre AMD. Samotná správa nepotvrdzuje chýbajúci balík.",
+    "logTitle": "Záznam inštalácie",
+    "logBody": "Každé spustenie zapisuje <code>/tmp/add_gpu_lxc.log</code> na hostiteľovi. Priložte záznam k žiadosti o pomoc."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Nainštalovať ovládače NVIDIA (host)",
+        "href": "/docs/hardware/nvidia-host",
+        "tail": " — pred zdieľaním NVIDIA nainštalujte ovládač hostiteľa."
+      },
+      {
+        "label": "Pridať GPU do VM (passthrough)",
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "tail": " — alternatíva na vyhradenie GPU jednej VM."
+      },
+      {
+        "label": "Zmeniť režim GPU (VM ↔ LXC)",
+        "href": "/docs/hardware/switch-gpu-mode",
+        "tail": " — prepnutie GPU medzi zdieľaním LXC a priradením VM."
+      },
+      {
+        "label": "GPU Prenosové príkazy",
+        "href": "/docs/help-info/gpu-commands",
+        "tail": " — stručný prehľad súvisiacich príkazov shellu."
+      }
+    ]
+  }
+}

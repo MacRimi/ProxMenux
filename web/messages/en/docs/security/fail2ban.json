@@ -91,7 +91,7 @@
   },
   "hardening": {
     "heading": "SSH hardening: MaxAuthTries",
-    "intro": "Lynis control <strong>SSH-7408</strong> recommends <code>MaxAuthTries 3</code> in <code>sshd_config</code>. With Fail2Ban's <code>maxretry = 2</code> on the SSH jail, a malicious client never reaches three attempts anyway — but the explicit setting satisfies the audit and adds defence in depth (e.g. if Fail2Ban is stopped for maintenance).",
+    "intro": "Lynis control <strong>SSH-7408</strong> recommends <code>MaxAuthTries 3</code> in <code>sshd_config</code>. The SSH jail uses <code>maxretry = 2</code> to trigger a ban after repeated failures, while MaxAuthTries limits attempts within a connection. The explicit SSH setting adds defence in depth, including when Fail2Ban is stopped for maintenance.",
     "installerIntro": "The installer:",
     "items": [
       "Reads the current <code>MaxAuthTries</code> value (or defaults to 6 if absent).",
@@ -125,7 +125,7 @@
   "troubleshoot": {
     "heading": "Troubleshooting",
     "neverBansTitle": "Fail2Ban runs but never bans anything",
-    "neverBansBody": "Check the auth log files actually receive entries: <code>tail -f /var/log/ssh-auth.log</code> and try a wrong-password SSH attempt from a different machine. If the log stays empty, the logger service is not running: <code>systemctl status ssh-auth-logger.service</code>. If it's active but the log is empty, check that the journald drop-in took effect: <code>journalctl --dump-catalog | head</code> — events at <em>info</em> level should be visible.",
+    "neverBansBody": "Check that <code>tail -f /var/log/ssh-auth.log</code> receives an entry after a wrong-password SSH attempt from another machine. If it stays empty, inspect <code>systemctl status ssh-auth-logger.service</code>. If the logger is active, inspect recent SSH events with <code>journalctl -u ssh.service -n 50 --no-pager -p info</code> and check whether the journald drop-in permits the <em>info</em> level.",
     "monitorEmptyTitle": "ProxMenux Monitor jail has no entries even after failed logins",
     "monitorEmptyBody": "The <code>[proxmenux]</code> jail reads <code>/var/log/proxmenux-auth.log</code>, which is written by the ProxMenux Monitor Flask app — not by a journald logger. If you don't run the Monitor, the file stays empty and the jail never fires. That's expected; the jail config is harmless. If you do run the Monitor and the log is empty, check the Flask logging config.",
     "selfBanTitle": "I banned myself",

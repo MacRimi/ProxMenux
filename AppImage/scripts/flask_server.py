@@ -90,11 +90,16 @@ from flask_terminal_routes import (  # noqa: E402
 from flask_health_routes import health_bp  # noqa: E402
 from flask_auth_routes import auth_bp  # noqa: E402
 from flask_proxmenux_routes import proxmenux_bp  # noqa: E402
+from flask_pbs_routes import pbs_bp  # noqa: E402
+from flask_monitor_links_routes import monitor_links_bp  # noqa: E402
+from pbs_manager import get_platform, is_pbs_host  # noqa: E402
 from flask_security_routes import security_bp  # noqa: E402
 from flask_notification_routes import notification_bp  # noqa: E402
 from flask_oci_routes import oci_bp  # noqa: E402
 from flask_audit_routes import audit_bp  # noqa: E402
 from flask_vm_backup_routes import vm_backup_bp  # noqa: E402
+from guest_backup_archives import (BackupArchiveError, delete_guest_backups,
+                                   guest_backup_deletion_status)  # noqa: E402
 from notification_manager import notification_manager, resolve_notification_hostname  # noqa: E402
 import post_install_versions  # noqa: E402  — Sprint 12A: detect post-install function updates
 from jwt_middleware import require_auth, require_auth_or_ticket, require_admin_scope  # noqa: E402
@@ -193,6 +198,8 @@ post_install_versions.scan_at_startup()
 app.register_blueprint(auth_bp)
 app.register_blueprint(health_bp)
 app.register_blueprint(proxmenux_bp)
+app.register_blueprint(pbs_bp)
+app.register_blueprint(monitor_links_bp)
 app.register_blueprint(security_bp)
 app.register_blueprint(notification_bp)
 app.register_blueprint(oci_bp)
@@ -2271,6 +2278,8 @@ def _handle_guest_lifecycle(vmid: str, vm_type: str, action: str) -> None:
     # or stops; drop the cached IP so the next /api/vms poll re-reads
     # it via `lxc-info`. QEMU guests do not touch this cache.
     if guest_type == 'lxc':
+        import native_app_discovery
+        native_app_discovery.mark_stale(guest_id)
         _invalidate_lxc_ip(guest_id)
     if action in ('start', 'reboot'):
         if guest_type == 'lxc':
@@ -3474,6 +3483,8 @@ def get_coral_info():
 def get_proxmox_version():
     """Get Proxmox version if available. Cached for 6 hours."""
     global _system_info_cache
+    if is_pbs_host():
+        return get_platform().get('version')
     
     now = time.time()
     if _system_info_cache['proxmox_version'] is not None and \
@@ -4186,13 +4197,17 @@ def get_system_disks():
         pass
     
     try:
-        # 4. Check LVM physical volumes. `--devices` (added when a disk
-        # is parked) keeps pvs from scanning — and waking — standby HDDs.
+        # 4. Check LVM physical volumes. `--devices` keeps pvs off the disks
+        # that are excluded, idle or asleep.
+        dev_args = _lvm_device_args()
         result = subprocess.run(
-            ['pvs', *_lvm_device_args(), '--noheadings', '-o', 'pv_name,vg_name'],
+            ['pvs', *dev_args, '--noheadings', '-o', 'pv_name,vg_name'],
             capture_output=True, text=True, timeout=5
-        )
-        if result.returncode == 0:
+        ) if dev_args is not None else None
+        if result is not None:
+            from lvm_device_scope import settle_scan_reads
+            settle_scan_reads()
+        if result is not None and result.returncode == 0:
             for line in result.stdout.strip().split('\n'):
                 if line.strip():
                     parts = line.split()
@@ -4534,6 +4549,8 @@ def get_storage_info():
                         disk_info['used'] = round(partition_usage.used / (1024**3), 1)
                         disk_info['available'] = round(partition_usage.free / (1024**3), 1)
                         disk_info['usage_percent'] = round(partition_usage.percent, 1)
+                        disk_info['total_bytes'] = partition_usage.total
+                        disk_info['used_bytes'] = partition_usage.used
                         
                 except PermissionError:
                     continue
@@ -5002,42 +5019,10 @@ def _hdd_in_standby(disk_name: str) -> bool:
     return parked
 
 
-def _lvm_device_args() -> list:
-    """Build the `--devices` argument that keeps an LVM tool (pvs/lvs/
-    vgs) off parked disks.
-
-    LVM tools scan every block device by default, which spins up a
-    standby HDD (issue #232). When any rotational disk is asleep, hand
-    LVM an explicit list of every block node EXCEPT those belonging to a
-    parked disk, so it never opens the sleeping drives. Each partition
-    must be listed too — `--devices /dev/sda` alone does not cover a PV
-    on /dev/sda3. Returns [] when nothing is parked, so hosts without
-    standby disks keep the plain pvs/lvs/vgs call unchanged.
-    """
-    try:
-        r = subprocess.run(
-            ['lsblk', '-rno', 'NAME,TYPE,PKNAME'],
-            capture_output=True, text=True, timeout=5)
-        if r.returncode != 0:
-            return []
-        nodes = []
-        for line in r.stdout.strip().split('\n'):
-            parts = line.split()
-            if len(parts) < 2 or parts[1] not in ('disk', 'part'):
-                continue
-            name = parts[0]
-            base = name if parts[1] == 'disk' else (parts[2] if len(parts) > 2 else name)
-            nodes.append((name, base))
-        standby_bases = {
-            name for name, base in nodes
-            if name == base and _hdd_in_standby(name)
-        }
-        if not standby_bases:
-            return []
-        devices = [f'/dev/{name}' for name, base in nodes if base not in standby_bases]
-        return ['--devices', ','.join(devices)] if devices else []
-    except (subprocess.SubprocessError, OSError):
-        return []
+def _lvm_device_args():
+    """None means no automatic scan; [] permits LVM's normal scan."""
+    from lvm_device_scope import lvm_device_args
+    return lvm_device_args(_hdd_in_standby)
 
 
 def get_smart_data(disk_name):
@@ -9863,6 +9848,7 @@ def api_system():
             'cpu_cores': cpu_cores,
             'cpu_threads': cpu_threads,
             'proxmox_version': proxmox_version,
+            'platform': get_platform(),
             'kernel_version': kernel_version,
             'available_updates': available_updates
         })
@@ -12234,6 +12220,17 @@ def _get_node_metrics_payload(timeframe, max_age=_NODE_METRICS_TTL):
         lock.release()
 
 
+def _node_rrd_command(local_node, timeframe, cf=None):
+    """Node RRD query; Proxmox Backup Server keeps the same fields under its own API."""
+    if is_pbs_host():
+        return ['proxmox-backup-debug', 'api', 'get', '/nodes/localhost/rrd',
+                '--timeframe', timeframe, '--cf', cf or 'AVERAGE', '--output-format', 'json']
+    command = ['pvesh', 'get', f'/nodes/{local_node}/rrddata', '--timeframe', timeframe]
+    if cf:
+        command += ['--cf', cf]
+    return command + ['--output-format', 'json']
+
+
 def _compute_node_metrics_payload(timeframe: str) -> dict:
     """Fetch and shape one node RRD snapshot within a bounded query budget."""
     valid_timeframes = ('hour', 'day', 'week', 'month', 'year')
@@ -12257,8 +12254,7 @@ def _compute_node_metrics_payload(timeframe: str) -> dict:
 
     try:
         rrd_result = subprocess.run(
-            ['pvesh', 'get', f'/nodes/{local_node}/rrddata',
-             '--timeframe', timeframe, '--output-format', 'json'],
+            _node_rrd_command(local_node, timeframe),
             capture_output=True, text=True, timeout=_NODE_METRICS_TIMEOUT,
         )
     except subprocess.TimeoutExpired:
@@ -12352,9 +12348,7 @@ def _compute_node_metrics_payload(timeframe: str) -> dict:
             return None
         try:
             extra = subprocess.run(
-                ['pvesh', 'get', f'/nodes/{local_node}/rrddata',
-                 '--timeframe', timeframe, '--cf', cf,
-                 '--output-format', 'json'],
+                _node_rrd_command(local_node, timeframe, cf),
                 capture_output=True, text=True, timeout=remaining,
             )
             if extra.returncode == 0 and extra.stdout:
@@ -13103,7 +13097,6 @@ def api_create_backup(vmid):
         mode = data.get('mode', 'snapshot')  # snapshot, suspend, stop
         compress = data.get('compress', 'zstd')  # none, lzo, gzip, zstd
         protected = data.get('protected', False)  # True/False
-        notification = data.get('notification', 'auto')  # always, failure, never, auto
         notes = data.get('notes', '')  # Backup notes/description
         pbs_change_detection = data.get('pbs_change_detection', None)  # default, legacy, data (for PBS + LXC)
         
@@ -13303,6 +13296,32 @@ def api_create_backup(vmid):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/vms/<int:vmid>/backups/delete', methods=['POST'])
+@require_admin_scope
+def api_delete_vm_backups(vmid):
+    """Delete an explicitly confirmed selection, revalidated by Proxmox."""
+    try:
+        return jsonify(delete_guest_backups(vmid, request.get_json(silent=True)))
+    except BackupArchiveError as error:
+        return jsonify({'error': str(error)}), error.code
+    finally:
+        # Native deletion may have started even if the pvesh response was lost.
+        _vm_cache_invalidate(vmid, _vm_backups_cache)
+
+
+@app.route('/api/vms/<int:vmid>/backups/delete-status', methods=['GET'])
+@require_admin_scope
+def api_vm_backup_deletion_status(vmid):
+    """Only poll deletion tasks started here for this guest."""
+    try:
+        result = guest_backup_deletion_status(vmid, request.args.get('task'))
+        if result['status'] != 'pending':
+            _vm_cache_invalidate(vmid, _vm_backups_cache)
+        return jsonify(result)
+    except BackupArchiveError as error:
+        return jsonify({'error': str(error)}), error.code
+
+
 @app.route('/api/vms/<int:vmid>/backups', methods=['GET'])
 @require_auth
 def api_vm_backups(vmid):
@@ -13383,6 +13402,7 @@ def api_vm_backups(vmid):
                             'timestamp': ctime,
                             'date': datetime.fromtimestamp(ctime).strftime('%Y-%m-%d %H:%M') if ctime else '',
                             'notes': item.get('notes', ''),
+                            'protected': item.get('protected', False) not in (False, 0, '0', '', None),
                         })
                 except Exception:
                     pass
@@ -13595,6 +13615,19 @@ def get_task_log(upid):
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+def _installed_proxmenux_version():
+    """Installed ProxMenux version; a beta install keeps beta_version.txt."""
+    for name in ('beta_version.txt', 'version.txt'):
+        try:
+            with open(f'/usr/local/share/proxmenux/{name}') as fh:
+                version = fh.read().strip()
+            if version:
+                return version
+        except OSError:
+            continue
+    return ''
+
+
 @app.route('/api/health', methods=['GET'])
 @require_auth
 def api_health():
@@ -13602,7 +13635,7 @@ def api_health():
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'version': '1.2.2'
+        'version': _installed_proxmenux_version()
     })
 
 # ─── User-configurable health thresholds ─────────────────────────────────────
@@ -14081,6 +14114,20 @@ def api_vm_apps_suggestions(vmid):
         return jsonify(payload)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps/native-discovery', methods=['GET', 'POST'])
+@require_auth
+def api_vm_apps_native_discovery(vmid):
+    """Only the Find applications button requests POST. GET never probes."""
+    import native_app_discovery
+    import lxc_apps
+    result = (native_app_discovery.discover(vmid) if request.method == 'POST'
+              else native_app_discovery.cached(vmid))
+    suggestions = _vm_cache_get(_vm_app_suggestions_cache, vmid, _VM_APP_SUGGESTIONS_TTL) or {}
+    sidecar = lxc_apps.load_sidecar(vmid) or {}
+    return jsonify(native_app_discovery.filter_candidates(
+        result, suggestions, sidecar.get('apps') or []))
 
 
 @app.route('/api/vms/<int:vmid>/apps/adguard-setup', methods=['GET'])
@@ -15014,11 +15061,11 @@ def api_prometheus():
             disk_name = disk.get('name', 'unknown')
             metrics.append(f'# HELP proxmox_disk_total_bytes Total disk space in bytes')
             metrics.append(f'# TYPE proxmox_disk_total_bytes gauge')
-            metrics.append(f'proxmox_disk_total_bytes{{node="{node}",disk="{disk_name}"}} {disk.get("total", 0)} {timestamp}')
+            metrics.append(f'proxmox_disk_total_bytes{{node="{node}",disk="{disk_name}"}} {disk.get("total_bytes", 0)} {timestamp}')
             
             metrics.append(f'# HELP proxmox_disk_used_bytes Used disk space in bytes')
             metrics.append(f'# TYPE proxmox_disk_used_bytes gauge')
-            metrics.append(f'proxmox_disk_used_bytes{{node="{node}",disk="{disk_name}"}} {disk.get("used", 0)} {timestamp}')
+            metrics.append(f'proxmox_disk_used_bytes{{node="{node}",disk="{disk_name}"}} {disk.get("used_bytes", 0)} {timestamp}')
             
             metrics.append(f'# HELP proxmox_disk_usage_percent Disk usage percentage')
             metrics.append(f'# TYPE proxmox_disk_usage_percent gauge')
@@ -22245,6 +22292,7 @@ def api_proxmenux_self_update_status():
 # so scheduled and manual applies cannot overlap.
 
 _APPLY_UPDATES_SCRIPT = _LXC_APPLY_UPDATES_SCRIPT
+_SCHEDULED_STOPPED_EXIT = 9
 _DOCKER_ENGINE_INTEGRATED_COMMAND = (
     'python3 /usr/local/share/proxmenux/monitor-app/usr/bin/'
     'update_docker_engine.py --vmid "$VMID"'
@@ -22284,6 +22332,23 @@ def _append_lxc_update_log(path: str | None, text: str) -> None:
             stream.write(text)
     except OSError as exc:
         print(f'[ProxMenux] scheduler: could not append update log: {exc}', flush=True)
+
+
+def _scheduled_runner_reported_stopped(result, log_path: str | None, marker: str) -> bool:
+    """Return true only for the scheduler's own pre-start stopped marker."""
+    if result.returncode != _SCHEDULED_STOPPED_EXIT or not marker:
+        return False
+    if log_path:
+        try:
+            with open(log_path, 'rb') as stream:
+                stream.seek(0, os.SEEK_END)
+                stream.seek(max(0, stream.tell() - 4096))
+                output = stream.read().decode('utf-8', errors='replace')
+        except OSError:
+            return False
+    else:
+        output = (result.stdout or '') + (result.stderr or '')
+    return marker in output
 
 
 def _prune_lxc_update_logs(vmid: int) -> None:
@@ -22679,8 +22744,10 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
     requested_targets = _normalise_schedule_targets(sched)
     targets = list(requested_targets)
     before = _lxc_update_snapshot(vmid)
+    requested_target = sched.get("target") or "both"
     deferred_targets: list[str] = []
     reasons: list[str] = []
+    reason_code: str | None = None
     reboot_required: bool | None = None
     reboot_packages: list[str] = []
     reboot_check_error: str | None = None
@@ -22732,6 +22799,7 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
             'status': status,
             'target': actual_target,
             'reason': reason,
+            'reason_code': reason_code,
             'run_id': run_id,
             'requested_targets': requested_targets,
             'executed_targets': list(executed),
@@ -22743,10 +22811,23 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
             'finalization': finalization,
         }
 
-    requested_target = sched.get("target") or "both"
+    if not originally_running:
+        reason_code = 'stopped_container'
+        reasons.append('container is stopped; scheduled update was skipped')
+        return finish('skipped', requested_target, [])
+
     if requested_targets == ['oci_image']:
         # A container installed by OCI manager Apps is updated by replacing
         # its image, through the same flow as the OCI menu, unattended.
+        # OCI updates have their own runner rather than apply_updates.sh.
+        # Check once more immediately before handing control to it: a user
+        # may have intentionally stopped the CT after the scheduler's first
+        # observation, and the OCI transaction can start a replacement CT
+        # while validating its new image.
+        if _fast_guest_status(vmid, 'lxc') != 'running':
+            reason_code = 'stopped_container'
+            reasons.append('container was stopped before scheduled update could begin')
+            return finish('skipped', 'oci_image', [])
         command = ['bash', '/usr/local/share/proxmenux/scripts/oci/oci_manager_apps.sh',
                    'manage', str(vmid), '--action', 'update', '--unattended']
         storage = (sched.get('backup_storage') or '').strip()
@@ -22887,6 +22968,9 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
             target = "both" if has_os_target and has_app_targets else ("os" if has_os_target else "app")
     env = dict(os.environ)
     env["VMID"] = str(vmid)
+    env["EXECUTION_MODE"] = "scheduled"
+    scheduled_stopped_marker = f"PROXMENUX_SCHEDULED_STOPPED:{run_id}"
+    env["SCHEDULED_STOPPED_MARKER"] = scheduled_stopped_marker
     env["TARGET"] = target
     env["BACKUP"] = "1" if sched.get("backup") else "0"
     env["BACKUP_STORAGE"] = sched.get("backup_storage") or ""
@@ -22952,6 +23036,10 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
                 text=True,
                 timeout=60 * 60,
             )
+        if _scheduled_runner_reported_stopped(r, log_path, scheduled_stopped_marker):
+            reason_code = 'stopped_container'
+            reasons.append('container was stopped before scheduled update could begin')
+            return finish('skipped', target, [])
         reboot_required, reboot_packages, reboot_check_error = (
             _inspect_lxc_reboot_requirement(
                 vmid,
@@ -23027,12 +23115,14 @@ def _scheduler_loop():
                     status = outcome.get('status') or 'failure'
                     actual_target = outcome.get('target') or 'both'
                     reason = outcome.get('reason')
+                    reason_code = outcome.get('reason_code')
                     try:
                         lxc_apps.record_schedule_run(
                             _vmid,
                             status,
                             actual_target,
                             reason,
+                            reason_code=reason_code,
                             log_name=outcome.get('log_name'),
                             reboot_required=outcome.get('reboot_required'),
                             reboot_packages=outcome.get('reboot_packages'),
@@ -23143,9 +23233,11 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f"[ProxMenux] Disk temperature history init failed: {e}")
             try:
-                import managed_installs
-                managed_installs.detect_and_register()
-                print("[ProxMenux] Managed-installs registry initialised")
+                # A PBS host has no guests whose applications could be tracked.
+                if not is_pbs_host():
+                    import managed_installs
+                    managed_installs.detect_and_register()
+                    print("[ProxMenux] Managed-installs registry initialised")
             except Exception as e:
                 print(f"[ProxMenux] managed_installs init failed: {e}")
             # Docker inventories are derived runtime data and intentionally
@@ -23287,6 +23379,9 @@ if __name__ == '__main__':
     # the 24 h PollingCollector cycle. Runs in a daemon thread with
     # a delay so it doesn't block startup — notification_manager needs
     # a moment to bind channels before we emit.
+    # The guest services below read VMs and LXCs, which do not exist on a
+    # Proxmox Backup Server.
+    pve_host = not is_pbs_host()
     try:
         def _startup_emit_pending_app_updates():
             time.sleep(15)  # let channels bind + first metrics collect
@@ -23296,8 +23391,9 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f"[ProxMenux] startup emit_all_pending_updates failed: {e}",
                       file=sys.stderr, flush=True)
-        threading.Thread(target=_startup_emit_pending_app_updates, daemon=True,
-                         name='app-updates-startup-emit').start()
+        if pve_host:
+            threading.Thread(target=_startup_emit_pending_app_updates, daemon=True,
+                             name='app-updates-startup-emit').start()
     except Exception as e:
         print(f"[ProxMenux] app-updates startup emitter failed to arm: {e}")
 
@@ -23309,6 +23405,13 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"[ProxMenux] Node-metrics prewarmer failed to start: {e}")
 
+    # Linked Monitors for the header node selector, renewed every 5 minutes.
+    try:
+        import monitor_links
+        monitor_links.start_prewarmer()
+    except Exception as e:
+        print(f"[ProxMenux] Monitor links prewarmer failed to start: {e}")
+
     # ── VM/CT modal-cache prewarmer ──
     # Keeps _vm_details_cache / _vm_backups_cache / app snapshots /
     # _vm_schedule_cache warm from the backend so the "Loading
@@ -23316,9 +23419,10 @@ if __name__ == '__main__':
     # after the tab has been closed for minutes. The React-side
     # prefetcher only ran while the page was open.
     try:
-        vm_modal_thread = threading.Thread(target=_vm_modal_prewarmer_loop, daemon=True, name='vm-modal-prewarmer')
-        vm_modal_thread.start()
-        print("[ProxMenux] VM-modal prewarmer started (one-shot warm-up; caches refreshed by event invalidation only)")
+        if pve_host:
+            vm_modal_thread = threading.Thread(target=_vm_modal_prewarmer_loop, daemon=True, name='vm-modal-prewarmer')
+            vm_modal_thread.start()
+            print("[ProxMenux] VM-modal prewarmer started (one-shot warm-up; caches refreshed by event invalidation only)")
     except Exception as e:
         print(f"[ProxMenux] VM-modal prewarmer failed to start: {e}")
 
@@ -23342,8 +23446,9 @@ if __name__ == '__main__':
     # identical (backup, restart, /usr/bin/update + custom command
     # chain) between manual and scheduled invocations.
     try:
-        scheduler_thread = threading.Thread(target=_scheduler_loop, daemon=True)
-        scheduler_thread.start()
+        if pve_host:
+            scheduler_thread = threading.Thread(target=_scheduler_loop, daemon=True)
+            scheduler_thread.start()
     except Exception as e:
         print(f"[ProxMenux] LXC update scheduler failed to start: {e}")
 

@@ -1,18 +1,18 @@
 {
   "meta": {
-    "title": "Instalador de utilidades del sistema | ProxMenux Documentation",
-    "description": "Instalador curado para 26 utilidades CLI (htop, btop, iperf3, jq, tmux, ncdu, ...) en Proxmox VE. Selección personalizada o grupos predefinidos (básico, dev, compresión, multiplexores, análisis, red). Usa el flujo canónico ensure_repositories + install_single_package.",
-    "ogTitle": "Instalador de utilidades del sistema | ProxMenux Documentation",
-    "ogDescription": "Instala herramientas CLI curadas en Proxmox VE con un clic o con selección personalizada."
+    "title": "Instalador de utilidades del sistema | Documentación de ProxMenux",
+    "description": "Instalador de utilidades CLI para Proxmox VE, con 25 paquetes en la lista canónica (htop, btop, iperf3, tmux, ...). Selección personalizada, instalación completa y grupos predefinidos (básico, desarrollo, compresión, multiplexores, análisis y red). Los grupos pueden incluir paquetes adicionales. Usa ensure_repositories + install_single_package.",
+    "ogTitle": "Instalador de utilidades del sistema | Documentación de ProxMenux",
+    "ogDescription": "Instala una selección de herramientas CLI en Proxmox VE con un clic o mediante selección personalizada."
   },
   "header": {
     "title": "Instalador de utilidades del sistema",
-    "description": "Selector curado para 26 utilidades CLI definidas en la lista canónica PROXMENUX_UTILS. Ofrece selección personalizada, instalar todo, seis grupos predefinidos y una comprobación de verificación de instalaciones. Usa el par compartido ensure_repositories() + install_single_package() para que la configuración de repos y el feedback por paquete se mantengan consistentes en todo el proyecto.",
+    "description": "Selector de las 25 utilidades CLI de la lista canónica PROXMENUX_UTILS. Ofrece selección personalizada, instalación completa, seis grupos predefinidos y comprobación de instalaciones. Los grupos pueden incluir herramientas ajenas a la lista canónica. Usa las funciones compartidas ensure_repositories() + install_single_package() para gestionar los repositorios y los mensajes de cada paquete de forma coherente.",
     "section": "Utilidades"
   },
   "info": {
     "title": "Qué hace",
-    "body": "Instala herramientas CLI de una lista curada de 26 paquetes. Cada instalación pasa por el mismo flujo canónico: <code>ensure_repositories</code> comprueba que el host tiene un repositorio de Proxmox utilizable para la versión mayor de PVE en ejecución, después <code>install_single_package</code> ejecuta la instalación y verifica que el comando resultante esté en PATH."
+    "body": "Instala herramientas CLI de una lista de 25 paquetes. Cada instalación usa el mismo proceso: <code>ensure_repositories</code> comprueba que el host tenga un repositorio Proxmox utilizable para la versión mayor de PVE en ejecución; después <code>install_single_package</code> instala el paquete y comprueba que su comando esté en PATH."
   },
   "opening": {
     "heading": "Abrir el instalador",
@@ -26,7 +26,7 @@
     "rows": [
       {
         "option": "1. Selección personalizada",
-        "behaviourRich": "Checklist de diálogo con los 26 paquetes. Usa SPACE para alternar, ENTER para confirmar; solo se instalan los seleccionados."
+        "behaviourRich": "Lista de selección de los 25 paquetes. Usa SPACE para marcar y ENTER para confirmar; solo se instalan los paquetes seleccionados."
       },
       {
         "option": "2. Instalar TODAS las utilidades",
@@ -63,7 +63,7 @@
     ]
   },
   "packages": {
-    "heading": "Los 26 paquetes",
+    "heading": "Los 25 paquetes",
     "intro": "Definidos en el compartido <code>scripts/global/utils-install-functions.sh</code> como <code>PROXMENUX_UTILS</code> (formato: <code>package:verify_command:description</code>). Otros scripts de ProxMenux (p. ej. los lanzadores de monitorización de red para iftop / iptraf-ng / iperf3) reutilizan entradas de esta lista para que paquete + comando de verificación se mantengan sincronizados.",
     "headerPackage": "Paquete",
     "headerVerify": "Comando de verificación",
@@ -193,11 +193,6 @@
         "package": "zip",
         "verify": "zip",
         "description": "Crear archivos ZIP"
-      },
-      {
-        "package": "libguestfs-tools",
-        "verify": "virt-filesystems",
-        "description": "Utilidades de disco de VM"
       }
     ]
   },
@@ -209,30 +204,30 @@
     ],
     "verifyIntro": "Tras instalar, el comando de verificación se comprueba con <code>command -v \"$verify_cmd\"</code>. Tres desenlaces:",
     "verifyOutcomes": [
-      "<strong>0 (éxito):</strong> comando disponible, paquete contado como <em>Successful</em>.",
-      "<strong>1 (fallido):</strong> apt falló, contado como <em>Failed</em>.",
-      "<strong>2 (advertencia):</strong> apt tuvo éxito pero el comando aún no está en PATH (refresco de hash pendiente) — contado como <em>With warnings</em>."
+      "<strong>0 (correcto):</strong> comando disponible; el paquete se cuenta como <em>Correcto</em>.",
+      "<strong>1 (fallo):</strong> apt ha fallado; se cuenta como <em>Fallido</em>.",
+      "<strong>2 (advertencia):</strong> apt ha terminado correctamente, pero el comando esperado no se encuentra en PATH; se cuenta como <em>Con advertencias</em>."
     ],
-    "summary": "Al final de una instalación de grupo / personalizada, un diálogo de resumen muestra los conteos de <em>Successful / With warnings / Failed</em>."
+    "summary": "Al terminar una instalación de grupo o personalizada, un diálogo muestra los recuentos de <em>Correctos / Con advertencias / Fallidos</em>."
   },
   "verify": {
     "heading": "Verificar instalaciones",
     "intro": "La opción 9 es de solo lectura: recorre <code>PROXMENUX_UTILS</code> y ejecuta <code>command -v</code> para cada comando de verificación. La salida se ve así:",
-    "code": "Total: 26\nAvailable: 18\nMissing: 8\n\n✓ axel - Download accelerator\n✓ aria2c - Multi-source downloader\n✓ btop - Modern resource monitor\n✗ cabextract - Extract CAB files\n✓ dos2unix - Convert DOS / Unix text files\n✗ genisoimage - Create ISO images\n✓ grc - Generic log colorizer\n...",
+    "code": "Total: 25\nAvailable: 18\nMissing: 8\n\n✓ axel - Download accelerator\n✓ aria2c - Multi-source downloader\n✓ btop - Modern resource monitor\n✗ cabextract - Extract CAB files\n✓ dos2unix - Convert DOS / Unix text files\n✗ genisoimage - Create ISO images\n✓ grc - Generic log colorizer\n...",
     "outro": "Útil antes de ejecutar scripts que dependen de estas herramientas (p. ej. <code>uup_dump_iso_creator.sh</code> necesita <code>aria2c</code> + <code>cabextract</code> + <code>wimlib-imagex</code>). Si falta algo, ejecuta la instalación del grupo correspondiente o elige los paquetes que faltan mediante selección personalizada."
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "reposTitle": "\"Failed to configure repositories. Installation aborted.\"",
+    "reposTitle": "«No se pudieron configurar los repositorios. Instalación cancelada.»",
     "reposBody": "La comprobación de repositorios no se superó: se rechazó el cambio al repositorio sin suscripción, no se pudo leer el estado de la suscripción o una entrada de repositorio requiere atención. El mensaje impreso justo encima indica la causa. Los repositorios se listan en <em>Nodo → Actualizaciones → Repositorios</em>, y <code>apt-get update</code> desde una consola muestra el error que reporta apt.",
     "warningsTitle": "Un paquete se reporta como \"With warnings\" pero el comando funciona tras cerrar el menú",
-    "warningsBody": "Esperado. Tras <code>apt-get install</code>, el nuevo binario está en disco pero la caché de PATH del shell actual (<code>hash -t</code>) aún no lo sabe. ProxMenux ejecuta <code>hash -r</code> tras cada instalación, pero en algunos shells el refresco solo surte efecto en el siguiente prompt. Abre un nuevo shell y el comando funcionará.",
+    "warningsBody": "Después de <code>apt-get install</code>, la función ejecuta <code>hash -r</code>, espera brevemente y comprueba el comando esperado con <code>command -v</code>. Una advertencia indica que esa comprobación sigue fallando, pero no identifica la causa. Prueba con una sesión de shell nueva y comprueba la instalación del paquete y PATH si el comando sigue faltando.",
     "hangsTitle": "Un apt install se queda colgado",
     "hangsBody": "Lo más probable es que un prompt de debconf esté bloqueado detrás de la salida silenciada. El script envuelve todas las llamadas de apt con <code>DEBIAN_FRONTEND=noninteractive</code>, que normalmente suprime los prompts, pero algunos paquetes aún requieren entrada del usuario. Cancela con <kbd>Ctrl</kbd>+<kbd>C</kbd>, ejecuta <code>apt-get install -y &lt;pkg&gt;</code> manualmente desde un shell para ver el prompt y decidir."
   },
   "files": {
     "heading": "Archivos implicados",
-    "code": "scripts/utilities/system_utils.sh                    # este script\nscripts/global/utils-install-functions.sh            # PROXMENUX_UTILS, install_single_package\nscripts/global/repository-functions.sh               # ensure_repositories\nscripts/global/repository_policy.py                  # lee y cambia los repositorios a través de la API de Proxmox\n/etc/apt/sources.list.d/proxmox.sources              # fuente sin suscripción, escrita por Proxmox al aceptar el cambio"
+    "code": "scripts/utilities/system_utils.sh                    # this script\nscripts/global/utils-install-functions.sh            # PROXMENUX_UTILS, install_single_package\nscripts/global/repository-functions.sh               # ensure_repositories\nscripts/global/repository_policy.py                  # reads and switches repositories through the Proxmox API\n/etc/apt/sources.list.d/proxmox.sources              # no-subscription source, written by Proxmox when the switch is accepted"
   },
   "related": {
     "heading": "Relacionado",
@@ -249,7 +244,7 @@
       },
       {
         "href": "/docs/utils",
-        "label": "Resumen de Utilidades",
+        "label": "Resumen de utilidades",
         "tailRich": " — volver al resumen de la sección."
       }
     ]

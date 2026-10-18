@@ -1,0 +1,118 @@
+{
+  "meta": {
+    "title": "Návody pre Proxmox VE — Coral TPU, NVIDIA, Kodi v LXC, Samba a cloudové zálohy | ProxMenux",
+    "description": "Podrobné návody pre Proxmox VE: Kodi v LXC s akceleráciou GPU, ovládače NVIDIA na PVE 9, USB disk zdieľaný cez Sambu v kontajneri a zálohy vzdump na Google Drive, Mega, Dropbox alebo OneDrive. Navyše vybrané komunitné zdroje, slovník pojmov a prehľad príkazov.",
+    "ogTitle": "Návody pre Proxmox VE — Coral TPU, NVIDIA, Kodi v LXC, Samba a cloudové zálohy",
+    "ogDescription": "Podrobné návody pre Proxmox VE: priame priradenie GPU, multimediálne centrum Kodi v LXC, USB disk zdieľaný cez Sambu, cloudové zálohy pomocou rclone a vybrané komunitné zdroje.",
+    "twitterTitle": "Návody pre Proxmox VE | ProxMenux",
+    "twitterDescription": "Podrobné návody pre Proxmox VE — GPU, Kodi v LXC, Samba, cloudové zálohy a ďalšie témy.",
+    "ogImageAlt": "Návody ProxMenux — podrobné postupy pre Proxmox VE"
+  },
+  "header": {
+    "title": "Návody ProxMenux",
+    "tagline": "Podrobné návody, stručné prehľady a vybrané komunitné zdroje na lepšie využitie Proxmox VE."
+  },
+  "inDepth": {
+    "heading": "Hĺbkové príručky",
+    "intro": "Podrobné návody na konkrétne úlohy v Proxmoxe. Každý opisuje manuálne kroky postupu, ktorý ProxMenux automatizuje, aby ste vedeli, čo sa v každom kroku deje.",
+    "items": [
+      {
+        "slug": "kodi-lxc",
+        "title": "Inštalácia Kodi v LXC s akceleráciou GPU a pripojením k monitoru alebo televízoru",
+        "description": "Spustite Kodi v privilegovanom kontajneri LXC na Proxmox VE, sprístupnite mu iGPU a vstupné USB zariadenia hostiteľa a používajte server ako multimediálne centrum pripojené priamo k televízoru."
+      },
+      {
+        "slug": "backup-cloud",
+        "title": "Zálohy Proxmoxu na osobné cloudové úložisko",
+        "description": "Pomocou rclone pripojte osobné cloudové úložisko, napríklad Google Drive, Mega, Dropbox alebo OneDrive, ako adresár na hostiteľovi Proxmox VE, zaregistrujte ho ako úložisko záloh pre vzdump a zálohujte VM aj kontajnery priamo do cloudu bez ďalšieho zálohovacieho skriptu."
+      },
+      {
+        "slug": "lxc-samba",
+        "title": "Pripojenie USB disku alebo kľúča ku kontajneru LXC a zdieľanie cez Sambu",
+        "description": "Sprístupnite USB disk alebo kľúč privilegovanému kontajneru LXC na Proxmox VE, nainštalujte v ňom Sambu a zdieľajte obsah cez sieť."
+      },
+      {
+        "slug": "nvidia-manual",
+        "title": "Inštalácia NVIDIA ovládačov grafickej karty na Proxmox VE 9 (manuálny postup)",
+        "description": "Manuálna inštalácia a konfigurácia ovládačov NVIDIA na hostiteľovi Proxmox VE 9 a sprístupnenie GPU jednému alebo viacerým kontajnerom LXC. Zahŕňa ovládače, službu perzistencie, voliteľnú úpravu NVENC a konfiguráciu jednotlivých kontajnerov."
+      }
+    ]
+  },
+  "references": {
+    "heading": "Odkazy na ProxMenux",
+    "intro": "Rýchly referenčný materiál z dokumentácie ProxMenux.",
+    "cards": {
+      "glossary": {
+        "title": "Slovník pojmov",
+        "description": "Viac než 60 definícií technických pojmov z ProxMenuxu: Proxmox, virtualizácia, úložiská, sieť a Linux. Rýchle vyhľadanie pomocou kategórií a súvisiacich odkazov."
+      },
+      "helpInfo": {
+        "title": "Pomoc a informácie — katalóg príkazov",
+        "description": "Výber príkazov Linuxu a Proxmoxu podľa tém s kopírovaním do schránky. Zodpovedá prehľadu v ponuke ProxMenuxu."
+      },
+      "linuxResources": {
+        "title": "Zdroje Linuxu",
+        "description": "Externé zdroje na učenie príkazového riadka Linuxu, bezpečnostných postupov, monitorovacích nástrojov a ZFS — dopĺňajú katalóg príkazov ProxMenuxu."
+      },
+      "externalRepos": {
+        "title": "Externé repozitáre",
+        "description": "Repozitáre skriptov tretích strán začlenené do ProxMenuxu ako alternatívne voľby ponuky, napríklad community-scripts/ProxmoxVE."
+      }
+    }
+  },
+  "official": {
+    "heading": "Oficiálne zdroje Proxmoxu",
+    "intro": "Dokumentácia priamo od Proxmox Server Solutions — rozhodujúci zdroj informácií o platforme.",
+    "cards": {
+      "pveDocs": {
+        "title": "Dokumentácia Proxmox VE",
+        "description": "Oficiálna príručka správcu. Komplexný prehľad inštalácie, siete, úložísk, klastrov, vysokej dostupnosti a API."
+      },
+      "pbsDocs": {
+        "title": "Dokumentácia Proxmox Backup Server",
+        "description": "Dokumentácia PBS — inkrementálne, deduplikované a šifrované zálohy pre Proxmox VE."
+      },
+      "videoTraining": {
+        "title": "Oficiálne videoškolenie",
+        "description": "Oficiálne videonávody a školenia od Proxmoxu."
+      },
+      "forum": {
+        "title": "Proxmox Forum",
+        "description": "Oficiálne komunitné fórum na otázky, riešenie problémov a zdieľanie skúseností. Sledujú ho správcovia projektu."
+      }
+    }
+  },
+  "community": {
+    "heading": "Komunitné projekty a zdroje",
+    "intro": "Open-source projekty a vybrané zoznamy zo širšej komunity Proxmox. Nie sú pridružené k Proxmox Server Solutions ani k ProxMenuxu; sú tu uvedené, pretože sa osvedčili.",
+    "cards": {
+      "helperScripts": {
+        "title": "Proxmox VE Helper-Scripts",
+        "description": "Komunitou udržiavaný katalóg skriptov na jednoduché nasadenie kontajnerov LXC, VM a úprav PVE, napríklad pre Home Assistant, Plex či Frigate. Nadväzuje na pomocné skripty od ttecka."
+      },
+      "awesome": {
+        "title": "awesome-proxmox-ve (výber zdrojov)",
+        "description": "Rozsiahly komunitný výber zdrojov pre Proxmox VE: nástroje, knižnice, integrácie, blogy a videá. Dobrý východiskový bod na ďalšie objavovanie."
+      }
+    },
+    "suggestRich": "Poznáte kvalitný zdroj, ktorý by sme mali pridať? Otvorte issue alebo PR na <link>GitHub</link>. Chceme zachovať premyslený výber, nie úplný zoznam všetkého."
+  },
+  "discussion": {
+    "heading": "Komunitná diskusia",
+    "intro": "Kde ľudia hovoria o Proxmoxe a ProxMenux.",
+    "cards": {
+      "proxmenuxDiscussions": {
+        "title": "ProxMenux Discussions",
+        "description": "GitHub Discussions venované ProxMenuxu: nápady na funkcie, otázky a odpovede a zdieľanie konfigurácií. Vhodné miesto na témy o ponuke, Monitore a dokumentácii."
+      },
+      "proxmoxForum": {
+        "title": "Proxmox Forum",
+        "description": "Oficiálne fórum Proxmoxu, uvedené aj vyššie. Vhodné na podrobné riešenie problémov a otázky ku konkrétnym konfiguráciám."
+      },
+      "reddit": {
+        "title": "r/Proxmox na Reddite",
+        "description": "Aktívny subreddit na diskusie, tipy a technickú pomoc. Jednoduchšie zapojenie než na fóre a často rýchlejšie odpovede na neformálne otázky."
+      }
+    }
+  }
+}

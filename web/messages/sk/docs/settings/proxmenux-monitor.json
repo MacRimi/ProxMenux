@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor | Dokumentácia ProxMenux",
+    "description": "Aktivujte alebo deaktivujte jednotku systemd proxmenux-monitor.service a skontrolujte jej aktuálny stav. Monitor poskytuje webové rozhranie na porte TCP 8008 na vizuálne monitorovanie hostiteľa.",
+    "ogTitle": "ProxMenux Monitor | Dokumentácia ProxMenux",
+    "ogDescription": "Aktivujte alebo deaktivujte službu systemd proxmenux-monitor a skontrolujte jej stav v Nastaveniach."
+  },
+  "header": {
+    "title": "ProxMenux Monitor",
+    "description": "Dve súvisiace akcie v Nastaveniach: aktivovať alebo deaktivovať jednotku systemd proxmenux-monitor.service (spustiť/zastaviť a povoliť/zakázať automatický štart naraz) a zobraziť jej podrobný stav. Monitor poskytuje webové rozhranie na porte TCP 8008 na vizuálne monitorovanie hostiteľa.",
+    "section": "Nastavenia"
+  },
+  "intro": {
+    "title": "Čo je ProxMenux Monitor?",
+    "body": "ProxMenux Monitor je integrovaný webový ovládací panel, ktorý zobrazuje stav infraštruktúry Proxmox v reálnom čase. Je dostupný z ľubovoľného prehliadača vo vašej sieti bez potreby terminálu."
+  },
+  "offers": {
+    "heading": "Čo ponúka",
+    "items": [
+      "Monitorovanie CPU, RAM, používanie disku a sieťová prevádzka v reálnom čase.",
+      "Prehľad prevádzkovaných VMs a LXC kontajnerov s indikátormi stavu.",
+      "Overenie prihlásenia na ochranu prístupu.",
+      "Dvojfaktorové overovanie (2FA) s podporou TOTP.",
+      "Reverzná proxy podpora (Nginx / Traefik).",
+      "Navrhnuté pre prácu cez stolové a mobilné zariadenia."
+    ]
+  },
+  "access": {
+    "heading": "Prístup",
+    "intro": "Po inštalácii je ovládací panel dostupný na adrese:",
+    "url": "http://<your-proxmox-ip>:8008",
+    "outro": "Monitor je automaticky nainštalovaný ako súčasť štandardnej inštalácie ProxMenux a beží ako služba systemd (<code>proxmenux-monitor.service</code>), ktorá sa spustí automaticky pri štarte."
+  },
+  "warnConditional": {
+    "title": "Možnosti nastavenia iba viditeľné pri inštalácii monitora",
+    "body": "V Nastaveniach sa zobrazujú dva nižšie uvedené položky menu, len ak je <code>proxmenux-monitor.service</code> registrovaný systemd. Ak ich nevidíte, monitor nebol nainštalovaný (je voliteľný počas inštalácie ProxMenux). Ak chcete pridať neskôr, preinštalujte ProxMenux s najnovšou verziou a vyberte možnosť Monitor."
+  },
+  "toggle": {
+    "heading": "Aktivovať / deaktivovať",
+    "intro": "Prvá položka menu prepína medzi dvoma stavmi podľa toho, či služba práve beží:",
+    "headerState": "Súčasný stav",
+    "headerLabel": "Zobrazený štítok menu",
+    "headerAction": "Akcia na potvrdenie",
+    "rows": [
+      {
+        "state": "aktívne",
+        "label": "Vypnúť ProxMenux Monitor",
+        "action": "systemctl stop + disable"
+      },
+      {
+        "state": "neaktívne",
+        "label": "Zapnúť ProxMenux Monitor",
+        "action": "systemctl enable + start"
+      }
+    ],
+    "outro": "Každé prepnutie vyžaduje potvrdenie áno/nie. Deaktivácia zastaví službu <em>a</em> zakáže jej automatický štart; aktivácia povolí automatický štart <em>a</em> službu ihneď spustí."
+  },
+  "status": {
+    "heading": "Zobraziť stav služby Monitor",
+    "intro": "Druhá položka menu je len na čítanie. Vyčistí obrazovku, zobrazí logo ProxMenux a názov <em>\"ProxMenux Monitor Service Verification\"</em>, potom uvádza:",
+    "items": [
+      "Stav <strong>Service:</strong> aktívny, neaktívny alebo not_installed.",
+      "<strong>Web UI URL</strong> (iba ak je aktívny): <code>http://&lt;host_ip&gt;:8008</code> Odvodené od <code>hostname -I | awk '''{print $1}'''</code>.",
+      "<strong>Podrobné systemd výstup:</strong> <code>systemctl status proxmenux-monitor.service --no-pager -l</code> Znázorňuje posledné logovacie riadky, ExecStart, MainPIDatď."
+    ]
+  },
+  "manual": {
+    "title": "Ručné ekvivalenty",
+    "intro": "Z ľubovoľného shellu:",
+    "code": "systemctl status proxmenux-monitor.service       # detailed status\nsystemctl is-active proxmenux-monitor.service    # one-word status\nsystemctl enable --now proxmenux-monitor.service # enable + start\nsystemctl disable --now proxmenux-monitor.service # stop + disable\njournalctl -u proxmenux-monitor.service -f       # follow live logs"
+  },
+  "reset": {
+    "heading": "Obnoviť heslo pre ProxMenux Monitor",
+    "intro": "Cesta obnovy pre operátora, ktorý stratil heslo palubnej dosky (alebo zariadenie 2FA). Voľba sa zobrazí iba vtedy, keď je monitor nainštalovaný na hostiteľa. Výber:",
+    "items": [
+      "Požiada o potvrdenie pomocou dialógového okna áno/nie – akcia je deštruktívna pre prihlasovacie údaje.",
+      "Zálohuje existujúci <code>/root/.config/proxmenux-monitor/auth.json</code> na <code>auth.json.bak-&lt;UTC timestamp&gt;</code> (režim <code>0600</code>), takže predchádzajúci stav môže byť obnovený manuálne, ak reset bol chyba.",
+      "Zastaví službu <code>proxmenux-monitor</code>, aby sa úprava súboru nedostala do konfliktu s prebiehajúcim prihlásením.",
+      "Vymaže údaje identity v <code>auth.json</code>: nastaví <code>enabled=false</code>, <code>configured=false</code> a vyprázdni <code>username</code>, <code>password_hash</code>, <code>totp_secret</code> aj pole záložných kódov.",
+      "<strong>Zachová</strong> <code>jwt_secret</code> a zaregistrované <code>api_tokens</code> / <code>revoked_tokens</code>, takže dlhodobé tokeny API používané Home Assistantom alebo inými skriptmi <em>naďalej umožňujú overenie</em> aj po obnovení.",
+      "Reštartuje službu. Ďalšia návšteva <code>http://&lt;host&gt;:8008</code> ukazuje sprievodcu nastavením prvého štartu, aby bolo možné vytvoriť nový účet admin."
+    ],
+    "preservedTitle": "Čo prežije reset, čo nie",
+    "preservedBody": "<strong>Vymazané:</strong> meno používateľa, hash hesla, tajomstvo TOTP pre 2FA a záložné kódy. <strong>Zachované:</strong> <code>jwt_secret</code>, metaúdaje <code>api_tokens</code> a zoznam <code>revoked_tokens</code>. Ak chcete zrušiť aj všetky tokeny API a začať odznova, ručne odstráňte <code>auth.json</code> namiesto použitia tejto možnosti. Pri ďalšom štarte služba znova vytvorí tajomstvo JWT a všetky ostatné údaje.",
+    "trustTitle": "Prístup k hostiteľovi je základom dôvery",
+    "trustBody": "Tento postup obnovenia vyžaduje root shell na hostiteľovi. Kto môže spustiť <code>menu</code> ako root, už ovláda celý systém; obnova hesla preto nepredstavuje zvýšenie oprávnení a zodpovedá správaniu ostatných nástrojov správy Proxmoxu. Prihlásenie do Monitora nechráni systém pred osobou, ktorej ste už umožnili prístup do shellu Proxmoxu.",
+    "seeAlso": "Pozrite aj <link>Monitor → Prístup a overovanie → Obnovenie strateného hesla</link>, kde je rovnaký postup opísaný z pohľadu ovládacieho panela spolu s podrobnosťami o hashovaní hesiel a generovaní tajomstva JWT."
+  },
+  "files": {
+    "heading": "Príslušné súbory",
+    "code": "/etc/systemd/system/proxmenux-monitor.service       # systemd unit\n/root/.config/proxmenux-monitor/                    # runtime config dir\n/var/log/proxmenux-auth.log                         # Flask app auth log\n                                                    # (read by Fail2Ban [proxmenux] jail)"
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "missingTitle": "Obe možnosti menu chýbajú",
+    "missingBody": "Monitor nie je registrovaný na systemd. Potvrďte <code>systemctl list-unit-files | grep proxmenux-monitor</code> Ak nie je výstup, preinštalujte ProxMenux od oficiálneho inštalátora s najnovšou verziou a vyberte možnosť Monitor počas inštalácie.",
+    "unreachableTitle": "Služba aktivovaná, ale URL je nedostupná",
+    "unreachableBody": "Stavový výstup Nastavenia vám dáva IP. Potvrdiť:",
+    "unreachableCmd": "ss -tlnp | grep 8008                # is anything listening?\njournalctl -u proxmenux-monitor -n 100 --no-pager  # recent errors\ncurl -sI http://localhost:8008      # local reachability",
+    "unreachableOutro": "Ak prístup cez localhost funguje, ale zvonka nie, skontrolujte firewall hostiteľa (<code>pve-firewall</code> alebo nftables) pre prichádzajúce spojenia na TCP 8008.",
+    "stopsTitle": "Aktivoval službu, ale zastaví sa o pár sekúnd neskôr",
+    "stopsBody": "Najčastejšie ide o konflikt na porte 8008 alebo zlyhanie kontroly závislostí. Príčinu ukáže systémový denník: <code>journalctl -u proxmenux-monitor.service -b</code>."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/security/fail2ban",
+        "label": "Fail2Ban",
+        "tailRich": "— <code>[proxmenux]</code> jail chráni monitor na TCP 8008."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Prehľad nastavení",
+        "tail": "."
+      }
+    ]
+  }
+}

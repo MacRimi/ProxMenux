@@ -1,0 +1,82 @@
+name: Offline OCI registry tests
+
+on:
+  pull_request:
+    paths:
+      - 'oci/**'
+      - '.github/workflows/test-oci-registries.yml'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'oci/**'
+      - '.github/workflows/test-oci-registries.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  registry-accounts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install OCI test dependencies
+        run: python3 -m pip install -r oci/requirements.txt
+      - name: Run OCI image reuse and resource edit regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p test_modify_image_reuse.py -v
+          python3 -m unittest discover -s oci/tests -p test_native_modify.py -v
+          python3 -m unittest discover -s oci/tests -p test_modify_review.py -v
+          python3 -m unittest discover -s oci/tests -p test_modify_review_transaction.py -v
+          python3 -m unittest discover -s oci/tests -p test_stage_release.py -v
+      - name: Run carried record, recovery and configuration cache regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p 'test_carried*.py' -v
+          python3 -m unittest discover -s oci/tests -p test_restore_recovery.py -v
+      - name: Run read-only volume preparation regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          test -x /bin/bash
+          test -x /usr/bin/jq
+          python3 -m unittest discover -s oci/tests -p test_readonly_volume_preparation.py -v
+      - name: Run offline registry account tests
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -m unittest discover -s oci/tests -p 'test_registry_*.py' -v
+      - name: Run OCI Modify latency regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p test_modify_latency.py -v
+          python3 -m unittest discover -s oci/tests -p test_menu_performance.py -v
+          python3 -m unittest discover -s oci/tests -p test_dialog_escape.py -v
+          python3 -m unittest discover -s oci/tests -p test_work_backup.py -v
+          python3 -m unittest discover -s oci/tests -p test_recreation.py -v
+      - name: Run OCI modification menu regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p test_modify_menu.py -v
+          python3 -m unittest discover -s oci/tests -p test_manage_sync_notice.py -v
+          python3 -m unittest discover -s oci/tests -p test_recreation.py -v
+          python3 -m unittest discover -s oci/tests -p test_shared_directories.py -v
+          python3 -m unittest discover -s oci/tests -p 'test_wizard*.py' -v
+      - name: Run external OCI settings regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p 'test_external_tags.py' -v
+          python3 -m unittest discover -s oci/tests -p 'test_instance_reconcile.py' -v
+          python3 -m unittest discover -s oci/tests -p 'test_guessed_endpoint_healthcheck.py' -v
+          python3 -m unittest discover -s oci/tests -p 'test_runtime_home_*.py' -v

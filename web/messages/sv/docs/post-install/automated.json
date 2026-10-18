@@ -1,0 +1,172 @@
+{
+  "meta": {
+    "title": "Automatiserat efterinstallationsskript | ProxMenux Dokumentation",
+    "description": "ProxMenux automatiserade efterinstallationsskript kör 14 förvalda optimeringar anpassade efter hårdvaran på en ny Proxmox VE-värd. Det saknar checklista för funktionsval men kan be om bekräftelse för systemuppdateringen, prenumerationsvarningen, vissa Log2RAM-installationer och omstart. Återställbara konfigurationsändringar registreras.",
+    "ogTitle": "Automatiserat efterinstallationsskript | ProxMenux Dokumentation",
+    "ogDescription": "14 fasta, hårdvaruanpassade optimeringar för en ny Proxmox VE-värd, med bekräftelse för vissa åtgärder och registrering av återställbara ändringar."
+  },
+  "header": {
+    "title": "Automatiserat efterinstallationsskript",
+    "description": "ProxMenux kör 14 förvalda grundoptimeringar utan checklista för funktionsval. Vissa åtgärder kräver bekräftelse. Återställbara konfigurationsändringar registreras för Avinstallera optimeringar; paketuppgraderingar beskrivs inte som återställbara.",
+    "section": "Post-Install · Automatiserad"
+  },
+  "intro": {
+    "title": "När du ska välja automatiserad efterinstallation",
+    "body": "Kör detta på en nyinstallerad Proxmox-värd när du vill ha den vettiga baslinjen utan att ta beslut. Skriptet är idempotent - att köra det två gånger är säkert, det tillämpar bara samma konfigurationer igen. Opt-in-funktioner (Fastfetch, IOMMU, Ceph repo, HA, AMD-fixar...) är avsiktligt <strong>inte</strong> en del av denna väg; välj dem från <link>Anpassningsbara</link> om du behöver dem."
+  },
+  "applies": {
+    "heading": "Vad skriptet tillämpar",
+    "intro": "Optimeringarna tillämpas i exakt denna ordning. Kolumnen <em>Kategori</em> länkar till utförlig dokumentation om varje ändring i den anpassningsbara efterinstallationen.",
+    "headerNum": "#",
+    "headerTool": "Verktyg",
+    "headerWhat": "Vad det gör",
+    "headerCategory": "Kategori"
+  },
+  "optimizations": [
+    {
+      "tool": "APT-repositorier + full uppgradering",
+      "what": "Inaktiverar företagsförråden pve-enterprise.sources och ceph.sources, skriver en no-subscription-källa för värdens Debian-kodnamn och kör sedan apt update && apt full-upgrade -y, Proxmox officiella uppgraderingskommando.",
+      "category": "Grundinställningar",
+      "categorySlug": "basic-settings"
+    },
+    {
+      "tool": "Borttagning av prenumerationsvarning",
+      "what": "Ändrar webbgränssnittet för att dölja varningen ”Ingen giltig prenumeration”. Ber om bekräftelse före ändringen; kan återställas via Avinstallera optimeringar.",
+      "category": "Anpassning",
+      "categorySlug": "customization"
+    },
+    {
+      "tool": "Tvinga IPv4",
+      "what": "Skriver /etc/apt/apt.conf.d/99-force-ipv4 så att apt bara använder IPv4 och kringgår instabila IPv6-anslutningar till speglar.",
+      "category": "Nätverk",
+      "categorySlug": "network"
+    },
+    {
+      "tool": "Hoppa över språkpaket",
+      "what": "Skriver /etc/apt/apt.conf.d/99-disable-translations för att sluta hämta index över översatta paketbeskrivningar och minska datamängden vid apt-uppdateringar.",
+      "category": "Grundinställningar",
+      "categorySlug": "basic-settings"
+    },
+    {
+      "tool": "Öka systemgränserna",
+      "what": "Höjer antalet inotify-bevakningar, nofile/nproc-gränser, kärnans nyckelringsgränser och fs.file-max via sysctl.d, limits.d, pam och systemd för värdar med många containrar.",
+      "category": "System",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Minnesjustering",
+      "what": "Sätter vm.swappiness=10, balanserade andelar ändrade men ännu inte skrivna minnessidor, vm.max_map_count=262144 och proaktiv minneskompaktering när det stöds. Kärnans policy för minnesöverallokering behåller Proxmox standardvärde.",
+      "category": "System",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Beteende vid kärnpanik",
+      "what": "Konfigurerar värden för att starta om 10 sekunder efter en panik / oops / hardlockup istället för att frysa på obestämd tid.",
+      "category": "System",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Justering av nätverksstacken",
+      "what": "TCP-buffertstorlekar, IPv4-härdning (omdirigeringar av, rp_filter=2, martian-loggning av), lokala portar 1024-65535, TCP MTU-avkänning, RFC 1337 och hjälpskriptet /usr/local/sbin/proxmenux-fwbr-tune kopplat till en engångsenhet i systemd och en udev-regel. Därmed återställs rp_filter=0 / log_martians=0 på fwbr*/fwln*/fwpr*/tap* varje gång Proxmox återskapar dem när VM:ar startas/stoppas, vid omstart eller livemigrering.",
+      "category": "Nätverk",
+      "categorySlug": "network"
+    },
+    {
+      "tool": "Anpassning av bashrc (root)",
+      "what": "Färgad PS1, vanliga alias (l/la/ll/ls/grep), tidsstämplad historik och inläsning av bash-completion, allt i ett avgränsat PMX_CORE_BASHRC-block som är lätt att ta bort.",
+      "category": "Anpassning",
+      "categorySlug": "customization"
+    },
+    {
+      "tool": "Log2RAM (SSD-medveten, auto)",
+      "what": "Minskar SSD-/NVMe-slitage genom att flytta /var/log till en tmpfs-ramdisk med regelbunden synkronisering till disk. Installation från ursprungsprojektet när rotdisken är SSD eller NVMe. Storlek efter värdens RAM (128M / 256M / 512M), periodisk synkronisering och skydd som rensar äldre journaler vid 80% fyllnadsgrad och trunkerar snabbt växande loggar vid 92% före skrivning. Anpassar journald-gränser till ramdisken. Detaljer på <link>Log2RAM</link>.",
+      "category": "Lagring",
+      "categorySlug": "storage"
+    },
+    {
+      "tool": "ZFS autotrim (endast SSD)",
+      "what": "Aktiverar zpool autotrim=on för varje ZFS-pool där alla vdevs är SSD- eller NVMe-enheter med TRIM-stöd. Kontrollerar /sys/block/[dev]/queue/rotational och discard_granularity. Pooler med hårddiskar hoppas över. Endast pooler som ProxMenux faktiskt ändrar registreras för återställning vid avinstallation; manuellt aktiverad autotrim lämnas oförändrad.",
+      "category": "Lagring",
+      "categorySlug": "storage"
+    },
+    {
+      "tool": "Journald storleksgränser",
+      "what": "Tvingar beständig lagring, begränsar SystemMaxUse=64M / RuntimeMaxUse=60M och aktiverar komprimering och info-loggning som Monitor behöver. Hoppas över när Log2RAM är aktivt eftersom det gör sin egen justering.",
+      "category": "System",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Justering av logrotate",
+      "what": "Sätter globalt daily följt av size 10M, sparar 7 rotationer och aktiverar komprimering och copytruncate. Det senare storleksvillkoret får företräde; enskilda loggregler kan åsidosätta det. Lämpligt för Log2RAM men frekvensen beror på regler och timer.",
+      "category": "System",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Beständiga gränssnittsnamn",
+      "what": "Skriver en <code>/etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code> per fysiskt nätverkskort med rubriken ”Managed by ProxMenux” som binder MAC till aktuellt namn. Namn som <code>eth0</code> / <code>enp…</code> förblir stabila efter omstarter och nya nätverkskort.",
+      "category": "Nätverk",
+      "categorySlug": "network"
+    }
+  ],
+  "hardwareTitle": "Hårdvaruanpassade standardvärden",
+  "hardwareBody": "Skriptet läser värdhårdvaran innan inställningar tillämpas. Log2RAM är bara installerat på SSD / NVMe rotdiskar som standard (den frågar om upptäckten säger något annat). Log2RAM ramdiskstorlek väljs från totalt RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). De journald gränser matchas till ramdiskstorleken när Log2RAM är aktivt, för att undvika att fylla det.",
+  "upgrade": {
+    "heading": "Uppdatera och uppgradera systemet",
+    "intro": "Det första steget i Automated-paketet är Proxmox-uppgraderingen. Proxmox egen uppgraderingsvägledning för en löpande värd (inom samma stora version) är att köra:",
+    "after": "Denna rad är det officiella kommandot för aktuella Proxmox-versioner. Skriptet kör <strong>exakt</strong> detta och lägger till förrådsstädning och efterarbete enligt uppgraderingsguiden — samma steg som det fristående verktyget <link>Proxmox systemuppdatering</link>:",
+    "items": [
+      "Inaktiverar Enterprise-källorna <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, tar bort äldre förrådsfiler och skriver en no-subscription-källa för värdens kodnamn.",
+      "Kör uppgraderingen utan interaktion med <code>DEBIAN_FRONTEND=noninteractive</code> och <code>--force-confdef --force-confold</code>. Anpassade konfigurationsfiler behålls även när de har ändrats i ursprungsprojektet.",
+      "Installerar viktiga Proxmox-paket om de saknas (<code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>).",
+      "Kontroll av LVM-metadatas rimlighet, <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code> och omstartsfråga bara om kärnan faktiskt ändrats."
+    ],
+    "sameTitle": "Samma uppdaterare, två ingångspunkter",
+    "sameBody": "Automatiserad bunt och fristående <link>Proxmox System Update</link>-verktyget delar samma underliggande skript (<code>update-pve8.sh</code> / <code>update-pve9_2.sh</code>). Använd verktyget på egen hand när du bara vill uppgradera värden utan att tillämpa resten av optimeringarna."
+  },
+  "endResult": {
+    "heading": "Förväntat slutresultat",
+    "body": "När skriptet är klart visas ett framgångsmeddelande med utdata från varje steg och en fråga om omstart, eftersom vissa kärninställningar kräver det. Du kan skjuta upp omstarten; inställningarna gäller vid nästa start.",
+    "imageAlt": "Automatiserat efterinstallationsskript — slutlig terminalutdata med varje optimering genomförd"
+  },
+  "notDoes": {
+    "heading": "Vad skriptet INTE gör",
+    "items": [
+      "Automatisk tidszonsidentifiering (bortkommenterad i källskriptet; använd Anpassningsbar om du vill ha den).",
+      "Inaktivera portmapper / rpcbind (se <secLink>Säkerhet</secLink>).",
+      "Aktivera IOMMU / VFIO (se <virtLink>Virtualisering</virtLink>).",
+      "Installera Fastfetch / Figurine / Ceph-förråd / HA / AMD-CPU-korrigeringar (se <optLink>Valfritt</optLink>).",
+      "Installera pigz eller justera ZFS ARC (se <perfLink>Prestanda</perfLink> / <storLink>Lagring</storLink>)."
+    ]
+  },
+  "xshokTitle": "xshok-proxmox detektering",
+  "xshokBody": "Om värden redan har kört skriptet <code>xshok-proxmox</code> upptäcker ProxMenux markörfilen och varnar innan du fortsätter. Vissa ändringar kan överlappa. Kompanjonskriptet är föråldrat; om du ändå fortsätter, läs <link>översikten</link> för sammanhang.",
+  "revert": {
+    "heading": "Revertering",
+    "body": "Varje verktyg i tabellen registreras i <code>/usr/local/share/proxmenux/installed_tools.json</code>. Öppna <link>Avinstallera optimeringar</link> och välj vilka delar som ska återställas. Kopior av ändrade konfigurationsfiler ligger bredvid originalen med suffixet <code>.bak</code>."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "label": "Anpassningsbar efterinstallation",
+        "href": "/docs/post-install/customizable",
+        "tail": " — Välj exakt vad du vill ha från samma katalog."
+      },
+      {
+        "label": "Avinstallera optimeringar",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — återställ valfria delar av ändringarna som gjorts här."
+      },
+      {
+        "label": "Användbara systemkommandon",
+        "href": "/docs/help-info/system-commands",
+        "tail": " — verifiera ändringarna (uptime, free, journalctl osv.)."
+      },
+      {
+        "label": "Översikt över efterinstallation",
+        "href": "/docs/post-install",
+        "tail": "."
+      }
+    ]
+  }
+}

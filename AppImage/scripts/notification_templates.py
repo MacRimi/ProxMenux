@@ -3335,6 +3335,7 @@ def _ai_cache_key(title, body, ai_config, detail_level, use_emojis):
         str(ai_config.get('ai_provider', '')), '\x1f',
         str(ai_config.get('ai_model', '')), '\x1f',
         str(ai_config.get('ai_language', '')), '\x1f',
+        str(ai_config.get('channel_type', '')).lower(), '\x1f',
         detail_level, '\x1f', '1' if use_emojis else '0',
     ]
     return _hash_ai_cache.sha256(''.join(parts).encode('utf-8', 'replace')).hexdigest()
@@ -3428,7 +3429,8 @@ def format_with_ai_full(title: str, body: str, severity: str,
         channel_type = ai_config.get('channel_type', '').lower()
         is_email = channel_type == 'email'
         
-        if is_email and detail_level == 'detailed' and body and len(body) > 50:
+        if (is_email and detail_level == 'detailed' and body and len(body) > 50
+                and result_body != body):
             # Only append if original has substantial content
             result_body += "\n\n" + "-" * 40 + "\n"
             result_body += "Original message:\n"

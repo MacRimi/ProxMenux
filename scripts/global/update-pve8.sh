@@ -188,7 +188,8 @@ EOF
         pmx_record_execution "Remove unused packages" "apt-get -y autoremove"
         apt-get -y autoremove > /dev/null 2>&1 || true
         apt-get -y autoclean > /dev/null 2>&1 || true
-        return 0
+        # Not an error, but the system was not updated.
+        return 3
     elif [[ $MENU_RESULT -eq 2 ]]; then
         msg_ok "$(translate "System is already up to date. No update needed.")"
         echo -e "\nSystem is already up to date." >> "$log_file"
@@ -280,6 +281,12 @@ EOF
         tput ed
         tput cnorm
         msg_ok "$(translate "System upgrade completed")"
+    else
+        tput rc
+        tput ed
+        tput cnorm
+        msg_error "$(translate "Proxmox VE 8 package upgrade failed. Review the APT output before retrying.")"
+        return 1
     fi
 
 

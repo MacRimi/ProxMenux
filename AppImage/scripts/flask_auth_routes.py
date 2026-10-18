@@ -560,10 +560,12 @@ def totp_setup():
     """Initialize TOTP setup for a user"""
     try:
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        username = auth_manager.verify_token(token)
+        username, scope = auth_manager.verify_token_full(token)
         
         if not username:
             return jsonify({"success": False, "message": "Unauthorized"}), 401
+        if scope != 'full_admin':
+            return jsonify({"success": False, "message": "This action requires a full_admin token"}), 403
         
         success, secret, qr_code, backup_codes, message = auth_manager.setup_totp(username)
         
@@ -586,10 +588,12 @@ def totp_enable():
     """Enable TOTP after verification"""
     try:
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        username = auth_manager.verify_token(token)
+        username, scope = auth_manager.verify_token_full(token)
         
         if not username:
             return jsonify({"success": False, "message": "Unauthorized"}), 401
+        if scope != 'full_admin':
+            return jsonify({"success": False, "message": "This action requires a full_admin token"}), 403
         
         data = request.json
         verification_token = data.get('token')
@@ -612,10 +616,12 @@ def totp_disable():
     """Disable TOTP (requires password confirmation)"""
     try:
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        username = auth_manager.verify_token(token)
+        username, scope = auth_manager.verify_token_full(token)
         
         if not username:
             return jsonify({"success": False, "message": "Unauthorized"}), 401
+        if scope != 'full_admin':
+            return jsonify({"success": False, "message": "This action requires a full_admin token"}), 403
         
         data = request.json or {}
         password = data.get('password')
@@ -653,10 +659,12 @@ def generate_api_token():
         if not token:
             return jsonify({"success": False, "message": "Unauthorized. Please log in first."}), 401
         
-        username = auth_manager.verify_token(token)
+        username, scope = auth_manager.verify_token_full(token)
         
         if not username:
             return jsonify({"success": False, "message": "Invalid or expired session. Please log in again."}), 401
+        if scope != 'full_admin':
+            return jsonify({"success": False, "message": "This action requires a full_admin token"}), 403
         
         data = request.json
         password = data.get('password')
@@ -749,8 +757,11 @@ def revoke_api_token_route(token_id):
             return jsonify({"success": False, "message": "Authentication is not configured"}), 400
 
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        if not token or not auth_manager.verify_token(token):
+        username, scope = auth_manager.verify_token_full(token) if token else (None, None)
+        if not username:
             return jsonify({"success": False, "message": "Unauthorized"}), 401
+        if scope != 'full_admin':
+            return jsonify({"success": False, "message": "This action requires a full_admin token"}), 403
 
         success, message = auth_manager.revoke_api_token(token_id)
 

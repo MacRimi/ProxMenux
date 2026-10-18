@@ -1,0 +1,75 @@
+{
+  "meta": {
+    "title": "Lokálny archív — tar.zst na súborovom systéme alebo USB disku | ProxMenux",
+    "description": "Lokálny cieľ zálohy vytvorí jediný archív .tar.zst v ľubovoľnom zapisovateľnom adresári: na internom disku, v bode pripojenia Proxmoxu, na zdieľaní NFS alebo na USB disku. Stránka opisuje nastavenie, rozpoznanie a pripojenie USB diskov, ochranu pred uložením archívu do zálohovanej cesty a sprievodný súbor JSON, ktorý zálohu identifikuje.",
+    "ogTitle": "ProxMenux Backup — lokálny cieľ archívu",
+    "ogDescription": "Ako ProxMenux píše lokálne zálohy ako .tar.zst archívy a ako nastaviť cieľový adresár alebo USB disk.",
+    "twitterTitle": "Lokálny cieľ zálohy | ProxMenux",
+    "twitterDescription": "Ako ProxMenux píše lokálne zálohy ako .tar.zst archívy na súborovom systéme alebo USB disku."
+  },
+  "header": {
+    "title": "Lokálny archív",
+    "description": "Lokálny cieľ zapisuje jeden komprimovaný archív tar do ľubovoľného zapisovateľného adresára na hostiteľovi: na interný disk, pripojenie NFS alebo SMB či USB disk.",
+    "section": "Záloha a obnova"
+  },
+  "intro": {
+    "title": "Jeden súbor, samostatný",
+    "body": "Lokálna záloha vytvorí jediný súbor <code>hostcfg-HOST-TIMESTAMP.tar.zst</code> (alebo <code>.tar.gz</code>, ak <code>zstd</code> nie je dostupné). Súbor obsahuje celý strom archívu — <code>manifest.json</code>, <code>metadata/</code> a <code>rootfs/</code> — a možno ho obnoviť na ľubovoľnom hostiteľovi Proxmox postupom obnovy ProxMenux alebo ručne rozbaliť cez <code>tar --zstd -xf</code> na ľubovoľnom systéme Linux. Netreba server, inicializáciu repozitára ani externú závislosť. Ak nie sú dostupné PBS ani Borg, tento cieľ ponúka najkratšiu cestu obnovy."
+  },
+  "targetConfig": {
+    "heading": "Nastavenie cieľového adresára",
+    "intro": "Miestny cieľ je <strong>jeden trvalý cieľový adresár</strong> — nie zoznam. ProxMenux ukladá voľbu operátora na <code>/usr/local/share/proxmenux/local-target.conf</code> a číta ju pri každej zálohe. Ak nie je nakonfigurovaný žiadny cieľ, použije sa predvolený <code>HB_LOCAL_TARGET_DEFAULT = /var/lib/vz/dump</code> (rovnaký adresár, ktorý Proxmox používa pre svoje vlastné výstupy <code>vzdump</code>). Cieľ sa konfiguruje z <em>Konfigurovať ciele zálohovania → Lokálne ciele</em>:",
+    "options": [
+      "<strong>Použiť predvolené (<code>/var/lib/vz/dump</code>).</strong> Lokálne úložisko Proxmox. Prítomný pri každej inštalácii Proxmox; archív sa nachádza vedľa výstupov vzdump a automaticky ho preberá karta Zálohy monitora.",
+      "<strong>Zadajte vlastnú cestu.</strong> Môžete použiť akúkoľvek absolútnu cestu súborového systému: pripojenie NFS, zdieľanie SMB pripojené cez <code>fstab</code>, vyhradený súbor údajov ZFS, druhý interný disk. ProxMenux overí, že cesta existuje a je adresárom, pred jej uložením.",
+      "<strong>Vyberte jednotku USB.</strong> Otvorí podponuku USB (nižšie), ktorá detekuje vymeniteľné zariadenia a ponúka pripojenie alebo formátovanie."
+    ]
+  },
+  "usbFlow": {
+    "heading": "Rozpoznanie a pripojenie USB disku",
+    "intro": "Podponuka USB uvádza oddiely na vymeniteľných zariadeniach hlásených nástrojom <code>lsblk</code>. Každý oddiel sa zobrazí s veľkosťou, menovkou súborového systému a aktuálnym stavom. Stav určuje ponúkanú akciu ProxMenux.",
+    "statesTitle": "Tri stavy zariadenia",
+    "stateRows": [
+      {
+        "state": "pripojené",
+        "shown": "Veľkosť · štítok · [fstype] · → /mount/point",
+        "action": "Oddiel je už pripojený. Jeho výber uloží aktuálny bod pripojenia ako lokálny cieľ zálohy. Žiadne nové pripojenie sa nevykoná."
+      },
+      {
+        "state": "odmontované",
+        "shown": "Veľkosť · menovka · [fstype] · (nepripojený — bude pripojený)",
+        "action": "Súborový systém je prítomný, ale nie je namontovaný. Po potvrdení, ProxMenux spustí <code>hb_mount_usb_partition</code>: vytvorí <code>/mnt/backup-LABEL</code> (alebo cestu založenú na UUID, ak nie je označenie), pripojí partíciu a uloží bod pripojenia ako miestny cieľ."
+      },
+      {
+        "state": "prázdny",
+        "shown": "Veľkosť · surový USB disk — bez súborového systému (bude NAFORMÁTOVANÝ)",
+        "action": "Zariadenie nemá súborový systém. Tento deštruktívny postup chráni dvojité potvrdenie. Najprv dialóg Áno/Nie upozorní, že operácia vymaže disk. Potom musí používateľ do vstupného poľa <strong>zadať presnú cestu zariadenia</strong> (napr. <code>/dev/sdb</code>), až následne ProxMenux vytvorí novú tabuľku GPT s oddielom ext4 a pripojí ho."
+      }
+    ],
+    "notMountedFallback": "Ak nie je detekované žiadne USB zariadenie, podmenu spadne späť do jednoduchého vstupného poľa. Operátor môže zadať ľubovoľnú cestu k bodu pripojenia; ak cesta nie je registrovaným bodom pripojenia, dialóg s potvrdením varuje pred pokračovaním."
+  },
+  "safetyCheck": {
+    "heading": "Bezpečnostná kontrola - cieľ vnútri záložnej cesty",
+    "body": "Pred zapísaním archívu <code>_bk_local</code> overí, že cieľový adresár <strong>nie je</strong> podcestou žiadneho zálohovaného adresára. Bežnou chybou by bolo pridanie <code>/root</code> do profilu a výber <code>/root/backups</code> ako cieľ — archív by potom zahrnul sám seba, buď by vytvoril poškodený archív, alebo by rástol bez obmedzenia, kým sa disk nezaplní. Kontrola vyrieši obe cesty pomocou <code>readlink -m</code>, porovná ich a v prípade konfliktu preruší zálohovanie pomocou dialógového okna, ktoré pomenuje konfliktnú cestu a uvedie tri spôsoby, ako to vyriešiť: vybrať cieľ mimo konfliktnej cesty, odstrániť vlastnú položku, ktorá obsahuje cieľ, alebo použiť vlastný režim na zrušenie začiarknutia konfliktnej cesty pre toto spustenie."
+  },
+  "archiveFormat": {
+    "heading": "Formát archívu a kompresia",
+    "intro": "Výstupné meno súboru vloží zdrojové meno hostiteľa a záložnú časovú pečiatku tak, že adresár, v ktorom je niekoľko archívov, sa chronologicky triedi a každý súbor je sebaidentifikačný.",
+    "namePattern": "hostcfg-HOSTNAME-YYYYMMDD_HHMMSS.tar.zst",
+    "compressionTitle": "Kompresia",
+    "compressionBody": "Hlavný postup používa <code>tar --zstd -cf</code> — jediný príkaz komprimujúci na predvolenej úrovni zstd. Ak <code>zstd</code> v zdroji nie je dostupné (na Proxmoxe zriedkavé, ale možné pri minimálnych inštaláciách), ProxMenux použije <code>gzip</code>. V tomto náhradnom postupe sa pri dostupnom <code>pv</code> pridá ukazovateľ priebehu, takže používateľ vidí rast veľkosti archívu v reálnom čase; bez <code>pv</code> sa použije obyčajné <code>tar -czf</code> bez priebežného výpisu.",
+    "sourceTitle": "Čo ide do archívu",
+    "sourceBody": "Príkaz tar sa spustí s <code>-C \"$staging_root\" .</code>, čím archivuje <strong>celý koreň dočasného prípravného adresára</strong>: <code>rootfs/</code>, <code>metadata/</code> a <code>manifest.json</code>. Všetky tri bloky údajov ležia vedľa seba na najvyššej úrovni archívu tar. Rozbalením vznikne presne ten strom, ktorý používa kód obnovy."
+  },
+  "sidecar": {
+    "heading": "Sprievodný súbor JSON",
+    "intro": "Každá úspešná lokálna záloha produkuje sesterský súbor: <code>HOSTNAME-TIMESTAMP.tar.zst.proxmenux.json</code>, zapísaný vedľa archívu funkciou <code>hb_write_archive_sidecar</code>. Tento malý súbor JSON umožňuje ProxMenux Monitor identifikovať archív ako zálohu ProxMenux hostiteľa, aj keď je neskôr presunutý, premenovaný alebo archivovaný inde.",
+    "contentTitle": "Obsah sprievodného súboru",
+    "contentBody": "Sprievodný súbor obsahuje verziu schémy, údaj o tom, či záloha vznikla interaktívne alebo plánovanou úlohou (<code>kind</code>), ID úlohy pri plánovaných spusteniach, použitý režim profilu (<code>default</code> alebo <code>custom</code>), názov zdrojového hostiteľa, pôvodný názov súboru archívu, časovú pečiatku vytvorenia ISO-8601 a veľkosť archívu v bajtoch.",
+    "whyBody": "Karta Backups v Monitore prehľadáva nakonfigurované lokálne adresáre a hľadá sprievodné súbory <code>*.proxmenux.json</code>, nie súbory <code>*.tar.zst</code>, pretože <code>.tar.zst</code> bez sprievodného súboru nemusí byť zálohou ProxMenux. Hľadanie je rýchle (súbory JSON sú malé) a párovanie zostane platné aj po premenovaní archívu, ak sa zodpovedajúco premenuje aj sprievodný súbor."
+  },
+  "restoreAccess": {
+    "heading": "Obnova z miestneho archívu",
+    "body": "Postup obnovy ProxMenux nájde lokálne archívy vyhľadaním sprievodných súborov v nastavenom lokálnom cieli a zobrazí ich v zozname archívov. Výber archívu spustí <code>_rs_check_layout</code>, ktorý rozbalí archív tar do dočasného prípravného adresára a pred pokračovaním overí štruktúru troch blokov údajov. Pri ručnom rozbalení mimo ProxMenux príkaz <code>tar --zstd -xf hostcfg-HOSTNAME-TIMESTAMP.tar.zst -C /tmp/hostcfg</code> vytvorí rovnaký strom, ktorý používa kód obnovy."
+  }
+}

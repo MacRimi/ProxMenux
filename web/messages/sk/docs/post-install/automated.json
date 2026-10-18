@@ -1,0 +1,172 @@
+{
+  "meta": {
+    "title": "Automatický skript po inštalácii | Dokumentácia ProxMenux",
+    "description": "Automatický skript ProxMenux po inštalácii vykoná na novom hostiteľovi Proxmox VE 14 vopred určených optimalizácií podľa hardvéru. Nemá zoznam funkcií na výber, no môže žiadať potvrdenie aktualizácie systému, odstránenia upozornenia na predplatné, niektorých inštalácií Log2RAM a reštartu. Vratné zmeny sa zaznamenajú na neskoršiu obnovu.",
+    "ogTitle": "Automatický skript po inštalácii | Dokumentácia ProxMenux",
+    "ogDescription": "14 vopred určených optimalizácií podľa hardvéru pre nový hostiteľ Proxmox VE, s potvrdením niektorých krokov a záznamom vratných zmien."
+  },
+  "header": {
+    "title": "Automatický skript po inštalácii",
+    "description": "ProxMenux vykoná 14 vopred určených základných optimalizácií bez zoznamu funkcií na výber. Niektoré kroky žiadajú potvrdenie. Vratné zmeny sa zaznamenajú pre Odinštalovať optimalizácie; aktualizácie balíkov sa neoznačujú za vratné.",
+    "section": "Po inštalácii · Automatizovaná"
+  },
+  "intro": {
+    "title": "Kedy vybrať automatizované",
+    "body": "Spustite ho na čerstvo nainštalovanom hostiteľovi Proxmox, ak chcete rozumné základné nastavenie bez výberu každej funkcie. Skript je idempotentný: opakované spustenie znovu použije rovnakú konfiguráciu. Voliteľné funkcie (Fastfetch, IOMMU, repozitár Ceph, HA, opravy AMD…) zámerne <strong>nie sú</strong> súčasťou tohto postupu; v prípade potreby ich vyberte v <link>Prispôsobiteľné</link>."
+  },
+  "applies": {
+    "heading": "Čo skript nastaví",
+    "intro": "Optimalizácia sa uplatňuje v tomto presnom poradí. Stĺpec <em>Kategória</em> odkazuje na podrobnú dokumentáciu každej zmeny v prispôsobiteľnom odkaze.",
+    "headerNum": "#",
+    "headerTool": "Nástroj",
+    "headerWhat": "Čo to robí?",
+    "headerCategory": "Kategória"
+  },
+  "optimizations": [
+    {
+      "tool": "Repozitáre APT + úplná aktualizácia",
+      "what": "Zakáže podnikové zdroje pve-enterprise.sources a ceph.sources, vytvorí čistý zdroj no-subscription pre kódový názov Debianu na hostiteľovi a spustí apt update && apt full-upgrade -y, čo je oficiálny príkaz Proxmoxu na aktualizáciu.",
+      "category": "Základné nastavenia",
+      "categorySlug": "basic-settings"
+    },
+    {
+      "tool": "Odstránenie upozornenia na predplatné",
+      "what": "Upraví webové rozhranie, aby skrylo upozornenie „Žiadne platné predplatné“. Pred použitím žiada potvrdenie; zmenu možno vrátiť cez Odinštalovať optimalizácie.",
+      "category": "Prispôsobenie",
+      "categorySlug": "customization"
+    },
+    {
+      "tool": "Vynútiť IPv4",
+      "what": "Zapíše /etc/apt/apt.conf.d/99-force-ipv4, aby apt používal iba IPv4 a obišiel nestabilné IPv6 spojenia so zrkadlami.",
+      "category": "Sieť",
+      "categorySlug": "network"
+    },
+    {
+      "tool": "Preskočiť jazykové balíky",
+      "what": "Zapíše /etc/apt/apt.conf.d/99-disable-translations, aby sa nesťahovali indexy preložených opisov balíkov a znížil sa objem dát pri aktualizáciách apt.",
+      "category": "Základné nastavenia",
+      "categorySlug": "basic-settings"
+    },
+    {
+      "tool": "Zvýšiť systémové limity",
+      "what": "Zvýši počet sledovaní inotify, limity nofile/nproc, limity zväzku kľúčov jadra a fs.file-max cez sysctl.d, limits.d, pam a systemd na hodnoty vhodné pre hostiteľov s mnohými kontajnermi.",
+      "category": "Systém",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Ladenie pamäte",
+      "what": "Nastaví vm.swappiness=10, vyvážené podiely zmenených nezapísaných stránok, vm.max_map_count=262144 a proaktívnu kompaktáciu, ak je podporovaná. Politika prideľovania pamäte nad dostupnú kapacitu zostáva na predvolenej hodnote Proxmoxu.",
+      "category": "Systém",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Správanie pri panike jadra",
+      "what": "Nastaví reštart hostiteľa 10 sekúnd po panic / oops / hardlockup namiesto neobmedzeného zamrznutia.",
+      "category": "Systém",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Ladenie sieťového zásobníka",
+      "what": "Veľkosti vyrovnávacích pamätí TCP, posilnenie IPv4 (vypnuté presmerovania, rp_filter=2, vypnuté logovanie martian), lokálne porty 1024-65535, zisťovanie MTU TCP, RFC 1337 a skript /usr/local/sbin/proxmenux-fwbr-tune spúšťaný jednorazovou jednotkou systemd a pravidlom udev. Tým sa rp_filter=0 / log_martians=0 opätovne nastavia na fwbr*/fwln*/fwpr*/tap* vždy, keď ich Proxmox znovu vytvorí pri štarte/zastavení VM, reštarte alebo živej migrácii.",
+      "category": "Sieť",
+      "categorySlug": "network"
+    },
+    {
+      "tool": "Prispôsobenie bashrc (root)",
+      "what": "Farebné PS1, bežné aliasy (l/la/ll/ls/grep), história s časovými značkami a načítanie bash-completion, všetko v ohraničenom bloku PMX_CORE_BASHRC na jednoduché odstránenie.",
+      "category": "Prispôsobenie",
+      "categorySlug": "customization"
+    },
+    {
+      "tool": "Log2RAM (prispôsobené pre SSD, automatické)",
+      "what": "Znižuje opotrebenie SSD/NVMe presunom /var/log na ramdisk tmpfs s pravidelnou synchronizáciou na disk. Inštalácia z pôvodného projektu pri koreňovom disku SSD alebo NVMe. Veľkosť podľa RAM hostiteľa (128M / 256M / 512M), pravidelná synchronizácia a ochrana, ktorá pri 80% zaplnení vyčistí staré žurnály a pri 92% skráti rýchlo rastúce logy pred zápisom. Limity journald prispôsobí ramdisku. Podrobnosti v <link>Log2RAM</link>.",
+      "category": "Úložisko",
+      "categorySlug": "storage"
+    },
+    {
+      "tool": "Autotrim ZFS (iba SSD)",
+      "what": "Zapne zpool autotrim=on v každom poole ZFS, ktorého všetky vdev sú SSD/NVMe s podporou TRIM (kontroluje /sys/block/[dev]/queue/rotational a discard_granularity). Pooly s HDD automaticky vynechá. Na odinštalovanie zaznamená iba pooly skutočne zmenené cez ProxMenux; ručne zapnutý autotrim ponechá.",
+      "category": "Úložisko",
+      "categorySlug": "storage"
+    },
+    {
+      "tool": "Limity veľkosti journald",
+      "what": "Vynúti trvalé ukladanie, obmedzí SystemMaxUse=64M / RuntimeMaxUse=60M, zapne kompresiu a logovanie úrovne info potrebné pre Monitor. Pri aktívnom Log2RAM sa vynechá, pretože ten vykonáva vlastné úpravy.",
+      "category": "Systém",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Ladenie logrotate",
+      "what": "Globálne nastaví daily a potom size 10M, uchová 7 rotácií a zapne kompresiu aj copytruncate. Neskoršie veľkostné kritérium má prednosť; pravidlá konkrétnych logov ho môžu prepísať. Vhodné pre Log2RAM, no frekvencia závisí od pravidiel a časovača.",
+      "category": "Systém",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Trvalé názvy rozhraní",
+      "what": "Pre každú fyzickú sieťovú kartu zapíše <code>/etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code> s hlavičkou „Managed by ProxMenux“, ktorý priradí MAC k aktuálnemu názvu. Názvy <code>eth0</code> / <code>enp…</code> zostanú stabilné po reštarte aj pridaní kariet.",
+      "category": "Sieť",
+      "categorySlug": "network"
+    }
+  ],
+  "hardwareTitle": "Predvolené hodnoty podľa hardvéru",
+  "hardwareBody": "Skript pred nastavením preskúma hardvér hostiteľa. Log2RAM sa predvolene inštaluje iba pri koreňovom disku SSD alebo NVMe; pri inej detekcii žiada potvrdenie. Veľkosť ramdisku sa vyberá podľa celkovej RAM (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). Pri aktívnom Log2RAM sa limity journald prispôsobia ramdisku, aby sa nezaplnil.",
+  "upgrade": {
+    "heading": "Aktualizovať systém",
+    "intro": "Prvým krokom automatického postupu je aktualizácia Proxmoxu. Oficiálny návod pre bežiaci hostiteľ v rámci rovnakej hlavnej verzie odporúča spustiť:",
+    "after": "Tento riadok je oficiálny príkaz pre aktuálne verzie Proxmoxu. Automatický skript vykoná <strong>presne</strong> tento príkaz a pridá čistenie repozitárov a kroky po aktualizácii podľa oficiálneho návodu — rovnako ako samostatný nástroj <link>Aktualizácia systému Proxmox</link>:",
+    "items": [
+      "Zakáže podnikové zdroje <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, odstráni staré súbory repozitárov a zapíše čistý zdroj bez predplatného pre kódový názov distribúcie hostiteľa.",
+      "Spustí inováciu neinteraktívne pomocou <code>DEBIAN_FRONTEND=noninteractive</code> a <code>--force-confdef --force-confold</code> – konfiguračné súbory, ktoré ste si prispôsobili, zostanú vaše, aj keď ich upstream zmení.",
+      "Nainštaluje základné balíky Proxmox, ak chýbajú (<code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>).",
+      "Kontrola konzistentnosti metadát LVM, <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code> a výzva na reštart iba pri zmene jadra."
+    ],
+    "sameTitle": "Rovnaká aktualizácia, dva vstupné body",
+    "sameBody": "Automatický postup a samostatný nástroj <link>Aktualizácia systému Proxmox</link> používajú rovnaké skripty (<code>update-pve8.sh</code> / <code>update-pve9_2.sh</code>). Samostatný nástroj použite, ak chcete iba aktualizovať hostiteľa bez ostatných optimalizácií."
+  },
+  "endResult": {
+    "heading": "Očakávaný konečný výsledok",
+    "body": "Po skončení uvidíte správu o úspechu s výstupmi jednotlivých krokov a výzvu na reštart, ktorý vyžadujú niektoré nastavenia jadra. Reštart môžete odložiť; nastavenia sa prejavia pri ďalšom štarte.",
+    "imageAlt": "Automatický skript po inštalácii – konečný výstup terminálu zobrazujúci každú úspešne aplikovanú optimalizáciu"
+  },
+  "notDoes": {
+    "heading": "Čo tento skript nerobí",
+    "items": [
+      "Automatické zistenie časového pásma (v pôvodnom skripte je zakomentované; v prípade potreby použite Prispôsobiteľné).",
+      "Zakázať portmapper / rpcbind (pozri <secLink>Zabezpečenie</secLink>).",
+      "Povoliť IOMMU / VFIO (pozri <virtLink>Virtualizácia</virtLink>).",
+      "Nainštalovať Fastfetch / Figurine / repozitár Ceph / HA / opravy CPU AMD (pozri <optLink>Voliteľné</optLink>).",
+      "Nainštalovať pigz alebo naladiť ZFS ARC (pozri <perfLink>Výkon</perfLink> / <storLink>Úložisko</storLink>)."
+    ]
+  },
+  "xshokTitle": "Detekcia xshok-proxmox",
+  "xshokBody": "Ak hostiteľ už spustil skript <code>xshok-proxmox</code>, ProxMenux rozpozná súbor označenia a pred pokračovaním vás upozorní. Niektoré úpravy sa môžu prekrývať. Doplnkový skript je zastaraný; ak napriek tomu pokračujete, prečítajte si <link>prehľad</link> so súvislosťami.",
+  "revert": {
+    "heading": "Vrátenie",
+    "body": "Každý nástroj v tabuľke sa zaznamená v <code>/usr/local/share/proxmenux/installed_tools.json</code>. Otvorte <link>Odinštalovať optimalizácie</link> a vyberte položky na obnovu. Zálohy zmenených súborov sú vedľa originálov s príponou <code>.bak</code>."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Prispôsobiteľné nastavenia po inštalácii",
+        "href": "/docs/post-install/customizable",
+        "tail": " — Vyberte si presne to, čo chcete z rovnakého katalógu."
+      },
+      {
+        "label": "Odinštalovať optimalizácie",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — vráťte vybrané zmeny z tohto postupu späť."
+      },
+      {
+        "label": "Užitočné systémové príkazy",
+        "href": "/docs/help-info/system-commands",
+        "tail": " — overte zmeny (uptime, free, journalctl atď.)."
+      },
+      {
+        "label": "Prehľad po inštalácii",
+        "href": "/docs/post-install",
+        "tail": "."
+      }
+    ]
+  }
+}

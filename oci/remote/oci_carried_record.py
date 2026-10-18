@@ -38,6 +38,8 @@ DIRECTORY = '.proxmenux'
 NAME = 'oci-record.json'
 KIND = 'proxmenux.oci-carried-record'
 STAMP = 'carried.sha256'
+CONFIG_CACHE = 'carried-config.json'
+LOCAL_CONFIGS = Path('/etc/pve/lxc')
 LIMIT = 16 * 1024 * 1024
 STACK_CONTRACT = '/etc/pve/priv/proxmenux-stack-{}.json'
 NVIDIA_HOOK = re.compile(r'/usr/local/lib/proxmenux/oci/nvidia-mount-([a-f0-9]{64})\.sh')
@@ -279,6 +281,47 @@ def read_stamp(path):
     return value if isinstance(value, dict) else {}
 
 
+def configuration(root, vmid, verify=False):
+    """Reuse pct's formatted output only while its local source is unchanged.
+
+    Opening Manage checks every carried copy. Starting a fresh pct process
+    for each unchanged guest dominates that check. The private host cache is
+    keyed by the complete native configuration, including notes, pending
+    changes and snapshot sections. Lifecycle verification always calls pct.
+    An unavailable source, invalid cache or concurrent edit falls back to pct.
+    """
+    source = LOCAL_CONFIGS / f'{int(vmid)}.conf'
+    cache = instances.location(root, vmid).parent / CONFIG_CACHE
+
+    def fingerprint():
+        try:
+            return sha(source.read_bytes())
+        except OSError:
+            return None
+
+    before = fingerprint()
+    if before is not None and not verify:
+        try:
+            if not cache.is_symlink() and cache.stat().st_size <= LIMIT:
+                value = json.loads(cache.read_text())
+                if (isinstance(value, dict) and value.get('schema_version') == 1
+                        and value.get('source_sha256') == before
+                        and isinstance(value.get('config'), str) and value['config']
+                        and fingerprint() == before):
+                    return value['config']
+        except (OSError, ValueError):
+            pass
+    result = _run('pct', 'config', str(vmid))
+    if result.returncode != 0:
+        return None
+    # Do not associate output from one revision with another revision's hash.
+    if before is not None and fingerprint() == before:
+        with contextlib.suppress(OSError, ValueError):
+            instances.write(cache, {'schema_version': 1, 'source_sha256': before,
+                                    'config': result.stdout})
+    return result.stdout
+
+
 def superseded(record, existing, stamp):
     """Whether the container carries a copy this host did not write, with a
     record that differs from the one of this host. That is a container that
@@ -308,10 +351,10 @@ def carry(root, vmid, mount_stopped=True, verify=False, adopted=False):
     if record.get('status') != 'installed' or record.get('pending_transaction') \
             or record.get('pending_stack_transaction'):
         return 'skipped'
-    result = _run('pct', 'config', str(vmid))
-    if result.returncode != 0 or instances.identity(result.stdout.encode()) != record['installation_id']:
+    config = configuration(root, vmid, verify)
+    if config is None or instances.identity(config.encode()) != record['installation_id']:
         return 'skipped'
-    value = bundle(record, result.stdout)
+    value = bundle(record, config)
     expected = digest(value)
     record_path = instances.location(root, vmid)
     path = record_path.parent / STAMP
@@ -340,7 +383,7 @@ def carry(root, vmid, mount_stopped=True, verify=False, adopted=False):
             else:
                 value['saved_at'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
                 value['generation'] = uuid.uuid4().hex
-                write_copy(rootfs, value, mapped_root(result.stdout))
+                write_copy(rootfs, value, mapped_root(config))
                 stamp = {'generation': value['generation']}
                 outcome = 'carried'
         if outcome == 'stale':

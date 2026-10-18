@@ -78,7 +78,7 @@ function walk(node) {
   if (ts.isVariableDeclaration(node)) {
     const name = node.name.getText(tree)
     if (wanted.has(name)) definitions.push(`const ${node.getText(tree)};`)
-    if (["applySchedulePayload", "loadSchedule", "loadBulkUpdate"].includes(name))
+    if (["LEGACY_STOPPED_SCHEDULE_REASONS", "scheduleReasonCodeFromPersisted", "applySchedulePayload", "loadSchedule", "loadBulkUpdate"].includes(name))
       preferenceDefinitions.push(`const ${node.getText(tree)};`)
     if (["osUpdateStale", "osUpdateStatusKnown", "hasOsUpdates"].includes(name))
       status.push(`const ${node.getText(tree)};`)
@@ -162,8 +162,10 @@ assert.equal(ui.osStatus({ ...recent, available: false, count: 0 }).osUpdateStat
 assert.equal(ui.osStatus({ ...recent, error: "probe failed" }).osUpdateStatusKnown, false)
 assert.equal(ui.aggregate({ app_watches: [{ update_available: true, name: "App" }] }).last_check, null,
   "an app badge cannot invent an OS check timestamp")
-assert.equal(ui.badge(legacy).props.children[0].type, "Clock")
-assert.equal(ui.badge(legacy).props.children[1], "vmLxc.updates.checkStale")
+assert.equal(ui.badge(legacy).props.children[0].type, "Arrow",
+  "an old check keeps the same badge as a recent one")
+assert.equal(ui.badge(legacy).props.children[1], 51)
+assert.equal(ui.badge({ ...legacy, available: false, count: 0 }), null)
 assert.equal(ui.badge({ ...recent, available: true, count: 2 }).props.children[1], 2)
 assert.equal(ui.badge({ ...recent, available: false, count: 0 }), null)
 assert.equal(requests.length, 0)
@@ -325,11 +327,11 @@ context.selectedVMRef.current = { vmid: 100 }
   }
   for (const name of ["ScheduleEnabled", "ScheduleConfigured", "ScheduleCron", "SchedulePreset",
     "ScheduleTarget", "ScheduleTargets", "ScheduleReleaseDelayDays", "ApplyBackup", "ApplyBackupStorage",
-    "ApplyRestart", "ScheduleLastRunAt", "ScheduleLastRunStatus", "ScheduleLastRunReason", "ScheduleLastRunLog",
+    "ApplyRestart", "ScheduleLastRunAt", "ScheduleLastRunStatus", "ScheduleLastRunReason", "ScheduleLastRunReasonCode", "ScheduleLastRunLog",
     "ScheduleLastRunRebootRequired", "ScheduleLastRunRebootPackages", "ExternalCron", "ScheduleError",
     "ScheduleLoaded", "BulkError", "BulkLoaded", "BulkEditMode", "BulkConfigured", "BulkTargets", "BulkPersistedTargets"])
     preferenceContext[`set${name}`] = value => { preferenceState[name] = value }
-  assert.equal(preferenceDefinitions.length, 3)
+  assert.equal(preferenceDefinitions.length, 5)
   const preferences = compile(preferenceDefinitions.join("\n") + `
     exports.apply = applySchedulePayload; exports.schedule = loadSchedule; exports.bulk = loadBulkUpdate;
   `, preferenceContext)
@@ -340,6 +342,12 @@ context.selectedVMRef.current = { vmid: 100 }
   assert.equal(preferenceState.ApplyRestart, false, "missing restart cannot inherit a reboot")
   preferences.apply({ backup: false, backup_storage: "", restart: false })
   assert.equal(preferenceState.ApplyBackupStorage, "")
+  preferences.apply({ last_run_reason_code: "stopped_container", last_run_reason: "raw stopped reason" })
+  assert.equal(preferenceState.ScheduleLastRunReasonCode, "stopped_container",
+    "schedule payload publishes its structured stopped reason")
+  preferences.apply({})
+  assert.equal(preferenceState.ScheduleLastRunReasonCode, null,
+    "a missing reason code cannot leak from the previously selected guest")
   preferenceContext.vmModalCacheRef.current.schedule.set(213, { backup: true, backup_storage: "local", restart: true })
   const previousSchedule = preferences.schedule(213)
   assert.equal(preferenceState.ApplyBackup, true, "use only the selected guest's own cache")

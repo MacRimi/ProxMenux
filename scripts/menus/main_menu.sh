@@ -128,4 +128,8 @@ show_menu() {
     done
 }
 
+source "$LOCAL_SCRIPTS/global/platform-functions.sh"
+if pmx_is_pbs; then
+    exec bash "$LOCAL_SCRIPTS/menus/pbs_menu.sh"
+fi
 show_menu

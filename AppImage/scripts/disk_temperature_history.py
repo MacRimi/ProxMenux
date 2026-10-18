@@ -526,6 +526,16 @@ def disk_read_policy(disk_name: str, excluded: Optional[set] = None) -> str:
     return IDLE
 
 
+def settle_own_reads(disk_names) -> None:
+    """A reader that has just read these disks itself takes their counters as
+    the new baseline, so its own I/O never counts as activity."""
+    stats = _read_diskstats()
+    with _cache_lock:
+        for name in disk_names:
+            if name in _last_io and name in stats:
+                _last_io[name] = stats[name]
+
+
 def is_disk_idle(disk_name: str) -> bool:
     """True while the disk is being left alone for having no I/O."""
     ts = _idle_state.get(disk_name)

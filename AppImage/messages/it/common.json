@@ -8,7 +8,8 @@
     "unknown": "Sconosciuto",
     "notAvailable": "N/A",
     "serverOffline": "Server offline",
-    "supportProject": "Sostieni e contribuisci al progetto"
+    "supportProject": "Sostieni e contribuisci al progetto",
+    "descriptionPbs": "Dashboard di Proxmox Backup Server"
   },
   "common": {
     "notAvailable": "N/A",
@@ -165,7 +166,8 @@
     },
     "runningCountOne": "{count} in esecuzione",
     "runningCountFew": "{count} in esecuzione",
-    "runningCountMany": "{count} in esecuzione"
+    "runningCountMany": "{count} in esecuzione",
+    "pbsVersion": "Versione PBS:"
   },
   "storage": {
     "loadingTitle": "Caricamento dati storage...",
@@ -1110,7 +1112,21 @@
       "available": "Backup disponibili",
       "loading": "Caricamento backup...",
       "empty": "Nessun backup trovato",
-      "emptyHint": "Crea il primo backup con il pulsante in alto"
+      "emptyHint": "Crea il primo backup con il pulsante in alto",
+      "refresh": "Aggiorna",
+      "refreshFailed": "Impossibile aggiornare i backup. Aggiorna di nuovo per confermarne lo stato attuale.",
+      "deleteSelected": "Elimina selezionati ({count})",
+      "deletedCount": "{count} backup eliminati.",
+      "unconfirmedCount": "L'eliminazione di {count} backup non è stata confermata. Aggiorna l'elenco e controlla le attività di Proxmox prima di riprovare.",
+      "deleteFailed": "Impossibile confermare l'eliminazione. Aggiorna l'elenco e controlla le attività di Proxmox prima di riprovare.",
+      "selectHint": "Seleziona i backup non protetti (fino a 20 per gruppo)",
+      "selectBackup": "Seleziona backup",
+      "protected": "Protetto",
+      "confirmTitle": "Eliminare {count} backup?",
+      "confirmDescription": "Questi archivi di backup della VM/CT {vmid} verranno eliminati definitivamente. I backup protetti sono esclusi. Questo non elimina l'ospite.",
+      "deleting": "In attesa che Proxmox termini l'eliminazione degli archivi selezionati…",
+      "cancel": "Annulla",
+      "confirmDelete": "Elimina backup"
     },
     "updatesPanel": {
       "pendingTitle": "Aggiornamenti pacchetti in sospeso",
@@ -1302,7 +1318,10 @@
         "Giovedì",
         "Venerdì",
         "Sabato"
-      ]
+      ],
+      "runSkippedStatus": "esecuzione saltata",
+      "reasonStoppedContainer": "Il contenitore è fermo; l'aggiornamento pianificato è stato saltato.",
+      "reasonStoppedContainerHistorical": "Il contenitore era fermo all'ora dell'aggiornamento pianificato."
     },
     "cronChip": {
       "detected": "cron host rilevato",
@@ -1718,7 +1737,17 @@
       "portCategoryCustomPlaceholder": "Digita una categoria e premi Enter (Esc per annullare)",
       "portCustomUrlPlaceholder": "URL personalizzato (ad es. https://vault.example.com) — sostituisce IP:port",
       "stackMemberTitle": "Parte di un'applicazione multi-container",
-      "stackMemberBody": "Questo container supporta un’applicazione il cui container principale è {primary}. L’applicazione, i suoi collegamenti web e la sua versione sono mostrati lì."
+      "stackMemberBody": "Questo container supporta un’applicazione il cui container principale è {primary}. L’applicazione, i suoi collegamenti web e la sua versione sono mostrati lì.",
+      "nativeEvidencePort": "Porta TCP in ascolto",
+      "nativeEvidenceFile": "File installato",
+      "nativeEvidenceProcess": "Eseguibile in esecuzione",
+      "nativeEvidenceDirectory": "Directory di lavoro",
+      "nativeEvidenceService": "Definizione del servizio",
+      "nativeScanFailed": "La ricerca delle applicazioni non è stata completata. I risultati precedenti potrebbero non essere aggiornati; riprova.",
+      "nativeScanPartial": "La ricerca delle applicazioni è incompleta. Controlla gli elementi trovati e riprova.",
+      "nativeVersionUnknown": "Versione installata sconosciuta",
+      "nativeEvidenceStale": "Gli elementi trovati potrebbero non essere aggiornati o essere incompleti.",
+      "nativeRegisterOnly": "Conferma la registrazione nell'editor. Una versione nota viene salvata come valore manuale; non viene configurato alcun aggiornamento automatico."
     },
     "statusFilter": {
       "ariaLabel": "Filtra macchine virtuali e container",
@@ -1814,7 +1843,8 @@
         "logs": "Log di sistema",
         "updates": "Aggiornamenti di sistema",
         "security": "Sicurezza e certificati",
-        "temperature": "Temperatura"
+        "temperature": "Temperatura",
+        "pbsServices": "Servizi PBS"
       }
     },
     "remoteStorage": {
@@ -2108,7 +2138,13 @@
         "inactiveFooter": "Abilita le notifiche per ricevere avvisi di sistema, integrità e sicurezza attraverso i canali configurati.",
         "notificationLanguage": "Lingua notifiche",
         "selectNotificationLanguage": "Seleziona lingua notifiche",
-        "notificationLanguageHint": "Usata per le notifiche runtime deterministiche anche quando l’IA è disabilitata."
+        "notificationLanguageHint": "Usata per le notifiche runtime deterministiche anche quando l’IA è disabilitata.",
+        "appriseServiceHelp": "Configurazione di Slack e Matrix",
+        "appriseSlackSteps": "Crea un webhook in ingresso nell'app Slack per il canale di destinazione, quindi incolla il suo URL HTTPS completo nel campo URL di Apprise. Non è necessaria alcuna conversione.",
+        "appriseSlackDocs": "Formati URL e configurazione di Slack",
+        "appriseMatrixSteps": "Usa un account di notifica autorizzato a pubblicare nella stanza. Sostituisci utente, password, homeserver e ID completo della stanza dell'esempio; codifica per URL i caratteri speciali nelle credenziali. Lo schema matrixs usa HTTPS. Consulta la documentazione per il supporto di token, SSO e stanze cifrate nella versione di Apprise installata.",
+        "appriseMatrixDocs": "Formati URL e configurazione di Matrix",
+        "appriseServiceFinish": "Abilita Apprise, inserisci il tuo URL, scegli le categorie di notifica o i singoli eventi, salva e poi usa Invia test. Questi esempi non modificano l'URL salvato. Questo canale Apprise ha una sola destinazione; usa l'API Apprise per più servizi contemporaneamente."
       },
       "ai": {
         "title": "Miglioramento con IA",
@@ -4753,6 +4789,24 @@
       "thursday": "Giovedì",
       "tuesday": "Martedì",
       "wednesday": "Mercoledì"
+    },
+    "storageRetention": {
+      "title": "Conservazione dell'archiviazione",
+      "keepAll": "Mantieni tutti i backup",
+      "description": "Conservazione predefinita dei backup salvata in Proxmox. Le attività di backup con una politica esplicita hanno la precedenza su questo valore.",
+      "refresh": "Aggiorna",
+      "saved": "Politica di conservazione dell'archiviazione salvata. Non è stata eseguita alcuna pulizia.",
+      "choosePolicy": "Scegli Mantieni tutti oppure almeno un numero di conservazione maggiore di zero.",
+      "saveFailed": "Impossibile salvare la politica di conservazione dell'archiviazione. Aggiorna l'elenco se la configurazione è cambiata.",
+      "loadFailed": "Impossibile caricare la politica di conservazione dell'archiviazione.",
+      "empty": "Nessuno spazio di archiviazione dei backup trovato.",
+      "default": "Valore predefinito di Proxmox",
+      "edit": "Modifica",
+      "editTitle": "Conservazione per {storage}",
+      "effect": "Si applica alle future esecuzioni dei backup che ereditano questa politica di archiviazione. Il salvataggio non elimina i backup esistenti. I backup protetti rimangono protetti.",
+      "cancel": "Annulla",
+      "save": "Salva conservazione",
+      "useDefault": "Usa l'impostazione predefinita di Proxmox (nessuna policy su questo storage)"
     }
   },
   "healthStatus": {
@@ -4783,7 +4837,8 @@
       "services": "Servizi PVE",
       "logs": "Log di sistema",
       "updates": "Aggiornamenti di sistema",
-      "security": "Sicurezza e certificati"
+      "security": "Sicurezza e certificati",
+      "pbsServices": "servizi PBS"
     },
     "checks": {
       "cpu_usage": "Utilizzo CPU",
@@ -7227,5 +7282,99 @@
         "diagnosticsOmitted": "Righe o testo diagnostico omessi: {count}. Il report originale è conservato."
       }
     }
+  },
+  "pbs": {
+    "title": "Proxmox Backup Server",
+    "server": "Server PBS",
+    "chooseServer": "Scegli un server PBS",
+    "local": "PBS locale",
+    "refresh": "Aggiorna",
+    "manage": "Gestisci le connessioni PBS",
+    "loadFailed": "Impossibile caricare lo stato di PBS.",
+    "loading": "Caricamento dei dati PBS…",
+    "noServer": "Aggiungi una connessione PBS per visualizzare datastore, attività e pianificazioni.",
+    "permissionsHelp": "Abilita l'autenticazione di Monitor prima di salvare le credenziali. Usa un token API PBS dedicato con il ruolo Audit su / sia nelle ACL dell'utente sia in quelle del token, con propagazione. Questo pannello legge soltanto i dati PBS.",
+    "editConnection": "Connessione da modificare",
+    "add": "Aggiungi una nuova connessione",
+    "name": "Nome",
+    "url": "URL HTTPS (includere :8007 per la porta nativa di PBS)",
+    "token_id": "ID del token API (user@realm!token)",
+    "token_secret": "Segreto del token API (lasciare vuoto per mantenere quello salvato)",
+    "fingerprint": "Impronta SHA256 del certificato (facoltativa)",
+    "tlsHelp": "Lascia vuota l'impronta per la normale verifica dell'autorità di certificazione e del nome host. Per un certificato autofirmato, copia la sua impronta SHA256 dalla console PBS o da un altro canale attendibile. L'impronta viene verificata prima dell'invio delle credenziali.",
+    "saved": "Connessione PBS verificata e salvata.",
+    "saveFailed": "Impossibile salvare la connessione PBS.",
+    "testing": "Verifica della connessione…",
+    "save": "Verifica e salva",
+    "remove": "Rimuovi connessione",
+    "removeConfirm": "Rimuovere da Monitor questa connessione PBS salvata e il suo token? I dati e le attività PBS non vengono modificati.",
+    "sampled": "Rilevato alle",
+    "datastores": "Datastore",
+    "total": "Capacità del filesystem",
+    "used": "Usato",
+    "free": "Disponibile",
+    "noDatastores": "Nessun datastore accessibile. Controlla la configurazione dei datastore e i permessi dell'utente e del token.",
+    "tasks": "Attività recenti",
+    "noTasks": "Non sono state restituite attività recenti.",
+    "task": "Attività",
+    "started": "Avviata",
+    "status": "Stato",
+    "running": "In esecuzione",
+    "jobs": "Pianificazioni di manutenzione",
+    "job": "Attività pianificata",
+    "schedule": "Pianificazione",
+    "sync": "Sincronizzazione",
+    "verify": "Verifica",
+    "prune": "Pulizia",
+    "overview": "Panoramica",
+    "logs": "Registri di sistema",
+    "terminal": "Terminale",
+    "security": "Sicurezza",
+    "logout": "Disconnetti",
+    "navigation": "Navigazione PBS",
+    "cpu": "CPU",
+    "memory": "Memoria",
+    "uptime": "Tempo di attività",
+    "capacityUnavailable": "Capacità non disponibile.",
+    "datastoresUnavailable": "{count} non disponibile",
+    "datastoresOnline": "Tutti disponibili",
+    "moreDatastores": "+{count} altri archivi dati",
+    "estimatedFull": "Pieno stimato",
+    "estimatedFullUnknown": "dati non ancora sufficienti",
+    "duration": "Durata",
+    "noJobs": "non è configurata alcuna pianificazione di sincronizzazione, verifica o eliminazione."
+  },
+  "monitorLinks": {
+    "groups": {
+      "cluster": "cluster",
+      "standalone": "nodi autonomi",
+      "pbs": "Proxmox Backup Server"
+    },
+    "thisNode": "questo nodo",
+    "checking": "Controllo dei nodi…",
+    "loadFailed": "impossibile caricare l'elenco dei nodi.",
+    "empty": "Ancora nessun altro nodo. Aggiungine uno per aprire il suo Monitor da qui.",
+    "noResponse": "Nessuna risposta",
+    "pbsInterface": "interfaccia PBS",
+    "openNewTab": "apri in una nuova scheda",
+    "manage": "aggiungi o gestisci nodi...",
+    "dialogTitle": "nodi collegati",
+    "dialogDescription": "I nodi del cluster e i Proxmox Backup Server configurati vengono rilevati automaticamente. Ogni Monitor mantiene il proprio accesso.",
+    "addTitle": "aggiungi un nodo",
+    "name": "Nome",
+    "address": "monitora l'indirizzo",
+    "type": "digita",
+    "add": "aggiungi",
+    "save": "salva",
+    "remove": "rimuovere",
+    "visible": "visibile",
+    "autoAddress": "automatico",
+    "detected": "rilevato",
+    "added": "aggiunto",
+    "saveFailed": "impossibile salvare l'elenco dei nodi.",
+    "backTo": "torna a {name}",
+    "cameFromTitle": "aggiungi il nodo Monitor?",
+    "cameFromBody": "aggiungi {name} ai nodi collegati di questo monitor.",
+    "notNow": "Non ora"
   }
 }

@@ -15,7 +15,7 @@ class VmBackupJobsWiring(TestCase):
         source = ROUTES.read_text()
         routes = re.findall(r'@vm_backup_bp\.route\("([^"]+)", methods=\["(\w+)"\]\)\n@(\w+)\ndef (\w+)', source)
         self.assertEqual(len(routes), source.count('@vm_backup_bp.route('))
-        self.assertEqual(len(routes), 8)
+        self.assertEqual(len(routes), 10)
         for path, method, guard, name in routes:
             expected = 'require_auth' if method == 'GET' else 'require_admin_scope'
             self.assertEqual(guard, expected, f'{method} {path} ({name})')

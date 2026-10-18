@@ -1,14 +1,14 @@
 {
   "meta": {
-    "title": "ProxMenux Monitor | ProxMenux Documentation",
+    "title": "ProxMenux Monitor | Documentación de ProxMenux",
     "description": "Activa o desactiva la unidad systemd proxmenux-monitor.service e inspecciona su estado actual. El Monitor expone una UI web en TCP 8008 para monitorización visual del host.",
-    "ogTitle": "ProxMenux Monitor | ProxMenux Documentation",
-    "ogDescription": "Conmuta el servicio systemd proxmenux-monitor y comprueba su estado desde el menú Settings."
+    "ogTitle": "ProxMenux Monitor | Documentación de ProxMenux",
+    "ogDescription": "Activa o desactiva el servicio systemd proxmenux-monitor y consulta su estado en Ajustes."
   },
   "header": {
     "title": "ProxMenux Monitor",
-    "description": "Dos acciones relacionadas dentro del menú Settings: conmutar la unidad systemd proxmenux-monitor.service (start / stop y enable / disable en un clic) y ver su estado detallado actual. El Monitor expone una UI web en TCP 8008 para monitorización visual del host.",
-    "section": "Settings"
+    "description": "Dos acciones relacionadas en Ajustes: activar o desactivar la unidad systemd proxmenux-monitor.service (iniciar/detener y habilitar/deshabilitar el arranque automático a la vez) y ver su estado detallado. Monitor ofrece una interfaz web en TCP 8008 para monitorizar el host.",
+    "section": "Ajustes"
   },
   "intro": {
     "title": "¿Qué es ProxMenux Monitor?",
@@ -32,7 +32,7 @@
     "outro": "El Monitor se instala automáticamente como parte de la instalación estándar de ProxMenux y corre como un servicio systemd (<code>proxmenux-monitor.service</code>) que arranca automáticamente al iniciar."
   },
   "warnConditional": {
-    "title": "Las opciones de Settings solo son visibles cuando el Monitor está instalado",
+    "title": "Las opciones de Ajustes solo aparecen cuando Monitor está instalado",
     "body": "Las dos entradas de menú descritas debajo solo aparecen en Settings si <code>proxmenux-monitor.service</code> está registrado en systemd. Si no las ves, el Monitor no se instaló (es opcional durante la instalación de ProxMenux). Para añadirlo más tarde, reinstala ProxMenux con la última versión y elige la opción de Monitor."
   },
   "toggle": {
@@ -43,17 +43,17 @@
     "headerAction": "Acción al confirmar",
     "rows": [
       {
-        "state": "active",
+        "state": "activo",
         "label": "Desactivar ProxMenux Monitor",
         "action": "systemctl stop + disable"
       },
       {
-        "state": "inactive",
+        "state": "inactivo",
         "label": "Activar ProxMenux Monitor",
         "action": "systemctl enable + start"
       }
     ],
-    "outro": "Cada conmutación requiere un diálogo explícito sí/no antes de ejecutarse. Activar / Desactivar es simétrico: desactivar para el servicio <em>y</em> deshabilita el auto-arranque al iniciar; activar habilita el auto-arranque <em>y</em> arranca el servicio inmediatamente."
+    "outro": "Cada cambio requiere confirmación sí/no. Desactivar detiene el servicio <em>y</em> deshabilita su inicio automático; activar habilita el inicio automático <em>y</em> arranca el servicio inmediatamente."
   },
   "status": {
     "heading": "Mostrar estado del servicio del Monitor",
@@ -70,21 +70,21 @@
     "code": "systemctl status proxmenux-monitor.service       # detailed status\nsystemctl is-active proxmenux-monitor.service    # one-word status\nsystemctl enable --now proxmenux-monitor.service # enable + start\nsystemctl disable --now proxmenux-monitor.service # stop + disable\njournalctl -u proxmenux-monitor.service -f       # follow live logs"
   },
   "reset": {
-    "heading": "Restablecer contraseña del Monitor",
-    "intro": "Ruta de recuperación para el operador que perdió la contraseña del panel (o el dispositivo 2FA). La opción solo aparece cuando el Monitor está instalado en el host. Al seleccionarla:",
+    "heading": "Restablecer la contraseña de ProxMenux Monitor",
+    "intro": "Ruta de recuperación para el usuario que perdió la contraseña del panel (o el dispositivo 2FA). La opción solo aparece cuando el Monitor está instalado en el host. Al seleccionarla:",
     "items": [
       "Pide confirmación con un diálogo sí/no — la acción es destructiva para las credenciales de login.",
       "Hace backup del <code>/root/.config/proxmenux-monitor/auth.json</code> existente a <code>auth.json.bak-&lt;UTC timestamp&gt;</code> (modo <code>0600</code>) para que el estado previo se pueda restaurar manualmente si el reset fue un error.",
-      "Para el servicio <code>proxmenux-monitor</code> para que la edición en disco no compita con un login en vuelo.",
+      "Detiene el servicio <code>proxmenux-monitor</code> para evitar conflictos entre la edición del archivo y un inicio de sesión en curso.",
       "Limpia los campos de identidad en <code>auth.json</code>: <code>enabled=false</code>, <code>configured=false</code>, vacía <code>username</code>, <code>password_hash</code>, <code>totp_secret</code> y el array de códigos de backup.",
-      "<strong>Preserva</strong> el <code>jwt_secret</code> y los <code>api_tokens</code> / <code>revoked_tokens</code> registrados — para que los tokens de API de larga vida usados por Home Assistant u otros scripts <em>sigan autenticando</em> tras el reset.",
+      "<strong>Conserva</strong> <code>jwt_secret</code> y los <code>api_tokens</code> / <code>revoked_tokens</code> registrados para que los tokens de larga duración de Home Assistant u otros scripts <em>sigan autenticándose</em> tras el restablecimiento.",
       "Reinicia el servicio. La siguiente visita a <code>http://&lt;host&gt;:8008</code> muestra el asistente de configuración de primer lanzamiento para que se pueda crear una nueva cuenta de administrador."
     ],
     "preservedTitle": "Qué sobrevive al reset, qué no",
-    "preservedBody": "<strong>Borrado:</strong> nombre de usuario, hash de contraseña, secreto TOTP de 2FA, códigos de backup. <strong>Preservado:</strong> <code>jwt_secret</code>, metadatos de <code>api_tokens</code>, lista de <code>revoked_tokens</code>. Si quieres activamente invalidar también todo token de API existente (pizarra limpia total), borra <code>auth.json</code> manualmente en lugar de usar esta opción de menú — el siguiente arranque del servicio regenera el secreto JWT y todo lo demás desde cero.",
+    "preservedBody": "<strong>Borra:</strong> usuario, hash de contraseña, secreto TOTP de 2FA y códigos de recuperación. <strong>Conserva:</strong> <code>jwt_secret</code>, metadatos de <code>api_tokens</code> y lista <code>revoked_tokens</code>. Para invalidar también todos los tokens API y empezar de cero, elimina <code>auth.json</code> manualmente en lugar de usar esta opción. Al reiniciar el servicio se regeneran el secreto JWT y los demás datos.",
     "trustTitle": "El acceso al host físico es el ancla de confianza",
     "trustBody": "Esta ruta de reset requiere shell root en el host. Cualquiera que pueda ejecutar el comando <code>menu</code> como root ya controla la máquina, así que darle la recuperación de contraseña no es una escalada de privilegios — es coherente con cómo funciona cualquier otra herramienta de administración en Proxmox. El corolario: el login del Monitor no protegerá nada de alguien a quien ya hayas dejado entrar al shell de Proxmox.",
-    "seeAlso": "Mira también <link>Monitor → Access y Auth → Recuperar una contraseña perdida</link> para el mismo flujo descrito desde el lado del panel, además del contexto más amplio sobre cómo se hashean las contraseñas y cómo se genera el secreto JWT."
+    "seeAlso": "Consulta también <link>Monitor → Acceso y autenticación → Recuperar una contraseña perdida</link> para ver este procedimiento desde el panel y conocer cómo se calculan los hashes de contraseñas y se genera el secreto JWT."
   },
   "files": {
     "heading": "Archivos implicados",
@@ -95,7 +95,7 @@
     "missingTitle": "Ambas opciones del menú faltan",
     "missingBody": "El Monitor no está registrado en systemd. Confirma con <code>systemctl list-unit-files | grep proxmenux-monitor</code> — si no hay salida, reinstala ProxMenux desde el instalador oficial con la última versión y elige la opción de Monitor durante la instalación.",
     "unreachableTitle": "Servicio activado pero la URL es inalcanzable",
-    "unreachableBody": "La salida del estado en Settings te da la IP. Confirma:",
+    "unreachableBody": "El estado en Ajustes muestra la IP. Comprueba:",
     "unreachableCmd": "ss -tlnp | grep 8008                # is anything listening?\njournalctl -u proxmenux-monitor -n 100 --no-pager  # recent errors\ncurl -sI http://localhost:8008      # local reachability",
     "unreachableOutro": "Si localhost funciona pero el externo no, comprueba el firewall del host (<code>pve-firewall</code> o nftables) para TCP 8008 entrante.",
     "stopsTitle": "Activé el servicio pero se para solo unos segundos después",
@@ -111,7 +111,7 @@
       },
       {
         "href": "/docs/settings",
-        "label": "Resumen de Settings",
+        "label": "Resumen de Ajustes",
         "tail": "."
       }
     ]

@@ -7,7 +7,8 @@
     "unknown": "Neznáme",
     "notAvailable": "Nedostupné",
     "serverOffline": "Server je offline",
-    "supportProject": "Podporte projekt alebo prispejte vlastnými úpravami"
+    "supportProject": "Podporte projekt alebo prispejte vlastnými úpravami",
+    "descriptionPbs": "Proxmox Backup Server Dashboard"
   },
   "common": {
     "notAvailable": "Nedostupné",
@@ -164,7 +165,8 @@
     "errors": {
       "serverUnavailableTitle": "Server Monitora nie je dostupný",
       "serverUnavailableDescription": "Nedá sa pripojiť k serveru Monitora. Skontrolujte, či služba beží, a skúste to znova."
-    }
+    },
+    "pbsVersion": "Verzia PBS:"
   },
   "storage": {
     "loadingTitle": "Načítavam úložiská...",
@@ -1131,7 +1133,21 @@
       "available": "Dostupné zálohy",
       "loading": "Načítavam zálohy...",
       "empty": "Nenašli sa žiadne zálohy",
-      "emptyHint": "Prvú zálohu vytvoríte tlačidlom vyššie"
+      "emptyHint": "Prvú zálohu vytvoríte tlačidlom vyššie",
+      "refresh": "Obnoviť",
+      "refreshFailed": "Nepodarilo sa obnoviť zálohy. Obnovte ich znova, aby ste potvrdili ich aktuálny stav.",
+      "deleteSelected": "Odstrániť vybrané ({count})",
+      "deletedCount": "Odstránené zálohy: {count}.",
+      "unconfirmedCount": "Odstránenie záloh ({count}) nebolo potvrdené. Pred ďalším pokusom obnovte zoznam a skontrolujte úlohy v Proxmoxe.",
+      "deleteFailed": "Odstránenie sa nepodarilo potvrdiť. Pred ďalším pokusom obnovte zoznam a skontrolujte úlohy v Proxmoxe.",
+      "selectHint": "Vyberte nechránené zálohy (najviac 20 v jednej dávke)",
+      "selectBackup": "Vybrať zálohu",
+      "protected": "Chránená",
+      "confirmTitle": "Odstrániť zálohy ({count})?",
+      "confirmDescription": "Tieto archívy záloh pre VM/CT {vmid} budú natrvalo odstránené. Chránené zálohy sú vylúčené. Hosť sa tým neodstráni.",
+      "deleting": "Čaká sa, kým Proxmox dokončí odstránenie vybraných archívov…",
+      "cancel": "Zrušiť",
+      "confirmDelete": "Odstrániť zálohy"
     },
     "updatesPanel": {
       "pendingTitle": "Čakajúce aktualizácie balíkov",
@@ -1288,6 +1304,9 @@
       "runFailed": "✗ zlyhalo",
       "runDeferred": "odložené z bezpečnostných dôvodov",
       "runSkipped": "nič nečaká",
+      "runSkippedStatus": "spustenie bolo preskočené",
+      "reasonStoppedContainer": "Kontajner je vypnutý; plánovaná aktualizácia sa preskočila.",
+      "reasonStoppedContainerHistorical": "Kontajner bol v čase plánovanej aktualizácie vypnutý.",
       "releaseDelaySummary": "odklad {days} deň/dní",
       "releaseDelayLabel": "Počkať po novej verzii aplikácie",
       "releaseDelayNone": "Bez čakacej doby",
@@ -1665,6 +1684,16 @@
       "searchApplications": "Hľadať aplikácie",
       "searchingApplications": "Hľadajú sa aplikácie…",
       "noApplicationsDetected": "Neboli zistené žiadne aplikácie.",
+      "nativeEvidencePort": "Otvorený TCP port",
+      "nativeEvidenceFile": "Nainštalovaný súbor",
+      "nativeEvidenceProcess": "Spustený program",
+      "nativeEvidenceDirectory": "Pracovný priečinok",
+      "nativeEvidenceService": "Definícia služby",
+      "nativeScanFailed": "Vyhľadávanie aplikácií sa nepodarilo dokončiť. Predchádzajúce dôkazy môžu byť zastarané; skús to znova.",
+      "nativeScanPartial": "Vyhľadávanie aplikácií je neúplné. Skontroluj dostupné dôkazy a skús to znova.",
+      "nativeVersionUnknown": "Nainštalovaná verzia nie je známa",
+      "nativeEvidenceStale": "Dôkazy môžu byť zastarané alebo neúplné.",
+      "nativeRegisterOnly": "Registráciu potvrď v editore. Známa verzia je ručný údaj; aktualizátor nie je nastavený.",
       "noNewApplicationsDetected": "Neboli zistené žiadne nové aplikácie.",
       "oneNewApplicationDetected": "Bola zistená jedna nová aplikácia.",
       "newApplicationsDetected": "Boli zistené {count} nové aplikácie.",
@@ -1813,7 +1842,8 @@
         "logs": "Systémové záznamy",
         "updates": "Aktualizácie systému",
         "security": "Bezpečnosť a certifikáty",
-        "temperature": "Teplota"
+        "temperature": "Teplota",
+        "pbsServices": "Služby PBS"
       }
     },
     "remoteStorage": {
@@ -2107,7 +2137,13 @@
         "inactiveFooter": "Zapnite notifikácie a dostávajte upozornenia o systéme, stave a bezpečnosti cez nastavené kanály.",
         "notificationLanguage": "Jazyk notifikácií",
         "selectNotificationLanguage": "Vyberte jazyk notifikácií",
-        "notificationLanguageHint": "Používa sa pre spoľahlivé runtime notifikácie aj vtedy, keď je AI vypnutá."
+        "notificationLanguageHint": "Používa sa pre spoľahlivé runtime notifikácie aj vtedy, keď je AI vypnutá.",
+        "appriseServiceHelp": "Nastavenie Slack a Matrix",
+        "appriseSlackSteps": "V aplikácii Slack vytvorte prichádzajúci webhook pre cieľový kanál a vložte jeho úplnú HTTPS URL do poľa URL Apprise. Nie je potrebný žiadny prevod.",
+        "appriseSlackDocs": "Formáty URL a nastavenie Slack",
+        "appriseMatrixSteps": "Použite účet pre oznámenia, ktorý môže odosielať správy do miestnosti. Nahraďte vzorového používateľa, heslo, domovský server a úplné ID miestnosti; špeciálne znaky v prihlasovacích údajoch zakódujte pre URL. Schéma matrixs používa HTTPS. Podporu tokenov, SSO a šifrovaných miestností v nainštalovanej verzii Apprise nájdete v dokumentácii.",
+        "appriseMatrixDocs": "Formáty URL a nastavenie Matrix",
+        "appriseServiceFinish": "Povoľte Apprise, zadajte svoju URL, vyberte kategórie oznámení alebo jednotlivé udalosti, uložte a potom použite Odoslať test. Tieto príklady nemenia uloženú URL. Tento kanál Apprise má jeden cieľ; pre viac služieb naraz použite API Apprise."
       },
       "ai": {
         "title": "AI vylepšenie",
@@ -4752,6 +4788,24 @@
       "thursday": "štvrtok",
       "tuesday": "utorok",
       "wednesday": "streda"
+    },
+    "storageRetention": {
+      "title": "Uchovávanie záloh úložiska",
+      "keepAll": "Ponechať všetky zálohy",
+      "description": "Predvolená politika uchovávania záloh uložená v Proxmoxe. Zálohovacie úlohy s vlastnou politikou majú pred týmto predvoleným nastavením prednosť.",
+      "refresh": "Obnoviť",
+      "saved": "Politika uchovávania záloh úložiska bola uložená. Prerezávanie sa nevykonalo.",
+      "choosePolicy": "Vyberte Ponechať všetky alebo aspoň jeden počet uchovávaných záloh väčší ako nula.",
+      "saveFailed": "Nepodarilo sa uložiť politiku uchovávania záloh úložiska. Ak sa konfigurácia zmenila, obnovte zoznam.",
+      "loadFailed": "Nepodarilo sa načítať politiku uchovávania záloh úložiska.",
+      "empty": "Nenašli sa žiadne úložiská záloh.",
+      "default": "Predvolené nastavenie Proxmoxu",
+      "edit": "Upraviť",
+      "editTitle": "Uchovávanie záloh pre {storage}",
+      "effect": "Platí pre budúce zálohovania, ktoré preberajú túto politiku úložiska. Uložením sa existujúce zálohy neodstránia. Chránené zálohy zostanú chránené.",
+      "cancel": "Zrušiť",
+      "save": "Uložiť uchovávanie záloh",
+      "useDefault": "Použite predvolené nastavenie Proxmox (žiadne pravidlá pre toto úložisko)"
     }
   },
   "healthStatus": {
@@ -4782,7 +4836,8 @@
       "services": "Služby PVE",
       "logs": "Systémové záznamy",
       "updates": "Aktualizácie systému",
-      "security": "Bezpečnosť a certifikáty"
+      "security": "Bezpečnosť a certifikáty",
+      "pbsServices": "Služby PBS"
     },
     "checks": {
       "cpu_usage": "Využitie CPU",
@@ -7226,5 +7281,99 @@
         "diagnosticsOmitted": "Ďalšie diagnostické riadky alebo text vynechaný: {count}. Pôvodná správa sa zachovala."
       }
     }
+  },
+  "pbs": {
+    "title": "Proxmox Backup Server",
+    "server": "Server PBS",
+    "chooseServer": "Vybrať server PBS",
+    "local": "Miestny PBS",
+    "refresh": "Obnoviť",
+    "manage": "Spravovať pripojenia PBS",
+    "loadFailed": "Nepodarilo sa načítať stav PBS.",
+    "loading": "Načítavajú sa údaje PBS…",
+    "noServer": "Pridajte pripojenie PBS na zobrazenie dátových úložísk, úloh a plánov.",
+    "permissionsHelp": "Pred uložením prihlasovacích údajov povoľte overovanie v Monitore. Použite vyhradený API token PBS s rolou Audit na / v ACL používateľa aj tokenu, so zapnutým dedením. Tento panel údaje PBS iba číta.",
+    "editConnection": "Pripojenie na úpravu",
+    "add": "Pridať nové pripojenie",
+    "name": "Názov",
+    "url": "HTTPS URL (pre pôvodný port PBS uveďte :8007)",
+    "token_id": "ID API tokenu (user@realm!token)",
+    "token_secret": "Tajný kľúč API tokenu (ponechajte prázdne, ak chcete zachovať uložený kľúč)",
+    "fingerprint": "Odtlačok SHA256 certifikátu (voliteľný)",
+    "tlsHelp": "Pre bežné overenie certifikačnej autority a názvu hostiteľa ponechajte odtlačok prázdny. Pri certifikáte s vlastným podpisom skopírujte jeho odtlačok SHA256 z konzoly PBS alebo iného dôveryhodného kanála. Odtlačok sa kontroluje pred odoslaním prihlasovacích údajov.",
+    "saved": "Pripojenie PBS bolo overené a uložené.",
+    "saveFailed": "Nepodarilo sa uložiť pripojenie PBS.",
+    "testing": "Overuje sa pripojenie…",
+    "save": "Overiť a uložiť",
+    "remove": "Odstrániť pripojenie",
+    "removeConfirm": "Odstrániť z Monitora toto uložené pripojenie PBS a jeho token? Údaje a úlohy PBS zostanú nezmenené.",
+    "sampled": "Údaje získané",
+    "datastores": "Dátové úložiská",
+    "total": "Kapacita súborového systému",
+    "used": "Použité",
+    "free": "Dostupné",
+    "noDatastores": "Žiadne dostupné dátové úložiská. Skontrolujte konfiguráciu úložísk a oprávnenia používateľa a tokenu.",
+    "tasks": "Nedávne úlohy",
+    "noTasks": "Neboli vrátené žiadne nedávne úlohy.",
+    "task": "Úloha",
+    "started": "Spustené",
+    "status": "Stav",
+    "running": "Prebieha",
+    "jobs": "Plány údržby",
+    "job": "Plánovaná úloha",
+    "schedule": "Plán",
+    "sync": "Synchronizácia",
+    "verify": "Overenie",
+    "prune": "Prerezávanie",
+    "overview": "Prehľad",
+    "logs": "Systémové záznamy",
+    "terminal": "Terminál",
+    "security": "Zabezpečenie",
+    "logout": "Odhlásiť sa",
+    "navigation": "Navigácia PBS",
+    "cpu": "CPU",
+    "memory": "Pamäť",
+    "uptime": "Čas prevádzky",
+    "capacityUnavailable": "Kapacita nie je k dispozícii.",
+    "datastoresUnavailable": "{count} nie je k dispozícii",
+    "datastoresOnline": "Všetky dostupné",
+    "moreDatastores": "+{count} ďalších dátových úložísk",
+    "estimatedFull": "Odhadovaný plný",
+    "estimatedFullUnknown": "Zatiaľ nie je dostatok údajov",
+    "duration": "Trvanie",
+    "noJobs": "Nie sú nakonfigurované žiadne plány synchronizácie, overovania ani odstraňovania."
+  },
+  "monitorLinks": {
+    "groups": {
+      "cluster": "Cluster",
+      "standalone": "Samostatné uzly",
+      "pbs": "Proxmox Backup Server"
+    },
+    "thisNode": "Tento uzol",
+    "checking": "Kontrolujú sa uzly…",
+    "loadFailed": "Nepodarilo sa načítať zoznam uzlov.",
+    "empty": "Zatiaľ žiadne ďalšie uzly. Pridajte jeden, aby ste odtiaľto otvorili jeho Monitor.",
+    "noResponse": "Žiadna odpoveď",
+    "pbsInterface": "rozhranie PBS",
+    "openNewTab": "Otvoriť na novej karte",
+    "manage": "Pridať alebo spravovať uzly…",
+    "dialogTitle": "Prepojené uzly",
+    "dialogDescription": "Uzly klastra a nakonfigurované Proxmox Backup Server sa zisťujú automaticky. Každý Monitor má vlastné prihlásenie.",
+    "addTitle": "Pridať uzol",
+    "name": "Meno",
+    "address": "Adresa monitora",
+    "type": "Typ",
+    "add": "Pridať",
+    "save": "Uložiť",
+    "remove": "Odstrániť",
+    "visible": "Viditeľné",
+    "autoAddress": "Automaticky",
+    "detected": "Zistené",
+    "added": "Pridané",
+    "saveFailed": "Nepodarilo sa uložiť zoznam uzlov.",
+    "backTo": "Späť na {name}",
+    "cameFromTitle": "Pridať uzol monitora?",
+    "cameFromBody": "Pridajte {name} do prepojených uzlov tohto monitora.",
+    "notNow": "Teraz nie"
   }
 }

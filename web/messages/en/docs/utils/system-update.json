@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Proxmox System Update | ProxMenux Documentation",
-    "description": "Runs the official Proxmox upgrade sequence (apt update + apt full-upgrade -y) and adds the repo hygiene, essential-package check, LVM sanity scan, autoremove/autoclean and reboot prompt that the upgrade guide also recommends. Detects the running major version automatically.",
+    "description": "Updates packages within the current Proxmox major version with apt-get update and apt full-upgrade -y. Checks disk space and configured repositories, attempts GPG key recovery, checks and repairs old LVM PV headers, rebuilds managed DKMS drivers when needed, runs autoremove/autoclean and offers a reboot when required.",
     "ogTitle": "Proxmox System Update | ProxMenux Documentation",
-    "ogDescription": "Official apt full-upgrade / dist-upgrade wrapped with repo hygiene, autoremove and a smart reboot prompt."
+    "ogDescription": "apt full-upgrade with repository checks, autoremove/autoclean and a reboot prompt when required."
   },
   "header": {
     "title": "Proxmox System Update",
-    "description": "Wrapper that delegates to a single safe worker (<code>update-pve-safe.sh</code>) which detects the running Proxmox major version by itself. The configured repositories are read through the Proxmox API and kept as they are; a host with no active subscription whose only Proxmox repository is Enterprise is asked before switching to no-subscription. All packages are upgraded, ProxMenux-managed DKMS drivers are rebuilt if a new kernel landed, and the reboot prompt fires only when the kernel actually changed. Also launchable from the <em>Update Now</em> button in the ProxMenux Monitor dashboard header when pending updates are detected.",
+    "description": "Delegates to a single worker (<code>update-pve-safe.sh</code>) that detects the running Proxmox major version. Configured repositories are read through the Proxmox API and preserved; an unsubscribed host with only Enterprise is asked before switching to no-subscription. The worker upgrades packages and rebuilds ProxMenux-managed DKMS drivers for a staged kernel. The wrapper offers a reboot when the system reboot marker exists or the newest installed kernel differs from the running kernel. Also available from <em>Update Now</em> in the ProxMenux Monitor header when pending updates are detected.",
     "section": "Utilities"
   },
   "calloutWhat": {
@@ -22,25 +22,25 @@
   },
   "onTop": {
     "heading": "What ProxMenux runs on top — verified against the script",
-    "intro": "This option runs <strong>exactly</strong> the apt command above, wrapped with the repo hygiene, DKMS rebuild for ProxMenux-managed drivers and post-upgrade cleanup the official upgrade guide also recommends. Everything below maps 1:1 to <code>scripts/utilities/proxmox_update.sh</code> and the single safe worker <code>scripts/global/update-pve-safe.sh</code> — nothing implied, every step is in the code:",
+    "intro": "Uses <strong>the same apt full-upgrade operation</strong>, with repository checks, DKMS rebuilding and post-update cleanup. The steps below correspond to <code>scripts/utilities/proxmox_update.sh</code> and its single worker <code>scripts/global/update-pve-safe.sh</code>:",
     "items": [
-      "<strong>Detects the PVE major version</strong> from inside the worker (<code>pveversion | grep -oP ''pve-manager/\\K[0-9]+''</code>) and adapts the base Proxmox / Debian repo URLs (bookworm on PVE 8, trixie on PVE 9). There is no fan-out to per-version worker scripts — a single safe worker handles both.",
+      "<strong>Detects the PVE major version</strong> inside the worker (<code>pveversion | grep -oP ''pve-manager/\\K[0-9]+''</code>). A single worker handles PVE 8 and PVE 9; configured repositories are preserved unless an unsubscribed host accepts the offered switch.",
       "<strong>Keeps the configured repositories.</strong> <code>ensure_repositories</code> reads the repositories through the Proxmox repository API, together with the subscription status. A host with an active subscription, or one that already uses the no-subscription or test repository, is left unchanged. A host with no active subscription whose only Proxmox repository is Enterprise is asked whether to switch to no-subscription; declining stops the update with no source changed.",
-      "<strong>Runs the upgrade non-interactively</strong> with <code>DEBIAN_FRONTEND=noninteractive</code> and <code>--force-confdef --force-confold</code> — if a configuration file you already modified also changed upstream, your version stays in place. No silent overwrites of custom configs.",
+      "<strong>Runs the upgrade non-interactively</strong> with <code>DEBIAN_FRONTEND=noninteractive</code> and <code>--force-confdef --force-confold</code>. For dpkg conffile decisions, it accepts the default action when one exists; otherwise it keeps the existing configuration file.",
       "<strong>Skips forcing optional utilities.</strong> The safe worker does not push <code>zfsutils-linux</code>, <code>chrony</code>, <code>ifupdown2</code> or similar packages onto the host — a Proxmox install that opted out of any of them keeps its choice. Missing packages are surfaced by the higher-level installer flows, not by the update path.",
-      "<strong>LVM metadata sanity check</strong> against stray PV headers from passthrough disks (warn-only, no automatic fix).",
+      "<strong>LVM metadata check and repair.</strong> Detects old PV headers and runs vgck --updatemetadata and vgchange -ay for the affected volume groups. This can change LVM metadata; it is not a warning-only scan.",
       "<strong>Cleans up afterwards:</strong> <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>.",
-      "<strong>DKMS rebuild before the reboot prompt.</strong> When the upgrade staged a new kernel, the wrapper calls <code>pmx_rebuild_dkms_after_kernel</code> to rebuild every driver that ProxMenux installed via DKMS against the incoming kernel version — so the modules are ready before the box comes back up. Reboot detection uses <code>/var/run/reboot-required</code> when <code>needrestart</code> is present, and falls back to a <code>dpkg-query</code> comparison between the running kernel and the newest installed <code>proxmox-kernel-*-pve-signed</code> / <code>pve-kernel-*-pve</code> package when it isn't — a signal that survives the many Proxmox hosts that ship without <code>needrestart</code>."
+      "<strong>DKMS rebuild before the reboot prompt.</strong> The worker calls <code>pmx_rebuild_dkms_after_kernel</code> when a newer installed kernel is staged. The wrapper checks <code>/var/run/reboot-required</code> and also uses <code>dpkg-query</code> to compare the kernel reported by <code>uname -r</code> with the newest installed <code>proxmox-kernel-*-pve-signed</code> / <code>pve-kernel-*-pve</code> package. The marker may be absent on hosts without <code>needrestart</code>; the kernel comparison still works in that case."
     ]
   },
   "calloutOneSentence": {
     "title": "In one sentence",
-    "body": "Same upgrade Proxmox tells you to run, plus the repo cleanup, the essential-package check, the LVM sanity scan, the autoremove/autoclean afterwards, and a reboot prompt only when it matters."
+    "body": "Updates host packages, preserves configured repositories unless you accept a switch, checks LVM metadata, rebuilds managed DKMS drivers, cleans up with autoremove/autoclean and offers a reboot when needed."
   },
   "confirm": {
     "heading": "Confirmation dialog",
     "intro": "Selecting the option opens a summary of what the worker will do, requiring an explicit confirmation:",
-    "imageAlt": "Proxmox System Update confirmation dialog listing repo hygiene, package updates, cleanup"
+    "imageAlt": "Proxmox System Update confirmation dialog with repository checks, package updates and cleanup"
   },
   "routes": {
     "heading": "How the wrapper routes",
@@ -61,14 +61,14 @@
   },
   "worker": {
     "heading": "What the worker does",
-    "intro": "A single worker (<code>scripts/global/update-pve-safe.sh</code>) handles both PVE 8 and PVE 9. It detects the major version internally and uses the version-appropriate codename (<code>bookworm</code> or <code>trixie</code>) for its base sources. The stages are:",
+    "intro": "One worker (<code>scripts/global/update-pve-safe.sh</code>) handles PVE 8 (<code>bookworm</code>) and PVE 9 (<code>trixie</code>). It detects the major version internally and checks the existing repository configuration without rewriting the Debian base sources. The stages are:",
     "items": [
       "<strong>Sanity checks.</strong> Verifies at least ~1 GB free in <code>/var/cache/apt/archives</code>. Aborts early with a clear message when it fails, so the run doesn't die in the middle of an apt transaction.",
       "<strong>Repository check.</strong> <code>ensure_repositories</code> reads the repositories and the subscription status. On a host with a usable Proxmox repository it changes nothing; on a host with no active subscription and only the Enterprise repository it asks before switching to no-subscription, and stops the update when the answer is no.",
       "<strong>Apt update with GPG auto-recovery.</strong> On <code>NO_PUBKEY</code> for any repo (yours or a third-party one) the worker imports the missing key and retries automatically before failing.",
       "<strong>Pending upgrades + security count.</strong> Reports how many packages will change and how many of those come from the security suite, so the confirmation dialog has real numbers to show.",
-      "<strong>Confirmation dialog.</strong> The wrapper asks for an explicit yes before touching apt.",
-      "<strong>apt full-upgrade.</strong> Runs with <code>DEBIAN_FRONTEND=noninteractive</code> and <code>--force-confdef --force-confold</code> so any configuration file you customised keeps its current contents when upstream also changed it. Never overwrites operator-edited configs silently.",
+      "<strong>Confirmation dialog.</strong> After refreshing package lists, the worker asks for an explicit yes before running the package upgrade.",
+      "<strong>apt full-upgrade.</strong> Uses <code>DEBIAN_FRONTEND=noninteractive</code> and <code>--force-confdef --force-confold</code>. Dpkg follows its default action for conffile decisions when available and otherwise retains the existing file.",
       "<strong>LVM sanity check.</strong> <code>lvm_repair_check</code> refreshes VG metadata when disks passed through to guest VMs (DSM, TrueNAS, storage appliances) come back with old PV headers.",
       "<strong>DKMS rebuild for ProxMenux-managed drivers.</strong> When the upgrade staged a new kernel, <code>pmx_rebuild_dkms_after_kernel</code> reads <code>components_status.json</code> for the drivers ProxMenux installed (currently <code>nvidia_driver</code> → module <code>nvidia</code>, <code>coral_driver</code> → module <code>gasket</code>), installs the matching kernel headers (<code>proxmox-headers-&lt;newkver&gt;</code> when available, else <code>pve-headers-&lt;newkver&gt;</code>) and runs <code>dkms autoinstall -k &lt;newkver&gt;</code>. If <code>dkms status</code> then doesn't show the modules built against the new kernel, the worker falls back to re-running each installer with <code>--auto-reinstall</code>. Any failure is logged but does not abort the update — you land on the reboot prompt in every case.",
       "<strong>Post-cleanup.</strong> <code>apt-get autoremove</code> + <code>apt-get autoclean</code> before returning control to the wrapper."
@@ -78,21 +78,21 @@
     "heading": "Post-update cleanup & reboot",
     "intro": "After the worker exits, the wrapper runs:",
     "code": "apt-get autoremove -y    # drop unused dependencies pulled in by old packages\napt-get autoclean        # drop downloaded .deb files no longer in the index",
-    "afterCode": "Then it checks whether a reboot is needed. Two signals trigger the prompt:",
+    "afterCode": "The wrapper also checks whether a reboot is needed. Either of these signals triggers the prompt:",
     "items": [
-      "<code>/var/run/reboot-required</code> exists (created by the kernel package post-install hook)",
-      "The update log contains <code>linux-image</code> entries (kernel was actually upgraded)"
+      "<code>/var/run/reboot-required</code> exists: a package or system tool has marked the host as needing a reboot.",
+      "The newest installed Proxmox kernel package differs from the running kernel, as determined by <code>dpkg-query</code> and uname -r."
     ],
     "outro": "If either is true, a whiptail dialog asks <em>\"Some changes require a reboot to take effect. Do you want to restart now?\"</em>. Decline to keep running on the old kernel until you choose to reboot manually (e.g. during a planned maintenance window)."
   },
   "end": {
     "heading": "What you see at the end",
-    "intro": "When the worker finishes, the terminal shows the cleanup output and (if the kernel changed) the reboot prompt:",
+    "intro": "When the worker finishes, the terminal shows the cleanup output and, if a reboot is required, the reboot prompt:",
     "imageAlt": "Proxmox System Update completion summary with cleanup output and reboot prompt"
   },
   "calloutDeclineReboot": {
     "title": "Decline reboot only if you know why",
-    "body": "Running on an old kernel after upgrading <code>linux-image-*</code> means you're on a half-upgraded system: userspace is new, kernel is old. Most of the time things work, but ZFS modules, IOMMU groups, KSMBD and any out-of-tree drivers will only match the kernel they were built for — a mismatch produces obscure failures. Reboot at the earliest sensible moment."
+    "body": "Installing a new <code>proxmox-kernel-*</code> package does not replace the running kernel until you reboot. The new kernel and its matching modules become active on the next boot. Plan the reboot for a suitable maintenance window, and review any DKMS build warnings beforehand."
   },
   "noSub": {
     "heading": "How the safe worker treats the Enterprise repository",
@@ -117,7 +117,7 @@
       "<strong>Major-version upgrade.</strong> 8 → 9 is a separate operation — see <link>Upgrade PVE 8 to PVE 9</link>.",
       "<strong>Backup.</strong> No snapshots, no rollback. Apt operations are not transactional. Combine with your normal backup discipline (PBS, vzdump, ZFS snapshots).",
       "<strong>Container / VM updates.</strong> Only the host is upgraded; guests are left alone.",
-      "<strong>Firmware updates.</strong> CPU microcode, NIC firmware, BIOS — out of scope."
+      "<strong>Dedicated firmware flashing.</strong> This is not a BIOS or device-firmware flashing tool. Installed firmware or CPU-microcode packages can still receive updates through apt."
     ]
   },
   "troubleshooting": {
@@ -129,15 +129,15 @@
       },
       {
         "title": "dist-upgrade hangs at \"Configuring grub-pc\"",
-        "body": "A dpkg prompt is asking which device(s) to install GRUB to. The wrapper passes <code>--force-confold</code> for config files but boot-loader install is a separate prompt. Use <kbd>Tab</kbd> + <kbd>Space</kbd> to select all your boot disks, then OK. Best avoided by selecting the boot disks once with <code>dpkg-reconfigure grub-pc</code> beforehand."
+        "body": "If an interactive GRUB prompt is visible, it asks which devices should receive the boot loader. The <code>--force-confold</code> option applies to configuration-file decisions, not to this device selection. Use <kbd>Tab</kbd> + <kbd>Space</kbd> to select the appropriate boot disks, then OK. You can configure this selection beforehand with <code>dpkg-reconfigure grub-pc</code>."
       },
       {
         "title": "Kernel upgraded but the new modules are missing for an out-of-tree driver",
-        "body": "The drivers ProxMenux installed via DKMS (currently <code>nvidia_driver</code> and <code>coral_driver</code>) are rebuilt automatically at the end of the upgrade against the incoming kernel version, using <code>dkms autoinstall -k &lt;newkver&gt;</code> and, when needed, a fallback to each installer with <code>--auto-reinstall</code>. Confirm with <code>dkms status</code>. Third-party out-of-tree modules that aren't in ProxMenux's <code>components_status.json</code> registry (custom NIC drivers, hand-installed DKMS packages, …) still need a manual <code>dkms autoinstall</code> — the safe worker only touches what it originally installed."
+        "body": "For managed drivers (<code>nvidia_driver</code> and <code>coral_driver</code>), the helper runs <code>dkms autoinstall -k &lt;newkver&gt;</code> and can retry their installers with <code>--auto-reinstall</code>. Check the result with <code>dkms status</code>. The autoinstall command can also rebuild other registered DKMS modules; the installer fallback is limited to the managed entries in <code>components_status.json</code>. Inspect any third-party module that remains missing and rebuild it as needed with <code>dkms autoinstall</code>."
       },
       {
         "title": "The reboot prompt didn't appear but I'm sure the kernel changed",
-        "body": "Two signals must agree (<code>/var/run/reboot-required</code> and <code>linux-image</code> in the upgrade log). If the marker file was cleared but the log is being parsed wrong, reboot manually with <code>shutdown -r now</code>. To confirm a kernel upgrade happened: <code>grep linux-image /var/log/apt/history.log</code>."
+        "body": "The signals are alternatives: <code>/var/run/reboot-required</code> or a difference between the running and newest installed Proxmox kernel. The wrapper does not parse linux-image entries in the apt log. Check the running version with <code>uname -r</code> and the installed kernel packages with <code>dpkg-query</code>. If a reboot is needed, schedule it or run <code>shutdown -r now</code> when ready."
       }
     ]
   },

@@ -148,7 +148,7 @@
     "title": "Create VM System NAS",
     "menu": "Create VM from template or script",
     "script": "menus/create_vm_menu.sh",
-    "keywords": "vm virtual nas",
+    "keywords": "vm virtual nas truenas openmediavault omv xigmanas rockstor fygoos fygonas fnos",
     "argument": "1"
   },
   {

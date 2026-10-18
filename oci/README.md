@@ -10,6 +10,7 @@ This document describes the engine in this directory: how it is organised, how a
 - [Structure](#structure)
 - [How a container is created](#how-a-container-is-created)
 - [Update, modify, recreate and remove](#update-modify-recreate-and-remove)
+- [Private image registries](#private-image-registries)
 - [From a Compose file or a docker run command to an oci-compose](#from-a-compose-file-or-a-docker-run-command-to-an-oci-compose)
 - [The oci-compose, block by block](#the-oci-compose-block-by-block)
 - [Writing and testing an oci-compose](#writing-and-testing-an-oci-compose)
@@ -60,6 +61,46 @@ There are three places an oci-compose comes from:
 
 On a node, the engine is installed in `/usr/local/share/proxmenux/oci/engine/`. Every installation keeps its record in `/usr/local/share/proxmenux/oci/instances/<VMID>/oci-compose.json`: the oci-compose it was installed from, under `template`, together with the answers given during the installation and the configuration Proxmox VE ended with. Updates, changes and removals read that record.
 
+## Private image registries
+
+Open **OCI manager Apps → Registry accounts** on the Proxmox node. Sign in
+with a registry hostname (for example `ghcr.io` or `registry.example.com:5443`),
+a username and a password or token with image pull permission. Passwords are
+entered in hidden fields and confirmed before the registry is contacted.
+
+Select a saved account to check access to an image, download it to template
+storage, install it with the existing LXC wizard, update its credentials or
+remove them. Image references retain their tag or full `sha256` digest.
+The normal custom-image importer can also use the saved credentials, including
+Compose files whose services come from private registries. When a registry
+refuses an image there, the importer offers to sign in on the spot and reads
+the image again. Updates, Modify, Recreate, the watchdog and the update check
+of the Monitor use the saved accounts too.
+
+ProxMenux keeps the accounts in `/etc/pve/priv/proxmenux/registry-auth.json`,
+where Proxmox keeps its own storage passwords: readable only by root and shared
+by every node of the cluster. The host backup includes it, and uninstalling
+ProxMenux removes it. A `REGISTRY_AUTH_FILE` set by the user is respected;
+without the cluster filesystem, Skopeo's default `/root/.config/containers/auth.json`
+is used. The
+credential directory must be owned by root with mode `700`, and the file with
+mode `600`. Basic credentials are base64 encoded, not encrypted. Configured
+Skopeo credential helpers use their own stores. Failed sign-in attempts leave
+the previous file credentials intact; removing an account leaves running
+applications unchanged. Other Skopeo/Docker authentication files are managed
+separately and may still grant access.
+
+TLS verification remains enabled. Install a private registry CA in
+`/etc/containers/certs.d/REGISTRY[:PORT]/ca.crt` when required, on each node
+that pulls images. Registry credentials are not written into the application
+template or copied into its LXC.
+
+Image access checks have a 30-second timeout per request; sign-in has a 45-second
+timeout. Errors identify rejected credentials, missing images, incompatible
+architectures, network/TLS failures, rate limits and registry outages. Downloads
+reuse the native update cache and layer integrity checks. Damaged cached images
+are downloaded again, and storage failures leave existing applications alone.
+
 ## How a container is created
 
 Selecting an application, or giving a definition, opens the same sequence.
@@ -101,7 +142,7 @@ An application made of several images is one entry of the catalog and one instal
 | Operation | What changes | What is kept |
 |---|---|---|
 | **Update** | The rootfs is replaced by the image the saved tag publishes today | Record, container disks, host directories, network and devices |
-| **Modify** | An editor opens with the current resources, network, paths and GPU; the container is rebuilt with the changes | The data of container disks and host directories |
+| **Modify** | Edit and confirm the configuration; supported native settings apply directly, while other changes use the existing recreation flow | Native edits keep the installed image and rootfs; both paths preserve persistent data |
 | **Recreate** (multi-container) | Every container is rebuilt from the image it was installed with | Data, network and devices |
 | **Watchdog** | Whether the application is started again when it stops on its own | Everything; only the choice is saved |
 | **Remove** | The LXC, or every container of the application, its disks and its record | Host directories, with their content |
@@ -117,6 +158,10 @@ An update is a transaction:
 Settings changed in Proxmox VE after the installation, such as memory, cores or start with the node, are carried into the new record. An operation interrupted by a closed terminal or a reboot is detected the next time the menu opens, and the previous installation can be recovered. A container restored from a backup on another host is registered again from the copy of the record it carries.
 
 A rolling tag is not an unattended update: the digest changes only through an explicit update.
+
+For standalone applications, CPU and RAM changes apply live. Supported network settings, environment overrides, directory mounts, additional managed volumes and native devices use a controlled stop/start when needed. Modify does not query the registry or download an image for these native edits, even if the cached archive has already been cleaned. Removing a managed mount detaches its disk without deleting its data; subsequent image updates park that unused disk and return it to the container. An optional retained backup does not force recreation.
+
+The native path checks the saved configuration and installation identity, keeps a private before/after journal, and restores the original settings if applying them or checking the restarted service fails. It refuses to overwrite concurrent edits. Changes that require installer adaptations, such as NVIDIA runtime changes, GPU permission/environment setup, file mounts, completion notes or a refreshed catalog template, use the existing validated recreation flow. The route is chosen before applying any settings, so one proposal is not partially applied by both paths. The recreation flow reuses a verified cached archive when it matches the resolved image; it downloads an image when a suitable archive is unavailable. Image changes and coordinated stack operations retain their separate update flow.
 
 ## From a Compose file or a docker run command to an oci-compose
 

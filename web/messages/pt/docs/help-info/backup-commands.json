@@ -1,0 +1,235 @@
+{
+  "meta": {
+    "title": "Comandos de cópia de segurança Proxmox — vzdump, qmrestore, pct restore | ProxMenux",
+    "description": "Referência dos comandos de cópia de segurança e restauro do Proxmox VE: vzdump para VM e contentores LXC, qmrestore para VM, pct restore para contentores, cópias agendadas em /etc/pve/jobs.cfg, scripts de hook e caminhos a excluir.",
+    "ogTitle": "Comandos de cópia de segurança Proxmox — vzdump, qmrestore, pct restore",
+    "ogDescription": "Referência dos comandos vzdump, qmrestore e pct restore para criar e restaurar cópias de VM e contentores LXC Proxmox.",
+    "twitterTitle": "Comandos de cópia de segurança Proxmox | ProxMenux",
+    "twitterDescription": "Comandos vzdump, qmrestore e pct restore para criar e restaurar cópias de VM e contentores Proxmox."
+  },
+  "header": {
+    "title": "Cópias de segurança e restauro",
+    "description": "Referência comentada dos comandos vzdump, qmrestore e pct restore para as cópias de segurança Proxmox. Inclui agendamento, opções avançadas como scripts de hook, caminhos a excluir e prioridade de E/S, além da gestão dos ficheiros de cópia.",
+    "section": "Ajuda e informações"
+  },
+  "intro": {
+    "title": "Três modos de backup",
+    "body": "Nas VM, <strong>snapshot</strong> faz uma cópia em funcionamento sem exigir snapshots do armazenamento. <strong>suspend</strong> suspende primeiro a VM, sem necessariamente melhorar a consistência. <strong>stop</strong> desliga-a primeiro; se estava em execução, pode retomar após o início da cópia. Em LXC é diferente: snapshot exige armazenamento com snapshots, suspend usa duas passagens rsync e stop mantém o contentor parado durante toda a cópia."
+  },
+  "commandGroups": [
+    {
+      "title": "Cópia de segurança de VM",
+      "commands": [
+        {
+          "command": "vzdump <vmid>",
+          "description": "Criar uma cópia de segurança de uma VM ou de um CT específico"
+        },
+        {
+          "command": "vzdump <vmid> --storage <storage>",
+          "description": "Backup VM para armazenamento específico"
+        },
+        {
+          "command": "vzdump <vmid> --mode snapshot",
+          "description": "Criar cópia de segurança de instantâneo (para VMs)"
+        },
+        {
+          "command": "vzdump <vmid> --mode suspend",
+          "description": "Suspender a VM antes da cópia em funcionamento, modo suspend antigo"
+        },
+        {
+          "command": "vzdump <vmid> --mode stop",
+          "description": "Desligar a VM antes de iniciar a cópia"
+        },
+        {
+          "command": "vzdump --all",
+          "description": "Backup de todas as VMs e contentores"
+        },
+        {
+          "command": "vzdump --all --exclude <vmid1>,<vmid2>",
+          "description": "Cópia de segurança de todos, exceto VMs especificadas"
+        }
+      ]
+    },
+    {
+      "title": "Opções de Cópia de Segurança",
+      "commands": [
+        {
+          "command": "vzdump <vmid> --compress zstd",
+          "description": "Usar compressão zstd para backup"
+        },
+        {
+          "command": "vzdump <vmid> --compress gzip --pigz <threads>",
+          "description": "Usar pigz com várias threads"
+        },
+        {
+          "command": "vzdump <vmid> --storage <storage> --notes-template <text>",
+          "description": "Adicionar notas ao backup"
+        },
+        {
+          "command": "vzdump <vmid> --mailto <email>",
+          "description": "Enviar um e- mail de notificação"
+        },
+        {
+          "command": "vzdump <vmid> --prune-backups keep-last=<n>",
+          "description": "Manter apenas n cópias de segurança por VM"
+        },
+        {
+          "command": "vzdump <vmid> --stdexcludes 0",
+          "description": "Não excluir arquivos temporários"
+        },
+        {
+          "command": "vzdump <vmid> --quiet 1",
+          "description": "Suprimir as mensagens de saída"
+        }
+      ]
+    },
+    {
+      "title": "Restaurar backups",
+      "commands": [
+        {
+          "command": "qmrestore <backup-file> <vmid>",
+          "description": "Restaurar VM de backup"
+        },
+        {
+          "command": "qmrestore <backup-file> <vmid> --storage <storage>",
+          "description": "Restaurar para armazenamento específico"
+        },
+        {
+          "command": "qmrestore <backup-file> <vmid> --unique",
+          "description": "Restaurar a VM com novos endereços MAC aleatórios"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file>",
+          "description": "Restaurar um contentor a partir de uma cópia de segurança"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --storage <storage>",
+          "description": "Restaurar o contentor para um armazenamento específico"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --rootfs <storage>:<size-GiB>",
+          "description": "Restaurar com o disco raiz no armazenamento e tamanho escolhidos"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --unprivileged 1",
+          "description": "Restaurar como CT sem privilégios"
+        }
+      ]
+    },
+    {
+      "title": "Gestão de cópias de segurança",
+      "commands": [
+        {
+          "command": "ls -la /var/lib/vz/dump/",
+          "description": "Listar as cópias de segurança na localização padrão"
+        },
+        {
+          "command": "find /var/lib/vz/dump/ -name \"*.vma*\"",
+          "description": "Encontrar cópias de segurança de VM"
+        },
+        {
+          "command": "find /var/lib/vz/dump/ -name \"*.tar*\"",
+          "description": "Procurar backups de contentores"
+        },
+        {
+          "command": "pvesm list <storage> --content backup",
+          "description": "Lista de backups em armazenamento específico"
+        },
+        {
+          "command": "rm /var/lib/vz/dump/<backup-file>",
+          "description": "Apagar um ficheiro de cópia de segurança"
+        },
+        {
+          "command": "cat /etc/vzdump.conf",
+          "description": "Mostrar configuração de backup"
+        }
+      ]
+    },
+    {
+      "title": "Cópias de segurança agendadas",
+      "commands": [
+        {
+          "command": "cat /etc/pve/jobs.cfg",
+          "description": "Mostrar agendamento de backup"
+        },
+        {
+          "command": "nano /etc/vzdump.conf",
+          "description": "Editar configuração de backup"
+        },
+        {
+          "command": "systemctl list-timers",
+          "description": "Listar temporizadores do systemd"
+        },
+        {
+          "command": "systemctl status cron",
+          "description": "Verificar o estado do serviço cron"
+        },
+        {
+          "command": "pvenode task list --typefilter vzdump",
+          "description": "Listar tarefas de cópia de segurança concluídas"
+        },
+        {
+          "command": "pvenode task log <upid>",
+          "description": "Mostrar o registo de uma tarefa de cópia pelo respetivo UPID"
+        }
+      ]
+    },
+    {
+      "title": "Operações Avançadas",
+      "commands": [
+        {
+          "command": "qmrestore <backup> <vmid> --force",
+          "description": "Forçar o restauro, substituindo a VM existente"
+        },
+        {
+          "command": "vzdump <vmid> --dumpdir <directory>",
+          "description": "Especificar diretório de backup personalizado"
+        },
+        {
+          "command": "vzdump <vmid> --script <script>",
+          "description": "Executar um script de hook durante a cópia de segurança"
+        },
+        {
+          "command": "vzdump <vmid> --exclude-path <path>",
+          "description": "Excluir caminhos específicos da cópia de segurança"
+        },
+        {
+          "command": "vzdump <vmid> --ionice <priority>",
+          "description": "Definir a prioridade de E/ S para o processo de backup"
+        },
+        {
+          "command": "vzdump <vmid> --lockwait <minutes>",
+          "description": "Esperar pelo bloqueio"
+        },
+        {
+          "command": "qm importdisk <vmid> <disk-image> <storage>",
+          "description": "Importar um ficheiro de imagem de disco (por exemplo raw, qcow2 ou vmdk) como disco não utilizado, não um arquivo de backup vzdump"
+        }
+      ]
+    }
+  ],
+  "testRestores": {
+    "title": "Teste suas restaurações",
+    "bodyRich": "Restaure periodicamente uma cópia para um VMID de teste livre com <code>qmrestore --unique</code>, inicie a VM numa rede isolada e verifique o conteúdo. A opção unique gera novos endereços MAC, mas não altera IP estáticos nem definições de aplicações. Teste os contentores da mesma forma com <code>pct restore</code>."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "Gestão de VM e CT",
+        "tail": " — comandos de ciclo de vida qm e pct."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Armazenamento e Discos",
+        "tail": " — gestão de armazenamento de pvesm."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Visão geral de ajuda e informações",
+        "tail": "."
+      }
+    ]
+  }
+}

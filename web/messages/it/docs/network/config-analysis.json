@@ -1,0 +1,122 @@
+{
+  "meta": {
+    "title": "Analisi della configurazione e pulizia guidata | Documentazione ProxMenux",
+    "description": "Rileva i blocchi iface in /etc/network/interfaces che fanno riferimento a schede di rete fisiche non più presenti sull’host. Li segnala e offre una rimozione guidata in 5 passaggi con backup obbligatorio e anteprima di ogni blocco.",
+    "ogTitle": "Analisi della configurazione e pulizia guidata | Documentazione ProxMenux",
+    "ogDescription": "Trovare e rimuovere i blocchi di interfaccia orfano lasciati dietro da modifiche hardware, con anteprima completa e rollback."
+  },
+  "header": {
+    "title": "Analisi della configurazione e pulizia guidata",
+    "description": "Esamina ogni blocco iface in /etc/network/interfaces e verifica che la scheda di rete fisica corrispondente esista ancora. Segnala i blocchi orfani rimasti dopo modifiche hardware e offre una rimozione guidata con backup, anteprima e conferma per ogni blocco.",
+    "section": "Rete"
+  },
+  "intro": {
+    "title": "Cosa fa",
+    "body": "Identifica le dichiarazioni <code>iface</code> il cui supporto NIC non è più presente sull'host (tipico dopo aver sostituito o rimosso una scheda di rete). Poi offre una pulizia guidata che rimuove <em>solo</em> i blocchi orfani, con un backup, un'anteprima per sezione e una conferma finale esplicita."
+  },
+  "differs": {
+    "heading": "Come differisce dall'analisi del ponte",
+    "headerAspect": "Aspetto",
+    "headerBridge": "Analisi del ponte",
+    "headerConfig": "Analisi della configurazione",
+    "rows": [
+      {
+        "aspect": "Esamina",
+        "bridge": "Ponti (<code>vmbrX</code>) e la loro linea <code>bridge-ports</code>",
+        "config": "Ogni blocco <code>iface</code>, esclusi loopback, bridge e bond"
+      },
+      {
+        "aspect": "Rilevamento",
+        "bridge": "Bridge che fanno riferimento a una porta inesistente",
+        "config": "Blocchi di interfaccia standalone per NIC che non esistono"
+      },
+      {
+        "aspect": "Azione di riparazione",
+        "bridge": "Sostituisce il nome della porta in <code>bridge-ports</code>",
+        "config": "Rimuove l'intero blocco <code>iface</code>"
+      },
+      {
+        "aspect": "Esclusi",
+        "bridge": "Nulla — ogni ponte viene analizzato",
+        "config": "Bridge (<code>vmbrX</code>) e bond (<code>bondX</code>) vengono sempre mantenuti: sono virtuali e la loro assenza durante l’avvio può essere normale"
+      }
+    ],
+    "outro": "In pratica si usano spesso entrambi in quest’ordine: prima <strong>analisi della configurazione</strong> per rimuovere i blocchi orfani, poi <link>analisi dei bridge</link> per riassegnare i bridge che dipendevano dall’interfaccia rimossa."
+  },
+  "step1": {
+    "heading": "Passo 1: analisi (solo lettura)",
+    "intro": "Interrompe immediatamente se l'host non è sulla pila classica. Altrimenti elenca ogni interfaccia non-loopback configurata e segnala il suo stato:",
+    "virtTitle": "Le interfacce virtuali sono protette",
+    "virtBody": "Bridge (<code>vmbrX</code>) e bond (<code>bondX</code>) sono strutture virtuali. È possibile che non esistano al momento dell’ispezione, ad esempio un bridge ancora senza porte. L’analisi non propone mai di rimuoverli, ma solo le schede di rete fisiche."
+  },
+  "step2": {
+    "heading": "Passo 2: pulizia guidata (5 passi)",
+    "intro": "Solo se accetti il prompt alla fine dell'analisi. Ogni passo richiede la conferma; la cancellazione in qualsiasi punto esce senza scrivere.",
+    "steps": [
+      {
+        "title": "1. Backup di sicurezza",
+        "body": "Copia <code>/etc/network/interfaces</code> in <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Il percorso viene mostrato prima e dopo.",
+        "tone": "blue"
+      },
+      {
+        "title": "2. Confermare la lista di rimozione",
+        "body": "Elenca esattamente i blocchi delle interfacce fisiche da rimuovere. Se le schede di rete riappaiono tra analisi e pulizia, ad esempio dopo aver reinserito una scheda, la procedura termina con <em>«Nessuna pulizia necessaria.»</em>",
+        "tone": "blue"
+      },
+      {
+        "title": "3. Visualizza in anteprima i blocchi esatti",
+        "body": "Apre una vista scorrevole di ogni blocco <code>iface</code> che verrebbe eliminato, esattamente come appare nel file. È il momento di individuare, ad esempio, un hook <code>up</code> che vuoi conservare.",
+        "tone": "blue"
+      },
+      {
+        "title": "4. Applicare la rimozione",
+        "body": "Per ogni interfaccia orfano, funziona <code>sed -i \"/^iface $iface/,/^$/d\" /etc/network/interfaces</code>. Questo elimina dalla linea <code>iface</code> corrispondente fino alla riga vuota successiva.",
+        "tone": "amber"
+      },
+      {
+        "title": "5. Verifica",
+        "body": "Rilegge il file, elenca ciò che è stato rimosso e ricontrolla le restanti interfacce. Stampa il comando di rollback. <strong>non</strong> riavvia automaticamente la rete: la rimozione di un blocco inutilizzato è sicura da applicare al riavvio successivo ed evita di toccare lo stato live.",
+        "tone": "emerald"
+      }
+    ],
+    "noRestartTitle": "Non riavvia automaticamente la rete",
+    "noRestartBody": "A differenza della riparazione del ponte, il flusso di pulizia non offre di riavviare il servizio. Rimuovere un blocco di interfaccia non utilizzato non ha alcun effetto immediato sulla configurazione in esecuzione, quindi un riavvio è inutile e sarebbe un rischio di connettività inutile. La modifica ha effetto sul successivo manuale <code>systemctl restart networking</code> o al successivo riavvio."
+  },
+  "caveats": {
+    "heading": "Osservazioni importanti",
+    "boundaryTitle": "Il confine del blocco è la prima linea vuota",
+    "boundaryBody": "Il pattern <code>sed</code> elimina da <code>iface &lt;name&gt;</code> fino alla riga vuota successiva. Se in <code>/etc/network/interfaces</code> manca una riga vuota tra i blocchi, cosa rara ma possibile dopo modifiche manuali, può essere eliminato anche il blocco successivo. Per questo <strong>il passaggio 3 è obbligatorio</strong>: controlla l’anteprima prima di confermare.",
+    "tandemTitle": "Un blocco iface orfano usato da un bridge viene rilevato qui, non nell’analisi dei bridge",
+    "tandemBody": "Se <code>vmbr0</code> dichiara <code>bridge-ports enp3s0</code> e <code>enp3s0</code> ha anche un blocco <code>iface enp3s0 inet manual</code>, rimuovere <code>enp3s0</code> qui lascia un riferimento non valido in <code>vmbr0</code>. Dopo la pulizia, esegui <link>l’analisi dei bridge</link> per riassegnare o rimuovere la porta del bridge. Le due procedure sono pensate per essere usate insieme."
+  },
+  "troubleshoot": {
+    "heading": "Risoluzione dei problemi",
+    "notFoundTitle": "L’analisi indica «NON TROVATA» per la mia nuova scheda di rete",
+    "notFoundBody": "Il kernel vede il dispositivo con un nome diverso da quello nel file. Esegui <code>ip link show</code> per trovare il nome effettivo. È proprio il caso in cui i <link>nomi persistenti delle interfacce</link> eviterebbero il problema in futuro.",
+    "tooMuchTitle": "La pulizia ha rimosso troppo (un blocco che volevo mantenere)",
+    "tooMuchBody": "Ripristino dal backup stampato nella fase 5:",
+    "tooMuchOutro": "Modificare il file a mano per aggiungere una linea vuota chiara tra i blocchi prima di eseguire la pulizia, o rimuovere il blocco problematico manualmente.",
+    "bridgeBreakTitle": "Un ponte smette di funzionare dopo la pulizia",
+    "bridgeBreakBody": "Il bridge dipendeva da una porta il cui blocco <code>iface</code> è stato appena rimosso. Esegui <link>l’analisi dei bridge</link>: il suggerimento assegnerà al bridge un’interfaccia fisica esistente."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "label": "Analisi dei bridge e riparazione guidata",
+        "href": "/docs/network/bridge-analysis",
+        "tail": "— il follow-up naturale dopo una pulizia."
+      },
+      {
+        "label": "Nomi di interfaccia persistenti",
+        "href": "/docs/network/persistent-names",
+        "tail": "— blocca i blocchi orfani dall'accumulo dopo ogni cambio hardware."
+      },
+      {
+        "label": "Backup e riavvio delle interfacce",
+        "href": "/docs/network/backup-restore",
+        "tail": "— snapshot manuali e browser di ripristino."
+      }
+    ]
+  }
+}

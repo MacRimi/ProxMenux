@@ -1,0 +1,404 @@
+{
+  "meta": {
+    "title": "Multicontainer-Anwendungen | ProxMenux",
+    "description": "Wie OCI manager Apps eine Anwendung mit Datenbank und Cache als koordinierte native LXCs umsetzt: Planung, privates Netzwerk, Abhängigkeits-Hook, Validierung und transaktionale Aktualisierungen."
+  },
+  "header": {
+    "title": "Anwendungen mit mehreren Containern",
+    "description": "Eine Anwendung mit Datenbank, Cache und anderen Diensten wird zu mehreren koordinierten nativen LXCs, die als eine installiert und aktualisiert werden.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Eine Anwendung für den Benutzer, mehrere LXCs für Proxmox VE",
+            "body": "Eine Multicontainer-Definition ist ein Eintrag des Katalogs. Der Installer erstellt einen nativen LXC pro Dienst und behält seine Abhängigkeiten explizit. Immich, Nextcloud, Paperless-ngx und Tandoor werden auf diese Weise installiert."
+          }
+        },
+        {
+          "mermaid": {
+            "chartCode": "flowchart LR\n C[\"Docker Compose\"] --> O[\"{{plan}}\"]\n O --> A[\"{{app}}<br/>{{appNet}}\"]\n O --> D[\"{{db}}<br/>{{private}}\"]\n O --> R[\"{{cache}}<br/>{{private}}\"]\n V1[(\"config\")] --> A\n V2[(\"database\")] --> D\n V3[(\"cache\")] --> R\n D --> A\n R --> A",
+            "labels": {
+              "plan": "Stack-Plan",
+              "app": "Anwendungs-LXC",
+              "appNet": "LAN + privat",
+              "db": "PostgreSQL LXC",
+              "cache": "Valkey LXC",
+              "private": "privat"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "plan",
+      "title": "1. Der Plan, bevor ein Container existiert",
+      "blocks": [
+        {
+          "p": "Es wird kein LXC erstellt, während die Compose-Definition interpretiert wird. Ein vollständiger Plan steht an erster Stelle, mit jedem Mitglied, Image, VMID, Netzwerk, Pfad, Geheimnis, Ordnung und Gesundheitscheck. Wenn der Plan nicht konsistent ist, wird die Installation nicht gestartet."
+        },
+        {
+          "table": {
+            "headers": [
+              "Planelement",
+              "Inhalt",
+              "Vor dem Erstellen geprüft"
+            ],
+            "rows": [
+              [
+                "Mitglieder",
+                "Hauptanwendung, Datenbank, Cache, maschinelles Lernen und andere Abhängigkeiten",
+                "Einzigartige VMIDs, bekannte Rollen und genau ein Hauptmitglied"
+              ],
+              [
+                "Images",
+                "Rollende Referenz, Architektur und aufgelöster Digest jedes Dienstes",
+                "Alle existieren, unterstützen die Architektur und bestehen die OCI-Integritätsprüfung"
+              ],
+              [
+                "Netzwerk",
+                "Private Bridge, Subnetz, eine feste Adresse pro Dienst und LAN-Zugang für das Hauptmitglied",
+                "Keine Kollision mit vorhandenen Brücken oder Subnetzen und keine wiederholte Adresse"
+              ],
+              [
+                "Persistenz",
+                "Container-Disks, Host-Verzeichnisse, Besitzer und Backup",
+                "Keine überlappenden Pfade, Speicher verfügbar und deklarierte Berechtigungen"
+              ],
+              [
+                "Geheimnisse",
+                "Datenbankpasswort, Anwendungsschlüssel und erste Anmeldeinformationen",
+                "Einmal generiert und nur an die Mitglieder gegeben, die sie verwenden"
+              ],
+              [
+                "Lebenszyklus",
+                "Start-Order, Stop-Order und Gesundheitscheck pro Mitglied",
+                "Die Hauptanwendung startet zuletzt und stoppt zuerst"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "create",
+      "title": "2. Erstellung, Mitglied für Mitglied",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Reservieren Sie jeden VMID",
+                "body": "Das Proxmox-VE-Inventar und das Instanzverzeichnis werden geprüft. Ein vorhandener CT wird nicht übernommen; ein Vertrag, der noch zu einer anderen Instanz gehört, wird nicht wiederverwendet."
+              },
+              {
+                "title": "Jedes Image vorbereiten",
+                "body": "Alle Images werden aufgelöst, heruntergeladen und verifiziert, bevor der erste Container erstellt wird."
+              },
+              {
+                "title": "Erstellen Sie alle Rootfs",
+                "body": "Die offiziellen OCI-Metadaten werden importiert und die ProxMenux-Instanzidentität und die Mitgliedsrolle hinzugefügt."
+              },
+              {
+                "title": "Privates Netzwerk",
+                "body": "Eine Brücke und ein Subnetz werden erstellt und jedes Mitglied erhält seine feste Adresse; nur das Hauptmitglied erhält auch die LAN-Schnittstelle."
+              },
+              {
+                "title": "Persistenz",
+                "body": "Jede Datenbank und Konfiguration erhält eine eigene Containerplatte; nur Daten, die freigegeben werden sollen, verwenden Hostverzeichnisse."
+              },
+              {
+                "title": "Umgebung",
+                "body": "Interne Endpunkte, Shared Secrets und Servicevariablen werden geschrieben. Die Anwendung erreicht ihre Abhängigkeiten an ihren reservierten Privatadressen."
+              },
+              {
+                "title": "Aufzeichnung",
+                "body": "Jedes Mitglied zeichnet seine native Konfiguration, die Rootfs-Änderungen, die Updates reproduzieren müssen, und seine Beziehung zum Stack auf."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "checks",
+      "title": "3. Starten und Überprüfen Sie jeden Container",
+      "intro": "Ein erstellter LXC bedeutet noch keinen betriebsbereiten Dienst. Die Abhängigkeiten starten der Reihe nach und durchlaufen jeweils eine dienstspezifische Prüfung.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Dienst",
+              "Überprüfung",
+              "Was es zeigt"
+            ],
+            "rows": [
+              [
+                "PostgreSQL",
+                "<code>pg_isready</code> im CT mit erwartetem Host, Benutzer und Datenbank",
+                "Der Server akzeptiert Verbindungen für die konfigurierte Datenbank"
+              ],
+              [
+                "Redis / Valkey",
+                "<code>redis-cli</code> oder <code>valkey-cli</code> <code>PING</code> gegen seine Privatadresse",
+                "Der Broker hört zu und antwortet"
+              ],
+              [
+                "Immich Maschinelles Lernen",
+                "HTTP <code>GET /ping</code>, plus eine Überprüfung der ausgewählten GPU-Laufzeit",
+                "Der Service antwortet und die angeforderte Beschleunigung ist nicht auf CPU zurückgefallen"
+              ],
+              [
+                "Nextcloud",
+                "<code>GET /status.php</code> mit <code>installed=true</code>, <code>maintenance=false</code> und <code>needsDbUpgrade=false</code>",
+                "Initialisierung ohne anstehende Migration beendet"
+              ],
+              [
+                "Paperless-ngx / Tandoor",
+                "HTTP über die LAN-Adresse und den realen Port des Dienstes",
+                "Das Frontend und seine Abhängigkeiten stellen die Anwendung bereit"
+              ],
+              [
+                "Hauptanwendung",
+                "Der Endpunkt seines Templates, zum Beispiel <code>/api/server/ping</code> in Immich",
+                "Der gesamte Stapel arbeitet durch die Anwendung, die die Abhängigkeiten verwendet"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Laufend bedeutet nicht funktionsfähig",
+            "body": "Der laufende Zustand sagt nur, dass der LXC-Prozess existiert. Wenn der Dienst eine bessere Prüfung bietet, wird eine Exec- oder HTTP-Prüfung mit einem Timeout verwendet. Wenn ein Mitglied stoppt oder seine Prüfung nicht besteht, wird der Stapel nicht als installiert deklariert."
+          }
+        }
+      ]
+    },
+    {
+      "id": "hook",
+      "title": "4. Der Abhängigkeits-Hook",
+      "blocks": [
+        {
+          "p": "Der Haken wird nur auf den Hauptcontainer eines abhängigen Stapels gesetzt. Proxmox VE behält das Skript als Snippet und führt es als <code>hookscript</code> dieses CT aus. Das Stack-Rezept ist nicht im Skript geschrieben: Es befindet sich in einem separaten privaten Vertrag."
+        },
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Hauptkonfiguration CT",
+                "code": "hookscript: local:snippets/proxmenux-stack-dependencies.sh"
+              },
+              {
+                "title": "Privatvertrag (Beispiel)",
+                "code": "/etc/pve/priv/proxmenux-stack-VMID.json\n{\n  \"schema\": 1,\n  \"stack\": \"immich\",\n  \"dependencies\": [\n    {\"vmid\": 107, \"label\": \"PostgreSQL\", \"healthcheck\": {...}},\n    {\"vmid\": 108, \"label\": \"Valkey\", \"healthcheck\": {...}},\n    {\"vmid\": 106, \"label\": \"Machine Learning\", \"healthcheck\": {...}}\n  ]\n}"
+              }
+            ]
+          }
+        },
+        {
+          "snippet": {
+            "summary": "Vollständige Quelle von proxmenux-stack-dependencies.sh",
+            "pathCode": "local:snippets/proxmenux-stack-dependencies.sh",
+            "snippetCode": "stackDependencyHook"
+          }
+        },
+        {
+          "p": "Das Skript ist für jeden Stack gleich. VMIDs, Namen, Prüftypen und Timeouts stammen aus dem privaten Vertrag <code>/etc/pve/priv/proxmenux-stack-VMID.json</code> jedes Stacks."
+        },
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Proxmox VE ruft pre-start auf",
+                "body": "Bevor der Haupt-CT startet, läuft der Hook mit seinem VMID und der Lebenszyklusphase."
+              },
+              {
+                "title": "Eine Sperre pro Stack",
+                "body": "<code>flock</code> auf <code>/run/lock/proxmenux-stack-VMID.lock</code> verhindert zwei Startsequenzen gleichzeitig."
+              },
+              {
+                "title": "Der Vertrag wird gelesen und validiert",
+                "body": "Ein bekanntes Schema, numerische Abhängigkeiten, Labels, ein exec, http oder Running Check und ein positives Timeout sind erforderlich."
+              },
+              {
+                "title": "Abhängigkeiten in der Reihenfolge",
+                "body": "Jeder CT muss vorhanden sein; ein gestoppter wird gestartet und ein bereits laufender wird nicht neu gestartet."
+              },
+              {
+                "title": "Auf Betriebsbereitschaft warten",
+                "body": "Der Check läuft alle zwei Sekunden, und der CT wird ebenfalls bestätigt, dass er noch läuft."
+              },
+              {
+                "title": "Der Haupt-CT startet",
+                "body": "Wenn jede Abhängigkeit bereit ist, endet der Vorstart und Proxmox VE startet die Anwendung."
+              }
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Der Haken stoppt Abhängigkeiten nicht",
+            "body": "Die Post-Start-, Pre-Stop- und Post-Stop-Phasen tun nichts. Das Stoppen des Haupt-CT lässt PostgreSQL, Redis, Valkey oder Machine Learning laufen. Der Hook ordnet den Start an; er verwandelt nicht mehrere LXCs in einen Prozess."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Typ",
+              "Beispiel",
+              "Spätere Starts"
+            ],
+            "rows": [
+              [
+                "Abhängiger Stapel",
+                "Immich, Nextcloud, Anwendung mit PostgreSQL",
+                "Der Haken des Haupt-CT startet die Abhängigkeiten und wartet auf sie"
+              ],
+              [
+                "Anwendungssuite",
+                "Arr Suite",
+                "Kein Hauptmitglied: jeder LXC folgt seinem eigenen <code>onboot</code>"
+              ],
+              [
+                "Einzelne Anwendung",
+                "Jellyfin",
+                "Proxmox VE startet diesen LXC direkt"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "stack-checks",
+      "title": "5. Kontrollen am Stapel als Ganzes",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Jede VMID existiert, ist einzigartig und behält die erwartete Instanzidentität.",
+              "Jeder Vertrag gehört zum selben Stack, behält seine Rolle und seine aufgezeichnete native Konfiguration.",
+              "Das Hauptmitglied ist das letzte in <code>start_order</code> und das erste in <code>stop_order</code>.",
+              "Es fehlt keine Member-, Volume- oder Rootfs-Adaption.",
+              "Der Haken zeigt auf das offizielle Snippet, sein Inhalt ist unverändert und sein Vertrag entspricht dem Stapelrezept.",
+              "Die beobachteten Images und Digests stimmen mit den vorbereiteten OCI-Archiven überein.",
+              "Geräte, GPU-Profile, Mounts, Geheimnisse und Endpunkte stimmen immer noch mit den Verträgen überein.",
+              "Nachdem alle Abhängigkeiten ihre Prüfung bestanden haben, prüft der Endpunkt der Hauptanwendung die Integration zwischen den Mitgliedern."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "manage",
+      "title": "Verwalten eines installierten Stapels",
+      "intro": "Unter <strong>Installierte OCI-Anwendungen verwalten</strong> führt jedes Mitglied zum gesamten Stack. Das Menü bietet <strong>Alle Container der Anwendung aktualisieren</strong>, <strong>Zusätzliche Pfade und Geräte ändern</strong>, <strong>Alle Container mit ihrer gespeicherten Konfiguration neu erstellen</strong> und <strong>Entfernen: Anwendung und Container löschen</strong>. Die Neuerstellung baut jeden Container anhand des gespeicherten Digests aus seinem ursprünglichen Image neu auf, ohne nach einem neueren zu suchen. Sie verwendet dieselben Schritte wie ein Update und wird für aktualisierbare Stacks angeboten.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Jedes Mitglied",
+                "body": "Der Vertrag des Mitglieds nennt die Haupt-VMID und die vollständige Liste der Mitglieder."
+              },
+              {
+                "title": "Der Stapel ist reproduzierbar",
+                "body": "Identitäten, Verträge, Hook, Anpassungen und eine koordinierte Wiederholung für dieses Rezept werden validiert."
+              },
+              {
+                "title": "Images zuerst",
+                "body": "Die Anwendung wird nicht gestoppt, bis jeder Digest gelöst, heruntergeladen und verifiziert wurde."
+              },
+              {
+                "title": "Stoppen und sichern Sie das Set",
+                "body": "Verifizierte native Backups werden mit gestopptem Stack übernommen, sodass Anwendung und Datenbanken zum selben Zeitpunkt gehören."
+              },
+              {
+                "title": "Aktualisieren und überprüfen Sie jedes Mitglied",
+                "body": "Anpassung, Netzwerk, Mounts, Geheimnisse und Geräte werden vor dem Gesundheitscheck jedes Mitglieds erneut angewendet."
+              },
+              {
+                "title": "Alles veröffentlichen oder wiederherstellen",
+                "body": "Die neuen Verträge werden nur veröffentlicht, wenn jedes Mitglied besteht. Wenn einer scheitert, wird jedes Mitglied wiederhergestellt."
+              }
+            ]
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Ändern",
+              "Was sich ändert",
+              "Was erhalten bleibt"
+            ],
+            "rows": [
+              [
+                "Extra Pfade und Geräte",
+                "Sie werden dem Anwendungscontainer hinzugefügt oder daraus entfernt, der neu gestartet wird. Es wird nichts neu erstellt",
+                "Die Daten der Anwendung, ihrer Datenbank und der anderen Container"
+              ],
+              [
+                "Was die Erkennung ausführt (Immich)",
+                "Der Machine Learning Container nimmt das Image und die Geräte des CPU oder eines GPU des Hosts auf. Die gesamte Anwendung wird gestoppt und aktualisiert, wie in einem Update",
+                "Der Modell-Cache, die Bibliothek und die Datenbank. Wenn etwas fehlschlägt, werden die vorherigen Container und die vorherige Auswahl wiederhergestellt"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Ein Stack ohne koordinierte Wiederholung wird nicht aktualisiert",
+            "body": "Wenn die Vorbereitung eines Stapels nicht reproduziert werden kann, wird die Aktualisierung abgelehnt, bevor der Stapel gestoppt wird. Die Anwendung läuft so, wie sie ist."
+          }
+        }
+      ]
+    },
+    {
+      "id": "failure",
+      "title": "6. Wenn etwas versagt",
+      "blocks": [
+        {
+          "p": "Während einer Installation stoppt und entfernt ein Fehler die unvollständigen Container, die die Operation erstellt hat, und die private Bridge, wenn die Operation sie erstellt hat. Ein Stack wird nicht als gültig veröffentlicht, bis die gesamte Sequenz beendet ist."
+        },
+        {
+          "p": "Ein Update ist transaktional: Alle Images werden zuerst vorbereitet, dann stoppt der Stapel, jedes Mitglied wird gesichert und das Backup verifiziert, und nur dann werden alle Rootfs ersetzt. Mitglieder beginnen eins nach dem anderen mit ihrem Gesundheitscheck; Wenn einer fehlschlägt, wird jedes Mitglied aus dem gleichen Backup-Satz wiederhergestellt, so dass die Datenbank und die Anwendung niemals zu verschiedenen Momenten gehören."
+        },
+        {
+          "mermaid": {
+            "chartCode": "flowchart LR\n P[\"{{prepare}}\"] --> S[\"{{stop}}\"]\n S --> B[\"{{backup}}\"]\n B --> R[\"{{replace}}\"]\n R --> H{\"{{healthy}}\"}\n H -- \"{{yes}}\" --> C[\"{{commit}}\"]\n H -- \"{{no}}\" --> X[\"{{rollback}}\"]",
+            "labels": {
+              "prepare": "Jedes Image vorbereiten",
+              "stop": "Stop, Hauptelement zuerst",
+              "backup": "Verifiziertes Backup jedes CT",
+              "replace": "rootfs ersetzen",
+              "healthy": "Alle funktionsfähig?",
+              "yes": "Ja",
+              "no": "Nein",
+              "commit": "Verträge veröffentlichen",
+              "rollback": "Jedes Mitglied wiederherstellen"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "not-assumed",
+      "title": "Was ein Stack nicht beinhaltet",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Eine in einem Fluss installierte Suite, wie die Arr-Suite, ist kein abhängiger Stapel: Ihre Container haben keine Startreihenfolge zwischen ihnen.",
+              "Das private Netzwerk ersetzt nicht die Authentifizierung, TLS oder die Konfiguration jeder Anwendung.",
+              "Das Backup eines LXC enthält nicht die Brücke, den Haken oder die Verträge des Rests des Stapels.",
+              "Prowlarr, Sonarr oder Radarr erhalten von ProxMenux keine Indexer, Profile oder Anbieter."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

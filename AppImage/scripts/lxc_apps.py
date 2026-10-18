@@ -94,6 +94,7 @@ _VALID_UPSTREAM_TYPES = ("github", "http_json", "docker_hub")
 # `*/N` step, and comma lists — that covers every preset the UI
 # exposes and the freeform "custom" text field.
 _VALID_SCHEDULE_TARGETS = ("os", "app", "both")
+_SCHEDULE_REASON_CODES = frozenset({"stopped_container"})
 _SCHEDULE_TARGET_ID_RE = re.compile(
     r"^(?:os|apps|oci_image|app:[A-Za-z0-9_-]{1,64}|docker-engine|docker-(?:compose|container):[A-Za-z0-9][A-Za-z0-9_.-]{0,127}|docker-unit:[a-f0-9]{20})$"
 )
@@ -1178,6 +1179,13 @@ def validate_config(payload: dict) -> tuple[bool, Any]:
             return _err("logo_url must be an http(s) URL (max 512 chars)")
         conf["logo_url"] = logo
 
+    # Native discovery identity is separate from a curated helper/updater.
+    discovery_id = payload.get("discovery_id")
+    if discovery_id is not None:
+        if not isinstance(discovery_id, str) or not re.fullmatch(r"native-[0-9a-f]{24}", discovery_id):
+            return _err("invalid discovery_id")
+        conf["discovery_id"] = discovery_id
+
     # Optional helper_slug — set by the frontend when the user picks
     # an auto-detected app (primary or extra). Persisted so we can
     # filter the "also detected" chip list against apps already
@@ -2081,8 +2089,28 @@ class _DockerNoRedirect(urllib.request.HTTPRedirectHandler):
 _docker_no_redirect_opener = urllib.request.build_opener(_DockerNoRedirect)
 
 
-def _registry_bearer_token(challenge: dict) -> tuple[Optional[str], Optional[str]]:
-    """Exchange a parsed ``WWW-Authenticate`` challenge for a pull token."""
+_REGISTRY_AUTH_FILE = "/etc/pve/priv/proxmenux/registry-auth.json"
+_DOCKER_HUB_API_HOSTS = {"docker.io", "index.docker.io", "registry-1.docker.io", "registry.hub.docker.com"}
+
+
+def _registry_saved_login(api_host: str) -> Optional[str]:
+    """The login saved in ProxMenux for a registry, as a Basic credential."""
+    try:
+        with open(_REGISTRY_AUTH_FILE, encoding="utf-8") as handle:
+            auths = (json.load(handle) or {}).get("auths") or {}
+    except (OSError, ValueError, AttributeError):
+        return None
+    host = (api_host or "").lower()
+    for key in ([host, "docker.io"] if host in _DOCKER_HUB_API_HOSTS else [host]):
+        entry = auths.get(key) if isinstance(auths, dict) else None
+        if isinstance(entry, dict) and isinstance(entry.get("auth"), str) and entry["auth"]:
+            return f"Basic {entry['auth']}"
+    return None
+
+
+def _registry_bearer_token(challenge: dict, saved_login: Optional[str] = None) -> tuple[Optional[str], Optional[str]]:
+    """Exchange a parsed ``WWW-Authenticate`` challenge for a pull token,
+    with the login saved for a private registry when there is one."""
     query = {
         key: challenge[key]
         for key in ("service", "scope") if challenge.get(key)
@@ -2090,10 +2118,10 @@ def _registry_bearer_token(challenge: dict) -> tuple[Optional[str], Optional[str
     token_url = challenge["realm"]
     if query:
         token_url += ("&" if "?" in token_url else "?") + urllib.parse.urlencode(query)
-    token_req = urllib.request.Request(
-        token_url,
-        headers={"User-Agent": "ProxMenux-Monitor", "Accept": "application/json"},
-    )
+    token_headers = {"User-Agent": "ProxMenux-Monitor", "Accept": "application/json"}
+    if saved_login:
+        token_headers["Authorization"] = saved_login
+    token_req = urllib.request.Request(token_url, headers=token_headers)
     try:
         with urllib.request.urlopen(token_req, timeout=_docker_registry_timeout()) as response:
             body = response.read(65537)
@@ -2160,13 +2188,18 @@ def _registry_request(url: str, headers: dict, method: str = "HEAD",
     if error:
         return None, None, token, error
     if status == 401:
-        challenge = _parse_bearer_challenge((response_headers or {}).get("WWW-Authenticate", ""))
-        if not challenge:
+        authenticate = (response_headers or {}).get("WWW-Authenticate", "")
+        saved_login = _registry_saved_login(urllib.parse.urlsplit(url).netloc)
+        challenge = _parse_bearer_challenge(authenticate)
+        if challenge:
+            token, token_error = _registry_bearer_token(challenge, saved_login)
+            if token_error:
+                return None, None, None, token_error
+            attempt_headers["Authorization"] = f"Bearer {token}"
+        elif saved_login and authenticate.lower().startswith("basic") and url.startswith("https://"):
+            attempt_headers["Authorization"] = saved_login
+        else:
             return None, None, token, "registry authentication required"
-        token, token_error = _registry_bearer_token(challenge)
-        if token_error:
-            return None, None, None, token_error
-        attempt_headers["Authorization"] = f"Bearer {token}"
         response_headers, body, status, location, error = _registry_open(
             url, attempt_headers, method, max_bytes,
         )
@@ -3918,6 +3951,7 @@ def record_schedule_run(
     target: str,
     reason: Optional[str] = None,
     *,
+    reason_code: Optional[str] = None,
     log_name: Optional[str] = None,
     reboot_required: Optional[bool] = None,
     reboot_packages: Optional[list[str]] = None,
@@ -3937,6 +3971,10 @@ def record_schedule_run(
             sidecar["schedule"]["last_run_reason"] = str(reason)[:300]
         else:
             sidecar["schedule"].pop("last_run_reason", None)
+        if reason_code in _SCHEDULE_REASON_CODES:
+            sidecar["schedule"]["last_run_reason_code"] = reason_code
+        else:
+            sidecar["schedule"].pop("last_run_reason_code", None)
         if log_name:
             sidecar["schedule"]["last_run_log"] = os.path.basename(str(log_name))[:220]
         else:

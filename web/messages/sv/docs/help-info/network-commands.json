@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Proxmox-nätverkskommandon — ip, ping, ss, pve-firewall, iptables | ProxMenux",
+    "description": "Referens för nätverkskommandon på Proxmox VE-värdar: ip / ip link / ip addr, ping, traceroute, mtr, ss, ethtool, dig och nslookup samt pve-firewall, iptables och nftables för filtrering. Kontroll av bryggor, länkaggregeringar och VLAN.",
+    "ogTitle": "Proxmox-nätverkskommandon — ip, ping, ss, pve-firewall, iptables",
+    "ogDescription": "Referens av nätverkskommandon för Proxmox VE - gränssnittskontroll, anslutningstest, övervakning, brandvägg (pve-firewall, iptables, nftables) och DNS-uppslag.",
+    "twitterTitle": "Proxmox nätverkskommandon | ProxMenux",
+    "twitterDescription": "Nätverksinspektion, testning, konfiguration och brandväggskommandon för Proxmox VE."
+  },
+  "header": {
+    "title": "Nätverkskommandon",
+    "description": "Utvalda kommandon för Proxmox-värdens nätverk: gränssnittsinformation, anslutningstester, konfiguration, trafikövervakning och brandväggshantering. Omfattar ip / ss / nmcli / ethtool / tcpdump / pve-firewall.",
+    "section": "Hjälp och info"
+  },
+  "intro": {
+    "title": "Snabb översikt över gränssnitten",
+    "body": "<code>ip a</code> visar varje gränssnitt med dess IP- och MAC-adresser. <code>ip r</code> visar routningstabellen. Tillsammans besvarar de på några sekunder de flesta frågor om huruvida ett gränssnitt är rätt konfigurerat."
+  },
+  "commandGroups": [
+    {
+      "title": "Nätverksinformation",
+      "commands": [
+        {
+          "command": "ip a",
+          "description": "Visa nätverksgränssnitt och IP-adresser"
+        },
+        {
+          "command": "ip r",
+          "description": "Visa rutttabell"
+        },
+        {
+          "command": "ip -s link",
+          "description": "Visa trafikstatistik per gränssnitt"
+        },
+        {
+          "command": "brctl show",
+          "description": "Visa konfigurerade nätverksbryggor"
+        },
+        {
+          "command": "cat /etc/network/interfaces",
+          "description": "Visa rå nätverkskonfiguration"
+        }
+      ]
+    },
+    {
+      "title": "Nätverkstestning",
+      "commands": [
+        {
+          "command": "ping <host>",
+          "description": "Kontrollera anslutningen med en annan värd"
+        },
+        {
+          "command": "traceroute <host>",
+          "description": "Spåra vägen till en värd"
+        },
+        {
+          "command": "mtr <host>",
+          "description": "Kombinera ping och traceroute i realtid"
+        },
+        {
+          "command": "dig <domain>",
+          "description": "DNS-sökning för en domän"
+        },
+        {
+          "command": "nslookup <domain>",
+          "description": "Alternativ DNS-uppslagning"
+        }
+      ]
+    },
+    {
+      "title": "Nätverkskonfiguration",
+      "commands": [
+        {
+          "command": "ifreload -a",
+          "description": "Ladda om nätverkskonfigurationen (ifupdown2)"
+        },
+        {
+          "command": "ethtool <iface>",
+          "description": "Visa Ethernet-enhetsinformation"
+        },
+        {
+          "command": "resolvectl status",
+          "description": "Visa DNS-upplösningsstatus"
+        },
+        {
+          "command": "nmcli device show",
+          "description": "Visa nätverksenhetsdetaljer (om NetworkManager används)"
+        },
+        {
+          "command": "ip link set <iface> up",
+          "description": "Aktivera ett nätverksgränssnitt"
+        },
+        {
+          "command": "ip link set <iface> down",
+          "description": "Inaktivera ett nätverksgränssnitt"
+        }
+      ]
+    },
+    {
+      "title": "Nätverksövervakning",
+      "commands": [
+        {
+          "command": "ss -tuln",
+          "description": "Visa lyssningsportar (TCP/UDP)"
+        },
+        {
+          "command": "netstat -tuln",
+          "description": "Alternativ för att visa lyssnande portar"
+        },
+        {
+          "command": "lsof -i",
+          "description": "Lista öppna nätverksfiler och anslutningar"
+        },
+        {
+          "command": "tcpdump -i <iface>",
+          "description": "Fånga paket på gränssnitt"
+        },
+        {
+          "command": "iftop -i <iface>",
+          "description": "Övervaka bandbreddsanvändningen på ett gränssnitt"
+        }
+      ]
+    },
+    {
+      "title": "Brandväggshantering",
+      "commands": [
+        {
+          "command": "iptables -L -n -v",
+          "description": "Visa aktiva brandväggsregler (iptables)"
+        },
+        {
+          "command": "nft list ruleset",
+          "description": "Visa nftables regler"
+        },
+        {
+          "command": "pve-firewall status",
+          "description": "Kontrollera status för Proxmox brandvägg"
+        },
+        {
+          "command": "pve-firewall compile",
+          "description": "Kompilera brandväggsregler för alla noder"
+        },
+        {
+          "command": "pve-firewall reload",
+          "description": "Ladda om Proxmox brandväggsregler"
+        }
+      ]
+    }
+  ],
+  "iptablesTip": {
+    "title": "iptables vs nftables",
+    "bodyRich": "Den klassiska tjänsten <code>pve-firewall</code> skapar iptables-regler. Den alternativa tjänsten proxmox-firewall använder <strong>nftables</strong>. Kontrollera iptables-backenden med <code>iptables -L -n -v</code> och nftables-backenden med <code>nft list ruleset</code>. Använd verktygen för den aktiva backenden; listorna är inte utbytbara."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "href": "/docs/network",
+        "label": "Nätverkshantering",
+        "tail": " — ProxMenux interaktiva nätverksverktyg för brygganalys, beständiga namn och övervakning."
+      },
+      {
+        "href": "/docs/help-info/tools-commands",
+        "label": "System CLI-verktyg",
+        "tail": " - fler nätverksövervakningsverktyg."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Översikt över Hjälp och info",
+        "tail": "."
+      }
+    ]
+  }
+}

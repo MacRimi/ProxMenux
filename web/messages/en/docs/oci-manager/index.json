@@ -41,6 +41,7 @@
               "<strong>Search applications</strong> — search by name across the catalog.",
               "<strong>All applications</strong> — the complete catalog, with the number of applications.",
               "<strong>Manage installed OCI applications</strong> — update, modify, remove or recover what was installed.",
+              "<strong>Registry accounts</strong> — the accounts used to install and update images from private registries.",
               "<strong>Install an image that is not in the catalog</strong> — translate a Compose file, a <code>docker run</code> command or an image reference.",
               "The catalog categories, each with its number of applications."
             ]

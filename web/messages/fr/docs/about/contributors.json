@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "title": "Contributeurs | Documentation ProxMenux",
+    "description": "Un hommage aux personnes qui rendent ProxMenux possible : testeurs, relecteurs et développeurs qui contribuent à chaque version.",
+    "ogTitle": "Contributeurs | Documentation ProxMenux",
+    "ogDescription": "Rencontrez les contributeurs derrière ProxMenux."
+  },
+  "header": {
+    "title": "Contributeurs",
+    "description": "Le projet ProxMenux grandit grâce à ses contributeurs. Cette page reconnaît leur travail : tester les versions avant leur publication, détecter les régressions, examiner les PR et orienter les nouvelles fonctionnalités.",
+    "section": "À propos"
+  },
+  "beyond": {
+    "title": "Au-delà de cette liste",
+    "body": "De nombreuses autres personnes contribuent en signalant des bugs, en proposant des fonctionnalités dans Discussions, en testant les versions bêta ou en traduisant le projet. La liste complète des contributeurs au code figure dans le <extlink>graphique des contributeurs GitHub</extlink>. La page ci-dessous met en avant les personnes les plus actives dans les tests et la vérification des versions de ProxMenux."
+  },
+  "testers": {
+    "heading": "Testeurs et évaluateurs",
+    "intro": "Ces personnes ont été parmi les premières à contribuer au projet. Leurs tests, signalements de problèmes et suggestions ont aidé ProxMenux à devenir ce qu’il est aujourd’hui.",
+    "roles": {
+      "testing": "Tests",
+      "testingReviewer": "Tests et relecture"
+    },
+    "youtube": "YouTube"
+  },
+  "contribute": {
+    "heading": "Vous voulez contribuer ?",
+    "intro": "Toute contribution est la bienvenue — code, test, conception, documentation, ou tout simplement partager vos idées:",
+    "tester": "<strong>Testeur</strong> — essayez le <beta>canal bêta</beta> et signalez ce qui fonctionne ou non avant la publication des versions stables.",
+    "developer": "<strong>Développeur</strong> — Bash, Next.js (TypeScript) et un peu de Python pour l’environnement virtuel de traduction (venv). Les PR sont les bienvenues sur <gh>GitHub</gh>.",
+    "designer": "<strong>Designer</strong> — Améliorations de l'interface utilisateur, icônes, captures d'écran pour la documentation.",
+    "ideas": "<strong>Idées</strong> — ouvrez un sujet dans <disc>GitHub Discussions</disc> avant de créer une issue pour demander une fonctionnalité."
+  },
+  "coc": {
+    "title": "Lisez d'abord le Code de conduite",
+    "body": "Avant de proposer du code ou de signaler un problème, lisez le <coclink>Code de conduite et les bonnes pratiques</coclink>. Il précise les attentes sur la responsabilité du code, le signalement des vulnérabilités et le périmètre des PR."
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "meta": {
+    "title": "Host: Freigegebenes Verzeichnis auf dem Host hinzufügen | ProxMenux-Dokumentation",
+    "description": "Erstellen Sie ein Hostverzeichnis, das für LXC-Bind-Mounts bereit ist, mit Berechtigungen, die für privilegierte und unprivilegierte Container gleichzeitig funktionieren. Sticky Bit + World-Rwx + ACLs für die Standardvererbung.",
+    "ogTitle": "Host: Freigegebenes Verzeichnis auf dem Host hinzufügen | ProxMenux-Dokumentation",
+    "ogDescription": "Bereiten Sie ein Hostverzeichnis für LXC-Bind-Mounts vor, dessen Berechtigungen mit privilegierten und unprivilegierten CTs kompatibel sind."
+  },
+  "header": {
+    "title": "Host: Freigegebenes Verzeichnis hinzufügen",
+    "description": "Erstellen Sie ein Host-Verzeichnis, das so konzipiert ist, dass es in einen oder mehrere LXC-Container eingebunden wird. ProxMenux wendet eine Reihe von Berechtigungen an, die sowohl für privilegierte als auch für unprivilegierte CTs gleichzeitig funktionieren - keine verschobenen UID-Kopfschmerzen, keine pro-Container-Chowns - und registriert das Verzeichnis, damit der LXC Mount Manager es später abholen kann.",
+    "section": "Speicher und Freigaben · Host"
+  },
+  "intro": {
+    "title": "Was das ist (und nicht ist)",
+    "body": "Dieses Tool registriert <strong>nicht</strong> irgendetwas in Proxmox (kein <code>pvesm add</code> hier). Es bereitet lediglich ein Verzeichnis auf dem Host vor – standardmäßig <code>/mnt/shared</code> – mit Berechtigungen, die jeder LXC-Container lesen und schreiben kann, unabhängig davon, ob der CT privilegiert oder nicht privilegiert ist. Der übliche nächste Schritt besteht darin, es mit dem <mountLink>LXC-Mount-Manager</mountLink> in jedes CT einzubinden."
+  },
+  "why": {
+    "heading": "Warum ein dediziertes Tool dafür",
+    "intro": "Wenn Sie ein Hostverzeichnis in einen LXC-Container binden, hängen die Berechtigungen ab von:",
+    "items": [
+      "Ob der CT <strong>privilegiert</strong> ist (UID 0 im CT = UID 0 auf dem Host) oder <strong>unprivilegiert</strong> (UID 0 im CT = UID 100000 auf dem Host — alle UIDs sind um +100000 verschoben).",
+      "Der Besitz des Hostverzeichnisses (eine Datei im Besitz von UID 1000 auf dem Host erscheint als \"andere\" aus der Perspektive eines unprivilegierten CT, da kein CT-Benutzer UID 1000 zuordnet).",
+      "Ob mehrere CTs das gleiche Verzeichnis teilen (unterschiedliche CTs können unterschiedliche UID-Bereiche haben)."
+    ],
+    "outro": "ProxMenux verwendet hier einen pragmatischen Ansatz: <strong>allen Zugriff gewähren</strong>, und zwar auf Dateisystemebene. Dazu kommen rwx-Rechte für alle, das Sticky-Bit und ACLs zur Vererbung der Rechte an neue Dateien. Jede zugeordnete UID kann lesen und schreiben; ein Abgleich von UIDs/GIDs ist nicht nötig."
+  },
+  "howRuns": {
+    "heading": "Wie das Skript läuft",
+    "body": "Das Skript hat kein Hauptmenü – es führt eine einzelne Aktion aus, <strong>Freigegebenes Verzeichnis erstellen</strong>. Phase 1 sammelt den Zielpfad; Phase 2 erstellt das Verzeichnis und wendet Berechtigungen an."
+  },
+  "bits": {
+    "heading": "Was jedes Berechtigungsbit tut",
+    "intro": "Die Nummer <strong>1777</strong> ist nicht willkürlich - es ist der gleiche Modus, den Linux für <code>/tmp</code> verwendet. Drei Eigenschaften kombiniert:",
+    "headerBit": "Bit",
+    "headerEffect": "Wirkung",
+    "headerWhy": "Warum es hier wichtig ist",
+    "rows": [
+      {
+        "bit": "1 (sticky bit)",
+        "effect": "Löschen und Umbenennen sind auf den Datei- oder Verzeichniseigentümer und ausreichend privilegierte Prozesse beschränkt.",
+        "why": "Hilft Benutzern mit unterschiedlichen zugeordneten UIDs, fremde Dateien vor Löschung zu schützen. CTs mit derselben zugeordneten UID oder privilegiertem Root-Zugriff sind dadurch nicht voneinander isoliert."
+      },
+      {
+        "bit": "777 (rwx-rwx-rwx)",
+        "effect": "Jeder kann lesen, schreiben und das Verzeichnis betreten.",
+        "why": "Unprivilegierte CT UIDs (100000+) erscheinen als \"andere\" vom Host, so dass world-rwx ihnen Zugriff gibt."
+      },
+      {
+        "bit": "ACLs (Standard)",
+        "effect": "Vererbt auf jeder neu erstellten Datei / Subdir.",
+        "why": "Neue Inhalte erben die Standard-ACLs, ohne das Skript erneut auszuführen. Anwendungen können weiterhin restriktive Modi anfordern oder Rechte später ändern."
+      }
+    ],
+    "privTitle": "Privilegierte CTs sehen dasselbe, nur ohne die Verschiebung",
+    "privBody": "Für einen privilegierten CT ist UID 0 im CT UID 0 auf dem Host, so dass <code>root</code> im CT das Hostverzeichnis direkt lesen / schreiben kann. <code>1777</code> ist immer noch in Ordnung - es bedeutet nur, dass Nicht-Root-Benutzer im CT auch das Verzeichnis verwenden können. Die gleichen Berechtigungen decken beide Fälle ab."
+  },
+  "where": {
+    "heading": "Wo das freigegebene Verzeichnis liegen soll",
+    "intro": "Der Location Picker bietet vier Optionen:",
+    "opt1Title": "1. Erstellen Sie einen neuen Ordner in /mnt",
+    "opt1Body": "Die übliche Wahl. ProxMenux schlägt automatisch den ersten freien Namen vor (<code>shared</code>, <code>shared2</code>, <code>shared3</code>, ...). Sie bestätigen oder geben nur einen anderen Namen ein.",
+    "opt2Title": "2. Benutzerdefinierter Pfad",
+    "opt2Body": "Für Verzeichnisse außerhalb von <code>/mnt</code>. Jeder absolute Pfad funktioniert (z.B. <code>/srv/media</code>, <code>/data/family</code>). Das Skript verwendet die gleichen Berechtigungen.",
+    "opt3Title": "3. Bestehende Ordner in /mnt anzeigen",
+    "opt3Body": "Read-only Diagnose: listet jedes Verzeichnis unter <code>/mnt</code> mit seinen Berechtigungen, Eigentümer und verfügbaren Speicherplatz auf. Nützlich, bevor Sie eine neue erstellen, um Namenskollisionen zu vermeiden.",
+    "opt4Title": "4. Abbrechen",
+    "opt4Body": "Beendet den Vorgang, ohne etwas zu erstellen. Entspricht <kbd>Esc</kbd>.",
+    "tipTitle": "Wo lebt /mnt?",
+    "tipBody": "Standardmäßig befindet sich <code>/mnt</code> auf dem Proxmox-Root-Dateisystem. Wenn Sie das freigegebene Verzeichnis auf einer anderen Festplatte (einer Datenplatte, einem ZFS-Pool) haben möchten, mounten Sie diese Festplatte zuerst unter <code>/mnt/&lt;name&gt;</code> (Disk Manager oder <diskLink>Lokale Festplatte als Proxmox-Speicher hinzufügen</diskLink>) und erstellen Sie dann das freigegebene Verzeichnis als Unterordner darin - oder wählen Sie \"Benutzerdefinierten Pfad eingeben\" hier und zeigen Sie auf die eingehängte Festplatte."
+  },
+  "manual": {
+    "heading": "Manuelles Äquivalent",
+    "body": "Der gesamte Flow kann von Hand wiedergegeben werden:"
+  },
+  "next": {
+    "heading": "Nächster Schritt: Bind-Mount in Container",
+    "body": "Durch das Erstellen des Verzeichnisses wird es nur vorbereitet – noch wird es von keinem Container gesehen. Um es in einem oder mehreren LXCs sichtbar zu machen, verwenden Sie den Mount-Manager <mountLink>LXC</mountLink>, um <code>/mnt/&lt;name&gt;</code> in die CTs einzubinden. Da die Berechtigungen bereits geöffnet sind, bietet der Mount-Manager <strong>nicht</strong> an, sie zu ändern – das Verzeichnis kann unverändert verwendet werden."
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "mkdirTitle": "\"Failed to create directory\"",
+    "mkdirBody": "Normalerweise ein Dateisystemproblem: <code>/mnt</code> befindet sich in einem schreibgeschützten Dateisystem, der Pfad enthält eine Komponente, die kein Verzeichnis ist (z. B. Sie haben <code>/etc/passwd/sub</code> eingegeben), oder die Festplatte ist voll. Überprüfen Sie mit <code>df -h /mnt</code> und <code>mount | grep /mnt</code>.",
+    "writeTitle": "Container kann trotz offener Berechtigungen nicht schreiben",
+    "writeBody": "Überprüfen Sie, ob der CT tatsächlich den Bind-Mount (<code>pct config &lt;ctid&gt; | grep ^mp</code>) verwendet. Führen Sie im CT <code>touch /mnt/data/test-$(date +%s)</code> aus – wenn dies mit verweigerter Berechtigung fehlschlägt, befindet sich das Mount möglicherweise auf einem Host-Dateisystem, das ACLs nicht berücksichtigt (einige ältere <code>ext3</code>- oder <code>vfat</code>-Mounts). Verschieben Sie das freigegebene Verzeichnis in ein ext4 / xfs / btrfs / zfs Backing.",
+    "aclTitle": "ACL Befehle leise nicht verfügbar",
+    "aclBody": "Bei einer minimalen Proxmox-Installation sind <code>setfacl</code> / <code>getfacl</code> möglicherweise nicht installiert. Das Skript fällt anmutig zurück (<code>command -v setfacl</code>-Check) und wendet nur POSIX-Berechtigungen an - was oft genug ist, aber neue Dateien werden das permissive Profil nicht automatisch erben. Installieren Sie <code>acl</code> mit <code>apt-get install -y acl</code> und führen Sie das Skript im Verzeichnis erneut aus."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "LXC-Mount-Verwaltung",
+        "tail": "— der natürliche nächste Schritt: bind-mount dieses Verzeichnis in einen oder mehrere Container."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "label": "Lokale Festplatte als Proxmox-Speicher hinzufügen",
+        "tailRich": "Wenn Sie das freigegebene Verzeichnis auf einer dedizierten Festplatte haben möchten, bereiten Sie die Festplatte zuerst vor, mounten Sie sie unter <code>/mnt</code> und erstellen Sie dann den freigegebenen Unterordner hier."
+      }
+    ]
+  }
+}

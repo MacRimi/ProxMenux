@@ -312,25 +312,31 @@ EOF
       <p className="text-lg mb-2">{t("figurine.automates")}</p>
       <CopyableCode
         code={`
-# Check for previous installation and remove if found
-if command -v figurine &> /dev/null; then
-  rm -f "/usr/local/bin/figurine"
-fi
-
 # Download and install Figurine
-version="2.0.0"
-file="figurine_linux_amd64_v\${version}.tar.gz"
+(
+set -e
+version="\${FIGURINE_VERSION:-2.1.1}"
+arch="$(dpkg --print-architecture 2>/dev/null || uname -m)"
+case "$arch" in
+  amd64|x86_64) arch="amd64" ;;
+  arm64|aarch64) arch="arm64" ;;
+  armhf|armv7l|armv8l) arch="arm" ;;
+  *) echo "Unsupported architecture for Figurine: $arch" >&2; exit 1 ;;
+esac
+file="figurine_linux_\${arch}_v\${version}.tar.gz"
 url="https://github.com/arsham/figurine/releases/download/v\${version}/\${file}"
-wget -qO "/tmp/\${file}" "\${url}"
-tar -xf "/tmp/\${file}" -C "/tmp"
-mv "/tmp/deploy/figurine" "/usr/local/bin/figurine"
-chmod +x "/usr/local/bin/figurine"
+temp_dir="$(mktemp -d)"
+trap 'rm -rf "$temp_dir"' EXIT
+wget -qO "\${temp_dir}/\${file}" "\${url}"
+tar -xf "\${temp_dir}/\${file}" -C "$temp_dir"
+install -m 0755 "\${temp_dir}/deploy/figurine" "/usr/local/bin/figurine"
 
 # Create welcome message script
 cat << 'EOF' > "/etc/profile.d/figurine.sh"
 /usr/local/bin/figurine -f "3d.flf" $(hostname)
 EOF
 chmod +x "/etc/profile.d/figurine.sh"
+)
   `}
       />
 
