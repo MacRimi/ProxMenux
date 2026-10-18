@@ -38,7 +38,7 @@
   },
   "creds": {
     "heading": "Where the password lives",
-    "body": "ProxMenux <strong>never stores the password in plain text</strong> in the mount command or in <code>/etc/fstab</code>. Instead it writes a credentials file inside the CT:",
+    "body": "ProxMenux <strong>does not put the password in the mount command</strong> or in <code>/etc/fstab</code>. It writes a credentials file inside the CT instead. That file contains plaintext credentials protected by root-only permissions; it is not encrypted:",
     "whyTitle": "Why a separate file rather than fstab",
     "whyBody": "The CIFS module accepts <code>username=</code> / <code>password=</code> options inline in fstab, but anyone who can read <code>/etc/fstab</code> sees the password in clear. Putting credentials in a root-only file and pointing fstab at it (<code>credentials=</code>) keeps the password out of world-readable config."
   },
@@ -85,7 +85,7 @@
       }
     ],
     "netEffectTitle": "Net effect of the fstab flags",
-    "netEffectBody": "Your container always boots, even if the Samba server is offline. The first time something touches the mount path, systemd quietly mounts it. If the server is still down, that one access fails with <em>resource temporarily unavailable</em> — but nothing else in the CT is affected."
+    "netEffectBody": "The CIFS filesystem is mounted on <em>first access</em> rather than eagerly during boot. If the server is offline, that access may wait or fail, and services that depend on the path can be affected. Automount reduces the boot-time dependency; it does not guarantee that every CT service is unaffected by an unavailable CIFS server."
   },
   "manual": {
     "heading": "Manual equivalent",

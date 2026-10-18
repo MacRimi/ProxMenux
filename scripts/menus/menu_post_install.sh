@@ -28,6 +28,12 @@ fi
 load_language
 initialize_cache
 
+PMX_ON_PBS=false
+if [[ -f "$LOCAL_SCRIPTS/global/platform-functions.sh" ]]; then
+    source "$LOCAL_SCRIPTS/global/platform-functions.sh"
+    pmx_is_pbs && PMX_ON_PBS=true
+fi
+
 # ==========================================================
 confirm_and_run() {
     local name="$1"
@@ -55,8 +61,13 @@ confirm_automated_script() {
     local script_info=""
 
 
-    script_info+="$(translate "This script will apply the following optimizations and advanced adjustments to your Proxmox VE server"):\n\n"
-    script_info+="• $(translate "Configure") \Z4free repositories\Z0 $(translate "and upgrade the system (disables the enterprise repo)")\n"
+    if [[ "$PMX_ON_PBS" == true ]]; then
+        script_info+="$(translate "This script will apply the following optimizations and advanced adjustments to your Proxmox Backup Server"):\n\n"
+        script_info+="• $(translate "Upgrade the system, offering the") \Z4no-subscription repository\Z0 $(translate "when the server has no subscription (you will be asked)")\n"
+    else
+        script_info+="$(translate "This script will apply the following optimizations and advanced adjustments to your Proxmox VE server"):\n\n"
+        script_info+="• $(translate "Configure") \Z4free repositories\Z0 $(translate "and upgrade the system (disables the enterprise repo)")\n"
+    fi
     script_info+="• $(translate "Optionally remove") \Z4subscription banner\Z0 $(translate "from Proxmox web interface (you will be asked)")\n"
     script_info+="• $(translate "Optimize") \Z4memory\Z0, \Z4kernel\Z0, $(translate "and") \Z4network\Z0 $(translate "for better performance and stability")\n"
     script_info+="• $(translate "Install and configure") \Z4Log2RAM\Z0 $(translate "(only on SSD/NVMe) to protect your disk")\n"
@@ -229,6 +240,12 @@ declare -a COMMUNITY_SCRIPTS=(
     "Proxmox VE Post Install|Helper-Scripts|bash -c \"\$(wget -qLO - https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pve-install.sh); msg_success \\\"\$(translate 'Press ENTER to continue...')\\\"; read -r _\""
     "Proxmox VE Microcode|Helper-Scripts|bash -c \"\$(wget -qLO - https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/microcode.sh); msg_success \\\"\$(translate 'Press ENTER to continue...')\\\"; read -r _\""
 )
+if [[ "$PMX_ON_PBS" == true ]]; then
+    COMMUNITY_SCRIPTS=(
+        "Proxmox Backup Server Post Install|Helper-Scripts|bash -c \"\$(wget -qLO - https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pbs-install.sh); msg_success \\\"\$(translate 'Press ENTER to continue...')\\\"; read -r _\""
+        "Proxmox Backup Server Microcode|Helper-Scripts|bash -c \"\$(wget -qLO - https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/pbs-microcode.sh); msg_success \\\"\$(translate 'Press ENTER to continue...')\\\"; read -r _\""
+    )
+fi
 
 # ==========================================================
 
@@ -270,6 +287,12 @@ post_install_label() {
             ;;
         "Proxmox VE Microcode")
             echo "Proxmox VE Microcode"
+            ;;
+        "Proxmox Backup Server Post Install")
+            echo "Proxmox Backup Server Post Install"
+            ;;
+        "Proxmox Backup Server Microcode")
+            echo "Proxmox Backup Server Microcode"
             ;;
         "Community Scripts")
             translate "Community Scripts"

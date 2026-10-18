@@ -1,0 +1,93 @@
+{
+  "meta": {
+    "title": "ProxMenux Säkerhetskopiering och återställning — Översikt | Fullständig säkerhetskopiering och återställning av värd för Proxmox VE",
+    "description": "ProxMenux Backup & Restore fångar det fullständiga tillståndet för en Proxmox-värd – filsystem, strukturerat konfigurationsmanifest och installerade paket/komponenter – och återskapar det på samma eller en annan värd. Säkerhetskopieringen och återställningen är fristående: inga externa beroenden, och återställningar över kärnor stöds genom ett riktningsmedvetet filter för säker delmängd och kärnagnostisk hydrering.",
+    "ogTitle": "ProxMenux Säkerhetskopiering och återställning — Översikt",
+    "ogDescription": "Fullständig säkerhetskopiering och återställning av värd för Proxmox VE med strukturerat manifest, paketlista och ominstallerare av komponenter.",
+    "twitterTitle": "ProxMenux Säkerhetskopiering och återställning | ProxMenux",
+    "twitterDescription": "Fullständig säkerhetskopiering och återställning av värd för Proxmox VE med strukturerat manifest, paketlista och ominstallerare av komponenter."
+  },
+  "header": {
+    "title": "Säkerhetskopiering och återställning",
+    "description": "Säkerhetskopiering av hela värden och återställning för Proxmox VE. Fångar filsystem, konfiguration och installerade komponenter i ett enda arkiv och återskapar värden på samma eller en annan Proxmox-installation utan externa beroenden.",
+    "section": "Säkerhetskopiering och återställning"
+  },
+  "intro": {
+    "title": "Vad det är, i ett stycke",
+    "body": "En ProxMenux-säkerhetskopia sparar hela tillståndet för en Proxmox-värd: <strong>filsystemet</strong>, med relevanta kataloger under <code>/etc</code>, <code>/root</code> och <code>/var/lib/pve-cluster</code> samt valfria egna sökvägar; <strong>ett strukturerat manifest</strong> i JSON med upptäckt maskinvara, kärnparametrar, nätverkskonfiguration, ZFS-status, användare och cron-poster; och <strong>en programinventering</strong> med paket som APT markerar som manuellt installerade samt komponenter som ProxMenux installerat, med exakta versioner. Alla tre mål som stöds – lokalt arkiv, Proxmox Backup Server (rekommenderas) och Borg – får samma fristående innehåll. Vart och ett kan användas för att återskapa målvärden utan att källvärden behöver vara nåbar under återställningen."
+  },
+  "video": {
+    "heading": "Videogenomgång",
+    "intro": "Föredrar du att titta på Backup & Restore i aktion innan du konfigurerar det? Den här genomgången täcker en fullständig demo av funktionen i ProxMenux.",
+    "title": "ProxMenux – genomgång för säkerhetskopiering och återställning",
+    "caption": "Extern video på YouTube. Spelas upp i integritetsförbättrat läge (inga cookies förrän du trycker på play)."
+  },
+  "whatItIsNot": {
+    "heading": "Vad det inte är",
+    "intro": "Det här avsnittet gäller säkerhetskopiering och återställning <strong>av värden</strong>: själva Proxmox-installationen, inte de program och gästsystem som körs på den.",
+    "items": [
+      "<strong>Det här är inget verktyg för säkerhetskopiering av VM:ar eller CT:er.</strong> Funktionen sparar varken gästernas diskar eller RAM-tillstånd; det sköts av <code>vzdump</code>. Gästernas <strong>konfigurationsfiler</strong> (<code>/etc/pve/nodes/&lt;node&gt;/qemu-server/*.conf</code> och <code>lxc/*.conf</code>) <strong>ingår däremot</strong>. Efter återställning visas inventeringen igen, och diskarna kan återställas eller anslutas från en befintlig PBS- eller lokal säkerhetskopia.",
+      "<strong>Det här är ingen åtgärd för hela klustret.</strong> Varje nod säkerhetskopierar sig själv. Klustertillhörigheten sparas i <code>/etc/pve</code> så att en återställd nod kan anslutas igen, men återställning av hela klustret kräver samordning mellan noderna.",
+      "<strong>Det här är ingen fullständig diskavbildning.</strong> Kärnans binärfiler, initramfs och startpartitionen ingår inte. Vid återställning använder ProxMenux målvärdens egna startfiler, som återskapas automatiskt av <code>update-initramfs</code> och starthanterarens verktyg, och installerar drivrutiner som passar målets körande kärna."
+    ]
+  },
+  "threePillars": {
+    "heading": "De tre pelarna i en säkerhetskopia",
+    "intro": "Ett ProxMenux arkiv är uppbyggt kring tre fristående nyttolaster. Återställningen använder alla tre tillsammans för att reproducera källvärden på ett mål som kanske inte ens har samma kärna installerad.",
+    "diagramCaption": "Varje säkerhetskopia innehåller samma tre datablock oavsett destination. Återställningen använder alla tre: rootfs för att återställa filerna, manifestet för att upptäcka avvikelser och skillnader mellan kärnversioner samt programinventeringen för att installera om paket och komponenter för målets egen kärna.",
+    "pillar1Label": "Filsystem",
+    "pillar1Detail": "rootfs/\n(rsync av /etc,\n/etc/systemd/network,\n/root, samt en\nsqlite3-ögonblicksbild\nav /var/lib/pve-cluster,\n+ valfria sökvägar)",
+    "pillar2Label": "Manifest",
+    "pillar2Detail": "manifest.json\n(maskinvara, kärn-\nparametrar, nätverk,\nZFS, användare, cron,\nZFS-pooler, lagring)",
+    "pillar3Label": "Applikationer",
+    "pillar3Detail": "packages.manual.list\n+ components_status.json\n(manuella APT-paket + ProxMenux-\ninstallationsprogram med versioner)"
+  },
+  "restoreIsUniversal": {
+    "heading": "Återställningen återger källvärden, inte arkivet",
+    "body": "En återställning av en ProxMenux-säkerhetskopia packar inte bara upp filsystemet. Återställningen läser manifestet för att upptäcka avvikelser mellan källa och mål (maskinvaruskillnader, namnbyten på nätverkskort, kärnversion och ZFS-poolens identitet), återställer filsystemet och startar sedan rätt komponentinstallerare för varje tjänst som fanns på källan (NVIDIA-drivrutin, Coral TPU samt GPU-verktyg för AMD och Intel). Varje installerare körs för <strong>målets aktuella kärna</strong>, så den återställda värden är inte beroende av att källans kärna finns kvar. När målets kärna är nyare än säkerhetskopians sammanfogar en kärnoberoende <strong>hydrering</strong> användarens egna inställningar (IOMMU-token, VFIO-enhets-ID:n, särskilda anpassningar och GRUB-nycklar) med målets nya startkonfiguration utan att kopiera kärnbundna filer ordagrant."
+  },
+  "twoInterfaces": {
+    "heading": "Två gränssnitt, en backend",
+    "intro": "Varje steg i arbetsflödet för säkerhetskopiering och återställning är tillgängligt från två ingångspunkter. Båda anropar samma skalbibliotek, producerar identiska arkiv och läser samma jobbregister.",
+    "cliLabel": "ProxMenux Scripts (TUI)",
+    "cliDetail": "meny → Verktyg →\nVärdsäkerhetskopiering/återställning\n\nDialogbaserat flöde,\nSSH-vänlig, skriptbar\nför obevakad användning.",
+    "webLabel": "ProxMenux Monitor (Webb UI)",
+    "webDetail": "Backups-fliken i\nMonitors webbgränssnitt.\n\nÅterställning med ett klick,\nlöpande loggvisning, integrerat\nmed aviseringar och visning\nav skillnader vid återställning."
+  },
+  "whereNext": {
+    "heading": "Vart ska man gå härifrån",
+    "intro": "Varje underavsnitt nedan täcker en aspekt av arbetsflödet på djupet. Börja med <em>Hur det fungerar</em> om målet är att förstå vad arkivet innehåller och varför. Hoppa till <em>Destinationer</em> för att konfigurera målet för kopian. Läs <em>Återställning</em> och <em>Återställning mellan kärnversioner</em> för återställningssidan.",
+    "items": [
+      {
+        "label": "Så fungerar det",
+        "href": "/docs/backup-restore/how-it-works",
+        "tail": "— de tre nyttolasterna (rootfs, manifest, applikationer) i detalj, med de samlare som producerar dem och formatet för varje fil."
+      },
+      {
+        "label": "Destinationer",
+        "href": "/docs/backup-restore/destinations",
+        "tail": "— jämförelse av lokal, Proxmox Backup Server (rekommenderas) och Borg, och hur man konfigurerar var och en."
+      },
+      {
+        "label": "Skapa säkerhetskopior",
+        "href": "/docs/backup-restore/creating-backups",
+        "tail": "— engångssäkerhetskopior, standardsökvägsprofilen, lägga till anpassade sökvägar, kryptering för PBS."
+      },
+      {
+        "label": "Schemalagda jobb",
+        "href": "/docs/backup-restore/scheduled-jobs",
+        "tail": "— nya jobb kontra att koppla till ett befintligt PVE vzdump-jobb, schemaläggningsformat, jobbdetaljmodal."
+      },
+      {
+        "label": "Återställning",
+        "href": "/docs/backup-restore/restoring",
+        "tail": "— de tre åtgärderna i ett arkiv (visa, ladda ner, återställ), Komplett vs. anpassad återställning, post-boot-dispatcher och varför de sista tio minuterna är viktiga."
+      },
+      {
+        "label": "Återställning mellan kärnversioner",
+        "href": "/docs/backup-restore/cross-kernel",
+        "tail": " — beteende som tar hänsyn till riktningen på versionsbytet när målets kärna skiljer sig från säkerhetskopians, filtret för en säker delmängd och de fyra hydreringsfaserna."
+      }
+    ]
+  }
+}

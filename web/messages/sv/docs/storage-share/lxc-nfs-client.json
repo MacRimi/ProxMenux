@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "title": "NFS klient i LXC | ProxMenux Dokumentation",
+    "description": "Montera NFS-delningar direkt i en Proxmox LXC-container med ProxMenux. Installerar nfs-common automatiskt, stöder upptäckt på LAN, beständiga monteringar via /etc/fstab och säkra startinställningar. Kräver en privilegierad container.",
+    "ogTitle": "NFS klient i LXC | ProxMenux Dokumentation",
+    "ogDescription": "Montera NFS-delningar i en privilegierad LXC-container. Automatisk upptäckt, beständiga poster i /etc/fstab och säkra startinställningar."
+  },
+  "header": {
+    "title": "NFS klient i LXC",
+    "description": "Montera NFS-delningar direkt i en Proxmox LXC-container. Containern blir en egen NFS-klient: den kommunicerar med NFS-servern över nätverket, kör mount.nfs och skriver till /etc/fstab. ProxMenux installerar nfs-common, hjälper till att hitta servrar och exporter och tillämpar säkra startinställningar.",
+    "section": "Lagring och delning · LXC"
+  },
+  "privReq": {
+    "title": "Privilegierad container krävs",
+    "body": "NFS-klienten som använder <code>mount.nfs</code> behöver förmågor (minst <code>SYS_ADMIN</code>) som oprivilegierade LXC:er inte tillhandahåller. Skriptet ber dig välja CT och <strong>avbryter om den är oprivilegierad</strong>. Behövs delningen i en sådan CT monterar du den först på Proxmox-värden med <hostNfsLink>NFS-delning som Proxmox-lagring</hostNfsLink> och bind-monterar den i CT:n med <mountLink>LXC Mount Manager</mountLink>."
+  },
+  "what": {
+    "heading": "Vad detta gör",
+    "body": "Till skillnad från LXC Mount Manager - vilket gör CT se något <em>via</em> Proxmox-värden - detta skript ger containern sin <strong>egen NFS-klient</strong>: det talar NFS över nätverket, monterar delningar direkt från NFS-servern och lagrar montet i containerns <code>/etc/fstab</code>. Proxmox-värden ligger inte i datavägen.",
+    "diagramServerLabel": "NFS-server",
+    "diagramServerDetail": "/export/data",
+    "diagramHostLabel": "Proxmox-värd",
+    "diagramHostDetail": "(bara en\nNätverksbro)",
+    "diagramCtLabel": "LXC (privilegierad)",
+    "diagramCtDetail": "/mnt/data\nmount.nfs inuti CT",
+    "diagramArrow": "NFS",
+    "twoWaysTitle": "Två sätt att ge en CT NFS åtkomst - välj en",
+    "twoWaysBind": "<strong>Bind montering via host</strong> (<mountLink>LXC Mount Manager</mountLink>): värd monterar NFS en gång, varje CT bind-monterar samma väg. Fungerar med oprivilegierade CT. Rekommenderas när flera CT behöver samma delning.",
+    "twoWaysDirect": "<strong>Direct NFS monteras inuti CT</strong> (denna sida): CT monterar själva NFS. Kräver privilegierad. Användbart när CT måste äga sin anslutning / referenser, eller för inställningar där varje CT talar till en annan server."
+  },
+  "opening": {
+    "heading": "Öppna verktyget",
+    "body": "Öppna <strong>Storage &amp; Share Manager → Konfigurera NFS-klient i LXC (endast privilegierad)</strong> i huvudmenyn. ProxMenux ber dig <strong>välja mål-CT</strong>, startar den om den är stoppad och avbryter om den är oprivilegierad. Sedan visas denna undermeny:",
+    "imageAlt": "NFS Client Manager-menyn - Mount / View / Unmount / Testanslutning"
+  },
+  "howRuns": {
+    "heading": "Hur man kör skriptet (Mount flow)"
+  },
+  "fstabFlags": {
+    "heading": "Varför dessa fstab flaggor",
+    "intro": "För permanenta monteringar lägger manuset tre flaggor bortom standarden NFS-alternativ: <code>_netdev,x-systemd.automount,noauto</code>. Var och en löser ett riktigt starttidsproblem:",
+    "headerFlag": "Flaggan",
+    "headerEffect": "Vad det gör",
+    "rows": [
+      {
+        "flag": "_netdev",
+        "effect": "Berättar initsystemet denna montering behöver nätverket. Boot blockerar inte vänta på det innan nätverket är uppe."
+      },
+      {
+        "flag": "x-systemd.automount",
+        "effectRich": "Skapar en systemd auto-mount enhet: monteringen sker bara första gången något når <code>/mnt/&lt;path&gt;</code>. NFS-servern som inte kan nås på starten stallar inte CT."
+      },
+      {
+        "flag": "noauto",
+        "effect": "Hoppar över omedelbar montering vid start. Tillsammans med automount-enheten ovan monteras filsystemet först vid åtkomst."
+      }
+    ],
+    "netEffectTitle": "Nettoeffekt",
+    "netEffectBody": "NFS-filsystemet monteras vid <em>första åtkomsten</em> i stället för direkt under starten. Om servern är offline kan åtkomsten vänta eller misslyckas och påverka tjänster som behöver sökvägen. Automount minskar startberoendet men garanterar inte att alla CT-tjänster förblir opåverkade av en otillgänglig NFS-server."
+  },
+  "manual": {
+    "heading": "Manuell motsvarande",
+    "body": "Replicera hela flödet för hand - varje kommando kör <strong>inuti CT</strong> via <code>pct exec &lt;ctid&gt; --</code> eller direkt via <code>pct enter &lt;ctid&gt;</code>:"
+  },
+  "view": {
+    "heading": "Visa aktuella fästen",
+    "body": "Listar varje NFS monteringspunkt aktiv inuti CT (<code>mount | grep nfs</code>) plus varje NFS linje i CT <code>/etc/fstab</code>. För varje fstab-post visas den levande monteringsstatusen - användbar för att upptäcka permanenta fästen som inte kom upp på start."
+  },
+  "unmount": {
+    "heading": "Avmontera NFS-delning",
+    "body": "Kombinerar live-monteringarna och fstab-posterna till en lista, låter dig välja en och <strong>tar bort motsvarande rad från <code>/etc/fstab</code></strong>. Skriptet kör <em>inte</em> <code>umount</code> på live-monteringen – istället talar om för dig att en CT omstart krävs för att avmonteringen ska träda i kraft.",
+    "warnTitle": "Skriptet tar bort fstab-poster, inte levande fästen",
+    "warnBody": "Detta är ett avsiktligt designval: <code>umount</code> på en upptagen montering misslyckas med \"enhet upptagen\" när något inuti CT fortfarande använder det. Ta bort fstab-posten garanterar att fästet försvinner rent på nästa CT-start. Om du vill monteringen borttagen <em>nu</em> och du är säker på att ingenting använder det, kör <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> för hand efter skriptet avslutas."
+  },
+  "test": {
+    "heading": "Test NFS-anslutning",
+    "body": "Diagnostic pass inuti CT: bekräftar <code>nfs-common</code> installeras, <code>rpcbind</code> körs, listar aktuella NFS-fästen, sedan itererar över varje NFS-server som refereras i fstab och kontrollerar ping → port 2049 → <code>showmount -e</code>. Bra första stopp när ett permanent fäste inte kommer upp."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "privTitle": "Privilegierad container krävs (skriptet avbryter)",
+    "privBody": "Den valda CT är oprivilegierad. Kernel NFS-klienten behöver <code>SYS_ADMIN</code>-kapacitet som oprivilegierade CT inte exponerar. Antingen konvertera CT till privilegierad (Disk Manager &amp; konvertering dokumenteras i <importLink>Import Disk till LXC</importLink> sida) eller använd den alternativa vägen som beskrivs i varningen högst upp på denna sida.",
+    "aptTitle": "apt-get install nfs-common fails",
+    "aptIntro": "Manuset antar en Debian-familj CT (<code>apt-get</code>). Om CT kör Alpine / Arch / Rocky / Alma misslyckas installationssteget tyst. Installera NFS-klienten för den distroen:",
+    "aptItems": [
+      "Alpine: <code>apk add nfs-utils</code>",
+      "Arch: <code>pacman -S nfs-utils</code>",
+      "Rocky / Alma: <code>dnf install nfs-utils</code>"
+    ],
+    "aptOutro": "Sedan kör ProxMenux-skriptet - installationssteget hoppar när verktygen redan finns.",
+    "portTitle": "\"NFS port (2049) is not accessible\"",
+    "portBody": "Ping lyckades men <code>nc -z &lt;server&gt; 2049</code> misslyckades inifrån CT. Kontrollera att NFS-tjänsten körs på servern, att brandväggen tillåter 2049 från CT-nätverket, och att CT faktiskt har en giltig nätverksväg (prova <code>pct exec &lt;ctid&gt; -- ip route</code>).",
+    "bootTitle": "Permanent montering lyckas men kommer inte upp på start",
+    "bootBody": "Nästan alltid en av: nätverket är inte redo när CT-fästen (skriptets <code>_netdev,x-systemd.automount,noauto</code>-flaggor fixar detta - återställer monteringen via skriptet om du skrev fstablinjen för hand utan dem), servern är oåtkomlig vid start (auto-mount väntar på första åtkomst - det är normalt), eller DNS är olöst på start (använd serverns IP, inte dess värdnamn).",
+    "squashTitle": "Server squashes root, ingen skriva tillgång inifrån CT",
+    "squashIntro": "NFS export använder <code>root_squash</code> (standard) och CT skriver som root. Två alternativ:",
+    "squashItems": [
+      "Server-side: ändra exporten till <code>no_root_squash</code> (endast om du litar på CT).",
+      "CT-sida: skriv som en icke-rotanvändare som servern accepterar, eller chown andelen på lämpligt sätt."
+    ],
+    "squashOutro": "ProxMenux kan inte fixa detta - det är serverpolicy."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "LXC-monteringspunkter (värd ↔ container)",
+        "tail": " — alternativet för oprivilegierade CT: montering på värd, binda till CT."
+      },
+      {
+        "href": "/docs/storage-share/lxc-samba-client",
+        "label": "Samba klient i LXC",
+        "tail": " — relaterad sida med samma mönster för SMB-/CIFS-delningar."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-server",
+        "label": "NFS server i LXC",
+        "tailRich": " — omvänt: exponera mappar <em>från</em> en CT över NFS."
+      },
+      {
+        "href": "/docs/storage-share/host-nfs",
+        "label": "NFS-delning som Proxmox-lagring",
+        "tail": " — registrera delningen i Proxmox i stället för i en enskild CT."
+      }
+    ]
+  }
+}

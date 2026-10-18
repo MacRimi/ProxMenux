@@ -5,7 +5,12 @@ serves every published page under locale-prefixed URLs:
 
 - `/en/<path>` — English, the source of truth
 - `/es/<path>` — Spanish
+- `/de/<path>` — German
+- `/fr/<path>` — French
+- `/it/<path>` — Italian
+- `/pt/<path>` — Portuguese
 - `/sk/<path>` — Slovak, with English fallback where needed
+- `/sv/<path>` — Swedish
 
 We use [`next-intl`](https://next-intl.dev) for the i18n plumbing. Anyone
 can translate the docs without writing TypeScript: most of the work is
@@ -147,6 +152,18 @@ Example:
 ```
 
 ### 4. Test locally
+
+From the repository root, check the available catalogs without using a
+translation provider:
+
+```bash
+python3 .github/scripts/check_web_docs_catalogs.py
+```
+
+For a full locale-completion change, add `--require-complete` to also require
+every English file and leaf. This validates schema, placeholders, rich-text
+tags, literal code and rendering metadata; it does not replace linguistic
+review. Partial translations can continue to use the English fallback.
 
 ```bash
 cd web
@@ -311,7 +328,10 @@ registers a renderer for them.
 If you want to add a language that isn't in the project yet:
 
 1. Create `messages/<locale>/common.json` and the page catalogs. The automated
-   builder can provide the initial baseline.
+   builder can provide the initial baseline when explicitly dispatched. It
+   does not run on merge: changing English and its translations together must
+   not trigger machine retranslation of the reviewed text. Offline validation
+   still runs automatically for website changes.
 2. Review the shared navigation and a representative set of documentation
    pages with a native speaker.
 3. Add the locale code to `routing.ts` only when the locale is ready to be

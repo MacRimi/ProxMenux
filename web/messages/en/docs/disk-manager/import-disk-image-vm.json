@@ -52,7 +52,7 @@
         "intro": "For every selected image ProxMenux asks:",
         "items": [
           "<strong>Interface</strong> — <code>scsi</code> (default), <code>virtio</code>, <code>sata</code> or <code>ide</code>. Matches how the guest will see the disk.",
-          "<strong>SSD emulation</strong> — only offered for non-VirtIO interfaces. Adds <code>ssd=1</code> so the guest advertises the disk as solid-state (useful for OS-level TRIM / alignment).",
+          "<strong>SSD emulation</strong> — only offered for non-VirtIO interfaces. Adds <code>ssd=1</code> so the guest recognizes a solid-state disk. Discard/TRIM support must be configured separately.",
           "<strong>Bootable</strong> — if yes, ProxMenux adds the disk to the boot order so it becomes the primary boot device of the VM."
         ]
       },
@@ -73,7 +73,7 @@
     "noImagesTitle": "\"No compatible disk images found\"",
     "noImagesBody": "The script scanned the directory but found no <code>.img</code> / <code>.qcow2</code> / <code>.vmdk</code> / <code>.raw</code> file. Check the extension (case matters), that the file sits directly in the selected directory (no sub-directories are searched) and that permissions allow root to read it.",
     "slowTitle": "Import is slow",
-    "slowBody": "VMDK → QCOW2 → raw conversions are CPU- and I/O-bound. Import speed depends on the source read speed, the target storage write speed and CPU for decompression. Prefer raw or qcow2 sources when possible.",
+    "slowBody": "Conversions between VMDK, QCOW2 and raw can be limited by CPU and I/O. Import speed depends on source reads, target writes and any decompression work. Prefer raw or qcow2 sources when possible.",
     "uefiTitle": "Imported disk boots into UEFI shell",
     "uefiBody": "The image was built for legacy (SeaBIOS) but the VM uses OVMF (or vice versa). Either switch the VM's BIOS in Proxmox to match the image, or rebuild the image in the correct mode before importing."
   },

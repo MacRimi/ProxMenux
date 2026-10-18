@@ -28,7 +28,12 @@
     "switcher": "Idioma",
     "en": "English",
     "es": "Español",
-    "sk": "Slovenčina"
+    "sk": "Slovenčina",
+    "de": "Deutsch",
+    "fr": "Français",
+    "it": "Italiano",
+    "pt": "Português",
+    "sv": "Svenska"
   },
   "resources": {
     "documentation": {

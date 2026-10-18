@@ -1,0 +1,130 @@
+{
+  "meta": {
+    "title": "Persistente Schnittstellennamen | ProxMenux-Dokumentation",
+    "description": "Binden Sie Proxmox-Schnittstellennamen (eno1, enp3s0, …) über systemd-.link-Dateien an MAC-Adressen, damit sie bei neuer PCI-Nummerierung, Kernel-Upgrades und beim Hinzufügen oder Entfernen anderer Netzwerkkarten erhalten bleiben.",
+    "ogTitle": "Persistente Schnittstellennamen | ProxMenux-Dokumentation",
+    "ogDescription": "Verhindern Sie, dass sich Proxmox-Schnittstellennamen bei Hardwareänderungen ändern. Verwendet systemd-.link-Dateien mit Zuordnung über die MAC-Adresse."
+  },
+  "header": {
+    "title": "Persistente Schnittstellennamen",
+    "description": "Erstellt pro physischer Netzwerkkarte eine systemd-.link-Datei, die den vom Kernel vergebenen Namen an die MAC-Adresse der Karte bindet. Nach der Anwendung beim nächsten Neustart bleiben die Schnittstellennamen beim Hinzufügen, Entfernen oder Umstecken von PCIe-Karten stabil.",
+    "section": "Netzwerk"
+  },
+  "intro": {
+    "title": "Was das macht",
+    "body": "Schreibt für jede physische Netzwerkkarte des Hosts eine kleine Datei unter <code>/etc/systemd/network/10-&lt;iface&gt;.link</code> mit der Regel: <em>„Das Gerät mit dieser MAC-Adresse muss immer diesen Namen tragen.“</em> systemd-udevd wendet die Regel bei jedem Start an, bevor <code>ifupdown</code> die Datei <code>/etc/network/interfaces</code> liest."
+  },
+  "problem": {
+    "heading": "Das Problem, das dies löst",
+    "intro": "Linux leitet Standard-Schnittstellennamen aus der PCI-Topologie ab — <code>eno1</code> = onboard, <code>enp3s0</code> = die Karte in PCI-Bus 3, Steckplatz 0 usw. Das Namensschema ist deterministisch, <em>solange die Hardwareanordnung gleich bleibt</em>. Ändert sich die Anordnung, verschieben sich die Namen:",
+    "items": [
+      "Fügen Sie einen GPU vor einem vorhandenen NIC hinzu → die NIC-Busnummer kann sich ändern → Namensänderungen.",
+      "Bewegen Sie eine Karte in einen anderen PCIe-Slot → Namensänderungen.",
+      "BIOS / UEFI-Update, das Geräte erneut auflistet → Namen können sich ändern.",
+      "Ersetzen Sie eine fehlerhafte Karte durch das gleiche Modell in einem anderen Slot → Namensänderungen."
+    ],
+    "outro": "Nach einer solchen Änderung verweist <code>/etc/network/interfaces</code> weiterhin auf den <em>alten</em> Namen. Die Bridge lässt sich nicht aktivieren und der Host verliert die Netzwerkverbindung. Persistente Namen verhindern, dass dieses Szenario erneut auftritt."
+  },
+  "howWorks": {
+    "heading": "Wie es funktioniert",
+    "arrowLabel": "je NIC",
+    "nodes": {
+      "detectLabel": "Physische NIC erkennen",
+      "detectDetail": "ls /sys/class/net/\nvmbr / bond / docker / veth /\nwireguard … ausschließen",
+      "readLabel": "Jede MAC-Adresse lesen",
+      "readDetail": "cat /sys/class/net/\n  '<'iface'>'/address",
+      "writeLabel": ".link-Datei schreiben",
+      "writeDetail": "/etc/systemd/network/\n  10-'<'iface'>'.link"
+    },
+    "minimalIntro": "Jede generierte Datei ist absichtlich minimal:",
+    "minimalOutro": "Beim Start erkennt systemd-udevd das Gerät anhand der MAC-Adresse und weist den gewünschten Namen zu, <em>bevor</em> andere Komponenten wie ifupdown oder die Standardbenennung des Kernels darauf zugreifen. Das Dateipräfix <code>10-</code> sorgt dafür, dass diese Regeln früh und vor der Standarddatei <code>99-default.link</code> geladen werden."
+  },
+  "scope": {
+    "heading": "Was geschrieben wird, was übersprungen wird",
+    "headerType": "Typ",
+    "headerBehaviour": "Verhalten",
+    "headerWhy": "Warum",
+    "rows": [
+      {
+        "type": "Onboard-/PCIe-Netzwerkkarte",
+        "behaviour": "<code>.link</code> Datei geschrieben",
+        "why": "Unterstützt durch ein echtes PCI-Gerät - der Fall, für den das Tool geeignet ist"
+      },
+      {
+        "type": "Wi-Fi (phy80211)",
+        "behaviour": "<code>.link</code> Datei geschrieben",
+        "why": "Hat einen echten MAC und profitiert von Namensstabilität"
+      },
+      {
+        "type": "Brücken (vmbrX)",
+        "behaviour": "Übersprungen",
+        "why": "Virtuell; Name kommt von <code>/etc/network/interfaces</code>"
+      },
+      {
+        "type": "Bonds (bondX)",
+        "behaviour": "Übersprungen",
+        "why": "Virtuell; Bondname wird von ifupdown festgelegt"
+      },
+      {
+        "type": "veth / docker0 / br-XXXX",
+        "behaviour": "Übersprungen",
+        "why": "Erstellt auf Anfrage von Docker / LXC - keine persistente Hardware"
+      },
+      {
+        "type": "tap / fwpr / fwln",
+        "behaviour": "Übersprungen",
+        "why": "Erstellt auf Anfrage von Proxmox per VM/CT"
+      },
+      {
+        "type": "WireGuard / Cilium / Tailscale",
+        "behaviour": "Übersprungen",
+        "why": "Software-Schnittstellen, die von eigenen Daemons verwaltet werden"
+      }
+    ]
+  },
+  "safety": {
+    "heading": "Sicherheitsnetz: Frühere .link-Dateien werden gesichert",
+    "intro": "Wenn <code>/etc/systemd/network/</code> bereits <code>.link</code>-Dateien enthält (aus einem früheren Lauf oder anderen Tools), werden diese in ein Backup-Verzeichnis mit Zeitstempel kopiert, bevor die neuen generiert werden:",
+    "outro": "Zum Zurückrollen: Kopieren Sie die Dateien aus dem Backup-Verzeichnis zurück und starten Sie neu.",
+    "rebootTitle": "Effekt beim nächsten Neustart, nicht sofort",
+    "rebootBody": "Änderungen an <code>.link</code>-Dateien gelten nur beim Booten, wenn udev Geräte erneut auflistet. Das Tool meldet <em>\"Änderungen gelten nach dem Neustart\"</em> aus diesem Grund. Das Umbenennen einer Schnittstelle ist riskant und wird nicht versucht: Ein aktiver <code>vmbr0</code> mit Mitgliedern müsste atomar neu konfiguriert werden, weshalb die Operation auf den nächsten sauberen Boot verschoben wird."
+  },
+  "afterReboot": {
+    "heading": "Nach dem Reboot",
+    "intro": "Sobald die Namen angeheftet sind, ist der Workflow für zukünftige Hardwareänderungen einfach:",
+    "items": [
+      "Ausschalten, Hardware ändern (Karte hinzufügen, in einen anderen Steckplatz umstecken, …), starten.",
+      "Jedes NIC behält seinen vorherigen Namen, weil sein MAC mit einer <code>.link</code>-Datei übereinstimmt.",
+      "Wenn ein NIC ersetzt wird (anderer MAC), erhält er einen Standard-Kernelnamen (<code>enp&lt;bus&gt;s&lt;slot&gt;</code>); Führen Sie dieses Menü erneut aus, um einen <code>.link</code>-Eintrag für den MAC der neuen Karte hinzuzufügen."
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "emptyTitle": "\"Keine physischen Schnittstellen gefunden\" nach dem Ausführen des Tools",
+    "emptyBody": "Der Kernel erkennt auf dem Host keine auf PCI oder phy80211 basierenden Schnittstellen. Prüfen Sie mit <code>ls -l /sys/class/net/</code> — jeder Eintrag sollte entweder einen <code>device</code>-Symlink (PCI) oder einen <code>phy80211</code>-Eintrag (WLAN) haben. Fehlt bei einer echten Netzwerkkarte beides, ist der Treiber nicht geladen.",
+    "noChangeTitle": "Nach dem Neustart änderten sich die Namen nicht wie erwartet",
+    "noChangeBody": "Überprüfen Sie, ob die Datei vorhanden und gut geformt ist: <code>cat /etc/systemd/network/10-&lt;iface&gt;.link</code>. Dann überprüfen Sie udev logs: <code>journalctl -u systemd-udevd -b | grep -i link</code>. Eine häufige Ursache ist ein veralteter <code>net.ifnames=0</code>-Kernelparameter, der die vorhersagbare Benennung vollständig deaktiviert - entfernen Sie ihn aus <code>/etc/default/grub</code>, führen Sie <code>update-grub</code> aus, Neustart.",
+    "undoTitle": "Ich möchte persistente Benennung rückgängig machen",
+    "undoBody": "Löschen Sie entweder die <code>.link</code>-Dateien (<code>rm /etc/systemd/network/10-*.link</code>) oder stellen Sie sie aus dem beim vorherigen Durchlauf erstellten Backup-Verzeichnis wieder her. Starten Sie neu, um die Änderung anzuwenden."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "label": "Brückenanalyse und geführte Reparatur",
+        "href": "/docs/network/bridge-analysis",
+        "tailRich": " — der Wiederherstellungsweg, wenn sich die Namen <em>bereits</em> geändert haben."
+      },
+      {
+        "label": "Konfigurationsanalyse und geführte Bereinigung",
+        "href": "/docs/network/config-analysis",
+        "tail": "- um verwaiste Blöcke zu entfernen, die durch Namensverschiebungen zurückgelassen wurden."
+      },
+      {
+        "label": "Diagnose",
+        "href": "/docs/network/diagnostics",
+        "tailRich": " — bestätigen Sie die neuen Namen nach dem Neustart mit <em>Routingtabelle anzeigen</em>."
+      }
+    ]
+  }
+}

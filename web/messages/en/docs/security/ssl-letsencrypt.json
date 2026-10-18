@@ -28,7 +28,7 @@
       "items": [
         "Auto-detected — no path to type",
         "Picks the ACME-uploaded cert if present, falls back to the self-signed default",
-        "Renewal happens through Proxmox; the Monitor follows automatically on next start"
+        "Proxmox handles renewal; the Monitor validates and loads it on the next new TLS connection"
       ]
     },
     "custom": {
@@ -143,7 +143,7 @@
   },
   "trustCa": {
     "heading": "Trust the Proxmox self-signed CA",
-    "intro1Rich": "If you prefer to keep the default Proxmox-generated certificate (no ACME), you can stop the browser warning by importing the cluster's root CA into the OS or browser trust store. The Monitor will keep auto-detecting the same <code>/etc/pve/local/pveproxy-ssl.pem</code>; the only thing that changes is that the device viewing the dashboard now recognises the issuer.",
+    "intro1Rich": "To keep the default Proxmox-generated certificate without ACME, import the cluster root CA into the OS or browser trust store. The Monitor detects <code>/etc/pve/local/pve-ssl.pem</code> as the fallback certificate. This makes the client trust its issuer; the URL must still match a name in the certificate.",
     "intro2Rich": "The CA file lives at <code>/etc/pve/pve-root-ca.pem</code> on every node. In a cluster the path is on the shared <code>pmxcfs</code> filesystem so all nodes share the same root, and a single import covers the whole datacenter. Copy it to your machine:",
     "code": "scp root@<your-host>:/etc/pve/pve-root-ca.pem ./pve-root-ca.pem",
     "thenImport": "Then import it on the client side:",

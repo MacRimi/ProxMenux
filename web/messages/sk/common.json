@@ -28,7 +28,12 @@
     "switcher": "Jazyk",
     "en": "English",
     "es": "Español",
-    "sk": "Slovenčina"
+    "sk": "Slovenčina",
+    "de": "Deutsch",
+    "fr": "Français",
+    "it": "Italiano",
+    "pt": "Português",
+    "sv": "Svenska"
   },
   "resources": {
     "documentation": {
@@ -193,7 +198,15 @@
       "backupRestoreJobs": "Plánované úlohy",
       "backupRestoreRestoring": "Obnova",
       "backupRestoreCrossKernel": "Obnova medzi kernelmi",
-      "backupRestoreGlossary": "Slovník pojmov"
+      "backupRestoreGlossary": "Slovník pojmov",
+      "dashboardApps": "Karta Aplikácie",
+      "auditReport": "Audit a správy",
+      "auditReportOverview": "Prehľad",
+      "auditReportAssessment": "Hodnotenie a inventár",
+      "auditReportPolicy": "Pravidlá",
+      "auditReportChanges": "Zmeny",
+      "auditReportReports": "Správy a porovnania",
+      "auditReportScope": "Rozsah a záruky"
     }
   },
   "hero": {
