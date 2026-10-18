@@ -23,14 +23,15 @@ const candidate = {
   evidence: [{kind: 'installation_file', value: '/opt/handmade/server'}], default_ports: [],
 }
 
-function fixture({nativeCandidate = candidate} = {}) {
-  let cursor = 0, tree, props, effects = [], states = [], refs = [], effectStates = []
+function fixture({nativeCandidate = candidate, apps = []} = {}) {
+  let cursor = 0, tree, props, effects = [], states = [], refs = [], effectStates = [], memoStates = []
   const calls = [], cachedWrites = []
   let native = {vmid: 101, status: 'not_scanned', candidates: [], stale: false}
   let holdScan, scanGate, holdSave, saveGate, scanStatus = 'complete', scanIssues
   let cacheGate, resolveCache, cachePending = false
   let iconGate, resolveIcon, iconResult = {logo_url: '/api/vms/101/apps/logo-cache/' + 'b'.repeat(32)}, iconError
-  const seed = {sidecar: {vmid: 101, apps: []}, suggestions: {extras: [], port_suggestions: []}}
+  const seed = {sidecar: {vmid: 101, apps}, suggestions: {extras: [], port_suggestions: []}}
+  let bundleReads = 0
   const react = {
     useState(initial) {
       const index = cursor++
@@ -38,7 +39,12 @@ function fixture({nativeCandidate = candidate} = {}) {
       return [states[index], value => {states[index] = typeof value === 'function' ? value(states[index]) : value}]
     },
     useRef(value) {const index = cursor++; return refs[index] ||= {current: value}},
-    useMemo(fn) {cursor++; return fn()}, useCallback(fn) {cursor++; return fn},
+    useMemo(fn, deps) {
+      const index = cursor++, prior = memoStates[index]
+      if (!prior || !deps || deps.some((value, i) => value !== prior.deps?.[i])) memoStates[index] = {deps, value: fn()}
+      return memoStates[index].value
+    },
+    useCallback(fn, deps) {return react.useMemo(() => fn, deps)},
     useEffect(fn, deps) {
       const index = cursor++, prior = effectStates[index]
       if (!prior || !deps || deps.some((value, i) => value !== prior.deps?.[i])) {
@@ -75,7 +81,7 @@ function fixture({nativeCandidate = candidate} = {}) {
     return []
   }
   const cache = {
-    getLxcAppsCached: () => null, fetchLxcApps: async () => seed,
+    getLxcAppsCached: () => null, fetchLxcApps: async () => {bundleReads++; return seed},
     subscribeLxcApps: () => () => {}, setLxcAppsCached: (...args) => cachedWrites.push(args),
   }
   const exports = {}
@@ -97,13 +103,34 @@ function fixture({nativeCandidate = candidate} = {}) {
     for (const effect of effects) effect()
     return tree
   }
+  // Exercise React's key identity boundary using the actual parent expression.
+  const parent = ts.createSourceFile('parent.tsx', fs.readFileSync(path.join(root, 'components/virtual-machines.tsx'), 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+  let keyExpression
+  function visit(node) {
+    if (ts.isJsxSelfClosingElement(node) && node.tagName.getText(parent) === 'LxcAppPanel') {
+      keyExpression = node.attributes.properties.find(p => p.name?.getText(parent) === 'key').initializer.expression.getText(parent)
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(parent)
+  const parentKey = new Function('selectedVM', 'return ' + keyExpression)
+  let lastKey
+  function renderParent(vmid = 101, revision = 0) {
+    const key = parentKey({vmid, modal_cache_revision: revision})
+    if (lastKey !== undefined && lastKey !== key) {
+      effectStates.forEach(effect => effect?.cleanup?.())
+      states = []; refs = []; effectStates = []; memoStates = []
+    }
+    lastKey = key
+    return render({vmid, cacheRevision: revision, initialData: seed})
+  }
   const settle = async () => {for (let i = 0; i < 6; i++) await Promise.resolve(); render()}
   const button = key => {
     const match = flatten(tree).find(n => n.type === 'Button' && text(n).includes('vmLxc.appEditor.' + key))
     assert.ok(match, 'Missing button ' + key)
     return match
   }
-  return {render, settle, calls, cachedWrites, button, tree: () => tree,
+  return {render, renderParent, settle, calls, cachedWrites, button, tree: () => tree, bundleReads: () => bundleReads,
     holdIcon: () => {iconGate = new Promise(resolve => {resolveIcon = resolve})},
     resolveIcon: () => resolveIcon(), setIconResult: value => {iconResult = value},
     setIconError: value => {iconError = value},

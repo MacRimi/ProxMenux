@@ -55,6 +55,28 @@ async function editor(ports = [8080]) {
 }
 async function main() {
   await cachedImageContract()
+  const existing = fixture({apps: [{id: 'existing', name: 'Saved app', ports: [{port: 8080, scheme: 'http'}], state: {}}]})
+  existing.renderParent(); await existing.settle()
+  const click = async key => {
+    const node = flatten(existing.tree()).find(n => ['button', 'Button'].includes(n.type) && text(n).includes('vmLxc.appEditor.' + key))
+    assert.ok(node, key); await node.props.onClick(); existing.render()
+  }
+  await click('editButton'); await click('editFieldsButton')
+  logo(existing).props.onChange({target: {value: 'https://example.test/draft.png'}}); existing.render()
+  existing.holdIcon()
+  const pendingExisting = existing.button('discoverLocalLogo').props.onClick(); existing.render()
+  const reads = existing.bundleReads()
+  existing.renderParent(101, 1); await existing.settle(); existing.render()
+  assert.equal(logo(existing)?.props.value, 'https://example.test/draft.png', 'lifecycle refresh must retain the open existing-app editor and unsaved fields')
+  assert.ok(existing.bundleReads() > reads, 'revision still reloads the saved app data')
+  existing.resolveIcon(); await pendingExisting; existing.render(); existing.render()
+  assert.match(logo(existing).props.value, /logo-cache/, 'successful lookup leaves existing editor open')
+  assert.equal(existing.calls.filter(c => ['POST', 'PUT', 'DELETE'].includes(c.method) && !c.url.endsWith('/logo-discovery')).length, 0)
+  await click('cancelButton')
+  await click('editFieldsButton')
+  assert.equal(logo(existing).props.value, '', 'cancel discards draft icon')
+  existing.renderParent(102, 1); await existing.settle(); existing.render()
+  assert.equal(logo(existing), undefined, 'switching guest must discard the old editor')
   const f = await editor([8080, 8443])
   assert.equal(f.calls.filter(c => c.url.endsWith('/logo-discovery')).length, 0)
   const select = flatten(f.tree()).find(n => n.props?.['aria-label'] === 'vmLxc.appEditor.localLogoPort')

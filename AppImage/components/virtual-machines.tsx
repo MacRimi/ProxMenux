@@ -5227,7 +5227,9 @@ export function VirtualMachines() {
                     null
                   return (
                     <LxcAppPanel
-                      key={`${selectedVM.vmid}-${selectedVM.modal_cache_revision ?? 0}`}
+                      // Refresh server data without destroying an unsaved editor.
+                      key={selectedVM.vmid}
+                      cacheRevision={selectedVM.modal_cache_revision ?? 0}
                       vmid={selectedVM.vmid}
                       ctIp={ctIp}
                       onChange={() => mutate()}

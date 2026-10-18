@@ -356,6 +356,7 @@ interface ManagedAppInfo {
 
 interface Props {
   vmid: number
+  cacheRevision?: number
   ctIp?: string | null
   onChange?: () => void
   managed?: ManagedAppInfo | null
@@ -497,7 +498,7 @@ function parseArgvInput(value: string): string[] {
   return value.split(",").map((item) => item.trim()).filter(Boolean)
 }
 
-export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }: Props) {
+export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, cacheRevision = 0 }: Props) {
   const t = useT()
   const isLightTheme = useIsLightTheme()
   // Seed from `initialData` first, then fall back to the shared cache
@@ -519,20 +520,23 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
     targetGeneration.current += 1
   }
   useEffect(() => {
-    const generation = targetGeneration.current
-    const request = ++nativeRequest.current
     setNativeDiscovery(null)
     setEditing(null)
     setDetectionNotice(null)
     setSearchingApplications(false)
     setSaving(false)
+    return () => { targetGeneration.current += 1 }
+  }, [vmid, managed])
+  useEffect(() => {
+    const generation = targetGeneration.current
+    const request = ++nativeRequest.current
     if (managed) return
     fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/native-discovery`).then(result => {
       if (targetRef.current === vmid && targetGeneration.current === generation
           && nativeRequest.current === request) setNativeDiscovery(result)
     }).catch(() => { /* cached metadata is optional; never initiate a scan */ })
-    return () => { targetGeneration.current += 1 }
-  }, [vmid, managed])
+    return () => { nativeRequest.current += 1 }
+  }, [vmid, managed, cacheRevision])
   const [adguardSetupAvailable, setAdguardSetupAvailable] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchingApplications, setSearchingApplications] = useState(false)
@@ -638,7 +642,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
       if (isCurrent()) setLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vmid, managed])
+  }, [vmid, managed, cacheRevision])
 
   useEffect(() => {
     if (managed) return
@@ -1686,9 +1690,18 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
                 from https://selfh.st/icons); empty → no logo in the
                 app card header. */}
             <div className="pt-2 border-t border-border/50">
+              <div className="flex flex-wrap items-center justify-between gap-2">
               <Label htmlFor="app-logo" className="text-xs uppercase tracking-wider text-muted-foreground">
                 {t("vmLxc.appEditor.logoUrlLabel")} <span className="normal-case tracking-normal text-[10px] opacity-70">{t("vmLxc.appEditor.optionalSuffix")}</span>
               </Label>
+              <Button type="button" variant="outline" size="sm"
+                disabled={!selectedIconPort || discoveringLocalLogo || saving}
+                onClick={discoverLocalLogo}>
+                {discoveringLocalLogo ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Search className="h-3.5 w-3.5 mr-1" />}
+                {t("vmLxc.appEditor.discoverLocalLogo")}
+              </Button>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
               <Input
                 id="app-logo"
                 type="text"
@@ -1696,9 +1709,11 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
                 onChange={(e) => setField({ logo_url: e.target.value })}
                 placeholder={t("vmLxc.appEditor.portLogoPlaceholder")}
                 maxLength={512}
-                className="text-sm mt-2 font-mono"
+                className="text-sm font-mono"
               />
-              <div className="flex flex-wrap items-center gap-2 mt-2">
+              {draft.logo_url && LOCAL_LOGO_CACHE_PATH.test(draft.logo_url) &&
+                <ThemeAwareLogo src={draft.logo_url} className="h-8 w-8 shrink-0 object-contain" />}
+              </div>
                 {iconPorts.length > 1 && <select
                   aria-label={t("vmLxc.appEditor.localLogoPort")}
                   value={selectedIconPort ? endpointKey(selectedIconPort) : ""}
@@ -1708,21 +1723,12 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
                     setDiscoveringLocalLogo(false)
                     setIconEndpoint(event.target.value)
                   }}
-                  className="rounded border bg-background px-2 py-1 text-xs"
+                  className="mt-2 rounded border bg-background px-2 py-1 text-xs"
                 >
                   {iconPorts.map(entry => <option key={endpointKey(entry)} value={endpointKey(entry)}>
                     {endpointKey(entry)}
                   </option>)}
                 </select>}
-                <Button type="button" variant="outline" size="sm"
-                  disabled={!selectedIconPort || discoveringLocalLogo || saving}
-                  onClick={discoverLocalLogo}>
-                  {discoveringLocalLogo ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Search className="h-3.5 w-3.5 mr-1" />}
-                  {t("vmLxc.appEditor.discoverLocalLogo")}
-                </Button>
-                {draft.logo_url && LOCAL_LOGO_CACHE_PATH.test(draft.logo_url) &&
-                  <ThemeAwareLogo src={draft.logo_url} className="h-8 w-8 object-contain" />}
-              </div>
               <p className="text-[10px] text-muted-foreground mt-1">{t("vmLxc.appEditor.localLogoHelp")}</p>
             </div>
 
