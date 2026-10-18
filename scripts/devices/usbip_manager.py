@@ -391,7 +391,13 @@ def attach_once(selected, owner):
         raise USBIPError("This endpoint has an unowned import; it was not adopted or detached")
     run(["usbip", "--tcp-port", str(selected["local_port"]), "attach", "--remote", "127.0.0.1",
          "--busid", remote["busid"]])
-    attached = find_import(selected, remote["busid"])
+    # The kernel publishes the port record shortly after attach returns.
+    attached = None
+    for _ in range(20):
+        attached = find_import(selected, remote["busid"])
+        if attached:
+            break
+        time.sleep(0.25)
     if not attached:
         raise USBIPError("USB/IP did not report an attached port")
     atomic_json(owner, attached)
