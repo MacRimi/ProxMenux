@@ -241,7 +241,7 @@
   "postInstall": {
     "heading": "Consejos post-instalación",
     "guestAgentHeading": "Instala el QEMU Guest Agent dentro de la VM",
-    "guestAgentBody": "ProxMenux habilita el canal del agente invitado en la configuración de la VM, pero debes instalar el agente dentro del sistema invitado. Permite el apagado controlado y congelar los sistemas de archivos durante las copias de seguridad para mejorar la coherencia de los datos.",
+    "guestAgentBody": "ProxMenux habilita el canal del agente invitado en la configuración de la VM, pero debes instalar el agente dentro del sistema invitado. Permite el apagado controlado y congelar los sistemas de archivos durante los backups para mejorar la coherencia de los datos.",
     "debian": "Debian / Ubuntu",
     "fedora": "Fedora / Rocky / RHEL",
     "arch": "Arch Linux",
