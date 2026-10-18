@@ -169,12 +169,13 @@ class ModifyMenuTests(unittest.TestCase):
 
 
 class ModifyDispatchTests(unittest.TestCase):
-    def call_manager(self, proposal, lifecycle):
+    def call_manager(self, proposal, lifecycle, ui=None, offer=None):
         import oci_instances
         import oci_instance_reconcile
         saved = record()
         row = {'vmid': 115, 'reason': 'matched', 'stack': False, 'pending': False, 'status': 'installed'}
-        with patch.object(management, 'carry_records', return_value={}), \
+        with patch.object(management.images, 'offer_removal', offer or Mock()), \
+                patch.object(management, 'carry_records', return_value={}), \
                 patch.object(management, 'check_selected', return_value=row), \
                 patch.object(management, '_work_backup_ready', return_value=True), \
                 patch.object(oci_instances, 'read', return_value=saved), \
@@ -182,7 +183,7 @@ class ModifyDispatchTests(unittest.TestCase):
                 patch.object(oci_instance_reconcile, 'propose', return_value=None), \
                 patch.object(recreation, 'edit_recreation', return_value=proposal), \
                 patch.object(management, '_run_lifecycle', side_effect=lifecycle):
-            return management.manage_instance(ROOT, Mock(), row, action='modify')
+            return management.manage_instance(ROOT, ui or Mock(), row, action='modify')
 
     def test_cancel_does_not_start_a_lifecycle_transaction(self):
         lifecycle = Mock()
@@ -202,6 +203,20 @@ class ModifyDispatchTests(unittest.TestCase):
             return True
         self.assertTrue(self.call_manager(proposal, lifecycle))
         self.assertEqual(seen, [proposal])
+
+    def test_the_image_question_only_follows_a_recreated_container(self):
+        proposal = {'operation': 'recreate', 'candidate': record(), 'base_config_sha256': 'fingerprint'}
+        ui = Mock(unattended=False)
+        for recreated in (False, True):
+            with self.subTest(recreated=recreated):
+                def lifecycle(command, title):
+                    if recreated:
+                        Path(management.os.environ['OCI_RECREATED_MARKER']).touch()
+                    return True
+                offer = Mock()
+                self.assertTrue(self.call_manager(proposal, lifecycle, ui, offer))
+                self.assertEqual(offer.called, recreated)
+                self.assertNotIn('OCI_RECREATED_MARKER', management.os.environ)
 
 
 if __name__ == '__main__':

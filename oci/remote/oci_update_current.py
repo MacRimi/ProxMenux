@@ -260,6 +260,9 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
             transaction.apply(instances.ROOT, vmid, archive, operation, proposal=proposal,
                               registry_digest=digest, acknowledge_external_data=acknowledge_external_data,
                               keep_backup=file_storage)
+    marker = os.environ.get('OCI_RECREATED_MARKER')
+    if marker:
+        Path(marker).touch()
 
 
 def main():

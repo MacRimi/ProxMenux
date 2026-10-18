@@ -441,11 +441,12 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
             return False
         if adoption:
             summary = '\n'.join(adoption['details'])
-            if not ui.review(
-                    f"{translate('These Proxmox resources were added outside ProxMenux:')}\n\n{summary}\n\n"
-                    + translate('They will be added to oci-compose before continuing. Unsupported or changed resources are not imported.'),
+            # Variables reordered in Proxmox change nothing that needs a decision.
+            if summary and not ui.review(
+                    f"{translate('These changes were made in Proxmox outside ProxMenux:')}\n\n{summary}\n\n"
+                    + translate('They will be saved in oci-compose before continuing.'),
                     translate('Review external OCI changes'),
-                    question=translate('Include these resources in oci-compose?'), default=False):
+                    question=translate('Include these changes in oci-compose?'), default=False):
                 return False
             try:
                 record = reconcile.commit(instances.ROOT, row['vmid'], adoption)
@@ -472,15 +473,24 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
         if '--acknowledge-external-data' not in command:
             command.append('--acknowledge-external-data')
         title = translate('Modify OCI') if proposal else translate('Update OCI')
-        if proposal is None:
-            completed = _run_lifecycle(command, title)
-        else:
-            # Saved environment/secrets must never be passed on the command line.
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as file:
-                json.dump(proposal, file)
-                file.flush()
-                completed = _run_lifecycle(command + ['--proposal', file.name], title)
-        if completed and not getattr(ui, 'unattended', False):
+        # The downloaded image is only worth mentioning when a new container
+        # was created from it, not after a change applied to the running one.
+        with tempfile.TemporaryDirectory() as folder:
+            marker = Path(folder) / 'recreated'
+            os.environ['OCI_RECREATED_MARKER'] = str(marker)
+            try:
+                if proposal is None:
+                    completed = _run_lifecycle(command, title)
+                else:
+                    # Saved environment/secrets must never be passed on the command line.
+                    with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as file:
+                        json.dump(proposal, file)
+                        file.flush()
+                        completed = _run_lifecycle(command + ['--proposal', file.name], title)
+            finally:
+                os.environ.pop('OCI_RECREATED_MARKER', None)
+            recreated = marker.exists()
+        if completed and recreated and not getattr(ui, 'unattended', False):
             images.offer_removal(ui, [row['vmid']])
         return completed
     action = ui.choose(translate('Interrupted operation'), [('status', translate('View status')),
