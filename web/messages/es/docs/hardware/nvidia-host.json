@@ -109,7 +109,7 @@
       "Regenera <code>initramfs</code> para todos los kernels, ejecuta <code>proxmox-boot-tool refresh</code> según la configuración de arranque y solicita reiniciar."
     ],
     "lxcWarnTitle": "LXC con acceso a NVIDIA",
-    "lxcWarnBody": "Retirar el controlador del host interrumpe las apps LXC que usan NVIDIA, aunque conserven sus bibliotecas. Programa mantenimiento para Frigate, Plex, Jellyfin, Ollama y otras apps que dependan de la GPU."
+    "lxcWarnBody": "Eliminar el controlador del host interrumpe las apps LXC que usan NVIDIA, aunque conserven sus bibliotecas. Programa mantenimiento para Frigate, Plex, Jellyfin, Ollama y otras apps que dependan de la GPU."
   },
   "updates": {
     "heading": "Avisos de actualizaciones",

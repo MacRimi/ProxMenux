@@ -4549,6 +4549,8 @@ def get_storage_info():
                         disk_info['used'] = round(partition_usage.used / (1024**3), 1)
                         disk_info['available'] = round(partition_usage.free / (1024**3), 1)
                         disk_info['usage_percent'] = round(partition_usage.percent, 1)
+                        disk_info['total_bytes'] = partition_usage.total
+                        disk_info['used_bytes'] = partition_usage.used
                         
                 except PermissionError:
                     continue
@@ -13095,7 +13097,6 @@ def api_create_backup(vmid):
         mode = data.get('mode', 'snapshot')  # snapshot, suspend, stop
         compress = data.get('compress', 'zstd')  # none, lzo, gzip, zstd
         protected = data.get('protected', False)  # True/False
-        notification = data.get('notification', 'auto')  # always, failure, never, auto
         notes = data.get('notes', '')  # Backup notes/description
         pbs_change_detection = data.get('pbs_change_detection', None)  # default, legacy, data (for PBS + LXC)
         
@@ -13614,6 +13615,19 @@ def get_task_log(upid):
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+def _installed_proxmenux_version():
+    """Installed ProxMenux version; a beta install keeps beta_version.txt."""
+    for name in ('beta_version.txt', 'version.txt'):
+        try:
+            with open(f'/usr/local/share/proxmenux/{name}') as fh:
+                version = fh.read().strip()
+            if version:
+                return version
+        except OSError:
+            continue
+    return ''
+
+
 @app.route('/api/health', methods=['GET'])
 @require_auth
 def api_health():
@@ -13621,7 +13635,7 @@ def api_health():
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'version': '1.2.2'
+        'version': _installed_proxmenux_version()
     })
 
 # ─── User-configurable health thresholds ─────────────────────────────────────
@@ -15047,11 +15061,11 @@ def api_prometheus():
             disk_name = disk.get('name', 'unknown')
             metrics.append(f'# HELP proxmox_disk_total_bytes Total disk space in bytes')
             metrics.append(f'# TYPE proxmox_disk_total_bytes gauge')
-            metrics.append(f'proxmox_disk_total_bytes{{node="{node}",disk="{disk_name}"}} {disk.get("total", 0)} {timestamp}')
+            metrics.append(f'proxmox_disk_total_bytes{{node="{node}",disk="{disk_name}"}} {disk.get("total_bytes", 0)} {timestamp}')
             
             metrics.append(f'# HELP proxmox_disk_used_bytes Used disk space in bytes')
             metrics.append(f'# TYPE proxmox_disk_used_bytes gauge')
-            metrics.append(f'proxmox_disk_used_bytes{{node="{node}",disk="{disk_name}"}} {disk.get("used", 0)} {timestamp}')
+            metrics.append(f'proxmox_disk_used_bytes{{node="{node}",disk="{disk_name}"}} {disk.get("used_bytes", 0)} {timestamp}')
             
             metrics.append(f'# HELP proxmox_disk_usage_percent Disk usage percentage')
             metrics.append(f'# TYPE proxmox_disk_usage_percent gauge')

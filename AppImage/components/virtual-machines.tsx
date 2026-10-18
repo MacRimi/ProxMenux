@@ -11,7 +11,7 @@ import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, PlusCircle, Loader2, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Trash2, Check, X, AlertTriangle, AlertCircle, Search, Pin, Tag as TagIcon } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, PlusCircle, Loader2, Database, Shield, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Trash2, Check, X, AlertTriangle, AlertCircle, Search, Pin, Tag as TagIcon } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Checkbox } from "./ui/checkbox"
 import { Switch } from "./ui/switch"
@@ -963,7 +963,6 @@ export function VirtualMachines() {
   const [showBackupModal, setShowBackupModal] = useState(false)
   const [backupMode, setBackupMode] = useState<string>("snapshot")
   const [backupProtected, setBackupProtected] = useState(false)
-  const [backupNotification, setBackupNotification] = useState<string>("auto")
   const [backupNotes, setBackupNotes] = useState<string>("{{guestname}}")
   const [backupPbsChangeMode, setBackupPbsChangeMode] = useState<string>("default")
   
@@ -1698,7 +1697,6 @@ export function VirtualMachines() {
     // Reset modal to defaults
     setBackupMode("snapshot")
     setBackupProtected(false)
-    setBackupNotification("auto")
     setBackupNotes("{{guestname}}")
     setBackupPbsChangeMode("default")
     // Auto-select first storage if none selected
@@ -1722,7 +1720,6 @@ export function VirtualMachines() {
           mode: backupMode,
           compress: "zstd",
           protected: backupProtected,
-          notification: backupNotification,
           notes: backupNotes,
           pbs_change_detection: backupPbsChangeMode
         }),
@@ -1879,40 +1876,6 @@ export function VirtualMachines() {
     setTerminalOpen(true)
   }
   
-const handleDownloadLogs = async (vmid: number, vmName: string) => {
-    try {
-      const data = await fetchApi(`/api/vms/${vmid}/logs`)
-
-      // Format logs as plain text
-      let logText = `=== ${t("vmLxc.logs.header", { name: vmName, vmid })} ===\n`
-      logText += `${t("vmLxc.logs.node")}: ${data.node}\n`
-      logText += `${t("vmLxc.logs.type")}: ${data.type}\n`
-      logText += `${t("vmLxc.logs.totalLines")}: ${data.log_lines}\n`
-      logText += `${t("vmLxc.logs.generated")}: ${new Date().toISOString()}\n`
-      logText += `\n${"=".repeat(80)}\n\n`
-
-      if (data.logs && Array.isArray(data.logs)) {
-        data.logs.forEach((log: any) => {
-          if (typeof log === "object" && log.t) {
-            logText += `${log.t}\n`
-          } else if (typeof log === "string") {
-            logText += `${log}\n`
-          }
-        })
-      }
-
-      const blob = new Blob([logText], { type: "text/plain" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `${vmName}-${vmid}-logs.txt`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error("Error downloading logs:", error)
-    }
-  }
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "running":
@@ -7850,25 +7813,6 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            
-            {/* Notification Row */}
-            <div className="space-y-2">
-                <Label className="text-sm flex items-center gap-1.5">
-                  <Bell className="h-3.5 w-3.5" />
-                  {t("vmLxc.backupModal.notification")}
-                </Label>
-              <Select value={backupNotification} onValueChange={setBackupNotification}>
-                <SelectTrigger className="bg-background">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="auto">{t("vmLxc.backupModal.useGlobalSettings")}</SelectItem>
-                  <SelectItem value="always">{t("vmLxc.backupModal.alwaysNotify")}</SelectItem>
-                  <SelectItem value="failure">{t("vmLxc.backupModal.notifyOnFailure")}</SelectItem>
-                  <SelectItem value="never">{t("vmLxc.backupModal.neverNotify")}</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             
             {/* Protected Checkbox */}

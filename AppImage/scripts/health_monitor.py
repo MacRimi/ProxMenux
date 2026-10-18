@@ -1637,7 +1637,7 @@ class HealthMonitor:
 
             mem_critical_samples = [
                 entry for entry in self.state_history[state_key]
-                if entry['mem_percent'] >= 90 and
+                if entry['mem_percent'] >= self.MEMORY_CRITICAL and
                 current_time - entry['time'] <= self.MEMORY_DURATION
             ]
 
@@ -1671,7 +1671,7 @@ class HealthMonitor:
                 oldest = min(s['time'] for s in mem_critical_samples)
                 actual_duration = int(current_time - oldest)
                 status = 'CRITICAL'
-                reason = f'RAM >90% sustained for {actual_duration}s'
+                reason = f'RAM >{self.MEMORY_CRITICAL}% sustained for {actual_duration}s'
             elif swap_critical >= 2:
                 status = 'CRITICAL'
                 reason = (f'Memory pressure: swap {swap_percent:.0f}% used '
@@ -1691,7 +1691,7 @@ class HealthMonitor:
             swap_total_gb = round(swap.total / (1024**3), 2)
 
             # Determine per-sub-check status
-            ram_status = 'CRITICAL' if mem_percent >= 90 and mem_critical_count >= MEM_CRITICAL_MIN_SAMPLES else ('WARNING' if mem_percent >= self.MEMORY_WARNING and mem_warning_count >= MEM_WARNING_MIN_SAMPLES else 'OK')
+            ram_status = 'CRITICAL' if mem_percent >= self.MEMORY_CRITICAL and mem_critical_count >= MEM_CRITICAL_MIN_SAMPLES else ('WARNING' if mem_percent >= self.MEMORY_WARNING and mem_warning_count >= MEM_WARNING_MIN_SAMPLES else 'OK')
             swap_status = 'CRITICAL' if swap_critical >= 2 else 'OK'
             
             result = {
