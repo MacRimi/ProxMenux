@@ -71,7 +71,7 @@
       },
       {
         "title": "Red",
-        "description": "Diagnósticos de solo lectura, flujos de análisis-y-sugerencia y reparaciones guiadas de /etc/network/interfaces. Copias de seguridad obligatorias antes de cualquier cambio.",
+        "description": "Diagnósticos de solo lectura, flujos de análisis-y-sugerencia y reparaciones guiadas de /etc/network/interfaces. Backups obligatorios antes de cualquier cambio.",
         "icon": "Network",
         "href": "/docs/network"
       },
@@ -89,7 +89,7 @@
       },
       {
         "title": "Referencia de comandos",
-        "description": "Selección de comandos de Linux y Proxmox organizada por temas: sistema, VM/CT con qm y pct, almacenamiento, red, ZFS, acceso directo a GPU, copias de seguridad y herramientas CLI de uso diario.",
+        "description": "Selección de comandos de Linux y Proxmox organizada por temas: sistema, VM/CT con qm y pct, almacenamiento, red, ZFS, acceso directo a GPU, backups y herramientas CLI de uso diario.",
         "icon": "BookOpen",
         "href": "/docs/help-info"
       }
