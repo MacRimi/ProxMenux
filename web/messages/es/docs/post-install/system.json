@@ -20,7 +20,7 @@
       "<code>SystemMaxUse=64M</code> / <code>RuntimeMaxUse=60M</code> — caps duros sobre el uso de disco/memoria del journal.",
       "<code>Compress=yes</code>, <code>Seal=no</code> — comprimir logs, saltar el forward-secure sealing (ahorra CPU).",
       "<code>MaxLevelStore=info</code> — almacenar info y superiores (requerido para el visor de logs del ProxMenux Monitor y para que Fail2Ban detecte fallos de autenticación SSH/Proxmox desde el journal).",
-      "Rate-limits: <code>1000 eventos / 30 s</code> para prevenir flooding de logs.",
+      "Límite de frecuencia: <code>1000 events / 30 s</code> para evitar una avalancha de registros.",
       "<code>ForwardToSyslog=no</code>, <code>ForwardToWall=no</code> — no duplicar mensajes a syslog ni broadcastear a consolas."
     ],
     "tipTitle": "Por qué importa MaxLevelStore=info",
