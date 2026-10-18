@@ -160,7 +160,7 @@
   },
   "disable": {
     "heading": "Deshabilitar HTTPS",
-    "bodyRich": "Pulsa <strong>Desactivar HTTPS</strong> en el mismo panel. Monitor reinicia con HTTP sin cifrar, útil si un certificado personalizado no se puede leer y el servicio no arranca. No hay otra desinstalación y los archivos de certificado no se modifican.",
+    "bodyRich": "Pulsa <strong>Deshabilitar HTTPS</strong> en el mismo panel. Monitor reinicia con HTTP sin cifrar, útil si un certificado personalizado no se puede leer y el servicio no arranca. No hay otra desinstalación y los archivos de certificado no se modifican.",
     "stateCallout": {
       "title": "Dónde se guarda el estado",
       "bodyRich": "<code>/etc/proxmenux/ssl_config.json</code> almacena las rutas de certificado activas y la fuente (<code>none</code>, <code>proxmox</code>, <code>custom</code>). Borrar el archivo equivale a deshabilitar HTTPS — en el siguiente arranque el Monitor recae en HTTP."

@@ -66,7 +66,7 @@
     "intro": "Välj <strong>Kör säkerhetsgranskning nu</strong> i hanteringsmenyn. Det motsvarar att köra:",
     "code": "lynis audit system --no-colors",
     "outro": "Granskningen tar 30 sekunder till några minuter beroende på värdens storlek. Utdata visas direkt i terminalen utan väntanimation. Lynis grupperar kontroller efter kategori och märker varje test med <ok>[ OK ]</ok>, <warn>[ WARNING ]</warn> eller <sugg>[ SUGGESTION ]</sugg>. Slutets sammanfattning visar de viktigaste siffrorna:",
-    "summary": "================================================================================\n\n  Detaljer för Lynis säkerhetsgranskning:\n\n  Härdningsindex : 76 [############        ]\n  Utförda tester : 247\n  Aktiverade insticksmoduler : 0\n\n  Komponenter:\n  - Brandvägg [V]\n  - Skanner för skadlig kod [X]\n\n  Lynis-moduler:\n  - Efterlevnadsstatus [?]\n  - Säkerhetsgranskning [V]\n  - Sårbarhetsgranskning [V]\n\n================================================================================"
+    "summary": "================================================================================\n\n  Lynis security scan details:\n\n  Hardening index : 76 [############        ]\n  Tests performed : 247\n  Plugins enabled : 0\n\n  Components:\n  - Firewall               [V]\n  - Malware scanner        [X]\n\n  Lynis modules:\n  - Compliance status      [?]\n  - Security audit         [V]\n  - Vulnerability scan     [V]\n\n================================================================================"
   },
   "report": {
     "heading": "Läsa rapporten",

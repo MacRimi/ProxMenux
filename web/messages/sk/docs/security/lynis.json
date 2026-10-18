@@ -66,7 +66,7 @@
     "intro": "V menu správy vyberte <strong>Spustiť bezpečnostný audit teraz</strong>. Zodpovedá to spusteniu:",
     "code": "lynis audit system --no-colors",
     "outro": "Audit trvá od 30 sekúnd do niekoľkých minút podľa veľkosti hostiteľa. Výstup ide priamo do terminálu bez animácie čakania. Lynis člení kontroly podľa kategórií a každý test označí ako <ok>[ OK ]</ok>, <warn>[ WARNING ]</warn> alebo <sugg>[ SUGGESTION ]</sugg>. Záverečné zhrnutie ukazuje hlavné údaje:",
-    "summary": "================================================================================\n\n  Podrobnosti bezpečnostného auditu Lynis:\n\n  Index zabezpečenia : 76 [############        ]\n  Vykonané testy : 247\n  Povolené doplnky : 0\n\n  Komponenty:\n  - Firewall [V]\n  - Skener škodlivého softvéru [X]\n\n  Moduly Lynis:\n  - Stav súladu [?]\n  - Bezpečnostný audit [V]\n  - Kontrola zraniteľností [V]\n\n================================================================================"
+    "summary": "================================================================================\n\n  Lynis security scan details:\n\n  Hardening index : 76 [############        ]\n  Tests performed : 247\n  Plugins enabled : 0\n\n  Components:\n  - Firewall               [V]\n  - Malware scanner        [X]\n\n  Lynis modules:\n  - Compliance status      [?]\n  - Security audit         [V]\n  - Vulnerability scan     [V]\n\n================================================================================"
   },
   "report": {
     "heading": "Čítanie správy",

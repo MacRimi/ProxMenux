@@ -66,7 +66,7 @@
     "intro": "No menu de gestão escolha <strong>Executar auditoria de segurança agora</strong>. Equivale a executar:",
     "code": "lynis audit system --no-colors",
     "outro": "A auditoria demora de 30 segundos a alguns minutos conforme a dimensão do anfitrião. A saída aparece diretamente no terminal, sem animação de espera. Lynis organiza os controlos por categoria e marca cada teste como <ok>[ OK ]</ok>, <warn>[ WARNING ]</warn> ou <sugg>[ SUGGESTION ]</sugg>. O resumo final apresenta os números principais:",
-    "summary": "================================================================================\n\n  Detalhes da análise de segurança Lynis:\n\n  Índice de reforço : 76 [############        ]\n  Testes realizados : 247\n  Plugins ativados : 0\n\n  Componentes:\n  - Firewall [V]\n  - Analisador de malware [X]\n\n  Módulos Lynis:\n  - Estado de conformidade [?]\n  - Auditoria de segurança [V]\n  - Análise de vulnerabilidades [V]\n\n================================================================================"
+    "summary": "================================================================================\n\n  Lynis security scan details:\n\n  Hardening index : 76 [############        ]\n  Tests performed : 247\n  Plugins enabled : 0\n\n  Components:\n  - Firewall               [V]\n  - Malware scanner        [X]\n\n  Lynis modules:\n  - Compliance status      [?]\n  - Security audit         [V]\n  - Vulnerability scan     [V]\n\n================================================================================"
   },
   "report": {
     "heading": "Ler o relatório",

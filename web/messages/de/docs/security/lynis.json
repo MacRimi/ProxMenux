@@ -66,7 +66,7 @@
     "intro": "Wählen Sie im Verwaltungsmenü <strong>Sicherheitsprüfung jetzt ausführen</strong>. Das entspricht folgendem Aufruf :",
     "code": "lynis audit system --no-colors",
     "outro": "Die Prüfung dauert je nach Hostgröße 30 Sekunden bis einige Minuten. Die Ausgabe erscheint direkt im Terminal, ohne Warteanimation. Lynis gliedert die Prüfungen nach Kategorien und kennzeichnet Tests mit <ok>[ OK ]</ok>, <warn>[ WARNING ]</warn> oder <sugg>[ SUGGESTION ]</sugg>. Die abschließende Zusammenfassung enthält die wichtigsten Zahlen :",
-    "summary": "================================================================================\n\n  Details der Lynis-Sicherheitsprüfung:\n\n  Härtungsindex : 76 [############        ]\n  Durchgeführte Tests : 247\n  Aktivierte Plugins : 0\n\n  Komponenten:\n  - Firewall [V]\n  - Malware-Scanner [X]\n\n  Lynis-Module:\n  - Konformitätsstatus [?]\n  - Sicherheitsprüfung [V]\n  - Schwachstellenprüfung [V]\n\n================================================================================"
+    "summary": "================================================================================\n\n  Lynis security scan details:\n\n  Hardening index : 76 [############        ]\n  Tests performed : 247\n  Plugins enabled : 0\n\n  Components:\n  - Firewall               [V]\n  - Malware scanner        [X]\n\n  Lynis modules:\n  - Compliance status      [?]\n  - Security audit         [V]\n  - Vulnerability scan     [V]\n\n================================================================================"
   },
   "report": {
     "heading": "Lesen Sie den Bericht",
