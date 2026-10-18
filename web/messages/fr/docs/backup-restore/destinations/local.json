@@ -1,0 +1,75 @@
+{
+  "meta": {
+    "title": "Destination d'archive locale — tar.zst sur un système de fichiers ou un lecteur USB ProxMenux",
+    "description": "La destination de sauvegarde locale écrit une seule archive .tar.zst dans n'importe quel répertoire accessible en écriture : un disque interne, un point de montage Proxmox, un partage NFS ou un lecteur USB. Cette page décrit le processus de configuration, la détection USB et la logique de montage, le contrôle de sécurité contre l'écriture de l'archive dans un chemin en cours de sauvegarde, et le sidecar JSON qui identifie le fichier.",
+    "ogTitle": "Sauvegarde ProxMenux — Destination des archives locales",
+    "ogDescription": "Comment ProxMenux écrit des sauvegardes locales comme archives .tar.zst et comment configurer le répertoire de destination ou le lecteur USB.",
+    "twitterTitle": "Destination de sauvegarde locale ProxMenux",
+    "twitterDescription": "Comment ProxMenux écrit des sauvegardes locales comme des archives .tar.zst sur un système de fichiers ou un lecteur USB."
+  },
+  "header": {
+    "title": "Archives locales",
+    "description": "La destination locale écrit une seule archive tar compressée dans n'importe quel répertoire accessible en écriture sur l'hôte : un disque interne, un montage NFS ou SMB ou un lecteur USB.",
+    "section": "Sauvegarde et restauration"
+  },
+  "intro": {
+    "title": "Un fichier autonome",
+    "body": "Une sauvegarde locale produit un seul fichier <code>hostcfg-HOST-TIMESTAMP.tar.zst</code> (ou <code>.tar.gz</code> lorsque <code>zstd</code> est absent). Le fichier contient l'arborescence entière de l'archive — <code>manifest.json</code>, <code>metadata/</code> et <code>rootfs/</code> — et peut être restauré sur n'importe quel hôte Proxmox avec le flux de restauration ProxMenux ou extrait manuellement avec <code>tar --zstd -xf</code> sur n'importe quel système Linux. Pas de serveur, pas d’initialisation de dépôt, pas de dépendance externe. C'est la destination avec le chemin de récupération le plus court lorsque ni PBS ni Borg n'est disponible."
+  },
+  "targetConfig": {
+    "heading": "Configuration du répertoire cible",
+    "intro": "La destination locale est un <strong>unique répertoire cible enregistré durablement</strong> — pas une liste. ProxMenux stocke le choix de l'opérateur chez <code>/usr/local/share/proxmenux/local-target.conf</code> et le lit sur chaque sauvegarde. Lorsqu'aucune cible n'a été configurée, le <code>HB_LOCAL_TARGET_DEFAULT = /var/lib/vz/dump</code> par défaut est utilisé (le même répertoire que Proxmox utilise pour ses propres sorties <code>vzdump</code>). La cible est configurée à partir de <em>Configurer les destinations de sauvegarde → Destinations locales</em>:",
+    "options": [
+      "<strong>Utilisez par défaut (<code>/var/lib/vz/dump</code>).</strong> Le stockage local Proxmox. Présent sur chaque install Proxmox ; l'archive se trouve à côté des sorties vzdump et est captée automatiquement par l'onglet Sauvegardes du moniteur.",
+      "<strong>Entrez un chemin personnalisé.</strong> Tout chemin absolu du système de fichiers peut être utilisé : un montage NFS, un partage SMB monté via <code>fstab</code>, un jeu de données ZFS dédié, un deuxième disque interne. ProxMenux valide que le chemin existe et est un répertoire avant de l’enregistrer.",
+      "<strong>Choisissez un lecteur USB.</strong> Ouvre le sous-menu USB (ci-dessous), qui détecte les appareils amovibles et propose de monter ou de formater un périphérique."
+    ]
+  },
+  "usbFlow": {
+    "heading": "Détection et montage du lecteur USB",
+    "intro": "Le sous-menu USB énumère les partitions sur les périphériques amovibles signalées par <code>lsblk</code>. Chaque partition est présentée avec sa taille, l'étiquette du système de fichiers et l'état actuel. L'état détermine l'action ProxMenux offre.",
+    "statesTitle": "Les trois états de l'appareil",
+    "stateRows": [
+      {
+        "state": "monté",
+        "shown": "Taille · étiquette · [fstype] · → /mount/point",
+        "action": "La partition est déjà montée quelque part. La sélection enregistre le point de montage actuel en tant que cible locale. Aucun montage n'est effectué."
+      },
+      {
+        "state": "non monté",
+        "shown": "Taille · étiquette · [fstype] · (non monté — sera monté)",
+        "action": "Un système de fichiers est présent mais n'est pas monté. Lors de la confirmation, ProxMenux exécute <code>hb_mount_usb_partition</code> : crée <code>/mnt/backup-LABEL</code> (ou un chemin basé sur UUID s'il n'y a pas d'étiquette), monte la partition et persiste le point de montage comme cible locale."
+      },
+      {
+        "state": "vide",
+        "shown": "Taille · disque USB brut — aucun système de fichiers (sera FORMATÉ)",
+        "action": "Le périphérique n’a pas de système de fichiers. Cette opération destructive est protégée par deux confirmations. Une boîte de dialogue Oui/Non avertit d’abord que le disque sera effacé. Ensuite, un champ exige de <strong>saisir le chemin exact du périphérique</strong> (par exemple <code>/dev/sdb</code>) avant que ProxMenux crée une nouvelle table GPT avec une partition ext4 et la monte."
+      }
+    ],
+    "notMountedFallback": "Lorsqu'aucun périphérique USB n'est détecté, le sous-menu revient à une boîte d'entrée simple. L'opérateur peut entrer un chemin de point de montage arbitraire ; si le chemin n'est pas un point de montage enregistré, une boîte de dialogue de confirmation avertit avant de procéder."
+  },
+  "safetyCheck": {
+    "heading": "Contrôle de sécurité — destination dans un chemin de sauvegarde",
+    "body": "Avant d'écrire l'archive, <code>_bk_local</code> vérifie que le répertoire de destination n'est <strong>pas</strong> un sous-chemin d'un répertoire en cours de sauvegarde. Une erreur courante consisterait à ajouter <code>/root</code> au profil et à choisir <code>/root/backups</code> comme destination — l'archive s'inclurait alors elle-même, produisant soit une archive corrompue, soit s'agrandissant sans limite jusqu'à ce que le disque se remplisse. La vérification résout les deux chemins avec <code>readlink -m</code>, les compare et, en cas de conflit, abandonne la sauvegarde avec une boîte de dialogue qui nomme le chemin en conflit et répertorie trois façons de le résoudre : choisissez une destination en dehors du chemin en conflit, supprimez l'entrée personnalisée qui contient la destination ou utilisez le mode personnalisé pour décocher le chemin en conflit pour cette exécution."
+  },
+  "archiveFormat": {
+    "heading": "Format d'archives et compression",
+    "intro": "Le nom du fichier contient le nom d’hôte source et l’horodatage de la sauvegarde, afin de permettre un tri chronologique dans un répertoire contenant plusieurs archives et d’identifier chaque fichier.",
+    "namePattern": "hostcfg-HOSTNAME-YYYYMMDD_HHMMSS.tar.zst",
+    "compressionTitle": "Compression",
+    "compressionBody": "Le chemin primaire utilise <code>tar --zstd -cf</code> — un pipeline à commande unique qui compresse au niveau par défaut de zstd. Lorsque <code>zstd</code> n'est pas présent sur la source (rare sur Proxmox mais possible sur des installations minimales), ProxMenux revient à <code>gzip</code>. Dans le chemin de repli, si <code>pv</code> est disponible, une barre de progression est ajoutée au pipeline afin que l'opérateur voit la taille des archives croître en temps réel; sans <code>pv</code>, <code>tar -czf</code> est utilisé en silence.",
+    "sourceTitle": "Ce qui va dans l'archive",
+    "sourceBody": "La commande tar est appelée avec <code>-C \"$staging_root\" .</code>, ce qui archive <strong>toute la racine du répertoire temporaire</strong> : <code>rootfs/</code>, <code>metadata/</code> et <code>manifest.json</code>. Les trois blocs de données se trouvent côte à côte à la racine de l’archive tar. L’extraction produit exactement l’arborescence utilisée par le code de restauration."
+  },
+  "sidecar": {
+    "heading": "Le sidecar JSON",
+    "intro": "Chaque sauvegarde locale réussie produit un fichier compagnon : <code>HOSTNAME-TIMESTAMP.tar.zst.proxmenux.json</code>, écrit à côté de l'archive par <code>hb_write_archive_sidecar</code>. Ce petit fichier JSON permet au ProxMenux Monitor d'identifier l'archive comme une sauvegarde d'hôte ProxMenux même s'il est déplacé, rebaptisé ou archivé ailleurs.",
+    "contentTitle": "Contenu du sidecar",
+    "contentBody": "Le sidecar stocke la version du schéma, que la sauvegarde soit issue d'une opération interactive ou d'un travail programmé (<code>kind</code>), l'ID de travail pour les opérations programmées, le mode de profil utilisé (<code>default</code> ou <code>custom</code>), le nom d'hôte source, le nom de base d'archive original, un horodatage de création ISO-8601 et la taille des archives en octets.",
+    "whyBody": "L'onglet Sauvegardes du moniteur scanne les répertoires locaux configurés pour les sidecars <code>*.proxmenux.json</code> — pas pour les fichiers <code>*.tar.zst</code> — parce qu'un <code>.tar.zst</code> sans sidecar pourrait ne pas être une sauvegarde ProxMenux du tout. Le scan est rapide (les fichiers JSON sont minuscules) et l'appariement est stable à travers les renoms de l'archive aussi longtemps que le sidecar est renommé pour correspondre."
+  },
+  "restoreAccess": {
+    "heading": "Restauration à partir d'une archive locale",
+    "body": "Le flux de restauration ProxMenux découvre les archives locales en scannant la cible locale configurée pour les sidecars et en les affichant dans la liste des archives. La sélection d’une archive déclenche <code>_rs_check_layout</code>, qui extrait le tarball dans un répertoire de préparation temporaire et confirme la mise en page à trois payload avant de procéder. Pour l'extraction manuelle à l'extérieur de ProxMenux, <code>tar --zstd -xf hostcfg-HOSTNAME-TIMESTAMP.tar.zst -C /tmp/hostcfg</code> donne le même arbre que le code de restauration consommé."
+  }
+}

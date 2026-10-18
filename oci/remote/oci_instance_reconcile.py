@@ -9,6 +9,7 @@ import oci_instances as instances
 import oci_gpu_devices as gpu_devices
 import oci_host_mounts as host_mounts
 import oci_instance_transaction as transaction
+import oci_native_modify as native_modify
 from oci_installation_state import parse_config, sha
 from oci_ui import translate
 
@@ -88,6 +89,43 @@ def _device(key, value):
     return device
 
 
+ENVIRONMENT_KEYS = ('env', 'lxc.environment.runtime')
+
+
+def _environment(record, config):
+    """Variables changed in Proxmox since the last operation. Values are
+    applied but never listed: they may be passwords."""
+    before = native_modify.environment(record['observed']['config'].encode())
+    now = native_modify.environment(config)
+    defaults = {item.split('=', 1)[0] for item in record['observed']['image'].get('defaults', {}).get('Env', [])
+                if '=' in item}
+    removed = sorted(before.keys() - now.keys())
+    # An image default comes back with a new container; its absence cannot be kept.
+    if any(name in defaults for name in removed):
+        raise ValueError(f"{translate('These manual changes cannot be adopted safely:')} env")
+    changed = sorted(name for name in now if before.get(name) != now[name])
+    return {name: now[name] for name in changed}, removed
+
+
+def _adopt_environment(deployment, values, removed):
+    items = deployment.setdefault('environment', [])
+    details = []
+    for name, value in values.items():
+        matches = [item for item in items if item['name'] == name]
+        if len(matches) > 1:
+            raise ValueError(translate('Duplicate variable in the contract; review it before editing'))
+        if matches:
+            matches[0]['value'] = value
+            details.append(f"env {name}: {translate('value changed in Proxmox')}")
+        else:
+            items.append({'name': name, 'value': value, 'sensitive': True})
+            details.append(f"env {name}: {translate('added in Proxmox')}")
+    for name in removed:
+        items[:] = [item for item in items if item['name'] != name]
+        details.append(f"env {name}: {translate('removed in Proxmox')}")
+    return details
+
+
 def propose(record, config):
     if (record.get('status') != 'installed' or record.get('stack') or record.get('stack_member')
             or record.get('native_stack_intent') or record.get('deployment', {}).get('stack_managed')):
@@ -101,16 +139,20 @@ def propose(record, config):
     # was checked above, so a presentation-only change needs no adoption.
     if 'description' in changed:
         changed.remove('description')
+    environment = None
+    if any(key in ENVIRONMENT_KEYS for key in changed):
+        changed = [key for key in changed if key not in ENVIRONMENT_KEYS]
+        environment = _environment(record, config)
     new_keys = [key for key in changed if key not in before and re.fullmatch(r'(mp|dev)[0-9]+', key)]
     unsupported = [key for key in changed if key not in new_keys and key not in transaction.ADOPTABLE
                    and key not in transaction.KEPT_AS_IS]
     if unsupported:
         raise ValueError(f"{translate('These manual changes cannot be adopted safely:')} {', '.join(unsupported)}")
-    if not new_keys:
+    if not new_keys and environment is None:
         return None
     candidate = copy.deepcopy(record)
     deployment = candidate['deployment']
-    details = []
+    details = _adopt_environment(deployment, *environment) if environment else []
     for key in new_keys:
         if key.startswith('mp'):
             mount = _mount(key, current[key], record['vmid'])
@@ -122,8 +164,13 @@ def propose(record, config):
             deployment.setdefault('devices', []).append(device)
             kind = 'GPU' if gpu_devices.gpu_path(device['host_path']) else 'USB/Coral/NPU'
             details.append(f"{key}: {device['host_path']} ({kind})")
+    skipped = [*new_keys, *(ENVIRONMENT_KEYS if environment else ())]
     filtered = b'\n'.join(line for line in config.splitlines()
-                          if not any(line.startswith(key.encode() + b': ') for key in new_keys)) + b'\n'
+                          if not any(line.startswith(key.encode() + b': ') for key in skipped))
+    if environment:
+        filtered += b''.join(b'\n' + line for line in record['observed']['config'].encode().splitlines()
+                             if any(line.startswith(key.encode() + b': ') for key in ENVIRONMENT_KEYS))
+    filtered += b'\n'
     for key, value in transaction.external_changes(record, filtered).items():
         section, name = transaction.ADOPTABLE[key]
         target = deployment.setdefault(section, {}) if section else deployment

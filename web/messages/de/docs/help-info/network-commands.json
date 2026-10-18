@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Proxmox-Netzwerkbefehle — ip, ping, ss, pve-firewall, iptables | ProxMenux",
+    "description": "Referenz für die Netzwerkkonfiguration auf Proxmox-VE-Hosts: ip / ip link / ip addr, ping, traceroute, mtr, ss, ethtool, dig und nslookup sowie pve-firewall, iptables und nftables für Paketfilter. Prüfung von Netzwerkbrücken, Bonds und VLANs.",
+    "ogTitle": "Proxmox-Netzwerkbefehle — ip, ping, ss, pve-firewall, iptables",
+    "ogDescription": "Netzwerkbefehle für Proxmox VE: Schnittstellenprüfung, Verbindungstests, Überwachung, Firewall (pve-firewall, iptables, nftables) und DNS-Abfragen.",
+    "twitterTitle": "Proxmox-Netzwerkbefehle | ProxMenux",
+    "twitterDescription": "Netzwerkinspektion, Test, Konfiguration und Firewall-Befehle für Proxmox VE."
+  },
+  "header": {
+    "title": "Netzwerkbefehle",
+    "description": "Ausgewählte Befehle für das Proxmox-Hostnetzwerk: Schnittstelleninformationen, Verbindungstests, Konfiguration, Verkehrsüberwachung und Firewall-Verwaltung. Enthält ip / ss / nmcli / ethtool / tcpdump / pve-firewall.",
+    "section": "Hilfe und Informationen"
+  },
+  "intro": {
+    "title": "Schneller Überblick über die Schnittstellen",
+    "body": "<code>ip a</code> zeigt jede Schnittstelle mit ihren IP-Adressen und ihrer MAC-Adresse. <code>ip r</code> zeigt die Routingtabelle. Zusammen beantworten sie in Sekunden die meisten Fragen dazu, ob eine Schnittstelle richtig konfiguriert ist."
+  },
+  "commandGroups": [
+    {
+      "title": "Netzinformationen",
+      "commands": [
+        {
+          "command": "ip a",
+          "description": "Netzwerkschnittstellen und IPs anzeigen"
+        },
+        {
+          "command": "ip r",
+          "description": "Routing-Tabelle anzeigen"
+        },
+        {
+          "command": "ip -s link",
+          "description": "Verkehrsstatistiken pro Schnittstelle anzeigen"
+        },
+        {
+          "command": "brctl show",
+          "description": "Konfigurierte Netzwerkbrücken anzeigen"
+        },
+        {
+          "command": "cat /etc/network/interfaces",
+          "description": "Rohe Netzwerkkonfiguration anzeigen"
+        }
+      ]
+    },
+    {
+      "title": "Netzwerktests",
+      "commands": [
+        {
+          "command": "ping <host>",
+          "description": "Überprüfen Sie die Konnektivität mit einem anderen Host"
+        },
+        {
+          "command": "traceroute <host>",
+          "description": "Route zu einem Host verfolgen"
+        },
+        {
+          "command": "mtr <host>",
+          "description": "Ping und Traceroute in Echtzeit kombinieren"
+        },
+        {
+          "command": "dig <domain>",
+          "description": "DNS-Suche nach einer Domain"
+        },
+        {
+          "command": "nslookup <domain>",
+          "description": "Alternative DNS-Abfrage"
+        }
+      ]
+    },
+    {
+      "title": "Netzwerkkonfiguration",
+      "commands": [
+        {
+          "command": "ifreload -a",
+          "description": "Netzwerkkonfiguration neu laden (ifupdown2)"
+        },
+        {
+          "command": "ethtool <iface>",
+          "description": "Informationen zum Ethernet-Gerät anzeigen"
+        },
+        {
+          "command": "resolvectl status",
+          "description": "DNS-Auflösungsstatus anzeigen"
+        },
+        {
+          "command": "nmcli device show",
+          "description": "Netzwerkgerätedetails anzeigen (wenn NetworkManager verwendet wird)"
+        },
+        {
+          "command": "ip link set <iface> up",
+          "description": "Netzwerkschnittstelle aktivieren"
+        },
+        {
+          "command": "ip link set <iface> down",
+          "description": "Netzwerkschnittstelle deaktivieren"
+        }
+      ]
+    },
+    {
+      "title": "Netzüberwachung",
+      "commands": [
+        {
+          "command": "ss -tuln",
+          "description": "Abhörports anzeigen (TCP/UDP)"
+        },
+        {
+          "command": "netstat -tuln",
+          "description": "Alternative Anzeige der lauschenden Ports"
+        },
+        {
+          "command": "lsof -i",
+          "description": "Liste offener Netzwerkdateien und Verbindungen"
+        },
+        {
+          "command": "tcpdump -i <iface>",
+          "description": "Pakete auf dem Interface erfassen"
+        },
+        {
+          "command": "iftop -i <iface>",
+          "description": "Überwachen der Bandbreitennutzung an der Schnittstelle"
+        }
+      ]
+    },
+    {
+      "title": "Firewall-Verwaltung",
+      "commands": [
+        {
+          "command": "iptables -L -n -v",
+          "description": "Aktive Firewall-Regeln anzeigen (iptables)"
+        },
+        {
+          "command": "nft list ruleset",
+          "description": "Nftables-Regeln anzeigen"
+        },
+        {
+          "command": "pve-firewall status",
+          "description": "Überprüfen Sie den Proxmox-Firewall-Status"
+        },
+        {
+          "command": "pve-firewall compile",
+          "description": "Firewall-Regeln für alle Knoten kompilieren"
+        },
+        {
+          "command": "pve-firewall reload",
+          "description": "Laden Sie die Proxmox-Firewallregeln neu"
+        }
+      ]
+    }
+  ],
+  "iptablesTip": {
+    "title": "iptables vs nftables",
+    "bodyRich": "Der klassische Dienst <code>pve-firewall</code> erzeugt iptables-Regeln. Der alternative Dienst proxmox-firewall verwendet <strong>nftables</strong>. Prüfen Sie das iptables-Backend mit <code>iptables -L -n -v</code> und das nftables-Backend mit <code>nft list ruleset</code>. Verwenden Sie die Werkzeuge des aktiven Backends; die Listen sind nicht austauschbar."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/network",
+        "label": "Netzwerkmanagement",
+        "tail": "— ProxMenux interaktive Netzwerktools (Brückenanalyse, persistente Namen, Überwachung)."
+      },
+      {
+        "href": "/docs/help-info/tools-commands",
+        "label": "System-CLI-Tools",
+        "tail": " — weitere Werkzeuge zur Netzwerküberwachung."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Übersicht über Hilfe und Informationen",
+        "tail": "."
+      }
+    ]
+  }
+}

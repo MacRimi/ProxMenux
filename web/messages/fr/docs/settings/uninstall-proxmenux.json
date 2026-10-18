@@ -1,0 +1,92 @@
+{
+  "meta": {
+    "title": "Désinstaller ProxMenux | Documentation ProxMenux",
+    "description": "Désinstallation propre de ProxMenux avec suppression facultative de jq et dialog, nettoyage des anciens fichiers de traduction et du service Monitor, et restauration des sauvegardes système.",
+    "ogTitle": "Désinstaller ProxMenux | Documentation ProxMenux",
+    "ogDescription": "Supprimer complètement ProxMenux d'un hôte Proxmox avec nettoyage de dépendance optionnel."
+  },
+  "header": {
+    "title": "Désinstaller ProxMenux",
+    "description": "Supprime ProxMenux de l'hôte Proxmox par un processus interactif : confirmation, suppression facultative des dépendances, nettoyage du service ProxMenux Monitor et restauration des sauvegardes de /root/.bashrc et /etc/motd. Une barre de progression est affichée tout au long du processus.",
+    "section": "Paramètres"
+  },
+  "scopeWarn": {
+    "title": "affecte uniquement l'installation de ProxMenux — pas vos VM / CT / stockage",
+    "body": "La désinstallation supprime les scripts ProxMenux, le lanceur de menu, le service Monitor facultatif et les sauvegardes de fichiers système créées par ProxMenux lors de son installation. <strong>Elle ne modifie pas vos VM, conteneurs, stockage, configuration réseau, Fail2Ban, pilote NVIDIA ni aucun autre élément installé via ProxMenux.</strong> Ces éléments restent en place."
+  },
+  "flow": {
+    "heading": "Déroulement de la désinstallation",
+    "items": [
+      "<strong>Dialogue de confirmation.</strong> Oui/non : « Voulez-vous vraiment désinstaller ProxMenux ? »",
+      "<strong>Liste des dépendances à supprimer.</strong> Propose jq et dialog. Les deux cases sont décochées par défaut ; sélectionnez uniquement les dépendances dont aucune autre application n'a besoin.",
+      "<strong>La suppression affiche une barre de progression.</strong> Supprime un éventuel ancien environnement de traduction, le lanceur <code>menu</code>, l'arborescence <code>/usr/local/share/proxmenux/</code>, le service ProxMenux Monitor s'il est présent avec la cible de notification enregistrée dans Proxmox VE (<code>proxmenux-webhook</code> et sa règle de correspondance), ainsi que les dépendances cochées. Restaure enfin les sauvegardes des fichiers système (voir ci-dessous).",
+      "<strong>Dialogue de fin.</strong> Répertorie les dépendances supprimées, puis quitte le programme."
+    ]
+  },
+  "deps": {
+    "heading": "Suppression de la dépendance : ce qui est offert",
+    "intro": "La liste propose jq et dialog. <strong>Aucune case n'est cochée par défaut</strong> : d'autres applications peuvent utiliser ces paquets système ; il est donc plus sûr de les conserver.",
+    "headerType": "Installation",
+    "headerOffered": "Proposé à la suppression",
+    "rows": [
+      {
+        "type": "Versions actuelles",
+        "offeredRich": "<code>dialog</code>, <code>jq</code>"
+      },
+      {
+        "type": "Anciennes installations après mise à jour",
+        "offeredRich": "<code>dialog</code>, <code>jq</code>"
+      }
+    ],
+    "warnTitle": "Paquets à l'échelle du système — réfléchir deux fois",
+    "warnBody": "La liste actuelle propose <code>jq</code> et <code>dialog</code>, pas <code>python3</code>. Ces paquets système peuvent être nécessaires à d'autres outils. Leur suppression peut aussi retirer des paquets dépendants ou des dépendances inutilisées. Conservez les paquets nécessaires et examinez toute proposition de suppression avant d'exécuter apt manuellement."
+  },
+  "removed": {
+    "heading": "Ce qui est enlevé",
+    "code": "/usr/local/bin/menu                                  # the launcher\n/usr/local/share/proxmenux/                          # everything: scripts, config, cache, version\n/opt/googletrans-env/                                # leftover legacy translation environment\n/etc/systemd/system/proxmenux-monitor.service        # Monitor service unit\n/root/.config/proxmenux-monitor/                     # Monitor config dir\n                                                     # + dependencies you ticked in the checklist"
+  },
+  "restored": {
+    "heading": "Ce qui est restauré",
+    "items": [
+      "Si <code>/root/.bashrc.bak</code> existe → rebaptisé <code>/root/.bashrc</code> (votre bashrc original retourne).",
+      "Si <code>/etc/motd.bak</code> existe, ce fichier est renommé en <code>/etc/motd</code>. Sinon, sed supprime la ligne ProxMenux (<em>“This system is optimised by: ProxMenux”</em>) du motd existant."
+    ]
+  },
+  "othersCallout": {
+    "title": "Les autres composants installés par ProxMenux sont conservés",
+    "body": "Tout ce qui est ProxMenux installé via d'autres menus — Fail2Ban, Lynis, les pilotes NVIDIA, les ajustements post-installation — n'est <strong>pas</strong> touché par ce programme de désinstallation. Chacun a son propre flux de désinstallation dans son menu respectif (ou vous pouvez le supprimer directement avec apt). Regardez d'abord <em>Afficher les informations sur la version</em> pour voir ce qui est enregistré."
+  },
+  "manual": {
+    "heading": "Désinstaller manuellement",
+    "intro": "Si pour une raison quelconque le désinstallateur de menu ne peut pas exécuter (par exemple, <code>dialog</code> déjà manquant), la séquence manuelle équivalente:",
+    "code": "# 1. Stop and remove the Monitor service (if installed)\nsystemctl stop proxmenux-monitor.service 2>/dev/null\nsystemctl disable proxmenux-monitor.service 2>/dev/null\nrm -f /etc/systemd/system/proxmenux-monitor.service\nrm -rf /root/.config/proxmenux-monitor\nsystemctl daemon-reload\nsystemctl reset-failed 2>/dev/null\n\n# 2. Remove a leftover legacy translation environment\nrm -rf /opt/googletrans-env\n\n# 3. Remove ProxMenux files\nrm -f /usr/local/bin/menu\nrm -rf /usr/local/share/proxmenux\n\n# 4. Restore backups\n[ -f /root/.bashrc.bak ] && mv /root/.bashrc.bak /root/.bashrc\n[ -f /etc/motd.bak ] && mv /etc/motd.bak /etc/motd \\\n    || sed -i '/This system is optimised by: ProxMenux/d' /etc/motd"
+  },
+  "reinstall": {
+    "heading": "Réinstaller plus tard",
+    "body": "Exécutez à nouveau l'installateur officiel ProxMenux. Les versions actuelles utilisent un seul mode d'installation incluant les huit langues de l'interface."
+  },
+  "troubleshoot": {
+    "heading": "Dépannage",
+    "hangTitle": "La désinstallation se bloque lors de la suppression d'un ancien environnement de traduction",
+    "hangBody": "Les versions actuelles suppriment un environnement résiduel avec <code>rm -rf /opt/googletrans-env</code> ; elles n'exécutent pas <code>pip uninstall</code>. Si cette étape se bloque, examinez-la depuis un autre shell et vérifiez le système de fichiers de l'hôte avant de réessayer.",
+    "aptTitle": "apt signale des paquets encore utilisés lors de la suppression des dépendances",
+    "aptBody": "Les paquets sélectionnés sont marqués comme automatiques et transmis à <code>apt-get -y --purge autoremove</code>. Cela ne garantit pas la protection des services dépendants. Laissez les dépendances décochées si d'autres outils les utilisent et examinez les suppressions proposées par apt avant tout nettoyage manuel.",
+    "motdTitle": "MOTD affiche toujours la ligne ProxMenux après désinstallation",
+    "motdBody": "Il se peut que <code>/etc/motd.bak</code> n'existe pas et que sed n'ait pas trouvé la ligne (par exemple, si elle a été modifiée). Modifiez <code>/etc/motd</code> manuellement et supprimez toute ligne ProxMenux restante."
+  },
+  "related": {
+    "heading": "Autres",
+    "items": [
+      {
+        "href": "/docs/settings/show-version-information",
+        "label": "Afficher les informations sur la version",
+        "tail": "— voir ce qui serait enlevé avant de désinstaller."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Aperçu des paramètres",
+        "tail": "."
+      }
+    ]
+  }
+}

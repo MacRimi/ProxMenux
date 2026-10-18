@@ -1,0 +1,186 @@
+{
+  "meta": {
+    "title": "Host: Pridať lokálny disk ako Proxmox úložisko ProxMenux Dokumentácia",
+    "description": "Naformátujte lokálny disk SATA, SAS alebo NVMe na hostiteľovi Proxmox a zaregistrujte ho ako adresárové úložisko alebo pool ZFS. Postup zahŕňa bezpečný výber disku, potvrdenie deštruktívnych operácií, fstab podľa UUID, vytvorenie poolu ZFS a príkazy pvesm add dir / zfspool.",
+    "ogTitle": "Host: Pridať lokálny disk ako Proxmox úložisko ProxMenux Dokumentácia",
+    "ogDescription": "Naformátujte lokálny disk a zaregistrujte ho ako adresár Proxmox alebo ZFS pool pomocou riadeného, bezpečnostne filtrovaného postupu."
+  },
+  "header": {
+    "title": "Host: Pridať lokálny disk ako úložisko Proxmox",
+    "description": "Vyberte fyzický disk na hostiteľovi Proxmox, prípadne ho naformátujte (ext4 / xfs / btrfs / zfs) a zaregistrujte ako úložisko Proxmox — adresár (pvesm add dir) alebo pool ZFS (pvesm add zfspool). ProxMenux odfiltruje systémový disk aj používané disky a pred vykonaním jasne uvedie každý deštruktívny krok.",
+    "section": "Úložisko a zdieľanie · hostiteľ"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "Ostatné nástroje pre <em>hostiteľa</em> v tejto časti pracujú so <strong>sieťovým</strong> úložiskom (NFS / Samba / iSCSI). Tento pracuje s <strong>lokálnymi</strong> diskami, teda voľnými diskami fyzicky pripojenými k hostiteľovi Proxmox, ktoré chcete použiť na disky VM, zálohy, ISO alebo šablóny. ProxMenux disk pripraví (rozdelenie + formátovanie + pripojenie) a zaregistruje v Proxmoxe, aby naň rozhranie mohlo ukladať obsah."
+  },
+  "destructive": {
+    "title": "Deštrukčný nástroj pre \"formátovú\" dráhu",
+    "body": "Postup <em>Formátovať</em> <strong>zničí existujúce oddiely a dáta na vybranom disku</strong>. ProxMenux zobrazí varovanie, odfiltruje používané disky a vyžiada potvrdenie pred spustením <code>wipefs</code> / <code>sgdisk</code> / <code>mkfs</code>. Nejde o bezpečné prepísanie každého bajtu. Pred potvrdením dvakrát overte cestu zariadenia."
+  },
+  "compare": {
+    "heading": "Adresár alebo pool ZFS — čo si vybrať?",
+    "headerDir": "Adresár (ext4 / xfs / btrfs)",
+    "headerZfs": "ZFS pool",
+    "rows": [
+      {
+        "label": "Typ skladovania Proxmoxu",
+        "dirRich": "<code>dir</code>",
+        "zfsRich": "<code>zfspool</code>"
+      },
+      {
+        "label": "Formát disku VM",
+        "dir": "Súbor qcow2 / raw na súborovom systéme",
+        "zfs": "Natívny súbor údajov ZFS (zvol) na disk"
+      },
+      {
+        "label": "Snímky",
+        "dir": "qcow2 snímky; btrfs snímky, ak fs=btrfs",
+        "zfs": "Natívne, okamžité, copy-on-write"
+      },
+      {
+        "label": "Tenké prideľovanie",
+        "dir": "Áno (predvolené pri qcow2)",
+        "zfs": "Áno (predvolená hodnota ZFS)"
+      },
+      {
+        "label": "RAM potreby",
+        "dir": "nízka",
+        "zfs": "Vysoké — ZFS používa voľnú RAM ako vyrovnávaciu pamäť ARC"
+      },
+      {
+        "label": "Podporuje typy obsahu",
+        "dir": "images, backup, iso, vztmpl, snippets, rootdir",
+        "zfs": "iba images a rootdir (blokové úložisko)"
+      },
+      {
+        "label": "Najlepšie pre",
+        "dir": "Univerzálny disk: mix diskov VM, zálohy, ISO",
+        "zfs": "Čistý dátový disk VM / LXC s snapshot + potreba integrity"
+      }
+    ]
+  },
+  "opening": {
+    "heading": "Otvorenie nástroja",
+    "body": "V hlavnej ponuke ProxMenux otvorte <strong>Storage &amp; Share Manager → Add Local Disk as Proxmox Storage</strong>. Zobrazí sa podponuka so štyrmi možnosťami:",
+    "imageAlt": "Ponuka lokálnych diskov — Pridať / Zobraziť / Odstrániť / Vypísať dostupné disky"
+  },
+  "howRuns": {
+    "heading": "Ako beží skript (Pridať tok)",
+    "body": "Postup má dve fázy s trojstupňovým bezpečnostným filtrom. Fáza 1 objavuje bezpečné disky, rozhoduje, čo robiť s vybraným a zbiera parametre úložiska; Fáza 2 robí deštruktívne práce. Až do posledného potvrdenia je disk nedotknutý."
+  },
+  "format": {
+    "heading": "Formátovať prázdny disk",
+    "intro": "Cesta pre čerstvý disk alebo ten, ktorého obsah vás nezaujíma.",
+    "items": [
+      "Vyberte disk (systém / používané disky sú skryté).",
+      "Vyberte \"Format disk (EASE všetky dáta) .\"",
+      "Vyberte súborový systém — porovnanie výhod a nevýhod je v tabuľke vyššie.",
+      "ID úložiska (predvolene <code>disk-&lt;device&gt;</code>), cesta pripojenia a predvoľba typu obsahu.",
+      "Potvrďte v dialógu <strong>KONEČNÉ POTVRDENIE — DÁTA SA VYMAŽÚ</strong>.",
+      "ProxMenux vymaže tabuľku oddielov a vytvorí jeden oddiel na celom disku. Spustí <code>mkfs.&lt;fs&gt;</code> alebo <code>zpool create</code> a výsledok pripojí. Bežné súborové systémy dostanú položku UUID v <code>/etc/fstab</code> s <code>defaults,nofail</code>; ZFS používa konfiguráciu pripojenia poolu. Ak je označené <em>Ako úložisko Proxmoxu</em> (pri ZFS vždy), následne sa zaregistruje cez <code>pvesm add dir</code> alebo <code>pvesm add zfspool</code>; inak zostane len pripojením na hostiteľovi."
+    ],
+    "tipTitle": "Prečo UUID + nofail v /etc/fstab",
+    "tipBody": "Skript zapíše <code>UUID=… /mnt/&lt;id&gt; &lt;fs&gt; defaults,nofail 0 2</code>. UUID zostane rovnaké aj pri zmene poradia zariadení po reštarte, takže premenovanie <code>/dev/sdc</code> na <code>/dev/sdd</code> nenaruší štart. S <code>nofail</code> sa Proxmox spustí aj pri chýbajúcom disku (porucha alebo odpojenie); úložisko sa bude zobrazovať ako neaktívne, kým sa disk nevráti."
+  },
+  "reuse": {
+    "heading": "Znovu použiť existujúci súborový systém",
+    "intro": "Cesta k disku, na ktorom si chcete ponechať údaje – možno ste ho presunuli z iného hostiteľa Proxmox alebo disk už obsahuje zálohy / ISO, ktoré chcete ponechať prístupné.",
+    "items": [
+      "Vyber ten disk.",
+      "Vyberte \"Použiť existujúci súborový systém.\"",
+      "ID úložiska, cesta pripojenia a predvoľba typu obsahu.",
+      "ProxMenux dáta <strong>nemení</strong>: vytvorí bod pripojenia, pripojí disk, pridá položku UUID do <code>/etc/fstab</code> a zaregistruje ho ako úložisko Proxmox typu <code>dir</code>."
+    ],
+    "warnTitle": "Opätovné použitie cesty nespracúva ZFS pools",
+    "warnBody": "Ak už disk obsahuje ZFS pool, cesta <em>znova použiť</em> sa ho pokúsi pripojiť ako bežný súborový systém – čo zlyhá. Ak chcete importovať existujúci ZFS pool, použite <code>zpool import &lt;name&gt;</code> na príkazovom riadku a potom ho manuálne zaregistrujte pomocou <code>pvesm add zfspool</code>."
+  },
+  "presets": {
+    "heading": "Prednastavenia typu obsahu",
+    "intro": "ProxMenux ponúka tri predvoľby a vlastnú možnosť. Vybraný reťazec typov obsahu odovzdá príkazu <code>pvesm add … --content &lt;csv&gt;</code>:",
+    "headerPreset": "Predvoľba",
+    "headerContent": "Reťazec typov obsahu",
+    "headerUse": "Prípad použitia",
+    "rows": [
+      {
+        "preset": "Úložisko VM",
+        "content": "images,backup",
+        "use": "Vyhradené úložisko diskov VM, ktoré zároveň uchováva aj zálohy týchto VM."
+      },
+      {
+        "preset": "Štandardné NAS",
+        "content": "backup,iso,vztmpl",
+        "use": "Archívny alebo mediálny disk — zálohy, ISO a šablóny LXC. Bez diskov používaných bežiacimi VM."
+      },
+      {
+        "preset": "Všetky typy",
+        "content": "images,backup,iso,vztmpl,snippets",
+        "use": "Táto široká predvoľba povolí obrazy, zálohy, ISO, šablóny LXC a snippet súbory. Ďalšie podporované typy, napríklad rootdir, podľa potreby pridajte cez vlastnú možnosť."
+      },
+      {
+        "preset": "Vlastné",
+        "content": "(voľný vstup)",
+        "useRich": "Napíšte presné CSV, napr. samotný <code>images</code> alebo <code>rootdir,images</code>."
+      }
+    ],
+    "zfsTitle": "ZFS pool obsah je užší",
+    "zfsBody": "Pri <strong>zfs</strong> podporuje <code>zfspool</code> iba <code>images</code> a <code>rootdir</code>, nie súbory ISO či zálohy. Cez vlastnú možnosť zadajte podporované typy. Skript výber odovzdá bez zmien; nepodporované typy môžu spôsobiť zlyhanie registrácie. Potom overte <code>pvesm status</code>."
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent",
+    "extIntro": "Formát + zaregistrovať disk ako úložisko adresára ext4:",
+    "zfsIntro": "Alebo ako ZFS pool:"
+  },
+  "view": {
+    "heading": "Zobraziť diskové úložiská",
+    "body": "Vypisuje všetky diskové úložiská Proxmox (<code>dir</code> aj <code>zfspool</code>, ktoré sú vytvorené používateľom — systémové pooly ako <code>rpool</code> je skrytý). Zobrazuje cestu pripojenia / pool názov, typy obsahu a aktuálny stav."
+  },
+  "remove": {
+    "heading": "Odstrániť diskové úložisko",
+    "body": "Odregistruje úložisko z Proxmoxu (<code>pvesm remove</code>) a ponúkne odstránenie príslušnej položky v <code>/etc/fstab</code>. Skript pool ZFS automaticky <strong>nezničí</strong>; na to slúži samostatný príkaz <code>zpool destroy &lt;name&gt;</code>, ktorý vykonáte ručne, keď ste si istí.",
+    "warnTitle": "Údaje a existujúce závislosti VM",
+    "warnBody": "Odstránenie úložiska sa nedotkne súborového systému ani pool — údaje zostanú na disku. Ale virtuálne počítače / CT, ktoré odkazujú na toto úložisko podľa ID, sa po odstránení nespustia. Pred odstránením presuňte tieto VM disky na iné úložisko (alebo vytvorte zálohu)."
+  },
+  "list": {
+    "heading": "Zoznam dostupných diskov",
+    "body": "Diagnostický pohľad iba na čítanie: vytlačí výstup <code>lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,MODEL</code>, po ktorom nasleduje <code>dir</code> / <code>zfspool</code> úložiská, ktoré Proxmox už pozná. Dobrá prvá zastávka, keď otvoríte nástroj a chcete vidieť \"čo je na tomto hostiteľovi?\" pred pridaním niečoho."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "noDisksTitle": "\"Nenájdené žiadne dostupné disky\"",
+    "noDisksIntro": "Bezpečnostný filter skryl každý disk. Časté dôvody:",
+    "noDisksItems": [
+      "Prítomný je len koreňový disk.",
+      "Každý iný disk je súčasťou aktívneho ZFS / LVM / RAID poľa.",
+      "Každý iný disk je odkazovaný VM alebo LXC config (pass through).",
+      "Disk je v režime iba na čítanie (zlyhanie hardvéru alebo write-blokátor)."
+    ],
+    "noDisksOutro": "Použite <em>Zoznam dostupných diskov</em> z ponuky, aby ste videli nespracovaný výstup <code>lsblk</code> a pochopili, čo sa deje.",
+    "mountedTitle": "Formát zlyhá s \"device is mounted\"",
+    "mountedBody": "Niečo auto-montoval disk (udisksd, desktop manažér, pretrvávajúce systemd jednotka). Odpojte ho: <code>umount /dev/sdX?*</code> alebo <code>systemctl stop &lt;whatever-mounts-it&gt;</code>, potom sa znovu skúste. Bezpečnostný filter skriptu by mal mať skryté namontované disky, takže ak ste dosiahli túto chybu, pripojiť sa stalo medzi zobrazením menu a potvrdením.",
+    "zpoolTitle": "zpool create zlyhá s hlásením \"invalid vdev specification\"",
+    "zpoolBody": "Zvyčajne to znamená, že disk má stále zastarané GPT / LVM / ZFS podpisy, ktoré <code>zpool</code> odmieta bez vynútenia prepísať. Skript pred formátovaním spustí <code>wipefs</code> a <code>sgdisk --zap-all</code>, ale veľmi tvrdohlavý disk môže mať stále zastaraný štítok. Manuálne vynútenie čistého vymazania: <code>zpool labelclear -f /dev/sdX</code> alebo <code>dd if=/dev/zero of=/dev/sdX bs=1M count=10</code> a skúste to znova.",
+    "inactiveTitle": "Skladovanie ukazuje ako neaktívne po reštarte",
+    "inactiveBody": "Skontrolujte <code>findmnt &lt;mount-path&gt;</code>. Ak pripojenie chýba, zlyhalo niečo v <code>/etc/fstab</code>. Výstup <code>dmesg | tail</code> zvyčajne ukáže príčinu, napríklad nesúlad UUID, poškodenie súborového systému alebo vynechanie ďalšieho pokusu v súvislosti s <code>nofail</code>. Po odstránení príčiny príkaz <code>mount -a</code> zvyčajne úložisko znovu pripojí."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/disk-manager/format-disk",
+        "label": "Správca diskov: formátovanie / vymazanie fyzického disku",
+        "tail": "— nízkoúrovňová alternatíva, keď chcete iba pripraviť disk bez toho, aby ste ho registrovali ako úložisko Proxmox."
+      },
+      {
+        "href": "/docs/storage-share/host-iscsi",
+        "label": "Pridať iSCSI target ako Proxmox úložisko",
+        "tail": " — sieťový ekvivalent, ak je blokové zariadenie na inom počítači."
+      },
+      {
+        "href": "/docs/storage-share/host-local-shared",
+        "label": "Pridať zdieľaný adresár na hostiteľa",
+        "tail": " — príprava adresára na hostiteľovi pre bind mounty LXC (bez registrácie úložiska Proxmox)."
+      }
+    ]
+  }
+}

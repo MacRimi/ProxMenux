@@ -73,6 +73,24 @@ TECHNICAL_TERMS = (
     "DKMS",
     "SSH",
     "API",
+    "Flask",
+    "SQLite",
+    "Prometheus",
+    "Grafana",
+    "Uptime Kuma",
+    "PWA",
+    "Fail2Ban",
+    "Tailscale",
+    "JavaScript",
+    "TypeScript",
+    "Next.js",
+    "Coral",
+    "rclone",
+    "journald",
+    "gasket",
+    "apex",
+    "Alpine",
+    "OpenVINO",
 )
 
 PROTECTED_PATTERNS = (
@@ -88,9 +106,13 @@ PROTECTED_PATTERNS = (
     re.compile(r"(?<![A-Za-z0-9<])/(?:[A-Za-z0-9._~:@%+=-]+/)*[A-Za-z0-9._~:@%+=-]+"),
     re.compile(r"\b[A-Za-z0-9_.-]+\.(?:json|ya?ml|toml|conf|service|socket|sh|py|tsx?|jsx?|md)\b"),
     re.compile(r"(?<![\w.@])@[A-Za-z_][A-Za-z0-9_]*"),
+    # Identifiers and encoded delimiters remain literal even outside <code>.
+    re.compile(r"(?<![A-Za-z0-9_])_?[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+(?![A-Za-z0-9_])"),
+    re.compile(r"\b[A-Za-z0-9]*(?:[a-z][A-Z])[A-Za-z0-9]*\b"),
+    re.compile(r"&(?:[A-Za-z]+|#[0-9]+|#x[0-9A-Fa-f]+);"),
 )
 LITERAL_TAG_RE = re.compile(
-    r"<(code|kbd|pre)\b[^>]*>.*?</\1>",
+    r"<(code|codeNw|codeXs|kbd|pre)\b[^>]*>.*?</\1>",
     re.IGNORECASE | re.DOTALL,
 )
 
@@ -109,16 +131,23 @@ ANY_TAG_RE = re.compile(r"</?[A-Za-z][^<>]*>")
 BARE_SENTINELS = False
 PLACEHOLDER_RE = re.compile(r"\{[A-Za-z_][A-Za-z0-9_.-]*\}")
 NON_TRANSLATABLE_KEYS = {
+    "accent",
+    "categoryslug",
     "command",
     "code",
     "href",
     "icon",
+    "iconbg",
     "id",
+    "menucmd",
     "path",
     "route",
     "slug",
     "src",
     "url",
+    "color",
+    "tone",
+    "variant",
 }
 SOURCE_STATE_VERSION = 1
 
@@ -186,12 +215,34 @@ def should_copy(source: str, path: tuple[str | int, ...]) -> bool:
     if not source.strip() or not re.search(r"[A-Za-z]", source):
         return True
     last = str(path[-1]).lower() if path else ""
+    # These fields describe the surrounding snippet; they are prose, even
+    # though their names end in "Code".
+    if last in {"aftercode", "beforecode"}:
+        return False
+    # This UI breadcrumb is prose, rather than a filesystem path.
+    if last == "uipath" and "<strong>" in source:
+        return False
+    if last == "flow" and source in {"loader", "dedicated"}:
+        return True
+    # These exact values drive rendering/navigation; similarly named visible
+    # labels remain translatable.
+    if last == "branch" and source in {"main", "develop", "feature/*"}:
+        return True
+    if last == "kind" and source in {"internal", "external"}:
+        return True
+    if last == "key" and source in {"linux", "nas", "windows"}:
+        return True
     if last in NON_TRANSLATABLE_KEYS or any(
         last.endswith(suffix)
         for suffix in ("url", "href", "path", "command", "code", "icon")
     ):
         return True
-    if re.fullmatch(r"https?://\S+", source) or re.fullmatch(r"/[A-Za-z0-9_./:@%+=-]+", source):
+    if re.fullmatch(r"https?://\S+", source) or re.fullmatch(r"/\S+", source):
+        return True
+    # Standalone literal blocks contain examples, not prose. Separators between
+    # several blocks do not make their command/configuration contents translatable.
+    without_literals = LITERAL_TAG_RE.sub("", source)
+    if without_literals != source and not re.search(r"[A-Za-z]", ANY_TAG_RE.sub("", without_literals)):
         return True
     if re.fullmatch(r"[A-Z0-9_.:/+-]{2,}", source):
         return True
@@ -200,6 +251,15 @@ def should_copy(source: str, path: tuple[str | int, ...]) -> bool:
 
 def leaf_token(path: tuple[str | int, ...]) -> str:
     return json.dumps(path, ensure_ascii=False, separators=(",", ":"))
+
+
+def literal_values_match(source: Any, target: Any) -> bool:
+    """Literal commands and rendering metadata must follow the source too."""
+    return all(
+        not should_copy(leaf.source, leaf.path)
+        or get_at_path(target, leaf.path) == leaf.source
+        for leaf in iter_leaves(source)
+    )
 
 
 def source_fingerprints(source: Any) -> dict[str, str]:
@@ -240,7 +300,7 @@ def protect_rich_tags(text: str) -> tuple[str, dict[str, str]]:
 
     def replace(match: re.Match[str]) -> str:
         original = match.group(1)
-        if original.lower() in {"code", "kbd", "pre"}:
+        if original.lower() in {"code", "codenw", "codexs", "kbd", "pre"}:
             return match.group(0)
         key = original.lower()
         internal = names.get(key)
@@ -329,11 +389,14 @@ def protect_text(text: str) -> tuple[str, dict[str, str]]:
 
 
 def restore_text(text: str, mapping: dict[str, str]) -> str:
-    missing = [token for token in mapping if token not in text]
+    # A local model may append a digit to a bare sentinel. A substring match
+    # would silently restore the prefix and leak the extra digit into prose.
+    patterns = {token: re.compile(re.escape(token) + r"(?![0-9])") for token in mapping}
+    missing = [token for token, pattern in patterns.items() if not pattern.search(text)]
     if missing:
         raise ValueError(f"translation provider changed protected token {missing[0]}")
     for token, original in mapping.items():
-        text = text.replace(token, original)
+        text = patterns[token].sub(lambda match: original, text)
     return text
 
 
@@ -347,6 +410,11 @@ def validate_contract(source: str, target: str) -> None:
         raise ValueError("literal code changed")
     if sorted(PLACEHOLDER_RE.findall(source)) != sorted(PLACEHOLDER_RE.findall(target)):
         raise ValueError("placeholder contract changed")
+    # Bare numeric protection markers once leaked a trailing zero just
+    # outside an otherwise intact code span. Literal/ICU checks cannot see it.
+    residue = re.compile(r'(?:</(?:code|codeNw|codeXs|pre|kbd)>|<strong>)(0+)(?=\s|[;:/<().,-]|$)')
+    if len(residue.findall(target)) > len(residue.findall(source)):
+        raise ValueError("unexpected numeric residue next to literal markup")
 
 
 def provider_function(args: argparse.Namespace) -> Callable[[str, str], str]:
@@ -822,7 +890,10 @@ def main() -> int:
             leaves = pending_leaves(source, target, queued_tokens)
             total_strings += len(iter_leaves(source))
             missing_strings += len(leaves)
-            schema_changed = not schema_matches(source, target)
+            schema_changed = (
+                not schema_matches(source, target)
+                or not literal_values_match(source, target)
+            )
             if leaves or schema_changed:
                 pending.append(
                     (

@@ -4,7 +4,7 @@
     "description": "Cómo convierte OCI manager Apps una aplicación con su base de datos y su caché en LXC nativos coordinados: plan, red privada, hook de dependencias, validación y actualizaciones transaccionales."
   },
   "header": {
-    "title": "Aplicaciones multicontenedor",
+    "title": "Aplicaciones con varios contenedores",
     "description": "Una aplicación con su base de datos, su caché y otros servicios se convierte en varios LXC nativos coordinados, que se instalan y actualizan como uno solo.",
     "section": "OCI manager Apps"
   },
@@ -21,7 +21,14 @@
         {
           "mermaid": {
             "chartCode": "flowchart LR\n C[\"Docker Compose\"] --> O[\"{{plan}}\"]\n O --> A[\"{{app}}<br/>{{appNet}}\"]\n O --> D[\"{{db}}<br/>{{private}}\"]\n O --> R[\"{{cache}}<br/>{{private}}\"]\n V1[(\"config\")] --> A\n V2[(\"database\")] --> D\n V3[(\"cache\")] --> R\n D --> A\n R --> A",
-            "labels": { "plan": "Plan de la pila", "app": "LXC de la aplicación", "appNet": "LAN + privada", "db": "LXC PostgreSQL", "cache": "LXC Valkey", "private": "privada" }
+            "labels": {
+              "plan": "Plan de la pila",
+              "app": "LXC de la aplicación",
+              "appNet": "LAN + privada",
+              "db": "LXC PostgreSQL",
+              "cache": "LXC Valkey",
+              "private": "privada"
+            }
           }
         }
       ]
@@ -35,14 +42,42 @@
         },
         {
           "table": {
-            "headers": ["Elemento del plan", "Contenido", "Comprobado antes de crear nada"],
+            "headers": [
+              "Elemento del plan",
+              "Contenido",
+              "Comprobado antes de crear nada"
+            ],
             "rows": [
-              ["Miembros", "Aplicación principal, base de datos, caché, aprendizaje automático y demás dependencias", "VMID únicos, roles conocidos y exactamente un miembro principal"],
-              ["Imágenes", "Referencia rolling, arquitectura y digest resuelto de cada servicio", "Todas existen, admiten la arquitectura y superan la verificación de integridad OCI"],
-              ["Red", "Bridge privado, subred, una dirección fija por servicio y acceso LAN para el miembro principal", "Sin colisión con bridges o subredes existentes y sin direcciones repetidas"],
-              ["Persistencia", "Discos del contenedor, directorios del host, propietarios y backup", "Rutas sin solapamientos, almacenamiento disponible y permisos declarados"],
-              ["Secretos", "Contraseña de la base de datos, claves de la aplicación y credenciales iniciales", "Se generan una vez y solo se entregan a los miembros que los usan"],
-              ["Ciclo de vida", "Orden de arranque, orden de parada y una comprobación de salud por miembro", "La aplicación principal arranca la última y se detiene la primera"]
+              [
+                "Miembros",
+                "Aplicación principal, base de datos, caché, aprendizaje automático y demás dependencias",
+                "VMID únicos, roles conocidos y exactamente un miembro principal"
+              ],
+              [
+                "Imágenes",
+                "Referencia rolling, arquitectura y digest resuelto de cada servicio",
+                "Todas existen, admiten la arquitectura y superan la verificación de integridad OCI"
+              ],
+              [
+                "Red",
+                "Bridge privado, subred, una dirección fija por servicio y acceso LAN para el miembro principal",
+                "Sin colisión con bridges o subredes existentes y sin direcciones repetidas"
+              ],
+              [
+                "Persistencia",
+                "Discos del contenedor, directorios del host, propietarios y backup",
+                "Rutas sin solapamientos, almacenamiento disponible y permisos declarados"
+              ],
+              [
+                "Secretos",
+                "Contraseña de la base de datos, claves de la aplicación y credenciales iniciales",
+                "Se generan una vez y solo se entregan a los miembros que los usan"
+              ],
+              [
+                "Ciclo de vida",
+                "Orden de arranque, orden de parada y una comprobación de salud por miembro",
+                "La aplicación principal arranca la última y se detiene la primera"
+              ]
             ]
           }
         }
@@ -55,13 +90,34 @@
         {
           "steps": {
             "items": [
-              { "title": "Reservar todos los VMID", "body": "Se comprueban el inventario de Proxmox VE y el registro de instancias. No se adopta un CT existente ni se reutiliza un contrato que todavía pertenece a otra instancia." },
-              { "title": "Preparar todas las imágenes", "body": "Todas las imágenes se resuelven, descargan y verifican antes de crear el primer contenedor." },
-              { "title": "Crear cada rootfs", "body": "Se importan los metadatos OCI oficiales y se añaden la identidad de instancia de ProxMenux y el rol del miembro." },
-              { "title": "Red privada", "body": "Se crean un bridge y una subred y cada miembro recibe su dirección fija; solo el miembro principal recibe además la interfaz de la LAN." },
-              { "title": "Persistencia", "body": "Cada base de datos y configuración recibe su propio disco del contenedor; solo los datos destinados a compartirse usan directorios del host." },
-              { "title": "Entorno", "body": "Se escriben los endpoints internos, los secretos compartidos y las variables de servicio. La aplicación llega a sus dependencias en sus direcciones privadas reservadas." },
-              { "title": "Registro", "body": "Cada miembro registra su configuración nativa, los cambios del rootfs que las actualizaciones deben reproducir y su relación con la pila." }
+              {
+                "title": "Reservar todos los VMID",
+                "body": "Se comprueban el inventario de Proxmox VE y el registro de instancias. No se adopta un CT existente ni se reutiliza un contrato que todavía pertenece a otra instancia."
+              },
+              {
+                "title": "Preparar todas las imágenes",
+                "body": "Todas las imágenes se resuelven, descargan y verifican antes de crear el primer contenedor."
+              },
+              {
+                "title": "Crear cada rootfs",
+                "body": "Se importan los metadatos OCI oficiales y se añaden la identidad de instancia de ProxMenux y el rol del miembro."
+              },
+              {
+                "title": "Red privada",
+                "body": "Se crean un bridge y una subred y cada miembro recibe su dirección fija; solo el miembro principal recibe además la interfaz de la LAN."
+              },
+              {
+                "title": "Persistencia",
+                "body": "Cada base de datos y configuración recibe su propio disco del contenedor; solo los datos destinados a compartirse usan directorios del host."
+              },
+              {
+                "title": "Entorno",
+                "body": "Se escriben los endpoints internos, los secretos compartidos y las variables de servicio. La aplicación llega a sus dependencias en sus direcciones privadas reservadas."
+              },
+              {
+                "title": "Registro",
+                "body": "Cada miembro registra su configuración nativa, los cambios del rootfs que las actualizaciones deben reproducir y su relación con la pila."
+              }
             ]
           }
         }
@@ -74,20 +130,48 @@
       "blocks": [
         {
           "table": {
-            "headers": ["Servicio", "Comprobación", "Qué demuestra"],
+            "headers": [
+              "Servicio",
+              "Comprobación",
+              "Qué demuestra"
+            ],
             "rows": [
-              ["PostgreSQL", "<code>pg_isready</code> en el CT con el host, el usuario y la base de datos esperados", "El servidor acepta conexiones para la base de datos configurada"],
-              ["Redis / Valkey", "<code>redis-cli</code> o <code>valkey-cli</code> <code>PING</code> contra su dirección privada", "El broker escucha y responde"],
-              ["Aprendizaje automático de Immich", "HTTP <code>GET /ping</code>, más una comprobación del runtime GPU seleccionado", "El servicio responde y la aceleración pedida no ha pasado a CPU"],
-              ["Nextcloud", "<code>GET /status.php</code> con <code>installed=true</code>, <code>maintenance=false</code> y <code>needsDbUpgrade=false</code>", "La inicialización terminó sin migraciones pendientes"],
-              ["Paperless-ngx / Tandoor", "HTTP en la dirección de la LAN y el puerto real del servicio", "El frontend y sus dependencias sirven la aplicación"],
-              ["Aplicación principal", "El endpoint de su plantilla, por ejemplo <code>/api/server/ping</code> en Immich", "La pila completa funciona a través de la aplicación que usa las dependencias"]
+              [
+                "PostgreSQL",
+                "<code>pg_isready</code> en el CT con el host, el usuario y la base de datos esperados",
+                "El servidor acepta conexiones para la base de datos configurada"
+              ],
+              [
+                "Redis / Valkey",
+                "<code>redis-cli</code> o <code>valkey-cli</code> <code>PING</code> contra su dirección privada",
+                "El broker escucha y responde"
+              ],
+              [
+                "Aprendizaje automático de Immich",
+                "HTTP <code>GET /ping</code>, más una comprobación del runtime GPU seleccionado",
+                "El servicio responde y la aceleración pedida no ha pasado a CPU"
+              ],
+              [
+                "Nextcloud",
+                "<code>GET /status.php</code> con <code>installed=true</code>, <code>maintenance=false</code> y <code>needsDbUpgrade=false</code>",
+                "La inicialización terminó sin migraciones pendientes"
+              ],
+              [
+                "Paperless-ngx / Tandoor",
+                "HTTP en la dirección de la LAN y el puerto real del servicio",
+                "El frontend y sus dependencias sirven la aplicación"
+              ],
+              [
+                "Aplicación principal",
+                "El endpoint de su plantilla, por ejemplo <code>/api/server/ping</code> en Immich",
+                "La pila completa funciona a través de la aplicación que usa las dependencias"
+              ]
             ]
           }
         },
         {
           "calloutWarning": {
-            "title": "running no significa healthy",
+            "title": "En ejecución no significa que funcione correctamente",
             "body": "El estado running solo indica que existe el proceso del LXC. Cuando el servicio ofrece una comprobación mejor, se usa una comprobación exec o HTTP con un tiempo límite. Si un miembro se detiene o no supera su comprobación, la pila no se declara instalada."
           }
         }
@@ -103,8 +187,14 @@
         {
           "codeGrid": {
             "items": [
-              { "title": "Configuración del CT principal", "code": "hookscript: local:snippets/proxmenux-stack-dependencies.sh" },
-              { "title": "Contrato privado (ejemplo)", "code": "/etc/pve/priv/proxmenux-stack-VMID.json\n{\n  \"schema\": 1,\n  \"stack\": \"immich\",\n  \"dependencies\": [\n    {\"vmid\": 107, \"label\": \"PostgreSQL\", \"healthcheck\": {...}},\n    {\"vmid\": 108, \"label\": \"Valkey\", \"healthcheck\": {...}},\n    {\"vmid\": 106, \"label\": \"Machine Learning\", \"healthcheck\": {...}}\n  ]\n}" }
+              {
+                "title": "Configuración del CT principal",
+                "code": "hookscript: local:snippets/proxmenux-stack-dependencies.sh"
+              },
+              {
+                "title": "Contrato privado (ejemplo)",
+                "code": "/etc/pve/priv/proxmenux-stack-VMID.json\n{\n  \"schema\": 1,\n  \"stack\": \"immich\",\n  \"dependencies\": [\n    {\"vmid\": 107, \"label\": \"PostgreSQL\", \"healthcheck\": {...}},\n    {\"vmid\": 108, \"label\": \"Valkey\", \"healthcheck\": {...}},\n    {\"vmid\": 106, \"label\": \"Machine Learning\", \"healthcheck\": {...}}\n  ]\n}"
+              }
             ]
           }
         },
@@ -121,12 +211,30 @@
         {
           "steps": {
             "items": [
-              { "title": "Proxmox VE llama a pre-start", "body": "Antes de arrancar el CT principal, el hook se ejecuta con su VMID y la fase del ciclo de vida." },
-              { "title": "Un bloqueo por pila", "body": "<code>flock</code> sobre <code>/run/lock/proxmenux-stack-VMID.lock</code> impide dos secuencias de arranque a la vez." },
-              { "title": "Se lee y valida el contrato", "body": "Se exigen un esquema conocido, dependencias numéricas, etiquetas, una comprobación exec, http o running y un tiempo límite positivo." },
-              { "title": "Dependencias en orden", "body": "Cada CT debe existir; uno detenido se arranca y uno que ya está en marcha no se reinicia." },
-              { "title": "Espera de salud", "body": "La comprobación se ejecuta cada dos segundos y se confirma además que el CT sigue en marcha." },
-              { "title": "Arranca el CT principal", "body": "Cuando todas las dependencias están listas, pre-start termina y Proxmox VE arranca la aplicación." }
+              {
+                "title": "Proxmox VE llama a pre-start",
+                "body": "Antes de arrancar el CT principal, el hook se ejecuta con su VMID y la fase del ciclo de vida."
+              },
+              {
+                "title": "Un bloqueo por pila",
+                "body": "<code>flock</code> sobre <code>/run/lock/proxmenux-stack-VMID.lock</code> impide dos secuencias de arranque a la vez."
+              },
+              {
+                "title": "Se lee y valida el contrato",
+                "body": "Se exigen un esquema conocido, dependencias numéricas, etiquetas, una comprobación exec, http o running y un tiempo límite positivo."
+              },
+              {
+                "title": "Dependencias en orden",
+                "body": "Cada CT debe existir; uno detenido se arranca y uno que ya está en marcha no se reinicia."
+              },
+              {
+                "title": "Esperar a que el servicio esté listo",
+                "body": "La comprobación se ejecuta cada dos segundos y se confirma además que el CT sigue en marcha."
+              },
+              {
+                "title": "Arranca el CT principal",
+                "body": "Cuando todas las dependencias están listas, pre-start termina y Proxmox VE arranca la aplicación."
+              }
             ]
           }
         },
@@ -138,11 +246,27 @@
         },
         {
           "table": {
-            "headers": ["Tipo", "Ejemplo", "Arranques posteriores"],
+            "headers": [
+              "Tipo",
+              "Ejemplo",
+              "Arranques posteriores"
+            ],
             "rows": [
-              ["Pila dependiente", "Immich, Nextcloud, aplicación con PostgreSQL", "El hook del CT principal arranca las dependencias y las espera"],
-              ["Suite de aplicaciones", "Suite Arr", "Sin miembro principal: cada LXC sigue su propio <code>onboot</code>"],
-              ["Aplicación simple", "Jellyfin", "Proxmox VE arranca directamente ese LXC"]
+              [
+                "Pila dependiente",
+                "Immich, Nextcloud, aplicación con PostgreSQL",
+                "El hook del CT principal arranca las dependencias y las espera"
+              ],
+              [
+                "Suite de aplicaciones",
+                "Suite Arr",
+                "Sin miembro principal: cada LXC sigue su propio <code>onboot</code>"
+              ],
+              [
+                "Aplicación simple",
+                "Jellyfin",
+                "Proxmox VE arranca directamente ese LXC"
+              ]
             ]
           }
         }
@@ -176,21 +300,51 @@
         {
           "steps": {
             "items": [
-              { "title": "Cualquier miembro", "body": "El contrato del miembro indica el VMID principal y la lista completa de miembros." },
-              { "title": "La pila es reproducible", "body": "Se validan identidades, contratos, hook, adaptaciones y la existencia de una reproducción coordinada para esa receta." },
-              { "title": "Primero las imágenes", "body": "La aplicación no se detiene hasta que todos los digests están resueltos, descargados y verificados." },
-              { "title": "Detener y respaldar el conjunto", "body": "Los backups nativos verificados se toman con la pila detenida, de modo que aplicación y bases de datos corresponden al mismo momento." },
-              { "title": "Actualizar y comprobar cada miembro", "body": "Adaptación, red, montajes, secretos y dispositivos se aplican de nuevo antes de la comprobación de salud de cada miembro." },
-              { "title": "Publicar o recuperar todo", "body": "Los contratos nuevos solo se publican cuando todos los miembros pasan. Si uno falla, se restauran todos." }
+              {
+                "title": "Cualquier miembro",
+                "body": "El contrato del miembro indica el VMID principal y la lista completa de miembros."
+              },
+              {
+                "title": "La pila es reproducible",
+                "body": "Se validan identidades, contratos, hook, adaptaciones y la existencia de una reproducción coordinada para esa receta."
+              },
+              {
+                "title": "Primero las imágenes",
+                "body": "La aplicación no se detiene hasta que todos los digests están resueltos, descargados y verificados."
+              },
+              {
+                "title": "Detener y respaldar el conjunto",
+                "body": "Los backups nativos verificados se toman con la pila detenida, de modo que aplicación y bases de datos corresponden al mismo momento."
+              },
+              {
+                "title": "Actualizar y comprobar cada miembro",
+                "body": "Adaptación, red, montajes, secretos y dispositivos se aplican de nuevo antes de la comprobación de salud de cada miembro."
+              },
+              {
+                "title": "Publicar o recuperar todo",
+                "body": "Los contratos nuevos solo se publican cuando todos los miembros pasan. Si uno falla, se restauran todos."
+              }
             ]
           }
         },
         {
           "table": {
-            "headers": ["Modificar", "Qué cambia", "Qué se conserva"],
+            "headers": [
+              "Modificar",
+              "Qué cambia",
+              "Qué se conserva"
+            ],
             "rows": [
-              ["Rutas y dispositivos extra", "Se añaden al contenedor de la aplicación o se eliminan de él, y el contenedor se reinicia. No se reconstruye nada", "Los datos de la aplicación, su base de datos y los demás contenedores"],
-              ["Qué ejecuta el reconocimiento (Immich)", "El contenedor Machine learning toma la imagen y los dispositivos de la CPU o de una GPU del host. Toda la aplicación se detiene y se actualiza, como en una actualización", "La caché de modelos, la biblioteca y la base de datos. Si algo falla, se restauran los contenedores y la opción anteriores"]
+              [
+                "Rutas y dispositivos extra",
+                "Se añaden al contenedor de la aplicación o se eliminan de él, y el contenedor se reinicia. No se reconstruye nada",
+                "Los datos de la aplicación, su base de datos y los demás contenedores"
+              ],
+              [
+                "Qué ejecuta el reconocimiento (Immich)",
+                "El contenedor Machine learning toma la imagen y los dispositivos de la CPU o de una GPU del host. Toda la aplicación se detiene y se actualiza, como en una actualización",
+                "La caché de modelos, la biblioteca y la base de datos. Si algo falla, se restauran los contenedores y la opción anteriores"
+              ]
             ]
           }
         },
@@ -220,7 +374,7 @@
               "stop": "Detener, primero el principal",
               "backup": "Backup verificado de cada CT",
               "replace": "Sustituir el rootfs",
-              "healthy": "¿Todos sanos?",
+              "healthy": "¿Todos funcionan correctamente?",
               "yes": "Sí",
               "no": "No",
               "commit": "Publicar los contratos",

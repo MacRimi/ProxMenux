@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "title": "Mitwirkende | ProxMenux-Dokumentation",
+    "description": "Anerkennung für die Menschen, die ProxMenux möglich machen: Tester, Reviewer und Entwickler, die jede Version mitgestalten.",
+    "ogTitle": "Mitwirkende | ProxMenux-Dokumentation",
+    "ogDescription": "Treffen Sie die Mitwirkenden hinter ProxMenux."
+  },
+  "header": {
+    "title": "Mitwirkende",
+    "description": "Das ProxMenux-Projekt wächst dank seiner Mitwirkenden. Diese Seite würdigt ihre Arbeit: Versionen vor der Veröffentlichung testen, Regressionen erkennen, PRs prüfen und die Entwicklung neuer Funktionen mitgestalten.",
+    "section": "Über"
+  },
+  "beyond": {
+    "title": "Weitere Mitwirkende",
+    "body": "Viele weitere Menschen helfen mit Fehlermeldungen, Funktionsideen in Discussions, Beta-Tests und Übersetzungen. Die vollständige Liste der Code-Mitwirkenden steht im <extlink>GitHub-Mitwirkendendiagramm</extlink>. Diese Seite hebt diejenigen hervor, die besonders aktiv ProxMenux-Versionen testen und prüfen."
+  },
+  "testers": {
+    "heading": "Tester & Reviewer",
+    "intro": "Diese Personen gehörten zu den ersten Mitwirkenden. Mit Tests, Fehlermeldungen und Verbesserungsvorschlägen halfen sie ProxMenux dabei, zu dem zu werden, was es heute ist.",
+    "roles": {
+      "testing": "Testen",
+      "testingReviewer": "Tests und Review"
+    },
+    "youtube": "YouTube"
+  },
+  "contribute": {
+    "heading": "Möchten Sie dazu beitragen?",
+    "intro": "Jeder Beitrag ist willkommen - Code, Testen, Design, Dokumentation oder einfach nur das Teilen Ihrer Ideen:",
+    "tester": "<strong>Tester</strong> — probieren Sie den <beta>Beta-Kanal</beta> aus und melden Sie vor der stabilen Veröffentlichung, was funktioniert und was nicht.",
+    "developer": "<strong>Entwickler</strong> — Bash, Next.js (TypeScript) und etwas Python für die virtuelle Übersetzungsumgebung (venv). PRs auf <gh>GitHub</gh> sind willkommen.",
+    "designer": "<strong>Designer</strong> — Verbesserungen der Benutzeroberfläche, Icons, Screenshots zur Dokumentation.",
+    "ideas": "<strong>Ideen</strong> — eröffnen Sie zuerst ein Thema in <disc>GitHub Discussions</disc>, bevor Sie einen Funktionswunsch als Issue einreichen."
+  },
+  "coc": {
+    "title": "Lesen Sie zuerst den Verhaltenskodex",
+    "body": "Lesen Sie vor dem Einreichen von Code oder Fehlermeldungen kurz den <coclink>Verhaltenskodex und die bewährten Vorgehensweisen</coclink>. Darin werden die Verantwortung für Code, die Meldung von Sicherheitslücken und der Umfang von PRs erläutert."
+  }
+}

@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import json
+import os
 import shlex
+import stat
 import sys
 import tarfile
 from pathlib import Path
@@ -90,14 +92,39 @@ def effective_entrypoint(
 
 
 def home_directory(passwd_path: Path, uid: int) -> str | None:
-    """Return the safe home directory recorded for a container UID."""
-    for line in passwd_path.read_text(encoding="utf-8").splitlines():
+    """Read a regular image passwd file; only an absent UID defaults to /."""
+    if uid < 0:
+        return None
+    # The caller supplies <mounted rootfs>/etc/passwd. Pin etc so an image
+    # symlink or a rename during lookup cannot redirect the host-side read.
+    directory = os.open(passwd_path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        if not stat.S_ISREG(os.stat(passwd_path.name, dir_fd=directory, follow_symlinks=False).st_mode):
+            return None
+        descriptor = os.open(
+            passwd_path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory,
+        )
+        try:
+            # Recheck the opened object, not its name; a FIFO replacement
+            # must neither block open() nor reach a read operation.
+            if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+                return None
+            with os.fdopen(descriptor, encoding="utf-8", closefd=False) as stream:
+                content = stream.read()
+        finally:
+            os.close(descriptor)
+    finally:
+        os.close(directory)
+    for line in content.splitlines():
         fields = line.split(":")
-        if len(fields) < 7 or fields[2] != str(uid):
+        if len(fields) < 3 or fields[2] != str(uid):
             continue
+        if len(fields) != 7:
+            return None
         home = fields[5]
-        return home if home.startswith("/") else None
-    return None
+        safe = home.startswith("/") and not any(ord(char) < 32 or ord(char) == 127 for char in home)
+        return home if safe else None
+    return "/"
 
 
 def main() -> int:

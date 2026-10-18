@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Diagnostik | ProxMenux Dokumentation",
+    "description": "Tre enstaka skrivskyddade diagnostikkontroller: Visa routningstabell, Testa anslutning och Avancerad diagnostik. Ren inspektion — skriver aldrig till /etc/network/interfaces och kör aldrig kommandon som ändrar systemet, med ett uttryckligt undantag: fullständig borttagning av NetworkManager, om det upptäcks, kräver ditt samtycke.",
+    "ogTitle": "Diagnostik | ProxMenux Dokumentation",
+    "ogDescription": "Skrivskyddad nätverksdiagnostik för Proxmox-värden: routning, nåbarhet och avancerad statistik."
+  },
+  "header": {
+    "title": "Diagnostik",
+    "description": "Tre enstaka skrivskyddade kontroller av nätverkets aktuella tillstånd: routningstabell, anslutningstest och avancerad statistik. Ingen skriver till /etc/network/interfaces — säkra att använda när som helst, även via SSH. För interaktiv övervakning i realtid, se Övervakningsverktyg i realtid.",
+    "section": "Nätverk"
+  },
+  "intro": {
+    "title": "Vad detta gör",
+    "body": "Visar information om routning, nåbarhet och samlad statistik <strong>utan att ändra något</strong>. Använd verktyget för att kontrollera att nätverket fungerar eller identifiera dubbla IP-adresser. För kontinuerlig trafikövervakning, se <monitoringLink>Övervakningsverktyg i realtid</monitoringLink>; för att visa den obearbetade konfigurationsfilen, se <backupLink>Säkerhetskopiering och omstart av gränssnitt</backupLink>."
+  },
+  "routing": {
+    "heading": "Visa routningstabell",
+    "body": "Listar alla rutter som kärnan använder för tillfället (<code>ip route show</code>) och markerar standardgatewayen. Användbart för att kontrollera att internettrafiken går genom rätt gränssnitt och att inga kvarvarande gamla rutter har företräde."
+  },
+  "connectivity": {
+    "heading": "Testa anslutning",
+    "intro": "Skickar två ICMP-sonder till vart och ett av tre mål i tur och ordning och rapporterar resultatet för varje mål. Kör sedan <code>nslookup google.com</code> för att verifiera DNS-uppslagning oberoende av ICMP.",
+    "headerTest": "Test",
+    "headerTarget": "Mål",
+    "headerConfirms": "Vad den bekräftar",
+    "rows": [
+      {
+        "test": "Google DNS",
+        "target": "8.8.8.8",
+        "confirms": "Extern nåbarhet via en välkänd anycast-IP-adress"
+      },
+      {
+        "test": "Cloudflare DNS",
+        "target": "1.1.1.1",
+        "confirms": "Oberoende andra åsikt om Google blockerar ICMP"
+      },
+      {
+        "test": "Gateway",
+        "target": "(standardrutt)",
+        "confirms": "L2 / L3-anslutning till den lokala routern"
+      },
+      {
+        "test": "DNS-upplösning",
+        "target": "google.com",
+        "confirms": "DNS server är tillgänglig och svarar"
+      }
+    ],
+    "readingTitle": "Läsa resultatet",
+    "readingBody": "Om gatewaytestet lyckas men de offentliga DNS-målen inte svarar har du lokal anslutning men inget internet — kontrollera gatewayens anslutning uppströms. Om DNS-uppslagning misslyckas men ping till <code>8.8.8.8</code> fungerar ligger problemet i DNS-resolvern, inte i nätverket: kontrollera <code>/etc/resolv.conf</code>."
+  },
+  "advanced": {
+    "heading": "Avancerad diagnostik",
+    "intro": "Sammanställer statistik för hela nätverket och utför en serie kontroller av vanliga problem. Rapporterar antalet aktiva anslutningar, lyssnande portar och totalt antal gränssnitt samt pekar uttryckligen ut två problematiska konfigurationer:",
+    "items": [
+      "<strong>NetworkManager körs på en Proxmox-värd.</strong> NetworkManager och Proxmox <code>ifupdown</code> står i konflikt: båda försöker hantera gränssnitten, vilket gör att bryggor växlar mellan aktivt och inaktivt tillstånd eller inte kan aktiveras. Om NetworkManager upptäcks erbjuder verktyget en interaktiv bekräftelse för att stoppa, inaktivera och ta bort det helt (detta är den <em>enda</em> diagnostik som kan ändra systemet, och bara efter uttryckligt samtycke).",
+      "<strong>Dubbla IP-adresser på olika gränssnitt.</strong> Två gränssnitt med samma IPv4-adress orsakar intermittenta anslutningsproblem som är mycket svåra att felsöka inifrån en VM. Upptäcks via <code>ip -4 addr show | sort | uniq -d</code>."
+    ],
+    "nmTitle": "NetworkManager-prompten är den enda modifierande åtgärden här",
+    "nmBody": "Alla andra kontroller i Avancerad diagnostik är skrivskyddade. Borttagning av NetworkManager kräver en ja/nej-bekräftelse och kör <code>systemctl stop / disable</code> + <code>apt-get purge -y network-manager</code>. Om du avböjer ändras ingenting."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "gwTitle": "Testa anslutning rapporterar ett gatewayfel men värden har internetåtkomst",
+    "gwBody": "Vissa routrar svarar inte på ICMP via sitt interna gränssnitt även om de vidarebefordrar trafiken korrekt. Testa med <code>traceroute 8.8.8.8</code> från en konsol: om det andra hoppet är din internetleverantör och det offentliga DNS-testet lyckades fungerar gatewayen trots att ping misslyckades.",
+    "dupTitle": "Avancerad diagnostik fortsätter att rapportera dubbla IP-adresser efter att jag tagit bort en",
+    "dupBody": "Kontrollen granskar kärnans aktuella tillstånd, inte konfigurationsfilen. Kör <code>ip -4 addr show</code> för att kontrollera. Om dubbletten finns kvar har ett gränssnitt fortfarande adressen. Använd <code>ip addr del &lt;IP&gt;/&lt;mask&gt; dev &lt;iface&gt;</code> för att ta bort den från det aktuella tillståndet och redigera sedan <code>/etc/network/interfaces</code> om den också är beständigt konfigurerad."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "label": "Övervakningsverktyg i realtid",
+        "href": "/docs/network/monitoring",
+        "tail": " — interaktiva iftop / iptraf-ng / iperf3-startare."
+      },
+      {
+        "label": "Brygganalys och guidad reparation",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — när en vmbrX saknar sin fysiska port."
+      },
+      {
+        "label": "Konfigurationsanalys och guidad rensning",
+        "href": "/docs/network/config-analysis",
+        "tail": " — när ett gammalt nätverkskort fortfarande deklareras men inte längre finns."
+      },
+      {
+        "label": "Säkerhetskopiering och omstart av gränssnitt",
+        "href": "/docs/network/backup-restore",
+        "tail": " — för att ta en ögonblicksbild av konfigurationen före varje ändring."
+      }
+    ]
+  }
+}

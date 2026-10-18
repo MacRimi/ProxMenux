@@ -221,6 +221,10 @@ class DialogUI:
 
     def _run(self, widget: list[str], title: str | None = None) -> subprocess.CompletedProcess[str]:
         environment = os.environ.copy()
+        # ncurses otherwise waits a full second to distinguish Escape from
+        # the prefix of a cursor/function key. Keep a short sequence window,
+        # while respecting an explicit terminal-specific setting.
+        environment.setdefault("ESCDELAY", "150")
         if environment.get("TERM", "").casefold() in {"", "dumb", "unknown"}:
             environment["TERM"] = "xterm-256color"
         # dialog draws on the terminal and writes the selection to stderr.

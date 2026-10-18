@@ -98,7 +98,7 @@
     ],
     "sourcesHeading": "Zdroje dostupnej verzie",
     "sources": [
-      "<strong>GitHub repozitár</strong>: najnovšie vydanie alebo značka verejného repozitára <code>vlastník/názov</code>.",
+      "<strong>GitHub repozitár</strong>: najnovšie vydanie alebo značka verejného repozitára <code>owner/name</code>.",
       "<strong>HTTP JSON</strong>: verejný koncový bod a cesta ako <code>data.version</code> alebo <code>releases[0].tag_name</code>.",
       "<strong>Docker Hub</strong>: verzované značky filtrované regulárnym výrazom. Živý náhľad pred uložením ukáže skutočné zodpovedajúce značky.",
       "Pohyblivé značky ako <code>latest</code>, <code>stable</code> alebo <code>lts</code> neobsahujú verziu. Tieto obrazy sledujte podľa digestu v aktualizáciách Docker obrazov."

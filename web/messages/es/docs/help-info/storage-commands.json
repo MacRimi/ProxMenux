@@ -1,20 +1,20 @@
 {
   "meta": {
-    "title": "Comandos de almacenamiento y disco en Proxmox — lsblk, LVM, pvesm, qm importdisk | ProxMenux",
+    "title": "Comandos de almacenamiento y discos de Proxmox — lsblk, LVM, pvesm, qm importdisk | ProxMenux",
     "description": "Referencia de comandos de almacenamiento y disco en Proxmox VE: lsblk, blkid, parted, lvdisplay, vgdisplay, pvs, mount, df, du, ncdu, pvesm status, qm importdisk y qemu-img convert para operaciones de disco de VM.",
-    "ogTitle": "Comandos de almacenamiento y disco en Proxmox — lsblk, LVM, pvesm, qm importdisk",
+    "ogTitle": "Comandos de almacenamiento y discos de Proxmox — lsblk, LVM, pvesm, qm importdisk",
     "ogDescription": "Referencia de comandos de almacenamiento y disco en Proxmox VE — inspección de discos, LVM, montajes, gestión de almacenamiento de Proxmox, importación de disco de VM y conversión de imágenes.",
     "twitterTitle": "Comandos de almacenamiento de Proxmox | ProxMenux",
     "twitterDescription": "Inspección de discos, información de montajes, gestión LVM, almacenamiento de Proxmox y comandos de importación / conversión de discos de VM."
   },
   "header": {
     "title": "Almacenamiento y discos",
-    "description": "Referencia curada para inspección de almacenamiento en hosts Proxmox: dispositivos de bloque, particiones, montajes, volúmenes LVM, configuración de almacenamiento de Proxmox y algunas operaciones de disco de VM (importdisk, qemu-img convert).",
+    "description": "Selección de comandos para inspeccionar el almacenamiento de hosts Proxmox: dispositivos de bloque, particiones, montajes, volúmenes LVM, configuración de Proxmox y operaciones con discos de VM (importdisk, qemu-img convert).",
     "section": "Ayuda e información"
   },
   "intro": {
     "title": "Inventario rápido de discos",
-    "body": "<code>lsblk</code> es la forma más rápida de ver todos los dispositivos de bloque y sus particiones en árbol. Para identificadores persistentes (que sobreviven entre reinicios y cambios de hardware) usa <code>ls -lh /dev/disk/by-id/</code>."
+    "body": "<code>lsblk</code> muestra los dispositivos de bloque y sus particiones en árbol. Consulta los identificadores persistentes con <code>ls -lh /dev/disk/by-id/</code>: para un mismo disco suelen mantenerse tras reinicios o cambios en el orden de detección de los dispositivos. Sustituir el disco o cambiar cómo la controladora expone su identidad puede modificar su ruta by-id."
   },
   "commandGroups": [
     {
@@ -104,16 +104,16 @@
           "description": "Mostrar el estado de todos los pools de almacenamiento"
         },
         {
-          "command": "pvesm list",
-          "description": "Listar todo el almacenamiento disponible"
+          "command": "pvesm status --enabled 1",
+          "description": "Listar los almacenamientos configurados y habilitados"
         },
         {
           "command": "pvesm list <storage>",
           "description": "Listar el contenido de un almacenamiento concreto"
         },
         {
-          "command": "pvesm scan <storage>",
-          "description": "Escanear el almacenamiento en busca de contenido nuevo"
+          "command": "pvesm scan nfs <server>",
+          "description": "Descubrir las exportaciones NFS de un servidor"
         }
       ]
     },
@@ -122,7 +122,7 @@
       "commands": [
         {
           "command": "qm importdisk <vmid> <image_path> <storage>",
-          "description": "Adjuntar una imagen de disco a una VM"
+          "description": "Importar la imagen como disco sin usar de la VM; hay que conectarlo después"
         },
         {
           "command": "qm set <vmid> -<bus><index> <disk_path>",
@@ -130,7 +130,7 @@
         },
         {
           "command": "qemu-img convert -O <format> <input> <output>",
-          "description": "Convertir el formato de una imagen de disco"
+          "description": "Convertir el formato de una imagen de disco sin uso activo"
         }
       ]
     },
@@ -199,15 +199,15 @@
   ],
   "lvmTip": {
     "title": "LVM: comandos cortos vs largos",
-    "bodyRich": "Existen ambas formas por compatibilidad. <code>pvs</code> / <code>vgs</code> / <code>lvs</code> dan una tabla limpia de una línea por volumen; <code>pvdisplay</code> / <code>vgdisplay</code> / <code>lvdisplay</code> dan un volcado verboso de varias líneas por volumen. Para el día a día prefiere las versiones cortas."
+    "bodyRich": "Existen ambas formas. <code>pvs</code> / <code>vgs</code> / <code>lvs</code> muestran tablas compactas con una fila por volumen físico, grupo de volúmenes o volumen lógico, respectivamente. <code>pvdisplay</code> / <code>vgdisplay</code> / <code>lvdisplay</code> ofrecen más detalle en varias líneas. Las formas cortas resultan prácticas para las consultas habituales."
   },
   "smartInfo": {
-    "title": "SMART para discos mecánicos vs NVMe",
-    "bodyRich": "<strong>Discos mecánicos / SATA / SAS</strong> usan la familia <code>smartctl</code> de <code>smartmontools</code> (instalada por defecto en Proxmox). Pasa el dispositivo como <code>/dev/sda</code>, <code>/dev/sdb</code>, etc. <strong>Los discos NVMe</strong> tienen su propio protocolo nativo — <code>smartctl</code> funciona contra ellos (pasa la mayoría de datos), pero la herramienta <code>nvme</code> de <code>nvme-cli</code> reporta más campos específicos de NVMe (wear levelling, errores de medio, info de namespace). Instala con <code>apt install nvme-cli</code> si no está."
+    "title": "SMART en SATA/SAS frente a NVMe",
+    "bodyRich": "<strong>Los discos SATA / SAS, incluidos los SSD,</strong> se pueden consultar con <code>smartctl</code> de <code>smartmontools</code>, instalado por defecto en Proxmox. Indica el dispositivo, por ejemplo <code>/dev/sda</code> o <code>/dev/sdb</code>. <strong>Los discos NVMe</strong> usan otro protocolo nativo. <code>smartctl</code> también los admite, mientras que <code>nvme</code> de <code>nvme-cli</code> ofrece consultas específicas de controladoras, namespaces y salud NVMe. Instálalo con <code>apt install nvme-cli</code> si falta."
   },
   "selfTestWarn": {
     "title": "Los self-tests se ejecutan en segundo plano",
-    "bodyRich": "<code>smartctl -t short</code> y <code>-t long</code> retornan inmediatamente — el disco ejecuta el test por su cuenta. Comprueba el progreso con <code>smartctl -a /dev/&lt;disk&gt;</code> (busca la línea \"Self-test routine in progress\") o espera a que termine y lee <code>smartctl -l selftest /dev/&lt;disk&gt;</code>. Los tests cortos tardan ~2 min; los largos pueden tardar horas en mecánicos grandes. El disco sigue usable durante la prueba, pero el rendimiento de E/S baja."
+    "bodyRich": "En discos compatibles, <code>smartctl -t short /dev/&lt;disk&gt;</code> y <code>smartctl -t long /dev/&lt;disk&gt;</code> inician pruebas en segundo plano y devuelven el control enseguida. Consulta el progreso con <code>smartctl -a /dev/&lt;disk&gt;</code>, buscando \"Self-test routine in progress\", o espera y lee <code>smartctl -l selftest /dev/&lt;disk&gt;</code>. Las cortas suelen tardar unos dos minutos; las largas pueden durar horas. El disco sigue disponible, aunque puede bajar el rendimiento de E/S."
   },
   "related": {
     "heading": "Relacionado",
@@ -219,7 +219,7 @@
       },
       {
         "href": "/docs/disk-manager",
-        "label": "Disk Manager",
+        "label": "Administrador de discos",
         "tail": " — flujos interactivos de ProxMenux para passthrough de disco, importación, formateo y SMART."
       },
       {
