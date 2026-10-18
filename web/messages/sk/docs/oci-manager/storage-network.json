@@ -38,7 +38,7 @@
               },
               {
                 "title": "Úložisko a veľkosť",
-                "body": "Na úložisku Proxmox VE sa vytvorí disk kontajnera so zadanou veľkosťou. Predvolená inštalácia používa <code>local-lvm</code>. Rozšírená inštalácia sa pri každej ceste pýta najprv na úložisko a potom na veľkosť; navrhuje úložisko rootfs. Disk sa zobrazuje ako <code>vm-VMID-disk-N</code> a pripája sa ako <code>mpN</code>."
+                "body": "Na úložisku Proxmox VE sa vytvorí disk kontajnera so zadanou veľkosťou. Predvolená inštalácia sa raz opýta na úložisko kontajnera a jeho údajov, ak má uzol viac ako jedno; rozšírená inštalácia sa pri každej ceste pýta na úložisko tesne pred veľkosťou a navrhuje úložisko rootfs. Disk sa zobrazuje ako <code>vm-VMID-disk-N</code> a pripája sa ako <code>mpN</code>."
               },
               {
                 "title": "Adresár hostiteľa",
@@ -109,6 +109,9 @@
         },
         {
           "p": "Rootfs je vyhradený pre binárne súbory a obsah obrazu. Aktualizácia alebo opätovné vytvorenie ho nahradí bez zásahu do ktoréhokoľvek z dvoch typov prípojných bodov."
+        },
+        {
+          "p": "Adresár hostiteľa sa pripojí so všetkým, čo v ňom má hostiteľ pripojené. Adresár ako <code>/mnt/pve</code> zobrazí v kontajneri svoje sieťové zdieľania, disky a datasety a to, čo tam hostiteľ neskôr pripojí alebo odpojí, sa zobrazí alebo zmizne bez reštartu kontajnera. Adresár pridaný iba na čítanie je iba na čítanie spolu s tým, čo je v ňom pripojené pri spustení kontajnera. Súborový systém, ktorý hostiteľ pripojí neskôr, prichádza s oprávneniami, s ktorými ho hostiteľ pripojí, a pri reštarte kontajnera bude tiež iba na čítanie."
         }
       ]
     },

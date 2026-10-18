@@ -215,7 +215,7 @@
     "shareTitle": "Sharing prompts with the community",
     "shareIntro": "The <em>Export</em> button writes your current custom prompt to a file (<code>.txt</code> / <code>.md</code>) you can keep as a backup or hand to someone else. <em>Import</em> pulls one back in. The third button next to them links to a public community gallery on GitHub:",
     "shareLinkLabel": "github.com/MacRimi/ProxMenux/discussions — Share custom prompts for AI notifications",
-    "shareOutro": "Browse the discussion to see what other operators have built — terse pager-style alerts, verbose technical reports, language-specific variants. If you tweak yours and like the result, post it there: even a one-paragraph description of what your prompt optimises for helps people pick a good starting point. Feedback on what works and what doesn't is equally welcome."
+    "shareOutro": "Browse the discussion to see what other users have built — terse pager-style alerts, verbose technical reports, language-specific variants. If you tweak yours and like the result, post it there: even a one-paragraph description of what your prompt optimises for helps people pick a good starting point. Feedback on what works and what doesn't is equally welcome."
   },
   "suggestions": {
     "heading": "AI Suggestions (BETA)",

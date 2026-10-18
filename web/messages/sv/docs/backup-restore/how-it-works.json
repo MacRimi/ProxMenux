@@ -121,7 +121,7 @@
       }
     ],
     "schemaTitle": "Schema validering",
-    "schemaBody": "manifestet validerar mot <code>scripts/backup_restore/schema/manifest.schema.json</code>. Kör <code>build_manifest.sh --validate</code> utlöser en Python-side JSON Schema validering (kräver <code>python3</code> + <code>jsonschema</code>). Om modulen inte är närvarande, är kontrollen hoppad tyst - validering är i första hand ett utvecklarhjälp, inte ett drifttidsberoende."
+    "schemaBody": "ProxMenux levereras med en mall som beskriver vilka fält manifestet måste innehålla och hur vart och ett ska se ut. När en säkerhetskopia skapas kan manifestet kontrolleras automatiskt mot mallen, så att en insamlare som har gett felformaterad JSON eller ett felstavat fält upptäcks direkt. Kontrollen är avsedd för utvecklingen av ProxMenux självt: på ett system där den inte är installerad fungerar säkerhetskopieringen som vanligt och manifestet skapas ändå."
   },
   "applications": {
     "heading": "Applikationsinventeringen",

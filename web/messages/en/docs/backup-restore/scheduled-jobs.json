@@ -127,7 +127,7 @@
   },
   "notifications": {
     "heading": "Notifications",
-    "body": "Every scheduled run fires the same <code>hb_notify_lifecycle</code> events as the interactive flow (<code>start</code>, <code>complete</code>, <code>fail</code>). If notification channels are configured in the Monitor, unattended jobs surface their results the same way manual backups do — an user does not need to check the log to know whether a job succeeded."
+    "body": "Every scheduled run fires the same <code>hb_notify_lifecycle</code> events as the interactive flow (<code>start</code>, <code>complete</code>, <code>fail</code>). If notification channels are configured in the Monitor, unattended jobs surface their results the same way manual backups do — a user does not need to check the log to know whether a job succeeded."
   },
   "whereNext": {
     "heading": "Where to go next",

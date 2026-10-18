@@ -63,7 +63,7 @@
       {
         "type": "local",
         "url": "/backup/borgbackup (any absolute path)",
-        "detail": "Repository lives on a local directory. Meaningful only when the target directory is on a separate physical disk — a repository on the same disk as the source protects against operator error but not against disk failure."
+        "detail": "Repository lives on a local directory. Meaningful only when the target directory is on a separate physical disk — a repository on the same disk as the source protects against user error but not against disk failure."
       }
     ]
   },
@@ -91,7 +91,7 @@
       },
       {
         "requirement": "A writable repository directory",
-        "detail": "The path the operator gives ProxMenux (for example <code>/backup/borgbackup</code>) must exist on the server and be owned by the borg user."
+        "detail": "The path the user gives ProxMenux (for example <code>/backup/borgbackup</code>) must exist on the server and be owned by the borg user."
       },
       {
         "requirement": "SSH daemon accepting the borg user",
@@ -117,7 +117,7 @@
       {
         "mode": "generate-manual",
         "label": "No admin password on this host",
-        "detail": "ProxMenux generates the keypair as above but displays the full <code>authorized_keys</code> line for the operator to paste manually into the server. The admin password never leaves the ProxMenux host because it is never asked for."
+        "detail": "ProxMenux generates the keypair as above but displays the full <code>authorized_keys</code> line for the user to paste manually into the server. The admin password never leaves the ProxMenux host because it is never asked for."
       },
       {
         "mode": "generate-pct",
@@ -127,7 +127,7 @@
       {
         "mode": "existing",
         "label": "Use an existing key",
-        "detail": "ProxMenux scans <code>/root/.ssh/</code> and <code>$HOME/.ssh/</code> for parseable ed25519/RSA private keys and lists them. The operator picks one or browses manually to a non-standard path."
+        "detail": "ProxMenux scans <code>/root/.ssh/</code> and <code>$HOME/.ssh/</code> for parseable ed25519/RSA private keys and lists them. The user picks one or browses manually to a non-standard path."
       },
       {
         "mode": "none",
@@ -150,7 +150,7 @@
       },
       {
         "file": "borg-pass-NAME.txt",
-        "content": "Passphrase for the target NAMEd above (<code>chmod 600</code>). Only present when the operator chose repokey encryption."
+        "content": "Passphrase for the target NAMEd above (<code>chmod 600</code>). Only present when the user chose repokey encryption."
       }
     ],
     "outro": "Saving the target is optional. Declining the save prompt omits the named target configuration, but does not remove a generated SSH key. If repokey encryption is enabled without a saved target, ProxMenux still saves the passphrase in the legacy borg-pass.txt file."

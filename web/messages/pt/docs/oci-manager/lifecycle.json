@@ -104,6 +104,7 @@
               "A nova imagem é verificada camada a camada antes de parar o CT. Uma transferência que chega danificada é repetida uma segunda vez; uma imagem já em cache que não passa na verificação é transferida novamente.",
               "As definições alteradas no Proxmox VE após a instalação (memória, swap, núcleos, limite e prioridade da CPU, arranque com o nó) são mantidas e incluídas no novo contrato.",
               "A interface LAN adicionada pela suite Arr e pelas aplicações com vários contentores (<code>net1</code>) e a ordem de arranque (<code>startup</code>) são repostas sem alterações no novo contentor.",
+              "Um diretório do host é reconhecido pelo seu caminho e pelo sistema de ficheiros em que se encontra, e não pelo nome de dispositivo que o host atribui ao seu disco, pelo que um disco USB ou de rede que volte com outro nome continua a ser o mesmo diretório. Quando o seu disco não está ligado, a atualização é interrompida antes de parar o CT e indica o diretório em falta.",
               "Qualquer outra diferença entre o CT e o seu contrato interrompe a atualização antes de parar o CT."
             ]
           }

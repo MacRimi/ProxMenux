@@ -104,6 +104,7 @@
               "La nouvelle image est vérifiée couche par couche avant l'arrêt du CT. Un téléchargement qui arrive endommagé est récupéré une deuxième fois ; une image déjà mise en cache qui échoue la vérification est à nouveau téléchargée.",
               "Les paramètres modifiés dans Proxmox VE après l'installation (mémoire, swap, cœurs, limite et priorité du CPU, démarrage avec le nœud) sont conservés et intégrés au nouveau contrat.",
               "L'interface LAN ajoutée par la suite Arr et les applications à plusieurs conteneurs (<code>net1</code>), ainsi que l'ordre de démarrage (<code>startup</code>), sont réappliqués tels quels au nouveau conteneur.",
+              "Un répertoire de l’hôte est reconnu par son chemin et par le système de fichiers sur lequel il se trouve, et non par le nom de périphérique que l’hôte donne à son disque : un disque USB ou réseau qui revient sous un autre nom reste donc le même répertoire. Lorsque son disque n’est pas connecté, la mise à jour s’arrête avant que le CT ne soit arrêté et indique le répertoire manquant.",
               "Toute autre différence entre le CT et son contrat arrête la mise à jour avant que le CT ne soit arrêté."
             ]
           }

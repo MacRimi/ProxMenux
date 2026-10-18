@@ -23,7 +23,7 @@
   },
   "repoSelection": {
     "heading": "Selección del repositorio",
-    "intro": "ProxMenux descubre los repositorios de PBS a partir de dos fuentes en cada backup. El usuario elige uno en un menú unificado; esa elección determina los valores de <code>HB_PBS_REPOSITORY</code>, <code>HB_PBS_SECRET</code> y <code>HB_PBS_FINGERPRINT</code> para esa ejecución.",
+    "intro": "ProxMenux descubre los repositorios de PBS a partir de dos fuentes en cada backup. El usuario elige uno en un menú unificado; en esa ejecución, la elección determina a qué servidor y datastore se envía el backup, la contraseña con la que se autentica y la <em>fingerprint</em> que valida el certificado.",
     "sourceRows": [
       {
         "source": "storage.cfg de Proxmox (auto-descubierto)",
@@ -46,7 +46,7 @@
     "backupIdTitle": "Nombrado del backup ID",
     "backupIdBody": "El backup ID por defecto es <code>hostcfg-HOSTNAME</code>. Se pide al usuario que lo confirme o edite antes de la subida; cualquier carácter fuera de <code>[A-Za-z0-9_-]</code> se elimina y los guiones finales se recortan. Reutilizar el mismo ID entre ejecuciones es intencional — PBS trata el ID como un <em>grupo</em>, y cada backup posterior aparece como un nuevo backup dentro de ese grupo, compartiendo dedup con las ejecuciones previas.",
     "pxarTitle": "Qué se incluye dentro del archivo .pxar",
-    "pxarBody": "El origen del <code>.pxar</code> es todo el directorio <code>staging_root</code>, con <code>rootfs/</code>, <code>metadata/</code> y <code>manifest.json</code> juntos. Las versiones anteriores utilizaban <code>$staging_root/rootfs</code> como origen; esto dejaba <code>metadata/</code> fuera del archivo y la comprobación de compatibilidad de la restauración no tenía datos que leer, por lo que mostraba advertencias de restauración entre hosts incluso al restaurar en el mismo host. Los backups antiguos creados solo a partir de rootfs siguen restaurándose correctamente mediante la rama del caso 3 de <code>_rs_check_layout</code>, que vuelve a colocar el árbol plano <code>etc/var/root/usr</code> dentro de una estructura <code>rootfs/</code>."
+    "pxarBody": "El archivo <code>.pxar</code> empaqueta todo el directorio de trabajo: el sistema de ficheros del host (<code>rootfs/</code>), los metadatos (<code>metadata/</code>) y el manifiesto (<code>manifest.json</code>). Al restaurar, ProxMenux compara el manifiesto con el host de destino para saber si son equivalentes, si ha cambiado el hardware o si es otra máquina, y adapta el proceso. Los backups antiguos, hechos por versiones anteriores de ProxMenux que solo empaquetaban el sistema de ficheros, se siguen restaurando bien: la restauración detecta ese formato antiguo y lo reorganiza automáticamente."
   },
   "encryption": {
     "heading": "Cifrado del lado del cliente",

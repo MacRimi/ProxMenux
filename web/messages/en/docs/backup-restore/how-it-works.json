@@ -107,7 +107,7 @@
       {
         "collector": "collect_kernel.sh",
         "produces": "kernel_params",
-        "content": "Operator-authored tokens from <code>/proc/cmdline</code> (stripped of boilerplate like <code>BOOT_IMAGE=</code>, <code>root=</code>, <code>ro/rw</code>, <code>quiet</code>, <code>splash</code>), modules loaded at boot from <code>/etc/modules</code>, and paths of <code>/etc/modprobe.d/*.conf</code> files with actual directives (<code>options</code>, <code>blacklist</code>, <code>install</code>, <code>alias</code>, <code>softdep</code>)."
+        "content": "User-authored tokens from <code>/proc/cmdline</code> (stripped of boilerplate like <code>BOOT_IMAGE=</code>, <code>root=</code>, <code>ro/rw</code>, <code>quiet</code>, <code>splash</code>), modules loaded at boot from <code>/etc/modules</code>, and paths of <code>/etc/modprobe.d/*.conf</code> files with actual directives (<code>options</code>, <code>blacklist</code>, <code>install</code>, <code>alias</code>, <code>softdep</code>)."
       },
       {
         "collector": "collect_proxmenux_state.sh",
@@ -121,7 +121,7 @@
       }
     ],
     "schemaTitle": "Schema validation",
-    "schemaBody": "The manifest validates against <code>scripts/backup_restore/schema/manifest.schema.json</code>. Running <code>build_manifest.sh --validate</code> triggers a Python-side JSON Schema validation (requires <code>python3</code> + <code>jsonschema</code>). If the module is not present, the check is skipped silently — validation is primarily a developer aid, not a runtime dependency."
+    "schemaBody": "ProxMenux ships a template that describes which fields the manifest must contain and the shape of each one. When a backup is generated, the manifest can be checked against that template automatically, so a collector that produced malformed JSON or a misspelled field is caught at once. The check is meant for the development of ProxMenux itself: on a system that does not have it installed, the backup works as usual and the manifest is generated all the same."
   },
   "applications": {
     "heading": "The application inventory",

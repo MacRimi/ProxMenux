@@ -76,7 +76,7 @@
   },
   "sameArchive": {
     "heading": "A disposição do arquivo não muda com o destino",
-    "body": "Dentro de qualquer um dos três destinos, o mesmo <code>rootfs/</code> + <code>metadata/</code> + <code>manifest.json</code> layout descrito em <em>Como funciona</em> está presente. Um <code>.tar.zst</code> extraído de um arquivo local, um <code>.pxar</code> restaurado de PBS, e um arquivo Borg extraído com <code>borg extract</code> todos produzem uma árvore de diretórios idêntica. O caminho do código de restauração (<code>_rs_check_layout</code>, <code>_rs_apply</code>, <code>_rs_prepare_pending_restore</code>) lê as mesmas três cargas úteis sem saber de que destino vieram."
+    "body": "Onde quer que o backup esteja guardado, contém sempre os mesmos três blocos descritos em <em>Como funciona</em>: o sistema de ficheiros (<code>rootfs/</code>), os metadados (<code>metadata/</code>) e o manifesto (<code>manifest.json</code>). Extrair um arquivo local <code>.tar.zst</code>, restaurar um <code>.pxar</code> a partir do PBS ou extrair um arquivo Borg produzem sempre uma árvore de diretórios idêntica. Por isso, o restauro lê sempre os mesmos ficheiros, seja qual for o destino de onde vem o backup."
   },
   "extractStandalone": {
     "heading": "Extraindo um backup fora de ProxMenux",

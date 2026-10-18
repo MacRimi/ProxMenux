@@ -88,7 +88,7 @@
     "updatesLinkLabel": "dedicated Updates page",
     "updatesLinkTail": "for integrated and custom updaters, Docker recreation, bulk selection, safety options and scheduling.",
     "mountsTitle": "Tab 4 — Mounts (LXC only, when present)",
-    "mountsImageAlt": "LXC drill-in modal — Mounts tab listing every mount point the container is using: PVE volumes, host binds, binds from PVE storage and ad-hoc NFS/CIFS mounts the operator mounted from inside the CT. Each card carries a type badge, capacity bar, used/total bytes, mount options, and a colour-coded state dot (green healthy, amber readonly/divergent, red stale)",
+    "mountsImageAlt": "LXC drill-in modal — Mounts tab listing every mount point the container is using: PVE volumes, host binds, binds from PVE storage and ad-hoc NFS/CIFS mounts the user mounted from inside the CT. Each card carries a type badge, capacity bar, used/total bytes, mount options, and a colour-coded state dot (green healthy, amber readonly/divergent, red stale)",
     "mountsImageCaption": "Mounts tab — only renders for LXC containers, and only when at least one mount point or ad-hoc remote mount is present. A CT without mounts gets no tab.",
     "mountsIntro": "Proxmox's own UI shows the mount-point entries defined in the container config (<code>mpX</code>) but stops there — anything you mount from inside the CT later (<code>mount.cifs</code>, NFS via <code>autofs</code>, …) is invisible. This tab merges <strong>both views</strong>: the configured mounts <strong>and</strong> the runtime mounts ProxMenux probes from inside the container, with a per-mount health status and a capacity bar wherever the backend can resolve one.",
     "mountTypesTitle": "Types of mount detected",

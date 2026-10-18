@@ -127,7 +127,7 @@
   },
   "notifications": {
     "heading": "Notificações",
-    "body": "Cada execução programada dispara os mesmos eventos <code>hb_notify_lifecycle</code> que o fluxo interativo (<code>start</code>, <code>complete</code>, <code>fail</code>). Se os canais de notificação estiverem configurados no Monitor, os trabalhos não vigiados mostram seus resultados da mesma forma que backups manuais – um usuário não precisa verificar o log para saber se um trabalho foi bem sucedido."
+    "body": "Cada execução agendada dispara os mesmos eventos <code>hb_notify_lifecycle</code> que o fluxo interativo (<code>start</code>, <code>complete</code>, <code>fail</code>). Se houver canais de notificação configurados no Monitor, as tarefas não vigiadas comunicam os seus resultados da mesma forma que os backups manuais: um utilizador não precisa de consultar o registo para saber se uma tarefa foi bem-sucedida."
   },
   "whereNext": {
     "heading": "Para onde ir a seguir",

@@ -104,6 +104,7 @@
               "Das neue Image wird Schicht für Schicht verifiziert, bevor der CT stoppt. Ein Download, der beschädigt ankommt, wird ein zweites Mal abgerufen; ein bereits zwischengespeichertes Image, das den Check nicht besteht, wird erneut heruntergeladen.",
               "Nach der Installation in Proxmox VE geänderte Einstellungen (Arbeitsspeicher, Swap, Kerne, CPU-Limit, CPU-Priorität, Start mit dem Knoten) bleiben erhalten und werden in den neuen Vertrag übernommen.",
               "Die LAN-Schnittstelle, die die Arr-Suite und Multi-Container-Anwendungen hinzufügen (<code>net1</code>) und die Startreihenfolge (<code>startup</code>) werden an den neuen Container zurückgegeben.",
+              "Ein Host-Verzeichnis wird an seinem Pfad und an dem Dateisystem erkannt, auf dem es liegt, nicht an dem Gerätenamen, den der Host seinem Datenträger gibt. Ein USB- oder Netzwerkdatenträger, der unter einem anderen Namen zurückkehrt, ist daher weiterhin dasselbe Verzeichnis. Ist sein Datenträger nicht angeschlossen, stoppt das Update, bevor der CT gestoppt wird, und nennt das fehlende Verzeichnis.",
               "Jeder andere Unterschied zwischen dem CT und seinem Vertrag stoppt das Update, bevor der CT gestoppt wird."
             ]
           }

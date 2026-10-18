@@ -127,7 +127,7 @@
   },
   "notifications": {
     "heading": "Benachrichtigungen",
-    "body": "Jeder geplante Lauf feuert die gleichen <code>hb_notify_lifecycle</code>-Ereignisse ab wie der interaktive Fluss (<code>start</code>, <code>complete</code>, <code>fail</code>). Wenn Benachrichtigungskanäle im Monitor konfiguriert sind, tauchen unbeaufsichtigte Jobs auf die gleiche Weise wie manuelle Backups auf - ein Benutzer muss das Protokoll nicht überprüfen, um zu wissen, ob ein Job erfolgreich war."
+    "body": "Jeder geplante Lauf löst dieselben <code>hb_notify_lifecycle</code>-Ereignisse aus wie der interaktive Ablauf (<code>start</code>, <code>complete</code>, <code>fail</code>). Sind im Monitor Benachrichtigungskanäle konfiguriert, melden unbeaufsichtigte Jobs ihre Ergebnisse auf die gleiche Weise wie manuelle Backups – ein Benutzer muss das Protokoll nicht prüfen, um zu wissen, ob ein Job erfolgreich war."
   },
   "whereNext": {
     "heading": "Wohin Sie als nächstes gehen",

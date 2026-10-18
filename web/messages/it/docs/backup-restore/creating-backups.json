@@ -118,7 +118,7 @@
       {
         "step": "5",
         "name": "Notifica (start)",
-        "detail": "Viene eseguito <code>hb_notify_lifecycle \"start\"</code>. Se le notifiche sono configurate in Monitor, viene inviato all’utente l’evento <em>Backup dell’host avviato</em>. Non viene inviato nulla se non sono configurati canali."
+        "detail": "Viene eseguito <code>hb_notify_lifecycle \"start\"</code>. Se le notifiche sono configurate nel Monitor, viene inviato all’utente l’evento <em>Backup dell’host avviato</em>. Non viene inviato nulla se non sono configurati canali."
       }
     ]
   },

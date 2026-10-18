@@ -127,7 +127,7 @@
   },
   "notifications": {
     "heading": "Notifications",
-    "body": "Chaque exécution programmée déclenche les mêmes événements <code>hb_notify_lifecycle</code> que le flux interactif (<code>start</code>, <code>complete</code>, <code>fail</code>). Si les canaux de notification sont configurés dans le moniteur, les tâches non surveillées présentent leurs résultats de la même manière que les sauvegardes manuelles, un utilisateur n'a pas besoin de vérifier le journal pour savoir si une tâche a réussi."
+    "body": "Chaque exécution programmée déclenche les mêmes événements <code>hb_notify_lifecycle</code> que le flux interactif (<code>start</code>, <code>complete</code>, <code>fail</code>). Si des canaux de notification sont configurés dans Monitor, les tâches sans surveillance présentent leurs résultats de la même manière que les sauvegardes manuelles : un utilisateur n’a pas besoin de consulter le journal pour savoir si une tâche a réussi."
   },
   "whereNext": {
     "heading": "Où aller ensuite?",

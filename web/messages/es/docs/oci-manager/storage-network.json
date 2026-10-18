@@ -38,7 +38,7 @@
               },
               {
                 "title": "Almacenamiento y tamaño",
-                "body": "Se crea un disco del contenedor en un almacenamiento de Proxmox VE con el tamaño indicado. La instalación predeterminada usa <code>local-lvm</code>; la avanzada pregunta el almacenamiento de cada ruta justo antes de su tamaño y propone el del rootfs. El disco aparece como <code>vm-VMID-disk-N</code> y se conecta como <code>mpN</code>."
+                "body": "Un disco del contenedor se crea en un almacenamiento de Proxmox VE con el tamaño indicado. La instalación por defecto pregunta una sola vez el almacenamiento del contenedor y sus datos cuando el nodo tiene más de uno; la instalación avanzada pregunta el almacenamiento de cada ruta justo antes de su tamaño y propone el del rootfs. Aparece como <code>vm-VMID-disk-N</code> y se conecta como <code>mpN</code>."
               },
               {
                 "title": "Directorio del host",
@@ -109,6 +109,9 @@
         },
         {
           "p": "El rootfs se reserva para los binarios y el contenido de la imagen. Una actualización o recreación lo sustituye sin tocar ninguno de los dos tipos de punto de montaje."
+        },
+        {
+          "p": "Un directorio del host se monta con todo lo que el host tiene montado dentro de él. Un directorio como <code>/mnt/pve</code> muestra en el contenedor sus recursos de red, discos y datasets, y lo que el host monta o desmonta allí después aparece o desaparece sin reiniciar el contenedor. Un directorio añadido como solo lectura lo es junto con lo que tiene montado dentro al iniciar el contenedor. Un sistema de archivos que el host monta después llega con los permisos con los que el host lo monta, y pasa también a solo lectura al reiniciar el contenedor."
         }
       ]
     },

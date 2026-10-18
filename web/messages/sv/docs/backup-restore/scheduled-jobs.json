@@ -127,7 +127,7 @@
   },
   "notifications": {
     "heading": "Aviseringar",
-    "body": "Varje schemalagd körning utlöser samma <code>hb_notify_lifecycle</code> händelser som det interaktiva flödet (<code>start</code>, <code>complete</code>, <code>fail</code>). Om meddelandekanaler är konfigurerade i Monitor, obevakade jobb visar sina resultat på samma sätt manuella säkerhetskopior gör - en användare behöver inte kontrollera loggen för att veta om ett jobb lyckades."
+    "body": "Varje schemalagd körning utlöser samma <code>hb_notify_lifecycle</code>-händelser som det interaktiva flödet (<code>start</code>, <code>complete</code>, <code>fail</code>). Om aviseringskanaler är konfigurerade i Monitor visar obevakade jobb sina resultat på samma sätt som manuella säkerhetskopior – en användare behöver inte kontrollera loggen för att veta om ett jobb lyckades."
   },
   "whereNext": {
     "heading": "Nästa steg",

@@ -104,6 +104,7 @@
               "Nový obraz sa overí vrstvu po vrstve ešte pred zastavením CT. Poškodené stiahnutie sa zopakuje druhýkrát; obraz už uložený vo vyrovnávacej pamäti, ktorý neprejde kontrolou, sa stiahne znova.",
               "Nastavenia zmenené v Proxmox VE po inštalácii (pamäť, swap, jadrá, limit CPU, priorita CPU, spustenie spolu s uzlom) sa zachovajú a prenesú do nového kontraktu.",
               "Rozhranie LAN, ktoré pridáva súprava Arr a aplikácie s viacerými kontajnermi (<code>net1</code>), aj poradie spúšťania (<code>startup</code>) sa bez zmeny prenesú do nového kontajnera.",
+              "Adresár hostiteľa sa rozpoznáva podľa svojej cesty a súborového systému, na ktorom sa nachádza, nie podľa názvu zariadenia, ktorý hostiteľ dáva jeho disku, takže disk USB alebo sieťový disk, ktorý sa vráti pod iným názvom, je stále ten istý adresár. Keď jeho disk nie je pripojený, aktualizácia sa zastaví pred zastavením CT a uvedie chýbajúci adresár.",
               "Akýkoľvek iný rozdiel medzi CT a jeho zmluvou zastaví aktualizáciu pred zastavením CT."
             ]
           }

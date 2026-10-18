@@ -121,7 +121,7 @@
       }
     ],
     "schemaTitle": "Potvrdenie schémy",
-    "schemaBody": "Manifest sa overuje podľa <code>scripts/backup_restore/schema/manifest.schema.json</code>. Príkaz <code>build_manifest.sh --validate</code> spustí validáciu JSON Schema v Pythone, ktorá vyžaduje <code>python3</code> a <code>jsonschema</code>. Ak modul chýba, kontrola sa bez upozornenia preskočí. Validácia slúži najmä vývojárom, nie je závislosťou potrebnou pri bežnom behu."
+    "schemaBody": "ProxMenux obsahuje šablónu, ktorá opisuje, ktoré polia musí manifest obsahovať a aký tvar má každé z nich. Pri vytváraní zálohy možno manifest automaticky overiť podľa tejto šablóny, takže zberač, ktorý vytvoril chybný JSON alebo pole s preklepom, sa odhalí okamžite. Kontrola je určená na vývoj samotného ProxMenux: v systéme, kde nie je nainštalovaná, záloha funguje ako zvyčajne a manifest sa vytvorí rovnako."
   },
   "applications": {
     "heading": "Inventár aplikácií",

@@ -104,6 +104,7 @@
               "La nuova immagine viene verificata livello per livello prima di arrestare il CT. Un download danneggiato viene ripetuto una seconda volta; un’immagine già nella cache che non supera la verifica viene scaricata di nuovo.",
               "Le impostazioni modificate in Proxmox VE dopo l’installazione (memoria, swap, core, limite e priorità della CPU, avvio con il nodo) vengono conservate e incluse nel nuovo contratto.",
               "L'interfaccia LAN che la suite Arr e le applicazioni multi-container aggiungono (<code>net1</code>) e l'ordine di avvio (<code>startup</code>) sono restituiti al nuovo contenitore come sono.",
+              "Una directory dell’host viene riconosciuta dal suo percorso e dal filesystem su cui si trova, non dal nome di dispositivo che l’host assegna al suo disco, quindi un disco USB o di rete che ricompare con un altro nome resta la stessa directory. Quando il suo disco non è collegato, l’aggiornamento si interrompe prima che il CT venga arrestato e indica la directory mancante.",
               "Qualsiasi altra differenza tra il CT e il suo contratto interrompe l’aggiornamento prima che il CT venga arrestato."
             ]
           }

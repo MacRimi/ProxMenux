@@ -104,6 +104,7 @@
               "Den nya avbildningen verifieras lager för lager innan CT:n stoppas. En skadad nedladdning hämtas en andra gång; en redan cachad avbildning som inte klarar kontrollen laddas ned igen.",
               "Inställningar som ändrats i Proxmox VE efter installationen (minne, swap, kärnor, CPU-gräns, CPU-prioritet och start med noden) bevaras och förs över till det nya kontraktet.",
               "LAN-gränssnittet som Arr-sviten och multi-container-applikationerna lägger till (<code>net1</code>) och startordern (<code>startup</code>) ges tillbaka till den nya containern som de är.",
+              "En katalog på värden känns igen på sin sökväg och på filsystemet den ligger på, inte på det enhetsnamn som värden ger dess disk, så en USB- eller nätverksdisk som kommer tillbaka under ett annat namn är fortfarande samma katalog. När dess disk inte är ansluten stoppar uppdateringen innan CT stoppas och anger vilken katalog som saknas.",
               "Alla andra skillnader mellan CT och dess kontrakt stoppar uppdateringen innan CT stoppas."
             ]
           }

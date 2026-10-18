@@ -19,9 +19,18 @@
         {
           "flow": {
             "nodes": [
-              { "label": "Host inventory", "detail": "/dev/dri/renderD128\nGID 993 · Intel" },
-              { "label": "ProxMenux", "detail": "vendor and\npermissions checked" },
-              { "label": "LXC", "detail": "same device\neffective GID" }
+              {
+                "label": "Host inventory",
+                "detail": "/dev/dri/renderD128\nGID 993 · Intel"
+              },
+              {
+                "label": "ProxMenux",
+                "detail": "vendor and\npermissions checked"
+              },
+              {
+                "label": "LXC",
+                "detail": "same device\neffective GID"
+              }
             ]
           }
         }
@@ -33,12 +42,32 @@
       "blocks": [
         {
           "table": {
-            "headers": ["Source", "What is read", "What the installer does"],
+            "headers": [
+              "Source",
+              "What is read",
+              "What the installer does"
+            ],
             "rows": [
-              ["Docker Compose", "<code>devices</code>, <code>group_add</code>, <code>deploy.resources</code> and NVIDIA requests", "Each requirement becomes a device request shown for review"],
-              ["Catalog profile", "The GPU, Coral, OpenCL, USB or FUSE support the application actually has", "Only the options validated for that image are offered"],
-              ["Image metadata and documentation", "VA-API, Selkies, LinuxServer mods or the NVIDIA runtime", "The documented variables and preparation are added"],
-              ["User selection", "CPU only, Intel/AMD, OpenCL, NVIDIA or an optional device", "The selection is stored in the instance contract"]
+              [
+                "Docker Compose",
+                "<code>devices</code>, <code>group_add</code>, <code>deploy.resources</code> and NVIDIA requests",
+                "Each requirement becomes a device request shown for review"
+              ],
+              [
+                "Catalog profile",
+                "The GPU, Coral, OpenCL, USB or FUSE support the application actually has",
+                "Only the options validated for that image are offered"
+              ],
+              [
+                "Image metadata and documentation",
+                "VA-API, Selkies, LinuxServer mods or the NVIDIA runtime",
+                "The documented variables and preparation are added"
+              ],
+              [
+                "User selection",
+                "CPU only, Intel/AMD, OpenCL, NVIDIA or an optional device",
+                "The selection is stored in the instance contract"
+              ]
             ]
           }
         },
@@ -57,16 +86,52 @@
       "blocks": [
         {
           "table": {
-            "headers": ["Type", "Identity", "Validation"],
+            "headers": [
+              "Type",
+              "Identity",
+              "Validation"
+            ],
             "rows": [
-              ["Intel/AMD DRM", "<code>/dev/dri/renderD*</code> and <code>/sys/class/drm/NODE/device/vendor</code>", "A character device with vendor <code>0x8086</code> (Intel) or <code>0x1002</code> (AMD)"],
-              ["AMD OpenCL", "The render node, plus <code>/dev/kfd</code> when the profile needs it", "Existence, type, vendor, permissions and declared compatibility"],
-              ["AMD ROCm", "The render node, <code>/dev/kfd</code> and the generation the compute driver reports in <code>/sys/class/kfd/kfd/topology/nodes/*/properties</code>", "A generation the ROCm image of the application carries kernels for, the RDNA2 GPUs it names and newer ones, is offered as it is. The other GPUs of those families, such as the Radeon 680M and 780M, are offered as experimental and are never the proposed option: ROCm does not support them officially, the application presents them as the generation of their family (<code>HSA_OVERRIDE_GFX_VERSION</code>) and the installer asks for confirmation before the larger image is downloaded. An older GPU, such as the integrated graphics of a Ryzen 5000U, is not offered and Immich keeps recognition on the CPU"],
-              ["NVIDIA", "<code>nvidia-smi</code> and <code>nvidia-container-cli</code>", "GPU, UUID, PCI bus, driver version, Toolkit, <code>/dev/nvidia*</code> nodes, binaries and libraries"],
-              ["Coral PCIe/M.2", "<code>/dev/apex_N</code> and its link in <code>/sys/dev/char/MAJOR:MINOR</code>", "Character node, major/minor, owner, GID and permissions"],
-              ["USB and serial", "<code>/dev/ttyUSB*</code>, <code>/dev/ttyACM*</code> or <code>/dev/bus/usb/BBB/DDD</code>", "Character node; for USB also vendor, product and serial when sysfs publishes them"],
-              ["KVM, TUN, FUSE, video and generic SCSI", "<code>/dev/kvm</code>, <code>/dev/net/tun</code>, <code>/dev/fuse</code>, <code>/dev/videoN</code> or <code>/dev/sgN</code>", "Supported path, node type and effective permissions"],
-              ["Optical drive", "<code>/dev/srN</code>", "A block device"]
+              [
+                "Intel/AMD DRM",
+                "<code>/dev/dri/renderD*</code> and <code>/sys/class/drm/NODE/device/vendor</code>",
+                "A character device with vendor <code>0x8086</code> (Intel) or <code>0x1002</code> (AMD)"
+              ],
+              [
+                "AMD OpenCL",
+                "The render node, plus <code>/dev/kfd</code> when the profile needs it",
+                "Existence, type, vendor, permissions and declared compatibility"
+              ],
+              [
+                "AMD ROCm",
+                "The render node, <code>/dev/kfd</code> and the generation the compute driver reports in <code>/sys/class/kfd/kfd/topology/nodes/*/properties</code>",
+                "A GPU of a generation the application's ROCm image supports (the RDNA2 GPUs it names, and newer ones) is offered as it is. Other GPUs of those families, such as the Radeon 680M and 780M, are offered as experimental and are never the proposed option. ROCm does not support them officially: the application presents them as the generation of their family (<code>HSA_OVERRIDE_GFX_VERSION</code>), and the installer asks for confirmation before downloading the larger image. An older GPU, such as the integrated graphics of a Ryzen 5000U, is not offered, and Immich keeps recognition on the CPU"
+              ],
+              [
+                "NVIDIA",
+                "<code>nvidia-smi</code> and <code>nvidia-container-cli</code>",
+                "GPU, UUID, PCI bus, driver version, Toolkit, <code>/dev/nvidia*</code> nodes, binaries and libraries"
+              ],
+              [
+                "Coral PCIe/M.2",
+                "<code>/dev/apex_N</code> and its link in <code>/sys/dev/char/MAJOR:MINOR</code>",
+                "Character node, major/minor, owner, GID and permissions"
+              ],
+              [
+                "USB and serial",
+                "<code>/dev/ttyUSB*</code>, <code>/dev/ttyACM*</code> or <code>/dev/bus/usb/BBB/DDD</code>",
+                "Character node; for USB also vendor, product and serial when sysfs publishes them"
+              ],
+              [
+                "KVM, TUN, FUSE, video and generic SCSI",
+                "<code>/dev/kvm</code>, <code>/dev/net/tun</code>, <code>/dev/fuse</code>, <code>/dev/videoN</code> or <code>/dev/sgN</code>",
+                "Supported path, node type and effective permissions"
+              ],
+              [
+                "Optical drive",
+                "<code>/dev/srN</code>",
+                "A block device"
+              ]
             ]
           }
         }
@@ -79,12 +144,30 @@
         {
           "steps": {
             "items": [
-              { "title": "The template offers its profiles", "body": "For example CPU only, Intel/AMD VA-API, AMD OpenCL, Intel OpenCL or NVIDIA. The options belong to the image, not to a common menu." },
-              { "title": "A profile is chosen", "body": "It defines the device nodes, environment, mods or runtime the application needs." },
-              { "title": "A path is proposed", "body": "For DRM, <code>/dev/dri/renderD128</code>, which can be changed on a host with several render nodes. For USB or serial, the concrete node is selected." },
-              { "title": "Validation", "body": "Existence, type, allowed vendor, permissions and GID are checked. A mismatch stops the operation." },
-              { "title": "The contract is written", "body": "Path, mode, GID, write access and profile are recorded for updates and recreations." },
-              { "title": "Attach and test", "body": "<code>pct set</code> adds the <code>devN</code> entry and access is then checked inside the LXC. LinuxServer images are also checked as user <code>abc</code>." }
+              {
+                "title": "The template offers its profiles",
+                "body": "For example CPU only, Intel/AMD VA-API, AMD OpenCL, Intel OpenCL or NVIDIA. The options belong to the image, not to a common menu."
+              },
+              {
+                "title": "A profile is chosen",
+                "body": "It defines the device nodes, environment, mods or runtime the application needs."
+              },
+              {
+                "title": "A path is proposed",
+                "body": "For DRM, <code>/dev/dri/renderD128</code>, which can be changed on a host with several render nodes. For USB or serial, the concrete node is selected."
+              },
+              {
+                "title": "Validation",
+                "body": "Existence, type, allowed vendor, permissions and GID are checked. A mismatch stops the operation."
+              },
+              {
+                "title": "The contract is written",
+                "body": "Path, mode, GID, write access and profile are recorded for updates and recreations."
+              },
+              {
+                "title": "Attach and test",
+                "body": "<code>pct set</code> adds the <code>devN</code> entry and access is then checked inside the LXC. LinuxServer images are also checked as user <code>abc</code>."
+              }
             ]
           }
         }
@@ -98,10 +181,22 @@
         {
           "codeGrid": {
             "items": [
-              { "title": "Intel/AMD VA-API", "code": "dev0: path=/dev/dri/renderD128,mode=0660,gid=993,deny-write=0" },
-              { "title": "Coral PCIe/M.2", "code": "dev0: path=/dev/apex_0,mode=0660,gid=GID,deny-write=0" },
-              { "title": "A specific USB device", "code": "dev0: path=/dev/bus/usb/003/004,mode=0660,gid=GID,deny-write=0" },
-              { "title": "AMD OpenCL", "code": "dev0: path=/dev/dri/renderD128,mode=0660,gid=GID,deny-write=0\ndev1: path=/dev/kfd,mode=0660,gid=GID,deny-write=0" }
+              {
+                "title": "Intel/AMD VA-API",
+                "code": "dev0: path=/dev/dri/renderD128,mode=0660,gid=993,deny-write=0"
+              },
+              {
+                "title": "Coral PCIe/M.2",
+                "code": "dev0: path=/dev/apex_0,mode=0660,gid=GID,deny-write=0"
+              },
+              {
+                "title": "A specific USB device",
+                "code": "dev0: path=/dev/bus/usb/003/004,mode=0660,gid=GID,deny-write=0"
+              },
+              {
+                "title": "AMD OpenCL",
+                "code": "dev0: path=/dev/dri/renderD128,mode=0660,gid=GID,deny-write=0\ndev1: path=/dev/kfd,mode=0660,gid=GID,deny-write=0"
+              }
             ]
           }
         },
@@ -116,13 +211,37 @@
       "blocks": [
         {
           "table": {
-            "headers": ["Profile", "Translation", "Offered when"],
+            "headers": [
+              "Profile",
+              "Translation",
+              "Offered when"
+            ],
             "rows": [
-              ["Intel/AMD VA-API", "<code>/dev/dri</code> render node", "The application supports video acceleration"],
-              ["OpenCL", "Render node, <code>/dev/kfd</code> when needed and the official mod", "The image or profile documents it"],
-              ["NVIDIA", "Driver devices and libraries of the host", "The host has a working driver and the NVIDIA Container Toolkit"],
-              ["Coral", "<code>/dev/apex_0</code> or the USB bus", "The profile declares Coral support (Frigate)"],
-              ["USB, serial, FUSE", "A single device, a validated tree or an LXC feature", "The contract asks for it"]
+              [
+                "Intel/AMD VA-API",
+                "<code>/dev/dri</code> render node",
+                "The application supports video acceleration"
+              ],
+              [
+                "OpenCL",
+                "Render node, <code>/dev/kfd</code> when needed and the official mod",
+                "The image or profile documents it"
+              ],
+              [
+                "NVIDIA",
+                "Driver devices and libraries of the host",
+                "The host has a working driver and the NVIDIA Container Toolkit"
+              ],
+              [
+                "Coral",
+                "<code>/dev/apex_0</code> or the USB bus",
+                "The profile declares Coral support (Frigate)"
+              ],
+              [
+                "USB, serial, FUSE",
+                "A single device, a validated tree or an LXC feature",
+                "The contract asks for it"
+              ]
             ]
           }
         }
@@ -145,7 +264,9 @@
           "p": "These two commands on the host show whether the driver and the Toolkit are available:"
         },
         {
-          "shell": { "code": "nvidia-smi -L\nnvidia-container-cli --version" }
+          "shell": {
+            "code": "nvidia-smi -L\nnvidia-container-cli --version"
+          }
         },
         {
           "p": "On a host where the driver was installed by other means, the Toolkit is installed from the official stable repository:"
@@ -159,7 +280,9 @@
           "p": "The inventory OCI manager Apps uses is the output of:"
         },
         {
-          "shell": { "code": "nvidia-container-cli list --device all --libraries --binaries --firmwares --ipcs" }
+          "shell": {
+            "code": "nvidia-container-cli list --device all --libraries --binaries --firmwares --ipcs"
+          }
         },
         {
           "calloutInfo": {
@@ -170,10 +293,26 @@
         {
           "cards": {
             "items": [
-              { "icon": "cpu", "title": "Inventory from the driver", "body": "<code>nvidia-container-cli</code> lists the device nodes, binaries, firmware and libraries of the installed driver." },
-              { "icon": "refresh", "title": "No fixed version", "body": "The template does not name library files. The profile is generated from the current host." },
-              { "icon": "shield", "title": "Read-only mounts", "body": "The host libraries are mounted read-only instead of being copied into the container." },
-              { "icon": "hardDrive", "title": "Driver changes", "body": "After a driver change the inventory is generated again before the affected LXCs start." }
+              {
+                "icon": "cpu",
+                "title": "Inventory from the driver",
+                "body": "<code>nvidia-container-cli</code> lists the device nodes, binaries, firmware and libraries of the installed driver."
+              },
+              {
+                "icon": "refresh",
+                "title": "No fixed version",
+                "body": "The template does not name library files. The profile is generated from the current host."
+              },
+              {
+                "icon": "shield",
+                "title": "Read-only mounts",
+                "body": "The host libraries are mounted read-only instead of being copied into the container."
+              },
+              {
+                "icon": "hardDrive",
+                "title": "Driver changes",
+                "body": "After a driver change the inventory is generated again before the affected LXCs start."
+              }
             ]
           }
         },
@@ -209,12 +348,32 @@
       "blocks": [
         {
           "table": {
-            "headers": ["Request", "Translation", "Scope"],
+            "headers": [
+              "Request",
+              "Translation",
+              "Scope"
+            ],
             "rows": [
-              ["<code>/dev/dvb</code>, <code>/dev/snd</code> or <code>/dev/bus/usb</code>", "Each character node of the tree gets its own <code>devN</code> entry with the host mode and GID", "Only the requested tree, not the rest of <code>/dev</code>"],
-              ["<code>/dev/fuse</code>", "The node and, when the profile needs it, the <code>fuse=1</code> feature", "FUSE alone does not publish mounts to other LXCs"],
-              ["<code>/dev/net/tun</code>", "A <code>devN</code> entry at the same path inside the LXC", "The VPN or network configuration stays in the application"],
-              ["<code>/dev/kvm</code>", "A validated <code>devN</code> entry", "Offered only when the contract asks for it"]
+              [
+                "<code>/dev/dvb</code>, <code>/dev/snd</code> or <code>/dev/bus/usb</code>",
+                "Each character node of the tree gets its own <code>devN</code> entry with the host mode and GID",
+                "Only the requested tree, not the rest of <code>/dev</code>"
+              ],
+              [
+                "<code>/dev/fuse</code>",
+                "The node and, when the profile needs it, the <code>fuse=1</code> feature",
+                "FUSE alone does not publish mounts to other LXCs"
+              ],
+              [
+                "<code>/dev/net/tun</code>",
+                "A <code>devN</code> entry at the same path inside the LXC",
+                "The VPN or network configuration stays in the application"
+              ],
+              [
+                "<code>/dev/kvm</code>",
+                "A validated <code>devN</code> entry",
+                "Offered only when the contract asks for it"
+              ]
             ]
           }
         }

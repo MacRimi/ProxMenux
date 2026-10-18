@@ -38,7 +38,7 @@
               },
               {
                 "title": "Armazenamento e tamanho",
-                "body": "É criado um disco do contentor num armazenamento do Proxmox VE com o tamanho indicado. A instalação predefinida utiliza <code>local-lvm</code>; a avançada pergunta o armazenamento de cada caminho imediatamente antes do tamanho e propõe o do rootfs. O disco aparece como <code>vm-VMID-disk-N</code> e é associado como <code>mpN</code>."
+                "body": "É criado um disco do contentor num armazenamento do Proxmox VE com o tamanho indicado. A instalação predefinida pergunta uma única vez o armazenamento do contentor e dos seus dados quando o nó tem mais do que um; a avançada pergunta o armazenamento de cada caminho imediatamente antes do tamanho e propõe o do rootfs. O disco aparece como <code>vm-VMID-disk-N</code> e é associado como <code>mpN</code>."
               },
               {
                 "title": "Diretório do host",
@@ -109,6 +109,9 @@
         },
         {
           "p": "O rootfs fica reservado para os binários e o conteúdo da imagem. Uma atualização ou recriação substitui-o sem tocar em nenhum dos dois tipos de ponto de montagem."
+        },
+        {
+          "p": "Um diretório do host é montado com tudo o que o host montou dentro dele. Um diretório como <code>/mnt/pve</code> mostra no contentor as suas partilhas de rede, discos e datasets, e o que o host lá montar ou desmontar mais tarde aparece ou desaparece sem reiniciar o contentor. Um diretório adicionado só de leitura fica só de leitura juntamente com o que estiver montado dentro dele quando o contentor arranca. Um sistema de ficheiros que o host monte depois chega com as permissões com que o host o monta e passa também a só de leitura quando o contentor é reiniciado."
         }
       ]
     },

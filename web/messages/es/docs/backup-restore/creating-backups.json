@@ -118,7 +118,7 @@
       {
         "step": "5",
         "name": "Notificación (start)",
-        "detail": "Se dispara <code>hb_notify_lifecycle \"start\"</code>. Si las notificaciones están configuradas en el Monitor, se emite un evento usuario-facing <em>Host backup started</em>. Silencioso si no hay canales configurados."
+        "detail": "Se dispara <code>hb_notify_lifecycle \"start\"</code>. Si las notificaciones están configuradas en el Monitor, se emite el evento <em>Host backup started</em>, visible para el usuario. Si no hay canales configurados, no se envía nada."
       }
     ]
   },

@@ -121,7 +121,7 @@
       }
     ],
     "schemaTitle": "Validierung des Schemas",
-    "schemaBody": "Das Manifest bestätigt gegen <code>scripts/backup_restore/schema/manifest.schema.json</code>. Das Ausführen von <code>build_manifest.sh --validate</code> löst eine Python-seitige JSON-Schemavalidierung aus (erfordert <code>python3</code> + <code>jsonschema</code>). Wenn das Modul nicht vorhanden ist, wird die Überprüfung still übersprungen - die Validierung ist in erster Linie eine Entwicklerhilfe, keine Laufzeitabhängigkeit."
+    "schemaBody": "ProxMenux liefert eine Vorlage mit, die beschreibt, welche Felder das Manifest enthalten muss und welche Form jedes Feld hat. Beim Erstellen eines Backups kann das Manifest automatisch mit dieser Vorlage abgeglichen werden, sodass ein Collector, der fehlerhaftes JSON oder ein falsch geschriebenes Feld erzeugt hat, sofort erkannt wird. Die Prüfung ist für die Entwicklung von ProxMenux selbst gedacht: Auf einem System, auf dem sie nicht installiert ist, funktioniert das Backup wie gewohnt, und das Manifest wird trotzdem erzeugt."
   },
   "applications": {
     "heading": "Das Anwendungsinventar",

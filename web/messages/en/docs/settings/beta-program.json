@@ -18,7 +18,7 @@
     "heading": "Why this option exists",
     "intro": "ProxMenux ships from two git branches:",
     "items": [
-      "<strong>Stable</strong> — the <code>main</code> branch. What the README points at, what most operators want, with a slower release cadence and only changes that have already been through beta validation.",
+      "<strong>Stable</strong> — the <code>main</code> branch. What the README points at, what most users want, with a slower release cadence and only changes that have already been through beta validation.",
       "<strong>Beta</strong> — the <code>develop</code> branch. Newer features and Monitor builds; carries the tag the next stable release will inherit. Some things may not work perfectly — that's the deal you sign up for and the way new features get tested before they ship."
     ],
     "outro": "Hopping between channels used to require remembering the right installer URL, copying it in from the README, and editing <code>config.json</code> by hand if something got out of sync. The unified option does the whole flow as a single guided action."
@@ -75,7 +75,7 @@
   },
   "unifiedCallout": {
     "title": "Why both directions are now one option",
-    "body": "The previous “Deactivate Beta Program” only existed if the host had ever joined the beta. Operators wanting to <em>join</em> had to find the beta installer URL elsewhere; operators wanting to <em>leave</em> sometimes had to manually clean up <code>beta_*</code> metadata to be sure. The unified <strong>Change Release Channel</strong> option always shows up, makes the current channel explicit, and treats both directions as the same kind of operation — runnable, repeatable, idempotent."
+    "body": "The previous “Deactivate Beta Program” only existed if the host had ever joined the beta. Users wanting to <em>join</em> had to find the beta installer URL elsewhere; users wanting to <em>leave</em> sometimes had to manually clean up <code>beta_*</code> metadata to be sure. The unified <strong>Change Release Channel</strong> option always shows up, makes the current channel explicit, and treats both directions as the same kind of operation — runnable, repeatable, idempotent."
   },
   "troubleshoot": {
     "heading": "Troubleshooting",

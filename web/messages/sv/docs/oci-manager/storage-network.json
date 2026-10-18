@@ -38,7 +38,7 @@
               },
               {
                 "title": "Lagring och storlek",
-                "body": "En containerdisk skapas på en Proxmox VE-lagring med den angivna storleken. Standardinstallationen använder <code>local-lvm</code>. Den avancerade installationen frågar efter lagring för varje sökväg strax före storleken och föreslår lagringen för rootfs. Disken visas som <code>vm-VMID-disk-N</code> och ansluts som <code>mpN</code>."
+                "body": "En containerdisk skapas på en Proxmox VE-lagring med den angivna storleken. Standardinstallationen frågar en gång efter lagringen för containern och dess data när noden har mer än en; den avancerade installationen frågar efter lagring för varje sökväg strax före storleken och föreslår lagringen för rootfs. Disken visas som <code>vm-VMID-disk-N</code> och ansluts som <code>mpN</code>."
               },
               {
                 "title": "Katalog på värden",
@@ -109,6 +109,9 @@
         },
         {
           "p": "Rootfs är reserverat för binärfilerna och avbildningens innehåll. En uppdatering eller ett återskapande ersätter det utan att röra någon av de två typerna av monteringspunkt."
+        },
+        {
+          "p": "En katalog på värden monteras med allt som värden har monterat i den. En katalog som <code>/mnt/pve</code> visar sina nätverksresurser, diskar och dataset i containern, och det som värden senare monterar eller avmonterar där dyker upp eller försvinner utan att containern startas om. En katalog som lagts till som skrivskyddad är skrivskyddad tillsammans med det som är monterat i den när containern startar. Ett filsystem som värden monterar efteråt kommer med de behörigheter som värden monterar det med, och blir också skrivskyddat när containern startas om."
         }
       ]
     },

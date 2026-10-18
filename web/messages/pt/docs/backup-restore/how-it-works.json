@@ -121,7 +121,7 @@
       }
     ],
     "schemaTitle": "Validação do esquema",
-    "schemaBody": "O manifesto valida contra <code>scripts/backup_restore/schema/manifest.schema.json</code>. Executar o <code>build_manifest.sh --validate</code> desencadeia uma validação do esquema JSON do lado Python (exige o <code>python3</code> + <code>jsonschema</code>). Se o módulo não estiver presente, a verificação é ignorada silenciosamente — a validação é principalmente um auxílio ao desenvolvedor, não uma dependência de execução."
+    "schemaBody": "O ProxMenux inclui um modelo que descreve os campos que o manifesto deve conter e o formato de cada um. Quando é gerado um backup, o manifesto pode ser verificado automaticamente face a esse modelo, pelo que um coletor que tenha produzido JSON malformado ou um campo mal escrito é detetado de imediato. A verificação destina-se ao desenvolvimento do próprio ProxMenux: num sistema que não a tenha instalada, o backup funciona normalmente e o manifesto é gerado na mesma."
   },
   "applications": {
     "heading": "O inventário de aplicativos",

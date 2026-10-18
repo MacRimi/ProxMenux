@@ -28,12 +28,30 @@
         {
           "steps": {
             "items": [
-              { "title": "Required paths", "body": "<code>/config</code>, <code>/data</code>, libraries, downloads and every volume the application declares are listed." },
-              { "title": "Location", "body": "Each path is placed on a disk of the container or on an existing host directory." },
-              { "title": "Storage and size", "body": "A container disk is created on a Proxmox VE storage with the size given. The default installation uses <code>local-lvm</code>; the advanced installation asks the storage of each path right before its size and proposes the one of the rootfs. It appears as <code>vm-VMID-disk-N</code> and is attached as <code>mpN</code>." },
-              { "title": "Host directory", "body": "A host directory is given by its path. A directory that does not exist is created, owned by the user the container maps." },
-              { "title": "Additional paths", "body": "More pairs of host path or volume and container path can be added before installing." },
-              { "title": "Summary", "body": "The complete mapping is shown before the CT is created and is stored in its instance contract." }
+              {
+                "title": "Required paths",
+                "body": "<code>/config</code>, <code>/data</code>, libraries, downloads and every volume the application declares are listed."
+              },
+              {
+                "title": "Location",
+                "body": "Each path is placed on a disk of the container or on an existing host directory."
+              },
+              {
+                "title": "Storage and size",
+                "body": "A container disk is created on a Proxmox VE storage with the size given. The default installation asks once for the storage of the container and its data when the node has more than one; the advanced installation asks the storage of each path right before its size and proposes the one of the rootfs. It appears as <code>vm-VMID-disk-N</code> and is attached as <code>mpN</code>."
+              },
+              {
+                "title": "Host directory",
+                "body": "A host directory is given by its path. A directory that does not exist is created, owned by the user the container maps."
+              },
+              {
+                "title": "Additional paths",
+                "body": "More pairs of host path or volume and container path can be added before installing."
+              },
+              {
+                "title": "Summary",
+                "body": "The complete mapping is shown before the CT is created and is stored in its instance contract."
+              }
             ]
           }
         }
@@ -45,20 +63,55 @@
       "blocks": [
         {
           "table": {
-            "headers": ["Property", "Container disk", "Host directory"],
+            "headers": [
+              "Property",
+              "Container disk",
+              "Host directory"
+            ],
             "rows": [
-              ["In the configuration", "<code>mpN: STORAGE:vm-VMID-disk-N,mp=/config,backup=1,size=16G</code>", "<code>mpN: /mnt/oci-shared/media,mp=/data/media</code>"],
-              ["Container backup (vzdump)", "Included, with <code>backup=1</code>", "Not included"],
-              ["Size", "Fixed; grown with a resize of the mount point", "The free space of the host filesystem or dataset"],
-              ["Other containers", "Mounted only by its own container", "The same directory can be mounted in several containers"],
-              ["Snapshots and restore", "Managed by Proxmox VE together with the CT", "Managed on the host storage"],
-              ["Removing the application", "Deleted with the container", "Kept, with its content"],
-              ["Moving the CT to another node", "Moves with the CT", "The same path has to exist on the other node"]
+              [
+                "In the configuration",
+                "<code>mpN: STORAGE:vm-VMID-disk-N,mp=/config,backup=1,size=16G</code>",
+                "<code>mpN: /mnt/oci-shared/media,mp=/data/media</code>"
+              ],
+              [
+                "Container backup (vzdump)",
+                "Included, with <code>backup=1</code>",
+                "Not included"
+              ],
+              [
+                "Size",
+                "Fixed; grown with a resize of the mount point",
+                "The free space of the host filesystem or dataset"
+              ],
+              [
+                "Other containers",
+                "Mounted only by its own container",
+                "The same directory can be mounted in several containers"
+              ],
+              [
+                "Snapshots and restore",
+                "Managed by Proxmox VE together with the CT",
+                "Managed on the host storage"
+              ],
+              [
+                "Removing the application",
+                "Deleted with the container",
+                "Kept, with its content"
+              ],
+              [
+                "Moving the CT to another node",
+                "Moves with the CT",
+                "The same path has to exist on the other node"
+              ]
             ]
           }
         },
         {
           "p": "The rootfs is reserved for the binaries and the content of the image. An update or a recreation replaces it without touching either kind of mount point."
+        },
+        {
+          "p": "A host directory is mounted with everything the host has mounted inside it. A directory such as <code>/mnt/pve</code> shows its network shares, disks and datasets in the container, and what the host mounts or unmounts there later appears or disappears without restarting the container. A directory added as read-only is read-only together with what is mounted inside it when the container starts. A filesystem the host mounts afterwards arrives with the permissions the host mounts it with, and becomes read-only as well when the container is restarted."
         }
       ]
     },
@@ -78,9 +131,18 @@
         {
           "flow": {
             "nodes": [
-              { "label": "Contract", "detail": "/config" },
-              { "label": "Location", "detail": "container disk\nor host directory" },
-              { "label": "LXC", "detail": "always /config\nfor the application" }
+              {
+                "label": "Contract",
+                "detail": "/config"
+              },
+              {
+                "label": "Location",
+                "detail": "container disk\nor host directory"
+              },
+              {
+                "label": "LXC",
+                "detail": "always /config\nfor the application"
+              }
             ],
             "caption": "The application sees the path the image publishes; only where it is stored changes."
           }
@@ -94,7 +156,10 @@
         {
           "mermaid": {
             "chartCode": "flowchart TB\n H[\"{{host}}<br/>/mnt/oci-shared/media\"]\n H --> Q[\"qBittorrent<br/>/data\"]\n H --> J[\"Jellyfin<br/>/data\"]\n H --> R[\"Radarr / Sonarr<br/>/data\"]\n Q -. \"{{config}}\" .-> QV[(\"/config mpN\")]\n J -. \"{{config}}\" .-> JV[(\"/config mpN\")]\n R -. \"{{config}}\" .-> RV[(\"/config mpN\")]",
-            "labels": { "host": "Host directory", "config": "own configuration" }
+            "labels": {
+              "host": "Host directory",
+              "config": "own configuration"
+            }
           }
         },
         {
@@ -110,10 +175,22 @@
         {
           "steps": {
             "items": [
-              { "title": "Container and remote", "body": "The VMID of the Rclone container, the exact name of the remote and, optionally, a path inside it." },
-              { "title": "Mount name and cache", "body": "The name of the mount and the VFS cache mode: <code>off</code>, <code>minimal</code>, <code>writes</code> or <code>full</code> (default)." },
-              { "title": "Published views", "body": "A common root, <code>/mnt/oci-shared</code> by default, holds a read/write view in <code>/mnt/oci-shared/remotes/NAME</code> and a read-only view in <code>/mnt/oci-shared/remotes-ro/NAME</code>." },
-              { "title": "Activation", "body": "After a confirmation, the CT is stopped, its start command and a Proxmox VE hookscript are set, and it is started again. The operation waits until both views are mounted on the host." }
+              {
+                "title": "Container and remote",
+                "body": "The VMID of the Rclone container, the exact name of the remote and, optionally, a path inside it."
+              },
+              {
+                "title": "Mount name and cache",
+                "body": "The name of the mount and the VFS cache mode: <code>off</code>, <code>minimal</code>, <code>writes</code> or <code>full</code> (default)."
+              },
+              {
+                "title": "Published views",
+                "body": "A common root, <code>/mnt/oci-shared</code> by default, holds a read/write view in <code>/mnt/oci-shared/remotes/NAME</code> and a read-only view in <code>/mnt/oci-shared/remotes-ro/NAME</code>."
+              },
+              {
+                "title": "Activation",
+                "body": "After a confirmation, the CT is stopped, its start command and a Proxmox VE hookscript are set, and it is started again. The operation waits until both views are mounted on the host."
+              }
             ]
           }
         },
@@ -133,17 +210,34 @@
         {
           "cards": {
             "items": [
-              { "icon": "network", "title": "Single application", "body": "Bridge and DHCP or a fixed CIDR address are chosen. The LXC has an address of its own and the summary shows the complete URLs of the services." },
-              { "icon": "waypoints", "title": "Multi-container application", "body": "A free subnet is found, a persistent private bridge is created and each member (application, database, cache) gets a fixed address on it." }
+              {
+                "icon": "network",
+                "title": "Single application",
+                "body": "Bridge and DHCP or a fixed CIDR address are chosen. The LXC has an address of its own and the summary shows the complete URLs of the services."
+              },
+              {
+                "icon": "waypoints",
+                "title": "Multi-container application",
+                "body": "A free subnet is found, a persistent private bridge is created and each member (application, database, cache) gets a fixed address on it."
+              }
             ]
           }
         },
         {
           "flow": {
             "nodes": [
-              { "label": "LAN", "detail": "reachable address\nmain service only" },
-              { "label": "Main LXC", "detail": "web / API\nLAN + private network" },
-              { "label": "Private network", "detail": "PostgreSQL · Valkey · ML\nfixed addresses" }
+              {
+                "label": "LAN",
+                "detail": "reachable address\nmain service only"
+              },
+              {
+                "label": "Main LXC",
+                "detail": "web / API\nLAN + private network"
+              },
+              {
+                "label": "Private network",
+                "detail": "PostgreSQL · Valkey · ML\nfixed addresses"
+              }
             ],
             "caption": "Dependencies talk over the private network and have no address on the LAN."
           }
@@ -174,13 +268,37 @@
       "blocks": [
         {
           "table": {
-            "headers": ["Element", "In the CT vzdump", "Where it is kept"],
+            "headers": [
+              "Element",
+              "In the CT vzdump",
+              "Where it is kept"
+            ],
             "rows": [
-              ["OCI rootfs", "Yes", "The CT backup; it can also be rebuilt from the image and the contract"],
-              ["Container disk with <code>backup=1</code>", "Yes", "The CT backup"],
-              ["Host directory", "No", "The backup of the host storage"],
-              ["Instance contract", "Yes, the copy carried inside the CT", "<code>/.proxmenux/oci-record.json</code> inside the CT; additional host and cluster copies are kept separately"],
-              ["Multi-container application", "Each member in its own backup", "The backups of every member, plus the stack contract and its bridge on the host"]
+              [
+                "OCI rootfs",
+                "Yes",
+                "The CT backup; it can also be rebuilt from the image and the contract"
+              ],
+              [
+                "Container disk with <code>backup=1</code>",
+                "Yes",
+                "The CT backup"
+              ],
+              [
+                "Host directory",
+                "No",
+                "The backup of the host storage"
+              ],
+              [
+                "Instance contract",
+                "Yes, the copy carried inside the CT",
+                "<code>/.proxmenux/oci-record.json</code> inside the CT; additional host and cluster copies are kept separately"
+              ],
+              [
+                "Multi-container application",
+                "Each member in its own backup",
+                "The backups of every member, plus the stack contract and its bridge on the host"
+              ]
             ]
           }
         }

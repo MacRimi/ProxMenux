@@ -105,7 +105,7 @@
               [
                 "AMD ROCm",
                 "Renderovací uzol, <code>/dev/kfd</code> a generácia, ktorú výpočtový ovládač hlási v <code>/sys/class/kfd/kfd/topology/nodes/*/properties</code>",
-                "Generácia, pre ktorú obraz ROCm aplikácie obsahuje výpočtové jadrá — uvedené GPU RDNA2 a novšie — sa ponúkne bez úprav. Ostatné GPU týchto rodín, napríklad Radeon 680M a 780M, sa ponúkajú ako experimentálne a nikdy nie sú navrhnutou voľbou: ROCm ich oficiálne nepodporuje, aplikácia ich prezentuje ako generáciu danej rodiny (<code>HSA_OVERRIDE_GFX_VERSION</code>) a inštalátor pred stiahnutím väčšieho obrazu vyžiada potvrdenie. Staršia GPU, napríklad integrovaná grafika Ryzen 5000U, sa neponúkne a Immich ponechá rozpoznávanie na CPU."
+                "GPU generácie, ktorú obraz ROCm aplikácie podporuje (uvedené GPU RDNA2 a novšie), sa ponúkne bez úprav. Ostatné GPU týchto rodín, napríklad Radeon 680M a 780M, sa ponúkajú ako experimentálne a nikdy nie sú navrhnutou voľbou. ROCm ich oficiálne nepodporuje: aplikácia ich prezentuje ako generáciu danej rodiny (<code>HSA_OVERRIDE_GFX_VERSION</code>) a inštalátor pred stiahnutím väčšieho obrazu vyžiada potvrdenie. Staršia GPU, napríklad integrovaná grafika Ryzen 5000U, sa neponúkne a Immich ponechá rozpoznávanie na CPU"
               ],
               [
                 "NVIDIA",

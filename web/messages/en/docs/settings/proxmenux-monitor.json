@@ -71,7 +71,7 @@
   },
   "reset": {
     "heading": "Reset ProxMenux Monitor Password",
-    "intro": "Recovery path for the operator who lost the dashboard password (or 2FA device). The option only appears when the Monitor is installed on the host. Selecting it:",
+    "intro": "Recovery path for the user who lost the dashboard password (or 2FA device). The option only appears when the Monitor is installed on the host. Selecting it:",
     "items": [
       "Asks for confirmation with a yes/no dialog — the action is destructive for the login credentials.",
       "Backs up the existing <code>/root/.config/proxmenux-monitor/auth.json</code> to <code>auth.json.bak-&lt;UTC timestamp&gt;</code> (mode <code>0600</code>) so the previous state can be restored manually if the reset was a mistake.",

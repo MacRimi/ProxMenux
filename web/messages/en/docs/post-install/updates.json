@@ -14,7 +14,7 @@
   },
   "why": {
     "heading": "Why this exists",
-    "body": "Post-install optimizations occasionally get improvements — a better sysctl tuning, a stricter Logrotate limit, a new Log2RAM size heuristic, a fix for an edge case reported by a tester. Without an update path the operator had only two options: manually re-run the post-install script (which re-applies <em>every</em> optimization) or skip the improvement entirely. Apply Available Updates is the middle ground: a per-optimization, opt-in re-run that lifts only the versions that actually moved."
+    "body": "Post-install optimizations occasionally get improvements — a better sysctl tuning, a stricter Logrotate limit, a new Log2RAM size heuristic, a fix for an edge case reported by a tester. Without an update path the user had only two options: manually re-run the post-install script (which re-applies <em>every</em> optimization) or skip the improvement entirely. Apply Available Updates is the middle ground: a per-optimization, opt-in re-run that lifts only the versions that actually moved."
   },
   "detection": {
     "heading": "How updates are detected",
@@ -25,7 +25,7 @@
       },
       {
         "title": "Versioned registry on the host",
-        "body": "When the operator applied each optimization, the corresponding <code>register_tool</code> call wrote the active version into <code>/usr/local/share/proxmenux/installed_tools.json</code>. That file is the source of truth for \"what is active on this host right now\"."
+        "body": "When the user applied each optimization, the corresponding <code>register_tool</code> call wrote the active version into <code>/usr/local/share/proxmenux/installed_tools.json</code>. That file is the source of truth for \"what is active on this host right now\"."
       },
       {
         "title": "Monitor compares both sides",

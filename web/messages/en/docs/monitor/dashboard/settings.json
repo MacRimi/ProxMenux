@@ -22,7 +22,7 @@
       "If a translated key is missing, only that text falls back to English instead of rendering a broken placeholder."
     ],
     "scopeTitle": "Browser-local preference",
-    "scopeBody": "The selection is stored in <code>localStorage</code> under <code>proxmenux-ui-language</code>. It is therefore specific to this browser profile and device, not a node-wide setting. Each operator can choose a different Monitor language."
+    "scopeBody": "The selection is stored in <code>localStorage</code> under <code>proxmenux-ui-language</code>. It is therefore specific to this browser profile and device, not a node-wide setting. Each user can choose a different Monitor language."
   },
   "navigationOrder": {
     "heading": "Navigation order",

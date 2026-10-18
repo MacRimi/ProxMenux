@@ -117,7 +117,7 @@
     "manualIntro": "The full sequence the script runs against each pool is replicable by hand. This is what you would type if you wanted to do the same thing on a single pool without ProxMenux:",
     "verifyTitle": "Verification and manual rollback",
     "oneShotTitle": "Need a one-shot trim instead of continuous?",
-    "oneShotBody": "Some operators prefer a manual trim during off-peak hours rather than continuous trim activity. Disable autotrim and schedule a cron job that runs <code>zpool trim &lt;pool&gt;</code> — same end goal, different cadence."
+    "oneShotBody": "Some users prefer a manual trim during off-peak hours rather than continuous trim activity. Disable autotrim and schedule a cron job that runs <code>zpool trim &lt;pool&gt;</code> — same end goal, different cadence."
   },
   "vzdump": {
     "heading": "Increase vzdump backup speed",

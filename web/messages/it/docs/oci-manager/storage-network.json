@@ -38,7 +38,7 @@
               },
               {
                 "title": "Storage e dimensione",
-                "body": "Viene creato un disco del container su uno storage Proxmox VE con la dimensione indicata. L’installazione predefinita usa <code>local-lvm</code>; quella avanzata chiede lo storage di ogni percorso subito prima della dimensione e propone quello del rootfs. Il disco appare come <code>vm-VMID-disk-N</code> e viene collegato come <code>mpN</code>."
+                "body": "Viene creato un disco del container su uno storage Proxmox VE con la dimensione indicata. L’installazione predefinita chiede una sola volta lo storage del container e dei suoi dati quando il nodo ne ha più di uno; quella avanzata chiede lo storage di ogni percorso subito prima della dimensione e propone quello del rootfs. Il disco appare come <code>vm-VMID-disk-N</code> e viene collegato come <code>mpN</code>."
               },
               {
                 "title": "Directory dell’host",
@@ -109,6 +109,9 @@
         },
         {
           "p": "Il rootfs è riservato ai binari e al contenuto dell’immagine. Un aggiornamento o una ricreazione lo sostituisce senza toccare nessuno dei due tipi di punto di mount."
+        },
+        {
+          "p": "Una directory dell’host viene montata con tutto ciò che l’host vi ha montato all’interno. Una directory come <code>/mnt/pve</code> mostra nel container le sue condivisioni di rete, i dischi e i dataset, e ciò che l’host vi monta o smonta in seguito compare o scompare senza riavviare il container. Una directory aggiunta in sola lettura è in sola lettura insieme a ciò che vi è montato all’avvio del container. Un filesystem che l’host monta successivamente arriva con i permessi con cui l’host lo monta e diventa anch’esso di sola lettura al riavvio del container."
         }
       ]
     },

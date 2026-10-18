@@ -78,6 +78,17 @@
     "heading": "Scripts communautaires",
     "body": "Le menu propose aussi deux scripts tiers du projet <a>community-scripts</a> : <em>Proxmox VE Post Install</em> et <em>Proxmox VE Microcode</em>. Ces enveloppes téléchargent et exécutent les scripts originaux via <code>wget | bash</code>. ProxMenux ne les maintient pas. Consultez <link>Dépôts externes</link> pour les détails et les questions de confiance avant de les lancer."
   },
+  "pbs": {
+    "heading": "Sur Proxmox Backup Server",
+    "body": "Sur un hôte Proxmox Backup Server, le même menu s'ouvre depuis <strong>Paramètres post-installation de Proxmox</strong> dans le menu PBS. Automatisé, Personnalisable, Appliquer les mises à jour disponibles et Désinstaller les optimisations fonctionnent comme sur Proxmox VE, avec ces différences :",
+    "items": [
+      "<strong>Dépôts et mise à niveau :</strong> lorsque le serveur n'a pas d'abonnement et que seul le dépôt Enterprise de PBS est actif, ProxMenux demande avant de passer au dépôt sans abonnement de PBS. Le changement passe par l'API des dépôts du serveur lui-même, celle utilisée par <em>Administration > Repositories</em>. Avec un abonnement actif, ou un dépôt sans abonnement ou de test déjà configuré, les sources restent telles quelles.",
+      "<strong>Liste personnalisable :</strong> les options qui ne concernent que Proxmox VE ne sont pas proposées : agent invité, VFIO IOMMU, Open vSwitch, vitesse des sauvegardes vzdump, pigz, Appliance Manager, Ceph, haute disponibilité et OVH Real Time Monitoring.",
+      "<strong>Bannière d'abonnement :</strong> le correctif s'applique à l'interface web de Proxmox Backup Server, et Désinstaller les optimisations la restaure.",
+      "<strong>Figurine :</strong> s'installe sans les alias de Proxmox VE.",
+      "<strong>Scripts communautaires :</strong> la section propose <em>Proxmox Backup Server Post Install</em> et <em>Proxmox Backup Server Microcode</em> à la place des scripts de Proxmox VE."
+    ]
+  },
   "related": {
     "heading": "Voir aussi",
     "items": [

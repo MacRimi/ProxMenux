@@ -78,6 +78,17 @@
     "heading": "Gemeinschaftsskripte",
     "body": "Das Menü bietet zwei Drittanbieterskripte aus dem Projekt <a>community-scripts</a>: <em>Proxmox VE Post Install</em> und <em>Proxmox VE Microcode</em>. Die Wrapper laden die Originalskripte mit <code>wget | bash</code> herunter und führen sie aus. ProxMenux pflegt sie nicht. Lesen Sie vor der Ausführung <link>Externe Repositories</link> für Details und Hinweise zur Vertrauenswürdigkeit."
   },
+  "pbs": {
+    "heading": "Auf Proxmox Backup Server",
+    "body": "Auf einem Proxmox-Backup-Server-Host öffnet sich dasselbe Menü über <strong>Einstellungen nach der Installation von Proxmox</strong> im PBS-Menü. Automatisiert, Anpassbar, Verfügbare Updates anwenden und Optimierungen deinstallieren funktionieren wie unter Proxmox VE, mit diesen Unterschieden:",
+    "items": [
+      "<strong>Repositories und Upgrade:</strong> Hat der Server kein Abonnement und ist nur das Enterprise-Repository von PBS aktiv, fragt ProxMenux, bevor es zum No-Subscription-Repository von PBS wechselt. Der Wechsel erfolgt über die Repository-API des Servers selbst, dieselbe wie unter <em>Administration > Repositories</em>. Mit aktivem Abonnement oder bereits eingerichtetem No-Subscription- oder Test-Repository bleiben die Quellen unverändert.",
+      "<strong>Anpassbare Liste:</strong> Optionen, die nur für Proxmox VE gelten, werden nicht angezeigt: Gast-Agent, VFIO IOMMU, Open vSwitch, vzdump-Backup-Geschwindigkeit, pigz, Appliance Manager, Ceph, Hochverfügbarkeit und OVH Real Time Monitoring.",
+      "<strong>Abonnement-Hinweis:</strong> Der Patch gilt für die Weboberfläche von Proxmox Backup Server, und Optimierungen deinstallieren stellt sie wieder her.",
+      "<strong>Figurine:</strong> wird ohne die Proxmox-VE-Aliase installiert.",
+      "<strong>Community-Skripte:</strong> Der Abschnitt bietet <em>Proxmox Backup Server Post Install</em> und <em>Proxmox Backup Server Microcode</em> anstelle der Proxmox-VE-Skripte an."
+    ]
+  },
   "related": {
     "heading": "Verwandte Themen",
     "items": [

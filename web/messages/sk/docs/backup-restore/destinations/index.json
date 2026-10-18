@@ -76,7 +76,7 @@
   },
   "sameArchive": {
     "heading": "Rozloženie archívu sa nemení s destináciou",
-    "body": "V každom z troch cieľov sa nachádza rovnaká štruktúra <code>rootfs/</code> + <code>metadata/</code> + <code>manifest.json</code> opísaná v časti <em>Ako to funguje</em>. Rozbalenie lokálneho archívu <code>.tar.zst</code>, obnova <code>.pxar</code> z PBS aj rozbalenie archívu Borg cez <code>borg extract</code> vytvoria rovnaký adresárový strom. Vetva kódu obnovy (<code>_rs_check_layout</code>, <code>_rs_apply</code>, <code>_rs_prepare_pending_restore</code>) číta rovnaké tri bloky údajov bez potreby vedieť, z ktorého cieľa pochádzajú."
+    "body": "Bez ohľadu na to, kde je záloha uložená, vždy obsahuje rovnaké tri bloky opísané v časti <em>Ako to funguje</em>: súborový systém (<code>rootfs/</code>), metadáta (<code>metadata/</code>) a manifest (<code>manifest.json</code>). Rozbalenie lokálneho archívu <code>.tar.zst</code>, obnova <code>.pxar</code> z PBS aj rozbalenie archívu Borg vytvoria rovnaký adresárový strom. Obnova preto vždy číta rovnaké súbory bez ohľadu na to, z ktorého cieľa záloha pochádza."
   },
   "extractStandalone": {
     "heading": "Rozbalenie zálohy mimo ProxMenux",

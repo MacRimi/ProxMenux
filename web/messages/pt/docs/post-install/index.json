@@ -78,6 +78,17 @@
     "heading": "Scripts da comunidade",
     "body": "O menu também oferece dois scripts de terceiros do projeto <a>community-scripts</a>: <em>Proxmox VE Post Install</em> e <em>Proxmox VE Microcode</em>. São invólucros que transferem e executam os scripts originais através de <code>wget | bash</code>. Não são mantidos pelo ProxMenux. Consulte <link>Repositórios externos</link> para detalhes e questões de confiança antes de os executar."
   },
+  "pbs": {
+    "heading": "No Proxmox Backup Server",
+    "body": "Num host Proxmox Backup Server, o mesmo menu abre-se a partir de <strong>Configurações pós-instalação do Proxmox</strong> no menu do PBS. Automatizado, Personalizável, Aplicar atualizações disponíveis e Desinstalar otimizações funcionam como no Proxmox VE, com estas diferenças:",
+    "items": [
+      "<strong>Repositórios e atualização:</strong> quando o servidor não tem subscrição e apenas o repositório Enterprise do PBS está ativo, o ProxMenux pergunta antes de mudar para o repositório sem subscrição do PBS. A mudança é feita através da API de repositórios do próprio servidor, a mesma usada em <em>Administration > Repositories</em>. Com uma subscrição ativa, ou com um repositório sem subscrição ou de teste já configurado, as fontes mantêm-se como estão.",
+      "<strong>Lista personalizável:</strong> as opções que só se aplicam ao Proxmox VE não são mostradas: agente convidado, VFIO IOMMU, Open vSwitch, velocidade dos backups vzdump, pigz, Appliance Manager, Ceph, alta disponibilidade e OVH Real Time Monitoring.",
+      "<strong>Banner de subscrição:</strong> o patch aplica-se à interface web do Proxmox Backup Server, e Desinstalar otimizações repõe-na.",
+      "<strong>Figurine:</strong> é instalado sem os aliases do Proxmox VE.",
+      "<strong>Scripts da comunidade:</strong> a secção oferece <em>Proxmox Backup Server Post Install</em> e <em>Proxmox Backup Server Microcode</em> em vez dos scripts do Proxmox VE."
+    ]
+  },
   "related": {
     "heading": "Relacionado",
     "items": [
