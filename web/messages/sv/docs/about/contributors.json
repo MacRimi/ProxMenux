@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "title": "Bidragsgivare | ProxMenux-dokumentation",
+    "description": "Ett erkännande till dem som gör ProxMenux möjligt: testare, granskare och utvecklare som bidrar till varje version.",
+    "ogTitle": "Bidragsgivare | ProxMenux-dokumentation",
+    "ogDescription": "Möt bidragsgivarna bakom ProxMenux."
+  },
+  "header": {
+    "title": "Bidragsgivare",
+    "description": "ProxMenux växer tack vare sina bidragsgivare. Den här sidan uppmärksammar deras arbete: att testa versioner före publicering, hitta regressioner, granska PR:ar och påverka utvecklingen av nya funktioner.",
+    "section": "Om"
+  },
+  "beyond": {
+    "title": "Utöver denna lista",
+    "body": "Många fler bidrar genom felrapporter, funktionsförslag i Discussions, betatestning och översättningar. Den fullständiga listan över kodbidragsgivare finns i <extlink>GitHubs bidragsgivargraf</extlink>. Den här sidan lyfter fram dem som är mest aktiva med att testa och granska ProxMenux-versioner."
+  },
+  "testers": {
+    "heading": "Testare och granskare",
+    "intro": "De här personerna var bland de första att bidra till projektet. Deras tester, felrapporter och förbättringsförslag hjälpte ProxMenux att bli vad det är i dag.",
+    "roles": {
+      "testing": "Testning",
+      "testingReviewer": "Testning och granskning"
+    },
+    "youtube": "YouTube"
+  },
+  "contribute": {
+    "heading": "Vill du bidra?",
+    "intro": "Alla bidrag är välkomna - kod, testning, design, dokumentation eller bara dela dina idéer:",
+    "tester": "<strong>Testare</strong> — prova <beta>betakanalen</beta> och rapportera vad som fungerar och vad som inte fungerar före de stabila versionerna.",
+    "developer": "<strong>Utvecklare</strong> — Bash, Next.js (TypeScript) och lite Python för översättningens virtuella miljö (venv). PR:ar välkomnas på <gh>GitHub</gh>.",
+    "designer": "<strong>Designer</strong> — UI förbättringar, ikoner, skärmdumpar för dokumentation.",
+    "ideas": "<strong>Idéer</strong> — öppna en tråd i <disc>GitHub Discussions</disc> innan du skapar ett ärende med ett funktionsförslag."
+  },
+  "coc": {
+    "title": "Läs uppförandekoden först",
+    "body": "Läs <coclink>uppförandekoden och rekommenderade arbetssätt</coclink> innan du skickar in kod eller rapporterar problem. Där beskrivs förväntningar på kodansvar, rapportering av säkerhetsbrister och omfattningen av PR:ar."
+  }
+}

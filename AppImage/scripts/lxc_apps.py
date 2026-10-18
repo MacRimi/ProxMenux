@@ -1179,6 +1179,13 @@ def validate_config(payload: dict) -> tuple[bool, Any]:
             return _err("logo_url must be an http(s) URL (max 512 chars)")
         conf["logo_url"] = logo
 
+    # Native discovery identity is separate from a curated helper/updater.
+    discovery_id = payload.get("discovery_id")
+    if discovery_id is not None:
+        if not isinstance(discovery_id, str) or not re.fullmatch(r"native-[0-9a-f]{24}", discovery_id):
+            return _err("invalid discovery_id")
+        conf["discovery_id"] = discovery_id
+
     # Optional helper_slug — set by the frontend when the user picks
     # an auto-detected app (primary or extra). Persisted so we can
     # filter the "also detected" chip list against apps already

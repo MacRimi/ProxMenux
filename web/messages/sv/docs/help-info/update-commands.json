@@ -1,0 +1,170 @@
+{
+  "meta": {
+    "title": "Proxmox-kommandon för uppdateringar och paket — apt, pveupgrade, dpkg | ProxMenux",
+    "description": "Uppdaterings- och paketkommandon för Proxmox VE: apt update, apt upgrade, apt dist-upgrade, pveupgrade, dpkg -l, paketinformationsfrågor och arkivkonfiguration i /etc/apt/sources.list.d/.",
+    "ogTitle": "Proxmox-kommandon för uppdateringar och paket — apt, pveupgrade, dpkg",
+    "ogDescription": "apt, pveupgrade och dpkg kommandon för att hålla Proxmox VE uppdaterad - systemuppgraderingar, pakethantering, förvarskonfiguration.",
+    "twitterTitle": "Proxmox uppdateringskommandon | ProxMenux",
+    "twitterDescription": "Kommandon med apt och pveupgrade för att hantera uppdateringar och paket på Proxmox VE-värdar."
+  },
+  "header": {
+    "title": "Uppdateringar och paket",
+    "description": "Utvalda kommandon med apt och för Proxmox-uppgraderingar: systemuppdatering, installation, borttagning och rensning av paket, paketfrågor med apt-cache policy och dpkg -l samt kontroll av arkivkonfiguration.",
+    "section": "Hjälp och info"
+  },
+  "intro": {
+    "title": "Alltid uppdatera indexet först",
+    "body": "<code>apt update</code> uppdaterar det lokala paketindexet från konfigurerade arkiv. Utan detta kan <code>apt install</code> använda gamla versioner eller misslyckas med \"Unable to locate package\"."
+  },
+  "commandGroups": [
+    {
+      "title": "Systemuppdateringar",
+      "commands": [
+        {
+          "command": "apt update && apt upgrade -y",
+          "description": "Uppdatera paketlistor och installerade paket (apt upgrade)"
+        },
+        {
+          "command": "apt dist-upgrade -y",
+          "description": "Fullständig systemuppgradering, inklusive beroenden"
+        },
+        {
+          "command": "apt update",
+          "description": "Uppdatera paketlistor endast"
+        },
+        {
+          "command": "apt upgrade",
+          "description": "Uppgradera endast paket (interaktivt)"
+        },
+        {
+          "command": "apt full-upgrade",
+          "description": "Uppgradera paket med beroendehantering (interaktiv)"
+        }
+      ]
+    },
+    {
+      "title": "Proxmox Uppdateringar",
+      "commands": [
+        {
+          "command": "pveupdate",
+          "description": "Uppdatera Proxmox-paketlistor"
+        },
+        {
+          "command": "pveupgrade",
+          "description": "Starta den interaktiva paketuppgraderingen för Proxmox"
+        },
+        {
+          "command": "pve8to9 --full",
+          "description": "Kontrollera beredskapen för PVE 8 till 9 utan att uppgradera"
+        },
+        {
+          "command": "ceph versions",
+          "description": "Visa versioner av Ceph-demoner innan en uppgradering planeras"
+        }
+      ]
+    },
+    {
+      "title": "Pakethantering",
+      "commands": [
+        {
+          "command": "apt autoremove --purge",
+          "description": "Ta bort oanvända paket och deras konfiguration"
+        },
+        {
+          "command": "apt clean",
+          "description": "Rensa ut det lokala förvaret av hämtade paketfiler"
+        },
+        {
+          "command": "apt autoclean",
+          "description": "Rensa ut endast föråldrade paketfiler"
+        },
+        {
+          "command": "apt install <package>",
+          "description": "Installera ett specifikt paket"
+        },
+        {
+          "command": "apt remove <package>",
+          "description": "Ta bort ett paket"
+        },
+        {
+          "command": "apt purge <package>",
+          "description": "Ta bort ett paket och dess konfigurationsfiler"
+        }
+      ]
+    },
+    {
+      "title": "Paketinformation",
+      "commands": [
+        {
+          "command": "apt list --installed",
+          "description": "Lista alla installerade paket"
+        },
+        {
+          "command": "apt search <keyword>",
+          "description": "Sök efter paket med sökord"
+        },
+        {
+          "command": "apt show <package>",
+          "description": "Visa detaljerad information om ett paket"
+        },
+        {
+          "command": "dpkg -l",
+          "description": "Lista alla installerade paket (alternativ)"
+        },
+        {
+          "command": "dpkg -l | grep <keyword>",
+          "description": "Sök installerade paket med sökord"
+        },
+        {
+          "command": "apt-cache policy <package>",
+          "description": "Visa paketversioner och prioriteringar"
+        }
+      ]
+    },
+    {
+      "title": "Hantering av paketförråd",
+      "commands": [
+        {
+          "command": "cat /etc/apt/sources.list",
+          "description": "Visa huvudsakliga APT repository källor"
+        },
+        {
+          "command": "ls -la /etc/apt/sources.list.d/",
+          "description": "Lista ytterligare arkiv källfiler"
+        },
+        {
+          "command": "cat /etc/apt/sources.list.d/pve-enterprise.list",
+          "description": "Visa Proxmox Enterprise-arkivets konfiguration i .list-filen för PVE 8"
+        },
+        {
+          "command": "apt-key list",
+          "description": "Lista äldre signeringsnycklar för arkiv där apt-key finns"
+        }
+      ]
+    }
+  ],
+  "backupWarn": {
+    "title": "Ta en backup innan stora uppgraderingar",
+    "bodyRich": "För vanliga uppdateringar rekommenderar Proxmox <code>apt update &amp;&amp; apt full-upgrade</code>. Granska paketändringarna innan du bekräftar. För <strong>uppgraderingar till en ny huvudversion</strong> (PVE 8 → 9) använder du ProxMenux-flödet <upgradeLink>Uppgradera PVE 8 till PVE 9</upgradeLink>. Det lägger till förkontroller, arkivmigrering och efterkontroll. Säkerhetskopiera först."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "href": "/docs/utils/system-update",
+        "label": "Proxmox-systemuppdatering (interaktiv)",
+        "tail": " — verktyget utför detta med en bekräftelsedialog, bygger automatiskt om ProxMenux-hanterade drivrutiner med DKMS när en ny kärna installeras och erbjuder omstart. Kan även startas från Uppdatera nu i ProxMenux Monitors panel."
+      },
+      {
+        "href": "/docs/utils/upgrade-pve8-pve9",
+        "label": "Uppgradera PVE 8 till PVE 9",
+        "tail": " — för uppgraderingar till en ny huvudversion."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Översikt över Hjälp och info",
+        "tail": "."
+      }
+    ]
+  }
+}

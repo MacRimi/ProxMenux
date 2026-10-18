@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "title": "Codice di condotta | Documentazione ProxMenux",
+    "description": "Codice di condotta e buone pratiche di ProxMenux per collaboratori, tester e utenti.",
+    "ogTitle": "Codice di condotta | Documentazione ProxMenux",
+    "ogDescription": "Aspettative sulla responsabilità del codice, sulla segnalazione delle vulnerabilità e sull’ambito delle PR nel progetto ProxMenux."
+  },
+  "errors": {
+    "notFound": "Errore: file CODE_OF_CONDUCT.md non trovato.",
+    "loadFailed": "Errore: impossibile caricare il contenuto del codice di condotta."
+  },
+  "contentMarkdown": "# 📝 Codice di condotta e buone pratiche\n\nQuesto documento definisce i **principi e le linee guida** per l’uso di **ProxMenux**, promuovendo **rispetto, collaborazione e sicurezza** nello sviluppo.\n\n## 📌 1. Attribuzione del codice e riconoscimenti\n\n- Se si usano **script, frammenti di codice o idee** di altri repository o sviluppatori, l’autore originale verrà sempre citato.\n- Un commento nel codice o nella documentazione indicherà la fonte e, se possibile, un collegamento al repository originale.\n- Quando si utilizza codice con una **licenza** specifica, occorre rispettarne le condizioni.\n\n### ✅ Esempio di attribuzione corretta nel codice:\n\n```bash\n# Script basato sul lavoro di [Autore] in [Link al repository]\n```\n\n## 🔒 2. Sicurezza e responsabilità del codice\n\n- Tutto il codice di questo repository segue le buone pratiche di sviluppo sicuro.\n- Non sono ammessi contributi che introducano vulnerabilità intenzionali o pratiche non sicure.\n- Gli script non devono mai compromettere la sicurezza del sistema o i dati degli utenti.\n- Prima dell’implementazione, i contributi vanno revisionati per verificarne sicurezza e stabilità.\n\n### ⚠️ Divulgazione responsabile delle vulnerabilità\n\nSe scopri una vulnerabilità di sicurezza, NON segnalarla in issue o forum pubblici.\n\nComunicala invece in privato tramite e-mail:\n\n📧 proxmenux@macrimi.pro\n\nPer maggiori informazioni sulle vulnerabilità e su come segnalarle, consulta la nostra [politica di sicurezza](./SECURITY.md).\n\n## 🤝 3. Regole della comunità\n\nPer mantenere un ambiente rispettoso e professionale, tutti gli utenti devono seguire queste regole:\n\n- ✅ Mantieni un atteggiamento rispettoso e costruttivo nelle discussioni.\n- ❌ Non saranno tollerati molestie, discorsi d’odio o comportamenti offensivi.\n- ✅ Fornisci riscontri in modo professionale, evitando attacchi personali.\n- ❌ Le violazioni possono comportare avvertimenti o esclusioni, in base alla gravità.\n\n##\n\nQuesto documento promuove l’uso etico del codice, la consapevolezza della sicurezza e una comunità rispettosa.\n\n📢 Costruiamo insieme qualcosa di straordinario!\n"
+}

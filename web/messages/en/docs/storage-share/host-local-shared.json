@@ -37,8 +37,8 @@
     "rows": [
       {
         "bit": "1 (sticky)",
-        "effect": "Only the file owner can delete / rename a file.",
-        "why": "Prevents CT-A from deleting files created by CT-B in the same directory."
+        "effect": "Deleting or renaming a file is restricted to its owner, the directory owner or a suitably privileged process.",
+        "why": "Helps prevent users with different mapped UIDs from deleting each other’s files. It does not isolate CTs that share a mapped UID or privileged root access."
       },
       {
         "bit": "777 (rwx-rwx-rwx)",
@@ -48,7 +48,7 @@
       {
         "bit": "ACLs (default)",
         "effect": "Inherited on every newly created file / subdir.",
-        "why": "The permissions apply forever — new content keeps the open profile without re-running the script."
+        "why": "New content inherits the default ACLs without re-running the script. Applications can still request restrictive modes or change permissions later."
       }
     ],
     "privTitle": "Privileged CTs see the same thing, just without the shift",

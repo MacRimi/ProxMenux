@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Comandi di rete Proxmox — ip, ping, ss, pve-firewall, iptables | ProxMenux",
+    "description": "Riferimento dei comandi di rete dell’host Proxmox VE: ip / ip link / ip addr, ping, traceroute, mtr, ss, ethtool, dig, nslookup, oltre a pve-firewall, iptables e nftables per il filtraggio. Controllo di bridge, bond e VLAN.",
+    "ogTitle": "Comandi di rete Proxmox — ip, ping, ss, pve-firewall, iptables",
+    "ogDescription": "Comandi di rete per Proxmox VE: controllo delle interfacce, test di connettività, monitoraggio, firewall (pve-firewall, iptables, nftables) e query DNS.",
+    "twitterTitle": "Comandi di rete Proxmox | ProxMenux",
+    "twitterDescription": "Controlli di rete, test, configurazione e firewall per Proxmox VE."
+  },
+  "header": {
+    "title": "Comandi rete",
+    "description": "Referenza curata per la rete host Proxmox: informazioni sull'interfaccia, test di connettività, configurazione, monitoraggio del traffico e gestione del firewall. Combina ip / ss / nmcli / ethtool / tcpdump / pve-firewall.",
+    "section": "Aiuto e informazioni"
+  },
+  "intro": {
+    "title": "Inventario rapido delle interfacce",
+    "body": "<code>ip a</code> mostra ogni interfaccia con i relativi indirizzi IP e MAC. <code>ip r</code> mostra la tabella di routing. Insieme permettono di verificare in pochi secondi gran parte della configurazione di un’interfaccia."
+  },
+  "commandGroups": [
+    {
+      "title": "Informazioni sulla rete",
+      "commands": [
+        {
+          "command": "ip a",
+          "description": "Mostra interfacce di rete e IP"
+        },
+        {
+          "command": "ip r",
+          "description": "Mostra tabella di routing"
+        },
+        {
+          "command": "ip -s link",
+          "description": "Mostra statistiche traffico per interfaccia"
+        },
+        {
+          "command": "brctl show",
+          "description": "Mostra i bridge di rete configurati"
+        },
+        {
+          "command": "cat /etc/network/interfaces",
+          "description": "Mostra la configurazione di rete grezza"
+        }
+      ]
+    },
+    {
+      "title": "Test di rete",
+      "commands": [
+        {
+          "command": "ping <host>",
+          "description": "Controlla la connettività con un altro host"
+        },
+        {
+          "command": "traceroute <host>",
+          "description": "Tracciare il percorso verso un host"
+        },
+        {
+          "command": "mtr <host>",
+          "description": "Combina ping e traceroute in tempo reale"
+        },
+        {
+          "command": "dig <domain>",
+          "description": "Ricerca DNS per un dominio"
+        },
+        {
+          "command": "nslookup <domain>",
+          "description": "Ricerca alternativa DNS"
+        }
+      ]
+    },
+    {
+      "title": "Configurazione rete",
+      "commands": [
+        {
+          "command": "ifreload -a",
+          "description": "Ricarica la configurazione di rete (ifupdown2)"
+        },
+        {
+          "command": "ethtool <iface>",
+          "description": "Mostra informazioni dispositivo Ethernet"
+        },
+        {
+          "command": "resolvectl status",
+          "description": "Mostra stato risoluzione DNS"
+        },
+        {
+          "command": "nmcli device show",
+          "description": "Mostra i dettagli del dispositivo di rete (se viene utilizzato NetworkManager)"
+        },
+        {
+          "command": "ip link set <iface> up",
+          "description": "Attiva un’interfaccia di rete"
+        },
+        {
+          "command": "ip link set <iface> down",
+          "description": "Disattiva un’interfaccia di rete"
+        }
+      ]
+    },
+    {
+      "title": "Monitoraggio della rete",
+      "commands": [
+        {
+          "command": "ss -tuln",
+          "description": "Mostra porte di ascolto (TCP/UDP)"
+        },
+        {
+          "command": "netstat -tuln",
+          "description": "Alternativa per mostrare le porte di ascolto"
+        },
+        {
+          "command": "lsof -i",
+          "description": "Elenca i file di rete aperti e le connessioni"
+        },
+        {
+          "command": "tcpdump -i <iface>",
+          "description": "Cattura i pacchetti sull'interfaccia"
+        },
+        {
+          "command": "iftop -i <iface>",
+          "description": "Monitorare l'utilizzo della larghezza di banda sull'interfaccia"
+        }
+      ]
+    },
+    {
+      "title": "Gestione del firewall",
+      "commands": [
+        {
+          "command": "iptables -L -n -v",
+          "description": "Mostra regole firewall attive (iptables)"
+        },
+        {
+          "command": "nft list ruleset",
+          "description": "Mostra regole nftables"
+        },
+        {
+          "command": "pve-firewall status",
+          "description": "Controlla stato firewall Proxmox"
+        },
+        {
+          "command": "pve-firewall compile",
+          "description": "Compila le regole firewall per tutti i nodi"
+        },
+        {
+          "command": "pve-firewall reload",
+          "description": "Ricarica regole firewall Proxmox"
+        }
+      ]
+    }
+  ],
+  "iptablesTip": {
+    "title": "iptables vs nftables",
+    "bodyRich": "Il servizio classico <code>pve-firewall</code> genera regole iptables. Il servizio alternativo proxmox-firewall usa <strong>nftables</strong>. Controlla il backend iptables con <code>iptables -L -n -v</code> e quello nftables con <code>nft list ruleset</code>. Usa gli strumenti del backend attivo: gli elenchi non sono intercambiabili."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "href": "/docs/network",
+        "label": "Gestione rete",
+        "tail": "— strumenti di rete interattivi ProxMenux (analisi del ponte, nomi persistenti, monitoraggio)."
+      },
+      {
+        "href": "/docs/help-info/tools-commands",
+        "label": "Strumenti CLI di sistema",
+        "tail": "— più strumenti di monitoraggio della rete."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Panoramica degli aiuti e delle informazioni",
+        "tail": "."
+      }
+    ]
+  }
+}

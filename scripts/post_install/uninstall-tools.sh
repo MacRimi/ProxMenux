@@ -266,6 +266,12 @@ uninstall_subscription_banner() {
         fi
     fi
     
+    # Proxmox Backup Server ships the same widget toolkit without the PVE packages.
+    local -a ui_packages=(pve-manager proxmox-widget-toolkit libjs-extjs libpve-http-server-perl)
+    if [[ "$(dpkg-query -W -f='${Status}' proxmox-backup-server 2>/dev/null)" == "install ok installed" ]]; then
+        ui_packages=(proxmox-widget-toolkit libjs-extjs)
+    fi
+
     if [[ "$restored" == false ]]; then
         msg_info "$(translate "Performing complete package reinstallation...")"
         
@@ -274,7 +280,7 @@ uninstall_subscription_banner() {
         
         # Reinstall packages with force-confnew to restore original configs
         if apt-get --reinstall -o Dpkg::Options::="--force-confnew" install \
-            pve-manager proxmox-widget-toolkit libjs-extjs libpve-http-server-perl -y >/dev/null 2>&1; then
+            "${ui_packages[@]}" -y >/dev/null 2>&1; then
             msg_ok "$(translate "Reinstalled Proxmox packages successfully")"
             restored=true
         else
@@ -286,7 +292,7 @@ uninstall_subscription_banner() {
         
         # Second pass reinstallation to ensure everything is clean
         apt-get update >/dev/null 2>&1
-        apt-get --reinstall install proxmox-widget-toolkit pve-manager libjs-extjs libpve-http-server-perl -y >/dev/null 2>&1 || true
+        apt-get --reinstall install "${ui_packages[@]}" -y >/dev/null 2>&1 || true
     fi
     
     msg_info "$(translate "Cleaning cached files...")"
@@ -575,7 +581,7 @@ uninstall_system_limits() {
     # Remove systemd limits (restore defaults)
     for file in /etc/systemd/system.conf /etc/systemd/user.conf; do
         if [ -f "$file" ]; then
-            pmx_edit_file "$file" '/^DefaultLimitNOFILE=256000/d'
+            pmx_edit_file "$file" -e '/^DefaultLimitNOFILE=256000$/d' -e '/^DefaultLimitNOFILE=1048576$/d'
         fi
     done
     
@@ -588,7 +594,7 @@ uninstall_system_limits() {
     
     # Remove ulimit from profile
     if [ -f /root/.profile ]; then
-        pmx_edit_file /root/.profile '/ulimit -n 256000/d'
+        pmx_edit_file /root/.profile -e '/^ulimit -n 256000$/d' -e '/^ulimit -n 1048576$/d'
     fi
     
     # Reload sysctl

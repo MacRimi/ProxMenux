@@ -1,0 +1,271 @@
+{
+  "meta": {
+    "title": "Désinstaller les optimisations | Documentation ProxMenux",
+    "description": "Restaurer les modifications de configuration réversibles après l'installation appliquées par ProxMenux. Les outils enregistrés utilisent des désinstallateurs dédiés qui préservent l'état d'hôte préexistant lorsque c'est possible."
+  },
+  "header": {
+    "title": "Désinstaller les optimisations",
+    "description": "Restaurer les modifications réversibles apportées par les scripts de post-installation automatisés ou personnalisables. ProxMenux enregistre chaque optimisation supportée avec sa fonction de restauration dédiée; les mises à jour de paquets sont intentionnellement exclues.",
+    "section": "Paramètres post-installation de Proxmox"
+  },
+  "intro": {
+    "title": "Pourquoi cela existe",
+    "body": "Chaque réglage réversible pris en charge est <strong>enregistré</strong> dans <code>/usr/local/share/proxmenux/installed_tools.json</code>. Ce registre liste les optimisations actives et appelle la fonction de restauration correspondante. Les actions sans retour arrière sûr, comme une mise à niveau complète des paquets, ne sont pas ajoutées."
+  },
+  "openMenu": {
+    "heading": "Comment l'ouvrir",
+    "body": "Depuis le menu principal, ouvrez <strong>Paramètres post-installation Proxmox → Désinstaller les optimisations</strong>. La liste propose les optimisations <em>actuellement appliquées</em> ; celles non appliquées n’apparaissent pas.",
+    "imageAlt": "Liste de désinstallation montrant les optimisations actives sur l’hôte, avec cases de sélection pour les annuler"
+  },
+  "howWorks": {
+    "heading": "Comment fonctionne le retour arrière",
+    "steps": [
+      {
+        "title": "Registre et détection automatique",
+        "body1": "Au premier passage, ProxMenux recherche des marqueurs sur l’hôte : <code>/etc/sysctl.d/99-memory.conf</code>, <code>/etc/apt/apt.conf.d/99-force-ipv4</code>, paquet <code>haveged</code> installé, service Log2RAM actif, etc. Les éléments reconnus sont enregistrés comme réversibles, même s’ils viennent d’une version antérieure au registre.",
+        "body2": "Cette migration ne dure qu'une seule fois. Ensuite, chaque application/réversion met à jour le registre directement."
+      },
+      {
+        "title": "Choisir les changements à annuler",
+        "body1": "La liste de vérification présente une étiquette lisible par l'homme par article (p. ex. <em>Optimisation des paramètres de mémoire</em>, <em>IOMMU/VFIO PCI Passthrough</em>, <em>Log2RAM (SSD Protection)</em>). Cochez ceux que vous voulez inverser. Rien de ce que vous ne cochez ne sera touché."
+      },
+      {
+        "title": "Exécution de la restauration",
+        "body1": "Pour chaque élément sélectionné, ProxMenux appelle sa fonction de désinstallation correspondante. La plupart des renversements suivent l'un des trois modèles suivants :",
+        "items": [
+          "<strong>Basé sur la sauvegarde</strong> — restaurer un <code>.bak</code> capturé au moment de l'application (bashrc, logrotate.conf, journald.conf, GRUB/kernel cmdline).",
+          "<strong>Suppression de configuration</strong> — retire les fichiers ProxMenux <code>/etc/sysctl.d/99-*.conf</code>, <code>/etc/apt/apt.conf.d/99-*</code> ou l’unité systemd, puis recharge.",
+          "<strong>Réinstallation de paquets</strong> — pour les modifications d’interface comme l’avertissement d’abonnement, réinstalle les paquets originaux avec <code>--force-confnew</code> pour rétablir les réglages fournis."
+        ],
+        "body2": "Chaque renversement enregistre ses progrès. Les éléments qui nécessitent un redémarrage (VFIO, noms d'interface persistants) définissent un drapeau qui déclenche l'invite de redémarrage à la fin."
+      },
+      {
+        "title": "Demande de redémarrage à la fin",
+        "body1": "Une fois l'inversion terminée, le menu affiche une invite de redémarrage. Les éléments qui ont modifié les paramètres du noyau, les modules du noyau ou le nom de réseau (VFIO, noms d'interface persistants) ont besoin du redémarrage pour prendre effet; d'autres éléments ne le font pas, et l'invite est une sécurité par défaut plutôt qu'une vérification par item."
+      }
+    ]
+  },
+  "reversible": {
+    "heading": "Ce qui est réversible",
+    "intro": "Les optimisations réversibles enregistrées et leurs désinstallateurs correspondants sont regroupés ici par domaine:",
+    "groups": [
+      {
+        "title": "Dépôts & APT",
+        "items": [
+          {
+            "tool": "Suppression de la bannière d'abonnement",
+            "restores": "D'abord essayer de restaurer les fichiers d'interface utilisateur à partir des sauvegardes de ProxMenux (/usr/local/share/proxmenux/backups/proxmoxlib.js.backup.* et, lorsque l'interface utilisateur mobile est patchée, index.html.tpl.backup.*). Seulement si une sauvegarde est manquante ou corrompue, revient à réinstaller pve-manager, proxmox-widget-toolkit, libjs-extjs et libpve-http-server-perl avec force-confnew. Efface également les copies en cache .js / .gz."
+          },
+          {
+            "tool": "Ignorer les langues APT",
+            "restores": "Supprime /etc/apt/apt.conf.d/99-disable-translations pour permettre les index de descriptions de paquets traduites selon les autres réglages linguistiques APT."
+          },
+          {
+            "tool": "Forcer IPv4 pour APT",
+            "restores": "Supprime /etc/apt/apt.conf.d/99-force-ipv4."
+          },
+          {
+            "tool": "Utilitaires système",
+            "restores": "Purge seulement les paquets utilitaires sélectionnés que ProxMenux enregistré comme nouvellement installé. Les paquets déjà présents avant l'action ne sont jamais ajoutés à cette liste et restent intacts."
+          }
+        ]
+      },
+      {
+        "title": "Limites du noyau, de la mémoire et du système",
+        "items": [
+          {
+            "tool": "Paramètres de la mémoire",
+            "restores": "Supprime /etc/sysctl.d/99-memory.conf et recharge sysctl."
+          },
+          {
+            "tool": "Configuration de la panique du noyau",
+            "restores": "Supprime /etc/sysctl.d/99-kernelpanic.conf."
+          },
+          {
+            "tool": "Augmentation des limites du système",
+            "restores": "Supprime /etc/sysctl.d/99-maxwatches.conf, 99-maxkeys.conf, 99-swap.conf, 99-fs.conf et /etc/security/limits.d/99-limits.conf. Rétablit les limites PAM et DefaultLimitNOFILE systemd. Dans /root/.profile, seul l’ancien ulimit -n 256000 est retiré ; ulimit -n 1048576 de l’installateur actuel peut rester et nécessiter une suppression manuelle."
+          },
+          {
+            "tool": "Profil d'échange ZRAM",
+            "restores": "Désactive le swap /dev/zram0, arrête dev-zram0.swap et supprime /etc/systemd/zram-generator.conf.d/90-proxmenux.conf. Le paquet systemd-zram-generator n’est purgé que si ProxMenux l’a installé et qu’aucune autre configuration ZRAM n’existe. Si les pages ne peuvent pas être évacuées, le profil reste actif et rien n’est supprimé."
+          }
+        ]
+      },
+      {
+        "title": "Réseautage",
+        "items": [
+          {
+            "tool": "Optimisations du réseau",
+            "restores": "Supprime /etc/sysctl.d/99-network.conf, 97-proxmenux-fwbr.conf et 98-proxmenux-rpf.conf, l’unité proxmenux-fwbr-tune.service, le script /usr/local/sbin/proxmenux-fwbr-tune et la règle udev /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules. Retire aussi la ligne source /etc/network/interfaces.d/* de /etc/network/interfaces. Recharge sysctl, systemd et les règles udev."
+          },
+          {
+            "tool": "Open vSwitch",
+            "restores": "Exécute apt purge pour openvswitch-switch et openvswitch-common. Migrez les ponts OVS vers Linux avant la désinstallation, sinon leurs VM perdront le réseau au prochain démarrage."
+          },
+          {
+            "tool": "TCP BBR + TCP Fast Open",
+            "restores": "Supprime /etc/sysctl.d/99-kernel-bbr.conf et 99-tcp-fastopen.conf, puis recharge le reste de sysctl. Supprimer les fichiers ne réinitialise pas les valeurs actives ; les valeurs par défaut comme cubic et tcp_fastopen=1 reviennent au redémarrage sauf autre configuration."
+          },
+          {
+            "tool": "Noms d'interface persistants",
+            "restores": "Supprime uniquement les fichiers 10-proxmenux-*.link contenant l'en-tête ProxMenux de /etc/systemd/network/. Tout fichier .link fourni par un autre paquet ou écrit par l'utilisateur est laissé en place. Les noms d'interface retournent au comportement par défaut de systemd lors du prochain redémarrage."
+          }
+        ]
+      },
+      {
+        "title": "Journalisation",
+        "items": [
+          {
+            "tool": "Optimisation de journald",
+            "restores": "Réécrit /etc/systemd/journald.conf par défaut et redémarre systemd-journald."
+          },
+          {
+            "tool": "Optimisation du logrotate",
+            "restores": "Restaurer /etc/logrotate.conf à partir du fichier .bak capturé avant le changement."
+          },
+          {
+            "tool": "Log2RAM",
+            "restores": "Arrête et désactive le service et le minuteur. Supprime tâches cron, unités systemd, binaires, configuration et /var/log.hdd. Désinstalle aussi le paquet apt si cette méthode a été utilisée."
+          },
+          {
+            "tool": "TRIM automatique ZFS",
+            "restores": "Lit /usr/local/share/proxmenux/zfs_autotrim_pools, la liste des pools réellement modifiés, et lance zpool set autotrim=off sur chacun. Les pools activés manuellement avant ProxMenux restent intacts."
+          }
+        ]
+      },
+      {
+        "title": "Shell & apparence",
+        "items": [
+          {
+            "tool": "Personnalisation de Bashrc",
+            "restores": "Restaurer /root/.bashrc à partir de la sauvegarde .bak. Si aucune sauvegarde n'existe, supprime le bloc PMX_CORE_BASHRC par des marqueurs."
+          },
+          {
+            "tool": "Bannière MOTD personnalisée",
+            "restores": "Restaurer le contenu original exact /etc/motd conservé sous /usr/local/share/proxmenux, supprime le fichier lorsqu'il n'existait pas avant, ou supprime en toute sécurité le marqueur existant lors de la migration d'une ancienne installation."
+          },
+          {
+            "tool": "Fastfetch",
+            "restores": "Supprime le binaire, le répertoire de configuration, le hook update-motd et le bloc délimité BEGIN FASTFETCH / END FASTFETCH de /root/.bashrc, ~/.profile, /etc/profile et /etc/profile.d/fastfetch.sh. Purge le paquet apt s’il est installé."
+          },
+          {
+            "tool": "Figurine",
+            "restores": "Supprime le binaire, l’entrée profile.d et le bloc d’alias de bashrc/profile."
+          }
+        ]
+      },
+      {
+        "title": "Matériel & virtualisation",
+        "items": [
+          {
+            "tool": "IOMMU / VFIO",
+            "restores": "Supprime les modules vfio de /etc/modules, les entrées de blocage nouveau / radeon / nvidia et les paramètres intel_iommu=on / amd_iommu=on / iommu=pt / pcie_acs_override de /etc/kernel/cmdline (ZFS) ou GRUB. Reconstruit initramfs."
+          },
+          {
+            "tool": "Corrections AMD CPU (Ryzen/EPYC)",
+            "restores": "Supprime idle=nomwait de la ligne de commande du noyau (ZFS) ou GRUB, et les options ignore_msrs / report_ignored_msrs de /etc/modprobe.d/kvm.conf."
+          },
+          {
+            "tool": "Agent invité pour un hôte Proxmox virtualisé",
+            "restores": "Lit /usr/local/share/proxmenux/guest_agent.pkg et purge le paquet hôte enregistré. L’installateur choisit qemu-guest-agent, open-vm-tools ou virtualbox-guest-utils selon l’hyperviseur. Sans enregistrement, la désinstallation essaie ces trois paquets. Cela agit sur l’hôte Proxmox imbriqué, pas sur les modèles invités."
+          }
+        ]
+      },
+      {
+        "title": "Stockage",
+        "items": [
+          {
+            "tool": "Dimensionnement de l'ARC ZFS",
+            "restores": "Supprime /etc/modprobe.d/99-zfsarc.conf, restaure les *.conf externes en conflit sauvegardés dans /usr/local/share/proxmenux/backups/zfs_arc/, reconstruit initramfs et lance proxmox-boot-tool refresh sur les hôtes systemd-boot."
+          },
+          {
+            "tool": "Instantanés automatiques ZFS",
+            "restores": "Supprime les tâches cron écrites par le script et propose apt purge zfs-auto-snapshot. Les instantanés existants sur les pools restent intacts ; supprimez-les séparément si nécessaire."
+          },
+          {
+            "tool": "Limites de vitesse vzdump",
+            "restores": "Restaure /etc/vzdump.conf depuis le .bak créé à l’installation pour rétablir bwlimit et ionice à leurs valeurs avant ProxMenux."
+          }
+        ]
+      },
+      {
+        "title": "Services et suppléments",
+        "items": [
+          {
+            "tool": "Synchronisation du temps",
+            "restores": "Rétablit le fuseau UTC, valeur par défaut sûre, via timedatectl."
+          },
+          {
+            "tool": "Génération d’entropie (haveged)",
+            "restores": "Arrête, désactive et purge le paquet haveged."
+          },
+          {
+            "tool": "kexec (redémarrages rapides)",
+            "restores": "Désactive kexec-pve.service, supprime l’unité et l’alias reboot-quick de /root/.bash_profile, puis purge kexec-tools."
+          },
+          {
+            "tool": "RPC / rpcbind Désactiver",
+            "restores": "Rétablit séparément rpcbind.service et rpcbind.socket dans leurs états activé/désactivé et actif/inactif enregistrés avant ProxMenux."
+          },
+          {
+            "tool": "pigz (parallèle gzip)",
+            "restores": "Rétablit le vrai gzip depuis gzip.distrib, supprime le détournement dpkg et /bin/pigzwrapper, commente la ligne pigz de /etc/vzdump.conf puis lance apt purge pigz après vérification de gzip."
+          },
+          {
+            "tool": "Services à haute disponibilité",
+            "restores": "Arrête et désactive pve-ha-lrm, pve-ha-crm et corosync. Les groupes HA existants et les définitions de ressources ne sont pas supprimés — les supprimer de l'interface utilisateur Web si vous n'en avez plus besoin."
+          },
+          {
+            "tool": "Dépôt Ceph",
+            "restores": "Purge les paquets Ceph installés par cette option, supprime le deb822 /etc/apt/sources.list.d/ceph.sources sur PVE 9 (ou la liste de Ceph sur PVE 8), et rafraîchit le cache APT."
+          },
+          {
+            "tool": "OVH RTM (surveillance)",
+            "restores": "Purge les paquets correspondant à ovh-rtm*, rtm et rtm-*, supprime /etc/rtm et retire l’entrée RTM du registre. Les restes Puppet dans /etc/puppet/ peuvent nécessiter une vérification et un nettoyage manuels ; le répertoire n’est pas supprimé. Hors OVH, l’installateur ne change normalement rien."
+          }
+        ]
+      }
+    ]
+  },
+  "edge": {
+    "heading": "Cas particuliers et précautions",
+    "packageTitle": "La réinstallation touche des paquets Proxmox en cours d’utilisation",
+    "packageBody": "Si les sauvegardes ProxMenux ne peuvent pas annuler <strong>Suppression de l’avertissement d’abonnement</strong>, la solution de repli réinstalle <code>pve-manager</code>, <code>proxmox-widget-toolkit</code>, <code>libjs-extjs</code> et <code>libpve-http-server-perl</code> avec <code>--force-confnew</code>. Cela touche l’interface active : actualisez le navigateur et attendez la reconnexion. Évitez les migrations et clonages en cours.",
+    "rebootTitle": "Les noms persistants et VFIO ont besoin d'un redémarrage",
+    "rebootBody": "Suppression ProxMenux's <code>10-proxmenux-*.link</code> fichiers (<em>Noms d'interface persistants</em>) et retour <em>IOMMU/VFIO</em> n'affectent pas le système d'exécution — ils ne comptent qu'après un redémarrage. ProxMenux définit le drapeau de redémarrage automatiquement pour ceux-ci.",
+    "perItemTitle": "Vous pouvez annuler une modification et garder les autres",
+    "perItemBody": "Le désinstallateur fonctionne par élément. Si vous voulez seulement supprimer Log2RAM mais garder le réglage réseau et les changements de bashrc, cochez uniquement <em>Log2RAM</em>. Rien d'autre n'est touché et le registre est mis à jour en conséquence."
+  },
+  "inspect": {
+    "heading": "Inspection manuelle du registre",
+    "intro": "Si vous voulez voir ce qui est suivi sans ouvrir le menu:",
+    "outro": "Chaque entrée <code>\"tool\": true</code> correspond à quelque chose de ProxMenux appliqué et peut inverser. L'élimination manuelle d'une entrée n'est pas recommandée — utilisez toujours le menu, qui exécute également la fonction d'inversion au lieu de simplement oublier le changement.",
+    "reinstallTitle": "Réinstaller après désinstallation",
+    "reinstallBody": "La réversion d'une optimisation ne vous empêche pas de la réappliquer plus tard. Ouvrez <link>le menu Post-Installer</link> à nouveau et exécutez soit Automatique ou Personnalisable — le registre suivra le nouvel état."
+  },
+  "related": {
+    "heading": "Voir aussi",
+    "items": [
+      {
+        "label": "Système automatisé de post-installation",
+        "href": "/docs/post-install/automated",
+        "tail": "— réappliquer le niveau de référence par défaut."
+      },
+      {
+        "label": "Post-installation personnalisable",
+        "href": "/docs/post-install/customizable",
+        "tail": "— choisir un sous-ensemble différent."
+      },
+      {
+        "label": "Désinstaller ProxMenux",
+        "href": "/docs/settings/uninstall-proxmenux",
+        "tail": "— fonctionnement différent: supprime ProxMenux lui-même, et non ses optimisations appliquées."
+      },
+      {
+        "label": "Aperçu après l'installation",
+        "href": "/docs/post-install",
+        "tail": "."
+      }
+    ]
+  }
+}
