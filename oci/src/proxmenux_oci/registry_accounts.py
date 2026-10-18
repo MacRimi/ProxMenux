@@ -166,7 +166,7 @@ def registry_accounts_menu(ui, engine=ENGINE_ROOT, auth=None):
             return
         try:
             options = [('add', translate('Sign in to a registry'))]
-            options += [(f'account-{index}', f"{row['registry']:<28}  {row['account'] or row['method']}  [{translate('saved')}]")
+            options += [(f'account-{index}', f"{row['registry']:<28}  [{translate('saved')}]")
                         for index, row in enumerate(rows)]
             options += [('storage', translate('Credential storage and access'))]
             count = translate('{count} saved account.') if len(rows) == 1 else translate('{count} saved accounts.')

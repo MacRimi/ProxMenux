@@ -8,7 +8,8 @@
     "unknown": "Okänd",
     "notAvailable": "N/A",
     "serverOffline": "Servern är frånkopplad",
-    "supportProject": "Stöd projektet och bidra"
+    "supportProject": "Stöd projektet och bidra",
+    "descriptionPbs": "Proxmox Backup Server Dashboard"
   },
   "common": {
     "notAvailable": "N/A",
@@ -165,7 +166,8 @@
     },
     "runningCountOne": "{count} körs",
     "runningCountFew": "{count} körs",
-    "runningCountMany": "{count} körs"
+    "runningCountMany": "{count} körs",
+    "pbsVersion": "PBS-version:"
   },
   "storage": {
     "loadingTitle": "Laddar lagringsdata...",
@@ -1831,7 +1833,8 @@
         "logs": "Systemloggar",
         "updates": "Systemuppdateringar",
         "security": "Säkerhet och certifikat",
-        "temperature": "Temperatur"
+        "temperature": "Temperatur",
+        "pbsServices": "PBS Services"
       }
     },
     "remoteStorage": {
@@ -4824,7 +4827,8 @@
       "services": "PVE-tjänster",
       "logs": "Systemloggar",
       "updates": "Systemuppdateringar",
-      "security": "Säkerhet & certifikat"
+      "security": "Säkerhet & certifikat",
+      "pbsServices": "PBS-tjänster"
     },
     "checks": {
       "cpu_usage": "CPU-användning",
@@ -7320,6 +7324,47 @@
     "navigation": "PBS-navigering",
     "cpu": "CPU",
     "memory": "Minne",
-    "uptime": "Drifttid"
+    "uptime": "Drifttid",
+    "capacityUnavailable": "Kapacitet inte tillgänglig.",
+    "datastoresUnavailable": "{count} inte tillgänglig",
+    "datastoresOnline": "Alla tillgängliga",
+    "moreDatastores": "+{count} fler databutiker",
+    "estimatedFull": "Beräknad full",
+    "estimatedFullUnknown": "Inte tillräckligt med data ännu",
+    "duration": "Varaktighet",
+    "noJobs": "Inga synkroniserings-, verifierings- eller beskärningsscheman är konfigurerade."
+  },
+  "monitorLinks": {
+    "groups": {
+      "cluster": "Kluster",
+      "standalone": "Fristående noder",
+      "pbs": "Proxmox Backup Server"
+    },
+    "thisNode": "Denna nod",
+    "checking": "Kontrollerar noder...",
+    "loadFailed": "Kunde inte ladda nodlistan.",
+    "empty": "Inga andra noder än. Lägg till en för att öppna dess Monitor härifrån.",
+    "noResponse": "Inget svar",
+    "pbsInterface": "PBS-gränssnitt",
+    "openNewTab": "Öppna i en ny flik",
+    "manage": "Lägg till eller hantera noder...",
+    "dialogTitle": "Länkade noder",
+    "dialogDescription": "Klusternoder och konfigurerade Proxmox Backup Server identifieras automatiskt. Varje Monitor behåller sin egen inloggning.",
+    "addTitle": "Lägg till en nod",
+    "name": "Namn",
+    "address": "Övervaka adress",
+    "type": "Typ",
+    "add": "Lägg till",
+    "save": "Spara",
+    "remove": "Ta bort",
+    "visible": "Synlig",
+    "autoAddress": "Automatisk",
+    "detected": "Upptäckt",
+    "added": "Tillagd",
+    "saveFailed": "Kunde inte spara nodlistan.",
+    "backTo": "Tillbaka till {name}",
+    "cameFromTitle": "Lägg till monitornod?",
+    "cameFromBody": "Lägg till {name} till de länkade noderna på denna monitor.",
+    "notNow": "Inte nu"
   }
 }

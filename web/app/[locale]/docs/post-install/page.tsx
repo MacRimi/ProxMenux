@@ -89,10 +89,12 @@ export default async function PostInstallPage({
     docs: { postInstall: {
       routes: Route[]
       related: { items: RelatedItem[] }
+      pbs?: { items: string[] }
     } }
   }
   const routes = messages.docs.postInstall.routes
   const relatedItems = messages.docs.postInstall.related.items
+  const pbsItems = messages.docs.postInstall.pbs?.items ?? []
 
   const code = (chunks: React.ReactNode) => <code>{chunks}</code>
   const strong = (chunks: React.ReactNode) => <strong>{chunks}</strong>
@@ -209,6 +211,14 @@ export default async function PostInstallPage({
       <p className="mb-4 text-gray-800 leading-relaxed">
         {t.rich("community.body", { em, code, a: communityAnchor, link: externalRepoLink })}
       </p>
+
+      <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("pbs.heading")}</h2>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("pbs.body", { strong })}</p>
+      <ul className="list-disc pl-6 mb-4 text-gray-800 leading-relaxed space-y-2">
+        {pbsItems.map((_, i) => (
+          <li key={i}>{t.rich(`pbs.items.${i}`, { strong, em })}</li>
+        ))}
+      </ul>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("related.heading")}</h2>
       <ul className="list-disc pl-6 text-gray-800 leading-relaxed space-y-1">

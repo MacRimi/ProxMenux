@@ -106,13 +106,32 @@ def _config_hostname(vmid):
     return ''
 
 
+def _selected_configuration(vmid):
+    """Reuse pct's output only while its complete native source is unchanged.
+
+    The forced carried-record verification has just fetched a fresh config.
+    Older installations without that source-keyed cache still query pct.
+    The lifecycle backend independently validates again before any mutation.
+    """
+    import oci_instances as instances
+    try:
+        import oci_carried_record
+        reader = getattr(oci_carried_record, 'configuration', None)
+        config = reader(instances.ROOT, vmid) if reader else None
+        if isinstance(config, str) and config:
+            return config.encode()
+    except (ImportError, OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+        pass
+    return instances.command('pct', 'config', str(vmid))
+
+
 def check_selected(project, row):
     """Validate only the chosen container; lifecycle backends validate its stack."""
     sys.path.insert(0, str(project / 'remote'))
     import oci_instances as instances
     with instances.locked(instances.ROOT):
         record = instances.read(instances.ROOT, row['vmid'])
-        config = instances.command('pct', 'config', str(row['vmid']))
+        config = _selected_configuration(row['vmid'])
         marker = instances.identity(config)
         reason = 'matched' if marker == record['installation_id'] else 'identity-unconfirmed'
         return public_row(record, {'reason': reason})
@@ -132,7 +151,7 @@ def _run_lifecycle(command, title):
     return completed.returncode == 0
 
 
-def carry_records(project, mount_stopped=True, vmids=None, verify=False, shown=False):
+def carry_records(project, mount_stopped=True, vmids=None, verify=False, shown=False, heading=None):
     """Leave inside each container the copy of its record that a restore on
     another host needs. It is refreshed after every operation. Returns what
     was found for each container. Every installed application is looked at,
@@ -140,6 +159,9 @@ def carry_records(project, mount_stopped=True, vmids=None, verify=False, shown=F
     from . import console
     sys.path.insert(0, str(project / 'remote'))
     if shown:
+        if heading:
+            console.show_logo()
+            console.msg_title(heading)
         console.msg_info(translate('Updating the copy of the record...'))
     try:
         import oci_carried_record
@@ -234,6 +256,17 @@ def interactive_management(project, ui):
         ui.message(translate('OCI management could not be completed. Check the backend status; no additional cleanup has been authorized.'), translate('OCI management'))
 
 
+def _records_unread(project):
+    """Whether an installed application has no cached configuration yet; only
+    then does the first sync read every container and take a while."""
+    sys.path.insert(0, str(project / 'remote'))
+    import oci_carried_record as carried
+    return any(not (carried.instances.location(carried.instances.ROOT, row['vmid']).parent
+                    / carried.CONFIG_CACHE).exists()
+               for row in saved_inventory(project)
+               if row.get('status') == 'installed' and not row.get('pending'))
+
+
 def _clean_orphans(project):
     """Remove, silently, what is left of containers that exist on no node of the cluster."""
     sys.path.insert(0, str(project / 'remote'))
@@ -253,7 +286,8 @@ def _interactive_management(project, ui):
     _clean_orphans(project)
     recover_automatically(project)
     offer_recovery(project, ui)
-    carry_records(project, mount_stopped=False, shown=True)
+    carry_records(project, mount_stopped=False, shown=_records_unread(project),
+                  heading=translate('Manage installed OCI applications'))
     # After each operation the list is shown again. Every operation leaves
     # the copies of the records up to date, so they are not all refreshed again.
     first = True
@@ -313,7 +347,7 @@ def _work_backup_ready(project, ui, vmid):
     import oci_instances as instances
     import oci_work_backup
     try:
-        state = oci_work_backup.status(instances.ROOT, vmid)
+        state = oci_work_backup.status(instances.ROOT, vmid, only_needed=True)
     except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError):
         # What cannot be measured here is told by the engine when it stops.
         return True
@@ -397,12 +431,10 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
             return _toggle_watchdog(project, ui, row['vmid'], watched)
         if action == 'remove':
             return _remove(project, ui, row['vmid'])
-        if not _work_backup_ready(project, ui, row['vmid']):
-            return False
         record = instances.read(instances.ROOT, row['vmid'])
         import oci_instance_reconcile as reconcile
         try:
-            current_config = instances.command('pct', 'config', str(row['vmid']))
+            current_config = _selected_configuration(row['vmid'])
             adoption = reconcile.propose(record, current_config)
         except (OSError, ValueError, RuntimeError) as error:
             ui.message(str(error), translate('Review external OCI changes'))
@@ -423,28 +455,15 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=()):
         proposal = None
         if action == 'modify':
             from .recreation import edit_recreation
-            from .cli import _deployment_summary_text
-            from .ui import BacktrackUI, RestartWizard
-            wizard = BacktrackUI(ui)
-            try:
-                while True:
-                    try:
-                        proposal = edit_recreation(record, wizard)
-                        approved = wizard.review(_deployment_summary_text(proposal['candidate']['template'],
-                                                 proposal['candidate']['deployment']), translate('Modify OCI'),
-                                                 question=translate('Apply these changes?'), default=True)
-                        break
-                    except RestartWizard:
-                        wizard.restart()
-                    except ValueError as error:
-                        if not wizard.retry_last(error):
-                            raise
-            finally:
-                wizard.close()
-            if not approved:
+            proposal = edit_recreation(record, ui)
+            if proposal is None:
                 return False
         elif not ui.review(translate('If the image channel has a new version, the CT is stopped, backed up and verified, and replaced with the new image to update the container. If the update fails after the container was changed, the backup is restored. An update that stops halfway is recovered from the OCI management menu.'),
                            translate('Update OCI'), question=translate('Update now?'), default=True):
+            return False
+        # Opening/cancelling a confirmation needs no disk or storage probes.
+        # Both accepted operations retain this check before the backend starts.
+        if not _work_backup_ready(project, ui, row['vmid']):
             return False
         command = [sys.executable, str(project / 'remote/oci_update_current.py'), str(row['vmid']),
                    *lifecycle_args]
@@ -495,7 +514,10 @@ def _removal_summary(project, vmid):
             record = instances.read(instances.ROOT, member)
         except (OSError, ValueError, KeyError):
             record = {}
-        config = oci_remove.guest_config(member)
+        try:
+            config = _selected_configuration(member)
+        except (OSError, RuntimeError, subprocess.SubprocessError):
+            config = None
         cfg = parse_config(config) if config else {}
         name = (cfg.get('hostname') or (record.get('stack_member') or {}).get('name')
                 or record.get('deployment', {}).get('hostname') or '')

@@ -382,6 +382,22 @@ def profile_keys(deployment):
     return keys
 
 
+GUESSED_ENDPOINT = 'compose-first-tcp-port-fallback'
+# curl exit codes for a port that accepted the connection and answered in a
+# protocol other than HTTP: HTTP/0.9 refused, weird reply, empty reply, reset.
+NON_HTTP_ANSWER = (1, 8, 52, 56)
+
+
+def probe_http(args):
+    """Run one curl probe and return its output and exit code."""
+    log('$ ' + shlex.join(str(arg) for arg in args))
+    try:
+        result = subprocess.run(args, capture_output=True, timeout=60, close_fds=True)
+    except subprocess.TimeoutExpired:
+        return b'', -1
+    return result.stdout, result.returncode
+
+
 def effective_healthcheck(template):
     """The template's own health check or, when it has none, one derived from
     its web address: any HTTP answer below 500 means the application is up."""
@@ -397,9 +413,14 @@ def effective_healthcheck(template):
         path = str(endpoint.get('path') or '/')
         if (endpoint.get('scheme') in ('http', 'https') and str(endpoint.get('port', '')).isdigit()
                 and path.startswith('/') and not any(c.isspace() for c in path)):
-            return {'scheme': endpoint['scheme'], 'port': int(endpoint['port']), 'path': path,
-                    'timeout_seconds': 300, 'request_timeout_seconds': 10, 'stability_seconds': 4,
-                    'verify_tls': False, 'accept_any_status': True}
+            check = {'scheme': endpoint['scheme'], 'port': int(endpoint['port']), 'path': path,
+                     'timeout_seconds': 300, 'request_timeout_seconds': 10, 'stability_seconds': 4,
+                     'verify_tls': False, 'accept_any_status': True}
+            # A port taken from the compose file because the recipe names no
+            # web address may serve a database or SSH: any answer counts.
+            if endpoint.get('source') == GUESSED_ENDPOINT:
+                check['accept_non_http'] = True
+            return check
     # Without a web address, the new image must at least keep the container running.
     return {'type': 'running', 'timeout_seconds': 90, 'stability_seconds': 20}
 
@@ -445,10 +466,9 @@ def candidate_contract(record, operation, proposal=None):
     return with_default_healthcheck(result)
 
 
-# Resource settings edited in Proxmox that the new container keeps.
 # Proxmox settings the rebuilt container gets back exactly as they are: the
-# LAN leg ProxMenux adds to a suite or stack member, and the start order.
-KEPT_AS_IS = ('net1', 'startup')
+# LAN leg ProxMenux adds to a suite or stack member, the start order and tags.
+KEPT_AS_IS = ('net1', 'startup', 'tags')
 ADOPTABLE = {'memory': ('resources', 'memory_mb'), 'swap': ('resources', 'swap_mb'),
              'cores': ('resources', 'cores'), 'cpulimit': ('resources', 'cores'),
              'cpuunits': ('resources', 'cpu_units'), 'onboot': (None, 'onboot')}
@@ -777,11 +797,10 @@ def healthcheck(vmid, template):
                 args += ['-w', '%{http_code}']
             if not check.get('verify_tls', False):
                 args.append('-k')
-            try:
-                answer = run(*args, f'{scheme}://{ip}:{port}{path}')
-                ok = not any_status or re.fullmatch(rb'[1-4][0-9][0-9]', answer.strip()) is not None
-            except RuntimeError:
-                pass
+            answer, status = probe_http([*args, f'{scheme}://{ip}:{port}{path}'])
+            ok = status == 0 and (not any_status or re.fullmatch(rb'[1-4][0-9][0-9]', answer.strip()) is not None)
+            if not ok and check.get('accept_non_http') and status in NON_HTTP_ANSWER:
+                ok = True
         if ok:
             stable_since = stable_since or time.monotonic()
             if time.monotonic() - stable_since >= stability:
@@ -1095,6 +1114,9 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
              'original_gpu_devices': original_gpu, 'desired_gpu_devices': desired_gpu,
              'was_running': run('pct', 'status', str(vmid)).strip() == b'status: running'}
     state['kept_config'] = {key: cfg[key] for key in KEPT_AS_IS if key in cfg}
+    # The installer adds default tags. Preserve an explicit absence too, so
+    # deleting all tags in Proxmox does not bring them back on the next update.
+    state['kept_config']['tags'] = cfg.get('tags', '')
     if not coordinated and state['kept_config']:
         # Applied by the installer before the new container starts, so the
         # application has its LAN leg from the first second.
@@ -1102,9 +1124,10 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     if coordinated:
         state['coordinated'] = coordinated
         state['preserved_stack_config'] = {key: cfg[key] for key in ('net1', 'startup', 'hookscript') if key in cfg}
+        state['preserved_stack_config']['tags'] = cfg.get('tags', '')
         if operation == 'update':
             state['preserved_stack_config'].update({key: cfg[key] for key in
-                ('net0', 'features', 'cmode', 'console', 'tty', 'cpuunits', 'tags') if key in cfg})
+                ('net0', 'features', 'cmode', 'console', 'tty', 'cpuunits') if key in cfg})
     checkpoint(journal, state, 'prepared')
     pending = copy.deepcopy(record)
     pending.update(status='updating', pending_transaction=str(journal), transaction_id=state['id'])
@@ -1187,7 +1210,10 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     move_retained_unused(state, to_stage=False)
     if coordinated:
         for key, value in state['preserved_stack_config'].items():
-            run('pct', 'set', str(vmid), '--' + key, value)
+            if key == 'tags' and not value:
+                run('pct', 'set', str(vmid), '--delete', 'tags')
+            else:
+                run('pct', 'set', str(vmid), '--' + key, value)
         check_runtime_mounts(run('pct', 'config', str(vmid)), candidate['deployment'])
         gpu_devices.check(run('pct', 'config', str(vmid)), candidate['deployment'])
         state['staged_config_sha256'] = sha(owned(vmid, record['installation_id']))
