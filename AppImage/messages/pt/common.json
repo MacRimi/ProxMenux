@@ -1744,6 +1744,7 @@
       "nativeEvidenceDirectory": "Diretório de trabalho",
       "nativeEvidenceService": "Definição do serviço",
       "nativeScanFailed": "A pesquisa de aplicativos não pôde ser concluída. Os resultados anteriores podem estar desatualizados; tente novamente.",
+      "nativeScanStopped": "Este contentor está parado. A pesquisa de aplicações só está disponível com o contentor em execução.",
       "nativeScanPartial": "A pesquisa de aplicativos está incompleta. Revise os itens encontrados e tente novamente.",
       "nativeVersionUnknown": "Versão instalada desconhecida",
       "nativeEvidenceStale": "Os itens encontrados podem estar desatualizados ou incompletos.",

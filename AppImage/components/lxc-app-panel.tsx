@@ -125,6 +125,7 @@ interface PortDetail {
 interface NativeDiscovery {
   vmid: number
   status: "not_scanned" | "complete" | "partial" | "error" | "busy"
+  issues?: string[]
   stale: boolean
   candidates: DetectedApp[]
 }
@@ -804,7 +805,10 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
       if (!isCurrent()) return
       setNativeDiscovery(native)
       if (native.status === "error" || native.status === "busy") {
-        setDetectionNotice({ found: false, text: t("vmLxc.appEditor.nativeScanFailed") })
+        const stopped = native.status === "error" && Array.isArray(native.issues)
+          && native.issues.includes("guest_stopped")
+        setDetectionNotice({ found: false, text: t(stopped
+          ? "vmLxc.appEditor.nativeScanStopped" : "vmLxc.appEditor.nativeScanFailed") })
         return
       }
       const result: Suggestions = await fetchApi(`/api/vms/${vmid}/apps/suggestions`, {

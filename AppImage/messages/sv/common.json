@@ -1744,6 +1744,7 @@
       "nativeEvidenceDirectory": "Arbetskatalog",
       "nativeEvidenceService": "Tjänstdefinition",
       "nativeScanFailed": "Programsökningen kunde inte slutföras. Tidigare resultat kan vara inaktuella; försök igen.",
+      "nativeScanStopped": "Den här containern är stoppad. Programsökningen är bara tillgänglig medan containern körs.",
       "nativeScanPartial": "Programsökningen är ofullständig. Granska det som hittades och försök igen.",
       "nativeVersionUnknown": "Installerad version okänd",
       "nativeEvidenceStale": "Det som hittades kan vara inaktuellt eller ofullständigt.",

@@ -1744,6 +1744,7 @@
       "nativeEvidenceDirectory": "Répertoire de travail",
       "nativeEvidenceService": "Définition du service",
       "nativeScanFailed": "La recherche d'applications n'a pas pu se terminer. Les résultats précédents peuvent être obsolètes ; réessayez.",
+      "nativeScanStopped": "Ce conteneur est arrêté. La recherche d'applications n'est disponible que lorsque le conteneur est en cours d'exécution.",
       "nativeScanPartial": "La recherche d'applications est incomplète. Vérifiez les éléments trouvés et réessayez.",
       "nativeVersionUnknown": "Version installée inconnue",
       "nativeEvidenceStale": "Les éléments trouvés peuvent être obsolètes ou incomplets.",

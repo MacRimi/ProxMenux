@@ -1746,6 +1746,7 @@
       "nativeEvidenceDirectory": "Working directory",
       "nativeEvidenceService": "Service definition",
       "nativeScanFailed": "Application search could not finish. Previous evidence may be outdated; try again.",
+      "nativeScanStopped": "This container is stopped. Application search is only available while the container is running.",
       "nativeScanPartial": "Application search is incomplete. Review the available evidence and try again.",
       "nativeVersionUnknown": "Installed version unknown",
       "nativeEvidenceStale": "Evidence may be outdated or incomplete.",
