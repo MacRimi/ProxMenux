@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "What this does",
-    "body": "Adds <code>dev&lt;N&gt;</code> entries to <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> for applicable <code>/dev/dri/*</code>, <code>/dev/kfd</code> or <code>/dev/nvidia*</code> nodes. It starts the container and installs userspace packages for its distribution, aligning <code>video</code> and <code>render</code> groups. Application acceleration still requires compatible hardware, libraries and app configuration."
+    "body": "Adds <code>dev&lt;N&gt;</code> entries to <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> for applicable <code>/dev/dri/*</code>, <code>/dev/kfd</code> or <code>/dev/nvidia*</code> nodes. It starts the container, installs userspace packages for its distribution and, for Intel/AMD, aligns the <code>video</code> and <code>render</code> groups. Application acceleration still requires compatible hardware, libraries and app configuration."
   },
   "compare": {
     "heading": "LXC sharing vs VM passthrough",
@@ -78,7 +78,7 @@
     },
     "pickCt": {
       "title": "Pick an LXC container",
-      "body": "Lists eligible LXC containers by ID and name; OCI containers are excluded and use OCI manager Apps for devices. A running container is stopped for configuration, started for driver installation and normally returned to its original running/stopped state.",
+      "body": "Lists eligible LXC containers by ID and name; OCI containers are excluded and use OCI manager Apps for devices. The container is stopped if running, started for driver installation and normally returned to its original running/stopped state.",
       "imageAlt": "Dialog listing existing LXC containers to choose from"
     },
     "selectGpu": {
@@ -98,7 +98,7 @@
     },
     "applyConfig": {
       "title": "Apply the LXC config changes",
-      "body1": "Stops the container if running and edits <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>. Numbered <code>dev&lt;N&gt;</code> entries carry the chosen group IDs. The <code>dev:</code> device mechanism replaces manual <code>lxc.mount.entry</code> rules in this assistant; inspect the resulting configuration and permissions.",
+      "body1": "Stops the container if running and edits <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>. Numbered <code>dev&lt;N&gt;</code> entries carry the host <code>video</code> or <code>render</code> GID. Existing <code>lxc.mount.entry</code> bind lines for <code>/dev/dri</code> are replaced by <code>dev:</code> entries; inspect the resulting configuration and permissions.",
       "body2": "Example after Intel + NVIDIA on the same container:"
     },
     "installDrivers": {
@@ -127,14 +127,14 @@
     },
     "alignGids": {
       "title": "Align GIDs and restore state",
-      "body1": "Reads the host GIDs for <code>video</code> and <code>render</code>, using 44/104 only as fallbacks, then edits <code>/etc/group</code> inside the container to match. Entries such as <code>video:44</code> and <code>render:104</code> are examples, not universal IDs. Verify app membership and effective device permissions.",
+      "body1": "For Intel/AMD, reads the host GIDs for <code>video</code> and <code>render</code>, using 44/104 only as fallbacks, then edits <code>/etc/group</code> inside the container to match; NVIDIA-only runs skip this step. Entries such as <code>video:44</code> and <code>render:104</code> are examples, not universal IDs. Verify app membership and effective device permissions.",
       "body2": "On the normal completion path, a container that was initially stopped is stopped again; one that was running stays running. If startup or installation fails, verify its final state and the log."
     }
   },
   "vendors": {
     "heading": "Vendor-specific notes",
     "intelHeading": "Intel iGPU",
-    "intelBody": "Intel media acceleration, including <em>Quick Sync</em>, depends on GPU generation, codecs and app configuration. The script shares existing nodes such as <code>/dev/dri/card0</code> and <code>/dev/dri/renderD128</code>; numbering can differ. The host must already provide them through its native driver, for example <code>i915</code>.",
+    "intelBody": "Intel media acceleration, including <em>Quick Sync</em>, depends on GPU generation, codecs and app configuration. The script shares whichever of <code>/dev/dri/card0</code>, <code>card1</code>, <code>renderD128</code> and <code>renderD129</code> exist; other node numbers are not added. The host must already provide them through its native driver, for example <code>i915</code>.",
     "amdHeading": "AMD",
     "amdBody": "AMD uses DRI nodes for Mesa/VA-API. If the host exposes <code>/dev/kfd</code>, the script also shares it. ROCm/OpenCL workloads still require supported hardware and compatible userspace packages; sharing the device does not install a complete ROCm stack.",
     "nvidiaHeading": "NVIDIA",

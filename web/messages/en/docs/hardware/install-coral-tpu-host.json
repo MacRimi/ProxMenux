@@ -71,7 +71,7 @@
       "title": "PCIe path — gasket + apex kernel modules via DKMS",
       "body": "Only runs if the script found a PCIe / M.2 Coral. It's the heavier of the two paths because it's compiling a kernel module for your exact running kernel.",
       "items": [
-        "<strong>Cleanup.</strong> If a previous <code>gasket-dkms</code> installation left a broken package state, the script attempts to purge it before rebuilding.",
+        "<strong>Cleanup.</strong> Any existing <code>gasket-dkms</code> package is removed before rebuilding; if it is in a broken package state, the script forces its removal and purge.",
         "<strong>Install build deps:</strong> <code>git</code>, <code>dkms</code>, <code>build-essential</code>, <code>proxmox-headers-$(uname -r)</code>."
       ],
       "cloneIntro": "<strong>Clone the driver source.</strong> Prefers <feranickLink>feranick/gasket-driver</feranickLink>, falling back to <googleLink>google/gasket-driver</googleLink> if unavailable. A successful build still depends on kernel compatibility. The Google fallback receives these version-dependent patches:",
@@ -132,7 +132,7 @@
       "Purges the <code>gasket-dkms</code>, <code>libedgetpu1-std</code> and <code>libedgetpu1-max</code> apt packages, then runs <code>apt-get autoremove --purge</code>.",
       "Deletes the udev rule <code>/etc/udev/rules.d/99-coral-apex.rules</code> ProxMenux wrote; restores the upstream <code>60-gasket-dkms.rules</code> group to its default if it's still present.",
       "Checks the supplementary member list of <code>apex</code>. <strong>If that list is empty</strong>, it attempts group removal; otherwise it retains <code>apex</code> and lists its members. This is not a complete check of primary-group users.",
-      "Removes legacy repository entries including <code>/etc/apt/sources.list.d/coral-edgetpu.list</code> and old keyrings named <code>coral-edgetpu-archive-keyring.gpg</code>. The current keyring at /etc/apt/keyrings/coral-edgetpu.gpg is not removed by this sequence.",
+      "Removes the repository list <code>/etc/apt/sources.list.d/coral-edgetpu.list</code>, the legacy <code>coral-cloud.list</code> and old keyrings named <code>coral-edgetpu-archive-keyring.gpg</code>. The current keyring at <code>/etc/apt/keyrings/coral-edgetpu.gpg</code> is not removed by this sequence.",
       "Prompts for a reboot at the end <strong>only if the PCIe path was installed</strong> — the cleanest way to flush the kernel modules. USB-only uninstalls don't need one."
     ],
     "lxcWarnTitle": "LXC containers with apex passthrough",

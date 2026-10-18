@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Fonctionnement",
-    "body": "Détecte le GPU et propose des branches maintenues incluant son ID PCI. Bloque <code>nouveau</code>, télécharge l’installateur officiel <code>.run</code>, utilise DKMS et installe <code>nvidia-persistenced</code> avec les règles udev ; correctif NVENC facultatif. La compilation vérifie le noyau actuel sans garantir toutes les applications. Les LXC NVIDIA peuvent recevoir des bibliothèques correspondantes."
+    "body": "ProxMenux détecte le GPU et propose des branches NVIDIA maintenues incluant son ID PCI. Il bloque <code>nouveau</code>, télécharge l’installateur officiel <code>.run</code>, utilise DKMS, installe <code>nvidia-persistenced</code>, les règles udev et le NVIDIA Container Toolkit, et propose un correctif NVENC facultatif. Les vérifications de compilation portent sur le noyau en cours ; une compilation réussie ne garantit pas que toutes les applications fonctionnent. Les LXC NVIDIA existants se voient proposer une mise à jour des bibliothèques userspace, de version correspondante sauf sous Arch."
   },
   "who": {
     "heading": "C'est pour qui ?",
@@ -89,7 +89,7 @@
     },
     "reboot": {
       "title": "Redémarrer",
-      "body": "Reconstruit <code>initramfs</code> pour tous les noyaux et propose un redémarrage. <strong>Prévoyez ce redémarrage</strong> pour vérifier modules et configuration nouveau au démarrage, même si le pilote répond déjà."
+      "body": "Après l’installation du pilote, le script reconstruit <code>initramfs</code> pour tous les noyaux ; sa dernière étape propose un redémarrage. <strong>Prévoyez ce redémarrage</strong> pour vérifier la configuration persistante des modules et la configuration nouveau lors d’un nouveau démarrage, même si le nouveau pilote répond déjà avant le redémarrage."
     }
   },
   "reinstallUninstall": {
@@ -102,8 +102,8 @@
     "uninstallHeading": "Désinstaller — ce qui est enlevé",
     "uninstallIntro": "Après confirmation Oui/Non, retire les composants suivants :",
     "uninstallItems": [
-      "Exécute <code>nvidia-uninstall --silent</code> pour l’installation <code>.run</code>, arrête et désactive <code>nvidia-persistenced</code> et <code>nvidia-powerd</code>, puis tente de décharger <code>nvidia_uvm</code>, <code>nvidia_drm</code>, <code>nvidia_modeset</code> et <code>nvidia</code>. Les applications LXC NVIDIA sont affectées ; des clients actifs peuvent empêcher le déchargement.",
-      "Exécute <code>apt purge</code> sur <code>nvidia-*</code>, <code>libnvidia-*</code>, <code>cuda-*</code> et <code>libcudnn*</code>, supprime l'arborescence des sources DKMS et le cache d'installation <code>/opt/nvidia</code> .run.",
+      "Arrête et désactive <code>nvidia-persistenced</code> et <code>nvidia-powerd</code>, tente de décharger <code>nvidia_uvm</code>, <code>nvidia_drm</code>, <code>nvidia_modeset</code> et <code>nvidia</code>, puis exécute <code>nvidia-uninstall --silent</code> pour l’installation <code>.run</code>. Les charges de travail LXC dépendant de NVIDIA sont affectées ; des clients actifs peuvent empêcher le déchargement.",
+      "Exécute <code>apt purge</code> sur <code>nvidia-*</code>, <code>libnvidia-*</code>, <code>cuda-*</code> et <code>libcudnn*</code>, supprime l'arborescence des sources DKMS et les dossiers <code>nvidia-persistenced</code> et <code>nvidia-patch</code> sous <code>/opt/nvidia</code>.",
       "Supprime la configuration de chargement des modules (<code>/etc/modules-load.d/nvidia-vfio.conf</code>) et les entrées de liste noire de nouveau gérées par ProxMenux. Les anciens fichiers ProxMenux de liste noire à deux lignes sont également migrés puis supprimés. Les fichiers modifiés ou indépendants de l’administrateur sont conservés.",
       "Retire <code>/etc/udev/rules.d/70-nvidia.rules</code> et marque NVENC <em>removed</em> dans le registre des installations gérées ; aucun fichier d’état séparé.",
       "Reconstruit <code>initramfs</code> pour tous les noyaux, exécute <code>proxmox-boot-tool refresh</code> selon l’amorçage et propose un redémarrage."

@@ -42,21 +42,21 @@
       },
       {
         "situation": "Chcem odstrániť všetky priradenia tohto GPU.",
-        "use": "Režim LXC vráti GPU ovládaču hostiteľa; priradenia hostí odstráňte príslušnými voľbami konfliktov. GPU zostane pripojený k ovládaču."
+        "use": "Režim LXC vráti GPU ovládaču hostiteľa; postup pri konflikte pre VM môže odstrániť položky hostpci, položky zariadení LXC však treba odstrániť samostatne. GPU zostane pripojený k ovládaču."
       }
     ]
   },
   "prereqs": {
     "title": "Skôr ako začnete",
     "assigned": "<strong>Už priradený GPU</strong> do VM cez VFIO alebo do LXC. Pri prvom priradení použite Pridať GPU do VM / LXC.",
-    "iommu": "<strong>IOMMU musí byť aktívne na hostiteľovi</strong> pri prechode <em>do</em> režimu VM. Záleží na firmvéri a podpore jadra; explicitné parametre nie sú vždy potrebné. V prípade potreby skript skúsi <code>intel_iommu=on iommu=pt</code> alebo <code>amd_iommu=on</code> cez aktívny spôsob zavádzania s <code>proxmox-boot-tool refresh</code> alebo <code>update-grub</code>. Skontrolujte varovania a podľa výzvy reštartujte.",
+    "iommu": "<strong>IOMMU musí byť aktívne na hostiteľovi</strong> pri prechode <em>do</em> režimu VM. Záleží na nastaveniach firmvéru aj na podpore jadra. Ak v bežiacom jadre chýba <code>intel_iommu=on</code> alebo <code>amd_iommu=on</code>, skript ho pridá s <code>iommu=pt</code> do <code>/etc/kernel/cmdline</code> (značka koreňa ZFS) alebo <code>/etc/default/grub</code> a potom spustí <code>proxmox-boot-tool refresh</code> alebo <code>update-grub</code>. Skontrolujte prípadné varovania a podľa výzvy reštartujte.",
     "iommuCheck": "dmesg | grep -i 'IOMMU enabled' | head -1",
     "reboot": "<strong>Počítajte s reštartom.</strong> Trvalé zmeny ovládača a zavádzania môžu vyžadovať obnovu initramfs a reštart. Skript na to vyzve na konci.",
     "knowList": "<strong>Zistite, ktoré VM a LXC používajú GPU.</strong> Skript vyhľadá odkazy a spýta sa na každého hosťa; známy zoznam uľahčí kontrolu."
   },
   "blocklist": {
     "title": "Nie všetky GPU sú bezpečné prejsť na VM",
-    "body": "Skript blokuje režim VM pre niektoré ID vrátane <code>8086:5a84</code> a <code>8086:5a85</code> podľa pravidiel kompatibility. Pri zhode zobrazí varovanie. Tento zoznam nebráni prechodu <em>do</em> režimu LXC; ďalšie kontroly naďalej platia."
+    "body": "Skript podľa svojich pravidiel kompatibility blokuje režim VM pre ID zariadení <code>8086:5a84</code> a <code>8086:5a85</code>. Ak vybraná GPU zodpovedá, zastaví prechod do režimu VM a vráti sa na výber GPU, alebo skončí, ak je to jediná GPU. Tento zoznam blokovaných nebráni prechodu <em>do</em> režimu LXC; ďalšie kontroly môžu naďalej platiť."
   },
   "running": {
     "heading": "Spustenie skriptu",
@@ -85,7 +85,7 @@
       "intro": "Na základe aktuálneho režimu, skript navrhuje opak ako cieľ:",
       "items": [
         "<strong>VM → LXC:</strong> odstráni väzbu na <code>vfio-pci</code>, aby GPU mohol používať natívny ovládač (<code>nvidia</code>, <code>amdgpu</code>, <code>i915</code>). Pre NVIDIA odstráni príslušné položky BDF z <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> pre ďalší štart.",
-        "<strong>LXC → VM:</strong> pripraví priradenie k <code>vfio-pci</code>. AMD / Intel blokuje natívny ovládač a používa <code>options vfio-pci ids=…</code>. Pre NVIDIA sa <code>nvidia</code> <strong>neblokuje</strong> globálne: pravidlá BDF nastavia <code>driver_override=vfio-pci</code> zariadeniam dotknutých skupín IOMMU. GPU mimo týchto skupín si môžu ponechať <code>nvidia</code>. Skontrolujte každého člena skupiny."
+        "<strong>LXC → VM:</strong> pripraví priradenie k <code>vfio-pci</code>. AMD / Intel blokujú natívny ovládač a používajú <code>options vfio-pci ids=…</code>. Pre NVIDIA sa <code>nvidia</code> globálne blokuje iba vtedy, keď je každá NVIDIA GPU hostiteľa vo VFIO; inak pravidlá podľa BDF nastavia <code>driver_override=vfio-pci</code> zariadeniam dotknutých skupín IOMMU a NVIDIA GPU mimo týchto skupín si ponechajú <code>nvidia</code>. Pred prepnutím skontrolujte každého člena skupiny."
       ],
       "outro": "Potvrdiť smer alebo zrušiť."
     },

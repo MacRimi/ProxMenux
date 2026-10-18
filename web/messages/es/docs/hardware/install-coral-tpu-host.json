@@ -6,7 +6,7 @@
   "header": {
     "title": "Instalar Coral TPU en el host",
     "description": "Prepara el host Proxmox para usar Coral y compartirla con LXC. Detecta M.2 / Mini-PCIe, USB o ambos y ejecuta el proceso correspondiente: módulos DKMS para PCIe y runtime Google Edge TPU para USB.",
-    "section": "Hardware: GPUs y Coral-TPU"
+    "section": "Hardware: GPU y Coral-TPU"
   },
   "intro": {
     "title": "Qué hace",
@@ -71,7 +71,7 @@
       "title": "PCIe: módulos gasket y apex mediante DKMS",
       "body": "Solo se ejecuta si detecta una Coral PCIe/M.2. Compila módulos para el kernel que está ejecutando el host.",
       "items": [
-        "<strong>Limpieza.</strong> Si una instalación anterior de <code>gasket-dkms</code> dejó paquetes en mal estado, intenta purgarla antes de compilar.",
+        "<strong>Limpieza.</strong> Elimina cualquier paquete <code>gasket-dkms</code> existente antes de compilar; si está en mal estado, fuerza su eliminación y lo purga.",
         "<strong>Dependencias de compilación:</strong> <code>git</code>, <code>dkms</code>, <code>build-essential</code>, <code>proxmox-headers-$(uname -r)</code>."
       ],
       "cloneIntro": "<strong>Clona el controlador.</strong> Prefiere <feranickLink>feranick/gasket-driver</feranickLink> y recurre a <googleLink>google/gasket-driver</googleLink> si no está disponible. Compilar requiere compatibilidad con el kernel. Al código de Google le aplica estos parches según la versión:",
@@ -115,7 +115,7 @@
       "Antes de indicar que ha terminado correctamente, el script verifica que el paquete antiguo ya no existe y que el gestor de paquetes está en buen estado."
     ],
     "warningTitle": "Confirma primero el hardware",
-    "warningBody": "Si esperabas una Coral PCIe/M.2 y no aparece, cancela la limpieza y revisa tarjeta, ranura y firmware."
+    "warningBody": "Si esperabas una Coral PCIe/M.2 y no aparece, cancela la limpieza y revisa tarjeta, slot y firmware."
   },
   "reinstallUninstall": {
     "heading": "Reinstalar o desinstalar",
@@ -128,11 +128,11 @@
     "uninstallIntro": "Requiere confirmación. Las apps LXC que usan <code>/dev/apex_*</code> pueden perder acceso durante la desinstalación o tras reiniciar. El proceso es:",
     "uninstallItems": [
       "Intenta descargar <code>apex</code> y <code>gasket</code>; si están en uso pueden permanecer cargados.",
-      "Quita cada entrada <code>gasket/&lt;version&gt;</code> registrada en DKMS para que los módulos no vuelvan en la siguiente instalación de kernel.",
+      "Elimina cada entrada <code>gasket/&lt;version&gt;</code> registrada en DKMS para que los módulos no vuelvan en la siguiente instalación de kernel.",
       "Purga <code>gasket-dkms</code>, <code>libedgetpu1-std</code> y <code>libedgetpu1-max</code> y ejecuta <code>apt-get autoremove --purge</code>.",
       "Elimina <code>/etc/udev/rules.d/99-coral-apex.rules</code> y restaura el grupo predeterminado de <code>60-gasket-dkms.rules</code> si aún existe.",
       "Consulta los miembros secundarios de <code>apex</code>. <strong>Si la lista está vacía</strong>, intenta eliminar el grupo; si no, conserva <code>apex</code> y muestra sus miembros. No comprueba por completo los usuarios que lo tienen como grupo principal.",
-      "Elimina repositorios antiguos como <code>/etc/apt/sources.list.d/coral-edgetpu.list</code> y llaveros llamados <code>coral-edgetpu-archive-keyring.gpg</code>. Este proceso no elimina el llavero actual /etc/apt/keyrings/coral-edgetpu.gpg.",
+      "Elimina la lista del repositorio <code>/etc/apt/sources.list.d/coral-edgetpu.list</code>, la antigua <code>coral-cloud.list</code> y los llaveros antiguos llamados <code>coral-edgetpu-archive-keyring.gpg</code>. Este proceso no elimina el llavero actual <code>/etc/apt/keyrings/coral-edgetpu.gpg</code>.",
       "Ofrece reiniciar <strong>solo si estaba instalado PCIe</strong> para descargar los módulos que sigan activos. Desinstalar solo USB no requiere reinicio."
     ],
     "lxcWarnTitle": "Contenedores LXC con passthrough de apex",
@@ -172,7 +172,7 @@
     "dkmsFailTitle": "Falla la compilación DKMS tras actualizar el kernel",
     "dkmsFailBody": "Una causa posible son cabeceras ausentes. Comprueba <code>proxmox-headers-$(uname -r)</code> con <code>dpkg -l proxmox-headers-$(uname -r)</code>. Instálalas si faltan y revisa incompatibilidades en el registro. Al repetir ejecuta <code>cleanup_broken_gasket_dkms</code>, pero limpiar no garantiza compatibilidad con cualquier kernel.",
     "apexMissTitle": "/dev/apex_0 no está después del reinicio",
-    "apexMissBody": "Comprueba la detección PCIe y que el módulo corresponda al kernel activo. Prueba <code>modprobe apex</code> y consulta <code>dmesg | grep -iE \"apex|gasket\"</code>. Fallos de compilación, carga o configuración de ranura/firmware pueden impedir crear el dispositivo.",
+    "apexMissBody": "Comprueba la detección PCIe y que el módulo corresponda al kernel activo. Prueba <code>modprobe apex</code> y consulta <code>dmesg | grep -iE \"apex|gasket\"</code>. Fallos de compilación, carga o configuración de slot/firmware pueden impedir crear el dispositivo.",
     "lxcMissTitle": "El host ve /dev/apex_0, pero el LXC no",
     "lxcMissBody": "Ver el nodo no prueba que funcione. Verifica acceso en el host, montaje LXC, reglas cgroup y permisos de UID/GID. Consulta <lxcLink>Añadir Coral TPU a un LXC</lxcLink>.",
     "usbUnreachTitle": "USB Accelerator detectado pero Frigate / TFLite no llega a él",

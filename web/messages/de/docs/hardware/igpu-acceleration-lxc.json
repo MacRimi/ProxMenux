@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Funktionsweise",
-    "body": "Fügt <code>dev&lt;N&gt;</code> zu <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> für passende <code>/dev/dri/*</code>-, <code>/dev/kfd</code>- oder <code>/dev/nvidia*</code>-Geräte hinzu. Startet den Container, installiert distributionsabhängige Bibliotheken und gleicht <code>video</code> und <code>render</code> ab. Beschleunigung erfordert kompatible Hardware, Bibliotheken und App-Einstellungen."
+    "body": "Fügt <code>dev&lt;N&gt;</code>-Einträge zu <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> für passende <code>/dev/dri/*</code>-, <code>/dev/kfd</code>- oder <code>/dev/nvidia*</code>-Knoten hinzu. Startet den Container, installiert Userspace-Pakete für dessen Distribution und gleicht bei Intel/AMD die Gruppen <code>video</code> und <code>render</code> ab. Die Anwendungsbeschleunigung erfordert weiterhin kompatible Hardware, Bibliotheken und App-Einstellungen."
   },
   "compare": {
     "heading": "LXC-Freigabe und VM-Passthrough im Vergleich",
@@ -78,7 +78,7 @@
     },
     "pickCt": {
       "title": "LXC-Container auswählen",
-      "body": "Listet geeignete LXC-Container mit ID und Name. OCI-Container fehlen bewusst; ihre Geräte werden unter Apps im OCI-Manager geändert. Der Container wird zur Konfiguration gestoppt, zur Installation gestartet und normalerweise in den Ausgangszustand zurückversetzt.",
+      "body": "Listet geeignete LXC-Container mit ID und Name; OCI-Container sind ausgeschlossen und nutzen für Geräte OCI manager Apps. Der Container wird gestoppt, falls er läuft, zur Treiberinstallation gestartet und normalerweise in seinen ursprünglichen Zustand (laufend/gestoppt) zurückversetzt.",
       "imageAlt": "Auswahl eines vorhandenen LXC-Containers"
     },
     "selectGpu": {
@@ -98,7 +98,7 @@
     },
     "applyConfig": {
       "title": "Anwenden der LXC-Konfigurationsänderungen",
-      "body1": "Stoppt den Container und bearbeitet <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>. <code>dev&lt;N&gt;</code>-Einträge enthalten die gewählten GIDs. Der <code>dev:</code>-Mechanismus ersetzt hier manuelle <code>lxc.mount.entry</code>-Regeln. Ergebnis und Rechte prüfen.",
+      "body1": "Stoppt den Container, falls er läuft, und bearbeitet <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>. Nummerierte <code>dev&lt;N&gt;</code>-Einträge enthalten die Host-GID von <code>video</code> oder <code>render</code>. Vorhandene <code>lxc.mount.entry</code>-Bind-Zeilen für <code>/dev/dri</code> werden durch <code>dev:</code>-Einträge ersetzt; prüfen Sie die resultierende Konfiguration und die Rechte.",
       "body2": "Beispiel nach Intel + NVIDIA auf demselben Container:"
     },
     "installDrivers": {
@@ -127,14 +127,14 @@
     },
     "alignGids": {
       "title": "GIDs ausrichten und Zustand wiederherstellen",
-      "body1": "Liest die Host-GIDs von <code>video</code> und <code>render</code>; 44/104 sind nur Ersatzwerte. Passt <code>/etc/group</code> im Container an. <code>video:44</code> und <code>render:104</code> sind Beispiele, keine universellen IDs. App-Mitgliedschaft und wirksame Rechte prüfen.",
+      "body1": "Liest bei Intel/AMD die Host-GIDs von <code>video</code> und <code>render</code>, wobei 44/104 nur als Ersatzwerte dienen, und passt dann <code>/etc/group</code> im Container entsprechend an; reine NVIDIA-Durchläufe überspringen diesen Schritt. Einträge wie <code>video:44</code> und <code>render:104</code> sind Beispiele, keine universellen IDs. Prüfen Sie die App-Mitgliedschaft und die wirksamen Geräterechte.",
       "body2": "Bei normalem Abschluss wird ein ursprünglich gestoppter Container erneut gestoppt; ein laufender bleibt aktiv. Bei Start- oder Installationsfehlern Endzustand und Protokoll prüfen."
     }
   },
   "vendors": {
     "heading": "Herstellerspezifische Hinweise",
     "intelHeading": "Intel iGPU",
-    "intelBody": "Intel-Beschleunigung mit <em>Quick Sync</em> hängt von Generation, Codecs und App-Einstellungen ab. Teilt vorhandene Knoten wie <code>/dev/dri/card0</code> und <code>/dev/dri/renderD128</code>; Nummern können abweichen. Der native Host-Treiber, etwa <code>i915</code>, muss sie bereitstellen.",
+    "intelBody": "Intel-Medienbeschleunigung, einschließlich <em>Quick Sync</em>, hängt von GPU-Generation, Codecs und App-Einstellungen ab. Das Skript teilt diejenigen von <code>/dev/dri/card0</code>, <code>card1</code>, <code>renderD128</code> und <code>renderD129</code>, die vorhanden sind; andere Knotennummern werden nicht hinzugefügt. Der Host muss sie bereits über seinen nativen Treiber bereitstellen, etwa <code>i915</code>.",
     "amdHeading": "AMD",
     "amdBody": "AMD nutzt DRI für Mesa/VA-API. Vorhandenes <code>/dev/kfd</code> wird ebenfalls geteilt. ROCm/OpenCL benötigt unterstützte Hardware und passende Bibliotheken; die Gerätefreigabe installiert keinen vollständigen ROCm-Stack.",
     "nvidiaHeading": "NVIDIA",

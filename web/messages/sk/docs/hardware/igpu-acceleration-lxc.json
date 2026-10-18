@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Čo robí",
-    "body": "Pridá <code>dev&lt;N&gt;</code> do <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> pre príslušné zariadenia <code>/dev/dri/*</code>, <code>/dev/kfd</code> alebo <code>/dev/nvidia*</code>. Spustí kontajner, nainštaluje balíky distribúcie a zosúladí <code>video</code> a <code>render</code>. Akcelerácia vyžaduje kompatibilný hardvér, knižnice a nastavenie aplikácie."
+    "body": "Pridá položky <code>dev&lt;N&gt;</code> do <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> pre príslušné uzly <code>/dev/dri/*</code>, <code>/dev/kfd</code> alebo <code>/dev/nvidia*</code>. Spustí kontajner, nainštaluje balíky používateľského priestoru pre jeho distribúciu a pri Intel/AMD zosúladí skupiny <code>video</code> a <code>render</code>. Akcelerácia aplikácií naďalej vyžaduje kompatibilný hardvér, knižnice a nastavenie aplikácie."
   },
   "compare": {
     "heading": "Zdieľanie LXC a priame priradenie VM",
@@ -78,7 +78,7 @@
     },
     "pickCt": {
       "title": "Vyberte kontajner LXC",
-      "body": "Zobrazí vhodné LXC podľa ID a názvu. OCI sú vylúčené; ich zariadenia nastavíte v Apps správcu OCI. Kontajner zastaví na konfiguráciu, spustí na inštaláciu a bežne obnoví pôvodný stav.",
+      "body": "Zobrazí vhodné kontajnery LXC podľa ID a názvu; kontajnery OCI sú vylúčené a pre zariadenia používajú OCI manager Apps. Kontajner sa zastaví, ak beží, spustí sa na inštaláciu ovládačov a bežne sa vráti do pôvodného stavu (spustený/zastavený).",
       "imageAlt": "Výber existujúceho kontajnera LXC"
     },
     "selectGpu": {
@@ -98,7 +98,7 @@
     },
     "applyConfig": {
       "title": "Použiť zmeny konfigurácie LXC",
-      "body1": "Zastaví kontajner a upraví <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>. Položky <code>dev&lt;N&gt;</code> obsahujú zvolené GID. Mechanizmus <code>dev:</code> tu nahrádza ručné pravidlá <code>lxc.mount.entry</code>. Overte výslednú konfiguráciu a oprávnenia.",
+      "body1": "Zastaví kontajner, ak beží, a upraví <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>. Číslované položky <code>dev&lt;N&gt;</code> obsahujú GID hostiteľa pre <code>video</code> alebo <code>render</code>. Existujúce riadky bind <code>lxc.mount.entry</code> pre <code>/dev/dri</code> sa nahradia položkami <code>dev:</code>; overte výslednú konfiguráciu a oprávnenia.",
       "body2": "Príklad po Intel + NVIDIA na tom istom kontajneri:"
     },
     "installDrivers": {
@@ -127,14 +127,14 @@
     },
     "alignGids": {
       "title": "Zarovnať GID a obnoviť stav",
-      "body1": "Načíta GID hostiteľa pre <code>video</code> a <code>render</code>; 44/104 použije iba ako náhradné hodnoty. Upraví <code>/etc/group</code> v kontajneri. <code>video:44</code> a <code>render:104</code> sú príklady, nie univerzálne ID. Overte členstvo aplikácie a účinné oprávnenia.",
+      "body1": "Pri Intel/AMD načíta GID hostiteľa pre <code>video</code> a <code>render</code>, pričom 44/104 použije iba ako náhradné hodnoty, a potom upraví <code>/etc/group</code> v kontajneri tak, aby zodpovedali; pri behu iba s NVIDIA sa tento krok preskočí. Položky ako <code>video:44</code> a <code>render:104</code> sú príklady, nie univerzálne ID. Overte členstvo aplikácie a účinné oprávnenia k zariadeniam.",
       "body2": "Pri bežnom dokončení pôvodne zastavený kontajner znovu zastaví; pôvodne spustený nechá bežať. Pri chybe spustenia alebo inštalácie overte konečný stav a záznam."
     }
   },
   "vendors": {
     "heading": "Poznámky podľa výrobcu",
     "intelHeading": "Intel iGPU",
-    "intelBody": "Akcelerácia Intel vrátane <em>Quick Sync</em> závisí od generácie, kodekov a aplikácie. Zdieľa existujúce uzly ako <code>/dev/dri/card0</code> a <code>/dev/dri/renderD128</code>; číslovanie sa môže líšiť. Musí ich poskytovať natívny ovládač hostiteľa, napríklad <code>i915</code>.",
+    "intelBody": "Akcelerácia médií Intel vrátane <em>Quick Sync</em> závisí od generácie GPU, kodekov a nastavenia aplikácie. Skript zdieľa tie z <code>/dev/dri/card0</code>, <code>card1</code>, <code>renderD128</code> a <code>renderD129</code>, ktoré existujú; iné čísla uzlov sa nepridajú. Hostiteľ ich už musí poskytovať prostredníctvom natívneho ovládača, napríklad <code>i915</code>.",
     "amdHeading": "AMD",
     "amdBody": "AMD používa DRI pre Mesa/VA-API. Ak hostiteľ poskytuje <code>/dev/kfd</code>, zdieľa aj ten. ROCm/OpenCL potrebuje podporovaný hardvér a kompatibilné knižnice; zdieľanie zariadenia nenainštaluje celé prostredie ROCm.",
     "nvidiaHeading": "NVIDIA",

@@ -45,7 +45,7 @@
     "heading": "Étapes de la procédure",
     "detect": {
       "title": "Détecter les GPU et vérifier IOMMU",
-      "body": "Vérifie IOMMU actif, pas seulement les paramètres. Après confirmation séparée, peut ajouter <code>intel_iommu=on</code> ou <code>amd_iommu=on</code> avec <code>iommu=pt</code>. Choisit <code>/etc/kernel/cmdline</code> si un marqueur ZFS comme <code>root=ZFS=</code> existe, sinon <code>/etc/default/grub</code>. Cette heuristique ne prouve pas le chargeur utilisé. Redémarrez puis vérifiez les groupes réels.",
+      "body": "Considère IOMMU comme actif uniquement si le noyau en cours a <code>intel_iommu=on</code> ou <code>amd_iommu=on</code> et que des groupes IOMMU existent. Si le paramètre est déjà enregistré pour le prochain démarrage, il continue en mode redémarrage en attente ; sinon, une étape confirmée séparément peut l’ajouter avec <code>iommu=pt</code>. Son heuristique de fichier d’amorçage utilise <code>/etc/kernel/cmdline</code> lorsqu’un marqueur de racine ZFS comme <code>root=ZFS=</code> s’y trouve ; sinon, elle utilise <code>/etc/default/grub</code>. Cette heuristique ne prouve pas le chargeur d’amorçage réellement utilisé. Un IOMMU nouvellement configuré prend effet après redémarrage ; vérifiez ensuite les groupes réels.",
       "tipTitle": "Post-installation déjà configurée ?",
       "tipBody": "Si la <postLink>prise en charge VFIO IOMMU</postLink> est configurée et active dans le noyau, le contrôle passe. Un réglage prévu pour le prochain démarrage ne prouve pas son activation actuelle.",
       "imageAlt": "Liste des GPU détectés avec l'adresse du fournisseur et du PCI"
@@ -58,7 +58,7 @@
         "<strong>Un seul GPU.</strong> La console locale peut perdre son affichage lorsque VFIO le réserve. Vérifiez d’abord l’accès SSH ou web depuis un autre ordinateur.",
         "<strong>Politique de réinitialisation AMD.</strong> Lit <code>/sys/bus/pci/devices/&lt;pci&gt;/reset_method</code>. APU ou carte dédiée sans FLR est <em>bloquée par la politique de l’assistant</em> ; un sous-type inconnu sans FLR exige confirmation. Cela ne prouve pas une impossibilité universelle.",
         "<strong>État D3cold.</strong> L’assistant bloque les cartes AMD signalant <code>D3cold</code> en raison du risque d’échec d’activation. Vérifiez alimentation et micrologiciel.",
-        "<strong>Groupe IOMMU.</strong> Lit <code>/sys/kernel/iommu_groups/</code> et inclut <em>tous les membres sauf les ponts</em>, parfois des contrôleurs réseau ou de stockage. Vérifiez avant confirmation. Si IOMMU attend un redémarrage, seule la fonction GPU est initialement prévue ; contrôlez l’isolation après."
+        "<strong>Analyse du groupe IOMMU.</strong> Lit <code>/sys/kernel/iommu_groups/</code> et inclut dans le plan de la VM <em>tous les membres sauf les ponts</em>, éventuellement des contrôleurs réseau ou de stockage. Le script ne les liste pas : vérifiez vous-même le groupe avant de confirmer. Si IOMMU attend un redémarrage, les groupes réels ne sont pas disponibles et le plan ne contient initialement que la fonction GPU sélectionnée ; vérifiez l’isolation après le redémarrage."
       ],
       "audioIntro": "<strong>Audio associé.</strong> Deux cas selon l’emplacement du contrôleur :",
       "audioDgpu": "<strong>GPU dédié :</strong> l’audio HDMI occupe souvent la fonction <code>.1</code> du même emplacement PCI et est inclus si détecté. Si l’hôte l’utilisait, il en perd l’accès lors de la réservation à la VM.",
@@ -75,7 +75,7 @@
       "items": [
         "<strong>GPU disponible.</strong> Continue sans retirer d’attribution.",
         "<strong>Attribué à une autre VM.</strong> Arrêtez d’abord la source. Vous pouvez <em>garder ses entrées et désactiver le démarrage automatique</em> ou <em>retirer les entrées en conservant le démarrage automatique</em>. Avec <code>vfio-pci</code> déjà actif et sans changement hôte, le transfert VM→VM peut éviter un redémarrage hôte.",
-        "<strong>Utilisé par LXC.</strong> Pour les conteneurs ordinaires, <em>garder la configuration et désactiver le démarrage automatique</em> ou <em>retirer les périphériques et règles anciennes <code>lxc.cgroup2.devices.allow</code>/<code>lxc.mount.entry</code> en conservant le démarrage automatique</em>. OCI conserve la configuration, est arrêté sans démarrage automatique ; retirez son GPU dans Apps. La détection par famille peut inclure d’autres cartes."
+        "<strong>GPU utilisé par LXC.</strong> Pour les conteneurs ordinaires, choisissez <em>garder la configuration GPU et désactiver le démarrage automatique</em> ou <em>retirer la configuration du périphérique GPU en conservant le démarrage automatique</em>. Le retrait supprime les entrées <code>devN</code> et, pour AMD/Intel, aussi les anciennes règles <code>/dev/dri</code> <code>lxc.mount.entry</code> et <code>lxc.cgroup2.devices.allow</code>. Les conteneurs OCI conservent leur configuration et sont arrêtés avec le démarrage automatique désactivé ; retirez leur GPU via OCI manager Apps. La détection des conflits se fait par famille de périphériques GPU et peut inclure d’autres cartes de cette famille."
       ],
       "imageAlt": "Boîte de dialogue offrant de supprimer le GPU d'un LXC avant de l'assigner au VM",
       "smartTitle": "Vérifier l’audio associé au retrait du GPU",
@@ -90,7 +90,7 @@
     },
     "summary": {
       "title": "Examiner le résumé de la confirmation",
-      "body": "Vérifiez le plan final, surtout chaque membre IOMMU, et annulez s’il est incorrect. Empêche les changements principaux, sans annuler une activation IOMMU précédemment confirmée.",
+      "body": "Vérifiez le plan final de l’hôte et de la VM, et annulez s’il est incorrect. Il affiche le groupe IOMMU et son nombre de périphériques, pas chaque membre : vérifiez donc le groupe au préalable. L’annulation empêche les changements principaux, sans annuler une modification de la configuration d’amorçage IOMMU confirmée séparément auparavant.",
       "imageAlt": "Résumé des modifications prévues sur hôte et VM"
     },
     "hostApply": {
@@ -102,7 +102,7 @@
         "Écrit <code>/etc/modprobe.d/iommu_unsafe_interrupts.conf</code> et <code>kvm.conf</code> avec <code>allow_unsafe_interrupts=1</code> et <code>ignore_msrs=1</code>. Réglages du script, pas des exigences universelles Windows/macOS ; les interruptions non sûres réduisent la protection du remappage.",
         "<code>/etc/modprobe.d/blacklist.conf</code>: NVIDIA — <code>nouveau</code>/<code>lbm-nouveau</code>; AMD — <code>radeon</code> + <code>amdgpu</code>; Intel — <code>i915</code>. Ces règles globales au fabricant peuvent toucher d’autres cartes utilisant le même pilote. Le module <code>nvidia</code> est bloqué <strong>uniquement</strong> via <code>/etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf</code> lorsque <em>toutes</em> les NVIDIA de l’hôte sont réservées à VFIO.",
         "<code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> + <code>/etc/proxmenux/vfio-bind.bdfs</code> — <strong>NVIDIA seulement.</strong> Applique <code>ATTR'{'driver_override'}'=\"vfio-pci\"</code> au PCI ADD des BDF enregistrés, y compris les fonctions du groupe IOMMU concerné. Hors de ces groupes, <code>nvidia</code> peut rester actif. La politique BDF ne divise pas les groupes matériels.",
-        "<strong>AMD seulement.</strong> Tente d’extraire la ROM de <code>/sys/bus/pci/.../rom</code> ou ACPI VFCT vers <code>/usr/share/kvm/vbios_&lt;card&gt;.bin</code>. Si réussi, utilise <code>romfile=</code>. Une ROM valide ne garantit pas l’initialisation GPU.",
+        "<strong>AMD seulement.</strong> Tente d’extraire la ROM de <code>/sys/bus/pci/.../rom</code> ou ACPI VFCT vers <code>/usr/share/kvm/vbios_&lt;vendor&gt;_&lt;device&gt;.bin</code>. En cas de réussite, la VM utilise <code>romfile=</code>. Une extraction valide ne garantit pas la réussite de l’initialisation du GPU.",
         "<strong>NVIDIA seulement.</strong> Arrête et désactive <code>nvidia-persistenced</code>, <code>nvidia-powerd</code>, <code>nvidia-fabricmanager</code> seulement si toutes les NVIDIA sont réservées à VFIO. En usage mixte, conserve les services et <code>nvidia</code> pour les cartes natives.",
         "<code>update-initramfs -u -k all</code> — ne fonctionne que si l'un des éléments ci-dessus a réellement changé."
       ]

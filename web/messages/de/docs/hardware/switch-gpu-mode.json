@@ -42,21 +42,21 @@
       },
       {
         "situation": "Ich möchte alle Gastzuweisungen dieser GPU entfernen.",
-        "use": "Der LXC-Modus gibt die GPU an den Host-Treiber zurück; entfernen Sie Gastzuweisungen über die jeweiligen Konfliktoptionen. Die GPU bleibt dabei an einen Treiber gebunden."
+        "use": "Der LXC-Modus gibt die GPU an den Host-Treiber zurück; die VM-Konfliktrichtlinie kann hostpci-Einträge entfernen, LXC-Geräteeinträge müssen jedoch separat entfernt werden. Die GPU bleibt dabei an einen Treiber gebunden."
       }
     ]
   },
   "prereqs": {
     "title": "Vorbereitung",
     "assigned": "<strong>Bereits zugewiesene GPU</strong> in einer VM über VFIO oder in einem LXC. Für die erste Zuweisung GPU zu VM / LXC hinzufügen verwenden.",
-    "iommu": "<strong>IOMMU muss auf dem Host aktiv sein</strong> beim Wechsel <em>in</em> den VM-Modus. Firmware und Kernel-Unterstützung sind entscheidend; explizite Parameter sind nicht immer nötig. Bei Bedarf versucht das Skript <code>intel_iommu=on iommu=pt</code> oder <code>amd_iommu=on</code> über den aktiven Bootweg mit <code>proxmox-boot-tool refresh</code> oder <code>update-grub</code>. Warnungen prüfen und bei Aufforderung neu starten.",
+    "iommu": "<strong>IOMMU muss auf dem Host aktiv sein</strong> beim Wechsel <em>in</em> den VM-Modus. Firmware-Einstellungen und Kernel-Unterstützung sind beide entscheidend. Fehlt <code>intel_iommu=on</code> oder <code>amd_iommu=on</code> im laufenden Kernel, fügt das Skript es mit <code>iommu=pt</code> zu <code>/etc/kernel/cmdline</code> (ZFS-Root-Marker) oder <code>/etc/default/grub</code> hinzu und führt dann <code>proxmox-boot-tool refresh</code> oder <code>update-grub</code> aus. Prüfen Sie eventuelle Warnungen und starten Sie bei Aufforderung neu.",
     "iommuCheck": "dmesg | grep -i 'IOMMU enabled' | head -1",
     "reboot": "<strong>Neustart einplanen.</strong> Dauerhafte Treiber- und Bootänderungen können ein neues initramfs und einen Neustart erfordern. Das Skript fragt am Ende danach.",
     "knowList": "<strong>Betroffene VMs und LXC kennen.</strong> Das Skript erkennt Verweise und fragt nach dem Umgang mit jedem Gast; eine bekannte Liste erleichtert die Prüfung."
   },
   "blocklist": {
     "title": "Nicht alle GPUs können sicher an einen VM übergeben werden",
-    "body": "Das Skript sperrt den VM-Modus für bestimmte Geräte-IDs, darunter <code>8086:5a84</code> und <code>8086:5a85</code>, gemäß seiner Kompatibilitätsrichtlinie. Bei Übereinstimmung erscheint eine Warnung. Die Liste verhindert nicht den Wechsel <em>in</em> den LXC-Modus; andere Prüfungen gelten weiterhin."
+    "body": "Das Skript sperrt den VM-Modus für die Geräte-IDs <code>8086:5a84</code> und <code>8086:5a85</code> gemäß seiner Kompatibilitätsrichtlinie. Passt eine gewählte GPU, bricht es den Wechsel in den VM-Modus ab und kehrt zur GPU-Auswahl zurück oder beendet sich, wenn es die einzige GPU ist. Diese Sperrliste verhindert nicht den Wechsel <em>in</em> den LXC-Modus; andere Prüfungen können weiterhin gelten."
   },
   "running": {
     "heading": "Skript ausführen",
@@ -85,7 +85,7 @@
       "intro": "Basierend auf dem aktuellen Modus schlägt das Skript das Gegenteil als Ziel vor:",
       "items": [
         "<strong>VM → LXC:</strong> Entfernt die Bindung an <code>vfio-pci</code>, damit der native Treiber (<code>nvidia</code>, <code>amdgpu</code>, <code>i915</code>) die GPU nutzen kann. Bei NVIDIA werden die betreffenden BDF-Einträge aus <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> für den nächsten Start entfernt.",
-        "<strong>LXC → VM:</strong> bereitet die Bindung an <code>vfio-pci</code> vor. AMD / Intel sperrt den nativen Treiber und nutzt <code>options vfio-pci ids=…</code>. Bei NVIDIA wird <code>nvidia</code> <strong>nicht</strong> global gesperrt: BDF-Regeln setzen <code>driver_override=vfio-pci</code> für Geräte der betroffenen IOMMU-Gruppen. NVIDIA-GPUs außerhalb dieser Gruppen können <code>nvidia</code> behalten. Alle Gruppenmitglieder prüfen."
+        "<strong>LXC → VM:</strong> bereitet die Bindung an <code>vfio-pci</code> vor. AMD / Intel sperren den nativen Treiber und nutzen <code>options vfio-pci ids=…</code>. Bei NVIDIA wird <code>nvidia</code> nur dann global gesperrt, wenn jede NVIDIA-GPU des Hosts in VFIO ist; andernfalls setzen Regeln pro BDF <code>driver_override=vfio-pci</code> für die Geräte der betroffenen IOMMU-Gruppen, und NVIDIA-GPUs außerhalb dieser Gruppen behalten <code>nvidia</code>. Prüfen Sie vor dem Wechsel alle Gruppenmitglieder."
       ],
       "outro": "Bestätigen Sie die Richtung oder brechen Sie ab."
     },

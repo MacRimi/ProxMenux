@@ -6,7 +6,7 @@
   "header": {
     "title": "Añadir GPU a VM (Passthrough)",
     "description": "Detecta GPU Intel, AMD o NVIDIA y prepara acceso directo desde una VM. Revisa IOMMU y los dispositivos asociados, configura VFIO y la VM y aplica sus reglas de compatibilidad. Comprueba siempre todos los dispositivos afectados.",
-    "section": "Hardware: GPUs y Coral-TPU"
+    "section": "Hardware: GPU y Coral-TPU"
   },
   "intro": {
     "title": "Qué hace",
@@ -45,7 +45,7 @@
     "heading": "Proceso paso a paso",
     "detect": {
       "title": "Detectar GPUs y comprobar IOMMU",
-      "body": "Comprueba IOMMU activo, no solo parámetros. Con confirmación aparte puede añadir <code>intel_iommu=on</code> o <code>amd_iommu=on</code> con <code>iommu=pt</code>. Elige <code>/etc/kernel/cmdline</code> si encuentra una marca ZFS como <code>root=ZFS=</code>; si no, <code>/etc/default/grub</code>. Es una heurística, no una prueba del cargador. Reinicia para activar el cambio y revisa los grupos reales.",
+      "body": "Considera IOMMU activo solo si el kernel en ejecución tiene <code>intel_iommu=on</code> o <code>amd_iommu=on</code> y existen grupos IOMMU. Si el parámetro ya está guardado para el próximo arranque, continúa en modo pendiente de reinicio; si no, con confirmación aparte puede añadirlo con <code>iommu=pt</code>. Elige <code>/etc/kernel/cmdline</code> si encuentra una marca ZFS como <code>root=ZFS=</code>; si no, <code>/etc/default/grub</code>. Es una heurística, no una prueba del cargador. Reinicia para activar el cambio y revisa los grupos reales.",
       "tipTitle": "¿Ya configuraste la postinstalación?",
       "tipBody": "Si el <postLink>soporte VFIO IOMMU</postLink> ya está configurado y activo en el kernel, supera la comprobación. Guardarlo para el próximo arranque no prueba que esté activo ahora.",
       "imageAlt": "Lista de GPUs detectadas con fabricante y dirección PCI"
@@ -58,10 +58,10 @@
         "<strong>Una sola GPU.</strong> La consola local puede perder su salida al reservarla para VFIO. Comprueba antes el acceso SSH o web desde otro equipo.",
         "<strong>Política de reinicio AMD.</strong> Lee <code>/sys/bus/pci/devices/&lt;pci&gt;/reset_method</code>. Una APU o dedicada sin FLR queda <em>bloqueada por la política del asistente</em>; un subtipo desconocido sin FLR exige confirmación. No demuestra que sea imposible en todo entorno.",
         "<strong>Estado D3cold.</strong> El asistente bloquea tarjetas AMD que indican <code>D3cold</code> por riesgo de fallo al activarlas. Revisa alimentación y firmware antes de continuar.",
-        "<strong>Grupo IOMMU.</strong> Lee <code>/sys/kernel/iommu_groups/</code> e incluye <em>todos los miembros que no sean puentes</em>, incluso controladores de red o discos. Revísalos antes de confirmar. Si falta reiniciar para activar IOMMU, solo puede planificar inicialmente la función GPU; comprueba el aislamiento después."
+        "<strong>Grupo IOMMU.</strong> Lee <code>/sys/kernel/iommu_groups/</code> e incluye <em>todos los miembros que no sean puentes</em>, incluso controladores de red o discos. El script no los muestra, así que revisa el grupo antes de confirmar. Si falta reiniciar para activar IOMMU, solo puede planificar inicialmente la función GPU; comprueba el aislamiento después."
       ],
       "audioIntro": "<strong>Audio asociado.</strong> Dos casos según dónde esté el controlador:",
-      "audioDgpu": "<strong>GPU dedicada:</strong> el audio HDMI suele ocupar la función <code>.1</code> de la misma ranura y se incluye al detectarlo. Si el host lo usaba, pierde acceso al reservarlo para la VM.",
+      "audioDgpu": "<strong>GPU dedicada:</strong> el audio HDMI suele ocupar la función <code>.1</code> del mismo slot y se incluye al detectarlo. Si el host lo usaba, pierde acceso al reservarlo para la VM.",
       "audioIgpu": "<strong>Sin función de audio <code>.1</code>:</strong> puede estar en otro dispositivo, como <code>00:1f.3</code>. Lista controladores y sus drivers, por ejemplo <code>snd_hda_intel</code>. Por defecto no selecciona <strong>ninguno</strong>; elige solo los necesarios."
     },
     "pickVm": {
@@ -75,22 +75,22 @@
       "items": [
         "<strong>GPU disponible.</strong> Continúa sin retirar asignaciones.",
         "<strong>Asignada a otra VM.</strong> Detén primero la VM origen. Puedes <em>conservar sus entradas y desactivar el arranque automático</em> o <em>retirarlas conservando el arranque automático</em>. Si ya usa <code>vfio-pci</code> y no requiere cambios del host, el traspaso VM→VM puede evitar reiniciar el host.",
-        "<strong>Usada por LXC.</strong> En contenedores normales elige <em>conservar configuración y desactivar arranque automático</em> o <em>retirar dispositivos y reglas antiguas <code>lxc.cgroup2.devices.allow</code>/<code>lxc.mount.entry</code>, conservando arranque automático</em>. OCI conserva la configuración y se detiene sin arranque automático; retira su GPU desde Apps. La detección por familia puede afectar a otras tarjetas similares."
+        "<strong>Usada por LXC.</strong> En contenedores normales elige <em>conservar configuración y desactivar arranque automático</em> o <em>eliminar la configuración de la GPU y conservar arranque automático</em>. Esta opción elimina las entradas <code>devN</code> y, en AMD/Intel, también las reglas antiguas <code>lxc.mount.entry</code> de <code>/dev/dri</code> y <code>lxc.cgroup2.devices.allow</code>. OCI conserva la configuración y se detiene sin arranque automático; elimina su GPU desde Apps del gestor OCI. La detección por familia puede afectar a otras tarjetas similares."
       ],
-      "imageAlt": "Diálogo que ofrece quitar la GPU de un LXC antes de asignarla a la VM",
+      "imageAlt": "Diálogo que ofrece eliminar la GPU de un LXC antes de asignarla a la VM",
       "smartTitle": "Revisión de audio asociado al retirar la GPU",
-      "smartBody": "Después ofrece una lista de <strong>audio posiblemente sin uso</strong> en la VM origen. Desmarca lo que aún necesite. Por ejemplo, puede conservar <code>02:00.1</code> y ofrecer retirar <code>00:1f.3</code>. La lista decide qué audio adicional se quita; no garantiza toda asociación entre pantalla y audio."
+      "smartBody": "Después ofrece una lista de <strong>audio posiblemente sin uso</strong> en la VM origen. Desmarca lo que aún necesite. Por ejemplo, puede conservar <code>02:00.1</code> y ofrecer retirar <code>00:1f.3</code>. La lista decide qué audio adicional se elimina; no garantiza toda asociación entre pantalla y audio."
     },
     "audioPick": {
       "title": "Si no hay audio .1, selecciona los controladores que necesites",
       "body": "Solo ocurre para iGPUs Intel y setups similares con audio separado. Una checklist muestra cada controlador de audio PCI del host (excluyendo cualquiera ya en el grupo IOMMU de la GPU), etiquetado con su driver actual. Selecciona los que quieras — o ninguno, si la VM no necesita audio del hardware del host.",
       "imageAlt": "Diálogo checklist con cada controlador de audio PCI del host (BDF + driver) cuando la GPU no tiene audio hermano .1",
       "warnTitle": "No selecciones audio que necesita el host",
-      "warnBody": "Asignar audio puede quitar acceso al host; tampoco puede pertenecer a otra VM activa a la vez. Deja audio opcional sin seleccionar si no lo necesitas y revisa sus asignaciones. El pitido de consola no procede necesariamente del audio PCI."
+      "warnBody": "Asignar audio puede dejar al host sin acceso; tampoco puede pertenecer a otra VM activa a la vez. Deja audio opcional sin seleccionar si no lo necesitas y revisa sus asignaciones. El pitido de consola no procede necesariamente del audio PCI."
     },
     "summary": {
       "title": "Revisar el resumen de confirmación",
-      "body": "Revisa el plan final, sobre todo cada miembro del grupo IOMMU, y cancela si no es correcto. Detiene los cambios principales, pero no revierte una activación de IOMMU confirmada anteriormente.",
+      "body": "Revisa el plan final y cancela si no es correcto. Muestra el grupo IOMMU y su número de dispositivos, no cada miembro, así que revisa el grupo antes. Cancelar detiene los cambios principales, pero no revierte una activación de IOMMU confirmada anteriormente.",
       "imageAlt": "Resumen de cambios previstos en host y VM"
     },
     "hostApply": {
@@ -102,7 +102,7 @@
         "Escribe <code>/etc/modprobe.d/iommu_unsafe_interrupts.conf</code> y <code>kvm.conf</code> con <code>allow_unsafe_interrupts=1</code> e <code>ignore_msrs=1</code>. Son ajustes del script, no requisitos universales de Windows/macOS; permitir interrupciones inseguras reduce esa protección.",
         "<code>/etc/modprobe.d/blacklist.conf</code>: NVIDIA — <code>nouveau</code>/<code>lbm-nouveau</code>; AMD — <code>radeon</code> + <code>amdgpu</code>; Intel — <code>i915</code>. Estas reglas por fabricante pueden afectar a otras tarjetas con el mismo controlador. El módulo <code>nvidia</code> se bloquea <strong>solo</strong> mediante <code>/etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf</code> cuando <em>todas</em> las NVIDIA del host están reservadas a VFIO.",
         "<code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> + <code>/etc/proxmenux/vfio-bind.bdfs</code> — <strong>Solo NVIDIA.</strong> Aplica <code>ATTR'{'driver_override'}'=\"vfio-pci\"</code> al evento PCI ADD de BDF registrados, incluidas funciones del grupo IOMMU afectado. Fuera de esos grupos puede conservarse <code>nvidia</code>. La política por BDF no divide grupos IOMMU.",
-        "<strong>Solo AMD.</strong> Intenta extraer ROM de <code>/sys/bus/pci/.../rom</code> o ACPI VFCT a <code>/usr/share/kvm/vbios_&lt;card&gt;.bin</code>. Si funciona, usa <code>romfile=</code>. Una ROM válida no garantiza que la GPU se inicialice.",
+        "<strong>Solo AMD.</strong> Intenta extraer ROM de <code>/sys/bus/pci/.../rom</code> o ACPI VFCT a <code>/usr/share/kvm/vbios_&lt;vendor&gt;_&lt;device&gt;.bin</code>. Si funciona, usa <code>romfile=</code>. Una ROM válida no garantiza que la GPU se inicialice.",
         "<strong>Solo NVIDIA.</strong> Detiene y deshabilita <code>nvidia-persistenced</code>, <code>nvidia-powerd</code>, <code>nvidia-fabricmanager</code> solo cuando todas las NVIDIA están reservadas para VFIO. En uso mixto conserva los servicios y <code>nvidia</code> para las tarjetas nativas.",
         "<code>update-initramfs -u -k all</code> — solo se ejecuta si algo de lo de arriba ha cambiado realmente."
       ]
@@ -148,7 +148,7 @@
   },
   "revert": {
     "heading": "Deshacer cambios manualmente",
-    "intro": "Detén la VM y retira solo sus asignaciones PCI correspondientes desde Hardware o mediante el índice explícito del ejemplo. Quitarla de la VM no devuelve la GPU al controlador del host. Para eso usa Cambiar modo de GPU y revisa los invitados afectados antes de confirmar."
+    "intro": "Detén la VM y retira solo sus asignaciones PCI correspondientes desde Hardware o mediante el índice explícito del ejemplo. Eliminarla de la VM no devuelve la GPU al controlador del host. Para eso usa Cambiar modo de GPU y revisa los invitados afectados antes de confirmar."
   },
   "related": {
     "heading": "Relacionado",

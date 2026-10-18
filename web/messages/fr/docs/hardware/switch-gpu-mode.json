@@ -42,21 +42,21 @@
       },
       {
         "situation": "Je veux retirer toutes les affectations de ce GPU.",
-        "use": "Le mode LXC rend le GPU au pilote hôte ; retirez les affectations des invités via les choix de conflit correspondants. Le GPU reste associé à un pilote."
+        "use": "Le mode LXC rend le GPU au pilote hôte ; la politique de conflit VM peut retirer les entrées hostpci, mais les entrées de périphérique LXC doivent être retirées séparément. Le GPU reste associé à un pilote."
       }
     ]
   },
   "prereqs": {
     "title": "Avant de commencer",
     "assigned": "<strong>Un GPU déjà attribué</strong> à une VM via VFIO ou à un LXC. Pour la première affectation, utilisez Ajouter un GPU à VM / LXC.",
-    "iommu": "<strong>IOMMU doit être actif sur l’hôte</strong> pour passer <em>au</em> mode VM. Firmware et noyau doivent le permettre ; les paramètres explicites ne sont pas toujours nécessaires. Si besoin, le script tente <code>intel_iommu=on iommu=pt</code> ou <code>amd_iommu=on</code> selon le système d’amorçage, avec <code>proxmox-boot-tool refresh</code> ou <code>update-grub</code>. Vérifiez les avertissements et redémarrez si demandé.",
+    "iommu": "<strong>IOMMU doit être actif sur l’hôte</strong> pour passer <em>au</em> mode VM. Les réglages du firmware et la prise en charge par le noyau comptent tous les deux. Si <code>intel_iommu=on</code> ou <code>amd_iommu=on</code> manque dans le noyau en cours, le script l’ajoute avec <code>iommu=pt</code> à <code>/etc/kernel/cmdline</code> (marqueur de racine ZFS) ou à <code>/etc/default/grub</code>, puis exécute <code>proxmox-boot-tool refresh</code> ou <code>update-grub</code>. Vérifiez les éventuels avertissements et redémarrez si demandé.",
     "iommuCheck": "dmesg | grep -i 'IOMMU enabled' | head -1",
     "reboot": "<strong>Prévoyez un redémarrage.</strong> Les changements persistants de pilote et d’amorçage peuvent nécessiter de reconstruire initramfs puis de redémarrer. Le script le demande à la fin.",
     "knowList": "<strong>Identifiez les VM et LXC utilisant le GPU.</strong> Le script détecte les références et demande quoi faire pour chaque invité ; connaître la liste facilite la vérification."
   },
   "blocklist": {
     "title": "Tous les GPU ne sont pas sûrs de passer à un VM",
-    "body": "Le script bloque le mode VM pour certains identifiants, dont <code>8086:5a84</code> et <code>8086:5a85</code>, selon sa politique de compatibilité. Une correspondance déclenche un avertissement. Cette liste n’empêche pas de passer <em>au</em> mode LXC ; d’autres contrôles restent possibles."
+    "body": "Le script bloque le mode VM pour les identifiants de périphérique <code>8086:5a84</code> et <code>8086:5a85</code> selon sa politique de compatibilité. Si un GPU sélectionné correspond, il interrompt le passage en mode VM et revient à la sélection du GPU, ou quitte s’il s’agit du seul GPU. Cette liste de blocage n’empêche pas de passer <em>au</em> mode LXC ; d’autres contrôles peuvent encore s’appliquer."
   },
   "running": {
     "heading": "Exécuter le script",
@@ -85,7 +85,7 @@
       "intro": "Basé sur le mode actuel, le script propose le contraire comme cible:",
       "items": [
         "<strong>VM → LXC :</strong> retire l’affectation à <code>vfio-pci</code> pour permettre au pilote natif (<code>nvidia</code>, <code>amdgpu</code>, <code>i915</code>) de prendre en charge le GPU. Pour NVIDIA, supprime les entrées BDF correspondantes de <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> au prochain démarrage.",
-        "<strong>LXC → VM :</strong> prépare l’affectation à <code>vfio-pci</code>. AMD / Intel bloque le pilote natif et utilise <code>options vfio-pci ids=…</code>. Pour NVIDIA, <code>nvidia</code> n’est <strong>pas</strong> bloqué globalement : les règles BDF appliquent <code>driver_override=vfio-pci</code> aux périphériques des groupes IOMMU concernés. Les GPU hors de ces groupes peuvent conserver <code>nvidia</code>. Vérifiez chaque membre."
+        "<strong>LXC → VM :</strong> prépare l’affectation à <code>vfio-pci</code>. AMD / Intel bloquent le pilote natif et utilisent <code>options vfio-pci ids=…</code>. Pour NVIDIA, <code>nvidia</code> n’est bloqué globalement que si chaque GPU NVIDIA de l’hôte est en VFIO ; sinon, des règles par BDF appliquent <code>driver_override=vfio-pci</code> aux périphériques des groupes IOMMU concernés, et les GPU NVIDIA hors de ces groupes conservent <code>nvidia</code>. Vérifiez chaque membre du groupe avant de basculer."
       ],
       "outro": "Confirmez la direction ou annulez."
     },

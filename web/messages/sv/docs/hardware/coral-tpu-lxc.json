@@ -18,7 +18,7 @@
   },
   "prereqs": {
     "title": "Innan du börjar",
-    "drivers": "<strong>Förbered Coral på värden</strong>. M.2 / PCIe kräver att värddrivrutinen är laddad; USB kräver enhetsåtkomst och rätt behörigheter. Se <hostLink>Installera Coral TPU på värden</hostLink>. Appens körmiljö måste finnas i containern.",
+    "drivers": "<strong>Förbered Coral-enheten på värden</strong>. M.2 / PCIe kräver att värddrivrutinen är laddad; USB kräver enhetsåtkomst och rätt behörigheter. Se <hostLink>Installera Coral TPU på värden</hostLink>. Skriptet installerar appens körmiljö i Debian/Ubuntu-containrar; andra distributioner måste tillhandahålla den separat.",
     "driversCheck": "ls /dev/apex_* 2>/dev/null ; lsusb | grep -E '1a6e:089a|18d1:9302'",
     "container": "<strong>En befintlig LXC</strong>, helst baserad på <strong>Debian / Ubuntu</strong>: installationen använder <code>apt-get</code>. <strong>Containrar med andra distributioner</strong> kan välja <strong>läge med enbart enhetsåtkomst</strong>, som hoppar över APT-installationen av <code>libedgetpu</code>. Passar om appen redan innehåller körmiljön, som Frigates Docker-avbildning.",
     "downtime": "<strong>Planera ett kort driftstopp</strong> för containern. Skriptet stoppar den för konfiguration och startar den för installation av körmiljön. Dessa ändringar kräver ingen omstart av värden."
@@ -44,7 +44,7 @@
     },
     "gpuHint": {
       "title": "Valfritt förslag om GPU-åtkomst",
-      "body": "Om en GPU hittas men inte är konfigurerad för containern rekommenderas <lxcGpuLink>Lägg till GPU i LXC</lxcGpuLink> för videoavkodning, som Quick Sync, VA-API eller NVDEC. Frågan gäller fortsatt installation av enbart Coral: Ja fortsätter, Nej avslutar så att GPU:n kan konfigureras först."
+      "body": "Om en GPU hittas men inte är konfigurerad för den här containern rekommenderar en dialog <lxcGpuLink>Lägg till GPU i LXC</lxcGpuLink> för hårdvaruavkodning av video, som Quick Sync, VA-API eller NVENC. Den frågar om installationen ska fortsätta med enbart Coral: Ja fortsätter TPU-konfigurationen, Nej avslutar så att du kan konfigurera GPU:n först."
     },
     "usb": {
       "title": "Konfigurera USB-åtkomst i LXC",
@@ -55,7 +55,7 @@
     "pcie": {
       "title": "Konfigurera M.2 / PCIe-åtkomst i LXC",
       "body1": "Om M.2 / PCIe-Coral hittas och <code>/dev/apex_0</code> finns används Proxmox API <code>dev</code> för cgroup2-behörigheter i privilegierade och oprivilegierade LXC:",
-      "body2": "Om <code>/dev/apex_0</code> ännu saknas efter <hostLink>Installera Coral på värden</hostLink> används klassisk cgroup2-konfiguration och en valfri bind-montering med <code>create=file</code>. Det skapar inte i sig en fungerande enhet:",
+      "body2": "Om <code>/dev/apex_0</code> saknas efter <hostLink>Installera Coral på värden</hostLink> skriver skriptet en bind-montering med <code>create=file</code> och, endast när apex-majornumret finns listat i <code>/proc/devices</code>, en klassisk cgroup2-regel. Ingen av dem skapar en fungerande enhet:",
       "rebootTitle": "Starta om värden först om du nyss installerat Coral-drivrutiner",
       "rebootBody": "Reservmonteringen laddar inte värdens <code>apex</code>-drivrutin. Ladda den eller starta om efter installationen och kontrollera enheten. Kör sedan skriptet igen för den moderna enhetsposten och starta om containern."
     },
@@ -92,7 +92,7 @@
   "troubleshoot": {
     "heading": "Felsökning",
     "apexTitle": "LXC har startat men /dev/apex_0 saknas",
-    "apexBody": "Kontrollera värdens drivrutin: <code>lsmod | grep apex</code>. Om den saknas, prova <code>modprobe apex</code> eller starta om efter installationen. När <code>/dev/apex_0</code> finns på värden, kontrollera LXC-enhetsposten och starta om med <code>pct stop &lt;ctid&gt; &amp;&amp; pct start &lt;ctid&gt;</code>.",
+    "apexBody": "Kontrollera först värdens drivrutin: <code>lsmod | grep apex</code>. Om den saknas, prova <code>modprobe apex</code> eller starta om efter installationen av drivrutinen. När <code>/dev/apex_0</code> finns på värden, kontrollera LXC-enhetsposten (kör skriptet igen om bara reservposterna skrevs) och starta om containern med <code>pct stop &lt;ctid&gt; &amp;&amp; pct start &lt;ctid&gt;</code>.",
     "replugTitle": "USB-Coral försvinner efter återanslutning till en annan port",
     "replugBody": "Kontrollera att LXC monterar <code>/dev/bus/usb</code> i stället för länken <code>/dev/coral</code>. Konfigurationen ska innehålla <code>lxc.mount.entry: /dev/bus/usb dev/bus/usb ...</code> utan direkt beroende av <code>/dev/coral</code>. Kör skriptet igen om konfigurationen är gammal.",
     "alpineTitle": "Alpine / Arch / RHEL / SUSE: körmiljö inte installerad",

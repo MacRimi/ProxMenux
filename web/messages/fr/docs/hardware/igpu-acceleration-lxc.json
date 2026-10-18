@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Fonctionnement",
-    "body": "Ajoute <code>dev&lt;N&gt;</code> à <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> pour les périphériques <code>/dev/dri/*</code>, <code>/dev/kfd</code> ou <code>/dev/nvidia*</code> concernés. Démarre le conteneur, installe les paquets adaptés et aligne <code>video</code> et <code>render</code>. L’accélération exige matériel, bibliothèques et configuration d’application compatibles."
+    "body": "Ajoute des entrées <code>dev&lt;N&gt;</code> à <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> pour les nœuds <code>/dev/dri/*</code>, <code>/dev/kfd</code> ou <code>/dev/nvidia*</code> concernés. Démarre le conteneur, installe les paquets userspace de sa distribution et, pour Intel/AMD, aligne les groupes <code>video</code> et <code>render</code>. L’accélération des applications exige toujours matériel, bibliothèques et configuration d’application compatibles."
   },
   "compare": {
     "heading": "Partage LXC ou attribution directe à une VM",
@@ -78,7 +78,7 @@
     },
     "pickCt": {
       "title": "Choisir un conteneur LXC",
-      "body": "Liste les LXC admissibles par ID et nom. Les conteneurs OCI utilisent Apps du gestionnaire OCI pour leurs périphériques. Le conteneur est arrêté pour configuration, démarré pour installation, puis retrouve normalement son état initial.",
+      "body": "Liste les conteneurs LXC admissibles par ID et nom ; les conteneurs OCI sont exclus et utilisent OCI manager Apps pour leurs périphériques. Le conteneur est arrêté s’il est en cours d’exécution, démarré pour l’installation des pilotes, puis retrouve normalement son état initial (en marche/arrêté).",
       "imageAlt": "Sélection d’un conteneur LXC existant"
     },
     "selectGpu": {
@@ -98,7 +98,7 @@
     },
     "applyConfig": {
       "title": "Appliquer les modifications de configuration LXC",
-      "body1": "Arrête le conteneur et modifie <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>. Les entrées <code>dev&lt;N&gt;</code> portent les GID choisis. Le mécanisme <code>dev:</code> remplace ici les règles manuelles <code>lxc.mount.entry</code>. Vérifiez configuration et droits.",
+      "body1": "Arrête le conteneur s’il est en cours d’exécution et modifie <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>. Les entrées numérotées <code>dev&lt;N&gt;</code> portent le GID hôte de <code>video</code> ou <code>render</code>. Les lignes bind <code>lxc.mount.entry</code> existantes pour <code>/dev/dri</code> sont remplacées par des entrées <code>dev:</code> ; vérifiez la configuration et les droits obtenus.",
       "body2": "Exemple après Intel + NVIDIA sur le même conteneur:"
     },
     "installDrivers": {
@@ -127,14 +127,14 @@
     },
     "alignGids": {
       "title": "Aligner les GID et restaurer l'état",
-      "body1": "Lit les GID hôte de <code>video</code> et <code>render</code>, avec 44/104 comme valeurs de secours, puis adapte <code>/etc/group</code> dans le conteneur. <code>video:44</code> et <code>render:104</code> sont des exemples. Vérifiez les groupes de l’application et les droits effectifs.",
+      "body1": "Pour Intel/AMD, lit les GID hôte de <code>video</code> et <code>render</code>, avec 44/104 uniquement comme valeurs de secours, puis modifie <code>/etc/group</code> dans le conteneur pour qu’ils correspondent ; les exécutions NVIDIA seul sautent cette étape. Des entrées comme <code>video:44</code> et <code>render:104</code> sont des exemples, pas des ID universels. Vérifiez l’appartenance de l’application aux groupes et les droits effectifs sur les périphériques.",
       "body2": "À la fin normale, un conteneur initialement arrêté est de nouveau arrêté ; un conteneur actif reste actif. En cas d’échec de démarrage ou d’installation, vérifiez l’état final et le journal."
     }
   },
   "vendors": {
     "heading": "Notes par fabricant",
     "intelHeading": "Intel iGPU",
-    "intelBody": "L’accélération Intel, dont <em>Quick Sync</em>, dépend de la génération, des codecs et de l’application. Partage les nœuds existants comme <code>/dev/dri/card0</code> et <code>/dev/dri/renderD128</code>, dont les numéros peuvent varier. Le pilote natif de l’hôte, par exemple <code>i915</code>, doit les fournir.",
+    "intelBody": "L’accélération multimédia Intel, dont <em>Quick Sync</em>, dépend de la génération du GPU, des codecs et de la configuration de l’application. Le script partage ceux de <code>/dev/dri/card0</code>, <code>card1</code>, <code>renderD128</code> et <code>renderD129</code> qui existent ; les autres numéros de nœud ne sont pas ajoutés. L’hôte doit déjà les fournir via son pilote natif, par exemple <code>i915</code>.",
     "amdHeading": "AMD",
     "amdBody": "AMD utilise DRI pour Mesa/VA-API. Si <code>/dev/kfd</code> existe sur l’hôte, le partage aussi. ROCm/OpenCL exige matériel et bibliothèques compatibles ; partager le périphérique n’installe pas toute la pile ROCm.",
     "nvidiaHeading": "NVIDIA",

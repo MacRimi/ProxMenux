@@ -42,21 +42,21 @@
       },
       {
         "situation": "I just want to completely unbind a GPU from everything.",
-        "use": "LXC mode restores host-driver ownership; removing guest assignments still needs the relevant conflict-policy choices. This does not leave the GPU unbound from every driver."
+        "use": "LXC mode restores host-driver ownership; the VM conflict policy can remove hostpci entries, but LXC device entries must be removed separately. This does not leave the GPU unbound from every driver."
       }
     ]
   },
   "prereqs": {
     "title": "Before you start",
     "assigned": "<strong>A GPU already assigned</strong> — either in a VM via VFIO or attached to at least one LXC. If you haven't assigned it yet, start from Add GPU to VM / LXC instead.",
-    "iommu": "<strong>IOMMU must be active on the host</strong> when switching <em>to</em> VM mode. Firmware settings and kernel support both matter; explicit arguments are not always necessary. If needed, the script attempts <code>intel_iommu=on iommu=pt</code> or <code>amd_iommu=on</code> using the active boot setup, with <code>proxmox-boot-tool refresh</code> or <code>update-grub</code>. Check any warnings and reboot when prompted.",
+    "iommu": "<strong>IOMMU must be active on the host</strong> when switching <em>to</em> VM mode. Firmware settings and kernel support both matter. If <code>intel_iommu=on</code> or <code>amd_iommu=on</code> is missing from the running kernel, the script adds it with <code>iommu=pt</code> to <code>/etc/kernel/cmdline</code> (ZFS-root marker) or <code>/etc/default/grub</code>, then runs <code>proxmox-boot-tool refresh</code> or <code>update-grub</code>. Check any warnings and reboot when prompted.",
     "iommuCheck": "dmesg | grep -i 'IOMMU enabled' | head -1",
     "reboot": "<strong>Plan for a reboot.</strong> Persistent driver and boot changes may require rebuilding initramfs and rebooting. The script presents a reboot prompt at the end.",
     "knowList": "<strong>Know which VMs / LXCs are using the GPU.</strong> The script will find them and ask what to do with each, but it's faster if you already know the list."
   },
   "blocklist": {
     "title": "Not all GPUs are safe to pass to a VM",
-    "body": "The script blocks VM mode for certain device IDs, including <code>8086:5a84</code> and <code>8086:5a85</code>, under its compatibility policy. If a selected GPU matches, it displays a warning. This blocklist does not prevent switching <em>to</em> LXC mode; other checks can still apply."
+    "body": "The script blocks VM mode for device IDs <code>8086:5a84</code> and <code>8086:5a85</code> under its compatibility policy. If a selected GPU matches, it stops the VM-mode switch and returns to GPU selection, or exits when it is the only GPU. This blocklist does not prevent switching <em>to</em> LXC mode; other checks can still apply."
   },
   "running": {
     "heading": "Running the script",
@@ -85,7 +85,7 @@
       "intro": "Based on the current mode, the script proposes the opposite as target:",
       "items": [
         "<strong>VM → LXC:</strong> unbind from <code>vfio-pci</code>, let the native driver (<code>nvidia</code>, <code>amdgpu</code>, <code>i915</code>) reclaim the card so LXCs can share it. On NVIDIA, the per-BDF entry is removed from <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> so the nvidia module reclaims the GPU after reboot.",
-        "<strong>LXC → VM:</strong> prepares <code>vfio-pci</code> ownership. AMD / Intel use native-driver blacklisting and <code>options vfio-pci ids=…</code>. For NVIDIA, <code>nvidia</code> is <strong>not</strong> globally blacklisted: per-BDF rules set <code>driver_override=vfio-pci</code> for the affected IOMMU-group devices. NVIDIA GPUs outside those groups can retain <code>nvidia</code>. Review every group member before switching."
+        "<strong>LXC → VM:</strong> prepares <code>vfio-pci</code> ownership. AMD / Intel use native-driver blacklisting and <code>options vfio-pci ids=…</code>. For NVIDIA, <code>nvidia</code> is globally blacklisted only when every host NVIDIA GPU is in VFIO; otherwise per-BDF rules set <code>driver_override=vfio-pci</code> for the affected IOMMU-group devices, and NVIDIA GPUs outside those groups keep <code>nvidia</code>. Review every group member before switching."
       ],
       "outro": "Confirm the direction or cancel."
     },

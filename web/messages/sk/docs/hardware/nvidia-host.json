@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Čo robí",
-    "body": "Zistí GPU a ponúkne udržiavané vetvy s jeho PCI ID. Zablokuje <code>nouveau</code>, stiahne oficiálny inštalátor <code>.run</code>, používa DKMS a nainštaluje <code>nvidia-persistenced</code> s pravidlami udev; patch NVENC je voliteľný. Zostavenie overuje aktuálne jadro, nezaručuje však všetky aplikácie. LXC NVIDIA môžu dostať zodpovedajúce knižnice."
+    "body": "ProxMenux zistí GPU a ponúkne udržiavané vetvy NVIDIA, ktoré uvádzajú jeho PCI ID. Zablokuje <code>nouveau</code>, stiahne oficiálny inštalátor <code>.run</code>, používa DKMS, nainštaluje <code>nvidia-persistenced</code>, pravidlá udev a NVIDIA Container Toolkit a ponúkne voliteľný patch NVENC. Kontroly zostavenia overujú bežiace jadro; úspešná kompilácia nezaručuje, že bude fungovať každá aplikácia. Existujúcim LXC NVIDIA sa ponúkne aktualizácia knižníc používateľského priestoru so zodpovedajúcou verziou, okrem Arch."
   },
   "who": {
     "heading": "Pre koho je toto?",
@@ -89,7 +89,7 @@
     },
     "reboot": {
       "title": "Reštartovať",
-      "body": "Obnoví <code>initramfs</code> pre všetky jadrá a ponúkne reštart. <strong>Naplánujte tento reštart</strong> na overenie modulov a konfigurácie nouveau pri štarte, aj keď ovládač odpovedá už predtým."
+      "body": "Po inštalácii ovládača skript obnoví <code>initramfs</code> pre všetky jadrá; jeho posledný krok ponúkne reštart. <strong>Naplánujte tento reštart</strong> na overenie trvalej konfigurácie modulov a nouveau pri novom štarte, aj keď nový ovládač odpovedá už pred reštartom."
     }
   },
   "reinstallUninstall": {
@@ -102,8 +102,8 @@
     "uninstallHeading": "Odinštalovať čo sa odstráni",
     "uninstallIntro": "Po potvrdení Áno/Nie odstráni nasledujúce komponenty:",
     "uninstallItems": [
-      "Spustí <code>nvidia-uninstall --silent</code> pre inštaláciu <code>.run</code>, zastaví a zakáže <code>nvidia-persistenced</code> a <code>nvidia-powerd</code> a skúsi odpojiť <code>nvidia_uvm</code>, <code>nvidia_drm</code>, <code>nvidia_modeset</code> a <code>nvidia</code>. Ovplyvní aplikácie LXC NVIDIA; aktívni klienti môžu odpojenie blokovať.",
-      "Spustí <code>apt purge</code> pre <code>nvidia-*</code>, <code>libnvidia-*</code>, <code>cuda-*</code> a <code>libcudnn*</code>, odstráni zdrojový strom DKMS a vyrovnávaciu pamäť inštalátora .run v <code>/opt/nvidia</code>.",
+      "Zastaví a zakáže <code>nvidia-persistenced</code> a <code>nvidia-powerd</code>, skúsi odpojiť <code>nvidia_uvm</code>, <code>nvidia_drm</code>, <code>nvidia_modeset</code> a <code>nvidia</code> a potom spustí <code>nvidia-uninstall --silent</code> pre inštaláciu <code>.run</code>. Ovplyvní záťaže LXC závislé od NVIDIA; aktívni klienti môžu odpojenie blokovať.",
+      "Spustí <code>apt purge</code> pre <code>nvidia-*</code>, <code>libnvidia-*</code>, <code>cuda-*</code> a <code>libcudnn*</code>, odstráni zdrojový strom DKMS a priečinky <code>nvidia-persistenced</code> a <code>nvidia-patch</code> v <code>/opt/nvidia</code>.",
       "Odstráni konfiguráciu načítavania modulov (<code>/etc/modules-load.d/nvidia-vfio.conf</code>) a položky blokovania ovládača nouveau spravované ProxMenux. Staré dvojriadkové súbory blokovania ProxMenux sa tiež migrujú a odstránia. Upravené alebo nesúvisiace súbory správcu sa zachovajú.",
       "Odstráni <code>/etc/udev/rules.d/70-nvidia.rules</code> a nastaví stav NVENC na <em>removed</em> v registri spravovaných inštalácií; samostatný stavový súbor neexistuje.",
       "Obnoví <code>initramfs</code> pre všetky jadrá, podľa konfigurácie zavádzania spustí <code>proxmox-boot-tool refresh</code> a vyzve na reštart."

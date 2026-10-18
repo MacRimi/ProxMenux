@@ -71,7 +71,7 @@
       "title": "PCIe: moduli gasket e apex tramite DKMS",
       "body": "Eseguito solo se rileva un Coral PCIe/M.2. Compila i moduli per il kernel attualmente in esecuzione sull’host.",
       "items": [
-        "<strong>Pulizia.</strong> Se una precedente installazione di <code>gasket-dkms</code> ha lasciato pacchetti in stato incoerente, tenta di eliminarla prima della compilazione.",
+        "<strong>Pulizia.</strong> Qualsiasi pacchetto <code>gasket-dkms</code> esistente viene rimosso prima della ricompilazione; se è in uno stato incoerente, lo script ne forza la rimozione e la purga.",
         "<strong>Dipendenze di compilazione:</strong> <code>git</code>, <code>dkms</code>, <code>build-essential</code>, <code>proxmox-headers-$(uname -r)</code>."
       ],
       "cloneIntro": "<strong>Clona i sorgenti del driver.</strong> Preferisce <feranickLink>feranick/gasket-driver</feranickLink>, altrimenti usa <googleLink>google/gasket-driver</googleLink>. La compilazione dipende dalla compatibilità del kernel. Applica queste patch ai sorgenti Google secondo la versione:",
@@ -132,7 +132,7 @@
       "Elimina completamente <code>gasket-dkms</code>, <code>libedgetpu1-std</code> e <code>libedgetpu1-max</code>, poi esegue <code>apt-get autoremove --purge</code>.",
       "Elimina <code>/etc/udev/rules.d/99-coral-apex.rules</code> e ripristina il gruppo predefinito in <code>60-gasket-dkms.rules</code>, se esiste ancora.",
       "Controlla i membri supplementari di <code>apex</code>. <strong>Se l’elenco è vuoto</strong>, tenta di rimuovere il gruppo; altrimenti mantiene <code>apex</code> ed elenca i membri. Non verifica completamente gli utenti che lo hanno come gruppo principale.",
-      "Rimuove i vecchi repository, tra cui <code>/etc/apt/sources.list.d/coral-edgetpu.list</code>, e portachiavi chiamati <code>coral-edgetpu-archive-keyring.gpg</code>. Il portachiavi attuale /etc/apt/keyrings/coral-edgetpu.gpg rimane.",
+      "Rimuove l’elenco dei repository <code>/etc/apt/sources.list.d/coral-edgetpu.list</code>, il vecchio <code>coral-cloud.list</code> e i vecchi portachiavi chiamati <code>coral-edgetpu-archive-keyring.gpg</code>. Il portachiavi attuale in <code>/etc/apt/keyrings/coral-edgetpu.gpg</code> non viene rimosso da questa sequenza.",
       "Propone un riavvio <strong>solo se PCIe era installato</strong> per scaricare i moduli ancora attivi. Rimuovere solo USB non richiede riavvio."
     ],
     "lxcWarnTitle": "LXC contenitori con apex passthrough",

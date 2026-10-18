@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "O que faz",
-    "body": "Deteta o GPU e oferece ramos mantidos que incluem o ID PCI. Bloqueia <code>nouveau</code>, descarrega o instalador oficial <code>.run</code>, utiliza DKMS e instala <code>nvidia-persistenced</code> com regras udev; patch NVENC opcional. A compilação verifica o kernel atual sem garantir todas as aplicações. Os LXC NVIDIA podem receber bibliotecas correspondentes."
+    "body": "O ProxMenux deteta o GPU e oferece ramos NVIDIA mantidos que incluem o seu ID PCI. Bloqueia <code>nouveau</code>, descarrega o instalador oficial <code>.run</code>, utiliza DKMS, instala <code>nvidia-persistenced</code>, regras udev e o NVIDIA Container Toolkit, e oferece um patch NVENC opcional. As verificações de compilação avaliam o kernel em execução; uma compilação bem-sucedida não garante que todas as aplicações funcionem. Aos LXC NVIDIA existentes é oferecida uma atualização das bibliotecas userspace, com versão correspondente exceto em Arch."
   },
   "who": {
     "heading": "Para quem é isto?",
@@ -89,7 +89,7 @@
     },
     "reboot": {
       "title": "Reiniciar",
-      "body": "Regenera <code>initramfs</code> para todos os kernels e oferece reiniciar. <strong>Preveja esse reinício</strong> para verificar módulos e configuração nouveau no arranque, mesmo que o controlador já responda antes."
+      "body": "Após a instalação do controlador, o script regenera <code>initramfs</code> para todos os kernels; o seu último passo oferece reiniciar. <strong>Preveja esse reinício</strong> para verificar a configuração persistente dos módulos e do nouveau num novo arranque, mesmo que o novo controlador já responda antes do reinício."
     }
   },
   "reinstallUninstall": {
@@ -102,8 +102,8 @@
     "uninstallHeading": "Desinstalar — o que é removido",
     "uninstallIntro": "Após confirmação Sim/Não, remove os seguintes componentes:",
     "uninstallItems": [
-      "Executa <code>nvidia-uninstall --silent</code> para a instalação <code>.run</code>, para e desativa <code>nvidia-persistenced</code> e <code>nvidia-powerd</code> e tenta descarregar <code>nvidia_uvm</code>, <code>nvidia_drm</code>, <code>nvidia_modeset</code> e <code>nvidia</code>. Afeta aplicações LXC NVIDIA; clientes ativos podem impedir a descarga.",
-      "Executa <code>apt purge</code> em <code>nvidia-*</code>, <code>libnvidia-*</code>, <code>cuda-*</code> e <code>libcudnn*</code>, remove a árvore fonte DKMS e o cache do instalador <code>/opt/nvidia</code>.run.",
+      "Para e desativa <code>nvidia-persistenced</code> e <code>nvidia-powerd</code>, tenta descarregar <code>nvidia_uvm</code>, <code>nvidia_drm</code>, <code>nvidia_modeset</code> e <code>nvidia</code> e depois executa <code>nvidia-uninstall --silent</code> para a instalação <code>.run</code>. Afeta as cargas de trabalho LXC dependentes de NVIDIA; clientes ativos podem impedir a descarga.",
+      "Executa <code>apt purge</code> em <code>nvidia-*</code>, <code>libnvidia-*</code>, <code>cuda-*</code> e <code>libcudnn*</code>, remove a árvore fonte DKMS e as pastas <code>nvidia-persistenced</code> e <code>nvidia-patch</code> em <code>/opt/nvidia</code>.",
       "Remove a configuração de carregamento <code>/etc/modules-load.d/nvidia-vfio.conf</code> e regras nouveau geridas pelo ProxMenux. Migra e remove também os antigos ficheiros ProxMenux com as duas linhas conhecidas; preserva ficheiros modificados ou não relacionados do administrador.",
       "Remove <code>/etc/udev/rules.d/70-nvidia.rules</code> e marca NVENC como <em>removed</em> no registo de instalações geridas; não existe ficheiro de estado separado.",
       "Regenera <code>initramfs</code> para todos os kernels, executa <code>proxmox-boot-tool refresh</code> conforme o arranque e pede reinício."

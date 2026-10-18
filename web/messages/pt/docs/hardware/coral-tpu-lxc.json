@@ -18,7 +18,7 @@
   },
   "prereqs": {
     "title": "Antes de começar",
-    "drivers": "<strong>Prepare o Coral no anfitrião</strong>. M.2 / PCIe exige o controlador carregado; USB exige acesso ao dispositivo e permissões adequadas. Consulte <hostLink>Instalar Coral TPU no anfitrião</hostLink>. O runtime da aplicação deve estar disponível no contentor.",
+    "drivers": "<strong>Prepare o dispositivo Coral no anfitrião</strong>. M.2 / PCIe exige o controlador do anfitrião carregado; USB exige acesso ao dispositivo e permissões adequadas. Consulte <hostLink>Instalar Coral TPU no anfitrião</hostLink>. O script instala o runtime da aplicação em contentores Debian/Ubuntu; as outras distribuições têm de o disponibilizar separadamente.",
     "driversCheck": "ls /dev/apex_* 2>/dev/null ; lsusb | grep -E '1a6e:089a|18d1:9302'",
     "container": "<strong>Um LXC existente</strong>, de preferência baseado em <strong>Debian / Ubuntu</strong>: a instalação utiliza <code>apt-get</code>. Os <strong>contentores de outras distribuições</strong> podem usar o <strong>modo apenas de passagem direta</strong>, que omite a instalação APT de <code>libedgetpu</code>. É útil se a aplicação já incluir o runtime, como a imagem Docker Frigate.",
     "downtime": "<strong>Preveja uma breve interrupção</strong> do contentor. O script para-o para alterar a configuração e inicia-o para instalar o runtime. Estas alterações não exigem reiniciar o anfitrião."
@@ -44,7 +44,7 @@
     },
     "gpuHint": {
       "title": "Sugestão opcional de acesso ao GPU",
-      "body": "Se detetar um GPU não configurado para o contentor, recomenda <lxcGpuLink>Adicionar GPU ao LXC</lxcGpuLink> para descodificação de vídeo, como Quick Sync, VA-API ou NVDEC. Pergunta se pretende continuar apenas com Coral: Sim continua; Não sai para configurar primeiro o GPU."
+      "body": "Se for detetado um GPU não configurado para este contentor, uma caixa de diálogo recomenda <lxcGpuLink>Adicionar GPU ao LXC</lxcGpuLink> para descodificação de vídeo por hardware, como Quick Sync, VA-API ou NVENC. Pergunta se pretende continuar apenas com Coral: Sim continua a configuração do TPU; Não sai para que possa configurar primeiro o GPU."
     },
     "usb": {
       "title": "Configurar acesso USB no LXC",
@@ -55,7 +55,7 @@
     "pcie": {
       "title": "Configurar acesso M.2 / PCIe no LXC",
       "body1": "Se detetar Coral M.2 / PCIe e existir <code>/dev/apex_0</code>, utiliza a API Proxmox <code>dev</code> para gerir cgroup2 em LXC com e sem privilégios:",
-      "body2": "Se <code>/dev/apex_0</code> ainda não existir após <hostLink>Instalar Coral no anfitrião</hostLink>, utiliza cgroup2 e um bind mount opcional com <code>create=file</code>. Isto não cria por si só um dispositivo funcional:",
+      "body2": "Se <code>/dev/apex_0</code> estiver ausente após <hostLink>Instalar Coral no anfitrião</hostLink>, o script escreve um bind mount com <code>create=file</code> e, apenas quando o número major do apex consta de <code>/proc/devices</code>, uma regra cgroup2 clássica. Nenhum dos dois cria um dispositivo funcional:",
       "rebootTitle": "Reiniciar o host primeiro se você acabou de instalar os drivers Coral",
       "rebootBody": "A montagem alternativa não carrega <code>apex</code> no anfitrião. Carregue o controlador ou reinicie após a instalação e verifique o dispositivo. Execute novamente o script para aplicar a entrada moderna e reinicie o contentor."
     },
@@ -92,7 +92,7 @@
   "troubleshoot": {
     "heading": "Resolução de problemas",
     "apexTitle": "LXC iniciado, mas falta /dev/apex_0",
-    "apexBody": "Verifique o controlador do anfitrião: <code>lsmod | grep apex</code>. Se faltar, tente <code>modprobe apex</code> ou reinicie após a instalação. Quando existir <code>/dev/apex_0</code> no anfitrião, verifique a entrada LXC e reinicie com <code>pct stop &lt;ctid&gt; &amp;&amp; pct start &lt;ctid&gt;</code>.",
+    "apexBody": "Verifique primeiro o controlador do anfitrião: <code>lsmod | grep apex</code>. Se faltar, tente <code>modprobe apex</code> ou reinicie após a instalação do controlador. Quando existir <code>/dev/apex_0</code> no anfitrião, verifique a entrada de dispositivo LXC (volte a executar o script se só foram escritas as entradas alternativas) e reinicie o contentor com <code>pct stop &lt;ctid&gt; &amp;&amp; pct start &lt;ctid&gt;</code>.",
     "replugTitle": "Coral USB desaparece ao ligar noutra porta",
     "replugBody": "Confirme que o LXC monta <code>/dev/bus/usb</code> em vez da ligação <code>/dev/coral</code>. A configuração deve incluir <code>lxc.mount.entry: /dev/bus/usb dev/bus/usb ...</code> sem depender diretamente de <code>/dev/coral</code>. Execute novamente o script se a configuração for antiga.",
     "alpineTitle": "Alpine / Arch / RHEL / SUSE: runtime não instalado",

@@ -6,11 +6,11 @@
   "header": {
     "title": "Instalar drivers NVIDIA en el host",
     "description": "Instala NVIDIA en el host Proxmox VE. Filtra las ramas mantenidas según el ID PCI de la GPU, comprueba la compilación, usa DKMS, gestiona nouveau e instala persistencia. También puede actualizar bibliotecas de LXC con acceso NVIDIA.",
-    "section": "Hardware: GPUs y Coral-TPU"
+    "section": "Hardware: GPU y Coral-TPU"
   },
   "intro": {
     "title": "Qué hace",
-    "body": "Detecta la GPU y ofrece ramas mantenidas que incluyen su ID PCI. Bloquea <code>nouveau</code>, descarga el instalador oficial <code>.run</code>, usa DKMS e instala <code>nvidia-persistenced</code> y reglas udev, con parche NVENC opcional. Las comprobaciones de compilación evalúan el kernel actual; compilar no garantiza que todas las apps funcionen. Puede actualizar bibliotecas de LXC NVIDIA."
+    "body": "Detecta la GPU y ofrece ramas mantenidas que incluyen su ID PCI. Bloquea <code>nouveau</code>, descarga el instalador oficial <code>.run</code>, usa DKMS, instala <code>nvidia-persistenced</code>, reglas udev y NVIDIA Container Toolkit, con parche NVENC opcional. Las comprobaciones de compilación evalúan el kernel actual; compilar no garantiza que todas las apps funcionen. Ofrece actualizar las bibliotecas de los LXC NVIDIA existentes, con la misma versión salvo en Arch."
   },
   "who": {
     "heading": "¿Para quién es esto?",
@@ -60,7 +60,7 @@
       "title": "Preparar el sistema",
       "body": "Durante la preparación, el script:",
       "items": [
-        "Comprueba repositorios antes de quitar o instalar componentes. Si no hay suscripción y solo está Enterprise, pide permiso para usar no-subscription; si rechazas el cambio, detiene la instalación.",
+        "Comprueba repositorios antes de eliminar o instalar componentes. Si no hay suscripción y solo está Enterprise, pide permiso para usar no-subscription; si rechazas el cambio, detiene la instalación.",
         "Instala <code>pve-headers-$(uname -r)</code> (o <code>proxmox-headers-$(uname -r)</code>), <code>build-essential</code> y <code>dkms</code>.",
         "Crea <code>/etc/modprobe.d/proxmenux-nouveau-blacklist.conf</code>, gestionado por ProxMenux, con <code>blacklist nouveau</code> y <code>options nouveau modeset=0</code>. Registra si añadió la línea complementaria a <code>blacklist.conf</code> e intenta descargar nouveau.",
         "Escribe <code>/etc/modules-load.d/nvidia-vfio.conf</code> con <code>nvidia</code> y <code>nvidia_uvm</code> para que los módulos se carguen pronto en el arranque."
@@ -89,7 +89,7 @@
     },
     "reboot": {
       "title": "Reiniciar",
-      "body": "Regenera <code>initramfs</code> para todos los kernels y ofrece reiniciar. <strong>Planifica ese reinicio</strong> para verificar módulos y bloqueo de nouveau en un arranque limpio, aunque el controlador ya responda antes."
+      "body": "Tras instalar el controlador, regenera <code>initramfs</code> para todos los kernels; el último paso ofrece reiniciar. <strong>Planifica ese reinicio</strong> para verificar módulos y bloqueo de nouveau en un arranque limpio, aunque el controlador ya responda antes."
     }
   },
   "reinstallUninstall": {
@@ -102,9 +102,9 @@
     "uninstallHeading": "Desinstalar — qué se elimina",
     "uninstallIntro": "Tras confirmar con Sí/No, desinstala estos componentes:",
     "uninstallItems": [
-      "Ejecuta <code>nvidia-uninstall --silent</code> para la instalación <code>.run</code>, detiene y deshabilita <code>nvidia-persistenced</code> y <code>nvidia-powerd</code> e intenta descargar <code>nvidia_uvm</code>, <code>nvidia_drm</code>, <code>nvidia_modeset</code> y <code>nvidia</code>. Afecta a las apps LXC que usan NVIDIA; clientes activos pueden impedir la descarga.",
-      "Ejecuta <code>apt purge</code> sobre <code>nvidia-*</code>, <code>libnvidia-*</code>, <code>cuda-*</code> y <code>libcudnn*</code>, quita el árbol fuente DKMS y la caché del instalador .run de <code>/opt/nvidia</code>.",
-      "Quita la configuración de carga de módulos (<code>/etc/modules-load.d/nvidia-vfio.conf</code>) y las entradas de blacklist de nouveau creadas por ProxMenux. También migra y elimina los archivos antiguos de ProxMenux con las dos líneas conocidas; conserva los archivos modificados o ajenos del administrador.",
+      "Detiene y desactiva <code>nvidia-persistenced</code> y <code>nvidia-powerd</code>, intenta descargar <code>nvidia_uvm</code>, <code>nvidia_drm</code>, <code>nvidia_modeset</code> y <code>nvidia</code> y después ejecuta <code>nvidia-uninstall --silent</code> para la instalación <code>.run</code>. Afecta a las apps LXC que usan NVIDIA; clientes activos pueden impedir la descarga.",
+      "Ejecuta <code>apt purge</code> sobre <code>nvidia-*</code>, <code>libnvidia-*</code>, <code>cuda-*</code> y <code>libcudnn*</code>, elimina el árbol fuente DKMS y las carpetas <code>nvidia-persistenced</code> y <code>nvidia-patch</code> de <code>/opt/nvidia</code>.",
+      "Elimina la configuración de carga de módulos (<code>/etc/modules-load.d/nvidia-vfio.conf</code>) y las entradas de blacklist de nouveau creadas por ProxMenux. También migra y elimina los archivos antiguos de ProxMenux con las dos líneas conocidas; conserva los archivos modificados o ajenos del administrador.",
       "Retira <code>/etc/udev/rules.d/70-nvidia.rules</code> y marca el estado NVENC como <em>removed</em> en el registro de instalaciones gestionadas; no hay un archivo de estado separado.",
       "Regenera <code>initramfs</code> para todos los kernels, ejecuta <code>proxmox-boot-tool refresh</code> según la configuración de arranque y solicita reiniciar."
     ],

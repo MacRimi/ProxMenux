@@ -18,7 +18,7 @@
   },
   "prereqs": {
     "title": "Skôr ako začnete",
-    "drivers": "<strong>Pripravte Coral na hostiteľovi</strong>. M.2 / PCIe vyžaduje načítaný ovládač hostiteľa; USB prístup k zariadeniu a správne oprávnenia. Pozrite <hostLink>Inštalácia Coral TPU na hostiteľa</hostLink>. Runtime aplikácie musí byť dostupný v kontajneri.",
+    "drivers": "<strong>Pripravte zariadenie Coral na hostiteľovi</strong>. M.2 / PCIe vyžaduje načítaný ovládač hostiteľa; USB prístup k zariadeniu a správne oprávnenia. Pozrite <hostLink>Inštalácia Coral TPU na hostiteľa</hostLink>. Skript nainštaluje runtime aplikácie v kontajneroch Debian/Ubuntu; ostatné distribúcie ho musia poskytnúť samostatne.",
     "driversCheck": "ls /dev/apex_* 2>/dev/null ; lsusb | grep -E '1a6e:089a|18d1:9302'",
     "container": "<strong>Existujúci LXC</strong>, ideálne založený na <strong>Debian / Ubuntu</strong>: inštalácia používa <code>apt-get</code>. <strong>Kontajnery iných distribúcií</strong> môžu zvoliť <strong>režim iba sprístupnenia zariadenia</strong>, ktorý preskočí APT inštaláciu <code>libedgetpu</code>. Hodí sa, ak aplikácia už runtime obsahuje, napríklad Docker obraz Frigate.",
     "downtime": "<strong>Počítajte s krátkym výpadkom</strong> kontajnera. Skript ho zastaví kvôli konfigurácii a spustí na inštaláciu runtime. Tieto zmeny nevyžadujú reštart hostiteľa."
@@ -44,7 +44,7 @@
     },
     "gpuHint": {
       "title": "Voliteľné odporúčanie prístupu ku GPU",
-      "body": "Ak zistí GPU bez konfigurácie pre kontajner, odporučí <lxcGpuLink>Pridať GPU do LXC</lxcGpuLink> na dekódovanie videa, napríklad Quick Sync, VA-API alebo NVDEC. Pýta sa, či pokračovať iba s Coral: Áno pokračuje; Nie ukončí postup, aby ste najprv nastavili GPU."
+      "body": "Ak sa zistí GPU, ktorá nie je nakonfigurovaná pre tento kontajner, dialóg odporučí <lxcGpuLink>Pridať GPU do LXC</lxcGpuLink> na hardvérové dekódovanie videa, napríklad Quick Sync, VA-API alebo NVENC. Pýta sa, či pokračovať iba s Coral: Áno pokračuje v nastavení TPU; Nie ukončí postup, aby ste najprv mohli nastaviť GPU."
     },
     "usb": {
       "title": "Nastavenie prístupu USB v LXC",
@@ -55,7 +55,7 @@
     "pcie": {
       "title": "Nastavenie prístupu M.2 / PCIe v LXC",
       "body1": "Ak zistí Coral M.2 / PCIe a existuje <code>/dev/apex_0</code>, použije API Proxmoxu <code>dev</code> na správu cgroup2 v privilegovaných aj neprivilegovaných LXC:",
-      "body2": "Ak po <hostLink>Inštalácii Coral na hostiteľa</hostLink> ešte neexistuje <code>/dev/apex_0</code>, použije klasické cgroup2 a voliteľný bind mount s <code>create=file</code>. Samotný zápis nevytvorí funkčné zariadenie:",
+      "body2": "Ak po <hostLink>Inštalácii Coral na hostiteľa</hostLink> chýba <code>/dev/apex_0</code>, skript zapíše bind mount s <code>create=file</code> a iba vtedy, keď je číslo major zariadenia apex uvedené v <code>/proc/devices</code>, aj klasické pravidlo cgroup2. Ani jedno nevytvorí funkčné zariadenie:",
       "rebootTitle": "Reštartovať hostiteľa ako prvý, ak ste práve nainštalovali Coral ovládače",
       "rebootBody": "Náhradné pripojenie nenačíta ovládač <code>apex</code> na hostiteľovi. Načítajte ho alebo po inštalácii reštartujte a overte zariadenie. Potom znova spustite skript pre modernú položku zariadenia a reštartujte kontajner."
     },
@@ -92,7 +92,7 @@
   "troubleshoot": {
     "heading": "Riešenie problémov",
     "apexTitle": "LXC je spustený, ale chýba /dev/apex_0",
-    "apexBody": "Overte ovládač hostiteľa: <code>lsmod | grep apex</code>. Ak chýba, skúste <code>modprobe apex</code> alebo po inštalácii reštartujte. Keď na hostiteľovi existuje <code>/dev/apex_0</code>, overte položku LXC a reštartujte cez <code>pct stop &lt;ctid&gt; &amp;&amp; pct start &lt;ctid&gt;</code>.",
+    "apexBody": "Najprv overte ovládač hostiteľa: <code>lsmod | grep apex</code>. Ak chýba, skúste <code>modprobe apex</code> alebo po inštalácii ovládača reštartujte. Keď na hostiteľovi existuje <code>/dev/apex_0</code>, overte položku zariadenia LXC (ak sa zapísali iba náhradné položky, spustite skript znova) a reštartujte kontajner cez <code>pct stop &lt;ctid&gt; &amp;&amp; pct start &lt;ctid&gt;</code>.",
     "replugTitle": "USB Coral zmizne po pripojení do iného portu",
     "replugBody": "Overte, že LXC pripája <code>/dev/bus/usb</code> namiesto odkazu <code>/dev/coral</code>. Konfigurácia má obsahovať <code>lxc.mount.entry: /dev/bus/usb dev/bus/usb ...</code> bez priamej závislosti od <code>/dev/coral</code>. Pri starej konfigurácii skript spustite znova.",
     "alpineTitle": "Alpine / Arch / RHEL / SUSE: runtime nie je nainštalovaný",

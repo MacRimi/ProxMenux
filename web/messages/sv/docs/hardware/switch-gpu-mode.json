@@ -42,21 +42,21 @@
       },
       {
         "situation": "Jag vill ta bort alla tilldelningar av denna GPU.",
-        "use": "LXC-läget återför GPU:n till värdens drivrutin; ta bort gästtilldelningar med motsvarande konfliktval. GPU:n är fortfarande bunden till en drivrutin."
+        "use": "LXC-läget återför GPU:n till värdens drivrutin; VM-konfliktpolicyn kan ta bort hostpci-poster, men LXC-enhetsposter måste tas bort separat. GPU:n är fortfarande bunden till en drivrutin."
       }
     ]
   },
   "prereqs": {
     "title": "Innan du börjar",
     "assigned": "<strong>En redan tilldelad GPU</strong> i en VM via VFIO eller i en LXC. För första tilldelningen, använd Lägg till GPU i VM / LXC.",
-    "iommu": "<strong>IOMMU måste vara aktivt på värden</strong> vid byte <em>till</em> VM-läge. Firmware och kärnstöd behövs; explicita parametrar är inte alltid nödvändiga. Vid behov försöker skriptet lägga till <code>intel_iommu=on iommu=pt</code> eller <code>amd_iommu=on</code> via aktiv startkonfiguration med <code>proxmox-boot-tool refresh</code> eller <code>update-grub</code>. Granska varningar och starta om när du uppmanas.",
+    "iommu": "<strong>IOMMU måste vara aktivt på värden</strong> vid byte <em>till</em> VM-läge. Både firmwareinställningar och kärnstöd spelar roll. Om <code>intel_iommu=on</code> eller <code>amd_iommu=on</code> saknas i den körande kärnan lägger skriptet till det med <code>iommu=pt</code> i <code>/etc/kernel/cmdline</code> (ZFS-rotmarkör) eller <code>/etc/default/grub</code> och kör sedan <code>proxmox-boot-tool refresh</code> eller <code>update-grub</code>. Granska eventuella varningar och starta om när du uppmanas.",
     "iommuCheck": "dmesg | grep -i 'IOMMU enabled' | head -1",
     "reboot": "<strong>Planera en omstart.</strong> Beständiga drivrutins- och startändringar kan kräva ombyggnad av initramfs och omstart. Skriptet frågar om detta i slutet.",
     "knowList": "<strong>Ta reda på vilka VM och LXC som använder GPU:n.</strong> Skriptet hittar referenser och frågar hur varje gäst ska hanteras; en känd lista underlättar granskningen."
   },
   "blocklist": {
     "title": "Inte alla GPU är säkra att passera till en VM",
-    "body": "Skriptet blockerar VM-läge för vissa enhets-ID, bland annat <code>8086:5a84</code> och <code>8086:5a85</code>, enligt sin kompatibilitetspolicy. En träff visar en varning. Listan hindrar inte byte <em>till</em> LXC-läge; andra kontroller kan fortfarande gälla."
+    "body": "Skriptet blockerar VM-läge för enhets-ID <code>8086:5a84</code> och <code>8086:5a85</code> enligt sin kompatibilitetspolicy. Om en vald GPU matchar avbryts bytet till VM-läge och skriptet återgår till GPU-valet, eller avslutas om det är den enda GPU:n. Blocklistan hindrar inte byte <em>till</em> LXC-läge; andra kontroller kan fortfarande gälla."
   },
   "running": {
     "heading": "Kör skriptet",
@@ -85,7 +85,7 @@
       "intro": "Baserat på det aktuella läget föreslår manuset motsatsen som mål:",
       "items": [
         "<strong>VM → LXC:</strong> tar bort bindningen till <code>vfio-pci</code> så att den inbyggda drivrutinen (<code>nvidia</code>, <code>amdgpu</code>, <code>i915</code>) kan använda GPU:n. För NVIDIA tas motsvarande BDF-poster bort från <code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> inför nästa start.",
-        "<strong>LXC → VM:</strong> förbereder bindning till <code>vfio-pci</code>. AMD / Intel blockerar den inbyggda drivrutinen och använder <code>options vfio-pci ids=…</code>. För NVIDIA blockeras <code>nvidia</code> <strong>inte</strong> globalt: BDF-regler sätter <code>driver_override=vfio-pci</code> för enheterna i berörda IOMMU-grupper. GPU:er utanför grupperna kan behålla <code>nvidia</code>. Granska varje gruppmedlem."
+        "<strong>LXC → VM:</strong> förbereder bindning till <code>vfio-pci</code>. AMD / Intel blockerar den inbyggda drivrutinen och använder <code>options vfio-pci ids=…</code>. För NVIDIA blockeras <code>nvidia</code> globalt endast när varje NVIDIA-GPU på värden är i VFIO; annars sätter regler per BDF <code>driver_override=vfio-pci</code> för enheterna i berörda IOMMU-grupper, och NVIDIA-GPU:er utanför grupperna behåller <code>nvidia</code>. Granska varje gruppmedlem före bytet."
       ],
       "outro": "Bekräfta riktningen eller avbryt."
     },

@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Vad det gör",
-    "body": "Lägger till <code>dev&lt;N&gt;</code> i <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> för tillämpliga <code>/dev/dri/*</code>-, <code>/dev/kfd</code>- eller <code>/dev/nvidia*</code>-enheter. Startar containern, installerar distributionspaket och anpassar <code>video</code> och <code>render</code>. Acceleration kräver kompatibel hårdvara, bibliotek och appinställningar."
+    "body": "Lägger till <code>dev&lt;N&gt;</code>-poster i <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> för tillämpliga <code>/dev/dri/*</code>-, <code>/dev/kfd</code>- eller <code>/dev/nvidia*</code>-noder. Startar containern, installerar userspace-paket för dess distribution och anpassar, för Intel/AMD, grupperna <code>video</code> och <code>render</code>. Appacceleration kräver fortfarande kompatibel hårdvara, bibliotek och appinställningar."
   },
   "compare": {
     "heading": "LXC-delning jämfört med VM-passthrough",
@@ -78,7 +78,7 @@
     },
     "pickCt": {
       "title": "Välj en LXC-container",
-      "body": "Listar lämpliga LXC-containrar med ID och namn. OCI undantas; enheterna ändras under Apps i OCI-hanteraren. Containern stoppas för konfigurering, startas för installation och återgår normalt till ursprungligt läge.",
+      "body": "Listar lämpliga LXC-containrar med ID och namn; OCI-containrar undantas och använder OCI manager Apps för enheter. Containern stoppas om den körs, startas för installation av drivrutiner och återgår normalt till sitt ursprungliga läge (igång/stoppad).",
       "imageAlt": "Val av en befintlig LXC-container"
     },
     "selectGpu": {
@@ -98,7 +98,7 @@
     },
     "applyConfig": {
       "title": "Tillämpa ändringarna i LXC-konfigurationen",
-      "body1": "Stoppar containern och ändrar <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>. Poster av typen <code>dev&lt;N&gt;</code> innehåller valda GID:n. Mekanismen <code>dev:</code> ersätter här manuella <code>lxc.mount.entry</code>-regler. Kontrollera slutlig konfiguration och rättigheter.",
+      "body1": "Stoppar containern om den körs och ändrar <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>. Numrerade <code>dev&lt;N&gt;</code>-poster innehåller värdens GID för <code>video</code> eller <code>render</code>. Befintliga <code>lxc.mount.entry</code>-bindrader för <code>/dev/dri</code> ersätts av <code>dev:</code>-poster; kontrollera slutlig konfiguration och rättigheter.",
       "body2": "Exempel efter Intel + NVIDIA på samma container:"
     },
     "installDrivers": {
@@ -127,14 +127,14 @@
     },
     "alignGids": {
       "title": "Anpassa GID:n och återställ tillståndet",
-      "body1": "Läser värdens GID:n för <code>video</code> och <code>render</code>, med 44/104 som reservvärden, och ändrar <code>/etc/group</code> i containern. <code>video:44</code> och <code>render:104</code> är exempel, inte universella ID:n. Kontrollera appens grupper och faktiska rättigheter.",
+      "body1": "För Intel/AMD läses värdens GID:n för <code>video</code> och <code>render</code>, med 44/104 endast som reservvärden, och sedan ändras <code>/etc/group</code> i containern så att de matchar; körningar med enbart NVIDIA hoppar över steget. Poster som <code>video:44</code> och <code>render:104</code> är exempel, inte universella ID:n. Kontrollera appens gruppmedlemskap och faktiska enhetsrättigheter.",
       "body2": "Vid normal avslutning stoppas en från början stoppad container igen; en som kördes fortsätter köra. Vid start- eller installationsfel, kontrollera slutläget och loggen."
     }
   },
   "vendors": {
     "heading": "Anmärkningar per tillverkare",
     "intelHeading": "Intel iGPU",
-    "intelBody": "Intel-acceleration med <em>Quick Sync</em> beror på generation, kodekar och appinställningar. Delar befintliga noder som <code>/dev/dri/card0</code> och <code>/dev/dri/renderD128</code>; numreringen kan variera. Värdens vanliga drivrutin, exempelvis <code>i915</code>, måste tillhandahålla dem.",
+    "intelBody": "Intels mediaacceleration, inklusive <em>Quick Sync</em>, beror på GPU-generation, kodekar och appinställningar. Skriptet delar de av <code>/dev/dri/card0</code>, <code>card1</code>, <code>renderD128</code> och <code>renderD129</code> som finns; andra nodnummer läggs inte till. Värden måste redan tillhandahålla dem via sin inbyggda drivrutin, exempelvis <code>i915</code>.",
     "amdHeading": "AMD",
     "amdBody": "AMD använder DRI för Mesa/VA-API. Om värden har <code>/dev/kfd</code> delas även den. ROCm/OpenCL kräver kompatibel hårdvara och bibliotek; enhetsdelning installerar inte hela ROCm-miljön.",
     "nvidiaHeading": "NVIDIA",

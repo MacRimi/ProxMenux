@@ -18,7 +18,7 @@
   },
   "prereqs": {
     "title": "Before you start",
-    "drivers": "<strong>Prepare the Coral device on the host</strong>. M.2 / PCIe needs the host driver loaded; USB needs device access and suitable permissions. See <hostLink>Install Coral TPU on the Host</hostLink>. The app runtime must be available inside the container.",
+    "drivers": "<strong>Prepare the Coral device on the host</strong>. M.2 / PCIe needs the host driver loaded; USB needs device access and suitable permissions. See <hostLink>Install Coral TPU on the Host</hostLink>. The script installs the app runtime in Debian/Ubuntu containers; other distributions must provide it separately.",
     "driversCheck": "ls /dev/apex_* 2>/dev/null ; lsusb | grep -E '1a6e:089a|18d1:9302'",
     "container": "<strong>An existing LXC container</strong>, ideally running a <strong>Debian / Ubuntu</strong>-based distro — the in-container runtime install uses <code>apt-get</code>. <strong>Non-Debian containers</strong> (Alpine, Arch, RHEL, SUSE…) are still supported in <strong>passthrough-only mode</strong>: the script detects the distro and offers a prompt to skip the <code>libedgetpu</code> APT install while still writing the device passthrough config — useful for app containers that bundle the runtime themselves (e.g. the Frigate Docker image).",
     "downtime": "<strong>Be OK with a brief downtime</strong> of the container. The script stops it to apply config changes, then starts it back up to install drivers inside. No host reboot needed."
@@ -44,7 +44,7 @@
     },
     "gpuHint": {
       "title": "GPU passthrough suggestion (optional)",
-      "body": "If a GPU is detected but not configured for this container, a dialog recommends <lxcGpuLink>Add GPU to LXC</lxcGpuLink> for hardware video decoding, such as Quick Sync, VA-API or NVDEC. It asks whether to continue with Coral only: Yes continues TPU setup; No exits so you can configure the GPU first."
+      "body": "If a GPU is detected but not configured for this container, a dialog recommends <lxcGpuLink>Add GPU to LXC</lxcGpuLink> for hardware video decoding, such as Quick Sync, VA-API or NVENC. It asks whether to continue with Coral only: Yes continues TPU setup; No exits so you can configure the GPU first."
     },
     "usb": {
       "title": "Write LXC config — USB path",
@@ -55,7 +55,7 @@
     "pcie": {
       "title": "Write LXC config — M.2 / PCIe path",
       "body1": "If a M.2 / PCIe Coral is present on the host and <code>/dev/apex_0</code> exists (the apex kernel module is loaded), the script uses the modern Proxmox <code>dev</code> API which handles cgroup2 permissions automatically for both privileged and unprivileged containers:",
-      "body2": "If <code>/dev/apex_0</code> is absent after <hostLink>Install Coral on Host</hostLink>, the script writes a classic cgroup2 configuration and optional bind mount with <code>create=file</code>. This does not itself create a working device:",
+      "body2": "If <code>/dev/apex_0</code> is absent after <hostLink>Install Coral on Host</hostLink>, the script writes a bind mount with <code>create=file</code> and, only when the apex major number is listed in <code>/proc/devices</code>, a classic cgroup2 rule. Neither creates a working device:",
       "rebootTitle": "Reboot the host first if you just installed Coral drivers",
       "rebootBody": "The fallback mount does not load the host <code>apex</code> driver. Load the driver, or reboot after installation, and verify the host device exists. Re-run the script once the device is ready to apply the modern device entry, then restart the container."
     },
@@ -92,7 +92,7 @@
   "troubleshoot": {
     "heading": "Troubleshooting",
     "apexTitle": "Container started but /dev/apex_0 missing inside",
-    "apexBody": "Check the host driver first: <code>lsmod | grep apex</code>. If missing, try <code>modprobe apex</code> or reboot after driver installation. Once <code>/dev/apex_0</code> exists on the host, verify the LXC device entry and restart the container with <code>pct stop &lt;ctid&gt; &amp;&amp; pct start &lt;ctid&gt;</code>.",
+    "apexBody": "Check the host driver first: <code>lsmod | grep apex</code>. If missing, try <code>modprobe apex</code> or reboot after driver installation. Once <code>/dev/apex_0</code> exists on the host, verify the LXC device entry (re-run the script if only the fallback entries were written) and restart the container with <code>pct stop &lt;ctid&gt; &amp;&amp; pct start &lt;ctid&gt;</code>.",
     "replugTitle": "USB Coral disappears after replug in a different port",
     "replugBody": "This is exactly why the script mounts <code>/dev/bus/usb</code> instead of the <code>/dev/coral</code> symlink. If you're hitting this, check your LXC config has <code>lxc.mount.entry: /dev/bus/usb dev/bus/usb ...</code> and not a reference to <code>/dev/coral</code> directly. Old configs from earlier script versions may need updating — re-run the script on the same container and the config gets refreshed.",
     "alpineTitle": "Alpine / Arch / RHEL / SUSE container — runtime not installed",

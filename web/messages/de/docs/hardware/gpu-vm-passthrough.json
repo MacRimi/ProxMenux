@@ -45,7 +45,7 @@
     "heading": "Schritt für Schritt",
     "detect": {
       "title": "GPUs erkennen und IOMMU überprüfen",
-      "body": "Prüft aktives IOMMU, nicht nur Parameter. Separat bestätigt kann <code>intel_iommu=on</code> oder <code>amd_iommu=on</code> mit <code>iommu=pt</code> ergänzt werden. Nutzt <code>/etc/kernel/cmdline</code> bei ZFS-Marker wie <code>root=ZFS=</code>, sonst <code>/etc/default/grub</code>. Dies ist eine Heuristik, kein Bootloadernachweis. Änderung nach Neustart aktiv; tatsächliche Gruppen prüfen.",
+      "body": "Betrachtet IOMMU nur dann als aktiv, wenn der laufende Kernel <code>intel_iommu=on</code> oder <code>amd_iommu=on</code> hat und IOMMU-Gruppen existieren. Ist der Parameter bereits für den nächsten Start gespeichert, wird im Modus „Neustart ausstehend“ fortgefahren; andernfalls kann ein separat bestätigter Schritt ihn mit <code>iommu=pt</code> ergänzen. Die Heuristik für die Bootdatei nutzt <code>/etc/kernel/cmdline</code>, wenn dort ein ZFS-Root-Marker wie <code>root=ZFS=</code> vorhanden ist, sonst <code>/etc/default/grub</code>. Diese Heuristik ist kein Nachweis des tatsächlichen Bootloaders. Neu konfiguriertes IOMMU wird nach dem Neustart aktiv; prüfen Sie danach die tatsächlichen Gruppen.",
       "tipTitle": "Nachinstallation bereits eingerichtet?",
       "tipBody": "Bei bereits konfiguriertem und aktivem <postLink>VFIO-IOMMU-Support</postLink> besteht die Prüfung. Eine Einstellung für den nächsten Start allein beweist keinen aktiven Zustand.",
       "imageAlt": "Liste der erkannten GPUs mit Hersteller- und PCI-Adresse"
@@ -58,7 +58,7 @@
         "<strong>Nur eine GPU.</strong> Die lokale Konsole kann durch VFIO ihre Ausgabe verlieren. Zuvor SSH- oder Webzugriff von einem anderen Rechner prüfen.",
         "<strong>AMD-Reset-Richtlinie.</strong> Liest <code>/sys/bus/pci/devices/&lt;pci&gt;/reset_method</code>. APU oder dedizierte Karte ohne FLR wird <em>durch die Assistentenrichtlinie blockiert</em>; unbekannter Untertyp ohne FLR verlangt Bestätigung. Dies beweist keine generelle technische Unmöglichkeit.",
         "<strong>D3cold-Zustand.</strong> AMD-Karten mit gemeldetem <code>D3cold</code> werden wegen möglicher Aktivierungsfehler blockiert. Stromversorgung und Firmware prüfen.",
-        "<strong>IOMMU-Gruppe.</strong> Liest <code>/sys/kernel/iommu_groups/</code> und plant <em>alle Nicht-Brücken-Geräte</em> ein, auch Netzwerk- oder Speichercontroller. Vor Bestätigung prüfen. Bei ausstehendem IOMMU-Neustart wird zunächst nur die GPU-Funktion eingeplant; Isolation danach prüfen."
+        "<strong>Analyse der IOMMU-Gruppe.</strong> Liest <code>/sys/kernel/iommu_groups/</code> und nimmt <em>alle Nicht-Brücken-Geräte</em> in den VM-Plan auf, möglicherweise auch Netzwerk- oder Speichercontroller. Das Skript listet sie nicht auf; prüfen Sie die Gruppe daher vor der Bestätigung selbst. Steht der IOMMU-Neustart noch aus, sind die tatsächlichen Gruppen nicht verfügbar und der Plan enthält zunächst nur die gewählte GPU-Funktion; prüfen Sie die Isolation nach dem Neustart."
       ],
       "audioIntro": "<strong>Zugehöriges Audio.</strong> Zwei Fälle je nach Controllerposition:",
       "audioDgpu": "<strong>Dedizierte GPU:</strong> HDMI-Audio liegt oft auf Funktion <code>.1</code> desselben PCI-Slots und wird bei Erkennung aufgenommen. Nutzt der Host es bisher, verliert er durch die VM-Reservierung den Zugriff.",
@@ -75,7 +75,7 @@
       "items": [
         "<strong>GPU verfügbar.</strong> Fortfahren ohne alte Zuweisung zu entfernen.",
         "<strong>Anderer VM zugewiesen.</strong> Quell-VM zuerst stoppen. Entweder <em>Einträge behalten und Autostart deaktivieren</em> oder <em>Einträge entfernen und Autostart behalten</em>. Bei bestehendem <code>vfio-pci</code> ohne nötige Hoständerungen kann VM→VM ohne Host-Neustart erfolgen.",
-        "<strong>Von LXC genutzt.</strong> Bei normalen Containern <em>Konfiguration behalten und Autostart deaktivieren</em> oder <em>Geräte und alte <code>lxc.cgroup2.devices.allow</code>/<code>lxc.mount.entry</code>-Regeln entfernen, Autostart behalten</em>. OCI behält die Konfiguration und wird ohne Autostart gestoppt; GPU unter Apps entfernen. Familienbasierte Erkennung kann weitere Karten erfassen."
+        "<strong>Von LXC genutzte GPU.</strong> Bei normalen Containern wählen Sie <em>GPU-Konfiguration behalten und Autostart deaktivieren</em> oder <em>GPU-Gerätekonfiguration entfernen und Autostart behalten</em>. Das Entfernen löscht die <code>devN</code>-Einträge und bei AMD/Intel auch alte <code>/dev/dri</code>-Regeln <code>lxc.mount.entry</code> und <code>lxc.cgroup2.devices.allow</code>. OCI-Container behalten ihre Konfiguration und werden mit deaktiviertem Autostart gestoppt; entfernen Sie ihre GPU über OCI manager Apps. Die Konflikterkennung erfolgt nach GPU-Gerätefamilie und kann weitere Karten dieser Familie erfassen."
       ],
       "imageAlt": "Dialogangebot zum Entfernen des GPU aus einem LXC, bevor es dem VM zugewiesen wird",
       "smartTitle": "Zugehöriges Audio beim Entfernen prüfen",
@@ -90,7 +90,7 @@
     },
     "summary": {
       "title": "Überprüfung der Bestätigungszusammenfassung",
-      "body": "Endplan und besonders alle IOMMU-Mitglieder prüfen; bei Fehlern abbrechen. Das verhindert die Hauptänderungen, macht aber eine zuvor bestätigte IOMMU-Bootänderung nicht rückgängig.",
+      "body": "Prüfen Sie den endgültigen Host- und VM-Plan und brechen Sie bei Fehlern ab. Er zeigt die IOMMU-Gruppe und die Anzahl ihrer Geräte, nicht jedes Mitglied; prüfen Sie die Gruppe daher vorher. Der Abbruch verhindert die Hauptänderungen, macht aber eine zuvor separat bestätigte Änderung der IOMMU-Bootkonfiguration nicht rückgängig.",
       "imageAlt": "Übersicht geplanter Änderungen an Host und VM"
     },
     "hostApply": {
@@ -102,7 +102,7 @@
         "Schreibt <code>/etc/modprobe.d/iommu_unsafe_interrupts.conf</code> und <code>kvm.conf</code> mit <code>allow_unsafe_interrupts=1</code> und <code>ignore_msrs=1</code>. Kompatibilitätseinstellungen des Skripts, keine allgemeinen Windows/macOS-Anforderungen; unsichere Interrupts schwächen den Interrupt-Remapping-Schutz.",
         "<code>/etc/modprobe.d/blacklist.conf</code>: NVIDIA — <code>nouveau</code>/<code>lbm-nouveau</code>; AMD — <code>radeon</code> + <code>amdgpu</code>; Intel — <code>i915</code>. Diese herstellerweiten Regeln können andere Karten mit demselben Treiber betreffen. Das Modul <code>nvidia</code> wird <strong>nur</strong> über <code>/etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf</code> blockiert, wenn <em>alle</em> NVIDIA-Karten für VFIO erfasst sind.",
         "<code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> + <code>/etc/proxmenux/vfio-bind.bdfs</code> — <strong>Nur NVIDIA.</strong> Setzt <code>ATTR'{'driver_override'}'=\"vfio-pci\"</code> bei PCI ADD für erfasste BDFs einschließlich betroffener IOMMU-Gruppenfunktionen. Außerhalb kann <code>nvidia</code> erhalten bleiben. BDF-Regeln teilen keine Hardware-IOMMU-Gruppe.",
-        "<strong>Nur AMD.</strong> Versucht ROM aus <code>/sys/bus/pci/.../rom</code> oder ACPI VFCT nach <code>/usr/share/kvm/vbios_&lt;card&gt;.bin</code> zu sichern. Bei Erfolg nutzt die VM <code>romfile=</code>. Ein gültiges ROM garantiert keine Initialisierung.",
+        "<strong>Nur AMD.</strong> Versucht, das ROM aus <code>/sys/bus/pci/.../rom</code> oder ACPI VFCT nach <code>/usr/share/kvm/vbios_&lt;vendor&gt;_&lt;device&gt;.bin</code> zu sichern. Bei Erfolg nutzt die VM <code>romfile=</code>. Ein gültiger Dump garantiert keine erfolgreiche GPU-Initialisierung.",
         "<strong>Nur NVIDIA.</strong> Stoppt und deaktiviert <code>nvidia-persistenced</code>, <code>nvidia-powerd</code>, <code>nvidia-fabricmanager</code> nur, wenn alle NVIDIA-Karten VFIO zugeordnet sind. Im Mischbetrieb bleiben Dienste und <code>nvidia</code> für native Karten erhalten.",
         "<code>update-initramfs -u -k all</code> — läuft nur, wenn einer der oben genannten tatsächlich geändert."
       ]

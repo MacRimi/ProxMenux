@@ -45,7 +45,7 @@
     "heading": "Walking through the flow",
     "detect": {
       "title": "Detect GPUs and check IOMMU",
-      "body": "Checks active IOMMU support, not just explicit kernel parameters. If inactive, a separately confirmed step can add <code>intel_iommu=on</code> or <code>amd_iommu=on</code> with <code>iommu=pt</code>. Its boot-file heuristic uses <code>/etc/kernel/cmdline</code> when a ZFS-root marker such as <code>root=ZFS=</code> exists there; otherwise it uses <code>/etc/default/grub</code>. That heuristic is not proof of the actual bootloader. Newly configured IOMMU takes effect after reboot; inspect the real groups afterwards.",
+      "body": "Treats IOMMU as active only when the running kernel has <code>intel_iommu=on</code> or <code>amd_iommu=on</code> and IOMMU groups exist. If the parameter is already saved for the next boot, it continues in pending-reboot mode; otherwise a separately confirmed step can add it with <code>iommu=pt</code>. Its boot-file heuristic uses <code>/etc/kernel/cmdline</code> when a ZFS-root marker such as <code>root=ZFS=</code> exists there; otherwise it uses <code>/etc/default/grub</code>. That heuristic is not proof of the actual bootloader. Newly configured IOMMU takes effect after reboot; inspect the real groups afterwards.",
       "tipTitle": "Already ran post-install?",
       "tipBody": "If <postLink>VFIO IOMMU support</postLink> was previously configured and is active in the running kernel, this check passes. A saved next-boot setting alone does not prove it is active.",
       "imageAlt": "List of detected GPUs with vendor and PCI address"
@@ -58,7 +58,7 @@
         "<strong>Single-GPU warning.</strong> If this is the only GPU in the host, you get a scary dialog reminding you that after reboot the console goes dark — make sure you have SSH or web-UI access from another machine.",
         "<strong>AMD reset policy.</strong> Reads <code>/sys/bus/pci/devices/&lt;pci&gt;/reset_method</code>. An APU or dedicated card without FLR is <em>blocked by this assistant’s policy</em>; an unknown subtype without FLR requires an explicit override. This does not establish universal hardware impossibility.",
         "<strong>Not in D3cold.</strong> Some AMD cards report <code>D3cold</code> power state while idle, which makes them invisible during VM startup. Blocked until you wake the GPU.",
-        "<strong>IOMMU group analysis.</strong> Reads <code>/sys/kernel/iommu_groups/</code> and includes <em>all non-bridge members</em> in the VM plan, possibly network or storage controllers. Inspect them before confirming. If IOMMU is pending reboot, real groups are unavailable and the plan initially contains only the selected GPU function; verify isolation after reboot."
+        "<strong>IOMMU group analysis.</strong> Reads <code>/sys/kernel/iommu_groups/</code> and includes <em>all non-bridge members</em> in the VM plan, possibly network or storage controllers. The script does not list them, so inspect the group yourself before confirming. If IOMMU is pending reboot, real groups are unavailable and the plan initially contains only the selected GPU function; verify isolation after reboot."
       ],
       "audioIntro": "<strong>Audio companion.</strong> Two paths, depending on where the audio lives:",
       "audioDgpu": "<strong>Discrete GPU:</strong> HDMI audio often occupies function <code>.1</code> of the same PCI slot and is automatically included when detected. If the host was using that audio device, it loses access when the device is reserved for the VM.",
@@ -75,7 +75,7 @@
       "items": [
         "<strong>GPU is free.</strong> Nothing to do, continue.",
         "<strong>GPU is in a different VM.</strong> If the source VM is currently running, the script aborts — two VMs can't share an exclusive VFIO assignment, and the source VM has to be stopped first. If the source VM is stopped, you get two options: <em>Keep GPU in the source VM's config but disable Start on boot</em>, or <em>Remove the GPU lines from the source VM's config and keep Start on boot</em>. A fast-path also exists: if the GPU is already bound to <code>vfio-pci</code> and the source VM is a plain VM→VM swap, no host reconfiguration is done and no reboot is needed.",
-        "<strong>GPU used by LXC.</strong> For ordinary containers, choose <em>keep the GPU configuration and disable Start on boot</em> or <em>remove GPU device configuration, including legacy <code>lxc.cgroup2.devices.allow</code>/<code>lxc.mount.entry</code> rules, and keep Start on boot</em>. OCI containers retain their configuration and are stopped with Start on boot disabled; remove their GPU through OCI manager Apps. Conflict detection is by GPU device family and may include other cards of that family."
+        "<strong>GPU used by LXC.</strong> For ordinary containers, choose <em>keep the GPU configuration and disable Start on boot</em> or <em>remove GPU device configuration and keep Start on boot</em>. Removal deletes the <code>devN</code> entries and, for AMD/Intel, also legacy <code>/dev/dri</code> <code>lxc.mount.entry</code> and <code>lxc.cgroup2.devices.allow</code> rules. OCI containers retain their configuration and are stopped with Start on boot disabled; remove their GPU through OCI manager Apps. Conflict detection is by GPU device family and may include other cards of that family."
       ],
       "imageAlt": "Dialog offering to remove the GPU from an LXC before assigning it to the VM",
       "smartTitle": "Audio siblings are cleaned up smartly too",
@@ -90,7 +90,7 @@
     },
     "summary": {
       "title": "Review the confirmation summary",
-      "body": "Review the final host and VM plan, especially every IOMMU-group member, and cancel if it is wrong. This stops the main changes; it does not undo an earlier separately confirmed IOMMU boot-configuration change.",
+      "body": "Review the final host and VM plan and cancel if it is wrong. It shows the IOMMU group and its device count, not each member, so check the group beforehand. Cancelling stops the main changes; it does not undo an earlier separately confirmed IOMMU boot-configuration change.",
       "imageAlt": "Summary dialog listing host changes (VFIO/blacklist files) and VM config changes (hostpci lines) before applying"
     },
     "hostApply": {
@@ -102,7 +102,7 @@
         "Writes <code>/etc/modprobe.d/iommu_unsafe_interrupts.conf</code> and <code>kvm.conf</code> with <code>allow_unsafe_interrupts=1</code> and <code>ignore_msrs=1</code>. These are compatibility settings applied by the script, not universal Windows/macOS requirements; unsafe interrupts relax interrupt-remapping protection.",
         "<code>/etc/modprobe.d/blacklist.conf</code>: NVIDIA — <code>nouveau</code>/<code>lbm-nouveau</code>; AMD — <code>radeon</code> + <code>amdgpu</code>; Intel — <code>i915</code>. These vendor-wide entries may affect other cards using the same driver. The proprietary <code>nvidia</code> module is blocked <strong>only</strong> through <code>/etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf</code> when <em>all</em> host NVIDIA cards are tracked for VFIO.",
         "<code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> + <code>/etc/proxmenux/vfio-bind.bdfs</code> — <strong>NVIDIA only.</strong> The udev rule sets <code>ATTR'{'driver_override'}'=\"vfio-pci\"</code> at PCI ADD for tracked BDFs, including affected IOMMU-group functions. Cards outside those groups can retain the <code>nvidia</code> driver. Per-BDF policy does not split a hardware IOMMU group.",
-        "<strong>AMD only.</strong> Attempts a ROM dump from <code>/sys/bus/pci/.../rom</code> or ACPI VFCT into <code>/usr/share/kvm/vbios_&lt;card&gt;.bin</code>. If successful, the VM uses <code>romfile=</code>. A valid dump does not guarantee successful GPU initialization.",
+        "<strong>AMD only.</strong> Attempts a ROM dump from <code>/sys/bus/pci/.../rom</code> or ACPI VFCT into <code>/usr/share/kvm/vbios_&lt;vendor&gt;_&lt;device&gt;.bin</code>. If successful, the VM uses <code>romfile=</code>. A valid dump does not guarantee successful GPU initialization.",
         "<strong>NVIDIA only.</strong> Host NVIDIA services (<code>nvidia-persistenced</code>, <code>nvidia-powerd</code>, <code>nvidia-fabricmanager</code>) are stopped and disabled only when every NVIDIA GPU is assigned to VFIO. With a mixed host they remain active, together with the <code>nvidia</code> module, for the GPU(s) that stay native.",
         "<code>update-initramfs -u -k all</code> — only runs if any of the above actually changed."
       ]

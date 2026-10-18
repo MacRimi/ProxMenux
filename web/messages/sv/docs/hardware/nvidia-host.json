@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Vad det gör",
-    "body": "Identifierar GPU:n och erbjuder underhållna grenar med dess PCI-ID. Blockerar <code>nouveau</code>, hämtar den officiella <code>.run</code>-installationen, använder DKMS och installerar <code>nvidia-persistenced</code> med udev-regler; NVENC-patch är valfri. Byggkontroller gäller aktuell kärna utan att garantera alla appar. NVIDIA-LXC kan få matchande användarbibliotek."
+    "body": "ProxMenux identifierar GPU:n och erbjuder underhållna NVIDIA-grenar som listar dess PCI-ID. Det blockerar <code>nouveau</code>, hämtar den officiella <code>.run</code>-installationen, använder DKMS, installerar <code>nvidia-persistenced</code>, udev-regler och NVIDIA Container Toolkit och erbjuder en valfri NVENC-patch. Byggkontroller bedömer den körande kärnan; en lyckad kompilering garanterar inte att alla appar fungerar. Befintliga NVIDIA-LXC erbjuds en uppdatering av användarbiblioteken, med matchande version utom på Arch."
   },
   "who": {
     "heading": "Vem är detta för?",
@@ -89,7 +89,7 @@
     },
     "reboot": {
       "title": "Starta om",
-      "body": "Bygger om <code>initramfs</code> för alla kärnor och erbjuder omstart. <strong>Planera den omstarten</strong> för att kontrollera moduler och nouveau-konfiguration vid ny start, även om drivrutinen redan svarar före omstarten."
+      "body": "Efter installationen av drivrutinen bygger skriptet om <code>initramfs</code> för alla kärnor; dess sista steg erbjuder omstart. <strong>Planera den omstarten</strong> för att kontrollera den beständiga modul- och nouveau-konfigurationen vid en ny start, även om den nya drivrutinen redan svarar före omstarten."
     }
   },
   "reinstallUninstall": {
@@ -102,8 +102,8 @@
     "uninstallHeading": "Avinstallera - vad som tas bort",
     "uninstallIntro": "Efter Ja/Nej-bekräftelse tas följande komponenter bort:",
     "uninstallItems": [
-      "Kör <code>nvidia-uninstall --silent</code> för <code>.run</code>-installationen, stoppar och inaktiverar <code>nvidia-persistenced</code> och <code>nvidia-powerd</code> och försöker ladda ur <code>nvidia_uvm</code>, <code>nvidia_drm</code>, <code>nvidia_modeset</code> och <code>nvidia</code>. NVIDIA-LXC påverkas; aktiva klienter kan hindra urladdningen.",
-      "Kör <code>apt purge</code> på <code>nvidia-*</code>, <code>libnvidia-*</code>, <code>cuda-*</code> och <code>libcudnn*</code>, tar bort DKMS källträd och <code>/opt/nvidia</code> .run installer cache.",
+      "Stoppar och inaktiverar <code>nvidia-persistenced</code> och <code>nvidia-powerd</code>, försöker ladda ur <code>nvidia_uvm</code>, <code>nvidia_drm</code>, <code>nvidia_modeset</code> och <code>nvidia</code> och kör sedan <code>nvidia-uninstall --silent</code> för <code>.run</code>-installationen. NVIDIA-beroende LXC-arbetslaster påverkas; aktiva klienter kan hindra urladdningen.",
+      "Kör <code>apt purge</code> på <code>nvidia-*</code>, <code>libnvidia-*</code>, <code>cuda-*</code> och <code>libcudnn*</code>, tar bort DKMS-källträdet och mapparna <code>nvidia-persistenced</code> och <code>nvidia-patch</code> under <code>/opt/nvidia</code>.",
       "Tar bort modulkonfigurationen <code>/etc/modules-load.d/nvidia-vfio.conf</code> och ProxMenux egna nouveau-blockeringar. Äldre ProxMenux-filer med de två kända raderna migreras och tas bort; ändrade eller orelaterade administratörsfiler bevaras.",
       "Tar bort <code>/etc/udev/rules.d/70-nvidia.rules</code> och sätter NVENC-status till <em>removed</em> i registret för hanterade installationer; ingen separat statusfil finns.",
       "Bygger om <code>initramfs</code> för alla kärnor, kör <code>proxmox-boot-tool refresh</code> enligt startkonfigurationen och frågar om omstart."

@@ -71,7 +71,7 @@
       "title": "PCIe : modules gasket et apex via DKMS",
       "body": "Exécuté uniquement pour un Coral PCIe/M.2 détecté. Compile les modules pour le noyau actuellement exécuté sur l’hôte.",
       "items": [
-        "<strong>Nettoyage.</strong> Si une installation précédente de <code>gasket-dkms</code> a laissé les paquets dans un état défectueux, le script tente de la purger avant compilation.",
+        "<strong>Nettoyage.</strong> Tout paquet <code>gasket-dkms</code> existant est supprimé avant la recompilation ; s’il est dans un état de paquet défectueux, le script force sa suppression et sa purge.",
         "<strong>Dépendances de compilation :</strong> <code>git</code>, <code>dkms</code>, <code>build-essential</code>, <code>proxmox-headers-$(uname -r)</code>."
       ],
       "cloneIntro": "<strong>Clone les sources du pilote.</strong> Préfère <feranickLink>feranick/gasket-driver</feranickLink>, sinon utilise <googleLink>google/gasket-driver</googleLink>. La compilation dépend de la compatibilité du noyau. Les sources Google reçoivent ces correctifs selon la version :",
@@ -132,7 +132,7 @@
       "Purge <code>gasket-dkms</code>, <code>libedgetpu1-std</code> et <code>libedgetpu1-max</code>, puis exécute <code>apt-get autoremove --purge</code>.",
       "Supprime <code>/etc/udev/rules.d/99-coral-apex.rules</code> et restaure le groupe par défaut de <code>60-gasket-dkms.rules</code> si ce fichier existe encore.",
       "Vérifie les membres supplémentaires de <code>apex</code>. <strong>Si la liste est vide</strong>, tente de supprimer le groupe ; sinon conserve <code>apex</code> et liste ses membres. Ce n’est pas une vérification complète des utilisateurs dont c’est le groupe principal.",
-      "Supprime les anciens dépôts dont <code>/etc/apt/sources.list.d/coral-edgetpu.list</code> et les trousseaux nommés <code>coral-edgetpu-archive-keyring.gpg</code>. Le trousseau actuel /etc/apt/keyrings/coral-edgetpu.gpg reste présent.",
+      "Supprime la liste de dépôts <code>/etc/apt/sources.list.d/coral-edgetpu.list</code>, l’ancien <code>coral-cloud.list</code> et les anciens trousseaux nommés <code>coral-edgetpu-archive-keyring.gpg</code>. Le trousseau actuel <code>/etc/apt/keyrings/coral-edgetpu.gpg</code> n’est pas supprimé par cette séquence.",
       "Propose un redémarrage <strong>seulement si PCIe était installé</strong> pour retirer les modules encore actifs. USB seul ne nécessite pas de redémarrage."
     ],
     "lxcWarnTitle": "Récipients LXC avec passage apex",

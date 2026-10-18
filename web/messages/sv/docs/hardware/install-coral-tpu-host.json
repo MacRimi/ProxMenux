@@ -71,7 +71,7 @@
       "title": "PCIe: modulerna gasket och apex med DKMS",
       "body": "Körs bara om en PCIe/M.2-Coral hittas. Bygger moduler för den kernel som värden kör.",
       "items": [
-        "<strong>Rensning.</strong> Om en tidigare installation av <code>gasket-dkms</code> lämnat paketen i felaktigt tillstånd försöker skriptet rensa bort den före bygget.",
+        "<strong>Rensning.</strong> Ett befintligt <code>gasket-dkms</code>-paket tas bort före ombygget; om paketet är i ett felaktigt tillstånd tvingar skriptet fram borttagning och rensning (purge).",
         "<strong>Byggberoenden:</strong> <code>git</code>, <code>dkms</code>, <code>build-essential</code>, <code>proxmox-headers-$(uname -r)</code>."
       ],
       "cloneIntro": "<strong>Klonar drivrutinens källkod.</strong> Föredrar <feranickLink>feranick/gasket-driver</feranickLink>, annars används <googleLink>google/gasket-driver</googleLink>. Bygget kräver en kompatibel kernel. Google-koden får följande versionsberoende ändringar:",
@@ -132,7 +132,7 @@
       "Rensar bort <code>gasket-dkms</code>, <code>libedgetpu1-std</code> och <code>libedgetpu1-max</code> och kör <code>apt-get autoremove --purge</code>.",
       "Tar bort <code>/etc/udev/rules.d/99-coral-apex.rules</code> och återställer standardgruppen i <code>60-gasket-dkms.rules</code> om filen finns kvar.",
       "Kontrollerar kompletterande medlemmar i <code>apex</code>. <strong>Om listan är tom</strong> försöker skriptet ta bort gruppen; annars behålls <code>apex</code> och medlemmarna listas. Användare med gruppen som primär grupp kontrolleras inte fullständigt.",
-      "Tar bort äldre förrådsfiler som <code>/etc/apt/sources.list.d/coral-edgetpu.list</code> och nyckelringar med namnet <code>coral-edgetpu-archive-keyring.gpg</code>. Den aktuella nyckelringen /etc/apt/keyrings/coral-edgetpu.gpg lämnas kvar.",
+      "Tar bort förrådslistan <code>/etc/apt/sources.list.d/coral-edgetpu.list</code>, den äldre <code>coral-cloud.list</code> och gamla nyckelringar med namnet <code>coral-edgetpu-archive-keyring.gpg</code>. Den aktuella nyckelringen i <code>/etc/apt/keyrings/coral-edgetpu.gpg</code> tas inte bort av den här sekvensen.",
       "Erbjuder omstart <strong>bara om PCIe var installerat</strong> för att ta bort kvarvarande moduler ur kerneln. Avinstallation av enbart USB kräver ingen omstart."
     ],
     "lxcWarnTitle": "LXC containrar med apex genomgång",

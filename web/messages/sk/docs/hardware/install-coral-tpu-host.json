@@ -71,7 +71,7 @@
       "title": "PCIe: moduly gasket a apex cez DKMS",
       "body": "Spustí sa iba pri zistenom Coral PCIe/M.2. Zostaví moduly pre aktuálne spustené jadro hostiteľa.",
       "items": [
-        "<strong>Čistenie.</strong> Ak predchádzajúca inštalácia <code>gasket-dkms</code> zanechala chybný stav balíkov, skript sa ju pred zostavením pokúsi odstrániť.",
+        "<strong>Čistenie.</strong> Existujúci balík <code>gasket-dkms</code> sa pred opätovným zostavením odstráni; ak je v chybnom stave, skript vynúti jeho odstránenie a vyčistenie (purge).",
         "<strong>Závislosti na zostavenie:</strong> <code>git</code>, <code>dkms</code>, <code>build-essential</code>, <code>proxmox-headers-$(uname -r)</code>."
       ],
       "cloneIntro": "<strong>Klonuje zdroje ovládača.</strong> Uprednostní <feranickLink>feranick/gasket-driver</feranickLink>, inak použije <googleLink>google/gasket-driver</googleLink>. Úspešné zostavenie závisí od kompatibility jadra. Na zdroje Google aplikuje tieto opravy podľa verzie:",
@@ -132,7 +132,7 @@
       "Úplne odstráni <code>gasket-dkms</code>, <code>libedgetpu1-std</code> a <code>libedgetpu1-max</code> a spustí <code>apt-get autoremove --purge</code>.",
       "Odstráni <code>/etc/udev/rules.d/99-coral-apex.rules</code> a obnoví predvolenú skupinu v <code>60-gasket-dkms.rules</code>, ak súbor ešte existuje.",
       "Skontroluje doplnkových členov <code>apex</code>. <strong>Ak je zoznam prázdny</strong>, pokúsi sa skupinu odstrániť; inak <code>apex</code> zachová a vypíše členov. Nejde o úplnú kontrolu používateľov s touto primárnou skupinou.",
-      "Odstráni staré repozitáre vrátane <code>/etc/apt/sources.list.d/coral-edgetpu.list</code> a zväzky kľúčov s názvom <code>coral-edgetpu-archive-keyring.gpg</code>. Aktuálny zväzok /etc/apt/keyrings/coral-edgetpu.gpg zostane.",
+      "Odstráni zoznam repozitárov <code>/etc/apt/sources.list.d/coral-edgetpu.list</code>, starší <code>coral-cloud.list</code> a staré zväzky kľúčov s názvom <code>coral-edgetpu-archive-keyring.gpg</code>. Aktuálny zväzok kľúčov v <code>/etc/apt/keyrings/coral-edgetpu.gpg</code> tento postup neodstráni.",
       "Ponúkne reštart <strong>iba ak bol nainštalovaný PCIe postup</strong>, aby uvoľnil stále aktívne moduly. Odstránenie samotného USB reštart nevyžaduje."
     ],
     "lxcWarnTitle": "Nádoby LXC s priechodom apex",

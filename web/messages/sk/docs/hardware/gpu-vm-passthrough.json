@@ -45,7 +45,7 @@
     "heading": "Postup krok za krokom",
     "detect": {
       "title": "Detekovať GPU a skontrolovať IOMMU",
-      "body": "Overí aktívne IOMMU, nielen parametre. Po samostatnom potvrdení môže pridať <code>intel_iommu=on</code> alebo <code>amd_iommu=on</code> s <code>iommu=pt</code>. Použije <code>/etc/kernel/cmdline</code> pri značke ZFS ako <code>root=ZFS=</code>, inak <code>/etc/default/grub</code>. Heuristika nedokazuje použitý zavádzač. Reštartujte a overte skutočné skupiny.",
+      "body": "Považuje IOMMU za aktívne iba vtedy, keď bežiace jadro má <code>intel_iommu=on</code> alebo <code>amd_iommu=on</code> a existujú skupiny IOMMU. Ak je parameter už uložený pre ďalší štart, pokračuje v režime čakajúceho reštartu; inak ho samostatne potvrdený krok môže pridať s <code>iommu=pt</code>. Jeho heuristika zavádzacieho súboru použije <code>/etc/kernel/cmdline</code>, keď sa v ňom nachádza značka koreňa ZFS ako <code>root=ZFS=</code>; inak použije <code>/etc/default/grub</code>. Táto heuristika nedokazuje skutočne použitý zavádzač. Novo nakonfigurované IOMMU sa prejaví po reštarte; potom overte skutočné skupiny.",
       "tipTitle": "Už ste nastavili kroky po inštalácii?",
       "tipBody": "Ak je <postLink>podpora VFIO IOMMU</postLink> nastavená a aktívna v jadre, kontrola prejde. Nastavenie pre ďalší štart samo osebe nedokazuje aktuálne zapnutie.",
       "imageAlt": "Zoznam zistených GPU s predávajúcim a PCI adresa"
@@ -58,7 +58,7 @@
         "<strong>Jediná GPU.</strong> Po rezervovaní pre VFIO môže miestna konzola stratiť obraz. Najprv overte SSH alebo webový prístup z iného počítača.",
         "<strong>Politika resetovania AMD.</strong> Číta <code>/sys/bus/pci/devices/&lt;pci&gt;/reset_method</code>. APU alebo samostatná karta bez FLR je <em>blokovaná politikou sprievodcu</em>; neznámy podtyp bez FLR vyžaduje potvrdenie. Nedokazuje to všeobecnú nemožnosť.",
         "<strong>Stav D3cold.</strong> Sprievodca blokuje AMD karty so stavom <code>D3cold</code> pre riziko zlyhania aktivácie. Overte napájanie a firmvér.",
-        "<strong>Skupina IOMMU.</strong> Číta <code>/sys/kernel/iommu_groups/</code> a zahrnie <em>všetkých členov okrem mostov</em>, aj sieťové či diskové radiče. Overte ich pred potvrdením. Pri čakajúcom reštarte IOMMU plánuje najprv iba funkciu GPU; izoláciu overte po reštarte."
+        "<strong>Analýza skupiny IOMMU.</strong> Číta <code>/sys/kernel/iommu_groups/</code> a do plánu VM zahrnie <em>všetkých členov okrem mostov</em>, prípadne aj sieťové či úložné radiče. Skript ich nevypíše, preto skupinu pred potvrdením overte sami. Pri čakajúcom reštarte IOMMU nie sú skutočné skupiny dostupné a plán najprv obsahuje iba vybranú funkciu GPU; izoláciu overte po reštarte."
       ],
       "audioIntro": "<strong>Pridružený zvuk.</strong> Dva prípady podľa umiestnenia radiča:",
       "audioDgpu": "<strong>Samostatná GPU:</strong> zvuk HDMI býva vo funkcii <code>.1</code> rovnakého PCI slotu a pri zistení sa zahrnie. Ak ho používal hostiteľ, rezervovaním pre VM stratí prístup.",
@@ -75,7 +75,7 @@
       "items": [
         "<strong>GPU je voľná.</strong> Pokračuje bez odstránenia priradení.",
         "<strong>Priradená inej VM.</strong> Najprv zastavte zdrojovú VM. Môžete <em>ponechať položky a vypnúť automatický štart</em> alebo <em>odstrániť položky a ponechať automatický štart</em>. Pri aktívnom <code>vfio-pci</code> bez potrebných zmien hostiteľa možno presun VM→VM vykonať bez jeho reštartu.",
-        "<strong>Používaná LXC.</strong> Pri bežných kontajneroch <em>ponechať konfiguráciu a vypnúť automatický štart</em> alebo <em>odstrániť zariadenia a staré pravidlá <code>lxc.cgroup2.devices.allow</code>/<code>lxc.mount.entry</code>, automatický štart ponechať</em>. OCI ponechá konfiguráciu a zastaví sa bez automatického štartu; GPU odstráňte cez Apps. Detekcia podľa rodiny môže zahrnúť ďalšie karty."
+        "<strong>GPU používaná LXC.</strong> Pri bežných kontajneroch zvoľte <em>ponechať konfiguráciu GPU a vypnúť automatický štart</em> alebo <em>odstrániť konfiguráciu zariadenia GPU a automatický štart ponechať</em>. Odstránenie vymaže položky <code>devN</code> a pri AMD/Intel aj staré pravidlá <code>/dev/dri</code> <code>lxc.mount.entry</code> a <code>lxc.cgroup2.devices.allow</code>. Kontajnery OCI si ponechajú konfiguráciu a zastavia sa s vypnutým automatickým štartom; ich GPU odstráňte cez OCI manager Apps. Detekcia konfliktov prebieha podľa rodiny zariadení GPU a môže zahrnúť ďalšie karty tejto rodiny."
       ],
       "imageAlt": "Dialóg ponúka odstrániť GPU z LXC pred pridelením do VM",
       "smartTitle": "Kontrola pridruženého zvuku pri odstránení GPU",
@@ -90,7 +90,7 @@
     },
     "summary": {
       "title": "Preskúmanie zhrnutia potvrdenia",
-      "body": "Overte konečný plán, najmä všetkých členov IOMMU, a pri chybe zrušte. Zastaví hlavné zmeny, nevráti však skoršie potvrdené zapnutie IOMMU v nastavení štartu.",
+      "body": "Overte konečný plán hostiteľa a VM a pri chybe ho zrušte. Zobrazuje skupinu IOMMU a počet jej zariadení, nie jednotlivých členov, preto skupinu overte vopred. Zrušenie zastaví hlavné zmeny, nevráti však skoršiu samostatne potvrdenú zmenu nastavenia štartu pre IOMMU.",
       "imageAlt": "Súhrn plánovaných zmien hostiteľa a VM"
     },
     "hostApply": {
@@ -102,7 +102,7 @@
         "Zapíše <code>/etc/modprobe.d/iommu_unsafe_interrupts.conf</code> a <code>kvm.conf</code> s <code>allow_unsafe_interrupts=1</code> a <code>ignore_msrs=1</code>. Ide o nastavenia skriptu, nie všeobecné požiadavky Windows/macOS; nebezpečné prerušenia oslabujú ochranu premapovania.",
         "<code>/etc/modprobe.d/blacklist.conf</code>: NVIDIA — <code>nouveau</code>/<code>lbm-nouveau</code>; AMD — <code>radeon</code> + <code>amdgpu</code>; Intel — <code>i915</code>. Tieto pravidlá výrobcu môžu ovplyvniť ďalšie karty s rovnakým ovládačom. Modul <code>nvidia</code> sa blokuje <strong>iba</strong> cez <code>/etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf</code>, keď sú <em>všetky</em> NVIDIA hostiteľa evidované pre VFIO.",
         "<code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> + <code>/etc/proxmenux/vfio-bind.bdfs</code> — <strong>Iba NVIDIA.</strong> Nastaví <code>ATTR'{'driver_override'}'=\"vfio-pci\"</code> pri PCI ADD pre evidované BDF vrátane funkcií dotknutej skupiny IOMMU. Mimo skupín môže zostať <code>nvidia</code>. Politika BDF nerozdelí hardvérovú skupinu IOMMU.",
-        "<strong>Iba AMD.</strong> Pokúsi sa získať ROM z <code>/sys/bus/pci/.../rom</code> alebo ACPI VFCT do <code>/usr/share/kvm/vbios_&lt;card&gt;.bin</code>. Pri úspechu použije <code>romfile=</code>. Platná ROM nezaručí inicializáciu GPU.",
+        "<strong>Iba AMD.</strong> Pokúsi sa o výpis ROM z <code>/sys/bus/pci/.../rom</code> alebo ACPI VFCT do <code>/usr/share/kvm/vbios_&lt;vendor&gt;_&lt;device&gt;.bin</code>. Pri úspechu VM použije <code>romfile=</code>. Platný výpis nezaručí úspešnú inicializáciu GPU.",
         "<strong>Iba NVIDIA.</strong> Zastaví a vypne <code>nvidia-persistenced</code>, <code>nvidia-powerd</code>, <code>nvidia-fabricmanager</code> iba ak sú všetky NVIDIA rezervované pre VFIO. Pri zmiešanom použití zachová služby a <code>nvidia</code> pre natívne karty.",
         "<code>update-initramfs -u -k all</code> — spustí sa iba pri zmene nastavenia hostiteľa."
       ]

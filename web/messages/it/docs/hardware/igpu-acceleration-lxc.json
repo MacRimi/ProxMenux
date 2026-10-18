@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Cosa fa",
-    "body": "Aggiunge <code>dev&lt;N&gt;</code> a <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> per i dispositivi <code>/dev/dri/*</code>, <code>/dev/kfd</code> o <code>/dev/nvidia*</code> pertinenti. Avvia il container, installa i pacchetti adatti e allinea <code>video</code> e <code>render</code>. L’accelerazione richiede hardware e librerie compatibili e configurazione dell’app."
+    "body": "Aggiunge voci <code>dev&lt;N&gt;</code> a <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> per i nodi <code>/dev/dri/*</code>, <code>/dev/kfd</code> o <code>/dev/nvidia*</code> pertinenti. Avvia il container, installa i pacchetti userspace della sua distribuzione e, per Intel/AMD, allinea i gruppi <code>video</code> e <code>render</code>. L’accelerazione delle applicazioni richiede comunque hardware e librerie compatibili e configurazione dell’app."
   },
   "compare": {
     "heading": "Condivisione LXC e passthrough VM a confronto",
@@ -78,7 +78,7 @@
     },
     "pickCt": {
       "title": "Scegli un container LXC",
-      "body": "Elenca i LXC idonei per ID e nome. I container OCI sono esclusi: gestisci i dispositivi da Apps nel gestore OCI. Arresta per configurare, avvia per installare e normalmente ripristina lo stato iniziale.",
+      "body": "Elenca i container LXC idonei per ID e nome; i container OCI sono esclusi e usano OCI manager Apps per i dispositivi. Il container viene arrestato se è in esecuzione, avviato per l’installazione dei driver e normalmente riportato allo stato iniziale (in esecuzione/arrestato).",
       "imageAlt": "Selezione di un container LXC esistente"
     },
     "selectGpu": {
@@ -98,7 +98,7 @@
     },
     "applyConfig": {
       "title": "Applicare le modifiche di configurazione LXC",
-      "body1": "Arresta il container e modifica <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>. Le voci <code>dev&lt;N&gt;</code> includono i GID scelti. Il meccanismo <code>dev:</code> sostituisce qui le regole manuali <code>lxc.mount.entry</code>. Verifica configurazione e permessi.",
+      "body1": "Arresta il container se è in esecuzione e modifica <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>. Le voci numerate <code>dev&lt;N&gt;</code> includono il GID host di <code>video</code> o <code>render</code>. Le righe bind <code>lxc.mount.entry</code> esistenti per <code>/dev/dri</code> vengono sostituite da voci <code>dev:</code>; verifica la configurazione e i permessi risultanti.",
       "body2": "Esempio dopo Intel + NVIDIA sullo stesso contenitore:"
     },
     "installDrivers": {
@@ -127,14 +127,14 @@
     },
     "alignGids": {
       "title": "Allineare GID e ripristinare lo stato",
-      "body1": "Legge i GID host di <code>video</code> e <code>render</code>, con 44/104 come ripiego, poi adatta <code>/etc/group</code> nel container. <code>video:44</code> e <code>render:104</code> sono esempi, non ID universali. Verifica gruppi dell’app e permessi effettivi.",
+      "body1": "Per Intel/AMD legge i GID host di <code>video</code> e <code>render</code>, usando 44/104 solo come ripiego, poi modifica <code>/etc/group</code> nel container perché corrispondano; le esecuzioni solo NVIDIA saltano questo passaggio. Voci come <code>video:44</code> e <code>render:104</code> sono esempi, non ID universali. Verifica l’appartenenza dell’app ai gruppi e i permessi effettivi sui dispositivi.",
       "body2": "Al termine normale, arresta di nuovo il container se inizialmente era fermo; se era attivo lo lascia attivo. In caso di errore di avvio o installazione, verifica stato finale e log."
     }
   },
   "vendors": {
     "heading": "Note per produttore",
     "intelHeading": "Intel iGPU",
-    "intelBody": "L’accelerazione Intel, incluso <em>Quick Sync</em>, dipende da generazione, codec e app. Condivide nodi esistenti come <code>/dev/dri/card0</code> e <code>/dev/dri/renderD128</code>; i numeri possono variare. Deve fornirli il driver nativo host, per esempio <code>i915</code>.",
+    "intelBody": "L’accelerazione multimediale Intel, incluso <em>Quick Sync</em>, dipende da generazione del GPU, codec e configurazione dell’app. Lo script condivide quelli tra <code>/dev/dri/card0</code>, <code>card1</code>, <code>renderD128</code> e <code>renderD129</code> che esistono; altri numeri di nodo non vengono aggiunti. L’host deve già fornirli tramite il proprio driver nativo, per esempio <code>i915</code>.",
     "amdHeading": "AMD",
     "amdBody": "AMD usa DRI per Mesa/VA-API. Se l’host espone <code>/dev/kfd</code>, lo condivide. ROCm/OpenCL richiede hardware e librerie compatibili; condividere il dispositivo non installa l’intero stack ROCm.",
     "nvidiaHeading": "NVIDIA",

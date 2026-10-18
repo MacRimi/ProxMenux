@@ -71,7 +71,7 @@
       "title": "PCIe: Kernelmodule gasket und apex über DKMS",
       "body": "Läuft nur bei erkannter PCIe-/M.2-Coral. Die Module werden für den aktuell laufenden Host-Kernel gebaut.",
       "items": [
-        "<strong>Bereinigung.</strong> Bei einem fehlerhaften Paketstatus einer früheren <code>gasket-dkms</code>-Installation versucht das Skript, sie vor dem Neubau zu entfernen.",
+        "<strong>Bereinigung.</strong> Ein vorhandenes <code>gasket-dkms</code>-Paket wird vor dem Neubau entfernt; befindet es sich in einem fehlerhaften Paketstatus, erzwingt das Skript dessen Entfernung und Purge.",
         "<strong>Build-Abhängigkeiten:</strong> <code>git</code>, <code>dkms</code>, <code>build-essential</code>, <code>proxmox-headers-$(uname -r)</code>."
       ],
       "cloneIntro": "<strong>Treiberquellen klonen.</strong> Bevorzugt <feranickLink>feranick/gasket-driver</feranickLink>, ersatzweise <googleLink>google/gasket-driver</googleLink>. Ein erfolgreicher Build setzt Kernelkompatibilität voraus. Die Google-Quellen erhalten folgende versionsabhängige Patches:",
@@ -132,7 +132,7 @@
       "Entfernt <code>gasket-dkms</code>, <code>libedgetpu1-std</code> und <code>libedgetpu1-max</code> vollständig und führt <code>apt-get autoremove --purge</code> aus.",
       "Löscht <code>/etc/udev/rules.d/99-coral-apex.rules</code> und stellt die Standardgruppe in <code>60-gasket-dkms.rules</code> wieder her, falls vorhanden.",
       "Prüft die zusätzlichen Mitglieder von <code>apex</code>. <strong>Bei leerer Liste</strong> wird die Gruppe zu entfernen versucht, sonst bleibt <code>apex</code> mit Mitgliederhinweis erhalten. Benutzer mit dieser primären Gruppe werden nicht vollständig geprüft.",
-      "Entfernt alte Repository-Einträge wie <code>/etc/apt/sources.list.d/coral-edgetpu.list</code> und Schlüsselbunde namens <code>coral-edgetpu-archive-keyring.gpg</code>. Der aktuelle Schlüsselbund /etc/apt/keyrings/coral-edgetpu.gpg bleibt erhalten.",
+      "Entfernt die Repository-Liste <code>/etc/apt/sources.list.d/coral-edgetpu.list</code>, die alte <code>coral-cloud.list</code> und alte Schlüsselbunde namens <code>coral-edgetpu-archive-keyring.gpg</code>. Der aktuelle Schlüsselbund unter <code>/etc/apt/keyrings/coral-edgetpu.gpg</code> wird durch diesen Ablauf nicht entfernt.",
       "Bietet einen Neustart <strong>nur bei zuvor installiertem PCIe-Pfad</strong> an, um noch aktive Module zu entladen. Reine USB-Entfernung braucht keinen Neustart."
     ],
     "lxcWarnTitle": "LXC Container mit apex Passthrough",
