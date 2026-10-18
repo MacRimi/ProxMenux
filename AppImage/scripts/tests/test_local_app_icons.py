@@ -98,6 +98,42 @@ class Icons(unittest.TestCase):
             with self.assertRaises(icons.IconError):
                 icons.normalize(data, 'image/svg+xml')
 
+    def test_svg_embedded_raster_is_validated_and_preserved_without_external_fetch(self):
+        from xml.etree import ElementTree as xml
+        embedded = base64.b64encode(picture()).decode()
+        raw = f'<svg width="88" height="88" viewBox="0 0 88 88"><image x="4" y="4" width="80" height="80" href="data:image/png;base64,{embedded}"/></svg>'.encode()
+        with patch.object(icons, '_open') as network:
+            data, mime = icons.normalize(raw, 'image/svg+xml')
+            network.assert_not_called()
+        image = xml.fromstring(data).find('{http://www.w3.org/2000/svg}image')
+        self.assertIsNotNone(image, 'sanitizing must not report an empty SVG as a found icon')
+        self.assertEqual(image.get('x'), '4')
+        self.assertEqual(image.get('width'), '80')
+        decoded = base64.b64decode(image.get('href').split(',', 1)[1], validate=True)
+        self.assertEqual(icons.normalize(decoded, 'image/png')[0], decoded)
+        self.assertEqual(icons.normalize(data, mime), (data, mime))
+
+    def test_raster_normalization_discards_source_metadata(self):
+        source = io.BytesIO()
+        Image.new('RGB', (2, 2), 'red').save(source, format='PNG', icc_profile=b'fixture-private-metadata')
+        data, _mime = icons.normalize(source.getvalue(), 'image/png')
+        with Image.open(io.BytesIO(data)) as result:
+            self.assertNotIn('icc_profile', result.info)
+
+    def test_svg_empty_invalid_or_recursive_embedded_images_are_rejected(self):
+        nested = base64.b64encode(b'<svg onload="bad()"/>').decode()
+        for raw in [b'<svg/>', b'<svg><script>bad()</script></svg>',
+                    b'<svg><image href="https://outside.test/icon"/></svg>',
+                    b'<svg><image href="data:image/png;base64,bm90IGFuIGltYWdl"/></svg>',
+                    f'<svg><image href="data:image/svg+xml;base64,{nested}"/></svg>'.encode()]:
+            with self.assertRaises(icons.IconError), patch.object(icons, '_open') as network:
+                icons.normalize(raw, 'image/svg+xml')
+            network.assert_not_called()
+        embedded = base64.b64encode(picture()).decode()
+        image = f'<image href="data:image/png;base64,{embedded}"/>'
+        with self.assertRaises(icons.IconError):
+            icons.normalize(('<svg>' + image * 2 + '</svg>').encode(), 'image/svg+xml')
+
     def test_explicit_lookup_derives_address_rechecks_and_never_writes_apps(self):
         with patch.object(icons, '_run', side_effect=self.resolve) as run, patch.object(icons, '_worker', return_value=(self.png, 'image/png')) as worker:
             result = icons.discover(101, self.payload)

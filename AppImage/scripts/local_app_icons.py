@@ -166,7 +166,7 @@ def _svg(body):
         raise IconError('invalid SVG') from exc
     ns = 'http://www.w3.org/2000/svg'
     tags = {'svg', 'g', 'defs', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline',
-            'polygon', 'linearGradient', 'radialGradient', 'stop', 'clipPath', 'title', 'desc'}
+            'polygon', 'linearGradient', 'radialGradient', 'stop', 'clipPath', 'title', 'desc', 'image'}
     attrs = {'viewBox', 'width', 'height', 'x', 'y', 'x1', 'x2', 'y1', 'y2', 'cx', 'cy',
              'r', 'rx', 'ry', 'd', 'points', 'fill', 'stroke', 'stroke-width', 'opacity',
              'fill-opacity', 'stroke-opacity', 'fill-rule', 'clip-rule', 'stroke-linecap',
@@ -175,20 +175,40 @@ def _svg(body):
     if original.tag not in ('svg', '{' + ns + '}svg'):
         raise IconError('invalid SVG root')
     count = 0
+    images = 0
     def clean(node, depth=0):
-        nonlocal count
+        nonlocal count, images
         count += 1
         if depth > 32 or count > 2048:
             raise IconError('SVG complexity limit')
         name = node.tag.removeprefix('{' + ns + '}')
         if name not in tags:
             return None
+        embedded = None
+        if name == 'image':
+            refs = {value for key, value in node.attrib.items()
+                    if key in ('href', '{http://www.w3.org/1999/xlink}href')}
+            if len(refs) != 1:
+                return None
+            match = re.fullmatch(r'data:(image/(?:png|jpeg|gif|webp|x-icon|vnd\.microsoft\.icon));base64,([A-Za-z0-9+/=]+)', refs.pop())
+            if not match:
+                return None  # No external resource or recursive SVG data URI.
+            images += 1
+            if images > 1:
+                raise IconError('SVG embedded image limit')
+            try:
+                raster = base64.b64decode(match[2], validate=True)
+            except ValueError as exc:
+                raise IconError('invalid embedded image') from exc
+            raster, _mime = normalize(raster, match[1])
+            embedded = 'data:image/png;base64,' + base64.b64encode(raster).decode()
         out = xml.Element('{' + ns + '}' + name)
         for key, value in node.attrib.items():
             if key not in attrs or len(value) > 32768:
                 continue
             # Only local fragment paint/clip references; no CSS, href, events,
-            # foreign namespaces, entities, animation, images, filters or use.
+            # foreign namespaces, entities, animation, filters or use.
+            # A single validated raster data URI is installed separately below.
             if re.search(r'url\s*\(', value, re.I):
                 if not re.fullmatch(r'url\(#[A-Za-z_][\w.-]*\)', value):
                     continue
@@ -198,6 +218,8 @@ def _svg(body):
                 if not re.fullmatch(r'\d+(?:\.\d+)?(?:px)?', value) or not 0 < float(value.removesuffix('px')) <= MAX_DIMENSION:
                     continue
             out.set(key, value)
+        if embedded:
+            out.set('href', embedded)
         if name in ('title', 'desc'):
             out.text = (node.text or '')[:512]
         for child in node:
@@ -206,6 +228,13 @@ def _svg(body):
                 out.append(cleaned)
         return out
     result = clean(original)
+    def has_drawing(node):
+        name = node.tag.removeprefix('{' + ns + '}')
+        if name in ('defs', 'clipPath'):
+            return False
+        return name in {'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'image'} or any(has_drawing(child) for child in node)
+    if not has_drawing(result):
+        raise IconError('SVG contains no supported drawing')
     xml.register_namespace('', ns)
     output = xml.tostring(result, encoding='utf-8')
     if len(output) > MAX_BYTES:
@@ -230,7 +259,9 @@ def normalize(body, mime):
                 raise IconError('image dimensions too large')
             picture.load()
             out = io.BytesIO()
-            picture.convert('RGBA').save(out, format='PNG')
+            converted = picture.convert('RGBA')
+            converted.info.clear()
+            converted.save(out, format='PNG')
         result = out.getvalue()
         if len(result) > MAX_BYTES:
             raise IconError('normalized icon too large')
