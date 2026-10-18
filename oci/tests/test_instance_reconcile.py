@@ -1,4 +1,5 @@
 """Regression tests for explicit adoption of external OCI resources."""
+import copy
 import json
 from pathlib import Path
 import sys
@@ -214,6 +215,18 @@ class EnvironmentAdoptionTests(unittest.TestCase):
         with (patch.object(reconcile.instances, 'identity', return_value=self.marker),
               self.assertRaisesRegex(ValueError, 'net0')):
             reconcile.propose(record, config)
+
+
+class OverlapMessageTests(unittest.TestCase):
+    def test_the_refusal_names_both_paths(self):
+        from test_modify_review import installation
+        saved, config = installation()
+        candidate = copy.deepcopy(saved)
+        volume = {'type': 'managed-volume', 'source': 'local-lvm', 'size_gb': 1, 'backup': True, 'read_only': False}
+        candidate['deployment']['mounts'] = [dict(volume, container_path='/source'),
+                                             dict(volume, container_path='/source/archivos')]
+        with self.assertRaisesRegex(ValueError, '/source/archivos - /source$'):
+            reconcile.transaction.preflight(saved, candidate, config)
 
 
 if __name__ == '__main__':

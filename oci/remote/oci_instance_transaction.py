@@ -571,9 +571,10 @@ def preflight(record, candidate, config, coordinated=None, in_place=False, basel
             target = host_mounts.valid_path(mount['container_path'])
             if mount['type'] == 'host-bind' and mount['source'] in declared and mount.get('read_only'):
                 continue
-            if (any(target == p or target.startswith(p.rstrip('/') + '/')
-                           or p.startswith(target.rstrip('/') + '/') for p in paths)):
-                raise ValueError(translate('Mount paths must not overlap'))
+            other = next((p for p in paths if target == p or target.startswith(p.rstrip('/') + '/')
+                          or p.startswith(target.rstrip('/') + '/')), None)
+            if other:
+                raise ValueError(f"{translate('Mount paths must not overlap')}: {target} - {other}")
             if mount['type'] == 'managed-volume':
                 if mount.get('backup') is not True or not isinstance(mount.get('size_gb'), int) or mount['size_gb'] < 1:
                     raise ValueError(translate('Managed disks must have backup enabled and a valid size'))
