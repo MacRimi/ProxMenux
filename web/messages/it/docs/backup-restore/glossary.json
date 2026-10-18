@@ -156,7 +156,7 @@
         {
           "id": "modo-adjunto",
           "term": "Modalità allegato",
-          "def": "Processo senza timer proprio. Un hook job-end PVE di <code>vzdump</code> lo avvia dopo i backup dei guest se lo storage corrisponde. Il processo padre fornisce destinazione e conservazione iniziale, ma il hook confronta lo storage, non l’ID padre. Anche un altro processo sullo stesso storage può attivarlo. Solo Local e PBS."
+          "def": "Processo senza timer proprio. Un hook job-end PVE di <code>vzdump</code> lo avvia dopo i backup dei guest se lo storage corrisponde. Il processo padre fornisce destinazione e conservazione, riletta dal processo padre a ogni esecuzione, ma il hook confronta lo storage, non l’ID padre. Anche un altro processo sullo stesso storage può attivarlo. Solo Local e PBS."
         },
         {
           "id": "timer-systemd",

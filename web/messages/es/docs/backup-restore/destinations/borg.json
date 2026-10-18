@@ -107,7 +107,7 @@
     "heading": "Autenticación SSH (lado cliente)",
     "intro": "Los repositorios Borg remotos se acceden vía SSH. La conexión va desde el host ProxMenux a una cuenta de usuario en el servidor Borg que ejecuta <code>borg serve</code>. Ese usuario se llama típicamente <code>borg</code>, NO el usuario admin/root del servidor — la línea de comando de borg-serve bloquea la conexión a esa ruta concreta del repositorio (ver las estrategias de clave más abajo).",
     "strategiesTitle": "Estrategias de clave SSH",
-    "strategiesIntro": "Al añadir un destino remoto, ProxMenux pide el usuario SSH, el host y la ruta remota, y ofrece cuatro opciones de autenticación. Si se rechaza la autenticación por contraseña, también ofrece generate-pct. Los modos se describen a continuación:",
+    "strategiesIntro": "Al añadir un destino remoto, ProxMenux pide el usuario SSH, el host, el puerto y la ruta remota, y ofrece cuatro opciones de autenticación. Si se rechaza la autenticación por contraseña, también ofrece generate-pct. Los modos se describen a continuación:",
     "strategyRows": [
       {
         "mode": "generate-auto",
@@ -166,7 +166,7 @@
       {
         "var": "BORG_RSH",
         "value": "ssh -i SSH_KEY_PATH -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new [-p PORT]",
-        "purpose": "Comando de shell remoto que Borg utiliza para repositorios SSH. Elegir una clave añade las opciones de identidad; un puerto distinto del predeterminado añade -p PORT. Sin clave personalizada y con el puerto predeterminado, la variable queda sin definir y Borg usa la configuración SSH del host."
+        "purpose": "Comando de shell remoto que Borg utiliza para repositorios SSH. Elegir una clave añade las opciones de identidad. Al añadir un destino con un puerto distinto del predeterminado, ProxMenux añade además -p PORT; los destinos guardados, los trabajos programados y el Monitor usan el puerto de la URL ssh://. Sin clave personalizada, y en un destino nuevo con el puerto predeterminado, la variable queda sin definir y Borg usa la configuración SSH del host."
       },
       {
         "var": "BORG_PASSPHRASE",

@@ -107,7 +107,7 @@
     "heading": "Autenticazione SSH (lato cliente)",
     "intro": "I repository Borg remoti sono accessibili su SSH. La connessione viene eseguita dall'host ProxMenux a un account utente sul server Borg che esegue <code>borg serve</code>. Questo utente è tipicamente chiamato <code>borg</code>, NON l'utente admin/root del server — la linea di comando borg-serve blocca la connessione a quel percorso di repository specifico (vedere le strategie chiave qui sotto).",
     "strategiesTitle": "Strategie per le chiavi SSH",
-    "strategiesIntro": "Aggiungendo una destinazione remota, ProxMenux chiede utente SSH, host e percorso remoto, poi offre quattro opzioni di autenticazione. Se l’accesso con password viene rifiutato, propone anche generate-pct. Le modalità sono descritte di seguito:",
+    "strategiesIntro": "Aggiungendo una destinazione remota, ProxMenux chiede utente SSH, host, porta e percorso remoto, poi offre quattro opzioni di autenticazione. Se l’accesso con password viene rifiutato, propone anche generate-pct. Le modalità sono descritte di seguito:",
     "strategyRows": [
       {
         "mode": "generate-auto",
@@ -166,7 +166,7 @@
       {
         "var": "BORG_RSH",
         "value": "ssh -i SSH_KEY_PATH -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new [-p PORT]",
-        "purpose": "Comando remoto usato da Borg per i repository SSH. Una chiave selezionata aggiunge le opzioni di identità; una porta non standard aggiunge -p PORT. Senza chiave personalizzata e con la porta predefinita, la variabile resta non impostata e Borg usa la configurazione SSH dell’host."
+        "purpose": "Comando remoto usato da Borg per i repository SSH. Una chiave selezionata aggiunge le opzioni di identità. Quando una destinazione viene aggiunta con una porta non standard, ProxMenux aggiunge anche -p PORT; le destinazioni salvate, i processi pianificati e il Monitor usano invece la porta dell’URL ssh://. Senza chiave personalizzata, e per una nuova destinazione con la porta predefinita, la variabile resta non impostata e Borg usa la configurazione SSH dell’host."
       },
       {
         "var": "BORG_PASSPHRASE",

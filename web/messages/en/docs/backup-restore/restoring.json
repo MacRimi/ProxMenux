@@ -81,11 +81,11 @@
       },
       {
         "class": "reboot",
-        "detail": "Paths deferred to the <strong>next boot</strong>, rather than applied <strong>immediately</strong> by this restore flow. They affect boot-time configuration: bootloader generation reads <code>/etc/default/grub</code>, filesystem mounting uses <code>/etc/fstab</code>, and module loading uses <code>/etc/modules</code>. The pending files are applied after reboot and the required boot artifacts are then regenerated. Examples: <code>/etc/default/grub</code>, <code>/etc/kernel</code>, <code>/etc/modules</code>, <code>/etc/fstab</code>, <code>/etc/zfs</code>, <code>/etc/initramfs-tools</code>."
+        "detail": "Paths deferred to the <strong>next boot</strong>, rather than applied <strong>immediately</strong> by this restore flow. They affect boot-time configuration: bootloader generation reads <code>/etc/default/grub</code>, filesystem mounting uses <code>/etc/fstab</code>, and module loading uses <code>/etc/modules</code>. The pending files are applied after reboot and the required boot artifacts are then regenerated. Examples: <code>/etc/default/grub</code>, <code>/etc/kernel</code>, <code>/etc/modules</code>, <code>/etc/fstab</code>, <code>/etc/zfs</code>, <code>/etc/modprobe.d</code>."
       },
       {
         "class": "dangerous",
-        "detail": "Paths that are <strong>NOT applied on the running system</strong> — a live write could corrupt state or drop the active connection. These are staged in the pending set and written by the post-boot dispatcher after the reboot, when the cluster is up but the system is not yet fully in use. Examples: <code>/etc/pve</code> (pmxcfs is a live FUSE mount holding active cluster configuration), <code>/var/lib/pve-cluster</code> (live cluster data), <code>/etc/network</code> (could reconfigure the very interface the user is connected on over SSH and drop the session)."
+        "detail": "Paths that are <strong>NOT applied on the running system</strong> — a live write could corrupt state or drop the active connection. These are staged in the pending set: <code>/etc/network</code> is written early in the next boot, before networking starts, and <code>/etc/pve</code> is written by the post-boot dispatcher once the cluster filesystem is up. Examples: <code>/etc/pve</code> (pmxcfs is a live FUSE mount holding active cluster configuration), <code>/var/lib/pve-cluster</code> (live cluster data, kept in the recovery directory for manual recovery only), <code>/etc/network</code> (could reconfigure the very interface the user is connected on over SSH and drop the session)."
       }
     ]
   },

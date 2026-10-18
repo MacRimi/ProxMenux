@@ -107,7 +107,7 @@
     "heading": "SSH authentication (client side)",
     "intro": "Remote Borg repositories are accessed over SSH. The connection runs from the ProxMenux host to a user account on the Borg server that runs <code>borg serve</code>. This user is typically named <code>borg</code>, NOT the admin/root user of the server — the borg-serve command line locks the connection to that specific repository path (see the key strategies below).",
     "strategiesTitle": "SSH key strategies",
-    "strategiesIntro": "When a remote target is added, ProxMenux asks for the SSH user, host and remote path, then offers four authentication choices. The additional generate-pct path is offered when password authentication is refused. The modes are described below:",
+    "strategiesIntro": "When a remote target is added, ProxMenux asks for the SSH user, host, port and remote path, then offers four authentication choices. The additional generate-pct path is offered when password authentication is refused. The modes are described below:",
     "strategyRows": [
       {
         "mode": "generate-auto",
@@ -166,7 +166,7 @@
       {
         "var": "BORG_RSH",
         "value": "ssh -i SSH_KEY_PATH -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new [-p PORT]",
-        "purpose": "The remote-shell command Borg uses for SSH repositories. A selected key adds the identity options; a non-default port adds -p PORT. With no custom key and the default port, the variable is unset so Borg uses the host’s default SSH configuration."
+        "purpose": "The remote-shell command Borg uses for SSH repositories. A selected key adds the identity options. When a target is first added with a non-default port, ProxMenux also appends -p PORT; saved targets, scheduled jobs and the Monitor rely on the port in the ssh:// URL instead. Without a custom key, and for a newly added target with the default port, the variable is unset so Borg uses the host’s default SSH configuration."
       },
       {
         "var": "BORG_PASSPHRASE",

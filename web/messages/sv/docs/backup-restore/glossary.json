@@ -156,7 +156,7 @@
         {
           "id": "modo-adjunto",
           "term": "Anslutet läge",
-          "def": "Jobb utan egen timer. En job-end-hook i PVE <code>vzdump</code> utlöser det efter gästsäkerhetskopior när mållagringen matchar. Det valda överordnade jobbet ger lagring och inledande lagringsregler, men hooken matchar lagring, inte jobb-ID. Även en annan uppgift med samma lagring kan utlösa det. Endast Local och PBS."
+          "def": "Jobb utan egen timer. En job-end-hook i PVE <code>vzdump</code> utlöser det efter gästsäkerhetskopior när mållagringen matchar. Det valda överordnade jobbet ger lagring och lagringsregler, som läses om från det överordnade jobbet vid varje körning, men hooken matchar lagring, inte jobb-ID. Även en annan uppgift med samma lagring kan utlösa det. Endast Local och PBS."
         },
         {
           "id": "timer-systemd",

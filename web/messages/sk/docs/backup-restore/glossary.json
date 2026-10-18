@@ -156,7 +156,7 @@
         {
           "id": "modo-adjunto",
           "term": "Pripojený režim",
-          "def": "Úloha bez vlastného časovača. Hook job-end PVE <code>vzdump</code> ju spustí po zálohách hostí pri zhodnom úložisku. Vybraná nadradená úloha poskytne cieľ a počiatočné uchovávanie, ale hook porovnáva úložisko, nie ID nadradenej úlohy. Spustiť ju môže aj iná úloha s tým istým úložiskom. Iba Local a PBS."
+          "def": "Úloha bez vlastného časovača. Hook job-end PVE <code>vzdump</code> ju spustí po zálohách hostí pri zhodnom úložisku. Vybraná nadradená úloha poskytne cieľ a uchovávanie, ktoré sa pri každom spustení znova načíta z nadradenej úlohy, ale hook porovnáva úložisko, nie ID nadradenej úlohy. Spustiť ju môže aj iná úloha s tým istým úložiskom. Iba Local a PBS."
         },
         {
           "id": "timer-systemd",

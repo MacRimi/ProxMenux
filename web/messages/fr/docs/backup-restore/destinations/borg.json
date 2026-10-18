@@ -107,7 +107,7 @@
     "heading": "authentification SSH (côté client)",
     "intro": "Les dépôts distants Borg sont accessibles sur SSH. La connexion passe de l'hôte ProxMenux à un compte utilisateur sur le serveur Borg qui exécute <code>borg serve</code>. Cet utilisateur s'appelle généralement <code>borg</code>, PAS l'utilisateur admin/root du serveur — la ligne de commande borg-serve verrouille la connexion à ce chemin de dépôt spécifique (voir les stratégies clés ci-dessous).",
     "strategiesTitle": "Stratégies de clé SSH",
-    "strategiesIntro": "Lors de l’ajout d’une destination distante, ProxMenux demande l’utilisateur SSH, l’hôte et le chemin distant, puis propose quatre choix d’authentification. L’alternative generate-pct est proposée si l’authentification par mot de passe est refusée. Voici les modes :",
+    "strategiesIntro": "Lors de l’ajout d’une destination distante, ProxMenux demande l’utilisateur SSH, l’hôte, le port et le chemin distant, puis propose quatre choix d’authentification. L’alternative generate-pct est proposée si l’authentification par mot de passe est refusée. Voici les modes :",
     "strategyRows": [
       {
         "mode": "generate-auto",
@@ -166,7 +166,7 @@
       {
         "var": "BORG_RSH",
         "value": "ssh -i SSH_KEY_PATH -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new [-p PORT]",
-        "purpose": "Commande distante utilisée par Borg pour les dépôts SSH. Une clé sélectionnée ajoute les options d’identité ; un port non standard ajoute -p PORT. Sans clé personnalisée et avec le port par défaut, la variable reste non définie et Borg utilise la configuration SSH de l’hôte."
+        "purpose": "Commande distante utilisée par Borg pour les dépôts SSH. Une clé sélectionnée ajoute les options d’identité. Quand une destination est ajoutée avec un port non standard, ProxMenux ajoute aussi -p PORT ; les destinations enregistrées, les tâches planifiées et le Monitor utilisent plutôt le port de l’URL ssh://. Sans clé personnalisée, et pour une nouvelle destination avec le port par défaut, la variable reste non définie et Borg utilise la configuration SSH de l’hôte."
       },
       {
         "var": "BORG_PASSPHRASE",

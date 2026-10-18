@@ -156,7 +156,7 @@
         {
           "id": "modo-adjunto",
           "term": "Attach mode",
-          "def": "Job without its own timer. A PVE <code>vzdump</code> job-end hook triggers it after guest backups when the destination storage matches. The selected parent supplies storage and initial retention, but the hook matches storage rather than parent job ID; another task using that storage may also trigger it. Supported for Local and PBS only."
+          "def": "Job without its own timer. A PVE <code>vzdump</code> job-end hook triggers it after guest backups when the destination storage matches. The selected parent supplies the storage and the retention, which is re-read from the parent job on every run, but the hook matches storage rather than parent job ID; another task using that storage may also trigger it. Supported for Local and PBS only."
         },
         {
           "id": "timer-systemd",

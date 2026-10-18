@@ -156,7 +156,7 @@
         {
           "id": "modo-adjunto",
           "term": "Mode rattaché",
-          "def": "Tâche sans timer propre. Un hook job-end de PVE <code>vzdump</code> la déclenche après les sauvegardes des invités si le stockage correspond. La tâche parent fournit destination et conservation initiale, mais le hook compare le stockage, pas l’ID parent. Une autre tâche sur ce stockage peut aussi la déclencher. Uniquement Local et PBS."
+          "def": "Tâche sans timer propre. Un hook job-end de PVE <code>vzdump</code> la déclenche après les sauvegardes des invités si le stockage correspond. La tâche parent fournit la destination et la conservation, relue depuis la tâche parent à chaque exécution, mais le hook compare le stockage, pas l’ID parent. Une autre tâche sur ce stockage peut aussi la déclencher. Uniquement Local et PBS."
         },
         {
           "id": "timer-systemd",

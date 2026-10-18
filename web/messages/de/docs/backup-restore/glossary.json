@@ -156,7 +156,7 @@
         {
           "id": "modo-adjunto",
           "term": "Anhängemodus",
-          "def": "Auftrag ohne eigenen Timer. Ein job-end-Hook von PVE-<code>vzdump</code> startet ihn nach Gastsicherungen bei passendem Zielspeicher. Der gewählte Elternauftrag liefert Speicher und anfängliche Aufbewahrung; der Hook vergleicht aber Speicher statt Auftrags-ID. Auch andere Aufgaben desselben Speichers können ihn auslösen. Nur Local und PBS."
+          "def": "Auftrag ohne eigenen Timer. Ein job-end-Hook von PVE-<code>vzdump</code> startet ihn nach Gastsicherungen bei passendem Zielspeicher. Der gewählte Elternauftrag liefert Speicher und Aufbewahrung, die bei jedem Lauf erneut aus dem Elternauftrag gelesen wird; der Hook vergleicht aber Speicher statt Auftrags-ID. Auch andere Aufgaben desselben Speichers können ihn auslösen. Nur Local und PBS."
         },
         {
           "id": "timer-systemd",

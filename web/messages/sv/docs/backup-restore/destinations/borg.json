@@ -107,7 +107,7 @@
     "heading": "SSH autentisering (klientsida)",
     "intro": "Remote Borg repositorier är tillgängliga över SSH. Anslutningen går från ProxMenux-värden till ett användarkonto på Borg-servern som kör <code>borg serve</code>. Den här användaren heter vanligtvis <code>borg</code>, inte admin/root-användaren av servern - borg-serve-kommandoraden låser anslutningen till den specifika förvaringsbanan (se de viktigaste strategierna nedan).",
     "strategiesTitle": "SSH-nyckelalternativ",
-    "strategiesIntro": "När ett fjärrmål läggs till frågar ProxMenux efter SSH-användare, värd och fjärrsökväg och erbjuder fyra autentiseringsval. Alternativet generate-pct erbjuds om lösenordsautentisering nekas. Lägena beskrivs nedan:",
+    "strategiesIntro": "När ett fjärrmål läggs till frågar ProxMenux efter SSH-användare, värd, port och fjärrsökväg och erbjuder fyra autentiseringsval. Alternativet generate-pct erbjuds om lösenordsautentisering nekas. Lägena beskrivs nedan:",
     "strategyRows": [
       {
         "mode": "generate-auto",
@@ -166,7 +166,7 @@
       {
         "var": "BORG_RSH",
         "value": "ssh -i SSH_KEY_PATH -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new [-p PORT]",
-        "purpose": "Fjärrskalskommandot som Borg använder för SSH-förvar. En vald nyckel lägger till identitetsalternativen; en annan port än standard lägger till -p PORT. Utan egen nyckel och med standardport lämnas variabeln osatt och Borg använder värdens SSH-konfiguration."
+        "purpose": "Fjärrskalskommandot som Borg använder för SSH-förvar. En vald nyckel lägger till identitetsalternativen. När ett mål läggs till med en annan port än standard lägger ProxMenux även till -p PORT; sparade mål, schemalagda jobb och Monitor använder i stället porten i ssh://-URL:en. Utan egen nyckel, och för ett nytt mål med standardport, lämnas variabeln osatt och Borg använder värdens SSH-konfiguration."
       },
       {
         "var": "BORG_PASSPHRASE",

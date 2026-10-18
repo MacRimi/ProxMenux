@@ -81,11 +81,11 @@
       },
       {
         "class": "reboot",
-        "detail": "Cesty odložené na <strong>ďalší štart</strong>, nie použité <strong>okamžite</strong> týmto postupom. Ovplyvňujú konfiguráciu štartu: tvorba zavádzača číta <code>/etc/default/grub</code>, pripájanie systémov používa <code>/etc/fstab</code> a načítanie modulov <code>/etc/modules</code>. Odložené súbory sa použijú po reštarte a potom sa znovu vytvoria potrebné zavádzacie súbory. Príklady: <code>/etc/default/grub</code>, <code>/etc/kernel</code>, <code>/etc/modules</code>, <code>/etc/fstab</code>, <code>/etc/zfs</code>, <code>/etc/initramfs-tools</code>."
+        "detail": "Cesty odložené na <strong>ďalší štart</strong>, nie použité <strong>okamžite</strong> týmto postupom. Ovplyvňujú konfiguráciu štartu: tvorba zavádzača číta <code>/etc/default/grub</code>, pripájanie systémov používa <code>/etc/fstab</code> a načítanie modulov <code>/etc/modules</code>. Odložené súbory sa použijú po reštarte a potom sa znovu vytvoria potrebné zavádzacie súbory. Príklady: <code>/etc/default/grub</code>, <code>/etc/kernel</code>, <code>/etc/modules</code>, <code>/etc/fstab</code>, <code>/etc/zfs</code>, <code>/etc/modprobe.d</code>."
       },
       {
         "class": "dangerous",
-        "detail": "Cesty, ktoré sa <strong>NEPOUŽÍVAJÚ na bežiacom systéme</strong>, pretože zápis by mohol poškodiť stav alebo prerušiť aktívne spojenie. Pripravia sa medzi odloženými súbormi a zapíšu sa po reštarte, keď je klaster spustený a systém ešte nie je plne používaný. Príklady: <code>/etc/pve</code> (pmxcfs je pripojenie FUSE s aktívnou konfiguráciou klastra), <code>/var/lib/pve-cluster</code> (aktívne údaje klastra) a <code>/etc/network</code> (zmena môže prekonfigurovať rozhranie používané na SSH a prerušiť reláciu)."
+        "detail": "Cesty, ktoré sa <strong>NEPOUŽIJÚ na bežiacom systéme</strong>, pretože zápis za behu by mohol poškodiť stav alebo prerušiť aktívne spojenie. Pripravia sa medzi odloženými súbormi: <code>/etc/network</code> sa zapíše na začiatku ďalšieho štartu, ešte pred spustením siete, a <code>/etc/pve</code> zapíše dispečer po štarte, keď je klastrový súborový systém dostupný. Príklady: <code>/etc/pve</code> (pmxcfs je pripojenie FUSE s aktívnou konfiguráciou klastra), <code>/var/lib/pve-cluster</code> (aktívne údaje klastra, uložené v adresári obnovy len na ručnú obnovu), <code>/etc/network</code> (zmena môže prekonfigurovať rozhranie používané na SSH a prerušiť reláciu)."
       }
     ]
   },

@@ -107,7 +107,7 @@
     "heading": "SSH-Authentifizierung (Clientseite)",
     "intro": "Remote-Borg-Repositories sind über SSH zugänglich. Die Verbindung läuft vom ProxMenux-Host zu einem Benutzerkonto auf dem Borg-Server, auf dem <code>borg serve</code> ausgeführt wird. Dieser Benutzer heißt normalerweise <code>borg</code>, NICHT der Admin / Root-Benutzer des Servers - die Befehlszeile borg-serve sperrt die Verbindung zu diesem spezifischen Repository-Pfad (siehe die wichtigsten Strategien unten).",
     "strategiesTitle": "SSH-Schlüsselstrategien",
-    "strategiesIntro": "Beim Hinzufügen eines entfernten Ziels fragt ProxMenux nach SSH-Benutzer, Host und entferntem Pfad und bietet vier Anmeldeoptionen. Wird die Passwortanmeldung abgewiesen, steht zusätzlich generate-pct zur Wahl. Die Modi sind unten beschrieben:",
+    "strategiesIntro": "Beim Hinzufügen eines entfernten Ziels fragt ProxMenux nach SSH-Benutzer, Host, Port und entferntem Pfad und bietet vier Anmeldeoptionen. Wird die Passwortanmeldung abgewiesen, steht zusätzlich generate-pct zur Wahl. Die Modi sind unten beschrieben:",
     "strategyRows": [
       {
         "mode": "generate-auto",
@@ -166,7 +166,7 @@
       {
         "var": "BORG_RSH",
         "value": "ssh -i SSH_KEY_PATH -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new [-p PORT]",
-        "purpose": "Remote-Shell-Befehl für Borg-Repositories über SSH. Ein gewählter Schlüssel ergänzt die Identitätsoptionen, ein abweichender Port ergänzt -p PORT. Ohne eigenen Schlüssel und mit Standardport bleibt die Variable ungesetzt; Borg nutzt dann die SSH-Vorgaben des Hosts."
+        "purpose": "Remote-Shell-Befehl für Borg-Repositories über SSH. Ein gewählter Schlüssel ergänzt die Identitätsoptionen. Wird ein Ziel erstmals mit einem abweichenden Port hinzugefügt, ergänzt ProxMenux zusätzlich -p PORT; gespeicherte Ziele, geplante Aufträge und der Monitor verwenden stattdessen den Port aus der ssh://-URL. Ohne eigenen Schlüssel und bei einem neuen Ziel mit Standardport bleibt die Variable ungesetzt; Borg nutzt dann die SSH-Vorgaben des Hosts."
       },
       {
         "var": "BORG_PASSPHRASE",

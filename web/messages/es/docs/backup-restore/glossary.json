@@ -156,7 +156,7 @@
         {
           "id": "modo-adjunto",
           "term": "Modo adjunto (attach mode)",
-          "def": "Trabajo sin timer propio. Un hook job-end de <code>vzdump</code> lo ejecuta después de los backups de invitados cuando coincide el almacenamiento. El padre seleccionado aporta destino y retención inicial, pero el hook compara almacenamiento, no ID de tarea padre; otra tarea con el mismo destino también puede activarlo. Solo para Local y PBS."
+          "def": "Trabajo sin timer propio. Un hook job-end de <code>vzdump</code> lo ejecuta después de los backups de invitados cuando coincide el almacenamiento. El padre seleccionado aporta el destino y la retención, que se vuelve a leer de la tarea padre en cada ejecución, pero el hook compara almacenamiento, no ID de tarea padre; otra tarea con el mismo destino también puede activarlo. Solo para Local y PBS."
         },
         {
           "id": "timer-systemd",

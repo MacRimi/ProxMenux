@@ -81,11 +81,11 @@
       },
       {
         "class": "reboot",
-        "detail": "Caminhos adiados para a <strong>próxima inicialização</strong>, em vez de aplicados <strong>imediatamente</strong> por este processo. Afetam a configuração de boot: a geração do carregador lê <code>/etc/default/grub</code>, as montagens usam <code>/etc/fstab</code> e a carga de módulos usa <code>/etc/modules</code>. Os arquivos pendentes são aplicados após reiniciar e os artefatos de boot necessários são então regenerados. Exemplos: <code>/etc/default/grub</code>, <code>/etc/kernel</code>, <code>/etc/modules</code>, <code>/etc/fstab</code>, <code>/etc/zfs</code>, <code>/etc/initramfs-tools</code>."
+        "detail": "Caminhos adiados para a <strong>próxima inicialização</strong>, em vez de aplicados <strong>imediatamente</strong> por este processo. Afetam a configuração de boot: a geração do carregador lê <code>/etc/default/grub</code>, as montagens usam <code>/etc/fstab</code> e a carga de módulos usa <code>/etc/modules</code>. Os arquivos pendentes são aplicados após reiniciar e os artefatos de boot necessários são então regenerados. Exemplos: <code>/etc/default/grub</code>, <code>/etc/kernel</code>, <code>/etc/modules</code>, <code>/etc/fstab</code>, <code>/etc/zfs</code>, <code>/etc/modprobe.d</code>."
       },
       {
         "class": "dangerous",
-        "detail": "Caminhos que são <strong>NÃO aplicados no sistema em execução</strong> — uma gravação ao vivo pode corromper o estado ou soltar a conexão ativa. Estes são encenados no conjunto pendente e escritos pelo expedidor pós-boot após a reinicialização, quando o cluster está acima, mas o sistema ainda não está totalmente em uso. Exemplos: <code>/etc/pve</code> (pmxcfs é uma montagem FUSE com a configuração ativa do cluster), <code>/var/lib/pve-cluster</code> (dados de cluster ao vivo), <code>/etc/network</code> (poderia reconfigurar a própria interface que o usuário está conectado sobre SSH e soltar a sessão)."
+        "detail": "Caminhos <strong>NÃO aplicados no sistema em execução</strong>: uma escrita a quente poderia corromper o estado ou cortar a ligação ativa. Ficam no conjunto pendente: <code>/etc/network</code> é escrito no início do arranque seguinte, antes de a rede arrancar, e <code>/etc/pve</code> é escrito pelo dispatcher pós-arranque quando o sistema de ficheiros do cluster está disponível. Exemplos: <code>/etc/pve</code> (pmxcfs é uma montagem FUSE com a configuração ativa do cluster), <code>/var/lib/pve-cluster</code> (dados ativos do cluster, guardados no diretório de recuperação apenas para recuperação manual), <code>/etc/network</code> (poderia reconfigurar a própria interface usada pela ligação SSH e cortar a sessão)."
       }
     ]
   },

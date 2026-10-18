@@ -107,7 +107,7 @@
     "heading": "Autenticação SSH (lado cliente)",
     "intro": "Repositórios Borg remotos são acessados sobre SSH. A conexão é executada do host ProxMenux para uma conta de usuário no servidor Borg que executa o <code>borg serve</code>. Este usuário é tipicamente chamado <code>borg</code>, NÃO o administrador/root usuário do servidor — a linha de comando borg-serve bloqueia a conexão com esse caminho específico do repositório (veja as estratégias chave abaixo).",
     "strategiesTitle": "Estratégias de chave SSH",
-    "strategiesIntro": "Ao adicionar um destino remoto, o ProxMenux pede usuário SSH, host e caminho remoto e oferece quatro opções de autenticação. A alternativa generate-pct é oferecida quando o acesso por senha é recusado. Os modos são descritos abaixo:",
+    "strategiesIntro": "Ao adicionar um destino remoto, o ProxMenux pede usuário SSH, host, porta e caminho remoto e oferece quatro opções de autenticação. A alternativa generate-pct é oferecida quando o acesso por senha é recusado. Os modos são descritos abaixo:",
     "strategyRows": [
       {
         "mode": "generate-auto",
@@ -166,7 +166,7 @@
       {
         "var": "BORG_RSH",
         "value": "ssh -i SSH_KEY_PATH -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new [-p PORT]",
-        "purpose": "Comando remoto usado pelo Borg para repositórios SSH. Uma chave selecionada acrescenta as opções de identidade; uma porta diferente da padrão acrescenta -p PORT. Sem chave personalizada e com a porta padrão, a variável fica indefinida e o Borg usa a configuração SSH do host."
+        "purpose": "Comando remoto usado pelo Borg para repositórios SSH. Uma chave selecionada acrescenta as opções de identidade. Quando um destino é adicionado com uma porta diferente da padrão, o ProxMenux acrescenta também -p PORT; os destinos guardados, as tarefas agendadas e o Monitor usam antes a porta do URL ssh://. Sem chave personalizada, e num destino novo com a porta padrão, a variável fica indefinida e o Borg usa a configuração SSH do host."
       },
       {
         "var": "BORG_PASSPHRASE",

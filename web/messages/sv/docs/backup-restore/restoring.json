@@ -81,11 +81,11 @@
       },
       {
         "class": "reboot",
-        "detail": "Sökvägar som skjuts upp till <strong>nästa start</strong> i stället för att tillämpas <strong>omedelbart</strong> av återställningen. De påverkar startkonfigurationen: genereringen av starthanteraren läser <code>/etc/default/grub</code>, monteringar använder <code>/etc/fstab</code> och modulladdning <code>/etc/modules</code>. De väntande filerna tillämpas efter omstart och nödvändiga startfiler genereras sedan om. Exempel: <code>/etc/default/grub</code>, <code>/etc/kernel</code>, <code>/etc/modules</code>, <code>/etc/fstab</code>, <code>/etc/zfs</code>, <code>/etc/initramfs-tools</code>."
+        "detail": "Sökvägar som skjuts upp till <strong>nästa start</strong> i stället för att tillämpas <strong>omedelbart</strong> av återställningen. De påverkar startkonfigurationen: genereringen av starthanteraren läser <code>/etc/default/grub</code>, monteringar använder <code>/etc/fstab</code> och modulladdning <code>/etc/modules</code>. De väntande filerna tillämpas efter omstart och nödvändiga startfiler genereras sedan om. Exempel: <code>/etc/default/grub</code>, <code>/etc/kernel</code>, <code>/etc/modules</code>, <code>/etc/fstab</code>, <code>/etc/zfs</code>, <code>/etc/modprobe.d</code>."
       },
       {
         "class": "dangerous",
-        "detail": "Paths som är <strong>INTE tillämpas på löpningssystem</strong> - en levande skriva kan korrumpera tillstånd eller släppa den aktiva anslutningen. Dessa är iscensatta i den väntande uppsättningen och skrivna av post-boot-sändaren efter omstarten, när klustret är upp men systemet är ännu inte helt i bruk. Exempel: <code>/etc/pve</code> (pmxcfs är en FUSE-montering med aktiv klusterkonfiguration), <code>/var/lib/pve-cluster</code> (levande klusterdata), <code>/etc/network</code> (kan omkonfigurera själva gränssnittet som användaren är ansluten på över SSH och släppa sessionen)."
+        "detail": "Sökvägar som <strong>INTE tillämpas på det körande systemet</strong>: en skrivning under drift kan förstöra tillståndet eller bryta den aktiva anslutningen. De läggs i den väntande uppsättningen: <code>/etc/network</code> skrivs tidigt vid nästa start, innan nätverket startar, och <code>/etc/pve</code> skrivs av efterstartsdistributören när klusterfilsystemet är uppe. Exempel: <code>/etc/pve</code> (pmxcfs är en aktiv FUSE-montering med klustrets konfiguration), <code>/var/lib/pve-cluster</code> (aktiva klusterdata, sparade i återställningskatalogen endast för manuell återställning), <code>/etc/network</code> (kan konfigurera om just det gränssnitt som SSH-anslutningen använder och bryta sessionen)."
       }
     ]
   },

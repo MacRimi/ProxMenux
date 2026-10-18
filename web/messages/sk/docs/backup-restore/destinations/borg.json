@@ -107,7 +107,7 @@
     "heading": "Overenie SSH (klientská strana)",
     "intro": "Remote Borg archívy sú prístupné cez SSH. Spojenie beží od ProxMenux host na užívateľský účet na serveri Borg, ktorý beží <code>borg serve</code>. Tento užívateľ je zvyčajne pomenovaný <code>borg</code>, NIE je admin / root užívateľa servera borg-serve príkazový riadok zablokuje pripojenie k tejto konkrétnej trase úložiska (pozri nižšie kľúčové stratégie).",
     "strategiesTitle": "Možnosti kľúča SSH",
-    "strategiesIntro": "Pri pridaní vzdialeného cieľa vyžiada ProxMenux používateľa SSH, hostiteľa a vzdialenú cestu a ponúkne štyri možnosti overenia. Ak je overenie heslom odmietnuté, ponúkne aj alternatívu generate-pct. Režimy sú opísané nižšie:",
+    "strategiesIntro": "Pri pridaní vzdialeného cieľa vyžiada ProxMenux používateľa SSH, hostiteľa, port a vzdialenú cestu a ponúkne štyri možnosti overenia. Ak je overenie heslom odmietnuté, ponúkne aj alternatívu generate-pct. Režimy sú opísané nižšie:",
     "strategyRows": [
       {
         "mode": "generate-auto",
@@ -166,7 +166,7 @@
       {
         "var": "BORG_RSH",
         "value": "ssh -i SSH_KEY_PATH -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new [-p PORT]",
-        "purpose": "Príkaz vzdialeného shellu pre úložiská Borg cez SSH. Vybraný kľúč pridá voľby identity; neštandardný port pridá -p PORT. Bez vlastného kľúča a s predvoleným portom zostane premenná nenastavená a Borg používa konfiguráciu SSH hostiteľa."
+        "purpose": "Príkaz vzdialeného shellu pre úložiská Borg cez SSH. Vybraný kľúč pridá voľby identity. Keď sa cieľ prvýkrát pridá s neštandardným portom, ProxMenux pridá aj -p PORT; uložené ciele, plánované úlohy a Monitor namiesto toho používajú port z URL ssh://. Bez vlastného kľúča a pri novom cieli s predvoleným portom zostane premenná nenastavená a Borg používa konfiguráciu SSH hostiteľa."
       },
       {
         "var": "BORG_PASSPHRASE",

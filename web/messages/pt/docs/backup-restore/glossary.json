@@ -156,7 +156,7 @@
         {
           "id": "modo-adjunto",
           "term": "Anexar modo",
-          "def": "Tarefa sem temporizador próprio. Um hook job-end PVE de <code>vzdump</code> a executa após os backups dos convidados quando o armazenamento coincide. A tarefa pai fornece destino e retenção inicial, mas o hook compara armazenamento, não ID pai. Outra tarefa no mesmo armazenamento também pode acioná-la. Somente Local e PBS."
+          "def": "Tarefa sem temporizador próprio. Um hook job-end PVE de <code>vzdump</code> a executa após os backups dos convidados quando o armazenamento coincide. A tarefa pai fornece o destino e a retenção, relida da tarefa pai em cada execução, mas o hook compara armazenamento, não ID pai. Outra tarefa no mesmo armazenamento também pode acioná-la. Somente Local e PBS."
         },
         {
           "id": "timer-systemd",
