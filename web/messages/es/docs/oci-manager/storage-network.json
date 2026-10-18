@@ -112,7 +112,7 @@
             "items": [
               { "title": "Contenedor y remoto", "body": "El VMID del contenedor Rclone, el nombre exacto del remoto y, opcionalmente, una ruta dentro de él." },
               { "title": "Nombre y caché", "body": "El nombre del montaje y el modo de caché VFS: <code>off</code>, <code>minimal</code>, <code>writes</code> o <code>full</code> (por defecto)." },
-              { "title": "Vistas publicadas", "body": "Una raíz común, <code>/mnt/oci-shared</code> por defecto, contiene una vista de lectura y escritura en <code>/mnt/oci-shared/remotes/NOMBRE</code> y una de solo lectura en <code>/mnt/oci-shared/remotes-ro/NOMBRE</code>." },
+              { "title": "Vistas publicadas", "body": "Una raíz común, <code>/mnt/oci-shared</code> de forma predeterminada, contiene una vista de lectura y escritura en <code>/mnt/oci-shared/remotes/NAME</code> y otra de solo lectura en <code>/mnt/oci-shared/remotes-ro/NAME</code>." },
               { "title": "Activación", "body": "Tras una confirmación, el CT se detiene, se configuran su orden de arranque y un hookscript de Proxmox VE, y se vuelve a iniciar. La operación espera hasta que las dos vistas están montadas en el host." }
             ]
           }

@@ -157,7 +157,7 @@
       "<strong>Filesystems runtime del kernel y sistema</strong> — <code>/proc</code>, <code>/sys</code>, <code>/dev</code> y <code>/run</code> son pseudo-filesystems que produce el kernel y udev; no se persisten en ningún sitio.",
       "<strong>Binarios de paquetes bajo <code>/usr/bin</code>, <code>/usr/lib</code>, <code>/lib</code>, <code>/sbin</code></strong> — los reinstala el APT del destino a partir de <code>packages.manual.list</code>.",
       "<strong><code>/var/log/</code>, <code>/var/tmp/</code>, <code>/var/cache/</code></strong> — estado runtime por host, no se restaura.",
-      "<strong><code>/home/USUARIO</code></strong> — no está en el perfil por defecto. Añadirlo como ruta custom cuando un sistema tenga directorios home de usuario que deban sobrevivir a una restauración."
+      "<strong><code>/home/USER</code></strong> — no está en el perfil por defecto. Añadirlo como ruta custom cuando un sistema tenga directorios home de usuario que deban sobrevivir a una restauración."
     ],
     "customPathsTitle": "Cómo se tratan las rutas custom",
     "customPathsBody": "Una ruta custom añadida en línea en modo Custom o persistida en <code>backup-extra-paths.txt</code> pasa por el mismo pipeline de <code>rsync</code> que las rutas del perfil por defecto. Se aplican las exclusiones globales. Si la ruta custom está bajo <code>/root/</code> o <code>/usr/local/share/proxmenux/</code>, siguen aplicando las exclusiones específicas de arriba. Cada ruta archivada — default o custom — queda registrada en <code>metadata/paths_archived.txt</code>. Las rutas que no existen en el origen se registran en <code>metadata/missing_paths.txt</code> sin detener la copia."
