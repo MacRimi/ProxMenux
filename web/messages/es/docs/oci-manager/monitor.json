@@ -30,7 +30,7 @@
                 "Un interruptor <strong>Vigilancia</strong> bajo Iniciar al arrancar: la aplicación se inicia de nuevo cuando se detiene sola"
               ],
               [
-                "Aplicación",
+                "App",
                 "La aplicación se identifica desde el registro y sus actualizaciones se siguen por la imagen"
               ],
               [
@@ -42,7 +42,7 @@
                 "Discos del contenedor y directorios del host, con su uso"
               ],
               [
-                "Registros",
+                "Logs",
                 "Solo en contenedores OCI: la salida de consola de la aplicación"
               ]
             ]
@@ -150,7 +150,7 @@
     },
     {
       "id": "logs",
-      "title": "Registros",
+      "title": "Logs",
       "intro": "La pestaña Logs solo aparece en los contenedores instalados por OCI manager Apps, entre Montajes y Backups. Muestra la salida estándar y de errores del proceso principal de la imagen, la misma que muestra <code>docker logs</code> en un contenedor Docker.",
       "blocks": [
         {

@@ -75,7 +75,7 @@
                 "<code>mpN: /mnt/oci-shared/media,mp=/data/media</code>"
               ],
               [
-                "Copia del contenedor (vzdump)",
+                "Backup del contenedor (vzdump)",
                 "Incluido, con <code>backup=1</code>",
                 "No incluido"
               ],
@@ -123,7 +123,7 @@
           }
         },
         {
-          "p": "Una actualización o recreación solo sustituye el rootfs: <code>mp0</code> conserva usuarios, bibliotecas y ajustes, y <code>mp1</code> sigue mostrando los mismos archivos multimedia. Al restaurar la copia del CT se recupera <code>/config</code>; si hace falta restaurar el directorio multimedia, se utiliza la copia de seguridad del almacenamiento del host."
+          "p": "Una actualización o recreación solo sustituye el rootfs: <code>mp0</code> conserva usuarios, bibliotecas y ajustes, y <code>mp1</code> sigue mostrando los mismos archivos multimedia. Al restaurar el backup del CT se recupera <code>/config</code>; si hace falta restaurar el directorio multimedia, se utiliza el backup del almacenamiento del host."
         },
         {
           "flow": {
@@ -261,30 +261,30 @@
     },
     {
       "id": "backup",
-      "title": "Qué contiene una copia del contenedor",
+      "title": "Qué contiene el backup de un contenedor",
       "blocks": [
         {
           "table": {
             "headers": [
               "Elemento",
-              "En la copia vzdump del CT",
+              "En el backup vzdump del CT",
               "Dónde se conserva"
             ],
             "rows": [
               [
                 "Rootfs OCI",
                 "Sí",
-                "En la copia del CT; también se puede reconstruir a partir de la imagen y el contrato"
+                "En el backup del CT; también se puede reconstruir a partir de la imagen y el contrato"
               ],
               [
                 "Disco del contenedor con <code>backup=1</code>",
                 "Sí",
-                "La copia del CT"
+                "El backup del CT"
               ],
               [
                 "Directorio del host",
                 "No",
-                "La copia de seguridad del almacenamiento del host"
+                "El backup del almacenamiento del host"
               ],
               [
                 "Contrato de la instancia",
@@ -293,8 +293,8 @@
               ],
               [
                 "Aplicación con varios contenedores",
-                "Cada miembro en su propia copia",
-                "Las copias de todos los miembros, más el contrato de la pila y su puente de red en el host"
+                "Cada miembro en su propio backup",
+                "Los backups de todos los miembros, más el contrato de la pila y su puente de red en el host"
               ]
             ]
           }

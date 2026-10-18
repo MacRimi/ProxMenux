@@ -232,7 +232,7 @@
               },
               {
                 "title": "Instalar y mantener al día",
-                "body": "Esa cuenta se utiliza para descargar la imagen durante la instalación y también en las actualizaciones, Modificar, Recrear, el watchdog y la comprobación de actualizaciones del Monitor, en cualquier nodo del clúster."
+                "body": "Esa cuenta se utiliza para descargar la imagen durante la instalación y también en las actualizaciones, Modificar, Recrear, la vigilancia y la comprobación de actualizaciones del Monitor, en cualquier nodo del clúster."
               }
             ]
           }
@@ -252,7 +252,7 @@
         {
           "calloutInfo": {
             "title": "Dónde se guardan las cuentas",
-            "body": "En <code>/etc/pve/priv/proxmenux/registry-auth.json</code>, accesible solo por root, en la misma carpeta donde Proxmox guarda las contraseñas de almacenamiento. <code>/etc/pve</code> se comparte entre los nodos del clúster, de modo que una cuenta añadida en un nodo se utiliza en todos. La copia del host incluye ese archivo y desinstalar ProxMenux lo elimina de todos los nodos."
+            "body": "En <code>/etc/pve/priv/proxmenux/registry-auth.json</code>, accesible solo por root, en la misma carpeta donde Proxmox guarda las contraseñas de almacenamiento. <code>/etc/pve</code> se comparte entre los nodos del clúster, de modo que una cuenta añadida en un nodo se utiliza en todos. El backup del host incluye ese archivo y desinstalar ProxMenux lo elimina de todos los nodos."
           }
         }
       ]

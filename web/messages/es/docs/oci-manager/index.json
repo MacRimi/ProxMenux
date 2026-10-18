@@ -79,7 +79,7 @@
           "p": "OCI manager Apps mantiene la etiqueta <strong>Technology Preview</strong> que Proxmox VE asigna a los contenedores de aplicaciones creados a partir de imágenes OCI, cuyo soporte se introdujo en Proxmox VE 9.1. La etiqueta se refiere a la tecnología sobre la que funciona OCI manager Apps, no al motor de ProxMenux: el comportamiento de estos contenedores puede cambiar entre versiones de Proxmox VE. Se mantendrá hasta que Proxmox VE considere estable ese soporte."
         },
         {
-          "p": "El motor de OCI manager Apps se prueba en el laboratorio de ProxMenux: instalación, actualización, modificación, recreación, copias de seguridad, restauración, migración y watchdog. Cada aplicación se verifica por separado. Las que se han probado realmente muestran <strong>Verificado</strong> y llevan un ✓ en las listas."
+          "p": "El motor de OCI manager Apps se prueba en el laboratorio de ProxMenux: instalación, actualización, modificación, recreación, backups, restauración, migración y vigilancia. Cada aplicación se verifica por separado. Las que se han probado realmente muestran <strong>Verificado</strong> y llevan un ✓ en las listas."
         }
       ]
     },
@@ -103,7 +103,7 @@
               [
                 "Conservar la configuración",
                 "<code>volumes: /config</code>",
-                "Un volumen persistente <code>mpN</code> incluido en la copia de seguridad, o bien un directorio del host."
+                "Un volumen persistente <code>mpN</code> incluido en el backup, o bien un directorio del host."
               ],
               [
                 "Publicar el servicio",
