@@ -42,6 +42,7 @@ import {
 } from "lucide-react"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { useT } from "@/lib/i18n/provider"
+import { useIsPbs } from "@/lib/use-platform"
 
 interface CategoryCheck {
   status: string
@@ -119,6 +120,7 @@ const CATEGORIES = [
 
 export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatusModalProps) {
   const t = useT()
+  const isPbs = useIsPbs()
   const [loading, setLoading] = useState(true)
   const [healthData, setHealthData] = useState<HealthDetails | null>(null)
   const [dismissedItems, setDismissedItems] = useState<DismissedError[]>([])
@@ -460,6 +462,11 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     return originalStatus?.toUpperCase() || "UNKNOWN"
   }
 
+  // Checks the host reports as not applicable (guests on PBS) are not listed or counted.
+  const visibleCategories = CATEGORIES.filter(({ key }) =>
+    !(healthData?.details?.[key as keyof typeof healthData.details] as { not_applicable?: boolean } | undefined)?.not_applicable)
+  const categoryLabel = (key: string) => t(`healthStatus.categories.${isPbs && key === "services" ? "pbsServices" : key}`)
+
   const getHealthStats = () => {
     if (!healthData?.details) return { total: 0, healthy: 0, info: 0, warnings: 0, critical: 0, unknown: 0 }
 
@@ -469,7 +476,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
     let critical = 0
     let unknown = 0
 
-    CATEGORIES.forEach(({ key }) => {
+    visibleCategories.forEach(({ key }) => {
       const categoryData = healthData.details[key as keyof typeof healthData.details]
       if (categoryData) {
         const effectiveStatus = getEffectiveStatus(key, categoryData.status)
@@ -481,7 +488,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
       }
     })
 
-    return { total: CATEGORIES.length, healthy, info, warnings, critical, unknown }
+    return { total: visibleCategories.length, healthy, info, warnings, critical, unknown }
   }
 
   const stats = getHealthStats()
@@ -759,7 +766,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
 
             {/* Category List */}
             <div className="space-y-2">
-              {CATEGORIES.map(({ key, Icon }) => {
+              {visibleCategories.map(({ key, Icon }) => {
                 const categoryData = healthData.details[key as keyof typeof healthData.details]
                 const originalStatus = categoryData?.status || "UNKNOWN"
                 const status = getEffectiveStatus(key, originalStatus)
@@ -784,7 +791,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                       </div>
                       <div className="flex-1 min-w-0 overflow-hidden">
                         <div className="flex items-center gap-1.5 sm:gap-2">
-                          <p className="font-medium text-xs sm:text-sm truncate">{t(`healthStatus.categories.${key}`)}</p>
+                          <p className="font-medium text-xs sm:text-sm truncate">{categoryLabel(key)}</p>
                           {hasChecks && (
                             <span className="text-[10px] text-muted-foreground shrink-0">
                               ({Object.values(checks).filter(c => c.installed !== false).length})
@@ -871,7 +878,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                 {filteredDismissed.map((item) => {
                   const catMeta = CATEGORIES.find(c => c.category === item.category || c.key === item.category)
                   const CatIcon = catMeta?.Icon || BellOff
-                  const catLabel = catMeta ? t(`healthStatus.categories.${catMeta.key}`) : item.category
+                  const catLabel = catMeta ? categoryLabel(catMeta.key) : item.category
                   const isPermanent = item.permanent || item.suppression_remaining_hours === -1
                   
                   return (
@@ -936,7 +943,7 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                         <div key={cs.key} className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <CatIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-blue-400/70 shrink-0" />
-                            <span className="text-[11px] sm:text-xs text-blue-400/80 truncate">{catMeta ? t(`healthStatus.categories.${catMeta.key}`) : cs.label}</span>
+                            <span className="text-[11px] sm:text-xs text-blue-400/80 truncate">{catMeta ? categoryLabel(catMeta.key) : cs.label}</span>
                           </div>
                           <Badge variant="outline" className="text-[9px] sm:text-[10px] border-blue-500/30 text-blue-400/80 bg-transparent shrink-0">
                             {durationLabel}

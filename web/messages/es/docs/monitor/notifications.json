@@ -44,7 +44,7 @@
       "Arranca el hilo de fondo de despacho. El hilo hace polling de la cola de eventos y camina cada evento por la pipeline diagramada arriba."
     ],
     "activeAlt": "Tarjeta de notificaciones activada con pestañas de canales, nombre visible y opciones avanzadas de IA",
-    "activeCaption": "Estado activo: pestañas Telegram, Gotify, Discord, Email, Pushover y Apprise, nombre visible, categorías por canal y opciones avanzadas de IA."
+    "activeCaption": "Estado activo: pestañas de canales en la parte superior (Telegram / Gotify / Discord / correo electrónico / Pushover / Apprise), campo Nombre para mostrar, lista de categorías de cada canal y sección desplegable <em>Avanzado: mejora con IA</em>."
   },
   "sources": {
     "heading": "Fuentes de eventos",
@@ -119,7 +119,7 @@
     "groupItems": [
       "Añade el bot al grupo como miembro (y hazlo admin si el grupo lo requiere para publicar).",
       "Envía cualquier mensaje en el grupo.",
-      "Abre <code>https://api.telegram.org/bot&lt;TU_TOKEN&gt;/getUpdates</code> en un navegador. Busca <code>chat.id</code> en la respuesta JSON — para grupos es un número negativo, para supergrupos empieza con <code>-100</code>.",
+      "Abre <code>https://api.telegram.org/bot&lt;YOUR_TOKEN&gt;/getUpdates</code> en un navegador. Busca <code>chat.id</code> en la respuesta JSON — para grupos es un número negativo, para supergrupos empieza con <code>-100</code>.",
       "Para supergrupos con <em>Topics</em> activado, anota también el <code>message_thread_id</code> del tema al que quieres apuntar — eso va en el campo opcional <em>Topic ID</em>."
     ],
     "groupAlt": "Formulario de canal Telegram con Bot Token (enmascarado), Chat ID negativo prefijado con -100 indicando un supergrupo, y Topic ID 3 configurado para entregar a un tema específico",
@@ -203,7 +203,7 @@
     "stepsTitle": "Pasos",
     "steps": [
       "Elige el servicio destino en la <a>wiki de Apprise</a> y copia la plantilla de URL para él. Cada página de servicio muestra el esquema exacto a usar (<code>ntfy://</code>, <code>matrix://</code>, <code>pover://</code>, <code>slack://</code>…) más cualquier token, canal u hostname requerido.",
-      "Rellena los placeholders con tus propias credenciales. Por ejemplo, un topic de ntfy.sh tiene aspecto de <code>ntfy://ntfy.sh/mi-topic</code>; una URL de Pushover tiene aspecto de <code>pover://user@token</code>; una URL de Matrix tiene aspecto de <code>matrix://user:pass@host:port/#room</code>.",
+      "Sustituye los marcadores por tus credenciales. Ejemplos: ntfy.sh <code>ntfy://ntfy.sh/my-topic</code>; Pushover <code>pover://user@token</code>; Matrix <code>matrix://user:pass@host:port/#room</code>.",
       "Pega la URL final en el campo <em>Apprise URL</em> en la pestaña Apprise del panel Notifications y guarda.",
       "Pulsa <em>Send Test</em> para verificar que la URL es alcanzable y las credenciales se aceptan."
     ],
@@ -295,7 +295,7 @@
     "rows": [
       {
         "stage": "1. Deduplicación por huella",
-        "what": "Cada evento genera una huella (<code>event_type + campos clave de data</code>). Las huellas idénticas dentro de una ventana corta se consideran duplicados del primero.",
+        "what": "Cada evento genera una huella (<code>event_type + key fields from data</code>). Las huellas idénticas dentro de una ventana corta se consideran duplicados del primero.",
         "tunable": "No — lógica interna del dispatcher."
       },
       {
@@ -339,7 +339,7 @@
       "<strong>Llamadores remotos.</strong> Cinco capas se apilan encima del rate-limiting: un shared secret en la cabecera <code>X-Webhook-Secret</code>, un timestamp de frescura en <code>X-ProxMenux-Timestamp</code> (rechazado si se desvía más allá de la ventana configurada), una búsqueda de caché de replay y una allowlist de IP opcional. El shared secret vive en la tabla de ajustes SQLite del Monitor — no en <code>/etc/pve/priv/notifications.cfg</code> — y se genera en el primer setup. Este camino existe para integraciones personalizadas que hacen POST desde fuera del host; el destino configurado por PVE nunca lo ejercita."
     ],
     "practiceTitle": "En la práctica",
-    "practiceBody": "El setup de PVE escribe el destino como <code>http://127.0.0.1:8008</code>, así que las notificaciones emitidas por PVE siempre pasan por el camino loopback con seguridad solo rate-limit. El camino de llamador remoto con shared secret es opt-in para integraciones personalizadas — apunta un servicio externo a <code>https://&lt;host-monitor&gt;:&lt;port&gt;/api/notifications/webhook</code> y suministra la cabecera <code>X-Webhook-Secret</code> para usarlo.",
+    "practiceBody": "El setup de PVE escribe el destino como <code>http://127.0.0.1:8008</code>, así que las notificaciones emitidas por PVE siempre pasan por el camino loopback con seguridad solo rate-limit. El camino de llamador remoto con shared secret es opt-in para integraciones personalizadas — apunta un servicio externo a <code>https://&lt;monitor-host&gt;:&lt;port&gt;/api/notifications/webhook</code> y suministra la cabecera <code>X-Webhook-Secret</code> para usarlo.",
     "actionsIntro": "El Monitor gestiona este destino a través de tres acciones en la pestaña Settings:",
     "actionsItems": [
       "<strong>Setup</strong> — corre automáticamente cuando activas Notifications. Crea la entrada en <code>/etc/pve/notifications.cfg</code>. El archivo solo se escribe cuando su contenido tiene que cambiar, y se guarda un backup del anterior en <code>/usr/local/share/proxmenux/backups/pve-notifications/</code> (los tres más recientes). No se escribe nada mientras <code>/etc/pve</code> no está montado: un Monitor que arranca durante un reinicio de <code>pve-cluster</code> registra la entrada cuando vuelve.",

@@ -52,7 +52,7 @@
     },
     {
       "id": "app",
-      "title": "App",
+      "title": "Aplicación",
       "intro": "La pestaña <appLink>App</appLink> ofrece la aplicación instalada como una detección, con el nombre, el logo, el puerto y el esquema del registro. Al registrarla se abre el editor con el método <strong>Imagen OCI (instalada por ProxMenux)</strong>, que no necesita configuración.",
       "blocks": [
         {

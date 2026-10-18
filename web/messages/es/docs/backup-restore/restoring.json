@@ -26,7 +26,7 @@
       },
       {
         "action": "Descargar",
-        "detail": "Exporta el archivo como un fichero portable <code>.tar.zst</code> (tar comprimido con zstd). Se puede extraer en cualquier sistema Linux con <code>tar --zstd -xf FICHERO.tar.zst</code>, o desde macOS/Windows con herramientas que soporten zstd (7-Zip, PeaZip, Keka…). El árbol extraído contiene <code>manifest.json</code>, <code>metadata/</code> y <code>rootfs/</code>, exactamente el mismo layout que consume la restauración. Es útil para inspección offline o para restaurar en un host que no tiene acceso al destino original (PBS, Borg)."
+        "detail": "Exporta el archivo como un fichero portable <code>.tar.zst</code> (tar comprimido con zstd). Se puede extraer en cualquier sistema Linux con <code>tar --zstd -xf FILE.tar.zst</code>, o desde macOS/Windows con herramientas que soporten zstd (7-Zip, PeaZip, Keka…). El árbol extraído contiene <code>manifest.json</code>, <code>metadata/</code> y <code>rootfs/</code>, exactamente el mismo layout que consume la restauración. Es útil para inspección offline o para restaurar en un host que no tiene acceso al destino original (PBS, Borg)."
       },
       {
         "action": "Restaurar",

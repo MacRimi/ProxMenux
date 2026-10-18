@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog"
 import { fetchApi } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
+import { useIsPbs } from "../lib/use-platform"
 import {
   Bell, BellOff, Send, CheckCircle2, XCircle, Loader2,
   AlertTriangle, Info, Settings2, Zap, Eye, EyeOff,
@@ -154,6 +155,8 @@ function validateGotifyUrl(url: string): { error?: string; warning?: string } {
 }
 
 const EVENT_CATEGORIES = ["vm_ct", "backup", "resources", "storage", "network", "security", "cluster", "services", "health", "updates", "hardware", "system", "other"].map(key => ({ key }))
+// Guests, vzdump backups and the cluster do not exist on Proxmox Backup Server.
+const PVE_ONLY_CATEGORIES = new Set(["vm_ct", "backup", "cluster"])
 
 const CHANNEL_TYPES = ["telegram", "gotify", "discord", "email", "pushover", "apprise"] as const
 
@@ -330,6 +333,7 @@ const DEFAULT_CONFIG: NotificationConfig = {
 
 export function NotificationSettings() {
   const t = useT()
+  const isPbs = useIsPbs()
   const { resolvedTheme } = useTheme()
   const [config, setConfig] = useState<NotificationConfig>(DEFAULT_CONFIG)
   const [status, setStatus] = useState<ServiceStatus | null>(null)
@@ -703,7 +707,7 @@ export function NotificationSettings() {
           <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.notificationCategories")}</Label>
         </div>
         <div className="space-y-2">
-          {EVENT_CATEGORIES.filter(cat => cat.key !== "other").map(cat => {
+          {EVENT_CATEGORIES.filter(cat => cat.key !== "other" && !(isPbs && PVE_ONLY_CATEGORIES.has(cat.key))).map(cat => {
             const isEnabled = overrides.categories[cat.key] ?? true
             const isExpanded = expandedCategories.has(`${chName}.${cat.key}`)
             // Hide the LXC update toggle when the user has disabled the
@@ -922,7 +926,7 @@ export function NotificationSettings() {
       const wasEnabled = originalConfig.enabled
       const isNowDisabled = !nextConfig.enabled
 
-      if (wasEnabled && isNowDisabled) {
+      if (wasEnabled && isNowDisabled && !isPbs) {
         try {
           await fetchApi("/api/notifications/proxmox/cleanup-webhook", { method: "POST" })
         } catch {
@@ -1217,8 +1221,10 @@ export function NotificationSettings() {
       setConfig(newConfig)
       setOriginalConfig(newConfig)
 
-      // 2) Auto-configure PVE webhook
-      try {
+      // 2) Auto-configure PVE webhook; PBS has no /etc/pve notifications
+      if (isPbs) {
+        setWebhookSetup({ status: "idle", fallback_commands: [], error: "" })
+      } else try {
         const setup = await fetchApi<{
           configured: boolean
           secret?: string
