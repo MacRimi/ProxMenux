@@ -48,23 +48,23 @@
     "headerUseFor": "Verwenden Sie es für",
     "rows": [
       {
-        "mode": "IP-Verkehrsmonitor",
+        "mode": "IP traffic monitor",
         "useFor": "Live TCP / UDP/ICMP / Other-IP-Flow-Liste mit Byte-Zählern und Verbindungszustand"
       },
       {
-        "mode": "Allgemeine Schnittstellenstatistiken",
+        "mode": "General interface stats",
         "useFor": "Aggregierte IPv4/IPv6/TCP/UDP/ICMP/Nicht-IP-Paketzahl pro NIC"
       },
       {
-        "mode": "Detaillierte Schnittstellenstatistiken",
+        "mode": "Detailed interface stats",
         "useFor": "Gleiche wie oben, aber für eine Schnittstelle, mit Paketgröße und -rate Details"
       },
       {
-        "mode": "Statistische Aufgliederungen",
+        "mode": "Statistical breakdowns",
         "useFor": "Histogramm der Paketgrößenverteilung nach TCP / UDP Port"
       },
       {
-        "mode": "LAN-Stationenmonitor",
+        "mode": "LAN station monitor",
         "useFor": "Per-MAC-Verkehrsstatistiken für die lokale Broadcast-Domain"
       }
     ],

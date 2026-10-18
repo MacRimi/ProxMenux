@@ -48,23 +48,23 @@
     "headerUseFor": "Använd den för",
     "rows": [
       {
-        "mode": "IP trafikövervakning",
+        "mode": "IP traffic monitor",
         "useFor": "Lista i realtid över TCP-/UDP-/ICMP-/övriga IP-flöden med byteräknare och anslutningstillstånd"
       },
       {
-        "mode": "Allmän gränssnittsstatistik",
+        "mode": "General interface stats",
         "useFor": "Samlat antal IPv4-/IPv6-/TCP-/UDP-/ICMP-/icke-IP-paket per nätverkskort"
       },
       {
-        "mode": "Detaljerad gränssnittsstatistik",
+        "mode": "Detailed interface stats",
         "useFor": "Samma som ovan men för ett gränssnitt, med paketstorlek och hastighetsdetalj"
       },
       {
-        "mode": "Statistisk fördelning",
+        "mode": "Statistical breakdowns",
         "useFor": "Histogram över paketstorleksfördelningen per TCP-/UDP-port"
       },
       {
-        "mode": "Övervakning av LAN-stationer",
+        "mode": "LAN station monitor",
         "useFor": "Per-MAC trafikstatistik för den lokala sändningsdomänen"
       }
     ],

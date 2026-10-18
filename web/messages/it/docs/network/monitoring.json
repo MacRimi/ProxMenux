@@ -48,23 +48,23 @@
     "headerUseFor": "Usalo per",
     "rows": [
       {
-        "mode": "Monitor di traffico IP",
+        "mode": "IP traffic monitor",
         "useFor": "Elenco in tempo reale dei flussi TCP / UDP / ICMP / altri protocolli IP con contatori di byte e stato della connessione"
       },
       {
-        "mode": "Statistiche generali delle interfacce",
+        "mode": "General interface stats",
         "useFor": "Conteggi aggregati dei pacchetti IPv4 / IPv6 / TCP / UDP / ICMP / non IP per scheda di rete"
       },
       {
-        "mode": "Statistiche dettagliate dell’interfaccia",
+        "mode": "Detailed interface stats",
         "useFor": "Come sopra, ma per una sola interfaccia, con dettagli sulle dimensioni e sulla frequenza dei pacchetti"
       },
       {
-        "mode": "Ripartizioni statistiche",
+        "mode": "Statistical breakdowns",
         "useFor": "Istogramma della distribuzione delle dimensioni dei pacchetti, per porta TCP / UDP"
       },
       {
-        "mode": "Monitor della stazione LAN",
+        "mode": "LAN station monitor",
         "useFor": "Per-MAC statistiche del traffico per il dominio broadcast locale"
       }
     ],

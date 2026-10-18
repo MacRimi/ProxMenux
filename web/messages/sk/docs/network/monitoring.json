@@ -48,23 +48,23 @@
     "headerUseFor": "Použiť pre",
     "rows": [
       {
-        "mode": "Monitor prevádzky IP",
+        "mode": "IP traffic monitor",
         "useFor": "Zoznam tokov TCP / UDP / ICMP / iných protokolov IP v reálnom čase s počítadlami bajtov a stavom pripojenia"
       },
       {
-        "mode": "Všeobecné štatistiky rozhraní",
+        "mode": "General interface stats",
         "useFor": "Súhrnný počet paketov IPv4 / IPv6 / TCP / UDP / ICMP / non-IP paketov na sieťovú kartu"
       },
       {
-        "mode": "Podrobné štatistiky rozhrania",
+        "mode": "Detailed interface stats",
         "useFor": "Rovnaké ako vyššie, ale pre jedno rozhranie, s podrobnosťami o veľkosti a rýchlosti paketov"
       },
       {
-        "mode": "Štatistické členenia",
+        "mode": "Statistical breakdowns",
         "useFor": "Histogram rozdelenia veľkosti paketov podľa portu TCP / UDP"
       },
       {
-        "mode": "Monitor stanice LAN",
+        "mode": "LAN station monitor",
         "useFor": "Štatistiky prevádzky podľa MAC adresy pre lokálnu broadcastovú doménu"
       }
     ],
