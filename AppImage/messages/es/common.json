@@ -1729,6 +1729,7 @@
       "nativeEvidenceDirectory": "Directorio de trabajo",
       "nativeEvidenceService": "Definición del servicio",
       "nativeScanFailed": "La búsqueda de aplicaciones no ha podido terminar. Lo detectado antes puede estar desactualizado; vuelve a intentarlo.",
+      "nativeScanStopped": "Este contenedor está detenido. La búsqueda de aplicaciones solo está disponible con el contenedor en marcha.",
       "nativeScanPartial": "La búsqueda de aplicaciones está incompleta. Revisa lo que se ha encontrado y vuelve a intentarlo.",
       "nativeVersionUnknown": "Versión instalada desconocida",
       "nativeEvidenceStale": "Lo detectado puede estar desactualizado o incompleto.",

@@ -1744,6 +1744,7 @@
       "nativeEvidenceDirectory": "Arbeitsverzeichnis",
       "nativeEvidenceService": "Dienstdefinition",
       "nativeScanFailed": "Die Anwendungssuche konnte nicht abgeschlossen werden. Frühere Ergebnisse sind möglicherweise veraltet; versuchen Sie es erneut.",
+      "nativeScanStopped": "Dieser Container ist gestoppt. Die Anwendungssuche ist nur verfügbar, während der Container läuft.",
       "nativeScanPartial": "Die Anwendungssuche ist unvollständig. Prüfen Sie die gefundenen Hinweise und versuchen Sie es erneut.",
       "nativeVersionUnknown": "Installierte Version unbekannt",
       "nativeEvidenceStale": "Die Hinweise sind möglicherweise veraltet oder unvollständig.",
