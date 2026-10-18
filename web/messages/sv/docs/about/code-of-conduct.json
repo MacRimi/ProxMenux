@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "title": "Uppförandekod | ProxMenux-dokumentation",
+    "description": "ProxMenux uppförandekod och rekommenderade arbetssätt för bidragsgivare, testare och användare.",
+    "ogTitle": "Uppförandekod | ProxMenux-dokumentation",
+    "ogDescription": "Förväntningar på ansvar för koden, rapportering av säkerhetsbrister och omfattningen av PR:ar i ProxMenux-projektet."
+  },
+  "errors": {
+    "notFound": "Fel: CODE_OF_CONDUCT.md-filen hittades inte.",
+    "loadFailed": "Fel: Det går inte att läsa in uppförandekodens innehåll."
+  },
+  "contentMarkdown": "# 📝 Uppförandekod och rekommendationer\n\nDetta dokument fastställer **principer och riktlinjer** för användningen av **ProxMenux**, för att främja **respekt, samarbete och säkerhet** i utvecklingen.\n\n## 📌 1. Källangivelser och erkännande\n\n- Om **skript, kodavsnitt eller idéer** från andra kodarkiv eller utvecklare används ska den ursprungliga upphovspersonen alltid anges.\n- En kommentar i koden eller dokumentationen ska ange källan och om möjligt länka till det ursprungliga kodarkivet.\n- Vid användning av kod med en viss **licens** måste dess villkor följas.\n\n### ✅ Exempel på korrekt källangivelse i koden:\n\n```bash\n# Skript baserat på arbetet av [Upphovsperson] i [Länk till kodarkiv]\n```\n\n## 🔒 2. Säkerhet och ansvar för koden\n\n- All kod i detta arkiv följer rekommenderade arbetssätt för säker utveckling.\n- Bidrag som avsiktligt inför sårbarheter eller osäkra arbetssätt tillåts inte.\n- Skript får aldrig äventyra systemsäkerheten eller användarnas data.\n- Bidrag bör granskas med avseende på säkerhet och stabilitet före införandet.\n\n### ⚠️ Ansvarsfull rapportering av sårbarheter\n\nOm du upptäcker en säkerhetssårbarhet ska du INTE rapportera den i offentliga ärenden eller forum.\n\nRapportera den i stället privat via e-post:\n\n📧 proxmenux@macrimi.pro\n\nLäs vår [säkerhetspolicy](./SECURITY.md) för mer information om sårbarheter och hur de rapporteras.\n\n## 🤝 3. Gemenskapens riktlinjer\n\nAlla användare måste följa dessa riktlinjer för att upprätthålla en respektfull och professionell miljö:\n\n- ✅ Var respektfull och konstruktiv i diskussioner.\n- ❌ Trakasserier, hatretorik och stötande beteende tolereras inte.\n- ✅ Ge återkoppling professionellt och undvik personangrepp.\n- ❌ Överträdelser kan leda till varningar eller avstängningar beroende på allvarlighetsgrad.\n\n##\n\nDetta dokument främjar etisk kodanvändning, säkerhetsmedvetenhet och en respektfull gemenskap.\n\n📢 Låt oss bygga något fantastiskt tillsammans!\n"
+}
