@@ -7375,6 +7375,10 @@
     "backTo": "Tillbaka till {name}",
     "cameFromTitle": "Lägg till monitornod?",
     "cameFromBody": "Lägg till {name} till de länkade noderna på denna monitor.",
-    "notNow": "Inte nu"
+    "notNow": "Inte nu",
+    "knownTitle": "Lägga till länkade noder?",
+    "knownBody": "{name} länkar dessa monitorer. Välj vilka du vill lägga till på denna monitor.",
+    "addSelected": "Lägg till valda",
+    "pbsWebInterface": "PBS webbgränssnitt"
   }
 }

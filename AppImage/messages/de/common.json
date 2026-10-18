@@ -7375,6 +7375,10 @@
     "backTo": "Zurück zu {name}",
     "cameFromTitle": "Monitorknoten hinzufügen?",
     "cameFromBody": "{name} zu den verknüpften Knoten dieses Monitors hinzufügen.",
-    "notNow": "Nicht jetzt"
+    "notNow": "Nicht jetzt",
+    "knownTitle": "Verknüpfte Knoten hinzufügen?",
+    "knownBody": "{name} verknüpft diese Monitore. Wählen Sie aus, welche Sie diesem Monitor hinzufügen möchten.",
+    "addSelected": "Auswahl hinzufügen",
+    "pbsWebInterface": "PBS-Weboberfläche"
   }
 }

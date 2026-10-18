@@ -7375,6 +7375,10 @@
     "backTo": "Voltar para {name}",
     "cameFromTitle": "Adicionar nó Monitor?",
     "cameFromBody": "Adicione {name} aos nós vinculados deste Monitor.",
-    "notNow": "agora não"
+    "notNow": "agora não",
+    "knownTitle": "Adicionar nós vinculados?",
+    "knownBody": "{name} liga estes Monitores. Escolha os que quer adicionar a este Monitor.",
+    "addSelected": "Adicionar selecionados",
+    "pbsWebInterface": "Interface web do PBS"
   }
 }

@@ -7375,6 +7375,10 @@
     "backTo": "Retour à {name}",
     "cameFromTitle": "Ajouter un nœud Moniteur ?",
     "cameFromBody": "Ajoutez {name} aux nœuds liés de ce moniteur.",
-    "notNow": "Pas maintenant"
+    "notNow": "Pas maintenant",
+    "knownTitle": "Ajouter des nœuds liés ?",
+    "knownBody": "{name} relie ces moniteurs. Choisissez ceux à ajouter à ce moniteur.",
+    "addSelected": "Ajouter la sélection",
+    "pbsWebInterface": "Interface web de PBS"
   }
 }

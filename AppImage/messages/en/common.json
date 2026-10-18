@@ -6583,6 +6583,10 @@
     "backTo": "Back to {name}",
     "cameFromTitle": "Add Monitor node?",
     "cameFromBody": "Add {name} to the linked nodes of this Monitor.",
-    "notNow": "Not now"
+    "notNow": "Not now",
+    "knownTitle": "Add linked nodes?",
+    "knownBody": "{name} links these Monitors. Choose the ones to add to this Monitor.",
+    "addSelected": "Add selected",
+    "pbsWebInterface": "PBS web interface"
   }
 }

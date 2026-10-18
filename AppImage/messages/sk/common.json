@@ -7374,6 +7374,10 @@
     "backTo": "Späť na {name}",
     "cameFromTitle": "Pridať uzol monitora?",
     "cameFromBody": "Pridajte {name} do prepojených uzlov tohto monitora.",
-    "notNow": "Teraz nie"
+    "notNow": "Teraz nie",
+    "knownTitle": "Pridať prepojené uzly?",
+    "knownBody": "{name} prepája tieto monitory. Vyberte tie, ktoré chcete pridať do tohto monitora.",
+    "addSelected": "Pridať vybrané",
+    "pbsWebInterface": "Webové rozhranie PBS"
   }
 }

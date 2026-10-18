@@ -7375,6 +7375,10 @@
     "backTo": "Volver a {name}",
     "cameFromTitle": "¿Añadir nodo Monitor?",
     "cameFromBody": "Añade {name} a los nodos enlazados de este Monitor.",
-    "notNow": "Ahora no"
+    "notNow": "Ahora no",
+    "knownTitle": "¿Añadir nodos enlazados?",
+    "knownBody": "{name} enlaza estos Monitores. Elige los que quieres añadir a este Monitor.",
+    "addSelected": "Añadir seleccionados",
+    "pbsWebInterface": "Interfaz web de PBS"
   }
 }
