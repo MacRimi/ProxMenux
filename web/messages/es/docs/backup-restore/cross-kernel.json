@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Cada salto de kernel se maneja de forma distinta",
-    "body": "Cuando la restauración detecta que la copia y el destino tienen versiones mayores distintas de kernel, el flujo se ramifica en función de la dirección del salto — si la copia es más antigua o más reciente que el destino — porque los dos casos tienen modos de fallo opuestos. Las copias más recientes que el destino se restauran limpiamente tal cual (verificado empíricamente en múltiples pruebas de banco). Las copias más antiguas que el destino necesitan un filtro para evitar romper el arranque del destino con configuración escrita para un kernel que desde entonces ha cambiado."
+    "body": "El kernel de un host Proxmox se identifica mediante una versión como <code>6.17.13-2-pve</code>. Los dos primeros números (<strong>6.17</strong> en este ejemplo) definen la versión principal: cuando cambian, algunos archivos de configuración del kernel anterior podrían no ser válidos para el nuevo. Si la restauración detecta versiones principales distintas en la copia y en el destino, el proceso toma un camino u otro según la dirección del salto: si el kernel de la copia es anterior o posterior al del destino. Los dos casos presentan riesgos opuestos. Las copias con un kernel más reciente que el del destino se restauran tal cual, sin problemas según las pruebas realizadas con varios saltos de kernel. Las copias con un kernel anterior al del destino necesitan un filtro para evitar que una configuración del kernel antiguo impida arrancar el sistema de destino."
   },
   "directionCheck": {
     "heading": "La comprobación de dirección",
@@ -78,7 +78,7 @@
     "intro": "Para desarrolladores que quieran trazar o extender el comportamiento cross-kernel:",
     "rows": [
       { "component": "Detección de dirección", "location": "<code>hb_compat_check</code> en <code>lib_host_backup_common.sh</code>. Fija <code>HB_COMPAT_KERNEL_DIRECTION</code>." },
-      { "component": "Lista de rutas del subconjunto seguro", "location": "<code>hb_unsafe_paths_cross_version</code> en <code>lib_host_backup_common.sh</code>. Emite líneas <code>path\\tmotivo</code> usadas tanto por el filtro CLI como por el endpoint Web <code>/api/host-backups/restore/prepare</code>." },
+      { "component": "Lista de rutas del subconjunto seguro", "location": "<code>hb_unsafe_paths_cross_version</code> en <code>lib_host_backup_common.sh</code>. Emite líneas <code>path\\treason</code> usadas tanto por el filtro CLI como por el endpoint Web <code>/api/host-backups/restore/prepare</code>." },
       { "component": "Fases de hidratación", "location": "<code>_rs_hyd_grub</code>, <code>_rs_hyd_kernel_cmdline</code>, <code>_rs_hyd_modules</code>, <code>_rs_hyd_files</code> en <code>backup_host.sh</code>. Orquestados por <code>_rs_apply_bk_older_hydration</code>." },
       { "component": "Forzado de reflow post-arranque", "location": "<code>apply_pending_restore.sh</code> lee <code>HB_HYDRATION_APPLIED</code> de <code>plan.env</code> y fuerza <code>NEEDS_INITRAMFS=1</code>/<code>NEEDS_GRUB=1</code>." },
       { "component": "Preview Web", "location": "<code>/api/host-backups/restore/prepare</code> en <code>flask_server.py</code>. Fuentea la librería helper, ejecuta <code>_rs_apply_bk_older_hydration</code> en modo plan, devuelve las acciones al modal Web." }

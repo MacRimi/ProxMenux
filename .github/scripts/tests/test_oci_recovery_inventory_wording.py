@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import re
 import runpy
+import subprocess
 import sys
 import tempfile
 from types import ModuleType, SimpleNamespace
@@ -52,7 +53,8 @@ class InventoryMessages(unittest.TestCase):
         state = ModuleType('oci_installation_state')
         state.parse_config = lambda raw: dict(line.split(': ', 1) for line in raw.decode().splitlines())
         scope = {'sys': SimpleNamespace(path=[]), 'source_text': lambda text: text or '',
-                 'translate': translate, 're': re}
+                 'translate': translate, 're': re, 'subprocess': subprocess,
+                 '_selected_configuration': remover.guest_config}
         summary = extracted(MENU, '_removal_summary', scope)
         with patch.dict(sys.modules, {'oci_instances': instances, 'oci_remove': remover,
                                       'oci_installation_state': state}):
