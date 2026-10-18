@@ -78,7 +78,7 @@
       "Pick the filesystem — see the table above for trade-offs.",
       "Storage ID (default <code>disk-&lt;device&gt;</code>), mount path, content-type preset.",
       "Confirm at the <strong>FINAL CONFIRMATION — DATA WILL BE ERASED</strong> dialog.",
-      "ProxMenux clears the partition table and creates one partition spanning the disk. It runs <code>mkfs.&lt;fs&gt;</code> or <code>zpool create</code> and mounts the result. Regular filesystems get an entry in <code>/etc/fstab</code> by UUID with <code>defaults,nofail</code>; ZFS uses its pool mount configuration instead. Registration uses <code>pvesm add dir</code> or <code>pvesm add zfspool</code>."
+      "ProxMenux clears the partition table and creates one partition spanning the disk. It runs <code>mkfs.&lt;fs&gt;</code> or <code>zpool create</code> and mounts the result. Regular filesystems get an entry in <code>/etc/fstab</code> by UUID with <code>defaults,nofail</code>; ZFS uses its pool mount configuration instead. If <em>As Proxmox storage</em> is marked (always the case for ZFS), it is then registered with <code>pvesm add dir</code> or <code>pvesm add zfspool</code>; otherwise it stays a host mount only."
     ],
     "tipTitle": "Why UUID + nofail in /etc/fstab",
     "tipBody": "The script writes <code>UUID=… /mnt/&lt;id&gt; &lt;fs&gt; defaults,nofail 0 2</code>. UUID survives device reordering across reboots (so <code>/dev/sdc</code> becoming <code>/dev/sdd</code> does not break boot). <code>nofail</code> means that if the disk ever disappears (hardware failure, unplugged), Proxmox still boots — storage will just show as inactive until the disk comes back."

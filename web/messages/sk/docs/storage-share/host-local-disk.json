@@ -78,7 +78,7 @@
       "Vyberte súborový systém — porovnanie výhod a nevýhod je v tabuľke vyššie.",
       "ID úložiska (predvolene <code>disk-&lt;device&gt;</code>), cesta pripojenia a predvoľba typu obsahu.",
       "Potvrďte v dialógu <strong>KONEČNÉ POTVRDENIE — DÁTA SA VYMAŽÚ</strong>.",
-      "ProxMenux vymaže tabuľku oddielov a vytvorí jeden oddiel na celom disku. Spustí <code>mkfs.&lt;fs&gt;</code> alebo <code>zpool create</code> a výsledok pripojí. Bežné súborové systémy dostanú položku UUID v <code>/etc/fstab</code> s <code>defaults,nofail</code>; ZFS používa konfiguráciu pripojenia poolu. Registrácia používa <code>pvesm add dir</code> alebo <code>pvesm add zfspool</code>."
+      "ProxMenux vymaže tabuľku oddielov a vytvorí jeden oddiel na celom disku. Spustí <code>mkfs.&lt;fs&gt;</code> alebo <code>zpool create</code> a výsledok pripojí. Bežné súborové systémy dostanú položku UUID v <code>/etc/fstab</code> s <code>defaults,nofail</code>; ZFS používa konfiguráciu pripojenia poolu. Ak je označené <em>Ako úložisko Proxmoxu</em> (pri ZFS vždy), následne sa zaregistruje cez <code>pvesm add dir</code> alebo <code>pvesm add zfspool</code>; inak zostane len pripojením na hostiteľovi."
     ],
     "tipTitle": "Prečo UUID + nofail v /etc/fstab",
     "tipBody": "Skript zapíše <code>UUID=… /mnt/&lt;id&gt; &lt;fs&gt; defaults,nofail 0 2</code>. UUID zostane rovnaké aj pri zmene poradia zariadení po reštarte, takže premenovanie <code>/dev/sdc</code> na <code>/dev/sdd</code> nenaruší štart. S <code>nofail</code> sa Proxmox spustí aj pri chýbajúcom disku (porucha alebo odpojenie); úložisko sa bude zobrazovať ako neaktívne, kým sa disk nevráti."

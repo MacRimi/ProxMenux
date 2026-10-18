@@ -91,7 +91,7 @@
     "warnTitle": "Živé disky VM na CIFS",
     "warnBody": "Výber <code>images</code> zobrazí varovanie ProxMenuxu: CIFS/SMB môže spôsobovať problémy so zámkami pri operáciách s diskami VM. Skript odporúča NFS, ale umožní pokračovať. Zálohy a ISO sú bežným použitím CIFS. Pred použitím pre <code>images</code> posúďte zámky, snímky, migráciu a záťaž.",
     "credsTitle": "Kde pvesm ukladá údaje",
-    "credsBody": "Heslo sa nezapisuje do <code>/etc/pve/storage.cfg</code>. Proxmox uloží údaje v otvorenom texte do <code>/etc/pve/priv/storage/&lt;storage-id&gt;.pw</code>, chránené súkromným adresárom klastrového súborového systému prístupným pre <code>root</code>. Nepredpokladajte pevný režim <code>0600</code> ani šifrovanie. Po zmene hesla na serveri použite <code>pvesm set &lt;id&gt; --password &lt;new&gt;</code> alebo úložisko odstráňte a pridajte cez ProxMenux."
+    "credsBody": "Heslo sa nezapisuje do <code>/etc/pve/storage.cfg</code>. Proxmox uloží údaje v otvorenom texte do <code>/etc/pve/priv/storage/&lt;storage-id&gt;.pw</code>, v súkromnej oblasti klastrového súborového systému, ktorú môže čítať iba <code>root</code> (režim <code>0600</code>); chránia ich prístupové práva, nie šifrovanie. Po zmene hesla na serveri použite <code>pvesm set &lt;id&gt; --password &lt;new&gt;</code> alebo úložisko odstráňte a pridajte cez ProxMenux."
   },
   "fstabBranch": {
     "heading": "Metóda B — iba pripojenie cez fstab hostiteľa",

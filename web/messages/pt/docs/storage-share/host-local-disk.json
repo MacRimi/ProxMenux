@@ -78,7 +78,7 @@
       "Escolha o sistema de arquivos — veja a tabela acima para trade-offs.",
       "ID de armazenamento (padrão <code>disk-&lt;device&gt;</code>), caminho de montagem, tipo de conteúdo predefinido.",
       "Confirme no diálogo <strong>CONFIRMAÇÃO FINAL — OS DADOS SERÃO APAGADOS</strong>.",
-      "O ProxMenux limpa a tabela de partições e cria uma partição que ocupa o disco. Executa <code>mkfs.&lt;fs&gt;</code> ou <code>zpool create</code> e monta o resultado. Sistemas de arquivos comuns recebem uma entrada UUID em <code>/etc/fstab</code> com <code>defaults,nofail</code>; o ZFS usa a configuração de montagem do pool. O registro usa <code>pvesm add dir</code> ou <code>pvesm add zfspool</code>."
+      "O ProxMenux limpa a tabela de partições e cria uma partição que ocupa o disco. Executa <code>mkfs.&lt;fs&gt;</code> ou <code>zpool create</code> e monta o resultado. Sistemas de arquivos comuns recebem uma entrada UUID em <code>/etc/fstab</code> com <code>defaults,nofail</code>; o ZFS usa a configuração de montagem do pool. Se <em>Como armazenamento Proxmox</em> estiver marcado (sempre no caso do ZFS), ele é registrado com <code>pvesm add dir</code> ou <code>pvesm add zfspool</code>; caso contrário, fica apenas como montagem do host."
     ],
     "tipTitle": "Porquê UUID + nofail em /etc/fstab",
     "tipBody": "O script escreve <code>UUID=… /mnt/&lt;id&gt; &lt;fs&gt; defaults,nofail 0 2</code>. O UUID sobrevive à reordenação do dispositivo através de reinicialização (então o <code>/dev/sdc</code> tornando-se o <code>/dev/sdd</code> não quebra a inicialização). <code>nofail</code> significa que se o disco desaparecer (falha de Hardware, desconectado), o Proxmox ainda inicia — o armazenamento só será mostrado como inativo até que o disco volte."

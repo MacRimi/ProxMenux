@@ -91,7 +91,7 @@
     "warnTitle": "Live VM diskar på CIFS",
     "warnBody": "Valet <code>images</code> visar en ProxMenux-varning om att CIFS/SMB kan ge låsningsproblem vid VM-diskoperationer. Skriptet rekommenderar NFS men låter dig fortsätta. Säkerhetskopior och ISO-filer är vanliga CIFS-användningar. Bedöm låsning, ögonblicksbilder, migrering och arbetslast innan CIFS används för <code>images</code>.",
     "credsTitle": "Var pvesm lagrar inloggningsuppgifter",
-    "credsBody": "Lösenordet skrivs inte i <code>/etc/pve/storage.cfg</code>. Proxmox sparar klartextuppgifter i <code>/etc/pve/priv/storage/&lt;storage-id&gt;.pw</code>, skyddade av klusterfilsystemets privata katalog för <code>root</code>. Förutsätt varken ett fast filläge <code>0600</code> eller kryptering. Efter ett lösenordsbyte på servern använder du <code>pvesm set &lt;id&gt; --password &lt;new&gt;</code> eller tar bort och lägger till lagringen via ProxMenux."
+    "credsBody": "Lösenordet skrivs inte i <code>/etc/pve/storage.cfg</code>. Proxmox sparar klartextuppgifter i <code>/etc/pve/priv/storage/&lt;storage-id&gt;.pw</code>, i klusterfilsystemets privata område som bara <code>root</code> kan läsa (läge <code>0600</code>); de skyddas av åtkomstbehörigheter, inte av kryptering. Efter ett lösenordsbyte på servern använder du <code>pvesm set &lt;id&gt; --password &lt;new&gt;</code> eller tar bort och lägger till lagringen via ProxMenux."
   },
   "fstabBranch": {
     "heading": "Metod B - Värd fstab montering endast",

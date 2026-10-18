@@ -78,7 +78,7 @@
       "Välj filsystemet - se tabellen ovan för avvägningar.",
       "Lagring ID (standard <code>disk-&lt;device&gt;</code>), monteringsväg, innehållstyp förinställd.",
       "Bekräfta i dialogen <strong>SLUTLIG BEKRÄFTELSE — DATA KOMMER ATT RADERAS</strong>.",
-      "ProxMenux rensar partitionstabellen och skapar en partition över hela disken. Det kör <code>mkfs.&lt;fs&gt;</code> eller <code>zpool create</code> och monterar resultatet. Vanliga filsystem får en UUID-post i <code>/etc/fstab</code> med <code>defaults,nofail</code>; ZFS använder poolens monteringskonfiguration. Registreringen görs med <code>pvesm add dir</code> eller <code>pvesm add zfspool</code>."
+      "ProxMenux rensar partitionstabellen och skapar en partition över hela disken. Det kör <code>mkfs.&lt;fs&gt;</code> eller <code>zpool create</code> och monterar resultatet. Vanliga filsystem får en UUID-post i <code>/etc/fstab</code> med <code>defaults,nofail</code>; ZFS använder poolens monteringskonfiguration. Om <em>Som Proxmox-lagring</em> är markerat (alltid för ZFS) registreras den sedan med <code>pvesm add dir</code> eller <code>pvesm add zfspool</code>; annars förblir den bara en montering på värden."
     ],
     "tipTitle": "Varför UUID + nofail i /etc/fstab",
     "tipBody": "Skriptet skriver <code>UUID=… /mnt/&lt;id&gt; &lt;fs&gt; defaults,nofail 0 2</code>. UUID överlever enhetsreordering över omstart (så <code>/dev/sdc</code> blir <code>/dev/sdd</code> inte bryta start). <code>nofail</code> innebär att om disken någonsin försvinner (hårdvarufel, urkopplad), startar Proxmox ändå - lagring kommer bara att visas som inaktiv tills disken kommer tillbaka."

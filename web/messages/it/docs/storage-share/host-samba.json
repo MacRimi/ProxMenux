@@ -91,7 +91,7 @@
     "warnTitle": "Live dischi VM su CIFS",
     "warnBody": "Selezionare <code>images</code> attiva un avviso ProxMenux: CIFS/SMB può causare problemi di blocco nelle operazioni sui dischi VM. Lo script consiglia NFS ma consente di continuare. Backup e ISO sono usi comuni di CIFS. Valuta blocchi, snapshot, migrazione e carico prima di usare CIFS per <code>images</code>.",
     "credsTitle": "Dove pvesm memorizza le credenziali",
-    "credsBody": "La password non è scritta in <code>/etc/pve/storage.cfg</code>. Proxmox salva credenziali in chiaro in <code>/etc/pve/priv/storage/&lt;storage-id&gt;.pw</code>, protette dalla directory privata del file system del cluster accessibile a <code>root</code>. Non presumere una modalità fissa <code>0600</code> o la cifratura. Dopo un cambio password sul server usa <code>pvesm set &lt;id&gt; --password &lt;new&gt;</code> oppure rimuovi e aggiungi lo storage tramite ProxMenux."
+    "credsBody": "La password non è scritta in <code>/etc/pve/storage.cfg</code>. Proxmox salva credenziali in chiaro in <code>/etc/pve/priv/storage/&lt;storage-id&gt;.pw</code>, nell’area privata del file system del cluster, leggibile solo da <code>root</code> (modalità <code>0600</code>); sono protette dai permessi di accesso, non dalla cifratura. Dopo un cambio password sul server usa <code>pvesm set &lt;id&gt; --password &lt;new&gt;</code> oppure rimuovi e aggiungi lo storage tramite ProxMenux."
   },
   "fstabBranch": {
     "heading": "Metodo B — solo montaggio tramite fstab sull’host",

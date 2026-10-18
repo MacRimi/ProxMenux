@@ -91,7 +91,7 @@
     "warnTitle": "Live VM disks on CIFS",
     "warnBody": "Selecting <code>images</code> triggers a ProxMenux warning that CIFS/SMB can cause locking issues with VM disk operations. The script recommends NFS for VM disk images but lets you continue. Backups and ISOs are common CIFS uses. Assess locking, snapshots, migration and workload requirements before using CIFS for <code>images</code>.",
     "credsTitle": "Where pvesm stores credentials",
-    "credsBody": "The password is not written in <code>/etc/pve/storage.cfg</code>. Proxmox writes plaintext credentials in <code>/etc/pve/priv/storage/&lt;storage-id&gt;.pw</code>, protected by the private cluster filesystem directory accessible to <code>root</code>. Do not assume a fixed file mode of <code>0600</code> or encryption. After a server password change, use <code>pvesm set &lt;id&gt; --password &lt;new&gt;</code> or remove and re-add through ProxMenux."
+    "credsBody": "The password is not written in <code>/etc/pve/storage.cfg</code>. Proxmox writes plaintext credentials in <code>/etc/pve/priv/storage/&lt;storage-id&gt;.pw</code>, inside the private area of the cluster filesystem, readable only by <code>root</code> (mode <code>0600</code>); it is protected by access control, not by encryption. After a server password change, use <code>pvesm set &lt;id&gt; --password &lt;new&gt;</code> or remove and re-add through ProxMenux."
   },
   "fstabBranch": {
     "heading": "Method B — Host fstab mount only",

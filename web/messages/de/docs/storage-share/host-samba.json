@@ -91,7 +91,7 @@
     "warnTitle": "VM-Disks auf CIFS",
     "warnBody": "Die Auswahl <code>images</code> löst eine ProxMenux-Warnung aus: CIFS/SMB kann Sperrprobleme bei VM-Festplattenoperationen verursachen. Das Skript empfiehlt NFS, lässt Sie aber fortfahren. Sicherungen und ISOs sind typische CIFS-Anwendungen. Prüfen Sie Sperren, Snapshots, Migration und Last vor der Verwendung für <code>images</code>.",
     "credsTitle": "Wo pvesm Anmeldeinformationen speichert",
-    "credsBody": "Das Passwort steht nicht in <code>/etc/pve/storage.cfg</code>. Proxmox schreibt Klartext-Zugangsdaten in <code>/etc/pve/priv/storage/&lt;storage-id&gt;.pw</code>, geschützt durch das private Cluster-Dateisystemverzeichnis für <code>root</code>. Nehmen Sie weder einen festen Dateimodus <code>0600</code> noch Verschlüsselung an. Nach einer Passwortänderung am Server verwenden Sie <code>pvesm set &lt;id&gt; --password &lt;new&gt;</code> oder entfernen und ergänzen den Speicher über ProxMenux erneut."
+    "credsBody": "Das Passwort steht nicht in <code>/etc/pve/storage.cfg</code>. Proxmox schreibt Klartext-Zugangsdaten in <code>/etc/pve/priv/storage/&lt;storage-id&gt;.pw</code>, im privaten Bereich des Cluster-Dateisystems, den nur <code>root</code> lesen kann (Modus <code>0600</code>); geschützt sind sie durch Zugriffsrechte, nicht durch Verschlüsselung. Nach einer Passwortänderung am Server verwenden Sie <code>pvesm set &lt;id&gt; --password &lt;new&gt;</code> oder entfernen und ergänzen den Speicher über ProxMenux erneut."
   },
   "fstabBranch": {
     "heading": "Methode B — nur ein fstab-Mount auf dem Host",
