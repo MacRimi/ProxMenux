@@ -16,7 +16,7 @@
   },
   "problem": {
     "heading": "El problema que resuelve",
-    "intro": "Linux obtiene los nombres de interfaz predeterminados a partir de la topología PCI: <code>eno1</code> = integrada en placa, <code>enp3s0</code> = la tarjeta en el bus PCI 3, ranura 0, etc. El esquema de nombres es determinista <em>con la misma disposición de hardware</em>. Si cambia la disposición, cambian los nombres:",
+    "intro": "Linux obtiene los nombres de interfaz predeterminados a partir de la topología PCI: <code>eno1</code> = integrada en placa, <code>enp3s0</code> = la tarjeta en el bus PCI 3, slot 0, etc. El esquema de nombres es determinista <em>con la misma disposición de hardware</em>. Si cambia la disposición, cambian los nombres:",
     "items": [
       "Añade una GPU delante de una NIC existente → el número de bus de la NIC puede cambiar → el nombre cambia.",
       "Mueve una tarjeta a otro slot PCIe → el nombre cambia.",
@@ -87,7 +87,7 @@
     "intro": "Si <code>/etc/systemd/network/</code> ya contiene ficheros <code>.link</code> (de una ejecución anterior u otra herramienta), se copian a un directorio de backup con timestamp antes de generar los nuevos:",
     "outro": "Para hacer rollback: copia los ficheros desde el directorio de backup y reinicia.",
     "rebootTitle": "Tiene efecto en el siguiente reinicio, no inmediatamente",
-    "rebootBody": "Los cambios en ficheros <code>.link</code> solo se aplican en el arranque, cuando udev vuelve a enumerar los dispositivos. Por eso la herramienta indica <em>«Los cambios se aplicarán tras reiniciar»</em>. No intenta renombrar una interfaz en vivo por el riesgo que supone: un <code>vmbr0</code> activo con interfaces miembro tendría que reconfigurarse de forma atómica, así que la operación se aplaza al siguiente arranque limpio."
+    "rebootBody": "Los cambios en ficheros <code>.link</code> solo se aplican en el arranque, cuando udev vuelve a enumerar los dispositivos. Por eso la herramienta indica <em>«Los cambios se aplicarán después del reinicio»</em>. No intenta renombrar una interfaz en vivo por el riesgo que supone: un <code>vmbr0</code> activo con interfaces miembro tendría que reconfigurarse de forma atómica, así que la operación se aplaza al siguiente arranque limpio."
   },
   "afterReboot": {
     "heading": "Tras el reinicio",
@@ -100,7 +100,7 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "emptyTitle": "«No se han encontrado interfaces físicas» tras ejecutar la herramienta",
+    "emptyTitle": "«No se encontraron interfaces físicas» tras ejecutar la herramienta",
     "emptyBody": "El host no tiene interfaces respaldadas por PCI / phy80211 visibles para el kernel. Confirma con <code>ls -l /sys/class/net/</code> — cada entrada debería tener un symlink <code>device</code> (PCI) o una entrada <code>phy80211</code> (Wi-Fi). Si faltan ambos para lo que debería ser una NIC real, el driver no está cargado.",
     "noChangeTitle": "Tras el reinicio, los nombres no han cambiado como esperaba",
     "noChangeBody": "Comprueba que el fichero está presente y bien formado: <code>cat /etc/systemd/network/10-&lt;iface&gt;.link</code>. Después mira los logs de udev: <code>journalctl -u systemd-udevd -b | grep -i link</code>. Una causa habitual es un parámetro de kernel <code>net.ifnames=0</code> residual que deshabilita el naming predictivo por completo — quítalo de <code>/etc/default/grub</code>, ejecuta <code>update-grub</code> y reinicia.",

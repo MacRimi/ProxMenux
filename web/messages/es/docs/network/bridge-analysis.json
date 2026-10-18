@@ -35,7 +35,7 @@
         "bridgeLabel": "Analizar (solo lectura)",
         "bridgeDetail": "ip link show enp3s0\n→ no existe",
         "targetLabel": "Informe + sugerencia",
-        "targetDetail": "❌ enp3s0: NO ENCONTRADA\nReemplazar por: eno1\n(aún sin cambios)"
+        "targetDetail": "❌ enp3s0: NO ENCONTRADO\nReemplazar por: eno1\n(aún sin cambios)"
       }
     },
     "diagram2": {
@@ -76,7 +76,7 @@
       },
       {
         "title": "3. Previsualizar los cambios propuestos",
-        "body": "Lista exactamente qué bridges se modificarán y qué sustituciones de puertos se harán. Si el análisis determina que no hay nada que reparar porque el puerto ha reaparecido entre las comprobaciones, el proceso termina con <em>«No es necesario realizar cambios»</em>.",
+        "body": "Lista exactamente qué bridges se modificarán y qué sustituciones de puertos se harán. Si el análisis determina que no hay nada que reparar porque el puerto ha reaparecido entre las comprobaciones, el proceso termina con <em>«No se necesitan cambios»</em>.",
         "tone": "blue"
       },
       {
@@ -99,7 +99,7 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "unsupportedTitle": "El análisis se detiene con «Pila de red no compatible»",
+    "unsupportedTitle": "El análisis se detiene con «Unsupported Network Stack»",
     "unsupportedBody": "El host usa netplan, systemd-networkd o NetworkManager. La herramienta solo admite <code>/etc/network/interfaces</code>. Cambia primero el host a la pila clásica o edita la configuración con las herramientas nativas del gestor (p. ej. <code>netplan apply</code>).",
     "noSuggestTitle": "No se imprime sugerencia para un puerto inválido",
     "noSuggestBody": "El host no tiene ninguna interfaz física libre (todas están ya en otro bridge o no existen). El análisis cae a sugerir <code>bridge-ports none</code> para que el bridge al menos pueda levantar sin puerto. Añade una NIC o migra puertos entre bridges manualmente antes de volver a ejecutar.",

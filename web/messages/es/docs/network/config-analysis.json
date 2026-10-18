@@ -60,7 +60,7 @@
       },
       {
         "title": "2. Confirmar la lista a eliminar",
-        "body": "Lista exactamente qué bloques de interfaz física se eliminarán. Si las NIC han reaparecido entre el análisis y la limpieza, por ejemplo al volver a insertar una tarjeta, el proceso termina con <em>«No es necesaria ninguna limpieza»</em>.",
+        "body": "Lista exactamente qué bloques de interfaz física se eliminarán. Si las NIC han reaparecido entre el análisis y la limpieza, por ejemplo al volver a insertar una tarjeta, el proceso termina con <em>«No se necesita limpieza»</em>.",
         "tone": "blue"
       },
       {
@@ -91,7 +91,7 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "notFoundTitle": "El análisis muestra mi NIC nueva como «NO ENCONTRADA»",
+    "notFoundTitle": "El análisis muestra mi NIC nueva como «NO ENCONTRADO»",
     "notFoundBody": "El kernel ve el dispositivo con un nombre distinto al que hay en el fichero. Ejecuta <code>ip link show</code> para obtener el nombre real. Este es exactamente el caso en el que <link>Nombres persistentes de interfaz</link> evitaría el problema de aquí en adelante.",
     "tooMuchTitle": "La limpieza eliminó demasiado (un bloque que quería conservar)",
     "tooMuchBody": "Restaura desde el backup impreso en el paso 5:",

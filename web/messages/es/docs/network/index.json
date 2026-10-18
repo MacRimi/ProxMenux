@@ -1,15 +1,15 @@
 {
   "meta": {
     "title": "Gestión de red en Proxmox — bridges, bonds, diagnóstico, reparación | ProxMenux",
-    "description": "Diagnóstico de solo lectura, análisis con propuestas y reparaciones guiadas para la pila de red Debian / Proxmox (/etc/network/interfaces). Inspecciona bridges y bonds, ejecuta herramientas de monitorización en vivo, fija nombres de interfaz, crea copias de seguridad y reinicia la red de forma segura, con copias obligatorias y vistas previas paso a paso.",
+    "description": "Diagnóstico de solo lectura, análisis con propuestas y reparaciones guiadas para la pila de red Debian / Proxmox (/etc/network/interfaces). Inspecciona bridges y bonds, ejecuta herramientas de monitorización en vivo, fija nombres de interfaz, crea backups y reinicia la red de forma segura, con backups obligatorios y vistas previas paso a paso.",
     "ogTitle": "Gestión de red en Proxmox — bridges, bonds, diagnóstico, reparación",
-    "ogDescription": "Diagnóstico, análisis y reparaciones guiadas para la pila de red de Proxmox con copias de seguridad obligatorias y vistas previas paso a paso.",
+    "ogDescription": "Diagnóstico, análisis y reparaciones guiadas para la pila de red de Proxmox con backups obligatorios y vistas previas paso a paso.",
     "twitterTitle": "Gestión de red en Proxmox | ProxMenux",
-    "twitterDescription": "Bridges, bonds, diagnóstico y reparaciones guiadas para la pila de red de Proxmox con copias de seguridad obligatorias."
+    "twitterDescription": "Bridges, bonds, diagnóstico y reparaciones guiadas para la pila de red de Proxmox con backups obligatorios."
   },
   "header": {
     "title": "Gestión de red",
-    "description": "Diagnóstico de solo lectura, informes de análisis con propuestas y reparaciones guiadas para la pila de red clásica de Debian/Proxmox. Cada operación destructiva crea primero una copia de seguridad y muestra los cambios exactos antes de aplicarlos.",
+    "description": "Diagnóstico de solo lectura, informes de análisis con propuestas y reparaciones guiadas para la pila de red clásica de Debian/Proxmox. Cada operación destructiva hace primero un backup y muestra los cambios exactos antes de aplicarlos.",
     "section": "Red"
   },
   "intro": {
