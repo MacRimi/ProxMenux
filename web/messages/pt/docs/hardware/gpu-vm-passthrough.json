@@ -58,7 +58,7 @@
         "<strong>Uma só GPU.</strong> A consola local pode perder a imagem ao reservá-la para VFIO. Verifique antes o acesso SSH ou web de outro computador.",
         "<strong>Política de reset AMD.</strong> Lê <code>/sys/bus/pci/devices/&lt;pci&gt;/reset_method</code>. APU ou dedicada sem FLR fica <em>bloqueada pela política do assistente</em>; subtipo desconhecido sem FLR exige confirmação. Não prova impossibilidade universal.",
         "<strong>Estado D3cold.</strong> Bloqueia placas AMD que indicam <code>D3cold</code> pelo risco de falha na ativação. Verifique alimentação e firmware.",
-        "<strong>Análise do grupo IOMMU.</strong> Lê <code>/sys/kernel/iommu_groups/</code> e inclui no plano da VM <em>todos os membros exceto pontes</em>, possivelmente controladores de rede ou de armazenamento. O script não os lista, por isso verifique o grupo por si mesmo antes de confirmar. Se o IOMMU aguardar reinício, os grupos reais não estão disponíveis e o plano contém inicialmente só a função GPU selecionada; verifique o isolamento após o reinício."
+        "<strong>Análise do grupo IOMMU.</strong> Lê <code>/sys/kernel/iommu_groups/</code> e inclui no plano da VM <em>todos os membros exceto pontes</em>, possivelmente controladores de rede ou de armazenamento. Se o grupo contiver dispositivos de outro slot, o script lista-os antes do resumo; verifique se o anfitrião não precisa de nenhum. Se o IOMMU aguardar reinício, os grupos reais não estão disponíveis e o plano contém inicialmente só a função GPU selecionada; verifique o isolamento após o reinício."
       ],
       "audioIntro": "<strong>Áudio associado.</strong> Dois casos consoante a localização do controlador:",
       "audioDgpu": "<strong>GPU dedicada:</strong> o áudio HDMI ocupa frequentemente a função <code>.1</code> da mesma ranhura PCI e é incluído se detetado. Se o anfitrião o usava, perde acesso ao reservá-lo à VM.",
@@ -90,7 +90,7 @@
     },
     "summary": {
       "title": "Rever o resumo da confirmação",
-      "body": "Verifique o plano final do anfitrião e da VM e cancele se estiver incorreto. Mostra o grupo IOMMU e o número dos seus dispositivos, não cada membro, por isso verifique o grupo antecipadamente. O cancelamento impede as alterações principais, mas não reverte uma alteração da configuração de arranque IOMMU confirmada separadamente antes.",
+      "body": "Verifique o plano final do anfitrião e da VM e cancele se estiver incorreto. Mostra o grupo IOMMU e o número dos seus dispositivos; os membros de outro slot são listados no passo anterior. O cancelamento impede as alterações principais, mas não reverte uma alteração da configuração de arranque IOMMU confirmada separadamente antes.",
       "imageAlt": "Resumo das alterações previstas no anfitrião e VM"
     },
     "hostApply": {

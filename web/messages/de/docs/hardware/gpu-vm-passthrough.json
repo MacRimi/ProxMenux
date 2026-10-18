@@ -58,7 +58,7 @@
         "<strong>Nur eine GPU.</strong> Die lokale Konsole kann durch VFIO ihre Ausgabe verlieren. Zuvor SSH- oder Webzugriff von einem anderen Rechner prüfen.",
         "<strong>AMD-Reset-Richtlinie.</strong> Liest <code>/sys/bus/pci/devices/&lt;pci&gt;/reset_method</code>. APU oder dedizierte Karte ohne FLR wird <em>durch die Assistentenrichtlinie blockiert</em>; unbekannter Untertyp ohne FLR verlangt Bestätigung. Dies beweist keine generelle technische Unmöglichkeit.",
         "<strong>D3cold-Zustand.</strong> AMD-Karten mit gemeldetem <code>D3cold</code> werden wegen möglicher Aktivierungsfehler blockiert. Stromversorgung und Firmware prüfen.",
-        "<strong>Analyse der IOMMU-Gruppe.</strong> Liest <code>/sys/kernel/iommu_groups/</code> und nimmt <em>alle Nicht-Brücken-Geräte</em> in den VM-Plan auf, möglicherweise auch Netzwerk- oder Speichercontroller. Das Skript listet sie nicht auf; prüfen Sie die Gruppe daher vor der Bestätigung selbst. Steht der IOMMU-Neustart noch aus, sind die tatsächlichen Gruppen nicht verfügbar und der Plan enthält zunächst nur die gewählte GPU-Funktion; prüfen Sie die Isolation nach dem Neustart."
+        "<strong>Analyse der IOMMU-Gruppe.</strong> Liest <code>/sys/kernel/iommu_groups/</code> und nimmt <em>alle Nicht-Brücken-Geräte</em> in den VM-Plan auf, möglicherweise auch Netzwerk- oder Speichercontroller. Enthält die Gruppe Geräte aus einem anderen Slot, listet das Skript sie vor der Zusammenfassung auf; prüfen Sie, dass der Host keines davon benötigt. Steht der IOMMU-Neustart noch aus, sind die tatsächlichen Gruppen nicht verfügbar und der Plan enthält zunächst nur die gewählte GPU-Funktion; prüfen Sie die Isolation nach dem Neustart."
       ],
       "audioIntro": "<strong>Zugehöriges Audio.</strong> Zwei Fälle je nach Controllerposition:",
       "audioDgpu": "<strong>Dedizierte GPU:</strong> HDMI-Audio liegt oft auf Funktion <code>.1</code> desselben PCI-Slots und wird bei Erkennung aufgenommen. Nutzt der Host es bisher, verliert er durch die VM-Reservierung den Zugriff.",
@@ -90,7 +90,7 @@
     },
     "summary": {
       "title": "Überprüfung der Bestätigungszusammenfassung",
-      "body": "Prüfen Sie den endgültigen Host- und VM-Plan und brechen Sie bei Fehlern ab. Er zeigt die IOMMU-Gruppe und die Anzahl ihrer Geräte, nicht jedes Mitglied; prüfen Sie die Gruppe daher vorher. Der Abbruch verhindert die Hauptänderungen, macht aber eine zuvor separat bestätigte Änderung der IOMMU-Bootkonfiguration nicht rückgängig.",
+      "body": "Prüfen Sie den endgültigen Host- und VM-Plan und brechen Sie bei Fehlern ab. Er zeigt die IOMMU-Gruppe und die Anzahl ihrer Geräte; Mitglieder aus einem anderen Slot werden im vorherigen Schritt aufgelistet. Der Abbruch verhindert die Hauptänderungen, macht aber eine zuvor separat bestätigte Änderung der IOMMU-Bootkonfiguration nicht rückgängig.",
       "imageAlt": "Übersicht geplanter Änderungen an Host und VM"
     },
     "hostApply": {

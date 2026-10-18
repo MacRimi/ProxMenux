@@ -58,7 +58,7 @@
         "<strong>Una sola GPU.</strong> La console locale può perdere l’uscita quando VFIO la riserva. Verifica prima l’accesso SSH o web da un altro computer.",
         "<strong>Politica di reset AMD.</strong> Legge <code>/sys/bus/pci/devices/&lt;pci&gt;/reset_method</code>. APU o scheda dedicata senza FLR viene <em>bloccata dalla politica dell’assistente</em>; un sottotipo sconosciuto senza FLR richiede conferma. Non prova un’impossibilità universale.",
         "<strong>Stato D3cold.</strong> Blocca schede AMD che indicano <code>D3cold</code> per il rischio di mancata attivazione. Verifica alimentazione e firmware.",
-        "<strong>Analisi del gruppo IOMMU.</strong> Legge <code>/sys/kernel/iommu_groups/</code> e include nel piano della VM <em>tutti i membri non bridge</em>, eventualmente controller di rete o di archiviazione. Lo script non li elenca, quindi verifica tu stesso il gruppo prima di confermare. Se IOMMU attende un riavvio, i gruppi reali non sono disponibili e il piano contiene inizialmente solo la funzione GPU selezionata; verifica l’isolamento dopo il riavvio."
+        "<strong>Analisi del gruppo IOMMU.</strong> Legge <code>/sys/kernel/iommu_groups/</code> e include nel piano della VM <em>tutti i membri non bridge</em>, eventualmente controller di rete o di archiviazione. Se il gruppo contiene dispositivi di un altro slot, lo script li elenca prima del riepilogo; verifica che l’host non ne abbia bisogno. Se IOMMU attende un riavvio, i gruppi reali non sono disponibili e il piano contiene inizialmente solo la funzione GPU selezionata; verifica l’isolamento dopo il riavvio."
       ],
       "audioIntro": "<strong>Audio associato.</strong> Due casi secondo la posizione del controller:",
       "audioDgpu": "<strong>GPU dedicata:</strong> l’audio HDMI occupa spesso la funzione <code>.1</code> dello stesso slot PCI ed è incluso se rilevato. Se l’host lo usava, perde l’accesso riservandolo alla VM.",
@@ -90,7 +90,7 @@
     },
     "summary": {
       "title": "Riepilogo della conferma",
-      "body": "Verifica il piano finale dell’host e della VM e annulla se è errato. Mostra il gruppo IOMMU e il numero dei suoi dispositivi, non ogni membro, quindi controlla prima il gruppo. L’annullamento ferma le modifiche principali, ma non annulla una modifica della configurazione di avvio IOMMU confermata separatamente in precedenza.",
+      "body": "Verifica il piano finale dell’host e della VM e annulla se è errato. Mostra il gruppo IOMMU e il numero dei suoi dispositivi; i membri di un altro slot sono elencati nel passaggio precedente. L’annullamento ferma le modifiche principali, ma non annulla una modifica della configurazione di avvio IOMMU confermata separatamente in precedenza.",
       "imageAlt": "Riepilogo delle modifiche previste a host e VM"
     },
     "hostApply": {

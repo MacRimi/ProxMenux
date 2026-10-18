@@ -58,7 +58,7 @@
         "<strong>Jediná GPU.</strong> Po rezervovaní pre VFIO môže miestna konzola stratiť obraz. Najprv overte SSH alebo webový prístup z iného počítača.",
         "<strong>Politika resetovania AMD.</strong> Číta <code>/sys/bus/pci/devices/&lt;pci&gt;/reset_method</code>. APU alebo samostatná karta bez FLR je <em>blokovaná politikou sprievodcu</em>; neznámy podtyp bez FLR vyžaduje potvrdenie. Nedokazuje to všeobecnú nemožnosť.",
         "<strong>Stav D3cold.</strong> Sprievodca blokuje AMD karty so stavom <code>D3cold</code> pre riziko zlyhania aktivácie. Overte napájanie a firmvér.",
-        "<strong>Analýza skupiny IOMMU.</strong> Číta <code>/sys/kernel/iommu_groups/</code> a do plánu VM zahrnie <em>všetkých členov okrem mostov</em>, prípadne aj sieťové či úložné radiče. Skript ich nevypíše, preto skupinu pred potvrdením overte sami. Pri čakajúcom reštarte IOMMU nie sú skutočné skupiny dostupné a plán najprv obsahuje iba vybranú funkciu GPU; izoláciu overte po reštarte."
+        "<strong>Analýza skupiny IOMMU.</strong> Číta <code>/sys/kernel/iommu_groups/</code> a do plánu VM zahrnie <em>všetkých členov okrem mostov</em>, prípadne aj sieťové či úložné radiče. Ak skupina obsahuje zariadenia z iného slotu, skript ich vypíše pred súhrnom; overte, že hostiteľ žiadne z nich nepotrebuje. Pri čakajúcom reštarte IOMMU nie sú skutočné skupiny dostupné a plán najprv obsahuje iba vybranú funkciu GPU; izoláciu overte po reštarte."
       ],
       "audioIntro": "<strong>Pridružený zvuk.</strong> Dva prípady podľa umiestnenia radiča:",
       "audioDgpu": "<strong>Samostatná GPU:</strong> zvuk HDMI býva vo funkcii <code>.1</code> rovnakého PCI slotu a pri zistení sa zahrnie. Ak ho používal hostiteľ, rezervovaním pre VM stratí prístup.",
@@ -90,7 +90,7 @@
     },
     "summary": {
       "title": "Preskúmanie zhrnutia potvrdenia",
-      "body": "Overte konečný plán hostiteľa a VM a pri chybe ho zrušte. Zobrazuje skupinu IOMMU a počet jej zariadení, nie jednotlivých členov, preto skupinu overte vopred. Zrušenie zastaví hlavné zmeny, nevráti však skoršiu samostatne potvrdenú zmenu nastavenia štartu pre IOMMU.",
+      "body": "Overte konečný plán hostiteľa a VM a pri chybe ho zrušte. Zobrazuje skupinu IOMMU a počet jej zariadení; členovia z iného slotu sú vypísaní v predchádzajúcom kroku. Zrušenie zastaví hlavné zmeny, nevráti však skoršiu samostatne potvrdenú zmenu nastavenia štartu pre IOMMU.",
       "imageAlt": "Súhrn plánovaných zmien hostiteľa a VM"
     },
     "hostApply": {

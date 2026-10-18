@@ -58,7 +58,7 @@
         "<strong>En enda GPU.</strong> Den lokala konsolen kan förlora bildutmatningen när VFIO reserverar GPU:n. Kontrollera först SSH- eller webbåtkomst från en annan dator.",
         "<strong>AMD-policy för återställning.</strong> Läser <code>/sys/bus/pci/devices/&lt;pci&gt;/reset_method</code>. APU eller separat kort utan FLR <em>blockeras av guidens policy</em>; okänd undertyp utan FLR kräver bekräftelse. Det bevisar inte att funktionen är omöjlig i alla miljöer.",
         "<strong>D3cold-läge.</strong> Guiden blockerar AMD-kort som rapporterar <code>D3cold</code> på grund av risk för aktiveringsfel. Kontrollera strömhantering och firmware.",
-        "<strong>Analys av IOMMU-grupp.</strong> Läser <code>/sys/kernel/iommu_groups/</code> och tar med <em>alla medlemmar utom bryggor</em> i VM-planen, möjligen nätverks- eller lagringskontroller. Skriptet listar dem inte, så kontrollera gruppen själv före bekräftelse. Om IOMMU väntar på omstart är de faktiska grupperna inte tillgängliga och planen innehåller först bara den valda GPU-funktionen; kontrollera isoleringen efter omstarten."
+        "<strong>Analys av IOMMU-grupp.</strong> Läser <code>/sys/kernel/iommu_groups/</code> och tar med <em>alla medlemmar utom bryggor</em> i VM-planen, möjligen nätverks- eller lagringskontroller. Om gruppen innehåller enheter från en annan PCI-plats listar skriptet dem före sammanfattningen; kontrollera att värden inte behöver någon av dem. Om IOMMU väntar på omstart är de faktiska grupperna inte tillgängliga och planen innehåller först bara den valda GPU-funktionen; kontrollera isoleringen efter omstarten."
       ],
       "audioIntro": "<strong>Tillhörande ljud.</strong> Två fall beroende på var kontrollern finns:",
       "audioDgpu": "<strong>Separat GPU:</strong> HDMI-ljud finns ofta på funktion <code>.1</code> i samma PCI-plats och tas med om det hittas. Om värden använde ljudet förlorar den åtkomsten när det reserveras för VM:n.",
@@ -90,7 +90,7 @@
     },
     "summary": {
       "title": "Granska bekräftelse sammanfattning",
-      "body": "Granska den slutliga planen för värd och VM och avbryt om den är fel. Den visar IOMMU-gruppen och antalet enheter i den, inte varje medlem, så kontrollera gruppen i förväg. Att avbryta stoppar huvudändringarna men återställer inte en tidigare separat bekräftad ändring av IOMMU-startkonfigurationen.",
+      "body": "Granska den slutliga planen för värd och VM och avbryt om den är fel. Den visar IOMMU-gruppen och antalet enheter i den; medlemmar från en annan PCI-plats listas i föregående steg. Att avbryta stoppar huvudändringarna men återställer inte en tidigare separat bekräftad ändring av IOMMU-startkonfigurationen.",
       "imageAlt": "Översikt över planerade ändringar på värd och VM"
     },
     "hostApply": {

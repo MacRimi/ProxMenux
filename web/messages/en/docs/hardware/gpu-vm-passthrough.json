@@ -58,7 +58,7 @@
         "<strong>Single-GPU warning.</strong> If this is the only GPU in the host, you get a scary dialog reminding you that after reboot the console goes dark — make sure you have SSH or web-UI access from another machine.",
         "<strong>AMD reset policy.</strong> Reads <code>/sys/bus/pci/devices/&lt;pci&gt;/reset_method</code>. An APU or dedicated card without FLR is <em>blocked by this assistant’s policy</em>; an unknown subtype without FLR requires an explicit override. This does not establish universal hardware impossibility.",
         "<strong>Not in D3cold.</strong> Some AMD cards report <code>D3cold</code> power state while idle, which makes them invisible during VM startup. Blocked until you wake the GPU.",
-        "<strong>IOMMU group analysis.</strong> Reads <code>/sys/kernel/iommu_groups/</code> and includes <em>all non-bridge members</em> in the VM plan, possibly network or storage controllers. The script does not list them, so inspect the group yourself before confirming. If IOMMU is pending reboot, real groups are unavailable and the plan initially contains only the selected GPU function; verify isolation after reboot."
+        "<strong>IOMMU group analysis.</strong> Reads <code>/sys/kernel/iommu_groups/</code> and includes <em>all non-bridge members</em> in the VM plan, possibly network or storage controllers. When the group contains devices from another slot, the script lists them before the summary; check that the host does not need any of them. If IOMMU is pending reboot, real groups are unavailable and the plan initially contains only the selected GPU function; verify isolation after reboot."
       ],
       "audioIntro": "<strong>Audio companion.</strong> Two paths, depending on where the audio lives:",
       "audioDgpu": "<strong>Discrete GPU:</strong> HDMI audio often occupies function <code>.1</code> of the same PCI slot and is automatically included when detected. If the host was using that audio device, it loses access when the device is reserved for the VM.",
@@ -90,7 +90,7 @@
     },
     "summary": {
       "title": "Review the confirmation summary",
-      "body": "Review the final host and VM plan and cancel if it is wrong. It shows the IOMMU group and its device count, not each member, so check the group beforehand. Cancelling stops the main changes; it does not undo an earlier separately confirmed IOMMU boot-configuration change.",
+      "body": "Review the final host and VM plan and cancel if it is wrong. It shows the IOMMU group and its device count; members from another slot are listed in the previous step. Cancelling stops the main changes; it does not undo an earlier separately confirmed IOMMU boot-configuration change.",
       "imageAlt": "Summary dialog listing host changes (VFIO/blacklist files) and VM config changes (hostpci lines) before applying"
     },
     "hostApply": {

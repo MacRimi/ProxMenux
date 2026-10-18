@@ -58,7 +58,7 @@
         "<strong>Una sola GPU.</strong> La consola local puede perder su salida al reservarla para VFIO. Comprueba antes el acceso SSH o web desde otro equipo.",
         "<strong>Política de reinicio AMD.</strong> Lee <code>/sys/bus/pci/devices/&lt;pci&gt;/reset_method</code>. Una APU o dedicada sin FLR queda <em>bloqueada por la política del asistente</em>; un subtipo desconocido sin FLR exige confirmación. No demuestra que sea imposible en todo entorno.",
         "<strong>Estado D3cold.</strong> El asistente bloquea tarjetas AMD que indican <code>D3cold</code> por riesgo de fallo al activarlas. Revisa alimentación y firmware antes de continuar.",
-        "<strong>Grupo IOMMU.</strong> Lee <code>/sys/kernel/iommu_groups/</code> e incluye <em>todos los miembros que no sean puentes</em>, incluso controladores de red o discos. El script no los muestra, así que revisa el grupo antes de confirmar. Si falta reiniciar para activar IOMMU, solo puede planificar inicialmente la función GPU; comprueba el aislamiento después."
+        "<strong>Grupo IOMMU.</strong> Lee <code>/sys/kernel/iommu_groups/</code> e incluye <em>todos los miembros que no sean puentes</em>, incluso controladores de red o discos. Si el grupo contiene dispositivos de otro slot, el script los muestra antes del resumen; comprueba que el host no necesite ninguno. Si falta reiniciar para activar IOMMU, solo puede planificar inicialmente la función GPU; comprueba el aislamiento después."
       ],
       "audioIntro": "<strong>Audio asociado.</strong> Dos casos según dónde esté el controlador:",
       "audioDgpu": "<strong>GPU dedicada:</strong> el audio HDMI suele ocupar la función <code>.1</code> del mismo slot y se incluye al detectarlo. Si el host lo usaba, pierde acceso al reservarlo para la VM.",
@@ -90,7 +90,7 @@
     },
     "summary": {
       "title": "Revisar el resumen de confirmación",
-      "body": "Revisa el plan final y cancela si no es correcto. Muestra el grupo IOMMU y su número de dispositivos, no cada miembro, así que revisa el grupo antes. Cancelar detiene los cambios principales, pero no revierte una activación de IOMMU confirmada anteriormente.",
+      "body": "Revisa el plan final y cancela si no es correcto. Muestra el grupo IOMMU y su número de dispositivos; los miembros de otro slot aparecen en el paso anterior. Cancelar detiene los cambios principales, pero no revierte una activación de IOMMU confirmada anteriormente.",
       "imageAlt": "Resumen de cambios previstos en host y VM"
     },
     "hostApply": {

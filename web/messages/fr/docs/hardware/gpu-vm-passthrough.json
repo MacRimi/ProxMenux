@@ -58,7 +58,7 @@
         "<strong>Un seul GPU.</strong> La console locale peut perdre son affichage lorsque VFIO le réserve. Vérifiez d’abord l’accès SSH ou web depuis un autre ordinateur.",
         "<strong>Politique de réinitialisation AMD.</strong> Lit <code>/sys/bus/pci/devices/&lt;pci&gt;/reset_method</code>. APU ou carte dédiée sans FLR est <em>bloquée par la politique de l’assistant</em> ; un sous-type inconnu sans FLR exige confirmation. Cela ne prouve pas une impossibilité universelle.",
         "<strong>État D3cold.</strong> L’assistant bloque les cartes AMD signalant <code>D3cold</code> en raison du risque d’échec d’activation. Vérifiez alimentation et micrologiciel.",
-        "<strong>Analyse du groupe IOMMU.</strong> Lit <code>/sys/kernel/iommu_groups/</code> et inclut dans le plan de la VM <em>tous les membres sauf les ponts</em>, éventuellement des contrôleurs réseau ou de stockage. Le script ne les liste pas : vérifiez vous-même le groupe avant de confirmer. Si IOMMU attend un redémarrage, les groupes réels ne sont pas disponibles et le plan ne contient initialement que la fonction GPU sélectionnée ; vérifiez l’isolation après le redémarrage."
+        "<strong>Analyse du groupe IOMMU.</strong> Lit <code>/sys/kernel/iommu_groups/</code> et inclut dans le plan de la VM <em>tous les membres sauf les ponts</em>, éventuellement des contrôleurs réseau ou de stockage. Si le groupe contient des périphériques d’un autre slot, le script les liste avant le résumé ; vérifiez que l’hôte n’en a pas besoin. Si IOMMU attend un redémarrage, les groupes réels ne sont pas disponibles et le plan ne contient initialement que la fonction GPU sélectionnée ; vérifiez l’isolation après le redémarrage."
       ],
       "audioIntro": "<strong>Audio associé.</strong> Deux cas selon l’emplacement du contrôleur :",
       "audioDgpu": "<strong>GPU dédié :</strong> l’audio HDMI occupe souvent la fonction <code>.1</code> du même emplacement PCI et est inclus si détecté. Si l’hôte l’utilisait, il en perd l’accès lors de la réservation à la VM.",
@@ -90,7 +90,7 @@
     },
     "summary": {
       "title": "Examiner le résumé de la confirmation",
-      "body": "Vérifiez le plan final de l’hôte et de la VM, et annulez s’il est incorrect. Il affiche le groupe IOMMU et son nombre de périphériques, pas chaque membre : vérifiez donc le groupe au préalable. L’annulation empêche les changements principaux, sans annuler une modification de la configuration d’amorçage IOMMU confirmée séparément auparavant.",
+      "body": "Vérifiez le plan final de l’hôte et de la VM, et annulez s’il est incorrect. Il affiche le groupe IOMMU et son nombre de périphériques ; les membres d’un autre slot sont listés à l’étape précédente. L’annulation empêche les changements principaux, sans annuler une modification de la configuration d’amorçage IOMMU confirmée séparément auparavant.",
       "imageAlt": "Résumé des modifications prévues sur hôte et VM"
     },
     "hostApply": {
