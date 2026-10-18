@@ -1,0 +1,218 @@
+{
+  "meta": {
+    "title": "Hodnotenie a inventár | Audit a správy",
+    "description": "Hodnotenie vo funkcii Audit a správy: profily správ, klasifikácia výsledkov, akceptované riziká, nečitateľné zdroje, Lynis a inventár uzla."
+  },
+  "header": {
+    "title": "Hodnotenie a inventár",
+    "description": "Hodnotenie kontroluje uzol, uchováva jeho zistenia a odpovedá na rôzne otázky v závislosti od profilu správy.",
+    "section": "Audit a správy"
+  },
+  "sections": [
+    {
+      "id": "read-only",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Hodnotenie kontroluje; nemení konfiguráciu",
+            "body": "Číta konfiguráciu a stav hostiteľa. Napíše svoje výsledky, správy a protokoly a kontroly zavádzania môžu na chvíľu pripojiť systémové partície EFI. Konfigurácia, ktorú posudzuje, sa nemení."
+          }
+        },
+        {
+          "p": "<strong>Spustiť hodnotenie</strong> spustí profil vybraný v položke <strong>Správa</strong>. Zobrazenie ukazuje dátum posledného spustenia a uplynutý čas."
+        }
+      ]
+    },
+    {
+      "id": "profiles",
+      "title": "Profily správ",
+      "intro": "Každý profil odpovedá na inú otázku. Kontroly a oddiely sa vyberú pred zložením dokumentu.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Profil",
+              "Čo zahŕňa"
+            ],
+            "rows": [
+              [
+                "Úplný audit",
+                "Všetky kontroly a celá dostupná štruktúra."
+              ],
+              [
+                "Rýchla diagnostika",
+                "Každá kontrola; výsledok sa otvára kritickými zisteniami, upozorneniami a meraniami, ktoré nebolo možné overiť."
+              ],
+              [
+                "Inventár",
+                "Opis uzla bez kontrol a klasifikácie."
+              ],
+              [
+                "Kontrola bezpečnosti",
+                "Vystavenie útokom, prístup, oprávnenia, certifikáty, aktualizácie, repozitáre a Lynis."
+              ],
+              [
+                "Overenie záloh",
+                "Pokrytie, vek, výsledky, overenie, uchovávanie a obnovenie záloh."
+              ],
+              [
+                "Kapacita a opotrebenie",
+                "Rastové rozpätie, pamäť, využitie priestoru a životnosť diskov."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Obsah každého dokumentu je popísaný v <reportsLink>Správy a porovnania</reportsLink>."
+        }
+      ]
+    },
+    {
+      "id": "results",
+      "title": "Ako sú výsledky klasifikované",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Zatriedenie",
+              "Význam"
+            ],
+            "rows": [
+              [
+                "Kritická",
+                "Zlyhaná podmienka, ktorá má prednosť."
+              ],
+              [
+                "Varovanie",
+                "Podmienka vyžadujúca kontrolu vzhľadom na dôkazy alebo politiku."
+              ],
+              [
+                "Poznámka",
+                "Informácie o uzle, ktorý nie je hlásený ako zlyhanie."
+              ],
+              [
+                "Nepodarilo sa overiť",
+                "Zdroj potrebný na kontrolu sa nepodarilo prečítať. To neznamená, že problém neexistuje."
+              ],
+              [
+                "V poriadku",
+                "Podmienka spĺňa použité kritérium."
+              ],
+              [
+                "Netýka sa",
+                "Nič v rozsahu kontroly neplatí."
+              ],
+              [
+                "Prijaté riziko",
+                "Toto zistenie existuje a rozhodnutie o ňom bolo zaznamenané."
+              ],
+              [
+                "Vylúčené politikou",
+                "Politika vyhlasuje, že prvok je vynechaný z počtu."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Zistenia možno filtrovať podľa oblasti: Systém, Úložisko, Sieť, Zabezpečenie, Zálohovanie, Hosťovské systémy a Hardvér. Každé zistenie si zachová dôkazy aj zdroj, z ktorého boli načítané."
+        }
+      ]
+    },
+    {
+      "id": "unverified",
+      "title": "Keď zdroj nemožno prečítať",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Prípad",
+              "Správanie"
+            ],
+            "rows": [
+              [
+                "Nepodarilo sa overiť",
+                "Kontrola si zachová identitu, v dôkazoch uvedie, ktorý zdroj zlyhal, a nezmení chýbajúce údaje na výsledok potvrdzujúci súlad."
+              ],
+              [
+                "Neúplné dôkazy",
+                "Správa uvádza zdroj a čas zberu, aby bolo možné odlíšiť skutočný problém od nedostatočného načítania."
+              ],
+              [
+                "Nové spustenie",
+                "Po oprave prístupu, balíka alebo služby, ten istý profil beží znova a porovnanie ukazuje, či je výsledok možné overiť."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "lynis",
+      "title": "Lynis",
+      "blocks": [
+        {
+          "p": "Bezpečnostná kontrola používa správu Lynis z hostiteľa. Ak Lynis ešte nebol spustený alebo je správa staršia než povoľuje politika, dialóg ponúkne <strong>Spustiť s Lynis</strong>, čo trvá o niekoľko minút dlhšie, alebo <strong>Spustiť bez Lynis</strong>, čo použije existujúcu správu."
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/lynis-dialog.png",
+            "alt": "Dialóg, ktorý ponúka spustenie hodnotenia s alebo bez Lynis",
+            "caption": "Lynisov dialóg pred bezpečnostnou previerkou."
+          }
+        }
+      ]
+    },
+    {
+      "id": "accept",
+      "title": "Prijatie rizika",
+      "blocks": [
+        {
+          "p": "<strong>Akceptovať riziko</strong> zaznamená rozhodnutie o zistení. Dôvod je povinný a uloží sa spolu s autorom a dátumom."
+        },
+        {
+          "table": {
+            "headers": [
+              "Pole",
+              "Možnosti"
+            ],
+            "rows": [
+              [
+                "Dôvod",
+                "Voľný text, požadovaný."
+              ],
+              [
+                "Znova preveriť po",
+                "90 dní, 180 dní, 1 rok alebo nevyprší platnosť. Keď obdobie skončí, nález sa znova stane aktívnym."
+              ],
+              [
+                "Pripomenúť kontrolu",
+                "Pripomenutie, ktoré privádza rozhodnutie späť do pozornosti, kým zostáva v platnosti."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Akceptované zistenie zostáva viditeľné s rozhodnutím; <strong>Vrátiť do aktívneho stavu</strong> akceptovanie zruší. Akceptovanie rizika nie je oprava: porovnanie ho uvedie ako akceptované, nie vyriešené."
+        }
+      ]
+    },
+    {
+      "id": "inventory",
+      "title": "Inventár",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Identita, verzia Proxmox VE, jadro, predplatné a klaster.",
+              "CPU, pamäť, základná doska, BIOS, radiče a IOMMU.",
+              "Disky, SMART, hodiny prevádzky a zaznamenané udalosti.",
+              "Adaptéry, bondy, mosty, latencia a spojenia.",
+              "Úložisko, hosťovské systémy s ich diskami a rozhraniami a zálohy.",
+              "PCI passthrough a softvér spravovaný ProxMenux."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,177 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Pannello: Panoramica del sistema | Documentazione ProxMenux",
+    "description": "La scheda iniziale predefinita di ProxMenux Monitor: quattro schede (CPU, memoria, VM e LXC attivi, temperatura) con aggiornamenti in tempo reale e minigrafico di tendenza, grafico storico e riepiloghi di storage e rete con link alle rispettive schede."
+  },
+  "header": {
+    "title": "Pannello: Panoramica del sistema",
+    "description": "La scheda aperta per impostazione predefinita: quattro schede con metriche in tempo reale in alto, grafico storico al centro e riepiloghi di storage e rete in basso, dalle stesse API delle rispettive schede.",
+    "section": "ProxMenux Monitor · Dashboard"
+  },
+  "readOnly": {
+    "title": "Un'istantanea di sola lettura",
+    "body": "Tutti i pannelli di questa scheda sono informativi. Le azioni si trovano nelle schede collegate: Storage per gestire i dischi, VM e LXC per avviare o fermare i guest e Sicurezza per configurare l'autenticazione."
+  },
+  "captureAlt": "Scheda Panoramica di sistema — quattro schede metriche (CPU, Memoria, VM attive, Temperatura), grafico metrico nodo e schede di sommario di Storage / Network",
+  "captureCaption": "Panoramica del sistema, la scheda iniziale predefinita. Le quattro schede si aggiornano in tempo reale, il grafico mostra lo storico e le due schede in basso riepilogano storage e rete.",
+  "topRow": {
+    "heading": "Riga superiore: schede con metriche in tempo reale",
+    "intro": "Quattro schede in una griglia 2×2 su mobile e in una riga su desktop. Ciascuna si aggiorna da <code>/api/system</code> ogni pochi secondi.",
+    "headerCard": "Scheda",
+    "headerWhat": "Cosa mostra",
+    "headerSource": "Fonte",
+    "rows": [
+      {
+        "card": "Utilizzo CPU",
+        "what": "Percentuale attuale con barra di avanzamento. Si aggiorna ogni ~1 s tramite il campionatore dei parametri vitali.",
+        "source": "psutil.cpu_percent()"
+      },
+      {
+        "card": "Utilizzo memoria",
+        "what": "GB usati, percentuale e GB totali. La barra rappresenta la percentuale.",
+        "source": "psutil.virtual_memory()"
+      },
+      {
+        "card": "VM e LXC attivi",
+        "what": "Numero di guest in esecuzione, con ripartizione In esecuzione / Arrestati e totali di VM e LXC in fondo.",
+        "source": "/api/vms (consolidato)"
+      },
+      {
+        "card": "Temperatura",
+        "what": "Temperatura CPU in °C con stato (bassa / moderata / alta) e minigrafico degli ultimi 5 minuti sullo sfondo. Mostra <em>N/A</em> senza sensore. Un clic apre i dettagli.",
+        "source": "sensors / coretemp"
+      }
+    ],
+    "thresholdsTitle": "Colori e soglie di stato applicate qui",
+    "thresholdsIntro": "Anelli, barre e minigrafici usano la stessa scala: <green/> <strong>verde</strong> sotto Avviso, <amber/> <strong>ambra</strong> tra Avviso e Critico, <red/> <strong>rosso</strong> da Critico in poi. Valori predefiniti consigliati inclusi in ProxMenux:",
+    "thresholdsItems": [
+      "<strong>Utilizzo CPU</strong> — avviso 85 %, critico 95 %.",
+      "<strong>Memoria</strong> — avviso 85 %, critico 95 %. Anche lo swap attiva Critico al 5 % di utilizzo; un host Proxmox sano dovrebbe usarlo raramente.",
+      "<strong>Temperatura CPU</strong> — avviso 80 °C, critico 90 °C."
+    ],
+    "thresholdsOutro": "Ogni valore è configurabile per host. <link>Impostazioni → Soglie del monitor di integrità</link> centralizza le impostazioni e spiega come regolarle.",
+    "sparklineTitle": "Il minigrafico mostra la tendenza",
+    "sparklineBody": "La scheda della temperatura traccia gli ultimi 5 minuti sotto il valore, con colori di linea e sfumatura legati alle soglie Avviso/Critico descritte sopra. Permette di vedere subito se la temperatura dell'host sale senza aprire i dettagli."
+  },
+  "processes": {
+    "heading": "Processi con maggiore utilizzo di CPU e memoria",
+    "intro": "Le schede Utilizzo CPU e Memoria aprono un elenco ordinabile dei 25 processi principali: per utilizzo CPU dalla scheda CPU e per memoria residente dalla scheda Memoria.",
+    "listTitle": "La finestra di dialogo elenco",
+    "listItems": [
+      "<strong>Aggiornamento automatico</strong> — l'elenco si aggiorna ogni 5 secondi finché la finestra è aperta e interrompe le richieste alla chiusura.",
+      "<strong>Filtro</strong> — la ricerca limita l'elenco per comando, utente o PID.",
+      "<strong>Barra nella riga</strong> — la colonna della metrica principale disegna una piccola barra scalata al massimo valore nell'elenco filtrato. La graduatoria resta evidente anche se nessun processo si avvicina al 100 %.",
+      "<strong>Disposizione mobile</strong> — sotto 640 px le colonne PID e Utente si nascondono, così Comando, CPU % e Memoria restano visibili senza scorrimento orizzontale."
+    ],
+    "captureListAlt": "Finestra dei processi per memoria — tabella ordinata per RSS con PID, utente, comando, CPU % e memoria",
+    "captureListCaption": "La scheda Memoria apre l'elenco ordinato per RSS (colore indaco). La scheda CPU apre lo stesso elenco ordinato per utilizzo CPU (colore blu).",
+    "detailTitle": "Dettaglio del processo",
+    "detailIntro": "Un clic su una riga apre una seconda finestra con i dati in tempo reale del processo, organizzati in quattro sezioni:",
+    "detailItems": [
+      "<strong>Panoramica</strong> — stato, processo padre, numero di thread, descrittori di file aperti, utente e gruppo.",
+      "<strong>Risorse</strong> — CPU %, memoria %, memoria residente (RSS), dimensione virtuale, swap e totali I/O di lettura e scrittura.",
+      "<strong>Comando</strong> — nome breve, riga di comando completa, percorso dell'eseguibile e directory di lavoro.",
+      "<strong>Durata</strong> — data e ora di avvio e tempo di esecuzione trascorso."
+    ],
+    "detailRefresh": "I dettagli si aggiornano ogni 3 secondi. Quando il processo termina, le richieste cessano e appare l'avviso ambra <em>Questo processo è terminato</em>. L'ultimo stato acquisito resta visibile ma attenuato, per vedere cosa accadeva prima della fine.",
+    "captureDetailAlt": "Dettagli del processo — Panoramica, Risorse, Comando e Durata per un PID",
+    "captureDetailCaption": "Dettagli di un processo aperti da una riga dell'elenco. Il colore corrisponde alla scheda usata per aprirli: blu per CPU, indaco per Memoria."
+  },
+  "middle": {
+    "heading": "Centro: grafici delle metriche del nodo",
+    "body1": "Sotto le schede, <code>NodeMetricsCharts</code> mostra grafici storici di CPU, memoria e I/O disco dal database RRD di Proxmox tramite <code>/api/node/metrics</code>. Il selettore offre <em>1 ora / 24 ore / 7 giorni / 30 giorni / 1 anno</em>. La risoluzione diminuisce con periodi più ampi per mantenere fluido il grafico.",
+    "body2": "Sono gli stessi grafici dell'interfaccia web Proxmox per un nodo, integrati nel tema scuro di Monitor e allineati agli altri pannelli."
+  },
+  "bottom": {
+    "heading": "Riga inferiore: riepiloghi di storage e rete",
+    "storageTitle": "Scheda Panoramica dello storage",
+    "storageIntro": "Vista compatta dello stato dello storage dell'host, suddivisa in tre blocchi:",
+    "storageItems": [
+      "<strong>Capacità totale del nodo</strong> — somma degli storage VM/LXC e dello storage locale del sistema, con una barra sfumata dello spazio usato e libero.",
+      "<strong>Capacità totale / Dischi fisici</strong> — capacità grezza e numero dei dischi fisici rilevati.",
+      "<strong>Storage VM/LXC</strong> — spazio usato, libero e percentuale degli storage dei guest, con un contatore quando sono più di uno.",
+      "<strong>Storage locale (sistema)</strong> — filesystem root o di sistema montato sull'host, separato dal pool dei guest."
+    ],
+    "storageDrillIn": "I dettagli sono nella <link>scheda Storage</link>: SMART per disco, pool ZFS, cronologia delle osservazioni e altro.",
+    "networkTitle": "Scheda panoramica della rete",
+    "networkBody1": "In alto appare il numero delle interfacce attive, fisiche e bridge insieme. Sotto, due righe di etichette colorate indicano le interfacce <code>up</code>: NIC fisiche in blu, bridge con un colore secondario. Il selettore in alto a destra (1 ora / 24 ore / 7 giorni / 30 giorni / 1 anno) controlla un piccolo grafico del traffico RX / TX.",
+    "networkBody2": "I dettagli per interfaccia (IP/MAC, grafico RRD, membri del bridge, modalità bond e altro) sono nella <link>scheda Rete</link>."
+  },
+  "refresh": {
+    "heading": "Modello di aggiornamento",
+    "intro": "Ogni pannello gestisce il proprio stato di caricamento (<code>loadingStates.cpu</code>, <code>loadingStates.storage</code>, …), così una sorgente lenta non blocca le altre. Durante il caricamento mostra un segnaposto pulsante. Gli errori sono gestiti senza interrompere la vista: senza sensore di temperatura mostra <em>N/A</em> invece di un errore.",
+    "items": [
+      "<strong>Schede superiori</strong> — aggiornamento ogni ~5 s. CPU e temperatura ricevono anche dati ogni secondo dal campionatore dei parametri vitali.",
+      "<strong>Grafico delle metriche del nodo</strong> — carica all'apertura e al cambio di periodo o lingua. Se necessario, riprova dopo 60 s.",
+      "<strong>Scheda Storage</strong> — aggiornamento ogni ~60 s. I dati SMART restano in cache più a lungo; la scheda Storage richiede una nuova lettura quando serve.",
+      "<strong>Scheda Rete</strong> — riepilogo ogni 59 s e grafico del traffico ogni 60 s nel periodo attivo.",
+      "<strong>Aggiornamento manuale</strong> — il pulsante Aggiorna nell'intestazione ricarica subito tutti i pannelli."
+    ]
+  },
+  "dataCollected": {
+    "heading": "Come vengono raccolti i dati",
+    "headerCard": "Scheda",
+    "headerEndpoint": "Endpoint",
+    "headerSource": "Fonte",
+    "rows": [
+      {
+        "card": "Indicatore di stato nell'intestazione",
+        "endpoint": "/api/health",
+        "source": "Lo stato complessivo prodotto dal monitor di integrità a ogni ciclo e conservato in cache."
+      },
+      {
+        "card": "CPU / RAM / Swap / Tempo di attività",
+        "endpoint": "/api/system",
+        "source": "<code>/proc/stat</code>, <code>/proc/meminfo</code>, <code>/proc/uptime</code>, con campionamento CPU su un breve intervallo."
+      },
+      {
+        "card": "Informazioni sull'host (kernel, BIOS, distribuzione)",
+        "endpoint": "/api/info",
+        "source": "<code>uname -a</code>, <code>dmidecode</code>, versione PVE. Conservati in cache per processo."
+      },
+      {
+        "card": "Carte di archiviazione / rete / VM",
+        "endpoint": "/api/storage/summary, /api/network/summary, /api/vms",
+        "source": "Vedere le schede dedicate per ciascuno. Le schede di intestazione mostrano una vista compattata dagli stessi endpoint."
+      },
+      {
+        "card": "Frequenza di aggiornamento",
+        "endpoint": "—",
+        "source": "Dati di sistema ogni 5 s; storage, VM e riepilogo di rete ogni 59 s. Il pulsante Aggiorna nell'intestazione ricarica subito tutti i pannelli."
+      }
+    ],
+    "codeComment1": "# Chiamata che alimenta lo indicatore di stato nell'intestazione",
+    "codeComment2": "# pubblico, senza token",
+    "codeComment3": "# Istantanea autenticata utilizzata dalle carte"
+  },
+  "whereNext": {
+    "heading": "Dove proseguire",
+    "items": [
+      {
+        "label": "Monitoraggio integrità",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — la finestra dell'indicatore di stato nell'intestazione: dieci categorie, avvisi ignorati e soppressione."
+      },
+      {
+        "label": "Riferimento API",
+        "href": "/docs/monitor/api",
+        "tail": " — endpoint system, info e health."
+      },
+      {
+        "label": "Notifiche",
+        "href": "/docs/monitor/notifications",
+        "tail": "— come gli stessi stati si trasformano in messaggi Telegram / Discord / Email."
+      },
+      {
+        "label": "Indice del pannello",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — le altre schede del pannello a colpo d'occhio."
+      },
+      {
+        "label": "Architettura",
+        "href": "/docs/monitor/architecture",
+        "tail": " — i thread in background e le API che alimentano questa vista."
+      }
+    ]
+  }
+}

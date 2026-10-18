@@ -1,0 +1,535 @@
+{
+  "meta": {
+    "title": "Oznámenia Proxmox — Telegram, Discord, e-mail, Gotify, Pushover, Apprise | ProxMenux Monitor",
+    "description": "Posielajte oznámenia Proxmox VE do Telegram, Discord, e-mailu, Gotify, Pushover a približne 80 služieb cez Apprise. Udalosti z monitora zdravia, denníkov a webhooku PVE spracuje deduplikácia, interval opakovania, zoskupovanie, voliteľná AI a história.",
+    "ogTitle": "Oznámenia Proxmox — Telegram, Discord, e-mail, Gotify, Pushover, Apprise",
+    "ogDescription": "Upozornenia Proxmox do Telegram, Discord, e-mailu, Gotify, Pushover a približne 80 služieb cez Apprise, s deduplikáciou, intervalmi opakovania, zoskupovaním a voliteľnou AI.",
+    "twitterTitle": "Oznámenia Proxmox | ProxMenux Monitor",
+    "twitterDescription": "Upozornenia Proxmox VE do Telegram, Discord, e-mailu, Gotify, Pushover a približne 80 služieb cez Apprise."
+  },
+  "header": {
+    "title": "Oznámenia",
+    "description": "Rozosiela udalosti zdrojov Monitora do Telegram, Discord, e-mailu, Gotify, Pushover a približne 80 služieb cez Apprise. Obsahuje deduplikáciu, intervaly opakovania, zoskupovanie, filtre udalostí a kanálov, voliteľnú AI a prehľadnú históriu.",
+    "section": "ProxMenux Monitor"
+  },
+  "intro": {
+    "title": "Odkiaľ pochádzajú správy",
+    "body": "Oznámenia spracúvajú výstup existujúcich zdrojov: <link>Monitor zdravia</link>, sledovanie denníka a úloh Proxmox, webhook PVE, pravidelné zisťovanie a priame udalosti skriptov. Každá udalosť prechádza rovnakým odosielacím postupom."
+  },
+  "howItWorks": {
+    "heading": "Ako to funguje",
+    "intro": "Zdroje vytvárajú štruktúrované udalosti. Spracovanie rozhodne o odoslaní a formáte, voliteľná AI upraví text a výsledok sa doručí nastaveným kanálom.",
+    "arrowLabel": "udalosť",
+    "caption": "Prehľad postupu. Každý skutočný úspešný, zoskupený či neúspešný pokus o odoslanie sa zaznamená v SQLite. Udalosti potlačené intervalom opakovania sa nezapisujú.",
+    "nodes": {
+      "sourcesLabel": "Zdroje",
+      "sourcesDetail": "Monitor zdravia\nSledovanie denníka\nSledovanie úloh\nWebhook PVE\nPravidelné zisťovanie\nInterné zdroje",
+      "dispatchLabel": "Postup odosielania",
+      "dispatchDetail": "Zoskupovanie nárazových udalostí\nKontrola odtlačku / intervalu\nLimity skupín\nOvládanie jednotlivých kanálov",
+      "aiLabel": "Prepis pomocou AI (voliteľné)",
+      "aiDetail": "OpenAI / Anthropic\nGemini / Groq\nOpenRouter / Ollama\n(predvolene vypnuté)",
+      "channelsLabel": "Kanály",
+      "channelsDetail": "Telegram\nDiscord\nE-mail (SMTP)\nGotify\nPushover\nApprise (približne 80 služieb)"
+    }
+  },
+  "enabling": {
+    "heading": "Zapnutie oznámení",
+    "intro": "Po novej inštalácii karta Oznámenia zobrazuje <em>Vypnuté</em> a tlačidlo <em>Zapnúť oznámenia</em>. Pred kliknutím sa nič neodosiela ani nemení konfigurácia PVE.",
+    "disabledAlt": "Úvodná karta oznámení so stavom Vypnuté a tlačidlom Zapnúť oznámenia",
+    "disabledCaption": "Úvodný stav — zapnutie jedným kliknutím.",
+    "stepsIntro": "Stlačením tlačidla urobíte tri veci v poradí:",
+    "steps": [
+      "Prepne stav na <em>Aktívne</em> a zobrazí formulár kanálov.",
+      "Zaregistruje webhook v <code>/etc/pve/notifications.cfg</code>. Bez HTTPS používa <code>POST http://127.0.0.1:8008/api/notifications/webhook</code>; s HTTPS lokálny HTTP prijímač na porte 8009. Oznámenia PVE vstúpia do spracovania Monitora. Pozrite <pvelink>Integrácia webhooku PVE</pvelink>.",
+      "Spustí odosielacie vlákno na pozadí, ktoré číta front udalostí a spracúva každú udalosť."
+    ],
+    "activeAlt": "Aktívna karta oznámení s kanálmi, zobrazovaným názvom a rozbaľovacími nastaveniami AI",
+    "activeCaption": "Aktívny stav: kanály Telegram / Gotify / Discord / e-mail / Pushover / Apprise, zobrazovaný názov, kategórie kanála a časť <em>Pokročilé: Vylepšenie pomocou AI</em>."
+  },
+  "sources": {
+    "heading": "Zdroje udalostí",
+    "intro": "Šesť typov zdrojov zahŕňa zberače na pozadí, webhookový prijímač a interné zdroje. Vytvárajú štruktúrované objekty <code>NotificationEvent</code>.",
+    "headerCollector": "Zberač údajov",
+    "headerWatches": "Čo sleduje",
+    "headerEvents": "Typické udalosti",
+    "rows": [
+      {
+        "collector": "Monitor zdravia",
+        "watches": "Desať kategórií, približne každých 5 minút",
+        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>."
+      },
+      {
+        "collector": "Sledovanie systémového denníka",
+        "watches": "<code>journalctl --follow</code> s rozpoznávaním zlyhaní SSH/webu, blokovaní Fail2Ban pri nainštalovanom jaili, chýb I/O jadra, OOM a udalostí smartd.",
+        "events": "<code>auth_fail</code>, <code>ip_block</code>, <code>oom_kill</code>, <code>disk_io_error</code>, <code>service_fail</code>."
+      },
+      {
+        "collector": "Sledovanie úloh",
+        "watches": "Sleduje <code>/var/log/pve/tasks/index</code> pre nové UPID úloh a ich jednotlivé denníky.",
+        "events": "<code>backup_start</code>, <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>migration_*</code>, <code>snapshot_complete</code>."
+      },
+      {
+        "collector": "Prijímač webhooku Proxmox",
+        "watches": "Prijíma <code>POST /api/notifications/webhook</code>. Verzie PVE s podporou cieľov webhook môžu po nastavení posielať oznámenia sem; pozrite <pvelink>nižšie</pvelink>.",
+        "events": "Oznámenia PVE vrátane HA, replikácie a vzdump z rozhrania, ktoré by Monitor inak nemusel zachytiť."
+      },
+      {
+        "collector": "Pravidelné zisťovanie",
+        "watches": "Pravidelne porovnáva dostupnosť uzlov klastra, platnosť certifikátov, GPU passthrough a dostupné aktualizácie PVE/ProxMenux.",
+        "events": "<code>node_disconnect</code>, <code>node_reconnect</code>, <code>pve_update</code>, <code>proxmenux_update</code>, <code>gpu_mode_switch</code>, <code>pci_passthrough_conflict</code>."
+      },
+      {
+        "collector": "Interné zdroje udalostí",
+        "watches": "Priame volania skriptov ProxMenux a samotného Monitora (<code>notification_manager.emit_event(...)</code>).",
+        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>ai_model_migrated</code>, vlastné testovacie udalosti."
+      }
+    ],
+    "after1": "Udalosť nesie <code>event_type</code>, závažnosť <code>severity</code> (<code>INFO</code>, <code>WARNING</code>, <code>CRITICAL</code>), kategóriu <code>category</code> pre ikony a filtre a údaje <code>data</code> pre šablónu (<code>vmid</code>, <code>device</code>, <code>source_ip</code>, <code>reason</code>…).",
+    "after2": "Pre každý <code>event_type</code> vytvorí šablóna v <code>notification_templates.py</code> text správy. Ten prechádza odosielaním a voliteľnou úpravou AI. Súvislosti vysvetľuje <ailink>stránka Asistent AI</ailink>."
+  },
+  "channels": {
+    "heading": "Nastavenie kanálov",
+    "intro": "Podporovaných je šesť kanálov: Telegram, Discord, Gotify, e-mail SMTP, Pushover a Apprise. Prvých päť má vlastné polia. Apprise pridáva približne 80 služieb cez URL, napríklad ntfy, Matrix, Slack, Teams, Pushbullet, AWS SNS a Mattermost. Postupy sú nižšie.",
+    "credsTitle": "Uloženie prihlasovacích údajov",
+    "credsBody": "Tokeny, kľúče, URL webhookov a heslá SMTP sú v miestnej databáze SQLite pod <code>/usr/local/share/proxmenux/</code>. Citlivé hodnoty sú chránené a v rozhraní maskované; odosielajú sa len príslušným službám. Záloha celého adresára umožní obnoviť kanály."
+  },
+  "telegram": {
+    "heading": "Telegram",
+    "intro": "Potrebujete <strong>token robota</strong>, použiteľný vo viacerých chatoch, a <strong>ID chatu</strong> pre súkromný chat, skupinu alebo tému superskupiny. Integrovaný návod opisuje nastavenie; tu sú aj oba formáty ID.",
+    "guideAlt": "Návod Telegram so štyrmi časťami: BotFather, token, ID chatu a skupiny alebo kanály",
+    "guideCaption": "Odkaz <em>+ návod na nastavenie</em> otvorí štyri kroky na vytvorenie robota a nastavenie kanála približne za dve minúty.",
+    "step1Title": "1 · Vytvorte robota cez BotFather",
+    "step1Items": [
+      "Otvorte Telegram a začnite četovať s <a>@BotFather</a> (s modrým overovacím začiarknutím – kópie sú bežné).",
+      "Pošlite <code>/newbot</code>.",
+      "Vyberte zobrazovaný názov (napr. <em>ProxMenux Lab</em>). Môže sa zmeniť neskôr.",
+      "Vyberte jedinečné meno na Telegrame končiace na <code>bot</code>, napríklad <em>proxmenux_lab_bot</em>.",
+      "BotFather vráti token v tvare <code>123456789:ABCdef…</code>. Je to token robota; chráňte ho ako heslo."
+    ],
+    "step2Title": "2 · Získajte ID rozhovoru",
+    "step2Intro": "ID chatu identifikuje <em>kde</em> robot prispieva. V závislosti od cieľa má jeden z dvoch tvarov.",
+    "privateLabel": "Súkromný chat (prijímate upozornenia na svoj vlastný účet):",
+    "privateItems": [
+      "Začnite chatovať so svojím novým robotom a pošlite akúkoľvek správu (napr. <code>/start</code>).",
+      "Otvorte chat s <a1>@userinfobot</a1> alebo <a2>@myidbot</a2> a pošlite <code>/start</code>. Kladné číselné ID používateľa v odpovedi je vaše ID súkromného chatu."
+    ],
+    "privateAlt": "Formulár Telegram s maskovaným tokenom, kladným ID súkromného chatu a prázdnym voliteľným ID témy",
+    "privateCaption": "Súkromný chat s robotom — ID chatu je vaše kladné používateľské ID.",
+    "groupLabel": "Skupina alebo superskupina s témami:",
+    "groupItems": [
+      "Pridajte robota do skupiny; ak to vyžadujú oprávnenia, nastavte ho ako správcu.",
+      "Pošlite správu do skupiny.",
+      "Otvorte <code>https://api.telegram.org/bot&lt;YOUR_TOKEN&gt;/getUpdates</code>. V odpovedi JSON nájdite <code>chat.id</code>: skupiny majú záporné ID, superskupiny začínajú na <code>-100</code>.",
+      "Pri superskupine so zapnutými <em>Témami</em> zadajte požadovaný <code>message_thread_id</code> do voliteľného poľa <em>ID témy</em>."
+    ],
+    "groupAlt": "Formulár Telegram s maskovaným tokenom, záporným ID superskupiny začínajúcim na -100 a ID témy 3",
+    "groupCaption": "Superskupina — ID začína na <code>-100…</code> a voliteľné <em>ID témy</em> vyberá konkrétne vlákno.",
+    "step3Title": "3 · Uložte a otestujte",
+    "step3Body": "Vložte token a ID chatu, uložte a vyberte <em>Odoslať test</em>. Správa má prísť do sekundy. Pri chybe História uvedie dôvod, napríklad neplatný token, chýbajúce členstvo v skupine alebo blokovanie používateľom."
+  },
+  "discord": {
+    "heading": "Discord",
+    "intro": "Discord prijíma správy cez <em>URL webhooku</em> priradenú ku kanálu. Monitor potrebuje túto URL.",
+    "items": [
+      "V Discord otvorte <em>Nastavenia servera → Integrácie → Webhooks</em>.",
+      "Kliknite na <em>Nový Webhook</em>. Pomenujte ho (napr. <em>ProxMenux</em>) a vyberte kanál, na ktorom má uverejňovať. Avatar je voliteľný.",
+      "Vyberte <em>Kopírovať URL webhooku</em>. Formát: <code>https://discord.com/api/webhooks/&lt;id&gt;/&lt;token&gt;</code>.",
+      "Vložte ju do poľa Webhook URL karty Discord v paneli upozornení a uložte."
+    ],
+    "imageAlt": "Formulár kanála Discord s Webhook URL poľom začínajúcim s https://discord.com/api/webhooks/",
+    "imageCaption": "Discord — vložte URL z <em>Nastavenia servera → Integrácie → Webhooks</em>."
+  },
+  "gotify": {
+    "heading": "Gotify",
+    "intro": "Gotify je push server na vlastnom hostiteľovi. Potrebujete jeho základnú URL a <em>token aplikácie</em> z administrácie.",
+    "items": [
+      "Ak Gotify ešte nemáte, použite <a>oficiálny inštalačný návod</a>.",
+      "Ako správca otvorte <em>Aplikácie</em> → <em>Vytvoriť aplikáciu</em>, zadajte názov ako <em>ProxMenux</em> a skopírujte token.",
+      "V Gotify nastavte <em>URL servera</em>, napríklad <code>https://gotify.example.com</code>, a vložte token aplikácie.",
+      "Uložte a stlačte <em>Odoslať test</em>."
+    ],
+    "imageAlt": "Formulár Gotify s URL https://gotify.example.com a vzorovou hodnotou tokenu A_valid_gotify_token",
+    "imageCaption": "Gotify — URL vlastnej inštancie a token aplikácie z administrácie."
+  },
+  "email": {
+    "heading": "E-mail (SMTP)",
+    "intro": "E-mail je najflexibilnejší kanál a ten s najviac polí. Potrebujete SMTP server, port, režim TLS, prípadne užívateľské meno a heslo, adresu odosielateľa a aspoň jedného príjemcu.",
+    "imageAlt": "Formulár SMTP: server, port, režim TLS, meno, heslo, odosielateľ, príjemcovia oddelení čiarkami a predpona predmetu",
+    "imageCaption": "E-mail: SMTP host / port / TLS režim, voliteľné užívateľské meno + heslo, adresa odosielateľa, čiarkovo oddeľovaní príjemcovia a predpona predmetu, aby sa upozornenia dali ľahko filtrovať do schránky.",
+    "appNote": "Monitor používa SMTP s heslom. Gmail môže vyžadovať <strong>heslo aplikácie</strong>. Pri Microsofte záleží na službe a pravidlách organizácie; heslo aplikácie neobíde zákaz základného overenia. Najprv overte podporu služby.",
+    "gmailTitle": "Heslo aplikácie Gmail",
+    "gmailIntro": "Heslá aplikácií Gmail vyžadujú zapnuté <strong>dvojstupňové overenie (2-Step Verification)</strong> v účte Google. Bez neho stránka <em>Heslá aplikácií</em> nebude dostupná.",
+    "gmailItems": [
+      "Otvorte <a>myaccount.google.com/security</a> a zapnite <em>2-Step Verification</em> ak ešte nie je zapnutý.",
+      "Otvorte <a>myaccount.google.com/apppasswords</a>.",
+      "Zadajte názov ako <em>ProxMenux</em> a vyberte <em>Vytvoriť</em>. Skopírujte 16-znakové heslo.",
+      "Nastavte <em>Server</em> <code>smtp.gmail.com</code>, <em>Port</em> <code>587</code>, <em>Režim TLS</em> <code>STARTTLS</code>, <em>Meno</em> vašu adresu Gmail a <em>Heslo</em> 16-znakové heslo aplikácie."
+    ],
+    "outlookTitle": "Microsoft / Outlook heslo aplikácie",
+    "outlookIntro": "Heslá aplikácií Microsoft vyžadujú <strong>dvojstupňové overenie</strong>, ale nezaručujú kompatibilitu SMTP. Pri požiadavke OAuth2 sa klient Monitora s heslom neprihlási. Použite SMTP relay podporujúci požadované overenie poskytovateľa.",
+    "outlookItems": [
+      "Otvorte <a>account.microsoft.com/security</a> a povoľte dvojstupňové overovanie.",
+      "Ak účet ponúka <em>Rozšírené možnosti zabezpečenia</em> → <em>Heslá aplikácií</em>, vyberte <em>Vytvoriť heslo aplikácie</em>. Samotná voľba nezaručuje podporu SMTP s heslom.",
+      "Ak Microsoft vytvorí heslo, skopírujte ho a overte jeho prijatie službou SMTP.",
+      "Len ak poskytovateľ dovoľuje SMTP s heslom, vyplňte jeho schválené hodnoty: <em>Server</em> <code>smtp.office365.com</code> pre Exchange Online, <em>Port</em> <code>587</code>, <em>Režim TLS</em> <code>STARTTLS</code>, <em>Používateľské meno</em> adresu vašej schránky a <em>Heslo</em> povolený prihlasovací údaj SMTP. Osobné Outlook.com má iné nastavenia a požiadavky na overenie; nepredpokladajte, že tieto údaje budú fungovať."
+    ],
+    "relayTitle": "SMTP relay na vlastnom serveri",
+    "relayBody": "Nasmerujte Monitor na vlastný SMTP relay, napríklad Postfix. Ten rieši overenie voči poskytovateľovi. Overenie a TLS Monitora nastavte podľa relaya; miestny relay automaticky nevypína šifrovanie."
+  },
+  "pushover": {
+    "heading": "Pushover",
+    "intro": "Pushover poskytuje push oznámenia pre iOS, Android aj počítačové prehliadače. Kanál ProxMenux používa priamo <a>API Pushover</a>, bez URL Apprise.",
+    "stepsTitle": "Nastavenie",
+    "steps": [
+      "Vytvorte <a>účet Pushover</a>, nainštalujte aplikáciu do prijímajúcich zariadení a prihláste sa.",
+      "Skopírujte <em>kľúč používateľa</em> z Pushover. Pre viac príjemcov môžete použiť kľúč skupiny.",
+      "Otvorte <a>Vytvoriť aplikáciu/token API</a>, vytvorte <em>ProxMenux</em> a skopírujte 30-znakový token API.",
+      "V <em>Nastavenia → Oznámenia → Pushover</em> vložte kľúč a token API. Zariadenie a zvuk sú voliteľné.",
+      "Uložte nastavenia a stlačte <em>Odoslať test</em>. Aplikácia Pushover by mala správu dostať okamžite."
+    ],
+    "priorityTitle": "Prioritné mapovanie",
+    "priorityBody": "Bežné správy majú prioritu 0. So zapnutou <strong>Vysokou prioritou kritických upozornení</strong> používa CRITICAL prioritu 1 a obíde tiché hodiny Pushover. Núdzová priorita 2 s opakovaním a potvrdením sa nepoužíva.",
+    "secretTitle": "Chrániť obe hodnoty",
+    "secretBody": "Kľúč používateľa/skupiny aj token API povoľujú doručenie. Monitor ich chráni a maskuje; nezverejňujte ani jeden na snímkach či v protokoloch podpory."
+  },
+  "apprise": {
+    "heading": "Apprise (generický uzol pre služby ~80)",
+    "intro": "Apprise podporuje približne 80 služieb cez URL: ntfy, Matrix, Slack, Microsoft Teams, Mattermost, Pushbullet, AWS SNS, Pushsafer, Rocket.Chat, Signal API a ďalšie. Monitor nemusí každú integrovať samostatne. Pushover možno tiež použiť cez Apprise, ale vlastná karta je jednoduchšia pre jeden cieľ.",
+    "listIntro": "Úplný zoznam podporovaných služieb a presný formát URL pre každú z nich je k dispozícii v oficiálnej dokumentácii Apprise:",
+    "listItems": [
+      "<a>Dokumentácia služieb Apprise</a> — úplný zoznam.",
+      "<a>Základy URL</a> — štruktúra URL Apprise."
+    ],
+    "stepsTitle": "Kroky",
+    "steps": [
+      "Vyberte cieľovú službu na <a>Apprise wiki</a> a skopírujte pre ňu šablónu URL. Každá stránka služby zobrazuje presnú schému, ktorá sa má použiť (<code>ntfy://</code>, <code>matrix://</code>, <code>pover://</code>, <code>slack://</code>…) plus všetky požadované tokeny, kanály alebo názvy hostiteľov.",
+      "Nahraďte zástupné hodnoty prihlasovacími údajmi. Príklady: ntfy.sh <code>ntfy://ntfy.sh/my-topic</code>, Pushover <code>pover://user@token</code>, Matrix <code>matrix://user:pass@host:port/#room</code>.",
+      "Prilepte cieľovú webovú adresu do poľa <em>Apprise URL</em> na karte Apprise na paneli Upozornenia a uložte.",
+      "Vyberte <em>Odoslať test</em> na overenie dostupnosti a prihlasovacích údajov."
+    ],
+    "deliveredTitle": "Čo dostane doručené",
+    "deliveredBody": "Apprise dostane názov, text a závažnosť prispôsobenú možnostiam služby, ako ikona, priorita či farba. Formátovanie a AI sa vykonajú pred odoslaním, rovnako ako pri Telegrame či e-maile.",
+    "fanoutTitle": "Jedno URL na kanál Apprise",
+    "fanoutBody": "Jeden kanál Apprise má jednu URL. Pre viac služieb, napríklad ntfy.sh a Matrix, použite <a>server Apprise API</a> s označenou konfiguráciou. Rozosiela volanie Monitora na všetky URL danej značky."
+  },
+  "rich": {
+    "heading": "Rozšírené správy, kategórie a filtre kanálov",
+    "intro": "Každý kanál má <em>Rozšírené správy</em>, jedenásť rozbaľovacích <em>Kategórií oznámení</em> s prepínačmi udalostí a tlačidlo <em>Odoslať test</em>.",
+    "imageAlt": "Panel kategórií s rozšírenými správami, skupinami VM/CT, záloh, zdrojov, úložiska, siete, bezpečnosti, klastra, služieb, zdravia a aktualizácií, počtami a tlačidlom testu",
+    "imageCaption": "Šípka označuje <em>Rozšírené správy</em>. Pod nimi je jedenásť kategórií s udalosťami; <em>Odoslať test</em> je dole.",
+    "richTitle": "Rozšírené správy",
+    "richIntro": "So zapnutými <em>Rozšírenými správami</em> sa pridá ikona kategórie a formát kanála, napríklad HTML Telegram alebo farebné karty Discord. Pri vypnutí príde rovnaký obsah ako obyčajný text:",
+    "plainHeader": "Obyčajný text — rozšírené správy vypnuté",
+    "richHeader": "Formátovaný text — rozšírené správy zapnuté",
+    "richOutro": "Každý kanál má vlastnú voľbu. E-mail môže zostať obyčajný, Telegram a Discord formátované. Kanály bez príslušného formátu, ako textový e-mail či Gotify, dostanú text.",
+    "togglesTitle": "Kategórie udalostí",
+    "togglesIntro": "Každý kanál nezávisle ovláda kategórie a udalosti. Vypnutá kategória potlačí svoje udalosti v danom kanáli. Jednotlivé prepínače platia v zapnutých kategóriách; globálny hlavný filter udalostí v odosielači nie je.",
+    "togglesItems": [
+      "<strong>Kategória podľa kanála.</strong> Vypnutie VM/CT potlačí <code>vm_start</code> a podobné udalosti. Ukladá sa ako <code>&lt;channel&gt;.events.&lt;group&gt;</code>.",
+      "<strong>Udalosť podľa kanála.</strong> V zapnutej kategórii možno <em>posielať <code>backup_complete</code> do Discord, nie do Telegram</em>. Ukladá sa ako <code>&lt;channel&gt;.event.&lt;event_type&gt;</code>."
+    ],
+    "togglesOutro": "Kategória ukazuje počet <em>zapnutých</em> / <em>všetkých</em> udalostí a prepínač celej skupiny, napríklad záloh <code>info</code> či aktualizácií, bez rozbalenia."
+  },
+  "quiet": {
+    "heading": "Tiché hodiny",
+    "intro": "Počas tichých hodín kanála prejdú iba udalosti <strong>CRITICAL</strong>. INFO, WARNING a akcie sa uložia na disk a po skončení prídu v súhrne.",
+    "imageAlt": "Nastavenia kanála: tiché hodiny 22:00–07:00 s náhľadom zmeny a denný súhrn o 09:00 s poznámkou, že tento súhrn nezdrží CRITICAL ani WARNING",
+    "imageCaption": "Dve nezávislé nastavenia kanála: tiché hodiny hore a denný súhrn pod nimi.",
+    "purposeTitle": "Načo to je?",
+    "purposeItems": [
+      "<strong>Nezobudiť ma o 03:00 kvôli upozorneniu na aktualizáciu.</strong> Zálohy, aktualizácie aplikácií, optimalizácie po inštalácii a ďalšie udalosti na úrovni INFO prestanú v noci pingovať váš telefón.",
+      "<strong>Kritické udalosti stále prídu.</strong> Tiché hodiny obídu iba udalosti CRITICAL. Samotný názov nestačí: sledovanie denníka vydáva blokovania Fail2Ban aj vypnutie/reštart hostiteľa ako INFO, takže sa môžu zadržať.",
+      "<strong>Odložené správy sa zachovajú.</strong> Čakajú v SQLite až do konca intervalu."
+    ],
+    "howTitle": "Ako to funguje",
+    "howItems": [
+      "<strong>Voľba podľa kanála.</strong> Telegram môže mlčať od 22:00 do 07:00, zatiaľ čo e-mail dostáva všetko nepretržite.",
+      "<strong>Začiatok a koniec</strong> v miestnom čase: začiatok sa započítava, koniec nie. Interval môže prejsť cez polnoc, napríklad 22:00–07:00.",
+      "<strong>Živý náhľad.</strong> Pod poľami je aktuálny stav intervalu a čas ďalšej zmeny.",
+      "<strong>Počas intervalu:</strong> CRITICAL sa odosiela normálne. INFO a WARNING čakajú v tabuľke SQLite <code>quiet_pending</code>.",
+      "<strong>Po skončení:</strong> príde chronologický súhrn s riadkom pre každú udalosť. Vyrovnávacia pamäť sa vyprázdni až po potvrdení doručenia, aby odolala dočasným výpadkom Telegram či SMTP.",
+      "<strong>Prežije reštart.</strong> Údaje zostanú na disku. Nasledujúci cyklus rozpozná čakajúce riadky a podľa potreby odošle obnovovací súhrn."
+    ],
+    "criticalTitle": "Čo je CRITICAL",
+    "criticalBody": "Závažnosť určuje zdroj pri vytvorení udalosti. Disk, vypnutie či bezpečnosť automaticky neznamenajú CRITICAL. Sledovanie denníka vydáva ip_block, system_shutdown a system_reboot ako INFO. <link>Katalóg udalostí</link> uvádza typy; skutočnú závažnosť overte v zdroji a prijatej udalosti."
+  },
+  "digest": {
+    "heading": "Denný súhrn informačných udalostí",
+    "intro1": "Denný súhrn je <strong>voliteľný</strong>. Vhodné INFO, napríklad dostupné aktualizácie, združuje o 09:00 alebo v zvolenom čase. Výsledky záloh a replikácie či priame akcie sú vyňaté. Tiché hodiny naopak zadržia nekritické správy počas intervalu.",
+    "intro2": "Voľba je pod tichými hodinami na rovnakej karte; pozrite <link>Tiché hodiny</link>. Zapínajú sa samostatne.",
+    "purposeTitle": "Načo to je?",
+    "purposeItems": [
+      "<strong>Ranný prehľad.</strong> Súhrn o 09:00 nahradí napríklad 20 jednotlivých správ z predošlého dňa bez čítania 20 bublín Telegramu.",
+      "<strong>Rozlíšenie aktivity a naliehavosti.</strong> INFO opisuje dianie; CRITICAL a WARNING signalizujú potrebu zásahu. Vhodné INFO sa zoskupia, ostatné si zachovajú priame doručovanie."
+    ],
+    "howTitle": "Ako to funguje",
+    "howItems": [
+      "<strong>Zapnutie pre každý kanál.</strong> Predvolene vypnuté. Zapnite iba tam, kde chcete súhrn; ostatné kanály nechajte priame.",
+      "<strong>Čas doručenia</strong> v miestnom čase, predvolene 09:00. Odosielač ho spustí približne do 60 s od danej minúty.",
+      "<strong>Obsah súhrnu:</strong> vhodné všeobecné udalosti so závažnosťou <strong>INFO</strong>. Napríklad <em>dostupná aktualizácia aplikácie</em>, <em>dostupná aktualizácia Tailscale</em>, <em>dostupná aktualizácia optimalizácie ProxMenux</em> a <em>čakajúce bezpečnostné aktualizácie APT</em>. Výsledky záloh a ďalšie vyňaté udalosti akcií zostanú priame.",
+      "<strong>Čo sa nikdy neodkladá:</strong>",
+      "<strong>Trvalé uloženie.</strong> Udalosti čakajú v tabuľke SQLite <code>digest_pending</code> do nastaveného času a prežijú reštart.",
+      "<strong>Bez udalostí nie je súhrn.</strong> Ak nečakajú INFO, prázdna správa sa neposiela."
+    ],
+    "neverDelayedSub": [
+      "Udalosti <strong>CRITICAL</strong> prechádzajú bez zdržania denným súhrnom.",
+      "Udalosti <strong>WARNING</strong> prechádzajú bez zdržania denným súhrnom.",
+      "Akcie a zlyhania VM/CT, začiatok a výsledky záloh, výsledky replikácie a vypnutie/reštart hostiteľa obídu denný súhrn aj pri INFO. Tiché hodiny môžu nekritické udalosti stále zdržať."
+    ],
+    "comboTitle": "Kombinovanie tichých hodín a denného súhrnu",
+    "comboBody": "Kanál môže mať <em>obe</em> voľby: ticho 22:00–07:00 a súhrn o 09:00. Nekritické udalosti intervalu prídu o 07:00; vhodné INFO mimo intervalu idú do denného súhrnu. CRITICAL obíde oboje; WARNING obíde denný súhrn, nie tiché hodiny. Vyberte <em>čas ticha</em>, <em>súhrn v pevnom čase</em> alebo oboje."
+  },
+  "displayName": {
+    "heading": "Zobrazovaný názov",
+    "intro": "Každé oznámenie nesie <em>Zobrazovaný názov</em> — označenie, ktoré identifikuje, ktorý hostiteľ vytvoril výstrahu. Je to hodnota, ktorú vidíte v spodnej časti vyššie uvedeného príkladu multimediálnych správ (<code>🏠 home-lab</code>) a vo vnútri predpony predmetu e-mailu.",
+    "imageAlt": "Pole zobrazovaného názvu s príkladom amd; prázdne pole použije systémový názov hostiteľa",
+    "imageCaption": "Pole Zobrazovaný názov – nechajte prázdne, ak chcete použiť názov hostiteľa systému, alebo ho prepíšte čímkoľvek, čo chcete.",
+    "outro": "Prázdne pole používa názov systému. Vlastný názov pomáha pri viacerých hostiteľoch v rovnakom chate či schránke: <em>home-lab</em> a <em>office-pve</em> sa čítajú ľahšie než <code>pve01.lan</code> či <code>pmx-prod-01</code>."
+  },
+  "dispatch": {
+    "heading": "Postup odosielania",
+    "intro": "Tabuľka opisuje tri súvisiace mechanizmy. Skutočné poradie je zoskupovanie, rezervácia doručenia a interval opakovania, limity skupín, vytvorenie textu a riadenie kanálov:",
+    "headerStage": "Štádium",
+    "headerWhat": "Čo to robí?",
+    "headerTunable": "Nastaviteľné?",
+    "rows": [
+      {
+        "stage": "Deduplikácia podľa odtlačku",
+        "what": "Pre udalosť sa vypočíta odtlačok (<code>event_type + key fields from data</code>). Rovnaké odtlačky v krátkom intervale sa považujú za duplikáty.",
+        "tunable": "Nie — interná logika odosielača."
+      },
+      {
+        "stage": "Interval opakovania",
+        "what": "Po úspešnom odoslaní sa opakované odtlačky potlačia; stav je v <code>notification_last_sent</code>. Základ pre <code>CRITICAL</code>, <code>WARNING</code>, <code>INFO</code>, <code>resources</code> a <code>updates</code> je 86400 s. Výnimky: 5 s pre akcie VM/CT a vypnutie/reštart, 10 s pre výsledky záloh/replikácie, 1800–3600 s pre viaceré zdravotné stavy. Výslovné nastavenia udalosti/skupiny majú prednosť.",
+        "tunable": "Len cez API nastavení — kľúč <code>cooldown.&lt;event_type&gt;</code> alebo <code>cooldown.&lt;group&gt;</code> prepíše predvolené hodnoty; v rozhraní na to nie je žiadny ovládací prvok."
+      },
+      {
+        "stage": "Zoskupovanie nárazových udalostí",
+        "what": "Viac rovnakých udalostí v krátkom čase, napríklad útok na SSH, vytvorí správu <code>burst_*</code> s počtom a ukážkou.",
+        "tunable": "Nie — okno a prah sú pevné pre každý typ udalosti."
+      }
+    ],
+    "calloutTitle": "Odosielanie vo vlákne na pozadí",
+    "calloutBody": "Slučka odoslania beží vo vlastnom vlákne. Požiadavka HTTP, ktorá vysiela udalosť, sa vráti hneď, ako je udalosť zaradená do frontu – nečaká na Telegram, SMTP alebo webhook RTT. Každý výsledok odoslania sa zaznamená do tabuľky histórie na spätnú kontrolu."
+  },
+  "aiRewrite": {
+    "heading": "Nepovinné prepísanie AI",
+    "body1": "Vhodné udalosti môže prepísať LLM. backup_complete a backup_fail sa neprepisujú. AI je predvolene vypnutá a beží v odosielacom vlákne. Pri chybe alebo časovom limite sa použije pôvodný text.",
+    "body2": "Podporuje OpenAI, Anthropic, Google Gemini, Groq, OpenRouter a miestne Ollama. Pre kanál: podrobnosť (<code>brief</code>, <code>standard</code>, <code>detailed</code>), jazyk, režim pokynov (<code>default</code> alebo <code>custom</code>) a vlastné pokyny. Návod a príklady sú v <link>Asistent AI</link>.",
+    "privacyTitle": "Poznámka o ochrane osobných údajov",
+    "privacyBody": "Požiadavka AI môže obsahovať názov, závažnosť, text, systémové/vlastné pokyny a kontext s názvami hostiteľov, IP, používateľmi, chybami a denníkmi. Posiela sa zvolenému serveru. Ollama zostáva miestne len s miestnym serverom aj modelom; vzdialený server alebo cloudový model odosiela údaje mimo hostiteľa. Ak musia zostať v sieti, vypnite AI alebo použite riadený miestny server a model."
+  },
+  "pveWebhook": {
+    "heading": "Integrácia PVE webhook",
+    "intro1": "Proxmox používa <em>ciele oznámení</em> sendmail, Gotify, SMTP a pri podporovaných verziách webhook. Monitor zaregistruje cieľ <code>webhook</code>. Oznámenia HA, replikácie a záloh z rozhrania potom vstupujú do rovnakého spracovania.",
+    "intro2": "Cieľ nájdete v <em>Datacenter → Oznámenia → Ciele oznámení</em>.",
+    "imageAlt": "Dialóg webhooku Proxmox s cieľom proxmenux-webhook, POST na http://127.0.0.1:8008/api/notifications/webhook a JSON šablónou s funkciami escape pre title, message, severity, timestamp a poľami json",
+    "imageCaption": "Webhook z pohľadu PVE; rozhranie snímky je v španielčine. Rovnaké polia platia v každom jazyku.",
+    "registeredIntro": "Čo sa zaregistruje:",
+    "registeredItems": [
+      "<strong>Metóda a URL.</strong> <code>POST http://127.0.0.1:8008/api/notifications/webhook</code> bez HTTPS Monitora; s HTTPS samostatný miestny HTTP port 8009. Obe zostávajú na hostiteľovi.",
+      "<strong>Šablóna správy.</strong> JSON s funkciami Handlebars PVE, uložený v konfigurácii ako base64. Po dekódovaní:",
+      "<strong>Pravidlo priradenia.</strong> Blok <code>matcher: proxmenux-matcher</code> s <code>mode all</code> posiela všetky oznámenia PVE do cieľa.",
+      "<strong>Súkromná konfigurácia.</strong> Nastavenie zapíše zodpovedajúci blok <code>webhook: proxmenux-webhook</code> do <code>/etc/pve/priv/notifications.cfg</code> s položkou <code>secret</code> s názvom X-Webhook-Secret, zakódovanou v base64. Verejný blok cieľa obsahuje iba šablónu tela, metódu a URL. Súkromný blok nie je prázdny zástupný záznam."
+    ],
+    "securityTitle": "Ako je prijímač zabezpečený",
+    "securityIntro": "Prijímač webhook na <code>POST /api/notifications/webhook</code> používa rôzne bezpečnostné vrstvy v závislosti od toho, odkiaľ pochádza žiadosť:",
+    "securityItems": [
+      "<strong>Miestne zdroje (<code>127.0.0.1</code> / <code>::1</code>).</strong> Platí limit požiadaviek, no preskočia sa vzdialené kontroly tajomstva, času a opakovania. Aj adresy miestnych rozhraní hostiteľa sú miestne. Automatický cieľ PVE používa loopback.",
+      "<strong>Vzdialené volania.</strong> Okrem limitu sa overí tajomstvo v <code>X-Webhook-Secret</code>, čas v <code>X-ProxMenux-Timestamp</code> alebo JSON, opakovanie a voliteľný zoznam IP. Tajomstvo je v SQLite aj ako kópia base64 v <code>/etc/pve/priv/notifications.cfg</code>, aby PVE odoslal hlavičku."
+    ],
+    "practiceTitle": "V praxi",
+    "practiceBody": "PVE používa <code>http://127.0.0.1:8008</code> bez HTTPS, inak HTTP 8009. Vzdialené integrácie na <code>https://&lt;monitor-host&gt;:&lt;port&gt;/api/notifications/webhook</code> musia poslať <code>X-Webhook-Secret</code>, aktuálny čas a splniť kontroly opakovania a IP. Tajomstvo samo nestačí.",
+    "actionsIntro": "Monitor riadi tento cieľ prostredníctvom troch akcií na karte Nastavenie:",
+    "actionsItems": [
+      "<strong>Nastaviť</strong> pri zapnutí vytvorí položku v <code>/etc/pve/notifications.cfg</code>. Zapisujú sa iba zmeny; tri najnovšie zálohy sú v <code>/usr/local/share/proxmenux/backups/pve-notifications/</code>. Bez pripojeného <code>/etc/pve</code> sa nezapisuje; čaká sa na návrat <code>pve-cluster</code>.",
+      "<strong>Vyčistiť</strong> odstráni položku a ponechá predchádzajúcu zálohu.",
+      "<strong>Čítať konfiguráciu</strong> zobrazí ciele a pravidlá, aby ste overili viac oznamovacích trás PVE."
+    ],
+    "clusterTitle": "Uzly klastra",
+    "clusterBody": "<code>/etc/pve/</code> vrátane URL a tajomstva je zdieľaný v klastri. Každý uzol volá svoj <em>vlastný</em> prijímač: <code>127.0.0.1:8008</code> bez HTTPS, inak HTTP 8009. Spustite Monitor na každom potrebnom uzle a zlaďte spoločný cieľ so všetkými prijímačmi."
+  },
+  "catalogue": {
+    "heading": "Katalóg udalostí",
+    "intro": "Približne sedemdesiat typov je v jedenástich kategóriách. Každá rozbaľovacia skupina ponúka prepínače udalostí. Predvolene sú zapnuté, pokiaľ nie je uvedené inak.",
+    "headerGroup": "Skupina",
+    "headerEvents": "Udalosti",
+    "rows": [
+      {
+        "group": "VM / CT",
+        "events": "<code>vm_start</code>, <code>vm_start_warning</code>, <code>vm_stop</code>, <code>vm_shutdown</code>, <code>vm_fail</code>, <code>vm_restart</code>, plus ekvivalenty <code>ct_*</code>, <code>migration_start</code>, <code>migration_complete</code>, <code>migration_warning</code>, <code>migration_fail</code>, <code>replication_complete</code>, <code>replication_fail</code>."
+      },
+      {
+        "group": "Zálohy",
+        "events": "<code>backup_start</code>, <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>snapshot_complete</code>, <code>snapshot_fail</code>."
+      },
+      {
+        "group": "Zdroje",
+        "events": "<code>cpu_high</code>, <code>ram_high</code>, <code>temp_high</code>, <code>load_high</code>."
+      },
+      {
+        "group": "Úložisko",
+        "events": "<code>disk_space_low</code>, <code>disk_io_error</code>, <code>storage_unavailable</code>, <code>smart_test_complete</code>, <code>smart_test_failed</code>."
+      },
+      {
+        "group": "Sieť",
+        "events": "<code>network_down</code>, <code>network_latency</code>."
+      },
+      {
+        "group": "Zabezpečenie",
+        "events": "<code>auth_fail</code>, <code>ip_block</code>, <code>firewall_issue</code>, <code>user_permission_change</code>."
+      },
+      {
+        "group": "Klaster",
+        "events": "<code>split_brain</code>, <code>node_disconnect</code>, <code>node_reconnect</code>."
+      },
+      {
+        "group": "Služby",
+        "events": "<code>system_startup</code>, <code>system_shutdown</code>, <code>system_reboot</code>, <code>system_problem</code>, <code>service_fail</code>, <code>oom_kill</code>, <code>system_mail</code>."
+      },
+      {
+        "group": "Monitor zdravia",
+        "events": "<code>new_error</code>, <code>error_resolved</code>, <code>error_escalated</code>, <code>health_degraded</code>, <code>health_persistent</code>, <code>health_issue_new</code>, <code>health_issue_resolved</code>."
+      },
+      {
+        "group": "Aktualizácie",
+        "events": "<code>update_summary</code>, <code>update_available</code>, <code>pve_update</code>, <code>update_complete</code>, <code>proxmenux_update</code>."
+      },
+      {
+        "group": "Hardvér / GPU",
+        "events": "<code>gpu_mode_switch</code>, <code>gpu_passthrough_blocked</code>, <code>pci_passthrough_conflict</code>, <code>ai_model_migrated</code>."
+      }
+    ],
+    "burstNote": "Typy <code>burst_*</code> (<code>burst_auth_fail</code>, <code>burst_ip_block</code>, <code>burst_disk_io</code>, atď.) nahrádzajú nárazové udalosti súhrnom. Nemajú vlastné prepínače v rozhraní a dedia stav zdrojovej udalosti.",
+    "backupResults": {
+      "heading": "Výsledky zálohy",
+      "intro": "Oznámenie o úlohe zálohovania Proxmox uvádza, ako sa úloha skončila. Výsledok sa prečíta zo správy, ktorú Proxmox odošle, a nastaví názov, ikonu zobrazenú so zapnutými <em>Rozšírenými správami</em> a stavový riadok e-mailu.",
+      "headerIcon": "Icon",
+      "headerResult": "Výsledok",
+      "headerWhen": "Kedy",
+      "rows": [
+        {
+          "icon": "💾✅",
+          "result": "Záloha bola dokončená",
+          "when": "Zálohovanie všetkých hostí v úlohe sa dokončilo a hlásenie neobsahuje upozornenia."
+        },
+        {
+          "icon": "💾⚠️",
+          "result": "Záloha skončila s upozorneniami",
+          "when": "Zálohovanie všetkých hostí sa dokončilo a hlásenie obsahuje aspoň jeden riadok s upozornením."
+        },
+        {
+          "icon": "💾❌",
+          "result": "Hlásená chyba zálohy",
+          "when": "Hosť zlyhal alebo úloha skončila chybou."
+        },
+        {
+          "icon": "💾❔",
+          "result": "Výsledok zálohy nepotvrdený",
+          "when": "Správa je neúplná alebo neuvádza výsledok pre každého hosťa."
+        }
+      ],
+      "items": [
+        "<strong>Názov identifikuje úlohu.</strong> Uvádza úložisko a pri jednom hosťovi aj jeho typ, meno a ID. Pri zlyhaní pomenuje dotknutého hosťa.",
+        "<strong>Text uvádza každého hosťa</strong> s výsledkom, veľkosťou, trvaním a archívom, potom súčty úlohy.",
+        "<strong>Varovania a chyby sa neopakujú.</strong> Duplicitné riadky sú uvedené raz, hlavná príčina prvá. Zobrazí sa najviac osem; ostatné sú spočítané na konci a zostanú v denníku úlohy Proxmox.",
+        "<strong>Úloha zlyhaná pred prvým hosťom</strong> uvedie príčinu od Proxmoxu, napríklad neexistujúce úložisko.",
+        "<strong>Súhrny zachovajú výsledok.</strong> Záloha v súhrne tichých hodín si ponechá ikonu výsledku. Výsledky záloh obchádzajú denný súhrn."
+      ]
+    }
+  },
+  "history": {
+    "heading": "História",
+    "body1": "Každý skutočný <em>pokus o odoslanie</em> je v <code>notification_history</code>: čas <code>sent_at</code>, kanál, typ, závažnosť, názov, text, <code>success</code> a pri chybe <code>error_message</code>. Zoskupenia majú typ <code>burst_*</code>. Udalosti potlačené intervalom sa nezapisujú.",
+    "body2": "Nastavenia → Oznámenia obsahuje predvolene zatvorenú <em>Históriu oznámení</em> s poslednými 20 položkami: výsledok, kanál, dátum, chyba a stav denného súhrnu. Stránka neponúka vymazanie; Audit & Report číta rovnaké údaje doručenia.",
+    "body3": "Rovnaké údaje sú vystavené na <code>GET /api/notifications/history</code> s voliteľnými parametrami dotazu <code>limit</code>, <code>offset</code>, <code>severity</code> a <code>channel</code>, a môžu byť vymazané <code>DELETE /api/notifications/history</code>."
+  },
+  "api": {
+    "heading": "Koncové body API",
+    "headerEndpoint": "Koncový bod",
+    "headerMethod": "Metóda",
+    "headerUse": "Použitie",
+    "rows": [
+      {
+        "endpoint": "/api/notifications/settings",
+        "method": "GET / POST",
+        "use": "Číta alebo zapisuje nastavenia kanálov, udalostí, AI a zobrazovaného názvu."
+      },
+      {
+        "endpoint": "/api/notifications/test",
+        "method": "POST",
+        "use": "Pošlite oznámenie o teste na jeden kanál: <code>'{'\"channel\":\"telegram\"'}'</code>."
+      },
+      {
+        "endpoint": "/api/notifications/test-ai",
+        "method": "POST",
+        "use": "Vytvorí a prepíše ukážkovú udalosť bez odoslania."
+      },
+      {
+        "endpoint": "/api/notifications/provider-models",
+        "method": "POST",
+        "use": "Zoznam dostupných modelov pre vybraného poskytovateľa AI."
+      },
+      {
+        "endpoint": "/api/notifications/send",
+        "method": "POST",
+        "use": "Vytvorí udalosť z externej integrácie."
+      },
+      {
+        "endpoint": "/api/notifications/history",
+        "method": "GET / DELETE",
+        "use": "Číta filtrovanú históriu alebo ju vymaže."
+      },
+      {
+        "endpoint": "/api/notifications/webhook",
+        "method": "POST",
+        "use": "Prijíma oznámenia Proxmox. Miestne zdroje preskočia vzdialené overenie, nie limit. Vzdialené požiadavky sa overia cez <code>X-Webhook-Secret</code>, čas v <code>X-ProxMenux-Timestamp</code> alebo JSON, kontrolu opakovania a nastavený zoznam IP."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/setup-webhook",
+        "method": "POST",
+        "use": "Zaregistrujte monitor ako cieľ v <code>/etc/pve/notifications.cfg</code>."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/cleanup-webhook",
+        "method": "POST",
+        "use": "Odstráni cieľ Monitora z nastavení oznámení PVE."
+      },
+      {
+        "endpoint": "/api/notifications/proxmox/read-cfg",
+        "method": "GET",
+        "use": "Zobrazí aktuálnu konfiguráciu oznámení PVE."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "AI asistent",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": " — poskytovatelia, modely, režimy pokynov, jazyky a podrobnosti podľa kanála."
+      },
+      {
+        "label": "Monitor zdravia",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — hlavný samostatný zdroj udalostí s vlastnými intervalmi potlačenia kategórií."
+      },
+      {
+        "label": "Architektúra",
+        "href": "/docs/monitor/architecture",
+        "tailRich": " — miesto tabuliek SQLite <code>notification_last_sent</code>, <code>notification_history</code> a odosielacieho vlákna v procese Monitora."
+      },
+      {
+        "label": "Prístup a overenie",
+        "href": "/docs/monitor/access-auth",
+        "tailRich": " — vydávanie tokenov API pre skripty volajúce <code>/api/notifications/send</code>."
+      },
+      {
+        "label": "Dashboard → Systémové denníky",
+        "href": "/docs/monitor/dashboard/system-logs",
+        "tail": " — živý pohľad na systémový denník, ktorý používa jeho sledovanie."
+      }
+    ]
+  }
+}

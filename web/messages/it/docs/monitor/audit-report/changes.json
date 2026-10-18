@@ -1,0 +1,208 @@
+{
+  "meta": {
+    "title": "Modifiche | Audit e report",
+    "description": "Registro delle modifiche di Audit e report: interventi di ProxMenux sull'host, stato precedente, differenze e possibilità di annullamento."
+  },
+  "header": {
+    "title": "Modifiche",
+    "description": "Registro delle operazioni eseguite da ProxMenux sull'host e, quando acquisito, dello stato prima e dopo ogni operazione.",
+    "section": "Audit e report"
+  },
+  "sections": [
+    {
+      "id": "purpose",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Dallo script eseguito alla modifica effettuata",
+            "body": "Una funzione lunga può modificare solo due righe. Il registro conserva ogni operazione concreta con script, funzione e versione responsabili, risorsa interessata, differenze e possibilità di annullamento."
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Script",
+                "detail": "funzione + versione"
+              },
+              {
+                "label": "Acquisizione",
+                "detail": "contenuto prima"
+              },
+              {
+                "label": "Operazione",
+                "detail": "file · pacchetto · servizio"
+              },
+              {
+                "label": "Registro",
+                "detail": "attribuzione + differenza"
+              }
+            ],
+            "caption": "L'acquisizione avviene durante l'operazione e viene consolidata quando Monitor legge il registro."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/changes-view.png",
+            "alt": "Vista Modifiche di Audit e report con voci raggruppate per opzione post-installazione e script",
+            "caption": "La vista Modifiche con le differenze di un file modificato da ProxMenux."
+          }
+        }
+      ]
+    },
+    {
+      "id": "types",
+      "title": "Tipi di voce",
+      "intro": "Il filtro in alto separa le voci per genere.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Tipo",
+              "Cosa registra"
+            ],
+            "rows": [
+              [
+                "Configurazione",
+                "ProxMenux ha scritto, modificato o rimosso un file, ha cambiato un'impostazione o modificato un servizio."
+              ],
+              [
+                "Installazioni",
+                "ProxMenux ha aggiunto un pacchetto o un componente, e i pacchetti che sono effettivamente apparsi sono registrati."
+              ],
+              [
+                "Esecuzioni",
+                "ProxMenux ha eseguito un comando; le modifiche dipendono dal comando stesso."
+              ],
+              [
+                "Applicato",
+                "Una funzione è stata applicata prima che esistesse il registro; lo stato precedente non è stato acquisito."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "groups",
+      "title": "Come è organizzata la vista",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Sezione",
+              "Contenuto"
+            ],
+            "rows": [
+              [
+                "Ottimizzazioni post-installazione",
+                "Gruppo dell'opzione post-installazione selezionata dall'utente."
+              ],
+              [
+                "Script ProxMenux",
+                "GPU, Coral, rete, archiviazione, sicurezza, utilità e altri script con strumentazione di audit, inclusi il programma di installazione di ProxMenux e ProxMenux Monitor."
+              ],
+              [
+                "Pacchetti e utilità installati",
+                "Software installato da ProxMenux sull'host."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "All'interno di ogni sezione, <strong>Per funzione</strong> raggruppa le voci sotto la funzione che li ha fatti."
+        }
+      ]
+    },
+    {
+      "id": "entry",
+      "title": "Cosa mostra ogni voce",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Lo script, la funzione e la versione responsabile.",
+              "La data e la risorsa interessata.",
+              "Lo stato conosciuto prima e dopo il cambiamento.",
+              "Le linee aggiunte e rimosse.",
+              "I pacchetti che sono stati effettivamente aggiunti.",
+              "Il cambiamento di stato di un servizio.",
+              "<strong>Annullamento</strong>: <em>Ripristina esattamente lo stato precedente</em>, <em>Elimina il file (prima non esisteva)</em>, <em>Il pacchetto può essere disinstallato</em>, un annullamento parziale oppure <em>Non annullabile dal registro</em>."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "before",
+      "title": "Cosa significa lo stato precedente",
+      "blocks": [
+        {
+          "p": "Lo stato precedente può essere contenuto acquisito, un file creato per la prima volta o uno stato sconosciuto. Le modifiche precedenti al registro non possono essere ricostruite; eseguendo nuovamente la funzione viene acquisito prima lo stato trovato in quel momento."
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Ambito del registro",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Le modifiche manuali e le modifiche apportate da altri software non sono registrate.",
+              "Solo le operazioni che attraversano i primitivi di audit ProxMenux sono coperte.",
+              "La registrazione non blocca mai l'operazione che descrive: se l'entrata non può essere scritta, l'operazione continua.",
+              "Le modifiche successive alla stessa risorsa sono mostrate confrontando lo stato iniziale noto con quello attuale."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "retention",
+      "title": "Prove memorizzate",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Elemento",
+              "Comportamento"
+            ],
+            "rows": [
+              [
+                "Voci",
+                "Le voci sono conservate sull'host; nulla viene eliminato automaticamente dal registro."
+              ],
+              [
+                "Contenuto catturato",
+                "Un oggetto catturato viene mantenuto mentre una voce si riferisce ad esso."
+              ],
+              [
+                "Dimensione di una cattura",
+                "I contenuti sopra 1 MiB non sono memorizzati in tutto; la voce riporta che la cattura è stata ignorata a causa della sua dimensione."
+              ],
+              [
+                "Lettura",
+                "Il Monitor non carica oggetti memorizzati sopra 2 MiB."
+              ],
+              [
+                "Differenza",
+                "Vengono mostrate al massimo 400 righe; le differenze più lunghe sono contrassegnate come troncate."
+              ],
+              [
+                "Elenco",
+                "L'API restituisce 200 voci per richiesta per impostazione predefinita, fino a un massimo di 1000."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Conservare il contenuto non significa annullare automaticamente",
+            "body": "Il contenuto precedente può essere ispezionato e ripristinato manualmente, ma la vista Modifiche non annulla le operazioni. Una voce di esecuzione registra il comando senza conoscere tutti gli effetti dello strumento eseguito."
+          }
+        }
+      ]
+    }
+  ]
+}

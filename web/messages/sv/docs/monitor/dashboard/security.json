@@ -1,0 +1,246 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Översikt: fliken Säkerhet | ProxMenux-dokumentation",
+    "description": "Fliken Säkerhet samlar skyddsfunktionerna i två kolumner: ProxMenux Monitor (autentisering, SSL/HTTPS, API-token, Secure Gateway) och Proxmox VE (brandvägg, Fail2Ban, Lynis-granskning). Med stegvisa anvisningar för Secure Gateway, Lynis-granskning samt installation och regelinställningar för Fail2Ban."
+  },
+  "header": {
+    "title": "Översikt: fliken Säkerhet",
+    "description": "Säkerhetsfunktionerna är uppdelade i två block: inställningar för Monitor (autentisering, SSL, token, Secure Gateway) och för den övervakade Proxmox-värden (brandvägg, Fail2Ban, Lynis).",
+    "section": "ProxMenux Monitor · Översikt"
+  },
+  "intro": {
+    "title": "Två områden, en flik",
+    "body": "Fliken Säkerhet har två avsnitt: <strong>ProxMenux Monitor</strong> (översiktens inställningar) och <strong>Proxmox VE</strong> (värdens inställningar). Korten för Fail2Ban och Lynis erbjuder installation när verktygen saknas och visar sedan deras kontroller när de är installerade."
+  },
+  "monitor": {
+    "heading": "ProxMenux Monitor",
+    "intro": "Fyra kort styr åtkomsten till översikten och autentiseringen."
+  },
+  "auth": {
+    "heading": "Autentisering",
+    "imageAlt": "Autentiseringskort med status Aktiverad, knapparna Logga ut och Ändra lösenord, information om tvåfaktorsautentisering samt knappar för att aktivera 2FA och inaktivera autentisering",
+    "imageCaption": "Kort med autentisering aktiverad: statusindikator, Ändra lösenord, Aktivera 2FA och den destruktiva åtgärden Inaktivera autentisering.",
+    "intro": "Kortet hanterar inloggningen till översikten. Första starten, lösenordsregler, TOTP-konfiguration och återställning när autentiseraren gått förlorad beskrivs i <link>Åtkomst och autentisering</link>. Kortet används för den dagliga hanteringen av dessa inställningar:",
+    "items": [
+      "<strong>Autentiseringsstatus</strong> — indikator med <em>Aktiverad</em> / <em>Inaktiverad</em> / <em>Avböjd</em>.",
+      "<strong>Ändra lösenord</strong> — nuvarande lösenord + nytt lösenord + bekräftelse.",
+      "<strong>Aktivera / Inaktivera tvåfaktorsautentisering</strong> — öppnar konfigurationsdialogen med QR-kod vid aktivering och begär det nuvarande lösenordet vid inaktivering.",
+      "<strong>Inaktivera autentisering</strong> — destruktiv åtgärd som vid nästa besök åter visar startdialogen <em>Skydda din översikt?</em>."
+    ]
+  },
+  "ssl": {
+    "heading": "SSL / HTTPS",
+    "imageAlt": "SSL/HTTPS-kort med status HTTP utan SSL, upptäckt Proxmox-certifikat med innehavare, utfärdare och utgångsdatum samt alternativ för Proxmox-certifikatet eller ett eget certifikat",
+    "imageCaption": "SSL/HTTPS-kort med HTTPS avstängt. Monitor upptäcker certifikatet på Proxmox-värden och låter dig använda det med ett klick. Välj <em>Använd eget certifikat</em> om du har egna filer på annan plats.",
+    "intro": "Gör översikten tillgänglig via HTTPS utan omvänd proxy. Kortet upptäcker certifikatet som Proxmox använder under <code>/etc/pve/local/</code> och visar innehavare, utfärdare och utgångsdatum för kontroll före aktivering. HTTPS kan aktiveras på två sätt:",
+    "items": [
+      "<strong>Använd Proxmox-certifikat</strong> — Monitor återanvänder värdens certifikat med ett klick. Lämpligt om PVE och översikten redan använder samma DNS-namn.",
+      "<strong>Använd eget certifikat</strong> — klistra in absoluta sökvägar till <code>.pem</code>-certifikatet och den privata <code>.key</code>-nyckeln. De valideras före omstarten. Om inläsningen misslyckas återgår översikten automatiskt till HTTP och förblir tillgänglig."
+    ],
+    "enabledAlt": "SSL/HTTPS-kort med HTTPS aktiverat, aktivt certifikat med sökvägar till pve-ssl.pem och pve-ssl.key samt knappen Inaktivera HTTPS",
+    "enabledCaption": "HTTPS är aktivt — kortet visar certifikatet som används, filsökvägarna och åtgärden <em>Inaktivera HTTPS</em>, som återgår till HTTP på samma port.",
+    "acmeTitle": "ACME / Let's Encrypt via Proxmox",
+    "acmeBody": "Om Let’s Encrypt redan är konfigurerat på Proxmox-noden under <em>Datacenter → Certifikat → ACME</em> återanvänder översikten det certifikat som värden visar för webbläsare när du väljer <em>Använd Proxmox-certifikat</em>. Monitor behöver ingen separat ACME-konfiguration.",
+    "walkthroughLink": "Se <link>HTTPS för ProxMenux Monitor</link> för stegvisa anvisningar om upptäckt av ACME-certifikatet, vad som skrivs till disk och hur du använder ett eget <code>.pem</code> / <code>.key</code>-par."
+  },
+  "apiTokens": {
+    "heading": "API-åtkomsttoken",
+    "emptyAlt": "Tomt kort för API-åtkomsttoken med information om token och knappen Generera ny API-token",
+    "emptyCaption": "Tokenkort efter en nyinstallation. Rutan <em>Om API-token</em> beskriver giltighetstid, användning och hur token läggs in i <code>Authorization: Bearer</code>-huvuden.",
+    "intro": "Token med ett års giltighet för automatiserade integrationer: Homepage-widgetar, REST-sensorer i Home Assistant, Grafana-insamlare, n8n-flöden och egna skript. Kortet har tre steg: tomt → formulär → genererad token.",
+    "generateBody": "<strong>Generera en token.</strong> Klicka på <em>Generera ny API-token</em>. Ange ett beskrivande <em>tokennamn</em> för identifiering i listan och ditt <em>lösenord</em> som extra bekräftelse. Om 2FA är aktiverat krävs även den aktuella TOTP-koden.",
+    "generateAlt": "Formulär för att generera API-token med fälten Tokennamn och Lösenord samt knapparna Generera token och Avbryt",
+    "generateCaption": "Formuläret Generera API-token: ange ett namn och bekräfta med lösenordet samt TOTP-koden om 2FA är aktiverat.",
+    "saveBody": "<strong>Spara token direkt.</strong> Hela tokenvärdet visas <strong>bara en gång</strong> efter att det genererats. Kortet markerar detta med ett orange meddelande och en kopieringsknapp. Värdet kan inte hämtas senare; listan över aktiva token visar bara prefixet.",
+    "generatedAlt": "Genererad API-token med maskerat värde, kopieringsknapp, instruktioner för huvudet Authorization: Bearer och lista över aktiva token med prefix",
+    "generatedCaption": "Token har genererats: värdet visas en gång med en kopieringsknapp och det exakta utdraget <code>Authorization: Bearer</code>. Listan över aktiva token visar namn, prefix och skapelsedatum så att du kan återkalla enskilda token.",
+    "outro": "Varje aktiv token har knappen <em>Återkalla</em>. Återkallelsen ogiltigförklarar token direkt och stoppar integrationer som använder den. Exempel för Homepage, Home Assistant, n8n och Prometheus finns under <link>Integrationer</link>."
+  },
+  "gateway": {
+    "heading": "Secure Gateway",
+    "cardAlt": "Secure Gateway-kort före den första installationen med knappen Installera Secure Gateway",
+    "cardCaption": "Secure Gateway-kort efter en nyinstallation: en knapp startar guiden.",
+    "intro": "Nå översikten, Proxmox webbgränssnitt och gästerna varifrån som helst i ditt <a>Tailscale</a>-nätverk utan att öppna portar mot internet. Monitor installerar en Alpine LXC-container på värden med <code>tailscaled</code> som undernätsrouter. Efter godkännande i Tailscales administratörskonsol kan fjärrenheterna nå värdens LAN-IP överallt.",
+    "wizardTitle": "Steg-för-steg guide",
+    "wizardIntro": "Skapa en autentiseringsnyckel i Tailscales konsol innan du klickar på <em>Deploy Secure Gateway</em>. Guiden ber om den i steg 2.",
+    "step0Title": "0. Skapa Tailscales autentiseringsnyckel",
+    "step0Body": "Logga in på <a>login.tailscale.com/admin/settings/keys</a> och klicka på <em>Generate auth key…</em>. Välj en <em>förautentiserad</em> nyckel så att gatewayen inte behöver en interaktiv Tailscale-inloggning. Kopiera värdet; det visas bara en gång.",
+    "step0Alt": "Sidan Settings → Keys i Tailscales administratörskonsol med knappen Generate auth key markerad",
+    "step0Caption": "Tailscale admin konsol - <em>Settings → Keys → Generate auth key...</em>. Använd ett gratis Tailscale-konto om du inte har en ännu (länk inuti guiden).",
+    "step1Title": "1. Öppna guiden",
+    "step1Body": "Gå tillbaka till fliken Säkerhet och klicka på <em>Deploy Secure Gateway</em>. Det första steget beskriver funktioner och krav.",
+    "step1Alt": "Introduktion i Secure Gateway-guiden: VPN-åtkomst utan portvidarebefordran och med totalsträckskryptering",
+    "step1Caption": "Steg 1 - översikt över vad Secure Gateway ger och en påminnelse om att du behöver ett gratis Tailscale-konto.",
+    "step2Title": "2. Tailscale autentisering",
+    "step2Body": "Klistra in autentiseringsnyckeln från steg 0 och välj ett värdnamn. Gatewayen visas med detta namn i Tailscales konsol, vanligtvis <code>proxmox-gateway</code> eller nodens namn.",
+    "step2Alt": "Steg i Secure Gateway-guiden med fält för Tailscales autentiseringsnyckel och enhetens värdnamn samt en länk för att skapa nyckeln",
+    "step2Caption": "Steg 2: klistra in den förautentiserade nyckeln och välj värdnamn. Om du hoppade över steg 0 öppnar länken under fältet motsvarande Tailscale-sida.",
+    "step3Title": "3. Åtkomstområde",
+    "step3Intro": "Välj vad ditt tailnet kan nå genom gateway:",
+    "step3Items": [
+      "<strong>Proxmox Only</strong> - endast Proxmox UI och Monitor. Mindre attackyta.",
+      "<strong>Hela det lokala nätverket</strong> — hela LAN-undernätet, automatiskt upptäckt via värdens primära gränssnitt. Ger åtkomst till NAS, skrivare, virtuella maskiner och andra LAN-enheter.",
+      "<strong>Egna undernät</strong> — ange specifika CIDR-nät. För miljöer med flera VLAN där bara vissa segment ska vara åtkomliga."
+    ],
+    "step3Alt": "Steget Åtkomstområde i Secure Gateway-guiden med alternativen Endast Proxmox, Hela det lokala nätverket och Egna undernät",
+    "step3Caption": "Steg 3: välj åtkomstområde. <em>Hela det lokala nätverket</em> fyller automatiskt i det upptäckta LAN-undernätet.",
+    "step4Title": "4. Avancerade alternativ (valfritt)",
+    "step4Intro": "Två valfria reglage, båda <strong>avstängda som standard</strong>:",
+    "step4Items": [
+      "<strong>Exit Node</strong> — när den aktiveras och väljs på en fjärrenhet går all enhetens internettrafik via Proxmox-värdens WAN-anslutning. Praktiskt på resor när du vill använda hemmets internetanslutning från telefonen.",
+      "<strong>Acceptera rutter</strong> — låter gatewayen nå nätverk som annonseras av <em>andra</em> undernätsroutrar i Tailscale-nätverket, för installationer på flera platser."
+    ],
+    "step4Alt": "Steget Avancerade alternativ i Secure Gateway-guiden med kryssrutorna Exit Node och Accept Routes",
+    "step4Caption": "Steg 4: Exit Node och Accept Routes. Låt båda vara avstängda om du bara behöver nå översikten från telefonen eller datorn.",
+    "step5Title": "5. Granska och installera",
+    "step5Body": "Slutlig sammanfattning före installationen. Guiden påminner om ett manuellt steg som återstår i Tailscales konsol efteråt: <strong>godkänna undernätsrutten</strong>.",
+    "step5Alt": "Steget Granska och installera i Secure Gateway med sammanfattning av värdnamn, åtkomstläge, nätverk, Exit Node och Accept Routes samt knappen Installera gateway",
+    "step5Caption": "Steg 5 - granska konfigurationen och distribuera. Det blå meddelandet längst ner flaggar det väntande ruttgodkännandet.",
+    "approvalTitle": "Ett sista manuellt steg i Tailscale admin",
+    "approvalBody": "Öppna <a>login.tailscale.com/admin/machines</a> efter installationen och godkänn undernätsrutten som gatewayen annonserar. Innan dess kan fjärrenheter i Tailscale-nätverket inte nå LAN-IP-adresser via gatewayen. Tailscale markerar väntande rutter med en gul varning på enhetens rad. Klicka på <em>Edit route settings</em> och markera rutten."
+  },
+  "pve": {
+    "heading": "Proxmox VE",
+    "intro": "Värdens skydd: brandvägg, intrångsskydd och säkerhetsgranskning. Korten för Fail2Ban och Lynis erbjuder installation om verktygen saknas och visar sedan deras kontroller."
+  },
+  "firewall": {
+    "heading": "Proxmox Firewall",
+    "imageAlt": "Proxmox-brandväggskort med kluster- och värdstatus, snabbåtkomstregler för Monitor och Proxmox webbgränssnitt, räknare, regellista och knappen Lägg till regel",
+    "imageCaption": "Proxmox-brandväggskort: reglage för kluster och värd, vanliga portar under <em>Snabbåtkomstregler</em>, räknare under <em>Regelöversikt</em> och fullständig lista med <em>+ Lägg till regel</em>.",
+    "intro": "Kortet hanterar Proxmox VE:s brandväggskonfiguration. Den klassiska motorn använder <code>iptables</code> och alternativet använder <code>nftables</code>. Regler som skapats utanför Proxmox hanteras inte. Tre block:",
+    "items": [
+      "<strong>Klusterbrandvägg + värdbrandvägg</strong> — övergripande reglage. Klusterbrandväggen måste vara aktiv för att värdens regler ska få effekt. Kortet visar detta beroende vid inställningen.",
+      "<strong>Snabbåtkomstregler</strong> — fördefinierade rader för <code>8008/TCP</code> (Monitor) och <code>8006/TCP</code> (Proxmox webbgränssnitt) med läget tillåtet, blockerat eller oskyddat. Proxmox-gränssnittet tillåts via ett <em>inbyggt</em> brandväggsmakro som inte kan tas bort av misstag.",
+      "<strong>Regelöversikt</strong> — räknare för alla regler, accept-regler, drop/reject-regler och olika skyddade portar. Värdena läses från <code>/etc/pve/firewall/cluster.fw</code> och <code>/etc/pve/nodes/&lt;node&gt;/host.fw</code>.",
+      "<strong>Brandväggsregler</strong> — lista med åtgärd, protokoll, port, källa och nivå. <em>+ Lägg till regel</em> öppnar redigeraren i kortet; papperskorgen tar bort regeln. Ändringar sparas i Proxmox-filerna och visas även i dess gränssnitt (Datacenter / Node → Firewall)."
+    ]
+  },
+  "fail2ban": {
+    "heading": "Fail2Ban",
+    "subHeading": "(beroende på status)",
+    "whatIs": "<strong>Vad är det?</strong> Fail2Ban är en tjänst med öppen källkod som upptäcker upprepade misslyckade inloggningar i loggar och blockerar IP-adressen i brandväggen. Den skyddar SSH och webbformulär mot ständiga brute force-attacker. ProxMenux konfigurerar tre jails: SSH, Proxmox webbinloggning (port 8006) och ProxMenux Monitors inloggning (port 8008).",
+    "notBundled": "Fail2Ban <strong>ingår inte</strong>. Kortet känner av om det är installerat och anpassas därefter: om det saknas erbjuds installation med ett klick. När det är installerat visas aktuell jail-status och blockerade IP-adresser, och antal försök samt blockeringstid kan ställas in för varje jail.",
+    "notInstalledAlt": "Fail2Ban-kort i läget Inte installerat med beskrivning av skydd för SSH, Proxmox webbgränssnitt och Monitor via nftables samt knappen Installera och konfigurera Fail2Ban",
+    "notInstalledCaption": "Fail2Ban-kortet innan du installerar - den blå rutan förhandsgranskar vad installationen skulle konfigurera.",
+    "clickBody": "Klicka på <em>Installera och konfigurera Fail2Ban</em> för att öppna en bekräftelsedialog med alla ändringar som skriptet gör på värden:",
+    "confirmAlt": "Fail2Ban-bekräftelse med aggressivt SSH-läge, skydd för Proxmox på port 8006 och Monitor på port 8008, identifiering av nftables, justerad journald-loggning och SSH-skydd via MaxAuthTries",
+    "confirmCaption": "Installationsbekräftelse: lista över jails, ändrad loggnivå i journald för att läsa SSH-händelser samt extra SSH-skydd (<code>MaxAuthTries=3</code>).",
+    "confirmIntro": "Efter bekräftelsen visar en panel installationen i realtid: apt, jail-konfiguration och tester. Samma mekanism används av ProxMenux CLI-installationsprogram.",
+    "progressAlt": "Panel med Fail2Bans installationslogg: paket, journald MaxLevelStore för autentisering, jails, nftables-identifiering, MaxAuthTries-skydd, kommunikationstest med fail2ban-client och slutmeddelande",
+    "progressCaption": "Installation pågår: varje steg loggas i panelen. Meddelandet Connection closed längst ner markerar att överföringen är avslutad.",
+    "afterInstall": "Efter installationen visar kortet aktuell status: konfigurerade jails, blockerade IP-adresser och senaste blockeringar. Flikarna skiljer <em>Jails och blockerade IP-adresser</em> från <em>Senaste aktivitet</em>, de senaste N posterna i Fail2Ban-loggen.",
+    "activeAlt": "Aktivt Fail2Ban-kort med tre jails (proxmenux, proxmox, sshd), räknare för blockerade IP-adresser, totala blockeringar och misslyckade försök samt rader med försök, blockeringstid, intervall och kugghjul",
+    "activeCaption": "Fail2Ban är aktivt: de tre förvalda jailsen (<code>proxmenux</code>, <code>proxmox</code>, <code>sshd</code>) med inställningar för försök, blockeringstid och identifieringsintervall.",
+    "tuneBody": "<strong>Justera jail-reglerna.</strong> Klicka på kugghjulet för att ändra <em>Max Retries</em>, <em>Ban Time</em> och <em>Find Time</em>, det rullande intervallet för att räkna försök. En permanent blockering gäller tills du tar bort den manuellt. Formuläret förklarar vanliga värden.",
+    "configAlt": "Formulär för jailen sshd med Max Retries, Ban Time i sekunder, alternativet Permanent Ban, Find Time, hjälp om vanliga värden och knappen Spara konfiguration",
+    "configCaption": "Redigera jailen sshd: sänk <em>Max Retries</em> om du bara använder SSH från ditt eget undernät, eller öka <em>Ban Time</em> för en översikt som är åtkomlig från internet.",
+    "outro": "Guiden <em>Installation, konfiguration och avinstallation</em> beskriver även manuell installation, ändringen av SSH MaxAuthTries och kopplingen till loggen <code>proxmenux-auth.log</code>. Se <link>ProxMenux → Säkerhet → Fail2Ban</link>.",
+    "calloutTitle": "Utan Fail2Ban blockerar den här mekanismen inga IP-adresser",
+    "calloutBody": "ProxMenux Monitor kontrollerar IP-adresser som blockerats i Fail2Bans jail <code>proxmenux</code> på <em>applikationsnivå</em> innan Flask-begäranden behandlas och sparar resultatet i cache i 30 sekunder. Utan Fail2Ban loggas misslyckade inloggningar i <code>proxmenux-auth.log</code> och inloggningsslutpunkten begränsas till 5 försök per IP var 5:e minut, men ingen IP-adress blockeras."
+  },
+  "lynis": {
+    "heading": "Säkerhetsgranskning med Lynis",
+    "subHeading": "(beroende på status)",
+    "whatIs": "<strong>Vad är det?</strong> Lynis är ett säkerhetsgranskningsverktyg med öppen källkod som kör omkring 280 tester på värden: filbehörigheter, kärnskydd, SSH, paketsårbarheter, kryptografiregler, schemalagda uppgifter, tjänsteidentifiering med mera. Det ger ett härdningsindex från 0 till 100, varningar och förslag. Det är en vanlig utgångspunkt för att bedöma Debian-servrar.",
+    "whyUseful": "<strong>Varför är det användbart?</strong> Att bedöma säkerheten genom att läsa varje konfigurationsfil är svårt. Lynis hittar vanliga förbiseenden: saknade kärnskydd, svaga SSH-chiffer, loggar som inte sparas permanent eller <code>NOPASSWD</code> i sudoers för standardkonton. En ny körning efter ProxMenux-ändringar gör förbättringen jämförbar genom en poäng.",
+    "notInstalledAlt": "Lynis-kort i läget Inte installerat med knappen Installera Lynis och funktionerna härdningsindex, sårbarhetsidentifiering, efterlevnadskontroll och GitHub-källkod",
+    "notInstalledCaption": "Lynis kort före installation - den blå rutan sammanfattar vad verktyget gör.",
+    "notBundled": "Lynis <strong>ingår inte</strong> heller. ProxMenux installerar det direkt från den officiella källkoden på GitHub i stället för Debian-paketet.",
+    "confirmAlt": "Bekräftelsedialog för Lynis med funktionerna härdningsindex, sårbarhetsidentifiering, konfigurationsanalys, efterlevnadskontroll och källkod från det officiella GitHub-arkivet",
+    "confirmCaption": "Installationsbekräftelse som uttryckligen anger GitHub som källa.",
+    "progressAlt": "Installationspanel för Lynis i realtid med installation av den senaste versionen, bekräftelse av version 3.1.6 och slutmeddelande",
+    "progressCaption": "Installation pågår: panelen visar loggen i realtid, precis som för Fail2Ban.",
+    "afterInstall": "Efter installationen visar kortet versionen och en tom granskningshistorik. Klicka på <em>Kör säkerhetsgranskning</em> för att starta den första kontrollen.",
+    "installedAlt": "Lynis-kort efter installation med version 3.1.6, tidpunkt för senaste kontroll, härdningsindex 0, varningar 0, förslag 0, tom rapport och knappen Kör säkerhetsgranskning",
+    "installedCaption": "Lynis är installerat, men ingen granskning har körts. Mätvärdena visar inledningsvis noll.",
+    "runningAlt": "Lynis-kort under granskning med meddelande om pågående kontroll, beräknad tid 2–5 minuter och inaktiverad knapp Granskning pågår",
+    "runningCaption": "Granskning pågår: knappen visar en laddningsindikator och kortet upplyser om att kontrollen kan ta 2–5 minuter.",
+    "finishedBody": "När kontrollen är klar visar kortet resultaten: härdningsindex, varningar, förslag och listan <em>Granskningsrapporter</em> med tidigare kontroller.",
+    "resultsAlt": "Lynis-kort med index 71, uppdelningen Lynis 66 och PVE 71, 3 varningar, 40 förslag, poäng anpassad för Proxmox på 71 av 100 i kategorin Bra, PDF-rapporter och knappen Kör säkerhetsgranskning",
+    "resultsCaption": "Exempelresultat: härdningsindex <strong>71/100 (Bra)</strong>. Kortet visar Lynis råpoäng (66) och poängen anpassad för Proxmox (71). Justeringen beror på råpoängen och andelen fynd som klassas som förväntat beteende i Proxmox VE; den lägger inte till 11 fasta poäng.",
+    "scoreTitle": "Lynis råpoäng och poäng anpassad för Proxmox",
+    "scoreIntro": "Lynis regler är avsedda för allmänna Debian-system. Proxmox avviker ibland av giltiga skäl, som klustertjänster som körs som root eller egna <code>journald</code>-inställningar. Kortet visar båda poängen så att du kan:",
+    "scoreItems": [
+      "Följa <em>Lynis råpoäng</em> på samma sätt som externa granskare.",
+      "Följa poängen <em>anpassad för Proxmox</em>, en lämpligare jämförelsegrund för noder i samma kluster."
+    ],
+    "reportBody": "<strong>Fullständig rapport.</strong> Knappen <em>PDF</em> för varje granskning hämtar en flersidig rapport: sammanfattning, systeminformation, säkerhetsläge, förklarade varningar, förslag sorterade efter påverkan och paketförteckning. Den kan bifogas en säkerhetsgenomgång.",
+    "reportAlt": "Exempel på första sidan i Lynis PDF-rapport med sammanfattning, index 71 av 100, antal varningar och förslag, värdnamn, kärna, Lynis-version, datum och säkerhetsöversikt",
+    "reportCaption": "Rapportens första sida: sammanfattning, systeminformation och säkerhetsläge. Därefter följer detaljerade varningar, förslag och installerade paket. En <a>exempelrapport i PDF</a> bifogas som referens.",
+    "runPeriodically": "Kör granskningen regelbundet, efter större Proxmox-uppgraderingar och ändringar efter installationen samt innan fjärråtkomst öppnas. Spara rapporterna; utvecklingen över tid är viktigare än ett enskilt värde.",
+    "outro": "Guiden för <em>installation, konfiguration och avinstallation</em> samt genomgången av en exempelrapport finns under <link>ProxMenux → Säkerhet → Lynis</link>."
+  },
+  "dataCollected": {
+    "heading": "Hur data samlas in",
+    "headerCard": "Kort",
+    "headerEndpoint": "Ändpunkt",
+    "headerSource": "Källa",
+    "rows": [
+      {
+        "card": "Autentisering, 2FA, lösenordsändring",
+        "endpoint": "/api/auth/*",
+        "source": "Lokal autentiseringskonfiguration i ~/.config/proxmenux-monitor/auth.json; JWT utfärdas av Monitor."
+      },
+      {
+        "card": "SSL / HTTPS",
+        "endpoint": "/api/auth/ssl/*",
+        "source": "<code>openssl x509</code> på <code>/etc/pve/local/pve-ssl.pem</code> + <code>/etc/proxmenux/ssl_config.json</code>."
+      },
+      {
+        "card": "Lista, skapa och återkalla API-token",
+        "endpoint": "/api/auth/api-tokens",
+        "source": "Token rader hålls lokalt; ingenting lämnar värden."
+      },
+      {
+        "card": "Secure Gateway (distribuera + status)",
+        "endpoint": "/api/oci/*",
+        "source": "Skapar en Alpine LXC-container med <code>tailscaled</code> via <code>pct create</code> / <code>pct exec</code>."
+      },
+      {
+        "card": "Brandväggsstatus och regler",
+        "endpoint": "/api/security/firewall/*",
+        "source": "<code>pve-firewall</code> + <code>/etc/pve/firewall/&lt;cluster|host&gt;.fw</code>."
+      },
+      {
+        "card": "Fail2Ban (endast när den är installerad)",
+        "endpoint": "/api/security/fail2ban/*",
+        "source": "<code>fail2ban-client status</code>, <code>/var/log/fail2ban.log</code>, <code>/etc/fail2ban/jail.local</code>."
+      },
+      {
+        "card": "Lynis revision (endast när den är installerad)",
+        "endpoint": "/api/security/lynis/*",
+        "source": "Kör <code>lynis audit system</code> i bakgrunden och läser rapporten från <code>/var/log/lynis-report.dat</code>."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Läs vidare",
+    "items": [
+      {
+        "label": "Åtkomst och autentisering",
+        "href": "/docs/monitor/access-auth",
+        "tail": " — fullständig första konfiguration, val av 2FA-app, återställning vid förlorad autentiserare och exempel för omvänd proxy."
+      },
+      {
+        "label": "Integrationer",
+        "href": "/docs/monitor/integrations",
+        "tail": " — exempel på API-token med Homepage, Home Assistant, Prometheus och n8n samt fullständig konfiguration av Secure Gateway."
+      },
+      {
+        "label": "API-referens",
+        "href": "/docs/monitor/api",
+        "tailRich": " — alla ändpunkter under <code>/api/auth</code>, <code>/api/security</code> och <code>/api/oci</code> med metod, begärandekropp och curl-exempel."
+      },
+      {
+        "label": "ProxMenux → Säkerhet → Fail2Ban",
+        "href": "/docs/security/fail2ban",
+        "tail": " — installationsguide, konfigurerade jails och manuell installation."
+      },
+      {
+        "label": "ProxMenux → Säkerhet → Lynis",
+        "href": "/docs/security/lynis",
+        "tail": " — exempelrapport, poängtolkning och när granskningen bör köras igen."
+      }
+    ]
+  }
+}

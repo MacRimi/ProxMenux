@@ -1,0 +1,136 @@
+{
+  "meta": {
+    "title": "Auditoria e relatórios | ProxMenux Monitor",
+    "description": "Avalie um nó Proxmox VE, registe as alterações do ProxMenux e declare o que se espera dos sistemas convidados e do armazenamento, com relatórios imprimíveis."
+  },
+  "header": {
+    "title": "Auditoria e relatórios",
+    "description": "Avaliação do nó, registo das alterações do ProxMenux e declaração das expectativas, com documentos que podem ser impressos ou guardados em PDF.",
+    "section": "ProxMenux Monitor"
+  },
+  "sections": [
+    {
+      "id": "views",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Três vistas, três perguntas",
+            "body": "Auditoria e relatórios distingue os factos do nó, as intervenções do ProxMenux e as expectativas declaradas. Uma configuração que não possa ser avaliada face a um objetivo declarado é descrita sem ser assinalada como falha."
+          }
+        },
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "shield",
+                "title": "Avaliação — como está o nó?",
+                "body": "Realiza as verificações do perfil escolhido, compõe o inventário e classifica o que precisa de atenção, com as evidências de cada resultado."
+              },
+              {
+                "icon": "refresh",
+                "title": "Alterações — o que fez o ProxMenux?",
+                "body": "Lista os ficheiros, pacotes, serviços e comandos alterados pelos scripts ProxMenux instrumentados, incluindo o estado anterior quando foi capturado."
+              },
+              {
+                "icon": "fileText",
+                "title": "Política — o que se espera?",
+                "body": "Declara quais os sistemas convidados que necessitam de cópia de segurança ou devem arrancar com o anfitrião, qual o armazenamento essencial e os limiares das verificações."
+              }
+            ]
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Avaliação",
+                "detail": "factos"
+              },
+              {
+                "label": "Política",
+                "detail": "contexto"
+              },
+              {
+                "label": "Alterações",
+                "detail": "intervenções"
+              }
+            ],
+            "caption": "A avaliação fornece os factos, a política dá-lhes contexto e o registo documenta as ações do ProxMenux."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/assessment-view.png",
+            "alt": "Auditoria e relatórios no ProxMenux Monitor com as vistas Avaliação, Alterações e Política",
+            "caption": "Auditoria e Relatório, com a visão de Avaliação aberta."
+          }
+        }
+      ]
+    },
+    {
+      "id": "boundaries",
+      "title": "Três funções diferentes",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Função",
+              "O que ele faz"
+            ],
+            "rows": [
+              [
+                "<healthLink>Monitor de estado</healthLink>",
+                "Observa métricas e eventos continuamente e pode gerar notificações."
+              ],
+              [
+                "Auditoria e relatórios",
+                "Executa uma avaliação a pedido, documenta o nó e compara as execuções entre si."
+              ],
+              [
+                "Registo de alterações",
+                "Regista as operações realizadas pelo ProxMenux através das suas primitivas de auditoria."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "pages",
+      "title": "Páginas desta secção",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Avaliação e inventário",
+                "href": "/docs/monitor/audit-report/assessment",
+                "tail": "Perfis, resultados, riscos aceites e inventário."
+              },
+              {
+                "label": "Alterações",
+                "href": "/docs/monitor/audit-report/changes",
+                "tail": "o diário do que ProxMenux mudou no host."
+              },
+              {
+                "label": "Política",
+                "href": "/docs/monitor/audit-report/policy",
+                "tail": "sistemas convidados, armazenamento e limiares."
+              },
+              {
+                "label": "Relatórios e comparações",
+                "href": "/docs/monitor/audit-report/reports",
+                "tail": "os seis documentos e a execução de referência."
+              },
+              {
+                "label": "Âmbito de aplicação e garantias",
+                "href": "/docs/monitor/audit-report/scope",
+                "tail": "fontes, limites e dados armazenados."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

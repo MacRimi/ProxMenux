@@ -1,0 +1,136 @@
+{
+  "meta": {
+    "title": "Audit et rapports | ProxMenux Monitor",
+    "description": "Évaluez un nœud Proxmox VE, consignez les changements de ProxMenux et déclarez les attentes concernant ses invités et son stockage, avec des rapports imprimables."
+  },
+  "header": {
+    "title": "Audit et rapports",
+    "description": "Évaluation du nœud, journal des changements de ProxMenux et déclaration des attentes, avec des documents imprimables ou enregistrables en PDF.",
+    "section": "ProxMenux Monitor"
+  },
+  "sections": [
+    {
+      "id": "views",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Trois vues, trois questions",
+            "body": "Audit et rapports distingue les faits du nœud, les interventions de ProxMenux et les attentes déclarées. Une configuration qui ne peut pas être évaluée selon un objectif déclaré est décrite sans être signalée comme une défaillance."
+          }
+        },
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "shield",
+                "title": "Évaluation — Comment va le nœud?",
+                "body": "Exécute les vérifications du profil choisi, compose l'inventaire et classe ce qui a besoin d'attention, avec la preuve de chaque résultat."
+              },
+              {
+                "icon": "refresh",
+                "title": "Changements — Qu'a fait ProxMenux?",
+                "body": "Répertorie les fichiers, paquets, services et commandes modifiés par les scripts ProxMenux instrumentés, avec l'état antérieur lorsqu'il a été capturé."
+              },
+              {
+                "icon": "fileText",
+                "title": "Politique — Qu'est - ce qui est attendu?",
+                "body": "Déclare quels invités nécessitent une sauvegarde ou doivent démarrer avec l'hôte, quel stockage est essentiel et les seuils des vérifications."
+              }
+            ]
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Évaluation",
+                "detail": "faits"
+              },
+              {
+                "label": "Politique",
+                "detail": "contexte"
+              },
+              {
+                "label": "Modifications",
+                "detail": "interventions"
+              }
+            ],
+            "caption": "L'évaluation fournit les faits, la politique leur donne du contexte et le journal consigne les actions de ProxMenux."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/assessment-view.png",
+            "alt": "Audit et rapports dans ProxMenux Monitor avec les vues Évaluation, Modifications et Politique",
+            "caption": "Vérification et rapport, la vue d'évaluation étant ouverte."
+          }
+        }
+      ]
+    },
+    {
+      "id": "boundaries",
+      "title": "Trois fonctions différentes",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Fonction",
+              "Ce qu'il fait"
+            ],
+            "rows": [
+              [
+                "<healthLink>Surveillance de santé</healthLink>",
+                "Observe les métriques et les événements en continu et peut déclencher des notifications."
+              ],
+              [
+                "Audit et rapports",
+                "Exécute une évaluation à la demande, documente le nœud et compare les exécutions entre elles."
+              ],
+              [
+                "Journal des modifications",
+                "Consigne les opérations effectuées par ProxMenux via ses primitives d'audit."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "pages",
+      "title": "Pages de cette section",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Évaluation et inventaire",
+                "href": "/docs/monitor/audit-report/assessment",
+                "tail": "profils, résultats, risques acceptés et inventaire."
+              },
+              {
+                "label": "Modifications",
+                "href": "/docs/monitor/audit-report/changes",
+                "tail": "le journal de ce que ProxMenux a changé sur l'hôte."
+              },
+              {
+                "label": "Politique",
+                "href": "/docs/monitor/audit-report/policy",
+                "tail": "invités, stockage et seuils."
+              },
+              {
+                "label": "Rapports et comparaisons",
+                "href": "/docs/monitor/audit-report/reports",
+                "tail": "les six documents et l'exécution de référence."
+              },
+              {
+                "label": "Portée et garanties",
+                "href": "/docs/monitor/audit-report/scope",
+                "tail": "les sources, les limites et les données stockées."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

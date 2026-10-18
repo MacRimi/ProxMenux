@@ -1,0 +1,101 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Dashboard | Documentazione ProxMenux",
+    "description": "Il pannello è l'interfaccia principale di ProxMenux Monitor: dieci schede, incluso il lanciatore Apps, un'intestazione globale e un ordine di navigazione configurabile."
+  },
+  "header": {
+    "title": "Dashboard",
+    "description": "La vista quotidiana di ProxMenux Monitor: dieci schede, incluso il lanciatore Apps, un'intestazione globale e un ordine di navigazione configurabile.",
+    "section": "ProxMenux Monitor"
+  },
+  "oneHeader": {
+    "title": "Un'intestazione, dieci schede",
+    "body": "L'intestazione (logo, nome del nodo, indicatore di stato, tempo di attività, aggiornamento e tema) rimane visibile. La scheda attiva cambia l'intera area dei contenuti. Il colore indica la categoria peggiore del <link>monitoraggio dello stato</link>: lo stesso dato visualizzato nel pannello."
+  },
+  "tabs": {
+    "heading": "Le dieci schede",
+    "intro": "Ogni scheda ha una propria pagina dedicata. Le pagine sono aggiunte in modo incrementale come la documentazione è riempita in; di seguito è l'elenco completo e ciò che ciascuno è responsabile.",
+    "headerTab": "Scheda",
+    "headerOwns": "Di cosa si occupa",
+    "rows": [
+      {
+        "name": "Panoramica sistema",
+        "linksTo": "/docs/monitor/dashboard/system-overview",
+        "owns": "CPU / widget di memoria / temperatura, conteggio attivo VM & LXC, grafici metrici storici, sommari di archiviazione e rete. Scheda di atterraggio predefinita fino a quando l'ordine di navigazione è personalizzato."
+      },
+      {
+        "name": "Applicazioni",
+        "linksTo": "/docs/monitor/dashboard/apps",
+        "owns": "Lanciatore unificato di collegamenti web LXC registrati e collegamenti personalizzati, con categorie, ricerca, scorciatoie ai guest e indicatori di aggiornamento per applicazione."
+      },
+      {
+        "name": "Archiviazione",
+        "owns": "Pool Proxmox, dischi fisici, dati SMART, stato ZFS, usura e durata utile, cronologia delle osservazioni."
+      },
+      {
+        "name": "Rete",
+        "owns": "Interfacce fisiche, bond, bridge e OVS, indirizzi IP/MAC, grafici RX/TX e cronologia RRD per interfaccia."
+      },
+      {
+        "name": "VM e LXC",
+        "owns": "Inventario dei guest, dettagli di configurazione, metriche e log, azioni di avvio, arresto, riavvio e spegnimento."
+      },
+      {
+        "name": "Hardware",
+        "owns": "Modello e topologia CPU, layout di memoria, topologia PCIe, GPU con monitoraggio in tempo reale per-slot."
+      },
+      {
+        "name": "Log di sistema",
+        "owns": "Live <code>journalctl</code> con filtri, cronologia delle attività Proxmox, registro delle notifiche, pacchetti di log scaricabili."
+      },
+      {
+        "name": "Terminale",
+        "owns": "Shell dell'host o di qualsiasi VM/CT nel browser, con <code>xterm.js</code> tramite WebSocket."
+      },
+      {
+        "name": "Sicurezza",
+        "owns": "Impostazione dell'auth, password / Token 2FA / API, log di audit, pannello Fail2Ban opzionale, distribuzione Secure Gateway."
+      },
+      {
+        "name": "Impostazioni",
+        "owns": "Lingua di Monitor, ordine di navigazione, canali di notifica, provider IA, soglie di stato, esclusioni e inventario delle ottimizzazioni post-installazione."
+      }
+    ]
+  },
+  "headerAnatomy": {
+    "heading": "Struttura dell'intestazione",
+    "items": [
+      "<strong>Logo + nome del prodotto</strong> a sinistra. Il logo si trasforma in una variante \"aggiornamento disponibile\" quando viene rilevata una nuova versione Monitor.",
+      " <strong>Identità del nodo</strong>: nome ottenuto da <code>pvesh get /nodes</code>, con <code>hostname</code> come alternativa.",
+      " <strong>Indicatore di stato</strong>: Regolare (verde), Avviso (giallo), Critico (rosso). Un clic apre il monitoraggio dello stato. Un badge blu <em>info</em> appare se gli elementi ignorati sono ancora nel periodo di soppressione.",
+      " <strong>Tempo di attività</strong>: durata di funzionamento dell'host in formato leggibile.",
+      " <strong>Pulsante Aggiorna</strong>: ripete le chiamate API dei dati in tempo reale senza ricaricare l'intera pagina.",
+      " <strong>Selettore del tema</strong>: chiaro, scuro o sistema. Salvato in <code>localStorage</code>."
+    ]
+  },
+  "whereNext": {
+    "heading": "Dove proseguire",
+    "items": [
+      {
+        "label": "Scheda Apps",
+        "href": "/docs/monitor/dashboard/apps",
+        "tail": " — lanciatore unificato di collegamenti web e relazione con le applicazioni LXC registrate."
+      },
+      {
+        "label": "Scheda Panoramica del sistema",
+        "href": "/docs/monitor/dashboard/system-overview",
+        "tail": "— la scheda di atterraggio, completamente documentata."
+      },
+      {
+        "label": "Monitoraggio integrità",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — finestra dell'indicatore di stato, con dettagli delle dieci categorie."
+      },
+      {
+        "label": "Architettura",
+        "href": "/docs/monitor/architecture",
+        "tail": "— come il cruscotto parla al backend Flask."
+      }
+    ]
+  }
+}

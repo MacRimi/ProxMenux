@@ -1,0 +1,101 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Tableau de bord | Documentation ProxMenux",
+    "description": "Le tableau de bord est l'interface principale de ProxMenux Monitor : dix onglets, dont le lanceur Apps, un en-tête global et un ordre de navigation configurable."
+  },
+  "header": {
+    "title": "Tableau de bord",
+    "description": "La vue quotidienne de ProxMenux Monitor : dix onglets, dont le lanceur Apps, un en-tête global et un ordre de navigation configurable.",
+    "section": "ProxMenux Monitor"
+  },
+  "oneHeader": {
+    "title": "Un en-tête, dix onglets",
+    "body": "L'en-tête (logo, nom du nœud, indicateur d'état, durée de fonctionnement, actualisation et thème) reste visible. L'onglet actif change toute la zone de contenu. La couleur de l'indicateur reflète la catégorie la plus grave du <link>moniteur d'état</link> : la même donnée est affichée sur le tableau de bord."
+  },
+  "tabs": {
+    "heading": "Les dix onglets",
+    "intro": "Chaque onglet a sa propre page dédiée. Les pages sont ajoutées progressivement à mesure que la documentation est remplie; ci-dessous est la liste complète et la responsabilité de chacun.",
+    "headerTab": "onglet",
+    "headerOwns": "Ce que cet onglet couvre",
+    "rows": [
+      {
+        "name": "Présentation du système",
+        "linksTo": "/docs/monitor/dashboard/system-overview",
+        "owns": "CPU / mémoire / widgets de température, nombre de VM et LXC actifs, graphiques historiques, stockage et résumés réseau. Onglet d'atterrissage par défaut jusqu'à ce que l'ordre de navigation soit personnalisé."
+      },
+      {
+        "name": "Applications",
+        "linksTo": "/docs/monitor/dashboard/apps",
+        "owns": "Lanceur unifié de liens web LXC enregistrés et de liens personnalisés, avec catégories, recherche, raccourcis vers les invités et indicateurs de mise à jour par application."
+      },
+      {
+        "name": "Stockage",
+        "owns": "Pools Proxmox, disques physiques, données SMART, état ZFS, usure et durée de vie, historique d'observation."
+      },
+      {
+        "name": "Réseau",
+        "owns": "Interfaces physiques, bonds, bridges et OVS, adresses IP/MAC, graphiques RX/TX et historique RRD par interface."
+      },
+      {
+        "name": "VM et LXC",
+        "owns": "Inventaire des invités, détails de configuration, métriques et journaux, actions de démarrage, arrêt, redémarrage et extinction."
+      },
+      {
+        "name": "Matériel",
+        "owns": "Modèle et topologie CPU, mise en page de mémoire, topologie PCIe, GPUs avec surveillance en temps réel per-slot."
+      },
+      {
+        "name": "Journaux système",
+        "owns": "Live <code>journalctl</code> avec filtres, historique des tâches Proxmox, journal de notification, paquets de journaux téléchargeables."
+      },
+      {
+        "name": "Terminal",
+        "owns": "Shell vers l'hôte ou toute VM/CT dans le navigateur, avec <code>xterm.js</code> via WebSockets."
+      },
+      {
+        "name": "Sécurité",
+        "owns": "Configuration auth, mot de passe / 2FA / API jetons, journal d'audit, panneau Fail2Ban optionnel, déploiement Secure Gateway."
+      },
+      {
+        "name": "Paramètres",
+        "owns": "Langue de Monitor, ordre de navigation, canaux de notification, fournisseur IA, seuils de surveillance, exclusions et inventaire des optimisations après installation."
+      }
+    ]
+  },
+  "headerAnatomy": {
+    "heading": "Anatomie en-tête",
+    "items": [
+      "<strong>Logo + nom du produit</strong> sur la gauche. Le logo se transforme en une variante \"mise à jour disponible\" quand une nouvelle version de Monitor est détectée.",
+      "<strong>Identité du nœud</strong> : nom obtenu par <code>pvesh get /nodes</code>, avec <code>hostname</code> en solution de repli.",
+      "<strong>Indicateur d'état</strong> : Sain (vert), Avertissement (jaune), Critique (rouge). Un clic ouvre le moniteur d'état. Un badge bleu <em>info</em> apparaît si des éléments ignorés restent dans leur période de suppression.",
+      "<strong>Durée de fonctionnement</strong> : temps d'activité de l'hôte dans un format lisible.",
+      "<strong>Bouton Actualiser</strong> : relance les appels API des données en direct sans recharger toute la page.",
+      "<strong>Sélecteur de thème</strong> : clair, sombre ou système. Enregistré dans <code>localStorage</code>."
+    ]
+  },
+  "whereNext": {
+    "heading": "Où aller ensuite",
+    "items": [
+      {
+        "label": "onglet Apps",
+        "href": "/docs/monitor/dashboard/apps",
+        "tail": " — lanceur unifié de liens web et relation avec les applications LXC enregistrées."
+      },
+      {
+        "label": "Onglet Aperçu du système",
+        "href": "/docs/monitor/dashboard/system-overview",
+        "tail": "— l'onglet d'atterrissage, entièrement documenté."
+      },
+      {
+        "label": "Moniteur de santé",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — fenêtre de l'indicateur d'état, avec le détail des dix catégories."
+      },
+      {
+        "label": "Architecture",
+        "href": "/docs/monitor/architecture",
+        "tail": "— comment le tableau de bord parle au moteur de Flask."
+      }
+    ]
+  }
+}

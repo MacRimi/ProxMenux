@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Apps-panelen: en startvy för alla webblänkar | ProxMenux",
+    "description": "Använd instrumentpanelen Apps för att öppna registrerade LXC Web Links och anpassade länkar, organisera dem efter kategori och hoppa tillbaka till gästen som äger varje tjänst."
+  },
+  "header": {
+    "title": "Dashboard: Apps flik",
+    "description": "En enda launcher för webbgränssnitten du använder över noden, oavsett om de kommer från en registrerad LXC-applikation eller en anpassad webblänk.",
+    "section": "ProxMenux Monitor · Översikt"
+  },
+  "intro": {
+    "title": "En launcher, inte en applikation installer",
+    "body": "Fliken <strong>Apps</strong> installerar inte program och upptäcker inte tjänster själv. Den samlar sparade länkar i ett sökbart rutnät. LXC-länkar ställs in på gästens <appTabLink>App-flik</appTabLink>; egna länkar kan lägga till VM-tjänster, omvända proxyservrar och externa paneler."
+  },
+  "sources": {
+    "heading": "Vad som visas i Apps",
+    "intro": "Varje lanseringsbar URL blir ett eget kort. Källan bestämmer var kortet redigeras, men inte hur det ser ut under normal användning.",
+    "colSource": "Källa",
+    "colAppears": "Vad som visas",
+    "colManagedFrom": "Där den hanteras",
+    "rows": [
+      {
+        "source": "Registrerad LXC-applikation",
+        "appears": "Ett kort för varje webblänk sparad på applikationsposten.",
+        "managedFrom": "VM och LXC → LXC-dialog → App"
+      },
+      {
+        "source": "Anpassad länk bunden till en gäst",
+        "appears": "En tjänst URL associerad med en specifik VM eller LXC.",
+        "managedFrom": "Apps → redigera"
+      },
+      {
+        "source": "Egen länk utan gästkoppling",
+        "appears": "Valfritt HTTP(S)-mål, inklusive externa tjänster eller tjänster bakom en omvänd proxy.",
+        "managedFrom": "Apps → redigera"
+      }
+    ],
+    "relationshipTitle": "Appar och LXC App-fliken har olika jobb",
+    "relationshipBody": "LXC-gästens <appTabLink>App-flik</appTabLink> hanterar identitet, webblänkar och valfri versionsspårning. <strong>Apps</strong> använder länkarna som snabb åtkomst. Redigering av ett LXC-kort leder därför till gästens post utan att duplicera konfigurationen."
+  },
+  "cards": {
+    "heading": "Hur man använder ett kort",
+    "intro": "Hela kortet är lanseringsmålet, medan dess mindre kontroller ger kontext utan att öppna tjänsten.",
+    "items": [
+      "Klicka på kortet för att öppna sin URL i en ny webbläsarflik.",
+      "Logotypen använder Web Link-logotypen först och faller tillbaka till applikationslogotypen när så är lämpligt.",
+      "Kategorietiketten använder samma färg och text som motsvarande webblänk i LXC-gästens App-flik.",
+      "Gästetiketten visar kopplad VM eller LXC. Ett klick öppnar dess dialog: LXC-länkar öppnar <strong>App</strong>, VM-länkar <strong>Status</strong>.",
+      "En lila uppåtpil innebär att den specifika applikationen eller Docker-bilden har en tillgänglig uppdatering. Det är inte en allmän uppdatering räknas för hela gästen."
+    ]
+  },
+  "toolbar": {
+    "heading": "Sök, filter och sortera",
+    "intro": "Verktygsfältet begränsar en stor applikationssamling utan att ändra sparade poster.",
+    "items": [
+      "Sök matchar applikationsnamnet, gästnamnet, VMID och kategori.",
+      "Kategorifiltret visar en kategori åt gången eller alla applikationer.",
+      "Sortera efter <strong>Namn</strong>, <strong>ID</strong> eller <strong>Kategori</strong>. Kategorisortering lägger in rubriker mellan kortgrupper.",
+      "Sorteringen sparas i denna webbläsare. Söktext och kategorifilter återställs när sidan besöks igen.",
+      "Fliken Apps förblir tillgänglig när nätet är tomt, så den första anpassade länken kan läggas till utan att registrera en LXC-applikation först."
+    ]
+  },
+  "customLinks": {
+    "heading": "Lägga till och redigera anpassade webblänkar",
+    "intro": "Använd en anpassad länk när tjänsten inte representeras av en registrerad LXC-applikation.",
+    "steps": [
+      "Välj <strong>Lägg till länk</strong> i verktygsfältet eller den tomma vyn.",
+      "Ange ett namn och en komplett <code>http://</code> eller <code>https://</code> URL.",
+      "Alternativt lägga till en logotyp, välj eller skapa en kategori och bind länken till en VM eller LXC.",
+      "Spara länken. Kortet visas direkt i rutnätet.",
+      "Välj <strong>Redigera</strong> och pennan på kortet för att ändra eller ta bort en egen länk."
+    ],
+    "colField": "Fält",
+    "colRequired": "Krav",
+    "colPurpose": "syfte",
+    "fields": [
+      {
+        "field": "Namn",
+        "required": "Ja",
+        "purpose": "Kortet titel och sökterm."
+      },
+      {
+        "field": "URL",
+        "required": "Ja",
+        "purpose": "Den kompletta HTTP (S) destination öppnas av kortet."
+      },
+      {
+        "field": "Logotyp URL",
+        "required": "Nej",
+        "purpose": "En fjärrbild som visas på kortet."
+      },
+      {
+        "field": "Kategori",
+        "required": "Nej",
+        "purpose": "Lägger till ett delat märke och möjliggör kategorifiltrering."
+      },
+      {
+        "field": "Gästkoppling",
+        "required": "Nej",
+        "purpose": "Kopplar länken till en VM eller LXC och aktiverar gästgenvägen."
+      }
+    ],
+    "editTitle": "Redigera källan till sanning",
+    "editBody": "Redigeringsläget visar pennor bara för egna länkar. För ett LXC-applikationskort öppnar du gästens <appTabLink>App-flik</appTabLink> och redigerar den sparade länken."
+  },
+  "categories": {
+    "heading": "Kategorier och uppdateringssignaler",
+    "intro": "Kategorier organiserar länkar; uppdateringssignaler rapporterar programvarutillstånd. De är avsiktligt separata.",
+    "items": [
+      "Katalogstödd LXC-registrering kan fylla i en kategori, men den är fortfarande redigerbar.",
+      "Anpassade kategorinamn kan skapas från samma väljare och sedan återanvändas av filtret.",
+      "Kategorifärger är deterministiska och anpassar sig till ljus eller mörkt tema. Lila och röda intervall är reserverade för uppdatering och farliga tillstånd.",
+      "För Docker-webblänkar kopplar ProxMenux kortet till dess container eller avbildning och visar avbildningens uppdateringsstatus. Docker Engine-uppdateringar finns kvar på LXC-gästens <updatesLink>Uppdateringar-flik</updatesLink>."
+    ]
+  },
+  "persistence": {
+    "heading": "Persistens och cache beteende",
+    "intro": "Dashboarden är utformad för att öppna från redan tillgängliga Monitor-data istället för att rescan varje gäst.",
+    "items": [
+      "Egna länkar sparas atomiskt i <code>/etc/proxmenux/custom_links.json</code> och läses in i minnet när Monitor startar.",
+      "Registrerade LXC-länkar förblir en del av deras applikations sparade Monitor-post; Apps-instrumentpanelen duplicerar dem inte i den anpassade länkfilen.",
+      "Skapa, redigera eller ta bort en anpassad länk uppdaterar in-memory-listan omedelbart.",
+      "Sorteringsvalet gäller lokalt i webbläsaren och synkroniseras inte mellan enheter eller användare.",
+      "Apps position i huvudnavigeringen ställs in separat under <settingsLink>Inställningar → Navigeringsordning</settingsLink>."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Vanliga situationer",
+    "colProblem": "Situation",
+    "colResolution": "Lösning",
+    "rows": [
+      {
+        "problem": "En LXC-applikation är registrerad men inget kort visas",
+        "resolution": "Öppna sin App-flik och lägg till minst en webblänk. Version spårning ensam skapar inte ett lanseringskort."
+      },
+      {
+        "problem": "URL eller logotyp är fel",
+        "resolution": "Redigera den anpassade länken i Apps, eller redigera webblänken i den egna LXC App-fliken."
+      },
+      {
+        "problem": "En Docker-tjänst saknas",
+        "resolution": "Redigera den registrerade Docker-applikationen och spara tjänstens publicerade webbport som en webblänk."
+      },
+      {
+        "problem": "Den lila pilen hänvisar till fel Docker-uppdatering",
+        "resolution": "Granska webblänkens namn och beskrivning så att de kan matchas till den avsedda containern eller avbildningen."
+      },
+      {
+        "problem": "Appar öppnar först istället för Systemöversikt",
+        "resolution": "Det första sparade objektet i Inställningar → Navigationsorder blir landningsfliken. Återställ standardordningen eller flytta översikt först."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Var till nästa",
+    "items": [
+      {
+        "label": "LXC App fliken",
+        "href": "/docs/monitor/dashboard/vms-lxcs/app",
+        "tail": " - registrera applikationer, webblänkar och valfri versionsspårning."
+      },
+      {
+        "label": "LXC Updates fliken",
+        "href": "/docs/monitor/dashboard/vms-lxcs/updates",
+        "tail": " — konfigurera och köra uppdateringar av applikationer, Docker Engine och avbildningar."
+      },
+      {
+        "label": "Inställningar flik",
+        "href": "/docs/monitor/dashboard/settings#navigation-order",
+        "tail": " — ändra navigeringsordningen och startfliken."
+      }
+    ]
+  }
+}

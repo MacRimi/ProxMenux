@@ -1,0 +1,120 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Panel: Systémové záznamy | Dokumentácia ProxMenux",
+    "description": "Záložka System Logs konsoliduje tri zdroje do jednej obrazovky: živé journalctl s filtrami a downloadom, História úloh Proxmox (UPIDs) a oznamovací protokol, všetky vyhľadávateľné, filtrovateľné podľa závažnosti / časového rozsahu, a sťahovanie ako textové zväzky."
+  },
+  "header": {
+    "title": "Panel: Systémové záznamy",
+    "description": "Tri podkarty na jednej obrazovke: systémový žurnál (journalctl s filtrami), história úloh Proxmox a záznam oznámení. Vo všetkých možno vyhľadávať, filtrovať a sťahovať údaje ako textové balíky.",
+    "section": "ProxMenux Monitor · Prehľad"
+  },
+  "readOnly": {
+    "title": "Len na čítanie podľa návrhu",
+    "body": "Táto karta nemení súbory záznamov. Filtre sa uchovávajú v URL alebo stave rozhrania a súbory na stiahnutie pripravuje server. Panel nikdy neodstraňuje záznamy; na ich údržbu použite na hostiteľovi <code>journalctl --vacuum-time=&lt;N&gt;</code> alebo <code>logrotate</code>."
+  },
+  "topRow": {
+    "heading": "Horný riadok: štyri počítadlá",
+    "items": [
+      "<strong>Celkový počet záznamov</strong> — počet položiek v časovom rozsahu aktívneho filtra.",
+      "<strong>Chyby</strong> — počet záznamov so závažnosťou ≤ 3 (<code>err</code> / <code>crit</code> / <code>alert</code> / <code>emerg</code>).",
+      "<strong>Upozornenia</strong> — počet záznamov so závažnosťou 4 (<code>warning</code>).",
+      "<strong>Zálohy</strong> — počet záznamov úloh vzdump / PBS v rovnakom časovom rozsahu."
+    ]
+  },
+  "subtabs": {
+    "heading": "Tri podkarty",
+    "logsTitle": "Logy",
+    "logsIntro": "Systémový žurnál, ktorý server načítava cez <code>journalctl</code>. Na paneli nástrojov sú tieto filtre:",
+    "logsFilters": [
+      "<strong>Závažnosť</strong> — emerg / alert / crit / err / warning / notice / info / debug alebo ľubovoľná kombinácia.",
+      "<strong>Časový rozsah</strong> Posledná 5 min/ 15 min/ 1 h / 6 h / 24 h / 7 d / vlastné.",
+      "<strong>Voľné vyhľadávanie textu</strong> — podreťazec alebo regulárny výraz (<code>journalctl --grep</code>).",
+      "<strong>Filter jednotky</strong> — obmedzí výsledky na konkrétnu jednotku systemd (<code>pveproxy.service</code>, <code>nginx.service</code>, …)."
+    ],
+    "logsRowsAfter": "Každý riadok zobrazuje časovú pečiatku, označenie závažnosti, zdrojovú jednotku a správu. Dlhé správy sa zbalia s prepínačom „zobraziť viac“. Akcia <strong>Stiahnuť</strong> vytvorí z aktuálneho filtra jeden súbor <code>.txt</code> cez <code>GET /api/logs/download</code>, vhodný na zdieľanie časti žurnálu s ďalšou osobou.",
+    "logDetailsModalTitle": "Okno Podrobnosti záznamu",
+    "logDetailsBody": "Kliknutie na riadok otvorí okno <strong>Podrobnosti záznamu</strong> so všetkými štruktúrovanými poľami, ktoré journald zachytil pre danú položku, rovnako ako príkaz <code>journalctl --output=verbose</code> na hostiteľovi.",
+    "logDetailsImageAlt": "Okno Podrobnosti záznamu — rozbalená položka žurnálu s úrovňou, službou, časovou pečiatkou, zdrojom, jednotkou systemd, ID procesu, názvom hostiteľa a úplnou správou",
+    "logDetailsImageCaption": "Podrobnosti záznamu — všetky štruktúrované polia danej položky journald a dole úplná neskrátená správa. Užitočné pri záznamoch cron a služieb, kde záleží na vykonanom príkaze.",
+    "fieldsIntro": "Zobrazené polia:",
+    "fields": [
+      "<strong>Úroveň</strong> — farebné označenie závažnosti (INFO / WARNING / ERROR / CRITICAL).",
+      "<strong>Služba</strong> — krátky názov jednotky alebo procesu, ktorý vytvoril záznam.",
+      "<strong>Časová pečiatka</strong> — úplný dátum a čas riadka záznamu.",
+      "<strong>Zdroj</strong> — pôvod položky (žurnál, jadro, audit, …).",
+      "<strong>Jednotka systemd</strong> — konkrétna jednotka <code>.service</code> / <code>.timer</code> / <code>.socket</code>, ak bola k záznamu priradená.",
+      "<strong>ID procesu</strong> — PID procesu, ktorý vytvoril záznam.",
+      "<strong>Názov hostiteľa</strong> — užitočný pri preposielaní žurnálov medzi uzlami klastra.",
+      "<strong>Správa</strong> — úplná neskrátená správa v bloku s neproporcionálnym písmom, pripravená na kopírovanie."
+    ],
+    "maxLevelStoreTitle": "Journald MaxLevelStore",
+    "maxLevelStoreBody": "Na novej inštalácii Proxmox používa journald predvolene <code>MaxLevelStore=warning</code>, čím zahadzuje správy info. Monitor to pri štarte rozpozná a pridá doplnkovú konfiguráciu (<code>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</code>) s prahom <code>info</code>, aby sa uchovávali informačné a závažnejšie správy. Správy debug to nezahŕňa.",
+    "backupsTitle": "Zálohy",
+    "backupsBody": "História úloh Proxmox obmedzená na zálohovanie. Jeden riadok na úlohu (<code>vzdump</code>, prenosy PBS, čistenie nepoužívaných dát a overenie), so stavom (OK / WARNINGS / ERROR), hosťovským systémom, zdrojovým úložiskom, trvaním a UPID. Kliknutím na riadok načítate úplný záznam úlohy cez <code>GET /api/task-log/&lt;upid&gt;</code> — rovnaké údaje ako v <em>Datacenter → Úlohy</em>, obmedzené na zálohy.",
+    "notificationsTitle": "Oznámenia",
+    "notificationsBody1": "Všetky oznámenia odoslané Monitorom: Telegram, Discord, e-mail, Gotify, ntfy, Slack, Teams a webhook. Každý riadok uvádza časovú pečiatku, kanál, typ udalosti, závažnosť, vytvorený názov a telo a pri zapnutej AI prepínač na porovnanie jej prepracovanej verzie s originálom.",
+    "notificationsBody2": "Na tejto karte overíte doručovanie oznámení cez kanál a porovnáte prepracovanie AI s pôvodnou šablónou. Kanály sa nastavujú na podrobnej stránke <link>Oznámenia</link>."
+  },
+  "dataCollected": {
+    "heading": "Spôsob zberu údajov",
+    "headerSubtab": "Podkarta",
+    "headerEndpoint": "Koncový bod",
+    "headerSource": "Zdroj",
+    "rows": [
+      {
+        "subtab": "Záznamy (živý filter)",
+        "endpoint": "/api/logs",
+        "source": "<code>journalctl --output json --since &lt;range&gt;</code> s filtrami závažnosti, jednotky a vyhľadávania použitými na serveri."
+      },
+      {
+        "subtab": "Stiahnuť",
+        "endpoint": "/api/logs/download",
+        "source": "Rovnaký dotaz, vrátený ako obyčajný text pre grep / less."
+      },
+      {
+        "subtab": "Zálohy",
+        "endpoint": "/api/backups",
+        "source": "História úloh PVE filtrovaná podľa <code>vzdump</code>, prenosov PBS, čistenia nepoužívaných dát a overenia."
+      },
+      {
+        "subtab": "Podrobnosti úlohy zálohovania",
+        "endpoint": "/api/task-log/&lt;upid&gt;",
+        "source": "Plný textový záznam úloh čítaný z <code>/var/log/pve/tasks/&lt;index&gt;/&lt;upid&gt;</code>."
+      },
+      {
+        "subtab": "História oznámení",
+        "endpoint": "/api/notifications/history",
+        "source": "Tabuľka SQLite <code>notification_history</code>, ktorú plní odosielacia slučka."
+      }
+    ],
+    "apiIntro": "Živý filter aj sťahovanie sú dostupné cez API:",
+    "codeComment1": "# Chyby a závažnejšie udalosti za poslednú hodinu s kľúčovým slovom",
+    "codeComment2": "# Stiahnuť celý žurnál za posledných 6 hodín ako obyčajný text",
+    "codeComment3": "# Vyhľadajte úplný výstup konkrétnej úlohy podľa UPID"
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "Monitor zdravia",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — kategória Systémové záznamy, ktorá sleduje pretrvávajúce vzory, náhle nárasty a kaskády."
+      },
+      {
+        "label": "Oznámenia",
+        "href": "/docs/monitor/notifications",
+        "tail": " — sledovanie žurnálu číta rovnaký zdroj a premieňa zhody na oznámenia."
+      },
+      {
+        "label": "Referenčná príručka API",
+        "href": "/docs/monitor/api",
+        "tail": " — koncové body logs a task-log s parametrami dotazov."
+      },
+      {
+        "label": "Index panela",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — Ostatné karty."
+      }
+    ]
+  }
+}

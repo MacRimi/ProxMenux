@@ -1,0 +1,367 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Översikt: fliken Inställningar | ProxMenux-dokumentation",
+    "description": "Fliken Inställningar hanterar språk, navigeringsordning, översiktens inställningar, övervakningsgränser och undantag, aviseringar, AI och förteckningen över optimeringar efter installation."
+  },
+  "header": {
+    "title": "Översikt: fliken Inställningar",
+    "description": "Monitors språk, navigeringsordning, översiktens inställningar, övervakningsundantag, aviseringar, AI-konfiguration och aktuell förteckning över ProxMenux-optimeringar.",
+    "section": "ProxMenux Monitor · Översikt"
+  },
+  "intro": {
+    "title": "Var varje inställning sparas",
+    "body": "Inställningar samlar översiktens utseende, Health Monitor-övervakning, utskick av larm och ändringar som ProxMenux redan gjort på värden. Korten länkar till sin detaljerade dokumentation; fliken är en ingång till den."
+  },
+  "interfaceLanguage": {
+    "heading": "Gränssnittsspråk",
+    "intro": "Välj språk för <strong>Monitors webbgränssnitt</strong>. Det ändras direkt utan att starta om tjänsten eller ändra språk i ProxMenux terminalmenyer.",
+    "items": [
+      "ProxMenux Monitor erbjuder för närvarande engelska, tyska, spanska, franska, italienska, portugisiska, slovakiska och svenska.",
+      "Vid första besöket används webbläsarens språk om det stöds, annars engelska.",
+      "Ett ändrat val uppdaterar sidans språk och synkroniserar andra öppna flikar i samma webbläsarprofil.",
+      "Om en översättning saknas visas bara den texten på engelska i stället för en felaktig nyckel eller platshållare."
+    ],
+    "scopeTitle": "Lokal webbläsarinställning",
+    "scopeBody": "Valet sparas i <code>localStorage</code> under <code>proxmenux-ui-language</code>. Det gäller denna webbläsarprofil och enhet, inte hela noden. Varje administratör kan välja sitt språk."
+  },
+  "navigationOrder": {
+    "heading": "Navigeringsordning",
+    "intro": "Ordna de sju huvudposterna: <strong>Översikt, Appar, VM och LXC, Nod, Säkerhetskopiering, Terminal och Administration</strong>. Välj <strong>Redigera</strong>, dra raderna och spara.",
+    "items": [
+      "Med mus börjar dragningen vid tryck. På pekskärm krävs ett 250 ms långt tryck för att skilja det från rullning.",
+      "Grupperna <strong>Nod</strong> och <strong>Administration</strong> flyttas som helheter; deras undersidor behåller den fastställda ordningen.",
+      "Mobilmenyn följer samma sparade ordning.",
+      "<strong>Återställ standard</strong> återställer ordningen under redigering. Spara för att tillämpa ändringen.",
+      "Nya huvudflikar i framtida versioner läggs sist i den anpassade ordningen så att din ordning bevaras."
+    ],
+    "landingTitle": "Den första posten blir startfliken",
+    "landingBody": "Monitor öppnar den första sparade posten. För <strong>Nod</strong> öppnas Lagring, för <strong>Administration</strong> Systemloggar. Ordningen sparas i webbläsaren under <code>proxmenux-nav-order</code>, så olika enheter kan ha olika arbetsordning."
+  },
+  "networkUnits": {
+    "heading": "Nätverksenheter",
+    "imageAlt": "Kortet Nätverksenheter med visningsvalet inställt på Byte",
+    "imageCaption": "Välj mellan bitar per sekund och byte per sekund för varje nätverkshastighet som visas i instrumentpanelen.",
+    "body": "Visar nätverkshastighet i <strong>bitar per sekund</strong> (Mbps/Gbps) eller <strong>byte per sekund</strong> (MB/s/GB/s). Bitar är standard som i specifikationer för nätverkskort och internet; filöverföringar använder ofta byte. Diagram, etiketter och tips ändras direkt utan omladdning."
+  },
+  "health": {
+    "heading": "Hälsoövervakare",
+    "intro": "Kortet ställer in <strong>undertryckningstid</strong>: hur länge kontrollen väntar innan en avfärdad varning får visas igen. Varje kategori — CPU, minne, lagring, diskar, nätverk, VM, PVE-tjänster, loggar, uppdateringar och säkerhet — har en egen lista:",
+    "items": [
+      "<strong>24 h</strong> - standard för de flesta övergående kategorier.",
+      "<strong>72 h</strong> — för händelser du vill tysta i några dagar.",
+      "<strong>168 h</strong> (1 vecka) och <strong>720 h</strong> (1 månad) - periodiska kontroller.",
+      "<strong>8760 h</strong> (1 år) — tystnad under lång tid.",
+      "<strong>-1</strong> — permanent tystnad tills du återaktiverar manuellt.",
+      "<strong>Eget antal timmar</strong> — ett heltal för ett mellanvärde."
+    ],
+    "imageAlt": "Inställningar, Health Monitor-kort med tid per kategori och aktiva undertryckningar",
+    "imageCaption": "Listorna anger tiden för framtida undertryckningar. Avsnittet nedanför visar tystade varningar och låter dig återaktivera dem.",
+    "editTitle": "Redigeringsläge",
+    "editBody": "Kortet är först skrivskyddat. <strong>Redigera</strong> uppe till höger aktiverar listor och återaktiveringsknappar. <strong>Spara</strong> tillämpar väntande tider och återaktiveringar tillsammans; <strong>Avbryt</strong> kastar dem. Spara aktiveras först när ändringar finns.",
+    "activeTitle": "Aktiva undertryckningar",
+    "activeIntro": "Under tiderna listar <strong>Aktiva undertryckningar</strong> tillfälligt tystade varningar —24 timmar, 7 dagar eller eget intervall— och <em>permanenta</em>. Varje rad visar:",
+    "activeItems": [
+      "Ett färgat märke: <strong>Permanent</strong> i bärnsten eller en nedräkning som <strong>24 h kvar</strong> / <strong>7 dagar kvar</strong> i blått.",
+      "Varningsidentifieraren i läsbar form (t.ex. <code>pve_storage_full_PBS-Cloud</code> → <em>PVE-lagring full: PBS-Cloud</em>).",
+      "Kategori, allvarlighetsgrad och tidpunkten då varningen avfärdades.",
+      "Knappen <strong>Återaktivera</strong> i redigeringsläge köar borttagning av undertryckningen när du sparar."
+    ],
+    "activeReenableTitle": "Så återaktiveras en varning",
+    "activeReenableBody": "<strong>Återaktivera</strong> under redigering markerar raden grönt och stryker identifieraren, utan att tillämpa ändringen. Klicka igen för att <strong>Ångra</strong>. <strong>Spara</strong> skickar parallella <code>POST /api/health/un-acknowledge</code> för varje återaktivering och tar bort raderna. Om problemet kvarstår och kategorin stöder nya varningar visas det åter som aktivt vid nästa kontroll.",
+    "activePermanentNote": "Permanenta undertryckningar —via <em>Permanent</em> eller standardtiden <code>-1</code>— <strong>återställs bara här</strong>. Den allmänna dialogen har ingen sådan knapp; avsnittet samlar översikt och återaktivering.",
+    "activeAutoRefreshTitle": "Automatisk uppdatering",
+    "activeAutoRefreshBody": "Listan uppdateras när en varning avfärdas eller återaktiveras i Health Monitor, när fliken får fokus igen och när synligheten ändras. Ingen omladdning behövs.",
+    "calloutTitle": "Detaljer på sidan Health Monitor",
+    "calloutBody": "Eskalering, automatisk lösning när en enhet försvinner och skillnaden mellan avfärda och lösa beskrivs i <link>Health Monitor → Avfärda varningar och undertryckningstid</link>. Kortet visar listorna och aktiva undertryckningar."
+  },
+  "thresholds": {
+    "heading": "Gränsvärden i Health Monitor",
+    "intro": "Förra kortet anger <em>tystnadens längd efter avfärdande</em>; detta anger <strong>värdet som utlöser en varning</strong>. De flesta gränskontroller har justerbara värden för <strong>Varning</strong> och <strong>Kritiskt</strong>. Tabellen nedan förklarar undantag som den kombinerade swapregeln.",
+    "whatForTitle": "Vad det används till",
+    "whatForIntro": "Standardvärdena är en utgångspunkt, men varje miljö har egna förutsättningar:",
+    "whatForItems": [
+      "Ett homelab med en enda SSD kan varna tidigare, till exempel vid 75/90 %, för att lämna plats för ögonblicksbilder.",
+      "Minnesgränser bör spegla värdens mätningar och arbetslast. Ceph-redundans motiverar inte ensam mildare varningar, och hög ZFS ARC-användning är inte samma sak som arbetsminne som inte kan återvinnas.",
+      "Välj temperaturgränser efter diskens specifikationer och faktiska förhållanden. Passiv eller forcerad kylning avgör inte ensam en allmänt lägre eller högre säker gräns.",
+      "En tungt virtualiserad värd kan få CPU-toppar vid byggen utan att varna för varje topp på 80 %, men måste fortfarande varna vid långvarig överbelastning."
+    ],
+    "whatForOutro": "Ändringar av tröskelvärden som stöds gäller <strong>vid nästa kontroll</strong>. Health Monitor läser <code>/usr/local/share/proxmenux/health_thresholds.json</code> varje cykel utan omstart. Utvalda indikatorer, bland annat disktemperatur, använder värdena; vissa kapacitetsstaplar behåller egna visuella gränser.",
+    "coloursTitle": "Statusfärger för Varning och Kritiskt",
+    "coloursIntro": "Widgetar med det konfigurerade paret Varning/Kritiskt följer de tre lägena nedan. Andra indikatorer, som PVE-kapacitetsstaplar, har egna gränser; färgen ensam visar inte att Health Monitor har larmat.",
+    "headerColour": "Färg",
+    "headerRange": "Intervall",
+    "headerMeaning": "Betydelse",
+    "colourRows": [
+      {
+        "colour": "Grön",
+        "range": "Värde < Varning",
+        "meaning": "Normalt intervall. Ingen varning skapas."
+      },
+      {
+        "colour": "Bärnstensgul",
+        "range": "Varning ≤ värde < Kritiskt",
+        "meaning": "Varningsläge. Health Monitor skapar en WARNING-händelse; aviseringar följer kanalfilter och tysta tider."
+      },
+      {
+        "colour": "Röd",
+        "range": "Värde ≥ Kritiskt",
+        "meaning": "Kritiskt läge. Health Monitor skapar en CRITICAL-händelse som kringgår tysta tider. Kanalens kategori- och händelseinställningar gäller fortfarande; leverans beror även på kanalens tillgänglighet."
+      }
+    ],
+    "sectionsTitle": "Avsnitt och rekommenderade standardvärden",
+    "sectionsIntro": "Detta är ProxMenux startvärden tills du ändrar dem. Avsnitten följer <em>beräkningslast</em>, <em>temperatur</em> och <em>lagringskapacitet</em>, från aktuell last till använt utrymme.",
+    "headerSection": "Avsnitt",
+    "headerWarning": "Varning",
+    "headerCritical": "Kritiskt",
+    "headerGates": "Berörd kontroll",
+    "thresholdRows": [
+      {
+        "section": "CPU-användning",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Varning för varaktig last när CPU-medelvärdet överstiger gränsen under kontrollperioden."
+      },
+      {
+        "section": "Minne",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Värdens RAM-belastning."
+      },
+      {
+        "section": "Swap (endast kritisk nivå)",
+        "warning": "—",
+        "critical": "80 %",
+        "gates": "Swap-CRITICAL kräver både över 80 % swap och under 15 % tillgängligt RAM över flera mätningar. Upptaget swaputrymme ensamt utlöser inte regeln."
+      },
+      {
+        "section": "CPU-temperatur",
+        "warning": "80 °C",
+        "critical": "90 °C",
+        "gates": "CPU-paketets eller kärnornas temperatur från <code>lm-sensors</code>."
+      },
+      {
+        "section": "Disktemperatur — HDD",
+        "warning": "60 °C",
+        "critical": "65 °C",
+        "gates": "HDD-temperatur. Standard: varning vid 60 °C och kritiskt vid 65 °C. Det är övervakningsvärden, inte en allmän tillverkargräns; kontrollera modellens specifikationer."
+      },
+      {
+        "section": "Disktemperatur — SSD",
+        "warning": "70 °C",
+        "critical": "75 °C",
+        "gates": "SATA-SSD i 2,5-tums- eller M.2-format. Klassen använder 70/75 °C som standard; faktiska gränser beror på modellen."
+      },
+      {
+        "section": "Disktemperatur — NVMe",
+        "warning": "80 °C",
+        "critical": "85 °C",
+        "gates": "NVMe-temperatur. Klassen använder 80/85 °C som standard. Styrenhetens strypningstemperatur varierar med modellen och är inte alltid 85 °C."
+      },
+      {
+        "section": "Disktemperatur — SAS",
+        "warning": "55 °C",
+        "critical": "65 °C",
+        "gates": "SAS-temperatur. Klassen använder varning vid 55 °C och kritiskt vid 65 °C. Det är <em>övervakningsvärden</em>, inte bevis på kylfel vid 55 °C eller en allmän tillverkargräns."
+      },
+      {
+        "section": "Diskutrymme — värd",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Kapacitet för <code>/</code> och varje monteringspunkt på värden (<code>/var/lib/vz</code>, <code>/mnt/*</code>…)."
+      },
+      {
+        "section": "Diskutrymme - LXC rootfs",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Rotdisk per container, bedömd mot rootfs-storleken från PVE."
+      },
+      {
+        "section": "LXC-monteringspunkter",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Kapacitet för monteringar i körande CT: mp0, mp1, NFS och bind-monteringar. Exkluderar rootfs."
+      },
+      {
+        "section": "PVE-lagring",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "Endast PVE-lagring av typerna LVM, LVM-thin, ZFS-pool, RBD, CephFS och PBS. Katalog-, NFS- och CIFS-lagring täcks av raden för värdens diskutrymme."
+      },
+      {
+        "section": "ZFS-pool",
+        "warning": "85 %",
+        "critical": "95 %",
+        "gates": "ZFS-pooler på värden, oberoende av registrering i PVE."
+      }
+    ],
+    "defaultsTitle": "Standardvärden, ändringar och återställning",
+    "defaultsBody": "Varje avsnitt börjar med standardvärden; bara önskade ändringar sparas. Kortet visar det <em>gällande</em> värdet: din ändring eller standarden. <strong>Återställ</strong> tar bort alla ändringar i samtliga avsnitt.",
+    "validationTitle": "Validering",
+    "validationBody": "När du sparar kontrolleras tillåtna intervall och Kritiskt under Varning avvisas. Gränssnittet visar fel och servern validerar API-begäranden igen före lagring."
+  },
+  "lxcDetection": {
+    "heading": "Identifiering av LXC-uppdateringar",
+    "imageAlt": "Kort för LXC-uppdateringar med reglage för att söka väntande paket i körande Debian-, Ubuntu- och Alpine-containrar",
+    "imageCaption": "Reglage för regelbundna kontroller med <code>apt list --upgradable</code> / <code>apk list -u</code> i körande CT. Påslaget som standard. Motsvarande aviseringsreglage under Aviseringar → Tjänster visas när detektering är på.",
+    "intro": "Reglaget mellan Gränser och Aviseringar styr LXC-kontrollen. Påslaget frågar det pakethanterarna i körande CT; Hårdvara visar resultat och matar <code>lxc_updates_available</code>. Avstängt stoppar det sina <code>pct exec</code>-anrop och tar bort LXC-poster från <code>managed_installs.json</code>; <code>/api/managed-installs</code> slutar visa statusen utan att vänta 24 timmar.",
+    "whatRunsTitle": "Vad kontrollen kör",
+    "whatRunsIntro": "För varje CT i tillståndet <code>running</code> med en pakethanterare som stöds:",
+    "whatRunsItems": [
+      "<strong>Metadatans aktualitet.</strong> Är apt/apk-cachen äldre än <strong>24 timmar</strong> provas <code>apt-get update -qq</code> på Debian/Ubuntu eller <code>apk update</code> på Alpine med 60 s tidsgräns. Vid fel används befintlig cache och resultaten kan vara inaktuella.",
+      "<strong>Lista.</strong> Kör <code>apt list --upgradable</code> / <code>apk list -u</code> och hämtar paketantal och några paketnamn.",
+      "<strong>Undvik dubbletter per CT.</strong> Ett fingeravtryck av totalantal, säkerhetsuppdateringar och sorterade namn förhindrar identiska dagliga aviseringar. En betydande ändring meddelas igen."
+    ],
+    "selfUpdateTitle": "CT som uppdateras utanför apt kan visa 0",
+    "selfUpdateBody": "Detekteringen täcker bara CT:ns pakethanterare. Program som uppdateras utanför apt, som ett konfigurerat <code>plexupdate</code>-jobb eller avbilder hämtade med <code>docker pull</code>, räknas inte. Noll apt-uppdateringar bevisar inte att alla appar är aktuella. Baspaket som väntar upptäcks fortfarande.",
+    "refreshTitle": "Varför metadata förnyas efter 24 timmar",
+    "refreshBody": "En CT som körts länge kan ha gamla apt-metadata om ingen kör <code>apt update</code>. <code>apt list --upgradable</code> kan då missa nya uppdateringar. ProxMenux försöker förnya efter 24 timmar och hoppar över steget om cachen är nyare.",
+    "toggleTitle": "Aviseringsreglage när detektering är på",
+    "toggleBody": "Reglaget <code>lxc_updates_available</code> per kanal under <strong>Aviseringar → Tjänster</strong> visas bara när detektering är på. När den stängs av döljs raden för alla kanaler. Valet sparas i databasen och samma värde återkommer när detektering slås på.",
+    "purgeTitle": "Vad som rensas när detektering stängs av",
+    "purgeBody": "Avstängning tar genast bort alla <code>type=lxc</code>-poster från <code>/usr/local/share/proxmenux/managed_installs.json</code>. Räknarna för LXC-uppdateringar på fliken VM och LXC töms vid nästa uppdatering av instrumentpanelen. Påslagning fyller registret vid nästa identifieringscykel, eller tidigare med manuell API-uppdatering."
+  },
+  "storageExclusions": {
+    "heading": "Exklusioner för fjärrlagring",
+    "imageAlt": "Kort för undantag av fjärrlagring med PBS-Cloud, PBS och PBS2 samt reglage för Hälsa och Varningar per rad",
+    "imageCaption": "Reglage för <em>Hälsa</em> och <em>Varningar</em> per lagring. Med båda avstängda räknas lagringen inte i Health Monitor och skickar inga aviseringar. Den syns fortfarande under Lagring, markerad som undantagen.",
+    "intro": "Lagring som hanteras av Proxmox (NFS / CIFS / PBS / Ceph / iSCSI osv.) kan undantas med två oberoende reglage:",
+    "items": [
+      "<strong>Hälsa</strong> — när reglaget stängs av slutar lagringen bidra till kategorin Lagring i Health Monitor. Användbart för arkivvolymer som oftast är offline eller fjärrmål för säkerhetskopiering som bara slås på enligt schema.",
+      "<strong>Varningar</strong> — avstängt hindrar reglaget aviseringar om lagringen via konfigurerade kanaler, även med hälsokontroller på. Användbart om du vill se status på panelen utan aviseringar."
+    ],
+    "outro": "Undantagen lagring syns på <link>fliken Lagring</link> med ett lila märke <em>undantagen</em>, så att inventeringen förblir synlig. Status sparas i SQLite-tabellen <code>excluded_storages</code>."
+  },
+  "interfaceExclusions": {
+    "heading": "Exklusioner för nätverksgränssnitt",
+    "imageAlt": "Kort för gränssnittsundantag med vmbr0, vmbr1, vmbr2, bond0 och eno1 samt reglage för Hälsa och Varningar per gränssnitt",
+    "imageCaption": "Precis som för lagring finns <em>Hälsa</em> och <em>Varningar</em> per gränssnitt. Varje rad visar namn, typ (brygga / bond / fysiskt), IP och länkhastighet.",
+    "intro": "Samma princip gäller gränssnitt: undanta varje från hälsokontroller, aviseringar eller båda. Vanliga exempel:",
+    "items": [
+      "En reservbrygga som avsiktligt är avstängd.",
+      "Ett fysiskt borttaget nätverkskort som fortfarande finns i <code>/etc/network/interfaces</code>.",
+      "Ett VLAN-undergränssnitt som bara används vid underhåll.",
+      "En hanteringsbrygga med kända, upprepade ändringar av länkstatus vid underhåll."
+    ],
+    "outro": "Status sparas i SQLite-tabellen <code>excluded_interfaces</code>. Det lila märket <em>undantaget</em> på <link>fliken Nätverk</link> gör att undantagna gränssnitt förblir synliga."
+  },
+  "notifications": {
+    "heading": "Aviseringar och AI",
+    "body1": "Här aktiveras ProxMenux Monitor-aviseringar och AI-omformulering. <em>Aktivera aviseringar</em> startar sändning i bakgrunden, registrerar ett Proxmox VE-webhookmål för dess händelser och öppnar kanalformuläret för Telegram, Discord, e-post, Gotify och fler. AI-omformulering finns i ett utfällbart avancerat avsnitt i samma panel.",
+    "body2": "Alternativen förklaras på egna sidor: kanaler, händelsereglage, formaterade meddelanden, visningsnamn, sändning med dubblettfilter, väntetid, gruppering och tysta timmar, PVE-webhook, AI-leverantörer och instruktionslägen:",
+    "items": [
+      "<notifLink>Aviseringar</notifLink>: kanaler (Telegram, Discord, Gotify, e-post och applösenord för Gmail / Microsoft, ntfy, Slack, Teams och allmän webhook), händelsekategorier, formaterade meddelanden, visningsnamn, sändning, PVE-webhook, historik och API.",
+      "<aiLink>AI-assistent</aiLink>: leverantörer (OpenAI, Anthropic, Gemini, Groq, OpenRouter, Ollama), modeller, standardinstruktioner eller egna instruktioner, utmatningsspråk, detaljnivå per kanal och AI-förslag."
+    ]
+  },
+  "optimizations": {
+    "heading": "ProxMenux-optimeringar",
+    "intro": "Inventering av efterinstallationsoptimeringar som ProxMenux registrerat på värden. Val från <autoLink>Automatisk efterinstallation</autoLink> och <customLink>Anpassningsbar efterinstallation</customLink> registrerar tillämpningen i <code>/usr/local/share/proxmenux/installed_tools.json</code>. Monitor läser registret. En post kontrollerar inte på nytt att alla underliggande inställningar är oförändrade.",
+    "imageAlt": "ProxMenux-optimeringskort med 14 poster: färgad prick, namn och version. Här finns APT IPv4 Force, Bashrc Customization, Fastfetch, Log2ram SSD Protection, Memory Settings Optimization, Setting persistent network interfaces, System Limits Increase, APT Language Skip, Entropy Generation haveged med Legacy, Kernel Panic Configuration, Logrotate Optimization, Network Optimizations, Subscription Banner Removal och VFIO IOMMU Passthrough.",
+    "imageCaption": "Varje optimering visar namn, version och färgad prick. Uppe till höger finns den orange räknaren <em>14 aktiva</em>. Verktyg med tillgänglig källkod går att öppna.",
+    "dotsTitle": "Vad prickarna betyder",
+    "dotsItems": [
+      "<green/> <strong>Grön prick</strong>: registrerad optimering utan Legacy-markering eller visad uppdatering. Öppna raden när källkod är tillgänglig.",
+      "<amber/> <strong>Bärnstensprick och <em>legacy</em>-märke</strong>: registrerad optimering vars skript har bytt namn eller ersatts. Bevarad källkod öppnas i Legacy-läge med bärnstensfärg. Värdens aktuella konfiguration kontrolleras inte på nytt."
+    ],
+    "clickTitle": "Öppna källkoden",
+    "clickBody": "Ett klick visar den kopplade bash-funktionen och skriptnamnet (<code>auto_post_install.sh</code> eller <code>customizable_post_install.sh</code>). Aktuella verktyg hämtas från värdens filer; äldre kan använda bevarad källkod. Syntaxmarkering och Kopiera hjälper vid granskning. Detta garanterar inte en kopia av exakt den kod som kördes vid installationen.",
+    "detailAlt": "Källkodsfönster för APT IPv4 Force med bash-funktionen force_apt_ipv4 från customizable_post_install.sh version 1.0. Markerad kod konfigurerar /etc/apt/apt.conf.d/99-force-ipv4 med Acquire ForceIPv4 true, registrerar verktyget och visar ett översatt meddelande om slutförd APT IPv4-konfiguration.",
+    "detailCaption": "Kod för <em>APT IPv4 Force</em>: funktionen <code>force_apt_ipv4()</code> från <code>customizable_post_install.sh v1.0</code>, med syntaxmarkering och kopiering med ett klick.",
+    "whyTitle": "Varför detta är viktigt",
+    "whyBody": "ProxMenux kan ändra kärnparametrar, paketkällor, nätverk, loggrotation och GPU-genomkoppling. Granska registrerade optimeringar före manuella ändringar, särskilt om en annan administratör satte upp värden. Kortet visar register och tillgänglig källkod; det granskar inte varje aktuell inställning och bevarar ingen exakt körningshistorik.",
+    "updatesTitle": "Banderoll för tillgängliga uppdateringar",
+    "updatesBody": "Om optimeringens version på disk är nyare än den som registrerats på värden visas en banderoll med antal och <strong>Tillämpa</strong>. <strong>Tillämpa</strong> öppnar väljaren, som <em>Tillämpa tillgängliga uppdateringar</em> i efterinstallationsmenyn. Välj vad som ska uppdateras; ProxMenux kör funktionerna igen och uppdaterar registret. När allt är aktuellt försvinner banderollen.",
+    "updatesAlt": "ProxMenux-optimeringskort med banderoll för tillgängliga uppdateringar, antal väntande och knappen Tillämpa som öppnar väljaren",
+    "updatesCaption": "Banderollen visas om minst en optimering har en nyare version på disk. Se <link>Tillämpa tillgängliga uppdateringar</link> för hela förloppet och motsvarigheten Path-A i skalmenyn.",
+    "revertTitle": "Ångra en optimering",
+    "revertBody": "Ångra en optimering med motsvarande val under <link>Avinstallera optimeringar</link> i ProxMenux Scripts-menyn. Avinstallationen tar bort posten från <code>installed_tools.json</code> och den försvinner från kortet vid nästa omladdning."
+  },
+  "dataCollected": {
+    "heading": "Hur data samlas in",
+    "headerCard": "Kort",
+    "headerEndpoint": "Slutpunkt",
+    "headerSource": "Källa",
+    "rows": [
+      {
+        "card": "Gränssnittsspråk",
+        "endpoint": "localStorage",
+        "source": "Webbläsarvalet <code>proxmenux-ui-language</code>; utan sparat val används först webbläsarens språk."
+      },
+      {
+        "card": "Navigeringsordning",
+        "endpoint": "localStorage",
+        "source": "Webbläsarvalet <code>proxmenux-nav-order</code>; det bestämmer också startfliken."
+      },
+      {
+        "card": "Nätverksenheter",
+        "endpoint": "/api/settings",
+        "source": "Sparas i panelens SQLite-tabell för inställningar."
+      },
+      {
+        "card": "Tider i Health Monitor",
+        "endpoint": "/api/health/settings",
+        "source": "Tid för undertryckning per kategori i Health Monitor-databasen."
+      },
+      {
+        "card": "Undantag för lagring och gränssnitt",
+        "endpoint": "/api/storage/exclusions, /api/network/exclusions",
+        "source": "SQLite-tabellerna <code>excluded_storages</code> och <code>excluded_interfaces</code>."
+      },
+      {
+        "card": "Panelen Aviseringar och AI",
+        "endpoint": "/api/notifications/*",
+        "source": "Se <notifLink>Aviseringar</notifLink> och <aiLink>AI-assistent</aiLink>."
+      },
+      {
+        "card": "ProxMenux-optimeringslista",
+        "endpoint": "/api/proxmenux/installed-tools",
+        "source": "Läser <code>/usr/local/share/proxmenux/installed_tools.json</code>, som skrivs av <code>register_tool</code>-anrop i efterinstallationsskripten."
+      },
+      {
+        "card": "Källkodsfönster för optimering",
+        "endpoint": "/api/proxmenux/tool-source",
+        "source": "Hämtar den kopplade bash-funktionen från <code>auto_post_install.sh</code> eller <code>customizable_post_install.sh</code> på värden; äldre verktyg kan använda bevarad källkod."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Gå vidare",
+    "items": [
+      {
+        "label": "Fliken Appar",
+        "href": "/docs/monitor/dashboard/apps",
+        "tail": " — appstartaren vars placering ändras med navigeringsordningen."
+      },
+      {
+        "label": "Aviseringar",
+        "href": "/docs/monitor/notifications",
+        "tail": " — kanaler, händelsereglage, kanalspecifika inställningar, historik och testsändning."
+      },
+      {
+        "label": "AI-assistent",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": " — leverantörer, modeller, instruktionslägen, språk och detaljnivå per kanal."
+      },
+      {
+        "label": "Health Monitor → Avfärda varningar och tid för undertryckning",
+        "href": "/docs/monitor/health-monitor#dismissing-alerts-and-the-suppression-duration",
+        "tail": " — hur listorna för tid per kategori fungerar."
+      },
+      {
+        "label": "ProxMenux Scripts → Automatisk efterinstallation",
+        "href": "/docs/post-install/automated",
+        "tailRich": " och <customLink>Anpassningsbar efterinstallation</customLink> — skripten som registrerar optimeringar i listan ovan."
+      },
+      {
+        "label": "Avinstallera optimeringar",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — hur du ångrar en optimering registrerad ovan."
+      },
+      {
+        "label": "Översiktsindex",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — tillbaka till fliköversikten."
+      }
+    ]
+  }
+}

@@ -1,0 +1,342 @@
+{
+  "meta": {
+    "title": "Proxmox-KI-Assistent — OpenAI, Claude, Gemini, Groq, Ollama | ProxMenux Monitor",
+    "description": "Der optionale KI-Assistent formuliert Proxmox-VE-Benachrichtigungen verständlich um. Sechs Anbieter: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter und Ollama. Die Oberfläche bietet dreizehn Sprachen, drei Detailstufen pro Kanal, eigene Prompts mit Community-Bibliothek sowie Ereigniskontext mit Laufzeit, Wiederholungen und SMART-Daten.",
+    "ogTitle": "Proxmox-KI-Assistent — OpenAI, Claude, Gemini, Groq, Ollama",
+    "ogDescription": "Beschreiben Sie Proxmox VE-Benachrichtigungen in einfacher Sprache mit OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter oder lokalem Ollama.",
+    "twitterTitle": "Proxmox-KI-Assistent | ProxMenux Monitor",
+    "twitterDescription": "Beschreiben Sie Proxmox VE-Benachrichtigungen in einfacher Sprache mit OpenAI, Anthropic, Gemini, Groq, OpenRouter oder lokalem Ollama."
+  },
+  "header": {
+    "title": "KI-Assistent",
+    "description": "Die optionale KI formuliert geeignete Benachrichtigungsvorlagen verständlich um: mit Detailstufen pro Kanal, dreizehn Oberflächensprachen, eigenen Prompts, öffentlicher Community-Bibliothek und zusätzlichem Kontext. Die Backup-Berichte <code>backup_complete</code> und <code>backup_fail</code> umgehen die KI vollständig.",
+    "section": "ProxMenux-Monitor"
+  },
+  "intro": {
+    "title": "Standardmäßig aus, mit einem Schalter aktivieren",
+    "body": "Die KI-Umschreibung ist standardmäßig aus. Aktivieren Sie sie unter <em>Einstellungen → Benachrichtigungen → Erweitert: KI-Verbesserung</em>. Schlagen Kontextanreicherung oder Umschreibung fehl, sendet der Dispatcher die ursprüngliche Vorlage. Umschreibungen in der Versandwarteschlange für Ereignisse haben ein Zeitlimit von 25 Sekunden; wird es erreicht, wird die Vorlage gesendet, statt weiter zu warten."
+  },
+  "howItWorks": {
+    "heading": "Wie es funktioniert",
+    "intro": "Die versendeten Monitor-Ereignisse durchlaufen denselben Ablauf. Die KI-Umschreibung ist ein optionaler Schritt zwischen Vorlagentext und Kanalversand. Ein Ereignis durchläuft vier Schritte:",
+    "steps": [
+      "<strong>Ereignis und Vorlage.</strong> Ein Ereignis kommt von einem der sechs Datensammler. <code>notification_templates.py</code> formatiert es als strukturierten Klartext. Diesen Text würde der Kanal ohne KI-Umschreibung senden.",
+      "<strong>Kontext-Anreicherung.</strong> Der Dispatcher inspiziert das Ereignis und fügt die relevanten zusätzlichen Signale bedingt an: System-Uptime (nur für kritische Systemausfälle), Ereignis-Frequenz, SMART-Daten (nur für Festplatten-Ereignisse), Bekannte Fehler-Datenbankübereinstimmungen und Journal-Logleitungen.",
+      "<strong>Prompt-Erstellung.</strong> Der Systemprompt setzt sich aus Vorlage und Kanaleinstellungen zusammen: Zielsprache, Detailstufe, Emoji-Regeln aus <em>Formatierte Nachrichten</em> und optionalen KI-Vorschlägen. Ein eigener Prompt ersetzt den Systemprompt vollständig. Die Benutzernachricht enthält Vorlagentext und ergänzte Kontextblöcke.",
+      "<strong>Anbieteraufruf.</strong> Groq, OpenAI, Anthropic, Gemini, Ollama oder OpenRouter liefert umformulierten Titel und Nachrichtentext. Der Dispatcher verarbeitet die Antwort, ersetzt diese Inhalte für den Kanal und übergibt sie an dessen Versandadapter."
+    ],
+    "notesIntro": "Drei Details, an denen es sich zu halten lohnt, bevor Sie den Rest dieser Seite lesen:",
+    "notes": [
+      "<strong>Die KI erzeugt keine Ereignisse.</strong> Jedes Ereignis stammt aus einem echten Signal wie Zustandsprüfung, Journalzeile oder PVE-Webhook. Vor der KI-Verarbeitung wird es als Vorlagentext formatiert. Die KI übersetzt und formatiert, sie überwacht das System nicht.",
+      "<strong>Die AI läuft per-channel.</strong> Telegram und Discord können eine kurze Umschreibung verwenden, während E-Mail einen detaillierten Bericht erhält - dasselbe Ereignis, unterschiedliche Form, alles von einem Anbieteranruf pro Kanal.",
+      "<strong>Fehler führen zur Vorlage zurück.</strong> Bei HTTP-5xx-Fehlern, Zeitüberschreitung, ungültiger Ausgabe oder abgelehnter Anfrage protokolliert der Dispatcher den Fehler und sendet den ursprünglichen Vorlagentext für den Kanal. Ein KI-Fehler verhindert die Benachrichtigung nicht."
+    ]
+  },
+  "enabling": {
+    "heading": "Panel aktivieren",
+    "intro": "Die AI-Konfiguration befindet sich am unteren Rand des Benachrichtigungsfeldes innerhalb der Registerkarte Einstellungen als zusammenklappbarer <em>Advanced: AI Enhancement</em>-Block. Klicken Sie auf den Header, um zu erweitern:",
+    "collapsedAlt": "Eingeklappter Bereich für erweiterte KI-Einstellungen mit Pfeilsymbol",
+    "collapsedCaption": "Standardmäßig eingeklappt; ein Klick öffnet das Panel.",
+    "panelAlt": "Geöffnetes KI-Panel mit Hauptschalter, Anbieter Google Gemini, verdecktem API-Schlüssel, Modell gemini-2.5-flash, Standardprompt, Sprache Englisch, Detailstufe für Telegram, Discord, Gotify und E-Mail, KI-Vorschlägen und Verbindungstest",
+    "panelCaption": "Das vollständige AI Enhancement-Panel - jedes auf dieser Seite dokumentierte Steuerelement wird einem der oben genannten Felder zugeordnet.",
+    "outro": "Von oben nach unten zeigt das Panel: den <em>AI-Enhanced Messages</em> Master-Toggle, den Provider-Selektor mit einem Informationsmodal daneben, den API-Schlüsseleingang (oder die Ollama-URL für den lokalen Modus), den Modell-Dropdown (vom Provider nach Eingabe des Schlüssels geladen), den prompten Modus (<em>Default</em> / <em>Custom</em>), die Ausgabesprache, die Pro-Kanal-Detailebene, die <em>AI Suggestions</em> Opt-in und eine <em>Test Connection</em>-Taste, die eine Probenachricht an den Provider sendet, um die Anmeldeinformationen zu validieren."
+  },
+  "context": {
+    "heading": "Welchen Kontext die KI erhält",
+    "intro": "Bevor die Eingabeaufforderung erstellt wird, führt der Dispatcher eine Kontextanreicherungsroutine durch, die entscheidet, welche zusätzlichen Signale für das jeweilige Ereignis relevant sind. Ziel ist es, dem LLM genügend Informationen zu geben, um eine nützliche Nachricht zu erstellen, ohne sie (und Ihren Geldbeutel) mit Lärm zu überschwemmen, der nicht zutrifft. Fünf Kontextblöcke können der Benutzernachricht hinzugefügt werden:",
+    "headerBlock": "Block",
+    "headerWhen": "Wenn es injiziert wird",
+    "headerWhat": "Was es trägt",
+    "rows": [
+      {
+        "block": "Systemlaufzeit",
+        "when": "Nur bei kritischen Systemfehlern: <code>crash</code>, <code>panic</code>, <code>oom</code>, <code>kernel</code>, <code>split_brain</code>, <code>quorum_lost</code>, <code>node_offline</code>, <code>node_fail</code>, <code>system_fail</code>, <code>boot_fail</code>. Bei Laufwerksfehlern, Warnungen und Routinevorgängen wird dieser Kontext für einen knappen Prompt ausgelassen.",
+        "what": "Eine Linie wie <code>System uptime: 14 days (stable system)</code>. LLM unterscheidet Startprobleme von lang andauernden Fehlern."
+      },
+      {
+        "block": "Ereignishäufigkeit",
+        "when": "Immer, wenn der Monitor den gleichen Fingerabdruck schon einmal gesehen hat.",
+        "what": "Häufigkeit, erstgesehener Zeitstempel, optionale Musterbezeichnung (wiederkehrend / einmalig / Spike). Das LLM verwendet dies, um \"wiederkehrendes Problem\" vs \"erstes Mal gesehen\" zu formulieren."
+      },
+      {
+        "block": "SMART-Daten",
+        "when": "Nur für plattenbezogene Ereignisse (der Ereignistyp enthält <code>disk</code>, <code>smart</code>, <code>storage</code>, <code>io_error</code> oder der Körper erwähnt <code>/dev/sd</code>, <code>ata</code>, <code>i/o error</code>).",
+        "what": "Ausgabe von <code>smartctl</code> für das betroffene Gerät — Gesamtzustand (PASSED / FAILED) zuzüglich der relevanten Attribute für den Fehlermodus."
+      },
+      {
+        "block": "Bekannte Fehler DB",
+        "when": "Wenn der Body- oder Journalkontext mit einem Proxmox-spezifischen Fehlermuster übereinstimmt, das mit dem Monitor ausgeliefert wird.",
+        "what": "Ein <code>KNOWN PROXMOX ERROR DETECTED</code> Block mit der passenden Ursache und einer konkreten Lösung. Die Aufforderung weist das LLM an, dieses wörtlich zu übersetzen - keine Paraphrasierung des empfohlenen Fixes."
+      },
+      {
+        "block": "Journalprotokolle",
+        "when": "Wenn der ursprüngliche Datensammler Journalzeilen zum Ereignis erfasst hat, vor allem die Journal- und Aufgabenüberwachung.",
+        "what": "Rohe <code>journalctl</code>-Auszüge. Die Aufforderung sagt dem LLM, IDs, Zeitstempel und Root-Cause-Hinweise zu extrahieren und nicht verwandte Einträge zu ignorieren."
+      }
+    ],
+    "afterBlocks": "Sobald diese Blöcke verbunden sind, hat die an den LLM gesendete Benutzernachricht diese Form:",
+    "calloutTitle": "Keine Telemetrie über das Ereignis selbst hinaus",
+    "calloutBody": "Der Monitor sendet nur das, was er für das aktuelle Ereignis zur Hand hat - keine systemweite Telemetrie, keine historischen metrischen Serien, keine Inventar-Dumps. Die fünf Blöcke oben sind die obere Grenze dessen, was den Host bei einer einzelnen KI-Umschreibung verlässt."
+  },
+  "tokens": {
+    "heading": "Tokens - was sie sind und wie sie konsumiert werden",
+    "intro1": "Kommerzielle Anbieter rechnen nach <em>Token</em> ab. Ein Token entspricht grob vier englischen Zeichen oder drei Vierteln eines Wortes. Der englische Satz <em>\"Backup completed on storage local-bak\"</em> hat ungefähr acht Token. Zehn Journalzeilen können je nach technischem Inhalt 200–400 Token umfassen.",
+    "intro2": "Zwei Dinge werden bei jedem Anruf in Rechnung gestellt:",
+    "items": [
+      "<strong>Eingabe-Token</strong> umfassen Systemprompt und Benutzernachricht: Schweregrad, Titel, Vorlagentext und Kontext. Die Anzahl hängt vom tatsächlichen Prompt und Ereignis ab. Jeder umgeschriebene Kanal kann eigene Eingabe-Token verbrauchen; Backup-Abschluss- und Fehlerberichte umgehen die KI.",
+      "<strong>Ausgabe-Token</strong> sind die Modellantwort. Monitor begrenzt sie mit <code>max_tokens</code>. Die Grenze ist ein <em>Höchstwert</em>, kein fester Verbrauch: Erzeugt das Modell 250 Token bei einem Limit von 1500, werden 250 berechnet."
+    ],
+    "capsIntro": "Dies sind die tatsächlichen Obergrenzen, die der Dispatcher anwendet, direkt aus <code>AI_DETAIL_TOKENS</code> in <code>notification_templates.py</code> entnommen:",
+    "headerLevel": "Detailebene",
+    "headerCap": "Ausgabegrenze (Token)",
+    "headerConsumption": "Typischer realer Verbrauch",
+    "capRows": [
+      {
+        "level": "kurz",
+        "cap": "500",
+        "consumption": "50–200 Ausgabe-Token für kurze Ereignisse."
+      },
+      {
+        "level": "Standard",
+        "cap": "1500",
+        "consumption": "200–700 Ausgabe-Token für typische Ereignisse mit wenig Kontext."
+      },
+      {
+        "level": "ausführlich",
+        "cap": "3000",
+        "consumption": "500–2000 Ausgabe-Token für vollständige E-Mail-Berichte mit Protokollen und SMART-Tabellen."
+      }
+    ],
+    "customNote": "Der benutzerdefinierte Eingabeaufforderungsmodus verwendet eine feste Obergrenze von 500-Ausgabetoken unabhängig von der Detailstufe - die benutzerdefinierte Eingabeaufforderung ist in Ihrer Kontrolle und die Obergrenze schützt vor außer Kontrolle geratenen Antworten.",
+    "sizingTitle": "Praktische Dimensionierung",
+    "sizingBody": "Schätzen Sie den Verbrauch als umgeschriebene Ereignisse × KI-Kanäle × Eingabe- und Ausgabe-Token je Aufruf. Beispiel: 50 Ereignisse × ein Kanal × (2.000 Eingabe + 300 Ausgabe) ergeben etwa 115.000 Token täglich, da allein der Standard-Systemprompt rund 1.500 Token umfasst. Tatsächlicher Verbrauch und Kosten hängen von Modell, Kontext, Cache und Anbieterlimits ab. Der Abschnitt <link>Detailstufe pro Kanal</link> erklärt <code>brief</code> für Chats statt <code>standard</code>, bei weiterhin ausführlichen E-Mail-Berichten."
+  },
+  "providers": {
+    "heading": "KI-Anbieter",
+    "intro": "Sechs Anbieter sind mit dem Monitor verbunden. Die Anbieter-Dropdown in der Benutzeroberfläche zeigt sie alle; ein Informationsbutton daneben öffnet ein Modal mit einer einzeiligen Beschreibung für jeden. Unten finden Sie die vollständige Referenz mit der URL zum Erhalten eines API-Schlüssels, der Beschreibung in der Benutzeroberfläche und den entsprechenden Notizen aus der Codebasis.",
+    "imageAlt": "AI Providers Informationen modal Auflistung der sechs unterstützten Anbieter - Groq, OpenAI, Anthropic Claude, Google Gemini, Ollama, OpenRouter - jeder mit seinem Symbol und einzeilige Beschreibung und eine spezielle OpenAI-Kompatible APIs Hinweis für OpenAI",
+    "imageCaption": "Informationsfenster mit sechs Karten, einer je Anbieter, und den unten beschriebenen Angaben.",
+    "groq": {
+      "heading": "Groq",
+      "tagline": "Sehr schnelle, großzügige freie Stufe (30 req/min). Ideal zum Starten.",
+      "items": [
+        "API-Schlüssel: <a>console.groq.com/keys</a>",
+        "Beispiele aus der mitgelieferten Modellliste: <code>allam-2-7b</code>, <code>qwen/qwen3.8-27b</code>, <code>openai/gpt-oss-20b</code>, <code>groq/compound-mini</code>.",
+        "Mitgelieferte Empfehlung: <strong><code>openai/gpt-oss-20b</code></strong>. Prüfen Sie die Verfügbarkeit für Ihr Konto über die Anbieterauswahl und den Verbindungstest."
+      ]
+    },
+    "openai": {
+      "heading": "OpenAI",
+      "tagline": "Industriestandard. Sehr genau und weit verbreitet.",
+      "items": [
+        "API-Schlüssel: <a>platform.openai.com/api-keys</a>",
+        "Beispiele aus der mitgelieferten Modellliste: <code>gpt-4.1-nano</code>, <code>gpt-4.1-mini</code>, <code>gpt-4o-mini</code>, <code>gpt-4.1</code>, <code>gpt-4o</code>, <code>gpt-5-nano</code>.",
+        "Mitgelieferte Empfehlung: <strong><code>gpt-4.1-nano</code></strong>. Der Adapter unterstützt auch besondere Anforderungen von Reasoning-Modellen; die Liste enthält gpt-5-nano. Diese Modelle sind daher nicht pauschal ausgeschlossen."
+      ],
+      "baseUrlTitle": "OpenAI-kompatible Basis URL",
+      "baseUrlBody": "Der OpenAI-Anbieter akzeptiert eine eigene <em>Basis-URL</em> für OpenAI-kompatible Endpunkte, etwa <strong>BytePlus / ByteDance (Kimi K2.5)</strong>, <strong>LocalAI</strong>, <strong>LM Studio</strong>, <strong>vLLM</strong>, <strong>Together AI</strong> und <strong>Fireworks AI</strong>, die das Format <code>/v1/chat/completions</code> unterstützen. Tragen Sie die URL im OpenAI-Bereich neben dem API-Schlüssel ein."
+    },
+    "anthropic": {
+      "heading": "Anthropic (Claude)",
+      "tagline": "Hervorragend zum Schreiben und Übersetzen. Schnell und wirtschaftlich.",
+      "items": [
+        "API-Schlüssel: <a>console.anthropic.com/settings/keys</a>",
+        "Beispiele aus der mitgelieferten Modellliste: <code>claude-haiku-4-5-20251001</code>, <code>claude-sonnet-4-6</code>, <code>claude-opus-4-6</code>.",
+        "Mitgelieferte Empfehlung: <strong><code>claude-haiku-4-5-20251001</code></strong>, ein fest angehefteter Snapshot statt eines wechselnden Alias."
+      ]
+    },
+    "gemini": {
+      "heading": "Google Gemini",
+      "tagline": "Kostenloses Kontingent verfügbar, gutes Verhältnis von Qualität und Preis.",
+      "items": [
+        "API-Schlüssel: <a>aistudio.google.com/app/apikey</a>",
+        "Beispiele aus der mitgelieferten Modellliste: <code>gemini-2.5-flash-lite</code>, <code>gemini-2.5-flash</code>, <code>gemini-3-flash-preview</code>.",
+        "Empfohlen: <strong><code>gemini-2.5-flash-lite</code></strong> - Flash und Flash-Lite passieren den Verifier konsequent. Die Pro-Varianten lehnen die <code>thinkingBudget=0</code>-Einstellung ab, die der Monitor verwendet, und sind für diese Workload übertrieben."
+      ]
+    },
+    "openrouter": {
+      "heading": "OpenRouter",
+      "tagline": "Aggregator mit Zugriff auf 100+ Modelle mit einem einzigen API-Schlüssel. Maximale Flexibilität.",
+      "items": [
+        "API-Schlüssel: <a>openrouter.ai/keys</a>",
+        "Beispiele aus der mitgelieferten Modellliste: <code>meta-llama/llama-3.3-70b-instruct</code>, <code>meta-llama/llama-3.1-70b-instruct</code>, <code>meta-llama/llama-3.1-8b-instruct</code>, <code>anthropic/claude-haiku-4.5</code>, <code>google/gemini-2.5-flash-lite</code>, <code>openai/gpt-4o-mini</code>, <code>mistralai/mistral-medium-3</code>.",
+        "Empfohlen: <strong><code>meta-llama/llama-3.3-70b-instruct</code></strong> - dasselbe Modell wie der Groq-Eintrag, aber über OpenRouter geroutet, was einen einzigen Schlüssel für alle aufgeführten Modelle bedeutet."
+      ]
+    },
+    "ollama": {
+      "heading": "Ollama (lokal)",
+      "tagline": "Nutzt die Modelle Ihres konfigurierten Ollama-Servers. Lokale Modelle laufen dort; Ollama-Cloud-Modelle leiten Anfragen an einen Cloud-Anbieter weiter. Lokale Ausführung vermeidet gehostete API-Gebühren, verbraucht aber eigene Hardware und Strom.",
+      "items": [
+        "Kein API-Schlüssel. Setzen Sie das <em>Ollama URL</em>-Feld auf Ihren Server (Standard <code>http://localhost:11434</code> oder welcher Host Ihre Ollama-Instanz ausführt).",
+        "Modelle: <strong>nicht gefiltert.</strong> Der Monitor liest die Modelle, die Sie auf der Ollama-Seite über <code>ollama pull &lt;model&gt;</code> gezogen haben. Der Dropdown wird von <code>GET /api/tags</code> auf Ihrem Ollama-Server ausgefüllt.",
+        "Installieren: <a>ollama.com/download</a> – läuft unter Linux, macOS, Windows. Für beste Ergebnisse wählen Sie ein Modell, das in RAM mit einem ausreichend großen Kontextfenster für die Journalblöcke passt, die der Dispatcher injiziert."
+      ]
+    }
+  },
+  "models": {
+    "heading": "Warum diese spezifischen Modelle",
+    "intro": "Die Modellauswahl nutzt den mitgelieferten Katalog <code>verified_ai_models.json</code> und Verfügbarkeitsprüfungen der Anbieteradapter. Diese setzen die interne Anfrage <code>system_prompt + user_message + max_tokens</code> in das jeweilige API-Format um. Der Katalog enthält getestete und manuell ergänzte Einträge; er garantiert weder aktuellen Kontozugriff noch denselben Verifikationstest für jedes Modell.",
+    "consequencesIntro": "Zwei Konsequenzen, die es wert sind, beachtet zu werden:",
+    "consequences": [
+      "<strong>Die mitgelieferte Empfehlung</strong> ist ein Ausgangspunkt für Benachrichtigungen. Bewerten Sie Sprachqualität, Latenz und Kosten mit Ihren Ereignissen und Ihrem Konto; sie ist keine allgemeine Modellrangliste.",
+      "<strong>Sie können ein anderes aufgeführtes Modell wählen</strong>, passend zu Kontingent und Vorlieben. Prüfen Sie die Verfügbarkeit mit dem Verbindungstest; ein Listeneintrag garantiert keinen aktuellen Kontozugriff."
+    ],
+    "ollamaTitle": "Ollama ist die Ausnahme",
+    "ollamaBody": "Die Ollama-Auswahl wird nicht vom kommerziellen Katalog gefiltert; sie zeigt die Modelle des Ollama-Servers. Wählen Sie für lokale Ausführung ein lokales Modell mit ausreichend RAM und Kontext für Journalblöcke. Cloud-Modelle bleiben auch über einen lokalen Ollama-Server remote."
+  },
+  "defaultPrompt": {
+    "heading": "Standard-Eingabeaufforderung",
+    "intro": "Im Modus <em>Standard</em> nutzt Monitor den unten gezeigten Systemprompt. Vor dem Aufruf werden die Platzhalter ersetzt: <code>'{'language'}'</code>, <code>'{'detail_level'}'</code>, <code>'{'emoji_instructions'}'</code>, <code>'{'suggestions_addon'}'</code>. Danach folgen Varianten für formatierte und einfache Kanäle sowie der Zusatz für KI-Vorschläge.",
+    "showFullSummary": "Vollständige Standardsystemaufforderung anzeigen",
+    "passagesIntro": "Zwei Textvarianten werden entsprechend dem Schalter <em>Formatierte Nachrichten</em> des jeweiligen Kanals eingesetzt:",
+    "passages": [
+      "<strong>Rich on</strong> → ein Emoji-Block wird eingeschleust, der die Symbole auflistet, die der LLM verwenden kann, sowie eine Hostnamenregel (der LLM muss das Hostnamenpräfix aus dem Titel wörtlich beibehalten) und eine Handvoll formatierter Beispiele (Backup-Start, Backup vollständig, Updates, VM Start, Gesundheit beeinträchtigt). Dies erzeugt die emoji-präfixierten Nachrichten auf Telegram und Discord.",
+      "<strong>Rich off</strong> → Ein einzeiliger Block weist den LLM an, nur einfache ASCII zu verwenden - keine Emojis, keine Unicode-Symbole. Wird für E-Mails und jeden Kanal verwendet, bei dem Formatierungsgeräusche die Posteingangsregeln oder die Lesbarkeit verletzen."
+    ],
+    "suggestionsPlaceholder": "Und der <code>'{'suggestions_addon'}'</code> Platzhalter ist leer, es sei denn, Sie aktivieren AI Suggestions (nächster Abschnitt), in welchem Fall dieser Block injiziert wird:",
+    "showAddonSummary": "AI Suggestions Addon anzeigen"
+  },
+  "customPrompt": {
+    "heading": "Benutzerdefinierter Eingabeaufforderungsmodus",
+    "intro": "Der Modus <em>Benutzerdefiniert</em> ersetzt den gesamten Standard-Systemprompt durch Ihren eigenen Text. Er wird in den SQLite-Einstellungen gespeichert und bei jedem KI-Aufruf unverändert gesendet. So können Sie Ton, Aufbau und Schwerpunkt frei festlegen.",
+    "imageAlt": "Eigener Prompt mit Textfeld für Übersetzungsregeln, Export- und Import-Schaltflächen sowie Link zu Community-Prompts",
+    "imageCaption": "Benutzerdefinierte Eingabeaufforderung — großer Textbereich mit der Eingabeaufforderung des Benutzers sowie <em>Export</em>, <em>Import</em> und ein Link zur Community-Galerie auf GitHub.",
+    "changesTitle": "Was sich ändert, wenn Custom eingeschaltet ist",
+    "changes": [
+      "<strong>Die Standardaufforderung wird vollständig ersetzt.</strong> Die Proxmox-Mappings, die Kontext-Handling-Regeln und die Emoji-Anweisungen sind alle verschwunden. Wenn Sie eine davon behalten möchten, fügen Sie sie in Ihre Eingabeaufforderung ein - die unten gezeigte gebündelte <code>EXAMPLE_CUSTOM_PROMPT</code> ist ein Ausgangspunkt.",
+      "<strong>Die Sprachauswahl wird ignoriert.</strong> Die Standard-Eingabeaufforderung hat einen <code>'{'language'}'</code>-Platzhalter; die benutzerdefinierte Eingabeaufforderung nicht. Wenn Sie eine Ausgabe in einer bestimmten Sprache wünschen, deklarieren Sie sie in Ihrer Eingabeaufforderung (\"Ins Spanische übersetzen\", \"Alles auf Französisch ausgeben\").",
+      "<strong>Der eigene Prompt hat ein festes Limit von 500 Token</strong>, unabhängig von der gespeicherten Detailstufe. Der Standardmodus nutzt 500 / 1500 / 3000. Prompt-Änderungen erhöhen das Limit nicht; fordern Sie kürzere Antworten an oder wählen Sie eine passende Standardstufe.",
+      "<strong>Die Ausgabemarker bleiben erforderlich.</strong> Geben Sie <code>[TITLE]</code> und <code>[BODY]</code> im Antwortformat vor. Der Parser liest deren Inhalt; fehlt ein Marker, wird die ursprüngliche Vorlage verwendet.",
+      "<strong>Emoji-Regeln formatierter Nachrichten werden nicht automatisch ergänzt.</strong> Fordern Sie Emojis im eigenen Prompt ausdrücklich an oder untersagen Sie sie für Klartext. Der Schalter steuert nur die Standardblöcke, nicht Ihren eigenen Text."
+    ],
+    "starterTitle": "Startaufforderung",
+    "starterIntro": "Der Textbereich <em>Benutzerdefinierte Eingabeaufforderung</em> wird mit einem minimalen Beispiel ausgeliefert, das Sie anpassen können:",
+    "showStarterSummary": "Benutzerdefinierten Beispielprompt anzeigen",
+    "shareTitle": "Aufforderungen mit der Community teilen",
+    "shareIntro": "Die Schaltfläche <em>Export</em> schreibt Ihre aktuelle benutzerdefinierte Eingabeaufforderung in eine Datei (<code>.txt</code> / <code>.md</code>), die Sie als Backup oder Hand an eine andere Person speichern können. <em>Import</em> zieht einen zurück. Der dritte Button neben ihnen verlinkt zu einer öffentlichen Community-Galerie auf GitHub:",
+    "shareLinkLabel": "github.com/MacRimi/ProxMenux/discussions — Eigene Prompts für KI-Benachrichtigungen teilen",
+    "shareOutro": "Durchsuchen sie die diskussion, um zu sehen, was andere betreiber erstellt haben - knappe pager-alarme, ausführliche technische berichte, sprachspezifische varianten. Wenn Sie Ihre optimieren und das Ergebnis mögen, posten Sie es dort: Selbst eine Beschreibung mit einem Absatz, für die Ihre Eingabeaufforderung optimiert wird, hilft den Menschen, einen guten Ausgangspunkt zu finden. Feedback darüber, was funktioniert und was nicht, ist ebenso willkommen."
+  },
+  "suggestions": {
+    "heading": "KI-Vorschläge (BETA)",
+    "intro": "KI-Vorschläge sind ein optionaler Zusatz für <strong>einen</strong> kurzen, umsetzbaren Tipp am Ende der Nachricht. Dafür müssen Modus <em>Standard</em>, der KI-Hauptschalter und <em>KI-Vorschläge</em> aktiv sein. Der Prompt verlangt, den Tipp bei unklarer Ursache oder Lösung auszulassen.",
+    "formatIntro": "Wenn ein Tipp hinzugefügt wird, folgt er genau diesem Format:",
+    "rulesIntro": "Die Regeln im Addon (sichtbar im zusammenklappbaren Block unter der Standard-Eingabeaufforderung oben):",
+    "rules": [
+      "Der Tipp ist <em>nur</em> enthalten, wenn der Journalkontext oder die Datenbank mit bekannten Fehlern eindeutig auf einen bestimmten Fix hinweist.",
+      "Der Prompt verlangt einen Tipp unter 100 Zeichen; der Parser prüft diese Länge nicht unabhängig.",
+      "Der Prompt verlangt einen konkreten Befehl oder Pfad und weist das Modell an, allgemeine Ratschläge zu vermeiden.",
+      "Wenn ein bekannter Fehler eine Lösung bietet, muss der LLM diese Lösung verwenden und keine neue erfinden.",
+      "Der Prompt weist das Modell an, den Tipp wegzulassen, wenn die Eingabe keine konkrete Lösung belegt."
+    ],
+    "betaTitle": "Warum Beta",
+    "betaBody": "Die Tip-Qualität hängt von zwei Dingen ab, die außerhalb von ProxMenux liegen: das ausgewählte Modell und wie reich der Journal-Kontext für die Veranstaltung war. Mit einem starken Modell (Claude 3.5 Haiku, GPT-4.1 Mini, Llama 3.3 70B) und einem Festplattenfehler, der mit smartctl + Zeitschriftenzeilen geliefert wird, ist der Tipp durchweg nützlich. Mit einem winzigen lokalen Ollama-Modell und einem einzeiligen Ereignis kann die Spitze flach fallen oder ganz übersprungen werden. Deaktivieren Sie den Schalter, wenn Sie die Tipps laut finden, und aktivieren Sie ihn wieder, wenn Sie ihn zurückhaben möchten."
+  },
+  "detailLevel": {
+    "heading": "Detailebene pro Kanal",
+    "intro": "Telegram, Discord, Gotify und E-Mail haben jeweils eine eigene Auswahl der Detailstufe. Drei Werte steuern im Standardprompt sowohl das Ausgabe-Token-Limit als auch die Detailvorgaben:",
+    "headerLevel": "Ebene",
+    "headerLabel": "UI-Kennzeichnung",
+    "headerCap": "Ausgabegrenze",
+    "headerProduce": "Was der Prompt vom LLM verlangt",
+    "rows": [
+      {
+        "level": "kurz",
+        "label": "2–3 Zeilen, nur das Wesentliche",
+        "cap": "500-Token",
+        "produce": "\"Was passiert ist + wo\". Nichts anderes."
+      },
+      {
+        "level": "Standard",
+        "label": "Knapp mit grundlegendem Kontext",
+        "cap": "1500-Token",
+        "produce": "3–6 Zeilen: was, wo, Ursache, betroffene Geräte."
+      },
+      {
+        "level": "ausführlich",
+        "label": "Vollständige technische Angaben",
+        "cap": "3000-Token",
+        "produce": "Vollständiger Bericht: was, wo, Ursache, Betroffene, Protokolle, SMART-Daten und Verlauf."
+      }
+    ],
+    "defaultsIntro": "Standardwerte bei der ersten Installation:",
+    "defaults": [
+      "<strong>Telegram, Discord, Gotify</strong> — <code>standard</code>.",
+      "<strong>Email</strong> — <code>detailed</code>. E-Mail ist der Kanal, in dem Sie normalerweise das vollständige Bild für die Archivierung wünschen."
+    ],
+    "emailTitle": "E-Mail-Detailebene fügt das Original hinzu",
+    "emailBody": "Liefert der KI-Formatter ein Ergebnis für E-Mail mit <code>detailed</code> und hat der Ursprungstext mehr als 50 Zeichen, hängt er ihn nach 40 Bindestrichen und <code>Original message:</code> an. Das bewahrt Details für spätere Suchen. Bei KI-Umgehung oder Fehlern kann nur die ursprüngliche Vorlage versendet werden."
+  },
+  "language": {
+    "heading": "Sprache",
+    "intro": "Die Oberflächenauswahl bietet dreizehn Sprachen. Sie speichert <code>ai_language</code>, das der Standardprompt in <em>\"translate alerts into '{'language'}'\"</em> verwendet. Die Liste:",
+    "list": "Englisch (<code>en</code>), Slowakisch (<code>sk</code>), Spanisch (<code>es</code>), Französisch (<code>fr</code>), Deutsch (<code>de</code>), Portugiesisch (<code>pt</code>), Italienisch (<code>it</code>), Russisch (<code>ru</code>), Schwedisch (<code>sv</code>), Norwegisch (<code>no</code>), Japanisch (<code>ja</code>), Chinesisch (<code>zh</code>), Niederländisch (<code>nl</code>).",
+    "rulesIntro": "Zwei wichtige Regeln direkt aus der Aufforderung:",
+    "rules": [
+      "<strong>Übersetzen</strong>: Beschriftungen, Beschreibungen, Statuswörter und Einheiten, etwa GB → Go auf Französisch.",
+      "<strong>Nicht übersetzen</strong>: Hostnamen, IPs, Pfade, VM/CT IDs, Gerätenamen wie <code>/dev/sdX</code>, technische Identifikatoren. Diese bleiben wortwörtlich unabhängig von der Sprache."
+    ],
+    "customNote": "Der eigene Prompt <strong>verwendet die Sprachauswahl nicht</strong>. Geben Sie die gewünschte Ausgabesprache direkt im Prompt an."
+  },
+  "templates": {
+    "heading": "Ein Hinweis auf Vorlagen",
+    "body1": "Die KI erhält formatierten Vorlagentext statt roher Ereignisdaten. Typen wie <code>vm_start</code>, <code>auth_fail</code> und <code>health_degraded</code> haben Vorlagen in <code>notification_templates.py</code>. Die KI formuliert geeignete Texte um; <code>backup_complete</code> und <code>backup_fail</code> behalten deterministische Berichte und umgehen die KI.",
+    "body2": "Zwei praktische Implikationen: Die KI sieht nie einen Hostnamen oder VMID, den sie erfinden muss - diese Felder werden von der Vorlage vor dem Umschreiben platziert. Und wenn AI deaktiviert ist, wird der vorgefertigte Körper direkt versandt. Die <link>Notifications</link>-Seite dokumentiert die Versandpipeline vollständig und ist der richtige Querverweis für alles, was mit einem Ereignis passiert, bevor es diese Ebene erreicht."
+  },
+  "privacy": {
+    "heading": "Datenschutz & Datenfluss",
+    "intro": "Bei aktivierter KI-Umschreibung sendet Monitor den Vorlagentext samt Kontextblöcken an den Anbieter. Dazu können Hostnamen, IP-Adressen, Benutzernamen, Gerätepfade, Journalzeilen und SMART-Attribute des betroffenen Geräts gehören. Ob diese Daten den Host verlassen, hängt vom Anbieter ab:",
+    "headerProvider": "Anbieter",
+    "headerDestination": "Datenziel",
+    "rows": [
+      {
+        "provider": "Ollama",
+        "destination": "Lokale Modelle laufen auf dem konfigurierten Ollama-Host. Ist dies der Proxmox-Knoten selbst, bleiben ihre Anfragen dort. Ollama-Cloud-Modelle senden Anfragen nach außen, auch über einen lokalen Ollama-Server."
+      },
+      {
+        "provider": "OpenAI",
+        "destination": "Standardmäßig <code>api.openai.com</code> oder die konfigurierte eigene Basis-URL. Es gelten die Datenverarbeitungsregeln des tatsächlichen Endpunktbetreibers."
+      },
+      {
+        "provider": "Anthropic",
+        "destination": "<code>api.anthropic.com</code>."
+      },
+      {
+        "provider": "Google Gemini",
+        "destination": "<code>generativelanguage.googleapis.com</code>."
+      },
+      {
+        "provider": "Groq",
+        "destination": "<code>api.groq.com</code>."
+      },
+      {
+        "provider": "OpenRouter",
+        "destination": "<code>openrouter.ai</code> leitet an den im Feld <code>model</code> gewählten Modellanbieter weiter. Zwei Verarbeitungsstationen statt einer."
+      }
+    ],
+    "calloutTitle": "Wenn Ereignisinhalte das Netzwerk nicht verlassen können",
+    "calloutBody": "Nutzen Sie einen lokal gehosteten Endpunkt mit lokalem Modell, etwa Ollama oder einen OpenAI-kompatiblen Server, oder deaktivieren Sie die KI. Ollama-Cloud-Modelle verarbeiten Daten nicht lokal. Der Dispatcher anonymisiert keine Hostnamen oder IP-Adressen; er nutzt den tatsächlichen Ereignisinhalt."
+  },
+  "whereNext": {
+    "heading": "Wohin als nächstes",
+    "items": [
+      {
+        "label": "Benachrichtigungen",
+        "href": "/docs/monitor/notifications",
+        "tail": "— die Versandpipeline, Kanäle, Per-Event-Toggles und die PVE webhook-Integration, die diese Schicht umgibt."
+      },
+      {
+        "label": "Gesundheitsmonitor",
+        "href": "/docs/monitor/health-monitor",
+        "tail": "— der größte Einzelproduzent von Ereignissen, den die KI am Ende umschreibt, mit eigenen Unterdrückungsdauern pro Kategorie."
+      },
+      {
+        "label": "Architektur",
+        "href": "/docs/monitor/architecture",
+        "tail": "- wo der AI Enhancer in den breiteren Monitor-Prozess passt (es ist ein Modul, kein separater Dienst)."
+      }
+    ],
+    "communityLabel": "Community prompts auf GitHub",
+    "communityTail": "- durchsuchen, teilen, fragen."
+  }
+}
