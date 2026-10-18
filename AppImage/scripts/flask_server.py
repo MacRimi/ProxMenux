@@ -14130,6 +14130,35 @@ def api_vm_apps_native_discovery(vmid):
         result, suggestions, sidecar.get('apps') or []))
 
 
+@app.route('/api/vms/<int:vmid>/apps/logo-discovery', methods=['POST'])
+@require_auth
+def api_vm_apps_logo_discovery(vmid):
+    """Explicit lookup of a port on this LXC; clients cannot supply a host."""
+    import local_app_icons
+    try:
+        return jsonify(local_app_icons.discover(vmid, request.get_json(silent=True)))
+    except local_app_icons.IconError as exc:
+        return jsonify({'error': 'Local icon unavailable', 'code': exc.code}), 400
+    except Exception:
+        return jsonify({'error': 'Local icon lookup failed', 'code': 'local_logo_unavailable'}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps/logo-cache/<token>', methods=['GET'])
+@require_auth
+def api_vm_apps_logo_cache(vmid, token):
+    """Authenticated, cache-only display, including while the LXC is stopped."""
+    import local_app_icons
+    cached = local_app_icons.read(vmid, token)
+    if not cached:
+        return jsonify({'error': 'Cached icon not found'}), 404
+    body, mime = cached
+    return Response(body, mimetype=mime, headers={
+        'Cache-Control': 'private, no-store',
+        'Content-Security-Policy': "default-src 'none'; style-src 'none'; sandbox",
+        'X-Content-Type-Options': 'nosniff',
+    })
+
+
 @app.route('/api/vms/<int:vmid>/apps/adguard-setup', methods=['GET'])
 @require_auth
 def api_vm_apps_adguard_setup(vmid):

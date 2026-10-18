@@ -29,6 +29,7 @@ function fixture({nativeCandidate = candidate} = {}) {
   let native = {vmid: 101, status: 'not_scanned', candidates: [], stale: false}
   let holdScan, scanGate, holdSave, saveGate, scanStatus = 'complete', scanIssues
   let cacheGate, resolveCache, cachePending = false
+  let iconGate, resolveIcon, iconResult = {logo_url: '/api/vms/101/apps/logo-cache/' + 'b'.repeat(32)}, iconError
   const seed = {sidecar: {vmid: 101, apps: []}, suggestions: {extras: [], port_suggestions: []}}
   const react = {
     useState(initial) {
@@ -47,6 +48,11 @@ function fixture({nativeCandidate = candidate} = {}) {
   }
   const api = async (url, options = {}) => {
     calls.push({url, ...options})
+    if (url.endsWith('/logo-discovery')) {
+      if (iconGate) await iconGate
+      if (iconError) throw iconError
+      return iconResult
+    }
     if (url.endsWith('/native-discovery')) {
       if (options.method !== 'POST' && cachePending) {
         cachePending = false
@@ -73,7 +79,7 @@ function fixture({nativeCandidate = candidate} = {}) {
     subscribeLxcApps: () => () => {}, setLxcAppsCached: (...args) => cachedWrites.push(args),
   }
   const exports = {}
-  vm.runInNewContext(compiled.outputText, {exports, console, setTimeout, clearTimeout,
+  vm.runInNewContext(compiled.outputText, {exports, console, setTimeout, clearTimeout, AbortController,
     require: name => {
       if (name === 'react') return react
       if (name === 'react/jsx-runtime') return {jsx: (type, props) => ({type, props}), jsxs: (type, props) => ({type, props})}
@@ -98,6 +104,9 @@ function fixture({nativeCandidate = candidate} = {}) {
     return match
   }
   return {render, settle, calls, cachedWrites, button, tree: () => tree,
+    holdIcon: () => {iconGate = new Promise(resolve => {resolveIcon = resolve})},
+    resolveIcon: () => resolveIcon(), setIconResult: value => {iconResult = value},
+    setIconError: value => {iconError = value},
     setNative: value => {native = value},
     holdInitialCache: () => {cachePending = true; cacheGate = new Promise(resolve => {resolveCache = resolve})},
     resolveInitialCache: () => resolveCache(),
@@ -230,4 +239,5 @@ async function main() {
   assert.equal(oci.calls.filter(c => c.url.endsWith('/native-discovery') && c.method === 'POST').length, 0, 'OCI refresh never native-scans')
   console.log('PASS native discovery: real panel Find → editor → Cancel/Save, no automatic scan, safe payload, CT switching and OCI refresh (fixtures)')
 }
-main().catch(error => {console.error(error); process.exitCode = 1})
+module.exports = {fixture, flatten, text, candidate}
+if (require.main === module) main().catch(error => {console.error(error); process.exitCode = 1})
