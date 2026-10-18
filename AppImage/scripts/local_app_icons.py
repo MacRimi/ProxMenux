@@ -94,7 +94,11 @@ def _origin(vmid, payload):
                     for a in interface.get('addr_info', []) if 'local' in a}
     except (ValueError, TypeError, KeyError) as exc:
         raise IconError('host address check unavailable') from exc
-    addresses = sorted({str(ipaddress.ip_address(ip)) for ip in ips if _private_ip(ip)}, key=lambda ip: ':' in ip)
+    # Preserve lxc-info's reported order (CT215: eth0 then Docker bridges).
+    # Unordered set iteration selected an internal bridge at random. Keep
+    # runtime order within each address family, including when deduplicating.
+    addresses = list(dict.fromkeys(str(ipaddress.ip_address(ip)) for ip in ips if _private_ip(ip)))
+    addresses.sort(key=lambda ip: ':' in ip)
     addresses = [ip for ip in addresses if ip not in host_ips]
     if not addresses:
         raise IconError('container has no isolated private address')

@@ -145,6 +145,18 @@ class Icons(unittest.TestCase):
         self.assertTrue(icons._same_origin('https://10.0.0.42:443', 'https://10.0.0.42/icon'))
         self.assertFalse(icons._same_origin('https://10.0.0.42', 'https://user@10.0.0.42/icon'))
 
+    def test_multiple_private_addresses_retain_runtime_order_not_set_order(self):
+        # Real CT215 lxc-info: eth0 followed by three Docker bridges and ULA.
+        observed = ['10.0.0.27', '172.17.0.1', '172.18.0.1', '172.19.0.1',
+                    'fd40:359f:8a1b:f9b3:be24:11ff:fe85:bd05']
+        for addresses in (observed, list(reversed(observed))):
+            expected = next(ip for ip in addresses if ':' not in ip)
+            def resolve(args):
+                return '\n'.join(addresses + addresses) if args[0] == 'lxc-info' else self.resolve(args)
+            with patch.object(icons, '_run', side_effect=resolve), patch.object(icons, '_worker', return_value=(self.png, 'image/png')) as worker:
+                icons.discover(101, self.payload)
+                worker.assert_called_once_with(f'http://{expected}:8080')
+
     def test_address_change_or_stop_during_request_cannot_cache(self):
         for second in ['http://10.0.0.43:8080', icons.IconError('stopped')]:
             with patch.object(icons, '_origin', side_effect=['http://10.0.0.42:8080', second]), patch.object(icons, '_worker', return_value=(self.png, 'image/png')), patch.object(icons, 'store') as store:
