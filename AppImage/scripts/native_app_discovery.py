@@ -146,6 +146,8 @@ SERVICE_SCRIPT = r'''
 command -v awk >/dev/null && command -v head >/dev/null || exit 1
 n=0
 for dir in /etc/systemd/system /usr/lib/systemd/system /lib/systemd/system /etc/init.d; do
+  # With a merged /usr, /lib is /usr/lib: the same units must not count twice.
+  [ "$dir" = /lib/systemd/system ] && [ /lib/systemd/system -ef /usr/lib/systemd/system ] && continue
   [ ! -d "$dir" ] || [ -r "$dir" ] || exit 1
   for f in "$dir"/*; do
     [ -f "$f" ] || continue
@@ -204,7 +206,8 @@ elif command -v netstat >/dev/null; then
       pid=$7; sub(/\/.*$/,"",pid); if(pid ~ /^[0-9]+$/) printf "L\t%s\t%s\n",pid,port}
     END {print failed ? "FAILED" : (limited ? "LIMIT" : "END")}'
 else
-  exit 1
+  # Without ss or netstat there is no listener evidence; a retry would not change it.
+  printf 'END\n'
 fi
 '''
 HESTIA_PANEL_SCRIPT = r'''

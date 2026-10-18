@@ -590,6 +590,28 @@ class DiscoveryFixtures(unittest.TestCase):
             self.assertNotIn('SECRET', output)
             self.assertFalse(marker.exists())
 
+    def test_merged_usr_units_are_counted_once(self):
+        usr = self.root / 'usr-units'
+        usr.mkdir()
+        (usr / 'handmade.service').write_text('[Service]\nExecStart=/opt/handmade/server\n')
+        lib = self.root / 'lib-units'
+        lib.symlink_to(usr)
+        check = '[ "$dir" = /lib/systemd/system ] && [ /lib/systemd/system -ef /usr/lib/systemd/system ]'
+        self.assertIn(check, native.SERVICE_SCRIPT)
+        script = (native.SERVICE_SCRIPT
+                  .replace('/etc/systemd/system /usr/lib/systemd/system /lib/systemd/system /etc/init.d', f'{usr} {lib}')
+                  .replace(check, f'[ "$dir" = {lib} ] && [ {lib} -ef {usr} ]'))
+        output = native.bounded_run(['sh', '-c', script], time.monotonic() + 3)
+        self.assertEqual(output.count('handmade.service'), 1)
+
+    def test_a_guest_without_ss_or_netstat_has_no_listener_evidence(self):
+        bin_dir = self.root / 'no-tools'
+        bin_dir.mkdir()
+        (bin_dir / 'awk').symlink_to('/usr/bin/awk')
+        output = native.bounded_run(['sh', '-c', 'PATH=' + str(bin_dir) + '\n' + native.PORT_SCRIPT, 'fixture', '256'],
+                                    time.monotonic() + 3)
+        self.assertEqual(native.parse_records(output, 'L'), ([], False, 0))
+
     def test_actual_process_parser_skips_docker_and_never_reads_environ_cmdline(self):
         proc = self.root / 'proc'
         proc.mkdir()
