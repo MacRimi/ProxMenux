@@ -27,7 +27,7 @@ function fixture({nativeCandidate = candidate} = {}) {
   let cursor = 0, tree, props, effects = [], states = [], refs = [], effectStates = []
   const calls = [], cachedWrites = []
   let native = {vmid: 101, status: 'not_scanned', candidates: [], stale: false}
-  let holdScan, scanGate, holdSave, saveGate, scanStatus = 'complete'
+  let holdScan, scanGate, holdSave, saveGate, scanStatus = 'complete', scanIssues
   let cacheGate, resolveCache, cachePending = false
   const seed = {sidecar: {vmid: 101, apps: []}, suggestions: {extras: [], port_suggestions: []}}
   const react = {
@@ -56,7 +56,7 @@ function fixture({nativeCandidate = candidate} = {}) {
       }
       if (options.method === 'POST') {
         if (scanGate) await scanGate
-        native = {...native, status: scanStatus, candidates: [nativeCandidate]}
+        native = {...native, status: scanStatus, issues: scanIssues, candidates: [nativeCandidate]}
       }
       return structuredClone(native)
     }
@@ -102,6 +102,7 @@ function fixture({nativeCandidate = candidate} = {}) {
     holdInitialCache: () => {cachePending = true; cacheGate = new Promise(resolve => {resolveCache = resolve})},
     resolveInitialCache: () => resolveCache(),
     setScanStatus: value => {scanStatus = value},
+    setScanIssues: value => {scanIssues = value},
     holdScan: () => {scanGate = new Promise(resolve => {holdScan = resolve})}, resolveScan: () => holdScan(),
     holdSave: () => {saveGate = new Promise(resolve => {holdSave = resolve})}, resolveSave: () => holdSave(),
   }
@@ -161,6 +162,39 @@ async function main() {
   await failed.button('searchApplications').props.onClick(); failed.render()
   assert.ok(text(failed.tree()).includes('nativeScanFailed'))
   assert.equal(failed.calls.filter(c => c.url.endsWith('/apps/suggestions') && c.method === 'POST').length, 0)
+
+  // Match the collector's public response, including retained stale evidence.
+  // A busy reply may carry an earlier guest_stopped issue from its cache.
+  for (const [status, issues, expected] of [
+    ['error', ['guest_stopped'], 'nativeScanStopped'],
+    ['error', ['status_unknown'], 'nativeScanFailed'],
+    ['error', ['timeout'], 'nativeScanFailed'],
+    ['error', [], 'nativeScanFailed'],
+    ['error', undefined, 'nativeScanFailed'],
+    ['error', 'guest_stopped', 'nativeScanFailed'],
+    ['busy', ['guest_stopped'], 'nativeScanFailed'],
+  ]) {
+    const denied = fixture()
+    denied.setNative({vmid: 101, status: 'complete', stale: true, candidates: [candidate]})
+    denied.render(); await denied.settle()
+    denied.setScanStatus(status); denied.setScanIssues(issues)
+    await denied.button('searchApplications').props.onClick(); denied.render()
+    assert.ok(text(denied.tree()).includes(expected), `${status}/${JSON.stringify(issues)} uses ${expected}`)
+    assert.ok(!text(denied.tree()).includes(expected === 'nativeScanStopped' ? 'nativeScanFailed' : 'nativeScanStopped'))
+    assert.ok(text(denied.tree()).includes('/opt/handmade/server'), 'failure retains prior evidence')
+    assert.equal(denied.calls.filter(c => c.method === 'POST').length, 1, 'only the explicit discovery POST, no suggestion, save or control call')
+    assert.equal(denied.cachedWrites.length, 0, 'failure cannot overwrite registrations')
+    assert.equal(denied.button('searchApplications').props.disabled, false, 'search settles and can be retried')
+  }
+
+  const stoppedLate = fixture()
+  stoppedLate.render(); await stoppedLate.settle()
+  stoppedLate.setScanStatus('error'); stoppedLate.setScanIssues(['guest_stopped'])
+  stoppedLate.holdScan()
+  const stoppedRequest = stoppedLate.button('searchApplications').props.onClick()
+  stoppedLate.render({vmid: 102}); await stoppedLate.settle()
+  stoppedLate.resolveScan(); await stoppedRequest; stoppedLate.render()
+  assert.ok(!text(stoppedLate.tree()).includes('nativeScanStopped'), 'late stopped response cannot label another CT')
 
   const editorSwitch = fixture()
   editorSwitch.render(); await editorSwitch.settle()

@@ -1690,6 +1690,7 @@
       "nativeEvidenceDirectory": "Pracovný priečinok",
       "nativeEvidenceService": "Definícia služby",
       "nativeScanFailed": "Vyhľadávanie aplikácií sa nepodarilo dokončiť. Predchádzajúce dôkazy môžu byť zastarané; skús to znova.",
+      "nativeScanStopped": "Kontajner je vypnutý. Vyhľadávanie aplikácií je dostupné iba v spustenom kontajneri.",
       "nativeScanPartial": "Vyhľadávanie aplikácií je neúplné. Skontroluj dostupné dôkazy a skús to znova.",
       "nativeVersionUnknown": "Nainštalovaná verzia nie je známa",
       "nativeEvidenceStale": "Dôkazy môžu byť zastarané alebo neúplné.",

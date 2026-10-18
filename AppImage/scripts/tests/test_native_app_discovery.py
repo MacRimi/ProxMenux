@@ -746,6 +746,27 @@ class Routes(unittest.TestCase):
             scan.assert_not_called()
             read.assert_not_called()
 
+    def test_stopped_scan_route_exposes_reason_and_keeps_cached_evidence(self):
+        item = {'discovery_id': 'native-retained', 'name': 'Retained app',
+                'installation_path': '/opt/retained/server'}
+        previous = {'vmid': 101, 'status': 'complete', 'stale': False,
+                    'scanned_at': time.time(), 'candidates': [item]}
+        native._cache[101] = copy.deepcopy(previous)
+        with patch.object(native, 'scan', side_effect=native.ProbeError('guest_stopped')), \
+             patch.object(lxc_apps, 'load_sidecar', return_value={'apps': []}), \
+             patch.object(lxc_apps, 'get_suggestions') as suggestions, \
+             patch.object(lxc_apps, '_write_sidecar') as write:
+            response = self.client.post('/api/vms/101/apps/native-discovery')
+            self.assertEqual(response.status_code, 200)
+            result = response.get_json()
+            self.assertEqual(result['status'], 'error')
+            self.assertEqual(result['issues'], ['guest_stopped'])
+            self.assertTrue(result['stale'])
+            self.assertEqual(result['candidates'], [item])
+            self.assertEqual(result['scanned_at'], previous['scanned_at'])
+            suggestions.assert_not_called()
+            write.assert_not_called()
+
     def test_actual_lifecycle_marks_last_known_stale_without_scanning(self):
         native._cache[101] = {'vmid': 101, 'status': 'complete', 'stale': False,
                               'candidates': [], 'scanned_at': time.time()}
