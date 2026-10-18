@@ -55,7 +55,7 @@
         "outro": "Es necesario reiniciar después de este cambio. El script te pide reiniciar ahora o más tarde; el passthrough no puede continuar hasta que la nueva cmdline del kernel esté activa.",
         "img": "/disk/nvme-passthrough/iommu-warning.png",
         "alt": "Diálogo que indica que se requiere IOMMU",
-        "caption": "IOMMU requerido: propuesta de habilitarlo y reiniciar"
+        "caption": "Se requiere IOMMU: propuesta de habilitarlo y reiniciar"
       },
       {
         "title": "Enumeración de dispositivos",

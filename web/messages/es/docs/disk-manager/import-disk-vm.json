@@ -69,7 +69,7 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "noDisksTitle": "\"No hay discos disponibles para este VM\"",
+    "noDisksTitle": "\"No hay discos disponibles para esta máquina virtual\"",
     "noDisksIntro": "El script encontró discos, pero todos los candidatos se filtraron. Razones comunes:",
     "noDisksItems": [
       "Cada disco restante ya está referenciado en la config de la VM destino.",
