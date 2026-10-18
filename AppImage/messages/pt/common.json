@@ -2,7 +2,7 @@
   "_meta": "Community translation target. Copy keys from ../en/common.json and translate the values.",
   "app": {
     "title": "ProxMenux Monitor",
-    "description": "Proxmox System Dashboard",
+    "description": "Painel do sistema Proxmox",
     "loading": "Carregando...",
     "connecting": "Conectando ao ProxMenux Monitor",
     "unknown": "Desconhecido",
@@ -1320,8 +1320,8 @@
         "Sábado"
       ],
       "runSkippedStatus": "execução ignorada",
-      "reasonStoppedContainer": "O contêiner está parado; a atualização agendada foi ignorada.",
-      "reasonStoppedContainerHistorical": "O contêiner estava parado no horário da atualização agendada."
+      "reasonStoppedContainer": "O contentor está parado; a atualização agendada foi ignorada.",
+      "reasonStoppedContainerHistorical": "O contentor estava parado à hora da atualização agendada."
     },
     "cronChip": {
       "detected": "cron do host detectado",
@@ -5350,7 +5350,7 @@
     "customLinkDeleteError": "Delete failed",
     "categoryLabels": {
       "arrSuite": "*Arr Suite",
-      "aiCodingDevTools": "AI / Coding & Dev-Tools",
+      "aiCodingDevTools": "IA / Programação e ferramentas de desenvolvimento",
       "adblockDns": "Adblock & DNS",
       "authenticationSecurity": "Authentication & Security",
       "automationScheduling": "Automation & Scheduling",
@@ -5365,18 +5365,18 @@
       "financeBudgeting": "Finance & Budgeting",
       "gamingLeisure": "Gaming & Leisure",
       "hostManagement": "Host Management",
-      "iotSmartHome": "IoT & Smart Home",
+      "iotSmartHome": "IoT e casa inteligente",
       "mediaStreaming": "Media & Streaming",
       "messagingNotifications": "Messaging & Notifications",
       "miscellaneous": "Miscellaneous",
       "monitoringAnalytics": "Monitoring & Analytics",
       "nvrCameras": "NVR & Cameras",
       "networkFirewall": "Network & Firewall",
-      "operatingSystemsAppliances": "Operating Systems & Appliances",
+      "operatingSystemsAppliances": "Sistemas operativos e dispositivos virtuais",
       "productivityWorkflows": "Productivity & Workflows",
-      "remoteAccessVpn": "Remote Access & VPN",
+      "remoteAccessVpn": "Acesso remoto e VPN",
       "webserversProxies": "Webservers & Proxies",
-      "zigbeeZwaveMatter": "ZigBee, Z-Wave & Matter"
+      "zigbeeZwaveMatter": "ZigBee, Z-Wave e Matter"
     },
     "emptyTitle": "Nenhum aplicativo com um link web ainda.",
     "emptyHint": "Registre um Web Link para qualquer aplicativo (App tab de um CT) para vê-lo aqui.",

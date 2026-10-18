@@ -2,7 +2,7 @@
   "_meta": "Community translation target. Copy keys from ../en/common.json and translate the values. Placeholders like {vmid} must stay unchanged.",
   "app": {
     "title": "ProxMenux Monitor",
-    "description": "Proxmox System Dashboard",
+    "description": "Systemöversikt för Proxmox",
     "loading": "Laddar...",
     "connecting": "Ansluter till ProxMenux Monitor",
     "unknown": "Okänd",
@@ -1319,9 +1319,9 @@
         "fredag",
         "lördag"
       ],
-      "runSkippedStatus": "körning överhoppad",
-      "reasonStoppedContainer": "Behållaren är stoppad; den schemalagda uppdateringen hoppades över.",
-      "reasonStoppedContainerHistorical": "Behållaren stoppades vid den schemalagda uppdateringstiden."
+      "runSkippedStatus": "körningen hoppades över",
+      "reasonStoppedContainer": "Containern är stoppad; den schemalagda uppdateringen hoppades över.",
+      "reasonStoppedContainerHistorical": "Containern var stoppad vid tiden för den schemalagda uppdateringen."
     },
     "cronChip": {
       "detected": "host cron upptäckt",
@@ -5350,7 +5350,7 @@
     "customLinkDeleteError": "Delete failed",
     "categoryLabels": {
       "arrSuite": "*Arr Suite",
-      "aiCodingDevTools": "AI / Coding & Dev-Tools",
+      "aiCodingDevTools": "AI / Programmering och utvecklingsverktyg",
       "adblockDns": "Adblock & DNS",
       "authenticationSecurity": "Authentication & Security",
       "automationScheduling": "Automation & Scheduling",
@@ -5365,18 +5365,18 @@
       "financeBudgeting": "Finance & Budgeting",
       "gamingLeisure": "Gaming & Leisure",
       "hostManagement": "Host Management",
-      "iotSmartHome": "IoT & Smart Home",
+      "iotSmartHome": "IoT och smarta hem",
       "mediaStreaming": "Media & Streaming",
       "messagingNotifications": "Messaging & Notifications",
       "miscellaneous": "Miscellaneous",
       "monitoringAnalytics": "Monitoring & Analytics",
       "nvrCameras": "NVR & Cameras",
       "networkFirewall": "Network & Firewall",
-      "operatingSystemsAppliances": "Operating Systems & Appliances",
+      "operatingSystemsAppliances": "Operativsystem och virtuella apparater",
       "productivityWorkflows": "Productivity & Workflows",
-      "remoteAccessVpn": "Remote Access & VPN",
+      "remoteAccessVpn": "Fjärråtkomst och VPN",
       "webserversProxies": "Webservers & Proxies",
-      "zigbeeZwaveMatter": "ZigBee, Z-Wave & Matter"
+      "zigbeeZwaveMatter": "ZigBee, Z-Wave och Matter"
     },
     "emptyTitle": "Inga appar med en webblänk ännu.",
     "emptyHint": "Registrera en webblänk för någon app (App-fliken på en CT) för att se den här.",

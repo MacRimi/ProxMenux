@@ -63,8 +63,8 @@
   "_meta": "Community translation target. Copy keys from ../en/common.json and translate the values.",
   "app": {
     "title": "ProxMenux Monitor",
-    "description": "Proxmox System Dashboard",
-    "descriptionPbs": "Proxmox Backup Server Dashboard",
+    "description": "Panel del sistema Proxmox",
+    "descriptionPbs": "Panel de Proxmox Backup Server",
     "loading": "Cargando...",
     "connecting": "Conexión al ProxMenux Monitor",
     "unknown": "Desconocido",
@@ -1381,8 +1381,8 @@
         "sábado"
       ],
       "runSkippedStatus": "ejecución omitida",
-      "reasonStoppedContainer": "El contenedor está parado; se ha omitido la actualización programada.",
-      "reasonStoppedContainerHistorical": "El contenedor estaba parado a la hora de la actualización programada."
+      "reasonStoppedContainer": "El contenedor está detenido; se ha omitido la actualización programada.",
+      "reasonStoppedContainerHistorical": "El contenedor estaba detenido a la hora de la actualización programada."
     },
     "cronChip": {
       "detected": "cron del host detectado",
@@ -5433,7 +5433,7 @@
       "hostManagement": "Host Management",
       "iotSmartHome": "IoT & Smart Home",
       "mediaStreaming": "Media & Streaming",
-      "messagingNotifications": "Mensajería y Notificaciones",
+      "messagingNotifications": "Messaging & Notifications",
       "miscellaneous": "Miscellaneous",
       "monitoringAnalytics": "Monitoring & Analytics",
       "nvrCameras": "NVR & Cameras",

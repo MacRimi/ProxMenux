@@ -1320,8 +1320,8 @@
         "Sabato"
       ],
       "runSkippedStatus": "esecuzione saltata",
-      "reasonStoppedContainer": "Il contenitore è fermo; l'aggiornamento pianificato è stato saltato.",
-      "reasonStoppedContainerHistorical": "Il contenitore era fermo all'ora dell'aggiornamento pianificato."
+      "reasonStoppedContainer": "Il contenitore è arrestato; l'aggiornamento pianificato è stato saltato.",
+      "reasonStoppedContainerHistorical": "Il contenitore era arrestato all'ora dell'aggiornamento pianificato."
     },
     "cronChip": {
       "detected": "cron host rilevato",
