@@ -78,6 +78,17 @@
     "heading": "Community scripts",
     "body": "The menu also exposes two third-party scripts from the <a>community-scripts</a> project: <em>Proxmox VE Post Install</em> and <em>Proxmox VE Microcode</em>. These are wrappers that <code>wget | bash</code> the original authors' scripts. They are not maintained by ProxMenux. See <link>External Repositories</link> for details and trust considerations before running them."
   },
+  "pbs": {
+    "heading": "On Proxmox Backup Server",
+    "body": "On a Proxmox Backup Server host, the same menu opens from <strong>Settings post-install Proxmox</strong> in the PBS menu. Automated, Customizable, Apply Available Updates and Uninstall Optimizations work as on Proxmox VE, with these differences:",
+    "items": [
+      "<strong>Repositories and upgrade:</strong> when the server has no subscription and only the Enterprise PBS repository is active, ProxMenux asks before switching to the PBS no-subscription repository. The switch goes through the server's own repository API, the same one behind <em>Administration > Repositories</em>. With an active subscription, or with a no-subscription or test repository already configured, the sources stay as they are.",
+      "<strong>Customizable list:</strong> the options that only apply to Proxmox VE are not listed: guest agent, VFIO IOMMU, Open vSwitch, vzdump backup speed, pigz, Appliance Manager, Ceph, High Availability and OVH Real Time Monitoring.",
+      "<strong>Subscription banner:</strong> the patch applies to the Proxmox Backup Server web interface, and Uninstall Optimizations restores it.",
+      "<strong>Figurine:</strong> installs without the Proxmox VE aliases.",
+      "<strong>Community scripts:</strong> the section offers <em>Proxmox Backup Server Post Install</em> and <em>Proxmox Backup Server Microcode</em> in place of the Proxmox VE scripts."
+    ]
+  },
   "related": {
     "heading": "Related",
     "items": [

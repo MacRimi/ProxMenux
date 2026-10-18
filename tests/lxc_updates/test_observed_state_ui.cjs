@@ -162,8 +162,10 @@ assert.equal(ui.osStatus({ ...recent, available: false, count: 0 }).osUpdateStat
 assert.equal(ui.osStatus({ ...recent, error: "probe failed" }).osUpdateStatusKnown, false)
 assert.equal(ui.aggregate({ app_watches: [{ update_available: true, name: "App" }] }).last_check, null,
   "an app badge cannot invent an OS check timestamp")
-assert.equal(ui.badge(legacy).props.children[0].type, "Clock")
-assert.equal(ui.badge(legacy).props.children[1], "vmLxc.updates.checkStale")
+assert.equal(ui.badge(legacy).props.children[0].type, "Arrow",
+  "an old check keeps the same badge as a recent one")
+assert.equal(ui.badge(legacy).props.children[1], 51)
+assert.equal(ui.badge({ ...legacy, available: false, count: 0 }), null)
 assert.equal(ui.badge({ ...recent, available: true, count: 2 }).props.children[1], 2)
 assert.equal(ui.badge({ ...recent, available: false, count: 0 }), null)
 assert.equal(requests.length, 0)

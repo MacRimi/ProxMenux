@@ -91,6 +91,7 @@ from flask_health_routes import health_bp  # noqa: E402
 from flask_auth_routes import auth_bp  # noqa: E402
 from flask_proxmenux_routes import proxmenux_bp  # noqa: E402
 from flask_pbs_routes import pbs_bp  # noqa: E402
+from flask_monitor_links_routes import monitor_links_bp  # noqa: E402
 from pbs_manager import get_platform, is_pbs_host  # noqa: E402
 from flask_security_routes import security_bp  # noqa: E402
 from flask_notification_routes import notification_bp  # noqa: E402
@@ -198,6 +199,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(health_bp)
 app.register_blueprint(proxmenux_bp)
 app.register_blueprint(pbs_bp)
+app.register_blueprint(monitor_links_bp)
 app.register_blueprint(security_bp)
 app.register_blueprint(notification_bp)
 app.register_blueprint(oci_bp)
@@ -12216,6 +12218,17 @@ def _get_node_metrics_payload(timeframe, max_age=_NODE_METRICS_TTL):
         lock.release()
 
 
+def _node_rrd_command(local_node, timeframe, cf=None):
+    """Node RRD query; Proxmox Backup Server keeps the same fields under its own API."""
+    if is_pbs_host():
+        return ['proxmox-backup-debug', 'api', 'get', '/nodes/localhost/rrd',
+                '--timeframe', timeframe, '--cf', cf or 'AVERAGE', '--output-format', 'json']
+    command = ['pvesh', 'get', f'/nodes/{local_node}/rrddata', '--timeframe', timeframe]
+    if cf:
+        command += ['--cf', cf]
+    return command + ['--output-format', 'json']
+
+
 def _compute_node_metrics_payload(timeframe: str) -> dict:
     """Fetch and shape one node RRD snapshot within a bounded query budget."""
     valid_timeframes = ('hour', 'day', 'week', 'month', 'year')
@@ -12239,8 +12252,7 @@ def _compute_node_metrics_payload(timeframe: str) -> dict:
 
     try:
         rrd_result = subprocess.run(
-            ['pvesh', 'get', f'/nodes/{local_node}/rrddata',
-             '--timeframe', timeframe, '--output-format', 'json'],
+            _node_rrd_command(local_node, timeframe),
             capture_output=True, text=True, timeout=_NODE_METRICS_TIMEOUT,
         )
     except subprocess.TimeoutExpired:
@@ -12334,9 +12346,7 @@ def _compute_node_metrics_payload(timeframe: str) -> dict:
             return None
         try:
             extra = subprocess.run(
-                ['pvesh', 'get', f'/nodes/{local_node}/rrddata',
-                 '--timeframe', timeframe, '--cf', cf,
-                 '--output-format', 'json'],
+                _node_rrd_command(local_node, timeframe, cf),
                 capture_output=True, text=True, timeout=remaining,
             )
             if extra.returncode == 0 and extra.stdout:
@@ -23355,8 +23365,8 @@ if __name__ == '__main__':
     # the 24 h PollingCollector cycle. Runs in a daemon thread with
     # a delay so it doesn't block startup — notification_manager needs
     # a moment to bind channels before we emit.
-    # The guest services below read VMs, LXCs and the PVE node metrics,
-    # none of which exist on a Proxmox Backup Server.
+    # The guest services below read VMs and LXCs, which do not exist on a
+    # Proxmox Backup Server.
     pve_host = not is_pbs_host()
     try:
         def _startup_emit_pending_app_updates():
@@ -23375,12 +23385,18 @@ if __name__ == '__main__':
 
     # Prewarm only the Overview's default day range; other ranges are lazy.
     try:
-        if pve_host:
-            metrics_thread = threading.Thread(target=_node_metrics_prewarmer_loop, daemon=True, name='node-metrics-prewarmer')
-            metrics_thread.start()
-            print("[ProxMenux] Node-metrics prewarmer started (day range, 90s interval)")
+        metrics_thread = threading.Thread(target=_node_metrics_prewarmer_loop, daemon=True, name='node-metrics-prewarmer')
+        metrics_thread.start()
+        print("[ProxMenux] Node-metrics prewarmer started (day range, 90s interval)")
     except Exception as e:
         print(f"[ProxMenux] Node-metrics prewarmer failed to start: {e}")
+
+    # Linked Monitors for the header node selector, renewed every 5 minutes.
+    try:
+        import monitor_links
+        monitor_links.start_prewarmer()
+    except Exception as e:
+        print(f"[ProxMenux] Monitor links prewarmer failed to start: {e}")
 
     # ── VM/CT modal-cache prewarmer ──
     # Keeps _vm_details_cache / _vm_backups_cache / app snapshots /

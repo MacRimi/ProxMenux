@@ -59,7 +59,12 @@ initialize_cache
 
 if [[ -f "$LOCAL_SCRIPTS/global/platform-functions.sh" ]]; then
     source "$LOCAL_SCRIPTS/global/platform-functions.sh"
-    pmx_require_pve || exit 1
+fi
+# Proxmox Backup Server runs the same host optimizations; repositories,
+# package upgrade and the subscription notice follow its own tooling.
+PMX_ON_PBS=false
+if declare -F pmx_is_pbs >/dev/null && pmx_is_pbs; then
+    PMX_ON_PBS=true
 fi
 
 # Global variables
@@ -142,6 +147,10 @@ $(translate "Do you want to continue anyway?")" 13 70
 
 
 apt_upgrade() {
+    if [[ "$PMX_ON_PBS" == true ]]; then
+        bash "$LOCAL_SCRIPTS/global/update-pbs.sh"
+        return
+    fi
     local pve_version
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
 
@@ -171,6 +180,20 @@ apt_upgrade() {
 remove_subscription_banner() {
     local FUNC_VERSION="1.0"
     # description: Patch the Proxmox web UI to suppress the subscription dialog and register a successful patch.
+    if [[ "$PMX_ON_PBS" == true ]]; then
+        stop_spinner
+        if ! whiptail --title "Proxmox Backup Server Subscription Banner Removal" \
+        --yesno "$(translate "Do you want to remove the Proxmox subscription banner from the Proxmox Backup Server web interface?")\n\n$(translate "Attention: Removing the subscription banner may cause issues in the web interface after a future update.")\n\n$(translate "If this happens, you can restore the backup from the 'Subscription Banner Removal' option in 'Uninstall optimizations'.")\n\n$(translate "Are you sure you want to continue?")" 14 75; then
+            msg_warn "Banner removal cancelled by user."
+            return 1
+        fi
+        if ! bash "$LOCAL_SCRIPTS/global/remove-banner-pve-v3.sh"; then
+            msg_error "$(translate "Subscription banner removal failed")"
+            return 1
+        fi
+        register_tool "subscription_banner" true "$FUNC_VERSION"
+        return 0
+    fi
     local pve_version
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
 
@@ -224,6 +247,17 @@ setup_proxmox_repositories() {
 # and set the correct file permissions.
 
     msg_info2 "$(translate "Configuring Proxmox APT repositories...")"
+
+    if [[ "$PMX_ON_PBS" == true ]]; then
+        if ! ensure_pbs_repositories; then
+            msg_error "$(translate "Failed to configure Proxmox Backup Server repositories")"
+            register_tool "proxmox_repos" false "$FUNC_VERSION"
+            return 1
+        fi
+        register_tool "proxmox_repos" true "$FUNC_VERSION"
+        msg_success "$(translate "Proxmox Backup Server APT repositories configured")"
+        return 0
+    fi
 
     if ! ensure_repositories; then
         msg_error "$(translate "Failed to configure Proxmox repositories")"
@@ -524,7 +558,7 @@ force_apt_ipv4() {
 # ==========================================================
 
 apply_network_optimizations() {
-  local FUNC_VERSION="1.1"
+  local FUNC_VERSION="1.2"
   pmx_journal_context "apply_network_optimizations" "$FUNC_VERSION"
   # description: Tune TCP buffers, somaxconn, IPv4 hardening and disable rp_filter on fw bridges (PVE 9 compatible).
   msg_info "$(translate "Optimizing network settings...")"
@@ -622,14 +656,16 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 EOF
 
-  pmx_write_file /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules <<'EOF'
+  pmx_remove_file /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
+
+  pmx_write_file /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules <<'EOF'
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwbr*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwln*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="fwpr*", RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="tap*",  RUN+="/usr/local/sbin/proxmenux-fwbr-tune %k"
 EOF
-  chmod 0644 /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
-  chown root:root /etc/udev/rules.d/99-proxmenux-fwbr-tune.rules
+  chmod 0644 /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules
+  chown root:root /etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules
 
   systemctl daemon-reload >/dev/null 2>&1 || true
   udevadm control --reload-rules >/dev/null 2>&1 || true
