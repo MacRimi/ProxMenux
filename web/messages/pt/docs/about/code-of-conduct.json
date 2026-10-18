@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "title": "Código de conduta | Documentação ProxMenux",
+    "description": "Código de conduta e boas práticas do ProxMenux para colaboradores, responsáveis pelos testes e utilizadores.",
+    "ogTitle": "Código de conduta | Documentação ProxMenux",
+    "ogDescription": "Expectativas sobre a responsabilidade pelo código, a comunicação de vulnerabilidades e o âmbito dos PR no projeto ProxMenux."
+  },
+  "errors": {
+    "notFound": "Erro: O ficheiro CODE_OF_CONDUCT.md não foi encontrado.",
+    "loadFailed": "Erro: Não foi possível carregar o conteúdo do Código de Conduta."
+  },
+  "contentMarkdown": "# 📝 Código de conduta e boas práticas\n\nEste documento define os **princípios e as orientações** para o uso do **ProxMenux**, promovendo o **respeito, a colaboração e a segurança** no desenvolvimento.\n\n## 📌 1. Autoria do código e reconhecimento\n\n- Se forem usados **scripts, excertos de código ou ideias** de outros repositórios ou programadores, o autor original será sempre reconhecido.\n- Será acrescentado um comentário no código ou na documentação que indique a origem e, se possível, uma ligação para o repositório original.\n- Ao usar código com uma **licença** específica, é obrigatório respeitar as suas condições.\n\n### ✅ Exemplo de atribuição correta no código:\n\n```bash\n# Script baseado no trabalho de [Autor] em [Ligação do repositório]\n```\n\n## 🔒 2. Segurança e responsabilidade pelo código\n\n- Todo o código deste repositório segue boas práticas de desenvolvimento seguro.\n- Não são permitidos contributos que introduzam vulnerabilidades intencionais ou práticas inseguras.\n- Os scripts nunca devem comprometer a segurança do sistema nem os dados dos utilizadores.\n- Antes da implementação, os contributos devem ser revistos para verificar a segurança e a estabilidade.\n\n### ⚠️ Divulgação responsável de vulnerabilidades\n\nSe descobrir uma vulnerabilidade de segurança, NÃO a comunique em issues ou fóruns públicos.\n\nComunique-a em privado por e-mail:\n\n📧 proxmenux@macrimi.pro\n\nPara mais informações sobre vulnerabilidades e como as comunicar, consulte a nossa [política de segurança](./SECURITY.md).\n\n## 🤝 3. Regras da comunidade\n\nPara manter um ambiente respeitador e profissional, todos os utilizadores devem seguir estas regras:\n\n- ✅ Seja respeitador e construtivo nas discussões.\n- ❌ Não serão tolerados assédio, discurso de ódio ou comportamentos ofensivos.\n- ✅ Dê opiniões de forma profissional, evitando ataques pessoais.\n- ❌ O incumprimento pode resultar em avisos ou exclusões, consoante a gravidade.\n\n##\n\nEste documento promove o uso ético do código, a consciência de segurança e uma comunidade respeitadora.\n\n📢 Vamos construir algo extraordinário em conjunto!\n"
+}

@@ -56,7 +56,7 @@
       "<strong>Entrada del portal</strong> — escribe la IP o hostname del servidor del target iSCSI. Se asume el puerto <code>3260</code> a menos que escribas <code>host:port</code>.",
       "<strong>Descubrimiento de targets</strong> — ProxMenux llama a <code>iscsiadm --mode discovery --type sendtargets --portal &lt;ip:port&gt;</code>. El servidor responde con cada IQN que permite ver a este initiator. Si el descubrimiento falla, el script muestra el error exacto de <code>iscsiadm</code> y lista las causas comunes (IP incorrecta, firewall, IQN del initiator no autorizado).",
       "<strong>Selección del target</strong> — si hay un solo target se selecciona automáticamente; con varios targets se muestra un menú.",
-      "<strong>Storage ID</strong> — por defecto es <code>iscsi-&lt;último segmento del IQN, máx. 20 caracteres&gt;</code>. Solo letras, dígitos, <code>-</code> y <code>_</code>.",
+      "<strong>Storage ID</strong> — por defecto es <code>iscsi-&lt;last IQN segment, 20 chars max&gt;</code>. Solo letras, dígitos, <code>-</code> y <code>_</code>.",
       "<strong>Content type</strong> — a diferencia de NFS / Samba, el contenido iSCSI está <strong>fijado a <code>images</code></strong>. iSCSI expone dispositivos de bloque raw, no un sistema de archivos, así que Proxmox solo te deja alojar discos de VM ahí."
     ],
     "authTitle": "Autorizar el initiator de Proxmox en el target",

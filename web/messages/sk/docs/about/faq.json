@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Časté otázky | Dokumentácia ProxMenux",
+    "description": "Časté otázky o ProxMenuxe: funkcie, inštalácia, kompatibilita od PVE 8, prispôsobenie, aktualizácie, bezpečnosť, produkčné použitie, systémové súbory, prispievanie a odinštalovanie.",
+    "ogTitle": "Časté otázky | Dokumentácia ProxMenux",
+    "ogDescription": "Časté otázky o inštalácii ProxMenuxu, kompatibilite, bezpečnosti a možnostiach prispievania."
+  },
+  "header": {
+    "title": "Často kladené otázky",
+    "description": "Bežné otázky o ProxMenuxe: čo to je, komu slúži, inštalácia, aktualizácia, odinštalovanie, kompatibilita, prispôsobenie, bezpečnosť a prispievanie. Ak tu svoju otázku nenájdete, pozrite si GitHub Discussions alebo vytvorte issue.",
+    "section": "O projekte"
+  },
+  "quickLinks": {
+    "title": "Rýchle odkazy",
+    "installationLabel": "Inštalácia",
+    "installationSuffix": " — inštalačný príkaz na jednom riadku a potrebné závislosti.",
+    "introductionLabel": "Úvod",
+    "introductionSuffix": " — čo ProxMenux robí, za päť minút.",
+    "uninstallLabel": "Odinštalovať",
+    "uninstallSuffix": " — úplné odstránenie programu.",
+    "issuesLabel": "GitHub Issues",
+    "discussionsLabel": "Diskusie"
+  },
+  "q1": {
+    "question": "Čo je ProxMenux a na čo slúži?",
+    "p1Rich": "<strong>ProxMenux</strong> je interaktívny nástroj s ponukami, ktorý sprístupňuje <strong>Proxmox VE</strong> všetkým používateľom bez ohľadu na ich technické skúsenosti. Zjednodušuje vykonávanie príkazov a umožňuje spravovať systém bez pokročilých znalostí Linuxu.",
+    "p2": "Menej skúsení používatelia môžu spúšťať príkazy cez prehľadné ponuky a nemusia ich ručne zadávať do terminálu. Skúseným správcom ProxMenux šetrí kroky pri opakovaných úlohách: zabezpečení po inštalácii, GPU passthrough, importe VM vo formáte OVF a rotácii snímok ZFS.",
+    "p3": "Proxmox VE sa široko používa na:",
+    "items": [
+      "Virtualizácia na podnikovej úrovni",
+      "HomeLab a osobné cloudové riešenia",
+      "Multimediálne servery, automatizácia a ďalšie"
+    ]
+  },
+  "q2": {
+    "question": "Ako nainštalujem ProxMenux?",
+    "p1Rich": "Postupujte podľa <installlink>inštalačnej príručky</installlink>. V skratke:",
+    "stableInstall": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)\"",
+    "p2": "Po nainštalovaní jednoducho spustite:",
+    "menuCmd": "menu"
+  },
+  "q3": {
+    "question": "Je ProxMenux kompatibilný so všetkými verziami Proxmoxu?",
+    "bodyRich": "<strong>Nie — ProxMenux vyžaduje Proxmox VE 8 alebo novší.</strong> PVE 7 a staršie verzie nie sú podporované. Ak ešte používate PVE 7, najskôr prejdite na 8.x podľa oficiálneho postupu Proxmoxu. Následný prechod z 8 na 9 môžete vykonať v ProxMenuxe cez <upgradelink>Nástroje → Aktualizovať PVE 8 na PVE 9</upgradelink>."
+  },
+  "q4": {
+    "question": "Môžem prispôsobiť ProxMenux?",
+    "p1Rich": "Aktualizácie môžu prepísať miestne zmeny hlavných skriptov, preto tieto súbory neupravujte priamo. Prispôsobiť si však <em>môžete</em>:",
+    "items": [
+      "Banner konzoly prostredníctvom nástroja <strong>FastFetch</strong> v možnostiach po inštalácii.",
+      "Ktoré voliteľné súčasti sa nainštalujú (Monitor, Fail2Ban, Lynis a ďalšie): vyberiete ich počas inštalácie alebo neskôr v príslušných ponukách."
+    ]
+  },
+  "q5": {
+    "question": "Ako aktualizujem ProxMenux?",
+    "p1Rich": "Keď je dostupná nová verzia, ProxMenux ju zistí pri ďalšom spustení <code>menu</code> a ponúkne aktualizáciu. Ak ju prijmete, nahradí súbory a konfiguráciu nástroja v existujúcej inštalácii. Nemusíte nič sťahovať ručne.",
+    "p2Rich": "Používatelia stabilnej verzie dostávajú stabilné aktualizácie a používatelia beta verzie beta aktualizácie. Po vydaní stabilnej verzie na to beta upozorní pri ďalšom otvorení ponuky a ponúkne automatický prechod. Pozrite si <betalink>beta program</betalink>."
+  },
+  "q6": {
+    "question": "Kde môžem nahlásiť problémy?",
+    "p1Rich": "Chyby nahlasujte cez <issueslink>GitHub Issues</issueslink>. Uveďte kroky na ich zopakovanie, chybové hlásenie a podľa potreby výstup Monitora z príkazu <code>journalctl -u proxmenux-monitor -n 50</code>.",
+    "p2Rich": "V prípade problémov s <strong>bezpečnosťou</strong> ich prosím <strong>nezverejňujte</strong>. Prečítajte si <coclink>Kódex správania a osvedčené postupy</coclink> o zodpovednom postupe zverejnenia."
+  },
+  "q7": {
+    "question": "Môžem prispieť k ProxMenux?",
+    "p1Rich": "<strong>Samozrejme.</strong> ProxMenux je otvorený komunitný projekt. Prispieť môžete kódom (Bash, Next.js/TypeScript a prekladové nástroje v Pythone), testovaním, dokumentáciou, dizajnom alebo nápadmi.",
+    "item1Rich": "Pred otvorením žiadosti o funkciu prediskutujte nápady v <discusslink>GitHub diskusiách</discusslink>.",
+    "item2Rich": "Pred odoslaním pull requestu si prečítajte <coclink>kódex správania a odporúčané postupy</coclink>.",
+    "item3Rich": "Na <contriblink>stránke prispievateľov</contriblink> nájdete aktuálnych testerov a recenzentov."
+  },
+  "q8": {
+    "question": "Upravuje ProxMenux kritické systémové súbory?",
+    "p1Rich": "<strong>Inštalácia ProxMenuxu pridá nasledujúce súčasti.</strong>",
+    "item1Rich": "Závislosti cez apt: <code>dialog</code>, <code>curl</code>, <code>jq</code> a <code>git</code>. Preklady používajú vopred vytvorené katalógy JSON; inštalátor na hostiteľa nepridáva virtuálne prostredie na preklad.",
+    "item2Rich": "Adresárový strom skriptov v <code>/usr/local/share/proxmenux/</code>.",
+    "item3Rich": "Spúšťač v <code>/usr/local/bin/menu</code>.",
+    "item4Rich": "Voliteľne: služba systemd pre Monitor, <code>proxmenux-monitor.service</code>.",
+    "p2Rich": "ProxMenux <em>nemení</em> základnú konfiguráciu Proxmoxu, pokiaľ o to výslovne nepožiadate v príslušnej ponuke. Oprava siete napríklad upravuje <code>/etc/network/interfaces</code>, ale až po vašom potvrdení a vytvorení zálohy."
+  },
+  "q9": {
+    "question": "Je bezpečné používať ProxMenux v produkčnom prostredí?",
+    "bodyRich": "<strong>Áno.</strong> Keďže ProxMenux mení základné súbory Proxmoxu iba na výslovnú žiadosť, možno ho používať aj v produkčnom prostredí. Ako pri každej automatizácii ho najprv otestujte v kontrolovanom prostredí a pred deštruktívnymi operáciami majte zálohy. Týka sa to napríklad prechodu z PVE 8 na 9, formátovania diskov či odstránenia VM."
+  },
+  "q10": {
+    "question": "Ako odinštalujem ProxMenux?",
+    "p1Rich": "V ProxMenuxe: <strong>Nastavenia → Odinštalovať ProxMenux</strong>. Odinštalovanie odstráni skripty, spúšťač a službu Monitor a voliteľne aj vybrané závislosti. Súbory <code>/root/.bashrc</code> a <code>/etc/motd</code> obnoví zo záloh vytvorených pri inštalácii, ak sú dostupné.",
+    "p2Rich": "Celý postup nájdete na stránke <uninstalllink>Odinštalovanie ProxMenuxu</uninstalllink>."
+  },
+  "q11": {
+    "question": "VirusTotal označuje inštalačnú URL ako podozrivú — je bezpečná?",
+    "p1Rich": "Výsledok 1/95 od <em>Chong Lua Dao</em>, nahlásený v issue #162, správca projektu označil za falošný poplach. Inštalátor používa vzor <code>curl | bash</code> a môže stiahnuť <code>jq</code> z jeho oficiálneho vydania na GitHube. Takéto <em>správanie</em> môže spustiť heuristickú detekciu; historické hlásenie nie je hodnotením všetkých budúcich stiahnutí.",
+    "p2Rich": "ProxMenux má úplne otvorený zdrojový kód a inštalačný skript si môžete skontrolovať riadok po riadku: <scriptlink>install_proxmenux.sh</scriptlink>. Ďalšie súvislosti nájdete v <issuelink>issue #162</issuelink>."
+  }
+}

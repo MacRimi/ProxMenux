@@ -1,32 +1,32 @@
 {
   "meta": {
-    "title": "Colaboradores | ProxMenux Documentation",
-    "description": "Reconocimiento a las personas que hacen posible ProxMenux — testers, revisores y desarrolladores que dan forma a cada release.",
-    "ogTitle": "Colaboradores | ProxMenux Documentation",
+    "title": "Colaboradores | Documentación de ProxMenux",
+    "description": "Reconocimiento a las personas que hacen posible ProxMenux: quienes prueban, revisan y desarrollan cada versión.",
+    "ogTitle": "Colaboradores | Documentación de ProxMenux",
     "ogDescription": "Conoce a los colaboradores detrás de ProxMenux."
   },
   "header": {
     "title": "Colaboradores",
-    "description": "El proyecto ProxMenux crece y prospera gracias a la contribución de sus colaboradores. Este es el merecido reconocimiento a su trabajo — probando builds antes del release, cazando regresiones, revisando PRs y dando forma a la dirección de las nuevas funciones.",
+    "description": "ProxMenux crece gracias a sus colaboradores. Esta página reconoce su trabajo: probar versiones antes de publicarlas, detectar regresiones, revisar PR y ayudar a orientar las nuevas funciones.",
     "section": "Acerca de"
   },
   "beyond": {
     "title": "Más allá de esta lista",
-    "body": "Mucha más gente contribuye vía reportes de bugs, ideas de funciones en Discussions, pruebas beta y traducciones. La lista completa de colaboradores de código vive en el <extlink>grafo de colaboradores de GitHub</extlink>. La página de abajo destaca a las personas que han estado más activamente involucradas en probar y revisar releases de ProxMenux."
+    "body": "Muchas más personas contribuyen notificando errores, proponiendo funciones en Discussions, probando versiones beta y traduciendo el proyecto. La lista completa de colaboradores del código está en el <extlink>gráfico de colaboradores de GitHub</extlink>. Esta página destaca a quienes participan más activamente en las pruebas y la revisión de las versiones de ProxMenux."
   },
   "testers": {
-    "heading": "Testers y revisores",
-    "intro": "Estas personas fueron de las primeras en contribuir al proyecto, probando, reportando incidencias y proponiendo mejoras que ayudaron a que ProxMenux haya crecido hasta convertirse en lo que es hoy.",
+    "heading": "Pruebas y revisión",
+    "intro": "Estas personas estuvieron entre las primeras en contribuir al proyecto. Sus pruebas, avisos de errores y propuestas de mejora ayudaron a convertir ProxMenux en lo que es hoy.",
     "roles": {
       "testing": "Pruebas",
-      "testingReviewer": "Pruebas y revisor"
+      "testingReviewer": "Pruebas y revisión"
     },
     "youtube": "YouTube"
   },
   "contribute": {
     "heading": "¿Quieres colaborar?",
     "intro": "Cualquier contribución es bienvenida — código, pruebas, diseño, documentación o simplemente compartir tus ideas:",
-    "tester": "<strong>Tester</strong> — prueba el <beta>canal beta</beta> y reporta qué funciona y qué no antes de los releases estables.",
+    "tester": "<strong>Pruebas</strong>: prueba el <beta>canal beta</beta> y comunica qué funciona y qué no antes de que se publiquen las versiones estables.",
     "developer": "<strong>Desarrollador</strong> — Bash + Next.js (TypeScript) + un poco de Python para el venv de traducción. Los PRs son bienvenidos en <gh>GitHub</gh>.",
     "designer": "<strong>Diseñador</strong> — mejoras de UI, iconos, capturas para la documentación.",
     "ideas": "<strong>Ideas</strong> — abre un hilo en <disc>GitHub Discussions</disc> antes de abrir una incidencia de petición de función."

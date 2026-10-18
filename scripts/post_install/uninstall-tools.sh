@@ -266,6 +266,12 @@ uninstall_subscription_banner() {
         fi
     fi
     
+    # Proxmox Backup Server ships the same widget toolkit without the PVE packages.
+    local -a ui_packages=(pve-manager proxmox-widget-toolkit libjs-extjs libpve-http-server-perl)
+    if [[ "$(dpkg-query -W -f='${Status}' proxmox-backup-server 2>/dev/null)" == "install ok installed" ]]; then
+        ui_packages=(proxmox-widget-toolkit libjs-extjs)
+    fi
+
     if [[ "$restored" == false ]]; then
         msg_info "$(translate "Performing complete package reinstallation...")"
         
@@ -274,7 +280,7 @@ uninstall_subscription_banner() {
         
         # Reinstall packages with force-confnew to restore original configs
         if apt-get --reinstall -o Dpkg::Options::="--force-confnew" install \
-            pve-manager proxmox-widget-toolkit libjs-extjs libpve-http-server-perl -y >/dev/null 2>&1; then
+            "${ui_packages[@]}" -y >/dev/null 2>&1; then
             msg_ok "$(translate "Reinstalled Proxmox packages successfully")"
             restored=true
         else
@@ -286,7 +292,7 @@ uninstall_subscription_banner() {
         
         # Second pass reinstallation to ensure everything is clean
         apt-get update >/dev/null 2>&1
-        apt-get --reinstall install proxmox-widget-toolkit pve-manager libjs-extjs libpve-http-server-perl -y >/dev/null 2>&1 || true
+        apt-get --reinstall install "${ui_packages[@]}" -y >/dev/null 2>&1 || true
     fi
     
     msg_info "$(translate "Cleaning cached files...")"
