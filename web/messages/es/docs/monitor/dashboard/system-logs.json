@@ -18,7 +18,7 @@
       "<strong>Entradas totales</strong>: número de registros dentro del intervalo del filtro activo.",
       "<strong>Errores</strong>: número de entradas con severidad ≤ 3 (<code>err</code> / <code>crit</code> / <code>alert</code> / <code>emerg</code>).",
       "<strong>Advertencias</strong>: número de entradas con severidad 4 (<code>warning</code>).",
-      "<strong>Copias de seguridad</strong>: número de entradas de tareas vzdump / PBS en el mismo intervalo."
+      "<strong>Backups</strong>: número de entradas de tareas vzdump / PBS en el mismo intervalo."
     ]
   },
   "subtabs": {
@@ -49,7 +49,7 @@
     ],
     "maxLevelStoreTitle": "MaxLevelStore de journald",
     "maxLevelStoreBody": "En una instalación nueva de Proxmox, journald usa por defecto <code>MaxLevelStore=warning</code>, que descarta los mensajes info. Monitor lo detecta al arrancar y añade un archivo de configuración complementario (<code>/etc/systemd/journald.conf.d/proxmenux-loglevel.conf</code>) con el umbral <code>info</code> para conservar los mensajes informativos y los de mayor gravedad. Esto no incluye debug.",
-    "backupsTitle": "Copias de seguridad",
+    "backupsTitle": "Backups",
     "backupsBody": "Historial de tareas de Proxmox filtrado a las entradas relacionadas con backup. Una fila por tarea (<code>vzdump</code>, transferencias PBS, Garbage Collect, Verify) con el estado (OK / WARNINGS / ERROR), el guest implicado, el almacenamiento de origen, la duración y el UPID. Pulsa una fila para cargar el log completo de la tarea vía <code>GET /api/task-log/&lt;upid&gt;</code> — los mismos datos que Proxmox expone a través de <em>Datacenter → Tasks</em>, acotado a backups.",
     "notificationsTitle": "Notificaciones",
     "notificationsBody1": "Todas las notificaciones enviadas por Monitor: Telegram, Discord, correo electrónico, Gotify, ntfy, Slack, Teams y webhook. Cada fila muestra fecha y hora, canal, tipo de evento, severidad, título y cuerpo generados y, si la IA está activa, un selector para comparar su reescritura con el original.",
@@ -72,12 +72,12 @@
         "source": "La misma consulta, devuelta como texto plano para grep / less."
       },
       {
-        "subtab": "Copias de seguridad",
+        "subtab": "Backups",
         "endpoint": "/api/backups",
         "source": "Historial de tareas PVE filtrado por <code>vzdump</code>, transferencias PBS, Garbage Collect, Verify."
       },
       {
-        "subtab": "Detalles de una tarea de copia de seguridad",
+        "subtab": "Detalles de una tarea de backup",
         "endpoint": "/api/task-log/&lt;upid&gt;",
         "source": "Log completo de la tarea en texto plano leído de <code>/var/log/pve/tasks/&lt;index&gt;/&lt;upid&gt;</code>."
       },

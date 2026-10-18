@@ -162,7 +162,7 @@
       {
         "endpoint": "/api/vms/<vmid>/backup",
         "method": "POST",
-        "use": "Skapar en vzdump-säkerhetskopia av VM eller LXC. Valfria fält att anpassa till lagringen: <code>storage</code> (PVE-mål), <code>mode</code> (<code>snapshot</code>, <code>suspend</code> eller <code>stop</code>), <code>compress</code> (<code>zstd</code>, <code>lzo</code>, <code>gzip</code> eller <code>none</code>), <code>protected</code> (<code>true</code> eller <code>false</code>), <code>notes</code>, <code>notification</code> (<code>auto</code>, <code>always</code>, <code>failure</code> eller <code>never</code>) och <code>pbs_change_detection</code> (<code>default</code>, <code>legacy</code> eller <code>data</code>). Returnerar PVE-uppgiftens UPID."
+        "use": "Skapar en vzdump-säkerhetskopia av en VM eller LXC. Fält i begäran, alla valfria om inte standardvärdena passar lagringsupplägget: <code>storage</code> (en PVE-lagring), <code>mode</code> (<code>snapshot</code>, <code>suspend</code> eller <code>stop</code>), <code>compress</code> (<code>zstd</code>, <code>lzo</code>, <code>gzip</code> eller <code>none</code>), <code>protected</code> (<code>true</code> eller <code>false</code>), <code>notes</code> och <code>pbs_change_detection</code> (<code>default</code>, <code>legacy</code> eller <code>data</code>). Returnerar PVE-uppgiftens UPID."
       },
       {
         "endpoint": "/api/vms/<vmid>/backups",
@@ -286,7 +286,7 @@
       {
         "endpoint": "/api/storage/smart/<disk>/test",
         "method": "POST",
-        "use": "Startar ett SMART-självtest. Schema för begäran: <code>'{'\"type\":\"short\"|\"long\"'}'</code>."
+        "use": "Startar ett SMART-självtest. Schema för begäran: <code>'{'\"test_type\":\"short\"|\"long\"'}'</code>."
       },
       {
         "endpoint": "/api/storage/smart/schedules",

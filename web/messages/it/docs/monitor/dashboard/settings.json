@@ -76,7 +76,7 @@
   },
   "thresholds": {
     "heading": "Soglie di Health Monitor",
-    "intro": "La scheda precedente imposta <em>il silenzio dopo aver ignorato un avviso</em>; questa regola <strong>il valore che attiva un avviso</strong>. La maggior parte dei controlli ha valori <strong>Avviso</strong> e <strong>Critico</strong> modificabili. La tabella spiega eccezioni come la regola combinata dello swap e il rilevatore RAM attuale.",
+    "intro": "La scheda precedente imposta <em>il silenzio dopo aver ignorato un avviso</em>; questa regola <strong>il valore che attiva un avviso</strong>. La maggior parte dei controlli a soglia ha valori <strong>Avviso</strong> e <strong>Critico</strong> modificabili. La tabella sotto spiega eccezioni come la regola combinata dello swap.",
     "whatForTitle": "A cosa serve",
     "whatForIntro": "I valori predefiniti sono un punto di partenza, ma ogni ambiente ha condizioni proprie:",
     "whatForItems": [
@@ -85,7 +85,7 @@
       "Scegli le soglie di temperatura secondo le specifiche del disco e le condizioni reali. Il raffreddamento passivo o forzato non determina da solo un limite sicuro universalmente più basso o alto.",
       "Un host molto virtualizzato può avere picchi CPU durante le compilazioni senza avvisare a ogni picco dell’80%, ma deve segnalare una saturazione prolungata."
     ],
-    "whatForOutro": "Le modifiche supportate valgono <strong>dall’analisi successiva</strong>. Health Monitor legge <code>/usr/local/share/proxmenux/health_thresholds.json</code> a ogni ciclo senza riavvio. Alcuni indicatori, come la temperatura dei dischi, usano questi valori; alcune barre di capacità hanno limiti propri. La riga RAM descrive un’eccezione attuale.",
+    "whatForOutro": "Le modifiche supportate alle soglie valgono <strong>dall’analisi successiva</strong>. Health Monitor legge <code>/usr/local/share/proxmenux/health_thresholds.json</code> a ogni ciclo senza riavvio. Alcuni indicatori, tra cui la temperatura dei dischi, usano questi valori; alcune barre di capacità mantengono limiti visivi propri.",
     "coloursTitle": "Colori degli stati Avviso e Critico",
     "coloursIntro": "I widget che usano Avviso/Critico seguono i tre stati sotto. Altri indicatori, come le barre di capacità PVE, hanno limiti propri; il loro colore da solo non dimostra un avviso Health Monitor.",
     "headerColour": "Colore",
@@ -125,7 +125,7 @@
         "section": "Memoria",
         "warning": "85 %",
         "critical": "95 %",
-        "gates": "Pressione RAM dell’host. Il valore configurabile mostra Critico al 95%, ma il rilevatore attuale usa una regola fissa del 90% prolungato; cambiare l’impostazione non modifica attualmente quel ramo."
+        "gates": "Pressione RAM dell’host."
       },
       {
         "section": "Swap (solo soglia critica)",
@@ -185,7 +185,7 @@
         "section": "Storage PVE",
         "warning": "85 %",
         "critical": "95 %",
-        "gates": "Storage gestiti da PVE: LVM, LVM-thin, ZFS-pool, RBD/Ceph e PBS. Non sono tutti backend a blocchi."
+        "gates": "Solo gli storage PVE di tipo LVM, LVM-thin, ZFS-pool, RBD, CephFS e PBS. Gli storage directory, NFS e CIFS sono coperti dalla riga dello spazio su disco dell’host."
       },
       {
         "section": "Pool ZFS",
@@ -218,7 +218,7 @@
     "toggleTitle": "Opzione di notifica legata al rilevamento",
     "toggleBody": "L’opzione <code>lxc_updates_available</code> per canale in <strong>Notifiche → Servizi</strong> appare solo con rilevamento attivo. Disattivandolo, la riga scompare da tutti i canali. La preferenza resta nel database e ritorna al valore precedente alla riattivazione.",
     "purgeTitle": "Cosa viene rimosso disattivando il rilevamento",
-    "purgeBody": "Disattivandolo si rimuovono subito le voci <code>type=lxc</code> da <code>/usr/local/share/proxmenux/managed_installs.json</code>. I contatori degli aggiornamenti LXC in Hardware spariscono al prossimo aggiornamento. Riattivandolo, il ciclo successivo ripopola il registro, o prima tramite aggiornamento manuale dell’API."
+    "purgeBody": "Disattivandolo si rimuovono subito tutte le voci <code>type=lxc</code> da <code>/usr/local/share/proxmenux/managed_installs.json</code>. I contatori degli aggiornamenti LXC nella scheda VM e LXC spariscono al prossimo aggiornamento della dashboard. Riattivandolo, il ciclo di rilevamento successivo ripopola il registro, o prima tramite aggiornamento manuale dell’API."
   },
   "storageExclusions": {
     "heading": "Esclusioni storage remoto",

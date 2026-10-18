@@ -162,7 +162,7 @@
       {
         "endpoint": "/api/vms/<vmid>/backup",
         "method": "POST",
-        "use": "Create a vzdump backup of a VM or LXC. Body fields, all optional unless the defaults do not match the storage layout: <code>storage</code> (a PVE storage), <code>mode</code> (<code>snapshot</code>, <code>suspend</code> or <code>stop</code>), <code>compress</code> (<code>zstd</code>, <code>lzo</code>, <code>gzip</code> or <code>none</code>), <code>protected</code> (<code>true</code> or <code>false</code>), <code>notes</code>, <code>notification</code> (<code>auto</code>, <code>always</code>, <code>failure</code> or <code>never</code>) and <code>pbs_change_detection</code> (<code>default</code>, <code>legacy</code> or <code>data</code>). Returns the PVE task UPID."
+        "use": "Create a vzdump backup of a VM or LXC. Body fields, all optional unless the defaults do not match the storage layout: <code>storage</code> (a PVE storage), <code>mode</code> (<code>snapshot</code>, <code>suspend</code> or <code>stop</code>), <code>compress</code> (<code>zstd</code>, <code>lzo</code>, <code>gzip</code> or <code>none</code>), <code>protected</code> (<code>true</code> or <code>false</code>), <code>notes</code> and <code>pbs_change_detection</code> (<code>default</code>, <code>legacy</code> or <code>data</code>). Returns the PVE task UPID."
       },
       {
         "endpoint": "/api/vms/<vmid>/backups",
@@ -286,7 +286,7 @@
       {
         "endpoint": "/api/storage/smart/<disk>/test",
         "method": "POST",
-        "use": "Start a SMART self-test. Body schema: <code>'{'\"type\":\"short\"|\"long\"'}'</code>."
+        "use": "Start a SMART self-test. Body schema: <code>'{'\"test_type\":\"short\"|\"long\"'}'</code>."
       },
       {
         "endpoint": "/api/storage/smart/schedules",

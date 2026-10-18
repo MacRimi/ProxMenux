@@ -220,7 +220,7 @@
     "heading": "n8n, Zapier and custom scripts",
     "intro": "Workflow tools and scripts can <em>send</em> notifications through a POST to <code>/api/notifications/send</code>, for example after a CI failure or an overlong cron job. This is a direct send: it bypasses the event queue and fingerprint cooldown. It still uses channel formatting, optional AI rewriting and delivery to configured channels. Apply any required duplicate control in the caller.",
     "n8nBody": "In n8n, use an <em>HTTP Request</em> node with POST, the URL above and the same JSON body as curl. Choose generic Header Auth credentials: set the header name to <em>Authorization</em> and its value to <code>Bearer YOUR_API_TOKEN</code>, replacing the placeholder. Connect a schedule, webhook or other preceding node to trigger the request.",
-    "severityBody": "Severity values are <code>INFO</code>, <code>WARNING</code> or <code>CRITICAL</code> in uppercase. The <code>data</code> object supplies event context. AI rewriting uses the rendered title and message plus supported enrichment; arbitrary fields are not guaranteed to appear in its prompt or output. See <link>Notifications → Event catalogue</link> for event semantics."
+    "severityBody": "Severity values are <code>INFO</code>, <code>WARNING</code> or <code>CRITICAL</code> in uppercase. The <code>data</code> object supplies event context and template fields. On this endpoint, AI rewriting receives only the title and message; fields in <code>data</code> are not sent to the provider. See <link>Notifications → Event catalogue</link> for event semantics."
   },
   "pveWebhook": {
     "heading": "Native Proxmox VE webhook (inbound)",

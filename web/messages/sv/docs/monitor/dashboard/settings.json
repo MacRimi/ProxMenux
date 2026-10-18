@@ -76,7 +76,7 @@
   },
   "thresholds": {
     "heading": "Gränsvärden i Health Monitor",
-    "intro": "Förra kortet anger <em>tystnadens längd efter avfärdande</em>; detta anger <strong>värdet som utlöser en varning</strong>. De flesta gränskontroller har justerbara värden för <strong>Varning</strong> och <strong>Kritiskt</strong>. Tabellen förklarar undantag som kombinerad swapregel och aktuell RAM-detektor.",
+    "intro": "Förra kortet anger <em>tystnadens längd efter avfärdande</em>; detta anger <strong>värdet som utlöser en varning</strong>. De flesta gränskontroller har justerbara värden för <strong>Varning</strong> och <strong>Kritiskt</strong>. Tabellen nedan förklarar undantag som den kombinerade swapregeln.",
     "whatForTitle": "Vad det används till",
     "whatForIntro": "Standardvärdena är en utgångspunkt, men varje miljö har egna förutsättningar:",
     "whatForItems": [
@@ -85,7 +85,7 @@
       "Välj temperaturgränser efter diskens specifikationer och faktiska förhållanden. Passiv eller forcerad kylning avgör inte ensam en allmänt lägre eller högre säker gräns.",
       "En tungt virtualiserad värd kan få CPU-toppar vid byggen utan att varna för varje topp på 80 %, men måste fortfarande varna vid långvarig överbelastning."
     ],
-    "whatForOutro": "Ändringar som stöds gäller <strong>vid nästa kontroll</strong>. Health Monitor läser <code>/usr/local/share/proxmenux/health_thresholds.json</code> varje cykel utan omstart. Vissa indikatorer, som disktemperatur, använder värdena; vissa kapacitetsstaplar har egna gränser. RAM-raden beskriver ett aktuellt undantag.",
+    "whatForOutro": "Ändringar av tröskelvärden som stöds gäller <strong>vid nästa kontroll</strong>. Health Monitor läser <code>/usr/local/share/proxmenux/health_thresholds.json</code> varje cykel utan omstart. Utvalda indikatorer, bland annat disktemperatur, använder värdena; vissa kapacitetsstaplar behåller egna visuella gränser.",
     "coloursTitle": "Statusfärger för Varning och Kritiskt",
     "coloursIntro": "Widgetar med det konfigurerade paret Varning/Kritiskt följer de tre lägena nedan. Andra indikatorer, som PVE-kapacitetsstaplar, har egna gränser; färgen ensam visar inte att Health Monitor har larmat.",
     "headerColour": "Färg",
@@ -125,7 +125,7 @@
         "section": "Minne",
         "warning": "85 %",
         "critical": "95 %",
-        "gates": "Värdens RAM-belastning. Den konfigurerbara standarden visar Kritiskt vid 95 %, men aktuell detektor använder en fast regel på 90 % över tid; inställningen ändrar för närvarande inte den körningsgrenen."
+        "gates": "Värdens RAM-belastning."
       },
       {
         "section": "Swap (endast kritisk nivå)",
@@ -185,7 +185,7 @@
         "section": "PVE-lagring",
         "warning": "85 %",
         "critical": "95 %",
-        "gates": "Lagring som hanteras av PVE: LVM, LVM-thin, ZFS-pool, RBD/Ceph och PBS. Alla är inte blocklagringssystem."
+        "gates": "Endast PVE-lagring av typerna LVM, LVM-thin, ZFS-pool, RBD, CephFS och PBS. Katalog-, NFS- och CIFS-lagring täcks av raden för värdens diskutrymme."
       },
       {
         "section": "ZFS-pool",
@@ -218,7 +218,7 @@
     "toggleTitle": "Aviseringsreglage när detektering är på",
     "toggleBody": "Reglaget <code>lxc_updates_available</code> per kanal under <strong>Aviseringar → Tjänster</strong> visas bara när detektering är på. När den stängs av döljs raden för alla kanaler. Valet sparas i databasen och samma värde återkommer när detektering slås på.",
     "purgeTitle": "Vad som rensas när detektering stängs av",
-    "purgeBody": "Avstängning tar genast bort <code>type=lxc</code>-poster från <code>/usr/local/share/proxmenux/managed_installs.json</code>. Räknarna för LXC-uppdateringar i Hårdvara försvinner vid nästa omladdning. Påslagning fyller registret vid nästa kontroll, eller tidigare med manuell API-uppdatering."
+    "purgeBody": "Avstängning tar genast bort alla <code>type=lxc</code>-poster från <code>/usr/local/share/proxmenux/managed_installs.json</code>. Räknarna för LXC-uppdateringar på fliken VM och LXC töms vid nästa uppdatering av instrumentpanelen. Påslagning fyller registret vid nästa identifieringscykel, eller tidigare med manuell API-uppdatering."
   },
   "storageExclusions": {
     "heading": "Exklusioner för fjärrlagring",

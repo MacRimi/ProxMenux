@@ -70,7 +70,7 @@
     "items": [
       "<strong>Percorso del dispositivo</strong> — <code>/dev/sda</code>, <code>/dev/nvme0n1</code>.",
       "<strong>Etichetta del tipo</strong> — SATA / NVMe e relativa icona.",
-      "<strong>Etichetta di sistema</strong> — indicatore arancione dei dischi identificati come dischi del sistema operativo. Il rilevamento usa i montaggi <code>/</code> e <code>/boot</code> e assegna <em>System</em>. L’assenza dell’etichetta non dimostra che il disco possa essere cancellato o riutilizzato senza rischi.",
+      "<strong>Etichetta di sistema</strong> — indicatore arancione dei dischi usati dall’host: punti di montaggio di sistema (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), swap attivo, membri di pool ZFS, volumi fisici LVM, membri RAID attivi o etichette di partizioni di sistema. L’assenza dell’etichetta non dimostra che il disco possa essere cancellato o riutilizzato senza rischi.",
       "<strong>Modello</strong> — produttore e modello da <code>smartctl -i</code>.",
       "<strong>Capacità</strong> — espressa in unità leggibili.",
       "<strong>Temperatura</strong> — valore attuale in °C, colorato secondo il tipo di disco; NVMe usa soglie più alte di SATA.",
@@ -112,7 +112,7 @@
     "pdfPreviewAlt": "Prima pagina del rapporto SMART con sintesi, indicatore PASSED e informazioni sul disco",
     "pdfPreviewCaption": "Prima pagina: sintesi, indicatore PASSED e informazioni complete del disco. Il PDF di esempio include usura SSD, tutti gli attributi SMART e cronologia dei test.",
     "pdfDownloadLabel": "Scarica un rapporto SMART di esempio (PDF)",
-    "pdfSectionsIntro": "Il rapporto ha sei sezioni principali:",
+    "pdfSectionsIntro": "Il rapporto include queste sezioni principali:",
     "pdfSections": [
       "<strong>Sintesi</strong> — stato PASSED/FAILED, valutazione chiara del disco — regolare, usurato o guasto — e quattro dati: data del rapporto, ultimo tipo di test, risultato e attributi controllati.",
       "<strong>Informazioni sul disco</strong> — modello, serie, capacità, tipo HDD/SSD/NVMe, famiglia, formato, interfaccia (SATA 3.3 · 6.0 Gb/s, …), TRIM, temperatura e soglia ottimale, ore e cicli di accensione, SMART, settori in attesa/riallocati ed errori CRC.",
@@ -127,7 +127,7 @@
     "historyImageCaption": "Cronologia SMART del disco. Ogni riga mostra tipo, data e ora, anzianità, indicatore dell’ultimo test e azioni di download dell’output <code>smartctl</code> ed eliminazione.",
     "historyIntro": "Test brevi ed estesi completati e conservati per il disco. Ogni voce contiene l’output originale <code>smartctl</code> e i campi interpretati da Monitor per la dashboard. Azioni per riga:",
     "historyItems": [
-      "<strong>Scarica</strong> — salva lo snapshot JSON con i dati <code>smartctl -a</code> usati dal rapporto. Utile se il supporto richiede i campi diagnostici originali.",
+      "<strong>Scarica</strong> — salva lo snapshot JSON di quel test (output di <code>smartctl -a --json</code>, o <code>nvme smart-log</code> su NVMe quando smartctl fallisce). Utile se il supporto del produttore richiede i campi diagnostici originali.",
       "<strong>Elimina</strong> — rimuove manualmente un test dalla cronologia. La conservazione in Pianificazione (<em>ultimi 5 / 10 / 20</em>) elimina automaticamente i più vecchi."
     ],
     "scheduleTitle": "Scheda 4 — Pianificazione",

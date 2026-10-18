@@ -19,13 +19,13 @@
       "<strong>Paquetes del SO</strong> para contenedores Debian, Ubuntu y Alpine.",
       "Una sección por cada <strong>aplicación registrada</strong>, incluidos los registros que solo contienen enlaces.",
       "Una sección <strong>Docker</strong> cuando Docker está registrado, con Docker Engine y las imágenes etiquetadas dentro del mismo bloque.",
-      "Una <strong>Actualización en bloque</strong> configurable, seguida de las opciones de copia, reinicio y programación."
+      "Una <strong>Actualización en bloque</strong> configurable, seguida de las opciones de backup, reinicio y programación."
     ]
   },
   "mechanisms": {
     "heading": "Cómo se selecciona el método",
     "lead": "La vía integrada de Proxmox VE Helper-Scripts sigue el mecanismo oficial <helper>update-apps</helper>. El resto de instalaciones usa el método de paquetes, Docker o el comando personalizado correspondiente.",
-    "officialReference": "Referencia oficial: la <helper>documentación de update-apps de Proxmox VE Helper-Scripts</helper> explica los modos interactivo y desatendido, las copias de seguridad, la simulación, los recursos temporales de compilación, los registros y los códigos de salida.",
+    "officialReference": "Referencia oficial: la <helper>documentación de update-apps de Proxmox VE Helper-Scripts</helper> explica los modos interactivo y desatendido, los backups, la simulación, los recursos temporales de compilación, los registros y los códigos de salida.",
     "colSource": "Origen",
     "colAction": "Acción mostrada",
     "colNotes": "Qué se ejecuta",
@@ -126,10 +126,10 @@
     "callout": "La actualización en bloque no reemplaza los botones individuales. Es un acceso opcional para una selección que debe ejecutarse junta."
   },
   "options": {
-    "heading": "Opciones de copia y reinicio",
+    "heading": "Opciones de backup y reinicio",
     "lead": "Las mismas opciones se aplican a ejecuciones manuales, en bloque y programadas:",
     "items": [
-      "<strong>Instantánea antes de aplicar</strong> crea una copia vzdump en el almacenamiento seleccionado. Si la copia solicitada falla, la actualización no comienza.",
+      "<strong>Backup antes de aplicar</strong> crea un backup vzdump en el almacenamiento seleccionado. Si el backup solicitado falla, la actualización no comienza.",
       "<strong>Reiniciar después de aplicar</strong> reinicia el LXC únicamente tras una ejecución correcta.",
       "Las selecciones se guardan por LXC y son independientes de la lista de objetivos."
     ]
@@ -196,8 +196,8 @@
       "caption": "La sección del sistema operativo mantiene los paquetes separados de las acciones de aplicaciones y Docker."
     },
     "options": {
-      "alt": "Opciones de actualización LXC con copia previa y reinicio posterior",
-      "caption": "Las preferencias de copia y reinicio se aplican a ejecuciones manuales, en bloque y programadas."
+      "alt": "Opciones de actualización LXC con backup previo y reinicio posterior",
+      "caption": "Las preferencias de backup y reinicio se aplican a ejecuciones manuales, en bloque y programadas."
     }
   }
 }

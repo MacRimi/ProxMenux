@@ -70,7 +70,7 @@
     "items": [
       "<strong>Enhetssökväg</strong> — <code>/dev/sda</code>, <code>/dev/nvme0n1</code>.",
       "<strong>Typetikett</strong> — SATA / NVMe och tillhörande ikon.",
-      "<strong>Systemetikett</strong> — orange markering för diskar som identifierats som operativsystemets diskar. Identifieringen använder monteringarna <code>/</code> och <code>/boot</code> och ger etiketten <em>System</em>. En saknad etikett bevisar inte att disken kan raderas eller användas för annat utan risk.",
+      "<strong>Systemetikett</strong> — orange markering för diskar som värden använder: systemets monteringspunkter (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), aktiv swap, ZFS-poolmedlemmar, fysiska LVM-volymer, aktiva RAID-medlemmar eller etiketter på systempartitioner. En saknad etikett bevisar inte att disken kan raderas eller användas för annat utan risk.",
       "<strong>Modell</strong> — tillverkare och modell från <code>smartctl -i</code>.",
       "<strong>Kapacitet</strong> — i lättlästa enheter.",
       "<strong>Temperatur</strong> — aktuellt värde i °C, färgat efter disktyp; NVMe använder högre gränser än SATA.",
@@ -112,7 +112,7 @@
     "pdfPreviewAlt": "Första sidan i SMART-rapporten med sammanfattning, PASSED-ring och diskinformation",
     "pdfPreviewCaption": "Första sidan: sammanfattning, PASSED-ring och fullständig diskinformation. Exempel-PDF:en innehåller SSD-slitage, alla SMART-attribut och testhistorik.",
     "pdfDownloadLabel": "Hämta exempelrapport för SMART (PDF)",
-    "pdfSectionsIntro": "Rapporten har sex huvudavsnitt:",
+    "pdfSectionsIntro": "Rapporten innehåller dessa huvudavsnitt:",
     "pdfSections": [
       "<strong>Sammanfattning</strong> — PASSED/FAILED, begriplig diskbedömning — bra, sliten eller felande — och fyra uppgifter: rapporttid, senaste testtyp, resultat och kontrollerade attribut.",
       "<strong>Diskinformation</strong> — modell, serienummer, kapacitet, typ HDD/SSD/NVMe, familj, formfaktor, gränssnitt (SATA 3.3 · 6.0 Gb/s, …), TRIM, temperatur och optimal gräns, drifttimmar, starter, SMART, väntande/omallokerade sektorer och CRC-fel.",
@@ -127,7 +127,7 @@
     "historyImageCaption": "Diskens SMART-historik. Varje rad visar typ, tid, ålder, markering av senaste test samt hämtning av <code>smartctl</code>-utdata och borttagning.",
     "historyIntro": "Sparade slutförda korta och utökade tester för disken. Varje post innehåller ursprungliga <code>smartctl</code>-utdata och fälten som Monitor tolkar för översikten. Åtgärder per rad:",
     "historyItems": [
-      "<strong>Hämta</strong> — sparar JSON-ögonblicksbilden med rapportens <code>smartctl -a</code>-data. Praktiskt när tillverkarsupporten behöver ursprungliga diagnostikfält.",
+      "<strong>Hämta</strong> — sparar testets JSON-ögonblicksbild (utdata från <code>smartctl -a --json</code>, eller <code>nvme smart-log</code> på NVMe när smartctl misslyckas). Praktiskt när tillverkarsupporten behöver ursprungliga diagnostikfält.",
       "<strong>Ta bort</strong> — raderar ett test manuellt ur historiken. Lagringsgränsen i Schema (<em>senaste 5 / 10 / 20</em>) tar automatiskt bort de äldsta."
     ],
     "scheduleTitle": "Flik 4 — Schema",

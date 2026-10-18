@@ -68,7 +68,7 @@
       {
         "category": "Almacenamiento",
         "checks": "Almacenamientos Proxmox, sistema de archivos raíz",
-        "events": "Uso de espacio por encima de los umbrales configurados en la raíz u otros sistemas de archivos supervisados (85% aviso / 95% crítico por defecto); exportación NFS desconectada; fallo de autenticación CIFS; pool LVM-thin lleno."
+        "events": "Uso de espacio por encima de los umbrales configurados en la raíz u otros sistemas de archivos supervisados (85% aviso / 95% crítico por defecto); almacenamientos PVE no disponibles; montajes NFS/CIFS bloqueados o en solo lectura inesperada; LVM-thin y otros almacenamientos de pool que superan los mismos umbrales."
       },
       {
         "category": "Discos y SMART",
@@ -98,7 +98,7 @@
       {
         "category": "Actualizaciones del sistema",
         "checks": "Actualizaciones pendientes, actualizaciones de seguridad, kernel / versión de PVE, antigüedad del sistema",
-        "events": "Actualizaciones pendientes de seguridad o del kernel en uso; sistema sin actualizar desde hace mucho tiempo. Si hay actualizaciones, la cabecera de Vista general muestra <em>Actualizar ahora</em>. Ejecuta todo el proceso de actualización de ProxMenux; al cerrarlo, consulta el estado con <code>?refresh=1</code> para actualizar el indicador sin esperar al próximo ciclo."
+        "events": "Actualizaciones pendientes de seguridad o del kernel en uso; sistema sin actualizar desde hace mucho tiempo. Si hay actualizaciones, la categoría Actualizaciones de la ventana de estado de salud muestra <em>Actualizar ahora</em>. Ejecuta todo el proceso de actualización de ProxMenux; al cerrarlo, consulta el estado con <code>?refresh=1</code> para actualizar el indicador sin esperar al próximo ciclo."
       },
       {
         "category": "Seguridad y Certificados",
@@ -158,7 +158,7 @@
   },
   "dismiss": {
     "heading": "Hacer dismiss de alertas y la Suppression Duration",
-    "intro": "Algunos eventos son ruidosos por naturaleza — un <em>System Updates: actualizaciones pendientes disponibles</em> permanece cierto hasta que parches el host, y no quieres una notificación cada cinco minutos durante una semana. El botón <em>Update Now</em> de la cabecera de Overview es el atajo directo para resolver ese caso concreto en sitio; para todo lo demás, o cuando el parche se aplaza, el Monitor de salud ofrece además dos mecanismos de silenciamiento acoplados:",
+    "intro": "Algunos eventos son ruidosos por naturaleza: <em>System Updates: actualizaciones pendientes disponibles</em> sigue activo hasta que actualices el host, y no quieres una notificación cada cinco minutos durante una semana. El botón <em>Actualizar ahora</em> de la categoría Actualizaciones de la ventana de estado de salud resuelve ese caso en el sitio; para todo lo demás, o si aplazas la actualización, el Monitor de salud ofrece además dos mecanismos de silenciado relacionados:",
     "step1": "<strong>Descartar un evento</strong> desde su ventana. El botón ofrece <strong>24 horas</strong>, <strong>7 días</strong> o <strong>Permanentemente</strong>, independientemente del valor de la categoría. Envía <code>POST /api/health/acknowledge</code> con el <code>error_key</code> y las <code>suppression_hours</code> elegidas (<code>-1</code> para permanente). El evento pasa a Descartados con su fecha <code>acknowledged_at</code>.",
     "dropdownImageAlt": "Menú para descartar una alerta: 24 horas, 7 días o permanentemente",
     "dropdownImageCaption": "La duración elegida se aplica solo a esta alerta; sin una elección individual, se usa el valor de la categoría. Los descartes permanentes llevan una etiqueta ámbar <em>Permanente</em> y normalmente no reaparecen. La excepción de temperatura crítica de CPU se explica más abajo.",
@@ -187,7 +187,7 @@
       },
       {
         "finding": "Pool ZFS DEGRADED / FAULTED",
-        "why": "Las comprobaciones de capacidad del pool ZFS permiten descartarse. Otros hallazgos del pool siguen su propio indicador. Confirmar no repara un pool degradado o averiado."
+        "why": "Los hallazgos de estado del pool ZFS (DEGRADED, FAULTED, UNAVAIL) permiten descartarse, igual que las comprobaciones de capacidad del pool. Confirmar no repara un pool degradado o averiado."
       },
       {
         "finding": "Errores I/O de disco con SMART FAILED",
@@ -289,7 +289,7 @@
   },
   "rest": {
     "heading": "Endpoints REST",
-    "intro": "Las acciones de la ventana están disponibles por API para scripts, paneles o bots. Con la autenticación del Monitor activada, las llamadas necesitan un token Bearer válido, obtenido al iniciar sesión o en la pantalla de tokens API. Los cambios, como confirmar alertas, guardar ajustes o limpiar errores huérfanos, exigen full_admin; read_only recibe 403. Si la autenticación está desactivada o se rechazó, estos controles permiten acceder sin token.",
+    "intro": "Las acciones de la ventana están disponibles por API para scripts, paneles o bots. Las llamadas necesitan un token Bearer válido, obtenido al iniciar sesión o en la pantalla de tokens API. Los cambios, como confirmar alertas, guardar ajustes o limpiar errores huérfanos, exigen full_admin; read_only recibe 403.",
     "headerEndpoint": "Endpoint",
     "headerMethod": "Método",
     "headerUse": "Uso",
@@ -297,7 +297,7 @@
       {
         "endpoint": "/api/health",
         "method": "GET",
-        "use": "Comprobación ligera que devuelve JSON con <code>status</code>, <code>timestamp</code> y <code>version</code>. Sirve para comprobar palabras clave con Uptime Kuma; si la autenticación del Monitor está activa, el cliente debe enviar una cabecera Bearer."
+        "use": "Comprobación ligera que devuelve JSON con <code>status</code>, <code>timestamp</code> y <code>version</code>. Sirve para comprobar palabras clave con Uptime Kuma; el cliente debe enviar una cabecera Bearer."
       },
       {
         "endpoint": "/api/health/status",

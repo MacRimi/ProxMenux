@@ -19,7 +19,7 @@
   "reaching": {
     "heading": "Öppna instrumentpanelen",
     "intro": "ProxMenux Monitor binder till <code>0.0.0.0:8008</code>. Det finns tre vanliga sätt att nå den:",
-    "outro": "Direktåtkomst motsvarar standardenheten för systemd. Omvänd proxy och Secure Gateway beskrivs nedan. Klient-IP från <code>X-Forwarded-For</code> kräver PROXMENUX_TRUST_PROXY=1 och en proxy du kontrollerar. Enbart <code>X-Forwarded-Proto</code> eller <code>X-Forwarded-Host</code> aktiverar inte detta förtroende; frontend bygger API-URL:er från webbläsarens ursprung."
+    "outro": "Direktåtkomst motsvarar standardenheten för systemd. Omvänd proxy och Secure Gateway beskrivs nedan. Förtroende för klient-IP i <code>X-Forwarded-For</code> kräver PROXMENUX_TRUST_PROXY=1 och en proxy du kontrollerar. Enbart förekomsten av <code>X-Forwarded-Proto</code> eller <code>X-Forwarded-Host</code> aktiverar inte proxyförtroende. På portarna 80/443 använder frontend relativa <code>/api/*</code>-URL:er; på alla andra portar anropas port 8008 på samma värdnamn."
   },
   "firstLaunch": {
     "heading": "Första starten",
@@ -117,8 +117,8 @@
     "loginImageCaption": "När autentiseringen är konfigurerad börjar varje besök på instrumentbrädan här. Med 2FA aktiverad ber skärmen om 6-siffrig kod i ett andra steg efter att lösenordet accepteras.",
     "loginFlowTitle": "Inloggningsflöde",
     "twofaIntro": "Med 2FA returnerar första anropet <code>requires_totp: true</code>. Upprepa det med den sexsiffriga koden:",
-    "publicTitle": "Offentlig åtkomst och skyddade kontroller",
-    "publicIntro": "Inloggning och autentiseringsstatus är offentliga. Kontot kan skapas så länge användarnamn och lösenord inte sparats, även efter att skydd avböjts. Systemdata kräver autentisering när skyddet är aktivt:",
+    "publicTitle": "Offentliga slutpunkter (utan token)",
+    "publicIntro": "Inloggning, autentiseringsstatus, första konfigurationen och den lätta slutpunkten <code>/api/system-info</code> är offentliga:",
     "publicItems": [
       "<code>/api/auth/login</code> och <code>/api/auth/status</code> är offentliga. <code>/api/auth/setup</code> skapar första kontot och vägrar skriva över befintliga inloggningsuppgifter.",
       "<code>/api/system-info</code> är en offentlig ändpunkt med grundläggande systeminformation, inklusive <code>health.status</code>. Den kräver ingen token. Även /api/auth/status är offentlig och passar för en tillgänglighetskontroll."
@@ -146,7 +146,7 @@
       },
       {
         "asset": "TOTP-hemlighet för 2FA",
-        "algorithm": "Standard-TOTP (RFC 6238) med base32-kodad hemlighet. De åtta engångskoderna för återställning lagras som SHA-256-hashar.",
+        "algorithm": "Standard-TOTP (RFC 6238) med base32-kodad hemlighet. De åtta reservkoderna är engångskoder och lagras som SHA-256-hashar.",
         "where": "<code>auth.json</code> → <code>totp_secret</code> + <code>backup_codes[]</code>"
       },
       {
@@ -243,17 +243,17 @@
       }
     ],
     "backupTitle": "Varför säkerhetskopior behövs",
-    "backupBody": "Om enheten försvinner, använd en sparad återställningskod eller återställ en säkerhetskopia som du ordnat i förväg. Molnsynkronisering och exporter skiljer sig mellan appar; kontrollera att TOTP-hemligheterna kan återställas. Root-åtkomst på värden möjliggör också återställning enligt nedan. Spara en separat, säker kopia.",
+    "backupBody": "Om autentiseringsenheten försvinner, använd en sparad reservkod eller återställ appen från en säkerhetskopia som du ordnat i förväg. Molnsynkronisering och lokala exporter skiljer sig mellan appar; kontrollera att den valda metoden verkligen återställer TOTP-hemligheterna. Root-åtkomst på värden möjliggör också återställning enligt nedan. Spara en separat, säker kopia.",
     "setupTitle": "Ställ in steg för steg från panelen",
     "setupImageAlt": "2FA-inställning med QR-kod och återställningskoder",
-    "setupImageCaption": "2FA-dialogen visar QR-kod, Base32-hemlighet för manuell inmatning och åtta engångskoder för återställning. Kopiera dem innan dialogen stängs; de visas inte igen.",
+    "setupImageCaption": "Installationsdialogen för 2FA visar en QR-kod, en Base32-hemlighet för manuell inmatning och, efter verifieringen, åtta reservkoder för engångsbruk. Kopiera koderna innan dialogen stängs; de visas inte igen.",
     "setupSteps": [
       "<strong>Installera autentiseringsappen på din telefon</strong> (eller öppna din lösenordshanterare). En av apparna från tabellen ovan. Du behöver bara göra det en gång - samma app kommer att hålla koder för varje tjänst du skyddar.",
       "<strong>Logga in på panelen</strong> med användarnamn och lösenord.",
-      "<strong>Öppna fliken Säkerhet</strong> och välj <strong>Aktivera 2FA</strong>. Dialogen visar QR-kod, Base32-hemlighet och åtta återställningskoder.",
+      "<strong>Öppna fliken Säkerhet</strong> i instrumentpanelens sidofält och klicka sedan på <strong>Aktivera 2FA</strong> och <strong>Starta installationen</strong>. Dialogen visar en QR-kod och den manuella nyckeln; de åtta reservkoderna visas när koden har verifierats.",
       "<strong>Lägg till posten i autentiseringsappen:</strong>",
-      "<strong>Spara återställningskoderna.</strong> Förvara alla åtta i en lösenordshanterare, krypterad anteckning eller säker papperskopia. Varje kod fungerar en gång när appen är otillgänglig.",
-      "<strong>Bekräfta med den aktuella sexsiffriga koden</strong> från appen i fältet \"Verifieringskod\" och skicka. Koden ändras var 30:e sekund; använd nästa om den hinner löpa ut.",
+      "<strong>Bekräfta med den aktuella sexsiffriga koden</strong> från appen i fältet \"Verifieringskod\" i installationsdialogen och skicka. Koden ändras var 30:e sekund; använd nästa om den hinner löpa ut medan du skriver.",
+      "<strong>Spara reservkoderna.</strong> Förvara efter verifieringen alla åtta säkert i en lösenordshanterare, krypterad anteckning eller säker papperskopia. Varje kod fungerar en gång om autentiseringsappen är otillgänglig.",
       "<strong>Klart.</strong> 2FA är aktivt. Nästa inloggning frågar först efter lösenord och sedan den aktuella sexsiffriga koden."
     ],
     "setupStep4Sub": [
@@ -261,17 +261,17 @@
       "<em>Manuellt alternativ</em> när skanning inte är möjlig, exempelvis på samma telefon: <em>Lägg till konto</em> → <em>Ange inställningsnyckel</em>. Välj ett namn som <em>Proxmox Monitor</em>, klistra in Base32-hemligheten, lämna <em>Typ</em> som <em>Tidsbaserad</em> och spara."
     ],
     "testTitle": "Test innan du loggar ut",
-    "testBody": "Behåll den nuvarande sessionen och testa en ny inloggning i ett privat fönster <em>omedelbart</em> efter inställningen. Kontrollera serverns och telefonens klockor om koden nekas, innan du stänger den fungerande sessionen. Om åtkomsten redan är förlorad, använd återställningskod eller redigera <code>auth.json</code> från värdens skal.",
+    "testBody": "Behåll den nuvarande sessionen och testa en ny inloggning i ett privat fönster <em>omedelbart</em> efter inställningen. Kontrollera serverns och telefonens klockor om koden nekas, innan du loggar ut från den fungerande sessionen. Om åtkomsten redan är förlorad, använd en reservkod eller redigera <code>auth.json</code> från värdens skal.",
     "lostTitle": "Förlorad autentiseringsapp",
     "lostIntro": "Tre återställningsmetoder, från minst till mest ingripande:",
     "lostItems": [
-      "<strong>Använd en återställningskod.</strong> Ange en av de åtta sparade koderna i TOTP-fältet. Den fungerar en gång; oanvända koder förblir giltiga. Ställ sedan in 2FA på nytt i inställningarna för åtta nya koder.",
+      "<strong>Använd en reservkod.</strong> Ange en av de åtta sparade koderna i TOTP-fältet. Den fungerar en gång; oanvända koder förblir giltiga. Öppna Säkerhet efter inloggningen, välj <strong>Inaktivera 2FA</strong> och sedan <strong>Aktivera 2FA</strong> för att få åtta nya koder.",
       "<strong>Återställ appen från moln eller säkerhetskopia.</strong> Med inställd molnsynkronisering kan appen installeras och kontot öppnas på en ny enhet: Google, Microsoft, Authy, Apple Passwords via iCloud-nyckelring, Ente eller 2FAS. Med en exportfil från Aegis, Raivo eller FreeOTP+, installera appen och importera filen.",
       "<strong>Stäng av 2FA från värdens skal.</strong> Om övriga metoder saknas, redigera <code>/root/.config/proxmenux-monitor/auth.json</code> som root via SSH eller konsol. Sätt <code>totp_enabled</code> till <code>false</code>, spara och starta om tjänsten:"
     ],
     "lostShellOutro": "Du kan logga in med användarnamn + lösenord bara, sedan aktivera 2FA från Inställningar.",
     "disableTitle": "Inaktivera 2FA",
-    "disableBody": "Öppna <strong>Säkerhet</strong> och välj <strong>Inaktivera 2FA</strong>. <code>POST /api/auth/totp/disable</code> kräver aktuellt lösenord och giltig TOTP- eller återställningskod. Hemligheten och återställningskoderna tas bort. Ta även bort den gamla posten i appen.",
+    "disableBody": "Öppna <strong>Säkerhet</strong> och välj <strong>Inaktivera 2FA</strong>. <code>POST /api/auth/totp/disable</code> kräver aktuellt lösenord och en giltig TOTP- eller reservkod. TOTP-hemligheten och reservkoderna tas bort. Ta även bort den gamla posten i autentiseringsappen.",
     "rejectedTitle": "Den sexsiffriga koden nekas alltid",
     "rejectedIntro": "TOTP är tidsbaserat. Serverns och telefonens klockor bör skilja mindre än cirka 30 s. Två kontroller:",
     "rejectedItems": [

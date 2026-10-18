@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "API de Proxmox Monitor — Referencia de integración | ProxMenux",
-    "description": "Endpoints HTTP de ProxMenux Monitor para Home Assistant, Homepage, Grafana, Prometheus, n8n y paneles propios. Consulta el estado y ejecuta operaciones documentadas: control de VM, inicio de copias, notificaciones y confirmación de alertas.",
+    "description": "Endpoints HTTP de ProxMenux Monitor para Home Assistant, Homepage, Grafana, Prometheus, n8n y paneles propios. Consulta el estado y ejecuta operaciones documentadas: control de VM, inicio de backups, notificaciones y confirmación de alertas.",
     "ogTitle": "API de Proxmox Monitor — Referencia de integración",
     "ogDescription": "Endpoints de ProxMenux Monitor para Home Assistant, Homepage, Grafana, Prometheus, n8n y paneles propios.",
     "twitterTitle": "API de Proxmox Monitor | ProxMenux",
@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Para qué es esta página",
-    "body": "Esta página reúne endpoints para integraciones externas: datos de lectura y operaciones como iniciar copias, enviar avisos y confirmar alertas. La API usa el mismo proceso Flask que sirve el panel en TCP <strong>8008</strong>. La dirección de escucha y TLS se explican en <link>Acceso y autenticación</link>."
+    "body": "Esta página reúne endpoints para integraciones externas: datos de lectura y operaciones como iniciar backups, enviar avisos y confirmar alertas. La API usa el mismo proceso Flask que sirve el panel en TCP <strong>8008</strong>. La dirección de escucha y TLS se explican en <link>Acceso y autenticación</link>."
   },
   "headerEndpoint": "Endpoint",
   "headerMethod": "Método",
@@ -102,9 +102,9 @@
   },
   "actions": {
     "heading": "Acciones del sistema",
-    "intro": "Estas acciones asíncronas se ejecutan en unidades systemd transitorias. Con autenticación activa, sus rutas de escritura exigen <code>full_admin</code>; <code>read_only</code> puede consultar <code>.../status</code>. El inicio aceptado devuelve HTTP 202 y estado; consulta <code>.../status</code> para el progreso. El control de invitados y las copias usan respuestas distintas, explicadas abajo.",
+    "intro": "Estas acciones asíncronas se ejecutan en unidades systemd transitorias. Con autenticación activa, sus rutas de escritura exigen <code>full_admin</code>; <code>read_only</code> puede consultar <code>.../status</code>. El inicio aceptado devuelve HTTP 202 y estado; consulta <code>.../status</code> para el progreso. El control de invitados y los backups usan respuestas distintas, explicadas abajo.",
     "shapeTitle": "Formato de respuesta común",
-    "shapeIntro": "Las acciones asíncronas del sistema comparten este objeto JSON de estado. El control de invitados y las copias tienen formatos distintos:",
+    "shapeIntro": "Las acciones asíncronas del sistema comparten este objeto JSON de estado. El control de invitados y los backups tienen formatos distintos:",
     "shapeCode": "{\n  \"unit\": \"proxmenux-action-pve-update.service\",\n  \"state\": \"idle | running | success | failed | cancelled\",\n  \"started_at\": \"Sat 2026-08-01 11:01:32 CEST\",\n  \"finished_at\": null,\n  \"exit_code\": null,\n  \"result\": null\n}",
     "concurrencyTitle": "Concurrencia y cancelación",
     "concurrencyBody": "Iniciar otra ejecución de la misma acción activa devuelve HTTP 409. Solo se cancela si hay una ruta DELETE documentada, como en la actualización PVE. Su estado pasa a <code>cancelled</code> y conserva fechas. Los estados finales se guardan en memoria del proceso y pueden perderse al reiniciar Monitor.",
@@ -162,7 +162,7 @@
       {
         "endpoint": "/api/vms/<vmid>/backup",
         "method": "POST",
-        "use": "Crea una copia vzdump de una VM o LXC. Campos opcionales, ajustables según el almacenamiento: <code>storage</code> (destino PVE), <code>mode</code> (<code>snapshot</code>, <code>suspend</code> o <code>stop</code>), <code>compress</code> (<code>zstd</code>, <code>lzo</code>, <code>gzip</code> o <code>none</code>), <code>protected</code> (<code>true</code> o <code>false</code>), <code>notes</code>, <code>notification</code> (<code>auto</code>, <code>always</code>, <code>failure</code> o <code>never</code>) y <code>pbs_change_detection</code> (<code>default</code>, <code>legacy</code> o <code>data</code>). Devuelve el UPID de la tarea PVE."
+        "use": "Crea un backup vzdump de una VM o LXC. Campos opcionales, ajustables según el almacenamiento: <code>storage</code> (destino PVE), <code>mode</code> (<code>snapshot</code>, <code>suspend</code> o <code>stop</code>), <code>compress</code> (<code>zstd</code>, <code>lzo</code>, <code>gzip</code> o <code>none</code>), <code>protected</code> (<code>true</code> o <code>false</code>), <code>notes</code> y <code>pbs_change_detection</code> (<code>default</code>, <code>legacy</code> o <code>data</code>). Devuelve el UPID de la tarea PVE."
       },
       {
         "endpoint": "/api/vms/<vmid>/backups",
@@ -171,7 +171,7 @@
       }
     ],
     "syncVsAsyncTitle": "Dos tipos de acción",
-    "syncVsAsyncBody": "Encendido, apagado y actualizaciones del host usan unidades systemd transitorias con <code>.../status</code>. Solo la actualización PVE tiene aquí una ruta de cancelación <code>DELETE</code>. El control VM/LXC devuelve una tarea que debe consultarse; la copia devuelve un UPID de trabajo en segundo plano. Aceptar la petición no equivale a terminarla. Autenticación y permisos dependen de la ruta.",
+    "syncVsAsyncBody": "Encendido, apagado y actualizaciones del host usan unidades systemd transitorias con <code>.../status</code>. Solo la actualización PVE tiene aquí una ruta de cancelación <code>DELETE</code>. El control VM/LXC devuelve una tarea que debe consultarse; el backup devuelve un UPID de trabajo en segundo plano. Aceptar la petición no equivale a terminarla. Autenticación y permisos dependen de la ruta.",
     "curlTitle": "Ejemplo curl",
     "curlBody": "Inicia una actualización PVE y consulta hasta que termine: la secuencia que usaría una automatización Home Assistant o un playbook Ansible.",
     "curlCode": "TOKEN=<your full_admin token>\n\ncurl -sSf -X POST \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  https://<host>:8008/api/system/pve-update/run\n\nwhile true; do\n  state=$(curl -sSf -H \"Authorization: Bearer $TOKEN\" \\\n    https://<host>:8008/api/system/pve-update/status | jq -r .state)\n  [ \"$state\" != \"running\" ] && break\n  sleep 30\ndone\necho \"final state: $state\"",
@@ -286,7 +286,7 @@
       {
         "endpoint": "/api/storage/smart/<disk>/test",
         "method": "POST",
-        "use": "Inicia una prueba SMART. Esquema del cuerpo: <code>'{'\"type\":\"short\"|\"long\"'}'</code>."
+        "use": "Inicia una prueba SMART. Esquema del cuerpo: <code>'{'\"test_type\":\"short\"|\"long\"'}'</code>."
       },
       {
         "endpoint": "/api/storage/smart/schedules",
@@ -356,7 +356,7 @@
       {
         "endpoint": "/api/vms/<vmid>/backups",
         "method": "GET",
-        "use": "Copias de seguridad conservadas para este invitado."
+        "use": "Backups conservados para este invitado."
       },
       {
         "endpoint": "/api/vms/<vmid>/control",
@@ -381,17 +381,17 @@
     ]
   },
   "backups": {
-    "heading": "Copias de seguridad",
+    "heading": "Backups",
     "rows": [
       {
         "endpoint": "/api/backups",
         "method": "GET",
-        "use": "Copias encontradas en almacenamientos dir, NFS, CIFS y PBS consultados desde el nodo local. No explora todos los nodos del clúster."
+        "use": "Backups encontrados en almacenamientos dir, NFS, CIFS y PBS consultados desde el nodo local. No explora todos los nodos del clúster."
       },
       {
         "endpoint": "/api/backup-storages",
         "method": "GET",
-        "use": "Almacenamientos que admiten copias de seguridad, con espacio libre."
+        "use": "Almacenamientos que admiten backups, con espacio libre."
       }
     ]
   },

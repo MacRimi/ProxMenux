@@ -220,7 +220,7 @@
     "heading": "n8n, Zapier und eigene Skripte",
     "intro": "Workflow-Werkzeuge und Skripte können mit POST an <code>/api/notifications/send</code> Meldungen <em>senden</em>, etwa bei CI-Fehlern oder langen Cronjobs. Der direkte Versand umgeht Ereigniswarteschlange und Fingerprint-Sperrzeit. Kanalformatierung, optionale KI und Versand bleiben erhalten. Erforderliche Duplikatkontrolle übernimmt der Aufrufer.",
     "n8nBody": "Nutzen Sie in n8n einen <em>HTTP Request</em>-Knoten mit POST, obiger URL und demselben JSON wie curl. Wählen Sie generische Header-Auth-Zugangsdaten mit <em>Authorization</em> und <code>Bearer YOUR_API_TOKEN</code>; ersetzen Sie den Platzhalter. Ein Zeitplan, Webhook oder vorheriger Knoten löst die Anfrage aus.",
-    "severityBody": "Schweregrade sind <code>INFO</code>, <code>WARNING</code> oder <code>CRITICAL</code> in Großbuchstaben. <code>data</code> liefert Kontext. Die KI nutzt gerenderten Titel und Text sowie unterstützte Ergänzungen; beliebige Felder erscheinen nicht garantiert in Prompt oder Ausgabe. Siehe <link>Benachrichtigungen → Ereigniskatalog</link>."
+    "severityBody": "Schweregrade sind <code>INFO</code>, <code>WARNING</code> oder <code>CRITICAL</code> in Großbuchstaben. Das Objekt <code>data</code> liefert Ereigniskontext und Vorlagenfelder. An diesem Endpunkt erhält die KI-Umschreibung nur Titel und Text; Felder in <code>data</code> werden nicht an den Anbieter gesendet. Zur Bedeutung der Ereignisse siehe <link>Benachrichtigungen → Ereigniskatalog</link>."
   },
   "pveWebhook": {
     "heading": "Nativer Proxmox-VE-Webhook (eingehend)",

@@ -52,7 +52,7 @@
       },
       {
         "name": "Terminál",
-        "description": "Shell hostiteľa a podporované konzoly VM/CT v prehliadači cez <code>xterm.js</code> a WebSockets. Používa nastavený režim overovania: pri vypnutí alebo odmietnutí môžu klienti s prístupom zo siete otvoriť reláciu bez prihlásenia. Neznamená to audit každého príkazu."
+        "description": "Shell hostiteľa a podporované konzoly VM/CT v prehliadači cez <code>xterm.js</code> a WebSockets. Relácie sa neauditujú po jednotlivých príkazoch."
       },
       {
         "name": "Zabezpečenie",
@@ -114,7 +114,7 @@
     "heading": "REST API a integrácie",
     "intro": "Endpointy REST poskytujú monitorovacie dáta JSON cez HTTP/HTTPS pre Homepage, Home Assistant, Uptime Kuma a skripty. Grafana môže použiť samostatný textový exportér Prometheus na <code>/api/prometheus</code>. Požiadavky možno posielať cez <code>curl</code>.",
     "tokens": "Tokeny API s dlhou životnosťou (365 dni) sa generujú z <strong>Nastavenia → API prístupových tokenov</strong> alebo prostredníctvom <code>POST /api/auth/generate-api-token</code>.",
-    "bearer": "Tokeny posielajte ako <code>Authorization: Bearer …</code>. Verejný <code>/api/health</code> je vhodný na kontroly dostupnosti bez poverení. Pod <code>/api/auth/*</code> sú verejné trasy nastavenia/prihlásenia/stavu aj chránená správa účtov/tokenov; nie všetky sú anonymné.",
+    "bearer": "Tokeny posielajte ako <code>Authorization: Bearer …</code>. Aj <code>/api/health</code> očakáva hlavičku Bearer, takže kontroly dostupnosti potrebujú token read_only. Pod <code>/api/auth/*</code> sú verejné trasy nastavenia/prihlásenia/stavu aj chránené trasy správy účtov/tokenov; nie všetky sú anonymné.",
     "catalog": "Katalóg endpointov, rotácia tokenov a zabezpečenie sú v <linkApi>Referenčnej príručke API</linkApi>; príklady pre Homepage, Home Assistant, Grafana, Uptime Kuma a cURL sú v <linkIntegrations>Integrácie</linkIntegrations>."
   },
   "serviceControl": {

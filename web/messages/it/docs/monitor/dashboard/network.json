@@ -162,7 +162,7 @@
       }
     ],
     "reportTitle": "Rapporto sulla latenza di rete (PDF)",
-    "reportIntro": "Entrambe le modalità hanno un pulsante <strong>Rapporto</strong> accanto alla destinazione. Genera un PDF delle misurazioni da allegare a una richiesta di assistenza al provider Internet.",
+    "reportIntro": "Entrambe le modalità hanno un pulsante <strong>Rapporto</strong> accanto alla destinazione. Apre un report stampabile delle misurazioni; salvalo in PDF dalla finestra di stampa del browser e allegalo a una richiesta di assistenza al provider Internet.",
     "reportPreviewAlt": "Prima pagina PDF del rapporto di latenza: sintesi, indicatore, statistiche, grafico e guida alle soglie",
     "reportPreviewCaption": "La prima pagina contiene sintesi, indicatore, statistiche principali, andamento della latenza e guida alle soglie. Dalla pagina 2 seguono la tabella delle misurazioni e la metodologia.",
     "downloadLabel": "Scarica un rapporto di latenza di esempio (PDF)",

@@ -52,7 +52,7 @@
       },
       {
         "name": "Terminal",
-        "description": "Browser-Shell für den Host und unterstützte VM-/CT-Konsolen über <code>xterm.js</code> und WebSockets. Es gilt der konfigurierte Authentifizierungsmodus: Bei deaktivierter oder abgelehnter Anmeldung können erreichbare Clients Sitzungen ohne Login öffnen. Das bedeutet keine Protokollierung jedes Befehls."
+        "description": "Browser-Shell für den Host und unterstützte VM-/CT-Konsolen über <code>xterm.js</code> und WebSockets. Sitzungen werden nicht pro Befehl protokolliert."
       },
       {
         "name": "Sicherheit",
@@ -114,7 +114,7 @@
     "heading": "REST API und Integrationen",
     "intro": "REST-Endpunkte liefern Überwachungsdaten als JSON über HTTP/HTTPS für Homepage, Home Assistant, Uptime Kuma und eigene Skripte. Grafana kann den separaten Prometheus-Textexporter unter <code>/api/prometheus</code> nutzen. Anfragen sind mit <code>curl</code> möglich.",
     "tokens": "Langlebige API-Tokens (365 Tage) werden aus <strong>Einstellungen → API Zugriffstokens</strong> oder über <code>POST /api/auth/generate-api-token</code> generiert.",
-    "bearer": "Token werden als <code>Authorization: Bearer …</code> gesendet. Der öffentliche Endpunkt <code>/api/health</code> eignet sich für Verfügbarkeitsprüfungen ohne Zugangsdaten. Unter <code>/api/auth/*</code> liegen öffentliche Setup-/Login-/Statusrouten und geschützte Konto-/Tokenverwaltung; nicht alle sind anonym.",
+    "bearer": "Token werden als <code>Authorization: Bearer …</code> gesendet. Auch <code>/api/health</code> erwartet den Bearer-Header, daher benötigen Verfügbarkeitsprüfungen ein read_only-Token. Unter <code>/api/auth/*</code> liegen sowohl öffentliche Setup-/Login-/Statusrouten als auch geschützte Routen der Konto-/Tokenverwaltung; nicht alle sind anonym.",
     "catalog": "Der vollständige Endpunktkatalog, Anleitungen zur Token-Rotation und Best Practices für die Sicherheit finden Sie in der <linkApi>API-Referenz</linkApi>; Vorgefertigte Beispiele für Homepage, Home Assistant, Grafana, Uptime Kuma und ein generisches cURL-Muster finden Sie in <linkIntegrations>Integrationen</linkIntegrations>."
   },
   "serviceControl": {

@@ -70,7 +70,7 @@
     "items": [
       "<strong>Ruta del dispositivo</strong> — <code>/dev/sda</code>, <code>/dev/nvme0n1</code>.",
       "<strong>Etiqueta de tipo</strong>: SATA / NVMe y su icono.",
-      "<strong>Etiqueta de sistema</strong>: marca naranja para los discos identificados como discos del SO. Se detectan mediante los montajes de <code>/</code> y <code>/boot</code> y reciben la etiqueta <em>System</em>. La ausencia de etiqueta no demuestra que se puedan borrar o reutilizar sin riesgo.",
+      "<strong>Etiqueta de sistema</strong>: marca naranja para los discos en uso por el host: montajes del sistema (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), swap activa, miembros de pools ZFS, volúmenes físicos LVM, miembros de RAID activos o etiquetas de partición del sistema. La ausencia de etiqueta no demuestra que se puedan borrar o reutilizar sin riesgo.",
       "<strong>Modelo</strong>: fabricante y modelo de <code>smartctl -i</code>.",
       "<strong>Capacidad</strong>: expresada en unidades legibles.",
       "<strong>Temperatura</strong>: °C actuales, con color según el umbral del tipo de disco; NVMe admite umbrales más altos que SATA.",
@@ -84,7 +84,7 @@
   },
   "external": {
     "heading": "Almacenamiento externo (USB)",
-    "body": "Las unidades USB tienen una tarjeta propia, visible cuando hay alguna conectada. Muestra los mismos campos que los discos internos y una etiqueta naranja <strong>USB</strong>. Como suelen conectarse solo para copias o transferencias ocasionales, se conservan sus observaciones, pero los errores de E/S de una unidad USB desconectada no se escalan."
+    "body": "Las unidades USB tienen una tarjeta propia, visible cuando hay alguna conectada. Muestra los mismos campos que los discos internos y una etiqueta naranja <strong>USB</strong>. Como suelen conectarse solo para backups o transferencias ocasionales, se conservan sus observaciones, pero los errores de E/S de una unidad USB desconectada no se escalan."
   },
   "drillIn": {
     "heading": "Diálogo de detalle del disco",
@@ -112,14 +112,14 @@
     "pdfPreviewAlt": "Primera página del informe SMART: resumen ejecutivo con indicador PASSED e información del disco",
     "pdfPreviewCaption": "Primera página: resumen, indicador PASSED e información completa del disco. El PDF de ejemplo incluye desgaste SSD, todos los atributos SMART e historial de pruebas.",
     "pdfDownloadLabel": "Descargar informe SMART de ejemplo (PDF)",
-    "pdfSectionsIntro": "El informe tiene seis secciones principales:",
+    "pdfSectionsIntro": "El informe incluye estas secciones principales:",
     "pdfSections": [
       "<strong>Resumen ejecutivo</strong>: estado PASSED/FAILED, evaluación clara del disco —correcto, con desgaste o fallando— y cuatro datos: fecha del informe, tipo de última prueba, resultado y atributos comprobados.",
       "<strong>Información del disco</strong>: modelo, serie, capacidad, tipo HDD/SSD/NVMe, familia, formato, interfaz (SATA 3.3 · 6.0 Gb/s, …), TRIM, temperatura y umbral óptimo, horas y ciclos de encendido, SMART, sectores pendientes y reasignados y errores CRC.",
       "<strong>Desgaste y vida útil SSD</strong> (solo SSD/NVMe): indicador de vida restante, atributo de origen, desgaste actual, datos escritos y horas de encendido.",
       "<strong>Atributos SMART completos</strong>: ID, nombre, valor, peor valor, umbral, valor bruto y estado de cada atributo. Los principales —Reallocated Sector Ct, Power On Hours, Reported Uncorrect, UDMA CRC Error Count, Media Wearout Indicator, …— incluyen una explicación breve bajo su fila.",
       "<strong>Última autoprueba e historial completo</strong>: última prueba con tipo, resultado, mensaje final y horas de encendido en ese momento, más una tabla numerada de todas las pruebas conservadas.",
-      "<strong>Recomendaciones</strong>: acciones según el resultado. Para discos correctos: <em>disco sano / pruebas periódicas / estrategia de copias</em>. Si los atributos salen de rango, incluye indicaciones de sustitución."
+      "<strong>Recomendaciones</strong>: acciones según el resultado. Para discos correctos: <em>disco sano / pruebas periódicas / estrategia de backups</em>. Si los atributos salen de rango, incluye indicaciones de sustitución."
     ],
     "pdfOutro": "El navegador crea el informe imprimible; Imprimir y Guardar como PDF abren su diálogo de impresión. Elige un nombre como <code>SMART-&lt;short-id&gt;.pdf</code>. Conserva copias fechadas para comparar cambios o compartirlas con el fabricante.",
     "historyTitle": "Pestaña 3 — Historial",
@@ -127,7 +127,7 @@
     "historyImageCaption": "Historial de pruebas SMART del disco. Cada fila muestra tipo, fecha y hora, antigüedad, marca de última prueba y acciones de descarga de la salida <code>smartctl</code> y eliminación.",
     "historyIntro": "Pruebas cortas y extendidas completadas y conservadas para el disco. Cada entrada guarda la salida original de <code>smartctl</code> y los campos que Monitor interpreta para el panel. Acciones por fila:",
     "historyItems": [
-      "<strong>Descargar</strong>: guarda la instantánea JSON con los datos de <code>smartctl -a</code> usados por el informe. Útil si el fabricante necesita los campos de diagnóstico originales.",
+      "<strong>Descargar</strong>: guarda el snapshot JSON de esa prueba (salida de <code>smartctl -a --json</code>, o <code>nvme smart-log</code> en NVMe cuando falla smartctl). Útil si el fabricante necesita los campos de diagnóstico originales.",
       "<strong>Eliminar</strong>: borra una prueba del historial manualmente. La retención de Programación (<em>últimas 5 / 10 / 20</em>) elimina automáticamente las más antiguas."
     ],
     "scheduleTitle": "Pestaña 4 — Programación",
@@ -160,7 +160,7 @@
     "tempWhyTitle": "Por qué importa el historial",
     "tempWhyItems": [
       "<strong>Detectar tendencias.</strong> Una lectura aislada no revela que un disco lleva semanas calentándose, por ejemplo por fallos de ventilación, polvo o calor cercano. Las vistas de 7 y 30 días permiten ver la evolución.",
-      "<strong>Relacionar picos.</strong> Si una copia de seguridad o reconstrucción elevó brevemente la temperatura por encima del umbral, las vistas de 1 y 24 horas muestran si fue puntual o recurrente.",
+      "<strong>Relacionar picos.</strong> Si un backup o una reconstrucción elevó brevemente la temperatura por encima del umbral, las vistas de 1 y 24 horas muestran si fue puntual o recurrente.",
       "<strong>Ajustar umbrales.</strong> Antes de cambiarlos en <em>Ajustes → Umbrales de Health Monitor</em>, consulta el gráfico de 30 días para conocer el rango real de funcionamiento del disco."
     ],
     "obsTitle": "Historial de observaciones en las pestañas",
@@ -184,7 +184,7 @@
     ],
     "obsDedupTitle": "Agrupación de duplicados y repetición de avisos",
     "obsDedupBody1": "Las observaciones se agrupan por <strong>firma</strong>, una huella estable del tipo de error, dispositivo y campos clave del mensaje. Las repeticiones aumentan <code>occurrence_count</code> en la fila existente. Una <strong>firma distinta</strong> crea otra observación y cuenta como evento nuevo para las notificaciones.",
-    "obsDedupBody2": "Para evitar avisos en cascada, la primera combinación de disco, firma y gravedad notifica al operador. La misma combinación no vuelve a avisar hasta pasadas 24 horas, aunque aumente el contador. Un cambio de WARNING a CRITICAL interrumpe esa espera y avisa del empeoramiento.",
+    "obsDedupBody2": "Para evitar avisos en cascada, la primera combinación de disco, firma y gravedad notifica al usuario. La misma combinación no vuelve a avisar hasta pasadas 24 horas, aunque aumente el contador. Un cambio de WARNING a CRITICAL interrumpe esa espera y avisa del empeoramiento.",
     "obsDismissTitle": "Historial permanente y errores activos",
     "obsDismissBody1": "Las observaciones no se pueden descartar, ocultar ni borrar. Cada firma tiene una tarjeta; si se repite, aumenta el contador y actualiza la última fecha. El historial sigue al número de serie: otro disco empieza vacío aunque use el mismo puerto, y un cambio de nombre del kernel no pierde el historial.",
     "obsDismissBody2": "Resolver o descartar un error activo en Health Monitor no modifica sus observaciones. Se conservan después de la resolución automática, de modo que un aviso transitorio de la semana pasada siga visible hoy. Consulta <link>Health Monitor</link> para gestionar los errores activos."
@@ -218,7 +218,7 @@
       {
         "section": "Historial de autopruebas SMART",
         "endpoint": "/api/storage/smart/<disk>/history",
-        "source": "Se guarda en <code>/usr/local/share/proxmenux/smart/&lt;disk&gt;/</code> como instantáneas JSON."
+        "source": "Se guarda en <code>/usr/local/share/proxmenux/smart/&lt;disk&gt;/</code> como snapshots JSON."
       },
       {
         "section": "Observaciones permanentes",

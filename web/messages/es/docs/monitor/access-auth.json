@@ -19,7 +19,7 @@
   "reaching": {
     "heading": "Cómo llegar al panel",
     "intro": "ProxMenux Monitor escucha en <code>0.0.0.0:8008</code>. Hay tres formas habituales de llegar a él:",
-    "outro": "El acceso directo corresponde a la unidad systemd predeterminada. El proxy inverso y Secure Gateway se describen más abajo. Para confiar en la IP de <code>X-Forwarded-For</code> se requiere PROXMENUX_TRUST_PROXY=1 y un proxy que controles. La presencia de <code>X-Forwarded-Proto</code> o <code>X-Forwarded-Host</code> no activa esa confianza; el frontend construye las URL de la API a partir del origen del navegador."
+    "outro": "El acceso directo corresponde a la unidad systemd predeterminada. El proxy inverso y Secure Gateway se describen más abajo. Para confiar en la IP de <code>X-Forwarded-For</code> se requiere PROXMENUX_TRUST_PROXY=1 y un proxy que controles. La presencia de <code>X-Forwarded-Proto</code> o <code>X-Forwarded-Host</code> no activa esa confianza. En los puertos 80/443 el frontend usa URL relativas <code>/api/*</code>; en cualquier otro puerto llama al puerto 8008 del mismo nombre de host."
   },
   "firstLaunch": {
     "heading": "Flujo de primer arranque",
@@ -117,14 +117,14 @@
     "loginImageCaption": "Una vez configurada la autenticación, cada visita al panel empieza aquí. Con 2FA activado, la pantalla pide el código de 6 dígitos en un segundo paso tras aceptar la contraseña.",
     "loginFlowTitle": "Flujo de login",
     "twofaIntro": "Con 2FA activado, la misma llamada devuelve primero <code>requires_totp: true</code>. Reemite con el código de 6 dígitos:",
-    "publicTitle": "Acceso público y sondas protegidas",
-    "publicIntro": "El inicio de sesión y su estado son públicos. Puedes crear la cuenta mientras no haya usuario y contraseña guardados, incluso tras rechazar la protección. Las sondas de datos del sistema requieren autenticación cuando la protección está activa:",
+    "publicTitle": "Endpoints públicos (sin token)",
+    "publicIntro": "El inicio de sesión, su estado, la configuración inicial y el endpoint ligero <code>/api/system-info</code> son públicos:",
     "publicItems": [
       "<code>/api/auth/login</code> y <code>/api/auth/status</code> son públicos. <code>/api/auth/setup</code> crea la cuenta inicial y rechaza sobrescribir credenciales existentes.",
       "<code>/api/system-info</code> es un endpoint público de información básica del sistema, incluido <code>health.status</code>. No lleva el requisito de token. /api/auth/status también es público y sirve para comprobar disponibilidad."
     ],
     "cryptoTitle": "Criptografía y almacenamiento",
-    "cryptoIntro": "ProxMenux Monitor es código abierto — nada de esto es secreto. Documentar el stack aquí de forma explícita es una decisión deliberada: los operadores que guardan credenciales en su host merecen saber cómo se protegen esas credenciales antes de decidir confiar en ellas. Los algoritmos de abajo son los mismos que usa el código en <code>scripts/auth_manager.py</code>; esta sección es un contrato, no una promesa de marketing.",
+    "cryptoIntro": "ProxMenux Monitor es código abierto — nada de esto es secreto. Documentar el stack aquí de forma explícita es una decisión deliberada: los usuarios que guardan credenciales en su host merecen saber cómo se protegen esas credenciales antes de decidir confiar en ellas. Los algoritmos de abajo son los mismos que usa el código en <code>scripts/auth_manager.py</code>; esta sección es un contrato, no una promesa de marketing.",
     "headerAsset": "Elemento",
     "headerAlgo": "Algoritmo",
     "headerWhere": "Ubicación",
@@ -146,7 +146,7 @@
       },
       {
         "asset": "Secret TOTP de 2FA",
-        "algorithm": "TOTP estándar (RFC 6238), con secreto codificado en base32. Los ocho códigos de recuperación son de un solo uso y se almacenan como hashes SHA-256.",
+        "algorithm": "TOTP estándar (RFC 6238), con secreto codificado en base32. Los ocho códigos de backup son de un solo uso y se almacenan como hashes SHA-256.",
         "where": "<code>auth.json</code> → <code>totp_secret</code> + <code>backup_codes[]</code>"
       },
       {
@@ -158,9 +158,9 @@
     "authJsonTitle": "auth.json — qué contiene y cómo se protege",
     "authJsonBody": "Todo lo que ProxMenux Monitor necesita para autenticarte vive en un único archivo: <code>/root/.config/proxmenux-monitor/auth.json</code>, modo <code>0600</code>, propietario <code>root</code>. El archivo guarda <em>hashes</em> (PBKDF2) y <em>material de firma</em> (<code>jwt_secret</code>, <code>totp_secret</code>) — nunca una contraseña en texto plano. Trátalo como cualquier otro secreto de solo-root: si haces backup o replicas el host, cifra el destino y nunca lo subas a control de versiones.",
     "rotateTitle": "Rotar jwt_secret invalida todos los JWTs existentes",
-    "rotateBody": "Si <code>auth.json</code> se regenera (borrado manual, reinstalación, restauración desde un backup con un secret distinto) el <code>jwt_secret</code> cambia y cada JWT previamente emitido — tanto sesiones interactivas como API tokens de larga duración — falla la verificación con \"Invalid or expired token\". La UI marca los API tokens afectados con un badge <strong>Invalid — regenerate</strong> para que el operador sepa que tiene que revocarlos y volver a emitirlos; Home Assistant / scripts / cualquier cliente externo necesita un token fresco después de eso.",
+    "rotateBody": "Si <code>auth.json</code> se regenera (borrado manual, reinstalación, restauración desde un backup con un secret distinto) el <code>jwt_secret</code> cambia y cada JWT previamente emitido — tanto sesiones interactivas como API tokens de larga duración — falla la verificación con \"Invalid or expired token\". La UI marca los API tokens afectados con un badge <strong>Invalid — regenerate</strong> para que el usuario sepa que tiene que revocarlos y volver a emitirlos; Home Assistant / scripts / cualquier cliente externo necesita un token fresco después de eso.",
     "recoverTitle": "Recuperar una contraseña perdida",
-    "recoverIntro": "No hay un flujo online de \"olvidé mi contraseña\" — por diseño, ya que el panel corre en el propio host del operador y el camino de recuperación es acceso shell a ese host. ProxMenux trae un reset guiado dentro del menú de configuración para que no tengas que editar a mano <code>auth.json</code>:",
+    "recoverIntro": "No hay un flujo online de \"olvidé mi contraseña\" — por diseño, ya que el panel corre en el propio host del usuario y el camino de recuperación es acceso shell a ese host. ProxMenux trae un reset guiado dentro del menú de configuración para que no tengas que editar a mano <code>auth.json</code>:",
     "survivesTitle": "Qué sobrevive al reset",
     "survivesBody": "Solo el login interactivo se borra. El <code>jwt_secret</code> y los <code>api_tokens</code> registrados se preservan — así que Home Assistant y cualquier otro script que use un API token de larga duración siguen funcionando sin reconfiguración. Si quieres una pizarra totalmente limpia (también rotar el secret JWT), borra <code>auth.json</code> manualmente y reinicia el servicio. El siguiente arranque genera un secret fresco y todos los tokens viejos se vuelven inválidos.",
     "physicalTitle": "Prerrequisito de acceso físico",
@@ -170,7 +170,7 @@
     "heading": "Autenticación de dos factores (TOTP)",
     "intro": "El 2FA añade un segundo factor encima de tu contraseña: un código de 6 dígitos que rota cada 30 segundos, generado en un móvil o gestor de contraseñas que controlas. Aunque alguien obtenga la contraseña, sigue sin poder entrar sin el código de tu dispositivo. ProxMenux Monitor implementa el protocolo estándar <strong>TOTP</strong> (RFC 6238), así que cualquier app autenticadora funciona.",
     "pickTitle": "Elige una app autenticadora",
-    "pickIntro": "Si ya tienes una aplicación TOTP, puedes usarla aquí. La tabla recoge opciones habituales: algunas son gratuitas y otras requieren suscripción. También cambian las plataformas y los métodos de copia de seguridad.",
+    "pickIntro": "Si ya tienes una aplicación TOTP, puedes usarla aquí. La tabla recoge opciones habituales: algunas son gratuitas y otras requieren suscripción. También cambian las plataformas y los métodos de backup.",
     "headerApp": "Aplicación",
     "headerPlatforms": "Plataformas",
     "headerAppNotes": "Notas",
@@ -243,17 +243,17 @@
       }
     ],
     "backupTitle": "Para qué importa realmente el \"backup\"",
-    "backupBody": "Si pierdes el dispositivo autenticador, usa un código de recuperación guardado o restaura una copia que hubieras configurado previamente. La sincronización en la nube y las exportaciones varían según la aplicación; comprueba que restauren los secretos TOTP. El acceso root al host también permite recuperar el acceso, como se explica abajo. Conserva una copia separada y segura.",
+    "backupBody": "Si pierdes el dispositivo autenticador, usa un código de backup guardado o restaura un backup de la app que hubieras configurado previamente. La sincronización en la nube y las exportaciones varían según la aplicación; comprueba que restauren los secretos TOTP. El acceso root al host también permite recuperar el acceso, como se explica abajo. Conserva un backup separado y seguro.",
     "setupTitle": "Configuración paso a paso desde el panel",
     "setupImageAlt": "Pantalla de configuración de 2FA con código QR y códigos de backup",
-    "setupImageCaption": "El diálogo de 2FA muestra un código QR, el secreto Base32 para introducirlo manualmente y ocho códigos de recuperación de un solo uso. Cópialos antes de cerrar; no volverán a mostrarse.",
+    "setupImageCaption": "El diálogo de 2FA muestra un código QR, el secreto Base32 para introducirlo manualmente y, tras la verificación, ocho códigos de backup de un solo uso. Cópialos antes de cerrar; no volverán a mostrarse.",
     "setupSteps": [
       "<strong>Instala la app autenticadora en tu móvil</strong> (o abre tu gestor de contraseñas). Una de las apps de la tabla de arriba. Solo necesitas hacerlo una vez — la misma app guardará códigos para cada servicio que protejas.",
       "<strong>Loguéate en el panel</strong> con tu usuario y contraseña.",
-      "<strong>Abre la pestaña Seguridad</strong> en la barra lateral y pulsa <strong>Activar 2FA</strong>. El diálogo muestra un QR, el secreto Base32 y ocho códigos de recuperación.",
+      "<strong>Abre la pestaña Seguridad</strong> en la barra lateral y pulsa <strong>Activar 2FA</strong> y <strong>Iniciar configuración</strong>. El diálogo muestra un QR y la clave manual; los ocho códigos de backup aparecen tras verificar el código.",
       "<strong>Añade la entrada a la app autenticadora:</strong>",
-      "<strong>Guarda los códigos de recuperación.</strong> Conserva los ocho en un gestor de contraseñas, nota cifrada o copia impresa segura. Cada uno funciona una vez si no tienes el autenticador.",
-      "<strong>Confirma escribiendo el código actual de 6 dígitos</strong> de la app en el campo \"Código de verificación\" del diálogo de setup y envía. Los códigos se refrescan cada 30 segundos, así que si caduca mientras escribes, simplemente introduce el siguiente.",
+      "<strong>Confirma escribiendo el código actual de 6 dígitos</strong> de la app en el campo \"Código de verificación\" del diálogo de configuración y envía. Los códigos se renuevan cada 30 segundos, así que si caduca mientras escribes, introduce el siguiente.",
+      "<strong>Guarda los códigos de backup.</strong> Tras la verificación, conserva los ocho en un gestor de contraseñas, nota cifrada o copia impresa segura. Cada uno funciona una vez si no tienes el autenticador.",
       "<strong>Hecho.</strong> El 2FA está ahora activo. La próxima vez que te logues, el panel pide primero la contraseña; una vez aceptada pide el código actual de 6 dígitos."
     ],
     "setupStep4Sub": [
@@ -261,17 +261,17 @@
       "<em>Plan B manual</em> (cuando escanear no es posible — p. ej. configurando en el mismo móvil con el que abriste el panel): pulsa <em>Añadir cuenta</em> → <em>Introducir clave de setup</em>. Escribe cualquier nombre (p. ej. <em>Proxmox Monitor</em>), pega la cadena Base32 del diálogo, deja <em>Tipo</em> como <em>Basado en tiempo</em>, guarda."
     ],
     "testTitle": "Prueba antes de cerrar sesión",
-    "testBody": "Mantén la sesión actual abierta y prueba un nuevo acceso en una ventana privada <em>inmediatamente</em> después de configurar 2FA. Si el código falla, comprueba los relojes del servidor y del móvil antes de cerrar la sesión válida. Si ya perdiste el acceso, usa un código de recuperación o edita <code>auth.json</code> desde la consola del host.",
+    "testBody": "Mantén la sesión actual abierta y prueba un nuevo acceso en una ventana privada <em>inmediatamente</em> después de configurar 2FA. Si el código falla, comprueba los relojes del servidor y del móvil antes de cerrar la sesión válida. Si ya perdiste el acceso, usa un código de backup o edita <code>auth.json</code> desde la consola del host.",
     "lostTitle": "Autenticador perdido",
     "lostIntro": "Tres salidas de emergencia, en orden de cuán disruptivas son:",
     "lostItems": [
-      "<strong>Usa un código de recuperación.</strong> Introduce uno de los ocho códigos guardados en el campo TOTP. Funciona una vez; los no usados siguen siendo válidos. Tras entrar, configura 2FA de nuevo desde Ajustes para obtener ocho códigos nuevos.",
+      "<strong>Usa un código de backup.</strong> Introduce uno de los ocho códigos guardados en el campo TOTP. Funciona una vez; los no usados siguen siendo válidos. Tras entrar, abre Seguridad, elige <strong>Desactivar 2FA</strong> y después <strong>Activar 2FA</strong> para obtener ocho códigos nuevos.",
       "<strong>Restaura el autenticador desde la nube / backup.</strong> Si tu app tiene sync en la nube (Google, Microsoft, Authy, Apple Passwords vía iCloud Keychain, Ente, 2FAS) instálala en un dispositivo nuevo, loguéate y las entradas reaparecen. Si tu app usa un archivo de exportación cifrado (Aegis, Raivo, FreeOTP+), instala la app en el dispositivo nuevo e importa el archivo.",
       "<strong>Desactiva el 2FA desde la shell del host.</strong> Cuando las opciones anteriores no están disponibles, edita <code>/root/.config/proxmenux-monitor/auth.json</code> en el host Proxmox (necesitas SSH root o acceso por consola), pon <code>totp_enabled</code> a <code>false</code>, guarda y reinicia el servicio:"
     ],
     "lostShellOutro": "Puedes loguearte con usuario + contraseña solo, luego reactivar el 2FA desde Settings.",
     "disableTitle": "Desactivar el 2FA",
-    "disableBody": "Abre <strong>Seguridad</strong> y elige <strong>Desactivar 2FA</strong>. <code>POST /api/auth/totp/disable</code> exige la contraseña actual y un código TOTP o de recuperación válido. Elimina el secreto TOTP y los códigos de recuperación. Borra también la entrada antigua en la aplicación autenticadora.",
+    "disableBody": "Abre <strong>Seguridad</strong> y elige <strong>Desactivar 2FA</strong>. <code>POST /api/auth/totp/disable</code> exige la contraseña actual y un código TOTP o de backup válido. Elimina el secreto TOTP y los códigos de backup. Elimina también la entrada antigua en la aplicación autenticadora.",
     "rejectedTitle": "El código de 6 dígitos se rechaza siempre",
     "rejectedIntro": "El TOTP está basado en tiempo — el reloj del servidor y el del móvil deben coincidir dentro de unos ~30 s. Dos comprobaciones:",
     "rejectedItems": [
@@ -316,7 +316,7 @@
     "calloutBody": "Monitor puede usar un certificado gestionado por Proxmox o archivos de certificados propios. No emite certificados ACME. Para emitirlos y renovarlos automáticamente, usa ACME de Proxmox o un proxy inverso como Caddy, Traefik o Nginx y asegúrate de cargar los certificados renovados."
   },
   "gateway": {
-    "heading": "Pasarela segura (Tailscale)",
+    "heading": "Secure Gateway (Tailscale)",
     "intro": "Un proxy inverso es una opción de acceso remoto. <strong>Secure Gateway</strong> permite acceder sin exponer TCP 8008: despliega un LXC Alpine con <a>Tailscale</a> como router de subred. El acceso a la IP LAN del host depende de las rutas aprobadas y de las reglas de acceso de la tailnet.",
     "calloutTitle": "Por qué esto es cómodo",
     "calloutBody": "Usa la URL LAN <code>http://&lt;proxmox-lan-ip&gt;:8008</code> mediante la ruta de subred aprobada. Tailscale usa SNAT por defecto, por lo que Monitor suele ver la IP LAN de la pasarela, no la dirección <code>100.x.y.z</code> del cliente. Los registros y Fail2Ban identifican la dirección de origen que recibe el host.",

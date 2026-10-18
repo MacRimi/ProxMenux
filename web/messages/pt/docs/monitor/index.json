@@ -52,7 +52,7 @@
       },
       {
         "name": "Terminal",
-        "description": "Shell do host e consolas VM/CT suportadas no navegador via <code>xterm.js</code> e WebSockets. Segue a autenticação configurada: desativada ou recusada, permite sessões sem início de sessão a clientes com acesso de rede. Não implica auditoria de cada comando."
+        "description": "Shell do host e consolas VM/CT suportadas no navegador via <code>xterm.js</code> e WebSockets. As sessões não são auditadas por comando."
       },
       {
         "name": "Segurança",
@@ -114,7 +114,7 @@
     "heading": "REST API e integrações",
     "intro": "Os endpoints REST expõem dados de monitorização JSON por HTTP/HTTPS para Homepage, Home Assistant, Uptime Kuma e scripts. Grafana pode usar o exportador de texto Prometheus separado em <code>/api/prometheus</code>. As chamadas podem usar <code>curl</code>.",
     "tokens": "Tokens API de longa duração (365 dias) são gerados em <strong>Configurações → API Tokens de acesso</strong> ou via <code>POST /api/auth/generate-api-token</code>.",
-    "bearer": "Envie tokens com <code>Authorization: Bearer …</code>. O endpoint público <code>/api/health</code> serve a testes de disponibilidade sem credenciais. Em <code>/api/auth/*</code> existem rotas públicas de configuração/início/estado e rotas protegidas de contas e tokens; nem todas são anónimas.",
+    "bearer": "Envie tokens com <code>Authorization: Bearer …</code>. <code>/api/health</code> também espera o cabeçalho Bearer, pelo que os testes de disponibilidade precisam de um token read_only. Em <code>/api/auth/*</code> existem tanto rotas públicas de configuração/início/estado como rotas protegidas de contas e tokens; nem todas são anónimas.",
     "catalog": "O catálogo de endpoints, rotação de tokens e segurança estão na <linkApi>Referência da API</linkApi>; exemplos para Homepage, Home Assistant, Grafana, Uptime Kuma e cURL estão em <linkIntegrations>Integrações</linkIntegrations>."
   },
   "serviceControl": {

@@ -52,7 +52,7 @@
       },
       {
         "name": "Terminal",
-        "description": "Värdskal och konsolåtkomst till VM/CT som stöds i webbläsaren via <code>xterm.js</code> och WebSockets. Följer valt autentiseringsläge: om autentisering är avstängd eller avböjd kan klienter med nätåtkomst öppna en session utan inloggning. Det innebär ingen granskning av varje kommando."
+        "description": "Värdskal och konsolåtkomst till VM/CT som stöds i webbläsaren via <code>xterm.js</code> och WebSockets. Sessioner granskas inte per kommando."
       },
       {
         "name": "Säkerhet",
@@ -114,7 +114,7 @@
     "heading": "REST API och integrationer",
     "intro": "REST-endpointar ger övervakningsdata som JSON över HTTP/HTTPS för Homepage, Home Assistant, Uptime Kuma och skript. Grafana kan använda den separata Prometheus-textexportören på <code>/api/prometheus</code>. Anrop kan göras med <code>curl</code>.",
     "tokens": "Långlivade API-token (365 dagar) skapas under <strong>Inställningar → API-åtkomsttoken</strong> eller via <code>POST /api/auth/generate-api-token</code>.",
-    "bearer": "Skicka token som <code>Authorization: Bearer …</code>. Den offentliga <code>/api/health</code> passar tillgänglighetskontroller utan inloggning. Under <code>/api/auth/*</code> finns offentliga inställnings-/inloggnings-/statusrutter och skyddad konto-/tokenhantering; alla är inte anonyma.",
+    "bearer": "Skicka token som <code>Authorization: Bearer …</code>. Även <code>/api/health</code> förväntar sig Bearer-headern, så tillgänglighetskontroller behöver en read_only-token. Under <code>/api/auth/*</code> finns både offentliga inställnings-/inloggnings-/statusrutter och skyddade rutter för konto-/tokenhantering; alla är inte anonyma.",
     "catalog": "Den fullständiga slutpunktskatalogen, vägledning för tokenrotation och bästa säkerhetspraxis finns i <linkApi>API Referens</linkApi>; Färdiga exempel för Homepage, Home Assistant, Grafana, Uptime Kuma och ett generiskt cURL-mönster finns i <linkIntegrations>Integrationer</linkIntegrations>."
   },
   "serviceControl": {

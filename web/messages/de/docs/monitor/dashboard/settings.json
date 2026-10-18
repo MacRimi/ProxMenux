@@ -76,7 +76,7 @@
   },
   "thresholds": {
     "heading": "Health-Monitor-Schwellenwerte",
-    "intro": "Die vorige Karte regelt <em>die Ruhezeit nach einer Unterdrückung</em>; diese bestimmt <strong>den Auslösewert einer Warnung</strong>. Die meisten Schwellenprüfungen bieten anpassbare Werte für <strong>Warnung</strong> und <strong>Kritisch</strong>. Die Tabelle erklärt Ausnahmen wie die kombinierte Swap-Regel und den aktuellen RAM-Detektor.",
+    "intro": "Die vorige Karte regelt <em>die Ruhezeit nach einer Unterdrückung</em>; diese bestimmt <strong>den Auslösewert einer Warnung</strong>. Die meisten Schwellenprüfungen bieten anpassbare Werte für <strong>Warnung</strong> und <strong>Kritisch</strong>. Die Tabelle unten erklärt Ausnahmen wie die kombinierte Swap-Regel.",
     "whatForTitle": "Wozu es dient",
     "whatForIntro": "Die Standardwerte sind ein Ausgangspunkt, aber jede Umgebung hat eigene Betriebsbedingungen:",
     "whatForItems": [
@@ -85,7 +85,7 @@
       "Wählen Sie Temperaturschwellen anhand der Laufwerksspezifikationen und tatsächlichen Bedingungen. Passive oder aktive Kühlung allein bestimmt keine allgemein niedrigere oder höhere sichere Grenze.",
       "Ein stark virtualisierter Host kann bei Builds CPU-Spitzen erreichen, ohne für jeden 80-%-Peak zu warnen; anhaltende Überlast muss weiter gemeldet werden."
     ],
-    "whatForOutro": "Unterstützte Änderungen gelten <strong>bei der nächsten Prüfung</strong>. Der Health Monitor liest <code>/usr/local/share/proxmenux/health_thresholds.json</code> in jedem Zyklus ohne Neustart. Einige Anzeigen wie die Datenträgertemperatur verwenden diese Werte; manche Kapazitätsbalken haben eigene Grenzen. Die RAM-Zeile beschreibt eine aktuelle Ausnahme.",
+    "whatForOutro": "Unterstützte Schwellenänderungen gelten <strong>bei der nächsten Prüfung</strong>. Der Health Monitor liest <code>/usr/local/share/proxmenux/health_thresholds.json</code> in jedem Zyklus ohne Neustart. Ausgewählte Anzeigen, darunter die Datenträgertemperatur, verwenden diese Werte; manche Kapazitätsbalken behalten eigene visuelle Grenzen.",
     "coloursTitle": "Statusfarben für Warnung und Kritisch",
     "coloursIntro": "Widgets mit dem konfigurierten Paar Warnung/Kritisch verwenden die drei folgenden Zustände. Andere Anzeigen, etwa PVE-Kapazitätsbalken, haben eigene Grenzen; ihre Farbe allein belegt keine Health-Monitor-Warnung.",
     "headerColour": "Farbe",
@@ -125,7 +125,7 @@
         "section": "Arbeitsspeicher",
         "warning": "85 %",
         "critical": "95 %",
-        "gates": "RAM-Druck des Hosts. Der konfigurierbare Standard zeigt Kritisch bei 95 %, doch der aktuelle Detektor verwendet fest 90 % über längere Zeit; diese Einstellung ändert diesen Laufzeitzweig derzeit nicht."
+        "gates": "RAM-Druck des Hosts."
       },
       {
         "section": "Swap (nur kritischer Schwellenwert)",
@@ -185,7 +185,7 @@
         "section": "PVE-Speicher",
         "warning": "85 %",
         "critical": "95 %",
-        "gates": "Von PVE verwaltete Speicher: LVM, LVM-thin, ZFS-pool, RBD/Ceph und PBS. Nicht alle sind Blockspeicher."
+        "gates": "Nur PVE-Speicher der Typen LVM, LVM-thin, ZFS-pool, RBD, CephFS und PBS. Verzeichnis-, NFS- und CIFS-Speicher deckt die Zeile zum Host-Speicherplatz ab."
       },
       {
         "section": "ZFS-Pool",
@@ -218,7 +218,7 @@
     "toggleTitle": "Benachrichtigungsschalter bei aktiver Erkennung",
     "toggleBody": "Der Schalter <code>lxc_updates_available</code> je Kanal unter <strong>Benachrichtigungen → Dienste</strong> erscheint nur bei aktiver Erkennung. Beim Abschalten verschwindet die Zeile in allen Kanälen. Die Datenbank bewahrt die Einstellung; beim Einschalten kehrt der bisherige Wert zurück.",
     "purgeTitle": "Was beim Abschalten der Erkennung gelöscht wird",
-    "purgeBody": "Das Abschalten entfernt sofort alle <code>type=lxc</code>-Einträge aus <code>/usr/local/share/proxmenux/managed_installs.json</code>. Hardware zeigt beim nächsten Neuladen keine LXC-Updatezähler mehr. Nach dem Einschalten füllt der nächste Erkennungszyklus den Bestand erneut; ein manueller API-Aufruf kann dies vorziehen."
+    "purgeBody": "Das Abschalten entfernt sofort alle <code>type=lxc</code>-Einträge aus <code>/usr/local/share/proxmenux/managed_installs.json</code>. Die LXC-Updatezähler auf der Registerkarte VMs und LXCs verschwinden beim nächsten Neuladen des Dashboards. Nach dem Einschalten füllt der nächste Erkennungszyklus den Bestand erneut; ein manueller API-Aufruf kann dies vorziehen."
   },
   "storageExclusions": {
     "heading": "Ausschlüsse von Remote-Speicher",

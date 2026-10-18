@@ -162,7 +162,7 @@
       {
         "endpoint": "/api/vms/<vmid>/backup",
         "method": "POST",
-        "use": "Crée une sauvegarde vzdump de VM ou LXC. Champs facultatifs à adapter au stockage : <code>storage</code> (cible PVE), <code>mode</code> (<code>snapshot</code>, <code>suspend</code> ou <code>stop</code>), <code>compress</code> (<code>zstd</code>, <code>lzo</code>, <code>gzip</code> ou <code>none</code>), <code>protected</code> (<code>true</code> ou <code>false</code>), <code>notes</code>, <code>notification</code> (<code>auto</code>, <code>always</code>, <code>failure</code> ou <code>never</code>) et <code>pbs_change_detection</code> (<code>default</code>, <code>legacy</code> ou <code>data</code>). Renvoie l’UPID de la tâche PVE."
+        "use": "Crée une sauvegarde vzdump d’une VM ou d’un LXC. Champs du corps, tous facultatifs sauf si les valeurs par défaut ne correspondent pas à l’organisation du stockage : <code>storage</code> (un stockage PVE), <code>mode</code> (<code>snapshot</code>, <code>suspend</code> ou <code>stop</code>), <code>compress</code> (<code>zstd</code>, <code>lzo</code>, <code>gzip</code> ou <code>none</code>), <code>protected</code> (<code>true</code> ou <code>false</code>), <code>notes</code> et <code>pbs_change_detection</code> (<code>default</code>, <code>legacy</code> ou <code>data</code>). Renvoie l’UPID de la tâche PVE."
       },
       {
         "endpoint": "/api/vms/<vmid>/backups",
@@ -286,7 +286,7 @@
       {
         "endpoint": "/api/storage/smart/<disk>/test",
         "method": "POST",
-        "use": "Lance un autotest SMART. Schéma du corps : <code>'{'\"type\":\"short\"|\"long\"'}'</code>."
+        "use": "Lance un autotest SMART. Schéma du corps : <code>'{'\"test_type\":\"short\"|\"long\"'}'</code>."
       },
       {
         "endpoint": "/api/storage/smart/schedules",

@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Desactivado por defecto, un solo interruptor para activarlo",
-    "body": "La reescritura con IA viene desactivada. Actívala en <em>Ajustes → Notificaciones → Avanzado: mejora con IA</em>. Si falla el enriquecimiento o la reescritura, se envía la plantilla original. Cada reescritura tiene un tiempo límite de 25 segundos; al alcanzarlo se usa la plantilla en lugar de esperar indefinidamente."
+    "body": "La reescritura con IA viene desactivada. Actívala en <em>Ajustes → Notificaciones → Avanzado: mejora con IA</em>. Si falla el enriquecimiento o la reescritura, se envía la plantilla original. Las reescrituras de la cola de eventos tienen un tiempo límite de 25 segundos; al alcanzarlo se envía la plantilla en lugar de esperar."
   },
   "howItWorks": {
     "heading": "Cómo funciona",
@@ -83,7 +83,7 @@
     "intro1": "Cada proveedor comercial cobra por <em>token</em>, así que merece la pena entender qué es un token antes de elegir un plan. Un token son aproximadamente cuatro caracteres de texto en inglés o unas tres cuartas partes de una palabra. La frase <em>\"Backup completed on storage local-bak\"</em> son unos ocho tokens. Un extracto corto de journal de diez líneas puede ser 200-400 tokens según la densidad técnica.",
     "intro2": "Se facturan dos cosas en cada llamada:",
     "items": [
-      "<strong>Tokens de entrada</strong>: incluyen las instrucciones del sistema y el mensaje de usuario: severidad, título, texto de la plantilla y contexto adicional. La cantidad depende del prompt y del evento. Cada canal reescrito puede consumir sus propios tokens de entrada; los informes de copia completada y fallida omiten la IA.",
+      "<strong>Tokens de entrada</strong>: incluyen las instrucciones del sistema y el mensaje de usuario: severidad, título, texto de la plantilla y contexto adicional. La cantidad depende del prompt y del evento. Cada canal reescrito puede consumir sus propios tokens de entrada; los informes de backup completado y fallido omiten la IA.",
       "<strong>Tokens de salida</strong> — lo que el modelo escribe de vuelta. El Monitor lo limita con <code>max_tokens</code> (mira la tabla de abajo). El límite es un <em>tope</em>, no un cargo: si el modelo produce 250 tokens con un tope de 1500, pagas 250."
     ],
     "capsIntro": "Estos son los topes reales que aplica el dispatcher, tomados directamente de <code>AI_DETAIL_TOKENS</code> en <code>notification_templates.py</code>:",
@@ -109,7 +109,7 @@
     ],
     "customNote": "El modo de prompt personalizado usa un tope fijo de 500 tokens de salida independientemente del nivel de detalle — el prompt personalizado está bajo tu control y el tope protege contra respuestas descontroladas.",
     "sizingTitle": "Dimensionamiento práctico",
-    "sizingBody": "Estima el consumo como eventos reescritos × canales con IA × tokens de entrada y salida por llamada. Por ejemplo: 50 eventos × un canal × (500 de entrada + 300 de salida) son 40.000 tokens al día. El consumo y coste reales dependen del modelo, contexto, caché y límites del proveedor. <link>Nivel de detalle por canal</link> explica cómo usar <code>brief</code> para chat en lugar de <code>standard</code>, manteniendo informes detallados por correo."
+    "sizingBody": "Estima el consumo como eventos reescritos × canales con IA × tokens de entrada y salida por llamada. Por ejemplo: 50 eventos × un canal × (2.000 de entrada + 300 de salida) son unos 115.000 tokens al día, porque el prompt de sistema predeterminado ya ocupa unos 1.500 tokens. El consumo y coste reales dependen del modelo, contexto, caché y límites del proveedor. <link>Nivel de detalle por canal</link> explica cómo usar <code>brief</code> para chat en lugar de <code>standard</code>, manteniendo informes detallados por correo."
   },
   "providers": {
     "heading": "Proveedores de IA",
@@ -142,7 +142,7 @@
       "items": [
         "Clave API: <a>console.anthropic.com/settings/keys</a>",
         "Ejemplos de la lista de modelos incluida: <code>claude-haiku-4-5-20251001</code>, <code>claude-sonnet-4-6</code>, <code>claude-opus-4-6</code>.",
-        "Recomendación incluida: <strong><code>claude-haiku-4-5-20251001</code></strong>. Esta versión exacta figura como recomendada; los modelos Claude 3.5 de la documentación anterior ya no están en la lista incluida."
+        "Recomendación incluida: <strong><code>claude-haiku-4-5-20251001</code></strong>, una versión fija y no un alias que cambie."
       ]
     },
     "gemini": {
@@ -215,7 +215,7 @@
     "shareTitle": "Compartir prompts con la comunidad",
     "shareIntro": "El botón <em>Export</em> escribe tu prompt personalizado actual en un archivo (<code>.txt</code> / <code>.md</code>) que puedes guardar como backup o pasar a otra persona. <em>Import</em> lo trae de vuelta. El tercer botón al lado enlaza con una galería comunitaria pública en GitHub:",
     "shareLinkLabel": "github.com/MacRimi/ProxMenux/discussions — Comparte prompts personalizados para notificaciones de IA",
-    "shareOutro": "Navega la discusión para ver qué han construido otros operadores — alertas escuetas tipo pager, reportes técnicos verbosos, variantes específicas por idioma. Si tuneas el tuyo y te gusta el resultado, publícalo allí: incluso una descripción de un párrafo de para qué optimiza tu prompt ayuda a la gente a elegir un buen punto de partida. El feedback sobre lo que funciona y lo que no es igualmente bienvenido."
+    "shareOutro": "Navega la discusión para ver qué han construido otros usuarios — alertas escuetas tipo pager, reportes técnicos verbosos, variantes específicas por idioma. Si tuneas el tuyo y te gusta el resultado, publícalo allí: incluso una descripción de un párrafo de para qué optimiza tu prompt ayuda a la gente a elegir un buen punto de partida. El feedback sobre lo que funciona y lo que no es igualmente bienvenido."
   },
   "suggestions": {
     "heading": "Sugerencias de IA (BETA)",

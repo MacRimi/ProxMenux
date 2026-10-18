@@ -162,7 +162,7 @@
       }
     ],
     "reportTitle": "Rapport om nätverkslatens (PDF)",
-    "reportIntro": "Båda lägena har knappen <strong>Rapport</strong> bredvid målväljaren. Den skapar en PDF med mätningarna som du kan bifoga ett supportärende hos internetleverantören.",
+    "reportIntro": "Båda lägena har knappen <strong>Rapport</strong> bredvid målväljaren. Den öppnar en utskrivbar rapport över mätningarna; spara den som PDF från webbläsarens utskriftsdialog och bifoga den till ett supportärende hos internetleverantören.",
     "reportPreviewAlt": "Första PDF-sidan i latensrapporten med sammanfattning, mätare, statistik, diagram och gränsvärdesguide",
     "reportPreviewCaption": "Första sidan innehåller sammanfattning, mätare, huvudstatistik, latens över tid och gränsvärdesguide. Från sida 2 följer mättabellen och metoden.",
     "downloadLabel": "Hämta exempelrapport om latens (PDF)",

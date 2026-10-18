@@ -68,7 +68,7 @@
       {
         "category": "Lagring",
         "checks": "Proxmox-lagring, rotfilsystem",
-        "events": "Rotfilsystemet eller andra övervakade filsystem passerar inställda utrymmeströsklar (85% varning / 95% kritiskt som standard); NFS-export offline; misslyckad CIFS-autentisering; full LVM-thin-pool."
+        "events": "Rotfilsystemet eller andra övervakade filsystem passerar inställda utrymmeströsklar (85% varning / 95% kritiskt som standard); otillgänglig PVE-lagring; hängande eller oväntat skrivskyddade NFS-/CIFS-monteringar; LVM-thin och annan poollagring som passerar samma trösklar."
       },
       {
         "category": "Disker och SMART",
@@ -98,7 +98,7 @@
       {
         "category": "Systemuppdateringar",
         "checks": "I väntan på uppdateringar, säkerhetsuppdateringar, kärna / PVE-version, systemålder",
-        "events": "Väntande säkerhetsuppdateringar eller uppdateringar av den kärna som används; system som inte uppdaterats på länge. Knappen <em>Uppdatera nu</em> visas i översiktens sidhuvud när uppdateringar finns. Den kör hela ProxMenux-flödet och uppdaterar hälsan med <code>?refresh=1</code> vid stängning utan att invänta nästa cykel."
+        "events": "Väntande säkerhetsuppdateringar eller uppdateringar av den kärna som används; system som inte uppdaterats på länge. Kategorin Uppdateringar i fönstret Hälsostatus visar knappen <em>Uppdatera nu</em> när uppdateringar väntar. Den kör hela ProxMenux-uppdateringsflödet direkt i fönstret; vid stängning uppdateras hälsan med <code>?refresh=1</code> så att indikatorn visar det nya tillståndet utan att invänta nästa cykel."
       },
       {
         "category": "Säkerhet och certifikat",
@@ -158,7 +158,7 @@
   },
   "dismiss": {
     "heading": "Avfärda larm och ange undertryckningstid",
-    "intro": "Vissa händelser kvarstår, som <em>Systemuppdateringar: uppdateringar tillgängliga</em> tills värden uppdaterats. En avisering var femte minut behövs inte. Knappen <em>Uppdatera nu</em> i översikten löser just det fallet direkt. För andra fall eller uppskjutna uppdateringar finns två sammankopplade sätt att tysta larm:",
+    "intro": "Vissa händelser kvarstår av naturen, som <em>Systemuppdateringar: uppdateringar tillgängliga</em> tills värden uppdaterats, och en avisering var femte minut i en vecka behövs inte. Knappen <em>Uppdatera nu</em> i kategorin Uppdateringar i fönstret Hälsostatus löser just det fallet direkt. För andra fall eller uppskjutna uppdateringar erbjuder hälsoövervakningen också två sammankopplade sätt att tysta larm:",
     "step1": "<strong>Avfärda en enskild händelse</strong> i fönstret. Menyn erbjuder <strong>24 timmar</strong>, <strong>7 dagar</strong> eller <strong>Permanent</strong>, oberoende av kategorins standard. Valet skickar <code>POST /api/health/acknowledge</code> med <code>error_key</code> och valda <code>suppression_hours</code> (<code>-1</code> för permanent). Händelsen flyttas till Avfärdade med tidsstämpeln <code>acknowledged_at</code>.",
     "dropdownImageAlt": "Meny för att avfärda ett larm: 24 timmar, 7 dagar eller permanent",
     "dropdownImageCaption": "Vald tid gäller bara detta larm; utan enskilt val används kategorins standard. Permanent avfärdade larm har ett bärnstensfärgat märke <em>Permanent</em> och utlöses normalt inte igen. Undantaget för kritisk CPU-temperatur beskrivs nedan.",
@@ -187,7 +187,7 @@
       },
       {
         "finding": "ZFS pool DEGRADED / FAULTED",
-        "why": "ZFS-poolernas kapacitetskontroller tillåter uttryckligen avfärdande. Andra poolfynd följer sin egen flagga. Kvittering reparerar inte en degraderad eller felaktig pool."
+        "why": "Fynd om ZFS-poolernas tillstånd (DEGRADED, FAULTED, UNAVAIL) tillåter uttryckligen avfärdande, liksom kontroller av poolkapacitet. Kvittering reparerar inte en degraderad eller felaktig pool."
       },
       {
         "finding": "Disk-I/O-fel med SMART FAILED",
@@ -289,7 +289,7 @@
   },
   "rest": {
     "heading": "REST-slutpunkter",
-    "intro": "Fönstrets åtgärder kan anropas via API för skript, översikter och botar. Med Monitors autentisering påslagen behövs en giltig Bearer-token från inloggning eller API-tokenskärmen. Ändringar som kvittering, sparande eller rensning av övergivna fel kräver full_admin; read_only får 403. Med autentisering avstängd eller avböjd tillåter dessa kontroller åtkomst utan token.",
+    "intro": "Fönstrets åtgärder kan också anropas via API för skript, egna översikter och botar. Anrop kräver en giltig Bearer-token, antingen från inloggning eller API-tokenskärmen. Ändringar som kvittering av larm, sparande av undertryckningsinställningar eller rensning av övergivna fel kräver omfånget full_admin; read_only får 403.",
     "headerEndpoint": "Slutpunkt",
     "headerMethod": "Metod",
     "headerUse": "Användning",
@@ -297,7 +297,7 @@
       {
         "endpoint": "/api/health",
         "method": "GET",
-        "use": "Lätt kontroll som ger JSON med <code>status</code>, <code>timestamp</code> och <code>version</code>. Passar Uptime Kumas nyckelordskontroller; när Monitors autentisering är påslagen måste klienten skicka en Bearer-header."
+        "use": "Lätt kontroll som ger JSON med <code>status</code>, <code>timestamp</code> och <code>version</code>. Passar Uptime Kumas nyckelordskontroller; klienten måste skicka en Bearer-header."
       },
       {
         "endpoint": "/api/health/status",

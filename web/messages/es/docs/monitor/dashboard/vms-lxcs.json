@@ -1,16 +1,16 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Panel: VMs y LXCs | Documentación de ProxMenux",
-    "description": "Inventario de todos los invitados con CPU, memoria y disco en vivo. Los detalles incluyen configuración, recursos, copias de seguridad, resultados recientes del log Proxmox, notas y controles Iniciar / Apagar / Reiniciar / Forzar parada."
+    "description": "Inventario de todos los invitados con CPU, memoria y disco en vivo. Los detalles incluyen configuración, recursos, backups, el log de consola de los contenedores OCI, notas y controles Iniciar / Apagar / Reiniciar / Forzar parada."
   },
   "header": {
     "title": "Panel: VMs y LXCs",
-    "description": "Inventario completo de invitados del nodo: cuatro métricas arriba, lista ordenable de VM y LXC abajo y detalles por invitado con configuración, recursos, copias, logs y cuatro controles de ciclo de vida (Iniciar / Apagar / Reiniciar / Forzar parada).",
+    "description": "Inventario completo de invitados del nodo: cuatro métricas arriba, lista ordenable de VM y LXC abajo y detalles por invitado con configuración, recursos, backups, el log de consola de los contenedores OCI y cuatro controles de ciclo de vida (Iniciar / Apagar / Reiniciar / Forzar parada).",
     "section": "ProxMenux Monitor · Panel"
   },
   "intro": {
     "title": "Controles de los invitados",
-    "body": "Controla el ciclo de vida de los invitados desde esta pestaña. Las acciones pasan por <code>POST /api/vms/&lt;vmid&gt;/control</code> con confirmación explícita y actualizan la fila del invitado. El apagado forzado requiere el botón específico Forzar parada."
+    "body": "Controla el ciclo de vida de los invitados desde esta pestaña. Las acciones pasan por <code>POST /api/vms/&lt;vmid&gt;/control</code>; Reiniciar y Forzar parada piden escribir el VMID para confirmar, y la respuesta se refleja en la fila del invitado. El apagado forzado requiere el botón específico Forzar parada."
   },
   "topRow": {
     "heading": "Fila superior: cuatro tarjetas de estadísticas",
@@ -108,16 +108,16 @@
     "mountsCalloutBody": "Una vista veraz y consciente de la capacidad de cada sitio donde el contenedor lee o escribe. Shares NFS o CIFS montados desde dentro del CT — invisibles para la UI web de Proxmox — aparecen aquí con el mismo aspecto y la misma sonda de salud que cualquier mount point configurado. Mounts remotos stale y zombie binds salen marcados antes de que muerdan durante un backup.",
     "logsTitle": "Pestaña 5 — Logs (solo contenedores OCI)",
     "logsBody": "Solo para contenedores de OCI manager Apps. Muestra la consola del proceso principal de la imagen, guardada en <code>/var/log/proxmenux/oci/VMID.console.log</code>: últimas 100, 500 o 1000 líneas, seguimiento en vivo mientras está activo, filtro y descarga. Relee el archivo al abrir y funciona detenido. Más en <ociLink>Contenedores OCI en ProxMenux Monitor</ociLink>.",
-    "backupsTitle": "Pestaña 6 — Copias de seguridad",
+    "backupsTitle": "Pestaña 6 — Backups",
     "backupsImageAlt": "Modal de vista en detalle por guest — pestaña Backups con la lista de backups disponibles, etiqueta de destino, tamaños y el botón Create Backup",
-    "backupsImageCaption": "Todas las copias del invitado en almacenamientos Proxmox configurados, de más nueva a más antigua. La cabecera muestra su número.",
-    "backupsIntro": "Lista las copias del invitado en almacenamientos Proxmox, empezando por la más reciente. El contador del título permite comprobar si tiene copias. Cada fila muestra:",
+    "backupsImageCaption": "Todos los backups del invitado en almacenamientos Proxmox configurados, de más nueva a más antigua. La cabecera muestra su número.",
+    "backupsIntro": "Lista los backups del invitado en almacenamientos Proxmox, empezando por la más reciente. El contador del título permite comprobar si tiene backups. Cada fila muestra:",
     "backupsItems": [
       "<strong>Fecha y hora</strong>: momento de la ejecución.",
       "<strong>Etiqueta de destino</strong> — el almacenamiento donde vive (PBS-Cloud, PBS-Local, NFS-Backup, …) coloreada por estado.",
-      "<strong>Tamaño</strong>: tamaño final en disco de la copia."
+      "<strong>Tamaño</strong>: tamaño final en disco del backup."
     ],
-    "backupsOutro": "<strong>+ Crear copia</strong> inicia una copia en el almacenamiento marcado «Backup target» en Proxmox. Para restaurar usa la interfaz web de Proxmox; Monitor muestra las copias recientes del invitado y permite crearlas.",
+    "backupsOutro": "<strong>+ Crear backup</strong> inicia un backup en el almacenamiento marcado «Backup target» en Proxmox. Para restaurar usa la interfaz web de Proxmox; Monitor muestra los backups recientes del invitado y permite crearlos.",
     "firewallTitle": "Pestaña 7 — Cortafuegos",
     "firewallIntro": "Lee el registro del cortafuegos de cada invitado directamente del host, sin servicio extra ni consultas periódicas. La pestaña siempre aparece; el contenido depende de que el cortafuegos esté activado y de que alguna regla registre paquetes.",
     "firewallItems": [
@@ -186,9 +186,9 @@
         "source": "Datos RRD de PVE (<code>pvesh get /nodes/&lt;node&gt;/qemu/&lt;id&gt;/rrddata</code>) condensados a una forma amigable para gráficas."
       },
       {
-        "section": "Resultados recientes del log Proxmox",
-        "endpoint": "/api/vms/<vmid>/logs",
-        "source": "<code>pvesh get /nodes/&lt;node&gt;/&lt;qemu|lxc&gt;/&lt;vmid&gt;/log --start 0 --limit 1000</code>. Si el comando falla devuelve una lista vacía; no proporciona todos los logs internos del invitado."
+        "section": "Log de consola OCI (pestaña Logs)",
+        "endpoint": "/api/lxc/<vmid>/console-log",
+        "source": "Salida de consola del proceso principal de la imagen, leída de <code>/var/log/proxmenux/oci/&lt;vmid&gt;.console.log</code> en el host. Solo para contenedores OCI."
       },
       {
         "section": "Backups disponibles para el guest",
@@ -227,7 +227,7 @@
       {
         "label": "Referencia de la API",
         "href": "/docs/monitor/api",
-        "tailRich": " — endpoints de VM y copias de seguridad."
+        "tailRich": " — endpoints de VM y backups."
       },
       {
         "label": "Índice del panel",

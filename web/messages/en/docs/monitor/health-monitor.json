@@ -68,7 +68,7 @@
       {
         "category": "Storage",
         "checks": "Proxmox storages, root filesystem",
-        "events": "Root or other monitored filesystems crossing configured space thresholds (85% warning / 95% critical by default); offline NFS export; CIFS authentication failure; full LVM-thin pool."
+        "events": "Root or other monitored filesystems crossing configured space thresholds (85% warning / 95% critical by default); unavailable PVE storages; stale or unexpectedly read-only NFS/CIFS mounts; LVM-thin and other pool storages crossing the same thresholds."
       },
       {
         "category": "Disks & SMART",
@@ -98,7 +98,7 @@
       {
         "category": "System Updates",
         "checks": "Pending updates, security updates, kernel / PVE version, system age",
-        "events": "Pending security or running-kernel updates; a system not updated for a long time. The Overview header shows an <em>Update Now</em> button when updates are pending. It runs the full ProxMenux update flow inline; closing it refreshes health with <code>?refresh=1</code> so the badge reflects the new state without waiting for the next cycle."
+        "events": "Pending security or running-kernel updates; a system not updated for a long time. The Updates category of the Health Status modal shows an <em>Update Now</em> button when updates are pending. It runs the full ProxMenux update flow inline; closing it refreshes health with <code>?refresh=1</code> so the badge reflects the new state without waiting for the next cycle."
       },
       {
         "category": "Security & Certificates",
@@ -158,7 +158,7 @@
   },
   "dismiss": {
     "heading": "Dismissing alerts and the Suppression Duration",
-    "intro": "Some events are noisy by nature — a <em>System Updates: pending updates available</em> stays true until you patch the host, and you don't want a notification every five minutes for a week. The <em>Update Now</em> button in the Overview header is the direct shortcut to resolve that specific case in place; for everything else, or when patching is deferred, the Health Monitor also offers two coupled silencing mechanisms:",
+    "intro": "Some events are noisy by nature — a <em>System Updates: pending updates available</em> stays true until you patch the host, and you don't want a notification every five minutes for a week. The <em>Update Now</em> button in the Updates category of the Health Status modal is the direct shortcut to resolve that specific case in place; for everything else, or when patching is deferred, the Health Monitor also offers two coupled silencing mechanisms:",
     "step1": "<strong>Per-event Dismiss action</strong> in the modal. The Dismiss button opens a small dropdown with three options — <strong>24 hours</strong>, <strong>7 days</strong> or <strong>Permanently</strong> — letting you choose how long this specific alert stays silenced regardless of the category's default. Picking one calls <code>POST /api/health/acknowledge</code> with the <code>error_key</code> and the chosen <code>suppression_hours</code> (<code>-1</code> for permanent). The event moves to the Dismissed list with a timestamped <code>acknowledged_at</code>.",
     "dropdownImageAlt": "Dismiss dropdown on a Health Monitor alert — 24 hours, 7 days or Permanently",
     "dropdownImageCaption": "Per-event Dismiss dropdown. The chosen window applies to this single alert; without a per-event choice the category default is used. Permanent dismissals have an amber <em>Permanent</em> badge and normally do not re-fire. The critical CPU-temperature override described below is an exception.",
@@ -187,7 +187,7 @@
       },
       {
         "finding": "ZFS pool DEGRADED / FAULTED",
-        "why": "ZFS pool-capacity checks explicitly allow dismissal. Other pool findings follow their own flag. Acknowledgment does not repair a degraded or faulted pool."
+        "why": "ZFS pool-state findings (DEGRADED, FAULTED, UNAVAIL) explicitly allow dismissal, as do pool-capacity checks. Acknowledgment does not repair a degraded or faulted pool."
       },
       {
         "finding": "Disk I/O errors with SMART FAILED",
@@ -289,7 +289,7 @@
   },
   "rest": {
     "heading": "REST endpoints",
-    "intro": "The modal actions are also available through the API for scripts, custom dashboards or chatbots. When Monitor authentication is enabled, calls need a valid bearer token, either from login or the API-token screen. Changes such as acknowledging alerts, saving suppression settings or cleaning orphan errors require full_admin scope; read_only receives 403. When authentication is disabled or declined, these decorators allow access without a token.",
+    "intro": "The modal actions are also available through the API for scripts, custom dashboards or chatbots. Calls need a valid bearer token, either from login or the API-token screen. Changes such as acknowledging alerts, saving suppression settings or cleaning orphan errors require full_admin scope; read_only receives 403.",
     "headerEndpoint": "Endpoint",
     "headerMethod": "Method",
     "headerUse": "Use",
@@ -297,7 +297,7 @@
       {
         "endpoint": "/api/health",
         "method": "GET",
-        "use": "Lightweight health probe returning JSON with <code>status</code>, <code>timestamp</code> and <code>version</code>. Suitable for Uptime Kuma keyword checks; when Monitor authentication is enabled, the client must send a bearer header."
+        "use": "Lightweight health probe returning JSON with <code>status</code>, <code>timestamp</code> and <code>version</code>. Suitable for Uptime Kuma keyword checks; the client must send a bearer header."
       },
       {
         "endpoint": "/api/health/status",

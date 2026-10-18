@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Predvolene vypnuté, zapnutie jedným prepínačom",
-    "body": "Prepis AI je predvolene vypnutý. Zapnite ho v <em>Nastavenia → Oznámenia → Pokročilé: vylepšenie AI</em>. Pri chybe doplnenia kontextu alebo prepisu sa odošle pôvodná šablóna. Každý prepis má časový limit 25 sekúnd; po jeho uplynutí sa použije šablóna bez neobmedzeného čakania."
+    "body": "Prepis AI je predvolene vypnutý. Zapnite ho v <em>Nastavenia → Oznámenia → Pokročilé: vylepšenie AI</em>. Pri chybe doplnenia kontextu alebo prepisu odosielač pošle pôvodnú šablónu. Prepisy vo fronte odosielania udalostí majú časový limit 25 sekúnd; po jeho dosiahnutí sa namiesto čakania odošle šablóna."
   },
   "howItWorks": {
     "heading": "Ako to funguje",
@@ -109,7 +109,7 @@
     ],
     "customNote": "Režim vlastného promptu má pevný limit 500 výstupných tokenov bez ohľadu na úroveň detailov. Prompt ovládate vy a limit bráni neprimerane dlhým odpovediam.",
     "sizingTitle": "Praktická veľkosť",
-    "sizingBody": "Spotrebu odhadnite ako prepísané udalosti × kanály AI × vstupné a výstupné tokeny na volanie. Napríklad 50 udalostí × jeden kanál × (500 vstupných + 300 výstupných) = 40 000 tokenov denne. Skutočná spotreba a cena závisia od modelu, kontextu, cache a limitov poskytovateľa. Časť <link>Detaily podľa kanála</link> opisuje <code>brief</code> pre chat namiesto <code>standard</code> pri zachovaní podrobných e-mailov."
+    "sizingBody": "Spotrebu odhadnite ako prepísané udalosti × kanály s AI × vstupné a výstupné tokeny na volanie. Napríklad 50 udalostí × jeden kanál × (2 000 vstupných + 300 výstupných) je asi 115 000 tokenov denne, pretože samotný predvolený systémový prompt má približne 1 500 tokenov. Skutočná spotreba a cena závisia od modelu, kontextu, cache a limitov poskytovateľa. Časť <link>Detaily podľa kanála</link> opisuje <code>brief</code> pre chat namiesto <code>standard</code> pri zachovaní podrobných e-mailových správ."
   },
   "providers": {
     "heading": "Poskytovatelia AI",
@@ -142,7 +142,7 @@
       "items": [
         "Kľúč API: <a>console.anthropic.com/settings/keys</a>",
         "Príklady z dodaného zoznamu modelov: <code>claude-haiku-4-5-20251001</code>, <code>claude-sonnet-4-6</code>, <code>claude-opus-4-6</code>.",
-        "Dodané odporúčanie: <strong><code>claude-haiku-4-5-20251001</code></strong>. Odporúčaná je táto presná verzia; staršie položky Claude 3.5 už v dodanom zozname nie sú."
+        "Dodané odporúčanie: <strong><code>claude-haiku-4-5-20251001</code></strong>, pevne určená snímka namiesto premenlivého aliasu."
       ]
     },
     "gemini": {

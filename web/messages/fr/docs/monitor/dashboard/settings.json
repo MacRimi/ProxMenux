@@ -76,7 +76,7 @@
   },
   "thresholds": {
     "heading": "Seuils du Health Monitor",
-    "intro": "La carte précédente définit <em>la durée de silence après un rejet</em> ; celle-ci règle <strong>la valeur qui déclenche une alerte</strong>. La plupart des contrôles ont des valeurs <strong>Avertissement</strong> et <strong>Critique</strong> réglables. Le tableau explique les exceptions, dont la règle combinée du swap et le détecteur RAM actuel.",
+    "intro": "La carte précédente définit <em>la durée de silence après un rejet</em> ; celle-ci règle <strong>la valeur qui déclenche une alerte</strong>. La plupart des contrôles à seuil ont des valeurs <strong>Avertissement</strong> et <strong>Critique</strong> réglables. Le tableau ci-dessous explique les exceptions, comme la règle combinée du swap.",
     "whatForTitle": "À quoi cela sert",
     "whatForIntro": "Les valeurs par défaut sont un point de départ ; chaque environnement a ses propres conditions :",
     "whatForItems": [
@@ -85,7 +85,7 @@
       "Choisissez les seuils de température selon les spécifications du disque et ses conditions réelles. Le refroidissement passif ou forcé ne définit pas seul une limite sûre universellement plus basse ou haute.",
       "Un hôte très virtualisé peut avoir des pics CPU pendant les compilations sans alerter à chaque pic de 80 %, mais doit signaler une saturation durable."
     ],
-    "whatForOutro": "Les modifications prises en charge s’appliquent <strong>à l’analyse suivante</strong>. Le Health Monitor lit <code>/usr/local/share/proxmenux/health_thresholds.json</code> à chaque cycle sans redémarrage. Certains indicateurs, comme la température des disques, utilisent ces valeurs ; des barres de capacité gardent leurs propres limites. La ligne RAM décrit une exception actuelle.",
+    "whatForOutro": "Les modifications de seuils prises en charge s’appliquent <strong>à l’analyse suivante</strong>. Le Health Monitor lit <code>/usr/local/share/proxmenux/health_thresholds.json</code> à chaque cycle sans redémarrage. Certains indicateurs, dont la température des disques, utilisent ces valeurs ; certaines barres de capacité gardent leurs propres limites visuelles.",
     "coloursTitle": "Couleurs des états Avertissement et Critique",
     "coloursIntro": "Les widgets utilisant Avertissement/Critique suivent les trois états ci-dessous. D’autres indicateurs, comme les barres de capacité PVE, ont leurs propres limites ; leur couleur seule n’indique pas une alerte Health Monitor.",
     "headerColour": "Couleur",
@@ -125,7 +125,7 @@
         "section": "Mémoire",
         "warning": "85 %",
         "critical": "95 %",
-        "gates": "Pression RAM de l’hôte. Le réglage affiche Critique à 95 %, mais le détecteur actuel utilise une règle fixe de 90 % soutenus ; ce réglage ne modifie pas actuellement cette branche d’exécution."
+        "gates": "Pression RAM de l’hôte."
       },
       {
         "section": "Swap (seuil critique uniquement)",
@@ -185,7 +185,7 @@
         "section": "Stockage PVE",
         "warning": "85 %",
         "critical": "95 %",
-        "gates": "Stockages gérés par PVE : LVM, LVM-thin, ZFS-pool, RBD/Ceph et PBS. Tous ne sont pas des stockages en blocs."
+        "gates": "Uniquement les stockages PVE de type LVM, LVM-thin, ZFS-pool, RBD, CephFS et PBS. Les stockages répertoire, NFS et CIFS relèvent de la ligne d’espace disque de l’hôte."
       },
       {
         "section": "Pool ZFS",
@@ -218,7 +218,7 @@
     "toggleTitle": "Interrupteur de notification lié à la détection",
     "toggleBody": "L’interrupteur <code>lxc_updates_available</code> par canal dans <strong>Notifications → Services</strong> n’apparaît que si la détection est active. La désactiver masque la ligne pour tous les canaux. Le choix reste dans la base et retrouve sa valeur à la réactivation.",
     "purgeTitle": "Ce qui est supprimé à la désactivation",
-    "purgeBody": "La désactivation retire aussitôt les entrées <code>type=lxc</code> de <code>/usr/local/share/proxmenux/managed_installs.json</code>. Les compteurs de mises à jour LXC de Matériel disparaissent à l’actualisation suivante. La réactivation remplit le registre au prochain cycle, ou plus tôt par actualisation manuelle de l’API."
+    "purgeBody": "La désactivation retire aussitôt toutes les entrées <code>type=lxc</code> de <code>/usr/local/share/proxmenux/managed_installs.json</code>. Les compteurs de mises à jour LXC de l’onglet VM et LXC disparaissent à l’actualisation suivante du tableau de bord. La réactivation remplit le registre au prochain cycle de détection, ou plus tôt par actualisation manuelle de l’API."
   },
   "storageExclusions": {
     "heading": "Exclusions de stockage distant",

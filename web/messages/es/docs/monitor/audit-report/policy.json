@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Política | Auditoría e informes",
-    "description": "Política del nodo en Auditoría e informes: copias de seguridad, arranque automático y objetivo de recuperación de cada invitado, función de cada almacenamiento y umbrales de comprobación."
+    "description": "Política del nodo en Auditoría e informes: backups, arranque automático y objetivo de recuperación de cada invitado, función de cada almacenamiento y umbrales de comprobación."
   },
   "header": {
     "title": "Política",

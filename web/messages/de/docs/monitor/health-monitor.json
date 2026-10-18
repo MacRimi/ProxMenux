@@ -68,7 +68,7 @@
       {
         "category": "Speicher",
         "checks": "Proxmox-Speicher, Root-Dateisystem",
-        "events": "Konfigurierte Belegungsschwellen auf Root oder anderen überwachten Dateisystemen überschritten (standardmäßig 85% Warnung / 95% kritisch); NFS-Freigabe offline; CIFS-Anmeldung fehlgeschlagen; LVM-thin-Pool voll."
+        "events": "Konfigurierte Belegungsschwellen auf Root oder anderen überwachten Dateisystemen überschritten (standardmäßig 85% Warnung / 95% kritisch); nicht verfügbare PVE-Speicher; hängende oder unerwartet schreibgeschützte NFS-/CIFS-Einhängungen; LVM-thin- und andere Pool-Speicher, die dieselben Schwellen überschreiten."
       },
       {
         "category": "Platten und SMART",
@@ -98,7 +98,7 @@
       {
         "category": "Systemaktualisierungen",
         "checks": "Ausstehende Updates, Sicherheitsupdates, Kernel / PVE-Version, Systemalter",
-        "events": "Ausstehende Sicherheits- oder Kernelupdates; lange nicht aktualisiertes System. Bei verfügbaren Updates erscheint in der Übersicht <em>Jetzt aktualisieren</em>. Die Schaltfläche startet den vollständigen ProxMenux-Updateablauf. Beim Schließen wird der Zustand mit <code>?refresh=1</code> neu abgefragt, damit die Anzeige ohne Warten auf den nächsten Zyklus aktualisiert wird."
+        "events": "Ausstehende Sicherheits- oder Kernelupdates; lange nicht aktualisiertes System. Die Kategorie Updates im Dialog zum Gesundheitszustand zeigt bei ausstehenden Updates die Schaltfläche <em>Jetzt aktualisieren</em>. Sie startet den vollständigen ProxMenux-Updateablauf direkt im Dialog; beim Schließen wird der Zustand mit <code>?refresh=1</code> neu abgefragt, damit die Anzeige den neuen Zustand ohne Warten auf den nächsten Zyklus widerspiegelt."
       },
       {
         "category": "Sicherheit & Zertifikate",
@@ -158,7 +158,7 @@
   },
   "dismiss": {
     "heading": "Warnungen bestätigen und die Unterdrückungsdauer",
-    "intro": "Manche Ereignisse bleiben lange bestehen: <em>Systemupdates: Updates verfügbar</em> gilt bis zur Aktualisierung des Hosts. Dafür ist nicht alle fünf Minuten eine neue Nachricht nötig. <em>Jetzt aktualisieren</em> in der Übersicht behebt diesen Fall direkt. Für andere Fälle oder aufgeschobene Updates bietet die Zustandsüberwachung zwei verbundene Möglichkeiten zum Unterdrücken von Meldungen:",
+    "intro": "Manche Ereignisse bleiben naturgemäß lange bestehen: <em>Systemupdates: Updates verfügbar</em> gilt bis zur Aktualisierung des Hosts, und eine Nachricht alle fünf Minuten über eine ganze Woche ist nicht erwünscht. Die Schaltfläche <em>Jetzt aktualisieren</em> in der Kategorie Updates des Dialogs zum Gesundheitszustand behebt genau diesen Fall direkt. Für andere Fälle oder aufgeschobene Updates bietet die Zustandsüberwachung zudem zwei verbundene Möglichkeiten zum Unterdrücken von Meldungen:",
     "step1": "<strong>Einzelnes Ereignis bestätigen</strong> im Dialog. Das Menü bietet <strong>24 Stunden</strong>, <strong>7 Tage</strong> oder <strong>Dauerhaft</strong>, unabhängig vom Kategoriestandard. Die Auswahl sendet <code>POST /api/health/acknowledge</code> mit <code>error_key</code> und gewählten <code>suppression_hours</code> (<code>-1</code> für dauerhaft). Das Ereignis wechselt mit Zeitstempel <code>acknowledged_at</code> in die unterdrückte Liste.",
     "dropdownImageAlt": "Menü zum Unterdrücken einer Warnung: 24 Stunden, 7 Tage oder dauerhaft",
     "dropdownImageCaption": "Die gewählte Dauer gilt nur für diese Warnung; ohne Einzelauswahl greift der Kategoriestandard. Dauerhafte Bestätigungen erhalten die bernsteinfarbene Markierung <em>Dauerhaft</em> und lösen normalerweise nicht erneut aus. Eine Ausnahme ist die unten beschriebene kritische CPU-Temperatur.",
@@ -187,7 +187,7 @@
       },
       {
         "finding": "ZFS pool DEGRADED / FAULTED",
-        "why": "ZFS-Poolbelegungsprüfungen erlauben ausdrücklich die Bestätigung. Andere Poolbefunde folgen ihrem eigenen Kennzeichen. Bestätigen repariert keinen beeinträchtigten oder ausgefallenen Pool."
+        "why": "Befunde zum ZFS-Poolzustand (DEGRADED, FAULTED, UNAVAIL) erlauben ausdrücklich die Bestätigung, ebenso Prüfungen der Poolbelegung. Bestätigen repariert keinen beeinträchtigten oder ausgefallenen Pool."
       },
       {
         "finding": "Festplatten-I/O-Fehler mit SMART FAILED",
@@ -289,7 +289,7 @@
   },
   "rest": {
     "heading": "REST-Endpunkte",
-    "intro": "Die Dialogaktionen sind per API für Skripte, Dashboards und Chatbots verfügbar. Bei aktiver Monitor-Authentifizierung benötigen Aufrufe ein gültiges Bearer-Token aus Anmeldung oder API-Tokenverwaltung. Änderungen wie Bestätigen, Speichern oder Bereinigen verwaister Fehler erfordern full_admin; read_only erhält 403. Bei deaktivierter oder abgelehnter Authentifizierung erlauben diese Prüfungen Zugriff ohne Token.",
+    "intro": "Die Dialogaktionen sind auch per API für Skripte, eigene Dashboards und Chatbots verfügbar. Aufrufe benötigen ein gültiges Bearer-Token aus Anmeldung oder API-Tokenverwaltung. Änderungen wie das Bestätigen von Warnungen, das Speichern von Unterdrückungseinstellungen oder das Bereinigen verwaister Fehler erfordern den Bereich full_admin; read_only erhält 403.",
     "headerEndpoint": "Endpunkt",
     "headerMethod": "Methode",
     "headerUse": "Verwendung",
@@ -297,7 +297,7 @@
       {
         "endpoint": "/api/health",
         "method": "GET",
-        "use": "Leichte Zustandsabfrage mit JSON-Feldern <code>status</code>, <code>timestamp</code> und <code>version</code>. Für Schlüsselwortprüfungen in Uptime Kuma geeignet; bei aktiver Monitor-Authentifizierung muss der Client einen Bearer-Header senden."
+        "use": "Leichte Zustandsabfrage mit JSON-Feldern <code>status</code>, <code>timestamp</code> und <code>version</code>. Für Schlüsselwortprüfungen in Uptime Kuma geeignet; der Client muss einen Bearer-Header senden."
       },
       {
         "endpoint": "/api/health/status",

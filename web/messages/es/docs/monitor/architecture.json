@@ -73,13 +73,13 @@
     "intro": "AppImage es un sistema de archivos que se monta al ejecutarlo. <code>AppRun</code> en su raíz prepara el entorno y lanza <code>flask_server.py</code>:",
     "consequencesIntro": "Dos consecuencias de esta estructura:",
     "consequences": [
-      "<strong>Entorno Python incluido.</strong> El intérprete y sus paquetes vienen en AppImage, evitando instalarlos en Python del host. La aplicación sigue usando interfaces del kernel y herramientas externas del host.",
+      "<strong>Paquetes Python incluidos.</strong> Los paquetes Python vienen en la AppImage y se ejecutan con el intérprete Python 3.11 (PVE 8) o 3.13 (PVE 9) del propio host, sin instalar nada en su Python del sistema. La aplicación sigue usando interfaces del kernel y herramientas externas del host.",
       "<strong>Clientes de hardware incluidos.</strong> Contiene <code>ipmitool</code>, <code>lm-sensors</code> y <code>upsc</code>. Las lecturas dependen del hardware compatible, acceso a sensores y, para el SAI, un servidor NUT configurado."
     ]
   },
   "flask": {
     "heading": "Estructura de la aplicación Flask",
-    "intro": "<code>flask_server.py</code> crea una instancia <code>Flask(__name__)</code> con CORS restringido, registra directamente nueve blueprints e inicializa el terminal. La tabla destaca módulos principales; también registra auditoría, copias VM y PBS. Las precargas PVE solo se ejecutan en hosts PVE.",
+    "intro": "<code>flask_server.py</code> crea una instancia <code>Flask(__name__)</code> con CORS restringido, registra directamente diez blueprints e inicializa el terminal. La tabla destaca módulos principales; también registra PBS, enlaces del Monitor, auditoría y backups de VM. Las precargas PVE solo se ejecutan en hosts PVE.",
     "headerBlueprint": "Blueprint / módulo",
     "headerPrefix": "Prefijo de rutas",
     "headerOwns": "Responsabilidad",
@@ -242,17 +242,17 @@
       "Actualizaciones: paquetes pendientes y parches de seguridad.",
       "Registros: patrones persistentes, picos y cascadas en el journal del sistema.",
       "Memoria: actividad del OOM killer y presión RAM sostenida.",
-      "Temperatura: lecturas CPU y discos frente a umbrales de monitorización; los sensores disponibles dependen del hardware.",
+      "CPU: uso y temperatura de la CPU frente a los umbrales configurables; los sensores disponibles dependen del hardware.",
       "Seguridad: fallos de acceso, bloqueos y estado del jail Fail2Ban."
     ],
-    "afterIntro": "Los hallazgos usan <code>error_key</code>, categoría y gravedad estables. Las filas de <code>errors</code> se actualizan con <code>last_seen</code> y recuentos, sin duplicarlas. El envío de avisos tiene además sus propias huellas y tiempos de espera.",
+    "afterIntro": "Los hallazgos usan <code>error_key</code>, categoría y gravedad estables. Las filas de <code>errors</code> se actualizan en el sitio (<code>last_seen</code>, gravedad, motivo), sin duplicarlas. El envío de avisos tiene además sus propias huellas y tiempos de espera.",
     "cycleEnd": "La limpieza puede resolver errores obsoletos con la <em>duración de silenciamiento</em> por categoría y reglas de estado, retirar registros huérfanos de recursos eliminados y borrar <code>events</code> de más de 30 días. Las categorías se explican en <link>Panel → Health Monitor</link>."
   },
   "notifications": {
     "heading": "Motor de notificaciones",
     "intro": "<code>notification_manager.py</code> coordina el envío: carga canales, gestiona la cola y ofrece una API Python para Flask y Health Monitor, además de una entrada de consola para los hooks <code>.sh</code> de ProxMenux.",
     "items": [
-      "Los <strong>observadores</strong> generan eventos: <code>JournalWatcher</code> sigue el journal, <code>TaskWatcher</code> consulta tareas Proxmox, <code>ProxmoxHookWatcher</code> recibe hooks de copias, replicación y snapshots, y <code>PollingCollector</code> gestiona fuentes lentas.",
+      "Los <strong>observadores</strong> generan eventos: <code>JournalWatcher</code> sigue el journal, <code>TaskWatcher</code> consulta tareas Proxmox, <code>ProxmoxHookWatcher</code> recibe hooks de backups, replicación y snapshots, y <code>PollingCollector</code> gestiona fuentes lentas.",
       "Las <strong>plantillas</strong> convierten eventos en título y texto. El proveedor de IA configurado (OpenAI / Anthropic / Gemini / Groq / Ollama / OpenRouter) puede reformularlos en lenguaje natural. Ambas versiones se guardan en <code>notification_history</code>.",
       "Los <strong>canales</strong> envían por Telegram, Discord, correo, Gotify, Pushover y Apprise, entre otros. Las implementaciones en <code>notification_channels.py</code> comparten <code>create_channel()</code> / <code>send()</code>.",
       "<strong>Cifrado.</strong> Los ajustes sensibles (<code>telegram.bot_token</code>, <code>discord.webhook_url</code>, <code>pushover.user_key</code>, <code>pushover.api_token</code>, <code>ai_api_key_*</code>, <code>email.password</code>) se cifran con la clave de <code>.notification_key</code> antes de guardarse en la base de datos y se muestran enmascarados en la interfaz."
@@ -264,9 +264,9 @@
     "intro": "La pestaña <em>Terminal</em> conecta un cliente ligero <code>xterm.js</code> a un PTY del servidor por WebSocket. Hay dos modos:",
     "items": [
       "<strong>Modo HTTP, predeterminado:</strong> el servidor Flask incluido y <code>flask-sock</code> gestionan el cambio de protocolo a WebSocket.",
-      "<strong>Modo HTTPS / WSS:</strong> usa <code>gevent.pywsgi.WSGIServer</code> con <code>geventwebsocket.handler.WebSocketHandler</code> para conexiones WebSocket sobre TLS."
+      "<strong>Modo HTTPS / WSS:</strong> usa <code>gevent.pywsgi.WSGIServer</code> con su gestor predeterminado; <code>flask-sock</code> atiende las conexiones WebSocket sobre TLS."
     ],
-    "outro": "Los procesos del terminal heredan <code>User=root</code>. Con autenticación activa, abrir WebSocket exige un ticket breve y de un solo uso, obtenido del endpoint de tickets autenticado con permisos administrativos. Si la autenticación está desactivada o se rechazó configurarla, la conexión sigue ese modo sin autenticación.",
+    "outro": "Los procesos del terminal heredan <code>User=root</code>. Abrir WebSocket exige un ticket breve y de un solo uso, obtenido del endpoint de tickets autenticado con permisos administrativos.",
     "proxyNote": "Si usas un proxy inverso, permite el tráfico WebSocket y sus cabeceras <code>Upgrade</code> y <code>Connection</code>. El terminal necesita ese reenvío."
   },
   "proxy": {

@@ -162,7 +162,7 @@
       {
         "endpoint": "/api/vms/<vmid>/backup",
         "method": "POST",
-        "use": "Vytvorí zálohu vzdump VM alebo LXC. Voliteľné polia prispôsobte úložisku: <code>storage</code> (cieľ PVE), <code>mode</code> (<code>snapshot</code>, <code>suspend</code> alebo <code>stop</code>), <code>compress</code> (<code>zstd</code>, <code>lzo</code>, <code>gzip</code> alebo <code>none</code>), <code>protected</code> (<code>true</code> alebo <code>false</code>), <code>notes</code>, <code>notification</code> (<code>auto</code>, <code>always</code>, <code>failure</code> alebo <code>never</code>) a <code>pbs_change_detection</code> (<code>default</code>, <code>legacy</code> alebo <code>data</code>). Vráti UPID úlohy PVE."
+        "use": "Vytvorí zálohu vzdump VM alebo LXC. Polia tela, všetky voliteľné, ak predvolené hodnoty zodpovedajú rozloženiu úložiska: <code>storage</code> (úložisko PVE), <code>mode</code> (<code>snapshot</code>, <code>suspend</code> alebo <code>stop</code>), <code>compress</code> (<code>zstd</code>, <code>lzo</code>, <code>gzip</code> alebo <code>none</code>), <code>protected</code> (<code>true</code> alebo <code>false</code>), <code>notes</code> a <code>pbs_change_detection</code> (<code>default</code>, <code>legacy</code> alebo <code>data</code>). Vráti UPID úlohy PVE."
       },
       {
         "endpoint": "/api/vms/<vmid>/backups",
@@ -286,7 +286,7 @@
       {
         "endpoint": "/api/storage/smart/<disk>/test",
         "method": "POST",
-        "use": "Spustí autotest SMART. Schéma tela: <code>'{'\"type\":\"short\"|\"long\"'}'</code>."
+        "use": "Spustí autotest SMART. Schéma tela: <code>'{'\"test_type\":\"short\"|\"long\"'}'</code>."
       },
       {
         "endpoint": "/api/storage/smart/schedules",

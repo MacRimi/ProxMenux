@@ -1,16 +1,16 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Panel: VM a LXC | Dokumentácia ProxMenux",
-    "description": "Inventár hosťovských systémov so živými údajmi CPU, pamäte a disku. Podrobnosti obsahujú konfiguráciu, zdroje, zálohy, nedávne výsledky záznamu Proxmox, poznámky a Spustiť / Vypnúť / Reštartovať / Vynútiť vypnutie."
+    "description": "Karta VM a LXC eviduje všetky hosťovské systémy na hostiteľovi so živým využitím CPU, pamäte a disku. Podrobnosti každého systému zobrazujú konfiguráciu, zdroje, zálohy, záznam konzoly kontajnerov OCI, poznámky a ovládanie Spustiť / Vypnúť / Reštartovať / Vynútiť vypnutie."
   },
   "header": {
     "title": "Panel: VM a LXC",
-    "description": "Úplný inventár hosťovských systémov uzla: štyri metriky hore, triediteľný zoznam VM a LXC a podrobnosti s konfiguráciou, zdrojmi, zálohami, záznamami a ovládaním Spustiť / Vypnúť / Reštartovať / Vynútiť vypnutie.",
+    "description": "Úplný inventár hosťovských systémov uzla: štyri metriky hore, triediteľný zoznam všetkých VM a LXC pod nimi a podrobnosti s konfiguráciou, zdrojmi, zálohami, záznamom konzoly kontajnerov OCI a štyrmi ovládacími prvkami životného cyklu (Spustiť / Vypnúť / Reštartovať / Vynútiť vypnutie).",
     "section": "ProxMenux Monitor · Prehľad"
   },
   "intro": {
     "title": "Ovládanie hosťovských systémov",
-    "body": "Táto karta ovláda životný cyklus hosťovských systémov. Akcie idú cez <code>POST /api/vms/&lt;vmid&gt;/control</code> s výslovným potvrdením a aktualizujú riadok systému. Nútené vypnutie vyžaduje samostatné tlačidlo Vynútiť vypnutie."
+    "body": "Táto karta ovláda životný cyklus hosťovských systémov. Akcie životného cyklu idú cez <code>POST /api/vms/&lt;vmid&gt;/control</code>; Reštartovať a Vynútiť vypnutie vás požiadajú o zadanie VMID na potvrdenie a odpoveď sa prejaví v riadku systému. Nútené vypnutie vyžaduje samostatné tlačidlo Vynútiť vypnutie."
   },
   "topRow": {
     "heading": "Horný riadok: štyri štatistické karty",
@@ -186,9 +186,9 @@
         "source": "Dáta RRD PVE (<code>pvesh get /nodes/&lt;node&gt;/qemu/&lt;id&gt;/rrddata</code>) upravené do formátu pre graf."
       },
       {
-        "section": "Nedávne výsledky záznamu Proxmox",
-        "endpoint": "/api/vms/<vmid>/logs",
-        "source": "<code>pvesh get /nodes/&lt;node&gt;/&lt;qemu|lxc&gt;/&lt;vmid&gt;/log --start 0 --limit 1000</code>. Pri zlyhaní príkazu vráti prázdny zoznam; nejde o úplné systémové záznamy vnútri hosťovského systému."
+        "section": "Záznam konzoly OCI (karta Logy)",
+        "endpoint": "/api/lxc/<vmid>/console-log",
+        "source": "Výstup konzoly hlavného procesu obrazu, čítaný z <code>/var/log/proxmenux/oci/&lt;vmid&gt;.console.log</code> na hostiteľovi. Zobrazuje sa iba pre kontajnery OCI."
       },
       {
         "section": "Zálohy k dispozícii pre hostí",

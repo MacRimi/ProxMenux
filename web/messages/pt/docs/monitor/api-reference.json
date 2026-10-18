@@ -162,7 +162,7 @@
       {
         "endpoint": "/api/vms/<vmid>/backup",
         "method": "POST",
-        "use": "Cria uma cópia vzdump de VM ou LXC. Campos opcionais a adaptar ao armazenamento: <code>storage</code> (destino PVE), <code>mode</code> (<code>snapshot</code>, <code>suspend</code> ou <code>stop</code>), <code>compress</code> (<code>zstd</code>, <code>lzo</code>, <code>gzip</code> ou <code>none</code>), <code>protected</code> (<code>true</code> ou <code>false</code>), <code>notes</code>, <code>notification</code> (<code>auto</code>, <code>always</code>, <code>failure</code> ou <code>never</code>) e <code>pbs_change_detection</code> (<code>default</code>, <code>legacy</code> ou <code>data</code>). Devolve o UPID da tarefa PVE."
+        "use": "Cria uma cópia vzdump de uma VM ou LXC. Campos do corpo, todos opcionais exceto se as predefinições não corresponderem à organização do armazenamento: <code>storage</code> (um armazenamento PVE), <code>mode</code> (<code>snapshot</code>, <code>suspend</code> ou <code>stop</code>), <code>compress</code> (<code>zstd</code>, <code>lzo</code>, <code>gzip</code> ou <code>none</code>), <code>protected</code> (<code>true</code> ou <code>false</code>), <code>notes</code> e <code>pbs_change_detection</code> (<code>default</code>, <code>legacy</code> ou <code>data</code>). Devolve o UPID da tarefa PVE."
       },
       {
         "endpoint": "/api/vms/<vmid>/backups",
@@ -286,7 +286,7 @@
       {
         "endpoint": "/api/storage/smart/<disk>/test",
         "method": "POST",
-        "use": "Inicia um autoteste SMART. Esquema do corpo: <code>'{'\"type\":\"short\"|\"long\"'}'</code>."
+        "use": "Inicia um autoteste SMART. Esquema do corpo: <code>'{'\"test_type\":\"short\"|\"long\"'}'</code>."
       },
       {
         "endpoint": "/api/storage/smart/schedules",

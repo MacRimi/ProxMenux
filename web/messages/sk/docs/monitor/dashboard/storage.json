@@ -70,7 +70,7 @@
     "items": [
       "<strong>Trasa zariadenia</strong> — <code>/dev/sda</code>, <code>/dev/nvme0n1</code>.",
       "<strong>Štítok typu</strong> — SATA / NVMe a príslušná ikona.",
-      "<strong>Systémový štítok</strong> — oranžové označenie diskov rozpoznaných ako disky operačného systému. Detekcia používa pripojenia <code>/</code> a <code>/boot</code> a pridelí štítok <em>System</em>. Chýbajúci štítok nedokazuje, že disk možno bezpečne vymazať alebo použiť inak.",
+      "<strong>Systémový štítok</strong> — oranžové označenie diskov, ktoré používa hostiteľ: systémové body pripojenia (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), aktívny swap, členovia poolov ZFS, fyzické zväzky LVM, aktívni členovia RAID alebo menovky systémových oddielov. Chýbajúci štítok nedokazuje, že disk možno bezpečne vymazať alebo použiť inak.",
       "<strong>Model</strong> — výrobca a model z <code>smartctl -i</code>.",
       "<strong>Kapacita</strong> — zobrazená v zrozumiteľných jednotkách.",
       "<strong>Teplota</strong> — aktuálna hodnota v °C s farbou podľa typu disku; NVMe používa vyššie prahy než SATA.",
@@ -112,7 +112,7 @@
     "pdfPreviewAlt": "Prvá strana správy SMART so súhrnom, ukazovateľom PASSED a informáciami o disku",
     "pdfPreviewCaption": "Prvá strana: súhrn, ukazovateľ PASSED a úplné informácie o disku. Príklad PDF obsahuje opotrebovanie SSD, všetky atribúty SMART a históriu testov.",
     "pdfDownloadLabel": "Stiahnuť príklad správy SMART (PDF)",
-    "pdfSectionsIntro": "Správa má šesť hlavných častí:",
+    "pdfSectionsIntro": "Správa obsahuje tieto hlavné časti:",
     "pdfSections": [
       "<strong>Súhrn</strong> — stav PASSED/FAILED, zrozumiteľné hodnotenie disku — v poriadku, opotrebovaný alebo zlyhávajúci — a štyri údaje: čas správy, posledný typ testu, výsledok a overené atribúty.",
       "<strong>Informácie o disku</strong> — model, sériové číslo, kapacita, typ HDD/SSD/NVMe, rodina, formát, rozhranie (SATA 3.3 · 6.0 Gb/s, …), TRIM, teplota a optimálny prah, hodiny prevádzky, zapnutia, SMART, čakajúce/prerozdelené sektory a chyby CRC.",
@@ -127,7 +127,7 @@
     "historyImageCaption": "História testov SMART disku. Každý riadok ukazuje typ, čas, vek, označenie posledného testu a možnosti stiahnutia výstupu <code>smartctl</code> a odstránenia.",
     "historyIntro": "Dokončené a uchované krátke aj rozšírené testy disku. Každý záznam obsahuje pôvodný výstup <code>smartctl</code> a polia spracované Monitorom pre prehľad. Akcie v riadku:",
     "historyItems": [
-      "<strong>Stiahnuť</strong> — uloží snímku JSON s údajmi <code>smartctl -a</code> použitými v správe. Užitočné, ak podpora potrebuje pôvodné diagnostické polia.",
+      "<strong>Stiahnuť</strong> — uloží snímku JSON daného testu (výstup <code>smartctl -a --json</code>, alebo <code>nvme smart-log</code> pri NVMe, keď smartctl zlyhá). Užitočné, ak podpora výrobcu potrebuje pôvodné diagnostické polia.",
       "<strong>Odstrániť</strong> — ručne vymaže test z histórie. Uchovávanie v Plánovaní (<em>posledných 5 / 10 / 20</em>) automaticky maže najstaršie."
     ],
     "scheduleTitle": "Karta 4 — Plánovanie",

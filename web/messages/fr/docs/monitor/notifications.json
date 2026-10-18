@@ -171,7 +171,7 @@
       "Ouvrez <a>account.microsoft.com/security</a> et activez la vérification en deux étapes.",
       "Si votre compte propose <em>Options de sécurité avancées</em> → <em>Mots de passe d’application</em>, choisissez <em>Créer un mot de passe d’application</em>. Cela ne garantit pas l’acceptation de SMTP avec mot de passe.",
       "Si Microsoft crée ce mot de passe, copiez-le et vérifiez son acceptation par le service SMTP.",
-      "Uniquement si SMTP avec mot de passe est autorisé, utilisez les paramètres approuvés : <em>Serveur</em> <code>smtp.office365.com</code> pour Exchange Online, <em>Port</em> <code>587</code>, <em>Mode TLS</em> <code>STARTTLS</code>, <em>Identifiant</em> votre adresse et <em>Mot de passe</em> la valeur autorisée. Outlook.com personnel a d’autres paramètres et exigences."
+      "Uniquement si votre fournisseur autorise SMTP avec mot de passe, saisissez ses paramètres approuvés : <em>Hôte SMTP</em> <code>smtp.office365.com</code> pour Exchange Online, <em>Port</em> <code>587</code>, <em>Mode TLS</em> <code>STARTTLS</code>, <em>Nom d'utilisateur</em> l’adresse de votre boîte aux lettres et <em>Mot de passe</em> l’identifiant SMTP autorisé. Les paramètres et exigences d’authentification d’Outlook.com personnel sont différents ; ne supposez pas que ces identifiants fonctionneront."
     ],
     "relayTitle": "Relais SMTP auto-hébergé",
     "relayBody": "Dirigez Monitor vers un relais SMTP contrôlé, par exemple Postfix. Le relais gère l’authentification du fournisseur. Configurez authentification et TLS selon le relais ; son caractère local ne désactive pas le chiffrement."
@@ -266,7 +266,7 @@
     "howItems": [
       "<strong>Activation par canal.</strong> Désactivé par défaut. Activez-le seulement là où vous voulez un résumé ; les autres canaux restent en direct.",
       "<strong>Heure de livraison</strong> locale, 09:00 par défaut. L’envoi se déclenche à environ 60 s près.",
-      "<strong>Inclus :</strong> événements génériques admissibles de niveau <strong>INFO</strong>, comme <em>mise à jour d’application disponible</em>, <em>mise à jour Tailscale disponible</em>, <em>mise à jour d’optimisation ProxMenux disponible</em>, <em>mises à jour de sécurité APT en attente</em> et <em>avis de limitation d’envoi</em>. Résultats de sauvegarde et actions exemptées restent en direct.",
+      "<strong>Inclus dans le résumé :</strong> événements génériques admissibles de niveau <strong>INFO</strong>. Exemples : <em>mise à jour d’application disponible</em>, <em>mise à jour Tailscale disponible</em>, <em>mise à jour d’optimisation ProxMenux disponible</em> et <em>mises à jour de sécurité APT en attente</em>. Les résultats de sauvegarde et les autres événements d’action exemptés restent en direct.",
       "<strong>Ce qui n'est jamais retardé:</strong>",
       "<strong>Persistance.</strong> Les événements restent dans SQLite, table <code>digest_pending</code>, jusqu’à l’heure prévue, même après redémarrage.",
       "<strong>Sans événement, sans résumé.</strong> Aucun résumé vide n’est envoyé si aucun INFO n’attend."
@@ -301,7 +301,7 @@
       {
         "stage": "Délai de répétition",
         "what": "Après livraison réussie, les répétitions sont supprimées ; l’état est dans <code>notification_last_sent</code>. Base pour <code>CRITICAL</code>, <code>WARNING</code>, <code>INFO</code>, <code>resources</code> et <code>updates</code> : 86400 s. Exceptions : 5 s pour actions VM/CT et arrêt/redémarrage, 10 s pour résultats sauvegarde/réplication, 1800–3600 s pour plusieurs états de santé. Les réglages explicites d’événement/groupe prévalent.",
-        "tunable": "Oui : des valeurs explicites par événement ou groupe remplacent les valeurs du répartiteur."
+        "tunable": "Uniquement via l’API des paramètres : une clé <code>cooldown.&lt;event_type&gt;</code> ou <code>cooldown.&lt;group&gt;</code> remplace les valeurs par défaut ; aucun contrôle n’existe dans l’interface."
       },
       {
         "stage": "Regroupement des rafales",
@@ -330,7 +330,7 @@
       "<strong>Méthode et URL.</strong> <code>POST http://127.0.0.1:8008/api/notifications/webhook</code> sans HTTPS Monitor ; avec HTTPS, récepteur HTTP local séparé sur 8009. Les deux restent sur l’hôte.",
       "<strong>Modèle du corps.</strong> JSON avec aides Handlebars natives de PVE, stocké en base64 dans la configuration. Une fois décodé :",
       "<strong>Matcher.</strong> Un bloc d'accompagnement <code>matcher: proxmenux-matcher</code> avec <code>mode all</code> afin que chaque notification PVE atteigne la cible.",
-      "<strong>Configuration privée.</strong> La configuration écrit <code>webhook: proxmenux-webhook</code> dans <code>/etc/pve/priv/notifications.cfg</code> avec le secret partagé en base64. La cible publique le référence pour envoyer X-Webhook-Secret. Le bloc n’est pas vide."
+      "<strong>Configuration privée.</strong> La configuration écrit le bloc correspondant <code>webhook: proxmenux-webhook</code> dans <code>/etc/pve/priv/notifications.cfg</code> avec une entrée <code>secret</code> nommée X-Webhook-Secret, encodée en base64. Le bloc public de la cible ne contient que le modèle du corps, la méthode et l’URL. Le bloc privé n’est pas une ébauche vide."
     ],
     "securityTitle": "Comment le récepteur est sécurisé",
     "securityIntro": "Le récepteur webhook de <code>POST /api/notifications/webhook</code> applique différentes couches de sécurité selon l'origine de la demande:",

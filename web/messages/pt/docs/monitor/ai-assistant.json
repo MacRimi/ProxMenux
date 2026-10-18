@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Desligado por omissão, comutador único para activar",
-    "body": "A reformulação por IA vem desativada. Ative-a em <em>Definições → Notificações → Avançado: melhoria por IA</em>. Se o enriquecimento ou a reformulação falhar, é enviado o modelo original. Cada reformulação tem um limite de espera de 25 segundos; ao atingi-lo, utiliza-se o modelo sem esperar indefinidamente."
+    "body": "A reformulação por IA vem desativada por predefinição. Ative-a em <em>Definições → Notificações → Avançado: melhoria por IA</em>. Se o enriquecimento ou a reformulação falhar, o processo de envio envia o modelo original. As reformulações na fila de envio de eventos têm um limite de espera de 25 segundos; ao atingi-lo, envia-se o modelo em vez de esperar."
   },
   "howItWorks": {
     "heading": "Como funciona",
@@ -109,7 +109,7 @@
     ],
     "customNote": "O modo de prompt personalizado limita a saída a 500 tokens, independentemente do detalhe. O prompt é controlado por si e o limite evita respostas excessivas.",
     "sizingTitle": "Tamanho prático",
-    "sizingBody": "Estime o consumo: eventos reformulados × canais IA × tokens de entrada e saída por chamada. Exemplo: 50 eventos × um canal × (500 de entrada + 300 de saída) = 40.000 tokens por dia. O consumo e custo reais dependem do modelo, contexto, cache e limites do fornecedor. <link>Detalhe por canal</link> explica o uso de <code>brief</code> no chat em vez de <code>standard</code>, mantendo e-mails detalhados."
+    "sizingBody": "Estime o consumo como eventos reformulados × canais com IA × tokens de entrada e saída por chamada. Por exemplo, 50 eventos × um canal × (2.000 de entrada + 300 de saída) são cerca de 115.000 tokens por dia, já que só o prompt de sistema predefinido tem cerca de 1.500 tokens. O consumo e o custo reais dependem do modelo, contexto, cache e limites do fornecedor. A secção <link>Detalhe por canal</link> explica o uso de <code>brief</code> no chat em vez de <code>standard</code>, mantendo relatórios de e-mail detalhados."
   },
   "providers": {
     "heading": "Prestadores de IA",
@@ -142,7 +142,7 @@
       "items": [
         "Chave API: <a>console.anthropic.com/settings/keys</a>",
         "Exemplos da lista de modelos incluída: <code>claude-haiku-4-5-20251001</code>, <code>claude-sonnet-4-6</code>, <code>claude-opus-4-6</code>.",
-        "Recomendação incluída: <strong><code>claude-haiku-4-5-20251001</code></strong>. Esta versão exata está configurada como recomendada; as antigas entradas Claude 3.5 já não constam da lista incluída."
+        "Recomendação incluída: <strong><code>claude-haiku-4-5-20251001</code></strong>, um snapshot fixo em vez de um alias variável."
       ]
     },
     "gemini": {

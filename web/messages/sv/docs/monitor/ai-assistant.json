@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Avstängt som standard, aktiveras med ett reglage",
-    "body": "AI-omskrivning är avstängd som standard. Aktivera den under <em>Inställningar → Aviseringar → Avancerat: AI-förbättring</em>. Om kontextberikning eller omskrivning misslyckas skickas originalmallen. Varje omskrivning har högst 25 sekunders väntetid; därefter används mallen i stället för obegränsad väntan."
+    "body": "AI-omskrivning är avstängd som standard. Aktivera den under <em>Inställningar → Aviseringar → Avancerat: AI-förbättring</em>. Om kontextberikning eller omskrivning misslyckas skickar sändaren originalmallen. Omskrivningar i händelsernas sändningskö har en tidsgräns på 25 sekunder; när den nås skickas mallen i stället för att vänta."
   },
   "howItWorks": {
     "heading": "Hur det fungerar",
@@ -109,7 +109,7 @@
     ],
     "customNote": "Läget med egen prompt har en fast gräns på 500 utdatatoken oavsett detaljnivå. Du styr prompten och gränsen motverkar alltför långa svar.",
     "sizingTitle": "Praktisk storlek",
-    "sizingBody": "Uppskatta förbrukningen som omskrivna händelser × AI-kanaler × in- och utdatatoken per anrop. Exempel: 50 händelser × en kanal × (500 indata + 300 utdata) = 40 000 token per dag. Förbrukning och kostnad beror på modell, kontext, cache och leverantörsgränser. <link>Detaljnivå per kanal</link> visar <code>brief</code> för chatt i stället för <code>standard</code>, med fortsatt detaljerad e-post."
+    "sizingBody": "Uppskatta förbrukningen som omskrivna händelser × AI-aktiverade kanaler × in- och utdatatoken per anrop. Exempel: 50 händelser × en kanal × (2 000 indata + 300 utdata) blir cirka 115 000 token per dag, eftersom standardsystemprompten ensam är ungefär 1 500 token. Faktisk förbrukning och kostnad beror på modell, kontext, cache och leverantörsgränser. Avsnittet <link>Detaljnivå per kanal</link> visar hur du använder <code>brief</code> för chatt i stället för <code>standard</code>, med fortsatt detaljerade e-postrapporter."
   },
   "providers": {
     "heading": "AI-leverantörer",
@@ -142,7 +142,7 @@
       "items": [
         "API-nyckel: <a>console.anthropic.com/settings/keys</a>",
         "Exempel från den medföljande modellistan: <code>claude-haiku-4-5-20251001</code>, <code>claude-sonnet-4-6</code>, <code>claude-opus-4-6</code>.",
-        "Medföljande rekommendation: <strong><code>claude-haiku-4-5-20251001</code></strong>. Denna exakta version är rekommenderad; de äldre Claude 3.5-posterna finns inte längre i listan."
+        "Medföljande rekommendation: <strong><code>claude-haiku-4-5-20251001</code></strong>, en fast ögonblicksbild i stället för ett rörligt alias."
       ]
     },
     "gemini": {

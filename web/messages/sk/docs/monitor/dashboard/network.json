@@ -162,7 +162,7 @@
       }
     ],
     "reportTitle": "Správa o latencii siete (PDF)",
-    "reportIntro": "Oba režimy majú pri výbere cieľa tlačidlo <strong>Správa</strong>. Vytvorí PDF meraní, ktoré môžete priložiť k žiadosti o podporu u poskytovateľa internetu.",
+    "reportIntro": "Oba režimy majú pri výbere cieľa tlačidlo <strong>Správa</strong>. Otvorí tlačiteľnú správu z meraní; uložte ju ako PDF cez dialóg tlače prehliadača a priložte ju k žiadosti o podporu u poskytovateľa internetu.",
     "reportPreviewAlt": "Prvá strana správy PDF o odozve: súhrn, ukazovateľ, štatistiky, graf a vysvetlenie prahov",
     "reportPreviewCaption": "Prvá strana obsahuje súhrn, ukazovateľ, hlavné štatistiky, časový priebeh odozvy a vysvetlenie prahov. Od strany 2 nasleduje tabuľka meraní a metodika.",
     "downloadLabel": "Stiahnuť príklad správy o odozve (PDF)",

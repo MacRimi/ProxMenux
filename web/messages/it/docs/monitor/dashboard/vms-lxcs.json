@@ -1,16 +1,16 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Pannello: VM e LXC | Documentazione ProxMenux",
-    "description": "Inventario dei guest con CPU, memoria e disco in tempo reale. I dettagli includono configurazione, risorse, backup, risultati recenti del log Proxmox, note e Avvia / Spegni / Riavvia / Forza arresto."
+    "description": "La scheda VM e LXC elenca ogni guest dell’host con utilizzo di CPU, memoria e disco in tempo reale. I dettagli per guest includono configurazione, risorse, backup, log della console dei container OCI, note e i comandi Avvia / Spegni / Riavvia / Forza arresto."
   },
   "header": {
     "title": "Pannello: VM e LXC",
-    "description": "Inventario completo dei guest del nodo: quattro metriche in alto, elenco ordinabile di VM e LXC e dettagli per guest con configurazione, risorse, backup, log e comandi Avvia / Spegni / Riavvia / Forza arresto.",
+    "description": "Inventario completo dei guest del nodo: quattro metriche in alto, elenco ordinabile di ogni VM e LXC sotto e dettagli per guest con configurazione, risorse, backup, log della console dei container OCI e i quattro comandi del ciclo di vita (Avvia / Spegni / Riavvia / Forza arresto).",
     "section": "ProxMenux Monitor · Dashboard"
   },
   "intro": {
     "title": "Controlli dei sistemi guest",
-    "body": "Questa scheda controlla il ciclo di vita dei guest. Le azioni passano da <code>POST /api/vms/&lt;vmid&gt;/control</code> con conferma esplicita e aggiornano la riga del guest. L'arresto forzato richiede il pulsante dedicato Forza arresto."
+    "body": "Questa scheda controlla il ciclo di vita dei guest. Le azioni del ciclo di vita passano da <code>POST /api/vms/&lt;vmid&gt;/control</code>; Riavvia e Forza arresto chiedono di digitare il VMID per confermare, e la risposta si riflette nella riga del guest. L’arresto forzato richiede il pulsante dedicato Forza arresto."
   },
   "topRow": {
     "heading": "Riga superiore: quattro schede statistiche",
@@ -186,9 +186,9 @@
         "source": "Dati RRD PVE (<code>pvesh get /nodes/&lt;node&gt;/qemu/&lt;id&gt;/rrddata</code>) adattati alla visualizzazione in grafico."
       },
       {
-        "section": "Risultati recenti del log Proxmox",
-        "endpoint": "/api/vms/<vmid>/logs",
-        "source": "<code>pvesh get /nodes/&lt;node&gt;/&lt;qemu|lxc&gt;/&lt;vmid&gt;/log --start 0 --limit 1000</code>. Se il comando fallisce restituisce uno elenco vuoto; non fornisce tutti i log interni del guest."
+        "section": "Log della console OCI (scheda Log)",
+        "endpoint": "/api/lxc/<vmid>/console-log",
+        "source": "Output della console del processo principale dell’immagine, letto da <code>/var/log/proxmenux/oci/&lt;vmid&gt;.console.log</code> sull’host. Mostrato solo per i container OCI."
       },
       {
         "section": "Backup disponibili per gli ospiti",

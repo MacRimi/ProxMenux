@@ -1,16 +1,16 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Dashboard: VMs und LXCs | ProxMenux-Dokumentation",
-    "description": "Inventar aller Gäste mit CPU, Arbeitsspeicher und Datenträgern in Echtzeit. Die Details zeigen Konfiguration, Ressourcen, Sicherungen, aktuelle Proxmox-Protokollergebnisse, Notizen und Starten / Herunterfahren / Neustart / Stopp."
+    "description": "Die Registerkarte VMs und LXCs listet alle Gäste des Hosts mit CPU-, Arbeitsspeicher- und Datenträgernutzung in Echtzeit. Die Details je Gast zeigen Konfiguration, Ressourcen, Sicherungen, das Konsolenprotokoll von OCI-Containern, Notizen und die Steuerung Starten / Herunterfahren / Neustart / Stopp erzwingen."
   },
   "header": {
     "title": "Dashboard: VMs und LXCs",
-    "description": "Vollständiges Gastinventar des Knotens: vier Kennzahlen oben, eine sortierbare VM-/LXC-Liste darunter und Gastdetails mit Konfiguration, Ressourcen, Sicherungen, Protokollen sowie Starten/Herunterfahren/Neustart/Stopp.",
+    "description": "Vollständiges Gastinventar des Knotens: vier Kennzahlen oben, eine sortierbare Liste aller VMs und LXCs darunter und Gastdetails mit Konfiguration, Ressourcen, Sicherungen, dem Konsolenprotokoll von OCI-Containern sowie den vier Lebenszyklus-Steuerungen (Starten / Herunterfahren / Neustart / Stopp erzwingen).",
     "section": "ProxMenux Monitor · Übersicht"
   },
   "intro": {
     "title": "Steuerung der Gäste",
-    "body": "Hier steuern Sie den Lebenszyklus der Gäste. Aktionen laufen nach ausdrücklicher Bestätigung über <code>POST /api/vms/&lt;vmid&gt;/control</code> und aktualisieren die Gastzeile. Erzwungenes Ausschalten erfordert die eigene Schaltfläche Stopp erzwingen."
+    "body": "Hier steuern Sie den Lebenszyklus der Gäste. Lebenszyklusaktionen laufen über <code>POST /api/vms/&lt;vmid&gt;/control</code>; bei Neustart und Stopp erzwingen geben Sie zur Bestätigung die VMID ein, und die Antwort wird in der Gastzeile angezeigt. Erzwungenes Ausschalten erfordert die eigene Schaltfläche Stopp erzwingen."
   },
   "topRow": {
     "heading": "Obere Reihe: vier Stat-Karten",
@@ -186,9 +186,9 @@
         "source": "PVE RRD-Daten (<code>pvesh get /nodes/&lt;node&gt;/qemu/&lt;id&gt;/rrddata</code>) werden zu einer chartfreundlichen Form verdichtet."
       },
       {
-        "section": "Aktuelle Proxmox-Protokollergebnisse",
-        "endpoint": "/api/vms/<vmid>/logs",
-        "source": "<code>pvesh get /nodes/&lt;node&gt;/&lt;qemu|lxc&gt;/&lt;vmid&gt;/log --start 0 --limit 1000</code>. Bei Befehlsfehlern wird eine leere Liste zurückgegeben; dies sind keine vollständigen Systemprotokolle aus dem Gast."
+        "section": "OCI-Konsolenprotokoll (Registerkarte Logs)",
+        "endpoint": "/api/lxc/<vmid>/console-log",
+        "source": "Konsolenausgabe des Hauptprozesses des Images, gelesen aus <code>/var/log/proxmenux/oci/&lt;vmid&gt;.console.log</code> auf dem Host. Nur für OCI-Container angezeigt."
       },
       {
         "section": "Backups für Gäste verfügbar",

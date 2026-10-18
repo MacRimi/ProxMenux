@@ -1,16 +1,16 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Tableau de bord : VM et LXC | Documentation ProxMenux",
-    "description": "Inventaire des invités avec CPU, mémoire et disque en direct. Les détails montrent configuration, ressources, sauvegardes, résultats récents du journal Proxmox, notes et Démarrer / Éteindre / Redémarrer / Forcer l'arrêt."
+    "description": "L’onglet VM et LXC inventorie tous les invités de l’hôte avec l’utilisation CPU, mémoire et disque en direct. Les détails de chaque invité montrent configuration, ressources, sauvegardes, journal de console des conteneurs OCI, notes et commandes Démarrer / Éteindre / Redémarrer / Forcer l'arrêt."
   },
   "header": {
     "title": "Tableau de bord : VM et LXC",
-    "description": "Inventaire complet du nœud : quatre mesures en haut, une liste triable des VM et LXC et les détails par invité avec configuration, ressources, sauvegardes, journaux et commandes Démarrer / Éteindre / Redémarrer / Forcer l'arrêt.",
+    "description": "Inventaire complet des invités du nœud : quatre mesures en haut, une liste triable de chaque VM et LXC en dessous et les détails par invité avec configuration, ressources, sauvegardes, journal de console des conteneurs OCI et les quatre commandes de cycle de vie (Démarrer / Éteindre / Redémarrer / Forcer l'arrêt).",
     "section": "ProxMenux Monitor · Tableau de bord"
   },
   "intro": {
     "title": "Commandes des systèmes invités",
-    "body": "Cet onglet contrôle le cycle de vie des invités. Les actions passent par <code>POST /api/vms/&lt;vmid&gt;/control</code> avec confirmation explicite et actualisent la ligne de l'invité. L'arrêt forcé nécessite le bouton dédié Forcer l'arrêt."
+    "body": "Cet onglet contrôle le cycle de vie des invités. Les actions de cycle de vie passent par <code>POST /api/vms/&lt;vmid&gt;/control</code> ; Redémarrer et Forcer l'arrêt demandent de saisir le VMID pour confirmer, et la réponse est reflétée dans la ligne de l’invité. L’arrêt forcé nécessite le bouton dédié Forcer l'arrêt."
   },
   "topRow": {
     "heading": "Ligne supérieure : quatre cartes statistiques",
@@ -186,9 +186,9 @@
         "source": "Les données PVE RRD (<code>pvesh get /nodes/&lt;node&gt;/qemu/&lt;id&gt;/rrddata</code>) sont condensées à une forme facile à tracer."
       },
       {
-        "section": "Résultats récents du journal Proxmox",
-        "endpoint": "/api/vms/<vmid>/logs",
-        "source": "<code>pvesh get /nodes/&lt;node&gt;/&lt;qemu|lxc&gt;/&lt;vmid&gt;/log --start 0 --limit 1000</code>. Un échec renvoie une liste vide ; ces données ne constituent pas les journaux système complets de l'invité."
+        "section": "Journal de console OCI (onglet Logs)",
+        "endpoint": "/api/lxc/<vmid>/console-log",
+        "source": "Sortie console du processus principal de l’image, lue depuis <code>/var/log/proxmenux/oci/&lt;vmid&gt;.console.log</code> sur l’hôte. Affiché uniquement pour les conteneurs OCI."
       },
       {
         "section": "Sauvegardes disponibles pour les invités",

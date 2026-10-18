@@ -73,13 +73,13 @@
     "intro": "AppImage innehåller ett filsystem som monteras vid körning. <code>AppRun</code> i roten ställer in miljön och startar <code>flask_server.py</code>:",
     "consequencesIntro": "Två konsekvenser av denna layout:",
     "consequences": [
-      "<strong>Medföljande Python-miljö.</strong> Tolken och paketen finns i AppImage utan installation i värdens system-Python. Appen använder fortfarande kärngränssnitt och externa värdverktyg.",
+      "<strong>Medföljande Python-paket.</strong> Python-paketen levereras i AppImage och körs med värdens egen Python-tolk 3.11 (PVE 8) eller 3.13 (PVE 9), utan att något installeras i värdens system-Python. Appen använder fortfarande värdens kärngränssnitt och externa värdverktyg.",
       "<strong>Maskinvaruklienter ingår.</strong> Här finns <code>ipmitool</code>, <code>lm-sensors</code> och <code>upsc</code>. Mätningar kräver maskinvarustöd, sensoråtkomst och för UPS en konfigurerad NUT-server."
     ]
   },
   "flask": {
     "heading": "Flask-appens struktur",
-    "intro": "<code>flask_server.py</code> skapar en <code>Flask(__name__)</code>-instans med begränsat CORS, registrerar nio blueprints direkt och initierar terminalen. Tabellen visar huvudmoduler; även granskning, VM-säkerhetskopiering och PBS registreras. PVE-förladdning körs bara på PVE-värdar.",
+    "intro": "<code>flask_server.py</code> skapar en <code>Flask(__name__)</code>-instans med begränsade CORS-ursprung, registrerar tio blueprints direkt och initierar terminalrutterna. Tabellen visar huvudmodulerna; blueprints för PBS, Monitor-länkar, granskning och VM-säkerhetskopiering registreras också. PVE-specifik förladdning körs bara på PVE-värdar.",
     "headerBlueprint": "Blueprint / modul",
     "headerPrefix": "Ruttprefix",
     "headerOwns": "Ansvar",
@@ -242,10 +242,10 @@
       "Uppdateringar: väntande paket och säkerhetsuppdateringar.",
       "Loggar: ihållande mönster, toppar och kaskader i systemjournalen.",
       "Minne: OOM-händelser och ihållande minnestryck.",
-      "Temperatur: CPU- och diskvärden jämförs med övervakningsgränser; tillgängliga sensorer beror på maskinvaran.",
+      "CPU: användning och CPU-temperatur jämförs med de konfigurerbara gränserna; tillgängliga sensorer beror på maskinvaran.",
       "Säkerhet: inloggningsfel, blockeringar och Fail2Ban-jailstatus."
     ],
-    "afterIntro": "Resultat använder stabil <code>error_key</code>, kategori och allvarlighetsgrad. Rader i <code>errors</code> uppdateras med <code>last_seen</code> och räknare utan dubbletter. Aviseringssändning har även egna fingeravtryck och väntetider.",
+    "afterIntro": "Resultat använder stabil <code>error_key</code>, kategori och allvarlighetsgrad. Befintliga poster i <code>errors</code> uppdateras på plats (<code>last_seen</code>, allvarlighetsgrad, orsak) i stället för att dupliceras. Aviseringssändning har även egna regler för fingeravtryck och väntetider.",
     "cycleEnd": "Rensning kan lösa gamla fel med kategorins <em>tid för undertryckning</em> och statusregler, ta bort övergivna poster för borttagna resurser och radera <code>events</code> äldre än 30 dagar. Kategorierna beskrivs i <link>Panel → Health Monitor</link>."
   },
   "notifications": {
@@ -264,9 +264,9 @@
     "intro": "Fliken <em>Terminal</em> ansluter en lätt <code>xterm.js</code>-klient till ett PTY på servern via WebSocket. Två lägen finns:",
     "items": [
       "<strong>HTTP-läge, standard:</strong> den inbyggda Flask-servern med <code>flask-sock</code> hanterar byte till WebSocket-protokollet.",
-      "<strong>HTTPS-/WSS-läge:</strong> använder <code>gevent.pywsgi.WSGIServer</code> med <code>geventwebsocket.handler.WebSocketHandler</code> för WebSocket över TLS."
+      "<strong>HTTPS-/WSS-läge:</strong> TLS-servern använder <code>gevent.pywsgi.WSGIServer</code> med sin standardhanterare; <code>flask-sock</code> hanterar WebSocket-anslutningar över TLS."
     ],
-    "outro": "Terminalprocesser ärver <code>User=root</code>. Med autentisering på kräver WebSocket en kortlivad engångsbiljett från den autentiserade biljettslutpunkten med administratörsbehörighet. Om autentisering är avstängd eller avböjd följer anslutningen det oautentiserade läget.",
+    "outro": "Terminalens underprocesser ärver <code>User=root</code> från tjänsten. För att öppna en WebSocket krävs en kortlivad engångsbiljett från den autentiserade slutpunkten för terminalbiljetter med administratörsbehörighet.",
     "proxyNote": "Med omvänd proxy måste WebSocket och dess headers <code>Upgrade</code> och <code>Connection</code> vidarebefordras. Terminalen kräver det."
   },
   "proxy": {

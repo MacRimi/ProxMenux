@@ -70,7 +70,7 @@
     "items": [
       "<strong>Chemin du périphérique</strong> — <code>/dev/sda</code>, <code>/dev/nvme0n1</code>.",
       "<strong>Étiquette de type</strong> — SATA / NVMe et icône associée.",
-      "<strong>Étiquette système</strong> — marque orange pour les disques identifiés comme hébergeant le système. La détection utilise les montages <code>/</code> et <code>/boot</code> et applique l’étiquette <em>System</em>. Son absence ne prouve pas qu’un disque peut être effacé ou réutilisé sans risque.",
+      "<strong>Étiquette système</strong> — marque orange pour les disques utilisés par l’hôte : points de montage système (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), swap actif, membres de pools ZFS, volumes physiques LVM, membres RAID actifs ou étiquettes de partitions système. Son absence ne prouve pas qu’un disque peut être effacé ou réutilisé sans risque.",
       "<strong>Modèle</strong> — fabricant et modèle de <code>smartctl -i</code>.",
       "<strong>Capacité</strong> — exprimée en unités lisibles.",
       "<strong>Température</strong> — valeur actuelle en °C, colorée selon le type de disque ; les seuils NVMe sont plus élevés que SATA.",
@@ -112,7 +112,7 @@
     "pdfPreviewAlt": "Première page du rapport SMART avec synthèse, indicateur PASSED et informations sur le disque",
     "pdfPreviewCaption": "Première page : synthèse, indicateur PASSED et informations complètes du disque. L’exemple PDF contient l’usure SSD, tous les attributs SMART et l’historique des tests.",
     "pdfDownloadLabel": "Télécharger un exemple de rapport SMART (PDF)",
-    "pdfSectionsIntro": "Le rapport comporte six sections principales :",
+    "pdfSectionsIntro": "Le rapport comporte ces sections principales :",
     "pdfSections": [
       "<strong>Synthèse</strong> — état PASSED/FAILED, évaluation claire du disque — sain, usé ou défaillant — et quatre données : date du rapport, dernier type de test, résultat et attributs vérifiés.",
       "<strong>Informations sur le disque</strong> — modèle, série, capacité, type HDD/SSD/NVMe, famille, format, interface (SATA 3.3 · 6.0 Gb/s, …), TRIM, température et seuil optimal, heures de fonctionnement, cycles d’alimentation, SMART, secteurs en attente/réalloués et erreurs CRC.",
@@ -127,7 +127,7 @@
     "historyImageCaption": "Historique SMART du disque. Chaque ligne affiche type, date, ancienneté, repère du dernier test et actions de téléchargement de la sortie <code>smartctl</code> et suppression.",
     "historyIntro": "Tests courts et étendus terminés et conservés pour le disque. Chaque entrée contient la sortie originale <code>smartctl</code> et les champs interprétés par Monitor pour le tableau de bord. Actions par ligne :",
     "historyItems": [
-      "<strong>Télécharger</strong> — enregistre l’instantané JSON contenant les données <code>smartctl -a</code> utilisées par le rapport. Utile si le support demande les champs de diagnostic originaux.",
+      "<strong>Télécharger</strong> — enregistre l’instantané JSON de ce test (sortie de <code>smartctl -a --json</code>, ou <code>nvme smart-log</code> sur NVMe si smartctl échoue). Utile si le support du fabricant demande les champs de diagnostic originaux.",
       "<strong>Supprimer</strong> — retire manuellement un test de l’historique. La conservation de Planification (<em>5 / 10 / 20 derniers</em>) supprime automatiquement les plus anciens."
     ],
     "scheduleTitle": "Onglet 4 — Planification",

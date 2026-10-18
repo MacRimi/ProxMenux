@@ -31,7 +31,7 @@
       "<strong>Placa base</strong>: fabricante, modelo, versión y fecha de BIOS y UUID SMBIOS. Sirve para localizar la página de descarga correcta del fabricante al buscar firmware."
     ],
     "memoryTitle": "Módulos de memoria",
-    "memoryBody": "Una fila por ranura ocupada según <code>dmidecode</code>: etiqueta, capacidad del módulo, tipo (DDR4 / DDR5 / variantes ECC), velocidad configurada y nominal, fabricante, referencia y número de serie. Las ranuras vacías aparecen atenuadas para mostrar el margen de ampliación.",
+    "memoryBody": "Una fila por slot ocupado según <code>dmidecode</code>: etiqueta, capacidad del módulo, tipo (DDR4 / DDR5 / variantes ECC), velocidad configurada y nominal, fabricante, referencia y número de serie. Los slots vacíos aparecen atenuados para mostrar el margen de ampliación.",
     "thermalTitle": "Monitoreo Térmico",
     "thermalIntro": "Siete bloques alimentados por <code>lm-sensors</code>, <code>sysfs</code> y lectores específicos de cada herramienta. Los sensores hwmon de almacenamiento se asocian al dispositivo de bloques físico, con su modelo y ruta <code>/dev/...</code>. Cada bloque se oculta si no hay sensores en su categoría.",
     "thermalItems": [
@@ -52,7 +52,7 @@
     "lxcImageAlt": "Tarjetas gráficas: iGPU Intel UHD Graphics con i915 y NVIDIA Quadro P1000 con nvidia, ambas listas para contenedores LXC",
     "lxcImageCaption": "Mismo nodo después de devolver la tarjeta NVIDIA al driver nativo — ambas GPUs ahora Ready for LXC containers.",
     "realtimeTitle": "Ventana de monitorización en tiempo real",
-    "realtimeBody": "Pulsa una GPU para abrir su monitorización por ranura, que consulta la herramienta del fabricante cada tres segundos. Muestra fabricante, tipo, ranura PCI, controlador, módulos del kernel, uso de motores (Render/3D, Video, Blitter, VideoEnhance), frecuencias de gráficos y memoria, temperatura, consumo si está disponible, VRAM y procesos activos con carga por proceso. Datos de <code>/api/gpu/&lt;slot&gt;/realtime</code>.",
+    "realtimeBody": "Pulsa una GPU para abrir su monitorización por slot, que consulta la herramienta del fabricante cada tres segundos. Muestra fabricante, tipo, slot PCI, controlador, módulos del kernel, uso de motores (Render/3D, Video, Blitter, VideoEnhance), frecuencias de gráficos y memoria, temperatura, consumo si está disponible, VRAM y procesos activos con carga por proceso. Datos de <code>/api/gpu/&lt;slot&gt;/realtime</code>.",
     "toolsIntro": "Herramienta del fabricante usada para cada GPU:",
     "headerVendor": "Proveedor",
     "headerTool": "Herramienta",
@@ -123,9 +123,9 @@
     "intro": "Todos los dispositivos de bloques conocidos por el kernel, agrupados por tipo. Cada disco muestra su nombre (<code>sda</code>, <code>nvme0n1</code>, <code>zram0</code>…), tipo (<em>SSD</em>, <em>HDD</em>, <em>NVMe SSD</em>), modelo y enlace negociado. Pulsa para abrir modelo, número de serie, capacidad, interfaz y velocidad actual y máxima.",
     "imageAlt": "Tarjeta Storage Summary listando once dispositivos de bloque (SSDs SATA, HDDs SATA, SSDs NVMe y zram) con cadenas de modelo y velocidades de enlace negociadas; los dos discos NVMe muestran 3.0 x4 con la velocidad actual resaltada",
     "imageCaption": "Once dispositivos en este nodo. Los enlaces SATA aparecen como <em>SATA &lt;version&gt;, &lt;Gb/s&gt; (current: ...)</em>; los NVMe como <em>&lt;PCIe gen&gt; x&lt;width&gt;</em>.",
-    "nvmeBody": "La línea de cada NVMe compara el enlace negociado con el máximo admitido. Si difieren, como un SSD Gen3 x4 funcionando a <strong>3.0 x1</strong> en una ranura de un solo carril, el valor actual aparece en ámbar. Permite detectar enlaces limitados al investigar discos lentos o cambios de carriles tras actualizar BIOS.",
+    "nvmeBody": "La línea de cada NVMe compara el enlace negociado con el máximo admitido. Si difieren, como un SSD Gen3 x4 funcionando a <strong>3.0 x1</strong> en un slot de un solo carril, el valor actual aparece en ámbar. Permite detectar enlaces limitados al investigar discos lentos o cambios de carriles tras actualizar BIOS.",
     "nvmeModalAlt": "Modal de detalle de disco NVMe para nvme0n1: tipo NVMe SSD, 953.9 GB de capacidad, velocidad actual de enlace 3.0 x1 resaltada en ámbar, velocidad máxima 3.0 x4, modelo WDC CL SN720, número de serie, interfaz PCIe/NVMe",
-    "nvmeModalCaption": "Detalles NVMe con enlace limitado: el disco admite x4, pero la ranura está conectada a x1.",
+    "nvmeModalCaption": "Detalles NVMe con enlace limitado: el disco admite x4, pero el slot está conectado a x1.",
     "outro": "Los datos SMART, autopruebas, historial e informe PDF están en <storageLink>Panel: Almacenamiento</storageLink>. Los mismos datos alimentan <smartLink>Salud y pruebas SMART de discos</smartLink>. Una prueba larga desde el script escribe el JSON mostrado por Monitor en <em>Almacenamiento → Historial</em>."
   },
   "pci": {

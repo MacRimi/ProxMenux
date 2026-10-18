@@ -70,7 +70,7 @@
     "items": [
       "<strong>Device path</strong> — <code>/dev/sda</code>, <code>/dev/nvme0n1</code>.",
       "<strong>Type badge</strong> — SATA / NVMe (and the relevant icon).",
-      "<strong>System badge</strong> — orange tag for disks identified as hosting the OS. Detection uses the mountpoints of <code>/</code> and <code>/boot</code>; physical disks hosting them receive the <em>System</em> tag. A missing tag does not prove a disk is safe to erase or repurpose.",
+      "<strong>System badge</strong> — orange tag for disks in use by the host: system mountpoints (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), active swap, ZFS pool members, LVM physical volumes, active RAID members or system partition labels. A missing tag does not prove a disk is safe to erase or repurpose.",
       "<strong>Model</strong> — vendor + model string from <code>smartctl -i</code>.",
       "<strong>Capacity</strong> — formatted human-readable.",
       "<strong>Temperature</strong> — current °C, coloured by the disk-type threshold (NVMe runs warmer than SATA).",
@@ -112,7 +112,7 @@
     "pdfPreviewAlt": "First page of the generated SMART Health Report PDF — Executive Summary with the PASSED ring + Disk Information block",
     "pdfPreviewCaption": "First page of the SMART Health Report — Executive Summary with the PASSED ring and the full Disk Information block. The full PDF below has the SSD wear ring, every SMART attribute and the test history.",
     "pdfDownloadLabel": "Download sample SMART report (PDF)",
-    "pdfSectionsIntro": "The report has six main sections:",
+    "pdfSectionsIntro": "The report includes these main sections:",
     "pdfSections": [
       "<strong>Executive Summary</strong> — large PASSED / FAILED verdict, plain-language disk health assessment paragraph (\"your disk is healthy / showing signs of wear / failing\"), and four quick stats (report timestamp, last-test type, test result, attributes checked).",
       "<strong>Disk Information</strong> — model, serial, capacity, type (HDD / SSD / NVMe), family, form factor, interface (SATA 3.3 · 6.0 Gb/s, …), TRIM support, current temperature with the optimal threshold, power-on time, power cycles, SMART status, plus the headline counters (pending sectors, CRC errors, reallocated sectors).",
@@ -127,7 +127,7 @@
     "historyImageCaption": "History tab — every retained SMART test for this disk. Per row: type, timestamp, \"X days ago\" tag, latest marker, download (raw <code>smartctl</code> output) and delete actions.",
     "historyIntro": "The retained pool of SMART tests for this disk — both short and extended runs that completed. Each entry is the raw <code>smartctl</code> output captured at run time, plus the structured fields the Monitor parsed out for the dashboard. Per-row actions:",
     "historyItems": [
-      "<strong>Download</strong> — saves the retained JSON snapshot with the <code>smartctl -a</code> data used by the report. Useful when vendor support needs the original diagnostic fields.",
+      "<strong>Download</strong> — saves that test's JSON snapshot (<code>smartctl -a --json</code> output, or <code>nvme smart-log</code> on NVMe when smartctl fails). Useful when vendor support needs the original diagnostic fields.",
       "<strong>Delete</strong> — removes the test from history. The retention limit set in the Schedule tab (<em>Last 5 / 10 / 20</em>) deletes oldest-first automatically; this action is the manual override."
     ],
     "scheduleTitle": "Tab 4 — Schedule",

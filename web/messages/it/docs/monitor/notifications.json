@@ -171,7 +171,7 @@
       "Apri <a>account.microsoft.com/security</a> e attiva la verifica in due passaggi.",
       "Se disponibile, apri <em>Opzioni di sicurezza avanzate</em> → <em>Password per le app</em> → <em>Crea una nuova password per app</em>. La sua presenza non prova che il servizio accetti SMTP con password.",
       "Se Microsoft genera una password per app, copiala e verifica che il servizio SMTP la accetti.",
-      "Solo se è consentito SMTP con password, usa i parametri approvati: <em>Server</em> <code>smtp.office365.com</code> per Exchange Online, <em>Porta</em> <code>587</code>, <em>Modalità TLS</em> <code>STARTTLS</code>, <em>Nome utente</em> con l’indirizzo email e <em>Password</em> con la credenziale consentita. Outlook.com personale ha requisiti differenti; non presumere che funzioni."
+      "Solo se il provider consente SMTP con password, inserisci i parametri approvati: <em>Host SMTP</em> <code>smtp.office365.com</code> per Exchange Online, <em>Porta</em> <code>587</code>, <em>Modalità TLS</em> <code>STARTTLS</code>, <em>Nome utente</em> con l’indirizzo della casella e <em>Password</em> con la credenziale SMTP consentita. Outlook.com personale ha impostazioni e requisiti di autenticazione differenti; non presumere che queste credenziali funzionino."
     ],
     "relayTitle": "Relay SMTP gestito da te",
     "relayBody": "Puoi usare un relay SMTP sotto il tuo controllo, come Postfix, che gestisca l’autenticazione a monte. Imposta credenziali e TLS di Monitor in base al relay: usare un relay locale non disattiva di per sé la cifratura."
@@ -266,7 +266,7 @@
     "howItems": [
       "<strong>Attivazione per canale.</strong> Disattivato inizialmente. Attivalo solo sui canali dove desideri un riepilogo; gli altri mantengono gli invii immediati.",
       "<strong>Ora di invio</strong> nel fuso locale, inizialmente 09:00. Puoi cambiarla; il processo invia entro circa 60 secondi dal minuto impostato.",
-      "<strong>Nel riepilogo:</strong> eventi generici idonei di livello <strong>INFO</strong>, come <em>aggiornamenti applicazioni</em>, <em>aggiornamenti Tailscale</em>, <em>aggiornamenti ottimizzazioni ProxMenux</em>, <em>aggiornamenti di sicurezza APT</em> e <em>avvisi di limite di frequenza</em>. Risultati backup e altre azioni escluse restano immediati.",
+      "<strong>Nel riepilogo:</strong> eventi generici idonei di livello <strong>INFO</strong>. Ad esempio <em>aggiornamenti applicazioni</em>, <em>aggiornamenti Tailscale</em>, <em>aggiornamenti ottimizzazioni ProxMenux</em> e <em>aggiornamenti di sicurezza APT</em>. Risultati backup e altri eventi di azione esclusi restano immediati.",
       "<strong>Che cosa non è mai ritardato:</strong>",
       "<strong>Persistenza.</strong> Gli eventi restano in SQLite, nella tabella <code>digest_pending</code>, fino all’ora scelta e sopravvivono ai riavvii di Monitor.",
       "<strong>Nessun evento, nessun riepilogo.</strong> Non invia messaggi vuoti quando non ci sono eventi INFO da riepilogare."
@@ -301,7 +301,7 @@
       {
         "stage": "Intervallo fra invii",
         "what": "Dopo un invio riuscito, sopprime le ripetizioni e salva lo stato in <code>notification_last_sent</code>. Valori base: 86 400 s per <code>CRITICAL</code>, <code>WARNING</code>, <code>INFO</code>, <code>resources</code> e <code>updates</code>. Eccezioni: 5 s per azioni VM/CT e spegnimento/riavvio host, 10 s per risultati backup/replica, 1 800–3 600 s per varie categorie di integrità. Impostazioni esplicite per evento/gruppo prevalgono.",
-        "tunable": "Sì: le impostazioni esplicite dell’intervallo per evento o gruppo sostituiscono i valori predefiniti del processo di invio."
+        "tunable": "Solo tramite l’API delle impostazioni: una chiave <code>cooldown.&lt;event_type&gt;</code> o <code>cooldown.&lt;group&gt;</code> sostituisce i valori predefiniti; nell’interfaccia non c’è alcun controllo."
       },
       {
         "stage": "Aggregazione eventi ravvicinati",
@@ -330,7 +330,7 @@
       "<strong>Metodo e URL.</strong> <code>POST http://127.0.0.1:8008/api/notifications/webhook</code> senza HTTPS Monitor. Con HTTPS usa il listener HTTP locale separato sulla porta 8009. Entrambi restano sullo stesso host.",
       "<strong>Modello del corpo.</strong> Usa gli helper Handlebars di PVE. PVE lo salva codificato in base64; il contenuto JSON è:",
       "<strong>Matcher.</strong> Un compagno blocco <code>matcher: proxmenux-matcher</code> con <code>mode all</code> così ogni notifica PVE raggiunge l'obiettivo.",
-      "<strong>Configurazione privata.</strong> Crea il blocco <code>webhook: proxmenux-webhook</code> in <code>/etc/pve/priv/notifications.cfg</code> con il segreto condiviso in base64. Il destinatario pubblico lo usa per X-Webhook-Secret. Il blocco non è vuoto."
+      "<strong>Configurazione privata.</strong> La configurazione scrive il blocco corrispondente <code>webhook: proxmenux-webhook</code> in <code>/etc/pve/priv/notifications.cfg</code> con una voce <code>secret</code> chiamata X-Webhook-Secret, codificata in base64. Il blocco pubblico del destinatario contiene solo modello del corpo, metodo e URL. Il blocco privato non è uno stub vuoto."
     ],
     "securityTitle": "Come il ricevitore è protetto",
     "securityIntro": "Il ricevitore webhook a <code>POST /api/notifications/webhook</code> applica diversi livelli di sicurezza a seconda di dove proviene la richiesta:",

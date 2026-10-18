@@ -76,7 +76,7 @@
   },
   "thresholds": {
     "heading": "Prahy Health Monitor",
-    "intro": "Predchádzajúca karta určuje <em>trvanie stíšenia po potlačení</em>; táto nastavuje <strong>hodnotu spustenia výstrahy</strong>. Väčšina kontrol má nastaviteľný <strong>varovný</strong> a <strong>kritický</strong> prah. Tabuľka vysvetľuje výnimky, napríklad kombinované pravidlo swapu a aktuálny detektor RAM.",
+    "intro": "Predchádzajúca karta určuje <em>trvanie stíšenia po potlačení</em>; táto nastavuje <strong>hodnotu spustenia výstrahy</strong>. Väčšina prahových kontrol má nastaviteľný <strong>varovný</strong> a <strong>kritický</strong> prah. Tabuľka nižšie vysvetľuje výnimky, napríklad kombinované pravidlo swapu.",
     "whatForTitle": "Na čo slúži",
     "whatForIntro": "Predvolené hodnoty sú východiskom, ale každé prostredie má vlastné podmienky:",
     "whatForItems": [
@@ -85,7 +85,7 @@
       "Teplotné prahy vyberte podľa špecifikácií disku a skutočných podmienok. Pasívne alebo nútené chladenie samo neurčuje univerzálne nižší či vyšší bezpečný limit.",
       "Silne virtualizovaný hostiteľ môže pri zostavovaní dosiahnuť špičky CPU bez výstrahy pri každom 80 % výkyve, ale musí upozorniť na trvalé preťaženie."
     ],
-    "whatForOutro": "Podporované zmeny platia <strong>pri ďalšej kontrole</strong>. Health Monitor číta <code>/usr/local/share/proxmenux/health_thresholds.json</code> v každom cykle bez reštartu. Niektoré ukazovatele, napríklad teplota diskov, používajú tieto hodnoty; niektoré kapacitné pruhy majú vlastné hranice. Riadok RAM vysvetľuje aktuálnu výnimku.",
+    "whatForOutro": "Podporované zmeny prahov platia <strong>pri ďalšej kontrole</strong>. Health Monitor číta <code>/usr/local/share/proxmenux/health_thresholds.json</code> v každom cykle bez reštartu. Vybrané ukazovatele vrátane teploty diskov používajú tieto hodnoty; niektoré kapacitné pruhy si ponechávajú vlastné vizuálne hranice.",
     "coloursTitle": "Farby stavov Varovanie a Kritické",
     "coloursIntro": "Widgety s nastavenou dvojicou Varovanie/Kritické používajú tri stavy nižšie. Iné ukazovatele, napríklad kapacitné pruhy PVE, majú vlastné hranice; samotná farba nedokazuje výstrahu Health Monitor.",
     "headerColour": "Farba",
@@ -125,7 +125,7 @@
         "section": "Pamäť",
         "warning": "85 %",
         "critical": "95 %",
-        "gates": "Tlak na RAM hostiteľa. Nastavenie uvádza kritický prah 95 %, ale aktuálny detektor používa pevné pravidlo trvalých 90 %; zmena nastavenia teraz nemení túto vetvu."
+        "gates": "Tlak na RAM hostiteľa."
       },
       {
         "section": "Swap (iba kritická hranica)",
@@ -185,7 +185,7 @@
         "section": "PVE úložisko",
         "warning": "85 %",
         "critical": "95 %",
-        "gates": "Úložiská spravované PVE: LVM, LVM-thin, ZFS-pool, RBD/Ceph a PBS. Nie všetky sú blokové úložiská."
+        "gates": "Iba úložiská PVE typu LVM, LVM-thin, ZFS-pool, RBD, CephFS a PBS. Úložiská typu adresár, NFS a CIFS pokrýva riadok miesta na disku hostiteľa."
       },
       {
         "section": "ZFS pool",
@@ -218,7 +218,7 @@
     "toggleTitle": "Prepínač oznámení pri zapnutej detekcii",
     "toggleBody": "Prepínač <code>lxc_updates_available</code> pre každý kanál v <strong>Oznámenia → Služby</strong> sa zobrazuje iba pri zapnutej detekcii. Vypnutie skryje riadok vo všetkých kanáloch. Voľba zostáva v databáze a po zapnutí sa obnoví pôvodná hodnota.",
     "purgeTitle": "Čo sa odstráni pri vypnutí detekcie",
-    "purgeBody": "Vypnutie ihneď odstráni záznamy <code>type=lxc</code> z <code>/usr/local/share/proxmenux/managed_installs.json</code>. Po obnovení Hardvér prestane zobrazovať počty aktualizácií LXC. Po zapnutí register naplní ďalší cyklus, prípadne skoršie ručné obnovenie cez API."
+    "purgeBody": "Vypnutie ihneď odstráni všetky záznamy <code>type=lxc</code> z <code>/usr/local/share/proxmenux/managed_installs.json</code>. Počty aktualizácií LXC na karte VM a LXC zmiznú pri ďalšom obnovení dashboardu. Po zapnutí register naplní ďalší cyklus detekcie, prípadne skoršie ručné obnovenie cez API."
   },
   "storageExclusions": {
     "heading": "Vylúčené vzdialené úložiská",

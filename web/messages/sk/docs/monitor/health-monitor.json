@@ -68,7 +68,7 @@
       {
         "category": "Úložisko",
         "checks": "Proxmox úložiská, koreňový súborový systém",
-        "events": "Prekročenie nastavených prahov využitia koreňového alebo iného sledovaného súborového systému (predvolene 85% upozornenie / 95% kritický stav); nedostupný export NFS; zlyhanie overenia CIFS; plný pool LVM-thin."
+        "events": "Prekročenie nastavených prahov využitia koreňového alebo iného sledovaného súborového systému (predvolene 85% upozornenie / 95% kritický stav); nedostupné úložiská PVE; zaseknuté pripojenia NFS/CIFS alebo pripojenia nečakane len na čítanie; úložiská LVM-thin a iné poolové úložiská prekračujúce rovnaké prahy."
       },
       {
         "category": "Disky & SMART",
@@ -98,7 +98,7 @@
       {
         "category": "Aktualizácie systému",
         "checks": "Nevybavené aktualizácie, aktualizácie zabezpečenia, verzia jadra / PVE, systémový vek",
-        "events": "Čakajúce bezpečnostné aktualizácie alebo aktualizácie používaného jadra; dlho neaktualizovaný systém. Ak sú dostupné aktualizácie, hlavička prehľadu zobrazí <em>Aktualizovať teraz</em>. Tlačidlo spustí celý postup ProxMenux; po zatvorení obnoví stav cez <code>?refresh=1</code> bez čakania na ďalší cyklus."
+        "events": "Čakajúce bezpečnostné aktualizácie alebo aktualizácie používaného jadra; dlho neaktualizovaný systém. Kategória Aktualizácie v okne Stav systému zobrazí tlačidlo <em>Aktualizovať teraz</em>, keď čakajú aktualizácie. Spustí celý postup aktualizácie ProxMenux priamo v okne; po zatvorení obnoví stav cez <code>?refresh=1</code>, aby indikátor ukázal nový stav bez čakania na ďalší cyklus."
       },
       {
         "category": "Bezpečnosť a certifikáty",
@@ -158,7 +158,7 @@
   },
   "dismiss": {
     "heading": "Potlačenie upozornení a jeho trvanie",
-    "intro": "Niektoré udalosti pretrvávajú, napríklad <em>Aktualizácie systému: dostupné aktualizácie</em>, kým hostiteľa neaktualizujete. Oznámenie každých päť minút nie je potrebné. Tlačidlo <em>Aktualizovať teraz</em> v prehľade tento prípad rieši priamo. Pre ostatné prípady alebo odložené aktualizácie sú dostupné dva prepojené spôsoby potlačenia:",
+    "intro": "Niektoré udalosti z povahy veci pretrvávajú, napríklad <em>Aktualizácie systému: dostupné aktualizácie</em>, kým hostiteľa neaktualizujete, a oznámenie každých päť minút počas celého týždňa nie je žiaduce. Tlačidlo <em>Aktualizovať teraz</em> v kategórii Aktualizácie okna Stav systému tento prípad rieši priamo. Pre ostatné prípady alebo odložené aktualizácie ponúka Monitor stavu aj dva prepojené spôsoby potlačenia:",
     "step1": "<strong>Potlačiť jednotlivú udalosť</strong> v okne. Ponuka obsahuje <strong>24 hodín</strong>, <strong>7 dní</strong> alebo <strong>Natrvalo</strong> bez ohľadu na predvolenú dobu kategórie. Voľba odošle <code>POST /api/health/acknowledge</code> s <code>error_key</code> a zvolenými <code>suppression_hours</code> (<code>-1</code> pre trvalé potlačenie). Udalosť sa presunie medzi potlačené s časom <code>acknowledged_at</code>.",
     "dropdownImageAlt": "Ponuka potlačenia upozornenia: 24 hodín, 7 dní alebo natrvalo",
     "dropdownImageCaption": "Zvolená doba platí iba pre toto upozornenie; bez individuálnej voľby sa použije hodnota kategórie. Trvalo potlačené upozornenia majú jantárový odznak <em>Natrvalo</em> a bežne sa neobnovujú. Výnimkou je kritická teplota CPU opísaná nižšie.",
@@ -187,7 +187,7 @@
       },
       {
         "finding": "ZFS pool DEGRADED / FAULTED",
-        "why": "Kontroly kapacity poolu ZFS výslovne umožňujú potlačenie. Ostatné zistenia používajú vlastný príznak. Potvrdenie neopraví degradovaný ani chybný pool."
+        "why": "Zistenia o stave poolu ZFS (DEGRADED, FAULTED, UNAVAIL) výslovne umožňujú potlačenie, rovnako ako kontroly kapacity poolu. Potvrdenie neopraví degradovaný ani chybný pool."
       },
       {
         "finding": "Chyba disku I/O s SMART FAILED",
@@ -289,7 +289,7 @@
   },
   "rest": {
     "heading": "Koncové body REST",
-    "intro": "Činnosti okna sú dostupné cez API pre skripty, panely či botov. Pri zapnutom overovaní Monitora treba platný Bearer token z prihlásenia alebo obrazovky API tokenov. Zmeny, ako potvrdenie upozornení, uloženie či čistenie osirelých chýb, vyžadujú full_admin; read_only dostane 403. Pri vypnutom alebo odmietnutom overovaní tieto kontroly umožnia prístup bez tokenu.",
+    "intro": "Činnosti okna sú dostupné aj cez API pre skripty, vlastné panely či botov. Volania vyžadujú platný Bearer token z prihlásenia alebo obrazovky API tokenov. Zmeny, ako potvrdenie upozornení, uloženie nastavení potlačenia či čistenie osirelých chýb, vyžadujú rozsah full_admin; read_only dostane 403.",
     "headerEndpoint": "Koncový bod",
     "headerMethod": "Metóda",
     "headerUse": "Použitie",
@@ -297,7 +297,7 @@
       {
         "endpoint": "/api/health",
         "method": "GET",
-        "use": "Ľahká kontrola vracajúca JSON s <code>status</code>, <code>timestamp</code> a <code>version</code>. Vhodná pre kontroly kľúčových slov Uptime Kuma; pri zapnutom overovaní Monitora musí klient poslať hlavičku Bearer."
+        "use": "Ľahká kontrola vracajúca JSON s <code>status</code>, <code>timestamp</code> a <code>version</code>. Vhodná pre kontroly kľúčových slov Uptime Kuma; klient musí poslať hlavičku Bearer."
       },
       {
         "endpoint": "/api/health/status",

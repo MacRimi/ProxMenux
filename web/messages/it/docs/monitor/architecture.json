@@ -73,13 +73,13 @@
     "intro": "L’AppImage contiene un filesystem montato all’esecuzione. <code>AppRun</code> alla radice prepara l’ambiente e avvia <code>flask_server.py</code>:",
     "consequencesIntro": "Due conseguenze di questo layout:",
     "consequences": [
-      "<strong>Ambiente Python incluso.</strong> Interprete e pacchetti sono nell’AppImage, senza installazione nel Python di sistema. L’app usa comunque interfacce del kernel e strumenti esterni dell’host.",
+      "<strong>Pacchetti Python inclusi.</strong> I pacchetti Python sono distribuiti nell’AppImage e girano sull’interprete Python dell’host stesso, 3.11 (PVE 8) o 3.13 (PVE 9), senza installare nulla nel Python di sistema dell’host. L’app usa comunque interfacce del kernel e strumenti esterni dell’host.",
       "<strong>Client hardware inclusi.</strong> Sono presenti <code>ipmitool</code>, <code>lm-sensors</code> e <code>upsc</code>. Le letture richiedono hardware compatibile, accesso ai sensori e, per l’UPS, un server NUT configurato."
     ]
   },
   "flask": {
     "heading": "Struttura dell’applicazione Flask",
-    "intro": "<code>flask_server.py</code> crea un’istanza <code>Flask(__name__)</code> con CORS limitato, registra direttamente nove blueprint e inizializza il terminale. La tabella mostra moduli principali; registra anche audit, backup VM e PBS. I precaricamenti PVE si eseguono solo sugli host PVE.",
+    "intro": "<code>flask_server.py</code> crea un’istanza <code>Flask(__name__)</code> con origini CORS limitate, registra direttamente dieci blueprint e inizializza le rotte del terminale. La tabella mostra i moduli principali; sono registrati anche i blueprint di PBS, collegamenti del Monitor, audit e backup VM. I precaricamenti specifici di PVE si eseguono solo sugli host PVE.",
     "headerBlueprint": "Blueprint / modulo",
     "headerPrefix": "Prefisso delle rotte",
     "headerOwns": "Responsabilità",
@@ -242,10 +242,10 @@
       "Aggiornamenti: pacchetti in attesa e patch di sicurezza.",
       "Log: schemi persistenti, picchi e sequenze a cascata nel journal di sistema.",
       "Memoria: interventi dell’OOM killer e pressione RAM prolungata.",
-      "Temperatura: letture CPU e dischi rispetto alle soglie di monitoraggio; i sensori disponibili dipendono dall’hardware.",
+      "CPU: utilizzo e temperatura della CPU rispetto alle soglie configurabili; i sensori disponibili dipendono dall’hardware.",
       "Sicurezza: errori di accesso, blocchi e stato del jail Fail2Ban."
     ],
-    "afterIntro": "I risultati usano <code>error_key</code>, categoria e gravità stabili. Le righe in <code>errors</code> vengono aggiornate con <code>last_seen</code> e contatori, senza duplicarle. L’invio delle notifiche ha anche impronte e intervalli propri.",
+    "afterIntro": "I risultati usano <code>error_key</code>, categoria e gravità stabili. I record esistenti in <code>errors</code> vengono aggiornati sul posto (<code>last_seen</code>, gravità, motivo), senza duplicarli. L’invio delle notifiche ha anche regole proprie di impronta e intervallo.",
     "cycleEnd": "La pulizia può risolvere errori obsoleti con la <em>durata del silenziamento</em> per categoria e regole di stato, rimuovere voci orfane di risorse eliminate e cancellare <code>events</code> oltre 30 giorni. Le categorie sono in <link>Pannello → Health Monitor</link>."
   },
   "notifications": {
@@ -264,9 +264,9 @@
     "intro": "La scheda <em>Terminale</em> collega un client leggero <code>xterm.js</code> a un PTY del server via WebSocket. Esistono due modalità:",
     "items": [
       "<strong>Modalità HTTP, predefinita:</strong> il server Flask integrato con <code>flask-sock</code> gestisce il passaggio al protocollo WebSocket.",
-      "<strong>Modalità HTTPS / WSS:</strong> usa <code>gevent.pywsgi.WSGIServer</code> con <code>geventwebsocket.handler.WebSocketHandler</code> per WebSocket su TLS."
+      "<strong>Modalità HTTPS / WSS:</strong> il server TLS usa <code>gevent.pywsgi.WSGIServer</code> con il suo gestore predefinito; <code>flask-sock</code> gestisce le connessioni WebSocket su TLS."
     ],
-    "outro": "I processi del terminale ereditano <code>User=root</code>. Con autenticazione attiva, WebSocket richiede un ticket breve monouso ottenuto dall’endpoint autenticato con permessi amministrativi. Se l’autenticazione è disattivata o rifiutata, la connessione segue quella modalità senza autenticazione.",
+    "outro": "I processi figli del terminale ereditano <code>User=root</code> dal servizio. Aprire un WebSocket richiede un ticket breve monouso ottenuto dall’endpoint autenticato dei ticket del terminale con permessi amministrativi.",
     "proxyNote": "Con un proxy inverso, abilita WebSocket e le intestazioni <code>Upgrade</code> e <code>Connection</code>. Il terminale richiede questo inoltro."
   },
   "proxy": {

@@ -19,7 +19,7 @@
   "reaching": {
     "heading": "Reaching the dashboard",
     "intro": "ProxMenux Monitor binds to <code>0.0.0.0:8008</code>. There are three common ways to reach it:",
-    "outro": "Direct access matches the default systemd unit. Reverse-proxy and Secure Gateway access are described below. Trust for client IPs in <code>X-Forwarded-For</code> requires PROXMENUX_TRUST_PROXY=1 and a proxy you control. The presence of <code>X-Forwarded-Proto</code> or <code>X-Forwarded-Host</code> alone does not enable proxy trust; the frontend builds API URLs from the browser’s origin."
+    "outro": "Direct access matches the default systemd unit. Reverse-proxy and Secure Gateway access are described below. Trust for client IPs in <code>X-Forwarded-For</code> requires PROXMENUX_TRUST_PROXY=1 and a proxy you control. The presence of <code>X-Forwarded-Proto</code> or <code>X-Forwarded-Host</code> alone does not enable proxy trust. On ports 80/443 the frontend uses relative <code>/api/*</code> URLs; on any other port it calls port 8008 on the same host name."
   },
   "firstLaunch": {
     "heading": "First-launch flow",
@@ -117,8 +117,8 @@
     "loginImageCaption": "Once authentication is configured, every visit to the dashboard starts here. With 2FA enabled, the screen asks for the 6-digit code in a second step after the password is accepted.",
     "loginFlowTitle": "Login flow",
     "twofaIntro": "With 2FA enabled, the same call returns <code>requires_totp: true</code> first. Re-issue with the 6-digit code:",
-    "publicTitle": "Public access and protected probes",
-    "publicIntro": "Login and authentication status are public. Initial setup is available while no username and password are stored, including after declining protection. System-data probes require authentication when protection is enabled:",
+    "publicTitle": "Public endpoints (no token)",
+    "publicIntro": "Login, authentication status, initial setup and the lightweight <code>/api/system-info</code> endpoint are public:",
     "publicItems": [
       "<code>/api/auth/login</code> and <code>/api/auth/status</code> are public. <code>/api/auth/setup</code> creates the initial account and rejects attempts to overwrite existing credentials.",
       "<code>/api/system-info</code> is a public lightweight system-information endpoint, including <code>health.status</code>. It is not decorated with the token requirement. /api/auth/status is another public endpoint suitable for a reachability check."
@@ -146,7 +146,7 @@
       },
       {
         "asset": "2FA TOTP secret",
-        "algorithm": "Standard TOTP (RFC 6238), with a base32-encoded secret. The eight recovery codes are single-use and stored as SHA-256 hashes.",
+        "algorithm": "Standard TOTP (RFC 6238), with a base32-encoded secret. The eight backup codes are single-use and stored as SHA-256 hashes.",
         "where": "<code>auth.json</code> → <code>totp_secret</code> + <code>backup_codes[]</code>"
       },
       {
@@ -243,17 +243,17 @@
       }
     ],
     "backupTitle": "What \"backup\" really matters for",
-    "backupBody": "If you lose the authenticator device, use a saved recovery code or restore the app from a backup you configured beforehand. Cloud sync and local exports differ by app; check that your chosen method actually restores the TOTP secrets. Root access to the host also allows recovery, as explained below. Keep a separate, secure backup.",
+    "backupBody": "If you lose the authenticator device, use a saved backup code or restore the app from a backup you configured beforehand. Cloud sync and local exports differ by app; check that your chosen method actually restores the TOTP secrets. Root access to the host also allows recovery, as explained below. Keep a separate, secure backup.",
     "setupTitle": "Step-by-step setup from the dashboard",
     "setupImageAlt": "2FA setup screen with QR code and backup codes",
-    "setupImageCaption": "The 2FA setup dialog shows a QR code, a Base32 secret for manual entry, and eight one-time recovery codes. Copy the codes before closing the dialog; they are not displayed again.",
+    "setupImageCaption": "The 2FA setup dialog shows a QR code, a Base32 secret for manual entry and, after verification, eight one-time backup codes. Copy the codes before closing the dialog; they are not displayed again.",
     "setupSteps": [
       "<strong>Install the authenticator app on your phone</strong> (or open your password manager). One of the apps from the table above. You only need to do this once — the same app will hold codes for every service you protect.",
       "<strong>Log into the dashboard</strong> with your username and password.",
-      "<strong>Open the Security tab</strong> in the dashboard sidebar, then click <strong>Enable 2FA</strong>. A dialog shows a QR code, the Base32 secret and eight recovery codes.",
+      "<strong>Open the Security tab</strong> in the dashboard sidebar, then click <strong>Enable 2FA</strong> and <strong>Start setup</strong>. The dialog shows a QR code and the manual key; the eight backup codes appear after the code is verified.",
       "<strong>Add the entry to the authenticator app:</strong>",
-      "<strong>Save the recovery codes.</strong> Store all eight safely in a password manager, encrypted note or secure printed copy. Each works once if your authenticator is unavailable.",
       "<strong>Confirm by typing the current 6-digit code</strong> from the app into the \"Verification code\" field of the setup dialog and submit. Codes refresh every 30 seconds, so if it expires while you're typing, just enter the next one.",
+      "<strong>Save the backup codes.</strong> After verification, store all eight safely in a password manager, encrypted note or secure printed copy. Each works once if your authenticator is unavailable.",
       "<strong>Done.</strong> 2FA is now active. Next time you log in, the dashboard asks for the password first; once it's accepted it asks for the current 6-digit code."
     ],
     "setupStep4Sub": [
@@ -261,17 +261,17 @@
       "<em>Manual fallback</em> (when scanning isn't possible — e.g. setting up on the same phone you opened the dashboard with): tap <em>Add account</em> → <em>Enter setup key</em>. Type any name (e.g. <em>Proxmox Monitor</em>), paste the Base32 string from the dialog, leave <em>Type</em> as <em>Time-based</em>, save."
     ],
     "testTitle": "Test before logging out",
-    "testBody": "Keep your current session open and test a new login in a private window <em>immediately</em> after setup. If the code is rejected, check the server and phone clocks before logging out of the working session. If access is already lost, use a recovery code or edit <code>auth.json</code> from the host shell.",
+    "testBody": "Keep your current session open and test a new login in a private window <em>immediately</em> after setup. If the code is rejected, check the server and phone clocks before logging out of the working session. If access is already lost, use a backup code or edit <code>auth.json</code> from the host shell.",
     "lostTitle": "Lost authenticator",
     "lostIntro": "Three escape hatches, in order of how disruptive they are:",
     "lostItems": [
-      "<strong>Use a recovery code.</strong> Enter one of the eight saved codes in the TOTP field. It works once; unused codes remain valid. After logging in, set up 2FA again from Settings to obtain eight new codes.",
+      "<strong>Use a backup code.</strong> Enter one of the eight saved codes in the TOTP field. It works once; unused codes remain valid. After logging in, open Security, choose <strong>Disable 2FA</strong> and then <strong>Enable 2FA</strong> to obtain eight new codes.",
       "<strong>Restore the authenticator from cloud / backup.</strong> If your app has a cloud sync (Google, Microsoft, Authy, Apple Passwords via iCloud Keychain, Ente, 2FAS) install it on a new device, sign in, and the entries reappear. If your app uses an encrypted export file (Aegis, Raivo, FreeOTP+), install the app on the new device and import the file.",
       "<strong>Disable 2FA from the host shell.</strong> When the previous options aren't available, edit <code>/root/.config/proxmenux-monitor/auth.json</code> on the Proxmox host (you need root SSH or console access), set <code>totp_enabled</code> to <code>false</code>, save, and restart the service:"
     ],
     "lostShellOutro": "You can log in with username + password only, then re-enable 2FA from Settings.",
     "disableTitle": "Disable 2FA",
-    "disableBody": "Open <strong>Security</strong> and choose <strong>Disable 2FA</strong>. <code>POST /api/auth/totp/disable</code> requires the current password and a valid TOTP or recovery code. It removes the TOTP secret and recovery codes. Remove the old entry from your authenticator app too.",
+    "disableBody": "Open <strong>Security</strong> and choose <strong>Disable 2FA</strong>. <code>POST /api/auth/totp/disable</code> requires the current password and a valid TOTP or backup code. It removes the TOTP secret and backup codes. Remove the old entry from your authenticator app too.",
     "rejectedTitle": "The 6-digit code is always rejected",
     "rejectedIntro": "TOTP is time-based — server clock and phone clock must agree to within ~30 s. Two checks:",
     "rejectedItems": [

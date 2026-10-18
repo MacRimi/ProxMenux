@@ -162,7 +162,7 @@
       }
     ],
     "reportTitle": "Network Latency Report (PDF)",
-    "reportIntro": "Both modes have a <strong>Report</strong> button beside the target selector. It generates a PDF of the measurements that you can attach to a troubleshooting request to your ISP.",
+    "reportIntro": "Both modes have a <strong>Report</strong> button beside the target selector. It opens a printable report of the measurements; save it as PDF from the browser's print dialog and attach it to a troubleshooting request to your ISP.",
     "reportPreviewAlt": "First page of the Network Latency Report PDF — Executive Summary with the gauge, latency statistics, the latency graph and the threshold guide",
     "reportPreviewCaption": "The first page of the Network Latency Report contains the executive summary, gauge, main statistics, time-series latency graph and threshold guide. Page 2 onwards contains the per-sample table and methodology.",
     "downloadLabel": "Download sample Network Latency report (PDF)",

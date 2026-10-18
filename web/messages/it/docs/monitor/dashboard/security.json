@@ -136,7 +136,7 @@
     "configCaption": "Modifica del jail sshd: riduci <em>Max Retries</em> se accedi a SSH solo dalla tua sottorete, oppure aumenta <em>Ban Time</em> per la dashboard esposta a Internet.",
     "outro": "La guida <em>Installazione, configurazione e disinstallazione</em> include anche l’installazione manuale, la modifica di SSH MaxAuthTries e il registro <code>proxmenux-auth.log</code>. Vedi <link>ProxMenux → Sicurezza → Fail2Ban</link>.",
     "calloutTitle": "Senza Fail2Ban, questo meccanismo non blocca gli IP",
-    "calloutBody": "ProxMenux Monitor controlla gli IP bloccati da Fail2Ban a <em>livello applicativo</em> prima di elaborare le richieste Flask. Interroga fail2ban-client e conserva il risultato in cache per 30 secondi; non legge una tabella SQL dei blocchi. Senza Fail2Ban, gli accessi falliti sono registrati in <code>proxmenux-auth.log</code>, ma questo meccanismo non blocca gli IP."
+    "calloutBody": "ProxMenux Monitor controlla gli IP bloccati nella jail <code>proxmenux</code> di Fail2Ban a <em>livello applicativo</em> prima di elaborare le richieste Flask, conservando il risultato in cache per 30 secondi. Senza Fail2Ban, gli accessi falliti sono registrati in <code>proxmenux-auth.log</code> e l’endpoint di login è limitato a 5 tentativi per IP ogni 5 minuti, ma nessun IP viene bloccato."
   },
   "lynis": {
     "heading": "Audit di sicurezza Lynis",

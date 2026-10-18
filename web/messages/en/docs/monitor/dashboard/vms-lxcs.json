@@ -1,16 +1,16 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Dashboard: VMs & LXCs tab | ProxMenux Documentation",
-    "description": "The VMs & LXCs tab inventories every guest on the host with live CPU / memory / disk usage. Per-guest details show configuration, resources, backups, recent Proxmox log results, notes, and Start / Shutdown / Reboot / Stop controls."
+    "description": "The VMs & LXCs tab inventories every guest on the host with live CPU / memory / disk usage. Per-guest details show configuration, resources, backups, the console log of OCI containers, notes, and Start / Shutdown / Reboot / Force Stop controls."
   },
   "header": {
     "title": "Dashboard: VMs & LXCs tab",
-    "description": "The full inventory of guests on the node. Four headline metrics across the top, a sortable list of every VM and LXC below, and a drill-in per guest with config, resources, backups, logs and the four lifecycle controls (Start / Shutdown / Reboot / Stop).",
+    "description": "The full inventory of guests on the node. Four headline metrics across the top, a sortable list of every VM and LXC below, and a drill-in per guest with config, resources, backups, the console log of OCI containers and the four lifecycle controls (Start / Shutdown / Reboot / Force Stop).",
     "section": "ProxMenux Monitor · Dashboard"
   },
   "intro": {
     "title": "The control surface for guests",
-    "body": "Use this tab to control guest lifecycles. Lifecycle actions go through <code>POST /api/vms/&lt;vmid&gt;/control</code> with an explicit confirmation and the response is reflected back in the guest’s row. Force shutdown requires the dedicated Force Stop button."
+    "body": "Use this tab to control guest lifecycles. Lifecycle actions go through <code>POST /api/vms/&lt;vmid&gt;/control</code>; Reboot and Force Stop ask you to type the VMID to confirm, and the response is reflected back in the guest’s row. Force shutdown requires the dedicated Force Stop button."
   },
   "topRow": {
     "heading": "Top row: four stat cards",
@@ -186,9 +186,9 @@
         "source": "PVE RRD data (<code>pvesh get /nodes/&lt;node&gt;/qemu/&lt;id&gt;/rrddata</code>) condensed to a chart-friendly shape."
       },
       {
-        "section": "Recent Proxmox log results",
-        "endpoint": "/api/vms/<vmid>/logs",
-        "source": "<code>pvesh get /nodes/&lt;node&gt;/&lt;qemu|lxc&gt;/&lt;vmid&gt;/log --start 0 --limit 1000</code>. A command failure returns an empty list; this does not provide complete in-guest system logs."
+        "section": "OCI console log (Logs tab)",
+        "endpoint": "/api/lxc/<vmid>/console-log",
+        "source": "Console output of the image's main process, read from <code>/var/log/proxmenux/oci/&lt;vmid&gt;.console.log</code> on the host. Shown for OCI containers only."
       },
       {
         "section": "Backups available for guest",

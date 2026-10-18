@@ -1,16 +1,16 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Översikt: VM och LXC | ProxMenux-dokumentation",
-    "description": "Inventering av gäster med CPU, minne och disk i realtid. Detaljerna visar konfiguration, resurser, säkerhetskopior, senaste Proxmox-loggresultat, anteckningar och Starta / Stäng av / Starta om / Tvinga stopp."
+    "description": "Fliken VM och LXC inventerar alla gäster på värden med CPU-, minnes- och diskanvändning i realtid. Detaljerna per gäst visar konfiguration, resurser, säkerhetskopior, konsolloggen för OCI-containrar, anteckningar och Starta / Stäng av / Starta om / Tvinga stopp."
   },
   "header": {
     "title": "Översikt: VM och LXC",
-    "description": "Hela nodens gästinventering: fyra mätvärden överst, en sorterbar lista över VM och LXC samt gästdetaljer med konfiguration, resurser, säkerhetskopior, loggar och Starta / Stäng av / Starta om / Tvinga stopp.",
+    "description": "Hela nodens gästinventering: fyra mätvärden överst, en sorterbar lista över alla VM och LXC nedanför samt gästdetaljer med konfiguration, resurser, säkerhetskopior, konsolloggen för OCI-containrar och de fyra livscykelkontrollerna (Starta / Stäng av / Starta om / Tvinga stopp).",
     "section": "ProxMenux Monitor · Översikt"
   },
   "intro": {
     "title": "Kontroller för gäster",
-    "body": "Här styr du gästernas livscykel. Åtgärder går via <code>POST /api/vms/&lt;vmid&gt;/control</code> efter uttrycklig bekräftelse och uppdaterar gästens rad. Tvingad avstängning kräver den särskilda knappen Tvinga stopp."
+    "body": "Här styr du gästernas livscykel. Livscykelåtgärder går via <code>POST /api/vms/&lt;vmid&gt;/control</code>; Starta om och Tvinga stopp ber dig skriva VMID för att bekräfta, och svaret visas i gästens rad. Tvingad avstängning kräver den särskilda knappen Tvinga stopp."
   },
   "topRow": {
     "heading": "Övre raden: fyra statistikkort",
@@ -186,9 +186,9 @@
         "source": "PVE RRD-data (<code>pvesh get /nodes/&lt;node&gt;/qemu/&lt;id&gt;/rrddata</code>) kondenserade till en diagramvänlig form."
       },
       {
-        "section": "Senaste Proxmox-loggresultat",
-        "endpoint": "/api/vms/<vmid>/logs",
-        "source": "<code>pvesh get /nodes/&lt;node&gt;/&lt;qemu|lxc&gt;/&lt;vmid&gt;/log --start 0 --limit 1000</code>. Om kommandot misslyckas returneras en tom lista; detta ger inte fullständiga systemloggar inifrån gästen."
+        "section": "OCI-konsollogg (fliken Loggar)",
+        "endpoint": "/api/lxc/<vmid>/console-log",
+        "source": "Konsolutdata från avbildningens huvudprocess, läst från <code>/var/log/proxmenux/oci/&lt;vmid&gt;.console.log</code> på värden. Visas endast för OCI-containrar."
       },
       {
         "section": "Backups tillgängliga för gäst",

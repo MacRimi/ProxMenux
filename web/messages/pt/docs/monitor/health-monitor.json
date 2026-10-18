@@ -68,7 +68,7 @@
       {
         "category": "Armazenamento",
         "checks": "Armazenamento do Proxmox, sistema de arquivos raiz",
-        "events": "Limiares de ocupação ultrapassados na raiz ou noutros sistemas de ficheiros monitorizados (85% aviso / 95% crítico por predefinição); exportação NFS indisponível; falha de autenticação CIFS; pool LVM-thin cheio."
+        "events": "Limiares de ocupação ultrapassados na raiz ou noutros sistemas de ficheiros monitorizados (85% aviso / 95% crítico por predefinição); armazenamentos PVE indisponíveis; montagens NFS/CIFS bloqueadas ou inesperadamente só de leitura; armazenamentos LVM-thin e outros pools que ultrapassam os mesmos limiares."
       },
       {
         "category": "Discos e SMART",
@@ -98,7 +98,7 @@
       {
         "category": "Atualizações do sistema",
         "checks": "Atualizações pendentes, atualizações de segurança, kernel / versão PVE, idade do sistema",
-        "events": "Atualizações de segurança ou do kernel em uso pendentes; sistema sem atualizar há muito tempo. O cabeçalho da vista geral apresenta <em>Atualizar agora</em> quando há atualizações. O botão executa todo o processo ProxMenux; ao fechar, atualiza o estado com <code>?refresh=1</code> sem esperar pelo ciclo seguinte."
+        "events": "Atualizações de segurança ou do kernel em uso pendentes; sistema sem atualizar há muito tempo. A categoria Atualizações da janela Estado de saúde apresenta o botão <em>Atualizar agora</em> quando há atualizações pendentes. Executa todo o processo de atualização ProxMenux na própria janela; ao fechar, atualiza o estado com <code>?refresh=1</code> para que o indicador mostre o novo estado sem esperar pelo ciclo seguinte."
       },
       {
         "category": "Segurança e Certificados",
@@ -158,7 +158,7 @@
   },
   "dismiss": {
     "heading": "Silenciar alertas e definir a duração da supressão",
-    "intro": "Alguns eventos persistem, como <em>Atualizações do sistema: atualizações disponíveis</em> até atualizar o anfitrião. Uma notificação a cada cinco minutos seria desnecessária. O botão <em>Atualizar agora</em> na vista geral resolve diretamente esse caso. Para os restantes casos ou atualizações adiadas, há dois mecanismos ligados de silenciamento:",
+    "intro": "Alguns eventos persistem por natureza, como <em>Atualizações do sistema: atualizações disponíveis</em> até atualizar o anfitrião, e uma notificação a cada cinco minutos durante uma semana seria desnecessária. O botão <em>Atualizar agora</em> na categoria Atualizações da janela Estado de saúde resolve diretamente esse caso. Para os restantes casos ou atualizações adiadas, a monitorização oferece também dois mecanismos ligados de silenciamento:",
     "step1": "<strong>Silenciar um evento</strong> na janela. O menu oferece <strong>24 horas</strong>, <strong>7 dias</strong> ou <strong>Permanentemente</strong>, independentemente da categoria. A escolha envia <code>POST /api/health/acknowledge</code> com <code>error_key</code> e <code>suppression_hours</code> (<code>-1</code> para permanente). O evento passa aos suprimidos com a data <code>acknowledged_at</code>.",
     "dropdownImageAlt": "Menu para silenciar um alerta: 24 horas, 7 dias ou permanentemente",
     "dropdownImageCaption": "A duração escolhida aplica-se só a este alerta; sem escolha individual, usa-se o valor da categoria. Os alertas silenciados permanentemente têm uma etiqueta âmbar <em>Permanente</em> e normalmente não reaparecem. A temperatura crítica da CPU é a exceção descrita abaixo.",
@@ -187,7 +187,7 @@
       },
       {
         "finding": "ZFS pool DEGRADED / FAULTED",
-        "why": "As verificações de capacidade dos pools ZFS permitem a supressão. As restantes ocorrências seguem o seu próprio indicador. Reconhecer não repara um pool degradado ou avariado."
+        "why": "As ocorrências de estado dos pools ZFS (DEGRADED, FAULTED, UNAVAIL) permitem explicitamente a supressão, tal como as verificações de capacidade dos pools. Reconhecer não repara um pool degradado ou avariado."
       },
       {
         "finding": "Erros de E/S de disco com SMART FAILED",
@@ -289,7 +289,7 @@
   },
   "rest": {
     "heading": "Endpoints REST",
-    "intro": "As ações da janela estão disponíveis pela API para scripts, painéis ou bots. Com a autenticação do Monitor ativa, é necessário um token Bearer válido, obtido no início de sessão ou no ecrã de tokens API. As alterações, como reconhecer alertas, guardar ou limpar erros órfãos, exigem full_admin; read_only recebe 403. Com autenticação desativada ou recusada, estes controlos permitem acesso sem token.",
+    "intro": "As ações da janela também estão disponíveis pela API para scripts, painéis personalizados ou bots. As chamadas exigem um token Bearer válido, obtido no início de sessão ou no ecrã de tokens API. As alterações, como reconhecer alertas, guardar definições de supressão ou limpar erros órfãos, exigem o âmbito full_admin; read_only recebe 403.",
     "headerEndpoint": "Endpoint",
     "headerMethod": "Método",
     "headerUse": "Utilização",
@@ -297,7 +297,7 @@
       {
         "endpoint": "/api/health",
         "method": "GET",
-        "use": "Verificação leve que devolve JSON com <code>status</code>, <code>timestamp</code> e <code>version</code>. Serve para verificações de palavras-chave Uptime Kuma; com autenticação do Monitor ativa, o cliente tem de enviar um cabeçalho Bearer."
+        "use": "Verificação leve que devolve JSON com <code>status</code>, <code>timestamp</code> e <code>version</code>. Serve para verificações de palavras-chave Uptime Kuma; o cliente tem de enviar um cabeçalho Bearer."
       },
       {
         "endpoint": "/api/health/status",

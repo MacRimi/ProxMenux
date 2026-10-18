@@ -171,7 +171,7 @@
       "Otvorte <a>account.microsoft.com/security</a> a povoľte dvojstupňové overovanie.",
       "Ak účet ponúka <em>Rozšírené možnosti zabezpečenia</em> → <em>Heslá aplikácií</em>, vyberte <em>Vytvoriť heslo aplikácie</em>. Samotná voľba nezaručuje podporu SMTP s heslom.",
       "Ak Microsoft vytvorí heslo, skopírujte ho a overte jeho prijatie službou SMTP.",
-      "Len ak poskytovateľ dovoľuje SMTP s heslom, použite schválené hodnoty: <em>Server</em> <code>smtp.office365.com</code> pre Exchange Online, <em>Port</em> <code>587</code>, <em>Režim TLS</em> <code>STARTTLS</code>, <em>Meno</em> adresu schránky a <em>Heslo</em> povolený údaj. Osobné Outlook.com má iné nastavenia a požiadavky."
+      "Len ak poskytovateľ dovoľuje SMTP s heslom, vyplňte jeho schválené hodnoty: <em>Server</em> <code>smtp.office365.com</code> pre Exchange Online, <em>Port</em> <code>587</code>, <em>Režim TLS</em> <code>STARTTLS</code>, <em>Používateľské meno</em> adresu vašej schránky a <em>Heslo</em> povolený prihlasovací údaj SMTP. Osobné Outlook.com má iné nastavenia a požiadavky na overenie; nepredpokladajte, že tieto údaje budú fungovať."
     ],
     "relayTitle": "SMTP relay na vlastnom serveri",
     "relayBody": "Nasmerujte Monitor na vlastný SMTP relay, napríklad Postfix. Ten rieši overenie voči poskytovateľovi. Overenie a TLS Monitora nastavte podľa relaya; miestny relay automaticky nevypína šifrovanie."
@@ -266,7 +266,7 @@
     "howItems": [
       "<strong>Zapnutie pre každý kanál.</strong> Predvolene vypnuté. Zapnite iba tam, kde chcete súhrn; ostatné kanály nechajte priame.",
       "<strong>Čas doručenia</strong> v miestnom čase, predvolene 09:00. Odosielač ho spustí približne do 60 s od danej minúty.",
-      "<strong>Obsah súhrnu:</strong> vhodné všeobecné udalosti <strong>INFO</strong>, napríklad <em>dostupná aktualizácia aplikácie</em>, <em>dostupná aktualizácia Tailscale</em>, <em>dostupná aktualizácia optimalizácie ProxMenux</em>, <em>čakajúce bezpečnostné aktualizácie APT</em> a <em>oznámenie o limite odosielania</em>. Výsledky záloh a vyňaté akcie zostanú priame.",
+      "<strong>Obsah súhrnu:</strong> vhodné všeobecné udalosti so závažnosťou <strong>INFO</strong>. Napríklad <em>dostupná aktualizácia aplikácie</em>, <em>dostupná aktualizácia Tailscale</em>, <em>dostupná aktualizácia optimalizácie ProxMenux</em> a <em>čakajúce bezpečnostné aktualizácie APT</em>. Výsledky záloh a ďalšie vyňaté udalosti akcií zostanú priame.",
       "<strong>Čo sa nikdy neodkladá:</strong>",
       "<strong>Trvalé uloženie.</strong> Udalosti čakajú v tabuľke SQLite <code>digest_pending</code> do nastaveného času a prežijú reštart.",
       "<strong>Bez udalostí nie je súhrn.</strong> Ak nečakajú INFO, prázdna správa sa neposiela."
@@ -301,7 +301,7 @@
       {
         "stage": "Interval opakovania",
         "what": "Po úspešnom odoslaní sa opakované odtlačky potlačia; stav je v <code>notification_last_sent</code>. Základ pre <code>CRITICAL</code>, <code>WARNING</code>, <code>INFO</code>, <code>resources</code> a <code>updates</code> je 86400 s. Výnimky: 5 s pre akcie VM/CT a vypnutie/reštart, 10 s pre výsledky záloh/replikácie, 1800–3600 s pre viaceré zdravotné stavy. Výslovné nastavenia udalosti/skupiny majú prednosť.",
-        "tunable": "Áno — konfiguračné hodnoty pre udalosť či skupinu prepisujú predvolené intervaly."
+        "tunable": "Len cez API nastavení — kľúč <code>cooldown.&lt;event_type&gt;</code> alebo <code>cooldown.&lt;group&gt;</code> prepíše predvolené hodnoty; v rozhraní na to nie je žiadny ovládací prvok."
       },
       {
         "stage": "Zoskupovanie nárazových udalostí",
@@ -330,7 +330,7 @@
       "<strong>Metóda a URL.</strong> <code>POST http://127.0.0.1:8008/api/notifications/webhook</code> bez HTTPS Monitora; s HTTPS samostatný miestny HTTP port 8009. Obe zostávajú na hostiteľovi.",
       "<strong>Šablóna správy.</strong> JSON s funkciami Handlebars PVE, uložený v konfigurácii ako base64. Po dekódovaní:",
       "<strong>Pravidlo priradenia.</strong> Blok <code>matcher: proxmenux-matcher</code> s <code>mode all</code> posiela všetky oznámenia PVE do cieľa.",
-      "<strong>Súkromná konfigurácia.</strong> Nastavenie zapíše <code>webhook: proxmenux-webhook</code> do <code>/etc/pve/priv/notifications.cfg</code> so zdieľaným tajomstvom v base64. Verejný cieľ ho použije pre X-Webhook-Secret. Blok nie je prázdny."
+      "<strong>Súkromná konfigurácia.</strong> Nastavenie zapíše zodpovedajúci blok <code>webhook: proxmenux-webhook</code> do <code>/etc/pve/priv/notifications.cfg</code> s položkou <code>secret</code> s názvom X-Webhook-Secret, zakódovanou v base64. Verejný blok cieľa obsahuje iba šablónu tela, metódu a URL. Súkromný blok nie je prázdny zástupný záznam."
     ],
     "securityTitle": "Ako je prijímač zabezpečený",
     "securityIntro": "Prijímač webhook na <code>POST /api/notifications/webhook</code> používa rôzne bezpečnostné vrstvy v závislosti od toho, odkiaľ pochádza žiadosť:",

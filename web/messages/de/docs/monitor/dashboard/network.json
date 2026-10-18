@@ -162,7 +162,7 @@
       }
     ],
     "reportTitle": "Netzwerklatenzbericht (PDF)",
-    "reportIntro": "Beide Modi haben neben der Zielauswahl eine Schaltfläche <strong>Bericht</strong>. Sie erzeugt ein PDF der Messungen als möglichen Anhang für eine Störungsmeldung beim Internetanbieter.",
+    "reportIntro": "Beide Modi haben neben der Zielauswahl eine Schaltfläche <strong>Bericht</strong>. Sie öffnet einen druckbaren Bericht der Messungen; speichern Sie ihn über den Druckdialog des Browsers als PDF und hängen Sie ihn an eine Störungsmeldung beim Internetanbieter an.",
     "reportPreviewAlt": "Erste PDF-Seite des Latenzberichts mit Zusammenfassung, Messanzeige, Statistik, Diagramm und Schwellenwerten",
     "reportPreviewCaption": "Die erste Seite enthält Zusammenfassung, Messanzeige, Hauptstatistik, Latenzverlauf und Schwellenwerte. Ab Seite 2 folgen die Messwerttabelle und die Methodik.",
     "downloadLabel": "Beispiel-Latenzbericht herunterladen (PDF)",

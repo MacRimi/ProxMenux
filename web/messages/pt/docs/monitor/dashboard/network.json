@@ -162,7 +162,7 @@
       }
     ],
     "reportTitle": "Relatório de latência da rede (PDF)",
-    "reportIntro": "Ambos os modos têm um botão <strong>Relatório</strong> junto ao seletor de destino. Gera um PDF das medições que pode anexar a um pedido de assistência ao fornecedor de Internet.",
+    "reportIntro": "Ambos os modos têm um botão <strong>Relatório</strong> junto ao seletor de destino. Abre um relatório imprimível das medições; guarde-o em PDF a partir da janela de impressão do navegador e anexe-o a um pedido de assistência ao fornecedor de Internet.",
     "reportPreviewAlt": "Primeira página PDF do relatório de latência: resumo executivo, indicador, estatísticas, gráfico e guia dos limites",
     "reportPreviewCaption": "A primeira página contém resumo executivo, indicador, estatísticas principais, evolução da latência e guia dos limites. A partir da página 2 surgem a tabela de medições e a metodologia.",
     "downloadLabel": "Transferir relatório de latência de exemplo (PDF)",

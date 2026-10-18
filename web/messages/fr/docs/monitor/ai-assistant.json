@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Désactivé par défaut, un seul interrupteur pour l’activer",
-    "body": "La reformulation IA est désactivée par défaut. Activez-la dans <em>Paramètres → Notifications → Avancé : amélioration IA</em>. Si l’enrichissement ou la reformulation échoue, le texte du modèle original est envoyé. Chaque reformulation a un délai maximal de 25 secondes ; au-delà, le modèle est utilisé sans attendre indéfiniment."
+    "body": "La reformulation IA est désactivée par défaut. Activez-la dans <em>Paramètres → Notifications → Avancé : amélioration IA</em>. Si l’enrichissement ou la reformulation échoue, le répartiteur envoie le modèle original. Les reformulations de la file d’envoi des événements ont un délai maximal de 25 secondes ; une fois ce délai atteint, le modèle est envoyé au lieu d’attendre."
   },
   "howItWorks": {
     "heading": "Comment ça marche",
@@ -109,7 +109,7 @@
     ],
     "customNote": "Le mode personnalisé fixe la sortie à 500 tokens, quel que soit le niveau de détail. Vous contrôlez les instructions ; le plafond évite les réponses trop longues.",
     "sizingTitle": "Taille pratique",
-    "sizingBody": "Estimez la consommation : événements reformulés × canaux IA × tokens d’entrée et de sortie par appel. Exemple : 50 événements × un canal × (500 en entrée + 300 en sortie) = 40 000 tokens par jour. Les valeurs réelles dépendent du modèle, du contexte, du cache et des limites du fournisseur. <link>Détail par canal</link> explique comment utiliser <code>brief</code> pour le chat au lieu de <code>standard</code>, avec des e-mails détaillés."
+    "sizingBody": "Estimez la consommation : événements reformulés × canaux avec IA × tokens d’entrée et de sortie par appel. Exemple : 50 événements × un canal × (2 000 en entrée + 300 en sortie) font environ 115 000 tokens par jour, car l’invite système par défaut compte à elle seule environ 1 500 tokens. La consommation et les coûts réels dépendent du modèle, du contexte, du cache et des limites du fournisseur. La section <link>Détail par canal</link> explique comment utiliser <code>brief</code> pour le chat au lieu de <code>standard</code>, tout en gardant des rapports e-mail détaillés."
   },
   "providers": {
     "heading": "Fournisseurs d'IA",
@@ -142,7 +142,7 @@
       "items": [
         "Clé API : <a>console.anthropic.com/settings/keys</a>",
         "Exemples de la liste de modèles fournie : <code>claude-haiku-4-5-20251001</code>, <code>claude-sonnet-4-6</code>, <code>claude-opus-4-6</code>.",
-        "Recommandation fournie : <strong><code>claude-haiku-4-5-20251001</code></strong>. Cette version précise est recommandée ; les anciens modèles Claude 3.5 ne figurent plus dans la liste fournie."
+        "Recommandation fournie : <strong><code>claude-haiku-4-5-20251001</code></strong>, un instantané figé plutôt qu’un alias évolutif."
       ]
     },
     "gemini": {

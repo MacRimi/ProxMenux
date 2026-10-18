@@ -34,7 +34,7 @@
               {
                 "icon": "fileText",
                 "title": "Política: ¿qué se espera?",
-                "body": "Declara qué invitados necesitan copia de seguridad o deben arrancar con el host, qué almacenamiento es esencial y los umbrales de las comprobaciones."
+                "body": "Declara qué invitados necesitan backup o deben arrancar con el host, qué almacenamiento es esencial y los umbrales de las comprobaciones."
               }
             ]
           }

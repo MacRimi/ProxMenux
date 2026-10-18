@@ -162,7 +162,7 @@
       }
     ],
     "reportTitle": "Informe de latencia de red (PDF)",
-    "reportIntro": "Ambos modos tienen un botón <strong>Informe</strong> junto al selector de destino. Genera un PDF de las mediciones que puedes adjuntar a una solicitud de asistencia a tu proveedor de Internet.",
+    "reportIntro": "Ambos modos tienen un botón <strong>Informe</strong> junto al selector de destino. Abre un informe imprimible de las mediciones; guárdalo como PDF desde el diálogo de impresión del navegador y adjúntalo a una solicitud de asistencia a tu proveedor de Internet.",
     "reportPreviewAlt": "Primera página del informe PDF de latencia: resumen ejecutivo, indicador, estadísticas, gráfico y guía de umbrales",
     "reportPreviewCaption": "La primera página contiene resumen ejecutivo, indicador, estadísticas principales, serie temporal de latencia y guía de umbrales. Desde la página 2 aparecen la tabla de muestras y la metodología.",
     "downloadLabel": "Descargar informe de ejemplo de latencia (PDF)",

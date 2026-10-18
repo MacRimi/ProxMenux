@@ -220,7 +220,7 @@
     "heading": "n8n, Zapier a vlastné skripty",
     "intro": "Workflow nástroje a skripty môžu <em>odosielať</em> oznámenia cez POST na <code>/api/notifications/send</code>, napríklad pri zlyhaní CI alebo dlhej úlohe cron. Priame odoslanie obíde front aj časový odstup podľa odtlačku udalosti. Zachová formátovanie kanálov, voliteľnú AI a doručenie. Duplicity musí riešiť volajúci.",
     "n8nBody": "V n8n použite uzol <em>HTTP Request</em> s POST, uvedenou URL a rovnakým JSON ako curl. Zvoľte všeobecné údaje Header Auth: názov <em>Authorization</em> a hodnotu <code>Bearer YOUR_API_TOKEN</code>, pričom nahraďte zástupný text. Požiadavku spustí plán, webhook alebo predchádzajúci uzol.",
-    "severityBody": "Závažnosť používa <code>INFO</code>, <code>WARNING</code> alebo <code>CRITICAL</code> veľkými písmenami. Objekt <code>data</code> poskytuje kontext. AI používa vytvorený nadpis, správu a podporované doplnenia; nie je zaručené, že ľubovoľné polia zahrnie do promptu či výstupu. Pozri <link>Oznámenia → Katalóg udalostí</link>."
+    "severityBody": "Závažnosť používa <code>INFO</code>, <code>WARNING</code> alebo <code>CRITICAL</code> veľkými písmenami. Objekt <code>data</code> poskytuje kontext udalosti a polia šablóny. Na tomto koncovom bode dostane prepis AI iba nadpis a správu; polia v <code>data</code> sa poskytovateľovi neposielajú. Význam udalostí pozri v <link>Oznámenia → Katalóg udalostí</link>."
   },
   "pveWebhook": {
     "heading": "Natívny webhook Proxmox VE (prichádzajúci)",

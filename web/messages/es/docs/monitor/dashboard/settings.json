@@ -26,7 +26,7 @@
   },
   "navigationOrder": {
     "heading": "Orden de navegación",
-    "intro": "Ordena los siete elementos principales: <strong>Resumen, Apps, VMs y LXCs, Nodo, Copias, Terminal y Administración</strong>. Pulsa <strong>Editar</strong>, arrastra las filas y guarda.",
+    "intro": "Ordena los siete elementos principales: <strong>Resumen, Apps, VMs y LXCs, Nodo, Backup, Terminal y Administración</strong>. Pulsa <strong>Editar</strong>, arrastra las filas y guarda.",
     "items": [
       "Con el ratón, el arrastre empieza al pulsar. En pantallas táctiles requiere mantener la pulsación 250 ms para distinguirlo del desplazamiento.",
       "Los grupos <strong>Nodo</strong> y <strong>Administración</strong> se mueven completos; sus páginas internas conservan el orden establecido.",
@@ -76,16 +76,16 @@
   },
   "thresholds": {
     "heading": "Umbrales de Health Monitor",
-    "intro": "La tarjeta anterior define <em>cuánto dura el silencio tras descartar</em>; esta define <strong>el valor que activa una alerta</strong>. La mayoría de controles tienen valores <strong>Aviso</strong> y <strong>Crítico</strong> ajustables. La tabla explica excepciones como la regla combinada de swap y el detector actual de RAM.",
+    "intro": "La tarjeta anterior define <em>cuánto dura el silencio tras descartar</em>; esta define <strong>el valor que activa una alerta</strong>. La mayoría de controles tienen valores <strong>Aviso</strong> y <strong>Crítico</strong> ajustables. La tabla explica excepciones como la regla combinada de swap.",
     "whatForTitle": "Para qué sirve",
     "whatForIntro": "Los valores predeterminados sirven como punto de partida, pero cada entorno tiene sus propias condiciones:",
     "whatForItems": [
-      "Un homelab con un único SSD puede avisar antes de llenarse, por ejemplo al 75/90 %, para dejar margen a las instantáneas.",
+      "Un homelab con un único SSD puede avisar antes de llenarse, por ejemplo al 75/90 %, para dejar margen a los snapshots.",
       "Los umbrales de memoria deben reflejar las mediciones y la carga del host. La redundancia Ceph no justifica por sí sola relajar avisos, y el uso elevado de ARC de ZFS no equivale a memoria de trabajo irrecuperable.",
       "Elige umbrales de temperatura según las especificaciones del disco y sus condiciones reales. La refrigeración pasiva o forzada no determina por sí sola un límite seguro universalmente más bajo o más alto.",
       "Un host muy virtualizado puede alcanzar picos de CPU durante compilaciones sin necesitar avisos por cada pico del 80 %, pero debe seguir avisando de saturación sostenida."
     ],
-    "whatForOutro": "Los cambios admitidos se aplican <strong>en el siguiente análisis</strong>. Health Monitor lee <code>/usr/local/share/proxmenux/health_thresholds.json</code> cada ciclo sin reinicio. Algunos indicadores, como temperatura de disco, usan estos valores; ciertas barras de capacidad conservan sus propios cortes. La fila de RAM explica una excepción actual.",
+    "whatForOutro": "Los cambios admitidos se aplican <strong>en el siguiente análisis</strong>. Health Monitor lee <code>/usr/local/share/proxmenux/health_thresholds.json</code> cada ciclo sin reinicio. Algunos indicadores, como temperatura de disco, usan estos valores; ciertas barras de capacidad conservan sus propios cortes.",
     "coloursTitle": "Colores de estado de Aviso y Crítico",
     "coloursIntro": "Los widgets que usan el par Aviso/Crítico siguen los tres estados siguientes. Algunos indicadores, como las barras de capacidad PVE, tienen límites propios; su color no basta para deducir una alerta de Health Monitor.",
     "headerColour": "Color",
@@ -125,7 +125,7 @@
         "section": "Memoria",
         "warning": "85 %",
         "critical": "95 %",
-        "gates": "Presión de RAM del host. La configuración muestra Crítico al 95 %, pero el detector actual usa una regla fija del 90 % sostenido; cambiar ese ajuste no modifica actualmente esa rama de ejecución."
+        "gates": "Presión de RAM del host."
       },
       {
         "section": "Uso de swap (solo crítico)",
@@ -185,7 +185,7 @@
         "section": "Almacenamiento PVE",
         "warning": "85 %",
         "critical": "95 %",
-        "gates": "Almacenamientos gestionados por PVE: LVM, LVM-thin, ZFS-pool, RBD/Ceph y PBS. No todos son backends de bloques."
+        "gates": "Solo almacenamientos PVE de tipo LVM, LVM-thin, ZFS-pool, RBD, CephFS y PBS. Los de tipo directorio, NFS y CIFS los cubre la fila de espacio en disco del host."
       },
       {
         "section": "Pool ZFS",
@@ -218,7 +218,7 @@
     "toggleTitle": "Interruptor de aviso condicionado a la detección",
     "toggleBody": "El interruptor por canal <code>lxc_updates_available</code> en <strong>Notificaciones → Servicios</strong> solo aparece con la detección activa. Al desactivarla, la fila se oculta en todos los canales. Su preferencia se conserva en la base de datos y recupera el mismo valor al reactivarla.",
     "purgeTitle": "Qué se elimina al desactivar la detección",
-    "purgeBody": "Desactivarlo elimina de inmediato las entradas <code>type=lxc</code> de <code>/usr/local/share/proxmenux/managed_installs.json</code>. Los contadores de actualizaciones LXC de Hardware desaparecen en el siguiente refresco. Al reactivarlo, el próximo ciclo de detección repuebla el registro, o antes con una actualización manual de la API."
+    "purgeBody": "Desactivarlo elimina de inmediato las entradas <code>type=lxc</code> de <code>/usr/local/share/proxmenux/managed_installs.json</code>. Los contadores de actualizaciones LXC de la pestaña VM y LXC desaparecen en el siguiente refresco. Al reactivarlo, el próximo ciclo de detección repuebla el registro, o antes con una actualización manual de la API."
   },
   "storageExclusions": {
     "heading": "Exclusiones de almacenamiento remoto",
@@ -226,7 +226,7 @@
     "imageCaption": "Controles <em>Estado</em> y <em>Alertas</em> por almacenamiento. Con ambos desactivados, deja de participar en Health Monitor y de enviar avisos. Sigue visible en Almacenamiento, marcado como excluido.",
     "intro": "Puedes excluir almacenamientos gestionados por Proxmox (NFS / CIFS / PBS / Ceph / iSCSI / etc.) con dos controles independientes:",
     "items": [
-      "<strong>Estado</strong> — al desactivar este control, el almacenamiento deja de contar en la categoría Almacenamiento de Health Monitor. Útil para volúmenes de archivo habitualmente desconectados o destinos remotos de copia que solo se encienden según un horario.",
+      "<strong>Estado</strong> — al desactivar este control, el almacenamiento deja de contar en la categoría Almacenamiento de Health Monitor. Útil para volúmenes de archivo habitualmente desconectados o destinos remotos de backup que solo se encienden según un horario.",
       "<strong>Alertas</strong> — desactivarlo impide enviar avisos de este almacenamiento por los canales configurados, aunque los controles de estado sigan activos. Útil si quieres ver su estado en el panel sin recibir avisos."
     ],
     "outro": "Los almacenamientos excluidos siguen en la <link>pestaña Almacenamiento</link> con la insignia morada <em>excluido</em>, para mantener visible el inventario. El estado se guarda en la tabla SQLite <code>excluded_storages</code>."

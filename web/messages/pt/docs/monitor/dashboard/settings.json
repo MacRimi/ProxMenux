@@ -76,7 +76,7 @@
   },
   "thresholds": {
     "heading": "Limites do Health Monitor",
-    "intro": "O cartão anterior define <em>o silêncio após dispensar um alerta</em>; este regula <strong>o valor que desencadeia um alerta</strong>. A maioria das verificações tem valores <strong>Aviso</strong> e <strong>Crítico</strong> ajustáveis. A tabela explica exceções como a regra combinada de swap e o detetor atual de RAM.",
+    "intro": "O cartão anterior define <em>o silêncio após dispensar um alerta</em>; este regula <strong>o valor que desencadeia um alerta</strong>. A maioria das verificações por limiar tem valores <strong>Aviso</strong> e <strong>Crítico</strong> ajustáveis. A tabela abaixo explica exceções como a regra combinada de swap.",
     "whatForTitle": "Para que serve",
     "whatForIntro": "Os valores predefinidos são um ponto de partida, mas cada ambiente tem condições próprias:",
     "whatForItems": [
@@ -85,7 +85,7 @@
       "Escolha os limites de temperatura conforme as especificações do disco e as condições reais. A refrigeração passiva ou forçada não determina só por si um limite seguro universalmente inferior ou superior.",
       "Um anfitrião muito virtualizado pode ter picos de CPU durante compilações sem avisar por cada pico de 80%, mas deve alertar para saturação prolongada."
     ],
-    "whatForOutro": "As alterações suportadas aplicam-se <strong>na próxima análise</strong>. O Health Monitor lê <code>/usr/local/share/proxmenux/health_thresholds.json</code> em cada ciclo sem reinício. Alguns indicadores, como a temperatura dos discos, usam estes valores; certas barras de capacidade têm limites próprios. A linha RAM descreve uma exceção atual.",
+    "whatForOutro": "As alterações de limiares suportadas aplicam-se <strong>na próxima análise</strong>. O Health Monitor lê <code>/usr/local/share/proxmenux/health_thresholds.json</code> em cada ciclo sem reinício. Alguns indicadores, incluindo a temperatura dos discos, usam estes valores; certas barras de capacidade mantêm limites visuais próprios.",
     "coloursTitle": "Cores dos estados Aviso e Crítico",
     "coloursIntro": "Os widgets que usam Aviso/Crítico seguem os três estados abaixo. Outros indicadores, como as barras de capacidade PVE, têm limites próprios; a cor por si só não indica um alerta Health Monitor.",
     "headerColour": "Cor",
@@ -125,7 +125,7 @@
         "section": "Memória",
         "warning": "85 %",
         "critical": "95 %",
-        "gates": "Pressão RAM do anfitrião. A definição mostra Crítico a 95%, mas o detetor atual usa uma regra fixa de 90% sustentados; alterar a definição não muda atualmente esse ramo."
+        "gates": "Pressão RAM do anfitrião."
       },
       {
         "section": "Swap (apenas nível crítico)",
@@ -185,7 +185,7 @@
         "section": "Armazenamento PVE",
         "warning": "85 %",
         "critical": "95 %",
-        "gates": "Armazenamentos geridos por PVE: LVM, LVM-thin, ZFS-pool, RBD/Ceph e PBS. Nem todos são backends de blocos."
+        "gates": "Apenas armazenamentos PVE do tipo LVM, LVM-thin, ZFS-pool, RBD, CephFS e PBS. Os armazenamentos de diretório, NFS e CIFS são cobertos pela linha de espaço em disco do anfitrião."
       },
       {
         "section": "Conjunto ZFS",
@@ -218,7 +218,7 @@
     "toggleTitle": "Opção de notificação ligada à deteção",
     "toggleBody": "A opção <code>lxc_updates_available</code> por canal em <strong>Notificações → Serviços</strong> só aparece com a deteção ativa. Desativá-la oculta a linha em todos os canais. A preferência fica na base de dados e recupera o mesmo valor ao reativar.",
     "purgeTitle": "O que é removido ao desativar a deteção",
-    "purgeBody": "Desativar remove de imediato as entradas <code>type=lxc</code> de <code>/usr/local/share/proxmenux/managed_installs.json</code>. Os contadores de atualizações LXC em Hardware desaparecem na próxima atualização. Reativar preenche o registo no próximo ciclo, ou antes por atualização manual da API."
+    "purgeBody": "Desativar remove de imediato todas as entradas <code>type=lxc</code> de <code>/usr/local/share/proxmenux/managed_installs.json</code>. Os contadores de atualizações LXC no separador VMs e LXCs desaparecem na próxima atualização do painel. Reativar preenche o registo no próximo ciclo de deteção, ou antes por atualização manual da API."
   },
   "storageExclusions": {
     "heading": "Exclusões de armazenamento remoto",

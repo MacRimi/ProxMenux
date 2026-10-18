@@ -220,7 +220,7 @@
     "heading": "n8n, Zapier e script personalizzati",
     "intro": "Workflow e script possono <em>inviare</em> notifiche con POST a <code>/api/notifications/send</code>, per esempio dopo un errore CI o un’attività troppo lunga. L’invio diretto salta coda e intervallo tra impronte degli eventi. Mantiene formato per canale, IA facoltativa e consegna. Gestisci gli eventuali duplicati nel chiamante.",
     "n8nBody": "In n8n usa un nodo <em>HTTP Request</em> con POST, URL sopra e lo stesso JSON di curl. Scegli credenziali generiche Header Auth: nome <em>Authorization</em> e valore <code>Bearer YOUR_API_TOKEN</code>, sostituendo il segnaposto. Collega una pianificazione, webhook o altro nodo per avviare la richiesta.",
-    "severityBody": "La gravità usa <code>INFO</code>, <code>WARNING</code> o <code>CRITICAL</code> in maiuscolo. L’oggetto <code>data</code> fornisce contesto. L’IA usa titolo e messaggio prodotti con gli arricchimenti supportati; non tutti i campi sono garantiti nel prompt o nell’output. Vedi <link>Notifiche → Catalogo eventi</link>."
+    "severityBody": "La gravità usa <code>INFO</code>, <code>WARNING</code> o <code>CRITICAL</code> in maiuscolo. L’oggetto <code>data</code> fornisce il contesto dell’evento e i campi del modello. Su questo endpoint la riscrittura IA riceve solo titolo e messaggio; i campi in <code>data</code> non vengono inviati al provider. Vedi <link>Notifiche → Catalogo eventi</link> per il significato degli eventi."
   },
   "pveWebhook": {
     "heading": "Webhook nativo Proxmox VE (in ingresso)",

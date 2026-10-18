@@ -52,7 +52,7 @@
       },
       {
         "name": "Terminale",
-        "description": "Shell host e console VM/CT supportate nel browser tramite <code>xterm.js</code> e WebSocket. Segue l’autenticazione configurata: se disabilitata o rifiutata, i client con accesso di rete possono aprire sessioni senza login. Non implica un audit di ogni comando."
+        "description": "Shell host e console VM/CT supportate nel browser tramite <code>xterm.js</code> e WebSocket. Le sessioni non sono sottoposte ad audit per singolo comando."
       },
       {
         "name": "Sicurezza",
@@ -114,7 +114,7 @@
     "heading": "REST API e integrazioni",
     "intro": "Gli endpoint REST espongono dati di monitoraggio JSON via HTTP/HTTPS per Homepage, Home Assistant, Uptime Kuma e script. Grafana può usare l’esportatore testuale Prometheus separato su <code>/api/prometheus</code>. Le richieste possono usare <code>curl</code>.",
     "tokens": "I token API a lunga durata (365 giorni) vengono generati in <strong>Impostazioni → Token di accesso API</strong> o tramite <code>POST /api/auth/generate-api-token</code>.",
-    "bearer": "Invia i token con <code>Authorization: Bearer …</code>. L’endpoint pubblico <code>/api/health</code> serve ai controlli di disponibilità senza credenziali. Sotto <code>/api/auth/*</code> ci sono rotte pubbliche di configurazione/login/stato e rotte protette per account e token; non sono tutte anonime.",
+    "bearer": "Invia i token con <code>Authorization: Bearer …</code>. Anche <code>/api/health</code> richiede l’intestazione Bearer, quindi i controlli di disponibilità necessitano di un token read_only. Sotto <code>/api/auth/*</code> ci sono sia rotte pubbliche di configurazione/login/stato sia rotte protette per account e token; non sono tutte anonime.",
     "catalog": "Catalogo degli endpoint, rotazione dei token e sicurezza sono nel <linkApi>Riferimento API</linkApi>; esempi per Homepage, Home Assistant, Grafana, Uptime Kuma e cURL sono in <linkIntegrations>Integrazioni</linkIntegrations>."
   },
   "serviceControl": {

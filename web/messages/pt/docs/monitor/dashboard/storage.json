@@ -70,7 +70,7 @@
     "items": [
       "<strong>Caminho do dispositivo</strong> — <code>/dev/sda</code>, <code>/dev/nvme0n1</code>.",
       "<strong>Etiqueta de tipo</strong> — SATA / NVMe e respetivo ícone.",
-      "<strong>Etiqueta de sistema</strong> — marca laranja dos discos identificados como discos do sistema operativo. A deteção usa as montagens <code>/</code> e <code>/boot</code> e atribui <em>System</em>. A ausência da etiqueta não prova que o disco possa ser apagado ou reutilizado sem risco.",
+      "<strong>Etiqueta de sistema</strong> — marca laranja dos discos usados pelo anfitrião: pontos de montagem do sistema (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), swap ativo, membros de pools ZFS, volumes físicos LVM, membros RAID ativos ou etiquetas de partições do sistema. A ausência da etiqueta não prova que o disco possa ser apagado ou reutilizado sem risco.",
       "<strong>Modelo</strong> — fabricante e modelo de <code>smartctl -i</code>.",
       "<strong>Capacidade</strong> — expressa em unidades legíveis.",
       "<strong>Temperatura</strong> — valor atual em °C, com cor conforme o tipo de disco; NVMe usa limites mais altos que SATA.",
@@ -112,7 +112,7 @@
     "pdfPreviewAlt": "Primeira página do relatório SMART com resumo executivo, indicador PASSED e informações do disco",
     "pdfPreviewCaption": "Primeira página: resumo, indicador PASSED e informações completas do disco. O PDF de exemplo inclui desgaste SSD, todos os atributos SMART e histórico de testes.",
     "pdfDownloadLabel": "Transferir relatório SMART de exemplo (PDF)",
-    "pdfSectionsIntro": "O relatório tem seis secções principais:",
+    "pdfSectionsIntro": "O relatório inclui estas secções principais:",
     "pdfSections": [
       "<strong>Resumo executivo</strong> — estado PASSED/FAILED, avaliação clara do disco — saudável, com desgaste ou a falhar — e quatro dados: data do relatório, último tipo de teste, resultado e atributos verificados.",
       "<strong>Informações do disco</strong> — modelo, série, capacidade, tipo HDD/SSD/NVMe, família, formato, interface (SATA 3.3 · 6.0 Gb/s, …), TRIM, temperatura e limite ideal, horas e ciclos de funcionamento, SMART, setores pendentes/realocados e erros CRC.",
@@ -127,7 +127,7 @@
     "historyImageCaption": "Histórico SMART do disco. Cada linha mostra tipo, data e hora, antiguidade, marca do último teste e ações de transferência da saída <code>smartctl</code> e eliminação.",
     "historyIntro": "Testes curtos e alargados concluídos e guardados para o disco. Cada entrada contém a saída original <code>smartctl</code> e os campos interpretados pelo Monitor para o painel. Ações por linha:",
     "historyItems": [
-      "<strong>Transferir</strong> — guarda a cópia JSON com os dados <code>smartctl -a</code> usados pelo relatório. Útil se o suporte pedir os campos de diagnóstico originais.",
+      "<strong>Transferir</strong> — guarda a cópia JSON desse teste (saída de <code>smartctl -a --json</code>, ou <code>nvme smart-log</code> em NVMe quando o smartctl falha). Útil se o suporte do fabricante pedir os campos de diagnóstico originais.",
       "<strong>Eliminar</strong> — remove manualmente um teste do histórico. A retenção em Agendamento (<em>últimos 5 / 10 / 20</em>) elimina automaticamente os mais antigos."
     ],
     "scheduleTitle": "Separador 4 — Agendamento",

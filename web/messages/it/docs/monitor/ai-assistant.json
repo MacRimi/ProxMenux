@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Off per impostazione predefinita, singolo interruttore per abilitare",
-    "body": "La riscrittura IA è disattivata per impostazione predefinita. Attivala in <em>Impostazioni → Notifiche → Avanzate: miglioramento IA</em>. Se il contesto aggiuntivo o la riscrittura falliscono, viene inviato il modello originale. Ogni riscrittura ha un tempo limite di 25 secondi; allo scadere si usa il modello senza attendere indefinitamente."
+    "body": "La riscrittura IA è disattivata per impostazione predefinita. Attivala in <em>Impostazioni → Notifiche → Avanzate: miglioramento IA</em>. Se il contesto aggiuntivo o la riscrittura falliscono, il processo di invio manda il modello originale. Le riscritture nella coda di invio degli eventi hanno un tempo limite di 25 secondi; allo scadere si invia il modello invece di attendere."
   },
   "howItWorks": {
     "heading": "Come funziona",
@@ -109,7 +109,7 @@
     ],
     "customNote": "La modalità con prompt personalizzato limita l’uscita a 500 token, indipendentemente dal livello di dettaglio. Il prompt è sotto il tuo controllo e il limite evita risposte eccessive.",
     "sizingTitle": "Pratico dimensionamento",
-    "sizingBody": "Stima il consumo come eventi riscritti × canali IA × token in ingresso e uscita per chiamata. Esempio: 50 eventi × un canale × (500 in ingresso + 300 in uscita) = 40.000 token al giorno. Consumi e costi dipendono da modello, contesto, cache e limiti del provider. <link>Dettaglio per canale</link> spiega come usare <code>brief</code> nelle chat invece di <code>standard</code>, mantenendo e-mail dettagliate."
+    "sizingBody": "Stima il consumo come eventi riscritti × canali con IA × token in ingresso e uscita per chiamata. Esempio: 50 eventi × un canale × (2.000 in ingresso + 300 in uscita) sono circa 115.000 token al giorno, perché il prompt di sistema predefinito da solo occupa circa 1.500 token. Consumi e costi reali dipendono da modello, contesto, cache e limiti del provider. La sezione <link>Dettaglio per canale</link> spiega come usare <code>brief</code> nelle chat invece di <code>standard</code>, mantenendo report e-mail dettagliati."
   },
   "providers": {
     "heading": "Fornitori di AI",
@@ -142,7 +142,7 @@
       "items": [
         "Chiave API: <a>console.anthropic.com/settings/keys</a>",
         "Esempi dall’elenco di modelli incluso: <code>claude-haiku-4-5-20251001</code>, <code>claude-sonnet-4-6</code>, <code>claude-opus-4-6</code>.",
-        "Raccomandazione inclusa: <strong><code>claude-haiku-4-5-20251001</code></strong>. Questa versione precisa è configurata come consigliata; le vecchie voci Claude 3.5 non sono più nella lista inclusa."
+        "Raccomandazione inclusa: <strong><code>claude-haiku-4-5-20251001</code></strong>, uno snapshot fisso anziché un alias variabile."
       ]
     },
     "gemini": {

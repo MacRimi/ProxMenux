@@ -73,13 +73,13 @@
     "intro": "The AppImage is a self-mounting filesystem. <code>AppRun</code> at the root sets up the environment and execs <code>flask_server.py</code>:",
     "consequencesIntro": "Two consequences of this layout:",
     "consequences": [
-      "<strong>Bundled Python environment.</strong> The interpreter and Python packages are shipped inside the AppImage, avoiding installation into the host’s system Python environment. The application still uses host kernel interfaces and external host tools.",
+      "<strong>Bundled Python packages.</strong> Python packages ship inside the AppImage and run on the host's own Python 3.11 (PVE 8) or 3.13 (PVE 9) interpreter, without installing anything into the host's system Python. The application still uses host kernel interfaces and external host tools.",
       "<strong>Hardware clients are bundled too.</strong> <code>ipmitool</code>, <code>lm-sensors</code> and <code>upsc</code> are included. Readings still depend on supported hardware, access to sensors and, for UPS data, a configured NUT server."
     ]
   },
   "flask": {
     "heading": "Flask app structure",
-    "intro": "<code>flask_server.py</code> creates one <code>Flask(__name__)</code> instance with restricted CORS origins, registers nine blueprints directly and initializes terminal routes. The table highlights the main modules; audit, VM-backup and PBS blueprints are also registered. PVE-specific prewarmers run only on PVE hosts.",
+    "intro": "<code>flask_server.py</code> creates one <code>Flask(__name__)</code> instance with restricted CORS origins, registers ten blueprints directly and initializes terminal routes. The table highlights the main modules; PBS, Monitor links, audit and VM-backup blueprints are also registered. PVE-specific prewarmers run only on PVE hosts.",
     "headerBlueprint": "Blueprint / module",
     "headerPrefix": "Routes prefix",
     "headerOwns": "Owns",
@@ -242,10 +242,10 @@
       "Updates: pending package upgrades and security patches.",
       "Logs: persistent / spike / cascade pattern detection in the system journal.",
       "Memory: OOM killer activity, sustained high pressure.",
-      "Temperature: CPU and disk readings checked against monitoring thresholds; available sensors depend on the hardware.",
+      "CPU: usage and CPU temperature checked against the configurable thresholds; available sensors depend on the hardware.",
       "Security: authentication failures, ban events, fail2ban jail status."
     ],
-    "afterIntro": "Findings use a stable <code>error_key</code>, category and severity. Existing records in <code>errors</code> are updated with <code>last_seen</code> and occurrence counts rather than duplicated. Notification delivery also has its own fingerprint and cooldown rules.",
+    "afterIntro": "Findings use a stable <code>error_key</code>, category and severity. Existing records in <code>errors</code> are updated in place (<code>last_seen</code>, severity, reason) rather than duplicated. Notification delivery also has its own fingerprint and cooldown rules.",
     "cycleEnd": "Cleanup can auto-resolve stale errors using category <em>Suppression Duration</em> values and state-based rules, remove orphan records for resources that were removed, and prune <code>events</code> older than 30 days. The categories and dashboard are described in <link>Dashboard → Health Monitor</link>."
   },
   "notifications": {
@@ -264,9 +264,9 @@
     "intro": "The <em>Terminal</em> tab in the dashboard is a thin <code>xterm.js</code> client wired to a server-side PTY through a WebSocket. Two transport modes:",
     "items": [
       "<strong>HTTP mode (default):</strong> the built-in Flask server with <code>flask-sock</code> handles WebSocket upgrade requests.",
-      "<strong>HTTPS / WSS mode:</strong> the TLS server uses <code>gevent.pywsgi.WSGIServer</code> with <code>geventwebsocket.handler.WebSocketHandler</code> for WebSocket connections over TLS."
+      "<strong>HTTPS / WSS mode:</strong> the TLS server uses <code>gevent.pywsgi.WSGIServer</code> with its default handler; <code>flask-sock</code> handles WebSocket connections over TLS."
     ],
-    "outro": "Terminal child processes inherit <code>User=root</code> from the service. With authentication enabled, opening a WebSocket requires a short-lived, single-use ticket obtained from the authenticated terminal-ticket endpoint with administrative scope. When authentication is disabled or declined, the handshake follows that unauthenticated mode.",
+    "outro": "Terminal child processes inherit <code>User=root</code> from the service. Opening a WebSocket requires a short-lived, single-use ticket obtained from the authenticated terminal-ticket endpoint with administrative scope.",
     "proxyNote": "If you access the Monitor through a reverse proxy, make sure WebSocket forwarding is enabled (the <code>Upgrade</code> and <code>Connection</code> headers). Without it the terminal won't work."
   },
   "proxy": {

@@ -162,7 +162,7 @@
       }
     ],
     "reportTitle": "Rapport de latence réseau (PDF)",
-    "reportIntro": "Les deux modes ont un bouton <strong>Rapport</strong> près du sélecteur de cible. Il génère un PDF des mesures que vous pouvez joindre à une demande d’assistance auprès de votre FAI.",
+    "reportIntro": "Les deux modes ont un bouton <strong>Rapport</strong> près du sélecteur de cible. Il ouvre un rapport imprimable des mesures ; enregistrez-le en PDF depuis la boîte de dialogue d’impression du navigateur et joignez-le à une demande d’assistance auprès de votre FAI.",
     "reportPreviewAlt": "Première page PDF du rapport de latence : synthèse, jauge, statistiques, graphique et guide des seuils",
     "reportPreviewCaption": "La première page contient la synthèse, la jauge, les statistiques principales, l’évolution de la latence et le guide des seuils. À partir de la page 2 figurent le tableau des mesures et la méthodologie.",
     "downloadLabel": "Télécharger un exemple de rapport de latence (PDF)",

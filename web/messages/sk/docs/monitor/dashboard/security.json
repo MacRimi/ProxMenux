@@ -136,7 +136,7 @@
     "configCaption": "Úprava jailu sshd: znížte <em>Max Retries</em>, ak SSH používate iba z vlastnej podsiete, alebo predĺžte <em>Ban Time</em> pre prehľad dostupný z internetu.",
     "outro": "Návod <em>Inštalácia, nastavenie a odinštalovanie</em> opisuje aj ručnú inštaláciu, zmenu SSH MaxAuthTries a súvislosť so záznamom <code>proxmenux-auth.log</code>. Pozrite <link>ProxMenux → Zabezpečenie → Fail2Ban</link>.",
     "calloutTitle": "Bez Fail2Ban tento mechanizmus neblokuje IP adresy",
-    "calloutBody": "ProxMenux Monitor kontroluje IP adresy blokované Fail2Ban na <em>aplikačnej úrovni</em> pred spracovaním požiadaviek Flask. Volá fail2ban-client a výsledok ukladá do vyrovnávacej pamäte na 30 sekúnd; nečíta tabuľku blokovaní SQL. Bez Fail2Ban sa neúspešné prihlásenia zapisujú do <code>proxmenux-auth.log</code>, ale tento mechanizmus IP adresy neblokuje."
+    "calloutBody": "ProxMenux Monitor kontroluje IP adresy zablokované v jail <code>proxmenux</code> nástroja Fail2Ban na <em>aplikačnej úrovni</em> pred spracovaním požiadaviek Flask a výsledok uchováva vo vyrovnávacej pamäti 30 sekúnd. Bez Fail2Ban sa neúspešné prihlásenia zapisujú do <code>proxmenux-auth.log</code> a koncový bod prihlásenia je obmedzený na 5 pokusov z jednej IP za 5 minút, ale žiadna IP adresa sa nezablokuje."
   },
   "lynis": {
     "heading": "Bezpečnostný audit Lynis",

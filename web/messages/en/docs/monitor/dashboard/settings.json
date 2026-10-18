@@ -76,7 +76,7 @@
   },
   "thresholds": {
     "heading": "Health Monitor Thresholds",
-    "intro": "The previous card sets <em>how long to stay quiet after a dismiss</em>; this one sets <strong>the value at which an alert is raised</strong>. Most threshold-based checks have adjustable <strong>Warning</strong> and <strong>Critical</strong> values. The table below explains exceptions such as the combined swap rule and the current RAM detector.",
+    "intro": "The previous card sets <em>how long to stay quiet after a dismiss</em>; this one sets <strong>the value at which an alert is raised</strong>. Most threshold-based checks have adjustable <strong>Warning</strong> and <strong>Critical</strong> values. The table below explains exceptions such as the combined swap rule.",
     "whatForTitle": "What it is for",
     "whatForIntro": "Defaults that ship with ProxMenux are sane for the average Proxmox host, but every environment has its own envelope:",
     "whatForItems": [
@@ -85,7 +85,7 @@
       "Choose drive-temperature thresholds using the drive’s specifications and observed operating conditions. Passive versus forced-air cooling alone does not determine a universally lower or higher safe limit.",
       "A heavily-virtualized host that pegs CPU during builds should not page on every 80 % spike, but must still alert on sustained pressure."
     ],
-    "whatForOutro": "Supported threshold changes take effect <strong>on the next scan</strong>. The Health Monitor reads <code>/usr/local/share/proxmenux/health_thresholds.json</code> each cycle without a restart. Selected widgets, including disk temperature, use these values; some capacity bars retain separate visual cutoffs. See the RAM row below for a current runtime exception.",
+    "whatForOutro": "Supported threshold changes take effect <strong>on the next scan</strong>. The Health Monitor reads <code>/usr/local/share/proxmenux/health_thresholds.json</code> each cycle without a restart. Selected widgets, including disk temperature, use these values; some capacity bars retain separate visual cutoffs.",
     "coloursTitle": "Status colours: how Warning and Critical render in the dashboard",
     "coloursIntro": "Widgets that use the configured Warning/Critical pair follow the three-state classification below. Some visual indicators, including the PVE storage capacity bars, use their own cutoffs; do not infer a Health Monitor alert solely from their colour.",
     "headerColour": "Colour",
@@ -125,7 +125,7 @@
         "section": "Memory",
         "warning": "85 %",
         "critical": "95 %",
-        "gates": "Host RAM pressure. The configurable Critical default shown here is 95 %, but the current detector uses a hard-coded 90 % sustained RAM rule; changing that setting does not currently change this runtime branch."
+        "gates": "Host RAM pressure."
       },
       {
         "section": "Swap (critical only)",
@@ -185,7 +185,7 @@
         "section": "PVE storage",
         "warning": "85 %",
         "critical": "95 %",
-        "gates": "PVE-managed storages, including LVM, LVM-thin, ZFS-pool, RBD/Ceph and PBS. These are not all block-storage backends."
+        "gates": "Only PVE storages of type LVM, LVM-thin, ZFS-pool, RBD, CephFS and PBS. Directory, NFS and CIFS storages are covered by the host disk-space row."
       },
       {
         "section": "ZFS pool",
@@ -218,7 +218,7 @@
     "toggleTitle": "Conditional notification toggle",
     "toggleBody": "The <code>lxc_updates_available</code> per-channel notification toggle in <strong>Notifications → Services</strong> only renders while detection is enabled. When you turn detection OFF, that row disappears from every channel's category list — but its stored preference is preserved in the DB, so re-enabling detection brings the toggle back at the value it had before.",
     "purgeTitle": "What gets purged when you disable detection",
-    "purgeBody": "Turning the switch OFF immediately removes every <code>type=lxc</code> entry from <code>/usr/local/share/proxmenux/managed_installs.json</code>. LXC update counts on the Hardware tab clear on the next dashboard refresh. Turning it back ON repopulates the registry on the next detection cycle, or sooner with a manual API refresh."
+    "purgeBody": "Turning the switch OFF immediately removes every <code>type=lxc</code> entry from <code>/usr/local/share/proxmenux/managed_installs.json</code>. LXC update counts in the VMs & LXCs tab clear on the next dashboard refresh. Turning it back ON repopulates the registry on the next detection cycle, or sooner with a manual API refresh."
   },
   "storageExclusions": {
     "heading": "Remote Storage Exclusions",

@@ -1,16 +1,16 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Painel: VM e LXC | Documentação ProxMenux",
-    "description": "Inventário dos sistemas convidados com CPU, memória e disco em direto. Os detalhes mostram configuração, recursos, cópias de segurança, resultados recentes do registo Proxmox, notas e Iniciar / Desligar / Reiniciar / Forçar paragem."
+    "description": "O separador VMs e LXCs inventaria todos os sistemas convidados do anfitrião com utilização de CPU, memória e disco em direto. Os detalhes de cada um mostram configuração, recursos, cópias de segurança, o registo de consola dos contentores OCI, notas e Iniciar / Desligar / Reiniciar / Forçar paragem."
   },
   "header": {
     "title": "Painel: VM e LXC",
-    "description": "Inventário completo dos sistemas convidados: quatro métricas no topo, lista ordenável de VM e LXC e detalhes com configuração, recursos, cópias de segurança, registos e controlos Iniciar / Desligar / Reiniciar / Forçar paragem.",
+    "description": "Inventário completo dos sistemas convidados do nó: quatro métricas no topo, lista ordenável de cada VM e LXC por baixo e detalhes com configuração, recursos, cópias de segurança, o registo de consola dos contentores OCI e os quatro controlos de ciclo de vida (Iniciar / Desligar / Reiniciar / Forçar paragem).",
     "section": "ProxMenux Monitor · Painel"
   },
   "intro": {
     "title": "Controlos dos sistemas convidados",
-    "body": "Este separador controla o ciclo de vida dos sistemas convidados. As ações passam por <code>POST /api/vms/&lt;vmid&gt;/control</code> com confirmação explícita e atualizam a linha do sistema. O desligamento forçado exige o botão específico Forçar paragem."
+    "body": "Este separador controla o ciclo de vida dos sistemas convidados. As ações de ciclo de vida passam por <code>POST /api/vms/&lt;vmid&gt;/control</code>; Reiniciar e Forçar paragem pedem que escreva o VMID para confirmar, e a resposta reflete-se na linha do sistema. O desligamento forçado exige o botão específico Forçar paragem."
   },
   "topRow": {
     "heading": "Linha superior: quatro cartas estatísticas",
@@ -186,9 +186,9 @@
         "source": "Dados PVE RRD (<code>pvesh get /nodes/&lt;node&gt;/qemu/&lt;id&gt;/rrddata</code>) condensados a uma forma amigável a gráficos."
       },
       {
-        "section": "Resultados recentes do registo Proxmox",
-        "endpoint": "/api/vms/<vmid>/logs",
-        "source": "<code>pvesh get /nodes/&lt;node&gt;/&lt;qemu|lxc&gt;/&lt;vmid&gt;/log --start 0 --limit 1000</code>. Uma falha devolve uma lista vazia; não fornece todos os registos internos do sistema convidado."
+        "section": "Registo de consola OCI (separador Logs)",
+        "endpoint": "/api/lxc/<vmid>/console-log",
+        "source": "Saída de consola do processo principal da imagem, lida de <code>/var/log/proxmenux/oci/&lt;vmid&gt;.console.log</code> no anfitrião. Mostrado apenas para contentores OCI."
       },
       {
         "section": "Backups disponíveis para hóspedes",

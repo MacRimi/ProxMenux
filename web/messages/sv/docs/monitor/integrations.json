@@ -220,7 +220,7 @@
     "heading": "n8n, Zapier och anpassade skript",
     "intro": "Arbetsflöden och skript kan <em>skicka</em> aviseringar med POST till <code>/api/notifications/send</code>, exempelvis vid CI-fel eller långa cronjobb. Direktsändning kringgår händelsekö och spärrtid per händelseavtryck. Kanalformatering, valfri AI och leverans finns kvar. Hantera eventuella dubbletter i anroparen.",
     "n8nBody": "Använd en <em>HTTP Request</em>-nod i n8n med POST, URL ovan och samma JSON som curl. Välj generiska Header Auth-uppgifter: namn <em>Authorization</em> och värde <code>Bearer YOUR_API_TOKEN</code>, och ersätt platshållaren. Anslut ett schema, en webhook eller en föregående nod som utlösare.",
-    "severityBody": "Allvarlighetsgrad anges som <code>INFO</code>, <code>WARNING</code> eller <code>CRITICAL</code> med versaler. Objektet <code>data</code> ger sammanhang. AI använder renderad titel och text samt stödd berikning; godtyckliga fält ingår inte säkert i prompt eller resultat. Se <link>Aviseringar → Händelsekatalog</link>."
+    "severityBody": "Allvarlighetsgrad anges som <code>INFO</code>, <code>WARNING</code> eller <code>CRITICAL</code> med versaler. Objektet <code>data</code> ger händelsekontext och mallfält. På denna slutpunkt får AI-omskrivningen bara titel och text; fält i <code>data</code> skickas inte till leverantören. Se <link>Aviseringar → Händelsekatalog</link> för händelsernas betydelse."
   },
   "pveWebhook": {
     "heading": "Inbyggd Proxmox VE-webhook (inkommande)",

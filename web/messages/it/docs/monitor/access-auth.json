@@ -19,7 +19,7 @@
   "reaching": {
     "heading": "Raggiungere la dashboard",
     "intro": "ProxMenux Monitor si lega a <code>0.0.0.0:8008</code>. Ci sono tre modi comuni per raggiungerlo:",
-    "outro": "L’accesso diretto corrisponde all’unità systemd predefinita. Proxy inverso e Secure Gateway sono descritti più avanti. Per usare l’IP in <code>X-Forwarded-For</code> servono PROXMENUX_TRUST_PROXY=1 e un proxy sotto il tuo controllo. <code>X-Forwarded-Proto</code> o <code>X-Forwarded-Host</code> da soli non attivano tale fiducia; il frontend costruisce gli URL API dall’origine del browser."
+    "outro": "L’accesso diretto corrisponde all’unità systemd predefinita. Proxy inverso e Secure Gateway sono descritti più avanti. Per fidarsi degli IP client in <code>X-Forwarded-For</code> servono PROXMENUX_TRUST_PROXY=1 e un proxy sotto il tuo controllo. La sola presenza di <code>X-Forwarded-Proto</code> o <code>X-Forwarded-Host</code> non attiva la fiducia nel proxy. Sulle porte 80/443 il frontend usa URL <code>/api/*</code> relativi; su qualsiasi altra porta chiama la porta 8008 sullo stesso nome host."
   },
   "firstLaunch": {
     "heading": "Procedura al primo avvio",
@@ -117,8 +117,8 @@
     "loginImageCaption": "Dopo la configurazione, l’accesso inizia da questa schermata. Con 2FA viene richiesto il codice a sei cifre dopo l’accettazione della password.",
     "loginFlowTitle": "Flusso di accesso",
     "twofaIntro": "Con 2FA, la prima chiamata restituisce <code>requires_totp: true</code>. Ripetila con il codice a sei cifre:",
-    "publicTitle": "Accesso pubblico e controlli protetti",
-    "publicIntro": "Accesso e stato dell’autenticazione sono pubblici. La creazione dell’account è possibile finché non sono salvati nome e password, anche dopo aver rifiutato la protezione. I dati di sistema richiedono autenticazione quando la protezione è attiva:",
+    "publicTitle": "Endpoint pubblici (senza token)",
+    "publicIntro": "Accesso, stato dell’autenticazione, configurazione iniziale e l’endpoint leggero <code>/api/system-info</code> sono pubblici:",
     "publicItems": [
       "<code>/api/auth/login</code> e <code>/api/auth/status</code> sono pubblici. <code>/api/auth/setup</code> crea il primo account e rifiuta di sovrascrivere credenziali esistenti.",
       "<code>/api/system-info</code> è un endpoint pubblico con informazioni di base sul sistema, incluso <code>health.status</code>. Non richiede un token. Anche /api/auth/status è pubblico e consente di verificare la raggiungibilità."
@@ -146,7 +146,7 @@
       },
       {
         "asset": "Segreto TOTP della 2FA",
-        "algorithm": "TOTP standard (RFC 6238), con segreto in base32. Gli otto codici di recupero sono monouso e vengono salvati come hash SHA-256.",
+        "algorithm": "TOTP standard (RFC 6238), con segreto in base32. Gli otto codici di backup sono monouso e vengono salvati come hash SHA-256.",
         "where": "<code>auth.json</code> → <code>totp_secret</code> + <code>backup_codes[]</code>"
       },
       {
@@ -243,17 +243,17 @@
       }
     ],
     "backupTitle": "Perché servono i backup",
-    "backupBody": "Se perdi il dispositivo, usa un codice di recupero salvato oppure ripristina un backup configurato in precedenza. Sincronizzazione cloud ed esportazioni variano per app: verifica che ripristinino davvero i segreti TOTP. L’accesso root all’host permette anche il recupero descritto sotto. Conserva una copia separata e sicura.",
+    "backupBody": "Se perdi il dispositivo di autenticazione, usa un codice di backup salvato oppure ripristina l’app da un backup configurato in precedenza. Sincronizzazione cloud ed esportazioni locali variano per app: verifica che il metodo scelto ripristini davvero i segreti TOTP. L’accesso root all’host permette anche il recupero descritto sotto. Conserva un backup separato e sicuro.",
     "setupTitle": "Impostazione passo passo dal cruscotto",
     "setupImageAlt": "Schermo di configurazione 2FA con codice QR e codici di backup",
-    "setupImageCaption": "La finestra 2FA mostra QR, segreto Base32 per inserimento manuale e otto codici di recupero monouso. Copiali prima di chiudere: non saranno mostrati di nuovo.",
+    "setupImageCaption": "La finestra di configurazione 2FA mostra un QR, un segreto Base32 per l’inserimento manuale e, dopo la verifica, otto codici di backup monouso. Copia i codici prima di chiudere la finestra: non saranno mostrati di nuovo.",
     "setupSteps": [
       "<strong>Installa l’app di autenticazione sul telefono</strong> o apri il gestore di password. Basta farlo una volta: la stessa app può conservare i codici di tutti i servizi protetti.",
       "<strong>Accedi alla dashboard</strong> con nome utente e password.",
-      "<strong>Apri la scheda Sicurezza</strong> e scegli <strong>Abilita 2FA</strong>. Il dialogo mostra QR, segreto Base32 e otto codici di recupero.",
+      "<strong>Apri la scheda Sicurezza</strong> nella barra laterale della dashboard, poi fai clic su <strong>Abilita 2FA</strong> e <strong>Avvia la configurazione</strong>. Il dialogo mostra il QR e la chiave manuale; gli otto codici di backup compaiono dopo la verifica del codice.",
       "<strong>Aggiungi la voce all’app di autenticazione:</strong>",
-      "<strong>Salva i codici di recupero.</strong> Conserva tutti e otto in un gestore di password, nota cifrata o copia cartacea sicura. Ciascuno funziona una volta se l’app non è disponibile.",
-      "<strong>Conferma inserendo il codice attuale a sei cifre</strong> dell’app nel campo \"Codice di verifica\" e invia. Cambia ogni 30 secondi: se scade mentre lo scrivi, usa il successivo.",
+      "<strong>Conferma inserendo il codice attuale a sei cifre</strong> dell’app nel campo \"Codice di verifica\" della finestra di configurazione e invia. Cambia ogni 30 secondi: se scade mentre lo scrivi, usa il successivo.",
+      "<strong>Salva i codici di backup.</strong> Dopo la verifica, conserva tutti e otto in modo sicuro in un gestore di password, nota cifrata o copia cartacea sicura. Ciascuno funziona una volta se l’app di autenticazione non è disponibile.",
       "<strong>Fatto.</strong> 2FA è attivo. Al prossimo accesso verrà richiesta prima la password, poi il codice attuale a sei cifre."
     ],
     "setupStep4Sub": [
@@ -261,17 +261,17 @@
       "<em>Alternativa manuale</em> se non puoi scansionare, ad esempio sullo stesso telefono: <em>Aggiungi account</em> → <em>Inserisci chiave di configurazione</em>. Scegli un nome come <em>Proxmox Monitor</em>, incolla il segreto Base32, lascia <em>Tipo</em> su <em>Basato sul tempo</em> e salva."
     ],
     "testTitle": "Prova prima di uscire",
-    "testBody": "Mantieni la sessione attuale aperta e prova un nuovo accesso in una finestra privata <em>subito</em> dopo la configurazione. Se il codice fallisce, controlla gli orologi di server e telefono prima di chiudere la sessione valida. Se hai già perso l’accesso, usa un codice di recupero o modifica <code>auth.json</code> dalla shell dell’host.",
+    "testBody": "Mantieni la sessione attuale aperta e prova un nuovo accesso in una finestra privata <em>subito</em> dopo la configurazione. Se il codice viene rifiutato, controlla gli orologi di server e telefono prima di uscire dalla sessione valida. Se hai già perso l’accesso, usa un codice di backup o modifica <code>auth.json</code> dalla shell dell’host.",
     "lostTitle": "Autenticatore perso",
     "lostIntro": "Tre metodi di recupero, dal meno al più invasivo:",
     "lostItems": [
-      "<strong>Usa un codice di recupero.</strong> Inserisci uno degli otto nel campo TOTP. Funziona una volta; gli altri restano validi. Dopo l’accesso, riconfigura 2FA dalle impostazioni per ottenere otto nuovi codici.",
+      "<strong>Usa un codice di backup.</strong> Inserisci uno degli otto codici salvati nel campo TOTP. Funziona una volta; i codici non usati restano validi. Dopo l’accesso apri Sicurezza, scegli <strong>Disattiva 2FA</strong> e poi <strong>Abilita 2FA</strong> per ottenere otto nuovi codici.",
       "<strong>Ripristina l’app da cloud o backup.</strong> Con sincronizzazione configurata, installala sul nuovo dispositivo e accedi: Google, Microsoft, Authy, Apple Passwords tramite Portachiavi iCloud, Ente o 2FAS. Con un file esportato da Aegis, Raivo o FreeOTP+, installa l’app e importa il file.",
       "<strong>Disattiva 2FA dalla shell dell’host.</strong> Se gli altri metodi non sono disponibili, modifica <code>/root/.config/proxmenux-monitor/auth.json</code> come root via SSH o console, imposta <code>totp_enabled</code> su <code>false</code>, salva e riavvia il servizio:"
     ],
     "lostShellOutro": "È possibile accedere solo con nome utente + password, quindi abilitare 2FA da Impostazioni.",
     "disableTitle": "Disabilita 2FA",
-    "disableBody": "Apri <strong>Sicurezza</strong> e scegli <strong>Disattiva 2FA</strong>. <code>POST /api/auth/totp/disable</code> richiede password attuale e codice TOTP o di recupero valido. Elimina segreto TOTP e codici di recupero. Rimuovi la vecchia voce anche dall’app.",
+    "disableBody": "Apri <strong>Sicurezza</strong> e scegli <strong>Disattiva 2FA</strong>. <code>POST /api/auth/totp/disable</code> richiede la password attuale e un codice TOTP o di backup valido. Elimina il segreto TOTP e i codici di backup. Rimuovi la vecchia voce anche dall’app di autenticazione.",
     "rejectedTitle": "Il codice a sei cifre viene sempre rifiutato",
     "rejectedIntro": "TOTP dipende dall’ora: gli orologi di server e telefono devono differire di meno di circa 30 s. Due controlli:",
     "rejectedItems": [

@@ -171,7 +171,7 @@
       "Öffnen Sie <a>account.microsoft.com/security</a> und ermöglichen Sie eine zweistufige Verifizierung.",
       "Falls angeboten, unter <em>Erweiterte Sicherheitsoptionen</em> → <em>App-Passwörter</em> die Option <em>Neues App-Passwort erstellen</em> wählen. Das garantiert keine Unterstützung für SMTP mit Passwort.",
       "Falls ein App-Passwort erzeugt wird, kopieren und die SMTP-Zulässigkeit prüfen.",
-      "Nur bei erlaubtem Passwort-SMTP die genehmigten Werte eintragen: <em>Host</em> <code>smtp.office365.com</code> für Exchange Online, <em>Port</em> <code>587</code>, <em>TLS-Modus</em> <code>STARTTLS</code>, <em>Benutzername</em> die Mailadresse und <em>Passwort</em> die erlaubte SMTP-Zugangsinformation. Persönliches Outlook.com hat andere Einstellungen und Anforderungen."
+      "Nur wenn Ihr Anbieter Passwort-SMTP erlaubt, die genehmigten Werte eintragen: <em>SMTP-Host</em> <code>smtp.office365.com</code> für Exchange Online, <em>Port</em> <code>587</code>, <em>TLS-Modus</em> <code>STARTTLS</code>, <em>Benutzername</em> Ihre Postfachadresse und <em>Passwort</em> die erlaubte SMTP-Zugangsinformation. Persönliches Outlook.com hat andere Einstellungen und Authentifizierungsanforderungen; gehen Sie nicht davon aus, dass diese Zugangsdaten funktionieren."
     ],
     "relayTitle": "Selbst gehostetes SMTP-Relay",
     "relayBody": "Den Monitor auf ein eigenes SMTP-Relay wie Postfix richten. Das Relay authentifiziert sich beim Anbieter. Authentifizierung und TLS des Monitors müssen zum Relay passen; ein lokales Relay deaktiviert die Verschlüsselung nicht automatisch."
@@ -266,7 +266,7 @@
     "howItems": [
       "<strong>Je Kanal aktivieren.</strong> Standardmäßig aus. Nur gewünschte Kanäle zusammenfassen; andere weiter direkt beliefern.",
       "<strong>Zustellzeit</strong> in lokaler Zeitzone, standardmäßig 09:00. Der Versand erfolgt etwa innerhalb von 60 s um diese Minute.",
-      "<strong>Enthalten:</strong> geeignete allgemeine Ereignisse mit Schwere <strong>INFO</strong>, etwa <em>App-Update verfügbar</em>, <em>Tailscale-Update verfügbar</em>, <em>ProxMenux-Optimierungsupdate verfügbar</em>, <em>APT-Sicherheitsupdates ausstehend</em> oder <em>Meldung zur Versandbegrenzung</em>. Sicherungsergebnisse und ausgenommene Aktionen bleiben direkt.",
+      "<strong>In der Zusammenfassung enthalten:</strong> geeignete allgemeine Ereignisse mit Schwere <strong>INFO</strong>. Beispiele sind <em>App-Update verfügbar</em>, <em>Tailscale-Update verfügbar</em>, <em>ProxMenux-Optimierungsupdate verfügbar</em> und <em>APT-Sicherheitsupdates ausstehend</em>. Sicherungsergebnisse und andere ausgenommene Aktionsereignisse bleiben direkt.",
       "<strong>Was ist nie verzögert:</strong>",
       "<strong>Dauerhafte Speicherung.</strong> Ausstehende Ereignisse bleiben bis zur Zustellzeit in <code>digest_pending</code> in SQLite und überstehen Neustarts.",
       "<strong>Leere Tage sind still.</strong> Wenn nichts INFO-Level passiert ist, wird kein Digest gesendet - der Kanal bleibt ruhig, anstatt eine Nachricht \"keine Ereignisse zu melden\" zu erhalten."
@@ -301,7 +301,7 @@
       {
         "stage": "Wartezeit für Wiederholungen",
         "what": "Nach erfolgreichem Versand werden Wiederholungen unterdrückt; der Zustand steht in <code>notification_last_sent</code>. Basiswerte für <code>CRITICAL</code>, <code>WARNING</code>, <code>INFO</code>, <code>resources</code> und <code>updates</code>: 86400 s. Ausnahmen: 5 s für VM/CT-Aktionen und Host-Neustart/Abschaltung, 10 s für Sicherungs-/Replikationsergebnisse, 1800–3600 s für mehrere Gesundheitskategorien. Explizite Ereignis-/Gruppeneinstellungen haben Vorrang.",
-        "tunable": "Ja — ausdrückliche Konfigurationswerte je Ereignis oder Gruppe überschreiben die Vorgaben."
+        "tunable": "Nur über die Einstellungs-API — ein Schlüssel <code>cooldown.&lt;event_type&gt;</code> oder <code>cooldown.&lt;group&gt;</code> überschreibt die Vorgaben; in der Oberfläche gibt es dafür kein Steuerelement."
       },
       {
         "stage": "Zusammenfassung von Ereignisspitzen",
@@ -330,7 +330,7 @@
       "<strong>Methode und URL.</strong> <code>POST http://127.0.0.1:8008/api/notifications/webhook</code> ohne Monitor-HTTPS; mit HTTPS der gesonderte lokale HTTP-Port 8009. Beide bleiben auf demselben Host.",
       "<strong>Nachrichtenvorlage.</strong> JSON mit nativen Handlebars-Helfern von PVE, in der Konfiguration als Base64 gespeichert. Dekodiert ergibt es:",
       "<strong>Matcher.</strong> Ein Begleiter <code>matcher: proxmenux-matcher</code> Block mit <code>mode all</code>, so dass jede PVE-Benachrichtigung das Ziel erreicht.",
-      "<strong>Private Konfiguration.</strong> Einrichtung schreibt <code>webhook: proxmenux-webhook</code> in <code>/etc/pve/priv/notifications.cfg</code>, einschließlich Base64-kodiertem gemeinsamem Geheimnis. Das öffentliche Ziel nutzt es für X-Webhook-Secret. Der Block ist nicht leer."
+      "<strong>Private Konfiguration.</strong> Die Einrichtung schreibt den passenden Block <code>webhook: proxmenux-webhook</code> in <code>/etc/pve/priv/notifications.cfg</code> mit einem Base64-kodierten <code>secret</code>-Eintrag namens X-Webhook-Secret. Der öffentliche Zielblock enthält nur Body-Vorlage, Methode und URL. Der private Block ist kein leerer Platzhalter."
     ],
     "securityTitle": "Wie der Empfänger gesichert ist",
     "securityIntro": "Der webhook-Empfänger bei <code>POST /api/notifications/webhook</code> verwendet verschiedene Sicherheitsschichten, je nachdem, woher die Anforderung stammt:",

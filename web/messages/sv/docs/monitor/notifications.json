@@ -171,7 +171,7 @@
       "Öppna <a>account.microsoft.com/security</a> och aktivera tvåstegsverifiering.",
       "Om kontot erbjuder <em>Avancerade säkerhetsalternativ</em> → <em>Applösenord</em>, välj <em>Skapa ett nytt applösenord</em>. Det garanterar inte att e-posttjänsten godtar SMTP med lösenord.",
       "Om Microsoft skapar ett applösenord, kopiera det och kontrollera att SMTP-tjänsten godtar det.",
-      "Använd bara dessa godkända inställningar om tjänsten tillåter SMTP med lösenord: <em>Server</em> <code>smtp.office365.com</code> för Exchange Online, <em>Port</em> <code>587</code>, <em>TLS-läge</em> <code>STARTTLS</code>, <em>Användarnamn</em> din e-postadress och <em>Lösenord</em> den tillåtna SMTP-inloggningsuppgiften. Personliga Outlook.com-konton har andra inställningar och krav."
+      "Fyll bara i tjänstens godkända inställningar om den tillåter SMTP med lösenord: <em>SMTP-värd</em> <code>smtp.office365.com</code> för Exchange Online, <em>Port</em> <code>587</code>, <em>TLS-läge</em> <code>STARTTLS</code>, <em>Användarnamn</em> din postlådeadress och <em>Lösenord</em> den tillåtna SMTP-inloggningsuppgiften. Personliga Outlook.com-konton har andra inställningar och autentiseringskrav; utgå inte från att dessa uppgifter fungerar."
     ],
     "relayTitle": "Eget SMTP-relä",
     "relayBody": "Anslut Monitor till ett SMTP-relä du kontrollerar, till exempel Postfix. Reläet hanterar tjänstens autentisering. Anpassa Monitors autentisering och TLS-läge till reläet; att det körs lokalt stänger inte av kryptering."
@@ -266,7 +266,7 @@
     "howItems": [
       "<strong>Aktiveras per kanal.</strong> Avstängt som standard. Aktivera sammanfattning på önskade kanaler och behåll direktleverans på andra.",
       "<strong>Leveranstid</strong> i lokal tidszon, som standard 09:00. Du kan välja en annan tid; sammanfattningen skickas inom ungefär 60 sekunder från den minuten.",
-      "<strong>Ingår i sammanfattningen:</strong> lämpliga allmänna händelser med nivån <strong>INFO</strong>. Exempel: <em>programuppdatering tillgänglig</em>, <em>Tailscale-uppdatering tillgänglig</em>, <em>ProxMenux-optimeringsuppdatering tillgänglig</em>, <em>APT-säkerhetsuppdateringar väntar</em> och <em>frekvensgräns nådd</em>. Säkerhetskopieringsresultat och andra undantagna åtgärdshändelser skickas direkt.",
+      "<strong>Ingår i sammanfattningen:</strong> lämpliga allmänna händelser med nivån <strong>INFO</strong>. Exempel: <em>programuppdatering tillgänglig</em>, <em>Tailscale-uppdatering tillgänglig</em>, <em>ProxMenux-optimeringsuppdatering tillgänglig</em> och <em>APT-säkerhetsuppdateringar väntar</em>. Säkerhetskopieringsresultat och andra undantagna åtgärdshändelser skickas direkt.",
       "<strong>Fördröjs aldrig av den dagliga sammanfattningen:</strong>",
       "<strong>Beständig lagring.</strong> Väntande händelser sparas i SQLite-tabellen <code>digest_pending</code> till vald tid. En omstart av Monitor förlorar inte innehållet.",
       "<strong>Tyst när inget har hänt.</strong> Om inga INFO-händelser väntar skickas ingen sammanfattning."
@@ -301,7 +301,7 @@
       {
         "stage": "Väntetid mellan upprepningar",
         "what": "Efter lyckad leverans undertrycks samma fingeravtryck och tillståndet sparas i <code>notification_last_sent</code>. Grundvärden för <code>CRITICAL</code>, <code>WARNING</code> och <code>INFO</code> är 86 400 s, liksom för <code>resources</code> och <code>updates</code>. Undantag: 5 s för VM/CT-åtgärder och värdens avstängning/omstart, 10 s för säkerhetskopierings-/replikeringsresultat och 1 800–3 600 s för flera hälsokategorier. Egna händelse- eller gruppinställningar kan ersätta värdena.",
-        "tunable": "Ja — uttryckliga väntetider för händelsetyp eller grupp ersätter standardvärdena i sändningskonfigurationen."
+        "tunable": "Endast via inställnings-API:t — en nyckel <code>cooldown.&lt;event_type&gt;</code> eller <code>cooldown.&lt;group&gt;</code> ersätter standardvärdena; det finns ingen kontroll i gränssnittet."
       },
       {
         "stage": "Gruppering av händelsetoppar",
@@ -330,7 +330,7 @@
       "<strong>Metod och URL.</strong> <code>POST http://127.0.0.1:8008/api/notifications/webhook</code> när HTTPS är avstängt i Monitor. Med HTTPS används en separat lokal HTTP-mottagare på port 8009. Båda finns på samma värd.",
       "<strong>Meddelandemall.</strong> JSON med PVE:s Handlebars-funktioner. PVE sparar mallen base64-kodad i konfigurationen. Avkodad blir den:",
       "<strong>Matchare.</strong> Ett tillhörande <code>matcher: proxmenux-matcher</code>-block med <code>mode all</code> skickar alla PVE-aviseringar till målet.",
-      "<strong>Privat konfiguration.</strong> Installationen skriver blocket <code>webhook: proxmenux-webhook</code> i <code>/etc/pve/priv/notifications.cfg</code>, med den delade hemligheten base64-kodad. Det offentliga målet hänvisar till hemligheten för att skicka X-Webhook-Secret. Blocket är alltså inte tomt."
+      "<strong>Privat konfiguration.</strong> Installationen skriver det matchande blocket <code>webhook: proxmenux-webhook</code> i <code>/etc/pve/priv/notifications.cfg</code> med en <code>secret</code>-post som heter X-Webhook-Secret, base64-kodad. Det offentliga målblocket innehåller bara body-mallen, metoden och URL:en. Det privata blocket är ingen tom stub."
     ],
     "securityTitle": "Så skyddas mottagaren",
     "securityIntro": "Webhookmottagaren på <code>POST /api/notifications/webhook</code> tillämpar olika säkerhetskontroller beroende på anropets källa:",

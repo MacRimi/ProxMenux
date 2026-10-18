@@ -52,7 +52,7 @@
       },
       {
         "name": "Terminal",
-        "description": "Shell del host y acceso a consolas VM/CT compatibles en el navegador mediante <code>xterm.js</code> y WebSockets. Sigue el modo de autenticación configurado: si está desactivada o rechazada, los clientes con acceso de red pueden abrir sesiones sin iniciar sesión. No implica auditoría de cada comando."
+        "description": "Shell del host y acceso a consolas VM/CT compatibles en el navegador mediante <code>xterm.js</code> y WebSockets. Las sesiones no se auditan comando a comando."
       },
       {
         "name": "Seguridad",
@@ -114,7 +114,7 @@
     "heading": "API REST e integraciones",
     "intro": "Los endpoints REST ofrecen datos de monitorización JSON por HTTP/HTTPS para widgets Homepage, sensores Home Assistant, pruebas Uptime Kuma y scripts. Grafana puede usar el exportador de texto Prometheus en <code>/api/prometheus</code>. Las peticiones se pueden hacer con <code>curl</code>.",
     "tokens": "Los tokens API de larga duración (365 días) se generan en <strong>Configuración → Tokens de acceso API</strong> o mediante <code>POST /api/auth/generate-api-token</code>.",
-    "bearer": "Envía tokens con <code>Authorization: Bearer …</code>. El endpoint público <code>/api/health</code> permite pruebas de disponibilidad sin credenciales. Bajo <code>/api/auth/*</code> hay rutas públicas de configuración/inicio/estado y rutas protegidas de cuentas y tokens; no todas son anónimas.",
+    "bearer": "Envía tokens con <code>Authorization: Bearer …</code>. <code>/api/health</code> también espera la cabecera Bearer, así que las pruebas de disponibilidad necesitan un token read_only. Bajo <code>/api/auth/*</code> hay rutas públicas de configuración/inicio/estado y rutas protegidas de cuentas y tokens; no todas son anónimas.",
     "catalog": "El catálogo de endpoints, rotación de tokens y prácticas de seguridad están en <linkApi>Referencia de la API</linkApi>. Los ejemplos para Homepage, Home Assistant, Grafana, Uptime Kuma y cURL están en <linkIntegrations>Integraciones</linkIntegrations>."
   },
   "serviceControl": {

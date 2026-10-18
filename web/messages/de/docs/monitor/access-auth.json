@@ -19,7 +19,7 @@
   "reaching": {
     "heading": "Dashboard öffnen",
     "intro": "ProxMenux Monitor lauscht auf <code>0.0.0.0:8008</code>. Drei übliche Zugriffswege:",
-    "outro": "Direktzugriff entspricht der Standard-systemd-Unit. Reverse-Proxy und Secure Gateway werden unten beschrieben. Client-IPs aus <code>X-Forwarded-For</code> werden nur mit PROXMENUX_TRUST_PROXY=1 und einem von Ihnen kontrollierten Proxy verwendet. <code>X-Forwarded-Proto</code> oder <code>X-Forwarded-Host</code> allein aktivieren dieses Vertrauen nicht; das Frontend erstellt API-URLs aus dem Ursprung des Browsers."
+    "outro": "Direktzugriff entspricht der Standard-systemd-Unit. Reverse-Proxy und Secure Gateway werden unten beschrieben. Das Vertrauen in Client-IPs aus <code>X-Forwarded-For</code> erfordert PROXMENUX_TRUST_PROXY=1 und einen von Ihnen kontrollierten Proxy. <code>X-Forwarded-Proto</code> oder <code>X-Forwarded-Host</code> allein aktivieren das Proxy-Vertrauen nicht. Auf den Ports 80/443 verwendet das Frontend relative <code>/api/*</code>-URLs; auf jedem anderen Port ruft es Port 8008 unter demselben Hostnamen auf."
   },
   "firstLaunch": {
     "heading": "Ablauf beim ersten Start",
@@ -117,8 +117,8 @@
     "loginImageCaption": "Sobald die Authentifizierung konfiguriert ist, beginnt hier jeder Besuch des Dashboards. Wenn 2FA aktiviert ist, fragt der Bildschirm in einem zweiten Schritt nach dem akzeptierten Passwort nach dem 6-stelligen Code.",
     "loginFlowTitle": "Loginfluss",
     "twofaIntro": "Mit 2FA antwortet derselbe Aufruf zunächst mit <code>requires_totp: true</code>. Senden Sie ihn erneut mit dem sechsstelligen Code:",
-    "publicTitle": "Öffentlicher Zugriff und geschützte Prüfungen",
-    "publicIntro": "Anmeldung und Authentifizierungsstatus sind öffentlich. Die Ersteinrichtung ist möglich, solange Benutzername und Passwort fehlen, auch nach abgelehntem Schutz. Systemdaten benötigen bei aktiviertem Schutz eine Authentifizierung:",
+    "publicTitle": "Öffentliche Endpunkte (ohne Token)",
+    "publicIntro": "Anmeldung, Authentifizierungsstatus, Ersteinrichtung und der leichte Endpunkt <code>/api/system-info</code> sind öffentlich:",
     "publicItems": [
       "<code>/api/auth/login</code> und <code>/api/auth/status</code> sind öffentlich. <code>/api/auth/setup</code> erstellt das erste Konto und lehnt das Überschreiben vorhandener Zugangsdaten ab.",
       "<code>/api/system-info</code> ist ein öffentlicher Endpunkt für grundlegende Systemdaten einschließlich <code>health.status</code>. Er verlangt kein Token. Auch /api/auth/status ist öffentlich und eignet sich für eine Erreichbarkeitsprüfung."
@@ -146,7 +146,7 @@
       },
       {
         "asset": "2FA-TOTP-Geheimnis",
-        "algorithm": "Standard-TOTP (RFC 6238) mit Base32-kodiertem Geheimnis. Die acht Wiederherstellungscodes sind einmalig und werden als SHA-256-Hashes gespeichert.",
+        "algorithm": "Standard-TOTP (RFC 6238) mit Base32-kodiertem Geheimnis. Die acht Backup-Codes sind einmalig und werden als SHA-256-Hashes gespeichert.",
         "where": "<code>auth.json</code> → <code>totp_secret</code> + <code>backup_codes[]</code>"
       },
       {
@@ -243,17 +243,17 @@
       }
     ],
     "backupTitle": "Warum Sicherungen wichtig sind",
-    "backupBody": "Bei Verlust des Authenticator-Geräts einen gesicherten Wiederherstellungscode verwenden oder eine zuvor eingerichtete App-Sicherung wiederherstellen. Cloud-Synchronisierung und lokale Exporte unterscheiden sich je nach App; prüfen Sie, ob die TOTP-Geheimnisse tatsächlich wiederhergestellt werden. Mit Root-Zugang zum Host ist die unten beschriebene Wiederherstellung ebenfalls möglich. Bewahren Sie eine separate, sichere Kopie auf.",
+    "backupBody": "Bei Verlust des Authenticator-Geräts einen gesicherten Backup-Code verwenden oder die App aus einer zuvor eingerichteten Sicherung wiederherstellen. Cloud-Synchronisierung und lokale Exporte unterscheiden sich je nach App; prüfen Sie, ob die gewählte Methode die TOTP-Geheimnisse tatsächlich wiederherstellt. Mit Root-Zugang zum Host ist die unten beschriebene Wiederherstellung ebenfalls möglich. Bewahren Sie eine separate, sichere Kopie auf.",
     "setupTitle": "Schritt-für-Schritt-Setup aus dem Dashboard",
     "setupImageAlt": "Einrichtungsbildschirm 2FA mit QR-Code und Backup-Codes",
-    "setupImageCaption": "Der 2FA-Dialog zeigt QR-Code, Base32-Geheimnis zur manuellen Eingabe und acht einmalige Wiederherstellungscodes. Vor dem Schließen kopieren; sie werden nicht erneut angezeigt.",
+    "setupImageCaption": "Der 2FA-Einrichtungsdialog zeigt QR-Code, Base32-Geheimnis zur manuellen Eingabe und nach der Überprüfung acht einmalige Backup-Codes. Die Codes vor dem Schließen des Dialogs kopieren; sie werden nicht erneut angezeigt.",
     "setupSteps": [
       "<strong>Installieren Sie die Authenticator-App auf Ihrem Telefon</strong> (oder öffnen Sie Ihren Passwort-Manager). Eine der Apps aus der Tabelle oben. Sie müssen dies nur einmal tun - die gleiche app enthält codes für jeden dienst, den sie schützen.",
       "<strong>Am Dashboard anmelden</strong> mit Benutzername und Passwort.",
-      "<strong>Sicherheit öffnen</strong> und <strong>2FA aktivieren</strong> wählen. Der Dialog zeigt QR-Code, Base32-Geheimnis und acht Wiederherstellungscodes.",
+      "<strong>Registerkarte Sicherheit öffnen</strong> in der Seitenleiste des Dashboards, dann auf <strong>2FA aktivieren</strong> und <strong>Einrichtung starten</strong> klicken. Der Dialog zeigt QR-Code und manuellen Schlüssel; die acht Backup-Codes erscheinen, nachdem der Code überprüft wurde.",
       "<strong>Fügen Sie den Eintrag zur Authenticator-App hinzu:</strong>",
-      "<strong>Wiederherstellungscodes sichern.</strong> Alle acht in einem Passwortmanager, einer verschlüsselten Notiz oder einem sicheren Ausdruck aufbewahren. Jeder funktioniert einmal, wenn der Authenticator fehlt.",
       "<strong>Bestätigen Sie, indem Sie den aktuellen 6-stelligen Code</strong> aus der App in das Feld \"Verifizierungscode\" des Setup-Dialogs eingeben und senden. Codes aktualisieren alle 30 Sekunden, wenn es also abläuft, während Sie tippen, geben Sie einfach den nächsten ein.",
+      "<strong>Backup-Codes sichern.</strong> Nach der Überprüfung alle acht sicher in einem Passwortmanager, einer verschlüsselten Notiz oder einem sicheren Ausdruck aufbewahren. Jeder funktioniert einmal, wenn der Authenticator nicht verfügbar ist.",
       "<strong>Fertig.</strong> 2FA ist aktiv. Bei der nächsten Anmeldung wird zuerst das Passwort und danach der aktuelle sechsstellige Code abgefragt."
     ],
     "setupStep4Sub": [
@@ -261,17 +261,17 @@
       "<em>Manuelle Alternative</em>, falls Scannen nicht möglich ist, etwa auf demselben Telefon: <em>Konto hinzufügen</em> → <em>Einrichtungsschlüssel eingeben</em>. Einen Namen wie <em>Proxmox Monitor</em> wählen, Base32-Geheimnis einfügen, <em>Typ</em> auf <em>Zeitbasiert</em> belassen und speichern."
     ],
     "testTitle": "Test vor dem Abmelden",
-    "testBody": "Die bestehende Sitzung geöffnet lassen und <em>sofort</em> in einem privaten Fenster eine neue Anmeldung testen. Bei abgelehntem Code zuerst Server- und Telefonuhr prüfen, bevor Sie die funktionierende Sitzung schließen. Bei bereits verlorenem Zugang Wiederherstellungscode verwenden oder <code>auth.json</code> in der Host-Shell bearbeiten.",
+    "testBody": "Die bestehende Sitzung geöffnet lassen und <em>sofort</em> nach der Einrichtung in einem privaten Fenster eine neue Anmeldung testen. Bei abgelehntem Code zuerst Server- und Telefonuhr prüfen, bevor Sie sich aus der funktionierenden Sitzung abmelden. Bei bereits verlorenem Zugang einen Backup-Code verwenden oder <code>auth.json</code> in der Host-Shell bearbeiten.",
     "lostTitle": "Verlorener Authentifikator",
     "lostIntro": "Drei Wiederherstellungswege, von geringem bis stärkerem Eingriff:",
     "lostItems": [
-      "<strong>Wiederherstellungscode verwenden.</strong> Einen der acht gesicherten Codes im TOTP-Feld eingeben. Jeder funktioniert einmal; unbenutzte bleiben gültig. Danach 2FA in den Einstellungen neu einrichten, um acht neue Codes zu erhalten.",
+      "<strong>Backup-Code verwenden.</strong> Einen der acht gesicherten Codes im TOTP-Feld eingeben. Er funktioniert einmal; unbenutzte Codes bleiben gültig. Nach der Anmeldung Sicherheit öffnen, zuerst <strong>2FA deaktivieren</strong> und danach <strong>2FA aktivieren</strong> wählen, um acht neue Codes zu erhalten.",
       "<strong>Authenticator aus Cloud oder Sicherung wiederherstellen.</strong> Bei eingerichteter Cloud-Synchronisierung die App auf dem neuen Gerät installieren und anmelden, etwa Google, Microsoft, Authy, Apple Passwords über iCloud-Schlüsselbund, Ente oder 2FAS. Bei einer Exportdatei, etwa aus Aegis, Raivo oder FreeOTP+, die App installieren und die Datei importieren.",
       "<strong>Deaktivieren Sie 2FA von der Host-Shell.</strong> Wenn die vorherigen Optionen nicht verfügbar sind, bearbeiten Sie <code>/root/.config/proxmenux-monitor/auth.json</code> auf dem Proxmox-Host (Sie benötigen SSH oder Konsolenzugriff), setzen Sie <code>totp_enabled</code> auf <code>false</code>, speichern und starten Sie den Dienst neu:"
     ],
     "lostShellOutro": "Sie können sich nur mit Benutzername + Passwort anmelden und dann 2FA aus Einstellungen wieder aktivieren.",
     "disableTitle": "Deaktivieren Sie 2FA",
-    "disableBody": "<strong>Sicherheit</strong> öffnen und <strong>2FA deaktivieren</strong> wählen. <code>POST /api/auth/totp/disable</code> benötigt Passwort und gültigen TOTP- oder Wiederherstellungscode. Danach werden Geheimnis und Wiederherstellungscodes gelöscht. Alten Eintrag auch in der App entfernen.",
+    "disableBody": "<strong>Sicherheit</strong> öffnen und <strong>2FA deaktivieren</strong> wählen. <code>POST /api/auth/totp/disable</code> benötigt das aktuelle Passwort und einen gültigen TOTP- oder Backup-Code. Dabei werden TOTP-Geheimnis und Backup-Codes gelöscht. Den alten Eintrag auch in der Authenticator-App entfernen.",
     "rejectedTitle": "Der 6-stellige Code wird immer abgelehnt",
     "rejectedIntro": "TOTP ist zeitbasiert. Server- und Telefonuhr dürfen nur etwa 30 Sekunden voneinander abweichen. Zwei Prüfungen:",
     "rejectedItems": [

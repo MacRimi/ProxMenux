@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Off by default, single switch to enable",
-    "body": "AI rewriting is off by default. Enable it in <em>Settings → Notifications → Advanced: AI Enhancement</em>. If enrichment or rewriting fails, the dispatcher sends the original template. Each rewrite has a 25-second dispatch timeout; reaching it falls back to the template instead of waiting indefinitely."
+    "body": "AI rewriting is off by default. Enable it in <em>Settings → Notifications → Advanced: AI Enhancement</em>. If enrichment or rewriting fails, the dispatcher sends the original template. Rewrites in the event dispatch queue have a 25-second timeout; reaching it sends the template instead of waiting."
   },
   "howItWorks": {
     "heading": "How it works",
@@ -109,7 +109,7 @@
     ],
     "customNote": "Custom prompt mode uses a fixed cap of 500 output tokens regardless of detail level — the custom prompt is in your control and the cap protects against runaway responses.",
     "sizingTitle": "Practical sizing",
-    "sizingBody": "Estimate usage as rewritten events × AI-enabled channels × input-plus-output tokens per call. For example, 50 events × one channel × (500 input + 300 output tokens) is 40,000 tokens per day, not a few thousand. Actual usage and charges depend on model, context, caching and provider limits. The <link>Detail level per channel</link> section shows how to use <code>brief</code> for chat instead of <code>standard</code>, while keeping detailed email reports."
+    "sizingBody": "Estimate usage as rewritten events × AI-enabled channels × input-plus-output tokens per call. For example, 50 events × one channel × (2,000 input + 300 output tokens) is about 115,000 tokens per day, since the default system prompt alone is roughly 1,500 tokens. Actual usage and charges depend on model, context, caching and provider limits. The <link>Detail level per channel</link> section shows how to use <code>brief</code> for chat instead of <code>standard</code>, while keeping detailed email reports."
   },
   "providers": {
     "heading": "AI providers",
@@ -142,7 +142,7 @@
       "items": [
         "API key: <a>console.anthropic.com/settings/keys</a>",
         "Examples from the bundled model list: <code>claude-haiku-4-5-20251001</code>, <code>claude-sonnet-4-6</code>, <code>claude-opus-4-6</code>.",
-        "Bundled recommendation: <strong><code>claude-haiku-4-5-20251001</code></strong>. This exact snapshot is the configured recommendation; the older Claude 3.5 entries shown in earlier documentation are no longer in the bundled list."
+        "Bundled recommendation: <strong><code>claude-haiku-4-5-20251001</code></strong>, a pinned snapshot rather than a moving alias."
       ]
     },
     "gemini": {

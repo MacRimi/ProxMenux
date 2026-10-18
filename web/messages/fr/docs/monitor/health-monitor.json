@@ -68,7 +68,7 @@
       {
         "category": "Stockage",
         "checks": "Stockages Proxmox, système de fichiers racine",
-        "events": "Seuils d’occupation dépassés sur la racine ou un autre système de fichiers surveillé (85% avertissement / 95% critique par défaut) ; export NFS indisponible ; échec d’authentification CIFS ; pool LVM-thin plein."
+        "events": "Seuils d’occupation dépassés sur la racine ou un autre système de fichiers surveillé (85% avertissement / 95% critique par défaut) ; stockages PVE indisponibles ; montages NFS/CIFS figés ou passés en lecture seule de façon inattendue ; stockages LVM-thin et autres pools dépassant les mêmes seuils."
       },
       {
         "category": "Disques & SMART",
@@ -98,7 +98,7 @@
       {
         "category": "Mises à jour du système",
         "checks": "Mises à jour en attente, mises à jour de sécurité, version noyau / PVE, âge du système",
-        "events": "Mises à jour de sécurité ou du noyau utilisé en attente ; système non mis à jour depuis longtemps. Le bouton <em>Mettre à jour maintenant</em> apparaît dans l’aperçu lorsque des mises à jour sont disponibles. Il lance la procédure complète ProxMenux ; sa fermeture actualise l’état avec <code>?refresh=1</code> sans attendre le cycle suivant."
+        "events": "Mises à jour de sécurité ou du noyau utilisé en attente ; système non mis à jour depuis longtemps. La catégorie Mises à jour de la fenêtre État de santé affiche un bouton <em>Mettre à jour maintenant</em> lorsque des mises à jour sont en attente. Il lance la procédure complète de mise à jour ProxMenux dans la fenêtre ; sa fermeture actualise l’état avec <code>?refresh=1</code> afin que l’indicateur reflète le nouvel état sans attendre le cycle suivant."
       },
       {
         "category": "Sécurité et certificats",
@@ -158,7 +158,7 @@
   },
   "dismiss": {
     "heading": "Masquer les alertes et choisir la durée de mise en sourdine",
-    "intro": "Certains événements persistent, comme <em>Mises à jour système : mises à jour disponibles</em> tant que l’hôte n’est pas mis à jour. Une notification toutes les cinq minutes serait inutile. Le bouton <em>Mettre à jour maintenant</em> de l’aperçu permet de résoudre ce cas directement. Pour les autres cas ou les mises à jour reportées, deux mécanismes liés permettent de masquer les alertes :",
+    "intro": "Certains événements persistent par nature, comme <em>Mises à jour système : mises à jour disponibles</em> tant que l’hôte n’est pas mis à jour, et une notification toutes les cinq minutes pendant une semaine serait inutile. Le bouton <em>Mettre à jour maintenant</em> de la catégorie Mises à jour de la fenêtre État de santé permet de résoudre ce cas directement. Pour les autres cas ou les mises à jour reportées, la surveillance offre aussi deux mécanismes liés pour masquer les alertes :",
     "step1": "<strong>Masquer un événement</strong> dans la fenêtre. Le menu propose <strong>24 heures</strong>, <strong>7 jours</strong> ou <strong>Définitivement</strong>, indépendamment de la catégorie. Le choix envoie <code>POST /api/health/acknowledge</code> avec <code>error_key</code> et <code>suppression_hours</code> (<code>-1</code> pour une durée permanente). L’événement passe dans la liste masquée avec l’horodatage <code>acknowledged_at</code>.",
     "dropdownImageAlt": "Menu pour masquer une alerte : 24 heures, 7 jours ou définitivement",
     "dropdownImageCaption": "La durée choisie ne concerne que cette alerte ; sans choix individuel, la valeur de la catégorie s’applique. Les alertes masquées définitivement portent un badge ambre <em>Permanent</em> et ne se déclenchent normalement plus. La température CPU critique constitue l’exception décrite plus bas.",
@@ -187,7 +187,7 @@
       },
       {
         "finding": "ZFS pool DEGRADED / FAULTED",
-        "why": "Les contrôles de capacité des pools ZFS autorisent l’acquittement. Les autres constats suivent leur propre indicateur. Acquitter ne répare pas un pool dégradé ou défaillant."
+        "why": "Les constats d’état des pools ZFS (DEGRADED, FAULTED, UNAVAIL) autorisent explicitement l’acquittement, tout comme les contrôles de capacité des pools. Acquitter ne répare pas un pool dégradé ou défaillant."
       },
       {
         "finding": "Erreurs d'entrée/sortie du disque avec SMART FAILED",
@@ -289,7 +289,7 @@
   },
   "rest": {
     "heading": "Points d’accès REST",
-    "intro": "Les actions de la fenêtre sont accessibles par API pour scripts, tableaux de bord ou bots. Si l’authentification du Monitor est activée, un jeton Bearer valide issu de la connexion ou de l’écran des jetons API est requis. Les modifications, comme acquitter, enregistrer ou nettoyer les erreurs orphelines, exigent full_admin ; read_only reçoit 403. Si l’authentification est désactivée ou refusée, ces contrôles autorisent l’accès sans jeton.",
+    "intro": "Les actions de la fenêtre sont aussi accessibles par API pour scripts, tableaux de bord personnalisés ou bots. Les appels exigent un jeton Bearer valide, issu de la connexion ou de l’écran des jetons API. Les modifications, comme acquitter des alertes, enregistrer les réglages de suppression ou nettoyer les erreurs orphelines, exigent la portée full_admin ; read_only reçoit 403.",
     "headerEndpoint": "Point d’accès",
     "headerMethod": "Méthode",
     "headerUse": "Utilisation",
@@ -297,7 +297,7 @@
       {
         "endpoint": "/api/health",
         "method": "GET",
-        "use": "Contrôle léger renvoyant du JSON avec <code>status</code>, <code>timestamp</code> et <code>version</code>. Convient aux contrôles de mots-clés Uptime Kuma ; si l’authentification du Monitor est activée, le client doit envoyer un en-tête Bearer."
+        "use": "Contrôle léger renvoyant du JSON avec <code>status</code>, <code>timestamp</code> et <code>version</code>. Convient aux contrôles de mots-clés Uptime Kuma ; le client doit envoyer un en-tête Bearer."
       },
       {
         "endpoint": "/api/health/status",

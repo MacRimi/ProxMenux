@@ -73,13 +73,13 @@
     "intro": "AppImage obsahuje súborový systém pripojený pri spustení. <code>AppRun</code> v koreni pripraví prostredie a spustí <code>flask_server.py</code>:",
     "consequencesIntro": "Dva dôsledky tohto usporiadania:",
     "consequences": [
-      "<strong>Pribalené prostredie Python.</strong> Interpret a balíky sú v AppImage, bez inštalácie do systémového Pythonu. Aplikácia naďalej používa rozhrania jadra a externé nástroje hostiteľa.",
+      "<strong>Pribalené balíky Python.</strong> Balíky Python sú súčasťou AppImage a bežia na vlastnom interpretri Python hostiteľa 3.11 (PVE 8) alebo 3.13 (PVE 9), bez inštalácie čohokoľvek do systémového Pythonu hostiteľa. Aplikácia naďalej používa rozhrania jadra hostiteľa a externé nástroje hostiteľa.",
       "<strong>Pribalení klienti hardvéru.</strong> Obsahuje <code>ipmitool</code>, <code>lm-sensors</code> a <code>upsc</code>. Merania vyžadujú podporovaný hardvér, prístup k senzorom a pre UPS nastavený server NUT."
     ]
   },
   "flask": {
     "heading": "Štruktúra aplikácie Flask",
-    "intro": "<code>flask_server.py</code> vytvorí inštanciu <code>Flask(__name__)</code> s obmedzeným CORS, priamo registruje deväť blueprintov a inicializuje terminál. Tabuľka uvádza hlavné moduly; registrované sú aj audit, zálohy VM a PBS. Prednačítavanie PVE beží iba na hostiteľoch PVE.",
+    "intro": "<code>flask_server.py</code> vytvorí jednu inštanciu <code>Flask(__name__)</code> s obmedzenými pôvodmi CORS, priamo registruje desať blueprintov a inicializuje trasy terminálu. Tabuľka uvádza hlavné moduly; registrované sú aj blueprinty PBS, odkazov Monitora, auditu a záloh VM. Prednačítavanie špecifické pre PVE beží iba na hostiteľoch PVE.",
     "headerBlueprint": "Blueprint / modul",
     "headerPrefix": "Predpona ciest",
     "headerOwns": "Zodpovednosť",
@@ -242,10 +242,10 @@
       "Aktualizácie: čakajúce balíky a bezpečnostné opravy.",
       "Protokoly: trvalé vzory, špičky a kaskády v systémovom denníku.",
       "Pamäť: zásahy OOM killer a dlhodobý tlak na RAM.",
-      "Teplota: hodnoty CPU a diskov sa porovnávajú s monitorovacími prahmi; dostupné senzory závisia od hardvéru.",
+      "CPU: využitie a teplota CPU sa porovnávajú s nastaviteľnými prahmi; dostupné senzory závisia od hardvéru.",
       "Bezpečnosť: zlyhania prihlásenia, blokovania a stav jailu Fail2Ban."
     ],
-    "afterIntro": "Nálezy používajú stabilné <code>error_key</code>, kategóriu a závažnosť. Riadky v <code>errors</code> sa aktualizujú cez <code>last_seen</code> a počty bez duplicít. Odosielanie oznámení má aj vlastné odtlačky a časové odstupy.",
+    "afterIntro": "Nálezy používajú stabilné <code>error_key</code>, kategóriu a závažnosť. Existujúce záznamy v <code>errors</code> sa aktualizujú na mieste (<code>last_seen</code>, závažnosť, dôvod) namiesto duplikovania. Odosielanie oznámení má aj vlastné pravidlá odtlačkov a časových odstupov.",
     "cycleEnd": "Čistenie môže vyriešiť staré chyby podľa <em>trvania potlačenia</em> kategórie a stavových pravidiel, odstrániť osirelé záznamy zrušených prostriedkov a vymazať <code>events</code> staršie než 30 dní. Kategórie opisuje <link>Panel → Health Monitor</link>."
   },
   "notifications": {
@@ -264,9 +264,9 @@
     "intro": "Karta <em>Terminál</em> prepája ľahkého klienta <code>xterm.js</code> s PTY servera cez WebSocket. Existujú dva režimy:",
     "items": [
       "<strong>Režim HTTP, predvolený:</strong> vstavaný server Flask s <code>flask-sock</code> spracúva prechod na protokol WebSocket.",
-      "<strong>Režim HTTPS / WSS:</strong> používa <code>gevent.pywsgi.WSGIServer</code> s <code>geventwebsocket.handler.WebSocketHandler</code> na spojenia WebSocket cez TLS."
+      "<strong>Režim HTTPS / WSS:</strong> server TLS používa <code>gevent.pywsgi.WSGIServer</code> s jeho predvoleným handlerom; <code>flask-sock</code> spracúva spojenia WebSocket cez TLS."
     ],
-    "outro": "Procesy terminálu dedia <code>User=root</code>. Pri zapnutom overovaní WebSocket vyžaduje krátkodobý jednorazový lístok získaný z overeného koncového bodu so správcovským oprávnením. Pri vypnutom alebo odmietnutom overovaní spojenie používa tento neoverovaný režim.",
+    "outro": "Podriadené procesy terminálu dedia <code>User=root</code> zo služby. Otvorenie WebSocketu vyžaduje krátkodobý jednorazový lístok získaný z overeného koncového bodu lístkov terminálu so správcovským oprávnením.",
     "proxyNote": "Pri reverznom proxy povoľte WebSocket a hlavičky <code>Upgrade</code> a <code>Connection</code>. Terminál potrebuje toto preposielanie."
   },
   "proxy": {

@@ -220,11 +220,11 @@
     "heading": "n8n, Zapier y scripts propios",
     "intro": "Las herramientas de workflow y scripts pueden <em>enviar</em> notificaciones con un POST a <code>/api/notifications/send</code>, por ejemplo por un fallo de CI o un trabajo cron demasiado largo. Es un envío directo: omite la cola y la espera entre huellas de eventos. Conserva el formato por canal, la IA opcional y la entrega a los canales configurados. Controla los duplicados desde quien llama.",
     "n8nBody": "En n8n, usa un nodo <em>HTTP Request</em> con POST, la URL anterior y el mismo JSON que curl. Elige credenciales genéricas Header Auth: nombre <em>Authorization</em> y valor <code>Bearer YOUR_API_TOKEN</code>, sustituyendo el marcador. Conecta una programación, webhook u otro nodo para disparar la petición.",
-    "severityBody": "La gravedad usa <code>INFO</code>, <code>WARNING</code> o <code>CRITICAL</code> en mayúsculas. El objeto <code>data</code> aporta contexto. La IA usa el título y mensaje renderizados más el enriquecimiento admitido; no se garantiza que todos los campos entren en el prompt o la salida. Consulta <link>Notificaciones → Catálogo de eventos</link>."
+    "severityBody": "La gravedad usa <code>INFO</code>, <code>WARNING</code> o <code>CRITICAL</code> en mayúsculas. El objeto <code>data</code> aporta contexto del evento y campos de plantilla. En este endpoint, la IA solo recibe el título y el mensaje; los campos de <code>data</code> no se envían al proveedor. Consulta <link>Notificaciones → Catálogo de eventos</link>."
   },
   "pveWebhook": {
     "heading": "Webhook nativo de Proxmox VE (entrante)",
-    "intro1": "El sistema de notificaciones llegó en PVE 8.1; los destinos webhook nativos requieren Proxmox VE 8.3 o posterior. <em>Activar notificaciones</em> en Ajustes intenta registrar el Monitor como destino. Los avisos que PVE enruta allí, como informes de copias o replicación, entran en su flujo de envío. El alta depende de que la configuración esté disponible y permita escritura.",
+    "intro1": "El sistema de notificaciones llegó en PVE 8.1; los destinos webhook nativos requieren Proxmox VE 8.3 o posterior. <em>Activar notificaciones</em> en Ajustes intenta registrar el Monitor como destino. Los avisos que PVE enruta allí, como informes de backups o replicación, entran en su flujo de envío. El alta depende de que la configuración esté disponible y permita escritura.",
     "intro2": "La mecánica, la plantilla de body que PVE envía, las entradas escritas en <code>/etc/pve/notifications.cfg</code> y el comportamiento en clusters están documentados en <link>Notifications → Integración del webhook de PVE</link>."
   },
   "whereNext": {

@@ -73,13 +73,13 @@
     "intro": "Das AppImage enthält ein beim Start eingehängtes Dateisystem. <code>AppRun</code> im Wurzelverzeichnis bereitet die Umgebung vor und startet <code>flask_server.py</code>:",
     "consequencesIntro": "Zwei Konsequenzen dieses Layouts:",
     "consequences": [
-      "<strong>Mitgelieferte Python-Umgebung.</strong> Interpreter und Pakete liegen im AppImage; eine Installation in das System-Python entfällt. Die Anwendung nutzt weiterhin Kernel-Schnittstellen und externe Host-Werkzeuge.",
+      "<strong>Mitgelieferte Python-Pakete.</strong> Die Python-Pakete liegen im AppImage und laufen mit dem Python-Interpreter des Hosts, 3.11 (PVE 8) oder 3.13 (PVE 9), ohne dass etwas in das System-Python des Hosts installiert wird. Die Anwendung nutzt weiterhin Kernel-Schnittstellen des Hosts und externe Host-Werkzeuge.",
       "<strong>Hardware-Clients sind enthalten.</strong> Mitgeliefert werden <code>ipmitool</code>, <code>lm-sensors</code> und <code>upsc</code>. Messwerte erfordern unterstützte Hardware, Sensorzugriff und für USV-Daten einen eingerichteten NUT-Server."
     ]
   },
   "flask": {
     "heading": "Struktur der Flask-Anwendung",
-    "intro": "<code>flask_server.py</code> erstellt eine <code>Flask(__name__)</code>-Instanz mit begrenztem CORS, registriert neun Blueprints direkt und initialisiert Terminalrouten. Die Tabelle zeigt Hauptmodule; Audit, VM-Sicherung und PBS sind ebenfalls registriert. PVE-Vorwärmer laufen nur auf PVE-Hosts.",
+    "intro": "<code>flask_server.py</code> erstellt eine <code>Flask(__name__)</code>-Instanz mit eingeschränkten CORS-Ursprüngen, registriert zehn Blueprints direkt und initialisiert Terminalrouten. Die Tabelle zeigt die Hauptmodule; die Blueprints für PBS, Monitor-Links, Audit und VM-Sicherung sind ebenfalls registriert. PVE-spezifische Vorwärmer laufen nur auf PVE-Hosts.",
     "headerBlueprint": "Blueprint / Modul",
     "headerPrefix": "Routenpräfix",
     "headerOwns": "Zuständigkeit",
@@ -242,10 +242,10 @@
       "Updates: ausstehende Paketaktualisierungen und Sicherheitspatches.",
       "Protokolle: anhaltende Muster, Spitzen und Kaskaden im Systemjournal.",
       "Arbeitsspeicher: OOM-Killer-Aktivität und anhaltender Speicherdruck.",
-      "Temperatur: CPU- und Datenträgerwerte im Vergleich zu Überwachungsschwellen; verfügbare Sensoren hängen von der Hardware ab.",
+      "CPU: Auslastung und CPU-Temperatur im Vergleich zu den konfigurierbaren Schwellen; verfügbare Sensoren hängen von der Hardware ab.",
       "Sicherheit: Anmeldefehler, Sperrereignisse und Fail2Ban-Jail-Zustand."
     ],
-    "afterIntro": "Befunde verwenden stabile <code>error_key</code>, Kategorie und Schweregrad. Vorhandene Zeilen in <code>errors</code> erhalten <code>last_seen</code> und Zähleraktualisierungen statt Duplikaten. Der Benachrichtigungsversand hat eigene Fingerabdrücke und Wartezeiten.",
+    "afterIntro": "Befunde verwenden stabile <code>error_key</code>, Kategorie und Schweregrad. Vorhandene Einträge in <code>errors</code> werden an Ort und Stelle aktualisiert (<code>last_seen</code>, Schweregrad, Grund), statt dupliziert zu werden. Der Benachrichtigungsversand hat zudem eigene Regeln für Fingerabdrücke und Wartezeiten.",
     "cycleEnd": "Die Bereinigung kann alte Fehler anhand der <em>Unterdrückungsdauer</em> je Kategorie und Zustandsregeln auflösen, verwaiste Einträge entfernter Ressourcen entfernen und <code>events</code> über 30 Tage löschen. Kategorien erklärt <link>Dashboard → Health Monitor</link>."
   },
   "notifications": {
@@ -264,9 +264,9 @@
     "intro": "Die Registerkarte <em>Terminal</em> verbindet einen schlanken <code>xterm.js</code>-Client über WebSocket mit einem serverseitigen PTY. Es gibt zwei Betriebsarten:",
     "items": [
       "<strong>HTTP-Modus, Standard:</strong> Der integrierte Flask-Server verarbeitet mit <code>flask-sock</code> WebSocket-Upgrade-Anfragen.",
-      "<strong>HTTPS-/WSS-Modus:</strong> Verwendet <code>gevent.pywsgi.WSGIServer</code> mit <code>geventwebsocket.handler.WebSocketHandler</code> für WebSocket über TLS."
+      "<strong>HTTPS-/WSS-Modus:</strong> Der TLS-Server verwendet <code>gevent.pywsgi.WSGIServer</code> mit dessen Standard-Handler; <code>flask-sock</code> verarbeitet WebSocket-Verbindungen über TLS."
     ],
-    "outro": "Terminalprozesse erben <code>User=root</code>. Bei aktiver Authentifizierung braucht WebSocket ein kurzlebiges Einmalticket vom authentifizierten Ticket-Endpunkt mit Verwaltungsrechten. Ist Authentifizierung deaktiviert oder abgelehnt, folgt der Verbindungsaufbau diesem unauthentifizierten Modus.",
+    "outro": "Terminal-Kindprozesse erben <code>User=root</code> vom Dienst. Das Öffnen eines WebSockets erfordert ein kurzlebiges Einmalticket vom authentifizierten Terminal-Ticket-Endpunkt mit Verwaltungsrechten.",
     "proxyNote": "Beim Reverse-Proxy muss WebSocket-Weiterleitung mit den Headern <code>Upgrade</code> und <code>Connection</code> funktionieren. Das Terminal benötigt diese Weiterleitung."
   },
   "proxy": {

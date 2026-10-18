@@ -19,7 +19,7 @@
   "reaching": {
     "heading": "Prístup k panelu",
     "intro": "ProxMenux Monitor sa viaže na <code>0.0.0.0:8008</code>. Existujú tri bežné spôsoby, ako ju dosiahnuť:",
-    "outro": "Priamy prístup zodpovedá predvolenej jednotke systemd. Reverzný proxy a Secure Gateway sú opísané nižšie. IP z <code>X-Forwarded-For</code> vyžadujú PROXMENUX_TRUST_PROXY=1 a proxy pod vašou kontrolou. Samotné <code>X-Forwarded-Proto</code> alebo <code>X-Forwarded-Host</code> túto dôveru nezapnú; frontend zostavuje URL API z pôvodu prehliadača."
+    "outro": "Priamy prístup zodpovedá predvolenej jednotke systemd. Reverzný proxy a Secure Gateway sú opísané nižšie. Dôvera v IP klientov z <code>X-Forwarded-For</code> vyžaduje PROXMENUX_TRUST_PROXY=1 a proxy pod vašou kontrolou. Samotná prítomnosť <code>X-Forwarded-Proto</code> alebo <code>X-Forwarded-Host</code> dôveru v proxy nezapne. Na portoch 80/443 frontend používa relatívne URL <code>/api/*</code>; na akomkoľvek inom porte volá port 8008 na rovnakom názve hostiteľa."
   },
   "firstLaunch": {
     "heading": "Postup pri prvom spustení",
@@ -117,8 +117,8 @@
     "loginImageCaption": "Po nastavení overenia sa tu začína prihlásenie. Pri zapnutom 2FA sa po prijatí hesla vyžiada šesťmiestny kód.",
     "loginFlowTitle": "Prihlasovací tok",
     "twofaIntro": "Pri 2FA prvé volanie vráti <code>requires_totp: true</code>. Zopakujte ho so šesťmiestnym kódom:",
-    "publicTitle": "Verejný prístup a chránené kontroly",
-    "publicIntro": "Prihlásenie a stav overenia sú verejné. Účet možno vytvoriť, kým nie sú uložené meno a heslo, aj po odmietnutí ochrany. Pri zapnutej ochrane vyžadujú systémové údaje overenie:",
+    "publicTitle": "Verejné koncové body (bez tokenu)",
+    "publicIntro": "Prihlásenie, stav overenia, počiatočné nastavenie a ľahký koncový bod <code>/api/system-info</code> sú verejné:",
     "publicItems": [
       "<code>/api/auth/login</code> a <code>/api/auth/status</code> sú verejné. <code>/api/auth/setup</code> vytvorí prvý účet a odmietne prepísať existujúce prihlasovacie údaje.",
       "<code>/api/system-info</code> je verejný endpoint so základnými údajmi systému vrátane <code>health.status</code>. Nevyžaduje token. Aj /api/auth/status je verejný a hodí sa na kontrolu dostupnosti."
@@ -146,7 +146,7 @@
       },
       {
         "asset": "Tajný kľúč TOTP pre 2FA",
-        "algorithm": "Štandardný TOTP (RFC 6238) s tajným kľúčom v base32. Osem jednorazových obnovovacích kódov sa ukladá ako hashe SHA-256.",
+        "algorithm": "Štandardný TOTP (RFC 6238) s tajným kľúčom v base32. Osem jednorazových záložných kódov sa ukladá ako hashe SHA-256.",
         "where": "<code>auth.json</code> → <code>totp_secret</code> + <code>backup_codes[]</code>"
       },
       {
@@ -243,17 +243,17 @@
       }
     ],
     "backupTitle": "Prečo sú zálohy dôležité",
-    "backupBody": "Pri strate zariadenia použite uložený obnovovací kód alebo obnovte vopred nastavenú zálohu. Cloudová synchronizácia a exporty sa líšia podľa aplikácie; overte, že obnovia aj tajné kľúče TOTP. Prístup root na hostiteľovi umožňuje aj obnovu opísanú nižšie. Uchovajte samostatnú bezpečnú zálohu.",
+    "backupBody": "Pri strate overovacieho zariadenia použite uložený záložný kód alebo obnovte aplikáciu z vopred nastavenej zálohy. Cloudová synchronizácia a lokálne exporty sa líšia podľa aplikácie; overte, že zvolený spôsob naozaj obnoví tajné kľúče TOTP. Prístup root na hostiteľovi umožňuje aj obnovu opísanú nižšie. Uchovajte samostatnú bezpečnú zálohu.",
     "setupTitle": "Nastavenie krok za krokom z panelu",
     "setupImageAlt": "Nastavovacia obrazovka 2FA s QR kódom a záložnými kódmi",
-    "setupImageCaption": "Dialóg 2FA zobrazuje QR, tajný kľúč Base32 na ručné zadanie a osem jednorazových obnovovacích kódov. Pred zatvorením ich skopírujte; už sa nezobrazia.",
+    "setupImageCaption": "Dialóg nastavenia 2FA zobrazuje QR, tajný kľúč Base32 na ručné zadanie a po overení osem jednorazových záložných kódov. Kódy skopírujte pred zatvorením dialógu; už sa nezobrazia.",
     "setupSteps": [
       "<strong>Nainštalujte autentifikačnú aplikáciu do telefónu</strong> alebo otvorte správcu hesiel. Stačí raz; rovnaká aplikácia môže uchovávať kódy pre všetky chránené služby.",
       "<strong>Prihláste sa do panelu</strong> menom a heslom.",
-      "<strong>Otvorte kartu Zabezpečenie</strong> a vyberte <strong>Zapnúť 2FA</strong>. Dialóg zobrazí QR, tajný kľúč Base32 a osem obnovovacích kódov.",
+      "<strong>Otvorte kartu Zabezpečenie</strong> v bočnom paneli dashboardu a kliknite na <strong>Zapnúť 2FA</strong> a <strong>Spustiť nastavenie</strong>. Dialóg zobrazí QR a ručný kľúč; osem záložných kódov sa zobrazí po overení kódu.",
       "<strong>Pridajte položku do autentifikačnej aplikácie:</strong>",
-      "<strong>Uložte obnovovacie kódy.</strong> Všetkých osem bezpečne uložte do správcu hesiel, šifrovanej poznámky alebo na papier. Každý funguje raz, keď aplikácia nie je dostupná.",
-      "<strong>Potvrďte aktuálnym šesťmiestnym kódom</strong> z aplikácie v poli \"Overovací kód\" a odošlite. Mení sa každých 30 sekúnd; ak počas písania vyprší, použite ďalší.",
+      "<strong>Potvrďte aktuálnym šesťmiestnym kódom</strong> z aplikácie v poli \"Overovací kód\" dialógu nastavenia a odošlite. Mení sa každých 30 sekúnd; ak počas písania vyprší, použite ďalší.",
+      "<strong>Uložte záložné kódy.</strong> Po overení všetkých osem bezpečne uložte do správcu hesiel, šifrovanej poznámky alebo na zabezpečenú tlačenú kópiu. Každý funguje raz, keď overovacia aplikácia nie je dostupná.",
       "<strong>Hotovo.</strong> 2FA je aktívne. Ďalšie prihlásenie vyžiada najprv heslo a potom aktuálny šesťmiestny kód."
     ],
     "setupStep4Sub": [
@@ -261,17 +261,17 @@
       "<em>Ručná alternatíva</em>, ak nemožno skenovať, napríklad na rovnakom telefóne: <em>Pridať účet</em> → <em>Zadať nastavovací kľúč</em>. Zvoľte názov ako <em>Proxmox Monitor</em>, vložte tajný kľúč Base32, nechajte <em>Typ</em> nastavený na <em>Časový</em> a uložte."
     ],
     "testTitle": "Test pred odhlásením",
-    "testBody": "Aktuálnu reláciu nechajte otvorenú a <em>hneď</em> po nastavení otestujte nové prihlásenie v súkromnom okne. Ak kód nefunguje, pred odhlásením skontrolujte hodiny servera a telefónu. Ak je prístup už stratený, použite obnovovací kód alebo upravte <code>auth.json</code> zo shellu hostiteľa.",
+    "testBody": "Aktuálnu reláciu nechajte otvorenú a <em>hneď</em> po nastavení otestujte nové prihlásenie v súkromnom okne. Ak je kód odmietnutý, pred odhlásením z funkčnej relácie skontrolujte hodiny servera a telefónu. Ak je prístup už stratený, použite záložný kód alebo upravte <code>auth.json</code> zo shellu hostiteľa.",
     "lostTitle": "Stratený autentifikátor",
     "lostIntro": "Tri spôsoby obnovy, od najmenšieho po najväčší zásah:",
     "lostItems": [
-      "<strong>Použite obnovovací kód.</strong> Jeden z ôsmich zadajte do poľa TOTP. Funguje raz; nepoužité kódy zostanú platné. Po prihlásení nastavte 2FA znova v nastaveniach a získajte osem nových kódov.",
+      "<strong>Použite záložný kód.</strong> Jeden z ôsmich uložených kódov zadajte do poľa TOTP. Funguje raz; nepoužité kódy zostanú platné. Po prihlásení otvorte Zabezpečenie, vyberte <strong>Vypnúť 2FA</strong> a potom <strong>Zapnúť 2FA</strong> a získajte osem nových kódov.",
       "<strong>Obnovte aplikáciu z cloudu alebo zálohy.</strong> Pri nastavenej synchronizácii ju nainštalujte na nové zariadenie a prihláste sa: Google, Microsoft, Authy, Apple Passwords cez iCloud Kľúčenku, Ente alebo 2FAS. Pri exporte z Aegis, Raivo alebo FreeOTP+ nainštalujte aplikáciu a importujte súbor.",
       "<strong>Vypnite 2FA zo shellu hostiteľa.</strong> Ak iné možnosti nie sú dostupné, upravte <code>/root/.config/proxmenux-monitor/auth.json</code> ako root cez SSH alebo konzolu. Nastavte <code>totp_enabled</code> na <code>false</code>, uložte a reštartujte službu:"
     ],
     "lostShellOutro": "Môžete sa prihlásiť iba s užívateľským menom + heslom a potom znovu zapnúť 2FA z Nastavenia.",
     "disableTitle": "Vypnúť 2FA",
-    "disableBody": "Otvorte <strong>Zabezpečenie</strong> a vyberte <strong>Vypnúť 2FA</strong>. <code>POST /api/auth/totp/disable</code> vyžaduje aktuálne heslo a platný TOTP alebo obnovovací kód. Odstráni tajný kľúč aj obnovovacie kódy. Starú položku odstráňte aj z aplikácie.",
+    "disableBody": "Otvorte <strong>Zabezpečenie</strong> a vyberte <strong>Vypnúť 2FA</strong>. <code>POST /api/auth/totp/disable</code> vyžaduje aktuálne heslo a platný TOTP alebo záložný kód. Odstráni tajný kľúč TOTP aj záložné kódy. Starú položku odstráňte aj z overovacej aplikácie.",
     "rejectedTitle": "Šesťmiestny kód je vždy odmietnutý",
     "rejectedIntro": "TOTP závisí od času. Rozdiel hodín servera a telefónu má byť najviac približne 30 s. Dve kontroly:",
     "rejectedItems": [

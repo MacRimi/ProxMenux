@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Standardmäßig aus, mit einem Schalter aktivieren",
-    "body": "Die KI-Umschreibung ist standardmäßig aus. Aktivieren Sie sie unter <em>Einstellungen → Benachrichtigungen → Erweitert: KI-Verbesserung</em>. Schlagen Kontextanreicherung oder Umschreibung fehl, wird die ursprüngliche Vorlage gesendet. Nach spätestens 25 Sekunden Wartezeit pro Umschreibung wird auf die Vorlage zurückgegriffen."
+    "body": "Die KI-Umschreibung ist standardmäßig aus. Aktivieren Sie sie unter <em>Einstellungen → Benachrichtigungen → Erweitert: KI-Verbesserung</em>. Schlagen Kontextanreicherung oder Umschreibung fehl, sendet der Dispatcher die ursprüngliche Vorlage. Umschreibungen in der Versandwarteschlange für Ereignisse haben ein Zeitlimit von 25 Sekunden; wird es erreicht, wird die Vorlage gesendet, statt weiter zu warten."
   },
   "howItWorks": {
     "heading": "Wie es funktioniert",
@@ -109,7 +109,7 @@
     ],
     "customNote": "Der benutzerdefinierte Eingabeaufforderungsmodus verwendet eine feste Obergrenze von 500-Ausgabetoken unabhängig von der Detailstufe - die benutzerdefinierte Eingabeaufforderung ist in Ihrer Kontrolle und die Obergrenze schützt vor außer Kontrolle geratenen Antworten.",
     "sizingTitle": "Praktische Dimensionierung",
-    "sizingBody": "Schätzen Sie den Verbrauch als umgeschriebene Ereignisse × KI-Kanäle × Eingabe- und Ausgabe-Token je Aufruf. Beispiel: 50 Ereignisse × ein Kanal × (500 Eingabe + 300 Ausgabe) ergeben 40.000 Token täglich. Verbrauch und Kosten hängen von Modell, Kontext, Cache und Anbieterlimits ab. <link>Detailstufe pro Kanal</link> erklärt <code>brief</code> für Chats statt <code>standard</code>, bei weiterhin ausführlichen E-Mails."
+    "sizingBody": "Schätzen Sie den Verbrauch als umgeschriebene Ereignisse × KI-Kanäle × Eingabe- und Ausgabe-Token je Aufruf. Beispiel: 50 Ereignisse × ein Kanal × (2.000 Eingabe + 300 Ausgabe) ergeben etwa 115.000 Token täglich, da allein der Standard-Systemprompt rund 1.500 Token umfasst. Tatsächlicher Verbrauch und Kosten hängen von Modell, Kontext, Cache und Anbieterlimits ab. Der Abschnitt <link>Detailstufe pro Kanal</link> erklärt <code>brief</code> für Chats statt <code>standard</code>, bei weiterhin ausführlichen E-Mail-Berichten."
   },
   "providers": {
     "heading": "KI-Anbieter",
@@ -142,7 +142,7 @@
       "items": [
         "API-Schlüssel: <a>console.anthropic.com/settings/keys</a>",
         "Beispiele aus der mitgelieferten Modellliste: <code>claude-haiku-4-5-20251001</code>, <code>claude-sonnet-4-6</code>, <code>claude-opus-4-6</code>.",
-        "Mitgelieferte Empfehlung: <strong><code>claude-haiku-4-5-20251001</code></strong>. Dieser genaue Snapshot ist als Empfehlung konfiguriert; die älteren Claude-3.5-Einträge stehen nicht mehr in der mitgelieferten Liste."
+        "Mitgelieferte Empfehlung: <strong><code>claude-haiku-4-5-20251001</code></strong>, ein fest angehefteter Snapshot statt eines wechselnden Alias."
       ]
     },
     "gemini": {

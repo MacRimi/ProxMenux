@@ -70,7 +70,7 @@
     "items": [
       "<strong>Gerätepfad</strong> — <code>/dev/sda</code>, <code>/dev/nvme0n1</code>.",
       "<strong>Typkennzeichnung</strong> — SATA / NVMe und passendes Symbol.",
-      "<strong>Systemkennzeichnung</strong> — orange Markierung für erkannte Betriebssystemlaufwerke. Die Erkennung verwendet die Einhängepunkte <code>/</code> und <code>/boot</code>; zugehörige Laufwerke erhalten <em>System</em>. Eine fehlende Markierung beweist nicht, dass das Laufwerk gefahrlos gelöscht oder anders verwendet werden kann.",
+      "<strong>Systemkennzeichnung</strong> — orange Markierung für Laufwerke, die der Host verwendet: Systemeinhängepunkte (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), aktiver Swap, ZFS-Poolmitglieder, physische LVM-Volumes, aktive RAID-Mitglieder oder Bezeichnungen von Systempartitionen. Eine fehlende Markierung beweist nicht, dass das Laufwerk gefahrlos gelöscht oder anders verwendet werden kann.",
       "<strong>Modell</strong> — Hersteller und Modell aus <code>smartctl -i</code>.",
       "<strong>Kapazität</strong> — in gut lesbaren Einheiten.",
       "<strong>Temperatur</strong> — aktueller Wert in °C, eingefärbt nach Laufwerkstyp; NVMe verwendet höhere Schwellen als SATA.",
@@ -112,7 +112,7 @@
     "pdfPreviewAlt": "Erste Seite des SMART-Berichts mit Zusammenfassung, PASSED-Ring und Laufwerksinformationen",
     "pdfPreviewCaption": "Erste Seite: Zusammenfassung, PASSED-Ring und vollständige Laufwerksinformationen. Das Beispiel-PDF enthält SSD-Verschleiß, alle SMART-Attribute und den Testverlauf.",
     "pdfDownloadLabel": "Beispiel-SMART-Bericht herunterladen (PDF)",
-    "pdfSectionsIntro": "Der Bericht hat sechs Hauptabschnitte:",
+    "pdfSectionsIntro": "Der Bericht enthält diese Hauptabschnitte:",
     "pdfSections": [
       "<strong>Zusammenfassung</strong> — PASSED/FAILED, verständliche Zustandsbewertung — in Ordnung, Verschleiß oder Ausfall — und vier Angaben: Berichtszeit, letzter Testtyp, Ergebnis und geprüfte Attribute.",
       "<strong>Laufwerksinformationen</strong> — Modell, Seriennummer, Kapazität, Typ HDD/SSD/NVMe, Familie, Bauform, Schnittstelle (SATA 3.3 · 6.0 Gb/s, …), TRIM, Temperatur und optimale Schwelle, Betriebsstunden, Einschaltzyklen, SMART, ausstehende/neu zugewiesene Sektoren und CRC-Fehler.",
@@ -127,7 +127,7 @@
     "historyImageCaption": "SMART-Testverlauf des Laufwerks. Jede Zeile zeigt Typ, Zeit, Alter, Markierung des neuesten Tests sowie Download der <code>smartctl</code>-Ausgabe und Löschen.",
     "historyIntro": "Aufbewahrte abgeschlossene kurze und erweiterte Tests des Laufwerks. Jeder Eintrag enthält die ursprüngliche <code>smartctl</code>-Ausgabe und die von Monitor für das Dashboard ausgewerteten Felder. Aktionen je Zeile:",
     "historyItems": [
-      "<strong>Herunterladen</strong> — speichert den JSON-Snapshot mit den vom Bericht verwendeten <code>smartctl -a</code>-Daten. Hilfreich, wenn der Herstellersupport die ursprünglichen Diagnosefelder benötigt.",
+      "<strong>Herunterladen</strong> — speichert den JSON-Snapshot dieses Tests (Ausgabe von <code>smartctl -a --json</code> oder bei NVMe <code>nvme smart-log</code>, wenn smartctl fehlschlägt). Hilfreich, wenn der Herstellersupport die ursprünglichen Diagnosefelder benötigt.",
       "<strong>Löschen</strong> — entfernt einen Test manuell aus dem Verlauf. Die Aufbewahrung im Zeitplan (<em>letzte 5 / 10 / 20</em>) löscht automatisch die ältesten."
     ],
     "scheduleTitle": "Registerkarte 4 — Zeitplan",

@@ -73,13 +73,13 @@
     "intro": "O AppImage contém um sistema de ficheiros montado ao executar. <code>AppRun</code> na raiz prepara o ambiente e inicia <code>flask_server.py</code>:",
     "consequencesIntro": "Duas consequências deste layout:",
     "consequences": [
-      "<strong>Ambiente Python incluído.</strong> O interpretador e os pacotes estão no AppImage, sem instalação no Python do sistema. A aplicação continua a usar interfaces do kernel e ferramentas externas do anfitrião.",
+      "<strong>Pacotes Python incluídos.</strong> Os pacotes Python vêm no AppImage e correm no interpretador Python do próprio anfitrião, 3.11 (PVE 8) ou 3.13 (PVE 9), sem instalar nada no Python do sistema do anfitrião. A aplicação continua a usar interfaces do kernel e ferramentas externas do anfitrião.",
       "<strong>Clientes de hardware incluídos.</strong> Contém <code>ipmitool</code>, <code>lm-sensors</code> e <code>upsc</code>. As leituras dependem do hardware compatível, acesso aos sensores e, para a UPS, de um servidor NUT configurado."
     ]
   },
   "flask": {
     "heading": "Estrutura da aplicação Flask",
-    "intro": "<code>flask_server.py</code> cria uma instância <code>Flask(__name__)</code> com CORS limitado, regista diretamente nove blueprints e inicia o terminal. A tabela destaca módulos principais; regista também auditoria, cópias VM e PBS. As pré-cargas PVE só funcionam em anfitriões PVE.",
+    "intro": "<code>flask_server.py</code> cria uma instância <code>Flask(__name__)</code> com origens CORS restritas, regista diretamente dez blueprints e inicia as rotas do terminal. A tabela destaca os módulos principais; também são registados os blueprints de PBS, ligações do Monitor, auditoria e cópias VM. As pré-cargas específicas de PVE só funcionam em anfitriões PVE.",
     "headerBlueprint": "Blueprint / módulo",
     "headerPrefix": "Prefixo das rotas",
     "headerOwns": "Responsabilidade",
@@ -242,10 +242,10 @@
       "Atualizações: pacotes pendentes e correções de segurança.",
       "Registos: padrões persistentes, picos e cascatas no journal do sistema.",
       "Memória: intervenções do OOM killer e pressão RAM prolongada.",
-      "Temperatura: leituras CPU e discos face aos limites de monitorização; os sensores disponíveis dependem do hardware.",
+      "CPU: utilização e temperatura da CPU face aos limites configuráveis; os sensores disponíveis dependem do hardware.",
       "Segurança: falhas de acesso, bloqueios e estado do jail Fail2Ban."
     ],
-    "afterIntro": "Os resultados usam <code>error_key</code>, categoria e gravidade estáveis. As linhas de <code>errors</code> recebem <code>last_seen</code> e contagens, sem duplicação. O envio de notificações tem também impressões e intervalos próprios.",
+    "afterIntro": "Os resultados usam <code>error_key</code>, categoria e gravidade estáveis. Os registos existentes em <code>errors</code> são atualizados no local (<code>last_seen</code>, gravidade, motivo), sem duplicação. O envio de notificações tem também regras próprias de impressões e intervalos.",
     "cycleEnd": "A limpeza pode resolver erros antigos com a <em>duração de silenciamento</em> por categoria e regras de estado, retirar registos órfãos de recursos removidos e apagar <code>events</code> com mais de 30 dias. As categorias estão em <link>Painel → Health Monitor</link>."
   },
   "notifications": {
@@ -264,9 +264,9 @@
     "intro": "A aba <em>Terminal</em> liga um cliente leve <code>xterm.js</code> a um PTY do servidor por WebSocket. Existem dois modos:",
     "items": [
       "<strong>Modo HTTP, predefinido:</strong> o servidor Flask incluído e <code>flask-sock</code> tratam a mudança de protocolo para WebSocket.",
-      "<strong>Modo HTTPS / WSS:</strong> usa <code>gevent.pywsgi.WSGIServer</code> com <code>geventwebsocket.handler.WebSocketHandler</code> para WebSocket sobre TLS."
+      "<strong>Modo HTTPS / WSS:</strong> o servidor TLS usa <code>gevent.pywsgi.WSGIServer</code> com o seu handler predefinido; <code>flask-sock</code> trata as ligações WebSocket sobre TLS."
     ],
-    "outro": "Os processos do terminal herdam <code>User=root</code>. Com autenticação ativa, WebSocket exige um ticket breve de uso único obtido pelo endpoint autenticado com permissões administrativas. Se a autenticação estiver desativada ou recusada, a ligação segue esse modo sem autenticação.",
+    "outro": "Os processos filhos do terminal herdam <code>User=root</code> do serviço. Abrir um WebSocket exige um ticket breve de uso único obtido pelo endpoint autenticado de tickets do terminal com permissões administrativas.",
     "proxyNote": "Num proxy inverso, permita WebSocket e os cabeçalhos <code>Upgrade</code> e <code>Connection</code>. O terminal precisa desse encaminhamento."
   },
   "proxy": {

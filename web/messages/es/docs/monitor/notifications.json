@@ -91,7 +91,7 @@
     "heading": "Configuración de los canales",
     "intro": "Actualmente se admiten seis canales: Telegram, Discord, Gotify, Email (SMTP), Pushover y Apprise. Los cinco primeros son integraciones nativas con sus propios campos de configuración. Apprise funciona como un concentrador genérico que añade unos 80 servicios adicionales (ntfy, Matrix, Slack, Teams, Pushbullet, AWS SNS, Mattermost…) mediante una única URL. Todos están documentados paso a paso a continuación.",
     "credsTitle": "Dónde se guardan las credenciales",
-    "credsBody": "Los tokens, las claves, las URL de webhook y las contraseñas SMTP se guardan localmente en la base de datos SQLite del Monitor dentro de <code>/usr/local/share/proxmenux/</code>. Los valores sensibles están protegidos y se ocultan en la interfaz. Solo salen del host para comunicarse con el servicio correspondiente. Una copia de ese directorio permite recuperar los canales configurados."
+    "credsBody": "Los tokens, las claves, las URL de webhook y las contraseñas SMTP se guardan localmente en la base de datos SQLite del Monitor dentro de <code>/usr/local/share/proxmenux/</code>. Los valores sensibles están protegidos y se ocultan en la interfaz. Solo salen del host para comunicarse con el servicio correspondiente. Un backup de ese directorio permite recuperar los canales configurados."
   },
   "telegram": {
     "heading": "Telegram",
@@ -120,7 +120,7 @@
       "Añade el bot al grupo como miembro (y hazlo admin si el grupo lo requiere para publicar).",
       "Envía cualquier mensaje en el grupo.",
       "Abre <code>https://api.telegram.org/bot&lt;YOUR_TOKEN&gt;/getUpdates</code> en un navegador. Busca <code>chat.id</code> en la respuesta JSON — para grupos es un número negativo, para supergrupos empieza con <code>-100</code>.",
-      "En supergrupos con <em>Temas</em>, anota el <code>message_thread_id</code> de destino e introdúcelo en el campo opcional <em>ID del tema</em>."
+      "En supergrupos con <em>Temas</em>, anota el <code>message_thread_id</code> de destino e introdúcelo en el campo opcional <em>ID de tema</em>."
     ],
     "groupAlt": "Formulario de canal Telegram con Bot Token (enmascarado), Chat ID negativo prefijado con -100 indicando un supergrupo, y Topic ID 3 configurado para entregar a un tema específico",
     "groupCaption": "Supergrupo — el Chat ID empieza con <code>-100…</code> y el <em>Topic ID</em> opcional apunta a un hilo específico.",
@@ -171,7 +171,7 @@
       "Abre <a>account.microsoft.com/security</a> y activa la verificación en dos pasos.",
       "Si tu cuenta ofrece <em>Opciones avanzadas de seguridad</em> → <em>Contraseñas de aplicación</em>, elige <em>Crear una contraseña de aplicación</em>. Eso no garantiza que el correo admita autenticación SMTP con contraseña.",
       "Si Microsoft genera la contraseña, cópiala y comprueba que tu servicio SMTP la acepte.",
-      "Solo si el proveedor admite SMTP con contraseña, usa sus ajustes autorizados: <em>Servidor</em> <code>smtp.office365.com</code> para Exchange Online, <em>Puerto</em> <code>587</code>, <em>Modo TLS</em> <code>STARTTLS</code>, <em>Usuario</em> tu dirección y <em>Contraseña</em> la credencial permitida. Outlook.com personal usa requisitos y ajustes distintos; no presupongas que estas credenciales funcionen."
+      "Solo si el proveedor admite SMTP con contraseña, usa sus ajustes autorizados: <em>servidor SMTP</em> <code>smtp.office365.com</code> para Exchange Online, <em>Puerto</em> <code>587</code>, <em>modo TLS</em> <code>STARTTLS</code>, <em>Nombre de usuario</em> tu dirección y <em>Contraseña</em> la credencial permitida. Outlook.com personal usa requisitos y ajustes distintos; no presupongas que estas credenciales funcionen."
     ],
     "relayTitle": "Relay SMTP autoalojado",
     "relayBody": "Usa un relay SMTP que controles, como Postfix. El relay gestiona la autenticación hacia el proveedor. Configura la autenticación y TLS de Monitor según lo que exija el relay; que sea local no desactiva el cifrado."
@@ -215,7 +215,7 @@
   "rich": {
     "heading": "Mensajes enriquecidos, categorías y filtros por canal",
     "intro": "Cada canal tiene tres controles: <em>Mensajes enriquecidos</em> arriba, once secciones de <em>Categorías de notificación</em> con interruptores por evento y <em>Enviar prueba</em> abajo.",
-    "imageAlt": "Categorías con Mensajes enriquecidos destacado, secciones de VM/CT, copias, recursos, almacenamiento, red, seguridad, clúster, servicios, salud y actualizaciones, con interruptores y contadores, y botón Enviar prueba",
+    "imageAlt": "Categorías con Mensajes enriquecidos destacado, secciones de VM/CT, backups, recursos, almacenamiento, red, seguridad, clúster, servicios, salud y actualizaciones, con interruptores y contadores, y botón Enviar prueba",
     "imageCaption": "La flecha señala <em>Mensajes enriquecidos</em>. Debajo están las once categorías desplegables con controles por evento. <em>Enviar prueba</em> está al final.",
     "richTitle": "Mensajes enriquecidos",
     "richIntro": "Con <em>Mensajes enriquecidos</em>, cada aviso lleva un emoji de categoría y formato nativo del canal, como HTML en Telegram o tarjetas coloreadas en Discord. Desactivado, se envía el mismo contenido en texto simple:",
@@ -228,7 +228,7 @@
       "<strong>Control de categoría por canal.</strong> Por ejemplo, desactivar VM/CT suprime <code>vm_start</code> y sus equivalentes para ese canal. Se guarda como <code>&lt;channel&gt;.events.&lt;group&gt;</code>.",
       "<strong>Control de evento por canal.</strong> En una categoría activa puedes elegir <em>enviar <code>backup_complete</code> a Discord pero no a Telegram</em>. Se guarda como <code>&lt;channel&gt;.event.&lt;event_type&gt;</code>."
     ],
-    "togglesOutro": "Cada categoría indica los eventos <em>activados</em> frente al <em>total</em> y permite activar o desactivar el grupo completo con un clic, por ejemplo copias <code>info</code> o avisos de actualización, sin abrirlo."
+    "togglesOutro": "Cada categoría indica los eventos <em>activados</em> frente al <em>total</em> y permite activar o desactivar el grupo completo con un clic, por ejemplo backups <code>info</code> o avisos de actualización, sin abrirlo."
   },
   "quiet": {
     "heading": "Horas de silencio",
@@ -255,7 +255,7 @@
   },
   "digest": {
     "heading": "Resumen diario de eventos INFO",
-    "intro1": "El resumen diario es una opción <strong>que activas expresamente</strong>: agrupa avisos INFO aptos, como actualizaciones disponibles, a las 09:00 o a la hora elegida. Los resultados de copias y replicación y las acciones en directo están excluidos. Las horas de silencio aplazan los avisos no críticos durante un intervalo.",
+    "intro1": "El resumen diario es una opción <strong>que activas expresamente</strong>: agrupa avisos INFO aptos, como actualizaciones disponibles, a las 09:00 o a la hora elegida. Los resultados de backups y replicación y las acciones en directo están excluidos. Las horas de silencio aplazan los avisos no críticos durante un intervalo.",
     "intro2": "Está debajo de las horas de silencio en la misma tarjeta; consulta la figura en <link>Horas de silencio</link>. Ambos se activan por separado.",
     "purposeTitle": "Para qué sirve",
     "purposeItems": [
@@ -266,7 +266,7 @@
     "howItems": [
       "<strong>Activación por canal.</strong> Desactivado por defecto. Actívalo solo donde quieras resúmenes y deja los otros canales con avisos directos.",
       "<strong>Hora de entrega</strong> en tu zona horaria local. Por defecto 09:00 pero puedes elegir cualquier hora; el dispatcher dispara el digest dentro de ~60 s de ese minuto.",
-      "<strong>Incluye:</strong> eventos generales aptos de nivel <strong>INFO</strong>, como <em>actualización de aplicación disponible</em>, <em>actualización de Tailscale disponible</em>, <em>actualización de optimización de ProxMenux disponible</em>, <em>actualizaciones de seguridad APT pendientes</em> y <em>aviso de límite de envíos</em>. Los resultados de copias y otras acciones excluidas siguen en directo.",
+      "<strong>Incluye:</strong> eventos generales aptos de nivel <strong>INFO</strong>, como <em>actualización de aplicación disponible</em>, <em>actualización de Tailscale disponible</em>, <em>actualización de optimización de ProxMenux disponible</em> y <em>actualizaciones de seguridad APT pendientes</em>. Los resultados de backups y otras acciones excluidas siguen en directo.",
       "<strong>Qué nunca se retrasa:</strong>",
       "<strong>Persistencia.</strong> Los pendientes se guardan en SQLite, tabla <code>digest_pending</code>, hasta la hora elegida y sobreviven a reinicios.",
       "<strong>Sin eventos, sin resumen.</strong> Si no hay avisos INFO pendientes, no se envía ningún resumen vacío."
@@ -274,7 +274,7 @@
     "neverDelayedSub": [
       "Los eventos <strong>CRITICAL</strong> siempre pasan inmediatamente.",
       "Los eventos <strong>WARNING</strong> siempre pasan inmediatamente.",
-      "Las acciones de VM/CT, sus fallos, inicio y resultados de copias, resultados de replicación y apagado o reinicio del host evitan el resumen incluso con nivel INFO. Las horas de silencio sí pueden retrasarlas si no son críticas."
+      "Las acciones de VM/CT, sus fallos, inicio y resultados de backups, resultados de replicación y apagado o reinicio del host evitan el resumen incluso con nivel INFO. Las horas de silencio sí pueden retrasarlas si no son críticas."
     ],
     "comboTitle": "Combinar horas de silencio y resumen diario",
     "comboBody": "Puedes activar <em>ambos</em>: silencio de 22:00 a 07:00 y resumen a 09:00. Los avisos no críticos del intervalo se liberan en el resumen de 07:00; los INFO aptos de fuera van al resumen diario. CRITICAL evita ambos; WARNING evita el diario, pero espera durante el silencio. Elige un <em>intervalo sin avisos</em>, un <em>resumen a hora fija</em> o ambos."
@@ -300,8 +300,8 @@
       },
       {
         "stage": "Intervalo de repetición",
-        "what": "Tras un envío correcto se suprimen huellas repetidas y se guarda el estado en <code>notification_last_sent</code>. Las bases de <code>CRITICAL</code>, <code>WARNING</code> e <code>INFO</code> son 86400 s, igual que <code>resources</code> y <code>updates</code>. Excepciones: 5 s para acciones VM/CT y apagado/reinicio, 10 s para resultados de copias/replicación y 1800–3600 s para varias categorías de salud. Los ajustes explícitos por evento o grupo prevalecen.",
-        "tunable": "Sí: los ajustes explícitos del distribuidor por evento o grupo sustituyen los valores predeterminados."
+        "what": "Tras un envío correcto se suprimen huellas repetidas y se guarda el estado en <code>notification_last_sent</code>. Las bases de <code>CRITICAL</code>, <code>WARNING</code> e <code>INFO</code> son 86400 s, igual que <code>resources</code> y <code>updates</code>. Excepciones: 5 s para acciones VM/CT y apagado/reinicio, 10 s para resultados de backups/replicación y 1800–3600 s para varias categorías de salud. Los ajustes explícitos por evento o grupo prevalecen.",
+        "tunable": "Solo mediante la API de ajustes: una clave <code>cooldown.&lt;event_type&gt;</code> o <code>cooldown.&lt;group&gt;</code> sustituye los valores predeterminados; no hay control en la interfaz."
       },
       {
         "stage": "Agrupación de ráfagas",
@@ -321,7 +321,7 @@
   },
   "pveWebhook": {
     "heading": "Integración del webhook de PVE",
-    "intro1": "El sistema de notificaciones Proxmox tiene <em>destinos</em> sendmail, Gotify, SMTP y, en versiones compatibles, webhook. Monitor registra un destino <code>webhook</code> al activarse. Los avisos de PVE, como HA, replicación y copias desde la interfaz, entran así en el mismo proceso de envío.",
+    "intro1": "El sistema de notificaciones Proxmox tiene <em>destinos</em> sendmail, Gotify, SMTP y, en versiones compatibles, webhook. Monitor registra un destino <code>webhook</code> al activarse. Los avisos de PVE, como HA, replicación y backups desde la interfaz, entran así en el mismo proceso de envío.",
     "intro2": "Puedes verlo en <em>Datacenter → Notificaciones → Destinos de notificación</em>.",
     "imageAlt": "Diálogo Proxmox VE Edit Webhook mostrando el destino proxmenux-webhook autocreado con método POST, URL http://127.0.0.1:8008/api/notifications/webhook y una plantilla JSON usando escape title, escape message, escape severity, escape timestamp y campos json",
     "imageCaption": "El destino webhook del lado PVE como Proxmox lo ve (la GUI está en el locale configurado del host — español en este ejemplo). Los mismos campos aplican en cualquier idioma.",
@@ -330,7 +330,7 @@
       "<strong>Método y URL.</strong> <code>POST http://127.0.0.1:8008/api/notifications/webhook</code> sin HTTPS en Monitor. Con HTTPS, usa el receptor HTTP local del puerto 8009. Ambos permanecen en el mismo host.",
       "<strong>Plantilla del cuerpo.</strong> JSON con funciones Handlebars de PVE, guardado como base64 en la configuración. Al expandirse resulta:",
       "<strong>Matcher.</strong> Un bloque compañero <code>matcher: proxmenux-matcher</code> con <code>mode all</code> para que cada notificación de PVE llegue al destino.",
-      "<strong>Configuración privada.</strong> Se escribe <code>webhook: proxmenux-webhook</code> en <code>/etc/pve/priv/notifications.cfg</code>, con el secreto compartido en base64. El destino público lo referencia para enviar X-Webhook-Secret. El bloque contiene ese secreto."
+      "<strong>Configuración privada.</strong> Se escribe el bloque <code>webhook: proxmenux-webhook</code> en <code>/etc/pve/priv/notifications.cfg</code> con una entrada <code>secret</code> llamada X-Webhook-Secret, codificada en base64. El bloque del destino público solo contiene la plantilla del cuerpo, el método y la URL. El bloque privado no está vacío."
     ],
     "securityTitle": "Cómo se asegura el receptor",
     "securityIntro": "El receptor webhook en <code>POST /api/notifications/webhook</code> aplica distintas capas de seguridad según de dónde venga la petición:",
@@ -360,7 +360,7 @@
         "events": "<code>vm_start</code>, <code>vm_start_warning</code>, <code>vm_stop</code>, <code>vm_shutdown</code>, <code>vm_fail</code>, <code>vm_restart</code>, más los equivalentes <code>ct_*</code>, <code>migration_start</code>, <code>migration_complete</code>, <code>migration_warning</code>, <code>migration_fail</code>, <code>replication_complete</code>, <code>replication_fail</code>."
       },
       {
-        "group": "Copias de seguridad",
+        "group": "Backups",
         "events": "<code>backup_start</code>, <code>backup_complete</code>, <code>backup_warning</code>, <code>backup_fail</code>, <code>snapshot_complete</code>, <code>snapshot_fail</code>."
       },
       {
@@ -403,7 +403,7 @@
     "burstNote": "Los tipos agrupados <code>burst_*</code> (<code>burst_auth_fail</code>, <code>burst_ip_block</code>, <code>burst_disk_io</code>, etc.) sustituyen ráfagas por un resumen. No tienen controles propios en la interfaz y heredan los del evento de origen.",
     "backupResults": {
       "heading": "Resultados de backup",
-      "intro": "El informe de cada trabajo de copia determina su resultado, título, icono con <em>Mensajes enriquecidos</em> y fila de estado del correo.",
+      "intro": "El informe de cada trabajo de backup determina su resultado, título, icono con <em>Mensajes enriquecidos</em> y fila de estado del correo.",
       "headerIcon": "Icon",
       "headerResult": "Resultado",
       "headerWhen": "Cuándo",
@@ -434,7 +434,7 @@
         "<strong>El cuerpo detalla cada sistema invitado</strong>, con resultado, tamaño, duración y archivo, seguido de los totales.",
         "<strong>Las advertencias y los errores se listan una vez.</strong> Las líneas repetidas se muestran una sola vez con la causa principal primero; a partir de ocho líneas, el resto se cuenta en una línea de cierre y permanece en el log de la tarea de Proxmox.",
         "<strong>Un trabajo que falla antes del primer invitado</strong> muestra la causa indicada por Proxmox, por ejemplo un almacenamiento inexistente.",
-        "<strong>Los resúmenes conservan el resultado.</strong> Una copia en el resumen de horas de silencio conserva su icono. Los resultados de copias evitan el resumen diario."
+        "<strong>Los resúmenes conservan el resultado.</strong> Un backup en el resumen de horas de silencio conserva su icono. Los resultados de backups evitan el resumen diario."
       ]
     }
   },
