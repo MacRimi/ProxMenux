@@ -202,7 +202,7 @@
   ],
   "bestPractices": {
     "title": "Operational best practices",
-    "bodyRich": "Run <code>zpool scrub</code> weekly or monthly to detect silent corruption. Keep at least 10-15% of pool space free — ZFS performance degrades sharply over 80% full. Always replace failed devices with <code>zpool replace</code> (in-place) rather than detach + add (which loses redundancy temporarily)."
+    "bodyRich": "Schedule <code>zpool scrub</code> regularly to verify checksums and inspect its results. Keep free capacity: the impact of a nearly full pool depends on workload and layout. Use <code>zpool replace</code> for a failed device and follow the procedure for its vdev type. Detach + add is not an equivalent replacement procedure and can alter topology or remove redundancy."
   },
   "related": {
     "heading": "Related",

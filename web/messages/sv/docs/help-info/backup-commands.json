@@ -1,0 +1,235 @@
+{
+  "meta": {
+    "title": "Proxmox-kommandon för säkerhetskopiering — vzdump, qmrestore, pct restore | ProxMenux",
+    "description": "Referens för säkerhetskopiering och återställning i Proxmox VE: vzdump för VM:ar och LXC-containrar, qmrestore för VM:ar, pct restore för containrar, schemalagda säkerhetskopior i /etc/pve/jobs.cfg, hookskript och sökvägar som ska undantas.",
+    "ogTitle": "Proxmox-kommandon för säkerhetskopiering — vzdump, qmrestore, pct restore",
+    "ogDescription": "Referens för vzdump, qmrestore och pct restore vid säkerhetskopiering och återställning av Proxmox-VM:ar och LXC-containrar.",
+    "twitterTitle": "Proxmox-kommandon för säkerhetskopiering | ProxMenux",
+    "twitterDescription": "Kommandona vzdump, qmrestore och pct restore för säkerhetskopiering och återställning av Proxmox-VM:ar och containrar."
+  },
+  "header": {
+    "title": "Säkerhetskopiering och återställning",
+    "description": "Kommenterad referens för vzdump, qmrestore och pct restore i Proxmox arbetsflöden för säkerhetskopiering. Omfattar schemaläggning, avancerade alternativ som hookskript, undantagna sökvägar och I/O-prioritet samt hantering av säkerhetskopieringsfiler.",
+    "section": "Hjälp och info"
+  },
+  "intro": {
+    "title": "Tre backup lägen",
+    "body": "För VM:ar är <strong>snapshot</strong> en livesäkerhetskopiering som inte kräver snapshots i lagringen. <strong>suspend</strong> pausar VM:n före säkerhetskopieringen utan att nödvändigtvis förbättra konsistensen. <strong>stop</strong> stänger först av VM:n; om den kördes kan den återupptas när säkerhetskopieringen har startat. LXC skiljer sig: snapshot kräver lagring med snapshot-stöd, suspend använder två rsync-pass och stop håller containern avstängd under hela säkerhetskopieringen."
+  },
+  "commandGroups": [
+    {
+      "title": "VM-säkerhetskopiering",
+      "commands": [
+        {
+          "command": "vzdump <vmid>",
+          "description": "Skapa en säkerhetskopia av en specifik VM/CT"
+        },
+        {
+          "command": "vzdump <vmid> --storage <storage>",
+          "description": "Backup VM till specifik lagring"
+        },
+        {
+          "command": "vzdump <vmid> --mode snapshot",
+          "description": "Skapa snapshot backup (för VM)"
+        },
+        {
+          "command": "vzdump <vmid> --mode suspend",
+          "description": "Pausa VM:n före livesäkerhetskopieringen, äldre suspend-läge"
+        },
+        {
+          "command": "vzdump <vmid> --mode stop",
+          "description": "Stäng av VM:n innan säkerhetskopieringen startar"
+        },
+        {
+          "command": "vzdump --all",
+          "description": "Säkerhetskopiera alla VM och containrar"
+        },
+        {
+          "command": "vzdump --all --exclude <vmid1>,<vmid2>",
+          "description": "Säkerhetskopiera alla utom specificerade VM"
+        }
+      ]
+    },
+    {
+      "title": "Alternativ för säkerhetskopiering",
+      "commands": [
+        {
+          "command": "vzdump <vmid> --compress zstd",
+          "description": "Använd zstd komprimering för backup"
+        },
+        {
+          "command": "vzdump <vmid> --compress gzip --pigz <threads>",
+          "description": "Använd pigz med flera trådar"
+        },
+        {
+          "command": "vzdump <vmid> --storage <storage> --notes-template <text>",
+          "description": "Lägg till anteckningar till backup"
+        },
+        {
+          "command": "vzdump <vmid> --mailto <email>",
+          "description": "Skicka meddelande e-post"
+        },
+        {
+          "command": "vzdump <vmid> --prune-backups keep-last=<n>",
+          "description": "Håll bara n backups per VM"
+        },
+        {
+          "command": "vzdump <vmid> --stdexcludes 0",
+          "description": "Undvik inte tillfälliga filer"
+        },
+        {
+          "command": "vzdump <vmid> --quiet 1",
+          "description": "Undertryck utdatameddelanden"
+        }
+      ]
+    },
+    {
+      "title": "Återställ säkerhetskopior",
+      "commands": [
+        {
+          "command": "qmrestore <backup-file> <vmid>",
+          "description": "Återställ VM från backup"
+        },
+        {
+          "command": "qmrestore <backup-file> <vmid> --storage <storage>",
+          "description": "Återställ till specifik lagring"
+        },
+        {
+          "command": "qmrestore <backup-file> <vmid> --unique",
+          "description": "Återställ VM:n med nya slumpmässiga MAC-adresser"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file>",
+          "description": "Återställ container från backup"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --storage <storage>",
+          "description": "Återställ container till specifik lagring"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --rootfs <storage>:<size-GiB>",
+          "description": "Återställ med en rotdisk på vald lagring och med vald storlek"
+        },
+        {
+          "command": "pct restore <vmid> <backup-file> --unprivileged 1",
+          "description": "Återställ som oprivilegierad CT"
+        }
+      ]
+    },
+    {
+      "title": "Hantering av säkerhetskopior",
+      "commands": [
+        {
+          "command": "ls -la /var/lib/vz/dump/",
+          "description": "Lista säkerhetskopior på standardplats"
+        },
+        {
+          "command": "find /var/lib/vz/dump/ -name \"*.vma*\"",
+          "description": "Hitta VM säkerhetskopior"
+        },
+        {
+          "command": "find /var/lib/vz/dump/ -name \"*.tar*\"",
+          "description": "Hitta container backups"
+        },
+        {
+          "command": "pvesm list <storage> --content backup",
+          "description": "Lista säkerhetskopior i specifik lagring"
+        },
+        {
+          "command": "rm /var/lib/vz/dump/<backup-file>",
+          "description": "Ta bort en backup-fil"
+        },
+        {
+          "command": "cat /etc/vzdump.conf",
+          "description": "Visa backup konfiguration"
+        }
+      ]
+    },
+    {
+      "title": "Schemalagda Backups",
+      "commands": [
+        {
+          "command": "cat /etc/pve/jobs.cfg",
+          "description": "Visa backup schema"
+        },
+        {
+          "command": "nano /etc/vzdump.conf",
+          "description": "Redigera säkerhetskopieringskonfigurationen"
+        },
+        {
+          "command": "systemctl list-timers",
+          "description": "Lista systemd-timers"
+        },
+        {
+          "command": "systemctl status cron",
+          "description": "Kontrollera cron service status"
+        },
+        {
+          "command": "pvenode task list --typefilter vzdump",
+          "description": "Lista slutförda säkerhetskopieringsuppgifter"
+        },
+        {
+          "command": "pvenode task log <upid>",
+          "description": "Visa loggen för en säkerhetskopieringsuppgift via dess UPID"
+        }
+      ]
+    },
+    {
+      "title": "Avancerade åtgärder",
+      "commands": [
+        {
+          "command": "qmrestore <backup> <vmid> --force",
+          "description": "Force-återställning, överskrivning av befintlig VM"
+        },
+        {
+          "command": "vzdump <vmid> --dumpdir <directory>",
+          "description": "Ange anpassad backup katalog"
+        },
+        {
+          "command": "vzdump <vmid> --script <script>",
+          "description": "Kör hook script under backup"
+        },
+        {
+          "command": "vzdump <vmid> --exclude-path <path>",
+          "description": "Undanta angivna sökvägar från säkerhetskopieringen"
+        },
+        {
+          "command": "vzdump <vmid> --ionice <priority>",
+          "description": "Ställ in I/O prioritet för backup process"
+        },
+        {
+          "command": "vzdump <vmid> --lockwait <minutes>",
+          "description": "Vänta på lås"
+        },
+        {
+          "command": "qm importdisk <vmid> <disk-image> <storage>",
+          "description": "Importera en diskavbildsfil (till exempel raw, qcow2 eller vmdk) som en oanvänd disk, inte ett vzdump-säkerhetskopiearkiv"
+        }
+      ]
+    }
+  ],
+  "testRestores": {
+    "title": "Testa återställningarna",
+    "bodyRich": "Återställ regelbundet en säkerhetskopia till ett ledigt test-VMID med <code>qmrestore --unique</code>, starta VM:n på ett isolerat testnät och kontrollera innehållet. unique skapar nya MAC-adresser men ändrar inte statiska IP-adresser eller programinställningar. Testa containeråterställning på samma sätt med <code>pct restore</code>."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "Hantering av VM:ar och CT:er",
+        "tail": " — qm och pct livscykel kommandon."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Lagring och diskar",
+        "tail": " — pvesm lagringshantering."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Översikt över Hjälp och info",
+        "tail": "."
+      }
+    ]
+  }
+}

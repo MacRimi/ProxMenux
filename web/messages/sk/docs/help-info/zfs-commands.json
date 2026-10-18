@@ -1,0 +1,227 @@
+{
+  "meta": {
+    "title": "Príkazy ZFS v Proxmoxe — zpool, zfs snapshot, send/receive, scrub | ProxMenux",
+    "description": "Príkazy na správu ZFS v Proxmox VE: zpool create / status / history, zfs list / get / set, snímky, clone, zfs send a receive, scrub, clear, replace, zpool iostat a súhrn ARC.",
+    "ogTitle": "Príkazy ZFS v Proxmoxe — zpool, zfs snapshot, send/receive, scrub",
+    "ogDescription": "Prehľad príkazov zpool a zfs v Proxmox VE: pooly, datasety, snímky, replikácia a údržba.",
+    "twitterTitle": "Príkazy ZFS v Proxmoxe | ProxMenux",
+    "twitterDescription": "príkazy zpool a zfs pre Proxmox VE: pools, množiny údajov, snapshots, replikácia, údržba."
+  },
+  "header": {
+    "title": "Správa ZFS",
+    "description": "Výber príkazov zpool a zfs: kontrola poolov, vytváranie, čítanie, úpravy a odstránenie datasetov, snímky, clone a prírastkové či rekurzívne send/receive, údržba cez scrub / clear / replace, štatistiky I/O a súhrn ARC.",
+    "section": "Pomoc a informácie"
+  },
+  "intro": {
+    "title": "Dve skupiny príkazov",
+    "body": "<code>zpool *</code> spravuje úložné pooly, teda fyzickú vrstvu: disky, vdevy a redundanciu. <code>zfs *</code> spravuje datasety a snímky v týchto pooloch, teda logickú vrstvu: súborové systémy, zväzky, snímky a vlastnosti."
+  },
+  "commandGroups": [
+    {
+      "title": "Informácie o pooloch",
+      "commands": [
+        {
+          "command": "zpool list",
+          "description": "Zobraziť všetky ZFS pooly"
+        },
+        {
+          "command": "zpool status",
+          "description": "Zobraziť podrobný stav a zdravie poolu"
+        },
+        {
+          "command": "zpool status -v",
+          "description": "Zobraziť podrobný stav pool s chybami"
+        },
+        {
+          "command": "zpool history",
+          "description": "Zobraziť históriu príkazov pre všetky pools"
+        },
+        {
+          "command": "zpool history <pool>",
+          "description": "Zobraziť históriu príkazov konkrétneho poolu"
+        },
+        {
+          "command": "zpool get all <pool>",
+          "description": "Zobraziť všetky vlastnosti pool"
+        }
+      ]
+    },
+    {
+      "title": "Správa datasetov",
+      "commands": [
+        {
+          "command": "zfs list",
+          "description": "Zobraziť všetky datasety ZFS"
+        },
+        {
+          "command": "zfs list -r <pool>",
+          "description": "Rekurzívne zobraziť všetky datasety v poole"
+        },
+        {
+          "command": "zfs create <pool>/<dataset>",
+          "description": "Vytvoriť nový dataset"
+        },
+        {
+          "command": "zfs destroy <pool>/<dataset>",
+          "description": "Odstrániť dataset"
+        },
+        {
+          "command": "zfs rename <pool>/<dataset> <pool>/<new-name>",
+          "description": "Premenovať dataset"
+        },
+        {
+          "command": "zfs get all <pool>/<dataset>",
+          "description": "Zobraziť všetky vlastnosti datasetu"
+        },
+        {
+          "command": "zfs set compression=on <pool>/<dataset>",
+          "description": "Zapnúť kompresiu na datasete"
+        }
+      ]
+    },
+    {
+      "title": "Správa snímok",
+      "commands": [
+        {
+          "command": "zfs list -t snapshot",
+          "description": "Zoznam všetkých snímok"
+        },
+        {
+          "command": "zfs list -t snapshot -r <pool>",
+          "description": "Zobraziť všetky snímky v poole"
+        },
+        {
+          "command": "zfs snapshot <pool>/<dataset>@<snapshot-name>",
+          "description": "Vytvoriť snímku"
+        },
+        {
+          "command": "zfs destroy <pool>/<dataset>@<snapshot-name>",
+          "description": "Odstrániť snímku"
+        },
+        {
+          "command": "zfs rollback <pool>/<dataset>@<snapshot-name>",
+          "description": "Rollback na snímku"
+        },
+        {
+          "command": "zfs hold <tag> <pool>/<dataset>@<snapshot-name>",
+          "description": "Chrániť snímku pred odstránením pomocou hold"
+        },
+        {
+          "command": "zfs release <tag> <pool>/<dataset>@<snapshot-name>",
+          "description": "Uvoľniť ochranu hold na snímke"
+        }
+      ]
+    },
+    {
+      "title": "Klon a odoslanie/prijatie",
+      "commands": [
+        {
+          "command": "zfs clone <pool>/<dataset>@<snapshot> <pool>/<clone-name>",
+          "description": "Vytvoriť klon zo snímky"
+        },
+        {
+          "command": "zfs send <pool>/<dataset>@<snapshot> > backup.zfs",
+          "description": "Poslať snímku do súboru"
+        },
+        {
+          "command": "zfs receive <pool>/<dataset> < backup.zfs",
+          "description": "Získať snímku zo súboru"
+        },
+        {
+          "command": "zfs send -i <pool>/<dataset>@<snap1> <pool>/<dataset>@<snap2> > incr.zfs",
+          "description": "Poslať prírastkovú snímku"
+        },
+        {
+          "command": "zfs send -R <pool>/<dataset>@<snapshot> > full-recursive.zfs",
+          "description": "Poslať rekurzívne snímky"
+        }
+      ]
+    },
+    {
+      "title": "Údržba a opravy",
+      "commands": [
+        {
+          "command": "zpool scrub <pool>",
+          "description": "Spustiť kontrolu scrub poolu"
+        },
+        {
+          "command": "zpool scrub -s <pool>",
+          "description": "Zastaviť prebiehajúci scrub"
+        },
+        {
+          "command": "zpool clear <pool>",
+          "description": "Vynulovať počítadlá chýb poolu"
+        },
+        {
+          "command": "zpool clear <pool> <device>",
+          "description": "Vymazať chyby na konkrétnom zariadení"
+        },
+        {
+          "command": "zpool replace <pool> <old-device> <new-device>",
+          "description": "Nahradiť chybné zariadenie"
+        },
+        {
+          "command": "zpool offline <pool> <device>",
+          "description": "Nastaviť zariadenie v poole ako offline"
+        },
+        {
+          "command": "zpool online <pool> <device>",
+          "description": "Nastaviť zariadenie v poole ako online"
+        }
+      ]
+    },
+    {
+      "title": "Výkonnosť a monitorovanie",
+      "commands": [
+        {
+          "command": "zpool iostat",
+          "description": "Zobraziť štatistiky I/O poolov"
+        },
+        {
+          "command": "zpool iostat -v",
+          "description": "Zobraziť podrobné I/O štatistiky"
+        },
+        {
+          "command": "zpool iostat 5",
+          "description": "Zobraziť štatistiky I/O každých päť sekúnd"
+        },
+        {
+          "command": "arc_summary",
+          "description": "Zobraziť štatistiku ARC (ak je nainštalovaná)"
+        },
+        {
+          "command": "zfs get compressratio <pool>/<dataset>",
+          "description": "Zobraziť kompresný pomer"
+        },
+        {
+          "command": "zfs get used,available,referenced <pool>/<dataset>",
+          "description": "Zobraziť využitie priestoru"
+        }
+      ]
+    }
+  ],
+  "bestPractices": {
+    "title": "Najlepšie prevádzkové postupy",
+    "bodyRich": "Pravidelne plánujte <code>zpool scrub</code> na overenie kontrolných súčtov a skontrolujte výsledok. Nechávajte voľnú kapacitu: vplyv takmer plného poolu závisí od záťaže a rozloženia. Chybné zariadenie vymeňte cez <code>zpool replace</code> podľa postupu pre jeho typ vdevu. Detach + add nie je rovnocenná výmena a môže zmeniť topológiu alebo odstrániť redundanciu."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Úložiská a disky",
+        "tail": " — všeobecné príkazy pre blokové zariadenia a LVM."
+      },
+      {
+        "href": "/docs/help-info/backup-commands",
+        "label": "Zálohovanie a obnova",
+        "tail": " — vzdump, qmrestore."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Prehľad pomoci a informácií",
+        "tail": "."
+      }
+    ]
+  }
+}
