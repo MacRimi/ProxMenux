@@ -1,0 +1,132 @@
+{
+  "meta": {
+    "title": "Servidor Samba em LXC | ProxMenux Documentação",
+    "description": "Execute um servidor Samba (SMB / CIFS) em um contêiner LXC Proxmox com o ProxMenux. Instala samba automaticamente e gerencia /etc/samba/smb.conf, usuários smbpasswd e o grupo sharedfiles para pastas em bind mounts. Exige um contêiner com privilégios.",
+    "ogTitle": "Servidor Samba em LXC | ProxMenux Documentação",
+    "ogDescription": "Disponibilize pastas por SMB/CIFS de um LXC com privilégios. Instalação automática, usuário smbpasswd e permissões adaptadas a bind mounts."
+  },
+  "header": {
+    "title": "Servidor Samba em LXC",
+    "description": "Execute um servidor Samba (SMB / CIFS) dentro de um container Proxmox LXC e exponha pastas para clientes Windows / macOS / Linux na rede. ProxMenux instala samba, cria um usuário Samba com smbpasswd, gerencia /etc/samba/smb.conf, e aplica permissões adaptadas a bind mounts quando a pasta compartilhada vem do host.",
+    "section": "Armazenamento e Compartilhamento · LXC"
+  },
+  "privReq": {
+    "title": "Recipiente privilegiado necessário",
+    "body": "Samba personifica o usuário de conexão com <code>setgroups()</code> em cada conexão em árvore (no momento em que um cliente abre um compartilhamento). Em um LXC sem privilégios, o kernel rejeita esse syscall porque o espaço de nomes de usuário do container é criado com <code>setgroups=deny</code> — e o <code>smbd</code> responde abortando o processo de worker com <code>PANIC: sys_setgroups failed</code>. O resultado é que o <code>smbd</code> inicia e liga as portas 139/445, mas toda conexão com o cliente falha com o <code>NT_STATUS_CONNECTION_DISCONNECTED</code>. O script impõe um CT privilegiado por esta razão e <strong>interrompe a execução se o CT não tiver privilégios</strong>. Não há correção limpa no lado do servidor; use um CT privilegiado ou execute Samba dentro de uma VM."
+  },
+  "what": {
+    "heading": "O que isto faz",
+    "body": "O contêiner torna-se um servidor SMB/CIFS: ele roda <code>smbd</code>, expõe uma pasta via <code>/etc/samba/smb.conf</code> e aceita conexões de cliente em portas <code>139</code> / <code>445</code>. Os clientes veem o compartilhamento em <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code> no Windows Explorer, <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code> no macOS Finder, ou via <code>mount.cifs</code> no Linux.",
+    "diagramServerLabel": "LXC (privilegiado) — Servidor Samba",
+    "diagramServerDetail": "/mnt/data\n(pasta compartilhada)\n\nsmbd + nmbd em execução\n\nUsuário: <username>\n(via smbpasswd)\n\nGrupo imposto:\nsharedfiles",
+    "diagramClientLabel": "Qualquer cliente na rede",
+    "diagramClientDetail": "Windows: \\\\<ip>\\<share>\nmacOS:   smb://<ip>/<share>\nLinux:   mount.cifs",
+    "diagramArrow": "SMB / CIFS"
+  },
+  "perms": {
+    "heading": "Dois caminhos de permissões, dependendo do tipo de pasta",
+    "body": "Antes de adicionar o compartilhamento ao <code>smb.conf</code>, o script verifica se a pasta escolhida é uma montagem <strong>bind do host</strong> ou uma pasta <strong>local regular dentro do CT</strong> – e aplica diferentes permissões de propriedade em conformidade:",
+    "headerType": "Tipo de pasta",
+    "headerAction": "O que o script faz",
+    "bindType": "Montagem de ligação da máquina",
+    "bindTypeSubRich": "detectado através da saída <code>mount</code>",
+    "bindActionRich": "Cria o grupo <code>sharedfiles</code> (padrão GID 999, dinâmico se tomado), adiciona o usuário Samba a ele, em seguida, <code>chown root:sharedfiles</code> + <code>chmod 2775</code> (SGID — novos arquivos herdam o grupo). Se o usuário ainda não consegue escrever, aplica <code>setfacl -m u:&lt;user&gt;:rwx</code>.",
+    "localType": "Pasta local dentro do CT",
+    "localTypeSub": "nenhuma montagem de ligação detectada",
+    "localActionRich": "Propriedade padrão: <code>chown -R &lt;user&gt;:&lt;user&gt;</code> + <code>chmod -R 755</code>. Nenhum grupo compartilhado é necessário porque nenhum outro CT escreve para esta pasta. Regressa ao <code>setfacl</code> se o acesso de escrita ainda estiver ausente.",
+    "gidTitle": "GID para 'sharedfiles' difere do fluxo do servidor NFS",
+    "gidBody": "O script do servidor Samba usa GID <strong>999</strong> para <code>sharedfiles</code>, enquanto o fluxo do servidor <nfsLink>NFS</nfsLink> usa GID <strong>101000</strong>. Se você executar ambos os servidores no mesmo CT e quiser um único grupo compartilhado em ambos os protocolos, edite um deles para corresponder ao outro após a instalação (por exemplo. <code>groupmod -g 101000 sharedfiles</code>) e reaplicar a propriedade nas pastas afetadas. Esta é uma incoerência conhecida nos scripts atuais."
+  },
+  "opening": {
+    "heading": "Abrir a ferramenta",
+    "body": "No menu principal, abra <strong>Storage & Share Manager → Configure Samba Server in LXC</strong>. Apenas CTs com privilégios são listados. Escolha o CT de destino; o script o inicia se estiver parado e recusa CTs sem privilégios. O menu oferece cinco opções.",
+    "imageAlt": "Samba Server Manager menu — Criar / Ver / Apagar / Estado / Desinstalar"
+  },
+  "howRuns": {
+    "heading": "Como o script é executado (Criar fluxo)"
+  },
+  "modes": {
+    "heading": "Os três modos de partilha",
+    "intro": "Cada modo escreve uma seção diferente em <code>smb.conf</code>. Todos os três incluem <code>valid users = &lt;username&gt;</code> (sem anônimo), <code>force group = sharedfiles</code> (então novos arquivos pertencem ao grupo compartilhado) e <code>veto files = /lost+found/</code> (esconde-o de clientes).",
+    "headerMode": "Modo",
+    "headerBlock": "Bloco escrito para smb.conf",
+    "rwMode": "Leitura e escrita",
+    "roMode": "Somente leitura",
+    "customMode": "Personalizado",
+    "customBodyRich": "Você digita suas próprias diretivas em uma caixa de texto livre. ProxMenux ainda os envolve em um bloco <code>[share]</code> com o <code>path</code>, <code>valid users</code>, <code>force group</code> e <code>veto files</code> padrão."
+  },
+  "manual": {
+    "heading": "Equivalente manual",
+    "body": "Replicar todo o fluxo à mão – cada comando roda <strong> dentro do CT</strong> via <code>pct exec &lt;ctid&gt; --</code> ou <code>pct enter &lt;ctid&gt;</code>:"
+  },
+  "connect": {
+    "heading": "Conexão de clientes",
+    "headerOs": "Sistema operativo do cliente",
+    "headerHow": "Como conectar",
+    "windowsOs": "Windows",
+    "windowsHowRich": "Explorador de Arquivos → barra de endereço: <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code>. Ou <em>Mapear unidade de rede</em> → marque «Conectar usando credenciais diferentes».",
+    "macosOs": "macOS",
+    "macosHowRich": "Finder → <em>Ir → Conecte-se ao servidor...</em> → <code>smb://&lt;ct-ip&gt;/&lt;share-name&gt;</code>. Ou <code>mount_smbfs //user@&lt;ct-ip&gt;/&lt;share&gt; /mountpoint</code>.",
+    "linuxOs": "Linux",
+    "linuxHowRich": "<code>mount -t cifs //&lt;ct-ip&gt;/&lt;share&gt; /mnt/x -o username=&lt;u&gt;,password=&lt;p&gt;,iocharset=utf8</code>. Ou use o cliente <clientLink>Samba na página LXC</clientLink> se o cliente for outro Proxmox CT."
+  },
+  "view": {
+    "heading": "Ver os compartilhamentos atuais",
+    "body": "Analisa <code>/etc/samba/smb.conf</code> dentro do CT e lista todos os blocos <code>[share]</code> (passando <code>[global]</code>, <code>[homes]</code>, <code>[printers]</code>) com seu caminho. Útil como um inventário rápido."
+  },
+  "delete": {
+    "heading": "Apagar um compartilhamento",
+    "body": "Permite escolher um compartilhamento pelo nome, remove o bloco do <code>smb.conf</code> (<code>sed</code> exclui do <code>[share]</code> para a próxima linha em branco), e reinicia o <code>smbd</code>. A pasta em si e seu conteúdo ficam intactos."
+  },
+  "status": {
+    "heading": "Verificar o estado do Samba",
+    "body": "Relata se o <code>smbd</code> e o <code>nmbd</code> estão instalados e ativos, lista os usuários do Samba (<code>pdbedit -L</code>) e imprime sessões ativas (<code>smbstatus</code>)."
+  },
+  "uninstall": {
+    "heading": "Desinstalar o servidor Samba",
+    "body": "Limpeza completa após confirmação: para e desativa <code>smbd</code> e <code>nmbd</code>, salva <code>smb.conf</code> em <code>smb.conf.backup.YYYYMMDD_HHMMSS</code>, remove usuários Samba com <code>smbpasswd -x</code> e os pacotes Samba com <code>apt-get purge</code>. As <strong>pastas exportadas não são apagadas</strong>.",
+    "warnTitle": "Pastas sobrevivem — backup de dados separadamente",
+    "warnBody": "<em>Excluir compartilhamento</em> e <em>Desinstalar servidor Samba</em> removem a configuração do compartilhamento. Os dados das pastas exportadas são preservados. Para apagá-los também, use explicitamente <code>rm -rf</code> após o término do script."
+  },
+  "troubleshoot": {
+    "heading": "Resolução de Problemas",
+    "privTitle": "Exige um contêiner com privilégios (o script interrompe a execução)",
+    "privBody": "O CT selecionado é desprivilegiado e o <code>smbd</code> não pode servir arquivos lá. Se você ignorar a verificação e configurar Samba à mão, <code>smbd</code> começa e as portas abrem, mas a primeira conexão do cliente entra em pânico com <code>PANIC: sys_setgroups failed</code> em <code>/var/log/samba/log.&lt;client&gt;</code> e o cliente vê <code>NT_STATUS_CONNECTION_DISCONNECTED</code>. A causa é o namespace desprivilegiado que tem <code>setgroups=deny</code>, que bloqueia a personificação de Samba por conexão. Nem <code>features=keyctl=1</code> nem remover <code>force user</code> / <code>force group</code> altera isso. As únicas opções viáveis são: converter o CT para privilegiado, ou mover Samba para uma VM.",
+    "aptTitle": "apt-get install falha",
+    "aptIntro": "O script assume uma família Debian CT. Em Alpine / Arch / Rocky / Alma, instalar Samba à mão:",
+    "aptItems": [
+      "Alpine: <code>apk add samba</code>",
+      "Arch: <code>pacman -S samba</code>",
+      "Rocky / Alma: <code>dnf install samba</code>"
+    ],
+    "aptOutro": "Execute novamente o script ProxMenux; a instalação é ignorada quando as ferramentas já estão presentes.",
+    "noShareTitle": "O cliente conecta- se mas não consegue ver a partilha",
+    "noShareBody": "Verifique se o <code>browseable = yes</code> está definido no bloco de partilha (por omissão para os modos rw / ro; pode estar em falta na personalização). Também verifique o firewall CT e o firewall do host Proxmox permitem o TCP 445 (SMB) e o 139 (NetBIOS). Alguns clientes do Windows também exigem resolução de nome — tente o IP diretamente primeiro.",
+    "authTitle": "Falha na autenticação (NT_STATUS_LOGON_FAILURE)",
+    "authBody": "A senha está incorreta (as senhas Samba são <em>separadas</em> das do sistema; liste os usuários Samba com <code>pdbedit -L</code>) ou o usuário não consta em <code>valid users</code> para esse compartilhamento. Redefina a senha dentro do CT com <code>smbpasswd &lt;user&gt;</code>.",
+    "groupTitle": "Os arquivos escritos pelo cliente aparecem com o grupo errado no servidor",
+    "groupBody": "O script define <code>force group = sharedfiles</code> no bloco de compartilhamento, então novos arquivos devem ser o grupo <code>sharedfiles</code>. Se eles não forem, o bit SGID no diretório pai pode ter sido perdido (alguém correu <code>chmod</code> à mão). Reaplicação: <code>chmod 2775 /mnt/&lt;share&gt;</code>.",
+    "bothTitle": "Compartilhando a mesma pasta em ambos NFS e Samba",
+    "bothBody": "ProxMenux usa diferentes GIDs para <code>sharedfiles</code> em cada script (Samba: 999, NFS: 101000). Se você serve a mesma pasta através de ambos, decida sobre um GID e alinhar ambos. A correção mais simples: após executar ambos os scripts, edite o GID menor:"
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-samba-client",
+        "label": "Cliente Samba em LXC",
+        "tail": " — o inverso: montar compartilhamentos Samba externos no CT."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-server",
+        "label": "Servidor NFS em LXC",
+        "tail": " — página relacionada, mesmo padrão com NFS em vez de CIFS."
+      },
+      {
+        "href": "/docs/storage-share/host-samba",
+        "label": "Samba / CIFS como armazenamento Proxmox",
+        "tailRich": " — quando o CT estiver exportando, registre o compartilhamento Samba no Proxmox para que apareça em <em>Datacenter → Storage</em>."
+      }
+    ]
+  }
+}

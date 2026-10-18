@@ -24,7 +24,7 @@
         "meaningRich": "El endpoint del servicio iSCSI en el servidor del target — una IP (o hostname) más un puerto TCP. El puerto por defecto es <code>3260</code>; ProxMenux lo asume si no especificas uno."
       },
       {
-        "term": "Target",
+        "term": "Destino (target)",
         "meaningRich": "Un único \"servidor\" exportado dentro del portal, identificado por su IQN (<em>iSCSI Qualified Name</em>). Un portal puede alojar muchos targets."
       },
       {
@@ -36,7 +36,7 @@
         "meaningRich": "Un dispositivo de bloque dentro de un target (Logical Unit Number). Un único target puede exponer varias LUNs; cada LUN aparece como su propio disco en Proxmox y puede convertirse en un disco de VM."
       },
       {
-        "term": "Initiator",
+        "term": "Iniciador",
         "meaningRich": "El cliente que conecta a un target — en este caso, tu host Proxmox. El initiator tiene su propio IQN guardado en <code>/etc/iscsi/initiatorname.iscsi</code>. Los targets normalmente solo aceptan sesiones de IQNs de initiator preautorizados."
       }
     ]
@@ -44,7 +44,7 @@
   "opening": {
     "heading": "Abrir la herramienta",
     "body": "Desde el menú principal de ProxMenux, abre <strong>Storage &amp; Share Manager → Add iSCSI Target as Proxmox Storage</strong>. Verás este submenú con cuatro opciones:",
-    "imageAlt": "Menú iSCSI Host Manager — Add / View / Remove / Test connectivity"
+    "imageAlt": "Menú del gestor iSCSI del host — Añadir / Ver / Eliminar / Probar conectividad"
   },
   "howRuns": {
     "heading": "Cómo se ejecuta el script (flujo Add)",
@@ -74,7 +74,7 @@
   "remove": {
     "heading": "Eliminar almacenamiento iSCSI",
     "body": "Ejecuta <code>pvesm remove &lt;storage-id&gt;</code> tras confirmar portal, target y contenido. Solo se elimina el registro en Proxmox — <strong>el propio target iSCSI no se toca</strong> y las sesiones existentes en el lado del kernel pueden persistir hasta el siguiente reinicio.",
-    "warnTitle": "Discos de VM existentes en este iSCSI primero",
+    "warnTitle": "Primero revisa los discos de VM existentes en este iSCSI",
     "warnBody": "Eliminar un almacenamiento iSCSI mientras las VMs todavía tienen discos en él deja a esas VMs apuntando a un almacén desaparecido. Proxmox marcará el error, pero los datos de la LUN siguen intactos en el target — puedes volver a registrar el almacenamiento después para recuperar los discos. Aun así, mueve o haz backup de las VMs primero por seguridad."
   },
   "test": {
@@ -98,7 +98,7 @@
     "noLunTitle": "Las LUNs no aparecen en /dev/disk/by-path tras el registro",
     "noLunBody": "<code>pvesm add iscsi</code> tuvo éxito pero el kernel no ve dispositivos de bloque. Comprueba <code>iscsiadm --mode session</code> — si no hay sesión activa, inicia una manualmente con <code>iscsiadm --mode node --login</code>. Si hay sesión pero no aparecen LUNs, fuerza un rescan: <code>iscsiadm --mode session --rescan</code>. Si sigue sin haber nada, probablemente el target todavía no tiene LUNs asignadas a este IQN (configura el mapeo de LUN en el target).",
     "chapTitle": "Autenticación CHAP",
-    "chapBody": "ProxMenux no expone los campos de usuario / contraseña CHAP en el flujo interactivo. Si tu target requiere CHAP, registra con ProxMenux primero (el descubrimiento con CHAP puede fallar, pero <code>pvesm add</code> escribirá la entrada igualmente), luego añade credenciales manualmente: <code>pvesm set &lt;id&gt; --username &lt;chap-user&gt;</code> y edita <code>/etc/iscsi/iscsid.conf</code> con la contraseña, después <code>systemctl restart iscsid</code>. Es una carencia del script actual — documentada aquí para que sepas qué hacer."
+    "chapBody": "ProxMenux no ofrece campos de usuario y contraseña CHAP en el flujo interactivo. Si falla el descubrimiento, el script se detiene antes de <code>pvesm add</code>; no registra el almacenamiento de todos modos. Configura por separado los requisitos CHAP del destino en <code>open-iscsi</code>, incluida la autenticación del descubrimiento si hace falta, y vuelve a intentarlo. Usa <code>iscsiadm</code> para comprobar la configuración y verifica las sesiones activas con <code>iscsiadm --mode session</code>."
   },
   "related": {
     "heading": "Relacionado",
