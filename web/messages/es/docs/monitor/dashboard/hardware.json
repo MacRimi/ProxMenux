@@ -32,7 +32,7 @@
     ],
     "memoryTitle": "Módulos de memoria",
     "memoryBody": "Una fila por slot ocupado según <code>dmidecode</code>: etiqueta, capacidad del módulo, tipo (DDR4 / DDR5 / variantes ECC), velocidad configurada y nominal, fabricante, referencia y número de serie. Los slots vacíos aparecen atenuados para mostrar el margen de ampliación.",
-    "thermalTitle": "Monitoreo Térmico",
+    "thermalTitle": "Monitorización térmica",
     "thermalIntro": "Siete bloques alimentados por <code>lm-sensors</code>, <code>sysfs</code> y lectores específicos de cada herramienta. Los sensores hwmon de almacenamiento se asocian al dispositivo de bloques físico, con su modelo y ruta <code>/dev/...</code>. Cada bloque se oculta si no hay sensores en su categoría.",
     "thermalItems": [
       "<strong>CPU</strong>: temperatura del encapsulado y de cada núcleo.",

@@ -30,7 +30,7 @@
       "Apagar una máquina virtual de forma segura",
       "Mostrar estado de VM",
       "Mostrar configuración de VM",
-      "Crear una instantánea de VM",
+      "Crear un snapshot de VM",
       "Listar todos los contenedores LXC",
       "Iniciar un contenedor LXC",
       "Detener un contenedor LXC",
