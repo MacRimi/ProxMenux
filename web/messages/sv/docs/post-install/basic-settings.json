@@ -1,0 +1,240 @@
+{
+  "meta": {
+    "title": "Post-Install: Grundläggande inställningar | ProxMenux Dokumentation",
+    "description": "Grundalternativ efter installationen: byt till Proxmox paketförråd utan prenumeration och uppgradera, identifiera tidszon och aktivera NTP, hoppa över APT-översättningar och välj bland 25 vanliga systemverktyg att installera."
+  },
+  "header": {
+    "title": "Post-Install: Grundläggande inställningar",
+    "section": "Inställningar efter installation av Proxmox"
+  },
+  "intro": {
+    "title": "Vad denna kategori täcker",
+    "body": "Fem grundval för en ny Proxmox-värd: byt till gemenskapens paketförråd utan prenumeration, uppgradera hela systemet, konfigurera tidszon och NTP automatiskt, stäng av APT-översättningar för att spara bandbredd och diskutrymme och välj bland 25 vanliga verktyg."
+  },
+  "upgrade": {
+    "heading": "Uppdatera och uppgradera systemet",
+    "intro": "Ställer om APT till det kostnadsfria förrådet <em>pve-no-subscription</em> i stället för Enterprise-förrådet som kräver prenumeration och uppgraderar hela systemet. Stegen beror på huvudversionen av Proxmox VE; ProxMenux identifierar den och startar rätt skript.",
+    "headerVersion": "PVE-version",
+    "headerScript": "Fördelningsskript",
+    "headerCodename": "Debians kodnamn",
+    "rows": [
+      {
+        "version": "9.x",
+        "script": "update-pve9_2.sh",
+        "codename": "trixie"
+      },
+      {
+        "version": "8.x",
+        "script": "update-pve8.sh",
+        "codename": "bookworm"
+      }
+    ],
+    "officialTitle": "Den officiella Proxmox rekommendation",
+    "officialBody": "Proxmox egna uppgraderingsvägledning är att köra i denna exakta ordning:",
+    "officialOutro": "Detta är det vanliga kommandot för uppdateringar inom den installerade huvudversionen av Proxmox VE. Kontrollera paketförråden och de föreslagna paketändringarna <em>innan</em> du fortsätter. Byte av huvudversion kräver den officiella migreringsproceduren.",
+    "doesTitle": "Vad ProxMenux-alternativet gör - verifierad mot skriptet",
+    "doesIntro": "ProxMenux-uppdateraren kör apt-kommandona ovan och lägger till för- och eftersteg som du annars behöver hantera manuellt. Punkterna nedan motsvarar vad versionsskriptet gör; se <link>Proxmox systemuppdatering</link> för hela beskrivningen.",
+    "doesItems": [
+      "<strong>Städa först i paketarkiven.</strong> Inaktiverar Enterprise-källorna <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, tar bort gamla arkivfiler från tidigare PVE-versioner och skriver en ren <code>proxmox.sources</code> som pekar på den kostnadsfria kanalen <em>pve-no-subscription</em>, anpassad till värdens Debian-kodnamn: trixie för PVE 9, bookworm för PVE 8.",
+      "<strong>Skriver om Debians paketförråd</strong> med main / updates / security och <code>non-free-firmware</code>, så att firmwarevarningen vid uppgradering försvinner.",
+      "<strong>Kör den officiella uppgraderingen.</strong> <code>apt-get update</code> följt av <code>apt full-upgrade -y</code> (PVE 9) eller <code>apt dist-upgrade -y</code> (PVE 8), båda utan interaktion med <code>--force-confdef --force-confold</code> för att behålla anpassade konfigurationsfiler.",
+      "<strong>Installerar viktiga paket</strong> om de saknas: <code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>.",
+      "<strong>Kontrollerar LVM-metadata.</strong> Söker efter VM:ar med diskgenomkoppling som kan ha lämnat gamla fysiska volymhuvuden på rådiskar. Varnar vid avvikelser utan automatisk åtgärd.",
+      "<strong>Rengör efteråt:</strong> <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>, sedan uppmanar till en omstart om kärnan uppdaterades eller <code>/var/run/reboot-required</code> är närvarande."
+    ],
+    "shortTitle": "Kort sagt",
+    "shortBody": "Alternativet kör rekommenderade <code>apt update && apt full-upgrade -y</code>, lägger till förråds- och efterstädning som beskrivs i den officiella guiden och frågar om omstart i slutet. Se <link>Proxmox systemuppdatering</link> för hela diagrammet — samma uppdaterare finns separat i huvudmenyn.",
+    "subTitle": "Tillämpa inte på en värd med prenumeration",
+    "subBody": "Om du har Proxmox-prenumeration och vill behålla Enterprise-förråden ska du hoppa över alternativet. Det stänger av Enterprise och byter till gemenskapskanalen. Paketuppgradering och omskrivning av förråd kan inte återställas via Avinstallera optimeringar; konfigurera förråden uttryckligen om du senare vill byta kanal.",
+    "safetyTitle": "Säkerhetskontroll efter uppdatering",
+    "safetyBody": "Efter uppgraderingen söker skriptet efter gamla metadata för fysiska volymer (PV) på diskar. Det kan uppstå när en VM med diskgenomkoppling skriver LVM-huvuden på en rådisk. Misstänkta fynd ger en varning med förslaget att granska med <code>pvs</code>. Inga automatiska åtgärder utförs."
+  },
+  "time": {
+    "heading": "Synkronisera tiden automatiskt",
+    "intro": "Hämtar serverns offentliga IP-adress med <code>dig myip.opendns.com @resolver1.opendns.com</code>, frågar sedan <code>ipapi.co/'{'ip'}'/timezone</code> efter motsvarande IANA-tidszon och ställer in den med <code>timedatectl set-timezone</code>. Aktiverar slutligen NTP med <code>timedatectl set-ntp true</code>.",
+    "depTitle": "Beroende på två externa tjänster",
+    "depBody": "Uppslagningen är beroende av att OpenDNS och <code>ipapi.co</code> kan nås och att deras svar är korrekta. Om du kör Proxmox bakom en VPN eller på en VLAN som avgår från en annan region, kan den automatiska upptäckta tidszonen vara fel. I det fallet hoppa över detta alternativ och ställa in tidszonen för hand:",
+    "revertTitle": "Kan återställas från Avinstallera-menyn",
+    "revertBody": "<link>Avinstallera optimeringar</link> återställer tidszonen till UTC, ett säkert standardval. NTP förblir aktivt: klockan fortsätter synkroniseras och visar UTC tills du ställer in en annan tidszon."
+  },
+  "languages": {
+    "heading": "Hoppa över nedladdning av ytterligare språk",
+    "intro": "Vid <code>apt update</code> kan APT hämta översatta paketbeskrivningar utöver huvudmetadata. Alternativet stänger av dessa för att spara bandbredd och diskutrymme. Först <strong>kontrollerar ProxMenux att värdens regionala inställning är genererad</strong>: läser <code>/etc/default/locale</code> eller <code>/etc/environment</code>, lägger till i <code>/etc/locale.gen</code> vid behov och kör <code>locale-gen</code>. Därmed behålls skalets regionala inställning.",
+    "writtenTitle": "Vad blir skrivet",
+    "revertTitle": "Kan återställas från Avinstallera-menyn",
+    "revertBody": "Ta bort <code>/etc/apt/apt.conf.d/99-disable-translations</code> (antingen manuellt eller från avinstallationsmenyn) återställer standardbeteendet och APT hämtar språkfiler igen."
+  },
+  "utilities": {
+    "heading": "Installera vanliga systemverktyg",
+    "intro": "Öppnar en grupperad lista med <strong>25 utvalda verktyg</strong>. Välj och bekräfta; ProxMenux installerar dem via <code>apt</code>, kontrollerar resultatet och visar en sammanfattning.",
+    "imageAlt": "Val av ProxMenux-systemverktyg: mellanslag väljer och Enter bekräftar",
+    "reuseTitle": "Samma lista återanvänds någon annanstans",
+    "reuseBody": "Katalogen med 25 verktyg definieras centralt: <code>PROXMENUX_UTILS</code> i <code>scripts/global/utils-install-functions.sh</code>. Menyn <em>Hjälpprogram och verktyg → Systemverktyg</em> erbjuder samma lista för senare installationer utan att köra efterinstallationen igen.",
+    "listTitle": "Vad finns i listan",
+    "groups": [
+      {
+        "group": "Systemövervakare",
+        "items": [
+          {
+            "pkg": "htop",
+            "desc": "Interaktiv processvisare"
+          },
+          {
+            "pkg": "btop",
+            "desc": "Modern resursövervakning (CPU, RAM, diskar, nät, processer)"
+          },
+          {
+            "pkg": "s-tui",
+            "desc": "Terminalgränssnitt för CPU-belastningstest och övervakning"
+          },
+          {
+            "pkg": "iftop",
+            "desc": "Bandbreddsanvändning per anslutning i realtid"
+          },
+          {
+            "pkg": "iotop",
+            "desc": "Disk-I/O per process"
+          },
+          {
+            "pkg": "iptraf-ng",
+            "desc": "Interaktiv IP-/LAN-övervakare"
+          }
+        ]
+      },
+      {
+        "group": "Nätverk",
+        "items": [
+          {
+            "pkg": "iperf3",
+            "desc": "Mät maximal uppnåelig bandbredd mellan värdar"
+          },
+          {
+            "pkg": "net-tools",
+            "desc": "Äldre verktyg (ifconfig, netstat, route). Fortfarande användbara för snabba kontroller"
+          },
+          {
+            "pkg": "ipset",
+            "desc": "Hantera stora IP-uppsättningar i kärnan - användbart med iptables/nftables-regler."
+          }
+        ]
+      },
+      {
+        "group": "Nedladdning och arkivering",
+        "items": [
+          {
+            "pkg": "axel",
+            "desc": "Resurssnål accelerator för parallella nedladdningar"
+          },
+          {
+            "pkg": "aria2",
+            "desc": "Nedladdare med flera källor och protokoll (HTTP, FTP, BitTorrent, Metalink)"
+          },
+          {
+            "pkg": "unzip",
+            "desc": "Extrahera ZIP arkiv"
+          },
+          {
+            "pkg": "zip",
+            "desc": "Skapa ZIP-arkiv"
+          },
+          {
+            "pkg": "cabextract",
+            "desc": "Packa upp Microsoft CAB-arkiv (användbart för Windows-ISO-filer)"
+          },
+          {
+            "pkg": "wimtools",
+            "desc": "Hantera Windows WIM-avbildningar (extrahera, dela, montera, tillämpa)"
+          },
+          {
+            "pkg": "genisoimage",
+            "desc": "Skapa ISO 9660-avbildningar från en katalog"
+          }
+        ]
+      },
+      {
+        "group": "Text och filer",
+        "items": [
+          {
+            "pkg": "dos2unix",
+            "desc": "Konvertera CRLF-radslut (Windows) till LF (Unix)"
+          },
+          {
+            "pkg": "grc",
+            "desc": "Allmän färgmarkering: ger syntaxmarkering åt utdata från ping, traceroute, dig, tail med flera"
+          },
+          {
+            "pkg": "plocate",
+            "desc": "Snabb filsökning (indexerad). Kör `updatedb` efter installation för att bygga indexet."
+          }
+        ]
+      },
+      {
+        "group": "Fjärråtkomst och sessioner",
+        "items": [
+          {
+            "pkg": "sshpass",
+            "desc": "SSH-lösenordsautentisering utan interaktion (användbart för skript, inte för dagligt bruk)"
+          },
+          {
+            "pkg": "tmux",
+            "desc": "Terminalmultiplexer: koppla loss sessioner, dela paneler och behåll sessioner efter frånkoppling"
+          }
+        ]
+      },
+      {
+        "group": "Hårdvara och låg nivå",
+        "items": [
+          {
+            "pkg": "msr-tools",
+            "desc": "Läs/skriv CPU-modellspecifika register (rdmsr, wrmsr)"
+          },
+          {
+            "pkg": "intel-gpu-tools",
+            "desc": "Intel GPU diagnostiska verktyg inklusive `intel_gpu_top`"
+          }
+        ]
+      },
+      {
+        "group": "Virtualisering",
+        "items": [
+          {
+            "pkg": "libguestfs-tools",
+            "desc": "Inspektera och ändra VM-diskavbildningar (virt-ls, virt-cat, guestmount…)"
+          },
+          {
+            "pkg": "chntpw",
+            "desc": "Redigera Windows SAM - användbar för återställning av lösenord på Windows VMs du ärver"
+          }
+        ]
+      }
+    ],
+    "actionTitle": "Några exempel i praktiken",
+    "noBulkTitle": "Endast ProxMenux-installerade verktyg tas bort",
+    "noBulkBody": "ProxMenux registrerar bara valda paket som inte redan var installerade. Avinstallera optimeringar rensar bort dessa paket och behåller tidigare installerade paket. APT-uppgraderingar har ingen säker atomär återställning: avinstallation av verktygen återställer inte systemuppgraderingen."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "label": "Proxmox systemuppdatering",
+        "href": "/docs/utils/system-update",
+        "tail": " — Kör cykeln apt update + dist-upgrade igen vid behov."
+      },
+      {
+        "label": "Installationsprogram för systemverktyg",
+        "href": "/docs/utils/system-utils",
+        "tail": " - installera (eller installera om) verktyg individuellt efter post-install."
+      },
+      {
+        "label": "Uppdateringar och paketkommandon",
+        "href": "/docs/help-info/update-commands",
+        "tail": " — apt-referens för skalet."
+      },
+      {
+        "label": "Anpassningsbar efterinstallation",
+        "href": "/docs/post-install/customizable",
+        "tail": " — tillbaka till den överordnade menyn."
+      }
+    ]
+  }
+}

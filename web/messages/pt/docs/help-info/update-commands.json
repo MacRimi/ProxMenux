@@ -1,0 +1,170 @@
+{
+  "meta": {
+    "title": "Comandos de atualização e pacotes Proxmox — apt, pveupgrade, dpkg | ProxMenux",
+    "description": "Comandos de atualização e gestão de pacotes Proxmox VE: apt update, apt upgrade, apt dist-upgrade, pveupgrade, dpkg -l, informações sobre pacotes e configuração de repositórios em /etc/apt/sources.list.d/.",
+    "ogTitle": "Comandos de atualização e pacotes Proxmox — apt, pveupgrade, dpkg",
+    "ogDescription": "comandos apt, pveupgrade e dpkg para manter o Proxmox VE atualizado — atualizações do sistema, gerenciamento de pacotes, configuração do repositório.",
+    "twitterTitle": "Comandos de atualização Proxmox | ProxMenux",
+    "twitterDescription": "Comandos apt e pveupgrade para gerir atualizações e pacotes em anfitriões Proxmox VE."
+  },
+  "header": {
+    "title": "Atualizações e pacotes",
+    "description": "Seleção de comandos apt e de atualização Proxmox: atualizações do sistema, instalação, remoção e eliminação completa de pacotes, consultas com apt-cache policy e dpkg -l e inspeção dos repositórios.",
+    "section": "Ajuda e informações"
+  },
+  "intro": {
+    "title": "Atualizar sempre o índice primeiro",
+    "body": "O <code>apt update</code> atualiza o índice de pacotes local dos repositórios configurados. Sem ele, <code>apt install</code> pode puxar versões antigas ou falhar com \"Não é possível localizar o pacote\"."
+  },
+  "commandGroups": [
+    {
+      "title": "Atualizações do sistema",
+      "commands": [
+        {
+          "command": "apt update && apt upgrade -y",
+          "description": "Atualizar as listas e os pacotes instalados (apt upgrade)"
+        },
+        {
+          "command": "apt dist-upgrade -y",
+          "description": "Atualização completa do sistema, incluindo dependências"
+        },
+        {
+          "command": "apt update",
+          "description": "Atualizar apenas as listas de pacotes"
+        },
+        {
+          "command": "apt upgrade",
+          "description": "Atualizar apenas pacotes (interativos)"
+        },
+        {
+          "command": "apt full-upgrade",
+          "description": "Atualizar pacotes com tratamento de dependência (interativo)"
+        }
+      ]
+    },
+    {
+      "title": "Atualizações do Proxmox",
+      "commands": [
+        {
+          "command": "pveupdate",
+          "description": "Atualizar listas de pacotes Proxmox"
+        },
+        {
+          "command": "pveupgrade",
+          "description": "Iniciar a atualização interativa dos pacotes Proxmox"
+        },
+        {
+          "command": "pve8to9 --full",
+          "description": "Verificar a preparação para passar do PVE 8 para 9, sem executar a atualização"
+        },
+        {
+          "command": "ceph versions",
+          "description": "Mostrar as versões dos serviços Ceph antes de planear uma atualização"
+        }
+      ]
+    },
+    {
+      "title": "Gestão de Pacotes",
+      "commands": [
+        {
+          "command": "apt autoremove --purge",
+          "description": "Remova pacotes não utilizados e suas configurações"
+        },
+        {
+          "command": "apt clean",
+          "description": "Limpar o repositório local dos arquivos de pacotes recuperados"
+        },
+        {
+          "command": "apt autoclean",
+          "description": "Limpar apenas os ficheiros de pacotes desactualizados"
+        },
+        {
+          "command": "apt install <package>",
+          "description": "Instalar um pacote específico"
+        },
+        {
+          "command": "apt remove <package>",
+          "description": "Remover um pacote"
+        },
+        {
+          "command": "apt purge <package>",
+          "description": "Remover um pacote e os seus ficheiros de configuração"
+        }
+      ]
+    },
+    {
+      "title": "Informação do Pacote",
+      "commands": [
+        {
+          "command": "apt list --installed",
+          "description": "Listar todos os pacotes instalados"
+        },
+        {
+          "command": "apt search <keyword>",
+          "description": "Procurar por pacotes por palavra- chave"
+        },
+        {
+          "command": "apt show <package>",
+          "description": "Mostrar informações detalhadas sobre um pacote"
+        },
+        {
+          "command": "dpkg -l",
+          "description": "Listar todos os pacotes instalados (alternativo)"
+        },
+        {
+          "command": "dpkg -l | grep <keyword>",
+          "description": "Procurar pacotes instalados por palavra- chave"
+        },
+        {
+          "command": "apt-cache policy <package>",
+          "description": "Mostrar as versões e prioridades do pacote"
+        }
+      ]
+    },
+    {
+      "title": "Gestão do Repositório",
+      "commands": [
+        {
+          "command": "cat /etc/apt/sources.list",
+          "description": "Mostrar as fontes principais do repositório APT"
+        },
+        {
+          "command": "ls -la /etc/apt/sources.list.d/",
+          "description": "Listar ficheiros adicionais de configuração de repositórios"
+        },
+        {
+          "command": "cat /etc/apt/sources.list.d/pve-enterprise.list",
+          "description": "Mostrar a configuração do repositório Proxmox Enterprise no ficheiro .list do PVE 8"
+        },
+        {
+          "command": "apt-key list",
+          "description": "Listar as antigas chaves de assinatura dos repositórios onde apt-key esteja disponível"
+        }
+      ]
+    }
+  ],
+  "backupWarn": {
+    "title": "Faça um backup antes das principais atualizações",
+    "bodyRich": "Para atualizações correntes, o Proxmox recomenda <code>apt update &amp;&amp; apt full-upgrade</code>; reveja as alterações de pacotes antes de confirmar. Para <strong>atualizações de versão principal</strong> (PVE 8 → 9), use o procedimento ProxMenux <upgradeLink>Atualizar PVE 8 para PVE 9</upgradeLink>. Inclui verificações prévias, migração de repositórios e validação final. Faça primeiro uma cópia de segurança."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/utils/system-update",
+        "label": "Actualização do Sistema Proxmox (interactiva)",
+        "tail": " — wrapper que faz tudo isso com uma janela de confirmação, uma reconstrução automática DKMS de drivers gerenciados por ProxMenux quando um novo kernel é instalado e um prompt de reinicialização. Também pode ser lançado a partir do botão Atualizar agora do painel ProxMenux Monitor."
+      },
+      {
+        "href": "/docs/utils/upgrade-pve8-pve9",
+        "label": "Atualize PVE 8 para PVE 9",
+        "tail": " — para actualizações de grandes versões."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Visão geral de ajuda e informações",
+        "tail": "."
+      }
+    ]
+  }
+}

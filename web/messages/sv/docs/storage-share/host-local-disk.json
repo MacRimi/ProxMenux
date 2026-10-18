@@ -1,0 +1,186 @@
+{
+  "meta": {
+    "title": "Värd: Lägg till lokal disk som Proxmox lagring | ProxMenux Dokumentation",
+    "description": "Formatera en lokal SATA-, SAS- eller NVMe-disk på en Proxmox-värd och registrera den som katalog- eller ZFS-poollagring. Verktyget väljer diskar säkert, kräver bekräftelse före destruktiva steg, använder UUID i fstab, skapar ZFS-pooler och kör pvesm add dir / zfspool.",
+    "ogTitle": "Värd: Lägg till lokal disk som Proxmox lagring | ProxMenux Dokumentation",
+    "ogDescription": "Formatera en lokal disk och registrera den som kataloglagring eller ZFS-pool i Proxmox med ett guidat flöde och säkerhetsfilter."
+  },
+  "header": {
+    "title": "Värd: Lägg till lokal disk som Proxmox lagring",
+    "description": "Välj en fysisk disk på Proxmox-värden, formatera den vid behov som ext4, xfs, btrfs eller zfs och registrera den som kataloglagring med pvesm add dir eller som ZFS-pool med pvesm add zfspool. ProxMenux filtrerar bort systemdisken och diskar som används och beskriver varje destruktivt steg innan det körs.",
+    "section": "Lagring och delning · Värd"
+  },
+  "intro": {
+    "title": "Vad detta gör",
+    "body": "Övriga <em>Host</em> verktyg i detta avsnitt behandla <strong>nätverkslagring</strong> (NFS / Samba / iSCSI). Den här handlar om <strong>lokala</strong> diskar - reservdiskar fysiskt fästa på din Proxmox-värd som du vill använda för VM-skivor, säkerhetskopior, ISOs eller mallar. ProxMenux förbereder disken (partition + format + montering) och registrerar den i Proxmox så att UI kan placera innehåll där."
+  },
+  "destructive": {
+    "title": "Destruktivt verktyg för \"format\" vägen",
+    "body": "Alternativet <em>Formatera</em> <strong>förstör befintliga partitioner och data på den valda disken</strong>. ProxMenux visar en varning, filtrerar bort diskar som används och kräver bekräftelse innan <code>wipefs</code> / <code>sgdisk</code> / <code>mkfs</code> körs. Detta är inte säker överskrivning av varje byte. Kontrollera enhetssökvägen två gånger innan du bekräftar."
+  },
+  "compare": {
+    "heading": "Katalog eller ZFS-pool — vilket ska du välja?",
+    "headerDir": "Katalog (ext4 / xfs / btrfs)",
+    "headerZfs": "ZFS pool",
+    "rows": [
+      {
+        "label": "Proxmox lagringstyp",
+        "dirRich": "<code>dir</code>",
+        "zfsRich": "<code>zfspool</code>"
+      },
+      {
+        "label": "VM skivformat",
+        "dir": "qcow2-/raw-fil i ett filsystem",
+        "zfs": "Inbyggt ZFS-dataset (zvol) per disk"
+      },
+      {
+        "label": "Ögonblicksbilder",
+        "dir": "qcow2 snapshots; btrfs snapshots om fs=btrfs",
+        "zfs": "Inbyggda, omedelbara, copy-on-write"
+      },
+      {
+        "label": "Dynamisk allokering",
+        "dir": "Ja (qcow2 standard)",
+        "zfs": "Ja (ZFS standard)"
+      },
+      {
+        "label": "RAM-behov",
+        "dir": "Låg",
+        "zfs": "Högt — ZFS använder ledigt RAM som ARC-cache"
+      },
+      {
+        "label": "Stöder innehållstyper",
+        "dir": "images, backup, iso, vztmpl, snippets, rootdir",
+        "zfs": "endast images och rootdir (blocklagring)"
+      },
+      {
+        "label": "Bäst för",
+        "dir": "Allmänt ändamål disk: blandning av VM diskar, säkerhetskopior, ISOs",
+        "zfs": "Rena VM / LXC datadisk med ögonblicksbild + integritetsbehov"
+      }
+    ]
+  },
+  "opening": {
+    "heading": "Öppna verktyget",
+    "body": "Öppna <strong>Storage &amp; Share Manager → Add Local Disk as Proxmox Storage</strong> i ProxMenux huvudmeny. Undermenyn har fyra alternativ:",
+    "imageAlt": "Lokal Disk Manager-menyn - Lägg till / Visa / Ta bort / Lista tillgängliga diskar"
+  },
+  "howRuns": {
+    "heading": "Hur man kör skriptet (Lägg till flöde)",
+    "body": "Flödet har två faser med ett trippelt säkerhetsfilter. Fas 1 upptäcker säkra diskar, bestämmer vad du ska göra med den valda och samlar in lagringsparametrar; Fas 2 gör det destruktiva arbetet. Fram till den slutliga bekräftelsen är disken orörd."
+  },
+  "format": {
+    "heading": "Formatera en blank disk",
+    "intro": "Vägen för en ny skiva eller en vars innehåll du inte bryr dig om.",
+    "items": [
+      "Välj disken (system / in-use diskar är dolda).",
+      "Välj \"Format disk (ERASE all data)\".",
+      "Välj filsystemet - se tabellen ovan för avvägningar.",
+      "Lagring ID (standard <code>disk-&lt;device&gt;</code>), monteringsväg, innehållstyp förinställd.",
+      "Bekräfta i dialogen <strong>SLUTLIG BEKRÄFTELSE — DATA KOMMER ATT RADERAS</strong>.",
+      "ProxMenux rensar partitionstabellen och skapar en partition över hela disken. Det kör <code>mkfs.&lt;fs&gt;</code> eller <code>zpool create</code> och monterar resultatet. Vanliga filsystem får en UUID-post i <code>/etc/fstab</code> med <code>defaults,nofail</code>; ZFS använder poolens monteringskonfiguration. Om <em>Som Proxmox-lagring</em> är markerat (alltid för ZFS) registreras den sedan med <code>pvesm add dir</code> eller <code>pvesm add zfspool</code>; annars förblir den bara en montering på värden."
+    ],
+    "tipTitle": "Varför UUID + nofail i /etc/fstab",
+    "tipBody": "Skriptet skriver <code>UUID=… /mnt/&lt;id&gt; &lt;fs&gt; defaults,nofail 0 2</code>. UUID överlever enhetsreordering över omstart (så <code>/dev/sdc</code> blir <code>/dev/sdd</code> inte bryta start). <code>nofail</code> innebär att om disken någonsin försvinner (hårdvarufel, urkopplad), startar Proxmox ändå - lagring kommer bara att visas som inaktiv tills disken kommer tillbaka."
+  },
+  "reuse": {
+    "heading": "Återanvänd ett befintligt filsystem",
+    "intro": "Vägen för en disk du vill hålla data på - kanske du flyttade den från en annan Proxmox-värd, eller disken har redan säkerhetskopior / ISOs du vill hålla tillgänglig.",
+    "items": [
+      "Välj disken.",
+      "Välj \"Använd befintliga filsystem\".",
+      "Lagring ID, monteringsväg, innehållstyp förinställd.",
+      "ProxMenux vidrör <strong>inte</strong> data: den skapar monteringspunkten, monterar disken, lägger till en UUID-post till <code>/etc/fstab</code> och registrerar den som en Proxmox <code>dir</code>-lagring."
+    ],
+    "warnTitle": "Återanvändningsväg hanterar inte ZFS pooler",
+    "warnBody": "Om disken redan innehåller en ZFS pool, <em>reuse</em> väg här försöker bara montera den som ett vanligt filsystem - som misslyckas. För att importera en befintlig ZFS pool använda <code>zpool import &lt;name&gt;</code> på kommandoraden och sedan registrera den manuellt med <code>pvesm add zfspool</code>."
+  },
+  "presets": {
+    "heading": "Innehållstyp förinställningar",
+    "intro": "ProxMenux erbjuder tre förinställningar och ett eget alternativ. Den valda innehållssträngen skickas till <code>pvesm add … --content &lt;csv&gt;</code>:",
+    "headerPreset": "Förinställning",
+    "headerContent": "Innehållssträng",
+    "headerUse": "Användningsfall",
+    "rows": [
+      {
+        "preset": "VM-lagring",
+        "content": "images,backup",
+        "use": "Lagring avsedd för VM-diskar som även har säkerhetskopior av samma VM:ar nära till hands."
+      },
+      {
+        "preset": "Standard-NAS",
+        "content": "backup,iso,vztmpl",
+        "use": "En arkiv / media disk - säkerhetskopior, ISOs och LXC mallar. Inga live VM-skivor här."
+      },
+      {
+        "preset": "Alla typer",
+        "content": "images,backup,iso,vztmpl,snippets",
+        "use": "Den breda förinställningen aktiverar avbildningar, säkerhetskopior, ISO-filer, LXC-mallar och snippets. Lägg vid behov till andra typer som stöds, exempelvis rootdir, via Anpassad."
+      },
+      {
+        "preset": "Anpassad",
+        "content": "(fri input)",
+        "useRich": "Skriv exakt CSV själv, t.ex. <code>images</code> ensam, eller <code>rootdir,images</code>."
+      }
+    ],
+    "zfsTitle": "ZFS pool innehåll är smalare",
+    "zfsBody": "Med <strong>zfs</strong> stöder en <code>zfspool</code> endast <code>images</code> och <code>rootdir</code>, inte ISO- eller säkerhetskopieringsfiler. Ange en lista som stöds via Anpassad. Skriptet skickar valet oförändrat; typer som inte stöds kan få registreringen att misslyckas. Kontrollera därefter <code>pvesm status</code>."
+  },
+  "manual": {
+    "heading": "Manuell motsvarande",
+    "extIntro": "Format + registrera en disk som ext4 katalog lagring:",
+    "zfsIntro": "Eller som ZFS pool:"
+  },
+  "view": {
+    "heading": "Visa disklagringar",
+    "body": "Listar varje diskstödd Proxmox-lagring (både <code>dir</code> och <code>zfspool</code> som är användarskapade - systempooler som <code>rpool</code> är dolda). Visar monteringsvägen / poolnamn, innehållstyper och aktuell status."
+  },
+  "remove": {
+    "heading": "Ta bort disklagring",
+    "body": "Avregistrerar lagringen från Proxmox (<code>pvesm remove</code>) och erbjuder att rensa upp den matchande posten i <code>/etc/fstab</code>. För ZFS pools förstör skriptet <strong>inte</strong> automatiskt pool – det är ett separat <code>zpool destroy &lt;name&gt;</code> steg du gör för hand när du är säker.",
+    "warnTitle": "Data och befintliga VM beroenden",
+    "warnBody": "Ta bort lagringen rör inte filsystemet eller poolen - data stannar på disken. Men VMs / CT som refererar till denna lagring av ID kommer inte att starta efter borttagning. Flytta dessa VM-skivor till en annan lagring (eller ta en säkerhetskopia) innan du tar bort."
+  },
+  "list": {
+    "heading": "Lista tillgängliga diskar",
+    "body": "En skrivskyddad diagnostikvy: visar utdata av <code>lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,MODEL</code> följt av <code>dir</code> / <code>zfspool</code> lagringar Proxmox vet redan om. Bra första stopp när du öppnar verktyget och vill se \"vad är på denna värd?\" innan du lägger till något."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "noDisksTitle": "\"Inga tillgängliga diskar hittade\"",
+    "noDisksIntro": "Säkerhetsfiltret gömde varje disk. Vanliga skäl:",
+    "noDisksItems": [
+      "Endast rotskivan är närvarande.",
+      "Varje annan disk är en del av en aktiv ZFS / LVM / RAID-array.",
+      "Varje annan disk refereras av en VM eller LXC konfig (genomgång).",
+      "Disken är skrivskyddad (hårdvarufel eller skrivblockerare)."
+    ],
+    "noDisksOutro": "Använd <em>List Available Disks</em> från menyn för att se den råa <code>lsblk</code>-utgången och förstå vad som händer.",
+    "mountedTitle": "Format misslyckas med \"enhet är monterad\"",
+    "mountedBody": "Något automatiskt monterade disken (udisksd, en skrivbordshanterare, en kvardröjande systemd-enhet). Avmontera den: <code>umount /dev/sdX?*</code> eller <code>systemctl stop &lt;whatever-mounts-it&gt;</code>, och försök igen. Skriptets säkerhetsfilter ska ha dolda monterade diskar, så om du nådde detta fel inträffade monteringen mellan menyn och du bekräftar.",
+    "zpoolTitle": "zpool create misslyckas med ”invalid vdev specification”",
+    "zpoolBody": "Vanligtvis betyder disken fortfarande har gamla GPT / LVM / ZFS signaturer som <code>zpool</code> vägrar att skriva utan att tvingas. Manuset kör <code>wipefs</code> och <code>sgdisk --zap-all</code> före formatet, men en mycket envis disk kan fortfarande ha en gammal etikett. Tvinga en rensning manuellt: <code>zpool labelclear -f /dev/sdX</code> eller <code>dd if=/dev/zero of=/dev/sdX bs=1M count=10</code> och försök igen.",
+    "inactiveTitle": "Lagring visar som inaktiv efter omstart",
+    "inactiveBody": "Kontrollera <code>findmnt &lt;mount-path&gt;</code> - om fästet saknas, missade något i <code>/etc/fstab</code>. <code>dmesg | tail</code> pekar vanligen på orsaken (UUID felmatch, filsystem korruption, <code>nofail</code> släppte retry). En <code>mount -a</code> återaktiverar vanligtvis lagringen när orsaken är fast."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/disk-manager/format-disk",
+        "label": "Diskhanterare: formatera / radera fysisk disk",
+        "tail": " — låg nivå alternativ när du bara vill förbereda en disk utan att registrera den som Proxmox lagring."
+      },
+      {
+        "href": "/docs/storage-share/host-iscsi",
+        "label": "Lägg till iSCSI-mål som Proxmox-lagring",
+        "tail": " — motsvarande nätverkslösning när blockenheten finns på en annan dator."
+      },
+      {
+        "href": "/docs/storage-share/host-local-shared",
+        "label": "Lägg till delad katalog på värd",
+        "tail": " — förbered en katalog på värden för LXC-bind-monteringar (registrerar ingen Proxmox-lagring)."
+      }
+    ]
+  }
+}

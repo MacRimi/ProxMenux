@@ -1,0 +1,93 @@
+{
+  "meta": {
+    "title": "Inštalácia ProxMenuxu | Dokumentácia ProxMenuxu",
+    "description": "Inštalácia ProxMenuxu jedným príkazom na hostiteľoch Proxmox VE 8 a novších. Obsahuje vopred vytvorené katalógy JSON pre osem jazykov: angličtinu, španielčinu, francúzštinu, nemčinu, taliančinu, portugalčinu, slovenčinu a švédčinu. Jazyk vyberiete pri inštalácii alebo ho neskôr zmeníte v nastaveniach. Beta kanál poskytuje skorý prístup k novým funkciám.",
+    "ogTitle": "Inštalácia ProxMenuxu | Dokumentácia ProxMenuxu",
+    "ogDescription": "Nainštalujte ProxMenux na Proxmox VE 8 alebo novší jediným príkazom. K dispozícii je stabilný aj beta kanál."
+  },
+  "header": {
+    "title": "Inštalácia ProxMenuxu",
+    "description": "Inštalátor spustíte jedným riadkom na ľubovoľnom hostiteľovi Proxmox VE 8 alebo novšom. Automaticky nainštaluje závislosti, stiahne skripty, nastaví spúšťač ponuky a pri prvom spustení požiada o výber jazyka. K dispozícii sú dva kanály: stabilný (predvolený) a beta.",
+    "section": "Inštalácia"
+  },
+  "stable": {
+    "heading": "Inštalovať",
+    "intro": "Spustite tento príkaz v termináli hostiteľa Proxmox:",
+    "code": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)\""
+  },
+  "during": {
+    "heading": "Počas inštalácie",
+    "intro": "ProxMenux automaticky nainštaluje a nakonfiguruje závislosti, ktoré potrebuje:",
+    "tablePackage": "Balík",
+    "tablePurpose": "Účel",
+    "rows": [
+      {
+        "package": "dialog",
+        "purpose": "Interaktívne ponuky v termináli"
+      },
+      {
+        "package": "curl",
+        "purpose": "Sťahovanie a kontrola pripojenia"
+      },
+      {
+        "package": "jq",
+        "purpose": "Spracovanie JSON"
+      },
+      {
+        "package": "git",
+        "purpose": "Klonovanie a aktualizácia repozitárov"
+      }
+    ],
+    "outro": "Inštalátor tiež stiahne skripty do <code>/usr/local/share/proxmenux/</code> a vytvorí spúšťač <code>/usr/local/bin/menu</code>. Webový panel <strong>ProxMenux Monitor</strong> sa zaregistruje ako služba <code>proxmenux-monitor.service</code>.",
+    "imageAlt": "Prebieha inštalácia ProxMenux"
+  },
+  "first": {
+    "heading": "Prvé spustenie",
+    "intro": "Po inštalácii spustite:",
+    "code": "menu",
+    "outro": "ProxMenux otvorí hlavnú ponuku. Z nej môžete spustiť všetky postupy zdokumentované na tejto stránke. Na čerstvo nainštalovanom hostiteľovi Proxmox je vhodné začať časťou <postlink>Po inštalácii</postlink>."
+  },
+  "beta": {
+    "heading": "Beta kanál",
+    "calloutTitle": "Čo je Beta program?",
+    "calloutBody": "Chcete vyskúšať novinky pred oficiálnym vydaním a pomôcť vytvoriť konečnú verziu? Beta program ProxMenuxu sprístupňuje nové funkcie vrátane najnovších zostavení Monitora priamo z vetvy <code>develop</code>. Beta verzie môžu obsahovať chyby alebo nedokončené funkcie. Vaša spätná väzba pomáha opraviť ich pred stabilným vydaním.",
+    "intro": "Namiesto stabilného nainštalujte beta verziu:",
+    "code": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/develop/install_proxmenux_beta.sh)\"",
+    "outro": "Účasť v beta programe je dobrovoľná: musíte výslovne spustiť beta inštalátor. Po vydaní stabilnej verzie ProxMenux pri ďalšom spustení <code>menu</code> upozorní a ponúkne automatický prechod. Ak chcete beta program opustiť skôr, v nastaveniach vyberte <betalink>Deaktivovať beta program</betalink>."
+  },
+  "updating": {
+    "heading": "Aktualizácia",
+    "body": "ProxMenux spravuje vlastné aktualizácie. Keď je dostupná nová verzia, ďalšie spustenie <code>menu</code> ponúkne jej inštaláciu. Po prijatí sa súbory a konfigurácia nástroja nahradia v existujúcej inštalácii, bez ručného sťahovania. Stabilný kanál dostáva stabilné vydania a beta kanál beta vydania spolu s vyššie opísanou ponukou prechodu. Podoba výzvy závisí od toho, kde spustíte <code>menu</code>: cez SSH alebo konzolu Proxmox sa zobrazí dialóg áno/nie a po potvrdení sa aktualizácia vykoná ihneď. V termináli WebSocket v ProxMenux Monitore sa namiesto neho zobrazí informačné okno, pretože tento terminál by sa počas aktualizácie prerušil. Okno ukazuje jednoriadkový inštalačný príkaz (<code>bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)\"</code> pre stabilný kanál alebo zodpovedajúcu URL <code>install_proxmenux_beta.sh</code> pre beta kanál), ktorý spustíte cez SSH alebo konzolu."
+  },
+  "uninstall": {
+    "heading": "Odinštalovanie",
+    "body": "V ProxMenuxe: <strong>Nastavenia → Odinštalovať ProxMenux</strong>. Odinštalovanie odstráni skripty, spúšťač a službu Monitor a voliteľne aj vybrané závislosti. Súbory <code>/root/.bashrc</code> a <code>/etc/motd</code> obnoví zo záloh, ktoré vytvoril Post-Install, ak sú dostupné (inak odstráni riadok ProxMenux z MOTD). Celý postup: <uninstalllink>Odinštalovanie ProxMenuxu</uninstalllink>."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "virustotalTitle": "VirusTotal označuje URL inštalácie",
+    "virustotalBody": "Výsledok 1/95 od <em>Chong Lua Dao</em>, nahlásený v issue #162, správca projektu označil za falošný poplach. Inštalátor sa spúšťa príkazom, ktorý skript stiahne a spustí (<code>bash -c \"$(wget -qLO - …)\"</code>) a môže stiahnuť <code>jq</code> z jeho oficiálneho vydania na GitHube. Takéto <em>správanie</em> môže spustiť heuristickú detekciu; historické hlásenie nie je hodnotením všetkých budúcich stiahnutí. Inštalátor má otvorený zdrojový kód a možno ho skontrolovať. Ďalšie súvislosti v <issuelink>issue #162</issuelink>.",
+    "aptTitle": "Inštalácia zlyhala s apt chybami",
+    "aptBody": "Zvyčajne chýba repozitár Proxmoxu alebo je nesprávne nastavený. Inštalátor získava závislosti cez apt, ktorý pri chybnej konfigurácii repozitárov zlyhá. Stáva sa to napríklad pri minimálnych inštaláciách Proxmoxu 8, ktoré ešte neboli aktualizované. Najprv ručne spustite <code>apt-get update</code>, opravte všetky chyby a potom znova spustite inštalátor.",
+    "menuTitle": "`menu: command not found` po inštalácii",
+    "menuBody": "Spúšťač je v <code>/usr/local/bin/menu</code>. Overte ho príkazom <code>ls -lh /usr/local/bin/menu</code>. Ak chýba, inštalácia sa predčasne ukončila; spustite ju znova. Ak existuje, ale príkaz sa nenájde, PATH neobsahuje <code>/usr/local/bin</code>. Opravte PATH alebo spustite priamo <code>/usr/local/bin/menu</code>.",
+    "stuckTitle": "Inštalácia visí alebo nepostupuje",
+    "stuckBody": "Ak sa inštalácia, reinštalácia alebo aktualizácia zasekne pre problém s pripojením, prerušte ju pomocou <strong>Ctrl + C</strong> a znova ručne spustite inštalátor.",
+    "otherTitle": "Iné problémy",
+    "otherBody": "Pozrite si známe problémy v <issueslink>GitHub Issues</issueslink> alebo vytvorte nové hlásenie s príslušnými výpismi. Ak používate beta verziu a problém súvisí s Monitorom, pridajte výstup <code>journalctl -u proxmenux-monitor -n 50</code>."
+  },
+  "next": {
+    "heading": "Čo ďalej?",
+    "postInstall": "<postlink>Skript po inštalácii</postlink> — úpravy a zabezpečenie čerstvo nainštalovaného hostiteľa Proxmox.",
+    "introduction": "<introlink>Úvod</introlink> — úplný prehľad funkcií.",
+    "monitor": "<monitorlink>ProxMenux Monitor</monitorlink> — webový panel hostiteľa, ktorý sa automaticky inštaluje spolu s ponukou."
+  },
+  "requirements": {
+    "heading": "Požiadavky a osvedčené postupy",
+    "reqTitle": "Požiadavky",
+    "reqBody": "Proxmox VE <strong>8.x alebo novší</strong>. PVE 7 a staršie verzie nie sú podporované. Hostiteľ potrebuje prístup na internet na stiahnutie skriptov, závislostí a AppImage ProxMenux Monitora. Inštalátor spúšťajte ako <strong>root</strong> na hostiteľovi Proxmox.",
+    "inspectTitle": "Vždy skontrolujte skripty, ktoré spustíte z internetu",
+    "inspectReview": "<sourcelink>Pred spustením si prezrite zdroj inštalátora</sourcelink>.",
+    "inspectCoc": "Všetky spustiteľné odkazy dodržiavajú <coclink>kódex správania ProxMenuxu</coclink>."
+  }
+}

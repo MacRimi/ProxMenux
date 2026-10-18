@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "Destinos de copia — Local, Proxmox Backup Server, Borg | ProxMenux",
-    "description": "Tres backends de almacenamiento reciben el mismo contenido de una copia de ProxMenux: un archivo local .tar.zst en cualquier sistema de ficheros escribible, un backup en un datastore de Proxmox Backup Server o un archivo en un repositorio local o remoto de Borg. Cada backend tiene sus propias características de compresión, deduplicación, cifrado y red.",
+    "title": "Destinos de backup — Local, Proxmox Backup Server, Borg | ProxMenux",
+    "description": "Tres backends de almacenamiento reciben el mismo contenido de un backup de ProxMenux: un archivo local .tar.zst en cualquier sistema de ficheros escribible, un backup en un datastore de Proxmox Backup Server o un archivo en un repositorio local o remoto de Borg. Cada backend tiene sus propias características de compresión, deduplicación, cifrado y red.",
     "ogTitle": "Destinos de ProxMenux Backup",
-    "ogDescription": "Local, Proxmox Backup Server y Borg — tres backends de almacenamiento para el mismo contenido de copia del host.",
+    "ogDescription": "Local, Proxmox Backup Server y Borg — tres backends de almacenamiento para el mismo contenido de backup del host.",
     "twitterTitle": "Destinos de ProxMenux Backup | ProxMenux",
-    "twitterDescription": "Archivo local, Proxmox Backup Server y Borg como backends para copias del host."
+    "twitterDescription": "Archivo local, Proxmox Backup Server y Borg como backends para backups del host."
   },
   "header": {
     "title": "Destinos",
@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "El mismo contenido, tres backends",
-    "body": "Cada copia produce los mismos tres bloques (rootfs, manifiesto, aplicaciones). Lo que cambia entre destinos es cómo se almacenan esos bloques y cómo el usuario los recupera para una restauración. Cada backend está implementado como una función independiente en <code>backup_host.sh</code> — <code>_bk_local</code>, <code>_bk_pbs</code>, <code>_bk_borg</code> — pero los tres comparten el mismo paso de staging (<code>hb_prepare_staging</code>) y el mismo camino de restauración. La elección del destino sólo afecta a la escritura y la recuperación; no cambia lo que hace una restauración ni cómo consume el archivo."
+    "body": "Cada backup produce los mismos tres bloques (rootfs, manifiesto, aplicaciones). Lo que cambia entre destinos es cómo se almacenan esos bloques y cómo el usuario los recupera para una restauración. Cada backend está implementado como una función independiente en <code>backup_host.sh</code> — <code>_bk_local</code>, <code>_bk_pbs</code>, <code>_bk_borg</code> — pero los tres comparten el mismo paso de staging (<code>hb_prepare_staging</code>) y el mismo camino de restauración. La elección del destino sólo afecta a la escritura y la recuperación; no cambia lo que hace una restauración ni cómo consume el archivo."
   },
   "comparison": {
     "heading": "Comparativa de características",
@@ -29,12 +29,12 @@
       {
         "feature": "Compresión",
         "local": "zstd (nivel por defecto) mediante <code>tar --zstd</code>. Fallback a gzip.",
-        "pbs": "Gestionada por PBS. El cliente envía sin comprimir; el servidor chunkiza + comprime.",
-        "borg": "La integrada de Borg (lz4 por defecto). Configurable al inicializar el repo."
+        "pbs": "La gestiona proxmox-backup-client. ProxMenux no modifica las opciones de compresión.",
+        "borg": "La compresión integrada de Borg. ProxMenux ejecuta borg create sin modificar las opciones de compresión."
       },
       {
         "feature": "Deduplicación",
-        "local": "Ninguna. Cada copia es un archivo completo independiente.",
+        "local": "Ninguna. Cada backup es un archivo completo independiente.",
         "pbs": "Deduplicación completa a nivel de chunk entre todas las backups del datastore.",
         "borg": "Deduplicación completa a nivel de chunk entre todos los archivos del repositorio."
       },
@@ -46,9 +46,9 @@
       },
       {
         "feature": "Retención / poda",
-        "local": "Aplicada por trabajo programado vía <code>KEEP_LAST</code>. Los archivos antiguos (y sus sidecars + logs del runner) se eliminan de forma simétrica. Las copias interactivas no aplican poda.",
-        "pbs": "Aplicada por trabajo programado vía <code>proxmox-backup-client prune --keep-last / --keep-daily / --keep-weekly</code>. Las copias interactivas no aplican poda.",
-        "borg": "Aplicada por trabajo programado vía <code>borg prune --keep-last / --keep-daily / --keep-weekly</code>. Las copias interactivas no aplican poda."
+        "local": "Aplicada por trabajo programado vía <code>KEEP_LAST</code>. Los archivos antiguos (y sus sidecars + logs del runner) se eliminan de forma simétrica. Los backups interactivos no aplican poda.",
+        "pbs": "Aplicada por trabajo programado vía <code>proxmox-backup-client prune --keep-last / --keep-daily / --keep-weekly</code>. Los backups interactivos no aplican poda.",
+        "borg": "Aplicada por trabajo programado vía <code>borg prune --keep-last / --keep-daily / --keep-weekly</code>. Los backups interactivos no aplican poda."
       },
       {
         "feature": "Red",
@@ -75,11 +75,11 @@
     "captionBorg": "Borg"
   },
   "sameArchive": {
-    "heading": "El contenido interno de la copia es el mismo en cualquier destino",
-    "body": "Con independencia de dónde se guarde la copia, dentro siempre están los mismos tres bloques descritos en <em>Cómo funciona</em>: el sistema de ficheros (<code>rootfs/</code>), los metadatos (<code>metadata/</code>) y el manifiesto (<code>manifest.json</code>). Al extraer una copia local <code>.tar.zst</code>, restaurar un archivo <code>.pxar</code> desde PBS o descomprimir un archivo Borg, el árbol de directorios resultante es idéntico en los tres casos. Esto significa que el proceso de restauración lee siempre los mismos ficheros y no le importa desde qué destino provenga la copia."
+    "heading": "El contenido interno del backup es el mismo en cualquier destino",
+    "body": "Los tres destinos contienen la misma estructura <code>rootfs/</code> + <code>metadata/</code> + <code>manifest.json</code> descrita en <em>Cómo funciona</em>. Extraer un <code>.tar.zst</code> de un archivo local, restaurar un <code>.pxar</code> desde PBS o extraer un archivo de Borg con <code>borg extract</code> produce el mismo árbol de directorios. El proceso de restauración (<code>_rs_check_layout</code>, <code>_rs_apply</code>, <code>_rs_prepare_pending_restore</code>) lee los mismos tres componentes sin necesitar saber de qué destino proceden."
   },
   "extractStandalone": {
-    "heading": "Extraer una copia fuera de ProxMenux",
+    "heading": "Extraer un backup fuera de ProxMenux",
     "intro": "Cualquiera de los tres formatos de archivo se puede leer con herramientas estándar sin tener ProxMenux instalado en el host de lectura. Los comandos siguientes producen el mismo árbol de directorios que consume internamente una restauración.",
     "localCmd": "# Desde un archivo local .tar.zst:\ntar --zstd -xf hostcfg-HOST-TIMESTAMP.tar.zst\n\n# Desde el fallback .tar.gz:\ntar -xzf hostcfg-HOST-TIMESTAMP.tar.gz",
     "pbsCmd": "# Desde un backup PBS (requiere proxmox-backup-client):\nproxmox-backup-client restore \\\n    --repository USER@REALM@HOST:DATASTORE \\\n    host/hostcfg-HOST/BACKUP-TIME \\\n    hostcfg.pxar /tmp/hostcfg\n\n# Añadir --keyfile KEY-PATH cuando el backup está cifrado.",

@@ -1,0 +1,213 @@
+{
+  "meta": {
+    "title": "OCI Container in ProxMenux Monitor | ProxMenux",
+    "description": "Was ProxMenux Monitor für einen mit OCI manager Apps installierten Container zeigt: Anwendungs- und Image-Versionen, neue Images, Konsolenausgabe und Proxmox-VE-Terminal."
+  },
+  "header": {
+    "title": "In ProxMenux Monitor",
+    "description": "Ein mit OCI manager Apps installierter Container erscheint wie jeder andere LXC unter VMs & LXCs. Sein Detaildialog liest den Installationsdatensatz: Anwendungs- und Image-Versionen, neue Images, Konsolenausgabe und Terminal.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Die Aufzeichnung ist die Quelle",
+            "body": "OCI manager Apps kennt die installierte Anwendung und ihre Herkunft. Der Monitor liest diesen Installationsdatensatz, statt die Anwendung im Container zu untersuchen. Diese Informationen stehen deshalb sowohl bei laufendem als auch bei gestopptem Container zur Verfügung."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Tab.",
+              "Was ändert sich für einen OCI Container"
+            ],
+            "rows": [
+              [
+                "Status",
+                "Ein <strong>Watchdog</strong> Switch unter Start beim Booten: Die Anwendung wird wieder gestartet, wenn sie von selbst stoppt"
+              ],
+              [
+                "App",
+                "Die Anwendung wird aus dem Datensatz identifiziert und Updates werden nach Image verfolgt"
+              ],
+              [
+                "Aktualisierungen",
+                "Das Image wird aktualisiert oder die Anwendung geändert, mit dem gleichen Ablauf wie das OCI-Menü"
+              ],
+              [
+                "Mounts",
+                "Containerfestplatten und Hostverzeichnisse mit ihrer Belegung"
+              ],
+              [
+                "Protokolle",
+                "Nur für OCI-Container: die Konsolenausgabe der Anwendung"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "app",
+      "title": "App",
+      "intro": "Die Registerkarte <appLink>App</appLink> bietet die installierte Anwendung als Erkennung mit dem Namen, dem Logo, dem Port und dem Schema des Datensatzes. Die Registrierung öffnet den Editor mit der Methode <strong>OCI-Image (installiert von ProxMenux)</strong>, die keine Konfiguration benötigt.",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "boxes",
+                "title": "Anwendung",
+                "body": "Die Version der Anwendung im Image, gelesen aus dem Image selbst: seine Umgebung oder seine <code>org.opencontainers.image.version</code> Label. Es ist informativ."
+              },
+              {
+                "icon": "archive",
+                "title": "Image",
+                "body": "Das Build-Datum und der Digest des installierten Images. Das Update wird hier entschieden: Der installierte Digest wird mit dem verglichen, den die Registry heute für dasselbe Tag veröffentlicht."
+              }
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Wenn die Registry einen neuen Digest veröffentlicht, zeigt die Karte <strong>Neues Image</strong> mit seinem Datum und Digest an, auch wenn sich die Anwendungsversion im Inneren nicht geändert hat: Ein Neuaufbau auf einer aktualisierten Basis ist ein Update.",
+              "Wenn die Digests übereinstimmen, liest die Karte <strong>Version</strong>.",
+              "Die Karte verlinkt auf das Repository des Images: das GitHub-Projekt oder die Docker-Hub-Seite für ein offizielles Image.",
+              "Der Zugangslink verwendet die LAN-Adresse des Containers, auch für das Hauptmitglied einer Multicontainer-Anwendung, die eine zweite Adresse in ihrem privaten Netzwerk hat.",
+              "Die Schaltfläche <strong>Daten aktualisieren</strong> liest den Datensatz und die Registry erneut. Die Optionen zum Suchen oder Registrieren weiterer Anwendungen werden nicht angeboten: Der Container enthält genau die Anwendung seines Datensatzes."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/monitor-app-tab.png",
+            "alt": "App-Tab eines OCI-Containers mit Anwendungsversion, Image und Repository-Link",
+            "caption": "Registerkarte App eines mit OCI manager Apps installierten Containers."
+          }
+        },
+        {
+          "p": "Der Check läuft einmal täglich mit den Update-Checks des Monitors und <strong>Daten aktualisieren</strong> führt ihn sofort aus. Ein neues Image wird als Benachrichtigung über die in <notificationsLink>Benachrichtigungen</notificationsLink> konfigurierten Kanäle gesendet. Das Update wird über den Tab Updates angewendet."
+        }
+      ]
+    },
+    {
+      "id": "updates",
+      "title": "Aktualisierungen",
+      "intro": "Bei einem mit OCI manager Apps installierten Container zeigt die Registerkarte Updates die Anwendung mit ihrem installierten Image und gegebenenfalls dem neuen Image aus der Registry, im selben Format wie andere Anwendungen. Die Paket- und Anwendungs-Updater eines gewöhnlichen LXC werden nicht angeboten.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Schaltfläche",
+              "Was es öffnet"
+            ],
+            "rows": [
+              [
+                "Aktualisierung",
+                "Die Aktualisierung aus <lifecycleLink>Installierte OCI-Anwendungen verwalten</lifecycleLink> für diesen Container im Monitor-Terminal. Sie kann mit oder ohne neues Image ausgeführt werden; ohne neues Image wird nichts verändert. Bei einer Multicontainer-Anwendung werden alle Mitglieder aktualisiert."
+              ],
+              [
+                "Ändern",
+                "Der Editor der Anwendung (Ressourcen, Netzwerk, Pfade und GPU). In einer Multicontainer-Anwendung werden die zusätzlichen Pfade und Geräte des Anwendungscontainers hinzugefügt oder entfernt und in Immich wird geändert, was die Erkennung ausführt."
+              ],
+              [
+                "Wiederherstellen",
+                "Ersetzt Update, wenn eine Operation auf dem Container unterbrochen wurde, und öffnet seine Wiederherstellung."
+              ],
+              [
+                "Wiederherstellen (wiederhergestellter Container)",
+                "Wird für einen aus einem Backup wiederhergestellten Container ohne Vertrag auf diesem Host unter <strong>Wiederhergestellte OCI-Anwendung</strong> angezeigt. Öffnet die <lifecycleLink>Wiederherstellung</lifecycleLink> im Monitor-Terminal; Aktualisieren und Ändern erscheinen nach der Registrierung."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Externe Änderungen, Hostverzeichnisse und Multicontainer-Anwendungen werden wie im OCI-Menü behandelt. In einer Multicontainer-Anwendung erscheinen die Buttons und die Optionen nur auf dem Hauptcontainer; die anderen Mitglieder zeigen ihr Image, eine Notiz, dass sie vom Hauptcontainer aktualisiert werden, und eine Schaltfläche, die es öffnet. Wenn das Terminal schließt, werden das Image, der Datensatz und die Mounts erneut gelesen."
+        },
+        {
+          "table": {
+            "headers": [
+              "Option",
+              "Verhalten"
+            ],
+            "rows": [
+              [
+                "Das vor dem Update erstellte Backup behalten",
+                "Jedes Update sichert den Container, um ihn wiederherzustellen, wenn das Update fehlschlägt. Mit dieser Option wird dasselbe Backup im ausgewählten Speicher gespeichert und erscheint unter den Backups des CT; auf Proxmox Backup Server wird vor dem Update ein Backup geschrieben."
+              ],
+              [
+                "Geplante Updates",
+                "Das Image wird zum gewählten Zeitpunkt nur aktualisiert, wenn die Registry ein neues veröffentlicht, und optional nur, wenn es 1, 3, 7 oder 14 Tage alt ist. Ein Container mit Änderungen außerhalb von ProxMenux wird übersprungen und gemeldet."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "logs",
+      "title": "Protokolle",
+      "intro": "Die Registerkarte Logs erscheint nur bei mit OCI manager Apps installierten Containern, zwischen Mounts und Backups. Sie zeigt Standardausgabe und Standardfehler des Hauptprozesses des Images, entsprechend der Ausgabe von <code>docker logs</code> bei Docker-Containern.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Die Ausgabe wird auf dem Host in <code>/var/log/proxmenux/oci/VMID.console.log</code> (Modus 0600) vom ersten Start und über Neustarts gehalten, so dass sie mit gestopptem Container gelesen werden kann.",
+              "Die Datei wird bei 10 MB gedreht und behält drei komprimierte Kopien (<code>/etc/logrotate.d/proxmenux-oci</code>).",
+              "Jeder Start des Containers wird in der Ausgabe markiert. Die Registerkarte zeigt die Ausgabe seit dem letzten Start standardmäßig; <strong>Vollständiger Verlauf</strong> zeigt auch die vorherigen.",
+              "Wenn die Anwendung entfernt wird, wird ihre Ausgabe mit ihr entfernt.",
+              "Die letzten 100-, 500- oder 1000-Zeilen werden gezeigt. Während der Container läuft, werden neue Zeilen live verfolgt; das Scrollen nach oben pausiert das Folgen und <strong>Follow</strong> nimmt es wieder auf.",
+              "Ein Filter zeigt nur die Zeilen an, die einen Text enthalten, und <strong>Herunterladen</strong> speichert die geladenen Zeilen.",
+              "Farbcodes werden entfernt und eine Zeile, die eine Fortschrittsleiste neu zeichnet, wird in ihrem endgültigen Zustand angezeigt.",
+              "Die Registerkarte liest die Datei bei jedem Öffnen; es wird nicht zwischengespeichert."
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Zugangsdaten beim ersten Start",
+            "body": "Images, die ein generiertes Passwort beim ersten Start ausdrucken, lassen es in dieser Ausgabe, wie <code>docker logs</code>. Der Installateur liest es von dort aus, um es in seiner Zusammenfassung zu zeigen."
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/monitor-logs-tab.png",
+            "alt": "Logs Tab mit dem Konsolenausgang eines OCI-Containers, dem Zeilenwähler, dem Filter und der Follow-Taste",
+            "caption": "Konsolenausgabe eines OCI-Containers."
+          }
+        }
+      ]
+    },
+    {
+      "id": "terminal",
+      "title": "Proxmox VE Konsole",
+      "blocks": [
+        {
+          "p": "Ein OCI-Image startet seinen eigenen Prozess als PID 1 und keinen Anmeldedienst. Die übliche LXC-Konsole würde deshalb ein Terminal ohne antwortenden Login-Prozess öffnen. Mit OCI manager Apps installierte Container erhalten <code>cmode: shell</code>: Die Proxmox-VE-Konsole öffnet über <code>lxc-attach</code> eine Shell, entsprechend <code>docker exec</code>. Die laufende Anwendung bleibt dabei unverändert."
+        },
+        {
+          "list": {
+            "items": [
+              "Die Shell ist diejenige, die <code>/etc/passwd</code> dem Root im Image gibt. Ein Image, dessen Root keine Shell hat oder keine ausliefert, behält die Standardkonsole.",
+              "Die Shell ist root im Container, ohne Passwort. Wer es öffnen kann, wird durch die <code>VM.Console</code>-Berechtigung von Proxmox VE entschieden.",
+              "Das Terminal des Monitors betritt den Container mit <code>pct enter</code>, was auf die gleiche Weise funktioniert."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "mounts",
+      "title": "Mounts",
+      "blocks": [
+        {
+          "p": "Die Registerkarte <mountsLink>Mounts</mountsLink> listet die Festplatten und Hostverzeichnisse des Containers auf. Die Belegung einer Containerfestplatte auf Blockspeicher wie LVM-thin wird aus deren Dateisystem gelesen, das nur im Container eingehängt ist."
+        }
+      ]
+    }
+  ]
+}

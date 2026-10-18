@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "title": "Pravidlá správania | Dokumentácia ProxMenux",
+    "description": "Kódex správania ProxMenux a najlepšie postupy pre prispievateľov, testerov a používateľov.",
+    "ogTitle": "Pravidlá správania | Dokumentácia ProxMenux",
+    "ogDescription": "Očakávania týkajúce sa zodpovednosti za kód, oznamovania bezpečnostných chýb a rozsahu PR v projekte ProxMenux."
+  },
+  "errors": {
+    "notFound": "Chyba: Súbor CODE_OF_CONDUCT.md nebol nájdený.",
+    "loadFailed": "Chyba: Nemožno načítať obsah kódexu správania."
+  },
+  "contentMarkdown": "# 📝 Kódex správania a odporúčané postupy\n\nTento dokument stanovuje **zásady a usmernenia** na používanie **ProxMenuxu** s cieľom podporovať **rešpekt, spoluprácu a bezpečnosť** pri vývoji.\n\n## 📌 1. Uvedenie autorstva kódu a uznanie\n\n- Pri použití **skriptov, úryvkov kódu alebo nápadov** z iných repozitárov či od iných vývojárov bude vždy uvedený pôvodný autor.\n- V kóde alebo dokumentácii bude komentár s uvedením zdroja a podľa možnosti s odkazom na pôvodný repozitár.\n- Pri použití kódu s konkrétnou **licenciou** je potrebné dodržať jej podmienky.\n\n### ✅ Príklad správneho uvedenia zdroja v kóde:\n\n```bash\n# Skript vychádza z práce [Autor] v [Odkaz na repozitár]\n```\n\n## 🔒 2. Bezpečnosť a zodpovednosť za kód\n\n- Všetok kód v tomto repozitári dodržiava odporúčané postupy bezpečného vývoja.\n- Príspevky, ktoré úmyselne zavádzajú zraniteľnosti alebo nebezpečné postupy, nie sú povolené.\n- Skripty nikdy nesmú ohroziť bezpečnosť systému ani údaje používateľov.\n- Pred implementáciou je potrebné príspevky skontrolovať z hľadiska bezpečnosti a stability.\n\n### ⚠️ Zodpovedné nahlasovanie zraniteľností\n\nAk objavíte bezpečnostnú zraniteľnosť, NEHLÁSTE ju vo verejných issues ani na fórach.\n\nNamiesto toho ju nahláste súkromne e-mailom:\n\n📧 proxmenux@macrimi.pro\n\nPodrobnosti o bezpečnostných zraniteľnostiach a ich nahlasovaní nájdete v našich [bezpečnostných zásadách](./SECURITY.md).\n\n## 🤝 3. Pravidlá komunity\n\nNa zachovanie rešpektujúceho a profesionálneho prostredia musia všetci používatelia dodržiavať tieto pravidlá:\n\n- ✅ V diskusiách buďte úctiví a konštruktívni.\n- ❌ Obťažovanie, nenávistné prejavy ani urážlivé správanie sa nebudú tolerovať.\n- ✅ Spätnú väzbu poskytujte profesionálne a bez osobných útokov.\n- ❌ Porušenie pravidiel môže podľa závažnosti viesť k upozorneniu alebo vylúčeniu.\n\n##\n\nTento dokument podporuje etické používanie kódu, povedomie o bezpečnosti a rešpektujúcu komunitu.\n\n📢 Vytvorme spolu niečo skvelé!\n"
+}

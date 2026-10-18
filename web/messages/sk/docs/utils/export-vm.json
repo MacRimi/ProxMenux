@@ -1,0 +1,145 @@
+{
+  "meta": {
+    "title": "Export VM do OVA / OVF | Dokumentácia ProxMenux",
+    "description": "Exportujte VM Proxmox do prenosného archívu OVA alebo adresára OVF pomocou štandardnej schémy DMTF. Disky VMDK vo formáte streamOptimized a manifest SHA1. Import je možný vo VMware ESXi / Workstation / Fusion, VirtualBox aj späť v Proxmoxe.",
+    "ogTitle": "Export VM do OVA / OVF | Dokumentácia ProxMenux",
+    "ogDescription": "Preveďte VM Proxmox na prenosný balík OVA / OVF kompatibilný s VMware a VirtualBox."
+  },
+  "header": {
+    "title": "Exportovať VM do OVA / OVF",
+    "description": "Prevedie VM Proxmox na prenosný balík OVA (jeden archív TAR) alebo OVF (deskriptor a súbory VMDK) pomocou štandardnej schémy DMTF OVF. Disky sa pomocou qemu-img konvertujú na VMDK vo formáte streamOptimized. Výsledok možno importovať vo VMware (ESXi / Workstation / Fusion), VirtualBox aj späť v Proxmoxe pomocou nástroja na import.",
+    "section": "Nástroje"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "Načíta konfiguráciu zastavenej VM, prevedie každý disk na VMDK vo formáte streamOptimized, vytvorí deskriptor OVF a manifest SHA1 a všetko zabalí do jedného súboru <code>.ova</code> alebo adresára <code>-ovf</code>. Zdrojová VM sa nikdy nemení."
+  },
+  "picker": {
+    "heading": "Výber VM",
+    "body": "Po spustení skript zobrazí všetky VM z <code>qm list</code> s VMID, názvom a stavom. Vyberte VM na export:",
+    "imgAlt": "Dialóg výberu VM na export so zoznamom všetkých VM"
+  },
+  "stopped": {
+    "heading": "VM musí byť zastavená",
+    "intro": "Konzistentný obraz disku vyžaduje zastavenú VM. Ak vybraná VM beží, ProxMenux ponúkne jej vypnutie:",
+    "items": [
+      "Riadne vypnutie cez <code>qm shutdown $VMID --timeout 120</code> (čaká 2 minúty na vypnutie hosťovského systému cez ACPI).",
+      "Po uplynutí času ponúkne vynútené zastavenie: <code>qm stop $VMID</code> (zodpovedá odpojeniu napájania).",
+      "Ak odmietnete obe možnosti, export sa zruší a žiadne údaje sa nezmenia."
+    ],
+    "warnTitle": "Vynútené zastavenie zodpovedá odpojeniu napájania",
+    "warnBody": "<code>qm stop</code> zodpovedá vytiahnutiu napájacieho kábla. Pri ďalšom štarte môže hosťovský systém potrebovať opravu súborového systému. Ak je to možné, použite riadne vypnutie a vynútené zastavenie si nechajte pre hosťovské systémy, ktoré nereagujú."
+  },
+  "format": {
+    "heading": "Volič formátu: OVA vs OVF",
+    "headerFormat": "Formát",
+    "headerOutput": "Výstup",
+    "headerPros": "Výhody",
+    "headerCons": "Nevýhody",
+    "rows": [
+      {
+        "format": "OVA",
+        "output": "name-vmid-ts.ova",
+        "pros": "Jeden samostatný súbor, ktorý sa ľahko presúva, prenáša cez sftp alebo pripája k požiadavke podpory.",
+        "cons": "Vyžaduje ~220% virtuálnej veľkosti disku (dodatočný priestor pre archív TAR počas vytvárania)."
+      },
+      {
+        "format": "OVF",
+        "output": "name-vmid-ts-ovf/",
+        "pros": "~120% virtuálnej veľkosti disku. Jednoduchšia kontrola, pretože deskriptor je textový XML. Pred importom ho možno upraviť.",
+        "cons": "Viac súborov, ktoré sa musia preniesť spoločne."
+      }
+    ]
+  },
+  "destination": {
+    "heading": "Cieľový priečinok",
+    "body": "Vyberte prednastavenú cestu (<code>/var/lib/vz/dump</code>, <code>/var/lib/vz/template/iso</code>) alebo zadajte vlastnú. Skript pred začiatkom overí možnosť zápisu do adresára a upozorní na nedostatok voľného miesta.",
+    "calloutTitle": "Orientačný odhad voľného miesta",
+    "calloutBody": "Pri exporte VM s celkovou virtuálnou veľkosťou diskov 100 GB do OVF počítajte s ~120 GB voľného miesta; pri OVA s ~220 GB. Takmer prázdne disky môžu v skutočnosti zaberať menej. Archív OVA sa vytvára pomocou nekomprimovaného TAR, kým dočasné súbory VMDK ešte existujú, preto treba miesto pre oboje. Ak sa miesto minie počas exportu, obsluha EXIT vyčistí dočasný adresár a musíte začať odznova."
+  },
+  "package": {
+    "heading": "Čo balík obsahuje",
+    "intro": "Pre OVA / OVF s názvom <code>myvm-100-2026-04-26_18-30-15</code>:",
+    "code": "# OVA mode (single .ova file is a TAR of):\nmyvm-100-2026-04-26_18-30-15.ovf      # XML descriptor (DMTF OVF 1.0 + RASD + VSSD)\nmyvm-100-2026-04-26_18-30-15.mf       # SHA1 manifest\nmyvm-100-2026-04-26_18-30-15-disk0.vmdk\nmyvm-100-2026-04-26_18-30-15-disk1.vmdk\n...\n\n# OVF mode (a directory):\nmyvm-100-2026-04-26_18-30-15-ovf/\n├── myvm-100-2026-04-26_18-30-15.ovf\n├── myvm-100-2026-04-26_18-30-15.mf\n├── myvm-100-2026-04-26_18-30-15-disk0.vmdk\n└── myvm-100-2026-04-26_18-30-15-disk1.vmdk"
+  },
+  "exported": {
+    "heading": "Čo sa exportuje",
+    "items": [
+      "<strong>Disky:</strong> všetky položky <code>scsi*</code>, <code>sata*</code>, <code>virtio*</code> a <code>ide*</code> v konfigurácii VM, prevedené na VMDK vo formáte streamOptimized.",
+      "<strong>Počet vCPU</strong> (RASD ResourceType 3) a <strong>pamäť</strong> v MiB (ResourceType 4).",
+      "<strong>Počet sieťových kariet</strong> (ResourceType 10: iba počet, nie most ani model).",
+      "<strong>Názov VM</strong> a údaj o type operačného systému."
+    ],
+    "notTitle": "Čo sa NEEXPORTUJE",
+    "notItems": [
+      "Pripojené CD-ROM / ISO (zámerne vylúčené).",
+      "Jednotky cloud-init (zámerne vylúčené).",
+      "Konkrétny most a model sieťovej karty (zachová sa iba počet).",
+      "Voľba BIOS / UEFI, ktorú treba pri importe znova nastaviť.",
+      "Konfigurácia priameho priradenia PCI.",
+      "Snímky: zachytí sa iba aktuálny stav.",
+      "Možnosti na úrovni VM (NUMA, hugepages, hotplug, …)."
+    ]
+  },
+  "conversion": {
+    "heading": "Konverzia disku",
+    "intro": "Každý disk je konvertovaný s:",
+    "code": "qemu-img convert -p -O vmdk -o subformat=streamOptimized \\\n    \"$source_path\" \\\n    \"$work_dir/<base_name>-disk<N>.vmdk\"",
+    "outro": "<code>streamOptimized</code> je formát VMware čitateľný jedným priechodom. Podporujú ho ESXi 6.7+, VMware Workstation, VirtualBox aj samotný Proxmox. Je to najširšie kompatibilný podformát VMDK a vhodná voľba na prenos. Nevýhodou je, že neumožňuje náhodný prístup, takže ho nemožno priamo pripojiť bez konverzie."
+  },
+  "manifest": {
+    "heading": "Manifest SHA1",
+    "intro": "Každý balík obsahuje súbor <code>.mf</code> s hashmi SHA1 deskriptora OVF a každého súboru VMDK:",
+    "code": "SHA1(myvm-100-2026-04-26_18-30-15.ovf)= 3a7bd3e2360a3d29eea436fcfb7e44c735d117c9\nSHA1(myvm-100-2026-04-26_18-30-15-disk0.vmdk)= b7e23ec29af22b0b4e41da31e868d57226121c84\nSHA1(myvm-100-2026-04-26_18-30-15-disk1.vmdk)= a87ff679a2f3e71d9181a67b7542122c",
+    "outro": "V špecifikácii OVF je manifest voliteľný a mnohé programy ho ignorujú. Pomáha však overiť, či sa balík preniesol neporušený. Overte ho ručne pomocou <code>sha1sum -c file.mf</code>."
+  },
+  "import": {
+    "heading": "Importovanie výsledku",
+    "intro": "Exportovaný balík možno importovať do:",
+    "items": [
+      {
+        "href": "/docs/utils/import-vm",
+        "preRich": "<strong>Proxmox</strong> — použite príslušný nástroj ",
+        "linkLabel": "Importovať VM z OVA / OVF",
+        "tailRich": "."
+      },
+      {
+        "tailRich": "<strong>VMware ESXi</strong> — Datacenter → Deploy OVF Template; vyberte súbor .ova alebo .ovf."
+      },
+      {
+        "tailRich": "<strong>VMware Workstation / Fusion</strong> — File → Open; vyberte súbor .ova alebo .ovf."
+      },
+      {
+        "tailRich": "<strong>VirtualBox</strong> — File → Import Appliance; vyberte súbor .ova alebo .ovf."
+      }
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "noSpaceTitle": "qemu-img convert zlyhá počas konverzie s chybou \"No space left on device\"",
+    "noSpaceBody": "V cieli sa minulo voľné miesto. Obsluha EXIT automaticky vyčistí dočasný adresár. Vyberte cieľ s väčším voľným miestom podľa odhadu vyššie a export spustite znova.",
+    "unsupportedHwTitle": "Export sa dokončí, ale VMware odmietne import: \"Unsupported hardware family\"",
+    "unsupportedHwBody": "Niektoré verzie ESXi odmietajú deskriptory OVF, ktoré deklarujú neznámu rodinu hardvéru. Otvorte .ovf v textovom editore alebo najprv rozbaľte .ova. Nájdite <code>&lt;vssd:VirtualSystemType&gt;</code> a zmeňte hodnotu na takú, ktorú ESXi prijme, napríklad <code>vmx-13</code> pre ESXi 6.5+. Ako rýchle obídenie problému skúste VirtualBox, ktorý je menej prísny.",
+    "nicTitle": "Importovaná VM používa inú sieťovú kartu alebo radič SCSI",
+    "nicBody": "OVF zachováva počet sieťových kariet, nie ich pôvodný model. Skontrolujte sieťové nastavenia importovanej VM v cieľovom hypervízore. Export deklaruje radič SCSI lsilogic pre kompatibilitu s VMware. Pri spätnom importe do Proxmoxu cez ProxMenux sa VM vytvorí s radičom LSI a kartami e1000; ak má hosťovský systém vhodné ovládače, prepnite potom na <code>VirtIO SCSI</code> a VirtIO.",
+    "runningTitle": "VM bežala a odmietol som jej vypnutie: export sa zrušil",
+    "runningBody": "Skript nemôže vytvoriť konzistentný obraz, keď sa na disky zapisuje. Nabudúce potvrďte vypnutie alebo najprv vypnite VM ručne (<code>qm shutdown $VMID</code>) a export spustite znova.",
+    "slowTitle": "Konverzia disku je pomalá",
+    "slowBody": "<code>qemu-img convert</code> používa jedno vlákno a číta zdroj plnou rýchlosťou. Pri 100 GB disku na mechanickom pevnom disku počítajte s 15–30 minútami. Prenos z NVMe na NVMe je 5–10-krát rýchlejší. Disky VM sa konvertujú postupne a čas rastie lineárne s celkovou virtuálnou veľkosťou."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/utils/import-vm",
+        "label": "Importovať VM z OVA / OVF",
+        "tail": " — doplnkový nástroj na spätný import."
+      },
+      {
+        "href": "/docs/utils",
+        "label": "Prehľad pomocných nástrojov",
+        "tail": " — Späť na prehľad sekcie."
+      }
+    ]
+  }
+}

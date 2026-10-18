@@ -1,0 +1,81 @@
+{
+  "meta": {
+    "title": "ProxMenux-inställningar — Aktivering av Monitor, versionskanal, språk | ProxMenux",
+    "description": "ProxMenux-inställningar: Monitor-tjänst och lösenordsåterställning, Stable/Beta-kanal, åtta gränssnittsspråk, versionsdiagnostik och avinstallation. Monitor-alternativen visas när tjänsten är installerad.",
+    "ogTitle": "ProxMenux-inställningar — Aktivering av Monitor, versionskanal, språk",
+    "ogDescription": "Konfigurera ProxMenux: Monitor-tjänst, versionskanal, språk, versionsinformation och avinstallation.",
+    "twitterTitle": "ProxMenux Inställningar",
+    "twitterDescription": "Aktivering av Monitor, byte av versionskanal, språk, versionsinformation och avinstallation."
+  },
+  "header": {
+    "title": "Inställningar",
+    "description": "Konfigurera ProxMenux: aktivera eller inaktivera Monitor, återställ dess inloggningsuppgifter, växla mellan Stable och Beta i båda riktningarna, välj ett av åtta språk, visa versionsdiagnostik och avinstallera. Monitor-åtgärder kräver att tjänsten är installerad; språkvalet är alltid tillgängligt.",
+    "section": "Inställningar"
+  },
+  "intro": {
+    "title": "Vad denna meny är för",
+    "body": "Administration av ProxMenux självt: Monitor-tjänst, lämna betakanalen, språk, versionsdiagnostik och avinstallation. Inget i menyn ändrar dina virtuella maskiner, containrar eller lagring."
+  },
+  "opening": {
+    "heading": "Öppna menyn",
+    "body": "Tryck på <kbd>s</kbd> i ProxMenux huvudmeny. Monitor-åtgärder visas om tjänsten är installerad; övriga inställningar är alltid tillgängliga:",
+    "imageAlt": "ProxMenux inställningsmeny med villkorliga Monitor-åtgärder"
+  },
+  "installTypes": {
+    "heading": "En installation, alla språk",
+    "intro": "Aktuella versioner inkluderar statiska JSON-kataloger i varje installation. Äldre versioner erbjöd separata lägen med översättning och Normal:",
+    "headerType": "Installationstyp",
+    "headerBundles": "Vad som ingår",
+    "headerMenu": "Menyn visar",
+    "rows": [
+      {
+        "type": "Aktuell installation",
+        "bundles": "Statiska JSON-kataloger för sju språk plus inbyggd engelska; ingen Python-miljö för översättning",
+        "menuRich": "<strong>Byt språk</strong> + Visa version + Avinstallera"
+      },
+      {
+        "type": "Äldre lägen med översättning / Normal",
+        "bundles": "Föråldrad uppdelning mellan översättningsmiljö och installation enbart på engelska",
+        "menu": "Uppdatera med den officiella installeraren för att använda den gemensamma menyn"
+      }
+    ],
+    "detectionTitle": "Språkvalet är alltid tillgängligt",
+    "detectionBody": "Menyn kontrollerar inte längre en översättningsmiljö. Varje installation innehåller <code>/usr/local/share/proxmenux/lang/</code> och sparar vald <code>language</code> i <code>config.json</code>."
+  },
+  "options": {
+    "heading": "Menyalternativ",
+    "intro": "Verktygen hanterar ProxMenux självt. <em>Villkorligt</em> betyder att Monitor-åtgärder bara visas när dess systemd-tjänst är installerad. Versionskanal, språk, versionsdiagnostik och avinstallation är alltid tillgängliga.",
+    "list": [
+      {
+        "icon": "Activity",
+        "href": "/docs/settings/proxmenux-monitor",
+        "title": "ProxMenux Monitor",
+        "description": "Aktivera / inaktivera proxmenux-monitor.service systemd-enheten, kontrollera dess nuvarande tillstånd och återställa inloggningslösenordet om det har gått förlorat. Web UI tillgängligt på TCP 8008.",
+        "badge": "Villkorligt"
+      },
+      {
+        "icon": "TestTube",
+        "href": "/docs/settings/beta-program",
+        "title": "Byt versionskanal",
+        "description": "Växla mellan Stable (main) och Beta (develop) i båda riktningarna från en enda dialogruta. Kör den officiella installeraren för den valda kanalen; idempotent och alltid synlig.",
+        "badge": "Alltid tillgänglig"
+      },
+      {
+        "icon": "Info",
+        "href": "/docs/settings/show-version-information",
+        "title": "Visa versionsinformation",
+        "description": "ProxMenux-version, versionskanal, installerade komponenter, filvägar, översättningsfiler och aktuellt språk."
+      },
+      {
+        "icon": "Trash2",
+        "href": "/docs/settings/uninstall-proxmenux",
+        "title": "Avinstallera ProxMenux",
+        "description": "Ta bort ProxMenux och (valfritt) dess beroenden. Återställer också /root/.bashrc och /etc/motd säkerhetskopior skapade vid installationstid."
+      }
+    ]
+  },
+  "configTip": {
+    "title": "Var konfigurationen lagras",
+    "bodyRich": "Det mesta av tillståndet som hanteras av menyn lagras i <code>/usr/local/share/proxmenux/config.json</code>: <code>language</code>, <code>beta_program.status</code> och installationsflaggor per komponent. Monitor-tjänstens tillstånd hanteras i systemd (<code>proxmenux-monitor.service</code>), inte här. Versionen läses från <code>/usr/local/share/proxmenux/version.txt</code>."
+  }
+}

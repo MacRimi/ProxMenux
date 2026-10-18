@@ -46,7 +46,7 @@
       {
         "format": "OVF",
         "output": "name-vmid-ts-ovf/",
-        "pros": "~120% disk overhead. Easier to inspect (descriptor is plain XML). Can edit before importing.",
+        "pros": "~120% of virtual disk size. Easier to inspect (descriptor is plain XML). Can edit before importing.",
         "cons": "Multiple files — must transfer all of them together."
       }
     ]
@@ -55,7 +55,7 @@
     "heading": "Destination directory",
     "body": "Pick from presets (<code>/var/lib/vz/dump</code>, <code>/var/lib/vz/template/iso</code>) or enter a manual path. The script validates the directory is writeable and warns if free space looks tight before starting.",
     "calloutTitle": "Free space rule of thumb",
-    "calloutBody": "For an OVF export of a VM with disks totalling 100 GB virtual: budget ~120 GB free. For an OVA: budget ~220 GB. Sparse / mostly-empty disks may use less, but the conversion writes them out fully before the OVA TAR step compresses anything. If you run out of space mid-export, the temp directory is cleaned up by the EXIT trap and you start over."
+    "calloutBody": "For an OVF export of a VM with disks totalling 100 GB virtual: budget ~120 GB free. For an OVA: budget ~220 GB. Actual usage may be lower for mostly-empty disks. The OVA archive is created with uncompressed TAR while the temporary VMDK files still exist, so allow space for both. If you run out of space mid-export, the temp directory is cleaned up by the EXIT trap and you start over."
   },
   "package": {
     "heading": "What ends up in the package",
@@ -120,8 +120,8 @@
     "noSpaceBody": "Destination ran out of space. The temp directory is auto-cleaned by the EXIT trap. Pick a destination with more headroom (rule of thumb above) and re-run.",
     "unsupportedHwTitle": "Export completes but VMware refuses to import: \"Unsupported hardware family\"",
     "unsupportedHwBody": "Some ESXi versions reject OVF descriptors that declare a hardware family they don't recognise. Open the .ovf in a text editor (or extract the .ova first), find <code>&lt;vssd:VirtualSystemType&gt;</code> and edit it to a value ESXi accepts (e.g. <code>vmx-13</code> for ESXi 6.5+). For a quick workaround, try VirtualBox — it's more permissive.",
-    "nicTitle": "Imported VM in VMware has e1000 NIC but I want VirtIO",
-    "nicBody": "Expected — the OVF only stores the NIC count, not the model. Edit the imported VM's NIC settings in VMware after import. Same applies for SCSI controller (export uses lsilogic for VMware compatibility; change to <code>VirtIO SCSI</code> if your guest supports it).",
+    "nicTitle": "Imported VM uses a different NIC or SCSI controller",
+    "nicBody": "The OVF preserves the NIC count, not the original model. Review the imported VM’s network settings in the destination hypervisor. The export declares an lsilogic SCSI controller for VMware compatibility. When importing back into Proxmox with ProxMenux, the VM is created with an LSI controller and e1000 NICs; switch to <code>VirtIO SCSI</code> and VirtIO afterwards if the guest has suitable drivers.",
     "runningTitle": "VM was running and I declined to stop it — export aborted",
     "runningBody": "The script can't produce a consistent image while disks are being written. Either accept the shutdown prompt next time, or stop the VM manually first (<code>qm shutdown $VMID</code>) and re-run.",
     "slowTitle": "Disk conversion is slow",

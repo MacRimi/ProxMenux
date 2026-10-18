@@ -29,10 +29,10 @@
     "blacklistBody": "Check whether the open-source <code>nouveau</code> driver is already blacklisted:",
     "blacklistCheckCode": "cat /etc/modprobe.d/blacklist.conf",
     "blacklistAdd": "If <code>blacklist nouveau</code> does not appear, add it and reboot:",
-    "blacklistAddCode": "echo \"blacklist nouveau\" '>>' /etc/modprobe.d/blacklist.conf\nreboot",
+    "blacklistAddCode": "echo \"blacklist nouveau\" >> /etc/modprobe.d/blacklist.conf\nupdate-initramfs -u -k all\nreboot",
     "blacklistImageAlt": "Blacklist check",
     "reposHeading": "1.2 Verify repositories (PVE 9 / Trixie)",
-    "reposBody": "If you ran the ProxMenux Post-Install script (or any other Proxmox post-install tooling), the repositories are already in place — skip this step.",
+    "reposBody": "Post-install tools may already have configured the repositories. Inspect the existing sources first and skip changes that are already in place; do not create duplicate entries.",
     "reposOtherwise": "Otherwise, on a vanilla PVE 9 install with no enterprise subscription:",
     "reposEditCode": "nano /etc/apt/sources.list.d/proxmox.sources",
     "reposPveBody": "Make sure it contains the no-subscription source for Trixie:",
@@ -47,7 +47,7 @@
   "installDriver": {
     "heading": "2. Install the NVIDIA driver on the host",
     "pickHeading": "2.1 Pick a driver version",
-    "pickBody": "Check the latest stable driver:",
+    "pickBody": "Choose a driver branch that supports your GPU and running kernel. The newest branch may not support older GPU models; check NVIDIA’s supported-products list for the chosen release:",
     "pickUrlCode": "https://download.nvidia.com/XFree86/Linux-x86_64/latest.txt",
     "nvencCallout": "If you plan to apply the NVENC patch (step 4), verify the patch supports your chosen driver version first: <patchLink>github.com/keylase/nvidia-patch</patchLink>",
     "nvencCalloutTitle": "Heads up",
@@ -56,27 +56,27 @@
     "pickImageAlt": "NVIDIA driver download",
     "pickVersionNote": "Throughout the rest of this guide, replace <code>'<'VERSION'>'</code> with the actual version (for example <code>580.95.05</code>).",
     "downloadHeading": "2.2 Download and run the installer",
-    "downloadCode": "mkdir -p /opt/nvidia\ncd /opt/nvidia\nwget https://download.nvidia.com/XFree86/Linux-x86_64/'<'VERSION'>'/NVIDIA-Linux-x86_64-'<'VERSION'>'.run\nchmod +x NVIDIA-Linux-x86_64-'<'VERSION'>'.run",
-    "firstPassBody": "First pass — this disables <code>nouveau</code> and prepares the system:",
-    "firstPassCode": "./NVIDIA-Linux-x86_64-'<'VERSION'>'.run --no-questions --ui=none --disable-nouveau\nreboot",
+    "downloadCode": "mkdir -p /opt/nvidia\ncd /opt/nvidia\nwget https://download.nvidia.com/XFree86/Linux-x86_64/VERSION/NVIDIA-Linux-x86_64-VERSION.run\nchmod +x NVIDIA-Linux-x86_64-VERSION.run",
+    "firstPassBody": "Run the installer. The option below can disable <code>nouveau</code> if necessary; installation may need a reboot before it can finish:",
+    "firstPassCode": "./NVIDIA-Linux-x86_64-VERSION.run --no-questions --ui=none --disable-nouveau\nreboot",
     "secondPassBody": "After the host comes back, run the installer again to compile and install the kernel module:",
-    "secondPassCode": "/opt/nvidia/NVIDIA-Linux-x86_64-'<'VERSION'>'.run --no-questions --ui=none",
+    "secondPassCode": "/opt/nvidia/NVIDIA-Linux-x86_64-VERSION.run --no-questions --ui=none",
     "modulesHeading": "2.3 Load NVIDIA modules at boot",
     "modulesBody": "Edit the modules-load configuration:",
     "modulesEditCode": "nano /etc/modules-load.d/modules.conf",
-    "modulesAddBody": "Add the VFIO and NVIDIA modules:",
-    "modulesAddCode": "vfio\nvfio_iommu_type1\nvfio_pci\nvfio_virqfd\nnvidia\nnvidia_uvm",
+    "modulesAddBody": "Add the NVIDIA modules needed for host/LXC use. VFIO modules are for VM passthrough and are not required for this LXC setup:",
+    "modulesAddCode": "nvidia\nnvidia_uvm",
     "modulesSaveBody": "Save (<code>Ctrl+X</code>) and rebuild initramfs:",
     "modulesSaveCode": "update-initramfs -u -k all",
     "udevHeading": "2.4 Create udev rules",
     "udevBody": "So that <code>/dev/nvidia*</code> device nodes are created when the modules load:",
     "udevEditCode": "nano /etc/udev/rules.d/70-nvidia.rules",
-    "udevRulesCode": "# /etc/udev/rules.d/70-nvidia.rules\n# Create /dev/nvidia0, /dev/nvidia1 ... and /dev/nvidiactl when nvidia module is loaded\nKERNEL==\"nvidia\", RUN+=\"/bin/bash -c ''/usr/bin/nvidia-smi -L''\"\n\n# Create the CUDA node when nvidia_uvm CUDA module is loaded\nKERNEL==\"nvidia_uvm\", RUN+=\"/bin/bash -c ''/usr/bin/nvidia-modprobe -c0 -u''\"",
+    "udevRulesCode": "# /etc/udev/rules.d/70-nvidia.rules\nKERNEL==\"nvidia\", RUN+=\"/bin/bash -c '/usr/bin/nvidia-smi -L'\"\nKERNEL==\"nvidia_uvm\", RUN+=\"/bin/bash -c '/usr/bin/nvidia-modprobe -c0 -u'\"",
     "udevSaveBody": "Save (<code>Ctrl+X</code>)."
   },
   "persistence": {
     "heading": "3. NVIDIA driver persistence service",
-    "body": "The persistence daemon keeps the GPU initialised between uses, which avoids the latency hit and occasional state loss that happens when the kernel module is loaded and unloaded repeatedly:",
+    "body": "The persistence daemon keeps the GPU initialized when no other application is using it. This reduces repeated initialization latency and preserves GPU-initialization state between clients:",
     "installCode": "cd /opt/nvidia\ngit clone https://github.com/NVIDIA/nvidia-persistenced.git\ncd nvidia-persistenced/init\n./install.sh\nreboot",
     "verifyBody": "Verify the driver is loaded and the service is running after reboot:",
     "verifySmiCode": "nvidia-smi",
@@ -86,7 +86,7 @@
   },
   "nvenc": {
     "heading": "4. (Optional) Lift the NVENC concurrent-session limit",
-    "body": "Consumer NVIDIA GPUs ship with a hardcoded limit on the number of simultaneous NVENC encoding sessions (typically 3, 5 or 8 depending on generation). The keylase patch removes that restriction. Useful when running Plex / Jellyfin / Frigate transcoding workloads.",
+    "body": "NVENC session limits depend on the GPU model and driver version; consult NVIDIA’s support matrix rather than assuming a fixed limit by GPU generation. The keylase patch removes the software limit for supported driver versions. It can help encoding workloads such as Plex or Jellyfin transcoding.",
     "code": "cd /opt/nvidia\ngit clone https://github.com/keylase/nvidia-patch.git\ncd nvidia-patch\n./patch.sh",
     "imageAlt": "NVIDIA patch application",
     "after": "The patch must be re-applied after every driver update. The keylase repo also includes <code>patch-fbc.sh</code> for the FBC (frame buffer capture) limit if you need it."
@@ -103,24 +103,36 @@
       "major": "Typical major"
     },
     "tableRows": [
-      { "device": "<code>/dev/nvidia0</code>, <code>/dev/nvidiactl</code>", "major": "195" },
-      { "device": "<code>/dev/nvidia-uvm</code>, <code>/dev/nvidia-uvm-tools</code>", "major": "509 (varies)" },
-      { "device": "<code>/dev/dri/*</code>", "major": "226" },
-      { "device": "<code>/dev/nvidia-modeset</code>", "major": "195 (shares with nvidia)" }
+      {
+        "device": "<code>/dev/nvidia0</code>, <code>/dev/nvidiactl</code>",
+        "major": "195"
+      },
+      {
+        "device": "<code>/dev/nvidia-uvm</code>, <code>/dev/nvidia-uvm-tools</code>",
+        "major": "509 (varies)"
+      },
+      {
+        "device": "<code>/dev/dri/*</code>",
+        "major": "226"
+      },
+      {
+        "device": "<code>/dev/nvidia-modeset</code>",
+        "major": "195 (shares with nvidia)"
+      }
     ],
     "editHeading": "5.2 Edit the LXC config",
     "editBody": "Stop the container first if it's running. Open its config file (replace <code>'<'CTID'>'</code> with the container ID):",
-    "editCode": "nano /etc/pve/lxc/'<'CTID'>'.conf",
+    "editCode": "nano /etc/pve/lxc/CTID.conf",
     "editConfigBody": "Comment out any pre-existing <code>lxc.cgroup2.devices.allow</code> or <code>/dev/dri</code> lines that conflict, then append the NVIDIA wiring (adjust the major numbers to match what <code>ls -l /dev/nv*</code> showed on <strong>your</strong> host):",
-    "editConfigCode": "lxc.cgroup2.devices.allow: c 195:* rwm\nlxc.cgroup2.devices.allow: c 509:* rwm\nlxc.cgroup2.devices.allow: c 10:* rwm\nlxc.cgroup2.devices.allow: c 238:* rwm\nlxc.mount.entry: /dev/nvidia0 dev/nvidia0 none bind,optional,create=file\nlxc.mount.entry: /dev/nvidiactl dev/nvidiactl none bind,optional,create=file\nlxc.mount.entry: /dev/nvidia-uvm dev/nvidia-uvm none bind,optional,create=file\nlxc.mount.entry: /dev/nvidia-modeset dev/nvidia-modeset none bind,optional,create=file\nlxc.mount.entry: /dev/nvidia-uvm-tools dev/nvidia-uvm-tools none bind,optional,create=file\nlxc.mount.entry: /dev/nvram dev/nvram none bind,optional,create=file",
+    "editConfigCode": "lxc.cgroup2.devices.allow: c 195:* rwm\nlxc.cgroup2.devices.allow: c 509:* rwm\nlxc.mount.entry: /dev/nvidia0 dev/nvidia0 none bind,optional,create=file\nlxc.mount.entry: /dev/nvidiactl dev/nvidiactl none bind,optional,create=file\nlxc.mount.entry: /dev/nvidia-uvm dev/nvidia-uvm none bind,optional,create=file\nlxc.mount.entry: /dev/nvidia-modeset dev/nvidia-modeset none bind,optional,create=file\nlxc.mount.entry: /dev/nvidia-uvm-tools dev/nvidia-uvm-tools none bind,optional,create=file",
     "editConfigImageAlt": "LXC configuration",
     "editSave": "Save (<code>Ctrl+X</code>) and start the container.",
     "installCtHeading": "5.3 Install the driver inside the container",
     "installCtCalloutTitle": "Important",
     "installCtCalloutBody": "This part runs <strong>inside</strong> the container, not on the host.",
     "installCtBody": "The kernel module is already loaded by the host — the container only needs the userland libraries that match the same driver version:",
-    "installCtCode": "mkdir -p /opt/nvidia\ncd /opt/nvidia\nwget https://download.nvidia.com/XFree86/Linux-x86_64/'<'VERSION'>'/NVIDIA-Linux-x86_64-'<'VERSION'>'.run\nchmod +x NVIDIA-Linux-x86_64-'<'VERSION'>'.run\n./NVIDIA-Linux-x86_64-'<'VERSION'>'.run --no-kernel-module",
-    "installCtAfter": "Accept the defaults at every prompt.",
+    "installCtCode": "mkdir -p /opt/nvidia\ncd /opt/nvidia\nwget https://download.nvidia.com/XFree86/Linux-x86_64/VERSION/NVIDIA-Linux-x86_64-VERSION.run\nchmod +x NVIDIA-Linux-x86_64-VERSION.run\n./NVIDIA-Linux-x86_64-VERSION.run --no-kernel-module",
+    "installCtAfter": "Review the prompts and keep this installation limited to user-space libraries. Do not build or install a kernel module inside the LXC.",
     "installCtImageAlt": "NVIDIA driver installation",
     "verifyCtHeading": "5.4 Verify inside the container",
     "verifyCtSmiCode": "nvidia-smi",
@@ -129,25 +141,25 @@
     "verifyCtLsImageAlt": "NVIDIA devices in LXC",
     "verifyCtAfter": "You should see the GPU listed and the device nodes mounted into the container's filesystem.",
     "workloadHeading": "5.5 Confirm a real workload picks up the GPU",
-    "workloadBody": "For Plex / Jellyfin, transcode a video and check the dashboard / logs — hardware-accelerated transcoding is now active.",
+    "workloadBody": "Enable NVIDIA hardware acceleration in Plex or Jellyfin, start a video transcode and check its dashboard or logs for actual GPU use. Installing the driver alone does not enable acceleration in the application.",
     "workloadImage1Alt": "Plex using NVIDIA GPU",
     "workloadImage2Alt": "Plex using NVIDIA GPU - active session",
-    "repeatNote": "To wire the GPU into another container, repeat <strong>section 5</strong> for each additional CTID. The driver install inside the container only needs to be done once per container."
+    "repeatNote": "Repeat <strong>section 5</strong> for each additional container that needs GPU access. Keep the user-space driver libraries in every container aligned when the host driver is updated."
   },
   "docker": {
     "heading": "6. (Optional) NVIDIA Docker inside an LXC",
-    "body": "If the container runs Docker and you want containers-inside-the-container to use the GPU, install <code>nvidia-docker2</code>. From inside the LXC:",
-    "code": "wget https://raw.githubusercontent.com/MacRimi/manuales/main/NVIDIA/nvidia-docker.sh\nchmod +x nvidia-docker.sh\n./nvidia-docker.sh",
-    "after": "The script handles the repository setup, package install and Docker daemon configuration in one go."
+    "body": "If Docker already runs inside the LXC, install <code>nvidia-container-toolkit</code> there to expose the GPU to its Docker containers. GPU access from the LXC must work first. The following commands are for a rootful Docker installation:",
+    "code": "apt-get update\napt-get install -y ca-certificates curl gnupg\ncurl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor --yes -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg\ncurl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' > /etc/apt/sources.list.d/nvidia-container-toolkit.list\napt-get update\napt-get install -y nvidia-container-toolkit\nnvidia-ctk runtime configure --runtime=docker\nsystemctl restart docker",
+    "after": "These commands configure NVIDIA’s repository, install the toolkit, configure the Docker runtime and restart Docker. LXC device permissions and cgroup restrictions still apply; verify GPU use with a test workload."
   },
   "troubleshoot": {
     "heading": "Troubleshooting",
     "items": [
-      "<strong><code>nvidia-smi</code> on the host shows the GPU, but inside the container it errors with \"No devices found\":</strong> the driver versions don't match. Re-download the same <code>'<'VERSION'>'</code> inside the container and run with <code>--no-kernel-module</code>.",
-      "<strong>Driver compile fails on the host with \"No precompiled kernel interface was found\":</strong> kernel headers are missing or out of sync. Re-run <code>apt-get install pve-headers-$(uname -r)</code> and confirm <code>uname -r</code> matches the running kernel.",
-      "<strong>NVENC sessions still capped after applying the patch:</strong> the patch was overwritten by a driver update. Re-run <code>./patch.sh</code> from <code>/opt/nvidia/nvidia-patch</code>.",
-      "<strong>GPU stops responding after a few hours of idle:</strong> persistence daemon isn't running. Check with <code>systemctl status nvidia-persistenced</code> and start / enable it.",
-      "<strong>Container starts but <code>ls /dev/nv*</code> shows nothing:</strong> the major numbers in the LXC config don't match the host's. Re-run <code>ls -l /dev/nv*</code> on the host and adjust the <code>lxc.cgroup2.devices.allow</code> lines accordingly."
+      "<strong><code>nvidia-smi</code> works on the host but reports \"No devices found\" in the container:</strong> check device mounts, permissions and matching driver libraries. If versions differ, install the host’s <code>'<'VERSION'>'</code> in the container with <code>--no-kernel-module</code>.",
+      "<strong>Driver compilation fails:</strong> inspect the build log. \"No precompiled kernel interface was found\" can simply mean the installer must compile locally. Install headers matching <code>uname -r</code> using <code>apt-get install pve-headers-$(uname -r)</code>, or the equivalent proxmox-headers package for that kernel.",
+      "<strong>NVENC sessions remain limited:</strong> confirm the patch supports the active driver. A driver update can overwrite it. For a supported version, reapply <code>./patch.sh</code> from <code>/opt/nvidia/nvidia-patch</code> and review its output.",
+      "<strong>GPU stops responding after idle:</strong> check <code>systemctl status nvidia-persistenced</code> and enable the service if intended. Also inspect kernel and driver logs; a stopped persistence daemon is not the only possible cause.",
+      "<strong>Container starts but <code>ls /dev/nv*</code> shows no NVIDIA devices:</strong> check the bind-mount entries and host device paths. Use <code>ls -l /dev/nv*</code> on the host to verify NVIDIA major numbers, then check the <code>lxc.cgroup2.devices.allow</code> rules and permissions."
     ]
   }
 }

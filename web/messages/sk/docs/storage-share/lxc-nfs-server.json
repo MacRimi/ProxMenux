@@ -1,0 +1,159 @@
+{
+  "meta": {
+    "title": "NFS server v LXC | ProxMenux Dokumentácia",
+    "description": "Zdieľajte priečinky cez NFS z kontajnera Proxmox LXC pomocou ProxMenux. Automaticky nainštaluje nfs-kernel-server a nastaví spoločnú skupinu sharedfiles, /etc/exports, sieťové ACL aj úplnú odinštaláciu. Vyžaduje privilegovaný kontajner.",
+    "ogTitle": "NFS server v LXC | ProxMenux Dokumentácia",
+    "ogDescription": "Spustite server NFS v privilegovanom LXC so spoločnou skupinou sharedfiles, sieťovými ACL a úplnou odinštaláciou."
+  },
+  "header": {
+    "title": "NFS server v LXC",
+    "description": "Spustite server NFS jadra v kontajneri Proxmox LXC a sprístupnite priečinky iným počítačom v sieti. ProxMenux nainštaluje nfs-kernel-server, nastaví spoločnú skupinu sharedfiles na zdieľanie súborov medzi viacerými privilegovanými CT, spravuje /etc/exports a ponúka úplnú odinštaláciu.",
+    "section": "Úložisko & Share · LXC"
+  },
+  "privReq": {
+    "title": "Požadovaný privilegovaný kontajner",
+    "body": "<code>nfs-kernel-server</code> musí pripojiť súborový systém jadra <code>nfsd</code> do <code>/proc/fs/nfsd</code>. To vyžaduje <code>CAP_SYS_ADMIN</code> v mennom priestore jadra hostiteľa, nielen v používateľskom mennom priestore kontajnera. Neprivilegované LXC túto schopnosť nemajú: <code>rpc.nfsd: Unable to access /proc/fs/nfsd errno 2 (No such file or directory)</code>; systemd označí <code>nfs-server.service</code> ako zlyhanú pre závislosť. Skript preto vyžaduje privilegovaný CT a <strong>pri neprivilegovanom CT sa ukončí</strong>. Alternatívou je server NFS vo VM."
+  },
+  "what": {
+    "heading": "Čo to robí?",
+    "body": "Ide o opačný smer než na stránke <em>klienta NFS</em>: CT sa stane <strong>serverom NFS</strong> a sprístupní vlastný priečinok iným CT, hostiteľovi Proxmox, VM alebo fyzickým počítačom.",
+    "diagramServerLabel": "LXC (privilegovaný) NFS server",
+    "diagramServerDetail": "/mnt/data\n(sprístupnený priečinok)\n\nchown root:sharedfiles\nchmod 2775 (SGID)\n\nnfs-kernel-server\n+ rpcbind spustené",
+    "diagramClientLabel": "Každý klient v sieti",
+    "diagramClientDetail": "ďalší CT, hostiteľ,\nVM, fyzický stroj...",
+    "diagramArrow": "Export NFS"
+  },
+  "shared": {
+    "heading": "Spoločná skupina „sharedfiles“",
+    "body": "Skript vytvorí skupinu <code>sharedfiles</code> s GID <strong>101000</strong> a pridá do nej bežných používateľov. Exportovaný adresár nastaví na <code>root:sharedfiles</code> s režimom <code>2775</code>. Úvodná číslica <code>2</code> zapína SGID: nové súbory a podadresáre zdedia skupinu <code>sharedfiles</code>.",
+    "gidTitle": "Prečo konkrétne GID 101000",
+    "gidBody": "Pri predvolenom mapovaní ID v LXC (+100000) sa GID 101000 hostiteľa zobrazí ako GID <strong>1000</strong> v neprivilegovanom CT. Tento serverový postup používa <strong>privilegovaný</strong> CT bez posunu ID. Dva privilegované CT so skupinou <code>sharedfiles</code> a GID 101000 preto používajú rovnaké číselné ID skupiny.",
+    "remapTitle": "Staré vytváranie používateľov „remap_*“ sa pri privilegovaných CT preskočí",
+    "remapBody": "Stará vetva pre neprivilegované CT by vytvorila používateľov <code>remap_&lt;uid&gt;</code> s UID <code>&lt;uid&gt; + 100000</code> v skupine <code>sharedfiles</code> pre bežných používateľov a časté UID (33, 1000, 1001, 1002). Posun <code>+100000</code> sa na požadované <strong>privilegované</strong> CT nevzťahuje, preto skript túto vetvu preskočí. Chýbajúce účty <code>remap_*</code> vo výstupe <code>getent passwd</code> sú očakávané a neznamenajú chybu."
+  },
+  "defaults": {
+    "heading": "Predvolené voľby exportu — prečítajte si najprv",
+    "warnTitle": "Štandardné možnosti zahŕňajú no_root_squash",
+    "warnBody": "ProxMenux predvolene používa <code>rw,sync,no_subtree_check,'<'strong'>'no_root_squash'<'/strong'>'</code>. <strong>Každý používateľ root na klientovi môže do exportu zapisovať ako root.</strong> Používajte to iba v dôveryhodnej domácej LAN. Ak je CT dostupný z nedôveryhodnej siete (VPS alebo nedôveryhodná VLAN), <strong>zmeňte voľbu na <code>root_squash</code></strong> v dialógu vlastných volieb."
+  },
+  "opening": {
+    "heading": "Otvorenie nástroja",
+    "body": "V hlavnej ponuke otvorte <strong>Storage & Share Manager → Configure NFS Server in LXC</strong>. Zobrazia sa iba privilegované CT. Vyberte cieľový CT; skript ho spustí, ak je zastavený, a neprivilegovaný CT odmietne. Ponuka má päť možností.",
+    "imageAlt": "Ponuka servera NFS — Vytvoriť / Zobraziť / Odstrániť / Stav / Odinštalovať"
+  },
+  "howRuns": {
+    "heading": "Ako spustí skript (Create flow)"
+  },
+  "network": {
+    "heading": "Sieťové ACL — kto smie pripojiť export?",
+    "intro": "<code>/etc/exports</code> určuje, ktorí klienti smú export pripojiť. Dialóg ponúka tri režimy:",
+    "headerMode": "Režim",
+    "headerValue": "Hodnota napísaná /etc/exports",
+    "headerWhen": "Kedy si ju vybrať",
+    "rows": [
+      {
+        "mode": "Miestna sieť",
+        "value": "192.168.0.0/16",
+        "whenRich": "Pre bežné domáce a malé firemné siete. Zahŕňa všetky adresy <code>192.168.*.*</code>."
+      },
+      {
+        "mode": "Vlastná podsieť",
+        "value": "Váš CIDR (napr. 10.0.0.0/24)",
+        "when": "Keď vaša LAN nie je v 192.168.x.x alebo chcete pevnejší rozsah."
+      },
+      {
+        "mode": "Jediný hostiteľ",
+        "value": "IP (napr. 10.0.0.42)",
+        "when": "Len jeden konkrétny stroj by sa mal pripojiť. Najviac obmedzujúce."
+      }
+    ]
+  },
+  "options": {
+    "heading": "Možnosti exportu vysvetlené",
+    "headerOption": "Možnosť",
+    "headerEffect": "Čo to robí?",
+    "rows": [
+      {
+        "option": "rw / ro",
+        "effect": "Povolí pripojeným klientom čítanie a zápis alebo prístup iba na čítanie."
+      },
+      {
+        "option": "sync",
+        "effectRich": "Odpovedať na žiadosti o zápis až potom, čo dáta sú na disku. Bezpečnejšie ako <code>async</code> za cenu priepustnosti."
+      },
+      {
+        "option": "no_subtree_check",
+        "effect": "Pri každej požiadavke vynechá kontrolu, či je súbor stále v exportovanom podstrome. Je to rýchlejšie a predchádza problémom pri premenovaní súborov počas operácie."
+      },
+      {
+        "option": "no_root_squash",
+        "effectRich": "<strong>Dôverovať používateľovi root na klientovi.</strong> Klient pripájajúci zdieľanie ako root zapisuje aj na serveri ako root. Hodí sa do dôveryhodnej LAN, napríklad ak zálohovací nástroj musí zachovať vlastníkov súborov. Ak úplne nedôverujete každému zariadeniu povolenému sieťovým ACL, použite namiesto toho <code>root_squash</code>."
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent",
+    "body": "Celý postup môžete vykonať ručne. Každý príkaz sa spúšťa <strong>v CT</strong> cez <code>pct exec &lt;ctid&gt; --</code> alebo <code>pct enter &lt;ctid&gt;</code>:"
+  },
+  "view": {
+    "heading": "Zobraziť aktuálne exporty",
+    "body": "Zobrazí <code>/etc/exports</code> z CT bez komentárov a prázdnych riadkov a vypíše každý export so sieťovým ACL a voľbami. Pred zdieľaním IP adresy CT tak môžete overiť, ktoré priečinky sú sprístupnené."
+  },
+  "delete": {
+    "heading": "Odstrániť export",
+    "body": "Zobrazí každý riadok v <code>/etc/exports</code> pre výber, odstráni vybraný (<code>sed -i</code>), spustí <code>exportfs -ra</code> a reštartuje <code>nfs-kernel-server</code>. Samotný priečinok a jeho obsah zostávajú neporušené."
+  },
+  "status": {
+    "heading": "Kontrola stavu NFS",
+    "body": "Diagnostika overí, či sú <code>nfs-kernel-server</code> a <code>rpcbind</code> nainštalované a aktívne, vypíše výstup <code>exportfs -v</code>, aktívne relácie NFS (<code>showmount -a</code>) a aktuálne pripojenia klientov."
+  },
+  "uninstall": {
+    "heading": "Odinštalovať server NFS",
+    "body": "Úplné čistenie po potvrdení: zastaví a vypne <code>nfs-kernel-server</code> a <code>rpcbind</code>, vyprázdni <code>/etc/exports</code>, odstráni balíky NFS pomocou <code>apt-get purge</code>, skupinu <code>sharedfiles</code> aj používateľov <code>remap_*</code> a ukončí zvyšné procesy. <strong>Exportované priečinky sa neodstránia</strong>; odstráni sa iba konfigurácia NFS a balíky.",
+    "warnTitle": "Skript sa zastaví na exportnom riadku, nie na dátach",
+    "warnBody": "<em>Odstrániť export</em> a <em>Odinštalovať server NFS</em> odstráni konfiguráciu exportu. Údaje o exportovanom priečinku sa zachovajú. Ak chcete odstrániť aj údaje, urobte to explicitne pomocou <code>rm -rf</code> po dokončení skriptu – a ak by ich ešte niekto mohol potrebovať, najprv si ich zálohujte."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "privTitle": "Vyžaduje sa privilegovaný kontajner (skript sa ukončí)",
+    "privBody": "Vybraný CT je neprivilegovaný. <code>nfs-kernel-server</code> v ňom nemôže bežať, pretože pripojenie <code>/proc/fs/nfsd</code> vyžaduje <code>CAP_SYS_ADMIN</code> v mennom priestore jadra hostiteľa. Ani modul <code>nfsd</code> nie je sprístupnený v mennom priestore kontajnera: <code>modprobe nfsd</code> zvnútra vráti <code>FATAL: Module nfsd not found</code>. Ak obídete kontrolu, v denníku sa objaví <code>rpc.nfsd: Unable to access /proc/fs/nfsd errno 2 (No such file or directory)</code> a porty NFS sa neotvoria. Možnosti sú previesť CT na privilegovaný alebo presunúť server NFS do VM.",
+    "aptTitle": "Príkaz apt-get install zlyhá",
+    "aptIntro": "Skript predpokladá CT založený na Debiane. Na Alpine / Arch / Rocky / Alma nainštalujte balíky servera NFS ručne:",
+    "aptItems": [
+      "Alpine: <code>apk add nfs-utils</code>",
+      "Arch: <code>pacman -S nfs-utils</code>",
+      "Rocky / Alma: <code>dnf install nfs-utils</code>"
+    ],
+    "aptOutro": "Potom znova spustite skript ProxMenux; ak sú nástroje už prítomné, inštalácia sa preskočí.",
+    "aclTitle": "Klient sa nemôže pripojiť: 'prístup zamietnutý serverom'",
+    "aclBody": "IP adresa klienta je mimo nakonfigurovaného sieťového ACL. Vytvorte export so širšou podsieťou alebo pridajte presnú IP klienta. Pozor: pri pripojení cez NAT sa môže zobraziť WAN IP smerovača namiesto LAN IP klienta. Overte to na serveri pomocou <code>tcpdump -n port 2049</code>.",
+    "ownTitle": "Súbory napísané klientom sa objavujú s divným vlastníctvom na serveri",
+    "ownIntro": "Dve možnosti:",
+    "ownItems": [
+      "S <code>no_root_squash</code> (predvolené) používateľ root na klientovi zapisuje ako root na serveri. Súbory sú vlastnené <code>root:sharedfiles</code> vďaka SGID na priečinku.",
+      "Používatelia klienta bez oprávnení root zapisujú pod vlastným UID/GID. Ak ich UID na serveri neexistuje, pri súboroch sa zobrazia iba čísla, napríklad <code>1234:1234</code>. Použite aj na klientovi skupinu <code>sharedfiles</code> alebo zjednoťte UID v systémoch, ktoré zdieľajú súbory."
+    ],
+    "noShowTitle": "Server dosiahnuteľný, ale showmount nič nevráti",
+    "noShowBody": "Po úprave <code>/etc/exports</code> obnovte tabuľku exportov pomocou <code>exportfs -ra</code> a reštartujte <code>nfs-kernel-server</code>. Skript robí oboje, ale po ručnej úprave to musíte spraviť sami. Overte tiež, že firewall CT aj hostiteľa Proxmox povoľuje TCP/UDP 2049 a port rpcbind (111)."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-nfs-client",
+        "label": "NFS klient v LXC",
+        "tail": " — opačný smer: pripojenie externých zdieľaní NFS v CT."
+      },
+      {
+        "href": "/docs/storage-share/lxc-samba-server",
+        "label": "Samba server v LXC",
+        "tail": " — súvisiaca stránka s rovnakým postupom, ale SMB / CIFS namiesto NFS."
+      },
+      {
+        "href": "/docs/storage-share/host-nfs",
+        "label": "Zdieľanie NFS ako úložisko Proxmox",
+        "tailRich": " — keď CT sprístupňuje export, zaregistrujte zdieľanie NFS v Proxmoxe, aby sa zobrazilo v <em>Datacenter → Storage</em>."
+      }
+    ]
+  }
+}
