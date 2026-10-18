@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "ProxMenux Settings — Monitor Activation, Release Channel, Languages | ProxMenux",
-    "description": "ProxMenux configuration menu: ProxMenux Monitor activation and service toggle, Reset Monitor Password, Change Release Channel between Stable and Beta, language selection (translation install), version information and uninstall. Options appear conditionally based on what is installed and active.",
+    "description": "ProxMenux settings: Monitor service and password reset, Stable/Beta release channel, eight interface languages, version diagnostics and uninstall. Monitor options appear when its service is installed.",
     "ogTitle": "ProxMenux Settings — Monitor Activation, Release Channel, Languages",
     "ogDescription": "Configure ProxMenux — Monitor service, Release Channel, language, version info and uninstall.",
     "twitterTitle": "ProxMenux Settings",
@@ -9,7 +9,7 @@
   },
   "header": {
     "title": "Settings",
-    "description": "ProxMenux configuration menu. Lists what's installed, lets you toggle the Monitor service, reset the Monitor login password, switch between Stable and Beta release channels in either direction, change the UI language (Translation install only), and provides a clean uninstaller. Options appear conditionally — what you see depends on your install type and current state.",
+    "description": "Configure ProxMenux: toggle the Monitor service, reset its login credentials, switch between Stable and Beta in either direction, choose one of eight interface languages, inspect version diagnostics and uninstall. Monitor actions require its service to be installed; language selection is always available.",
     "section": "Settings"
   },
   "intro": {
@@ -18,33 +18,33 @@
   },
   "opening": {
     "heading": "Opening the menu",
-    "body": "From ProxMenux's main menu, press <kbd>s</kbd>. The options shown depend on your install type and on what is currently active:",
-    "imageAlt": "Settings ProxMenux menu with conditional options based on install type and component state"
+    "body": "From ProxMenux's main menu, press <kbd>s</kbd>. Monitor actions appear when its service is installed; the remaining settings are always available:",
+    "imageAlt": "ProxMenux Settings menu with conditional Monitor actions"
   },
   "installTypes": {
-    "heading": "Two install types, different menus",
-    "intro": "ProxMenux ships in two flavours. The Settings menu adapts to which one you have:",
+    "heading": "One installation, all languages",
+    "intro": "Current releases include static JSON translation catalogs in every installation. Older releases offered separate Translation and Normal modes:",
     "headerType": "Install type",
     "headerBundles": "What it bundles",
     "headerMenu": "Menu shows",
     "rows": [
       {
-        "type": "Translation",
-        "bundles": "Python venv + googletrans + multi-language config",
+        "type": "Current installation",
+        "bundles": "Static JSON catalogs for seven languages plus built-in English; no translation Python environment",
         "menuRich": "<strong>Change Language</strong> + Show Version + Uninstall"
       },
       {
-        "type": "Normal (lightweight)",
-        "bundles": "English-only, no venv, smaller footprint",
-        "menu": "Show Version + Uninstall (no language picker)"
+        "type": "Legacy Translation / Normal modes",
+        "bundles": "Obsolete split between a translation environment and an English-only installation",
+        "menu": "Update with the official installer to use the current unified menu"
       }
     ],
-    "detectionTitle": "Detection happens automatically",
-    "detectionBody": "The script checks for <code>/opt/googletrans-env/bin/activate</code> and a non-empty <code>language</code> key in <code>config.json</code>. Both present → Translation install. Either missing → Normal install. You don't choose; the menu adapts."
+    "detectionTitle": "Language selection is always available",
+    "detectionBody": "The menu no longer checks for a translation environment. Every installation includes <code>/usr/local/share/proxmenux/lang/</code> and saves the selected <code>language</code> in <code>config.json</code>."
   },
   "options": {
     "heading": "Menu options",
-    "intro": "Five tools. The <em>Conditional</em> badges mean the option only appears when the prerequisite is met (Monitor installed; Beta program active; Translation install).",
+    "intro": "The tools below manage ProxMenux itself. <em>Conditional</em> means the Monitor actions appear only when its systemd service is installed. Release channel, language, version diagnostics and uninstall are always available.",
     "list": [
       {
         "icon": "Activity",
@@ -64,7 +64,7 @@
         "icon": "Info",
         "href": "/docs/settings/show-version-information",
         "title": "Show Version Information",
-        "description": "ProxMenux version, install type, installed components, file paths, virtual environment state and current language."
+        "description": "ProxMenux version, release channel, installed components, file paths, translation files and current language."
       },
       {
         "icon": "Trash2",

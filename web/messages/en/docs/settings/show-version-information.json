@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Show Version Information | ProxMenux Documentation",
-    "description": "Read-only ProxMenux self-diagnostic: version number, install type (Translation / Normal), installed components from config.json, file paths, virtual environment state and current language.",
+    "description": "Read-only ProxMenux diagnostics: version, release channel, components recorded in config.json, file paths, translation catalogs and current language.",
     "ogTitle": "Show Version Information | ProxMenux Documentation",
-    "ogDescription": "Diagnostic dump of ProxMenux version, install type, components, files and language."
+    "ogDescription": "Diagnostic output of ProxMenux version, release channel, components, files and language."
   },
   "header": {
     "title": "Show Version Information",
-    "description": "Read-only diagnostic. Reads version.txt, config.json and a few well-known file paths, then renders a scrollable text box with version, install type, installed components, file presence, virtual environment state and current language.",
+    "description": "Read-only diagnostics. Reads version.txt, config.json and known file paths, then shows a scrollable text box with the version, release channel, installed components, file presence, translation files and current language.",
     "section": "Settings"
   },
   "intro": {
@@ -26,9 +26,9 @@
         "contentRich": "Single-line version number; <code>Unknown</code> if file missing"
       },
       {
-        "section": "Install type",
-        "source": "venv + config.json checks",
-        "content": "Translation (multi-language) or Normal (English-only)"
+        "section": "Release channel",
+        "source": "config.json beta-program status",
+        "content": "Stable (main) or Beta (develop); beta version when available"
       },
       {
         "section": "Installed components",
@@ -41,14 +41,14 @@
         "contentRich": "<code>menu</code>, <code>utils.sh</code>, <code>config.json</code>, <code>version.txt</code> presence + paths"
       },
       {
-        "section": "Virtual environment",
-        "source": "/opt/googletrans-env",
-        "content": "Translation install only — venv + pip presence"
+        "section": "Translation files",
+        "source": "/usr/local/share/proxmenux/lang/",
+        "content": "Presence of the lang/ directory included with every installation"
       },
       {
         "section": "Current language",
         "source": "config.json",
-        "contentRich": "Translation: language code from <code>.language</code>; Normal: <code>English (Fixed)</code>"
+        "contentRich": "Language code from <code>.language</code>; defaults to <code>en</code> when unset"
       }
     ]
   },
