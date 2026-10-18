@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "title": "Adicionar um disco USB a LXC e partilhá-lo com Samba | ProxMenux",
+    "description": "Disponibilize um disco ou uma pen USB num contentor LXC privilegiado no Proxmox VE, instale Samba no contentor e partilhe o conteúdo na rede.",
+    "ogTitle": "Adicionar um disco USB a LXC e partilhá-lo com Samba",
+    "ogDescription": "Disponibilize um disco USB num contentor LXC privilegiado no Proxmox VE, instale Samba e partilhe o conteúdo na rede local."
+  },
+  "header": {
+    "title": "Adicionar um disco ou uma pen USB a LXC e partilhá-los na rede com Samba",
+    "description": "Disponibilize um disco ou uma pen USB num contentor LXC privilegiado no Proxmox VE, instale Samba no contentor e partilhe o conteúdo na rede.",
+    "section": "Guias"
+  },
+  "recommended": {
+    "calloutTitle": "Recomendado",
+    "calloutIntro": "O ProxMenux disponibiliza ambas as partes deste procedimento através de menus guiados:",
+    "items": [
+      "<strong>Gestão de discos → Formatar/apagar disco físico</strong> para a formatação.",
+      "<strong>Armazenamento e partilha → Partilha de rede LXC → Servidor Samba em LXC</strong> para a instalação no contentor privilegiado e a configuração do Samba."
+    ],
+    "calloutOutro": "Os procedimentos guiados tratam das permissões dos contentores sem privilégios, dos perfis de partilha com leitura e escrita, só leitura ou personalizados e do grupo sharedfiles. Este guia descreve os passos manuais para os compreender ou configurar diretamente."
+  },
+  "intro": {
+    "body": "Um disco ou uma pen USB pode ser útil num anfitrião Proxmox, sobretudo num mini PC com poucas opções de expansão interna. Este guia explica:",
+    "stepsTitle": "O que vai fazer",
+    "steps": [
+      "Anexando o disco USB a um LXC privilegiado.",
+      "A instalar o Samba dentro do contentor.",
+      "Partilhar o conteúdo do disco pela LAN."
+    ],
+    "useCasesTitle": "Casos de uso",
+    "useCases": [
+      "Guardar ficheiros torrent e disponibilizá-los na rede.",
+      "Fornecer armazenamento a um servidor multimédia como Plex, Jellyfin ou Emby.",
+      "Guardar documentos processados automaticamente pelo Paperless.",
+      "Armazenamento genérico estilo NAS para a rede doméstica."
+    ],
+    "privilegedCalloutTitle": "Contentor privilegiado para este procedimento",
+    "privilegedCalloutBody": "Este procedimento utiliza um contentor LXC privilegiado com um dispositivo de blocos como <code>mp0</code>. Para contentores sem privilégios, pode montar o sistema de ficheiros no anfitrião e disponibilizar o diretório por bind mount, com permissões e mapeamento de identificadores adequados. Consulte <strong>Armazenamento e partilha → Pontos de montagem LXC</strong> no ProxMenux."
+  },
+  "attach": {
+    "heading": "1. Disponibilizar o disco USB em LXC",
+    "identifyHeading": "1.1 Identificar o dispositivo",
+    "identifyBody": "Compare a lista de discos <strong>antes</strong> e <strong>depois</strong> da ligação USB. O novo dispositivo é o disco pretendido.",
+    "beforeLabel": "Antes:",
+    "afterLabel": "Após:",
+    "imageBeforeAlt": "Lista de disco antes de adicionar unidade USB",
+    "imageAfterAlt": "Lista de disco depois de adicionar unidade USB",
+    "lsblkBody": "Pode também utilizar <code>lsblk -o NAME,SIZE,MODEL,SERIAL</code> para listar dispositivos de blocos com modelo e número de série.",
+    "stableCalloutTitle": "Importante — utilizar um identificador estável",
+    "stableCalloutBody": "O nome <code>/dev/sdb1</code> pode mudar após um reinício, sobretudo com vários discos USB. Procure o identificador persistente:",
+    "stableCalloutCode": "ls -l /dev/disk/by-id/",
+    "stableCalloutAfter": "Utilize a entrada <code>/dev/disk/by-id/usb-...</code> da partição pretendida na configuração LXC, em vez de <code>/dev/sdb1</code>. Escolha a partição, não o disco completo: continuará identificável se a ordem dos dispositivos mudar.",
+    "formatHeading": "1.2 Formatar o disco",
+    "formatBody": "ext4 é adequado para partilhas Linux: distingue maiúsculas e suporta ACL POSIX e ficheiros grandes. A formatação destrói o conteúdo do sistema de ficheiros existente. Confirme a partição e execute o comando no <strong>anfitrião Proxmox</strong>:",
+    "formatCode": "mkfs.ext4 /dev/sdb1",
+    "formatAfter": "Substitua <code>/dev/sdb1</code> pela partição real ou pelo respetivo caminho persistente <code>/dev/disk/by-id/usb-...-part1</code>.",
+    "mkdirHeading": "1.3 Criar o ponto de montagem no contentor LXC",
+    "mkdirBody": "Dentro do LXC, crie o diretório onde o disco irá aparecer (qualquer nome funciona):",
+    "mkdirCode": "mkdir /mnt/lxc_USB",
+    "wireHeading": "1.4 Configurar o dispositivo em LXC",
+    "wireBody": "No <strong>anfitrião Proxmox</strong>, edite a configuração do contentor. Substitua <code>'<'CTID'>'</code> pelo respetivo ID:",
+    "wireEditCode": "nano /etc/pve/lxc/CTID.conf",
+    "wireAddLine": "Adicionar esta linha:",
+    "wireConfigCode": "mp0: /dev/disk/by-id/usb-VENDOR_MODEL_SERIAL-part1,mp=/mnt/lxc_USB,backup=0",
+    "wireShortForm": "Pode também utilizar a entrada curta <code>mp0: /dev/sdb1,mp=/mnt/lxc_USB,backup=0</code> se aceitar o risco de alteração do caminho do dispositivo.",
+    "wireBackupNote": "O exemplo utiliza <code>backup=0</code>. O conteúdo dos pontos de montagem de dispositivos e dos bind mounts não é incluído nas cópias <code>vzdump</code> do contentor. Prepare uma cópia separada dos dados do disco externo.",
+    "restartHeading": "1.5 Reinicie o LXC e defina permissões",
+    "restartBody": "Reinicie o CT para aplicar o ponto de montagem:",
+    "restartCode": "pct reboot CTID",
+    "permsBody": "No contentor LXC, crie a conta da partilha antes de lhe atribuir a propriedade e defina as permissões do diretório:",
+    "permsCode": "adduser --system --group --no-create-home --shell /usr/sbin/nologin proxmenux\nmkdir -p /mnt/lxc_USB\nchown -R proxmenux:proxmenux /mnt/lxc_USB\nchmod 770 /mnt/lxc_USB",
+    "permsNoteTitle": "Observação",
+    "permsNote": "Substitua <code>proxmenux</code> pelo nome escolhido. O modo <code>770</code> permite o acesso ao proprietário e ao grupo, sem acesso para outros; é mais restritivo do que <code>chmod -R 777</code>. A conta é criada aqui e registada no Samba no passo 2.2."
+  },
+  "samba": {
+    "heading": "2. Instalar o Samba",
+    "installHeading": "2.1 Instale o pacote dentro do LXC",
+    "installCode": "apt-get update\napt-get install -y samba",
+    "confirmBody": "Confirme que o serviço está em execução:",
+    "confirmCode": "systemctl status smbd.service",
+    "userHeading": "2.2 Verificar a conta da partilha",
+    "userBody": "A conta de sistema <code>proxmenux</code> foi criada sem shell de início de sessão no passo 1.5. Verifique-a antes de definir a palavra-passe Samba e utilize sempre o nome escolhido:",
+    "userCode": "id proxmenux",
+    "passwordBody": "Defina a palavra-passe Samba, separada da palavra-passe do sistema, pois o Samba mantém o seu próprio armazenamento de credenciais:",
+    "passwordCode": "smbpasswd -a proxmenux",
+    "aclHeading": "2.3 Definir propriedade e ACL",
+    "aclBody": "Se o <code>chown</code> do passo 1.5 for suficiente, as permissões estão prontas. Para vários utilizadores com direitos diferentes no mesmo caminho, utilize ACL:",
+    "aclCode": "apt-get install -y acl\nsetfacl -R -m \"u:proxmenux:rwx\" /mnt/lxc_USB\nsetfacl -d -R -m \"u:proxmenux:rwx\" /mnt/lxc_USB    # default ACL — applies to new files"
+  },
+  "configure": {
+    "heading": "3. Configurar a partilha Samba",
+    "editHeading": "3.1 Editar smb.conf",
+    "editCode": "nano /etc/samba/smb.conf",
+    "appendBody": "Adicione uma definição da partilha no fim do ficheiro:",
+    "shareCode": "[lxc_usb]\n    comment = Shared USB storage\n    path = /mnt/lxc_USB\n    read only = no\n    writable = yes\n    browseable = yes\n    guest ok = no\n    valid users = proxmenux\n    create mask = 0660\n    directory mask = 0770",
+    "validUsersNoteTitle": "Observação",
+    "validUsersNote": "A linha <code>valid users = proxmenux</code> restringe o acesso ao único usuário do Samba. Para acesso baseado em grupo, use <code>valid users = @samba_users</code> após adicionar o(s) usuário(s) a um grupo chamado <code>samba_users</code>.",
+    "reloadHeading": "3.2 Recarregar Samba",
+    "reloadCode": "systemctl restart smbd"
+  },
+  "verify": {
+    "heading": "4. Verificar o acesso",
+    "body": "De qualquer cliente da LAN, navegue até <code>\\\\'<'CT_IP'>'</code> (Windows) ou <code>smb://'<'CT_IP'>'</code> (macOS / gerenciadores de arquivos Linux). Autentique com o usuário Samba (<code>proxmenux</code>) e a senha que você definiu com <code>smbpasswd</code>.",
+    "image1Alt": "Acesso ao servidor Samba de um cliente",
+    "image2Alt": "Pedido de autenticação Samba",
+    "usageBody": "Pode utilizar a partilha no contentor e através da rede:",
+    "image3Alt": "Utilização do disco USB através da partilha"
+  },
+  "troubleshoot": {
+    "heading": "Resolução de Problemas",
+    "items": [
+      "<strong><code>pct reboot</code> falha com “device not found”:</strong> confirme que o caminho em <code>mp0</code> existe no anfitrião. Verifique <code>ls -l /dev/disk/by-id/</code> e corrija o caminho.",
+      "<strong>O contentor arranca, mas <code>/mnt/lxc_USB</code> está vazio:</strong> o disco pode não estar montado ou o sistema de ficheiros pode estar vazio. Verifique no anfitrião com <code>pct exec '<'CTID'>' -- mount | grep lxc_USB</code>. Se a montagem faltar, examine a configuração, o caminho do dispositivo e os erros de arranque.",
+      "<strong>A autenticação Samba funciona, mas a escrita falha com “Permission denied”:</strong> verifique as permissões Linux do diretório e as definições de escrita da partilha. Reveja <code>chown</code> e <code>setfacl</code> nas secções 1.5 e 2.3.",
+      "<strong>A partilha não aparece, mas <code>smb://'<'ip'>'/lxc_usb</code> funciona:</strong> a descoberta NetBIOS antiga utiliza <code>nmbd</code>. O Windows moderno utiliza WS-Discovery; em Debian 12 instale <code>apt-get install -y wsdd</code>; em Debian 13, onde <code>wsdd</code> não está no arquivo estável, use <code>apt-get install -y wsdd2</code>. Verifique o serviço e a firewall. Ativar apenas <code>nmbd</code> não fornece WS-Discovery.",
+      "<strong>Para adicionar outro utilizador à partilha:</strong> crie a conta com <code>adduser</code>, registe-a com <code>smbpasswd -a</code> e adicione-a à lista <code>valid users =</code>, separada por vírgulas. Atribua também as permissões ou ACL necessárias no sistema de ficheiros."
+    ]
+  }
+}

@@ -95,6 +95,7 @@ show_system_commands() {
         echo
         echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter a number, or write or paste a command: ') ${CL}"
         read -r user_input
+        cmd=""
 
         # Check for Esc key press
         if [[ "$user_input" == $'\x1b' ]]; then
@@ -184,17 +185,24 @@ show_vm_ct_commands() {
         echo -e " 8) ${GREEN}pct config <ctid>${NC}        - $(translate 'Show container configuration. Use the correct <ctid>')"
         echo -e " 9) ${GREEN}qm destroy <vmid>${NC}        - $(translate 'Delete a VM (irreversible). Use the correct <vmid>')"
         echo -e "10) ${GREEN}pct destroy <ctid>${NC}       - $(translate 'Delete a CT (irreversible). Use the correct <ctid>')"
-        echo -e "11) ${GN}[Only with menu] Show CT users for permission mapping${NC} - $(translate 'root and real users only')"
-        echo -e "12) ${GREEN}pct exec <ctid> -- getent passwd | column -t -s :${NC}  - $(translate 'Show CT users in table format')"
-        echo -e "13) ${GREEN}pct exec <ctid> -- ps aux --sort=-%mem | head${NC}      - $(translate 'Top memory processes in CT')"
-        echo -e "14) ${GREEN}cat /etc/pve/qemu-server/<vmid>.conf${NC}               - $(translate 'View raw VM configuration file')"
-        echo -e "15) ${GREEN}cat /etc/pve/lxc/<ctid>.conf${NC}                       - $(translate 'View raw CT configuration file')"
-        echo -e "16) ${GREEN}nano /etc/pve/qemu-server/<vmid>.conf${NC}              - $(translate 'Edit raw VM configuration file')"
-        echo -e "17) ${GREEN}nano /etc/pve/lxc/<ctid>.conf${NC}                      - $(translate 'Edit raw CT configuration file')"
+        echo -e "11) ${GREEN}qm unlock <vmid>${NC}         - $(translate 'Remove the lock left on a VM by an interrupted task')"
+        echo -e "12) ${GREEN}pct unlock <ctid>${NC}        - $(translate 'Remove the lock left on a container by an interrupted task')"
+        # Translated label: pad it so its description lines up with 14-19.
+        local users_label pad
+        users_label="$(translate 'Show CT users and their UID/GID on the host')"
+        pad=$((51 - ${#users_label})); (( pad < 1 )) && pad=1
+        echo -e "13) ${GN}${users_label}${NC}$(printf '%*s' "$pad" '')- $(translate 'root and real users only')"
+        echo -e "14) ${GREEN}pct exec <ctid> -- getent passwd | column -t -s :${NC}  - $(translate 'Show CT users in table format')"
+        echo -e "15) ${GREEN}pct exec <ctid> -- ps aux --sort=-%mem | head${NC}      - $(translate 'Top memory processes in CT')"
+        echo -e "16) ${GREEN}cat /etc/pve/qemu-server/<vmid>.conf${NC}               - $(translate 'View raw VM configuration file')"
+        echo -e "17) ${GREEN}cat /etc/pve/lxc/<ctid>.conf${NC}                       - $(translate 'View raw CT configuration file')"
+        echo -e "18) ${GREEN}nano /etc/pve/qemu-server/<vmid>.conf${NC}              - $(translate 'Edit raw VM configuration file')"
+        echo -e "19) ${GREEN}nano /etc/pve/lxc/<ctid>.conf${NC}                      - $(translate 'Edit raw CT configuration file')"
         echo -e " ${DEF}0) $(translate ' Back to previous menu or Esc + Enter')"
         echo
         echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter a number, or write or paste a command: ') ${CL}"
         read -r user_input
+        cmd=""
 
         # Check for Esc key press
         if [[ "$user_input" == $'\x1b' ]]; then
@@ -212,7 +220,9 @@ show_vm_ct_commands() {
             8) echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter CT ID: ')${CL}"; read -r id; cmd="pct config $id" ;;
             9) echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter VM ID: ')${CL}"; read -r id; cmd="qm destroy $id" ;;
             10) echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter CT ID: ')${CL}"; read -r id; cmd="pct destroy $id" ;;
-            11)
+            11) echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter VM ID: ')${CL}"; read -r id; cmd="qm unlock $id" ;;
+            12) echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter CT ID: ')${CL}"; read -r id; cmd="pct unlock $id" ;;
+            13)
                 echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter CT ID: ')${CL}"
                 read -r id
 
@@ -236,34 +246,34 @@ show_vm_ct_commands() {
                 done
                 ;;
 
-            12)
+            14)
                 echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter CT ID: ')${CL}"
                 read -r id
                 cmd="pct exec $id -- getent passwd | column -t -s :"
                 ;; 
 
-            13)
+            15)
 
                 echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter CT ID: ')${CL}"
                 read -r id
                 cmd="pct exec $id -- ps aux --sort=-%mem | head"
                 ;;
-            14)
+            16)
                 echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter VM ID: ')${CL}"
                 read -r id
                 cmd="cat /etc/pve/qemu-server/$id.conf"
                 ;;
-            15)
+            17)
                 echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter CT ID: ')${CL}"
                 read -r id
                 cmd="cat /etc/pve/lxc/$id.conf"
                 ;;
-            16)
+            18)
                 echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter VM ID: ')${CL}"
                 read -r id
                 cmd="nano /etc/pve/qemu-server/$id.conf"
                 ;;
-            17)
+            19)
                 echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter CT ID: ')${CL}"
                 read -r id
                 cmd="nano /etc/pve/lxc/$id.conf"
@@ -272,8 +282,10 @@ show_vm_ct_commands() {
             *) cmd="$user_input" ;;
         esac
 
-        echo -e "\n${GREEN}> $cmd${NC}\n"
-        bash -c "$cmd"
+        if [[ -n "$cmd" ]]; then
+            echo -e "\n${GREEN}> $cmd${NC}\n"
+            bash -c "$cmd"
+        fi
         echo
         msg_success "$(translate 'Press ENTER to continue...')"
         read -r tmp
@@ -324,6 +336,7 @@ show_storage_commands() {
         echo
         echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter a number, or write or paste a command: ') ${CL}"
         read -r user_input
+        cmd=""
 
         # Esc key exit
         if [[ "$user_input" == $'\x1b' ]]; then
@@ -550,8 +563,10 @@ show_storage_commands() {
             *) cmd="$user_input" ;;
         esac
 
-        echo -e "\n${GREEN}> $cmd${NC}\n"
-        bash -c "$cmd"
+        if [[ -n "$cmd" ]]; then
+            echo -e "\n${GREEN}> $cmd${NC}\n"
+            bash -c "$cmd"
+        fi
         echo
         msg_success "$(translate 'Press ENTER to continue...')"
         read -r tmp
@@ -588,6 +603,7 @@ show_network_commands() {
         echo
         echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter a number, or write or paste a command: ') ${CL}"
         read -r user_input
+        cmd=""
 
         if [[ "$user_input" == $'\x1b' ]]; then
             break
@@ -630,8 +646,10 @@ show_network_commands() {
             *) cmd="$user_input" ;;
         esac
 
-        echo -e "\n${GREEN}> $cmd${NC}\n"
-        bash -c "$cmd"
+        if [[ -n "$cmd" ]]; then
+            echo -e "\n${GREEN}> $cmd${NC}\n"
+            bash -c "$cmd"
+        fi
         echo
         msg_success "$(translate 'Press ENTER to continue...')"
         read -r tmp
@@ -658,6 +676,7 @@ show_update_commands() {
         echo
         echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter a number, or write or paste a command: ') ${CL}"
         read -r user_input
+        cmd=""
 
         # Check for Esc key press
         if [[ "$user_input" == $'\x1b' ]]; then
@@ -674,8 +693,10 @@ show_update_commands() {
             *) cmd="$user_input" ;;
         esac
 
-        echo -e "\n${GREEN}> $cmd${NC}\n"
-        bash -c "$cmd"
+        if [[ -n "$cmd" ]]; then
+            echo -e "\n${GREEN}> $cmd${NC}\n"
+            bash -c "$cmd"
+        fi
         echo
         msg_success "$(translate 'Press ENTER to continue...')"
         read -r tmp
@@ -698,7 +719,7 @@ show_gpu_commands() {
         echo -e " 4) ${GREEN}dmesg -T | grep -Ei 'DMAR|IOMMU|vfio|pcie'${NC}     - $(translate 'Inspect passthrough/kernel events')"
         echo -e " 5) ${GREEN}find /sys/kernel/iommu_groups -type l${NC}          - $(translate 'List IOMMU group mapping')"
         echo -e " 6) ${GREEN}lsmod | grep -E 'vfio|nvidia|amdgpu|apex'${NC}      - $(translate 'Check loaded GPU/TPU modules')"
-        echo -e " 7) ${GREEN}grep -R \"vfio-pci|blacklist\" /etc/modprobe.d${NC} - $(translate 'Review passthrough config files')"
+        echo -e " 7) ${GREEN}grep -R \"vfio-pci|blacklist\" /etc/modprobe.d${NC}   - $(translate 'Review passthrough config files')"
         echo -e " 8) ${GREEN}nvidia-smi${NC}                                     - $(translate 'Check NVIDIA driver and devices')"
         echo -e " 9) ${GREEN}qm config <vmid> | grep 'hostpci|bios'${NC}         - [T] $(translate 'Check VM passthrough settings')"
         echo -e "10) ${GREEN}pct config <ctid> | grep 'dev|lxc.cgroup2'${NC}     - [T] $(translate 'Check LXC GPU/TPU mapping')"
@@ -713,6 +734,7 @@ show_gpu_commands() {
         echo
         echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter a number, or write or paste a command: ') ${CL}"
         read -r user_input
+        cmd=""
 
         if [[ "$user_input" == $'\x1b' ]]; then
             break
@@ -794,8 +816,10 @@ show_gpu_commands() {
             continue
         fi
 
-        echo -e "\n${GREEN}> $cmd${NC}\n"
-        bash -c "$cmd"
+        if [[ -n "$cmd" ]]; then
+            echo -e "\n${GREEN}> $cmd${NC}\n"
+            bash -c "$cmd"
+        fi
         echo
         msg_success "$(translate 'Press ENTER to continue...')"
         read -r tmp
@@ -830,6 +854,7 @@ show_zfs_commands() {
         echo
         echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter a number, or write or paste a command: ') ${CL}"
         read -r user_input
+        cmd=""
 
         # Detect ESC
         if [[ "$user_input" == $'\x1b' ]]; then
@@ -883,8 +908,10 @@ show_zfs_commands() {
             *) cmd="$user_input" ;;
         esac
 
-        echo -e "\n${GREEN}> $cmd${NC}\n"
-        bash -c "$cmd"
+        if [[ -n "$cmd" ]]; then
+            echo -e "\n${GREEN}> $cmd${NC}\n"
+            bash -c "$cmd"
+        fi
         echo
         msg_success "$(translate 'Press ENTER to continue...')"
         read -r tmp
@@ -916,6 +943,7 @@ show_backup_commands() {
         echo
         echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter a number, or write or paste a command: ') ${CL}"
         read -r user_input
+        cmd=""
 
         # Check for Esc key press
         if [[ "$user_input" == $'\x1b' ]]; then
@@ -967,8 +995,10 @@ show_backup_commands() {
             *) cmd="$user_input" ;;
         esac
 
-        echo -e "\n${GREEN}> $cmd${NC}\n"
-        bash -c "$cmd"
+        if [[ -n "$cmd" ]]; then
+            echo -e "\n${GREEN}> $cmd${NC}\n"
+            bash -c "$cmd"
+        fi
         echo
         msg_success "$(translate 'Press ENTER to continue...')"
         read -r tmp
@@ -1001,6 +1031,7 @@ show_tools_commands() {
         echo
         echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter a number, or write or paste a command: ') ${CL}"
         read -r user_input
+        cmd=""
 
         # Check for Esc key press
         if [[ "$user_input" == $'\x1b' ]]; then
@@ -1063,8 +1094,10 @@ show_tools_commands() {
             fi
         fi
 
-        echo -e "\n${GREEN}> $cmd${NC}\n"
-        bash -c "$cmd"
+        if [[ -n "$cmd" ]]; then
+            echo -e "\n${GREEN}> $cmd${NC}\n"
+            bash -c "$cmd"
+        fi
         echo
         msg_success "$(translate 'Press ENTER to continue...')"
         read -r tmp
