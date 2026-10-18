@@ -83,7 +83,7 @@
   "troubleshoot": {
     "heading": "Risoluzione dei problemi",
     "unprivTitle": "\"Impossibile proseguire con un contenitore non privilegiato\"",
-    "unprivBody": "Hai rifiutato la conversione. In <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> il valore passa da <code>unprivileged: 1</code> a <code>unprivileged: 0</code>, ma questo da solo non converte la proprietà UID/GID esistente. Salva un backup e gestisci la mappatura dei proprietari prima della conversione sul posto; in alternativa, ripristina o ricrea il contenitore come privilegiato.",
+    "unprivBody": "Hai rifiutato la conversione, quindi lo script si è fermato senza modificare nulla. Per continuare, eseguilo di nuovo e accetta: lo script arresta il contenitore, salva la sua configurazione in <code>/etc/pve/lxc/&lt;CTID&gt;.conf.bak</code> e sostituisce <code>unprivileged: 1</code> con <code>unprivileged: 0</code>. Questa modifica da sola non converte la proprietà UID/GID dei file esistenti: esegui prima un backup del contenitore e correggi i proprietari, oppure ripristina o ricrea il contenitore come privilegiato.",
     "permsTitle": "Le autorizzazioni all'interno del contenitore sono sbagliate",
     "permsBody": "Montare una partizione in un contenitore privilegiato conserva i proprietari esistenti; un filesystem appena formattato appartiene spesso a <code>root:root</code>. Se il servizio usa un altro utente, ad esempio <code>www-data</code> per Nextcloud, controlla UID/GID e modifica i file necessari con <code>chown</code>/<code>chmod</code>. Le modifiche agiscono anche sul disco sottostante."
   },

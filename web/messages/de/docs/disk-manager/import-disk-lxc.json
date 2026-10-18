@@ -83,7 +83,7 @@
   "troubleshoot": {
     "heading": "Fehlerbehebung",
     "unprivTitle": "\"Kann nicht mit einem unprivilegierten Container fortfahren\"",
-    "unprivBody": "Sie haben die Konvertierung abgelehnt. In <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> wird <code>unprivileged: 1</code> zu <code>unprivileged: 0</code>, doch das allein wandelt vorhandene UID-/GID-Eigentümer nicht um. Sichern Sie den Container und klären Sie die Eigentümerzuordnung vor einer direkten Konvertierung; alternativ stellen Sie ihn privilegiert wieder her oder erstellen ihn neu.",
+    "unprivBody": "Sie haben die Konvertierung abgelehnt; das Skript wurde daher ohne Änderungen beendet. Um fortzufahren, führen Sie es erneut aus und stimmen zu: Das Skript stoppt den Container, sichert seine Konfiguration in <code>/etc/pve/lxc/&lt;CTID&gt;.conf.bak</code> und ersetzt <code>unprivileged: 1</code> durch <code>unprivileged: 0</code>. Diese Änderung allein wandelt die UID-/GID-Eigentümer vorhandener Dateien nicht um; sichern Sie den Container daher vorher und passen Sie die Eigentümer an. Alternativ stellen Sie ihn privilegiert wieder her oder erstellen ihn neu.",
     "permsTitle": "Berechtigungen im Container sind falsch",
     "permsBody": "Beim Einhängen in einen privilegierten Container bleiben vorhandene Dateieigentümer erhalten; ein neues Dateisystem gehört häufig <code>root:root</code>. Läuft der Dienst unter einem anderen Benutzer, etwa <code>www-data</code> für Nextcloud, prüfen Sie dessen UID/GID und passen Sie die nötigen Dateien mit <code>chown</code>/<code>chmod</code> an. Dies verändert auch den zugrunde liegenden Datenträger."
   },

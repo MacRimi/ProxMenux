@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Ce que ça fait",
-    "body": "Cette méthode utilise un disque physique brut comme support d’une interface de disque virtuel. L’invité ne reçoit pas automatiquement les données SMART natives ni les fonctions du contrôleur physique ; utilisez le passthrough PCI du contrôleur si elles sont nécessaires. Le disque est connecté via <code>/dev/disk/by-id/…</code> et non <code>/dev/sdX</code>, pour préserver l’affectation si l’ordre des périphériques change au démarrage."
+    "body": "Cette méthode utilise un disque physique brut comme support d’une interface de disque virtuel. L’invité ne reçoit pas automatiquement les données SMART natives ni les fonctions du contrôleur physique ; utilisez le passthrough PCI du contrôleur si elles sont nécessaires. Le disque est connecté via son chemin <code>/dev/disk/by-id/…</code> lorsqu’il existe, pour préserver l’affectation si l’ordre des périphériques change au démarrage ; sinon, <code>/dev/sdX</code> est utilisé."
   },
   "howRuns": {
     "heading": "Comment fonctionne le script",

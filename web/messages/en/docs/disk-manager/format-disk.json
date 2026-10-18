@@ -46,7 +46,7 @@
         "mode": "1. Wipe all",
         "part": "Destroyed",
         "data": "Signatures wiped",
-        "useCase": "Remove partitioning and metadata to prepare a new layout. This does not overwrite all user data."
+        "useCase": "Removes the partition table and the filesystem and RAID metadata, zeroes the first and last 16 MiB and, on drives that support discard, trims the whole disk. The rest of the data is not overwritten and may still be recoverable on HDDs; this is not a secure erase."
       },
       {
         "mode": "2. Remove FS labels",

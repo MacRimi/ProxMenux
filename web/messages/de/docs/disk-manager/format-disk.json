@@ -46,7 +46,7 @@
         "mode": "1. Alles löschen",
         "part": "Zerstört",
         "data": "Signaturen gelöscht",
-        "useCase": "Partitionierung und Metadaten für ein neues Layout entfernen. Dabei werden nicht alle Nutzdaten überschrieben."
+        "useCase": "Entfernt die Partitionstabelle sowie Dateisystem- und RAID-Metadaten, überschreibt die ersten und letzten 16 MiB mit Nullen und führt bei Laufwerken mit Discard-Unterstützung ein TRIM über den gesamten Datenträger aus. Die übrigen Daten werden nicht überschrieben und können auf HDDs noch wiederherstellbar sein; dies ist kein sicheres Löschen."
       },
       {
         "mode": "2. FS-Etiketten entfernen",

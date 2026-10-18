@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Qué hace esto",
-    "body": "Conecta un disco físico como dispositivo subyacente de una interfaz de disco virtual. El invitado no recibe automáticamente los datos SMART nativos ni las funciones de la controladora física; usa passthrough PCI de la controladora si los necesitas. Se conecta mediante <code>/dev/disk/by-id/…</code>, no <code>/dev/sdX</code>, para que un cambio en el orden de enumeración al arrancar no rompa la asignación."
+    "body": "Conecta un disco físico como dispositivo subyacente de una interfaz de disco virtual. El invitado no recibe automáticamente los datos SMART nativos ni las funciones de la controladora física; usa passthrough PCI de la controladora si los necesitas. Se conecta mediante su ruta <code>/dev/disk/by-id/…</code> cuando existe, para que un cambio en el orden de enumeración al arrancar no rompa la asignación; si no existe, se usa <code>/dev/sdX</code>."
   },
   "howRuns": {
     "heading": "Cómo se ejecuta el script",

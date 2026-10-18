@@ -89,7 +89,7 @@
       },
       {
         "title": "Prüfergebnisse",
-        "bodyRich": "Status und Berichte erscheinen im Terminal; JSON wird für die oben genannten Aktionen exportiert, nicht für den vollständigen Bericht. Verwenden Sie bei Langtests später <strong>Testfortschritt prüfen</strong> für dasselbe Laufwerk.",
+        "bodyRich": "Status-, Test- und Fortschrittsausgaben erscheinen im Terminal; <strong>Vollständiger Bericht</strong> öffnet sich in einem scrollbaren Dialog. JSON wird für die oben genannten Aktionen exportiert, nicht für den vollständigen Bericht. Verwenden Sie bei Langtests später <strong>Testfortschritt prüfen</strong> für dasselbe Laufwerk.",
         "img": "/disk/smart/quick-status.png",
         "alt": "Schnelle Ausgabe des Gesundheitszustands",
         "caption": "Schnelle Ausgabe des Gesundheitszustands (SATA — smartctl -H + -A)"
@@ -106,7 +106,7 @@
     "noSmartTitle": "\"Konnte SMART-Daten aus /dev/sdX nicht lesen\"",
     "noSmartBody": "Die Festplatte befindet sich wahrscheinlich hinter einem RAID / SAS-Controller, der SMART nicht durchläuft. Versuchen Sie mit Megaraid-basierten Karten <code>smartctl -d megaraid,N /dev/sdX</code>. Für HBAs im IT-Modus funktioniert der direkte Aufruf.",
     "longTitle": "Langer Test nie abgeschlossen",
-    "longBody": "Der Test läuft in der Laufwerksfirmware; hohe E/A-Last kann ihn verzögern. Nutzen Sie eine ruhige Zeit, etwa nachts. Bei SATA/SAS zeigt <code>smartctl -c</code> den verbleibenden Prozentsatz; das Selbsttestprotokoll zeigt Abschlussstatus und gegebenenfalls fehlerhafte LBAs. Lesefehler müssen untersucht werden; langsamer Fortschritt allein beweist keinen defekten Sektor."
+    "longBody": "Der Test läuft in der Laufwerksfirmware; hohe E/A-Last kann ihn verzögern. Nutzen Sie eine ruhige Zeit, etwa nachts. Bei SATA zeigt <code>smartctl -c</code> den verbleibenden Prozentsatz, bei SAS <code>smartctl -l selftest</code>; das Selbsttestprotokoll zeigt Abschlussstatus und gegebenenfalls fehlerhafte LBAs. Lesefehler müssen untersucht werden; langsamer Fortschritt allein beweist keinen defekten Sektor."
   },
   "related": {
     "heading": "Verwandte Themen",

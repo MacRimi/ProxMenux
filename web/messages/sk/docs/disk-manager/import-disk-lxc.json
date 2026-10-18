@@ -83,7 +83,7 @@
   "troubleshoot": {
     "heading": "Riešenie problémov",
     "unprivTitle": "\"Nemôže pokračovať s neprivilegovaným kontajnerom\"",
-    "unprivBody": "Odmietli ste konverziu. V <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> sa zmení <code>unprivileged: 1</code> na <code>unprivileged: 0</code>, no samotná zmena neprevedie existujúce vlastníctvo UID/GID. Pred priamou konverziou kontajner zálohujte a vyriešte mapovanie vlastníkov; prípadne ho obnovte alebo znova vytvorte ako privilegovaný.",
+    "unprivBody": "Odmietli ste konverziu, takže skript skončil bez akejkoľvek zmeny. Ak chcete pokračovať, spustite ho znova a súhlaste: skript zastaví kontajner, zálohuje jeho konfiguráciu do <code>/etc/pve/lxc/&lt;CTID&gt;.conf.bak</code> a nahradí <code>unprivileged: 1</code> hodnotou <code>unprivileged: 0</code>. Samotná zmena neprevedie vlastníctvo UID/GID existujúcich súborov; preto kontajner najprv zálohujte a upravte vlastníkov, prípadne ho obnovte alebo znova vytvorte ako privilegovaný.",
     "permsTitle": "Práva vnútri kontajnera sú nesprávne",
     "permsBody": "Pri pripojení oddielu do privilegovaného kontajnera sa zachová existujúce vlastníctvo súborov; nový súborový systém často patrí <code>root:root</code>. Ak služba beží pod iným používateľom, napríklad <code>www-data</code> pri Nextcloude, overte UID/GID a upravte potrebné súbory pomocou <code>chown</code>/<code>chmod</code>. Zmeny ovplyvnia aj podkladový disk."
   },

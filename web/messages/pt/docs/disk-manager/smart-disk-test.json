@@ -89,7 +89,7 @@
       },
       {
         "title": "Rever os resultados",
-        "bodyRich": "O estado e os relatórios são apresentados no terminal; o JSON é exportado para as ações descritas acima, exceto Relatório completo. Para testes longos, volte a <strong>Verificar o progresso do teste</strong> no mesmo disco.",
+        "bodyRich": "O estado, os testes e o progresso são apresentados no terminal; <strong>Relatório completo</strong> abre numa caixa de diálogo com deslocamento. O JSON é exportado para as ações descritas acima, exceto Relatório completo. Para testes longos, volte a <strong>Verificar o progresso do teste</strong> no mesmo disco.",
         "img": "/disk/smart/quick-status.png",
         "alt": "Saída rápida do estado de saúde",
         "caption": "Saída rápida do estado de saúde (SATA — smartctl -H + -A)"
@@ -106,7 +106,7 @@
     "noSmartTitle": "\"Não foi possível ler dados SMART de /dev/sdX\"",
     "noSmartBody": "O disco pode estar ligado a um controlador RAID/SAS que não transmite SMART. Com placas megaraid, tente <code>smartctl -d megaraid,N /dev/sdX</code>. Com HBA em modo IT, a chamada direta funciona.",
     "longTitle": "O teste longo nunca termina",
-    "longBody": "O teste corre no firmware e uma carga elevada de E/S pode atrasá-lo. Tente num período calmo, como durante a noite. Em SATA/SAS, <code>smartctl -c</code> mostra a percentagem restante; o registo de autotestes indica o resultado e eventuais LBA com erros. Uma falha de leitura exige investigação; a lentidão, por si só, não prova um setor danificado."
+    "longBody": "O teste corre no firmware e uma carga elevada de E/S pode atrasá-lo. Tente num período calmo, como durante a noite. Em SATA, <code>smartctl -c</code> mostra a percentagem restante e, em SAS, <code>smartctl -l selftest</code>; o registo de autotestes indica o resultado e eventuais LBA com erros. Uma falha de leitura exige investigação; a lentidão, por si só, não prova um setor danificado."
   },
   "related": {
     "heading": "Relacionado",

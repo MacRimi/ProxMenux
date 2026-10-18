@@ -46,7 +46,7 @@
         "mode": "1. Limpar tudo",
         "part": "Destruído",
         "data": "Assinaturas apagadas",
-        "useCase": "Remove o particionamento e os metadados para preparar uma nova organização. Não sobrescreve todos os dados do utilizador."
+        "useCase": "Remove a tabela de partições e os metadados de sistemas de ficheiros e RAID, preenche com zeros os primeiros e os últimos 16 MiB e, nas unidades que suportam discard, aplica TRIM a todo o disco. O resto dos dados não é sobrescrito e ainda pode ser recuperável num HDD; não é um apagamento seguro."
       },
       {
         "mode": "2. Remover rótulos FS",

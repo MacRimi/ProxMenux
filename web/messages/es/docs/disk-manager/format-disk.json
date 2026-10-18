@@ -46,7 +46,7 @@
         "mode": "1. Borrar todo",
         "part": "Destruida",
         "data": "Firmas borradas",
-        "useCase": "Eliminar las particiones y los metadatos para preparar una nueva distribución. No sobrescribe todos los datos de usuario."
+        "useCase": "Elimina la tabla de particiones y los metadatos de sistemas de archivos y RAID, pone a cero los primeros y los últimos 16 MiB y, en unidades que admiten discard, aplica TRIM a todo el disco. El resto de los datos no se sobrescribe y en un HDD aún podría recuperarse; no es un borrado seguro."
       },
       {
         "mode": "2. Borrar firmas FS",

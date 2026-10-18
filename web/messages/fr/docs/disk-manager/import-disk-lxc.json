@@ -83,7 +83,7 @@
   "troubleshoot": {
     "heading": "Dépannage",
     "unprivTitle": "\"Ne peut pas continuer avec un conteneur non privilégié\"",
-    "unprivBody": "Vous avez refusé la conversion. Le paramètre de <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> passe de <code>unprivileged: 1</code> à <code>unprivileged: 0</code>, mais cela ne convertit pas à lui seul les UID/GID des fichiers existants. Sauvegardez et traitez le mappage des propriétaires avant une conversion sur place ; sinon, restaurez ou recréez le conteneur en mode privilégié.",
+    "unprivBody": "Vous avez refusé la conversion : le script s’est arrêté sans rien modifier. Pour continuer, relancez-le et acceptez : le script arrête le conteneur, sauvegarde sa configuration dans <code>/etc/pve/lxc/&lt;CTID&gt;.conf.bak</code> et remplace <code>unprivileged: 1</code> par <code>unprivileged: 0</code>. Ce changement ne convertit pas à lui seul les UID/GID des fichiers existants ; sauvegardez donc d’abord le conteneur et corrigez les propriétaires, ou restaurez ou recréez-le en mode privilégié.",
     "permsTitle": "Les autorisations à l'intérieur du conteneur sont erronées",
     "permsBody": "Le montage dans un conteneur privilégié conserve les propriétaires des fichiers existants ; un système de fichiers neuf appartient souvent à <code>root:root</code>. Si le service utilise un autre compte, par exemple <code>www-data</code> pour Nextcloud, vérifiez son UID/GID et ajustez les fichiers nécessaires avec <code>chown</code>/<code>chmod</code>. Ces changements affectent aussi le disque sous-jacent."
   },

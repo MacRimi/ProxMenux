@@ -83,7 +83,7 @@
   "troubleshoot": {
     "heading": "Felsökning",
     "unprivTitle": "\"Kan inte fortsätta med en oprivilegierad container\"",
-    "unprivBody": "Du avböjde konverteringen. Flaggan i <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> ändras från <code>unprivileged: 1</code> till <code>unprivileged: 0</code>, men det omvandlar inte befintligt UID/GID-ägarskap. Säkerhetskopiera och hantera ägarmappningen före en konvertering på plats, eller återläs eller återskapa containern som privilegierad.",
+    "unprivBody": "Du avböjde konverteringen, så skriptet avslutades utan att ändra något. Kör det igen och godkänn för att fortsätta: skriptet stoppar containern, säkerhetskopierar konfigurationen till <code>/etc/pve/lxc/&lt;CTID&gt;.conf.bak</code> och ersätter <code>unprivileged: 1</code> med <code>unprivileged: 0</code>. Den ändringen omvandlar inte i sig UID/GID-ägarskapet för befintliga filer, så säkerhetskopiera containern och rätta ägarskapet först, eller återställ eller återskapa containern som privilegierad.",
     "permsTitle": "Behörigheter inne i containern är fel",
     "permsBody": "Befintliga filägare behålls när en partition monteras i en privilegierad container; ett nyformaterat filsystem ägs ofta av <code>root:root</code>. Om tjänsten körs som en annan användare, exempelvis <code>www-data</code> för Nextcloud, kontrollera UID/GID och justera berörda filer med <code>chown</code>/<code>chmod</code>. Ändringarna påverkar även den underliggande disken."
   },

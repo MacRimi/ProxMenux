@@ -89,7 +89,7 @@
       },
       {
         "title": "Review results",
-        "bodyRich": "Status and reports are shown in the terminal; JSON export is performed for supported actions as described above, not for Full report. For long tests, return later and run <strong>Check test progress</strong> on the same disk to see the outcome.",
+        "bodyRich": "Status, test and progress output is shown in the terminal; <strong>Full report</strong> opens in a scrollable dialog. JSON is exported for the actions described above, not for Full report. For long tests, return later and run <strong>Check test progress</strong> on the same disk to see the outcome.",
         "img": "/disk/smart/quick-status.png",
         "alt": "Quick health status output",
         "caption": "Quick health status output (SATA — smartctl -H + -A)"
@@ -106,7 +106,7 @@
     "noSmartTitle": "\"Could not read SMART data from /dev/sdX\"",
     "noSmartBody": "The disk is probably behind a RAID / SAS controller that does not pass SMART through. With megaraid-based cards, try <code>smartctl -d megaraid,N /dev/sdX</code>. For HBAs in IT mode the direct invocation works.",
     "longTitle": "Long test never completes",
-    "longBody": "The drive runs the test in firmware, and heavy I/O can delay completion. Try an idle period such as overnight. For SATA/SAS, <code>smartctl -c</code> shows the remaining percentage; inspect the self-test log for completion status and any failing LBA. A reported read failure needs investigation; slow progress alone does not prove a bad sector."
+    "longBody": "The drive runs the test in firmware, and heavy I/O can delay completion. Try an idle period such as overnight. For SATA, <code>smartctl -c</code> shows the remaining percentage, and for SAS, <code>smartctl -l selftest</code>; inspect the self-test log for completion status and any failing LBA. A reported read failure needs investigation; slow progress alone does not prove a bad sector."
   },
   "related": {
     "heading": "Related",

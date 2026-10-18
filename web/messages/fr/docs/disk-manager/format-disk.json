@@ -46,7 +46,7 @@
         "mode": "1. Tout effacer",
         "part": "Détruite",
         "data": "Signatures effacées",
-        "useCase": "Supprimer le partitionnement et les métadonnées pour préparer une nouvelle organisation. Cela n’écrase pas toutes les données utilisateur."
+        "useCase": "Supprime la table de partitions et les métadonnées de système de fichiers et RAID, met à zéro les 16 premiers et derniers Mio et, sur les disques qui prennent en charge discard, applique un TRIM à tout le disque. Le reste des données n’est pas écrasé et peut encore être récupérable sur un HDD ; ce n’est pas un effacement sécurisé."
       },
       {
         "mode": "2. Supprimer les étiquettes FS",

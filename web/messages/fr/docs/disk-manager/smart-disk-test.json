@@ -89,7 +89,7 @@
       },
       {
         "title": "Examen des résultats",
-        "bodyRich": "L’état et les rapports s’affichent dans le terminal ; le JSON est exporté pour les actions décrites plus haut, sauf Rapport complet. Pour les tests longs, revenez à <strong>Vérifier la progression du test</strong> sur le même disque.",
+        "bodyRich": "L’état, les tests et la progression s’affichent dans le terminal ; <strong>Rapport complet</strong> s’ouvre dans une boîte de dialogue défilante. Le JSON est exporté pour les actions décrites plus haut, sauf Rapport complet. Pour les tests longs, revenez à <strong>Vérifier la progression du test</strong> sur le même disque.",
         "img": "/disk/smart/quick-status.png",
         "alt": "État de santé rapide",
         "caption": "État de santé rapide (SATA — smartctl -H + -A)"
@@ -106,7 +106,7 @@
     "noSmartTitle": "\"Ne pouvait pas lire les données SMART de /dev/sdX\"",
     "noSmartBody": "Le disque est probablement derrière un contrôleur RAID / SAS qui ne passe pas SMART à travers. Avec des cartes à base de megaraid, essayez <code>smartctl -d megaraid,N /dev/sdX</code>. Pour les HBA en mode IT, l'invocation directe fonctionne.",
     "longTitle": "Un long test ne se termine jamais",
-    "longBody": "Le disque exécute le test dans son firmware et une forte activité peut le retarder. Essayez pendant une période calme, par exemple la nuit. Pour SATA/SAS, <code>smartctl -c</code> indique le pourcentage restant ; le journal des autotests contient l’état final et les éventuels LBA en erreur. Une erreur de lecture doit être examinée ; la lenteur seule ne prouve pas un secteur défectueux."
+    "longBody": "Le disque exécute le test dans son firmware et une forte activité peut le retarder. Essayez pendant une période calme, par exemple la nuit. Pour SATA, <code>smartctl -c</code> indique le pourcentage restant, et pour SAS, <code>smartctl -l selftest</code> ; le journal des autotests contient l’état final et les éventuels LBA en erreur. Une erreur de lecture doit être examinée ; la lenteur seule ne prouve pas un secteur défectueux."
   },
   "related": {
     "heading": "Voir aussi",

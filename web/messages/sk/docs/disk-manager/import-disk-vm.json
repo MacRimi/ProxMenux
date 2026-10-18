@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Čo to robí?",
-    "body": "Fyzický disk sa pripojí ako podkladové zariadenie rozhrania virtuálneho disku. Hosť automaticky nedostane natívne SMART dáta ani funkcie fyzického radiča; ak ich potrebujete, použite PCI passthrough radiča. Disk sa pripája cez <code>/dev/disk/by-id/…</code>, nie <code>/dev/sdX</code>, takže zmena poradia zariadení pri štarte nenaruší priradenie."
+    "body": "Fyzický disk sa pripojí ako podkladové zariadenie rozhrania virtuálneho disku. Hosť automaticky nedostane natívne SMART dáta ani funkcie fyzického radiča; ak ich potrebujete, použite PCI passthrough radiča. Disk sa pripája cez svoju cestu <code>/dev/disk/by-id/…</code>, ak existuje, takže zmena poradia zariadení pri štarte nenaruší priradenie; inak sa použije <code>/dev/sdX</code>."
   },
   "howRuns": {
     "heading": "Ako beží skript",

@@ -46,7 +46,7 @@
         "mode": "1. Vymazať všetko",
         "part": "Zničené",
         "data": "Vymazané podpisy",
-        "useCase": "Odstráni rozdelenie na oddiely a metadáta pre nové usporiadanie. Neprepíše všetky používateľské dáta."
+        "useCase": "Odstráni tabuľku oddielov a metadáta súborových systémov a RAID, vynuluje prvých a posledných 16 MiB a na diskoch s podporou discard vykoná TRIM celého disku. Ostatné dáta sa neprepíšu a na HDD môžu byť stále obnoviteľné; nejde o bezpečné vymazanie."
       },
       {
         "mode": "2. Odstrániť značky FS",

@@ -83,7 +83,7 @@
   "troubleshoot": {
     "heading": "Troubleshooting",
     "unprivTitle": "\"Cannot continue with an unprivileged container\"",
-    "unprivBody": "You declined the conversion. The flag in <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> changes from <code>unprivileged: 1</code> to <code>unprivileged: 0</code>, but that alone does not convert existing UID/GID ownership. Back up and handle the ownership mapping before accepting an in-place conversion; alternatively restore or rebuild the container as privileged.",
+    "unprivBody": "You declined the conversion, so the script stopped without changing anything. To continue, run it again and accept: the script stops the container, backs up its configuration to <code>/etc/pve/lxc/&lt;CTID&gt;.conf.bak</code> and replaces <code>unprivileged: 1</code> with <code>unprivileged: 0</code>. That flag change alone does not convert the UID/GID ownership of existing files, so back up the container and fix the ownership first; alternatively, restore or rebuild the container as privileged.",
     "permsTitle": "Permissions inside the container are wrong",
     "permsBody": "Existing file ownership is retained when a partition is mounted into a privileged container; a newly formatted filesystem is often owned by <code>root:root</code>. If the service runs as another user (e.g. <code>www-data</code> for Nextcloud), inspect its UID/GID and adjust the required files with <code>chown</code>/<code>chmod</code>. Changes also affect the underlying disk."
   },

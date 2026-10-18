@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Vad detta gör",
-    "body": "En fysisk disk ansluts som underlag för ett virtuellt diskgränssnitt. Gästen får inte automatiskt inbyggda SMART-data eller den fysiska styrenhetens funktioner; använd PCI-passthrough av styrenheten om dessa behövs. Disken ansluts via <code>/dev/disk/by-id/…</code>, inte <code>/dev/sdX</code>, så ändrad enhetsordning vid start bryter inte tilldelningen."
+    "body": "En fysisk disk ansluts som underlag för ett virtuellt diskgränssnitt. Gästen får inte automatiskt inbyggda SMART-data eller den fysiska styrenhetens funktioner; använd PCI-passthrough av styrenheten om dessa behövs. Disken ansluts via sin sökväg <code>/dev/disk/by-id/…</code> när en sådan finns, så ändrad enhetsordning vid start bryter inte tilldelningen; annars används <code>/dev/sdX</code>."
   },
   "howRuns": {
     "heading": "Så körs skriptet",

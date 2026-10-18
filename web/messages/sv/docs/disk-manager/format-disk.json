@@ -46,7 +46,7 @@
         "mode": "1. Radera allt",
         "part": "Förstörd",
         "data": "Signaturer raderade",
-        "useCase": "Ta bort partitionering och metadata för att förbereda en ny layout. Detta skriver inte över alla användardata."
+        "useCase": "Tar bort partitionstabellen och metadata för filsystem och RAID, nollställer de första och sista 16 MiB och kör TRIM på hela disken om enheten stöder discard. Övriga data skrivs inte över och kan fortfarande gå att återställa på en HDD; detta är ingen säker radering."
       },
       {
         "mode": "2. Ta bort FS-etiketter",

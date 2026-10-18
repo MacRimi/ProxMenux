@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Was das macht",
-    "body": "Ein physisches Laufwerk wird als Backend einer virtuellen Laufwerksschnittstelle zugewiesen. Der Gast erhält nicht automatisch native SMART-Daten oder Funktionen des physischen Controllers; dafür ist Controller-PCI-Passthrough geeignet. Das Laufwerk wird über <code>/dev/disk/by-id/…</code> statt <code>/dev/sdX</code> zugewiesen, sodass eine geänderte Gerätereihenfolge beim Start die Zuordnung nicht unterbricht."
+    "body": "Ein physisches Laufwerk wird als Backend einer virtuellen Laufwerksschnittstelle zugewiesen. Der Gast erhält nicht automatisch native SMART-Daten oder Funktionen des physischen Controllers; dafür ist Controller-PCI-Passthrough geeignet. Das Laufwerk wird, falls vorhanden, über seinen Pfad <code>/dev/disk/by-id/…</code> zugewiesen, sodass eine geänderte Gerätereihenfolge beim Start die Zuordnung nicht unterbricht; andernfalls wird <code>/dev/sdX</code> verwendet."
   },
   "howRuns": {
     "heading": "Wie das Skript läuft",

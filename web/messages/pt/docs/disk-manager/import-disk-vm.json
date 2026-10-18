@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "O que isto faz",
-    "body": "Liga um disco físico bruto como dispositivo subjacente de uma interface de disco virtual. O sistema convidado não recebe automaticamente os dados SMART nativos nem as funções do controlador físico; utilize passthrough PCI do controlador se forem necessários. O disco é ligado por <code>/dev/disk/by-id/…</code>, não por <code>/dev/sdX</code>, para manter a atribuição se a ordem dos dispositivos mudar no arranque."
+    "body": "Liga um disco físico bruto como dispositivo subjacente de uma interface de disco virtual. O sistema convidado não recebe automaticamente os dados SMART nativos nem as funções do controlador físico; utilize passthrough PCI do controlador se forem necessários. O disco é ligado pelo seu caminho <code>/dev/disk/by-id/…</code> quando existe, para manter a atribuição se a ordem dos dispositivos mudar no arranque; caso contrário, é usado <code>/dev/sdX</code>."
   },
   "howRuns": {
     "heading": "Como o script é executado",

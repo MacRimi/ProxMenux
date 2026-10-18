@@ -89,7 +89,7 @@
       },
       {
         "title": "Controlla i risultati",
-        "bodyRich": "Stato e rapporti compaiono nel terminale; l’esportazione JSON avviene per le azioni indicate sopra, non per Rapporto completo. Per i test lunghi torna a <strong>Verifica avanzamento test</strong> sullo stesso disco.",
+        "bodyRich": "Stato, test e avanzamento compaiono nel terminale; <strong>Rapporto completo</strong> si apre in una finestra scorrevole. L’esportazione JSON avviene per le azioni indicate sopra, non per Rapporto completo. Per i test lunghi torna a <strong>Verifica avanzamento test</strong> sullo stesso disco.",
         "img": "/disk/smart/quick-status.png",
         "alt": "Uscita rapida dello stato di salute",
         "caption": "Uscita rapida dello stato di salute (SATA — smartctl -H + -A)"
@@ -106,7 +106,7 @@
     "noSmartTitle": "\"Impossibile leggere i dati SMART da /dev/sdX\"",
     "noSmartBody": "Il disco è probabilmente dietro un controller RAID / SAS che non passa SMART attraverso. Con le carte a base di megaraid, prova a <code>smartctl -d megaraid,N /dev/sdX</code>. Per HBA in modalità IT l'invocazione diretta funziona.",
     "longTitle": "Il lungo test non completa mai",
-    "longBody": "Il test viene eseguito nel firmware e un carico I/O elevato può ritardarlo. Prova in un periodo di inattività, ad esempio di notte. Su SATA/SAS, <code>smartctl -c</code> mostra la percentuale rimanente; il log degli autotest indica esito ed eventuali LBA difettosi. Un errore di lettura va indagato; la lentezza da sola non prova un settore danneggiato."
+    "longBody": "Il test viene eseguito nel firmware e un carico I/O elevato può ritardarlo. Prova in un periodo di inattività, ad esempio di notte. Su SATA, <code>smartctl -c</code> mostra la percentuale rimanente, su SAS <code>smartctl -l selftest</code>; il log degli autotest indica esito ed eventuali LBA difettosi. Un errore di lettura va indagato; la lentezza da sola non prova un settore danneggiato."
   },
   "related": {
     "heading": "Correlati",

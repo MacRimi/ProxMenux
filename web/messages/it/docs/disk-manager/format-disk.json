@@ -46,7 +46,7 @@
         "mode": "1. Pulisci tutto",
         "part": "Distrutto",
         "data": "Firme cancellate",
-        "useCase": "Rimuove partizionamento e metadati per preparare una nuova struttura. Non sovrascrive tutti i dati utente."
+        "useCase": "Rimuove la tabella delle partizioni e i metadati di file system e RAID, azzera i primi e gli ultimi 16 MiB e, sulle unità che supportano discard, esegue il TRIM dell’intero disco. Il resto dei dati non viene sovrascritto e su un HDD potrebbe essere ancora recuperabile; non è una cancellazione sicura."
       },
       {
         "mode": "2. Rimuovere le etichette FS",

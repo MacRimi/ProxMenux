@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "What this does",
-    "body": "This attaches a raw physical disk as the backing device for a virtual disk interface. The guest does not automatically receive native SMART data or the physical controller’s features; use controller PCI passthrough when those are required. The disk is attached through <code>/dev/disk/by-id/…</code>, not <code>/dev/sdX</code>, so a changed device enumeration order at boot does not break the assignment."
+    "body": "This attaches a raw physical disk as the backing device for a virtual disk interface. The guest does not automatically receive native SMART data or the physical controller’s features; use controller PCI passthrough when those are required. The disk is attached through its <code>/dev/disk/by-id/…</code> path when one exists, so a changed device enumeration order at boot does not break the assignment; otherwise <code>/dev/sdX</code> is used."
   },
   "howRuns": {
     "heading": "How the script runs",

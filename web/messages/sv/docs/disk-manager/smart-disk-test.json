@@ -89,7 +89,7 @@
       },
       {
         "title": "Granska resultat",
-        "bodyRich": "Status och rapporter visas i terminalen; JSON exporteras för åtgärderna ovan, inte för Fullständig rapport. För långa tester återkommer du till <strong>Kontrollera testförlopp</strong> på samma disk.",
+        "bodyRich": "Status, tester och förlopp visas i terminalen; <strong>Fullständig rapport</strong> öppnas i en rullbar dialog. JSON exporteras för åtgärderna ovan, inte för Fullständig rapport. För långa tester återkommer du till <strong>Kontrollera testförlopp</strong> på samma disk.",
         "img": "/disk/smart/quick-status.png",
         "alt": "Utdata från snabb statuskontroll",
         "caption": "Snabb hälsostatusutgång (SATA - smartctl -H + -A)"
@@ -106,7 +106,7 @@
     "noSmartTitle": "\"Kan inte läsa SMART data från /dev/sdX\"",
     "noSmartBody": "Disken sitter troligen bakom en RAID/SAS-styrenhet som inte vidarebefordrar SMART. För megaraid-kort kan du prova <code>smartctl -d megaraid,N /dev/sdX</code>. För HBA:er i IT-läge fungerar det direkta anropet.",
     "longTitle": "Långt test slutför aldrig",
-    "longBody": "Testet körs i diskens firmware och hög I/O-belastning kan fördröja det. Prova en lugn period, exempelvis över natten. För SATA/SAS visar <code>smartctl -c</code> återstående procent; självtestloggen visar slutstatus och eventuella felaktiga LBA:er. Läsfel behöver undersökas; långsamt förlopp bevisar inte i sig en dålig sektor."
+    "longBody": "Testet körs i diskens firmware och hög I/O-belastning kan fördröja det. Prova en lugn period, exempelvis över natten. För SATA visar <code>smartctl -c</code> återstående procent, för SAS <code>smartctl -l selftest</code>; självtestloggen visar slutstatus och eventuella felaktiga LBA:er. Läsfel behöver undersökas; långsamt förlopp bevisar inte i sig en dålig sektor."
   },
   "related": {
     "heading": "Relaterat",

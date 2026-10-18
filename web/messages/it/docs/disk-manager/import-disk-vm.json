@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "Che cosa fa",
-    "body": "Collega un disco fisico grezzo come supporto di un’interfaccia disco virtuale. Il guest non riceve automaticamente i dati SMART nativi o le funzioni del controller fisico; usa il passthrough PCI del controller se servono. Il disco viene collegato tramite <code>/dev/disk/by-id/…</code>, non <code>/dev/sdX</code>, così un diverso ordine di enumerazione all’avvio non interrompe l’assegnazione."
+    "body": "Collega un disco fisico grezzo come supporto di un’interfaccia disco virtuale. Il guest non riceve automaticamente i dati SMART nativi o le funzioni del controller fisico; usa il passthrough PCI del controller se servono. Il disco viene collegato tramite il suo percorso <code>/dev/disk/by-id/…</code> quando esiste, così un diverso ordine di enumerazione all’avvio non interrompe l’assegnazione; altrimenti si usa <code>/dev/sdX</code>."
   },
   "howRuns": {
     "heading": "Come funziona lo script",

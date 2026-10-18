@@ -89,7 +89,7 @@
       },
       {
         "title": "Skontrolovať výsledky",
-        "bodyRich": "Stav a správy sa zobrazia v termináli; JSON sa exportuje pri vyššie opísaných akciách, nie pri úplnej správe. Pri dlhých testoch neskôr použite <strong>Skontrolovať priebeh testu</strong> na rovnakom disku.",
+        "bodyRich": "Stav, testy a priebeh sa zobrazia v termináli; <strong>Úplná správa</strong> sa otvorí v posúvateľnom dialógu. JSON sa exportuje pri vyššie opísaných akciách, nie pri úplnej správe. Pri dlhých testoch neskôr použite <strong>Skontrolovať priebeh testu</strong> na rovnakom disku.",
         "img": "/disk/smart/quick-status.png",
         "alt": "Výstup rýchlej kontroly stavu",
         "caption": "Rýchly prehľad stavu disku (SATA — smartctl -H + -A)"
@@ -106,7 +106,7 @@
     "noSmartTitle": "\"Nepodarilo sa prečítať dáta SMART z /dev/sdX\"",
     "noSmartBody": "Disk je pravdepodobne za radičom RAID/SAS, ktorý nesprístupňuje SMART. Pri kartách megaraid skúste <code>smartctl -d megaraid,N /dev/sdX</code>. Pri HBA v režime IT funguje priame volanie.",
     "longTitle": "Dlhý test sa nikdy nedokončil",
-    "longBody": "Test beží vo firmvéri disku a vysoká záťaž ho môže spomaliť. Skúste pokojné obdobie, napríklad noc. Pri SATA/SAS zobrazí <code>smartctl -c</code> zostávajúce percento; výsledok a prípadné chybné LBA nájdete v zázname testov. Chybu čítania treba preskúmať; pomalý priebeh sám osebe nedokazuje chybný sektor."
+    "longBody": "Test beží vo firmvéri disku a vysoká záťaž ho môže spomaliť. Skúste pokojné obdobie, napríklad noc. Pri SATA zobrazí <code>smartctl -c</code> zostávajúce percento, pri SAS <code>smartctl -l selftest</code>; výsledok a prípadné chybné LBA nájdete v zázname testov. Chybu čítania treba preskúmať; pomalý priebeh sám osebe nedokazuje chybný sektor."
   },
   "related": {
     "heading": "Súvisiace",
