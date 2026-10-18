@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import useSWR, { mutate as refreshCache } from "swr"
-import { ArrowLeft, ChevronDown, DatabaseBackup, ExternalLink, Globe, Plus, Server, Trash2 } from "lucide-react"
+import { ArrowLeft, ChevronDown, DatabaseBackup, ExternalLink, Globe, Pencil, Plus, Server, Trash2 } from "lucide-react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
@@ -280,6 +280,7 @@ function ManageLinksDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const { data, mutate } = useSWR<MonitorLinks>("/api/monitor-links?all=1", fetcher, { revalidateOnFocus: false })
   const [form, setForm] = useState({ name: "", url: "", product: "pve" })
   const [addresses, setAddresses] = useState<Record<string, string>>({})
+  const [editing, setEditing] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
 
@@ -304,7 +305,7 @@ function ManageLinksDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         <DialogDescription>{t("monitorLinks.dialogDescription")}</DialogDescription>
       </DialogHeader>
 
-      <div className="space-y-3 rounded-lg border border-border bg-card p-4">
+      <div className="space-y-3 rounded-lg border border-border p-4">
         <p className="text-sm font-medium">{t("monitorLinks.addTitle")}</p>
         <div className="grid gap-3 sm:grid-cols-[1fr_1.5fr_auto]">
           <div className="space-y-1.5">
@@ -327,7 +328,7 @@ function ManageLinksDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             </Select>
           </div>
         </div>
-        <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" disabled={busy || !form.url.trim()} onClick={() => run(async () => {
+        <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-600/50 disabled:text-white disabled:opacity-100" disabled={busy || !form.url.trim()} onClick={() => run(async () => {
           await send("/api/monitor-links", "POST", form)
           setForm({ name: "", url: "", product: "pve" })
         })}><Plus className="mr-2 h-4 w-4" />{t("monitorLinks.add")}</Button>
@@ -338,8 +339,12 @@ function ManageLinksDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       <div className="space-y-3">
         {data?.links.length === 0 && <p className="text-sm text-muted-foreground">{t("monitorLinks.empty")}</p>}
         {data?.links.map(link => {
-          const address = addresses[link.key] ?? (link.manual || link.custom_url ? link.url || "" : "")
-          return <div key={link.key} className={`space-y-2 rounded-lg border border-border bg-card p-3 ${link.hidden ? "opacity-60" : ""}`}>
+          const own = link.manual || link.custom_url
+          const shown = link.url || ""
+          const draft = addresses[link.key] ?? (own ? shown : "")
+          const isEditing = editing === link.key
+          // A read-only card is a panel; while its address is edited it lets the field stand out.
+          return <div key={link.key} className={`space-y-2 rounded-lg border border-border p-3 ${isEditing ? "" : "bg-card"} ${link.hidden ? "opacity-60" : ""}`}>
             <div className="flex items-center gap-2">
               <ProductIcon product={link.product} className="h-4 w-4 text-muted-foreground" />
               <span className="min-w-0 flex-1 truncate font-medium">{link.name}</span>
@@ -354,16 +359,29 @@ function ManageLinksDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                 <Trash2 className="h-4 w-4 text-red-500" />
               </Button>}
             </div>
-            <div className="flex gap-2">
-              <Input value={address} disabled={busy} aria-label={t("monitorLinks.address")}
-                placeholder={link.manual ? "" : `${t("monitorLinks.autoAddress")}${link.url ? `: ${link.url}` : ""}`}
-                onChange={event => setAddresses({ ...addresses, [link.key]: event.target.value })} />
-              <Button variant="outline" size="sm" className="h-10" disabled={busy || addresses[link.key] === undefined}
-                onClick={() => run(async () => {
-                  await send(`/api/monitor-links/${encodeURIComponent(link.key)}`, "PATCH", { url: addresses[link.key] })
-                  setAddresses(({ [link.key]: _, ...rest }) => rest)
-                })}>{t("monitorLinks.save")}</Button>
-            </div>
+            {isEditing
+              ? <div className="flex gap-2">
+                  <Input value={draft} disabled={busy} autoFocus aria-label={t("monitorLinks.address")}
+                    placeholder={link.manual ? "" : `${t("monitorLinks.autoAddress")}${shown ? `: ${shown}` : ""}`}
+                    onChange={event => setAddresses({ ...addresses, [link.key]: event.target.value })} />
+                  <Button size="sm" className="h-10 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-600/50 disabled:text-white disabled:opacity-100"
+                    disabled={busy || addresses[link.key] === undefined || (link.manual && !draft.trim())}
+                    onClick={() => run(async () => {
+                      await send(`/api/monitor-links/${encodeURIComponent(link.key)}`, "PATCH", { url: addresses[link.key] })
+                      setAddresses(({ [link.key]: _, ...rest }) => rest)
+                      setEditing(null)
+                    })}>{t("monitorLinks.save")}</Button>
+                  <Button variant="outline" size="sm" className="h-10" disabled={busy}
+                    onClick={() => { setAddresses(({ [link.key]: _, ...rest }) => rest); setEditing(null) }}>{t("monitorLinks.cancel")}</Button>
+                </div>
+              : <div className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate font-mono text-sm text-foreground">{shown || "—"}</span>
+                  {!link.manual && !link.custom_url && <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground">{t("monitorLinks.autoAddress")}</span>}
+                  <Button variant="ghost" size="sm" disabled={busy} aria-label={t("monitorLinks.changeAddress")} title={t("monitorLinks.changeAddress")}
+                    onClick={() => setEditing(link.key)}>
+                    <Pencil className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </div>}
           </div>
         })}
       </div>

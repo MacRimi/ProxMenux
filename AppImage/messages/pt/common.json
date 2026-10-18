@@ -7379,6 +7379,8 @@
     "knownTitle": "Adicionar nós vinculados?",
     "knownBody": "{name} liga estes Monitores. Escolha os que quer adicionar a este Monitor.",
     "addSelected": "Adicionar selecionados",
-    "pbsWebInterface": "Interface web do PBS"
+    "pbsWebInterface": "Interface web do PBS",
+    "changeAddress": "Alterar endereço",
+    "cancel": "Cancelar"
   }
 }

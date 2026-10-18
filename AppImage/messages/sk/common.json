@@ -7378,6 +7378,8 @@
     "knownTitle": "Pridať prepojené uzly?",
     "knownBody": "{name} prepája tieto monitory. Vyberte tie, ktoré chcete pridať do tohto monitora.",
     "addSelected": "Pridať vybrané",
-    "pbsWebInterface": "Webové rozhranie PBS"
+    "pbsWebInterface": "Webové rozhranie PBS",
+    "changeAddress": "Zmeniť adresu",
+    "cancel": "Zrušiť"
   }
 }

@@ -7379,6 +7379,8 @@
     "knownTitle": "Lägga till länkade noder?",
     "knownBody": "{name} länkar dessa monitorer. Välj vilka du vill lägga till på denna monitor.",
     "addSelected": "Lägg till valda",
-    "pbsWebInterface": "PBS webbgränssnitt"
+    "pbsWebInterface": "PBS webbgränssnitt",
+    "changeAddress": "Ändra adress",
+    "cancel": "Avbryt"
   }
 }

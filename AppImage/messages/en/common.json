@@ -6587,6 +6587,8 @@
     "knownTitle": "Add linked nodes?",
     "knownBody": "{name} links these Monitors. Choose the ones to add to this Monitor.",
     "addSelected": "Add selected",
-    "pbsWebInterface": "PBS web interface"
+    "pbsWebInterface": "PBS web interface",
+    "changeAddress": "Change address",
+    "cancel": "Cancel"
   }
 }

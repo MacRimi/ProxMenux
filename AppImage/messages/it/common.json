@@ -7379,6 +7379,8 @@
     "knownTitle": "Aggiungere nodi collegati?",
     "knownBody": "{name} collega questi monitor. Scegli quelli da aggiungere a questo monitor.",
     "addSelected": "Aggiungi selezionati",
-    "pbsWebInterface": "Interfaccia web di PBS"
+    "pbsWebInterface": "Interfaccia web di PBS",
+    "changeAddress": "Cambia indirizzo",
+    "cancel": "Annulla"
   }
 }

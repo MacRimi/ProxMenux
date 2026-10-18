@@ -7379,6 +7379,8 @@
     "knownTitle": "Verknüpfte Knoten hinzufügen?",
     "knownBody": "{name} verknüpft diese Monitore. Wählen Sie aus, welche Sie diesem Monitor hinzufügen möchten.",
     "addSelected": "Auswahl hinzufügen",
-    "pbsWebInterface": "PBS-Weboberfläche"
+    "pbsWebInterface": "PBS-Weboberfläche",
+    "changeAddress": "Adresse ändern",
+    "cancel": "Abbrechen"
   }
 }

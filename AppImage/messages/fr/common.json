@@ -7379,6 +7379,8 @@
     "knownTitle": "Ajouter des nœuds liés ?",
     "knownBody": "{name} relie ces moniteurs. Choisissez ceux à ajouter à ce moniteur.",
     "addSelected": "Ajouter la sélection",
-    "pbsWebInterface": "Interface web de PBS"
+    "pbsWebInterface": "Interface web de PBS",
+    "changeAddress": "Modifier l'adresse",
+    "cancel": "Annuler"
   }
 }
