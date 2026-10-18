@@ -55,6 +55,12 @@ async function editor(ports = [8080]) {
 }
 async function main() {
   await cachedImageContract()
+  const scanning = fixture()
+  scanning.renderParent(); await scanning.settle(); scanning.holdScan()
+  const pendingScan = scanning.button('searchApplications').props.onClick(); scanning.render()
+  scanning.renderParent(101, 1); await scanning.settle()
+  scanning.resolveScan(); await pendingScan; scanning.render()
+  assert.equal(scanning.button('searchApplications').props.disabled, false, 'revision must not leave an active Native Find stuck busy')
   const existing = fixture({apps: [{id: 'existing', name: 'Saved app', ports: [{port: 8080, scheme: 'http'}], state: {}}]})
   existing.renderParent(); await existing.settle()
   const click = async key => {

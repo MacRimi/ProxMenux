@@ -529,13 +529,14 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
   }, [vmid, managed])
   useEffect(() => {
     const generation = targetGeneration.current
-    const request = ++nativeRequest.current
+    const request = nativeRequest.current
+    let cancelled = false
     if (managed) return
     fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/native-discovery`).then(result => {
-      if (targetRef.current === vmid && targetGeneration.current === generation
+      if (!cancelled && targetRef.current === vmid && targetGeneration.current === generation
           && nativeRequest.current === request) setNativeDiscovery(result)
     }).catch(() => { /* cached metadata is optional; never initiate a scan */ })
-    return () => { nativeRequest.current += 1 }
+    return () => { cancelled = true }
   }, [vmid, managed, cacheRevision])
   const [adguardSetupAvailable, setAdguardSetupAvailable] = useState(false)
   const [error, setError] = useState<string | null>(null)
