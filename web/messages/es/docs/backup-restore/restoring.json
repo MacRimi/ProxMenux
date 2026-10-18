@@ -1,28 +1,28 @@
 {
   "meta": {
-    "title": "Restaurar una copia — flujos Completo y Personalizado | ProxMenux",
-    "description": "El flujo completo de restauración. Documenta las tres acciones disponibles sobre cualquier copia (ver, descargar, restaurar), la comprobación de compatibilidad y sus resultados, los modos Completo y Personalizado, la clasificación de rutas que decide qué se aplica en vivo y qué espera al siguiente arranque, el dispatcher de arranque y la pasada de reinstalación post-arranque de componentes.",
+    "title": "Restaurar un backup — flujos Completo y Personalizado | ProxMenux",
+    "description": "El flujo completo de restauración. Documenta las tres acciones disponibles sobre cualquier backup (ver, descargar, restaurar), la comprobación de compatibilidad y sus resultados, los modos Completo y Personalizado, la clasificación de rutas que decide qué se aplica en vivo y qué espera al siguiente arranque, el dispatcher de arranque y la pasada de reinstalación post-arranque de componentes.",
     "ogTitle": "ProxMenux Backup — restaurar",
     "ogDescription": "Flujos de restauración completo y personalizado con la comprobación de compatibilidad, la clasificación de rutas, el dispatcher post-arranque y la reinstalación de componentes.",
-    "twitterTitle": "Restaurar una copia | ProxMenux",
-    "twitterDescription": "Cómo se convierte una copia de host de ProxMenux en un host Proxmox operativo."
+    "twitterTitle": "Restaurar un backup | ProxMenux",
+    "twitterDescription": "Cómo se convierte un backup de host de ProxMenux en un host Proxmox operativo."
   },
   "header": {
-    "title": "Restaurar una copia",
-    "description": "El flujo completo de restauración: desde elegir una copia hasta un host operativo. Documenta la comprobación de compatibilidad, los dos modos de restauración, el dispatcher post-arranque, la pasada de reinstalación de componentes, y los mecanismos que hacen predecibles las restauraciones cross-host y cross-kernel.",
-    "section": "Copias de seguridad y restauración"
+    "title": "Restaurar un backup",
+    "description": "El flujo completo de restauración: desde elegir un backup hasta un host operativo. Documenta la comprobación de compatibilidad, los dos modos de restauración, el dispatcher post-arranque, la pasada de reinstalación de componentes, y los mecanismos que hacen predecibles las restauraciones cross-host y cross-kernel.",
+    "section": "Backup & Restore"
   },
   "intro": {
     "title": "La restauración reproduce el origen, no sólo los ficheros",
-    "body": "Restaurar una copia de ProxMenux requiere más que extraer archivos. Antes de aplicar cambios, se consulta el manifiesto para detectar diferencias entre origen y destino, se filtran rutas que podrían impedir el arranque y se adapta la configuración del usuario que no puede copiarse literalmente. Tras el reinicio necesario, se intenta reinstalar los componentes compatibles registrados (controlador NVIDIA, Coral TPU y herramientas GPU) para el kernel que ejecuta el destino. Una única copia dirige la comprobación de compatibilidad, la clasificación de rutas y los procesos de arranque y posteriores. Revisa los resultados de cada componente y los logs para confirmar el resultado."
+    "body": "Restaurar un backup de ProxMenux requiere más que extraer archivos. Antes de aplicar cambios, se consulta el manifiesto para detectar diferencias entre origen y destino, se filtran rutas que podrían impedir el arranque y se adapta la configuración del usuario que no puede copiarse literalmente. Tras el reinicio necesario, se intenta reinstalar los componentes compatibles registrados (controlador NVIDIA, Coral TPU y herramientas GPU) para el kernel que ejecuta el destino. Un único backup dirige la comprobación de compatibilidad, la clasificación de rutas y los procesos de arranque y posteriores. Revisa los resultados de cada componente y los logs para confirmar el resultado."
   },
   "threeActions": {
-    "heading": "Tres acciones sobre una copia",
-    "intro": "Seleccionar una copia de la lista abre un menú con tres acciones.",
+    "heading": "Tres acciones sobre un backup",
+    "intro": "Seleccionar un backup de la lista abre un menú con tres acciones.",
     "actionRows": [
       {
         "action": "Ver",
-        "detail": "Abre una vista de sólo lectura del archivo: contenido de manifest.json (hostname de origen, versión de PVE, kernel, hardware, componentes instalados), la lista de rutas dentro de <code>rootfs/</code>, y un diff de qué cambiaría en el host actual si se aplicara la copia."
+        "detail": "Abre una vista de sólo lectura del archivo: contenido de manifest.json (hostname de origen, versión de PVE, kernel, hardware, componentes instalados), la lista de rutas dentro de <code>rootfs/</code>, y un diff de qué cambiaría en el host actual si se aplicara el backup."
       },
       {
         "action": "Descargar",
@@ -40,7 +40,7 @@
     "outputRows": [
       {
         "output": "Flag de dirección",
-        "detail": "<code>HB_COMPAT_KERNEL_DIRECTION</code> — uno de <code>same</code>, <code>bk_newer</code> o <code>bk_older</code>. Compara la versión mayor del kernel de la copia contra la del destino. Dirige el filtro cross-kernel de subconjunto seguro (sólo dispara en <code>bk_older</code>) y la pasada de hidratación documentada en la página cross-kernel."
+        "detail": "<code>HB_COMPAT_KERNEL_DIRECTION</code> — uno de <code>same</code>, <code>bk_newer</code> o <code>bk_older</code>. Compara la versión mayor del kernel del backup contra la del destino. Dirige el filtro cross-kernel de subconjunto seguro (sólo dispara en <code>bk_older</code>) y la pasada de hidratación documentada en la página cross-kernel."
       },
       {
         "output": "Lista de rutas a saltar",
@@ -52,7 +52,7 @@
       },
       {
         "output": "Plan de rollback",
-        "detail": "Lo calcula <code>compute_rollback_plan.sh</code>. Lista las VMs, LXCs y componentes presentes en el destino pero ausentes de la copia. La confirmación permite optar por eliminar los invitados adicionales antes del reinicio. Los componentes deben desinstalarse manualmente y la eliminación de invitados puede fallar; no garantiza que el destino coincida exactamente con la copia."
+        "detail": "Lo calcula <code>compute_rollback_plan.sh</code>. Lista las VMs, LXCs y componentes presentes en el destino pero ausentes del backup. La confirmación permite optar por eliminar los invitados adicionales antes del reinicio. Los componentes deben desinstalarse manualmente y la eliminación de invitados puede fallar; no garantiza que el destino coincida exactamente con el backup."
       }
     ],
     "reportBody": "La comprobación también emite un informe estructurado (<code>HB_COMPAT_RESULTS</code>) categorizado como PASS / INFO / WARN / FAIL. Las entradas WARN y FAIL aparecen en el panel previo a la restauración; la restauración se niega a continuar sólo cuando hay un FAIL que el usuario no puede resolver pulsando Continuar."
@@ -77,7 +77,7 @@
     "rows": [
       {
         "class": "hot",
-        "detail": "Rutas que se aplican <strong>de inmediato</strong> sobre el sistema en ejecución. El servicio que las consume detecta el cambio por sí mismo o al siguiente reload, sin necesidad de reiniciar. Son la mayoría del contenido de una copia: <code>/etc/ssh</code>, <code>/etc/apt</code>, <code>/etc/cron.*</code>, <code>/root</code>, <code>/usr/local/bin</code>, ficheros de configuración de servicios generales, etc."
+        "detail": "Rutas que se aplican <strong>de inmediato</strong> sobre el sistema en ejecución. El servicio que las consume detecta el cambio por sí mismo o al siguiente reload, sin necesidad de reiniciar. Son la mayoría del contenido de un backup: <code>/etc/ssh</code>, <code>/etc/apt</code>, <code>/etc/cron.*</code>, <code>/root</code>, <code>/usr/local/bin</code>, ficheros de configuración de servicios generales, etc."
       },
       {
         "class": "reboot",
@@ -92,7 +92,7 @@
   "fullFlow": {
     "heading": "El flujo completo de restauración",
     "intro": "El pipeline completo desde la selección del archivo hasta un host restaurado y operativo. Cada etapa alimenta a la siguiente; el estado escrito por etapas anteriores lo consumen las posteriores.",
-    "diagram": "┌─────────────────────────────────────────────────────────────────┐\n│  Archive → staging_root/                                        │\n│    manifest.json   metadata/   rootfs/                          │\n└──────────────────────────────┬──────────────────────────────────┘\n                               │\n                               ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  1. hb_compat_check                                     │\n   │     · hardware drift → RS_SKIP_PATHS                    │\n   │     · kernel direction → same / bk_newer / bk_older     │\n   │     · NIC remap plan                                    │\n   │     · hydration plan (bk_older only)                    │\n   │     · rollback plan                                     │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  2. Confirmation dialog                                 │\n   │     Shows: hot count, pending count, drift, hydration,  │\n   │     NIC remap, cross-kernel note, reinstalls preview    │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │ (accepted)\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  3. Apply hot paths → LIVE                              │\n   │     _rs_apply rsyncs each hot path                      │\n   │     from staging_root/rootfs to /                       │\n   │     (skips paths in RS_SKIP_PATHS)                      │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  4. _rs_prepare_pending_restore                         │\n   │     /var/lib/proxmenux/pending-restore/                 │\n   │       ├── apply-on-boot.list                            │\n   │       ├── plan.env                                      │\n   │       ├── rs-skip-paths.txt                             │\n   │       └── rootfs/ (deferred paths)                      │\n   │     Enable proxmenux-restore-onboot.service             │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  4b. _rs_import_data_pools                              │\n   │      Imports non-root ZFS pools whose disks are all     │\n   │      present; retries with -f on foreign hostid;        │\n   │      skips with a warning when disks are missing.       │\n   │      Log: /var/log/proxmenux/restore-datapools-*.log    │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  5. _rs_run_complete_extras                             │\n   │     packages.manual.list                                │\n   │       → cascade-safe filter                             │\n   │       → apt-get install                                 │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  6. REBOOT                                              │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  7. apply_pending_restore.sh (on early boot)            │\n   │     Reads plan.env                                      │\n   │     Applies apply-on-boot.list (filtered)               │\n   │     Installs the postboot systemd unit                  │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  8. apply_cluster_postboot.sh (~10 minutes)             │\n   │     Runs after pve-cluster is up                        │\n   │     · Applies /etc/pve entries to pmxcfs                │\n   │     · update-initramfs -u -k all                        │\n   │     · update-grub / proxmox-boot-tool refresh           │\n   │     · component --auto-reinstall (nvidia, coral, ...)   │\n   │     · Boot sanity check                                 │\n   │     · Notification: \"Host restore finished\"             │\n   └─────────────────────────────────────────────────────────┘"
+    "diagram": "┌─────────────────────────────────────────────────────────────────┐\n│  Archivo → staging_root/                                        │\n│    manifest.json   metadata/   rootfs/                          │\n└──────────────────────────────┬──────────────────────────────────┘\n                               │\n                               ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  1. hb_compat_check                                     │\n   │     · drift de hardware → RS_SKIP_PATHS                 │\n   │     · dirección kernel → same / bk_newer / bk_older     │\n   │     · plan de remapeo NIC                               │\n   │     · plan de hidratación (sólo bk_older)               │\n   │     · plan de rollback                                  │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  2. Diálogo de confirmación                             │\n   │     Muestra: rutas hot, rutas pending, drift,           │\n   │     hidratación, remapeo NIC, nota cross-kernel,        │\n   │     preview de reinstalaciones                          │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │ (aceptado)\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  3. Aplicar rutas hot → EN VIVO                         │\n   │     _rs_apply rsyncea cada ruta hot                     │\n   │     desde staging_root/rootfs a /                       │\n   │     (salta rutas en RS_SKIP_PATHS)                      │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  4. _rs_prepare_pending_restore                         │\n   │     /var/lib/proxmenux/pending-restore/                 │\n   │       ├── apply-on-boot.list                            │\n   │       ├── plan.env                                      │\n   │       ├── rs-skip-paths.txt                             │\n   │       └── rootfs/ (rutas diferidas)                     │\n   │     Habilita proxmenux-restore-onboot.service           │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  4b. _rs_import_data_pools                              │\n   │      Importa pools ZFS no-raíz cuyos discos             │\n   │      están todos presentes; retry con -f en             │\n   │      foreign hostid; skip con warning si faltan discos. │\n   │      Log: /var/log/proxmenux/restore-datapools-*.log    │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  5. _rs_run_complete_extras                             │\n   │     packages.manual.list                                │\n   │       → filtro cascade-safe                             │\n   │       → apt-get install                                 │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  6. REINICIO                                            │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  7. apply_pending_restore.sh (arranque temprano)        │\n   │     Lee plan.env                                        │\n   │     Aplica apply-on-boot.list (filtrado)                │\n   │     Instala la unit systemd de postboot                 │\n   └──────────────────────────────┬──────────────────────────┘\n                                  │\n                                  ▼\n   ┌─────────────────────────────────────────────────────────┐\n   │  8. apply_cluster_postboot.sh (~10 minutos)             │\n   │     Corre cuando pve-cluster está arriba                │\n   │     · Aplica entradas de /etc/pve a pmxcfs              │\n   │     · update-initramfs -u -k all                        │\n   │     · update-grub / proxmox-boot-tool refresh           │\n   │     · component --auto-reinstall (nvidia, coral, ...)   │\n   │     · Comprobación de sanidad de arranque               │\n   │     · Notificación: \"Host restore finished\"             │\n   └─────────────────────────────────────────────────────────┘"
   },
   "pendingMachinery": {
     "heading": "La maquinaria del pending-restore",
@@ -134,7 +134,7 @@
         "detail": "Lee el <code>components_status.json</code> restaurado y recorre los instaladores compatibles registrados (nvidia_driver, coral_driver, amdgpu_top e intel_gpu_tools). Cada uno se ejecuta en modo <code>--auto-reinstall</code>, lee su estado guardado y reinstala para el entorno del destino, recompilando módulos cuando corresponde. Se difiere hasta después del reinicio para utilizar el kernel que ejecute entonces el destino. Los fallos individuales se registran y no detienen el siguiente componente."
       },
       {
-        "task": "Comprobación del arranque",
+        "task": "Comprobación de sanidad del arranque",
         "detail": "Antes de emitir la notificación de finalización, verifica que <code>proxmox-boot-tool status</code> muestra un ESP configurado, que cada <code>/boot/vmlinuz-*</code> tiene su directorio <code>/lib/modules/&lt;ver&gt;</code> correspondiente, y que <code>/vmlinuz</code> resuelve. Cualquier inconsistencia aparece en la notificación en lugar de quedar oculta."
       },
       {
@@ -173,7 +173,7 @@
       },
       {
         "name": "Tail del log",
-        "detail": "Las últimas 600 líneas de <code>proxmenux-cluster-postboot-&lt;ts&gt;.log</code>, con un filtro <em>Solo incidencias</em> que deja solo las líneas con <code>error</code>, <code>warning</code>, <code>failed</code>, <code>✗</code> o <code>traceback</code>."
+        "detail": "Las últimas 600 líneas de <code>proxmenux-cluster-postboot-&lt;ts&gt;.log</code>, con un filtro <em>Issues only</em> que deja solo las líneas con <code>error</code>, <code>warning</code>, <code>failed</code>, <code>✗</code> o <code>traceback</code>."
       }
     ],
     "dismissBody": "Cuando la restauración termina como <em>complete</em> o <em>failed</em>, el botón Dismiss colapsa la tarjeta. El fichero de estado se conserva y el botón History la reabre junto con cualquier restauración anterior (se archivan las últimas 20 en <code>/var/lib/proxmenux/restore-history/</code>).",
@@ -218,12 +218,12 @@
         "detail": "Descarga la versión registrada del driver, compila los módulos DKMS contra el kernel actual, aplica el parche de ProxMenux si el origen lo tenía. La tarea individual más larga."
       },
       {
-        "stage": "Reinstalación de Coral y otros componentes",
+        "stage": "Reinstalación de otros componentes",
         "time": "3–5 min",
         "detail": "Compilaciones DKMS de Coral, apt install para intel-gpu-tools, descarga + install del .deb para amdgpu_top."
       },
       {
-        "stage": "Comprobación del arranque y notificación",
+        "stage": "Comprobación de sanidad + notificación",
         "time": "~2 s",
         "detail": "Barata. El usuario se entera de que la ejecución ha terminado en el momento en que dispara la notificación."
       }
@@ -232,7 +232,7 @@
   },
   "destructiveRollback": {
     "heading": "El rollback destructivo opcional",
-    "body": "La restauración es aditiva por defecto: se conservan las VMs, LXCs y componentes adicionales del destino. Si hay diferencias, la confirmación ofrece <em>¿Ejecutar rollback destructivo?</em>, con No por defecto. Aceptar llama a <code>_rs_execute_rollback</code> antes del reinicio para intentar eliminar las VMs y LXCs adicionales indicados. Los componentes se señalan para desinstalación manual porque la automática no está implementada. Los fallos al eliminar invitados se registran y el proceso continúa; no se garantiza una coincidencia exacta con la copia. Revisa nombres y VMID/CTID antes de elegir esta opción destructiva."
+    "body": "La restauración es aditiva por defecto: se conservan las VMs, LXCs y componentes adicionales del destino. Si hay diferencias, la confirmación ofrece <em>¿Ejecutar el rollback destructivo?</em>, con No por defecto. Aceptar llama a <code>_rs_execute_rollback</code> antes del reinicio para intentar eliminar las VMs y LXCs adicionales indicados. Los componentes se señalan para desinstalación manual porque la automática no está implementada. Los fallos al eliminar invitados se registran y el proceso continúa; no se garantiza una coincidencia exacta con el backup. Revisa nombres y VMID/CTID antes de elegir esta opción destructiva."
   },
   "logs": {
     "heading": "Dónde viven los logs",
@@ -265,7 +265,7 @@
       {
         "label": "Restauración cross-kernel",
         "href": "/docs/backup-restore/cross-kernel",
-        "tail": " — el filtro direccional de subconjunto seguro y la pasada de hidratación que se invocan cuando el kernel del destino difiere del de la copia."
+        "tail": " — el filtro direccional de subconjunto seguro y la pasada de hidratación que se invocan cuando el kernel del destino difiere del del backup."
       },
       {
         "label": "Cómo funciona",

@@ -1,16 +1,16 @@
 {
   "meta": {
     "title": "Trabajos programados — timers, modo adjunto, retención | ProxMenux",
-    "description": "Trabajos de copia de host programados en ProxMenux. Dos modos de creación (timer systemd propio o adjuntarse a un trabajo vzdump de PVE existente), valores de retención aplicados por trabajo vía proxmox-backup-client/borg/local prune, layout de almacenamiento bajo /var/lib/proxmenux/backup-jobs, y el script runner que produce archivos idénticos al flujo interactivo.",
+    "description": "Trabajos de backup de host programados en ProxMenux. Dos modos de creación (timer systemd propio o adjuntarse a un trabajo vzdump de PVE existente), valores de retención aplicados por trabajo vía proxmox-backup-client/borg/local prune, layout de almacenamiento bajo /var/lib/proxmenux/backup-jobs, y el script runner que produce archivos idénticos al flujo interactivo.",
     "ogTitle": "ProxMenux Backup — trabajos programados",
-    "ogDescription": "Copias de host desatendidas programadas con modo adjunto, retención, y los mismos tres destinos que el flujo interactivo.",
+    "ogDescription": "Backups de host desatendidos programados con modo adjunto, retención, y los mismos tres destinos que el flujo interactivo.",
     "twitterTitle": "Trabajos programados | ProxMenux",
-    "twitterDescription": "Trabajos de copia de host desatendidos con modo adjunto y retención."
+    "twitterDescription": "Trabajos de backup de host desatendidos con modo adjunto y retención."
   },
   "header": {
     "title": "Trabajos programados",
-    "description": "Trabajos de copia de host desatendidos. Dos modelos de creación: un trabajo nuevo e independiente con su propio horario, o un trabajo adjuntado a una tarea vzdump de PVE existente que hereda el horario y la retención de esa tarea. Ambos producen archivos idénticos al flujo interactivo.",
-    "section": "Copias de seguridad y restauración"
+    "description": "Trabajos de backup de host desatendidos. Dos modelos de creación: un trabajo nuevo e independiente con su propio horario, o un trabajo adjuntado a una tarea vzdump de PVE existente que hereda el horario y la retención de esa tarea. Ambos producen archivos idénticos al flujo interactivo.",
+    "section": "Backup & Restore"
   },
   "intro": {
     "title": "Los dos modelos de trabajo programado",
@@ -22,11 +22,11 @@
   },
   "attachBadge": {
     "title": "Modo adjunto — recomendado cuando ya existe una tarea vzdump de PVE",
-    "body": "Si ya existe una tarea vzdump de PVE para las VM y los LXC de este nodo, adjuntar la copia del host hace que se ejecute después de la copia de los invitados, en el <strong>mismo ciclo de copia</strong>. Al restaurar, las configuraciones de los invitados proceden de la copia del host (bajo <code>/etc/pve</code>) y sus discos de las copias vzdump de ese ciclo. Esto facilita coordinar la recuperación de todo el nodo, pero no es una instantánea atómica: los cambios durante el ciclo pueden dejar diferencias entre la configuración del host y el estado de los discos de los invitados."
+    "body": "Si ya existe una tarea vzdump de PVE para las VM y los LXC de este nodo, adjuntar el backup del host hace que se ejecute después del backup de los invitados, en el <strong>mismo ciclo de backup</strong>. Al restaurar, las configuraciones de los invitados proceden del backup del host (bajo <code>/etc/pve</code>) y sus discos de los backups vzdump de ese ciclo. Esto facilita coordinar la recuperación de todo el nodo, pero no es un snapshot atómico: los cambios durante el ciclo pueden dejar diferencias entre la configuración del host y el estado de los discos de los invitados."
   },
   "frequencyBadge": {
     "title": "Frecuencia recomendada",
-    "body": "Para garantizar la máxima compatibilidad entre la copia y su posterior restauración se recomienda hacer copias de seguridad del host con frecuencia. Cuanto más reciente sea la copia respecto al estado actual del host, menor será la desviación de configuración, paquetes y componentes que la restauración tendrá que reconciliar."
+    "body": "Para garantizar la máxima compatibilidad entre el backup y su posterior restauración se recomienda hacer backups del host con frecuencia. Cuanto más reciente sea el backup respecto al estado actual del host, menor será la desviación de configuración, paquetes y componentes que la restauración tendrá que reconciliar."
   },
   "modes": {
     "heading": "Los dos modos",
@@ -35,7 +35,7 @@
         "mode": "Nuevo trabajo programado",
         "backends": "Local, PBS, Borg",
         "schedule": "Expresión <code>OnCalendar</code> propia (sintaxis de calendario systemd — por ejemplo <code>daily</code>, <code>Mon..Fri 03:00</code>).",
-        "retention": "Se pregunta por separado: <code>keep-last</code>, <code>keep-hourly</code>, <code>keep-daily</code>, <code>keep-weekly</code>, <code>keep-monthly</code>, <code>keep-yearly</code>. La aplica el runner tras cada copia exitosa."
+        "retention": "Se pregunta por separado: <code>keep-last</code>, <code>keep-hourly</code>, <code>keep-daily</code>, <code>keep-weekly</code>, <code>keep-monthly</code>, <code>keep-yearly</code>. La aplica el runner tras cada backup exitoso."
       },
       {
         "mode": "Adjuntar a un trabajo vzdump de PVE",
@@ -47,7 +47,7 @@
   },
   "attachDetail": {
     "heading": "Cómo funciona el modo adjunto",
-    "intro": "PVE guarda las tareas <code>vzdump</code> en <code>/etc/pve/jobs.cfg</code>: una sección por tarea, con el almacenamiento de las copias de VM y LXC. El modo adjunto requiere un backend compatible con ProxMenux (Local o PBS). La copia del host se ejecuta desde el hook job-end cuando termina la tarea de copia de los invitados.",
+    "intro": "PVE guarda las tareas <code>vzdump</code> en <code>/etc/pve/jobs.cfg</code>: una sección por tarea, con el almacenamiento de los backups de VM y LXC. El modo adjunto requiere un backend compatible con ProxMenux (Local o PBS). El backup del host se ejecuta desde el hook job-end cuando termina la tarea de backup de los invitados.",
     "steps": [
       {
         "step": "1",
@@ -66,7 +66,7 @@
         "detail": "El archivo aterriza en el mismo storage donde los dumps de vzdump acaban de escribirse: <code>path/dump/</code> para Local, o el repositorio PBS configurado en la entrada de storage de PVE."
       }
     ],
-    "outroBody": "El modo adjunto no tiene temporizador propio. Desactivar o eliminar la tarea padre seleccionada detiene ese disparador, pero otra tarea vzdump con el mismo almacenamiento aún puede activar la copia del host. Para impedirlo, desactiva o elimina el propio trabajo de ProxMenux. Al desactivarlo, su entrada sigue en disco para poder reactivarla o volver a adjuntarla."
+    "outroBody": "El modo adjunto no tiene temporizador propio. Desactivar o eliminar la tarea padre seleccionada detiene ese disparador, pero otra tarea vzdump con el mismo almacenamiento aún puede activar el backup del host. Para impedirlo, desactiva o elimina el propio trabajo de ProxMenux. Al desactivarlo, su entrada sigue en disco para poder reactivarla o volver a adjuntarla."
   },
   "storageLayout": {
     "heading": "Ficheros que componen un trabajo",
@@ -85,7 +85,7 @@
         "content": "Sólo modo Nuevo. El service invoca <code>run_scheduled_backup.sh JOB_ID</code>. El timer lo programa con <code>Persistent=true</code> (los disparos perdidos se ejecutan al siguiente arranque) y un pequeño <code>RandomizedDelaySec=120</code> para repartir carga cuando varios trabajos comparten la misma expresión OnCalendar."
       },
       {
-        "path": "/etc/vzdump.conf script-hook",
+        "path": "script-hook de /etc/vzdump.conf",
         "content": "Sólo modo adjunto. Lo instala una vez <code>hb_install_vzdump_hook</code>; casa el <code>PVE_STORAGE</code> de cada trabajo adjuntado contra el <code>$STOREID</code> que PVE pasa al script-hook."
       }
     ]
@@ -94,9 +94,9 @@
     "heading": "Qué hace un trabajo cuando se dispara",
     "intro": "Cada trabajo — sea del modelo nuevo o adjunto — ejecuta la misma secuencia de tres pasos:",
     "steps": [
-      "<strong>Preparar la copia.</strong> Lee la configuración del trabajo (destino, perfil, rutas) y ensambla el árbol de la copia siguiendo exactamente el mismo procedimiento que el flujo interactivo. El resultado es el mismo archivo que produciría una copia manual con esos ajustes.",
-      "<strong>Escribir en el destino.</strong> Sube o escribe la copia al destino configurado — un archivo local <code>.tar.zst</code>, un backup PBS o un archivo Borg — usando exactamente las mismas herramientas y credenciales que utilizaría una copia manual al mismo destino.",
-      "<strong>Aplicar retención.</strong> Elimina las copias antiguas del destino conservando los valores <code>keep-last</code> / <code>keep-daily</code> / <code>keep-weekly</code> configurados en el trabajo. La poda la realiza el propio destino: PBS mantiene la cuenta en su lado, Borg ejecuta <code>borg prune</code>, y en Local ProxMenux borra los archivos que quedan fuera del <code>keep-last</code>."
+      "<strong>Preparar el backup.</strong> Lee la configuración del trabajo (destino, perfil, rutas) y ensambla el árbol del backup siguiendo exactamente el mismo procedimiento que el flujo interactivo. El resultado es el mismo archivo que produciría un backup manual con esos ajustes.",
+      "<strong>Escribir en el destino.</strong> Sube o escribe el backup al destino configurado — un archivo local <code>.tar.zst</code>, un backup PBS o un archivo Borg — usando exactamente las mismas herramientas y credenciales que utilizaría un backup manual al mismo destino.",
+      "<strong>Aplicar retención.</strong> Elimina los backups antiguos del destino conservando los valores <code>keep-last</code> / <code>keep-daily</code> / <code>keep-weekly</code> configurados en el trabajo. La poda la realiza el propio destino: PBS mantiene la cuenta en su lado, Borg ejecuta <code>borg prune</code>, y en Local ProxMenux borra los archivos que quedan fuera del <code>keep-last</code>."
     ]
   },
   "management": {
@@ -104,36 +104,36 @@
     "intro": "El menú del scheduler (TUI de Scripts) y la pestaña Backups del Monitor exponen las mismas acciones sobre cualquier trabajo.",
     "rows": [
       {
-        "action": "Ejecutar ahora",
+        "action": "Run now",
         "detail": "Invoca el runner de inmediato, saltándose el timer / hook de vzdump. Útil para verificar una configuración de trabajo sin esperar al siguiente disparo programado."
       },
       {
-        "action": "Activar / Desactivar",
+        "action": "Enable / Disable",
         "detail": "Modo Nuevo: <code>systemctl enable/disable --now</code> sobre el timer. Modo adjunto: cambia el flag <code>ENABLED</code> en el env del trabajo — el script-hook lo respeta en el siguiente disparo de PVE."
       },
       {
-        "action": "Editar",
+        "action": "Edit",
         "detail": "Reabre los prompts de destino, horario, perfil y retención y reescribe los ficheros del trabajo. Preserva el ID del trabajo."
       },
       {
-        "action": "Eliminar",
+        "action": "Delete",
         "detail": "Elimina el env del trabajo, el fichero de rutas, el timer + service systemd (modo Nuevo) y desactiva el binding del hook (modo adjunto). No toca los archivos ya presentes en el destino."
       },
       {
-        "action": "Ver log",
+        "action": "View log",
         "detail": "Muestra en streaming <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — un fichero de log por ejecución. El runner también emite una línea de estado compacta a journald bajo el service systemd."
       }
     ]
   },
   "notifications": {
     "heading": "Notificaciones",
-    "body": "Cada ejecución programada dispara los mismos eventos <code>hb_notify_lifecycle</code> que el flujo interactivo (<code>start</code>, <code>complete</code>, <code>fail</code>). Si hay canales de notificación configurados en el Monitor, los trabajos desatendidos exponen sus resultados igual que las copias manuales — un usuario no necesita revisar el log para saber si un trabajo tuvo éxito."
+    "body": "Cada ejecución programada dispara los mismos eventos <code>hb_notify_lifecycle</code> que el flujo interactivo (<code>start</code>, <code>complete</code>, <code>fail</code>). Si hay canales de notificación configurados en el Monitor, los trabajos desatendidos exponen sus resultados igual que los backups manuales — un usuario no necesita revisar el log para saber si un trabajo tuvo éxito."
   },
   "whereNext": {
     "heading": "A dónde seguir",
     "items": [
       {
-        "label": "Crear copias",
+        "label": "Crear backups",
         "href": "/docs/backup-restore/creating-backups",
         "tail": " — el flujo interactivo que comparte backend con el scheduler."
       },
