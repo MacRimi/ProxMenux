@@ -35,7 +35,7 @@
       "Almacenamiento tipo NAS genérico para la red doméstica."
     ],
     "privilegedCalloutTitle": "Contenedor privilegiado para este procedimiento",
-    "privilegedCalloutBody": "Este procedimiento utiliza un LXC privilegiado con un dispositivo de bloque como <code>mp0</code>. Para un contenedor sin privilegios, una alternativa es montar el sistema de archivos en el host y pasar su directorio mediante bind mount, con permisos y mapeo de identificadores adecuados. Consulta <strong>Almacenamiento y recursos compartidos → Puntos de montaje LXC</strong> en ProxMenux."
+    "privilegedCalloutBody": "Este procedimiento utiliza un LXC privilegiado con un dispositivo de bloque como <code>mp0</code>. Para un contenedor sin privilegios, una alternativa es montar el sistema de archivos en el host y pasar su directorio mediante bind mount, con permisos y mapeo de identificadores adecuados. Consulta <strong>Gestor de almacenamiento y recursos compartidos → Configurar puntos de montaje LXC</strong> en ProxMenux."
   },
   "attach": {
     "heading": "1. Conectar el disco USB al LXC",

@@ -12,7 +12,7 @@
   },
   "intro": {
     "calloutTitle": "Aviso",
-    "calloutBody": "Esta guía utiliza un script externo de la comunidad para preparar el LXC de Kodi. ProxMenux también puede configurar el acceso a la iGPU del host: <strong>GPUs y Coral-TPU → Añadir GPU a LXC</strong> configura <code>/dev/dri</code> e instala los controladores dentro del contenedor. El script siguiente instala además Kodi y el arranque automático en <code>tty7</code>. Úsalo para preparar un centro multimedia en LXC; elige el <gpuLink>asistente de ProxMenux</gpuLink> si solo necesitas dar acceso a la GPU a un contenedor que ya has configurado.",
+    "calloutBody": "Esta guía utiliza un script externo de la comunidad para preparar el LXC de Kodi. ProxMenux también puede configurar el acceso a la iGPU del host: <strong>GPUs y Coral-TPU → Agregar GPU a un LXC</strong> configura <code>/dev/dri</code> e instala los controladores dentro del contenedor. El script siguiente instala además Kodi y el arranque automático en <code>tty7</code>. Úsalo para preparar un centro multimedia en LXC; elige el <gpuLink>asistente de ProxMenux</gpuLink> si solo necesitas dar acceso a la GPU a un contenedor que ya has configurado.",
     "credit": "Script original del LXC de Kodi creado por <authorLink>mrrudy</authorLink>.",
     "stepsTitle": "Qué vas a hacer",
     "steps": [
@@ -57,7 +57,7 @@
   "troubleshoot": {
     "heading": "Solución de problemas",
     "items": [
-      "<strong>El LXC de Kodi arranca pero no se ve nada en la TV:</strong> puede que el contenedor no tenga acceso a la iGPU. Comprueba <code>ls /dev/dri</code> en su interior: deberían aparecer <code>card0</code> y <code>renderD128</code>. Si está vacío, revisa el acceso a la GPU; puedes usar el menú <strong>Añadir GPU a LXC</strong> de ProxMenux.",
+      "<strong>El LXC de Kodi arranca pero no se ve nada en la TV:</strong> puede que el contenedor no tenga acceso a la iGPU. Comprueba <code>ls /dev/dri</code> en su interior: deberían aparecer <code>card0</code> y <code>renderD128</code>. Si está vacío, revisa el acceso a la GPU; puedes usar el menú <strong>Agregar GPU a un LXC</strong> de ProxMenux.",
       "<strong>El teclado o ratón no se detecta tras reiniciar:</strong> comprueba que <code>/dev/input</code> esté montado y Kodi tenga permiso para leer los dispositivos. Ejecuta <code>ls -l /dev/input</code> en el host y el contenedor, y revisa la regla <code>lxc.cgroup2.devices.allow</code>.",
       "<strong>La reproducción acelerada por hardware usa la CPU en lugar de la GPU:</strong> instala o actualiza los controladores VA-API en el contenedor: <code>intel-media-va-driver</code> para iGPU Intel modernas, <code>i965-va-driver</code> para las antiguas y <code>mesa-va-drivers</code> para AMD.",
       "<strong><code>add-apt-repository: command not found</code>:</strong> falta el comando; eso no demuestra que el contenedor sea Debian. Comprueba la distribución y los paquetes disponibles. En Debian, utiliza sus paquetes Kodi sin añadir el PPA de Ubuntu."

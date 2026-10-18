@@ -96,7 +96,7 @@
   "retention": {
     "heading": "6. Retención — mantén la cuota de la nube bajo control",
     "body": "Los archivos vzdump de Proxmox son <strong>copias completas, no incrementales</strong>. Su tamaño real depende de los datos incluidos y de la compresión, no solo de la capacidad del disco virtual. Si un archivo ocupa 30 GB, conservar cinco requiere unos 150 GB. Configura una política de retención para evitar que la nube se llene.",
-    "uiPath": "En la interfaz de Proxmox: <strong>Centro de datos → Copias de seguridad → [tu tarea] → Retención</strong>:",
+    "uiPath": "En la interfaz de Proxmox: <strong>Datacenter → Backup → [tu tarea] → Retention</strong>:",
     "image7Alt": "Ajustes de retención de backup en Proxmox",
     "starterIntro": "Valores iniciales razonables para un montaje doméstico / de laboratorio:",
     "starterItems": [
@@ -109,7 +109,7 @@
   "troubleshoot": {
     "heading": "Solución de problemas",
     "items": [
-      "<strong><code>Mount point /mnt/gdrive is itself on a fuse.rclone filesystem</code>:</strong> el directorio ya está montado, quizá por otra instancia de rclone. Comprueba que no haya copias en curso antes de quitar el montaje anterior con <code>fusermount -uz /mnt/gdrive</code> y reinicia la unidad systemd.",
+      "<strong><code>Mount point /mnt/gdrive is itself on a fuse.rclone filesystem</code>:</strong> el directorio ya está montado, quizá por otra instancia de rclone. Comprueba que no haya copias en curso antes de desmontar el montaje anterior con <code>fusermount -uz /mnt/gdrive</code> y reinicia la unidad systemd.",
       "<strong>La copia es muy lenta:</strong> confirma que <code>--vfs-cache-mode writes</code> figure en la línea <code>ExecStart</code>. Revisa el rendimiento de la caché local, la velocidad de subida y los límites del proveedor. La subida puede continuar después de terminar vzdump.",
       "<strong>La copia falla con No space left on device:</strong> revisa el espacio de la caché local y la cuota del proveedor. La caché suele estar en <code>~/.cache/rclone/</code>. Si se llena, elige una ruta como <code>--cache-dir /var/cache/rclone</code> en un sistema de archivos con espacio; cambiar de ruta dentro del mismo sistema lleno no ayuda.",
       "<strong>El token de rclone ha caducado:</strong> vuelve a conectarte por SSH con el túnel (<code>ssh -L localhost:53682:localhost:53682 root@ip_proxmox</code>) y ejecuta <code>rclone config reconnect gdrive:</code> para renovar la autorización.",
