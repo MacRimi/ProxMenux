@@ -1,30 +1,30 @@
 {
   "meta": {
-    "title": "Fail2Ban | ProxMenux Documentation",
+    "title": "Fail2Ban | Documentación de ProxMenux",
     "description": "Instala Fail2Ban con tres jails afinados para Proxmox (SSH agresivo, Proxmox UI 8006, ProxMenux Monitor 8008). Incluye el arreglo de journald MaxLevelStore, servicios de log propios para fiabilidad, backend nftables/iptables autodetectado y hardening de SSH MaxAuthTries.",
-    "ogTitle": "Fail2Ban | ProxMenux Documentation",
-    "ogDescription": "Protección contra fuerza bruta para SSH y las UIs web de Proxmox, con arreglos específicos de journald y backend para Proxmox."
+    "ogTitle": "Fail2Ban | Documentación de ProxMenux",
+    "ogDescription": "Protección contra fuerza bruta para SSH y las interfaces web de Proxmox, con correcciones de journald y del backend específicas para Proxmox."
   },
   "header": {
     "title": "Fail2Ban",
-    "description": "Instala Fail2Ban con una configuración específica para Proxmox: tres jails (SSH agresivo, Proxmox UI en puerto 8006, ProxMenux Monitor en puerto 8008 + proxy inverso), un arreglo del nivel de log de journald para que los eventos de autenticación SSH se almacenen de verdad, dos servicios logger journal-a-archivo que rodean un problema conocido del backend systemd de Fail2Ban, backend de firewall autodetectado y hardening de SSH MaxAuthTries.",
+    "description": "Instala Fail2Ban con configuración para Proxmox: tres jails (SSH agresivo, Proxmox en 8006 y ProxMenux Monitor en 8008 y proxy inverso), corrección del nivel de journald para guardar fallos SSH, dos servicios que copian el journal a archivos para evitar un problema del backend systemd de Fail2Ban, detección del backend de firewall y refuerzo SSH mediante MaxAuthTries.",
     "section": "Seguridad"
   },
   "intro": {
     "title": "Qué hace",
-    "body": "Instala Fail2Ban desde los repos de Debian y escribe una configuración completa afinada para Proxmox que protege tres superficies de ataque (SSH, Proxmox UI, ProxMenux Monitor) por defecto. Detecta una instalación existente y ofrece un menú de gestión (reinstalar / eliminar) en lugar de volver a ejecutar el instalador."
+    "body": "Instala Fail2Ban desde los repositorios Debian y escribe una configuración para Proxmox que protege SSH, Proxmox UI y ProxMenux Monitor desde el primer momento. Si detecta una instalación existente, ofrece un menú para reinstalar o eliminar."
   },
   "firstLaunch": {
     "heading": "Diálogo de primer lanzamiento",
-    "body": "En un host sin Fail2Ban, el script muestra un diálogo de confirmación que resume todo lo que va a instalar y configurar. Cancelar sale sin cambios; confirmar arranca el flujo de instalación.",
-    "imageAlt": "Diálogo de confirmación de instalación de Fail2Ban listando los tres jails, el arreglo de journald y el hardening de SSH"
+    "body": "Sin Fail2Ban instalado, el script muestra un diálogo con lo que instalará y configurará. Cancelar termina sin cambios; confirmar inicia la instalación.",
+    "imageAlt": "Confirmación de instalación de Fail2Ban con las tres jails, corrección de journald y refuerzo SSH"
   },
   "jails": {
     "heading": "Los tres jails",
     "headerJail": "Jail",
     "headerProtects": "Protege",
     "headerRetries": "Reintentos / Ventana",
-    "headerBan": "Tiempo de ban",
+    "headerBan": "Tiempo de bloqueo",
     "rows": [
       {
         "jail": "[sshd]",
@@ -49,12 +49,12 @@
   },
   "journald": {
     "heading": "Por qué importa el arreglo de journald",
-    "intro": "Proxmox entrega <code>/etc/systemd/journald.conf</code> con <codeNw>MaxLevelStore=warning</codeNw>. journald descarta cada mensaje de log <em>por debajo</em> de warning antes de almacenarlo. SSH y PAM emiten fallos de autenticación a niveles <em>info</em> / <em>notice</em>, así que:",
+    "intro": "Proxmox incluye <code>/etc/systemd/journald.conf</code> con <codeNw>MaxLevelStore=warning</codeNw>. journald descarta los mensajes de nivel <em>inferior</em> a warning antes de guardarlos. SSH y PAM emiten fallos de autenticación en los niveles <em>info</em> / <em>notice</em>, por lo que:",
     "diagram": {
       "sshLabel": "SSH / PAM",
       "sshDetail": "fallo de autenticación\n(nivel info / notice)",
       "journaldLabel": "journald",
-      "journaldDetail": "MaxLevelStore=warning\n→ evento descartado en silencio",
+      "journaldDetail": "MaxLevelStore=warning\n→ evento descartado sin aviso",
       "fail2banLabel": "Fail2Ban",
       "fail2banDetail": "no ve nada\n→ nunca banea nada",
       "arrowLabel": "Proxmox por defecto"
@@ -65,8 +65,8 @@
   },
   "loggers": {
     "heading": "Por qué dos servicios logger propios",
-    "intro1": "Fail2Ban puede leer directamente del journal de systemd (<code>backend = systemd</code>), pero en Proxmox este backend tiene problemas conocidos de fiabilidad con los procesos worker de <code>pvedaemon</code> (los eventos de autenticación aparecen en el journal pero Fail2Ban no siempre los recoge) e intermitentemente con <code>sshd</code>.",
-    "intro2": "La solución alternativa: ProxMenux crea dos pequeños servicios systemd que hacen <code>journalctl -f</code> de las unidades relevantes y añaden cada línea a un archivo. Fail2Ban entonces lee esos archivos con el sólido como una roca <code>backend = auto</code> (modo archivo):",
+    "intro1": "Fail2Ban puede leer directamente el journal de systemd (<code>backend = systemd</code>), pero en Proxmox este backend presenta problemas de fiabilidad con procesos worker de <code>pvedaemon</code> (los eventos aparecen en el journal pero Fail2Ban no siempre los recoge) y ocasionalmente con <code>sshd</code>.",
+    "intro2": "ProxMenux crea dos pequeños servicios systemd que siguen las unidades correspondientes con <code>journalctl -f</code> y añaden cada línea a un archivo. Fail2Ban lee esos archivos con el fiable <code>backend = auto</code> (modo archivo):",
     "headerService": "Servicio",
     "headerSource": "Unidad origen",
     "headerOutput": "Archivo de salida",
@@ -91,12 +91,12 @@
   },
   "hardening": {
     "heading": "Hardening de SSH: MaxAuthTries",
-    "intro": "El control de Lynis <strong>SSH-7408</strong> recomienda <code>MaxAuthTries 3</code> en <code>sshd_config</code>. Con el <code>maxretry = 2</code> de Fail2Ban en el jail SSH, un cliente malicioso nunca llega a tres intentos de todas formas — pero el ajuste explícito satisface la auditoría y añade defensa en profundidad (p. ej. si Fail2Ban está parado por mantenimiento).",
+    "intro": "El control Lynis <strong>SSH-7408</strong> recomienda <code>MaxAuthTries 3</code> en <code>sshd_config</code>. La jail SSH usa <code>maxretry = 2</code> para bloquear tras fallos repetidos; MaxAuthTries limita los intentos dentro de una conexión. Este ajuste SSH añade defensa en profundidad, también cuando Fail2Ban está detenido por mantenimiento.",
     "installerIntro": "El instalador:",
     "items": [
       "Lee el valor actual de <code>MaxAuthTries</code> (o por defecto 6 si está ausente).",
       "Lo guarda en <code>/usr/local/share/proxmenux/sshd_maxauthtries_backup</code>.",
-      "Edita <code>sshd_config</code> en sitio — reemplaza la línea existente, descomenta la línea comentada o la añade.",
+      "Edita <code>sshd_config</code> directamente: sustituye la línea existente, descomenta la comentada o añade una nueva.",
       "Recarga <code>sshd</code> (reload, no restart, para mantener vivas las sesiones existentes)."
     ],
     "outro": "Al desinstalar, el valor original guardado se restaura y se recarga <code>sshd</code> otra vez."
@@ -109,7 +109,7 @@
     "rows": [
       {
         "action": "Reinstalar",
-        "what": "Vuelve a ejecutar el instalador completo — reescribe todos los jails con los valores por defecto actuales de ProxMenux. Úsalo cuando una actualización de ProxMenux suba los valores recomendados."
+        "what": "Repite la instalación completa y reescribe todas las jails con los valores actuales de ProxMenux. Úsalo cuando una actualización cambie las recomendaciones."
       },
       {
         "action": "Eliminar",
@@ -125,7 +125,7 @@
   "troubleshoot": {
     "heading": "Solución de problemas",
     "neverBansTitle": "Fail2Ban corre pero nunca banea nada",
-    "neverBansBody": "Comprueba que los archivos de log de autenticación reciben entradas de verdad: <code>tail -f /var/log/ssh-auth.log</code> y prueba un intento SSH con contraseña incorrecta desde otra máquina. Si el log se queda vacío, el servicio logger no está corriendo: <code>systemctl status ssh-auth-logger.service</code>. Si está activo pero el log está vacío, comprueba que el drop-in de journald surtió efecto: <code>journalctl --dump-catalog | head</code> — eventos a nivel <em>info</em> deberían ser visibles.",
+    "neverBansBody": "Comprueba que <code>tail -f /var/log/ssh-auth.log</code> recibe una entrada tras intentar acceder por SSH con contraseña incorrecta desde otra máquina. Si sigue vacío, consulta <code>systemctl status ssh-auth-logger.service</code>. Si el logger está activo, mira los eventos SSH recientes con <code>journalctl -u ssh.service -n 50 --no-pager -p info</code> y comprueba que el drop-in de journald admite el nivel <em>info</em>.",
     "monitorEmptyTitle": "El jail del Monitor de ProxMenux no tiene entradas ni siquiera tras logins fallidos",
     "monitorEmptyBody": "El jail <code>[proxmenux]</code> lee <code>/var/log/proxmenux-auth.log</code>, que lo escribe la app Flask del Monitor de ProxMenux — no un logger de journald. Si no usas el Monitor, el archivo se queda vacío y el jail nunca dispara. Eso es lo esperado; la configuración del jail es inocua. Si sí usas el Monitor y el log está vacío, comprueba la configuración de logging de Flask.",
     "selfBanTitle": "Me he baneado a mí mismo",
@@ -143,7 +143,7 @@
   "related": {
     "heading": "Relacionado",
     "monitorLabel": "ProxMenux Monitor → pestaña de Seguridad",
-    "monitorTail": " — misma instalación accesible desde el panel, más estado en vivo de los jails, IPs baneadas y ajuste por jail de reintentos / tiempo de ban desde el navegador.",
+    "monitorTail": " — instalación desde el panel, estado de las jails en directo, IP bloqueadas y ajuste de reintentos y duración de bloqueo por jail desde el navegador.",
     "lynisLabel": "Lynis",
     "lynisTail": " — ejecuta una auditoría de seguridad antes/después para confirmar que el control SSH-7408 se satisface.",
     "securityLabel": "Resumen de Seguridad",

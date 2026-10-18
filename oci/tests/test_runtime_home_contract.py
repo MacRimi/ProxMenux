@@ -31,14 +31,14 @@ class RuntimeHomeResolutionTests(unittest.TestCase):
         )
         self.assertEqual(oci_runtime.home_directory(passwd, 1001), "/srv/app")
 
-    def test_unknown_or_unsafe_home_is_not_invented(self):
+    def test_unsafe_record_is_rejected_but_unknown_uid_defaults_to_root(self):
         passwd = self.passwd(
             "root:x:0:0:root:relative-home:/bin/sh\n"
             "app:x:1001:1001:App user::/sbin/nologin\n"
         )
         self.assertIsNone(oci_runtime.home_directory(passwd, 0))
         self.assertIsNone(oci_runtime.home_directory(passwd, 1001))
-        self.assertIsNone(oci_runtime.home_directory(passwd, 1234))
+        self.assertEqual(oci_runtime.home_directory(passwd, 1234), "/")
 
 
 class RuntimeHomeInstallerContractTests(unittest.TestCase):

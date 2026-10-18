@@ -1,0 +1,135 @@
+{
+  "meta": {
+    "title": "Proxmox NFS, Samba, iSCSI und LXC-Mounts — Speicher und Freigaben | ProxMenux",
+    "description": "Integrieren Sie externen und lokalen Speicher in Proxmox VE und teilen Sie Ordner zwischen dem Host und LXC-Containern. Fügen Sie NFS-Freigaben, Samba-Freigaben (CIFS) und iSCSI-Ziele als Proxmox-Speicher hinzu, richten Sie LXC-Bind-Mounts mit dem Mount Manager ein und betreiben Sie NFS-/Samba-Clients und -Server in Containern.",
+    "ogTitle": "Proxmox NFS, Samba, iSCSI und LXC-Mounts — Speicher und Freigaben",
+    "ogDescription": "Integrieren Sie externen / lokalen Speicher in Proxmox VE - NFS, Samba, iSCSI-Registrierung sowie LXC-Bind-Mounts und Netzwerkfreigabe.",
+    "twitterTitle": "Proxmox NFS, Samba, iSCSI | ProxMenux",
+    "twitterDescription": "Fügen Sie NFS / Samba / iSCSI als Proxmox-Speicher hinzu und teilen Sie Ordner zwischen Host und LXC."
+  },
+  "header": {
+    "title": "Speicher- und Freigabemanager",
+    "description": "Integrieren Sie externen oder lokalen Speicher in Proxmox VE und teilen Sie Ordner zwischen dem Host und LXC-Containern. Drei Werkzeuggruppen: Host-Speicherintegration (Speicher direkt in Proxmox registrieren), der LXC Mount Manager (Bind-Mounts mit pragmatischer Rechteverwaltung) und LXC-Netzwerkfreigaben (NFS-/Samba-Client- und -Server-Abläufe für bestimmte Anwendungsfälle).",
+    "section": "Speicher und Freigaben"
+  },
+  "intro": {
+    "title": "Wofür dieses Menü ist",
+    "body": "Der Disk Manager arbeitet auf der Ebene von <em>individuellen physischen Disks</em>. Der Storage &amp; Share Manager arbeitet eine Ebene höher – er <strong> registriert Speicherpools und Netzwerkfreigaben in Proxmox</strong> (damit die Benutzeroberfläche und der VM-Ersteller sie verwenden können) und <strong> richtet die Dateifreigabe zwischen dem Host und Ihren Containern</strong> ein."
+  },
+  "opening": {
+    "heading": "Öffnen des Menüs",
+    "body": "Wählen Sie im Hauptmenü von ProxMenux <strong>Storage &amp; Share Manager</strong>. Sie werden sehen:",
+    "imageAlt": "Storage & Share Manager Menü mit HOST und LXC Blöcken"
+  },
+  "groups": {
+    "heading": "Drei Werkzeuggruppen",
+    "intro": "Das Menü ist in drei Gruppen aufgeteilt. <strong>Host-Speicherintegration</strong> registriert externen oder lokalen Speicher direkt in Proxmox. Der <strong>LXC Mount Manager</strong> ist das Hauptwerkzeug zur Ordnerfreigabe für Container — ein pragmatischer Bind-Mount-Ablauf, der die UID-Zuordnung unprivilegierter CTs auf dem Host berücksichtigt. <strong>LXC-Netzwerkfreigaben</strong> decken vier zusätzliche Szenarien ab, in denen ein Container NFS-/Samba-Freigaben direkt <em>nutzen</em> oder <em>bereitstellen</em> muss.",
+    "hostTitle": "Host-Speicher",
+    "hostBody": "Registrieren Sie externe und lokale Speicherung in Proxmox über <code>pvesm add …</code>. Nach der Registrierung erscheint der Speicher in der Proxmox-Benutzeroberfläche und steht den VM- und CT-Erstellern zur Verfügung.",
+    "hostItems": [
+      "Externer NFS / Samba / iSCSI → Proxmox Speicher",
+      "Lokale Festplatte → Proxmox Verzeichnis oder ZFS Speicher",
+      "Lokales freigegebenes Verzeichnis (für Bind-Mounts in mehrere CTs)"
+    ],
+    "lxcMountTitle": "LXC-Mount-Verwaltung",
+    "lxcMountBody": "Das primäre LXC-Sharing-Tool. Bindet Host-Verzeichnisse über <code>pct set -mpN</code> in Container ein und verarbeitet die Besonderheiten der Berechtigungen von unprivilegierten CTs, ohne eine Gruppe oder einen Benutzer im Container zu erstellen.",
+    "lxcMountItems": [
+      "Arbeitet mit privilegierten und unprivilegierten CTs",
+      "Bietet <code>o+rwx</code> für das Hostverzeichnis an, um unprivilegierte UIDs zu unterstützen",
+      "Behebt vorhandene CIFS / NFS Mounts bei Bedarf"
+    ],
+    "lxcNetTitle": "LXC Netzwerkfreigabe",
+    "lxcNetBody": "Vier zusätzliche Abläufe, wenn ein Container NFS-/Samba-Freigaben direkt nutzen oder bereitstellen muss. Alle erfordern einen <strong>privilegierten</strong> Container.",
+    "lxcNetItems": [
+      "NFS-/Samba-<strong>Client</strong> (externe Freigaben nutzen)",
+      "NFS-/Samba-<strong>Server</strong> (CT-Ordner bereitstellen)"
+    ]
+  },
+  "host": {
+    "heading": "Integration von Host-Speicher",
+    "intro": "Speicher in Proxmox registrieren. Jede Option ruft <code>pvesm add …</code> unter der Haube auf, so dass der Speicher in <strong>Datacenter → Storage</strong> angezeigt wird und den VM / CT-Erstellern zur Verfügung steht.",
+    "options": [
+      {
+        "href": "/docs/storage-share/host-nfs",
+        "icon": "Network",
+        "title": "NFS-Freigabe als Proxmox-Speicher hinzufügen",
+        "description": "Registrieren Sie einen externen NFS-Export als Proxmox-Speicher über pvesm add nfs. Proxmox übernimmt das mount - keine fstab-einträge erforderlich."
+      },
+      {
+        "href": "/docs/storage-share/host-samba",
+        "icon": "Share2",
+        "title": "Samba-Freigabe als Proxmox-Speicher hinzufügen",
+        "description": "Registrieren Sie eine externe Samba-/CIFS-Freigabe als Proxmox-Speicher über pvesm add cifs. Proxmox übernimmt das Einhängen und die Anmeldeinformationen."
+      },
+      {
+        "href": "/docs/storage-share/host-iscsi",
+        "icon": "Database",
+        "title": "Hinzufügen von iSCSI-Ziel als Proxmox-Speicher",
+        "description": "Verbinden Sie sich mit einem externen iSCSI-Ziel und registrieren Sie es als Proxmox-Speicher (Blockgerät) für VM-Disk-Images."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "icon": "HardDrive",
+        "title": "Lokale Festplatte als Proxmox-Speicher hinzufügen",
+        "description": "Formatieren Sie eine lokale SATA / SAS / NVMe-Festplatte und registrieren Sie sie als Proxmox-Verzeichnis oder ZFS-Poolspeicher."
+      },
+      {
+        "href": "/docs/storage-share/host-local-shared",
+        "icon": "FolderOpen",
+        "title": "Freigegebenes Verzeichnis auf dem Host hinzufügen",
+        "description": "Erstellen Sie ein Host-Verzeichnis, das in mehrere CTs eingebunden werden soll. Kein Proxmox-Speicher - rein eine hostseitige Ressource für LXC-Bind-Mounts."
+      }
+    ]
+  },
+  "lxcMount": {
+    "heading": "LXC-Mount-Verwaltung",
+    "intro": "Das primäre Tool zum Teilen von Ordnern zwischen dem Proxmox-Host und LXC-Containern. Es verwendet <code>pct set -mpN</code>, um ein Host-Verzeichnis in den Container zu binden, und behandelt die Besonderheiten der Berechtigungen von unprivilegierten CTs auf der Hostseite (es werden keine Gruppen oder Benutzer innerhalb des Containers erstellt).",
+    "card": {
+      "title": "LXC-Mountpoints (Host ↔ CT)",
+      "description": "Binden Sie ein beliebiges Hostverzeichnis mit pct set -mpN in einen LXC-Container ein. Dies funktioniert mit privilegierten und unprivilegierten CTs. Das Werkzeug bietet chmod o+rwx und ACLs für das Hostverzeichnis an und korrigiert bei Bedarf vorhandene CIFS- oder NFS-Mounts."
+    }
+  },
+  "lxcNet": {
+    "heading": "LXC Netzwerkfreigabe",
+    "intro": "Verwenden Sie diese Abläufe, wenn ein Container ein NFS-/Samba-Endpunkt <em>sein</em> muss — entweder eine externe Freigabe nutzen (Client) oder eigene Ordner bereitstellen (Server). Für die meisten Dateifreigaben (Bind-Mounts zwischen Host ↔ CT) ist der <mountLink>LXC Mount Manager</mountLink> einfacher und erfordert keine privilegierten Container.",
+    "options": [
+      {
+        "href": "/docs/storage-share/lxc-nfs-client",
+        "icon": "Download",
+        "title": "NFS-Client in LXC",
+        "description": "NFS-Freigaben innerhalb eines privilegierten LXC-Containers einhängen. Unterstützt automatische Erkennung, dauerhafte Einträge in /etc/fstab und sauberes Aushängen."
+      },
+      {
+        "href": "/docs/storage-share/lxc-samba-client",
+        "icon": "Download",
+        "title": "Samba-Client in LXC",
+        "description": "Samba-/CIFS-Freigaben innerhalb eines privilegierten LXC-Containers einhängen. Zugangsdaten werden geschützt gespeichert; automatische Erkennung ist verfügbar."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-server",
+        "icon": "Upload",
+        "title": "NFS Server in LXC",
+        "description": "Exportieren Sie Ordner über NFS aus einem privilegierten LXC-Container."
+      },
+      {
+        "href": "/docs/storage-share/lxc-samba-server",
+        "icon": "Upload",
+        "title": "Samba-Server in LXC",
+        "description": "Geben Sie Ordner über SMB / CIFS aus einem privilegierten LXC-Container frei."
+      }
+    ]
+  },
+  "privReq": {
+    "title": "Privilegierte Containeranforderung",
+    "body": "Die vier obigen Abläufe für <strong>LXC-Netzwerkfreigaben</strong> erfordern einen <strong>privilegierten</strong> Container. Die Skripte prüfen diesen unterstützten Modus, bevor sie Dienste und Mount-Werkzeuge konfigurieren (<code>nfs-kernel-server</code>, <code>smbd</code>, <code>mount.nfs</code>, <code>mount.cifs</code>). Wenn Sie nur Dateien zwischen Host und unprivilegiertem CT teilen möchten, verwenden Sie den <mountLink>LXC Mount Manager</mountLink>: Er bindet die Verzeichnisse vom Host aus ein und passt dort die Rechte an, sodass der Container lesen und schreiben kann, ohne diese Dienste oder Werkzeuge in ihm einzurichten."
+  },
+  "unprivExplain": {
+    "title": "Wie ProxMenux unprivilegierte CT-Berechtigungen verarbeitet",
+    "body": "Unprivilegierte LXC-Container verschieben ihre UIDs auf dem Host um <strong>+100000</strong> (Container-UID 0 = Host-UID 100000, Container-UID 1000 = Host-UID 101000, …). Eine von einem Container-Benutzer erstellte Datei erscheint daher auf dem Host als <em>andere</em> — sie gehört keinem regulären Host-Benutzer oder keiner regulären Host-Gruppe. Der LXC Mount Manager löst dies pragmatisch: Statt UIDs/GIDs zwischen Host und CT abzugleichen, bietet er <code>chmod o+rwx</code> mit passenden ACLs für das Hostverzeichnis an, sodass jede zugeordnete UID lesen und schreiben kann. CIFS wird mit <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> neu eingehängt; bei NFS wird ein für alle beschreibbares Verzeichnis mit Sticky-Bit eingerichtet. Bei Root-Squashing weist das Werkzeug auf die nötige serverseitige Korrektur hin."
+  },
+  "scripts": {
+    "heading": "Involvierte Skripte",
+    "intro": "Jede einzelne Seite verlinkt auf das Skript, das seinen Fluss antreibt. Die folgende Datei ist ein gemeinsamer Helfer, der nicht als eigene Seite dokumentiert ist, sondern von mehreren LXC-Netzwerk-Sharing-Flows verwendet wird:",
+    "itemTail": "CT-Validierung, Einhängepunktauswahl, privilegierte Überprüfung und universelle Gruppeneinrichtungshelfer, die über die LXC-Client- / Serverflüsse hinweg geteilt werden."
+  }
+}

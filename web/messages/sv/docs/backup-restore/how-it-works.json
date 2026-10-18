@@ -1,0 +1,205 @@
+{
+  "meta": {
+    "title": "Hur ProxMenux Backup fungerar internt - rootfs, manifest, applikationer",
+    "description": "Detaljerat innehåll i en ProxMenux-säkerhetskopia: rootfs kopierat med rsync enligt standardprofilens sökvägar, ett strukturerat manifest från sex oberoende insamlare och programinventeringen som styr automatisk ominstallation av paket och komponenter efter återställning.",
+    "ogTitle": "Hur ProxMenux Backup fungerar internt",
+    "ogDescription": "De tre nyttolasterna av en ProxMenux-backup förklarade: rootfs, manifest och applikationer.",
+    "twitterTitle": "Hur ProxMenux Backup fungerar | ProxMenux",
+    "twitterDescription": "De tre nyttolasterna av en ProxMenux-backup och hur återställningen reproducerar källvärden från dem."
+  },
+  "header": {
+    "title": "Hur det fungerar",
+    "description": "Den interna nedbrytningen av en ProxMenux-backup - filsystem, manifest och applikationsinventering - och hur återställningen förbrukar alla tre för att reproducera källvärden på ett mål som kanske inte delar samma kärna.",
+    "section": "Säkerhetskopiering och återställning"
+  },
+  "intro": {
+    "title": "Ett arkiv, tre delar",
+    "body": "Varje säkerhetskopia skapar tre tydliga delar under en gemensam förberedelsekatalog. Arkivet som laddas upp till målet (lokalt <code>.tar.zst</code>, PBS-säkerhetskopia eller Borg-arkiv) innehåller samma struktur. Återställningen använder alla tre: <strong>manifestet</strong> läses före ändringar för att upptäcka avvikelser och bestämma undantag; <strong>rootfs</strong> ger konfigurationsfiler som tillämpas direkt eller efter omstart; <strong>programinventeringen</strong> styr paketinstallation och ominstallation av komponenter efter start. Varje del kan granskas eller packas upp oberoende."
+  },
+  "layout": {
+    "heading": "Arkivlayout",
+    "intro": "Varje arkiv följer samma trädlayout oavsett destination. <code>metadata/</code> underkatalog håller de strukturerade nyttolasterna; <code>rootfs/</code> underkatalog håller filsystemet kopiera.",
+    "treeCaption": "Förberedelsekatalogen som skapas vid säkerhetskopiering. Alla mål får samma träd i sitt eget format: tar för lokala mål, PBS-block för PBS och Borg-segment för Borg.",
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state\n├── metadata/\n│   ├── packages.manual.list       # apt-mark showmanual\n│   ├── run_info.env               # backup run identity + kernel version + pmxcfs method\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, …\n    ├── root/                      # /root (with volatile subdirs excluded)\n    ├── usr/local/                 # /usr/local/bin, /usr/local/share/proxmenux, …\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/…"
+  },
+  "rootfs": {
+    "heading": "Innehållet i rootfs",
+    "intro": "Trädet <code>rootfs/</code> är en <strong>vanlig filsystemkopia</strong> som skapas med <code>rsync</code> från källvärden. Det innehåller en utvald <strong>standardprofil</strong> med sökvägar som behövs för Proxmox-återställning samt <strong>egna sökvägar</strong> som användaren lägger till i jobbet eller den interaktiva sessionen. Urvalet är avsiktligt begränsat till sökvägar som <em>innehåller konfiguration</em> eller <em>lagrar tillstånd som Proxmox inte kan återskapa själv</em>.",
+    "defaultProfileTitle": "Standardprofilen",
+    "defaultProfileBody": "Standardprofilen definieras av <code>hb_default_profile_paths</code> i <code>lib_host_backup_common.sh</code>. Den omfattar åtta fasta kategorier och vid behov ZFS-tillstånd, som tillsammans beskriver en fungerande Proxmox-värd:",
+    "categoriesTitle": "Sökvägskategorier",
+    "categoryRows": [
+      {
+        "category": "PVE-kärna",
+        "paths": "/etc/pve, /var/lib/pve-cluster, /etc/vzdump.conf",
+        "why": "Cluster filsystem innehåll och vzdump standarder. Pmxcfs databas (<code>config.db</code>) fångas som en konsekvent ögonblicksbild via <code>sqlite3 .backup</code> utan att stoppa klustret, och <code>.db-wal</code> / <code>.db-shm</code> sidovagnar är uteslutna från rsync. När <code>sqlite3</code> inte är tillgänglig, skapas i stället <code>config.db.raw-fallback</code>, som automatiskt används som databas vid återställning."
+      },
+      {
+        "category": "Värd identitet och nätverk",
+        "paths": "/etc/hostname, /etc/hosts, /etc/timezone, /etc/resolv.conf, /etc/network, /etc/systemd/network",
+        "why": "Det värden behöver för att komma upp i nätverket med samma identitet. Filerna <code>.link</code> under <code>/etc/systemd/network</code> kopplar nätverkskortens namn till deras MAC-adresser, så att namnen bevaras vid ominstallation och hårdvaruändringar."
+      },
+      {
+        "category": "Åtkomst och autentisering",
+        "paths": "/etc/ssh, /etc/sudoers, /etc/sudoers.d, /etc/pam.d, /etc/security",
+        "why": "SSH-nycklar, sudoregler och PAM-konfiguration. Att förlora dessa låser användaren ur den restaurerade värden."
+      },
+      {
+        "category": "Kärna och uppstart",
+        "paths": "/etc/default/grub, /etc/kernel, /etc/modules, /etc/modules-load.d, /etc/modprobe.d, /etc/sysctl.conf, /etc/sysctl.d, /etc/udev/rules.d, /etc/fstab, /etc/iscsi, /etc/multipath",
+        "why": "IOMMU-parametrar, svartlistor för moduler, VFIO-enhets-ID, monteringstabell och lagringskonfiguration."
+      },
+      {
+        "category": "Skal och språkinställningar",
+        "paths": "/etc/environment, /etc/bash.bashrc, /etc/inputrc, /etc/profile, /etc/profile.d, /etc/locale.gen, /etc/locale.conf",
+        "why": "Systemgemensam skalkonfiguration, miljövariabler och inställningar för generering av språkmiljöer."
+      },
+      {
+        "category": "Pakethantering och cron",
+        "paths": "/etc/apt, /etc/cron.d, /etc/cron.{daily,hourly,weekly,monthly}, /etc/cron.allow, /etc/cron.deny, /var/spool/cron/crontabs",
+        "why": "APT-källor för konsekvent paketlösning, schemalagda uppgifter som definieras av användaren."
+      },
+      {
+        "category": "ProxMenux tillstånd och verktyg",
+        "paths": "/etc/proxmenux, /etc/systemd/system, /etc/log2ram.conf, /etc/logrotate.conf, /etc/logrotate.d, /etc/lm-sensors, /etc/sensors3.conf, /etc/fail2ban, /etc/snmp, /etc/postfix, /etc/wireguard, /etc/openvpn, /etc/grafana, /etc/influxdb, /etc/prometheus, /etc/telegraf, /etc/zabbix",
+        "why": "Valfri men vanlig Proxmox verktyg. Saknade vägar noteras i <code>metadata/missing_paths.txt</code> utan att stoppa backupen."
+      },
+      {
+        "category": "ProxMenux-program och root-kontot",
+        "paths": "/usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux, /var/lib/proxmenux, /root (flyktiga subdirs exkluderade)",
+        "why": "ProxMenux-installerade binärer och per användare konfiguration under <code>/root</code>. Volatila vägar (<code>.bash_history</code>, <code>.cache/</code>, <code>tmp/</code>, <code>.local/share/Trash/</code>) utesluts från kopian. <code>/var/lib/proxmenux</code> håller de schemalagda backupjobben och värdens tillstånd som hålls av ProxMenux; återställningsstagningen, återställningskopiorna och efteråtsmarkörerna är uteslutna, eftersom de tillhör värden som kör en återställning."
+      },
+      {
+        "category": "ZFS tillstånd (villkor)",
+        "paths": "/etc/zfs",
+        "why": "Det ingår endast när källvärden kör ZFS. innehåller <code>zpool.cache</code> och <code>hostid</code>."
+      }
+    ],
+    "customTitle": "Utöka profilen med anpassade vägar",
+    "customBody": "Utöver standardprofilen erbjuder ProxMenux två sätt att inkludera ytterligare vägar i en säkerhetskopia. De komponerar utan konflikt och gäller både interaktiva säkerhetskopior och schemalagda jobb.",
+    "customExtrasTitle": "1. Persistenta extrafunktioner (per-host-fil)",
+    "customExtrasBody": "En textfil på <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code> innehåller en lista över absoluta vägar som användaren har markerat som \"alltid inkluderar\" på denna värd. När en säkerhetskopia körs i <strong>Default</strong>-läge, appenderar ProxMenux dessa vägar till standardprofilen automatiskt utan att fråga. Filen redigeras från gränssnittet - ingen manuell redigering behövs - och kvarstår över omstart och uppdateringar. En absolut väg per rad; <code>#</code> kommentarer är tillåtna.",
+    "customModeTitle": "2. Anpassat läge (per körning)",
+    "customModeBody": "Att starta en säkerhetskopia i <strong>Custom</strong>-läge ersätter den automatiska tillämpningen av standardprofilen med en checklista som visar varje väg: standardprofilerade poster och de ihållande extrafunktionerna (prefixed med <code>[+]</code> och förmarkerade). Användaren markerar eller avmarkerar poster för den specifika körningen, och kan också trycka på <em>Lägg till anpassad sökväg</em> för att ange en ny väg - som sedan kvarstår till extrafilen för framtida säkerhetskopior.",
+    "customMissingTitle": "Vägar frånvarande från källan",
+    "customMissingBody": "Varje väg från profilen (standard eller tillägg) som inte finns på källvärden registreras i <code>metadata/missing_paths.txt</code> inuti arkivet. Säkerhetskopieringen misslyckas varken eller slutar - användaren ser en sammanfattning av arkiverade vägar och saknade vägar i slutet. I praktiken sker detta för valfria verktygsvägar som <code>/etc/wireguard</code> eller <code>/etc/prometheus</code> när dessa verktyg inte är installerade."
+  },
+  "manifest": {
+    "heading": "Manifestdelen",
+    "intro": "<code>manifest.json</code> är ett strukturerat JSON-dokument som beskriver källvärden vid backupen. Den produceras av <strong>sex oberoende insamlare</strong> orkestrerad av <code>build_manifest.sh</code>. Varje samlare läser endast data, producerar ett väldefinierat JSON-fragment och faller tillbaka till ett säkert tomt standard om det misslyckas - manifestet är fortfarande användbart om ett avsnitt är ofullständigt.",
+    "orchestratorCaption": "De sex samlarna komponerar manifestet. Varje samlare körs i sin egen underprocess; ett misslyckande i en faller tillbaka till en dokumenterad säker standard och varnar men inte avbryter backupen.",
+    "collectorRows": [
+      {
+        "collector": "collect_source_host.sh",
+        "produces": "source_host",
+        "content": "Hostname, PVE version (<code>pveversion</code>), PBS version om värden kör backup-server roll, kärna (<code>uname -r</code>), startläge (efi/bios), root filsystem typ, CPU modell + arkitektur, minne i KB."
+      },
+      {
+        "collector": "collect_hardware.sh",
+        "produces": "hardware_inventory",
+        "content": "GPU (med leverantör och ProxMenux installer mapping), TPUs (Coral USB + M.2 med <code>lsusb</code> / <code>lspci</code> detektering), NICs (med MAC, PCI slot och bro medlemskap), trådlösa enheter. GPU-poster bär en <code>passthrough_eligible</code>-heuristisk."
+      },
+      {
+        "collector": "collect_storage.sh",
+        "produces": "storage_inventory",
+        "content": "ZFS-pooler (med pooltyp + medlemsdisker löste <code>/dev/disk/by-id/*</code>, <code>/dev/disk/by-partuuid/*</code> eller rå <code>/dev/sdX</code>-vägar beroende på hur varje pool ursprungligen skapades), LVM-volymgrupper + tunna pooler, fysiska diskar med SMART-kapacitet, PVE <code>storage.cfg</code>-poster, externa monteringar."
+      },
+      {
+        "collector": "collect_kernel.sh",
+        "produces": "kernel_params",
+        "content": "Parametrar som operatören lagt till i <code>/proc/cmdline</code>, utan standardposter som <code>BOOT_IMAGE=</code>, <code>root=</code>, <code>ro/rw</code>, <code>quiet</code> och <code>splash</code>; moduler som laddas vid start från <code>/etc/modules</code>; sökvägar till <code>/etc/modprobe.d/*.conf</code>-filer med faktiska direktiv (<code>options</code>, <code>blacklist</code>, <code>install</code>, <code>alias</code>, <code>softdep</code>)."
+      },
+      {
+        "collector": "collect_proxmenux_state.sh",
+        "produces": "proxmenux_installed_components",
+        "content": "Läser <code>/usr/local/share/proxmenux/managed_installs.json</code> (registret över allt ProxMenux har installerat) och <code>installed_tools.json</code>. Varje post håller installationsbanan (<code>menu_script</code>) så att återställningen kan utlösa exakt samma installationsflöde."
+      },
+      {
+        "collector": "collect_guests.sh",
+        "produces": "vms_lxcs_at_backup",
+        "content": "Uppräknar VMs (<code>qm list</code>) och LXCs (<code>pct list</code>) närvarande vid backuptid - VMID, namn, aktuell status. Endast inventeringen: de faktiska gästdata är <code>vzdump</code>/PBS."
+      }
+    ],
+    "schemaTitle": "Schema validering",
+    "schemaBody": "manifestet validerar mot <code>scripts/backup_restore/schema/manifest.schema.json</code>. Kör <code>build_manifest.sh --validate</code> utlöser en Python-side JSON Schema validering (kräver <code>python3</code> + <code>jsonschema</code>). Om modulen inte är närvarande, är kontrollen hoppad tyst - validering är i första hand ett utvecklarhjälp, inte ett drifttidsberoende."
+  },
+  "applications": {
+    "heading": "Applikationsinventeringen",
+    "intro": "Två inventeringar listar programvara utöver Proxmox VE:s baspaket: paketlistan under <code>metadata/</code> och komponentregistret i rootfs, som beskrivs nedan. Återställningen använder APT eller ProxMenux egna installationsprogram för att återskapa användarens programvara enligt det ursprungliga installationssättet.",
+    "packagesTitle": "packages.manual.list",
+    "packagesBody": "En alfabetisk textlista från <code>apt-mark showmanual</code> med alla APT-paket som <em>uttryckligen installerats</em> på källvärden. Beroenden till Proxmox VE:s bassystem ingår inte; målets APT installerar dem automatiskt. Under återställningen läser <code>_rs_run_complete_extras</code> listan och använder ett <em>filter mot borttagning i kaskad</em> i tre steg: <code>dpkg -s</code> hittar redan installerade paket, andra huvudversioner av bibliotek identifieras och <code>apt-get install --simulate</code> kontrollerar risken för följdborttagningar. Återstående paket installeras med <code>apt-get install -y</code>.",
+    "componentsTitle": "components_status.json (del av rootfs)",
+    "componentsBody": "En JSON registret under <code>/usr/local/share/proxmenux/</code> som registrerar varje komponent ProxMenux har installerat med sitt exakta tillstånd: version, ProxMenux-specifika flaggor (för NVIDIA: <code>patched</code> boolean; för Coral: DKMS version). Denna fil lever i rootfs - inte i <code>metadata/</code> - eftersom det är <em>läses efter</em> att rootfs har kopierats till målet. Post-boot dispatcher (<code>apply_cluster_postboot.sh</code>) itererar över sina poster och kör varje komponent <code>--auto-reinstall</code> krok, som läser det inspelade tillståndet och reproducerar installationen mot målets nuvarande kärna.",
+    "componentInstallersTitle": "Installationsprogram för komponenter",
+    "componentInstallersBody": "Fyra ProxMenux installatörer exponerar för närvarande en <code>--auto-reinstall</code> ingångspunkt:",
+    "installerRows": [
+      {
+        "component": "nvidia_driver",
+        "installer": "gpu_tpu/nvidia_installer.sh",
+        "action": "Läser <code>version</code> + <code>patched</code>. Ladda ner exakt samma NVIDIA runfil, bygger DKMS-moduler mot målets kärna, applicerar ProxMenux-patchen om källan hade den."
+      },
+      {
+        "component": "coral_driver",
+        "installer": "gpu_tpu/install_coral.sh",
+        "action": "Läser versionen av Coral-drivrutinen och kompilerar DKMS-modulen för målets kärna."
+      },
+      {
+        "component": "amdgpu_top",
+        "installer": "gpu_tpu/amd_gpu_tools.sh",
+        "action": "Läser den inspelade versionen. Laddar ner exakt <code>.deb</code> från GitHub release."
+      },
+      {
+        "component": "intel_gpu_tools",
+        "installer": "gpu_tpu/intel_gpu_tools.sh",
+        "action": "APT-installerar paketet. Idempotent om det redan finns från <code>packages.manual.list</code>."
+      }
+    ]
+  },
+  "restoreFlow": {
+    "heading": "Hur återställningen förbrukar de tre nyttolasterna",
+    "intro": "Återställningen är en sexstegs pipeline. Varje steg läser en specifik delmängd av arkivet och uppdaterar målvärden. Inget stadium kräver att källvärden kan nås - arkivet är helt fristående.",
+    "stagesCaption": "Steg 1 använder manifestet för att bestämma vad du ska röra. Steg 2 kopierar rootfs vägar som är säkra att tillämpa på ett körsystem. Stadium 3 iscensätter de riskfyllda vägarna för nästa start. Steg 3b importerar icke-rot ZFS datapooler vars diskar är alla närvarande. Steg 4 hanterar paket. Stage 5 körs efter omstart och ominstallerar komponenter mot målets kärna.",
+    "stageRows": [
+      {
+        "stage": "1",
+        "name": "Kompatibilitetskontroll",
+        "reads": "manifest.json",
+        "action": "Kör <code>hb_compat_check</code>. Jämför källa vs mål hårdvara (NIC, lagrings-ID), PVE-version och stor kärnversion. Set <code>HB_COMPAT_KERNEL_DIRECTION</code> (<code>same</code>, <code>bk_newer</code> eller <code>bk_older</code>) och befolkar <code>RS_SKIP_PATHS</code> med hårdvara-drift och cross-kernel uteslutningar."
+      },
+      {
+        "stage": "2",
+        "name": "Tillämpning under drift",
+        "reads": "rootfs/ (endast säkra vägar)",
+        "action": "<code>_rs_apply … hot</code> kopierar <code>hb_classify_path</code>=<code>hot</code>-poster direkt till live-målet. Allt under <code>/etc/pve</code>, <code>/etc/network</code> eller vägar som klassificeras som <em>reboot</em>/<em>dangerous</em> uppskjuts."
+      },
+      {
+        "stage": "3",
+        "name": "Förbered uppskjutna ändringar",
+        "reads": "rootfs/ (omstart + farliga vägar)",
+        "action": "<code>_rs_prepare_pending_restore</code> förbereder riskfyllda sökvägar under <code>/var/lib/proxmenux/pending-restore/</code>, skriver <code>plan.env</code>, <code>apply-on-boot.list</code> och <code>rs-skip-paths.txt</code> och aktiverar <code>proxmenux-restore-onboot.service</code> för nästa start."
+      },
+      {
+        "stage": "3b",
+        "name": "Datapool import",
+        "reads": "manifest.storage_inventory + mål ZFS tillstånd",
+        "action": "<code>_rs_import_data_pools</code> försöker importera varje ZFS-pool utan rotfilsystem vars samtliga diskar finns på målet. Pooler med ett annat hostid provas igen med <code>zpool import -f</code>. Om någon disk saknas hoppas poolen över med en varning. Resultatet per pool loggas i <code>/var/log/proxmenux/restore-datapools-&lt;timestamp&gt;.log</code>."
+      },
+      {
+        "stage": "4",
+        "name": "Paketinstallation",
+        "reads": "metadata/packages.manual.list",
+        "action": "<code>_rs_run_complete_extras</code> kör kaskadsäkert filter och kallar <code>apt-get install -y</code> med den överlevande paketlistan. Fullständig utdata går till <code>/var/log/proxmenux/restore-apt-*.log</code>."
+      },
+      {
+        "stage": "5",
+        "name": "Efter uppstart",
+        "reads": "rootfs (redan tillämpat) + components_status.json",
+        "action": "Efter omstart, <code>apply_pending_restore.sh</code> spelar tillbaka de uppskjutna banorna och <code>apply_cluster_postboot.sh</code> kör <code>update-initramfs</code>, <code>update-grub</code> (eller <code>proxmox-boot-tool refresh</code>) och itererar över <code>components_status.json</code> skjuter varje komponent <code>--auto-reinstall</code> krok."
+      }
+    ]
+  },
+  "whyItWorks": {
+    "heading": "Varför säkerhetskopian delas i tre delar",
+    "body": "Uppdelningen följer uppgifternas <strong>livscykel</strong>. Filsystemet överförs med <code>rsync</code>: snabbt, öppet och atomärt per fil. Konfigurationstillstånd som måste tolkas före ändringar lagras som <strong>strukturerad JSON</strong>, läsbar för sig, versionshanterbar med schema och maskinellt jämförbar med målets tillstånd. Programvara som ska installeras om beskrivs i en <strong>inventering</strong> med namn och versioner; målets pakethanterare och ProxMenux installationsprogram väljer rätt binärer. Varje del fyller sin egen uppgift. Tillsammans eftersträvar de en sammanhängande återställning med feltolerans: ett skadat manifest lämnar rootfs återställbart, ett saknat paket hindrar inte komponentinstallation och ett fel för en post stoppar inte nästa."
+  }
+}

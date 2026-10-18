@@ -1,0 +1,132 @@
+{
+  "meta": {
+    "title": "Brygganalys och guidad reparation | ProxMenux-dokumentation",
+    "description": "Upptäcker vmbrX-bryggor med saknade eller ogiltiga fysiska portar, vanligen efter omnumrering av PCI-enheter. Rapporterar dem med föreslagna skalkommandon och erbjuder guidad reparation i 5 steg med obligatorisk säkerhetskopia.",
+    "ogTitle": "Brygganalys och guidad reparation | ProxMenux-dokumentation",
+    "ogDescription": "Granska och reparera Proxmox bryggportar efter maskinvaruändringar med ett guidat flöde som ger säker återställning."
+  },
+  "header": {
+    "title": "Brygganalys och guidad reparation",
+    "description": "Granskar varje vmbrX-brygga i /etc/network/interfaces, kontrollerar att dess fysiska portar finns och erbjuder stegvis reparation om de saknas. Analysen är skrivskyddad; reparationen kräver godkännande, visar en förhandsvisning och tar en säkerhetskopia.",
+    "section": "Nätverk"
+  },
+  "intro": {
+    "title": "Vad detta gör",
+    "body": "Läser varje brygga i <code>/etc/network/interfaces</code>, granskar dess <code>bridge-ports</code>-rad och kontrollerar att varje deklarerad port, till exempel <code>enp3s0</code>, finns på värden. Om en port saknas föreslås en ersättning och ändringen tillämpas med uttryckligt samtycke i flödet <strong>säkerhetskopiera, förhandsvisa, tillämpa, verifiera</strong>."
+  },
+  "when": {
+    "heading": "När du behöver detta",
+    "intro": "Linux tilldelar förutsägbara gränssnittsnamn från PCI topologi och slot order. Flera händelser blandar dem och lämnar <code>/etc/network/interfaces</code> med hänvisning till namn som inte längre finns:",
+    "items": [
+      "Lägga till eller ta bort ett PCIe-kort (en NIC, en GPU, en HBA, en NVMe-bärare).",
+      "Flytta ett befintligt kort till en annan PCIe slot.",
+      "BIOS-/UEFI-uppdateringar som numrerar om PCI-enheter.",
+      "Flytta startdisken till annan maskinvara."
+    ],
+    "outro": "Efter nästa start försöker bryggan ansluta till en port som inte längre finns. Den kan inte aktiveras och värden förlorar nätverksanslutningen. <link>Beständiga gränssnittsnamn</link> förhindrar att detta händer igen. Om du redan är utelåst visar den här sidan hur du återställer åtkomsten."
+  },
+  "bigPicture": {
+    "heading": "Överblick",
+    "diagram1": {
+      "arrowLabel": "Steg 1",
+      "nodes": {
+        "sourceLabel": "/etc/network/interfaces",
+        "sourceDetail": "auto vmbr0\niface vmbr0 inet static\n  bridge-ports enp3s0",
+        "bridgeLabel": "Analysera (skrivskyddat)",
+        "bridgeDetail": "ip link show enp3s0\n→ finns inte",
+        "targetLabel": "Rapport + förslag",
+        "targetDetail": "❌ enp3s0: HITTADES INTE\nErsätt med: eno1\n(inga ändringar ännu)"
+      }
+    },
+    "diagram2": {
+      "arrowLabel": "tillämpa med säkerhetskopia",
+      "nodes": {
+        "sourceLabel": "Guidad reparation",
+        "sourceDetail": "1. Säkerhetskopiera\n2. Visa aktuell konfiguration\n3. Förhandsvisa ändringar\n4. Tillämpa\n5. Verifiera",
+        "targetLabel": "/etc/network/interfaces (ny)",
+        "targetDetail": "auto vmbr0\niface vmbr0 inet static\n  bridge-ports eno1"
+      }
+    }
+  },
+  "step1": {
+    "heading": "Steg 1: analys (skrivskyddad)",
+    "intro": "När du väljer <strong>Analysera bryggkonfiguration</strong> avbryts verktyget direkt om värden inte använder den klassiska Debian/Proxmox-stacken. Annars granskas varje brygga och följande rapporteras:",
+    "items": [
+      "Bryggnamn, aktuell status (UP / DOWN), tilldelad IP.",
+      "Varje deklarerad port och om den för närvarande finns (<code>ip link show &lt;port&gt;</code>).",
+      "För varje ogiltig port: en föreslagen ersättning (det första tillgängliga fysiska gränssnittet) och det exakta <code>sed</code>-kommandot för att tillämpa ändringen manuellt.",
+      "Broar utan <code>bridge-ports</code> alls och föräldralösa <code>auto</code>-poster (ingen matchande <code>iface</code>-block)."
+    ],
+    "readonlyTitle": "Garanti för skrivskyddad analys",
+    "readonlyBody": "Fram till denna punkt har skriptet inte kört ett enda kommando som ändrar systemet. Du kan lämna analysen öppen, kopiera de föreslagna <code>sed</code>-kommandona och tillämpa dem manuellt om du vill, eller godkänna nästa fråga för att gå vidare till den guidade reparationen."
+  },
+  "step2": {
+    "heading": "Steg 2: guidad reparation (5 steg)",
+    "intro": "Startas bara om du godkänner frågan i slutet av analysen. Varje steg visar vad som kommer att ske och ber om bekräftelse innan flödet fortsätter.",
+    "steps": [
+      {
+        "title": "1. Säkerhetskopia",
+        "body": "Kopierar <code>/etc/network/interfaces</code> till <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Den exakta sökvägen visas före och efter kopieringen, tillsammans med återställningskommandot.",
+        "tone": "blue"
+      },
+      {
+        "title": "2. Granska nuvarande konfiguration",
+        "body": "Öppnar live <code>/etc/network/interfaces</code> i en rullningsbar dialog så att du kan se exakt vad som ska ändras.",
+        "tone": "blue"
+      },
+      {
+        "title": "3. Förhandsgranska föreslagna ändringar",
+        "body": "Listar exakt vilka bryggor som berörs och vilka portbyten som planeras. Om ingen reparation längre behövs eftersom porten har dykt upp igen mellan kontrollerna avslutas flödet med <em>”Inga ändringar behövs.”</em>",
+        "tone": "blue"
+      },
+      {
+        "title": "4. Tillämpa ändringarna",
+        "body": "För varje drabbad bro kör <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> mot <code>/etc/network/interfaces</code>. Om en bro inte hade någon giltig ersättning tillgänglig, är ersättningen hoppad och rapporterad i steg 5.",
+        "tone": "amber"
+      },
+      {
+        "title": "5. Verifiering",
+        "body": "Läser filen igen och bekräftar att varje bryggas nya port finns. Skriver ut återställningskommandot (<code>cp &lt;backup&gt; /etc/network/interfaces</code>). Erbjuder slutligen <strong>Starta om nätverket</strong> — godkänn bara om du har konsolåtkomst som reserv.",
+        "tone": "emerald"
+      }
+    ],
+    "restartTitle": "Omstart av nätverket ≠ riskfri återställning",
+    "restartBody": "Reparationen skrivs till disk oavsett om du startar om tjänsten. <code>systemctl restart networking</code> tillämpar ändringen <em>nu</em>, vilket kan bryta SSH-sessionen om den nya porten är fel. Om du avböjer börjar ändringen ändå gälla vid nästa omstart — kontrollera först den nya konfigurationen eller återställ med det utskrivna kommandot."
+  },
+  "edits": {
+    "heading": "Vad blir redigerat (exakt)",
+    "body": "Endast <code>bridge-ports</code>-raden för varje berörd brygga. Andra direktiv (<code>address</code>, <code>netmask</code>, <code>gateway</code>, <code>bridge-stp</code>, …) lämnas orörda. Skriptet skapar eller tar aldrig bort <code>iface</code>-block i detta flöde — det sköts av <link>konfigurationsanalys &amp; rensning</link>."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "unsupportedTitle": "Analysen avbryts med ”Nätverksstacken stöds inte”",
+    "unsupportedBody": "Värden kör netplan, systemd-networkd eller NetworkManager. Verktyget stöder endast <code>/etc/network/interfaces</code>. Byt först till den klassiska stacken eller redigera konfigurationen med nätverkshanterarens egna verktyg, till exempel <code>netplan apply</code>.",
+    "noSuggestTitle": "Inget förslag trycks för en ogiltig port",
+    "noSuggestBody": "Värden har noll fria fysiska gränssnitt (allt är antingen redan i en annan bro eller inte existerar). Analysen faller tillbaka för att föreslå <code>bridge-ports none</code> så att bron åtminstone kan komma upp utan en port. Lägg till en NIC eller migrera portar mellan broar manuellt innan du kör.",
+    "stillDownTitle": "Reparationen slutförs men bron är fortfarande DOWN",
+    "stillDownBody": "<code>sed</code> uppdaterade filen men <code>systemctl restart networking</code> avböjdes. Kör kommandot manuellt när den nya konfigurationen har kontrollerats eller starta om. Om omstarten godkändes och bryggan fortfarande är DOWN, kör <code>ip link show</code> för att kontrollera att den nya porten finns och granska sedan <code>journalctl -u networking</code> för det verkliga felet: urkopplad kabel, länk som inte förhandlats fram eller port som redan tillhör en annan brygga.",
+    "lostSshTitle": "Jag förlorade SSH-åtkomst direkt efter att ha startat om nätverk",
+    "lostSshIntro": "Använd konsol / IPMI / iKVM för att nå värden. Återställ backup:",
+    "lostSshOutro": "Kör sedan analysen igen från konsolen för att ta reda på varför förslaget inte fungerade, oftast för att ersättningsporten inte är ansluten."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "label": "Beständiga gränssnittsnamn",
+        "href": "/docs/network/persistent-names",
+        "tail": " — binder namn till MAC-adresser så att problemet inte återkommer."
+      },
+      {
+        "label": "Konfigurationsanalys och guidad rensning",
+        "href": "/docs/network/config-analysis",
+        "tailRich": " — för föräldralösa <code>iface</code> block (den andra hälften av samma problem)."
+      },
+      {
+        "label": "Säkerhetskopiering och omstart av gränssnitt",
+        "href": "/docs/network/backup-restore",
+        "tail": " — manuella ögonblicksbilder och bläddring bland säkerhetskopior för återställning."
+      }
+    ]
+  }
+}

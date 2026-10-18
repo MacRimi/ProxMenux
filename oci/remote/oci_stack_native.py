@@ -192,7 +192,7 @@ class NativeAdapter:
                 config = instances.command('pct', 'config', str(vmid))
                 if instances.identity(config) != record['installation_id']:
                     raise ValueError(translate('The identity of a member was replaced'))
-                if (not self.journal.exists() or not self.state().get('replacement_intent')) and not instances.same_config_except_notes(record, config):
+                if (not self.journal.exists() or not self.state().get('replacement_intent')) and not instances.same_config_except_notes(record, config, ignore_tags=True):
                     raise ValueError(translate('A member configuration changed during the preparation'))
             else:
                 if Path('/etc/pve/lxc/%s.conf' % vmid).exists():

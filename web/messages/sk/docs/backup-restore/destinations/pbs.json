@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "title": "Cieľ Proxmox Backup Server — repozitár, šifrovanie a obnova | ProxMenux",
+    "description": "Cieľ PBS ukladá zálohy hostiteľa ProxMenux ako zálohy PBS. Stránka opisuje zisťovanie úložísk z /etc/pve/storage.cfg, ručnú konfiguráciu PBS, odoslanie .pxar, šifrovanie na strane klienta so súborom kľúča a voliteľnou obnovovacou kópiou chránenou prístupovou frázou aj obnovu kľúča z viacerých zdrojov na novo nainštalovanom hostiteľovi.",
+    "ogTitle": "Zálohovanie ProxMenux — cieľ Proxmox Backup Server",
+    "ogDescription": "Ako ProxMenux ukladá zálohy hostiteľa na Proxmox Backup Server so šifrovaním súborom kľúča na strane klienta a uloženou kópiou na obnovu.",
+    "twitterTitle": "PBS Záložné miesto ProxMenux",
+    "twitterDescription": "Cieľ Proxmox Backup Server so šifrovaním súborom kľúča a obnovovacou kópiou chránenou prístupovou frázou."
+  },
+  "header": {
+    "title": "Proxmox Backup Server",
+    "description": "Cieľ PBS odosiela celý prípravný adresár ako jednu zálohu .pxar do dátového úložiska Proxmox Backup Server. Voliteľne ju šifruje na strane klienta súborom kľúča a vedľa každej zálohy môže uložiť aj obnovovaciu kópiu kľúča chránenú prístupovou frázou.",
+    "section": "Záloha a obnova"
+  },
+  "recommendedBadge": "Odporúčané miesto určenia",
+  "aboutPbs": {
+    "heading": "Čo je Proxmox Backup Server",
+    "body": "Proxmox Backup Server (PBS) je zálohovací server spoločnosti Proxmox, ktorý vyvíja a udržiava rovnaký tím ako Proxmox VE. Prijíma zálohy z hostiteľov Proxmox VE (VM, kontajnerov LXC a cez <code>proxmox-backup-client</code> aj ľubovoľných adresárov hostiteľa), podporuje deduplikáciu po blokoch, šifrovanie na strane klienta a pravidlá uchovávania na serveri. ProxMenux používa PBS ako jeden z troch cieľov záloh hostiteľa. Všetky tu opísané mechanizmy PBS (skupiny záloh, archívy <code>.pxar</code>, <code>--backup-id</code> a šifrovanie súborom kľúča) patria k štandardnému správaniu PBS."
+  },
+  "intro": {
+    "title": "Jedna záloha pri každom spustení, deduplikácia po blokoch",
+    "body": "Záloha PBS vytvorí v dátovom úložisku jednu položku pod identifikátorom <code>host/hostcfg-HOSTNAME/BACKUP-TIME</code>. Obsah tvorí archív <code>.pxar</code> s rovnakou trojblokovou štruktúrou ako v časti <em>Ako to funguje</em>. PBS deduplikuje bloky medzi všetkými zálohami v úložisku, takže ďalšie zálohy toho istého hostiteľa prenášajú a ukladajú iba zmenené bloky. Uchovávanie pri plánovaných úlohách riadi samotný ProxMenux: po každom úspešnom spustení vykoná <code>run_scheduled_backup.sh</code> príkaz <code>proxmox-backup-client prune</code> s voľbami <code>--keep-last</code> / <code>--keep-daily</code> / <code>--keep-weekly</code> podľa hodnôt nastavených v úlohe."
+  },
+  "repoSelection": {
+    "heading": "Výber úložiska",
+    "intro": "ProxMenux objavuje archív PBS z dvoch zdrojov na každej zálohe. Operátor vyberie jeden z jednotného menu; voľba určuje <code>HB_PBS_REPOSITORY</code>, <code>HB_PBS_SECRET</code> a <code>HB_PBS_FINGERPRINT</code> pre spustenie.",
+    "sourceRows": [
+      {
+        "source": "Proxmox storage.cfg (automaticky zistené)",
+        "path": "/etc/pve/storage.cfg + /etc/pve/priv/storage/NAME.pw",
+        "content": "Každá sekcia <code>pbs:</code> v konfigurácii úložísk Proxmoxu sa zistí automaticky. Server, dátové úložisko, používateľské meno a odtlačok certifikátu sa prevezmú z tejto sekcie. Heslo sa načíta z adresára prihlasovacích údajov Proxmoxu. V ProxMenux ho netreba zadávať znova: úložisko je dostupné hneď po konfigurácii v Proxmoxe."
+      },
+      {
+        "source": "ProxMenux manuálna konfigurácia",
+        "path": "/usr/local/share/proxmenux/pbs-manual-configs.txt + pbs-pass-NAME.txt + pbs-fingerprint-NAME.txt",
+        "content": "Pridáva sa cez <em>Nastaviť ciele záloh → Ciele PBS → Pridať PBS</em>. Zadáva sa názov, používateľské meno (<code>root@pam</code> alebo <code>user@pbs!token</code>), hostiteľ alebo IP adresa, dátové úložisko a heslo. Pri prázdnom hesle sa výzva zopakuje: inak by sa prázdna hodnota potichu uložila a každá ďalšia záloha by zlyhala s nejasnou chybou overenia. Táto možnosť slúži pre PBS, ktorý nie je zaregistrovaný ako úložisko Proxmoxu."
+      }
+    ],
+    "menuTitle": "Výberové menu",
+    "menuBody": "Oba zdroje sú v jednej ponuke a každý riadok označuje pôvod (<code>[proxmox]</code> alebo <code>[manual]</code>). Položky bez zisteného hesla majú upozornenie <code>⚠ no password</code>; pri ich výbere treba heslo zadať pred spustením zálohy. Odtlačok sa odovzdáva nástroju <code>proxmox-backup-client</code> cez premennú prostredia <code>PBS_FINGERPRINT</code>. Ak odtlačok chýba, klient pri prvej zálohe interaktívne požiada operátora o prijatie certifikátu servera."
+  },
+  "backupCommand": {
+    "heading": "Záložný príkaz",
+    "intro": "Odoslanie používa jediné volanie <code>proxmox-backup-client backup</code>. ProxMenux pomocou <code>env</code> odovzdáva klientovi heslo, šifrovacie heslo a odtlačok ako premenné prostredia.",
+    "cmd": "env \\\n    PBS_PASSWORD=\"$HB_PBS_SECRET\" \\\n    PBS_ENCRYPTION_PASSWORD=\"$HB_PBS_ENC_PASS\" \\\n    PBS_FINGERPRINT=\"$HB_PBS_FINGERPRINT\" \\\n    proxmox-backup-client backup \\\n        hostcfg.pxar:$staging_root \\\n        --repository USER@REALM@HOST:DATASTORE \\\n        --backup-type host \\\n        --backup-id  hostcfg-HOSTNAME \\\n        --backup-time BACKUP-EPOCH \\\n        [--keyfile /usr/local/share/proxmenux/pbs-key.conf]",
+    "backupIdTitle": "Identifikačné meno zálohy",
+    "backupIdBody": "Predvolený identifikátor zálohy je <code>hostcfg-HOSTNAME</code>. Pred odoslaním ho operátor potvrdí alebo upraví. Znaky mimo <code>[A-Za-z0-9_-]</code> aj pomlčky na konci sa odstránia. Opakované použitie rovnakého ID je zámerné: PBS ho chápe ako <em>skupinu</em> a každá ďalšia záloha pribudne do tejto skupiny ako nová položka so spoločnou deduplikáciou s predchádzajúcimi zálohami.",
+    "pxarTitle": "Prečo je zdrojom celý prípravný adresár",
+    "pxarBody": "Zdrojom archívu <code>.pxar</code> je celý <code>staging_root</code>: spolu <code>rootfs/</code>, <code>metadata/</code> aj <code>manifest.json</code>. Staršie verzie používali ako zdroj <code>$staging_root/rootfs</code>, takže v archíve chýbal adresár <code>metadata/</code>. Kontrola kompatibility pri obnove nemala čo čítať a zobrazovala upozornenia na iného hostiteľa aj pri obnove na pôvodnom hostiteľovi. Staré zálohy obsahujúce iba rootfs sa stále obnovujú správne pomocou tretej vetvy <code>_rs_check_layout</code>, ktorá plochý strom <code>etc/var/root/usr</code> zabalí do hierarchie <code>rootfs/</code>."
+  },
+  "encryption": {
+    "heading": "Šifrovanie na strane klienta",
+    "glossaryHint": "Táto časť používa pojmy <em>súbor kľúča</em>, <em>prístupová fráza</em> a <em>obnovovacia obálka</em>. <glosarioLink>Slovník pojmov</glosarioLink> vysvetľuje ich rozdiely jednou vetou pre každý pojem.",
+    "intro": "Šifrovanie PBS na strane klienta šifruje bloky súborom kľúča na zdrojovom hostiteľovi ešte pred odoslaním. V ProxMenux je voliteľné. Ak sa zapne, operátor pri nastavení výslovne zvolí áno alebo nie, či sa má na PBS uložiť aj obnovovacia kópia súboru kľúča chránená prístupovou frázou. Voľbu môže neskôr zmeniť v Monitore. Súbor kľúča je vždy na kanonickej ceste <code>/usr/local/share/proxmenux/pbs-key.conf</code> a pri každej ďalšej šifrovanej zálohe sa použije bez ďalších otázok.",
+    "keyfileTitle": "Nastavenie súboru kľúčov",
+    "keyfileBody": "Dialóg šifrovania sa zobrazí pri prvej šifrovanej zálohe hostiteľa. Najprv sa opýta, či sa má záloha šifrovať: <em>Nie</em> pokračuje bez šifrovania, <em>Áno</em> prejde na druhý krok. Ten závisí od toho, či je na ceste <code>/usr/local/share/proxmenux/pbs-key.conf</code> už nainštalovaný súbor kľúča. Ak áno, použije sa bez otázok a zálohovanie pokračuje; ani pri ďalších zálohách sa otázka neopakuje. Ak nie, ponuka poskytne dve možnosti. <em>Vygenerovať nový súbor kľúča</em> spustí <code>proxmox-backup-client key create --kdf none</code>. <em>Použiť existujúci súbor kľúča</em> automaticky zistí kľúč spravovaný PVE: ak je vybrané úložisko PBS v Proxmoxe zaregistrované so šifrovacím kľúčom na ceste <code>/etc/pve/priv/storage/&lt;NAME&gt;.enc</code>, súbor sa bez otázok skopíruje na kanonickú cestu ProxMenux. Ak sa nenájde zodpovedajúci kľúč PVE, dialóg vyžiada absolútnu cestu, kam operátor už súbor kľúča na hostiteľovi umiestnil. V oboch prípadoch sa uloží na kanonickú cestu s <code>chmod 600</code>.",
+    "modesTitle": "Súbor kľúča pre každý hostiteľ alebo spoločný súbor",
+    "modesIntro": "Oba modely sú podporované a ani jeden nie je povinný. Operátor si vyberie podľa organizácie svojich hostiteľov.",
+    "modesPerHostTitle": "Vlastný súbor kľúča pre každý hostiteľ (predvolené)",
+    "modesPerHostBody": "Každý hostiteľ generuje svoj vlastný súbor kľúčov prvýkrát, čo umožňuje šifrovanie PBS. Izolácia je maximálna: ohrozenie súboru kľúčov jedného hostiteľa nevystavuje zálohy žiadneho iného hostiteľa. Odporúčané pre produkčné prostredia a pre prostredia, v ktorých majú hostitelia rôznych vlastníkov alebo hranice súladu.",
+    "modesSharedTitle": "Zdieľaný súbor kľúča (import na každom hostiteľovi)",
+    "modesSharedBody": "Jeden súbor hlavného kľúča vygenerovaný raz a nainštalovaný na každom hostiteľovi pomocou možnosti <em>Použiť existujúci súbor kľúča</em>. Správa je jednoduchšia: jediné tajomstvo na ochranu a ktorýkoľvek hostiteľ môže dešifrovať archívy akéhokoľvek iného (užitočné na konsolidáciu, nácvik obnovy medzi hostiteľmi alebo centralizované overenie zálohy). Kompromisom je, že únik zdieľaného súboru kľúča odhalí každého hostiteľa naraz. Odporúča sa pre domáce laboratóriá a pre flotily, kde majú všetci hostitelia rovnakého vlastníka a hranice dôvery.",
+    "recoveryTitle": "Odoslanie kľúča na PBS — rozhoduje operátor",
+    "recoveryBody": "Hneď po výbere súboru kľúča položí ProxMenux výslovnú otázku <em>Odoslať kľúč na PBS?</em> s dvoma odpoveďami. <strong>Kým operátor nezvolí Áno, na PBS sa neodošle žiadny obnovovací artefakt.</strong> Predvolená voľba je <em>Nie, ponechať iba lokálne</em>: kľúč zostane na kanonickej miestnej ceste, ProxMenux neodosiela na PBS žiadne obnovovacie artefakty a externú kópiu zabezpečí operátor. Tlačidlo <em>Stiahnuť súbor kľúča</em> v riadku cieľa PBS v Monitore ju poskytne na požiadanie. Voľba <em>Áno, odoslať</em> vyžiada dvakrát prístupovú frázu na obnovu a overí zhodu. ProxMenux ňou zašifruje súbor kľúča pomocou AES-256-CBC a PBKDF2 (600 000 iterácií, náhodná soľ) a vytvorí <code>pbs-key.recovery.enc</code>. Každá ďalšia šifrovaná záloha odošle túto obálku na PBS ako priradenú skupinu záloh. Pri týchto odoslaniach sa na PBS neposiela prístupová fráza ani súbor kľúča v otvorenom tvare. Voľbu možno kedykoľvek zmeniť v Monitore: ovládací prvok v riadku PBS prepína Áno/Nie a okamžite použije Spustiť odosielanie, Zastaviť odosielanie alebo Aktualizovať prístupovú frázu podľa aktuálneho stavu.",
+    "blobUploadTitle": "Párovaná záložná skupina na PBS",
+    "blobUploadBody1": "Keď je režim úschovy <em>Áno, nahrať</em>, ProxMenux odošle obálku na obnovenie do PBS po každej zašifrovanej zálohe ako druhá, spárovaná skupina záloh s rovnakým názvom ako hostiteľská skupina, ale končiaca na <code>-keyrecovery</code>. Tieto dve skupiny sedia vedľa seba v zozname dátového skladu – jedna pre zálohy hostiteľa, druhá pre obálky na obnovenie. <strong>Obálka nikdy neopustí hostiteľa v obyčajnom texte</strong>: šifrovanie prebieha na samotnom hostiteľovi pomocou AES-256-CBC a PBKDF2 predtým, ako prejdú akékoľvek bajty na drôt (<code>openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt</code>). PBS prijíma iba už zašifrovanú obálku.",
+    "envelopeSecurityTitle": "Predstavuje odoslanie obnovovacieho súboru na PBS bezpečnostné riziko?",
+    "envelopeSecurityBody": "Obnovovací súbor je šifrovaný pri prenose aj pri uložení. Prístupová fráza na obnovu neopúšťa hostiteľa: šifrovanie prebehne lokálne pred odoslaním a PBS dostane iba zašifrovaný výsledok. Správca PBS alebo ktokoľvek s prístupom k dátovému úložisku môže obnovovací súbor stiahnuť, ale bez prístupovej frázy nedokáže prečítať súbor kľúča vnútri; ide o nečitateľný šifrovaný text. Na získanie súboru kľúča treba obe časti súčasne: obnovovací súbor aj prístupovú frázu. Obe má iba operátor.",
+    "blobUploadConstraintTitle": "Prečo dve skupiny namiesto jedného zašifrovaného",
+    "blobUploadConstraintBody": "Jediné volanie <code>proxmox-backup-client backup</code> zašifruje všetky svoje archívy rovnakým súborom kľúča alebo nezašifruje žiadny; kombinácia nie je možná. Záloha hostiteľa sa musí zašifrovať jeho kľúčom, ale obnovovacia obálka sa nesmie odoslať v tom istom volaní. Bola by zašifrovaná práve kľúčom, ktorý obsahuje. Na novo nainštalovanom hostiteľovi by ju nebolo možné otvoriť: na dešifrovanie kľúča by bol potrebný ten istý kľúč. Preto sa oba artefakty odosielajú nezávisle a zobrazujú sa ako dve skupiny. Klient PBS šifruje zálohu hostiteľa súborom kľúča a ProxMenux pred odoslaním šifruje obnovovaciu obálku prístupovou frázou. Dve odlišné šifrovacie vrstvy chránia dva odlišné objekty.",
+    "blobUploadImageAlt": "Rozhranie PBS zobrazuje skupiny záloh hostcfg-HOSTNAME a hostcfg-HOSTNAME-keyrecovery vedľa seba v zozname dátového úložiska.",
+    "blobUploadImageCaption": "Rozhranie PBS — priradené skupiny záloh. Hlavná skupina obsahuje zálohy hostiteľa; skupina -keyrecovery obsahuje súbor kľúča chránený prístupovou frázou.",
+    "recoverTitle": "Obnovenie nového hostiteľa",
+    "recoverBody": "Ak miestny súbor kľúča chýba na kanonickej ceste, napríklad po preinštalovaní hostiteľa alebo úmyselnom odstránení, obnova vyskúša tri zdroje v poradí a skončí pri prvom použiteľnom kľúči. Najprv sa bez otázok skopíruje zodpovedajúci kľúč spravovaný PVE z <code>/etc/pve/priv/storage/&lt;NAME&gt;.enc</code> na kanonickú cestu, ak existuje pre vybrané úložisko PBS. Ak je na PBS dostupná skupina <code>-keyrecovery</code>, druhý krok stiahne jej najnovšiu snímku a vyžiada prístupovú frázu na dešifrovanie. Ak ani jedna možnosť nefunguje alebo ich operátor odmietne, tretí krok vyžiada absolútnu cestu k súboru kľúča na tomto hostiteľovi a skopíruje ho na kanonickú cestu. Monitor poskytuje rovnaký import v okne podrobností zálohy. Ak Obnoviť, Stiahnuť alebo Zobraziť obsah potrebuje chýbajúci kľúč, hore sa zobrazí jantárový panel. Ak je kľúč nainštalovaný, ale nezodpovedá šifrovaniu zálohy, PBS vráti chybu <code>wrong key — manifest's key XX does not match provided key YY</code>. Rovnaké tri akcie potom zobrazia štruktúrovaný panel so zvýrazneným odtlačkom kľúča požadovaným manifestom, aby operátor vedel, ktorý kľúč má pre túto zálohu importovať.",
+    "monitorManagementTitle": "Správa súboru kľúčov z monitora",
+    "monitorManagementBody": "Monitor zobrazuje ovládanie súboru kľúča priamo v každom riadku cieľa PBS na stránke konfigurácie záloh. Sú tam tri akcie: <em>Stiahnuť</em> exportuje aktuálny súbor do prehliadača operátora; <em>Nahrať</em> nahradí nainštalovaný súbor dodaným súborom, pričom pôvodný prepíše až po úspešnom uložení nového na kanonickú cestu; <em>Odstrániť</em> zmaže súbor z hostiteľa. Vedľa je ovládanie obnovovacej kópie: výber Áno/Nie pre <em>Odoslať kľúč na PBS?</em>, pole prístupovej frázy pri voľbe Áno a kontextové tlačidlo na použitie voľby <em>Spustiť odosielanie</em>, <em>Zastaviť odosielanie</em> alebo <em>Aktualizovať prístupovú frázu</em>. Všetky akcie používajú rovnaké koncové body Flask ako terminálové rozhranie, takže účinok na disku a stav na PBS sú z oboch rozhraní rovnaké."
+  },
+  "restoreAccess": {
+    "heading": "Získavanie na strane obnovy",
+    "body": "Obnova zisťuje zálohy hostiteľa ProxMenux na PBS zoznamom skupín v nakonfigurovanom úložisku a filtrovaním podľa vzoru identifikátora zálohy. Karta Zálohy v Monitore zobrazuje rovnaký zoznam. Výber zálohy spustí <code>proxmox-backup-client restore</code> s rovnakým úložiskom, heslom a odtlačkom, prípadne aj s <code>--keyfile</code>, ak bola záloha šifrovaná. Archív <code>.pxar</code> sa rozbalí do prípravného adresára, ktorý <code>_rs_check_layout</code> odovzdá štandardnému procesu obnovy. Pri ručnom získaní mimo ProxMenux rozbalí ten istý príkaz archív na ľubovoľnú cestu; výsledný strom možno skontrolovať alebo použiť pri ručnej obnove."
+  },
+  "references": {
+    "heading": "Odkazy",
+    "intro": "Oficiálna dokumentácia Proxmox Backup Server ku komponentom, ktoré ProxMenux používa.",
+    "items": [
+      {
+        "label": "Dokumentácia Proxmox Backup Server",
+        "href": "https://pbs.proxmox.com/docs/",
+        "tail": " — hlavný rozcestník pre inštaláciu, správu, úložiská, používateľov a roly."
+      },
+      {
+        "label": "proxmox-backup-client",
+        "href": "https://pbs.proxmox.com/docs/backup-client.html",
+        "tail": " — nástroj príkazového riadka, ktorý ProxMenux používa pri každej zálohe a obnove. Opisuje identifikátory a typy záloh, archívy, syntax úložísk a premenné prostredia."
+      },
+      {
+        "label": "Šifrovanie na strane klienta",
+        "href": "https://pbs.proxmox.com/docs/backup-client.html#encryption",
+        "tail": " — vytvorenie súboru kľúča, režimy --kdf a model šifrovania, ktorý ProxMenux rozširuje o obnovovaciu kópiu chránenú prístupovou frázou."
+      },
+      {
+        "label": "Správa dátových úložísk",
+        "href": "https://pbs.proxmox.com/docs/storage.html",
+        "tail": "— vytváranie a správa dátových úložísk, ktoré prijímajú zálohy hostiteľa, vrátane rozloženia chunk-store a povolení."
+      },
+      {
+        "label": "Prerezávanie a zber odpadu",
+        "href": "https://pbs.proxmox.com/docs/maintenance.html#pruning",
+        "tail": " — model uchovávania pre --keep-last / --keep-daily / --keep-weekly, ktorý ProxMenux uplatňuje pre každú plánovanú úlohu, aj spôsob, akým PBS uvoľňuje nepoužívané bloky po odstránení starých záloh."
+      }
+    ]
+  }
+}

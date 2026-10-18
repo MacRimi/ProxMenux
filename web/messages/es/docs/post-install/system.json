@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "Post-instalación: Sistema | ProxMenux Documentation",
+    "title": "Post-instalación: Sistema | Documentación de ProxMenux",
     "description": "Optimizaciones a nivel de sistema en el script post-instalación Customizable de ProxMenux: límites de tamaño de journald y logrotate, límites de kernel y descriptores de fichero más altos, tuning de memoria balanceado, kexec para reinicios rápidos, y recuperación ante kernel panic."
   },
   "header": {
     "title": "Post-instalación: Sistema",
-    "section": "Settings post-install Proxmox"
+    "section": "Configuración post instalación de Proxmox"
   },
   "intro": {
     "title": "Qué cubre esta categoría",
@@ -17,10 +17,10 @@
     "keyTitle": "Valores clave",
     "keyItems": [
       "<code>Storage=persistent</code> — conservar logs en disco entre reinicios.",
-      "<code>SystemMaxUse=64M</code> / <code>RuntimeMaxUse=60M</code> — caps duros sobre el uso de disco/memoria del journal.",
+      "<code>SystemMaxUse=64M</code> / <code>RuntimeMaxUse=60M</code> — límites de uso de disco y memoria del journal.",
       "<code>Compress=yes</code>, <code>Seal=no</code> — comprimir logs, saltar el forward-secure sealing (ahorra CPU).",
       "<code>MaxLevelStore=info</code> — almacenar info y superiores (requerido para el visor de logs del ProxMenux Monitor y para que Fail2Ban detecte fallos de autenticación SSH/Proxmox desde el journal).",
-      "Rate-limits: <code>1000 eventos / 30 s</code> para prevenir flooding de logs.",
+      "Límite de frecuencia: <code>1000 events / 30 s</code> para evitar una avalancha de registros.",
       "<code>ForwardToSyslog=no</code>, <code>ForwardToWall=no</code> — no duplicar mensajes a syslog ni broadcastear a consolas."
     ],
     "tipTitle": "Por qué importa MaxLevelStore=info",
@@ -28,9 +28,9 @@
   },
   "logrotate": {
     "heading": "Optimizar logrotate",
-    "intro": "Reescribe <code>/etc/logrotate.conf</code> con una política más estricta adecuada para un host que también forma parte de un setup Log2RAM de protección de SSD: rotación diaria, retención de 7 días, trigger de tamaño 10 MB, compresión, y <code>copytruncate</code> para que los servicios activos sigan escribiendo sin reabrir sus archivos de log. El <code>logrotate.conf</code> original se respalda en <code>.bak</code> en la primera aplicación.",
+    "intro": "Reescribe <code>/etc/logrotate.conf</code> con ajustes globales de frecuencia diaria y tamaño, 7 rotaciones conservadas, compresión y <code>copytruncate</code> para que los servicios sigan escribiendo sin reabrir los archivos. El tamaño aparece después de la frecuencia diaria y prevalece salvo que una regla particular lo cambie. El <code>logrotate.conf</code> original se copia a <code>.bak</code> la primera vez.",
     "tipTitle": "Amigable con Log2RAM",
-    "tipBody": "El trigger <code>size 10M</code> significa que los logs rotan por tamaño <em>o</em> diariamente, lo que ocurra primero. Combinado con el <code>/var/log</code> respaldado en RAM de Log2RAM, esto mantiene el working set pequeño para que los flushes a disco sean baratos."
+    "tipBody": "La directiva <code>size 10M</code> prevalece sobre el ajuste diario anterior; <em>no</em> significa lo que ocurra primero. Logrotate comprueba el umbral al ejecutarse y las reglas particulares pueden cambiar los valores globales. Con <code>/var/log</code> en la RAM de Log2RAM, revisa las reglas y la frecuencia del temporizador para controlar el espacio."
   },
   "limits": {
     "heading": "Aumentar varios límites del sistema",
@@ -72,7 +72,7 @@
       }
     ],
     "tipTitle": "Por qué importa inotify",
-    "tipBody": "Aplicaciones como Docker, Syncthing, watchers de Node.js, el escáner de biblioteca de Plex y muchas más pegan rápido contra <code>max_user_watches</code>. El valor por defecto en Debian es 8192 — un solo Plex en ejecución puede agotarlo. 1M es generoso y cuesta ~1 KB de RAM por watch, lo que es despreciable."
+    "tipBody": "Docker, Syncthing, los observadores de archivos de Node.js y los análisis de bibliotecas de Plex pueden agotar <code>max_user_watches</code>. El valor predeterminado depende del núcleo y la memoria; no siempre es 8192. Subirlo a 1M permite más observadores, sin preasignarlos. Los observadores activos consumen memoria del núcleo: vigila el uso en hosts con poca RAM."
   },
   "memory": {
     "heading": "Optimizar ajustes de memoria",
@@ -102,8 +102,8 @@
   "verify": {
     "heading": "Verificación",
     "intro": "Tras aplicar las optimizaciones de Sistema:",
-    "tipTitle": "Totalmente reversible",
-    "tipBody": "Las seis opciones están registradas en <code>installed_tools.json</code>, así que aparecen en <link>Uninstall Optimizations</link> si quieres revertir alguna. Las reversiones restauran los valores por defecto de los archivos sysctl, eliminan la unit systemd y el alias de kexec, y resetean journald/logrotate a las configuraciones stock de Debian."
+    "tipTitle": "Restauración y limitaciones",
+    "tipBody": "Las seis opciones se registran en <code>installed_tools.json</code> y aparecen en <link>Desinstalar optimizaciones</link>. La restauración elimina los archivos de configuración, la unidad y el alias de kexec, reescribe journald.conf con los valores predeterminados de systemd y restaura logrotate.conf desde su backup. Algunos límites activos requieren otra sesión o reinicio."
   },
   "related": {
     "heading": "Relacionado",
@@ -119,12 +119,12 @@
         "tail": " — tuning adicional a nivel de sistema (pigz)."
       },
       {
-        "label": "Uninstall Optimizations",
+        "label": "Desinstalar optimizaciones",
         "href": "/docs/post-install/uninstall",
         "tail": " — revierte cualquiera de estos cambios."
       },
       {
-        "label": "Customizable Post-Install",
+        "label": "Post-instalación personalizable",
         "href": "/docs/post-install/customizable",
         "tail": " — volver al menú padre."
       }

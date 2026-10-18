@@ -38,7 +38,7 @@
     "breakTitle": "Can break after Proxmox updates",
     "breakBody": "Proxmox regularly ships UI updates that overwrite <code>proxmoxlib.js</code>. When that happens, the banner comes back. You can re-apply this option after every Proxmox update to re-patch the file, or just accept the nag until you reapply. ProxMenux also installs an APT hook that auto-re-patches on package upgrades — see <link>Uninstall Optimizations</link> for how that hook is reversed.",
     "legalTitle": "Legal note (always worth repeating)",
-    "legalBody": "This option only hides the UI nag. It does <strong>not</strong> grant you enterprise support, access to the enterprise repository, or any rights to ship Proxmox commercially without a subscription. If you run Proxmox in a revenue-generating environment, buy a subscription — it supports the project and gets you the stable enterprise channel."
+    "legalBody": "This option only hides the UI notice. It does <strong>not</strong> grant enterprise support or access to the enterprise repository, and it does not change the software license. Proxmox VE is released under the GNU AGPLv3. A subscription supports the project and provides access to the enterprise update channel; choose the appropriate support level for your environment."
   },
   "verify": {
     "heading": "Verification",

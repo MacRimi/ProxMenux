@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "Destinos das cópias de segurança — arquivo local, Proxmox Backup Server e Borg | ProxMenux",
+    "description": "Três backends de armazenamento recebem a mesma carga útil de backup ProxMenux: um arquivo .tar.zst local em qualquer sistema de arquivos com permissão de gravação, um backup PBS em uma datastore Proxmox Backup Server, ou um arquivo Borg em um repositório Borg local ou remoto. Cada infra-estrutura tem suas próprias características de compressão, desduplicação, criptografia e rede.",
+    "ogTitle": "Destinos de backup do ProxMenux",
+    "ogDescription": "Local, Proxmox Backup Server e Borg — três backends de armazenamento para a mesma carga útil de backup do host.",
+    "twitterTitle": "Destinos de backup do ProxMenux | ProxMenux",
+    "twitterDescription": "Arquivos locais, infraestruturas Proxmox Backup Server e Borg para backups de host."
+  },
+  "header": {
+    "title": "Destinos",
+    "description": "Três backends de armazenamento suportados pelo ProxMenux Backup: arquivo local, Proxmox Backup Server (recomendado) e Borg. Cada um recebe o mesmo arquivo de três blocos de dados; eles diferem em formato de armazenamento, deduplicação, modelo de criptografia e requisitos de rede.",
+    "section": "Cópias de segurança e restauro"
+  },
+  "intro": {
+    "title": "Mesmo conteúdo, três backends",
+    "body": "Cada backup produz as mesmas três cargas (rootfs, manifesto, aplicações). O que muda entre destinos é como essas cargas são armazenadas e como o operador as recupera para uma restauração. Cada infra-estrutura é implementada como uma função separada em <code>backup_host.sh</code> — <code>_bk_local</code>, <code>_bk_pbs</code>, <code>_bk_borg</code> — mas todos os três compartilham a mesma etapa de preparação temporária (<code>hb_prepare_staging</code>) e o mesmo caminho de restauração de código. A escolha de destino apenas afeta a escrita e a recuperação; ela não altera o que uma restauração faz ou como consome o arquivo."
+  },
+  "comparison": {
+    "heading": "Comparação de características",
+    "intro": "A tabela a seguir lista as diferenças concretas entre as três infra-estruturas como se comportam hoje em ProxMenux. Todos os valores descrevem o comportamento observado da própria infra-estrutura, não as recomendações editoriais.",
+    "rows": [
+      {
+        "feature": "Formato de armazenamento",
+        "local": "Um ficheiro <code>.tar.zst</code> (ou <code>.tar.gz</code> se o <code>zstd</code> estiver ausente).",
+        "pbs": "Backup PBS (blocos <code>.pxar</code> no datastore).",
+        "borg": "Arquivo Borg dentro de um repositório Borg (arquivos de segmentos)."
+      },
+      {
+        "feature": "Compressão",
+        "local": "zstd (nível padrão) via <code>tar --zstd</code>. gzip fallback.",
+        "pbs": "Gerenciada pelo proxmox-backup-client. O ProxMenux não altera as configurações de compressão.",
+        "borg": "Compressão integrada do Borg. O ProxMenux chama borg create sem alterar as configurações de compressão."
+      },
+      {
+        "feature": "Desduplicação",
+        "local": "Nenhuma. Cada backup é um arquivo independente completo.",
+        "pbs": "Deduplicação completa por blocos entre todos os backups no datastore.",
+        "borg": "Deduplicação completa por blocos entre todos os arquivos do repositório."
+      },
+      {
+        "feature": "Criptografia em repouso",
+        "local": "Nenhum (depende da proteção do sistema de arquivos).",
+        "pbs": "Criptografia opcional do lado do cliente com um arquivo de chave. Quando ativada, o blob de recuperação é enviado em um grupo de backup separado.",
+        "borg": "Criptografia opcional repokey (chave armazenada no repo, desbloqueada por uma frase- senha)."
+      },
+      {
+        "feature": "Retenção / limpeza",
+        "local": "Aplicada por trabalho agendado via <code>KEEP_LAST</code>. Os arquivos antigos são removidos junto com seus arquivos auxiliares e logs de execução. Os backups interativos não fazem limpeza.",
+        "pbs": "Aplicado por trabalho programado via <code>proxmox-backup-client prune --keep-last / --keep-daily / --keep-weekly</code>. Os backups interativos não fazem limpeza.",
+        "borg": "Aplicado por trabalho programado via <code>borg prune --keep-last / --keep-daily / --keep-weekly</code>. Os backups interativos não fazem limpeza."
+      },
+      {
+        "feature": "Rede",
+        "local": "Nenhuma. Escreve para um ponto de montagem local (tipicamente um disco interno ou uma unidade USB).",
+        "pbs": "TCP para o servidor PBS (porta padrão 8007). Requer credenciais PBS + impressão digital.",
+        "borg": "Localização local do sistema de ficheiros ou túnel SSH para uma máquina Borg remota."
+      },
+      {
+        "feature": "Dependências",
+        "local": "<code>tar</code>, <code>zstd</code> (presente no Proxmox por padrão).",
+        "pbs": "Pacote <code>proxmox-backup-client</code> (incluído no Proxmox VE 8+).",
+        "borg": "binário <code>borg</code>. Auto-fornecido por ProxMenux do pacote Monitor AppImage quando faltando."
+      },
+      {
+        "feature": "Acesso para restauração",
+        "local": "Qualquer máquina com tar+zstd pode extrair o arquivo. Não é necessário PBS/Borg.",
+        "pbs": "Requer <code>proxmox-backup-client</code>, credenciais PBS e o arquivo de chave (se o backup estiver criptografado).",
+        "borg": "Requer <code>borg</code> + o caminho do repositório + a senha (se criptografada)."
+      }
+    ],
+    "captionCode": "feature",
+    "captionLocal": "Local",
+    "captionPbs": "Proxmox Backup Server (recomendado)",
+    "captionBorg": "Borg"
+  },
+  "sameArchive": {
+    "heading": "A disposição do arquivo não muda com o destino",
+    "body": "Dentro de qualquer um dos três destinos, o mesmo <code>rootfs/</code> + <code>metadata/</code> + <code>manifest.json</code> layout descrito em <em>Como funciona</em> está presente. Um <code>.tar.zst</code> extraído de um arquivo local, um <code>.pxar</code> restaurado de PBS, e um arquivo Borg extraído com <code>borg extract</code> todos produzem uma árvore de diretórios idêntica. O caminho do código de restauração (<code>_rs_check_layout</code>, <code>_rs_apply</code>, <code>_rs_prepare_pending_restore</code>) lê as mesmas três cargas úteis sem saber de que destino vieram."
+  },
+  "extractStandalone": {
+    "heading": "Extraindo um backup fora de ProxMenux",
+    "intro": "Qualquer um dos três formatos de arquivo pode ser lido com ferramentas padrão sem ProxMenux instalado no host de leitura. Os comandos abaixo produzem a mesma árvore de diretórios que uma restauração consome internamente.",
+    "localCmd": "# From a local .tar.zst archive:\ntar --zstd -xf hostcfg-HOST-TIMESTAMP.tar.zst\n\n# From a .tar.gz fallback:\ntar -xzf hostcfg-HOST-TIMESTAMP.tar.gz",
+    "pbsCmd": "# From a PBS backup (requires proxmox-backup-client):\nproxmox-backup-client restore \\\n    --repository USER@REALM@HOST:DATASTORE \\\n    host/hostcfg-HOST/BACKUP-TIME \\\n    hostcfg.pxar /tmp/hostcfg\n\n# Add --keyfile KEY-PATH when the backup is encrypted.",
+    "borgCmd": "# De um arquivo Borg (requer borg e a senha dos repositórios criptografados):\nborg extract REPO-PATH::ARCHIVE-NAME\n\n# Em um repositório remoto acessível por SSH:\nborg extract ssh://USER@HOST:PORT/REPO-PATH::ARCHIVE-NAME",
+    "note": "A árvore extraída pode então ser inspecionada manualmente ou alimentada a uma restauração manual. Veja as páginas de destino individuais para o fluxo de recuperação exato que o ProxMenux usa sob o capô."
+  },
+  "whereNext": {
+    "heading": "Detalhes por destino",
+    "intro": "Cada destino tem sua própria página cobrindo o fluxo de configuração, o formato on-disk e o comando de recuperação usado pela restauração.",
+    "items": [
+      {
+        "label": "Arquivo local",
+        "href": "/docs/backup-restore/destinations/local",
+        "tail": " — pré-configurando um alvo local, montagem da unidade USB, a verificação de segurança contra a gravação do arquivo em si, o sidecar JSON que permite ao Monitor identificar o arquivo."
+      },
+      {
+        "label": "Proxmox Backup Server (recomendado)",
+        "href": "/docs/backup-restore/destinations/pbs",
+        "tail": " — seleção de datastore, credenciais e impressão digital, ciclo de vida do arquivo de chave de criptografia, senha de recuperação, carregando o blob de recuperação para PBS para recuperação de nova instalação."
+      },
+      {
+        "label": "Borg",
+        "href": "/docs/backup-restore/destinations/borg",
+        "tail": " — repositórios locais ou acessíveis por SSH, origem do binário Borg (sistema / cache / pacote AppImage do Monitor / download do GitHub), inicialização do repositório, gerenciamento da senha e configuração da chave SSH para repositórios remotos."
+      }
+    ]
+  }
+}

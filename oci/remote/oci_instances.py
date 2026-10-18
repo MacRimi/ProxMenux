@@ -230,8 +230,9 @@ def identity(config):
     return match.group(1) if match else None
 
 
-def same_config_except_notes(record, config):
-    """Accept a presentation-only note edit, never a changed OCI identity or LXC setting."""
+def same_config_except_notes(record, config, ignore_tags=False):
+    """Accept a presentation-only note edit, never a changed OCI identity or LXC setting.
+    With `ignore_tags`, Proxmox tags may differ too: the operation keeps them as they are."""
     previous = record['observed']['config'].encode()
     expected = record['installation_id']
     if identity(previous) != expected or identity(config) != expected:
@@ -242,7 +243,8 @@ def same_config_except_notes(record, config):
         notes = [line for line in lines if line.startswith(b'description: ')]
         if len(notes) != 1:
             return None
-        return b''.join(line for line in lines if not line.startswith(b'description: '))
+        dropped = (b'description: ', b'tags: ') if ignore_tags else (b'description: ',)
+        return b''.join(line for line in lines if not line.startswith(dropped))
 
     original = without_notes(previous)
     return original is not None and original == without_notes(config)

@@ -1,0 +1,93 @@
+{
+  "meta": {
+    "title": "ProxMenux Backup e restauração — Visão geral | Backup e restauração completos do host para Proxmox VE",
+    "description": "ProxMenux Backup & Restore captura o estado completo de um host Proxmox – sistema de arquivos, manifesto de configuração estruturado e pacotes/componentes instalados – e o reproduz no mesmo host ou em um host diferente. O backup e a restauração são independentes: não há dependências externas e as restaurações entre kernels são suportadas por meio de um filtro de subconjunto seguro com reconhecimento de direção e hidratação independente do kernel.",
+    "ogTitle": "ProxMenux Backup e restauração — Visão geral",
+    "ogDescription": "Backup e restauração completos do host para Proxmox VE com manifesto estruturado, lista de pacotes e reinstaladores de componentes.",
+    "twitterTitle": "ProxMenux Backup e restauração | ProxMenux",
+    "twitterDescription": "Backup e restauração completos do host para Proxmox VE com manifesto estruturado, lista de pacotes e reinstaladores de componentes."
+  },
+  "header": {
+    "title": "Backup e restauração",
+    "description": "Backup e restauração de host completo para Proxmox VE. Captura o sistema de arquivos, a configuração e os componentes instalados em um único arquivo e reproduz o host na mesma instalação do Proxmox ou em uma instalação diferente, sem dependências externas.",
+    "section": "Backup e restauração"
+  },
+  "intro": {
+    "title": "O que é, em um parágrafo",
+    "body": "Uma cópia do ProxMenux guarda o estado completo de um host Proxmox: <strong>o sistema de ficheiros</strong>, com os diretórios relevantes em <code>/etc</code>, <code>/root</code> e <code>/var/lib/pve-cluster</code> e os caminhos personalizados opcionais; <strong>um manifesto estruturado</strong> em JSON com o hardware detetado, parâmetros do kernel, configuração de rede, estado do ZFS, utilizadores e entradas cron; e <strong>um inventário de aplicações</strong>, com os pacotes que o APT marca como instalados manualmente e os componentes instalados pelo ProxMenux, incluindo as versões exatas. Os três destinos suportados — arquivo local, Proxmox Backup Server (recomendado) e Borg — recebem o mesmo conteúdo autónomo. Qualquer um permite reconstruir o host de destino sem que o host de origem tenha de estar acessível durante o restauro."
+  },
+  "video": {
+    "heading": "Vídeo passo a passo",
+    "intro": "Prefere assistir o Backup e Restauração em ação antes de configurá-lo? Este passo a passo abrange uma demonstração completa do recurso em ProxMenux.",
+    "title": "ProxMenux — Passo a passo sobre backup e restauração",
+    "caption": "Vídeo externo em YouTube. Reproduz no modo de privacidade aprimorada (sem cookies até você apertar play)."
+  },
+  "whatItIsNot": {
+    "heading": "O que não é",
+    "intro": "Esta secção abrange a cópia de segurança e o restauro <strong>do host</strong>: a instalação do Proxmox, não as aplicações e os sistemas convidados que nela são executados.",
+    "items": [
+      "<strong>Não é uma ferramenta de backup de VM/CT.</strong> Esta funcionalidade não guarda os discos nem o estado da RAM dos sistemas convidados; essa é a função do <code>vzdump</code>. Os <strong>ficheiros de configuração</strong> dos convidados (<code>/etc/pve/nodes/&lt;node&gt;/qemu-server/*.conf</code> e <code>lxc/*.conf</code>) <strong>são</strong> guardados. Após o restauro, o inventário reaparece e os discos podem ser restaurados ou associados a partir de um backup existente no PBS ou em armazenamento local.",
+      "<strong>Não é uma operação sobre todo o cluster.</strong> Cada nó cria a sua própria cópia. A pertença ao cluster é guardada em <code>/etc/pve</code> para permitir reintegrar um nó restaurado, mas recuperar todo o cluster exige coordenar o restauro dos vários nós.",
+      "<strong>Não é uma imagem completa do disco.</strong> Os binários do kernel, o initramfs e a partição de arranque não são guardados. Durante o restauro, o ProxMenux utiliza os ficheiros de arranque do host de destino, regenerados automaticamente por <code>update-initramfs</code> e pela ferramenta do gestor de arranque, e instala os controladores adequados ao kernel em execução no destino."
+    ]
+  },
+  "threePillars": {
+    "heading": "Os três pilares de um backup",
+    "intro": "Um arquivo ProxMenux é estruturado em torno de três cargas independentes. A restauração usa as três em conjunto para reproduzir o host de origem em um destino que pode nem ter o mesmo kernel instalado.",
+    "diagramCaption": "Cada backup envia as mesmas três cargas, independentemente do destino. A restauração consome todos os três: rootfs para estabelecer arquivos, manifesto para detectar desvios e diferenças entre kernels e inventário de aplicativos para reinstalar pacotes e componentes no próprio kernel do destino.",
+    "pillar1Label": "Sistema de ficheiros",
+    "pillar1Detail": "rootfs/\n(rsync de /etc,\n/etc/systemd/network,\n/root, mais um\ninstantâneo sqlite3\nde /var/lib/pve-cluster,\n+ caminhos opcionais)",
+    "pillar2Label": "Manifesto",
+    "pillar2Detail": "manifest.json\n(hardware, parâmetros\ndo kernel, rede,\nZFS, usuários, cron,\npools ZFS, armazenamento)",
+    "pillar3Label": "Aplicativos",
+    "pillar3Detail": "packages.manual.list\n+ components_status.json\n(pacotes APT manuais + instaladores\nProxMenux com versões)"
+  },
+  "restoreIsUniversal": {
+    "heading": "A restauração reproduz o host de origem, não o arquivo",
+    "body": "A restauração de um backup ProxMenux não extrai apenas o sistema de arquivos. O fluxo de restauração lê o manifesto para detectar desvios entre a origem e o destino (diferenças de hardware, renomeações de NIC, versão do kernel, identidade do pool ZFS), reproduz o sistema de arquivos e aciona o instalador de componente correto para cada serviço que foi instalado na origem (driver NVIDIA, Coral TPU, ferramentas de GPU AMD, ferramentas Intel GPU). Cada instalador é executado no <strong>kernel atual do destino</strong>, portanto, o host restaurado não depende da presença do kernel da origem. Quando o kernel do destino é mais recente que o do backup, um passo de <strong>hidratação</strong> independente do kernel mescla o próprio ajuste do usuário (tokens IOMMU, IDs de dispositivos VFIO, peculiaridades personalizadas, chaves GRUB) na nova configuração de inicialização do destino sem copiar arquivos vinculados ao kernel literalmente."
+  },
+  "twoInterfaces": {
+    "heading": "Duas interfaces, um back-end",
+    "intro": "Cada etapa do fluxo de trabalho de backup e restauração está disponível em dois pontos de entrada. Ambos chamam a mesma biblioteca shell, produzem arquivos idênticos e leem o mesmo registro de tarefas.",
+    "cliLabel": "ProxMenux Scripts (TUI)",
+    "cliDetail": "menu → Utilitários →\nBackup/restauração de host\n\nFluxo baseado em diálogo,\nSSH amigável, programável\npara uso não supervisionado.",
+    "webLabel": "ProxMenux Monitor (Web UI)",
+    "webDetail": "Aba Backups na\ninterface web do Monitor.\n\nRestauração com um clique,\nacompanhamento dos logs ao vivo,\nintegração com notificações e o\nvisualizador de diferenças da reversão."
+  },
+  "whereNext": {
+    "heading": "Para onde ir a partir daqui",
+    "intro": "Cada subseção abaixo aborda detalhadamente um aspecto do fluxo de trabalho. Comece com <em>Como funciona</em> se o objetivo é entender o que o arquivo contém e por quê. Vá para <em>Destinos</em> para configurar o destino da cópia. Leia <em>Restauração</em> e <em>Restauração entre kernels</em> para o lado da recuperação.",
+    "items": [
+      {
+        "label": "Como funciona",
+        "href": "/docs/backup-restore/how-it-works",
+        "tail": "— os três payloads (rootfs, manifesto, aplicações) em detalhes, com os coletores que os produzem e o formato de cada arquivo."
+      },
+      {
+        "label": "Destinos",
+        "href": "/docs/backup-restore/destinations",
+        "tail": "— comparação entre local, Proxmox Backup Server (recomendado) e Borg, e como configurar cada um."
+      },
+      {
+        "label": "Criando backups",
+        "href": "/docs/backup-restore/creating-backups",
+        "tail": "— backups únicos, perfil de caminho padrão, adição de caminhos personalizados, criptografia para PBS."
+      },
+      {
+        "label": "Trabalhos agendados",
+        "href": "/docs/backup-restore/scheduled-jobs",
+        "tail": "— novos trabalhos versus anexação a um trabalho PVE vzdump existente, formatos de agendamento, modal de detalhes do trabalho."
+      },
+      {
+        "label": "Restauração",
+        "href": "/docs/backup-restore/restoring",
+        "tail": "— as três ações em um arquivo (visualizar, baixar, restaurar), restauração completa versus restauração personalizada, o despachante pós-inicialização e por que os últimos dez minutos são importantes."
+      },
+      {
+        "label": "Restauração entre kernels",
+        "href": "/docs/backup-restore/cross-kernel",
+        "tail": " — comportamento que considera a direção da mudança de versão quando o kernel do destino difere do kernel do backup, filtro de subconjunto seguro e quatro fases de hidratação."
+      }
+    ]
+  }
+}

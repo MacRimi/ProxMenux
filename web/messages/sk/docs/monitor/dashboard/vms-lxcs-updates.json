@@ -110,7 +110,7 @@
       "Nepridávajte <code>pct exec</code>; ProxMenux už vstupuje do kontajnera a príkaz spúšťa ako root."
     ],
     "exampleLead": "Príklad úplného postupu v kontajneri:",
-    "example": "cd /opt/moja-aplikacia && ./update.sh",
+    "example": "cd /opt/my-app && ./update.sh",
     "callout": "Príkaz ako <code>myapp --version</code> iba číta verziu a nič neaktualizuje. Príkazy sa spúšťajú s oprávneniami správcu a musia sa kontrolovať ako príkazy shellu root."
   },
   "bulk": {
@@ -140,7 +140,7 @@
     "items": [
       "Vyberte predvoľbu alebo cron výraz a potom presné ciele: balíky OS, jednotlivé aplikácie, Docker Engine, samostatné jednotky Dockeru alebo skupiny služieb Compose.",
       "Oneskorenie po vydaní platí iba pre vybrané aplikácie so sledovaním verzie. Aplikácie bez sledovania spustia aktualizátor pri každom termíne.",
-      "Stav posledného behu rozlišuje úspech, čiastočné dokončenie, zlyhanie, bezpečnostné pozdržanie a stav bez čakajúcich aktualizácií.",
+      "Stav posledného behu rozlišuje úspech, čiastočné dokončenie, zlyhanie, bezpečnostné pozastavenie a žiadne čakajúce aktualizácie. Po prvom plánovanom behu otvorí <strong>Aktualizácie → Plánované aktualizácie → Zobraziť záznam</strong> celý výstup aktualizátora a podradených skriptov.",
       "Zistené externé plány Proxmox VE Helper-Scripts sa zobrazia samostatne, aby bola viditeľná prekrývajúca sa automatizácia."
     ],
     "callout": "Pred zapnutím plánu otestujte každú vybranú metódu manuálne. Plánovaný príkaz nemôže odpovedať na interaktívne otázky."

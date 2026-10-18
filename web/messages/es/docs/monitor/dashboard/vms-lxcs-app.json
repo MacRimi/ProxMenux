@@ -101,7 +101,7 @@
     ],
     "sourcesHeading": "Fuentes para la versión disponible",
     "sources": [
-      "<strong>Repositorio de GitHub</strong>: último lanzamiento o etiqueta de un repositorio público <code>propietario/nombre</code>.",
+      "<strong>Repositorio de GitHub</strong>: último lanzamiento o etiqueta de un repositorio público <code>owner/name</code>.",
       "<strong>HTTP JSON</strong>: un punto final público y una ruta como <code>data.version</code> o <code>releases[0].tag_name</code>.",
       "<strong>Docker Hub</strong>: etiquetas versionadas filtradas con una expresión regular. La vista previa muestra etiquetas reales coincidentes antes de guardar.",
       "Las etiquetas móviles como <code>latest</code>, <code>stable</code> o <code>lts</code> no contienen una versión. Esas imágenes se siguen por digest desde las actualizaciones de imágenes Docker."
