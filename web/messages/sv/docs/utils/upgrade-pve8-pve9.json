@@ -33,7 +33,7 @@
       "title": "Automatiskt / Utan tillsyn",
       "summary": "Anger <code>ASSUME_YES=1</code> + <code>DEBIAN_FRONTEND=noninteractive</code>. För ändrade konfigurationsfiler använder dpkg sin standardåtgärd om den finns; annars <strong>behålls den befintliga filen</strong> (<code>--force-confold</code>).",
       "items": [
-        "Snabbast — ingen väntan på svar",
+        "Snabbast — inga dpkg-frågor under uppgraderingen",
         "Passar standardinstallationer utan anpassade konfigurationsfiler",
         "Risk: en anpassad konfiguration behålls utan fråga och kan dölja nya standardvärden"
       ]
@@ -69,7 +69,7 @@
   },
   "auto": {
     "heading": "Automatiskt läge / Utan tillsyn",
-    "intro": "Vanliga bekräftelser och frågor om konfigurationsfiler använder de valda standardsvaren. Blockerande fel i förkontrollen kan fortfarande kräva åtgärder. Använd läget för standardinstallationer eller efter att ha granskat hur standardsvaren påverkar dina anpassade filer.",
+    "intro": "Frågor om paket och konfigurationsfiler använder standardvärdena i tabellen nedan, och ett 401 från Enterprise-källan byter till no-subscription utan att fråga. Bekräftelsen av uppgraderingen, sammanfattningen av PVE 8-uppdateringen, reparationer från förkontrollen och frågan om omstart visas fortfarande.",
     "behaviourHeading": "Beteende i automatiskt läge",
     "behaviourTable": {
       "settingHeader": "Inställning",
@@ -77,7 +77,7 @@
       "rows": [
         {
           "settingRich": "<code>ASSUME_YES=1</code>",
-          "effectRich": "Intern inställning — bekräftar automatiskt skriptets ja/nej-frågor"
+          "effectRich": "Intern inställning — skriptet svarar själv ja på sina egna frågor, till exempel bytet till no-subscription efter ett 401"
         },
         {
           "settingRich": "<code>DEBIAN_FRONTEND=noninteractive</code>",
@@ -94,8 +94,8 @@
       ]
     },
     "flowHeading": "Förlopp i automatiskt läge",
-    "flowIntro": "Sex faser i följd. Tidiga faser kan uppdatera PVE 8-paket och skriva konfiguration för paketkällor. Ett fel stoppar förloppet men återställer inte ändringarna. Fas 5 kör <code>dist-upgrade</code> till PVE 9.",
-    "flowDiagram": "1. KONTROLLER\nBlockera termproxy / vncshell; avvisa PVE 9; kontrollera utrymme och anslutning.\nKräv Ceph 19.x Squid om det är installerat.\npve8to9 --full (kan erbjuda reparationer).\n\n2. FÖRBERED PVE 8\nscripts/global/update-pve8.sh\nUppdatera PVE 8-paket; systemctl restart pve-manager.\n\n3. ÄNDRA PAKETKÄLLOR\nBookworm → Trixie; skriv deb822-filer .sources.\nKommentera bort gamla .list-filer; apt-get update.\n\n4. KONTROLLERA PVE 9-KANDIDATEN\napt-cache policy proxmox-ve\napt-get -s dist-upgrade\nStoppa om kandidaten inte är 9.x eller om proxmox-ve skulle tas bort.\n\n5. UPPGRADERA\napt-get -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' dist-upgrade\nLogg: /var/log/pve8-a-pve9-'<'timestamp'>'.log\n\n6. KONTROLLERA OCH STARTA OM\nEFI: apt install grub-efi-amd64\npve8to9 --full; granska resultatet och frågan om omstart.",
+    "flowIntro": "Sex faser i följd. Fas 2 uppdaterar PVE 8-paketen och fas 3 skriver konfigurationen för PVE 9-paketkällorna. Ett fel stoppar förloppet men återställer inte ändringarna; om PVE 8-uppdateringen misslyckas eller avbryts lämnas paketkällorna orörda. Fas 5 kör <code>dist-upgrade</code> till PVE 9.",
+    "flowDiagram": "1. KONTROLLER\nBlockera termproxy / vncshell; bekräfta uppgraderingen; avvisa PVE 9.\n\n2. FÖRBERED PVE 8\nscripts/global/update-pve8.sh\nUppdatera PVE 8-paket; stoppa om uppdateringen misslyckas eller avbryts.\npve8to9 --full (kan erbjuda reparationer).\nKontrollera utrymme och anslutning; Ceph 19.x Squid på hyperkonvergerade noder.\n\n3. ÄNDRA PAKETKÄLLOR\nBookworm → Trixie; skriv deb822-filer .sources.\nKommentera bort gamla .list-filer; apt-get update.\n\n4. KONTROLLERA PVE 9-KANDIDATEN\napt-cache policy proxmox-ve\napt-get -s dist-upgrade\nStoppa om kandidaten inte är 9.x eller om proxmox-ve skulle tas bort.\n\n5. UPPGRADERA\napt-get -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' dist-upgrade\nUtan prenumeration: inaktivera pve-enterprise.sources.\nLogg: /var/log/pve8-a-pve9-'<'timestamp'>'.log\n\n6. KONTROLLERA OCH STARTA OM\nEFI: apt install grub-efi-amd64\npve8to9 --full; granska resultatet och frågan om omstart.",
     "preflightHeading": "Förkontroll: vad som kontrolleras",
     "preflightTable": {
       "checkHeader": "Kontroll",
@@ -137,7 +137,7 @@
     "postHeading": "Åtgärder efter uppgraderingen (automatiskt läge)",
     "postItems": [
       "<strong>EFI-värdar:</strong> installerar <code>grub-efi-amd64</code> enligt det kända problemet i Proxmox dokumentation. Uppgraderingen installerar inte paketet automatiskt och det kan behövas vid nästa start.",
-      "<strong>När <code>pve-manager</code> startas om.</strong> Den uttryckliga omstarten ingår i förberedelsen av PVE 8, före paketuppgraderingen till Trixie/PVE 9.",
+      "<strong>Enterprise-källa utan prenumeration.</strong> pve-manager 9 lägger till <code>pve-enterprise.sources</code> under uppgraderingen; i no-subscription-läget sätter skriptet den till <code>Enabled: false</code>.",
       "<strong>Kör <code>pve8to9 --full</code> igen.</strong> Visar kvarstående problem. Vid FAIL-fel visas samma reparationsmeny som under förkontrollen.",
       "<strong>Fråga om omstart.</strong> Omstart rekommenderas för att läsa in den nya kärnan och tjänsterna. Avböj endast av ett konkret skäl: det innebär risker att använda den gamla kärnan efter ett huvudversionsbyte."
     ]

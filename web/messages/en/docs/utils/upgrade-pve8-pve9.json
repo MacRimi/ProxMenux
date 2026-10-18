@@ -33,7 +33,7 @@
       "title": "Automatic / Unattended",
       "summary": "Sets <code>ASSUME_YES=1</code> + <code>DEBIAN_FRONTEND=noninteractive</code>. For modified configuration files, dpkg uses its default action when available; otherwise it will <strong>keep the current file</strong> (<code>--force-confold</code>).",
       "items": [
-        "Fastest — no waiting for prompts",
+        "Fastest — no dpkg prompts during the upgrade",
         "Best for vanilla installs without custom config files",
         "Risk: a config you customised is silently kept and may shadow new defaults"
       ]
@@ -69,7 +69,7 @@
   },
   "auto": {
     "heading": "Automatic / Unattended mode",
-    "intro": "Standard confirmation and configuration-file prompts use the configured defaults. Blocking pre-check failures may still require action. Use this mode for standard installations or after reviewing how the defaults affect your customised configuration files.",
+    "intro": "Package and configuration-file prompts use the defaults in the table below, and a 401 from the enterprise repository switches to no-subscription without asking. The upgrade confirmation, the PVE 8 update summary, any pre-check repairs and the reboot prompt are still shown.",
     "behaviourHeading": "Auto-mode-specific behaviour",
     "behaviourTable": {
       "settingHeader": "Setting",
@@ -77,7 +77,7 @@
       "rows": [
         {
           "settingRich": "<code>ASSUME_YES=1</code>",
-          "effectRich": "Internal flag — every yes/no confirmation in the script auto-confirms"
+          "effectRich": "Internal flag — the script answers its own yes/no questions, such as switching to no-subscription after a 401"
         },
         {
           "settingRich": "<code>DEBIAN_FRONTEND=noninteractive</code>",
@@ -94,8 +94,8 @@
       ]
     },
     "flowHeading": "Auto-mode flow",
-    "flowIntro": "Six sequential phases. Earlier phases can update PVE 8 packages and write repository configuration. A failure stops the flow but does not roll those changes back. Phase 5 runs the PVE 9 <code>dist-upgrade</code>.",
-    "flowDiagram": "1. CHECKS\nBlock termproxy / vncshell; reject PVE 9; check space and connectivity.\nRequire Ceph 19.x Squid when installed.\npve8to9 --full (may offer repairs).\n\n2. PREPARE PVE 8\nscripts/global/update-pve8.sh\nUpdate PVE 8 packages; systemctl restart pve-manager.\n\n3. MIGRATE REPOSITORIES\nBookworm → Trixie; write deb822 .sources files.\nComment legacy .list files; apt-get update.\n\n4. VALIDATE THE PVE 9 CANDIDATE\napt-cache policy proxmox-ve\napt-get -s dist-upgrade\nStop if the candidate is not 9.x or proxmox-ve would be removed.\n\n5. UPGRADE\napt-get -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' dist-upgrade\nLog: /var/log/pve8-a-pve9-'<'timestamp'>'.log\n\n6. VERIFY AND REBOOT\nEFI: apt install grub-efi-amd64\npve8to9 --full; review results and the reboot prompt.",
+    "flowIntro": "Six sequential phases. Phase 2 updates the PVE 8 packages and phase 3 writes the PVE 9 repository configuration. A failure stops the flow without rolling those changes back; if the PVE 8 update fails or is cancelled, the repositories are left unchanged. Phase 5 runs the PVE 9 <code>dist-upgrade</code>.",
+    "flowDiagram": "1. CHECKS\nBlock termproxy / vncshell; confirm the upgrade; reject PVE 9.\n\n2. PREPARE PVE 8\nscripts/global/update-pve8.sh\nUpdate PVE 8 packages; stop if the update fails or is cancelled.\npve8to9 --full (may offer repairs).\nCheck space and connectivity; Ceph 19.x Squid on hyper-converged nodes.\n\n3. MIGRATE REPOSITORIES\nBookworm → Trixie; write deb822 .sources files.\nComment legacy .list files; apt-get update.\n\n4. VALIDATE THE PVE 9 CANDIDATE\napt-cache policy proxmox-ve\napt-get -s dist-upgrade\nStop if the candidate is not 9.x or proxmox-ve would be removed.\n\n5. UPGRADE\napt-get -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' dist-upgrade\nNo subscription: disable pve-enterprise.sources.\nLog: /var/log/pve8-a-pve9-'<'timestamp'>'.log\n\n6. VERIFY AND REBOOT\nEFI: apt install grub-efi-amd64\npve8to9 --full; review results and the reboot prompt.",
     "preflightHeading": "Pre-flight: what gets checked",
     "preflightTable": {
       "checkHeader": "Check",
@@ -137,7 +137,7 @@
     "postHeading": "Post-upgrade tasks (auto mode)",
     "postItems": [
       "<strong>EFI hosts:</strong> installs <code>grub-efi-amd64</code> (known issue per Proxmox docs — the upgrade doesn't pull it in automatically and the next boot would fail without it).",
-      "<strong>Restart timing for <code>pve-manager</code>.</strong> The explicit restart is part of PVE 8 preparation, before the Trixie/PVE 9 package upgrade.",
+      "<strong>Enterprise repository without a subscription.</strong> pve-manager 9 adds <code>pve-enterprise.sources</code> during the upgrade; in no-subscription mode the script sets it to <code>Enabled: false</code>.",
       "<strong>Re-run <code>pve8to9 --full</code>.</strong> Surfaces any residual issues that the upgrade didn't resolve. If FAILs are reported, the same guided-repair menu as the pre-check appears.",
       "<strong>Reboot prompt.</strong> \"It is RECOMMENDED to reboot now to load the new kernel and services. Reboot now?\" Decline only if you have a specific reason — running on the old kernel after a major upgrade is risky."
     ]

@@ -33,7 +33,7 @@
       "title": "Automatique / Sans surveillance",
       "summary": "Définit <code>ASSUME_YES=1</code> + <code>DEBIAN_FRONTEND=noninteractive</code>. Pour les fichiers de configuration modifiés, dpkg utilise son action par défaut si elle existe ; sinon, il <strong>conserve le fichier actuel</strong> (<code>--force-confold</code>).",
       "items": [
-        "Le plus rapide — aucune attente des réponses",
+        "Le plus rapide — aucune question dpkg pendant la mise à niveau",
         "Adapté aux installations standard sans fichiers de configuration personnalisés",
         "Risque : une configuration personnalisée est conservée sans question et peut masquer les nouvelles valeurs par défaut"
       ]
@@ -69,7 +69,7 @@
   },
   "auto": {
     "heading": "Mode automatique / sans surveillance",
-    "intro": "Les confirmations et les questions habituelles sur les fichiers de configuration utilisent les réponses par défaut. Des échecs bloquants du contrôle préalable peuvent encore demander une intervention. Réservez ce mode aux installations standard, ou examinez d’abord l’effet des réponses sur vos fichiers personnalisés.",
+    "intro": "Les questions sur les paquets et les fichiers de configuration utilisent les valeurs par défaut du tableau ci-dessous, et un 401 du dépôt Enterprise bascule vers no-subscription sans demander. La confirmation de la mise à niveau, le résumé de la mise à jour PVE 8, les réparations du contrôle préalable et la demande de redémarrage restent affichés.",
     "behaviourHeading": "Comportement propre au mode automatique",
     "behaviourTable": {
       "settingHeader": "Réglage",
@@ -77,7 +77,7 @@
       "rows": [
         {
           "settingRich": "<code>ASSUME_YES=1</code>",
-          "effectRich": "Option interne — confirme automatiquement les questions oui/non du script"
+          "effectRich": "Option interne — le script répond oui à ses propres questions, comme le passage à no-subscription après un 401"
         },
         {
           "settingRich": "<code>DEBIAN_FRONTEND=noninteractive</code>",
@@ -94,8 +94,8 @@
       ]
     },
     "flowHeading": "Déroulement du mode automatique",
-    "flowIntro": "Six phases successives. Les premières peuvent mettre à jour des paquets PVE 8 et écrire la configuration des dépôts. Un échec arrête le déroulement sans annuler ces modifications. La phase 5 lance <code>dist-upgrade</code> vers PVE 9.",
-    "flowDiagram": "1. CONTRÔLES\nBloque termproxy / vncshell ; refuse PVE 9 ; vérifie espace et connectivité.\nExige Ceph 19.x Squid s’il est installé.\npve8to9 --full (peut proposer des réparations).\n\n2. PRÉPARER PVE 8\nscripts/global/update-pve8.sh\nMet à jour les paquets PVE 8 ; systemctl restart pve-manager.\n\n3. MIGRER LES DÉPÔTS\nBookworm → Trixie ; écrit les fichiers deb822 .sources.\nCommente les anciens fichiers .list ; apt-get update.\n\n4. VALIDER LE CANDIDAT PVE 9\napt-cache policy proxmox-ve\napt-get -s dist-upgrade\nArrêt si le candidat n’est pas 9.x ou si proxmox-ve serait supprimé.\n\n5. METTRE À NIVEAU\napt-get -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' dist-upgrade\nJournal : /var/log/pve8-a-pve9-'<'timestamp'>'.log\n\n6. VÉRIFIER ET REDÉMARRER\nEFI : apt install grub-efi-amd64\npve8to9 --full ; examiner le résultat et la demande de redémarrage.",
+    "flowIntro": "Six phases successives. La phase 2 met à jour les paquets PVE 8 et la phase 3 écrit la configuration des dépôts PVE 9. Un échec arrête le déroulement sans annuler ces modifications ; si la mise à jour PVE 8 échoue ou est annulée, les dépôts restent inchangés. La phase 5 lance <code>dist-upgrade</code> vers PVE 9.",
+    "flowDiagram": "1. CONTRÔLES\nBloque termproxy / vncshell ; confirme la mise à niveau ; refuse PVE 9.\n\n2. PRÉPARER PVE 8\nscripts/global/update-pve8.sh\nMet à jour les paquets PVE 8 ; arrêt si la mise à jour échoue ou est annulée.\npve8to9 --full (peut proposer des réparations).\nVérifie espace et connectivité ; Ceph 19.x Squid sur les nœuds hyperconvergés.\n\n3. MIGRER LES DÉPÔTS\nBookworm → Trixie ; écrit les fichiers deb822 .sources.\nCommente les anciens fichiers .list ; apt-get update.\n\n4. VALIDER LE CANDIDAT PVE 9\napt-cache policy proxmox-ve\napt-get -s dist-upgrade\nArrêt si le candidat n’est pas 9.x ou si proxmox-ve serait supprimé.\n\n5. METTRE À NIVEAU\napt-get -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' dist-upgrade\nSans abonnement : désactive pve-enterprise.sources.\nJournal : /var/log/pve8-a-pve9-'<'timestamp'>'.log\n\n6. VÉRIFIER ET REDÉMARRER\nEFI : apt install grub-efi-amd64\npve8to9 --full ; examiner le résultat et la demande de redémarrage.",
     "preflightHeading": "Contrôles avant la mise à niveau",
     "preflightTable": {
       "checkHeader": "Vérifier",
@@ -137,7 +137,7 @@
     "postHeading": "Tâches après mise à niveau (mode automatique)",
     "postItems": [
       "<strong>Hôtes EFI :</strong> installe <code>grub-efi-amd64</code>, conformément au problème connu décrit par Proxmox. La mise à niveau ne l’installe pas automatiquement et il peut être nécessaire au prochain démarrage.",
-      "<strong>Moment du redémarrage de <code>pve-manager</code>.</strong> Ce redémarrage explicite intervient pendant la préparation de PVE 8, avant la mise à niveau des paquets vers Trixie/PVE 9.",
+      "<strong>Dépôt Enterprise sans abonnement.</strong> pve-manager 9 ajoute <code>pve-enterprise.sources</code> pendant la mise à niveau ; en mode no-subscription, le script le règle sur <code>Enabled: false</code>.",
       "<strong>Relance <code>pve8to9 --full</code>.</strong> Signale les problèmes restants. Des erreurs FAIL affichent le même menu de réparation que le contrôle préalable.",
       "<strong>Demande de redémarrage.</strong> Il est recommandé de redémarrer pour charger le nouveau noyau et les services. Ne refusez que pour une raison précise : garder l’ancien noyau après un changement de version majeure présente un risque."
     ]

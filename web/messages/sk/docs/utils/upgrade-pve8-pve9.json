@@ -33,7 +33,7 @@
       "title": "Automatické / bez dozoru",
       "summary": "Nastaví <code>ASSUME_YES=1</code> + <code>DEBIAN_FRONTEND=noninteractive</code>. Pri upravených konfiguračných súboroch použije dpkg predvolenú akciu, ak existuje; inak <strong>ponechá aktuálny súbor</strong> (<code>--force-confold</code>).",
       "items": [
-        "Najrýchlejšie — bez čakania na odpovede",
+        "Najrýchlejšie — počas aktualizácie žiadne otázky dpkg",
         "Vhodné pre štandardné inštalácie bez vlastných úprav konfigurácie",
         "Riziko: upravený súbor sa ponechá bez otázky a môže prekryť nové predvolené nastavenia"
       ]
@@ -69,7 +69,7 @@
   },
   "auto": {
     "heading": "Automatický režim / Bezobslužne",
-    "intro": "Bežné potvrdenia a otázky o konfiguračných súboroch používajú predvolené odpovede. Blokujúce chyby predbežnej kontroly môžu naďalej vyžadovať zásah. Režim použite pri štandardnej inštalácii alebo po overení vplyvu odpovedí na vlastné nastavenia.",
+    "intro": "Otázky k balíkom a konfiguračným súborom používajú predvolené hodnoty z nasledujúcej tabuľky a odpoveď 401 z repozitára Enterprise prepne na no-subscription bez opýtania. Potvrdenie aktualizácie, súhrn aktualizácie PVE 8, opravy z predbežnej kontroly a otázka na reštart sa naďalej zobrazujú.",
     "behaviourHeading": "Správanie automatického režimu",
     "behaviourTable": {
       "settingHeader": "Nastavenie",
@@ -77,7 +77,7 @@
       "rows": [
         {
           "settingRich": "<code>ASSUME_YES=1</code>",
-          "effectRich": "Interná voľba — automaticky potvrdí otázky skriptu typu áno/nie"
+          "effectRich": "Interná voľba — skript sám odpovie áno na svoje otázky, napríklad na prechod na no-subscription po chybe 401"
         },
         {
           "settingRich": "<code>DEBIAN_FRONTEND=noninteractive</code>",
@@ -94,8 +94,8 @@
       ]
     },
     "flowHeading": "Postup automatického režimu",
-    "flowIntro": "Šesť po sebe idúcich fáz. Úvodné fázy môžu aktualizovať balíky PVE 8 a zapísať konfiguráciu repozitárov. Chyba postup zastaví, tieto zmeny však nevráti. Fáza 5 vykoná <code>dist-upgrade</code> na PVE 9.",
-    "flowDiagram": "1. KONTROLY\nBlokuje termproxy / vncshell; odmietne PVE 9; overí miesto a pripojenie.\nAk je Ceph nainštalovaný, vyžaduje 19.x Squid.\npve8to9 --full (môže ponúknuť opravy).\n\n2. PRÍPRAVA PVE 8\nscripts/global/update-pve8.sh\nAktualizuje balíky PVE 8; systemctl restart pve-manager.\n\n3. MIGRÁCIA REPOZITÁROV\nBookworm → Trixie; zapíše súbory deb822 .sources.\nZakomentuje staré súbory .list; apt-get update.\n\n4. OVERENIE KANDIDÁTA PVE 9\napt-cache policy proxmox-ve\napt-get -s dist-upgrade\nZastaví sa, ak kandidát nie je 9.x alebo by sa odstránil proxmox-ve.\n\n5. AKTUALIZÁCIA\napt-get -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' dist-upgrade\nProtokol: /var/log/pve8-a-pve9-'<'timestamp'>'.log\n\n6. OVERENIE A REŠTART\nEFI: apt install grub-efi-amd64\npve8to9 --full; skontrolujte výsledok a otázku na reštart.",
+    "flowIntro": "Šesť po sebe idúcich fáz. Fáza 2 aktualizuje balíky PVE 8 a fáza 3 zapíše konfiguráciu repozitárov PVE 9. Chyba postup zastaví, tieto zmeny však nevráti; ak aktualizácia PVE 8 zlyhá alebo sa zruší, repozitáre zostanú nezmenené. Fáza 5 vykoná <code>dist-upgrade</code> na PVE 9.",
+    "flowDiagram": "1. KONTROLY\nBlokuje termproxy / vncshell; potvrdí aktualizáciu; odmietne PVE 9.\n\n2. PRÍPRAVA PVE 8\nscripts/global/update-pve8.sh\nAktualizuje balíky PVE 8; zastaví sa, ak aktualizácia zlyhá alebo sa zruší.\npve8to9 --full (môže ponúknuť opravy).\nOverí miesto a pripojenie; Ceph 19.x Squid na hyperkonvergovaných uzloch.\n\n3. MIGRÁCIA REPOZITÁROV\nBookworm → Trixie; zapíše súbory deb822 .sources.\nZakomentuje staré súbory .list; apt-get update.\n\n4. OVERENIE KANDIDÁTA PVE 9\napt-cache policy proxmox-ve\napt-get -s dist-upgrade\nZastaví sa, ak kandidát nie je 9.x alebo by sa odstránil proxmox-ve.\n\n5. AKTUALIZÁCIA\napt-get -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' dist-upgrade\nBez predplatného: vypne pve-enterprise.sources.\nProtokol: /var/log/pve8-a-pve9-'<'timestamp'>'.log\n\n6. OVERENIE A REŠTART\nEFI: apt install grub-efi-amd64\npve8to9 --full; skontrolujte výsledok a otázku na reštart.",
     "preflightHeading": "Kontroly pred aktualizáciou",
     "preflightTable": {
       "checkHeader": "Kontrola",
@@ -137,7 +137,7 @@
     "postHeading": "Úlohy po aktualizácii (automatický režim)",
     "postItems": [
       "<strong>Hostitelia EFI:</strong> nainštaluje <code>grub-efi-amd64</code> podľa známeho problému v dokumentácii Proxmoxu. Aktualizácia ho nepridá automaticky a pri ďalšom štarte môže byť potrebný.",
-      "<strong>Čas reštartu <code>pve-manager</code>.</strong> Výslovný reštart patrí do prípravy PVE 8, pred aktualizáciou balíkov na Trixie/PVE 9.",
+      "<strong>Repozitár Enterprise bez predplatného.</strong> pve-manager 9 počas aktualizácie pridá <code>pve-enterprise.sources</code>; v režime no-subscription ho skript nastaví na <code>Enabled: false</code>.",
       "<strong>Znova spustí <code>pve8to9 --full</code>.</strong> Zobrazí zostávajúce problémy. Pri chybách FAIL sa otvorí rovnaká ponuka opráv ako pri predbežnej kontrole.",
       "<strong>Otázka na reštart.</strong> Reštart sa odporúča na načítanie nového jadra a služieb. Odmietnite ho iba z konkrétneho dôvodu: ponechanie starého jadra po prechode na novú hlavnú verziu prináša riziko."
     ]

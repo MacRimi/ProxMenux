@@ -33,7 +33,7 @@
       "title": "Automatisch / unbeaufsichtigt",
       "summary": "Setzt <code>ASSUME_YES=1</code> + <code>DEBIAN_FRONTEND=noninteractive</code>. Bei geänderten Konfigurationsdateien verwendet dpkg seine Standardaktion, sofern vorhanden; andernfalls wird <strong>die vorhandene Datei beibehalten</strong> (<code>--force-confold</code>).",
       "items": [
-        "Am schnellsten — kein Warten auf Rückfragen",
+        "Am schnellsten — keine dpkg-Rückfragen während des Upgrades",
         "Geeignet für Standardinstallationen ohne angepasste Konfigurationsdateien",
         "Risiko: Eine angepasste Datei bleibt ohne Rückfrage erhalten und kann neue Standardwerte überlagern"
       ]
@@ -69,7 +69,7 @@
   },
   "auto": {
     "heading": "Automatischer / unbeaufsichtigter Modus",
-    "intro": "Übliche Bestätigungen und Rückfragen zu Konfigurationsdateien verwenden die eingestellten Standardantworten. Blockierende Fehler der Vorabprüfung können weiterhin Eingriffe erfordern. Verwenden Sie den Modus für Standardinstallationen oder nachdem Sie die Auswirkungen auf angepasste Dateien geprüft haben.",
+    "intro": "Rückfragen zu Paketen und Konfigurationsdateien verwenden die Standardwerte aus der folgenden Tabelle, und ein 401 vom Enterprise-Repository wechselt ohne Rückfrage zu no-subscription. Die Upgrade-Bestätigung, die Zusammenfassung des PVE-8-Updates, Reparaturen der Vorabprüfung und die Neustart-Rückfrage werden weiterhin angezeigt.",
     "behaviourHeading": "Besonderheiten des automatischen Modus",
     "behaviourTable": {
       "settingHeader": "Einstellung",
@@ -77,7 +77,7 @@
       "rows": [
         {
           "settingRich": "<code>ASSUME_YES=1</code>",
-          "effectRich": "Interner Schalter — bestätigt die Ja/Nein-Rückfragen des Skripts automatisch"
+          "effectRich": "Interner Schalter — das Skript beantwortet seine eigenen Ja/Nein-Rückfragen, etwa den Wechsel zu no-subscription nach einem 401"
         },
         {
           "settingRich": "<code>DEBIAN_FRONTEND=noninteractive</code>",
@@ -94,8 +94,8 @@
       ]
     },
     "flowHeading": "Ablauf im automatischen Modus",
-    "flowIntro": "Sechs aufeinanderfolgende Phasen. Frühere Phasen können PVE-8-Pakete aktualisieren und Repository-Dateien schreiben. Ein Fehler hält den Ablauf an, macht diese Änderungen aber nicht rückgängig. Phase 5 führt <code>dist-upgrade</code> auf PVE 9 aus.",
-    "flowDiagram": "1. PRÜFUNGEN\ntermproxy / vncshell blockieren; PVE 9 ablehnen; Speicher und Verbindung prüfen.\nBei installiertem Ceph ist 19.x Squid erforderlich.\npve8to9 --full (kann Reparaturen anbieten).\n\n2. PVE 8 VORBEREITEN\nscripts/global/update-pve8.sh\nPVE-8-Pakete aktualisieren; systemctl restart pve-manager.\n\n3. REPOSITORIES UMSTELLEN\nBookworm → Trixie; deb822-Dateien .sources schreiben.\nAlte .list-Dateien auskommentieren; apt-get update.\n\n4. PVE-9-KANDIDAT PRÜFEN\napt-cache policy proxmox-ve\napt-get -s dist-upgrade\nAbbruch, wenn der Kandidat nicht 9.x ist oder proxmox-ve entfernt würde.\n\n5. UPGRADE\napt-get -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' dist-upgrade\nProtokoll: /var/log/pve8-a-pve9-'<'timestamp'>'.log\n\n6. PRÜFEN UND NEU STARTEN\nEFI: apt install grub-efi-amd64\npve8to9 --full; Ergebnis und Neustart-Rückfrage prüfen.",
+    "flowIntro": "Sechs aufeinanderfolgende Phasen. Phase 2 aktualisiert die PVE-8-Pakete, Phase 3 schreibt die Repository-Konfiguration für PVE 9. Ein Fehler hält den Ablauf an, macht diese Änderungen aber nicht rückgängig; schlägt das PVE-8-Update fehl oder wird es abgebrochen, bleiben die Repositories unverändert. Phase 5 führt <code>dist-upgrade</code> auf PVE 9 aus.",
+    "flowDiagram": "1. PRÜFUNGEN\ntermproxy / vncshell blockieren; Upgrade bestätigen; PVE 9 ablehnen.\n\n2. PVE 8 VORBEREITEN\nscripts/global/update-pve8.sh\nPVE-8-Pakete aktualisieren; Abbruch, wenn das Update fehlschlägt oder abgebrochen wird.\npve8to9 --full (kann Reparaturen anbieten).\nSpeicher und Verbindung prüfen; Ceph 19.x Squid auf hyperkonvergenten Knoten.\n\n3. REPOSITORIES UMSTELLEN\nBookworm → Trixie; deb822-Dateien .sources schreiben.\nAlte .list-Dateien auskommentieren; apt-get update.\n\n4. PVE-9-KANDIDAT PRÜFEN\napt-cache policy proxmox-ve\napt-get -s dist-upgrade\nAbbruch, wenn der Kandidat nicht 9.x ist oder proxmox-ve entfernt würde.\n\n5. UPGRADE\napt-get -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' dist-upgrade\nOhne Subskription: pve-enterprise.sources deaktivieren.\nProtokoll: /var/log/pve8-a-pve9-'<'timestamp'>'.log\n\n6. PRÜFEN UND NEU STARTEN\nEFI: apt install grub-efi-amd64\npve8to9 --full; Ergebnis und Neustart-Rückfrage prüfen.",
     "preflightHeading": "Vor dem Upgrade: diese Punkte werden geprüft",
     "preflightTable": {
       "checkHeader": "Prüfung",
@@ -137,7 +137,7 @@
     "postHeading": "Post-Upgrade-Aufgaben (Automodus)",
     "postItems": [
       "<strong>EFI-Hosts:</strong> installiert <code>grub-efi-amd64</code> gemäß dem bekannten Problem in der Proxmox-Dokumentation. Das Paket wird beim Upgrade nicht automatisch installiert und kann für den nächsten Start erforderlich sein.",
-      "<strong>Zeitpunkt des Neustarts von <code>pve-manager</code>.</strong> Der ausdrückliche Neustart erfolgt bei der Vorbereitung von PVE 8, vor dem Paket-Upgrade auf Trixie/PVE 9.",
+      "<strong>Enterprise-Repository ohne Subskription.</strong> pve-manager 9 legt beim Upgrade <code>pve-enterprise.sources</code> an; im no-subscription-Modus setzt das Skript es auf <code>Enabled: false</code>.",
       "<strong><code>pve8to9 --full</code> erneut ausführen.</strong> Zeigt verbliebene Probleme. Bei FAIL-Meldungen erscheint das gleiche Reparaturmenü wie bei der Vorabprüfung.",
       "<strong>Neustart-Rückfrage.</strong> Ein Neustart wird empfohlen, um den neuen Kernel und die Dienste zu laden. Lehnen Sie ihn nur aus einem konkreten Grund ab; der alte Kernel nach einem Hauptversionswechsel birgt Risiken."
     ]
