@@ -83,12 +83,12 @@
   },
   "q10": {
     "question": "Comment désinstaller ProxMenux ?",
-    "p1Rich": "Dans ProxMenux : <strong>Paramètres → Désinstaller ProxMenux</strong>. La désinstallation supprime l’arborescence des scripts, le lanceur et le service Monitor, ainsi que les dépendances sélectionnées si vous le souhaitez. Elle restaure <code>/root/.bashrc</code> et <code>/etc/motd</code> depuis les sauvegardes de l’installation, si elles existent.",
+    "p1Rich": "Dans ProxMenux : <strong>Paramètres → Désinstaller ProxMenux</strong>. La désinstallation supprime l’arborescence des scripts, le lanceur et le service Monitor, ainsi que les dépendances sélectionnées si vous le souhaitez. Elle restaure <code>/root/.bashrc</code> et <code>/etc/motd</code> depuis les sauvegardes créées par Post-Install, si elles existent (sinon, elle supprime la ligne ProxMenux du MOTD).",
     "p2Rich": "Étape par étape : <uninstalllink>Désinstaller ProxMenux</uninstalllink>."
   },
   "q11": {
     "question": "VirusTotal affiche l'URL d'installation — est-ce sûr?",
-    "p1Rich": "Le résultat de 1/95 attribué à <em>Chong Lua Dao</em> et signalé dans l’issue #162 a été identifié par le mainteneur comme un faux positif. L’installateur utilise le modèle <code>curl | bash</code> et peut télécharger <code>jq</code> depuis sa version officielle sur GitHub. Ce <em>comportement</em> peut déclencher des analyses heuristiques ; ce rapport historique ne préjuge pas de tous les téléchargements futurs.",
+    "p1Rich": "Le résultat de 1/95 attribué à <em>Chong Lua Dao</em> et signalé dans l’issue #162 a été identifié par le mainteneur comme un faux positif. L’installateur est lancé par une commande qui télécharge puis exécute le script (<code>bash -c \"$(wget -qLO - …)\"</code>) et peut télécharger <code>jq</code> depuis sa version officielle sur GitHub. Ce <em>comportement</em> peut déclencher des analyses heuristiques ; ce rapport historique ne préjuge pas de tous les téléchargements futurs.",
     "p2Rich": "ProxMenux est entièrement open source. Vous pouvez examiner le script d’installation ligne par ligne : <scriptlink>install_proxmenux.sh</scriptlink>. Plus de contexte dans l’<issuelink>issue #162</issuelink>."
   }
 }

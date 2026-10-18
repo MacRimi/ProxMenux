@@ -140,7 +140,7 @@
     "heading": "Solución de problemas",
     "noServersTitle": "\"No se encontraron servidores NFS en la red\"",
     "noServersBody": "El auto-descubrimiento usa <code>nmap -p 2049 --open &lt;subnet&gt;/24</code>. El servidor puede no responder si: está en una VLAN / subnet diferente, su firewall bloquea las sondas nmap (muchos lo hacen) o el puerto 2049 está intencionalmente cerrado en esa interfaz. Usa la opción <em>Manual</em> con la IP o hostname del servidor en su lugar.",
-    "portTitle": "«El puerto NFS (2049) no es accesible»",
+    "portTitle": "«No se puede acceder al puerto NFS (2049)»",
     "portBody": "El ping tuvo éxito pero <code>nc -z -w 3 &lt;server&gt; 2049</code> falló. Comprueba que el servicio NFS está corriendo en el servidor (<code>systemctl status nfs-server</code> en Linux, Panel de Control → File Services en Synology, plugin NFS en OMV / TrueNAS) y que el firewall permite el 2049 desde el host Proxmox.",
     "showmountTitle": "\"Failed to connect\" desde showmount",
     "showmountBody": "El servidor rechazó la consulta de la lista de exports. Causas comunes: el servidor aplica ACLs de cliente estrictas (tu IP de Proxmox no está en la lista permitida), <code>rpcbind</code> no está corriendo en el servidor o el servidor expone solo NFSv4 con <code>showmount</code> deshabilitado. La ruta del export se puede añadir manualmente igualmente si la conoces.",

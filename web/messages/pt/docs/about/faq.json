@@ -83,12 +83,12 @@
   },
   "q10": {
     "question": "Como faço para desinstalar ProxMenux?",
-    "p1Rich": "No ProxMenux: <strong>Definições → Desinstalar ProxMenux</strong>. A desinstalação remove os scripts, o comando de arranque e o serviço Monitor, além das dependências selecionadas, se assim escolher. Restaura <code>/root/.bashrc</code> e <code>/etc/motd</code> a partir das cópias criadas na instalação, caso existam.",
+    "p1Rich": "No ProxMenux: <strong>Definições → Desinstalar ProxMenux</strong>. A desinstalação remove os scripts, o comando de arranque e o serviço Monitor, além das dependências selecionadas, se assim escolher. Restaura <code>/root/.bashrc</code> e <code>/etc/motd</code> a partir das cópias criadas pelo Post-Install, caso existam (caso contrário, remove a linha do ProxMenux do MOTD).",
     "p2Rich": "Passo a passo completo: <uninstalllink>Desinstalar ProxMenux</uninstalllink>."
   },
   "q11": {
     "question": "VirusTotal sinaliza o URL de instalação — é seguro?",
-    "p1Rich": "O resultado de 1/95 do motor <em>Chong Lua Dao</em>, comunicado na issue #162, foi identificado pelo responsável do projeto como um falso positivo. O instalador usa o padrão <code>curl | bash</code> e pode descarregar <code>jq</code> da sua versão oficial no GitHub. Este <em>comportamento</em> pode ativar análises heurísticas; esse relatório histórico não avalia todos os downloads futuros.",
+    "p1Rich": "O resultado de 1/95 do motor <em>Chong Lua Dao</em>, comunicado na issue #162, foi identificado pelo responsável do projeto como um falso positivo. O instalador é executado com um comando que descarrega e executa o script (<code>bash -c \"$(wget -qLO - …)\"</code>) e pode descarregar <code>jq</code> da sua versão oficial no GitHub. Este <em>comportamento</em> pode ativar análises heurísticas; esse relatório histórico não avalia todos os downloads futuros.",
     "p2Rich": "O ProxMenux é totalmente de código aberto e pode analisar o script de instalação linha a linha: <scriptlink>install_proxmenux.sh</scriptlink>. Mais contexto na <issuelink>issue #162</issuelink>."
   }
 }

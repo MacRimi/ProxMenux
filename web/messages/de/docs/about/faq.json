@@ -83,12 +83,12 @@
   },
   "q10": {
     "question": "Wie deinstalliere ich ProxMenux?",
-    "p1Rich": "In ProxMenux: <strong>Einstellungen → ProxMenux deinstallieren</strong>. Die Deinstallation entfernt den Skriptbaum, das Startskript und den Monitor-Dienst sowie auf Wunsch ausgewählte Abhängigkeiten. <code>/root/.bashrc</code> und <code>/etc/motd</code> werden aus den bei der Installation angelegten Sicherungen wiederhergestellt, sofern diese vorhanden sind.",
+    "p1Rich": "In ProxMenux: <strong>Einstellungen → ProxMenux deinstallieren</strong>. Die Deinstallation entfernt den Skriptbaum, das Startskript und den Monitor-Dienst sowie auf Wunsch ausgewählte Abhängigkeiten. <code>/root/.bashrc</code> und <code>/etc/motd</code> werden aus den von Post-Install angelegten Sicherungen wiederhergestellt, sofern diese vorhanden sind (andernfalls wird die ProxMenux-Zeile aus der MOTD entfernt).",
     "p2Rich": "Die vollständige Anleitung finden Sie unter <uninstalllink>ProxMenux deinstallieren</uninstalllink>."
   },
   "q11": {
     "question": "VirusTotal markiert die Installations-URL - ist es sicher?",
-    "p1Rich": "Der in Issue #162 gemeldete Treffer von <em>Chong Lua Dao</em> bei 1 von 95 Prüfungen wurde vom Maintainer als Fehlalarm eingestuft. Der Installer verwendet das Muster <code>curl | bash</code> und kann <code>jq</code> aus dessen offizieller GitHub-Veröffentlichung herunterladen. Dieses <em>Verhalten</em> kann heuristische Scanner auslösen. Der damalige Bericht ist keine Bewertung aller künftigen Downloads.",
+    "p1Rich": "Der in Issue #162 gemeldete Treffer von <em>Chong Lua Dao</em> bei 1 von 95 Prüfungen wurde vom Maintainer als Fehlalarm eingestuft. Der Installer wird mit einem Befehl gestartet, der das Skript herunterlädt und ausführt (<code>bash -c \"$(wget -qLO - …)\"</code>) und kann <code>jq</code> aus dessen offizieller GitHub-Veröffentlichung herunterladen. Dieses <em>Verhalten</em> kann heuristische Scanner auslösen. Der damalige Bericht ist keine Bewertung aller künftigen Downloads.",
     "p2Rich": "ProxMenux ist vollständig quelloffen. Sie können das Installationsskript Zeile für Zeile prüfen: <scriptlink>install_proxmenux.sh</scriptlink>. Weitere Hintergründe finden Sie in <issuelink>Issue #162</issuelink>."
   }
 }

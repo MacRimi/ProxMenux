@@ -308,7 +308,7 @@ show_storage_commands() {
         echo -e "16) ${GREEN}cat /etc/pve/storage.cfg${NC}    - $(translate 'Show Proxmox storage configuration')"
         echo -e "17) ${GREEN}pvesm status${NC}                - $(translate 'Show status of all storage pools')"
         echo -e "18) ${GREEN}pvesm list <storage>${NC}        - $(translate 'List content of specific storage')"
-        echo -e "19) ${GREEN}pvesm scan <storage>${NC}        - $(translate 'Scan storage for new content')"
+        echo -e "19) ${GREEN}pvesm scan nfs <server>${NC}     - $(translate 'Discover NFS exports on a server')"
         echo -e "20) ${GREEN}qm importdisk <vmid> <img> <storage>${NC}          - $(translate 'Import disk image to VM')"
         echo -e "21) ${GREEN}qm set <vmid> -<bus><index> <disk>${NC}            - $(translate 'Add physical disk to VM via') passthrough"
         echo -e "22) ${GREEN}qemu-img convert -O <format> <input> <output>${NC} - $(translate 'Convert disk image format')"
@@ -358,9 +358,9 @@ show_storage_commands() {
                 cmd="pvesm list $store"
                 ;;
             19)
-                echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter storage ID: ')${CL}"
-                read -r store
-                cmd="pvesm scan $store"
+                echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter NFS server IP or hostname:') ${CL}"
+                read -r server
+                cmd="pvesm scan nfs $server"
                 ;;
             20)
                 echo -en "${TAB}${BOLD}${YW}${HOLD}$(translate 'Enter VM ID: ')${CL}"
@@ -652,7 +652,7 @@ show_update_commands() {
         echo -e " 1) ${GREEN}apt update && apt upgrade -y${NC}   - $(translate 'Update and upgrade all system packages')"
         echo -e " 2) ${GREEN}apt dist-upgrade -y${NC}            - $(translate 'Full system upgrade, including dependencies')"
         echo -e " 3) ${GREEN}pveupdate${NC}                      - $(translate 'Update Proxmox package lists')"
-        echo -e " 4) ${GREEN}pveupgrade${NC}                     - $(translate 'Show available Proxmox upgrades')"
+        echo -e " 4) ${GREEN}pveupgrade${NC}                     - $(translate 'Start the interactive Proxmox package upgrade')"
         echo -e " 5) ${GREEN}apt autoremove --purge${NC}         - $(translate 'Remove unused packages and their config')"
         echo -e " ${DEF}0) $(translate ' Back to previous menu or Esc + Enter')"
         echo

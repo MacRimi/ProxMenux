@@ -83,12 +83,12 @@
   },
   "q10": {
     "question": "¿Cómo desinstalo ProxMenux?",
-    "p1Rich": "Desde ProxMenux: <strong>Ajustes → Desinstalar ProxMenux</strong>. El desinstalador elimina el árbol de scripts, el lanzador y el servicio Monitor, permite eliminar dependencias seleccionadas y restaura <code>/root/.bashrc</code> y <code>/etc/motd</code> desde los backups hechos al instalar, si existen.",
+    "p1Rich": "Desde ProxMenux: <strong>Ajustes → Desinstalar ProxMenux</strong>. El desinstalador elimina el árbol de scripts, el lanzador y el servicio Monitor, permite eliminar dependencias seleccionadas y restaura <code>/root/.bashrc</code> y <code>/etc/motd</code> desde los backups que crea Post-Install, si existen (si no, elimina la línea de ProxMenux del MOTD).",
     "p2Rich": "Paso a paso completo: <uninstalllink>Desinstalar ProxMenux</uninstalllink>."
   },
   "q11": {
     "question": "VirusTotal marca la URL de instalación — ¿es seguro?",
-    "p1Rich": "El resultado de 1/95 notificado en el issue #162, de <em>Chong Lua Dao</em>, fue identificado por el mantenedor como un falso positivo. El instalador usa el patrón <code>curl | bash</code> y puede descargar <code>jq</code> desde su versión oficial de GitHub. Este <em>comportamiento</em> puede activar análisis heurísticos; aquel informe histórico no determina la seguridad de futuras descargas.",
+    "p1Rich": "El resultado de 1/95 notificado en el issue #162, de <em>Chong Lua Dao</em>, fue identificado por el mantenedor como un falso positivo. El instalador se ejecuta con una orden que descarga y ejecuta el script (<code>bash -c \"$(wget -qLO - …)\"</code>) y puede descargar <code>jq</code> desde su versión oficial de GitHub. Este <em>comportamiento</em> puede activar análisis heurísticos; aquel informe histórico no determina la seguridad de futuras descargas.",
     "p2Rich": "ProxMenux es 100% código abierto y el script de instalación es revisable línea por línea: <scriptlink>install_proxmenux.sh</scriptlink>. Más contexto en la <issuelink>Issue #162</issuelink>."
   }
 }

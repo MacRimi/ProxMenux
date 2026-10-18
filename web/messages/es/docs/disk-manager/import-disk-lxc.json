@@ -82,7 +82,7 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "unprivTitle": "\"No se puede continuar con un contenedor no privilegiado\"",
+    "unprivTitle": "\"No se puede continuar con un contenedor sin privilegios\"",
     "unprivBody": "Rechazaste la conversión, así que el script se detuvo sin cambiar nada. Para continuar, vuelve a ejecutarlo y acepta: el script detiene el contenedor, guarda una copia de su configuración en <code>/etc/pve/lxc/&lt;CTID&gt;.conf.bak</code> y sustituye <code>unprivileged: 1</code> por <code>unprivileged: 0</code>. Ese cambio por sí solo no convierte los UID/GID de los archivos existentes, así que haz antes un backup del contenedor y corrige los propietarios; como alternativa, restaura o recrea el contenedor como privilegiado.",
     "permsTitle": "Los permisos dentro del contenedor están mal",
     "permsBody": "Al montar una partición en un contenedor privilegiado se conserva la propiedad existente; un sistema de archivos recién formateado suele pertenecer a <code>root:root</code>. Si el servicio usa otro usuario, por ejemplo <code>www-data</code> para Nextcloud, comprueba su UID/GID y ajusta los archivos necesarios con <code>chown</code>/<code>chmod</code>. Los cambios afectan también al disco subyacente."

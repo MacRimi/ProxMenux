@@ -83,12 +83,12 @@
   },
   "q10": {
     "question": "Ako odinštalujem ProxMenux?",
-    "p1Rich": "V ProxMenuxe: <strong>Nastavenia → Odinštalovať ProxMenux</strong>. Odinštalovanie odstráni skripty, spúšťač a službu Monitor a voliteľne aj vybrané závislosti. Súbory <code>/root/.bashrc</code> a <code>/etc/motd</code> obnoví zo záloh vytvorených pri inštalácii, ak sú dostupné.",
+    "p1Rich": "V ProxMenuxe: <strong>Nastavenia → Odinštalovať ProxMenux</strong>. Odinštalovanie odstráni skripty, spúšťač a službu Monitor a voliteľne aj vybrané závislosti. Súbory <code>/root/.bashrc</code> a <code>/etc/motd</code> obnoví zo záloh, ktoré vytvoril Post-Install, ak sú dostupné (inak odstráni riadok ProxMenux z MOTD).",
     "p2Rich": "Celý postup nájdete na stránke <uninstalllink>Odinštalovanie ProxMenuxu</uninstalllink>."
   },
   "q11": {
     "question": "VirusTotal označuje inštalačnú URL ako podozrivú — je bezpečná?",
-    "p1Rich": "Výsledok 1/95 od <em>Chong Lua Dao</em>, nahlásený v issue #162, správca projektu označil za falošný poplach. Inštalátor používa vzor <code>curl | bash</code> a môže stiahnuť <code>jq</code> z jeho oficiálneho vydania na GitHube. Takéto <em>správanie</em> môže spustiť heuristickú detekciu; historické hlásenie nie je hodnotením všetkých budúcich stiahnutí.",
+    "p1Rich": "Výsledok 1/95 od <em>Chong Lua Dao</em>, nahlásený v issue #162, správca projektu označil za falošný poplach. Inštalátor sa spúšťa príkazom, ktorý skript stiahne a spustí (<code>bash -c \"$(wget -qLO - …)\"</code>) a môže stiahnuť <code>jq</code> z jeho oficiálneho vydania na GitHube. Takéto <em>správanie</em> môže spustiť heuristickú detekciu; historické hlásenie nie je hodnotením všetkých budúcich stiahnutí.",
     "p2Rich": "ProxMenux má úplne otvorený zdrojový kód a inštalačný skript si môžete skontrolovať riadok po riadku: <scriptlink>install_proxmenux.sh</scriptlink>. Ďalšie súvislosti nájdete v <issuelink>issue #162</issuelink>."
   }
 }

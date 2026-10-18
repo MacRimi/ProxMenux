@@ -83,12 +83,12 @@
   },
   "q10": {
     "question": "How do I uninstall ProxMenux?",
-    "p1Rich": "From inside ProxMenux: <strong>Settings → Uninstall ProxMenux</strong>. The uninstaller removes the script tree, the launcher and the Monitor service, optionally removes selected dependencies, and restores <code>/root/.bashrc</code> and <code>/etc/motd</code> from install-time backups if those backups exist.",
+    "p1Rich": "From inside ProxMenux: <strong>Settings → Uninstall ProxMenux</strong>. The uninstaller removes the script tree, the launcher and the Monitor service, optionally removes selected dependencies, and restores <code>/root/.bashrc</code> and <code>/etc/motd</code> from the backups created by Post-Install, if they exist (otherwise it removes the ProxMenux MOTD line).",
     "p2Rich": "Full step-by-step: <uninstalllink>Uninstall ProxMenux</uninstalllink>."
   },
   "q11": {
     "question": "VirusTotal flags the install URL — is it safe?",
-    "p1Rich": "The 1/95 result reported in Issue #162, from <em>Chong Lua Dao</em>, was identified by the maintainer as a false positive. The installer uses the <code>curl | bash</code> pattern and can download <code>jq</code> from its official GitHub release. Such <em>behaviour</em> can trigger heuristic scanners; the historical report is not a verdict on every future download.",
+    "p1Rich": "The 1/95 result reported in Issue #162, from <em>Chong Lua Dao</em>, was identified by the maintainer as a false positive. The installer is run with a command that downloads and executes the script (<code>bash -c \"$(wget -qLO - …)\"</code>) and can download <code>jq</code> from its official GitHub release. Such <em>behaviour</em> can trigger heuristic scanners; the historical report is not a verdict on every future download.",
     "p2Rich": "ProxMenux is 100% open source and the install script is reviewable line by line: <scriptlink>install_proxmenux.sh</scriptlink>. More context in <issuelink>Issue #162</issuelink>."
   }
 }
