@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Installing ProxMenux | ProxMenux Documentation",
-    "description": "One-line installer for ProxMenux on Proxmox VE 8+ hosts. Ships pre-generated translation files for six languages (English, Spanish, French, German, Italian, Portuguese) — the language is picked once during installation. Beta channel also available for early access to new features.",
+    "description": "One-command installer for ProxMenux on Proxmox VE 8+ hosts. Includes pre-generated JSON catalogs for eight languages: English, Spanish, French, German, Italian, Portuguese, Slovak and Swedish. Choose a language during installation or change it later in Settings. A beta channel provides early access to new features.",
     "ogTitle": "Installing ProxMenux | ProxMenux Documentation",
     "ogDescription": "Install ProxMenux on Proxmox VE 8+ in one command. Stable and beta channels available."
   },
@@ -61,12 +61,12 @@
   },
   "uninstall": {
     "heading": "Uninstalling",
-    "body": "From inside ProxMenux: <strong>Settings → Uninstall ProxMenux</strong>. Removes the script tree, launcher and Monitor service, optionally removes selected dependencies, restores <code>/root/.bashrc</code> and <code>/etc/motd</code> backups taken at install time. Full step-by-step: <uninstalllink>Uninstall ProxMenux</uninstalllink>."
+    "body": "From inside ProxMenux: <strong>Settings → Uninstall ProxMenux</strong>. Removes the script tree, launcher and Monitor service, optionally removes selected dependencies, and restores <code>/root/.bashrc</code> and <code>/etc/motd</code> from the backups created by Post-Install, if they exist (otherwise it removes the ProxMenux MOTD line). Full step-by-step: <uninstalllink>Uninstall ProxMenux</uninstalllink>."
   },
   "troubleshoot": {
     "heading": "Troubleshooting",
     "virustotalTitle": "VirusTotal flags the install URL",
-    "virustotalBody": "A 1/95 detection by heuristic engines (e.g. <em>Chong Lua Dao</em>) is a known false positive. The installer uses the standard <code>curl | bash</code> pattern and downloads legitimate binaries (like <code>jq</code> from its official GitHub release), which aggressive scanners flag based on <em>behaviour</em> rather than actual malicious code. The installer is 100% open source and reviewable. More context in <issuelink>Issue #162</issuelink>.",
+    "virustotalBody": "The 1/95 result from <em>Chong Lua Dao</em> reported in Issue #162 was identified by the maintainer as a false positive. The installer is run with a command that downloads and executes the script (<code>bash -c \"$(wget -qLO - …)\"</code>) and can download <code>jq</code> from its official GitHub release. This <em>behaviour</em> can trigger heuristic scanners. That historical report does not assess every future download. The installer is open source and reviewable. More context in <issuelink>Issue #162</issuelink>.",
     "aptTitle": "Install fails with apt errors",
     "aptBody": "Usually a missing or misconfigured Proxmox repo. The installer pulls dependencies via apt; if the repo config is broken (often the case on bare-bones Proxmox 8 installs that haven't been updated yet), apt fails. Run <code>apt-get update</code> manually first and resolve any errors, then re-run the installer.",
     "menuTitle": "`menu: command not found` after install",
