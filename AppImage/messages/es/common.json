@@ -2673,7 +2673,7 @@
       "expires": "Vence",
       "selfSignedWarning": "Los certificados autofirmados pueden mostrar una advertencia en el navegador. Esto es normal para las configuraciones locales de Proxmox.",
       "configuring": "Configurando...",
-      "useProxmoxCertificate": "Utilice el certificado Proxmox",
+      "useProxmoxCertificate": "Usar certificado de Proxmox",
       "noProxmoxCertificate": "No se detectó ningún certificado Proxmox.",
       "useCustomCertificate": "Usar certificado personalizado",
       "customPaths": "Rutas de certificados personalizadas",
