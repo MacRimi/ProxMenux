@@ -1,0 +1,213 @@
+{
+  "meta": {
+    "title": "OCI manager Apps | ProxMenux",
+    "description": "Kör officiella OCI-avbildningar som LXC-containrar direkt i Proxmox VE, med beständiga data, enhetsåtkomst, program med flera containrar och transaktionsbaserade uppdateringar."
+  },
+  "header": {
+    "title": "OCI manager Apps",
+    "description": "Officiella OCI-avbildningar körs som inbyggda LXC-containrar i Proxmox VE. Avbildningen är fortfarande den som underhållaren publicerar; ProxMenux återskapar miljön som Docker Compose annars skulle ha skapat runt den.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "model",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "En OCI-avbildning, en LXC direkt i Proxmox VE",
+            "body": "Ingen Docker Engine körs i containrarna. Proxmox VE importerar avbildningens filsystem och OCI-metadata. Programmet blir huvudprocessen i en inbyggd LXC-container som hanteras med samma verktyg som övriga containrar på noden."
+          }
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Källa",
+                "detail": "OCI-avbildning\nCompose och dokumentation"
+              },
+              {
+                "label": "ProxMenux",
+                "detail": "JSON-kontrakt\nvalidering och planering"
+              },
+              {
+                "label": "Proxmox VE",
+                "detail": "LXC direkt i Proxmox VE\nvolymer och enheter"
+              }
+            ],
+            "caption": "Programmet byggs inte om. Dess miljö beskrivs deklarativt och återskapas."
+          }
+        }
+      ]
+    },
+    {
+      "id": "where",
+      "title": "Var du hittar det",
+      "intro": "Öppna <strong>OCI manager Apps (Technology Preview)</strong> i ProxMenux huvudmeny på Proxmox-noden som root. Den första vyn erbjuder:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "<strong>Sök program</strong> – sök efter namn i hela katalogen.",
+              "<strong>Alla program</strong> – visa hela katalogen och antalet program.",
+              "<strong>Hantera installerade OCI-program</strong> – uppdatera, ändra, ta bort eller återställ befintliga installationer.",
+              "<strong>Registerkonton</strong> – hantera konton för att installera och uppdatera avbildningar från privata register.",
+              "<strong>Installera en avbildning utanför katalogen</strong> – anpassa en Compose-fil, ett <code>docker run</code>-kommando eller en avbildningsreferens.",
+              "Katalogens kategorier, var och en med sitt antal program."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/main-menu.png",
+            "alt": "Huvudvyn i OCI manager Apps med sökning, hela katalogen, programhantering, avbildningar utanför katalogen och kategorier.",
+            "caption": "Huvudvyn i OCI manager Apps."
+          }
+        },
+        {
+          "p": "När du väljer ett program visas dess beskrivning, avbildningen som används och två installationslägen. <strong>Installera med standardinställningar</strong> frågar bara efter grundvalen: lagring, dataplacering, adress och start. <strong>Installera med avancerade inställningar</strong> går igenom alla val i ordning: VMID och resurser, lagring för varje sökväg, nätverksbrygga och enheter."
+        },
+        {
+          "p": "Program som faktiskt har testats visas som <strong>Verifierad</strong> i den här vyn och markeras med ✓ i listorna, oavsett om testet gjordes i ProxMenux labb eller av användargemenskapen."
+        }
+      ]
+    },
+    {
+      "id": "beta",
+      "title": "Varför beteckningen Technology Preview används",
+      "blocks": [
+        {
+          "p": "OCI manager Apps behåller beteckningen <strong>Technology Preview</strong> som Proxmox VE använder för programcontainrar skapade från OCI-avbildningar. Stödet infördes i Proxmox VE 9.1. Beteckningen gäller tekniken som OCI manager Apps bygger på, inte ProxMenux-motorn: containrarnas beteende kan fortfarande ändras mellan Proxmox VE-versioner. Beteckningen behålls tills Proxmox VE bedömer att stödet är stabilt."
+        },
+        {
+          "p": "Funktionerna i OCI manager Apps testas i ProxMenux labb: installation, uppdatering, ändringar, återskapande, säkerhetskopiering, återställning, migrering och watchdog. Varje program testas separat. De som faktiskt har testats visas som <strong>Verifierad</strong> och markeras med ✓ i listorna."
+        }
+      ]
+    },
+    {
+      "id": "translation",
+      "title": "Så beskriver Docker kraven och så omsätter OCI manager Apps dem",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Krav",
+              "Så uttrycks det i Docker",
+              "Så omsätts det i OCI manager Apps"
+            ],
+            "rows": [
+              [
+                "Kör programmet",
+                "<code>image</code>, <code>entrypoint</code>, <code>command</code>",
+                "OCI-avbildningens rootfs och LXC-containerns huvudprocess"
+              ],
+              [
+                "Bevara konfigurationen",
+                "<code>volumes: /config</code>",
+                "En beständig <code>mpN</code>-volym som tas med i säkerhetskopian, eller en katalog på värden."
+              ],
+              [
+                "Gör tjänsten tillgänglig",
+                "<code>ports</code>",
+                "En egen adress för LXC-containern och tjänstens åtkomst-URL."
+              ],
+              [
+                "Använd maskinvara",
+                "<code>devices</code>, <code>group_add</code>",
+                "<code>devN</code>-poster med värdens effektiva grupp-ID (GID) och en validerad profil."
+              ],
+              [
+                "Koppla ihop beroenden",
+                "<code>networks</code>, <code>depends_on</code>",
+                "En privat nätverksbrygga, fasta adresser, startordning och hälsokontroller."
+              ],
+              [
+                "Uppdatera",
+                "Hämta med <code>pull</code> och återskapa",
+                "Ett nytt rootfs med samma kontrakt för beständiga data."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "kept",
+      "title": "Vad som bevaras och vad som ändras",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "archive",
+                "title": "Bevaras",
+                "body": "Den officiella avbildningen, dess interna sökvägar, miljö, startprocess och användardokumentation."
+              },
+              {
+                "icon": "boxes",
+                "title": "Anpassas",
+                "body": "Körmiljön: nätverk, beständiga data, enheter, behörigheter och beroenden använder de inbyggda LXC-funktionerna i Proxmox VE."
+              },
+              {
+                "icon": "shield",
+                "title": "Utan motsvarighet",
+                "body": "Ett Compose-alternativ utan en säker motsvarighet markeras som ett hinder för installationen. Mallar med sådana hinder erbjuds inte för installation, och känsliga alternativ måste bekräftas i installationsguiden."
+              },
+              {
+                "icon": "refresh",
+                "title": "Sparas",
+                "body": "Avbildningens digest, resurser, sökvägar, nätverk, enheter och tillhörighet till en stack sparas i instanskontraktet. Uppdateringar och återskapande följer samma kontrakt."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "pages",
+      "title": "Sidor i det här avsnittet",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Så anpassas en OCI-avbildning",
+                "href": "/docs/oci-manager/architecture",
+                "tail": "Från avbildningen och dess Compose-fil till en LXC direkt i Proxmox VE."
+              },
+              {
+                "label": "Installera en avbildning utanför katalogen",
+                "href": "/docs/oci-manager/custom-image",
+                "tail": "En Compose-fil, ett docker run-kommando eller en avbildningsreferens."
+              },
+              {
+                "label": "Data, sökvägar och nätverk",
+                "href": "/docs/oci-manager/storage-network",
+                "tail": "Containervolymer, kataloger på värden, rclone-monteringar och adresser."
+              },
+              {
+                "label": "Enheter och acceleration",
+                "href": "/docs/oci-manager/hardware",
+                "tail": "GPU, NVIDIA, Coral, USB och andra enheter."
+              },
+              {
+                "label": "Program med flera containrar",
+                "href": "/docs/oci-manager/stacks",
+                "tail": "Program, databas och cache i samordnade LXC-containrar."
+              },
+              {
+                "label": "Installera, uppdatera och ändra",
+                "href": "/docs/oci-manager/lifecycle",
+                "tail": "Instanskontraktet och dess åtgärder."
+              },
+              {
+                "label": "I ProxMenux Monitor",
+                "href": "/docs/oci-manager/monitor",
+                "tail": "Versioner, uppdateringar, konsolutdata och terminal."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

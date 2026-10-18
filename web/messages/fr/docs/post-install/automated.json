@@ -1,0 +1,172 @@
+{
+  "meta": {
+    "title": "Script de post-installation automatisé | Documentation ProxMenux",
+    "description": "Le script de post-installation automatisé ProxMenux exécute 14 optimisations prédéfinies adaptées au matériel sur un nouvel hôte Proxmox VE. Il n’a pas de liste de fonctions à sélectionner, mais peut demander confirmation pour la mise à jour du système, pour masquer l’avertissement d’abonnement, installer Log2RAM dans certains cas et redémarrer. Les changements réversibles sont enregistrés.",
+    "ogTitle": "Script de post-installation automatisé | Documentation ProxMenux",
+    "ogDescription": "14 optimisations prédéfinies adaptées au matériel pour un nouvel hôte Proxmox VE, avec confirmation de certaines actions et suivi des changements réversibles."
+  },
+  "header": {
+    "title": "Script de post-installation automatisé",
+    "description": "ProxMenux exécute 14 optimisations de base prédéfinies sans liste de fonctions à sélectionner. Certaines actions demandent confirmation. Les changements réversibles sont enregistrés pour Désinstaller les optimisations ; les mises à niveau de paquets ne sont pas présentées comme réversibles.",
+    "section": "Post-installation · Automatisée"
+  },
+  "intro": {
+    "title": "Quand choisir Automatisé",
+    "body": "Exécutez-le sur un hôte Proxmox fraîchement installé pour obtenir une configuration de base raisonnable sans choisir chaque fonction. Le script est idempotent : une deuxième exécution réapplique les mêmes paramètres. Les fonctions optionnelles (Fastfetch, IOMMU, dépôt Ceph, HA, correctifs AMD…) ne font volontairement <strong>pas</strong> partie de ce parcours ; choisissez-les dans <link>Personnalisable</link> au besoin."
+  },
+  "applies": {
+    "heading": "Ce que le script applique",
+    "intro": "Les optimisations sont appliquées dans cet ordre exact. La colonne <em>Catégorie</em> permet de consulter la documentation détaillée de chaque changement dans la référence personnalisable.",
+    "headerNum": "#",
+    "headerTool": "Outil",
+    "headerWhat": "Ce qu'il fait",
+    "headerCategory": "Catégorie"
+  },
+  "optimizations": [
+    {
+      "tool": "Dépôts APT + mise à jour complète",
+      "what": "Désactive les dépôts Enterprise pve-enterprise.sources et ceph.sources, crée une source sans abonnement pour le nom de code Debian de l’hôte, puis lance apt update && apt full-upgrade -y (commande officielle de mise à niveau Proxmox).",
+      "category": "Paramètres de base",
+      "categorySlug": "basic-settings"
+    },
+    {
+      "tool": "Suppression de la bannière d'abonnement",
+      "what": "Modifie l’interface web pour masquer l’avertissement « Aucun abonnement valide ». Demande confirmation avant application ; réversible via Désinstaller les optimisations.",
+      "category": "Personnalisation",
+      "categorySlug": "customization"
+    },
+    {
+      "tool": "Forcer IPv4",
+      "what": "Écrit /etc/apt/apt.conf.d/99-force-ipv4 pour que apt utilise uniquement IPv4 et contourne les liaisons IPv6 instables vers les miroirs.",
+      "category": "Réseau",
+      "categorySlug": "network"
+    },
+    {
+      "tool": "Sauter les paquets de langue",
+      "what": "Écrit /etc/apt/apt.conf.d/99-disable-translations pour ne plus télécharger les index de descriptions de paquets traduites et réduire les données des mises à jour apt.",
+      "category": "Paramètres de base",
+      "categorySlug": "basic-settings"
+    },
+    {
+      "tool": "Augmentation des limites du système",
+      "what": "Augmente le nombre de surveillances inotify, les limites nofile/nproc, celles du trousseau du noyau et fs.file-max via sysctl.d, limits.d, pam et systemd, pour les hôtes avec de nombreux conteneurs.",
+      "category": "Système",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Réglage de la mémoire",
+      "what": "Définit vm.swappiness=10, des ratios équilibrés de pages modifiées non écrites, vm.max_map_count=262144 et la proactivité du compactage si disponible. La politique de surallocation mémoire du noyau reste celle de Proxmox par défaut.",
+      "category": "Système",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Comportement en cas de panique du noyau",
+      "what": "Configure l’hôte pour redémarrer 10 secondes après un panic / oops / hardlockup au lieu de rester bloqué indéfiniment.",
+      "category": "Système",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Réglage de la pile réseau",
+      "what": "Taille des tampons TCP, durcissement IPv4 (redirections désactivées, rp_filter=2, journalisation martian désactivée), ports locaux 1024-65535, détection MTU TCP, RFC 1337 et script /usr/local/sbin/proxmenux-fwbr-tune lié à une unité systemd à exécution unique et une règle udev. Ainsi, rp_filter=0 / log_martians=0 sont réappliqués aux interfaces fwbr*/fwln*/fwpr*/tap* à chaque recréation par Proxmox au démarrage/arrêt des VM, au redémarrage ou à la migration à chaud.",
+      "category": "Réseau",
+      "categorySlug": "network"
+    },
+    {
+      "tool": "Personnalisation du bashrc (root)",
+      "what": "PS1 coloré, alias courants (l/la/ll/ls/grep), historique horodaté et chargement de bash-completion, dans un bloc délimité PMX_CORE_BASHRC facile à retirer.",
+      "category": "Personnalisation",
+      "categorySlug": "customization"
+    },
+    {
+      "tool": "Log2RAM (adapté aux SSD, automatique)",
+      "what": "Réduit l’usure SSD/NVMe en déplaçant /var/log dans un disque RAM tmpfs synchronisé régulièrement vers le disque. Installation depuis le projet amont si le disque racine est SSD ou NVMe. Taille selon la RAM de l’hôte (128M / 256M / 512M), synchronisation périodique et protection automatique qui purge les anciens journaux à 80% et tronque les journaux très actifs à 92% avant écriture. Adapte les limites journald au disque RAM. Détails dans <link>Log2RAM</link>.",
+      "category": "Stockage",
+      "categorySlug": "storage"
+    },
+    {
+      "tool": "ZFS autotrim (SSD seulement)",
+      "what": "Active zpool autotrim=on sur chaque pool ZFS dont tous les vdevs sont des SSD ou NVMe compatibles TRIM, après vérification de /sys/block/[dev]/queue/rotational et discard_granularity. Les pools sur HDD sont ignorés. Seuls les pools effectivement modifiés par ProxMenux sont mémorisés pour la désinstallation ; ceux sur lesquels vous avez activé autotrim manuellement restent inchangés.",
+      "category": "Stockage",
+      "categorySlug": "storage"
+    },
+    {
+      "tool": "Limites de taille de journald",
+      "what": "Force le stockage persistant, limite SystemMaxUse=64M / RuntimeMaxUse=60M, active la compression et les journaux de niveau info requis par Monitor. Ignoré si Log2RAM est actif, car il effectue son propre réglage.",
+      "category": "Système",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Réglage du logrotate",
+      "what": "Définit globalement daily puis size 10M, conserve 7 rotations et active compression et copytruncate. Le critère de taille placé après prévaut ; les règles propres aux journaux peuvent le remplacer. Adapté à Log2RAM, mais la fréquence dépend des règles et du minuteur.",
+      "category": "Système",
+      "categorySlug": "system"
+    },
+    {
+      "tool": "Noms d'interface persistants",
+      "what": "Écrit un <code>/etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code> par NIC physique (chacun commençant par un en-tête 'Managed by ProxMenux') qui épingle le MAC au nom courant, de sorte que les noms <code>eth0</code> / <code>enp…</code> restent stables à travers les reboots et les nouveaux ajouts NIC.",
+      "category": "Réseau",
+      "categorySlug": "network"
+    }
+  ],
+  "hardwareTitle": "Valeurs par défaut adaptées au matériel",
+  "hardwareBody": "Le script examine le matériel avant de configurer l’hôte. Par défaut, Log2RAM s’installe uniquement si le disque racine est SSD ou NVMe ; il demande confirmation sinon. La taille du disque RAM dépend de la RAM totale (<code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>'>' 16 GB → 512M</code>). Quand Log2RAM est actif, les limites journald sont adaptées au disque RAM pour éviter de le remplir.",
+  "upgrade": {
+    "heading": "Mettre à jour les listes de paquets et le système",
+    "intro": "La première étape du parcours automatisé est la mise à niveau Proxmox. Pour un hôte en fonctionnement au sein de la même version majeure, Proxmox recommande :",
+    "after": "Cette ligne est la commande officielle des versions actuelles de Proxmox. Le script automatisé l’exécute <strong>exactement</strong> et ajoute le nettoyage des dépôts et les tâches après mise à niveau recommandés par le guide — comme l’utilitaire autonome <link>Mise à jour du système Proxmox</link> :",
+    "items": [
+      "Désactive les sources Enterprise <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, supprime les anciens fichiers de dépôts et crée une source sans abonnement pour le nom de code de l’hôte.",
+      "Exécute la mise à jour non interactive avec <code>DEBIAN_FRONTEND=noninteractive</code> et <code>--force-confdef --force-confold</code> — les fichiers de configuration que vous avez personnalisés restent les vôtres lorsque l'amont les a également modifiés.",
+      "Installe les paquets Proxmox essentiels s’ils manquent (<code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>).",
+      "Vérification de cohérence des métadonnées LVM, <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code> et demande de redémarrage seulement si le noyau a changé."
+    ],
+    "sameTitle": "Même mise à jour, deux points d'entrée",
+    "sameBody": "Le paquet automatisé et l'utilitaire autonome <link>Proxmox System Update</link> partagent les mêmes scripts sous-jacents (<code>update-pve8.sh</code> / <code>update-pve9_2.sh</code>). Utilisez l'utilitaire seul quand vous voulez seulement mettre à niveau l'hôte sans appliquer le reste des optimisations."
+  },
+  "endResult": {
+    "heading": "Résultat final escompté",
+    "body": "À la fin, un message de réussite et les sorties de chaque étape s’affichent, avec une demande de redémarrage pour les paramètres du noyau qui en ont besoin. Vous pouvez le reporter ; ces paramètres s’appliqueront au prochain démarrage.",
+    "imageAlt": "script automatisé post-installation — sortie finale du terminal montrant chaque optimisation appliquée avec succès"
+  },
+  "notDoes": {
+    "heading": "Ce que ce script ne fait PAS",
+    "items": [
+      "Détection automatique par fuseau horaire (commenté en amont; utiliser Personnalisable si vous le souhaitez).",
+      "Désactiver portmapper / rpcbind (voir <secLink>Sécurité</secLink>).",
+      "Activer IOMMU / VFIO (voir <virtLink>Virtualisation</virtLink>).",
+      "Installer Fastfetch / Figurine / le dépôt Ceph / HA / les correctifs CPU AMD (voir <optLink>Options</optLink>).",
+      "Installer pigz ou ajuster ZFS ARC (voir <perfLink>Performances</perfLink> / <storLink>Stockage</storLink>)."
+    ]
+  },
+  "xshokTitle": "détection xshok-proxmox",
+  "xshokBody": "Si l'hôte a déjà lancé le script <code>xshok-proxmox</code>, ProxMenux détecte le fichier marqueur et vous avertit avant de continuer. Certains changements peuvent se chevaucher. Le script compagnon est déprécié — si vous décidez de continuer de toute façon, consultez <link>la vue d'ensemble</link> pour le contexte.",
+  "revert": {
+    "heading": "Annuler les changements",
+    "body": "Chaque outil du tableau est enregistré dans <code>/usr/local/share/proxmenux/installed_tools.json</code>. Ouvrez <link>Désinstaller les optimisations</link> pour choisir les éléments à rétablir. Les sauvegardes des fichiers modifiés se trouvent à côté des originaux avec le suffixe <code>.bak</code>."
+  },
+  "related": {
+    "heading": "Voir aussi",
+    "items": [
+      {
+        "label": "Post-installation personnalisable",
+        "href": "/docs/post-install/customizable",
+        "tail": "— choisissez exactement ce que vous voulez dans le même catalogue."
+      },
+      {
+        "label": "Désinstaller les optimisations",
+        "href": "/docs/post-install/uninstall",
+        "tail": "— de revenir sur tout sous-ensemble de ce qui a été appliqué ici."
+      },
+      {
+        "label": "Commandes système utiles",
+        "href": "/docs/help-info/system-commands",
+        "tail": "— vérifier les changements (uptime, free, journalctl, etc.)."
+      },
+      {
+        "label": "Aperçu après l'installation",
+        "href": "/docs/post-install",
+        "tail": "."
+      }
+    ]
+  }
+}

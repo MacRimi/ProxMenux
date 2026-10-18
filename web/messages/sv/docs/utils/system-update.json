@@ -1,0 +1,168 @@
+{
+  "meta": {
+    "title": "Proxmox systemuppdatering | ProxMenux-dokumentation",
+    "description": "Uppdaterar paket inom den aktuella Proxmox-huvudversionen med apt-get update och apt full-upgrade -y. Kontrollerar diskutrymme och konfigurerade paketförråd, försöker återställa GPG-nycklar, kontrollerar och reparerar gamla LVM-PV-huvuden, bygger om hanterade DKMS-drivrutiner vid behov, kör autoremove/autoclean och erbjuder omstart när det behövs.",
+    "ogTitle": "Proxmox systemuppdatering | ProxMenux-dokumentation",
+    "ogDescription": "apt full-upgrade med kontroll av paketförråd, autoremove/autoclean och omstartsfråga vid behov."
+  },
+  "header": {
+    "title": "Proxmox systemuppdatering",
+    "description": "Anropar ett enda arbetsskript (<code>update-pve-safe.sh</code>) som identifierar den aktuella Proxmox-huvudversionen. Konfigurerade paketförråd läses via Proxmox API och bevaras. En värd utan abonnemang som bara använder Enterprise måste bekräfta ett byte till no-subscription. Skriptet uppdaterar paket och bygger om ProxMenux-hanterade DKMS-drivrutiner för en kärna som är klar för nästa start. Huvudskriptet erbjuder omstart om systemets omstartsmarkering finns eller om den senaste installerade kärnan skiljer sig från den som körs. Processen kan också startas med <em>Update Now</em> i ProxMenux Monitor-huvudet när väntande uppdateringar upptäcks.",
+    "section": "Verktyg"
+  },
+  "calloutWhat": {
+    "title": "Vad detta gör",
+    "body": "Uppdaterar värden till den senaste korrigeringsnivån inom dess aktuella huvudversion. Uppgraderar <strong>inte</strong> till en annan huvudversion. För PVE 8 → PVE 9, se <link>Uppgradera PVE 8 till PVE 9</link>."
+  },
+  "official": {
+    "heading": "Proxmox officiella rekommendation",
+    "intro": "För att uppdatera en värd inom samma huvudversion rekommenderar Proxmox att du kör:",
+    "code": "apt update && apt full-upgrade -y",
+    "outro": "Den här raden är det officiella kommandot för aktuella Proxmox-versioner. Du behöver också kontrollera att paketförråden är korrekta, att rätt förråd är aktiverade och att värden fungerar som den ska efter uppdateringen."
+  },
+  "onTop": {
+    "heading": "Vad ProxMenux lägger till: verifierat i skriptet",
+    "intro": "Använder <strong>samma apt full-upgrade-åtgärd</strong>, med kontroll av paketförråd, DKMS-ombyggnad och efterföljande städning. Stegen nedan motsvarar <code>scripts/utilities/proxmox_update.sh</code> och dess enda arbetsskript <code>scripts/global/update-pve-safe.sh</code>:",
+    "items": [
+      "<strong>Identifierar PVE-huvudversionen</strong> i arbetsskriptet (<code>pveversion | grep -oP ''pve-manager/\\K[0-9]+''</code>). Ett enda skript hanterar PVE 8 och PVE 9. Konfigurerade paketförråd bevaras om inte en värd utan abonnemang accepterar det erbjudna bytet.",
+      "<strong>Behåller konfigurerade paketförråd.</strong> <code>ensure_repositories</code> läser förråd och abonnemangsstatus via Proxmox API. Med ett aktivt abonnemang eller ett redan använt no-subscription- eller testförråd ändras inget. En värd utan aktivt abonnemang som bara använder Enterprise måste bekräfta bytet till no-subscription. Ett nej avslutar uppdateringen utan att ändra några källor.",
+      "<strong>Kör uppdateringen utan interaktion</strong> med <code>DEBIAN_FRONTEND=noninteractive</code> och <code>--force-confdef --force-confold</code>. För dpkg-konfigurationsfiler väljs standardåtgärden om en sådan finns; annars behålls den befintliga filen.",
+      "<strong>Tvingar inte fram valfria verktyg.</strong> Arbetsskriptet installerar inte <code>zfsutils-linux</code>, <code>chrony</code>, <code>ifupdown2</code> eller liknande paket mot det tidigare valet. En Proxmox-installation som avstått från något av dem behåller det valet. Saknade paket visas av de överordnade installationsflödena, inte av uppdateringsflödet.",
+      "<strong>Kontroll och reparation av LVM-metadata.</strong> Identifierar gamla PV-huvuden och kör vgck --updatemetadata och vgchange -ay för berörda volymgrupper. Detta kan ändra LVM-metadata; det är inte en kontroll som bara visar varningar.",
+      "<strong>Rengör efteråt:</strong> <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>.",
+      "<strong>DKMS byggs om före omstartsfrågan.</strong> Arbetsskriptet anropar <code>pmx_rebuild_dkms_after_kernel</code> när en nyare installerad kärna är klar. Huvudskriptet kontrollerar <code>/var/run/reboot-required</code> och använder <code>dpkg-query</code> för att jämföra kärnan från <code>uname -r</code> med det senaste installerade paketet <code>proxmox-kernel-*-pve-signed</code> / <code>pve-kernel-*-pve</code>. Markeringen kan saknas på värdar utan <code>needrestart</code>; kärnjämförelsen fungerar ändå."
+    ]
+  },
+  "calloutOneSentence": {
+    "title": "I en mening",
+    "body": "Uppdaterar värdens paket, behåller paketförråd om du inte accepterar ett byte, kontrollerar LVM-metadata, bygger om hanterade DKMS-drivrutiner, städar med autoremove/autoclean och erbjuder omstart vid behov."
+  },
+  "confirm": {
+    "heading": "Bekräftelsedialog",
+    "intro": "När du väljer alternativet öppnas en sammanfattning av de planerade åtgärderna som kräver en uttrycklig bekräftelse:",
+    "imageAlt": "Bekräftelsedialog för Proxmox systemuppdatering med kontroll av paketförråd, paketuppdateringar och städning"
+  },
+  "routes": {
+    "heading": "Så delegerar huvudskriptet arbetet",
+    "nodes": {
+      "source": {
+        "label": "proxmox_update.sh",
+        "detail": "pveversion |\ngrep -oP ''pve-manager/\\K[0-9]+''"
+      },
+      "bridge": {
+        "label": "Ett enda arbetsskript",
+        "detail": "update-pve-safe.sh\n(detekterar PVE 8 / 9\ninternt)"
+      },
+      "target": {
+        "label": "Efter uppdatering",
+        "detail": "apt-get autoremove\napt-get autoclean\nOmstartsfråga vid behov"
+      }
+    }
+  },
+  "worker": {
+    "heading": "Vad arbetsskriptet gör",
+    "intro": "Ett arbetsskript (<code>scripts/global/update-pve-safe.sh</code>) hanterar PVE 8 (<code>bookworm</code>) och PVE 9 (<code>trixie</code>). Det identifierar huvudversionen internt och kontrollerar befintliga paketförråd utan att skriva om Debians grundkällor. Stegen är:",
+    "items": [
+      "<strong>Förkontroller.</strong> Kontrollerar att minst ~1 GB är ledigt i <code>/var/cache/apt/archives</code>. Vid för lite utrymme avbryts processen tidigt med ett tydligt meddelande så att den inte misslyckas mitt i en apt-transaktion.",
+      "<strong>Kontroll av paketförråd.</strong> <code>ensure_repositories</code> läser förråd och abonnemangsstatus. Med ett användbart Proxmox-förråd ändras inget. En värd utan aktivt abonnemang som bara använder Enterprise måste bekräfta bytet till no-subscription; ett nej avslutar uppdateringen.",
+      "<strong>apt update med automatisk GPG-återställning.</strong> Vid <code>NO_PUBKEY</code> för ett paketförråd, även ett från tredje part, importerar arbetsskriptet den saknade nyckeln och försöker igen innan det rapporterar ett fel.",
+      "<strong>Väntande uppdateringar och säkerhetsuppdateringar.</strong> Visar hur många paket som kommer att ändras och hur många som kommer från säkerhetssviten, så att bekräftelsedialogen visar konkreta antal.",
+      "<strong>Bekräftelsedialog.</strong> Efter uppdatering av paketlistorna kräver arbetsskriptet ett uttryckligt ja innan paketen uppdateras.",
+      "<strong>apt full-upgrade.</strong> Använder <code>DEBIAN_FRONTEND=noninteractive</code> och <code>--force-confdef --force-confold</code>. Dpkg följer standardåtgärden för konfigurationsfiler när en sådan finns och behåller annars den befintliga filen.",
+      "<strong>LVM-kontroll.</strong> <code>lvm_repair_check</code> uppdaterar volymgruppernas metadata när diskar som genomkopplats till gäst-VM:er (DSM, TrueNAS eller lagringsapparater) återkommer med gamla PV-huvuden.",
+      "<strong>DKMS-ombyggnad för ProxMenux-hanterade drivrutiner.</strong> När en ny kärna är klar läser <code>pmx_rebuild_dkms_after_kernel</code> de ProxMenux-installerade drivrutinerna i <code>components_status.json</code> (för närvarande <code>nvidia_driver</code> → modul <code>nvidia</code> och <code>coral_driver</code> → modul <code>gasket</code>), installerar matchande kärnheaders (<code>proxmox-headers-&lt;newkver&gt;</code> om de finns, annars <code>pve-headers-&lt;newkver&gt;</code>) och kör <code>dkms autoinstall -k &lt;newkver&gt;</code>. Om <code>dkms status</code> därefter inte visar moduler byggda för den nya kärnan körs respektive installationsprogram igen med <code>--auto-reinstall</code>. Fel loggas men avbryter inte uppdateringen, som ändå når omstartsfrågan.",
+      "<strong>Efterföljande städning.</strong> <code>apt-get autoremove</code> + <code>apt-get autoclean</code> innan kontrollen lämnas tillbaka till huvudskriptet."
+    ]
+  },
+  "post": {
+    "heading": "Rensning och omstart efter uppdatering",
+    "intro": "När arbetsskriptet har avslutats kör huvudskriptet:",
+    "code": "apt-get autoremove -y    # drop unused dependencies pulled in by old packages\napt-get autoclean        # drop downloaded .deb files no longer in the index",
+    "afterCode": "Huvudskriptet kontrollerar också om en omstart behövs. Var och en av följande signaler utlöser frågan:",
+    "items": [
+      "<code>/var/run/reboot-required</code> finns: ett paket eller systemverktyg har markerat att värden behöver startas om.",
+      "Det senaste installerade Proxmox-kärnpaketet skiljer sig från kärnan som körs, enligt <code>dpkg-query</code> och uname -r."
+    ],
+    "outro": "Om något av villkoren uppfylls frågar en whiptail-dialog <em>”Vissa ändringar kräver en omstart. Vill du starta om nu?”</em>. Avböj för att fortsätta med den aktuella kärnan tills du startar om manuellt, till exempel under ett planerat underhållsfönster."
+  },
+  "end": {
+    "heading": "Vad du ser i slutet",
+    "intro": "När arbetsskriptet är klart visar terminalen resultatet av städningen och omstartsfrågan om en omstart behövs:",
+    "imageAlt": "Slutsammanfattning för Proxmox systemuppdatering med städningsresultat och omstartsfråga"
+  },
+  "calloutDeclineReboot": {
+    "title": "Skjut bara upp omstarten om du har ett tydligt skäl",
+    "body": "När du installerar ett nytt paket av typen <code>proxmox-kernel-*</code> ersätts den kärna som körs först efter en omstart. Den nya kärnan och dess matchande moduler aktiveras vid nästa start. Planera omstarten till ett lämpligt underhållsfönster och granska eventuella DKMS-byggvarningar i förväg."
+  },
+  "noSub": {
+    "heading": "Så hanterar arbetsskriptet Enterprise-förrådet",
+    "intro": "Proxmox aktiverar Enterprise-förrådet som standard. Utan ett aktivt abonnemang returnerar det 401 vid <code>apt-get update</code>. Arbetsskriptet ändrar förråden endast i detta fall och efter bekräftelse, via Proxmox API som används av <em>Node → Updates → Repositories</em>. De olika fallen:",
+    "items": [
+      "Med ett <strong>aktivt abonnemang</strong> behålls förråden och Enterprise tillhandahåller uppdateringarna.",
+      "Om <strong>no-subscription- eller testförrådet redan är aktiverat</strong> behålls förråden, oavsett vilka andra källor som har konfigurerats.",
+      "Med <strong>inget aktivt abonnemang och enbart Enterprise-förrådet</strong> erbjuder en dialog ett byte. Om du accepterar inaktiveras Enterprise, no-subscription aktiveras och paketlistorna uppdateras. Ändringen registreras i vyn <em>Changes</em> i Audit & Report. Ett nej avslutar uppdateringen utan att ändra källorna.",
+      "Befintliga <strong>Enterprise-källor för Ceph</strong> inaktiveras vid samma byte utan att någon annan Ceph-kanal väljs. En värd som använder Ceph konfigurerar dess kanal separat.",
+      "Om <strong>ingen terminal finns för bekräftelsen</strong> ändras inga källor och uppdateringen avslutas med ett meddelande som hänvisar till <em>Node → Updates → Repositories</em>."
+    ],
+    "outro": "Debians källor och övriga filer för paketförråd ändras aldrig av det här flödet. En post som blandar Enterprise med andra komponenter byts inte: uppdateringen avbryts och ber dig dela upp posten i Proxmox vy för paketförråd."
+  },
+  "cluster": {
+    "heading": "Att tänka på för kluster",
+    "calloutTitle": "På kluster: uppdatera en nod i taget",
+    "calloutBody": "Kör det här alternativet på <strong>en nod i taget</strong> i ett Proxmox-kluster och vänta tills omstarten är klar innan du fortsätter. Migrera först gäster från noden för att undvika tjänsteavbrott i hela klustret. Olika mindre versioner, till exempel 8.4.1 och 8.4.5, kan köras parallellt under några timmar. Olika kärnor kan ge oväntat beteende för HA-hanterade gäster."
+  },
+  "doesnt": {
+    "heading": "Vad det inte gör",
+    "items": [
+      "<strong>Uppgradering av huvudversion.</strong> 8 → 9 är en separat åtgärd; se <link>Uppgradera PVE 8 till PVE 9</link>.",
+      "<strong>Säkerhetskopiering.</strong> Inga ögonblicksbilder eller automatisk återgång. Apt-åtgärder är inte transaktionella. Behåll dina vanliga säkerhetskopieringsrutiner (PBS, vzdump, ZFS-ögonblicksbilder).",
+      "<strong>Uppdateringar av containrar / VM:er.</strong> Bara värden uppdateras; gästerna lämnas oförändrade.",
+      "<strong>Separat firmwareflashning.</strong> Detta är inget verktyg för att flasha BIOS eller enheters firmware. Installerade paket för firmware eller CPU-mikrokod kan fortfarande uppdateras via apt."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Felsökning",
+    "items": [
+      {
+        "title": "apt update misslyckas med 401 Unauthorized",
+        "body": "Enterprise-förrådet är aktiverat utan ett aktivt abonnemang. Före <code>apt-get update</code> erbjuder arbetsskriptet ett byte till no-subscription. Om du avböjde kan du köra uppdateringen igen och acceptera, eller inaktivera Enterprise i <em>Node → Updates → Repositories</em> och aktivera no-subscription."
+      },
+      {
+        "title": "dist-upgrade fastnar vid \"Configuring grub-pc\"",
+        "body": "Om en interaktiv GRUB-fråga visas frågar den vilka enheter som ska få starthanteraren. Alternativet <code>--force-confold</code> gäller konfigurationsfiler, inte det här enhetsvalet. Välj lämpliga startdiskar med <kbd>Tab</kbd> + <kbd>Space</kbd> och sedan OK. Du kan konfigurera valet i förväg med <code>dpkg-reconfigure grub-pc</code>."
+      },
+      {
+        "title": "Kärnan har uppgraderats men nya moduler saknas för en extern drivrutin",
+        "body": "För hanterade drivrutiner (<code>nvidia_driver</code> och <code>coral_driver</code>) kör hjälpfunktionen <code>dkms autoinstall -k &lt;newkver&gt;</code> och kan försöka igen med deras installationsprogram och <code>--auto-reinstall</code>. Kontrollera resultatet med <code>dkms status</code>. Kommandot autoinstall kan också bygga om andra registrerade DKMS-moduler. Reservvägen via installationsprogram är begränsad till de hanterade posterna i <code>components_status.json</code>. Granska tredjepartsmoduler som fortfarande saknas och bygg om dem med <code>dkms autoinstall</code> vid behov."
+      },
+      {
+        "title": "Omstartsfrågan visades inte trots att en ny kärna installerades",
+        "body": "Signalerna är alternativ: <code>/var/run/reboot-required</code> eller en skillnad mellan den kärna som körs och den senaste installerade Proxmox-kärnan. Huvudskriptet tolkar inte linux-image-poster i apt-loggen. Kontrollera den aktuella versionen med <code>uname -r</code> och installerade kärnpaket med <code>dpkg-query</code>. Planera en nödvändig omstart eller kör <code>shutdown -r now</code> när du är redo."
+      }
+    ]
+  },
+  "files": {
+    "heading": "Filer involverade",
+    "code": "scripts/utilities/proxmox_update.sh              # this script (wrapper)\nscripts/global/update-pve-safe.sh                # single safe worker (PVE 8 + PVE 9)\nscripts/global/repository-functions.sh           # ensure_repositories\nscripts/global/repository_policy.py              # reads and switches repositories through the Proxmox API\nscripts/global/utils-install-functions.sh        # pmx_rebuild_dkms_after_kernel\n/usr/local/share/proxmenux/components_status.json # ProxMenux-managed DKMS driver registry\n/etc/apt/sources.list.d/proxmox.sources          # no-subscription source, written by Proxmox when the switch is accepted\n/var/run/reboot-required                         # read to decide on reboot prompt\n# Reboot fallback when needrestart isn't installed:\n# dpkg-query -W 'proxmox-kernel-*-pve-signed' 'pve-kernel-*-pve' vs. uname -r"
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "href": "/docs/utils/upgrade-pve8-pve9",
+        "label": "Uppgradera PVE 8 till PVE 9",
+        "tail": " — för uppgraderingen av huvudversion med ett annat verktyg och en annan säkerhetsmodell."
+      },
+      {
+        "href": "/docs/utils/system-utils",
+        "label": "Installationsprogram för systemverktyg",
+        "tail": " — för att installera användbara CLI-verktyg för uppdateringar (htop / btop / ncdu)."
+      },
+      {
+        "href": "/docs/utils",
+        "label": "Verktygsöversikt",
+        "tail": " — tillbaka till avsnittsöversikten."
+      }
+    ]
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "Schnittstellen sichern und neu starten | ProxMenux-Dokumentation",
+    "description": "Manuelle Schnappschüsse erstellen und unter /var/backups/proxmenux/ gespeicherte Backups von /etc/network/interfaces durchsuchen und wiederherstellen. Mit bestätigtem Neustart des Netzwerkdienstes und Schnellansicht der aktuellen Konfiguration.",
+    "ogTitle": "Schnittstellen sichern und neu starten | ProxMenux-Dokumentation",
+    "ogDescription": "Snapshot und Wiederherstellung der Proxmox-Netzwerkkonfiguration; Neustart des Netzwerkdienstes mit Bestätigung."
+  },
+  "header": {
+    "title": "Schnittstellen sichern und neu starten",
+    "description": "Vier Werkzeuge für /etc/network/interfaces: einen manuellen Schnappschuss erstellen, die aktuelle Konfiguration anzeigen, ein früheres Backup mit optionaler Vorschau wiederherstellen und den Netzwerkdienst nach ausdrücklicher Zustimmung neu starten. Sie verwenden dasselbe Backup-Verzeichnis wie die geführten Reparaturen.",
+    "section": "Netzwerk"
+  },
+  "intro": {
+    "title": "Was das macht",
+    "body": "Verwaltet das gleiche Backup-Verzeichnis, das von den geführten Reparaturflüssen verwendet wird (<code>/var/backups/proxmenux/</code>). Sie können vor jeder manuellen Änderung eine zusätzliche Momentaufnahme machen, alle vorhandenen Backups durchsuchen und zu einem von ihnen zurückkehren - immer mit einem neuen Pre-Restore-Backup, das automatisch als zweites Sicherheitsnetz übernommen wird."
+  },
+  "shared": {
+    "heading": "Das gemeinsame Backup-Verzeichnis",
+    "intro": "Jedes Backup im Netzwerkmenü landet an der gleichen Stelle:",
+    "outro": "Dateinamen werden mit einem Zeitstempel versehen, nach Datum sortiert und nie überschrieben. Das Verzeichnis wird bei der ersten Verwendung erstellt."
+  },
+  "show": {
+    "heading": "Netzwerkkonfigurationsdatei anzeigen",
+    "body": "Gibt <code>/etc/network/interfaces</code> unverändert im Terminal aus. Schreibgeschützt. Nützlich zur Kontrolle vor einem Backup oder nach einer Wiederherstellung. Es gibt kein separates Werkzeug zum Vergleich mit dem vorherigen Backup; die aktuelle Datei direkt zu prüfen ist daher am einfachsten."
+  },
+  "create": {
+    "heading": "Netzwerk-Backup erstellen",
+    "body": "Kopiert den aktuellen <code>/etc/network/interfaces</code> mit einem neuen Zeitstempel in das Backup-Verzeichnis. Das ist es — keine Analyse, keine Aufforderungen, nur eine Momentaufnahme.",
+    "whenTitle": "Wann Sie ein manuelles Backup durchführen sollten",
+    "whenBody": "Vor der manuellen Bearbeitung von <code>/etc/network/interfaces</code>, vor der Installation eines Pakets, das den Netzwerkstack ändern kann (z. B. NetworkManager, Open vSwitch), oder vor Hardwareänderungen. Geführte Reparaturen erstellen bereits automatisch einen Schnappschuss — diese Option ist für <em>manuelle</em> Eingriffe."
+  },
+  "restore": {
+    "heading": "Netzwerksicherung wiederherstellen",
+    "intro": "Listet alle Backups in <code>/var/backups/proxmenux/</code> vom neuesten zum ältesten auf und führt durch eine abgesicherte Wiederherstellung:",
+    "steps": [
+      {
+        "title": "1. Wählen Sie ein Backup",
+        "body": "Ein Menü listet jedes Backup nach seinem Zeitstempel auf. Wenn keine Backups vorhanden sind, wird der Flow mit einer klaren Nachricht beendet.",
+        "tone": "blue"
+      },
+      {
+        "title": "2. Optionale Vorschau",
+        "body": "Bietet an, das ausgewählte Backup in einer scrollbaren Ansicht zu öffnen, bevor Sie es festlegen. Standardmäßig ja – überspringen Sie es nicht auf einem entfernten Host.",
+        "tone": "blue"
+      },
+      {
+        "title": "3. Backup vor der Wiederherstellung",
+        "body": "Erstellt vor dem Überschreiben von <code>/etc/network/interfaces</code> ein <strong>weiteres</strong> Backup des aktuellen Zustands. Eine Wiederherstellung ist selbst ein destruktiver Vorgang. Mit dem neuen Schnappschuss können Sie zurückkehren, falls das gewählte Backup falsch war.",
+        "tone": "amber"
+      },
+      {
+        "title": "4. Anwenden der Wiederherstellung",
+        "body": "Kopiert das ausgewählte Backup über <code>/etc/network/interfaces</code>. Die Dateiänderung ist auf der Festplatte; der Live-Kernel-Zustand spiegelt immer noch die vorherige Konfiguration wider.",
+        "tone": "amber"
+      },
+      {
+        "title": "5. Optionaler Neustart",
+        "body": "Fragt, ob <code>systemctl restart networking</code> jetzt ausgeführt werden soll. Lehnen Sie ab, um die Änderung auf den nächsten Neustart zu verschieben.",
+        "tone": "emerald"
+      }
+    ],
+    "autoBackupTitle": "Jede Wiederherstellung erstellt automatisch ein eigenes Backup",
+    "autoBackupBody": "Die Auswahl von <em>Netzwerksicherung wiederherstellen</em> erstellt immer einen neuen Schnappschuss der <em>aktuellen</em> Konfiguration, bevor sie überschrieben wird. Falls Sie das falsche Backup wiederherstellen, enthält die neueste Datei in <code>/var/backups/proxmenux/</code> den vorherigen Zustand."
+  },
+  "restart": {
+    "heading": "Starten Sie den Netzwerkdienst neu",
+    "body": "Führt nach einer Ja/Nein-Bestätigung <code>systemctl restart networking</code> aus. Meldet das Ergebnis mit <code>msg_ok</code> / <code>msg_error</code>. Die meisten Abläufe in diesem Menü bieten am Ende selbst einen Neustart an. Diese Option dient zum Neustart nach manueller Bearbeitung oder wenn Sie den zuvor angebotenen Neustart abgelehnt haben.",
+    "warnTitle": "Kurze Trennung garantiert; dauerhafte Trennung möglich",
+    "warnBody": "Ein Neustart von <code>networking</code> deaktiviert alle in <code>/etc/network/interfaces</code> deklarierten Schnittstellen und wendet ihre Konfiguration erneut an. SSH-Sitzungen über diese Schnittstellen brechen ab. Ist die neue Konfiguration ungültig, kehrt das Netzwerk nicht zurück. Nur ausführen, wenn:",
+    "warnItems": [
+      "Sie Konsolen-/IPMI-/iKVM-Zugriff bereithalten, <em>oder</em>",
+      "Sie sich direkt neben dem Rechner befinden, <em>oder</em>",
+      "Sie haben gerade erfolgreich zu einer bekannten guten Konfiguration zurückgerollt und wollen sie anwenden."
+    ]
+  },
+  "manualRollback": {
+    "heading": "Manuelles Rollback von einer Konsole",
+    "intro": "Wenn Sie das Menü nicht erreichen können (kein SSH, Dialogabsturz, ...), aber eine Konsole erreichen können, besteht das Rollback aus zwei Befehlen:",
+    "outro": "Das ist <em>dieselbe</em> Operation wie im Menü, nur von Hand eingegeben. Startet <code>networking</code> weiterhin nicht, prüfen Sie <code>journalctl -u networking -b</code> auf den zugrunde liegenden Syntax- oder Treiberfehler."
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "noneTitle": "„Keine Backups gefunden“ bei der Wiederherstellung",
+    "noneBody": "Das Verzeichnis <code>/var/backups/proxmenux/</code> existiert nicht oder enthält keine <code>interfaces_backup_*</code>-Dateien. Führen Sie <em>Netzwerk-Backup erstellen</em> mindestens einmal aus oder starten Sie eine geführte Reparatur, die automatisch ein Backup erstellt. Prüfen Sie mit <code>ls /var/backups/proxmenux/</code>.",
+    "unreachTitle": "Der Netzwerkneustart gelingt, aber der Host ist weiterhin nicht erreichbar",
+    "unreachBody": "Entweder ist die neue Konfiguration falsch oder die beim Neustart angewendete Konfiguration weist Ihre Verwaltungs-IP nicht zu. Setzen Sie sie über die Konsole zurück (siehe oben). Nutzen Sie danach <bridgeLink>Brückenanalyse</bridgeLink> und <configLink>Konfigurationsanalyse</configLink>, um den Fehler vor einem erneuten Anwenden zu verstehen.",
+    "emptyTitle": "Die Wiederherstellungsvorschau zeigt eine leere Datei",
+    "emptyBody": "Die Backup-Datei ist leer (0 Bytes). Das passiert, wenn ein Kopiervorgang bei einem früheren Durchlauf unbemerkt fehlgeschlagen ist. Wählen Sie ein älteres Backup oder führen Sie <em>Netzwerk-Backup erstellen</em> jetzt erneut aus, wenn die aktuelle Konfiguration funktioniert."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "label": "Brückenanalyse und geführte Reparatur",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — der häufigste Grund, warum hier ein Backup erstellt wird."
+      },
+      {
+        "label": "Konfigurationsanalyse und geführte Bereinigung",
+        "href": "/docs/network/config-analysis",
+        "tailRich": "— schreibt auch automatisch an <code>/var/backups/proxmenux/</code>."
+      },
+      {
+        "label": "Diagnose",
+        "href": "/docs/network/diagnostics",
+        "tail": "- Überprüfen Sie den Live-Zustand nach einer Wiederherstellung."
+      }
+    ]
+  }
+}

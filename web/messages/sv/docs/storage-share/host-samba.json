@@ -1,0 +1,172 @@
+{
+  "meta": {
+    "title": "Värd: montera Samba-delning | ProxMenux-dokumentation",
+    "description": "Montera en extern Samba-/CIFS-delning på Proxmox-värden - antingen som Proxmox-lagring (pvesm add cifs), som en vanlig värd fstab-fäste med öppen uid/gid/file_mode (Inte synlig i Datacenter > Lagring), eller båda. Fstab-metoden öppnar behörigheter så att en oprivilegierad LXC-bindning kan läsa / skriva utan några ändringar i containern.",
+    "ogTitle": "Värd: montera Samba-delning | ProxMenux-dokumentation",
+    "ogDescription": "Montera en extern Samba-/CIFS-delning på Proxmox-värden via pvesm, fstab med öppna behörigheter för LXC-bind-monteringar eller båda."
+  },
+  "header": {
+    "title": "Värd: montera Samba-delning på värden",
+    "description": "Montera en extern Samba-delning (SMB / CIFS) - från en NAS, en Windows-box, en TrueNAS SMB export - på Proxmox värd. Välj en eller båda metoderna: registrera den som Proxmox-lagring (synlig i Datacenter > Lagring) och / eller lägg till en vanlig /etc/fstab-fäste på en väg du väljer, med öppen uid / gid / file_mode så oprivilegierade LXCs kan binda-mount och skriva utan några ändringar i containern.",
+    "section": "Lagring och delning · Värd"
+  },
+  "intro": {
+    "title": "Vad detta gör",
+    "body": "ProxMenux erbjuder två sätt att montera en Samba-resurs: <strong>(1) Proxmox-lagring</strong> via <code>pvesm add cifs</code>, synlig i Datacenter > Storage och monterad på <code>/mnt/pve/&lt;id&gt;</code>. Lösenordet sparas i klartext i <code>/etc/pve/priv/storage/&lt;id&gt;.pw</code>, skyddat av den privata katalog som bara root kan komma åt. Det är åtkomstkontroll, inte kryptering. <strong>(2) fstab-montering på värden</strong> på en vald sökväg, beständig via <code>/etc/fstab</code> med <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> så att oprivilegierade LXC-containrar kan skriva via bind-monteringar. Uppgifterna finns i en fil som bara root kan läsa under <code>/etc/samba/credentials/</code>, aldrig direkt i <code>fstab</code>. Du kan använda endera metoden eller båda."
+  },
+  "opening": {
+    "heading": "Öppna verktyget",
+    "body": "Öppna <strong>Storage &amp; Share Manager → Mount Samba Share on Host</strong> i ProxMenux huvudmeny. Undermenyn har fyra alternativ:",
+    "imageAlt": "Samba-värdmeny — Montera / Visa / Ta bort / Testa anslutning"
+  },
+  "howRuns": {
+    "heading": "Hur manuset går",
+    "body": "Flödet har två faser. Fas 1: Upptäck server, validera inloggningsuppgifter, välj delning, välj sedan monteringsmetod (er) via en checklista. Fas 2: endast de metoder du markerade utförs. Inloggningsuppgifter behövs i förväg eftersom <code>smbclient</code> behöver dem för att lista delningar. Fram till den slutliga bekräftelsen berörs varken <code>/etc/pve/storage.cfg</code> eller <code>/etc/fstab</code>."
+  },
+  "modes": {
+    "heading": "Välj monteringsmetod (ett eller båda alternativen)",
+    "intro": "Efter att ha valt delningen och validerat inloggningsuppgifterna visar ProxMenux en checklista med de två monteringsmetoderna. Du kan markera antingen, eller båda. Om du trycker på OK utan att markera något, återkommer dialogrutan tills du väljer minst ett alternativ eller trycker på Avbryt flödet.",
+    "headerMethod": "Metod",
+    "headerMount": "Monteringssökväg",
+    "headerUi": "Synlig i datacenter > Lagring",
+    "headerUseCase": "Typiskt användningsfall",
+    "rows": [
+      {
+        "method": "<strong>Som Proxmox-lagring (pvesm)</strong>",
+        "mountRich": "<code>/mnt/pve/&lt;storage-id&gt;</code> (hanterad av Proxmox)",
+        "ui": "Ja",
+        "useCase": "Säkerhetskopior, ISOs, LXC-mallar - allt som behöver visas i Proxmox UI. Live VM-skivor stöds tekniskt men avskräcks på CIFS (låser semantik)."
+      },
+      {
+        "method": "<strong>Endast värdens fstab</strong>",
+        "mountRich": "<code>/mnt/&lt;path&gt;</code> med öppen uid/gid/file_mode",
+        "ui": "Nej",
+        "useCaseRich": "Bind-montera delningen i LXC:er <em>utan</em> att registrera Proxmox-lagring. Öppna lokala behörigheter underlättar åtkomst för oprivilegierade CT:er, men SMB-servern måste fortfarande tillåta den autentiserade användaren att skriva."
+      },
+      {
+        "method": "<strong>Båda</strong>",
+        "mount": "Båda sökvägarna ovan (två monteringspunkter för samma CIFS-export)",
+        "ui": "Ja",
+        "useCase": "Du vill ha UI-integration och en stabil värdsida med öppna behörigheter för LXC-bindning. pvesm-fästet använder Proxmox-standarder; fstabfästet tillämpar den öppna uid/gid/file_mode separat."
+      }
+    ],
+    "bothTitle": "”Båda” skapar två CIFS-monteringspunkter",
+    "bothBody": "pvesm monterar på <code>/mnt/pve/&lt;id&gt;</code> med Proxmox standardalternativ. fstab monterar på <code>/mnt/&lt;path&gt;</code> med <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> för lokal åtkomst via LXC-bind-monteringar. SMB-servern upprätthåller fortfarande monteringsanvändarens behörigheter. Två monteringspunkter garanterar inte två separata TCP-anslutningar."
+  },
+  "pvesmBranch": {
+    "heading": "Metod A - Som Proxmox lagring (pvesm)",
+    "intro": "Om <em>Som Proxmox-lagring</em> är markerad, ProxMenux kör den ursprungliga pvesm flöde:",
+    "items": [
+      "<strong>Lagring ID</strong> - Standard <code>cifs-&lt;server-ip-with-dashes&gt;</code>. Endast bokstäver, siffror, <code>-</code> och <code>_</code>.",
+      "<strong>Innehållstyper</strong> — den här ProxMenux-listan har <strong>6</strong> val. Den utelämnar <code>rootdir</code> jämfört med NFS-listan. Detta är ett val i skriptet, inte ett påstående att alla versioner av Proxmox CIFS-backend förbjuder LXC-rotfilsystem:"
+    ],
+    "headerType": "Innehåll typ",
+    "headerAllows": "Vad det tillåter",
+    "rows": [
+      {
+        "type": "import",
+        "allows": "Diskbildsimport (vald som standard)."
+      },
+      {
+        "type": "backup",
+        "allowsRich": "VM och CT backup filer (<code>vzdump</code>)."
+      },
+      {
+        "type": "iso",
+        "allows": "Installation av ISO-bilder."
+      },
+      {
+        "type": "vztmpl",
+        "allows": "LXC mallar."
+      },
+      {
+        "type": "images",
+        "allowsRich": "Diskavbildningar för VM:ar i drift — <strong>varning visas i dialogen</strong>, se nedan."
+      },
+      {
+        "type": "snippets",
+        "allows": "Hook scripts och cloud-init snippets."
+      }
+    ],
+    "warnTitle": "Live VM diskar på CIFS",
+    "warnBody": "Valet <code>images</code> visar en ProxMenux-varning om att CIFS/SMB kan ge låsningsproblem vid VM-diskoperationer. Skriptet rekommenderar NFS men låter dig fortsätta. Säkerhetskopior och ISO-filer är vanliga CIFS-användningar. Bedöm låsning, ögonblicksbilder, migrering och arbetslast innan CIFS används för <code>images</code>.",
+    "credsTitle": "Var pvesm lagrar inloggningsuppgifter",
+    "credsBody": "Lösenordet skrivs inte i <code>/etc/pve/storage.cfg</code>. Proxmox sparar klartextuppgifter i <code>/etc/pve/priv/storage/&lt;storage-id&gt;.pw</code>, i klusterfilsystemets privata område som bara <code>root</code> kan läsa (läge <code>0600</code>); de skyddas av åtkomstbehörigheter, inte av kryptering. Efter ett lösenordsbyte på servern använder du <code>pvesm set &lt;id&gt; --password &lt;new&gt;</code> eller tar bort och lägger till lagringen via ProxMenux."
+  },
+  "fstabBranch": {
+    "heading": "Metod B - Värd fstab montering endast",
+    "intro": "Om <em>Endast fstab-montering på värden</em> väljs frågar ProxMenux efter sökväg och beständiga alternativ, skapar en fil med inloggningsuppgifter endast för root i användarläge, monterar delningen och skriver posten i <code>/etc/fstab</code>:",
+    "items": [
+      "<strong>Monteringssökväg på värden</strong> - standard <code>/mnt/&lt;share-name&gt;</code>. Måste vara en absolut väg. Om något redan är monterat där, eller en fstab-post existerar, erbjuder ProxMenux att ersätta den.",
+      "<strong>Monteringsalternativ</strong> — <em>Läs/skriv</em> (standard: <code>rw,uid=0,gid=0,file_mode=0777,dir_mode=0777,iocharset=utf8,nofail,_netdev</code>), <em>Skrivskyddad</em> (<code>file_mode=0555,dir_mode=0555</code>), <em>Anpassad</em> (ange egna alternativ). Skriptet rekommenderar öppna uid/gid/file_mode för skrivning via LXC-bind-monteringar."
+    ],
+    "credsTitle": "Fil med inloggningsuppgifter (användarläge)",
+    "credsBody": "I användarläge skapar ProxMenux en fil som bara root kan läsa på <code>/etc/samba/credentials/&lt;server&gt;_&lt;share&gt;.cred</code> (läge <code>0600</code>) med raderna <code>username=</code> och <code>password=</code>. Fstab-posten hänvisar till den via <code>credentials=</code>; klartextlösenordet skrivs inte i <code>/etc/fstab</code>. I gästläge läggs <code>guest</code> till i stället och ingen inloggningsfil skapas.",
+    "appliesIntro": "När du bekräftar gör skriptet följande:",
+    "applies": [
+      "<code>mkdir -p</code> monteringsvägen.",
+      "<code>mount -t cifs -o &lt;opts&gt;,credentials=&lt;file&gt;</code> (eller <code>guest</code>) <code>//&lt;srv&gt;/&lt;share&gt; &lt;path&gt;</code>.",
+      "Skriver en enradig post till <code>/etc/fstab</code>: <code>//&lt;srv&gt;/&lt;share&gt; &lt;path&gt; cifs &lt;opts&gt; 0 0</code>.",
+      "Kör <code>systemctl daemon-reload</code> så systemd plockar upp den nya fstab inträde."
+    ],
+    "lxcTitle": "Använda fstab montering från en oprivilegierad LXC",
+    "lxcBody": "CIFS-alternativen <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code> öppnar lokala behörighetskontroller för LXC-bind-monteringar. Serverns ACL:er och förhandlad Unix-/POSIX-semantik kan fortfarande påverka åtkomsten. <strong>Inget ändras inne i containern</strong>: ingen <code>chown</code> i CT:n, inga grupper eller ändringar i <code>/etc/lxc</code>. Raden <code>mp</code> hanteras i Proxmox CT-konfiguration. Använd det visade <code>pct set</code>-kommandot eller <mountLink>LXC Mount Manager</mountLink>.",
+    "noUiTitle": "Fstab montering är inte en Proxmox lagring",
+    "noUiBody": "Värd fstab montering är osynlig för Proxmox webb UI - genom design. Det visas inte i <em>Datacenter > Storage</em>, du kan inte välja det i VM / CT skapare, och Proxmox backup jobb kan inte rikta det. Det är bara en värd filsystem väg. Om du också vill ha UI integration, markera <em>båda</em> metoder i väljaren."
+  },
+  "manual": {
+    "heading": "Manuell motsvarande",
+    "pvesmIntro": "Metod A (pvesm) motsvarar:",
+    "fstabUserIntro": "Metod B (fstab, användarautentisering) — fil med inloggningsuppgifter och montering:",
+    "fstabGuestIntro": "Metod B (fstab, gästautentisering) — ingen fil med inloggningsuppgifter:"
+  },
+  "view": {
+    "heading": "Visa CIFS-lagringar och värdmonteringar",
+    "body": "Visar registrerade CIFS-lagringar (<code>pvesm status | awk ''$2 == \"cifs\"''</code>) med server, delning, innehåll, användare eller <em>Gäst</em>, sökväg och status. Lösenord <strong>visas aldrig</strong>. <strong>Obs:</strong> ett andra avsnitt visar värdens fstab-monteringar, alternativ, inloggningsfilens sökväg och aktiv/inaktiv status. Kontrollera manuellt med <code>findmnt -t cifs</code> eller <code>grep cifs /etc/fstab</code>."
+  },
+  "remove": {
+    "heading": "Ta bort CIFS-lagring eller värdmontering",
+    "body": "Väljaren erbjuder pvesm-lagringar och värdens fstab-monteringar. För pvesm körs <code>pvesm remove &lt;storage-id&gt;</code> och Proxmox tar bort motsvarande inloggningsuppgifter. För fstab försöker skriptet köra <code>umount &lt;path&gt;</code>, tar bort posten i <code>/etc/fstab</code> och uppgifter under <code>/etc/samba/credentials/</code> samt den tomma monteringskatalogen om möjligt. Misslyckad avmontering kräver manuell avmontering eller omstart. <strong>Den externa Samba-servern och dess filer ändras inte</strong>.",
+    "warnTitle": "Säkerhetskopiera beroenden först",
+    "warnBody": "VM, CT eller backup jobb som refererar till denna lagring av ID kommer att misslyckas efter borttagning. Flytta/släpp dessa referenser innan du tar bort lagringen."
+  },
+  "test": {
+    "heading": "Testa Samba-anslutning",
+    "body": "Kör ett diagnostiskt pass över varje CIFS-lagring registrerad i Proxmox: kontrollerar att <code>smbclient</code> är tillgänglig, pings varje server, probes portar 445 och 139, försöker en gästlista och rapporterar Proxmox egen vy (<code>pvesm status</code>). \"Kräver autentisering\" på gästlista betyder att din server endast exponerar aktier till autentiserade användare - normalt för de flesta NAS-inställningar."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "noServersTitle": "\"Inga Samba-servrar som finns på nätverket\"",
+    "noServersBody": "Auto-discover använder <code>nmap -p 139,445</code>. Servern kan vara på ett annat undernät, brandvägg eller bara nås via värdnamn (mDNS / WINS). Använd alternativet <em>Manual</em> med IP eller värdnamn istället.",
+    "noSharesTitle": "”Inga tillgängliga delningar hittades”",
+    "noSharesBody": "<code>smbclient -L</code> returnerade ingenting för dessa referenser. Orsaker: användaren har ingen tillåtelse att lista delningar (försök med admin referenser en gång eller ange delningens namn manuellt), servern har dela synlighet inaktiverad, eller referenser är fel. Skriptet låter dig skriva delningens namn för hand i det här fallet.",
+    "denyTitle": "Proxmox montering misslyckas med NT_STATUS_ACCESS_DENIED",
+    "denyBody": "Credentials pvesm lagras inte synkroniseras med Samba-servern (lösenord ändras, konto funktionshindrad, domän / arbetsgrupp felmatch). Ange referenser med <code>pvesm set &lt;id&gt; --username &lt;u&gt; --password &lt;p&gt;</code> eller ta bort och re-add från ProxMenux. Om servern finns i en AD-domän, använd <code>--domain &lt;DOMAIN&gt;</code> till <code>pvesm set</code>-samtalet.",
+    "sleepTitle": "\"host is down\" eller lagringsstatus går inaktiv på natten",
+    "sleepBody": "Vissa NAS-apparater sätter SMB för att sova aggressivt. <code>pvestatd</code> ser sedan lagringen som inaktiv tills den första åtkomsten vaknar NAS. Om detta är kosmetiskt, är ingenting brutet. Om det orsakar säkerhetskopieringsfel, inaktivera SMB-idle koppla bort på NAS eller schemalägga säkerhetskopior utanför sömnfönstret.",
+    "lxcNoWriteTitle": "Oprivilegierad LXC bind-mount kan inte skriva till fstab-banan",
+    "lxcNoWriteBody": "Kontrollera avsedda alternativ med <code>findmnt /mnt/&lt;path&gt;</code>, exempelvis <code>uid=0,gid=0,file_mode=0777,dir_mode=0777</code>. Saknade lokala skrivbehörigheter kan blockera mappade LXC-UID:n. Tillämpa RW-profilen igen eller anpassa egna alternativ. Kontrollera även SMB-användarens skrivbehörighet på servern och om Unix-/POSIX-tillägg ger serverlägen; öppna lokala lägen åsidosätter inte serverns ACL:er.",
+    "fstabBootTitle": "fstab montering kommer inte upp efter omstart",
+    "fstabBootBody": "Skriptet lägger till <code>nofail,_netdev</code> så en saknad delning på start blockerar inte start. Om fästet aldrig kommer upp: bekräfta att nätverket är tillgängligt (<code>ping &lt;server&gt;</code>), kontrollera <code>journalctl -u remote-fs.target</code>, verifiera filen med inloggningsuppgifter fortfarande finns (<code>ls -l /etc/samba/credentials/</code>) och är läsbar och prova <code>mount -a</code> manuellt."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/storage-share/host-nfs",
+        "label": "NFS-delning som Proxmox-lagring",
+        "tail": " — syskon sida med samma flödesmönster (Metod A pvesm + Metod B fstab) och sida vid sida avvägningar."
+      },
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "Monteringshanterare för LXC",
+        "tailRich": " - bind-mount fstab-bara vägen <code>/mnt/&lt;path&gt;</code> i en eller flera containrar."
+      },
+      {
+        "href": "/docs/storage-share/lxc-samba-client",
+        "label": "Samba klient i LXC",
+        "tail": " — alternativ: montering Samba direkt inifrån en privilegierad container (skippar värden)."
+      }
+    ]
+  }
+}

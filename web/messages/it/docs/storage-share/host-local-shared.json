@@ -1,0 +1,103 @@
+{
+  "meta": {
+    "title": "Host: Aggiungi directory condivisa su Host | ProxMenux Documentazione",
+    "description": "Crea una directory sull’host pronta per i bind mount LXC, con permessi compatibili sia con i container privilegiati sia con quelli non privilegiati. Usa sticky bit, permessi rwx per tutti e ACL per l’ereditarietà predefinita.",
+    "ogTitle": "Host: Aggiungi directory condivisa su Host | ProxMenux Documentazione",
+    "ogDescription": "Prepara una directory sull’host per i bind mount LXC con permessi compatibili con CT privilegiati e non privilegiati."
+  },
+  "header": {
+    "title": "Host: Aggiungi directory condivisa su Host",
+    "description": "Crea una directory sull’host da rendere accessibile a uno o più container LXC tramite bind mount. ProxMenux applica permessi compatibili con CT privilegiati e non privilegiati, senza dover allineare gli UID spostati o eseguire chown per ogni container, e registra la directory per renderla disponibile a LXC Mount Manager.",
+    "section": "Archiviazione e condivisione · Host"
+  },
+  "intro": {
+    "title": "Ciò che è (e NON è)",
+    "body": "Questo strumento <strong>non</strong> registra nulla in Proxmox (nessun <code>pvesm add</code> qui). Prepara semplicemente una directory sull'host — <code>/mnt/shared</code>, per impostazione predefinita — con autorizzazioni che qualsiasi contenitore LXC può leggere e scrivere, indipendentemente dal fatto che il CT sia privilegiato o non privilegiato. Il solito passaggio successivo è collegarlo al montaggio in ogni CT con <mountLink>LXC Mount Manager</mountLink>."
+  },
+  "why": {
+    "heading": "Perché uno strumento dedicato per questo",
+    "intro": "Quando si esegue il bind mount di una directory host in un contenitore LXC, le autorizzazioni dipendono da:",
+    "items": [
+      "Se il CT è <strong>privilegiato</strong> (UID 0 nel CT = UID 0 sull’host) o <strong>non privilegiato</strong> (UID 0 nel CT = UID 100000 sull’host, con uno spostamento di +100000).",
+      "La proprietà della directory host (un file dell’UID 1000 sull’host usa i permessi per «altri» dal punto di vista di un CT non privilegiato, poiché nessun utente del CT corrisponde a quell’UID host).",
+      "Se più CT condividono la stessa directory (le TC differenti possono avere diversi intervalli UID)."
+    ],
+    "outro": "ProxMenux usa una soluzione pratica: <strong>dare accesso a tutti</strong> a livello di filesystem, con rwx per tutti, sticky bit e ACL per l’ereditarietà dei permessi. Qualsiasi UID mappato può leggere e scrivere; non serve allineare UID/GID."
+  },
+  "howRuns": {
+    "heading": "Come funziona lo script",
+    "body": "Lo script non ha menu principale — esegue una singola azione, <strong>Crea directory condivisa</strong>. Fase 1 raccoglie il percorso di destinazione; Fase 2 crea la directory e applica autorizzazioni."
+  },
+  "bits": {
+    "heading": "Che ogni bit di autorizzazione fa",
+    "intro": "Il numero <strong>1777</strong> non è arbitrario: è la stessa modalità che utilizza Linux per <code>/tmp</code>. Tre proprietà combinate:",
+    "headerBit": "Bit",
+    "headerEffect": "Effetto",
+    "headerWhy": "Perché è importante qui",
+    "rows": [
+      {
+        "bit": "1 (sticky bit)",
+        "effect": "Solo il proprietario del file, quello della directory o un processo con privilegi sufficienti può eliminare o rinominare il file.",
+        "why": "Aiuta a impedire agli utenti con UID mappati diversi di eliminare i file altrui. Non isola CT con lo stesso UID mappato o accesso root privilegiato."
+      },
+      {
+        "bit": "777 (rwx-rwx-rwx)",
+        "effect": "Tutti possono leggere, scrivere e attraversare.",
+        "why": "Gli UID dei CT non privilegiati (100000+) usano i permessi per “altri” sull’host; rwx per tutti concede loro accesso."
+      },
+      {
+        "bit": "ACL (predefinite)",
+        "effect": "Ereditate su ogni nuovo file / subdir creato.",
+        "why": "I nuovi contenuti ereditano le ACL predefinite senza rieseguire lo script. Le applicazioni possono comunque richiedere modalità restrittive o modificare i permessi in seguito."
+      }
+    ],
+    "privTitle": "I CT privilegiati vedono lo stesso risultato, senza lo spostamento degli UID",
+    "privBody": "Per un CT privilegiato, UID 0 nel CT è UID 0 sull'host, così <code>root</code> all'interno del CT può leggere / scrivere direttamente la directory host. <code>1777</code> è ancora bene — significa solo che gli utenti non-root all'interno del CT possono anche usare la directory. Gli stessi permessi coprono entrambi i casi."
+  },
+  "where": {
+    "heading": "Dove mettere la directory condivisa",
+    "intro": "Il localizzatore offre quattro opzioni:",
+    "opt1Title": "1. Crea una nuova cartella in /mnt",
+    "opt1Body": "La solita scelta. ProxMenux suggerisce automaticamente il primo nome libero (<code>shared</code>, <code>shared2</code>, <code>shared3</code>, ...). Basta confermare o digitare un nome diverso.",
+    "opt2Title": "2. Inserisci il percorso personalizzato",
+    "opt2Body": "Per le directory al di fuori di <code>/mnt</code>. Qualsiasi percorso assoluto funziona (ad es. <code>/srv/media</code>, <code>/data/family</code>). Lo script applica le stesse autorizzazioni.",
+    "opt3Title": "3. Visualizza le cartelle esistenti in /mnt",
+    "opt3Body": "Diagnostica di sola lettura: elenca ogni directory sotto <code>/mnt</code> con le sue autorizzazioni, proprietario e spazio disponibile. Utile prima di creare un nuovo per evitare collisioni di nome.",
+    "opt4Title": "4. Annulla",
+    "opt4Body": "Esce senza creare nulla, come premendo <kbd>Esc</kbd>.",
+    "tipTitle": "Dove vive /mnt?",
+    "tipBody": "Per impostazione predefinita <code>/mnt</code> siede sul filesystem Proxmox root. Se si desidera la directory condivisa su un disco diverso (un disco di dati, un ZFS pool), montare il disco sotto <code>/mnt/&lt;name&gt;</code> primo (Disk Manager o <diskLink>Aggiungere il disco locale come archiviazione Proxmox</diskLink>), e quindi creare la directory condivisa come una sottocartella all'interno di esso — o scegliere \"Inserisci percorso personalizzato\" qui e puntare al disco montato."
+  },
+  "manual": {
+    "heading": "Equivalente manuale",
+    "body": "L'intero flusso può essere riprodotto a mano:"
+  },
+  "next": {
+    "heading": "Passaggio successivo: bind mount nei container",
+    "body": "La creazione della directory la prepara solo: nessun contenitore la vede ancora. Per renderlo visibile all'interno di uno o più LXC, utilizzare <mountLink>LXC Mount Manager</mountLink> per collegare il montaggio <code>/mnt/&lt;name&gt;</code> ai CT. Poiché i permessi sono già aperti, Mount Manager <strong>non</strong> offrirà di modificarli: la directory è pronta per l'uso così com'è."
+  },
+  "troubleshoot": {
+    "heading": "Risoluzione dei problemi",
+    "mkdirTitle": "\"Failed to create directory\"",
+    "mkdirBody": "Di solito un problema filesystem: <code>/mnt</code> è su un filesystem di sola lettura, il percorso contiene un componente che non è una directory (ad esempio digitato <code>/etc/passwd/sub</code>), o disco è pieno. Controllare con <code>df -h /mnt</code> e <code>mount | grep /mnt</code>.",
+    "writeTitle": "Container non può scrivere nonostante le autorizzazioni aperte",
+    "writeBody": "Verifica che il CT stia realmente usando il bind mount con <code>pct config &lt;ctid&gt; | grep ^mp</code>. Nel CT esegui <code>touch /mnt/data/test-$(date +%s)</code>. Se ricevi un errore di accesso negato, la directory potrebbe trovarsi su un filesystem dell’host che non rispetta le ACL, come alcune vecchie configurazioni <code>ext3</code> o <code>vfat</code>. Sposta la directory condivisa su un filesystem ext4, xfs, btrfs o zfs.",
+    "aclTitle": "ACL comanda silenziosamente non disponibile",
+    "aclBody": "In un’installazione minima di Proxmox, <code>setfacl</code> / <code>getfacl</code> potrebbero non essere installati. Lo script ricade con grazia (controllo <code>command -v setfacl</code>) e applica solo le autorizzazioni POSIX — che è spesso abbastanza, ma i nuovi file non erediteranno automaticamente il profilo permissivo. Installare <code>acl</code> con <code>apt-get install -y acl</code> e eseguire nuovamente lo script nella directory."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "Gestore montaggi LXC",
+        "tail": "— il passo successivo naturale: legare-montare questa directory in uno o più contenitori."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "label": "Aggiungere disco locale come archiviazione Proxmox",
+        "tailRich": "— se si desidera la directory condivisa su un disco dedicato, preparare il disco prima, montarlo sotto <code>/mnt</code>, quindi creare la sottocartella condivisa qui."
+      }
+    ]
+  }
+}

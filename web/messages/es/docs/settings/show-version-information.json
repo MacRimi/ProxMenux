@@ -1,14 +1,14 @@
 {
   "meta": {
-    "title": "Mostrar información de versión | ProxMenux Documentation",
-    "description": "Autodiagnóstico de ProxMenux de solo lectura: número de versión, tipo de instalación (con traducción / normal), componentes instalados desde config.json, rutas de archivos, estado del entorno virtual e idioma actual.",
-    "ogTitle": "Mostrar información de versión | ProxMenux Documentation",
-    "ogDescription": "Volcado de diagnóstico de versión de ProxMenux, tipo de instalación, componentes, archivos e idioma."
+    "title": "Mostrar información de versión | Documentación de ProxMenux",
+    "description": "Diagnóstico de ProxMenux de solo lectura: versión, canal de versiones, componentes registrados en config.json, rutas de archivos, catálogos de traducción e idioma actual.",
+    "ogTitle": "Mostrar información de versión | Documentación de ProxMenux",
+    "ogDescription": "Datos de diagnóstico de ProxMenux: versión, canal de versiones, componentes, archivos e idioma."
   },
   "header": {
     "title": "Mostrar información de versión",
-    "description": "Diagnóstico de solo lectura. Lee version.txt, config.json y unas pocas rutas de archivos conocidas, después renderiza un cuadro de texto desplazable con la versión, tipo de instalación, componentes instalados, presencia de archivos, estado del entorno virtual e idioma actual.",
-    "section": "Settings"
+    "description": "Diagnóstico de solo lectura. Lee version.txt, config.json y rutas de archivos conocidas; muestra un cuadro de texto desplazable con la versión, el canal de versiones, los componentes instalados, la presencia de archivos, los archivos de traducción y el idioma actual.",
+    "section": "Ajustes"
   },
   "intro": {
     "title": "Qué es esto",
@@ -26,14 +26,14 @@
         "contentRich": "Número de versión de una sola línea; <code>Unknown</code> si el archivo falta"
       },
       {
-        "section": "Tipo de instalación",
-        "source": "comprobaciones de venv + config.json",
-        "content": "Con traducción (multi-idioma) o Normal (solo inglés)"
+        "section": "Canal de versiones",
+        "source": "Estado del programa beta en config.json",
+        "content": "Estable (main) o beta (develop); versión beta si está disponible"
       },
       {
         "section": "Componentes instalados",
         "source": "config.json",
-        "content": "Estado por componente (✓ instalado / creado / actualizado, ✗ faltante)"
+        "content": "Estado de cada componente (✓ instalado / creado / actualizado, ✗ ausente)"
       },
       {
         "section": "Archivos de ProxMenux",
@@ -41,14 +41,14 @@
         "contentRich": "Presencia y rutas de <code>menu</code>, <code>utils.sh</code>, <code>config.json</code>, <code>version.txt</code>"
       },
       {
-        "section": "Entorno virtual",
-        "source": "/opt/googletrans-env",
-        "content": "Solo instalación con traducción — presencia de venv + pip"
+        "section": "Archivos de traducción",
+        "source": "/usr/local/share/proxmenux/lang/",
+        "content": "Presencia del directorio lang/ incluido en todas las instalaciones"
       },
       {
         "section": "Idioma actual",
         "source": "config.json",
-        "contentRich": "Con traducción: código de idioma desde <code>.language</code>; Normal: <code>English (Fixed)</code>"
+        "contentRich": "Código de idioma de <code>.language</code>; usa <code>en</code> por defecto si no está definido"
       }
     ]
   },
@@ -60,7 +60,7 @@
     "unknownBody": "<code>/usr/local/share/proxmenux/version.txt</code> falta o no es legible. Lo más habitual es por una instalación parcial. Reinstala desde la fuente oficial de ProxMenux.",
     "noConfigTitle": "No hay información de instalación disponible",
     "noConfigBody": "<code>config.json</code> falta. El script no puede enumerar los componentes sin él. Reinstala para regenerarlo.",
-    "wrongStatusTitle": "Un componente muestra ✗ y estoy seguro de haberlo instalado",
+    "wrongStatusTitle": "Un componente muestra ✗ aunque estoy seguro de haberlo instalado",
     "wrongStatusBody": "Significa que <code>config.json</code> no registra ese componente como instalado — podría ser un script que aún no se registra a sí mismo, o una instalación manual que se saltó ProxMenux. El diálogo refleja lo que dice <code>config.json</code>, no lo que hay realmente en disco."
   },
   "related": {
@@ -73,7 +73,7 @@
       },
       {
         "href": "/docs/settings",
-        "label": "Resumen de Settings",
+        "label": "Resumen de Ajustes",
         "tail": "."
       }
     ]

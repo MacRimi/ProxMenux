@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Proxmox-Dienstprogramme — UUP Dump, Upgrade von PVE 8 auf 9, OVA-Export/-Import | ProxMenux",
+    "description": "Dienstprogramme für den Proxmox-VE-Alltag: Windows-ISOs mit UUP Dump erstellen, ausgewählte CLI-Werkzeuge installieren, das Proxmox-System sicher aktualisieren, das Versionsupgrade von PVE 8 auf PVE 9 durchführen sowie VMs als OVA / OVF exportieren und aus VMware oder VirtualBox importieren.",
+    "ogTitle": "Proxmox-Dienstprogramme — UUP Dump, Upgrade von PVE 8 auf 9, OVA-Export/-Import",
+    "ogDescription": "Erstellen Sie Windows ISOs, installieren Sie CLI-Tools, führen Sie ein sicheres Update aus, aktualisieren Sie PVE 8 auf PVE 9, exportieren / importieren Sie OVA / OVF-VMs.",
+    "twitterTitle": "Proxmox Dienstprogramme | ProxMenux",
+    "twitterDescription": "ISO-Erstellung, CLI-Werkzeuge, Proxmox-Aktualisierung, Upgrade PVE 8→9, portable VMs im OVA- / OVF-Format."
+  },
+  "header": {
+    "title": "Dienstprogramme und Werkzeuge",
+    "description": "Sechs Werkzeuge ergänzen den täglichen Proxmox-VE-Arbeitsablauf: ISO-Erstellung, Systemwartung und portable VMs. Jede Option ist unabhängig. Wählen Sie die benötigte aus; erst auf Ihre Anforderung wird etwas installiert.",
+    "section": "Dienstprogramme"
+  },
+  "intro": {
+    "title": "Wofür dieses Menü ist",
+    "body": "Drei Gruppen unabhängiger, aber häufig benötigter Werkzeuge: <strong>eine Windows-ISO erstellen</strong> mit UUP Dump, <strong>den Proxmox-Host warten</strong> (CLI-Werkzeuge, Aktualisierungen und Versionsupgrade) und <strong>VMs importieren und exportieren</strong> mit dem Standardformat OVA / OVF."
+  },
+  "opening": {
+    "heading": "Öffnen des Menüs",
+    "body": "Wählen Sie im Hauptmenü von ProxMenux <strong>Utilities</strong>. Sie werden sehen:",
+    "imageAlt": "Dienstprogrammmenü mit UUP Dump, Systemwerkzeugen, Aktualisierung, Versionsupgrade, Export und Import"
+  },
+  "groups": {
+    "heading": "Drei Werkzeuggruppen",
+    "intro": "Die sechs Werkzeuge fallen in drei unabhängige Gruppen. Klicken Sie auf eine Karte unten, um zum passenden Abschnitt zu springen.",
+    "iso": {
+      "title": "ISO-Erstellung",
+      "body": "Erstellen Sie offizielle Windows ISOs von UUP Dump auf dem Proxmox-Host selbst.",
+      "bullets": [
+        "Freigabelink von UUP Dump → bootfähige ISO",
+        "Abhängigkeiten automatisch installiert",
+        "Das Ergebnis wird im ISO-Vorlagenverzeichnis von Proxmox gespeichert"
+      ]
+    },
+    "maintenance": {
+      "title": "Systemwartung",
+      "body": "Halten Sie den Host in gutem Zustand: mit CLI-Werkzeugen, regelmäßigen Aktualisierungen und dem Versionsupgrade, wenn es ansteht.",
+      "bullets": [
+        "Installationsprogramm für Systemwerkzeuge (25 CLI-Werkzeuge)",
+        "Proxmox-Systemaktualisierung (apt + dist-upgrade)",
+        "Versionsupgrade PVE 8 → PVE 9"
+      ]
+    },
+    "portability": {
+      "title": "VM Portabilität",
+      "body": "Bewegen Sie VMs in und aus Proxmox mit dem Standard-OVA / OVF-Format.",
+      "bullets": [
+        "Proxmox-VM exportieren → OVA / OVF",
+        "OVA / OVF importieren → Proxmox-VM",
+        "Kompatibel mit VMware und VirtualBox"
+      ]
+    }
+  },
+  "upgradeWarn": {
+    "title": "Das PVE 8 → 9 Upgrade ist destruktiv und nicht reversibel",
+    "body": "Ein Versionsupgrade ersetzt die Debian-Basis (Bookworm → Trixie) und die Proxmox-Komponenten direkt im bestehenden System. Es gibt keinen Rückweg. Sie benötigen vor dem Start <strong>geprüfte Sicherungen</strong> aller VMs und CTs sowie <strong>Zugriff über Konsole / IPMI / iKVM</strong>. Deshalb verweigert das Upgrade-Werkzeug die Ausführung im Proxmox-Webterminal."
+  },
+  "isoSection": {
+    "heading": "ISO-Erstellung",
+    "body": "Erstellen Sie direkt auf dem Proxmox-Host eine neue, aktuelle Windows-Installations-ISO. Das Skript automatisiert den gesamten UUP-Dump-Ablauf: Installation der Abhängigkeiten (aria2c, cabextract, wimlib-imagex, …), paralleler Download der Aktualisierungsdateien mit aria2 und Umwandlung in eine bootfähige ISO. Diese wird unter <code>/var/lib/vz/template/iso</code> gespeichert und kann einer VM zugewiesen werden.",
+    "options": [
+      {
+        "title": "UUP-Dump-ISO-Erstellung",
+        "description": "Erstellen Sie eine aktuelle Windows-Installations-ISO über einen Freigabelink von UUP Dump. Abhängigkeiten, Download und Umwandlung werden vollständig automatisch abgewickelt. Die fertige ISO wird unter /var/lib/vz/template/iso für die VM-Erstellung gespeichert.",
+        "href": "/docs/utils/UUp-Dump-ISO-Creator"
+      }
+    ]
+  },
+  "maintenanceSection": {
+    "heading": "Systemwartung",
+    "body": "Drei Werkzeuge decken tägliche und gelegentliche Arbeiten am Host ab. Das <strong>Installationsprogramm für Systemwerkzeuge</strong> richtet die nach einer Neuinstallation benötigten CLI-Werkzeuge ein. Die <strong>Proxmox-Systemaktualisierung</strong> dient der wöchentlichen oder monatlichen Wartung. Das <strong>Upgrade von PVE 8 auf PVE 9</strong> ist der große Wechsel beim nächsten Hauptversionszyklus. Zusätzliche Sicherheitsprüfungen sind vorgesehen, weil er nicht rückgängig gemacht werden kann.",
+    "options": [
+      {
+        "title": "Installationsprogramm für Systemdienstprogramme",
+        "description": "Auswahl von 25 bewährten CLI-Werkzeugen (htop, btop, iperf3, tmux, ...) mit individueller Auswahl oder vordefinierten Gruppen (Basis, Entwicklung, Komprimierung, Multiplexer, Analyse, Netzwerk). Verwendet den standardisierten Ablauf mit Repository und Prüfbefehl.",
+        "href": "/docs/utils/system-utils"
+      },
+      {
+        "title": "Proxmox-Systemupdate",
+        "description": "Repository-Prüfung + apt update + apt dist-upgrade mit Rückfrage vor dem Neustart. Erkennt die PVE-Hauptversion (8 oder 9), behält die konfigurierten Repositories bei und fragt nach, bevor ein Host ohne Abonnement auf das no-subscription-Repository umgestellt wird. Anschließend wird autoremove ausgeführt.",
+        "href": "/docs/utils/system-update"
+      },
+      {
+        "title": "Aktualisieren Sie PVE 8 auf PVE 9",
+        "description": "Versionsupgrade (Debian Bookworm → Trixie + PVE 8 → 9). Vorabprüfungen, Repository-Migration, automatischer oder interaktiver Modus, Prüfung nach dem Upgrade und Neustart. Verweigert die Ausführung im Webterminal.",
+        "href": "/docs/utils/upgrade-pve8-pve9"
+      }
+    ]
+  },
+  "portabilitySection": {
+    "heading": "VM Portabilität (OVA / OVF)",
+    "body": "OVA und OVF sind hypervisorübergreifende Paketformate des DMTF-Standards, die von VMware, VirtualBox und Proxmox unterstützt werden. Die beiden Werkzeuge ermöglichen Export und Rückimport: Eine aus Proxmox exportierte VM lässt sich wieder importieren und umgekehrt. Damit können Sie Arbeitslasten von ESXi migrieren, eine portable VM-Sicherung erstellen oder eine vorbereitete VM mit jemandem teilen, der VirtualBox nutzt.",
+    "options": [
+      {
+        "title": "VM nach OVA / OVF exportieren",
+        "description": "Wandeln Sie eine Proxmox-VM in ein portables OVA-Archiv oder OVF-Verzeichnis um. DMTF-Standardschema, SHA1-Manifest, VMDK-Festplatten im Format streamOptimized. Importierbar in VMware (ESXi / Workstation / Fusion), VirtualBox und wieder in Proxmox.",
+        "href": "/docs/utils/export-vm"
+      },
+      {
+        "title": "VM von OVA / OVF importieren",
+        "description": "Importieren Sie einen Export aus VMware / VirtualBox / ProxMenux in Proxmox. Das Werkzeug entpackt OVA automatisch, liest die OVF-Metadaten, erstellt die VM und importiert jede Festplatte in das native Format des Speichers.",
+        "href": "/docs/utils/import-vm"
+      }
+    ]
+  },
+  "diskSpaceCallout": {
+    "title": "Eine Notiz zum Speicherplatz für den Export / Import",
+    "body": "Beide Werkzeuge wandeln Festplattenformate um: Der Export verwendet <code>qemu-img convert -O vmdk -o subformat=streamOptimized</code>, der Import <code>qm importdisk</code> für die Rückwandlung in das native Speicherformat (qcow2 / raw). Planen Sie für den Export <strong>~120% der virtuellen Festplattengröße</strong> für OVF und <strong>~220%</strong> für OVA ein. Das OVA-Archiv wird als unkomprimiertes TAR erstellt, während die temporären VMDK-Dateien noch vorhanden sind. Prüfen Sie vor dem Start, ob im Zielverzeichnis ausreichend Platz frei ist."
+  },
+  "fitsTogether": {
+    "heading": "Wie das Menü zusammenpasst",
+    "body": "Jedes Werkzeug hat ein eigenes Skript unter <code>scripts/utilities/</code>. Die Proxmox-Systemaktualisierung ruft ein einziges Arbeitsskript unter <code>scripts/global/</code> auf: update-pve-safe.sh erkennt die Hauptversion und verarbeitet PVE 8 und PVE 9. Das Upgrade PVE 8 → 9 bietet im eigenen Menü zwei weitere Aktionen: eine eigenständige <em>Prüfung vor dem Upgrade</em> (führt <code>pve8to9 --full</code> aus) und eine schreibgeschützte <em>Anleitung für das manuelle Upgrade</em> (17 Schritte). Damit können Benutzer den Ablauf prüfen oder von Hand ausführen."
+  }
+}
