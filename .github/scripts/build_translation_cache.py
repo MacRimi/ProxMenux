@@ -38,6 +38,18 @@ DEFAULT_CONTEXT = "Context: Technical message for Proxmox and IT. Translate:"
 # provider, then restore the exact source spelling afterwards. Keep longer
 # terms first so ``gasket`` cannot consume part of ``gasket-dkms``.
 PROTECTED_TECHNICAL_TERMS = (
+    # Product names, kept whole. Left to a translator, "Proxmox Backup Server"
+    # became "Proxmox Sicherungsserver" and "Serveur de sauvegarde Proxmox",
+    # and when a provider rightly handed it back unchanged the string was
+    # retried and then dropped as untranslated.
+    "Proxmox Backup Server",
+    "Proxmox Datacenter Manager",
+    "Proxmox Mail Gateway",
+    "Proxmox VE",
+    "ProxMenux Monitor",
+    "ProxMenux Optimizations",
+    "Secure Gateway",
+    "Tailscale",
     "google/gasket-driver",
     "feranick/gasket-driver",
     "libedgetpu1-std",

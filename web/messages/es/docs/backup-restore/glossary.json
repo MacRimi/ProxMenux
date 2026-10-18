@@ -112,7 +112,7 @@
         {
           "id": "repositorio-pbs",
           "term": "Repositorio PBS",
-          "def": "Combinación de servidor Proxmox Backup Server + <a href=\"#datastore\">datastore</a> + usuario al que se suben las copias. Se identifica con el formato <code>usuario@realm@host:datastore</code>. Un mismo servidor PBS puede alojar varios repositorios."
+          "def": "Combinación de servidor Proxmox Backup Server + <a href=\"#datastore\">datastore</a> + usuario al que se suben las copias. Se identifica con el formato <code>user@realm@host:datastore</code>. Un mismo servidor PBS puede alojar varios repositorios."
         },
         {
           "id": "datastore",

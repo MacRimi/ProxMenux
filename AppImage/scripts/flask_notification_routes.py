@@ -1156,6 +1156,14 @@ def setup_pve_webhook_core() -> dict:
         'fallback_commands': [],
         'error': None,
     }
+    try:  # Proxmox Backup Server has no /etc/pve notification configuration
+        from pbs_manager import is_pbs_host
+        on_pbs = is_pbs_host()
+    except Exception:
+        on_pbs = False
+    if on_pbs:
+        result['not_applicable'] = True
+        return result
     
     try:
         if not _pve_cluster_fs_mounted():
@@ -1339,6 +1347,13 @@ def cleanup_pve_webhook_core() -> dict:
     Only removes blocks named 'proxmenux-webhook' / 'proxmenux-default'.
     """
     result = {'cleaned': False, 'error': None}
+    try:  # Proxmox Backup Server has no /etc/pve notification configuration
+        from pbs_manager import is_pbs_host
+        on_pbs = is_pbs_host()
+    except Exception:
+        on_pbs = False
+    if on_pbs:
+        return {'cleaned': True, 'error': None, 'not_applicable': True}
     
     try:
         if not _pve_cluster_fs_mounted():

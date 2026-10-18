@@ -257,7 +257,7 @@
       "<strong>Hecho.</strong> El 2FA está ahora activo. La próxima vez que te logues, el panel pide primero la contraseña; una vez aceptada pide el código actual de 6 dígitos."
     ],
     "setupStep4Sub": [
-      "<em>Camino fácil:</em> en la app, pulsa <em>Añadir cuenta</em> → <em>Escanear código QR</em>, apunta la cámara al QR en la pantalla. La app nombra la entrada automáticamente (algo como <code>ProxMenux Monitor (tu-usuario)</code>) y empieza a mostrar un código de 6 dígitos que se refresca cada 30 segundos.",
+      "<em>Camino fácil:</em> en la app, pulsa <em>Añadir cuenta</em> → <em>Escanear código QR</em>, apunta la cámara al QR en la pantalla. La app nombra la entrada automáticamente (algo como <code>ProxMenux Monitor (your-username)</code>) y empieza a mostrar un código de 6 dígitos que se refresca cada 30 segundos.",
       "<em>Plan B manual</em> (cuando escanear no es posible — p. ej. configurando en el mismo móvil con el que abriste el panel): pulsa <em>Añadir cuenta</em> → <em>Introducir clave de setup</em>. Escribe cualquier nombre (p. ej. <em>Proxmox Monitor</em>), pega la cadena Base32 del diálogo, deja <em>Tipo</em> como <em>Basado en tiempo</em>, guarda."
     ],
     "testTitle": "Prueba antes de hacer logout",
@@ -319,7 +319,7 @@
     "heading": "Secure Gateway (Tailscale)",
     "intro": "Los reverse proxies son la respuesta clásica a \"llegar al panel desde fuera\" pero requieren un dominio público, certificado y un puerto abierto en el borde. <strong>Secure Gateway</strong> es la alternativa cero-puertos que viene dentro del propio Monitor — una app desplegable preconstruida que levanta un LXC Alpine ejecutando <a>Tailscale</a> como subnet router. Una vez unido a tu tailnet, cada dispositivo en él puede llegar al Monitor en la propia IP LAN del host — desde un portátil de vacaciones, un móvil con 5G u otro nodo — sin exponer TCP 8008 a internet.",
     "calloutTitle": "Por qué esto es cómodo",
-    "calloutBody": "La URL se mantiene igual que en la LAN — <code>http://&lt;ip-lan-proxmox&gt;:8008</code> funciona donde Tailscale funcione. Sin certificados, sin DNS, sin port forwarding. El propio Monitor ve la petición viniendo de una IP de tailnet (típicamente <code>100.x.y.z</code>), así que el log de auth y el hook de Fail2Ban siguen funcionando como en la LAN.",
+    "calloutBody": "La URL se mantiene igual que en la LAN — <code>http://&lt;proxmox-lan-ip&gt;:8008</code> funciona donde Tailscale funcione. Sin certificados, sin DNS, sin port forwarding. El propio Monitor ve la petición viniendo de una IP de tailnet (típicamente <code>100.x.y.z</code>), así que el log de auth y el hook de Fail2Ban siguen funcionando como en la LAN.",
     "deployBody": "El flujo de despliegue es una sola pantalla — elige el storage LXC del host, pega un auth-key de Tailscale (generado en <a>login.tailscale.com/admin/settings/keys</a>), elige qué subnets anunciar, pulsa Deploy. El LXC tarda ~30 segundos en arrancar y se registra en el tailnet automáticamente.",
     "outro": "El despliegue paso a paso, la configuración de subnet-routes, las ACLs de Tailscale y el modo Exit Node se documentan por separado en <link>Dashboard → Security → Secure Gateway</link> — ahí vive el wizard de despliegue en la UI del panel. Esta página solo cubre el patrón de acceso."
   },

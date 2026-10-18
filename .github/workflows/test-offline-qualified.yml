@@ -12,6 +12,7 @@ on:
       - 'AppImage/package-lock.json'
       - 'AppImage/scripts/*.py'
       - 'AppImage/scripts/tests/test_health_persistence_recurrence.py'
+      - 'AppImage/scripts/tests/test_native_app_discovery.py'
       - 'AppImage/app/**'
       - 'AppImage/components/**'
       - 'AppImage/hooks/**'
@@ -32,6 +33,7 @@ on:
       - 'AppImage/package-lock.json'
       - 'AppImage/scripts/*.py'
       - 'AppImage/scripts/tests/test_health_persistence_recurrence.py'
+      - 'AppImage/scripts/tests/test_native_app_discovery.py'
       - 'AppImage/app/**'
       - 'AppImage/components/**'
       - 'AppImage/hooks/**'
@@ -56,7 +58,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Run nine qualified Python files
+      - name: Install native discovery route fixture dependency
+        run: python3 -m pip install 'Flask>=3,<4'
+      - name: Run qualified Python files
         env:
           PYTHONDONTWRITEBYTECODE: '1'
         run: python3 -I -B .github/scripts/run_offline_qualified.py --lane python
@@ -82,7 +86,7 @@ jobs:
         run: |
           npm ci --prefix .github/ci/offline-node --legacy-peer-deps --ignore-scripts --no-audit --no-fund
           ln -s ../.github/ci/offline-node/node_modules AppImage/node_modules
-      - name: Run eleven qualified Node files
+      - name: Run qualified Node files
         env:
           NODE_PATH: ${{ github.workspace }}/AppImage/node_modules
           PYTHONDONTWRITEBYTECODE: '1'
