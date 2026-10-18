@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "title": "NFS klient v LXC | ProxMenux Dokumentácia",
+    "description": "Pripojte zdieľania NFS priamo zvnútra kontajnera Proxmox LXC pomocou ProxMenuxu. Skript nainštaluje nfs-common, podporuje automatické vyhľadanie serverov v LAN, trvalé pripojenia cez /etc/fstab a bezpečné spúšťanie systému. Vyžaduje privilegovaný kontajner.",
+    "ogTitle": "NFS klient v LXC | ProxMenux Dokumentácia",
+    "ogDescription": "Pripojte zdieľania NFS z privilegovaného kontajnera LXC. Automatické vyhľadanie, trvalé záznamy v /etc/fstab a bezpečné nastavenia spúšťania."
+  },
+  "header": {
+    "title": "NFS klient v LXC",
+    "description": "Pripojte zdieľania NFS priamo z kontajnera Proxmox LXC. Kontajner sa stáva skutočným klientom NFS: komunikuje so serverom cez sieť, spúšťa mount.nfs a zapisuje do /etc/fstab. ProxMenux nainštaluje nfs-common, pomôže vyhľadať servery a exporty a nastaví bezpečné spúšťanie.",
+    "section": "Úložisko a zdieľanie · LXC"
+  },
+  "privReq": {
+    "title": "Požadovaný privilegovaný kontajner",
+    "body": "Klient NFS používajúci <code>mount.nfs</code> potrebuje schopnosti (aspoň <code>SYS_ADMIN</code>), ktoré neprivilegované LXC neposkytujú. Skript vyžiada výber CT a <strong>skončí, ak je neprivilegovaný</strong>. Ak zdieľanie potrebujete v neprivilegovanom CT, najprv ho pripojte na hostiteľovi Proxmox cez <hostNfsLink>Zdieľanie NFS ako úložisko Proxmox</hostNfsLink> a potom ho sprístupnite CT pomocou bind mountu v <mountLink>LXC Mount Manager</mountLink>."
+  },
+  "what": {
+    "heading": "Čo to robí?",
+    "body": "LXC Mount Manager sprístupňuje CT cestu <em>cez</em> hostiteľa Proxmox. Tento skript namiesto toho poskytne kontajneru <strong>vlastného klienta NFS</strong>: kontajner komunikuje cez sieť, pripája zdieľania priamo zo servera NFS a ukladá ich do vlastného súboru <code>/etc/fstab</code>. Hostiteľ Proxmox nie je súčasťou dátovej cesty.",
+    "diagramServerLabel": "NFS server",
+    "diagramServerDetail": "/export/data",
+    "diagramHostLabel": "Hostiteľ Proxmox",
+    "diagramHostDetail": "(len\nmost siete)",
+    "diagramCtLabel": "LXC (privilegovaný)",
+    "diagramCtDetail": "/mnt/data\nmount.nfs vnútri CT",
+    "diagramArrow": "NFS",
+    "twoWaysTitle": "Dva spôsoby, ako poskytnúť CT NFS prístup — vyberte si jeden",
+    "twoWaysBind": "<strong>Bind mount cez hostiteľa</strong> (<mountLink>LXC Mount Manager</mountLink>): hostiteľ pripojí NFS raz a každý CT dostane rovnakú cestu cez bind mount. Funguje s neprivilegovanými CT. Odporúča sa, ak rovnaké zdieľanie potrebuje viacero CT.",
+    "twoWaysDirect": "<strong>Priame pripojenie NFS v CT</strong> (táto stránka): CT pripojí NFS samostatne. Vyžaduje privilegovaný CT. Hodí sa, ak má CT spravovať vlastné pripojenie a prihlasovacie údaje alebo ak každý CT komunikuje s iným serverom."
+  },
+  "opening": {
+    "heading": "Otvorenie nástroja",
+    "body": "V hlavnej ponuke otvorte <strong>Storage &amp; Share Manager → Nastaviť klienta NFS v LXC (iba privilegovaný)</strong>. ProxMenux najprv vyžiada <strong>výber cieľového CT</strong>, spustí ho, ak je zastavený, a skončí pri neprivilegovanom CT. Potom sa zobrazí táto podponuka:",
+    "imageAlt": "Ponuka klienta NFS — Pripojiť / Zobraziť / Odpojiť / Testovať pripojenie"
+  },
+  "howRuns": {
+    "heading": "Ako beží skript (Mount flow)"
+  },
+  "fstabFlags": {
+    "heading": "Prečo tie fstab vlajky?",
+    "intro": "Pre trvalé pripojenie skript pridáva tri vlajky za štandardné NFS možnosti: <code>_netdev,x-systemd.automount,noauto</code>. Každý z nich rieši skutočný boot-time problém:",
+    "headerFlag": "Vlajka",
+    "headerEffect": "Čo to robí?",
+    "rows": [
+      {
+        "flag": "_netdev",
+        "effect": "Oznámi inicializačnému systému, že toto pripojenie potrebuje sieť. Spúšťanie systému sa nezablokuje čakaním na pripojenie ešte pred dostupnosťou siete."
+      },
+      {
+        "flag": "x-systemd.automount",
+        "effectRich": "Vytvorí jednotku systemd automount: súborový systém sa pripojí až pri prvom prístupe k <code>/mnt/&lt;path&gt;</code>. Nedostupný server NFS pri štarte nezablokuje CT."
+      },
+      {
+        "flag": "noauto",
+        "effect": "Vynechá okamžité pripojenie pri štarte. Spolu s uvedenou jednotkou automount sa súborový systém pripojí až pri prvom prístupe."
+      }
+    ],
+    "netEffectTitle": "Čistý účinok",
+    "netEffectBody": "Súborový systém NFS sa pripojí pri <em>prvom prístupe</em>, nie okamžite pri štarte. Ak server nie je dostupný, prístup môže čakať alebo zlyhať a ovplyvniť služby závislé od danej cesty. Automount znižuje závislosť pri štarte, ale nezaručuje, že výpadok NFS neovplyvní žiadnu službu CT."
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent",
+    "body": "Celý postup zopakujete ručne — každý príkaz sa spúšťa <strong>vo vnútri CT</strong> cez <code>pct exec &lt;ctid&gt; --</code> alebo priamo cez <code>pct enter &lt;ctid&gt;</code>:"
+  },
+  "view": {
+    "heading": "Zobraziť aktuálne pripojenia",
+    "body": "Zobrazí aktívne pripojenia NFS v CT (<code>mount | grep nfs</code>) aj všetky riadky NFS v jeho <code>/etc/fstab</code>. Pri každom zázname fstab sa zobrazí aktuálny stav pripojenia, čo pomáha nájsť trvalé pripojenia neobnovené pri štarte."
+  },
+  "unmount": {
+    "heading": "Odpojiť zdieľanie NFS",
+    "body": "Spojí aktívne pripojenia a položky fstab do jedného zoznamu, umožní výber a <strong>odstráni príslušný riadok z <code>/etc/fstab</code></strong>. Skript <em>nespúšťa</em> <code>umount</code> na aktívnom pripojení — upozorní, že odpojenie sa prejaví až po reštarte CT.",
+    "warnTitle": "Skript odstráni položky fstab, nie aktívne pripojenia",
+    "warnBody": "Ide o zámerné správanie: <code>umount</code> zlyhá s „device busy“, ak pripojenie stále používa proces v CT. Odstránenie záznamu z fstab zabezpečí, že sa pri ďalšom spustení CT neobnoví. Ak ho chcete odpojiť <em>hneď</em> a ste si istí, že ho nič nepoužíva, po skončení skriptu ručne vykonajte <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code>."
+  },
+  "test": {
+    "heading": "Test NFS konektivita",
+    "body": "Diagnostika vnútri CT overí inštaláciu <code>nfs-common</code>, beh <code>rpcbind</code> a vypíše aktuálne pripojenia NFS. Potom pri každom serveri NFS uvedenom vo fstab skontroluje ping, port 2049 a <code>showmount -e</code>. Je to vhodný prvý krok, ak sa trvalé pripojenie neobnoví."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "privTitle": "Vyžaduje sa privilegovaný kontajner (skript skončí)",
+    "privBody": "Vybrané CT je neprivilegované. Jadro NFS klient potrebuje schopnosť <code>SYS_ADMIN</code>, ktorú neprivilegované CT nevystavujú. Buď previesť CT na privilegované (Disk Manager &amp; konverzie je zdokumentovaný v <importLink>Import Disk na LXC</importLink>) alebo použiť alternatívnu cestu popísanú v varovaní v hornej časti tejto stránky.",
+    "aptTitle": "apt-get install nfs-common fails",
+    "aptIntro": "Skript predpokladá rodinu Debianu CT (<code>apt-get</code>). Ak CT beží Alpine / Arch / Rocky / Alma, inštalačný krok nefunguje ticho. Nainštalujte NFS klienta ručne pre tento distro:",
+    "aptItems": [
+      "Alpine: <code>apk add nfs-utils</code>",
+      "Arch: <code>pacman -S nfs-utils</code>",
+      "Rocky / Alma: <code>dnf install nfs-utils</code>"
+    ],
+    "aptOutro": "Potom znova spustite skript ProxMenux — krok inštalácie preskočí, keď už sú nástroje k dispozícii.",
+    "portTitle": "\"NFS port (2049) is not accessible\"",
+    "portBody": "Ping uspel, ale <code>nc -z &lt;server&gt; 2049</code> zlyhal zvnútra CT. Skontrolujte, či služba NFS beží na serveri, či firewall umožňuje 2049 zo siete CT a či má CT skutočne platnú sieťovú trasu (skúste <code>pct exec &lt;ctid&gt; -- ip route</code>).",
+    "bootTitle": "Trvalé pripojenie funguje, ale po štarte sa neobnoví",
+    "bootBody": "Príčinou býva nepripravená sieť pri pripájaní v CT, nedostupný server pri štarte alebo nefungujúce DNS pri štarte. Prvý problém riešia voľby <code>_netdev,x-systemd.automount,noauto</code>; ak ste záznam fstab vytvorili ručne bez nich, pridajte pripojenie znovu cez skript. Automount čaká na prvý prístup, čo je bežné správanie. Pri probléme s DNS použite IP adresu servera namiesto názvu.",
+    "squashTitle": "Server squashes root, žiadny prístup k zápisu z vnútra CT",
+    "squashIntro": "Export NFS používa <code>root_squash</code> (štandardne) a CT píše ako root. Dve možnosti:",
+    "squashItems": [
+      "Server-strana: zmeňte export na <code>no_root_squash</code> (iba ak veríte CT).",
+      "Na strane CT zapisujte ako používateľ mimo root, ktorého server akceptuje, alebo vhodne upravte vlastníka zdieľania cez chown."
+    ],
+    "squashOutro": "ProxMenux to nemôže opraviť — ide o pravidlá servera."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "LXC Body pripojenia (Host ↔ Container)",
+        "tail": " - alternatíva pre neprivilegované CT: pripojiť sa na hostiteľa, naviazať do CT."
+      },
+      {
+        "href": "/docs/storage-share/lxc-samba-client",
+        "label": "Samba klient v LXC",
+        "tail": " — súvisiaca stránka s rovnakým postupom pre zdieľania SMB / CIFS."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-server",
+        "label": "NFS server v LXC",
+        "tailRich": " — opačný smer: sprístupniť priečinky <em>z</em> CT cez NFS."
+      },
+      {
+        "href": "/docs/storage-share/host-nfs",
+        "label": "Zdieľanie NFS ako úložisko Proxmox",
+        "tail": " — zaregistrovať zdieľanie priamo v Proxmoxe namiesto jedného CT."
+      }
+    ]
+  }
+}

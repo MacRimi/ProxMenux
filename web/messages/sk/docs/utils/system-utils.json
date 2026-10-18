@@ -1,0 +1,252 @@
+{
+  "meta": {
+    "title": "Inštalátor systémových nástrojov | Dokumentácia ProxMenux",
+    "description": "Inštalátor nástrojov CLI pre Proxmox VE s 25 balíkmi v hlavnom zozname (htop, btop, iperf3, tmux, ...). Vlastný výber, inštalácia všetkého a preddefinované skupiny (základné, vývoj, kompresia, multiplexery, analýza, sieť). Skupiny môžu obsahovať ďalšie balíky. Používa ensure_repositories + install_single_package.",
+    "ogTitle": "Inštalátor systémových nástrojov | Dokumentácia ProxMenux",
+    "ogDescription": "Nainštalujte vybrané nástroje CLI v Proxmox VE jedným kliknutím alebo vlastným výberom."
+  },
+  "header": {
+    "title": "Inštalátor systémových nástrojov",
+    "description": "Výber 25 nástrojov CLI z hlavného zoznamu PROXMENUX_UTILS. Ponúka vlastný výber, inštaláciu všetkého, šesť preddefinovaných skupín a overenie inštalácií. Skupiny môžu obsahovať nástroje mimo hlavného zoznamu. Používa spoločné funkcie ensure_repositories() + install_single_package() na jednotnú správu repozitárov a správy o jednotlivých balíkoch.",
+    "section": "Nástroje"
+  },
+  "info": {
+    "title": "Čo to robí?",
+    "body": "Inštaluje nástroje CLI zo zoznamu 25 balíkov. Každá inštalácia používa rovnaký postup: <code>ensure_repositories</code> overí použiteľný repozitár Proxmox pre spustenú hlavnú verziu PVE; potom <code>install_single_package</code> nainštaluje balík a overí dostupnosť príkazu v PATH."
+  },
+  "opening": {
+    "heading": "Otvorenie inštalátora",
+    "intro": "Z menu Utilities vyberte <strong>System Utilities Installer</strong>. Hlavné menu ponúka deväť možností:",
+    "imageAlt": "Menu inštalátora systémových nástrojov s vlastným výberom, ALL, preddefinovanými skupinami a overením"
+  },
+  "actions": {
+    "heading": "9 akcií menu",
+    "headerOption": "Možnosť",
+    "headerBehaviour": "Správanie",
+    "rows": [
+      {
+        "option": "1. Vlastný výber",
+        "behaviourRich": "Výberový zoznam všetkých 25 balíkov. SPACE prepína označenie a ENTER potvrdzuje; nainštalujú sa iba vybrané balíky."
+      },
+      {
+        "option": "2. Nainštalovať všetky nástroje",
+        "behaviourRich": "Nainštaluje všetky balíky z <code>PROXMENUX_UTILS</code> naraz. Použite po novej inštalácii Proxmox."
+      },
+      {
+        "option": "3. Základné",
+        "behaviourRich": "<code>grc</code>, <code>htop</code>, <code>tree</code>, <code>curl</code>, <code>wget</code>"
+      },
+      {
+        "option": "4. Vývoj",
+        "behaviourRich": "<code>git</code>, <code>vim</code>, <code>nano</code>"
+      },
+      {
+        "option": "5. Kompresia",
+        "behaviourRich": "<code>zip</code>, <code>unzip</code>, <code>rsync</code>"
+      },
+      {
+        "option": "6. Terminálne multiplexéry",
+        "behaviourRich": "<code>screen</code>, <code>tmux</code>"
+      },
+      {
+        "option": "7. Analýza",
+        "behaviourRich": "<code>jq</code>, <code>ncdu</code>, <code>iotop</code>"
+      },
+      {
+        "option": "8. Sieť",
+        "behaviourRich": "<code>iperf3</code>, <code>nethogs</code>, <code>nmap</code>, <code>tcpdump</code>, <code>lsof</code>"
+      },
+      {
+        "option": "9. Overiť inštalácie",
+        "behaviourRich": "Prejde každú položku v <code>PROXMENUX_UTILS</code>, overí dostupnosť príkazu v PATH a vypíše súhrn Dostupné / Chýbajúce."
+      }
+    ]
+  },
+  "packages": {
+    "heading": "25 balíkov",
+    "intro": "Definované v spoločnom súbore <code>scripts/global/utils-install-functions.sh</code> ako <code>PROXMENUX_UTILS</code> (formát: <code>package:verify_command:description</code>). Ďalšie skripty ProxMenux, napríklad spúšťanie sieťových nástrojov iftop / iptraf-ng / iperf3, tieto položky používajú tiež, aby balík a overovací príkaz zostali zosúladené.",
+    "headerPackage": "Balík",
+    "headerVerify": "Overovací príkaz",
+    "headerDescription": "Popis",
+    "rows": [
+      {
+        "package": "axel",
+        "verify": "axel",
+        "description": "Urýchľovač sťahovania"
+      },
+      {
+        "package": "aria2",
+        "verify": "aria2c",
+        "description": "Sťahovanie z viacerých zdrojov"
+      },
+      {
+        "package": "btop",
+        "verify": "btop",
+        "description": "Moderný monitor zdrojov"
+      },
+      {
+        "package": "cabextract",
+        "verify": "cabextract",
+        "description": "Extrahovať CAB súbory"
+      },
+      {
+        "package": "chntpw",
+        "verify": "chntpw",
+        "description": "Upraviť register Windows / heslá"
+      },
+      {
+        "package": "dos2unix",
+        "verify": "dos2unix",
+        "description": "Previesť DOS / Unix textové súbory"
+      },
+      {
+        "package": "genisoimage",
+        "verify": "genisoimage",
+        "description": "Vytváranie obrazov ISO"
+      },
+      {
+        "package": "grc",
+        "verify": "grc",
+        "description": "Všeobecné farebné zvýrazňovanie záznamov"
+      },
+      {
+        "package": "htop",
+        "verify": "htop",
+        "description": "Interaktívny prehliadač procesov"
+      },
+      {
+        "package": "iftop",
+        "verify": "iftop",
+        "description": "Používanie siete v reálnom čase"
+      },
+      {
+        "package": "intel-gpu-tools",
+        "verify": "intel_gpu_top",
+        "description": "Nástroje Intel GPU"
+      },
+      {
+        "package": "iotop",
+        "verify": "iotop",
+        "description": "Monitorovanie diskových vstupov a výstupov"
+      },
+      {
+        "package": "iperf3",
+        "verify": "iperf3",
+        "description": "Testovanie šírky pásma siete"
+      },
+      {
+        "package": "ipset",
+        "verify": "ipset",
+        "description": "Správa množín IP adries"
+      },
+      {
+        "package": "iptraf-ng",
+        "verify": "iptraf-ng",
+        "description": "Nástroj monitorovania siete"
+      },
+      {
+        "package": "libguestfs-tools",
+        "verify": "virt-filesystems",
+        "description": "Nástroje pre disky VM"
+      },
+      {
+        "package": "msr-tools",
+        "verify": "rdmsr",
+        "description": "Prístup k registrom MSR procesora"
+      },
+      {
+        "package": "net-tools",
+        "verify": "netstat",
+        "description": "Staršie sieťové nástroje"
+      },
+      {
+        "package": "plocate",
+        "verify": "locate",
+        "description": "Rýchlo nájsť súbory"
+      },
+      {
+        "package": "s-tui",
+        "verify": "s-tui",
+        "description": "Stress-Terminal UI"
+      },
+      {
+        "package": "sshpass",
+        "verify": "sshpass",
+        "description": "Neinteraktívne prihlásenie SSH"
+      },
+      {
+        "package": "tmux",
+        "verify": "tmux",
+        "description": "Terminálny multiplexer"
+      },
+      {
+        "package": "unzip",
+        "verify": "unzip",
+        "description": "Extrakcia ZIP súborov"
+      },
+      {
+        "package": "wimtools",
+        "verify": "wimlib-imagex",
+        "description": "Správa obrazov WIM"
+      },
+      {
+        "package": "zip",
+        "verify": "zip",
+        "description": "Vytvoriť ZIP súbory"
+      }
+    ]
+  },
+  "howItWorks": {
+    "heading": "Ako funguje inštalácia jedného balíka",
+    "items": [
+      "<code>ensure_repositories</code> rozpozná PVE 8 alebo 9 a načíta repozitáre cez API Proxmox. Pri použiteľnom repozitári Proxmox nič nemení. Hostiteľ bez aktívneho predplatného s jediným repozitárom Enterprise musí potvrdiť prechod na no-subscription. Po potvrdenej zmene sa spustí <code>apt-get update</code>.",
+      "<code>install_single_package \"pkg\" \"verify_cmd\" \"description\"</code> spustí <code>apt-get install -y \"$pkg\"</code> so správami (<code>msg_info</code> / <code>msg_ok</code> / <code>msg_error</code>)."
+    ],
+    "verifyIntro": "Po inštalácii sa overovací príkaz skontroluje pomocou <code>command -v \"$verify_cmd\"</code>. Možné sú tri výsledky:",
+    "verifyOutcomes": [
+      "<strong>0 (úspech):</strong> príkaz je dostupný a balík sa počíta ako <em>Úspešný</em>.",
+      "<strong>1 (zlyhanie):</strong> apt zlyhal a balík sa počíta ako <em>Neúspešný</em>.",
+      "<strong>2 (upozornenie):</strong> apt uspel, ale očakávaný príkaz sa nenašiel v PATH; balík sa počíta ako <em>S upozorneniami</em>."
+    ],
+    "summary": "Na konci skupinovej/vlastnej inštalácie sa v súhrnnom dialógovom okne zobrazí počet <em>Úspešné / S upozorneniami / Neúspešné</em>."
+  },
+  "verify": {
+    "heading": "Overiť inštalácie",
+    "intro": "Možnosť 9 je iba na čítanie: prejde <code>PROXMENUX_UTILS</code> a spustí <code>command -v</code> pre každý príkaz. Výstup vyzerá takto:",
+    "code": "Total: 25\nAvailable: 18\nMissing: 8\n\n✓ axel - Download accelerator\n✓ aria2c - Multi-source downloader\n✓ btop - Modern resource monitor\n✗ cabextract - Extract CAB files\n✓ dos2unix - Convert DOS / Unix text files\n✗ genisoimage - Create ISO images\n✓ grc - Generic log colorizer\n...",
+    "outro": "Užitočné pred spustením skriptov závislých od týchto nástrojov. Napríklad <code>uup_dump_iso_creator.sh</code> potrebuje <code>aria2c</code> + <code>cabextract</code> + <code>wimlib-imagex</code>. Ak niečo chýba, nainštalujte príslušnú skupinu alebo vyberte chýbajúce balíky jednotlivo."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "reposTitle": "„Repozitáre sa nepodarilo nastaviť. Inštalácia sa zrušila.“",
+    "reposBody": "Kontrola repozitárov zlyhala: prechod na no-subscription bol odmietnutý, stav predplatného sa nedal načítať alebo položka repozitára potrebuje zásah. Príčinu uvádza predchádzajúca správa. Repozitáre sú v <em>Node → Updates → Repositories</em>; príkaz <code>apt-get update</code> v konzole zobrazí chybu apt.",
+    "warningsTitle": "Balíček je hlásený \"S upozorneniami,\" ale príkaz funguje po zatvorení menu",
+    "warningsBody": "Po <code>apt-get install</code> funkcia spustí <code>hash -r</code>, krátko počká a overí očakávaný príkaz cez <code>command -v</code>. Upozornenie znamená, že kontrola stále zlyhala, ale neurčuje príčinu. Skúste nový shell a ak príkaz stále chýba, overte inštaláciu balíka a PATH.",
+    "hangsTitle": "Apt inštalácia visí",
+    "hangsBody": "Pravdepodobne je otázka debconf skrytá za potlačeným výstupom. Skript pri volaniach apt používa <code>DEBIAN_FRONTEND=noninteractive</code>, čo zvyčajne otázky potlačí, ale niektoré balíky stále potrebujú vstup. Zrušte operáciu pomocou <kbd>Ctrl</kbd>+<kbd>C</kbd> a ručne spustite <code>apt-get install -y &lt;pkg&gt;</code> v shelli, aby ste otázku videli a mohli rozhodnúť."
+  },
+  "files": {
+    "heading": "Príslušné súbory",
+    "code": "scripts/utilities/system_utils.sh                    # this script\nscripts/global/utils-install-functions.sh            # PROXMENUX_UTILS, install_single_package\nscripts/global/repository-functions.sh               # ensure_repositories\nscripts/global/repository_policy.py                  # reads and switches repositories through the Proxmox API\n/etc/apt/sources.list.d/proxmox.sources              # no-subscription source, written by Proxmox when the switch is accepted"
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/utils/system-update",
+        "label": "Aktualizácia systému Proxmox",
+        "tailRich": " — pre samotný <code>apt dist-upgrade</code> na hostiteľovi."
+      },
+      {
+        "href": "/docs/network/monitoring",
+        "label": "Živé monitorovacie nástroje (Sieť)",
+        "tailRich": " — používa iftop / iptraf-ng / iperf3 z rovnakého zoznamu."
+      },
+      {
+        "href": "/docs/utils",
+        "label": "Prehľad pomocných nástrojov",
+        "tailRich": " — Späť na prehľad sekcie."
+      }
+    ]
+  }
+}

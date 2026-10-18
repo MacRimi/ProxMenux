@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Utilitários Proxmox — UUP Dump, atualização de PVE 8 para 9, exportação/importação OVA | ProxMenux",
+    "description": "Utilitários do dia a dia para Proxmox VE: criar ISOs do Windows com o UUP Dump, instalar uma seleção de ferramentas CLI, atualizar o sistema Proxmox com segurança, passar do PVE 8 para o PVE 9, exportar VMs para OVA / OVF e importar VMs OVA / OVF do VMware ou VirtualBox.",
+    "ogTitle": "Utilitários Proxmox — UUP Dump, atualização de PVE 8 para 9, exportação/importação OVA",
+    "ogDescription": "Crie ISOs do Windows, instale ferramentas CLI, execute uma atualização segura, passe do PVE 8 para o PVE 9 e exporte ou importe VMs OVA / OVF.",
+    "twitterTitle": "Utilitários Proxmox | ProxMenux",
+    "twitterDescription": "Criação de ISOs, ferramentas CLI, atualização do Proxmox, passagem PVE 8→9 e portabilidade de VMs OVA / OVF."
+  },
+  "header": {
+    "title": "Utilitários e Ferramentas",
+    "description": "Seis ferramentas complementam as tarefas diárias no Proxmox VE: criação de ISOs, manutenção do sistema e portabilidade de VMs. Cada opção é independente: escolha a que precisa; nada é instalado sem que o solicite.",
+    "section": "Utilitários"
+  },
+  "intro": {
+    "title": "Para que serve este menu",
+    "body": "Três grupos de ferramentas independentes, mas frequentemente necessárias: <strong>criar uma ISO do Windows</strong> com o UUP Dump, <strong>manter o host Proxmox</strong> (utilitários CLI, atualizações e passagem de versão principal) e <strong>importar e exportar VMs</strong> no Proxmox através do formato padrão OVA / OVF."
+  },
+  "opening": {
+    "heading": "Abrir o menu",
+    "body": "No menu principal do ProxMenux, selecione <strong>Utilities</strong>. Você verá isto:",
+    "imageAlt": "Menu de utilitários com UUP Dump, utilitários de sistema, atualização, passagem de versão, exportação e importação"
+  },
+  "groups": {
+    "heading": "Três grupos de ferramentas",
+    "intro": "As seis ferramentas estão divididas em três grupos independentes. Clique num cartão abaixo para ir para a secção correspondente.",
+    "iso": {
+      "title": "Criação ISO",
+      "body": "Crie ISOs oficiais do Windows do UUP Dump no próprio host Proxmox.",
+      "bullets": [
+        "Link partilhado do UUP Dump → ISO de arranque",
+        "Dependências instaladas automaticamente",
+        "O resultado é guardado no diretório de modelos ISO do Proxmox"
+      ]
+    },
+    "maintenance": {
+      "title": "Manutenção do sistema",
+      "body": "Mantenha o host saudável: ferramentas CLI, atualizações regulares e atualização de versão principal quando chegar a hora.",
+      "bullets": [
+        "Instalador de utilitários de sistema (25 ferramentas CLI)",
+        "Atualização do Sistema Proxmox (apt + dist-upgrade)",
+        "Atualização de versão principal PVE 8 → PVE 9"
+      ]
+    },
+    "portability": {
+      "title": "Portabilidade VM",
+      "body": "Mover VMs para dentro e para fora do Proxmox usando o formato padrão OVA / OVF.",
+      "bullets": [
+        "Exportação Proxmox VM → OVA / OVF",
+        "Importar OVA / OVF → Proxmox VM",
+        "Compatível com VMware e VirtualBox"
+      ]
+    }
+  },
+  "upgradeWarn": {
+    "title": "A atualização PVE 8 → 9 é destrutiva e não reversível",
+    "body": "Uma atualização de versão principal substitui no local a base Debian (Bookworm → Trixie) e os componentes Proxmox. Não existe um caminho de reversão: antes de começar, precisa de <strong>cópias de segurança verificadas</strong> de cada VM e CT e de <strong>acesso por consola / IPMI / iKVM</strong>. Por isso, a ferramenta recusa a execução no terminal web do Proxmox."
+  },
+  "isoSection": {
+    "heading": "Criação ISO",
+    "body": "Crie uma nova ISO de instalação do Windows atualizada diretamente no host Proxmox. O script automatiza todo o processo UUP Dump: instalação de dependências (aria2c, cabextract, wimlib-imagex, …), transferência paralela dos ficheiros de atualização com aria2 e conversão numa única ISO de arranque. A ISO é guardada em <code>/var/lib/vz/template/iso</code>, pronta para associar a uma VM.",
+    "options": [
+      {
+        "title": "Criador de ISO do UUP Dump",
+        "description": "Crie uma ISO de instalação do Windows atualizada a partir de um link partilhado do UUP Dump. As dependências, a transferência e a conversão são totalmente automatizadas; a ISO resultante é guardada em /var/lib/vz/template/iso, pronta para criar uma VM.",
+        "href": "/docs/utils/UUp-Dump-ISO-Creator"
+      }
+    ]
+  },
+  "maintenanceSection": {
+    "heading": "Manutenção do sistema",
+    "body": "Três ferramentas cobrem as tarefas diárias e ocasionais no host. O <strong>Instalador de utilitários de sistema</strong> configura as ferramentas CLI úteis após uma nova instalação. A <strong>Atualização do sistema Proxmox</strong> trata da manutenção semanal ou mensal. A <strong>Atualização do PVE 8 para o PVE 9</strong> é a grande mudança de cada ciclo de versão principal, com verificações de segurança adicionais por não ser reversível.",
+    "options": [
+      {
+        "title": "Instalador de utilitários de sistema",
+        "description": "Seletor de 25 ferramentas CLI escolhidas (htop, btop, iperf3, tmux, ...) com seleção personalizada ou grupos predefinidos (básico, desenvolvimento, compressão, multiplexadores, análise e rede). Usa o fluxo padrão com repositório e comando de verificação.",
+        "href": "/docs/utils/system-utils"
+      },
+      {
+        "title": "Atualização do sistema Proxmox",
+        "description": "Verificação dos repositórios + apt update + apt dist-upgrade, com confirmação antes de reiniciar. Deteta a versão principal do PVE (8 ou 9), mantém os repositórios configurados e pede confirmação antes de mudar um host sem subscrição para o repositório no-subscription; depois executa autoremove.",
+        "href": "/docs/utils/system-update"
+      },
+      {
+        "title": "Atualize PVE 8 para PVE 9",
+        "description": "Atualização de versão principal (Debian Bookworm → Trixie + PVE 8 → 9). Verificações prévias, migração dos repositórios, modo automatizado ou interativo, validação final e reinício. Recusa a execução no terminal web.",
+        "href": "/docs/utils/upgrade-pve8-pve9"
+      }
+    ]
+  },
+  "portabilitySection": {
+    "heading": "Portabilidade VM (OVA / OVF)",
+    "body": "OVA e OVF são formatos de empacotamento entre hipervisores definidos pelo padrão DMTF e suportados pelo VMware, VirtualBox e Proxmox. As duas ferramentas permitem exportar e voltar a importar: uma VM exportada do Proxmox pode ser importada novamente, e vice-versa. Use-as para migrar cargas de trabalho do ESXi, criar uma cópia de segurança portátil de uma VM ou partilhar uma VM preparada com alguém que usa VirtualBox.",
+    "options": [
+      {
+        "title": "Exportar VM para OVA / OVF",
+        "description": "Converta uma VM Proxmox num arquivo OVA portátil ou num diretório OVF. Esquema padrão DMTF, manifesto SHA1 e discos VMDK no formato streamOptimized. Importável no VMware (ESXi / Workstation / Fusion), VirtualBox e novamente no Proxmox.",
+        "href": "/docs/utils/export-vm"
+      },
+      {
+        "title": "Importar VM de OVA / OVF",
+        "description": "Importe no Proxmox uma exportação do VMware / VirtualBox / ProxMenux. A ferramenta extrai automaticamente o OVA, analisa os metadados OVF, cria a VM e importa cada disco no formato nativo do armazenamento.",
+        "href": "/docs/utils/import-vm"
+      }
+    ]
+  },
+  "diskSpaceCallout": {
+    "title": "Nota sobre o espaço em disco para exportação / importação",
+    "body": "As duas ferramentas convertem formatos de disco: a exportação usa <code>qemu-img convert -O vmdk -o subformat=streamOptimized</code>; a importação usa <code>qm importdisk</code> para voltar ao formato nativo do armazenamento (qcow2 / raw). Para exportar, reserve <strong>~120% do tamanho virtual do disco</strong> para OVF e <strong>~220%</strong> para OVA. O arquivo OVA usa TAR sem compressão e é criado enquanto os ficheiros VMDK temporários ainda existem. Verifique se o diretório de destino tem espaço livre suficiente antes de começar."
+  },
+  "fitsTogether": {
+    "heading": "Como o menu se encaixa",
+    "body": "Cada ferramenta tem um script dedicado em <code>scripts/utilities/</code>. A atualização do sistema Proxmox chama um único script seguro em <code>scripts/global/</code>, update-pve-safe.sh, que deteta a versão principal e trata do PVE 8 e do PVE 9. A atualização PVE 8 → 9 oferece duas ações adicionais no seu próprio menu: uma <em>Verificação prévia à atualização</em> independente (executa <code>pve8to9 --full</code>) e um <em>Guia de atualização manual</em> só de leitura (procedimento de 17 passos), para quem quer inspecionar o processo ou executá-lo manualmente."
+  }
+}

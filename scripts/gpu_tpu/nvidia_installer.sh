@@ -203,8 +203,14 @@ detect_driver_status() {
       
       if [[ -n "$CURRENT_DRIVER_VERSION" ]]; then
         CURRENT_DRIVER_INSTALLED=true
-        # Register the installed driver version in components_status.json
-        update_component_status "nvidia_driver" "installed" "$CURRENT_DRIVER_VERSION" "gpu" '{"patched":false}'
+        # Register the installed driver version in components_status.json,
+        # keeping the patched flag while the recorded version is unchanged.
+        local patched_json='{"patched":false}'
+        if [[ "$(jq -r '.nvidia_driver.version // empty' "$COMPONENTS_STATUS_FILE" 2>/dev/null)" == "$CURRENT_DRIVER_VERSION" ]] \
+           && is_current_nvidia_patched; then
+          patched_json='{"patched":true}'
+        fi
+        update_component_status "nvidia_driver" "installed" "$CURRENT_DRIVER_VERSION" "gpu" "$patched_json"
       fi
     fi
   fi

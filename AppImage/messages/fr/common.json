@@ -8,7 +8,8 @@
     "unknown": "Inconnu",
     "notAvailable": "N/A",
     "serverOffline": "Serveur hors ligne",
-    "supportProject": "Soutenir et contribuer au projet"
+    "supportProject": "Soutenir et contribuer au projet",
+    "descriptionPbs": "Tableau de bord Proxmox Backup Server"
   },
   "common": {
     "notAvailable": "N/A",
@@ -165,7 +166,8 @@
     },
     "runningCountOne": "{count} en cours d'exécution",
     "runningCountFew": "{count} en cours d'exécution",
-    "runningCountMany": "{count} en cours d'exécution"
+    "runningCountMany": "{count} en cours d'exécution",
+    "pbsVersion": "Version PBS :"
   },
   "storage": {
     "loadingTitle": "Chargement des données de stockage...",
@@ -1110,7 +1112,21 @@
       "available": "Sauvegardes disponibles",
       "loading": "Chargement des sauvegardes...",
       "empty": "Aucune sauvegarde trouvée",
-      "emptyHint": "Créez votre première sauvegarde en utilisant le bouton ci-dessus"
+      "emptyHint": "Créez votre première sauvegarde en utilisant le bouton ci-dessus",
+      "refresh": "Actualiser",
+      "refreshFailed": "Impossible d'actualiser les sauvegardes. Actualisez à nouveau pour confirmer leur état actuel.",
+      "deleteSelected": "Supprimer la sélection ({count})",
+      "deletedCount": "{count} sauvegarde(s) supprimée(s).",
+      "unconfirmedCount": "La suppression de {count} sauvegarde(s) n'a pas été confirmée. Actualisez la liste et vérifiez les tâches Proxmox avant de réessayer.",
+      "deleteFailed": "La suppression n'a pas pu être confirmée. Actualisez la liste et vérifiez les tâches Proxmox avant de réessayer.",
+      "selectHint": "Sélectionnez les sauvegardes non protégées (jusqu'à 20 par lot)",
+      "selectBackup": "Sélectionner la sauvegarde",
+      "protected": "Protégée",
+      "confirmTitle": "Supprimer {count} sauvegarde(s) ?",
+      "confirmDescription": "Ces archives de sauvegarde de la VM/CT {vmid} seront définitivement supprimées. Les sauvegardes protégées sont exclues. Cela ne supprime pas l'invité.",
+      "deleting": "En attente de la fin de la suppression des archives sélectionnées par Proxmox…",
+      "cancel": "Annuler",
+      "confirmDelete": "Supprimer les sauvegardes"
     },
     "updatesPanel": {
       "pendingTitle": "Mises à jour des packages en attente",
@@ -1721,7 +1737,17 @@
       "portCategoryCustomPlaceholder": "Tapez une catégorie et appuyez sur Entrée (Esc pour annuler)",
       "portCustomUrlPlaceholder": "URL personnalisée (par exemple https://vault.example.com) — remplace IP:port",
       "stackMemberTitle": "Fait partie d'une application multi-conteneurs",
-      "stackMemberBody": "Ce conteneur fait partie d'une application dont le conteneur principal est {primary}. L'application, ses liens web et sa version y sont affichés."
+      "stackMemberBody": "Ce conteneur fait partie d'une application dont le conteneur principal est {primary}. L'application, ses liens web et sa version y sont affichés.",
+      "nativeEvidencePort": "Port TCP en écoute",
+      "nativeEvidenceFile": "Fichier installé",
+      "nativeEvidenceProcess": "Exécutable en cours d'exécution",
+      "nativeEvidenceDirectory": "Répertoire de travail",
+      "nativeEvidenceService": "Définition du service",
+      "nativeScanFailed": "La recherche d'applications n'a pas pu se terminer. Les résultats précédents peuvent être obsolètes ; réessayez.",
+      "nativeScanPartial": "La recherche d'applications est incomplète. Vérifiez les éléments trouvés et réessayez.",
+      "nativeVersionUnknown": "Version installée inconnue",
+      "nativeEvidenceStale": "Les éléments trouvés peuvent être obsolètes ou incomplets.",
+      "nativeRegisterOnly": "Confirmez l'enregistrement dans l'éditeur. Une version connue est enregistrée comme valeur manuelle ; aucun outil de mise à jour n'est configuré."
     },
     "statusFilter": {
       "ariaLabel": "Filtrer les machines virtuelles et les conteneurs",
@@ -1817,7 +1843,8 @@
         "logs": "Journaux système",
         "updates": "Mises à jour du système",
         "security": "Sécurité et certificats",
-        "temperature": "Température"
+        "temperature": "Température",
+        "pbsServices": "Services PBS"
       }
     },
     "remoteStorage": {
@@ -2111,7 +2138,13 @@
         "inactiveFooter": "Activez les notifications pour recevoir des alertes système, de santé et de sécurité via les canaux configurés.",
         "notificationLanguage": "Langue de notification",
         "selectNotificationLanguage": "Sélectionnez la langue de notification",
-        "notificationLanguageHint": "Utilisé pour les notifications d'exécution déterministes, même lorsque l'IA est désactivée."
+        "notificationLanguageHint": "Utilisé pour les notifications d'exécution déterministes, même lorsque l'IA est désactivée.",
+        "appriseServiceHelp": "Configuration de Slack et Matrix",
+        "appriseSlackSteps": "Créez un webhook entrant dans votre application Slack pour le canal cible, puis collez son URL HTTPS complète dans le champ URL Apprise. Aucune conversion n'est nécessaire.",
+        "appriseSlackDocs": "Formats d'URL et configuration de Slack",
+        "appriseMatrixSteps": "Utilisez un compte de notification autorisé à publier dans le salon. Remplacez l'utilisateur, le mot de passe, le serveur d'origine et l'identifiant complet du salon de l'exemple ; encodez les caractères spéciaux des identifiants pour les URL. Le schéma matrixs utilise HTTPS. Consultez la documentation pour la prise en charge des jetons, du SSO et des salons chiffrés dans votre version d'Apprise.",
+        "appriseMatrixDocs": "Formats d'URL et configuration de Matrix",
+        "appriseServiceFinish": "Activez Apprise, saisissez votre URL, choisissez les catégories de notification ou les événements individuels, enregistrez, puis utilisez Envoyer un test. Ces exemples ne modifient pas votre URL enregistrée. Ce canal Apprise possède une destination ; utilisez l'API Apprise pour plusieurs services à la fois."
       },
       "ai": {
         "title": "Amélioration de l'IA",
@@ -2980,7 +3013,7 @@
       "youWillNeed": "Vous aurez besoin de :",
       "needApp": "Une application d'authentification telle que Aegis, 1Password, Bitwarden ou Google Authenticator.",
       "needQrOrKey": "Un code QR ou une clé manuelle de cette configuration.",
-      "needBackupCodes": "Codes de sauvegarde enregistrés dans un endroit sûr.",
+      "needBackupCodes": "Codes de secours enregistrés dans un endroit sûr.",
       "starting": "Départ...",
       "startSetup": "Démarrer la configuration",
       "scanTitle": "Scannez le code QR",
@@ -2993,10 +3026,10 @@
       "verifying": "Vérification...",
       "verifyAndEnable": "Vérifier et activer",
       "enabledTitle": "2FA est activé.",
-      "enabledDescription": "Enregistrez les codes de sauvegarde avant de fermer cette fenêtre.",
-      "saveCodesTitle": "Enregistrez vos codes de sauvegarde",
+      "enabledDescription": "Enregistrez les codes de secours avant de fermer cette fenêtre.",
+      "saveCodesTitle": "Enregistrez vos codes de secours",
       "saveCodesDescription": "Chaque code peut être utilisé une fois si vous perdez l'accès à votre application d'authentification.",
-      "backupCodes": "Codes de sauvegarde",
+      "backupCodes": "Codes de secours",
       "copyAll": "Copier tout",
       "finish": "Finition"
     },
@@ -4756,6 +4789,24 @@
       "thursday": "Jeudi",
       "tuesday": "Mardi",
       "wednesday": "Mercredi"
+    },
+    "storageRetention": {
+      "title": "Rétention du stockage",
+      "keepAll": "Conserver toutes les sauvegardes",
+      "description": "Rétention par défaut des sauvegardes enregistrée dans Proxmox. Les tâches de sauvegarde avec une politique explicite remplacent cette valeur par défaut.",
+      "refresh": "Actualiser",
+      "saved": "Rétention du stockage enregistrée. Aucune purge n'a été exécutée.",
+      "choosePolicy": "Choisissez Tout conserver ou au moins un nombre de rétention supérieur à zéro.",
+      "saveFailed": "Impossible d'enregistrer la rétention du stockage. Actualisez la liste si la configuration a changé.",
+      "loadFailed": "Impossible de charger la rétention du stockage.",
+      "empty": "Aucun stockage de sauvegarde trouvé.",
+      "default": "Valeur par défaut de Proxmox",
+      "edit": "Modifier",
+      "editTitle": "Rétention de {storage}",
+      "effect": "S'applique aux futures sauvegardes qui héritent de cette politique de stockage. L'enregistrement ne supprime pas les sauvegardes existantes. Les sauvegardes protégées restent protégées.",
+      "cancel": "Annuler",
+      "save": "Enregistrer la rétention",
+      "useDefault": "Utiliser la valeur par défaut de Proxmox (aucune politique sur ce stockage)"
     }
   },
   "healthStatus": {
@@ -4786,7 +4837,8 @@
       "services": "Services PVE",
       "logs": "Journaux système",
       "updates": "Mises à jour du système",
-      "security": "Sécurité et certificats"
+      "security": "Sécurité et certificats",
+      "pbsServices": "services PBS"
     },
     "checks": {
       "cpu_usage": "Utilisation du processeur",
@@ -7230,5 +7282,99 @@
         "diagnosticsOmitted": "Lignes ou texte de diagnostic omis : {count}. Rapport original conservé."
       }
     }
+  },
+  "pbs": {
+    "title": "Proxmox Backup Server",
+    "server": "Serveur PBS",
+    "chooseServer": "Choisir un serveur PBS",
+    "local": "PBS local",
+    "refresh": "Actualiser",
+    "manage": "Gérer les connexions PBS",
+    "loadFailed": "Impossible de charger l'état de PBS.",
+    "loading": "Chargement des données PBS…",
+    "noServer": "Ajoutez une connexion PBS pour afficher les magasins de données, les tâches et les planifications.",
+    "permissionsHelp": "Activez l'authentification Monitor avant d'enregistrer des identifiants. Utilisez un jeton API PBS dédié avec le rôle Audit sur / pour les ACL de l'utilisateur et du jeton, avec propagation. Ce panneau accède aux données PBS uniquement en lecture.",
+    "editConnection": "Connexion à modifier",
+    "add": "Ajouter une connexion",
+    "name": "Nom",
+    "url": "URL HTTPS (inclure :8007 pour le port natif de PBS)",
+    "token_id": "Identifiant du jeton API (user@realm!token)",
+    "token_secret": "Secret du jeton API (laisser vide pour conserver le secret enregistré)",
+    "fingerprint": "Empreinte SHA256 du certificat (facultative)",
+    "tlsHelp": "Laissez l'empreinte vide pour la vérification habituelle de l'autorité de certification et du nom d'hôte. Pour un certificat autosigné, copiez son empreinte SHA256 depuis la console PBS ou un autre canal de confiance. L'empreinte est vérifiée avant l'envoi des identifiants.",
+    "saved": "Connexion PBS vérifiée et enregistrée.",
+    "saveFailed": "Impossible d'enregistrer la connexion PBS.",
+    "testing": "Vérification de la connexion…",
+    "save": "Vérifier et enregistrer",
+    "remove": "Supprimer la connexion",
+    "removeConfirm": "Supprimer de Monitor cette connexion PBS enregistrée et son jeton ? Les données et tâches PBS restent inchangées.",
+    "sampled": "Relevé effectué à",
+    "datastores": "Magasins de données",
+    "total": "Capacité du système de fichiers",
+    "used": "Utilisé",
+    "free": "Disponible",
+    "noDatastores": "Aucun magasin de données accessible. Vérifiez leur configuration et les permissions de l'utilisateur et du jeton.",
+    "tasks": "Tâches récentes",
+    "noTasks": "Aucune tâche récente n'a été renvoyée.",
+    "task": "Tâche",
+    "started": "Démarrée",
+    "status": "État",
+    "running": "En cours",
+    "jobs": "Planifications de maintenance",
+    "job": "Tâche planifiée",
+    "schedule": "Planification",
+    "sync": "Synchronisation",
+    "verify": "Vérification",
+    "prune": "Purge",
+    "overview": "Vue d'ensemble",
+    "logs": "Journaux système",
+    "terminal": "Terminal",
+    "security": "Sécurité",
+    "logout": "Se déconnecter",
+    "navigation": "Navigation PBS",
+    "cpu": "CPU",
+    "memory": "Mémoire",
+    "uptime": "Durée de fonctionnement",
+    "capacityUnavailable": "Capacité non disponible.",
+    "datastoresUnavailable": "{count} indisponible",
+    "datastoresOnline": "Tous disponibles",
+    "moreDatastores": "+{count} banques de données supplémentaires",
+    "estimatedFull": "Estimé complet",
+    "estimatedFullUnknown": "Pas encore assez de données",
+    "duration": "Durée",
+    "noJobs": "Aucune planification de synchronisation, de vérification ou d'élagage n'est configurée."
+  },
+  "monitorLinks": {
+    "groups": {
+      "cluster": "Cluster",
+      "standalone": "nœuds autonomes",
+      "pbs": "Proxmox Backup Server"
+    },
+    "thisNode": "Ce nœud",
+    "checking": "Vérification des nœuds…",
+    "loadFailed": "Impossible de charger la liste des nœuds.",
+    "empty": "Aucun autre nœud pour l'instant. Ajoutez-en un pour ouvrir son Monitor depuis ici.",
+    "noResponse": "Pas de réponse",
+    "pbsInterface": "interface PBS",
+    "openNewTab": "Ouvrir dans un nouvel onglet",
+    "manage": "Ajouter ou gérer des nœuds…",
+    "dialogTitle": "nœuds liés",
+    "dialogDescription": "Les nœuds du cluster et les Proxmox Backup Server configurés sont détectés automatiquement. Chaque Monitor conserve sa propre connexion.",
+    "addTitle": "ajouter un nœud",
+    "name": "Nom",
+    "address": "Adresse du moniteur",
+    "type": "Type",
+    "add": "Ajouter",
+    "save": "Enregistrer",
+    "remove": "Supprimer",
+    "visible": "Visible",
+    "autoAddress": "Automatique",
+    "detected": "Détecté",
+    "added": "ajouté",
+    "saveFailed": "Impossible d'enregistrer la liste des nœuds.",
+    "backTo": "Retour à {name}",
+    "cameFromTitle": "Ajouter un nœud Moniteur ?",
+    "cameFromBody": "Ajoutez {name} aux nœuds liés de ce moniteur.",
+    "notNow": "Pas maintenant"
   }
 }

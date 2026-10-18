@@ -16,7 +16,7 @@
         "extra": ""
       },
       {
-        "name": "TinyCore RedPill M-shell",
+        "name": "Alpine RedPill M-shell (TinyCore project)",
         "url": "https://github.com/PeterSuh-Q3/tinycore-redpill",
         "extra": ""
       }
@@ -115,24 +115,24 @@
   },
   "diskSelection": {
     "heading": "Disk Selection",
-    "intro": "Once the machine is configured, the script allows you to choose between two types of disks:",
+    "intro": "The storage plan lets you add virtual disks, physical disks, and PCI controllers or NVMe devices. The disk options are explained below.",
     "virtualHeading": "Virtual Disk",
     "virtualItems": [
       "The script lists the storage options available in Proxmox",
       "The user selects the disk and size in GB",
-      "The virtual disk is automatically assigned to the VM. If more disks are configured, they will be added as <strong>SATA</strong> (e.g., sata0, sata1, etc.), up to a maximum of 6 virtual disks."
+      "Virtual disks are attached as <strong>SATA</strong> (sata0, sata1, etc.). Virtual and physical data disks share the six SATA slots numbered 0–5; the loader uses a separate IDE slot."
     ],
     "physicalHeading": "Physical Disk Passthrough",
     "physicalItems": [
       "The script detects all available physical disks",
       "The user selects the physical disk or disks they want to use.",
-      "The physical disk is directly assigned to the VM via passthrough. If more disks are configured, they will be added as <strong>SATA</strong> (e.g., sata0, sata1, etc.), up to a maximum of 6 physical disks."
+      "Physical disks are attached as <strong>SATA</strong> devices. They share the six SATA slots numbered 0–5 with virtual data disks; this is not a separate allowance of six physical disks."
     ]
   },
   "loaderInstall": {
     "heading": "Loader Installation",
     "intro1": "The script automatically downloads and extracts the loader from the developer's repository. If the download fails, the script will display an error message.",
-    "intro2Rich": "<strong>AuxXxilium Arc</strong>, <strong>RedPill RR</strong>, and <strong>TinyCore RedPill M-shell</strong>. Downloads and extracts automatically.",
+    "intro2Rich": "<strong>AuxXxilium Arc</strong>, <strong>RedPill RR</strong>, and <strong>Alpine RedPill M-shell</strong> are downloaded and extracted automatically.",
     "customRich": "For <strong>Custom Loader</strong>, the script searches for files in <code>/var/lib/vz/template/iso</code>. If multiple files are found, you will be prompted to select the desired file.",
     "uploadIntro": "You can upload custom loaders from the local storage options:",
     "imageAlt": "Add Custom Loader",
@@ -143,14 +143,14 @@
     "intro": "Once the loader is downloaded, the script creates the VM using the following commands:",
     "items": [
       "<code>qm create</code> – Creates the virtual machine with the configured parameters",
-      "<code>qm importdisk</code> – Imports the boot loader disk to the VM. For greater compatibility the loader is imported as an IDE disk",
+      "<code>qm importdisk</code> imports the loader image to Proxmox storage. The script then attaches that image to the VM as ide0 for compatibility.",
       "<code>qm set</code> – Assigns configuration values such as CPU, RAM, and storage",
-      "<code>qm set -boot</code> – Configures the boot order"
+      "<code>qm set VMID --boot order=ide0</code> configures the loader as the boot device. Replace VMID with the VM ID."
     ]
   },
   "stepGuide": {
     "heading": "Step-by-Step Boot Loader Configuration Guide",
-    "intro": "While all loaders share similarities, each one has its own structure and configuration methods. This section provides a basic guide covering the 6 steps involved in setting up a Synology DSM loader. The exact steps may vary depending on the loader and any changes introduced by the developer. Therefore, understanding these common basic steps is crucial to correctly building and configuring the loader of your choice for proper Synology DSM functionality.",
+    "intro": "Each loader has its own menus and configuration methods. The six steps below explain the common process; follow the current loader’s prompts when they differ. The M-shell screenshots show an earlier TinyCore interface, while the current script downloads Alpine RedPill M-shell.",
     "selectorHeading": "Select your loader type:",
     "loaderButtons": {
       "arc": "Arc Loader",

@@ -1,0 +1,335 @@
+{
+  "meta": {
+    "title": "Aktualizácia PVE 8 na PVE 9 | Dokumentácia ProxMenux",
+    "description": "Tri spôsoby prechodu z Proxmox VE 8 na 9 (Debian Bookworm na Trixie a PVE 8 na 9): automaticky, interaktívne alebo ručne podľa oficiálneho postupu. Kontrola pve8to9, migrácia repozitárov, dist-upgrade a záverečné overenie. Spustenie z webového terminálu je zablokované.",
+    "ogTitle": "Aktualizácia PVE 8 na PVE 9 | Dokumentácia ProxMenux",
+    "ogDescription": "Tri postupy (automatický, interaktívny a ručný) na prechod z Proxmox VE 8 na 9."
+  },
+  "header": {
+    "title": "Aktualizácia PVE 8 na PVE 9",
+    "description": "Vykoná prechod z Proxmox VE 8 na 9 podľa oficiálneho postupu: Debian Bookworm na Trixie a PVE 8 na 9. Ponúka automatický, interaktívny a ručný postup aj samostatnú predbežnú kontrolu. Webový terminál blokuje, pretože prerušenie spojenia počas aktualizácie môže poškodiť systém hostiteľa.",
+    "section": "Nástroje"
+  },
+  "dangerCallout": {
+    "title": "Prechod na novú hlavnú verziu je nevratný",
+    "intro": "Táto operácia nahradí základ Debianu (Bookworm → Trixie) a súčasti Proxmoxu priamo v systéme. <strong>Návrat na pôvodnú verziu nie je možný</strong>. Pred začiatkom:",
+    "items": [
+      "<strong>Overené zálohy</strong> všetkých VM a CT (PBS, vzdump, snímky ZFS — overte aj obnovu).",
+      "<strong>Prístup cez konzolu / IPMI / iKVM</strong> k hostiteľovi pre prípad výpadku SSH.",
+      "Hostiteľ už používa aktuálnu PVE 8.4.x (skript to vynucuje).",
+      "Ceph (ak je k dispozícii) vo verzii 19.x Squid.",
+      "Aspoň <strong>5 GB voľného miesta</strong> v koreňovom súborovom systéme."
+    ]
+  },
+  "modeMenu": {
+    "heading": "Menu režimu",
+    "intro": "Voľba otvorí štyri položky: Automaticky, Interaktívne, Predbežná kontrola a Ručný návod. Tri možnosti aktualizáciu <em>vykonajú</em> alebo vysvetlia jej postup; samostatná kontrola <em>overí</em> pripravenosť a môže ponúknuť opravy.",
+    "imageAlt": "Ponuka aktualizácie PVE 8 na 9: automaticky, interaktívne, predbežná kontrola a ručný návod"
+  },
+  "threeWays": {
+    "heading": "Tri spôsoby aktualizácie",
+    "intro": "Automatický a interaktívny režim používajú rovnaký postup s predbežnými aj záverečnými kontrolami. Líšia sa odpoveďami na otázky dpkg počas <code>dist-upgrade</code>. Ručný návod zobrazí príkazy vrátane kontrol; každý krok musíte vykonať sami.",
+    "auto": {
+      "title": "Automatické / bez dozoru",
+      "summary": "Nastaví <code>ASSUME_YES=1</code> + <code>DEBIAN_FRONTEND=noninteractive</code>. Pri upravených konfiguračných súboroch použije dpkg predvolenú akciu, ak existuje; inak <strong>ponechá aktuálny súbor</strong> (<code>--force-confold</code>).",
+      "items": [
+        "Najrýchlejšie — počas aktualizácie žiadne otázky dpkg",
+        "Vhodné pre štandardné inštalácie bez vlastných úprav konfigurácie",
+        "Riziko: upravený súbor sa ponechá bez otázky a môže prekryť nové predvolené nastavenia"
+      ]
+    },
+    "interactive": {
+      "title": "Interaktívny",
+      "summary": "Rovnaký postup, ale na každú otázku dpkg o konflikte konfigurácie odpovedáte sami. Pomalšie, no s úplným prehľadom.",
+      "items": [
+        "Vidíte každý konflikt a rozhodnite sa.",
+        "Najlepšie keď máte prispôsobené <code>/etc/lvm</code>, <code>/etc/ssh</code>, atď.",
+        "Pozrite si tabuľku odporúčaných odpovedí v ručnom postupe nižšie"
+      ]
+    },
+    "manual": {
+      "title": "Príručka manuálnej aktualizácie",
+      "summary": "Zobrazí oficiálny postup Proxmoxu v 17 krokoch bez jeho vykonania. Príkazy spúšťajte ručne v samostatnom shelli.",
+      "items": [
+        "Úplná kontrola — každý príkaz zadávate sami",
+        "Najlepšie, keď sa chcete naučiť postup alebo neveríte ničomu",
+        "Skript zobrazuje kroky; nič nie je spustené automaticky"
+      ]
+    }
+  },
+  "precheckCallout": {
+    "title": "Plus samostatná predbežná kontrola",
+    "body": "Možnosť 3 — <strong>Spustiť kontrolu PVE 8 na 9</strong> — spustí oficiálny nástroj <code>pve8to9 --full</code>, ponúkne opravy bežných problémov a potom <strong>skončí</strong>. Použite ju pred aktualizáciou alebo po ručných opravách. Automatický a interaktívny režim kontrolu tiež spúšťajú; v ručnom návode ju spúšťate sami."
+  },
+  "webTerminal": {
+    "heading": "Prečo je webový terminál zablokovaný?",
+    "body": "Všetky tri režimy zistia <code>termproxy</code> / <code>vncshell</code> v reťazci rodičovských procesov a odmietnu spustenie. Webový terminál závisí od služby <code>pveproxy</code>, ktorá sa počas aktualizácie mení. Po reštarte <code>pveproxy</code> sa ukončí terminál aj skript v ňom. Hostiteľ môže zostať aktualizovaný iba čiastočne.",
+    "warningTitle": "Použite SSH alebo fyzickú konzolu / IPMI / iKVM",
+    "warningBody": "Najčastejšou voľbou je SSH. Spustite ho v <code>tmux</code> alebo <code>screen</code>, aby krátky výpadok siete neprerušil aktualizáciu. Pri bežnom SSH shelli skript najprv zobrazí pripomienku tmux/screen."
+  },
+  "auto": {
+    "heading": "Automatický režim / Bezobslužne",
+    "intro": "Otázky k balíkom a konfiguračným súborom používajú predvolené hodnoty z nasledujúcej tabuľky a odpoveď 401 z repozitára Enterprise prepne na no-subscription bez opýtania. Potvrdenie aktualizácie, súhrn aktualizácie PVE 8, opravy z predbežnej kontroly a otázka na reštart sa naďalej zobrazujú.",
+    "behaviourHeading": "Správanie automatického režimu",
+    "behaviourTable": {
+      "settingHeader": "Nastavenie",
+      "effectHeader": "Účinok",
+      "rows": [
+        {
+          "settingRich": "<code>ASSUME_YES=1</code>",
+          "effectRich": "Interná voľba — skript sám odpovie áno na svoje otázky, napríklad na prechod na no-subscription po chybe 401"
+        },
+        {
+          "settingRich": "<code>DEBIAN_FRONTEND=noninteractive</code>",
+          "effectRich": "apt / dpkg sa spúšťajú bez otázok debconf"
+        },
+        {
+          "settingRich": "<code>--force-confdef</code>",
+          "effectRich": "Pre nedotknuté konfiguračné súbory: nainštalujte novú verziu správcu"
+        },
+        {
+          "settingRich": "<code>--force-confold</code>",
+          "effectRich": "Pri upravených súboroch: predvolená akcia dpkg, ak existuje; inak <strong>ponechať vašu verziu</strong>."
+        }
+      ]
+    },
+    "flowHeading": "Postup automatického režimu",
+    "flowIntro": "Šesť po sebe idúcich fáz. Fáza 2 aktualizuje balíky PVE 8 a fáza 3 zapíše konfiguráciu repozitárov PVE 9. Chyba postup zastaví, tieto zmeny však nevráti; ak aktualizácia PVE 8 zlyhá alebo sa zruší, repozitáre zostanú nezmenené. Fáza 5 vykoná <code>dist-upgrade</code> na PVE 9.",
+    "flowDiagram": "1. KONTROLY\nBlokuje termproxy / vncshell; potvrdí aktualizáciu; odmietne PVE 9.\n\n2. PRÍPRAVA PVE 8\nscripts/global/update-pve8.sh\nAktualizuje balíky PVE 8; zastaví sa, ak aktualizácia zlyhá alebo sa zruší.\npve8to9 --full (môže ponúknuť opravy).\nOverí miesto a pripojenie; Ceph 19.x Squid na hyperkonvergovaných uzloch.\n\n3. MIGRÁCIA REPOZITÁROV\nBookworm → Trixie; zapíše súbory deb822 .sources.\nZakomentuje staré súbory .list; apt-get update.\n\n4. OVERENIE KANDIDÁTA PVE 9\napt-cache policy proxmox-ve\napt-get -s dist-upgrade\nZastaví sa, ak kandidát nie je 9.x alebo by sa odstránil proxmox-ve.\n\n5. AKTUALIZÁCIA\napt-get -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' dist-upgrade\nBez predplatného: vypne pve-enterprise.sources.\nProtokol: /var/log/pve8-a-pve9-'<'timestamp'>'.log\n\n6. OVERENIE A REŠTART\nEFI: apt install grub-efi-amd64\npve8to9 --full; skontrolujte výsledok a otázku na reštart.",
+    "preflightHeading": "Kontroly pred aktualizáciou",
+    "preflightTable": {
+      "checkHeader": "Kontrola",
+      "whyHeader": "Prečo na tom záleží",
+      "rows": [
+        {
+          "checkRich": "<strong>Blok webového terminálu</strong>",
+          "whyRich": "Zabráni tomu, aby aktualizácia ukončila shell, v ktorom beží"
+        },
+        {
+          "checkRich": "<strong>Už na 9.x</strong>",
+          "whyRich": "Skončí, ak hostiteľ už používa PVE 9 — nie je čo aktualizovať"
+        },
+        {
+          "checkRich": "<strong>Najnovšia verzia PVE 8.4.x</strong>",
+          "whyRich": "Najprv aktualizuje PVE 8 na najnovšiu revíziu pomocou príslušného skriptu; staré verzie 8.x majú odlišné požiadavky"
+        },
+        {
+          "checkRich": "<strong>pve8to9 --full</strong>",
+          "whyRich": "Kontrola pripravenosti od Proxmoxu; chyby FAIL blokujú aktualizáciu, kým ich neopravíte"
+        },
+        {
+          "checkRich": "<strong>Miesto na disku</strong>",
+          "whyRich": "≥ 1024 MB voľného miesta v <code>/var/cache/apt/archives</code> pre stiahnuté súbory .deb"
+        },
+        {
+          "checkRich": "<strong>Pripojenie</strong>",
+          "whyRich": "Ping na <code>download.proxmox.com</code> — pri zlyhaní sa aktualizácia nezačne"
+        },
+        {
+          "checkRich": "<strong>Ceph 19.x Squid</strong>",
+          "whyRich": "Ak je Ceph nainštalovaný, musí už používať 19.x. PVE 9 nefunguje s Ceph 17/18. Voľby <code>--ignore-ceph-check</code> a <code>--warn-ceph-check</code> obchádzajú kontrolu; používajte ich len so znalosťou dôsledkov."
+        }
+      ]
+    },
+    "distUpgradeHeading": "Príkaz dist-upgrade (automatický režim)",
+    "distUpgradeCode": "apt-get -y \\\n    -o Dpkg::Options::='--force-confdef' \\\n    -o Dpkg::Options::='--force-confold' \\\n    dist-upgrade",
+    "distUpgradeOutro": "Výstup sa zobrazuje v reálnom čase na stdout a ukladá sa aj do <code>/var/log/pve8-a-pve9-&lt;timestamp&gt;.log</code>. Vidíte všetko; vynechané sú len otázky.",
+    "postHeading": "Úlohy po aktualizácii (automatický režim)",
+    "postItems": [
+      "<strong>Hostitelia EFI:</strong> nainštaluje <code>grub-efi-amd64</code> podľa známeho problému v dokumentácii Proxmoxu. Aktualizácia ho nepridá automaticky a pri ďalšom štarte môže byť potrebný.",
+      "<strong>Repozitár Enterprise bez predplatného.</strong> pve-manager 9 počas aktualizácie pridá <code>pve-enterprise.sources</code>; v režime no-subscription ho skript nastaví na <code>Enabled: false</code>.",
+      "<strong>Znova spustí <code>pve8to9 --full</code>.</strong> Zobrazí zostávajúce problémy. Pri chybách FAIL sa otvorí rovnaká ponuka opráv ako pri predbežnej kontrole.",
+      "<strong>Otázka na reštart.</strong> Reštart sa odporúča na načítanie nového jadra a služieb. Odmietnite ho iba z konkrétneho dôvodu: ponechanie starého jadra po prechode na novú hlavnú verziu prináša riziko."
+    ]
+  },
+  "interactive": {
+    "heading": "Interaktívny režim",
+    "intro": "Rovnaký postup ako <autolink>automatický režim</autolink>: rovnaké kontroly, migrácia repozitárov aj záverečné overenie. Rozdiel je pri <code>dist-upgrade</code>: <strong>na každú otázku dpkg o konflikte konfigurácie odpovedáte sami</strong>. ProxMenux spustí <code>apt-get dist-upgrade</code> bez volieb <code>--force-conf*</code>.",
+    "distUpgradeHeading": "Dist-upgrade príkaz (interaktívny režim)",
+    "distUpgradeCode": "apt-get dist-upgrade\n# (user answers each dpkg config-file conflict prompt as it appears)",
+    "whenHeading": "Keď interaktívne je správna voľba",
+    "whenItems": [
+      "Prispôsobili ste <code>/etc/lvm/lvm.conf</code>, <code>/etc/ssh/sshd_config</code>, <code>/etc/default/grub</code> alebo akýkoľvek iný konfiguračný súbor, ktorý sa dotkne aktualizácie.",
+      "Chcete vidieť, ktoré balíky spôsobujú konflikty, a rozhodnúť o každom súbore.",
+      "Vylepšujete producenta, kde je akákoľvek skrytá zmena neprijateľná."
+    ],
+    "promptCalloutTitle": "Čo odpovedať na každú výzvu",
+    "promptCalloutBody": "Platia rovnaké odporúčania ako pri ručnom postupe: pozrite <dpkglink>Odporúčané odpovede na otázky dpkg</dpkglink> nižšie. Pomocou <strong>D</strong> zobrazíte rozdiely, pomocou <strong>Z</strong> otvoríte shell."
+  },
+  "manual": {
+    "heading": "Postup manuálnej aktualizácie",
+    "intro": "Toto zobrazí možnosť <strong>Ručný návod na aktualizáciu</strong>: <wikilink>oficiálny wiki návod Proxmoxu z 8 na 9</wikilink>, rozdelený do štyroch fáz. Skript príkazy <em>zobrazí</em>; vykonáte ich sami v samostatnom shelli používateľa root. Každý krok máte pod kontrolou.",
+    "rootCalloutTitle": "Všetky príkazy vyžadujú root",
+    "rootCalloutBody": "Použite shell používateľa root aj pre presmerovania a dokumenty here-document. Pri <code>sudo</code> zabezpečte, aby sa s oprávneniami root vykonal celý príkaz.",
+    "phase1Heading": "Fáza 1 — Príprava",
+    "phase1Intro": "Aktualizujte hostiteľa na najnovšiu PVE 8.4.x, overte verziu a používaný Ceph, spustite kontrolu Proxmoxu a terminálový multiplexor na prežitie výpadkov spojenia.",
+    "phase1Code": "# Step 1 — Update PVE 8 to the latest 8.4+\napt update && apt dist-upgrade -y\n\n# Step 2 — Verify version (must be 8.4.1 or newer)\npveversion\n\n# Step 2.1 — Hyper-converged Ceph: must already be on 19.x Squid\nceph --version\n# If older, follow https://pve.proxmox.com/wiki/Ceph_Reef_to_Squid\n\n# Step 3 — Run the official upgrade-readiness check\npve8to9 --full\n# If it warns about systemd-boot meta-package, remove it:\n#   apt remove systemd-boot\n\n# Step 4 — Start tmux or screen (so SSH disconnect doesn't kill the upgrade)\ntmux new-session -s upgrade\n# or\nscreen -S upgrade",
+    "phase2Heading": "Fáza 2 — Migrácia repozitárov",
+    "phase2Intro": "Zmeňte všetky repozitáre Debianu a Proxmoxu z Bookworm na Trixie a zdroje Proxmoxu preveďte na deb822. <strong>Vyberte krok 7 ALEBO 8</strong> podľa predplatného Enterprise. Bez Ceph vynechajte krok 9.",
+    "phase2Code": "# Step 5 — Debian: bookworm → trixie\nsed -i 's/bookworm/trixie/g' /etc/apt/sources.list\n\n# Step 6 — Same for the legacy enterprise list (only if you use enterprise)\nsed -i 's/bookworm/trixie/g' /etc/apt/sources.list.d/pve-enterprise.list\n\n# Step 7 — Add the new PVE 9 enterprise repo (deb822) — Enterprise users only\ncat > /etc/apt/sources.list.d/pve-enterprise.sources << EOF\nTypes: deb\nURIs: https://enterprise.proxmox.com/debian/pve\nSuites: trixie\nComponents: pve-enterprise\nSigned-By: /usr/share/keyrings/proxmox-archive-keyring.gpg\nEOF\n\n# Step 8 — OR add the no-subscription repo (most home / lab users)\ncat > /etc/apt/sources.list.d/proxmox.sources << EOF\nTypes: deb\nURIs: http://download.proxmox.com/debian/pve\nSuites: trixie\nComponents: pve-no-subscription\nSigned-By: /usr/share/keyrings/proxmox-archive-keyring.gpg\nEOF\n\n# Step 8.1 — Refresh and verify proxmox-ve candidate is 9.x\napt update && apt policy | sed -n '1,120p'\n\n# Step 9 — Update Ceph repo (only if you run Ceph)\ncat > /etc/apt/sources.list.d/ceph.sources << EOF\nTypes: deb\nURIs: http://download.proxmox.com/debian/ceph-squid\nSuites: trixie\nComponents: no-subscription\nSigned-By: /usr/share/keyrings/proxmox-archive-keyring.gpg\nEOF\n\n# Step 10 — Remove old .list files now superseded by deb822 .sources\nrm -f /etc/apt/sources.list.d/pve-enterprise.list /etc/apt/sources.list.d/ceph.list\n\n# Step 11 — Final apt update\napt update",
+    "phase3Heading": "Fáza 3 — dist-upgrade",
+    "phase3Intro": "Samotná aktualizácia. Krok 12 je voliteľný, ale odporúčaný na obmedzenie správ auditu. Krok 13 trvá dlhšie: odpovedajte podľa tabuľky. Krok 13.1 je iba pre EFI a vychádza zo známych problémov v oficiálnom návode.",
+    "phase3Code": "# Step 12 — Disable kernel audit messages (optional)\nsystemctl disable --now systemd-journald-audit.socket\n\n# Step 13 — The main upgrade (this takes a while)\napt dist-upgrade\n# (answer prompts using the table below)\n\n# Step 13.1 — EFI hosts: install grub for EFI (per known issues)\n[ -d /sys/firmware/efi ] && apt install grub-efi-amd64",
+    "dpkgHeading": "Odporúčané odpovede na otázky dpkg",
+    "dpkgIntro": "Odporúčania Proxmoxu: <strong>Y</strong> nainštaluje nový súbor správcu balíka a prepíše váš; <strong>N</strong> ponechá aktuálny súbor. Pri pochybnostiach najprv skontrolujte rozdiely:",
+    "dpkgTable": {
+      "fileHeader": "Súbor / otázka",
+      "answerHeader": "Odporúčaná odpoveď",
+      "whyHeader": "Prečo?",
+      "rows": [
+        {
+          "fileRich": "/etc/issue",
+          "answerRich": "<strong>N</strong> (ponechať aktuálny súbor)",
+          "whyRich": "Ponechá prihlasovací oznam, na ktorý ste zvyknutí",
+          "fileFont": true
+        },
+        {
+          "fileRich": "/etc/lvm/lvm.conf",
+          "answerRich": "<strong>Y</strong> (verzia správcu balíka)",
+          "whyRich": "PVE 9 potrebuje nové predvolené nastavenia LVM",
+          "fileFont": true
+        },
+        {
+          "fileRich": "/etc/ssh/sshd_config",
+          "answerRich": "<strong>Y</strong> pri iba predvolených zmenách; vlastné úpravy najprv skontrolujte",
+          "whyRich": "Pred nahradením súboru overte miestne nastavenia SSH a zachovajte prístup. Predvolené zmeny zahŕňajú premenované voľby a komentáre.",
+          "fileFont": true
+        },
+        {
+          "fileRich": "/etc/default/grub",
+          "answerRich": "<strong>N</strong> v prípade prispôsobenia",
+          "whyRich": "Sú tu parametre zavádzania, napríklad IOMMU a PCI passthrough",
+          "fileFont": true
+        },
+        {
+          "fileRich": "/etc/chrony/chrony.conf",
+          "answerRich": "<strong>Y</strong>, ak nebol upravený; miestne nastavenia najprv zachovajte",
+          "whyRich": "Trixie mení predvolené nastavenia synchronizácie času. Pred prijatím nového súboru presuňte miestne nastavenia do adresárov conf.d / sources.d programu chrony.",
+          "fileFont": true
+        },
+        {
+          "fileRich": "Reštarty služieb počas aktualizácie",
+          "answerRich": "<strong>Áno</strong> (predvolené)",
+          "whyRich": "Reštartuje väčšinu služieb bez reštartu hostiteľa",
+          "fileFont": false
+        },
+        {
+          "fileRich": "<code>apt-listchanges</code>",
+          "answerRich": "Stlačte <kbd>q</kbd>",
+          "whyRich": "Ukončí iba prehliadač textu; zobrazené informácie sú súhrnom zmien",
+          "fileFont": false
+        }
+      ]
+    },
+    "inspectCalloutTitle": "Kontrola špecifického dpkg konfliktu",
+    "inspectCalloutBody": "Pri otázke dpkg o konfiguračnom súbore zobrazí <strong>D</strong> rozdiely medzi vaším súborom a novou verziou; <strong>Z</strong> otvorí shell na ďalšie overenie. Rozhodnutie tak nemusíte odhadovať.",
+    "phase4Heading": "Fáza 4 — Po aktualizácii",
+    "phase4Intro": "Overte úspešné dokončenie, reštartujte na jadro PVE 9 a potvrďte verziu. Potom môžete zostávajúce staré súbory <code>.list</code> previesť na deb822.",
+    "phase4Code": "# Step 14 — Re-run the readiness check (should be much cleaner now)\npve8to9 --full\n\n# Step 15 — Reboot to load the new kernel and PVE 9 daemons\nreboot\n\n# Step 16 — After reboot, confirm PVE 9.x\npveversion\n# Should show pve-manager/9.x.x\n\n# Step 17 — Optional: modernise the remaining legacy .list files to deb822\napt modernize-sources\n# (keeps .list backups as .bak)"
+  },
+  "clusterCeph": {
+    "heading": "Klaster a Ceph",
+    "clusterCalloutTitle": "Klaster: aktualizujte uzly po jednom",
+    "clusterCalloutBody": "Zistené cez <code>pvecm status</code>. <strong>Neaktualizujte</strong> viac uzlov naraz. Presuňte hostí, aktualizujte uzol, reštartujte a overte členstvo v klastri. Až potom pokračujte. Počas aktualizácie funguje živá migrácia zo staršej verzie PVE na novšiu; opačný smer spravidla nie je podporovaný. Skupiny HA sa automaticky prevedú na pravidlá HA, keď všetky uzly používajú PVE 9.",
+    "cephCalloutTitle": "Ceph: NAJPRV inovujte Ceph, potom Proxmox",
+    "cephCalloutBody": "Ceph musí pred aktualizáciou Proxmoxu už používať 19.x Squid. Postupujte v oficiálnom poradí Quincy 17 → Reef 18 → Squid 19: aktualizujte balíky a postupne reštartujte démony Ceph podľa návodu. Pred každým uzlom Proxmoxu overte <code>ceph --version</code>. Celý postup: <cephlink>wiki aktualizácie Ceph Reef na Squid</cephlink>."
+  },
+  "troubleshooting": {
+    "heading": "Riešenie problémov",
+    "items": [
+      {
+        "title": "Skript skončí: \"This script cannot be executed from the Proxmox web terminal\"",
+        "bodyRich": "Otvorte SSH alebo konzolu / IPMI / iKVM a spustite ho odtiaľ. Najprv použite <code>tmux new -s pveupgrade</code>, aby krátky výpadok siete neprerušil beh."
+      },
+      {
+        "title": "pve8to9 hlási FAIL a oprava cez možnosť 1 hlási \"command not found\"",
+        "bodyRich": "Ak chyba spomína <code>configure_repositories</code>, kópia skriptu je zastaraná. Aktuálna oprava používa cleanup_duplicate_repos a ensure_repositories. Aktualizujte ju alebo cez možnosť 2 skontrolujte ručné príkazy. <code>apt-get update</code> obnoví zoznamy balíkov, ale nevyrieši všetky blokujúce kontroly."
+      },
+      {
+        "title": "Simulácia apt hlási \"proxmox-ve will be REMOVED\"",
+        "bodyRich": "Nové repozitáre sú nedostupné alebo sa nezmenil názov vydania. Skontrolujte <code>cat /etc/apt/sources.list.d/proxmox.sources</code>: riadok <code>Suites:</code> musí obsahovať <code>trixie</code>, nie <code>bookworm</code>. <code>apt-cache policy proxmox-ve</code> musí zobrazovať kandidáta 9.x z nového repozitára."
+      },
+      {
+        "title": "dist-upgrade zlyhá čiastočne cez",
+        "bodyRich": "Opravte závislosti pomocou <code>apt-get -f install</code> a zopakujte aktualizáciu. Ak zlyhá, pozrite koniec protokolu <code>/var/log/pve8-a-pve9-&lt;timestamp&gt;.log</code>. Nereštartujte, kým <code>dpkg -l | grep ^iU</code> nevráti prázdny výstup."
+      },
+      {
+        "title": "EFI host nebude štartovať po reštarte",
+        "bodyRich": "Po aktualizácii sa inštaluje <code>grub-efi-amd64</code>. Ak ste krok vynechali alebo zlyhal, spustite ISO Proxmoxu v záchrannom režime, pripojte koreňový súborový systém, použite chroot a <code>apt-get install grub-efi-amd64 &amp;&amp; update-grub</code>."
+      },
+      {
+        "title": "GUI sa po aktualizácii nenačíta",
+        "bodyRich": "Spustite <code>systemctl status pveproxy</code> a <code>systemctl restart pveproxy</code>. Ak problém pretrváva, pozrite chybu cez <code>journalctl -u pveproxy -b</code>."
+      },
+      {
+        "title": "Sieť nefunguje po reštarte",
+        "bodyRich": "Overte, že <code>/etc/network/interfaces</code> odkazuje na existujúce zariadenia a je nainštalovaný <code>ifupdown2</code>: <code>apt install ifupdown2</code>. Pri zmene názvov pozrite <netlink>Trvalé názvy sieťových rozhraní</netlink>."
+      },
+      {
+        "title": "Split-brain klastra po aktualizácii jedného uzla",
+        "bodyRich": "Zmiešané klastre PVE 8 / PVE 9 sú počas aktualizácie podporované. Živá migrácia zo starších na novšie verzie funguje; opačný smer spravidla nie je podporovaný. Ak sa uzol javí odpojený, skontrolujte <code>corosync</code> a konfiguráciu QDevice / siete. Na každom uzle spustite <code>pvecm status</code> na overenie kvóra."
+      }
+    ]
+  },
+  "files": {
+    "heading": "Príslušné súbory",
+    "code": "scripts/utilities/upgrade_pve8_to_pve9.sh                         # main upgrade orchestrator\nscripts/utilities/pve8to9_check.sh                                # pre-check (separate menu option)\nscripts/utilities/proxmox-upgrade-pve8-to-pve9-manual-guide.sh    # 17-step runbook\nscripts/global/update-pve8.sh                                     # PVE 8 worker (final patches)\n/etc/apt/sources.list                                             # bookworm → trixie sed\n/etc/apt/sources.list.d/proxmox.sources                           # created (deb822 PVE 9)\n/etc/apt/sources.list.d/debian.sources                            # created (deb822 trixie)\n/etc/apt/sources.list.d/ceph.sources                              # created if Ceph\n/etc/apt/sources.list.d/*.list                                    # legacy files commented out / removed\n/var/log/pve8-a-pve9-'<'timestamp'>'.log                              # full upgrade log"
+  },
+  "references": {
+    "heading": "Oficiálne zdroje",
+    "intro": "Ručný postup skriptu vychádza z týchto oficiálnych zdrojov. Pri pochybnostiach počas aktualizácie postupujte podľa oficiálneho wiki: ProxMenux pomáha s vykonaním, rozhodujúci je návod Proxmoxu.",
+    "items": [
+      {
+        "href": "https://pve.proxmox.com/wiki/Upgrade_from_8_to_9",
+        "title": "Aktualizácia z 8 na 9",
+        "desc": "Hlavná stránka Proxmox wiki pre aktualizáciu 8 → 9. Zdroj pravdy pre každý príkaz v manuálnom postupe vyššie."
+      },
+      {
+        "href": "https://pve.proxmox.com/wiki/Ceph_Reef_to_Squid",
+        "title": "Aktualizácia na Ceph Squid (19.x)",
+        "desc": "Povinný predbežný krok pre hyperkonvergované uzly Ceph. Pred PVE 9 musí Ceph používať 19.x Squid."
+      },
+      {
+        "href": "https://pve.proxmox.com/wiki/Roadmap",
+        "title": "Plán Proxmox VE",
+        "desc": "Poznámky k vydaniu PVE 9 a zmeny oproti 8.x — prečítajte si ich pred aktualizáciou."
+      },
+      {
+        "href": "https://www.debian.org/releases/trixie/releasenotes",
+        "title": "Poznámky k vydaniu Debianu Trixie",
+        "desc": "PVE 9 vychádza z Debianu Trixie. Poznámky Debianu vysvetľujú zmeny operačného systému, ktoré ovplyvnia aj hostiteľa."
+      },
+      {
+        "href": "https://forum.proxmox.com/forums/proxmox-ve-installation-and-configuration.16/",
+        "title": "Inštalačné fórum Proxmox VE",
+        "desc": "Pri problémoch počas aktualizácie najprv prehľadajte toto fórum; rovnaký problém už možno niekto riešil."
+      },
+      {
+        "href": "https://pve.proxmox.com/wiki/Backup_and_Restore",
+        "title": "Zálohovanie a obnova",
+        "desc": "Aktualizácia hlavnej verzie je nevratná. Pred začiatkom overte svoje zálohy."
+      }
+    ]
+  },
+  "video": {
+    "heading": "Videonávod",
+    "intro": "Preferovať sledovanie upgrade spustiť end-to-end pred tým, než to urobiť sám? Tento prechod demonštruje tok upgrade ProxMenux v reálnom čase.",
+    "title": "ProxMenux — Videonávod na aktualizáciu Proxmox VE 8 na 9",
+    "caption": "Externé video na YouTube. Prehrávanie v režime rozšíreného súkromia, bez cookies až do spustenia videa."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/utils/system-update",
+        "label": "Aktualizácia systému Proxmox",
+        "tail": " — pre bežné aktualizácie v rámci rovnakej hlavnej verzie (8.4.1 → 8.4.5 a podobne)."
+      },
+      {
+        "href": "/docs/utils",
+        "label": "Prehľad pomocných nástrojov",
+        "tail": " — späť na prehľad sekcie."
+      }
+    ]
+  }
+}

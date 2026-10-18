@@ -1,0 +1,240 @@
+{
+  "meta": {
+    "title": "Pós-instalação: Configurações básicas | Documentação ProxMenux",
+    "description": "Opções de pós-instalação fundamentais: mude para repositórios gratuitos do Proxmox e atualize, detecte automaticamente o fuso horário e habilite o NTP, pule downloads de linguagem APT e escolha os utilitários comuns do sistema 25 para instalar."
+  },
+  "header": {
+    "title": "Pós-instalação: Configurações básicas",
+    "section": "Configurações pós-instalação do Proxmox"
+  },
+  "intro": {
+    "title": "O que esta categoria abrange",
+    "body": "Cinco opções de base para um host Proxmox novo: usar repositórios comunitários sem subscrição, atualizar todo o sistema, configurar automaticamente o fuso horário e NTP, desativar traduções APT para poupar largura de banda e espaço e escolher entre 25 utilitários comuns."
+  },
+  "upgrade": {
+    "heading": "Atualizar listas de pacotes e sistema",
+    "intro": "Reconfigura o APT para usar o repositório <em>pve-no-subscription</em> gratuito (em vez do repositório corporativo que requer uma assinatura) e executa uma atualização completa do sistema. Os passos exatos dependem da versão principal do Proxmox VE: ProxMenux detecta e envia para o script certo.",
+    "headerVersion": "Versão PVE",
+    "headerScript": "Script de seleção por versão",
+    "headerCodename": "Nome de código Debian",
+    "rows": [
+      {
+        "version": "9.x",
+        "script": "update-pve9_2.sh",
+        "codename": "trixie"
+      },
+      {
+        "version": "8.x",
+        "script": "update-pve8.sh",
+        "codename": "bookworm"
+      }
+    ],
+    "officialTitle": "A recomendação oficial da Proxmox",
+    "officialBody": "A própria orientação de atualização da Proxmox é executar, nesta ordem exata:",
+    "officialOutro": "É o comando habitual para atualizações dentro da versão principal instalada do Proxmox VE. Verifique os repositórios e as alterações propostas aos pacotes <em>antes</em> de continuar. A mudança de versão principal exige o procedimento oficial de migração.",
+    "doesTitle": "O que a opção ProxMenux faz — verificado contra o script",
+    "doesIntro": "A atualização ProxMenux executa os comandos apt acima e acrescenta passos prévios e posteriores que teria de gerir manualmente. Cada item abaixo corresponde ao script de seleção; consulte <link>Atualização do sistema Proxmox</link> para o detalhe completo.",
+    "doesItems": [
+      "<strong>Primeiro, organizar os repositórios.</strong> Desativa as fontes Enterprise <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, remove ficheiros antigos de versões PVE anteriores e cria um <code>proxmox.sources</code> limpo para o canal gratuito <em>pve-no-subscription</em>, conforme o nome de código Debian: trixie para PVE 9, bookworm para PVE 8.",
+      "<strong>Reescreve os repositórios Debian</strong> com main / updates / security e <code>non-free-firmware</code>, para eliminar o aviso de firmware durante a atualização.",
+      "<strong>Executa a atualização oficial.</strong> <code>apt-get update</code> seguido por <code>apt full-upgrade -y</code> (PVE 9) ou <code>apt dist-upgrade -y</code> (PVE 8), ambos lançados não-interactivamente com <code>--force-confdef --force-confold</code> para que quaisquer arquivos de configuração que você personalizou permaneçam seus.",
+      "<strong>Instala pacotes essenciais</strong> se estiverem faltando: <code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>.",
+      "<strong>Verifica os metadados LVM.</strong> Procura VMs com passthrough de discos que possam ter deixado cabeçalhos antigos de volumes físicos nos discos em bruto. Avisa sobre anomalias sem as corrigir automaticamente.",
+      "<strong>Limpa depois:</strong> <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>, então pede uma reinicialização se o kernel foi atualizado ou <code>/var/run/reboot-required</code> está presente."
+    ],
+    "shortTitle": "Em suma",
+    "shortBody": "A opção executa o comando recomendado <code>apt update && apt full-upgrade -y</code>, com a organização dos repositórios e a limpeza final indicadas no guia oficial, e pede reinício no fim. Consulte <link>Atualização do sistema Proxmox</link> para o diagrama completo; o mesmo atualizador está disponível separadamente no menu principal.",
+    "subTitle": "Não aplicar a um host com subscrição",
+    "subBody": "Se você realmente tiver uma assinatura Proxmox e quiser continuar usando os repositórios empresariais, pule esta opção. Executando-o desabilita o repositório corporativo e encaminha o host para o canal comunitário. A atualização do pacote e reescrita do repositório não são apresentadas como reversíveis em Desinstalar Otimizações; restaure sua configuração do repositório deliberadamente se você precisar mudar de canal mais tarde.",
+    "safetyTitle": "Controlo de segurança pós-atualização",
+    "safetyBody": "Após a atualização, o script procura metadados antigos de volumes físicos (PV) nos discos. Pode acontecer quando uma VM com passthrough escreve cabeçalhos LVM num disco em bruto. Se detetar algo suspeito, avisa e sugere <code>pvs</code> para inspeção. Não altera nada automaticamente."
+  },
+  "time": {
+    "heading": "Sincronizar a hora automaticamente",
+    "intro": "Detecta o IP público do servidor via <code>dig myip.opendns.com @resolver1.opendns.com</code>, em seguida, consulta o <code>ipapi.co/'{'ip'}'/timezone</code> para procurar o fuso horário IANA correspondente, e aplica-o com o <code>timedatectl set-timezone</code>. Finalmente permite NTP com <code>timedatectl set-ntp true</code>.",
+    "depTitle": "Depende de dois serviços externos",
+    "depBody": "A pesquisa depende de OpenDNS e <code>ipapi.co</code> serem alcançáveis, e de suas respostas serem corretas. Se você executar o Proxmox atrás de uma VPN ou em um VLAN que sai de uma região diferente, o fuso horário detectado automaticamente pode estar errado. Nesse caso, ignore esta opção e defina o fuso- horário à mão:",
+    "revertTitle": "Reversível do menu Desinstalar",
+    "revertBody": "<link>Desinstalar otimizações</link> repõe o fuso horário em UTC, um valor seguro. NTP continua ativo: o relógio sincroniza e mostra UTC até definir outro fuso manualmente."
+  },
+  "languages": {
+    "heading": "ignorar o download de idiomas adicionais",
+    "intro": "Durante <code>apt update</code>, o APT pode transferir descrições de pacotes traduzidas além dos metadados principais. A opção desativa-as para poupar largura de banda e espaço. Antes, o ProxMenux <strong>confirma que as definições regionais do host foram geradas</strong>: lê <code>/etc/default/locale</code> ou <code>/etc/environment</code>, acrescenta a <code>/etc/locale.gen</code> se faltar e executa <code>locale-gen</code>. Assim mantém as definições regionais da shell.",
+    "writtenTitle": "O que é escrito",
+    "revertTitle": "Reversível do menu Desinstalar",
+    "revertBody": "Excluindo <code>/etc/apt/apt.conf.d/99-disable-translations</code> (quer manualmente ou a partir do menu Desinstalar) restaura o comportamento padrão e APT baixa arquivos de idioma novamente."
+  },
+  "utilities": {
+    "heading": "Instale utilitários comuns do sistema",
+    "intro": "Abre uma lista de <strong>25 utilitários selecionados</strong> por grupos. Escolha e confirme; o ProxMenux instala-os pelo <code>apt</code>, verifica o resultado e mostra um resumo final.",
+    "imageAlt": "Seletor de utilitários ProxMenux: Espaço para selecionar, Enter para confirmar",
+    "reuseTitle": "A mesma lista é reutilizada em outro lugar",
+    "reuseBody": "O catálogo dos 25 utilitários tem uma única definição: <code>PROXMENUX_UTILS</code> em <code>scripts/global/utils-install-functions.sh</code>. O menu <em>Utilitários e ferramentas → Utilitários do sistema</em> oferece a mesma lista para instalar mais tarde sem repetir a pós-instalação.",
+    "listTitle": "O que está na lista",
+    "groups": [
+      {
+        "group": "Monitores de sistemas",
+        "items": [
+          {
+            "pkg": "htop",
+            "desc": "Visualizador interativo de processos"
+          },
+          {
+            "pkg": "btop",
+            "desc": "Monitor moderno de recursos (CPU, RAM, discos, rede, processos)"
+          },
+          {
+            "pkg": "s-tui",
+            "desc": "Interface de terminal para testes de esforço e monitorização da CPU"
+          },
+          {
+            "pkg": "iftop",
+            "desc": "Utilização de largura de banda ao vivo por ligação"
+          },
+          {
+            "pkg": "iotop",
+            "desc": "I/O do disco por processo"
+          },
+          {
+            "pkg": "iptraf-ng",
+            "desc": "Monitor Interativo IP LAN"
+          }
+        ]
+      },
+      {
+        "group": "Rede",
+        "items": [
+          {
+            "pkg": "iperf3",
+            "desc": "Medir largura de banda máxima alcançável entre máquinas"
+          },
+          {
+            "pkg": "net-tools",
+            "desc": "Ferramentas antigas (ifconfig, netstat, route). Ainda úteis para verificações rápidas"
+          },
+          {
+            "pkg": "ipset",
+            "desc": "Gerencie grandes conjuntos de IP no kernel — úteis com regras iptables/nftables."
+          }
+        ]
+      },
+      {
+        "group": "Transferências e arquivos",
+        "items": [
+          {
+            "pkg": "axel",
+            "desc": "Acelerador de transferência paralelo leve"
+          },
+          {
+            "pkg": "aria2",
+            "desc": "Downloader multi-fonte / multi-protocolo (HTTP, FTP, BitTorrent, Metalink)"
+          },
+          {
+            "pkg": "unzip",
+            "desc": "Extrair arquivos ZIP"
+          },
+          {
+            "pkg": "zip",
+            "desc": "Criar arquivos ZIP"
+          },
+          {
+            "pkg": "cabextract",
+            "desc": "Extrair arquivos Microsoft CAB (útil com ISOs do Windows)"
+          },
+          {
+            "pkg": "wimtools",
+            "desc": "Manipular imagens WIM do Windows (extrair, dividir, montar, aplicar)"
+          },
+          {
+            "pkg": "genisoimage",
+            "desc": "Compila imagens ISO 9660 de uma árvore de diretórios"
+          }
+        ]
+      },
+      {
+        "group": "Texto e ficheiros",
+        "items": [
+          {
+            "pkg": "dos2unix",
+            "desc": "Converter final de linha CRLF (Windows) para LF (Unix)"
+          },
+          {
+            "pkg": "grc",
+            "desc": "Colorização genérica: aplica realce de sintaxe às saídas de ping, traceroute, dig, tail e outros comandos"
+          },
+          {
+            "pkg": "plocate",
+            "desc": "Pesquisa rápida de arquivos (indexado). Executar `updatedb` após instalar para construir o índice."
+          }
+        ]
+      },
+      {
+        "group": "Remoto e sessões",
+        "items": [
+          {
+            "pkg": "sshpass",
+            "desc": "Autenticação de senha SSH não interativa — útil para scripts, não para uso diário"
+          },
+          {
+            "pkg": "tmux",
+            "desc": "Multiplexador de terminal — desacoplar sessões, dividir painéis, sobreviver a desconexão"
+          }
+        ]
+      },
+      {
+        "group": "Hardware e baixo nível",
+        "items": [
+          {
+            "pkg": "msr-tools",
+            "desc": "Ler/escrever registos específicos do modelo de CPU (rdmsr, wrmsr)"
+          },
+          {
+            "pkg": "intel-gpu-tools",
+            "desc": "Utilitários de diagnóstico Intel GPU incluindo `intel_gpu_top`"
+          }
+        ]
+      },
+      {
+        "group": "Virtualização",
+        "items": [
+          {
+            "pkg": "libguestfs-tools",
+            "desc": "Inspecionar e modificar imagens de disco VM (virt-ls, virt-cat, guestmount...)"
+          },
+          {
+            "pkg": "chntpw",
+            "desc": "Editar Windows SAM — útil para recuperação de senha em Windows VMs você herda"
+          }
+        ]
+      }
+    ],
+    "actionTitle": "Alguns deles em acção",
+    "noBulkTitle": "Apenas os utilitários instalados pelo ProxMenux são removidos",
+    "noBulkBody": "ProxMenux registra apenas os pacotes utilitários selecionados que ainda não estavam instalados antes desta ação. Desinstalar Otimizações pode purgar esses pacotes mais tarde, enquanto utilitários que já estavam presentes no host são deixados intocados. A atualização geral do sistema APT não é intencionalmente rastreada como reversível porque os pacotes atualizados não têm retorno atômico seguro."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "label": "Atualização do sistema Proxmox",
+        "href": "/docs/utils/system-update",
+        "tail": " — reexecuta o ciclo apt update + dist-upgrade a pedido."
+      },
+      {
+        "label": "Instalador de utilitários de sistema",
+        "href": "/docs/utils/system-utils",
+        "tail": " — instalar (ou reinstalar) utilitários individualmente após a pós-instalação."
+      },
+      {
+        "label": "Comandos de atualizações e pacotes",
+        "href": "/docs/help-info/update-commands",
+        "tail": " — Referência apt para a shell."
+      },
+      {
+        "label": "Pós-instalação personalizável",
+        "href": "/docs/post-install/customizable",
+        "tail": " — voltar ao menu superior."
+      }
+    ]
+  }
+}

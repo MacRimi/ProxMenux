@@ -818,7 +818,7 @@ Note that the dev server has no Flask backend on the same host by default: the a
 
 ### Testing
 
-#### Offline i18n script tests
+#### Offline script regressions (including i18n)
 
 From the repository root, run the complete script suite:
 
@@ -835,6 +835,14 @@ functions extracted from `AppImage/lib/i18n/provider.tsx`, not a reimplementatio
 It does not launch React or require `npm install`, `pip install`, a Proxmox host,
 API keys, or a translation provider. Generator tests use isolated temporary
 catalogs and fake/forbidden providers; repository catalogs are not regenerated.
+
+The command-description recovery regression first completes disposable copies
+of the shipped catalogs with the real generator and a deterministic offline
+provider, then requires a second run to make zero provider calls and zero
+writes. It checks that all existing nonempty translations and the frozen
+command-description arrays survive unchanged. A synthetic EN-only feature tests
+new nested strings, arrays, placeholders and non-text values. New message keys
+do not need to be added to a test-specific translation seed list.
 
 Scheduler fixtures discover every shipped `lang/*.json` cache and run the actual
 `translate` lookup at both empty-job consumers for PBS and local archive backends.
@@ -859,12 +867,17 @@ than silently skipping the consumer assertions. `.github/workflows/test-i18n.yml
 provisions Python and Node and runs this same command on relevant pull requests
 and main/develop pushes (or manually). It is separate from the translation
 publication workflow and has read-only repository permissions.
+Its Actions name is **Offline script regressions** because it also covers menus,
+downloads, scheduler behavior and other scripts. The `offline-i18n` check ID is
+retained for compatibility with existing branch protection rules; a failure of
+that check is not necessarily a translation failure. Read its failing test name
+and traceback before changing catalogs or translation-provider settings.
 
 #### Qualified offline `tests/` CI lanes
 
 `.github/workflows/test-offline-qualified.yml` runs **only** the explicitly listed
-nine Python files (including the inert active-notification payload fixture and
-the focused health recurrence tests) and eleven
+ten Python files (including the native discovery fixtures, the inert active-notification payload fixture and
+the focused health recurrence tests) and twelve
 Node files in `.github/scripts/run_offline_qualified.py`.
 The Python runner gives each test file a private temporary directory through
 `TMPDIR`. It removes that directory after the test file finishes.
@@ -887,7 +900,7 @@ dangling symlink) rather than overwrite or reuse it. In Bash:
 )
 ```
 
-Requires Python 3.11, Node 22.14, npm and Bash/coreutils for the bounded shell
+Requires Python 3.11, Flask 3.x for the native route fixtures, Node 22.14, npm and Bash/coreutils for the bounded shell
 fixtures. The separate lockfile installs only TypeScript, React, React DOM,
 Lucide icons and the locked scheduler dependency; it does not build the Monitor
 or run npm lifecycle scripts. `--legacy-peer-deps` admits the existing Lucide

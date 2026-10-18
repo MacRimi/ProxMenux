@@ -2,12 +2,21 @@
 # Shared repository policy for package-install and safe-update flows.
 # Proxmox's own repository API parses .list/.sources and edits individual
 # entries. No shell rewriting of operator-maintained APT files.
+source "$(dirname "${BASH_SOURCE[0]}")/platform-functions.sh"
 repository_policy() {
     python3 "$(dirname "${BASH_SOURCE[0]}")/repository_policy.py" "$@"
 }
 
 ensure_repositories() {
     local version suite decision refresh_status
+    if pmx_is_pbs; then
+        if [[ "$(pmx_platform_field supported)" != true ]]; then
+            msg_error "$(translate 'This operation supports PBS 3 on Debian 12 and PBS 4 on Debian 13.')"
+            return 1
+        fi
+        msg_info "$(translate 'PBS: using the configured APT repositories without changing sources.')"
+        return 0
+    fi
     version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
     case "$version" in
         8) suite=bookworm ;;
@@ -48,6 +57,51 @@ ensure_repositories() {
         else
             refresh_status=$?
             msg_error "$(translate 'Repository sources changed, but APT package-list refresh failed. Operation stopped; sources were not rolled back. Inspect Node > Updates > Repositories and retry apt-get update before continuing.')"
+            return "$refresh_status"
+        fi
+    fi
+    return 0
+}
+
+# The no-subscription switch of a Proxmox Backup Server: the same policy and
+# API as on PVE, offered only when the host has no active subscription.
+ensure_pbs_repositories() {
+    local suite decision refresh_status
+    if [[ "$(pmx_platform_field supported)" != true ]]; then
+        msg_error "$(translate 'This operation supports PBS 3 on Debian 12 and PBS 4 on Debian 13.')"
+        return 1
+    fi
+    suite=$(pmx_platform_field codename)
+    decision=$(repository_policy plan "$suite" pbs) || return 1
+    case "$decision" in
+        preserve) return 0 ;;
+        offer) ;;
+        *) msg_error "$(translate 'Repository policy returned an unexpected result.')"; return 1 ;;
+    esac
+    if ! declare -F hybrid_yesno >/dev/null || { [[ ! -t 0 ]] && ! { declare -F is_web_mode >/dev/null && is_web_mode; }; }; then
+        msg_error "$(translate 'No active subscription and no usable PBS repository. Noninteractive mode cannot change APT sources; configure them in Administration > Repositories.')"
+        return 1
+    fi
+    if ! hybrid_yesno "$(translate 'Proxmox repository')" \
+        "$(translate 'This Proxmox Backup Server has no active subscription, switch to the no-subscription repository? The inaccessible Enterprise PBS source will be disabled.')" 14 90; then
+        msg_error "$(translate 'Repository switch declined; no APT source changed.')"
+        return 1
+    fi
+    decision=$(repository_policy apply "$suite" pbs) || return 1
+    [[ "$decision" == changed || "$decision" == preserve ]] || return 1
+    if [[ "$decision" == changed ]]; then
+        if declare -F pmx_record_execution >/dev/null; then
+            local journal_function="${PMX_JOURNAL_FUNCTION:-}" journal_version="${PMX_JOURNAL_VERSION:-}"
+            pmx_journal_context "ensure_pbs_repositories" "" "${PMX_JOURNAL_SOURCE:-}"
+            pmx_record_execution "Switch to the PBS no-subscription repository" \
+                "proxmox-backup-debug api set /nodes/localhost/apt/repositories --handle no-subscription"
+            PMX_JOURNAL_FUNCTION="$journal_function" PMX_JOURNAL_VERSION="$journal_version"
+        fi
+        if apt-get update; then
+            return 0
+        else
+            refresh_status=$?
+            msg_error "$(translate 'Repository sources changed, but APT package-list refresh failed. Operation stopped; sources were not rolled back. Inspect Administration > Repositories and retry apt-get update before continuing.')"
             return "$refresh_status"
         fi
     fi

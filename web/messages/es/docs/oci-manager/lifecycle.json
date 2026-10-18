@@ -18,7 +18,7 @@
         },
         {
           "code": {
-            "code": "instances/\n└── 105/\n    └── oci-compose.json\n        ├── imagen y digest resuelto\n        ├── recursos y red\n        ├── entorno (secretos protegidos)\n        ├── discos del contenedor y directorios del host\n        ├── perfil de hardware y dispositivos\n        ├── log de consola y modo de terminal\n        └── pertenencia a una pila y ciclo de vida"
+            "code": "instances/\n└── 105/\n    └── oci-compose.json\n        ├── image and resolved digest\n        ├── resources and network\n        ├── environment (secrets protected)\n        ├── container disks and host directories\n        ├── hardware profile and devices\n        ├── console log and terminal mode\n        └── stack membership and lifecycle"
           }
         },
         {
@@ -86,7 +86,7 @@
               "registry": "Registro OCI",
               "update": "Actualizar la instancia",
               "resolve": "Resolver la etiqueta",
-              "verify": "Verificar el archivo y preflight",
+              "verify": "Verificar el archivo y realizar las comprobaciones previas",
               "backup": "Detener y respaldar el CT",
               "import": "Importar el rootfs nuevo",
               "reapply": "Aplicar de nuevo el contrato",
@@ -215,7 +215,7 @@
     {
       "id": "restore",
       "title": "Backup, restauración y otro host",
-      "intro": "Un backup hecho con vzdump o Proxmox Backup Server incluye el contenedor, sus discos y la copia de su contrato. Lo que la instalación guarda en el host no forma parte de él. <strong>Gestionar aplicaciones OCI instaladas</strong> detecta los contenedores restaurados en un host que no tiene su contrato, un Proxmox recién instalado u otro host, y ofrece registrarlos de nuevo.",
+      "intro": "Un backup hecho con vzdump o Proxmox Backup Server incluye el contenedor, los discos del contenedor seleccionados para el backup y la copia de su contrato. Lo que la instalación guarda en el host no forma parte de él. <strong>Gestionar aplicaciones OCI instaladas</strong> detecta los contenedores restaurados en un host que no tiene su contrato, un Proxmox recién instalado u otro host, y ofrece registrarlos de nuevo.",
       "blocks": [
         {
           "steps": {
@@ -462,7 +462,7 @@
               ],
               [
                 "Discos del contenedor",
-                "Proxmox los mueve con el contenedor. HA necesita que estén en un almacenamiento compartido."
+                "Proxmox los mueve con el contenedor. HA necesita sus datos disponibles en el nodo de destino, mediante almacenamiento compartido o una configuración de replicación compatible."
               ],
               [
                 "Directorios del host y dispositivos",

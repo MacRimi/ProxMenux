@@ -1,0 +1,74 @@
+{
+  "meta": {
+    "title": "Post-Install: Anpassning | ProxMenux Dokumentation",
+    "description": "Anpassningar i ProxMenux anpassningsbara skript efter installationen: färgad bash-prompt med användbara alias, ProxMenux-banner i MOTD och möjlighet att ta bort prenumerationsmeddelandet från Proxmox webbgränssnitt."
+  },
+  "header": {
+    "title": "Efter installationen: anpassning",
+    "description": "Visuella och praktiska justeringar för Proxmox-värden. De gör skalet trevligare och döljer prenumerationsmeddelandet i webbgränssnittet. Bashrc, MOTD och bannern registreras och kan återställas via Avinstallera.",
+    "section": "Inställningar efter installation av Proxmox"
+  },
+  "intro": {
+    "title": "Vad denna kategori täcker",
+    "body": "Tre små oberoende alternativ: en <strong>färgad bash-prompt med alias</strong> för root-skalet, en enradig <strong>MOTD-banner</strong> vid SSH-inloggning och borttagning av <strong>popupen ”Ingen giltig prenumeration”</strong> som Proxmox visar vid varje webbinloggning."
+  },
+  "bashrc": {
+    "heading": "Anpassa bashrc",
+    "intro": "Lägger in ett förberett block i <code>/root/.bashrc</code> med färgad prompt, tidsstämplad historik, vanliga <code>ls</code>-/<code>grep</code>-alias och en <code>source</code> för bash-komplettering. Gör arbetet via SSH trevligare och visar tydligt vilken värd du är på när många flikar är öppna.",
+    "writesTitle": "Vad ProxMenux lägger till .bashrc",
+    "writesOutro": "Blocket avgränsas av markörerna <code>PMX_CORE_BASHRC</code>. Om skriptet körs igen ersätts det gamla blocket utan att dupliceras. Ursprunglig <code>.bashrc</code> säkerhetskopieras en gång till <code>/root/.bashrc.bak</code>, och raden <code>source /root/.bashrc</code> läggs till i <code>/root/.bash_profile</code> så att prompten även gäller i inloggningsskal, till exempel efter <code>su -</code>.",
+    "rootTitle": "Gäller för root endast",
+    "rootBody": "Anpassningen gäller root-kontots skal. Andra användare på värden behåller sina egna standardinställningar. Om du bara administrerar Proxmox via webben och aldrig använder skalet kan du hoppa över detta rent estetiska alternativ."
+  },
+  "motd": {
+    "heading": "Konfigurera anpassad MOTD-banner",
+    "intro": "Lägger <em>\"This system is optimised by: ProxMenux\"</em> först i <code>/etc/motd</code>, meddelandet efter lyckad SSH-inloggning ovanför prompten och före <code>update-motd</code>-skript. Ofarligt och rent informativt — en snabb synlig bekräftelse på att ProxMenux har tillämpats på värden.",
+    "writesTitle": "Vad ProxMenux skriver",
+    "writesOutro": "Vid första tillämpningen registrerar ProxMenux om <code>/etc/motd</code> fanns och sparar originalinnehållet under <code>/usr/local/share/proxmenux</code>. Åtgärden är idempotent: om markörraden redan finns läggs inget till. Äldre installationer med <code>/etc/motd.bak</code> migreras till samma återställbara tillstånd."
+  },
+  "banner": {
+    "heading": "Ta bort prenumerationsbanner",
+    "intro": "Tar bort dialogen <em>”Du har ingen giltig prenumeration för den här servern”</em> som visas vid varje webbinloggning i Proxmox utan Enterprise-prenumeration. ProxMenux tar hänsyn till versionen och väljer rätt skript för huvudversionernas olika gränssnittspaket.",
+    "versionTitle": "Val av skript efter version",
+    "versionItems": [
+      "<strong>PVE 9.x</strong> → kör <code>remove-banner-pve-v3.sh</code>, som patchar både <code>proxmoxlib.js</code> för datorgränssnittet och det nya Yew-baserade mobilgränssnittet.",
+      "<strong>PVE 8.x</strong> → kör <code>remove-banner-pve8.sh</code>, endast för datorgränssnittet."
+    ],
+    "versionOutro": "Före patchningen säkerhetskopierar ProxMenux originalfilerna för JS/mallar till <code>/usr/local/share/proxmenux/backups/</code> med tidsstämpel. Avinstallationen återställer filerna därifrån eller installerar om Proxmox gränssnittspaket om säkerhetskopian saknas eller är skadad.",
+    "breakTitle": "Kan bryta efter Proxmox uppdateringar",
+    "breakBody": "Proxmox gränssnittsuppdateringar skriver regelbundet över <code>proxmoxlib.js</code>, vilket kan få meddelandet att återkomma. Du kan tillämpa alternativet igen eller acceptera meddelandet tills dess. ProxMenux installerar också en APT-hook som patchar om efter paketuppgraderingar — se <link>Avinstallera optimeringar</link> för hur den tas bort.",
+    "legalTitle": "Juridisk anmärkning (alltid värt att upprepa)",
+    "legalBody": "Alternativet döljer bara gränssnittets meddelande. Det ger <strong>inte</strong> Enterprise-support eller åtkomst till Enterprise-förrådet och ändrar inte programvarans licens. Proxmox VE ges ut under GNU AGPLv3. En prenumeration stödjer projektet och ger åtkomst till Enterprise-uppdateringskanalen; välj rätt supportnivå för din miljö."
+  },
+  "verify": {
+    "heading": "Verifiering",
+    "intro": "Efter att ha applicerat alla tre:",
+    "reversibleTitle": "Alla tre anpassningsförändringar spåras",
+    "reversibleBody": "<link>Avinstallera optimeringar</link> återställer <code>/root/.bashrc</code>, återför MOTD till exakt innehåll före ProxMenux eller tar bort filen om den inte fanns tidigare och återställer patchade gränssnittsfiler från säkerhetskopian eller installerar om berörda paket vid behov."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "label": "Valfritt",
+        "href": "/docs/post-install/optional",
+        "tail": " — Fastfetch och Figurine (andra visuella anpassningar)."
+      },
+      {
+        "label": "Visa versionsinformation",
+        "href": "/docs/settings/show-version-information",
+        "tail": " — bekräftar att anpassningarna spåras som installerade."
+      },
+      {
+        "label": "Avinstallera optimeringar",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — återställ bashrc, motd och prenumerationsmeddelandet."
+      },
+      {
+        "label": "Anpassningsbar efterinstallation",
+        "href": "/docs/post-install/customizable",
+        "tail": " — tillbaka till den överordnade menyn."
+      }
+    ]
+  }
+}

@@ -103,7 +103,7 @@
     "noShareTitle": "Client connects but cannot see the share",
     "noShareBody": "Check that <code>browseable = yes</code> is set in the share block (default for rw / ro modes; may be missing in custom). Also check the CT firewall and the Proxmox host firewall allow TCP 445 (SMB) and 139 (NetBIOS). Some Windows clients also require name resolution — try the IP directly first.",
     "authTitle": "Authentication fails (NT_STATUS_LOGON_FAILURE)",
-    "authBody": "Either the wrong password (Samba passwords are <em>separate</em> from system passwords — see them with <code>pdbedit -L</code>) or the user is not in <code>valid users</code> for that share. Reset the password with <code>smbpasswd &lt;user&gt;</code> inside the CT.",
+    "authBody": "Either the password is wrong (Samba passwords are <em>separate</em> from system passwords; list Samba users with <code>pdbedit -L</code>) or the user is not in <code>valid users</code> for that share. Reset the password with <code>smbpasswd &lt;user&gt;</code> inside the CT.",
     "groupTitle": "Files written by the client appear with wrong group on the server",
     "groupBody": "The script sets <code>force group = sharedfiles</code> in the share block, so new files should be group <code>sharedfiles</code>. If they aren't, the SGID bit on the parent directory may have been lost (someone ran <code>chmod</code> by hand). Reapply: <code>chmod 2775 /mnt/&lt;share&gt;</code>.",
     "bothTitle": "Sharing the same folder over both NFS and Samba",

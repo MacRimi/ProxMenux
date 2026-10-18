@@ -56,7 +56,7 @@
       }
     ],
     "netEffectTitle": "Net effect",
-    "netEffectBody": "Your container always boots, even if the NFS server is offline. The first time something touches the mount path, systemd quietly mounts it. If the server is still down, that one access fails with <em>resource temporarily unavailable</em> — but nothing else in the CT is affected."
+    "netEffectBody": "The NFS filesystem is mounted on <em>first access</em> rather than eagerly during boot. If the server is offline, that access may wait or fail, and services that depend on the path can be affected. Automount reduces the boot-time dependency; it does not guarantee that every CT service is unaffected by an unavailable NFS server."
   },
   "manual": {
     "heading": "Manual equivalent",

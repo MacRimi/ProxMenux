@@ -8,7 +8,8 @@
     "unknown": "Okänd",
     "notAvailable": "N/A",
     "serverOffline": "Servern är frånkopplad",
-    "supportProject": "Stöd projektet och bidra"
+    "supportProject": "Stöd projektet och bidra",
+    "descriptionPbs": "Proxmox Backup Server Dashboard"
   },
   "common": {
     "notAvailable": "N/A",
@@ -165,7 +166,8 @@
     },
     "runningCountOne": "{count} körs",
     "runningCountFew": "{count} körs",
-    "runningCountMany": "{count} körs"
+    "runningCountMany": "{count} körs",
+    "pbsVersion": "PBS-version:"
   },
   "storage": {
     "loadingTitle": "Laddar lagringsdata...",
@@ -1110,7 +1112,21 @@
       "available": "Tillgängliga säkerhetskopior",
       "loading": "Laddar säkerhetskopior...",
       "empty": "Inga säkerhetskopior hittades",
-      "emptyHint": "Skapa din första säkerhetskopia med knappen ovan"
+      "emptyHint": "Skapa din första säkerhetskopia med knappen ovan",
+      "refresh": "Uppdatera",
+      "refreshFailed": "Det gick inte att uppdatera säkerhetskopiorna. Uppdatera igen för att bekräfta deras aktuella tillstånd.",
+      "deleteSelected": "Ta bort markerade ({count})",
+      "deletedCount": "{count} säkerhetskopior har tagits bort.",
+      "unconfirmedCount": "Borttagning av {count} säkerhetskopior har inte bekräftats. Uppdatera listan och kontrollera Proxmox uppgifter innan du försöker igen.",
+      "deleteFailed": "Borttagningen kunde inte bekräftas. Uppdatera listan och kontrollera Proxmox uppgifter innan du försöker igen.",
+      "selectHint": "Välj oskyddade säkerhetskopior (upp till 20 per omgång)",
+      "selectBackup": "Välj säkerhetskopia",
+      "protected": "Skyddad",
+      "confirmTitle": "Ta bort {count} säkerhetskopior?",
+      "confirmDescription": "Dessa säkerhetskopieringsarkiv för VM/CT {vmid} kommer att tas bort permanent. Skyddade säkerhetskopior är undantagna. Detta tar inte bort gästen.",
+      "deleting": "Väntar på att Proxmox ska slutföra borttagningen av de valda arkiven…",
+      "cancel": "Avbryt",
+      "confirmDelete": "Ta bort säkerhetskopior"
     },
     "updatesPanel": {
       "pendingTitle": "Väntande paketuppdateringar",
@@ -1721,7 +1737,17 @@
       "portCategoryCustomPlaceholder": "Skriv en kategori och tryck på Enter (Esc för att avbryta)",
       "portCustomUrlPlaceholder": "Anpassad URL (t.ex. https://vault.example.com) - åsidosätter IP:port",
       "stackMemberTitle": "En del av en multicontainerapplikation",
-      "stackMemberBody": "Den här behållaren stöder en applikation vars huvudbehållare är {primary}. Applikationen, dess webblänkar och dess version visas där."
+      "stackMemberBody": "Den här behållaren stöder en applikation vars huvudbehållare är {primary}. Applikationen, dess webblänkar och dess version visas där.",
+      "nativeEvidencePort": "Lyssnande TCP-port",
+      "nativeEvidenceFile": "Installerad fil",
+      "nativeEvidenceProcess": "Körande programfil",
+      "nativeEvidenceDirectory": "Arbetskatalog",
+      "nativeEvidenceService": "Tjänstdefinition",
+      "nativeScanFailed": "Programsökningen kunde inte slutföras. Tidigare resultat kan vara inaktuella; försök igen.",
+      "nativeScanPartial": "Programsökningen är ofullständig. Granska det som hittades och försök igen.",
+      "nativeVersionUnknown": "Installerad version okänd",
+      "nativeEvidenceStale": "Det som hittades kan vara inaktuellt eller ofullständigt.",
+      "nativeRegisterOnly": "Bekräfta registreringen i redigeraren. En känd version sparas som ett manuellt värde; ingen uppdatering konfigureras."
     },
     "statusFilter": {
       "ariaLabel": "Filtrera virtuella maskiner och containrar",
@@ -1817,7 +1843,8 @@
         "logs": "Systemloggar",
         "updates": "Systemuppdateringar",
         "security": "Säkerhet och certifikat",
-        "temperature": "Temperatur"
+        "temperature": "Temperatur",
+        "pbsServices": "PBS Services"
       }
     },
     "remoteStorage": {
@@ -2078,7 +2105,7 @@
         "webhookUrl": "Webhook URL",
         "enableEmail": "Aktivera e-post",
         "smtpHost": "SMTP-värd",
-        "port": "Hamn",
+        "port": "Port",
         "tlsMode": "TLS-läge",
         "noTls": "Ingen (port 25)",
         "username": "Användarnamn",
@@ -2111,7 +2138,13 @@
         "inactiveFooter": "Aktivera aviseringar för att ta emot system-, hälso- och säkerhetsvarningar via de konfigurerade kanalerna.",
         "notificationLanguage": "Aviseringsspråk",
         "selectNotificationLanguage": "Välj språk för meddelanden",
-        "notificationLanguageHint": "Används för deterministiska körtidsmeddelanden även när AI är inaktiverat."
+        "notificationLanguageHint": "Används för deterministiska körtidsmeddelanden även när AI är inaktiverat.",
+        "appriseServiceHelp": "Konfiguration av Slack och Matrix",
+        "appriseSlackSteps": "Skapa en inkommande webhook i din Slack-app för målkanalen och klistra sedan in dess fullständiga HTTPS-URL i fältet Apprise-URL. Ingen omvandling behövs.",
+        "appriseSlackDocs": "URL-format och konfiguration för Slack",
+        "appriseMatrixSteps": "Använd ett aviseringskonto som får skicka meddelanden till rummet. Ersätt exemplets användare, lösenord, hemserver och fullständiga rums-ID; URL-koda specialtecken i inloggningsuppgifterna. Schemat matrixs använder HTTPS. Se dokumentationen för stöd för token, SSO och krypterade rum i din installerade Apprise-version.",
+        "appriseMatrixDocs": "URL-format och konfiguration för Matrix",
+        "appriseServiceFinish": "Aktivera Apprise, ange din URL, välj aviseringskategorier eller enskilda händelser, spara och använd sedan Skicka test. Dessa exempel ändrar inte din sparade URL. Denna Apprise-kanal har ett mål; använd Apprise-API för flera tjänster samtidigt."
       },
       "ai": {
         "title": "AI-förbättring",
@@ -2690,7 +2723,7 @@
         "interfaceOptional": "Gränssnitt (valfritt)",
         "applyTo": "Ansök till",
         "commentOptional": "Kommentar (valfritt)",
-        "port": "Hamn",
+        "port": "Port",
         "source": "Källa",
         "level": "Nivå",
         "interface": "Gränssnitt",
@@ -4756,6 +4789,24 @@
       "thursday": "torsdag",
       "tuesday": "tisdag",
       "wednesday": "onsdag"
+    },
+    "storageRetention": {
+      "title": "Lagringens bevarandepolicy",
+      "keepAll": "Behåll alla säkerhetskopior",
+      "description": "Standardpolicy för bevarande av säkerhetskopior, sparad i Proxmox. Säkerhetskopieringsjobb med en uttrycklig policy åsidosätter denna standard.",
+      "refresh": "Uppdatera",
+      "saved": "Lagringens bevarandepolicy har sparats. Ingen gallring har körts.",
+      "choosePolicy": "Välj Behåll alla eller minst ett bevarandeantal som är större än noll.",
+      "saveFailed": "Det gick inte att spara lagringens bevarandepolicy. Uppdatera listan om konfigurationen har ändrats.",
+      "loadFailed": "Det gick inte att läsa in lagringens bevarandepolicy.",
+      "empty": "Ingen lagring för säkerhetskopior hittades.",
+      "default": "Proxmox standard",
+      "edit": "Redigera",
+      "editTitle": "Bevarande för {storage}",
+      "effect": "Gäller framtida säkerhetskopieringar som ärver denna lagringspolicy. Att spara tar inte bort befintliga säkerhetskopior. Skyddade säkerhetskopior förblir skyddade.",
+      "cancel": "Avbryt",
+      "save": "Spara bevarandepolicy",
+      "useDefault": "Använd Proxmox-standard (ingen policy för denna lagring)"
     }
   },
   "healthStatus": {
@@ -4786,7 +4837,8 @@
       "services": "PVE-tjänster",
       "logs": "Systemloggar",
       "updates": "Systemuppdateringar",
-      "security": "Säkerhet & certifikat"
+      "security": "Säkerhet & certifikat",
+      "pbsServices": "PBS-tjänster"
     },
     "checks": {
       "cpu_usage": "CPU-användning",
@@ -7230,5 +7282,99 @@
         "diagnosticsOmitted": "Utelämnade diagnosrader eller text: {count}. Originalrapporten bevaras."
       }
     }
+  },
+  "pbs": {
+    "title": "Proxmox Backup Server",
+    "server": "PBS-server",
+    "chooseServer": "Välj en PBS-server",
+    "local": "Lokal PBS",
+    "refresh": "Uppdatera",
+    "manage": "Hantera PBS-anslutningar",
+    "loadFailed": "Det gick inte att läsa in PBS-status.",
+    "loading": "Läser in PBS-data…",
+    "noServer": "Lägg till en PBS-anslutning för att visa datalager, uppgifter och scheman.",
+    "permissionsHelp": "Aktivera Monitor-autentisering innan du sparar inloggningsuppgifter. Använd en särskild PBS-API-token med rollen Audit på / i både användarens och tokenens ACL, med nedärvning. Denna panel läser endast PBS-data.",
+    "editConnection": "Anslutning att redigera",
+    "add": "Lägg till en ny anslutning",
+    "name": "Namn",
+    "url": "HTTPS-URL (ta med :8007 för PBS ordinarie port)",
+    "token_id": "API-token-ID (user@realm!token)",
+    "token_secret": "API-tokenhemlighet (lämna tomt för att behålla den sparade hemligheten)",
+    "fingerprint": "Certifikatets SHA256-fingeravtryck (valfritt)",
+    "tlsHelp": "Lämna fingeravtrycket tomt för vanlig kontroll av certifikatutfärdare och värdnamn. För ett självsignerat certifikat kopierar du dess SHA256-fingeravtryck från PBS-konsolen eller en annan betrodd kanal. Fingeravtrycket kontrolleras innan inloggningsuppgifter skickas.",
+    "saved": "PBS-anslutningen har verifierats och sparats.",
+    "saveFailed": "Det gick inte att spara PBS-anslutningen.",
+    "testing": "Verifierar anslutningen…",
+    "save": "Verifiera och spara",
+    "remove": "Ta bort anslutningen",
+    "removeConfirm": "Ta bort denna sparade PBS-anslutning och dess token från Monitor? PBS-data och jobb påverkas inte.",
+    "sampled": "Avläst",
+    "datastores": "Datalager",
+    "total": "Filsystemets kapacitet",
+    "used": "Använt",
+    "free": "Tillgängligt",
+    "noDatastores": "Inga tillgängliga datalager. Kontrollera datalagrets konfiguration samt användarens och tokenens behörigheter.",
+    "tasks": "Senaste uppgifter",
+    "noTasks": "Inga senaste uppgifter returnerades.",
+    "task": "Uppgift",
+    "started": "Startad",
+    "status": "Status",
+    "running": "Körs",
+    "jobs": "Underhållsscheman",
+    "job": "Jobb",
+    "schedule": "Schema",
+    "sync": "Synkronisering",
+    "verify": "Verifiering",
+    "prune": "Gallring",
+    "overview": "Översikt",
+    "logs": "Systemloggar",
+    "terminal": "Terminal",
+    "security": "Säkerhet",
+    "logout": "Logga ut",
+    "navigation": "PBS-navigering",
+    "cpu": "CPU",
+    "memory": "Minne",
+    "uptime": "Drifttid",
+    "capacityUnavailable": "Kapacitet inte tillgänglig.",
+    "datastoresUnavailable": "{count} inte tillgänglig",
+    "datastoresOnline": "Alla tillgängliga",
+    "moreDatastores": "+{count} fler databutiker",
+    "estimatedFull": "Beräknad full",
+    "estimatedFullUnknown": "Inte tillräckligt med data ännu",
+    "duration": "Varaktighet",
+    "noJobs": "Inga synkroniserings-, verifierings- eller beskärningsscheman är konfigurerade."
+  },
+  "monitorLinks": {
+    "groups": {
+      "cluster": "Kluster",
+      "standalone": "Fristående noder",
+      "pbs": "Proxmox Backup Server"
+    },
+    "thisNode": "Denna nod",
+    "checking": "Kontrollerar noder...",
+    "loadFailed": "Kunde inte ladda nodlistan.",
+    "empty": "Inga andra noder än. Lägg till en för att öppna dess Monitor härifrån.",
+    "noResponse": "Inget svar",
+    "pbsInterface": "PBS-gränssnitt",
+    "openNewTab": "Öppna i en ny flik",
+    "manage": "Lägg till eller hantera noder...",
+    "dialogTitle": "Länkade noder",
+    "dialogDescription": "Klusternoder och konfigurerade Proxmox Backup Server identifieras automatiskt. Varje Monitor behåller sin egen inloggning.",
+    "addTitle": "Lägg till en nod",
+    "name": "Namn",
+    "address": "Övervaka adress",
+    "type": "Typ",
+    "add": "Lägg till",
+    "save": "Spara",
+    "remove": "Ta bort",
+    "visible": "Synlig",
+    "autoAddress": "Automatisk",
+    "detected": "Upptäckt",
+    "added": "Tillagd",
+    "saveFailed": "Kunde inte spara nodlistan.",
+    "backTo": "Tillbaka till {name}",
+    "cameFromTitle": "Lägg till monitornod?",
+    "cameFromBody": "Lägg till {name} till de länkade noderna på denna monitor.",
+    "notNow": "Inte nu"
   }
 }

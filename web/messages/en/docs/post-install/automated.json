@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Automated Post-Install Script | ProxMenux Documentation",
-    "description": "The ProxMenux Automated post-install script applies a curated set of 14 safe, hardware-aware optimizations to a fresh Proxmox VE host with zero prompts. Reversible configuration changes are registered for later restoration.",
+    "description": "The ProxMenux Automated post-install script runs a fixed set of 14 hardware-aware optimizations on a fresh Proxmox VE host. It has no feature-selection checklist, but the system update, banner removal, some Log2RAM installations and rebooting can ask for confirmation. Reversible configuration changes are registered for later restoration.",
     "ogTitle": "Automated Post-Install Script | ProxMenux Documentation",
-    "ogDescription": "14 curated optimizations applied to a fresh Proxmox VE host with zero prompts. Hardware-aware, with reversible configuration changes tracked."
+    "ogDescription": "14 fixed, hardware-aware optimizations for a fresh Proxmox VE host, with confirmations for some actions and reversible configuration changes tracked."
   },
   "header": {
     "title": "Automated Post-Install Script",
-    "description": "One click, zero prompts — ProxMenux applies a curated set of 14 safe optimizations that almost every Proxmox host benefits from. Reversible configuration changes are registered for Uninstall Optimizations; package upgrades are not described as reversible.",
+    "description": "ProxMenux runs a fixed set of 14 baseline optimizations without a feature-selection checklist. Some actions still ask for confirmation. Reversible configuration changes are registered for Uninstall Optimizations; package upgrades are not described as reversible.",
     "section": "Post-Install · Automated"
   },
   "intro": {
@@ -43,7 +43,7 @@
     },
     {
       "tool": "Skip language packages",
-      "what": "Writes /etc/apt/apt.conf.d/99-disable-translations to stop downloading locale-specific packages. Faster, lighter apt updates.",
+      "what": "Writes /etc/apt/apt.conf.d/99-disable-translations to stop downloading translated package-description indexes, reducing the data fetched by apt updates.",
       "category": "Basic Settings",
       "categorySlug": "basic-settings"
     },
@@ -97,7 +97,7 @@
     },
     {
       "tool": "Logrotate tuning",
-      "what": "Daily rotation with size cap 10M, 7 rotations, compression and copytruncate — Log2RAM-friendly.",
+      "what": "Sets daily and then size 10M globally, keeps 7 rotations, enables compression and copytruncate. The later size criterion takes precedence; per-log rules may override it. Suitable for Log2RAM, but rotation frequency depends on the rules and timer.",
       "category": "System",
       "categorySlug": "system"
     },

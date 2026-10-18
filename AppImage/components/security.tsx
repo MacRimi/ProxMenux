@@ -66,7 +66,7 @@ function validatePasswordStrength(pw: string, t: (key: string) => string): strin
   return null
 }
 
-export function Security() {
+export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}) {
   const { language, t } = useI18n()
   const st = (key: string, params?: Record<string, string | number>) => t(`securityPage.${key}`, params)
   const interfaceTypeLabel = (type: string) =>
@@ -292,9 +292,11 @@ export function Security() {
     checkAuthStatus()
     loadApiTokens()
     loadSslStatus()
-    loadFirewallStatus()
-    loadNetworkInterfaces()
-    loadSecurityTools()
+    if (hostType === "pve") {
+      loadFirewallStatus()
+      loadNetworkInterfaces()
+      loadSecurityTools()
+    }
   }, [])
 
   const loadFirewallStatus = async () => {
@@ -2778,6 +2780,7 @@ ${(report.sections && report.sections.length > 0) ? `
       )}
 
       {/* ── Proxmox VE Security Group ── */}
+      {hostType === "pve" && <>
       <div className="flex items-center gap-3 mt-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-orange-500">Proxmox VE</h2>
         <div className="flex-1 h-px bg-orange-500/20" />
@@ -4832,6 +4835,8 @@ ${(report.sections && report.sections.length > 0) ? `
           </div>
         </div>
       )}
+
+      </>}
 
       <TwoFactorSetup
         open={show2FASetup}

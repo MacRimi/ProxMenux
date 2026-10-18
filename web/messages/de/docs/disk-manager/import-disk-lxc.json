@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Datenträger zu LXC importieren | ProxMenux Dokumentation",
+    "description": "Befestigen Sie eine physische Festplatte an einen vorhandenen LXC-Container auf Proxmox VE mit ProxMenux. Behandelt Dateisystemerkennung / -formatierung, Einhängepunkt, unprivilegierte → privilegierte Konvertierung und persistente Gerätepfade.",
+    "ogTitle": "Datenträger zu LXC importieren | ProxMenux Dokumentation",
+    "ogDescription": "Befestigen Sie eine physische Festplatte an einen vorhandenen LXC-Container. Behandelt Dateisystem, Mount Point und unprivilegierte → privilegierte Konvertierung."
+  },
+  "header": {
+    "title": "Datenträger in LXC importieren",
+    "description": "Fügen Sie eine physische Festplatte an einen vorhandenen LXC-Container auf dem Proxmox-Host an. ProxMenux erkennt freie Festplatten, formatiert sie optional mit einem unterstützten Dateisystem und verkabelt die Partition mit persistenten Gerätepfaden an einen Einhängepunkt im Container.",
+    "section": "Datenträgerverwaltung · LXC"
+  },
+  "intro": {
+    "title": "VM-Passthrough und LXC-Passthrough",
+    "body": "LXC-Passthrough stellt hier <strong>kein rohes Blockgerät</strong> bereit. Der Container erhält einen <em>Einhängepunkt</em>, also ein Verzeichnis auf der gewählten Host-Partition. Anders als bei einer VM nutzt der Gast den Host-Kernel; das Dateisystem (ext4/xfs/btrfs) wird daher vom Proxmox-Host gelesen, verwaltet und dem Container zugänglich gemacht."
+  },
+  "howRuns": {
+    "heading": "Wie das Skript läuft",
+    "body": "Der Fluss hat zwei Phasen mit klarer Trennung zwischen \"Sammeln von Informationen und Entscheidungen\" und \"tatsächliches Ändern der Containerkonfiguration\". Bis zur endgültigen Bestätigung wird nichts in den CT eingebaut.",
+    "summary": "ProxMenux blendet das Root-Laufwerk, eingehängte Laufwerke und bereits in VM-/LXC-Konfigurationen referenzierte Laufwerke aus. Aktive ZFS-/LVM-/RAID-Mitglieder werden ausgeblendet; alte Signaturen werden mit ⚠ markiert, damit Sie sie vor dem Formatieren löschen können."
+  },
+  "prereqs": {
+    "heading": "Voraussetzungen",
+    "items": [
+      "Mindestens ein LXC-Container, der auf dem Host definiert ist.",
+      "Der Container ist <strong>privilegiert</strong>, oder Sie nehmen das Konvertierungsangebot des Skripts an.",
+      "Mindestens eine physische Festplatte, die vom Host oder einem anderen Gast nicht verwendet wird."
+    ],
+    "warnTitle": "Privilegierter Container erforderlich",
+    "warnBody": "Dieses Skript benötigt für die direkte Laufwerkszuweisung einen <strong>privilegierten</strong> Container. Bei <code>unprivileged: 1</code> bietet es an, <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> direkt zu ändern. Das ändert das Sicherheitsmodell, ordnet vorhandene Dateieigentümer aber nicht neu zu. Sichern Sie den Container und prüfen Sie die Eigentümer vor der Zustimmung, oder erstellen Sie ihn privilegiert neu."
+  },
+  "steps": {
+    "heading": "Schritt für Schritt",
+    "stepLabel": "Schritt",
+    "list": [
+      {
+        "title": "Wählen Sie den Zielcontainer",
+        "img": "/disk/select-container.png",
+        "caption": "Auswahlmenü für Container",
+        "bodyRich": "ProxMenux listet jeden LXC-Container auf dem Host auf (<code>pct list</code>). Wählen Sie diejenige, die die Festplatte erhalten wird. Wenn der Container nicht privilegiert ist, wird Ihnen angeboten, ihn jetzt umzuwandeln."
+      },
+      {
+        "title": "Wählen Sie die physische Festplatte",
+        "img": "/disk/disk-selection-ct.png",
+        "caption": "Freie Festplatten auf dem Host erkannt (mit ⚠ Labels für veraltete Metadaten)",
+        "bodyRich": "Nur sichere Kandidaten werden angezeigt. Anders als bei VMs weist dieses Skript <strong>ein Laufwerk pro Durchlauf</strong> zu. Führen Sie es für jedes weitere Laufwerk erneut aus."
+      },
+      {
+        "title": "Formatieren oder wiederverwenden",
+        "intro": "Das Skript überprüft die Festplatte:",
+        "items": [
+          "Wenn es bereits ein unterstütztes Dateisystem (ext4 / xfs / btrfs) trägt, können Sie es so wiederverwenden, wie es ist (bestehende Dateien bleiben erhalten).",
+          "Wenn es kein unterstütztes Dateisystem hat, wird Ihnen angeboten, es zu formatieren. Wählen Sie ext4 / xfs / btrfs."
+        ]
+      },
+      {
+        "title": "Wählen Sie den Mount Point",
+        "bodyRich": "Geben Sie den Pfad ein, unter dem der Container das Laufwerk sehen soll, etwa <code>/mnt/data</code> oder <code>/mnt/disk_passthrough</code>. Dies ist der Pfad <em>innerhalb</em> des Containers; der Host sieht die Partition bereits unter <code>/dev/disk/by-id/…</code>."
+      },
+      {
+        "title": "Zuweisen und prüfen",
+        "img": "/disk/assignment-ct.png",
+        "caption": "Zuordnung zu CT",
+        "bodyRich": "ProxMenux fügt der Containerkonfiguration einen neuen <code>mpN:</code>-Eintrag hinzu, überspringt belegte Indizes und liest die Konfiguration zur Bestätigung erneut. Bei laufendem Container wird die Einhängung sofort angewendet, andernfalls beim nächsten Start.",
+        "extraImg": "/disk/result-point.png",
+        "extraAlt": "Mount Point erfolgreich erstellt",
+        "extraCaption": "Einhängepunkt erstellt und geprüft"
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Manuelles Äquivalent",
+    "body": "Das Skript wickelt <code>pct set</code> ab. Ein direkter Aufruf für eine einzelne Festplatte sieht so aus:"
+  },
+  "important": {
+    "heading": "Wichtige Überlegungen",
+    "items": [
+      "<strong>Ein Laufwerk pro Durchlauf</strong>. Führen Sie das Skript für jedes weitere Laufwerk erneut aus.",
+      "Hängen Sie <strong>nicht</strong> dieselbe Partition an mehrere Container an, die sie gleichzeitig bereitstellen könnten – gleichzeitige Schreibvorgänge beschädigen das Dateisystem.",
+      "<strong>Alte Metadaten</strong> (RAID / ZFS / LVM-Signaturen) müssen manuell gelöscht werden, bevor Sie das Skript formatieren lassen, andernfalls weigert sich <code>mkfs</code> zu überschreiben. Verwenden Sie dafür das <wipeLink>Format / Wipe Physical Disk</wipeLink> Tool."
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "unprivTitle": "\"Kann nicht mit einem unprivilegierten Container fortfahren\"",
+    "unprivBody": "Sie haben die Konvertierung abgelehnt; das Skript wurde daher ohne Änderungen beendet. Um fortzufahren, führen Sie es erneut aus und stimmen zu: Das Skript stoppt den Container, sichert seine Konfiguration in <code>/etc/pve/lxc/&lt;CTID&gt;.conf.bak</code> und ersetzt <code>unprivileged: 1</code> durch <code>unprivileged: 0</code>. Diese Änderung allein wandelt die UID-/GID-Eigentümer vorhandener Dateien nicht um; sichern Sie den Container daher vorher und passen Sie die Eigentümer an. Alternativ stellen Sie ihn privilegiert wieder her oder erstellen ihn neu.",
+    "permsTitle": "Berechtigungen im Container sind falsch",
+    "permsBody": "Beim Einhängen in einen privilegierten Container bleiben vorhandene Dateieigentümer erhalten; ein neues Dateisystem gehört häufig <code>root:root</code>. Läuft der Dienst unter einem anderen Benutzer, etwa <code>www-data</code> für Nextcloud, prüfen Sie dessen UID/GID und passen Sie die nötigen Dateien mit <code>chown</code>/<code>chmod</code> an. Dies verändert auch den zugrunde liegenden Datenträger."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Datenträger in VM importieren",
+        "tail": " — entsprechender Ablauf für VMs."
+      },
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "LXC-Einhängepunkte (Host ↔ CT)",
+        "tail": "- Hostverzeichnisse mit einem CT teilen, anstatt eine ganze Festplatte anzuhängen."
+      },
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "VM und CT Verwaltungsbefehle",
+        "tail": "- pct config / push / pull Referenz."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Übersicht Disk Manager",
+        "tail": "."
+      }
+    ]
+  }
+}
