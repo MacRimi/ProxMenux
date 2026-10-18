@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "title": "Zabezpečenie Proxmox — Fail2Ban a audit zabezpečenia Lynis | ProxMenux",
+    "description": "Dva bezpečnostné nástroje pre Proxmox VE: Fail2Ban (prevencia prienikov cez SSH, webové rozhranie Proxmox a ProxMenux Monitor) a Lynis (audit bezpečnosti a posilnenia zabezpečenia, inštalovaný z pôvodného repozitára GitHub).",
+    "ogTitle": "Zabezpečenie Proxmox — Fail2Ban a audit zabezpečenia Lynis",
+    "ogDescription": "Fail2Ban a Lynis pre Proxmox VE: prevencia prienikov a audit zabezpečenia, inštalované a spravované cez ProxMenux.",
+    "twitterTitle": "Zabezpečenie Proxmox | ProxMenux",
+    "twitterDescription": "Fail2Ban a Lynis pre Proxmox VE: prevencia prienikov a audit zabezpečenia."
+  },
+  "header": {
+    "title": "Zabezpečenie",
+    "description": "Dva doplnkové nástroje pre Proxmox VE: aktívna ochrana (Fail2Ban blokuje IP adresy útočiace na SSH alebo webové rozhrania) a lokálny audit (Lynis hľadá nedostatky zabezpečenia a udeľuje skóre 0–100). Každý má vlastné menu inštalácie a správy, ktoré pred každou akciou rozpozná existujúcu inštaláciu.",
+    "section": "Zabezpečenie"
+  },
+  "intro": {
+    "title": "Aktívna ochrana a lokálny audit",
+    "body": "Odpovedajú na rôzne otázky. <strong>Fail2Ban</strong> odpovedá na <em>„Útočí na nás niekto práve teraz?“</em> sledovaním protokolov overovania a blokovaním útočiacich IP adries. <strong>Lynis</strong> odpovedá na <em>„Ako dobre je tento hostiteľ zabezpečený?“</em> jednorazovým auditom a konkrétnymi odporúčaniami. Používajte oba: Lynis ukáže, čo zlepšiť, a Fail2Ban reaguje na prebiehajúce útoky."
+  },
+  "opening": {
+    "heading": "Otvorenie menu",
+    "body": "V hlavnom menu ProxMenux vyberte <strong>Zabezpečenie</strong>. Zobrazí sa toto:",
+    "imageAlt": "Bezpečnostné menu s možnosťami Fail2Ban a Lynis"
+  },
+  "pick": {
+    "heading": "Vyberte si nástroj",
+    "body": "Tieto dva nástroje sú nezávislé: nainštalujte jeden, oba alebo žiadny. Každá karta nižšie odkazuje na podrobný opis nástroja."
+  },
+  "cards": {
+    "fail2ban": {
+      "title": "Fail2Ban",
+      "body": "Aktívna prevencia prienikov. Sleduje protokoly overovania SSH a webových rozhraní a po opakovaných zlyhaniach blokuje IP adresy.",
+      "bullets": [
+        "Tri jails: SSH, Proxmox UI (8006), ProxMenux Monitor (8008)",
+        "Opravuje predvolené nastavenia Proxmox journald, ktoré blokujú protokoly overenia",
+        "Automaticky rozpozná nftables / iptables",
+        "Posilnenie SSH: MaxAuthTries=3 (odporúčanie Lynis)"
+      ]
+    },
+    "lynis": {
+      "title": "Lynis",
+      "body": "Lokálny bezpečnostný audítor. Preskúma hostiteľa a zobrazí skóre zabezpečenia a konkrétne odporúčania na nápravu.",
+      "bullets": [
+        "Inštalované z pôvodného repozitára CISOfy na GitHube (najnovšia verzia)",
+        "Skóre zabezpečenia 0–100 a zoznam upozornení a návrhov",
+        "Audit a aktualizácia priamo v menu",
+        "Navrhnuté iba na čítanie: nikdy nemení systém"
+      ]
+    }
+  },
+  "workflowTip": {
+    "title": "Pracovný tok, ktorý využíva oboje",
+    "body": "Najprv spustite audit Lynis, aby ste poznali počiatočné skóre a hlavné odporúčania. Použite vybrané opravy. Potom nainštalujte Fail2Ban: automaticky zavedie ochranu SSH pred hrubou silou a upraví <code>MaxAuthTries</code> v <code>sshd_config</code> podľa kontroly SSH-7408. Opätovným auditom Lynis overte zlepšenie."
+  },
+  "fail2banSection": {
+    "heading": "Fail2Ban",
+    "body": "ProxMenux inštaluje Fail2Ban s konfiguráciou pre Proxmox. Okrem štandardného SSH jailu chráni webové rozhranie Proxmox a ProxMenux Monitor. Obchádza dva špecifické problémy: predvolené nastavenie journald zahadzujúce udalosti overovania a problém backendu systemd, ktorý bráni spoľahlivému čítaniu niektorých zdrojov systémového denníka. Podrobná stránka vysvetľuje inštaláciu, tri jaily, opravu journald, posilnenie SSH a riešenie problémov.",
+    "optionTitle": "Fail2Ban — inštalácia a správa",
+    "optionDescription": "Tri predkonfigurované jaily (agresívny režim sshd, rozhranie Proxmox na 8006, ProxMenux Monitor na 8008 a reverzný proxy), detekcia nftables/iptables, oprava journald a posilnenie SSH pomocou MaxAuthTries."
+  },
+  "lynisSection": {
+    "heading": "Lynis",
+    "body": "ProxMenux klonuje Lynis z <code>github.com/CISOfy/lynis</code> do <code>/opt/lynis</code> a sprístupní ho ako <code>/usr/local/bin/lynis</code>. Balík Debian zámerne nepoužíva, pretože za pôvodným projektom zaostáva o viacero hlavných verzií. Podrobná stránka opisuje inštaláciu, audit, aktualizáciu, odinštalovanie, čítanie správy a riešenie zistení.",
+    "optionTitle": "Lynis — inštalácia, audit a správa",
+    "optionDescription": "Nainštaluje najnovší Lynis z oficiálneho repozitára CISOfy na GitHube (namiesto staršieho balíka Debian), vykonáva audity systému so skóre zabezpečenia a aktualizuje cez git pull."
+  },
+  "componentStatus": {
+    "heading": "Stav komponentu",
+    "body": "Obaja inštalátori registrujú svoj stav v <code>/usr/local/share/proxmenux/components_status.json</code> v kategórii <code>security</code>. ProxMenux používa tento súbor na rozhodnutie, či zobraziť inštaláciu alebo menu správy pri následných spusteniach, a rovnaké dáta napája palubnú dosku v ProxMenux Monitor keď je prítomný."
+  }
+}

@@ -1,0 +1,392 @@
+{
+  "meta": {
+    "title": "Enheter och acceleration | ProxMenux",
+    "description": "Hur OCI manager Apps ger en OCI-container tillgång till GPU, NVIDIA, Coral, USB, FUSE och andra enheter som validerade inbyggda Proxmox VE-resurser."
+  },
+  "header": {
+    "title": "Enheter och acceleration",
+    "description": "GPU, NVIDIA, Coral, USB, FUSE och blockenheter blir validerade inbyggda Proxmox VE-resurser för containern.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "principle",
+      "title": "Enheten som programmet behöver, inte hela värden",
+      "blocks": [
+        {
+          "p": "En enhet som begärs av Compose-filen eller av applikationsprofilen blir en konkret <code>devN</code>-post eller LXC-montering. Be om en GPU, en USB-enhet eller en Coral gör inte containern privilegierad."
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Värdinventering",
+                "detail": "/dev/dri/renderD128\nGID 993 · Intel"
+              },
+              {
+                "label": "ProxMenux",
+                "detail": "tillverkare och\nbehörigheter kontrollerade"
+              },
+              {
+                "label": "LXC",
+                "detail": "samma enhet\neffektiv GID"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "origin",
+      "title": "Varifrån enhetsbegäran kommer",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Källa",
+              "Vad läses",
+              "Vad installationsprogrammet gör"
+            ],
+            "rows": [
+              [
+                "Docker Compose",
+                "<code>devices</code>, <code>group_add</code>, <code>deploy.resources</code> och NVIDIA förfrågningar",
+                "Varje krav blir en begäran om enhet som visas för granskning"
+              ],
+              [
+                "Katalogprofil",
+                "Programmets faktiska stöd för GPU, Coral, OpenCL, USB eller FUSE",
+                "Endast de alternativ som valideras för den avbildningen erbjuds"
+              ],
+              [
+                "Avbildningens metadata och dokumentation",
+                "VA-API, Selkies, LinuxServer mods eller NVIDIA runtime",
+                "Dokumenterade variabler och förberedelser läggs till"
+              ],
+              [
+                "Användarval",
+                "CPU endast, Intel/AMD, OpenCL, NVIDIA eller en valfri enhet",
+                "Urvalet lagras i instansavtalet"
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Upptäckta enheter ansluts inte automatiskt",
+            "body": "Värden är inventerad, men endast enheter som deklareras av Compose-filen eller av en kompatibel profil erbjuds och bifogas. En GPU, USB-dongel eller Coral närvarande på värden är inte utsatt för varje LXC."
+          }
+        }
+      ]
+    },
+    {
+      "id": "identify",
+      "title": "Hur värdenheten identifieras",
+      "intro": "Innan LXC modifieras läses enheten på värden och matchas mot den valda profilen.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Typ",
+              "Identitet",
+              "Validering"
+            ],
+            "rows": [
+              [
+                "Intel/AMD DRM",
+                "<code>/dev/dri/renderD*</code> och <code>/sys/class/drm/NODE/device/vendor</code>",
+                "En teckenenhet med leverantör <code>0x8086</code> (Intel) eller <code>0x1002</code> (AMD)"
+              ],
+              [
+                "AMD OpenCL",
+                "Rendernoden plus <code>/dev/kfd</code> när profilen behöver den",
+                "Existens, typ, leverantör, behörigheter och förklarad kompatibilitet"
+              ],
+              [
+                "AMD ROCm",
+                "Rendernoden, <code>/dev/kfd</code> och generationen som beräkningsdrivrutinen rapporterar i <code>/sys/class/kfd/kfd/topology/nodes/*/properties</code>",
+                "En generation som programmets ROCm-avbildning innehåller beräkningskärnor för — de namngivna RDNA2-GPU:erna och nyare — erbjuds utan anpassning. Andra GPU:er i dessa familjer, till exempel Radeon 680M och 780M, erbjuds som experimentella och väljs aldrig som föreslaget alternativ: ROCm stöder dem inte officiellt, programmet presenterar dem som familjens generation (<code>HSA_OVERRIDE_GFX_VERSION</code>) och installeraren begär bekräftelse innan den större avbildningen hämtas. Äldre GPU:er, till exempel den integrerade grafiken i Ryzen 5000U, erbjuds inte och Immich fortsätter köra igenkänningen på CPU:n."
+              ],
+              [
+                "NVIDIA",
+                "<code>nvidia-smi</code> och <code>nvidia-container-cli</code>",
+                "GPU, UUID, PCI buss, drivrutinsversion, Toolkit, <code>/dev/nvidia*</code> noder, binärer och bibliotek"
+              ],
+              [
+                "Coral PCIe/M.2",
+                "<code>/dev/apex_N</code> och dess länk i <code>/sys/dev/char/MAJOR:MINOR</code>",
+                "Teckenenhetsnod, major/minor-nummer, ägare, GID och behörigheter"
+              ],
+              [
+                "USB och seriell",
+                "<code>/dev/ttyUSB*</code>, <code>/dev/ttyACM*</code> eller <code>/dev/bus/usb/BBB/DDD</code>",
+                "Teckenenhetsnod; för USB även tillverkare, produkt och serienummer när sysfs publicerar dem"
+              ],
+              [
+                "KVM, TUN, FUSE, video och generisk SCSI",
+                "<code>/dev/kvm</code>, <code>/dev/net/tun</code>, <code>/dev/fuse</code>, <code>/dev/videoN</code> eller <code>/dev/sgN</code>",
+                "Sökväg som stöds, nodtyp och effektiva behörigheter"
+              ],
+              [
+                "Optisk enhet",
+                "<code>/dev/srN</code>",
+                "En blockenhet"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "install",
+      "title": "Vad händer under installationen",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Mallen erbjuder sina profiler",
+                "body": "Till exempel CPU endast, Intel/AMD VA-API, AMD OpenCL, Intel OpenCL eller NVIDIA. Alternativen hör till avbildningen, inte till en vanlig meny."
+              },
+              {
+                "title": "En profil väljs",
+                "body": "Den anger enhetsnoder, miljö, moddar eller den körmiljö som programmet behöver."
+              },
+              {
+                "title": "En väg föreslås",
+                "body": "För DRM, <code>/dev/dri/renderD128</code>, som kan ändras på en värd med flera rendernoder. För USB eller seriell, är den specifika noden vald."
+              },
+              {
+                "title": "Validering",
+                "body": "Existens, typ, tillåten leverantör, behörigheter och GID kontrolleras. En missmatchning stoppar operationen."
+              },
+              {
+                "title": "Kontraktet är skrivet",
+                "body": "Sökväg, läge, GID, skrivåtkomst och profil sparas för uppdateringar och när containern skapas om."
+              },
+              {
+                "title": "Anslut och testa",
+                "body": "<code>pct set</code> lägger till <code>devN</code> inträde och åtkomst kontrolleras sedan inuti LXC. LinuxServer avbildningar kontrolleras också som användare <code>abc</code>."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "config",
+      "title": "Hur det visas i LXC-konfigurationen",
+      "intro": "Exempelvärden: <code>dev0</code> och <code>dev1</code> är lediga platser som Proxmox VE tilldelar, och <code>renderD128</code>, <code>apex_0</code> samt GID beror på nodens maskinvara.",
+      "blocks": [
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Intel/AMD VA-API",
+                "code": "dev0: path=/dev/dri/renderD128,mode=0660,gid=993,deny-write=0"
+              },
+              {
+                "title": "Coral PCIe/M.2",
+                "code": "dev0: path=/dev/apex_0,mode=0660,gid=GID,deny-write=0"
+              },
+              {
+                "title": "En specifik USB-enhet",
+                "code": "dev0: path=/dev/bus/usb/003/004,mode=0660,gid=GID,deny-write=0"
+              },
+              {
+                "title": "AMD OpenCL",
+                "code": "dev0: path=/dev/dri/renderD128,mode=0660,gid=GID,deny-write=0\ndev1: path=/dev/kfd,mode=0660,gid=GID,deny-write=0"
+              }
+            ]
+          }
+        },
+        {
+          "p": "GID läses med <code>stat</code> på värden och skrivs till <code>devN</code>-posten; <code>render</code> och <code>video</code>-grupper antas inte ha ett fast nummer. Enheten håller samma <code>/dev</code>-väg inuti LXC, där programmets egna mekanismer letar efter det."
+        }
+      ]
+    },
+    {
+      "id": "profiles",
+      "title": "Profiler en avbildning kan erbjuda",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Profil",
+              "Resulterande konfiguration",
+              "Erbjuds när"
+            ],
+            "rows": [
+              [
+                "Intel/AMD VA-API",
+                "Rendernod i <code>/dev/dri</code>",
+                "Applikationen stöder videoacceleration"
+              ],
+              [
+                "OpenCL",
+                "Rendernod, <code>/dev/kfd</code> vid behov och den officiella modden",
+                "Avbildningen eller profilen dokumenterar den"
+              ],
+              [
+                "NVIDIA",
+                "Värdens drivrutinsenheter och bibliotek",
+                "Värden har en fungerande drivrutin och NVIDIA Container Toolkit"
+              ],
+              [
+                "Coral",
+                "<code>/dev/apex_0</code> eller USB buss",
+                "Profilen förklarar Coral Support (Frigate)"
+              ],
+              [
+                "USB, seriell, FUSE",
+                "En enhet, ett validerat träd eller en LXC-funktion",
+                "Kontraktet begär det"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "nvidia",
+      "title": "NVIDIA",
+      "blocks": [
+        {
+          "calloutWarning": {
+            "title": "Nodkrav: NVIDIA Container Toolkit",
+            "body": "En fungerande drivrutin på Proxmox VE är inte tillräckligt för att ge en NVIDIA GPU till en OCI-avbildning. OCI Manager Apps använder <code>nvidia-container-cli</code>, från NVIDIA Container Toolkit, för att identifiera enheterna och för att få binärer och bibliotek som matchar den laddade drivrutinen."
+          }
+        },
+        {
+          "p": "<nvidiaLink>ProxMenux NVIDIA-installerare</nvidiaLink> installerar NVIDIA Container Toolkit från NVIDIAs officiella arkiv tillsammans med drivrutinen. Den kontrollerar dess fyra paket, validerar <code>nvidia-container-cli</code> och registrerar resultatet i ändringsloggen för <auditLink>Audit & Report</auditLink>."
+        },
+        {
+          "p": "Dessa två kommandon på värden visar om drivrutinen och Toolkit är tillgängliga:"
+        },
+        {
+          "shell": {
+            "code": "nvidia-smi -L\nnvidia-container-cli --version"
+          }
+        },
+        {
+          "p": "På en värd där drivrutinen installerades på annat sätt installeras Toolkit från det officiella stabila förvaret:"
+        },
+        {
+          "shell": {
+            "code": "apt-get update\napt-get install -y --no-install-recommends ca-certificates curl gnupg2\n\ncurl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \\\n  | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg\n\ncurl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \\\n  | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \\\n  > /etc/apt/sources.list.d/nvidia-container-toolkit.list\n\napt-get update\napt-get install -y nvidia-container-toolkit libnvidia-container-tools"
+          }
+        },
+        {
+          "p": "Inventeringen OCI Manager Apps använder är utdata av:"
+        },
+        {
+          "shell": {
+            "code": "nvidia-container-cli list --device all --libraries --binaries --firmwares --ipcs"
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Docker runtime konfiguration är inte involverad",
+            "body": "Containrarna är inbyggda LXC:er utan Docker-demon, så <code>nvidia-ctk runtime configure --runtime=docker</code> ingår inte: ProxMenux frågar <code>nvidia-container-cli</code> direkt och skriver LXC-enheter och monteringar. Kommandon och plattformar som stöds underhålls i <toolkitLink>installationsguiden för NVIDIA Container Toolkit</toolkitLink>."
+          }
+        },
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "cpu",
+                "title": "Inventering från drivrutinen",
+                "body": "<code>nvidia-container-cli</code> listar enhetsnoder, binärer, firmware och bibliotek av den installerade drivrutinen."
+              },
+              {
+                "icon": "refresh",
+                "title": "Ingen fast version",
+                "body": "Mallen anger inga biblioteksfilnamn. Profilen genereras från den aktuella värden."
+              },
+              {
+                "icon": "shield",
+                "title": "Skrivskyddade monteringar",
+                "body": "Värdens bibliotek monteras skrivskyddat i stället för att kopieras till containern."
+              },
+              {
+                "icon": "hardDrive",
+                "title": "Ändringar av drivrutin",
+                "body": "Efter en drivrutinsändring genereras inventeringen på nytt innan berörda LXC:er startar."
+              }
+            ]
+          }
+        },
+        {
+          "code": {
+            "title": "NVIDIA resultat (förenklad)",
+            "code": "devN: path=/dev/nvidia0,...\ndevN: path=/dev/nvidiactl,...\ndevN: path=/dev/nvidia-uvm,...\nlxc.mount.entry: HOST_LIBRARY CONTAINER_LIBRARY none ro,bind,create=file 0 0"
+          }
+        },
+        {
+          "p": "Att bara ge tillgång till <code>/dev/nvidia0</code> räcker inte. Den laddade drivrutinens användarkomponenter monteras skrivskyddat, och <code>nvidia-smi</code> körs sedan i LXC:n för att jämföra GPU, UUID, PCI-buss och version med värdens inventering."
+        }
+      ]
+    },
+    {
+      "id": "usb",
+      "title": "USB, seriell och USB Coral",
+      "blocks": [
+        {
+          "calloutWarning": {
+            "title": "USB-nummer kan ändra",
+            "body": "En väg som <code>/dev/bus/usb/003/004</code> kan ändras när enheten är återansluten eller värden startar om. Profilen registrerar tillverkaren, produkten och serienumret när de är tillgängliga, men en ny bussadress mappas om inte automatiskt."
+          }
+        },
+        {
+          "p": "En kringutrustning anges med sin specifika nod: <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> eller <code>/dev/bus/usb/BBB/DDD</code>. Att passera hela <code>/dev</code> accepteras inte. Coral erbjuds endast program vars profil anger det."
+        }
+      ]
+    },
+    {
+      "id": "trees",
+      "title": "Enhetsträd och LXC-funktioner",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Begäran",
+              "Resulterande konfiguration",
+              "Omfattning"
+            ],
+            "rows": [
+              [
+                "<code>/dev/dvb</code>, <code>/dev/snd</code> eller <code>/dev/bus/usb</code>",
+                "Varje teckenenhetsnod i trädet får en egen <code>devN</code>-post med värdens läge och GID",
+                "Endast det begärda trädet, inte resten av <code>/dev</code>"
+              ],
+              [
+                "<code>/dev/fuse</code>",
+                "Noden och när profilen behöver den, funktionen <code>fuse=1</code>",
+                "FUSE offentliggör inte fästen till andra LXCs"
+              ],
+              [
+                "<code>/dev/net/tun</code>",
+                "En <code>devN</code>-post med samma sökväg inuti LXC:n",
+                "VPN- eller nätverkskonfigurationen stannar i programmet"
+              ],
+              [
+                "<code>/dev/kvm</code>",
+                "En validerad <code>devN</code>-post",
+                "Erbjuds endast när kontraktet begär det"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "title": "Bekräftelser av risknivå",
+      "blocks": [
+        {
+          "p": "Konkreta enheter, valfri privilegiering, krävs privilegier, AppArmor eller seccomp avslappning och tillgång till värd PID-namnrymden behandlas som separata fall, inte under en generisk privilegierad etikett. Varje alternativ med en risk förklaras och bekräftas under installationen."
+        }
+      ]
+    }
+  ]
+}
