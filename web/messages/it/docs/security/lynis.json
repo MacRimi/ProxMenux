@@ -1,0 +1,170 @@
+{
+  "meta": {
+    "title": "Lynis | Documentazione ProxMenux",
+    "description": "Installa la versione più recente di Lynis dal repository ufficiale CISOfy su GitHub, esegui un audit con punteggio di rafforzamento 0–100 e aggiorna tramite git pull. Auditor in sola lettura: non modifica il sistema.",
+    "ogTitle": "Lynis | Documentazione ProxMenux",
+    "ogDescription": "Installa ed esegui Lynis su Proxmox VE. Installazione dal repository originale GitHub, audit e aggiornamento."
+  },
+  "header": {
+    "title": "Lynis",
+    "description": "Clona la versione più recente di Lynis dal repository ufficiale CISOfy su GitHub, la rende disponibile come /usr/local/bin/lynis e offre audit, aggiornamento, reinstallazione e disinstallazione dal menu. L'analisi è in sola lettura: produce rapporti senza modificare il sistema.",
+    "section": "Sicurezza"
+  },
+  "intro": {
+    "title": "Cosa fa",
+    "body": "Installa Lynis, auditor di sicurezza open source di CISOfy, dal repository GitHub in <code>/opt/lynis</code> e crea un lanciatore in <code>/usr/local/bin/lynis</code> per renderlo disponibile nel <code>PATH</code>. Se rileva una installazione esistente, mostra un menu per audit, aggiornamento, reinstallazione o rimozione."
+  },
+  "manageMenu": {
+    "heading": "Menu di gestione (dopo l'installazione)",
+    "intro": "Una volta che Lynis è installato, ogni successiva invocazione apre il menu di gestione invece di rifare l'installatore. Da qui si avvia un audit, si aggiorna tramite git pull, reinstalla o disinstalla:",
+    "imageAlt": "Menù di gestione Lynis con controllo, aggiornamento, reinstallare e rimuovere le opzioni"
+  },
+  "whyUpstream": {
+    "heading": "Perché il repository ufficiale GitHub invece di apt",
+    "intro": "Debian distribuisce Lynis tramite apt, ma il pacchetto è spesso indietro di diverse versioni principali. Nuovi controlli, correzioni per nuovi vettori di attacco e raccomandazioni migliorate arrivano prima su GitHub. Lynis è uno script shell autonomo, senza compilazione e senza dipendenze di installazione oltre a <code>git</code>; clonare il repository è quindi il metodo raccomandato da CISOfy.",
+    "headerSource": "Fonte",
+    "headerPath": "Install path",
+    "headerUpdate": "Metodo di aggiornamento",
+    "headerFresh": "Aggiornamento della versione",
+    "rows": [
+      {
+        "sourceRich": "<strong>ProxMenux (questo script)</strong>",
+        "path": "/opt/lynis/",
+        "update": "git pull (dal menu)",
+        "fresh": "Ultima versione del progetto originale"
+      },
+      {
+        "sourceRich": "<strong>Debian apt</strong>",
+        "path": "/usr/bin/lynis",
+        "update": "apt upgrade",
+        "fresh": "Spesso mesi / anni dietro"
+      }
+    ]
+  },
+  "install": {
+    "heading": "Come funziona l'installazione",
+    "node1Label": "github.com/CISOfy/lynis",
+    "node1Detail": "git clone\n(installa prima git se manca)",
+    "node2Label": "/opt/lynis/",
+    "node2Detail": "repository completo\nincluso lo script ./lynis",
+    "node3Label": "/usr/local/bin/lynis",
+    "node3Detail": "wrapper:\ncd /opt/lynis && ./lynis $@",
+    "outro": "Il wrapper è obbligatorio — Lynis insiste per essere eseguito dalla propria directory perché carica percorsi relativi per plugin e dati del profilo. L'involucro nasconde quel dettaglio così <code>lynis audit system</code> funziona da qualsiasi luogo."
+  },
+  "detection": {
+    "heading": "Sentieri di rilevamento",
+    "intro": "Prima di mostrare il menu, lo script controlla tre posizioni per decidere se Lynis è già presente:",
+    "items": [
+      "<code>/usr/local/bin/lynis</code> — wrapper installato da ProxMenux",
+      "<code>/opt/lynis/lynis</code> — percorso diretto (nel caso in cui l'involucro sia stato rimosso)",
+      "<code>/usr/bin/lynis</code> — versione apt-installata, se l'utente l'ha installato in quel modo prima"
+    ],
+    "outro": "Se trova uno di questi percorsi apre il menu di gestione. Lo script <strong>non</strong> disinstalla Lynis installato con apt; rimuove solo quello gestito in <code>/opt/lynis</code> e il relativo lanciatore."
+  },
+  "audit": {
+    "heading": "Eseguire un audit",
+    "intro": "Dal menu di gestione scegli <strong>Esegui audit di sicurezza ora</strong>. Equivale a eseguire:",
+    "code": "lynis audit system --no-colors",
+    "outro": "L'audit richiede da 30 secondi ad alcuni minuti secondo le dimensioni dell'host. Lo output viene mostrato direttamente nel terminale, senza animazione di attesa. Lynis organizza i controlli per categoria e marca ogni test come <ok>[ OK ]</ok>, <warn>[ WARNING ]</warn> o <sugg>[ SUGGESTION ]</sugg>. Il riepilogo finale mostra i dati principali:",
+    "summary": "================================================================================\n\n  Lynis security scan details:\n\n  Hardening index : 76 [############        ]\n  Tests performed : 247\n  Plugins enabled : 0\n\n  Components:\n  - Firewall               [V]\n  - Malware scanner        [X]\n\n  Lynis modules:\n  - Compliance status      [?]\n  - Security audit         [V]\n  - Vulnerability scan     [V]\n\n================================================================================"
+  },
+  "report": {
+    "heading": "Leggere il rapporto",
+    "intro": "Le due sezioni importanti sono <strong>Warnings</strong> (le cose che si devono risolvere presto) e <strong>Suggestions</strong> (raccomandazioni per migliorare l'indurimento). Ogni elemento porta un ID di controllo come <code>SSH-7408</code> — utile quando si cerca i documenti Lynis per la razionalità e la correzione.",
+    "headerMarker": "Marcatore",
+    "headerMeaning": "Significato",
+    "headerAction": "Azione",
+    "rows": [
+      {
+        "markerRich": "<strong>OK</strong>",
+        "meaning": "Test superato",
+        "action": "Niente."
+      },
+      {
+        "markerRich": "<strong>WARNING</strong>",
+        "meaning": "Problema reale, fix consigliato",
+        "action": "Leggi la descrizione del controllo, pianifica una correzione"
+      },
+      {
+        "markerRich": "<strong>SUGGESTION</strong>",
+        "meaning": "Miglioramento dell'indurimento disponibile",
+        "action": "Applica se adatto al modello di minaccia"
+      }
+    ],
+    "outro": "Il rapporto completo e i dati leggibili dalla macchina sono scritti a <code>/var/log/lynis.log</code> e <code>/var/log/lynis-report.dat</code> da Lynis stesso."
+  },
+  "pairFail2ban": {
+    "title": "Combina con Fail2Ban",
+    "body": "SSH-7408 (MaxAuthTries) è uno degli avvisi più comuni. Installazione di <link>Fail2Ban</link> da ProxMenux lo sgombera automaticamente perché l'installatore imposta <code>MaxAuthTries=3</code> come parte della sua fase di indurimento SSH. Eseguire Lynis di nuovo dopo per confermare che l'avvertimento è andato."
+  },
+  "update": {
+    "heading": "Aggiornamento Lynis",
+    "body": "Nel menu, <strong>Aggiorna Lynis all'ultima versione</strong> esegue <code>git pull --quiet</code> in <code>/opt/lynis</code>. Se la directory esiste ma non è una copia di lavoro Git, per esempio dopo una copia manuale dei file, lo script esegue una reinstallazione completa."
+  },
+  "reinstall": {
+    "heading": "Reinstallare / disinstallare",
+    "headerAction": "Azione",
+    "headerWhat": "Che cosa fa",
+    "rows": [
+      {
+        "actionRich": "<strong>Reinstalla</strong>",
+        "whatRich": "Rimuove <code>/opt/lynis</code>, clona nuovamente da GitHub e ricrea il lanciatore. Usalo se la copia locale è danneggiata."
+      },
+      {
+        "actionRich": "<strong>Rimuovi</strong>",
+        "whatRich": "Elimina <code>/opt/lynis</code> e <code>/usr/local/bin/lynis</code>. I registri a <code>/var/log/lynis*</code> sono mantenuti (sono storia dell'audit). Un Lynis apt-installed a <code>/usr/bin/lynis</code> è lasciato intatto."
+      }
+    ]
+  },
+  "cli": {
+    "heading": "Opzioni utili CLI",
+    "intro": "Una volta installato, Lynis può essere invocata direttamente da una shell con opzioni extra non esposte dal menu:",
+    "code": "lynis show version            # version + build date\nlynis show commands           # list every available command\nlynis show details TEST-ID    # explain a specific control\nlynis audit system --quick    # skip slow tests (e.g. malware scan)\nlynis audit system --pentest  # treat host as untrusted (more aggressive)\nlynis update info             # check if a newer Lynis is available\n\n# Filter the report log for just the warnings\ngrep \"Warning\" /var/log/lynis.log\n\n# Same, for suggestions only\ngrep \"Suggestion\" /var/log/lynis.log"
+  },
+  "troubleshoot": {
+    "heading": "Risoluzione dei problemi",
+    "cloneTitle": "git clone non riesce durante l'installazione",
+    "cloneBody": "L'host ha bisogno di accesso alla rete e DNS per raggiungere <code>github.com</code>. Da una console: <code>curl -sI https://github.com</code> e <code>git ls-remote https://github.com/CISOfy/lynis.git</code> riveleranno l'errore effettivo (DNS, TLS, proxy, repo URL). Se è richiesto un proxy, impostare <code>https_proxy</code> nell'ambiente prima di ri-inviare il menu.",
+    "notFoundTitle": "lynis: comando non trovato dopo l'installazione",
+    "notFoundIntro": "L'involucro a <code>/usr/local/bin/lynis</code> non è stato creato o rimosso. Correzione più rapida: reinstallare dal menu. Correzione manuale:",
+    "notFoundCode": "cat > /usr/local/bin/lynis <<'EOF'\n#!/bin/bash\ncd /opt/lynis && ./lynis \"$@\"\nEOF\nchmod +x /usr/local/bin/lynis",
+    "sshTitle": "L'audit mostra \"Warning: Test SSH-7408 — MaxAuthTries set incorrectly\"",
+    "sshIntro": "Il daemon SSH consente troppi tentativi auth per connessione. Installare <link>Fail2Ban</link> da ProxMenux (che imposta automaticamente <code>MaxAuthTries=3</code>) o modificare <code>/etc/ssh/sshd_config</code> a mano:",
+    "sshCode": "sed -i 's/^#?MaxAuthTries.*/MaxAuthTries 3/' /etc/ssh/sshd_config\nsystemctl reload sshd",
+    "scoreTitle": "Score è andato giù dopo un aggiornamento Proxmox",
+    "scoreBody": "Eseguire <code>lynis update info</code> prima — un aggiornamento Lynis potrebbe aver aggiunto nuovi controlli che contrassegnano la configurazione esistente. Aggiornare Lynis dal menu, ri-audit e affrontare i nuovi risultati."
+  },
+  "files": {
+    "heading": "File scritti",
+    "code": "/opt/lynis/                   # full Lynis git checkout\n/usr/local/bin/lynis          # wrapper script (cd + exec)\n/var/log/lynis.log            # human-readable audit log (Lynis itself)\n/var/log/lynis-report.dat     # machine-readable report (Lynis itself)"
+  },
+  "sample": {
+    "heading": "Rapporto di esempio",
+    "intro": "ProxMenux Monitor genera per ogni esecuzione di Lynis un PDF multipagina dalla <link>scheda Sicurezza</link>. La prima pagina riepiloga punteggio di rafforzamento, informazioni di sistema e stato della sicurezza. Le successive spiegano ogni avviso, elencano i suggerimenti per impatto e includono l'inventario dei pacchetti usato nell'audit.",
+    "imageAlt": "Prima pagina del Lynis Security Audit Report PDF — Riepilogo esecutivo con Hardening Index 71/100, blocco informazioni di sistema e panoramica della postura di sicurezza con firewall, malware scanner e pacchetti installati conteggio",
+    "captionPrefix": "Prima pagina di un rapporto campione. Il PDF completo (",
+    "captionLink": "campione",
+    "captionSuffix": ") continua con avvisi dettagliati, suggerimenti e la lista dei pacchetti installati.",
+    "cli": "Sul lato CLI gli stessi dati sono in <code>/var/log/lynis-report.dat</code> (file piatto leggibile dalla macchina) e <code>/var/log/lynis.log</code> (il registro di esecuzione leggibile dall'uomo). Il PDF viene generato su richiesta da ProxMenux Monitor — l'esecuzione di <code>lynis</code> dalla riga di comando non ne produce uno."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "href": "/docs/monitor/dashboard/security",
+        "label": "ProxMenux Monitor → Scheda di sicurezza",
+        "tail": "— eseguire l'audit, sfogliare i rapporti storici e scaricare il PDF direttamente dal cruscotto."
+      },
+      {
+        "href": "/docs/security/fail2ban",
+        "label": "Fail2Ban",
+        "tailRich": " — attua il SSH protezione brute-force che Lynis raccomanda."
+      },
+      {
+        "href": "/docs/security",
+        "label": "Panoramica della sicurezza",
+        "tail": "— di nuovo alla panoramica della sezione."
+      }
+    ]
+  }
+}
