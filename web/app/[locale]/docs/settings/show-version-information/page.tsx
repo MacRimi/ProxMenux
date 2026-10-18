@@ -86,7 +86,7 @@ export default async function ShowVersionInformationPage({
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("sampleHeading")}</h2>
       <pre className="rounded-md bg-gray-100 p-4 overflow-x-auto text-xs font-mono text-gray-800 leading-relaxed border border-gray-200">{`Current ProxMenux version: VERSION
-Release channel: Stable (main)
+Release channel: Stable (main branch)
 
 Installed components:
 ✓ post_install_settings: installed
@@ -98,7 +98,7 @@ Installed components:
 
 ProxMenux files:
 ✓ menu → /usr/local/bin/menu
-✓ utils.sh → /usr/local/share/proxmenux/scripts/utils.sh
+✓ utils.sh → /usr/local/share/proxmenux/utils.sh
 ✓ config.json → /usr/local/share/proxmenux/config.json
 ✓ version.txt → /usr/local/share/proxmenux/version.txt
 

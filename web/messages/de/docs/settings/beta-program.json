@@ -84,7 +84,7 @@
     "downloadCmd": "curl -fsSL -o /tmp/test https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh && head -1 /tmp/test",
     "downloadOutro": "Wenn dies außerhalb von ProxMenux fehlschlägt, handelt es sich um ein Netzwerk- / Proxy-Problem auf dem Host.",
     "errorsTitle": "\"Installer mit Fehlern beendet\"",
-    "errorsBody": "Der Installer hat einen Exitcode ungleich null zurückgegeben. Es gibt kein automatisches Zurücksetzen; einige Dateien oder Komponenten können bereits geändert worden sein. Prüfen Sie Ausgabe und aktuellen Zustand vor einem erneuten Versuch. Führen Sie den Installer für die vollständige Ausgabe per SSH oder in der Hostkonsole aus.",
+    "errorsBody": "Der Installer hat einen Exitcode ungleich null zurückgegeben. Es gibt kein automatisches Zurücksetzen; einige Dateien oder Komponenten können bereits geändert worden sein. Lesen Sie die Ausgabe des Installers über der Fehlermeldung, bevor Sie Enter drücken, und prüfen Sie den aktuellen Zustand. Versuchen Sie es danach erneut über das Menü oder führen Sie den Installer manuell per SSH oder in der Hostkonsole aus.",
     "configTitle": "\"Konfigurationsdatei konnte nicht aktualisiert werden\" nach dem Wechsel zu Stable",
     "configBody": "Die Bereinigung von Beta-Metadaten nach der Installation ist fehlgeschlagen - in der Regel, weil <code>config.json</code> einen Syntaxfehler aus einer manuellen Bearbeitung aufweist. Validierung:",
     "configCmd": "jq . /usr/local/share/proxmenux/config.json",

@@ -30,7 +30,7 @@
     "rows": [
       {
         "type": "Aktuell installation",
-        "bundles": "Statiska JSON-kataloger för åtta språk; ingen Python-miljö för översättning",
+        "bundles": "Statiska JSON-kataloger för sju språk plus inbyggd engelska; ingen Python-miljö för översättning",
         "menuRich": "<strong>Byt språk</strong> + Visa version + Avinstallera"
       },
       {

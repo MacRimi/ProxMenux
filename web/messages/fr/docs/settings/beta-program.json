@@ -84,7 +84,7 @@
     "downloadCmd": "curl -fsSL -o /tmp/test https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh && head -1 /tmp/test",
     "downloadOutro": "Si cela échoue en dehors de ProxMenux, c'est un problème réseau / proxy sur l'hôte.",
     "errorsTitle": "L'installation est terminée par des erreurs.",
-    "errorsBody": "L'installateur a renvoyé un code de sortie non nul. Aucun retour arrière automatique n'est prévu : certains fichiers ou composants peuvent déjà avoir changé. Examinez la sortie et l'état actuel avant de réessayer. Exécutez l'installateur manuellement par SSH ou depuis la console de l'hôte pour obtenir la sortie complète.",
+    "errorsBody": "L'installateur a renvoyé un code de sortie non nul. Aucun retour arrière automatique n'est prévu : certains fichiers ou composants peuvent déjà avoir changé. Lisez la sortie de l'installateur affichée au-dessus de l'erreur avant d'appuyer sur Entrée et vérifiez l'état actuel, puis réessayez depuis le menu ou lancez l'installateur manuellement par SSH ou depuis la console de l'hôte.",
     "configTitle": "Impossible de mettre à jour le fichier de configuration après le passage à Stable",
     "configBody": "Le nettoyage post-installation des métadonnées bêta a échoué — généralement parce que <code>config.json</code> a une erreur de syntaxe d'une modification manuelle. Valider :",
     "configCmd": "jq . /usr/local/share/proxmenux/config.json",

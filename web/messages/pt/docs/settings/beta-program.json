@@ -84,7 +84,7 @@
     "downloadCmd": "curl -fsSL -o /tmp/test https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh && head -1 /tmp/test",
     "downloadOutro": "Se isso falhar fora do ProxMenux, é um problema de rede / proxy no host.",
     "errorsTitle": "“Installer terminou com erros”",
-    "errorsBody": "O instalador devolveu um código de saída diferente de zero. Não existe reversão automática: alguns ficheiros ou componentes podem já ter sido alterados. Verifique a saída e o estado atual antes de repetir. Execute o instalador manualmente por SSH ou na consola do anfitrião para ver a saída completa.",
+    "errorsBody": "O instalador devolveu um código de saída diferente de zero. Não existe reversão automática: alguns ficheiros ou componentes podem já ter sido alterados. Leia a saída do instalador mostrada acima do erro antes de premir Enter e verifique o estado atual; depois repita a partir do menu ou execute o instalador manualmente por SSH ou na consola do anfitrião.",
     "configTitle": "\"Não foi possível atualizar o arquivo de configuração\" após mudar para Stable",
     "configBody": "A limpeza pós-instalação dos metadados beta falhou — geralmente porque o <code>config.json</code> tem um erro de sintaxe de uma edição manual. Validar:",
     "configCmd": "jq . /usr/local/share/proxmenux/config.json",

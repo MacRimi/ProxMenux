@@ -30,7 +30,7 @@
     "rows": [
       {
         "type": "Aktuelle Installation",
-        "bundles": "Statische JSON-Kataloge für acht Sprachen; keine Python-Übersetzungsumgebung",
+        "bundles": "Statische JSON-Kataloge für sieben Sprachen plus integriertes Englisch; keine Python-Übersetzungsumgebung",
         "menuRich": "<strong>Sprache ändern</strong> + Version anzeigen + Deinstallieren"
       },
       {

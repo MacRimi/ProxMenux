@@ -30,7 +30,7 @@
     "rows": [
       {
         "type": "Aktuálna inštalácia",
-        "bundles": "Statické katalógy JSON pre osem jazykov; bez prekladového prostredia Python",
+        "bundles": "Statické katalógy JSON pre sedem jazykov a vstavaná angličtina; bez prekladového prostredia Python",
         "menuRich": "<strong>Zmeniť jazyk</strong> + Zobraziť verziu + Odinštalovať"
       },
       {

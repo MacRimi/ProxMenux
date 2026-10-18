@@ -84,7 +84,7 @@
     "downloadCmd": "curl -fsSL -o /tmp/test https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh && head -1 /tmp/test",
     "downloadOutro": "Ak toto zlyhá mimo ProxMenux, je to sieťový / proxy problém na hostiteľa.",
     "errorsTitle": "Installer skončil s chybami",
-    "errorsBody": "Inštalátor vrátil nenulový návratový kód. Automatický návrat zmien neexistuje; niektoré súbory alebo komponenty sa už mohli zmeniť. Pred opakovaním skontrolujte výstup a aktuálny stav. Úplný výstup získate ručným spustením inštalátora cez SSH alebo konzolu hostiteľa.",
+    "errorsBody": "Inštalátor vrátil nenulový návratový kód. Automatický návrat zmien neexistuje; niektoré súbory alebo komponenty sa už mohli zmeniť. Pred stlačením Enter si prečítajte výstup inštalátora nad chybou a skontrolujte aktuálny stav; potom to skúste znova z menu alebo spustite inštalátor ručne cez SSH alebo konzolu hostiteľa.",
     "configTitle": "Nie je možné aktualizovať konfiguračný súbor po prepnutí na Stable",
     "configBody": "Vyčistenie beta metadát po inštalácii zlyhalo, zvyčajne preto, že <code>config.json</code> má syntax chybu z manuálnej úpravy. Overte ho:",
     "configCmd": "jq . /usr/local/share/proxmenux/config.json",

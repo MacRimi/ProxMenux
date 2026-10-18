@@ -84,7 +84,7 @@
     "downloadCmd": "curl -fsSL -o /tmp/test https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh && head -1 /tmp/test",
     "downloadOutro": "Om detta misslyckas utanför ProxMenux är det ett nätverk / proxyproblem på värden.",
     "errorsTitle": "\"Installer slutade med fel\"",
-    "errorsBody": "Installeraren returnerade en slutkod som inte är noll. Ingen automatisk återställning sker; vissa filer eller komponenter kan redan ha ändrats. Granska utdata och aktuellt tillstånd innan du försöker igen. Kör installeraren manuellt via SSH eller värdkonsolen för fullständiga utdata.",
+    "errorsBody": "Installeraren returnerade en slutkod som inte är noll. Ingen automatisk återställning sker; vissa filer eller komponenter kan redan ha ändrats. Läs installerarens utdata ovanför felet innan du trycker på Enter och kontrollera aktuellt tillstånd. Försök sedan igen från menyn eller kör installeraren manuellt via SSH eller värdkonsolen.",
     "configTitle": "\"Kan inte uppdatera konfigfil\" efter att ha bytt till Stable",
     "configBody": "Post-install rensningen av beta metadata misslyckades - vanligtvis eftersom <code>config.json</code> har ett syntaxfel från en manuell redigering. Validera det:",
     "configCmd": "jq . /usr/local/share/proxmenux/config.json",
