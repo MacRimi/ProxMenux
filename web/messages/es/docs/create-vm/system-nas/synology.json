@@ -171,7 +171,7 @@
     "heading": "Configuración del loader paso a paso",
     "intro": "Los seis pasos comunes son: arrancar la VM, elegir modelo, versión de DSM y complementos, construir y arrancar. Los menús y las opciones varían según la versión. Las capturas de M-shell muestran una interfaz anterior de TinyCore; el script actual descarga Alpine RedPill M-shell, por lo que debes seguir sus indicaciones actuales.",
     "warnCalloutTitle": "Los loaders no los mantiene ProxMenux",
-    "warnCalloutBody": "Arc, RR y TinyCore son proyectos de la comunidad con su propia cadencia de release. Si un paso se ve distinto a las capturas de abajo, lo más probable es que el loader se haya actualizado — consulta la documentación del propio loader (enlaces al final de esta página)."
+    "warnCalloutBody": "Arc, RR y Alpine RedPill M-shell son proyectos de la comunidad con su propia cadencia de release. Si un paso se ve distinto a las capturas de abajo, lo más probable es que el loader se haya actualizado — consulta la documentación del propio loader (enlaces al final de esta página)."
   },
   "stepBadge": "Paso",
   "step1": {

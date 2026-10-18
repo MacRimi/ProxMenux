@@ -35,7 +35,7 @@
         "iconBg": "bg-emerald-100 text-emerald-700",
         "description": "Oito sistemas NAS como VM dedicadas. A maioria usa o processo ISO automático; Synology DSM tem um assistente especializado com carregador.",
         "bullets": [
-          "Synology DSM (ARC / RR / TinyCore carregadores)",
+          "Synology DSM (Arc / RR / Alpine RedPill M-shell carregadores)",
           "TrueNAS SCALE e CORE (ZFS)",
           "OpenMediaVault (baseado em Debian)",
           "XigmaNAS (FreeBSD ZFS)",
@@ -106,7 +106,7 @@
       },
       {
         "path": "vm/select_nas_iso.sh",
-        "role": "Seletor ISO e sistemas NAS (Synology, TrueNAS, OMV, Rockstor, ZimaOS)."
+        "role": "Seletor ISO e sistemas NAS (Synology, TrueNAS, OMV, Rockstor, XigmaNAS, ZimaOS, FygoOS)."
       },
       {
         "path": "vm/select_windows_iso.sh",

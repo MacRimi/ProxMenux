@@ -69,7 +69,7 @@
       },
       {
         "param": "Typ CPU",
-        "optionsRich": "Host, KVM64 a ďalšie modely CPU zo zoznamu"
+        "optionsRich": "Host, KVM64 a ďalšie modely CPU zo zoznamu (ZimaOS: Host alebo KVM64)"
       },
       {
         "param": "Jadro",
@@ -106,7 +106,7 @@
     "virtualItemsRich": [
       "Zobrazí úložiská Proxmox dostupné na hostiteľovi.",
       "Vyberiete cieľové úložisko a veľkosť v GB.",
-      "Disk používa zvolenú zbernicu: SCSI (predvolená), SATA, VirtIO alebo IDE. SATA má šesť pozícií s číslami 0 až 5: <code>sata0</code>, <code>sata1</code>, …."
+      "Disk používa zvolenú zbernicu: SCSI (predvolená), SATA, VirtIO alebo IDE (ZimaOS: SCSI alebo SATA). SATA má šesť pozícií s číslami 0 až 5: <code>sata0</code>, <code>sata1</code>, …."
     ],
     "importHeading": "b. Pridať importný disk",
     "importItemsRich": [

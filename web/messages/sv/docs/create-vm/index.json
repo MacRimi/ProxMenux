@@ -35,7 +35,7 @@
         "iconBg": "bg-emerald-100 text-emerald-700",
         "description": "Åtta NAS-system som separata VM. De flesta använder automatiskt ISO-flöde; Synology DSM har en särskild starthanterarguide.",
         "bullets": [
-          "Synology DSM (starthanterare ARC / RR / TinyCore)",
+          "Synology DSM (starthanterare Arc / RR / Alpine RedPill M-shell)",
           "TrueNAS SCALE och CORE (ZFS)",
           "OpenMediaVault (Debianbaserad)",
           "XigmaNAS (FreeBSD ZFS)",
@@ -106,7 +106,7 @@
       },
       {
         "path": "vm/select_nas_iso.sh",
-        "role": "Val av ISO och NAS-system (Synology, TrueNAS, OMV, Rockstor, ZimaOS)."
+        "role": "Val av ISO och NAS-system (Synology, TrueNAS, OMV, Rockstor, XigmaNAS, ZimaOS, FygoOS)."
       },
       {
         "path": "vm/select_windows_iso.sh",

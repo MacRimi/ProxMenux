@@ -237,7 +237,7 @@
       {
         "href": "/docs/disk-manager/import-disk-image-vm",
         "label": "Importera diskavbildning till virtuell dator",
-        "tail": " — importera en befintlig Windows-.vmdk till en ny VM; konvertera först .vhdx-avbildningar till ett format som stöds."
+        "tail": " — importera en befintlig Windows-diskavbild (.vmdk, .qcow2, .img eller .raw) till en befintlig VM; konvertera först .vhdx-avbildningar till ett format som stöds."
       },
       {
         "href": "/docs/hardware/gpu-vm-passthrough",

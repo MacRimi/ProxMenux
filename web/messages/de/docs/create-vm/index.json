@@ -35,7 +35,7 @@
         "iconBg": "bg-emerald-100 text-emerald-700",
         "description": "Acht NAS-Betriebssysteme als eigene VMs. Die meisten nutzen den automatischen ISO-Ablauf; Synology DSM verwendet den spezialisierten Loader-Assistenten.",
         "bullets": [
-          "Synology DSM (ARC / RR / TinyCore Loader)",
+          "Synology DSM (Arc / RR / Alpine RedPill M-shell Loader)",
           "TrueNAS SCALE und CORE (ZFS)",
           "OpenMediaVault (Debian-basiert)",
           "XigmaNAS (FreeBSD ZFS)",
@@ -106,7 +106,7 @@
       },
       {
         "path": "vm/select_nas_iso.sh",
-        "role": "ISO/Appliance Selektor für NAS-Systeme (Synology, TrueNAS, OMV, Rockstor, ZimaOS)."
+        "role": "ISO/Appliance Selektor für NAS-Systeme (Synology, TrueNAS, OMV, Rockstor, XigmaNAS, ZimaOS, FygoOS)."
       },
       {
         "path": "vm/select_windows_iso.sh",

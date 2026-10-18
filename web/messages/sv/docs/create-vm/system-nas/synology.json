@@ -171,7 +171,7 @@
     "heading": "Konfigurera starthanteraren steg för steg",
     "intro": "De sex gemensamma stegen är: starta VM:n, välj modell, DSM-version och tillägg, bygg och starta. Menyer och alternativ varierar mellan versioner. M-shell-bilderna visar ett äldre TinyCore-gränssnitt; det aktuella skriptet laddar ned Alpine RedPill M-shell, så följ dess aktuella instruktioner.",
     "warnCalloutTitle": "Starthanterarna underhålls inte av ProxMenux",
-    "warnCalloutBody": "Arc, RR och TinyCore är communityprojekt med egna utgivningsplaner. Om ett steg skiljer sig från bilderna nedan har starthanteraren troligen uppdaterats. Läs dess egen dokumentation via länkarna längst ned på sidan."
+    "warnCalloutBody": "Arc, RR och Alpine RedPill M-shell är communityprojekt med egna utgivningsplaner. Om ett steg skiljer sig från bilderna nedan har starthanteraren troligen uppdaterats. Läs dess egen dokumentation via länkarna längst ned på sidan."
   },
   "stepBadge": "Steg",
   "step1": {

@@ -171,7 +171,7 @@
     "heading": "Schrittweise Loader-Konfiguration",
     "intro": "Die sechs gemeinsamen Schritte sind: VM starten, Modell, DSM-Version und Addons wählen, Loader erstellen und starten. Menüs und Optionen ändern sich je nach Version. Die M-shell-Bilder zeigen eine ältere TinyCore-Oberfläche; das aktuelle Skript lädt Alpine RedPill M-shell. Folgen Sie dessen aktuellen Anweisungen.",
     "warnCalloutTitle": "Die Loader werden nicht von ProxMenux gepflegt",
-    "warnCalloutBody": "Arc, RR und TinyCore sind Community-Projekte mit eigener Release-Kadenz. Wenn ein Schritt anders aussieht als die Screenshots unten, hat der Loader wahrscheinlich aktualisiert - überprüfen Sie die eigene Dokumentation des Loaders (Links unten auf dieser Seite)."
+    "warnCalloutBody": "Arc, RR und Alpine RedPill M-shell sind Community-Projekte mit eigener Release-Kadenz. Wenn ein Schritt anders aussieht als die Screenshots unten, hat der Loader wahrscheinlich aktualisiert - überprüfen Sie die eigene Dokumentation des Loaders (Links unten auf dieser Seite)."
   },
   "stepBadge": "Schritt",
   "step1": {

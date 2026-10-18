@@ -237,7 +237,7 @@
       {
         "href": "/docs/disk-manager/import-disk-image-vm",
         "label": "Importer l'image disque vers la VM",
-        "tail": " — importer un .vmdk Windows existant dans une nouvelle VM ; convertir d’abord les images .vhdx dans un format pris en charge."
+        "tail": " — importer une image disque Windows existante (.vmdk, .qcow2, .img ou .raw) dans une VM existante ; convertir d’abord les images .vhdx dans un format pris en charge."
       },
       {
         "href": "/docs/hardware/gpu-vm-passthrough",

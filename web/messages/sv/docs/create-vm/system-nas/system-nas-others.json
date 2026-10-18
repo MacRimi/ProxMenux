@@ -69,7 +69,7 @@
       },
       {
         "param": "CPU-typ",
-        "optionsRich": "Host, KVM64 och andra listade CPU-modeller"
+        "optionsRich": "Host, KVM64 och andra listade CPU-modeller (ZimaOS: Host eller KVM64)"
       },
       {
         "param": "Kärnor",
@@ -106,7 +106,7 @@
     "virtualItemsRich": [
       "Listar de Proxmox lagringsvolymer som finns på värden.",
       "Du väljer mållagring och storleken på GB.",
-      "Disken använder vald buss: SCSI (standard), SATA, VirtIO eller IDE. SATA har sex platser numrerade 0–5: <code>sata0</code>, <code>sata1</code>, …."
+      "Disken använder vald buss: SCSI (standard), SATA, VirtIO eller IDE (ZimaOS: SCSI eller SATA). SATA har sex platser numrerade 0–5: <code>sata0</code>, <code>sata1</code>, …."
     ],
     "importHeading": "b. Lägg till importerad disk",
     "importItemsRich": [

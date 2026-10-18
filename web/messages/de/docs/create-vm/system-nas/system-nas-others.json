@@ -69,7 +69,7 @@
       },
       {
         "param": "CPU-Typ",
-        "optionsRich": "Host, KVM64 und weitere aufgeführte CPU-Modelle"
+        "optionsRich": "Host, KVM64 und weitere aufgeführte CPU-Modelle (ZimaOS: Host oder KVM64)"
       },
       {
         "param": "Kerne",
@@ -106,7 +106,7 @@
     "virtualItemsRich": [
       "Listen Sie die auf dem Host verfügbaren Proxmox-Speichervolumen auf.",
       "Sie wählen den Zielspeicher und die Größe in GB aus.",
-      "Das Laufwerk nutzt den gewählten Bus: SCSI (Standard), SATA, VirtIO oder IDE. SATA hat sechs Anschlüsse von 0 bis 5: <code>sata0</code>, <code>sata1</code>, …."
+      "Das Laufwerk nutzt den gewählten Bus: SCSI (Standard), SATA, VirtIO oder IDE (ZimaOS: SCSI oder SATA). SATA hat sechs Anschlüsse von 0 bis 5: <code>sata0</code>, <code>sata1</code>, …."
     ],
     "importHeading": "b. Physisches Laufwerk hinzufügen",
     "importItemsRich": [

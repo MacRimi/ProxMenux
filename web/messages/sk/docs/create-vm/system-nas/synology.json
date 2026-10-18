@@ -171,7 +171,7 @@
     "heading": "Nastavenie zavádzača krok za krokom",
     "intro": "Šesť spoločných krokov: spustiť VM, vybrať model, verziu DSM a doplnky, zostaviť a spustiť zavádzač. Menu a možnosti závisia od vydania. Snímky M-shell zobrazujú staršie rozhranie TinyCore; aktuálny skript sťahuje Alpine RedPill M-shell, preto sa riaďte jeho aktuálnymi pokynmi.",
     "warnCalloutTitle": "Zavádzače neudržiava ProxMenux",
-    "warnCalloutBody": "Arc, RR a TinyCore sú komunitné projekty s vlastným harmonogramom vydaní. Ak sa krok líši od snímok nižšie, zavádzač bol pravdepodobne aktualizovaný. Pozrite jeho dokumentáciu; odkazy sú na konci stránky."
+    "warnCalloutBody": "Arc, RR a Alpine RedPill M-shell sú komunitné projekty s vlastným harmonogramom vydaní. Ak sa krok líši od snímok nižšie, zavádzač bol pravdepodobne aktualizovaný. Pozrite jeho dokumentáciu; odkazy sú na konci stránky."
   },
   "stepBadge": "Krok",
   "step1": {

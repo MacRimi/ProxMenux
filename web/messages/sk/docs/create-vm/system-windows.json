@@ -237,7 +237,7 @@
       {
         "href": "/docs/disk-manager/import-disk-image-vm",
         "label": "Importovať obraz disku do VM",
-        "tail": " — importovať existujúci Windows .vmdk do novej VM; obrazy .vhdx najprv previesť do podporovaného formátu."
+        "tail": " — importovať existujúci obraz disku Windows (.vmdk, .qcow2, .img alebo .raw) do existujúcej VM; obrazy .vhdx najprv previesť do podporovaného formátu."
       },
       {
         "href": "/docs/hardware/gpu-vm-passthrough",

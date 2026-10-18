@@ -35,7 +35,7 @@
         "iconBg": "bg-emerald-100 text-emerald-700",
         "description": "Osem systémov NAS ako samostatné VM. Väčšina používa automatický postup ISO; Synology DSM má špecializovaného sprievodcu zavádzačom.",
         "bullets": [
-          "Synology DSM (zavádzače ARC / RR / TinyCore)",
+          "Synology DSM (zavádzače Arc / RR / Alpine RedPill M-shell)",
           "TrueNAS SCALE a CORE (ZFS)",
           "OpenMediaVault (na báze Debianu)",
           "XigmaNAS (FreeBSD ZFS)",
@@ -106,7 +106,7 @@
       },
       {
         "path": "vm/select_nas_iso.sh",
-        "role": "Výber ISO a systémov NAS (Synology, TrueNAS, OMV, Rockstor, ZimaOS)."
+        "role": "Výber ISO a systémov NAS (Synology, TrueNAS, OMV, Rockstor, XigmaNAS, ZimaOS, FygoOS)."
       },
       {
         "path": "vm/select_windows_iso.sh",

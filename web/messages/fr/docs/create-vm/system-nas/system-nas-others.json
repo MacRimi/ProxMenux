@@ -69,7 +69,7 @@
       },
       {
         "param": "Type CPU",
-        "optionsRich": "Host, KVM64 et autres modèles CPU proposés"
+        "optionsRich": "Host, KVM64 et autres modèles CPU proposés (ZimaOS : Host ou KVM64)"
       },
       {
         "param": "Noyaux",
@@ -106,7 +106,7 @@
     "virtualItemsRich": [
       "Liste les volumes de stockage Proxmox disponibles sur l'hôte.",
       "Vous choisissez le stockage cible et la taille en GB.",
-      "Le disque utilise le bus choisi : SCSI (par défaut), SATA, VirtIO ou IDE. SATA offre six emplacements numérotés de 0 à 5 : <code>sata0</code>, <code>sata1</code>, …."
+      "Le disque utilise le bus choisi : SCSI (par défaut), SATA, VirtIO ou IDE (ZimaOS : SCSI ou SATA). SATA offre six emplacements numérotés de 0 à 5 : <code>sata0</code>, <code>sata1</code>, …."
     ],
     "importHeading": "b. Ajouter un disque d'importation",
     "importItemsRich": [

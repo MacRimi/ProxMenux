@@ -171,7 +171,7 @@
     "heading": "Configuração do carregador passo a passo",
     "intro": "Os seis passos comuns são: iniciar a VM, escolher modelo, versão DSM e complementos, construir e arrancar. Os menus e opções variam por versão. As capturas M-shell mostram uma interface TinyCore anterior; o script atual transfere Alpine RedPill M-shell, pelo que deve seguir as indicações atuais.",
     "warnCalloutTitle": "Os carregadores não são mantidos pelo ProxMenux",
-    "warnCalloutBody": "Arc, RR e TinyCore são projetos comunitários com sua própria cadência de lançamento. Se um passo parece diferente das capturas de tela abaixo, o carregador provavelmente atualizou — verifique a própria documentação do carregador (links na parte inferior desta página)."
+    "warnCalloutBody": "Arc, RR e Alpine RedPill M-shell são projetos comunitários com sua própria cadência de lançamento. Se um passo parece diferente das capturas de tela abaixo, o carregador provavelmente atualizou — verifique a própria documentação do carregador (links na parte inferior desta página)."
   },
   "stepBadge": "Etapa",
   "step1": {
