@@ -3580,7 +3580,8 @@ EOF
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 MAILTO=""
-*/5 * * * * root /usr/local/bin/log2ram-check.sh >/dev/null 2>&1
+# nice/ionice keep the check off the priority queue for scheduled tasks.
+3-59/10 * * * * root nice -n 19 ionice -c 3 /usr/local/bin/log2ram-check.sh >/dev/null 2>&1
 EOF
         chmod 0644 /etc/cron.d/log2ram-auto-sync
         chown root:root /etc/cron.d/log2ram-auto-sync

@@ -581,7 +581,7 @@ uninstall_system_limits() {
     # Remove systemd limits (restore defaults)
     for file in /etc/systemd/system.conf /etc/systemd/user.conf; do
         if [ -f "$file" ]; then
-            pmx_edit_file "$file" '/^DefaultLimitNOFILE=256000/d'
+            pmx_edit_file "$file" -e '/^DefaultLimitNOFILE=256000$/d' -e '/^DefaultLimitNOFILE=1048576$/d'
         fi
     done
     
@@ -594,7 +594,7 @@ uninstall_system_limits() {
     
     # Remove ulimit from profile
     if [ -f /root/.profile ]; then
-        pmx_edit_file /root/.profile '/ulimit -n 256000/d'
+        pmx_edit_file /root/.profile -e '/^ulimit -n 256000$/d' -e '/^ulimit -n 1048576$/d'
     fi
     
     # Reload sysctl
