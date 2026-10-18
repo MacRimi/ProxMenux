@@ -1,14 +1,9 @@
 name: Build web documentation translations
 
 on:
-  push:
-    branches: [develop]
-    paths:
-      - 'web/messages/en/*.json'
-      - 'web/messages/en/**/*.json'
-      - '.github/scripts/build_web_docs_i18n.py'
-      - '.github/scripts/build_translation_cache.py'
-      - '.github/workflows/build-web-docs-i18n.yml'
+  # Source and locale corrections are reviewed together. An automatic run
+  # would treat the changed English fingerprints as stale translations and
+  # overwrite those reviewed locale strings with provider output.
   workflow_dispatch:
     inputs:
       languages:

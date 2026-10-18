@@ -1,4 +1,5 @@
 """Regression tests for explicit adoption of external OCI resources."""
+import copy
 import json
 from pathlib import Path
 import sys
@@ -153,6 +154,79 @@ class ProposalTests(unittest.TestCase):
             history = list((target.parent / 'history').glob('before-reconciliation-*.json'))
             self.assertEqual(len(history), 1)
             self.assertEqual(json.loads(history[0].read_text())['deployment']['mounts'], [])
+
+
+class EnvironmentAdoptionTests(unittest.TestCase):
+    marker = '11111111-1111-1111-1111-111111111111'
+
+    def record(self, env):
+        config = f'description: proxmenux-instance={self.marker}\nenv: {env}\n'.encode()
+        return {
+            'vmid': 200, 'status': 'installed', 'installation_id': self.marker,
+            'deployment': {'mounts': [], 'devices': [], 'environment': [
+                {'name': 'APP_PASSWORD', 'value': 'first-secret', 'sensitive': True}]},
+            'observed': {'config': config.decode(), 'config_sha256': sha(config),
+                         'archive_path': '/unused.tar', 'resolved_registry_digest': 'sha256:test',
+                         'image': {'manifest_digest': 'sha256:test', 'defaults': {'Env': ['PATH=/bin']}}},
+        }
+
+    def propose(self, record, env):
+        config = f'description: proxmenux-instance={self.marker}\nenv: {env}\n'.encode()
+        with (patch.object(reconcile.instances, 'ROOT', Path('/inert')),
+              patch.object(reconcile.instances, 'identity', return_value=self.marker),
+              patch.object(reconcile.instances, 'location', return_value=Path(__file__)),
+              patch.object(reconcile.gpu_devices, 'capture', return_value={}),
+              patch.object(reconcile.host_mounts, 'capture_sources', return_value={}),
+              patch.object(reconcile.transaction, 'preflight')):
+            return reconcile.propose(record, config)
+
+    def test_a_password_changed_in_proxmox_is_adopted_without_showing_it(self):
+        record = self.record('PATH=/bin\0APP_PASSWORD=first-secret')
+        proposal = self.propose(record, 'PATH=/bin\0APP_PASSWORD=my-own-secret\0TZ=Europe/Madrid')
+        environment = proposal['candidate']['deployment']['environment']
+        self.assertEqual(environment, [
+            {'name': 'APP_PASSWORD', 'value': 'my-own-secret', 'sensitive': True},
+            {'name': 'TZ', 'value': 'Europe/Madrid', 'sensitive': True}])
+        self.assertEqual(proposal['details'], ['env APP_PASSWORD: value changed in Proxmox',
+                                               'env TZ: added in Proxmox'])
+        self.assertNotIn('my-own-secret', str(proposal['details']))
+        self.assertEqual(record['deployment']['environment'][0]['value'], 'first-secret')
+
+    def test_reordered_variables_need_no_decision(self):
+        record = self.record('PATH=/bin\0APP_PASSWORD=first-secret')
+        proposal = self.propose(record, 'APP_PASSWORD=first-secret\0PATH=/bin')
+        self.assertEqual(proposal['details'], [])
+
+    def test_removing_an_image_default_is_refused(self):
+        record = self.record('PATH=/bin\0APP_PASSWORD=first-secret')
+        with self.assertRaisesRegex(ValueError, 'env'):
+            self.propose(record, 'APP_PASSWORD=first-secret')
+
+    def test_removing_a_saved_variable_removes_it_from_the_contract(self):
+        record = self.record('PATH=/bin\0APP_PASSWORD=first-secret')
+        proposal = self.propose(record, 'PATH=/bin')
+        self.assertEqual(proposal['candidate']['deployment']['environment'], [])
+        self.assertEqual(proposal['details'], ['env APP_PASSWORD: removed in Proxmox'])
+
+    def test_other_changes_next_to_the_variables_are_still_refused(self):
+        record = self.record('PATH=/bin')
+        config = (f'description: proxmenux-instance={self.marker}\nenv: PATH=/bin\0A=1\n'
+                  'net0: name=eth0,bridge=vmbr1\n').encode()
+        with (patch.object(reconcile.instances, 'identity', return_value=self.marker),
+              self.assertRaisesRegex(ValueError, 'net0')):
+            reconcile.propose(record, config)
+
+
+class OverlapMessageTests(unittest.TestCase):
+    def test_the_refusal_names_both_paths(self):
+        from test_modify_review import installation
+        saved, config = installation()
+        candidate = copy.deepcopy(saved)
+        volume = {'type': 'managed-volume', 'source': 'local-lvm', 'size_gb': 1, 'backup': True, 'read_only': False}
+        candidate['deployment']['mounts'] = [dict(volume, container_path='/source'),
+                                             dict(volume, container_path='/source/archivos')]
+        with self.assertRaisesRegex(ValueError, '/source/archivos - /source$'):
+            reconcile.transaction.preflight(saved, candidate, config)
 
 
 if __name__ == '__main__':
