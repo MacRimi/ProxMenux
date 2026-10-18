@@ -1,15 +1,15 @@
 {
   "meta": {
     "title": "Glosario de términos — Backup & Restore | ProxMenux",
-    "description": "Glosario de términos y definiciones en español para el sistema de copia y restauración de ProxMenux: cifrado, clave, passphrase, sobre de recuperación, PBS, chunks, rootfs, manifiesto, runner y hidratación cross-kernel.",
+    "description": "Glosario de términos y definiciones en español para el sistema de backup y restauración de ProxMenux: cifrado, clave, passphrase, sobre de recuperación, PBS, chunks, rootfs, manifiesto, runner y hidratación cross-kernel.",
     "ogTitle": "Glosario de Backup & Restore | ProxMenux",
-    "ogDescription": "Definiciones claras en español para los términos que aparecen en la documentación de copia y restauración de ProxMenux.",
+    "ogDescription": "Definiciones claras en español para los términos que aparecen en la documentación de backup y restauración de ProxMenux.",
     "twitterTitle": "Glosario Backup & Restore | ProxMenux",
     "twitterDescription": "Passphrase, keyfile, sobre de recuperación, rootfs, manifiesto, PBS, chunks — todo definido en español."
   },
   "header": {
     "title": "Glosario",
-    "description": "Términos que aparecen a lo largo de la documentación de copia y restauración, con su definición.",
+    "description": "Términos que aparecen a lo largo de la documentación de backup y restauración, con su definición.",
     "section": "Backup & Restore"
   },
   "intro": {
@@ -18,49 +18,42 @@
   "groups": [
     {
       "title": "Cifrado y recuperación de clave",
-      "intro": "Terminología del bloque de cifrado de copias en PBS. Incluye dos secretos distintos: una clave binaria y una passphrase escrita.",
+      "intro": "Terminología del bloque de cifrado de backups en PBS. Incluye dos secretos distintos: una clave binaria y una passphrase escrita.",
       "entries": [
         {
           "id": "passphrase-recuperacion",
           "term": "Passphrase de recuperación",
-          "also": "recovery passphrase",
-          "def": "Contraseña de texto que elige el usuario para proteger el <a href=\"#sobre-recuperacion\">sobre de recuperación</a>. Se pide dos veces con validación de coincidencia y solo se usa para cifrar el sobre y para descifrarlo si algún día hay que recuperar la clave. <strong>No sirve para desbloquear la clave del keyfile</strong> ni se envía nunca a PBS. Nunca sale del host durante una copia normal."
+          "def": "Contraseña de texto que elige el usuario para proteger el <a href=\"#sobre-recuperacion\">sobre de recuperación</a>. Se pide dos veces con validación de coincidencia y solo se usa para cifrar el sobre y para descifrarlo si algún día hay que recuperar la clave. <strong>No sirve para desbloquear la clave del keyfile</strong> ni se envía nunca a PBS. Nunca sale del host durante un backup normal."
         },
         {
           "id": "clave-cifrado",
           "term": "Clave de cifrado (keyfile)",
-          "also": "keyfile, PBS encryption key",
-          "def": "Fichero binario que Proxmox Backup Server utiliza para cifrar los <a href=\"#chunk\">chunks</a> de la copia antes de subirlos. Sin ese fichero, ninguna copia cifrada puede leerse. ProxMenux lo guarda en <code>/usr/local/share/proxmenux/pbs-key.conf</code> con permisos <code>600</code>. Es el activo que hay que proteger; el <a href=\"#sobre-recuperacion\">sobre de recuperación</a> existe precisamente para poder rescatar este fichero si se pierde."
+          "def": "Archivo de clave que proxmox-backup-client usa para cifrar los <a href=\"#chunk\">chunks</a> antes de subirlos a PBS. Sin la clave correspondiente no se leen los datos cifrados. ProxMenux lo guarda en <code>/usr/local/share/proxmenux/pbs-key.conf</code> con modo <code>600</code>. Protégelo: el <a href=\"#sobre-recuperacion\">sobre de recuperación</a> permite recuperarlo si se pierde."
         },
         {
           "id": "contrasena-keyfile",
           "term": "Contraseña de la clave (KDF passphrase)",
-          "also": "keyfile passphrase, scrypt passphrase",
-          "def": "Contraseña opcional que puede llevar la propia clave, distinta de la <a href=\"#passphrase-recuperacion\">passphrase de recuperación</a>. Solo aparece si la clave se creó con <code>--kdf scrypt</code> (una clave importada de otro sitio, por ejemplo). Sin ella, la clave no se puede desbloquear en cada uso. ProxMenux la persiste cifrada en el host para que las copias programadas puedan ejecutarse sin diálogo interactivo."
+          "def": "Contraseña opcional que puede llevar la propia clave, distinta de la <a href=\"#passphrase-recuperacion\">passphrase de recuperación</a>. Solo aparece si la clave se creó con <code>--kdf scrypt</code> (una clave importada de otro sitio, por ejemplo). Sin ella, la clave no se puede desbloquear en cada uso. ProxMenux la persiste cifrada en el host para que los backups programados puedan ejecutarse sin diálogo interactivo."
         },
         {
           "id": "sobre-recuperacion",
           "term": "Sobre de recuperación",
-          "also": "recovery envelope, escrow blob, pbs-key.recovery.enc",
           "def": "La propia <a href=\"#clave-cifrado\">clave de cifrado</a> envuelta en una capa adicional: se cifra con la <a href=\"#passphrase-recuperacion\">passphrase de recuperación</a> mediante <a href=\"#aes-256-cbc\">AES-256-CBC</a> y <a href=\"#pbkdf2\">PBKDF2</a> antes de salir del host. Es lo que se sube a PBS en el grupo <code>-keyrecovery</code>. Sin la passphrase, el sobre es opaco: descargarlo desde PBS no revela la clave."
         },
         {
           "id": "cifrado-cliente",
           "term": "Cifrado del lado del cliente",
-          "also": "client-side encryption",
           "def": "Modelo en el que los datos se cifran en el host de origen antes de subirse. PBS solo recibe y almacena datos cifrados; ni siquiera un administrador de PBS con acceso al datastore puede leerlos sin la clave. ProxMenux se apoya en este modelo y añade el <a href=\"#sobre-recuperacion\">sobre de recuperación</a> encima."
         },
         {
           "id": "kdf-none",
           "term": "--kdf none",
-          "also": "clave sin contraseña",
           "def": "Opción de <code>proxmox-backup-client key create</code> que genera una clave sin contraseña asociada. La clave se puede usar directamente sin ningún diálogo, lo que es imprescindible para que los trabajos programados corran de forma desatendida. Es lo que ProxMenux usa por defecto al generar una clave nueva."
         },
         {
           "id": "kdf-scrypt",
           "term": "--kdf scrypt",
-          "also": "clave con contraseña",
-          "def": "Opción de <code>proxmox-backup-client key create</code> que genera una clave protegida con una <a href=\"#contrasena-keyfile\">contraseña de la clave</a>. Cada vez que se usa la clave hay que desbloquearla con esa contraseña. ProxMenux acepta este tipo de claves al importarlas y guarda la contraseña cifrada para que las copias programadas puedan correr sin intervención."
+          "def": "Opción de <code>proxmox-backup-client key create</code> que genera una clave protegida con una <a href=\"#contrasena-keyfile\">contraseña de la clave</a>. Cada vez que se usa la clave hay que desbloquearla con esa contraseña. ProxMenux acepta este tipo de claves al importarlas y guarda la contraseña cifrada para que los backups programados puedan correr sin intervención."
         },
         {
           "id": "aes-256-cbc",
@@ -75,8 +68,8 @@
       ]
     },
     {
-      "title": "Estructura de la copia",
-      "intro": "Términos que describen lo que hay dentro de una copia, sea cual sea el destino.",
+      "title": "Estructura del backup",
+      "intro": "Términos que describen lo que hay dentro de un backup, sea cual sea el destino.",
       "entries": [
         {
           "id": "rootfs",
@@ -86,17 +79,17 @@
         {
           "id": "manifiesto",
           "term": "Manifiesto (manifest.json)",
-          "def": "Documento JSON estructurado que describe el host de origen en el momento de la copia: hardware, almacenamiento, kernel, componentes instalados por ProxMenux e inventario de VMs y LXCs. Lo genera ProxMenux con seis colectores independientes. La restauración lo utiliza para comparar origen y destino."
+          "def": "Documento JSON estructurado que describe el host de origen en el momento del backup: hardware, almacenamiento, kernel, componentes instalados por ProxMenux e inventario de VMs y LXCs. Lo genera ProxMenux con seis colectores independientes. La restauración lo utiliza para comparar origen y destino."
         },
         {
           "id": "staging",
           "term": "Directorio de staging",
-          "def": "Directorio temporal donde ProxMenux ensambla los tres bloques (rootfs, metadata y manifiesto) antes de empaquetarlos y subirlos al destino. Se elimina automáticamente al terminar la copia, incluso si se aborta."
+          "def": "Directorio temporal donde ProxMenux ensambla los tres bloques (rootfs, metadata y manifiesto) antes de empaquetarlos y subirlos al destino. Se elimina automáticamente al terminar el backup, incluso si se aborta."
         },
         {
           "id": "perfil-defecto",
           "term": "Perfil por defecto",
-          "def": "Conjunto curado de rutas que ProxMenux copia por defecto en toda copia. Cubre configuración de PVE, red, SSH, kernel, apt, herramientas ProxMenux y otras. Está definido en el código y se documenta en la página <em>Cómo funciona</em>."
+          "def": "Conjunto curado de rutas que ProxMenux copia por defecto en todo backup. Cubre configuración de PVE, red, SSH, kernel, apt, herramientas ProxMenux y otras. Está definido en el código y se documenta en la página <em>Cómo funciona</em>."
         },
         {
           "id": "rutas-personalizadas",
@@ -107,22 +100,22 @@
     },
     {
       "title": "Destinos y almacenamiento",
-      "intro": "Términos ligados al lugar donde acaba la copia — servidor PBS, archivo local o repositorio Borg — y a la forma en que PBS organiza los datos.",
+      "intro": "Términos ligados al lugar donde acaba el backup — servidor PBS, archivo local o repositorio Borg — y a la forma en que PBS organiza los datos.",
       "entries": [
         {
           "id": "repositorio-pbs",
           "term": "Repositorio PBS",
-          "def": "Combinación de servidor Proxmox Backup Server + <a href=\"#datastore\">datastore</a> + usuario al que se suben las copias. Se identifica con el formato <code>user@realm@host:datastore</code>. Un mismo servidor PBS puede alojar varios repositorios."
+          "def": "Combinación de servidor Proxmox Backup Server + <a href=\"#datastore\">datastore</a> + usuario al que se suben los backups. Se identifica con el formato <code>user@realm@host:datastore</code>. Un mismo servidor PBS puede alojar varios repositorios."
         },
         {
           "id": "datastore",
           "term": "Datastore",
-          "def": "Almacén concreto dentro de un servidor PBS donde se guardan las copias y sus chunks. Cada datastore vive sobre un sistema de ficheros del servidor PBS y tiene sus propios permisos y políticas."
+          "def": "Almacén concreto dentro de un servidor PBS donde se guardan los backups y sus chunks. Cada datastore vive sobre un sistema de ficheros del servidor PBS y tiene sus propios permisos y políticas."
         },
         {
           "id": "chunk",
           "term": "Chunk / deduplicación por chunks",
-          "def": "PBS divide cada copia en trozos (chunks) de tamaño variable, identifica cada trozo por su hash y solo guarda cada trozo una vez, aunque aparezca en muchas copias distintas. Esto hace que copias sucesivas del mismo host o entre hosts similares consuman muy poco espacio adicional."
+          "def": "PBS divide cada backup en trozos (chunks) de tamaño variable, identifica cada trozo por su hash y solo guarda cada trozo una vez, aunque aparezca en muchos backups distintos. Esto hace que backups sucesivos del mismo host o entre hosts similares consuman muy poco espacio adicional."
         },
         {
           "id": "fingerprint",
@@ -131,13 +124,13 @@
         },
         {
           "id": "grupo-copia",
-          "term": "Grupo de copia (backup group)",
-          "def": "Contenedor lógico dentro de PBS bajo el cual se acumulan todas las copias sucesivas del mismo activo. Cada nueva copia comparte deduplicación con las anteriores del mismo grupo. ProxMenux utiliza dos grupos por host cuando hay cifrado: uno para la copia del host y otro con sufijo <code>-keyrecovery</code> para el <a href=\"#sobre-recuperacion\">sobre de recuperación</a>."
+          "term": "Grupo de backup (backup group)",
+          "def": "Contenedor lógico dentro de PBS bajo el cual se acumulan todos los backups sucesivos del mismo activo. Cada nuevo backup comparte deduplicación con los anteriores del mismo grupo. ProxMenux utiliza dos grupos por host cuando hay cifrado: uno para el backup del host y otro con sufijo <code>-keyrecovery</code> para el <a href=\"#sobre-recuperacion\">sobre de recuperación</a>."
         },
         {
           "id": "backup-id",
           "term": "Backup ID",
-          "def": "Nombre del <a href=\"#grupo-copia\">grupo de copia</a>. ProxMenux propone por defecto <code>hostcfg-HOSTNAME</code> y permite editarlo antes de la subida; los caracteres no admitidos se limpian automáticamente."
+          "def": "Nombre del <a href=\"#grupo-copia\">grupo de backup</a>. ProxMenux propone por defecto <code>hostcfg-HOSTNAME</code> y permite editarlo antes de la subida; los caracteres no admitidos se limpian automáticamente."
         },
         {
           "id": "pxar",
@@ -153,17 +146,17 @@
         {
           "id": "runner",
           "term": "Runner",
-          "def": "Script <code>run_scheduled_backup.sh</code> que ejecuta una copia programada. Lee la configuración del trabajo, lanza el backend correspondiente (Local, PBS o Borg), aplica la retención al terminar y envía las notificaciones configuradas."
+          "def": "Script <code>run_scheduled_backup.sh</code> que ejecuta un backup programado. Lee la configuración del trabajo, lanza el backend correspondiente (Local, PBS o Borg), aplica la retención al terminar y envía las notificaciones configuradas."
         },
         {
           "id": "trabajo-programado",
           "term": "Trabajo programado",
-          "def": "Configuración persistida de una copia recurrente. Incluye destino, credenciales, cifrado, horario y retención. Se guarda en <code>/var/lib/proxmenux/backup-jobs/&lt;id&gt;.env</code>."
+          "def": "Configuración persistida de un backup recurrente. Incluye destino, credenciales, cifrado, horario y retención. Se guarda en <code>/var/lib/proxmenux/backup-jobs/&lt;id&gt;.env</code>."
         },
         {
           "id": "modo-adjunto",
           "term": "Modo adjunto (attach mode)",
-          "def": "Trabajo programado que no lleva horario propio; se dispara automáticamente cada vez que una tarea <code>vzdump</code> de PVE existente se ejecuta. Hereda el horario y la retención de esa tarea padre. Solo compatible con destinos Local y PBS."
+          "def": "Trabajo sin timer propio. Un hook job-end de <code>vzdump</code> lo ejecuta después de los backups de invitados cuando coincide el almacenamiento. El padre seleccionado aporta el destino y la retención, que se vuelve a leer de la tarea padre en cada ejecución, pero el hook compara almacenamiento, no ID de tarea padre; otra tarea con el mismo destino también puede activarlo. Solo para Local y PBS."
         },
         {
           "id": "timer-systemd",
@@ -173,7 +166,7 @@
         {
           "id": "retencion",
           "term": "Retención (keep-last, keep-daily…)",
-          "def": "Política que decide qué copias antiguas se conservan y cuáles se eliminan. Se define por trabajo con parámetros como <code>keep-last</code>, <code>keep-daily</code>, <code>keep-weekly</code>, <code>keep-monthly</code>. El runner la aplica después de cada copia exitosa."
+          "def": "Política que decide qué backups antiguos se conservan y cuáles se eliminan. Se define por trabajo con parámetros como <code>keep-last</code>, <code>keep-daily</code>, <code>keep-weekly</code>, <code>keep-monthly</code>. El runner la aplica después de cada backup exitoso."
         }
       ]
     },
@@ -189,7 +182,7 @@
         {
           "id": "hidratacion",
           "term": "Hidratación (cross-kernel)",
-          "def": "Pasada de restauración que funde la configuración propia del usuario del origen (tokens IOMMU, IDs de dispositivos VFIO, quirks personalizadas, claves de GRUB) sobre la configuración de arranque fresca del destino, sin copiar verbatim los ficheros ligados al kernel del origen. Se ejecuta cuando el kernel del destino es más reciente que el de la copia."
+          "def": "Pasada de restauración que funde la configuración propia del usuario del origen (tokens IOMMU, IDs de dispositivos VFIO, quirks personalizadas, claves de GRUB) sobre la configuración de arranque fresca del destino, sin copiar verbatim los ficheros ligados al kernel del origen. Se ejecuta cuando el kernel del destino es más reciente que el del backup."
         },
         {
           "id": "cross-kernel",
@@ -209,8 +202,7 @@
         {
           "id": "equipo-recien-instalado",
           "term": "Equipo recién instalado",
-          "also": "fresh install",
-          "def": "Host acabado de reinstalar desde cero, sin la <a href=\"#clave-cifrado\">clave de cifrado</a> local. Para restaurar copias cifradas hace falta primero recuperar la clave desde el <a href=\"#sobre-recuperacion\">sobre</a> almacenado en PBS, con la <a href=\"#passphrase-recuperacion\">passphrase de recuperación</a>."
+          "def": "Host acabado de reinstalar desde cero, sin la <a href=\"#clave-cifrado\">clave de cifrado</a> local. Para restaurar backups cifrados hace falta primero recuperar la clave desde el <a href=\"#sobre-recuperacion\">sobre</a> almacenado en PBS, con la <a href=\"#passphrase-recuperacion\">passphrase de recuperación</a>."
         }
       ]
     }
@@ -221,7 +213,7 @@
       {
         "label": "Cómo funciona",
         "href": "/docs/backup-restore/how-it-works",
-        "tail": " — dónde encajan el rootfs, el manifiesto y el inventario de aplicaciones en cada copia."
+        "tail": " — dónde encajan el rootfs, el manifiesto y el inventario de aplicaciones en cada backup."
       },
       {
         "label": "Destino Proxmox Backup Server",
