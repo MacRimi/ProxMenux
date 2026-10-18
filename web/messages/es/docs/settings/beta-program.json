@@ -40,7 +40,7 @@
     "heading": "Qué pasa al confirmar",
     "items": [
       "<strong>Descarga el instalador oficial</strong> del canal de destino:<ul><li>Estable: <code>install_proxmenux.sh</code> desde <code>main</code></li><li>Beta: <code>install_proxmenux_beta.sh</code> desde <code>develop</code></li></ul>Se comprueba que la descarga existe y se hace ejecutable antes de continuar.",
-      "<strong>Ejecuta el instalador</strong> completo, el mismo que enlaza el README. La detección de componentes, las copias de seguridad, las dependencias y la conservación del idioma siguen el procedimiento oficial de instalación del canal elegido.",
+      "<strong>Ejecuta el instalador</strong> completo, el mismo que enlaza el README. La detección de componentes, los backups, las dependencias y la conservación del idioma siguen el procedimiento oficial de instalación del canal elegido.",
       "Al cambiar a <strong>estable</strong>, el menú poda después cualquier metadato beta sobrante de <code>config.json</code>: <code>beta_program</code>, <code>beta_version</code>, <code>install_branch</code>, <code>update_available.beta*</code> se borran, y <code>proxmenux_monitor.status = beta_updated</code> se normaliza a <code>updated</code>. El archivo sobrante <code>beta_version.txt</code> y cualquier instalador beta descargado se eliminan.",
       "Al cambiar a estable, se reescribe la unidad systemd de Monitor con la plantilla estable: se quita «Beta» de la descripción y <code>ExecStart</code> vuelve a apuntar al directorio de ejecución. Así, <code>systemctl status</code> refleja el canal actual.",
       "Recarga el menú de configuración. <em>Mostrar información de versión</em> mostrará el nuevo canal."

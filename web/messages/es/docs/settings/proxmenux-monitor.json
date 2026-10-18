@@ -71,7 +71,7 @@
   },
   "reset": {
     "heading": "Restablecer la contraseña de ProxMenux Monitor",
-    "intro": "Ruta de recuperación para el operador que perdió la contraseña del panel (o el dispositivo 2FA). La opción solo aparece cuando el Monitor está instalado en el host. Al seleccionarla:",
+    "intro": "Ruta de recuperación para el usuario que perdió la contraseña del panel (o el dispositivo 2FA). La opción solo aparece cuando el Monitor está instalado en el host. Al seleccionarla:",
     "items": [
       "Pide confirmación con un diálogo sí/no — la acción es destructiva para las credenciales de login.",
       "Hace backup del <code>/root/.config/proxmenux-monitor/auth.json</code> existente a <code>auth.json.bak-&lt;UTC timestamp&gt;</code> (modo <code>0600</code>) para que el estado previo se pueda restaurar manualmente si el reset fue un error.",

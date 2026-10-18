@@ -17,7 +17,7 @@
   "flow": {
     "heading": "El proceso de desinstalación",
     "items": [
-      "<strong>Diálogo de confirmación.</strong> Sí/no: «¿Seguro que quieres desinstalar ProxMenux?»",
+      "<strong>Diálogo de confirmación.</strong> Sí/no: «¿Estás seguro de que deseas desinstalar ProxMenux?»",
       "<strong>Lista de eliminación de dependencias.</strong> Ofrece jq y dialog. Ambas casillas están desmarcadas por defecto; selecciona solo dependencias que ninguna otra aplicación necesite.",
       "<strong>La eliminación muestra una barra de progreso.</strong> Elimina cualquier entorno de traducción antiguo que quede, el lanzador <code>menu</code>, el árbol <code>/usr/local/share/proxmenux/</code>, el servicio ProxMenux Monitor si existe y el destino de notificaciones que registró en Proxmox VE (<code>proxmenux-webhook</code> y su regla de coincidencia), las dependencias seleccionadas y, por último, restaura las copias de los archivos del sistema (ver más abajo).",
       "<strong>Diálogo de finalización.</strong> Enumera las dependencias eliminadas y termina."
@@ -39,7 +39,7 @@
       }
     ],
     "warnTitle": "Paquetes de todo el sistema — piénsalo dos veces",
-    "warnBody": "La lista actual ofrece <code>jq</code> y <code>dialog</code>, no <code>python3</code>. Son paquetes del sistema que otras herramientas pueden necesitar. La eliminación también puede quitar paquetes dependientes o dependencias sin uso. Conserva los paquetes necesarios y revisa cualquier propuesta de eliminación antes de ejecutar apt manualmente."
+    "warnBody": "La lista actual ofrece <code>jq</code> y <code>dialog</code>, no <code>python3</code>. Son paquetes del sistema que otras herramientas pueden necesitar. La eliminación también puede eliminar paquetes dependientes o dependencias sin uso. Conserva los paquetes necesarios y revisa cualquier propuesta de eliminación antes de ejecutar apt manualmente."
   },
   "removed": {
     "heading": "Qué se elimina",
