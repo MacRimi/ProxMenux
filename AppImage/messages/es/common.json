@@ -5416,7 +5416,7 @@
     "customLinkDeleteError": "Error al eliminar",
     "categoryLabels": {
       "arrSuite": "*Arr Suite",
-      "aiCodingDevTools": "IA / Programación y herramientas de desarrollo",
+      "aiCodingDevTools": "AI / Coding & Dev-Tools",
       "adblockDns": "Adblock & DNS",
       "authenticationSecurity": "Authentication & Security",
       "automationScheduling": "Automation & Scheduling",
@@ -5431,18 +5431,18 @@
       "financeBudgeting": "Finance & Budgeting",
       "gamingLeisure": "Gaming & Leisure",
       "hostManagement": "Host Management",
-      "iotSmartHome": "IoT y hogar inteligente",
+      "iotSmartHome": "IoT & Smart Home",
       "mediaStreaming": "Media & Streaming",
-      "messagingNotifications": "Mensajería y Notificaciones",
+      "messagingNotifications": "Messaging & Notifications",
       "miscellaneous": "Miscellaneous",
       "monitoringAnalytics": "Monitoring & Analytics",
       "nvrCameras": "NVR & Cameras",
       "networkFirewall": "Network & Firewall",
-      "operatingSystemsAppliances": "Sistemas operativos y dispositivos virtuales",
+      "operatingSystemsAppliances": "Operating Systems & Appliances",
       "productivityWorkflows": "Productivity & Workflows",
-      "remoteAccessVpn": "Acceso remoto y VPN",
+      "remoteAccessVpn": "Remote Access & VPN",
       "webserversProxies": "Webservers & Proxies",
-      "zigbeeZwaveMatter": "ZigBee, Z-Wave y Matter"
+      "zigbeeZwaveMatter": "ZigBee, Z-Wave & Matter"
     }
   },
   "audit": {
