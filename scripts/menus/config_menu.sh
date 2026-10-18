@@ -93,10 +93,52 @@ remove_registry_logins() {
 }
 
 uninstall_proxmenux_monitor() {
+    local monitor_tui_wrapper_owned=false
 
-    # 1. Stop service if it is running
+    # Remove only the ProxMenux-owned tty1 drop-in/wrappers and restore the
+    # template getty behavior without restarting an occupied console. Keep the
+    # web service running if ownership checks prevent this reversible change.
+    local monitor_tui_lifecycle_available=false
+    if [[ -x "$BASE_DIR/scripts/monitor_tui/lifecycle.sh" ]]; then
+        monitor_tui_lifecycle_available=true
+        if ! "$BASE_DIR/scripts/monitor_tui/lifecycle.sh" uninstall; then
+            echo " - Could not remove ProxMenux TTY1 integration; preserving the Monitor installation." >&2
+            return 1
+        fi
+    elif [[ -e /usr/local/bin/proxmenux-monitor || -L /usr/local/bin/proxmenux-monitor ]]; then
+        if [[ -f /usr/local/bin/proxmenux-monitor && ! -L /usr/local/bin/proxmenux-monitor ]] &&
+           [[ "$(head -n 1 /usr/local/bin/proxmenux-monitor)" == '#!/bin/sh' &&
+              "$(sed -n '2p' /usr/local/bin/proxmenux-monitor)" == '# ProxMenux-owned' ]]; then
+            monitor_tui_wrapper_owned=true
+        fi
+    fi
+    if [[ "$monitor_tui_lifecycle_available" == false && ( "$monitor_tui_wrapper_owned" == true ||
+            -e /etc/systemd/system/getty@tty1.service.d/90-proxmenux-monitor-tui.conf ||
+            -L /etc/systemd/system/getty@tty1.service.d/90-proxmenux-monitor-tui.conf ||
+            -e /etc/tmpfiles.d/proxmenux-monitor-console.conf ||
+            -L /etc/tmpfiles.d/proxmenux-monitor-console.conf ||
+            -e /usr/local/bin/proxmenux-monitor-tui ||
+            -L /usr/local/bin/proxmenux-monitor-tui ||
+            -e /usr/local/bin/proxmenux-monitor ||
+            -L /usr/local/bin/proxmenux-monitor ||
+            -e /usr/local/bin/proxmenux-monitor-getty-pre ||
+            -L /usr/local/bin/proxmenux-monitor-getty-pre ||
+            -e "$BASE_DIR/monitor-tui.disabled" ||
+            -L "$BASE_DIR/monitor-tui.disabled" ||
+            -e "$BASE_DIR/monitor-tui.group-owned" ||
+            -L "$BASE_DIR/monitor-tui.group-owned" ||
+            -e /run/proxmenux-monitor/tty1-seen ||
+            -L /run/proxmenux-monitor/tty1-seen ||
+            -e /run/proxmenux-monitor/console.json ||
+            -L /run/proxmenux-monitor/console.json ) ]]; then
+        echo " - TTY1 integration artifacts remain but their lifecycle helper is missing; preserving the Monitor installation." >&2
+        return 1
+    fi
+
+    # Stop Monitor only after TTY1 teardown succeeds, so a refused/partial
+    # uninstall does not strand the web dashboard in a stopped state.
     if systemctl is-active --quiet "${MONITOR_SERVICE}"; then
-    echo " - Stoping service..."
+    echo " - Stopping service..."
     systemctl stop "${MONITOR_SERVICE}" > /dev/null 2>&1
     else
     echo " - Service is not running (ok)"
@@ -815,6 +857,13 @@ uninstall_proxmenu() {
             rm -rf "/opt/googletrans-env"
         fi
 
+        echo "45" ; echo "Removing ProxMenux Monitor..."
+        pmx_record_execution "Uninstall ProxMenux Monitor" "uninstall_proxmenux_monitor"
+        if ! uninstall_proxmenux_monitor; then
+            echo "100" ; echo "Monitor uninstall failed; stopping before removing ProxMenux files."
+            exit 1
+        fi
+
         echo "50" ; echo "Removing ProxMenu files..."
         pmx_remove_file "$INSTALL_DIR/$MENU_SCRIPT"
         pmx_record_execution "Remove ProxMenux application directory" "rm -rf $BASE_DIR"
@@ -835,10 +884,6 @@ uninstall_proxmenu() {
             apt-get autoremove -y --purge >/dev/null 2>&1
         fi
 
-        echo "80" ; echo "Removing ProxMenux Monitor..."
-        pmx_record_execution "Uninstall ProxMenux Monitor" "uninstall_proxmenux_monitor"
-        uninstall_proxmenux_monitor
-        
         echo "90" ; echo "Restoring system files..."
         # Restore .bashrc and motd
         if [ -f /root/.bashrc.bak ]; then
@@ -858,6 +903,13 @@ uninstall_proxmenu() {
     ) | dialog --clear --backtitle "$BACKTITLE" \
                --title "Uninstalling ProxMenux" \
                --gauge "Starting uninstallation..." 10 60 0
+    local -a uninstall_pipeline_status=("${PIPESTATUS[@]}")
+    if [[ "${uninstall_pipeline_status[0]:-0}" -ne 0 ]]; then
+        dialog --clear --backtitle "$BACKTITLE" \
+               --title "Uninstall Incomplete" \
+               --msgbox "Monitor TTY1 integration could not be removed. The ProxMenux files were preserved; resolve the reported issue and retry." 10 70
+        return 1
+    fi
     
     # Show completion message
     local final_message="ProxMenux has been uninstalled successfully.\n\n"

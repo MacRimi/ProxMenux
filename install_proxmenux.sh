@@ -573,6 +573,12 @@ install_proxmenux_monitor() {
         return 1
     fi
 
+    if [ -x "$TEMP_DIR/scripts/monitor_tui/lifecycle.sh" ]; then
+        if ! "$TEMP_DIR/scripts/monitor_tui/lifecycle.sh" install; then
+            msg_warn "Monitor console integration could not be installed; the web Monitor remains available."
+        fi
+    fi
+
     msg_ok "ProxMenux Monitor v$appimage_version installed."
 
     if [ "$service_exists" = false ]; then

@@ -1,0 +1,37 @@
+#!/bin/sh
+# ProxMenux-owned
+# ProxMenux-owned TTY1 opt-out control.
+set -eu
+STATE=${PROXMENUX_TUI_STATE:-/usr/local/share/proxmenux/monitor-tui.disabled}
+case "${1:-}" in
+  disable)
+    if [ -e "$STATE" ] && ! { [ -f "$STATE" ] && [ ! -L "$STATE" ] && [ "$(head -n 1 "$STATE")" = '# ProxMenux-owned TTY1 opt-out state.' ]; }; then
+      echo "Refusing to overwrite unowned opt-out state: $STATE" >&2
+      exit 1
+    fi
+    install -d -m 0755 "$(dirname "$STATE")"
+    printf '%s\n' '# ProxMenux-owned TTY1 opt-out state.' > "$STATE.new"
+    chmod 0644 "$STATE.new"
+    mv -f "$STATE.new" "$STATE"
+    echo "ProxMenux TTY1 monitor disabled for future getty starts."
+    ;;
+  enable)
+    if [ -e "$STATE" ]; then
+      if [ -f "$STATE" ] && [ ! -L "$STATE" ] && [ "$(head -n 1 "$STATE")" = '# ProxMenux-owned TTY1 opt-out state.' ]; then
+        rm -f "$STATE"
+      else
+        echo "Refusing to remove unowned opt-out state: $STATE" >&2
+        exit 1
+      fi
+    fi
+    echo "ProxMenux TTY1 monitor enabled for future getty starts."
+    ;;
+  status)
+    if [ -f "$STATE" ] && [ ! -L "$STATE" ] && [ "$(head -n 1 "$STATE")" = '# ProxMenux-owned TTY1 opt-out state.' ]; then
+      echo disabled
+    else
+      echo enabled
+    fi
+    ;;
+  *) echo "Usage: proxmenux-monitor-tui {enable|disable|status}" >&2; exit 2 ;;
+esac

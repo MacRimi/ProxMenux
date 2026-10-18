@@ -5,23 +5,34 @@
 
 set -e
 
-WORK_DIR="/tmp/proxmenux_build"
+WORK_DIR="${PROXMENUX_MONITOR_BUILD_DIR:-/tmp/proxmenux_build}"
+DEFAULT_WORK_DIR=/tmp/proxmenux_build
+if [[ -n "${QF_ADHOC_DIR:-}" ]]; then
+    QF_ADHOC_ROOT=$(realpath -e /srv/quantum-qa/adhoc)
+    QF_ADHOC_REAL=$(realpath -e "$QF_ADHOC_DIR")
+    if [[ "$QF_ADHOC_REAL" != "$QF_ADHOC_ROOT"/* ||
+          "$WORK_DIR" != "$QF_ADHOC_REAL/build" ]]; then
+        echo "❌ Refusing unsafe build directory outside the active qf-test adhoc run" >&2
+        exit 1
+    fi
+elif [[ "$WORK_DIR" != "$DEFAULT_WORK_DIR" ]]; then
+    echo "❌ Refusing unsafe build directory; use $DEFAULT_WORK_DIR or an active qf-test adhoc run" >&2
+    exit 1
+fi
 APP_DIR="$WORK_DIR/ProxMenux.AppDir"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DIST_DIR="$SCRIPT_DIR/../dist"
+DIST_DIR="${PROXMENUX_MONITOR_DIST_DIR:-$SCRIPT_DIR/../dist}"
 APPIMAGE_ROOT="$SCRIPT_DIR/.."
+if [[ -n "${QF_ADHOC_DIR:-}" ]]; then
+    EXPECTED_DIST_DIR="$QF_ADHOC_REAL/artifacts/dist"
+    DIST_DIR_REAL=$(realpath -m "$DIST_DIR")
+    if [[ "$DIST_DIR_REAL" != "$EXPECTED_DIST_DIR" ]]; then
+        echo "❌ Refusing unsafe AppImage output directory outside the active qf-test adhoc run" >&2
+        exit 1
+    fi
+fi
 
-# Native Python dependencies are selected explicitly for the two Python ABIs
-# used by supported Proxmox VE hosts.  GitHub Actions currently builds on
-# Ubuntu 22.04 (CPython 3.10), while PVE 8 and PVE 9 execute the AppImage with
-# the host's CPython 3.11 and 3.13 respectively.  Installing gevent with the
-# builder's interpreter therefore creates an AppImage that cannot import its
-# C extensions on either supported host (issue #331).
-GEVENT_VERSION="26.8.0"
-GREENLET_VERSION="3.5.5"
-ZOPE_INTERFACE_VERSION="8.6"
-ZOPE_EVENT_VERSION="6.2"
-GEVENT_WEBSOCKET_VERSION="0.10.1"
+# PVE 8 and PVE 9 execute the AppImage with host CPython 3.11 and 3.13.
 
 VERSION=$(node -p "require('$APPIMAGE_ROOT/package.json').version")
 APPIMAGE_NAME="ProxMenux-${VERSION}.AppImage"
@@ -33,15 +44,26 @@ echo "🚀 Building ProxMenux Monitor AppImage v${VERSION} with hardware monitor
 # under the non-root GitHub Actions runner — previously hardcoded to
 # /var/cache/, which the CI user can't write to (mkdir Permission
 # denied → build aborted before doing any actual work).
-APPIMAGETOOL_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/proxmenux-build/appimagetool"
+APPIMAGETOOL_VERSION=1.9.1
+APPIMAGETOOL_SHA256=ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
+TYPE2_RUNTIME_VERSION=20251108
+TYPE2_RUNTIME_SHA256=2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d
+APPIMAGETOOL_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/proxmenux-build/appimagetool-$APPIMAGETOOL_VERSION"
+TYPE2_RUNTIME_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/proxmenux-build/runtime-x86_64-$TYPE2_RUNTIME_VERSION"
 
 # Preserve a cached copy of appimagetool across builds. wget -q has bitten
 # us repeatedly when GitHub momentarily rate-limits or the runner has no
 # network — the result is a 0-byte file that passes the `[ -f ]` check on
 # the next run and breaks the build silently.
-if [ -f "$WORK_DIR/appimagetool" ] && [ -s "$WORK_DIR/appimagetool" ]; then
+if [ -f "$WORK_DIR/appimagetool" ] && [ -s "$WORK_DIR/appimagetool" ] && \
+   echo "$APPIMAGETOOL_SHA256  $WORK_DIR/appimagetool" | sha256sum -c --status; then
     mkdir -p "$(dirname "$APPIMAGETOOL_CACHE")"
     cp -f "$WORK_DIR/appimagetool" "$APPIMAGETOOL_CACHE"
+fi
+if [ -f "$WORK_DIR/runtime-x86_64" ] && [ -s "$WORK_DIR/runtime-x86_64" ] && \
+   echo "$TYPE2_RUNTIME_SHA256  $WORK_DIR/runtime-x86_64" | sha256sum -c --status; then
+    mkdir -p "$(dirname "$TYPE2_RUNTIME_CACHE")"
+    cp -f "$WORK_DIR/runtime-x86_64" "$TYPE2_RUNTIME_CACHE"
 fi
 
 # Clean and create work directory
@@ -49,17 +71,43 @@ rm -rf "$WORK_DIR"
 mkdir -p "$APP_DIR"
 mkdir -p "$DIST_DIR"
 
+# appimagetool 1.9.1 otherwise fetches a moving runtime at package time.
+# Pin and verify it; reuse a verified cache for offline rebuilds.
+if [ -s "$TYPE2_RUNTIME_CACHE" ] && \
+   echo "$TYPE2_RUNTIME_SHA256  $TYPE2_RUNTIME_CACHE" | sha256sum -c --status; then
+    cp "$TYPE2_RUNTIME_CACHE" "$WORK_DIR/runtime-x86_64"
+else
+    wget --tries=3 --timeout=60 \
+        "https://github.com/AppImage/type2-runtime/releases/download/$TYPE2_RUNTIME_VERSION/runtime-x86_64" \
+        -O "$WORK_DIR/runtime-x86_64"
+    if ! echo "$TYPE2_RUNTIME_SHA256  $WORK_DIR/runtime-x86_64" | sha256sum -c --status; then
+        echo "❌ AppImage runtime SHA256 verification failed" >&2
+        rm -f "$WORK_DIR/runtime-x86_64"
+        exit 1
+    fi
+    mkdir -p "$(dirname "$TYPE2_RUNTIME_CACHE")"
+    cp -f "$WORK_DIR/runtime-x86_64" "$TYPE2_RUNTIME_CACHE"
+fi
+
 # Restore appimagetool from cache if available, otherwise download.
-if [ -s "$APPIMAGETOOL_CACHE" ]; then
+if [ -s "$APPIMAGETOOL_CACHE" ] && \
+   echo "$APPIMAGETOOL_SHA256  $APPIMAGETOOL_CACHE" | sha256sum -c --status; then
     echo "📦 Reusing cached appimagetool"
     cp "$APPIMAGETOOL_CACHE" "$WORK_DIR/appimagetool"
     chmod +x "$WORK_DIR/appimagetool"
 fi
-if [ ! -s "$WORK_DIR/appimagetool" ]; then
+if [ ! -s "$WORK_DIR/appimagetool" ] || \
+   ! echo "$APPIMAGETOOL_SHA256  $WORK_DIR/appimagetool" | sha256sum -c --status; then
     echo "📥 Downloading appimagetool..."
-    wget --tries=3 --timeout=60 "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage" -O "$WORK_DIR/appimagetool" || true
+    rm -f "$WORK_DIR/appimagetool"
+    wget --tries=3 --timeout=60 "https://github.com/AppImage/appimagetool/releases/download/$APPIMAGETOOL_VERSION/appimagetool-x86_64.AppImage" -O "$WORK_DIR/appimagetool" || true
     if [ ! -s "$WORK_DIR/appimagetool" ]; then
         echo "❌ Failed to download appimagetool" >&2
+        exit 1
+    fi
+    if ! echo "$APPIMAGETOOL_SHA256  $WORK_DIR/appimagetool" | sha256sum -c --status; then
+        echo "❌ appimagetool SHA256 verification failed" >&2
+        rm -f "$WORK_DIR/appimagetool"
         exit 1
     fi
     chmod +x "$WORK_DIR/appimagetool"
@@ -75,6 +123,22 @@ mkdir -p "$APP_DIR/usr/share/applications"
 mkdir -p "$APP_DIR/usr/share/icons/hicolor/256x256/apps"
 mkdir -p "$APP_DIR/web"
 
+# Ship the Linux virtual-console terminfo entry used by Proxmox local consoles.
+# _curses is supplied by the host's already-required CPython runtime; no host
+# package is installed by ProxMenux. Build validation checks that runtime.
+if command -v infocmp >/dev/null 2>&1 && command -v tic >/dev/null 2>&1; then
+    mkdir -p "$APP_DIR/usr/share/terminfo"
+    infocmp -x linux | tic -x -o "$APP_DIR/usr/share/terminfo" -
+else
+    echo "❌ infocmp/tic are required to package the TERM=linux console entry" >&2
+    exit 1
+fi
+if ! TERMINFO="$APP_DIR/usr/share/terminfo" TERM=linux python3 -c \
+    'import _curses, curses; curses.setupterm(term="linux"); assert _curses' >/dev/null 2>&1; then
+    echo "❌ Python _curses cannot load the packaged TERM=linux entry" >&2
+    exit 1
+fi
+
 echo "🔨 Building Next.js application..."
 cd "$APPIMAGE_ROOT"
 if [ ! -f "package.json" ]; then
@@ -87,14 +151,13 @@ fi
 # tree existed on disk — so a bump in package.json silently shipped
 # with the cached version. We hit this when bumping Next.js
 # 15.1.6 -> 15.1.9 for CVE-2025-55182: the build succeeded with the
-# stale node_modules and the AppImage still carried 15.1.6. `npm install`
-# is idempotent: when package.json + lockfile + node_modules already
-# agree it returns in under a second. `--legacy-peer-deps` is required
+# stale node_modules and the AppImage still carried 15.1.6. `npm ci`
+# enforces the committed lockfile and fails on any mismatch. `--legacy-peer-deps` is required
 # because vaul@0.9.9 (and a few others) still declare peer-deps for
 # React ≤18 while we are on React 19; npm 7+ refuses by default.
 # The actual runtime works fine with React 19.
 echo "📦 Reconciling dependencies against the lockfile..."
-npm install --legacy-peer-deps
+npm ci --legacy-peer-deps
 
 echo "🏗️  Building Next.js static export..."
 npm run export
@@ -329,55 +392,27 @@ echo "🎨 Setting up icon..."
 if [ -f "$APPIMAGE_ROOT/public/images/proxmenux-logo.png" ]; then
     cp "$APPIMAGE_ROOT/public/images/proxmenux-logo.png" "$APP_DIR/proxmenux-monitor.png"
 else
-    wget -q "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logo.png" -O "$APP_DIR/proxmenux-monitor.png" || {
-        echo "⚠️  Could not download logo, creating placeholder..."
-        convert -size 256x256 xc:blue -fill white -gravity center -pointsize 24 -annotate +0+0 "PM" "$APP_DIR/proxmenux-monitor.png" 2>/dev/null || {
-            echo "⚠️  ImageMagick not available, skipping icon creation"
-        }
-    }
+    echo "⚠️  Local Monitor logo not found; building without an icon."
 fi
 
 if [ -f "$APP_DIR/proxmenux-monitor.png" ]; then
     cp "$APP_DIR/proxmenux-monitor.png" "$APP_DIR/usr/share/icons/hicolor/256x256/apps/"
 fi
 
+# Install the local, read-only curses renderer alongside the Monitor backend.
+cp "$SCRIPT_DIR/monitor_console.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/proxmenux_monitor_tui.py" "$APP_DIR/usr/bin/"
+chmod 0755 "$APP_DIR/usr/bin/proxmenux_monitor_tui.py"
+
 echo "📦 Installing Python dependencies..."
-# Flask/WebSocket dependencies for the Monitor dashboard. The previous
-# Phase-1 (googletrans==4.0.0-rc1 + httpx 0.13.3 + httpcore 0.9.1 +
-# h11 0.9.0) is gone — translation is now a static-lookup feature on
-# the host, so the AppImage no longer needs any runtime translator.
-# Removing those pins also unblocks the h11>=0.14.0 family without the
-# conflict workaround we used to ship.
-# Note: cryptography removed due to Python version compatibility issues (PyO3 modules)
-pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade --no-deps \
-    flask \
-    flask-cors \
-    psutil \
-    requests \
-    PyJWT \
-    pyotp \
-    segno \
-    beautifulsoup4
-
-# WebSocket with modern h11 (no need for the legacy pin anymore)
-pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade \
-    h11>=0.14.0 \
-    wsproto>=1.2.0 \
-    simple-websocket>=0.10.0 \
-    flask-sock>=0.6.0
-
-# Phase 3b: Install the complete gevent/WSS runtime separately for every
-# supported host ABI.  Keeping each dependency tree isolated avoids mixing
-# CPython-specific modules from the build runner with those loaded by PVE.
-# The two --platform values allow gevent's manylinux_2_28 wheels and the
-# backwards-compatible manylinux2014 zope.interface wheels to be resolved in
-# one deterministic installation.
-install_gevent_runtime() {
+# Install the complete hash-locked runtime separately for each supported ABI.
+# This keeps native extensions from the build runner out of PVE's Python trees.
+install_monitor_runtime() {
     local python_version="$1"
     local abi="$2"
     local target="$APP_DIR/usr/lib/python3/vendor/$abi"
 
-    echo "📦 Installing gevent runtime for ${abi} (Python ${python_version})..."
+    echo "📦 Installing hash-locked Python runtime for ${abi} (Python ${python_version})..."
     mkdir -p "$target"
     python3 -m pip install \
         --disable-pip-version-check \
@@ -390,15 +425,12 @@ install_gevent_runtime() {
         --python-version "$python_version" \
         --abi "$abi" \
         --no-deps \
-        "gevent==${GEVENT_VERSION}" \
-        "greenlet==${GREENLET_VERSION}" \
-        "zope.interface==${ZOPE_INTERFACE_VERSION}" \
-        "zope.event==${ZOPE_EVENT_VERSION}" \
-        "gevent-websocket==${GEVENT_WEBSOCKET_VERSION}"
+        --require-hashes \
+        -r "$SCRIPT_DIR/requirements-monitor.lock"
 }
 
-install_gevent_runtime "3.11" "cp311"
-install_gevent_runtime "3.13" "cp313"
+install_monitor_runtime "3.11" "cp311"
+install_monitor_runtime "3.13" "cp313"
 
 echo "🔍 Verifying bundled Python ABI extensions..."
 for abi in cp311 cp313; do
@@ -417,16 +449,12 @@ for abi in cp311 cp313; do
         echo "❌ Missing gevent-websocket runtime for ${abi}" >&2
         exit 1
     fi
+    if ! compgen -G "$abi_dir/psutil/_psutil_linux.abi3.so" >/dev/null; then
+        echo "❌ Missing ABI-compatible psutil extension for ${abi}" >&2
+        exit 1
+    fi
     echo "  ✅ ${abi} runtime complete"
 done
-
-# Phase 3c: Apprise notification hub (issue #207). One library handles
-# ~80 notification services behind a single URL scheme (`tgram://`,
-# `discord://`, `ntfy://`, `matrix://`, etc.). Used by the optional
-# `apprise` channel in notification_channels.py for operators who want
-# to reach a service we don't support natively.
-pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade \
-    apprise>=1.7.0
 
 cat > "$APP_DIR/usr/lib/python3/dist-packages/cgi.py" << 'PYEOF'
 from typing import Tuple, Dict
@@ -595,7 +623,8 @@ echo "🔨 Building unified AppImage v${VERSION}..."
 cd "$WORK_DIR"
 export NO_CLEANUP=1
 export APPIMAGE_EXTRACT_AND_RUN=1
-ARCH=x86_64 ./appimagetool --no-appstream --verbose "$APP_DIR" "$APPIMAGE_NAME"
+ARCH=x86_64 ./appimagetool --no-appstream --verbose \
+    --runtime-file "$WORK_DIR/runtime-x86_64" "$APP_DIR" "$APPIMAGE_NAME"
 
 # Move to dist directory
 mv "$APPIMAGE_NAME" "$DIST_DIR/"

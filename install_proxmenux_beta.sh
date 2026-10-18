@@ -458,6 +458,12 @@ install_proxmenux_monitor() {
         return 1
     fi
 
+    if [ -x "$TEMP_DIR/scripts/monitor_tui/lifecycle.sh" ]; then
+        if ! "$TEMP_DIR/scripts/monitor_tui/lifecycle.sh" install; then
+            msg_warn "Monitor console integration could not be installed; the web Monitor remains available."
+        fi
+    fi
+
     # Copy shutdown-notify.sh script for systemd ExecStop
     local shutdown_script_src="$TEMP_DIR/scripts/shutdown-notify.sh"
     local shutdown_script_dst="$MONITOR_INSTALL_DIR/scripts/shutdown-notify.sh"

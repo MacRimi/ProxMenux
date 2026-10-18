@@ -31,6 +31,27 @@ A modern, responsive dashboard for monitoring Proxmox VE systems built with Next
 
 The application runs as a standalone AppImage on your Proxmox server and serves a web interface accessible from any device on your network.
 
+### Native console view
+
+The ProxMenux installer also adds a keyboard-only Monitor view to Linux virtual
+console TTY1. It starts on the next normal TTY1 start or reboot; installation
+never switches VTs or restarts an occupied getty. Press `q` or `Ctrl-C` to
+restore the login prompt. Other virtual terminals, serial consoles, SSH, and
+the web dashboard remain available.
+
+Run `sudo proxmenux-monitor --tui` to open the view manually. To opt out of starting
+it on TTY1, run `sudo proxmenux-monitor-tui disable`; restore the default with
+`sudo proxmenux-monitor-tui enable` and inspect it with
+`proxmenux-monitor-tui status`.
+The setting survives updates. The console reads local kernel metrics
+directly and, when the Monitor backend is available, reads only the minimal
+read-only cluster snapshot in `/run/proxmenux-monitor/console.json`. It does
+not expose the authenticated web API or execute administrative actions.
+Cluster totals require fresh samples from every member node and quorum.
+Per-node storage is shown only when Proxmox reports it; remote ZRAM and host
+network counters remain `N/D` because the cluster resource API does not provide
+those metrics. The local host's ZRAM and host network rates remain visible.
+
 **Full documentation:** [proxmenux.com/docs/monitor](https://proxmenux.com/docs/monitor) — per-feature walkthroughs, API reference and integration guides.
 
 
