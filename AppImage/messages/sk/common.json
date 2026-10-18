@@ -1729,7 +1729,7 @@
       "catalogPort": "port {port}",
       "trackingAvailable": "možno sledovať verziu",
       "logoUrlLabel": "URL loga",
-      "discoverLocalLogo": "Zistiť ikonu z lokálnej aplikácie",
+      "discoverLocalLogo": "Zistiť ikonu",
       "localLogoPort": "Port aplikácie na hľadanie ikony",
       "localLogoHelp": "Číta iba vybraný port v tomto spustenom kontajneri. Externé ikony nesťahuje. Ikona sa použije až po uložení.",
       "localLogoStopped": "Kontajner je vypnutý. Pred hľadaním ikony ho spusti.",

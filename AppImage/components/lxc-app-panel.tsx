@@ -1696,6 +1696,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
                 {t("vmLxc.appEditor.logoUrlLabel")} <span className="normal-case tracking-normal text-[10px] opacity-70">{t("vmLxc.appEditor.optionalSuffix")}</span>
               </Label>
               <Button type="button" variant="outline" size="sm"
+                className="h-8 px-2 text-xs"
                 disabled={!selectedIconPort || discoveringLocalLogo || saving}
                 onClick={discoverLocalLogo}>
                 {discoveringLocalLogo ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Search className="h-3.5 w-3.5 mr-1" />}

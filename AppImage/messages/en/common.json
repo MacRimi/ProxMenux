@@ -1790,7 +1790,7 @@
       "catalogPort": "port {port}",
       "trackingAvailable": "tracking available",
       "logoUrlLabel": "Logo URL",
-      "discoverLocalLogo": "Find icon from local application",
+      "discoverLocalLogo": "Find icon",
       "localLogoPort": "Application port for icon lookup",
       "localLogoHelp": "Reads only the selected port in this running container. External icons are not fetched. The icon is applied when you save.",
       "localLogoStopped": "The container is stopped. Start it before looking for its icon.",
