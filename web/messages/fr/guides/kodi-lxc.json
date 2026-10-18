@@ -32,7 +32,7 @@
     "body": "Les périphériques d’entrée se trouvent dans <code>/dev/input/</code> sur l’hôte. Repérez leur numéro majeur :",
     "listCode": "ls -l /dev/input",
     "imageAlt": "Liste des périphériques d'entrée",
-    "afterList": "Pour les périphériques de caractères, prenez le numéro majeur avant la virgule, ici <code>13</code>. Arrêtez le conteneur Kodi et modifiez sa configuration, en remplaçant <code>'<'CTID'>'</code> par son identifiant, par exemple <code>102</code> :",
+    "afterList": "Pour les périphériques de caractères, prenez le numéro majeur avant la virgule, ici <code>13</code>. Sur l’hôte, modifiez la configuration du conteneur Kodi, en remplaçant <code>'<'CTID'>'</code> par son identifiant, par exemple <code>102</code> :",
     "editCode": "nano /etc/pve/lxc/CTID.conf",
     "addLines": "Ajoutez les lignes suivantes en adaptant <code>13</code> au numéro relevé sur <strong>votre</strong> hôte :",
     "configCode": "lxc.cgroup2.devices.allow: c 13:* rwm\nlxc.mount.entry: /dev/input dev/input none bind,optional,create=dir",

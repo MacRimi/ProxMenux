@@ -32,7 +32,7 @@
     "body": "Input devices live under <code>/dev/input/</code> on the host. Identify the major number:",
     "listCode": "ls -l /dev/input",
     "imageAlt": "Input devices list",
-    "afterList": "For character devices, use the major number before the comma (in the example: <code>13</code>). Stop the Kodi LXC and edit its configuration, replacing <code>'<'CTID'>'</code> with its ID, for example <code>102</code>:",
+    "afterList": "For character devices, use the major number before the comma (in the example: <code>13</code>). On the host, edit the Kodi LXC's configuration, replacing <code>'<'CTID'>'</code> with its ID, for example <code>102</code>:",
     "editCode": "nano /etc/pve/lxc/CTID.conf",
     "addLines": "Add (adjust <code>13</code> to what you saw on <strong>your</strong> host):",
     "configCode": "lxc.cgroup2.devices.allow: c 13:* rwm\nlxc.mount.entry: /dev/input dev/input none bind,optional,create=dir",

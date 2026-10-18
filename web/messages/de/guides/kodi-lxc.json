@@ -32,7 +32,7 @@
     "body": "Eingabegeräte finden Sie auf dem Host unter <code>/dev/input/</code>. Ermitteln Sie deren Major-Nummer:",
     "listCode": "ls -l /dev/input",
     "imageAlt": "Liste der Eingabegeräte",
-    "afterList": "Verwenden Sie bei Zeichengeräten die Major-Nummer vor dem Komma, im Beispiel <code>13</code>. Stoppen Sie den Kodi-LXC-Container und bearbeiten Sie seine Konfiguration. Ersetzen Sie <code>'<'CTID'>'</code> durch seine ID, etwa <code>102</code>:",
+    "afterList": "Verwenden Sie bei Zeichengeräten die Major-Nummer vor dem Komma, im Beispiel <code>13</code>. Bearbeiten Sie auf dem Host die Konfiguration des Kodi-LXC-Containers. Ersetzen Sie <code>'<'CTID'>'</code> durch seine ID, etwa <code>102</code>:",
     "editCode": "nano /etc/pve/lxc/CTID.conf",
     "addLines": "Fügen Sie Folgendes hinzu und passen Sie <code>13</code> an die Nummer auf <strong>Ihrem</strong> Host an:",
     "configCode": "lxc.cgroup2.devices.allow: c 13:* rwm\nlxc.mount.entry: /dev/input dev/input none bind,optional,create=dir",

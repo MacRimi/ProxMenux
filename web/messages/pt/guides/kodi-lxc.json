@@ -32,7 +32,7 @@
     "body": "Os dispositivos de entrada encontram-se em <code>/dev/input/</code> no anfitrião. Identifique o número major:",
     "listCode": "ls -l /dev/input",
     "imageAlt": "Lista de dispositivos de entrada",
-    "afterList": "Nos dispositivos de caracteres, utilize o número major antes da vírgula, neste exemplo <code>13</code>. Pare o contentor Kodi e edite a configuração, substituindo <code>'<'CTID'>'</code> pelo respetivo ID, por exemplo <code>102</code>:",
+    "afterList": "Nos dispositivos de caracteres, utilize o número major antes da vírgula, neste exemplo <code>13</code>. No host, edite a configuração do contentor Kodi, substituindo <code>'<'CTID'>'</code> pelo respetivo ID, por exemplo <code>102</code>:",
     "editCode": "nano /etc/pve/lxc/CTID.conf",
     "addLines": "Adicione as linhas seguintes, ajustando <code>13</code> ao número encontrado no <strong>seu</strong> anfitrião:",
     "configCode": "lxc.cgroup2.devices.allow: c 13:* rwm\nlxc.mount.entry: /dev/input dev/input none bind,optional,create=dir",
