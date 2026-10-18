@@ -179,7 +179,7 @@
               ["OCI rootfs", "Yes", "The CT backup; it can also be rebuilt from the image and the contract"],
               ["Container disk with <code>backup=1</code>", "Yes", "The CT backup"],
               ["Host directory", "No", "The backup of the host storage"],
-              ["Instance contract", "No", "<code>/usr/local/share/proxmenux/oci/instances/VMID/</code> on the host"],
+              ["Instance contract", "Yes, the copy carried inside the CT", "<code>/.proxmenux/oci-record.json</code> inside the CT; additional host and cluster copies are kept separately"],
               ["Multi-container application", "Each member in its own backup", "The backups of every member, plus the stack contract and its bridge on the host"]
             ]
           }
