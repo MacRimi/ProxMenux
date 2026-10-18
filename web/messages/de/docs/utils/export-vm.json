@@ -1,0 +1,145 @@
+{
+  "meta": {
+    "title": "VM nach OVA / OVF exportieren | ProxMenux-Dokumentation",
+    "description": "Exportieren Sie eine Proxmox-VM mit dem DMTF-Standardschema in ein portables OVA-Archiv oder OVF-Verzeichnis. VMDK-Festplatten im Format streamOptimized und SHA1-Manifest. Importierbar in VMware ESXi / Workstation / Fusion, VirtualBox und wieder in Proxmox.",
+    "ogTitle": "VM nach OVA / OVF exportieren | ProxMenux-Dokumentation",
+    "ogDescription": "Wandeln Sie eine Proxmox-VM in ein portables OVA- / OVF-Paket um, das mit VMware und VirtualBox kompatibel ist."
+  },
+  "header": {
+    "title": "VM nach OVA / OVF exportieren",
+    "description": "Wandelt eine Proxmox-VM mit dem DMTF-OVF-Standardschema in ein portables OVA-Paket (ein TAR-Archiv) oder OVF-Paket (Deskriptor und VMDK-Dateien) um. Die Festplatten werden mit qemu-img in VMDK im Format streamOptimized konvertiert. Das Ergebnis lässt sich in VMware (ESXi / Workstation / Fusion), VirtualBox und mit dem Importwerkzeug wieder in Proxmox importieren.",
+    "section": "Dienstprogramme"
+  },
+  "intro": {
+    "title": "Was das macht",
+    "body": "Liest die Konfiguration einer gestoppten VM, konvertiert jede Festplatte in VMDK im Format streamOptimized, erzeugt einen OVF-Deskriptor und ein SHA1-Manifest und verpackt alles als einzelne <code>.ova</code>-Datei oder als <code>-ovf</code>-Verzeichnis. Die Quell-VM wird dabei nicht verändert."
+  },
+  "picker": {
+    "heading": "VM-Auswahl",
+    "body": "Beim Start zeigt das Skript alle VMs aus <code>qm list</code> mit VMID, Name und Status an. Wählen Sie die zu exportierende VM aus:",
+    "imgAlt": "Dialog zur Auswahl der zu exportierenden VM mit einer Liste aller VMs"
+  },
+  "stopped": {
+    "heading": "Die VM muss gestoppt sein",
+    "intro": "Für ein konsistentes Festplattenabbild muss die VM gestoppt sein. Falls die ausgewählte VM läuft, bietet ProxMenux an, sie herunterzufahren:",
+    "items": [
+      "Geordnetes Herunterfahren mit <code>qm shutdown $VMID --timeout 120</code> (wartet 2 Minuten auf das Herunterfahren des Gasts über ACPI).",
+      "Nach Ablauf der Wartezeit wird ein erzwungener Stopp angeboten: <code>qm stop $VMID</code> (entspricht dem Abschalten der Stromversorgung).",
+      "Wenn Sie beide ablehnen, wird der Export abgebrochen - es werden keine Daten berührt."
+    ],
+    "warnTitle": "Ein erzwungener Stopp entspricht dem Abschalten der Stromversorgung",
+    "warnBody": "<code>qm stop</code> entspricht dem Ziehen des Netzsteckers. Beim nächsten Start kann eine Reparatur des Gastdateisystems nötig sein. Nutzen Sie nach Möglichkeit das geordnete Herunterfahren und erzwingen Sie den Stopp nur bei Gästen, die nicht reagieren."
+  },
+  "format": {
+    "heading": "Formatauswahl: OVA vs. OVF",
+    "headerFormat": "Format",
+    "headerOutput": "Ausgabe",
+    "headerPros": "Vorteile",
+    "headerCons": "Nachteile",
+    "rows": [
+      {
+        "format": "OVA",
+        "output": "name-vmid-ts.ova",
+        "pros": "Eine einzelne, in sich geschlossene Datei, die sich einfach verschieben, per sftp übertragen oder an ein Ticket anhängen lässt.",
+        "cons": "Benötigt ~220% der virtuellen Festplattengröße (zusätzlicher Platz für das TAR-Archiv während der Erstellung)."
+      },
+      {
+        "format": "OVF",
+        "output": "name-vmid-ts-ovf/",
+        "pros": "~120% der virtuellen Festplattengröße. Leichter zu prüfen, da der Deskriptor reines XML ist. Kann vor dem Import bearbeitet werden.",
+        "cons": "Mehrere Dateien, die gemeinsam übertragen werden müssen."
+      }
+    ]
+  },
+  "destination": {
+    "heading": "Zielverzeichnis",
+    "body": "Wählen Sie ein voreingestelltes Verzeichnis (<code>/var/lib/vz/dump</code>, <code>/var/lib/vz/template/iso</code>) oder geben Sie einen eigenen Pfad ein. Das Skript prüft vor dem Start, ob das Verzeichnis beschreibbar ist, und warnt bei knappem Speicherplatz.",
+    "calloutTitle": "Faustregel für freien Speicherplatz",
+    "calloutBody": "Planen Sie für den OVF-Export einer VM mit insgesamt 100 GB virtueller Festplattengröße ~120 GB freien Platz ein, für OVA ~220 GB. Bei weitgehend leeren Festplatten kann der tatsächliche Bedarf geringer sein. Das OVA-Archiv wird als unkomprimiertes TAR erstellt, während die temporären VMDK-Dateien noch vorhanden sind. Planen Sie daher Platz für beides ein. Geht der Platz während des Exports aus, räumt der EXIT-Handler das temporäre Verzeichnis auf und Sie müssen neu beginnen."
+  },
+  "package": {
+    "heading": "Was im Paket landet",
+    "intro": "Für eine OVA / OVF namens <code>myvm-100-2026-04-26_18-30-15</code>:",
+    "code": "# OVA mode (single .ova file is a TAR of):\nmyvm-100-2026-04-26_18-30-15.ovf      # XML descriptor (DMTF OVF 1.0 + RASD + VSSD)\nmyvm-100-2026-04-26_18-30-15.mf       # SHA1 manifest\nmyvm-100-2026-04-26_18-30-15-disk0.vmdk\nmyvm-100-2026-04-26_18-30-15-disk1.vmdk\n...\n\n# OVF mode (a directory):\nmyvm-100-2026-04-26_18-30-15-ovf/\n├── myvm-100-2026-04-26_18-30-15.ovf\n├── myvm-100-2026-04-26_18-30-15.mf\n├── myvm-100-2026-04-26_18-30-15-disk0.vmdk\n└── myvm-100-2026-04-26_18-30-15-disk1.vmdk"
+  },
+  "exported": {
+    "heading": "Was exportiert wird",
+    "items": [
+      "<strong>Festplatten:</strong> Alle Einträge <code>scsi*</code>, <code>sata*</code>, <code>virtio*</code> und <code>ide*</code> in der VM-Konfiguration werden in VMDK im Format streamOptimized konvertiert.",
+      "<strong>vCPU-Anzahl</strong> (RASD ResourceType 3) und <strong>Arbeitsspeicher</strong> in MiB (ResourceType 4).",
+      "<strong>Anzahl der Netzwerkkarten</strong> (ResourceType 10, nur die Anzahl, nicht Bridge oder Modell).",
+      "<strong>VM-Name</strong> und ein Hinweis auf den Betriebssystemtyp."
+    ],
+    "notTitle": "Was nicht exportiert wird",
+    "notItems": [
+      "CD-ROM- und ISO-Mounts (bewusst ausgeschlossen).",
+      "Cloud-init-Laufwerke (bewusst ausgeschlossen).",
+      "Die konkrete Bridge und das Modell der Netzwerkkarte (nur die Anzahl bleibt erhalten).",
+      "BIOS- / UEFI-Auswahl, die beim Import neu festgelegt werden muss.",
+      "Konfiguration der PCI-Durchreichung.",
+      "Snapshots - nur der aktuelle Zustand wird erfasst.",
+      "Optionen auf VM-Ebene (NUMA, hugepages, hotplug, …)."
+    ]
+  },
+  "conversion": {
+    "heading": "Plattenumwandlung",
+    "intro": "Jede Festplatte wird konvertiert mit:",
+    "code": "qemu-img convert -p -O vmdk -o subformat=streamOptimized \\\n    \"$source_path\" \\\n    \"$work_dir/<base_name>-disk<N>.vmdk\"",
+    "outro": "<code>streamOptimized</code> ist ein in einem Durchlauf lesbares VMware-Format, das von ESXi 6.7+, VMware Workstation, VirtualBox und Proxmox selbst unterstützt wird. Es ist das am breitesten unterstützte VMDK-Unterformat und eignet sich für portable VMs. Der Nachteil: Es bietet keinen wahlfreien Zugriff und kann deshalb ohne Umwandlung nicht direkt eingebunden werden."
+  },
+  "manifest": {
+    "heading": "SHA1-Manifest",
+    "intro": "Jedes Paket enthält eine <code>.mf</code>-Datei mit SHA1-Hashes des OVF-Deskriptors und jedes VMDK:",
+    "code": "SHA1(myvm-100-2026-04-26_18-30-15.ovf)= 3a7bd3e2360a3d29eea436fcfb7e44c735d117c9\nSHA1(myvm-100-2026-04-26_18-30-15-disk0.vmdk)= b7e23ec29af22b0b4e41da31e868d57226121c84\nSHA1(myvm-100-2026-04-26_18-30-15-disk1.vmdk)= a87ff679a2f3e71d9181a67b7542122c",
+    "outro": "In der OVF-Spezifikation ist das Manifest optional; viele Importprogramme ignorieren es. Es hilft jedoch zu prüfen, ob das Paket unbeschädigt übertragen wurde. Prüfen Sie es manuell mit <code>sha1sum -c file.mf</code>."
+  },
+  "import": {
+    "heading": "Importieren des Ergebnisses",
+    "intro": "Das exportierte Paket kann in folgende Systeme importiert werden:",
+    "items": [
+      {
+        "href": "/docs/utils/import-vm",
+        "preRich": "<strong>Proxmox</strong> — verwenden Sie das zugehörige Werkzeug ",
+        "linkLabel": "VM von OVA / OVF importieren",
+        "tailRich": "."
+      },
+      {
+        "tailRich": "<strong>VMware ESXi</strong> — Datacenter → Deploy OVF Template; wählen Sie die .ova- oder .ovf-Datei aus."
+      },
+      {
+        "tailRich": "<strong>VMware Workstation / Fusion</strong> — Datei → Öffnen, wählen Sie .ova oder .ovf."
+      },
+      {
+        "tailRich": "<strong>VirtualBox</strong> — Datei → Appliance importieren, .ova oder .ovf auswählen."
+      }
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "noSpaceTitle": "qemu-img convert bricht während der Umwandlung mit \"No space left on device\" ab",
+    "noSpaceBody": "Am Ziel ist kein Speicherplatz mehr frei. Der EXIT-Handler räumt das temporäre Verzeichnis automatisch auf. Wählen Sie ein Ziel mit mehr freiem Platz (siehe Faustregel oben) und führen Sie den Export erneut aus.",
+    "unsupportedHwTitle": "Der Export ist abgeschlossen, aber VMware verweigert den Import mit \"Unsupported hardware family\"",
+    "unsupportedHwBody": "Einige ESXi-Versionen lehnen OVF-Deskriptoren ab, deren Hardwarefamilie sie nicht erkennen. Öffnen Sie die .ovf-Datei in einem Texteditor oder entpacken Sie zuerst die .ova-Datei. Suchen Sie <code>&lt;vssd:VirtualSystemType&gt;</code> und ändern Sie den Wert auf einen von ESXi akzeptierten Wert, etwa <code>vmx-13</code> für ESXi 6.5+. Als schnelle Umgehung können Sie VirtualBox ausprobieren, das weniger streng prüft.",
+    "nicTitle": "Die importierte VM verwendet eine andere Netzwerkkarte oder einen anderen SCSI-Controller",
+    "nicBody": "Die OVF-Datei übernimmt die Anzahl der Netzwerkkarten, nicht deren ursprüngliches Modell. Prüfen Sie die Netzwerkeinstellungen der importierten VM im Zielhypervisor. Für die VMware-Kompatibilität deklariert der Export einen lsilogic-SCSI-Controller. Beim Rückimport in Proxmox mit ProxMenux wird die VM mit einem LSI-Controller und e1000-Netzwerkkarten erstellt; wechseln Sie danach zu <code>VirtIO SCSI</code> und VirtIO, wenn der Gast passende Treiber besitzt.",
+    "runningTitle": "Die VM lief und ich habe das Herunterfahren abgelehnt: Export abgebrochen",
+    "runningBody": "Das Skript kann kein konsistentes Abbild erstellen, während auf die Festplatten geschrieben wird. Bestätigen Sie beim nächsten Mal das Herunterfahren oder fahren Sie die VM zuvor manuell herunter (<code>qm shutdown $VMID</code>) und starten Sie den Export erneut.",
+    "slowTitle": "Die Festplattenumwandlung ist langsam",
+    "slowBody": "<code>qemu-img convert</code> arbeitet mit einem Thread und liest die Quelle mit voller Geschwindigkeit. Rechnen Sie bei einer 100-GB-Festplatte auf einer mechanischen Festplatte mit 15–30 Minuten. Von NVMe zu NVMe geht es 5–10-mal schneller. Die Festplatten einer VM werden nacheinander umgewandelt; die Dauer wächst linear mit der gesamten virtuellen Größe."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/utils/import-vm",
+        "label": "VM aus OVA / OVF importieren",
+        "tail": " — das passende Werkzeug für den Rückimport."
+      },
+      {
+        "href": "/docs/utils",
+        "label": "Übersicht der Dienstprogramme",
+        "tail": " — zurück zur Abschnittsübersicht."
+      }
+    ]
+  }
+}
