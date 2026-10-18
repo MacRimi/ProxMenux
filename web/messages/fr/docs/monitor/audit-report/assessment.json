@@ -1,0 +1,218 @@
+{
+  "meta": {
+    "title": "Évaluation et inventaire | Audit et rapports",
+    "description": "Évaluation d'Audit et rapports : profils des rapports, classement des résultats, risques acceptés, sources illisibles, Lynis et inventaire du nœud."
+  },
+  "header": {
+    "title": "Évaluation et inventaire",
+    "description": "L'évaluation inspecte le noeud, conserve ses constatations et répond à différentes questions selon le profil du rapport.",
+    "section": "Audit et rapports"
+  },
+  "sections": [
+    {
+      "id": "read-only",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Une évaluation inspecte; elle ne modifie pas la configuration",
+            "body": "Il lit la configuration et l'état de l'hôte. Il écrit ses résultats, rapports et journaux, et les vérifications de démarrage peuvent monter des partitions système EFI pour un moment. La configuration qu'elle évalue n'est pas modifiée."
+          }
+        },
+        {
+          "p": "<strong>Lancer l'évaluation</strong> démarre une exécution avec le profil choisi dans <strong>Rapport</strong>. La vue indique la date de la dernière exécution et le temps écoulé."
+        }
+      ]
+    },
+    {
+      "id": "profiles",
+      "title": "Profils des rapports",
+      "intro": "Chaque profil répond à une question différente. Les vérifications et les sections sont sélectionnées avant la composition du document.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Profil",
+              "Ce qu'il couvre"
+            ],
+            "rows": [
+              [
+                "Audit complet",
+                "Toutes les vérifications et toute la structure disponible."
+              ],
+              [
+                "Diagnostic rapide",
+                "Chaque vérification; le résultat s'ouvre sur les constatations critiques, les avertissements et les lectures qui n'ont pas pu être vérifiées."
+              ],
+              [
+                "Inventaire",
+                "Une description du noeud, sans vérification et sans classification."
+              ],
+              [
+                "Examen de la sécurité",
+                "Exposition, accès, privilèges, certificats, mises à jour, dépôts et Lynis."
+              ],
+              [
+                "Assurance de sauvegarde",
+                "Couverture, âge, résultats, vérification, conservation et récupération des sauvegardes."
+              ],
+              [
+                "Capacité et usure",
+                "Marge de croissance, mémoire, utilisation de l'espace et la durée de vie des disques."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Le contenu de chaque document est décrit dans <reportsLink>Rapports et comparaisons</reportsLink>."
+        }
+      ]
+    },
+    {
+      "id": "results",
+      "title": "La classification des résultats",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Classement",
+              "Signification"
+            ],
+            "rows": [
+              [
+                "Critique",
+                "Une condition ratée qui a priorité."
+              ],
+              [
+                "Avertissement",
+                "Une condition qui nécessite un examen, compte tenu de la preuve ou de la politique."
+              ],
+              [
+                "Observation",
+                "Informations sur le noeud qui n'est pas déclaré comme un échec."
+              ],
+              [
+                "Non vérifié",
+                "La source nécessaire à la vérification n'a pas pu être lue. Cela ne signifie pas que le problème est absent."
+              ],
+              [
+                "Conforme",
+                "La condition répond au critère appliqué."
+              ],
+              [
+                "Non applicable",
+                "Rien dans le cadre de la vérification ne s'applique."
+              ],
+              [
+                "Risque accepté",
+                "La conclusion existe et une décision à ce sujet a été enregistrée."
+              ],
+              [
+                "Exclu par la politique",
+                "La politique déclare que l'élément est exclu du compte."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Les résultats peuvent être filtrés par zone : Système, Stockage, Réseau, Sécurité, Sauvegarde, Invités et Matériel. Chaque constatation conserve ses preuves, avec la source à laquelle elle a été lue."
+        }
+      ]
+    },
+    {
+      "id": "unverified",
+      "title": "Quand une source ne peut pas être lue",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Cas",
+              "Comportement"
+            ],
+            "rows": [
+              [
+                "Non vérifié",
+                "La vérification conserve son identité, précise dans les preuves quelle source a échoué et ne transforme pas les données manquantes en résultat conforme."
+              ],
+              [
+                "Preuves incomplètes",
+                "Le rapport précise la source et l'heure de collecte pour distinguer un problème réel d'une lecture insuffisante."
+              ],
+              [
+                "Une nouvelle exécution",
+                "Une fois que l'accès, le paquet ou le service est corrigé, le même profil fonctionne à nouveau et la comparaison montre si le résultat peut être vérifié."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "lynis",
+      "title": "Lynis",
+      "blocks": [
+        {
+          "p": "La revue de sécurité utilise le rapport Lynis de l'hôte. Si Lynis n'a jamais été exécuté ou si le rapport dépasse l'ancienneté autorisée par la politique, un dialogue propose <strong>Exécuter avec Lynis</strong>, qui prend quelques minutes de plus, ou <strong>Exécuter sans Lynis</strong>, qui utilise le rapport existant."
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/lynis-dialog.png",
+            "alt": "Boîte de dialogue qui offre d'exécuter l'évaluation avec ou sans Lynis",
+            "caption": "Le dialogue Lynis avant un examen de sécurité."
+          }
+        }
+      ]
+    },
+    {
+      "id": "accept",
+      "title": "Accepter un risque",
+      "blocks": [
+        {
+          "p": "<strong>Accepter le risque</strong> consigne une décision sur un constat. Le motif est obligatoire et enregistré avec l'auteur et la date."
+        },
+        {
+          "table": {
+            "headers": [
+              "Champ",
+              "Possibilités"
+            ],
+            "rows": [
+              [
+                "Motifs",
+                "Texte libre requis."
+              ],
+              [
+                "Cesse de s'appliquer après",
+                "90 jours, 180 jours, 1 année ou n'expire pas. Lorsque la période prend fin, la constatation devient active à nouveau."
+              ],
+              [
+                "Me rappeler de la revoir",
+                "Un rappel qui rappelle la décision pendant qu'elle reste en vigueur."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Un constat accepté reste visible avec la décision ; <strong>Rendre à nouveau actif</strong> révoque cette acceptation. Accepter un risque ne le corrige pas : la comparaison le signale comme accepté, pas comme résolu."
+        }
+      ]
+    },
+    {
+      "id": "inventory",
+      "title": "Inventaire",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Identité, version Proxmox VE, noyau, abonnement et cluster.",
+              "CPU, mémoire, carte, BIOS, contrôleurs et IOMMU.",
+              "Disques, SMART, heures d'alimentation et événements enregistrés.",
+              "Adaptateurs, bonds, bridges, latence et connexions.",
+              "Stockage, invités avec leurs disques et interfaces, et sauvegardes.",
+              "PCI passthrough et le logiciel ProxMenux gère."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

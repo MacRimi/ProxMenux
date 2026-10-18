@@ -76,18 +76,18 @@
   },
   "thresholds": {
     "heading": "Health Monitor Thresholds",
-    "intro": "Where the previous card decides <em>how long to stay quiet after a dismiss</em>, this one decides <strong>at what value an alert fires in the first place</strong>. Every check the Health Monitor runs is parameterised by a pair of numbers — a <strong>Warning</strong> threshold and a <strong>Critical</strong> threshold — and both are exposed here for the operator to tune.",
+    "intro": "The previous card sets <em>how long to stay quiet after a dismiss</em>; this one sets <strong>the value at which an alert is raised</strong>. Most threshold-based checks have adjustable <strong>Warning</strong> and <strong>Critical</strong> values. The table below explains exceptions such as the combined swap rule.",
     "whatForTitle": "What it is for",
     "whatForIntro": "Defaults that ship with ProxMenux are sane for the average Proxmox host, but every environment has its own envelope:",
     "whatForItems": [
       "A small homelab with a single-disk SSD may want to page earlier on capacity (75 / 90 %) to leave room for snapshots.",
-      "A datacenter host with redundant Ceph nodes can be more relaxed on memory warnings (a 90 % working set is normal under ZFS ARC).",
-      "A passively-cooled mini-PC needs lower temperature thresholds than a server with forced-air cooling — same drive class, different physical envelope.",
+      "Memory thresholds should reflect the host’s memory measurements and workload. Ceph redundancy alone does not justify relaxing memory warnings, and high ZFS ARC usage must not be confused with an unreclaimable working set.",
+      "Choose drive-temperature thresholds using the drive’s specifications and observed operating conditions. Passive versus forced-air cooling alone does not determine a universally lower or higher safe limit.",
       "A heavily-virtualized host that pegs CPU during builds should not page on every 80 % spike, but must still alert on sustained pressure."
     ],
-    "whatForOutro": "Editing a threshold takes effect <strong>on the next scan</strong> — the Health Monitor re-reads the values from <code>/usr/local/share/proxmenux/health_thresholds.json</code> on every cycle, no service restart needed. The same numbers also feed the colour ranges of the dashboard widgets (the temperature line in the disk-temperature modal, the bars on the storage cards) so the visual classification matches what triggers the alert.",
+    "whatForOutro": "Supported threshold changes take effect <strong>on the next scan</strong>. The Health Monitor reads <code>/usr/local/share/proxmenux/health_thresholds.json</code> each cycle without a restart. Selected widgets, including disk temperature, use these values; some capacity bars retain separate visual cutoffs.",
     "coloursTitle": "Status colours: how Warning and Critical render in the dashboard",
-    "coloursIntro": "Every threshold below produces the same three-state classification across the dashboard — same colours for storage bars, CPU/memory rings, temperature chips, and the dot on the disk modal. Reading a colour anywhere in the Monitor maps to a definite range relative to the configured pair:",
+    "coloursIntro": "Widgets that use the configured Warning/Critical pair follow the three-state classification below. Some visual indicators, including the PVE storage capacity bars, use their own cutoffs; do not infer a Health Monitor alert solely from their colour.",
     "headerColour": "Colour",
     "headerRange": "Range",
     "headerMeaning": "Meaning",
@@ -105,7 +105,7 @@
       {
         "colour": "Red",
         "range": "value ≥ Critical",
-        "meaning": "Critical state. The Health Monitor fires a CRITICAL event; CRITICAL bypasses Quiet Hours and always reaches the channel."
+        "meaning": "Critical state. The Health Monitor raises a CRITICAL event, which bypasses Quiet Hours. Channel category/event settings still apply; delivery also depends on the channel being available."
       }
     ],
     "sectionsTitle": "Sections and recommended defaults",
@@ -125,13 +125,13 @@
         "section": "Memory",
         "warning": "85 %",
         "critical": "95 %",
-        "gates": "RAM pressure on the host."
+        "gates": "Host RAM pressure."
       },
       {
         "section": "Swap (critical only)",
         "warning": "—",
-        "critical": "5 %",
-        "gates": "Swap actually being used. The number is intentionally low: a healthy Proxmox host should rarely touch swap, so even 5 % is a meaningful signal of RAM pressure."
+        "critical": "80 %",
+        "gates": "Swap CRITICAL requires both swap usage above 80 % and available RAM below 15 %, sustained across the detector’s samples. Used swap alone does not trigger this rule."
       },
       {
         "section": "CPU temperature",
@@ -143,25 +143,25 @@
         "section": "Disk temp — HDD",
         "warning": "60 °C",
         "critical": "65 °C",
-        "gates": "Standard spinning drives. Manufacturer envelope tops out around 60–65 °C, so Critical is set right at the hard limit."
+        "gates": "HDD temperature. The defaults are 60 °C Warning and 65 °C Critical; these are monitoring defaults, not a universal manufacturer limit. Check the specific drive model’s specifications."
       },
       {
         "section": "Disk temp — SSD",
         "warning": "70 °C",
         "critical": "75 °C",
-        "gates": "2.5'' / M.2 SATA SSDs — run cooler than NVMe but warmer than HDDs."
+        "gates": "SATA SSDs in 2.5-inch or M.2 formats. This class uses 70/75 °C monitoring defaults; actual temperature limits depend on the drive model."
       },
       {
         "section": "Disk temp — NVMe",
         "warning": "80 °C",
         "critical": "85 °C",
-        "gates": "NVMe drives run hotter by design; controllers self-throttle above ~85 °C, so Warning catches the climb before throttling kicks in."
+        "gates": "NVMe temperature. The class uses 80/85 °C monitoring defaults. Controller throttling temperatures vary by model and are not universally 85 °C."
       },
       {
         "section": "Disk temp — SAS",
         "warning": "55 °C",
         "critical": "65 °C",
-        "gates": "Enterprise SAS drives share the same ~65 °C manufacturer limit as HDDs, but are normally deployed in rack chassis with active cooling. A reading at 55 °C already signals a cooling problem (failed fan, HVAC issue) <em>before</em> the drive itself is at risk — hence a lower Warning than HDD, not because SAS is less heat-tolerant."
+        "gates": "SAS temperature. This class uses 55 °C Warning and 65 °C Critical. These are <em>monitoring defaults</em>, not proof of a cooling fault at 55 °C or a universal manufacturer limit."
       },
       {
         "section": "Disk space — host",
@@ -185,7 +185,7 @@
         "section": "PVE storage",
         "warning": "85 %",
         "critical": "95 %",
-        "gates": "Block-style PVE storages (LVM, LVM-thin, ZFS-pool, RBD/Ceph, PBS)."
+        "gates": "Only PVE storages of type LVM, LVM-thin, ZFS-pool, RBD, CephFS and PBS. Directory, NFS and CIFS storages are covered by the host disk-space row."
       },
       {
         "section": "ZFS pool",
@@ -197,7 +197,7 @@
     "defaultsTitle": "Defaults, overrides and reset",
     "defaultsBody": "The backend exposes a merged view: every section starts from the ProxMenux defaults (the values you see when the host is fresh) and you override only the knobs you care about. The card shows the <em>effective</em> value — the override if you set one, otherwise the default. A <strong>Reset</strong> button wipes every override and goes back to defaults across all sections at once.",
     "validationTitle": "Validation",
-    "validationBody": "Saving rejects values that don't make sense (percentages outside 0–100, critical below warning, negative temperatures). The frontend shows the inline error; the backend validates again before persisting, so the API can't be tricked into a broken threshold by a hand-crafted PUT."
+    "validationBody": "Saving validates values against each field’s allowed range and rejects Critical below Warning. The interface shows validation errors, and the backend validates API requests again before persisting changes."
   },
   "lxcDetection": {
     "heading": "LXC Update Detection",
@@ -207,18 +207,18 @@
     "whatRunsTitle": "What the scan actually runs",
     "whatRunsIntro": "For each CT in <code>running</code> state with a supported package manager:",
     "whatRunsItems": [
-      "<strong>Cache freshness gate.</strong> If the in-container apt/apk metadata cache is older than <strong>24 hours</strong>, a best-effort refresh runs first (<code>apt-get update -qq</code> on Debian/Ubuntu, <code>apk update</code> on Alpine) with a 60 s timeout. Any failure (no network, broken repo, timeout) is swallowed silently — the listing below still runs against whatever cache exists, so a transient repo issue can never make detection worse than before.",
+      "<strong>Metadata freshness.</strong> If the in-container apt/apk metadata cache is older than <strong>24 hours</strong>, a refresh is attempted first (<code>apt-get update -qq</code> on Debian/Ubuntu, <code>apk update</code> on Alpine), with a 60 s timeout. If it fails, listing still uses the available cache; results may therefore be stale.",
       "<strong>Listing.</strong> Then ProxMenux runs <code>apt list --upgradable</code> / <code>apk list -u</code> and parses the output into a structured count plus a sample of the top package names.",
       "<strong>Per-CT dedup.</strong> A fingerprint built from count, security-count and the sorted top names is stored so a stable set of pending updates doesn't re-notify daily, while a meaningfully different set does."
     ],
     "selfUpdateTitle": "CTs that self-update outside apt may legitimately report 0",
-    "selfUpdateBody": "Detection only sees what the in-container package manager knows about. A CT whose key software updates itself outside apt (Plex's <code>plexupdate</code> cron, Docker containers updated via <code>docker pull</code>, Frigate's built-in updater, etc.) will keep reporting low or zero apt updates even when the appliance is actively staying current — that's correct, not a bug. The apt-level base system on the same CT may still have its own pending updates, which the scan does surface.",
+    "selfUpdateBody": "Detection only covers the in-container package manager. Software updated outside apt, such as a configured <code>plexupdate</code> job or Docker images fetched with <code>docker pull</code>, is outside that count. Zero apt updates does not prove that every application is current. The same CT’s base system can still have package updates detected by the scan.",
     "refreshTitle": "Why the 24 h auto-refresh",
-    "refreshBody": "Long-running appliance CTs frequently end up with apt caches months out of date because nobody routinely runs <code>apt update</code> inside them. Without the refresh, <code>apt list --upgradable</code> reports 0 updates from a frozen snapshot and the operator never sees the backlog. The threshold matches the rest of the check cycle — if the CT was refreshed within the last 24 h, ProxMenux trusts that signal and skips the refresh.",
+    "refreshBody": "Long-running CTs can have stale apt metadata if nobody runs <code>apt update</code>. Then <code>apt list --upgradable</code> can miss newer updates. ProxMenux attempts a refresh when the metadata is older than 24 hours and skips it when the cache was refreshed more recently.",
     "toggleTitle": "Conditional notification toggle",
     "toggleBody": "The <code>lxc_updates_available</code> per-channel notification toggle in <strong>Notifications → Services</strong> only renders while detection is enabled. When you turn detection OFF, that row disappears from every channel's category list — but its stored preference is preserved in the DB, so re-enabling detection brings the toggle back at the value it had before.",
     "purgeTitle": "What gets purged when you disable detection",
-    "purgeBody": "Turning the switch OFF immediately removes every <code>type=lxc</code> entry from <code>/usr/local/share/proxmenux/managed_installs.json</code>. The Hardware tab badges drop to zero on the next dashboard refresh. Turning it back ON repopulates the registry on the next detection cycle (or sooner if you trigger a manual refresh from the API)."
+    "purgeBody": "Turning the switch OFF immediately removes every <code>type=lxc</code> entry from <code>/usr/local/share/proxmenux/managed_installs.json</code>. LXC update counts in the VMs & LXCs tab clear on the next dashboard refresh. Turning it back ON repopulates the registry on the next detection cycle, or sooner with a manual API refresh."
   },
   "storageExclusions": {
     "heading": "Remote Storage Exclusions",
@@ -238,9 +238,9 @@
     "intro": "Same shape as Storage Exclusions but for network interfaces. Per interface: exclude from Health checks and / or exclude from notifications. Typical use cases:",
     "items": [
       "An intentionally-down spare bridge.",
-      "A NIC that was physically removed but still references in <code>/etc/network/interfaces</code>.",
+      "A NIC that was physically removed but is still referenced in <code>/etc/network/interfaces</code>.",
       "A VLAN sub-interface used only during maintenance windows.",
-      "A management bridge that is up but doesn't carry traffic — flapping noisily on every cycle."
+      "A management bridge with known, repeated link-state changes during maintenance."
     ],
     "outro": "State is persisted in the <code>excluded_interfaces</code> SQLite table. Same purple <em>excluded</em> badge on the <link>Network tab</link> so excluded interfaces stay visible."
   },
@@ -255,26 +255,26 @@
   },
   "optimizations": {
     "heading": "ProxMenux Optimizations",
-    "intro": "A live, transparent inventory of every ProxMenux post-install optimization currently active on the host. Every time you apply a post-install option from the Scripts side — either via the <autoLink>Automated post-install</autoLink> or via the à-la-carte <customLink>Customizable post-install</customLink> — the corresponding script registers itself in <code>/usr/local/share/proxmenux/installed_tools.json</code>. The Monitor reads that file and renders this card so you can see, at a glance, what's been changed on your server.",
+    "intro": "An inventory of post-install optimizations recorded by ProxMenux on the host. Options from <autoLink>Automated post-install</autoLink> and <customLink>Customizable post-install</customLink> register their application in <code>/usr/local/share/proxmenux/installed_tools.json</code>. The Monitor reads that registry for this card. A recorded entry is not a fresh check that every underlying setting remains unchanged.",
     "imageAlt": "ProxMenux Optimizations card with grid of installed tools, each row showing a green dot, tool name and version. Examples include APT IPv4 Force, Bashrc Customization, Fastfetch, Log2ram SSD Protection, Memory Settings Optimization, Setting persistent network interfaces, System Limits Increase, APT Language Skip, Entropy Generation haveged with Legacy badge, Kernel Panic Configuration, Logrotate Optimization, Network Optimizations, Subscription Banner Removal, VFIO IOMMU Passthrough — 14 active total",
     "imageCaption": "The card lists every active optimization with its name, version, a coloured dot and an orange <em>14 active</em> counter at the top right. Tools whose source is reachable are clickable.",
     "dotsTitle": "What the dots mean",
     "dotsItems": [
-      "<green/> <strong>Green dot</strong> — current optimization, registered by the active version of ProxMenux. Source code is reachable: click the row to open it.",
-      "<amber/> <strong>Amber dot + <em>legacy</em> badge</strong> — applied by an older ProxMenux version whose script has since been renamed or replaced. Still active on the host; the source opens in \"legacy\" mode (with an amber accent) so you can audit what was actually run."
+      "<green/> <strong>Green dot</strong> — a registered optimization that is not marked legacy and has no available update indicated. Click the row when source code is available.",
+      "<amber/> <strong>Amber dot + <em>legacy</em> badge</strong> — a registered optimization whose script was renamed or replaced. Its preserved source opens in legacy mode with an amber accent. This does not revalidate the current host configuration."
     ],
     "clickTitle": "Click-through to source code",
-    "clickBody": "Clicking a tool opens a modal with the exact bash function that applied the change, plus the script file path it lives in (<code>auto_post_install.sh</code> for the Automated bundle, <code>customizable_post_install.sh</code> for the à-la-carte side). Comments and shell constructs are syntax-highlighted; a Copy button puts the source on your clipboard. This is the \"show your work\" surface — verify what ProxMenux did to your host before any manual change you make on top.",
+    "clickBody": "Clicking a tool opens a modal with its mapped bash function and script name (<code>auto_post_install.sh</code> or <code>customizable_post_install.sh</code>). Current tools are extracted from files on the host; legacy tools can use preserved source. Syntax highlighting and Copy help inspect the code. This is not a guaranteed snapshot of the exact code that ran at installation time.",
     "detailAlt": "Tool source code modal for APT IPv4 Force showing the bash function force_apt_ipv4 from customizable_post_install.sh version 1.0 with syntax-highlighted code that configures /etc/apt/apt.conf.d/99-force-ipv4 with Acquire ForceIPv4 true, registers the tool and emits a translate APT IPv4 configuration completed message",
     "detailCaption": "Source modal for <em>APT IPv4 Force</em> — exact <code>force_apt_ipv4()</code> function from <code>customizable_post_install.sh v1.0</code>, with syntax highlighting and a one-click Copy.",
     "whyTitle": "Why this matters",
-    "whyBody": "ProxMenux changes things on your host: kernel parameters, repository configuration, network bits, log rotation, GPU passthrough, etc. Knowing exactly what's active is essential before you start adding manual customisation on top — and even more so if a different admin runs the host than the one who set it up. This card is the auditable record of every optimisation currently in effect, with the exact code that produced it.",
+    "whyBody": "ProxMenux can change kernel parameters, repository settings, networking, log rotation and GPU passthrough. Review the recorded optimizations before adding manual changes, especially when another administrator set up the host. The card shows registry entries and available source; it does not audit every live setting or preserve an exact execution history.",
     "updatesTitle": "Updates available banner",
     "updatesBody": "When a post-install optimization gets a newer version on disk than the one currently registered on the host, the card shows an \"Updates available\" banner at the top with the count and an <strong>Apply</strong> button. Clicking <strong>Apply</strong> opens a per-optimization picker (the same one available from the Post-Install menu's <em>Apply available updates</em> entry). Pick which optimizations to lift; ProxMenux re-runs the corresponding function and refreshes the version in the registry. When everything is current the banner disappears.",
     "updatesAlt": "ProxMenux Optimizations card with an Updates available banner at the top — count of pending updates plus an Apply button that opens the per-optimization picker",
     "updatesCaption": "The banner only renders when at least one optimization has a newer version on disk. See <link>Apply Available Updates</link> for the full update flow and the Path-A equivalent in the shell menu.",
     "revertTitle": "Reverting an optimization",
-    "revertBody": "The card is read-only — to undo an optimization, run the corresponding <link>Uninstall Optimizations</link> option from the ProxMenux Scripts menu. The uninstall step removes the entry from <code>installed_tools.json</code>, so it disappears from this card on the next refresh."
+    "revertBody": "To undo an optimization, use the corresponding <link>Uninstall Optimizations</link> option in the ProxMenux Scripts menu. Uninstalling removes its entry from <code>installed_tools.json</code>, so the card stops listing it on the next refresh."
   },
   "dataCollected": {
     "heading": "How the data is collected",
@@ -320,7 +320,7 @@
       {
         "card": "Optimization source-code modal",
         "endpoint": "/api/proxmenux/tool-source",
-        "source": "Extracts the matching bash function from <code>auto_post_install.sh</code> or <code>customizable_post_install.sh</code> on the host."
+        "source": "Extracts the mapped bash function from <code>auto_post_install.sh</code> or <code>customizable_post_install.sh</code> on the host; legacy tools can use preserved source."
       }
     ]
   },

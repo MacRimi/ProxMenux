@@ -48,16 +48,16 @@
     "multiTitle": "Multi-widget setup — system, storage, network",
     "multiIntro": "For a richer view, render three separate cards backed by different endpoints — one for system metrics, one for storage, one for network. Use the same token in every card; it's the same Monitor instance.",
     "multiCalloutTitle": "Multiple Proxmox hosts",
-    "multiCalloutBody": "Repeat the entry block per host to get the multi-card layout in the screenshot above — each entry points at the <code>http://&lt;host&gt;:8008</code> URL of its own ProxMenux Monitor instance. The token can be different per host (one secret entry per host) or shared, depending on how you generate them."
+    "multiCalloutBody": "Repeat the entry block for each host to get the multi-card layout shown above. Each entry uses the URL <code>http://&lt;host&gt;:8008</code> of that host’s Monitor instance. Generate and store a token for each host; separate installations have their own signing secrets, so a token from one host should not be assumed to work on another."
   },
   "homeAssistant": {
     "heading": "Home Assistant",
     "headingHref": "https://www.home-assistant.io",
-    "intro": "There is no native HACS integration for ProxMenux Monitor (yet) — but you don't need one. The built-in <code>rest</code> integration in Home Assistant can pull every endpoint documented in the <link>API Reference</link> and turn the responses into sensors, attributes and triggers. The complete reference build below exposes ~25 sensors covering system resources, the Health Monitor, VMs / CTs, storage, network, gateway latency and ProxMenux update status — drop the YAML into <code>configuration.yaml</code>, restart, and you have a full Proxmox observability layer inside HA.",
+    "intro": "These examples use Home Assistant’s built-in <code>rest</code> integration, so a custom HACS component is not required. It reads Monitor endpoints described in the <link>API Reference</link> and turns their responses into sensors and attributes for automations. The reference configuration below provides roughly 25 sensors for system resources, health, VMs/CTs, storage, network and ProxMenux updates. Add it to <code>configuration.yaml</code> and reload or restart HA.",
     "imageAlt": "Home Assistant dashboard showing ProxMenux Monitor entities — health status badge, CPU / RAM / Temp gauges, VM count, storage usage and active errors counter",
     "imageCaption": "ProxMenux Monitor as a first-class Home Assistant integration — sensors built from the YAML recipe below.",
     "step1Title": "1 · Store the API token",
-    "step1Body": "Drop the token into Home Assistant's <code>secrets.yaml</code> so it never leaks into a config dump. The whole bearer prefix goes in one line — that lets the YAML reference it directly as a header value. Filename and location depend on your HA install (typically <code>/config/secrets.yaml</code> for HA OS / Container).",
+    "step1Body": "Store the token in Home Assistant’s <code>secrets.yaml</code> to keep it separate from the main configuration. Include the full Bearer prefix and token in one value so YAML can reference it as a header. This file is not encrypted and must also be kept private. Its location depends on the installation, typically <code>/config/secrets.yaml</code> on HA OS or Container.",
     "step2Title": "2 · Drop in the REST configuration",
     "step2Body": "Six REST blocks cover the full surface — one per major Monitor area. Each block has a sensible <code>scan_interval</code> tuned to how often the underlying data changes (system resources every 30 s, health every 60 s, slowly-changing inventories every 5-10 min). Paste into <code>configuration.yaml</code>:",
     "step3Title": "3 · Add binary sensors and template helpers",
@@ -72,14 +72,14 @@
     "viewTipBody": "Open the dashboard's 3-dot menu → <em>Raw configuration editor</em> and add a new view with this header (above the <code>cards:</code> list from the YAML above):",
     "viewTipOutro": "That gives you a dedicated tab/view in your dashboard with its own icon and title, instead of one long card on an existing view.",
     "altViewTitle": "Alternative — a dedicated dashboard view",
-    "altViewIntro": "If you'd rather have a full dedicated page (its own tab in the dashboard sidebar) than a single card inside an existing view, Home Assistant lets you create a new view directly with YAML. Steps:",
+    "altViewIntro": "To create a dedicated view tab inside an existing dashboard, rather than one card within another view, add a view with the YAML below. A view is a tab within a dashboard; it does not create a new sidebar dashboard entry. Steps:",
     "altViewSteps": [
       "Open the dashboard where you want the new tab.",
       "Click the pencil (edit dashboard) at the top right.",
       "Click the <em>+</em> tab at the end of the existing tabs to create a new view.",
       "In the dialog that opens, switch to the <em>Code editor</em> tab (top right of the dialog — toggles between visual editor and YAML).",
       "Paste the YAML below.",
-      "Save. The new <em>ProxMenux Monitor</em> tab appears in the sidebar with all cards rendered."
+      "Save. The new <em>ProxMenux Monitor</em> view appears as a tab inside the dashboard with its cards."
     ],
     "twoEditorsTitle": "Two YAML editors in HA — pick the right one",
     "twoEditorsIntro": "Home Assistant has two YAML editors that look similar but expect different formats:",
@@ -89,7 +89,7 @@
     ],
     "twoEditorsOutro": "Pasting view-body YAML into the whole-dashboard editor (or vice versa) leaves you with a <em>Vista sin nombre</em> and <code>cards: []</code>. The YAML below is for the single-view editor — paste exactly as shown.",
     "viewImageAlt": "Home Assistant dedicated view rendering ProxMenux Monitor — picture-entity header, glance KPIs, and System / VMs / Storage / Network entity cards laid out automatically by HA across multiple columns",
-    "viewImageCaption": "The dedicated <em>ProxMenux Monitor</em> view as Home Assistant renders it on a wide screen — HA's default layout splits the cards into multiple columns automatically.",
+    "viewImageCaption": "The dedicated <em>ProxMenux Monitor</em> view on a wide screen. A Masonry layout arranges the cards into columns automatically; the layout depends on the configured view type.",
     "twoColTipTitle": "Want a fixed two-column layout instead of the auto layout?",
     "twoColTipBody": "Replace any pair of cards (e.g. <em>System</em> + <em>VMs</em>, or <em>Storage</em> + <em>Network</em>) with a single <code>horizontal-stack</code> wrapping both, so they always render side by side regardless of screen width:",
     "twoColTipOutro": "On mobile the row stays compressed; HA's auto layout (no horizontal-stack) reflows better at narrow widths.",
@@ -105,19 +105,19 @@
       "In the Lovelace YAML, replace the <code>image:</code> URL with <code>/local/icons/proxmenux.svg</code>. Save and reload — the image renders from the local file, no internet needed."
     ],
     "scanTipTitle": "scan_interval rule of thumb",
-    "scanTipBody": "<code>/api/system</code> is cheap to call — 30 s is fine. <code>/api/health/full</code> uses an internal 6-min cache, so polling it more often than ~60 s gains you nothing. <code>/api/storage/summary</code> changes slowly — every 5 min is plenty. <code>/api/proxmenux/update-status</code> only matters once an hour. Tune to your hardware budget if you have many sensors across many hosts."
+    "scanTipBody": "Polling <code>/api/system</code> every 30 s is a reasonable starting point. <code>/api/health/full</code> normally reads a background result valid for up to 6 min; polling every 60 s does not bypass that cache. Try 5 min for <code>/api/storage/summary</code> and an hour for <code>/api/proxmenux/update-status</code>. Adjust intervals for your hardware and number of hosts."
   },
   "grafana": {
     "heading": "Prometheus + Grafana",
     "promHref": "https://prometheus.io",
     "grafanaHref": "https://grafana.com",
-    "intro": "ProxMenux Monitor exposes a Prometheus-format scrape endpoint at <code>GET /api/prometheus</code> (authenticated) returning OpenMetrics text. Wire it into Prometheus, then build a Grafana dashboard on top — same data the dashboard UI shows, in the format your TSDB expects.",
+    "intro": "ProxMenux Monitor exposes <code>GET /api/prometheus</code>, returning Prometheus text exposition format 0.0.4. It requires a bearer token when Monitor authentication is enabled. Configure Prometheus to collect it, then use Grafana to visualize the metrics in your time-series database.",
     "imageAlt": "Grafana dashboard rendering ProxMenux Monitor metrics — CPU usage gauge, memory usage timeseries, running VMs count, network throughput",
     "imageCaption": "A basic Grafana dashboard built from the ProxMenux Prometheus scrape — CPU, memory, running VMs, network throughput. The full metric catalogue lives in the <link>API Reference → Prometheus metrics</link>.",
     "step1Title": "1 · Add the scrape job to Prometheus",
     "step1Body": "Pass the API token via Prometheus' native <code>authorization</code> block (cleaner than custom headers and works with secret stores):",
-    "step1After": "Reload Prometheus (<code>kill -HUP</code> or <code>systemctl reload prometheus</code>, or <code>docker compose restart prometheus</code> if you run it as a container) and check <em>Status → Targets</em> — the proxmenux job should turn green within one scrape interval. Each metric carries a <code>node=\"&lt;hostname&gt;\"</code> label so you can distinguish hosts in queries.",
-    "tokenTipTitle": "Token via file or env, not inline",
+    "step1After": "Reload Prometheus with <code>kill -HUP &lt;PID&gt;</code> (replace PID with the Prometheus process ID), <code>systemctl reload prometheus</code> if supported by your service, or <code>docker compose restart prometheus</code> for a container. Check <em>Status → Targets</em>: the proxmenux job should become UP within one collection interval. Monitor metrics carry a <code>node=\"&lt;hostname&gt;\"</code> label to distinguish hosts.",
+    "tokenTipTitle": "Keep the token in a separate file",
     "tokenTipBody": "For production deployments avoid inlining the token. Prometheus supports <code>credentials_file: /etc/prometheus/secrets/proxmenux.token</code> as an alternative — keep the token in a 0600 file and let Prometheus read it.",
     "step2Title": "2 · Verify the scrape with a couple of queries",
     "step2Body": "Before configuring Grafana, confirm Prometheus actually has the data. Open Prometheus' own UI at <code>http://&lt;prometheus-host&gt;:9090</code>, click <em>Query</em> and run any of these — you should get back live numbers from your Proxmox host:",
@@ -142,9 +142,9 @@
       }
     ],
     "calloutTitle": "The 401 you may see when clicking the endpoint URL is fine",
-    "calloutBody": "On the <em>Status → Targets</em> page, clicking the endpoint link (<code>/api/prometheus</code>) makes your browser fetch it directly — without the bearer header that Prometheus uses for its own scrapes. So you'll see <code>'{'\"error\":\"Authentication required\"'}'</code>. That confirms the API is properly protected; Prometheus itself authenticates correctly because it has the token from the scrape config. Trust the green <em>State: UP</em>, not the click-through.",
+    "calloutBody": "With Monitor authentication enabled, clicking the endpoint link on <em>Status → Targets</em> fetches <code>/api/prometheus</code> in the browser without Prometheus’s bearer header. The response can contain <code>'{'\"error\":\"Authentication required\"'}'</code>. Check the target’s actual <em>State: UP</em> to confirm that Prometheus itself is collecting successfully with its configured token.",
     "step3Title": "3 · Add Prometheus as a Grafana data source",
-    "step3Body": "In Grafana: <em>Connections → Data sources → Add new → Prometheus</em>. Set the URL to your Prometheus instance (e.g. <code>http://prometheus.lan:9090</code>), save and test. No extra auth needed at this layer — Prometheus has already authenticated to ProxMenux.",
+    "step3Body": "In Grafana, open <em>Connections → Data sources → Add new → Prometheus</em>. Set the Prometheus URL, for example <code>http://prometheus.lan:9090</code>, then save and test. If your Prometheus server requires authentication, configure that separately here. The Monitor API token belongs in the Prometheus collection job.",
     "step4Title": "4 · Build panels with these PromQL queries",
     "step4Body": "A starter set that maps directly to what users typically watch on a Proxmox host:",
     "headerPanel": "Panel idea",
@@ -200,7 +200,7 @@
   "uptimeKuma": {
     "heading": "Uptime Kuma and other status checkers",
     "href": "https://github.com/louislam/uptime-kuma",
-    "intro": "For external probes, use <code>GET /api/system-info</code> — it is the one endpoint that works without a token, returning a small JSON payload with hostname, uptime and the overall health status (mapped to <code>healthy</code> / <code>warning</code> / <code>critical</code>). That's exactly what a keyword-based monitor needs.",
+    "intro": "For a keyword-based check, use <code>GET /api/system-info</code>. This route has no token decorator and returns hostname, uptime and a health status mapped to <code>healthy</code>, <code>warning</code> or <code>critical</code>. It is a public probe, unlike the authenticated detailed health endpoints.",
     "kumaTitle": "Uptime Kuma — HTTP keyword monitor",
     "kumaSteps": [
       "In Uptime Kuma, click <em>+ Add New Monitor</em>.",
@@ -209,22 +209,22 @@
       "URL: <code>http://pve01.lan:8008/api/system-info</code>.",
       "Keyword: <code>healthy</code> (the value of <code>health.status</code> when the host is OK).",
       "Heartbeat Interval: 60 seconds is enough.",
-      "Save. No headers needed — the endpoint is public."
+      "Save. This system-info route does not require a bearer header."
     ],
     "healthchecksTitle": "healthchecks.io / cron-style pings",
-    "healthchecksBody": "Same endpoint, same shape — point your cron-style ping at <code>/api/system-info</code> and assert <code>.health.status == \"healthy\"</code>. Most of these services accept a 2xx HTTP status as the \"up\" signal too, in which case even a curl without parsing is enough.",
+    "healthchecksBody": "A cron job can query <code>/api/system-info</code> and test <code>.health.status == \"healthy\"</code>. Only after a successful health test should it send a success ping to the check’s unique Healthchecks.io URL. Healthchecks.io receives pings from jobs; it does not poll the Monitor URL. An HTTP 2xx response alone does not prove that the reported host health is good.",
     "richTitle": "Want richer health data",
-    "richBody": "For the full state (the ten Health Monitor categories + active errors + dismissed list), use <code>GET /api/health/full</code> instead — that one needs an API token but gives you everything the dashboard modal renders in a single response."
+    "richBody": "For the full state — ten health categories, active errors and dismissed items — use <code>GET /api/health/full</code>. It returns the dashboard modal’s data in one response and needs a bearer token when Monitor authentication is enabled."
   },
   "workflows": {
     "heading": "n8n, Zapier and custom scripts",
-    "intro": "For workflow tools and ad-hoc scripts that need to <em>raise</em> notifications through the Monitor (a CI failure, a smart-home sensor, a cron job that ran too long), the recipe is one POST to <code>/api/notifications/send</code>. The event flows through the same dispatch pipeline as anything emitted internally — dedup, cooldown, optional AI rewrite, fan-out to the configured channels.",
-    "n8nBody": "In n8n, the equivalent is an <em>HTTP Request</em> node with method POST, the URL above, an <em>Authorization</em> header set to <code>Bearer '{''{'$credentials.proxmenux.token'}''}'</code> (using n8n credentials), and a JSON body matching the curl payload. Wire any preceding node as the trigger (cron, webhook, condition).",
-    "severityBody": "Severity values are <code>INFO</code>, <code>WARNING</code> or <code>CRITICAL</code> (uppercase). The <code>data</code> payload is free-form JSON — the AI rewriter, when enabled, will pull anything useful from it for the rendered body. Full event-type semantics live in <link>Notifications → Event catalogue</link>."
+    "intro": "Workflow tools and scripts can <em>send</em> notifications through a POST to <code>/api/notifications/send</code>, for example after a CI failure or an overlong cron job. This is a direct send: it bypasses the event queue and fingerprint cooldown. It still uses channel formatting, optional AI rewriting and delivery to configured channels. Apply any required duplicate control in the caller.",
+    "n8nBody": "In n8n, use an <em>HTTP Request</em> node with POST, the URL above and the same JSON body as curl. Choose generic Header Auth credentials: set the header name to <em>Authorization</em> and its value to <code>Bearer YOUR_API_TOKEN</code>, replacing the placeholder. Connect a schedule, webhook or other preceding node to trigger the request.",
+    "severityBody": "Severity values are <code>INFO</code>, <code>WARNING</code> or <code>CRITICAL</code> in uppercase. The <code>data</code> object supplies event context and template fields. On this endpoint, AI rewriting receives only the title and message; fields in <code>data</code> are not sent to the provider. See <link>Notifications → Event catalogue</link> for event semantics."
   },
   "pveWebhook": {
     "heading": "Native Proxmox VE webhook (inbound)",
-    "intro1": "Proxmox VE 8.1+ has its own notification system. ProxMenux Monitor registers itself as a webhook target so that everything PVE emits on its own (HA fencing, replication, vzdump from the GUI, certificate renewal) lands in the same dispatch pipeline as the Monitor's own events. This happens automatically when you press <em>Enable Notifications</em> on the Settings tab — no integration work required on the user side.",
+    "intro1": "The PVE notification system was introduced in 8.1; native webhook targets require Proxmox VE 8.3 or later. Enabling notifications with <em>Enable Notifications</em> in Settings attempts to register the Monitor as a target. PVE notifications routed to that target, such as backup or replication reports, then enter the Monitor’s dispatch flow. Setup depends on the notification configuration being writable and available.",
     "intro2": "Mechanics, the body template PVE sends, the entries written to <code>/etc/pve/notifications.cfg</code>, and behaviour in clusters are documented in <link>Notifications → PVE webhook integration</link>."
   },
   "whereNext": {

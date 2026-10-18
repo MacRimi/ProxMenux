@@ -56,7 +56,7 @@
         "notes": "Stiahne vybraný obraz a znova vytvorí jeho skupinu služieb Compose alebo chránený samostatný kontajner."
       }
     ],
-    "callout": "Vlastný príkaz <strong>nahrádza</strong> Helper-Scripts pre danú aplikáciu. Ručné, hromadné aj naplánované spustenia rešpektujú uložený výber. Existujúce príkazy a staršie výslovne uložené výbery v plánoch alebo aktívnych naplánovaných úlohách sa zachovajú; starší plán nikdy neaktivuje aktualizátor novo registrovanej aplikácie."
+    "callout": "Vlastný príkaz <strong>nahrádza</strong> Helper-Scripts pre danú aplikáciu. Ručné, hromadné aj plánované behy rešpektujú uloženú voľbu. Existujúce príkazy a staršie výslovne uložené výbery v hromadných plánoch či aktívnych úlohách sa zachovajú; starý plán nikdy nezahrnie novo registrovanú aplikáciu."
   },
   "docker": {
     "heading": "Docker Engine a Docker obrazy",
@@ -90,7 +90,7 @@
       },
       {
         "state": "Overene aktuálne",
-        "appearance": "Zelená kontrola a zelená akcia Aktualizované",
+        "appearance": "Zelená značka a zelená akcia Aktualizované",
         "meaning": "Posledná dokončená kontrola potvrdila, že cieľ je aktuálny."
       },
       {
@@ -120,7 +120,7 @@
       "Balíky OS sú povinné. Musí byť vybraná aspoň jedna ďalšia aplikácia, Docker Engine alebo jednotka Docker obrazu.",
       "Aplikácie a jednotky Dockeru sa vyberajú samostatne. Hlavná služba Compose zobrazuje závislosti, ktoré sa aktualizujú spolu s ňou.",
       "Odstránené alebo nedostupné ciele sa označia ako neaktuálne a pred uložením ich treba odstrániť.",
-      "Tlačidlo <strong>Použiť aktualizácie</strong> je fialové, ak má niektorý vybraný cieľ overenú aktualizáciu, zelené, ak sú všetky overene aktuálne, a neutrálne pri neznámom výsledku.",
+      "<strong>Použiť aktualizácie</strong> je fialové, ak má niektorý cieľ overenú aktualizáciu, zelené, ak sú všetky overene aktuálne, a neutrálne pri neznámom výsledku.",
       "Odstránenie hromadnej konfigurácie neodstráni samostatné metódy ani plánovanie."
     ],
     "callout": "Hromadná aktualizácia nenahrádza samostatné tlačidlá. Je to voliteľná skratka pre výber, ktorý sa má spustiť spolu."
@@ -141,7 +141,10 @@
       "Vyberte predvoľbu alebo cron výraz a potom presné ciele: balíky OS, jednotlivé aplikácie, Docker Engine, samostatné jednotky Dockeru alebo skupiny služieb Compose.",
       "Oneskorenie po vydaní platí iba pre vybrané aplikácie so sledovaním verzie. Aplikácie bez sledovania spustia aktualizátor pri každom termíne.",
       "Stav posledného behu rozlišuje úspech, čiastočné dokončenie, zlyhanie, bezpečnostné pozastavenie a žiadne čakajúce aktualizácie. Po prvom plánovanom behu otvorí <strong>Aktualizácie → Plánované aktualizácie → Zobraziť záznam</strong> celý výstup aktualizátora a podradených skriptov.",
-      "Zistené externé plány Proxmox VE Helper-Scripts sa zobrazia samostatne, aby bola viditeľná prekrývajúca sa automatizácia."
+      "Po každom spustení ProxMenux skontroluje štandardnú značku Debianu oznamujúcu potrebu reštartu. Ak je reštart potrebný, karta Aktualizácie aj záverečné upozornenie to oznámia. Varovanie sa zruší pri spustení alebo reštarte daného LXC.",
+      "Na počítači Proxmox sa v <code>/usr/local/share/proxmenux/logs/lxc-updates/</code> ukladajú záznamy plánovaného priebehu pomocou mena <code>&lt;VMID&gt;-scheduled-&lt;run-id&gt;.log</code>. Posledných desať protokolov je zachovaných na LXC a staršie súbory sú automaticky odstránené.",
+      "Táto zachovaná história sa vzťahuje na plánované aktualizácie. Manuálna aktualizácia zobrazuje svoj výstup naživo v okne vykonávania monitora a v tomto adresári nevytvára plánovaný záznam.",
+      "Externé plány na hostiteľovi zistené z Proxmox VE Helper-Scripts sa zobrazujú samostatne, aby bolo vidieť prekrývajúce sa automatizácie."
     ],
     "callout": "Pred zapnutím plánu otestujte každú vybranú metódu manuálne. Plánovaný príkaz nemôže odpovedať na interaktívne otázky."
   },
@@ -150,9 +153,10 @@
     "lead": "Aktualizácia sa nepovažuje za dokončenú iba preto, že príkaz v termináli skončil.",
     "items": [
       "Rovnaký beh uloží konečný výsledok a podľa potreby obnoví stav balíkov OS, verzie aplikácií a inventár Dockeru.",
-      "Vyrovnávacia pamäť LXC sa nahradí overeným stavom po aktualizácii, takže odznaky a tlačidlá nezostanú v starom stave.",
-      "Po spustení zastaveného alebo obnoveného LXC existujúca udalosť životného cyklu znova obnoví tento LXC. Inventár Dockeru čaká na pripravenosť démona a dočasne prázdny výsledok nepovažuje za konečný.",
-      "Povolené upozornenia sa odošlú z dokončeného behu vrátane čiastočných zlyhaní a zoskupených výsledkov Docker obrazov."
+      "Plánované behy uchovávajú výstup terminálu a oznamujú, či je na dokončenie zmien balíkov ešte potrebný reštart.",
+      "Vyrovnávacia pamäť LXC sa nahradí overeným stavom po aktualizácii, aby označenia a tlačidlá nezostali v pôvodnom stave.",
+      "Ak sa spustí zastavený alebo obnovený LXC, existujúca udalosť životného cyklu znova obnoví jeho údaje. Inventarizácia Dockeru počká na pripravenosť démona, aby sa prázdny výsledok pri štarte neuložil ako konečný.",
+      "Zapnuté oznámenia sa odosielajú po dokončení behu vrátane čiastočných zlyhaní a zoskupených výsledkov Docker obrazov."
     ]
   },
   "troubleshooting": {
@@ -179,6 +183,10 @@
       {
         "problem": "Vlastný príkaz zlyhá",
         "resolution": "Spustite ho v termináli LXC a skontrolujte cestu, závislosti, neinteraktívne parametre a návratový kód."
+      },
+      {
+        "problem": "Plánovaná aktualizácia hovorí, že je potrebné reštartovať",
+        "resolution": "Otvorte Zobraziť záznam, skontrolujte dokončený beh a reštartujte daný LXC. ProxMenux vymaže upozornenie, keď udalosť životného cyklu zaznamená nový štart."
       }
     ]
   },

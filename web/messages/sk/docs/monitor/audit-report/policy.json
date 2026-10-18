@@ -1,0 +1,111 @@
+{
+  "meta": {
+    "title": "Politika | Audit a správy",
+    "description": "Politika uzla vo funkcii Audit a správy: zálohovanie, automatický štart a cieľ obnovy každého hosťovského systému, úloha každého úložiska a prahové hodnoty kontrol."
+  },
+  "header": {
+    "title": "Politika",
+    "description": "Politika určuje to, čo žiadna kontrola nemôže odvodiť: účel každého hosťovského systému a úložiska a prahové hodnoty kontrol.",
+    "section": "Audit a správy"
+  },
+  "sections": [
+    {
+      "id": "principle",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Bez deklarácie správa opisuje; s deklaráciou hodnotí",
+            "body": "Hodnotenie vidí, čo robí hostiteľ, nie na čo je. Hosť bez zálohy, ktorého účel nie je deklarovaný, sa vykazuje ako pozorovanie. Ak je jeho záloha vyhlásená za požadovanú, tá istá neprítomnosť sa oznamuje ako varovanie. Nič sa nemusí vyhlásiť."
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/audit/policy-view.png",
+            "alt": "Zobrazenie Politika s hosťovskými systémami, úložiskom a prahovými hodnotami uzla",
+            "caption": "Zobrazenie Politika."
+          }
+        }
+      ]
+    },
+    {
+      "id": "guests",
+      "title": "Hosťovské systémy",
+      "intro": "Každá VM a LXC na uzle má tri polia. Pole ponechané na predvolenej hodnote preberá všeobecnú hodnotu zobrazenú vedľa neho.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Pole",
+              "Hodnoty",
+              "Vplyv na posúdenie"
+            ],
+            "rows": [
+              [
+                "Zálohovanie",
+                "vyžaduje sa, nevyžaduje sa, neuvádza sa",
+                "Chýbajúca záloha je varovanie, keď sa vyžaduje, pozorovanie, ak nie je uvedené, a je vynechané z počtu, keď sa nevyžaduje."
+              ],
+              [
+                "Automatický štart",
+                "vyžaduje sa, nevyžaduje sa, neuvádza sa",
+                "Či sa hosťovský systém musí spustiť spolu s hostiteľom."
+              ],
+              [
+                "Požadovaný vek zálohy",
+                "Hodiny",
+                "Maximálny prijateľný vek poslednej zálohy."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "title": "Úložisko",
+      "blocks": [
+        {
+          "p": "Nedostupné úložisko sa označí ako kritické, ak je deklarované ako nevyhnutné alebo slúži bežiacemu hosťovskému systému; ako varovanie, ak jeho úloha nie je uvedená; a ako pozorovanie, ak je deklarované ako voliteľné."
+        }
+      ],
+      "intro": "Každé úložisko uzla sa označí ako Nevyhnutné, Voliteľné alebo Neuvedené."
+    },
+    {
+      "id": "thresholds",
+      "title": "Prahové hodnoty",
+      "intro": "Prázdne pole prahovej hodnoty používa dodanú predvolenú hodnotu zobrazenú ako zástupný text.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Kontrola kapacity úložiska (%) a zaplnenia thin poolu (%).",
+              "Pomer nadmerného prideľovania thin úložiska a nadmerného prideľovania pamäte.",
+              "Interval kontroly scrub ZFS (dni).",
+              "Náhradný limit veku zálohy (dni) a tolerancia plánu zálohovania (pomer).",
+              "Oznámenie o uplynutí platnosti osvedčenia (dni).",
+              "Životnosť disku (hodiny) a nedávne okno chyby disku (dni).",
+              "Vek správy Lynis (dni) a indexu balíkov (dni).",
+              "Využitie systémového denníka vzhľadom na jeho limit (%).",
+              "Kontrola priestoru (%) a inode (%) súborového systému."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "save",
+      "title": "Ako sa politika ukladá",
+      "blocks": [
+        {
+          "p": "Deklarácia sa overí a atomicky uloží do <code>/usr/local/share/proxmenux/audit_policy.json</code>. Každé uloženie obsahuje revíziu: ak deklaráciu zmenila iná relácia, návrh sa neuloží a zobrazenie ponúkne načítanie uloženej verzie."
+        },
+        {
+          "calloutWarning": {
+            "title": "Politika nie je nikdy odvodená",
+            "body": "ProxMenux nepridáva vlastné požiadavky. Prázdne pole zachová predvolenú hodnotu alebo zostane neuvedené; čiastočná deklarácia ovplyvní iba pomenované prvky."
+          }
+        }
+      ]
+    }
+  ]
+}

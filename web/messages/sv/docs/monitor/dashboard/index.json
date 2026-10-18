@@ -1,0 +1,101 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Översikt | ProxMenux-dokumentation",
+    "description": "Panelen är ProxMenux Monitors huvudgränssnitt: tio innehållsflikar inklusive Apps-startaren, ett gemensamt sidhuvud och en konfigurerbar ordning i huvudnavigeringen."
+  },
+  "header": {
+    "title": "Översikt",
+    "description": "ProxMenux Monitors vardagsvy: tio innehållsflikar inklusive Apps-startaren, ett gemensamt sidhuvud och en konfigurerbar ordning i huvudnavigeringen.",
+    "section": "ProxMenux Monitor"
+  },
+  "oneHeader": {
+    "title": "En rubrik, tio flikar",
+    "body": "Sidhuvudet med logotyp, nodnamn, statusindikator, drifttid, uppdatering och tema förblir synligt. Den aktiva fliken ändrar hela innehållsytan nedanför. Statusfärgen visar den allvarligaste kategorin i <link>hälsoövervakningen</link>; samma värde visas i panelen."
+  },
+  "tabs": {
+    "heading": "De tio flikarna",
+    "intro": "Varje flik har sin egen dedikerade sida. Sidor läggs inkrementellt som dokumentationen fylls i; nedan är den fullständiga listan och vad var och en är ansvarig för.",
+    "headerTab": "Flik",
+    "headerOwns": "Vad fliken omfattar",
+    "rows": [
+      {
+        "name": "Systemöversikt",
+        "linksTo": "/docs/monitor/dashboard/system-overview",
+        "owns": "CPU / minne / temperatur widgets, aktiva VM & LXC räkna, historiska metriska diagram, lagring och nätverkssammanfattningar. Standardlandningsfliken tills navigationsordern är anpassad."
+      },
+      {
+        "name": "Appar",
+        "linksTo": "/docs/monitor/dashboard/apps",
+        "owns": "Gemensam startvy för registrerade LXC-webblänkar och egna länkar, med kategorier, sökning, gästgenvägar och uppdateringsindikatorer per applikation."
+      },
+      {
+        "name": "Lagring",
+        "owns": "Proxmox pooler, fysiska diskar, SMART data, ZFS tillstånd, slitage och livstid, observationshistorik."
+      },
+      {
+        "name": "Nätverk",
+        "owns": "Fysiska gränssnitt, bondningar, bryggor och OVS, IP/MAC-adresser, RX/TX-diagram och RRD-historik per gränssnitt."
+      },
+      {
+        "name": "VM och LXC",
+        "owns": "Inventering av gäster, detaljvyer för konfiguration, mätvärden och loggar samt start, stopp, omstart och avstängning."
+      },
+      {
+        "name": "Hårdvara",
+        "owns": "CPU modell och topologi, minne layout, PCIe topologi, GPU med per-slot realtid övervakning."
+      },
+      {
+        "name": "Systemloggar",
+        "owns": "Live <code>journalctl</code> med filter, Proxmox aktivitetshistorik, anmälningslogg, nedladdningsbara loggpaket."
+      },
+      {
+        "name": "Terminal",
+        "owns": "Skal till värden eller valfri VM/CT i webbläsaren, med <code>xterm.js</code> över WebSockets."
+      },
+      {
+        "name": "Säkerhet",
+        "owns": "Auth installation, lösenord / 2FA / API tokens, revisionslogg, valfri Fail2Ban panel, Secure Gateway distribution."
+      },
+      {
+        "name": "Inställningar",
+        "owns": "Monitors språk, navigeringsordning, aviseringskanaler, AI-leverantör, hälsotrösklar, undantag och inventering av efterinstallationsoptimeringar."
+      }
+    ]
+  },
+  "headerAnatomy": {
+    "heading": "Header anatomi",
+    "items": [
+      "<strong>Logo + produktnamn</strong> till vänster. Logotypen förvandlas till en \"uppdatering tillgänglig\" variant när en nyare Monitor release upptäcks.",
+      "<strong>Nodidentitet</strong>: namn från <code>pvesh get /nodes</code>, med <code>hostname</code> som reserv.",
+      "<strong>Statusindikator</strong>: Frisk (grön), Varning (gul), Kritisk (röd). Ett klick öppnar hälsoövervakningen. Ett blått <em>info</em>-märke visas när avfärdade poster fortfarande är inom sin undertryckningstid.",
+      "<strong>Drifttid</strong>: värdens drifttid i lättläst format.",
+      "<strong>Uppdateringsknapp</strong>: upprepar API-anropen för aktuella data utan att ladda om hela sidan.",
+      "<strong>Temaväljare</strong>: ljust, mörkt eller system. Sparas i <code>localStorage</code>."
+    ]
+  },
+  "whereNext": {
+    "heading": "Var till nästa",
+    "items": [
+      {
+        "label": "Apps flik",
+        "href": "/docs/monitor/dashboard/apps",
+        "tail": " — gemensam startvy för webblänkar och dess relation till registrerade LXC-applikationer."
+      },
+      {
+        "label": "Systemöversikt flik",
+        "href": "/docs/monitor/dashboard/system-overview",
+        "tail": " - landningsfliken, fullt dokumenterad."
+      },
+      {
+        "label": "Hälsoövervakare",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — dialogen bakom statusindikatorn med detaljer för tio kategorier."
+      },
+      {
+        "label": "Arkitektur",
+        "href": "/docs/monitor/architecture",
+        "tail": " — Hur instrumentpanelen pratar med Flask backend."
+      }
+    ]
+  }
+}

@@ -110,7 +110,7 @@ class LynisThresholdContracts(unittest.TestCase):
         _, module = extract_function(APP / 'scripts/health_monitor.py', '_check_memory_comprehensive', owner='HealthMonitor')
         # The method is bound to an inert class, not the production constructor.
         self_obj = SimpleNamespace(state_history=defaultdict(list), MEMORY_DURATION=300, SWAP_CRITICAL_DURATION=300,
-                                   MEMORY_WARNING=80, SWAP_HIGH_PERCENT=80, AVAILABLE_MIN_PERCENT=20)
+                                   MEMORY_WARNING=80, MEMORY_CRITICAL=90, SWAP_HIGH_PERCENT=80, AVAILABLE_MIN_PERCENT=20)
         memory = SimpleNamespace(percent=50, available=10, total=100)
         swap = SimpleNamespace(percent=90, used=90, total=100)
         namespace = {'Dict': dict, 'Any': object, 'psutil': SimpleNamespace(virtual_memory=lambda: memory, swap_memory=lambda: swap),

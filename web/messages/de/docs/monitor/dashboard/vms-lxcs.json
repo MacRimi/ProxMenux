@@ -1,0 +1,244 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Dashboard: VMs und LXCs | ProxMenux-Dokumentation",
+    "description": "Die Registerkarte VMs und LXCs listet alle Gäste des Hosts mit CPU-, Arbeitsspeicher- und Datenträgernutzung in Echtzeit. Die Details je Gast zeigen Konfiguration, Ressourcen, Sicherungen, das Konsolenprotokoll von OCI-Containern, Notizen und die Steuerung Starten / Herunterfahren / Neustart / Stopp erzwingen."
+  },
+  "header": {
+    "title": "Dashboard: VMs und LXCs",
+    "description": "Vollständiges Gastinventar des Knotens: vier Kennzahlen oben, eine sortierbare Liste aller VMs und LXCs darunter und Gastdetails mit Konfiguration, Ressourcen, Sicherungen, dem Konsolenprotokoll von OCI-Containern sowie den vier Lebenszyklus-Steuerungen (Starten / Herunterfahren / Neustart / Stopp erzwingen).",
+    "section": "ProxMenux Monitor · Übersicht"
+  },
+  "intro": {
+    "title": "Steuerung der Gäste",
+    "body": "Hier steuern Sie den Lebenszyklus der Gäste. Lebenszyklusaktionen laufen über <code>POST /api/vms/&lt;vmid&gt;/control</code>; bei Neustart und Stopp erzwingen geben Sie zur Bestätigung die VMID ein, und die Antwort wird in der Gastzeile angezeigt. Erzwungenes Ausschalten erfordert die eigene Schaltfläche Stopp erzwingen."
+  },
+  "topRow": {
+    "heading": "Obere Reihe: vier Stat-Karten",
+    "intro": "Vier Karten fassen den Gastzustand zusammen: Gesamtzahl, CPU-Auslastung, zugewiesener Arbeitsspeicher im Verhältnis zur Hostkapazität und Datenträgerzuweisung.",
+    "imageAlt": "Registerkarte VMs & LXCs — oberste Reihe von vier Statistikkarten: Total VMs & LXCs, Total CPU, Total Memory, Total Disk",
+    "imageCaption": "Obere Reihe: Gesamtzahlen und Laufend/Gestoppt, aktuelle CPU-Auslastung, belegter Speicher / laufenden Gästen zugewiesener Speicher / insgesamt zugewiesener Speicher mit Grenzwertanzeige sowie zugewiesener Datenträgerplatz.",
+    "headerCard": "Karte",
+    "headerWhat": "Was es zeigt",
+    "totalLabel": "Gesamtzahl der VMs und LXCs",
+    "totalWhat": "Gesamtzahl mit zwei Abzeichen — <em>X Running</em> (grün) und <em>Y Stopped</em> (rot, nur wenn > 0). Die Nummer, die Sie sehen, wenn etwas nach einem Neustart nicht wieder auftaucht.",
+    "cpuLabel": "CPU gesamt",
+    "cpuWhat": "Gesamte aktuelle CPU-Auslastung aller Gäste als Anteil der physischen Host-CPU mit der Fußzeile <em>„Zugewiesene CPU-Auslastung“</em>.",
+    "memoryLabel": "Gesamtspeicher",
+    "memoryIntro": "Drei Messwerte vertikal gestapelt:",
+    "memoryItems": [
+      "<strong>Aktuell belegt</strong> — großer Wert, etwa <em>15.4 GB</em>, und <em>X.X % von Y GB</em> des Host-RAMs. Der blaue Balken zeigt den Prozentsatz.",
+      "<strong>Laufenden Gästen zugewiesen</strong> + <strong>Insgesamt zugewiesen</strong> — Summe von <code>maxmem</code> der <em>laufenden</em> Gäste neben der Summe <em>aller</em> Gäste einschließlich gestoppter. Die erste ist jetzt relevant, die zweite beim gleichzeitigen Start aller Gäste.",
+      "<strong>Innerhalb der Grenzen</strong> ist grün und wechselt zu <em>Überbucht</em>, wenn die Gesamtzuweisung den Host-RAM übersteigt. Kontrollierte Überbuchung kann mit KSM funktionieren; die Anzeige warnt früh bei knappem Spielraum."
+    ],
+    "diskLabel": "Gesamtes Laufwerk",
+    "diskWhat": "Summe des Speicherplatzes, der allen Gästen in der entsprechenden Einheit (GB / TB) zugewiesen ist, mit der Fußzeile <em>\"Zugeordneter Speicherplatz\"</em>."
+  },
+  "inventory": {
+    "heading": "Liste virtueller Maschinen und Container",
+    "intro": "Eine Reihe pro Gast. Die Liste stammt aus <code>/api/vms</code>, die <code>qm list</code> + <code>pct list</code> + <code>pvesh /cluster/resources</code> auf dem Host konsolidiert.",
+    "imageAlt": "Liste virtueller Maschinen und Container — eine Zeile pro Gast mit Status, Typabzeichen, Name, ID und Inline-CPU / Speicher / Festplattenprozentsatz",
+    "imageCaption": "Das mobil optimierte Layout des Inventars - die gleichen Daten, die die Desktop-Ansicht zeigt, werden in einer einzigen Spalte neu gestapelt, wobei die Prozentsätze und Statusindikatoren kompakt gehalten werden.",
+    "rowsIntro": "Jede Zeile zeigt:",
+    "rows": [
+      "<strong>Statussymbol</strong> — grünes Wiedergabedreieck für laufend oder rotes Quadrat für gestoppt. Gestoppte Gäste werden abgeblendet und fallen sofort auf.",
+      "<strong>Typanzeige</strong> — <em>LXC</em> in Cyan für Container, <em>VM</em> in Lila für virtuelle Maschinen.",
+      "<strong>Name</strong> — Hostname oder Anzeigename des Gasts.",
+      "<strong>VMID</strong> — die numerische ID von Proxmox unter dem Namen.",
+      "<strong>Inline-Metriken</strong> — drei Prozent mit ihrem Symbol (CPU %, Memory %, Disk %). Jedes Symbol wird orange, wenn die Metrik eine Aufmerksamkeitsschwelle überschreitet (z. B. Speicher über 90 %), so dass ein schneller Scan Ihnen sagt, welcher Gast unter Druck steht, ohne ihn zu öffnen."
+    ],
+    "clickHint": "Ein Klick auf eine Zeile öffnet den Detaildialog, unabhängig davon, ob der Gast läuft oder gestoppt ist.",
+    "mobileTitle": "Die Liste ist für Mobilgeräte entworfen",
+    "mobileBody": "Auf Telefonen und in schmalen Fenstern stehen Typ, Name, ID und die drei Prozentwerte untereinander wie im Bild. Auf breiten Ansichten verteilen sie sich horizontal. In beiden Fällen öffnet ein Tippen auf die gesamte Zeile die Details."
+  },
+  "drillIn": {
+    "heading": "Gastdetaildialog",
+    "intro": "Der Detaildialog zeigt Gastname, VMID, Typ, Zustand und Laufzeit. Seine Navigation passt sich dem Gast an: <strong>Status</strong>, <strong>App</strong> und <strong>Updates</strong> für die LXC-Anwendungsverwaltung, <strong>Mounts</strong> bei vorhandenen LXC-Mountpoints, <strong>Logs</strong> für durch OCI manager Apps installierte Container sowie <strong>Backups</strong> und <strong>Firewall</strong>. Die feste Aktionsleiste hält die Start- und Stoppfunktionen sowie das LXC-Terminal in jeder Registerkarte bereit.",
+    "statusTitle": "Tab. 1 — Status",
+    "statusImageAlt": "Gastdetails — Status mit Live-Werten für CPU, Arbeitsspeicher und Datenträger, Datenträger-/Netzwerk-I/O, Betriebssystemlogo und Ressourcen/IP-Adressen",
+    "statusImageCaption": "Status: oben CPU, Arbeitsspeicher und Datenträger mit Balken; darunter gesamte I/O-Daten (Datenträger gelesen/geschrieben, Netzwerk empfangen/gesendet); anschließend Ressourcen mit Notizen, + Info und IP-Adressliste.",
+    "statusIntro": "Der Standardreiter zum Prüfen des Gastzustands. Drei Bereiche:",
+    "liveTitle": "1. Zeile Live-Metriken",
+    "liveItems": [
+      "<strong>CPU-Auslastung (X Kerne)</strong> — Prozentsatz mit Balken. Die konfigurierte Kernzahl im Kopf erklärt, worauf sich 100 % bezieht.",
+      "<strong>Arbeitsspeicher</strong> — <em>belegt / maximal</em> in GB mit Balken.",
+      "<strong>Datenträger</strong> — <em>belegt / maximal</em> für das primäre Gast-Image im selben Format."
+    ],
+    "ioTitle": "2. I/O-Gesamtwerte + OS-Logo",
+    "ioItems": [
+      "<strong>Datenträger-I/O</strong> — gelesene (↓) und geschriebene (↑) Daten seit dem Start. Zeigt einen plötzlichen I/O-Anstieg gegenüber dem üblichen Gastverhalten.",
+      "<strong>Netzwerk-I/O</strong> — insgesamt empfangene (↓) und gesendete (↑) Daten, entsprechend den Datenträgerwerten.",
+      "<strong>OS-Verteilungslogo</strong> - das Debian / Ubuntu / Alpine / Windows / usw.-Symbol, das vom Betriebssystemtyp des Gastes erkannt wird. Ein schneller visueller Hinweis beim Scrollen mehrerer geöffneter Modals."
+    ],
+    "resourcesTitle": "3. Ressourcenblock",
+    "resourcesIntro": "Gastkonfiguration aus Proxmox: CPU-Kerne, Arbeitsspeicher (konfiguriertes <code>maxmem</code>) und Swap. Zwei aufklappbare Bereiche im Kopf:",
+    "resourcesItems": [
+      "<strong>Notizen</strong> — bearbeitbare Gastbeschreibung. Speichern ruft <code>PUT /api/vms/&lt;vmid&gt;/config</code> auf und schreibt in <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> oder <code>/etc/pve/lxc/&lt;vmid&gt;.conf</code>.",
+      "<strong>+ Info</strong> — BIOS-Modus, Maschinentyp, Agentstatus, hostpci-Passthrough-Einträge, CT-Einhängepunkte und Startreihenfolge."
+    ],
+    "ipsTitle": "4. IP-Adressen",
+    "ipsBody": "Jede IPv4-/IPv6-Adresse des Gasts erscheint als grüne Anzeige. Die Liste bleibt bei gestopptem Gast oder einer VM ohne QEMU-Agent leer. LXCs melden ihre Adressen direkt.",
+    "appTitle": "Tab 2 — App (nur LXC)",
+    "appIntro": "Registriert Anwendungen, die zum LXC gehören, speichert Weblinks und vergleicht optional installierte und verfügbare Versionen. Vorschläge kommen aus dem Start-Cache; <strong>Find-Anwendungen</strong> aktualisiert ausdrücklich die Entdeckung für diesen LXC, nachdem neue Software installiert wurde.",
+    "appLinkLead": "Siehe die",
+    "appLinkLabel": "dedizierte App-Seite",
+    "appLinkTail": "für zwischengespeicherte Erkennung, kataloggestützte Registrierung, Docker-Weblinks und Versionsdetektoren.",
+    "updatesTitle": "Tab 3 — Updates (nur LXC)",
+    "updatesIntro": "<strong>Betriebssystempakete</strong>, Apps, <strong>Docker Engine</strong> und Docker-Images bleiben getrennte Ziele. Jedes lässt sich einzeln starten oder in einer genau festgelegten Sammelaktion bzw. einem Zeitplan auswählen.",
+    "updatesLinkLead": "Siehe die",
+    "updatesLinkLabel": "dedizierte Updates Seite",
+    "updatesLinkTail": "für integrierte und eigene Updater, Neuerstellung von Docker-Containern, Sammelauswahl, Sicherheitsoptionen und Zeitplanung.",
+    "mountsTitle": "Reiter 4 — Einhängepunkte (nur LXC, falls vorhanden)",
+    "mountsImageAlt": "LXC-Details, Einhängepunkte: PVE-Volumes, Bind-Mounts vom Host oder PVE-Speicher sowie im CT eingehängte NFS-/CIFS-Freigaben. Je Karte: Typ, Kapazität, belegte/gesamte Bytes, Optionen und Statuspunkt — grün intakt, bernsteinfarben schreibgeschützt/abweichend, rot nicht erreichbar.",
+    "mountsImageCaption": "Einhängepunkte erscheint nur bei LXCs mit mindestens einem konfigurierten oder nachträglich hinzugefügten Remote-Einhängepunkt. Ohne Einhängepunkte fehlt der Reiter.",
+    "mountsIntro": "Proxmox zeigt konfigurierte <code>mpX</code>-Einhängepunkte, jedoch keine später im CT über <code>mount.cifs</code>, NFS mit <code>autofs</code> usw. hinzugefügten. Dieser Reiter verbindet <strong>beide Ansichten</strong>: konfigurierte Einhängepunkte <strong>und</strong> im Container erkannte Laufzeiteinhängungen, mit Status und abrufbarer Kapazität.",
+    "mountTypesTitle": "Erkannte Einhängepunkttypen",
+    "mountTypesItems": [
+      "<strong>PVE-Volume</strong> — liegt auf Proxmox-verwaltetem Speicher, etwa ZFS-Subvolume, Verzeichnis oder Ceph RBD. Die Kapazität stammt aus den PVE-Speicherstatistiken und entspricht der Proxmox-Anzeige.",
+      "<strong>Bind-Mount aus PVE-Speicher</strong> — <code>mpX</code>-Eintrag mit einem Pfad auf PVE-bekanntem Speicher.",
+      "<strong>Bind-Mount vom Host</strong> — <code>mpX</code>-Eintrag mit beliebigem Hostpfad (<code>/mnt/something</code>). Die Kapazität liefert <code>df</code> für diesen Pfad.",
+      "<strong>Ad-hoc in CT</strong> – Mount, der <em>nur</em> im Mount-Namespace des Containers existiert (z. B. eine NFS-Freigabe, die der CT selbstständig mountet). Die Kapazität wird über <code>pct exec &lt;vmid&gt; df</code> gelesen, was die einzige Möglichkeit ist, sie anzuzeigen – <code>/proc/&lt;pid&gt;/root</code> vom Host stellt die tatsächlichen Statistiken des Remote-Mounts nicht offen."
+    ],
+    "mountStateTitle": "Statuspunkt und Warnungen je Karte",
+    "mountStateItems": [
+      "<green/> <strong>Grün</strong> — Einhängepunkt intakt und erreichbar.",
+      "<amber/> <strong>Bernsteinfarben</strong> — konfiguriert, aber nicht eingehängt, schreibgeschützt oder <em>Zombie-Bind</em>. Dabei fehlt die Hostquelle, während der CT sie noch als eingehängt sieht, etwa nach Entfernen eines USB-Laufwerks oder <code>umount</code> auf dem Host.",
+      "<red/> <strong>Rot</strong> — nicht erreichbar: Die Laufzeitprüfung konnte den Einhängepunkt nicht erreichen, etwa eine NFS-Freigabe bei ausgefallenem Server."
+    ],
+    "mountsCalloutTitle": "Zusätzliche Informationen gegenüber Proxmox",
+    "mountsCalloutBody": "Zeigt alle Lese- und Schreibziele des Containers samt Kapazität. Im CT eingehängte NFS-/CIFS-Freigaben, die Proxmox nicht anzeigt, erhalten dieselbe Darstellung und Zustandsprüfung. Nicht erreichbare Remote-Mounts und Zombie-Binds werden vor Problemen bei einer Sicherung markiert.",
+    "logsTitle": "Tab 5 — Protokolle (nur OCI-Container)",
+    "logsBody": "Nur für Container aus OCI manager Apps. Zeigt die Hauptprozess-Konsole des Images aus <code>/var/log/proxmenux/oci/VMID.console.log</code>: letzte 100, 500 oder 1000 Zeilen, Live-Verfolgung bei laufendem Container, Filter und Download. Die Datei wird beim Öffnen neu gelesen, auch bei gestopptem Container. Details: <ociLink>OCI-Container in ProxMenux Monitor</ociLink>.",
+    "backupsTitle": "Tab. 6 — Backups",
+    "backupsImageAlt": "Pro-Gast-Bohr-in-Modal - Backups-Registerkarte mit der verfügbaren Backup-Liste, Ziel-Tag, Größen und der Create Backup-Schaltfläche",
+    "backupsImageCaption": "Alle Sicherungen dieses Gasts auf konfigurierten Proxmox-Speichern, neueste zuerst. Die Kopfzeile zeigt ihre Anzahl.",
+    "backupsIntro": "Listet alle Gastsicherungen auf konfigurierten Proxmox-Speichern, neueste zuerst. Der Zähler im Titel zeigt, ob Sicherungen vorhanden sind. Jede Zeile enthält :",
+    "backupsItems": [
+      "<strong>Zeitstempel</strong> — Datum und Uhrzeit des Laufs.",
+      "<strong>Zielanzeige</strong> — Speicherort (PBS-Cloud, PBS-Local, NFS-Backup, …), nach Zustand eingefärbt.",
+      "<strong>Größe</strong> — endgültige Größe der Sicherung auf dem Datenträger."
+    ],
+    "backupsOutro": "<strong>+ Sicherung erstellen</strong> startet eine Sicherung auf dem in Proxmox als „Backup target“ markierten Speicher. Die Wiederherstellung erfolgt in der Proxmox-Weboberfläche; Monitor zeigt aktuelle Sicherungen des Gasts und erstellt neue.",
+    "firewallTitle": "Tab. 7 — Firewall",
+    "firewallIntro": "Liest das Proxmox-Firewallprotokoll des Gasts direkt vom Host, ohne Zusatzdienst oder regelmäßige Abfragen. Der Reiter ist immer sichtbar; der Inhalt hängt davon ab, ob die Firewall aktiv ist und Regeln tatsächlich protokollieren.",
+    "firewallItems": [
+      "<strong>Firewall deaktiviert</strong> — eine bernsteinfarbene Mitteilung erklärt genau, wo sie in der Proxmox-Benutzeroberfläche aktiviert werden soll (<em>&lt;Container|VM&gt; → Firewall → Options</em>) und erinnert Sie daran, dass mindestens eine Regel <code>log: info</code> (oder höher) benötigt, bevor Pakete angezeigt werden.",
+      "<strong>Firewall aktiv, noch keine Ereignisse</strong> — Hinweis im leeren Bereich auf die nötige Protokollierung, hilfreich direkt nach dem Aktivieren.",
+      "<strong>Ereignisse vorhanden</strong> — scrollbarer Monospace-Bereich mit Originaleinträgen nach Aktion: <green>ACCEPT</green> grün, <orange>REJECT</orange> orange, <red>DROP</red> rot. Der Zähler im Kopf nennt die geladenen Einträge."
+    ],
+    "firewallRefresh": "<em>Aktualisieren</em> lädt neue Einträge bei Bedarf. Ohne automatische Abfrage bleibt die Ansicht eine Momentaufnahme des Öffnens oder letzten Aktualisierens. Quelle ist <code>/var/log/pve-firewall.log</code>, nach VMID gefiltert über <code>GET /api/vms/&lt;vmid&gt;/firewall/log</code>.",
+    "firewallCalloutTitle": "Warum haben Sie es hier, wenn die Proxmox-Benutzeroberfläche es bereits zeigt?",
+    "firewallCalloutBody": "Spart den Wechsel zur Proxmox-Oberfläche und hält die Ansicht auf dieselbe VMID beschränkt: Gast starten, Einhängepunkte und Firewallereignisse prüfen, Gast wieder stoppen. Regeln werden in Proxmox bearbeitet; Monitor verändert sie nicht.",
+    "actionBarTitle": "Untere Aktionsleiste",
+    "actionBarIntro": "Immer sichtbar am Fuß des Modals, unabhängig davon, welcher Tab aktiv ist:",
+    "consoleItem": "<strong>Konsole</strong> öffnet bei laufenden LXCs <code>pct enter &lt;vmid&gt;</code> im Container. Sie nutzt wie der <link>Terminalreiter</link> xterm.js und WebSocket sowie die <strong>mobile Werkzeugleiste</strong> mit ESC, TAB, Pfeilen, Enter und Ctrl+C / Ctrl+X / Ctrl+R. Damit ist die Bedienung per Telefon oder Tablet möglich. VMs nutzen hier keine Konsole; verwenden Sie Proxmox noVNC.",
+    "lifecycleIntro": "Darunter stehen vier Schaltflächen im 2×2-Raster. Jede sendet <code>POST /api/vms/&lt;vmid&gt;/control</code> mit der passenden <code>action</code>. Ihre Verfügbarkeit hängt vom Gastzustand ab.",
+    "headerButton": "Schaltfläche",
+    "headerEnabled": "Aktiviert, wenn",
+    "headerAction": "Aktion an Host gesendet",
+    "lifecycleRows": [
+      {
+        "button": "Starten",
+        "color": "green",
+        "enabled": "Der Gast ist gestoppt.",
+        "action": "qm start / pct start"
+      },
+      {
+        "button": "Herunterfahren",
+        "color": "blue",
+        "enabled": "Der Gast läuft.",
+        "action": "qm shutdown / pct shutdown — geordnetes Herunterfahren, ACPI"
+      },
+      {
+        "button": "Neustart",
+        "color": "blue",
+        "enabled": "Der Gast läuft.",
+        "action": "qm reboot / pct reboot — geordneter Neustart"
+      },
+      {
+        "button": "Stopp erzwingen",
+        "color": "red",
+        "enabled": "Der Gast läuft.",
+        "action": "qm stop / pct stop — hartes Ausschalten"
+      }
+    ],
+    "forceStopTitle": "Stopp erzwingen schaltet sofort aus",
+    "forceStopBody": "<strong>Stopp erzwingen</strong> umgeht das Herunterfahren wie ein Ziehen des Stromkabels. Nutzen Sie <strong>Herunterfahren</strong>, solange der Gast reagiert. Erzwingen Sie den Stopp nur bei hängendem Herunterfahren und akzeptiertem Datenverlustrisiko. Farbe und Beschriftung warnen vor versehentlichem Auslösen."
+  },
+  "dataCollected": {
+    "heading": "Wie die Daten gesammelt werden",
+    "headerSection": "Abschnitt des Reiters",
+    "headerEndpoint": "Endpunkt",
+    "headerSource": "Quelle",
+    "rows": [
+      {
+        "section": "Bestandsverzeichnis",
+        "endpoint": "/api/vms",
+        "source": "<code>pvesh get /cluster/resources --type vm</code> für VM und CT."
+      },
+      {
+        "section": "Detail-Panel (Konfiguration, Netzwerk, Festplatten)",
+        "endpoint": "/api/vms/<vmid>",
+        "source": "<code>qm config &lt;id&gt;</code> für VMs / <code>pct config &lt;id&gt;</code> für CTs."
+      },
+      {
+        "section": "Kennzahlendiagramm pro Gast",
+        "endpoint": "/api/vms/<vmid>/metrics",
+        "source": "PVE RRD-Daten (<code>pvesh get /nodes/&lt;node&gt;/qemu/&lt;id&gt;/rrddata</code>) werden zu einer chartfreundlichen Form verdichtet."
+      },
+      {
+        "section": "OCI-Konsolenprotokoll (Registerkarte Logs)",
+        "endpoint": "/api/lxc/<vmid>/console-log",
+        "source": "Konsolenausgabe des Hauptprozesses des Images, gelesen aus <code>/var/log/proxmenux/oci/&lt;vmid&gt;.console.log</code> auf dem Host. Nur für OCI-Container angezeigt."
+      },
+      {
+        "section": "Backups für Gäste verfügbar",
+        "endpoint": "/api/vms/<vmid>/backups",
+        "source": "<code>pvesm list &lt;storage&gt;</code> durch VMID gefiltert."
+      },
+      {
+        "section": "Pro-Gast-Firewall-Log (Firewall-Tab)",
+        "endpoint": "/api/vms/<vmid>/firewall/log",
+        "source": "<code>/var/log/pve-firewall.log</code> durch VMID gefiltert."
+      },
+      {
+        "section": "Einschalttasten (Start / Stop / Reboot / Shutdown)",
+        "endpoint": "/api/vms/<vmid>/control",
+        "source": "<code>qm start|stop|reboot|shutdown</code> oder <code>pct</code>-Äquivalente."
+      }
+    ],
+    "codeComment1": "# Dashboard-Daten mit PVE abgleichen",
+    "codeComment2": "# Gastkonfiguration genau wie im Detaildialog prüfen",
+    "codeComment3": "# VM",
+    "codeComment4": "# CT"
+  },
+  "whereNext": {
+    "heading": "Wohin als nächstes",
+    "items": [
+      {
+        "label": "Gesundheitsmonitor",
+        "href": "/docs/monitor/health-monitor",
+        "tailRich": " — Kategorie VMs und Container: Startfehler, QMP-Zeitüberschreitungen und CT-Herunterfahrfehler."
+      },
+      {
+        "label": "Benachrichtigungen",
+        "href": "/docs/monitor/notifications",
+        "tailRich": "— was die <code>vm_*</code>, <code>ct_*</code>, <code>migration_*</code> und <code>backup_*</code> Ereignisse nachgeschaltet auslösen."
+      },
+      {
+        "label": "API-Referenz",
+        "href": "/docs/monitor/api",
+        "tailRich": " — die Endpunkte für VMs und Sicherungen."
+      },
+      {
+        "label": "Dashboard-Index",
+        "href": "/docs/monitor/dashboard",
+        "tailRich": " — die anderen Reiter."
+      },
+      {
+        "label": "ProxMenux: VM erstellen",
+        "href": "/docs/create-vm",
+        "tailRich": " — Bereitstellung: NAS-Systemvorlagen (Synology und andere), Linux-/Windows-VMs und für Proxmox angepasste Standardwerte."
+      }
+    ]
+  }
+}

@@ -1,0 +1,268 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Dashboard: Registerkarte Speicher | ProxMenux-Dokumentation",
+    "description": "Die Registerkarte Speicher vereint vier Ansichten: Proxmox-Speicher mit Status, ZFS-Pools, interne Laufwerke mit SMART und externe USB-Laufwerke. Die Laufwerksdetails zeigen SMART-Attribute, Verschleiß, Lebensdauer und dauerhaft gespeicherte Beobachtungen."
+  },
+  "header": {
+    "title": "Dashboard: Registerkarte Speicher",
+    "description": "Der gesamte Hostspeicher auf einer Seite: Proxmox-Speicher NFS / CIFS / LVM / ZFS / dir, ZFS-Poolzustand, interne SATA/NVMe-Laufwerke mit SMART und externe USB-Laufwerke. Ein Klick auf ein Laufwerk öffnet SMART-Attribute und Beobachtungsverlauf.",
+    "section": "ProxMenux Monitor · Übersicht"
+  },
+  "intro": {
+    "title": "Unterstützt durch drei Quellen",
+    "body": "Proxmox-Speicher stammen aus <code>pvesm status</code>, ZFS aus <code>zpool status</code>, physische Laufwerke aus <code>lsblk</code> + <code>smartctl</code> und NVMe-Felder aus <code>nvme</code>. Die Seite aktualisiert sich etwa alle 60 Sekunden; die Detailansicht fordert eine SMART-Abfrage an."
+  },
+  "thresholds": {
+    "title": "Hier angewendete Statusfarben und -schwellen",
+    "intro": "Health Monitor bewertet den Status als <green/> <strong>grün</strong> unter Warnung, <amber/> <strong>orange</strong> zwischen Warnung und Kritisch und <red/> <strong>rot</strong> ab Kritisch. Die Standardwerte folgen. Einzelne Dashboard-Balken können andere, unten beschriebene Farbgrenzen verwenden.",
+    "items": [
+      "<strong>Kapazität</strong> (Hostlaufwerke, PVE-Speicher, ZFS-Pools, LXC-Einhängepunkte) — Warnung 85 %, Kritisch 95 %.",
+      "<strong>Laufwerkstemperatur</strong> — HDD 60/65 °C · SSD 70/75 °C · NVMe 80/85 °C · SAS 55/65 °C (Warnung / Kritisch)."
+    ],
+    "outro": "Alle Werte lassen sich je Host konfigurieren. <link>Einstellungen → Health-Monitor-Schwellen</link> nennt die maßgeblichen Werte und erklärt ihre Anpassung."
+  },
+  "topRow": {
+    "heading": "Obere Reihe: Speicherübersicht",
+    "intro": "Vier Karten fassen beim Öffnen Gesamtkapazität, lokale Nutzung, entfernte Nutzung und physische Laufwerke zusammen. Sie geben schnelle Antworten; die Karten darunter enthalten die Details.",
+    "imageAlt": "Registerkarte Speicher mit vier Karten: Gesamtspeicher, lokale Nutzung, entfernte Nutzung und physische Laufwerke",
+    "imageCaption": "Obere Reihe: Gesamtkapazität und Laufwerksanzahl, lokal und entfernt belegte Bytes sowie physische Laufwerke nach Typ mit Zustandsübersicht.",
+    "headerCard": "Karte",
+    "headerWhat": "Was es zeigt",
+    "totalLabel": "Gesamtspeicher",
+    "totalWhat": "Gesamte Rohkapazität aller physischen Laufwerke. Die Fußzeile nennt die Anzahl erkannter Laufwerke.",
+    "localLabel": "Lokale Nutzung",
+    "localWhat": "Belegte Bytes auf lokalem Speicher: LVM / LVM-thin / ZFS / dir auf den Hostlaufwerken. Der Hauptwert zeigt belegte Bytes, die Fußzeile <em>X.XX % von Y TB</em> zusätzlich den Belegungsgrad.",
+    "remoteLabel": "Entfernte Nutzung",
+    "remoteWhat": "Dasselbe Format wie Lokale Nutzung für entfernte Speicher NFS / CIFS / PBS / Ceph / iSCSI. Sie werden getrennt gezählt, da lokale und entfernte Ausfälle unterschiedlich wirken und die Ressourcen anders geplant und überwacht werden.",
+    "disksLabel": "Physische Laufwerke",
+    "disksIntro": "Zwei Aufschlüsselungslinien für das Inventar:",
+    "disksItems": [
+      "<strong>Nach Typ</strong> — Anzahl der NVMe-Laufwerke in Lila, SSDs und HDDs in Blau. Angezeigt werden erkannte Typen; ein reiner NVMe-Host zeigt nur diesen Zähler.",
+      "<strong>Nach Zustand</strong> — Anzahl <em>normaler</em> Laufwerke in Grün, mit <em>Warnung</em> in Gelb und <em>kritischer</em> in Rot. Ohne Probleme erscheint nur „X normal“; die anderen Zustände werden erst bei entsprechenden Befunden angezeigt."
+    ]
+  },
+  "pveStorage": {
+    "heading": "Proxmox Speicherkarte",
+    "intro": "Je Speicher aus <code>/etc/pve/storage.cfg</code> eine Zeile mit Typ (<code>nfs</code> / <code>cifs</code> / <code>zfspool</code> / <code>lvm</code> / <code>lvmthin</code> / <code>dir</code> / <code>pbs</code>), Name, Status aktiv/Fehler/nicht überwacht, Belegungsgrad und Farbbalken:",
+    "items": [
+      "<strong>Bis 75 %</strong> — blauer Balken und Wert.",
+      "<strong>Über 75 % bis 90 %</strong> — gelber Balken und Wert. Diese Farbgrenzen sind von den Health-Monitor-Schwellen getrennt.",
+      "<strong>> 90 %</strong> — roter Balken und Wert. Diese Farbgrenze ist von der Eskalation im Health Monitor getrennt.",
+      "<strong>Fehler</strong> — roter Rahmen um die Zeile bei konfiguriertem, aber unerreichbarem Speicher, etwa ausgefallenem NFS-Server oder abgelaufenen CIFS-Zugangsdaten.",
+      "<strong>Ausgeschlossen</strong> — lila Rahmen und Kennzeichnung „nicht überwacht“. Vom Benutzer ausgeschlossene Speicher, etwa absichtlich getrennte Archivvolumes."
+    ],
+    "calloutTitle": "Speicher von der Überwachung ausschließen",
+    "calloutBody": "Im Speichermenü lässt sich der Speicher als <em>von Überwachung ausgeschlossen</em> markieren. Die Einstellung liegt in <code>excluded_storages</code> und gilt für Dashboard und Health Monitor: keine Benachrichtigungen und kein Einfluss auf den Gesamtstatus."
+  },
+  "zfs": {
+    "heading": "ZFS Poolkarte",
+    "intro": "Erscheint nur bei installiertem ZFS und mindestens einem Pool. Jede Zeile zeigt einen Pool mit Status, Größe, belegtem und freiem Platz sowie Statussymbol:",
+    "items": [
+      "<strong>ONLINE</strong> — grün. Alles gesund.",
+      "<strong>DEGRADED</strong> — gelb. Der Pool liefert Daten, aber mindestens ein Gerät ist nicht verfügbar; ein Austausch muss geprüft werden.",
+      "<strong>FAULTED</strong> / <strong>UNAVAIL</strong> / <strong>SUSPENDED</strong> — rot. Der Pool liefert keine Daten und erfordert sofortiges Eingreifen."
+    ],
+    "outro": "ZFS-Zustand und SMART-Status jedes Laufwerks fließen in die Kategorie <em>Laufwerke und E/A</em> im <link>Health Monitor</link> ein."
+  },
+  "physical": {
+    "heading": "Physische Laufwerke und SMART-Status",
+    "intro": "Interne Festplatten (SATA / NVMe). Jede Zeile kondensiert die nützlichsten Felder auf einen Blick:",
+    "items": [
+      "<strong>Gerätepfad</strong> — <code>/dev/sda</code>, <code>/dev/nvme0n1</code>.",
+      "<strong>Typkennzeichnung</strong> — SATA / NVMe und passendes Symbol.",
+      "<strong>Systemkennzeichnung</strong> — orange Markierung für Laufwerke, die der Host verwendet: Systemeinhängepunkte (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), aktiver Swap, ZFS-Poolmitglieder, physische LVM-Volumes, aktive RAID-Mitglieder oder Bezeichnungen von Systempartitionen. Eine fehlende Markierung beweist nicht, dass das Laufwerk gefahrlos gelöscht oder anders verwendet werden kann.",
+      "<strong>Modell</strong> — Hersteller und Modell aus <code>smartctl -i</code>.",
+      "<strong>Kapazität</strong> — in gut lesbaren Einheiten.",
+      "<strong>Temperatur</strong> — aktueller Wert in °C, eingefärbt nach Laufwerkstyp; NVMe verwendet höhere Schwellen als SATA.",
+      "<strong>SMART-Status</strong> — bestanden / fehlgeschlagen / unbekannt.",
+      "<strong>Beobachtungsanzeige</strong> — enthält der dauerhafte Verlauf <code>disk_observations</code> Einträge für das Laufwerk, erscheint eine blaue Kennzeichnung mit der Anzahl, etwa <em>3 obs.</em>. Ein Klick öffnet die Beobachtungen.",
+      "<strong>Zustandsanzeige</strong> — In Ordnung / Warnung / Kritisch anhand von SMART und jüngsten Beobachtungen."
+    ],
+    "clickHint": "Die gesamte Zeile öffnet per Klick die unten beschriebenen Laufwerksdetails.",
+    "warningTitle": "Systemlaufwerke mit Bedacht behandeln",
+    "warningBody": "Laufwerke mit orangefarbenem <strong>System</strong> enthalten das laufende Betriebssystem. Die Kennzeichnung hilft bei der Erkennung; <link>ProxMenux → Laufwerksverwaltung → Formatieren / Löschen</link> verweigert destruktive Aktionen darauf. Verwenden Sie zur Umnutzung einer Startplatte eine Rettungsumgebung außerhalb des laufenden Proxmox."
+  },
+  "external": {
+    "heading": "Externer Speicher (USB)",
+    "body": "USB-Laufwerke haben eine eigene Karte, die nur bei angeschlossenen Geräten erscheint. Sie zeigt dieselben Felder wie interne Laufwerke und ein orangefarbenes <strong>USB</strong>-Label. Da sie oft nur für Sicherungen oder gelegentliche Übertragungen verbunden sind, bleiben Beobachtungen erhalten, während E/A-Fehler getrennter USB-Laufwerke nicht eskalieren."
+  },
+  "drillIn": {
+    "heading": "Dialog mit Laufwerksdetails",
+    "intro": "Ein Klick auf ein Laufwerk öffnet vier Registerkarten: <strong>Übersicht</strong> · <strong>SMART</strong> · <strong>Verlauf</strong> · <strong>Zeitplan</strong>. Die Kopfzeile zeigt Gerätepfad, Modell, Kapazität und gegebenenfalls das orangefarbene <em>System</em>-Label.",
+    "overviewTitle": "Registerkarte 1 — Übersicht",
+    "overviewImageAlt": "Laufwerksdetails mit Übersicht, Zustand, Ringanzeige für Verschleiß und Lebensdauer sowie wichtigen SMART-Attributen",
+    "overviewImageCaption": "Übersicht: Identifikation, Zustand, Restlebensdauer mit aktuellem Verschleiß und geschriebenen Daten sowie wichtige SMART-Attribute.",
+    "overviewIntro": "Standardansicht zum Prüfen des Laufwerkszustands ohne Testlauf. Drei Bereiche:",
+    "overviewItems": [
+      "<strong>Identifikation</strong> — Modell, Seriennummer, Kapazität und Zustand In Ordnung / Warnung / Kritisch.",
+      "<strong>Verschleiß und Lebensdauer</strong> — Ring für Restlebensdauer (97 %, 50 %, …) mit Quellattribut (<em>Media Wearout Indicator</em>, <em>Percentage Used</em>, …), Verschleißbalken, Prognose <em>Geschätzte Lebensdauer</em> in Jahren und geschriebenen Gesamtdaten. NVMe zeigt auch <em>Available Spare</em>.",
+      "<strong>SMART-Attribute</strong>: Die wichtigsten Werte erscheinen in einem Raster mit zwei Spalten: Temperatur, Betriebsstunden mit lesbarer Dauer wie <em>3 Jahre und 116 Tage</em>, Drehzahl oder <em>SSD</em>, Einschaltzyklen, SMART-Status, neu zugewiesene Sektoren, ausstehende Sektoren und CRC-Fehler. Die vollständige Attributtabelle befindet sich auf der Registerkarte SMART."
+    ],
+    "smartTitle": "Tab. 2 — SMART",
+    "smartImageAlt": "Laufwerksdetails, SMART-Registerkarte mit kurzem und erweitertem Test, letztem Ergebnis und vollständiger Attributtabelle",
+    "smartImageCaption": "SMART-Registerkarte: kurzen oder erweiterten Test starten, letztes Ergebnis und alle Attribute prüfen sowie den vollständigen Bericht zum Drucken oder Speichern als PDF öffnen.",
+    "smartIntro": "Verfügbare Aktionen in drei Bereichen:",
+    "smartItems": [
+      "<strong>SMART-Test starten</strong> — zwei Schaltflächen. <em>Kurzer Test (~2 Min.)</em> wartet auf das Ergebnis und zeigt es im Dialog. <em>Erweiterter Test (Hintergrund)</em> kann bei großen Laufwerken Stunden dauern, läuft auf dem Server weiter und benachrichtigt bei Abschluss.",
+      "<strong>Letzter Test</strong> — Typ, Status (<em>bestanden</em> / <em>fehlgeschlagen</em>) und Zeitstempel des letzten Laufs.",
+      "<strong>SMART-Attribute</strong> — vollständige Tabelle mit ID, Name, Wert, schlechtestem Wert und Status In Ordnung, Warnung oder Kritisch. SATA/SAS zeigt die nummerierte Liste. NVMe verwendet <code>nvme smart-log</code>: Temperatur, verfügbare Reserve, verbrauchter Anteil, gelesene/geschriebene Einheiten, Hostzugriffe, Controller-Auslastungszeit, Einschaltzyklen, unsichere Abschaltungen, Medienfehler, Fehlerprotokolleinträge und Zeit im Warn-/Kritischbereich der Gesamttemperatur."
+    ],
+    "pdfTitle": "Vollständigen SMART-Bericht anzeigen (PDF)",
+    "pdfIntro": "Unten auf SMART öffnet <strong>Vollständigen SMART-Bericht anzeigen</strong> einen druckbaren Bericht. Speichern Sie ihn über den Browser-Druckdialog als PDF zum Archivieren oder für den Herstellersupport bei einer RMA.",
+    "pdfPreviewAlt": "Erste Seite des SMART-Berichts mit Zusammenfassung, PASSED-Ring und Laufwerksinformationen",
+    "pdfPreviewCaption": "Erste Seite: Zusammenfassung, PASSED-Ring und vollständige Laufwerksinformationen. Das Beispiel-PDF enthält SSD-Verschleiß, alle SMART-Attribute und den Testverlauf.",
+    "pdfDownloadLabel": "Beispiel-SMART-Bericht herunterladen (PDF)",
+    "pdfSectionsIntro": "Der Bericht enthält diese Hauptabschnitte:",
+    "pdfSections": [
+      "<strong>Zusammenfassung</strong> — PASSED/FAILED, verständliche Zustandsbewertung — in Ordnung, Verschleiß oder Ausfall — und vier Angaben: Berichtszeit, letzter Testtyp, Ergebnis und geprüfte Attribute.",
+      "<strong>Laufwerksinformationen</strong> — Modell, Seriennummer, Kapazität, Typ HDD/SSD/NVMe, Familie, Bauform, Schnittstelle (SATA 3.3 · 6.0 Gb/s, …), TRIM, Temperatur und optimale Schwelle, Betriebsstunden, Einschaltzyklen, SMART, ausstehende/neu zugewiesene Sektoren und CRC-Fehler.",
+      "<strong>SSD-Verschleiß und Lebensdauer</strong> (nur SSD/NVMe) — Restlebensdauer, Quellattribut, aktueller Verschleiß, geschriebene Daten und Betriebsstunden.",
+      "<strong>Vollständige SMART-Attribute</strong> — ID, Name, Wert, schlechtester Wert, Schwelle, Rohwert und Status jedes Attributs. Wichtige Attribute wie Reallocated Sector Ct, Power On Hours, Reported Uncorrect, UDMA CRC Error Count und Media Wearout Indicator werden unter der Zeile kurz erklärt.",
+      "<strong>Letzter Selbsttest und vollständiger Verlauf</strong> — letzter Test mit Typ, Ergebnis, Abschlussmeldung und damaligen Betriebsstunden sowie nummerierte Tabelle aller aufbewahrten Tests.",
+      "<strong>Empfehlungen</strong> — Maßnahmen anhand des Ergebnisses. Für gesunde Laufwerke: <em>Laufwerk in Ordnung / regelmäßige Tests / Sicherungsstrategie</em>. Bei auffälligen Attributen folgen Hinweise zum Austausch."
+    ],
+    "pdfOutro": "Der Browser erstellt den druckbaren Bericht; Drucken und Als PDF speichern öffnen beide den Druckdialog. Wählen Sie einen Namen wie <code>SMART-&lt;short-id&gt;.pdf</code>. Bewahren Sie datierte Berichte zum Vergleich oder für den Herstellersupport auf.",
+    "historyTitle": "Registerkarte 3 — Verlauf",
+    "historyImageAlt": "Laufwerksdetails, Verlauf mit früheren SMART-Tests sowie Download und Löschen",
+    "historyImageCaption": "SMART-Testverlauf des Laufwerks. Jede Zeile zeigt Typ, Zeit, Alter, Markierung des neuesten Tests sowie Download der <code>smartctl</code>-Ausgabe und Löschen.",
+    "historyIntro": "Aufbewahrte abgeschlossene kurze und erweiterte Tests des Laufwerks. Jeder Eintrag enthält die ursprüngliche <code>smartctl</code>-Ausgabe und die von Monitor für das Dashboard ausgewerteten Felder. Aktionen je Zeile:",
+    "historyItems": [
+      "<strong>Herunterladen</strong> — speichert den JSON-Snapshot dieses Tests (Ausgabe von <code>smartctl -a --json</code> oder bei NVMe <code>nvme smart-log</code>, wenn smartctl fehlschlägt). Hilfreich, wenn der Herstellersupport die ursprünglichen Diagnosefelder benötigt.",
+      "<strong>Löschen</strong> — entfernt einen Test manuell aus dem Verlauf. Die Aufbewahrung im Zeitplan (<em>letzte 5 / 10 / 20</em>) löscht automatisch die ältesten."
+    ],
+    "scheduleTitle": "Registerkarte 4 — Zeitplan",
+    "scheduleImageAlt": "Laufwerksdetails, Zeitplan-Registerkarte mit Schalter für automatische SMART-Tests, Zeitplanliste und Schaltfläche Zeitplan hinzufügen",
+    "scheduleImageCaption": "Zeitplan: Testtyp, Intervall und Aufbewahrung wählen; Monitor richtet <code>cron</code> für automatische Tests ein.",
+    "scheduleIntro": "Automatische SMART-Tests über cron ohne Terminal. Drei Bereiche:",
+    "scheduleItems": [
+      "<strong>Automatische SMART-Tests</strong> — gemeinsamer Schalter für alle Zeitpläne des Laufwerks. Er pausiert sie während der Wartung, ohne ihre Konfiguration zu löschen.",
+      "<strong>Konfigurierte Zeitpläne</strong> — je Zeitplan eine Zeile mit Typ (<em>kurz</em> / <em>lang</em>), lesbarem Cron-Ausdruck (<em>„Am 1. des Monats um 03:00“</em>, <em>„Jeden Sonntag um 02:00“</em>), betroffenen Laufwerken und Aufbewahrung.",
+      "<strong>Zeitplan hinzufügen / bearbeiten</strong> — Typ (<em>kurz ~2 Min.</em> / <em>lang 1–4 Std.</em>), Intervall (<em>täglich / wöchentlich / monatlich</em>), Monats- oder Wochentag, Uhrzeit und Ergebnisse aufbewahren (<em>letzte 5 / 10 / 20</em>)."
+    ],
+    "scheduleOutro": "Der Zeitplan erzeugt einen Cron-Eintrag auf dem Host, der Monitor aufruft. Ergebnisse landen im SMART-Verlauf auf Registerkarte 3; die Aufbewahrung entfernt nach neuen Tests automatisch die ältesten Ergebnisse.",
+    "tempTitle": "Dialog mit Temperaturverlauf",
+    "tempIntro": "Monitor erfasst regelmäßig Messwerte von Laufwerken mit Temperatursensor und speichert sie lokal als Verlauf. Der aktuelle Wert steht in der Übersicht; ein Klick öffnet den Temperaturverlauf.",
+    "tempImageAlt": "Temperaturverlauf mit Gerätepfad und Modell, Zeiträumen von 1 Stunde, 24 Stunden, 7 oder 30 Tagen, Anzeigen für Aktuell/Minimum/Mittelwert/Maximum und Liniendiagramm nach den Schwellen des Laufwerkstyps",
+    "tempImageCaption": "Der Temperaturdialog öffnet sich aus der Übersicht bei einem Sensorwert ungleich null. Das Diagramm verwendet die Schwellen für HDD / SSD / NVMe / SAS.",
+    "tempShowsTitle": "Inhalt des Dialogs",
+    "tempShowsItems": [
+      "<strong>Zeitraumauswahl</strong>: <em>1 Stunde</em>, standardmäßig <em>24 Stunden</em>, <em>7 Tage</em> oder <em>30 Tage</em>. Die Auflösung wird je Anfrage für ein lesbares Diagramm angepasst.",
+      "<strong>Vier Kennzahlen</strong>: <em>Aktuell</em>, <em>Minimum</em>, <em>Mittelwert</em> und <em>Maximum</em> im Zeitraum. <em>Aktuell</em> verwendet dieselben Schwellen wie Speicheransicht und Benachrichtigungen für normale, erhöhte oder hohe Temperatur.",
+      "<strong>Liniendiagramm</strong> der Temperatur im Zeitverlauf, dessen Linie und Fläche nach Laufwerkstyp eingefärbt sind:"
+    ],
+    "tempDiskTypes": [
+      "HDD - typischerweise kühlere Schwellenwerte.",
+      "SSD — moderate Schwellenwerte.",
+      "NVMe — höhere Schwellenwerte (NVMe läuft vom Design her heißer).",
+      "SAS — Warnung bei 55 °C und Kritisch bei 65 °C; die Warnschwelle unterscheidet sich von HDD."
+    ],
+    "tempConfigurable": "Alle vier Typen werden unter <em>Einstellungen → Health-Monitor-Schwellen</em> konfiguriert.",
+    "tempWhyTitle": "Warum der Verlauf wichtig ist",
+    "tempWhyItems": [
+      "<strong>Trends erkennen.</strong> Ein einzelner Wert zeigt nicht, dass ein Laufwerk seit Wochen wärmer wird, etwa durch Lüfterprobleme, Staub oder benachbarte Wärmequellen. Die Ansichten für 7 und 30 Tage zeigen den Verlauf.",
+      "<strong>Spitzen zuordnen.</strong> Hat eine Sicherung oder Wiederherstellung die Temperatur kurz über die Schwelle erhöht, zeigen die Ansichten für 1 und 24 Stunden, ob es einmalig oder wiederkehrend war.",
+      "<strong>Schwellen anpassen.</strong> Prüfen Sie vor Änderungen unter <em>Einstellungen → Health-Monitor-Schwellen</em> im 30-Tage-Diagramm den tatsächlichen Betriebsbereich des Laufwerks."
+    ],
+    "obsTitle": "Beobachtungsverlauf über Registerkarten hinweg",
+    "obsIntro": "Laufwerksfehler können sich allmählich entwickeln. Ein Laufwerk kann SMART <strong>PASSED</strong> melden und dennoch Lesefehler in dmesg, SATA-Verbindungsabbrüche oder zeitweise ausstehende Sektoren zeigen. ProxMenux speichert diese <em>Signale</em> und zeigt sie im Dialog neben dem aktuellen SMART-Status.",
+    "obsImageAlt": "Übersicht eines Laufwerks mit bestandenem SMART und null neu zugewiesenen/ausstehenden Sektoren und CRC-Fehlern, aber einer E/A-Beobachtung mit ursprünglicher Kernelmeldung, ATA-Erklärung, erstem und letztem Zeitpunkt und Zähler",
+    "obsImageCaption": "Ein Laufwerk mit <strong>bestandenem SMART</strong> kann frühere Beobachtungen haben. Die Karte ergänzt den aktuellen Status um den Signalverlauf.",
+    "obsWhatTitle": "Was ist eine Beobachtung?",
+    "obsWhatIntro": "ProxMenux speichert erkannte Laufwerksereignisse aus Kernelprotokoll, dmesg oder SMART als <strong>Beobachtung</strong>, wenn sie einzeln zu detailliert für eine Benachrichtigung wären. Jede Zeile zeigt:",
+    "obsWhatItems": [
+      "<strong>Typ</strong> — E/A-, SMART-, Dateisystem-, ZFS-Pool- oder Verbindungsfehler.",
+      "<strong>Ursprüngliche Kernelmeldung</strong> aus dmesg zum Kopieren in eine Suchmaschine oder Supportanfrage.",
+      "<strong>Kurze Erklärung</strong> bekannter ATA-Codes: <code>IDNF</code>, Sektoradresse nicht gefunden, möglicher Sektor- oder Kabelfehler; <code>UNC</code>, nicht korrigierbarer Lesefehler, defekter Sektor; und weitere Standardcodes.",
+      "<strong>Erster und letzter Zeitpunkt</strong> sowie <strong>Anzahl der Vorkommen</strong>, gruppiert nach Fehlersignatur."
+    ],
+    "obsWhyTitle": "Warum ProxMenux sie speichert und anzeigt",
+    "obsWhyItems": [
+      "<strong>Fehler können sich entwickeln.</strong> ATA-Busfehler, UNC-Sektoren oder Medienfehler können auftreten, bevor SMART <em>FAILED</em> meldet. Der dmesg-Puffer bewahrt sie nicht über Neustarts hinweg; der Beobachtungsverlauf schon.",
+      "<strong>SMART schließt nicht jeden Fehler aus.</strong> Ein Laufwerk kann grüne Attribute und trotzdem Probleme haben. Beobachtungen bewahren zusätzliche Symptome wie ICRC, IDNF, SATA-Verbindungsresets oder Geschwindigkeitsreduzierungen.",
+      "<strong>Trennt aktuell von kürzlich.</strong> Health Monitor löst vorübergehende Fehler automatisch, wenn sie nicht mehr auftreten. Der Verlauf zeigt noch Tage später beispielsweise drei E/A-Fehler einer Nacht.",
+      "<strong>Grundlage abgestufter Benachrichtigungen.</strong> disk_io verwendet die Beobachtungsrate der Tabelle für still, WARNING oder CRITICAL über das seit 1.2.1.2 gleitende 24-Stunden-Fenster."
+    ],
+    "obsDedupTitle": "Duplikate und erneute Benachrichtigungen",
+    "obsDedupBody1": "Beobachtungen werden nach <strong>Signatur</strong> gruppiert, einem stabilen Fingerabdruck aus Fehlertyp, Gerät und wichtigen Meldungsfeldern. Wiederholungen erhöhen <code>occurrence_count</code> der vorhandenen Zeile. Eine <strong>andere Signatur</strong> erzeugt eine weitere Beobachtung und gilt für Benachrichtigungen als neues Ereignis.",
+    "obsDedupBody2": "Gegen Benachrichtigungskaskaden meldet die erste Kombination aus Laufwerk, Signatur und Schweregrad den Befund. Dieselbe Kombination meldet sich trotz steigender Anzahl erst nach 24 Stunden erneut. Ein Wechsel von WARNING zu CRITICAL unterbricht diese Wartezeit.",
+    "obsDismissTitle": "Dauerhafter Verlauf und aktive Fehler",
+    "obsDismissBody1": "Beobachtungen lassen sich nicht verwerfen, ausblenden oder löschen. Jede Signatur hat eine Karte; Wiederholungen erhöhen die Anzahl und aktualisieren den letzten Zeitpunkt. Der Verlauf folgt der Seriennummer: Ein anderes Laufwerk beginnt leer, auch am selben Port; eine Kernel-Umbenennung bewahrt seinen Verlauf.",
+    "obsDismissBody2": "Das Beheben oder Verwerfen eines aktiven Fehlers im Health Monitor verändert die Beobachtungen nicht. Sie bleiben nach automatischer Auflösung erhalten, sodass eine vorübergehende Warnung von letzter Woche heute sichtbar bleibt. Aktive Fehler verwalten Sie unter <link>Health Monitor</link>."
+  },
+  "dataCollected": {
+    "heading": "Wie die Daten gesammelt werden",
+    "headerSection": "Abschnitt des Reiters",
+    "headerEndpoint": "Endpunkt",
+    "headerSource": "Quelle",
+    "rows": [
+      {
+        "section": "Obere Übersichtskarten",
+        "endpoint": "/api/storage/summary",
+        "source": "Aggregiert aus <code>lsblk</code>, <code>zpool list</code>, <code>vgs</code> / <code>lvs</code>."
+      },
+      {
+        "section": "Inventar je Laufwerk",
+        "endpoint": "/api/storage",
+        "source": "<code>lsblk -O</code> + <code>smartctl -i</code> je Gerät mit Identitätscache, der bei Hotplug-Ereignissen geleert wird."
+      },
+      {
+        "section": "Proxmox-Speicher",
+        "endpoint": "/api/proxmox-storage",
+        "source": "<code>pvesh get /nodes/&lt;node&gt;/storage</code> mit dem aktiven / Online-Zustand von jedem."
+      },
+      {
+        "section": "Aktuelle SMART-Werte",
+        "endpoint": "/api/storage/smart/<disk>",
+        "source": "<code>smartctl -A &lt;dev&gt;</code> ist eine mögliche Abfrage; der Detail-Endpunkt verwendet auch vollständige SMART-JSON-Daten und NVMe-spezifische Werte."
+      },
+      {
+        "section": "SMART-Selbsttestverlauf",
+        "endpoint": "/api/storage/smart/<disk>/history",
+        "source": "Als JSON-Snapshots unter <code>/usr/local/share/proxmenux/smart/&lt;disk&gt;/</code> gespeichert."
+      },
+      {
+        "section": "Dauerhafte Beobachtungen",
+        "endpoint": "/api/storage/observations",
+        "source": "SQLite-Tabelle, die Health Monitor in jedem Zyklus aktualisiert und nach Auflösung aktiver Fehler beibehält."
+      }
+    ],
+    "outro": "Überprüfung der Sammelkette auf dem Host:",
+    "codeComment1": "# Aktuellen Stand aus einem Skript abrufen",
+    "codeComment2": "# Dashboard-Daten mit der direkten Betriebssystemansicht vergleichen"
+  },
+  "whereNext": {
+    "heading": "Wohin als nächstes",
+    "items": [
+      {
+        "label": "Gesundheitsmonitor",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — Kategorie Laufwerke und E/A sowie Unterdrückungsregeln."
+      },
+      {
+        "label": "API-Referenz",
+        "href": "/docs/monitor/api",
+        "tail": " — Speicher- und SMART-Endpunkte."
+      },
+      {
+        "label": "Benachrichtigungen",
+        "href": "/docs/monitor/notifications",
+        "tailRich": " — welche Folgeaktionen <code>disk_io_error</code>, <code>storage_unavailable</code> und <code>smart_test_failed</code> auslösen."
+      },
+      {
+        "label": "Dashboard-Index",
+        "href": "/docs/monitor/dashboard",
+        "tail": "Die anderen Tabs."
+      },
+      {
+        "label": "ProxMenux → Datenträgerverwaltung",
+        "href": "/docs/disk-manager",
+        "tail": " — TUI-Aktionen: Formatieren, Löschen, SMART-Tests und Laufwerke in VMs oder Container importieren."
+      },
+      {
+        "label": "ProxMenux → SMART-Laufwerkszustand und Tests",
+        "href": "/docs/disk-manager/smart-disk-test",
+        "tail": " — CLI-Entsprechung: SMART-Tests planen, das angezeigte JSON exportieren und Testtypen sowie Ergebnisinterpretation nachschlagen."
+      }
+    ]
+  }
+}

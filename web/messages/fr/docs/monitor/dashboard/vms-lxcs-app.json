@@ -1,0 +1,245 @@
+{
+  "meta": {
+    "title": "Onglet App LXC : détection, liens et suivi de version | ProxMenux",
+    "description": "Découvrez et enregistrez les applications LXC, créez des liens web et en option suivez les versions installées et disponibles."
+  },
+  "header": {
+    "title": "Onglet de l'application LXC : découverte, liens et suivi des versions",
+    "description": "Donnez à chaque application LXC une identité persistante, un accès web et une preuve de version optionnelle sans couplage de l'enregistrement aux mises à jour."
+  },
+  "intro": {
+    "p1": "L'onglet <strong>App</strong> enregistre les applications du LXC. Une fiche peut contenir simplement un nom et un lien web, ou aussi un détecteur de version installée et une source amont.",
+    "p2": "La procédure qui modifie le logiciel se configure séparément dans l'<link>onglet Mises à jour</link>. Enregistrer une application ne lance jamais d'installateur ni de programme de mise à jour.",
+    "callout": "L'enregistrement, le suivi et la mise à jour des versions sont trois capacités indépendantes. Chacun peut être utilisé sans exiger les deux autres.",
+    "dashboardTitle": "De l'inscription au lanceur Apps",
+    "dashboard": "Chaque lien web enregistré ici apparaît aussi dans l'<appsLink>onglet Apps</appsLink> principal. Cette page du LXC reste la référence pour le nom, le logo, les liens et le suivi de version."
+  },
+  "overview": {
+    "heading": "Ce que peut fournir une fiche d'application",
+    "lead": "Un seul enregistrement enregistré peut inclure:",
+    "items": [
+      "Un nom d'affichage et un logo adapté au thème.",
+      "Un ou plusieurs liens Web cliquables construits à partir de l'adresse LXC, le schéma et le port sauvegardé.",
+      "Un détecteur optionnel pour la version actuellement installée dans le LXC.",
+      "Une source optionnelle GitHub, HTTP JSON ou Docker Hub pour la dernière version disponible.",
+      "Notifications de nouvelles versions et inclusion dans le compteur de mises à jour, par application.",
+      "Une section correspondante de l'onglet Mises à jour, même lorsque le suivi des versions est désactivé."
+    ]
+  },
+  "discovery": {
+    "heading": "Découverte en cache et recherche d'applications",
+    "lead": "Les suggestions sont incluses dans le cache de la fenêtre de chaque LXC. L'analyse de démarrage les prépare en arrière-plan pour afficher immédiatement les résultats à l'ouverture d'App.",
+    "items": [
+      "L'ouverture de l'onglet Application <strong>ne démarre pas</strong> une nouvelle analyse du catalogue et n'interroge pas de manière répétée le LXC.",
+      "<strong>Rechercher des applications</strong> lance une nouvelle détection pour ce LXC. Utilisez cette action après avoir installé un logiciel alors que ProxMenux fonctionne déjà.",
+      "La liste précédente reste visible pendant l'analyse. Les nouvelles correspondances sont ajoutées à la fin.",
+      "Si aucune nouvelle correspondance n'est trouvée, le résultat est indiqué à côté des actions et <strong>Enregistrer l'application</strong> reste disponible pour l'entrée manuelle.",
+      "Enregistrer, supprimer ou restaurer une application met à jour le même cache immédiatement. Commencer ou restaurer un LXC rafraîchit seulement cet invité à travers son cycle de vie existant."
+    ],
+    "callout": "Une suggestion n'est pas une fiche enregistrée. Elle reste en lecture seule jusqu'au clic sur <strong>Enregistrer</strong> et à la sauvegarde du formulaire."
+  },
+  "registration": {
+    "heading": "Enregistrement d'une application",
+    "lead": "Une suggestion détectée et un enregistrement manuel utilisent le même éditeur:",
+    "steps": [
+      "Cliquez sur <strong>Enregistrer</strong> pour une suggestion, ou sur <strong>Enregistrer une application</strong> pour choisir dans le catalogue ou saisir un nom personnalisé.",
+      "Consultez le nom et le logo proposés par le catalogue.",
+      "Ajouter les liens web requis. Les ports d'écoute détectés sont proposés comme raccourcis, mais aucun n'est enregistré automatiquement.",
+      "Laissez <strong>Suivre la version amont</strong> désactivé pour une fiche avec seulement des liens, ou activez-le et vérifiez le détecteur de version installée et la source amont.",
+      "Si le suivi est activé, utilisez <strong>Tester le détecteur</strong>, puis enregistrez la fiche.",
+      "Cliquez sur <strong>Terminé</strong> après modification. App et Mises à jour utilisent la même fiche actualisée en cache."
+    ]
+  },
+  "catalog": {
+    "heading": "Inscription assistée par catalogue",
+    "lead": "Le catalogue fournit des données par défaut, mais l'enregistrement enregistré reste modifiable.",
+    "items": [
+      "Les résultats de recherche peuvent préremplir le nom canonique, le logo et les ports web communs.",
+      "Les détecteurs connus utilisent les vrais noms de paquets, exécutables, fichiers, distributions Python, étiquettes OCI ou commandes, plutôt qu'une hypothèse universelle comme <code>/root/.app</code>.",
+      "Les corrections vérifiées dans les installations réelles sont prioritaires lorsque le chemin diffère des métadonnées de l'installateur.",
+      "Les marqueurs Proxmox VE Helper-Scripts tels que <code>/root/.slug</code> restent un signal de compatibilité pour les nouvelles installations d'aide, pas le seul détecteur.",
+      "Chaque valeur proposée peut être modifiée avant d'enregistrer pour couvrir les installateurs officiels et les installations manuelles."
+    ]
+  },
+  "docker": {
+    "heading": "Comment les Docker LXC sont représentés",
+    "lead": "Si Docker est la plateforme principale d'un LXC, <strong>Docker</strong> est l'application enregistrée au niveau LXC.",
+    "items": [
+      "Une charge de travail conteneurisée telle que Portainer, Frigate ou Vaultwarden n'est pas suggérée en tant qu'application native indépendante LXC.",
+      "Les services Docker en cours d'exécution avec des ports TCP publiés sont proposés comme liens web facultatifs dans l'éditeur Docker.",
+      "Chaque lien suggéré indique le service, le port hôte et le port conteneur. Seuls les liens qui fournissent une interface Web doivent être enregistrés.",
+      "Le logo général Docker est utilisé si le lien n'a pas de logo spécifique. Un logo configuré pour le lien le remplace.",
+      "Après l'enregistrement de Docker, Docker Engine et les mises à jour d'images sont affichées ensemble dans sa section sur l'onglet Mises à jour."
+    ],
+    "callout": "Cette structure empêche une charge de travail Docker de ressembler à un logiciel installé directement dans le LXC tout en préservant des liens rapides avec ses interfaces."
+  },
+  "webLinks": {
+    "heading": "Liens et logos Web",
+    "lead": "Les liens Web fonctionnent avec ou sans suivi des versions.",
+    "items": [
+      "Chaque lien stocke un schéma, un port, une description optionnelle et une URL de logo optionnelle.",
+      "L'URL affichée utilise l'adresse courante déjà détectée pour le LXC; l'adresse n'est pas dupliquée dans chaque enregistrement d'application.",
+      "Un lien sans son propre logo revient au logo du niveau de l'application.",
+      "Plusieurs liens peuvent représenter une interface d'administration, une API, une interface secondaire ou un autre point de terminaison de l'application.",
+      "Une application enregistrée avec seulement des liens apparaît aussi dans Mises à jour, où un programme personnalisé peut être configuré plus tard."
+    ]
+  },
+  "tracking": {
+    "heading": "Suivi optionnel de la version",
+    "lead": "Le suivi combine un détecteur de version installé avec une source en amont optionnelle. Les deux côtés sont vérifiés indépendamment.",
+    "colMethod": "Méthode de détection de la version installée",
+    "colUse": "Utilisation",
+    "detectorRows": [
+      {
+        "method": "dpkg / apk",
+        "use": "Lis la version de paquets installée à partir de métadonnées de paquets Debian, Ubuntu ou Alpine."
+      },
+      {
+        "method": "binary",
+        "use": "Exécute un chemin binaire absolu ou un nom de commande avec des arguments de version."
+      },
+      {
+        "method": "file + regex",
+        "use": "Lit un fichier réel et extrait la version avec un groupe de capture."
+      },
+      {
+        "method": "docker label / docker exec",
+        "use": "Lit une étiquette de version OCI ou exécute une commande de version dans un conteneur Docker."
+      },
+      {
+        "method": "python distribution",
+        "use": "Utilise importlib.metadata via l'interpréteur Python sélectionné."
+      },
+      {
+        "method": "command",
+        "use": "Exécute une commande avancée de style argv sans shell et extrait la version de sa sortie."
+      },
+      {
+        "method": "manual",
+        "use": "Stocke une version entrée manuellement; elle doit être modifiée après la mise à jour de l'application."
+      },
+      {
+        "method": "OCI image",
+        "use": "Pour les conteneurs installés par OCI manager Apps. Lit les versions de l'application et de l'image dans la fiche d'installation et compare le digest installé à celui publié par le registre. Aucune configuration nécessaire."
+      }
+    ],
+    "sourcesHeading": "Sources de la version disponible",
+    "sources": [
+      "<strong>GitHub dépôt</strong> : dernière version ou étiquette d'un dépôt public <code>owner/name</code>.",
+      "<strong>HTTP JSON</strong> : point de terminaison public et chemin à points comme <code>data.version</code> ou <code>releases[0].tag_name</code>.",
+      "<strong>Docker Hub</strong>: étiquettes en version filtrées par une expression régulière. Un aperçu en direct montre de vraies balises correspondantes avant que l'enregistrement soit enregistré.",
+      "Les tags mobiles comme <code>latest</code>, <code>stable</code> ou <code>lts</code> ne contiennent pas de version. Suivez ces images par digest dans les mises à jour d'images Docker."
+    ],
+    "regexHeading": "Écrire l'expression de capture",
+    "regexLead": "L'expression régulière doit renvoyer la version dans son <strong>premier groupe de capture</strong>.",
+    "regexRules": [
+      "Correspondez au texte émis par la source binaire, le fichier, la commande ou la balise sélectionnée; ne devinez pas un chemin générique.",
+      "Échappez les points littéraux avec <code>\\.</code> pour éviter de reconnaître des caractères arbitraires.",
+      "Acceptez un <code>v</code> initial seulement si la source peut en contenir un.",
+      "Inclure des suffixes tels que des révisions préalables ou des révisions distro seulement lorsqu'elles sont significatives pour la comparaison.",
+      "Utilisez <strong>Tester le détecteur</strong> avant de sauvegarder et vérifiez la version installée affichée dans le LXC."
+    ],
+    "regexExampleLead": "Capture sémantique commune:",
+    "regexExample": "v?(\\d+\\.\\d+\\.\\d+)",
+    "regexCallout": "Une correspondance régex réussie n'est pas la preuve que le chemin du détecteur est correct. Le chemin ou le paquet doit également exister dans l'installation réelle enregistrée."
+  },
+  "updater": {
+    "heading": "Le suivi et la mise à jour des versions sont indépendants",
+    "lead": "L'<link>onglet Mises à jour</link> crée une section dès qu'une fiche d'application est enregistrée.",
+    "items": [
+      "Un enregistrement link-only montre que le suivi des versions n'est pas configuré, mais peut toujours recevoir une commande de mise à jour personnalisée.",
+      "Une application avec suivi mais sans méthode exécutable affiche un message neutre demandant une commande personnalisée.",
+      "Une application avec un wrapper Proxmox VE Helper-Scripts vérifié peut utiliser ce programme intégré même si sa fiche a commencé par un simple lien web.",
+      "Ajouter ou modifier un programme de mise à jour ne change ni le détecteur ni la source amont enregistrés dans App."
+    ]
+  },
+  "states": {
+    "heading": "États de version sur la carte App",
+    "colState": "État",
+    "colDisplay": "Affichage",
+    "colMeaning": "Signification",
+    "rows": [
+      {
+        "state": "Mise à jour disponible",
+        "display": "Version disponible en violet avec une icône vers le haut",
+        "meaning": "Les versions installées et amont diffèrent."
+      },
+      {
+        "state": "À jour",
+        "display": "Versions installée et disponible sans alerte violette",
+        "meaning": "La dernière vérification n'a trouvé aucune version en amont plus récente."
+      },
+      {
+        "state": "Suivi en attente",
+        "display": "Vérification en cours ou en attente",
+        "meaning": "L'enregistrement est configuré mais n'a pas encore effectué les deux vérifications."
+      },
+      {
+        "state": "Suivi désactivé",
+        "display": "Liens Web seulement; aucun bloc de comparaison de version",
+        "meaning": "La fiche reste valide et peut toujours avoir un programme de mise à jour."
+      },
+      {
+        "state": "Erreur de vérification",
+        "display": "Explication en ambre dans la carte",
+        "meaning": "L'état précédent reste visible tandis que l'erreur du détecteur ou de la source amont est signalée."
+      }
+    ]
+  },
+  "management": {
+    "heading": "Gestion des applications sauvegardées et suggérées",
+    "lead": "Les actions en bas de l'onglet ont des rôles distincts :",
+    "items": [
+      "<strong>Trouver des applications</strong> rafraîchit la découverte pour ce LXC seulement.",
+      "<strong>Inscrivez une autre application</strong> ouvre le catalogue et l'éditeur manuel sans rescanner le LXC.",
+      "<strong>Modifier</strong> révèle les actions Supprimer, Vérifier, notifications et Modifier les champs sur chaque carte.",
+      "<strong>Masquer</strong> retire une suggestion indésirable. Les détections masquées se restaurent dans la vue d'enregistrement.",
+      "<strong>Vérifier</strong> actualise les données de version de la fiche sélectionnée sans rechercher de nouvelles applications."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Situations communes",
+    "colProblem": "Situation actuelle",
+    "colResolution": "Résolution",
+    "rows": [
+      {
+        "problem": "Le logiciel a été installé après le démarrage de ProxMenux",
+        "resolution": "Appuyez sur Trouver des applications. L'analyse explicite met à jour les suggestions mises en cache pour ce LXC."
+      },
+      {
+        "problem": "Aucune application n'a été détectée",
+        "resolution": "Enregistrez-le manuellement. Un nom et un lien Web suffisent; un suivi peut être ajouté plus tard."
+      },
+      {
+        "problem": "Le détecteur suggéré retourne la mauvaise version",
+        "resolution": "Ouvrez Modifier les champs, choisissez le vrai paquet, exécutable ou chemin de fichier et testez avant de sauvegarder."
+      },
+      {
+        "problem": "Une charge de travail Docker n'est pas offerte en tant qu'application LXC",
+        "resolution": "Enregistrez Docker et ajoutez l'interface publiée de la charge de travail comme lien web Docker. Les mises à jour d'image restent dans la section Docker."
+      },
+      {
+        "problem": "Une application enregistrée n'a pas de bouton de mise à jour",
+        "resolution": "Ouvrez Mises à jour et configurez la méthode. Le seul suivi de version ne définit pas comment installer une mise à jour."
+      }
+    ]
+  },
+  "figures": {
+    "catalog": {
+      "alt": "Catalogue d'enregistrement d'applications avec résultats de recherche, logos, ports et champs détecteurs",
+      "caption": "Les métadonnées de catalogue accélèrent l'enregistrement tandis que chaque valeur proposée reste modifiable."
+    },
+    "webLinks": {
+      "alt": "Carte d'application LXC sauvegardée contenant un lien Web cliquable",
+      "caption": "Une fiche avec seulement des liens est valide : le suivi peut rester désactivé et un programme de mise à jour peut être ajouté séparément."
+    },
+    "tracking": {
+      "alt": "Détecteur de version installé en option et champs sources en amont",
+      "caption": "La détection de la version installée et la source en amont sont configurées et testées séparément."
+    },
+    "card": {
+      "alt": "Carte d'application sauvegardée avec versions installées et disponibles plus un lien web",
+      "caption": "La carte combine l'identité, les preuves de version et l'accès web sans exécuter des actions de mise à jour de cet onglet."
+    }
+  }
+}

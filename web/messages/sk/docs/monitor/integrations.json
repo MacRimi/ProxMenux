@@ -1,0 +1,255 @@
+{
+  "meta": {
+    "title": "Integrácie Proxmox — Homepage, Home Assistant, Grafana, Prometheus | ProxMenux Monitor",
+    "description": "Príklady na skopírovanie pre pripojenie ProxMenux Monitor k Homepage, Home Assistant, Grafana cez Prometheus a Uptime Kuma. Obsahujú potrebnú konfiguráciu, koncové body API a hlavičku overenia.",
+    "ogTitle": "Integrácie Proxmox — Homepage, Home Assistant, Grafana, Prometheus",
+    "ogDescription": "Návody na pripojenie ProxMenux Monitor k Homepage, Home Assistant, Grafana, Prometheus a Uptime Kuma.",
+    "twitterTitle": "Integrácie Proxmox | ProxMenux Monitor",
+    "twitterDescription": "Recepty pre Homepage, Home Assistant, Grafana, Prometheus a Uptime Kuma."
+  },
+  "header": {
+    "title": "Integrácie",
+    "description": "Príklady na skopírovanie pre nástroje vášho homelabu: Homepage, Home Assistant, Grafana cez Prometheus a Uptime Kuma. Každý ukazuje potrebnú konfiguráciu, použitý koncový bod Monitora a hlavičku overenia.",
+    "section": "ProxMenux Monitor"
+  },
+  "intro": {
+    "title": "Čo môžete vytvoriť z tejto stránky",
+    "body": "Skopírujte príklad do zvoleného nástroja. Koncové body opisuje <link>Referenčná príručka API</link>; táto stránka ukazuje ich použitie v Homepage, Home Assistant a Grafana. Snímky ukazujú výsledok konfigurácií."
+  },
+  "auth": {
+    "heading": "Overenie: jedna vec, ktorú každý recept potrebuje",
+    "intro": "Väčšina použitých koncových bodov vyžaduje overenie. Požiadavku možno splniť dvoma spôsobmi.",
+    "optAtitle": "Možnosť A API token (odporúčané pre integráciu)",
+    "optAbody1": "Otvorte <strong>Nastavenia → Bezpečnosť → API tokeny</strong>. Kliknite na <em>Generovať token</em>, zadajte názov ako <em>homepage</em>, <em>home-assistant</em> alebo <em>prometheus</em> a skopírujte ho: zobrazí sa <em>iba raz</em>. Predvolene platí rok a možno ho samostatne odvolať. Používajte ho pre klientov mimo prehliadača.",
+    "optAbody2": "Od tohto bodu je každá žiadosť jednoducho:",
+    "optBtitle": "Možnosť B — prihlásenie menom a heslom",
+    "optBbody": "Vhodné pre skripty, ktoré sa overujú ako používateľ. Vrátený token platí krátko; väčšina integrácií by mala použiť možnosť A.",
+    "outro": "Pole TOTP treba iba pri zapnutom dvojfaktorovom overení. Výmenu a odvolanie tokenov, pravidlá hesiel a auditný denník opisuje <link>Prístup a overenie</link>.",
+    "httpsTitle": "Používanie HTTPS namiesto HTTP",
+    "httpsIntro": "Príklady používajú pre stručnosť <code>http://</code>. Ak ste na Monitore zapli TLS (<strong>Nastavenia → Bezpečnosť → SSL/HTTPS</strong>), v každej URL nahraďte <code>http://</code> za <code>https://</code>. Dve poznámky pre konkrétne nástroje:",
+    "httpsItems": [
+      "<strong>Certifikáty podpísané vlastným kľúčom.</strong> Integrácia Home Assistant <code>rest:</code> predvolene overuje TLS. Pri takomto certifikáte Monitora pridajte <code>verify_ssl: false</code> do každého bloku REST vedľa <code>scan_interval:</code> alebo importujte CA Monitora medzi dôveryhodné certifikáty. Rovnako postupujú iné nástroje overujúce certifikáty.",
+      "<strong>Prometheus</strong> má v príklade nižšie pripravené <code>scheme: https</code>. Zapnite alebo ponechajte <code>https</code>, ak je TLS na Monitore zapnuté."
+    ]
+  },
+  "homepage": {
+    "heading": "Homepage",
+    "headingHref": "https://gethomepage.dev",
+    "intro": "Homepage je statický prispôsobiteľný panel aplikácií. ProxMenux Monitor sa pripája cez vstavaný widget <code>customapi</code>: vložte službu do <code>services.yaml</code>, reštartujte Homepage a karta zobrazí aktuálne hodnoty.",
+    "iconCalloutTitle": "Oficiálne logo ProxMenux je na dashboardicons.com",
+    "iconCalloutBody": "Príklady používajú <code>icon: proxmenux.png</code>. Homepage automaticky vyhľadá jednoduché názvy súborov v <a1>dashboardicons.com</a1>, knižnici ikon pre vlastné panely. Položka ProxMenux je na <a2>dashboardicons.com/icons/external/proxmenux</a2> a načíta sa pri prvom zobrazení. Rovnako fungujú tisíce nástrojov ako Telegram, Discord, Grafana či Tailscale: do služby stačí napísať <code>icon: &lt;name&gt;.png</code>.",
+    "imageAlt": "Panel Homepage s tromi kartami ProxMenux Monitor (EDGE, VOID, DREAM), ktoré ukazujú čas prevádzky, CPU, RAM a teplotu každého hostiteľa",
+    "imageCaption": "Tri inštancie ProxMenux Monitor ako karty Homepage: čas prevádzky, CPU, RAM a teplota CPU sa čítajú z <code>/api/system</code> každého hostiteľa každých 10 s.",
+    "basicTitle": "Základný widget — bez overenia",
+    "basicIntro": "Použite to, keď je ProxMenux Monitor na dôveryhodnej sieti a ešte ste nezaviedli autentifikáciu na strane monitora. Najjednoduchšia možná položka <code>services.yaml</code>:",
+    "authedTitle": "Overený grafický prvok",
+    "authedIntro": "Na Monitore vytvorte token v <strong>Nastavenia → Bezpečnosť → API tokeny</strong>. Skopírujte ho do hlavičky <code>Authorization</code> nižšie: ukážkový token za <code>Bearer</code> nahraďte vlastným.",
+    "authedOutro": "Reštartujte Homepage a karta zobrazí aktuálne hodnoty. Rovnaký token použite vo widgetoch, ktoré čítajú tú istú inštanciu Monitora.",
+    "multiTitle": "Nastavenie multi- widgetu Systém, úložisko, sieť",
+    "multiIntro": "Pre viac podrobností vytvorte tri karty s rôznymi koncovými bodmi: systém, úložisko a sieť. Pre tú istú inštanciu Monitora použite rovnaký token.",
+    "multiCalloutTitle": "Viac hostiteľov Proxmox",
+    "multiCalloutBody": "Zopakujte blok pre každého hostiteľa, aby vznikli zobrazené karty. Každá položka používa <code>http://&lt;host&gt;:8008</code> vlastnej inštancie. Vytvorte a uložte token pre každého hostiteľa: oddelené inštalácie majú vlastné podpisové kľúče, preto nemožno predpokladať platnosť tokenu inde."
+  },
+  "homeAssistant": {
+    "heading": "Home Assistant",
+    "headingHref": "https://www.home-assistant.io",
+    "intro": "Príklady používajú vstavanú integráciu Home Assistant <code>rest</code>, takže vlastný komponent HACS netreba. Číta body opísané v <link>Referenčnej príručke API</link> a vytvára senzory a atribúty pre automatizácie. Konfigurácia ponúka približne 25 senzorov zdrojov, stavu, VM/CT, úložiska, siete a aktualizácií. Vložte ju do <code>configuration.yaml</code> a znovu načítajte alebo reštartujte HA.",
+    "imageAlt": "Panel Home Assistant s entitami ProxMenux Monitor: stav, ukazovatele CPU/RAM/teploty, počet VM, využitie úložiska a počet aktívnych chýb",
+    "imageCaption": "ProxMenux Monitor plne začlenený do Home Assistant so senzormi vytvorenými z príkladu YAML nižšie.",
+    "step1Title": "1 · Uložiť API token",
+    "step1Body": "Token uložte do <code>secrets.yaml</code> oddelene od hlavnej konfigurácie. Predponu Bearer a token vložte do jednej hodnoty použiteľnej ako hlavička. Súbor nie je šifrovaný a musí zostať súkromný. Umiestnenie závisí od inštalácie, obvykle <code>/config/secrets.yaml</code> v HA OS alebo Container.",
+    "step2Title": "2 · Vložiť konfiguráciu REST",
+    "step2Body": "Šesť blokov REST pokrýva všetky hlavné oblasti Monitora, jeden blok pre každú oblasť. Každý má vhodný <code>scan_interval</code> podľa frekvencie zmien údajov: systémové zdroje každých 30 s, stav každých 60 s a pomaly sa meniaci inventár každých 5–10 minút. Vložte do <code>configuration.yaml</code>:",
+    "step3Title": "3 · Pridať binárne senzory a pomocné šablóny",
+    "step3Body": "Dva binárne senzory a niekoľko šablónových senzorov dopĺňajú integráciu – vďaka nim sú automatizácie a podmienené karty Lovelace oveľa čistejšie ako reťazenie Jinja na každom mieste.",
+    "step4Title": "4 · Znovu načítať a overiť",
+    "step4Body": "V rozhraní Home Assistant najprv overte syntax cez <em>Vývojárske nástroje → YAML → Skontrolovať konfiguráciu</em>. Potom znovu načítajte <em>Všetku konfiguráciu YAML</em> alebo vykonajte úplný reštart. Po obnovení v časti <em>Nastavenia → Zariadenia a služby → Entity</em> filtrujte podľa <em>proxmenux</em>. Všetkých približne 25 entít by sa malo naplniť počas jedného intervalu načítania.",
+    "replaceTitle": "Nahradiť skoršiu verziu tohto receptu?",
+    "replaceBody": "Po staršej verzii môže register uchovať neaktuálne ID a karty hlásiť <em>Entita sa nenašla</em>. Odstráňte staré bloky <code>rest:</code> a <code>template:</code> z <code>configuration.yaml</code> a znovu načítajte. V <em>Nastavenia → Zariadenia a služby → Entity</em> filtrujte podľa <em>proxmenux</em> a vymažte staré obnovené alebo nedostupné položky. Vložte aktuálny YAML a načítajte znova, aby sa zaregistrovali nové.",
+    "step5Title": "5 · Panel Lovelace",
+    "step5Body": "YAML vytvorí kartu <strong>vertical-stack</strong> s logom, ukazovateľmi, systémom, VM, úložiskom, sieťou a podmienenými problémami. Otvorte panel, kliknite na ceruzku, <em>Pridať kartu</em> a dole <em>Manuálne</em>, potom vložte:",
+    "viewTipTitle": "Chcete to namiesto jednej karty ako kompletný pohľad na prístrojovú dosku?",
+    "viewTipBody": "Otvorte ponuku s troma bodkami → <em>Editor surovej konfigurácie</em> a pridajte zobrazenie s touto hlavičkou nad zoznam <code>cards:</code>:",
+    "viewTipOutro": "To vám dáva vyhradenú záložku / pohľad na palubnej doske s vlastnou ikonou a názvom, namiesto jednej dlhej karty na existujúcom pohľade.",
+    "altViewTitle": "Alternatívou je dedikovaný pohľad na prístrojovú dosku",
+    "altViewIntro": "Ak chcete vlastnú kartu v existujúcom paneli, pridajte zobrazenie s YAML nižšie. Zobrazenie je karta panela, nevytvára novú položku v bočnom paneli. Postup:",
+    "altViewSteps": [
+      "Otvorte prístrojovú dosku, kde chcete novú kartu.",
+      "Vpravo hore kliknite na ceruzku na úpravu panela.",
+      "Kliknutím na záložku <em>+</em> na konci existujúcich kariet vytvoríte nový pohľad.",
+      "V pravom hornom rohu okna zvoľte <em>Editor kódu</em> na prepnutie medzi vizuálnym editorom a YAML.",
+      "Vložte YAML nižšie.",
+      "Uložte. Zobrazenie <em>ProxMenux Monitor</em> sa objaví ako karta v paneli so svojimi kartami."
+    ],
+    "twoEditorsTitle": "Dva editory YAML v HA — vyberte správny",
+    "twoEditorsIntro": "Home Assistant má dva YAML editory, ktoré vyzerajú podobne, ale očakávajú rôzne formáty:",
+    "twoEditorsItems": [
+      "<strong>Editor jedného zobrazenia</strong> — cez <em>+</em> alebo <em>Upraviť zobrazenie → Editor kódu</em>. Očakáva jedno zobrazenie s <code>title:</code>, <code>path:</code> a <code>cards:</code> na najvyššej úrovni bez úvodnej pomlčky.",
+      "<strong>Editor surovej konfigurácie celého panela</strong> — cez ponuku s troma bodkami. Očakáva celý zoznam <code>views:</code>, každé zobrazenie ako položku začínajúcu <code>-</code>."
+    ],
+    "twoEditorsOutro": "Nesprávny formát môže vytvoriť <em>Nepomenované zobrazenie</em> a <code>cards: []</code>. YAML nižšie patrí do editora jedného zobrazenia; skopírujte ho presne.",
+    "viewImageAlt": "Home Assistant vykresľovanie vyhradeného zobrazenia ProxMenux Monitor — hlavička obrázkovej entity, kľúčové ukazovatele výkonu a karty entít systému / virtuálnych počítačov / úložiska / siete automaticky rozložené HA vo viacerých stĺpcoch",
+    "viewImageCaption": "Zobrazenie <em>ProxMenux Monitor</em> na širokej obrazovke. Rozloženie Masonry automaticky usporiada karty do stĺpcov; výsledok závisí od nastaveného typu zobrazenia.",
+    "twoColTipTitle": "Chcete pevné dvojstĺpcové rozloženie namiesto automatického?",
+    "twoColTipBody": "Dvojicu kariet, napríklad <em>Systém</em> + <em>VM</em> alebo <em>Úložisko</em> + <em>Sieť</em>, vložte do spoločného <code>horizontal-stack</code>, aby zostali vedľa seba pri každej šírke:",
+    "twoColTipOutro": "Na mobile zostane riadok stlačený. Automatické rozloženie HA bez horizontal-stack sa lepšie prispôsobí úzkej obrazovke.",
+    "step6Title": "6 · Automatizácie",
+    "step6Body": "Tri automatizácie pre najbežnejšie scenáre: nahraďte <code>notify.mobile_app_&lt;your_phone&gt;</code> vlastnou oznamovacou službou.",
+    "logoTitle": "O logu ProxMenux",
+    "logoBody": "Karta picture-entity načíta oficiálne logo z <a1>dashboardicons.com</a1>, bezplatnej knižnice pre vlastné panely. Položka je na <a2>dashboardicons.com/icons/external/proxmenux</a2>. Home Assistant načíta SVG cez HTTPS pri prvom zobrazení a uloží ho do vyrovnávacej pamäte.",
+    "logoBrokenTitle": "Ak logo karta zobrazí rozbitý obrázok",
+    "logoBrokenIntro": "Niektoré inštalácie, filtrované siete alebo blokátory obsahu bránia prístupu k jsdelivr.net pri zobrazení. Použite lokálnu kópiu:",
+    "logoBrokenSteps": [
+      "Stiahnite si SVG z <a>cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmenux.svg</a>.",
+      "Uložte si to na <code>/config/www/icons/proxmenux.svg</code> na HA hostiteľa.",
+      "V Lovelace YAML nahraďte <code>image:</code> URL adresu <code>/local/icons/proxmenux.svg</code>. Uložiť a znova načítať – obrázok sa vykreslí z lokálneho súboru, nie je potrebný internet."
+    ],
+    "scanTipTitle": "Praktické pravidlo pre scan_interval",
+    "scanTipBody": "Začnite čítaním <code>/api/system</code> každých 30 s. <code>/api/health/full</code> zvyčajne číta výsledok platný až šesť minút; čítanie každých 60 s túto pamäť neobíde. Skúste päť minút pre <code>/api/storage/summary</code> a hodinu pre <code>/api/proxmenux/update-status</code>. Intervaly prispôsobte hardvéru a počtu hostiteľov."
+  },
+  "grafana": {
+    "heading": "Prometheus + Grafana",
+    "promHref": "https://prometheus.io",
+    "grafanaHref": "https://grafana.com",
+    "intro": "ProxMenux Monitor poskytuje <code>GET /api/prometheus</code> v textovom formáte Prometheus 0.0.4. Pri zapnutom overení treba Bearer token. Nastavte Prometheus na zber metrík a Grafana na zobrazenie údajov z databázy časových radov.",
+    "imageAlt": "Panel Grafana s metrikami ProxMenux: ukazovateľ CPU, vývoj pamäte, počet spustených VM a sieťová priepustnosť",
+    "imageCaption": "Jednoduchý panel Grafana z metrík ProxMenux zozbieraných cez Prometheus: CPU, pamäť, spustené VM a sieťová priepustnosť. Celý katalóg je v <link>Referenčnej príručke API → Metriky Prometheus</link>.",
+    "step1Title": "1 · Pridať úlohu zberu do Prometheus",
+    "step1Body": "API token odovzdajte cez vstavaný blok Prometheus <code>authorization</code>, ktorý umožňuje aj prihlasovacie údaje zo súboru.",
+    "step1After": "Znovu načítajte Prometheus cez <code>kill -HUP &lt;PID&gt;</code> (PID nahraďte ID jeho procesu), <code>systemctl reload prometheus</code>, ak je podporované, alebo <code>docker compose restart prometheus</code> pre kontajner. V <em>Status → Targets</em> má proxmenux prejsť do UP v jednom intervale. Štítok <code>node=\"&lt;hostname&gt;\"</code> odlišuje hostiteľov.",
+    "tokenTipTitle": "Token uložte do samostatného súboru",
+    "tokenTipBody": "V produkcii oddeľte token od konfigurácie. Pomocou <code>credentials_file: /etc/prometheus/secrets/proxmenux.token</code> ho Prometheus načíta zo súboru s oprávneniami 0600.",
+    "step2Title": "2 · Overiť zber pomocou niekoľkých dopytov",
+    "step2Body": "Pred konfiguráciou Grafana overte, či Prometheus naozaj má údaje. Otvorte jeho webové rozhranie na <code>http://&lt;prometheus-host&gt;:9090</code>, kliknite na <em>Query</em> a spustite niektorý z týchto dopytov. Mali by sa vrátiť aktuálne číselné údaje z vášho hostiteľa Proxmox:",
+    "headerQuery": "Dopyt",
+    "headerConfirms": "Čo potvrdzuje",
+    "verifyRows": [
+      {
+        "query": "up{job=\"proxmenux\"}",
+        "confirms": "Vráti <code>1</code>, ak Prometheus úspešne zbiera údaje Monitora, inak <code>0</code>. Najrýchlejšia úvodná kontrola."
+      },
+      {
+        "query": "proxmox_cpu_usage",
+        "confirms": "Aktuálne využitie CPU hostiteľa Proxmox v percentách. Pri opakovaní dopytu o niekoľko sekúnd by sa hodnota mala meniť."
+      },
+      {
+        "query": "proxmox_vms_running",
+        "confirms": "Počet bežiacich hostí. Porovnaj to s tým, čo vidíš v UI Proxmoxu."
+      },
+      {
+        "query": "proxmox_uptime_seconds / 86400",
+        "confirms": "Čas prevádzky hostiteľa v dňoch. Má zodpovedať príkazu <code>uptime</code> v termináli Proxmox."
+      }
+    ],
+    "calloutTitle": "401 pri priamom otvorení URL koncového bodu môže byť v poriadku",
+    "calloutBody": "Pri zapnutom overení odkaz v <em>Status → Targets</em> otvorí <code>/api/prometheus</code> v prehliadači bez hlavičky Bearer služby Prometheus. Odpoveď môže obsahovať <code>'{'\"error\":\"Authentication required\"'}'</code>. Skutočný <em>State: UP</em> cieľa potvrdzuje úspešný zber cez Prometheus.",
+    "step3Title": "3 · Pridať Prometheus ako zdroj údajov Grafana",
+    "step3Body": "V Grafana otvorte <em>Connections → Data sources → Add new → Prometheus</em>. Zadajte URL, napríklad <code>http://prometheus.lan:9090</code>, uložte a otestujte. Ak Prometheus vyžaduje overenie, nastavte ho tu samostatne. Token Monitora patrí do úlohy zberu Prometheus.",
+    "step4Title": "4 · Vytvoriť panely pomocou týchto dopytov PromQL",
+    "step4Body": "Úvodný výber metrík bežne sledovaných na hostiteľovi Proxmox:",
+    "headerPanel": "Nápad panelu",
+    "headerPromql": "Dopyt PromQL",
+    "panelRows": [
+      {
+        "panel": "Merač využitia CPU na hostiteľa",
+        "promql": "proxmox_cpu_usage"
+      },
+      {
+        "panel": "Merač využitia pamäte na hostiteľa",
+        "promql": "proxmox_memory_usage_percent"
+      },
+      {
+        "panel": "Použitá pamäť vs celková (časové rady)",
+        "promql": "proxmox_memory_used_bytes / 1024 / 1024 / 1024"
+      },
+      {
+        "panel": "Spustené VM/CT podľa hostiteľa",
+        "promql": "proxmox_vms_running"
+      },
+      {
+        "panel": "Teplota CPU",
+        "promql": "proxmox_cpu_temperature_celsius"
+      },
+      {
+        "panel": "Sieťová priepustnosť RX (bajty/s)",
+        "promql": "rate(proxmox_interface_bytes_received_total[5m])"
+      },
+      {
+        "panel": "Sieťová priepustnosť TX (bytes/s)",
+        "promql": "rate(proxmox_interface_bytes_sent_total[5m])"
+      },
+      {
+        "panel": "Priemer zaťaženia (1 m)",
+        "promql": "proxmox_load_average{period=\"1m\"}"
+      },
+      {
+        "panel": "Použitý diskový priestor % na bod pripojenia",
+        "promql": "proxmox_disk_usage_percent"
+      },
+      {
+        "panel": "Stav nabitia batérie UPS",
+        "promql": "proxmox_ups_battery_charge_percent"
+      },
+      {
+        "panel": "Teplota GPU na slot",
+        "promql": "proxmox_gpu_temperature_celsius"
+      }
+    ],
+    "outro": "Každý dopyt pridajte ako panel Grafana, s <em>Stat</em> pre hodnoty a <em>Time series</em> pre vývoj, a zoskupte podľa kategórie. Použite <code>node</code> ako premennú panela (<em>Settings → Variables → New → Query → label_values(proxmox_cpu_usage, node)</em>) na filtrovanie podľa hostiteľa."
+  },
+  "uptimeKuma": {
+    "heading": "Uptime Kuma a iné kontroly stavu",
+    "href": "https://github.com/louislam/uptime-kuma",
+    "intro": "Na kontrolu kľúčového slova použite <code>GET /api/system-info</code>. Táto cesta nevyžaduje token a vracia názov hostiteľa, čas prevádzky a stav <code>healthy</code>, <code>warning</code> alebo <code>critical</code>. Je verejná, na rozdiel od chránených podrobných koncových bodov.",
+    "kumaTitle": "Uptime Kuma — HTTP monitor kľúčových slov",
+    "kumaSteps": [
+      "V Uptime Kuma, kliknite na <em>+ Pridať nový monitor</em>.",
+      "Typ monitora: <em>HTTP(s) – kľúčové slovo</em>.",
+      "Zobrazovaný názov: <em>ProxMenux Monitor — pve01</em>.",
+      "URL: <code>http://pve01.lan:8008/api/system-info</code>.",
+      "Kľúčové slovo: <code>healthy</code> (hodnota <code>health.status</code>, keď hostiteľ je OK).",
+      "Interval kontroly: 60 sekúnd stačí.",
+      "Uložte. Cesta system-info nevyžaduje hlavičku Bearer."
+    ],
+    "healthchecksTitle": "healthchecks.io / pingy z úloh cron",
+    "healthchecksBody": "Úloha cron môže čítať <code>/api/system-info</code> a overiť <code>.health.status == \"healthy\"</code>. Až po úspechu odošle úspešný ping na vlastnú URL Healthchecks.io. Služba prijíma pingy úloh, sama Monitor nekontroluje. Samotné HTTP 2xx nedokazuje dobrý stav hostiteľa.",
+    "richTitle": "Chcete podrobnejšie údaje o stave?",
+    "richBody": "Pre úplný stav — desať kategórií, aktívne a potlačené chyby — použite <code>GET /api/health/full</code>. Jedna odpoveď obsahuje údaje okna panela. Pri zapnutom overení treba Bearer token."
+  },
+  "workflows": {
+    "heading": "n8n, Zapier a vlastné skripty",
+    "intro": "Workflow nástroje a skripty môžu <em>odosielať</em> oznámenia cez POST na <code>/api/notifications/send</code>, napríklad pri zlyhaní CI alebo dlhej úlohe cron. Priame odoslanie obíde front aj časový odstup podľa odtlačku udalosti. Zachová formátovanie kanálov, voliteľnú AI a doručenie. Duplicity musí riešiť volajúci.",
+    "n8nBody": "V n8n použite uzol <em>HTTP Request</em> s POST, uvedenou URL a rovnakým JSON ako curl. Zvoľte všeobecné údaje Header Auth: názov <em>Authorization</em> a hodnotu <code>Bearer YOUR_API_TOKEN</code>, pričom nahraďte zástupný text. Požiadavku spustí plán, webhook alebo predchádzajúci uzol.",
+    "severityBody": "Závažnosť používa <code>INFO</code>, <code>WARNING</code> alebo <code>CRITICAL</code> veľkými písmenami. Objekt <code>data</code> poskytuje kontext udalosti a polia šablóny. Na tomto koncovom bode dostane prepis AI iba nadpis a správu; polia v <code>data</code> sa poskytovateľovi neposielajú. Význam udalostí pozri v <link>Oznámenia → Katalóg udalostí</link>."
+  },
+  "pveWebhook": {
+    "heading": "Natívny webhook Proxmox VE (prichádzajúci)",
+    "intro1": "Systém oznámení prišiel v PVE 8.1; natívne ciele webhook vyžadujú Proxmox VE 8.3 alebo novší. <em>Zapnúť oznámenia</em> v nastaveniach sa pokúsi zaregistrovať Monitor ako cieľ. Oznámenia PVE smerované sem, napríklad správy záloh či replikácie, vstúpia do jeho odosielacieho postupu. Konfigurácia musí byť dostupná a zapisovateľná.",
+    "intro2": "Postup, šablónu od PVE, záznamy v <code>/etc/pve/notifications.cfg</code> a správanie v klastri opisuje <link>Oznámenia → Integrácia webhooku PVE</link>."
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "Referenčná príručka API",
+        "href": "/docs/monitor/api",
+        "tail": " — koncové body s metódou, cestou a úplným katalógom metrík Prometheus."
+      },
+      {
+        "label": "Oznámenia",
+        "href": "/docs/monitor/notifications",
+        "tail": " — zdroje udalostí, kanály, postup odosielania a podrobná integrácia webhooku PVE."
+      },
+      {
+        "label": "AI asistent",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": " — voliteľné preformulovanie šablón do zrozumiteľného jazyka pred odoslaním cez Telegram, Discord, e-mail alebo Gotify."
+      },
+      {
+        "label": "Prístup a overenie",
+        "href": "/docs/monitor/access-auth",
+        "tail": " — vytváranie a odvolanie API tokenov pre tieto príklady, auditný denník a nastavenie TLS."
+      }
+    ]
+  }
+}

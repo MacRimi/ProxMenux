@@ -1,0 +1,248 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Panel: Hardvér | Dokumentácia ProxMenux",
+    "description": "Na karte Hardvér je inventár fyzického počítača: CPU a základná doska, pamäťové moduly, teplotné senzory, GPU (s monitorovaním jednotlivých slotov v reálnom čase a inštalátorom ovládačov jedným kliknutím), Coral TPU akcelerátory, prehľad úložiska s kontrolou rýchlosti pripojenia, úplný zoznam zariadení PCI a USB, spotreba energie, jednotky PSU, ventilátory a stav UPS."
+  },
+  "header": {
+    "title": "Panel: Hardvér",
+    "description": "Fyzický stroj na jednej obrazovke: CPU a základná doska, každý pamäťový modul, teplotné snímače všetkých subsystémov, GPU so živým využitím a inštalátorom ovládačov, Coral TPU, každé zariadenie PCI a USB s ovládačom jadra, úplný inventár diskov s dohodnutými rýchlosťami spojenia, príkon, chladenie a UPS.",
+    "section": "ProxMenux Monitor · Prehľad"
+  },
+  "intro": {
+    "title": "Postavený zo štandardných nástrojov",
+    "body": "Väčšina z tejto karty je spracovaná z <code>lscpu</code>, <code>dmidecode</code>, <code>lspci</code>, <code>lsusb</code>, <code>lsblk</code>, <code>smartctl</code>, <code>nvme</code>, <code>sensors</code>, <code>nvidia-smi</code>, <code>intel_gpu_top</code>, <code>amdgpu_top</code>, <code>ipmitool</code> a <code>upsc</code>. Sekcie vykresľujú iba vtedy, keď príslušný nástroj vráti dáta, takže hostiteľ bez UPS neukáže kartu UPS a hostiteľ bez IPMI neukáže údaje o výkone mimo pásma."
+  },
+  "thresholds": {
+    "title": "Farby stavu a prahové hodnoty, ktoré sa tu uplatňujú",
+    "intro": "Každý indikátor a údaj teploty používa rovnakú škálu: <green/> <strong>zelená</strong> pod prahom Upozornenie, <amber/> <strong>jantárová</strong> medzi Upozornenie a Kritické, <red/> <strong>červená</strong> od prahu Kritické vyššie. Odporúčané predvolené hodnoty ProxMenux:",
+    "items": [
+      "<strong>Teplota CPU</strong> — upozornenie 80 °C, kritické 90 °C.",
+      "<strong>Teplota disku</strong> HDD 60/65 °C · SSD 70/75 °C · NVMe 80/85 °C · SAS 55/65 °C (varovanie/kritické)."
+    ],
+    "outro": "Hodnoty možno nastaviť pre každého hostiteľa. <link>Nastavenia → Prahy monitora stavu</link> sú hlavný zdroj a vysvetľujú ich úpravu."
+  },
+  "sections": {
+    "heading": "Časti",
+    "intro": "Sekcie sa zobrazujú zhora nadol v tomto poradí. Niektoré vyžadujú príslušný hardvér alebo nástroj a sú označené ako <em>(podmienené)</em>.",
+    "systemInfoTitle": "Informácie o systéme",
+    "systemInfoIntro": "Dva bloky vedľa seba, vždy prítomné:",
+    "systemInfoItems": [
+      "<strong>CPU</strong> — model, mikroarchitektúra, pätice/jadrá/vlákna, základná a boost frekvencia, príznaky virtualizácie (VT-x / AMD-V) a topológia cache.",
+      "<strong>Základná doska</strong> — výrobca, model, verzia a dátum BIOS, UUID SMBIOS. Pomáha nájsť správnu stránku výrobcu na stiahnutie firmvéru."
+    ],
+    "memoryTitle": "Pamäťové moduly",
+    "memoryBody": "Jeden riadok na obsadený slot podľa <code>dmidecode</code>: označenie, kapacita modulu, typ (DDR4 / DDR5 / varianty ECC), nastavená a menovitá rýchlosť, výrobca, číslo dielu a sériové číslo. Prázdne sloty sú sivé, aby bolo vidieť možnosti rozšírenia.",
+    "thermalTitle": "Sledovanie teplôt",
+    "thermalIntro": "Sedem blokov s údajmi z <code>lm-sensors</code>, <code>sysfs</code> a čítačiek pre konkrétne nástroje. Snímače úložiska hwmon sú priradené k fyzickému blokovému zariadeniu, s modelom a cestou <code>/dev/...</code>. Blok sa skryje, ak kategória neobsahuje snímače.",
+    "thermalItems": [
+      "<strong>CPU</strong> — teploty puzdra procesora a jednotlivých jadier.",
+      "<strong>GPU</strong> — snímače samostatnej GPU cez <code>nvidia-smi</code> / <code>amdgpu_top</code> a Intel iGPU. Zahŕňa najteplejší bod a teplotu pamäťového prechodu, ak ich ovládač poskytuje.",
+      "<strong>NVME</strong> — zložená teplota radiča priradená ku konkrétnemu mennému priestoru NVMe.",
+      "<strong>HDD</strong> — hodnoty <code>drivetemp</code> pre rotačné blokové zariadenia.",
+      "<strong>SSD</strong> — hodnoty <code>drivetemp</code> pre nerotačné blokové zariadenia SATA/SAS.",
+      "<strong>PCI</strong> — senzory, ktoré sa javia ako zariadenia pripojené k PCI (HBA, sieťové karty s internými senzormi).",
+      "<strong>OTHER</strong> — čipset, VRM, senzory okolia, ktoré sa inde nehodia."
+    ]
+  },
+  "graphics": {
+    "heading": "Grafické karty",
+    "intro": "Každý radič videa má kartu s výrobcom, modelom, typom (<em>Integrovaný</em> / <em>PCI</em> / BMC), adresou PCI (BDF), ovládačom jadra a modulmi. <strong>Prepnúť režim</strong> mení zdieľanie LXC s natívnym ovládačom na passthrough VM (<code>vfio-pci</code>) a späť. <link>Prepnúť režim GPU (VM ↔ LXC)</link> vysvetľuje zmeny na hostiteľovi.",
+    "vfioImageAlt": "Grafické karty: integrovaná Matrox G200EH priradená k mgag200, pripravená pre LXC, a NVIDIA Quadro P400 priradená k vfio-pci, pripravená pre passthrough VM",
+    "vfioImageCaption": "Dve GPU: čip BMC Matrox používa natívny ovládač a je pripravený pre LXC; NVIDIA Quadro P400 je priradená k <code>vfio-pci</code> a pripravená pre passthrough VM.",
+    "lxcImageAlt": "Grafické karty: Intel UHD Graphics iGPU s i915 a NVIDIA Quadro P1000 s nvidia, obe pripravené pre kontajnery LXC",
+    "lxcImageCaption": "Rovnaký uzol po vrátení karty NVIDIA k natívnemu ovládaču: obe GPU sú pripravené pre kontajnery LXC.",
+    "realtimeTitle": "Okno monitorovania v reálnom čase",
+    "realtimeBody": "Kliknutie otvorí monitorovanie GPU podľa slotu, ktoré každé tri sekundy zisťuje údaje nástrojom výrobcu. Ukazuje výrobcu, typ, slot PCI, ovládač, moduly jadra, využitie jednotiek (Render/3D, Video, Blitter, VideoEnhance), grafické a pamäťové frekvencie, teplotu, dostupnú spotrebu, VRAM a aktívne procesy s ich zaťažením jednotiek. Dáta z <code>/api/gpu/&lt;slot&gt;/realtime</code>.",
+    "toolsIntro": "Nástroj výrobcu používaný pre každú GPU:",
+    "headerVendor": "Výrobca",
+    "headerTool": "Nástroj",
+    "headerProject": "Projekt",
+    "tools": [
+      {
+        "vendor": "NVIDIA",
+        "tool": "nvidia-smi",
+        "projectLabel": "developer.nvidia.com",
+        "projectHref": "https://developer.nvidia.com/nvidia-system-management-interface"
+      },
+      {
+        "vendor": "Intel iGPU",
+        "tool": "intel_gpu_top (igt-gpu-tools)",
+        "projectLabel": "gitlab.freedesktop.org",
+        "projectHref": "https://gitlab.freedesktop.org/drm/igt-gpu-tools"
+      },
+      {
+        "vendor": "AMD",
+        "tool": "amdgpu_top",
+        "projectLabel": "github.com/Umio-Yasuno/amdgpu_top",
+        "projectHref": "https://github.com/Umio-Yasuno/amdgpu_top"
+      },
+      {
+        "vendor": "Matrox / ASPEED (BMC)",
+        "tool": "(iba zobrazovanie)",
+        "projectLabel": "Detekovaný a označený ako BMC; žiadny blok v reálnom čase."
+      }
+    ],
+    "nvidiaImageAlt": "Monitorovanie NVIDIA Quadro P1000: výrobca NVIDIA, načítaný ovládač nvidia, grafická frekvencia 1.26 GHz, pamäťová 2.50 GHz, teplota 50 °C, všetky jednotky na 0 %, žiadne aktívne procesy, celková pamäť 4096 MiB",
+    "nvidiaImageCaption": "NVIDIA Quadro P1000 s proprietárnym ovládačom: frekvencie, teplota, ukazovatele využitia jednotiek a aktívne procesy.",
+    "intelImageAlt": "Monitorovanie Intel UHD Graphics iGPU s ovládačom i915: spotreba 11.31 W, zaťaženie video jednotky 1 % a proces ffmpeg s využitím 8 MB",
+    "intelImageCaption": "Intel iGPU s aktívnym <code>i915</code>. Tabuľka Aktívne procesy zobrazuje úlohu ffmpeg používajúcu video jednotku.",
+    "amdImageAlt": "Monitorovanie integrovanej GPU AMD Lucienne s amdgpu: využitie jednotiek 0 % a amdgpu_top ako aktívny proces",
+    "amdImageCaption": "AMD iGPU monitorovaná cez <code>amdgpu_top</code>. Samotný nástroj je aktívny proces, pretože získava živé údaje.",
+    "installTitle": "Inštalácia ovládača NVIDIA z okna",
+    "installBody": "Pri <code>nouveau</code>/<code>nvidiafb</code> bez proprietárneho ovládača NVIDIA nie sú dostupné frekvencie, spotreba ani zaťaženie procesov. Okno ponúkne <strong>Nainštalovať ovládače NVIDIA</strong> a spustí skript opísaný v <link>Inštalácia ovládačov NVIDIA na hostiteľovi</link>.",
+    "noDriverAlt": "Monitorovanie NVIDIA Quadro P620 s načítanými nvidiafb a nouveau, oznámením Rozšírené monitorovanie nie je dostupné a modrým tlačidlom Nainštalovať ovládače NVIDIA",
+    "noDriverCaption": "Proprietárny ovládač ešte nie je nainštalovaný: okno ponúka inštaláciu jedným kliknutím.",
+    "promptAlt": "Potvrdenie inštalácie ovládača NVIDIA s nájdenými GPU, kontajnermi LXC s passthrough NVIDIA a tlačidlami Áno/Zrušiť",
+    "promptCaption": "Súhrn pred inštaláciou: nájdené GPU, kontajnery LXC s passthrough NVIDIA a plánované kroky. Bez potvrdenia sa nič nemení.",
+    "successAlt": "Výstup terminálu zobrazujúci ovládač NVIDIA 580.105.08 nainštalovaný úspešne a nvidia-smi hlásijúci Quadro P620",
+    "successCaption": "Úspešná inštalácia: NVIDIA <code>.run</code> zostavený cez DKMS, služba perzistencie pripravená a <code>nvidia-smi</code> hlási GPU.",
+    "warningTitle": "Vyberte si verziu ovládača, ktorú GPU skutočne podporuje",
+    "warningBody": "Novšie vetvy NVIDIA ukončujú podporu starších rodín GPU, napríklad Maxwell alebo Kepler. Ak po inštalácii <code>nvidia-smi</code> hlási <em>\"No devices were found\"</em> alebo DKMS zlyhá, vetva nemusí GPU podporovať. Zopakujte inštaláciu so staršou vetvou, napríklad legacy 470.x pre Kepler. Kompatibilitu overte na <a>oficiálnej stránke vyhľadávania ovládačov</a>.",
+    "whereGoIntro": "Kam ísť odtiaľto:",
+    "whereGoItems": [
+      "<link1>Inštalácia ovládačov NVIDIA na hostiteľovi</link1> — úplný postup, matica kompatibility jadra, voliteľná oprava NVENC a prenos do LXC.",
+      "<link2>Prepnúť režim GPU (VM ↔ LXC)</link2> — čo robí ovládanie <em>Prepnúť režim</em> na karte.",
+      "<link3>Pridať GPU do VM (passthrough)</link3> a <link4>Pridať GPU do LXC</link4> — prvé priradenie neviazanej GPU."
+    ]
+  },
+  "coral": {
+    "heading": "Coral TPU / AI akcelerátory",
+    "subHeading": "(podmienečné)",
+    "intro": "Zobrazí sa pri pripojenom Google Coral alebo inom AI akcelerátore. Okno zariadenia uvádza pripojenie (M.2 / mini-PCIe / USB), šírku PCIe, ID výrobcu/produktu, softvérovú podporu (<code>apex</code> v jadre pre PCIe, <code>libedgetpu</code> v používateľskom priestore pre USB), moduly (<code>gasket</code> + <code>apex</code>), uzly (<code>/dev/apex_*</code>), stav runtime Edge TPU, živú teplotu a výstražné prahy firmvéru.",
+    "imageAlt": "Podrobnosti Coral Edge TPU: pripojenie PCIe/M.2, 5.0 GT/s x1, ID 1ac1:089a, ovládač apex, načítané moduly gasket a apex, /dev/apex_0 prítomný, Edge TPU Runtime nenainštalovaný, 53.5 °C a hardvérové výstražné prahy",
+    "imageCaption": "Coral M.2 s načítanými modulmi jadra hostiteľa, prítomným uzlom zariadenia a dostupnými výstrahami teploty firmvéru. Indikátor runtime sa zmení na zelený po inštalácii zodpovedajúceho Edge TPU Runtime.",
+    "pathsIntro": "Dve možnosti inštalácie podľa vyhotovenia:",
+    "pathsItems": [
+      "<strong>M.2 / Mini-PCIe</strong> — hostiteľ potrebuje moduly jadra <code>gasket</code> + <code>apex</code> zostavené cez DKMS, aby sa pri štarte objavil uzol <code>/dev/apex_0</code>.",
+      "<strong>Akcelerátor USB</strong> — hostiteľ potrebuje iba runtime Edge TPU v používateľskom priestore (<code>libedgetpu1-std</code>) z repozitára APT spoločnosti Google."
+    ],
+    "outro": "<installLink>Inštalovať Coral TPU na hostiteľa</installLink> rozpozná a spravuje oba varianty. Informácie a oficiálny runtime sú na <a>coral.ai/docs</a>. Potom priraďte zariadenie kontajneru cez <lxcLink>Pridať Coral TPU do LXC</lxcLink>."
+  },
+  "storage": {
+    "heading": "Súhrn úložiska",
+    "intro": "Všetky blokové zariadenia známe jadru, zoskupené podľa typu. Každý disk ukazuje názov (<code>sda</code>, <code>nvme0n1</code>, <code>zram0</code>…), typ (<em>SSD</em>, <em>HDD</em>, <em>NVMe SSD</em>), model a dohodnuté spojenie. Kliknutie otvorí model, sériové číslo, kapacitu, rozhranie a aktuálnu aj maximálnu rýchlosť spojenia.",
+    "imageAlt": "Súhrn úložiska s jedenástimi blokovými zariadeniami (SSD SATA, HDD SATA, SSD NVMe a zram), modelmi a rýchlosťami spojenia; dva NVMe ukazujú 3.0 x4 so zvýraznenou aktuálnou rýchlosťou",
+    "imageCaption": "Jedenásť zariadení na tomto uzle. SATA spojenia sa zobrazujú ako <em>SATA &lt;version&gt;, &lt;Gb/s&gt; (current: ...)</em>; NVMe ako <em>&lt;PCIe gen&gt; x&lt;width&gt;</em>.",
+    "nvmeBody": "Riadok NVMe porovnáva dohodnuté spojenie s podporovaným maximom. Pri rozdiele, napríklad Gen3 x4 SSD na <strong>3.0 x1</strong> v slote zapojenom jednou linkou, je aktuálna hodnota jantárová. Pomáha pri diagnostike pomalých diskov alebo zmenách liniek po aktualizácii BIOS.",
+    "nvmeModalAlt": "NVMe detail pohonu pre nvme0n1: NVMe typ SSD, kapacita 953.9 GB, súčasná rýchlosť spojenia 3.0 x1 zvýraznená v jantári, maximálna rýchlosť spojenia 3.0 x4, model WDC CL SN720, sériové číslo, rozhranie PCIe/NVMe",
+    "nvmeModalCaption": "Podrobnosti NVMe s obmedzeným spojením: disk podporuje x4, ale slot je zapojený x1.",
+    "outro": "Dáta SMART, samotesty, história a správa PDF sú v <storageLink>Panel: Úložisko</storageLink>. Rovnaké dáta používa <smartLink>Stav a testy SMART diskov</smartLink>. Dlhý test zo skriptu zapíše JSON zobrazený v Monitore v <em>Úložisko → História</em>."
+  },
+  "pci": {
+    "heading": "PCI zariadenia",
+    "intro": "Zariadenia PCI určené pomocou <strong>PCI BDF</strong> (Bus:Device.Function, napríklad <code>03:00.0</code>) a triedy (<em>Radič úložiska</em>, <em>Radič USB</em>, <em>Grafická karta</em>, <em>Sieťový radič</em>, <em>Zvukový radič</em>…). Každá karta zobrazuje výrobcu, názov a <strong>aktuálne priradený ovládač jadra</strong>, užitočné pri diagnostike passthrough, skupín IOMMU či nesprávneho ovládača.",
+    "imageAlt": "Pätnásť zariadení PCI podľa triedy: radiče úložiska ahci/nvme, USB, grafické karty (jedna s vfio-pci, druhá s natívnym ovládačom), sieť igb/tg3 a zvuk pri GPU odovzdanej VM",
+    "imageCaption": "Pätnásť zariadení na uzle. GPU aj pridružená zvuková funkcia sú priradené k <code>vfio-pci</code>, teda pripravené pre passthrough VM.",
+    "bdfTitle": "Čítanie BDF",
+    "bdfBody": "<code>03:00.0</code> znamená zbernicu PCI <code>03</code>, zariadenie <code>00</code>, funkciu <code>0</code>. Samostatné GPU zvyčajne používajú <code>.0</code> pre GPU a <code>.1</code> pre zvuk HDMI. Obe funkcie sa odovzdávajú VM spolu; preto <link>Prepnúť režim GPU</link> pri odchode z režimu VM vyčistí aj osamotené zvukové priradenia."
+  },
+  "usb": {
+    "heading": "USB zariadenia",
+    "intro": "Zariadenia USB s výrobcom a produktom, verziou USB, adresou <code>bus:device</code>, ID <code>vendor:product</code> a ovládačom jadra. Sú rozdelené podľa úlohy: <em>Komunikácia</em> (adaptéry Z-Wave / Zigbee), <em>UPS</em>, úložisko alebo HID. Zariadenia tak rozlíšite bez porovnávania ID.",
+    "imageAlt": "Zariadenia USB: Aeotec Z-Wave Z-Stick, koordinátor Zigbee ConBee II a UPS Ellipse ECO, s verziou USB, adresou, ID vendor:product a priradeným ovládačom",
+    "imageCaption": "Tri zariadenia USB: dva adaptéry domácej automatizácie cez <code>usbfs</code> a UPS cez <code>usbfs</code>, s ktorým NUT komunikuje cez libusb."
+  },
+  "power": {
+    "heading": "Spotreba energie",
+    "subHeading": "(podmienečné)",
+    "intro": "Zobrazí sa, ak hostiteľ poskytuje telemetriu príkonu. Podľa dostupnosti ukazuje dva nezávislé zdroje:",
+    "items": [
+      "<strong>Celkový príkon ACPI / IPMI</strong> — príkon celého systému zo snímača základnej dosky alebo BMC. Typické pre serverové dosky.",
+      "<strong>Príkon puzdra CPU</strong> — počítadlá Intel RAPL alebo ekvivalent AMD. Odlišuje príkon CPU od zvyšku systému na bežných doskách bez celkového snímača."
+    ],
+    "supplyImageAlt": "Spotreba: 198 W celkovo cez ACPI a dva zdroje so stavom OK a výstupom 185 W a 5 W",
+    "supplyImageCaption": "Serverová doska s jedným snímačom ACPI a dvoma zdrojmi cez IPMI: druhý je redundantný, v pokoji na 5 W.",
+    "cpuImageAlt": "Spotreba na bežnej doske: iba príkon CPU 8.7 W cez Intel RAPL",
+    "cpuImageCaption": "Bežná doska bez celkového snímača: ukazuje iba príkon CPU cez RAPL."
+  },
+  "psu": {
+    "heading": "Napájacie zdroje",
+    "subHeading": "(podmienečné)",
+    "body": "Na serverových strojoch s dvojitými zdrojmi ukazuje IPMI prítomnosť (PSU 1 / PSU 2 / …), vstupné napätie, výstupný výkon a stav OK/zlyhanie. Skontrolujte po výpadku napájania na uzle s redundantnými zdrojmi."
+  },
+  "fans": {
+    "heading": "Ventilátory systému",
+    "subHeading": "(podmienečné)",
+    "body": "Otáčky každého ventilátora v RPM s minigrafom, ak je podporovaný. Bez jednotlivých údajov ukáže jednu hodnotu ventilátora skrinky."
+  },
+  "ups": {
+    "heading": "Stav UPS",
+    "subHeading": "(podmienečné)",
+    "body": "Zobrazí sa pri nastavenom a dostupnom serveri NUT (Network UPS Tools). Ukazuje stav (sieť / batéria / nabíjanie / slabá batéria), nabitie batérie, odhad výdrže, percento zaťaženia, vstupné napätie, model a firmvér. Rovnaké údaje používa <em>Bezpečnosť a certifikáty</em> monitora stavu; prechod na batériu sa hneď zobrazí."
+  },
+  "dataCollected": {
+    "heading": "Spôsob zberu údajov",
+    "headerSection": "Sekcia karty",
+    "headerEndpoint": "Koncový bod",
+    "headerSource": "Zdroj",
+    "rows": [
+      {
+        "section": "Statický inventár (PCI, CPU, BIOS)",
+        "endpoint": "/api/hardware",
+        "source": "<code>lspci -vmm</code>, <code>/proc/cpuinfo</code>, <code>dmidecode</code>; vyrovnávacia pamäť počas životnosti procesu."
+      },
+      {
+        "section": "Hodnoty živých snímačov",
+        "endpoint": "/api/hardware/live",
+        "source": "<code>sensors</code> (lm-sensors), <code>/sys/class/hwmon</code> a <code>/sys/block</code> identifikujú úložné zariadenia. Teploty zostávajú živé; iba mapovanie hwmon na zariadenia sa uchováva v pamäti 60 sekúnd."
+      },
+      {
+        "section": "História teploty CPU",
+        "endpoint": "/api/temperature/history",
+        "source": "Časový rad zaznamenávaný každých 60 sekúnd zberačom teploty a uložený v SQLite."
+      },
+      {
+        "section": "Živé metriky GPU",
+        "endpoint": "/api/gpu/<slot>/realtime",
+        "source": "NVIDIA: <code>nvidia-smi --query-gpu=...</code>. Intel: <code>intel_gpu_top</code>. AMD: sysfs <code>/sys/class/drm/cardN</code>."
+      }
+    ],
+    "codeComment1": "# Porovnať inventár s pohľadom operačného systému",
+    "codeComment2": "# Potvrďte kartu GPU ktorú prístrojová doska vidí"
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "label": "Nainštalovať ovládače NVIDIA (host)",
+        "href": "/docs/hardware/nvidia-host",
+        "tail": " — skript spustený inštalačným tlačidlom v okne GPU."
+      },
+      {
+        "label": "Prepnúť režim GPU (VM ↔ LXC)",
+        "href": "/docs/hardware/switch-gpu-mode",
+        "tail": " — zmeny na hostiteľovi po prepnutí režimu na karte GPU."
+      },
+      {
+        "label": "Inštalovať Coral TPU na hostiteľa",
+        "href": "/docs/hardware/install-coral-tpu-host",
+        "tail": " — inštalácia modulu jadra a runtime Coral."
+      },
+      {
+        "label": "SMART Zdravie a test disku",
+        "href": "/docs/disk-manager/smart-disk-test",
+        "tail": " — skript poskytujúci dáta SMART v podrobnostiach disku na karte Úložisko."
+      },
+      {
+        "label": "Dashboard: Záložka úložiska",
+        "href": "/docs/monitor/dashboard/storage",
+        "tail": " — úplná tabuľka atribútov SMART, história samotestov a správa PDF."
+      },
+      {
+        "label": "Monitor zdravia",
+        "href": "/docs/monitor/health-monitor",
+        "tail": " — kategória CPU a teplota, ktorá používa rovnaké snímače."
+      },
+      {
+        "label": "Referenčná príručka API",
+        "href": "/docs/monitor/api",
+        "tail": " — koncové body hardvéru a GPU."
+      },
+      {
+        "label": "Index panela",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — Ostatné karty."
+      }
+    ]
+  }
+}

@@ -1,0 +1,372 @@
+{
+  "meta": {
+    "title": "Monitoraggio Proxmox — CPU, memoria, archiviazione, SMART, ZFS, log | ProxMenux",
+    "description": "Monitoraggio proattivo di Proxmox VE: dieci categorie ogni cinque minuti (CPU e temperatura, memoria e swap, archiviazione, dischi/SMART, rete, VM, servizi, log, aggiornamenti e sicurezza), quattro livelli di gravità, silenziamento per categoria, pulizia degli errori risolti, cronologia permanente dei dischi e notifiche Telegram, Discord, Gotify o e-mail.",
+    "ogTitle": "Monitoraggio Proxmox — CPU, memoria, archiviazione, SMART, ZFS, log",
+    "ogDescription": "Monitoraggio proattivo di Proxmox VE in dieci categorie, con livelli di gravità, durata del silenziamento e notifiche per evento.",
+    "twitterTitle": "Monitoraggio dello stato di Proxmox | ProxMenux",
+    "twitterDescription": "Monitoraggio proattivo di Proxmox VE in dieci categorie, con livelli di gravità e notifiche."
+  },
+  "header": {
+    "title": "Monitoraggio integrità",
+    "description": "Il controllo continuo esamina dieci categorie dello stato dell’host ogni cinque minuti, raccoglie misure tra i cicli, deduplica i rilevamenti in eventi strutturati e alimenta dashboard, notifiche e riscrittura IA facoltativa da un’unica fonte.",
+    "section": "Monitor di ProxMenux"
+  },
+  "intro": {
+    "title": "Uno scanner, tre consumatori",
+    "body": "Un thread in background esegue il ciclo completo ogni cinque minuti e salva ogni rilevamento in SQLite con un <code>error_key</code> stabile. Così <strong>(1)</strong> la dashboard mostra lo stato attuale, <strong>(2)</strong> il sistema di notifiche distribuisce i nuovi eventi e <strong>(3)</strong> l’assistente IA facoltativo riscrive gli avvisi in linguaggio semplice. Un’unica configurazione alimenta tutti questi componenti."
+  },
+  "howItWorks": {
+    "heading": "Come funziona",
+    "intro": "Il monitor usa due thread paralleli. Un <strong>campionatore di metriche</strong> leggero riempie i buffer di CPU, memoria e temperatura. Il <strong>ciclo completo di controllo</strong> legge i buffer, valuta le condizioni prolungate ed esegue gli altri controlli circa ogni cinque minuti, poi salva i rilevamenti in SQLite per dashboard e notifiche.",
+    "scannerTitle": "Dal campione al ritrovamento memorizzato",
+    "scannerCaption": "Il campionatore riempie i buffer tra i cicli: CPU ogni 5 s, memoria ogni 30 s e temperatura ogni 15 s. Non valuta gli avvisi. Il ciclo completo analizza i buffer ed esegue i controlli più pesanti su SMART, ZFS, log e servizi prima di salvare i rilevamenti in SQLite.",
+    "scannerArrowLabel": "passo",
+    "scannerNodes": {
+      "samplerLabel": "Campionatore di metriche",
+      "samplerDetail": "Uso CPU 5 s\nMemoria 30 s\nTemperatura 15 s\n→ buffer storici",
+      "cycleLabel": "ciclo completo di salute",
+      "cycleDetail": "Ogni 5 min\nLegge i buffer\n+ controlli diretti\n(SMART, ZFS,\nservizi, log…)",
+      "checksLabel": "Controlli per categoria",
+      "checksDetail": "Dieci categorie\n(CPU, memoria,\narchiviazione, dischi,\nrete, VM,\nservizi, log,\naggiornamenti, sicurezza)",
+      "sqliteLabel": "SQLite",
+      "sqliteDetail": "tabella errors\n(attivi +\nsilenziati)\n+ disk_observations\n(cronologia permanente\nper disco)"
+    },
+    "notifTitle": "Dal rilevamento salvato all’utente",
+    "notifCaption": "Percorso delle notifiche. La stessa tabella degli errori alimenta anche la dashboard (elenchi degli avvisi attivi e silenziati) e la pulizia a fine ciclo che risolve automaticamente le voci obsolete. Entrambe leggono i dati direttamente, senza passare dal dispatcher.",
+    "notifArrowLabel": "evento",
+    "notifNodes": {
+      "errorsLabel": "errori tabella",
+      "errorsDetail": "Righe attive +\nsilenziate\nidentificate da\nerror_key",
+      "dispatcherLabel": "Inviatore di notifica",
+      "dispatcherDetail": "Eventi nuovi +\naggravati in coda\nSecondo le opzioni\n+ intervallo minimo",
+      "templatesLabel": "Modelli + riscrittura AI",
+      "templatesDetail": "Modello\nper evento\n→ riscrittura IA\nfacoltativa in\nlinguaggio semplice",
+      "channelsLabel": "Canali",
+      "channelsDetail": "Telegram\nDiscord\nGotify\nPosta elettronica (SMTP)"
+    }
+  },
+  "categories": {
+    "heading": "Le dieci categorie",
+    "imageAlt": "Vista del monitor di stato con le dieci categorie e i relativi stati: CPU, memoria, archiviazione, dischi, rete, VM, servizi, log, aggiornamenti e sicurezza",
+    "imageCaption": "Salute Monitor vista — le dieci categorie con il loro stato attuale. Le categorie su un host sano mostrano tutto OK; gli avvisi e gli eventi critici appaiono in linea con le righe che li hanno prodotti.",
+    "intro": "Ogni ciclo esegue dieci controlli indipendenti. Ciascuno restituisce uno dei quattro stati (<strong>OK</strong>, <strong>INFO</strong>, <strong>WARNING</strong>, <strong>CRITICAL</strong>) e dati strutturati, come nomi dei dispositivi, estratti dei log e soglie precise, mostrati nella dashboard e nelle notifiche.",
+    "headerCategory": "Categoria",
+    "headerChecks": "Sottocontrolli",
+    "headerEvents": "Eventi tipici",
+    "rows": [
+      {
+        "category": "CPU e temperatura",
+        "checks": "CPU utilizzo con isteresi, temperatura del sensore",
+        "events": "Uso elevato e prolungato della CPU; avvisi di temperatura basati sulle letture campionate."
+      },
+      {
+        "category": "Memoria e swap",
+        "checks": "RAM utilizzo, utilizzo swap",
+        "events": "Pressione prolungata sulla memoria; attività dell’OOM-killer; esaurimento dello swap."
+      },
+      {
+        "category": "Archiviazione",
+        "checks": "Archivi Proxmox, filesystem radice",
+        "events": "Soglie di spazio superate sulla radice o su altri filesystem monitorati (85% avviso / 95% critico per impostazione predefinita); storage PVE non disponibili; montaggi NFS/CIFS bloccati o inaspettatamente in sola lettura; storage LVM-thin e altri pool che superano le stesse soglie."
+      },
+      {
+        "category": "Disco e SMART",
+        "checks": "SMART, errori I/O in dmesg, pool ZFS, LVM, errori del filesystem",
+        "events": "Controllo SMART fallito; settori riallocati o in attesa; errori I/O ATA; pool ZFS DEGRADED / FAULTED; ext4 rimontato in sola lettura."
+      },
+      {
+        "category": "Rete",
+        "checks": "Connettività, stato collegamento, latenza gateway",
+        "events": "Bridge o bond down; gateway irraggiungibile; persistenti picchi di latenza."
+      },
+      {
+        "category": "VM e container",
+        "checks": "Comunicazione QMP, avvio VM, avvio container",
+        "events": "Avvio della VM fallito; arresto del CT fallito; timeout del socket QMP; configurazione o disco mancanti dopo una clonazione."
+      },
+      {
+        "category": "Servizi PVE",
+        "checks": "<code>pveproxy</code>, <code>pvedaemon</code>, <code>pvestatd</code>, <code>pve-cluster</code>, modalità cluster",
+        "events": "Servizio arrestato in modo anomalo; quorum del cluster perso; <code>pmxcfs</code> bloccato."
+      },
+      {
+        "category": "Log di sistema",
+        "checks": "Errori persistenti, punte di errore, cascata di errore, messaggi critici del kernel",
+        "events": "Errori identici ripetuti; improvvisa scoppio di avvisi (modello cascata); <code>BUG:</code> / <code>OOPS:</code> / <code>oom-killer</code> in dmesg."
+      },
+      {
+        "category": "Aggiornamenti di sistema",
+        "checks": "Aggiornamenti di attesa, aggiornamenti di sicurezza, versione kernel / PVE, età del sistema",
+        "events": "Aggiornamenti di sicurezza o del kernel in uso in attesa; sistema non aggiornato da molto tempo. La categoria Aggiornamenti della finestra Stato di salute mostra il pulsante <em>Aggiorna ora</em> quando ci sono aggiornamenti in attesa. Avvia l’intera procedura di aggiornamento ProxMenux nella finestra stessa; alla chiusura aggiorna lo stato con <code>?refresh=1</code>, così l’indicatore riflette il nuovo stato senza attendere il ciclo successivo."
+      },
+      {
+        "category": "Sicurezza e certificati",
+        "checks": "Tentativi di accesso, certificati in scadenza, stato delle jail Fail2Ban se installato",
+        "events": "Ripetuti errori di autenticazione SSH o web; certificato PVE in scadenza tra meno di 30 giorni; blocchi Fail2Ban attivi."
+      }
+    ]
+  },
+  "severity": {
+    "heading": "Modello di gravità",
+    "headerStatus": "Stato",
+    "headerColour": "Colore",
+    "headerMeaning": "Significato",
+    "headerNotification": "Notifica",
+    "rows": [
+      {
+        "status": "OK",
+        "colour": "Verde",
+        "meaning": "Stato regolare. Nessun rilevamento in questa categoria.",
+        "notification": "Silenzioso."
+      },
+      {
+        "status": "INFO",
+        "colour": "Blu",
+        "meaning": "Condizione transitoria o già risolta degna di nota una volta. Utilizzato anche per le categorie che hanno <em>solo</em> elementi abbandonati rimasti.",
+        "notification": "Facoltativa. Ogni tipo di evento può essere attivato o disattivato per ciascun canale."
+      },
+      {
+        "status": "WARNING",
+        "colour": "Giallo",
+        "meaning": "L'attenzione è necessaria ma l'host è ancora funzionale. Causa non banale — leggere i dettagli.",
+        "notification": "Inviata quando il tipo di evento è attivo per il canale."
+      },
+      {
+        "status": "CRITICAL",
+        "colour": "Rosso",
+        "meaning": "Funzionalità rotta o perdita di dati possibile. Azione richiesta.",
+        "notification": "Inviata se il tipo di evento è attivo per il canale. Un avviso di temperatura CPU CRITICAL si riattiva per sicurezza anche se era stato silenziato."
+      }
+    ],
+    "infoNote": "Una categoria <strong>OK</strong> con eventi ancora nel periodo di silenziamento appare come <strong>INFO</strong>, per ricordare che alcuni avvisi sono stati silenziati.",
+    "unknownTitle": "UNKNOWN quando un controllo non può essere completato",
+    "unknownBody": "Un controllo non disponibile restituisce <code>UNKNOWN</code>; dopo tre cicli consecutivi viene salvato un rilevamento persistente. La dashboard lo mostra in giallo. Lo stato complessivo limita <code>UNKNOWN</code> a <strong>WARNING</strong>: il solo controllo non disponibile non rende critico l’host."
+  },
+  "dashboardView": {
+    "heading": "La vista del cruscotto",
+    "intro": "Il monitor si trova nella scheda <strong>Panoramica</strong>. L’indicatore nell’intestazione (Regolare / Avviso / Critico) apre una finestra con due elenchi:",
+    "items": [
+      "<strong>Attivi</strong> — categorie con rilevamenti irrisolti. Espandendo una riga si vedono i controlli coinvolti, il testo originale <code>reason</code>, l’ID del dispositivo o della VM e, se disponibile, un collegamento ad Archiviazione, Rete, VM, Log o Hardware.",
+      "<strong>Silenziati</strong> — elementi riconosciuti dall’utente e ancora nel periodo di silenziamento. Ogni riga mostra tempo restante e durata scelta. Alla scadenza esce dall’elenco; se la causa persiste e la categoria lo supporta, torna tra gli <em>Attivi</em>."
+    ],
+    "pillTitle": "L’indicatore riflette la categoria più grave",
+    "pillBody": "Il colore dell’intestazione riflette la gravità massima: CRITICAL → rosso, altrimenti WARNING → giallo, altrimenti INFO → blu, altrimenti verde. La stessa logica controlla il punto della favicon e il badge PWA.",
+    "updateNowTitle": "Pulsante Aggiorna ora nell’intestazione della panoramica",
+    "updateNowBody1": "Se <em>Aggiornamenti di sistema</em> segnala aggiornamenti in attesa, appare <strong>Aggiorna ora</strong> accanto all’indicatore. La finestra esegue la procedura di <em>ProxMenux → Settings post-install Proxmox → Proxmox System Update</em>: pulizia dei repository, <code>apt full-upgrade</code> tramite <code>update-pve-safe.sh</code>, ricompilazione DKMS dei driver gestiti con un nuovo kernel, autoremove/autoclean e richiesta di riavvio se cambia il kernel. La finestra mostra l’avanzamento in tempo reale.",
+    "updateNowBody2": "Al termine, chiudere la finestra richiama <code>GET /api/health/details?refresh=1</code> e invalida la cache dell’endpoint. Aggiornamenti in attesa e gravità vengono ricalcolati dal nuovo stato dei pacchetti: il badge scompare senza attendere il ciclo successivo. Se l’host è già aggiornato, il pulsante resta nascosto."
+  },
+  "dismiss": {
+    "heading": "Silenziare gli avvisi e scegliere la durata",
+    "intro": "Alcuni eventi persistono per natura, come <em>Aggiornamenti di sistema: aggiornamenti disponibili</em> finché non aggiorni l’host, e una notifica ogni cinque minuti per una settimana non serve. Il pulsante <em>Aggiorna ora</em> nella categoria Aggiornamenti della finestra Stato di salute risolve direttamente questo caso. Per gli altri casi o gli aggiornamenti rimandati il monitor offre anche due meccanismi collegati per silenziare gli avvisi:",
+    "step1": "<strong>Silenziare un singolo evento</strong> nella finestra. Il menu offre <strong>24 ore</strong>, <strong>7 giorni</strong> o <strong>Permanentemente</strong>, indipendentemente dalla categoria. La scelta invia <code>POST /api/health/acknowledge</code> con <code>error_key</code> e <code>suppression_hours</code> (<code>-1</code> per permanente). L’evento passa tra i silenziati con data <code>acknowledged_at</code>.",
+    "dropdownImageAlt": "Menu per silenziare un avviso: 24 ore, 7 giorni o permanentemente",
+    "dropdownImageCaption": "La durata scelta vale solo per questo avviso; senza scelta individuale si usa il valore della categoria. Gli avvisi silenziati permanentemente hanno un’etichetta ambra <em>Permanente</em> e normalmente non si riattivano. La temperatura critica della CPU è l’eccezione descritta sotto.",
+    "step2": "<strong>Durata del silenziamento per categoria</strong>. In Impostazioni → Monitoraggio, o tramite <code>POST /api/health/settings</code>, ciascuna delle dieci categorie ha una durata predefinita usata senza scelta individuale:",
+    "imageAlt": "Durata del silenziamento per categoria in Impostazioni → Monitoraggio",
+    "imageCaption": "Un menu per categoria. Scegli una durata lunga per eventi ripetitivi, come aggiornamenti in attesa, e breve per quelli da rivalutare presto. Sotto sono elencati i silenziamenti attivi.",
+    "outro": "Durante il silenziamento il controllo continua e aggiorna <code>last_seen</code>, senza nuove notifiche. Alla scadenza il ciclo successivo rivaluta la causa: l’avviso può riattivarsi oppure sparire se il problema è risolto.",
+    "activeSuppressionsTitle": "Rivedere e annullare i silenziamenti attivi",
+    "activeSuppressionsBody": "Gli avvisi silenziati, temporanei o permanenti, sono in <strong>Impostazioni → Monitoraggio → Silenziamenti attivi</strong>. Ogni riga mostra identificatore, categoria, gravità, data e tempo restante. <strong>Riattiva</strong> rimuove il riconoscimento per il prossimo controllo. Da qui si annullano i silenziamenti permanenti e si interrompono quelli temporanei. Attiva <em>Modifica</em>, scegli le righe da riattivare (bordo verde e testo barrato), poi salva. Annulla svuota la selezione.",
+    "autoTitle": "Silenziamento automatico al cambiare la durata",
+    "autoBody": "Scegliere una durata diversa dalle 24 ore predefinite ha un secondo effetto: <strong>i nuovi rilevamenti della categoria vengono salvati già riconosciuti</strong>. Una settimana scelta per i dischi vale quindi anche per i nuovi avvisi, senza silenziarli singolarmente. Appaiono direttamente tra i silenziati con la durata scelta. Le categorie lasciate a 24 ore mantengono il comportamento normale: i nuovi rilevamenti restano attivi finché intervieni.",
+    "tempTitle": "Eccezione per temperatura CPU CRITICAL",
+    "tempBody": "La persistenza prevede una regola speciale per <strong>Temperatura CPU CRITICAL</strong>: un tale record ignora il riconoscimento precedente e il silenziamento automatico. Ciò non significa che ogni controllo di temperatura generi un record critico al superamento di una soglia configurata.",
+    "nonDismissableTitle": "Quali rilevamenti si possono silenziare?",
+    "nonDismissableBody": "La finestra mostra Silenzia solo se il controllo restituisce esplicitamente dismissable = true. Un valore falso o assente nasconde il pulsante. La gravità non determina questo permesso: diversi controlli critici consentono il riconoscimento. Gli esempi descrivono i dati attuali; silenziare un avviso non ne risolve la causa.",
+    "headerFinding": "Rilevamento",
+    "headerWhy": "Comportamento del silenziamento",
+    "rows": [
+      {
+        "finding": "Temperatura CPU: avviso / critica",
+        "why": "L’avviso basato sui campioni di temperatura consente esplicitamente il silenziamento. Una regola separata ignora il riconoscimento se arriva un record di temperatura CPU con gravità CRITICAL."
+      },
+      {
+        "finding": "Spazio critico del filesystem radice",
+        "why": "I controlli dello spazio consentono il silenziamento anche con utilizzo critico. Riconoscere l’avviso non libera spazio né elimina il rischio di scritture fallite."
+      },
+      {
+        "finding": "ZFS pool DEGRADED / FAULTED",
+        "why": "I rilevamenti sullo stato dei pool ZFS (DEGRADED, FAULTED, UNAVAIL) consentono esplicitamente il silenziamento, così come i controlli di capacità dei pool. Il riconoscimento non ripara un pool degradato o guasto."
+      },
+      {
+        "finding": "Errori del disco I/O con SMART FAILED",
+        "why": "I rilevamenti del disco salvati dal journal possono consentire il silenziamento. SMART FAILED richiede comunque un’indagine; il pulsante dipende dall’indicatore del controllo, non dal solo testo dell’avviso."
+      },
+      {
+        "finding": "Interfaccia di rete DOWN",
+        "why": "I controlli persistenti di interfaccia DOWN consentono il silenziamento. Questo non ripristina bridge, bond, collegamento fisico o accesso remoto."
+      },
+      {
+        "finding": "Eventi I/O su dischi sani (INFO)",
+        "why": "Gli eventi ATA o dmesg transitori con SMART sano possono essere informativi e risolversi da soli. Le righe informative possono non offrire Silenzia; il controllo stabilisce quando la condizione è risolta."
+      }
+    ],
+    "principle": "Usa il pulsante mostrato per il rilevamento effettivo, senza dedurne la disponibilità dalla categoria o gravità. Il riconoscimento controlla presentazione e notifiche. I controlli di ripristino e la cronologia del disco restano separati."
+  },
+  "autoresolve": {
+    "heading": "Autorisoluzione e pulizia",
+    "intro": "Molti avvisi devono sparire quando cessa la causa: una VM torna ad avviarsi, un disco viene rimosso o la temperatura torna normale. La pulizia alla fine di ogni ciclo di cinque minuti applica queste regole:",
+    "headerTrigger": "Trigger",
+    "headerAction": "Azione",
+    "rows": [
+      {
+        "trigger": "Uso CPU o temperatura tornati alla normalità.",
+        "action": "Segnato risolto. Esce dalla lista attiva."
+      },
+      {
+        "trigger": "Pressione di memoria indietro sotto la soglia di avvertimento dopo un OOM / avviso di memoria.",
+        "action": "Segnato risolto."
+      },
+      {
+        "trigger": "VM / CT richiamato dall'errore non esiste più (<code>qm status</code> / <code>pct status</code> non zero).",
+        "action": "Segnato risolto come risorsa rimosso."
+      },
+      {
+        "trigger": "Il disco richiamato dall'errore non è più presente in <code>/dev/</code>.",
+        "action": "Segnato risolto come dispositivo rimosso. La storia dell'osservazione permanente è conservata (vedi sezione successiva)."
+      },
+      {
+        "trigger": "Rilevamenti dal journal di sistema (categoria <code>logs</code>, voci SMART, errori ATA o I/O) alla scadenza del silenziamento.",
+        "action": "Vengono rimossi. Ogni scansione esamina le nuove voci del journal da quel momento; la stessa vecchia riga non viene emessa di nuovo."
+      },
+      {
+        "trigger": "Errori risolti da oltre sette giorni.",
+        "action": "Eliminati dal database per contenere la tabella. La cronologia delle notifiche è indipendente e viene conservata più a lungo."
+      }
+    ],
+    "permanentTitle": "Silenziare permanentemente non significa risolvere",
+    "permanentBody": "Una durata di categoria pari a <code>-1</code> (<em>permanente</em>) silenzia i futuri avvisi degli elementi riconosciuti, senza saltare il controllo di risoluzione automatica. Se la causa scompare, per esempio dopo la rimozione della risorsa o il rientro sotto soglia, l’elemento viene comunque ripulito automaticamente."
+  },
+  "observations": {
+    "heading": "Osservazioni dei dischi — la cronologia permanente",
+    "intro": "Gli eventi dei dischi meritano di essere conservati. Un avviso SMART su <code>/dev/sdh</code> alle 02:14 resta utile dopo la fine della raffica di I/O e la risoluzione automatica: il disco ha ormai dei precedenti. Per questo il monitor mantiene una tabella <strong>permanente</strong> separata: <code>disk_observations</code>.",
+    "headerProperty": "Proprietà",
+    "headerErrors": "Tabella <code>errors</code> (Attiva)",
+    "headerObs": "Tabella <code>disk_observations</code>",
+    "rows": [
+      {
+        "property": "Scopo",
+        "errors": "Alimenta la vista dello stato <em>attuale</em> e l’invio delle notifiche.",
+        "obs": "Registro di controllo permanente per disco."
+      },
+      {
+        "property": "Risoluzione automatica",
+        "errors": "Sì — le righe sono cancellate quando la condizione scompare.",
+        "obs": "No: le voci restano finché l’utente non le archivia esplicitamente."
+      },
+      {
+        "property": "Chiave di deduplicazione",
+        "errors": "<code>error_key</code> (es. <code>smart_sdh</code>).",
+        "obs": "<code>(disk_registry_id, error_type, error_signature)</code> con firme stabili spogliate di dati volatili."
+      },
+      {
+        "property": "Dove appare",
+        "errors": "Finestra del monitor (elenchi Attivi / Silenziati).",
+        "obs": "Scheda del disco nella sezione <strong>Archiviazione</strong>, con un indicatore «X obs.» per disco."
+      },
+      {
+        "property": "Cosa registra",
+        "errors": "Qualunque cosa stia attualmente fallendo.",
+        "obs": "Avvisi SMART (settori, temperatura, CRC, test automatici falliti), errori I/O (ATA / NVMe / dm), errori del filesystem ed eventi dei pool ZFS."
+      }
+    ],
+    "outro": "Un avviso può sparire dalla dashboard mentre l’incidente resta nella cronologia del disco. Aprendo il disco in Archiviazione, la scheda mostra il numero di osservazioni pendenti con date, gravità e messaggi originali non elaborati. Aiuta a decidere se sostituire l’unità.",
+    "renameTitle": "Le variazioni del nome del dispositivo vengono unite automaticamente",
+    "renameBody": "I dischi possono apparire inizialmente con nomi provvisori come <code>ata8</code> o <code>nvme0n1p3</code>. Le osservazioni vengono raggruppate per numero di serie noto: se un evento è registrato come <code>ata8</code> e il disco poi identificato come <code>sdh</code>, al ciclo seguente le vecchie osservazioni vengono associate a <code>sdh</code>, mantenendo unita la cronologia."
+  },
+  "notification": {
+    "heading": "Dal rilevamento alla notifica",
+    "intro": "Ogni errore attivo può anche generare una notifica. Il percorso:",
+    "items": [
+      "Lo scanner registra il risultato con la categoria + gravità + dettagli strutturati.",
+      "Se il tipo di evento è <strong>attivo</strong> nelle notifiche globali e il canale non ha silenziato la categoria, l’evento viene messo in coda.",
+      "Il motore dei modelli produce titolo e corpo dai dati strutturati. Se la riscrittura IA è attiva, la coppia passa anche al fornitore configurato per una versione in linguaggio semplice.",
+      "Il canale invia un messaggio Telegram, un embed Discord, una notifica push Gotify o un’e-mail. L’esito è salvato in <code>notification_history</code>.",
+      "Silenziare un avviso avvia il periodo di sospensione. Durante quel periodo nuove rilevazioni dello stesso <code>error_key</code> normalmente non generano notifiche né vengono accodate per la scadenza. Resta l’eccezione per la temperatura critica della CPU."
+    ],
+    "outro": "La configurazione dei canali — token del bot Telegram, URL webhook, chiavi IA, opzioni per evento e per canale — è descritta in <notifLink>Notifiche</notifLink> e <aiLink>Assistente IA</aiLink>."
+  },
+  "rest": {
+    "heading": "Endpoint REST",
+    "intro": "Le azioni della finestra sono disponibili anche via API per script, dashboard personalizzate o bot. Le chiamate richiedono un token Bearer valido, ottenuto con l’accesso o nella schermata dei token API. Le modifiche, come riconoscere avvisi, salvare le impostazioni di soppressione o pulire errori orfani, richiedono l’ambito full_admin; read_only riceve 403.",
+    "headerEndpoint": "Endpoint",
+    "headerMethod": "Metodo",
+    "headerUse": "Uso",
+    "rows": [
+      {
+        "endpoint": "/api/health",
+        "method": "GET",
+        "use": "Controllo leggero che restituisce JSON con <code>status</code>, <code>timestamp</code> e <code>version</code>. Adatto ai controlli per parola chiave Uptime Kuma; il client deve inviare un’intestazione Bearer."
+      },
+      {
+        "endpoint": "/api/health/status",
+        "method": "GET",
+        "use": "Stato complessivo: un livello di gravità e una sintesi. Richiede autenticazione."
+      },
+      {
+        "endpoint": "/api/health/details",
+        "method": "GET",
+        "use": "Tutte le dieci categorie con i rispettivi stati e i dati strutturati che li hanno prodotti."
+      },
+      {
+        "endpoint": "/api/health/full",
+        "method": "GET",
+        "use": "Vista completa: categorie, errori attivi, silenziati e impostazioni personalizzate. Alimenta la finestra con una sola richiesta e usa una cache in background di sei minuti per risposte rapide."
+      },
+      {
+        "endpoint": "/api/health/active-errors",
+        "method": "GET",
+        "use": "Solo la lista attiva. Filtrabile da <code>?category=&lt;name&gt;</code>."
+      },
+      {
+        "endpoint": "/api/health/dismissed",
+        "method": "GET",
+        "use": "Solo l’elenco dei silenziati, con le ore restanti."
+      },
+      {
+        "endpoint": "/api/health/acknowledge",
+        "method": "POST",
+        "use": "Corpo: <code>'{'\"error_key\":\"smart_sdh\"'}'</code>. Silenzia un avviso per la durata configurata della categoria."
+      },
+      {
+        "endpoint": "/api/health/settings",
+        "method": "GET / POST",
+        "use": "Leggere o salvare la durata del silenziamento per categoria."
+      },
+      {
+        "endpoint": "/api/health/cleanup-orphans",
+        "method": "POST",
+        "use": "Pulizia manuale degli errori di dispositivi o VM rimossi. Idempotente."
+      }
+    ],
+    "codeComment1": "# Ottenere lo stato attuale per uno script",
+    "codeComment2": "# Silenziare un errore specifico",
+    "codeComment3": "# Imposta a una settimana la sospensione della categoria dischi"
+  },
+  "whereNext": {
+    "heading": "Come proseguire",
+    "items": [
+      {
+        "label": "Dashboard",
+        "href": "/docs/monitor/dashboard",
+        "tail": " — da qui si apre la finestra del monitor nell’interfaccia."
+      },
+      {
+        "label": "Notifiche",
+        "href": "/docs/monitor/notifications",
+        "tail": " — canali, opzioni per evento, riscrittura IA e cronologia."
+      },
+      {
+        "label": "Assistente AI",
+        "href": "/docs/monitor/ai-assistant",
+        "tail": " — fornitore (OpenAI / Anthropic / Gemini / Groq / Ollama / OpenRouter), modalità del prompt, dettaglio per canale e lingua."
+      },
+      {
+        "label": "Architettura",
+        "href": "/docs/monitor/architecture",
+        "tailRich": " — schema SQLite (<code>errors</code>, <code>disk_observations</code>, <code>events</code>) e frequenza dei thread in background."
+      }
+    ]
+  }
+}
