@@ -9,10 +9,10 @@
   },
   "intro": {
     "title": "Qué cubre esta categoría",
-    "body": "Dos opciones independientes. <strong>Instalar el agente invitado correspondiente</strong> ayuda cuando el propio Proxmox se ejecuta anidado dentro de otro hipervisor. <strong>Activar soporte VFIO IOMMU</strong> es la opción que más usuarios necesitan: activa las funciones del kernel para asignar una GPU, HBA o NIC directamente a una VM con rendimiento casi nativo."
+    "body": "Dos opciones independientes. <strong>Instalar el guest agent correspondiente</strong> ayuda cuando el propio Proxmox se ejecuta anidado dentro de otro hipervisor. <strong>Activar soporte VFIO IOMMU</strong> es la opción que más usuarios necesitan: activa las funciones del kernel para asignar una GPU, HBA o NIC directamente a una VM con rendimiento casi nativo."
   },
   "guestAgent": {
-    "heading": "Instalar el agente invitado correspondiente",
+    "heading": "Instalar el guest agent correspondiente",
     "intro": "Detecta el entorno de virtualización del host Proxmox mediante <code>systemd-detect-virt</code> y <code>dmidecode</code> e instala el paquete de herramientas de invitado correspondiente para comunicarse correctamente con el hipervisor exterior: apagado ordenado, sincronización del reloj, información de IP, etc.",
     "headerDetected": "Host detectado",
     "headerPackage": "Paquete instalado",
@@ -76,12 +76,12 @@
       "<strong>Dos GPUs:</strong> una puede ir a una VM y la otra a un LXC, pero necesitarás una configuración más granular (vincular solo una tarjeta a <code>vfio-pci</code> por ID PCI). La blacklist por defecto es demasiado amplia para este caso — edita <code>blacklist.conf</code> después."
     ],
     "acsTitle": "Sobre pcie_acs_override — sé consciente de lo que estás activando",
-    "acsBody": "<code>pcie_acs_override=downstream,multifunction</code> relaja el chequeo de PCIe Access Control Services. Permite al kernel partir grupos IOMMU que el firmware reporta como monolíticos, que a veces es la única forma de hacer passthrough de un dispositivo de un grupo sin arrastrar el resto. El trade-off es <strong>aislamiento reducido entre dispositivos</strong>: una VM maliciosa o comprometida con passthrough tiene una superficie de ataque mayor vía DMA. Bien para un home lab; piénsatelo dos veces antes de activarlo en un host que ejecuta cargas no confiables. Si no lo necesitas, quita ese token de <code>/etc/kernel/cmdline</code> o <code>/etc/default/grub</code> tras ejecutar el script y vuelve a ejecutar el paso de actualización del cargador de arranque.",
+    "acsBody": "<code>pcie_acs_override=downstream,multifunction</code> relaja el chequeo de PCIe Access Control Services. Permite al kernel partir grupos IOMMU que el firmware reporta como monolíticos, que a veces es la única forma de hacer passthrough de un dispositivo de un grupo sin arrastrar el resto. El trade-off es <strong>aislamiento reducido entre dispositivos</strong>: una VM maliciosa o comprometida con passthrough tiene una superficie de ataque mayor vía DMA. Bien para un home lab; piénsatelo dos veces antes de activarlo en un host que ejecuta cargas no confiables. Si no lo necesitas, elimina ese token de <code>/etc/kernel/cmdline</code> o <code>/etc/default/grub</code> tras ejecutar el script y vuelve a ejecutar el paso de actualización del cargador de arranque.",
     "rebootTitle": "Se requiere reinicio",
     "rebootBody": "IOMMU, los módulos VFIO y la blacklist solo surten efecto tras un reinicio + regeneración del initramfs. El script dispara <code>update-initramfs -u -k all</code> y el refresh del cargador de arranque, y activa el flag de \"se requiere reinicio\" para que Personalizable te lo pregunte al final.",
     "verifyTitle": "Verificación tras el reinicio",
     "revertTitle": "Reversible desde el menú Desinstalar",
-    "revertBody": "<link>Desinstalar optimizaciones</link> revierte todos los cambios: elimina los parámetros IOMMU de <code>/etc/kernel/cmdline</code> o GRUB, quita los módulos VFIO de <code>/etc/modules</code>, elimina las entradas de bloqueo de controladores y reconstruye initramfs. Debes reiniciar para aplicar la reversión."
+    "revertBody": "<link>Desinstalar optimizaciones</link> revierte todos los cambios: elimina los parámetros IOMMU de <code>/etc/kernel/cmdline</code> o GRUB, elimina los módulos VFIO de <code>/etc/modules</code>, elimina las entradas de bloqueo de controladores y reconstruye initramfs. Debes reiniciar para aplicar la reversión."
   },
   "related": {
     "heading": "Relacionado",

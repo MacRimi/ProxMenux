@@ -12,7 +12,7 @@
     "body": "Cuatro optimizaciones relacionadas con almacenamiento: tunear el tamaño de la caché <strong>ARC de ZFS</strong> a una fracción sensata de la RAM del host, instalar y programar <strong>auto-snapshots de ZFS</strong>, activar <strong>autotrim de ZFS</strong> en pools SSD/NVMe y eliminar throttles de <strong>vzdump</strong> para que los backups corran a máxima velocidad. Las cuatro son independientes — elige las que se ajusten a tu setup. Una quinta optimización cercana al almacenamiento, <link>Log2RAM</link>, reduce el desgaste del SSD/NVMe moviendo <code>/var/log</code> a una ramdisk — vive en la página Optional porque el menú Personalizable de ProxMenux la agrupa allí."
   },
   "trackedTitle": "Las cuatro se registran en el menú Desinstalar",
-  "trackedBody": "Cada una de estas opciones registra un tool en <code>installed_tools.json</code>, así que aparecen en <link>Uninstall Optimizations</link>. Revertir <code>zfs_arc</code> elimina <code>/etc/modprobe.d/99-zfsarc.conf</code> y reconstruye initramfs; <code>zfs_auto_snapshot</code> revierte la programación cron y ofrece purgar el paquete; <code>zfs_autotrim</code> pone <code>autotrim=off</code> en los pools que activó; <code>vzdump_speed</code> restaura <code>/etc/vzdump.conf</code> desde el <code>.bak</code> que la instalación creó.",
+  "trackedBody": "Cada una de estas opciones registra un tool en <code>installed_tools.json</code>, así que aparecen en <link>Desinstalar optimizaciones</link>. Revertir <code>zfs_arc</code> elimina <code>/etc/modprobe.d/99-zfsarc.conf</code> y reconstruye initramfs; <code>zfs_auto_snapshot</code> revierte la programación cron y ofrece purgar el paquete; <code>zfs_autotrim</code> pone <code>autotrim=off</code> en los pools que activó; <code>vzdump_speed</code> restaura <code>/etc/vzdump.conf</code> desde el <code>.bak</code> que la instalación creó.",
   "arc": {
     "heading": "Optimizar el tamaño del ARC de ZFS",
     "intro": "La <strong>Adaptive Replacement Cache (ARC)</strong> es la caché de lectura en memoria de ZFS. Las instalaciones Proxmox VE desde 8.1 fijan un límite del 10% de RAM, con máximo 16 GiB; hosts antiguos o actualizados pueden diferir. Esta opción escribe su propio límite según la RAM. Revisa ajustes y carga: una caché menor no siempre es más rápida.",
@@ -117,7 +117,7 @@
     "manualIntro": "La secuencia completa que el script ejecuta contra cada pool es replicable a mano. Esto es lo que escribirías si quisieras hacer lo mismo en un solo pool sin ProxMenux:",
     "verifyTitle": "Verificación y reversión manual",
     "oneShotTitle": "¿Necesitas un trim puntual en lugar de continuo?",
-    "oneShotBody": "Algunos operadores prefieren un trim manual durante horas de baja carga en lugar de actividad de trim continua. Desactiva autotrim y programa un cron que ejecute <code>zpool trim &lt;pool&gt;</code> — mismo objetivo final, distinta cadencia."
+    "oneShotBody": "Algunos usuarios prefieren un trim manual durante horas de baja carga en lugar de actividad de trim continua. Desactiva autotrim y programa un cron que ejecute <code>zpool trim &lt;pool&gt;</code> — mismo objetivo final, distinta cadencia."
   },
   "vzdump": {
     "heading": "Aumentar la velocidad de backup de vzdump",

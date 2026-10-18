@@ -25,7 +25,7 @@
       },
       {
         "title": "Registro versionado en el host",
-        "body": "Cuando el operador aplicó cada optimización, la llamada <code>register_tool</code> correspondiente escribió la versión activa en <code>/usr/local/share/proxmenux/installed_tools.json</code>. Ese archivo es la fuente de verdad de \"qué está activo en este host ahora mismo\"."
+        "body": "Cuando el usuario aplicó cada optimización, la llamada <code>register_tool</code> correspondiente escribió la versión activa en <code>/usr/local/share/proxmenux/installed_tools.json</code>. Ese archivo es la fuente de verdad de \"qué está activo en este host ahora mismo\"."
       },
       {
         "title": "El Monitor compara ambos lados",

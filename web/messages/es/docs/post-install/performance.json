@@ -1,11 +1,11 @@
 {
   "meta": {
     "title": "Post-instalación: Rendimiento | Documentación de ProxMenux",
-    "description": "Opciones de rendimiento en el script post-instalación Personalizable de ProxMenux. Sustituye gzip de un solo hilo por pigz (gzip paralelo) para copias de seguridad y compresión más rápidas en hosts multinúcleo."
+    "description": "Opciones de rendimiento en el script post-instalación Personalizable de ProxMenux. Sustituye gzip de un solo hilo por pigz (gzip paralelo) para backups y compresión más rápidos en hosts multinúcleo."
   },
   "header": {
     "title": "Post-instalación: Rendimiento",
-    "description": "Opciones de rendimiento del script post-instalación Personalizable. Esta categoría contiene una sola optimización: sustituir gzip por pigz para que las copias de seguridad y la compresión usen todos los núcleos de la CPU en lugar de uno.",
+    "description": "Opciones de rendimiento del script post-instalación Personalizable. Esta categoría contiene una sola optimización: sustituir gzip por pigz para que los backups y la compresión usen todos los núcleos de la CPU en lugar de uno.",
     "section": "Configuración post instalación de Proxmox"
   },
   "intro": {

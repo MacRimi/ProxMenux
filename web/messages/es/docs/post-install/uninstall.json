@@ -14,7 +14,7 @@
   },
   "openMenu": {
     "heading": "Cómo abrirlo",
-    "body": "Desde el menú principal, abre <strong>Configuración post-instalación de Proxmox → Desinstalar optimizaciones</strong>. Verás una lista de optimizaciones <em>actualmente aplicadas</em>; las no aplicadas no aparecen.",
+    "body": "Desde el menú principal, abre <strong>Configuración post instalación de Proxmox → Desinstalar optimizaciones</strong>. Verás una lista de optimizaciones <em>actualmente aplicadas</em>; las no aplicadas no aparecen.",
     "imageAlt": "Lista de Desinstalar optimizaciones con las opciones activas del host y casillas para elegir cuáles revertir"
   },
   "howWorks": {

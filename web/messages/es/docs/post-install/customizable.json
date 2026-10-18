@@ -16,7 +16,7 @@
   },
   "compare": {
     "heading": "Comparación con el Automatizado",
-    "body": "Personalizable incluye todo el <link>script Automatizado</link>. Cubre las mismas 14 optimizaciones básicas y una larga lista de opciones que Automatizado omite deliberadamente, útiles para hardware específico (correcciones AMD), alojamiento específico (OVH RTM) o cargas concretas (IOMMU/VFIO, repositorio Ceph, alta disponibilidad, Fastfetch, Figurine, ajuste del ARC de ZFS, pigz, instantáneas automáticas ZFS, límites de velocidad vzdump, Open vSwitch, TCP BBR…)."
+    "body": "Personalizable incluye todo el <link>script Automatizado</link>. Cubre las mismas 14 optimizaciones básicas y una larga lista de opciones que Automatizado omite deliberadamente, útiles para hardware específico (correcciones AMD), alojamiento específico (OVH RTM) o cargas concretas (IOMMU/VFIO, repositorio Ceph, alta disponibilidad, Fastfetch, Figurine, ajuste del ARC de ZFS, pigz, snapshots automáticos de ZFS, límites de velocidad vzdump, Open vSwitch, TCP BBR…)."
   },
   "categoriesSection": {
     "heading": "Las 10 categorías",

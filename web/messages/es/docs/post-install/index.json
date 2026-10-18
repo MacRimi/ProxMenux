@@ -80,13 +80,13 @@
   },
   "pbs": {
     "heading": "En Proxmox Backup Server",
-    "body": "En un host Proxmox Backup Server, el mismo menú se abre desde <strong>Settings post-install Proxmox</strong> en el menú de PBS. Automatizado, Personalizable, Apply Available Updates y Uninstall Optimizations funcionan igual que en Proxmox VE, con estas diferencias:",
+    "body": "En un host Proxmox Backup Server, el mismo menú se abre desde <strong>Configuración post instalación de Proxmox</strong> en el menú de PBS. Automatizado, Personalizable, Aplicar actualizaciones disponibles y Desinstalar optimizaciones funcionan igual que en Proxmox VE, con estas diferencias:",
     "items": [
       "<strong>Repositorios y actualización:</strong> cuando el servidor no tiene suscripción y solo está activo el repositorio Enterprise de PBS, ProxMenux pregunta antes de cambiar al repositorio sin suscripción de PBS. El cambio se hace con la API de repositorios del propio servidor, la misma que usa <em>Administration > Repositories</em>. Con una suscripción activa, o con un repositorio sin suscripción o de pruebas ya configurado, las fuentes se mantienen como están.",
       "<strong>Lista personalizable:</strong> no aparecen las opciones que solo se aplican a Proxmox VE: agente de invitado, VFIO IOMMU, Open vSwitch, velocidad de backups vzdump, pigz, Appliance Manager, Ceph, alta disponibilidad y OVH Real Time Monitoring.",
-      "<strong>Banner de suscripción:</strong> el parche se aplica a la interfaz web de Proxmox Backup Server, y Uninstall Optimizations lo restaura.",
+      "<strong>Banner de suscripción:</strong> el parche se aplica a la interfaz web de Proxmox Backup Server, y Desinstalar optimizaciones lo restaura.",
       "<strong>Figurine:</strong> se instala sin los alias de Proxmox VE.",
-      "<strong>Scripts de la comunidad:</strong> la sección ofrece <em>Proxmox Backup Server Post Install</em> y <em>Proxmox Backup Server Microcode</em> en lugar de los scripts de Proxmox VE."
+      "<strong>Scripts comunitarios:</strong> la sección ofrece <em>Proxmox Backup Server Post Install</em> y <em>Proxmox Backup Server Microcode</em> en lugar de los scripts de Proxmox VE."
     ]
   },
   "related": {
