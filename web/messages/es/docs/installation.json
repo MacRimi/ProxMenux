@@ -61,12 +61,12 @@
   },
   "uninstall": {
     "heading": "Desinstalar",
-    "body": "Desde ProxMenux: <strong>Configuración → Desinstalar ProxMenux</strong>. El desinstalador elimina el árbol de scripts, el lanzador y el servicio Monitor, permite eliminar dependencias seleccionadas y restaura <code>/root/.bashrc</code> y <code>/etc/motd</code> desde las copias de la instalación, si existen. Procedimiento completo: <uninstalllink>Desinstalar ProxMenux</uninstalllink>."
+    "body": "Desde ProxMenux: <strong>Ajustes → Desinstalar ProxMenux</strong>. El desinstalador elimina el árbol de scripts, el lanzador y el servicio Monitor, permite eliminar dependencias seleccionadas y restaura <code>/root/.bashrc</code> y <code>/etc/motd</code> desde los backups que crea Post-Install, si existen (si no, elimina la línea de ProxMenux del MOTD). Procedimiento completo: <uninstalllink>Desinstalar ProxMenux</uninstalllink>."
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
     "virustotalTitle": "VirusTotal marca la URL de instalación",
-    "virustotalBody": "El resultado de 1/95 notificado en el issue #162, de <em>Chong Lua Dao</em>, fue identificado por el mantenedor como un falso positivo. El instalador usa el patrón <code>curl | bash</code> y puede descargar <code>jq</code> desde su versión oficial de GitHub. Este <em>comportamiento</em> puede activar análisis heurísticos; aquel informe histórico no determina la seguridad de futuras descargas. El código del instalador es abierto y se puede revisar. Más contexto en el <issuelink>issue #162</issuelink>.",
+    "virustotalBody": "El resultado de 1/95 notificado en el issue #162, de <em>Chong Lua Dao</em>, fue identificado por el mantenedor como un falso positivo. El instalador se ejecuta con una orden que descarga y ejecuta el script (<code>bash -c \"$(wget -qLO - …)\"</code>) y puede descargar <code>jq</code> desde su versión oficial de GitHub. Este <em>comportamiento</em> puede activar análisis heurísticos; aquel informe histórico no determina la seguridad de futuras descargas. El código del instalador es abierto y se puede revisar. Más contexto en el <issuelink>issue #162</issuelink>.",
     "aptTitle": "La instalación falla con errores de apt",
     "aptBody": "Suele deberse a un repositorio de Proxmox ausente o mal configurado. El instalador obtiene las dependencias mediante apt: si los repositorios están mal configurados, apt falla. Es habitual en instalaciones mínimas de Proxmox 8 que aún no se han actualizado. Ejecuta primero <code>apt-get update</code> a mano, resuelve los errores y vuelve a ejecutar el instalador.",
     "menuTitle": "`menu: command not found` tras la instalación",

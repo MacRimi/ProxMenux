@@ -113,7 +113,7 @@
       },
       {
         "title": "AI assistent",
-        "description": "Valfri omformulering av aviseringar till lättbegripligt språk. Sex leverantörer: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter och lokalt körd Ollama. Tretton språk i språkvalet för aviseringar.",
+        "description": "Valfri omformulering av aviseringar till lättbegripligt språk. Sex leverantörer: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter och lokalt körd Ollama. Tretton språk i AI-språkvalet.",
         "icon": "Sparkles",
         "href": "/docs/monitor/ai-assistant"
       },

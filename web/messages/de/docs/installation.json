@@ -61,12 +61,12 @@
   },
   "uninstall": {
     "heading": "Deinstallation",
-    "body": "In ProxMenux: <strong>Einstellungen → ProxMenux deinstallieren</strong>. Die Deinstallation entfernt den Skriptbaum, das Startskript und den Monitor-Dienst sowie auf Wunsch ausgewählte Abhängigkeiten. <code>/root/.bashrc</code> und <code>/etc/motd</code> werden aus den bei der Installation angelegten Sicherungen wiederhergestellt, sofern diese vorhanden sind. Vollständige Anleitung: <uninstalllink>ProxMenux deinstallieren</uninstalllink>."
+    "body": "In ProxMenux: <strong>Einstellungen → ProxMenux deinstallieren</strong>. Die Deinstallation entfernt den Skriptbaum, das Startskript und den Monitor-Dienst sowie auf Wunsch ausgewählte Abhängigkeiten. <code>/root/.bashrc</code> und <code>/etc/motd</code> werden aus den von Post-Install angelegten Sicherungen wiederhergestellt, sofern diese vorhanden sind (andernfalls wird die ProxMenux-Zeile aus der MOTD entfernt). Vollständige Anleitung: <uninstalllink>ProxMenux deinstallieren</uninstalllink>."
   },
   "troubleshoot": {
     "heading": "Fehlerbehebung",
     "virustotalTitle": "VirusTotal markiert die Installations-URL",
-    "virustotalBody": "Der in Issue #162 gemeldete Treffer von <em>Chong Lua Dao</em> bei 1 von 95 Prüfungen wurde vom Maintainer als Fehlalarm eingestuft. Der Installer verwendet das Muster <code>curl | bash</code> und kann <code>jq</code> aus dessen offizieller GitHub-Veröffentlichung herunterladen. Dieses <em>Verhalten</em> kann heuristische Scanner auslösen. Der damalige Bericht ist keine Bewertung aller künftigen Downloads. Der Installer ist quelloffen und überprüfbar. Weitere Hintergründe in <issuelink>Issue #162</issuelink>.",
+    "virustotalBody": "Der in Issue #162 gemeldete Treffer von <em>Chong Lua Dao</em> bei 1 von 95 Prüfungen wurde vom Maintainer als Fehlalarm eingestuft. Der Installer wird mit einem Befehl gestartet, der das Skript herunterlädt und ausführt (<code>bash -c \"$(wget -qLO - …)\"</code>) und kann <code>jq</code> aus dessen offizieller GitHub-Veröffentlichung herunterladen. Dieses <em>Verhalten</em> kann heuristische Scanner auslösen. Der damalige Bericht ist keine Bewertung aller künftigen Downloads. Der Installer ist quelloffen und überprüfbar. Weitere Hintergründe in <issuelink>Issue #162</issuelink>.",
     "aptTitle": "Installation schlägt mit apt-Fehlern fehl",
     "aptBody": "Meist fehlt ein Proxmox-Repository oder ist falsch konfiguriert. Der Installer bezieht Abhängigkeiten über apt; fehlerhafte Repository-Einstellungen lassen apt scheitern. Das kommt etwa bei noch nicht aktualisierten Minimalinstallationen von Proxmox 8 vor. Führen Sie zuerst <code>apt-get update</code> manuell aus, beheben Sie alle Fehler und starten Sie den Installer erneut.",
     "menuTitle": "`menu: command not found` nach der Installation",

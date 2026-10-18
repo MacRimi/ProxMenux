@@ -113,7 +113,7 @@
       },
       {
         "title": "AI Assistant",
-        "description": "Optional rewrite of notifications in plain language. Six providers: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter, local Ollama. Thirteen languages in the notification-language selector.",
+        "description": "Optional rewrite of notifications in plain language. Six providers: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter, local Ollama. Thirteen languages in the AI language selector.",
         "icon": "Sparkles",
         "href": "/docs/monitor/ai-assistant"
       },

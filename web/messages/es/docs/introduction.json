@@ -113,7 +113,7 @@
       },
       {
         "title": "Asistente de IA",
-        "description": "Reescritura opcional de notificaciones en lenguaje natural. Seis proveedores: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter, Ollama local. Trece idiomas en el selector de notificaciones.",
+        "description": "Reescritura opcional de notificaciones en lenguaje natural. Seis proveedores: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter, Ollama local. Trece idiomas en el selector de idioma de la IA.",
         "icon": "Sparkles",
         "href": "/docs/monitor/ai-assistant"
       },

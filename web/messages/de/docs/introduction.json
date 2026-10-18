@@ -113,7 +113,7 @@
       },
       {
         "title": "KI-Assistent",
-        "description": "Optionale Umformulierung von Benachrichtigungen in verständliche Sprache. Sechs Anbieter: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter und lokales Ollama. Dreizehn Sprachen in der Sprachauswahl für Benachrichtigungen.",
+        "description": "Optionale Umformulierung von Benachrichtigungen in verständliche Sprache. Sechs Anbieter: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter und lokales Ollama. Dreizehn Sprachen in der Sprachauswahl der KI.",
         "icon": "Sparkles",
         "href": "/docs/monitor/ai-assistant"
       },

@@ -61,12 +61,12 @@
   },
   "uninstall": {
     "heading": "Uninstalling",
-    "body": "From inside ProxMenux: <strong>Settings → Uninstall ProxMenux</strong>. Removes the script tree, launcher and Monitor service, optionally removes selected dependencies, and restores <code>/root/.bashrc</code> and <code>/etc/motd</code> from install-time backups if they exist. Full step-by-step: <uninstalllink>Uninstall ProxMenux</uninstalllink>."
+    "body": "From inside ProxMenux: <strong>Settings → Uninstall ProxMenux</strong>. Removes the script tree, launcher and Monitor service, optionally removes selected dependencies, and restores <code>/root/.bashrc</code> and <code>/etc/motd</code> from the backups created by Post-Install, if they exist (otherwise it removes the ProxMenux MOTD line). Full step-by-step: <uninstalllink>Uninstall ProxMenux</uninstalllink>."
   },
   "troubleshoot": {
     "heading": "Troubleshooting",
     "virustotalTitle": "VirusTotal flags the install URL",
-    "virustotalBody": "The 1/95 result from <em>Chong Lua Dao</em> reported in Issue #162 was identified by the maintainer as a false positive. The installer uses the <code>curl | bash</code> pattern and can download <code>jq</code> from its official GitHub release. This <em>behaviour</em> can trigger heuristic scanners. That historical report does not assess every future download. The installer is open source and reviewable. More context in <issuelink>Issue #162</issuelink>.",
+    "virustotalBody": "The 1/95 result from <em>Chong Lua Dao</em> reported in Issue #162 was identified by the maintainer as a false positive. The installer is run with a command that downloads and executes the script (<code>bash -c \"$(wget -qLO - …)\"</code>) and can download <code>jq</code> from its official GitHub release. This <em>behaviour</em> can trigger heuristic scanners. That historical report does not assess every future download. The installer is open source and reviewable. More context in <issuelink>Issue #162</issuelink>.",
     "aptTitle": "Install fails with apt errors",
     "aptBody": "Usually a missing or misconfigured Proxmox repo. The installer pulls dependencies via apt; if the repo config is broken (often the case on bare-bones Proxmox 8 installs that haven't been updated yet), apt fails. Run <code>apt-get update</code> manually first and resolve any errors, then re-run the installer.",
     "menuTitle": "`menu: command not found` after install",

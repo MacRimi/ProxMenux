@@ -61,12 +61,12 @@
   },
   "uninstall": {
     "heading": "Disinstallare",
-    "body": "Da ProxMenux: <strong>Impostazioni → Disinstalla ProxMenux</strong>. La disinstallazione rimuove gli script, il comando di avvio e il servizio Monitor, oltre alle dipendenze selezionate se richiesto. Ripristina <code>/root/.bashrc</code> e <code>/etc/motd</code> dalle copie create all’installazione, se presenti. Procedura completa: <uninstalllink>Disinstallare ProxMenux</uninstalllink>."
+    "body": "Da ProxMenux: <strong>Impostazioni → Disinstalla ProxMenux</strong>. La disinstallazione rimuove gli script, il comando di avvio e il servizio Monitor, oltre alle dipendenze selezionate se richiesto. Ripristina <code>/root/.bashrc</code> e <code>/etc/motd</code> dalle copie create da Post-Install, se presenti (altrimenti rimuove la riga di ProxMenux dal MOTD). Procedura completa: <uninstalllink>Disinstallare ProxMenux</uninstalllink>."
   },
   "troubleshoot": {
     "heading": "Risoluzione dei problemi",
     "virustotalTitle": "VirusTotal contrassegna l'URL di installazione",
-    "virustotalBody": "Il risultato di 1/95 del motore <em>Chong Lua Dao</em>, riportato nella issue #162, è stato identificato dal manutentore come falso positivo. L’installazione usa il modello <code>curl | bash</code> e può scaricare <code>jq</code> dalla sua release ufficiale su GitHub. Questo <em>comportamento</em> può attivare gli scanner euristici; il rapporto storico non costituisce una valutazione di ogni download futuro. Il codice dell’installazione è aperto e verificabile. Altri dettagli nella <issuelink>issue #162</issuelink>.",
+    "virustotalBody": "Il risultato di 1/95 del motore <em>Chong Lua Dao</em>, riportato nella issue #162, è stato identificato dal manutentore come falso positivo. L’installazione si avvia con un comando che scarica ed esegue lo script (<code>bash -c \"$(wget -qLO - …)\"</code>) e può scaricare <code>jq</code> dalla sua release ufficiale su GitHub. Questo <em>comportamento</em> può attivare gli scanner euristici; il rapporto storico non costituisce una valutazione di ogni download futuro. Il codice dell’installazione è aperto e verificabile. Altri dettagli nella <issuelink>issue #162</issuelink>.",
     "aptTitle": "L’installazione non riesce a causa di errori di apt",
     "aptBody": "Di solito manca un repository Proxmox o è configurato male. L’installazione ottiene le dipendenze tramite apt, che non riesce a procedere se i repository sono configurati male. Può accadere su installazioni minime di Proxmox 8 non ancora aggiornate. Esegui prima <code>apt-get update</code> manualmente, correggi tutti gli errori e riavvia l’installazione.",
     "menuTitle": "`menu: command not found` dopo l'installazione",

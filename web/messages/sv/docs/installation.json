@@ -61,12 +61,12 @@
   },
   "uninstall": {
     "heading": "Avinstallera",
-    "body": "I ProxMenux: <strong>Inställningar → Avinstallera ProxMenux</strong>. Avinstallationen tar bort skriptträdet, startkommandot och Monitor-tjänsten samt, om du väljer det, utvalda beroenden. Den återställer <code>/root/.bashrc</code> och <code>/etc/motd</code> från säkerhetskopiorna som skapades vid installationen, om de finns. Fullständiga instruktioner: <uninstalllink>Avinstallera ProxMenux</uninstalllink>."
+    "body": "I ProxMenux: <strong>Inställningar → Avinstallera ProxMenux</strong>. Avinstallationen tar bort skriptträdet, startkommandot och Monitor-tjänsten samt, om du väljer det, utvalda beroenden. Den återställer <code>/root/.bashrc</code> och <code>/etc/motd</code> från säkerhetskopiorna som Post-Install skapade, om de finns (annars tas ProxMenux-raden bort ur MOTD). Fullständiga instruktioner: <uninstalllink>Avinstallera ProxMenux</uninstalllink>."
   },
   "troubleshoot": {
     "heading": "Felsökning",
     "virustotalTitle": "VirusTotal flaggar installationsadressen",
-    "virustotalBody": "Resultatet 1/95 från <em>Chong Lua Dao</em>, som rapporterades i ärende #162, bedömdes av projektansvarig som ett falsklarm. Installationsprogrammet använder mönstret <code>curl | bash</code> och kan ladda ned <code>jq</code> från dess officiella GitHub-utgåva. Detta <em>beteende</em> kan utlösa heuristiska skannrar. Den historiska rapporten säger inget avgörande om alla framtida nedladdningar. Installationsprogrammet har öppen källkod och kan granskas. Mer bakgrund finns i <issuelink>ärende #162</issuelink>.",
+    "virustotalBody": "Resultatet 1/95 från <em>Chong Lua Dao</em>, som rapporterades i ärende #162, bedömdes av projektansvarig som ett falsklarm. Installationsprogrammet startas med ett kommando som laddar ned och kör skriptet (<code>bash -c \"$(wget -qLO - …)\"</code>) och kan ladda ned <code>jq</code> från dess officiella GitHub-utgåva. Detta <em>beteende</em> kan utlösa heuristiska skannrar. Den historiska rapporten säger inget avgörande om alla framtida nedladdningar. Installationsprogrammet har öppen källkod och kan granskas. Mer bakgrund finns i <issuelink>ärende #162</issuelink>.",
     "aptTitle": "Installationen misslyckas med apt-fel",
     "aptBody": "Vanligtvis saknas ett Proxmox-kodarkiv eller så är det felkonfigurerat. Installationsprogrammet hämtar beroenden via apt, som misslyckas om arkivkonfigurationen är fel. Det förekommer bland annat på minimala Proxmox 8-installationer som ännu inte har uppdaterats. Kör först <code>apt-get update</code> manuellt, rätta alla fel och kör sedan installationsprogrammet igen.",
     "menuTitle": "`menu: command not found` efter installation",

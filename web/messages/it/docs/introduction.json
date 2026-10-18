@@ -113,7 +113,7 @@
       },
       {
         "title": "Assistente AI",
-        "description": "Riformulazione facoltativa delle notifiche in un linguaggio chiaro. Sei fornitori: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter e Ollama locale. Tredici lingue nel selettore delle notifiche.",
+        "description": "Riformulazione facoltativa delle notifiche in un linguaggio chiaro. Sei fornitori: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter e Ollama locale. Tredici lingue nel selettore della lingua dell’IA.",
         "icon": "Sparkles",
         "href": "/docs/monitor/ai-assistant"
       },

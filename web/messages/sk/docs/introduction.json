@@ -113,7 +113,7 @@
       },
       {
         "title": "AI asistent",
-        "description": "Voliteľné preformulovanie upozornení do zrozumiteľného jazyka. Šesť poskytovateľov: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter a lokálny Ollama. Trinásť jazykov vo výbere jazyka upozornení.",
+        "description": "Voliteľné preformulovanie upozornení do zrozumiteľného jazyka. Šesť poskytovateľov: OpenAI, Anthropic Claude, Google Gemini, Groq, OpenRouter a lokálny Ollama. Trinásť jazykov vo výbere jazyka AI.",
         "icon": "Sparkles",
         "href": "/docs/monitor/ai-assistant"
       },

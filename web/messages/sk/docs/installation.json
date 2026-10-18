@@ -61,12 +61,12 @@
   },
   "uninstall": {
     "heading": "Odinštalovanie",
-    "body": "V ProxMenuxe: <strong>Nastavenia → Odinštalovať ProxMenux</strong>. Odinštalovanie odstráni skripty, spúšťač a službu Monitor a voliteľne aj vybrané závislosti. Súbory <code>/root/.bashrc</code> a <code>/etc/motd</code> obnoví zo záloh vytvorených pri inštalácii, ak sú dostupné. Celý postup: <uninstalllink>Odinštalovanie ProxMenuxu</uninstalllink>."
+    "body": "V ProxMenuxe: <strong>Nastavenia → Odinštalovať ProxMenux</strong>. Odinštalovanie odstráni skripty, spúšťač a službu Monitor a voliteľne aj vybrané závislosti. Súbory <code>/root/.bashrc</code> a <code>/etc/motd</code> obnoví zo záloh, ktoré vytvoril Post-Install, ak sú dostupné (inak odstráni riadok ProxMenux z MOTD). Celý postup: <uninstalllink>Odinštalovanie ProxMenuxu</uninstalllink>."
   },
   "troubleshoot": {
     "heading": "Riešenie problémov",
     "virustotalTitle": "VirusTotal označuje URL inštalácie",
-    "virustotalBody": "Výsledok 1/95 od <em>Chong Lua Dao</em>, nahlásený v issue #162, správca projektu označil za falošný poplach. Inštalátor používa vzor <code>curl | bash</code> a môže stiahnuť <code>jq</code> z jeho oficiálneho vydania na GitHube. Takéto <em>správanie</em> môže spustiť heuristickú detekciu; historické hlásenie nie je hodnotením všetkých budúcich stiahnutí. Inštalátor má otvorený zdrojový kód a možno ho skontrolovať. Ďalšie súvislosti v <issuelink>issue #162</issuelink>.",
+    "virustotalBody": "Výsledok 1/95 od <em>Chong Lua Dao</em>, nahlásený v issue #162, správca projektu označil za falošný poplach. Inštalátor sa spúšťa príkazom, ktorý skript stiahne a spustí (<code>bash -c \"$(wget -qLO - …)\"</code>) a môže stiahnuť <code>jq</code> z jeho oficiálneho vydania na GitHube. Takéto <em>správanie</em> môže spustiť heuristickú detekciu; historické hlásenie nie je hodnotením všetkých budúcich stiahnutí. Inštalátor má otvorený zdrojový kód a možno ho skontrolovať. Ďalšie súvislosti v <issuelink>issue #162</issuelink>.",
     "aptTitle": "Inštalácia zlyhala s apt chybami",
     "aptBody": "Zvyčajne chýba repozitár Proxmoxu alebo je nesprávne nastavený. Inštalátor získava závislosti cez apt, ktorý pri chybnej konfigurácii repozitárov zlyhá. Stáva sa to napríklad pri minimálnych inštaláciách Proxmoxu 8, ktoré ešte neboli aktualizované. Najprv ručne spustite <code>apt-get update</code>, opravte všetky chyby a potom znova spustite inštalátor.",
     "menuTitle": "`menu: command not found` po inštalácii",
