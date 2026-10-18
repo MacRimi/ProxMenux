@@ -320,6 +320,36 @@ def mounts(config):
     return result
 
 
+def unused_volumes(config):
+    return {key: value for key, value in parse_config(config).items()
+            if re.fullmatch(r'unused[0-9]+', key)}
+
+
+def move_retained_unused(state, to_stage):
+    """Unused disks are not in vzdump. Park and return them separately, using
+    PVE's volume reassignment API, never --delete (which frees an unused disk).
+    The journal's keys and both ownership markers also make retries safe."""
+    keys = set(state.get('retained_unused', {}))
+    if not keys:
+        return
+    vmid, stage = state['vmid'], state['stage']
+    guest_marker = state['record']['installation_id']
+    holder_marker = 'proxmenux-transaction=' + state['id']
+    source, target = (vmid, stage) if to_stage else (stage, vmid)
+    source_marker, target_marker = ((guest_marker, holder_marker) if to_stage
+                                    else (holder_marker, guest_marker))
+    for key in sorted(keys):
+        present = unused_volumes(owned(source, source_marker))
+        destination = unused_volumes(owned(target, target_marker))
+        if key not in present:
+            if key in destination:
+                continue  # Already reassigned before an interruption.
+            raise ValueError(translate('There are extra disks or bind mounts outside the journal; the rootfs is not replaced'))
+        if key in destination or (to_stage and present.keys() - keys):
+            raise ValueError(translate('There are extra disks or bind mounts outside the journal; the rootfs is not replaced'))
+        run('pct', 'move-volume', str(source), key, '--target-vmid', str(target), '--target-volume', key)
+
+
 def is_file_bind(mount, files=()):
     return mount['type'] == 'host-bind' and (mount['source'] in files or Path(mount['source']).is_file())
 
@@ -473,7 +503,7 @@ def external_changes(record, config, adopt=True):
     return values
 
 
-def preflight(record, candidate, config, coordinated=None):
+def preflight(record, candidate, config, coordinated=None, in_place=False, baseline=True):
     deployment = record['deployment']
     desired = candidate['deployment']
     if coordinated and (record.get('native_stack_intent') or deployment.get('rootfs_adaptation_replay_required')):
@@ -482,7 +512,7 @@ def preflight(record, candidate, config, coordinated=None):
         raise ValueError(translate('Stack members are updated together with their stack'))
     if instances.identity(config) != record['installation_id']:
         raise ValueError(translate('The container identity changed; the container is not replaced'))
-    for key, value in external_changes(record, config, adopt=not coordinated).items():
+    for key, value in (external_changes(record, config, adopt=not coordinated) if baseline else {}).items():
         section, name = ADOPTABLE[key]
         recorded = deployment.get(section, {}) if section else deployment
         target = desired.setdefault(section, {}) if section else desired
@@ -511,7 +541,17 @@ def preflight(record, candidate, config, coordinated=None):
         runtime_keys.add('lxc.mount.entry')
     runtime_settings.check(config, deployment, record['vmid'])
     coordinated_keys = {'hookscript', *KEPT_AS_IS} if coordinated else set(KEPT_AS_IS)
-    if '[' in config.decode() or keys - BASIC - runtime_keys - coordinated_keys - {k for k in keys if re.fullmatch(r'(mp|dev)[0-9]+', k)}:
+    preserved_keys = {'nameserver', 'searchdomain', 'timezone', 'protection'} if in_place else set()
+    detached = unused_volumes(config)
+    if baseline and detached != unused_volumes(record['observed'].get('config', '').encode()):
+        raise ValueError(translate('The container disks do not match the saved record'))
+    used_volumes = {value.split(',', 1)[0] for key, value in cfg.items()
+                    if key == 'rootfs' or re.fullmatch(r'mp[0-9]+', key)}
+    if (len(set(detached.values())) != len(detached)
+            or any(not re.fullmatch(r'[A-Za-z0-9_.-]+:[^\s,]+', value) or value in used_volumes
+                   for value in detached.values())):
+        raise ValueError(translate('The container disks do not match the saved record'))
+    if '[' in config.decode() or keys - BASIC - runtime_keys - coordinated_keys - preserved_keys - {k for k in keys if re.fullmatch(r'(mp|dev|unused)[0-9]+', k)}:
         raise ValueError(translate('The container has advanced Proxmox settings outside the supported profile'))
     unprivileged = deployment.get('security', {}).get('unprivileged', True) is not False
     if (desired.get('security', {}).get('unprivileged', True) is not False) != unprivileged \
@@ -552,7 +592,8 @@ def preflight(record, candidate, config, coordinated=None):
         raise ValueError(translate('Changing the rootfs or its storage requires a separate migration'))
     actual = mounts(config)
     gpu_devices.check(config, deployment)
-    gpu_devices.verify_baseline(record['observed'].get('gpu_devices', {}), deployment)
+    if baseline:
+        gpu_devices.verify_baseline(record['observed'].get('gpu_devices', {}), deployment)
     recorded_files = {m['source']: bool(m.get('read_only')) for m in deployment.get('mounts', []) if is_file_bind(m, files)}
     if files != recorded_files:
         raise ValueError(translate('A container mount has a source, backup or permission different from the saved record'))
@@ -567,7 +608,9 @@ def preflight(record, candidate, config, coordinated=None):
                 or mount.get('ro', '0') != ('1' if old[target].get('read_only') else '0')):
             raise ValueError(translate('A container mount has a source, backup or permission different from the saved record'))
     for target in old.keys() & new.keys():
-        if any(old[target].get(k) != new[target].get(k) for k in ('type', 'source', 'size_gb')):
+        directory_bind = old[target]['type'] == new[target]['type'] == 'host-bind'
+        fixed = ('type', 'size_gb') if directory_bind else ('type', 'source', 'size_gb')
+        if any(old[target].get(k) != new[target].get(k) for k in fixed):
             raise ValueError(translate('Changing the storage or size of a disk requires a migration; empty disks are not created'))
     protected = ('/bin', '/sbin', '/etc', '/usr', '/lib', '/lib64', '/proc', '/sys', '/dev', '/run')
     for target in new.keys() - old.keys():
@@ -1060,6 +1103,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
                                   for p, m in actual.items() if p in required and not m['volume'].startswith('/')])
     state = {'schema_version': 1, 'id': directory.name, 'vmid': vmid, 'operation': operation,
              'record': record, 'candidate_contract': candidate, 'before_config': before.decode(),
+             'retained_unused': unused_volumes(before),
              'original_description': description,
              'archive': str(archive), 'archive_sha256': filehash(archive),
              'registry_digest': registry_digest or image['manifest_digest'],
@@ -1137,6 +1181,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
         else:
             owned(stage, 'proxmenux-transaction=' + state['id'])
             run('pct', 'move-volume', str(vmid), mount['key'], '--target-vmid', str(stage), '--target-volume', mount['key'])
+    move_retained_unused(state, to_stage=True)
     checkpoint(journal, state, 'data-parked')
     if show:
         msg_ok(translate('Data volumes protected'))
@@ -1146,8 +1191,8 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
         msg_info(translate('Installing the new image...') if update else translate('Recreating the container...'))
     current = owned(vmid, record['installation_id'])
     expected = b''.join(line for line in before.splitlines(keepends=True)
-                        if not re.match(rb'mp[0-9]+: ', line))
-    if mounts(current) or current != expected:
+                        if not re.match(rb'(mp|unused)[0-9]+: ', line))
+    if mounts(current) or unused_volumes(current) or current != expected:
         raise ValueError(translate('A concurrent change was detected; the container is not removed'))
     host_mounts.verify_sources(original_sources)
     gpu_devices.verify(original_gpu)
@@ -1162,6 +1207,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     install_candidate(root, journal, state, progress)
     restore_description(vmid, state)
     restore_firewall(vmid, state)
+    move_retained_unused(state, to_stage=False)
     if coordinated:
         for key, value in state['preserved_stack_config'].items():
             if key == 'tags' and not value:
@@ -1299,6 +1345,9 @@ def complete_recovery(root, journal, state):
 
 def recover(root, journal):
     state = json.loads(journal.read_text())
+    if state.get('kind') == 'native-modify':
+        import oci_native_modify
+        return oci_native_modify.recover(root, journal)
     vmid = state['vmid']
     show = not state.get('coordinated')
     if show:
@@ -1361,8 +1410,9 @@ def recover(root, journal):
         stop(vmid)
         current = owned(vmid, record['installation_id'])
         gpu_devices.check_recovery_entries(current, state)
-        if any(re.fullmatch(r'unused[0-9]+', k) for k in parse_config(current)):
+        if unused_volumes(current).keys() - state.get('retained_unused', {}).keys():
             raise ValueError(translate('There are extra disks or bind mounts outside the journal; the rootfs is not replaced'))
+        move_retained_unused(state, to_stage=True)
         known_binds = {(m['source'], m['container_path'])
                        for plan in (state['record']['deployment'], state['candidate_contract']['deployment'])
                        for m in plan.get('mounts', []) if m['type'] == 'host-bind'}
@@ -1390,6 +1440,7 @@ def recover(root, journal):
     host_mounts.verify_sources(state.get('original_host_sources', {}))
     run('pct', 'restore', str(vmid), backup, '--force', '1', '--storage',
         state['record']['deployment']['rootfs']['storage'])
+    move_retained_unused(state, to_stage=False)
     state['restore_config_sha256'] = sha(owned(vmid, state['record']['installation_id']))
     checkpoint(journal, state, 'checking-recovery')
     if show:
