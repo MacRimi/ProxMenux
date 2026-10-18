@@ -1,0 +1,155 @@
+{
+  "meta": {
+    "title": "Cliente Samba em LXC | ProxMenux Documentação",
+    "description": "Monte compartilhamentos Samba / CIFS em um contêiner LXC Proxmox com o ProxMenux. Instala cifs-utils e smbclient automaticamente e oferece descoberta de servidores, armazenamento protegido de credenciais e montagens persistentes via /etc/fstab. Exige um contêiner com privilégios.",
+    "ogTitle": "Cliente Samba em LXC | ProxMenux Documentação",
+    "ogDescription": "Monte compartilhamentos Samba / CIFS em um contêiner LXC com privilégios. Descoberta automática, arquivo de credenciais protegido e persistência em /etc/fstab."
+  },
+  "header": {
+    "title": "Cliente Samba em LXC",
+    "description": "Monte compartilhamentos Samba (SMB / CIFS) diretamente de dentro de um recipiente Proxmox LXC. O container torna-se um cliente CIFS real — fala com o servidor Samba através da rede, executa mount.cifs, armazena credenciais com segurança e escreve para /etc/fstab. ProxMenux instala cifs-utils + smbclient para você e valida credenciais contra o servidor antes de montar.",
+    "section": "Armazenamento e Compartilhamento · LXC"
+  },
+  "privReq": {
+    "title": "Recipiente privilegiado necessário",
+    "body": "O cliente do kernel <code>mount.cifs</code> precisa de recursos (<code>SYS_ADMIN</code> no mínimo) que os recipientes LXC desprivilegiados não expõem. O script impõe isso — ele pede que você escolha um CT e <strong>interrompe a execução se ele não for privilegiado</strong>. Se você precisar da partilha dentro de um CT sem privilégios, monte-a no host Proxmox primeiro (com a partilha <hostSambaLink>Samba / CIFS como armazenamento Proxmox</hostSambaLink>) e ligue-a ao CT com o gestor de montagem <mountLink>LXC</mountLink>."
+  },
+  "what": {
+    "heading": "O que isto faz",
+    "body": "O contêiner fala CIFS através da rede e monta a partilha por conta própria. O host Proxmox é apenas a ponte de rede — ele não vê ou gerencia a montagem.",
+    "diagramServerLabel": "Servidor Samba",
+    "diagramServerDetail": "//srv/share",
+    "diagramHostLabel": "Host Proxmox",
+    "diagramHostDetail": "(apenas uma\nponte de rede)",
+    "diagramCtLabel": "LXC (com privilégios)",
+    "diagramCtDetail": "/mnt/share\nmount.cifs dentro de CT",
+    "diagramArrow": "CIFS",
+    "twoWaysTitle": "Duas maneiras de dar um CT uma quota Samba — escolha uma",
+    "twoWaysBind": "<strong>Bind mount pelo host</strong> (<mountLink>LXC Mount Manager</mountLink>): o host monta CIFS uma vez e cada CT recebe o mesmo caminho por bind mount. Funciona com CTs sem privilégios. Recomendado quando vários CTs precisam do mesmo compartilhamento.",
+    "twoWaysDirect": "<strong>Montagem CIFS direta no CT</strong> (esta página): o CT monta CIFS por conta própria. Exige um CT com privilégios. Útil quando cada CT deve gerenciar suas credenciais ou usar um servidor diferente."
+  },
+  "opening": {
+    "heading": "Abrir a ferramenta",
+    "body": "Do menu principal do ProxMenux, abra o <strong>Storage &amp; Share Manager → Configure o cliente Samba em LXC (somente privilegiado)</strong>. O ProxMenux primeiro pede- lhe para escolher o <strong> alvo CT</strong> (e inicia- o se parar); aborta se não tiver privilégios. Uma vez que o CT é selecionado, você vê este sub-menu:",
+    "imageAlt": "Menu Samba Client Manager — Montar / Ver / Desmontar / Teste de conectividade"
+  },
+  "howRuns": {
+    "heading": "Como o script é executado (Fluxo do Monte)"
+  },
+  "creds": {
+    "heading": "Onde vive a senha",
+    "body": "O ProxMenux <strong>não inclui a senha no comando de montagem</strong> nem em <code>/etc/fstab</code>. Cria um arquivo de credenciais no CT. Esse arquivo contém credenciais em texto simples protegidas por permissões somente para root; não é criptografado:",
+    "whyTitle": "Por que um arquivo separado em vez de fstab",
+    "whyBody": "O módulo CIFS aceita opções <code>username=</code> / <code>password=</code> em linha em fstab, mas qualquer um que possa ler <code>/etc/fstab</code> vê a senha em claro. Colocar credenciais em um arquivo somente root e apontar fstab para ele (<code>credentials=</code>) mantém a senha fora da configuração legível no mundo."
+  },
+  "options": {
+    "heading": "Opções de montagem explicadas",
+    "headerOption": "Opção",
+    "headerEffect": "O que ele faz",
+    "rows": [
+      {
+        "option": "rw / ro",
+        "effect": "Modo de leitura e gravação ou somente leitura para toda a montagem."
+      },
+      {
+        "option": "file_mode=0664",
+        "effect": "Permissões relatadas para arquivos via CIFS. O padrão permite ao proprietário + grupo escrever, outros lerem."
+      },
+      {
+        "option": "dir_mode=0775",
+        "effect": "Permissões relatadas para pastas. O padrão permite que o proprietário + grupo entre e crie, outros atravessam."
+      },
+      {
+        "option": "iocharset=utf8",
+        "effect": "Força UTF-8 para nomes de arquivos recebidos pela rede, evitando caracteres corrompidos em nomes não ASCII."
+      },
+      {
+        "option": "credentials=file",
+        "effect": "Leia o nome de usuário / senha do arquivo (adicionado automaticamente para autenticação do usuário)."
+      },
+      {
+        "option": "guest",
+        "effect": "Autentique como convidado, sem credenciais necessárias (adicionadas automaticamente quando o convidado é escolhido)."
+      },
+      {
+        "option": "_netdev",
+        "effect": "Diz ao sistema de init que esta montagem precisa da rede. O Boot não bloqueia a espera."
+      },
+      {
+        "option": "x-systemd.automount",
+        "effect": "Montagem preguiçosa: apenas monta no primeiro acesso. O servidor CIFS não acessível no arranque não para o CT."
+      },
+      {
+        "option": "noauto",
+        "effect": "Evita a montagem imediata na inicialização. Com a unidade automount, o sistema de arquivos só é montado no primeiro acesso."
+      }
+    ],
+    "netEffectTitle": "Efeito líquido das bandeiras fstab",
+    "netEffectBody": "O sistema de arquivos CIFS é montado no <em>primeiro acesso</em> em vez de imediatamente durante a inicialização. Se o servidor estiver offline, o acesso pode esperar ou falhar e afetar serviços que dependem do caminho. Automount reduz a dependência na inicialização, mas não garante que todos os serviços do CT fiquem imunes a uma falha CIFS."
+  },
+  "manual": {
+    "heading": "Equivalente manual",
+    "body": "Replicar todo o fluxo à mão – cada comando roda <strong> dentro do CT</strong> via <code>pct exec &lt;ctid&gt; --</code> ou diretamente via <code>pct enter &lt;ctid&gt;</code>:",
+    "guestIntro": "Variante convidada — nenhum arquivo de credenciais necessário:"
+  },
+  "view": {
+    "heading": "Ver as montagens actuais",
+    "body": "Lista cada ponto de montagem CIFS ativo dentro do CT (<code>mount -t cifs</code>) mais cada linha CIFS no CT <code>/etc/fstab</code>. Para cada entrada do fstab é mostrado o status de montagem ao vivo — útil para detectar montagens permanentes que não apareceram no boot."
+  },
+  "unmount": {
+    "heading": "Desmontar a partilha do Samba",
+    "body": "Combina as montagens ao vivo e as entradas fstab em uma lista, permite que você escolha uma, e <strong> remove a linha correspondente de <code>/etc/fstab</code></strong> mais o arquivo de credenciais correspondentes. O script não executa <code>umount</code> na montagem ao vivo — em vez disso, ele lhe diz que uma reinicialização CT é necessária para que a desmontagem faça efeito.",
+    "warnTitle": "O script remove entradas do fstab, sem desmontar os sistemas de arquivos ativos",
+    "warnBody": "O mesmo design do cliente NFS: <code>umount</code> em uma montagem movimentada falha com o \"dispositivo ocupado\". A remoção da entrada do fstab garante que a montagem desapareça de forma limpa no próximo início do CT. Se você quiser o <em>agora</em>, execute <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> à mão depois que o script terminar."
+  },
+  "test": {
+    "heading": "Teste a conectividade do Samba",
+    "body": "Passe diagnóstico dentro do CT: confirma <code>cifs-utils</code> é instalado, lista as montagens CIFS atuais, em seguida, para cada servidor referenciado em fstab verifica ping → portas 139/445 → guest listing. \"Requer autenticação\" no teste convidado é normal para qualquer servidor que não expõe compartilhamentos públicos."
+  },
+  "troubleshoot": {
+    "heading": "Resolução de Problemas",
+    "privTitle": "Contêiner com privilégios necessário (o script interrompe a execução)",
+    "privBody": "O CT selecionado não tem privilégios. O cliente do kernel CIFS precisa de capacidade <code>SYS_ADMIN</code> que CTs desprivilegiadas não expõem. Ou converter o CT para privilegiado, ou usar o caminho alternativo descrito no aviso no topo desta página.",
+    "aptTitle": "apt-get install fails",
+    "aptIntro": "O script assume uma família Debian CT (<code>apt-get</code>). No Alpine / Arch / Rocky / Alma, instale o cliente CIFS à mão:",
+    "aptItems": [
+      "Alpine: <code>apk add cifs-utils samba-client</code>",
+      "Arch: <code>pacman -S cifs-utils smbclient</code>",
+      "Rocky / Alma: <code>dnf install cifs-utils samba-client</code>"
+    ],
+    "aptOutro": "Em seguida, execute novamente o script ProxMenux — o passo de instalação salta quando as ferramentas já estão presentes.",
+    "guestFallbackTitle": "\"O servidor conectou você como convidado em vez do usuário especificado\"",
+    "guestFallbackBody": "A validação ativa do script captou um problema real de autenticação. O servidor aceitou a conexão, mas baixou para o hóspede porque as credenciais estão erradas. Causas comuns: erro no nome de usuário / senha, o usuário não existe no servidor, o usuário está bloqueado para fora, ou o grupo de trabalho / domínio é desigual. Execute novamente o fluxo e informe as credenciais com cuidado (a senha está escondida na janela).",
+    "denyTitle": "\"NT_STATUS_ACCESS_DENIED\" na montagem",
+    "denyBody": "As credenciais foram validadas, mas o compartilhamento nega acesso. Verifique no lado do servidor se o usuário tem permissões nesse compartilhamento específico (a validação só confirma login, não ACLs por compartilhamento). Verifique também se o servidor requer uma versão específica do protocolo SMB: anexe <code>vers=3.0</code> (ou <code>2.1</code>, <code>2.0</code>) às opções de montagem.",
+    "utf8Title": "Nomes de arquivos UTF-8 / não ASCII aparecem corrompidos",
+    "utf8Body": "As opções padrão incluem <code>iocharset=utf8</code>, mas algumas configurações de servidor reportam uma página de código inesperada. Se nomes de arquivos com acentos / símbolos olhar errado, também tente <code>nounix</code> (alguns servidores Linux Samba precisam disso quando o cliente também é Linux) ou definir o lado do servidor para <code>unix extensions = no</code>.",
+    "bootTitle": "A montagem permanente tem sucesso mas não aparece no arranque",
+    "bootBody": "Quase sempre uma de: a rede não está pronta quando o CT monta (as bandeiras <code>_netdev,x-systemd.automount,noauto</code> do script corrigem isso), o servidor é inacessível no boot (auto-mount espera pelo primeiro acesso – isso é normal), ou DNS não está resolvido no boot (use o IP do servidor, não seu hostname)."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "Pontos de montagem LXC (Host ↔ Container)",
+        "tail": " — a alternativa para os TAC não privilegiados: montagem no hospedeiro, ligação em CT."
+      },
+      {
+        "href": "/docs/storage-share/lxc-nfs-client",
+        "label": "Cliente NFS em LXC",
+        "tail": " — página relacionada com o mesmo padrão para compartilhamentos NFS."
+      },
+      {
+        "href": "/docs/storage-share/lxc-samba-server",
+        "label": "Servidor Samba em LXC",
+        "tailRich": " — o inverso: expor pastas <em>de</em> um CT por Samba."
+      },
+      {
+        "href": "/docs/storage-share/host-samba",
+        "label": "Samba / CIFS como armazenamento Proxmox",
+        "tail": " — registrar o compartilhamento no próprio Proxmox em vez de dentro de um único CT."
+      }
+    ]
+  }
+}

@@ -1,0 +1,177 @@
+{
+  "meta": {
+    "title": "ProxMenux po inštalácii: Voliteľné nastavenia",
+    "description": "Sprievodca voliteľnými nastaveniami skriptu ProxMenux po inštalácii pre ďalšie funkcie a optimalizácie Proxmox VE.",
+    "ogTitle": "ProxMenux po inštalácii: Voliteľné nastavenia",
+    "ogDescription": "Sprievodca voliteľnými nastaveniami skriptu ProxMenux po inštalácii pre ďalšie funkcie a optimalizácie Proxmox VE.",
+    "ogImageAlt": "ProxMenux Nepovinné nastavenia po inštalácii"
+  },
+  "title": "Voliteľné nastavenia",
+  "intro": "Kategória <strong>Voliteľné nastavenia</strong> ponúka ďalšie funkcie a optimalizácie pre inštaláciu Proxmox VE. Nie sú nevyhnutné, ale v konkrétnych situáciách môžu rozšíriť možnosti systému.",
+  "available": "Dostupné voliteľné funkcie",
+  "stepLabel": "Krok",
+  "ceph": {
+    "title": "Pridať najnovšiu podporu Ceph",
+    "intro": "Táto možnosť nainštaluje najnovšiu podporu Ceph úložného systému pre Proxmox VE. Ceph je distribuovaný úložný systém, ktorý poskytuje vysoký výkon, spoľahlivosť a škálovateľnosť.",
+    "doesIntro": "Čo robí:",
+    "doesItems": [
+      "Pridá repozitár Ceph do vášho systému",
+      "Aktualizuje zoznamy balíkov",
+      "Inštaluje balíky Ceph pomocou príkazu 'pveceph install'",
+      "Overuje inštaláciu"
+    ],
+    "howUse": "Použitie: Po inštalácii môžete nastaviť a spravovať úložisko Ceph cez webové rozhranie Proxmox VE alebo nástroje príkazového riadku.",
+    "automates": "Táto úprava automatizuje nasledujúce príkazy:"
+  },
+  "amd": {
+    "title": "Použiť opravy CPU AMD",
+    "intro": "Táto možnosť použije konkrétne opravy procesorov AMD EPYC a Ryzen na zlepšenie stability a kompatibility.",
+    "doesIntro": "Čo robí:",
+    "doesItems": [
+      "Odhaľuje, či je prítomný AMD EPYC alebo Ryzen CPU",
+      "Použije parameter jadra idle=nomwait na predchádzanie náhodným pádom (cez /etc/kernel/cmdline na hostiteľoch so systemd-boot alebo /etc/default/grub pri GRUB, so zálohou originálu .bak).",
+      "Nastaví KVM na ignorovanie určitých MSR (registrov špecifických pre model) pre lepšiu kompatibilitu hosťovských systémov Windows."
+    ],
+    "howUse": "Použitie: Opravy sa použijú automaticky a prejavia sa po reštarte systému.",
+    "automates": "Táto úprava automatizuje nasledujúce príkazy:"
+  },
+  "ha": {
+    "title": "Zapnúť služby vysokej dostupnosti",
+    "intro": "Táto možnosť zapne služby vysokej dostupnosti (HA) v Proxmox VE, ktoré umožňujú automatické prevzatie VM a kontajnerov iným uzlom pri poruche uzla.",
+    "doesIntro": "Čo robí:",
+    "doesItems": [
+      "Zapne a spustí službu pve-ha-lrm (lokálny správca zdrojov)",
+      "Zapne a spustí službu pve-ha-crm (správca zdrojov klastra)",
+      "Zapne a spustí službu corosync na komunikáciu klastra"
+    ],
+    "howUse": "Ako používať: Po umožnení týchto služieb môžete konfigurovať HA skupiny a zdroje vo webovom rozhraní Proxmox VE.",
+    "automates": "Táto úprava automatizuje nasledujúce príkazy:"
+  },
+  "pveam": {
+    "title": "Aktualizovať Proxmox VE Appliance Manager",
+    "intro": "Obnoví lokálny index šablón kontajnerov, ktorý <code>pveam</code> sprístupňuje v rozhraní Proxmox. Zoznam dostupných softvérových šablón tak bude aktuálny pri ďalšom vytvorení LXC.",
+    "doesIntro": "Čo robí:",
+    "doesItems": [
+      "Spustí <code>pveam update</code> voči zrkadlám Proxmox a získa aktuálny katalóg softvérových šablón",
+      "Doplní zoznam softvérových šablón zobrazený pri vytváraní kontajnera"
+    ],
+    "howUse": "Použitie: spustite ho, ak zoznam šablón v rozhraní vyzerá zastarano alebo po zmene zrkadiel. Stiahne iba index katalógu, nie samotné šablóny.",
+    "automates": "Táto úprava automatizuje nasledujúci príkaz:"
+  },
+  "fastfetch": {
+    "title": "Nainštalovať a nastaviť Fastfetch",
+    "intro": "Táto možnosť ticho nainštaluje a konfiguruje nástroj Fastfetch, ktorý zobrazuje systémové špecifikácie a vlastné logo pri prihlásení.",
+    "doesLabel": "Čo robí:",
+    "doesItems": [
+      "Ticho stiahne a nainštaluje najnovšiu verziu Fastfetch",
+      "Umožňuje vám vybrať si vlastné logo (<strong>ProxMenux, Proxmox, Helper-Scripts, Home-Labs-Club, Proxmology</strong> alebo vlastné logo)",
+      "Nastaví Fastfetch na zobrazenie <em>„Systém optimalizovaný cez ProxMenux“</em>",
+      "Nastaví Fastfetch pre automatické spustenie pri prihlásení konzoly"
+    ],
+    "importantLabel": "Dôležité:",
+    "importantBody": "Ak sa pripájate k Proxmoxu cez SSH, vyberte logo <strong>Proxmox</strong> alebo vytvorte vlastné pomocou <code>jp2a</code> alebo <code>img2txt</code>. Ostatné logá vytvára <code>chafa</code> a v bežnej relácii SSH sa nemusia zobraziť správne.",
+    "customLabel": "Vlastné logá:",
+    "customBody1": "Vlastné logo použijete vložením textového súboru s ASCII grafikou do: <code>/usr/local/share/fastfetch/logos/</code>",
+    "customBody2": "Môžete vytvoriť vlastné logá pomocou nástrojov ako <code>chafa</code>, <code>jp2a</code>, alebo <code>img2txt</code>.",
+    "customBody3": "Pre dosiahnutie najlepších výsledkov:",
+    "customItems": [
+      "Obmedzte výšku loga na 35 riadkov, aby sa zachovali proporcie a zmestilo sa do terminálu",
+      "Použite <code>chafa</code> pre farebné logá (v reláciách SSH sa nemusia zobraziť správne)",
+      "Použiť <code>jp2a</code> alebo <code>img2txt</code> pre logá kompatibilné s SSH"
+    ],
+    "examplesLabel": "Príkladové logá:",
+    "logos": [
+      {
+        "name": "ProxMenux",
+        "alt": "Logo ProxMenux",
+        "src": "https://macrimi.github.io/ProxMenux/fastfetch/proxmenux.png"
+      },
+      {
+        "name": "Proxmox",
+        "alt": "Logo Proxmox",
+        "src": "https://macrimi.github.io/ProxMenux/fastfetch/proxmox.png"
+      },
+      {
+        "name": "JC Channel",
+        "alt": "Logo JC Channel",
+        "src": "/fastfetch/jc-channel.png"
+      },
+      {
+        "name": "Helper-Scripts",
+        "alt": "Logo Helper-Scripts",
+        "src": "https://macrimi.github.io/ProxMenux/fastfetch/helper-scripts.png"
+      },
+      {
+        "name": "Home-Labs-Club",
+        "alt": "Logo Home-Labs-Club",
+        "src": "https://macrimi.github.io/ProxMenux/fastfetch/home-labs-club.png"
+      },
+      {
+        "name": "Proxmology",
+        "alt": "Logo Proxmology",
+        "src": "https://macrimi.github.io/ProxMenux/fastfetch/proxmology.png"
+      }
+    ],
+    "automates": "Táto úprava automatizuje nasledujúce príkazy:"
+  },
+  "figurine": {
+    "title": "Inštalovať a nastaviť Figurine",
+    "intro": "Táto voľba nainštaluje a konfiguruje Figurine, nástroj, ktorý vytvára štýlové ASCII textové bannery pre váš terminál, zobrazujúci vaše meno hostiteľa vo vizuálne atraktívnom 3D formáte.",
+    "doesLabel": "Čo robí:",
+    "doesItems": [
+      "Stiahne a nainštaluje Figurine v2.1.1 z GitHubu pre architektúru hostiteľa (AMD64, ARM64 alebo ARMv7)",
+      "Vytvorí uvítaciu správu, ktorá zobrazí vaše meno hostiteľa v 3D ASCII umení pri prihlásení",
+      "Aktualizuje existujúci binárny súbor Figurine až po úspešnom stiahnutí a rozbalení",
+      "Nastaví uvítaciu správu pre automatické spustenie pri prihlásení"
+    ],
+    "practicalLabel": "Praktické použitie:",
+    "practicalBody": "Pri správe viacerých uzlov Proxmox v klastri Figurine hneď ukáže, do ktorého uzla ste prihlásený. Pomáha to predchádzať náhodným príkazom na nesprávnom uzle a zlepšuje prácu s viacerými servermi.",
+    "exampleLabel": "Príklad výstupu:",
+    "imageAlt": "Príklad výstupu Figurine",
+    "automates": "Táto úprava automatizuje tento proces:",
+    "outro": "Po inštalácii uvidíte vaše meno hostiteľa zobrazené v 3D ASCII umení zakaždým, keď sa prihlásite, aby bolo okamžite jasné, na ktorom uzol Proxmox pracujete."
+  },
+  "log2ram": {
+    "title": "Nainštalovať Log2RAM (zníženie opotrebenia SSD/NVMe)",
+    "intro": "Log2RAM pripojí <code>/var/log</code> ako ramdisk tmpfs a pravidelne ho synchronizuje na disk. Ukladanie častých zápisov journald do RAM môže znížiť opotrebenie SSD a diskové I/O. Synchronizácia a riadne vypnutie uložia logy na disk, ale náhly výpadok napájania môže stratiť záznamy od poslednej synchronizácie.",
+    "upstreamLabel": "Pôvodný projekt:",
+    "upstreamUrl": "https://github.com/azlux/log2ram",
+    "upstreamLinkLabel": "azlux/log2ram na GitHub",
+    "doesLabel": "Čo robí ProxMenux:",
+    "doesItems": [
+      "Čítaním <code>/sys/block/&lt;dev&gt;/queue/rotational</code> zistí, či je koreňový disk SSD/NVMe. Pri rotačnom disku sa automatický postup pred inštaláciou opýta.",
+      "Naklonuje pôvodný repozitár (<code>azlux/log2ram</code>) do <code>/tmp/log2ram</code> a upraví <code>install.sh</code>: nahradí <code>rsync -aAXv</code> príkazom <code>rsync -aXv --no-acls</code>. Predíde tak chybe <em>set_acl: Operation not supported</em> s návratovým kódom 23 pri presune /var/log na súborovom systéme bez ACL. Jednotka systemd <code>log2ram</code> sa po inštalácii zapne.",
+      "Nastaví veľkosť ramdisku podľa RAM hostiteľa: <code>≤ 8 GB → 128M</code>, <code>≤ 16 GB → 256M</code>, <code>&gt; 16 GB → 512M</code>. Zapíše hodnotu do <code>SIZE=</code> v <code>/etc/log2ram.conf</code>.",
+      "Plánuje periodickú synchronizáciu disku cez <code>/etc/cron.d/log2ram</code>: každý 1h / 3h / 6h podľa rovnakej úrovne RAM.",
+      "Nainštaluje <code>/usr/local/bin/log2ram-check.sh</code>, spúšťaný cez <code>/etc/cron.d/log2ram-auto-sync</code> každých 10 minút. Keď <code>/var/log</code> dosiahne 80% ramdisku, vyčistí staré žurnály. Pri 92% najprv spustí <code>logrotate -f /etc/logrotate.d/proxmox-backup-api</code>, ak súbor existuje: logy API PBS bývajú najväčším spotrebiteľom miesta na hostiteľovi PBS. Potom skráti <code>pveproxy access/error</code> a <code>pveam.log</code> pred synchronizáciou. Samotný <code>log2ram write</code> skopíruje tmpfs na disk, ale nezmenší ho. Ochrana pomáha predchádzať pádom PVE s <em>No space left on device</em> pri nekontrolovanom raste logov.",
+      "Zistí službu <code>proxmox-backup-server</code> na hostiteľovi. Ak existuje, vytvorí <code>/etc/logrotate.d/proxmox-backup-api</code> (20 MB × 3 rotácie) a <code>/etc/cron.hourly/proxmox-backup-logrotate</code>, aby obmedzil logy API PBS, častý zdroj rastu, aj medzi synchronizáciami Log2RAM. Bez PBS nič nezmení.",
+      "Prispôsobí limity systemd-journald (<code>SystemMaxUse</code>, <code>RuntimeMaxUse</code>) ramdisku, aby ho nárazový príval záznamov nezaplnil.",
+      "Zaznamená sa v <code>installed_tools.json</code>, aby sa dal vrátiť cez Odinštalovať optimalizácie."
+    ],
+    "howUseLabel": "Ako používať:",
+    "howUseBody": "Automatický postup nainštaluje Log2RAM bez zásahu pri zistení koreňového SSD/NVMe. Prispôsobiteľný postup sa pýta na veľkosť, interval a ochranu synchronizácie. Výzva uvádza 90%, no vytvorený skript používa vyššie opísané limity 80% na čistenie a 92% na intenzívne čistenie.",
+    "verifyLabel": "Overiť a spravovať zo shellu:",
+    "verifyCode": "# Service state and configured timers\nsystemctl status log2ram\nsystemctl list-timers log2ram*\n\n# Current ramdisk usage — /var/log IS the tmpfs itself\ndf -h /var/log\n\n# Force a sync now (tmpfs → disk); does NOT shrink the tmpfs\nlog2ram write\n\n# Trigger the auto-sync guard on demand (vacuum + sync when usage is high)\n/usr/local/bin/log2ram-check.sh\n\n# Current config: SIZE, mail settings, path\ncat /etc/log2ram.conf\n\n# ProxMenux-specific cron jobs\ncat /etc/cron.d/log2ram /etc/cron.d/log2ram-auto-sync\n\n# Recent Log2RAM activity\njournalctl -u log2ram -n 50 --no-pager"
+  },
+  "zram": {
+    "title": "Povoliť výmenný profil ZRAM",
+    "intro": "Pomocou <code>/dev/zram0</code> vytvorí komprimované odkladacie zariadenie v RAM cez <code>systemd-zram-generator</code>. Stránky presunuté jadrom do swapu sa komprimujú cez zstd a zostanú v pamäti pred použitím swapu na disku.",
+    "doesLabel": "Čo robí:",
+    "doesItems": [
+      "Nainštaluje <code>systemd-zram-generator</code>, ak chýba, a zaznamená, či ho nainštaloval ProxMenux.",
+      "Zapíše <code>/etc/systemd/zram-generator.conf.d/90-proxmenux.conf</code>: zariadenie <code>zram0</code> s veľkosťou desatiny RAM hostiteľa, kompresiou zstd (<code>zstd(level=9)</code> pri systemd-zram-generator 1.2.0 alebo novšom) a prioritou swapu 32767.",
+      "S touto prioritou jadro najprv zaplní ZRAM. Existujúci swap na disku si zachová svoju prioritu a prijme stránky, ktoré sa už do ZRAM nezmestia.",
+      "Pred zmenou niečoho, hľadá ďalšie nastavenie ZRAM: aktívny zram swap, zram linka v <code>/etc/fstab</code>, systemd jednotka alebo iný súbor generátora. Ak ho nájde, možnosť sa zastaví a nechá nastavenie ako je.",
+      "Spustí <code>dev-zram0.swap</code> a overí, či aktívne zariadenie zodpovedá profilu. Ak nie, obnoví predchádzajúci stav.",
+      "Zaznamená sa v <code>installed_tools.json</code>, aby sa dal vrátiť cez Odinštalovať optimalizácie."
+    ],
+    "howUseLabel": "Ako používať:",
+    "howUseBody": "Možnosť je iba v prispôsobiteľnom postupe; automatický ju nepoužíva. Zariadenie sa pri každom štarte vytvorí znovu. Kým je aktívne, panel Pamäť v ProxMenux Monitor zobrazí kapacitu, využitý swap, algoritmus, kompresný pomer a obsadenú fyzickú pamäť.",
+    "verifyLabel": "Overiť zo shellu:",
+    "verifyCode": "# Active swap devices and their priority\nswapon --show\n\n# ZRAM device: algorithm, size and compressed data\nzramctl\n\n# Profile written by ProxMenux\ncat /etc/systemd/zram-generator.conf.d/90-proxmenux.conf\n\n# State of the swap unit\nsystemctl status dev-zram0.swap"
+  },
+  "autoApplication": {
+    "title": "Automatická aplikácia",
+    "body": "V prispôsobiteľnom postupe vyberte funkcie podľa potreby. Log2RAM je aj súčasťou automatického postupu s detekciou hardvéru; ZRAM zostáva iba prispôsobiteľný. Jednotlivé časti opisujú výzvy a predpoklady."
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "Cópia de segurança e reinício das interfaces | Documentação ProxMenux",
+    "description": "Snapshot manual, navegar e restaurar backups /etc/network/interfaces armazenados em /var/backups/proxmenux/. Inclui uma reinicialização do serviço de rede com confirmação e uma visão rápida da configuração ao vivo.",
+    "ogTitle": "Cópia de segurança e reinício das interfaces | Documentação ProxMenux",
+    "ogDescription": "Instantâneo e restauração da configuração de rede Proxmox; reinicie o serviço de rede com confirmação."
+  },
+  "header": {
+    "title": "Cópia de segurança e reinício das interfaces",
+    "description": "Quatro utilitários que giram em torno de /etc/network/interfaces: tirar um instantâneo manual, visualizar a configuração ao vivo, restaurar um backup anterior com visualização opcional, e reiniciar o serviço de rede com consentimento explícito. Mesmo diretório de backup usado pelos fluxos de reparo guiados.",
+    "section": "Rede"
+  },
+  "intro": {
+    "title": "O que isto faz",
+    "body": "Gere o mesmo diretório de cópias de segurança usado pelas reparações guiadas (<code>/var/backups/proxmenux/</code>). Permite criar uma cópia extra antes de qualquer alteração manual, consultar todas as cópias existentes e repor qualquer uma delas — sempre com uma nova cópia do estado anterior ao restauro, criada automaticamente como segunda proteção."
+  },
+  "shared": {
+    "heading": "O diretório de backup compartilhado",
+    "intro": "Cada backup feito em qualquer lugar no menu Rede chega no mesmo lugar:",
+    "outro": "Os nomes dos ficheiros contêm data e hora, são ordenados por data e nunca são substituídos. O diretório é criado na primeira utilização."
+  },
+  "show": {
+    "heading": "Mostrar arquivo de configuração de rede",
+    "body": "Imprime <code>/etc/network/interfaces</code> na íntegra para o terminal. Só para leitura. Útil como uma verificação de sanidade antes de fazer um backup ou depois de uma restauração — não há nenhuma ferramenta separada \"diff com backup anterior\", então olhar para o arquivo ao vivo é a maneira mais fácil de confirmar o que você tem."
+  },
+  "create": {
+    "heading": "Criar backup de rede",
+    "body": "Copia o <code>/etc/network/interfaces</code> atual para o diretório de backup com um timestamp fresco. É isso — sem análise, sem prompts, apenas um instantâneo.",
+    "whenTitle": "Quando criar uma cópia de segurança manual",
+    "whenBody": "Antes de editar <code>/etc/network/interfaces</code> à mão, instalar um pacote que possa alterar a pilha de rede (por exemplo NetworkManager ou Open vSwitch) ou fazer qualquer alteração de hardware. As reparações guiadas já criam uma cópia automaticamente — esta opção serve para as operações <em>manuais</em>."
+  },
+  "restore": {
+    "heading": "Restaurar backup de rede",
+    "intro": "Lista todas as cópias em <code>/var/backups/proxmenux/</code> da mais recente à mais antiga e guia um restauro com proteções:",
+    "steps": [
+      {
+        "title": "1. Escolher uma cópia de segurança",
+        "body": "Um menu lista cada backup pelo seu timestamp. Se não existirem backups, o fluxo sai com uma mensagem clara.",
+        "tone": "blue"
+      },
+      {
+        "title": "2. Visualização opcional",
+        "body": "Propõe abrir a cópia selecionada numa vista com deslocamento antes de confirmar o restauro. A opção predefinida é Sim — não ignore este passo num host remoto.",
+        "tone": "blue"
+      },
+      {
+        "title": "3. Cópia de segurança antes do restauro",
+        "body": "Antes de sobrepor <code>/etc/network/interfaces</code>, toma <strong>outro</strong> backup do estado atual. Restaurar um backup é em si uma ação destrutiva, então o novo instantâneo pré-restore permite que você volte se o backup escolhido acabar sendo o errado.",
+        "tone": "amber"
+      },
+      {
+        "title": "4. Aplicar a restauração",
+        "body": "Substitui <code>/etc/network/interfaces</code> pela cópia selecionada. A alteração do ficheiro está no disco; o estado atual do kernel ainda reflete a configuração anterior.",
+        "tone": "amber"
+      },
+      {
+        "title": "5. Reinício opcional",
+        "body": "Pergunta se deve executar o <code>systemctl restart networking</code> agora. Recusar para adiar a alteração para a próxima reinicialização.",
+        "tone": "emerald"
+      }
+    ],
+    "autoBackupTitle": "O restauro cria automaticamente a sua própria cópia de segurança",
+    "autoBackupBody": "Selecionar <em>Restaurar backup de rede</em> cria sempre uma nova cópia da configuração <em>atual</em> antes de a substituir. Se restaurar a cópia errada, o ficheiro mais recente em <code>/var/backups/proxmenux/</code> contém o estado anterior."
+  },
+  "restart": {
+    "heading": "Reinicie o serviço de rede",
+    "body": "Executa <code>systemctl restart networking</code> após uma confirmação sim/não. Relata o resultado com <code>msg_ok</code> / <code>msg_error</code>. A maioria dos fluxos neste menu oferece o seu próprio prompt de reinicialização no final; esta opção é para reiniciar após uma edição manual ou depois de recusar o reinício do fluxo antes.",
+    "warnTitle": "Breve desconexão garantida; desconexão permanente possível",
+    "warnBody": "Reiniciando <code>networking</code> derruba e reaplica cada interface declarada em <code>/etc/network/interfaces</code>. As sessões SSH hospedadas nessas interfaces caem. Se a nova configuração for inválida, a rede nunca voltará. Execute isto apenas quando:",
+    "warnItems": [
+      "Você tem o console / IPMI / iKVM pronto, <em> ou</em>",
+      "Está fisicamente ao lado da máquina, <em>ou</em>",
+      "Você acabou de voltar com sucesso para uma configuração conhecida-boa e quer aplicá-la."
+    ]
+  },
+  "manualRollback": {
+    "heading": "Retroceder manualmente de uma consola",
+    "intro": "Se você não conseguir alcançar o menu (sem SSH, a janela está a falhar, ...) mas pode chegar a uma consola, o rollback são dois comandos:",
+    "outro": "É a <em>mesma</em> operação executada pelo menu, apenas escrita à mão. Se <code>networking</code> continuar sem iniciar, consulte <code>journalctl -u networking -b</code> para identificar o erro de sintaxe ou do controlador."
+  },
+  "troubleshoot": {
+    "heading": "Resolução de Problemas",
+    "noneTitle": "\"Nenhum backup encontrado\" na Restauração",
+    "noneBody": "O diretório <code>/var/backups/proxmenux/</code> não existe ou não contém ficheiros <code>interfaces_backup_*</code>. Execute <em>Criar backup de rede</em> pelo menos uma vez ou faça uma reparação guiada, que cria uma cópia automaticamente. Confirme com <code>ls /var/backups/proxmenux/</code>.",
+    "unreachTitle": "Reiniciar a rede tem sucesso, mas a máquina ainda não está acessível",
+    "unreachBody": "A nova configuração está errada ou não atribui o seu IP de gestão. Reponha a configuração a partir da consola (ver acima). Depois use a <bridgeLink>análise de bridges</bridgeLink> e a <configLink>análise de configuração</configLink> para perceber o problema antes de voltar a aplicar.",
+    "emptyTitle": "A antevisão da restauração mostra um arquivo vazio",
+    "emptyBody": "O ficheiro de backup está vazio (0 bytes). Isto acontece se uma cópia falhar silenciosamente numa execução anterior. Escolha uma cópia mais antiga ou execute novamente <em>Criar backup de rede</em> agora, se a configuração atual funcionar."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "label": "Análise de ponte e reparo guiado",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — a razão mais comum pela qual um backup acaba aqui."
+      },
+      {
+        "label": "Análise de configuração e limpeza guiada",
+        "href": "/docs/network/config-analysis",
+        "tailRich": " — escreve igualmente para o <code>/var/backups/proxmenux/</code> automaticamente."
+      },
+      {
+        "label": "Diagnósticos",
+        "href": "/docs/network/diagnostics",
+        "tail": " — para verificar o estado atual após um restauro."
+      }
+    ]
+  }
+}

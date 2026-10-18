@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "title": "Segurança do Proxmox — Fail2Ban e auditoria de reforço com Lynis | ProxMenux",
+    "description": "Duas ferramentas de segurança para Proxmox VE: Fail2Ban (prevenção de intrusões para SSH, interface web do Proxmox e ProxMenux Monitor) e Lynis (auditoria de segurança e reforço do sistema, instalado a partir do repositório original no GitHub).",
+    "ogTitle": "Segurança do Proxmox — Fail2Ban e auditoria de reforço com Lynis",
+    "ogDescription": "Fail2Ban e Lynis para Proxmox VE: prevenção de intrusões e auditoria de reforço, instalados e geridos pelo ProxMenux.",
+    "twitterTitle": "Segurança do Proxmox | ProxMenux",
+    "twitterDescription": "Fail2Ban e Lynis para Proxmox VE: prevenção de intrusões e auditoria de reforço."
+  },
+  "header": {
+    "title": "Segurança",
+    "description": "Duas ferramentas complementares para Proxmox VE: defesa ativa (Fail2Ban bloqueia IPs que atacam SSH ou interfaces web) e auditoria local (Lynis procura falhas de reforço e dá uma pontuação de 0 a 100). Cada ferramenta tem o seu menu de instalação e gestão, com deteção de instalações existentes antes de agir.",
+    "section": "Segurança"
+  },
+  "intro": {
+    "title": "Defesa ativa e auditoria local",
+    "body": "Respondem a perguntas diferentes. <strong>Fail2Ban</strong> responde a <em>«Estamos a ser atacados agora?»</em> observando os registos de autenticação e bloqueando os IPs responsáveis. <strong>Lynis</strong> responde a <em>«Qual é o nível de reforço deste anfitrião?»</em> através de uma auditoria pontual com recomendações concretas. Utilize ambos: Lynis indica o que melhorar e Fail2Ban reage aos ataques em curso."
+  },
+  "opening": {
+    "heading": "Abrir o menu",
+    "body": "No menu principal do ProxMenux selecione <strong>Segurança</strong>. Verá o seguinte:",
+    "imageAlt": "Menu de segurança com opções Fail2Ban e Lynis"
+  },
+  "pick": {
+    "heading": "Escolha sua ferramenta",
+    "body": "As duas ferramentas de segurança são independentes — instale uma, ambas ou nenhuma. Cada carta abaixo salta para a seção que explica a ferramenta em detalhes."
+  },
+  "cards": {
+    "fail2ban": {
+      "title": "Fail2Ban",
+      "body": "Prevenção ativa de intrusões. Observa os registos de autenticação SSH e web e bloqueia IPs após falhas repetidas.",
+      "bullets": [
+        "Três jails: SSH, interface Proxmox (8006), ProxMenux Monitor (8008)",
+        "Corrige as predefinições do journald no Proxmox que bloqueiam os registos de autenticação",
+        "Detecta automaticamente nftables / iptables",
+        "Endurecimento de SSH: MaxAuthTries=3 (recomendação Lynis)"
+      ]
+    },
+    "lynis": {
+      "title": "Lynis",
+      "body": "Auditor local de segurança. Analisa o anfitrião e apresenta uma pontuação de reforço e sugestões concretas de correção.",
+      "bullets": [
+        "Instalado a partir do repositório original da CISOfy no GitHub (versão mais recente)",
+        "Pontuação de reforço 0–100 e lista de avisos e sugestões",
+        "Auditoria e atualização através do menu",
+        "Concebido apenas para leitura: nunca altera o sistema"
+      ]
+    }
+  },
+  "workflowTip": {
+    "title": "Fluxo de trabalho que utiliza ambos",
+    "body": "Execute primeiro Lynis para conhecer a pontuação inicial e as principais recomendações. Aplique as correções desejadas. Depois instale Fail2Ban: implementa automaticamente a proteção SSH contra força bruta e ajusta <code>MaxAuthTries</code> em <code>sshd_config</code> para cumprir o controlo SSH-7408. Execute Lynis novamente para verificar a melhoria."
+  },
+  "fail2banSection": {
+    "heading": "Fail2Ban",
+    "body": "O ProxMenux instala Fail2Ban com uma configuração específica para Proxmox. Além da jail SSH padrão, protege a interface web Proxmox e o ProxMenux Monitor. Contorna dois problemas específicos: uma predefinição do journald que descarta eventos de autenticação e um problema do backend systemd que impede a leitura fiável de certas fontes do registo. A página detalhada explica a instalação, as três jails, a correção do journald, o reforço SSH e a resolução de problemas.",
+    "optionTitle": "Fail2Ban — instalar e gerenciar",
+    "optionDescription": "Três jails pré-configuradas (sshd agressivo, interface Proxmox em 8006, ProxMenux Monitor em 8008 e proxy inverso), deteção de nftables/iptables, correção do journald e reforço SSH com MaxAuthTries."
+  },
+  "lynisSection": {
+    "heading": "Lynis",
+    "body": "O ProxMenux clona Lynis de <code>github.com/CISOfy/lynis</code> para <code>/opt/lynis</code> e disponibiliza-o como <code>/usr/local/bin/lynis</code>. Evita o pacote Debian porque está várias versões principais atrás do projeto original. A página detalhada explica instalação, auditoria, atualização, desinstalação, leitura do relatório e ações sobre os resultados.",
+    "optionTitle": "Lynis — instalar, auditar e gerenciar",
+    "optionDescription": "Instala a versão mais recente do Lynis a partir do repositório oficial CISOfy no GitHub (em vez do pacote Debian mais antigo), executa auditorias com pontuação de reforço e atualiza através de git pull."
+  },
+  "componentStatus": {
+    "heading": "Estado do componente",
+    "body": "Ambos os instaladores registram seu estado em <code>/usr/local/share/proxmenux/components_status.json</code> na categoria <code>security</code>. ProxMenux usa este arquivo para decidir se deve mostrar a instalação ou o menu de gerenciamento em sequências, e os mesmos dados alimentam os painéis no ProxMenux Monitor quando presente."
+  }
+}

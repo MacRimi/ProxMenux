@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "Destinationer för säkerhetskopior — lokalt, Proxmox Backup Server, Borg | ProxMenux",
+    "description": "Tre lagringsbackender tar emot samma säkerhetskopieringsinnehåll från ProxMenux: ett lokalt .tar.zst-arkiv på ett skrivbart filsystem, en PBS-säkerhetskopia i en Proxmox Backup Server-datastore eller ett Borg-arkiv i ett lokalt eller fjärranslutet Borg-arkivlager. Varje backend har egna egenskaper för komprimering, deduplicering, kryptering och nätverk.",
+    "ogTitle": "ProxMenux mål för säkerhetskopior",
+    "ogDescription": "Lokal, Proxmox Backup Server och Borg - tre lagringsbackends för samma värdbackup payload.",
+    "twitterTitle": "Destinationer för ProxMenux-säkerhetskopior | ProxMenux",
+    "twitterDescription": "Lokal arkiv, Proxmox Backup Server och Borg backends för värdbackups."
+  },
+  "header": {
+    "title": "Destinationer",
+    "description": "Tre lagringsbackends som stöds av ProxMenux Backup: lokal arkiv, Proxmox Backup Server (rekommenderas) och Borg. Varje får samma tre-payload arkiv; de skiljer sig i lagringsformat, deduplicering, krypteringsmodell och nätverkskrav.",
+    "section": "Säkerhetskopiering och återställning"
+  },
+  "intro": {
+    "title": "Samma nyttolast, tre backends",
+    "body": "Varje säkerhetskopia skapar samma tre datablock (rootfs, manifest, program). Det som skiljer destinationerna åt är hur innehållet lagras och hämtas inför en återställning. Varje backend är en separat funktion i <code>backup_host.sh</code> — <code>_bk_local</code>, <code>_bk_pbs</code>, <code>_bk_borg</code> — men alla tre använder samma tillfälliga förberedelsesteg (<code>hb_prepare_staging</code>) och samma återställningskod. Valet av destination påverkar bara skrivning och hämtning; det ändrar inte hur återställningen fungerar eller använder arkivet."
+  },
+  "comparison": {
+    "heading": "Funktionsjämförelse",
+    "intro": "Följande tabell listar de konkreta skillnaderna mellan de tre backends som de beter sig i ProxMenux idag. Alla värden beskriver observerat beteende av backend själv, inte redaktionella rekommendationer.",
+    "rows": [
+      {
+        "feature": "Lagringsformat",
+        "local": "Enkel <code>.tar.zst</code>-fil (eller <code>.tar.gz</code> om <code>zstd</code> är frånvarande).",
+        "pbs": "PBS-säkerhetskopia (<code>.pxar</code>-block i datastoren).",
+        "borg": "Borg arkiv inuti ett Borg-förvar (segmentfiler)."
+      },
+      {
+        "feature": "Kompression",
+        "local": "zstd (standardnivå) via <code>tar --zstd</code>. gzip fallback.",
+        "pbs": "Hanteras av proxmox-backup-client. ProxMenux åsidosätter inte komprimeringsinställningarna.",
+        "borg": "Borgs inbyggda komprimering. ProxMenux anropar borg create utan att åsidosätta komprimeringsinställningarna."
+      },
+      {
+        "feature": "Deduplicering",
+        "local": "Ingen. Varje backup är ett fullt oberoende arkiv.",
+        "pbs": "Full chunk-nivå deduplicering över alla säkerhetskopior i databutiken.",
+        "borg": "Full chunk-nivå deduplicering över alla arkiv i förvaret."
+      },
+      {
+        "feature": "Kryptering i vila",
+        "local": "Ingen (förlitar sig på skydd av filsystemnivå).",
+        "pbs": "Valfri kryptering på klientsidan med en nyckelfil. När den är aktiverad laddas återställningsbloben upp som en separat säkerhetskopieringsgrupp.",
+        "borg": "Valfri repokey kryptering (nyckel lagrad i repan, upplåst med en passfras)."
+      },
+      {
+        "feature": "Bevarande / rensning",
+        "local": "Tillämpas per schemalagt jobb via <code>KEEP_LAST</code>. Gamla arkiv tas bort tillsammans med sina sidofiler och körningsloggar. Interaktiva säkerhetskopior utför ingen rensning.",
+        "pbs": "Tillämpas per schemalagt jobb via <code>proxmox-backup-client prune --keep-last / --keep-daily / --keep-weekly</code>. Interaktiva säkerhetskopior utför ingen rensning.",
+        "borg": "Tillämpas per schemalagt jobb via <code>borg prune --keep-last / --keep-daily / --keep-weekly</code>. Interaktiva säkerhetskopior utför ingen rensning."
+      },
+      {
+        "feature": "Nätverk",
+        "local": "Ingen. Skriver till en lokal monteringspunkt (vanligtvis en intern disk eller en USB-enhet).",
+        "pbs": "TCP till PBS-servern (standardport 8007). Kräver PBS-uppgifter + fingeravtryck.",
+        "borg": "Lokal filsystemväg eller SSH tunnel till en avlägsen Borg värd."
+      },
+      {
+        "feature": "Beroenden",
+        "local": "<code>tar</code>, <code>zstd</code> (på Proxmox som standard).",
+        "pbs": "Paketet <code>proxmox-backup-client</code> (medföljer Proxmox VE 8+).",
+        "borg": "<code>borg</code> binär. Autotillhandahållen av ProxMenux från Monitor AppImage-paketet när det saknas."
+      },
+      {
+        "feature": "Åtkomst för återställning",
+        "local": "Alla värdar med tar+zstd kan extrahera arkivet. Inget PBS/Borg behövs.",
+        "pbs": "Kräver <code>proxmox-backup-client</code>, PBS-inloggningsuppgifter och nyckelfilen (om säkerhetskopian är krypterad).",
+        "borg": "Kräver <code>borg</code> + sökvägen till arkivlagret + passfrasen (om krypterad)."
+      }
+    ],
+    "captionCode": "feature",
+    "captionLocal": "Lokal",
+    "captionPbs": "Proxmox Backup Server (rekommenderas)",
+    "captionBorg": "Borg"
+  },
+  "sameArchive": {
+    "heading": "Arkivlayouten ändras inte med destinationen",
+    "body": "Alla tre destinationerna innehåller samma struktur med <code>rootfs/</code> + <code>metadata/</code> + <code>manifest.json</code> som beskrivs i <em>Så fungerar det</em>. Ett uppackat lokalt <code>.tar.zst</code>-arkiv, ett <code>.pxar</code>-arkiv återställt från PBS och ett Borg-arkiv uppackat med <code>borg extract</code> ger samma katalogträd. Återställningskoden (<code>_rs_check_layout</code>, <code>_rs_apply</code>, <code>_rs_prepare_pending_restore</code>) läser samma tre datablock utan att behöva veta vilken destination de kommer från."
+  },
+  "extractStandalone": {
+    "heading": "Extrahera en backup utanför ProxMenux",
+    "intro": "Alla tre arkivformat kan läsas med standardverktyg utan ProxMenux installerat på läsvärden. Kommandona nedan producerar samma katalogträd som en återställning konsumerar internt.",
+    "localCmd": "# From a local .tar.zst archive:\ntar --zstd -xf hostcfg-HOST-TIMESTAMP.tar.zst\n\n# From a .tar.gz fallback:\ntar -xzf hostcfg-HOST-TIMESTAMP.tar.gz",
+    "pbsCmd": "# From a PBS backup (requires proxmox-backup-client):\nproxmox-backup-client restore \\\n    --repository USER@REALM@HOST:DATASTORE \\\n    host/hostcfg-HOST/BACKUP-TIME \\\n    hostcfg.pxar /tmp/hostcfg\n\n# Add --keyfile KEY-PATH when the backup is encrypted.",
+    "borgCmd": "# Från ett Borg-arkiv (kräver borg och passfrasen för krypterade arkivlager):\nborg extract REPO-PATH::ARCHIVE-NAME\n\n# Från ett fjärranslutet arkivlager via SSH:\nborg extract ssh://USER@HOST:PORT/REPO-PATH::ARCHIVE-NAME",
+    "note": "Det extraherade trädet kan sedan inspekteras manuellt eller matas till en manuell återställning. Se de enskilda destinationssidorna för det exakta hämtningsflödet ProxMenux använder under huven."
+  },
+  "whereNext": {
+    "heading": "Detaljer per destination",
+    "intro": "Varje destination har sin egen sida som täcker konfigurationsflödet, on-disk-formatet och hämtningskommandot som används av återställningen.",
+    "items": [
+      {
+        "label": "Lokalt arkiv",
+        "href": "/docs/backup-restore/destinations/local",
+        "tail": " — förkonfigurera ett lokalt mål, montera USB-enheter, skydd mot att arkivet inkluderar sig självt samt JSON-sidofilen som låter Monitor identifiera filen."
+      },
+      {
+        "label": "Proxmox Backup Server (rekommenderas)",
+        "href": "/docs/backup-restore/destinations/pbs",
+        "tail": " — val av datastore, inloggningsuppgifter och certifikatets fingeravtryck, nyckelfilens livscykel, återställningspassfras samt uppladdning av återställningsbloben till PBS för återställning efter en nyinstallation."
+      },
+      {
+        "label": "Borg",
+        "href": "/docs/backup-restore/destinations/borg",
+        "tail": " — lokala arkivlager och arkivlager via SSH, var Borg-binären hämtas (system / cache / Monitors AppImage-paket / GitHub), initiering av arkivlager, hantering av passfraser och SSH-nycklar för fjärranslutna arkivlager."
+      }
+    ]
+  }
+}

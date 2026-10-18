@@ -1,0 +1,106 @@
+{
+  "meta": {
+    "title": "Prispôsobiteľný skript po inštalácii | Dokumentácia ProxMenux",
+    "description": "Vyberte presne tie optimalizácie, ktoré má ProxMenux použiť na hostiteľovi Proxmox VE. 10 kategórií, približne 35 nástrojov a výber pomocou zaškrtávacích políčok. Obsahuje všetko z automatizovaného skriptu aj voliteľné funkcie (IOMMU, Fastfetch, Figurine, Ceph, HA, opravy AMD…).",
+    "ogTitle": "Prispôsobiteľný skript po inštalácii | Dokumentácia ProxMenux",
+    "ogDescription": "10 kategórií, približne 35 jednotlivých optimalizácií. Vyberte presne to, čo chcete na hostiteľovi Proxmox VE. Vratné zmeny sa zaznamenávajú."
+  },
+  "header": {
+    "title": "Prispôsobiteľný post-inštalačný skript",
+    "description": "Vyberte presne tie optimalizácie, ktoré chcete použiť na hostiteľovi Proxmox VE. ProxMenux zoskupuje približne 35 nástrojov do 10 kategórií v jednom výberovom dialógu. Rovnaký základ ako Automatizované, ale s úplnou kontrolou nad použitými zmenami.",
+    "section": "Po inštalácii · Prispôsobiteľné"
+  },
+  "intro": {
+    "title": "Kedy vybrať prispôsobiteľné",
+    "body": "Vyberte túto cestu, ak už poznáte požadované alebo nechcené úpravy hostiteľa. Výberový zoznam zoskupený podľa kategórií umožňuje vopred vyberať, rušiť výber a kombinovať optimalizácie. Položky možno neskôr použiť znovu a vratné zmeny sa zaznamenávajú pre <link>Odinštalovať optimalizácie</link>. Aktualizácie balíkov sa neuvádzajú ako vratné."
+  },
+  "compare": {
+    "heading": "Ako sa porovnáva s Automatizovaným",
+    "body": "Prispôsobiteľné obsahuje celý <link>automatizovaný skript</link>: rovnakých 14 základných optimalizácií a množstvo voliteľných položiek, ktoré Automatizované zámerne vynecháva. Sú užitočné pre konkrétny hardvér (opravy AMD), hosting (OVH RTM) alebo záťaže (IOMMU/VFIO, repozitár Ceph, vysoká dostupnosť, Fastfetch, Figurine, ladenie ARC ZFS, pigz, automatické snímky ZFS, rýchlostné limity vzdump, Open vSwitch, TCP BBR…)."
+  },
+  "categoriesSection": {
+    "heading": "10 kategórií",
+    "body": "Prispôsobiteľný skript zoskupuje optimalizácie do 10 kategórií v jednom výberovom dialógu. Každá kategória má vlastnú stránku dokumentácie — otvorte kartu nižšie pre zdôvodnenie, predvolené hodnoty a overovacie kroky jednotlivých možností."
+  },
+  "categories": [
+    {
+      "name": "Základné nastavenia",
+      "description": "Vyčistí zdroje APT, spustí oficiálnu aktualizáciu Proxmox a nastaví časové pásmo, miestne nastavenia a bežné nástroje. Základ všetkých ostatných skupín."
+    },
+    {
+      "name": "Systém",
+      "description": "Vyladí záznamový subsystém a limity jadra pre hostiteľa s mnohými VM a kontajnermi. Zahŕňa journald, logrotate, sysctl (pamäť, limity súborov), správanie pri kernel panic a rýchle reštarty."
+    },
+    {
+      "name": "Virtualizácia",
+      "description": "Pripraví hostiteľa na pokročilú virtualizáciu. Nainštaluje zodpovedajúceho hosťovského agenta, ak samotný Proxmox beží v podporovanej VM, a povolí IOMMU/VFIO na priame priradenie PCI zariadení GPU, radičov a TPU."
+    },
+    {
+      "name": "Sieť",
+      "description": "Posilní a vyladí sieťový stack hostiteľa. Vynúti IPv4 pre APT, použije bezpečnostné nastavenia sysctl a ladenie vyrovnávacích pamätí TCP, ponúkne Open vSwitch, TCP BBR a TCP Fast Open a priradí trvalé názvy rozhraní k MAC adresám."
+    },
+    {
+      "name": "Úložisko",
+      "description": "Nastaví bežné úložné subsystémy Proxmox: veľkosť ARC ZFS, automatické snímky ZFS, autotrim ZFS pre pooly SSD/NVMe a rýchlostné limity vzdump proti vyťaženiu diskov pri zálohovaní."
+    },
+    {
+      "name": "Zabezpečenie",
+      "description": "Zmenší predvolene vystavenú útočnú plochu. Vypne služby RPC portmapper/rpcbind, ktoré Proxmox nepotrebuje, ale ponecháva načúvať."
+    },
+    {
+      "name": "Prispôsobenie",
+      "description": "Zmení vzhľad a prostredie shellu hostiteľa: farby a aliasy v bashrc, banner MOTD a odstránenie upozornenia na predplatné vo webovom rozhraní."
+    },
+    {
+      "name": "Monitorovanie",
+      "description": "Integruje hostiteľa s OVH Real-Time Monitoring. RTM sa nainštaluje iba pri zistení servera OVH; na iných hostiteľoch možnosť nič nemení."
+    },
+    {
+      "name": "Výkon",
+      "description": "Zrýchli kompresiu pri zálohách a prenosoch nahradením gzip jeho paralelnou alternatívou pigz."
+    },
+    {
+      "name": "Voliteľné",
+      "description": "Špecializované možnosti, ktoré nepotrebuje každý hostiteľ: opravy CPU AMD, banner Fastfetch, 3D názov hostiteľa Figurine, aktualizácia indexu PVE Appliance Manager, repozitár Ceph, služby vysokej dostupnosti, Log2RAM na zníženie opotrebenia SSD a swapový profil ZRAM."
+    }
+  ],
+  "mixTip": {
+    "title": "Kombinujte Automatizované a Prispôsobiteľné",
+    "body": "Bežný postup: najprv spustite <strong>Automatizované</strong> pre rozumné základné nastavenia, potom otvorte <strong>Prispôsobiteľné</strong> a vyberte iba potrebné voliteľné nástroje, napríklad IOMMU pre priame priradenie GPU. Zmeny sa sledujú nezávisle; menu Odinštalovať zobrazí všetko použité bez ohľadu na zvolenú cestu."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Automatizované nastavenia po inštalácii",
+        "href": "/docs/post-install/automated",
+        "tail": " — rozumné predvolené nastavenia použité bez otázok."
+      },
+      {
+        "label": "Odinštalovať optimalizácie",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — čisto vrátiť vybrané zmeny."
+      },
+      {
+        "label": "Základné nastavenia",
+        "href": "/docs/post-install/basic-settings",
+        "tail": " — repozitáre, čas, jazyk a nástroje."
+      },
+      {
+        "label": "Virtualizácia",
+        "href": "/docs/post-install/virtualization",
+        "tail": " — IOMMU + VFIO na priame priradenie zariadení."
+      },
+      {
+        "label": "Zabezpečenie",
+        "href": "/docs/post-install/security",
+        "tailRich": " · <storageLink>Úložisko</storageLink> · <networkLink>Sieť</networkLink> · <customLink>Prispôsobenie</customLink> — ďalšie kategórie."
+      },
+      {
+        "label": "Prehľad po inštalácii",
+        "href": "/docs/post-install",
+        "tail": "."
+      }
+    ]
+  }
+}

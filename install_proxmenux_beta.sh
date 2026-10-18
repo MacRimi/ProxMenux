@@ -594,7 +594,8 @@ select_language() {
         "de" "German" \
         "it" "Italian" \
         "pt" "Portuguese" \
-        "sk" "Slovenčina" 3>&1 1>&2 2>&3)
+        "sk" "Slovenčina" \
+        "sv" "Svenska" 3>&1 1>&2 2>&3)
 
     if [ -z "$LANGUAGE" ]; then
         msg_error "No language selected. Exiting."

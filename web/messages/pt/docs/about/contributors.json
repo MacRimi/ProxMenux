@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "title": "Colaboradores | Documentação ProxMenux",
+    "description": "Reconhecimento às pessoas que tornam o ProxMenux possível: quem testa, revê e desenvolve cada versão.",
+    "ogTitle": "Colaboradores | Documentação ProxMenux",
+    "ogDescription": "Conheça os colaboradores por trás do ProxMenux."
+  },
+  "header": {
+    "title": "Colaboradores",
+    "description": "O projeto ProxMenux cresce graças aos seus colaboradores. Esta página reconhece o seu trabalho: testar versões antes da publicação, detetar regressões, rever PR e ajudar a orientar novas funcionalidades.",
+    "section": "Sobre"
+  },
+  "beyond": {
+    "title": "Para além desta lista",
+    "body": "Muitas outras pessoas contribuem ao comunicar erros, propor funcionalidades em Discussions, testar versões beta e traduzir o projeto. A lista completa de colaboradores do código está no <extlink>gráfico de colaboradores do GitHub</extlink>. Esta página destaca quem participa mais ativamente nos testes e na revisão das versões do ProxMenux."
+  },
+  "testers": {
+    "heading": "Testadores e revisores",
+    "intro": "Estas pessoas estiveram entre as primeiras a contribuir para o projeto. Os seus testes, relatos de problemas e sugestões de melhoria ajudaram o ProxMenux a tornar-se no que é hoje.",
+    "roles": {
+      "testing": "Teste",
+      "testingReviewer": "Testes e revisão"
+    },
+    "youtube": "YouTube"
+  },
+  "contribute": {
+    "heading": "Queres contribuir?",
+    "intro": "Todos os contributos são bem-vindos: código, testes, design, documentação ou simplesmente partilhar ideias:",
+    "tester": "<strong>Testes</strong> — experimente o <beta>canal beta</beta> e comunique o que funciona ou não antes da publicação das versões estáveis.",
+    "developer": "<strong>Desenvolvimento</strong> — Bash, Next.js (TypeScript) e algum Python para o ambiente virtual de tradução (venv). Os PR são bem-vindos no <gh>GitHub</gh>.",
+    "designer": "<strong>Designer</strong> — Melhorias de interface, ícones, capturas de tela para documentação.",
+    "ideas": "<strong>Ideias</strong> — abra um tópico em <disc>GitHub Discussions</disc> antes de criar uma issue para pedir uma funcionalidade."
+  },
+  "coc": {
+    "title": "Leia primeiro o Código de Conduta",
+    "body": "Antes de propor código ou comunicar problemas, leia o <coclink>Código de conduta e as boas práticas</coclink>. Explica as expectativas sobre a responsabilidade pelo código, a comunicação de vulnerabilidades e o âmbito dos PR."
+  }
+}

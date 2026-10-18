@@ -53,7 +53,12 @@ initialize_cache
 
 if [[ -f "$LOCAL_SCRIPTS/global/platform-functions.sh" ]]; then
     source "$LOCAL_SCRIPTS/global/platform-functions.sh"
-    pmx_require_pve || exit 1
+fi
+# On Proxmox Backup Server the menu lists only the options that apply to
+# it; repositories, upgrade and the subscription notice use its tooling.
+PMX_ON_PBS=false
+if declare -F pmx_is_pbs >/dev/null && pmx_is_pbs; then
+    PMX_ON_PBS=true
 fi
 
 # Load shared global functions
@@ -121,6 +126,17 @@ setup_proxmox_repositories() {
     # and set the correct file permissions.
 
     msg_info2 "$(translate "Configuring Proxmox APT repositories...")"
+
+    if [[ "$PMX_ON_PBS" == true ]]; then
+        if ! ensure_pbs_repositories; then
+            msg_error "$(translate "Failed to configure Proxmox Backup Server repositories")"
+            register_tool "proxmox_repos" false "$FUNC_VERSION"
+            return 1
+        fi
+        register_tool "proxmox_repos" true "$FUNC_VERSION"
+        msg_success "$(translate "Proxmox Backup Server APT repositories configured")"
+        return 0
+    fi
 
     if ! ensure_repositories; then
         msg_error "$(translate "Failed to configure Proxmox repositories")"
@@ -248,6 +264,10 @@ EOF
 
 
 apt_upgrade() {
+    if [[ "$PMX_ON_PBS" == true ]]; then
+        bash "$LOCAL_SCRIPTS/global/update-pbs.sh"
+        return
+    fi
     local pve_version
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
 
@@ -2376,6 +2396,14 @@ EOF
 remove_subscription_banner() {
     local FUNC_VERSION="1.0"
     # description: Patch the Proxmox web UI to suppress the "no valid subscription" dialog (PVE 8 + 9 variants supported).
+    if [[ "$PMX_ON_PBS" == true ]]; then
+        if ! bash "$LOCAL_SCRIPTS/global/remove-banner-pve-v3.sh"; then
+            msg_error "$(translate "Subscription banner removal failed")"
+            return 1
+        fi
+        register_tool "subscription_banner" true "$FUNC_VERSION"
+        return 0
+    fi
     local pve_version
     pve_version=$(pveversion 2>/dev/null | grep -oP 'pve-manager/\K[0-9]+' | head -1)
 
@@ -3143,8 +3171,11 @@ EOF
     }
 
 
-    ensure_aliases
-    msg_ok "$(translate "Aliases added to .bashrc")"
+    # The aliases call Proxmox VE tools.
+    if [[ "$PMX_ON_PBS" != true ]]; then
+        ensure_aliases
+        msg_ok "$(translate "Aliases added to .bashrc")"
+    fi
 
     msg_success "$(translate "Figurine installation and configuration completed successfully.")"
     register_tool "figurine" true "$FUNC_VERSION"
@@ -3549,7 +3580,8 @@ EOF
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 MAILTO=""
-*/5 * * * * root /usr/local/bin/log2ram-check.sh >/dev/null 2>&1
+# nice/ionice keep the check off the priority queue for scheduled tasks.
+3-59/10 * * * * root nice -n 19 ionice -c 3 /usr/local/bin/log2ram-check.sh >/dev/null 2>&1
 EOF
         chmod 0644 /etc/cron.d/log2ram-auto-sync
         chown root:root /etc/cron.d/log2ram-auto-sync
@@ -3992,6 +4024,19 @@ main_menu() {
     "Optional|Install Figurine|FIGURINE"
     "Optional|Install and configure Log2RAM|LOG2RAM"
   )
+
+  if [[ "$PMX_ON_PBS" == true ]]; then
+    local -A pve_only=(
+      [GUESTAGENT]=1 [VFIO_IOMMU]=1 [OPENVSWITCH]=1 [VZDUMP]=1 [PVEAM]=1
+      [CEPH]=1 [ENABLE_HA]=1 [OVHRTM]=1 [PIGZ]=1
+    )
+    local pbs_options=() option_key
+    for option in "${options[@]}"; do
+      option_key="${option##*|}"
+      [[ -n "${pve_only[$option_key]:-}" ]] || pbs_options+=("$option")
+    done
+    options=("${pbs_options[@]}")
+  fi
 
   IFS=$'\n' sorted_options=($(for option in "${options[@]}"; do
     IFS='|' read -r category description function_name <<< "$option"

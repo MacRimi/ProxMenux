@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "Säkerhetskopiering och omstart av gränssnitt | ProxMenux-dokumentation",
+    "description": "Ta manuella ögonblicksbilder, bläddra bland och återställ säkerhetskopior av /etc/network/interfaces som lagras i /var/backups/proxmenux/. Inkluderar omstart av nätverkstjänsten med bekräftelse och en snabbvy av den aktuella konfigurationen.",
+    "ogTitle": "Säkerhetskopiering och omstart av gränssnitt | ProxMenux-dokumentation",
+    "ogDescription": "Ta en ögonblicksbild och återställ Proxmox nätverkskonfiguration; starta om nätverkstjänsten med bekräftelse."
+  },
+  "header": {
+    "title": "Säkerhetskopiering och omstart av gränssnitt",
+    "description": "Fyra verktyg för /etc/network/interfaces: ta en manuell ögonblicksbild, visa aktuell konfiguration, återställa en tidigare säkerhetskopia med valfri förhandsvisning och starta om nätverkstjänsten med uttryckligt samtycke. Samma katalog för säkerhetskopior används av de guidade reparationerna.",
+    "section": "Nätverk"
+  },
+  "intro": {
+    "title": "Vad detta gör",
+    "body": "Hanterar samma katalog för säkerhetskopior som de guidade reparationerna (<code>/var/backups/proxmenux/</code>). Du kan ta en extra ögonblicksbild före manuella ändringar, bläddra bland alla befintliga säkerhetskopior och återställa vilken som helst — alltid med en ny automatisk säkerhetskopia före återställningen som ett andra skydd."
+  },
+  "shared": {
+    "heading": "Den gemensamma katalogen för säkerhetskopior",
+    "intro": "Varje säkerhetskopia som tas någonstans i nätverksmenyn landar på samma ställe:",
+    "outro": "Filnamnen är tidsstämplade och sorterade efter datum, och filerna skrivs aldrig över. Katalogen skapas vid första användningen."
+  },
+  "show": {
+    "heading": "Visa nätverkskonfigurationsfil",
+    "body": "Skriver ut <code>/etc/network/interfaces</code> oförändrad i terminalen. Skrivskyddat. Användbart som kontroll före säkerhetskopiering eller efter återställning. Det finns inget separat verktyg för att jämföra med föregående säkerhetskopia, så att granska den aktuella filen är det enklaste sättet att kontrollera innehållet."
+  },
+  "create": {
+    "heading": "Skapa nätverksbackup",
+    "body": "Kopierar den nuvarande <code>/etc/network/interfaces</code> i backupkatalogen med en ny tidsstämpel. Det är det - ingen analys, inga prompts, bara en ögonblicksbild.",
+    "whenTitle": "När man tar en manuell backup",
+    "whenBody": "Innan du redigerar <code>/etc/network/interfaces</code> för hand, installerar ett paket som kan ändra nätverksstacken (till exempel NetworkManager eller Open vSwitch) eller gör en maskinvaruändring. De guidade reparationerna tar redan ögonblicksbilder automatiskt — det här alternativet är för <em>manuella</em> ingrepp."
+  },
+  "restore": {
+    "heading": "Återställ nätverkssäkerhetskopia",
+    "intro": "Listar alla säkerhetskopior i <code>/var/backups/proxmenux/</code> från nyast till äldst och vägleder genom en återställning med skyddsåtgärder:",
+    "steps": [
+      {
+        "title": "1. Välj en backup",
+        "body": "En meny listar varje säkerhetskopia med dess tidsstämpel. Om det inte finns några säkerhetskopior avslutas flödet med ett tydligt meddelande.",
+        "tone": "blue"
+      },
+      {
+        "title": "2. Valfri förhandsvisning",
+        "body": "Erbjuder att öppna den valda säkerhetskopian i en rullningsbar vy innan återställningen bekräftas. Ja är standardvalet — hoppa inte över detta på en fjärransluten värd.",
+        "tone": "blue"
+      },
+      {
+        "title": "3. Säkerhetskopiering före återställning",
+        "body": "Tar <strong>ytterligare en</strong> säkerhetskopia av det aktuella tillståndet innan <code>/etc/network/interfaces</code> skrivs över. Återställning är i sig en destruktiv åtgärd, så den nya ögonblicksbilden före återställningen gör att du kan gå tillbaka om du valde fel säkerhetskopia.",
+        "tone": "amber"
+      },
+      {
+        "title": "4. Applicera återställningen",
+        "body": "Skriver den valda säkerhetskopian över <code>/etc/network/interfaces</code>. Filen har ändrats på disk, men kärnans aktuella tillstånd speglar fortfarande den tidigare konfigurationen.",
+        "tone": "amber"
+      },
+      {
+        "title": "5. Valfri omstart",
+        "body": "Frågar om <code>systemctl restart networking</code> ska köras nu. Avböj för att skjuta upp ändringen till nästa omstart.",
+        "tone": "emerald"
+      }
+    ],
+    "autoBackupTitle": "En återställning tar sin egen backup automatiskt",
+    "autoBackupBody": "När du väljer <em>Återställ nätverkssäkerhetskopia</em> tas alltid en ny ögonblicksbild av den <em>aktuella</em> konfigurationen innan den skrivs över. Om du återställer fel säkerhetskopia innehåller den senaste filen i <code>/var/backups/proxmenux/</code> tillståndet du hade före återställningen."
+  },
+  "restart": {
+    "heading": "Starta om nätverkstjänsten",
+    "body": "Kör <code>systemctl restart networking</code> efter en ja/nej-bekräftelse. Rapporterar resultatet med <code>msg_ok</code> / <code>msg_error</code>. De flesta flöden i menyn erbjuder redan en omstart i slutet. Detta alternativ används efter en manuell ändring eller om du tidigare avböjt den erbjudna omstarten.",
+    "warnTitle": "Kort frånkoppling garanteras; permanent frånkoppling är möjlig",
+    "warnBody": "Omstart av <code>networking</code> tar ned och konfigurerar om alla gränssnitt som deklareras i <code>/etc/network/interfaces</code>. SSH-sessioner via dessa gränssnitt bryts. Om den nya konfigurationen är ogiltig kommer nätverket inte tillbaka. Kör endast detta när:",
+    "warnItems": [
+      "Du har konsolåtkomst / IPMI / iKVM redo, <em>eller</em>",
+      "Du befinner dig fysiskt bredvid maskinen, <em>eller</em>",
+      "Du har precis återställt en konfiguration som du vet fungerar och vill tillämpa den."
+    ]
+  },
+  "manualRollback": {
+    "heading": "Manuell återgång från en konsol",
+    "intro": "Om du inte kan nå menyn (ingen SSH, dialog kraschar, ...) men kan nå en konsol, är återgång två kommandon:",
+    "outro": "Det är <em>samma</em> åtgärd som menyn utför, bara inmatad för hand. Om <code>networking</code> fortfarande inte startar, kontrollera <code>journalctl -u networking -b</code> för att hitta det bakomliggande syntax- eller drivrutinsfelet."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "noneTitle": "”Inga säkerhetskopior hittades” vid återställning",
+    "noneBody": "Katalogen <code>/var/backups/proxmenux/</code> finns inte eller innehåller inga <code>interfaces_backup_*</code>-filer. Kör <em>Skapa nätverksbackup</em> minst en gång eller en guidad reparation som tar en säkerhetskopia automatiskt. Bekräfta med <code>ls /var/backups/proxmenux/</code>.",
+    "unreachTitle": "Omstart av nätverket lyckas men värden är fortfarande onåbar",
+    "unreachBody": "Den nya konfigurationen är fel eller tilldelar inte din IP-adress för administration. Återställ från konsolen (se ovan). Använd sedan <bridgeLink>brygganalys</bridgeLink> och <configLink>konfigurationsanalys</configLink> för att förstå felet innan du tillämpar den igen.",
+    "emptyTitle": "Förhandsvisningen för återställning visar en tom fil",
+    "emptyBody": "Säkerhetskopian är tom (0 byte). Det händer om en kopiering misslyckats utan felmeddelande under en tidigare körning. Välj en äldre säkerhetskopia eller kör <em>Skapa nätverksbackup</em> igen nu om den aktuella konfigurationen fungerar."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "label": "Brygganalys och guidad reparation",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — Den vanligaste orsaken till att en säkerhetskopia hamnar här."
+      },
+      {
+        "label": "Konfigurationsanalys och guidad rensning",
+        "href": "/docs/network/config-analysis",
+        "tailRich": " - skriver också till <code>/var/backups/proxmenux/</code> automatiskt."
+      },
+      {
+        "label": "Diagnostik",
+        "href": "/docs/network/diagnostics",
+        "tail": " — för att verifiera det aktuella tillståndet efter en återställning."
+      }
+    ]
+  }
+}
