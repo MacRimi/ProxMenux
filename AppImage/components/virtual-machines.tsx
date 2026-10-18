@@ -11,7 +11,7 @@ import { Badge } from "./ui/badge"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, PlusCircle, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Trash2, Check, X, AlertTriangle, AlertCircle, Search, Pin, Tag as TagIcon } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, PlusCircle, Loader2, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Trash2, Check, X, AlertTriangle, AlertCircle, Search, Pin, Tag as TagIcon } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Checkbox } from "./ui/checkbox"
 import { Switch } from "./ui/switch"
@@ -2863,8 +2863,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     onClick?: () => void,
   ) => {
     if (!uc) return null
-    const stale = uc.stale === true || (!!uc.last_check && isLxcUpdateStale(uc))
-    if (!stale && (!uc.available || !uc.count || uc.count <= 0)) return null
+    if (!uc.available || !uc.count || uc.count <= 0) return null
     const last = uc.last_check
       ? new Date(uc.last_check).toLocaleString()
       : "—"
@@ -2912,8 +2911,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
             space — matters most on the LXC card row where uptime,
             IP and other chips compete for width. Count alone with
             the up-arrow reads unambiguously as "pending updates". */}
-        {stale ? <Clock className={iconSize} /> : <ArrowUpCircle className={iconSize} />}
-        {stale ? t("vmLxc.updates.checkStale") : uc.count}
+        <ArrowUpCircle className={iconSize} />
+        {uc.count}
         {/* Chevron only when the badge is wired up as a clickable
             shortcut — its absence on the dashboard card avoids
             implying interactivity where there isn't any (the whole

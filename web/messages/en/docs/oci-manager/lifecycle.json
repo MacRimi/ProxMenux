@@ -215,7 +215,7 @@
     {
       "id": "restore",
       "title": "Backup, restore and another host",
-      "intro": "A backup made with vzdump or Proxmox Backup Server includes the container, its disks and the copy of its contract. What the installation keeps on the host is not part of it. <strong>Manage installed OCI applications</strong> detects the containers restored on a host that has no contract for them, a new Proxmox installation or another host, and offers to register them again.",
+      "intro": "A backup made with vzdump or Proxmox Backup Server includes the container, the container disks selected for backup and the copy of its contract. What the installation keeps on the host is not part of it. <strong>Manage installed OCI applications</strong> detects the containers restored on a host that has no contract for them, a new Proxmox installation or another host, and offers to register them again.",
       "blocks": [
         {
           "steps": {
@@ -462,7 +462,7 @@
               ],
               [
                 "Container disks",
-                "Proxmox moves them with the container. HA needs them on shared storage."
+                "Proxmox moves them with the container. HA needs their data available on the target node, through shared storage or a supported replication setup."
               ],
               [
                 "Host directories and devices",

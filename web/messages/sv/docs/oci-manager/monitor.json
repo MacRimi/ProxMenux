@@ -1,0 +1,213 @@
+{
+  "meta": {
+    "title": "OCI-behållare i ProxMenux Monitor | ProxMenux",
+    "description": "Vad ProxMenux Monitor visar för en container installerad av OCI Manager Apps: applikations- och avbildningsversioner, nya avbildningar, konsolutdata och Proxmox VE-terminalen."
+  },
+  "header": {
+    "title": "I ProxMenux Monitor",
+    "description": "En container installerad av OCI Manager Apps visas i VMs & LXCs som alla andra LXC. Dess modal läser installationsposten: applikations- och avbildningsversioner, nya avbildningar, konsolutdata och terminal.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Posten är källan",
+            "body": "OCI Manager Apps vet vad den installerade och var den kom ifrån. Monitorn läser det installationsrekordet istället för att prova containern, så data är detsamma om containern körs eller stoppas."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Flik",
+              "Vilka förändringar för en OCI container"
+            ],
+            "rows": [
+              [
+                "Status",
+                "En <strong>Watchdog</strong>-brytare under Start vid start: programmet startas igen när det stannar på egen hand."
+              ],
+              [
+                "App",
+                "Programmet identifieras från posten och uppdateringar spåras av avbildning"
+              ],
+              [
+                "Uppdateringar",
+                "Avbildningen uppdateras eller programmet ändras, med samma flöde som OCI-menyn"
+              ],
+              [
+                "Monteringar",
+                "Container diskar och värd kataloger, med deras användning"
+              ],
+              [
+                "Loggar",
+                "Endast för OCI-containrar: programmets konsolutdata"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "app",
+      "title": "App",
+      "intro": "<appLink>App</appLink>-fliken erbjuder den installerade applikationen som en detektering, med namnet, logotypen, porten och schemat för posten. När den registreras öppnas redigeraren med metoden <strong>OCI-avbildning (installerad av ProxMenux) </strong>, som inte behöver någon konfiguration.",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "boxes",
+                "title": "Program",
+                "body": "Versionen av applikationen i avbildningen, läs från själva avbildningen: dess miljö eller <code>org.opencontainers.image.version</code>-etiketten. Det är informativt."
+              },
+              {
+                "icon": "archive",
+                "title": "Avbildning",
+                "body": "Byggdatum och digest för den installerade avbildningen. Uppdateringen avgörs här: installerad digest jämförs med den som registret publicerar för samma tagg i dag."
+              }
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "När registret publicerar en ny digest visar kortet <strong>Ny avbildning</strong> med datum och digest, även om programversionen inuti inte ändrats: en ombyggnad på en uppdaterad bas är en uppdatering.",
+              "När digestvärdena matchar visar kortet <strong>Version</strong>.",
+              "Kortet länkar till bildförvaret: dess GitHub-projekt, eller dess Docker Hub-sida för en officiell avbildning.",
+              "Tillgångslänken använder containerns LAN-adress, även för huvudmedlemmen i en multi-container-applikation, som har en andra adress på sitt privata nätverk.",
+              "Knappen <strong>Uppdatera data</strong> läser installationsposten och avbildningsregistret igen. Alternativen för att söka efter eller registrera andra program visas inte: containern innehåller exakt det program som anges i posten."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/monitor-app-tab.png",
+            "alt": "App-fliken för en OCI-behållare med applikationsversionen, avbildningen och förvaringslänken",
+            "caption": "App-fliken för en container installerad av OCI Manager Apps."
+          }
+        },
+        {
+          "p": "Kontrollen körs en gång om dagen med uppdateringskontrollerna av Monitor, och <strong>Uppdatera data</strong> kör den omedelbart. En ny avbildning skickas som ett meddelande via de kanaler som konfigureras i <notificationsLink>Aviseringar</notificationsLink>. Uppdateringen tillämpas från fliken Uppdateringar."
+        }
+      ]
+    },
+    {
+      "id": "updates",
+      "title": "Uppdateringar",
+      "intro": "För en container installerad av OCI Manager Apps visar fliken Uppdateringar programmet med sin installerade avbildning och när registret publicerar en, den nya avbildningen, i samma format som alla andra program. Paket- och programuppdaterarna för en vanlig LXC visas inte.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Knapp",
+              "Vad det öppnar"
+            ],
+            "rows": [
+              [
+                "Uppdatering",
+                "Uppdateringen från <lifecycleLink>Hantera installerade OCI-program</lifecycleLink> för denna container i Monitors terminal. Den kan köras med eller utan ny avbildning; utan en ny avbildning ändras ingenting. I ett program med flera containrar uppdateras alla medlemmar."
+              ],
+              [
+                "Ändra",
+                "Redigeraren för programmet (resurser, nätverk, vägar och GPU). I en multi-container-applikation lägger den till eller tar bort de extra vägarna och enheterna i applikationsbehållaren och i Immich ändrar det som kör igenkänning."
+              ],
+              [
+                "Återställ",
+                "Ersätter uppdatering när en operation på containern avbröts och öppnar sin återhämtning."
+              ],
+              [
+                "Återställ (återställd container)",
+                "Visas för en container återställd från säkerhetskopia som saknar kontrakt på denna värd, under <strong>Återställt OCI-program</strong>. Öppnar <lifecycleLink>återställningen</lifecycleLink> i Monitors terminal; Uppdatera och Ändra visas när den har registrerats."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Externa förändringar, värdkataloger och multi-container-applikationer hanteras som i OCI-menyn. I en multi-container-applikation visas knapparna och alternativen endast på huvudbehållaren; de andra medlemmarna visar sin avbildning, en anteckning om att de uppdateras från huvudbehållaren och en knapp som öppnar den. När terminalen stängs läses avbildningen, posten och monteringarna igen."
+        },
+        {
+          "table": {
+            "headers": [
+              "Alternativ",
+              "Beteende"
+            ],
+            "rows": [
+              [
+                "Behåll säkerhetskopian som tas före uppdateringen",
+                "Varje uppdatering backar upp containern för att återställa den om uppdateringen misslyckas. Med det här alternativet hålls samma säkerhetskopiering i den valda lagringen och visas bland säkerhetskopiorna i CT; på Proxmox Backup Server skrivs en säkerhetskopia före uppdateringen."
+              ],
+              [
+                "Schemalagda uppdateringar",
+                "Avbildningen uppdateras vid vald tid bara om registret publicerar en ny, med möjlighet att vänta tills den är 1, 3, 7 eller 14 dagar gammal. En container med ändringar gjorda utanför ProxMenux hoppas över och rapporteras."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "logs",
+      "title": "Loggar",
+      "intro": "Logs-fliken visas bara för containrar installerade av OCI manager Apps, mellan Monteringar och Säkerhetskopior. Den visar standardutdata och standardfel från avbildningens huvudprocess, samma utdata som <code>docker logs</code> visar för en Docker-container.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Utdata sparas på värden i <code>/var/log/proxmenux/oci/VMID.console.log</code> (läge 0600), från första starten och över omstarter, så att de kan läsas när containern är stoppad.",
+              "Filen roteras på 10 MB och håller tre komprimerade kopior (<code>/etc/logrotate.d/proxmenux-oci</code>).",
+              "Varje start av containern är markerad i utgången. Fliken visar utgången sedan den sista starten som standard; <strong>Full historia</strong> visar också de tidigare.",
+              "När programmet tas bort tas även dess utdata bort.",
+              "De senaste 100, 500 eller 1000 raderna visas. När containern körs följs nya rader i realtid; om du rullar upp pausas följningen och <strong>Följ</strong> återupptar den.",
+              "Ett filter visar endast linjer som innehåller en text, och <strong>Ladda ner</strong> sparar linjerna laddade.",
+              "Färgkoder tas bort och en rad som ritas om av en förloppsindikator visas i sitt slutliga tillstånd.",
+              "Fliken läser filen varje gång den öppnas; den mellanlagras inte."
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Inloggningsuppgifter vid första starten",
+            "body": "Avbildningar som skriver ut ett genererat lösenord på sin första start lämnar det i denna utgång, som <code>docker logs</code> gör. Installatören läser den därifrån för att visa den i sin sammanfattning."
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/monitor-logs-tab.png",
+            "alt": "Logs-fliken med konsolutgången av en OCI-behållare, linjeväljaren, filtret och följknappen",
+            "caption": "Konsolutgång av en OCI-behållare."
+          }
+        }
+      ]
+    },
+    {
+      "id": "terminal",
+      "title": "Proxmox VE konsol",
+      "blocks": [
+        {
+          "p": "En OCI-bild kör sin egen process som PID 1 och ingen inloggningstjänst, så standardkonsolen för en LXC skulle öppna en terminal där inget svarar. Containers installerade av OCI Manager Apps skapas med <code>cmode: shell</code>: Proxmox VE-konsolen öppnar ett skal med <code>lxc-attach</code>, motsvarande <code>docker exec</code>, med den löpande applikationen orörd."
+        },
+        {
+          "list": {
+            "items": [
+              "Skalet är det som <code>/etc/passwd</code> anger för root i avbildningen. Om root saknar skal eller avbildningen inte innehåller något behålls standardkonsolen.",
+              "Skalet körs som root i containern, utan ett lösenord. Vem kan öppna det beslutas av <code>VM.Console</code> tillstånd av Proxmox VE.",
+              "Monitorns terminal går in i containern med <code>pct enter</code>, som fungerar på samma sätt."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "mounts",
+      "title": "Monteringar",
+      "blocks": [
+        {
+          "p": "<mountsLink>Monteringar</mountsLink>-fliken listar containerns diskar och värdkataloger. Användningen av en containerdisk på blocklagring som LVM-thin läses från diskens filsystem, som bara är monterat inuti containern."
+        }
+      ]
+    }
+  ]
+}
