@@ -1740,14 +1740,14 @@
       "stackMemberBody": "Den här behållaren stöder en applikation vars huvudbehållare är {primary}. Applikationen, dess webblänkar och dess version visas där.",
       "nativeEvidencePort": "Lyssnande TCP-port",
       "nativeEvidenceFile": "Installerad fil",
-      "nativeEvidenceProcess": "Kör körbar fil",
+      "nativeEvidenceProcess": "Körande programfil",
       "nativeEvidenceDirectory": "Arbetskatalog",
-      "nativeEvidenceService": "Servicedefinition",
-      "nativeScanFailed": "Programsökningen kunde inte avslutas.Tidigare bevis kan vara föråldrade;försök igen.",
-      "nativeScanPartial": "Sökningen är ofullständig.Granska de tillgängliga bevisen och försök igen.",
+      "nativeEvidenceService": "Tjänstdefinition",
+      "nativeScanFailed": "Programsökningen kunde inte slutföras. Tidigare resultat kan vara inaktuella; försök igen.",
+      "nativeScanPartial": "Programsökningen är ofullständig. Granska det som hittades och försök igen.",
       "nativeVersionUnknown": "Installerad version okänd",
-      "nativeEvidenceStale": "Bevisen kan vara föråldrade eller ofullständiga.",
-      "nativeRegisterOnly": "Bekräfta registreringen i editorn.En känd version är ett manuellt värde;ingen uppdatering är konfigurerad."
+      "nativeEvidenceStale": "Det som hittades kan vara inaktuellt eller ofullständigt.",
+      "nativeRegisterOnly": "Bekräfta registreringen i redigeraren. En känd version sparas som ett manuellt värde; ingen uppdatering konfigureras."
     },
     "statusFilter": {
       "ariaLabel": "Filtrera virtuella maskiner och containrar",
