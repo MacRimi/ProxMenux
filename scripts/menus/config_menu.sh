@@ -744,7 +744,7 @@ show_version_info() {
             fi
             local translated_status=$(translate "$status")
             case "$status" in
-                "installed"|"already_installed"|"created"|"already_exists"|"upgraded"|"updated")
+                "installed"|"already_installed"|"installed_from_github"|"created"|"already_exists"|"upgraded"|"updated")
                     info_message+="✓ $component: $translated_status\n"
                     ;;
                 *)
@@ -851,6 +851,9 @@ uninstall_proxmenu() {
         else
             pmx_edit_file /etc/motd '/This system is optimised by: ProxMenux/d'
         fi
+
+        # The change journal above writes under BASE_DIR again.
+        rm -rf "$BASE_DIR"
         
         echo "100" ; echo "Uninstallation complete!"
         sleep 1
