@@ -20,7 +20,7 @@
   },
   "iommu": {
     "heading": "IOMMU groups — why the whole card leaves at once",
-    "body": "PCI passthrough is done per <strong>IOMMU group</strong>, which is the smallest unit the CPU's IOMMU can isolate. Everything inside a group moves together. If your SATA controller shares its IOMMU group with the USB controller, passing the SATA card to a VM also takes the USB ports with it — often undesirable.",
+    "body": "The isolation boundary for PCI passthrough is the <strong>IOMMU group</strong>, the smallest unit the CPU’s IOMMU can isolate. Devices in the same group cannot be isolated from each other. If a SATA controller shares its group with a USB controller, passing through SATA may also require releasing USB from the host, or may prevent passthrough. It does not automatically assign every device in the group to the VM.",
     "outro": "ProxMenux shows the IOMMU group next to each device and warns you when a group carries more than just the controller you want. You can still proceed if the extra devices in the group are acceptable (all disk controllers, for example), or back out if they are not."
   },
   "prereqs": {
@@ -97,7 +97,7 @@
     "busyBody": "Another process still holds the PCI device. Most common causes: a previous VM that crashed without releasing it, or the host kernel reclaimed it on the last boot. Run <code>lspci -nnk -s &lt;addr&gt;</code> to see which driver is bound; it should be <code>vfio-pci</code>. A full host reboot usually clears this.",
     "noDisksTitle": "Guest sees the controller but not the disks",
     "noDisksBody": "The controller model lacks an in-guest driver. Linux almost never hits this; Windows does — install the vendor driver (e.g. LSI / Broadcom for older SAS HBAs) while the card is detached, then reboot with the card attached.",
-    "sharedTitle": "Shared IOMMU group also exports an unrelated device",
+    "sharedTitle": "The IOMMU group includes an unrelated device",
     "sharedBody": "Options: (a) move the card to a different PCIe slot to change its group, (b) enable <em>ACS override</em> in the kernel to split groups (security trade-off — research before applying), or (c) pick a different card in a cleaner group."
   },
   "related": {

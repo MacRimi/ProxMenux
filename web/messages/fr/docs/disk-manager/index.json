@@ -1,0 +1,135 @@
+{
+  "meta": {
+    "title": "Gestionnaire de disques Proxmox : VM/LXC, tests SMART et effacement | ProxMenux",
+    "description": "Gérez les disques physiques d’un hôte Proxmox VE avec ProxMenux : connexion aux VM ou LXC (qm set scsi/sata/virtio, pct mp), import d’images img / qcow2 / vmdk / raw, passthrough de HBA ou contrôleurs NVMe complets, effacement avec contrôles de sécurité et autotests SMART.",
+    "ogTitle": "Gestionnaire de disques Proxmox : VM/LXC, tests SMART et effacement",
+    "ogDescription": "Connecter des disques aux VM/LXC, importer des images, utiliser le passthrough PCI des contrôleurs, effacer avec contrôles de sécurité et lancer des tests SMART sur Proxmox VE.",
+    "twitterTitle": "Gestionnaire de disques Proxmox | ProxMenux",
+    "twitterDescription": "Connexion de disques aux VM/LXC, import d’images, passthrough PCI, effacement avec contrôles de sécurité et tests SMART."
+  },
+  "header": {
+    "title": "Gestionnaire de disque",
+    "description": "Le menu Gestionnaire de disques regroupe les outils ProxMenux pour les disques physiques de l’hôte : connexion aux VM et LXC, import d’images, passthrough d’un contrôleur complet ou d’un périphérique NVMe, effacement avec contrôles de sécurité et tests SMART.",
+    "section": "Gestionnaire de disque"
+  },
+  "intro": {
+    "title": "Ce menu sert à",
+    "body": "Ces outils utilisent les <strong>disques physiques visibles par l’hôte Proxmox et les fichiers image qui y sont stockés</strong>. Le menu comporte trois groupes : <strong>VM</strong> (connexion de disques ou import d’images), <strong>LXC</strong> (connexion à un conteneur) et <strong>Utilitaires</strong> (formatage et état SMART). Les opérations de connexion et d’effacement masquent ou bloquent les disques système et utilisés ; SMART peut les examiner sans les effacer."
+  },
+  "opening": {
+    "heading": "Ouverture du menu",
+    "body": "Dans le menu principal de ProxMenux, sélectionnez <strong>Disk Manager</strong>. Vous verrez ceci :",
+    "imageAlt": "Menu Gestionnaire de disque avec blocs VM, LXC et Utilitaires"
+  },
+  "groups": {
+    "heading": "Trois groupes d'outils",
+    "intro": "Le menu est organisé en trois groupes : <strong>VM</strong>, <strong>LXC</strong> et <strong>Utilitaires</strong>. Cliquez sur une carte pour accéder directement aux outils du groupe.",
+    "vmTitle": "VM",
+    "vmBody": "Outils qui fonctionnent sur des machines virtuelles existantes. Le VM doit être éteint; ProxMenux le valide avant de toucher la configuration.",
+    "vmItems": [
+      "Importer le disque vers la VM",
+      "Importer l'image disque vers la VM",
+      "Ajouter un contrôleur ou un NVMe à une VM"
+    ],
+    "lxcTitle": "LXC",
+    "lxcBody": "Outils pour conteneurs LXC existants. Ce script exige un conteneur privilégié et propose de changer le paramètre si nécessaire. Lisez d’abord les précautions sur la conversion et les propriétaires des fichiers sur la page de l’outil.",
+    "lxcItems": [
+      "Importer un disque vers LXC"
+    ],
+    "utilitiesTitle": "Utilitaires",
+    "utilitiesBody": "Outils côté hôte qui fonctionnent sur les disques eux-mêmes, indépendamment de tout VM ou conteneur.",
+    "utilitiesItems": [
+      "Formater ou effacer un disque physique",
+      "Santé et test du disque SMART"
+    ]
+  },
+  "vm": {
+    "heading": "VM",
+    "intro": "Outils qui fonctionnent sur des machines virtuelles existantes. Le VM doit être éteint; ProxMenux le valide avant de toucher la configuration.",
+    "options": [
+      {
+        "icon": "HardDrive",
+        "href": "/docs/disk-manager/import-disk-vm",
+        "title": "Importer le disque vers la VM",
+        "description": "Joindre un disque physique non assigné à un VM existant. Prend en charge SATA / SCSI / VirtIO / IDE, utilise des chemins de /dev/disk/by-id persistants."
+      },
+      {
+        "icon": "FileDown",
+        "href": "/docs/disk-manager/import-disk-image-vm",
+        "title": "Importer l'image disque vers la VM",
+        "description": "Importez des images disque (.img / .qcow2 / .vmdk / .raw) dans une VM existante. Processus en deux phases utilisant qm importdisk."
+      },
+      {
+        "icon": "Cpu",
+        "href": "/docs/disk-manager/add-controller-nvme-vm",
+        "title": "Ajouter un contrôleur ou un NVMe à une VM",
+        "description": "Passthrough PCI d’un HBA SATA/SAS complet ou d’un périphérique NVMe à une VM. Gestion de l’activation d’IOMMU et de la détection des conflits."
+      }
+    ]
+  },
+  "lxc": {
+    "heading": "LXC",
+    "intro": "Outils pour conteneurs LXC existants. Ce script exige un conteneur privilégié et propose de changer le paramètre si nécessaire. Lisez d’abord les précautions sur la conversion et les propriétaires des fichiers sur la page de l’outil.",
+    "options": [
+      {
+        "icon": "Boxes",
+        "href": "/docs/disk-manager/import-disk-lxc",
+        "title": "Importer un disque vers LXC",
+        "description": "Joindre un disque physique non assigné à un conteneur LXC existant comme point de montage. Gérer la détection de système de fichiers / format et la conversion privilégiée."
+      }
+    ]
+  },
+  "utilities": {
+    "heading": "Utilitaires",
+    "intro": "Outils côté hôte qui fonctionnent sur les disques eux-mêmes, indépendamment de tout VM ou conteneur.",
+    "options": [
+      {
+        "icon": "Eraser",
+        "href": "/docs/disk-manager/format-disk",
+        "title": "Formater/effacer le disque physique (sûr)",
+        "description": "Effacement de disques avec des contrôles stricts : seuls les disques entièrement libres sont affichés et une double confirmation est toujours requise."
+      },
+      {
+        "icon": "Activity",
+        "href": "/docs/disk-manager/smart-disk-test",
+        "title": "Santé et test du disque SMART",
+        "description": "Exécutez des contrôles de santé SMART et des auto-tests courts/longs sur les disques SATA, SAS et NVMe. Exporte JSON pour le moniteur."
+      }
+    ]
+  },
+  "safety": {
+    "title": "Règles de sécurité pour la connexion et l’effacement des disques",
+    "intro": "Les opérations de connexion et d’effacement excluent les périphériques susceptibles de nuire à l’hôte :",
+    "items": [
+      "Le <strong>disque système</strong> et les membres actifs du pool racine, du swap et de ZFS/LVM/RAID sont toujours masqués.",
+      "Les disques <strong> montés</strong> n'importe où sur l'hôte sont cachés ou bloqués lors de l'exécution.",
+      "Les disques <strong> référencés par un VM ou LXC</strong> en cours d'exécution ne peuvent pas être réaffectés ou effacés.",
+      "Les opérations qui peuvent modifier l'état hôte (activer IOMMU, effacer) nécessitent une confirmation explicite."
+    ]
+  },
+  "related": {
+    "heading": "Voir aussi",
+    "items": [
+      {
+        "href": "/docs/storage-share",
+        "label": "Gestionnaire de stockage et de partage",
+        "tail": "— enregistrer le stockage dans Proxmox lui-même (NFS / Samba / iSCSI / local) et partager les dossiers entre hôte et CT."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Commandes de stockage et de disques",
+        "tail": " — référence des périphériques bloc, LVM, pvesm et SMART."
+      },
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "Commandes de gestion ZFS",
+        "tail": "— pour les pools et ensembles de données ZFS."
+      },
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Ajouter GPU à VM (Passthrough)",
+        "tail": "— les mêmes concepts IOMMU/VFIO appliqués aux GPU."
+      }
+    ]
+  }
+}
