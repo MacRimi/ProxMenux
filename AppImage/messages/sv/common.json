@@ -1737,7 +1737,17 @@
       "portCategoryCustomPlaceholder": "Skriv en kategori och tryck på Enter (Esc för att avbryta)",
       "portCustomUrlPlaceholder": "Anpassad URL (t.ex. https://vault.example.com) - åsidosätter IP:port",
       "stackMemberTitle": "En del av en multicontainerapplikation",
-      "stackMemberBody": "Den här behållaren stöder en applikation vars huvudbehållare är {primary}. Applikationen, dess webblänkar och dess version visas där."
+      "stackMemberBody": "Den här behållaren stöder en applikation vars huvudbehållare är {primary}. Applikationen, dess webblänkar och dess version visas där.",
+      "nativeEvidencePort": "Lyssnande TCP-port",
+      "nativeEvidenceFile": "Installerad fil",
+      "nativeEvidenceProcess": "Kör körbar fil",
+      "nativeEvidenceDirectory": "Arbetskatalog",
+      "nativeEvidenceService": "Servicedefinition",
+      "nativeScanFailed": "Programsökningen kunde inte avslutas.Tidigare bevis kan vara föråldrade;försök igen.",
+      "nativeScanPartial": "Sökningen är ofullständig.Granska de tillgängliga bevisen och försök igen.",
+      "nativeVersionUnknown": "Installerad version okänd",
+      "nativeEvidenceStale": "Bevisen kan vara föråldrade eller ofullständiga.",
+      "nativeRegisterOnly": "Bekräfta registreringen i editorn.En känd version är ett manuellt värde;ingen uppdatering är konfigurerad."
     },
     "statusFilter": {
       "ariaLabel": "Filtrera virtuella maskiner och containrar",

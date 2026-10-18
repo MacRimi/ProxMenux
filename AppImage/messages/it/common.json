@@ -1737,7 +1737,17 @@
       "portCategoryCustomPlaceholder": "Digita una categoria e premi Enter (Esc per annullare)",
       "portCustomUrlPlaceholder": "URL personalizzato (ad es. https://vault.example.com) — sostituisce IP:port",
       "stackMemberTitle": "Parte di un'applicazione multi-container",
-      "stackMemberBody": "Questo container supporta un’applicazione il cui container principale è {primary}. L’applicazione, i suoi collegamenti web e la sua versione sono mostrati lì."
+      "stackMemberBody": "Questo container supporta un’applicazione il cui container principale è {primary}. L’applicazione, i suoi collegamenti web e la sua versione sono mostrati lì.",
+      "nativeEvidencePort": "porta TCP in ascolto",
+      "nativeEvidenceFile": "file installato",
+      "nativeEvidenceProcess": "esecuzione dell'eseguibile",
+      "nativeEvidenceDirectory": "directory di lavoro",
+      "nativeEvidenceService": "definizione del servizio",
+      "nativeScanFailed": "impossibile completare la ricerca dell'applicazione.Le prove precedenti potrebbero essere obsolete;riprova.",
+      "nativeScanPartial": "la ricerca dell'applicazione è incompleta.Esaminare le prove disponibili e riprovare.",
+      "nativeVersionUnknown": "versione installata sconosciuta",
+      "nativeEvidenceStale": "le prove potrebbero essere obsolete o incomplete.",
+      "nativeRegisterOnly": "conferma la registrazione nell'editor.Una versione nota è un valore manuale;nessun programma di aggiornamento è configurato."
     },
     "statusFilter": {
       "ariaLabel": "Filtra macchine virtuali e container",

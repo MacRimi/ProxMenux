@@ -1737,7 +1737,17 @@
       "portCategoryCustomPlaceholder": "Geben Sie eine Kategorie ein und drücken Sie Enter (Esc zum Abbrechen)",
       "portCustomUrlPlaceholder": "Benutzerdefinierte URL (z. B. https://vault.example.com) überschreibt IP:port",
       "stackMemberTitle": "Teil einer Multi-Container-Anwendung",
-      "stackMemberBody": "Dieser Container gehört zu einer Anwendung, deren Hauptcontainer {primary} ist. Die Anwendung, ihre Weblinks und ihre Version werden dort angezeigt."
+      "stackMemberBody": "Dieser Container gehört zu einer Anwendung, deren Hauptcontainer {primary} ist. Die Anwendung, ihre Weblinks und ihre Version werden dort angezeigt.",
+      "nativeEvidencePort": "Überwachung des TCP-Ports",
+      "nativeEvidenceFile": "Installierte Datei",
+      "nativeEvidenceProcess": "Ausführbare Datei ausführen",
+      "nativeEvidenceDirectory": "Arbeitsverzeichnis",
+      "nativeEvidenceService": "Dienstdefinition",
+      "nativeScanFailed": "Die Anwendungssuche konnte nicht abgeschlossen werden.Frühere Beweise könnten veraltet sein;versuchen Sie es erneut.",
+      "nativeScanPartial": "Die Anwendungssuche ist unvollständig.Überprüfen Sie die verfügbaren Beweise und versuchen Sie es erneut.",
+      "nativeVersionUnknown": "Installierte Version unbekannt",
+      "nativeEvidenceStale": "Die Beweise sind möglicherweise veraltet oder unvollständig.",
+      "nativeRegisterOnly": "Registrierung im Editor bestätigen.Eine bekannte Version ist ein manueller Wert;Es ist kein Updater konfiguriert."
     },
     "statusFilter": {
       "ariaLabel": "Virtuelle Maschinen und Container filtern",
