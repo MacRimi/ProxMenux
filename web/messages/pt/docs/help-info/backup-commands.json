@@ -203,7 +203,7 @@
         },
         {
           "command": "qm importdisk <vmid> <disk-image> <storage>",
-          "description": "Importar uma imagem de disco raw ou qcow2 já extraída, não um arquivo de cópia"
+          "description": "Importar um ficheiro de imagem de disco (por exemplo raw, qcow2 ou vmdk) como disco não utilizado, não um arquivo de backup vzdump"
         }
       ]
     }

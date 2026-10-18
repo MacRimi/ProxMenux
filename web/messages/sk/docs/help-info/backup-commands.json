@@ -203,7 +203,7 @@
         },
         {
           "command": "qm importdisk <vmid> <disk-image> <storage>",
-          "description": "Importovať už extrahovaný obraz disku raw alebo qcow2, nie archív zálohy"
+          "description": "Importovať súbor obrazu disku (napríklad raw, qcow2 alebo vmdk) ako nepoužitý disk, nie archív zálohy vzdump"
         }
       ]
     }

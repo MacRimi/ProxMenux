@@ -203,7 +203,7 @@
         },
         {
           "command": "qm importdisk <vmid> <disk-image> <storage>",
-          "description": "Importera en redan extraherad raw- eller qcow2-diskavbild, inte ett säkerhetskopieringsarkiv"
+          "description": "Importera en diskavbildsfil (till exempel raw, qcow2 eller vmdk) som en oanvänd disk, inte ett vzdump-säkerhetskopiearkiv"
         }
       ]
     }
