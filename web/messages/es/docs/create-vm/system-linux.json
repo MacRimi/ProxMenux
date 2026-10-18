@@ -1,13 +1,13 @@
 {
   "meta": {
-    "title": "Crear VM: System Linux | ProxMenux Documentation",
+    "title": "Crear VM: sistema Linux | Documentación de ProxMenux",
     "description": "Crea máquinas virtuales Linux en Proxmox VE con ProxMenux. Cubre el catálogo curado de ISOs oficiales (Ubuntu, Debian, Fedora, Arch, Rocky, Mint, openSUSE, Alpine, Kali, Manjaro), el plan de almacenamiento unificado, el passthrough de GPU opcional y consejos post-instalación.",
-    "ogTitle": "Crear VM: System Linux | ProxMenux Documentation",
+    "ogTitle": "Crear VM: sistema Linux | Documentación de ProxMenux",
     "ogDescription": "Crea VMs Linux en Proxmox VE con ProxMenux. Catálogo curado de ISOs, plan de almacenamiento unificado, passthrough de GPU opcional y consejos post-instalación.",
     "ogImageAlt": "Menú de VM Linux de ProxMenux"
   },
   "header": {
-    "title": "Crear VM: System Linux",
+    "title": "Crear VM: sistema Linux",
     "description": "Crea una VM Linux en Proxmox VE. ProxMenux trae un catálogo curado de ISOs oficiales de Linux listas para descargar, más un selector de ISO local, y enruta todo a través del asistente de VM compartido, el plan de almacenamiento unificado y el asistente opcional de passthrough de GPU.",
     "section": "Máquinas virtuales"
   },
@@ -27,7 +27,7 @@
     "headerValue": "Valor por defecto",
     "defaultRows": [
       {
-        "param": "Machine type",
+        "param": "Tipo de máquina",
         "valueRich": "<code>q35</code>"
       },
       {
@@ -35,11 +35,11 @@
         "value": "OVMF (UEFI)"
       },
       {
-        "param": "CPU type",
+        "param": "Tipo de CPU",
         "value": "Host"
       },
       {
-        "param": "Cores",
+        "param": "Núcleos",
         "value": "2"
       },
       {
@@ -47,15 +47,15 @@
         "value": "4096 MB"
       },
       {
-        "param": "Bridge",
+        "param": "Puente",
         "valueRich": "<code>vmbr0</code>"
       },
       {
-        "param": "MAC address",
+        "param": "Dirección MAC",
         "value": "Generada automáticamente"
       },
       {
-        "param": "Start on completion",
+        "param": "Arrancar al terminar",
         "value": "No"
       }
     ],
@@ -64,7 +64,7 @@
     "headerOptions": "Opciones",
     "advancedRows": [
       {
-        "param": "Machine type",
+        "param": "Tipo de máquina",
         "optionsRich": "<code>q35</code> o <code>i440fx</code>"
       },
       {
@@ -72,11 +72,11 @@
         "options": "OVMF (UEFI) o SeaBIOS (Legacy)"
       },
       {
-        "param": "CPU type",
-        "options": "Host o KVM64"
+        "param": "Tipo de CPU",
+        "options": "Host, KVM64 y otros modelos de CPU de la lista"
       },
       {
-        "param": "Cores",
+        "param": "Núcleos",
         "options": "Número de núcleos de CPU"
       },
       {
@@ -84,11 +84,11 @@
         "options": "Memoria asignada a la VM"
       },
       {
-        "param": "Bridge",
+        "param": "Puente",
         "options": "Bridge de red"
       },
       {
-        "param": "MAC address",
+        "param": "Dirección MAC",
         "options": "MAC personalizada"
       },
       {
@@ -108,19 +108,19 @@
     "virtualDiskItems": [
       "Lista los volúmenes de almacenamiento Proxmox disponibles en el host.",
       "Eliges el almacenamiento destino y el tamaño en GB.",
-      "El disco se adjunta a la VM como SATA (<code>sata0</code>, <code>sata1</code>, … hasta 6)."
+      "El disco usa el bus elegido: SCSI (predeterminado), SATA, VirtIO o IDE. Los puertos SATA son <code>sata0</code>, <code>sata1</code>, …, seis puertos numerados del 0 al 5."
     ],
     "importDiskTitle": "b. Añadir disco importado",
     "importDiskItems": [
       "Detecta los discos físicos que es seguro importar (los discos del sistema y protegidos están ocultos).",
       "Seleccionas uno o varios discos mediante una checklist.",
-      "Los discos importados se adjuntan como SATA mediante <code>qm set</code>."
+      "Los discos importados usan el bus elegido y se conectan mediante <code>qm set</code>."
     ],
     "pciTitle": "c. Añadir controladora o NVMe (PCI passthrough)",
     "pciItems": [
       "Detecta HBAs SATA/SAS y dispositivos NVMe del host y te deja pasar una <em>controladora entera</em> a la VM. IOMMU debe estar habilitado; el script se ofrece a habilitarlo y reinicia si hace falta.",
       "Un paso de confirmación advierte del riesgo a nivel de controladora (la tarjeta completa, incluidos todos los discos que tenga, deja de estar en el host).",
-      "Los dispositivos PCI seleccionados se adjuntan mediante <code>qm set hostpciN: …</code>."
+      "Los dispositivos PCI se conectan con comandos como <code>qm set VMID --hostpci0 PCI_ADDRESS,pcie=1</code>. Sustituye VMID y PCI_ADDRESS por el ID de la VM y la dirección PCI y usa un índice hostpci libre para cada dispositivo."
     ],
     "resetTitle": "Resetear y terminar",
     "resetBody": "El menú también ofrece <strong>r</strong> (resetear la selección actual y empezar de nuevo) y <strong>d</strong> (terminar y continuar). No puedes terminar con un plan vacío."
@@ -135,7 +135,7 @@
     "efiBody": "Cuando se selecciona OVMF (UEFI), ProxMenux crea un disco EFI de 4 MB en el almacenamiento que elijas para que el firmware tenga dónde guardar sus variables.",
     "isoTitle": "Montaje de la ISO",
     "isoBody": "La ISO de instalación se adjunta a <code>ide2</code> como CD-ROM, lista para el primer arranque.",
-    "guestTitle": "QEMU Guest Agent",
+    "guestTitle": "QEMU Agente invitado",
     "guestBody": "El canal del guest agent se habilita en la configuración de la VM. Aún tienes que instalar el agente dentro del guest — mira los consejos más abajo."
   },
   "installOptions": {
@@ -182,7 +182,7 @@
       {
         "name": "Arch Linux",
         "variants": [
-          "latest"
+          "el último"
         ]
       },
       {
@@ -227,7 +227,7 @@
     "heading": "Qué hace el script de principio a fin",
     "items": [
       "Obtiene la ISO de Linux (descarga oficial o archivo local).",
-      "Aplica la configuración por defecto o avanzada de CPU / RAM / BIOS / machine type.",
+      "Aplica la configuración predeterminada o avanzada de CPU, RAM, BIOS y tipo de máquina.",
       "Abre el plan de almacenamiento y adjunta los discos virtuales, discos importados y dispositivos PCI seleccionados.",
       "Crea el disco EFI cuando se selecciona UEFI.",
       "Monta la ISO de Linux en <code>ide2</code>.",
@@ -241,23 +241,23 @@
   "postInstall": {
     "heading": "Consejos post-instalación",
     "guestAgentHeading": "Instala el QEMU Guest Agent dentro de la VM",
-    "guestAgentBody": "ProxMenux habilita el canal del guest agent en la configuración de la VM, pero el agente como tal tiene que instalarse dentro del guest. Permite el apagado controlado, el freeze del filesystem para snapshots consistentes y un reporte de memoria preciso en la UI de Proxmox.",
+    "guestAgentBody": "ProxMenux habilita el canal del agente invitado en la configuración de la VM, pero debes instalar el agente dentro del sistema invitado. Permite el apagado controlado y congelar los sistemas de archivos durante los backups para mejorar la coherencia de los datos.",
     "debian": "Debian / Ubuntu",
     "fedora": "Fedora / Rocky / RHEL",
     "arch": "Arch Linux",
     "opensuse": "openSUSE",
     "virtioHeading": "Soporte de VirtIO en Linux",
-    "virtioBody": "Los kernels modernos de Linux (2.6.25+) incluyen los drivers VirtIO de disco y red por defecto, así que puedes cambiar la interfaz del disco a <code>virtio</code> o <code>virtio-scsi</code> en el asistente avanzado y el adaptador de red a <code>virtio</code> sin ningún paso extra de drivers.",
+    "virtioBody": "Las distribuciones modernas de Linux suelen incluir controladores VirtIO de disco y red. Selecciona <code>virtio</code> para discos de bloques VirtIO o <code>scsi</code> con la controladora VirtIO SCSI configurada; el adaptador de red también usa <code>virtio</code>. Comprueba la compatibilidad en instaladores antiguos.",
     "virtioWarnTitle": "Distribuciones muy antiguas",
-    "virtioWarnBody": "Si vas a instalar algo anterior al kernel 2.6.25, puede que los módulos VirtIO no estén disponibles en el momento de la instalación. En ese caso mantén SATA / SCSI o proporciona un disco de drivers.",
+    "virtioWarnBody": "Los instaladores muy antiguos pueden carecer de los controladores VirtIO necesarios. En ese caso usa una controladora SATA / SCSI emulada o proporciona los controladores adecuados.",
     "trimHeading": "Habilita TRIM / discard en almacenamiento SSD",
     "trimBody": "Cuando la VM está sobre almacenamiento Proxmox respaldado por SSD y el disco se adjuntó con el flag <code>discard</code>, puedes propagar los comandos trim desde dentro del guest. Dos opciones:",
     "trimItems": [
-      "Ejecutar <code>fstrim -av</code> periódicamente (o habilitar la unit <code>fstrim.timer</code> en distribuciones systemd).",
-      "O montar los filesystems con la opción <code>discard</code> en <code>/etc/fstab</code>."
+      "Ejecuta <code>fstrim -av</code> periódicamente o habilita la unidad <code>fstrim.timer</code> en distribuciones con systemd.",
+      "O monta los sistemas de archivos con la opción <code>discard</code> en <code>/etc/fstab</code>."
     ],
-    "balloonHeading": "Memory ballooning",
-    "balloonBody": "El driver <code>virtio_balloon</code> viene con los kernels modernos de Linux. Proxmox lo usa para reclamar memoria no usada de la VM y mostrar utilización precisa en la UI — sin configuración del lado del guest."
+    "balloonHeading": "Asignación dinámica de memoria (ballooning)",
+    "balloonBody": "Los kernels modernos de Linux suelen incluir el controlador <code>virtio_balloon</code>. Con el dispositivo de ballooning habilitado, Proxmox puede recopilar estadísticas de memoria. La recuperación dinámica requiere además una memoria mínima inferior a la máxima configurada; con valores iguales la asignación permanece fija."
   },
   "related": {
     "heading": "Relacionado",

@@ -1,0 +1,92 @@
+{
+  "meta": {
+    "title": "Avinstallera ProxMenux | ProxMenux-dokumentation",
+    "description": "Ren avinstallation av ProxMenux med valfri borttagning av jq och dialog, rensning av äldre översättningsfiler och Monitor-tjänsten samt återställning av säkerhetskopierade systemfiler.",
+    "ogTitle": "Avinstallera ProxMenux | ProxMenux-dokumentation",
+    "ogDescription": "Ta bort ProxMenux rent från en Proxmox-värd med valfri rensning av beroenden."
+  },
+  "header": {
+    "title": "Avinstallera ProxMenux",
+    "description": "Tar bort ProxMenux från Proxmox-värden med ett interaktivt förlopp: bekräftelse, valfri borttagning av beroenden, rensning av tjänsten ProxMenux Monitor och återställning av säkerhetskopior av /root/.bashrc och /etc/motd. Visar en förloppsindikator under hela processen.",
+    "section": "Inställningar"
+  },
+  "scopeWarn": {
+    "title": "Påverkar ProxMenux-installationen bara - inte dina VM / CT / lagringsutrymme",
+    "body": "Avinstallationen tar bort ProxMenux-skripten, menystartaren, den valfria Monitor-tjänsten och säkerhetskopior av systemfiler som ProxMenux skapade vid installationen. <strong>Den ändrar inte dina virtuella maskiner, containrar, lagring, nätverkskonfiguration, Fail2Ban, NVIDIA-drivrutiner eller annat som du installerat via ProxMenux.</strong> De förblir som de är."
+  },
+  "flow": {
+    "heading": "Avinstallationsförloppet",
+    "items": [
+      "<strong>Bekräftelsedialog.</strong> Ja/nej: ”Vill du verkligen avinstallera ProxMenux?”",
+      "<strong>Lista över beroenden att ta bort.</strong> Erbjuder jq och dialog. Båda rutorna är avmarkerade från början; välj bara beroenden som inget annat program behöver.",
+      "<strong>Borttagningen visar en förloppsindikator.</strong> Tar bort en eventuell kvarvarande äldre översättningsmiljö, startaren <code>menu</code>, katalogträdet <code>/usr/local/share/proxmenux/</code>, tjänsten ProxMenux Monitor om den finns samt aviseringsmålet som den registrerat i Proxmox VE (<code>proxmenux-webhook</code> och dess matchningsregel) och de markerade beroendena. Slutligen återställs säkerhetskopiorna av systemfilerna (se nedan).",
+      "<strong>Slutdialog.</strong> Listar borttagna beroenden och avslutar."
+    ]
+  },
+  "deps": {
+    "heading": "Beroende borttagning: vad som erbjuds",
+    "intro": "Listan erbjuder jq och dialog. <strong>Ingen ruta är markerad som standard</strong>: andra program kan använda dessa systempaket, så det är säkrare att behålla dem.",
+    "headerType": "Installation",
+    "headerOffered": "Erbjuds för borttagning",
+    "rows": [
+      {
+        "type": "Aktuella versioner",
+        "offeredRich": "<code>dialog</code>, <code>jq</code>"
+      },
+      {
+        "type": "Äldre installationer efter uppdatering",
+        "offeredRich": "<code>dialog</code>, <code>jq</code>"
+      }
+    ],
+    "warnTitle": "Systemomfattande paket – tänk två gånger",
+    "warnBody": "Den aktuella listan erbjuder <code>jq</code> och <code>dialog</code>, inte <code>python3</code>. Andra verktyg kan behöva dessa systempaket. Borttagning kan även ta bort beroende paket eller oanvända beroenden. Behåll nödvändiga paket och granska föreslagna borttagningar innan du kör apt manuellt."
+  },
+  "removed": {
+    "heading": "Vad som tas bort",
+    "code": "/usr/local/bin/menu                                  # the launcher\n/usr/local/share/proxmenux/                          # everything: scripts, config, cache, version\n/opt/googletrans-env/                                # leftover legacy translation environment\n/etc/systemd/system/proxmenux-monitor.service        # Monitor service unit\n/root/.config/proxmenux-monitor/                     # Monitor config dir\n                                                     # + dependencies you ticked in the checklist"
+  },
+  "restored": {
+    "heading": "Vad som återställs",
+    "items": [
+      "Om <code>/root/.bashrc.bak</code> finns → byta namn tillbaka till <code>/root/.bashrc</code> (din ursprungliga bashrc returnerar).",
+      "Om <code>/etc/motd.bak</code> finns byter den namn till <code>/etc/motd</code>. Annars tar sed bort ProxMenux-raden (<em>“This system is optimised by: ProxMenux”</em>) från befintlig motd."
+    ]
+  },
+  "othersCallout": {
+    "title": "Andra ProxMenux-installerade komponenter stannar",
+    "body": "Allt som ProxMenux installerat via andra menyer — Fail2Ban, Lynis, NVIDIA drivrutiner, justeringar efter installation — berörs <strong>inte</strong> av denna avinstallation. Var och en har sitt eget avinstallationsflöde i sin respektive meny (eller så kan du ta bort med apt direkt). Titta på <em>Visa versionsinformation</em> först för att se vad som är registrerat."
+  },
+  "manual": {
+    "heading": "Manuell avinstallation",
+    "intro": "Om menyn av någon anledning inte kan köras (t.ex. <code>dialog</code> saknas redan), motsvarande manuell sekvens:",
+    "code": "# 1. Stop and remove the Monitor service (if installed)\nsystemctl stop proxmenux-monitor.service 2>/dev/null\nsystemctl disable proxmenux-monitor.service 2>/dev/null\nrm -f /etc/systemd/system/proxmenux-monitor.service\nrm -rf /root/.config/proxmenux-monitor\nsystemctl daemon-reload\nsystemctl reset-failed 2>/dev/null\n\n# 2. Remove a leftover legacy translation environment\nrm -rf /opt/googletrans-env\n\n# 3. Remove ProxMenux files\nrm -f /usr/local/bin/menu\nrm -rf /usr/local/share/proxmenux\n\n# 4. Restore backups\n[ -f /root/.bashrc.bak ] && mv /root/.bashrc.bak /root/.bashrc\n[ -f /etc/motd.bak ] && mv /etc/motd.bak /etc/motd \\\n    || sed -i '/This system is optimised by: ProxMenux/d' /etc/motd"
+  },
+  "reinstall": {
+    "heading": "Ominstallera senare",
+    "body": "Kör den officiella ProxMenux-installeraren igen. Aktuella versioner använder en gemensam installationsväg som inkluderar alla åtta gränssnittsspråk."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "hangTitle": "Avinstallationen fastnar när en äldre översättningsmiljö tas bort",
+    "hangBody": "Aktuella versioner tar bort en kvarvarande miljö med <code>rm -rf /opt/googletrans-env</code>; de kör inte <code>pip uninstall</code>. Om steget fastnar undersöker du det från ett annat skal och kontrollerar värdens filsystem innan du försöker igen.",
+    "aptTitle": "apt varnar om paket som fortfarande används när beroenden tas bort",
+    "aptBody": "Valda paket markeras som automatiska och skickas till <code>apt-get -y --purge autoremove</code>. Det garanterar inte att beroende tjänster skyddas. Låt beroenden vara avmarkerade om andra verktyg behöver dem och granska apts föreslagna borttagningar före manuell rensning.",
+    "motdTitle": "MOTD visar fortfarande ProxMenux-linjen efter avinstallation",
+    "motdBody": "Det kan hända om <code>/etc/motd.bak</code> saknades och sed inte hittade raden (till exempel för att den ändrats). Redigera <code>/etc/motd</code> manuellt och ta bort kvarvarande ProxMenux-rader."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/settings/show-version-information",
+        "label": "Visa versionsinformation",
+        "tail": " - se vad som skulle tas bort innan du avinstallerar."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Översikt över inställningar",
+        "tail": "."
+      }
+    ]
+  }
+}

@@ -12,7 +12,7 @@
   },
   "intro": {
     "title": "What this does",
-    "body": "This is a raw-disk passthrough: the guest OS sees the drive as a real block device (with its SMART data and native geometry). The disk is attached via its <code>/dev/disk/by-id/…</code> path — not <code>/dev/sdX</code> — so the assignment does not break if disk controllers enumerate devices in a different order on the next boot."
+    "body": "This attaches a raw physical disk as the backing device for a virtual disk interface. The guest does not automatically receive native SMART data or the physical controller’s features; use controller PCI passthrough when those are required. The disk is attached through its <code>/dev/disk/by-id/…</code> path when one exists, so a changed device enumeration order at boot does not break the assignment; otherwise <code>/dev/sdX</code> is used."
   },
   "howRuns": {
     "heading": "How the script runs",
@@ -49,7 +49,7 @@
         "items": [
           "<strong>SCSI</strong> — modern default for Linux and Windows with VirtIO-SCSI drivers installed.",
           "<strong>SATA</strong> — broad compatibility, works out of the box on virtually every guest.",
-          "<strong>VirtIO</strong> — paravirtualised block device, fastest but requires guest drivers.",
+          "<strong>VirtIO</strong> — efficient paravirtualised block device; requires guest drivers.",
           "<strong>IDE</strong> — for legacy guests that lack any of the above drivers."
         ]
       },
@@ -63,7 +63,7 @@
     "heading": "Manual equivalent",
     "body": "The script is a wrapper around <code>qm set</code>. The exact command for a single disk looks like this:",
     "migrationTitle": "Live migration is not possible",
-    "migrationBody": "A VM with a passthrough disk is <strong>tied to the host that exposes that disk</strong>. Live migration to another Proxmox node will fail because the target node does not see the same <code>/dev/disk/by-id/…</code> path. Use replication or backup/restore instead, or pick virtual disks on shared storage if you need mobility.",
+    "migrationBody": "A VM with a physical passthrough disk is <strong>tied to the host that exposes that disk</strong>. Another node normally lacks the same <code>/dev/disk/by-id/…</code> path and disk data. Back up and transfer that data separately, or use managed virtual disks on shared or supported replicated storage for mobility; do not assume Proxmox storage replication covers this device.",
     "shareTitle": "Do not share a physical disk between VMs",
     "shareBody": "Attaching the same physical disk to two VMs at the same time will corrupt data on next write. ProxMenux detects this situation and blocks it, but if you bypass the script (direct <code>qm set</code>), make sure only one guest ever mounts the disk."
   },

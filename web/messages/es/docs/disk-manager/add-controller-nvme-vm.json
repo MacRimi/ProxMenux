@@ -1,14 +1,14 @@
 {
   "meta": {
-    "title": "Añadir controladora o NVMe a VM | ProxMenux Documentation",
+    "title": "Añadir controladora o NVMe a una VM | Documentación de ProxMenux",
     "description": "PCI passthrough de una controladora de almacenamiento (HBA SATA / SAS) o un dispositivo NVMe a una VM Proxmox usando ProxMenux. Gestiona la habilitación de IOMMU, la detección de conflictos y el conexionado con qm set --hostpci.",
-    "ogTitle": "Añadir controladora o NVMe a VM | ProxMenux Documentation",
+    "ogTitle": "Añadir controladora o NVMe a una VM | Documentación de ProxMenux",
     "ogDescription": "Pasa un HBA SATA / SAS entero o un dispositivo NVMe a una VM Proxmox. ProxMenux gestiona IOMMU, detección de conflictos y conexionado hostpci."
   },
   "header": {
     "title": "Añadir controladora o NVMe a VM",
     "description": "Pasa un host bus adapter (HBA) SATA / SAS entero o un dispositivo NVMe a una VM Proxmox mediante PCI passthrough. ProxMenux comprueba — y, con tu consentimiento, habilita — IOMMU, enumera los dispositivos elegibles para passthrough, filtra los conflictos y conecta la asignación con qm set --hostpci.",
-    "section": "Disk Manager · VM"
+    "section": "Administrador de discos · VM"
   },
   "intro": {
     "title": "Qué hace (y qué no hace) esto",
@@ -20,7 +20,7 @@
   },
   "iommu": {
     "heading": "Grupos IOMMU — por qué la tarjeta entera sale a la vez",
-    "body": "El PCI passthrough se hace por <strong>grupo IOMMU</strong>, que es la unidad más pequeña que el IOMMU de la CPU puede aislar. Todo lo que hay dentro de un grupo se mueve junto. Si tu controladora SATA comparte grupo IOMMU con la controladora USB, pasar la tarjeta SATA a una VM se lleva también los puertos USB — algo a menudo no deseado.",
+    "body": "El límite de aislamiento del passthrough PCI es el <strong>grupo IOMMU</strong>, la unidad más pequeña que puede aislar el IOMMU de la CPU. Los dispositivos del mismo grupo no pueden aislarse entre sí. Si una controladora SATA comparte grupo con una USB, pasar la SATA puede requerir liberar también la USB del host o impedir el passthrough. Esto no asigna automáticamente a la VM todos los dispositivos del grupo.",
     "outro": "ProxMenux muestra el grupo IOMMU junto a cada dispositivo y te avisa cuando un grupo lleva algo más que la controladora que quieres. Aún así puedes continuar si los dispositivos extra del grupo son aceptables (todas controladoras de disco, por ejemplo), o echar atrás si no lo son."
   },
   "prereqs": {
@@ -54,8 +54,8 @@
         ],
         "outro": "Es necesario reiniciar después de este cambio. El script te pide reiniciar ahora o más tarde; el passthrough no puede continuar hasta que la nueva cmdline del kernel esté activa.",
         "img": "/disk/nvme-passthrough/iommu-warning.png",
-        "alt": "Diálogo IOMMU Required",
-        "caption": "IOMMU Required — propuesta de habilitar y reiniciar"
+        "alt": "Diálogo que indica que se requiere IOMMU",
+        "caption": "Se requiere IOMMU: propuesta de habilitarlo y reiniciar"
       },
       {
         "title": "Enumeración de dispositivos",
@@ -97,7 +97,7 @@
     "busyBody": "Otro proceso aún retiene el dispositivo PCI. Causas más comunes: una VM anterior que crasheó sin soltarlo, o el kernel del host lo recuperó en el último arranque. Ejecuta <code>lspci -nnk -s &lt;addr&gt;</code> para ver qué driver está vinculado; debería ser <code>vfio-pci</code>. Un reinicio completo del host suele resolverlo.",
     "noDisksTitle": "El guest ve la controladora pero no los discos",
     "noDisksBody": "El modelo de la controladora no tiene driver en el guest. Linux casi nunca tiene este problema; Windows sí — instala el driver del fabricante (p. ej. LSI / Broadcom para HBAs SAS antiguos) con la tarjeta desconectada y luego reinicia con la tarjeta adjuntada.",
-    "sharedTitle": "Grupo IOMMU compartido que exporta también un dispositivo no relacionado",
+    "sharedTitle": "El grupo IOMMU incluye un dispositivo no relacionado",
     "sharedBody": "Opciones: (a) mover la tarjeta a un slot PCIe distinto para cambiar su grupo, (b) habilitar <em>ACS override</em> en el kernel para separar grupos (compromiso de seguridad — investiga antes de aplicarlo), o (c) elegir otra tarjeta en un grupo más limpio."
   },
   "related": {

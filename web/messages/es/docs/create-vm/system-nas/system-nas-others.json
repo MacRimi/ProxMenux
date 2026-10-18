@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "Crear VM: Otros sistemas NAS | ProxMenux Documentation",
+    "title": "Crear VM: otros sistemas NAS | Documentación de ProxMenux",
     "description": "Crea máquinas virtuales de TrueNAS SCALE, TrueNAS CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS y FygoOS en Proxmox VE con ProxMenux. Cubre la configuración por defecto / avanzada, el nuevo plan de almacenamiento, el passthrough de GPU opcional y las specs recomendadas por sistema.",
-    "ogTitle": "Crear VM: Otros sistemas NAS | ProxMenux Documentation",
+    "ogTitle": "Crear VM: otros sistemas NAS | Documentación de ProxMenux",
     "ogDescription": "Crea VMs de TrueNAS SCALE / CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS y FygoOS en Proxmox VE con ProxMenux.",
     "ogImageAlt": "Selector NAS de ProxMenux"
   },
@@ -23,7 +23,7 @@
     "headerValue": "Valor por defecto",
     "defaultRowsRich": [
       {
-        "param": "Machine type",
+        "param": "Tipo de máquina",
         "valueRich": "<code>q35</code>"
       },
       {
@@ -31,11 +31,11 @@
         "valueRich": "OVMF (UEFI)<note> — SeaBIOS para OpenMediaVault</note>"
       },
       {
-        "param": "CPU type",
+        "param": "Tipo de CPU",
         "valueRich": "Host"
       },
       {
-        "param": "Cores",
+        "param": "Núcleos",
         "valueRich": "2"
       },
       {
@@ -43,15 +43,15 @@
         "valueRich": "8192 MB<note> — 4096 MB para ZimaOS</note>"
       },
       {
-        "param": "Bridge",
+        "param": "Puente",
         "valueRich": "<code>vmbr0</code>"
       },
       {
-        "param": "MAC address",
+        "param": "Dirección del MAC",
         "valueRich": "Generada automáticamente"
       },
       {
-        "param": "Start on completion",
+        "param": "Arrancar al terminar",
         "valueRich": "No"
       }
     ],
@@ -60,7 +60,7 @@
     "headerOptions": "Opciones",
     "advancedRowsRich": [
       {
-        "param": "Machine type",
+        "param": "Tipo de máquina",
         "optionsRich": "<code>q35</code> o <code>i440fx</code>"
       },
       {
@@ -68,11 +68,11 @@
         "optionsRich": "OVMF (UEFI) o SeaBIOS (Legacy)"
       },
       {
-        "param": "CPU type",
-        "optionsRich": "Host o KVM64"
+        "param": "Tipo de CPU",
+        "optionsRich": "Host, KVM64 y otros modelos de CPU de la lista (ZimaOS: Host o KVM64)"
       },
       {
-        "param": "Cores",
+        "param": "Núcleos",
         "optionsRich": "Número de núcleos de CPU"
       },
       {
@@ -80,11 +80,11 @@
         "optionsRich": "Memoria asignada a la VM"
       },
       {
-        "param": "Bridge",
+        "param": "Puente",
         "optionsRich": "Bridge de red"
       },
       {
-        "param": "MAC address",
+        "param": "Dirección del MAC",
         "optionsRich": "MAC personalizada"
       },
       {
@@ -97,7 +97,7 @@
       }
     ],
     "zfsCalloutTitle": "ZFS y RAM",
-    "zfsCalloutBody": "TrueNAS SCALE / CORE y XigmaNAS están basados en ZFS. ZFS usa la memoria libre como caché ARC, así que los 8 GB por defecto son un mínimo — súbela a 16 GB o más si tienes pensado guardar algo serio. OMV (ext4/XFS), Rockstor (Btrfs) y ZimaOS son mucho menos exigentes con la memoria."
+    "zfsCalloutBody": "TrueNAS SCALE / CORE y XigmaNAS usan ZFS, cuya caché ARC se beneficia de la RAM. TrueNAS necesita al menos 8 GB para uso básico; 16 GB o más pueden ayudar con servicios y apps exigentes. Dimensiona la VM según la distribución y la carga; 8 GB no es un mínimo universal de ZFS. Las configuraciones ligeras de OMV, Rockstor o ZimaOS pueden necesitar menos."
   },
   "storagePlan": {
     "heading": "Plan de almacenamiento",
@@ -106,19 +106,19 @@
     "virtualItemsRich": [
       "Lista los volúmenes de almacenamiento Proxmox disponibles en el host.",
       "Eliges el almacenamiento destino y el tamaño en GB.",
-      "El disco se adjunta a la VM como SATA (<code>sata0</code>, <code>sata1</code>, … hasta 6)."
+      "El disco usa el bus elegido: SCSI (predeterminado), SATA, VirtIO o IDE (ZimaOS: SCSI o SATA). Los puertos SATA son <code>sata0</code>, <code>sata1</code>, …, seis puertos numerados del 0 al 5."
     ],
     "importHeading": "b. Añadir disco importado",
     "importItemsRich": [
       "Detecta los discos físicos que es seguro importar (los discos del sistema y protegidos están ocultos).",
       "Seleccionas uno o varios discos mediante una checklist.",
-      "Los discos importados se adjuntan como SATA mediante <code>qm set</code>."
+      "Los discos importados usan el bus elegido y se conectan mediante <code>qm set</code>."
     ],
     "pciHeading": "c. Añadir controladora o NVMe (PCI passthrough)",
     "pciItemsRich": [
       "Detecta HBAs SATA/SAS y dispositivos NVMe del host y te deja pasar una <em>controladora entera</em> a la VM. IOMMU debe estar habilitado; el script se ofrece a habilitarlo y reinicia si hace falta.",
       "Un paso de confirmación advierte del riesgo a nivel de controladora (la tarjeta completa, incluidos todos los discos que tenga, deja de estar en el host).",
-      "Los dispositivos PCI seleccionados se adjuntan mediante <code>qm set hostpciN: …</code>."
+      "Los dispositivos PCI se conectan con comandos como <code>qm set VMID --hostpci0 PCI_ADDRESS,pcie=1</code>. Sustituye VMID y PCI_ADDRESS por el ID de la VM y la dirección PCI y usa un índice hostpci libre para cada dispositivo."
     ],
     "resetCalloutTitle": "Resetear y terminar",
     "resetCalloutBodyRich": "El menú también ofrece <strong>r</strong> (resetear la selección actual y empezar de nuevo) y <strong>d</strong> (terminar y continuar). No puedes terminar con un plan vacío."
@@ -133,7 +133,7 @@
     "efiBody": "Cuando se selecciona OVMF (UEFI), ProxMenux crea automáticamente un disco EFI de 4 MB en el almacenamiento que elijas, formateado para coincidir con el tipo de almacenamiento (raw para almacenamiento basado en directorio).",
     "isoTitle": "Montaje de la ISO",
     "isoBodyRich": "La ISO de instalación se descarga (si hace falta) y se adjunta a <code>ide2</code> como CD-ROM, lista para el primer arranque.",
-    "guestTitle": "QEMU Guest Agent",
+    "guestTitle": "QEMU Agente invitado",
     "guestBody": "El canal del guest agent se habilita en la configuración de la VM. Aún tienes que instalar el agente dentro del guest una vez el SO NAS esté arriba."
   },
   "endToEnd": {
@@ -163,7 +163,7 @@
       "icon": "Database",
       "officialName": "TrueNAS SCALE",
       "officialUrl": "https://www.truenas.com/truenas-scale/",
-      "description": "TrueNAS basado en Debian con apps Docker / Kubernetes, Linux KVM y ZFS como filesystem principal. El sucesor moderno de FreeNAS para quien quiere ZFS más un ecosistema de contenedores.",
+      "description": "TrueNAS basado en Debian con apps Docker en las versiones actuales, Linux KVM y ZFS como sistema de archivos principal. Las versiones antiguas de SCALE usaban Kubernetes. Combina almacenamiento ZFS y un ecosistema de contenedores.",
       "specs": [
         "Interfaz recomendada: SATA o SCSI (ambas soportan discard/trim)",
         "RAM mínima: 8 GB (16 GB+ recomendado para cargas reales)",
@@ -182,7 +182,7 @@
       "icon": "Database",
       "officialName": "TrueNAS CORE",
       "officialUrl": "https://www.truenas.com/truenas-core/",
-      "description": "TrueNAS basado en FreeBSD (el antiguo FreeNAS). Almacenamiento ZFS maduro con jails y plugins, pero sin Docker / Kubernetes. Se está descontinuando en favor de SCALE pero sigue ampliamente desplegado.",
+      "description": "TrueNAS basado en FreeBSD, antes FreeNAS, centrado en almacenamiento ZFS. Las jails, plugins y funciones de virtualización de CORE 13.3 están obsoletas y sin soporte; el desarrollo actual se centra en las ediciones Linux.",
       "specs": [
         "Interfaz recomendada: SATA",
         "RAM mínima: 8 GB (16 GB+ recomendado)",
@@ -254,7 +254,7 @@
       "icon": "MonitorIcon",
       "officialName": "zimaspace.com",
       "officialUrl": "https://www.zimaspace.com/zimaos",
-      "description": "SO ligero de NAS / home server construido sobre Debian, con foco en multimedia, apps Docker y domótica. ZimaOS usa un instalador dedicado de ProxMenux (vm/zimaos.sh) que descarga una imagen pre-construida, pero el perfil de la VM sigue el mismo flujo que los otros sistemas NAS.",
+      "description": "SO ligero para NAS y servidor doméstico construido con Buildroot, evolución de CasaOS, centrado en multimedia, apps Docker y domótica. ZimaOS usa un instalador específico de ProxMenux (vm/zimaos.sh) que descarga una imagen preparada y permite configurar CPU, RAM y almacenamiento.",
       "specs": [
         "Interfaz recomendada: SATA o VirtIO",
         "RAM por defecto: 4 GB (suficiente para multimedia / apps autoalojadas)",

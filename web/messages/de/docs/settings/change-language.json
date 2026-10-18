@@ -1,0 +1,108 @@
+{
+  "meta": {
+    "title": "Sprache ändern | ProxMenux-Dokumentation",
+    "description": "Wählen Sie aus acht Sprachen für die ProxMenux-Oberfläche. Jede Installation enthält vorab erzeugte JSON-Übersetzungskataloge; auf dem Host sind weder ein Übersetzungsdienst noch eine Python-Umgebung nötig. Das Menü wird automatisch neu geladen.",
+    "ogTitle": "Sprache ändern | ProxMenux-Dokumentation",
+    "ogDescription": "Wählen Sie in den Einstellungen eine von acht ProxMenux-Sprachen. Bei jeder Installation verfügbar."
+  },
+  "header": {
+    "title": "Sprache ändern",
+    "description": "Wechseln Sie die ProxMenux-Oberfläche zwischen acht unterstützten Sprachen. Die Auswahl wird in config.json gespeichert und das Menü in der neuen Sprache neu gestartet. Jede Installation enthält die Übersetzungskataloge.",
+    "section": "Einstellungen"
+  },
+  "intro": {
+    "title": "Was das ist",
+    "body": "Ein Dialog listet die acht unterstützten Sprachen auf. ProxMenux speichert Ihre Auswahl in <code>config.json</code> unter <code>.language</code> und startet <code>config_menu.sh</code> erneut, damit sie sofort wirksam wird."
+  },
+  "warn": {
+    "title": "Bei jeder Installation verfügbar",
+    "body": "Sprache ändern wird in den Einstellungen immer angezeigt. Die Kataloge werden in <code>/usr/local/share/proxmenux/lang/</code> installiert <em>und</em> die gewählte Sprache wird in <code>config.json</code> gespeichert. Die frühere Python-Übersetzungsumgebung ist nicht erforderlich."
+  },
+  "supported": {
+    "heading": "Unterstützte Sprachen",
+    "headerCode": "Code",
+    "headerLang": "Sprache",
+    "headerNotes": "Notizen",
+    "rows": [
+      {
+        "code": "en",
+        "lang": "Englisch",
+        "notes": "Ausgangssprache — am genauesten"
+      },
+      {
+        "code": "es",
+        "lang": "Spanisch",
+        "notes": "Vorab erzeugter JSON-Katalog"
+      },
+      {
+        "code": "fr",
+        "lang": "Französisch",
+        "notes": "Vorab erzeugter JSON-Katalog"
+      },
+      {
+        "code": "de",
+        "lang": "Deutsch",
+        "notes": "Vorab erzeugter JSON-Katalog"
+      },
+      {
+        "code": "it",
+        "lang": "Italienisch",
+        "notes": "Vorab erzeugter JSON-Katalog"
+      },
+      {
+        "code": "pt",
+        "lang": "Portugiesisch",
+        "notes": "Vorab erzeugter JSON-Katalog"
+      },
+      {
+        "code": "sk",
+        "lang": "Slowakisch",
+        "notes": "Vorab erzeugter JSON-Katalog"
+      },
+      {
+        "code": "sv",
+        "lang": "Schwedisch",
+        "notes": "Vorab erzeugter JSON-Katalog"
+      }
+    ]
+  },
+  "englishTip": {
+    "title": "Englisch ist am genauesten",
+    "body": "Nicht englische Texte stammen aus den mitgelieferten, vorab erzeugten JSON-Katalogen. Fehlende Übersetzungen fallen auf Englisch zurück; der Host ruft keinen Übersetzungsdienst auf. Bei zweifelhaften Übersetzungen bleibt Englisch die Referenz."
+  },
+  "underHood": {
+    "heading": "Wie es unter der Haube funktioniert",
+    "items": [
+      "Der Dialog listet acht Sprachcodes auf; wählen Sie einen aus.",
+      "Wenn <code>config.json</code> vorhanden ist: <code>jq --arg lang \"$new_language\" '.language = $lang''</code> aktualisiert das Feld.",
+      "Wenn <code>config.json</code> nicht existiert: Ein neuer wird mit dem Sprachcode in einem Einzelfeldobjekt erstellt.",
+      "Bestätigungsdialog: <em>\"Sprache geändert in [code]\"</em>.",
+      "<code>exec bash config_menu.sh</code> lädt das Einstellungsmenü mit der neuen aktiven Sprache neu."
+    ]
+  },
+  "manual": {
+    "heading": "Manuelles Äquivalent"
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "noOptionTitle": "Option erscheint nicht in Einstellungen",
+    "noOptionBody": "Sprache ändern ist in aktuellen Versionen immer verfügbar. Falls die Option fehlt, aktualisieren Sie ProxMenux mit dem offiziellen Installer und öffnen die Einstellungen erneut.",
+    "stillEnglishTitle": "Sprache geändert, aber UI zeigt immer noch Englisch",
+    "stillEnglishBody": "Das Menü startet nach der Änderung erneut. Wenn Sie eine neue Shell geöffnet und einen anderen ProxMenux-Einstiegspunkt gestartet haben, führen Sie <code>menu</code> erneut aus, um die neue Sprache zu übernehmen. Prüfen Sie dies mit <code>jq -r '.language' /usr/local/share/proxmenux/config.json</code>."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "href": "/docs/settings/show-version-information",
+        "label": "Versionsinformationen anzeigen",
+        "tail": " — bestätigt Veröffentlichungskanal, Übersetzungsdateien und aktuelle Sprache."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Einstellungen Übersicht",
+        "tail": "."
+      }
+    ]
+  }
+}

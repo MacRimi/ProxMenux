@@ -1,0 +1,292 @@
+{
+  "meta": {
+    "title": "Créer une VM : système Linux | Documentation ProxMenux",
+    "description": "Créez des machines virtuelles Linux sur Proxmox VE avec ProxMenux. Découvrez le catalogue d’ISO officielles (Ubuntu, Debian, Fedora, Arch, Rocky, Mint, openSUSE, Alpine, Kali, Manjaro), le plan de stockage commun, le passthrough GPU facultatif et les conseils après installation.",
+    "ogTitle": "Créer une VM : système Linux | Documentation ProxMenux",
+    "ogDescription": "Créez des VM Linux sur Proxmox VE : catalogue d’ISO officielles, stockage, passthrough GPU et conseils après installation.",
+    "ogImageAlt": "Menu ProxMenux Linux VM"
+  },
+  "header": {
+    "title": "Créer une VM : système Linux",
+    "description": "Créez une VM Linux sur Proxmox VE. ProxMenux propose un catalogue d’ISO Linux officielles à télécharger et un sélecteur d’ISO locales. Chaque parcours passe par l’assistant VM commun, le plan de stockage et l’assistant facultatif de passthrough GPU.",
+    "section": "Machines virtuelles"
+  },
+  "intro": {
+    "title": "Ce que ce script fait",
+    "body": "Choisissez une ISO Linux officielle à télécharger automatiquement ou une ISO locale déjà chargée. L’assistant commun passe ensuite par CPU, RAM et BIOS, le plan de stockage, le passthrough GPU facultatif et la création de la VM."
+  },
+  "image": {
+    "alt": "Options d'installation de ProxMenux Linux",
+    "caption": "Options d'installation Linux"
+  },
+  "config": {
+    "heading": "Configuration par défaut vs Configuration avancée",
+    "intro": "Une fois l'ISO sélectionné, ProxMenux demande s'il faut utiliser le profil VM par défaut ou ouvrir l'assistant avancé.",
+    "defaultHeading": "Configuration par défaut",
+    "headerParam": "Paramètre",
+    "headerValue": "Valeur par défaut",
+    "defaultRows": [
+      {
+        "param": "Type de machine",
+        "valueRich": "<code>q35</code>"
+      },
+      {
+        "param": "BIOS",
+        "value": "OVMF (UEFI)"
+      },
+      {
+        "param": "Type CPU",
+        "value": "Host"
+      },
+      {
+        "param": "Noyaux",
+        "value": "2"
+      },
+      {
+        "param": "RAM",
+        "value": "4096 MB"
+      },
+      {
+        "param": "Pont",
+        "valueRich": "<code>vmbr0</code>"
+      },
+      {
+        "param": "Adresse MAC",
+        "value": "Généré automatiquement"
+      },
+      {
+        "param": "Démarrer à la fin",
+        "value": "Non"
+      }
+    ],
+    "advancedHeading": "Configuration avancée",
+    "advancedIntro": "L'assistant avancé expose chaque paramètre individuellement :",
+    "headerOptions": "Possibilités",
+    "advancedRows": [
+      {
+        "param": "Type de machine",
+        "optionsRich": "<code>q35</code> ou <code>i440fx</code>"
+      },
+      {
+        "param": "BIOS",
+        "options": "OVMF (UEFI) ou SeaBIOS (Légacy)"
+      },
+      {
+        "param": "Type CPU",
+        "options": "Host, KVM64 et autres modèles CPU proposés"
+      },
+      {
+        "param": "Noyaux",
+        "options": "Nombre de cœurs CPU"
+      },
+      {
+        "param": "RAM",
+        "options": "Mémoire attribuée au VM"
+      },
+      {
+        "param": "Pont",
+        "options": "Pont réseau"
+      },
+      {
+        "param": "Adresse MAC",
+        "options": "MAC personnalisée"
+      },
+      {
+        "param": "VLAN",
+        "options": "Étiquette VLAN (facultatif)"
+      },
+      {
+        "param": "MTU",
+        "options": "Taille MTU"
+      }
+    ]
+  },
+  "storagePlan": {
+    "heading": "Plan de stockage",
+    "body": "Après CPU / RAM, ProxMenux ouvre le menu <strong>Plan de stockage</strong>, où vous pouvez combiner des disques virtuels, des disques importés et des périphériques PCI passants dans le même VM, ajoutant des éléments un à la fois et finissant lorsque vous avez terminé.",
+    "virtualDiskTitle": "a. Ajouter un disque virtuel",
+    "virtualDiskItems": [
+      "Liste les volumes de stockage Proxmox disponibles sur l'hôte.",
+      "Vous choisissez le stockage cible et la taille en GB.",
+      "Le disque utilise le bus choisi : SCSI (par défaut), SATA, VirtIO ou IDE. SATA offre six emplacements numérotés de 0 à 5 : <code>sata0</code>, <code>sata1</code>, …."
+    ],
+    "importDiskTitle": "b. Ajouter un disque d'importation",
+    "importDiskItems": [
+      "Détecte les disques physiques qui sont sûrs à importer (le système et les disques protégés sont cachés).",
+      "Vous sélectionnez un ou plusieurs disques via une liste de contrôle.",
+      "Les disques importés utilisent le bus choisi et sont connectés par <code>qm set</code>."
+    ],
+    "pciTitle": "c. Ajouter un contrôleur ou NVMe (passthrough PCI)",
+    "pciItems": [
+      "Détecte les appareils HBA SATA/SAS et NVMe sur l'hôte et vous permet de passer un contrôleur <em>entier</em> dans le VM. IOMMU doit être activé ; le script offre de l'activer et de redémarrer si nécessaire.",
+      "Une étape de confirmation met en garde contre le risque à l'échelle du contrôleur (la carte entière, y compris chaque disque sur elle, quitte l'hôte).",
+      "Les périphériques PCI sont affectés avec des commandes comme <code>qm set VMID --hostpci0 PCI_ADDRESS,pcie=1</code>. Remplacez VMID et PCI_ADDRESS par l’ID de VM et l’adresse PCI, et utilisez un indice hostpci libre pour chaque périphérique."
+    ],
+    "resetTitle": "Réinitialiser et terminer",
+    "resetBody": "Le menu offre également <strong>r</strong> (réinitialiser la sélection actuelle et recommencer) et <strong>d</strong> (finir et poursuivre). Vous ne pouvez pas finir avec un plan vide."
+  },
+  "gpu": {
+    "heading": "Passage facultatif de GPU",
+    "body": "Après le plan de stockage, si un GPU compatible est détecté sur l'hôte ProxMenux offre de lancer l'assistant de passage GPU. Voir <gpuLink>Ajouter GPU à un VM (Passthrough)</gpuLink> pour savoir comment fonctionne l'assistant — un redémarrage d'hôte peut être nécessaire."
+  },
+  "autoFeatures": {
+    "heading": "Fonctions automatiques VM",
+    "efiTitle": "disque EFI",
+    "efiBody": "Lorsque OVMF (UEFI) est sélectionné, ProxMenux crée un disque système EFI 4 MB sur le stockage que vous choisissez afin que le firmware ait un endroit pour stocker ses variables.",
+    "isoTitle": "Montage ISO",
+    "isoBody": "L'installation ISO est fixée à <code>ide2</code> en tant que CD-ROM, prêt pour le premier démarrage.",
+    "guestTitle": "QEMU Agent invité",
+    "guestBody": "Le canal d'agent invité est activé dans la configuration VM. Vous devez toujours installer l'agent à l'intérieur de l'invité — voir les conseils ci-dessous."
+  },
+  "installOptions": {
+    "heading": "Options d'installation Linux",
+    "officialHeading": "ISO officielle (installation traditionnelle)",
+    "officialBody": "ProxMenux propose une sélection d’ISO Linux officielles. Choisissez-en une : le script la télécharge depuis le miroir du projet dans <code>/var/lib/vz/template/iso</code>, puis la connecte à la VM.",
+    "officialImageAlt": "Sélection de distribution Linux",
+    "officialImageCaption": "Sélection de distribution Linux",
+    "localHeading": "ISO locale",
+    "localBody": "Utilise une ISO Linux déjà présente dans <code>/var/lib/vz/template/iso</code>. Le script affiche tous les fichiers <code>*.iso</code> trouvés et vous permet d’en choisir un.",
+    "localImageAlt": "Menu local de sélection ISO",
+    "localImageCaption": "Menu local de sélection ISO",
+    "distros": [
+      {
+        "name": "Ubuntu",
+        "variants": [
+          "25.10 Desktop",
+          "24.04 Desktop",
+          "22.04 Desktop",
+          "20.04 Desktop",
+          "25.10 Server",
+          "24.04 Server",
+          "22.04 Server",
+          "20.04 Server"
+        ]
+      },
+      {
+        "name": "Debian",
+        "variants": [
+          "13 Desktop",
+          "12 Desktop",
+          "11 Desktop",
+          "13 Netinst",
+          "12 Netinst",
+          "11 Netinst"
+        ]
+      },
+      {
+        "name": "Fedora",
+        "variants": [
+          "Workstation 42"
+        ]
+      },
+      {
+        "name": "Arch Linux",
+        "variants": [
+          "dernière version"
+        ]
+      },
+      {
+        "name": "Rocky Linux",
+        "variants": [
+          "9"
+        ]
+      },
+      {
+        "name": "Linux Mint",
+        "variants": [
+          "22.1 Cinnamon"
+        ]
+      },
+      {
+        "name": "openSUSE",
+        "variants": [
+          "Leap 15.6"
+        ]
+      },
+      {
+        "name": "Alpine Linux",
+        "variants": [
+          "3.21"
+        ]
+      },
+      {
+        "name": "Kali Linux",
+        "variants": [
+          "2026.1"
+        ]
+      },
+      {
+        "name": "Manjaro",
+        "variants": [
+          "25.0 GNOME"
+        ]
+      }
+    ]
+  },
+  "endToEnd": {
+    "heading": "Ce que fait le script de bout en bout",
+    "items": [
+      "Récupère l’ISO Linux par téléchargement officiel ou depuis un fichier local.",
+      "Applique la configuration par défaut ou avancée CPU / RAM / BIOS / type machine.",
+      "Ouvre le plan de stockage et fixe les disques virtuels sélectionnés, les disques importés et les périphériques PCI.",
+      "Crée le disque EFI lorsque UEFI est sélectionné.",
+      "Monte l'ISO Linux sur <code>ide2</code>.",
+      "Définit l'ordre de démarrage (disque d'abord, puis ISO).",
+      "Active le canal QEMU Guest Agent.",
+      "En option, exécute l'assistant de passage GPU.",
+      "Génère une description HTML de style jointe au VM.",
+      "Démarre la VM si vous l’avez choisi."
+    ]
+  },
+  "postInstall": {
+    "heading": "Conseils après l'installation",
+    "guestAgentHeading": "Installez l’agent invité QEMU dans la VM",
+    "guestAgentBody": "ProxMenux active le canal de l’agent invité dans la configuration VM ; l’agent doit être installé dans le système invité. Il permet l’arrêt contrôlé et le gel des systèmes de fichiers pendant les sauvegardes pour améliorer la cohérence des données.",
+    "debian": "Debian / Ubuntu",
+    "fedora": "Fedora / Rocky / RHEL",
+    "arch": "Arch Linux",
+    "opensuse": "openSUSE",
+    "virtioHeading": "Support VirtIO sous Linux",
+    "virtioBody": "Les distributions Linux modernes incluent généralement les pilotes VirtIO de disque et réseau. Choisissez <code>virtio</code> pour les disques blocs VirtIO, ou <code>scsi</code> avec le contrôleur VirtIO SCSI configuré ; l’adaptateur réseau utilise aussi <code>virtio</code>. Vérifiez les pilotes avec les anciens installateurs.",
+    "virtioWarnTitle": "Distributions très anciennes",
+    "virtioWarnBody": "Les très anciens installateurs peuvent manquer des pilotes VirtIO nécessaires. Utilisez alors un contrôleur SATA / SCSI émulé ou fournissez les pilotes adaptés.",
+    "trimHeading": "Activer TRIM / discard sur un stockage SSD",
+    "trimBody": "Si la VM utilise un stockage Proxmox sur SSD et que le disque a été connecté avec l’option <code>discard</code>, vous pouvez transmettre les commandes TRIM du système invité. Deux possibilités :",
+    "trimItems": [
+      "Exécuter périodiquement <code>fstrim -av</code> (ou activer l'unité <code>fstrim.timer</code> sur les distributions systemd).",
+      "Ou monter des systèmes de fichiers avec l'option <code>discard</code> dans <code>/etc/fstab</code>."
+    ],
+    "balloonHeading": "Allocation dynamique de mémoire (ballooning)",
+    "balloonBody": "Les noyaux Linux modernes incluent généralement le pilote <code>virtio_balloon</code>. Avec le périphérique balloon activé, Proxmox peut recueillir des statistiques mémoire. La récupération dynamique nécessite aussi une mémoire minimale inférieure au maximum configuré ; des valeurs égales maintiennent une allocation fixe."
+  },
+  "related": {
+    "heading": "Voir aussi",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-image-vm",
+        "label": "Importer l'image disque vers la VM",
+        "tail": " — connecter une image Linux existante .qcow2 / .img / .raw à une nouvelle VM."
+      },
+      {
+        "href": "/docs/utils/import-vm",
+        "label": "Importer VM de OVA / OVF",
+        "tail": " — importer une VM Linux exportée depuis VMware / VirtualBox / Proxmox."
+      },
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Ajouter GPU à VM (Passthrough)",
+        "tail": "— pour les VM Linux qui ont besoin d'accélération GPU."
+      },
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "Commandes de gestion VM et CT",
+        "tail": "— qm CLI référence."
+      },
+      {
+        "href": "/docs/create-vm",
+        "label": "Vue d’ensemble de la création de VM",
+        "tail": "."
+      }
+    ]
+  }
+}

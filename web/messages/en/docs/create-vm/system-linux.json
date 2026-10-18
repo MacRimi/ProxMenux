@@ -73,7 +73,7 @@
       },
       {
         "param": "CPU type",
-        "options": "Host or KVM64"
+        "options": "Host, KVM64 and other listed CPU models"
       },
       {
         "param": "Cores",
@@ -108,19 +108,19 @@
     "virtualDiskItems": [
       "Lists the Proxmox storage volumes available on the host.",
       "You pick the target storage and the size in GB.",
-      "The disk is attached to the VM as SATA (<code>sata0</code>, <code>sata1</code>, … up to 6)."
+      "The disk uses the selected bus: SCSI (default), SATA, VirtIO or IDE. SATA slots are <code>sata0</code>, <code>sata1</code>, …, with six slots numbered 0–5."
     ],
     "importDiskTitle": "b. Add import disk",
     "importDiskItems": [
       "Detects physical disks that are safe to import (system and protected disks are hidden).",
       "You select one or more disks via a checklist.",
-      "Imported disks are attached as SATA via <code>qm set</code>."
+      "Imported disks use the selected bus and are attached via <code>qm set</code>."
     ],
     "pciTitle": "c. Add Controller or NVMe (PCI passthrough)",
     "pciItems": [
       "Detects SATA/SAS HBAs and NVMe devices on the host and lets you pass an <em>entire controller</em> into the VM. IOMMU must be enabled; the script offers to enable it and reboots if required.",
       "A confirmation step warns about controller-wide risk (the whole card, including every disk on it, leaves the host).",
-      "The selected PCI devices are attached via <code>qm set hostpciN: …</code>."
+      "The selected PCI devices are attached with commands such as <code>qm set VMID --hostpci0 PCI_ADDRESS,pcie=1</code>. Replace VMID and PCI_ADDRESS with the VM ID and PCI address, and use an unused hostpci index for each device."
     ],
     "resetTitle": "Reset and finish",
     "resetBody": "The menu also offers <strong>r</strong> (reset the current selection and start over) and <strong>d</strong> (finish and continue). You cannot finish with an empty plan."
@@ -241,15 +241,15 @@
   "postInstall": {
     "heading": "Post-install tips",
     "guestAgentHeading": "Install the QEMU Guest Agent inside the VM",
-    "guestAgentBody": "ProxMenux enables the guest agent channel in the VM config, but the agent itself has to be installed inside the guest. It enables graceful shutdown, filesystem freeze for consistent snapshots and accurate memory reporting in the Proxmox UI.",
+    "guestAgentBody": "ProxMenux enables the guest agent channel in the VM config, but the agent itself has to be installed inside the guest. It supports controlled shutdown and filesystem freezing during backups to improve data consistency.",
     "debian": "Debian / Ubuntu",
     "fedora": "Fedora / Rocky / RHEL",
     "arch": "Arch Linux",
     "opensuse": "openSUSE",
     "virtioHeading": "VirtIO support in Linux",
-    "virtioBody": "Modern Linux kernels (2.6.25+) include VirtIO disk and network drivers out of the box, so you can switch the disk interface to <code>virtio</code> or <code>virtio-scsi</code> in the Advanced wizard and the network adapter to <code>virtio</code> without any extra driver step.",
+    "virtioBody": "Modern Linux distributions normally include VirtIO disk and network drivers. Select <code>virtio</code> for VirtIO block disks, or <code>scsi</code> with the configured VirtIO SCSI controller; the network adapter also uses <code>virtio</code>. Check driver support with older installers.",
     "virtioWarnTitle": "Very old distributions",
-    "virtioWarnBody": "If you are installing something predating the 2.6.25 kernel, VirtIO modules may not be available at install time. In that case keep SATA / SCSI or provide a driver disk.",
+    "virtioWarnBody": "Very old installers may lack the required VirtIO drivers. In that case use an emulated SATA / SCSI controller or supply suitable drivers.",
     "trimHeading": "Enable TRIM / discard on SSD-backed storage",
     "trimBody": "When the VM sits on SSD-backed Proxmox storage and the disk was attached with the <code>discard</code> flag, you can forward trim commands from inside the guest. Two options:",
     "trimItems": [
@@ -257,7 +257,7 @@
       "Or mount filesystems with the <code>discard</code> option in <code>/etc/fstab</code>."
     ],
     "balloonHeading": "Memory ballooning",
-    "balloonBody": "The <code>virtio_balloon</code> driver ships with modern Linux kernels. Proxmox uses it to reclaim unused memory from the VM and show accurate utilisation in the UI — no guest-side configuration required."
+    "balloonBody": "Modern Linux kernels normally include the <code>virtio_balloon</code> driver. With a balloon device enabled, Proxmox can collect memory statistics. Dynamic memory reclamation also requires a minimum memory setting below the configured maximum; equal values keep memory allocation fixed."
   },
   "related": {
     "heading": "Related",

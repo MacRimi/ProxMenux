@@ -46,13 +46,13 @@
       },
       {
         "method": "<strong>Both</strong>",
-        "mount": "Both paths above (two independent NFS connections to the server)",
+        "mount": "Both paths above (two mount points for the same NFS export)",
         "ui": "Yes",
-        "useCase": "You want UI integration AND a stable host-side path with open permissions for LXC bind-mounts. Server sees two connections from the host."
+        "useCase": "UI integration plus a separate stable host path with open permissions for LXC bind mounts."
       }
     ],
     "bothTitle": "\"Both\" creates two independent NFS mounts",
-    "bothBody": "Marking both options runs each method independently — pvesm mounts at <code>/mnt/pve/&lt;id&gt;</code>, fstab mounts at <code>/mnt/&lt;path&gt;</code>. The server sees two TCP connections from the Proxmox host. This is intentional: it lets you keep the pvesm storage clean (default Proxmox options) while having a separate host-side mount with open permissions for LXC bind-mounts."
+    "bothBody": "Both methods run separately: pvesm mounts at <code>/mnt/pve/&lt;id&gt;</code> and fstab at <code>/mnt/&lt;path&gt;</code>. This provides a Proxmox-managed mount with default options and a separate host mount for LXC bind mounts. Two mount points do not guarantee two separate TCP connections; the NFS client may reuse transport connections."
   },
   "pvesmBranch": {
     "heading": "Method A — As Proxmox storage (pvesm)",
@@ -94,7 +94,7 @@
       }
     ],
     "warnTitle": "images and rootdir on NFS",
-    "warnBody": "Marking <code>images</code> on an NFS storage lets Proxmox place live VM disks there. It works, but NFS latency + its lock semantics make this noticeably slower than local storage (and a network outage pauses every VM backed by that store). Marking <code>rootdir</code> means you will host LXC root filesystems over NFS, which historically has trouble with unprivileged containers (overlay / chown interactions). Prefer keeping <code>images</code> / <code>rootdir</code> on local or iSCSI storage and using NFS for <code>backup</code> / <code>iso</code> / <code>vztmpl</code>.",
+    "warnBody": "Selecting <code>images</code> lets Proxmox store VM disks on NFS. Performance depends on the network, server and workload; an outage can block I/O that depends on the mount. Selecting <code>rootdir</code> stores LXC root filesystems on NFS, where unprivileged containers can encounter UID mapping, overlay and ownership limitations. Assess these requirements before placing <code>images</code> / <code>rootdir</code> there; NFS is also useful for <code>backup</code> / <code>iso</code> / <code>vztmpl</code>.",
     "result": "The result is <code>pvesm add nfs &lt;id&gt; --server &lt;srv&gt; --export &lt;path&gt; --content &lt;csv&gt;</code> and Proxmox auto-mounts at <code>/mnt/pve/&lt;id&gt;</code>."
   },
   "fstabBranch": {
@@ -113,7 +113,7 @@
       "Attempts <code>chmod 1777</code> + <code>setfacl o::rwx</code> on the mount point (silent best-effort — only succeeds if the NFS server allows it; many NAS exports already serve world-writable paths)."
     ],
     "lxcTitle": "Using the fstab mount from an LXC",
-    "lxcBody": "The script prints the exact <code>pct set</code> command at the end to bind-mount the path into a container, e.g. <code>pct set &lt;ctid&gt; -mp0 /mnt/&lt;path&gt;,mp=/mnt/&lt;ct-path&gt;,shared=1,backup=0</code>. Or use the <mountLink>LXC Mount Manager</mountLink>, which detects the fstab mount automatically. <strong>No changes are made inside the container</strong> — for unprivileged LXCs to read/write the NFS data, the script relies on server-side world-writable export semantics (typical for Synology, TrueNAS, OMV defaults). If your NFS server squashes root or restricts perms, see Troubleshooting.",
+    "lxcBody": "The script prints a <code>pct set</code> command for a bind mount, e.g. <code>pct set &lt;ctid&gt; -mp0 /mnt/&lt;path&gt;,mp=/mnt/&lt;ct-path&gt;,shared=1,backup=0</code>. Or use the <mountLink>LXC Mount Manager</mountLink>, which detects fstab mounts. <strong>No changes are made inside the container</strong>. Access from an unprivileged CT depends on server-side permissions for its mapped UIDs/GIDs. The script only attempts host-side permission changes; it cannot guarantee writable exports or manufacturer defaults. See Troubleshooting if access fails.",
     "noUiTitle": "The fstab mount is NOT a Proxmox storage",
     "noUiBody": "The host fstab mount is invisible to the Proxmox web UI — by design. It does not appear in <em>Datacenter > Storage</em>, you cannot select it in the VM / CT creator, and Proxmox backup jobs cannot target it. It is purely a host filesystem path. If you also want UI integration, mark <em>both</em> methods in the picker."
   },
@@ -145,9 +145,9 @@
     "showmountTitle": "\"Failed to connect\" from showmount",
     "showmountBody": "The server refused the export-list query. Common causes: the server enforces strict client ACLs (your Proxmox IP is not on the allowed list), <code>rpcbind</code> is not running on the server, or the server exposes only NFSv4 with <code>showmount</code> disabled. The export path can still be added manually if you know it.",
     "inactiveTitle": "Storage shows as inactive in the Proxmox UI",
-    "inactiveBody": "Run <em>Test NFS Connectivity</em> first — 99 % of the time this flags the exact hop that breaks (DNS, port, mount permissions). If connectivity is fine but Proxmox still flags inactive, check <code>journalctl -u pvestatd</code> on the Proxmox node; intermittent DNS or slow NFS mounts on boot can leave storages in an inactive state until <code>pvesm set &lt;id&gt; --disable 0</code> is re-applied.",
+    "inactiveBody": "Run <em>Test NFS Connectivity</em> first: it checks that the server answers ping, that port 2049 is open and that the export list (<code>showmount -e</code>) is available. If connectivity works but storage remains inactive, inspect <code>journalctl -u pvestatd</code> and the server/export configuration. Restore the underlying connectivity or permissions first. <code>pvesm set &lt;id&gt; --disable 0</code> enables a disabled storage; it is not a general repair for NFS failures.",
     "lxcNoWriteTitle": "fstab mount works but unprivileged LXC can't write through a bind-mount",
-    "lxcNoWriteBody": "NFS permissions are enforced server-side, not by the host. The fstab options (<code>uid=</code>, <code>file_mode=</code>) that work for CIFS do <strong>not</strong> apply to NFS. If your unprivileged LXC (root inside CT = UID 100000 on host, mapped to NFS as \"others\") cannot write, the NFS server is either squashing root or has restrictive perms. Fix on the server: change the export to <code>no_root_squash</code> if you trust the host, or set the export world-writable (Synology, TrueNAS, OMV all expose this in the UI). The script tries <code>chmod 1777</code> on the mount but that only succeeds when the server permits it.",
+    "lxcNoWriteBody": "NFS access depends on server-side ownership, ACLs and squash settings. CIFS-style options such as <code>uid=</code> and <code>file_mode=</code> do <strong>not</strong> apply to NFS. With default LXC mapping, CT root becomes host UID 100000, not remote UID 0. Configure access for the actual mapped UID/GID or the server’s anonymous identity. <code>no_root_squash</code> only affects remote UID 0, so it is not a universal fix for UID 100000. The script attempts <code>chmod 1777</code> but cannot override the server’s permissions.",
     "fstabBootTitle": "fstab mount does not come up after reboot",
     "fstabBootBody": "The script adds <code>nofail,_netdev</code> so a missing share at boot does not block startup. If the mount never comes up: confirm the network is reachable (<code>ping &lt;server&gt;</code>), check <code>journalctl -u remote-fs.target</code>, and verify the entry is valid with <code>mount -fav | grep nfs</code>. <code>mount -a</code> after boot mounts everything that is currently missing."
   },

@@ -19,7 +19,7 @@
   "aliasesLabel": "also:",
   "missingCallout": {
     "title": "Missing a term?",
-    "leadRich": "If a term in the docs isn't defined here, open an issue or PR on <ext>GitHub</ext> — the glossary lives in <code>web/app/docs/glossary/page.tsx</code> as a simple data array."
+    "leadRich": "If a term in the docs is missing, open an issue or PR on <ext>GitHub</ext>. Glossary content lives in <code>web/messages/en/docs/glossary.json</code>, with matching locale catalogs."
   },
   "entries": [
     {
@@ -29,7 +29,7 @@
         "ACS override"
       ],
       "category": "Virtualization",
-      "definitionRich": "PCIe extension that prevents direct peer-to-peer traffic between devices, ensuring each device sits in its own IOMMU group. The <em>ACS override</em> kernel patch loosens this so devices in the same IOMMU group can be passed to different VMs — useful but a security trade-off.",
+      "definitionRich": "PCIe access-control features that help isolate device traffic. IOMMU grouping depends on hardware and topology. The <em>ACS override</em> kernel patch can split groups reported by Linux, but does not add hardware isolation; assigning those devices to separate VMs carries a security risk.",
       "seeAlso": [
         {
           "label": "Add Controller or NVMe to VM",
@@ -43,7 +43,7 @@
         "Adaptive Replacement Cache"
       ],
       "category": "Storage",
-      "definitionRich": "ZFS's in-memory read cache. Holds recently and frequently used data blocks; size scales with available host RAM. Defaults are aggressive — Proxmox post-install lets you cap it.",
+      "definitionRich": "ZFS read cache in host RAM, holding recently and frequently used data blocks. Its default limit depends on the Proxmox version and installation settings. ProxMenux Post-Install offers an option to cap it.",
       "seeAlso": [
         {
           "label": "Post-Install: Storage",
@@ -83,7 +83,7 @@
         "Linux bridge"
       ],
       "category": "Network",
-      "definitionRich": "A virtual layer-2 switch on the host. <code>vmbr0</code> is the default Proxmox bridge that connects VMs and containers to the physical network. Multiple bridges (<code>vmbr1</code>, <code>vmbr2</code>...) isolate groups of guests.",
+      "definitionRich": "A virtual layer-2 switch on the host. <code>vmbr0</code> commonly connects guests to the physical network. Additional bridges (<code>vmbr1</code>, <code>vmbr2</code>...) can separate guest networks, depending on their physical links and configuration.",
       "seeAlso": [
         {
           "label": "Bridge analysis & guided repair",
@@ -94,7 +94,7 @@
     {
       "term": "Ceph",
       "category": "Storage",
-      "definitionRich": "Distributed storage system tightly integrated with Proxmox for hyper-converged clusters. Provides object, block and file storage backed by OSDs (Object Storage Daemons). PVE 9 requires Ceph 19.x (Squid).",
+      "definitionRich": "Distributed storage integrated with Proxmox for hyper-converged clusters. OSDs (Object Storage Daemons) underpin its object, block and file storage. Required Ceph versions depend on the Proxmox release and upgrade path; consult the corresponding upgrade guide.",
       "seeAlso": [
         {
           "label": "Upgrade PVE 8 to PVE 9",
@@ -134,7 +134,7 @@
         "Discrete GPU"
       ],
       "category": "Virtualization",
-      "definitionRich": "A standalone graphics card on its own PCIe slot (e.g. NVIDIA RTX, AMD Radeon). Contrasts with <strong>iGPU</strong>. Typically used for VFIO passthrough to a single VM, not for sharing across LXCs.",
+      "definitionRich": "A separate graphics card, typically connected over PCIe, unlike an <strong>iGPU</strong>. It can be assigned to a VM with VFIO or accessed by multiple LXC containers through device nodes and the host driver, subject to hardware and application support.",
       "seeAlso": [
         {
           "label": "Add GPU to VM (Passthrough)",
@@ -153,7 +153,7 @@
         "Dynamic Kernel Module Support"
       ],
       "category": "Linux",
-      "definitionRich": "Framework that automatically rebuilds out-of-tree kernel modules (NVIDIA, ZFS, custom drivers) when the kernel is upgraded. Avoids modules being left behind after kernel updates.",
+      "definitionRich": "Framework for rebuilding registered out-of-tree kernel modules, such as NVIDIA or ZFS, when the kernel changes. Successful builds still require compatible module sources and matching kernel headers.",
       "seeAlso": [
         {
           "label": "Install Coral TPU (Host)",
@@ -189,7 +189,7 @@
         "GRand Unified Bootloader"
       ],
       "category": "Linux",
-      "definitionRich": "Boot loader for most Linux distributions. Configuration lives in <code>/etc/default/grub</code> + <code>/boot/grub/</code>. Modified for IOMMU enablement, kernel parameters and EFI boot entries. Run <code>update-grub</code> after edits.",
+      "definitionRich": "Boot loader used on GRUB-based Linux installations. Configuration is in <code>/etc/default/grub</code> and <code>/boot/grub/</code>; run <code>update-grub</code> after edits. Other Proxmox boot setups may use systemd-boot, so check the active boot loader before changing kernel parameters.",
       "seeAlso": [
         {
           "label": "GPU Passthrough commands",
@@ -229,7 +229,7 @@
         "AMD-Vi"
       ],
       "category": "Virtualization",
-      "definitionRich": "Hardware feature (Intel VT-d / AMD-Vi) that lets PCIe devices be safely assigned directly to guest VMs. Required for GPU and disk-controller passthrough. Must be enabled both in BIOS / UEFI and in the kernel command line (<code>intel_iommu=on</code> or <code>amd_iommu=on</code>).",
+      "definitionRich": "Hardware feature (Intel VT-d / AMD-Vi) needed for PCIe passthrough to VMs. Enable it in firmware and ensure kernel support is active. Kernel arguments such as <code>intel_iommu=on</code> or <code>amd_iommu=on</code> may be needed, depending on platform and kernel defaults.",
       "seeAlso": [
         {
           "label": "Post-Install: Virtualization",
@@ -244,7 +244,7 @@
     {
       "term": "IOMMU group",
       "category": "Virtualization",
-      "definitionRich": "The smallest unit of devices that the IOMMU can isolate from each other. All devices in a group must be passed through together — usually one device, but multi-function cards or shared root-port devices land in the same group. Listed via <code>find /sys/kernel/iommu_groups/ -type l | sort -V</code>."
+      "definitionRich": "A set of devices that forms the smallest IOMMU isolation boundary. Devices within a group are not necessarily isolated from one another; review every member before VFIO assignment. Listed via <code>find /sys/kernel/iommu_groups/ -type l | sort -V</code>."
     },
     {
       "term": "iSCSI",
@@ -274,7 +274,7 @@
         "Logical Volume Manager"
       ],
       "category": "Storage",
-      "definitionRich": "Linux storage stack that abstracts physical disks into volume groups (VG) of logical volumes (LV). Proxmox uses LVM-thin pools for VM disks by default. Concise tools: <code>pvs</code>, <code>vgs</code>, <code>lvs</code>.",
+      "definitionRich": "Linux volume-management layer that groups physical storage into volume groups (VG) containing logical volumes (LV). LVM-based Proxmox installations commonly use LVM-thin for guest disks; other backends are available. Tools include <code>pvs</code>, <code>vgs</code> and <code>lvs</code>.",
       "seeAlso": [
         {
           "label": "Storage and Disks commands",
@@ -288,7 +288,7 @@
         "Linux Containers"
       ],
       "category": "Linux",
-      "definitionRich": "OS-level virtualization technology — multiple isolated user-space instances share the host's kernel. Lighter and faster than VMs but less isolated. Proxmox manages LXC containers via the <code>pct</code> CLI.",
+      "definitionRich": "OS-level virtualization in which isolated userspace instances share the host kernel. Usually has less overhead than VMs, with a different isolation boundary. Proxmox manages LXC containers with the <code>pct</code> CLI.",
       "seeAlso": [
         {
           "label": "VM and CT Management",
@@ -313,7 +313,7 @@
         "Hardware address"
       ],
       "category": "Network",
-      "definitionRich": "48-bit identifier burnt into a NIC's firmware. Used by Proxmox <em>Persistent Network Names</em> to pin interface names (<code>eno1</code>, <code>enp3s0</code>) so they survive PCI re-enumeration.",
+      "definitionRich": "Usually a 48-bit Ethernet interface identifier, assigned by hardware or software. ProxMenux <em>Persistent Network Names</em> matches MAC addresses to stable interface names (<code>eno1</code>, <code>enp3s0</code>) to keep names consistent after PCI re-enumeration.",
       "seeAlso": [
         {
           "label": "Persistent interface names",
@@ -327,7 +327,7 @@
         "Message of the Day"
       ],
       "category": "Linux",
-      "definitionRich": "Text shown after SSH login. Stored in <code>/etc/motd</code>. ProxMenux Post-Install can add a banner here; the uninstaller restores the backup if you applied it."
+      "definitionRich": "Text displayed after SSH login, stored in <code>/etc/motd</code>. ProxMenux Post-Install can add a banner; the uninstaller restores the previous file when a backup exists."
     },
     {
       "term": "NFS",
@@ -346,7 +346,7 @@
     {
       "term": "nftables / iptables",
       "category": "Network",
-      "definitionRich": "Linux firewall systems. <code>nftables</code> is the modern engine; <code>iptables</code> is the legacy front-end (still works as a translation layer). Proxmox's <code>pve-firewall</code> emits nftables rules from the cluster firewall config.",
+      "definitionRich": "Linux firewall tooling. <code>nftables</code> is the modern framework; <code>iptables</code> can use legacy or nft-compatible backends. Classic <code>pve-firewall</code> uses iptables, while the alternative proxmox-firewall backend uses nftables.",
       "seeAlso": [
         {
           "label": "Network commands",
@@ -357,7 +357,7 @@
     {
       "term": "nouveau",
       "category": "Linux",
-      "definitionRich": "Open-source NVIDIA driver bundled with the Linux kernel. Must be blacklisted before installing the proprietary NVIDIA driver, otherwise both load and the install fails.",
+      "definitionRich": "Open-source NVIDIA graphics driver included with the Linux kernel. When installing the proprietary NVIDIA driver, prevent nouveau from binding the same GPU, usually by blacklisting it and rebuilding initramfs.",
       "seeAlso": [
         {
           "label": "NVIDIA installation guide",
@@ -368,7 +368,7 @@
     {
       "term": "no-subscription repo",
       "category": "Proxmox",
-      "definitionRich": "Free Proxmox repository for users without an enterprise subscription. Less polished QA than the enterprise repo (slightly riskier for production) but free. Set up automatically by the ProxMenux Post-Install.",
+      "definitionRich": "Proxmox package repository available without an enterprise subscription. Packages receive less validation than in the enterprise repository, which Proxmox recommends for production. ProxMenux Post-Install offers repository configuration.",
       "seeAlso": [
         {
           "label": "Post-Install: Basic Settings",
@@ -382,7 +382,7 @@
         "Open Virtualization Format"
       ],
       "category": "Virtualization",
-      "definitionRich": "DMTF-standard packaging formats for portable VMs. <strong>OVA</strong> is a single TAR archive; <strong>OVF</strong> is a directory with an XML descriptor + external VMDK files. Importable on VMware, VirtualBox and Proxmox.",
+      "definitionRich": "DMTF formats for packaging portable VMs. <strong>OVA</strong> packages the files in a single TAR archive; <strong>OVF</strong> describes the VM in XML with accompanying disk files, commonly VMDK. Import support depends on the target hypervisor and configuration.",
       "seeAlso": [
         {
           "label": "Export VM to OVA / OVF",
@@ -401,7 +401,7 @@
         "Open Virtual Machine Firmware"
       ],
       "category": "Virtualization",
-      "definitionRich": "UEFI firmware implementation for VMs. Set with <code>qm set &lt;vmid&gt; -bios ovmf</code>. Required for Windows 11, Secure Boot, and most modern OS installs. Pair with an <code>efidisk0</code> to persist EFI variables.",
+      "definitionRich": "UEFI firmware for VMs, selected with <code>qm set &lt;vmid&gt; -bios ovmf</code>. Used for UEFI guests, including Windows 11 and Secure Boot configurations. An <code>efidisk0</code> stores persistent EFI variables; many other guests can still use legacy BIOS.",
       "seeAlso": [
         {
           "label": "Add GPU to VM (Passthrough)",
@@ -415,7 +415,7 @@
         "Proxmox Backup Server"
       ],
       "category": "Proxmox",
-      "definitionRich": "Standalone product from Proxmox for incremental, deduplicated, encrypted VM / CT backups. Recommended over plain vzdump when you have a separate machine to host it on."
+      "definitionRich": "Separate Proxmox backup product providing incremental transfers, deduplication and optional client-side encryption for VM and CT backups. It can be used as a vzdump destination; a separate backup server is preferable to keeping backups on the protected host."
     },
     {
       "term": "pct",
@@ -466,7 +466,7 @@
     {
       "term": "Privileged container",
       "category": "Linux",
-      "definitionRich": "LXC container where the root user inside the container <em>is</em> root on the host (UIDs not shifted). Required for hardware passthrough (USB devices, GPU sharing) and Samba / NFS server inside the CT. Less secure than unprivileged — use only when needed."
+      "definitionRich": "LXC container whose root user <em>maps to host UID 0</em>, while namespaces and other restrictions still apply. Less isolated than an unprivileged container. GPU, USB and Samba access do not universally require this mode; permissions and UID mappings matter."
     },
     {
       "term": "ProxMenux Monitor",
@@ -485,7 +485,7 @@
         "QEMU Copy-On-Write v2"
       ],
       "category": "Storage",
-      "definitionRich": "Default VM disk image format on Proxmox directory storage. Supports thin provisioning, snapshots, and copy-on-write. Convert with <code>qemu-img convert -O qcow2 ...</code>."
+      "definitionRich": "VM disk image format commonly used on directory storage. Supports allocation on demand, snapshots and copy-on-write. Convert an image with <code>qemu-img convert -O qcow2 ...</code>."
     },
     {
       "term": "qm",
@@ -514,7 +514,7 @@
     {
       "term": "rclone",
       "category": "Linux",
-      "definitionRich": "Command-line tool that talks to ~50 cloud storage providers (Google Drive, Dropbox, OneDrive, Mega, S3, …). Used in the Proxmox cloud-backup guide to mount a personal cloud as a directory the host can write vzdump archives to.",
+      "definitionRich": "Command-line tool supporting many cloud storage providers, including Google Drive, Dropbox, OneDrive, Mega and S3. The cloud-backup guide uses it to mount remote storage as a directory for vzdump archives.",
       "seeAlso": [
         {
           "label": "Backup to Personal Cloud",
@@ -564,7 +564,7 @@
     {
       "term": "sysctl",
       "category": "Linux",
-      "definitionRich": "Kernel parameter management. Reads <code>/etc/sysctl.conf</code> + <code>/etc/sysctl.d/*.conf</code> at boot. ProxMenux Post-Install ships a curated sysctl tuning profile.",
+      "definitionRich": "Tool for reading and changing kernel parameters. Persistent settings are commonly placed in <code>/etc/sysctl.d/*.conf</code>; support for <code>/etc/sysctl.conf</code> depends on the loader. ProxMenux Post-Install offers a sysctl tuning profile.",
       "seeAlso": [
         {
           "label": "Post-Install: Network",
@@ -594,7 +594,7 @@
         "UID shift"
       ],
       "category": "Linux",
-      "definitionRich": "In <strong>unprivileged</strong> LXC containers, UIDs and GIDs are shifted by <code>+100000</code> on the host. Container UID 0 = host UID 100000, container UID 1000 = host UID 101000, etc. Affects file ownership on bind mounts.",
+      "definitionRich": "With the default mapping in <strong>unprivileged</strong> LXC containers, host UIDs and GIDs are shifted by <code>+100000</code>: container UID 0 maps to host UID 100000, and 1000 to 101000. Custom mappings can differ; file ownership on bind mounts must match the chosen mapping.",
       "seeAlso": [
         {
           "label": "LXC Mount Points",
@@ -605,7 +605,7 @@
     {
       "term": "Unprivileged container",
       "category": "Linux",
-      "definitionRich": "LXC container where root inside is mapped to an unprivileged UID on the host (UID shift +100000). Safer than privileged but can't do hardware passthrough or run kernel-level services. Default for most use cases."
+      "definitionRich": "LXC container whose root maps to an unprivileged host UID, normally 100000. This reduces host privileges while sharing its kernel. Hardware access can still be configured with suitable device permissions and mappings; privileged mode is not universally required."
     },
     {
       "term": "VFIO",
@@ -640,7 +640,7 @@
         "Virtual Machine"
       ],
       "category": "Proxmox",
-      "definitionRich": "A full machine emulation managed by Proxmox via QEMU/KVM. Has a numeric VMID that maps to <code>/etc/pve/qemu-server/&lt;VMID&gt;.conf</code>. Heavier than LXC containers but fully isolated.",
+      "definitionRich": "Virtual machine managed by Proxmox with QEMU/KVM, running its own guest kernel. Its numeric VMID maps to <code>/etc/pve/qemu-server/&lt;VMID&gt;.conf</code>. Usually has more overhead than LXC, with a separate kernel isolation boundary.",
       "seeAlso": [
         {
           "label": "VM and CT Management",
@@ -651,7 +651,7 @@
     {
       "term": "vzdump",
       "category": "Proxmox",
-      "definitionRich": "Proxmox's built-in backup tool for VMs and CTs. <strong>Not incremental</strong> — every backup is a full snapshot. Configure modes (snapshot / suspend / stop), compression (zstd / pigz / lzo), retention and notification per job.",
+      "definitionRich": "Proxmox backup tool for VMs and CTs. File archives are <strong>not incremental</strong>; PBS targets support incremental transfers. Jobs can configure backup mode (snapshot / suspend / stop), compression (such as zstd, gzip or lzo), retention and notifications.",
       "seeAlso": [
         {
           "label": "Backup and Restore commands",
@@ -665,7 +665,7 @@
         "Zettabyte File System"
       ],
       "category": "Storage",
-      "definitionRich": "Combined filesystem and volume manager known for snapshots, send/receive replication, end-to-end checksums, compression and self-healing. Memory-hungry (see <strong>ARC</strong>) but extremely robust.",
+      "definitionRich": "Combined filesystem and volume manager with snapshots, send/receive replication, checksums and compression. It can repair corrupted data when a valid redundant copy is available. Read caching uses RAM through <strong>ARC</strong>, whose size can be limited.",
       "seeAlso": [
         {
           "label": "ZFS Management commands",

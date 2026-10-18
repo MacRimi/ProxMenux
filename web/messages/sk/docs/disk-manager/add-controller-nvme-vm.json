@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "title": "Pridať radič alebo NVMe do VM | Dokumentácia ProxMenux",
+    "description": "Sprístupnenie radiča úložiska SATA/SAS HBA alebo zariadenia NVMe virtuálnemu stroju Proxmox cez PCI passthrough pomocou ProxMenuxu. Nástroj zabezpečuje aktiváciu IOMMU, rozpoznanie konfliktov a priradenie cez qm set --hostpci.",
+    "ogTitle": "Pridať radič alebo NVMe do VM | Dokumentácia ProxMenux",
+    "ogDescription": "Priraďte celý HBA SATA/SAS alebo zariadenie NVMe virtuálnemu stroju Proxmox. ProxMenux zabezpečí IOMMU, rozpoznanie konfliktov a priradenie hostpci."
+  },
+  "header": {
+    "title": "Pridať radič alebo NVMe do VM",
+    "description": "Priraďte celý adaptér SATA/SAS HBA alebo zariadenie NVMe virtuálnemu stroju Proxmox cez PCI passthrough. ProxMenux skontroluje IOMMU a s vaším súhlasom ho aktivuje, vyhľadá vhodné zariadenia, vylúči konflikty a zapíše priradenie pomocou qm set --hostpci.",
+    "section": "Správca disku · VM"
+  },
+  "intro": {
+    "title": "Čo to robí (a nerobí)",
+    "body": "Toto je <strong>priechod na úrovni zariadenia</strong>: karta PCIe opustí pohľad hostiteľského jadra a je viazaná na <code>vfio-pci</code>. VM vidí samotný radič – nie jednotlivé disky za ním – a načíta svoj vlastný ovládač pre tento presný model. Každý disk pripojený k tomuto radiču ho nasleduje automaticky, s natívnymi SMART údajmi, úplnými funkciami firmvéru a bez vrstvy Proxmox medzi nimi."
+  },
+  "howRuns": {
+    "heading": "Ako beží skript",
+    "body": "Postup má dve oddelené fázy: zhromaždenie informácií, kontrolu IOMMU a výpis vhodných zariadení; potom samotné pripojenie zariadenia PCI. Až do záverečného potvrdenia sa do konfigurácie VM nič nezapisuje."
+  },
+  "iommu": {
+    "heading": "Skupiny IOMMU: prečo treba posudzovať celú kartu",
+    "body": "Hranicou izolácie PCI passthrough je <strong>skupina IOMMU</strong>, najmenšia jednotka, ktorú IOMMU procesora dokáže izolovať. Zariadenia v rovnakej skupine nemožno izolovať navzájom. Ak radič SATA zdieľa skupinu s radičom USB, passthrough SATA môže vyžadovať aj uvoľnenie USB z hostiteľa alebo nemusí byť možný. Automaticky nepriradí VM všetky zariadenia skupiny.",
+    "outro": "ProxMenux zobrazuje skupinu IOMMU pri každom zariadení a upozorní, ak skupina obsahuje aj iné zariadenia než požadovaný radič. Môžete pokračovať, ak sú tieto ďalšie zariadenia prijateľné, napríklad ak sú všetky radičmi diskov, alebo sa vrátiť späť."
+  },
+  "prereqs": {
+    "heading": "Predpoklady",
+    "items": [
+      "<strong>CPU a základná doska podporujú</strong> VT-d (Intel) alebo AMD-Vi a funkcia je povolená vo firmvéri (BIOS/UEFI). ProxMenux môže upraviť nastavenie jadra, ale nemôže prepnúť nastavenie firmvéru.",
+      "Cieľová VM je pred pripojením zariadení PCI <strong>vypnutá</strong>.",
+      "Radič/NVMe <strong>nie je ten, na ktorom sa nachádza koreňový súborový systém Proxmox</strong>. Skript skryje všetko, čo hostiteľ používa.",
+      "Hosťujúci OS má ovládače pre model radiča. Linux pokrýva prakticky každý HBA hneď po vybalení; Windows potrebuje nainštalovaný ovládač od dodávateľa <em>pred</em> spustením s pripojeným radičom."
+    ],
+    "warnTitle": "Živá migrácia nie je možná",
+    "warnBody": "VM s PCI passthrough je viazaná na uzol, v ktorom je karta fyzicky osadená. Živá migrácia medzi uzlami zlyhá. Prispôsobte tomu zálohovanie a replikáciu."
+  },
+  "steps": {
+    "heading": "Krok za krokom",
+    "stepLabel": "Krok",
+    "list": [
+      {
+        "title": "Vyberte cieľovú VM",
+        "bodyRich": "ProxMenux načíta <code>qm list</code> a zobrazí všetky VM. Vyberte tú, ktorej chcete priradiť radič.",
+        "img": "/disk/nvme-passthrough/vm-selection.png",
+        "alt": "dialóg výberu VM",
+        "caption": "dialóg výberu VM"
+      },
+      {
+        "title": "Kontrola IOMMU",
+        "bodyRich": "Ak IOMMU nie je povolené v príkazovom riadku jadra, ProxMenux ponúkne jeho aktiváciu. Upraví <code>/etc/kernel/cmdline</code> pre systemd-boot alebo <code>/etc/default/grub</code> pre GRUB a pridá správny parameter pre váš CPU:",
+        "items": [
+          "<code>intel_iommu=on</code> pre procesory Intel.",
+          "<code>amd_iommu=on</code> pre CPU AMD."
+        ],
+        "outro": "Po tejto zmene je potrebný reštart. Skript ponúkne reštart teraz alebo neskôr; passthrough nemôže pokračovať, kým nie je aktívny nový príkazový riadok jadra.",
+        "img": "/disk/nvme-passthrough/iommu-warning.png",
+        "alt": "Dialóg IOMMU je vyžadované",
+        "caption": "IOMMU je vyžadované: ponuka aktivácie a reštartu"
+      },
+      {
+        "title": "Výpis zariadení",
+        "body": "ProxMenux vypíše všetky radiče úložiska (HBA SATA/SAS) a všetky zariadenia NVMe na zbernici PCI. Pri každom zariadení zobrazí:",
+        "items": [
+          "Adresa PCI (<code>00:17.0</code>, <code>01:00.0</code>, ...).",
+          "Dodávateľ / popis zariadenia.",
+          "Skupina IOMMU a upozornenie ⚠, ak ju zdieľajú ďalšie nesúvisiace zariadenia.",
+          "Disky aktuálne pripojené k radiču, aby ste vedeli, ktoré s ním prejdú do VM."
+        ],
+        "img": "/disk/nvme-passthrough/device-list.png",
+        "alt": "Výpis radičov a zariadení NVMe",
+        "caption": "Výpis radičov a zariadení NVMe s informáciami o skupine IOMMU"
+      },
+      {
+        "title": "Odhalenie konfliktov",
+        "bodyRich": "Skript zablokuje jednoznačne nebezpečné zariadenia: už priradené inej VM cez <code>hostpci</code> v jej konfigurácii, používané hostiteľom, napríklad radič koreňového disku, alebo zaradené v skupine IOMMU, ktorej ostatných členov nedokáže bezpečne identifikovať. Vhodné zariadenia sú dostupné na výber.",
+        "img": "/disk/nvme-passthrough/conflict-warning.png",
+        "alt": "Upozornenie na zistený konflikt",
+        "caption": "Rozpoznanie konfliktu: zariadenie zablokované s uvedením dôvodu"
+      },
+      {
+        "title": "Pripojiť a dokončiť",
+        "bodyRich": "Pre každé vybrané zariadenie ProxMenux spustí <code>qm set &lt;VMID&gt; --hostpciN &lt;pci-addr&gt;,pcie=1</code> a vyberie ďalší voľný slot <code>hostpci</code>. Ak sa počas tejto relácie aktivovalo IOMMU, pripomenie potrebu reštartu pred spustením VM.",
+        "img": "/disk/nvme-passthrough/assignment.png",
+        "alt": "Prehľad priradenia",
+        "caption": "Prehľad priradenia: sloty hostpciN a pripojené adresy PCI"
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent"
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "noGroupsTitle": "IOMMU povolené, ale žiadne skupiny pod /sys/kernel/iommu_groups/",
+    "noGroupsBody": "Na uplatnenie príkazového riadka jadra je potrebný reštart. Ak skupiny chýbajú aj po reštarte, VT-d/AMD-Vi je pravdepodobne vypnuté vo firmvéri: skontrolujte nastavenia BIOS/UEFI.",
+    "busyTitle": "VM sa nespustí: \"hostpciN: device busy\"",
+    "busyBody": "Iný proces stále drží PCI zariadenie. Najčastejšie príčiny: predchádzajúci VM, ktorý zlyhal bez jeho uvoľnenia, alebo ho hostiteľské jadro získalo späť pri poslednom spustení. Spustite <code>lspci -nnk -s &lt;addr&gt;</code> a zistite, ktorý ovládač je viazaný; malo by to byť <code>vfio-pci</code>. Úplný reštart hostiteľa to zvyčajne vymaže.",
+    "noDisksTitle": "Hosť vidí radič, ale nie disky",
+    "noDisksBody": "V hosťovi chýba ovládač pre daný model radiča. V Linuxe je to zriedkavé, vo Windowse sa to stáva: nainštalujte ovládač výrobcu, napríklad LSI/Broadcom pre staršie HBA SAS, keď karta nie je priradená, a potom reštartujte s priradenou kartou.",
+    "sharedTitle": "Skupina IOMMU obsahuje nesúvisiace zariadenie",
+    "sharedBody": "Možnosti: (a) presunúť kartu do iného slotu PCIe a zmeniť tak jej skupinu, (b) zapnúť <em>ACS override</em> v jadre na rozdelenie skupín (bezpečnostný kompromis, pred použitím si ho preštudujte), alebo (c) vybrať inú kartu v lepšie izolovanej skupine."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importovať disk do VM",
+        "tail": " — alternatíva: pripojiť fyzický disk cez Proxmox bez úplného PCIe passthrough."
+      },
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Pridať GPU do VM (passthrough)",
+        "tail": " — Rovnaké IOMMU / VFIO koncepty použité na GPU."
+      },
+      {
+        "href": "/docs/help-info/gpu-commands",
+        "label": "Príkazy pre GPU passthrough",
+        "tail": " — príkazy na overenie IOMMU platia aj pre passthrough radiča alebo NVMe."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Prehľad správcu diskov",
+        "tail": "."
+      }
+    ]
+  }
+}

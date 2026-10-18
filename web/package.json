@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && pagefind --site out --output-path public/pagefind && cp -r public/pagefind out/pagefind",
+    "build": "next build && node scripts/localize-export.mjs && pagefind --site out --output-path public/pagefind && cp -r public/pagefind out/pagefind",
     "start": "next start",
     "lint": "next lint",
-    "index": "pagefind --site out --output-path public/pagefind && cp -r public/pagefind out/pagefind"
+    "index": "node scripts/localize-export.mjs && pagefind --site out --output-path public/pagefind && cp -r public/pagefind out/pagefind"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

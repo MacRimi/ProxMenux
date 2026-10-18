@@ -578,8 +578,6 @@ def interactive(catalog: Catalog) -> int:
                           f"{translate('All applications')} ({len(applications)})")
             elif selection == "manage":
                 from .management import interactive_management
-                console.show_logo()
-                console.msg_title(translate("Manage installed OCI applications"))
                 interactive_management(PROJECT_ROOT, ui)
             elif selection == "registries":
                 from .registry_accounts import open_registry_accounts

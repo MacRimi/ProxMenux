@@ -1,0 +1,240 @@
+{
+  "meta": {
+    "title": "Po inštalácii: Základné nastavenia | Dokumentácia ProxMenux",
+    "description": "Základné možnosti po inštalácii: prechod na repozitáre Proxmox bez predplatného a aktualizácia systému, zistenie časového pásma a zapnutie NTP, vynechanie prekladov APT a výber z 25 bežných systémových nástrojov na inštaláciu."
+  },
+  "header": {
+    "title": "Po inštalácii: Základné nastavenia",
+    "section": "Nastavenie Proxmoxu po inštalácii"
+  },
+  "intro": {
+    "title": "Čo táto kategória zahŕňa",
+    "body": "Päť základných možností pre nový hostiteľ Proxmox: prejsť na komunitné repozitáre bez predplatného, plne aktualizovať systém, automaticky nastaviť časové pásmo a NTP, vypnúť preklady APT na úsporu šírky pásma a disku a vybrať z 25 bežných nástrojov."
+  },
+  "upgrade": {
+    "heading": "Aktualizovať systém",
+    "intro": "Nastaví APT na bezplatný repozitár <em>pve-no-subscription</em> namiesto repozitára Enterprise s predplatným a plne aktualizuje systém. Presné kroky závisia od hlavnej verzie Proxmox VE; ProxMenux ju zistí a spustí správny skript.",
+    "headerVersion": "PVE verzia",
+    "headerScript": "Skript výberu podľa verzie",
+    "headerCodename": "Kódové meno Debianu",
+    "rows": [
+      {
+        "version": "9.x",
+        "script": "update-pve9_2.sh",
+        "codename": "trixie"
+      },
+      {
+        "version": "8.x",
+        "script": "update-pve8.sh",
+        "codename": "bookworm"
+      }
+    ],
+    "officialTitle": "Oficiálne odporúčanie pre Proxmox",
+    "officialBody": "Oficiálny návod Proxmox odporúča tieto príkazy v presnom poradí:",
+    "officialOutro": "Toto je bežný príkaz pre aktualizácie v rámci nainštalovanej hlavnej verzie Proxmox VE. Skontrolujte repozitáre a navrhované zmeny balíkov <em>pred</em> pokračovaním. Prechod na inú hlavnú verziu vyžaduje oficiálny migračný postup.",
+    "doesTitle": "Čo robí možnosť ProxMenux — overené podľa skriptu",
+    "doesIntro": "Aktualizácia ProxMenux vykoná uvedené príkazy apt a pridá prípravné aj záverečné kroky, na ktoré by ste inak museli myslieť sami. Nasledujúce položky zodpovedajú výberovému skriptu; podrobnosti sú v <link>Aktualizácia systému Proxmox</link>.",
+    "doesItems": [
+      "<strong>Najprv poriadok v repozitároch.</strong> Zakáže podnikové zdroje <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, odstráni staré súbory repozitárov z predchádzajúcich verzií PVE a vytvorí čistý <code>proxmox.sources</code> s bezplatným kanálom <em>pve-no-subscription</em> podľa kódového názvu Debianu na hostiteľovi: trixie pre PVE 9, bookworm pre PVE 8.",
+      "<strong>Prepíše repozitáre Debian</strong> s main / updates / security a <code>non-free-firmware</code>, aby počas aktualizácie zmizlo upozornenie na firmvér.",
+      "<strong>Spustí oficiálnu aktualizáciu.</strong> <code>apt-get update</code> a potom <code>apt full-upgrade -y</code> (PVE 9) alebo <code>apt dist-upgrade -y</code> (PVE 8), neinteraktívne s <code>--force-confdef --force-confold</code> na zachovanie upravených konfiguračných súborov.",
+      "<strong>Nainštaluje základné balíky</strong>, ak chýbajú: <code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>.",
+      "<strong>Skontroluje metadáta LVM.</strong> Hľadá VM s priamo priradenými diskami, ktoré mohli na surové disky zapísať staré hlavičky fyzických zväzkov. Upozorní na nezrovnalosti bez automatickej opravy.",
+      "<strong>Potom vyčistí:</strong> <code>apt-get autoremove -y</code> + <code>apt-get autoclean -y</code>, potom vyzve na reštart, ak jadro bolo aktualizované alebo <code>/var/run/reboot-required</code> je prítomný."
+    ],
+    "shortTitle": "Stručne povedané",
+    "shortBody": "Možnosť spustí odporúčaný príkaz <code>apt update && apt full-upgrade -y</code>, doplní úpravu repozitárov a záverečné čistenie uvedené v oficiálnom návode a ponúkne reštart. Pozrite <link>Aktualizácia systému Proxmox</link> s celým diagramom; rovnaký aktualizátor je samostatne dostupný v hlavnom menu.",
+    "subTitle": "Nepoužívajte na hostiteľovi s predplatným",
+    "subBody": "Ak máte predplatné Proxmox a chcete ponechať repozitáre Enterprise, túto možnosť vynechajte. Zakáže Enterprise a prepne hostiteľa na komunitný kanál. Aktualizácia balíkov ani prepísanie repozitárov sa nedajú vrátiť cez Odinštalovať optimalizácie. Neskoršiu zmenu kanála musíte vykonať úpravou konfigurácie repozitárov.",
+    "safetyTitle": "Bezpečnostná kontrola po aktualizácii",
+    "safetyBody": "Po aktualizácii skript hľadá staré metadáta fyzických zväzkov (PV) na diskoch. Môže k tomu dôjsť, keď VM s priamo priradeným diskom zapíše hlavičky LVM na surový disk. Pri podozrivom náleze zobrazí upozornenie a navrhne kontrolu cez <code>pvs</code>. Automaticky nič nemení."
+  },
+  "time": {
+    "heading": "Automaticky synchronizovať čas",
+    "intro": "Zistí verejnú IP adresu servera cez <code>dig myip.opendns.com @resolver1.opendns.com</code>, potom z <code>ipapi.co/'{'ip'}'/timezone</code> získa zodpovedajúce časové pásmo IANA a nastaví ho cez <code>timedatectl set-timezone</code>. Nakoniec zapne NTP cez <code>timedatectl set-ntp true</code>.",
+    "depTitle": "Závisí od dvoch externých služieb",
+    "depBody": "Vyhľadávanie závisí od dostupnosti OpenDNS a <code>ipapi.co</code> a od správnosti ich odpovedí. Ak spustíte Proxmox za VPN alebo na VLAN, ktorá vychádza z iného regiónu, automaticky zistené časové pásmo môže byť nesprávne. V takom prípade preskočte túto možnosť a nastavte časové pásmo ručne:",
+    "revertTitle": "Reverzibilné z menu Odinštalovať",
+    "revertBody": "<link>Odinštalovanie optimalizácií</link> obnoví časové pásmo na UTC (bezpečné predvolené nastavenie). Nezakáže NTP – vaše hodiny sa neustále synchronizujú, len sú ukotvené na UTC, kým manuálne nenastavíte nové časové pásmo."
+  },
+  "languages": {
+    "heading": "Nesťahovať ďalšie jazyky",
+    "intro": "Počas <code>apt update</code> môže APT okrem hlavných metadát sťahovať aj preklady opisov balíkov. Možnosť ich vypne na úsporu šírky pásma a miesta. Predtým ProxMenux <strong>overí, že miestne nastavenie hostiteľa je vygenerované</strong>: prečíta <code>/etc/default/locale</code> alebo <code>/etc/environment</code>, podľa potreby doplní <code>/etc/locale.gen</code> a spustí <code>locale-gen</code>. Miestne nastavenie shellu sa tak zachová.",
+    "writtenTitle": "Čo sa napíše",
+    "revertTitle": "Reverzibilné z menu Odinštalovať",
+    "revertBody": "Odstraňovanie <code>/etc/apt/apt.conf.d/99-disable-translations</code> (buď manuálne, alebo z menu Odinštalovať) obnoví štandardné správanie a APT znovu stiahne jazykové súbory."
+  },
+  "utilities": {
+    "heading": "Nainštalovať bežné systémové nástroje",
+    "intro": "Otvorí zoznam <strong>25 vybraných nástrojov</strong> rozdelených do skupín. Vyberiete požadované nástroje a potvrdíte výber. ProxMenux ich nainštaluje cez <code>apt</code>, overí fungovanie balíkov a na konci zobrazí súhrn.",
+    "imageAlt": "Výber systémových nástrojov ProxMenux: medzerník vyberá, Enter potvrdzuje",
+    "reuseTitle": "Rovnaký zoznam je opätovne použitý inde",
+    "reuseBody": "Katalóg 25 nástrojov má jedinú definíciu: <code>PROXMENUX_UTILS</code> v <code>scripts/global/utils-install-functions.sh</code>. Menu <em>Pomôcky a nástroje → Systémové nástroje</em> ponúka rovnaký zoznam na neskoršie inštalácie bez opakovania nastavení po inštalácii.",
+    "listTitle": "Čo je v zozname?",
+    "groups": [
+      {
+        "group": "Monitory systému",
+        "items": [
+          {
+            "pkg": "htop",
+            "desc": "Interaktívny prehliadač procesov"
+          },
+          {
+            "pkg": "btop",
+            "desc": "Moderný monitor zdrojov (CPU, RAM, disky, sieť, procesy)"
+          },
+          {
+            "pkg": "s-tui",
+            "desc": "Terminálové rozhranie na záťažové testy a sledovanie CPU"
+          },
+          {
+            "pkg": "iftop",
+            "desc": "Využitie šírky pásma pre každé spojenie v reálnom čase"
+          },
+          {
+            "pkg": "iotop",
+            "desc": "Diskové I/O podľa procesu"
+          },
+          {
+            "pkg": "iptraf-ng",
+            "desc": "Interaktívny monitor IP LAN"
+          }
+        ]
+      },
+      {
+        "group": "Sieť",
+        "items": [
+          {
+            "pkg": "iperf3",
+            "desc": "Meranie maximálnej dosiahnuteľnej šírky pásma medzi hostiteľmi"
+          },
+          {
+            "pkg": "net-tools",
+            "desc": "Staršie nástroje (ifconfig, netstat, route). Stále užitočné na rýchle kontroly"
+          },
+          {
+            "pkg": "ipset",
+            "desc": "Spravuje veľké množiny IP adries v jadre — užitočné pre pravidlá iptables/nftables"
+          }
+        ]
+      },
+      {
+        "group": "Sťahovanie a archívy",
+        "items": [
+          {
+            "pkg": "axel",
+            "desc": "Nenáročný akcelerátor paralelného sťahovania"
+          },
+          {
+            "pkg": "aria2",
+            "desc": "Sťahovanie z viacerých zdrojov a cez viac protokolov (HTTP, FTP, BitTorrent, Metalink)"
+          },
+          {
+            "pkg": "unzip",
+            "desc": "Rozbaliť archívy ZIP"
+          },
+          {
+            "pkg": "zip",
+            "desc": "Vytvoriť ZIP archívy"
+          },
+          {
+            "pkg": "cabextract",
+            "desc": "Rozbaliť archívy Microsoft CAB (užitočné pri súboroch ISO systému Windows)"
+          },
+          {
+            "pkg": "wimtools",
+            "desc": "Manipulovať obrazy Windows WIM (extrahovať, rozdeliť, pripojiť, použiť)"
+          },
+          {
+            "pkg": "genisoimage",
+            "desc": "Vytvárať obrazy ISO 9660 z adresára"
+          }
+        ]
+      },
+      {
+        "group": "Text a súbory",
+        "items": [
+          {
+            "pkg": "dos2unix",
+            "desc": "Previesť koncovky riadkov CRLF (Windows) na LF (Unix)"
+          },
+          {
+            "pkg": "grc",
+            "desc": "Univerzálne farebné zvýraznenie výstupu príkazov ping, traceroute, dig, tail a ďalších"
+          },
+          {
+            "pkg": "plocate",
+            "desc": "Rýchle indexované vyhľadávanie súborov. Po inštalácii spustite updatedb na vytvorenie indexu"
+          }
+        ]
+      },
+      {
+        "group": "Vzdialený prístup a relácie",
+        "items": [
+          {
+            "pkg": "sshpass",
+            "desc": "Neinteraktívne overenie SSH heslom (užitočné pre skripty, nie na každodenné používanie)"
+          },
+          {
+            "pkg": "tmux",
+            "desc": "Terminálový multiplexer: odpojenie relácií, rozdelenie panelov a zachovanie relácií pri strate spojenia"
+          }
+        ]
+      },
+      {
+        "group": "Hardvér a nízkoúrovňové nástroje",
+        "items": [
+          {
+            "pkg": "msr-tools",
+            "desc": "Čítať a zapisovať registre špecifické pre model CPU (rdmsr, wrmsr)"
+          },
+          {
+            "pkg": "intel-gpu-tools",
+            "desc": "Intel GPU diagnostické pomôcky vrátane `intel_gpu_top`"
+          }
+        ]
+      },
+      {
+        "group": "Virtualizácia",
+        "items": [
+          {
+            "pkg": "libguestfs-tools",
+            "desc": "Kontrolovať a upravovať obrazy diskov VM (virt-ls, virt-cat, guestmount…)"
+          },
+          {
+            "pkg": "chntpw",
+            "desc": "Upravovať Windows SAM (užitočné na obnovenie hesiel v prevzatých Windows VM)"
+          }
+        ]
+      }
+    ],
+    "actionTitle": "Niekoľko z nich v akcii",
+    "noBulkTitle": "Odstránia sa iba nástroje nainštalované cez ProxMenux",
+    "noBulkBody": "ProxMenux zaznamenáva iba vybrané balíky, ktoré ešte neboli nainštalované. Voľba Odinštalovať optimalizácie ich úplne odstráni a ponechá pôvodné balíky. Aktualizácie APT nemajú bezpečný atómový návrat späť: odinštalovanie nástrojov nevráti aktualizáciu systému."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Aktualizácia systému Proxmox",
+        "href": "/docs/utils/system-update",
+        "tail": " — Na požiadanie zopakuje cyklus apt update + dist-upgrade."
+      },
+      {
+        "label": "Inštalátor systémových nástrojov",
+        "href": "/docs/utils/system-utils",
+        "tail": " — Nainštalovať alebo preinštalovať jednotlivé nástroje aj po nastavení po inštalácii."
+      },
+      {
+        "label": "Príkazy na aktualizácie a balíky",
+        "href": "/docs/help-info/update-commands",
+        "tail": " — Prehľad apt pre shell."
+      },
+      {
+        "label": "Prispôsobiteľné nastavenia po inštalácii",
+        "href": "/docs/post-install/customizable",
+        "tail": " — späť do nadradeného menu."
+      }
+    ]
+  }
+}
