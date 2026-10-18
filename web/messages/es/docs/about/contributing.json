@@ -163,7 +163,7 @@
       },
       {
         "function": "msg_success \"text\"",
-        "whenRich": "Mensaje final «Pulsa Intro para volver» al terminar la fase 2.",
+        "whenRich": "Mensaje final «Press Enter to return» al terminar la fase 2.",
         "spinner": "Para"
       },
       {

@@ -19,7 +19,7 @@
     "uninstallLabel": "Desinstalación",
     "uninstallSuffix": " — eliminación limpia.",
     "issuesLabel": "GitHub Issues",
-    "discussionsLabel": "Discusiones"
+    "discussionsLabel": "Discussions"
   },
   "q1": {
     "question": "¿Qué es ProxMenux y para qué sirve?",
@@ -75,7 +75,7 @@
     "item2Rich": "El árbol de scripts en <code>/usr/local/share/proxmenux/</code>.",
     "item3Rich": "El lanzador en <code>/usr/local/bin/menu</code>.",
     "item4Rich": "Opcional: el servicio systemd del Monitor en <code>proxmenux-monitor.service</code>.",
-    "p2Rich": "ProxMenux <em>no</em> modifica la configuración principal de Proxmox salvo que lo solicites expresamente desde un menú específico. Por ejemplo, la reparación de red edita <code>/etc/network/interfaces</code>, pero solo después de tu confirmación y de crear una copia de seguridad."
+    "p2Rich": "ProxMenux <em>no</em> modifica la configuración principal de Proxmox salvo que lo solicites expresamente desde un menú específico. Por ejemplo, la reparación de red edita <code>/etc/network/interfaces</code>, pero solo después de tu confirmación y de hacer un backup."
   },
   "q9": {
     "question": "¿Es seguro usar ProxMenux en producción?",
@@ -83,7 +83,7 @@
   },
   "q10": {
     "question": "¿Cómo desinstalo ProxMenux?",
-    "p1Rich": "Desde ProxMenux: <strong>Configuración → Desinstalar ProxMenux</strong>. El desinstalador elimina el árbol de scripts, el lanzador y el servicio Monitor, permite eliminar dependencias seleccionadas y restaura <code>/root/.bashrc</code> y <code>/etc/motd</code> desde las copias de la instalación, si existen.",
+    "p1Rich": "Desde ProxMenux: <strong>Ajustes → Desinstalar ProxMenux</strong>. El desinstalador elimina el árbol de scripts, el lanzador y el servicio Monitor, permite eliminar dependencias seleccionadas y restaura <code>/root/.bashrc</code> y <code>/etc/motd</code> desde los backups hechos al instalar, si existen.",
     "p2Rich": "Paso a paso completo: <uninstalllink>Desinstalar ProxMenux</uninstalllink>."
   },
   "q11": {
