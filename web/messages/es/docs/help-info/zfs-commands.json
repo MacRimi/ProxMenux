@@ -214,7 +214,7 @@
       },
       {
         "href": "/docs/help-info/backup-commands",
-        "label": "Copias de seguridad y restauración",
+        "label": "Backup & Restore",
         "tail": " — vzdump, qmrestore."
       },
       {

@@ -8,8 +8,8 @@
     "twitterDescription": "Comandos vzdump, qmrestore y pct restore para hacer y restaurar backups de VMs y contenedores de Proxmox."
   },
   "header": {
-    "title": "Copias de seguridad y restauración",
-    "description": "Selección de comandos vzdump, qmrestore y pct restore para copias de seguridad en Proxmox. Incluye programación, opciones avanzadas como hooks, rutas excluidas y prioridad de E/S, y gestión de archivos de copia.",
+    "title": "Backup y restauración",
+    "description": "Selección de comandos vzdump, qmrestore y pct restore para backups en Proxmox. Incluye programación, opciones avanzadas como hooks, rutas excluidas y prioridad de E/S, y gestión de archivos de copia.",
     "section": "Ayuda e información"
   },
   "intro": {
@@ -166,7 +166,7 @@
         },
         {
           "command": "pvenode task list --typefilter vzdump",
-          "description": "Listar tareas de copia de seguridad finalizadas"
+          "description": "Listar tareas de backup finalizadas"
         },
         {
           "command": "pvenode task log <upid>",

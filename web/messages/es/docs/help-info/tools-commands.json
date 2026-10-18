@@ -251,7 +251,7 @@
   ],
   "tmuxTip": {
     "title": "Usa tmux / screen para comandos de larga duración",
-    "bodyRich": "Ejecuta las tareas largas, como una copia de seguridad, una actualización o una transferencia grande con rsync, dentro de <code>tmux</code> o <code>screen</code> para que una desconexión SSH no termine la sesión del terminal. En una sesión tmux, vuelve a conectarte al mismo host con el mismo usuario y ejecuta <code>tmux attach</code>. Las sesiones screen tienen su propio comando de reconexión."
+    "bodyRich": "Ejecuta las tareas largas, como un backup, una actualización o una transferencia grande con rsync, dentro de <code>tmux</code> o <code>screen</code> para que una desconexión SSH no termine la sesión del terminal. En una sesión tmux, vuelve a conectarte al mismo host con el mismo usuario y ejecuta <code>tmux attach</code>. Las sesiones screen tienen su propio comando de reconexión."
   },
   "related": {
     "heading": "Relacionado",
@@ -263,7 +263,7 @@
       },
       {
         "href": "/docs/help-info/system-commands",
-        "label": "Comandos de sistema útiles",
+        "label": "Comandos útiles del sistema",
         "tail": " — comandos de inspección específicos de Proxmox."
       },
       {

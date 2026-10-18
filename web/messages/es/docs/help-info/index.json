@@ -1,9 +1,9 @@
 {
   "meta": {
     "title": "Referencia de comandos de Proxmox — qm, pct, vzdump, zpool, pveversion | ProxMenux",
-    "description": "Selección de comandos esenciales de Proxmox VE y Linux por tema: inspección del sistema, gestión de VM y LXC (qm / pct), almacenamiento y discos, red, actualizaciones, passthrough de GPU, ZFS, copias de seguridad y restauración, y herramientas de terminal para el día a día.",
+    "description": "Selección de comandos esenciales de Proxmox VE y Linux por tema: inspección del sistema, gestión de VM y LXC (qm / pct), almacenamiento y discos, red, actualizaciones, passthrough de GPU, ZFS, backup y restauración, y herramientas de terminal para el día a día.",
     "ogTitle": "Referencia de comandos de Proxmox — qm, pct, vzdump, zpool",
-    "ogDescription": "Selección de comandos útiles de Proxmox VE y Linux por tema: sistema, VM/CT, almacenamiento, red, actualizaciones, passthrough de GPU, ZFS, copias de seguridad y herramientas CLI.",
+    "ogDescription": "Selección de comandos útiles de Proxmox VE y Linux por tema: sistema, VM/CT, almacenamiento, red, actualizaciones, passthrough de GPU, ZFS, backups y herramientas CLI.",
     "twitterTitle": "Referencia de comandos de Proxmox | ProxMenux",
     "twitterDescription": "Selección de comandos útiles de Proxmox VE y Linux, agrupados por tema."
   },
@@ -27,7 +27,7 @@
       {
         "icon": "Terminal",
         "href": "/docs/help-info/system-commands",
-        "title": "Comandos de sistema útiles",
+        "title": "Comandos útiles del sistema",
         "description": "pveversion, uptime, free, journalctl, hostnamectl, información del usuario actual, auditoría con lynis y fastfetch."
       },
       {
@@ -69,7 +69,7 @@
       {
         "icon": "Archive",
         "href": "/docs/help-info/backup-commands",
-        "title": "Copias de seguridad y restauración",
+        "title": "Backup y restauración",
         "description": "vzdump, qmrestore / pct restore, ayudas para Proxmox Backup Server, operaciones de snapshot."
       },
       {

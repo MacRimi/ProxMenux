@@ -144,8 +144,8 @@
     }
   ],
   "backupWarn": {
-    "title": "Haz una copia de seguridad antes de las actualizaciones mayores",
-    "bodyRich": "Para las actualizaciones habituales, Proxmox recomienda <code>apt update &amp;&amp; apt full-upgrade</code>; revisa los cambios de paquetes antes de confirmar. Para <strong>actualizaciones de versión mayor</strong> (PVE 8 → 9), usa el procedimiento específico de ProxMenux: <upgradeLink>Actualizar PVE 8 a PVE 9</upgradeLink>. Añade comprobaciones previas, migración de repositorios y validación posterior. Haz una copia de seguridad antes."
+    "title": "Haz un backup antes de las actualizaciones mayores",
+    "bodyRich": "Para las actualizaciones habituales, Proxmox recomienda <code>apt update &amp;&amp; apt full-upgrade</code>; revisa los cambios de paquetes antes de confirmar. Para <strong>actualizaciones de versión mayor</strong> (PVE 8 → 9), usa el procedimiento específico de ProxMenux: <upgradeLink>Actualizar PVE 8 a PVE 9</upgradeLink>. Añade comprobaciones previas, migración de repositorios y validación posterior. Haz un backup antes."
   },
   "related": {
     "heading": "Relacionado",

@@ -8,13 +8,13 @@
     "twitterDescription": "Comandos esenciales de inspección del sistema para Proxmox VE — versión, estado, servicios, logs, información de usuarios."
   },
   "header": {
-    "title": "Comandos de sistema útiles",
+    "title": "Comandos útiles del sistema",
     "description": "Comandos para inspeccionar el host Proxmox: versión, kernel, tiempo de actividad, memoria, estado de la interfaz web, registros recientes y usuarios conectados, además de herramientas de auditoría y resumen. La mayoría consultan el estado, pero systemctl restart pveproxy reinicia el proxy web y las auditorías pueden escribir informes y registros.",
     "section": "Ayuda e información"
   },
   "intro": {
     "title": "Qué es esto",
-    "body": "Es la misma lista numerada que ProxMenux muestra al elegir <em>Comandos de sistema útiles</em>. Usa el botón Copiar para copiar un comando o consulta la lista para recordar la opción exacta."
+    "body": "Es la misma lista numerada que ProxMenux muestra al elegir <em>Comandos útiles del sistema</em>. Usa el botón Copiar para copiar un comando o consulta la lista para recordar la opción exacta."
   },
   "commandGroups": [
     {

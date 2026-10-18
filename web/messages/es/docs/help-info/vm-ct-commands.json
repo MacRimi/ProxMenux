@@ -153,7 +153,7 @@
   ],
   "destroyWarn": {
     "title": "Destroy es irreversible",
-    "bodyRich": "<code>qm destroy</code> y <code>pct destroy</code> eliminan la configuración del guest y sus volúmenes de disco gestionados. No supongas que borran los datos externos o montados por bind mount. La CLI no pide confirmación por defecto. Guarda antes cualquier dato que puedas necesitar; consulta <backupLink>Copias de seguridad y restauración</backupLink>."
+    "bodyRich": "<code>qm destroy</code> y <code>pct destroy</code> eliminan la configuración del guest y sus volúmenes de disco gestionados. No supongas que borran los datos externos o montados por bind mount. La CLI no pide confirmación por defecto. Guarda antes cualquier dato que puedas necesitar; consulta <backupLink>Backup & Restore</backupLink>."
   },
   "qmConfigTip": {
     "title": "qm config frente a editar directamente el archivo .conf",
@@ -164,7 +164,7 @@
     "items": [
       {
         "href": "/docs/help-info/backup-commands",
-        "label": "Copias de seguridad y restauración",
+        "label": "Backup & Restore",
         "tail": " — vzdump y qmrestore / pct restore."
       },
       {
