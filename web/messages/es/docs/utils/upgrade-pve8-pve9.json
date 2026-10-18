@@ -59,7 +59,7 @@
   },
   "precheckCallout": {
     "title": "Más una Comprobación previa aparte",
-    "body": "La opción 3 — <strong>Ejecutar comprobación de PVE 8 a 9</strong> — ejecuta la herramienta oficial <code>pve8to9 --full</code>, ofrece reparaciones guiadas para problemas habituales y después <strong>se detiene</strong>. Úsala antes de actualizar o tras reparar manualmente. Los modos Automático e Interactivo también la ejecutan; la guía manual indica que debes ejecutarla tú."
+    "body": "La opción 3 — <strong>Ejecutar la comprobación de PVE 8 a 9</strong> — ejecuta la herramienta oficial <code>pve8to9 --full</code>, ofrece reparaciones guiadas para problemas habituales y después <strong>se detiene</strong>. Úsala antes de actualizar o tras reparar manualmente. Los modos Automático e Interactivo también la ejecutan; la guía manual indica que debes ejecutarla tú."
   },
   "webTerminal": {
     "heading": "Por qué se bloquea el terminal web",

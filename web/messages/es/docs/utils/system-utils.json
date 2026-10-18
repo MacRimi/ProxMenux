@@ -218,7 +218,7 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "reposTitle": "«No se han podido configurar los repositorios. Instalación cancelada».",
+    "reposTitle": "«No se pudieron configurar los repositorios. Instalación cancelada.»",
     "reposBody": "La comprobación de repositorios no se superó: se rechazó el cambio al repositorio sin suscripción, no se pudo leer el estado de la suscripción o una entrada de repositorio requiere atención. El mensaje impreso justo encima indica la causa. Los repositorios se listan en <em>Nodo → Actualizaciones → Repositorios</em>, y <code>apt-get update</code> desde una consola muestra el error que reporta apt.",
     "warningsTitle": "Un paquete se reporta como \"With warnings\" pero el comando funciona tras cerrar el menú",
     "warningsBody": "Después de <code>apt-get install</code>, la función ejecuta <code>hash -r</code>, espera brevemente y comprueba el comando esperado con <code>command -v</code>. Una advertencia indica que esa comprobación sigue fallando, pero no identifica la causa. Prueba con una sesión de shell nueva y comprueba la instalación del paquete y PATH si el comando sigue faltando.",
