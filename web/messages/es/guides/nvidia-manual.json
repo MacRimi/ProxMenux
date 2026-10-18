@@ -12,7 +12,7 @@
   },
   "intro": {
     "calloutTitle": "Nota",
-    "calloutBody": "Este procedimiento manual se conserva como referencia. Para la mayoría de usuarios recomendamos el asistente de ProxMenux: <strong>Instalar controladores NVIDIA en el host</strong>, en <em>GPUs y Coral-TPU</em>, y después <strong>Agregar GPU a un LXC</strong> o <strong>Añadir GPU a VM</strong> para configurar el invitado. El asistente realiza los mismos pasos con comprobaciones adicionales de las cabeceras del kernel, IOMMU y conflictos VFIO. Esta página permite entender cada comando o adaptar la configuración.",
+    "calloutBody": "Este procedimiento manual se conserva como referencia. Para la mayoría de usuarios recomendamos el asistente de ProxMenux: <strong>Instalar controladores NVIDIA en el host</strong>, en <em>GPUs y Coral-TPU</em>, y después <strong>Añadir GPU a un LXC</strong> o <strong>Añadir GPU a una VM</strong> para configurar el invitado. El asistente realiza los mismos pasos con comprobaciones adicionales de las cabeceras del kernel, IOMMU y conflictos VFIO. Esta página permite entender cada comando o adaptar la configuración.",
     "targetNote": "Dirigido a <strong>Proxmox VE 9</strong> (Debian Trixie). PVE 7 (Bullseye) y PVE 8 (Bookworm) ya no se cubren.",
     "stepsTitle": "Qué vas a hacer",
     "steps": [
