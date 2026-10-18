@@ -103,7 +103,7 @@
     "heading": "Vérification",
     "intro": "Après l'application des optimisations système:",
     "tipTitle": "Restauration et limites",
-    "tipBody": "Les six options figurent dans <code>installed_tools.json</code> et <link>Désinstaller les optimisations</link>. La restauration retire fichiers de configuration, unité et alias kexec, et rétablit journald/logrotate. Certaines limites actives nécessitent une nouvelle session ou un redémarrage. Le nettoyage de /root/.profile retire seulement l’ancien ulimit -n 256000 ; l’actuel ulimit -n 1048576 peut rester et nécessiter une suppression manuelle."
+    "tipBody": "Les six options figurent dans <code>installed_tools.json</code> et <link>Désinstaller les optimisations</link>. La restauration retire les fichiers de configuration, l’unité et l’alias kexec, réécrit journald.conf avec les valeurs par défaut de systemd et rétablit logrotate.conf depuis sa sauvegarde. Certaines limites actives nécessitent une nouvelle session ou un redémarrage."
   },
   "related": {
     "heading": "Voir aussi",

@@ -103,7 +103,7 @@
     "heading": "Verifica",
     "intro": "Dopo aver applicato le ottimizzazioni del sistema:",
     "tipTitle": "Ripristino e limiti",
-    "tipBody": "Le sei opzioni sono registrate in <code>installed_tools.json</code> e disponibili in <link>Disinstalla ottimizzazioni</link>. Il ripristino rimuove configurazioni, unità e alias kexec e ripristina journald/logrotate. Alcuni limiti attivi richiedono una nuova sessione o riavvio. Da /root/.profile viene rimosso solo il vecchio ulimit -n 256000; l’attuale ulimit -n 1048576 può restare e richiedere rimozione manuale."
+    "tipBody": "Le sei opzioni sono registrate in <code>installed_tools.json</code> e disponibili in <link>Disinstalla ottimizzazioni</link>. Il ripristino rimuove i file di configurazione, l’unità e l’alias kexec, riscrive journald.conf con i valori predefiniti di systemd e ripristina logrotate.conf dal backup. Alcuni limiti attivi richiedono una nuova sessione o un riavvio."
   },
   "related": {
     "heading": "Correlati",

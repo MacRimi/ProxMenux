@@ -103,7 +103,7 @@
     "heading": "Verification",
     "intro": "After applying the System optimizations:",
     "tipTitle": "Restoration and limitations",
-    "tipBody": "All six options are tracked in <code>installed_tools.json</code> and offered in <link>Uninstall Optimizations</link>. Restoration removes configuration files, the kexec unit and alias, and restores journald/logrotate configuration. Some live limits need a new session or reboot. The system-limits cleanup removes the legacy ulimit -n 256000 line from /root/.profile; the current ulimit -n 1048576 line can remain and may need manual removal."
+    "tipBody": "All six options are tracked in <code>installed_tools.json</code> and offered in <link>Uninstall Optimizations</link>. Restoration removes the configuration files and the kexec unit and alias, rewrites journald.conf with the stock systemd defaults and restores logrotate.conf from its backup. Some live limits need a new session or reboot."
   },
   "related": {
     "heading": "Related",

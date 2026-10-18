@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Automatiserat efterinstallationsskript | ProxMenux Dokumentation",
-    "description": "ProxMenux automatiserade efterinstallationsskript kör 14 förvalda optimeringar anpassade efter hårdvaran på en ny Proxmox VE-värd. Det saknar checklista för funktionsval men kan be om bekräftelse för prenumerationsvarningen, vissa Log2RAM-installationer och omstart. Återställbara konfigurationsändringar registreras.",
+    "description": "ProxMenux automatiserade efterinstallationsskript kör 14 förvalda optimeringar anpassade efter hårdvaran på en ny Proxmox VE-värd. Det saknar checklista för funktionsval men kan be om bekräftelse för systemuppdateringen, prenumerationsvarningen, vissa Log2RAM-installationer och omstart. Återställbara konfigurationsändringar registreras.",
     "ogTitle": "Automatiserat efterinstallationsskript | ProxMenux Dokumentation",
     "ogDescription": "14 fasta, hårdvaruanpassade optimeringar för en ny Proxmox VE-värd, med bekräftelse för vissa åtgärder och registrering av återställbara ändringar."
   },

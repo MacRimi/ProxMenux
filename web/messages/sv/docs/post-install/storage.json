@@ -15,7 +15,7 @@
   "trackedBody": "Varje alternativ registreras i <code>installed_tools.json</code> för <link>Avinstallera optimeringar</link>. Återställning av <code>zfs_arc</code> tar bort <code>/etc/modprobe.d/99-zfsarc.conf</code> och bygger om initramfs; <code>zfs_auto_snapshot</code> tar bort cron-schemat och erbjuder paketrensning; <code>zfs_autotrim</code> sätter <code>autotrim=off</code> på pooler det aktiverat; <code>vzdump_speed</code> återställer <code>/etc/vzdump.conf</code> från installationens <code>.bak</code>.",
   "arc": {
     "heading": "Optimera ZFS ARC-storlek",
-    "intro": "<strong>Adaptive Replacement Cache (ARC)</strong> är ZFS läscache i RAM. Proxmox VE-installationer från 8.1 sätter 10% av RAM, högst 16 GiB; äldre eller uppgraderade värdar kan skilja sig. Alternativet skriver en egen RAM-baserad gräns. Granska befintliga inställningar och arbetslast; en mindre cache är inte alltid snabbare.",
+    "intro": "<strong>Adaptive Replacement Cache (ARC)</strong> är ZFS läscache i RAM. Proxmox VE-installationer från 8.1 sätter 10% av RAM, högst 16 GiB; äldre eller uppgraderade värdar kan skilja sig. Alternativet skriver samma regel uttryckligen (RAM/10, högst 16 GiB, minst 64 MiB) till en egen fil, vilket även täcker äldre eller uppgraderade värdar. Granska befintliga inställningar och arbetslast; en mindre cache är inte alltid snabbare.",
     "sizingTitle": "Storleksregler",
     "headerRam": "Värdens RAM",
     "headerMax": "ARC-gräns",
@@ -41,7 +41,7 @@
         "max": "16 GiB (gräns)"
       }
     ],
-    "after": "Filen <code>/etc/modprobe.d/99-zfsarc.conf</code> innehåller bara <code>options zfs zfs_arc_max=…</code>. Övriga ZFS-parametrar (<code>zfs_arc_min</code>, L2ARC-förhämtning/skrivbegränsning, TXG-timeout) justeras inte. Först söks andra <code>*.conf</code> i <code>/etc/modprobe.d/</code> efter <code>zfs_arc_min</code> / <code>zfs_arc_max</code>. De säkerhetskopieras med manifest till <code>/usr/local/share/proxmenux/backups/zfs_arc/</code> och motstridiga rader tas bort så bara ProxMenux ARC-fil är aktiv. Sedan körs <code>update-initramfs -u -k all</code> och vid behov <code>proxmox-boot-tool refresh</code> så gränsen når initramfs för system med ZFS-rot.",
+    "after": "Filen <code>/etc/modprobe.d/99-zfsarc.conf</code> innehåller bara <code>options zfs zfs_arc_max=…</code>. Övriga ZFS-parametrar (<code>zfs_arc_min</code>, L2ARC-förhämtning/skrivbegränsning, TXG-timeout) justeras inte. Först söks andra <code>*.conf</code> i <code>/etc/modprobe.d/</code> efter <code>zfs_arc_min</code> / <code>zfs_arc_max</code>. De säkerhetskopieras med manifest till <code>/usr/local/share/proxmenux/backups/zfs_arc/</code> och de motstridiga värdena <code>zfs_arc_min</code> / <code>zfs_arc_max</code> tas bort (övriga alternativ på de raderna behålls) så att bara ProxMenux ARC-fil sätter gränsen. Sedan körs <code>update-initramfs -u -k all</code> och vid behov <code>proxmox-boot-tool refresh</code> så gränsen når initramfs för system med ZFS-rot.",
     "rebootTitle": "Kräver en omstart för att träda i kraft",
     "rebootBody": "ARC-inställningar läses när kärnmodulen <code>zfs</code> laddas. För ZFS-rotvärdar bygger ProxMenux om initramfs med <code>update-initramfs -u -k all</code> och uppdaterar vid behov starthanteraren med <code>proxmox-boot-tool refresh</code>. Den nya parametern kräver fortfarande omstart; omstartsflaggan sätts automatiskt.",
     "safeTitle": "Säker på icke-ZFS värdar",

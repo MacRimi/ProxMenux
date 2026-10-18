@@ -15,7 +15,7 @@
   "trackedBody": "Každá z týchto možností zaregistruje nástroj v <code>installed_tools.json</code>, takže sa zobrazí v časti <link>Odstrániť optimalizácie</link>. Vrátenie <code>zfs_arc</code> odstráni <code>/etc/modprobe.d/99-zfsarc.conf</code> a znovu vytvorí initramfs. <code>zfs_auto_snapshot</code> zruší plán cron a ponúkne úplné odstránenie balíka; <code>zfs_autotrim</code> nastaví <code>autotrim=off</code> v pooloch, v ktorých ho zaplo; <code>vzdump_speed</code> obnoví <code>/etc/vzdump.conf</code> zo súboru <code>.bak</code> vytvoreného pri inštalácii.",
   "arc": {
     "heading": "Optimalizovať veľkosť ZFS ARC",
-    "intro": "<strong>Adaptive Replacement Cache (ARC)</strong> je čítacia cache ZFS v RAM. Inštalácie Proxmox VE od 8.1 nastavujú 10% RAM, najviac 16 GiB; staršie alebo aktualizované hostitele sa môžu líšiť. Táto možnosť zapíše vlastný limit podľa RAM. Skontrolujte existujúce nastavenia a záťaž: menšia cache nie je vždy rýchlejšia.",
+    "intro": "<strong>Adaptive Replacement Cache (ARC)</strong> je čítacia cache ZFS v RAM. Inštalácie Proxmox VE od 8.1 nastavujú 10% RAM, najviac 16 GiB; staršie alebo aktualizované hostitele sa môžu líšiť. Táto možnosť zapíše rovnaké pravidlo výslovne (RAM/10, najviac 16 GiB, najmenej 64 MiB) do vlastného súboru, čím pokryje aj staršie alebo aktualizované hostitele. Skontrolujte existujúce nastavenia a záťaž: menšia cache nie je vždy rýchlejšia.",
     "sizingTitle": "Pravidlá veľkosti",
     "headerRam": "RAM hostiteľa",
     "headerMax": "Limit ARC",
@@ -41,7 +41,7 @@
         "max": "16 GiB (limit)"
       }
     ],
-    "after": "Súbor <code>/etc/modprobe.d/99-zfsarc.conf</code> obsahuje iba <code>options zfs zfs_arc_max=…</code>. Ostatné parametre ZFS (<code>zfs_arc_min</code>, prednačítanie/obmedzenie zápisov L2ARC, časový limit TXG) sa neladia. Pred zápisom kontrola nájde iné <code>*.conf</code> v <code>/etc/modprobe.d/</code> s <code>zfs_arc_min</code> / <code>zfs_arc_max</code>, zálohuje ich s manifestom do <code>/usr/local/share/proxmenux/backups/zfs_arc/</code> a odstráni konfliktné riadky, aby zostal aktívny iba súbor ARC ProxMenux. Potom <code>update-initramfs -u -k all</code> a podľa potreby <code>proxmox-boot-tool refresh</code> začlenia limit do initramfs systémov s koreňom na ZFS.",
+    "after": "Súbor <code>/etc/modprobe.d/99-zfsarc.conf</code> obsahuje iba <code>options zfs zfs_arc_max=…</code>. Ostatné parametre ZFS (<code>zfs_arc_min</code>, prednačítanie/obmedzenie zápisov L2ARC, časový limit TXG) sa neladia. Pred zápisom kontrola nájde iné <code>*.conf</code> v <code>/etc/modprobe.d/</code> s <code>zfs_arc_min</code> / <code>zfs_arc_max</code>, zálohuje ich s manifestom do <code>/usr/local/share/proxmenux/backups/zfs_arc/</code> a odstráni z nich konfliktné hodnoty <code>zfs_arc_min</code> / <code>zfs_arc_max</code> (ostatné voľby v týchto riadkoch zostanú), aby limit určoval iba súbor ARC ProxMenux. Potom <code>update-initramfs -u -k all</code> a podľa potreby <code>proxmox-boot-tool refresh</code> začlenia limit do initramfs systémov s koreňom na ZFS.",
     "rebootTitle": "Prejaví sa po reštarte",
     "rebootBody": "Nastavenia ARC sa čítajú pri načítaní modulu <code>zfs</code>. Pre hostiteľov s koreňom na ZFS ProxMenux znovu vytvorí initramfs cez <code>update-initramfs -u -k all</code> a podľa potreby obnoví zavádzač cez <code>proxmox-boot-tool refresh</code>. Nový parameter stále vyžaduje reštart; príznak potreby reštartu sa nastaví automaticky.",
     "safeTitle": "Bezpečné na hostiteľoch bez ZFS",

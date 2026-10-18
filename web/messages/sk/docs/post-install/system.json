@@ -103,7 +103,7 @@
     "heading": "Overenie",
     "intro": "Po uplatnení optimalizácie systému:",
     "tipTitle": "Obnova a obmedzenia",
-    "tipBody": "Všetkých šesť možností je v <code>installed_tools.json</code> a <link>Odinštalovať optimalizácie</link>. Obnova odstráni konfiguračné súbory, jednotku a alias kexec a obnoví journald/logrotate. Niektoré aktívne limity vyžadujú novú reláciu alebo reštart. Z /root/.profile sa odstráni iba starý ulimit -n 256000; aktuálny ulimit -n 1048576 môže zostať a vyžadovať ručné odstránenie."
+    "tipBody": "Všetkých šesť možností je v <code>installed_tools.json</code> a <link>Odinštalovať optimalizácie</link>. Obnova odstráni konfiguračné súbory, jednotku a alias kexec, prepíše journald.conf predvolenými hodnotami systemd a obnoví logrotate.conf zo zálohy. Niektoré aktívne limity vyžadujú novú reláciu alebo reštart."
   },
   "related": {
     "heading": "Súvisiace",

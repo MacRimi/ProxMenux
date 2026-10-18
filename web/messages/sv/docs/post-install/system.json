@@ -103,7 +103,7 @@
     "heading": "Verifiering",
     "intro": "Efter att ha tillämpat systemoptimeringarna:",
     "tipTitle": "Återställning och begränsningar",
-    "tipBody": "Alla sex alternativ finns i <code>installed_tools.json</code> och <link>Avinstallera optimeringar</link>. Återställningen tar bort konfigurationsfiler, kexec-enhet och alias och återställer journald/logrotate. Vissa aktiva gränser kräver ny session eller omstart. Bara äldre ulimit -n 256000 tas bort ur /root/.profile; nuvarande ulimit -n 1048576 kan bli kvar och behöva tas bort manuellt."
+    "tipBody": "Alla sex alternativ finns i <code>installed_tools.json</code> och <link>Avinstallera optimeringar</link>. Återställningen tar bort konfigurationsfilerna, kexec-enheten och aliaset, skriver om journald.conf med systemds standardvärden och återställer logrotate.conf från säkerhetskopian. Vissa aktiva gränser kräver ny session eller omstart."
   },
   "related": {
     "heading": "Relaterat",

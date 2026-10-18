@@ -103,7 +103,7 @@
     "heading": "Verifizierung",
     "intro": "Nach Anwendung der Systemoptimierungen:",
     "tipTitle": "Wiederherstellung und Grenzen",
-    "tipBody": "Alle sechs Optionen werden in <code>installed_tools.json</code> erfasst und unter <link>Optimierungen deinstallieren</link> angeboten. Die Wiederherstellung entfernt Konfigurationsdateien, kexec-Unit und Alias und stellt journald/logrotate wieder her. Manche aktiven Grenzen brauchen eine neue Sitzung oder Neustart. Aus /root/.profile wird nur altes ulimit -n 256000 entfernt; aktuelles ulimit -n 1048576 kann bleiben und manuelle Entfernung erfordern."
+    "tipBody": "Alle sechs Optionen werden in <code>installed_tools.json</code> erfasst und unter <link>Optimierungen deinstallieren</link> angeboten. Die Wiederherstellung entfernt die Konfigurationsdateien sowie kexec-Unit und Alias, schreibt journald.conf mit den systemd-Standardwerten neu und stellt logrotate.conf aus der Sicherung wieder her. Manche aktiven Grenzen brauchen eine neue Sitzung oder einen Neustart."
   },
   "related": {
     "heading": "Verwandte Themen",

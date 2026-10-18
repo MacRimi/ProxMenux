@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Automated Post-Install Script | ProxMenux Documentation",
-    "description": "The ProxMenux Automated post-install script runs a fixed set of 14 hardware-aware optimizations on a fresh Proxmox VE host. It has no feature-selection checklist, but banner removal, some Log2RAM installations and rebooting can ask for confirmation. Reversible configuration changes are registered for later restoration.",
+    "description": "The ProxMenux Automated post-install script runs a fixed set of 14 hardware-aware optimizations on a fresh Proxmox VE host. It has no feature-selection checklist, but the system update, banner removal, some Log2RAM installations and rebooting can ask for confirmation. Reversible configuration changes are registered for later restoration.",
     "ogTitle": "Automated Post-Install Script | ProxMenux Documentation",
     "ogDescription": "14 fixed, hardware-aware optimizations for a fresh Proxmox VE host, with confirmations for some actions and reversible configuration changes tracked."
   },

@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Automatický skript po inštalácii | Dokumentácia ProxMenux",
-    "description": "Automatický skript ProxMenux po inštalácii vykoná na novom hostiteľovi Proxmox VE 14 vopred určených optimalizácií podľa hardvéru. Nemá zoznam funkcií na výber, no môže žiadať potvrdenie odstránenia upozornenia na predplatné, niektorých inštalácií Log2RAM a reštartu. Vratné zmeny sa zaznamenajú na neskoršiu obnovu.",
+    "description": "Automatický skript ProxMenux po inštalácii vykoná na novom hostiteľovi Proxmox VE 14 vopred určených optimalizácií podľa hardvéru. Nemá zoznam funkcií na výber, no môže žiadať potvrdenie aktualizácie systému, odstránenia upozornenia na predplatné, niektorých inštalácií Log2RAM a reštartu. Vratné zmeny sa zaznamenajú na neskoršiu obnovu.",
     "ogTitle": "Automatický skript po inštalácii | Dokumentácia ProxMenux",
     "ogDescription": "14 vopred určených optimalizácií podľa hardvéru pre nový hostiteľ Proxmox VE, s potvrdením niektorých krokov a záznamom vratných zmien."
   },

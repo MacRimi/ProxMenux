@@ -83,13 +83,13 @@
     "whyItems": [
       "Pridanie alebo odstránenie zariadení PCIe môže zmeniť číslovanie zbernice a premenovať <code>enp3s0</code> na <code>enp4s0</code>. Ak <code>/etc/network/interfaces</code> odkazuje na starý názov, most po reštarte zmizne.",
       "BIOS / Aktualizácie firmvéru niekedy menia spôsob, akým zariadenia enumerujú, s rovnakým účinkom.",
-      "Pomocný skript pevne priraďuje názvy fyzických kariet vrátane fyzických portov bondov. Vynecháva virtuálne rozhrania, napríklad LXC veth a samotné bondy; nerieši súbehy pri pomenovaní virtuálnych kariet <code>hotplug</code>."
+      "Pomocný skript zapisuje súbory <code>.link</code> pre fyzické karty vrátane portov bondov, s MAC adresou, ktorú práve hlási sysfs; pri portoch bondu to môže byť spoločná MAC bondu, preto ich názvy po reštarte skontrolujte. Vynecháva virtuálne rozhrania, napríklad LXC veth a samotné bondy; nerieši súbehy pri pomenovaní virtuálnych kariet <code>hotplug</code>."
     ],
     "writtenTitle": "Čo sa napíše",
     "writtenIntro": "Jeden súbor pre každú fyzickú kartu v <code>/etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code>. Začína hlavičkou <code># Managed by ProxMenux — do not edit</code>, aby ProxMenux rozlíšil vlastné súbory od súborov <code>.link</code> používateľa alebo iných balíkov.",
     "writtenOutro": "Súbory <code>.link</code> iných balíkov alebo používateľa zostávajú zachované; spravujú sa iba súbory s hlavičkou ProxMenux. Pri opakovanom spustení funkcia skontroluje svoje súbory: z každého <code>10-proxmenux-*.link</code> znovu načíta <code>MACAddress=</code> a odstráni tie, ktorých MAC sa už nenachádza v <code>/sys/class/net/</code>. Súbory starších verzií vo formáte <code>10-&lt;iface&gt;.link</code> sa pri prvom spustení automaticky migrujú.",
     "pveTitle": "PVE 9 vs PVE 8",
-    "pveBody": "Skript používa súbory systemd <code>.link</code> pre trvalé názvy. V Proxmox VE 9 po ich zápise navyše načíta pravidlá udev, aby ich novo pridané karty mohli použiť bez reštartu. Existujúce rozhrania skontrolujte po reštarte v PVE 8 aj PVE 9. Nemení sa tým používanie <code>ifupdown2</code> na hostiteľovi. Skript v oboch prípadoch nastaví príznak reštartu, aby sa naň prispôsobiteľné nastavenie opýtalo.",
+    "pveBody": "Skript používa súbory systemd <code>.link</code> pre trvalé názvy. V Proxmox VE 9 po ich zápise navyše načíta pravidlá udev, aby už pripnutá karta, ktorá sa znova pripojí alebo rozpozná, použila svoje pravidlo bez reštartu. Existujúce rozhrania skontrolujte po reštarte v PVE 8 aj PVE 9. Nemení sa tým používanie <code>ifupdown2</code> na hostiteľovi. Skript v oboch prípadoch nastaví príznak reštartu, aby sa naň prispôsobiteľné nastavenie opýtalo.",
     "reviewTitle": "Najprv skontrolujte existujúci /etc/network/interfaces",
     "reviewBody": "Ak staršia konfigurácia v <code>/etc/network/interfaces</code> odkazuje na názvy kariet vytvorené jadrom, pevné priradenie <em>aktuálnych</em> názvov je správny výsledok. Ak ste už konfiguráciu ručne prispôsobili konkrétnym názvom, pred reštartom overte, že pevné názvy zodpovedajú súboru interfaces.",
     "revertTitle": "Reverzibilné z menu Odinštalovať",

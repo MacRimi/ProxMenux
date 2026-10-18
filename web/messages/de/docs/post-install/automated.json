@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Automatisiertes Nachinstallationsskript | ProxMenux Dokumentation",
-    "description": "Das automatisierte Nachinstallationsskript von ProxMenux führt 14 festgelegte, hardwareabhängige Optimierungen auf einem neuen Proxmox-VE-Host aus. Es gibt keine Funktionsauswahlliste; Bannerentfernung, manche Log2RAM-Installationen und Neustart können jedoch eine Bestätigung verlangen. Rückgängig zu machende Konfigurationsänderungen werden erfasst.",
+    "description": "Das automatisierte Nachinstallationsskript von ProxMenux führt 14 festgelegte, hardwareabhängige Optimierungen auf einem neuen Proxmox-VE-Host aus. Es gibt keine Funktionsauswahlliste; Systemaktualisierung, Bannerentfernung, manche Log2RAM-Installationen und Neustart können jedoch eine Bestätigung verlangen. Rückgängig zu machende Konfigurationsänderungen werden erfasst.",
     "ogTitle": "Automatisiertes Nachinstallationsskript | ProxMenux Dokumentation",
     "ogDescription": "14 festgelegte, hardwareabhängige Optimierungen für einen neuen Proxmox-VE-Host, mit Bestätigungen für einige Aktionen und Erfassung rückgängig zu machender Änderungen."
   },

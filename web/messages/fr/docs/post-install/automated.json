@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Script de post-installation automatisé | Documentation ProxMenux",
-    "description": "Le script de post-installation automatisé ProxMenux exécute 14 optimisations prédéfinies adaptées au matériel sur un nouvel hôte Proxmox VE. Il n’a pas de liste de fonctions à sélectionner, mais peut demander confirmation pour masquer l’avertissement d’abonnement, installer Log2RAM dans certains cas et redémarrer. Les changements réversibles sont enregistrés.",
+    "description": "Le script de post-installation automatisé ProxMenux exécute 14 optimisations prédéfinies adaptées au matériel sur un nouvel hôte Proxmox VE. Il n’a pas de liste de fonctions à sélectionner, mais peut demander confirmation pour la mise à jour du système, pour masquer l’avertissement d’abonnement, installer Log2RAM dans certains cas et redémarrer. Les changements réversibles sont enregistrés.",
     "ogTitle": "Script de post-installation automatisé | Documentation ProxMenux",
     "ogDescription": "14 optimisations prédéfinies adaptées au matériel pour un nouvel hôte Proxmox VE, avec confirmation de certaines actions et suivi des changements réversibles."
   },
