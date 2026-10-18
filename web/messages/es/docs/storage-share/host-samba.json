@@ -126,7 +126,7 @@
   },
   "remove": {
     "heading": "Eliminar almacenamiento CIFS o montaje del host",
-    "body": "El selector ofrece almacenamientos pvesm y montajes fstab del host. Para pvesm ejecuta <code>pvesm remove &lt;storage-id&gt;</code> y Proxmox borra las credenciales asociadas. Para fstab intenta <code>umount &lt;path&gt;</code>, elimina la entrada de <code>/etc/fstab</code> y las credenciales de <code>/etc/samba/credentials/</code>, y quita el directorio de montaje si está vacío. Si falla el desmontaje, debes hacerlo manualmente o reiniciar. <strong>No modifica el servidor Samba remoto ni sus archivos</strong>.",
+    "body": "El selector ofrece almacenamientos pvesm y montajes fstab del host. Para pvesm ejecuta <code>pvesm remove &lt;storage-id&gt;</code> y Proxmox borra las credenciales asociadas. Para fstab intenta <code>umount &lt;path&gt;</code>, elimina la entrada de <code>/etc/fstab</code> y las credenciales de <code>/etc/samba/credentials/</code>, y elimina el directorio de montaje si está vacío. Si falla el desmontaje, debes hacerlo manualmente o reiniciar. <strong>No modifica el servidor Samba remoto ni sus archivos</strong>.",
     "warnTitle": "Haz backup de las dependencias primero",
     "warnBody": "Las VMs, CTs o trabajos de backup que referencien este almacenamiento por ID fallarán tras la eliminación. Mueve / elimina esas referencias antes de eliminar el almacenamiento."
   },
@@ -136,7 +136,7 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "noServersTitle": "\"No hay servidores Samba encontrados en la red\"",
+    "noServersTitle": "\"No se encontraron servidores Samba en la red\"",
     "noServersBody": "El auto-descubrimiento usa <code>nmap -p 139,445</code>. El servidor puede estar en una subnet diferente, con firewall o solo alcanzable por hostname (mDNS / WINS). Usa la opción <em>Manual</em> con la IP o hostname en su lugar.",
     "noSharesTitle": "«No se encontraron recursos compartidos accesibles»",
     "noSharesBody": "<code>smbclient -L</code> no devolvió nada para estas credenciales. Causas: el usuario no tiene permiso para listar shares (prueba con credenciales de admin una vez, o escribe el nombre del share manualmente), el servidor tiene la visibilidad de shares deshabilitada o las credenciales son incorrectas. El script te permite escribir el nombre del share a mano en este caso.",

@@ -147,7 +147,7 @@
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "noDisksTitle": "\"No hay discos disponibles encontrados\"",
+    "noDisksTitle": "\"No se encontraron discos disponibles\"",
     "noDisksIntro": "El filtro de seguridad ocultó cada disco. Razones comunes:",
     "noDisksItems": [
       "Solo está presente el disco raíz.",

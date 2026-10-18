@@ -123,7 +123,7 @@
   },
   "remove": {
     "heading": "Eliminar un punto de montaje",
-    "body": "Elige el contenedor, elige la entrada <code>mpN</code>, confirma. El script ejecuta <code>pct set --delete mpN</code> para quitar la entrada de la config del CT y ofrece reiniciar el contenedor si está corriendo. El directorio del host y su contenido <strong>no se tocan</strong> — puedes volver a añadir el montaje después (o adjuntar el mismo directorio a un CT distinto).",
+    "body": "Elige el contenedor, elige la entrada <code>mpN</code>, confirma. El script ejecuta <code>pct set --delete mpN</code> para eliminar la entrada de la config del CT y ofrece reiniciar el contenedor si está corriendo. El directorio del host y su contenido <strong>no se tocan</strong> — puedes volver a añadir el montaje después (o adjuntar el mismo directorio a un CT distinto).",
     "warnTitle": "Los contenedores en ejecución necesitan un reinicio para que los cambios surtan efecto",
     "warnBody": "Tanto añadir como eliminar puntos de montaje solo se hacen visibles dentro del contenedor tras un reinicio. El script ofrece un <code>pct reboot</code> de un clic al final de cada operación; puedes declinar y reiniciar manualmente después."
   },
@@ -133,7 +133,7 @@
     "noMountBody": "Los bind mounts solo se adjuntan cuando el contenedor arranca. Si añadiste el montaje mientras el CT estaba corriendo, reinícialo (<code>pct reboot &lt;ctid&gt;</code>). Si ya está reiniciado y sigue faltando, comprueba <code>pct config &lt;ctid&gt;</code> para confirmar que la entrada existe y que la ruta del host realmente contiene un directorio.",
     "noWriteTitle": "El contenedor puede ver el directorio pero no puede escribir",
     "noWriteBody": "Casi siempre un problema de permisos. Para contenedores unprivileged, ejecuta de nuevo el fix de permisos del script — las ACLs del directorio del host pueden haber sido reseteadas por otra herramienta (rsync, restore desde backup, <code>chmod</code> manual). Para CIFS, revisa las opciones de montaje en el host: <code>findmnt /mnt/pve/cifs-…</code>, busca valores <code>uid=</code> / <code>gid=</code> / <code>file_mode=</code>.",
-    "alreadyTitle": "\"Este camino ya se utiliza como punto de montaje en este contenedor\"",
+    "alreadyTitle": "\"Esta ruta ya se utiliza como punto de montaje en este contenedor\"",
     "alreadyBody": "Elegiste la misma ruta del contenedor que ya está cableada a un directorio del host distinto. O elige una ruta del contenedor diferente, o elimina el punto de montaje existente primero.",
     "nfsTitle": "El acceso NFS sigue bloqueado tras aplicar el fix del host",
     "nfsIntro": "Tu servidor NFS está aplicando squash a root o a todas las conexiones. El script puede detectar esto (intenta escribir un archivo de prueba desde el host) y muestra guía del lado del servidor. Dos arreglos comunes del lado del servidor para el export:",

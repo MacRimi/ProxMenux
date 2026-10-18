@@ -118,7 +118,7 @@
       "Rocky / Alma: <code>dnf install cifs-utils samba-client</code>"
     ],
     "aptOutro": "Después reejecuta el script de ProxMenux — el paso de instalación se salta cuando las herramientas ya están presentes.",
-    "guestFallbackTitle": "\"El servidor te conecta como invitado en lugar del usuario especificado\"",
+    "guestFallbackTitle": "\"El servidor te conectó como invitado en lugar de con el usuario indicado\"",
     "guestFallbackBody": "La validación activa del script detectó un problema real de auth. El servidor aceptó la conexión pero la degradó a guest porque las credenciales son incorrectas. Causas comunes: typo en el usuario / contraseña, el usuario no existe en el servidor, el usuario está bloqueado o el workgroup / dominio no coincide. Reejecuta el flujo y vuelve a introducir las credenciales con cuidado (la contraseña queda oculta en el diálogo).",
     "denyTitle": "\"NT_STATUS_ACCESS_DENIED\" al montar",
     "denyBody": "Las credenciales se validaron pero el share deniega el acceso. Comprueba en el lado del servidor si el usuario tiene permisos en ese share específico (la validación solo confirma el login, no las ACLs por share). Comprueba también si el servidor requiere una versión específica del protocolo SMB: añade <code>vers=3.0</code> (o <code>2.1</code>, <code>2.0</code>) a las opciones de montaje.",
