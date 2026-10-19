@@ -42,13 +42,16 @@ class SelectionTests(unittest.TestCase):
         _, ui, run = self.select(['111'])
         self.assertEqual(run.call_count, 1)
         self.assertEqual(run.call_args.args[2]['vmid'], 111)
-        self.assertEqual(run.call_args.kwargs, {'action': 'update'})
+        self.assertEqual(run.call_args.kwargs, {'action': 'update', 'heading': 'Update OCI (1/1) · Second app'})
         self.assertIn('Second app', ui.review.call_args.args[0])
         self.assertNotIn('First app', ui.review.call_args.args[0])
 
     def test_select_all_includes_every_app_once(self):
         _, ui, run = self.select(['all', '111'])
         self.assertEqual([c.args[2]['vmid'] for c in run.call_args_list], [110, 111])
+        # Each update shows its place in the batch while its container is checked.
+        self.assertEqual([c.kwargs['heading'] for c in run.call_args_list],
+                         ['Update OCI (1/2) · First app', 'Update OCI (2/2) · Second app'])
         self.assertFalse(ui.review.call_args.kwargs['default'])
 
     def test_cancel_does_nothing(self):

@@ -188,9 +188,10 @@ def select_updates(project, ui, available):
             ui.message(translate('An application changed since the update check. Check for updates again.'),
                        translate('Updates available'))
             return False
-    for row in selected:
+    for index, row in enumerate(selected, 1):
         # Keep the existing identity checks, backup/storage prompts, update
         # confirmation, coordinated stack update and recovery path.
-        if not manage_instance(project, ui, current[row['vmid']], action='update'):
+        heading = f"{translate('Update OCI')} ({index}/{len(selected)}) · {row['title']}"
+        if not manage_instance(project, ui, current[row['vmid']], action='update', heading=heading):
             break  # A cancellation or failure never updates later selections.
     return False

@@ -853,6 +853,7 @@
   "Checking the GPU of the machine learning container...": "Comprobando la GPU del contenedor Machine learning...",
   "Checking the container before modifying it...": "Revisando el contenedor antes de modificarlo...",
   "Checking the container before the update...": "Revisando el contenedor antes de la actualización...",
+  "Checking the container...": "Comprobando el contenedor...",
   "Checking the device permissions for the application user...": "Comprobando los permisos del dispositivo para el usuario de la aplicación...",
   "Checking the image compatibility:": "Comprobando la compatibilidad de la imagen:",
   "Checking the image in the registry...": "Revisando la imagen en el registro...",

@@ -854,6 +854,7 @@
   "Checking the container before modifying it...": "Verifica del container prima della modifica...",
   "Checking the container before recreating it...": "Verifica del container prima della ricreazione...",
   "Checking the container before the update...": "Verifica del container prima dell'aggiornamento...",
+  "Checking the container...": "Verifica del container...",
   "Checking the device permissions for the application user...": "Verifica dei permessi del dispositivo per l'utente dell'applicazione...",
   "Checking the image compatibility:": "Verifica della compatibilità dell'immagine:",
   "Checking the image in the registry...": "Verifica dell'immagine nel registro...",

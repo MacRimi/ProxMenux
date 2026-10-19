@@ -854,6 +854,7 @@
   "Checking the container before modifying it...": "Kontrola kontajnera pred jeho úpravou...",
   "Checking the container before recreating it...": "Kontrola kontajnera pred obnovením...",
   "Checking the container before the update...": "Kontrola kontajnera pred aktualizáciou...",
+  "Checking the container...": "Kontroluje sa kontajner...",
   "Checking the device permissions for the application user...": "Kontrola oprávnení zariadenia pre užívateľa aplikácie...",
   "Checking the image compatibility:": "Kontrola kompatibility obrázku:",
   "Checking the image in the registry...": "Kontrola obrazu v registri...",

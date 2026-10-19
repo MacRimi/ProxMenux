@@ -854,6 +854,7 @@
   "Checking the container before modifying it...": "Kontrollerar behållaren innan den ändras...",
   "Checking the container before recreating it...": "Kontrollera behållaren innan du återskapar den...",
   "Checking the container before the update...": "Kontrollera behållaren innan uppdateringen...",
+  "Checking the container...": "Kontrollerar containern...",
   "Checking the device permissions for the application user...": "Kontrollera enhetens behörigheter för applikationsanvändaren...",
   "Checking the image compatibility:": "Kontrollera bildkompatibiliteten:",
   "Checking the image in the registry...": "Kolla bilden i registret...",

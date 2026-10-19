@@ -151,7 +151,7 @@ def _run_lifecycle(command, title):
     return completed.returncode == 0
 
 
-def carry_records(project, mount_stopped=True, vmids=None, verify=False, shown=False, heading=None):
+def carry_records(project, mount_stopped=True, vmids=None, verify=False, shown=False, heading=None, message=None):
     """Leave inside each container the copy of its record that a restore on
     another host needs. It is refreshed after every operation. Returns what
     was found for each container. Every installed application is looked at,
@@ -162,7 +162,7 @@ def carry_records(project, mount_stopped=True, vmids=None, verify=False, shown=F
         if heading:
             console.show_logo()
             console.msg_title(heading)
-        console.msg_info(translate('Updating the copy of the record...'))
+        console.msg_info(message or translate('Updating the copy of the record...'))
     try:
         import oci_carried_record
         return oci_carried_record.sync(oci_carried_record.instances.ROOT, vmids, mount_stopped, verify)
@@ -391,13 +391,15 @@ def _toggle_watchdog(project, ui, vmid, enabled):
     return True
 
 
-def manage_instance(project, ui, row, action=None, lifecycle_args=()):
+def manage_instance(project, ui, row, action=None, lifecycle_args=(), heading=None):
     """What the menu does with one instance once it is selected. `action`
     skips the choice of operation, as ProxMenux Monitor does; the extra
-    `lifecycle_args` are passed to the program that performs it."""
+    `lifecycle_args` are passed to the program that performs it. A `heading`
+    shows the check of the container on screen, as one of several updates."""
+    shown = {'shown': True, 'heading': heading, 'message': translate('Checking the container...')} if heading else {}
     # A container that came back from another node or from an older backup
     # carries the record that describes it; the one of this host is not used.
-    if carry_records(project, vmids=[row['vmid']], verify=True).get(row['vmid']) == 'stale':
+    if carry_records(project, vmids=[row['vmid']], verify=True, **shown).get(row['vmid']) == 'stale':
         ui.message(translate('This container was restored or came back from another host after its record on this host was written. Open this menu again to recover it; the container was not modified.'),
                    translate('OCI management'))
         return False
