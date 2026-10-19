@@ -757,13 +757,18 @@ def clean_format_directories(entry):
     """A restore formats the volumes again, and the `lost+found` of each new
     one belongs to the host: an application that walks its data cannot enter
     it and fails to start."""
+    from oci_managed_volumes import eligible_paths
     mounts = []
     for key, value in parse_config(entry['config'].encode()).items():
-        if re.fullmatch(r'mp[0-9]+', key) and not value.startswith('/'):
-            target = oci_stack_modify.options(value).get('mp')
-            if target:
-                mounts.append({'type': 'managed-volume', 'backup': True, 'container_path': target})
-    if not mounts:
+        if not re.fullmatch(r'mp[0-9]+', key):
+            continue
+        options = oci_stack_modify.options(value)
+        target = options.get('mp')
+        if target:
+            mounts.append({'type': 'host-bind' if value.startswith('/') else 'managed-volume',
+                           'backup': True, 'container_path': target,
+                           'read_only': options.get('ro', '0') != '0'})
+    if not eligible_paths({'mounts': mounts}):
         return
     with carried.container_root(entry['vmid']) as rootfs:
         if rootfs is not None:
