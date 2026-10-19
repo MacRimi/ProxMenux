@@ -137,6 +137,50 @@ An application made of several images is one entry of the catalog and one instal
 
 ## Update, modify, recreate and remove
 
+The OCI menu has a **Check for updates** entry. Checking changes that same
+entry to **Checking for updates (completed/total)**, then **Updates available (N)** when
+newer images are found. Progress counts applications, including coordinated
+applications with several containers, and advances as each finishes. When finished, the entry shows only
+**Updates available (N)** or **Check for updates**. Only registry metadata is read; no image layers are
+downloaded and no containers are changed. The menu remains usable during the
+check. Leaving the OCI menu closes its request; the Monitor may finish
+metadata queries already in progress before stopping the remaining checks.
+
+Open **Updates available (N)** to choose applications with Space. Nothing is
+preselected, even when there is only one update. **Select all** at the top
+includes every listed application. After reviewing the selection, each
+application uses the existing update workflow, including its identity checks,
+backup prompts and recovery. Cancelling or failing an update stops the batch.
+The selection screen has only **Update** and **Cancel** buttons.
+
+Opening the menu reads the Monitor's existing `/etc/proxmenux/apps` results
+without contacting registries. Its daily checks and the manual menu check use
+the same `lxc_apps.check_app` implementation, cache and registry credentials.
+There is no second checker, private update-status cache or fallback checker.
+Manual checks run in the Monitor process through a root-only local Unix
+socket, preserving its locks and registry retries without changing web
+authentication. ProxMenux Monitor must be installed, running and include the
+menu integration for manual checks.
+
+Manual checks run up to sixteen applications in parallel. The native checker
+holds its shared cache lock only while reading or publishing a result; each
+app has its own check lock. Before saving it re-reads the app and installation
+record, discards answers for a concurrently edited/replaced app, and preserves
+unrelated registrations and schedules. A fresh tag/index lookup that confirms
+the same platform digest reuses its immutable version/build metadata. Changed
+digests still fetch and verify the new metadata; installs and updates retain
+the full image-contract verification path. Checks therefore still consult the
+registry rather than returning a cached verdict as a new check.
+
+Results older than 24 hours or for a different installed image or reference
+are not offered as current. Network failures retain the Monitor's existing
+result and retry state, or remain unknown when no previous result exists.
+Coordinated applications count once and follow the Monitor's existing policy:
+update availability is tracked on the primary container, while secondary
+containers are updated together with it. The menu does not add independent
+update tracking for secondary images. A reference pinned to an immutable
+digest does not follow newer tags.
+
 *Manage installed OCI applications* lists the registered installations. Before any action a container is compared with its record; one that no longer matches is neither modified nor deleted.
 
 | Operation | What changes | What is kept |

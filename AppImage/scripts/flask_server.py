@@ -23147,6 +23147,16 @@ if __name__ == '__main__':
     import sys
     import logging
 
+    # The root terminal menu shares the Monitor's checker and sidecar cache.
+    # This local socket changes neither the web API nor its authentication.
+    try:
+        if not is_pbs_host():
+            import lxc_apps
+            import oci_menu_bridge
+            oci_menu_bridge.start(lxc_apps)
+    except Exception as _e:
+        print(f"[startup] OCI menu bridge unavailable: {_e}", file=sys.stderr)
+
     # Regenerate /etc/cron.d/proxmenux-smart from the current schedule
     # config on every Monitor start. Pre-existing installs may carry
     # a cron file with the broken script path (without /storage/),

@@ -4,11 +4,19 @@ on:
   pull_request:
     paths:
       - 'oci/**'
+      - 'AppImage/scripts/oci_menu_bridge.py'
+      - 'AppImage/scripts/lxc_apps.py'
+      - 'AppImage/scripts/tests/test_oci_parallel_checks.py'
+      - 'AppImage/scripts/flask_server.py'
       - '.github/workflows/test-oci-registries.yml'
   push:
     branches: [main, develop]
     paths:
       - 'oci/**'
+      - 'AppImage/scripts/oci_menu_bridge.py'
+      - 'AppImage/scripts/lxc_apps.py'
+      - 'AppImage/scripts/tests/test_oci_parallel_checks.py'
+      - 'AppImage/scripts/flask_server.py'
       - '.github/workflows/test-oci-registries.yml'
   workflow_dispatch:
 
@@ -54,6 +62,13 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: '1'
         run: python3 -m unittest discover -s oci/tests -p 'test_registry_*.py' -v
+      - name: Run OCI menu update checks and selection regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p 'test_update*.py' -v
+          python3 -m unittest discover -s AppImage/scripts/tests -p 'test_oci*.py' -v
+          python3 -m unittest discover -s oci/tests -p test_recreate_registry_digest.py -v
       - name: Run OCI Modify latency regressions
         env:
           PYTHONDONTWRITEBYTECODE: '1'
