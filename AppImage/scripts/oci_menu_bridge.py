@@ -74,19 +74,19 @@ def check_applications(module, rows, report):
                 module.check_app(vmid, app['id'], force=True, notify=False)
 
     pool = ThreadPoolExecutor(max_workers=_CHECK_WORKERS, thread_name_prefix='oci-check')
-    failed = False
+    failed = []
     try:
-        futures = [pool.submit(check_one, row) for row in rows]
+        futures = {pool.submit(check_one, row): row['vmid'] for row in rows}
         for completed, future in enumerate(as_completed(futures), 1):
             try:
                 future.result()
             except Exception:
-                failed = True  # One failure never stops the other applications.
+                failed.append(futures[future])  # One failure never stops the other applications.
             report({'completed': completed, 'total': len(rows)})
     finally:
         stopped.set()
         pool.shutdown(wait=True, cancel_futures=True)
-    report({'error': 'check_failed'} if failed else {'done': True})
+    report({'done': True, 'failed': sorted(failed)})
 
 
 class _Handler(socketserver.StreamRequestHandler):

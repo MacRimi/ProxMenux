@@ -95,13 +95,17 @@ def snapshot(root=instances.ROOT, configs=Path('/etc/pve/lxc')):
     return applications
 
 
-def cached(root=instances.ROOT, configs=Path('/etc/pve/lxc'), now=None, apps=APPS):
-    """Read the Monitor's sidecars; obey its primary-container stack policy."""
+def cached(root=instances.ROOT, configs=Path('/etc/pve/lxc'), now=None, apps=APPS, failed=()):
+    """Read the Monitor's sidecars; obey its primary-container stack policy.
+    An application whose last check failed keeps no older result."""
     inventory = snapshot(root, configs)
     result = {'checked': False, 'available': [], 'unknown': 0, 'applications': len(inventory)}
     instant = time.time() if now is None else now
     for app in inventory:
         try:
+            if app['vmid'] in failed:
+                result['checked'] = True
+                raise ValueError('Check failed')
             if not app['complete'] or not all(member['ready'] for member in app['members']):
                 raise ValueError('Incomplete installation')
             main = next(member for member in app['members'] if member['vmid'] == app['vmid'])
@@ -134,9 +138,15 @@ def cached(root=instances.ROOT, configs=Path('/etc/pve/lxc'), now=None, apps=APP
 def monitor_available(path=SOCKET):
     try:
         parent, endpoint = path.parent.lstat(), path.lstat()
-        return (stat.S_ISDIR(parent.st_mode) and parent.st_uid == 0
+        if not (stat.S_ISDIR(parent.st_mode) and parent.st_uid == 0
                 and not parent.st_mode & 0o077 and stat.S_ISSOCK(endpoint.st_mode)
-                and endpoint.st_uid == 0 and not endpoint.st_mode & 0o077)
+                and endpoint.st_uid == 0 and not endpoint.st_mode & 0o077):
+            return False
+        # A Monitor that stopped without cleaning up leaves the socket behind.
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as probe:
+            probe.settimeout(0.5)
+            probe.connect(str(path))
+        return True
     except OSError:
         return False
 
@@ -167,7 +177,10 @@ def check(root=instances.ROOT, configs=Path('/etc/pve/lxc'), progress=None, path
                     raise RuntimeError('Monitor check incomplete')
                 event = json.loads(line)
                 if event.get('done') is True and completed == len(rows):
-                    return
+                    failed = event.get('failed', [])
+                    if not isinstance(failed, list) or any(type(vmid) is not int for vmid in failed):
+                        raise RuntimeError('Monitor check incomplete')
+                    return failed
                 done, count = event.get('completed'), event.get('total')
                 if (type(done) is not int or type(count) is not int
                         or count != len(rows) or not completed <= done <= count or done < 0):
@@ -177,12 +190,16 @@ def check(root=instances.ROOT, configs=Path('/etc/pve/lxc'), progress=None, path
                     progress(skipped + completed, total)
 
 
-def emit_progress(completed, total):
-    message = (json.dumps({'completed': completed, 'total': total}) + '\n').encode()
+def emit(event):
+    message = (json.dumps(event) + '\n').encode()
     try:
         os.write(sys.stdout.fileno(), message)
     except (BlockingIOError, BrokenPipeError):
         pass
+
+
+def emit_progress(completed, total):
+    emit({'completed': completed, 'total': total})
 
 
 def main():
@@ -194,7 +211,9 @@ def main():
     try:
         if args.progress:
             os.set_blocking(sys.stdout.fileno(), False)
-        check(args.root, args.configs, progress=emit_progress if args.progress else None)
+        failed = check(args.root, args.configs, progress=emit_progress if args.progress else None)
+        if args.progress and failed:
+            emit({'failed': failed})
         return 0
     except (OSError, ValueError, KeyError, TypeError, RuntimeError):
         return 1

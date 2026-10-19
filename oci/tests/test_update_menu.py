@@ -134,7 +134,7 @@ class StatusTests(unittest.TestCase):
             state = checker.status()
         self.assertEqual(checker.label(state), 'Check for updates')
         self.assertEqual(state['available'], [])
-        self.assertEqual(checker.notice(state), '')
+        self.assertEqual(checker.notice(state), 'The update check could not be completed. Try again later.')
 
     def test_finished_worker_keeps_the_final_redraw_pending_until_status_is_consumed(self):
         checker = self.checker(); checker.completed = checker.total = 2
@@ -162,6 +162,29 @@ class StatusTests(unittest.TestCase):
         self.assertIn('--progress', args.args[0])
         self.assertEqual(args.kwargs['stdout'], subprocess.PIPE)
         blocking.assert_called_once_with(checker.process.stdout.fileno(), False)
+
+    def test_failed_applications_are_reported_and_cleared_by_a_new_check(self):
+        checker = self.checker(); read, write = os.pipe()
+        os.write(write, b'{"completed": 2, "total": 2}\n{"failed": [110]}\n'); os.close(write)
+        os.set_blocking(read, False)
+        checker.process = Mock(stdout=Mock(fileno=Mock(return_value=read)))
+        checker.process.poll.return_value = checker.process.wait.return_value = 0
+        state = {'checked': True, 'available': [], 'unknown': 1, 'applications': 2}
+        with patch.object(checker.backend, 'cached', return_value=state) as cached:
+            final = checker.status()
+        os.close(read)
+        self.assertEqual(cached.call_args.kwargs['failed'], {110})
+        self.assertEqual(checker.notice(final),
+                         'Some applications could not be checked (1). Try again later.')
+        with patch.object(subprocess, 'Popen'), patch.object(updates.os, 'set_blocking'), \
+                patch.object(checker.backend, 'monitor_available', return_value=True), \
+                patch.object(checker.backend, 'cached', return_value=state):
+            checker.start()
+        self.assertEqual(checker.failed_applications, set())
+
+    def test_a_failed_check_is_reported_in_the_menu(self):
+        checker = self.checker(); checker.failed = True
+        self.assertEqual(checker.notice({}), 'The update check could not be completed. Try again later.')
 
     def test_missing_monitor_never_starts_a_fallback_checker(self):
         checker = self.checker()

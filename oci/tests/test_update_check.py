@@ -177,7 +177,8 @@ class UpdateCheckTests(unittest.TestCase):
     def test_readonly_monitor_availability_rejects_non_private_endpoints(self):
         path = Mock(); path.parent.lstat.return_value = SimpleNamespace(st_mode=stat.S_IFDIR | 0o700, st_uid=0)
         path.lstat.return_value = SimpleNamespace(st_mode=stat.S_IFSOCK | 0o600, st_uid=0)
-        self.assertTrue(check.monitor_available(path))
+        with patch.object(check.socket, 'socket'):
+            self.assertTrue(check.monitor_available(path))
         path.lstat.return_value.st_mode |= 0o066
         self.assertFalse(check.monitor_available(path))
         path.lstat.return_value.st_mode = stat.S_IFREG | 0o600
@@ -185,6 +186,30 @@ class UpdateCheckTests(unittest.TestCase):
         path.lstat.return_value.st_mode = stat.S_IFSOCK | 0o600
         path.parent.lstat.return_value.st_uid = 1000
         self.assertFalse(check.monitor_available(path))
+
+    def test_socket_left_by_a_stopped_monitor_is_not_available(self):
+        folder = Path(tempfile.mkdtemp(dir='/tmp')); self.addCleanup(lambda: __import__('shutil').rmtree(folder))
+        folder.chmod(0o700); path = folder / 'check.sock'
+        listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); listener.bind(str(path)); path.chmod(0o600)
+        listener.listen(1)
+        owner = SimpleNamespace(st_uid=0)
+        real_lstat = Path.lstat
+        def lstat(self):
+            value = real_lstat(self)
+            return SimpleNamespace(st_mode=value.st_mode, st_uid=owner.st_uid)
+        with patch.object(Path, 'lstat', lstat):
+            self.assertTrue(check.monitor_available(path))
+            listener.close()  # The socket file stays, nothing listens.
+            self.assertTrue(path.exists())
+            self.assertFalse(check.monitor_available(path))
+
+    def test_failed_application_keeps_no_older_result(self):
+        self.record(); self.sidecar(update_available=True)
+        self.assertEqual([r['vmid'] for r in self.status()['available']], [110])
+        state = self.status(failed={110})
+        self.assertEqual(state['available'], [])
+        self.assertEqual(state['unknown'], 1)
+        self.assertTrue(state['checked'])
 
     def test_full_or_closed_progress_pipe_does_not_abort_client(self):
         for error in (BlockingIOError(), BrokenPipeError()):
@@ -205,7 +230,7 @@ class BridgeTests(unittest.TestCase):
         module = self.module(); events = []
         bridge.check_applications(module, [{'vmid': 110, 'installation_id': 'id-110'}], events.append)
         module.check_app.assert_called_once_with(110, 'native-app', force=True, notify=False)
-        self.assertEqual(events, [{'completed': 0, 'total': 1}, {'completed': 1, 'total': 1}, {'done': True}])
+        self.assertEqual(events, [{'completed': 0, 'total': 1}, {'completed': 1, 'total': 1}, {'done': True, 'failed': []}])
 
     def test_replaced_guest_pending_operation_and_secondary_are_not_queried(self):
         for changes, secondary in (({'installation_id': 'replacement'}, False),
@@ -236,10 +261,10 @@ class BridgeTests(unittest.TestCase):
         bridge.check_applications(module, [{'vmid': 110, 'installation_id': 'id-110'},
                                           {'vmid': 111, 'installation_id': 'id-111'}], report)
         self.assertEqual(events, [{'completed': 0, 'total': 2}, {'completed': 1, 'total': 2},
-                                  {'completed': 2, 'total': 2}, {'done': True}])
+                                  {'completed': 2, 'total': 2}, {'done': True, 'failed': []}])
         self.assertEqual(module.check_app.call_count, 2)
 
-    def test_unexpected_failure_does_not_skip_other_apps_or_report_success(self):
+    def test_unexpected_failure_does_not_skip_other_apps_and_names_the_failed_app(self):
         module = self.module(); events = []
         module._read_oci_record.side_effect = lambda vmid: {
             'vmid': vmid, 'installation_id': f'id-{vmid}', 'status': 'installed'}
@@ -248,7 +273,7 @@ class BridgeTests(unittest.TestCase):
                                           {'vmid': 111, 'installation_id': 'id-111'}], events.append)
         self.assertEqual(module.check_app.call_count, 2)
         self.assertEqual(events[-2], {'completed': 2, 'total': 2})
-        self.assertEqual(events[-1], {'error': 'check_failed'})
+        self.assertEqual(events[-1], {'done': True, 'failed': [110]})
 
     def test_requests_cannot_specify_commands_images_paths_or_duplicate_guests(self):
         valid = {'vmid': 110, 'installation_id': 'id'}

@@ -20,6 +20,7 @@ class UpdateCheck:
         self.backend = importlib.import_module('oci_update_check')
         self.process = None
         self.failed = False
+        self.failed_applications = set()
         self.completed = self.total = 0
         self._progress_buffer = b''
         self._shown_progress = (0, 0)
@@ -52,6 +53,9 @@ class UpdateCheck:
                     line, self._progress_buffer = self._progress_buffer.split(b'\n', 1)
                     try:
                         data = json.loads(line)
+                        if isinstance(data.get('failed'), list):
+                            self.failed_applications = {vmid for vmid in data['failed'] if type(vmid) is int}
+                            continue
                         completed, total = data['completed'], data['total']
                         if type(completed) is int and type(total) is int and 0 <= completed <= total:
                             self.completed, self.total = completed, total
@@ -77,7 +81,7 @@ class UpdateCheck:
             self._close_output()
             self.process = None
         try:
-            state = self.backend.cached()
+            state = self.backend.cached(failed=self.failed_applications)
         except (OSError, ValueError, KeyError, TypeError):
             state = {'checked': False, 'available': [], 'unknown': 0, 'applications': 0}
         if self.failed:
@@ -93,6 +97,7 @@ class UpdateCheck:
             raise ValueError(translate('The ProxMenux Monitor update checker is not available. Start or update ProxMenux Monitor and try again.'))
         state = self.status()
         self.failed = False
+        self.failed_applications = set()
         self.completed, self.total = 0, state['applications']
         self._progress_buffer = b''
         self.process = subprocess.Popen(
@@ -142,7 +147,14 @@ class UpdateCheck:
         return f"{translate('Updates available')} ({count})" if count else translate('Check for updates')
 
     def notice(self, state):
-        return ''  # Keep the menu heading clear after a check.
+        if self.active:
+            return ''
+        if self.failed:
+            return translate('The update check could not be completed. Try again later.')
+        if self.failed_applications:
+            return translate('Some applications could not be checked ({count}). Try again later.').format(
+                count=len(self.failed_applications))
+        return ''
 
 
 def select_updates(project, ui, available):
