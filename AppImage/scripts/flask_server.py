@@ -2280,6 +2280,8 @@ def _handle_guest_lifecycle(vmid: str, vm_type: str, action: str) -> None:
     if guest_type == 'lxc':
         import native_app_discovery
         native_app_discovery.mark_stale(guest_id)
+        import docker_app_discovery
+        docker_app_discovery.mark_stale(guest_id)
         _invalidate_lxc_ip(guest_id)
     if action in ('start', 'reboot'):
         if guest_type == 'lxc':
@@ -14127,6 +14129,20 @@ def api_vm_apps_native_discovery(vmid):
     suggestions = _vm_cache_get(_vm_app_suggestions_cache, vmid, _VM_APP_SUGGESTIONS_TTL) or {}
     sidecar = lxc_apps.load_sidecar(vmid) or {}
     return jsonify(native_app_discovery.filter_candidates(
+        result, suggestions, sidecar.get('apps') or []))
+
+
+@app.route('/api/vms/<int:vmid>/apps/docker-discovery', methods=['GET', 'POST'])
+@require_auth
+def api_vm_apps_docker_discovery(vmid):
+    """New discovery contract: explicit POST scans; GET only composes cached data."""
+    import docker_app_discovery
+    import lxc_apps
+    result = (docker_app_discovery.discover(vmid) if request.method == 'POST'
+              else docker_app_discovery.cached(vmid))
+    suggestions = _vm_cache_get(_vm_app_suggestions_cache, vmid, _VM_APP_SUGGESTIONS_TTL) or {}
+    sidecar = lxc_apps.load_sidecar(vmid) or {}
+    return jsonify(docker_app_discovery.filter_candidates(
         result, suggestions, sidecar.get('apps') or []))
 
 

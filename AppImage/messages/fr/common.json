@@ -1748,7 +1748,14 @@
       "nativeScanPartial": "La recherche d'applications est incomplète. Vérifiez les éléments trouvés et réessayez.",
       "nativeVersionUnknown": "Version installée inconnue",
       "nativeEvidenceStale": "Les éléments trouvés peuvent être obsolètes ou incomplets.",
-      "nativeRegisterOnly": "Confirmez l'enregistrement dans l'éditeur. Une version connue est enregistrée comme valeur manuelle ; aucun outil de mise à jour n'est configuré."
+      "nativeRegisterOnly": "Confirmez l'enregistrement dans l'éditeur. Une version connue est enregistrée comme valeur manuelle ; aucun outil de mise à jour n'est configuré.",
+      "dockerScanFailed": "La recherche Docker n'a pas pu se terminer. Les résultats précédents peuvent être obsolètes ; réessayez.",
+      "dockerScanPartial": "La recherche Docker est incomplète. Certains conteneurs n'ont pas pu être vérifiés.",
+      "dockerEvidenceContainer": "Conteneur Docker",
+      "dockerEvidenceImage": "Image",
+      "dockerEvidencePort": "Port TCP publié",
+      "dockerEvidenceProject": "Projet Compose",
+      "dockerEndpointReview": "Conteneur avec des ports TCP publiés. Confirmez le nom et l'adresse web avant d'enregistrer. L'enregistrement ne configure pas les mises à jour."
     },
     "statusFilter": {
       "ariaLabel": "Filtrer les machines virtuelles et les conteneurs",

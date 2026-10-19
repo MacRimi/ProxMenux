@@ -768,13 +768,19 @@ class Routes(unittest.TestCase):
             write.assert_not_called()
 
     def test_actual_lifecycle_marks_last_known_stale_without_scanning(self):
+        import docker_app_discovery as docker
+        docker._cache[101] = {'vmid':101, 'status':'complete', 'stale':False, 'candidates':[], 'scanned_at':time.time()}
+        self.addCleanup(docker._cache.clear)
         native._cache[101] = {'vmid': 101, 'status': 'complete', 'stale': False,
                               'candidates': [], 'scanned_at': time.time()}
         with patch.object(native, 'discover') as scan, \
+             patch.object(docker, 'discover') as docker_scan, \
              patch.object(lxc_apps, 'clear_schedule_reboot_required') as clear:
             for action in ('start', 'reboot', 'stop'):
                 self.globals['_handle_guest_lifecycle']('101', 'lxc', action)
                 self.assertTrue(native.cached(101)['stale'])
+                self.assertTrue(docker.cached(101)['stale'])
+            docker_scan.assert_not_called()
             scan.assert_not_called()
             self.assertEqual(clear.call_count, 2)
 

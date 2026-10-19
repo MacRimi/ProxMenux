@@ -1182,7 +1182,7 @@ def validate_config(payload: dict) -> tuple[bool, Any]:
     # Native discovery identity is separate from a curated helper/updater.
     discovery_id = payload.get("discovery_id")
     if discovery_id is not None:
-        if not isinstance(discovery_id, str) or not re.fullmatch(r"native-[0-9a-f]{24}", discovery_id):
+        if not isinstance(discovery_id, str) or not re.fullmatch(r"(?:native|docker)-[0-9a-f]{24}", discovery_id):
             return _err("invalid discovery_id")
         conf["discovery_id"] = discovery_id
 
@@ -5406,6 +5406,10 @@ def _probe_docker_web_links(vmid) -> list[dict]:
     Stopped containers are included from their persistent HostConfig bindings,
     so their links remain registrable before the workload is started again.
     """
+    import docker_app_discovery
+    shared = docker_app_discovery.cached_web_links(vmid, _docker_service_catalog_meta)
+    if shared is not None:
+        return shared
     key = str(vmid)
     now = time.time()
     with _docker_web_links_lock:
@@ -5461,7 +5465,12 @@ def _probe_docker_web_links(vmid) -> list[dict]:
                             if not isinstance(binding, dict):
                                 continue
                             host_ip = str(binding.get("HostIp") or "").strip()
-                            if host_ip in {"127.0.0.1", "::1"}:
+                            try:
+                                import ipaddress
+                                bind_ip = ipaddress.ip_address(host_ip or "0.0.0.0")
+                                if bind_ip.is_loopback or (getattr(bind_ip, "ipv4_mapped", None) and bind_ip.ipv4_mapped.is_loopback):
+                                    continue
+                            except ValueError:
                                 continue
                             try:
                                 host_port = int(binding.get("HostPort"))

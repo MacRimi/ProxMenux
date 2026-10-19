@@ -1748,7 +1748,14 @@
       "nativeScanPartial": "La ricerca delle applicazioni è incompleta. Controlla gli elementi trovati e riprova.",
       "nativeVersionUnknown": "Versione installata sconosciuta",
       "nativeEvidenceStale": "Gli elementi trovati potrebbero non essere aggiornati o essere incompleti.",
-      "nativeRegisterOnly": "Conferma la registrazione nell'editor. Una versione nota viene salvata come valore manuale; non viene configurato alcun aggiornamento automatico."
+      "nativeRegisterOnly": "Conferma la registrazione nell'editor. Una versione nota viene salvata come valore manuale; non viene configurato alcun aggiornamento automatico.",
+      "dockerScanFailed": "La ricerca Docker non è stata completata. I risultati precedenti potrebbero non essere aggiornati; riprova.",
+      "dockerScanPartial": "La ricerca Docker è incompleta. Non è stato possibile controllare alcuni container.",
+      "dockerEvidenceContainer": "Container Docker",
+      "dockerEvidenceImage": "Immagine",
+      "dockerEvidencePort": "Porta TCP pubblicata",
+      "dockerEvidenceProject": "Progetto Compose",
+      "dockerEndpointReview": "Container con porte TCP pubblicate. Conferma il nome e l'indirizzo web prima di salvare. La registrazione non configura gli aggiornamenti."
     },
     "statusFilter": {
       "ariaLabel": "Filtra macchine virtuali e container",
