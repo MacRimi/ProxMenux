@@ -13,6 +13,7 @@ import sys
 import tempfile
 
 PYTHON_FILES = (
+    "AppImage/scripts/tests/test_local_app_icon_isolation.py",
     "AppImage/scripts/tests/test_local_app_icons.py",
     "AppImage/scripts/tests/test_docker_app_discovery.py",
     "AppImage/scripts/tests/test_native_app_discovery.py",

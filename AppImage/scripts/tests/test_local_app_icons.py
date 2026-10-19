@@ -1,6 +1,7 @@
 """Offline icon contracts: actual codecs, HTTP, cache transactions and routes."""
 import ast
 import base64
+import contextlib
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -49,6 +50,12 @@ class Icons(unittest.TestCase):
             self.addCleanup(p.stop)
         self.png = picture()
         self.payload = {'port': 8080, 'scheme': 'http'}
+        # Namespace identity is exercised separately by test_local_app_icon_isolation.
+        for name, value in (('_network', contextlib.nullcontext((81, 'fixture'))),
+                            ('_network_unchanged', True)):
+            p = patch.object(icons, name, return_value=value)
+            p.start()
+            self.addCleanup(p.stop)
 
     def resolve(self, args):
         if args[:2] == ['/usr/sbin/pct', 'status']:
@@ -137,7 +144,7 @@ class Icons(unittest.TestCase):
     def test_explicit_lookup_derives_address_rechecks_and_never_writes_apps(self):
         with patch.object(icons, '_run', side_effect=self.resolve) as run, patch.object(icons, '_worker', return_value=(self.png, 'image/png')) as worker:
             result = icons.discover(101, self.payload)
-        worker.assert_called_once_with('http://10.0.0.42:8080')
+        worker.assert_called_once_with('http://10.0.0.42:8080', 81)
         self.assertEqual(run.call_count, 6)
         self.assertFalse((self.apps / '101.json').exists())
         self.assertEqual(icons.read(101, result['logo_url'].split('/')[-1])[1], 'image/png')
@@ -191,7 +198,7 @@ class Icons(unittest.TestCase):
                 return '\n'.join(addresses + addresses) if args[0] == 'lxc-info' else self.resolve(args)
             with patch.object(icons, '_run', side_effect=resolve), patch.object(icons, '_worker', return_value=(self.png, 'image/png')) as worker:
                 icons.discover(101, self.payload)
-                worker.assert_called_once_with(f'http://{expected}:8080')
+                worker.assert_called_once_with(f'http://{expected}:8080', 81)
 
     def test_address_change_or_stop_during_request_cannot_cache(self):
         for second in ['http://10.0.0.43:8080', icons.IconError('stopped')]:
@@ -207,17 +214,17 @@ class Icons(unittest.TestCase):
             with self.assertRaises(icons.IconError):
                 icons.discover(101, self.payload)
             origin.assert_not_called()
-        with patch.object(icons.subprocess, 'run', side_effect=subprocess.TimeoutExpired('worker', 8)):
+        with patch.object(icons.subprocess, 'Popen', side_effect=OSError('cannot start worker')):
             with self.assertRaises(icons.IconError):
-                icons._worker('http://10.0.0.42:80')
+                icons._worker('http://10.0.0.42:80', 81)
 
     def test_real_worker_timeout_kills_child_and_returns_promptly(self):
         worker = self.root / 'slow.py'
         worker.write_text('import time\ntime.sleep(20)\n')
         started = time.monotonic()
-        with patch.object(icons, '__file__', str(worker)), patch.object(icons, 'WORKER_TIMEOUT', .15):
+        with patch.object(icons, '_worker_command', return_value=[sys.executable, str(worker)]), patch.object(icons, 'WORKER_TIMEOUT', .15):
             with self.assertRaises(icons.IconError):
-                icons._worker('http://10.0.0.42:80')
+                icons._run_worker(['--decode'])
         self.assertLess(time.monotonic() - started, 2)
 
     def test_proxy_environment_is_ignored_and_private_https_context_is_explicit(self):
@@ -396,7 +403,7 @@ class HttpContract(unittest.TestCase):
         try:
             origin = f'http://127.0.0.1:{server.server_port}'
             # Production rejects loopback; this fixture tests only the HTTP contract.
-            with patch.object(icons, '_private_ip', return_value=True):
+            with patch.object(icons, '_private_ip', return_value=True), patch.object(icons, '_owns_address', return_value=True):
                 for case, paths in [('relative', ['/', '/icon.png']), ('redirect', ['/', '/login/', '/login/icon.png']), ('fallback', ['/', '/favicon.ico'])]:
                     mode[0] = case; requests.clear()
                     self.assertEqual(icons._fetch(origin)[1], 'image/png')
