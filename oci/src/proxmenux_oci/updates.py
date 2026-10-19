@@ -10,7 +10,7 @@ import subprocess
 import sys
 
 from .i18n import translate
-from .ui import UserCancelled
+from .ui import UserCancelled, menu_size
 
 
 class UpdateCheck:
@@ -166,7 +166,8 @@ def select_updates(project, ui, available):
         try:
             picked = ui.checklist(
                 translate('Press Space to select applications to update. Select all includes every application in this list.'),
-                choices, defaults, title=translate('Updates available'), ok_label=translate('Update'))
+                choices, defaults, title=translate('Updates available'), ok_label=translate('Update'),
+                size=menu_size())
         except UserCancelled:
             return False
         selected = [row for row in available if 'all' in picked or str(row['vmid']) in picked]

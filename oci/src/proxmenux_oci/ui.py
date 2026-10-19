@@ -172,7 +172,7 @@ class TerminalUI:
             return options[int(selected) - 1][0]
         return None
 
-    def checklist(self, text, options, defaults, title: str | None = None, ok_label=None):
+    def checklist(self, text, options, defaults, title: str | None = None, ok_label=None, size=None):
         return [tag for tag, label in options if self.confirm(label, tag in defaults)]
 
     def detail_menu(self, text: str, options: list[tuple[str, str]], default: str | None = None,
@@ -374,12 +374,14 @@ class DialogUI:
         result = self._run(widget, title)
         return result.stderr.strip() if result.returncode == 0 else None
 
-    def checklist(self, text, options, defaults, title: str | None = None, ok_label=None):
+    def checklist(self, text, options, defaults, title: str | None = None, ok_label=None, size=None):
         terminal = shutil.get_terminal_size((100, 30))
         height = min(max(len(options) + 9, 14), terminal.lines - 2)
+        width, rows = MENU_WIDTH, max(4, min(len(options), height - 8))
+        if size:
+            height, width, rows = size
         widget = ['--ok-label', ok_label] if ok_label else []
-        widget += ["--separate-output", "--checklist", f"\n{text}", str(height), str(MENU_WIDTH),
-                  str(max(4, min(len(options), height - 8)))]
+        widget += ["--separate-output", "--checklist", f"\n{text}", str(height), str(width), str(rows)]
         for tag, label in options:
             widget += [tag, label, "on" if tag in defaults else "off"]
         result = self._run(widget, title)

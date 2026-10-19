@@ -61,6 +61,8 @@ class SelectionTests(unittest.TestCase):
     def test_selection_has_an_update_button_and_no_extra_action(self):
         result, ui, run = self.select([])
         self.assertEqual(ui.checklist.call_args.kwargs['ok_label'], 'Update')
+        # The same height and width as the OCI main menu.
+        self.assertEqual(ui.checklist.call_args.kwargs['size'], updates.menu_size())
         self.assertNotIn('extra_button', ui.checklist.call_args.kwargs)
         self.assertFalse(result); ui.review.assert_not_called(); run.assert_not_called()
 
@@ -242,6 +244,11 @@ class DialogTests(unittest.TestCase):
         self.assertNotIn('--extra-button', widget)
         self.assertEqual(widget[widget.index('--ok-label') + 1], 'Update')
         self.assertNotIn('on', widget)
+        with patch.object(ui, '_run', return_value=SimpleNamespace(returncode=0, stderr='')) as run:
+            ui.checklist('Updates', [('111', 'App')], [], size=(24, 75, 16))
+        widget = run.call_args.args[0]
+        start = widget.index('--checklist')
+        self.assertEqual(widget[start + 2:start + 5], ['24', '75', '16'])
 
 
 class MainMenuTests(unittest.TestCase):
