@@ -2569,7 +2569,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
                   {t(e.kind === "docker_container" ? "vmLxc.appEditor.dockerEvidenceContainer"
                     : e.kind === "docker_image" ? "vmLxc.appEditor.dockerEvidenceImage"
                     : e.kind === "compose_project" ? "vmLxc.appEditor.dockerEvidenceProject"
-                    : e.kind === "tcp_listener" ? "vmLxc.appEditor.nativeEvidencePort"
+                    : e.kind === "tcp_listener" ? (d.source === "docker_metadata"
+                      ? "vmLxc.appEditor.dockerEvidencePort" : "vmLxc.appEditor.nativeEvidencePort")
                     : e.kind === "installation_file" ? "vmLxc.appEditor.nativeEvidenceFile"
                     : e.kind === "process_executable" ? "vmLxc.appEditor.nativeEvidenceProcess"
                     : e.kind === "working_directory" ? "vmLxc.appEditor.nativeEvidenceDirectory"

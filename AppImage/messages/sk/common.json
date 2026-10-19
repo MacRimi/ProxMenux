@@ -1699,6 +1699,7 @@
       "dockerScanPartial": "Docker vyhľadávanie je neúplné. Niektoré kontajnery sa nepodarilo skontrolovať.",
       "dockerEvidenceContainer": "Docker kontajner",
       "dockerEvidenceImage": "Obraz",
+      "dockerEvidencePort": "Publikovaný TCP port",
       "dockerEvidenceProject": "Compose projekt",
       "dockerEndpointReview": "Kontajner s publikovanými TCP portmi. Pred uložením potvrď názov a webovú adresu. Registrácia nenastaví aktualizácie.",
       "noNewApplicationsDetected": "Neboli zistené žiadne nové aplikácie.",

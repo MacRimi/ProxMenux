@@ -5,7 +5,7 @@ const candidate = {
   vmid:101,slug:'docker-'+'b'.repeat(24),discovery_id:'docker-'+'b'.repeat(24),
   source:'docker_metadata',name:'Uncatalogued web app',default_ports:[8080],
   installed_version:null,tracking_suggestion:null,
-  evidence:[{kind:'docker_container',value:'web-1'},{kind:'docker_image',value:'example/web:7'}],
+  evidence:[{kind:'docker_container',value:'web-1'},{kind:'docker_image',value:'example/web:7'},{kind:'tcp_listener',value:'8080'}],
 }
 async function main() {
   const f = fixture({nativeCandidate:null,dockerCandidate:candidate})
@@ -15,6 +15,7 @@ async function main() {
   assert.equal(f.calls.filter(c=>c.url.endsWith('/docker-discovery')&&c.method==='POST').length,1)
   assert.ok(text(f.tree()).includes('example/web:7'))
   assert.ok(text(f.tree()).includes('dockerEndpointReview'))
+  assert.ok(text(f.tree()).includes('dockerEvidencePort'),'published mapping is not claimed as a probed listener')
   assert.ok(text(f.tree()).includes('nativeVersionUnknown'))
   await f.button('registerButton').props.onClick(); f.render()
   f.button('cancelButton').props.onClick(); f.render()

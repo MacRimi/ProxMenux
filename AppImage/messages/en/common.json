@@ -1755,6 +1755,7 @@
       "dockerScanPartial": "Docker search is incomplete. Some containers could not be checked.",
       "dockerEvidenceContainer": "Docker container",
       "dockerEvidenceImage": "Image",
+      "dockerEvidencePort": "Published TCP port",
       "dockerEvidenceProject": "Compose project",
       "dockerEndpointReview": "Container with published TCP ports. Confirm the name and web address before saving. Registration does not configure updates.",
       "noNewApplicationsDetected": "No new applications were detected.",
