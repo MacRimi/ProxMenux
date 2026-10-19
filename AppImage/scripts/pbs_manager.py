@@ -17,7 +17,7 @@ import subprocess
 import tempfile
 import threading
 import time
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlencode, urlsplit
 
 import auth_manager
 
@@ -111,12 +111,11 @@ def public_servers():
                 for row in _load_servers()]
 
 
-def _validate_server(data, previous=None):
+def _validate_server(data, previous=None, fields=("name", "url", "token_id", "token_secret", "fingerprint")):
     if not isinstance(data, dict):
         raise PBSError("Invalid PBS server configuration.")
     previous = previous or {}
-    row = {field: data.get(field, previous.get(field, ""))
-           for field in ("name", "url", "token_id", "token_secret", "fingerprint")}
+    row = {field: data.get(field, previous.get(field, "")) for field in fields}
     if any(not isinstance(value, str) or len(value) > 4096 for value in row.values()):
         raise PBSError("Invalid PBS connection field.")
     row["name"] = row["name"].strip()
@@ -131,6 +130,8 @@ def _validate_server(data, previous=None):
         raise PBSError("Use an HTTPS PBS URL without embedded credentials, query or fragment.") from exc
     if not row["name"] or len(row["name"]) > 128:
         raise PBSError("A server name of at most 128 characters is required.")
+    if "token_id" not in row:
+        return _validated_fingerprint(row)
     row["token_id"] = row["token_id"].strip()
     if not re.fullmatch(r"[^\s:!]+@[^\s:!]+![^\s:!]+", row["token_id"]):
         raise PBSError("Enter a PBS API token ID in user@realm!token format.")
@@ -139,6 +140,10 @@ def _validate_server(data, previous=None):
         raise PBSError("A valid API token secret is required.")
     if not row["token_id"].isascii():
         raise PBSError("Invalid API token ID.")
+    return _validated_fingerprint(row)
+
+
+def _validated_fingerprint(row):
     fingerprint = row["fingerprint"].strip().lower().replace(":", "")
     if fingerprint and not re.fullmatch("[a-f0-9]{64}", fingerprint):
         raise PBSError("The certificate fingerprint must be SHA256 (64 hex characters).")
@@ -148,6 +153,13 @@ def _validate_server(data, previous=None):
 
 def _remote_get(server, endpoint):
     """Validate the TLS peer BEFORE transmitting the PBS token (no redirects)."""
+    return _remote_request(server, "GET", endpoint, {
+        "Authorization": "PBSAPIToken=" + server["token_id"] + ":" + server["token_secret"]})
+
+
+def _remote_request(server, method, endpoint, headers, form=None,
+                    rejected="PBS rejected the API token or its permissions. Check both the user and token ACLs."):
+    """One request to PBS; credentials leave only after the certificate is checked."""
     parts = urlsplit(server["url"])
     fingerprint = server.get("fingerprint")
     if fingerprint:
@@ -165,14 +177,15 @@ def _remote_get(server, endpoint):
             if not hmac.compare_digest(actual, fingerprint):
                 raise PBSError("PBS certificate fingerprint does not match. No credentials were sent.")
         path = parts.path.rstrip("/") + "/api2/json" + endpoint
-        connection.request("GET", path, headers={
-            "Accept": "application/json",
-            "Authorization": "PBSAPIToken=" + server["token_id"] + ":" + server["token_secret"],
-        })
+        body = urlencode(form) if form is not None else None
+        request_headers = {"Accept": "application/json", **headers}
+        if body is not None:
+            request_headers["Content-Type"] = "application/x-www-form-urlencoded"
+        connection.request(method, path, body=body, headers=request_headers)
         response = connection.getresponse()
         content = response.read(MAX_RESPONSE + 1)
         if response.status in (401, 403):
-            raise PBSError("PBS rejected the API token or its permissions. Check both the user and token ACLs.")
+            raise PBSError(rejected)
         if response.status != 200 or len(content) > MAX_RESPONSE:
             raise PBSError("PBS returned an invalid response. Redirects are not followed.")
         document = json.loads(content)
@@ -206,6 +219,43 @@ def save_server(data):
         servers = [existing for existing in servers if existing["id"] != row["id"]]
         _save_servers([*servers, row])
     return row["id"]
+
+
+def connect_with_password(data):
+    """Sign in once and create a read-only token for this Monitor. The password
+    is used for that sign-in only and is never stored."""
+    endpoint = _validate_server(data, fields=("name", "url", "fingerprint"))
+    username = data.get("username") if isinstance(data, dict) else None
+    password = data.get("password") if isinstance(data, dict) else None
+    if not isinstance(username, str) or not re.fullmatch(r"[^\s:!@]+@[^\s:!@]+", username.strip()):
+        raise PBSError("Enter the PBS user as user@realm, for example root@pam.")
+    if not isinstance(password, str) or not password or len(password) > 4096:
+        raise PBSError("Enter the password of the PBS user.")
+    ticket = _remote_request(endpoint, "POST", "/access/ticket", {},
+                             {"username": username.strip(), "password": password},
+                             rejected="PBS rejected the user name or password.")
+    if not isinstance(ticket, dict) or not ticket.get("ticket") or not ticket.get("CSRFPreventionToken"):
+        raise PBSError("PBS returned an invalid sign-in response.")
+    session = {"Cookie": "PBSAuthCookie=" + quote(ticket["ticket"], safe=""),
+               "CSRFPreventionToken": ticket["CSRFPreventionToken"]}
+    user = str(ticket.get("username") or username.strip())
+    name = "proxmenux-" + secrets.token_hex(4)
+    token_path = f"/access/users/{quote(user, safe='')}/token/{name}"
+    created = _remote_request(endpoint, "POST", token_path, session, {"comment": "ProxMenux Monitor, read-only"},
+                              rejected="This PBS user cannot create API tokens.")
+    if not isinstance(created, dict) or not created.get("tokenid") or not created.get("value"):
+        raise PBSError("PBS returned an invalid API token.")
+    try:
+        _remote_request(endpoint, "PUT", "/access/acl", session,
+                        {"path": "/", "role": "Audit", "auth-id": created["tokenid"], "propagate": "1"},
+                        rejected="This PBS user cannot grant the Audit role. Sign in with root@pam or an administrator.")
+        return save_server({**endpoint, "token_id": created["tokenid"], "token_secret": created["value"]})
+    except PBSError:
+        try:
+            _remote_request(endpoint, "DELETE", token_path, session)
+        except PBSError:
+            pass
+        raise
 
 
 def delete_server(identifier):

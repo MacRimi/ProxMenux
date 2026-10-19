@@ -12,6 +12,7 @@ import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { PBSDatastoreCard, type PBSDatastore } from "./pbs-datastore-usage"
 import { fetchApi } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
@@ -27,7 +28,8 @@ interface PBSStatus {
   sync: Job[] | null; verify: Job[] | null; prune: Job[] | null; errors: Record<string, string>;
 }
 
-const emptyForm = { id: "", name: "", url: "", token_id: "", fingerprint: "", token_secret: "" }
+const emptyForm = { id: "", name: "", url: "", token_id: "", fingerprint: "", token_secret: "", username: "", password: "" }
+type Method = "password" | "token"
 const NEW_CONNECTION = "__new__"
 const badgeTone = {
   ok: "bg-green-500/10 text-green-500 border-green-500/20",
@@ -69,14 +71,17 @@ function formatDuration(seconds: number) {
 }
 
 // `localOnly` is the PBS host's own Monitor: no connection picker, the
-// header Refresh already reloads the page data.
-export function PBSPanel({ localOnly = false }: { localOnly?: boolean } = {}) {
+// header Refresh already reloads the page data. Its tabs show one `view` each.
+export function PBSPanel({ localOnly = false, view = "all" }: { localOnly?: boolean; view?: "all" | "datastores" | "tasks" } = {}) {
+  const showStores = view !== "tasks"
+  const showTasks = view !== "datastores"
   const t = useT()
   const { data: connections, error: connectionError, mutate: reloadConnections } = useSWR<Connections>(
     "/api/pbs/servers", url => fetchApi<Connections>(url), { revalidateOnFocus: false })
   const [selected, setSelected] = useState("")
   const [manage, setManage] = useState(false)
   const [form, setForm] = useState(emptyForm)
+  const [method, setMethod] = useState<Method>("password")
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
@@ -91,16 +96,26 @@ export function PBSPanel({ localOnly = false }: { localOnly?: boolean } = {}) {
     setSelected(connections.local_available ? "local" : connections.servers[0]?.id || "")
   }, [connections, selected])
 
+  const openManage = (next = emptyForm) => {
+    setForm(next); setMethod(next.id ? "token" : "password"); setError(""); setMessage(""); setManage(true)
+  }
+
   const save = async () => {
     setBusy(true); setError(""); setMessage("")
     try {
-      const result = await fetchApi<{ id: string }>("/api/pbs/servers", { method: "POST", body: JSON.stringify({
-        ...form, id: form.id || undefined, token_secret: form.token_secret || undefined,
-      }) })
+      // A password is sent once to create a read-only token; only the token is kept.
+      const { username, password, ...connection } = form
+      const result = !form.id && method === "password"
+        ? await fetchApi<{ id: string }>("/api/pbs/servers/login", { method: "POST", body: JSON.stringify({
+          name: form.name, url: form.url, fingerprint: form.fingerprint, username, password,
+        }) })
+        : await fetchApi<{ id: string }>("/api/pbs/servers", { method: "POST", body: JSON.stringify({
+          ...connection, id: form.id || undefined, token_secret: form.token_secret || undefined,
+        }) })
       await reloadConnections()
       setSelected(result.id)
       setForm(emptyForm)
-      setMessage(t("pbs.saved"))
+      setManage(false)
     } catch (err) { setError(err instanceof Error ? err.message : t("pbs.saveFailed")) }
     finally { setBusy(false) }
   }
@@ -130,7 +145,7 @@ export function PBSPanel({ localOnly = false }: { localOnly?: boolean } = {}) {
       <Button variant="outline" size="sm" disabled={isLoading || !selected} onClick={() => mutate()}>
         <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />{t("pbs.refresh")}
       </Button>
-      <Button variant="outline" size="sm" onClick={() => setManage(!manage)}>
+      <Button variant="outline" size="sm" onClick={() => openManage()}>
         <Settings2 className="mr-2 h-4 w-4" />{t("pbs.manage")}
       </Button>
     </div>}
@@ -147,56 +162,83 @@ export function PBSPanel({ localOnly = false }: { localOnly?: boolean } = {}) {
             <span className="block truncate text-sm font-medium text-foreground">{row.name}</span>
             <span className="block break-all font-mono text-xs text-muted-foreground">{row.url}</span>
           </span>
-          <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => {
-            setForm({ ...emptyForm, name: row.name, url: row.url, fingerprint: row.fingerprint })
-            setError(""); setMessage(""); setManage(true)
-          }}>{t("pbs.connect")}</Button>
+          <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700"
+            onClick={() => openManage({ ...emptyForm, name: row.name, url: row.url, fingerprint: row.fingerprint })}>
+            {t("pbs.connect")}
+          </Button>
         </div>)}
       </CardContent>
     </Card>}
-    {manage && !localOnly && <Card>
-      <CardHeader><CardTitle>{t("pbs.manage")}</CardTitle></CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">{t("pbs.permissionsHelp")}</p>
-        <Select value={form.id || NEW_CONNECTION} onValueChange={value => {
-          const row = connections?.servers.find(item => item.id === value)
-          setForm(row ? { ...row, token_secret: "" } : emptyForm)
-        }}>
-          <SelectTrigger aria-label={t("pbs.editConnection")} className="w-full"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NEW_CONNECTION}>{t("pbs.add")}</SelectItem>
-            {connections?.servers.map(row => <SelectItem key={row.id} value={row.id}>{row.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <div className="grid gap-4 md:grid-cols-2">
-          {(["name", "url", "token_id", "token_secret", "fingerprint"] as const).map(field =>
-            <div key={field} className="space-y-2">
-              <Label htmlFor={`pbs-${field}`}>{t(`pbs.${field}`)}</Label>
-              <Input id={`pbs-${field}`} disabled={busy} type={field === "token_secret" ? "password" : field === "url" ? "url" : "text"}
-                autoComplete={field === "token_secret" ? "new-password" : "off"}
-                value={form[field]} onChange={event => setForm({ ...form, [field]: event.target.value })} />
-            </div>)}
+    {!localOnly && <Dialog open={manage} onOpenChange={open => { if (!busy) setManage(open) }}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-accent [&_input]:bg-background [&_[role=combobox]]:bg-background">
+        <DialogHeader>
+          <DialogTitle>{t("pbs.manage")}</DialogTitle>
+          <DialogDescription>{method === "password" && !form.id ? t("pbs.passwordHelp") : t("pbs.permissionsHelp")}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>{t("pbs.editConnection")}</Label>
+            <Select value={form.id || NEW_CONNECTION} disabled={busy} onValueChange={value => {
+              const row = connections?.servers.find(item => item.id === value)
+              setForm(row ? { ...emptyForm, ...row, token_secret: "" } : emptyForm)
+              setMethod(row ? "token" : "password"); setError("")
+            }}>
+              <SelectTrigger aria-label={t("pbs.editConnection")} className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NEW_CONNECTION}>{t("pbs.add")}</SelectItem>
+                {connections?.servers.map(row => <SelectItem key={row.id} value={row.id}>{row.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          {!form.id && <div className="space-y-2">
+            <Label>{t("pbs.signInWith")}</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {(["password", "token"] as const).map(option =>
+                <Button key={option} type="button" variant="outline" disabled={busy} onClick={() => { setMethod(option); setError("") }}
+                  className={method === option ? "border-blue-600 bg-blue-600/15 text-foreground hover:bg-blue-600/20" : "bg-background"}>
+                  {t(option === "password" ? "pbs.methodPassword" : "pbs.methodToken")}
+                </Button>)}
+            </div>
+          </div>}
+          <div className="grid gap-4 md:grid-cols-2">
+            {(["name", "url", ...(method === "password" && !form.id ? ["username", "password"] : ["token_id", "token_secret"]), "fingerprint"] as const).map(field => {
+              const secret = field === "token_secret" || field === "password"
+              return <div key={field} className="space-y-2">
+                <Label htmlFor={`pbs-${field}`}>{t(`pbs.${field}`)}</Label>
+                <Input id={`pbs-${field}`} disabled={busy} type={secret ? "password" : field === "url" ? "url" : "text"}
+                  autoComplete={secret ? "new-password" : "off"} placeholder={field === "username" ? "root@pam" : undefined}
+                  value={form[field as keyof typeof form]} onChange={event => setForm({ ...form, [field]: event.target.value })} />
+              </div>
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground">{t("pbs.tlsHelp")}</p>
+          {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
+          {message && <p role="status" className="text-sm text-green-500">{message}</p>}
+          <div className="flex flex-wrap justify-end gap-2">
+            {form.id && <Button variant="outline" disabled={busy} className="mr-auto text-red-500 hover:text-red-500" onClick={remove}>
+              <Trash2 className="mr-2 h-4 w-4" />{t("pbs.remove")}
+            </Button>}
+            <Button variant="outline" disabled={busy} onClick={() => setManage(false)}>{t("pbs.cancel")}</Button>
+            <Button className="bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-600/50 disabled:text-white disabled:opacity-100"
+              disabled={busy || !form.url.trim() || !form.name.trim()} onClick={save}>
+              {busy ? t("pbs.testing") : t("pbs.save")}
+            </Button>
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground">{t("pbs.tlsHelp")}</p>
-        {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
-        {message && <p role="status" className="text-sm text-green-500">{message}</p>}
-        <div className="flex gap-2">
-          <Button disabled={busy} onClick={save}>{busy ? t("pbs.testing") : t("pbs.save")}</Button>
-          {form.id && <Button variant="destructive" disabled={busy} onClick={remove}>{t("pbs.remove")}</Button>}
-        </div>
-      </CardContent>
-    </Card>}
+      </DialogContent>
+    </Dialog>}
     {data && <>
-      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+      {!localOnly && <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
         <span>{data.name} · PBS {data.version || "—"} · {t("pbs.updatedAt", { time: new Date(data.fetched_at * 1000).toLocaleTimeString() })}</span>
         {Object.keys(data.services).length > 0 && Object.values(data.services).every(state => state === "active")
           ? <Badge variant="outline" className={badgeTone.ok}>{t("pbs.servicesActive")}</Badge>
           : Object.entries(data.services).filter(([, state]) => state !== "active").map(([service, state]) =>
             <Badge key={service} variant="outline" className={badgeTone.error}>{service}: {state}</Badge>)}
-      </div>
-      {Object.entries(data.errors).map(([section, detail]) => <p key={section} role="alert" className="text-sm text-amber-500">{t(`pbs.${section}`)}: {detail}</p>)}
+      </div>}
+      {Object.entries(data.errors).filter(([section]) => section === "datastores" ? showStores : showTasks)
+        .map(([section, detail]) => <p key={section} role="alert" className="text-sm text-amber-500">{t(`pbs.${section}`)}: {detail}</p>)}
 
-      <Card className="bg-card border-border">
+      {showStores && <Card className="bg-card border-border">
         <CardHeader><CardTitle className="flex items-center text-foreground"><Database className="mr-2 h-5 w-5" />{t("pbs.datastores")}</CardTitle></CardHeader>
         <CardContent>
           {data.datastores?.length === 0 && <p className="text-sm text-muted-foreground">{t("pbs.noDatastores")}</p>}
@@ -204,8 +246,9 @@ export function PBSPanel({ localOnly = false }: { localOnly?: boolean } = {}) {
             {data.datastores.map(store => <PBSDatastoreCard key={store.name} store={store} />)}
           </div>}
         </CardContent>
-      </Card>
+      </Card>}
 
+      {showTasks && <>
       <Card className="bg-card border-border">
         <CardHeader><CardTitle className="flex items-center text-foreground"><Activity className="mr-2 h-5 w-5" />{t("pbs.tasks")}</CardTitle></CardHeader>
         <CardContent>
@@ -261,6 +304,7 @@ export function PBSPanel({ localOnly = false }: { localOnly?: boolean } = {}) {
           })()}
         </CardContent>
       </Card>
+      </>}
     </>}
   </div>
 }

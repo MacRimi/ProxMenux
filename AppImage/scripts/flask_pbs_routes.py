@@ -67,6 +67,20 @@ def save_server():
         return jsonify(error="Could not save PBS connection."), 500
 
 
+@pbs_bp.route("/api/pbs/servers/login", methods=["POST"])
+@require_admin_scope
+def connect_with_password():
+    if not _protected_configuration():
+        return jsonify(error="Enable local authentication before saving remote PBS credentials."), 409
+    try:
+        identifier = pbs.connect_with_password(request.get_json(silent=True))
+        return jsonify(success=True, id=identifier, servers=pbs.public_servers())
+    except pbs.PBSError as exc:
+        return jsonify(error=str(exc)), 400
+    except OSError:
+        return jsonify(error="Could not save PBS connection."), 500
+
+
 @pbs_bp.route("/api/pbs/servers/<identifier>", methods=["DELETE"])
 @require_admin_scope
 def delete_server(identifier):
