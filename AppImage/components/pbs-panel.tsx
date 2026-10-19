@@ -54,9 +54,10 @@ function taskState(task: Task): keyof typeof badgeTone {
   return "error"
 }
 
+// PBS reports "OK", "WARNINGS: n" or the error text of the last run.
 function jobState(state?: string): keyof typeof badgeTone {
   if (!state) return "muted"
-  if (state === "ok") return "ok"
+  if (state.toLowerCase() === "ok") return "ok"
   if (state.toLowerCase().startsWith("warn")) return "warn"
   return "error"
 }

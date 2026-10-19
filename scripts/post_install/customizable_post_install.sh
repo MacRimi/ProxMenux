@@ -2348,7 +2348,7 @@ setup_motd() {
 
 
 optimize_logrotate() {
-    local FUNC_VERSION="1.1"
+    local FUNC_VERSION="1.2"
     # description: Replace logrotate.conf with a Log2RAM-friendly profile (daily rotation, copytruncate).
     msg_info2 "$(translate "Optimizing logrotate configuration...")"
 
@@ -2369,7 +2369,6 @@ su root adm
 rotate 7
 size 10M
 compress
-delaycompress
 missingok
 notifempty
 create 0640 root adm
@@ -3264,7 +3263,6 @@ _update_existing_log2ram_custom() {
     size 20M
     rotate 3
     compress
-    delaycompress
     missingok
     notifempty
     copytruncate
@@ -3349,7 +3347,7 @@ EOF
 
 
 configure_log2ram() {
-    local FUNC_VERSION="1.7"
+    local FUNC_VERSION="1.8"
     local existing_log2ram_bin=""
     pmx_journal_context "configure_log2ram" "$FUNC_VERSION"
     # description: Install Log2RAM with user-chosen RAM size; prompts for size and SSD/M.2 awareness before applying.
@@ -3487,7 +3485,6 @@ configure_log2ram() {
     size 20M
     rotate 3
     compress
-    delaycompress
     missingok
     notifempty
     copytruncate

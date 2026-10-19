@@ -12242,18 +12242,6 @@ def _compute_node_metrics_payload(timeframe: str) -> dict:
     deadline = time.monotonic() + _NODE_METRICS_TIMEOUT
     local_node = get_proxmox_node_name()
 
-    zfs_arc_size = 0
-    try:
-        with open('/proc/spl/kstat/zfs/arcstats', 'r') as f:
-            for line in f:
-                if line.startswith('size'):
-                    parts = line.split()
-                    if len(parts) >= 3:
-                        zfs_arc_size = int(parts[2])
-                        break
-    except (FileNotFoundError, PermissionError, ValueError):
-        pass
-
     try:
         rrd_result = subprocess.run(
             _node_rrd_command(local_node, timeframe),
@@ -12322,11 +12310,11 @@ def _compute_node_metrics_payload(timeframe: str) -> dict:
             'code': 'metrics_invalid_data',
         })
 
+    # Only the history the node recorded is drawn. A PBS RRD has no ARC field,
+    # and the current size repeated over the period is not its history.
     for item in rrd_data:
         if 'arcsize' in item:
             item['zfsarc'] = item['arcsize']
-        elif zfs_arc_size > 0 and ('zfsarc' not in item or item.get('zfsarc', 0) == 0):
-            item['zfsarc'] = zfs_arc_size
 
     def _values_from(items, field_key, scale=1.0):
         return [item[field_key] * scale for item in items

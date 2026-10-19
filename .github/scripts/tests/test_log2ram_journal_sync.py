@@ -4,6 +4,7 @@ journald then continues an old sequence and deletes its newest archives first.
 The post-install makes the sync remove that file from the disk copy."""
 
 from pathlib import Path
+import re
 import shutil
 import stat
 import subprocess
@@ -86,7 +87,18 @@ class Log2ramJournalSyncTests(unittest.TestCase):
                 # An existing installation is told that it needs a reboot.
                 self.assertIn('if pmx_log2ram_drop_stale_journal "$log2ram_bin"; then\n        NECESSARY_REBOOT=1', text)
                 # The version is what offers the update to existing installations.
-                self.assertIn(f'{function}() {{\n    local FUNC_VERSION="1.7"', text)
+                version = re.search(rf'{function}\(\) {{\n    local FUNC_VERSION="([0-9.]+)"', text)
+                self.assertIsNotNone(version)
+                self.assertGreaterEqual(tuple(map(int, version.group(1).split("."))), (1, 7))
+
+    def test_rotated_logs_are_compressed_at_once_on_a_tmpfs_var_log(self):
+        # A rotated log kept uncompressed filled the 128M Log2RAM of a PBS.
+        for name, function in FLOWS.items():
+            with self.subTest(flow=name):
+                text = (ROOT / "scripts/post_install" / name).read_text()
+                self.assertNotIn("delaycompress", text)
+                version = re.search(rf'{function}\(\) {{\n    local FUNC_VERSION="([0-9.]+)"', text)
+                self.assertGreaterEqual(tuple(map(int, version.group(1).split("."))), (1, 8))
 
 
 if __name__ == "__main__":

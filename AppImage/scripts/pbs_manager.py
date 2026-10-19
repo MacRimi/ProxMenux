@@ -279,6 +279,20 @@ def _cli(*arguments):
         raise PBSError("Could not read PBS " + " ".join(arguments[:2]) + ". Check its service and permissions.") from exc
 
 
+def _local_api(path):
+    """The local PBS API, which reports what the job configuration lacks: the
+    state of the last run and the next one."""
+    try:
+        result = subprocess.run(["proxmox-backup-debug", "api", "get", path, "--output-format", "json"],
+                                check=True, text=True, capture_output=True, timeout=8)
+        data = json.loads(result.stdout)
+        if not isinstance(data, list) or not all(isinstance(row, dict) for row in data):
+            raise ValueError()
+        return data
+    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        raise PBSError("Could not read PBS " + path + ". Check its service and permissions.") from exc
+
+
 def _local_datastores():
     stores = _cli("datastore", "list")
     result = []
@@ -325,9 +339,9 @@ def get_status(identifier):
         services = _local_services()
         operations = {"datastores": _local_datastores,
                       "tasks": lambda: _cli("task", "list", "--all", "true", "--limit", "20"),
-                      "sync": lambda: _cli("sync-job", "list"),
-                      "verify": lambda: _cli("verify-job", "list"),
-                      "prune": lambda: _cli("prune-job", "list")}
+                      "sync": lambda: _local_api("/admin/sync"),
+                      "verify": lambda: _local_api("/admin/verify"),
+                      "prune": lambda: _local_api("/admin/prune")}
     else:
         with _lock:
             server = next((row for row in _load_servers() if row["id"] == identifier), None)

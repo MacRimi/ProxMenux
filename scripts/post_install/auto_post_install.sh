@@ -392,7 +392,7 @@ EOF
 
 # ==========================================================
 optimize_logrotate() {
-    local FUNC_VERSION="1.1"
+    local FUNC_VERSION="1.2"
     pmx_journal_context "optimize_logrotate" "$FUNC_VERSION"
     # description: Replace logrotate.conf with a Log2RAM-friendly profile (daily rotation, copytruncate).
     msg_info "$(translate "Optimizing logrotate configuration...")"
@@ -408,7 +408,6 @@ su root adm
 rotate 7
 size 10M
 compress
-delaycompress
 missingok
 notifempty
 create 0640 root adm
@@ -941,7 +940,6 @@ _update_existing_log2ram_auto() {
     size 20M
     rotate 3
     compress
-    delaycompress
     missingok
     notifempty
     copytruncate
@@ -1041,7 +1039,7 @@ EOF
 
 
 install_log2ram_auto() {
-    local FUNC_VERSION="1.7"
+    local FUNC_VERSION="1.8"
     local existing_log2ram_bin=""
     pmx_journal_context "install_log2ram_auto" "$FUNC_VERSION"
 
@@ -1174,7 +1172,6 @@ install_log2ram_auto() {
     size 20M
     rotate 3
     compress
-    delaycompress
     missingok
     notifempty
     copytruncate

@@ -152,9 +152,11 @@ class PBSManagerTests(unittest.TestCase):
     def test_local_status_reads_pbs_commands_and_filesystem_capacity(self):
         def run(command, **kwargs):
             self.assertNotIn("shell", kwargs)
-            self.assertEqual(command[0], "proxmox-backup-manager")
+            self.assertIn(command[0], ("proxmox-backup-manager", "proxmox-backup-debug"))
             self.assertEqual(command[-2:], ["--output-format", "json"])
             data = [{"name": "backup", "path": str(self.root)}] if command[1:3] == ["datastore", "list"] else []
+            if command[:4] == ["proxmox-backup-debug", "api", "get", "/admin/verify"]:
+                data = [{"id": "v-1", "store": "backup", "schedule": "daily", "last-run-state": "OK"}]
             return SimpleNamespace(stdout=json.dumps(data), returncode=0)
         with mock.patch.object(pbs, "get_platform", return_value={"product": "pbs", "version": "4.2.5"}), \
                 mock.patch.object(pbs, "_local_services", return_value={key: "active" for key in pbs.PBS_SERVICES}), \
@@ -165,6 +167,8 @@ class PBSManagerTests(unittest.TestCase):
         self.assertEqual(result["errors"], {})
         self.assertEqual(result["datastores"][0]["used"], 30)
         self.assertEqual(set(result["services"]), set(pbs.PBS_SERVICES))
+        # Jobs come from the API, which carries the state of their last run.
+        self.assertEqual(result["verify"][0]["last-run-state"], "OK")
 
     def test_pbs_installed_next_to_pve_is_read_locally_with_its_own_version(self):
         def run(command, **kwargs):
