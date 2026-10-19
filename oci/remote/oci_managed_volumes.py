@@ -84,10 +84,7 @@ def remove_empty_format_directories(rootfs, deployment, backed_only=True, target
     if not paths:
         return 0
     flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
-    try:
-        root = os.open(rootfs, flags)
-    except FileNotFoundError:
-        return 0
+    root = os.open(rootfs, flags)
     removed = 0
     try:
         for path in paths:
@@ -98,8 +95,6 @@ def remove_empty_format_directories(rootfs, deployment, backed_only=True, target
                     os.close(current)
                     current = following
                 removed += int(remove_empty_at(current))
-            except FileNotFoundError:
-                continue
             except OSError as error:
                 if error.errno in (errno.ELOOP, errno.ENOTDIR):
                     raise ValueError('Symbolic link or invalid managed volume path') from error

@@ -174,6 +174,21 @@ class FormatDirectoryTests(unittest.TestCase):
             opened.assert_not_called()
 
 
+    def test_missing_rootfs_is_an_error_without_remove(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(volumes.os, 'rmdir') as remove:
+            with self.assertRaises(FileNotFoundError):
+                volumes.remove_empty_format_directories(Path(tmp) / 'missing', {'mounts': [
+                    {'container_path': '/config', 'type': 'managed-volume', 'backup': True}]})
+            remove.assert_not_called()
+
+    def test_missing_managed_mount_is_an_error_without_remove(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(volumes.os, 'rmdir') as remove:
+            with self.assertRaises(FileNotFoundError):
+                volumes.remove_empty_format_directories(Path(tmp), {'mounts': [
+                    {'container_path': '/missing', 'type': 'managed-volume', 'backup': True}]})
+            remove.assert_not_called()
+
+
 class StartupContractTests(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory(); self.addCleanup(directory.cleanup)
