@@ -132,7 +132,7 @@ interface NativeDiscovery {
 
 interface DetectedApp {
   discovery_id?: string
-  source?: "native_metadata"
+  source?: "native_metadata" | "docker_metadata"
   installed_version?: string | null
   evidence?: Array<{ kind: string; value: string }>
   slug: string
@@ -477,6 +477,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
   const [suggestions, setSuggestions] = useState<Suggestions | null>(seed?.suggestions ?? null)
   const [nativeDiscovery, setNativeDiscovery] = useState<NativeDiscovery | null>(null)
   const nativeRequest = useRef(0)
+  const [dockerDiscovery, setDockerDiscovery] = useState<NativeDiscovery | null>(null)
+  const dockerRequest = useRef(0)
   const targetRef = useRef(vmid)
   targetRef.current = vmid
   const targetGeneration = useRef(0)
@@ -489,6 +491,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
     const generation = targetGeneration.current
     const request = ++nativeRequest.current
     setNativeDiscovery(null)
+    setDockerDiscovery(null)
     setEditing(null)
     setDetectionNotice(null)
     setSearchingApplications(false)
@@ -499,6 +502,17 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
           && nativeRequest.current === request) setNativeDiscovery(result)
     }).catch(() => { /* cached metadata is optional; never initiate a scan */ })
     return () => { targetGeneration.current += 1 }
+  }, [vmid, managed])
+  useEffect(() => {
+    const generation = targetGeneration.current
+    const request = dockerRequest.current
+    let cancelled = false
+    if (managed) return
+    fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/docker-discovery`).then(result => {
+      if (!cancelled && targetRef.current === vmid && targetGeneration.current === generation
+          && dockerRequest.current === request) setDockerDiscovery(result)
+    }).catch(() => { /* optional cached result; never initiate a scan */ })
+    return () => { cancelled = true }
   }, [vmid, managed])
   const [adguardSetupAvailable, setAdguardSetupAvailable] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -693,7 +707,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
   // (`extras[]` from the backend). Both use the same DetectedApp
   // shape so the empty state renders them uniformly.
   const detectedList: DetectedApp[] = useMemo(() => {
-    const out: DetectedApp[] = [...(nativeDiscovery?.vmid === vmid ? nativeDiscovery.candidates : [])]
+    const out: DetectedApp[] = [...(nativeDiscovery?.vmid === vmid ? nativeDiscovery.candidates : []),
+      ...(dockerDiscovery?.vmid === vmid ? dockerDiscovery.candidates || [] : [])]
     if (!suggestions) return out
     // A ProxMenux OCI install has no helper slug — nothing was installed by a
     // community script — so its template id identifies it instead.
@@ -719,7 +734,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
       }
     }
     return out
-  }, [suggestions, nativeDiscovery, vmid])
+  }, [suggestions, nativeDiscovery, dockerDiscovery, vmid])
 
   // Registered slugs — used to filter the detection list down to
   // what the user hasn't already registered on this CT.
@@ -792,6 +807,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
   const searchInstalledApplications = async () => {
     const generation = targetGeneration.current
     const request = ++nativeRequest.current
+    ++dockerRequest.current
     const isCurrent = () => targetRef.current === vmid && targetGeneration.current === generation
       && nativeRequest.current === request
     const before = new Set([...visibleDetected, ...visibleWorkloads].map((item) => item.slug))
@@ -811,6 +827,11 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
           ? "vmLxc.appEditor.nativeScanStopped" : "vmLxc.appEditor.nativeScanFailed") })
         return
       }
+      let docker = await fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/docker-discovery`, {
+        method: "POST",
+      })
+      if (!isCurrent()) return
+      setDockerDiscovery(docker)
       const result: Suggestions = await fetchApi(`/api/vms/${vmid}/apps/suggestions`, {
         method: "POST",
       })
@@ -819,6 +840,9 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
       native = await fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/native-discovery`)
       if (!isCurrent()) return
       setNativeDiscovery(native)
+      docker = await fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/docker-discovery`)
+      if (!isCurrent()) return
+      setDockerDiscovery(docker)
       setSuggestions(result)
       if (sidecar) setLxcAppsCached(vmid, sidecar, result)
 
@@ -827,11 +851,16 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
       for (const item of result.extras || []) detected.add(item.slug)
       for (const item of result.docker_workloads || []) detected.add(item.slug)
       for (const item of native.candidates) detected.add(item.slug)
+      for (const item of docker.candidates || []) detected.add(item.slug)
       const visible = [...detected].filter(
         (slug) => !registeredSlugs.has(slug) && !dismissedSlugs.has(slug),
       )
       const newCount = visible.filter((slug) => !before.has(slug)).length
-      if (native.status === "partial") {
+      if (docker.status === "error" || docker.status === "busy") {
+        setDetectionNotice({ found: visible.length > 0, text: t("vmLxc.appEditor.dockerScanFailed") })
+      } else if (docker.status === "partial" || docker.stale) {
+        setDetectionNotice({ found: visible.length > 0, text: t("vmLxc.appEditor.dockerScanPartial") })
+      } else if (native.status === "partial") {
         setDetectionNotice({ found: visible.length > 0, text: t("vmLxc.appEditor.nativeScanPartial") })
       } else if (newCount === 1) {
         setDetectionNotice({ found: true, text: t("vmLxc.appEditor.oneNewApplicationDetected") })
@@ -2526,22 +2555,28 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
                 ? t("vmLxc.appEditor.versionDetected", { version: d.tracking_suggestion.detected_version || "" })
                 : t("vmLxc.appEditor.detectedInContainer")}
             </div>
-            {d.source === "native_metadata" && (
+            {(d.source === "native_metadata" || d.source === "docker_metadata") && (
               <div className="text-xs text-muted-foreground mt-1 break-all">
                 <div>{d.installed_version
                   ? t("vmLxc.appEditor.versionDetected", { version: d.installed_version })
                   : t("vmLxc.appEditor.nativeVersionUnknown")}</div>
-                {(nativeDiscovery?.stale || nativeDiscovery?.status === "partial") && (
+                {(d.source === "docker_metadata"
+                  ? dockerDiscovery?.stale || dockerDiscovery?.status === "partial"
+                  : nativeDiscovery?.stale || nativeDiscovery?.status === "partial") && (
                   <div className="text-amber-400">{t("vmLxc.appEditor.nativeEvidenceStale")}</div>
                 )}
                 {d.evidence?.map((e, index) => <div key={index}>
-                  {t(e.kind === "tcp_listener" ? "vmLxc.appEditor.nativeEvidencePort"
+                  {t(e.kind === "docker_container" ? "vmLxc.appEditor.dockerEvidenceContainer"
+                    : e.kind === "docker_image" ? "vmLxc.appEditor.dockerEvidenceImage"
+                    : e.kind === "compose_project" ? "vmLxc.appEditor.dockerEvidenceProject"
+                    : e.kind === "tcp_listener" ? "vmLxc.appEditor.nativeEvidencePort"
                     : e.kind === "installation_file" ? "vmLxc.appEditor.nativeEvidenceFile"
                     : e.kind === "process_executable" ? "vmLxc.appEditor.nativeEvidenceProcess"
                     : e.kind === "working_directory" ? "vmLxc.appEditor.nativeEvidenceDirectory"
                     : "vmLxc.appEditor.nativeEvidenceService")}: {e.value}
                 </div>)}
-                <div>{t("vmLxc.appEditor.nativeRegisterOnly")}</div>
+                <div>{t(d.source === "docker_metadata"
+                  ? "vmLxc.appEditor.dockerEndpointReview" : "vmLxc.appEditor.nativeRegisterOnly")}</div>
               </div>
             )}
             {d.tracking_suggestion?.detector_source === "legacy_fallback" && (

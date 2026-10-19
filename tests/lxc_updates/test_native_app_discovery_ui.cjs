@@ -23,11 +23,13 @@ const candidate = {
   evidence: [{kind: 'installation_file', value: '/opt/handmade/server'}], default_ports: [],
 }
 
-function fixture({nativeCandidate = candidate} = {}) {
+function fixture({nativeCandidate = candidate, dockerCandidate = null} = {}) {
   let cursor = 0, tree, props, effects = [], states = [], refs = [], effectStates = []
   const calls = [], cachedWrites = []
   let native = {vmid: 101, status: 'not_scanned', candidates: [], stale: false}
   let holdScan, scanGate, holdSave, saveGate, scanStatus = 'complete', scanIssues
+  let dockerStatus = "complete", dockerCached = {vmid:101,status:"not_scanned",candidates:[],stale:false}
+  let holdDocker, dockerGate
   let cacheGate, resolveCache, cachePending = false
   const seed = {sidecar: {vmid: 101, apps: []}, suggestions: {extras: [], port_suggestions: []}}
   const react = {
@@ -56,9 +58,17 @@ function fixture({nativeCandidate = candidate} = {}) {
       }
       if (options.method === 'POST') {
         if (scanGate) await scanGate
-        native = {...native, status: scanStatus, issues: scanIssues, candidates: [nativeCandidate]}
+        native = {...native, status: scanStatus, issues: scanIssues, candidates: nativeCandidate ? [nativeCandidate] : []}
       }
       return structuredClone(native)
+    }
+    if (url.endsWith('/docker-discovery')) {
+      if (options.method === 'POST') {
+        if (dockerGate) await dockerGate
+        dockerCached = {vmid:Number(url.split('/')[3]),status:dockerStatus,
+          stale:dockerStatus !== 'complete',candidates:dockerCandidate ? [dockerCandidate] : []}
+      }
+      return structuredClone(dockerCached)
     }
     if (url.endsWith('/apps/suggestions')) return seed.suggestions
     if (url.endsWith('/apps') && options.method === 'POST') {
@@ -102,6 +112,8 @@ function fixture({nativeCandidate = candidate} = {}) {
     holdInitialCache: () => {cachePending = true; cacheGate = new Promise(resolve => {resolveCache = resolve})},
     resolveInitialCache: () => resolveCache(),
     setScanStatus: value => {scanStatus = value},
+    setDockerStatus: value => {dockerStatus = value},
+    holdDocker: () => {dockerGate = new Promise(resolve => {holdDocker = resolve})}, resolveDocker: () => holdDocker(),
     setScanIssues: value => {scanIssues = value},
     holdScan: () => {scanGate = new Promise(resolve => {holdScan = resolve})}, resolveScan: () => holdScan(),
     holdSave: () => {saveGate = new Promise(resolve => {holdSave = resolve})}, resolveSave: () => holdSave(),
@@ -230,4 +242,5 @@ async function main() {
   assert.equal(oci.calls.filter(c => c.url.endsWith('/native-discovery') && c.method === 'POST').length, 0, 'OCI refresh never native-scans')
   console.log('PASS native discovery: real panel Find → editor → Cancel/Save, no automatic scan, safe payload, CT switching and OCI refresh (fixtures)')
 }
-main().catch(error => {console.error(error); process.exitCode = 1})
+module.exports = {fixture, flatten, text}
+if (require.main === module) main().catch(error => {console.error(error); process.exitCode = 1})
