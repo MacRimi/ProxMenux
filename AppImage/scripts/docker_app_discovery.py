@@ -116,18 +116,19 @@ def public_ports(record):
             if not isinstance(value, dict):
                 raise ValueError('invalid binding')
             address = value.get('HostIp') or '0.0.0.0'
+            raw = value.get('HostPort')
+            # An unassigned ("") or ranged host port is not a single address.
+            if not isinstance(raw, str) or not raw.isdecimal():
+                continue
             try:
                 ip = ipaddress.ip_address(address)
-                if ip.is_loopback or getattr(ip, 'ipv4_mapped', None) and ip.ipv4_mapped.is_loopback:
-                    continue
-                raw = value.get('HostPort')
-                if not isinstance(raw, str) or not raw.isdecimal():
-                    raise ValueError('invalid port')
-                outer = int(raw)
             except (ValueError, TypeError):
-                raise ValueError('invalid binding') from None
+                continue
+            if ip.is_loopback or getattr(ip, 'ipv4_mapped', None) and ip.ipv4_mapped.is_loopback:
+                continue
+            outer = int(raw)
             if not 1 <= outer <= 65535:
-                raise ValueError('invalid port')
+                continue
             result[outer] = {'host_port': outer, 'container_port': inner,
                              'scheme': 'https' if inner in {443, 4443, 8443, 9443} or outer in {443, 4443, 8443, 9443} else 'http'}
     return sorted(result.values(), key=lambda item: item['host_port'])
@@ -167,6 +168,9 @@ def _candidate(vmid, record):
             'container_name': record['name'], 'name': name,
             'installed_version': record['version'], 'evidence': evidence,
             'default_ports': [port['host_port'] for port in record['endpoints'] if port['container_port'] in WEB_PORTS],
+            'port_details': [{'port': port['host_port'], 'scheme': port['scheme'], 'path': None,
+                              'description': '', 'logo_url': ''}
+                             for port in record['endpoints'] if port['container_port'] in WEB_PORTS] or None,
             'tracking_suggestion': None}
 
 
@@ -272,7 +276,9 @@ def cached_web_links(vmid, lookup):
     """Reuse a Find snapshot in existing web-link suggestions without another scan."""
     with _mutex:
         value = copy.deepcopy(_cache.get(int(vmid)))
-    if not value or value.get('_retired') or time.time() - value['_attempt_at'] >= SNAPSHOT_SECONDS:
+    # Only a complete search lists every container; otherwise probe as before.
+    if (not value or value.get('_retired') or value.get('status') != 'complete'
+            or time.time() - value['_attempt_at'] >= SNAPSHOT_SECONDS):
         return None
     result = []
     for record in value.get('_containers', []):

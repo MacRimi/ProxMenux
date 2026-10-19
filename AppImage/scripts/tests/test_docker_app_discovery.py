@@ -100,6 +100,21 @@ class Scan(unittest.TestCase):
         self.assertEqual(item['default_ports'],[8080])
         self.assertIn({'kind':'tcp_listener','value':'21115'},item['evidence'])
 
+    def test_unassigned_or_ranged_host_ports_are_skipped_not_invalid(self):
+        app = record(running=False, bindings={'8080/tcp': [{'HostIp': '', 'HostPort': ''}],
+                                              '9000/tcp': [{'HostIp': '', 'HostPort': '9000-9010'}],
+                                              '443/tcp': [{'HostIp': '', 'HostPort': '8444'}]})
+        result = self.scan(records=[app])
+        self.assertEqual(result['status'], 'complete')
+        endpoints = result['_containers'][0]['endpoints']
+        self.assertEqual([e['host_port'] for e in endpoints], [8444])
+
+    def test_https_container_port_prefills_its_scheme(self):
+        app = record(bindings={'443/tcp': [{'HostIp': '0.0.0.0', 'HostPort': '8444'}]})
+        item, = self.scan(records=[app])['candidates']
+        self.assertEqual(item['default_ports'], [8444])
+        self.assertEqual([(d['port'], d['scheme']) for d in item['port_details']], [(8444, 'https')])
+
     def test_empty_engine_is_complete_and_missing_docker_never_calls_docker(self):
         self.assertEqual(self.scan(ids=[])['status'], 'complete')
         self.calls.clear()
@@ -201,6 +216,20 @@ class Cache(unittest.TestCase):
             with patch.object(lxc_apps, '_docker_service_catalog_meta', lookup):
                 self.assertEqual(lxc_apps._probe_docker_web_links(101)[0]['host_port'], 8080)
             execute.assert_not_called()
+
+    def test_incomplete_search_never_replaces_the_web_link_probe(self):
+        lookup = Mock(return_value={'slug': None, 'name': 'web', 'logo_url': None})
+        partial = {**copy.deepcopy(self.value), 'status': 'partial', 'issues': ['inspect_failed']}
+        with patch.object(docker, 'scan', return_value=partial), patch.object(docker.time, 'time', return_value=1000):
+            docker.discover(101)
+        with patch.object(docker.time, 'time', return_value=1001):
+            self.assertIsNone(docker.cached_web_links(101, lookup))
+        docker._cache.clear()
+        with patch.object(docker, 'scan', side_effect=native.ProbeError('timeout')), \
+                patch.object(docker.time, 'time', return_value=1000):
+            docker.discover(101)
+        with patch.object(docker.time, 'time', return_value=1001):
+            self.assertIsNone(docker.cached_web_links(101, lookup))
 
     def test_shared_links_keep_existing_name_then_port_order(self):
         value = copy.deepcopy(self.value)
