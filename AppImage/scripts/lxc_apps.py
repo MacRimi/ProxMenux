@@ -45,6 +45,7 @@ import urllib.parse
 import urllib.request
 import uuid
 from typing import Any, Optional
+import local_app_icons
 
 _APPS_DIR = "/etc/proxmenux/apps"
 _PCT_BIN = "/usr/sbin/pct"
@@ -598,15 +599,16 @@ def _write_sidecar(vmid, data: dict) -> bool:
     path = _sidecar_path(vmid)
     tmp = f"{path}.tmp.{os.getpid()}"
     try:
-        with open(tmp, "w") as f:
-            json.dump({k: v for k, v in data.items() if k != '_revision'}, f, indent=2, sort_keys=True)
-        os.chmod(tmp, 0o600)
-        with _sidecar_cache_lock:
-            os.replace(tmp, path)
-            snapshot = _publish_sidecar_snapshot(path, data, _sidecar_signature(os.stat(path)))
-            data['_revision'] = snapshot['_revision']
+        with local_app_icons.protect_references(vmid, data):
+            with open(tmp, "w") as f:
+                json.dump({k: v for k, v in data.items() if k != '_revision'}, f, indent=2, sort_keys=True)
+            os.chmod(tmp, 0o600)
+            with _sidecar_cache_lock:
+                os.replace(tmp, path)
+                snapshot = _publish_sidecar_snapshot(path, data, _sidecar_signature(os.stat(path)))
+                data['_revision'] = snapshot['_revision']
         return True
-    except OSError as e:
+    except (OSError, local_app_icons.IconError) as e:
         print(f"[ProxMenux] lxc_apps: could not write sidecar {path}: {e}")
         try:
             os.unlink(tmp)
@@ -933,7 +935,7 @@ def validate_bulk_update(payload: Any) -> tuple[bool, Any]:
     return True, {"targets": ["os", *sorted(item for item in targets if item != "os")]}
 
 
-def validate_config(payload: dict) -> tuple[bool, Any]:
+def validate_config(payload: dict, *, vmid: Optional[int] = None) -> tuple[bool, Any]:
     """Return (True, normalised_config_without_state_id) or
     (False, error). Rejects anything that would give shell-injection
     at check-time. Only the five fixed installed_via methods are
@@ -1175,8 +1177,8 @@ def validate_config(payload: dict) -> tuple[bool, Any]:
     # payloads through the App card's <img src>.
     logo = (payload.get("logo_url") or "").strip()
     if logo:
-        if not _LOGO_URL_RE.match(logo):
-            return _err("logo_url must be an http(s) URL (max 512 chars)")
+        if not _LOGO_URL_RE.match(logo) and not local_app_icons.valid_url(vmid, logo):
+            return _err("logo_url must be an http(s) URL or this VM's cached local icon")
         conf["logo_url"] = logo
 
     # Native discovery identity is separate from a curated helper/updater.
@@ -3324,7 +3326,7 @@ def test_config(vmid, payload: dict) -> tuple[bool, Any]:
     bad local detector from a bad repository/tag filter.  Probe output is
     never returned: a user-selected file or command could contain secrets.
     """
-    ok, config = validate_config(payload)
+    ok, config = validate_config(payload, vmid=vmid)
     if not ok:
         return False, config
 
@@ -3408,7 +3410,7 @@ def _find_app(sidecar: dict, app_id: str) -> Optional[dict]:
 
 
 def add_app(vmid, payload: dict, notify: bool = True) -> tuple[bool, Any]:
-    ok, cfg = validate_config(payload)
+    ok, cfg = validate_config(payload, vmid=vmid)
     if not ok:
         return False, cfg
     with _cache_lock:
@@ -3433,7 +3435,7 @@ def add_app(vmid, payload: dict, notify: bool = True) -> tuple[bool, Any]:
 
 
 def update_app(vmid, app_id: str, payload: dict) -> tuple[bool, Any]:
-    ok, cfg = validate_config(payload)
+    ok, cfg = validate_config(payload, vmid=vmid)
     if not ok:
         return False, cfg
     with _cache_lock:
@@ -3511,7 +3513,7 @@ def delete_app(vmid, app_id: str) -> bool:
             except OSError:
                 pass
         if before != len(sidecar["apps"]):
-            _write_sidecar(vmid, sidecar)
+            return _write_sidecar(vmid, sidecar)
         return True
 
 

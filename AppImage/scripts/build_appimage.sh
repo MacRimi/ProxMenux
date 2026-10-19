@@ -150,6 +150,7 @@ cp "$SCRIPT_DIR/lxc_update_observation.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/lxc_update_finalization.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/lxc_check_job.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/native_app_discovery.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/local_app_icons.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/docker_app_discovery.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/lxc_apps.py" "$APP_DIR/usr/bin/" 2>/dev/null || echo "⚠️  lxc_apps.py not found"
 cp "$SCRIPT_DIR/oci_menu_bridge.py" "$APP_DIR/usr/bin/"
@@ -360,7 +361,8 @@ pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade --no-de
     PyJWT \
     pyotp \
     segno \
-    beautifulsoup4
+    beautifulsoup4 \
+    defusedxml==0.7.1
 
 # WebSocket with modern h11 (no need for the legacy pin anymore)
 pip3 install --target "$APP_DIR/usr/lib/python3/dist-packages" --upgrade \
@@ -388,6 +390,7 @@ install_gevent_runtime() {
         --upgrade \
         --only-binary=:all: \
         --platform manylinux_2_28_x86_64 \
+        --platform manylinux_2_27_x86_64 \
         --platform manylinux2014_x86_64 \
         --implementation cp \
         --python-version "$python_version" \
@@ -397,7 +400,8 @@ install_gevent_runtime() {
         "greenlet==${GREENLET_VERSION}" \
         "zope.interface==${ZOPE_INTERFACE_VERSION}" \
         "zope.event==${ZOPE_EVENT_VERSION}" \
-        "gevent-websocket==${GEVENT_WEBSOCKET_VERSION}"
+        "gevent-websocket==${GEVENT_WEBSOCKET_VERSION}" \
+        "Pillow==12.3.0"
 }
 
 install_gevent_runtime "3.11" "cp311"
@@ -410,7 +414,8 @@ for abi in cp311 cp313; do
     for extension in \
         "gevent/_gevent_c_hub_local.cpython-${abi_digits}-*.so" \
         "greenlet/_greenlet.cpython-${abi_digits}-*.so" \
-        "zope/interface/_zope_interface_coptimizations.cpython-${abi_digits}-*.so"; do
+        "zope/interface/_zope_interface_coptimizations.cpython-${abi_digits}-*.so" \
+        "PIL/_imaging.cpython-${abi_digits}-*.so"; do
         if ! compgen -G "$abi_dir/$extension" >/dev/null; then
             echo "❌ Missing ${abi} extension: ${extension}" >&2
             exit 1

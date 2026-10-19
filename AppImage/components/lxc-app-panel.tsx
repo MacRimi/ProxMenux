@@ -32,7 +32,7 @@ import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Badge } from "./ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
-import { fetchApi } from "../lib/api-config"
+import { fetchApi, getApiUrl, getAuthToken } from "../lib/api-config"
 import { fetchLxcApps, getLxcAppsCached, setLxcAppsCached, subscribeLxcApps } from "../lib/lxc-apps-cache"
 import { categoryChipStyle, useIsLightTheme } from "../lib/category-color"
 import { getCategoryLabel } from "../lib/category-label"
@@ -356,6 +356,7 @@ interface ManagedAppInfo {
 
 interface Props {
   vmid: number
+  cacheRevision?: number
   ctIp?: string | null
   onChange?: () => void
   managed?: ManagedAppInfo | null
@@ -411,7 +412,40 @@ function selfhstThemeLogos(src: string) {
   return match ? SELFHST_THEME_LOGOS[match[1]] : null
 }
 
+const LOCAL_LOGO_CACHE_PATH = /^\/api\/vms\/[1-9]\d*\/apps\/logo-cache\/[a-f0-9]{32}$/
+
+function CachedLocalLogo({ src, className }: { src: string; className: string }) {
+  const [image, setImage] = useState<{ src: string; url: string } | null>(null)
+  useEffect(() => {
+    const controller = new AbortController()
+    let active = true
+    let url: string | null = null
+    const token = getAuthToken()
+    fetch(getApiUrl(src), {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      signal: controller.signal, cache: "no-store",
+    }).then(async response => {
+      if (!response.ok) throw new Error("cached icon unavailable")
+      const blob = await response.blob()
+      const mime = blob.type.split(";", 1)[0].trim().toLowerCase()
+      if (!["image/png", "image/svg+xml"].includes(mime) || blob.size > 262144) {
+        throw new Error("invalid cached icon")
+      }
+      if (!active) return
+      url = URL.createObjectURL(blob)
+      setImage({ src, url })
+    }).catch(() => { if (active) setImage(null) })
+    return () => {
+      active = false
+      controller.abort()
+      if (url) URL.revokeObjectURL(url)
+    }
+  }, [src])
+  return image?.src === src ? <img src={image.url} alt="" className={className} /> : null
+}
+
 export function ThemeAwareLogo({ src, className }: { src: string; className: string }) {
+  if (LOCAL_LOGO_CACHE_PATH.test(src)) return <CachedLocalLogo src={src} className={className} />
   const themed = selfhstThemeLogos(src)
   const hideBroken = (e: React.SyntheticEvent<HTMLImageElement>) => {
     e.currentTarget.style.display = "none"
@@ -464,7 +498,7 @@ function parseArgvInput(value: string): string[] {
   return value.split(",").map((item) => item.trim()).filter(Boolean)
 }
 
-export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }: Props) {
+export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, cacheRevision = 0 }: Props) {
   const t = useT()
   const isLightTheme = useIsLightTheme()
   // Seed from `initialData` first, then fall back to the shared cache
@@ -488,21 +522,25 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
     targetGeneration.current += 1
   }
   useEffect(() => {
-    const generation = targetGeneration.current
-    const request = ++nativeRequest.current
     setNativeDiscovery(null)
     setDockerDiscovery(null)
     setEditing(null)
     setDetectionNotice(null)
     setSearchingApplications(false)
     setSaving(false)
-    if (managed) return
-    fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/native-discovery`).then(result => {
-      if (targetRef.current === vmid && targetGeneration.current === generation
-          && nativeRequest.current === request) setNativeDiscovery(result)
-    }).catch(() => { /* cached metadata is optional; never initiate a scan */ })
     return () => { targetGeneration.current += 1 }
   }, [vmid, managed])
+  useEffect(() => {
+    const generation = targetGeneration.current
+    const request = nativeRequest.current
+    let cancelled = false
+    if (managed) return
+    fetchApi<NativeDiscovery>(`/api/vms/${vmid}/apps/native-discovery`).then(result => {
+      if (!cancelled && targetRef.current === vmid && targetGeneration.current === generation
+          && nativeRequest.current === request) setNativeDiscovery(result)
+    }).catch(() => { /* cached metadata is optional; never initiate a scan */ })
+    return () => { cancelled = true }
+  }, [vmid, managed, cacheRevision])
   useEffect(() => {
     const generation = targetGeneration.current
     const request = dockerRequest.current
@@ -519,7 +557,29 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
   const [searchingApplications, setSearchingApplications] = useState(false)
   const [detectionNotice, setDetectionNotice] = useState<{ found: boolean; text: string } | null>(null)
   // Editor state
-  const [editing, setEditing] = useState<{ appId: string | null; draft: AppConfig; targetVmid: number } | null>(null)
+  const [editing, setEditingState] = useState<{ appId: string | null; draft: AppConfig; targetVmid: number } | null>(null)
+  const editingRef = useRef(editing)
+  editingRef.current = editing
+  const [iconEndpoint, setIconEndpoint] = useState("")
+  const [discoveringLocalLogo, setDiscoveringLocalLogo] = useState(false)
+  const iconRequest = useRef(0)
+  const iconAbort = useRef<AbortController | null>(null)
+  const setEditing: typeof setEditingState = value => {
+    // Invalidate synchronously, including before React commits a batched edit.
+    iconRequest.current += 1
+    iconAbort.current?.abort()
+    setDiscoveringLocalLogo(false)
+    setEditingState(value)
+  }
+  useEffect(() => {
+    iconRequest.current += 1
+    iconAbort.current?.abort()
+    setDiscoveringLocalLogo(false)
+    return () => {
+      iconRequest.current += 1
+      iconAbort.current?.abort()
+    }
+  }, [editing, vmid, iconEndpoint])
   const [binaryArgsInput, setBinaryArgsInput] = useState("")
   const [commandArgvInput, setCommandArgvInput] = useState("")
   const [saving, setSaving] = useState(false)
@@ -597,7 +657,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
       if (isCurrent()) setLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vmid, managed])
+  }, [vmid, managed, cacheRevision])
 
   useEffect(() => {
     if (managed) return
@@ -1394,6 +1454,40 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
       setDetectorTest(null)
       setEditing({ ...editing, draft: { ...draft, ...patch } })
     }
+    const iconPorts = draft.ports.filter(entry => typeof entry.port === "number" && entry.port > 0 && entry.port <= 65535)
+    const endpointKey = (entry: PortEntry) => `${entry.scheme || defaultSchemeFor(entry.port)}:${entry.port}`
+    const selectedIconPort = iconPorts.find(entry => endpointKey(entry) === iconEndpoint) || iconPorts[0]
+    const discoverLocalLogo = async () => {
+      if (!selectedIconPort || discoveringLocalLogo) return
+      const snapshot = editing
+      const generation = targetGeneration.current
+      const requestId = ++iconRequest.current
+      const controller = new AbortController()
+      iconAbort.current = controller
+      const current = () => iconRequest.current === requestId && editingRef.current === snapshot
+        && targetRef.current === vmid && targetGeneration.current === generation
+      setDiscoveringLocalLogo(true)
+      setError(null)
+      try {
+        const result = await fetchApi<{ logo_url: string }>(`/api/vms/${vmid}/apps/logo-discovery`, {
+          method: "POST", signal: controller.signal,
+          body: JSON.stringify({ port: selectedIconPort.port, scheme: selectedIconPort.scheme || defaultSchemeFor(selectedIconPort.port) }),
+        })
+        if (!current()) return
+        if (!LOCAL_LOGO_CACHE_PATH.test(result.logo_url) || !result.logo_url.startsWith(`/api/vms/${vmid}/`)) {
+          throw new Error("invalid icon response")
+        }
+        setEditing(previous => previous === snapshot
+          ? { ...previous, draft: { ...previous.draft, logo_url: result.logo_url } } : previous)
+      } catch (error: unknown) {
+        if (current()) {
+          const code = (error as { body?: { code?: string } })?.body?.code
+          setError(t(code === "local_logo_stopped" ? "vmLxc.appEditor.localLogoStopped" : "vmLxc.appEditor.localLogoUnavailable"))
+        }
+      } finally {
+        if (current()) setDiscoveringLocalLogo(false)
+      }
+    }
     // Editing the Name auto-fills the Package field on packaged
     // methods when it's still empty. Rationale: 90% of the time the
     // dpkg/apk package name mirrors the friendly app name (jellyfin,
@@ -1626,18 +1720,47 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci }:
                 from https://selfh.st/icons); empty → no logo in the
                 app card header. */}
             <div className="pt-2 border-t border-border/50">
+              <div className="flex flex-wrap items-center justify-between gap-2">
               <Label htmlFor="app-logo" className="text-xs uppercase tracking-wider text-muted-foreground">
                 {t("vmLxc.appEditor.logoUrlLabel")} <span className="normal-case tracking-normal text-[10px] opacity-70">{t("vmLxc.appEditor.optionalSuffix")}</span>
               </Label>
+              <Button type="button" variant="outline" size="sm"
+                className="h-8 px-2 text-xs"
+                disabled={!selectedIconPort || discoveringLocalLogo || saving}
+                onClick={discoverLocalLogo}>
+                {discoveringLocalLogo ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Search className="h-3.5 w-3.5 mr-1" />}
+                {t("vmLxc.appEditor.discoverLocalLogo")}
+              </Button>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
               <Input
                 id="app-logo"
-                type="url"
+                type="text"
                 value={draft.logo_url || ""}
                 onChange={(e) => setField({ logo_url: e.target.value })}
                 placeholder={t("vmLxc.appEditor.portLogoPlaceholder")}
                 maxLength={512}
-                className="text-sm mt-2 font-mono"
+                className="text-sm font-mono"
               />
+              {draft.logo_url && LOCAL_LOGO_CACHE_PATH.test(draft.logo_url) &&
+                <ThemeAwareLogo src={draft.logo_url} className="h-8 w-8 shrink-0 object-contain" />}
+              </div>
+                {iconPorts.length > 1 && <select
+                  aria-label={t("vmLxc.appEditor.localLogoPort")}
+                  value={selectedIconPort ? endpointKey(selectedIconPort) : ""}
+                  onChange={event => {
+                    iconRequest.current += 1
+                    iconAbort.current?.abort()
+                    setDiscoveringLocalLogo(false)
+                    setIconEndpoint(event.target.value)
+                  }}
+                  className="mt-2 rounded border bg-background px-2 py-1 text-xs"
+                >
+                  {iconPorts.map(entry => <option key={endpointKey(entry)} value={endpointKey(entry)}>
+                    {endpointKey(entry)}
+                  </option>)}
+                </select>}
+              <p className="text-[10px] text-muted-foreground mt-1">{t("vmLxc.appEditor.localLogoHelp")}</p>
             </div>
 
             {/* Web links — each port becomes a clickable link (built as

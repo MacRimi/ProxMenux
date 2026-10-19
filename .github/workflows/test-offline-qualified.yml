@@ -13,6 +13,8 @@ on:
       - 'AppImage/scripts/*.py'
       - 'AppImage/scripts/tests/test_health_persistence_recurrence.py'
       - 'AppImage/scripts/tests/test_native_app_discovery.py'
+      - 'AppImage/scripts/tests/test_local_app_icons.py'
+      - 'AppImage/scripts/tests/test_local_app_icon_isolation.py'
       - 'AppImage/scripts/tests/test_docker_app_discovery.py'
       - 'AppImage/scripts/tests/fixtures/docker_discovery_inspect.json'
       - 'AppImage/app/**'
@@ -36,6 +38,8 @@ on:
       - 'AppImage/scripts/*.py'
       - 'AppImage/scripts/tests/test_health_persistence_recurrence.py'
       - 'AppImage/scripts/tests/test_native_app_discovery.py'
+      - 'AppImage/scripts/tests/test_local_app_icons.py'
+      - 'AppImage/scripts/tests/test_local_app_icon_isolation.py'
       - 'AppImage/scripts/tests/test_docker_app_discovery.py'
       - 'AppImage/scripts/tests/fixtures/docker_discovery_inspect.json'
       - 'AppImage/app/**'
@@ -63,7 +67,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install native discovery route fixture dependency
-        run: python3 -m pip install 'Flask>=3,<4'
+        run: python3 -m pip install 'Flask>=3,<4' 'Pillow==12.3.0' 'defusedxml==0.7.1'
       - name: Run qualified Python files
         env:
           PYTHONDONTWRITEBYTECODE: '1'
