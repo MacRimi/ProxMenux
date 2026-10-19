@@ -84,7 +84,8 @@ def remove_empty_format_directories(rootfs, deployment, backed_only=True, target
     if not paths:
         return 0
     flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
-    root = os.open(rootfs, flags)
+    # A running container is reached through /proc/<pid>/root, a link.
+    root = os.open(rootfs, os.O_RDONLY | os.O_DIRECTORY)
     removed = 0
     try:
         for path in paths:

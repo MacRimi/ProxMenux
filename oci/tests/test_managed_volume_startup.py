@@ -91,6 +91,16 @@ class FormatDirectoryTests(unittest.TestCase):
             self.assertEqual((root / 'config/keep').read_bytes(), b'application data')
             self.assertEqual(deployment, before)
 
+    def test_running_container_root_reached_through_a_link_is_cleaned(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp); real = base / 'rootfs'; real.mkdir()
+            lost, deployment = self.fixture(real)
+            proc_root = base / 'root'; proc_root.symlink_to(real, target_is_directory=True)
+            with ext4_metadata():
+                self.assertEqual(volumes.remove_empty_format_directories(proc_root, deployment), 1)
+            self.assertFalse(lost.exists())
+            self.assertEqual((real / 'config/keep').read_bytes(), b'application data')
+
     def test_nonempty_format_directory_has_no_remove_call(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); lost, deployment = self.fixture(root)
