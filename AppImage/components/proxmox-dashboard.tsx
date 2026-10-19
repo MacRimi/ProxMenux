@@ -843,6 +843,7 @@ function MonitorDashboard({ product }: { product: Product }) {
           {isPbs && (
             <TabsContent value="datastores" className="space-y-4 md:space-y-6 mt-0">
               <PBSPanel key={`datastores-${componentKey}`} localOnly />
+              <StorageOverview key={`datastore-disks-${componentKey}`} disksOnly />
             </TabsContent>
           )}
 

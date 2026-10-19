@@ -1184,7 +1184,7 @@ def validate_config(payload: dict, *, vmid: Optional[int] = None) -> tuple[bool,
     # Native discovery identity is separate from a curated helper/updater.
     discovery_id = payload.get("discovery_id")
     if discovery_id is not None:
-        if not isinstance(discovery_id, str) or not re.fullmatch(r"native-[0-9a-f]{24}", discovery_id):
+        if not isinstance(discovery_id, str) or not re.fullmatch(r"(?:native|docker)-[0-9a-f]{24}", discovery_id):
             return _err("invalid discovery_id")
         conf["discovery_id"] = discovery_id
 
@@ -4340,7 +4340,86 @@ def _detect_with_alt_healing(vmid, app: dict) -> tuple:
     return installed, err, False
 
 
+_oci_check_locks: dict = {}
+_oci_check_locks_guard = threading.Lock()
+
+
 def check_app(
+    vmid, app_id: str, force: bool = False, notify: bool = True,
+) -> Optional[dict]:
+    # Keep legacy detectors' locking unchanged. OCI network requests use a
+    # per-app lock and hold the shared cache lock only while reading/saving.
+    with _cache_lock:
+        sidecar = _read_sidecar(vmid)
+        app = _find_app(sidecar, app_id) if sidecar else None
+        if not app or app.get("installed_via") != "oci_image":
+            return _check_non_oci_app(vmid, app_id, force=force, notify=notify)
+    return _check_oci_app(vmid, app_id, force=force, notify=notify)
+
+
+def _check_oci_app(vmid, app_id, force=False, notify=True):
+    key = (int(vmid), app_id)
+    with _oci_check_locks_guard:
+        lock = _oci_check_locks.setdefault(key, threading.Lock())
+    with lock:
+        with _cache_lock:
+            sidecar = _read_sidecar(vmid)
+            app = _find_app(sidecar, app_id) if sidecar else None
+            if not app or app.get("installed_via") != "oci_image":
+                return sidecar
+            state = app.get("state") or _empty_state()
+            if not force and state.get("checked_at"):
+                try:
+                    checked = datetime.datetime.strptime(state["checked_at"].rstrip("Z"), "%Y-%m-%dT%H:%M:%S")
+                    age = (datetime.datetime.utcnow() - checked).total_seconds()
+                    if 0 <= age < _UPSTREAM_CACHE_TTL_SEC:
+                        return sidecar
+                except (ValueError, TypeError):
+                    pass
+            before_app = copy.deepcopy(app)
+            before_record = _read_oci_record(vmid)
+
+        # No global cache lock is held while waiting for registries. The same
+        # native resolver, credentials and digest comparisons are retained.
+        result = _oci_image_versions(
+            vmid, known=state, with_latest=not _oci_secondary_member(before_record))
+        if result.get("busy"):
+            _recheck_after_oci_operation(vmid, app_id)
+            return _read_sidecar(vmid)
+
+        with _cache_lock:
+            # Re-read rather than writing the pre-query copy: other apps,
+            # schedules and registrations may have changed while we waited.
+            sidecar = _read_sidecar(vmid)
+            app = _find_app(sidecar, app_id) if sidecar else None
+            if app != before_app or _read_oci_record(vmid) != before_record:
+                return sidecar  # Never publish a result for a replaced/edited app.
+            app["state"] = {
+                "installed_version": result.get("installed_version"),
+                "latest_version": result.get("latest_version"),
+                "latest_published_at": None,
+                "update_available": result.get("update_available"),
+                "error": result.get("error"),
+                "checked_at": _now_iso(),
+                "installed_digest": result.get("installed_digest"),
+                "installed_registry_digest": result.get("installed_registry_digest"),
+                "registry_retry": bool(result.get("registry_retry")),
+                "latest_digest": result.get("latest_digest"),
+                "image_created": result.get("image_created"),
+                "latest_image_created": result.get("latest_image_created"),
+                "image_reference": result.get("image_reference"),
+                "image_repository": result.get("image_repository"),
+            }
+            sidecar["updated_at"] = _now_iso()
+            _write_sidecar(vmid, sidecar)
+        if app["state"]["registry_retry"]:
+            _retry_oci_registry(vmid, app_id)
+        if notify and app["state"]["update_available"]:
+            _fire_update_notification(vmid, app)
+        return sidecar
+
+
+def _check_non_oci_app(
     vmid, app_id: str, force: bool = False, notify: bool = True,
 ) -> Optional[dict]:
     with _cache_lock:
@@ -4370,40 +4449,6 @@ def check_app(
                     return sidecar
             except (ValueError, TypeError):
                 pass
-
-        if app.get("installed_via") == "oci_image":
-            # A secondary container of a stack shows the version it runs; the
-            # registry is not asked, because it is not updated on its own.
-            result = _oci_image_versions(
-                vmid, known=state, with_latest=not _oci_secondary_member(_read_oci_record(vmid)))
-            if result.get("busy"):
-                _recheck_after_oci_operation(vmid, app_id)
-                return sidecar
-            app["state"] = {
-                "installed_version": result.get("installed_version"),
-                "latest_version": result.get("latest_version"),
-                "latest_published_at": None,
-                "update_available": result.get("update_available"),
-                "error": result.get("error"),
-                "checked_at": _now_iso(),
-                "installed_digest": result.get("installed_digest"),
-                "installed_registry_digest": result.get("installed_registry_digest"),
-                "registry_retry": bool(result.get("registry_retry")),
-                "latest_digest": result.get("latest_digest"),
-                "image_created": result.get("image_created"),
-                "latest_image_created": result.get("latest_image_created"),
-                "image_reference": result.get("image_reference"),
-                "image_repository": result.get("image_repository"),
-            }
-            sidecar["updated_at"] = _now_iso()
-            _write_sidecar(vmid, sidecar)
-            if app["state"]["registry_retry"]:
-                _retry_oci_registry(vmid, app_id)
-            # The payload names an image by its build date and digest when it
-            # states no version, so it decides whether there is anything to send.
-            if notify and app["state"]["update_available"]:
-                _fire_update_notification(vmid, app)
-            return sidecar
 
         installed, inst_err, _healed = _detect_with_alt_healing(vmid, app)
         # Trigger the upstream fetch when ANY upstream source is
@@ -5363,6 +5408,10 @@ def _probe_docker_web_links(vmid) -> list[dict]:
     Stopped containers are included from their persistent HostConfig bindings,
     so their links remain registrable before the workload is started again.
     """
+    import docker_app_discovery
+    shared = docker_app_discovery.cached_web_links(vmid, _docker_service_catalog_meta)
+    if shared is not None:
+        return shared
     key = str(vmid)
     now = time.time()
     with _docker_web_links_lock:
@@ -5418,7 +5467,12 @@ def _probe_docker_web_links(vmid) -> list[dict]:
                             if not isinstance(binding, dict):
                                 continue
                             host_ip = str(binding.get("HostIp") or "").strip()
-                            if host_ip in {"127.0.0.1", "::1"}:
+                            try:
+                                import ipaddress
+                                bind_ip = ipaddress.ip_address(host_ip or "0.0.0.0")
+                                if bind_ip.is_loopback or (getattr(bind_ip, "ipv4_mapped", None) and bind_ip.ipv4_mapped.is_loopback):
+                                    continue
+                            except ValueError:
                                 continue
                             try:
                                 host_port = int(binding.get("HostPort"))
@@ -5977,14 +6031,22 @@ def _oci_repository(reference: str) -> str:
     return repository
 
 
-def _oci_resolve(module, reference: str, architecture: str) -> dict:
+def _oci_resolve(module, reference: str, architecture: str, known=None) -> dict:
     # One retry: an anonymous registry answers the occasional request with an
     # error that the next one does not repeat.
-    try:
+    def resolve():
+        # Older installed engines remain compatible; both paths use their
+        # native resolver. No separate registry client or verdict is added.
+        metadata = getattr(module, "resolve_candidate_metadata", None)
+        if known is not None and callable(metadata):
+            return metadata(reference, architecture, known)
         return module.resolve_candidate(reference, architecture)
+
+    try:
+        return resolve()
     except RuntimeError:
         time.sleep(2)
-        return module.resolve_candidate(reference, architecture)
+        return resolve()
 
 
 # What the panel shows, translated, when the registry of an image did not answer.
@@ -6067,8 +6129,15 @@ def _oci_image_versions(vmid, known: Optional[dict] = None, with_latest: bool = 
         result["installed_version"] = _oci_guest_version(vmid, meta.get("template_id"))
     if not with_latest:
         return result
+    cached_metadata = None
+    if (known.get("installed_digest") == installed_digest
+            and known.get("image_reference") == reference and known.get("latest_digest")):
+        cached_metadata = {"manifest_digest": known["latest_digest"],
+                           "version": known.get("latest_version"),
+                           "created": known.get("latest_image_created"),
+                           "architecture": architecture}
     try:
-        latest = _oci_resolve(module, reference, architecture)
+        latest = _oci_resolve(module, reference, architecture, known=cached_metadata)
     except Exception:
         # A registry that does not answer says nothing new about the image:
         # what the last check found for this same image still stands.

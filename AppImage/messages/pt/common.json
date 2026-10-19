@@ -1748,7 +1748,14 @@
       "nativeScanPartial": "A pesquisa de aplicativos está incompleta. Revise os itens encontrados e tente novamente.",
       "nativeVersionUnknown": "Versão instalada desconhecida",
       "nativeEvidenceStale": "Os itens encontrados podem estar desatualizados ou incompletos.",
-      "nativeRegisterOnly": "Confirme o registro no editor. Uma versão conhecida é salva como valor manual; nenhum atualizador é configurado."
+      "nativeRegisterOnly": "Confirme o registro no editor. Uma versão conhecida é salva como valor manual; nenhum atualizador é configurado.",
+      "dockerScanFailed": "A pesquisa no Docker não pôde ser concluída. Os resultados anteriores podem estar desatualizados; tente novamente.",
+      "dockerScanPartial": "A pesquisa no Docker está incompleta. Não foi possível verificar alguns contentores.",
+      "dockerEvidenceContainer": "Contentor Docker",
+      "dockerEvidenceImage": "Imagem",
+      "dockerEvidencePort": "Porta TCP publicada",
+      "dockerEvidenceProject": "Projeto Compose",
+      "dockerEndpointReview": "Contentor com portas TCP publicadas. Confirme o nome e o endereço web antes de guardar. O registo não configura atualizações."
     },
     "statusFilter": {
       "ariaLabel": "Filtrar máquinas virtuais e contêineres",
@@ -7289,6 +7296,12 @@
     "server": "Servidor PBS",
     "chooseServer": "Escolher um servidor PBS",
     "local": "PBS local",
+    "thisNode": "PBS deste nó",
+    "updatedAt": "Atualizado às {time}",
+    "servicesActive": "Serviços ativos",
+    "detectedTitle": "PBS detetados no armazenamento do Proxmox",
+    "detectedHelp": "Estes Proxmox Backup Server estão configurados como armazenamento de backups. Ligue cada um com um token API só de leitura para ver aqui os seus datastores, tarefas e trabalhos.",
+    "connect": "Ligar",
     "refresh": "Atualizar",
     "manage": "Gerir ligações PBS",
     "loadFailed": "Não foi possível carregar o estado do PBS.",

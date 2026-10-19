@@ -1748,7 +1748,14 @@
       "nativeScanPartial": "Die Anwendungssuche ist unvollständig. Prüfen Sie die gefundenen Hinweise und versuchen Sie es erneut.",
       "nativeVersionUnknown": "Installierte Version unbekannt",
       "nativeEvidenceStale": "Die Hinweise sind möglicherweise veraltet oder unvollständig.",
-      "nativeRegisterOnly": "Bestätigen Sie die Registrierung im Editor. Eine bekannte Version wird als manueller Wert gespeichert; es wird kein Updater eingerichtet."
+      "nativeRegisterOnly": "Bestätigen Sie die Registrierung im Editor. Eine bekannte Version wird als manueller Wert gespeichert; es wird kein Updater eingerichtet.",
+      "dockerScanFailed": "Die Docker-Suche konnte nicht abgeschlossen werden. Frühere Ergebnisse sind möglicherweise veraltet; versuchen Sie es erneut.",
+      "dockerScanPartial": "Die Docker-Suche ist unvollständig. Einige Container konnten nicht geprüft werden.",
+      "dockerEvidenceContainer": "Docker-Container",
+      "dockerEvidenceImage": "Image",
+      "dockerEvidencePort": "Veröffentlichter TCP-Port",
+      "dockerEvidenceProject": "Compose-Projekt",
+      "dockerEndpointReview": "Container mit veröffentlichten TCP-Ports. Bestätigen Sie Namen und Webadresse vor dem Speichern. Die Registrierung richtet keine Updates ein."
     },
     "statusFilter": {
       "ariaLabel": "Virtuelle Maschinen und Container filtern",
@@ -7289,6 +7296,12 @@
     "server": "PBS-Server",
     "chooseServer": "PBS-Server auswählen",
     "local": "Lokaler PBS",
+    "thisNode": "PBS auf diesem Knoten",
+    "updatedAt": "Aktualisiert um {time}",
+    "servicesActive": "Dienste aktiv",
+    "detectedTitle": "Im Proxmox-Speicher erkannte PBS",
+    "detectedHelp": "Diese Proxmox Backup Server sind als Backup-Speicher eingerichtet. Verbinden Sie jeden mit einem schreibgeschützten API-Token, um hier seine Datastores, Aufgaben und Jobs zu sehen.",
+    "connect": "Verbinden",
     "refresh": "Aktualisieren",
     "manage": "PBS-Verbindungen verwalten",
     "loadFailed": "PBS-Status konnte nicht geladen werden.",

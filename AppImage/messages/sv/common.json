@@ -1748,7 +1748,14 @@
       "nativeScanPartial": "Programsökningen är ofullständig. Granska det som hittades och försök igen.",
       "nativeVersionUnknown": "Installerad version okänd",
       "nativeEvidenceStale": "Det som hittades kan vara inaktuellt eller ofullständigt.",
-      "nativeRegisterOnly": "Bekräfta registreringen i redigeraren. En känd version sparas som ett manuellt värde; ingen uppdatering konfigureras."
+      "nativeRegisterOnly": "Bekräfta registreringen i redigeraren. En känd version sparas som ett manuellt värde; ingen uppdatering konfigureras.",
+      "dockerScanFailed": "Docker-sökningen kunde inte slutföras. Tidigare resultat kan vara inaktuella; försök igen.",
+      "dockerScanPartial": "Docker-sökningen är ofullständig. Vissa containrar kunde inte kontrolleras.",
+      "dockerEvidenceContainer": "Docker-container",
+      "dockerEvidenceImage": "Avbild",
+      "dockerEvidencePort": "Publicerad TCP-port",
+      "dockerEvidenceProject": "Compose-projekt",
+      "dockerEndpointReview": "Container med publicerade TCP-portar. Bekräfta namnet och webbadressen innan du sparar. Registreringen konfigurerar inga uppdateringar."
     },
     "statusFilter": {
       "ariaLabel": "Filtrera virtuella maskiner och containrar",
@@ -7289,6 +7296,12 @@
     "server": "PBS-server",
     "chooseServer": "Välj en PBS-server",
     "local": "Lokal PBS",
+    "thisNode": "PBS på den här noden",
+    "updatedAt": "Uppdaterad {time}",
+    "servicesActive": "Tjänsterna är aktiva",
+    "detectedTitle": "PBS som hittats i Proxmox-lagringen",
+    "detectedHelp": "Dessa Proxmox Backup Server är konfigurerade som backuplagring. Anslut var och en med en skrivskyddad API-token för att se deras datastores, uppgifter och jobb här.",
+    "connect": "Anslut",
     "refresh": "Uppdatera",
     "manage": "Hantera PBS-anslutningar",
     "loadFailed": "Det gick inte att läsa in PBS-status.",

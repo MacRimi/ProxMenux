@@ -166,6 +166,39 @@ class PBSManagerTests(unittest.TestCase):
         self.assertEqual(result["datastores"][0]["used"], 30)
         self.assertEqual(set(result["services"]), set(pbs.PBS_SERVICES))
 
+    def test_pbs_installed_next_to_pve_is_read_locally_with_its_own_version(self):
+        def run(command, **kwargs):
+            if command[0] == "dpkg-query":
+                return SimpleNamespace(stdout="4.2.8-1", returncode=0)
+            return SimpleNamespace(stdout="[]", returncode=0)
+        with mock.patch.object(pbs, "get_platform", return_value={"product": "pve", "version": "9.1.4", "hostname": "rimegra"}), \
+                mock.patch.object(pbs.shutil, "which", return_value="/usr/sbin/proxmox-backup-manager"), \
+                mock.patch.object(pbs.Path, "exists", return_value=True), \
+                mock.patch.object(pbs, "_local_services", return_value={key: "active" for key in pbs.PBS_SERVICES}), \
+                mock.patch.object(pbs.subprocess, "run", side_effect=run):
+            self.assertTrue(pbs.local_available())
+            result = pbs.get_status("local")
+        self.assertEqual((result["name"], result["version"]), ("rimegra", "4.2.8-1"))
+        with mock.patch.object(pbs, "get_platform", return_value={"product": "pve"}), \
+                mock.patch.object(pbs.shutil, "which", return_value=None):
+            self.assertFalse(pbs.local_available())
+
+    def test_storage_pbs_without_a_connection_is_offered_with_its_address_and_fingerprint(self):
+        import monitor_links
+        storage = self.root / "storage.cfg"
+        storage.write_text("pbs: Local\n\tserver localhost\n\tdatastore a\n\n"
+                           "pbs: Lab\n\tserver 10.0.0.49\n\tdatastore b\n\tfingerprint AA:BB\n\n"
+                           "pbs: Known\n\tserver pbs.test\n\tdatastore c\n\tport 8007\n")
+        with mock.patch.object(monitor_links, "STORAGE_CFG", storage), \
+                mock.patch.object(monitor_links, "_own_addresses", return_value=set()), \
+                mock.patch.object(pbs, "is_pbs_host", return_value=False), \
+                mock.patch.object(pbs, "local_available", return_value=False), \
+                mock.patch.object(pbs, "_remote_get", return_value=[]):
+            pbs.save_server(self.server)
+            response = self.client.get("/api/pbs/servers", headers=self.headers)
+        self.assertEqual(response.json["detected"],
+                         [{"name": "Lab", "url": "https://10.0.0.49:8007", "fingerprint": "AA:BB"}])
+
     def test_connection_api_requires_full_admin_and_does_not_return_secret(self):
         self.assertEqual(self.client.get("/api/pbs/servers").status_code, 401)
         with mock.patch.object(pbs, "_remote_get", return_value=[]):

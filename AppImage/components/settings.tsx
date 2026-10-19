@@ -1878,7 +1878,7 @@ export function Settings() {
           the matching toggle in NotificationSettings is hidden (the
           preference is preserved in the DB and reappears when detection
           is re-enabled). */}
-      <LxcUpdateDetection />
+      {!isPbs && <LxcUpdateDetection />}
 
       {!isPbs && <>
       {/* GitHub API — optional authentication for app upstream checks. */}

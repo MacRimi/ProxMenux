@@ -14,6 +14,7 @@ import tempfile
 
 PYTHON_FILES = (
     "AppImage/scripts/tests/test_local_app_icons.py",
+    "AppImage/scripts/tests/test_docker_app_discovery.py",
     "AppImage/scripts/tests/test_native_app_discovery.py",
     "tests/test_audit_presentation.py",
     "tests/test_audit_safety_wording.py",
@@ -27,6 +28,7 @@ PYTHON_FILES = (
 )
 NODE_FILES = (
     "tests/lxc_updates/test_local_app_icons_ui.cjs",
+    "tests/lxc_updates/test_docker_app_discovery_ui.cjs",
     "tests/lxc_updates/test_native_app_discovery_ui.cjs",
     "tests/lxc_updates/test_docker_delegated_ui.cjs",
     "tests/test_audit_diagnostic_document.cjs",

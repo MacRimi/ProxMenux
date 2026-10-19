@@ -2280,6 +2280,8 @@ def _handle_guest_lifecycle(vmid: str, vm_type: str, action: str) -> None:
     if guest_type == 'lxc':
         import native_app_discovery
         native_app_discovery.mark_stale(guest_id)
+        import docker_app_discovery
+        docker_app_discovery.mark_stale(guest_id)
         _invalidate_lxc_ip(guest_id)
     if action in ('start', 'reboot'):
         if guest_type == 'lxc':
@@ -14159,6 +14161,20 @@ def api_vm_apps_logo_cache(vmid, token):
     })
 
 
+@app.route('/api/vms/<int:vmid>/apps/docker-discovery', methods=['GET', 'POST'])
+@require_auth
+def api_vm_apps_docker_discovery(vmid):
+    """New discovery contract: explicit POST scans; GET only composes cached data."""
+    import docker_app_discovery
+    import lxc_apps
+    result = (docker_app_discovery.discover(vmid) if request.method == 'POST'
+              else docker_app_discovery.cached(vmid))
+    suggestions = _vm_cache_get(_vm_app_suggestions_cache, vmid, _VM_APP_SUGGESTIONS_TTL) or {}
+    sidecar = lxc_apps.load_sidecar(vmid) or {}
+    return jsonify(docker_app_discovery.filter_candidates(
+        result, suggestions, sidecar.get('apps') or []))
+
+
 @app.route('/api/vms/<int:vmid>/apps/adguard-setup', methods=['GET'])
 @require_auth
 def api_vm_apps_adguard_setup(vmid):
@@ -23175,6 +23191,16 @@ def _scheduler_loop():
 if __name__ == '__main__':
     import sys
     import logging
+
+    # The root terminal menu shares the Monitor's checker and sidecar cache.
+    # This local socket changes neither the web API nor its authentication.
+    try:
+        if not is_pbs_host():
+            import lxc_apps
+            import oci_menu_bridge
+            oci_menu_bridge.start(lxc_apps)
+    except Exception as _e:
+        print(f"[startup] OCI menu bridge unavailable: {_e}", file=sys.stderr)
 
     # Regenerate /etc/cron.d/proxmenux-smart from the current schedule
     # config on every Monitor start. Pre-existing installs may carry

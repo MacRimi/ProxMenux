@@ -163,7 +163,7 @@ def record_install(args):
     save_record(args.state_dir, record)
 
 
-def resolve_candidate(reference, architecture):
+def resolve_candidate(reference, architecture, *, _known_metadata=None):
     repo = reference.split('@', 1)[0]
     if ':' in repo.rsplit('/', 1)[-1]:
         repo = repo.rsplit(':', 1)[0]
@@ -173,12 +173,27 @@ def resolve_candidate(reference, architecture):
     raw = command('skopeo', 'inspect', '--raw', 'docker://' + transport)
     registry_digest = 'sha256:' + sha(raw)
     manifest = json.loads(raw)
-    if 'manifests' in manifest:
+    indexed = 'manifests' in manifest
+    if indexed:
         matches = [m for m in manifest['manifests'] if m.get('platform', {}).get('architecture') == architecture
                    and m.get('platform', {}).get('os') == 'linux']
         if len(matches) != 1:
             raise ValueError(translate('A single matching image platform cannot be resolved'))
         digest = matches[0]['digest']
+    else:
+        digest = registry_digest
+    # The Monitor needs only the published version/build and digest. A fresh
+    # tag/index lookup proving the same immutable platform digest also proves
+    # its previously verified metadata; fetching its manifest and config again
+    # adds no information. Install/update callers do not pass this option and
+    # always receive the complete verified image contract below.
+    if (isinstance(_known_metadata, dict)
+            and re.fullmatch(r'sha256:[0-9a-f]{64}', str(digest))
+            and _known_metadata.get('manifest_digest') == digest
+            and _known_metadata.get('architecture') == architecture):
+        return {'manifest_digest': digest, 'registry_digest': registry_digest,
+                'version': _known_metadata.get('version'), 'created': _known_metadata.get('created')}
+    if indexed:
         raw = command('skopeo', 'inspect', '--raw', 'docker://' + repo + '@' + digest)
         if 'sha256:' + sha(raw) != digest:
             raise ValueError(translate('The manifest does not match its digest'))
@@ -202,6 +217,11 @@ def resolve_candidate(reference, architecture):
             'layers': [layer['digest'] for layer in json.loads(raw).get('layers', [])],
             'size': sum(int(layer.get('size') or 0) for layer in json.loads(raw).get('layers', [])),
             'defaults': defaults, 'version': version, 'created': config.get('created')}
+
+
+def resolve_candidate_metadata(reference, architecture, known=None):
+    """Monitor-only metadata fast path through the normal native resolver."""
+    return resolve_candidate(reference, architecture, _known_metadata=known)
 
 
 def same_image(candidate, image):

@@ -1,7 +1,7 @@
 """Run the installer's volume preparation loop against filesystem fixtures.
 
 Write doubles reject every mutation of the protected directory, including
-lost+found removal. Writable paths still run real rm/chmod; chown is recorded
+lost+found removal. Writable paths keep ordinary directories and run real chmod; chown is recorded
 without requiring root. These tests never invoke Proxmox or touch a container.
 """
 
@@ -62,6 +62,8 @@ TEMPLATE_FILE="$FIXTURE/template.json"
 DEPLOYMENT_FILE="$FIXTURE/deployment.json"
 HOST_BIND_UID=110001; HOST_BIND_GID=110001
 HOST_ROOT_UID=100000; HOST_ROOT_GID=100000
+SCRIPT_DIR="$REMOTE"
+oci_quiet() { printf "WRITE cleanup %s\n" "${!#}"; "$@"; }
 failed=0; volumes_prepared=0
 oci_log() { printf 'log %s\n' "$*"; }
 write_op() {
@@ -87,7 +89,7 @@ test "$failed" = 0
 '''
             result = subprocess.run(
                 ["bash", "-c", script], capture_output=True, text=True,
-                env=dict(os.environ, FIXTURE=str(fixture),
+                env=dict(os.environ, FIXTURE=str(fixture), REMOTE=str(ROOT / "remote"),
                          PROTECTED=str(protected) if read_only else ""),
                 timeout=15,
             )
@@ -102,7 +104,7 @@ test "$failed" = 0
                 self.assertTrue((protected / "lost+found").is_dir())
             elif "prepared=1" in result.stdout:
                 self.assertEqual(protected.stat().st_mode & 0o777, 0o750)
-                self.assertFalse((protected / "lost+found").exists())
+                self.assertTrue((protected / "lost+found").is_dir())
             return result
 
     def assert_skipped(self, result):
@@ -113,7 +115,7 @@ test "$failed" = 0
 
     def assert_prepared(self, result):
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-        for operation in ("rm", "chown", "chmod"):
+        for operation in ("cleanup", "chown", "chmod"):
             self.assertIn(f"WRITE {operation} ", result.stdout)
         self.assertIn("prepared=1", result.stdout)
 

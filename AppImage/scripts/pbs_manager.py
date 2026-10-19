@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import secrets
 import shutil
+import socket
 import ssl
 import subprocess
 import tempfile
@@ -51,6 +52,26 @@ def get_platform():
 
 def is_pbs_host():
     return get_platform().get("product") == "pbs"
+
+
+def local_available():
+    """This host runs PBS: as its product, or installed next to PVE."""
+    if is_pbs_host():
+        return True
+    return bool(shutil.which("proxmox-backup-manager")) and any(
+        Path(folder, "proxmox-backup-proxy.service").exists()
+        for folder in ("/lib/systemd/system", "/usr/lib/systemd/system"))
+
+
+def _local_version():
+    if is_pbs_host():
+        return get_platform().get("version")
+    try:
+        result = subprocess.run(["dpkg-query", "-W", "-f=${Version}", "proxmox-backup-server"],
+                                capture_output=True, text=True, timeout=5)
+        return result.stdout.strip() or None if result.returncode == 0 else None
+    except (OSError, subprocess.SubprocessError):
+        return None
 
 
 def _servers_path():
@@ -248,9 +269,9 @@ def get_status(identifier):
             return cached[1]
     errors = {}
     if identifier == "local":
-        if not is_pbs_host():
+        if not local_available():
             raise PBSError("The local host is not a PBS server.")
-        name, version = "Local PBS", get_platform().get("version")
+        name, version = get_platform().get("hostname") or socket.gethostname(), _local_version()
         services = _local_services()
         operations = {"datastores": _local_datastores,
                       "tasks": lambda: _cli("task", "list", "--all", "true", "--limit", "20"),

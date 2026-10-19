@@ -1261,28 +1261,9 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
 
 
 def remove_empty_format_directories(rootfs, deployment):
-    """Remove only empty, unmapped mkfs lost+found on restored managed disks."""
-    root = Path(rootfs)
-    for mount in deployment.get('mounts', []):
-        if mount.get('type') != 'managed-volume' or not mount.get('backup'):
-            continue
-        current = root
-        for part in Path(mount['container_path']).parts[1:]:
-            if part in ('.', '..'):
-                raise ValueError(translate('Invalid restored volume path'))
-            current /= part
-            if current.is_symlink():
-                raise ValueError(translate('Symbolic link in a restored volume path'))
-        candidate = current / 'lost+found'
-        if not candidate.exists() or candidate.is_symlink():
-            continue
-        info = candidate.lstat()
-        if (stat.S_ISDIR(info.st_mode) and info.st_ino == 11
-                and info.st_uid == 0 and info.st_gid == 0
-                and stat.S_IMODE(info.st_mode) == 0o700):
-            if not any(candidate.iterdir()):
-                candidate.rmdir()
-
+    """Keep the recovery entrypoint, sharing the guarded format-dir cleanup."""
+    from oci_managed_volumes import remove_empty_format_directories as clean
+    return clean(rootfs, deployment)
 
 def cleanup_restored_format_dirs(vmid, deployment, installation_id):
     owned(vmid, installation_id)

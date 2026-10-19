@@ -542,6 +542,8 @@ def _search(catalog: Catalog, ui, applications: list[dict[str, Any]]) -> None:
 
 
 def interactive(catalog: Catalog) -> int:
+    from .ui import MenuRefresh
+    from .updates import UpdateCheck, select_updates
     ui = interactive_ui()
     if not catalog.index_path.exists():
         ui.message(translate("The OCI catalog is not installed. Update ProxMenux and try again."))
@@ -565,34 +567,54 @@ def interactive(catalog: Catalog) -> int:
     ] + [(number, f"{translate(labels[key]):<35} ({len(categories[key]):>3})")
          for number, key in category_by_index.items()]
     selection = "search"
-    while True:
-        selection = ui.choose(translate("Select a category or search for applications:"), ReadableTags(options),
-                              selection, size=MENU_SIZE)
-        if selection is None:
-            return 0
-        try:
-            if selection == "search":
-                _search(catalog, ui, applications)
-            elif selection == "all":
-                _app_list(catalog, ui, applications,
-                          f"{translate('All applications')} ({len(applications)})")
-            elif selection == "manage":
-                from .management import interactive_management
-                interactive_management(PROJECT_ROOT, ui)
-            elif selection == "registries":
-                from .registry_accounts import open_registry_accounts
-                open_registry_accounts(ui)
-            elif selection == "custom":
-                from .custom import explore
-                explore(ui)
-            elif selection in category_by_index:
-                key = category_by_index[selection]
-                _app_list(catalog, ui, categories[key], translate(labels[key]))
-        except UserCancelled:
-            continue
-        except (ConversionError, InstallError, OSError, ValueError) as exc:
-            console.stop_spinner()
-            ui.message(f"{translate('The operation could not be completed')}:\n\n{exc}")
+    with UpdateCheck(PROJECT_ROOT) as updates:
+        while True:
+            state = updates.status()
+            entries = ReadableTags(options[:3] + [('updates', updates.label(state))] + options[3:])
+            text = translate("Select a category or search for applications:")
+            if notice := updates.notice(state):
+                text += '\n\n' + notice
+            if updates.active and not getattr(ui, 'live_refresh', False):
+                ui.info(translate('Checking for updates...'))
+                updates.wait()
+                continue
+            try:
+                kwargs = {'refresh': updates.changed} if updates.active else {}
+                selected = ui.choose(text, entries, selection, size=MENU_SIZE, **kwargs)
+            except MenuRefresh:
+                continue
+            if selected is None:
+                return 0
+            selection = selected
+            try:
+                if selection == "search":
+                    _search(catalog, ui, applications)
+                elif selection == "all":
+                    _app_list(catalog, ui, applications,
+                              f"{translate('All applications')} ({len(applications)})")
+                elif selection == "manage":
+                    from .management import interactive_management
+                    interactive_management(PROJECT_ROOT, ui)
+                elif selection == "updates":
+                    if not updates.active:
+                        if state['available']:
+                            select_updates(PROJECT_ROOT, ui, state['available'])
+                        else:
+                            updates.start()
+                elif selection == "registries":
+                    from .registry_accounts import open_registry_accounts
+                    open_registry_accounts(ui)
+                elif selection == "custom":
+                    from .custom import explore
+                    explore(ui)
+                elif selection in category_by_index:
+                    key = category_by_index[selection]
+                    _app_list(catalog, ui, categories[key], translate(labels[key]))
+            except UserCancelled:
+                continue
+            except (ConversionError, InstallError, OSError, ValueError) as exc:
+                console.stop_spinner()
+                ui.message(f"{translate('The operation could not be completed')}:\n\n{exc}")
 
 
 # ---------------------------------------------------------------- maintenance CLI
