@@ -199,6 +199,46 @@ class PBSManagerTests(unittest.TestCase):
         self.assertEqual(response.json["detected"],
                          [{"name": "Lab", "url": "https://10.0.0.49:8007", "fingerprint": "AA:BB"}])
 
+    def test_password_sign_in_keeps_only_a_read_only_token(self):
+        calls = []
+        def request(server, method, endpoint, headers, form=None, rejected=""):
+            calls.append((method, endpoint, form))
+            if endpoint == "/access/ticket":
+                return {"ticket": "PBS:root@pam:ticket", "CSRFPreventionToken": "csrf", "username": "root@pam"}
+            if "/token/" in endpoint and method == "POST":
+                self.assertEqual(headers["CSRFPreventionToken"], "csrf")
+                return {"tokenid": "root@pam!proxmenux-1", "value": "generated-secret"}
+            return None
+        login = {"name": "Lab", "url": "https://pbs.test:8007", "fingerprint": "a" * 64,
+                 "username": "root@pam", "password": "fixture-password"}
+        with mock.patch.object(pbs, "_remote_request", side_effect=request), \
+                mock.patch.object(pbs, "_remote_get", return_value=[]):
+            identifier = pbs.connect_with_password(login)
+        self.assertIn(("PUT", "/access/acl", {"path": "/", "role": "Audit", "auth-id": "root@pam!proxmenux-1", "propagate": "1"}),
+                      calls)
+        stored = (self.root / "pbs_servers.json").read_text()
+        self.assertNotIn("fixture-password", stored)
+        self.assertIn("generated-secret", stored)
+        self.assertEqual(pbs.public_servers()[0]["id"], identifier)
+
+    def test_password_sign_in_removes_its_token_when_the_role_cannot_be_granted(self):
+        calls = []
+        def request(server, method, endpoint, headers, form=None, rejected=""):
+            calls.append((method, endpoint))
+            if endpoint == "/access/ticket":
+                return {"ticket": "t", "CSRFPreventionToken": "c"}
+            if method == "POST":
+                return {"tokenid": "audit@pbs!proxmenux-1", "value": "secret"}
+            if method == "PUT":
+                raise pbs.PBSError(rejected)
+            return None
+        with mock.patch.object(pbs, "_remote_request", side_effect=request):
+            with self.assertRaisesRegex(pbs.PBSError, "Audit"):
+                pbs.connect_with_password({"name": "Lab", "url": "https://pbs.test:8007", "fingerprint": "",
+                                           "username": "audit@pbs", "password": "x"})
+        self.assertEqual(calls[-1][0], "DELETE")
+        self.assertEqual(pbs.public_servers(), [])
+
     def test_connection_api_requires_full_admin_and_does_not_return_secret(self):
         self.assertEqual(self.client.get("/api/pbs/servers").status_code, 401)
         with mock.patch.object(pbs, "_remote_get", return_value=[]):
