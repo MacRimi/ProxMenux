@@ -67,7 +67,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install native discovery route fixture dependency
-        run: python3 -m pip install 'Flask>=3,<4' 'Pillow==13.0.0' 'defusedxml==0.7.1'
+        run: python3 -m pip install 'Flask>=3,<4' 'Pillow==12.3.0' 'defusedxml==0.7.1'
       - name: Run qualified Python files
         env:
           PYTHONDONTWRITEBYTECODE: '1'
