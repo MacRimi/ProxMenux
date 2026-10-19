@@ -24,7 +24,7 @@
       "amd64"
     ],
     "launch": {
-      "scheme": "http",
+      "scheme": "https",
       "port": 5800,
       "path": "/"
     },
