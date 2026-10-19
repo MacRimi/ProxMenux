@@ -202,6 +202,19 @@ class Cache(unittest.TestCase):
                 self.assertEqual(lxc_apps._probe_docker_web_links(101)[0]['host_port'], 8080)
             execute.assert_not_called()
 
+    def test_shared_links_keep_existing_name_then_port_order(self):
+        value = copy.deepcopy(self.value)
+        value['_containers'][0]['name'] = 'z-last'
+        second = copy.deepcopy(value['_containers'][0]); second['name'] = 'a-first'
+        second['endpoints'] = [{'host_port':9090,'container_port':8080,'scheme':'http'},
+                               {'host_port':8080,'container_port':8080,'scheme':'http'}]
+        value['_containers'].append(second)
+        lookup = lambda service,name,image: {'slug':None,'name':name,'logo_url':None}
+        with patch.object(docker,'scan',return_value=value): docker.discover(101)
+        links = docker.cached_web_links(101,lookup)
+        self.assertEqual([(x['service_name'],x['host_port']) for x in links],
+                         [('a-first',8080),('a-first',9090),('z-last',8080)])
+
     def test_registered_container_image_app_or_existing_port_is_not_duplicated(self):
         item = self.value['candidates'][0]
         for app in [{'discovery_id': item['discovery_id']}, {'container_name': item['container_name']},

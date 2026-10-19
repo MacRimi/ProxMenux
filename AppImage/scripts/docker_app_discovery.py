@@ -281,7 +281,7 @@ def cached_web_links(vmid, lookup):
             result.append({**endpoint, 'container_name': record['name'],
                            'service_name': meta['name'], 'service_slug': meta['slug'],
                            'image': record['image'], 'web_path': '/', 'logo_url': meta['logo_url']})
-    return result
+    return sorted(result, key=lambda item: (item["service_name"].lower(), item["host_port"]))
 
 
 def filter_candidates(result, suggestions, apps):
