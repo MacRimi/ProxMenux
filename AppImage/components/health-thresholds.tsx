@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useIsPbs } from "../lib/use-platform"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Input } from "./ui/input"
 import {
@@ -283,8 +284,12 @@ function computeVisualRange(
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
+// Guests and PVE storages do not exist on a Proxmox Backup Server.
+const PVE_ONLY_SECTIONS = new Set(["lxc_rootfs", "lxc_mount", "pve_storage"])
+
 export function HealthThresholds() {
   const t = useT()
+  const isPbs = useIsPbs()
   const tFallback = (key: string, fallback: string) => {
     const translated = t(key)
     return translated === key ? fallback : translated
@@ -773,7 +778,7 @@ export function HealthThresholds() {
               Mobile (<md) stays single-column as today.
             */}
             <div className="columns-1 md:columns-2 2xl:columns-3 gap-4 space-y-4 [&>*]:break-inside-avoid">
-            {SECTIONS.map((section) => {
+            {SECTIONS.filter((section) => !isPbs || !PVE_ONLY_SECTIONS.has(section.id)).map((section) => {
               const Icon = section.icon
               return (
                 <div key={section.id} className="rounded-md border border-border/50 px-3 py-2">

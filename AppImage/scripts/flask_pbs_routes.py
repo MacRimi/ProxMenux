@@ -24,9 +24,28 @@ def platform():
 @require_auth
 def servers():
     try:
-        return jsonify(servers=pbs.public_servers(), local_available=pbs.is_pbs_host())
+        servers = pbs.public_servers()
+        return jsonify(servers=servers, local_available=pbs.local_available(), detected=_detected(servers))
     except pbs.PBSError as exc:
         return jsonify(error=str(exc)), 500
+
+
+def _detected(servers):
+    """PBS storages of this PVE that have no monitoring connection yet."""
+    if pbs.is_pbs_host():
+        return []
+    import monitor_links
+    from urllib.parse import urlsplit
+    known = {urlsplit(row.get("url", "")).hostname for row in servers}
+    found = {}
+    for row in monitor_links._storage_pbs():
+        host = row["server"]
+        if host in known or monitor_links._is_this_host(host):
+            continue
+        port = row.get("port") if str(row.get("port", "")).isdigit() else monitor_links.PBS_UI_PORT
+        url = monitor_links._host_url(host, port, "https")
+        found.setdefault(url, {"name": row["name"], "url": url, "fingerprint": row.get("fingerprint", "")})
+    return list(found.values())
 
 
 def _protected_configuration():

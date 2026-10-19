@@ -231,7 +231,8 @@ function translateAtaError(raw: string, t: (key: string) => string): string | nu
   return out.length ? out.join('; ') : null
 }
 
-export function StorageOverview() {
+// `disksOnly` is the PBS Monitor: its disks and pools, without Proxmox VE storages.
+export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } = {}) {
   const t = useT()
 
   // User-configurable disk temperature thresholds (Settings → Health
@@ -284,7 +285,7 @@ export function StorageOverview() {
     try {
       const [data, proxmoxData, mountsData] = await Promise.all([
         fetchApi<StorageData>("/api/storage"),
-        fetchApi<ProxmoxStorageData>("/api/proxmox-storage"),
+        disksOnly ? Promise.resolve(null) : fetchApi<ProxmoxStorageData>("/api/proxmox-storage"),
         // Sprint 13 — host-level NFS/CIFS/SMB mounts. Wrapped in catch
         // so a failure here doesn't blank the whole storage tab.
         fetchApi<RemoteMountsData>("/api/mounts").catch(() => ({ mounts: [], available: false } as RemoteMountsData)),
@@ -1134,7 +1135,7 @@ export function StorageOverview() {
   return (
     <div className="space-y-6">
       {/* Storage Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 xl:gap-6">
+      {!disksOnly && <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 xl:gap-6">
         {/* ── Total Storage (preview restyle: headline + stacked bar Local·Remote·Free) ── */}
         {(() => {
           const totalGB = (totalLocalCapacity || 0) + (totalRemoteCapacity || 0)
@@ -1355,9 +1356,9 @@ export function StorageOverview() {
             </Card>
           )
         })()}
-      </div>
+      </div>}
 
-      {proxmoxStorage && proxmoxStorage.storage && proxmoxStorage.storage.length > 0 && (
+      {!disksOnly && proxmoxStorage && proxmoxStorage.storage && proxmoxStorage.storage.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

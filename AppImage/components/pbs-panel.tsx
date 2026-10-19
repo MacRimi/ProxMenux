@@ -17,7 +17,8 @@ import { fetchApi } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
 
 interface Connection { id: string; name: string; url: string; token_id: string; fingerprint: string; has_token: boolean }
-interface Connections { local_available: boolean; servers: Connection[] }
+interface Detected { name: string; url: string; fingerprint: string }
+interface Connections { local_available: boolean; servers: Connection[]; detected?: Detected[] }
 interface Task { upid: string; worker_type?: string; worker_id?: string; starttime?: number; endtime?: number; status?: string }
 interface Job { id: string; store?: string; schedule?: string; "last-run-state"?: string }
 interface PBSStatus {
@@ -122,7 +123,7 @@ export function PBSPanel({ localOnly = false }: { localOnly?: boolean } = {}) {
       <Select value={selected || undefined} onValueChange={setSelected}>
         <SelectTrigger aria-label={t("pbs.server")} className="w-full sm:ml-auto sm:w-56"><SelectValue placeholder={t("pbs.chooseServer")} /></SelectTrigger>
         <SelectContent>
-          {connections?.local_available && <SelectItem value="local">{t("pbs.local")}</SelectItem>}
+          {connections?.local_available && <SelectItem value="local">{t("pbs.thisNode")}</SelectItem>}
           {connections?.servers.map(row => <SelectItem key={row.id} value={row.id}>{row.name}</SelectItem>)}
         </SelectContent>
       </Select>
@@ -137,6 +138,22 @@ export function PBSPanel({ localOnly = false }: { localOnly?: boolean } = {}) {
       {String((connectionError || statusError)?.message || t("pbs.loadFailed"))}</p>}
     {isLoading && <p role="status" className="text-sm text-muted-foreground">{t("pbs.loading")}</p>}
     {!selected && !connectionError && connections && <p className="text-sm text-muted-foreground">{t("pbs.noServer")}</p>}
+    {!localOnly && !manage && (connections?.detected?.length || 0) > 0 && <Card className="bg-card border-border">
+      <CardHeader><CardTitle className="flex items-center text-foreground"><DatabaseBackup className="mr-2 h-5 w-5" />{t("pbs.detectedTitle")}</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">{t("pbs.detectedHelp")}</p>
+        {connections?.detected?.map(row => <div key={row.url} className="flex flex-wrap items-center gap-3 rounded-lg border border-border px-3 py-2">
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium text-foreground">{row.name}</span>
+            <span className="block break-all font-mono text-xs text-muted-foreground">{row.url}</span>
+          </span>
+          <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => {
+            setForm({ ...emptyForm, name: row.name, url: row.url, fingerprint: row.fingerprint })
+            setError(""); setMessage(""); setManage(true)
+          }}>{t("pbs.connect")}</Button>
+        </div>)}
+      </CardContent>
+    </Card>}
     {manage && !localOnly && <Card>
       <CardHeader><CardTitle>{t("pbs.manage")}</CardTitle></CardHeader>
       <CardContent className="space-y-4">
@@ -171,9 +188,11 @@ export function PBSPanel({ localOnly = false }: { localOnly?: boolean } = {}) {
     </Card>}
     {data && <>
       <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-        <span>{data.name} · PBS {data.version || "—"} · {t("pbs.sampled")} {new Date(data.fetched_at * 1000).toLocaleTimeString()}</span>
-        {Object.entries(data.services).map(([service, state]) =>
-          <Badge key={service} variant="outline" className={state === "active" ? badgeTone.ok : badgeTone.error}>{service}: {state}</Badge>)}
+        <span>{data.name} · PBS {data.version || "—"} · {t("pbs.updatedAt", { time: new Date(data.fetched_at * 1000).toLocaleTimeString() })}</span>
+        {Object.keys(data.services).length > 0 && Object.values(data.services).every(state => state === "active")
+          ? <Badge variant="outline" className={badgeTone.ok}>{t("pbs.servicesActive")}</Badge>
+          : Object.entries(data.services).filter(([, state]) => state !== "active").map(([service, state]) =>
+            <Badge key={service} variant="outline" className={badgeTone.error}>{service}: {state}</Badge>)}
       </div>
       {Object.entries(data.errors).map(([section, detail]) => <p key={section} role="alert" className="text-sm text-amber-500">{t(`pbs.${section}`)}: {detail}</p>)}
 

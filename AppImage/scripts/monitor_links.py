@@ -107,6 +107,32 @@ def _is_private(host):
         return False
 
 
+def _own_addresses():
+    addresses = set()
+    try:
+        import psutil
+        for entries in psutil.net_if_addrs().values():
+            for entry in entries:
+                if entry.family in (socket.AF_INET, socket.AF_INET6):
+                    addresses.add(entry.address.split("%")[0])
+    except Exception:
+        pass
+    return addresses
+
+
+def _is_this_host(host):
+    """A PBS installed next to PVE is named localhost or one of the host's own addresses."""
+    try:
+        resolved = {info[4][0].split("%")[0] for info in socket.getaddrinfo(host, None)}
+    except OSError:
+        return False
+    own = _own_addresses()
+    try:
+        return bool(resolved) and all(ipaddress.ip_address(a).is_loopback or a in own for a in resolved)
+    except ValueError:
+        return False
+
+
 def _cluster_nodes():
     try:
         result = subprocess.run(["pvesh", "get", "/cluster/status", "--output-format", "json"],
@@ -135,7 +161,7 @@ def _storage_pbs():
             if current is not None:
                 servers.append(current)
             continue
-        option = re.match(r"^\s+(server|port)\s+(\S+)", line)
+        option = re.match(r"^\s+(server|port|fingerprint)\s+(\S+)", line)
         if current is not None and option:
             current[option.group(1)] = option.group(2)
     return [row for row in servers if row.get("server")]
@@ -154,8 +180,17 @@ def _pbs_servers():
                 found.setdefault(host, {"name": row.get("name") or host, "native_url": normalize_url(row["url"])})
     except Exception:
         pass
-    return [{"key": f"pbs:{host}", "name": info["name"], "product": "pbs", "group": "pbs",
-             "host": host, "native_url": info["native_url"]} for host, info in found.items()]
+    servers, local = [], None
+    for host, info in found.items():
+        if _is_this_host(host):
+            # Its web interface is on the address the browser already uses.
+            if local is None:
+                local = {"key": "pbs:local", "name": info["name"], "product": "pbs", "group": "pbs", "local": True}
+                servers.append(local)
+            continue
+        servers.append({"key": f"pbs:{host}", "name": info["name"], "product": "pbs", "group": "pbs",
+                        "host": host, "native_url": info["native_url"]})
+    return servers
 
 
 def _probe(url):
@@ -188,6 +223,8 @@ def _resolve(entry, override):
         return override["url"], "online" if _probe(override["url"]) else "offline"
     if entry.get("url"):
         return entry["url"], "online" if _probe(entry["url"]) else "offline"
+    if entry.get("local"):
+        return None, "local"
     host = entry["host"]
     if not _is_private(host):
         return None, "unknown"
@@ -218,6 +255,7 @@ def list_links(include_hidden=False):
         links.append({"key": entry["key"], "name": entry["name"], "product": entry["product"],
                       "group": entry["group"], "url": url, "status": state,
                       "native_url": entry.get("native_url"), "manual": bool(entry.get("manual")),
+                      "local": bool(entry.get("local")),
                       "hidden": bool(override.get("hidden")), "custom_url": bool(override.get("url"))})
     return {"self": {"name": platform.get("hostname") or socket.gethostname(), "product": platform.get("product")},
             "links": links}

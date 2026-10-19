@@ -22,9 +22,11 @@ interface MonitorLink {
   product: "pve" | "pbs"
   group: "cluster" | "standalone" | "pbs"
   url: string | null
-  status: "online" | "offline" | "unknown"
+  status: "online" | "offline" | "unknown" | "local"
   native_url?: string | null
   manual: boolean
+  // A PBS installed on this same host.
+  local?: boolean
   hidden: boolean
   custom_url: boolean
 }
@@ -48,6 +50,15 @@ function bareOrigin(value: unknown): string | null {
   } catch { return null }
 }
 
+// localhost names the computer that opens the address, never another node.
+function isLoopback(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.replace(/^\[|\]$/g, "").toLowerCase()
+    return host === "localhost" || host.endsWith(".localhost") || /^127\./.test(host)
+      || host === "::1" || /^::ffff:127\./.test(host) || /^::ffff:7f/.test(host)
+  } catch { return false }
+}
+
 // The Monitors the source already links, carried in the jump so this one can add them too.
 function readCarried(raw: string | null): Carried[] {
   if (!raw) return []
@@ -58,7 +69,7 @@ function readCarried(raw: string | null): Carried[] {
     const out: Carried[] = []
     for (const row of rows.slice(0, MAX_CARRIED)) {
       const url = bareOrigin(row?.u)
-      if (!url || url === window.location.origin || seen.has(url)) continue
+      if (!url || url === window.location.origin || isLoopback(url) || seen.has(url)) continue
       seen.add(url)
       out.push({ url, name: String(row?.n || new URL(url).hostname).slice(0, 64), product: row?.p === "pbs" ? "pbs" : "pve" })
     }
@@ -102,6 +113,7 @@ function takeOrigin(): (Origin & { fresh?: boolean }) | null {
 
 // Where a link leads: its Monitor, or the native PBS interface when no Monitor answers there.
 function destination(link: MonitorLink): { href: string; native: boolean } | null {
+  if (link.local && !link.url) return { href: `https://${window.location.hostname}:8007`, native: true }
   if (link.product === "pbs" && link.status !== "online" && link.native_url) return { href: link.native_url, native: true }
   return link.url ? { href: link.url, native: false } : null
 }
@@ -127,7 +139,7 @@ export function MonitorSwitcher({ nodeName, compact = false }: { nodeName: strin
   const originKnown = !!origin && known(origin.url)
   // The source Monitor and the Monitors it links that this one does not know yet.
   const candidates: Carried[] = origin && data
-    ? [origin, ...(origin.links || [])].filter(row => !known(row.url))
+    ? [origin, ...(origin.links || [])].filter(row => !known(row.url) && !isLoopback(row.url))
     : []
   const declined = (url: string) => {
     try { return (JSON.parse(sessionStorage.getItem(DECLINED_KEY) || "[]") as string[]).includes(url) } catch { return false }
@@ -147,7 +159,8 @@ export function MonitorSwitcher({ nodeName, compact = false }: { nodeName: strin
   const withOrigin = (href: string) => {
     const target = bareOrigin(href.replace(/\/+$/, ""))
     const carried = (data?.links || [])
-      .filter(link => link.url && link.status === "online" && !destination(link)?.native && link.url !== target)
+      .filter(link => link.url && link.status === "online" && !destination(link)?.native && link.url !== target
+        && !isLoopback(link.url))
       .map(link => ({ url: link.url as string, name: link.name, product: link.product }))
     const params = new URLSearchParams({ pmx_from: window.location.origin, pmx_name: nodeName, pmx_product: data?.self.product === "pbs" ? "pbs" : "pve" })
     if (carried.length > 0) params.set("pmx_links", writeCarried(carried))
@@ -359,7 +372,12 @@ function ManageLinksDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                 <Trash2 className="h-4 w-4 text-red-500" />
               </Button>}
             </div>
-            {isEditing
+            {link.local && !link.custom_url
+              ? <div className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate text-sm text-foreground">{t("monitorLinks.pbsWebInterface")}</span>
+                  <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground">{t("monitorLinks.thisNode")}</span>
+                </div>
+              : isEditing
               ? <div className="flex gap-2">
                   <Input value={draft} disabled={busy} autoFocus aria-label={t("monitorLinks.address")}
                     placeholder={link.manual ? "" : `${t("monitorLinks.autoAddress")}${shown ? `: ${shown}` : ""}`}
