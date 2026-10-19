@@ -1250,7 +1250,8 @@ apply_installer_profile() {
         continue
       fi
       if [[ $remove_lost_found == true ]]; then
-        rm -rf "${rootfs}${target}/lost+found" || { failed=1; break; }
+        oci_quiet python3 "${SCRIPT_DIR}/oci_managed_volumes.py" prepare \
+          "$rootfs" "$DEPLOYMENT_FILE" --target "$target" || { failed=1; break; }
       fi
       case "$owner_strategy" in
         mapped-root) chown "$HOST_ROOT_UID:$HOST_ROOT_GID" "${rootfs}${target}" || failed=1 ;;
@@ -2058,6 +2059,20 @@ while IFS=$'\t' read -r NAME ENCODED; do
   set_runtime_environment "$NAME" "$VALUE"
 done < <(jq -r '.environment[] | [.name, (.value | @base64)] | @tsv' "$DEPLOYMENT_FILE")
 
+prepare_managed_format_directories() {
+  local rootfs=$1 preparation_failed=0
+  # Stack members receive their real mounts later in attach_mounts().
+  [[ $(jq -r '.stack_managed // false' "$DEPLOYMENT_FILE") != true ]] || return 0
+  (( MOUNT_ENTRIES > 0 )) || return 0
+  mount_ct_rootfs
+  oci_quiet python3 "${SCRIPT_DIR}/oci_managed_volumes.py" prepare "$rootfs" "$DEPLOYMENT_FILE" \
+    || preparation_failed=1
+  oci_quiet pct unmount "$VMID" || preparation_failed=1
+  (( preparation_failed == 0 )) \
+    || die "$(translate "Could not add the mount point:") CT $VMID"
+}
+
+prepare_managed_format_directories "/var/lib/lxc/${VMID}/rootfs"
 apply_extra_hosts
 apply_installer_profile
 ensure_runtime_home

@@ -80,6 +80,10 @@ jobs:
           python3 -m unittest discover -s oci/tests -p 'test_instance_reconcile.py' -v
           python3 -m unittest discover -s oci/tests -p 'test_guessed_endpoint_healthcheck.py' -v
           python3 -m unittest discover -s oci/tests -p 'test_runtime_home_*.py' -v
+      - name: Run managed volume startup regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -m unittest discover -s oci/tests -p 'test_managed_volume_*.py' -v
       - name: Run catalog web-link regressions
         env:
           PYTHONDONTWRITEBYTECODE: '1'
