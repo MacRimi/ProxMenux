@@ -80,3 +80,7 @@ jobs:
           python3 -m unittest discover -s oci/tests -p 'test_instance_reconcile.py' -v
           python3 -m unittest discover -s oci/tests -p 'test_guessed_endpoint_healthcheck.py' -v
           python3 -m unittest discover -s oci/tests -p 'test_runtime_home_*.py' -v
+      - name: Run catalog web-link regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -m unittest discover -s oci/tests -p test_catalog_web_links.py -v
