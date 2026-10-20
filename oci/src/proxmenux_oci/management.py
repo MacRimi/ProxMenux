@@ -658,7 +658,7 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
                                        'the OCI management menu.')
                              .format(count=len(members), vmid=primary_id), translate('Recreate OCI stack'),
                              question=translate('Recreate the whole stack?'), default=False):
-                return False
+                return CANCELLED
         else:
             if not ui.review(translate('All {count} containers of the application are updated together (main CT: {vmid}). '
                                        'If there are new versions, all images are downloaded and verified, the application '
