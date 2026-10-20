@@ -28050,8 +28050,9 @@
       "Authentication & Security"
     ],
     "notes": [
-      "Application credentials: `cat /etc/zitadel/INSTALLATION_INFO.txt`",
-      "Change the ExternalDomain value in `/opt/zitadel/config.yaml` to your domain/hostname/IP and run `bash zitadel-rerun.sh`"
+      "Sign in at /ui/console as zitadel-admin@zitadel.localhost with the initial password from ~/zitadel.creds in the container. Zitadel asks for a new password at the first sign-in.",
+      "With Login V2 (default) Zitadel runs at https://<IP>:8080 with a self-signed certificate; accept it in the browser. Login V1 stays on plain http://<IP>:8080.",
+      "Zitadel only answers on the ExternalDomain in /opt/zitadel/config.yaml (the container IP). To use a hostname, change it, run zitadel setup --masterkeyFile /opt/zitadel/.masterkey --config /opt/zitadel/config.yaml and restart zitadel"
     ],
     "warnings": [],
     "port": 8080,
@@ -28068,7 +28069,7 @@
     "config_path": "",
     "default_credentials": {
       "username": "zitadel-admin@zitadel.localhost",
-      "password": "Password1!"
+      "password": "cat ~/zitadel.creds"
     },
     "os": "debian"
   },
