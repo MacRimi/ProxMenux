@@ -31,7 +31,7 @@ import {
 import "xterm/css/xterm.css"
 import { API_PORT } from "@/lib/api-config"
 import { getTicketedWsUrl } from "@/lib/terminal-ws"
-import { scriptCompletion } from "@/lib/script-completion"
+import { scriptCompletion, scriptCompletionOutput } from "@/lib/script-completion"
 import { useT } from "../lib/i18n/provider"
 
 interface WebInteraction {
@@ -203,7 +203,7 @@ const initMessage = {
             if (scriptCompletion(exitCode, cancelledExitCode).kind !== "cancelled") termRef.current?.write(event.data)
             completionReceivedRef.current = true
             setIsComplete(true)
-            termRef.current?.writeln(`\x1b[${scriptCompletion(exitCode, cancelledExitCode).color}m${getCompletionMessage(exitCode)}\x1b[0m`)
+            termRef.current?.writeln(scriptCompletionOutput(exitCode, getCompletionMessage(exitCode), cancelledExitCode))
             onCompleteRef.current?.(exitCode)
             if (ws.readyState === WebSocket.OPEN) ws.close(1000, "script complete")
             return
@@ -234,7 +234,7 @@ const initMessage = {
               const exitCode = Number(msg.exit_code ?? 1)
               completionReceivedRef.current = true
               setIsComplete(true)
-              termRef.current?.writeln(`\x1b[${scriptCompletion(exitCode, cancelledExitCode).color}m${getCompletionMessage(exitCode)}\x1b[0m`)
+              termRef.current?.writeln(scriptCompletionOutput(exitCode, getCompletionMessage(exitCode), cancelledExitCode))
               onCompleteRef.current?.(exitCode)
               if (ws.readyState === WebSocket.OPEN) ws.close(1000, "script complete")
               return
@@ -420,7 +420,7 @@ const initMessage = {
         if (scriptCompletion(exitCode, cancelledExitCode).kind !== "cancelled") term.write(event.data)
         completionReceivedRef.current = true
         setIsComplete(true)
-        term.writeln(`\x1b[${scriptCompletion(exitCode, cancelledExitCode).color}m${getCompletionMessage(exitCode)}\x1b[0m`)
+        term.writeln(scriptCompletionOutput(exitCode, getCompletionMessage(exitCode), cancelledExitCode))
         onCompleteRef.current?.(exitCode)
         if (ws.readyState === WebSocket.OPEN) ws.close(1000, "script complete")
         return
@@ -453,7 +453,7 @@ const initMessage = {
           const exitCode = Number(msg.exit_code ?? 1)
           completionReceivedRef.current = true
           setIsComplete(true)
-          term.writeln(`\x1b[${scriptCompletion(exitCode, cancelledExitCode).color}m${getCompletionMessage(exitCode)}\x1b[0m`)
+          term.writeln(scriptCompletionOutput(exitCode, getCompletionMessage(exitCode), cancelledExitCode))
           onCompleteRef.current?.(exitCode)
           if (ws.readyState === WebSocket.OPEN) ws.close(1000, "script complete")
           return

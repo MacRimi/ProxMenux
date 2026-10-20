@@ -44,10 +44,12 @@ for (const handler of handlers) for (const locale of ['en','sk']) for (const fra
     if(kind==='cancelled') {
       assert.ok(rendered.includes(f.t('scriptTerminal.cancelled')));
       assert.ok(rendered.includes('\x1b[36m'));
+      assert.ok(rendered.startsWith('\x1bc'),'cancel resets the obsolete dialog in the queued output');
       assert.ok(!rendered.includes('Script exited with code'));
       assert.ok(!rendered.includes('\x1b[31m'));
       assert.ok(!rendered.includes(f.t('scriptTerminal.completedSuccessfully')));
     } else {
+      assert.ok(!rendered.includes('\x1bc'),'success/errors and non-opted-in scripts keep their logs');
       assert.ok(rendered.includes(kind==='success'?f.t('scriptTerminal.completedSuccessfully'):f.t('scriptTerminal.completedWithError',{code})));
     }
     // Worker sends both forms; neither a second frame nor a heartbeat may complete twice.

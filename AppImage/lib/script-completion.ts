@@ -12,3 +12,11 @@ export function scriptCompletion(exitCode: number, cancelledExitCode?: number) {
 export function shouldRefreshOciAfterCompletion(exitCode?: number) {
   return exitCode !== OCI_CANCELLED_EXIT_CODE
 }
+
+export function scriptCompletionOutput(exitCode: number, message: string, cancelledExitCode?: number) {
+  const completion = scriptCompletion(exitCode, cancelledExitCode)
+  // Queue RIS with the result so earlier ncurses writes finish before reset.
+  // A synchronous terminal.reset() could be overwritten by that pending output.
+  const reset = completion.kind === "cancelled" ? "\x1bc" : ""
+  return `${reset}\x1b[${completion.color}m${message}\x1b[0m`
+}
