@@ -15,7 +15,7 @@ from . import console, images
 from .catalog import Catalog
 from .converter import ConversionError
 from .github_source import SourceError
-from .i18n import N_, source_text, translate
+from .i18n import N_, diagnostic, source_text, translate
 from .installer import (
     ADDRESS_SHOWN,
     ADVANCED_MODE,
@@ -38,7 +38,7 @@ PUBLISHERS = {"linuxserver.io": "LinuxServer", "official": N_("Official image")}
 STACK_LABELS = {
     "server": N_("Server"),
     "application": N_("Application"),
-    "machine_learning": "Machine learning",
+    "machine_learning": N_("Machine learning"),
     "database": "PostgreSQL",
     "valkey": "Valkey",
     "cache": "Redis",
@@ -133,7 +133,7 @@ def _service_kind(service: dict[str, Any]) -> str:
     if service.get("is_main"):
         return translate("Application")
     if "machine-learning" in name or "machine-learning" in image:
-        return "Machine learning"
+        return translate("Machine learning")
     for key, label in SERVICE_KINDS:
         if key in image:
             return label
@@ -267,7 +267,7 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
                 target = (f"{mount['size_gb']} GB {on} {mount['source']}"
                           if mount["type"] == "managed-volume" else mount["source"])
                 lines.append(f"    {mount['container_path']} → {target}")
-        for key, label in (("media", "Library"), ("application", "Application data"), ("transfer", "Consume/export")):
+        for key, label in (("media", N_("Library")), ("application", N_("Application data")), ("transfer", N_("Consume/export"))):
             storage = plan.get(key)
             if isinstance(storage, dict) and "mode" in storage:
                 if storage["mode"] == "host-bind":
@@ -614,7 +614,7 @@ def interactive(catalog: Catalog) -> int:
                 continue
             except (ConversionError, InstallError, OSError, ValueError) as exc:
                 console.stop_spinner()
-                ui.message(f"{translate('The operation could not be completed')}:\n\n{exc}")
+                ui.message(f"{translate('The operation could not be completed')}:\n\n{diagnostic(exc)}")
 
 
 # ---------------------------------------------------------------- maintenance CLI
@@ -773,7 +773,7 @@ def main(argv: list[str] | None = None) -> int:
         return 130
     except (ConversionError, SourceError, InstallError, OSError, ValueError) as exc:
         console.stop_spinner()
-        print(f"ERROR: {exc}", file=sys.stderr)
+        print(f"ERROR: {diagnostic(exc)}", file=sys.stderr)
         return 1
 
 

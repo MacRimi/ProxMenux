@@ -7,6 +7,7 @@ is the source language: a missing translation returns the English text.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -44,6 +45,23 @@ def translate(text: str) -> str:
         except (OSError, ValueError):
             _cache = {}
     return _cache.get(text) or text
+
+
+def diagnostic(error: Any) -> str:
+    """Translate legacy diagnostics only when presenting them to a person.
+
+    The catalog's exception types and original messages remain stable for
+    internal callers; identifiers are inserted after the translation lookup.
+    """
+    text = str(error)
+    for pattern, source in (
+        (r"No template is available for '(.*)'", N_("No template is available for '{app_id}'")),
+        (r"The application '(.*)' is not in the index", N_("The application '{app_id}' is not in the index")),
+    ):
+        match = re.fullmatch(pattern, text)
+        if match:
+            return translate(source).format(app_id=match[1])
+    return text
 
 
 def source_text(value: Any) -> str:
