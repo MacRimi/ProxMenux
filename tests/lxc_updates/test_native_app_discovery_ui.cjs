@@ -100,6 +100,13 @@ function fixture({nativeCandidate = candidate, dockerCandidate = null, apps = []
       if (name === 'react') return react
       if (name === 'react/jsx-runtime') return {jsx: (type, props) => ({type, props}), jsxs: (type, props) => ({type, props})}
       if (name.includes('api-config')) return {fetchApi: api}
+      if (name.includes('lxc-app-editor-errors')) {
+        const context = {exports: {}}
+        vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(root, 'lib/lxc-app-editor-errors.ts'), 'utf8'), {
+          compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020},
+        }).outputText, context)
+        return context.exports
+      }
       if (name.includes('lxc-apps-cache')) return cache
       if (name.includes('i18n/provider')) return {useT: () => (key, values) => key + (values ? JSON.stringify(values) : '')}
       if (name.includes('category-color')) return {useIsLightTheme: () => false, categoryChipStyle: () => ({})}
