@@ -978,7 +978,7 @@ export function VirtualMachines() {
   // A container restored from a backup carries the mark of its installation
   // and has no record on this host until it is recovered from the menu.
   const [ociRestored, setOciRestored] = useState(false)
-  const [ociAction, setOciAction] = useState<{ vmid: number; action: "update" | "modify" | "recover" } | null>(null)
+  const [ociAction, setOciAction] = useState<{ vmid: number; action: "update" | "modify" | "recover"; recoverPrevious?: boolean } | null>(null)
   const ociCompletionCodeRef = useRef<number | undefined>(undefined)
   useEffect(() => { ociCompletionCodeRef.current = undefined }, [ociAction])
 
@@ -5518,7 +5518,7 @@ export function VirtualMachines() {
                                 <Button
                                   size="sm"
                                   className={updateBtnCls}
-                                  onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "update" })}
+                                  onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "update", recoverPrevious: !!ociInstance.pending })}
                                 >
                                   {hasUpdate
                                     ? <ArrowUpCircle className="h-4 w-4 mr-1.5" />
@@ -8033,7 +8033,8 @@ export function VirtualMachines() {
           scriptName="oci_manage_instance"
           cancelledExitCode={OCI_CANCELLED_EXIT_CODE}
           onComplete={(exitCode) => { ociCompletionCodeRef.current = exitCode }}
-          title={ociAction.action === "update" ? t("vmLxc.ociUpdates.terminalTitleUpdate")
+          title={ociAction.action === "update" ? t(ociAction.recoverPrevious
+            ? "vmLxc.ociUpdates.terminalTitleRecoverPrevious" : "vmLxc.ociUpdates.terminalTitleUpdate")
             : ociAction.action === "recover" ? t("vmLxc.ociUpdates.terminalTitleRecover")
             : t("vmLxc.ociUpdates.terminalTitleModify")}
           description={t("vmLxc.ociUpdates.terminalDescription")}

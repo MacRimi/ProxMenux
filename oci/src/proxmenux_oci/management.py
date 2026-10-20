@@ -510,11 +510,11 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=(), heading=No
     action = ui.choose(translate('Interrupted operation'), [('status', translate('View status')),
                                                         ('recover', translate('Recover the previous installation'))], 'status')
     if action is None:
-        return False
+        return CANCELLED
     if action == 'recover' and not ui.review(
             translate('If the container had already been changed, its previous native backup is restored. Shared host directories are not reverted. The disks of the failed attempt are removed when the cleanup succeeds.'),
             translate('Recover OCI'), question=translate('Recover now?'), default=True):
-        return False
+        return CANCELLED
     return _run_lifecycle([sys.executable, str(project / 'remote/oci_instance_transaction.py'),
                            action, str(row['vmid'])],
                           translate('Recover OCI') if action == 'recover' else translate('OCI management'))
@@ -668,7 +668,7 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
     else:
         if not ui.review(translate('A coordinated operation has a saved journal. Continuing attempts to recover the previous stack where needed, or finish cleanup for a completed operation. Recovery or cleanup can fail.'), translate('Recover OCI stack'),
                 question=translate('Recover or complete the operation?'), default=True):
-            return False
+            return CANCELLED
         import json
         members = json.loads(Path(pending).read_text())['plan']['members']
     if not pending and not _work_backup_ready(project, ui, primary_id):

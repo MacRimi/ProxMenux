@@ -69,17 +69,44 @@ const fs=require('node:fs');
 assert.match(fs.readFileSync('oci/src/proxmenux_oci/management.py','utf8'),/^EXIT_CANCELLED = 6 /m);
 assert.equal(completion.OCI_CANCELLED_EXIT_CODE,6);
 const parent=ts.createSourceFile('vms.tsx',read('components/virtual-machines.tsx'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
-let ociElement,reset;
+let ociElement,reset,pendingRecoveryClick;
 function find(node) {
   if(ts.isJsxSelfClosingElement(node) && node.tagName.getText(parent)==='ScriptTerminalModal' &&
       node.attributes.properties.some(p=>p.name?.getText(parent)==='scriptPath' && p.initializer?.text?.endsWith('/oci/manage_instance.sh'))) ociElement=node;
   if(ts.isCallExpression(node) && node.expression.getText(parent)==='useEffect' && node.arguments[0]?.getText(parent).includes('ociCompletionCodeRef.current = undefined')) reset=node.arguments[0];
+  if(ts.isJsxElement(node) && node.openingElement.tagName.getText(parent)==='Button') {
+    const click=node.openingElement.attributes.properties.find(p=>p.name?.getText(parent)==='onClick')?.initializer?.expression;
+    if(click?.getText(parent).includes('setOciAction(') && click.getText(parent).includes('action: "update"')) pendingRecoveryClick=click;
+  }
   ts.forEachChild(node,find);
 }
-find(parent);assert.ok(ociElement);assert.ok(reset);
+find(parent);assert.ok(ociElement);assert.ok(reset);assert.ok(pendingRecoveryClick);
 const attribute=name=>ociElement.attributes.properties.find(p=>p.name?.getText(parent)===name)?.initializer?.expression;
 assert.equal(attribute('cancelledExitCode').getText(parent),'OCI_CANCELLED_EXIT_CODE');
 (async()=>{
+ for(const locale of ['en','sk']) for(const pending of [false,true]) {
+  const scope={t:translator(locale), selectedVM:{vmid:110}, ociInstance:{pending},
+    applyBackup:false,applyBackupStorage:'',selectedBackupStorage:''};
+  scope.setOciAction=value=>scope.ociAction=value;
+  executable(pendingRecoveryClick,parent,scope)();
+  assert.equal(scope.ociAction.vmid,110);
+  assert.equal(scope.ociAction.action,'update','pending recovery retains the existing manage contract');
+  // Background refresh or another selected guest must not rename this open operation.
+  scope.ociInstance={pending:!pending};scope.selectedVM={vmid:999};
+  const title=executable(attribute('title'),parent,scope);
+  assert.equal(title,scope.t(pending?'vmLxc.ociUpdates.terminalTitleRecoverPrevious':'vmLxc.ociUpdates.terminalTitleUpdate'));
+  assert.equal(title,pending?(locale==='sk'?'Obnoviť predchádzajúcu OCI inštaláciu':'Recover the previous OCI installation'):
+    (locale==='sk'?'Aktualizovať OCI aplikáciu':'Update OCI application'));
+  const params=executable(attribute('params'),parent,scope);
+  assert.equal(params.ACTION,'update');assert.equal(params.VMID,'110');
+  assert.equal(params.KEEP_BACKUP,'');
+ }
+ for(const action of ['modify','recover']) {
+  const scope={t:translator('sk'),ociAction:{vmid:110,action,recoverPrevious:true}};
+  assert.equal(executable(attribute('title'),parent,scope),scope.t(action==='recover'?
+    'vmLxc.ociUpdates.terminalTitleRecover':'vmLxc.ociUpdates.terminalTitleModify'),
+    'registration and editing retain their own titles');
+ }
  for(const frame of ['raw','json']) {
   const f=fixture(handlers[0],'sk'),timers=[];
   const old={readyState:3,onclose:()=>f.callbacks.push(-1),onerror:()=>{},onmessage:()=>{},close(){this.onclose?.({})}};

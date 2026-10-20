@@ -1328,6 +1328,7 @@
       "modify": "Modify",
       "recover": "Recover",
       "terminalTitleUpdate": "Update OCI application",
+      "terminalTitleRecoverPrevious": "Recover the previous OCI installation",
       "terminalTitleModify": "Modify OCI application",
       "terminalTitleRecover": "Recover restored OCI application",
       "terminalDescription": "Runs the same process as the ProxMenux menu: OCI manager Apps → Manage installed OCI applications.",
