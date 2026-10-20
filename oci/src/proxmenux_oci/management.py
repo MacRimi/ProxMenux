@@ -564,13 +564,15 @@ def _removal_summary(project, vmid):
     bridge = oci_remove.private_bridge(primary)
     text = []
     if len(members) > 1 and vmid == primary_id:
-        text += [f"{application} {translate('runs in')} {len(members)} {translate('containers')}. "
-                 f"{translate('All of them are targeted for removal.')}", '']
+        sentence = translate('{application} runs in {count} containers.').format(
+            application=application, count=len(members))
+        text += [f"{sentence} {translate('All of them are targeted for removal.')}", '']
     elif len(members) > 1:
         alone = translate('It cannot be removed on its own, because the application would stop '
                           'working: continuing targets the whole application for removal.')
-        text += [f"CT {vmid} {translate('is one of the')} {len(members)} "
-                 f"{translate('containers of')} {application}. {alone}", '']
+        sentence = translate('CT {vmid} is one of the {count} containers of {application}.').format(
+            vmid=vmid, count=len(members), application=application)
+        text += [f"{sentence} {alone}", '']
     text += [translate('Containers targeted for removal:'), *lines, '',
              translate('Container data targeted for deletion:'), *volumes]
     if bridge and not oci_remove.bridge_in_use(bridge, set(members)):
