@@ -79,6 +79,7 @@ class StorageWordingTests(StorageFixture):
         ui,plan=self.build('paperless-ngx',{'Documents volume size in GB':'30',
             'Where to store the consume and export folders':'managed-volume','Size of each consume/export volume in GB':'3'})
         for text in ['Úložisko pre údaje a dokumenty aplikácie Paperless',
+                'Kam uložiť priečinky consume a export',
                 'Veľkosť dátového zväzku pre dokumenty v GB',
                 'Veľkosť každého dátového zväzku pre consume a export v GB']:
             self.assertIn(text,ui.asked)

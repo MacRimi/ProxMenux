@@ -7564,7 +7564,7 @@
   "Where to store": "Kde uchovávať",
   "Where to store the Immich library": "Kde uložiť knižnicu Immich",
   "Where to store the Nextcloud files, configuration and data": "Kam uložiť súbory, konfiguráciu a dáta Nextcloud",
-  "Where to store the consume and export folders": "Kam uložiť priečinky spotreby a exportu",
+  "Where to store the consume and export folders": "Kam uložiť priečinky consume a export",
   "Where to store the recipe images and files": "Kam ukladať obrázky a súbory receptov",
   "Which guests should this job back up?": "Ktorých hostí by mala táto úloha zálohovať?",
   "While the server allows guest listing, no shares are actually accessible without authentication.": "Server síce dovolí hosťovi zobraziť zoznam, ale bez prihlásenia nie je dostupné žiadne zdieľanie.",
