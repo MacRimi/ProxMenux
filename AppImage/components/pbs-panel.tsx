@@ -14,8 +14,10 @@ import { Label } from "./ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog"
 import { PBSDatastoreCard, type PBSDatastore } from "./pbs-datastore-usage"
+import { PBSProblemMessage } from "./pbs-problem-message"
+import { pbsDiagnostic, pbsResultText, pbsServiceState, pbsTaskType, formatPBSDuration } from "../lib/pbs-messages"
 import { fetchApi } from "../lib/api-config"
-import { useT } from "../lib/i18n/provider"
+import { useT, useI18n } from "../lib/i18n/provider"
 
 interface Connection { id: string; name: string; url: string; token_id: string; fingerprint: string; has_token: boolean }
 interface Detected { name: string; url: string; fingerprint: string }
@@ -26,6 +28,7 @@ interface PBSStatus {
   name: string; version: string | null; fetched_at: number; services: Record<string, string>;
   datastores: PBSDatastore[] | null; tasks: Task[] | null;
   sync: Job[] | null; verify: Job[] | null; prune: Job[] | null; errors: Record<string, string>;
+  error_details?: Record<string, { code: string; params?: Record<string, unknown> }>;
 }
 
 const emptyForm = { id: "", name: "", url: "", token_id: "", fingerprint: "", token_secret: "", username: "", password: "" }
@@ -46,9 +49,10 @@ const TASK_ICONS: Record<string, typeof Activity> = {
   termproxy: Terminal, dircreate: Database, "create-datastore": Database,
 }
 
-// PBS reports "OK", "WARNINGS: n" or the error text; a task without one is still running.
+// PBS reports "unknown", "OK", "WARNINGS: n" or an error; no state is still running.
 function taskState(task: Task): keyof typeof badgeTone {
   if (!task.status) return task.endtime ? "muted" : "running"
+  if (task.status === "unknown") return "muted"
   if (task.status === "OK") return "ok"
   if (task.status.startsWith("WARNINGS")) return "warn"
   return "error"
@@ -56,19 +60,10 @@ function taskState(task: Task): keyof typeof badgeTone {
 
 // PBS reports "OK", "WARNINGS: n" or the error text of the last run.
 function jobState(state?: string): keyof typeof badgeTone {
-  if (!state) return "muted"
+  if (!state || state === "unknown") return "muted"
   if (state.toLowerCase() === "ok") return "ok"
   if (state.toLowerCase().startsWith("warn")) return "warn"
   return "error"
-}
-
-function formatDuration(seconds: number) {
-  if (!Number.isFinite(seconds) || seconds < 0) return "—"
-  if (seconds < 60) return `${Math.round(seconds)}s`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ${Math.round(seconds % 60)}s`
-  const hours = Math.floor(minutes / 60)
-  return hours < 24 ? `${hours}h ${minutes % 60}m` : `${Math.floor(hours / 24)}d ${hours % 24}h`
 }
 
 // `localOnly` is the PBS host's own Monitor: no connection picker, the
@@ -77,6 +72,7 @@ export function PBSPanel({ localOnly = false, view = "all" }: { localOnly?: bool
   const showStores = view !== "tasks"
   const showTasks = view !== "datastores"
   const t = useT()
+  const { language } = useI18n()
   const { data: connections, error: connectionError, mutate: reloadConnections } = useSWR<Connections>(
     "/api/pbs/servers", url => fetchApi<Connections>(url), { revalidateOnFocus: false })
   const [selected, setSelected] = useState("")
@@ -85,7 +81,8 @@ export function PBSPanel({ localOnly = false, view = "all" }: { localOnly?: bool
   const [method, setMethod] = useState<Method>("password")
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState("")
-  const [error, setError] = useState("")
+  const [error, setError] = useState<unknown>(null)
+  const [errorFallback, setErrorFallback] = useState("pbs.saveFailed")
   const { data, error: statusError, isLoading, mutate } = useSWR<PBSStatus>(
     selected ? `/api/pbs/status?server=${encodeURIComponent(selected)}` : null,
     url => fetchApi<PBSStatus>(url), { refreshInterval: 30000, revalidateOnFocus: false })
@@ -102,7 +99,9 @@ export function PBSPanel({ localOnly = false, view = "all" }: { localOnly?: bool
   }
 
   const save = async () => {
+    setErrorFallback("pbs.saveFailed")
     setBusy(true); setError(""); setMessage("")
+    let saved = false
     try {
       // A password is sent once to create a read-only token; only the token is kept.
       const { username, password, ...connection } = form
@@ -113,22 +112,26 @@ export function PBSPanel({ localOnly = false, view = "all" }: { localOnly?: bool
         : await fetchApi<{ id: string }>("/api/pbs/servers", { method: "POST", body: JSON.stringify({
           ...connection, id: form.id || undefined, token_secret: form.token_secret || undefined,
         }) })
+      saved = true
       await reloadConnections()
       setSelected(result.id)
       setForm(emptyForm)
       setManage(false)
-    } catch (err) { setError(err instanceof Error ? err.message : t("pbs.saveFailed")) }
+    } catch (err) { setError(saved ? { body: { code: "pbs_saved_refresh_failed" }, message: pbsDiagnostic(err) } : err) }
     finally { setBusy(false) }
   }
 
   const remove = async () => {
     if (!form.id || !window.confirm(t("pbs.removeConfirm"))) return
+    setErrorFallback("pbs.removeFailed")
     setBusy(true); setError(""); setMessage("")
+    let removed = false
     try {
       await fetchApi(`/api/pbs/servers/${encodeURIComponent(form.id)}`, { method: "DELETE" })
+      removed = true
       setForm(emptyForm)
       await reloadConnections()
-    } catch (err) { setError(err instanceof Error ? err.message : t("pbs.saveFailed")) }
+    } catch (err) { setError(removed ? { body: { code: "pbs_removed_refresh_failed" }, message: pbsDiagnostic(err) } : err) }
     finally { setBusy(false) }
   }
   const now = Date.now() / 1000
@@ -150,8 +153,9 @@ export function PBSPanel({ localOnly = false, view = "all" }: { localOnly?: bool
         <Settings2 className="mr-2 h-4 w-4" />{t("pbs.manage")}
       </Button>
     </div>}
-    {(connectionError || statusError) && <p role="alert" className="text-sm text-red-500">
-      {String((connectionError || statusError)?.message || t("pbs.loadFailed"))}</p>}
+    {(connectionError || statusError) && <div role="alert" className="text-sm text-red-500">
+      <PBSProblemMessage problem={connectionError || statusError} raw={pbsDiagnostic(connectionError || statusError)} />
+    </div>}
     {isLoading && <p role="status" className="text-sm text-muted-foreground">{t("pbs.loading")}</p>}
     {!selected && !connectionError && connections && <p className="text-sm text-muted-foreground">{t("pbs.noServer")}</p>}
     {!localOnly && !manage && (connections?.detected?.length || 0) > 0 && <Card className="bg-card border-border">
@@ -171,7 +175,7 @@ export function PBSPanel({ localOnly = false, view = "all" }: { localOnly?: bool
       </CardContent>
     </Card>}
     {!localOnly && <Dialog open={manage} onOpenChange={open => { if (!busy) setManage(open) }}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-accent [&_input]:bg-background [&_[role=combobox]]:bg-background">
+      <DialogContent className="grid-cols-1 max-w-2xl max-h-[85vh] overflow-y-auto bg-accent [&_input]:bg-background [&_[role=combobox]]:bg-background">
         <DialogHeader>
           <DialogTitle>{t("pbs.manage")}</DialogTitle>
           <DialogDescription>{method === "password" && !form.id ? t("pbs.passwordHelp") : t("pbs.permissionsHelp")}</DialogDescription>
@@ -201,7 +205,7 @@ export function PBSPanel({ localOnly = false, view = "all" }: { localOnly?: bool
                 </Button>)}
             </div>
           </div>}
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {(["name", "url", ...(method === "password" && !form.id ? ["username", "password"] : ["token_id", "token_secret"]), "fingerprint"] as const).map(field => {
               const secret = field === "token_secret" || field === "password"
               return <div key={field} className="space-y-2">
@@ -213,7 +217,9 @@ export function PBSPanel({ localOnly = false, view = "all" }: { localOnly?: bool
             })}
           </div>
           <p className="text-xs text-muted-foreground">{t("pbs.tlsHelp")}</p>
-          {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
+          {!!error && <div role="alert" className="text-sm text-red-500">
+            <PBSProblemMessage problem={error} raw={pbsDiagnostic(error)} fallback={errorFallback} />
+          </div>}
           {message && <p role="status" className="text-sm text-green-500">{message}</p>}
           <div className="flex flex-wrap justify-end gap-2">
             {form.id && <Button variant="outline" disabled={busy} className="mr-auto text-red-500 hover:text-red-500" onClick={remove}>
@@ -230,14 +236,17 @@ export function PBSPanel({ localOnly = false, view = "all" }: { localOnly?: bool
     </Dialog>}
     {data && <>
       {!localOnly && <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-        <span>{data.name} · PBS {data.version || "—"} · {t("pbs.updatedAt", { time: new Date(data.fetched_at * 1000).toLocaleTimeString() })}</span>
+        <span>{data.name} · PBS {data.version || "—"} · {t("pbs.updatedAt", { time: new Date(data.fetched_at * 1000).toLocaleTimeString(language) })}</span>
         {Object.keys(data.services).length > 0 && Object.values(data.services).every(state => state === "active")
           ? <Badge variant="outline" className={badgeTone.ok}>{t("pbs.servicesActive")}</Badge>
           : Object.entries(data.services).filter(([, state]) => state !== "active").map(([service, state]) =>
-            <Badge key={service} variant="outline" className={badgeTone.error}>{service}: {state}</Badge>)}
+            <Badge key={service} variant="outline" className={badgeTone.error}>{service}: {pbsServiceState(state, t)}</Badge>)}
       </div>}
       {Object.entries(data.errors).filter(([section]) => section === "datastores" ? showStores : showTasks)
-        .map(([section, detail]) => <p key={section} role="alert" className="text-sm text-amber-500">{t(`pbs.${section}`)}: {detail}</p>)}
+        .map(([section, detail]) => <div key={section} role="alert" className="text-sm text-amber-500">
+          <p className="font-medium">{t(`pbs.${["datastores", "tasks", "sync", "verify", "prune"].includes(section) ? section : "title"}`)}</p>
+          <PBSProblemMessage problem={data.error_details?.[section]} raw={detail} />
+        </div>)}
 
       {showStores && <Card className="bg-card border-border">
         <CardHeader><CardTitle className="flex items-center text-foreground"><Database className="mr-2 h-5 w-5" />{t("pbs.datastores")}</CardTitle></CardHeader>
@@ -268,14 +277,14 @@ export function PBSPanel({ localOnly = false, view = "all" }: { localOnly?: bool
               return <tr key={row.upid} className="border-b border-border/60 last:border-0">
                 <td className="py-2 pr-3"><span className="flex items-center gap-2">
                   <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="text-foreground">{row.worker_type}</span>
+                  <span className="text-foreground" title={row.worker_type}>{pbsTaskType(row.worker_type, t)}</span>
                   {row.worker_id && <span className="truncate text-muted-foreground">{row.worker_id}</span>}
                 </span></td>
-                <td className="whitespace-nowrap py-2 pr-3 tabular-nums text-muted-foreground">{row.starttime ? new Date(row.starttime * 1000).toLocaleString() : "—"}</td>
-                <td className="whitespace-nowrap py-2 pr-3 tabular-nums text-muted-foreground">{row.starttime && end ? formatDuration(end - row.starttime) : "—"}</td>
-                <td className="py-2"><Badge variant="outline" className={`${badgeTone[state]} max-w-[16rem] truncate`} title={row.status}>
-                  {state === "running" ? t("pbs.running") : row.status || "—"}
-                </Badge></td>
+                <td className="whitespace-nowrap py-2 pr-3 tabular-nums text-muted-foreground">{row.starttime ? new Date(row.starttime * 1000).toLocaleString(language) : "—"}</td>
+                <td className="whitespace-nowrap py-2 pr-3 tabular-nums text-muted-foreground">{row.starttime && end ? formatPBSDuration(end - row.starttime, t) : "—"}</td>
+                <td className="py-2">
+                  <PBSResultBadge status={row.status} running={state === "running"} tone={badgeTone[state]} />
+                </td>
               </tr>
             })}</tbody>
           </table></div>}
@@ -299,7 +308,7 @@ export function PBSPanel({ localOnly = false, view = "all" }: { localOnly?: bool
                 <td className="py-2 pr-3"><span className="text-foreground">{t(`pbs.${kind}`)}</span> <span className="text-muted-foreground">· {row.id}</span></td>
                 <td className="py-2 pr-3 text-muted-foreground">{row.store || "—"}</td>
                 <td className="py-2 pr-3 font-mono text-xs text-muted-foreground">{row.schedule || "—"}</td>
-                <td className="py-2"><Badge variant="outline" className={badgeTone[jobState(row["last-run-state"])]}>{row["last-run-state"] || "—"}</Badge></td>
+                <td className="py-2"><PBSResultBadge status={row["last-run-state"]} tone={badgeTone[jobState(row["last-run-state"])]} /></td>
               </tr>)}</tbody>
             </table></div>
           })()}
@@ -308,4 +317,16 @@ export function PBSPanel({ localOnly = false, view = "all" }: { localOnly?: bool
       </>}
     </>}
   </div>
+}
+
+function PBSResultBadge({ status, running = false, tone }: { status?: string; running?: boolean; tone: string }) {
+  const t = useT()
+  const badge = <Badge variant="outline" className={`${tone} max-w-[16rem] truncate`}>
+    {running ? t("pbs.running") : pbsResultText(status, t)}
+  </Badge>
+  if (running || !status || /^ok$/i.test(status)) return badge
+  return <details className="max-w-xs">
+    <summary className="cursor-pointer" aria-label={t("pbs.technicalDetails")}>{badge}</summary>
+    <pre className="mt-1 whitespace-pre-wrap break-words text-xs text-muted-foreground">{status}</pre>
+  </details>
 }

@@ -6,6 +6,7 @@ on:
       - '.github/workflows/test-pbs.yml'
       - 'AppImage/scripts/*pbs*.py'
       - 'AppImage/scripts/tests/test_pbs.py'
+      - 'AppImage/scripts/tests/test_pbs_i18n.py'
       - 'AppImage/scripts/health_monitor.py'
       - 'AppImage/scripts/auth_manager.py'
       - 'AppImage/scripts/build_appimage.sh'
@@ -51,6 +52,7 @@ jobs:
       - name: Platform, real TLS, APIs, health and AppImage packaging
         run: |
           python -B -m unittest discover -s AppImage/scripts/tests -p test_pbs.py -v
+          python -B -m unittest discover -s AppImage/scripts/tests -p test_pbs_i18n.py -v
           python -B -m unittest discover -s AppImage/scripts/tests -p test_auth_manager_ssl_reload.py -v
           for script in scripts/global/platform-functions.sh scripts/global/repository-functions.sh scripts/menus/pbs_menu.sh scripts/utilities/pbs_update.sh scripts/menus/main_menu.sh scripts/post_install/auto_post_install.sh scripts/post_install/customizable_post_install.sh scripts/post_install/uninstall-tools.sh scripts/global/update-pbs.sh scripts/menus/menu_post_install.sh; do
             bash -n "$script"
