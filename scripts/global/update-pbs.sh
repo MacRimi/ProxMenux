@@ -52,7 +52,7 @@ update_pbs() {
     local available_space
     available_space=$(df /var/cache/apt/archives | awk 'NR==2 {print int($4/1024)}')
     if [ "$available_space" -lt 1024 ]; then
-        msg_error "$(translate "Insufficient disk space. Available: ${available_space}MB")"
+        msg_error "$(translate "Insufficient disk space. Available:") ${available_space}MB"
         return 1
     fi
 
@@ -149,7 +149,7 @@ update_pbs() {
     rm -f "$screen_capture"
 
     if [ $upgrade_exit_code -ne 0 ]; then
-        msg_error "$(translate "System upgrade failed. Check log: $log_file")"
+        msg_error "$(translate "System upgrade failed. Check log:") $log_file"
         echo "Finished: $(date -Iseconds) — upgrade failed (exit $upgrade_exit_code)" >> "$log_file"
         return 1
     fi

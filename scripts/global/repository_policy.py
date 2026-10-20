@@ -7,8 +7,10 @@ repository API responses: they can contain subscription keys or credentials.
 """
 import copy
 import json
+from pathlib import Path
 import re
 import subprocess
+import string
 import sys
 
 ENDPOINT = '/nodes/localhost/apt/repositories'
@@ -26,6 +28,41 @@ PRODUCTS = {
             'test': {'pbs-no-subscription', 'pbs-test', 'pbstest'},
             'ui': 'Administration > Repositories', 'ceph': False},
 }
+BASE = Path(__file__).resolve().parents[2]
+
+
+def N_(text):
+    """Mark a CLI message without changing the policy's English exception."""
+    return text
+
+
+class PolicyError(ValueError):
+    def __init__(self, template, **params):
+        self.template = template
+        self.params = params
+        super().__init__(template.format(**params))
+
+
+def cli_error(error, product):
+    """Localize only PBS CLI diagnostics; policy callers retain English errors."""
+    if product != 'pbs' or not isinstance(error, PolicyError):
+        return str(error)
+    try:
+        language = json.loads((BASE / 'config.json').read_text()).get('language', 'en')
+        if language not in ('sk', 'de', 'es', 'fr', 'it', 'pt', 'sv'):
+            return str(error)
+        catalog = json.loads((BASE / 'lang' / f'{language}.json').read_text())
+        message = catalog.get(error.template)
+        if isinstance(message, str) and message.strip():
+            fields = lambda text: {name for _, name, _, _ in string.Formatter().parse(text) if name is not None}
+            if fields(message) != fields(error.template) or any(
+                spec or conversion for _, _, spec, conversion in string.Formatter().parse(message)
+            ):
+                return str(error)
+            return message.format(**error.params)
+    except (OSError, ValueError, KeyError, IndexError, TypeError, AttributeError):
+        pass
+    return str(error)
 
 
 def run(args):
@@ -43,7 +80,7 @@ def subscription_status(product='pve'):
         except (ValueError, AttributeError):
             status = None
         if status not in ('active', 'notfound', 'expired'):
-            raise ValueError('Subscription status is not unambiguously active, notfound or expired. Check proxmox-backup-manager subscription get locally; no repository changed.')
+            raise PolicyError(N_('Subscription status is not unambiguously active, notfound or expired. Check proxmox-backup-manager subscription get locally; no repository changed.'))
         return status
     # pvesubscription's CLI get printer emits sorted "key: value" lines,
     # including a secret key and server ID. Only parse the exact status line.
@@ -110,12 +147,12 @@ def repository_state(suite, product='pve'):
                 entries.append((file['path'], index, row))
         return data, entries
     except (KeyError, TypeError, ValueError, IndexError) as exc:
-        raise ValueError(f"Proxmox APT repository inventory is invalid or reports parse errors. Fix sources in {p['ui']}; no repository changed.") from exc
+        raise PolicyError(N_('Proxmox APT repository inventory is invalid or reports parse errors. Fix sources in {ui}; no repository changed.'), ui=p['ui']) from exc
 
 
 def evaluate(suite, apply=False, product='pve'):
     if suite not in ('bookworm', 'trixie'):
-        raise ValueError('Unsupported Proxmox suite; no repository changed.')
+        raise PolicyError(N_('Unsupported Proxmox suite; no repository changed.'))
     p = PRODUCTS[product]
     data, entries = repository_state(suite, product)
     pve = []
@@ -139,8 +176,8 @@ def evaluate(suite, apply=False, product='pve'):
             ceph.append((path, index, row))
     # Name the stale sources, never their URIs: those can carry credentials.
     if wrong_pve:
-        raise ValueError(f"This host runs {p['name']} on {suite}, but these {p['name']} repositories are for another suite: "
-                         f"{'; '.join(wrong_pve)}. Disable or remove them in {p['ui']} and run the update again; no repository changed.")
+        raise PolicyError(N_('This host runs {name} on {suite}, but these {name} repositories are for another suite: {details}. Disable or remove them in {ui} and run the update again; no repository changed.'),
+                          name=p['name'], suite=suite, details='; '.join(wrong_pve), ui=p['ui'])
     if wrong_ceph:
         raise ValueError(f"This host runs Proxmox VE on {suite}, but these Enterprise Ceph repositories are for another suite: "
                          f"{'; '.join(wrong_ceph)}. Correct them in Node > Updates > Repositories before switching; no repository changed.")
@@ -152,20 +189,20 @@ def evaluate(suite, apply=False, product='pve'):
     status = subscription_status(product)  # fail closed before any write
     if status == 'active':
         if not pve:
-            raise ValueError(f"Host has an active subscription but no active {p['short']} repository. Configure its Enterprise source in {p['ui']}; no repository changed.")
+            raise PolicyError(N_('Host has an active subscription but no active {short} repository. Configure its Enterprise source in {ui}; no repository changed.'), short=p['short'], ui=p['ui'])
         return 'preserve'
     if not debian:
-        raise ValueError('No active Debian base repository for this suite; configure it in the Proxmox repository UI before continuing.')
+        raise PolicyError(N_('No active Debian base repository for this suite; configure it in the Proxmox repository UI before continuing.'))
     # No active product source or only inaccessible Enterprise. A mixed stanza
     # cannot be disabled without also disabling an unrelated component.
     disable = [item for item in pve if p['enterprise'] in item[2]['Components']] + ceph
     for _, _, row in disable:
         expected = {p['enterprise']} if p['enterprise'] in row['Components'] else {'enterprise'}
         if set(row['Components']) != expected:
-            raise ValueError('Enterprise shares an APT stanza with other components. Split it in the Proxmox repository UI; no repository changed.')
+            raise PolicyError(N_('Enterprise shares an APT stanza with other components. Split it in the Proxmox repository UI; no repository changed.'))
     handles = [r.get('handle') for r in data['standard-repos'] if r.get('handle') == 'no-subscription']
     if len(handles) != 1:
-        raise ValueError('Proxmox no-subscription standard repository handle unavailable; no repository changed.')
+        raise PolicyError(N_('Proxmox no-subscription standard repository handle unavailable; no repository changed.'))
     if not apply:
         return 'offer'
     # Adopt a refreshed digest only after checking the complete expected
@@ -192,11 +229,12 @@ def evaluate(suite, apply=False, product='pve'):
                   for path, index, _ in disable for p, i, row in current):
             raise ValueError('Could not verify the switched repositories; inspect the Proxmox repository UI before retrying.')
     except ValueError as exc:
-        raise ValueError(f"Could not complete or verify the repository switch; changes may be partial and repository state is unknown. Inspect {p['ui']} before retrying; no automatic rollback was attempted.") from exc
+        raise PolicyError(N_('Could not complete or verify the repository switch; changes may be partial and repository state is unknown. Inspect {ui} before retrying; no automatic rollback was attempted.'), ui=p['ui']) from exc
     return 'changed'
 
 
 def main():
+    product = 'pve'
     try:
         if len(sys.argv) not in (3, 4) or sys.argv[1] not in ('plan', 'apply') \
                 or (len(sys.argv) == 4 and sys.argv[3] not in PRODUCTS):
@@ -204,7 +242,7 @@ def main():
         product = sys.argv[3] if len(sys.argv) == 4 else 'pve'
         print(evaluate(sys.argv[2], apply=sys.argv[1] == 'apply', product=product))
     except ValueError as exc:
-        print(str(exc), file=sys.stderr)
+        print(cli_error(exc, product), file=sys.stderr)
         return 1
     return 0
 
