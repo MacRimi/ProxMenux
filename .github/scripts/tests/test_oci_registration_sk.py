@@ -144,6 +144,18 @@ class RegistrationCancellationTests(RegistrationFixture):
                          'Žiadna OCI aplikácia obnovená zo zálohy nečaká na opätovnú registráciu.')
         self.no_effects()
 
+    def test_initial_single_and_multi_dialog_describes_registration_precheck(self):
+        catalog=json.loads((ROOT/'lang/sk.json').read_text())
+        for multi in (False,True):
+            if multi:self.members()
+            with self.subTest(multi=multi),patch.object(i18n,'_language','sk'),patch.object(i18n,'_cache',catalog):
+                self.assertEqual(menu.direct_recovery(ROOT/'oci'),6)
+            text=self.ui.confirm.call_args.args[0]
+            self.assertIn('Pred opätovnou registráciou',text)
+            self.assertNotIn('Obnova najprv',text)
+            self.assertIn('aplikácie sa potom nespúšťajú automaticky',text)
+            self.no_effects()
+
     def test_real_backend_blocker_stays_error_and_uses_registration_wording(self):
         catalog=json.loads((ROOT/'lang/sk.json').read_text())
         plan={'title':'Fictional restored application','restored':[{'vmid':110}],
