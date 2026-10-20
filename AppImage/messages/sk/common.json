@@ -4807,7 +4807,7 @@
       "keepAll": "Ponechať všetky zálohy",
       "description": "Predvolená politika uchovávania záloh uložená v Proxmoxe. Zálohovacie úlohy s vlastnou politikou majú pred týmto predvoleným nastavením prednosť.",
       "refresh": "Obnoviť",
-      "saved": "Politika uchovávania záloh úložiska bola uložená. Prerezávanie sa nevykonalo.",
+      "saved": "Pravidlá uchovávania záloh na úložisku boli uložené. Žiadne zálohy sa teraz neodstránili.",
       "choosePolicy": "Vyberte Ponechať všetky alebo aspoň jeden počet uchovávaných záloh väčší ako nula.",
       "saveFailed": "Nepodarilo sa uložiť politiku uchovávania záloh úložiska. Ak sa konfigurácia zmenila, obnovte zoznam.",
       "loadFailed": "Nepodarilo sa načítať politiku uchovávania záloh úložiska.",
@@ -5641,7 +5641,7 @@
           "nextStep": {
             "missing": "Nastavte si držanie na týchto pracovných miestach, alebo na sklade, na ktorý píšu. Proxmox berie nastavenie úlohy ako prvý, potom úložisko je, potom uzol predvolený.",
             "notDeclared": "Tieto práce uchovávajú všetky kópie, ktoré robia. To je zámerná voľba pre niektoré destinácie, ale potvrďte, že cieľ má priestor na rast.",
-            "onServer": "Tieto úlohy píšu na záložný server, ktorý ich prerezáva podľa vlastných pravidiel. Z tohto uzla sa nedá čítať to, čo drží, takže skontrolujte, či tam nie je."
+            "onServer": "Tieto úlohy ukladajú zálohy na zálohovací server. Ten odstraňuje staré zálohy podľa vlastných pravidiel. Z tohto uzla sa nedá zistiť, ktoré zálohy uchováva; skontroluj ich priamo na zálohovacom serveri."
           },
           "explanation": "O tom, koľko výtlačkov sa uchováva a ako dlho sa uchováva. Bez nej sa cieľ naplní, kým neprestane prijímať nové kópie, a záloha, ktorú nemožno napísať, je tá, o ktorej sa dozviete v deň, keď ju potrebujete."
         },
@@ -7356,7 +7356,7 @@
     "schedule": "Plán",
     "sync": "Synchronizácia",
     "verify": "Overenie",
-    "prune": "Prerezávanie záloh",
+    "prune": "Odstraňovanie starých záloh",
     "overview": "Prehľad",
     "logs": "Systémové záznamy",
     "terminal": "Terminál",
@@ -7373,7 +7373,7 @@
     "estimatedFull": "Odhadované zaplnenie",
     "estimatedFullUnknown": "Zatiaľ sa nedá odhadnúť",
     "duration": "Trvanie",
-    "noJobs": "Nie sú nastavené žiadne plány synchronizácie, overovania ani prerezávania záloh.",
+    "noJobs": "Nie sú nastavené žiadne plány synchronizácie, overovania ani odstraňovania starých záloh.",
     "removeFailed": "Nepodarilo sa odstrániť pripojenie PBS.",
     "savedRefreshFailed": "Pripojenie PBS sa uložilo, ale nepodarilo sa obnoviť zoznam pripojení. Pred ďalšou zmenou obnov stránku.",
     "removedRefreshFailed": "Pripojenie PBS sa odstránilo, ale nepodarilo sa obnoviť zoznam pripojení. Obnov stránku.",
@@ -7415,7 +7415,7 @@
     "taskTypes": {
       "backup": "Zálohovanie", "restore": "Obnova", "verify": "Overovanie",
       "verifyGroup": "Overovanie skupiny záloh", "verifySnapshot": "Overovanie snímky",
-      "prune": "Prerezávanie záloh", "garbageCollection": "Čistenie nepoužívaných dát", "sync": "Synchronizácia",
+      "prune": "Odstraňovanie starých záloh", "garbageCollection": "Čistenie nepoužívaných dát", "sync": "Synchronizácia",
       "updateCheck": "Kontrola aktualizácií", "terminal": "Terminál", "createDatastore": "Vytvorenie dátového úložiska",
       "other": "Iná úloha ({type})"
     },
