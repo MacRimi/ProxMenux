@@ -229,7 +229,7 @@ def offer_recovery(project, ui):
             f"{translate('Until they are registered again they cannot be updated or managed from here. The recovery checks first what prevents their registration; an application with such a problem is not registered. A Rclone mount that has to be enabled again does not prevent it, but then the applications are not started automatically.')}"
             f"\n\n{translate('Recover them now?')}")
     if not ui.confirm(text, default=True):
-        return
+        return CANCELLED
     command = [sys.executable, str(project / 'remote/oci_restore_recovery.py'), 'recover']
     for rule in _restored_firewall_rules(project):
         if ui.confirm(translate('CT {vmid} is a host monitor and had a rule in the host firewall. Allow TCP port {port} from {subnet} through the firewall of this host? Existing firewall rules are not changed.').format(
@@ -252,7 +252,9 @@ def direct_recovery(project):
     if not restored_applications(project):
         ui.message(translate('No restored OCI application is waiting to be recovered.'), translate('Restored OCI applications'))
         return EXIT_DONE
-    offer_recovery(project, ui)
+    completed = offer_recovery(project, ui)
+    if completed is CANCELLED:
+        return EXIT_CANCELLED
     return EXIT_DONE if not restored_applications(project) else EXIT_FAILED
 
 

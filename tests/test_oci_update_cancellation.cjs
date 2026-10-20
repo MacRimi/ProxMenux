@@ -69,7 +69,7 @@ const fs=require('node:fs');
 assert.match(fs.readFileSync('oci/src/proxmenux_oci/management.py','utf8'),/^EXIT_CANCELLED = 6 /m);
 assert.equal(completion.OCI_CANCELLED_EXIT_CODE,6);
 const parent=ts.createSourceFile('vms.tsx',read('components/virtual-machines.tsx'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
-let ociElement,reset,pendingRecoveryClick;
+let ociElement,reset,pendingRecoveryClick,registrationClick,registrationLabel;
 function find(node) {
   if(ts.isJsxSelfClosingElement(node) && node.tagName.getText(parent)==='ScriptTerminalModal' &&
       node.attributes.properties.some(p=>p.name?.getText(parent)==='scriptPath' && p.initializer?.text?.endsWith('/oci/manage_instance.sh'))) ociElement=node;
@@ -77,13 +77,30 @@ function find(node) {
   if(ts.isJsxElement(node) && node.openingElement.tagName.getText(parent)==='Button') {
     const click=node.openingElement.attributes.properties.find(p=>p.name?.getText(parent)==='onClick')?.initializer?.expression;
     if(click?.getText(parent).includes('setOciAction(') && click.getText(parent).includes('action: "update"')) pendingRecoveryClick=click;
+    if(click?.getText(parent).includes('setOciAction(') && click.getText(parent).includes('action: "recover"')) {
+      registrationClick=click;
+      registrationLabel=node.children.find(child=>ts.isJsxExpression(child)&&child.expression)?.expression;
+    }
   }
   ts.forEachChild(node,find);
 }
-find(parent);assert.ok(ociElement);assert.ok(reset);assert.ok(pendingRecoveryClick);
+find(parent);assert.ok(ociElement);assert.ok(reset);assert.ok(pendingRecoveryClick);assert.ok(registrationClick);assert.ok(registrationLabel);
 const attribute=name=>ociElement.attributes.properties.find(p=>p.name?.getText(parent)===name)?.initializer?.expression;
 assert.equal(attribute('cancelledExitCode').getText(parent),'OCI_CANCELLED_EXIT_CODE');
 (async()=>{
+ for(const locale of ['en','sk']) {
+  const scope={t:translator(locale),selectedVM:{vmid:110},applyBackup:false,applyBackupStorage:'',selectedBackupStorage:''};
+  scope.setOciAction=value=>scope.ociAction=value;
+  executable(registrationClick,parent,scope)();
+  assert.equal(scope.ociAction.action,'recover');assert.equal(scope.ociAction.vmid,110);
+  assert.equal(executable(registrationLabel,parent,scope),locale==='sk'?'Znova zaregistrovať':'Register again');
+  assert.equal(executable(attribute('title'),parent,scope),locale==='sk'?
+    'Zaregistrovať OCI aplikácie obnovené zo zálohy':'Register restored OCI applications');
+  scope.selectedVM={vmid:111};
+  assert.equal(executable(attribute('params'),parent,scope).VMID,'110','registration preserves the clicked target context');
+  assert.equal(executable(attribute('params'),parent,scope).ACTION,'recover','registration retains its existing global CLI action');
+  assert.equal(scope.t('vmLxc.ociUpdates.recover'),locale==='sk'?'Obnoviť':'Recover');
+ }
  for(const locale of ['en','sk']) for(const pending of [false,true]) {
   const scope={t:translator(locale), selectedVM:{vmid:110}, ociInstance:{pending},
     applyBackup:false,applyBackupStorage:'',selectedBackupStorage:''};

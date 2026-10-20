@@ -5747,7 +5747,7 @@ export function VirtualMachines() {
                                 onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "recover" })}
                               >
                                 <RotateCcw className="h-4 w-4 mr-1.5" />
-                                {t("vmLxc.ociUpdates.recover")}
+                                {t("vmLxc.ociUpdates.registerRestored")}
                               </Button>
                             </div>
                           )}
