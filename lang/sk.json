@@ -4506,7 +4506,7 @@
   "Operation cancelled by user": "Operácia bola zrušená používateľom",
   "Operation cancelled by user to create backup.": "Operácia bola zrušená používateľom kvôli vytvoreniu zálohy.",
   "Operation cancelled by user.": "Operácia zrušená používateľom.",
-  "Operation cancelled.": "Operation zrušený.",
+  "Operation cancelled.": "Operácia bola zrušená.",
   "Operation cancelled. Cannot continue with an unprivileged container.": "Operácia bola zrušená. S neprivilegovaným kontajnerom sa nedá pokračovať.",
   "Operation log": "Záznam operácie",
   "Operator config re-applied via kernel-agnostic merge": "Vlastné nastavenie správcu bolo znovu použité cez zlúčenie nezávislé od kernelu",
@@ -5070,7 +5070,7 @@
   "Recover or complete the operation?": "Obnoviť alebo dokončiť operation?",
   "Recover restored OCI applications": "Obnovte obnovené aplikácie OCI",
   "Recover the keyfile using your recovery passphrase?": "Obnoviť keyfile pomocou obnovovacej frázy?",
-  "Recover the previous installation": "Obnoviť predchádzajúce zariadenie",
+  "Recover the previous installation": "Obnoviť predchádzajúcu inštaláciu",
   "Recover them now?": "Obnoviť ich teraz?",
   "Recoverable:": "Obnoviteľné:",
   "Recovering the previous installation": "Obnovenie predchádzajúceho zariadenia",
@@ -7200,7 +7200,7 @@
   "Update Export": "Aktualizovať export",
   "Update Lynis to latest version": "Aktualizovať Lynis na najnovšiu verziu",
   "Update NVIDIA in LXC Containers": "Aktualizovať NVIDIA v LXC kontajneroch",
-  "Update OCI": "Aktualizovať OCI",
+  "Update OCI": "Aktualizovať aplikáciu",
   "Update OCI stack": "Aktualizovať OCI stack",
   "Update PBS using configured repositories": "Aktualizovať PBS pomocou nakonfigurovaných repozitárov",
   "Update PVE enterprise repository (Only if using enterprise):": "Aktualizujte PVE enterprise repozitár (iba ak používate enterprise):",
@@ -7216,7 +7216,7 @@
   "Update credentials": "Aktualizovať prihlasovacie údaje",
   "Update every container of the application": "Aktualizovať každý kontajner aplikácie",
   "Update kernel to compatible version": "Aktualizovať kernel na kompatibilnú verziu",
-  "Update now?": "Aktualizácia?",
+  "Update now?": "Spustiť aktualizáciu?",
   "Update package index:": "Aktualizujte index balíkov:",
   "Update prepared": "Aktualizácia",
   "Update selected OCI applications": "Aktualizovať vybrané aplikácie OCI",
@@ -8263,5 +8263,6 @@
   "The main Compose service has no image.": "Hlavná služba v súbore Compose nemá zadaný žiadny obraz.",
   "Invalid Compose volume path:": "Neplatná cesta dátového úložiska v súbore Compose:",
   "Invalid Compose port:": "Neplatný port v súbore Compose:",
-  "Invalid application identifier:": "Neplatný identifikátor aplikácie:"
+  "Invalid application identifier:": "Neplatný identifikátor aplikácie:",
+  "If a newer application image is available, the container is stopped and backed up, and the backup integrity is verified. The container is then updated using the new image.\n\nIf the update fails after the container was changed, ProxMenux attempts to restore the previous installation from the backup. If the operation remains incomplete, select the application in OCI management and choose \"Recover the previous installation\".\n\nHost directories mounted in the container are not restored by the container backup.": "Ak je dostupný novší obraz aplikácie, kontajner sa zastaví, vytvorí sa jeho záloha a overí sa jej integrita. Potom sa kontajner aktualizuje pomocou nového obrazu.\n\nAk aktualizácia po zmene kontajnera zlyhá, ProxMenux sa pokúsi obnoviť predchádzajúcu inštaláciu zo zálohy. Ak operácia zostane nedokončená, v správe OCI vyberte danú aplikáciu a možnosť „Obnoviť predchádzajúcu inštaláciu“.\n\nPripojené adresáre hostiteľa sa zo zálohy kontajnera neobnovujú."
 }

@@ -19,6 +19,16 @@ STATUS_LABELS = {'installed': N_('installed'), 'failed': N_('failed'), 'updating
                  'assembling': N_('assembling')}
 
 
+class CancelledOperation:
+    """An explicit user decline; remains false for menu and batch callers."""
+
+    def __bool__(self):
+        return False
+
+
+CANCELLED = CancelledOperation()
+
+
 def public_row(record, decision):
     return {'vmid': record['vmid'], 'hostname': record.get('deployment', {}).get('hostname',
             f'OCI {record["vmid"]}'),
@@ -461,9 +471,9 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=(), heading=No
             proposal = edit_recreation(record, ui)
             if proposal is None:
                 return False
-        elif not ui.review(translate('If the image channel has a new version, the CT is stopped, backed up and verified, and replaced with the new image to update the container. If the update fails after the container was changed, the backup is restored. An update that stops halfway is recovered from the OCI management menu.'),
+        elif not ui.review(translate('If a newer application image is available, the container is stopped and backed up, and the backup integrity is verified. The container is then updated using the new image.\n\nIf the update fails after the container was changed, ProxMenux attempts to restore the previous installation from the backup. If the operation remains incomplete, select the application in OCI management and choose "Recover the previous installation".\n\nHost directories mounted in the container are not restored by the container backup.'),
                            translate('Update OCI'), question=translate('Update now?'), default=True):
-            return False
+            return CANCELLED
         # Opening/cancelling a confirmation needs no disk or storage probes.
         # Both accepted operations retain this check before the backend starts.
         if not _work_backup_ready(project, ui, row['vmid']):
@@ -650,7 +660,7 @@ def _manage_stack(project, ui, row, action=None, lifecycle_args=()):
                                        'fails after a container was changed, the backups are restored. An operation that stops '
                                        'halfway is recovered from the OCI management menu.').format(count=len(members), vmid=primary_id),
                     translate('Update OCI stack'), question=translate('Update the whole stack?'), default=True):
-                return False
+                return CANCELLED
     else:
         if not ui.review(translate('A coordinated operation has a saved journal. Continuing attempts to recover the previous stack where needed, or finish cleanup for a completed operation. Recovery or cleanup can fail.'), translate('Recover OCI stack'),
                 question=translate('Recover or complete the operation?'), default=True):
@@ -707,6 +717,7 @@ class UnattendedUI:
 
 # Exit codes of `manage`, read by ProxMenux Monitor.
 EXIT_DONE, EXIT_FAILED, EXIT_NOT_OCI, EXIT_BUSY, EXIT_NEEDS_REVIEW, EXIT_TOO_RECENT = 0, 1, 2, 3, 4, 5
+EXIT_CANCELLED = 6  # Interactive update confirmation only; never a successful update.
 
 
 def _image_too_recent(project, vmid, min_age_days):
@@ -765,4 +776,6 @@ def direct_management(project, vmid, action, lifecycle_args=(), unattended=False
         return EXIT_BUSY
     if unattended and ui.declined:
         return EXIT_NEEDS_REVIEW
+    if completed is CANCELLED and not unattended:
+        return EXIT_CANCELLED
     return EXIT_DONE if completed else EXIT_FAILED

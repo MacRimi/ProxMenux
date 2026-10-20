@@ -31,6 +31,7 @@ import {
 import "xterm/css/xterm.css"
 import { API_PORT } from "@/lib/api-config"
 import { getTicketedWsUrl } from "@/lib/terminal-ws"
+import { scriptCompletion } from "@/lib/script-completion"
 import { useT } from "../lib/i18n/provider"
 
 interface WebInteraction {
@@ -52,6 +53,7 @@ interface ScriptTerminalModalProps {
   params?: Record<string, string>
   completedSuccessfullyMessage?: string
   completedWithErrorMessage?: (exitCode: number) => string
+  cancelledExitCode?: number
   // Optional callback fired when the script's WebSocket closes
   // (script_runner sends an exit code and then closes). Lets the
   // parent auto-dismiss the modal — used by host-backup's Restore
@@ -69,6 +71,7 @@ export function ScriptTerminalModal({
   params = { EXECUTION_MODE: "web" },
   completedSuccessfullyMessage,
   completedWithErrorMessage,
+  cancelledExitCode,
   onComplete,
 }: ScriptTerminalModalProps) {
   const t = useT()
@@ -103,10 +106,12 @@ export function ScriptTerminalModal({
 
   const getCompletionMessage = useCallback(
     (exitCode: number) =>
-      exitCode === 0
+      scriptCompletion(exitCode, cancelledExitCode).kind === "cancelled"
+        ? t("scriptTerminal.cancelled")
+        : exitCode === 0
         ? (completedSuccessfullyMessage ?? t("scriptTerminal.completedSuccessfully"))
         : (completedWithErrorMessage?.(exitCode) ?? t("scriptTerminal.completedWithError", { code: exitCode })),
-    [completedSuccessfullyMessage, completedWithErrorMessage, t],
+    [completedSuccessfullyMessage, completedWithErrorMessage, cancelledExitCode, t],
   )
 
   const terminalContainerRef = useRef<HTMLDivElement>(null)
@@ -139,6 +144,11 @@ export function ScriptTerminalModal({
     reconnectTimeoutRef.current = setTimeout(async () => {
       if (wsRef.current?.readyState !== WebSocket.OPEN && termRef.current) {
         if (wsRef.current) {
+          // Replacing a stale socket is not a script result. Its close event
+          // must not complete the operation before the new socket reports it.
+          wsRef.current.onclose = null
+          wsRef.current.onerror = null
+          wsRef.current.onmessage = null
           wsRef.current.close()
         }
 
@@ -176,6 +186,7 @@ const initMessage = {
         }
 
         ws.onmessage = (event) => {
+          if (completionReceivedRef.current) return
           // Filter out pong responses from heartbeat
           if (event.data === '{"type": "pong"}' || event.data === '{"type":"pong"}') {
             return
@@ -189,10 +200,10 @@ const initMessage = {
             : null
           if (exitMatch) {
             const exitCode = Number(exitMatch[1])
-            termRef.current?.write(event.data)
+            if (scriptCompletion(exitCode, cancelledExitCode).kind !== "cancelled") termRef.current?.write(event.data)
             completionReceivedRef.current = true
             setIsComplete(true)
-            termRef.current?.writeln(`\x1b[${exitCode === 0 ? "32" : "31"}m${getCompletionMessage(exitCode)}\x1b[0m`)
+            termRef.current?.writeln(`\x1b[${scriptCompletion(exitCode, cancelledExitCode).color}m${getCompletionMessage(exitCode)}\x1b[0m`)
             onCompleteRef.current?.(exitCode)
             if (ws.readyState === WebSocket.OPEN) ws.close(1000, "script complete")
             return
@@ -223,7 +234,7 @@ const initMessage = {
               const exitCode = Number(msg.exit_code ?? 1)
               completionReceivedRef.current = true
               setIsComplete(true)
-              termRef.current?.writeln(`\x1b[${exitCode === 0 ? "32" : "31"}m${getCompletionMessage(exitCode)}\x1b[0m`)
+              termRef.current?.writeln(`\x1b[${scriptCompletion(exitCode, cancelledExitCode).color}m${getCompletionMessage(exitCode)}\x1b[0m`)
               onCompleteRef.current?.(exitCode)
               if (ws.readyState === WebSocket.OPEN) ws.close(1000, "script complete")
               return
@@ -261,7 +272,7 @@ const initMessage = {
         }
       }
     }, 1000)
-  }, [isOpen, isComplete, scriptPath, getCompletionMessage, t])
+  }, [isOpen, isComplete, scriptPath, getCompletionMessage, cancelledExitCode, t])
 
   const sendKey = useCallback((key: string) => {
     if (!termRef.current) return
@@ -392,6 +403,7 @@ const initMessage = {
     }
 
     ws.onmessage = (event) => {
+      if (completionReceivedRef.current) return
       // Filter out pong responses from heartbeat - don't display in terminal
       if (event.data === '{"type": "pong"}' || event.data === '{"type":"pong"}') {
         return
@@ -405,10 +417,10 @@ const initMessage = {
         : null
       if (exitMatch) {
         const exitCode = Number(exitMatch[1])
-        term.write(event.data)
+        if (scriptCompletion(exitCode, cancelledExitCode).kind !== "cancelled") term.write(event.data)
         completionReceivedRef.current = true
         setIsComplete(true)
-        term.writeln(`\x1b[${exitCode === 0 ? "32" : "31"}m${getCompletionMessage(exitCode)}\x1b[0m`)
+        term.writeln(`\x1b[${scriptCompletion(exitCode, cancelledExitCode).color}m${getCompletionMessage(exitCode)}\x1b[0m`)
         onCompleteRef.current?.(exitCode)
         if (ws.readyState === WebSocket.OPEN) ws.close(1000, "script complete")
         return
@@ -441,7 +453,7 @@ const initMessage = {
           const exitCode = Number(msg.exit_code ?? 1)
           completionReceivedRef.current = true
           setIsComplete(true)
-          term.writeln(`\x1b[${exitCode === 0 ? "32" : "31"}m${getCompletionMessage(exitCode)}\x1b[0m`)
+          term.writeln(`\x1b[${scriptCompletion(exitCode, cancelledExitCode).color}m${getCompletionMessage(exitCode)}\x1b[0m`)
           onCompleteRef.current?.(exitCode)
           if (ws.readyState === WebSocket.OPEN) ws.close(1000, "script complete")
           return
@@ -814,7 +826,7 @@ const initMessage = {
           )}
 
           {(isMobile || isTablet) && (
-            <div className="flex items-center justify-center gap-1.5 px-1 py-2 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex flex-wrap items-center justify-center gap-1.5 px-1 py-2 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <Button
                 onPointerDown={(e) => {
                   e.preventDefault()

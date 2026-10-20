@@ -5319,6 +5319,7 @@
     "websocketError": "Chyba WebSocket spojenia",
     "connectionClosed": "Spojenie bolo zatvorené",
     "completedSuccessfully": "Skript sa úspešne dokončil",
+    "cancelled": "Operácia bola zrušená.",
     "completedWithError": "Skript skončil s chybovým kódom {code}",
     "yes": "Áno",
     "yourInput": "Tvoj vstup:",
