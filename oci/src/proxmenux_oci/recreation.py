@@ -212,8 +212,8 @@ def edit_section(candidate, ui, setting):
         wizard.close()
 
 
-def edit_recreation(record, ui):
-    """Keep a draft across independently editable settings; apply it once."""
+def edit_recreation(record, ui, *, cancelled_result=None):
+    """Keep a draft; optionally distinguish cancellation from an unchanged review."""
     from .cli import _deployment_summary_text
     candidate = copy.deepcopy(record)
     selected = 'cores'
@@ -227,7 +227,7 @@ def edit_recreation(record, ui):
                              title=translate('Modify OCI'), show_tags=False)
         if selected is None or selected == 'discard':
             if not pending or ui.confirm(translate('Discard unapplied changes?'), False):
-                return None
+                return cancelled_result
             selected = 'apply'
         elif selected == 'apply':
             if not pending:

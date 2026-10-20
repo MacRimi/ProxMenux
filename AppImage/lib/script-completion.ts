@@ -1,4 +1,4 @@
-// Native OCI `manage` reserves this code for an explicitly declined update.
+// Native OCI `manage` reserves this code for explicit user cancellation.
 export const OCI_CANCELLED_EXIT_CODE = 6
 
 export function scriptCompletion(exitCode: number, cancelledExitCode?: number) {

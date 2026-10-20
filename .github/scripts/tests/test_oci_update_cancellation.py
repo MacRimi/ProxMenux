@@ -15,7 +15,7 @@ import oci_instances as instances
 import oci_instance_reconcile as reconcile
 
 
-class UpdateCancellationTests(unittest.TestCase):
+class CancellationFixture(unittest.TestCase):
     def setUp(self):
         self.record = {'status': 'installed', 'vmid': 110, 'deployment': {}, 'template': {}}
         self.original = copy.deepcopy(self.record)
@@ -56,6 +56,8 @@ class UpdateCancellationTests(unittest.TestCase):
             mock.assert_not_called()
         self.assertEqual(self.record, self.original)
 
+
+class UpdateCancellationTests(CancellationFixture):
     def test_no_is_a_distinct_falsy_result_before_backup_or_lifecycle(self):
         result = menu.manage_instance(ROOT / 'oci', self.ui, self.row, action='update')
         self.assertIs(result, menu.CANCELLED)

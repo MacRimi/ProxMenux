@@ -95,8 +95,8 @@ assert.equal(attribute('cancelledExitCode').getText(parent),'OCI_CANCELLED_EXIT_
   ref.current.onmessage({data:frame==='raw'?'\r\n[Script exited with code 6]\r\n':JSON.stringify({type:'script_complete',exit_code:6})});
   assert.deepEqual(f.callbacks,[6]);
  }
- for(const code of [6,0,1,undefined]) {
-  const calls=[],row={vmid:110,action:'update'},saved=JSON.stringify(row),ref={current:undefined};
+ for(const action of ['update','modify']) for(const code of [6,0,1,undefined]) {
+  const calls=[],row={vmid:110,action},saved=JSON.stringify(row),ref={current:undefined};
   const scope={...completion,ociAction:row,ociCompletionCodeRef:ref,
     setOciAction:value=>calls.push(['close',value]),fetchApi:(url,options)=>{calls.push(['fetch',url,options]);return Promise.resolve({});},
     invalidateLxcApps:vmid=>calls.push(['invalidate',vmid]),vmModalCacheRef:{current:{mountPoints:new Map()}},

@@ -468,7 +468,9 @@ def manage_instance(project, ui, row, action=None, lifecycle_args=(), heading=No
         proposal = None
         if action == 'modify':
             from .recreation import edit_recreation
-            proposal = edit_recreation(record, ui)
+            proposal = edit_recreation(record, ui, cancelled_result=CANCELLED)
+            if proposal is CANCELLED:
+                return CANCELLED
             if proposal is None:
                 return False
         elif not ui.review(translate('If a newer application image is available, the container is stopped and backed up, and the backup integrity is verified. The container is then updated using the new image.\n\nIf the update fails after the container was changed, ProxMenux attempts to restore the previous installation from the backup. If the operation remains incomplete, select the application in OCI management and choose "Recover the previous installation".\n\nHost directories mounted in the container are not restored by the container backup.'),
@@ -717,7 +719,7 @@ class UnattendedUI:
 
 # Exit codes of `manage`, read by ProxMenux Monitor.
 EXIT_DONE, EXIT_FAILED, EXIT_NOT_OCI, EXIT_BUSY, EXIT_NEEDS_REVIEW, EXIT_TOO_RECENT = 0, 1, 2, 3, 4, 5
-EXIT_CANCELLED = 6  # Interactive update confirmation only; never a successful update.
+EXIT_CANCELLED = 6  # Explicit interactive cancellation; never a successful update.
 
 
 def _image_too_recent(project, vmid, min_age_days):
