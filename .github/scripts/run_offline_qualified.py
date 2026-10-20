@@ -13,6 +13,8 @@ import sys
 import tempfile
 
 PYTHON_FILES = (
+    "AppImage/scripts/tests/test_monitor_links_i18n.py",
+    "AppImage/scripts/tests/test_monitor_links.py",
     "AppImage/scripts/tests/test_local_app_icon_isolation.py",
     "AppImage/scripts/tests/test_local_app_icons.py",
     "AppImage/scripts/tests/test_docker_app_discovery.py",
@@ -28,6 +30,7 @@ PYTHON_FILES = (
     "AppImage/scripts/tests/test_health_persistence_recurrence.py",
 )
 NODE_FILES = (
+    "tests/test_monitor_links_i18n.cjs",
     "tests/lxc_updates/test_local_app_icons_ui.cjs",
     "tests/lxc_updates/test_docker_app_discovery_ui.cjs",
     "tests/lxc_updates/test_native_app_discovery_ui.cjs",

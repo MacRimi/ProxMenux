@@ -6616,6 +6616,17 @@
     "addSelected": "Add selected",
     "pbsWebInterface": "PBS web interface",
     "changeAddress": "Change address",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "errors": {
+      "addressRequired": "Enter the address of the Monitor.",
+      "invalidAddress": "The address must start with http:// or https:// and name a host.",
+      "addressCredentials": "The address must not contain a user or password.",
+      "invalidPort": "The port of the address is not valid.",
+      "invalidRequest": "The request is not valid. Reload the page and try again.",
+      "limit": "At most {count} nodes can be added.",
+      "duplicate": "This address is already in the list.",
+      "notFound": "The node was not found. Reload the list and try again.",
+      "detectedRemove": "Only nodes added by hand can be removed. Detected nodes can be hidden."
+    }
   }
 }
