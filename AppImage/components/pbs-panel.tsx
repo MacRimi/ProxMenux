@@ -208,11 +208,16 @@ export function PBSPanel({ localOnly = false, view = "all" }: { localOnly?: bool
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {(["name", "url", ...(method === "password" && !form.id ? ["username", "password"] : ["token_id", "token_secret"]), "fingerprint"] as const).map(field => {
               const secret = field === "token_secret" || field === "password"
-              return <div key={field} className="space-y-2">
-                <Label htmlFor={`pbs-${field}`}>{t(`pbs.${field}`)}</Label>
+              const help = field === "url" ? "pbs.urlHelp" : field === "username" ? "pbs.usernameHelp"
+                : field === "token_id" ? "pbs.tokenIdHelp" : field === "token_secret"
+                  ? form.id ? "pbs.tokenSecretKeepHelp" : "pbs.tokenSecretHelp" : undefined
+              return <div key={field} className="min-w-0 space-y-2">
+                <Label htmlFor={`pbs-${field}`} className="block leading-5">{t(`pbs.${field}`)}</Label>
                 <Input id={`pbs-${field}`} disabled={busy} type={secret ? "password" : field === "url" ? "url" : "text"}
+                  aria-describedby={help ? `pbs-${field}-help` : undefined}
                   autoComplete={secret ? "new-password" : "off"} placeholder={field === "username" ? "root@pam" : undefined}
                   value={form[field as keyof typeof form]} onChange={event => setForm({ ...form, [field]: event.target.value })} />
+                {help && <p id={`pbs-${field}-help`} className="text-xs text-muted-foreground">{t(help)}</p>}
               </div>
             })}
           </div>
@@ -324,7 +329,7 @@ function PBSResultBadge({ status, running = false, tone }: { status?: string; ru
   const badge = <Badge variant="outline" className={`${tone} max-w-[16rem] truncate`}>
     {running ? t("pbs.running") : pbsResultText(status, t)}
   </Badge>
-  if (running || !status || /^ok$/i.test(status)) return badge
+  if (running || !status || status === "unknown" || /^ok$/i.test(status) || /^WARNINGS:\s*\d+\s*$/i.test(status)) return badge
   return <details className="max-w-xs">
     <summary className="cursor-pointer" aria-label={t("pbs.technicalDetails")}>{badge}</summary>
     <pre className="mt-1 whitespace-pre-wrap break-words text-xs text-muted-foreground">{status}</pre>

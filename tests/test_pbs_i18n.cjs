@@ -97,11 +97,28 @@ async function main() {
     assert.equal(messages.pbsTaskType('garbage_collection',t),t('pbs.taskTypes.garbageCollection'));
     assert.equal(messages.pbsTaskType('future',t),t('pbs.taskTypes.other',{type:'future'}));
     assert.equal(messages.pbsServiceState('constructor',t),t('pbs.serviceStates.unknown'));
+    assert.equal(t('pbs.url'),locale==='sk'?'Adresa HTTPS':'HTTPS address');
+    const diagnosticFixture=fixture(locale),problem=diagnosticFixture.load('AppImage/components/pbs-problem-message.tsx').PBSProblemMessage;
+    for(const code of codes){
+      if(code==='pbs_unknown')continue;
+      const err=failure(code);err.body.params={count:32};
+      const rendered=problem({problem:err,raw:'RAW DIAGNOSTIC'});
+      assert.ok(!text(rendered).includes('RAW DIAGNOSTIC'),'Known '+code+' must not repeat an English application message');
+      assert.ok(!flatten(rendered).some(n=>n.type==='details'));
+    }
+    for(const code of ['future','__proto__','constructor']){
+      const rendered=problem({problem:failure(code),raw:'RAW <img> DIAGNOSTIC'});
+      assert.ok(text(rendered).includes('RAW <img> DIAGNOSTIC'));assert.ok(flatten(rendered).some(n=>n.type==='details'));
+    }
     const unknown=fixture(locale);unknown.status.tasks=[{upid:'unknown',endtime:1700000000,status:'unknown'}];unknown.status.sync=[{id:'unknown','last-run-state':'unknown'}];
     unknown.render();unknown.render();
     const unknownBadges=unknown.nodes().filter(n=>n.type==='Badge'&&text(n)===t('pbs.states.unknown'));
     assert.equal(unknownBadges.length,2);assert.ok(unknownBadges.every(n=>!n.props.className.includes('red-')));
+    unknown.status.tasks=[{upid:'warn',endtime:1700000000,status:'WARNINGS: 3'},{upid:'raw',endtime:1700000000,status:'RAW EXTERNAL TASK ERROR'}];unknown.status.sync=[];unknown.render();
+    const taskDetails=unknown.nodes().filter(n=>n.type==='details');assert.equal(taskDetails.length,1);assert.ok(text(taskDetails[0]).includes('RAW EXTERNAL TASK ERROR'));
     const f=fixture(locale);f.render();f.render();f.button(t('pbs.manage')).props.onClick();f.render();
+    assert.equal(f.input('url').props['aria-describedby'],'pbs-url-help');
+    assert.ok(f.text().includes(t('pbs.urlHelp')));assert.ok(f.text().includes(t('pbs.usernameHelp')));
     f.input('name').props.onChange({target:{value:'Draft'}});f.render();
     f.input('password').props.onChange({target:{value:'fake-one-time-password'}});f.render();
     f.button(t('pbs.cancel')).props.onClick();f.render();assert.equal(f.calls.length,0);
@@ -111,8 +128,11 @@ async function main() {
     assert.ok(f.text().includes(t('pbs.errors.invalidUrl')));assert.equal(f.input('url').props.value,'http://bad.invalid');
     assert.equal(f.calls[0].path,'/api/pbs/servers/login');assert.ok(!Object.hasOwn(JSON.parse(f.calls[0].body),'token_secret'));
     f.button(t('pbs.methodToken')).props.onClick();f.render();await f.button(t('pbs.save')).props.onClick();f.render();
+    assert.ok(f.text().includes(t('pbs.tokenSecretHelp')));assert.ok(!f.text().includes(t('pbs.tokenSecretKeepHelp')));
+    assert.equal(f.input('token_secret').props['aria-describedby'],'pbs-token_secret-help');
     assert.equal(f.calls[1].path,'/api/pbs/servers');assert.ok(!Object.hasOwn(JSON.parse(f.calls[1].body),'password'));
     f.select(t('pbs.editConnection')).props.onValueChange('saved');f.render();await f.button(t('pbs.remove')).props.onClick();f.render();
+    assert.ok(f.text().includes(t('pbs.tokenSecretKeepHelp')));assert.ok(!f.text().includes(t('pbs.tokenSecretHelp')));
     assert.deepEqual(f.confirmations,[t('pbs.removeConfirm')]);assert.equal(f.calls.length,2,'Declined remove has no DELETE');
     const remove=fixture(locale,{confirm:true});remove.render();remove.render();remove.button(t('pbs.manage')).props.onClick();remove.render();remove.select(t('pbs.editConnection')).props.onValueChange('saved');remove.render();
     await remove.button(t('pbs.remove')).props.onClick();remove.render();assert.equal(remove.calls.length,1);assert.equal(remove.calls[0].method,'DELETE');

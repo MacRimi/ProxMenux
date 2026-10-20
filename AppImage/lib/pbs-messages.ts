@@ -20,18 +20,26 @@ const ERROR_KEYS: Record<string, string> = {
   pbs_datastore_offline: "pbs.errors.datastoreOffline", pbs_datastore_unavailable: "pbs.errors.datastoreUnavailable",
 }
 
-// Accept structured codes from fetchApi, partial status or a datastore. Legacy
-// English errors remain diagnostics; never interpret arbitrary text as a key.
-export function pbsErrorText(error: unknown, t: Translate, fallback = "pbs.loadFailed"): string {
+// Accept structured codes, never arbitrary error text as a translation key.
+function pbsErrorTranslation(error: unknown): { key: string; params?: { count: number } } | null {
   const body = error && typeof error === "object" && "body" in error ? error.body : error
-  if (!body || typeof body !== "object" || !("code" in body) || typeof body.code !== "string") return t(fallback)
+  if (!body || typeof body !== "object" || !("code" in body) || typeof body.code !== "string") return null
   if (body.code === "pbs_connection_limit") {
     const params = "params" in body ? body.params : null
     const count = params && typeof params === "object" && "count" in params ? params.count : null
     return typeof count === "number" && Number.isSafeInteger(count) && count > 0
-      ? t("pbs.errors.connectionLimit", { count }) : t(fallback)
+      ? { key: "pbs.errors.connectionLimit", params: { count } } : null
   }
-  return Object.prototype.hasOwnProperty.call(ERROR_KEYS, body.code) ? t(ERROR_KEYS[body.code]) : t(fallback)
+  return Object.prototype.hasOwnProperty.call(ERROR_KEYS, body.code) ? { key: ERROR_KEYS[body.code] } : null
+}
+
+export function pbsIsKnownError(error: unknown): boolean {
+  return pbsErrorTranslation(error) !== null
+}
+
+export function pbsErrorText(error: unknown, t: Translate, fallback = "pbs.loadFailed"): string {
+  const translated = pbsErrorTranslation(error)
+  return translated ? t(translated.key, translated.params) : t(fallback)
 }
 
 export function pbsDiagnostic(error: unknown): string | undefined {
