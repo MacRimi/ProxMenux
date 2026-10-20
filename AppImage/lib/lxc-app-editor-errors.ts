@@ -27,7 +27,7 @@ const RULES: [RegExp, string, string[]][] = [
   [/^no version matched in command output$/, "commandNoVersion", []],
   [/^unsupported method: ([\s\S]+)$/, "unsupportedMethod", ["method"]],
   [/^unknown upstream_type: ([\s\S]+)$/, "unknownUpstream", ["type"]],
-  [/^([\s\S]+): not found$/, "githubNotFound", ["repo"]],
+  [/^([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+): not found$/, "githubNotFound", ["repo"]],
   [/^github rejected the request \(403\)$/, "githubRejected", []],
   [/^github error (\d+)$/, "githubError", ["code"]],
   [/^no tag \/ release name in response$/, "noRelease", []],

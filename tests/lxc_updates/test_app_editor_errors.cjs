@@ -71,20 +71,46 @@ const enErrors = catalogs.en.vmLxc.appEditor.errors, skErrors = catalogs.sk.vmLx
 assert.deepEqual(Object.keys(enErrors).sort(), Object.keys(skErrors).sort())
 for (const [key, template] of Object.entries(enErrors)) {
   const params = Object.fromEntries([...template.matchAll(/\{(\w+)\}/g)].map(([, name]) => [name,
-    ['index','port','max','code'].includes(name) ? '17' : "detail /opt/app --version {literal} <tag>\nnext line"]))
+    ['index','port','max','code'].includes(name) ? '17' : name === 'repo' ? 'owner/project' : "detail /opt/app --version {literal} <tag>\nnext line"]))
   const message = en(`vmLxc.appEditor.errors.${key}`, params)
   assert.equal(localize(message, en), message)
   assert.equal(localize(message, sk), sk(`vmLxc.appEditor.errors.${key}`, params), key)
 }
 assert.equal(localize('binary_args[4] exceeds 256 chars', sk), 'Argument binary_args[4] môže mať najviac 256 znakov.')
 assert.equal(localize('tag_regex is not a valid regex: [bad]\nposition 4', sk), 'Regulárny výraz pre tagy (tag_regex) je neplatný: [bad]\nposition 4')
-for (const message of ['unknown /opt/app --version', '<script>alert(1)</script>', 'file_regex is required extra', 'prefix file_regex is required', 'binary_args[-1] exceeds 4 chars']) {
+for (const message of ['unknown /opt/app --version', 'myapp: not found', 'sh: myapp: not found', '<script>alert(1)</script>', 'file_regex is required extra', 'prefix file_regex is required', 'binary_args[-1] exceeds 4 chars']) {
   assert.equal(localize(message, sk), message, 'Unknown detail must remain intact')
 }
 for (const empty of [null, undefined, '']) assert.equal(localize(empty, sk), '')
 assert.equal(catalogs.sk.vmLxc.appEditor.commandPlaceholder, catalogs.en.vmLxc.appEditor.commandPlaceholder)
 assert.equal(catalogs.sk.vmLxc.appEditor.regexPlaceholderVersion, catalogs.en.vmLxc.appEditor.regexPlaceholderVersion)
 async function main() {
+  const {fixture, flatten, text} = require('./test_native_app_discovery_ui.cjs')
+  const recorded = {id: 'fiction', name: 'Fixture', installed_via: 'file', file_path: 'relative', ports: [], state: {}}
+  for (const locale of ['en', 'sk']) {
+    const t = translate(locale)
+    const f = fixture({apps: [recorded], translate: t, apiError: 'file_path is required and must be an absolute path'})
+    f.render(); await f.settle()
+    const mode = flatten(f.tree()).find(n => n.type === 'button' && text(n).trim() === t('vmLxc.appEditor.editButton'))
+    assert.ok(mode); mode.props.onClick(); f.render()
+    const action = key => flatten(f.tree()).find(n => n.type === 'button' && text(n).trim() === t('vmLxc.appEditor.' + key))
+    await action('removeButton').props.onClick(); f.render()
+    assert.deepEqual(f.confirmPrompts, [t('vmLxc.appEditor.confirmRemove')])
+    assert.equal(f.calls.filter(c => c.method === 'DELETE').length, 0)
+    assert.equal(f.cachedWrites.length, 0, 'decline leaves cache untouched')
+    await action('editFieldsButton').props.onClick(); f.render()
+    await f.button('saveButton').props.onClick(); f.render()
+    assert.ok(text(f.tree()).includes(t('vmLxc.appEditor.errors.filePath')))
+    assert.equal(flatten(f.tree()).find(n => n.props?.id === 'app-file-path').props.value, 'relative')
+    assert.equal(f.calls.filter(c => c.method === 'PUT').length, 1)
+    assert.equal(f.cachedWrites.length, 0, 'failed save preserves cached record')
+    await f.button('testDetectorButton').props.onClick(); f.render()
+    assert.ok(text(f.tree()).includes(t('vmLxc.appEditor.errors.filePath')))
+    const before = f.calls.filter(c => c.method && c.method !== 'GET').length
+    f.button('cancelButton').props.onClick(); f.render()
+    assert.equal(f.calls.filter(c => c.method && c.method !== 'GET').length, before)
+    assert.ok(text(f.tree()).includes('Fixture'))
+  }
   let requests = 0
   const backend = 'file_path is required and must be an absolute path'
   const {fetchApi} = load('lib/api-config.ts', {fetch: async () => {
