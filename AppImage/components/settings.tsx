@@ -9,6 +9,7 @@ import { NotificationSettings } from "./notification-settings"
 import { HealthThresholds } from "./health-thresholds"
 import { LxcUpdateDetection } from "./lxc-update-detection"
 import { DiskExclusions } from "./disk-exclusions"
+import { optimizationDescription, optimizationToolName } from "../lib/optimization-descriptions"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Switch } from "./ui/switch"
@@ -580,7 +581,7 @@ export function Settings() {
     if (entries.length === 0) return
     const batch = entries.map(e => `${e.source}:${e.function}:${e.key}`).join("\n")
     const title = entries.length === 1
-      ? t("settings.optimizations.updateOneTitle", { name: entries[0].name })
+      ? t("settings.optimizations.updateOneTitle", { name: optimizationToolName(entries[0].key, entries[0].name, t) })
       : t("settings.optimizations.updateManyTitle", { count: entries.length })
     const description = entries.length === 1
       ? t("settings.optimizations.updateOneDescription", { functionName: entries[0].function, source: entries[0].source })
@@ -2117,7 +2118,7 @@ export function Settings() {
                         <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                           hasUpdate ? 'bg-purple-400' : (isDeprecated ? 'bg-amber-500' : 'bg-green-500')
                         }`} />
-                        <span className="text-sm font-medium truncate">{tool.name}</span>
+                        <span className="text-sm font-medium truncate">{optimizationToolName(tool.key, tool.name, t)}</span>
                         {isDeprecated && (
                           <span className="text-[9px] uppercase tracking-wider text-amber-500 bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded flex-shrink-0">
                             {t("settings.optimizations.legacy")}
@@ -2133,7 +2134,7 @@ export function Settings() {
                             <button
                               onClick={(e) => { e.stopPropagation(); handleSingleToolUpdate(tool) }}
                               className="text-purple-300 hover:text-purple-200 transition-colors"
-                              title={t("settings.optimizations.updateToolTitle", { name: tool.name, version: tool.available_version || "?" })}
+                              title={t("settings.optimizations.updateToolTitle", { name: optimizationToolName(tool.key, tool.name, t), version: tool.available_version || "?" })}
                             >
                               <ArrowUpCircle className="h-4 w-4" />
                             </button>
@@ -2289,13 +2290,13 @@ export function Settings() {
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium">{tool.name}</span>
+                        <span className="text-sm font-medium">{optimizationToolName(tool.key, tool.name, t)}</span>
                         <span className="text-[10px] text-purple-300 bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded font-mono">
                           v{tool.version || '1.0'} → v{tool.available_version || '?'}
                         </span>
                       </div>
                       {tool.description && (
-                        <p className="text-xs text-muted-foreground mt-1 leading-snug">{tool.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1 leading-snug">{optimizationDescription(tool.description, t)}</p>
                       )}
                     </div>
                   </label>

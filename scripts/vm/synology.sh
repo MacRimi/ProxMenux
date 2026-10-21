@@ -90,7 +90,7 @@ VM_STORAGE_IOMMU_PENDING_REBOOT=0
 
 function exit_script() {
   clear
-      if whiptail --backtitle "ProxMenuX" --title "$NAME" --yesno "$(translate "This will create a New $NAME. Proceed?")" 10 58; then
+      if whiptail --backtitle "ProxMenuX" --title "$NAME" --yesno "$(printf "$(translate "This will create a New %s. Proceed?")" "$NAME")" 10 58; then
         start_script
       else
         clear
@@ -104,7 +104,7 @@ function exit_script() {
 function header_info() {
   clear
   show_proxmenux_logo
-  msg_title "Synology VM Creator"
+  msg_title "$(translate "Synology VM Creator")"
 }
 # ==========================================================
 
@@ -211,13 +211,13 @@ function run_gpu_passthrough_wizard() {
 # start Script
 # ==========================================================
 function start_script() {
-  if (whiptail --backtitle "ProxMenuX" --title "SETTINGS" --yesno "$(translate  "Use Default Settings?")" --no-button Advanced 10 58); then
+  if (whiptail --backtitle "ProxMenuX" --title "$(translate "SETTINGS")" --yesno "$(translate  "Use Default Settings?")" --no-button "$(translate "Advanced")" 10 58); then
     header_info
-    echo -e "${DEF}Using Default Settings${CL}"
+    echo -e "${DEF}$(translate "Using Default Settings")${CL}"
     default_settings || return 1
   else
     header_info
-    echo -e "${CUS}Using Advanced Settings${CL}"
+    echo -e "${CUS}$(translate "Using Advanced Settings")${CL}"
     advanced_settings || return 1
   fi
   return 0
@@ -247,21 +247,21 @@ function default_settings() {
   SERIAL_PORT="socket"
   START_VM="no"
   
-  echo -e " ${TAB}${DGN}Using Virtual Machine ID: ${BGN}${VMID}${CL}"
-  echo -e " ${TAB}${DGN}Using Machine Type: ${BGN}q35${CL}"
-  echo -e " ${TAB}${DGN}Using BIOS Type: ${BGN}OVMF (UEFI)${CL}"
-  echo -e " ${TAB}${DGN}Using Hostname: ${BGN}${HN}${CL}"
-  echo -e " ${TAB}${DGN}Using CPU Model: ${BGN}Host${CL}"
-  echo -e " ${TAB}${DGN}Allocated Cores: ${BGN}${CORE_COUNT}${CL}"
-  echo -e " ${TAB}${DGN}Allocated RAM: ${BGN}${RAM_SIZE}${CL}"
-  echo -e " ${TAB}${DGN}Using Bridge: ${BGN}${BRG}${CL}"
-  echo -e " ${TAB}${DGN}Using MAC Address: ${BGN}${MAC}${CL}"
-  echo -e " ${TAB}${DGN}Using VLAN: ${BGN}Default${CL}"
-  echo -e " ${TAB}${DGN}Using Interface MTU Size: ${BGN}Default${CL}"
-  echo -e " ${TAB}${DGN}Configuring Serial Port: ${BGN}${SERIAL_PORT}${CL}"
-  echo -e " ${TAB}${DGN}Start VM when completed: ${BGN}${START_VM}${CL}"
+  echo -e " ${TAB}${DGN}$(translate "Using Virtual Machine ID:") ${BGN}${VMID}${CL}"
+  echo -e " ${TAB}${DGN}$(translate "Using Machine Type:") ${BGN}q35${CL}"
+  echo -e " ${TAB}${DGN}$(translate "Using BIOS Type:") ${BGN}OVMF (UEFI)${CL}"
+  echo -e " ${TAB}${DGN}$(translate "Using Hostname:") ${BGN}${HN}${CL}"
+  echo -e " ${TAB}${DGN}$(translate "Using CPU Model:") ${BGN}Host${CL}"
+  echo -e " ${TAB}${DGN}$(translate "Allocated Cores:") ${BGN}${CORE_COUNT}${CL}"
+  echo -e " ${TAB}${DGN}$(translate "Allocated RAM:") ${BGN}${RAM_SIZE}${CL}"
+  echo -e " ${TAB}${DGN}$(translate "Using Bridge:") ${BGN}${BRG}${CL}"
+  echo -e " ${TAB}${DGN}$(translate "Using MAC Address:") ${BGN}${MAC}${CL}"
+  echo -e " ${TAB}${DGN}$(translate "Using VLAN:") ${BGN}$(translate "Default")${CL}"
+  echo -e " ${TAB}${DGN}$(translate "Using Interface MTU Size:") ${BGN}$(translate "Default")${CL}"
+  echo -e " ${TAB}${DGN}$(translate "Configuring Serial Port:") ${BGN}${SERIAL_PORT}${CL}"
+  echo -e " ${TAB}${DGN}$(translate "Start VM when completed:") ${BGN}${START_VM}${CL}"
   echo -e
-  echo -e "${DEF}Creating a $NAME using the above default settings${CL}"
+  echo -e "${DEF}$(printf "$(translate "Creating a %s using the above default settings")" "$NAME")${CL}"
  
   sleep 1
   select_disk_type || return 1
@@ -278,16 +278,16 @@ function default_settings() {
 function advanced_settings() {
   # VM ID Selection
   while true; do
-    if VMID=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "Set Virtual Machine ID")" 8 58 $NEXTID --title "VIRTUAL MACHINE ID" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+    if VMID=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "Set Virtual Machine ID")" 8 58 $NEXTID --title "$(translate "VIRTUAL MACHINE ID")" --cancel-button "$(translate "Exit-Script")" 3>&1 1>&2 2>&3); then
       if [ -z "$VMID" ]; then
         VMID="$NEXTID"
       fi
       if pct status "$VMID" &>/dev/null || qm status "$VMID" &>/dev/null; then
-        echo -e "${CROSS}${RD} ID $VMID is already in use${CL}"
+        echo -e "${CROSS}${RD} $(printf "$(translate "ID %s is already in use")" "$VMID")${CL}"
         sleep 1
         continue
       fi
-      echo -e "${DGN}Virtual Machine ID: ${BGN}$VMID${CL}"
+      echo -e "${DGN}$(translate "Virtual Machine ID:") ${BGN}$VMID${CL}"
       break
     else
       exit_script
@@ -295,16 +295,16 @@ function advanced_settings() {
   done
 
   # Machine Type Selection
-  if MACH=$(whiptail --backtitle "ProxMenuX" --title "$(translate "MACHINE TYPE")" --radiolist --cancel-button Exit-Script "Choose Type" 10 58 2 \
-    "q35" "Machine q35" ON \
-    "i440fx" "Machine i440fx" OFF \
+  if MACH=$(whiptail --backtitle "ProxMenuX" --title "$(translate "MACHINE TYPE")" --radiolist --cancel-button "$(translate "Exit-Script")" "$(translate "Choose Type")" 10 58 2 \
+    "q35" "$(translate "Machine q35")" ON \
+    "i440fx" "$(translate "Machine i440fx")" OFF \
     3>&1 1>&2 2>&3); then
     if [ $MACH = q35 ]; then
-      echo -e "${DGN}Using Machine Type: ${BGN}$MACH${CL}"
+      echo -e "${DGN}$(translate "Using Machine Type:") ${BGN}$MACH${CL}"
       FORMAT=""
       MACHINE=" -machine q35"
     else
-      echo -e "${DGN}Using Machine Type: ${BGN}$MACH${CL}"
+      echo -e "${DGN}$(translate "Using Machine Type:") ${BGN}$MACH${CL}"
       FORMAT=",efitype=4m"
       MACHINE=""
     fi
@@ -313,15 +313,15 @@ function advanced_settings() {
   fi
 
     # BIOS Type Selection 
-  if BIOS=$(whiptail --backtitle "ProxMenuX" --title "$(translate "BIOS TYPE")" --radiolist --cancel-button Exit-Script "Choose BIOS Type" 10 58 2 \
+  if BIOS=$(whiptail --backtitle "ProxMenuX" --title "$(translate "BIOS TYPE")" --radiolist --cancel-button "$(translate "Exit-Script")" "$(translate "Choose BIOS Type")" 10 58 2 \
     "ovmf" "UEFI (OVMF)" ON \
-    "seabios" "SeaBIOS (Legacy)" OFF \
+    "seabios" "$(translate "SeaBIOS (Legacy)")" OFF \
     3>&1 1>&2 2>&3); then
     if [ "$BIOS" = "seabios" ]; then
-        echo -e "${DGN}Using BIOS Type: ${BGN}SeaBIOS${CL}"
+        echo -e "${DGN}$(translate "Using BIOS Type:") ${BGN}SeaBIOS${CL}"
         BIOS_TYPE=" -bios seabios"
     else
-        echo -e "${DGN}Using BIOS Type: ${BGN}OVMF (UEFI)${CL}"
+        echo -e "${DGN}$(translate "Using BIOS Type:") ${BGN}OVMF (UEFI)${CL}"
         BIOS_TYPE=" -bios ovmf"
     fi
   else
@@ -329,28 +329,28 @@ function advanced_settings() {
    fi
 
   # Hostname Selection
-  if VM_NAME=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "Set Hostname")" 8 58 Synology-DSM --title "HOSTNAME" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+  if VM_NAME=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "Set Hostname")" 8 58 Synology-DSM --title "$(translate "HOSTNAME")" --cancel-button "$(translate "Exit-Script")" 3>&1 1>&2 2>&3); then
     if [ -z $VM_NAME ]; then
       HN="Synology-DSM"
-      echo -e "${DGN}Using Hostname: ${BGN}$HN${CL}"
+      echo -e "${DGN}$(translate "Using Hostname:") ${BGN}$HN${CL}"
     else
       HN=$(echo ${VM_NAME,,} | tr -d ' ')
-      echo -e "${DGN}Using Hostname: ${BGN}$HN${CL}"
+      echo -e "${DGN}$(translate "Using Hostname:") ${BGN}$HN${CL}"
     fi
   else
     exit_script
   fi
 
   # CPU Type Selection 
-  if CPU_TYPE1=$(whiptail --backtitle "ProxMenuX" --title "$(translate "CPU MODEL")" --radiolist "Choose" --cancel-button Exit-Script 10 58 2 \
+  if CPU_TYPE1=$(whiptail --backtitle "ProxMenuX" --title "$(translate "CPU MODEL")" --radiolist "$(translate "Choose")" --cancel-button "$(translate "Exit-Script")" 10 58 2 \
     "1" "Host" ON \
     "0" "KVM64" OFF \
     3>&1 1>&2 2>&3); then
     if [ $CPU_TYPE1 = "1" ]; then
-      echo -e "${DGN}Using CPU Model: ${BGN}Host${CL}"
+      echo -e "${DGN}$(translate "Using CPU Model:") ${BGN}Host${CL}"
       CPU_TYPE=" -cpu host"
     else
-      echo -e "${DGN}Using CPU Model: ${BGN}KVM64${CL}"
+      echo -e "${DGN}$(translate "Using CPU Model:") ${BGN}KVM64${CL}"
       CPU_TYPE=""
     fi
   else
@@ -358,77 +358,77 @@ function advanced_settings() {
   fi
 
   # Core Count Selection
-  if CORE_COUNT=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "Allocate CPU Cores")" 8 58 2 --title "CORE COUNT" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+  if CORE_COUNT=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "Allocate CPU Cores")" 8 58 2 --title "$(translate "CORE COUNT")" --cancel-button "$(translate "Exit-Script")" 3>&1 1>&2 2>&3); then
     if [ -z $CORE_COUNT ]; then
       CORE_COUNT="2"
-      echo -e "${DGN}Allocated Cores: ${BGN}$CORE_COUNT${CL}"
+      echo -e "${DGN}$(translate "Allocated Cores:") ${BGN}$CORE_COUNT${CL}"
     else
-      echo -e "${DGN}Allocated Cores: ${BGN}$CORE_COUNT${CL}"
+      echo -e "${DGN}$(translate "Allocated Cores:") ${BGN}$CORE_COUNT${CL}"
     fi
   else
     exit_script
   fi
 
   # RAM Size Selection
-  if RAM_SIZE=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "Allocate RAM in MiB")" 8 58 4096 --title "RAM" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+  if RAM_SIZE=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "Allocate RAM in MiB")" 8 58 4096 --title "RAM" --cancel-button "$(translate "Exit-Script")" 3>&1 1>&2 2>&3); then
     if [ -z $RAM_SIZE ]; then
       RAM_SIZE="4096"
-      echo -e "${DGN}Allocated RAM: ${BGN}$RAM_SIZE${CL}"
+      echo -e "${DGN}$(translate "Allocated RAM:") ${BGN}$RAM_SIZE${CL}"
     else
-      echo -e "${DGN}Allocated RAM: ${BGN}$RAM_SIZE${CL}"
+      echo -e "${DGN}$(translate "Allocated RAM:") ${BGN}$RAM_SIZE${CL}"
     fi
   else
     exit_script
   fi
 
   # Bridge Selection
-  if BRG=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "Set a Bridge")" 8 58 vmbr0 --title "BRIDGE" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+  if BRG=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "Set a Bridge")" 8 58 vmbr0 --title "$(translate "BRIDGE")" --cancel-button "$(translate "Exit-Script")" 3>&1 1>&2 2>&3); then
     if [ -z $BRG ]; then
       BRG="vmbr0"
-      echo -e "${DGN}Using Bridge: ${BGN}$BRG${CL}"
+      echo -e "${DGN}$(translate "Using Bridge:") ${BGN}$BRG${CL}"
     else
-      echo -e "${DGN}Using Bridge: ${BGN}$BRG${CL}"
+      echo -e "${DGN}$(translate "Using Bridge:") ${BGN}$BRG${CL}"
     fi
   else
     exit_script
   fi
 
   # MAC Address Selection
-  if MAC1=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "Set a MAC Address")" 8 58 $GEN_MAC --title "MAC ADDRESS" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+  if MAC1=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "Set a MAC Address")" 8 58 $GEN_MAC --title "$(translate "MAC ADDRESS")" --cancel-button "$(translate "Exit-Script")" 3>&1 1>&2 2>&3); then
     if [ -z $MAC1 ]; then
       MAC="$GEN_MAC"
-      echo -e "${DGN}Using MAC Address: ${BGN}$MAC${CL}"
+      echo -e "${DGN}$(translate "Using MAC Address:") ${BGN}$MAC${CL}"
     else
       MAC="$MAC1"
-      echo -e "${DGN}Using MAC Address: ${BGN}$MAC1${CL}"
+      echo -e "${DGN}$(translate "Using MAC Address:") ${BGN}$MAC1${CL}"
     fi
   else
     exit_script
   fi
 
   # VLAN Selection
-  if VLAN1=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "Set a Vlan(leave blank for default)")" 8 58 --title "VLAN" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+  if VLAN1=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "Set a Vlan(leave blank for default)")" 8 58 --title "VLAN" --cancel-button "$(translate "Exit-Script")" 3>&1 1>&2 2>&3); then
     if [ -z $VLAN1 ]; then
-      VLAN1="Default"
+      VLAN1="$(translate "Default")"
       VLAN=""
-      echo -e "${DGN}Using Vlan: ${BGN}$VLAN1${CL}"
+      echo -e "${DGN}$(translate "Using Vlan:") ${BGN}$VLAN1${CL}"
     else
       VLAN=",tag=$VLAN1"
-      echo -e "${DGN}Using Vlan: ${BGN}$VLAN1${CL}"
+      echo -e "${DGN}$(translate "Using Vlan:") ${BGN}$VLAN1${CL}"
     fi
   else
     exit_script
   fi
 
   # MTU Selection
-  if MTU1=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "Set Interface MTU Size (leave blank for default)")" 8 58 --title "MTU SIZE" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+  if MTU1=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "Set Interface MTU Size (leave blank for default)")" 8 58 --title "$(translate "MTU SIZE")" --cancel-button "$(translate "Exit-Script")" 3>&1 1>&2 2>&3); then
     if [ -z $MTU1 ]; then
-      MTU1="Default"
+      MTU1="$(translate "Default")"
       MTU=""
-      echo -e "${DGN}Using Interface MTU Size: ${BGN}$MTU1${CL}"
+      echo -e "${DGN}$(translate "Using Interface MTU Size:") ${BGN}$MTU1${CL}"
     else
       MTU=",mtu=$MTU1"
-      echo -e "${DGN}Using Interface MTU Size: ${BGN}$MTU1${CL}"
+      echo -e "${DGN}$(translate "Using Interface MTU Size:") ${BGN}$MTU1${CL}"
     fi
   else
     exit_script
@@ -437,15 +437,15 @@ function advanced_settings() {
 
 
   # Confirmation
-  if (whiptail --backtitle "ProxMenuX" --title "$(translate "ADVANCED SETTINGS COMPLETE")" --yesno "Ready to create a $NAME?" --no-button Do-Over 10 58); then
+  if (whiptail --backtitle "ProxMenuX" --title "$(translate "ADVANCED SETTINGS COMPLETE")" --yesno "$(printf "$(translate "Ready to create a %s?")" "$NAME")" --no-button "$(translate "Do-Over")" 10 58); then
     echo -e
-    echo -e "${CUS}Creating a $NAME using the above advanced settings${CL}"
+    echo -e "${CUS}$(printf "$(translate "Creating a %s using the above advanced settings")" "$NAME")${CL}"
     sleep 1
     select_disk_type || return 1
   else
    header_info
    sleep 1
-   echo -e "${CUS}Using Advanced Settings${CL}"
+   echo -e "${CUS}$(translate "Using Advanced Settings")${CL}"
    advanced_settings
   fi
 }
@@ -482,13 +482,13 @@ function select_disk_type() {
 
   while true; do
     local choice
-    choice=$(whiptail --backtitle "ProxMenuX" --title "STORAGE PLAN" --menu "$(_build_storage_plan_summary)" 18 78 5 \
+    choice=$(whiptail --backtitle "ProxMenuX" --title "$(translate "STORAGE PLAN")" --menu "$(_build_storage_plan_summary)" 18 78 5 \
       "a" "$(translate "Add virtual disk")" \
       "b" "$(translate "Add import disk")" \
       "c" "$(translate "Add Controller or NVMe (PCI passthrough)")" \
       "r" "$(translate "Reset current storage selection")" \
       "d" "$(translate "──── [ Finish and continue ] ────")" \
-      --ok-button "Select" --cancel-button "Cancel" 3>&1 1>&2 2>&3) || {
+      --ok-button "$(translate "Select")" --cancel-button "$(translate "Cancel")" 3>&1 1>&2 2>&3) || {
       msg_warn "$(translate "Storage plan selection cancelled.")"
       return 1
     }
@@ -560,7 +560,7 @@ function select_virtual_disk() {
   local VALID
   VALID=$(pvesm status -content images | awk 'NR>1')
   if [[ -z "$VALID" ]]; then
-    msg_error "Unable to detect a valid storage location."
+    msg_error "$(translate "Unable to detect a valid storage location.")"
     return 1
   fi
 
@@ -577,7 +577,7 @@ function select_virtual_disk() {
 
   local DISK_SIZE
   stop_spinner
-  DISK_SIZE=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "System Disk Size (GB)")" 8 58 32 --title "VIRTUAL DISK" --cancel-button Cancel 3>&1 1>&2 2>&3) || return 0
+  DISK_SIZE=$(whiptail --backtitle "ProxMenuX" --inputbox "$(translate "System Disk Size (GB)")" 8 58 32 --title "$(translate "VIRTUAL DISK")" --cancel-button "$(translate "Cancel")" 3>&1 1>&2 2>&3) || return 0
   [[ -z "$DISK_SIZE" ]] && DISK_SIZE="32"
 
   VIRTUAL_DISKS+=("${STORAGE}:${DISK_SIZE}")
@@ -592,7 +592,7 @@ function select_controller_nvme() {
     fi
   elif declare -F _pci_is_iommu_active >/dev/null 2>&1; then
     if ! _pci_is_iommu_active; then
-      whiptail --title "Controller + NVMe" --msgbox \
+      whiptail --title "$(translate "Controller + NVMe")" --msgbox \
 "$(translate "IOMMU is not active on this host.")\n\n$(translate "Controller/NVMe passthrough requires IOMMU enabled in BIOS/UEFI and kernel.")\n\n$(translate "Enable IOMMU, reboot the host, and try again.")" \
         14 90
       return 1
@@ -675,12 +675,12 @@ function select_controller_nvme() {
         msg+="$(translate "Hidden for safety"):\n${blocked_report}"
       fi
     fi
-    whiptail --title "Controller + NVMe" --msgbox "$msg" 18 84
+    whiptail --title "$(translate "Controller + NVMe")" --msgbox "$msg" 18 84
     return 1
   fi
 
   local selected
-  selected=$(whiptail --title "Controller + NVMe" --checklist \
+  selected=$(whiptail --title "$(translate "Controller + NVMe")" --checklist \
     "$(translate "Select available Controllers/NVMe to add:")" 20 96 10 \
     "${menu_items[@]}" 3>&1 1>&2 2>&3) || return 1
 
@@ -692,7 +692,7 @@ function select_controller_nvme() {
 
   if [[ ${#CONTROLLER_NVME_PCIS[@]} -gt 0 ]] && declare -F _vm_storage_confirm_controller_passthrough_risk >/dev/null 2>&1; then
     local vm_name_for_notice="${HN:-$NAME}"
-    if ! _vm_storage_confirm_controller_passthrough_risk "${VMID:-}" "$vm_name_for_notice" "Controller + NVMe"; then
+    if ! _vm_storage_confirm_controller_passthrough_risk "${VMID:-}" "$vm_name_for_notice" "$(translate "Controller + NVMe")"; then
       CONTROLLER_NVME_PCIS=()
       return 1
     fi
@@ -745,18 +745,18 @@ function prompt_controller_conflict_policy() {
 function select_loader() {
   # Ensure the images directory exists
   if [ ! -d "$IMAGES_DIR" ]; then
-    msg_info "Creating images directory"
+    msg_info "$(translate "Creating images directory")"
     mkdir -p "$IMAGES_DIR"
     chmod 755 "$IMAGES_DIR"
-    msg_ok "Images directory created: $IMAGES_DIR"
+    msg_ok "$(printf "$(translate "Images directory created: %s")" "$IMAGES_DIR")"
   fi
 
   # Create the loader selection menu
-  LOADER_OPTION=$(whiptail --backtitle "ProxMenuX" --title "SELECT LOADER" --menu "$(translate "Choose a loader for Synology DSM:")" 15 70 4 \
+  LOADER_OPTION=$(whiptail --backtitle "ProxMenuX" --title "$(translate "SELECT LOADER")" --menu "$(translate "Choose a loader for Synology DSM:")" 15 70 4 \
     "1" "AuxXxilium Arc Loader" \
     "2" "RedPill Loader (RROrg - RR)" \
     "3" "Alpine RedPill Loader (PeterSuh-Q3 M-shell)" \
-    "4" "Custom Loader Image (from $IMAGES_DIR)" \
+    "4" "$(printf "$(translate "Custom Loader Image (from %s)")" "$IMAGES_DIR")" \
     3>&1 1>&2 2>&3)
 
   if [ -z "$LOADER_OPTION" ]; then
@@ -768,28 +768,28 @@ function select_loader() {
       LOADER_TYPE="arc"
       LOADER_NAME="AuxXxilium Arc"
       LOADER_URL="https://github.com/AuxXxilium/arc/"
-      echo -e "${DGN}${TAB}Selected Loader: ${BGN}$LOADER_NAME${CL}"
+      echo -e "${DGN}${TAB}$(translate "Selected Loader:") ${BGN}$LOADER_NAME${CL}"
       download_loader
       ;;
     2)
       LOADER_TYPE="redpill"
       LOADER_NAME="RedPill RR"
       LOADER_URL="https://github.com/RROrg/rr/"
-      echo -e "${DGN}${TAB}Selected Loader: ${BGN}$LOADER_NAME${CL}"
+      echo -e "${DGN}${TAB}$(translate "Selected Loader:") ${BGN}$LOADER_NAME${CL}"
       download_loader
       ;;
     3)
       LOADER_TYPE="tinycore"
       LOADER_NAME="Alpine RedPill M-shell"
       LOADER_URL="https://github.com/PeterSuh-Q3/tinycore-redpill/"
-      echo -e "${DGN}${TAB}Selected Loader: ${BGN}$LOADER_NAME${CL}"
+      echo -e "${DGN}${TAB}$(translate "Selected Loader:") ${BGN}$LOADER_NAME${CL}"
       download_loader
       ;;
     4)
       LOADER_TYPE="custom"
-      LOADER_NAME="Custom Image"
+      LOADER_NAME="$(translate "Custom Image")"
       LOADER_URL="https://xpenology.com/forum/"
-      echo -e "${DGN}${TAB}Selected Loader: ${BGN}$LOADER_NAME${CL}"
+      echo -e "${DGN}${TAB}$(translate "Selected Loader:") ${BGN}$LOADER_NAME${CL}"
       select_custom_image
       ;;
   esac
@@ -800,7 +800,7 @@ function select_custom_image() {
   IMAGES=$(find "$IMAGES_DIR" -type f -name "*.img" -o -name "*.iso" -o -name "*.qcow2" -o -name "*.vmdk" | sort)
   
   if [ -z "$IMAGES" ]; then
-    whiptail --title "$(translate "No Images Found")" --msgbox "No compatible images found in $IMAGES_DIR\n\nSupported formats: .img, .iso, .qcow2, .vmdk\n\nPlease add some images and try again." 15 70
+    whiptail --title "$(translate "No Images Found")" --msgbox "$(printf "$(translate "No compatible images found in %s\n\nSupported formats: .img, .iso, .qcow2, .vmdk\n\nPlease add some images and try again.")" "$IMAGES_DIR")" 15 70
     select_loader
   fi
   
@@ -814,14 +814,14 @@ function select_custom_image() {
   done <<< "$IMAGES"
   
   # Let the user select an image
-  LOADER_FILE=$(whiptail --backtitle "ProxMenuX" --title "SELECT CUSTOM IMAGE" --menu "$(translate "Choose a custom image:")" 20 70 10 "${IMAGE_OPTIONS[@]}" 3>&1 1>&2 2>&3)
+  LOADER_FILE=$(whiptail --backtitle "ProxMenuX" --title "$(translate "SELECT CUSTOM IMAGE")" --menu "$(translate "Choose a custom image:")" 20 70 10 "${IMAGE_OPTIONS[@]}" 3>&1 1>&2 2>&3)
   
   if [ -z "$LOADER_FILE" ]; then
-    msg_error "No custom image selected"
+    msg_error "$(translate "No custom image selected")"
     exit_script
   fi
   
-  echo -e "${DGN}${TAB}Using Custom Image: ${BGN}$(basename "$LOADER_FILE")${CL}"
+  echo -e "${DGN}${TAB}$(translate "Using Custom Image:") ${BGN}$(basename "$LOADER_FILE")${CL}"
   FILE=$(basename "$LOADER_FILE")
 }
 # ==========================================================
@@ -840,17 +840,17 @@ function download_loader() {
   FILE=""
   LOADER_FILE=""
 
-  echo -e "${DGN}${TAB}Retrieving the URL for the ${BGN}$LOADER_NAME loader${CL}"
+  echo -e "${DGN}${TAB}$(printf "$(translate "Retrieving the URL for the %s loader")" "${BGN}$LOADER_NAME")${CL}"
 
   if [[ "$LOADER_TYPE" == "arc" || "$LOADER_TYPE" == "redpill" ]] && ! command -v unzip &> /dev/null; then
-    msg_info "Installing unzip..."
+    msg_info "$(translate "Installing unzip...")"
     apt-get update -qq && apt-get install -y unzip -qq >/dev/null 2>&1
     if ! command -v unzip &> /dev/null; then
-      msg_error "Failed to install unzip"
+      msg_error "$(translate "Failed to install unzip")"
       sleep 2
       return 1
     fi
-    msg_ok "Installed unzip successfully."
+    msg_ok "$(translate "Installed unzip successfully.")"
   fi
 
   asset_pattern='^[^/]+[.]img[.]zip$'
@@ -927,7 +927,7 @@ function download_loader() {
   rm -rf "$stage"
   FILE="$image_name"
   LOADER_FILE="$IMAGES_DIR/$FILE"
-  msg_ok "Downloaded ${CL}${BL}${FILE}${CL} to ${IMAGES_DIR}"
+  msg_ok "$(printf "$(translate "Downloaded %s to %s")" "${CL}${BL}${FILE}${CL}" "${IMAGES_DIR}")"
 }
 # =======================================================
 
@@ -960,7 +960,7 @@ function select_efi_storage() {
 
   VALID=$(pvesm status -content images | awk 'NR>1')
   if [ -z "$VALID" ]; then
-    msg_error "Unable to detect a valid storage location for EFI disk." >&2
+    msg_error "$(translate "Unable to detect a valid storage location for EFI disk.")" >&2
     return 1
 
   elif [ $((${#STORAGE_MENU[@]} / 3)) -eq 1 ]; then
@@ -969,7 +969,7 @@ function select_efi_storage() {
   else
     [[ -n "${SPINNER_PID:-}" ]] && kill "$SPINNER_PID" > /dev/null 2>&1
     while [ -z "${STORAGE:+x}" ]; do
-      STORAGE=$(whiptail --backtitle "ProxMenuX" --title "EFI Disk Storage" --radiolist \
+      STORAGE=$(whiptail --backtitle "ProxMenuX" --title "$(translate "EFI Disk Storage")" --radiolist \
         "$(translate "Choose the storage for the EFI disk (4MB):")"$'\n\n'"$(translate "Use Spacebar to select.")" \
         16 $(($MSG_MAX_LENGTH + 23)) 6 \
         "${STORAGE_MENU[@]}" 3>&1 1>&2 2>&3) || {
@@ -1015,7 +1015,7 @@ function select_storage_volume() {
 
   VALID=$(pvesm status -content images | awk 'NR>1')
   if [ -z "$VALID" ]; then
-    msg_error "Unable to detect a valid storage location." >&2
+    msg_error "$(translate "Unable to detect a valid storage location.")" >&2
     return 1
   elif [ $((${#STORAGE_MENU[@]} / 3)) -eq 1 ]; then
     STORAGE=${STORAGE_MENU[0]}
@@ -1048,19 +1048,19 @@ function create_vm() {
   if ! qm create $VMID -agent 1${MACHINE} -tablet 0 -localtime 1${BIOS_TYPE}${CPU_TYPE} -cores $CORE_COUNT -memory $RAM_SIZE \
     -name $HN -tags proxmenux,nas -net0 virtio,bridge=$BRG,macaddr=$MAC$VLAN$MTU -onboot 1 -ostype l26 -scsihw virtio-scsi-pci \
     -serial0 socket; then
-    msg_error "Failed to create base VM. Check VM ID and host configuration."
+    msg_error "$(translate "Failed to create base VM. Check VM ID and host configuration.")"
     return 1
   fi
-  msg_ok "Create a $NAME"
+  msg_ok "$(printf "$(translate "Create a %s")" "$NAME")"
 
 
  
 # Check if UEFI (OVMF) is being used ===================
   if [[ "$BIOS_TYPE" == *"ovmf"* ]]; then
 
-    msg_info "Configuring EFI disk"
+    msg_info "$(translate "Configuring EFI disk")"
     if ! EFI_STORAGE=$(select_efi_storage $VMID); then
-      msg_error "EFI storage selection failed or was cancelled."
+      msg_error "$(translate "EFI storage selection failed or was cancelled.")"
       return 1
     fi
     EFI_DISK_NAME="vm-${VMID}-disk-efivars"
@@ -1084,9 +1084,9 @@ function create_vm() {
     if [[ "$STORAGE_TYPE" == "btrfs" || "$STORAGE_TYPE" == "dir" || "$STORAGE_TYPE" == "nfs" ]]; then
 
         if qm set "$VMID" -$EFI_DISK_ID "$EFI_STORAGE:4,efitype=4m,format=raw,pre-enrolled-keys=0" >/dev/null 2>&1; then
-            msg_ok "EFI disk created (raw) and configured on ${CL}${BL}$EFI_STORAGE${GN}${CL}"
+            msg_ok "$(printf "$(translate "EFI disk created (raw) and configured on %s")" "${CL}${BL}$EFI_STORAGE${GN}${CL}")"
         else
-            msg_error "Failed to configure EFI disk"
+            msg_error "$(translate "Failed to configure EFI disk")"
             ERROR_FLAG=true
         fi
     else
@@ -1097,13 +1097,13 @@ function create_vm() {
 
         if pvesm alloc "$EFI_STORAGE" "$VMID" "$EFI_DISK_NAME" 4M >/dev/null 2>&1; then
             if qm set "$VMID" -$EFI_DISK_ID "$EFI_STORAGE:${EFI_DISK_NAME},pre-enrolled-keys=0" >/dev/null 2>&1; then
-                msg_ok "EFI disk created and configured on ${CL}${BL}$EFI_STORAGE${GN}${CL}"
+                msg_ok "$(printf "$(translate "EFI disk created and configured on %s")" "${CL}${BL}$EFI_STORAGE${GN}${CL}")"
             else
-                msg_error "Failed to configure EFI disk"
+                msg_error "$(translate "Failed to configure EFI disk")"
                 ERROR_FLAG=true
             fi
         else
-            msg_error "Failed to create EFI disk"
+            msg_error "$(translate "Failed to create EFI disk")"
             ERROR_FLAG=true
         fi
     fi
@@ -1116,7 +1116,7 @@ function create_vm() {
 # Select storage volume for loader =======================
 
     if ! LOADER_STORAGE=$(select_storage_volume $VMID "loader disk"); then
-      msg_error "Loader storage selection failed or was cancelled."
+      msg_error "$(translate "Loader storage selection failed or was cancelled.")"
       return 1
     fi
       
@@ -1126,7 +1126,7 @@ function create_vm() {
     import_pid=$!
 
     # Show a simple progress indicator
-    echo -n "Importing loader disk: "
+    echo -n "$(translate "Importing loader disk:") "
     while kill -0 $import_pid 2>/dev/null; do
         echo -n "."
         sleep 2.5
@@ -1139,10 +1139,10 @@ function create_vm() {
 
     # If the disk was not imported correctly, show an error message but continue
     if [ -z "$IMPORTED_DISK" ]; then
-          msg_error "Loader import failed. No disk detected."
+          msg_error "$(translate "Loader import failed. No disk detected.")"
           ERROR_FLAG=true
       else
-          msg_ok "Loader imported successfully to ${CL}${BL}$LOADER_STORAGE${GN}${CL}"
+          msg_ok "$(printf "$(translate "Loader imported successfully to %s")" "${CL}${BL}$LOADER_STORAGE${GN}${CL}")"
     fi
 
 
@@ -1159,23 +1159,23 @@ function create_vm() {
 
         if [[ -n "$IMPORTED_REF" && -n "$IMPORTED_ID" ]]; then
             if qm set "$VMID" -ide0 "$IMPORTED_REF" >/dev/null 2>&1; then
-                msg_ok "Configured loader disk as ide0"
+                msg_ok "$(translate "Configured loader disk as ide0")"
                 qm set "$VMID" -delete "$IMPORTED_ID" >/dev/null 2>&1
             else
-                msg_error "Failed to assign loader disk to ide0"
+                msg_error "$(translate "Failed to assign loader disk to ide0")"
                 ERROR_FLAG=true
             fi
         else
-            msg_error "Loader import failed. No disk detected in config."
+            msg_error "$(translate "Loader import failed. No disk detected in config.")"
             ERROR_FLAG=true
         fi
     else
 
         DISK_NAME="vm-${VMID}-disk-0"
         if qm set "$VMID" -ide0 "$LOADER_STORAGE:${DISK_NAME}" >/dev/null 2>&1; then
-            msg_ok "Configured loader disk as ide0"
+            msg_ok "$(translate "Configured loader disk as ide0")"
         else
-            msg_error "Failed to assign loader disk"
+            msg_error "$(translate "Failed to assign loader disk")"
             ERROR_FLAG=true
         fi
     fi
@@ -1185,7 +1185,7 @@ function create_vm() {
 
     result=$(qm set "$VMID" -boot order=ide0 2>&1)
     if [[ $? -eq 0 ]]; then
-          msg_ok "Loader configured as boot device."
+          msg_ok "$(translate "Loader configured as boot device.")"
       else
           ERROR_FLAG=true
     fi
@@ -1217,27 +1217,27 @@ if [[ ${#VIRTUAL_DISKS[@]} -gt 0 ]]; then
         SATA_ID="sata${DISK_SLOT_INDEX}"
 
         if [[ "$STORAGE_TYPE" == "btrfs" || "$STORAGE_TYPE" == "dir" || "$STORAGE_TYPE" == "nfs" ]]; then
-            msg_info "Creating virtual disk (format=raw) for $STORAGE_TYPE..."
+            msg_info "$(printf "$(translate "Creating virtual disk (format=raw) for %s...")" "$STORAGE_TYPE")"
             if ! qm set "$VMID" -$SATA_ID "$STORAGE:$SIZE,format=raw" >/dev/null 2>&1; then
-              msg_error "Failed to assign disk $DISK_NUM ($SATA_ID) on $STORAGE"
+              msg_error "$(printf "$(translate "Failed to assign disk %s (%s) on %s")" "$DISK_NUM" "$SATA_ID" "$STORAGE")"
               ERROR_FLAG=true
               continue
             fi
         else
-            msg_info "Allocating virtual disk for $STORAGE_TYPE..."
+            msg_info "$(printf "$(translate "Allocating virtual disk for %s...")" "$STORAGE_TYPE")"
             if ! pvesm alloc "$STORAGE" "$VMID" "$DISK_NAME" "$SIZE"G >/dev/null 2>&1; then
-              msg_error "Failed to allocate virtual disk $DISK_NUM"
+              msg_error "$(printf "$(translate "Failed to allocate virtual disk %s")" "$DISK_NUM")"
               ERROR_FLAG=true
               continue
             fi
             if ! qm set "$VMID" -$SATA_ID "$STORAGE:${DISK_REF}$DISK_NAME" >/dev/null 2>&1; then
-              msg_error "Failed to configure virtual disk as $SATA_ID"
+              msg_error "$(printf "$(translate "Failed to configure virtual disk as %s")" "$SATA_ID")"
               ERROR_FLAG=true
               continue
             fi
         fi
 
-        msg_ok "Configured virtual disk as $SATA_ID, ${SIZE}GB on ${CL}${BL}$STORAGE${CL} ${GN}"
+        msg_ok "$(printf "$(translate "Configured virtual disk as %s, %sGB on %s")" "$SATA_ID" "${SIZE}" "${CL}${BL}$STORAGE${CL} ${GN}")"
         DISK_INFO="${DISK_INFO}<p>Virtual Disk $DISK_NUM: ${SIZE}GB on ${STORAGE}</p>"
         CONSOLE_DISK_INFO="${CONSOLE_DISK_INFO}- Virtual Disk $DISK_NUM: ${SIZE}GB on ${STORAGE} ($SATA_ID)\n"
         DISK_SLOT_INDEX=$((DISK_SLOT_INDEX + 1))
@@ -1259,12 +1259,12 @@ if [[ ${#EFFECTIVE_IMPORT_DISKS[@]} -gt 0 ]]; then
         DISK_ID="sata${DISK_SLOT_INDEX}"
 
         if qm set "$VMID" -${DISK_ID} ${DISK} >/dev/null 2>&1; then
-            msg_ok "Configured import disk ${CL}${BL}($DISK_MODEL $DISK_SIZE)${CL}${GN} as $DISK_ID"
+            msg_ok "$(printf "$(translate "Configured import disk %s as %s")" "${CL}${BL}($DISK_MODEL $DISK_SIZE)${CL}${GN}" "$DISK_ID")"
             DISK_INFO="${DISK_INFO}<p>Import Disk ${DISK_NUM}: $DISK ($DISK_MODEL $DISK_SIZE)</p>"
             CONSOLE_DISK_INFO="${CONSOLE_DISK_INFO}- Import Disk ${DISK_NUM}: $DISK ($DISK_MODEL $DISK_SIZE) (${DISK_ID})\n"
             DISK_SLOT_INDEX=$((DISK_SLOT_INDEX + 1))
         else
-            msg_error "Failed to configure import disk $DISK as $DISK_ID"
+            msg_error "$(printf "$(translate "Failed to configure import disk %s as %s")" "$DISK" "$DISK_ID")"
             ERROR_FLAG=true
         fi
     done
@@ -1343,14 +1343,14 @@ if [[ ${#CONTROLLER_NVME_PCIS[@]} -gt 0 ]]; then
         for PCI_DEV in "${CONTROLLER_NVME_PCIS[@]}"; do
             if declare -F _pci_function_assigned_to_vm >/dev/null 2>&1; then
                 if _pci_function_assigned_to_vm "$PCI_DEV" "$VMID"; then
-                    msg_warn "Controller/NVMe already present in VM config (${PCI_DEV})"
+                    msg_warn "$(printf "$(translate "Controller/NVMe already present in VM config (%s)")" "${PCI_DEV}")"
                     continue
                 fi
             else
                 local PCI_BDF
                 PCI_BDF="${PCI_DEV#0000:}"
                 if qm config "$VMID" 2>/dev/null | grep -qE "^hostpci[0-9]+:.*(0000:)?${PCI_BDF}([,[:space:]]|$)"; then
-                    msg_warn "Controller/NVMe already present in VM config (${PCI_DEV})"
+                    msg_warn "$(printf "$(translate "Controller/NVMe already present in VM config (%s)")" "${PCI_DEV}")"
                     continue
                 fi
             fi
@@ -1397,12 +1397,12 @@ if [[ ${#CONTROLLER_NVME_PCIS[@]} -gt 0 ]]; then
             fi
 
             if qm set "$VMID" --hostpci${HOSTPCI_INDEX} "${PCI_DEV},pcie=1" >/dev/null 2>&1; then
-                msg_ok "Configured controller/NVMe as hostpci${HOSTPCI_INDEX}: ${PCI_DEV}"
+                msg_ok "$(printf "$(translate "Configured controller/NVMe as hostpci%s: %s")" "${HOSTPCI_INDEX}" "${PCI_DEV}")"
                 DISK_INFO="${DISK_INFO}<p>Controller/NVMe: ${PCI_DEV}</p>"
                 CONSOLE_DISK_INFO="${CONSOLE_DISK_INFO}- Controller/NVMe: ${PCI_DEV} (hostpci${HOSTPCI_INDEX})\n"
                 HOSTPCI_INDEX=$((HOSTPCI_INDEX + 1))
             else
-                msg_error "Failed to configure controller/NVMe: ${PCI_DEV}"
+                msg_error "$(printf "$(translate "Failed to configure controller/NVMe: %s")" "${PCI_DEV}")"
                 ERROR_FLAG=true
             fi
         done
@@ -1411,7 +1411,7 @@ if [[ ${#CONTROLLER_NVME_PCIS[@]} -gt 0 ]]; then
 fi
 
 if [[ ${#VIRTUAL_DISKS[@]} -eq 0 && ${#EFFECTIVE_IMPORT_DISKS[@]} -eq 0 && ${#CONTROLLER_NVME_PCIS[@]} -eq 0 ]]; then
-    msg_error "No disks/controllers configured."
+    msg_error "$(translate "No disks/controllers configured.")"
     exit_script
 fi
 
@@ -1424,16 +1424,16 @@ HTML_DESC="<div align='center'>
 </td>
 <td style='vertical-align: middle;'>
 <h1 style='margin: 0;'>Synology DSM VM</h1>
-<p style='margin: 0;'>Created with ProxMenuX</p>
-<p style='margin: 0;'>Loader: $LOADER_NAME</p>
+<p style='margin: 0;'>$(translate "Created with ProxMenuX")</p>
+<p style='margin: 0;'>$(translate "Loader:") $LOADER_NAME</p>
 </td>
 </tr>
 </table>
 
 <p>
-<a href='https://macrimi.github.io/ProxMenux/docs/create-vm/synology' target='_blank'><img src='https://img.shields.io/badge/📚_Docs-blue' alt='Docs'></a>
-<a href='https://raw.githubusercontent.com/MacRimi/ProxMenux/refs/heads/main/scripts/vm/synology.sh' target='_blank'><img src='https://img.shields.io/badge/💻_Code-green' alt='Code'></a>
-<a href='$LOADER_URL' target='_blank'><img src='https://img.shields.io/badge/📦_Loader-orange' alt='Loader'></a>
+<a href='https://macrimi.github.io/ProxMenux/docs/create-vm/synology' target='_blank'><img src='https://img.shields.io/badge/📚_$(translate "Docs")-blue' alt='$(translate "Docs")'></a>
+<a href='https://raw.githubusercontent.com/MacRimi/ProxMenux/refs/heads/main/scripts/vm/synology.sh' target='_blank'><img src='https://img.shields.io/badge/💻_$(translate "Code")-green' alt='$(translate "Code")'></a>
+<a href='$LOADER_URL' target='_blank'><img src='https://img.shields.io/badge/📦_$(translate "Loader")-orange' alt='$(translate "Loader")'></a>
 <a href='https://ko-fi.com/macrimi' target='_blank'><img src='https://img.shields.io/badge/☕_Ko--fi-red' alt='Ko-fi'></a>
 </p>
 
@@ -1442,16 +1442,16 @@ ${DISK_INFO}
 </div>
 </div>"
 
-msg_info "Setting VM description"
+msg_info "$(translate "Setting VM description")"
 if ! qm set "$VMID" -description "$HTML_DESC" >/dev/null 2>&1; then
-    msg_error "Failed to set VM description"
+    msg_error "$(translate "Failed to set VM description")"
     exit_script
 fi
-msg_ok "Configured VM description"
+msg_ok "$(translate "Configured VM description")"
   
   
 if [ "$ERROR_FLAG" = true ]; then
-   msg_error "VM created with errors. Check configuration." 
+   msg_error "$(translate "VM created with errors. Check configuration.")"
 else
 if [[ "${WIZARD_ADD_GPU:-no}" == "yes" ]]; then
   WIZARD_GPU_RESULT="cancelled"
@@ -1540,7 +1540,7 @@ header_info
 sleep 1
 
 # Start script
-if whiptail --backtitle "ProxMenuX" --title "$NAME" --yesno "$(translate "This will create a New $NAME. Proceed?")" 10 58; then
+if whiptail --backtitle "ProxMenuX" --title "$NAME" --yesno "$(printf "$(translate "This will create a New %s. Proceed?")" "$NAME")" 10 58; then
   start_vm_wizard_capture
   if ! start_script; then
     stop_vm_wizard_capture
