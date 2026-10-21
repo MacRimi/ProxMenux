@@ -77,6 +77,8 @@ async function main(){
   f.setReply(()=>({http:500,body:{success:false,error:'PermissionError /opt/demo <unsafe>&'}}));await f.tool('one').props.onClick();f.render();assert.ok(text(f.dialog()).includes('PermissionError /opt/demo <unsafe>&'))
   f.language('sk');assert.ok(text(f.dialog()).includes(translate('sk')('settings.optimizations.sourceLoadFailed')))
   f.setReply(()=>sourceBody);await f.tool('one').props.onClick();f.render();
+  const backdrop=flatten(f.tree()).find(node=>node.props?.className?.startsWith('fixed inset-0')&&flatten(node).some(child=>child.props?.role==='dialog'))
+  assert.equal(backdrop.props.style.margin,0,'parent space-y must not offset the fixed backdrop')
   const pre=flatten(f.dialog()).find(node=>node.type==='pre');assert.ok(pre.props.dangerouslySetInnerHTML.__html.includes('&lt;'));assert.ok(!pre.props.dangerouslySetInnerHTML.__html.includes('<tag>'))
   const copy=flatten(f.dialog()).find(node=>node.props?.title===f.t('actions.copyToClipboard'));await copy.props.onClick();f.render();assert.equal(f.copies.at(-1),sourceBody.source)
   f.win.isSecureContext=false;await copy.props.onClick();assert.equal(f.fallbackCopies(),1)

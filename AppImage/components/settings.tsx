@@ -2175,7 +2175,7 @@ export function Settings() {
 
       {/* Code Viewer Modal */}
       {codeModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={closeCodeModal}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ margin: 0 }} onClick={closeCodeModal}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div
             className="relative bg-card border border-border rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col"
