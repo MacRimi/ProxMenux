@@ -3,6 +3,7 @@ transcoding and its recognition: the CPU, or each usable GPU of the host for
 both or for only one of them."""
 
 from pathlib import Path
+import json
 import sys
 import unittest
 from unittest.mock import patch
@@ -165,7 +166,15 @@ class ImmichAccelerationTests(unittest.TestCase):
     def test_the_name_of_the_machine_learning_container_is_not_translated(self, *_):
         script = (ROOT / "remote/install_immich_stack.sh").read_text()
         self.assertNotIn('translate "Machine learning"', script)
-        self.assertNotIn('translate("Machine learning")', (ROOT / "src/proxmenux_oci/cli.py").read_text())
+        from proxmenux_oci.cli import _service_kind
+        from proxmenux_oci import i18n
+        service = {'name': 'immich-machine-learning', 'image': 'ghcr.io/immich-app/immich-machine-learning:release'}
+        original = dict(service)
+        with patch.object(i18n, 'language', return_value='sk'), patch.object(i18n, '_cache', json.loads((ROOT.parent / 'lang/sk.json').read_text())):
+            self.assertEqual(_service_kind(service), 'Strojové učenie')
+            _, _, plan = self.plan(NOTHING, DEFAULT_MODE)
+        self.assertIn('machine_learning', plan)
+        self.assertEqual(service, original)
 
 
 if __name__ == "__main__":

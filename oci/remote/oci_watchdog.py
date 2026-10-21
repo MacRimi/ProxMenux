@@ -19,6 +19,7 @@ import time
 
 import oci_instances as instances
 import oci_operation_notice
+from oci_ui import translate
 
 UNIT = 'proxmenux-oci-watchdog.service'
 UNIT_FILE = Path('/etc/systemd/system') / UNIT
@@ -191,7 +192,8 @@ def look(states, now):
                         lambda seen: stop_requested(read_tasks(), vmid, seen))
         data = {'app_name': name, 'vmid': vmid, 'containers': f'CT {vmid}'}
         if action == 'start':
-            print(f'CT {vmid} ({name}) stopped on its own; starting it again (attempt {state["attempts"]})', flush=True)
+            print(translate('CT {vmid} ({name}) stopped on its own; starting it again (attempt {attempt})').format(
+                vmid=vmid, name=name, attempt=state['attempts']), flush=True)
             try:
                 started = start(vmid)
             except (OSError, subprocess.SubprocessError):
@@ -199,7 +201,8 @@ def look(states, now):
             if started and notice_due(state, now):
                 oci_operation_notice.notify('oci_watchdog_restarted', data)
         elif action == 'give-up':
-            print(f'CT {vmid} ({name}) could not be kept running; it is left stopped', flush=True)
+            print(translate('CT {vmid} ({name}) could not be kept running; it is left stopped').format(
+                vmid=vmid, name=name), flush=True)
             oci_operation_notice.notify('oci_watchdog_failed', data)
 
 
@@ -290,7 +293,7 @@ def main():
         try:
             vmids = set_watchdog(instances.ROOT, args.vmid, args.state == 'on')
         except BlockingIOError:
-            print('Another OCI operation is using the instance registry.', file=sys.stderr)
+            print(translate('Another OCI operation is using the instance registry.'), file=sys.stderr)
             return 3
         except (OSError, ValueError, KeyError) as error:
             print(str(error) or type(error).__name__, file=sys.stderr)

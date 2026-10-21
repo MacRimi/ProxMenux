@@ -1032,7 +1032,7 @@
       "pciPassthrough": "PCI Passthrough",
       "usbDevices": "USB zariadenia",
       "serialPorts": "Sériové porty",
-      "bridge": "Sieťový bridge",
+      "bridge": "Sieťový most (bridge)",
       "enabled": "Zapnuté",
       "disabled": "Vypnuté",
       "on": "zapnuté",
@@ -1248,13 +1248,15 @@
       "stackNote": "Súčasť aplikácie s viacerými kontajnermi (hlavný CT {primary}, {count} kontajnerov): aktualizácia sa týka všetkých.",
       "memberNote": "Tento kontajner patrí do aplikácie s viacerými kontajnermi, ktorej hlavný CT je {primary}, a neaktualizuje sa samostatne. Aktualizácia sa vykonáva z hlavného CT, ktorý aktualizuje všetkých {count} kontajnerov naraz.",
       "openPrimary": "Otvoriť hlavný CT",
-      "pendingNote": "Operácia na tomto kontajneri bola prerušená; tlačidlo Obnoviť spustí obnovenie.",
+      "pendingNote": "Operácia na tomto kontajneri zostala nedokončená. Tlačidlo Obnoviť otvorí možnosti obnovenia.",
       "update": "Aktualizovať",
       "modify": "Upraviť",
       "recover": "Obnoviť",
+      "registerRestored": "Znova zaregistrovať",
       "terminalTitleUpdate": "Aktualizovať OCI aplikáciu",
+      "terminalTitleRecoverPrevious": "Obnoviť predchádzajúcu OCI inštaláciu",
       "terminalTitleModify": "Upraviť OCI aplikáciu",
-      "terminalTitleRecover": "Obnoviť obnovenú OCI aplikáciu",
+      "terminalTitleRecover": "Zaregistrovať OCI aplikácie obnovené zo zálohy",
       "terminalDescription": "Použije sa rovnaký postup ako v ponuke Správca OCI aplikácií → Spravovať nainštalované OCI aplikácie.",
       "keepBackup": "Ponechať zálohu vytvorenú pred aktualizáciou",
       "noKeepBackup": "Záloha vytvorená pred aktualizáciou sa neponecháva",
@@ -1485,7 +1487,7 @@
       "ociTitle": "Kontajner z OCI obrazu",
       "ociBody": "Tento kontajner bol vytvorený z OCI (Docker) obrazu mimo Správcu OCI aplikácií. Aktualizuje sa nahradením obrazu, čo ProxMenux pri tomto kontajneri nespravuje.",
       "ociRestoredTitle": "Obnovená OCI aplikácia",
-      "ociRestoredBody": "Tento kontajner bol obnovený zo zálohy a tento hostiteľ nemá záznam o jeho aplikácii, preto ho zatiaľ nemožno aktualizovať odtiaľto. Obnoviť ho znova zaregistruje na tomto hostiteľovi, rovnako ako OCI manager Apps → Spravovať nainštalované OCI aplikácie.",
+      "ociRestoredBody": "Tento kontajner bol obnovený zo zálohy, ale tento server nemá záznam o jeho OCI aplikácii, preto ju tu zatiaľ nemožno aktualizovať. Možnosť Znova zaregistrovať otvorí registráciu obnovených OCI aplikácií na tomto uzle, rovnako ako ponuka Správca OCI aplikácií → Spravovať nainštalované OCI aplikácie.",
       "dockerImagesTitle": "Docker obrazy",
       "dockerAppTitle": "Docker",
       "dockerImagesSubheading": "Obrazy",
@@ -1872,7 +1874,7 @@
     },
     "networkInterfaces": {
       "title": "Vylúčené sieťové rozhrania",
-      "description": "Vylúčte sieťové rozhrania, napríklad most, bond alebo fyzické sieťové karty, z kontroly stavu a upozornení. Hodí sa to pre rozhrania, ktoré sú zámerne vypnuté alebo sa nepoužívajú.",
+      "description": "Vylúčte sieťové rozhrania, napríklad sieťové mosty (bridge), bond alebo fyzické sieťové karty, z kontroly stavu a upozornení. Hodí sa to pre rozhrania, ktoré sú zámerne vypnuté alebo sa nepoužívajú.",
       "emptyTitle": "Nenašli sa žiadne sieťové rozhrania",
       "interface": "Rozhranie",
       "down": "VYPNUTÉ",
@@ -3504,7 +3506,7 @@
     },
     "loading": {
       "title": "Načítavam údaje o sieti...",
-      "description": "Kontrolujem rozhrania, sieťové mosty a premávku"
+      "description": "Kontrolujem rozhrania, sieťové mosty (bridge) a premávku"
     },
     "errors": {
       "serverUnavailableTitle": "Server nie je dostupný",
@@ -3518,7 +3520,7 @@
     },
     "sections": {
       "physicalInterfaces": "Fyzické rozhrania",
-      "bridgeInterfaces": "Sieťové mosty",
+      "bridgeInterfaces": "Sieťové mosty (bridge)",
       "vmLxcInterfaces": "Sieťové rozhrania VM a LXC"
     },
     "summary": {
@@ -3538,8 +3540,8 @@
     },
     "interfaceTypes": {
       "physical": "Fyzické",
-      "bridge": "Most",
-      "bridges": "Mosty",
+      "bridge": "Sieťový most (bridge)",
+      "bridges": "Sieťové mosty (bridge)",
       "bond": "Bond",
       "vlan": "VLAN",
       "virtual": "Virtuálne",
@@ -3633,7 +3635,7 @@
       "inactiveTitle": "Rozhranie je neaktívne",
       "inactiveDescription": "Toto rozhranie je momentálne vypnuté. Štatistiky sieťovej premávky nie sú dostupné.",
       "bondConfiguration": "Nastavenie bondu",
-      "bridgeConfiguration": "Nastavenie mosta"
+      "bridgeConfiguration": "Nastavenie sieťového mosta (bridge)"
     },
     "flow": {
       "title": "Tok siete"
@@ -5437,6 +5439,7 @@
     "websocketError": "Chyba WebSocket spojenia",
     "connectionClosed": "Spojenie bolo zatvorené",
     "completedSuccessfully": "Skript sa úspešne dokončil",
+    "cancelled": "Operácia bola zrušená.",
     "completedWithError": "Skript skončil s chybovým kódom {code}",
     "yes": "Áno",
     "yourInput": "Tvoj vstup:",
@@ -6169,11 +6172,11 @@
           }
         },
         "bridge_without_ports": {
-          "title": "Porty bridgeov",
-          "rationale": "Konfigurácia portov každého bridge. Bridge bez fyzického portu obsluhuje internú alebo smerovanú sieť.",
+          "title": "Porty sieťových mostov (bridge)",
+          "rationale": "Konfigurácia portov každého sieťového mosta (bridge). Sieťový most (bridge) bez fyzického portu obsluhuje internú alebo smerovanú sieť.",
           "summary": {
-            "allConnected": "Všetkých {total} bridgeov má port",
-            "isolated": "{count} z {total} bridgeov nemá port",
+            "allConnected": "Všetkých {total} sieťových mostov (bridge) má port",
+            "isolated": "{count} z {total} sieťových mostov (bridge) nemá port",
             "evaluationFailed": "Kontrolu sa nepodarilo vyhodnotiť"
           }
         }
@@ -6389,13 +6392,13 @@
       "network": "Sieť",
       "adapters": "Adaptéry",
       "bond": "Bond",
-      "bridge": "Bridge",
-      "bridges": "Bridge",
+      "bridge": "Sieťový most (bridge)",
+      "bridges": "Sieťové mosty (bridge)",
       "physicalAdapters": "Fyzické adaptéry",
       "interface": "Rozhranie",
       "driver": "Ovládač",
       "state": "Stav",
-      "networkDiagramNote": "Cesta od kábla ku každému VM a LXC: fyzický adaptér, bond, ak ich zoskupuje, bridge a pripojené VM a LXC.",
+      "networkDiagramNote": "Cesta od kábla ku každému VM a LXC: fyzický adaptér, bond, ak ich zoskupuje, sieťový most (bridge) a pripojené VM a LXC.",
       "storageAndProtection": "Úložisko a ochrana",
       "storage": "Úložisko",
       "content": "Obsah",

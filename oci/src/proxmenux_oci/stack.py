@@ -365,13 +365,13 @@ def build_stack(template, ui, mode='advanced'):
         service_name = group['service']
         if service_name not in envs:
             raise StackError(f"{translate('Unknown credential service:')} {service_name}")
-        if not quiet.confirm(f"{translate('Configure')} {group['label']} ({translate('optional')})", False):
+        if not quiet.confirm(f"{translate('Configure')} {translate(group['label'])} ({translate('optional')})", False):
             continue
         for field in group['fields']:
             if field['name'] not in envs[service_name] or envs[service_name][field['name']] != '':
                 raise StackError(f"{translate('External field not reserved:')} {field['name']}")
-            value = (ui.password(field['label'], required=True) if field.get('sensitive',True)
-                     else ui.ask(field['label'], required=True))
+            value = (ui.password(translate(field['label']), required=True) if field.get('sensitive',True)
+                     else ui.ask(translate(field['label']), required=True))
             if not value or any(c in value for c in '\r\n'):
                 raise StackError(translate('External credential is empty or spans multiple lines'))
             envs[service_name][field['name']] = value

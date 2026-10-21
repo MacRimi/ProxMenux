@@ -20,7 +20,11 @@ class OutcomePromises(TestCase):
         texts = oci_menu_texts()
         self.assertEqual([text for text in texts if 'If anything fails' in text], [])
         previews = [text for text in texts if 'stops halfway is recovered from the OCI management menu' in text]
-        self.assertEqual(len(previews), 3)
+        self.assertEqual(len(previews), 2)  # Coordinated stack update/recreation previews.
+        update = next(text for text in texts if text.startswith('If a newer application image is available'))
+        self.assertIn('attempts to restore the previous installation', update)
+        self.assertIn('If the operation remains incomplete', update)
+        self.assertIn('choose "Recover the previous installation"', update)
 
     def test_the_recovery_preview_says_when_each_step_happens(self):
         preview = next(text for text in oci_menu_texts() if 'previous native backup' in text)

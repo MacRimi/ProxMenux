@@ -71,8 +71,8 @@ jobs:
         run: |
           test -x /bin/bash
           test -x /usr/bin/jq
-      - name: Install OCI wording test dependency
-        run: python3 -m pip install 'PyYAML>=6,<7'
+      - name: Install OCI wording test dependencies
+        run: python3 -m pip install 'PyYAML>=6,<7' 'jsonschema==4.25.1'
       - name: Run offline i18n and script regressions
         env:
           PYTHONDONTWRITEBYTECODE: '1'

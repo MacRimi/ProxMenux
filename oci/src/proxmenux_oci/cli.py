@@ -15,7 +15,7 @@ from . import console, images
 from .catalog import Catalog
 from .converter import ConversionError
 from .github_source import SourceError
-from .i18n import N_, source_text, translate
+from .i18n import N_, diagnostic, source_text, translate
 from .installer import (
     ADDRESS_SHOWN,
     ADVANCED_MODE,
@@ -38,7 +38,7 @@ PUBLISHERS = {"linuxserver.io": "LinuxServer", "official": N_("Official image")}
 STACK_LABELS = {
     "server": N_("Server"),
     "application": N_("Application"),
-    "machine_learning": "Machine learning",
+    "machine_learning": N_("Machine learning"),
     "database": "PostgreSQL",
     "valkey": "Valkey",
     "cache": "Redis",
@@ -133,7 +133,7 @@ def _service_kind(service: dict[str, Any]) -> str:
     if service.get("is_main"):
         return translate("Application")
     if "machine-learning" in name or "machine-learning" in image:
-        return "Machine learning"
+        return translate("Machine learning")
     for key, label in SERVICE_KINDS:
         if key in image:
             return label
@@ -267,7 +267,7 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
                 target = (f"{mount['size_gb']} GB {on} {mount['source']}"
                           if mount["type"] == "managed-volume" else mount["source"])
                 lines.append(f"    {mount['container_path']} → {target}")
-        for key, label in (("media", "Library"), ("application", "Application data"), ("transfer", "Consume/export")):
+        for key, label in (("media", N_("Library")), ("application", N_("Application data")), ("transfer", N_("Consume/export"))):
             storage = plan.get(key)
             if isinstance(storage, dict) and "mode" in storage:
                 if storage["mode"] == "host-bind":
@@ -472,7 +472,7 @@ def _rclone_mount(catalog: Catalog, ui) -> None:
     if result:
         from .management import carry_records
         carry_records(PROJECT_ROOT, shown=True)
-        console.msg_ok(f"Remote: {result['remote']}:")
+        console.msg_ok(f"{translate('Rclone remote')}: {result['remote']}:")
         console.msg_ok(f"{translate('Read/write')}: {result['read_write_path']}")
         console.msg_ok(f"{translate('Read-only')}: {result['read_only_path']}")
     console.wait_for_enter(translate("Press Enter to return to the menu..."))
@@ -614,7 +614,7 @@ def interactive(catalog: Catalog) -> int:
                 continue
             except (ConversionError, InstallError, OSError, ValueError) as exc:
                 console.stop_spinner()
-                ui.message(f"{translate('The operation could not be completed')}:\n\n{exc}")
+                ui.message(f"{translate('The operation could not be completed')}:\n\n{diagnostic(exc)}")
 
 
 # ---------------------------------------------------------------- maintenance CLI
@@ -623,52 +623,52 @@ def _template_summary_text(template: dict[str, Any]) -> str:
     contract = template["container_contract"]
     lines = [
         source_text(template["catalog_ui"]["title"]),
-        f"Image: {contract['image']['reference']}",
-        f"Status: {template['status']}",
-        "Ports: " + (", ".join(f"{p['container_port']}/{p['protocol']}" for p in contract["ports"]) or "none"),
-        "Volumes: " + (", ".join(v["container_path"] for v in contract["volumes"]) or "none"),
+        f"{translate('Image')}: {contract['image']['reference']}",
+        f"{translate('Status')}: {template['status']}",
+        translate("Ports") + ": " + (", ".join(f"{p['container_port']}/{p['protocol']}" for p in contract["ports"]) or translate("none")),
+        translate("Volumes") + ": " + (", ".join(v["container_path"] for v in contract["volumes"]) or translate("none")),
     ]
     blockers = template["compatibility"]["untranslated_blockers"]
     if blockers:
-        lines.append(f"Blockers: {', '.join(blockers)}")
+        lines.append(f"{translate('Blockers')}: {', '.join(blockers)}")
     return "\n".join(lines)
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="oci_manager_apps.sh",
-                                     description="ProxMenux OCI manager Apps (Technology Preview)")
+                                     description=translate("ProxMenux OCI manager Apps (Technology Preview)"))
     subparsers = parser.add_subparsers(dest="command")
-    subparsers.add_parser("sync", help="Refresh the index from the image sources")
-    list_parser = subparsers.add_parser("list", help="List applications")
+    subparsers.add_parser("sync", help=translate("Refresh the index from the image sources"))
+    list_parser = subparsers.add_parser("list", help=translate("List applications"))
     list_parser.add_argument("--filter", default="")
-    generate_parser = subparsers.add_parser("generate", help="Regenerate the template of one application")
+    generate_parser = subparsers.add_parser("generate", help=translate("Regenerate the template of one application"))
     generate_parser.add_argument("app")
-    generate_all_parser = subparsers.add_parser("generate-all", help="Regenerate the catalog templates")
+    generate_all_parser = subparsers.add_parser("generate-all", help=translate("Regenerate the catalog templates"))
     generate_all_parser.add_argument("--provider", choices=["all", "linuxserver.io", "imported", "curated"],
                                      default="all")
-    subparsers.add_parser("apply-icons", help="Resolve catalog icons against the jsdelivr icon sets")
-    show_parser = subparsers.add_parser("show", help="Show the summary of a template")
+    subparsers.add_parser("apply-icons", help=translate("Resolve catalog icons against the jsdelivr icon sets"))
+    show_parser = subparsers.add_parser("show", help=translate("Show the summary of a template"))
     show_parser.add_argument("app")
-    open_parser = subparsers.add_parser("open", help="Open the page of an application in the menu")
+    open_parser = subparsers.add_parser("open", help=translate("Open the page of an application in the menu"))
     open_parser.add_argument("app")
-    install_parser = subparsers.add_parser("install", help="Configure and install an application")
+    install_parser = subparsers.add_parser("install", help=translate("Configure and install an application"))
     install_parser.add_argument("app")
-    install_parser.add_argument("--host", default="auto", help="'auto'/'local', or root@IP for development")
+    install_parser.add_argument("--host", default="auto", help=translate("'auto'/'local', or root@IP for development"))
     install_parser.add_argument("--advanced", action="store_true")
     install_parser.add_argument("--dry-run", action="store_true")
-    rclone_parser = subparsers.add_parser("rclone-mount", help="Enable a mount on an installed Rclone OCI")
+    rclone_parser = subparsers.add_parser("rclone-mount", help=translate("Enable a mount on an installed Rclone OCI"))
     rclone_parser.add_argument("--host", default="auto")
     rclone_parser.add_argument("--dry-run", action="store_true")
-    subparsers.add_parser("recover", help="Register again the OCI applications restored from a backup")
-    manage_parser = subparsers.add_parser("manage", help="Update, modify or recreate one installed OCI instance")
+    subparsers.add_parser("recover", help=translate("Register again the OCI applications restored from a backup"))
+    manage_parser = subparsers.add_parser("manage", help=translate("Update, modify or recreate one installed OCI instance"))
     manage_parser.add_argument("vmid", type=int)
     manage_parser.add_argument("--action", choices=("update", "modify", "recreate"), required=True)
     manage_parser.add_argument("--keep-backup", metavar="STORAGE",
-                               help="Keep the backup taken before the update in this Proxmox storage")
+                               help=translate("Keep the backup taken before the update in this Proxmox storage"))
     manage_parser.add_argument("--unattended", action="store_true",
-                               help="Scheduled run: no questions; stops where a person has to decide")
+                               help=translate("Scheduled run: no questions; stops where a person has to decide"))
     manage_parser.add_argument("--acknowledge-external-data", action="store_true",
-                               help="Host directories are not reverted by the backup (confirmed beforehand)")
+                               help=translate("Host directories are not reverted by the backup (confirmed beforehand)"))
     manage_parser.add_argument("--min-image-age-days", type=int, default=0)
     return parser
 
@@ -681,15 +681,15 @@ def main(argv: list[str] | None = None) -> int:
             return interactive(catalog)
         if args.command == "sync":
             payload = catalog.sync_index()
-            print(f"Index updated: {len(payload['applications'])} candidate applications")
+            print(translate('Index updated: {count} candidate applications').format(count=len(payload['applications'])))
             return 0
         if args.command == "list":
             query = args.filter.casefold()
             for item in catalog.load_index()["applications"]:
                 if not item.get("hidden", False) and query in item["id"].casefold():
                     candidate = item.get("automatic_install_candidate")
-                    status = ("installable" if candidate else "pending adaptation" if candidate is False
-                              else item.get("template_status") or "not generated")
+                    status = (translate("installable") if candidate else translate("pending adaptation") if candidate is False
+                              else item.get("template_status") or translate("not generated"))
                     print(f"{item['id']:<30} {_display_architectures(item):<12} {publisher(item):<14} {status}")
             return 0
         if args.command == "generate":
@@ -702,13 +702,12 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"\r[{current:3}/{total}] {marker:<5} {app_id:<32}", end="", flush=True)
 
             report = catalog.generate_all(progress=progress, provider=args.provider)
-            print(f"\nGenerated: {report['generated_count']}; failed: {report['failed_count']}; "
-                  f"family: {args.provider}")
+            print('\n' + translate('Generated: {generated}; failed: {failed}; family: {provider}').format(
+                generated=report['generated_count'], failed=report['failed_count'], provider=args.provider))
             return 0 if not report["failed"] else 2
         if args.command == "apply-icons":
             report = catalog.apply_icons()
-            print(f"Icons resolved: {report['resolved']}; cleared: {report['cleared']}; "
-                  f"unchanged: {report['unchanged']}; with a theme variant: {report['themed']}")
+            print(translate('Icons resolved: {resolved}; cleared: {cleared}; unchanged: {unchanged}; with a theme variant: {themed}').format(**report))
             return 0
         if args.command == "show":
             print(_template_summary_text(catalog.compose(args.app)))
@@ -728,14 +727,14 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "install":
             template = catalog.compose(args.app)
             if not template["compatibility"]["automatic_install_candidate"]:
-                raise InstallError("Installation blocked: " + ", ".join(template["compatibility"]["untranslated_blockers"]))
+                raise InstallError(translate("Installation blocked:") + " " + ", ".join(template["compatibility"]["untranslated_blockers"]))
             notice = external_services_notice(template)
             if notice:
                 print(notice + "\n")
             deployment = build_deployment(template, None, ADVANCED_MODE if args.advanced else DEFAULT_MODE)
             print(_deployment_summary_text(template, deployment))
-            if not args.dry_run and input("\nInstall? [y/N]: ").strip().casefold() not in {"y", "yes"}:
-                print("Installation cancelled.")
+            if not args.dry_run and input('\n' + translate('Install? [y/N]:') + ' ').strip().casefold() not in {"y", "yes"}:
+                print(translate("Installation cancelled."))
                 return 0
             result = run_remote_install(PROJECT_ROOT, template, deployment, args.host, args.dry_run)
             if result:
@@ -764,7 +763,7 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(deployment, ensure_ascii=False, indent=2))
             result = run_remote_rclone_mount(PROJECT_ROOT, template, deployment, args.host, args.dry_run)
             if result:
-                print(f"Read/write: {result['read_write_path']}\nRead-only: {result['read_only_path']}")
+                print(f"{translate('Read/write')}: {result['read_write_path']}\n{translate('Read-only')}: {result['read_only_path']}")
             return 0
         return 1
     except (KeyboardInterrupt, UserCancelled):
@@ -773,7 +772,7 @@ def main(argv: list[str] | None = None) -> int:
         return 130
     except (ConversionError, SourceError, InstallError, OSError, ValueError) as exc:
         console.stop_spinner()
-        print(f"ERROR: {exc}", file=sys.stderr)
+        print(f"ERROR: {diagnostic(exc)}", file=sys.stderr)
         return 1
 
 
