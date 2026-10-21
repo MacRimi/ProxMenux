@@ -85,6 +85,8 @@ async function main(){
   const before=f.calls.length;f.close();f.render();assert.equal(f.dialog(),undefined);assert.equal(f.calls.length,before)
  }
  const names=catalogs.en.settings.optimizations.sourceToolNames
+ const metadata=JSON.parse(execFileSync('python3',['-c',"import ast,json,sys;t=ast.parse(open(sys.argv[1]).read());n=next(n for n in t.body if isinstance(n,ast.Assign) and isinstance(n.targets[0],ast.Name) and n.targets[0].id=='TOOL_METADATA');print(json.dumps({k:v['name'] for k,v in ast.literal_eval(n.value).items()}))",path.join(app,'scripts/flask_proxmenux_routes.py')],{encoding:'utf8'}))
+ assert.deepEqual(names,metadata,'source title names must match real backend metadata')
  for(const [key,name]of Object.entries(names)){
   assert.equal(formatter.exports.optimizationSourceName(key,name,translate('en')),name)
   assert.equal(formatter.exports.optimizationSourceName(key,name,translate('sk')),catalogs.sk.settings.optimizations.sourceToolNames[key])
