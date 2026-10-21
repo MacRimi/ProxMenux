@@ -31,6 +31,7 @@ PYTHON_FILES = (
     "AppImage/scripts/tests/test_health_persistence_recurrence.py",
 )
 NODE_FILES = (
+    "tests/test_optimization_source.cjs",
     "tests/lxc_updates/test_app_editor_errors.cjs",
     "tests/test_oci_update_cancellation.cjs",
     "tests/test_host_backup_messages.cjs",
