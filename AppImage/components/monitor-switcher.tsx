@@ -14,6 +14,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "./ui/dropdown-menu"
 import { fetchApi } from "../lib/api-config"
+import { monitorLinkError } from "../lib/monitor-link-errors"
 import { useT } from "../lib/i18n/provider"
 
 interface MonitorLink {
@@ -185,8 +186,9 @@ export function MonitorSwitcher({ nodeName, compact = false }: { nodeName: strin
       await refreshCache("/api/monitor-links")
       setOfferOrigin(false)
     } catch (err) {
-      await refreshCache("/api/monitor-links")
-      setAddError(err instanceof Error ? err.message : t("monitorLinks.saveFailed"))
+      setAddError(monitorLinkError(err, t))
+      try { await refreshCache("/api/monitor-links") }
+      catch { /* SWR shows the load error; keep the localized mutation error. */ }
     } finally { setAdding(false) }
   }
   const notNow = () => {
@@ -260,7 +262,7 @@ export function MonitorSwitcher({ nodeName, compact = false }: { nodeName: strin
     </DropdownMenu>
     {manageOpen && <ManageLinksDialog open={manageOpen} onOpenChange={setManageOpen} />}
     {origin && <Dialog open={offerOrigin} onOpenChange={open => { if (!open) notNow() }}>
-      <DialogContent className="max-w-md" onClick={event => event.stopPropagation()}>
+      <DialogContent className="grid-cols-1 max-w-md" onClick={event => event.stopPropagation()}>
         <DialogHeader>
           <DialogTitle>{t("monitorLinks.knownTitle")}</DialogTitle>
           <DialogDescription>{t("monitorLinks.knownBody", { name: origin.name })}</DialogDescription>
@@ -290,7 +292,7 @@ export function MonitorSwitcher({ nodeName, compact = false }: { nodeName: strin
 
 function ManageLinksDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const t = useT()
-  const { data, mutate } = useSWR<MonitorLinks>("/api/monitor-links?all=1", fetcher, { revalidateOnFocus: false })
+  const { data, mutate, error: loadError, isLoading } = useSWR<MonitorLinks>("/api/monitor-links?all=1", fetcher, { revalidateOnFocus: false })
   const [form, setForm] = useState({ name: "", url: "", product: "pve" })
   const [addresses, setAddresses] = useState<Record<string, string>>({})
   const [editing, setEditing] = useState<string | null>(null)
@@ -304,14 +306,14 @@ function ManageLinksDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       await mutate()
       await refreshCache("/api/monitor-links")
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("monitorLinks.saveFailed"))
+      setError(monitorLinkError(err, t))
     } finally { setBusy(false) }
   }
   const send = (path: string, method: string, body?: unknown) =>
     fetchApi(path, { method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) })
 
   return <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-accent [&_input]:bg-background [&_textarea]:bg-background [&_[role=combobox]]:bg-background"
+    <DialogContent className="grid-cols-1 max-w-2xl max-h-[85vh] overflow-y-auto bg-accent [&_input]:bg-background [&_textarea]:bg-background [&_[role=combobox]]:bg-background"
       onClick={event => event.stopPropagation()}>
       <DialogHeader>
         <DialogTitle>{t("monitorLinks.dialogTitle")}</DialogTitle>
@@ -320,7 +322,7 @@ function ManageLinksDialog({ open, onOpenChange }: { open: boolean; onOpenChange
 
       <div className="space-y-3 rounded-lg border border-border p-4">
         <p className="text-sm font-medium">{t("monitorLinks.addTitle")}</p>
-        <div className="grid gap-3 sm:grid-cols-[1fr_1.5fr_auto]">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1.5fr_auto]">
           <div className="space-y-1.5">
             <Label htmlFor="monitor-link-name">{t("monitorLinks.name")}</Label>
             <Input id="monitor-link-name" value={form.name} disabled={busy} onChange={event => setForm({ ...form, name: event.target.value })} />
@@ -350,6 +352,8 @@ function ManageLinksDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
 
       <div className="space-y-3">
+        {isLoading && <p className="text-sm text-muted-foreground">{t("monitorLinks.checking")}</p>}
+        {loadError && <p role="alert" className="text-sm text-amber-500">{t("monitorLinks.loadFailed")}</p>}
         {data?.links.length === 0 && <p className="text-sm text-muted-foreground">{t("monitorLinks.empty")}</p>}
         {data?.links.map(link => {
           const own = link.manual || link.custom_url
@@ -378,8 +382,8 @@ function ManageLinksDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                   <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground">{t("monitorLinks.thisNode")}</span>
                 </div>
               : isEditing
-              ? <div className="flex gap-2">
-                  <Input value={draft} disabled={busy} autoFocus aria-label={t("monitorLinks.address")}
+              ? <div className="grid grid-cols-2 gap-2 sm:flex">
+                  <Input className="col-span-2 min-w-0 sm:flex-1" value={draft} disabled={busy} autoFocus aria-label={t("monitorLinks.address")}
                     placeholder={link.manual ? "" : `${t("monitorLinks.autoAddress")}${shown ? `: ${shown}` : ""}`}
                     onChange={event => setAddresses({ ...addresses, [link.key]: event.target.value })} />
                   <Button size="sm" className="h-10 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-600/50 disabled:text-white disabled:opacity-100"

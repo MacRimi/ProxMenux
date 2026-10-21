@@ -4,9 +4,32 @@
 from __future__ import annotations
 
 import ctypes
+import json
 import os
 import platform
 import sys
+from pathlib import Path
+from functools import lru_cache
+
+
+@lru_cache(maxsize=1)
+def _messages() -> dict:
+    # This helper is also installed alone in libexec: importing oci_ui would
+    # break that existing caller. Read the same catalog using stdlib only.
+    base = Path(os.environ.get('PMX_BASE_DIR', '/usr/local/share/proxmenux'))
+    try:
+        language = json.loads((base / 'config.json').read_text(encoding='utf-8')).get('language', 'en')
+        if language == 'en' or not isinstance(language, str) or not language:
+            return {}
+        data = json.loads((base / 'lang' / (language + '.json')).read_text(encoding='utf-8'))
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError, AttributeError):
+        return {}
+
+
+def translate(text: str) -> str:
+    value = _messages().get(text)
+    return value if isinstance(value, str) and value else text
 
 
 AT_FDCWD = -100
@@ -41,14 +64,16 @@ def fail(step: str) -> None:
 
 def main() -> int:
     if len(sys.argv) != 5 or sys.argv[4] not in {"rw", "ro"}:
-        print(f"usage: {sys.argv[0]} PID SOURCE TARGET rw|ro", file=sys.stderr)
+        print(f"{translate('Usage:')} {sys.argv[0]} PID SOURCE TARGET rw|ro", file=sys.stderr)
         return 2
     machine = platform.machine().lower()
     if machine not in SYSCALLS:
-        print(f"unsupported host architecture: {machine}", file=sys.stderr)
+        print(f"{translate('Unsupported host architecture:')} {machine}", file=sys.stderr)
         return 2
     open_tree_nr, move_mount_nr, mount_setattr_nr = SYSCALLS[machine]
     pid, source, target, mode = sys.argv[1:]
+    # The host catalog is no longer reachable after chroot into the container.
+    _messages()
     libc = ctypes.CDLL(None, use_errno=True)
     libc.syscall.restype = ctypes.c_long
     libc.setns.argtypes = (ctypes.c_int, ctypes.c_int)
@@ -60,7 +85,7 @@ def main() -> int:
     ct_root = os.open(f"/proc/{pid}/root", os.O_PATH | os.O_DIRECTORY | os.O_CLOEXEC)
     try:
         if libc.setns(ct_ns, CLONE_NEWNS) != 0:
-            fail("enter container namespace")
+            fail(translate("enter container namespace"))
         os.fchdir(ct_root)
         os.chroot(".")
         os.chdir("/")
@@ -71,7 +96,7 @@ def main() -> int:
             OPEN_TREE_CLONE | os.O_CLOEXEC,
         )
         if tree < 0:
-            fail("clone source mount tree")
+            fail(translate("clone source mount tree"))
         try:
             if mode == "ro":
                 attributes = MountAttr(attr_set=MOUNT_ATTR_RDONLY)
@@ -84,9 +109,9 @@ def main() -> int:
                     ctypes.sizeof(attributes),
                 )
                 if result != 0:
-                    fail("make cloned mount tree read-only")
+                    fail(translate("make cloned mount tree read-only"))
             if libc.setns(host_ns, CLONE_NEWNS) != 0:
-                fail("return to host namespace")
+                fail(translate("return to host namespace"))
             os.fchdir(host_root)
             os.chroot(".")
             os.chdir("/")
@@ -99,7 +124,7 @@ def main() -> int:
                 MOVE_MOUNT_F_EMPTY_PATH,
             )
             if result != 0:
-                fail("publish mount tree")
+                fail(translate("publish mount tree"))
         finally:
             os.close(tree)
     finally:

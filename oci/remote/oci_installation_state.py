@@ -301,7 +301,7 @@ def main(argv=None):
     diagnose = sub.add_parser('diagnose')
     diagnose.add_argument('vmid', type=int)
     diagnose.add_argument('--check-registry', action='store_true')
-    record = sub.add_parser('record', help='Internal installer operation; not legacy adoption')
+    record = sub.add_parser('record', help=translate('Internal installer operation; not legacy adoption'))
     record.add_argument('vmid', type=int)
     for flag in ('template', 'deployment', 'archive', 'digest'):
         record.add_argument('--' + flag, required=True)

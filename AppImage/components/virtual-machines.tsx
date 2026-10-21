@@ -22,6 +22,7 @@ import useSWR from "swr"
 import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
 import { ScriptTerminalModal } from "./script-terminal-modal"
+import { OCI_CANCELLED_EXIT_CODE, shouldRefreshOciAfterCompletion } from "@/lib/script-completion"
 import { LxcAppPanel, ThemeAwareLogo, ociImageLabel } from "./lxc-app-panel"
 import { GuestBackupList } from "./guest-backup-list"
 import type { GuestBackup } from "../lib/guest-backup-archives"
@@ -977,7 +978,9 @@ export function VirtualMachines() {
   // A container restored from a backup carries the mark of its installation
   // and has no record on this host until it is recovered from the menu.
   const [ociRestored, setOciRestored] = useState(false)
-  const [ociAction, setOciAction] = useState<{ vmid: number; action: "update" | "modify" | "recover" } | null>(null)
+  const [ociAction, setOciAction] = useState<{ vmid: number; action: "update" | "modify" | "recover"; recoverPrevious?: boolean } | null>(null)
+  const ociCompletionCodeRef = useRef<number | undefined>(undefined)
+  useEffect(() => { ociCompletionCodeRef.current = undefined }, [ociAction])
 
   // Firewall log state — fetched only when the operator opens that tab
   // so a CT/VM without firewall use doesn't pay the pvesh cost on every
@@ -5515,7 +5518,7 @@ export function VirtualMachines() {
                                 <Button
                                   size="sm"
                                   className={updateBtnCls}
-                                  onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "update" })}
+                                  onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "update", recoverPrevious: !!ociInstance.pending })}
                                 >
                                   {hasUpdate
                                     ? <ArrowUpCircle className="h-4 w-4 mr-1.5" />
@@ -5744,7 +5747,7 @@ export function VirtualMachines() {
                                 onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "recover" })}
                               >
                                 <RotateCcw className="h-4 w-4 mr-1.5" />
-                                {t("vmLxc.ociUpdates.recover")}
+                                {t("vmLxc.ociUpdates.registerRestored")}
                               </Button>
                             </div>
                           )}
@@ -8014,6 +8017,7 @@ export function VirtualMachines() {
           onClose={() => {
             const vmid = ociAction.vmid
             setOciAction(null)
+            if (!shouldRefreshOciAfterCompletion(ociCompletionCodeRef.current)) return
             // The image, the digest and the record changed: read them again.
             fetchApi(`/api/vms/${vmid}/apps/check`, { method: "POST" })
               .catch(() => undefined)
@@ -8027,7 +8031,10 @@ export function VirtualMachines() {
           }}
           scriptPath="/usr/local/share/proxmenux/scripts/oci/manage_instance.sh"
           scriptName="oci_manage_instance"
-          title={ociAction.action === "update" ? t("vmLxc.ociUpdates.terminalTitleUpdate")
+          cancelledExitCode={OCI_CANCELLED_EXIT_CODE}
+          onComplete={(exitCode) => { ociCompletionCodeRef.current = exitCode }}
+          title={ociAction.action === "update" ? t(ociAction.recoverPrevious
+            ? "vmLxc.ociUpdates.terminalTitleRecoverPrevious" : "vmLxc.ociUpdates.terminalTitleUpdate")
             : ociAction.action === "recover" ? t("vmLxc.ociUpdates.terminalTitleRecover")
             : t("vmLxc.ociUpdates.terminalTitleModify")}
           description={t("vmLxc.ociUpdates.terminalDescription")}

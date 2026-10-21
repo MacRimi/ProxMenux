@@ -121,7 +121,7 @@ class OciWordingTests(TestCase):
 
     def test_failed_registry_inspection_points_to_registry_accounts(self):
         ui = SimpleNamespace(message=Mock())
-        fn = function(CUSTOM, 'explore', read_definition=lambda _: ('definition', 'source'),
+        fn = function(CUSTOM, '_explore', read_definition=lambda _: ('definition', 'source'),
             ignored_settings=lambda _: [], template_from_compose=lambda _: {
                 'container_contract': {'image': {'reference': 'example:latest'}}},
             describe=lambda _: 'SUMMARY', registry_report=lambda _: (False, 'INSPECTION FAILED'),

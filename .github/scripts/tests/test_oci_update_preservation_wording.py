@@ -24,9 +24,12 @@ OLD_GUARD = 'The current template changes the image or identity; an explicit mig
 GUARD = 'The current template changes the template identity or image repository; an explicit migration is required'
 OLD_PREVIEW = ('The saved image channel is checked for a newer image. If replacement is needed, the CT is stopped and '
                'a native backup is verified before its root is replaced. Host directories are outside that backup.')
-PREVIEW = ('If the image channel has a new version, the CT is stopped, backed up and verified, and replaced with '
-           'the new image to update the container. If the update fails after the container was changed, the backup '
-           'is restored. An update that stops halfway is recovered from the OCI management menu.')
+PREVIEW = ('If a newer application image is available, the container is stopped and backed up, and the backup '
+           'integrity is verified. The container is then updated using the new image.\n\n'
+           'If the update fails after the container was changed, ProxMenux attempts to restore the previous '
+           'installation from the backup. If the operation remains incomplete, select the application in OCI '
+           'management and choose "Recover the previous installation".\n\n'
+           'Host directories mounted in the container are not restored by the container backup.')
 
 
 def extracted(path, name, scope):
@@ -130,7 +133,7 @@ class UpdateWording(unittest.TestCase):
         reconcile = ModuleType('oci_instance_reconcile')
         reconcile.propose = lambda *args: None
         scope = {'sys': SimpleNamespace(path=[], executable='python3'),
-                 'os': os, 'tempfile': tempfile, 'Path': Path,
+                 'os': os, 'tempfile': tempfile, 'Path': Path, 'CANCELLED': None,
                  'translate': lambda text: text, 'check_selected': lambda project, row: row,
                  '_selected_configuration': lambda vmid: instances.command('pct', 'config', str(vmid)),
                  'images': SimpleNamespace(offer_removal=lambda *args: None),

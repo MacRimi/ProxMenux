@@ -164,7 +164,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("archive", type=Path)
     parser.add_argument("--extracted-mib", action="store_true",
-                        help="print the estimated unpacked size in MiB (0 when unknown)")
+                        help=translate("print the estimated unpacked size in MiB (0 when unknown)"))
     args = parser.parse_args()
     if args.extracted_mib:
         try:

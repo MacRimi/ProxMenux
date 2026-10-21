@@ -18,6 +18,7 @@ import time
 
 import oci_instances as instances
 from oci_installation_state import parse_config
+from oci_ui import translate
 
 APPS = Path('/etc/proxmenux/apps')
 SOCKET = Path('/run/proxmenux-monitor/oci-check.sock')
@@ -206,7 +207,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, default=instances.ROOT)
     parser.add_argument('--configs', type=Path, default=Path('/etc/pve/lxc'))
-    parser.add_argument('--progress', action='store_true', help='Emit numeric progress for the OCI menu')
+    parser.add_argument('--progress', action='store_true', help=translate('Emit numeric progress for the OCI menu'))
     args = parser.parse_args()
     try:
         if args.progress:
