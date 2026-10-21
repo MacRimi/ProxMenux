@@ -1356,7 +1356,7 @@ show_uninstall_menu() {
             system_limits) desc="System Limits Increase";;
             entropy) desc="Entropy Generation (haveged)";;
             memory_settings) desc="Memory Settings Optimization";;
-            zram_swap) desc="ZRAM swap profile";;
+            zram_swap) desc="$(translate "ZRAM swap profile")";;
             kernel_panic) desc="Kernel Panic Configuration";;
             apt_ipv4) desc="APT IPv4 Force";;
             kexec) desc="kexec for quick reboots";;

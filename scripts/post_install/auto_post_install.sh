@@ -182,9 +182,9 @@ remove_subscription_banner() {
     # description: Patch the Proxmox web UI to suppress the subscription dialog and register a successful patch.
     if [[ "$PMX_ON_PBS" == true ]]; then
         stop_spinner
-        if ! whiptail --title "Proxmox Backup Server Subscription Banner Removal" \
+        if ! whiptail --title "$(translate "Proxmox Backup Server Subscription Banner Removal")" \
         --yesno "$(translate "Do you want to remove the Proxmox subscription banner from the Proxmox Backup Server web interface?")\n\n$(translate "Attention: Removing the subscription banner may cause issues in the web interface after a future update.")\n\n$(translate "If this happens, you can restore the backup from the 'Subscription Banner Removal' option in 'Uninstall optimizations'.")\n\n$(translate "Are you sure you want to continue?")" 14 75; then
-            msg_warn "Banner removal cancelled by user."
+            msg_warn "$(translate "Banner removal cancelled by user.")"
             return 1
         fi
         if ! bash "$LOCAL_SCRIPTS/global/remove-banner-pve-v3.sh"; then

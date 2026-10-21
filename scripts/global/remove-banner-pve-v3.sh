@@ -312,7 +312,7 @@ EOFAPT
     
     # Verify APT hook syntax
     apt-config dump >/dev/null 2>&1 || { 
-        msg_warn "APT hook syntax issue, removing..."
+        msg_warn "$(translate "APT hook syntax issue, removing...")"
         rm -f "$APT_HOOK"
     }
 }

@@ -2574,7 +2574,7 @@ configure_zram_swap() {
     fi
     version="$(dpkg-query -W -f='${Version}' systemd-zram-generator 2>/dev/null)"
     if [[ -z "$version" ]]; then
-        failure="Cannot determine installed systemd-zram-generator version"
+        failure="$(translate "Cannot determine installed systemd-zram-generator version")"
     else
         if dpkg --compare-versions "$version" ge '1.2.0'; then
             supports_params=true
@@ -2588,7 +2588,7 @@ configure_zram_swap() {
             msg_success "$(translate "ZRAM profile is already active")"
             return 0
         fi
-        failure="Existing ZRAM profile is active but does not match its configuration"
+        failure="$(translate "Existing ZRAM profile is active but does not match its configuration")"
     fi
     if [[ -z "$failure" && "$previous_active" == true ]]; then
         if ! swapoff /dev/zram0; then
@@ -2597,31 +2597,31 @@ configure_zram_swap() {
         fi
         state_mutated=true
         if ! systemctl stop dev-zram0.swap >/dev/null 2>&1; then
-            failure="Could not stop existing dev-zram0.swap"
+            failure="$(translate "Could not stop existing dev-zram0.swap")"
         fi
     fi
     if [[ -z "$failure" ]]; then
         state_mutated=true
         if ! install -d -m 755 "$(dirname "$config")"; then
-            failure="Could not create ZRAM generator directory"
+            failure="$(translate "Could not create ZRAM generator directory")"
         elif ! printf '%s\n' "$desired" | pmx_write_file "$config"; then
-            failure="Could not write ZRAM generator configuration"
+            failure="$(translate "Could not write ZRAM generator configuration")"
         fi
     fi
     if [[ -z "$failure" ]]; then
         old_umask="$(umask)"
         umask 077
         if ! printf 'installed_by_proxmenux=%s\n' "$package_owned" | pmx_write_file "$marker"; then
-            failure="Could not write ZRAM package ownership state"
+            failure="$(translate "Could not write ZRAM package ownership state")"
         fi
         umask "$old_umask"
         [[ -f "$marker" ]] && chmod 600 "$marker"
     fi
     if [[ -z "$failure" ]]; then
         if ! systemctl daemon-reload || ! systemctl start dev-zram0.swap; then
-            failure="Could not activate dev-zram0.swap"
+            failure="$(translate "Could not activate dev-zram0.swap")"
         elif ! zram_profile_verify_active "$algorithm"; then
-            failure="Active ZRAM algorithm, capacity or swap sources did not match the profile"
+            failure="$(translate "Active ZRAM algorithm, capacity or swap sources did not match the profile")"
         fi
     fi
     if [[ -z "$failure" ]]; then
