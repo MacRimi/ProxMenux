@@ -15,7 +15,7 @@ const source=process.argv.includes('--baseline')?execFileSync('git',['show','e82
 const formatter={exports:{}};vm.runInNewContext(compile(fs.readFileSync(path.join(app,'lib/optimization-source-errors.ts'),'utf8')),formatter)
 const tools=['one','two'].map(key=>({key,name:'Demo '+key,enabled:true,has_source:true,version:'1.0',available_version:'1.1'}))
 const sourceBody={success:true,function:'demo',script:'demo.sh',source:'demo() {\n  echo "<tag>& $HOME"\n}\n',deprecated:false}
-function fixture(locale='sk'){
+function fixture(locale='sk',catalog=tools){
  let cursor=0,states=[],refs=[],effects=[],memo=[],tree,language=locale,reply=()=>sourceBody
  const calls=[],events={},timers=[],copies=[];let fallbackCopies=0
  const t=(key,params)=>translate(language)(key,params)
@@ -29,7 +29,7 @@ function fixture(locale='sk'){
   const endpoint=String(url).replace(/^https?:\/\/[^/]+/,'');calls.push({endpoint,method:options.method||'GET'})
   assert.equal(options.method||'GET','GET','Source viewer may never mutate')
   if(endpoint.includes('/tool-source/')){const result=await reply(endpoint);if(result instanceof Error)throw result;return result?.http?response(result.body,result.http):response(result)}
-  if(endpoint.endsWith('/installed-tools'))return response({success:true,installed_tools:tools,updates_available_count:0})
+  if(endpoint.endsWith('/installed-tools'))return response({success:true,installed_tools:catalog,updates_available_count:0})
   return response({categories:[],storages:[],interfaces:[],dismissed:[],success:true,candidates:[],configured:false})
  }
  const api={exports:{},fetch,process:{env:{}},console:{error(){}}};vm.runInNewContext(compile(fs.readFileSync(path.join(app,'lib/api-config.ts'),'utf8')),api)
@@ -51,7 +51,7 @@ function fixture(locale='sk'){
  vm.runInNewContext(compile(source),context)
  const render=()=>{cursor=0;effects=[];tree=context.exports.Settings();for(const effect of effects)effect();return tree}
  const settle=async()=>{for(let i=0;i<24;i++)await Promise.resolve();render()}
- const tool=name=>flatten(tree).find(node=>node.props?.title===t('settings.optimizations.sourceTitle')&&text(node).includes('Demo '+name))
+ const tool=name=>flatten(tree).find(node=>node.props?.title===t('settings.optimizations.sourceTitle')&&text(node).includes(catalog.find(tool=>tool.key===name)?.name||'Demo '+name))
  const dialog=()=>flatten(tree).find(node=>node.props?.role==='dialog')
  const close=()=>flatten(tree).find(node=>node.props?.['aria-label']===t('actions.close')).props.onClick()
  return{render,settle,tool,dialog,close,calls,copies,timers,tree:()=>tree,setReply:value=>reply=value,t,
@@ -84,6 +84,15 @@ async function main(){
   f.win.isSecureContext=false;await copy.props.onClick();assert.equal(f.fallbackCopies(),1)
   const before=f.calls.length;f.close();f.render();assert.equal(f.dialog(),undefined);assert.equal(f.calls.length,before)
  }
+ const names=catalogs.en.settings.optimizations.sourceToolNames
+ for(const [key,name]of Object.entries(names)){
+  assert.equal(formatter.exports.optimizationSourceName(key,name,translate('en')),name)
+  assert.equal(formatter.exports.optimizationSourceName(key,name,translate('sk')),catalogs.sk.settings.optimizations.sourceToolNames[key])
+  assert.equal(formatter.exports.optimizationSourceName(key,name,translate('de')),name)
+ }
+ assert.equal(Object.keys(names).length,27)
+ assert.equal(formatter.exports.optimizationSourceName('future','Future tool',translate('sk')),'Future tool')
+ const known=fixture('sk',[{...tools[0],key:'time_sync',name:'Time Synchronization'}]);known.render();await known.settle();await known.tool('time_sync').props.onClick();known.render();assert.ok(text(known.dialog()).includes('Synchronizácia času'));known.language('en');assert.ok(text(known.dialog()).includes('Time Synchronization'))
  const f=fixture();f.render();await f.settle();let resolveOld;f.setReply(()=>new Promise(resolve=>resolveOld=resolve));const old=f.tool('one').props.onClick();f.render();assert.ok(flatten(f.dialog()).some(node=>node.props?.role==='status'))
  f.close();f.render();resolveOld(sourceBody);await old;f.render();assert.equal(f.dialog(),undefined,'late success never reopens closed viewer')
  let resolveStale;f.setReply(()=>new Promise(resolve=>resolveStale=resolve));const stale=f.tool('one').props.onClick();f.setReply(()=>({...sourceBody,source:'two() { :; }'}));await f.tool('two').props.onClick();f.render();resolveStale({http:404,body:{error:'Function not found in available scripts'}});await stale;f.render();assert.ok(text(f.dialog()).includes('Demo two'));assert.equal(flatten(f.dialog()).some(node=>node.props?.role==='alert'),false)

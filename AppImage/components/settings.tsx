@@ -19,7 +19,7 @@ import { SUPPORTED_LANGUAGES, useI18n } from "../lib/i18n/provider"
 import { useIsPbs } from "../lib/use-platform"
 import type { LanguageCode } from "../lib/i18n/languages"
 import { NavTabOrderCard } from "./nav-tab-order-card"
-import { optimizationSourceError, type OptimizationSourceError, type OptimizationSourceResponse } from "../lib/optimization-source-errors"
+import { optimizationSourceError, optimizationSourceName, type OptimizationSourceError, type OptimizationSourceResponse } from "../lib/optimization-source-errors"
 
 // GitHub Dark color palette for bash syntax highlighting
 const BASH_KEYWORDS = new Set([
@@ -355,6 +355,7 @@ export function Settings() {
     open: boolean
     loading: boolean
     toolName: string
+    toolKey: string
     version: string
     availableVersion: string
     functionName: string
@@ -362,7 +363,7 @@ export function Settings() {
     script: string
     error: OptimizationSourceError | null
     deprecated: boolean
-  }>({ open: false, loading: false, toolName: '', version: '', availableVersion: '', functionName: '', source: '', script: '', error: null, deprecated: false })
+  }>({ open: false, loading: false, toolName: '', toolKey: '', version: '', availableVersion: '', functionName: '', source: '', script: '', error: null, deprecated: false })
   const [codeCopied, setCodeCopied] = useState(false)
   const codeRequest = useRef(0)
   const closeCodeModal = () => {
@@ -685,6 +686,7 @@ export function Settings() {
       open: true,
       loading: true,
       toolName: tool.name,
+      toolKey: tool.key,
       version: tool.version || '1.0',
       availableVersion: tool.available_version || tool.version || '1.0',
       functionName: '',
@@ -2182,7 +2184,7 @@ export function Settings() {
             className="relative bg-card border border-border rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col"
             role="dialog"
             aria-modal="true"
-            aria-label={t("settings.optimizations.sourceDialogTitle", { name: codeModal.toolName })}
+            aria-label={t("settings.optimizations.sourceDialogTitle", { name: optimizationSourceName(codeModal.toolKey, codeModal.toolName, t) })}
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
@@ -2191,7 +2193,7 @@ export function Settings() {
                 <Code className={`h-5 w-5 flex-shrink-0 ${codeModal.deprecated ? 'text-amber-500' : 'text-orange-500'}`} />
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-sm font-semibold truncate">{codeModal.toolName}</h3>
+                    <h3 className="text-sm font-semibold truncate">{optimizationSourceName(codeModal.toolKey, codeModal.toolName, t)}</h3>
                     {codeModal.deprecated && (
                       <span className="text-[9px] uppercase tracking-wider text-amber-500 bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded flex-shrink-0">
                         {t("settings.optimizations.legacy")}
