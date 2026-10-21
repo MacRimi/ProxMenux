@@ -50,6 +50,22 @@ class TechnicalMessages(unittest.TestCase):
         self.assertTrue(raw.startswith('La plantilla generada no cumple el esquema:'))
         self.assertEqual(i18n.diagnostic(caught.exception), 'Vygenerovaná šablóna nezodpovedá schéme:' + raw.split(':', 1)[1])
 
+    def test_missing_schema_validator_is_distinct_from_invalid_schema_without_effects(self):
+        template = {}
+        read = self.patch(Path, 'read_text', side_effect=AssertionError('schema must not be read without a validator'))
+        with patch.dict(sys.modules, {'jsonschema': None}):
+            with self.assertRaises(converter.ConversionError) as caught:
+                self.catalog.validate(template)
+            raw = 'python3-jsonschema is required to generate templates'
+            self.assertEqual(str(caught.exception), raw)
+            self.assertEqual(i18n.diagnostic(caught.exception), 'Na generovanie šablón je potrebný python3-jsonschema')
+            self.assertEqual(str(caught.exception), raw)
+            self.assertIsNone(self.catalog.validate(template, required=False))
+        read.assert_not_called()
+        self.assertEqual(template, {})
+        for effect in self.effects:
+            effect.assert_not_called()
+
     def test_real_casaos_error_preserves_the_protocol_and_localizes_the_message(self):
         with self.assertRaises(converter.ConversionError) as caught:
             casaos.parse_casaos_compose('[]')
