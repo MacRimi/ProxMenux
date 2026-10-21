@@ -37,6 +37,7 @@ import { fetchLxcApps, getLxcAppsCached, setLxcAppsCached, subscribeLxcApps } fr
 import { categoryChipStyle, useIsLightTheme } from "../lib/category-color"
 import { getCategoryLabel } from "../lib/category-label"
 import { useT } from "@/lib/i18n/provider"
+import { localizeAppEditorError } from "../lib/lxc-app-editor-errors"
 
 // installed_via is optional now — an empty value means "register only,
 // no version tracking, no warnings, just a clickable link". Docker
@@ -728,7 +729,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
     if (lower.startsWith("registry unreachable")) {
       return t("vmLxc.appEditor.upstreamErrorRegistry")
     }
-    return msg
+    return localizeAppEditorError(msg, t)
   }
 
   const editorOpen = !!editing && editing.targetVmid === vmid
@@ -1212,7 +1213,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
   }
 
   const removeOne = async (appId: string) => {
-    if (!confirm("Remove this application from the CT's App tab?")) return
+    if (!confirm(t("vmLxc.appEditor.confirmRemove"))) return
     setBusyAppId(appId)
     setError(null)
     try {
@@ -2069,14 +2070,14 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
                           id="app-package"
                           value={draft.package || ""}
                           onChange={(e) => setField({ package: e.target.value })}
-                          placeholder={method === "dpkg" ? "e.g. jellyfin-server" : "e.g. tailscale"}
+                          placeholder={t("vmLxc.appEditor.packageExample", { package: method === "dpkg" ? "jellyfin-server" : "tailscale" })}
                         />
                         <div className="text-[10px] text-muted-foreground mt-1">
-                          Auto-filled from Name. Verify with{" "}
+                          {t("vmLxc.appEditor.packageHelpBefore")}{" "}
                           <code className="text-foreground/70">
                             {method === "dpkg" ? "dpkg -l | grep <app>" : "apk info | grep <app>"}
                           </code>{" "}
-                          inside the CT.
+                          {t("vmLxc.appEditor.packageHelpAfter")}
                         </div>
                       </div>
                     )}
@@ -2092,8 +2093,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
                           className="font-mono text-xs"
                         />
                         <div className="text-[10px] text-muted-foreground mt-1">
-                          Absolute path. Find it with{" "}
-                          <code className="text-foreground/70">which &lt;app&gt;</code> or{" "}
+                          {t("vmLxc.appEditor.binaryHelpBefore")}{" "}
+                          <code className="text-foreground/70">which &lt;app&gt;</code>{" "}{t("vmLxc.appEditor.binaryHelpOr")}{" "}
                           <code className="text-foreground/70">systemctl show &lt;service&gt; -p ExecStart</code>.
                         </div>
                       </div>
@@ -2558,7 +2559,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
                     {detectorTest.installed.version ? (
                       <div className="font-mono text-sm text-emerald-400">{detectorTest.installed.version}</div>
                     ) : (
-                      <div className="text-xs text-amber-300">{detectorTest.installed.error || t("vmLxc.appEditor.detectorTestNoVersion")}</div>
+                      <div className="text-xs text-amber-300">{localizeUpstreamError(detectorTest.installed.error) || t("vmLxc.appEditor.detectorTestNoVersion")}</div>
                     )}
                     <div className="mt-1.5 text-[10px] text-muted-foreground break-all">
                       {detectorTest.installed.method || "—"}
@@ -2574,7 +2575,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
                     ) : detectorTest.upstream.version ? (
                       <div className="font-mono text-sm text-emerald-400">{detectorTest.upstream.version}</div>
                     ) : (
-                      <div className="text-xs text-amber-300">{detectorTest.upstream.error || t("vmLxc.appEditor.detectorTestNoVersion")}</div>
+                      <div className="text-xs text-amber-300">{localizeUpstreamError(detectorTest.upstream.error) || t("vmLxc.appEditor.detectorTestNoVersion")}</div>
                     )}
                     {detectorTest.upstream.type && (
                       <div className="mt-1.5 text-[10px] text-muted-foreground">{detectorTest.upstream.type}</div>
@@ -2587,7 +2588,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
             {error && (
               <div className="text-xs text-red-400 flex items-start gap-1.5">
                 <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-                <span>{error}</span>
+                <span>{localizeAppEditorError(error, t)}</span>
               </div>
             )}
 
@@ -3343,7 +3344,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
       {error && (
         <div className="text-xs text-red-400 flex items-start gap-1.5">
           <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-          <span>{error}</span>
+          <span>{localizeAppEditorError(error, t)}</span>
         </div>
       )}
     </div>
