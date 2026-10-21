@@ -67,7 +67,7 @@ async function main(){
  for(const locale of ['en','sk','de']){
   const f=fixture(locale);f.render();await f.settle()
   for(const [reply,key,param]of [
-   [{success:false},'sourceUnavailable'],[null,'sourceUnavailable'],[{success:true,source:''},'sourceUnavailable'],[{success:true,source:'   '},'sourceUnavailable'],[{success:true,source:17},'sourceUnavailable'],
+   [{success:false},'sourceUnavailable'],[null,'sourceUnavailable'],[{success:'yes',source:'invalid'},'sourceUnavailable'],[{success:true,source:''},'sourceUnavailable'],[{success:true,source:'   '},'sourceUnavailable'],[{success:true,source:17},'sourceUnavailable'],
    [{http:404,body:{success:false,error:'Function not found in available scripts'}},'sourceFunctionMissing'],
    [{http:404,body:{success:false,error:'Unknown tool: demo'}},'sourceUnknownTool',{tool:'demo'}],
    [{http:404,body:{success:false,error:'No function mapping for demo'}},'sourceNoMapping',{tool:'demo'}],

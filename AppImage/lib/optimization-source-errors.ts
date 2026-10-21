@@ -5,6 +5,15 @@ export interface OptimizationSourceError {
   detail?: string
 }
 
+export interface OptimizationSourceResponse {
+  success?: unknown
+  source?: unknown
+  function?: unknown
+  script?: unknown
+  deprecated?: unknown
+  error?: unknown
+}
+
 // Keep the blueprint's English API contract intact; translate only its display.
 export function optimizationSourceError(error: OptimizationSourceError, t: Translate): string {
   const detail = error.detail || ""

@@ -19,7 +19,7 @@ import { SUPPORTED_LANGUAGES, useI18n } from "../lib/i18n/provider"
 import { useIsPbs } from "../lib/use-platform"
 import type { LanguageCode } from "../lib/i18n/languages"
 import { NavTabOrderCard } from "./nav-tab-order-card"
-import { optimizationSourceError, type OptimizationSourceError } from "../lib/optimization-source-errors"
+import { optimizationSourceError, type OptimizationSourceError, type OptimizationSourceResponse } from "../lib/optimization-source-errors"
 
 // GitHub Dark color palette for bash syntax highlighting
 const BASH_KEYWORDS = new Set([
@@ -694,9 +694,9 @@ export function Settings() {
       deprecated: !!tool.deprecated,
     })
     try {
-      const data = await fetchApi(`/api/proxmenux/tool-source/${tool.key}`)
+      const data = await fetchApi<OptimizationSourceResponse | null>(`/api/proxmenux/tool-source/${tool.key}`)
       if (request !== codeRequest.current) return
-      if (data?.success && typeof data.source === "string" && data.source.trim()) {
+      if (data?.success === true && typeof data.source === "string" && data.source.trim()) {
         setCodeModal(prev => ({ ...prev, loading: false, functionName: typeof data.function === "string" ? data.function : '', source: data.source, script: typeof data.script === "string" ? data.script : '', deprecated: !!data.deprecated }))
       } else {
         setCodeModal(prev => ({ ...prev, loading: false, error: { kind: "unavailable", detail: typeof data?.error === "string" ? data.error : undefined } }))
