@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Package, Ruler, HeartPulse, Cpu, MemoryStick, HardDrive, CircleDot, Network, Server, Settings2, FileText, RefreshCw, Shield, AlertTriangle, Info, Loader2, Check, Database, CloudOff, Code, X, Copy, Sparkles, ArrowUpCircle, BellOff, Globe2, Github } from "lucide-react"
 import { Badge } from "./ui/badge"
@@ -19,6 +19,7 @@ import { SUPPORTED_LANGUAGES, useI18n } from "../lib/i18n/provider"
 import { useIsPbs } from "../lib/use-platform"
 import type { LanguageCode } from "../lib/i18n/languages"
 import { NavTabOrderCard } from "./nav-tab-order-card"
+import { optimizationSourceError, type OptimizationSourceError } from "../lib/optimization-source-errors"
 
 // GitHub Dark color palette for bash syntax highlighting
 const BASH_KEYWORDS = new Set([
@@ -359,10 +360,25 @@ export function Settings() {
     functionName: string
     source: string
     script: string
-    error: string
+    error: OptimizationSourceError | null
     deprecated: boolean
-  }>({ open: false, loading: false, toolName: '', version: '', availableVersion: '', functionName: '', source: '', script: '', error: '', deprecated: false })
+  }>({ open: false, loading: false, toolName: '', version: '', availableVersion: '', functionName: '', source: '', script: '', error: null, deprecated: false })
   const [codeCopied, setCodeCopied] = useState(false)
+  const codeRequest = useRef(0)
+  const closeCodeModal = () => {
+    codeRequest.current += 1
+    setCodeModal(prev => ({ ...prev, open: false }))
+    setCodeCopied(false)
+  }
+  useEffect(() => () => { codeRequest.current += 1 }, [])
+  useEffect(() => {
+    if (!codeModal.open) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeCodeModal()
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [codeModal.open])
   
   // Health Monitor suppression settings
   const [suppressionCategories, setSuppressionCategories] = useState<SuppressionCategory[]>([])
@@ -663,6 +679,8 @@ export function Settings() {
   }
 
   const viewToolSource = async (tool: ProxMenuxTool) => {
+    const request = ++codeRequest.current
+    setCodeCopied(false)
     setCodeModal({
       open: true,
       loading: true,
@@ -672,22 +690,26 @@ export function Settings() {
       functionName: '',
       source: '',
       script: '',
-      error: '',
+      error: null,
       deprecated: !!tool.deprecated,
     })
     try {
       const data = await fetchApi(`/api/proxmenux/tool-source/${tool.key}`)
-      if (data.success) {
-        setCodeModal(prev => ({ ...prev, loading: false, functionName: data.function, source: data.source, script: data.script, deprecated: !!data.deprecated }))
+      if (request !== codeRequest.current) return
+      if (data?.success && typeof data.source === "string" && data.source.trim()) {
+        setCodeModal(prev => ({ ...prev, loading: false, functionName: typeof data.function === "string" ? data.function : '', source: data.source, script: typeof data.script === "string" ? data.script : '', deprecated: !!data.deprecated }))
       } else {
-        setCodeModal(prev => ({ ...prev, loading: false, error: data.error || 'Source code not available' }))
+        setCodeModal(prev => ({ ...prev, loading: false, error: { kind: "unavailable", detail: typeof data?.error === "string" ? data.error : undefined } }))
       }
-    } catch {
-      setCodeModal(prev => ({ ...prev, loading: false, error: 'Failed to load source code' }))
+    } catch (error: any) {
+      if (request !== codeRequest.current) return
+      const detail = typeof error?.body?.error === "string" ? error.body.error : undefined
+      setCodeModal(prev => ({ ...prev, loading: false, error: { kind: "loadFailed", detail } }))
     }
   }
 
   const copySourceCode = async () => {
+    const request = codeRequest.current
     const text = codeModal.source
     let ok = false
 
@@ -721,9 +743,9 @@ export function Settings() {
       }
     }
 
-    if (ok) {
+    if (ok && request === codeRequest.current) {
       setCodeCopied(true)
-      setTimeout(() => setCodeCopied(false), 2000)
+      setTimeout(() => { if (request === codeRequest.current) setCodeCopied(false) }, 2000)
     }
   }
 
@@ -2153,10 +2175,13 @@ export function Settings() {
 
       {/* Code Viewer Modal */}
       {codeModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setCodeModal(prev => ({ ...prev, open: false }))}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={closeCodeModal}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div
             className="relative bg-card border border-border rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("settings.optimizations.sourceDialogTitle", { name: codeModal.toolName })}
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
@@ -2201,7 +2226,8 @@ export function Settings() {
                   </button>
                 )}
                 <button
-                  onClick={() => setCodeModal(prev => ({ ...prev, open: false }))}
+                    onClick={closeCodeModal}
+                    aria-label={t("actions.close")}
                   className="p-1.5 rounded-md hover:bg-muted transition-colors"
                 >
                   <X className="h-4 w-4" />
@@ -2211,13 +2237,13 @@ export function Settings() {
             {/* Body */}
             <div className="flex-1 overflow-auto p-0">
               {codeModal.loading ? (
-                <div className="flex items-center justify-center py-16">
+                <div className="flex items-center justify-center py-16" role="status" aria-label={t("settings.optimizations.sourceLoading")}>
                   <div className="animate-spin h-8 w-8 border-4 border-orange-500 border-t-transparent rounded-full" />
                 </div>
               ) : codeModal.error ? (
                 <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                   <Code className="h-10 w-10 mb-3 opacity-40" />
-                  <p className="text-sm">{codeModal.error}</p>
+                  <p className="text-sm" role="alert">{optimizationSourceError(codeModal.error, t)}</p>
                 </div>
               ) : (
                 <pre
