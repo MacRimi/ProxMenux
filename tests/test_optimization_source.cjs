@@ -4,6 +4,8 @@ const {execFileSync}=require('node:child_process')
 const root=path.resolve(__dirname,'..'),app=path.join(root,'AppImage')
 const ts=require(path.join(app,'node_modules/typescript'))
 const catalogs=Object.fromEntries(['en','sk','de'].map(locale=>[locale,JSON.parse(fs.readFileSync(path.join(app,`messages/${locale}/common.json`)))]))
+// A locale without these keys must show the English name.
+catalogs.missing={}
 const translate=locale=>(key,params={})=>{
  const find=data=>key.split('.').reduce((item,name)=>item?.[name],data)
  return (find(catalogs[locale])??find(catalogs.en)??key).replace(/\{(\w+)\}/g,(all,key)=>params[key]??all)
@@ -13,6 +15,8 @@ const text=node=>node==null||node===false?'':typeof node!=='object'?String(node)
 const compile=source=>ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}}).outputText
 const source=process.argv.includes('--baseline')?execFileSync('git',['show','e826680c:AppImage/components/settings.tsx'],{cwd:root,encoding:'utf8'}):fs.readFileSync(path.join(app,'components/settings.tsx'),'utf8')
 const formatter={exports:{}};vm.runInNewContext(compile(fs.readFileSync(path.join(app,'lib/optimization-source-errors.ts'),'utf8')),formatter)
+const descriptionsPath=path.join(app,'lib/optimization-descriptions.ts')
+const descriptions={exports:{},require:name=>({default:require(path.resolve(app,'lib',name))})};if(fs.existsSync(descriptionsPath))vm.runInNewContext(compile(fs.readFileSync(descriptionsPath,'utf8')),descriptions)
 const tools=['one','two'].map(key=>({key,name:'Demo '+key,enabled:true,has_source:true,version:'1.0',available_version:'1.1'}))
 const sourceBody={success:true,function:'demo',script:'demo.sh',source:'demo() {\n  echo "<tag>& $HOME"\n}\n',deprecated:false}
 function fixture(locale='sk',catalog=tools){
@@ -42,6 +46,7 @@ function fixture(locale='sk',catalog=tools){
   if(name==='react')return react
   if(name==='react/jsx-runtime')return{jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})}
   if(name.includes('optimization-source-errors'))return formatter.exports
+  if(name.includes('optimization-descriptions'))return descriptions.exports
   if(name.includes('api-config'))return api.exports
   if(name.includes('i18n/provider'))return{SUPPORTED_LANGUAGES:[],useI18n:()=>({t,language,setLanguage:value=>language=value})}
   if(name.includes('use-platform'))return{useIsPbs:()=>false}
@@ -51,7 +56,9 @@ function fixture(locale='sk',catalog=tools){
  vm.runInNewContext(compile(source),context)
  const render=()=>{cursor=0;effects=[];tree=context.exports.Settings();for(const effect of effects)effect();return tree}
  const settle=async()=>{for(let i=0;i<24;i++)await Promise.resolve();render()}
- const tool=name=>flatten(tree).find(node=>node.props?.title===t('settings.optimizations.sourceTitle')&&text(node).includes(catalog.find(tool=>tool.key===name)?.name||'Demo '+name))
+ // Rows show the localized tool name when the catalog has one.
+ const label=name=>{const fallback=catalog.find(tool=>tool.key===name)?.name||'Demo '+name;return descriptions.exports.optimizationToolName?descriptions.exports.optimizationToolName(name,fallback,t):fallback}
+ const tool=name=>flatten(tree).find(node=>node.props?.title===t('settings.optimizations.sourceTitle')&&text(node).includes(label(name)))
  const dialog=()=>flatten(tree).find(node=>node.props?.role==='dialog')
  const close=()=>flatten(tree).find(node=>node.props?.['aria-label']===t('actions.close')).props.onClick()
  return{render,settle,tool,dialog,close,calls,copies,timers,tree:()=>tree,setReply:value=>reply=value,t,
@@ -90,7 +97,7 @@ async function main(){
  for(const [key,name]of Object.entries(names)){
   assert.equal(formatter.exports.optimizationSourceName(key,name,translate('en')),name)
   assert.equal(formatter.exports.optimizationSourceName(key,name,translate('sk')),catalogs.sk.settings.optimizations.sourceToolNames[key])
-  assert.equal(formatter.exports.optimizationSourceName(key,name,translate('de')),name)
+  assert.equal(formatter.exports.optimizationSourceName(key,name,translate('missing')),name)
  }
  assert.equal(Object.keys(names).length,27)
  assert.equal(formatter.exports.optimizationSourceName('future','Future tool',translate('sk')),'Future tool')

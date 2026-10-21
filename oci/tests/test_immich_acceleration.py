@@ -173,6 +173,9 @@ class ImmichAccelerationTests(unittest.TestCase):
         with patch.object(i18n, 'language', return_value='sk'), patch.object(i18n, '_cache', json.loads((ROOT.parent / 'lang/sk.json').read_text())):
             self.assertEqual(_service_kind(service), 'Strojové učenie')
             _, _, plan = self.plan(NOTHING, DEFAULT_MODE)
+        # Spanish keeps the English name of the service.
+        with patch.object(i18n, 'language', return_value='es'), patch.object(i18n, '_cache', json.loads((ROOT.parent / 'lang/es.json').read_text())):
+            self.assertEqual(_service_kind(service), 'Machine learning')
         self.assertIn('machine_learning', plan)
         self.assertEqual(service, original)
 

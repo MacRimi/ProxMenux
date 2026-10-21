@@ -25,6 +25,8 @@ const translate = locale => (key, params = {}) => {
   assert.equal(typeof template, 'string', 'Missing translation ' + key)
   return template.replace(/\{(\w+)\}/g, (all, key) => params[key] ?? all)
 }
+// A locale without these keys must show the English backend text.
+catalogs.missing = {}
 const en = translate('en'), sk = translate('sk')
 // Enumerate only pure validator ASTs; importing lxc_apps would access host state.
 const contract = JSON.parse(execFileSync('python3', ['-c', String.raw`
@@ -64,7 +66,7 @@ assert.equal(contract.templates.length, 69, 'Update the contract inventory when 
 for (const message of [...contract.templates, ...contract.actual]) {
   assert.equal(localize(message, en), message, 'EN must preserve the exact backend message')
   assert.notEqual(localize(message, sk), message, 'Untranslated backend validation: ' + message)
-  assert.equal(localize(message, translate('de')), message, 'Missing locale falls back to EN')
+  assert.equal(localize(message, translate('missing')), message, 'Missing locale falls back to EN')
 }
 // Every supported message, including detector errors, preserves interpolated data.
 const enErrors = catalogs.en.vmLxc.appEditor.errors, skErrors = catalogs.sk.vmLxc.appEditor.errors
