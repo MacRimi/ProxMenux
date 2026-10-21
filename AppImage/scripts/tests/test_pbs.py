@@ -205,7 +205,7 @@ class PBSManagerTests(unittest.TestCase):
 
     def test_password_sign_in_keeps_only_a_read_only_token(self):
         calls = []
-        def request(server, method, endpoint, headers, form=None, rejected=""):
+        def request(server, method, endpoint, headers, form=None, rejected="", **kwargs):
             calls.append((method, endpoint, form))
             if endpoint == "/access/ticket":
                 return {"ticket": "PBS:root@pam:ticket", "CSRFPreventionToken": "csrf", "username": "root@pam"}
@@ -227,7 +227,7 @@ class PBSManagerTests(unittest.TestCase):
 
     def test_password_sign_in_removes_its_token_when_the_role_cannot_be_granted(self):
         calls = []
-        def request(server, method, endpoint, headers, form=None, rejected=""):
+        def request(server, method, endpoint, headers, form=None, rejected="", **kwargs):
             calls.append((method, endpoint))
             if endpoint == "/access/ticket":
                 return {"ticket": "t", "CSRFPreventionToken": "c"}
@@ -351,15 +351,17 @@ class TLSTests(unittest.TestCase):
 
     def test_bad_pin_and_untrusted_ca_send_no_http_credentials(self):
         for fingerprint in ('0' * 64, ''):
-            with self.subTest(fingerprint=fingerprint), self.assertRaises(pbs.PBSError):
+            with self.subTest(fingerprint=fingerprint), self.assertRaises(pbs.PBSError) as caught:
                 pbs._remote_get({**self.connection, "fingerprint": fingerprint}, '/status/datastore-usage')
+            self.assertEqual(caught.exception.code, "pbs_fingerprint_mismatch" if fingerprint else "pbs_connect_failed")
             self.assertEqual(self.requests, [])
 
     def test_bad_credentials_and_redirects_are_rejected(self):
         for status in (401, 403, 302):
             type(self).response_status = status
-            with self.subTest(status=status), self.assertRaises(pbs.PBSError):
+            with self.subTest(status=status), self.assertRaises(pbs.PBSError) as caught:
                 pbs._remote_get(self.connection, '/status/datastore-usage')
+            self.assertEqual(caught.exception.code, "pbs_token_rejected" if status in (401, 403) else "pbs_invalid_response")
 
 
 if __name__ == '__main__':
