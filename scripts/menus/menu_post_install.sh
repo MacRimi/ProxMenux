@@ -63,13 +63,13 @@ confirm_automated_script() {
 
     if [[ "$PMX_ON_PBS" == true ]]; then
         script_info+="$(translate "This script will apply the following optimizations and advanced adjustments to your Proxmox Backup Server"):\n\n"
-        script_info+="• $(translate "Upgrade the system, offering the") \Z4no-subscription repository\Z0 $(translate "when the server has no subscription (you will be asked)")\n"
+        script_info+="• $(translate "Upgrade the system, offering the") \Z4$(translate "no-subscription repository")\Z0 $(translate "when the server has no subscription (you will be asked)")\n"
     else
         script_info+="$(translate "This script will apply the following optimizations and advanced adjustments to your Proxmox VE server"):\n\n"
         script_info+="• $(translate "Configure") \Z4free repositories\Z0 $(translate "and upgrade the system (disables the enterprise repo)")\n"
     fi
-    script_info+="• $(translate "Optionally remove") \Z4subscription banner\Z0 $(translate "from Proxmox web interface (you will be asked)")\n"
-    script_info+="• $(translate "Optimize") \Z4memory\Z0, \Z4kernel\Z0, $(translate "and") \Z4network\Z0 $(translate "for better performance and stability")\n"
+    script_info+="• $(translate "Optionally remove") \Z4$(translate "subscription banner")\Z0 $(translate "from Proxmox web interface (you will be asked)")\n"
+    script_info+="• $(translate "Optimize") \Z4$(translate "memory")\Z0, \Z4$(translate "kernel")\Z0, $(translate "and") \Z4$(translate "network")\Z0 $(translate "for better performance and stability")\n"
     script_info+="• $(translate "Install and configure") \Z4Log2RAM\Z0 $(translate "(only on SSD/NVMe) to protect your disk")\n"
     script_info+="• $(translate "Enable") \Z4ZFS autotrim\Z0 $(translate "on SSD/NVMe pools that support discard")\n"
     script_info+="• $(translate "Improve log rotation and limit log size to save space and extend disk life")\n"
@@ -289,10 +289,10 @@ post_install_label() {
             echo "Proxmox VE Microcode"
             ;;
         "Proxmox Backup Server Post Install")
-            echo "Proxmox Backup Server Post Install"
+            translate "Proxmox Backup Server Post Install"
             ;;
         "Proxmox Backup Server Microcode")
-            echo "Proxmox Backup Server Microcode"
+            translate "Proxmox Backup Server Microcode"
             ;;
         "Community Scripts")
             translate "Community Scripts"

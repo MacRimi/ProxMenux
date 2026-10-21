@@ -3,7 +3,7 @@ import copy
 import re
 from pathlib import Path, PurePosixPath
 
-from .i18n import translate
+from .i18n import N_, translate
 from .ui import BacktrackUI, RestartWizard, UserCancelled
 
 
@@ -212,8 +212,8 @@ def edit_section(candidate, ui, setting):
         wizard.close()
 
 
-def edit_recreation(record, ui):
-    """Keep a draft across independently editable settings; apply it once."""
+def edit_recreation(record, ui, *, cancelled_result=None):
+    """Keep a draft; optionally distinguish cancellation from an unchanged review."""
     from .cli import _deployment_summary_text
     candidate = copy.deepcopy(record)
     selected = 'cores'
@@ -227,7 +227,7 @@ def edit_recreation(record, ui):
                              title=translate('Modify OCI'), show_tags=False)
         if selected is None or selected == 'discard':
             if not pending or ui.confirm(translate('Discard unapplied changes?'), False):
-                return None
+                return cancelled_result
             selected = 'apply'
         elif selected == 'apply':
             if not pending:
@@ -243,8 +243,29 @@ def edit_recreation(record, ui):
             candidate = edit_section(candidate, ui, selected)
 
 
+def _catalog_message(error):
+    """Localize legacy catalog errors here, preserving the catalog API."""
+    text = str(error)
+    patterns = (
+        (r"No template is available for '(.*)'", N_("No template is available for '{app_id}'")),
+        (r"The application '(.*)' is not in the index", N_("The application '{app_id}' is not in the index")),
+    )
+    for pattern, source in patterns:
+        match = re.fullmatch(pattern, text)
+        if match:
+            translated = translate(source)
+            return text if translated == source else translated.format(app_id=match[1])
+    prefix = 'La plantilla generada no cumple el esquema:'
+    if text.startswith(prefix):
+        source = N_('The generated template does not match the schema:')
+        translated = translate(source)
+        return text if translated == source else translated + text[len(prefix):]
+    return text
+
+
 def refresh_template(candidate, ui):
     from .catalog import Catalog
+    from .converter import ConversionError
     old = candidate.get('template', {})
     template_id = old.get('id', '')
     if not re.fullmatch(r'[a-z0-9][a-z0-9-]+', template_id):
@@ -258,7 +279,10 @@ def refresh_template(candidate, ui):
     if len(matching) != 1:
         return
     name = matching[0]['id']
-    latest = catalog.compose(name)
+    try:
+        latest = catalog.compose(name)
+    except ConversionError as error:
+        raise ConversionError(_catalog_message(error)) from error
     if latest == old:
         return
     if not ui.confirm(translate('Apply options from the current catalog template? New required paths and settings may be requested. Review the resulting configuration before recreating the CT.'), True):

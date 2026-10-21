@@ -284,7 +284,7 @@ def change(root, primary_id, acceleration, render_device=None, gfx_override=None
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('vmid', type=int, help='main container of the application')
+    parser.add_argument('vmid', type=int, help=translate('main container of the application'))
     parser.add_argument('--acceleration', required=True, choices=PROFILES)
     parser.add_argument('--render-device')
     parser.add_argument('--gfx-override')

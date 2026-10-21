@@ -48,6 +48,7 @@ import {
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { RestoreProgressCard } from "./restore-progress-card"
 import { fetchApi, getApiUrl } from "../lib/api-config"
+import { hostBackupErrorText } from "../lib/host-backup-messages"
 import { fetchTerminalTicket } from "../lib/terminal-ws"
 import { formatStorage, formatBytes, cancelButtonClass } from "../lib/utils"
 import { getStorageUsageColor } from "../lib/storage-usage-color"
@@ -525,7 +526,7 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
       await mutateInfo()
       closeUpload()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
+      setErr(hostBackupErrorText(e, t))
       setBusy(false)
     }
   }
@@ -542,7 +543,7 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
       await mutateInfo()
       closeDelete()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
+      setErr(hostBackupErrorText(e, t))
       setBusy(false)
     }
   }
@@ -765,7 +766,7 @@ function KeyfileActionsBar({
       setPass1("")
       setPass2("")
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
+      setErr(hostBackupErrorText(e, t))
     } finally {
       setBusy(false)
     }
@@ -956,7 +957,7 @@ export function HostBackup() {
       mutateJobs()
       setJobToDelete(null)
     } catch (e) {
-      setActionError(t("backup.errors.deleteFailed", { error: `"${id}": ${e instanceof Error ? e.message : String(e)}` }))
+      setActionError(t("backup.errors.deleteFailed", { error: `"${id}": ${hostBackupErrorText(e, t)}` }))
     } finally {
       setBusyJobId(null)
     }
@@ -1334,7 +1335,7 @@ export function HostBackup() {
               <div className="font-medium">{t("backup.archives.remoteQueryWarning")}</div>
               {remoteArchivesResp.errors.map((e, i) => (
                 <div key={i} className="font-mono break-all">
-                  {e.backend}/{e.repo_name}: {e.error}
+                  {e.backend}/{e.repo_name}: {hostBackupErrorText(e.error, t)}
                 </div>
               ))}
             </div>
@@ -1761,7 +1762,7 @@ function InspectModal({
       setImportFile(null)
       setImportPath("")
     } catch (e) {
-      setImportError(e instanceof Error ? e.message : String(e))
+      setImportError(hostBackupErrorText(e, t))
     } finally {
       setImporting(false)
     }
@@ -1812,7 +1813,7 @@ function InspectModal({
           : undefined,
       })
     } catch (e) {
-      setRestoreError(e instanceof Error ? e.message : String(e))
+      setRestoreError(hostBackupErrorText(e, t))
     } finally {
       setRestorePreparing(false)
     }
@@ -1841,7 +1842,7 @@ function InspectModal({
       a.click()
       document.body.removeChild(a)
     } catch (e) {
-      setError(t("backup.errors.downloadFailed", { error: e instanceof Error ? e.message : String(e) }))
+      setError(t("backup.errors.downloadFailed", { error: hostBackupErrorText(e, t) }))
     } finally {
       // The download itself runs in the browser's network stack;
       // we just initiated it. Clear the spinner immediately.
@@ -1914,7 +1915,7 @@ function InspectModal({
       document.body.removeChild(a)
       setExportTask(null)
     } catch (e) {
-      setError(t("backup.errors.downloadFailed", { error: e instanceof Error ? e.message : String(e) }))
+      setError(t("backup.errors.downloadFailed", { error: hostBackupErrorText(e, t) }))
     } finally {
       setDownloading(false)
     }
@@ -1962,7 +1963,7 @@ function InspectModal({
       setShowDeleteArchiveConfirm(false)
       if (onDeleted) onDeleted(); else onClose()
     } catch (e) {
-      setError(t("backup.errors.deleteFailed", { error: e instanceof Error ? e.message : String(e) }))
+      setError(t("backup.errors.deleteFailed", { error: hostBackupErrorText(e, t) }))
     } finally {
       setDeletingArchive(false)
     }
@@ -1989,7 +1990,7 @@ function InspectModal({
       ) as NonNullable<typeof instructions>
       setInstructions(res)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setFetchingInstructions(false)
     }
@@ -2021,7 +2022,7 @@ function InspectModal({
       )
       setReport(res)
     } catch (e: any) {
-      setError(e?.message || t("backup.errors.preflightFailed"))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setRunning(false)
     }
@@ -2164,7 +2165,7 @@ function InspectModal({
                   <span className="text-muted-foreground">— {exportTask.message}</span>
                 </div>
                 {exportTask.state === "failed" && exportTask.error && (
-                  <div className="text-red-500 mt-1">{exportTask.error}</div>
+                  <div className="text-red-500 mt-1">{hostBackupErrorText(exportTask.error, t)}</div>
                 )}
                 {exportTask.state === "completed" && exportTask.size_bytes > 0 && (
                   <div className="text-emerald-400">{t("backup.archives.packedSizeLabel")} {formatBytes(exportTask.size_bytes)}</div>
@@ -2706,7 +2707,7 @@ function PreflightReportView({ report }: { report: PreflightReport }) {
               <Icon className={`h-3.5 w-3.5 ${color} flex-shrink-0 mt-0.5`} />
               <div className="flex-1 min-w-0">
                 <span className={`font-mono ${color}`}>{c.id}</span>
-                <span className="text-muted-foreground ml-2">{c.message}</span>
+                <span className="text-muted-foreground ml-2">{hostBackupErrorText(c.message, t)}</span>
               </div>
             </div>
           )
@@ -3326,9 +3327,9 @@ function CreateJobDialog({
       } catch (e) {
         const err = e as Error & { body?: { tool_output?: string; tool_exit_code?: number } }
         const detail = err.body?.tool_output
-          ? `${err.message}\n\n${t("backup.errors.proxmoxBackupClientOutput")}:\n${err.body.tool_output}`
-          : err.message
-        setError(t("backup.errors.encryptionSetupFailed", { detail: detail || String(e) }))
+          ? `${hostBackupErrorText(err, t)}\n\n${t("backup.errors.proxmoxBackupClientOutput")}:\n${err.body.tool_output}`
+          : hostBackupErrorText(err, t)
+        setError(t("backup.errors.encryptionSetupFailed", { error: detail || hostBackupErrorText(e, t) }))
         setPbsImportBusy(false)
         setSubmitting(false)
         return
@@ -3391,7 +3392,7 @@ function CreateJobDialog({
       })
       onCreated()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setSubmitting(false)
     }
@@ -3764,7 +3765,7 @@ function CreateJobDialog({
                     </>
                   ) : (
                     <div className="text-red-500">
-                      <span className="font-medium">{t("backup.validation.invalidLabel")}</span> {calendarPreview.error}
+                      <span className="font-medium">{t("backup.validation.invalidLabel")}</span> {hostBackupErrorText(calendarPreview.error, t)}
                     </div>
                   )
                 ) : (
@@ -4696,9 +4697,9 @@ function ManualBackupDialog({
       } catch (e) {
         const err = e as Error & { body?: { tool_output?: string; tool_exit_code?: number } }
         const detail = err.body?.tool_output
-          ? `${err.message}\n\n${t("backup.errors.proxmoxBackupClientOutput")}:\n${err.body.tool_output}`
-          : err.message
-        setError(t("backup.errors.encryptionSetupFailed", { detail: detail || String(e) }))
+          ? `${hostBackupErrorText(err, t)}\n\n${t("backup.errors.proxmoxBackupClientOutput")}:\n${err.body.tool_output}`
+          : hostBackupErrorText(err, t)
+        setError(t("backup.errors.encryptionSetupFailed", { error: detail || hostBackupErrorText(e, t) }))
         setPbsImportBusy(false)
         setSubmitting(false)
         return
@@ -4738,7 +4739,7 @@ function ManualBackupDialog({
       )
       onLaunched(resp.job_id)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setSubmitting(false)
     }
@@ -5542,7 +5543,7 @@ function DestinationsSection({
       await fetchApi(`/api/host-backups/destinations/pbs/${encodeURIComponent(name)}${force ? "?force=true" : ""}`, { method: "DELETE" })
       onChanged()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -5554,7 +5555,7 @@ function DestinationsSection({
       await fetchApi(`/api/host-backups/destinations/borg/${encodeURIComponent(name)}${force ? "?force=true" : ""}`, { method: "DELETE" })
       onChanged()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -5571,7 +5572,7 @@ function DestinationsSection({
       )
       onChanged()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -5599,7 +5600,7 @@ function DestinationsSection({
       })
       onChanged()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -6042,7 +6043,7 @@ function DestinationRow({
 
       {capacity?.error && (
         <p className="mt-3 text-[11px] text-muted-foreground italic">
-          {t("backup.destinations.capacityUnavailable", { error: capacity.error })}
+          {t("backup.destinations.capacityUnavailable", { error: hostBackupErrorText(capacity.error, t) })}
         </p>
       )}
       {!capacity && (
@@ -6341,7 +6342,7 @@ function AddDestinationDialog({
       )
       setGeneratedKey(resp)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setGeneratingKey(false)
     }
@@ -6405,7 +6406,7 @@ function AddDestinationDialog({
       }
       onSaved(savedRepo)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setSubmitting(false)
     }
@@ -6756,7 +6757,7 @@ function UsbPicker({
       mutate()
       if (resp?.mountpoint) onPick(resp.mountpoint)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -6784,7 +6785,7 @@ function UsbPicker({
       setFormatTyped("")
       if (resp?.mountpoint) onPick(resp.mountpoint)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -7001,7 +7002,7 @@ function ExtraPathsSection() {
       setNewPath("")
       mutate()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setSubmitting(false)
     }
@@ -7014,7 +7015,7 @@ function ExtraPathsSection() {
       await fetchApi(`/api/host-backups/extra-paths?path=${encodeURIComponent(p)}`, { method: "DELETE" })
       mutate()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyPath(null)
     }
@@ -7180,7 +7181,7 @@ function UsbDrivesSection() {
       })
       mutate()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -7198,7 +7199,7 @@ function UsbDrivesSection() {
       })
       mutate()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -7222,7 +7223,7 @@ function UsbDrivesSection() {
       setFormatTarget(null)
       setFormatTyped("")
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -7508,7 +7509,7 @@ function JobDetailModal({
       setRunning(false)
       setRunBaseline(null)
       setRunBaselineLogPath(null)
-      setActionError(t("backup.errors.runFailed", { error: e instanceof Error ? e.message : String(e) }))
+      setActionError(t("backup.errors.runFailed", { error: hostBackupErrorText(e, t) }))
     }
   }
 
@@ -7522,7 +7523,7 @@ function JobDetailModal({
       await refetch()
       onChanged()
     } catch (e) {
-      setActionError(t("backup.errors.toggleFailed", { error: e instanceof Error ? e.message : String(e) }))
+      setActionError(t("backup.errors.toggleFailed", { error: hostBackupErrorText(e, t) }))
     } finally {
       setBusy("")
     }
@@ -8155,7 +8156,7 @@ function PbsKeyfileRecoveryDialog({
       })
       onRecovered()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusy(false)
     }
@@ -8342,7 +8343,7 @@ function ArchiveContentsModal({
       body: JSON.stringify(body),
     })
       .then((r: any) => setData(r))
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .catch((e) => setError(hostBackupErrorText(e, t)))
       .finally(() => setLoading(false))
   }, [open, source, repo_name, snapshot, path])
 
@@ -8571,7 +8572,7 @@ function PlanSummary({ plan }: { plan: any }) {
           <div className="text-[10px] uppercase tracking-wider text-red-400 mb-1">{t("backup.plan.blockers")}</div>
           <ul className="space-y-0.5 ml-4 list-disc">
             {blockers.map((b, i) => (
-              <li key={i} className="text-red-400">{typeof b === "string" ? b : (b.message || JSON.stringify(b))}</li>
+              <li key={i} className="text-red-400">{hostBackupErrorText(typeof b === "string" ? b : (b.message || JSON.stringify(b)), t)}</li>
             ))}
           </ul>
         </div>
@@ -8581,7 +8582,7 @@ function PlanSummary({ plan }: { plan: any }) {
           <div className="text-[10px] uppercase tracking-wider text-amber-400 mb-1">{t("backup.plan.warnings")}</div>
           <ul className="space-y-0.5 ml-4 list-disc">
             {warnings.map((w, i) => (
-              <li key={i} className="text-amber-400">{typeof w === "string" ? w : (w.message || JSON.stringify(w))}</li>
+              <li key={i} className="text-amber-400">{hostBackupErrorText(typeof w === "string" ? w : (w.message || JSON.stringify(w)), t)}</li>
             ))}
           </ul>
         </div>
@@ -8611,7 +8612,7 @@ function StorageSection({ storage }: { storage: any }) {
             <div className="min-w-0 flex-1">
               <code className="font-mono">{e.name || e.storage || `entry ${i}`}</code>
               {e.type && <span className="text-muted-foreground ml-2">{e.type}</span>}
-              {e.message && <div className="text-muted-foreground text-[11px]">{e.message}</div>}
+              {e.message && <div className="text-muted-foreground text-[11px]">{hostBackupErrorText(e.message, t)}</div>}
             </div>
           </li>
         )

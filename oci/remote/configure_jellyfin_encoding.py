@@ -93,8 +93,8 @@ def main() -> None:
     rootfs = Path(sys.argv[1])
     configuration = json.loads(sys.argv[2])
     path, changed = update_encoding(rootfs, configuration)
-    state = "updated" if changed else "already applied"
-    print(f"Jellyfin configuration {state}: /{path.relative_to(rootfs.resolve())}")
+    state = translate("Jellyfin configuration updated:") if changed else translate("Jellyfin configuration already applied:")
+    print(f"{state} /{path.relative_to(rootfs.resolve())}")
 
 
 if __name__ == "__main__":
