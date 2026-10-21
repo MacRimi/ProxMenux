@@ -39,7 +39,13 @@ MAX_RESPONSE = 4 * 1024 * 1024
 
 
 class PBSError(ValueError):
-    pass
+    def __init__(self, message, *, code="pbs_unknown", params=None):
+        super().__init__(message)
+        self.code = code
+        self.params = params
+
+    def problem(self):
+        return {"code": self.code, **({"params": self.params} if self.params else {})}
 
 
 def get_platform():
@@ -87,7 +93,7 @@ def _load_servers():
     except FileNotFoundError:
         return []
     except (OSError, ValueError) as exc:
-        raise PBSError("Could not read the PBS server configuration.") from exc
+        raise PBSError("Could not read the PBS server configuration.", code="pbs_config_read") from exc
 
 
 def _save_servers(servers):
@@ -113,11 +119,11 @@ def public_servers():
 
 def _validate_server(data, previous=None, fields=("name", "url", "token_id", "token_secret", "fingerprint")):
     if not isinstance(data, dict):
-        raise PBSError("Invalid PBS server configuration.")
+        raise PBSError("Invalid PBS server configuration.", code="pbs_invalid_config")
     previous = previous or {}
     row = {field: data.get(field, previous.get(field, "")) for field in fields}
     if any(not isinstance(value, str) or len(value) > 4096 for value in row.values()):
-        raise PBSError("Invalid PBS connection field.")
+        raise PBSError("Invalid PBS connection field.", code="pbs_invalid_field")
     row["name"] = row["name"].strip()
     row["url"] = row["url"].strip().rstrip("/")
     try:
@@ -127,26 +133,26 @@ def _validate_server(data, previous=None, fields=("name", "url", "token_id", "to
                 or parts.query or parts.fragment):
             raise ValueError()
     except ValueError as exc:
-        raise PBSError("Use an HTTPS PBS URL without embedded credentials, query or fragment.") from exc
+        raise PBSError("Use an HTTPS PBS URL without embedded credentials, query or fragment.", code="pbs_invalid_url") from exc
     if not row["name"] or len(row["name"]) > 128:
-        raise PBSError("A server name of at most 128 characters is required.")
+        raise PBSError("A server name of at most 128 characters is required.", code="pbs_name_required")
     if "token_id" not in row:
         return _validated_fingerprint(row)
     row["token_id"] = row["token_id"].strip()
     if not re.fullmatch(r"[^\s:!]+@[^\s:!]+![^\s:!]+", row["token_id"]):
-        raise PBSError("Enter a PBS API token ID in user@realm!token format.")
+        raise PBSError("Enter a PBS API token ID in user@realm!token format.", code="pbs_token_id_format")
     if (not row["token_secret"] or not row["token_secret"].isascii()
             or any(char.isspace() or ord(char) < 32 for char in row["token_secret"])):
-        raise PBSError("A valid API token secret is required.")
+        raise PBSError("A valid API token secret is required.", code="pbs_token_secret")
     if not row["token_id"].isascii():
-        raise PBSError("Invalid API token ID.")
+        raise PBSError("Invalid API token ID.", code="pbs_invalid_token_id")
     return _validated_fingerprint(row)
 
 
 def _validated_fingerprint(row):
     fingerprint = row["fingerprint"].strip().lower().replace(":", "")
     if fingerprint and not re.fullmatch("[a-f0-9]{64}", fingerprint):
-        raise PBSError("The certificate fingerprint must be SHA256 (64 hex characters).")
+        raise PBSError("The certificate fingerprint must be SHA256 (64 hex characters).", code="pbs_invalid_fingerprint")
     row["fingerprint"] = fingerprint
     return row
 
@@ -158,7 +164,8 @@ def _remote_get(server, endpoint):
 
 
 def _remote_request(server, method, endpoint, headers, form=None,
-                    rejected="PBS rejected the API token or its permissions. Check both the user and token ACLs."):
+                    rejected="PBS rejected the API token or its permissions. Check both the user and token ACLs.",
+                    *, rejected_code="pbs_token_rejected"):
     """One request to PBS; credentials leave only after the certificate is checked."""
     parts = urlsplit(server["url"])
     fingerprint = server.get("fingerprint")
@@ -175,7 +182,7 @@ def _remote_request(server, method, endpoint, headers, form=None,
         if fingerprint:
             actual = hashlib.sha256(connection.sock.getpeercert(binary_form=True)).hexdigest()
             if not hmac.compare_digest(actual, fingerprint):
-                raise PBSError("PBS certificate fingerprint does not match. No credentials were sent.")
+                raise PBSError("PBS certificate fingerprint does not match. No credentials were sent.", code="pbs_fingerprint_mismatch")
         path = parts.path.rstrip("/") + "/api2/json" + endpoint
         body = urlencode(form) if form is not None else None
         request_headers = {"Accept": "application/json", **headers}
@@ -185,17 +192,17 @@ def _remote_request(server, method, endpoint, headers, form=None,
         response = connection.getresponse()
         content = response.read(MAX_RESPONSE + 1)
         if response.status in (401, 403):
-            raise PBSError(rejected)
+            raise PBSError(rejected, code=rejected_code)
         if response.status != 200 or len(content) > MAX_RESPONSE:
-            raise PBSError("PBS returned an invalid response. Redirects are not followed.")
+            raise PBSError("PBS returned an invalid response. Redirects are not followed.", code="pbs_invalid_response")
         document = json.loads(content)
         if not isinstance(document, dict) or "data" not in document:
-            raise PBSError("PBS returned an invalid JSON document.")
+            raise PBSError("PBS returned an invalid JSON document.", code="pbs_invalid_json")
         return document["data"]
     except PBSError:
         raise
     except (OSError, http.client.HTTPException, ValueError) as exc:
-        raise PBSError("Could not connect to PBS over verified HTTPS. Check the address, certificate and service.") from exc
+        raise PBSError("Could not connect to PBS over verified HTTPS. Check the address, certificate and service.", code="pbs_connect_failed") from exc
     finally:
         connection.close()
 
@@ -203,19 +210,19 @@ def _remote_request(server, method, endpoint, headers, form=None,
 def save_server(data):
     identifier = data.get("id") if isinstance(data, dict) else None
     if identifier is not None and not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", str(identifier)):
-        raise PBSError("Invalid PBS server ID.")
+        raise PBSError("Invalid PBS server ID.", code="pbs_invalid_id")
     with _lock:
         previous = next((row for row in _load_servers() if row["id"] == identifier), None)
     row = _validate_server(data, previous)
     # /version may be public; validate credentials on the protected status API.
     usage = _remote_get(row, "/status/datastore-usage")
     if not isinstance(usage, list):
-        raise PBSError("PBS returned an invalid datastore list.")
+        raise PBSError("PBS returned an invalid datastore list.", code="pbs_invalid_datastores")
     row.update(id=identifier or "pbs-" + secrets.token_hex(6), revision=secrets.token_hex(16))
     with _lock:
         servers = _load_servers()
         if previous is None and len(servers) >= 32:
-            raise PBSError("At most 32 PBS connections may be configured.")
+            raise PBSError("At most 32 PBS connections may be configured.", code="pbs_connection_limit", params={"count": 32})
         servers = [existing for existing in servers if existing["id"] != row["id"]]
         _save_servers([*servers, row])
     return row["id"]
@@ -228,27 +235,27 @@ def connect_with_password(data):
     username = data.get("username") if isinstance(data, dict) else None
     password = data.get("password") if isinstance(data, dict) else None
     if not isinstance(username, str) or not re.fullmatch(r"[^\s:!@]+@[^\s:!@]+", username.strip()):
-        raise PBSError("Enter the PBS user as user@realm, for example root@pam.")
+        raise PBSError("Enter the PBS user as user@realm, for example root@pam.", code="pbs_username")
     if not isinstance(password, str) or not password or len(password) > 4096:
-        raise PBSError("Enter the password of the PBS user.")
+        raise PBSError("Enter the password of the PBS user.", code="pbs_password")
     ticket = _remote_request(endpoint, "POST", "/access/ticket", {},
                              {"username": username.strip(), "password": password},
-                             rejected="PBS rejected the user name or password.")
+                             rejected="PBS rejected the user name or password.", rejected_code="pbs_login_rejected")
     if not isinstance(ticket, dict) or not ticket.get("ticket") or not ticket.get("CSRFPreventionToken"):
-        raise PBSError("PBS returned an invalid sign-in response.")
+        raise PBSError("PBS returned an invalid sign-in response.", code="pbs_invalid_login")
     session = {"Cookie": "PBSAuthCookie=" + quote(ticket["ticket"], safe=""),
                "CSRFPreventionToken": ticket["CSRFPreventionToken"]}
     user = str(ticket.get("username") or username.strip())
     name = "proxmenux-" + secrets.token_hex(4)
     token_path = f"/access/users/{quote(user, safe='')}/token/{name}"
     created = _remote_request(endpoint, "POST", token_path, session, {"comment": "ProxMenux Monitor, read-only"},
-                              rejected="This PBS user cannot create API tokens.")
+                              rejected="This PBS user cannot create API tokens.", rejected_code="pbs_token_create_denied")
     if not isinstance(created, dict) or not created.get("tokenid") or not created.get("value"):
-        raise PBSError("PBS returned an invalid API token.")
+        raise PBSError("PBS returned an invalid API token.", code="pbs_invalid_token")
     try:
         _remote_request(endpoint, "PUT", "/access/acl", session,
                         {"path": "/", "role": "Audit", "auth-id": created["tokenid"], "propagate": "1"},
-                        rejected="This PBS user cannot grant the Audit role. Sign in with root@pam or an administrator.")
+                        rejected="This PBS user cannot grant the Audit role. Sign in with root@pam or an administrator.", rejected_code="pbs_audit_role_denied")
         return save_server({**endpoint, "token_id": created["tokenid"], "token_secret": created["value"]})
     except PBSError:
         try:
@@ -263,7 +270,7 @@ def delete_server(identifier):
         servers = _load_servers()
         remaining = [row for row in servers if row["id"] != identifier]
         if len(remaining) == len(servers):
-            raise PBSError("PBS server not found.")
+            raise PBSError("PBS server not found.", code="pbs_not_found")
         _save_servers(remaining)
 
 
@@ -276,7 +283,7 @@ def _cli(*arguments):
             raise ValueError()
         return data
     except (OSError, subprocess.SubprocessError, ValueError) as exc:
-        raise PBSError("Could not read PBS " + " ".join(arguments[:2]) + ". Check its service and permissions.") from exc
+        raise PBSError("Could not read PBS " + " ".join(arguments[:2]) + ". Check its service and permissions.", code="pbs_read_failed") from exc
 
 
 def _local_api(path):
@@ -290,7 +297,7 @@ def _local_api(path):
             raise ValueError()
         return data
     except (OSError, subprocess.SubprocessError, ValueError) as exc:
-        raise PBSError("Could not read PBS " + path + ". Check its service and permissions.") from exc
+        raise PBSError("Could not read PBS " + path + ". Check its service and permissions.", code="pbs_read_failed") from exc
 
 
 def _local_datastores():
@@ -305,12 +312,14 @@ def _local_datastores():
         inactive = store.get("backing-device") and not (path and os.path.ismount(path))
         if not path or inactive or store.get("maintenance-mode"):
             row["error"] = "Datastore is offline, in maintenance or has no mounted backing device."
+            row["error_code"] = "pbs_datastore_offline"
         else:
             try:
                 capacity = shutil.disk_usage(path)
                 row.update(total=capacity.total, used=capacity.used, avail=capacity.free)
             except OSError:
                 row["error"] = "Datastore filesystem is not available."
+                row["error_code"] = "pbs_datastore_unavailable"
         result.append(row)
     return result
 
@@ -331,10 +340,10 @@ def get_status(identifier):
         cached = _status_cache.get(identifier)
         if cached and cached[0] > time.monotonic():
             return cached[1]
-    errors = {}
+    errors, error_details = {}, {}
     if identifier == "local":
         if not local_available():
-            raise PBSError("The local host is not a PBS server.")
+            raise PBSError("The local host is not a PBS server.", code="pbs_local_unavailable")
         name, version = get_platform().get("hostname") or socket.gethostname(), _local_version()
         services = _local_services()
         operations = {"datastores": _local_datastores,
@@ -346,7 +355,7 @@ def get_status(identifier):
         with _lock:
             server = next((row for row in _load_servers() if row["id"] == identifier), None)
         if not server:
-            raise PBSError("PBS server not found.")
+            raise PBSError("PBS server not found.", code="pbs_not_found")
         metadata = _remote_get(server, "/version")
         name, version = server["name"], metadata.get("version") if isinstance(metadata, dict) else None
         services = {}
@@ -354,18 +363,19 @@ def get_status(identifier):
                      "sync": "/admin/sync", "verify": "/admin/verify", "prune": "/admin/prune"}
         operations = {key: (lambda endpoint=path: _remote_get(server, endpoint)) for key, path in endpoints.items()}
     result = {"server": identifier, "name": name, "version": version, "services": services,
-              "fetched_at": int(time.time()), "errors": errors}
+              "fetched_at": int(time.time()), "errors": errors, "error_details": error_details}
     with ThreadPoolExecutor(max_workers=5) as executor:
         futures = {key: executor.submit(operation) for key, operation in operations.items()}
         for key, future in futures.items():
             try:
                 data = future.result()
                 if not isinstance(data, list) or not all(isinstance(row, dict) for row in data):
-                    raise PBSError("PBS returned an invalid list.")
+                    raise PBSError("PBS returned an invalid list.", code="pbs_invalid_list")
                 result[key] = [{**row, "name": row.get("store", row.get("name"))} for row in data] if key == "datastores" else data
             except PBSError as exc:
                 result[key] = None  # Unknown/forbidden is never presented as zero.
                 errors[key] = str(exc)
+                error_details[key] = exc.problem()
     with _lock:
         if len(_status_cache) >= 33:
             _status_cache.clear()
