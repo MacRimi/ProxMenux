@@ -697,7 +697,8 @@ export function Settings() {
       const data = await fetchApi<OptimizationSourceResponse | null>(`/api/proxmenux/tool-source/${tool.key}`)
       if (request !== codeRequest.current) return
       if (data?.success === true && typeof data.source === "string" && data.source.trim()) {
-        setCodeModal(prev => ({ ...prev, loading: false, functionName: typeof data.function === "string" ? data.function : '', source: data.source, script: typeof data.script === "string" ? data.script : '', deprecated: !!data.deprecated }))
+        const source = data.source
+        setCodeModal(prev => ({ ...prev, loading: false, functionName: typeof data.function === "string" ? data.function : '', source, script: typeof data.script === "string" ? data.script : '', deprecated: !!data.deprecated }))
       } else {
         setCodeModal(prev => ({ ...prev, loading: false, error: { kind: "unavailable", detail: typeof data?.error === "string" ? data.error : undefined } }))
       }
