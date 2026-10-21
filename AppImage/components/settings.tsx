@@ -2226,8 +2226,8 @@ export function Settings() {
                   </button>
                 )}
                 <button
-                    onClick={closeCodeModal}
-                    aria-label={t("actions.close")}
+                  onClick={closeCodeModal}
+                  aria-label={t("actions.close")}
                   className="p-1.5 rounded-md hover:bg-muted transition-colors"
                 >
                   <X className="h-4 w-4" />
