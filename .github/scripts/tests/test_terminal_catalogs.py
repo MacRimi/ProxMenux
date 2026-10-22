@@ -85,27 +85,6 @@ class TerminalCatalogsTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn('missing=0', result.stdout)
 
-    def test_optional_completeness_still_rejects_invalid_present_translations(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            (root / 'scripts').mkdir()
-            (root / 'lang').mkdir()
-            (root / 'scripts/check.sh').write_text('translate "Check /etc/pve/storage.cfg"')
-            (root / 'lang/sk.json').write_text(json.dumps({'Check /etc/pve/storage.cfg': 'Skontrolujte /etc/pve/storage.cfg'}))
-            (root / 'lang/es.json').write_text('{}')
-
-            def check(languages, *flags):
-                return subprocess.run(
-                    [sys.executable, '-B', str(SCRIPTS / 'check_terminal_catalogs.py'),
-                     '--root', str(root), '--languages', languages, *flags],
-                    capture_output=True, text=True, timeout=60,
-                )
-
-            self.assertEqual(check('es,sk').returncode, 0)
-            self.assertEqual(check('sk', '--require-complete').returncode, 0)
-            self.assertNotEqual(check('es', '--require-complete').returncode, 0)
-            (root / 'lang/es.json').write_text(json.dumps({'Check /etc/pve/storage.cfg': 'Compruebe /etc/PVE/storage.cfg'}))
-            self.assertNotEqual(check('es,sk').returncode, 0)
 
     def test_optional_completeness_still_rejects_invalid_present_translations(self):
         with tempfile.TemporaryDirectory() as temporary:
