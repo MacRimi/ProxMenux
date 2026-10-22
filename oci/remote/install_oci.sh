@@ -521,6 +521,11 @@ capture_volume_seeds() {
     index=$((index + 1))
   done < <(jq -r '.mounts[]? | select(.type == "managed-volume") | .container_path' "$DEPLOYMENT_FILE")
 
+  if (( failed == 0 )); then
+    # Data seeds were captured first; prepare the raw image even when the
+    # transaction will reuse a persistent disk and therefore skipped seeding.
+    oci_quiet python3 "$SCRIPT_DIR/oci_image_mountpoints.py" "$rootfs" "$DEPLOYMENT_FILE" || failed=1
+  fi
   if (( mounted == 1 )); then
     oci_quiet pct unmount "$VMID" || failed=1
   fi

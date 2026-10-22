@@ -405,6 +405,9 @@ def attach_mounts(service, temporary):
                     run('cp','-a',str(target)+'/.',str(seed))
             else:
                 owner = (100000,100000,0o755)
+            if mount['type'] == 'managed-volume':
+                from oci_image_mountpoints import normalize
+                normalize(root, [mount['container_path']])
         finally:
             run('pct','unmount',vmid)
         if mount['type']=='managed-volume':
