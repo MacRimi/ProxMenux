@@ -1,5 +1,17 @@
 const assert=require('node:assert/strict')
+const fs=require('node:fs'),path=require('node:path')
 const {loadTypeScript}=require('./ts-fixture.cjs')
+async function withApiCatalog(language,values,run){
+ const original=fs.readFileSync,target=path.resolve(__dirname,'../AppImage/messages',language,'common.json')
+ fs.readFileSync=function(file,...args){
+  const content=original.call(this,file,...args)
+  if(typeof file==='string'&&path.resolve(file)===target){
+   const catalog=JSON.parse(content);catalog.apiErrors=values;return JSON.stringify(catalog)
+  }
+  return content
+ }
+ try{return await run()}finally{fs.readFileSync=original}
+}
 function fixture(language='sk',token='fixture-token'){
  const local=new Map(token?[['proxmenux-auth-token',token]]:[]),session=new Map(),calls=[];let reloads=0,reply=()=>new Response('{}',{headers:{'Content-Type':'application/json'}})
  const storage=map=>({getItem:key=>map.get(key)||null,setItem:(key,v)=>map.set(key,v),removeItem:key=>map.delete(key)})
@@ -9,6 +21,35 @@ function fixture(language='sk',token='fixture-token'){
  return{fetchApi,calls,reply:value=>reply=value,globals,local,reloads:()=>reloads}
 }
 async function main(){
+ // Future translations must work without another language-specific code branch.
+ for(const language of ['de','es','fr','it','pt','sv']){
+  await withApiCatalog(language,{http:language+' HTTP {status} {statusText}',unknownContentType:language+' TYPE'},async()=>{
+   const f=fixture(language)
+   f.reply(()=>new Response('html',{status:502,statusText:'Bad Gateway'}))
+   await assert.rejects(f.fetchApi('/api/demo'),e=>e.message===language+' HTTP 502 Bad Gateway')
+   // A partial catalog falls back per key, preserving the original endpoint.
+   f.reply(()=>new Response('{',{headers:{'Content-Type':'application/json'}}))
+   await assert.rejects(f.fetchApi('/api/demo'),e=>e.message==='Invalid JSON response from /api/demo')
+   assert.equal(f.calls.length,2,'Localization never retries or makes its own request')
+  })
+ }
+ await withApiCatalog('fr',{http:{invalid:'not a message'},invalidJson:'FR {endpoint}'},async()=>{
+  const f=fixture('fr');f.reply(()=>new Response('',{status:503,statusText:'Unavailable'}))
+  await assert.rejects(f.fetchApi('/api/demo'),e=>e.message==='API request failed: 503 Unavailable')
+  const browser=loadTypeScript('lib/api-errors.ts',{navigator:{language:'fr-FR',languages:['sk']}})
+  assert.equal(browser.apiFailure('invalidJson',{endpoint:'/literal?x=<a>&y=1'}),'FR /literal?x=<a>&y=1')
+  const document={documentElement:{lang:'sk'}};let storedReads=0
+  const current=loadTypeScript('lib/api-errors.ts',{document,window:{localStorage:{getItem:()=>{storedReads++;return 'sk'}}}})
+  assert.equal(current.apiFailure('invalidJson',{endpoint:'/api/demo'}),'Odpoveď z /api/demo obsahuje neplatný JSON')
+  document.documentElement.lang='fr'
+  assert.equal(current.apiFailure('invalidJson',{endpoint:'/api/demo'}),'FR /api/demo','The next error follows a language switch without reloading')
+  assert.equal(storedReads,0,'The provider document language takes precedence')
+  document.documentElement.lang='unsupported'
+  assert.equal(current.apiFailure('unknownContentType'),'neznámy typ obsahu')
+  assert.equal(storedReads,1,'An invalid document language uses a supported stored preference')
+  const denied=loadTypeScript('lib/api-errors.ts',{window:{get localStorage(){throw new Error('denied')}},navigator:{language:'fr-FR',languages:[]}})
+  assert.equal(denied.apiFailure('invalidJson',{endpoint:'/api/demo'}),'FR /api/demo')
+ })
  for(const lang of ['sk','en','de']){
   const f=fixture(lang),sk=lang==='sk'
   f.reply(()=>new Response('html',{status:502,statusText:'Bad Gateway',headers:{'Content-Type':'text/html'}}))

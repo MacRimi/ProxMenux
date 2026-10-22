@@ -1431,9 +1431,9 @@ HTML_DESC="<div align='center'>
 </table>
 
 <p>
-<a href='https://macrimi.github.io/ProxMenux/docs/create-vm/synology' target='_blank'><img src='https://img.shields.io/badge/📚_$(translate "Docs")-blue' alt='$(translate "Docs")'></a>
-<a href='https://raw.githubusercontent.com/MacRimi/ProxMenux/refs/heads/main/scripts/vm/synology.sh' target='_blank'><img src='https://img.shields.io/badge/💻_$(translate "Code")-green' alt='$(translate "Code")'></a>
-<a href='$LOADER_URL' target='_blank'><img src='https://img.shields.io/badge/📦_$(translate "Loader")-orange' alt='$(translate "Loader")'></a>
+<a href='https://macrimi.github.io/ProxMenux/docs/create-vm/synology' target='_blank'><img src='https://img.shields.io/badge/📚_Docs-blue' alt='Docs'></a>
+<a href='https://raw.githubusercontent.com/MacRimi/ProxMenux/refs/heads/main/scripts/vm/synology.sh' target='_blank'><img src='https://img.shields.io/badge/💻_Code-green' alt='Code'></a>
+<a href='$LOADER_URL' target='_blank'><img src='https://img.shields.io/badge/📦_Loader-orange' alt='Loader'></a>
 <a href='https://ko-fi.com/macrimi' target='_blank'><img src='https://img.shields.io/badge/☕_Ko--fi-red' alt='Ko-fi'></a>
 </p>
 

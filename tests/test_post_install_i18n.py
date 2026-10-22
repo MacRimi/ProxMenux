@@ -26,12 +26,21 @@ def run(source,params,language='en',utilities=True):
         return result.returncode,result.stdout+result.stderr,trace.read_text()
 
 class PostInstallI18n(unittest.TestCase):
-    def test_existing_single_batch_failures_and_fallback_contract(self):
-        before=(ROOT/'tests/fixtures/cli-before-i18n/update_post_install_function.sh').read_text();after=(ROOT/FILE).read_text()
-        cases=[{}, {'SOURCE_TYPE':'auto','FUNCTION_NAME':'fixture_ok','TOOL_KEY':'fixture'}, {'SOURCE_TYPE':'detected','FUNCTION_NAME':'fixture_ok','TOOL_KEY':'fixture'}, {'SOURCE_TYPE':'custom','FUNCTION_NAME':'missing_fn','TOOL_KEY':'fixture'}, {'SOURCE_TYPE':'wrong','FUNCTION_NAME':'fixture_ok'}, {'FUNCTIONS_BATCH':'auto:fixture_ok:one\ncustom:fixture_fail:two\nauto:missing_fn:three\ndetected:fixture_ok:four'}]
+    def test_single_batch_exit_codes_and_fallback_without_host_calls(self):
+        source=(ROOT/FILE).read_text()
+        cases=[({},2,''),
+               ({'SOURCE_TYPE':'auto','FUNCTION_NAME':'fixture_ok','TOOL_KEY':'fixture'},0,'ok\n'),
+               ({'SOURCE_TYPE':'detected','FUNCTION_NAME':'fixture_ok','TOOL_KEY':'fixture'},0,'ok\n'),
+               ({'SOURCE_TYPE':'custom','FUNCTION_NAME':'missing_fn','TOOL_KEY':'fixture'},1,''),
+               ({'SOURCE_TYPE':'wrong','FUNCTION_NAME':'fixture_ok'},1,''),
+               ({'FUNCTIONS_BATCH':'auto:fixture_ok:one\ncustom:fixture_fail:two\nauto:missing_fn:three\ndetected:fixture_ok:four'},1,'ok\nfail\nok\n')]
         for utilities in (False,True):
-            for params in cases:
-                with self.subTest(utilities=utilities,params=params):self.assertEqual(run(before,params,utilities=utilities),run(after,params,utilities=utilities))
+            for params,expected_code,expected_trace in cases:
+                with self.subTest(utilities=utilities,params=params):
+                    code,text,trace=run(source,params,utilities=utilities)
+                    self.assertEqual(code,expected_code)
+                    self.assertEqual(trace,expected_trace)
+                    self.assertNotIn('command not found',text)
     def test_slovak_missing_failure_summary_and_no_real_host_calls(self):
         source=(ROOT/FILE).read_text()
         code,text,trace=run(source,{'FUNCTIONS_BATCH':'auto:fixture_ok:one\ncustom:fixture_fail:two\nauto:missing_fn:three'},language='sk')

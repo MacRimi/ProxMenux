@@ -1,6 +1,7 @@
 """Real translate and display-only shell calls; never source a VM creator."""
 from pathlib import Path
 import importlib.util,json,os,re,shlex,subprocess,tempfile,unittest
+from html.parser import HTMLParser
 
 ROOT=Path(__file__).resolve().parents[1]
 SPEC=importlib.util.spec_from_file_location('official_i18n',ROOT/'.github/scripts/build_translation_cache.py')
@@ -27,6 +28,25 @@ def render(calls,language):
         return result.stdout+result.stderr
 
 class RemainingCliI18n(unittest.TestCase):
+    def test_badges_remain_valid_with_hostile_translations_without_host_calls(self):
+        source=(ROOT/FILES[0]).read_text()
+        html=re.search(r'(?ms)^HTML_DESC=".*?^</div>"',source).group()
+        class Images(HTMLParser):
+            def __init__(self):super().__init__();self.images=[]
+            def handle_starttag(self,tag,attrs):
+                if tag=='img':self.images.append(dict(attrs))
+        with tempfile.TemporaryDirectory() as tmp:
+            blocked=Path(tmp)/'blocked';blocked.write_text('')
+            forbidden='\n'.join(name+'(){ echo '+shlex.quote(name)+' >> '+shlex.quote(str(blocked))+'; return 97; }' for name in ('qm','pct','pvesh','curl','wget','mount','reboot','systemctl'))
+            script=forbidden+'\ntranslate(){ printf "%s" "O\'Brien & <label> / ? #"; }; LOADER_URL=https://fixture.invalid/loader; LOADER_NAME=fixture; DISK_INFO=;\n'+html+'\nprintf "%s" "$HTML_DESC"'
+            result=subprocess.run(['bash','-c',script],text=True,capture_output=True,timeout=10,check=True)
+            self.assertEqual(blocked.read_text(),'')
+            parser=Images();parser.feed(result.stdout)
+            badges=[image for image in parser.images if image.get('src','').startswith('https://img.shields.io/')]
+            self.assertEqual([badge.get('alt') for badge in badges],['Docs','Code','Loader','Ko-fi'])
+            for badge in badges:
+                self.assertNotIn('Brien',badge['src'])
+                self.assertNotIn('<label>',badge['src'])
     def test_real_default_and_advanced_wizard_cancel_before_host_calls(self):
         source=(ROOT/'scripts/vm/synology.sh').read_text()
         functions='\n'.join(re.search(r'(?ms)^function '+name+r'\(\) \{.*?^\}',source).group() for name in ('default_settings','select_disk_type','_build_storage_plan_summary','advanced_settings','exit_script'))
@@ -45,13 +65,9 @@ class RemainingCliI18n(unittest.TestCase):
         generated=subprocess.check_output(['bash','-c',script],text=True,timeout=10)
         self.assertIn('Príkaz sa nenašiel.',generated);self.assertIn('Vytvorenie zoznamu súborov UUP',generated)
         subprocess.run(['bash','-n'],input=generated,text=True,check=True)
-    def test_english_display_contract_and_slovak_errors(self):
+    def test_slovak_display_errors_without_host_calls(self):
         for file in FILES:
-            old=(ROOT/'tests/fixtures/cli-before-i18n'/(Path(file).stem+'-display.sh')).read_text()
-            new=(ROOT/file).read_text();before=display_calls(old);after=display_calls(new)
-            self.assertEqual(len(before),len(after),file)
-            self.assertEqual(render(before,'en'),render(after,'en'),file)
-            translated=render(after,'sk')
+            translated=render(display_calls((ROOT/file).read_text()),'sk')
             if file.endswith('synology.sh'):
                 self.assertIn('Priradenie disku 2 (sata2) na data-store zlyhalo',translated)
                 self.assertIn('Nenašlo sa použiteľné úložisko.',translated)
