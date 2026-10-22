@@ -40,6 +40,11 @@ if command -v initialize_cache >/dev/null 2>&1; then
     initialize_cache
 fi
 
+# Keep standalone invocations usable when the shared utilities are unavailable.
+if ! command -v translate >/dev/null 2>&1; then
+    translate() { printf '%s\n' "$1"; }
+fi
+
 if command -v show_proxmenux_logo >/dev/null 2>&1; then
     show_proxmenux_logo
 fi
@@ -60,7 +65,7 @@ if [[ -n "$FUNCTIONS_BATCH" ]]; then
 elif [[ -n "$SOURCE_TYPE" && -n "$FUNCTION_NAME" ]]; then
     BATCH+=("${SOURCE_TYPE}:${FUNCTION_NAME}:${TOOL_KEY}")
 else
-    echo "ERROR: provide either SOURCE_TYPE+FUNCTION_NAME (single mode) or FUNCTIONS_BATCH (batch mode)."
+    echo "ERROR: $(translate "provide either SOURCE_TYPE+FUNCTION_NAME (single mode) or FUNCTIONS_BATCH (batch mode).")"
     exit 2
 fi
 
@@ -99,7 +104,7 @@ ensure_flow_loaded() {
             fi
             ;;
         *)
-            echo "ERROR: invalid source '$source_type' (must be 'auto', 'custom', or 'detected')"
+            echo "ERROR: $(printf "$(translate "invalid source '%s' (must be 'auto', 'custom', or 'detected')")" "$source_type")"
             return 2
             ;;
     esac
@@ -135,9 +140,9 @@ for entry in "${BATCH[@]}"; do
     [[ -z "$tkey" ]] && tkey="$fn"
 
     if command -v msg_info2 >/dev/null 2>&1; then
-        msg_info2 "[$INDEX/$TOTAL] Updating ${tkey} (running ${fn} from ${src} flow)..."
+        msg_info2 "[$INDEX/$TOTAL] $(printf "$(translate "Updating %s (running %s from %s flow)...")" "$tkey" "$fn" "$src")"
     else
-        echo "[ProxMenux] [$INDEX/$TOTAL] Updating ${tkey} (running ${fn} from ${src} flow)..."
+        echo "[ProxMenux] [$INDEX/$TOTAL] $(printf "$(translate "Updating %s (running %s from %s flow)...")" "$tkey" "$fn" "$src")"
     fi
 
     if ! ensure_flow_loaded "$src"; then
@@ -147,9 +152,9 @@ for entry in "${BATCH[@]}"; do
 
     if ! declare -F "$fn" >/dev/null 2>&1; then
         if command -v msg_error >/dev/null 2>&1; then
-            msg_error "Function '$fn' is not defined in the ${src} flow."
+            msg_error "$(printf "$(translate "Function '%s' is not defined in the %s flow.")" "$fn" "$src")"
         else
-            echo "ERROR: function '$fn' is not defined in the ${src} flow."
+            echo "ERROR: $(printf "$(translate "function '%s' is not defined in the %s flow.")" "$fn" "$src")"
         fi
         FAILED=$((FAILED + 1))
         continue
@@ -162,15 +167,15 @@ for entry in "${BATCH[@]}"; do
 
     if [[ $RC -eq 0 ]]; then
         if command -v msg_ok >/dev/null 2>&1; then
-            msg_ok "Update for ${tkey} completed."
+            msg_ok "$(printf "$(translate "Update for %s completed.")" "$tkey")"
         else
-            echo "[ProxMenux] Update for ${tkey} completed."
+            echo "[ProxMenux] $(printf "$(translate "Update for %s completed.")" "$tkey")"
         fi
     else
         if command -v msg_error >/dev/null 2>&1; then
-            msg_error "Update for ${tkey} exited with status $RC."
+            msg_error "$(printf "$(translate "Update for %s exited with status %s.")" "$tkey" "$RC")"
         else
-            echo "ERROR: update for ${tkey} exited with status $RC."
+            echo "ERROR: $(printf "$(translate "update for %s exited with status %s.")" "$tkey" "$RC")"
         fi
         FAILED=$((FAILED + 1))
     fi
@@ -178,22 +183,22 @@ done
 
 if [[ $FAILED -eq 0 ]]; then
     if command -v msg_success >/dev/null 2>&1; then
-        msg_success "All $TOTAL update(s) completed successfully."
+        msg_success "$(printf "$(translate "All %s update(s) completed successfully.")" "$TOTAL")"
     else
-        echo "[ProxMenux] All $TOTAL update(s) completed successfully."
+        echo "[ProxMenux] $(printf "$(translate "All %s update(s) completed successfully.")" "$TOTAL")"
     fi
 else
     if command -v msg_warn >/dev/null 2>&1; then
-        msg_warn "$FAILED of $TOTAL updates failed — see the messages above."
+        msg_warn "$(printf "$(translate "%s of %s updates failed — see the messages above.")" "$FAILED" "$TOTAL")"
     else
-        echo "WARNING: $FAILED of $TOTAL updates failed."
+        echo "WARNING: $(printf "$(translate "%s of %s updates failed.")" "$FAILED" "$TOTAL")"
     fi
 fi
 
 if command -v msg_success >/dev/null 2>&1; then
-    msg_success "Press Enter to close this terminal..."
+    msg_success "$(translate "Press Enter to close this terminal...")"
 else
-    echo "Press Enter to close this terminal..."
+    echo "$(translate "Press Enter to close this terminal...")"
 fi
 read -r 2>/dev/null || true
 

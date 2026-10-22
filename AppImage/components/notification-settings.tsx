@@ -1530,7 +1530,7 @@ export function NotificationSettings() {
                           <Input
                             type={showSecrets["tg_token"] ? "text" : "password"}
                             className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
-                            placeholder="7595377878:AAGE6Fb2cy... (with or without 'bot' prefix)"
+                            placeholder={t("settings.notifications.ui.botTokenPlaceholder")}
                             value={secretValue("tg_token", config.channels.telegram?.bot_token || "")}
                             onChange={e => updateChannel("telegram", "bot_token", e.target.value)}
                             disabled={!editMode}
@@ -1542,6 +1542,7 @@ export function NotificationSettings() {
                             {showSecrets["tg_token"] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                           </button>
                         </div>
+                        <p className="text-[10px] text-muted-foreground">{t("settings.notifications.ui.botTokenHelp")}</p>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.chatId")}</Label>

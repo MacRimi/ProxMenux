@@ -13,6 +13,8 @@ import sys
 import tempfile
 
 PYTHON_FILES = (
+    "tests/test_post_install_i18n.py",
+    "tests/test_remaining_cli_i18n.py",
     "AppImage/scripts/tests/test_pbs_i18n.py",
     "AppImage/scripts/tests/test_monitor_links_i18n.py",
     "AppImage/scripts/tests/test_monitor_links.py",
@@ -31,6 +33,9 @@ PYTHON_FILES = (
     "AppImage/scripts/tests/test_health_persistence_recurrence.py",
 )
 NODE_FILES = (
+    "tests/test_api_import_boundaries.cjs",
+    "tests/test_api_errors.cjs",
+    "tests/test_optimization_labels.cjs",
     "tests/test_optimization_source.cjs",
     "tests/lxc_updates/test_app_editor_errors.cjs",
     "tests/test_oci_update_cancellation.cjs",

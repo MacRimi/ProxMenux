@@ -2407,7 +2407,9 @@
         "inactiveFooter": "Enable notifications to receive system, health and security alerts through the configured channels.",
         "notificationLanguage": "Notification language",
         "selectNotificationLanguage": "Select notification language",
-        "notificationLanguageHint": "Used for deterministic runtime notifications even when AI is disabled."
+        "notificationLanguageHint": "Used for deterministic runtime notifications even when AI is disabled.",
+        "botTokenPlaceholder": "7595377878:AAGE6Fb2cy...",
+        "botTokenHelp": "The token can include the 'bot' prefix or be entered without it."
       },
       "ai": {
         "title": "AI enhancement",
@@ -2585,7 +2587,73 @@
       "availableUpdates": "Available updates",
       "availableUpdatesDescription": "{count} optimizations can be updated to a newer version.",
       "selectedCount": "{selected} of {total} selected",
-      "updateSelected": "Update selected"
+      "updateSelected": "Update selected",
+      "toolDescriptions": {
+        "subscriptionAuto": "Patch the Proxmox web UI to suppress the subscription dialog and register a successful patch.",
+        "timeSync": "Detect timezone from public IP and enable systemd time sync (NTP).",
+        "aptLanguages": "Stop APT from downloading translation files to speed up updates.",
+        "journald": "Cap journald size, raise rate limit and force info-level logging so the log viewer and Fail2Ban work.",
+        "logrotate": "Replace logrotate.conf with a Log2RAM-friendly profile (daily rotation, copytruncate).",
+        "systemLimits": "Raise inotify watches, file descriptors, process keys and PID limits to enterprise levels.",
+        "memory": "Tune swappiness, dirty page ratios and compaction proactiveness for VM hosts without overriding the kernel's memory-overcommit policy.",
+        "kernelPanic": "Auto-reboot on kernel panic / oops / hardlockup; write crash dumps to /var/crash.",
+        "aptIpv4": "Force APT to use IPv4 to avoid stalls on hosts with broken IPv6 connectivity.",
+        "network": "Tune TCP buffers, somaxconn, IPv4 hardening and disable rp_filter on fw bridges (PVE 9 compatible).",
+        "bashrc": "Install and safely migrate the managed ProxMenux Bash prompt and aliases while preserving or selecting the short/full working-directory style.",
+        "log2ramAuto": "Install Log2RAM with size auto-tuned to host RAM (128M/256M/512M); SSD/M.2 detection skips on rotational disks.",
+        "zfsAutotrim": "Enable ZFS autotrim on detected pools and record only pools changed by ProxMenux.",
+        "persistentNetwork": "Pin NIC names to MAC addresses via systemd .link files so kernel updates don't shuffle interface names.",
+        "kexec": "Install kexec-tools and add a Ctrl+Alt+K hotkey + systemd unit for fast reboots that skip BIOS/POST.",
+        "amd": "Detect AMD EPYC/Ryzen CPUs and apply microcode + IOMMU + KVM-specific kernel boot params.",
+        "openVSwitch": "Install OpenVSwitch for software-defined networking inside VMs and containers.",
+        "tcpBbr": "Enable TCP Fast Open (clients + server) and BBR congestion control for better latency under load.",
+        "ceph": "Install Ceph (client + server packages) for distributed RBD/CephFS storage; PVE 8/9 aware repo selection.",
+        "zfsArc": "Cap ZFS ARC max using Proxmox VE's 10%-of-RAM policy (16 GiB ceiling), safely reconcile conflicting module settings and report the pool-size guideline before applying it.",
+        "zfsSnapshots": "Install zfs-auto-snapshot with cron schedules for hourly/daily/weekly/monthly snapshots.",
+        "rpc": "Disable rpcbind service/socket while preserving their exact previous systemd state for rollback.",
+        "pigz": "Replace gzip with pigz (parallel implementation) for faster vzdump backup compression.",
+        "guestAgent": "Detect the host's hypervisor (qemu/vmware/hyperv/virtualbox) and install the matching guest agent.",
+        "vfio": "Enable IOMMU and load VFIO modules to allow GPU/PCI passthrough into VMs.",
+        "motd": "Add the ProxMenux MOTD banner while preserving the original file contents or absence for rollback.",
+        "subscriptionCustom": "Patch the Proxmox web UI to suppress the \"no valid subscription\" dialog (PVE 8 + 9 variants supported).",
+        "zram": "Enable an opt-in ZRAM swap profile sized to one tenth of RAM.",
+        "backupLimits": "Lift vzdump bandwidth/IO limits so backups run at the storage's real throughput.",
+        "ovh": "Detect OVH-rented hardware via whois lookup and install OVH Real-Time Monitoring (no-op on non-OVH).",
+        "ha": "Enable the Proxmox HA stack (pve-ha-lrm, pve-ha-crm, corosync) for cluster failover.",
+        "fastfetch": "Install Fastfetch system summary tool with the ProxMenux logo + status block as the SSH login banner.",
+        "figurine": "Install Figurine (ASCII-art hostname banner) and wire it into the SSH login flow.",
+        "log2ramCustom": "Install Log2RAM with user-chosen RAM size; prompts for size and SSD/M.2 awareness before applying.",
+        "systemUtilities": "Install selected system utilities and track only packages that were newly added by ProxMenux."
+      },
+      "toolNames": {
+        "subscription_banner": "Subscription Banner Removal",
+        "time_sync": "Time Synchronization",
+        "apt_languages": "APT Language Skip",
+        "journald": "Journald Optimization",
+        "logrotate": "Logrotate Optimization",
+        "system_limits": "System Limits Increase",
+        "memory_settings": "Memory Settings Optimization",
+        "zram_swap": "ZRAM Swap Profile",
+        "kernel_panic": "Kernel Panic Configuration",
+        "apt_ipv4": "APT IPv4 Force",
+        "kexec": "kexec for quick reboots",
+        "rpc": "RPC / rpcbind Disable",
+        "motd": "Custom MOTD Banner",
+        "system_utils": "System Utilities",
+        "network_optimization": "Network Optimizations",
+        "bashrc_custom": "Bashrc Customization",
+        "figurine": "Figurine",
+        "fastfetch": "Fastfetch",
+        "log2ram": "Log2ram (SSD Protection)",
+        "zfs_autotrim": "ZFS Autotrim",
+        "amd_fixes": "AMD CPU (Ryzen/EPYC) fixes",
+        "persistent_network": "Setting persistent network interfaces",
+        "vfio_iommu": "VFIO/IOMMU Passthrough",
+        "lvm_repair": "LVM PV Headers Repair",
+        "repo_cleanup": "Repository Cleanup",
+        "proxmox_repos": "Proxmox APT Repositories",
+        "entropy": "Entropy Generation (haveged)"
+      }
     },
     "healthThresholds": {
       "title": "Health Monitor Thresholds",
@@ -6959,5 +7027,12 @@
       "notFound": "The node was not found. Reload the list and try again.",
       "detectedRemove": "Only nodes added by hand can be removed. Detected nodes can be hidden."
     }
+  },
+  "apiErrors": {
+    "http": "API request failed: {status} {statusText}",
+    "unexpectedContentType": "Expected JSON response but got {contentType}",
+    "unknownContentType": "unknown content type",
+    "invalidJson": "Invalid JSON response from {endpoint}",
+    "unauthorized": "Unauthorized: {endpoint}"
   }
 }
