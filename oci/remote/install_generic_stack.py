@@ -405,6 +405,13 @@ def attach_mounts(service, temporary):
                     run('cp','-a',str(target)+'/.',str(seed))
             else:
                 owner = (100000,100000,0o755)
+            if mount['type'] == 'managed-volume':
+                from oci_image_mountpoints import normalize
+                try:
+                    normalize(root, [mount['container_path']])
+                except (OSError, ValueError) as error:
+                    # Nothing was moved; the image keeps its files as before.
+                    print(f'Image defaults left in place for {mount["container_path"]}: {error}', file=sys.stderr)
         finally:
             run('pct','unmount',vmid)
         if mount['type']=='managed-volume':
