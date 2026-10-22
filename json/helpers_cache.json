@@ -24478,6 +24478,37 @@
     "os": "alpine"
   },
   {
+    "name": "tinyMediaManager",
+    "slug": "tinymediamanager",
+    "desc": "tinyMediaManager is a media library manager for organizing and scraping metadata, artwork, and NFO files for movies and TV shows, ready for Kodi, Plex, Jellyfin and Emby. Browser access is the desktop UI via noVNC.",
+    "script": "ct/tinymediamanager.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/tinymediamanager.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/tinymediamanager.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [],
+    "warnings": [],
+    "port": 6080,
+    "website": "https://www.tinymediamanager.org/",
+    "documentation": "https://www.tinymediamanager.org/docs/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tinymediamanager.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
     "name": "Tolgee",
     "slug": "tolgee",
     "desc": "Tolgee is an open-source localization platform that helps teams manage translations with in-context editing and collaboration features.",
