@@ -187,7 +187,7 @@ $(translate "Do you want to continue anyway?")" 13 70
 enable_kexec() {
     local FUNC_VERSION="1.1"
     pmx_journal_context "enable_kexec" "$FUNC_VERSION"
-    # description: Install kexec-tools and add a Ctrl+Alt+K hotkey + systemd unit for fast reboots that skip BIOS/POST.
+    # description: Install kexec-tools and prepare a systemd unit plus the reboot-quick alias for fast reboots that skip BIOS/POST.
     msg_info2 "$(translate "Configuring kexec for quick reboots...")"
     NECESSARY_REBOOT=1
 
@@ -695,7 +695,7 @@ configure_time_sync() {
 apply_amd_fixes() {
     local FUNC_VERSION="1.0"
     pmx_journal_context "apply_amd_fixes" "$FUNC_VERSION"
-    # description: Detect AMD EPYC/Ryzen CPUs and apply microcode + IOMMU + KVM-specific kernel boot params.
+    # description: Apply idle=nomwait and KVM module options on AMD EPYC/Ryzen hosts.
     msg_info2 "$(translate "Detecting AMD CPU and applying fixes if necessary...")"
     NECESSARY_REBOOT=1
 
@@ -1812,7 +1812,7 @@ EOF
 
 install_guest_agent() {
     local FUNC_VERSION="1.0"
-    # description: Detect the host's hypervisor (qemu/vmware/hyperv/virtualbox) and install the matching guest agent.
+    # description: Detect QEMU/KVM, VMware or VirtualBox and install the matching guest agent; skip other environments.
     msg_info2 "$(translate "Detecting virtualization and installing  guest agent...")"
     NECESSARY_REBOOT=1
 
@@ -2669,7 +2669,7 @@ configure_zram_swap() {
 optimize_vzdump() {
     local FUNC_VERSION="1.0"
     pmx_journal_context "optimize_vzdump" "$FUNC_VERSION"
-    # description: Lift vzdump bandwidth/IO limits so backups run at the storage's real throughput.
+    # description: Set global vzdump defaults to bwlimit: 0 and ionice: 5. This does not guarantee faster backups.
     msg_info2 "$(translate "Optimizing vzdump backup speed...")"
 
     local vzdump_conf="/etc/vzdump.conf"
@@ -3350,7 +3350,7 @@ configure_log2ram() {
     local FUNC_VERSION="1.8"
     local existing_log2ram_bin=""
     pmx_journal_context "configure_log2ram" "$FUNC_VERSION"
-    # description: Install Log2RAM with user-chosen RAM size; prompts for size and SSD/M.2 awareness before applying.
+    # description: Install Log2RAM with a chosen size, sync interval and optional autosync. Updates preserve the size and autosync choice.
 
     existing_log2ram_bin="$(command -v log2ram 2>/dev/null || true)"
     if [[ -f /etc/log2ram.conf || -n "$existing_log2ram_bin" \
