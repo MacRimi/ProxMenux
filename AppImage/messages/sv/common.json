@@ -2280,7 +2280,9 @@
         "appriseSlackDocs": "URL-format och konfiguration för Slack",
         "appriseMatrixSteps": "Använd ett aviseringskonto som får skicka meddelanden till rummet. Ersätt exemplets användare, lösenord, hemserver och fullständiga rums-ID; URL-koda specialtecken i inloggningsuppgifterna. Schemat matrixs använder HTTPS. Se dokumentationen för stöd för token, SSO och krypterade rum i din installerade Apprise-version.",
         "appriseMatrixDocs": "URL-format och konfiguration för Matrix",
-        "appriseServiceFinish": "Aktivera Apprise, ange din URL, välj aviseringskategorier eller enskilda händelser, spara och använd sedan Skicka test. Dessa exempel ändrar inte din sparade URL. Denna Apprise-kanal har ett mål; använd Apprise-API för flera tjänster samtidigt."
+        "appriseServiceFinish": "Aktivera Apprise, ange din URL, välj aviseringskategorier eller enskilda händelser, spara och använd sedan Skicka test. Dessa exempel ändrar inte din sparade URL. Denna Apprise-kanal har ett mål; använd Apprise-API för flera tjänster samtidigt.",
+        "botTokenPlaceholder": "7595377878:AAGE6Fb2cy...",
+        "botTokenHelp": "Token kan innehålla prefixet 'bot' eller anges utan det."
       },
       "ai": {
         "title": "AI-förbättring",
@@ -2458,7 +2460,73 @@
       "availableUpdates": "Tillgängliga uppdateringar",
       "availableUpdatesDescription": "{count} optimeringar kan uppdateras till en nyare version.",
       "selectedCount": "{selected} av {total} har valts",
-      "updateSelected": "Uppdatering vald"
+      "updateSelected": "Uppdatering vald",
+      "toolDescriptions": {
+        "subscriptionAuto": "Patch the Proxmox web UI to suppress the subscription dialog and register a successful patch.",
+        "timeSync": "Upptäck tidszon från offentlig IP och aktivera systemd tidssynkronisering (NTP).",
+        "aptLanguages": "Stoppa APT från att ladda ner översättningsfiler för att påskynda uppdateringarna.",
+        "journald": "Begränsa journalstorleken, höj hastighetsgränsen och tvinga fram loggning på infonivå så att loggvisaren och Fail2Ban fungerar.",
+        "logrotate": "Ersätt logrotate.conf med en Log2RAM-vänlig profil (daglig rotation, copytruncate).",
+        "systemLimits": "Höj inotify-klockor, filbeskrivningar, processnycklar och PID-gränser till företagsnivåer.",
+        "memory": "Justera utbyten, smutsiga sidförhållanden och komprimeringsproaktivitet för VM-värdar utan att åsidosätta kärnans policy för minnesöverskridande.",
+        "kernelPanic": "Automatisk omstart vid kärnan panik / oops / hardlockup;skriv kraschdumpar till /var/crash.",
+        "aptIpv4": "Tvinga APT att använda IPv4 för att undvika stall på värdar med trasig IPv6-anslutning.",
+        "network": "Justera TCP-buffertar, somaxconn, IPv4-härdning och inaktivera rp_filter på fw-bryggor (PVE 9-kompatibel).",
+        "bashrc": "Installera och migrera den hanterade ProxMenux Bash-prompten och aliasen på ett säkert sätt samtidigt som du bevarar eller väljer den korta/fulla arbetskatalogstilen.",
+        "log2ramAuto": "Installera Log2RAM med storleken automatiskt anpassad till värd-RAM (128M/256M/512M);SSD/M.2-detekteringshopp på roterande diskar.",
+        "zfsAutotrim": "Aktivera ZFS autotrim på upptäckta pooler och registrera endast pooler ändrade av ProxMenux.",
+        "persistentNetwork": "Fäst NIC-namn till MAC-adresser via systemd .link-filer så att kärnuppdateringar inte blandar gränssnittsnamn.",
+        "kexec": "Installera kexec-tools och lägg till en Ctrl+Alt+K snabbtangent + systemd-enhet för snabba omstarter som hoppar över BIOS/POST.",
+        "amd": "Upptäck AMD EPYC/Ryzen-processorer och använd mikrokod + IOMMU + KVM-specifika kärnstartparametrar.",
+        "openVSwitch": "Installera OpenVSwitch för mjukvarudefinierat nätverk i virtuella datorer och behållare.",
+        "tcpBbr": "Aktivera TCP Fast Open (klienter + server) och BBR-överbelastningskontroll för bättre latens under belastning.",
+        "ceph": "Installera Ceph (klient + serverpaket) för distribuerad RBD/CephFS-lagring;PVE 8/9 medvetet repoval.",
+        "zfsArc": "Kapa ZFS ARC max genom att använda Proxmox VE:s 10%-av-RAM-policy (16 GiB-tak), stämma av motstridiga modulinställningar på ett säkert sätt och rapportera poolstorleksriktlinjen innan du tillämpar den.",
+        "zfsSnapshots": "Installera zfs-auto-snapshot med cron-scheman för ögonblicksbilder varje timme/dag/vecka/månad.",
+        "rpc": "Inaktivera rpcbind-tjänsten/socket samtidigt som de behåller deras exakta tidigare systemtillstånd för återställning.",
+        "pigz": "Ersätt gzip med pigz (parallell implementering) för snabbare vzdump-backupkomprimering.",
+        "guestAgent": "Upptäck värdens hypervisor (qemu/vmware/hyperv/virtualbox) och installera den matchande gästagenten.",
+        "vfio": "Aktivera IOMMU och ladda VFIO-moduler för att tillåta GPU/PCI-passthrough till virtuella datorer.",
+        "motd": "Lägg till ProxMenux MOTD-bannern samtidigt som du behåller originalfilens innehåll eller frånvaro för återställning.",
+        "subscriptionCustom": "Patcha Proxmox webbgränssnitt för att undertrycka dialogrutan \"ingen giltig prenumeration\" (PVE 8 + 9 varianter stöds).",
+        "zram": "Aktivera en ZRAM-växlingsprofil med en storlek på en tiondel av RAM-minnet.",
+        "backupLimits": "Lyft vzdump-bandbredds-/IO-gränserna så att säkerhetskopieringar körs med lagringens verkliga genomströmning.",
+        "ovh": "Upptäck OVH-hyrd hårdvara via whois-sökning och installera OVH Real-Time Monitoring (no-op på icke-OVH).",
+        "ha": "Aktivera Proxmox HA-stacken (pve-ha-lrm, pve-ha-crm, corosync) för kluster-failover.",
+        "fastfetch": "Installera Fastfetch-systemsammanfattningsverktyget med ProxMenux-logotypen + statusblock som SSH-inloggningsbannern.",
+        "figurine": "Installera Figurine (ASCII-art hostname banner) och koppla in den i SSH-inloggningsflödet.",
+        "log2ramCustom": "Installera Log2RAM med användarvald RAM-storlek;frågar efter storlek och SSD/M.2-medvetenhet innan du ansöker.",
+        "systemUtilities": "Installera utvalda systemverktyg och spåra endast paket som nyligen lagts till av ProxMenux."
+      },
+      "toolNames": {
+        "subscription_banner": "Borttagning av prenumerationsbanner",
+        "time_sync": "Tidssynkronisering",
+        "apt_languages": "APT Language Skip",
+        "journald": "Journald Optimization",
+        "logrotate": "Logrotate Optimization",
+        "system_limits": "Ökning av systemgränser",
+        "memory_settings": "Optimering av minnesinställningar",
+        "zram_swap": "ZRAM Swap-profil",
+        "kernel_panic": "Kernel Panic Configuration",
+        "apt_ipv4": "APT IPv4 Force",
+        "kexec": "kexec för snabba omstarter",
+        "rpc": "RPC / rpcbind Disable",
+        "motd": "Anpassad MOTD-banner",
+        "system_utils": "Systemverktyg",
+        "network_optimization": "Nätverksoptimeringar",
+        "bashrc_custom": "Bashrc Customization",
+        "figurine": "Figurine",
+        "fastfetch": "Fastfetch",
+        "log2ram": "Log2ram (SSD-skydd)",
+        "zfs_autotrim": "ZFS Autotrim",
+        "amd_fixes": "AMD CPU (Ryzen/EPYC) fixes",
+        "persistent_network": "Ställa in beständiga nätverksgränssnitt",
+        "vfio_iommu": "VFIO/IOMMU Passthrough",
+        "lvm_repair": "Reparation av LVM PV Headers",
+        "repo_cleanup": "Repository Cleanup",
+        "proxmox_repos": "Proxmox APT Repositories",
+        "entropy": "Entropy Generation (haved)"
+      }
     },
     "healthThresholds": {
       "title": "Health Monitor Trösklar",
@@ -7776,5 +7844,12 @@
       "notFound": "Noden hittades inte. Läs in listan igen och försök igen.",
       "detectedRemove": "Endast noder som lagts till manuellt kan tas bort. Identifierade noder kan döljas."
     }
+  },
+  "apiErrors": {
+    "http": "API request failed: {status} {statusText}",
+    "unexpectedContentType": "Förväntade JSON-svar men fick {contentType}",
+    "unknownContentType": "okänd innehållstyp",
+    "invalidJson": "Ogiltigt JSON-svar från {endpoint}",
+    "unauthorized": "Obehörig: {endpoint}"
   }
 }

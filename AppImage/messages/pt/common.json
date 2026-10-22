@@ -2280,7 +2280,9 @@
         "appriseSlackDocs": "Formatos de URL e configuração do Slack",
         "appriseMatrixSteps": "Utilize uma conta de notificações que possa publicar na sala. Substitua o utilizador, a palavra-passe, o homeserver e o ID completo da sala do exemplo; codifique os caracteres especiais das credenciais para URL. O esquema matrixs usa HTTPS. Consulte a documentação sobre o suporte de tokens, SSO e salas cifradas na versão do Apprise instalada.",
         "appriseMatrixDocs": "Formatos de URL e configuração do Matrix",
-        "appriseServiceFinish": "Ative o Apprise, introduza o seu URL, escolha as categorias de notificação ou os eventos individuais, guarde e utilize Enviar teste. Estes exemplos não alteram o URL guardado. Este canal do Apprise tem um destino; utilize a API do Apprise para vários serviços em simultâneo."
+        "appriseServiceFinish": "Ative o Apprise, introduza o seu URL, escolha as categorias de notificação ou os eventos individuais, guarde e utilize Enviar teste. Estes exemplos não alteram o URL guardado. Este canal do Apprise tem um destino; utilize a API do Apprise para vários serviços em simultâneo.",
+        "botTokenPlaceholder": "7595377878:AAGE6Fb2cy...",
+        "botTokenHelp": "O token pode incluir o prefixo 'bot' ou ser inserido sem ele."
       },
       "ai": {
         "title": "Aprimoramento de IA",
@@ -2458,7 +2460,73 @@
       "availableUpdates": "Atualizações disponíveis",
       "availableUpdatesDescription": "As otimizações {count} podem ser atualizadas para uma versão mais recente.",
       "selectedCount": "{selected} de {total} selecionado",
-      "updateSelected": "Atualização selecionada"
+      "updateSelected": "Atualização selecionada",
+      "toolDescriptions": {
+        "subscriptionAuto": "aplique patch à interface da web do Proxmox para suprimir a caixa de diálogo de assinatura e registrar um patch bem-sucedido.",
+        "timeSync": "Detecte o fuso horário do IP público e habilite a sincronização de horário do systemd (NTP).",
+        "aptLanguages": "impede o APT de baixar arquivos de tradução para acelerar as atualizações.",
+        "journald": "limite o tamanho do diário, aumente o limite de taxa e force o registro em nível de informação para que o visualizador de log e o Fail2Ban funcionem.",
+        "logrotate": "Substitua logrotate.conf por um perfil compatível com Log2RAM (rotação diária, copytruncate).",
+        "systemLimits": "eleve relógios inotify, descritores de arquivos, chaves de processo e limites PID para níveis corporativos.",
+        "memory": "ajuste a troca, as proporções de páginas sujas e a proatividade de compactação para hosts VM sem substituir a política de superalocação de memória do kernel.",
+        "kernelPanic": "reinicialização automática em kernel panic / oops / hardlockup;gravar despejos de memória em /var/crash.",
+        "aptIpv4": "Force o APT a usar IPv4 para evitar travamentos em hosts com conectividade IPv6 quebrada.",
+        "network": "Ajuste buffers TCP, somaxconn, proteção IPv4 e desative rp_filter em pontes fw (compatível com PVE 9).",
+        "bashrc": "instale e migre com segurança o prompt e os aliases gerenciados do Bash ProxMenux, preservando ou selecionando o estilo de diretório de trabalho curto/completo.",
+        "log2ramAuto": "Instale Log2RAM com tamanho ajustado automaticamente para hospedar RAM (128M/256M/512M);A detecção de SSD/M.2 salta em discos rotacionais.",
+        "zfsAutotrim": "Habilite o ajuste automático ZFS em pools detectados e registre apenas pools alterados por ProxMenux.",
+        "persistentNetwork": "fixe nomes de NIC em endereços MAC por meio de arquivos .link do systemd para que as atualizações do kernel não embaralhem os nomes das interfaces.",
+        "kexec": "Instale kexec-tools e adicione uma tecla de atalho Ctrl+Alt+K + unidade systemd para reinicializações rápidas que ignoram BIOS/POST.",
+        "amd": "Detecte CPUs AMD EPYC/Ryzen e aplique microcódigo + IOMMU + parâmetros de inicialização de kernel específicos do KVM.",
+        "openVSwitch": "Instale o OpenVSwitch para redes definidas por software dentro de VMs e contêineres.",
+        "tcpBbr": "Habilite TCP Fast Open (clientes + servidor) e controle de congestionamento BBR para melhor latência sob carga.",
+        "ceph": "Instale o Ceph (pacotes cliente + servidor) para armazenamento RBD/CephFS distribuído;Seleção de repositório com reconhecimento de PVE 8/9.",
+        "zfsArc": "limite o ZFS ARC max usando a política de 10% de RAM do Proxmox VE (teto de 16 GiB), reconcilie com segurança as configurações conflitantes do módulo e relate a diretriz de tamanho do pool antes de aplicá-la.",
+        "zfsSnapshots": "Instale zfs-auto-snapshot com programações cron para snapshots horários/diários/semanais/mensais.",
+        "rpc": "Desative o serviço/soquete rpcbind enquanto preserva seu estado anterior exato do systemd para reversão.",
+        "pigz": "Substitua gzip por pigz (implementação paralela) para compactação de backup vzdump mais rápida.",
+        "guestAgent": "detecte o hipervisor do host (qemu/vmware/hyperv/virtualbox) e instale o agente convidado correspondente.",
+        "vfio": "Habilite o IOMMU e carregue os módulos VFIO para permitir a passagem GPU/PCI nas VMs.",
+        "motd": "Adicione o banner ProxMenux MOTD preservando o conteúdo do arquivo original ou ausente para reversão.",
+        "subscriptionCustom": "corrija a UI da web Proxmox para suprimir a caixa de diálogo \"nenhuma assinatura válida\" (variantes PVE 8 + 9 suportadas).",
+        "zram": "Habilite um perfil de troca ZRAM opcional dimensionado para um décimo de RAM.",
+        "backupLimits": "Aumente os limites de largura de banda/IO do vzdump para que os backups sejam executados na taxa de transferência real do armazenamento.",
+        "ovh": "Detecte o hardware alugado pela OVH através da pesquisa whois e instale o OVH Real-Time Monitoring (no-op em não-OVH).",
+        "ha": "Habilite a pilha HA Proxmox (pve-ha-lrm, pve-ha-crm, corosync) para failover de cluster.",
+        "fastfetch": "Instale a ferramenta de resumo do sistema Fastfetch com o logotipo ProxMenux + bloco de status como banner de login SSH.",
+        "figurine": "Instale o Figurine (banner de nome de host em arte ASCII) e conecte-o ao fluxo de login SSH.",
+        "log2ramCustom": "Instale Log2RAM com tamanho de RAM escolhido pelo usuário;solicita tamanho e conhecimento do SSD/M.2 antes da aplicação.",
+        "systemUtilities": "Instale utilitários de sistema selecionados e rastreie apenas os pacotes que foram adicionados recentemente pelo ProxMenux."
+      },
+      "toolNames": {
+        "subscription_banner": "Remoção de Banner de Assinatura",
+        "time_sync": "Time Synchronization",
+        "apt_languages": "Pular Idioma APT",
+        "journald": "Otimização do Journald",
+        "logrotate": "Otimização Logrotate",
+        "system_limits": "Aumento dos Limites do Sistema",
+        "memory_settings": "Otimização de configurações de memória",
+        "zram_swap": "Perfil de troca ZRAM",
+        "kernel_panic": "Configuração do Kernel Panic",
+        "apt_ipv4": "Força APT IPv4",
+        "kexec": "kexec para reinicializações rápidas",
+        "rpc": "Desativar RPC / rpcbind",
+        "motd": "Banner MOTD personalizado",
+        "system_utils": "Utilitários de Sistema",
+        "network_optimization": "Otimizações de Rede",
+        "bashrc_custom": "Personalização Bashrc",
+        "figurine": "Estatueta",
+        "fastfetch": "Fastfetch",
+        "log2ram": "Log2ram (proteção SSD)",
+        "zfs_autotrim": "ZFS Autotrim",
+        "amd_fixes": "correções AMD CPU (Ryzen/EPYC)",
+        "persistent_network": "Configurando interfaces de rede persistentes",
+        "vfio_iommu": "Passagem VFIO/IOMMU",
+        "lvm_repair": "Reparo de cabeçalhos LVM PV",
+        "repo_cleanup": "Limpeza de Repositório",
+        "proxmox_repos": "Repositórios APT Proxmox",
+        "entropy": "Geração de Entropia (haveged)"
+      }
     },
     "healthThresholds": {
       "title": "Limites do Monitor de Integridade",
@@ -7776,5 +7844,12 @@
       "notFound": "O nó não foi encontrado. Recarregue a lista e tente novamente.",
       "detectedRemove": "Só podem ser eliminados os nós adicionados manualmente. Os nós detetados podem ser ocultados."
     }
+  },
+  "apiErrors": {
+    "http": "falha na solicitação de API: {status} {statusText}",
+    "unexpectedContentType": "resposta JSON esperada, mas obteve {contentType}",
+    "unknownContentType": "tipo de conteúdo desconhecido",
+    "invalidJson": "resposta JSON inválida do {endpoint}",
+    "unauthorized": "Não autorizado: {endpoint}"
   }
 }
