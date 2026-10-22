@@ -524,7 +524,10 @@ capture_volume_seeds() {
   if (( failed == 0 )); then
     # Data seeds were captured first; prepare the raw image even when the
     # transaction will reuse a persistent disk and therefore skipped seeding.
-    oci_quiet python3 "$SCRIPT_DIR/oci_image_mountpoints.py" "$rootfs" "$DEPLOYMENT_FILE" || failed=1
+    # The helper changes nothing when it refuses a path (a link, another
+    # filesystem); the image then installs as it did before.
+    oci_quiet python3 "$SCRIPT_DIR/oci_image_mountpoints.py" "$rootfs" "$DEPLOYMENT_FILE" \
+      || oci_log "Image defaults left in place: a volume mountpoint of the image is not a plain directory"
   fi
   if (( mounted == 1 )); then
     oci_quiet pct unmount "$VMID" || failed=1

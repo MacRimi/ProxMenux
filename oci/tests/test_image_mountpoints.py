@@ -119,5 +119,15 @@ class ImageMountpointTests(unittest.TestCase):
         self.assertEqual(self.normalize(), [])
 
 
+    def test_installers_keep_installing_when_a_mountpoint_is_refused(self):
+        # A refused path changes nothing, so the image installs as it did before.
+        remote = MODULE.parent
+        script = (remote / 'install_oci.sh').read_text()
+        call = script[script.index('oci_image_mountpoints.py'):]
+        self.assertTrue(call.split('\n', 2)[1].strip().startswith('|| oci_log'))
+        stack = (remote / 'install_generic_stack.py').read_text()
+        block = stack[stack.index('normalize(root, [mount'):][:400]
+        self.assertIn('except (OSError, ValueError)', block)
+
 if __name__ == '__main__':
     unittest.main()
