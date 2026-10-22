@@ -116,7 +116,7 @@ class RecoveryMessages(unittest.TestCase):
         instances.ROOT = Path('/inert')
         instances.read = lambda root, vmid: self.primary
         self.modules = {'oci_instances': instances, 'oci_stack_replay': ModuleType('oci_stack_replay')}
-        self.scope = {'sys': SimpleNamespace(path=[], executable='python3'), 'Path': Path,
+        self.scope = {'sys': SimpleNamespace(path=[], executable='python3'), 'Path': Path, 'CANCELLED': None,
                       'translate': lambda text: text, 'images': SimpleNamespace(offer_removal=lambda *args: None),
                       '_remove': lambda *args: self.fail('remove must not run'),
                       '_run_lifecycle': lambda command, title: self.calls.append((command, title)) or False}

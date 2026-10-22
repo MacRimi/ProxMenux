@@ -1029,9 +1029,9 @@ def main():
     parser.add_argument('--root', type=Path, default=instances.ROOT)
     parser.add_argument('--start', action='store_true')
     parser.add_argument('--host-firewall', type=int, action='append', default=[], metavar='VMID',
-                        help='Add the host firewall rule of this container; one option for each confirmed rule')
+                        help=translate('Add the host firewall rule of this container; one option for each confirmed rule'))
     parser.add_argument('--automatic', action='store_true',
-                        help='Only the applications that need no question: the ones the cluster keeps a record of')
+                        help=translate('Only the applications that need no question: the ones the cluster keeps a record of'))
     args = parser.parse_args()
     if os.geteuid() != 0:
         parser.error(translate('Root privileges are required'))

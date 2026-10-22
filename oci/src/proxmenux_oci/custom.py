@@ -21,7 +21,7 @@ from .cli import install_template
 from .i18n import source_text
 from .installer import ADVANCED_MODE, DEFAULT_MODE
 from .converter import ConversionError
-from .i18n import translate
+from .i18n import N_, translate
 from .registry_auth import RegistryError, refuses_access, validate_image
 from .ui import UserCancelled
 
@@ -533,16 +533,16 @@ def read_definition(ui) -> tuple[str, str]:
 
 
 BLOCKER_TEXTS = {
-    'multi-service-compose': 'it describes more than one image',
-    'native-multi-lxc-orchestrator-not-yet-implemented': 'it describes more than one image',
-    'top-level-configs': 'it uses Compose configs, which have no equivalent here',
-    'devices-format': 'the devices it asks for are not written in a way that can be read',
-    'healthcheck-format': 'its health check is not written in a way that can be read',
-    'stop-grace-period-format': 'its stop timeout is not written in a way that can be read',
-    'shm-size-format': 'its shared memory size is not written in a way that can be read',
-    'ulimits-format-or-resource': 'the resource limits it asks for cannot be applied',
-    'mem-limit-format-or-below-proxmox-minimum': 'the memory limit it asks for cannot be applied',
-    'mem-limit-deploy-consistency-review': 'it asks for two different memory limits',
+    'multi-service-compose': N_('it describes more than one image'),
+    'native-multi-lxc-orchestrator-not-yet-implemented': N_('it describes more than one image'),
+    'top-level-configs': N_('it uses Compose configs, which have no equivalent here'),
+    'devices-format': N_('the devices it asks for are not written in a way that can be read'),
+    'healthcheck-format': N_('its health check is not written in a way that can be read'),
+    'stop-grace-period-format': N_('its stop timeout is not written in a way that can be read'),
+    'shm-size-format': N_('its shared memory size is not written in a way that can be read'),
+    'ulimits-format-or-resource': N_('the resource limits it asks for cannot be applied'),
+    'mem-limit-format-or-below-proxmox-minimum': N_('the memory limit it asks for cannot be applied'),
+    'mem-limit-deploy-consistency-review': N_('it asks for two different memory limits'),
 }
 
 
@@ -730,7 +730,7 @@ def _name(ui, template: dict[str, Any]) -> str:
     return name
 
 
-def explore(ui) -> None:
+def _explore(ui) -> None:
     """Reads a Compose file, a docker run command, an image reference or an
     oci-compose, reports what ProxMenux would install from it and installs it."""
     text, origin = read_definition(ui)
@@ -784,3 +784,43 @@ def explore(ui) -> None:
     else:
         name = _name(ui, template)
     install_template(ui, template, name, mode)
+
+
+def conversion_message(error: ConversionError) -> str:
+    """Render legacy converter diagnostics at the custom-image UI boundary.
+
+    Converter exceptions are also consumed by catalog tools. Keep their
+    original text, and any diagnostic data, outside this localized UI.
+    """
+    text = str(error)
+    exact = {
+        'environment must be a list or a mapping': N_('Compose environment must be a list or a mapping.'),
+        'volumes must be a list': N_('Compose volumes must be a list.'),
+        'ports must be a list': N_('Compose ports must be a list.'),
+        'The CasaOS Compose file has no services': N_('The Compose file has no services.'),
+        'The CasaOS document is not a Compose mapping': N_('The Compose document must be a mapping.'),
+        'The Compose file has no x-casaos metadata': N_('The Compose file has no x-casaos metadata.'),
+        'x-casaos.main no identifica un servicio valido': N_('x-casaos.main must name an existing service.'),
+        'The main CasaOS service declares no image': N_('The main Compose service has no image.'),
+    }
+    prefixes = {
+        'Ruta de volumen no valida:': N_('Invalid Compose volume path:'),
+        'Puerto no valido:': N_('Invalid Compose port:'),
+        'Cannot normalise the CasaOS identifier:': N_('Invalid application identifier:'),
+        'Docker Compose CasaOS no valido:': N_('The Compose file is not valid YAML:'),
+    }
+    if text in exact:
+        translated = translate(exact[text])
+        return text if translated == exact[text] else translated
+    for prefix, source in prefixes.items():
+        if text.startswith(prefix):
+            translated = translate(source)
+            return text if translated == source else translated + text[len(prefix):]
+    return text
+
+
+def explore(ui) -> None:
+    try:
+        _explore(ui)
+    except ConversionError as error:
+        raise ConversionError(conversion_message(error)) from error

@@ -23,9 +23,10 @@ const candidate = {
   evidence: [{kind: 'installation_file', value: '/opt/handmade/server'}], default_ports: [],
 }
 
-function fixture({nativeCandidate = candidate, dockerCandidate = null, apps = []} = {}) {
+function fixture({nativeCandidate = candidate, dockerCandidate = null, apps = [], translate,
+    confirmAccepted = false, apiError = null, detectorResult = null} = {}) {
   let cursor = 0, tree, props, effects = [], states = [], refs = [], effectStates = [], memoStates = []
-  const calls = [], cachedWrites = []
+  const calls = [], cachedWrites = [], confirmPrompts = []
   let native = {vmid: 101, status: 'not_scanned', candidates: [], stale: false}
   let holdScan, scanGate, holdSave, saveGate, scanStatus = 'complete', scanIssues
   let dockerStatus = "complete", dockerCached = {vmid:101,status:"not_scanned",candidates:[],stale:false}
@@ -56,6 +57,8 @@ function fixture({nativeCandidate = candidate, dockerCandidate = null, apps = []
   }
   const api = async (url, options = {}) => {
     calls.push({url, ...options})
+    if (apiError && options.method && options.method !== 'GET') throw new Error(apiError)
+    if (detectorResult && url.endsWith('/apps/test')) return detectorResult
     if (url.endsWith('/logo-discovery')) {
       if (iconGate) await iconGate
       if (iconError) throw iconError
@@ -96,12 +99,20 @@ function fixture({nativeCandidate = candidate, dockerCandidate = null, apps = []
   }
   const exports = {}
   vm.runInNewContext(compiled.outputText, {exports, console, setTimeout, clearTimeout, AbortController,
+    confirm: prompt => {confirmPrompts.push(prompt); return confirmAccepted},
     require: name => {
       if (name === 'react') return react
       if (name === 'react/jsx-runtime') return {jsx: (type, props) => ({type, props}), jsxs: (type, props) => ({type, props})}
       if (name.includes('api-config')) return {fetchApi: api}
+      if (name.includes('lxc-app-editor-errors')) {
+        const context = {exports: {}}
+        vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(root, 'lib/lxc-app-editor-errors.ts'), 'utf8'), {
+          compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020},
+        }).outputText, context)
+        return context.exports
+      }
       if (name.includes('lxc-apps-cache')) return cache
-      if (name.includes('i18n/provider')) return {useT: () => (key, values) => key + (values ? JSON.stringify(values) : '')}
+      if (name.includes('i18n/provider')) return {useT: () => translate || ((key, values) => key + (values ? JSON.stringify(values) : ''))}
       if (name.includes('category-color')) return {useIsLightTheme: () => false, categoryChipStyle: () => ({})}
       if (name.includes('category-label')) return {getCategoryLabel: value => value}
       return new Proxy({}, {get: (_, key) => key})
@@ -136,11 +147,12 @@ function fixture({nativeCandidate = candidate, dockerCandidate = null, apps = []
   }
   const settle = async () => {for (let i = 0; i < 6; i++) await Promise.resolve(); render()}
   const button = key => {
-    const match = flatten(tree).find(n => n.type === 'Button' && text(n).includes('vmLxc.appEditor.' + key))
+    const label = translate ? translate('vmLxc.appEditor.' + key) : 'vmLxc.appEditor.' + key
+    const match = flatten(tree).find(n => n.type === 'Button' && text(n).includes(label))
     assert.ok(match, 'Missing button ' + key)
     return match
   }
-  return {render, renderParent, settle, calls, cachedWrites, button, tree: () => tree, bundleReads: () => bundleReads,
+  return {render, renderParent, settle, calls, cachedWrites, confirmPrompts, button, tree: () => tree, bundleReads: () => bundleReads,
     holdIcon: () => {iconGate = new Promise(resolve => {resolveIcon = resolve})},
     resolveIcon: () => resolveIcon(), setIconResult: value => {iconResult = value},
     setIconError: value => {iconError = value},
