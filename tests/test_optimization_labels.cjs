@@ -31,7 +31,7 @@ async function main(){
  for(const locale of ['sk','en','de']){
   const t=translate(locale)
   for(const [key,name] of Object.entries(catalogs.en.settings.optimizations.toolNames)){
-   assert.equal(descriptions.exports.optimizationToolName(key,name,t),locale==='sk'?catalogs.sk.settings.optimizations.toolNames[key]:name)
+   assert.equal(descriptions.exports.optimizationToolName(key,name,t),locale==='en'?name:catalogs[locale].settings.optimizations.toolNames[key])
   }
   assert.equal(descriptions.exports.optimizationToolName('future','Future <raw>&',t),'Future <raw>&')
  }

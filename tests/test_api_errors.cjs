@@ -50,7 +50,8 @@ async function main(){
   const denied=loadTypeScript('lib/api-errors.ts',{window:{get localStorage(){throw new Error('denied')}},navigator:{language:'fr-FR',languages:[]}})
   assert.equal(denied.apiFailure('invalidJson',{endpoint:'/api/demo'}),'FR /api/demo')
  })
- for(const lang of ['sk','en','de']){
+ // Translated locales use their catalog; per-key English fallback is covered above.
+ for(const lang of ['sk','en']){
   const f=fixture(lang),sk=lang==='sk'
   f.reply(()=>new Response('html',{status:502,statusText:'Bad Gateway',headers:{'Content-Type':'text/html'}}))
   await assert.rejects(f.fetchApi('/api/demo'),e=>e.message===(sk?'Požiadavka na API zlyhala: 502 Bad Gateway':'API request failed: 502 Bad Gateway'))

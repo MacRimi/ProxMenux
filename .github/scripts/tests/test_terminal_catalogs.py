@@ -69,22 +69,13 @@ class TerminalCatalogsTests(unittest.TestCase):
     def test_shipped_active_catalogs_keep_literal_contracts(self):
         result = subprocess.run(
             [sys.executable, '-B', str(SCRIPTS / 'check_terminal_catalogs.py'),
-             '--root', str(ROOT)],
+             '--root', str(ROOT), '--require-complete'],
             capture_output=True, text=True, timeout=60,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         for locale in MODULE.DEFAULT_LANGUAGES:
             self.assertIn(f'[{locale}] active=', result.stdout)
-        # New hand-reviewed Slovak keys ship with their source changes;
-        # other locales may use the runtime English fallback until translated.
-        result = subprocess.run(
-            [sys.executable, '-B', str(SCRIPTS / 'check_terminal_catalogs.py'),
-             '--root', str(ROOT), '--languages', 'sk', '--require-complete'],
-            capture_output=True, text=True, timeout=60,
-        )
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn('missing=0', result.stdout)
-
+        self.assertNotIn('missing=1', result.stdout)
 
     def test_optional_completeness_still_rejects_invalid_present_translations(self):
         with tempfile.TemporaryDirectory() as temporary:
