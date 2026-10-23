@@ -146,6 +146,7 @@
   "AMD (ROCm)": "AMD (ROCm)",
   "AMD (VA-API and ROCm detection)": "AMD (VA-API e rilevamento tramite ROCm)",
   "AMD CPU detected": "Rilevata CPU AMD",
+  "AMD CPU detected, but these fixes only apply to AMD EPYC and Ryzen. Nothing was changed.": "CPU AMD rilevata, ma queste correzioni si applicano solo ad AMD EPYC e Ryzen. Non è stato modificato nulla.",
   "AMD CPU fixes applied successfully": "Correzioni CPU AMD applicate correttamente",
   "AMD GPU Tools installation completed!": "Installazione strumenti GPU AMD completata!",
   "AMD GPU passthrough configured.": "Passthrough GPU AMD configurato.",

@@ -697,17 +697,22 @@ apply_amd_fixes() {
     pmx_journal_context "apply_amd_fixes" "$FUNC_VERSION"
     # description: Apply idle=nomwait and KVM module options on AMD EPYC/Ryzen hosts.
     msg_info2 "$(translate "Detecting AMD CPU and applying fixes if necessary...")"
-    NECESSARY_REBOOT=1
 
-    local cpu_model
+    local cpu_model cpu_vendor
     cpu_model=$(grep -i -m 1 "model name" /proc/cpuinfo || true)
+    cpu_vendor=$(grep -i -m 1 "vendor_id" /proc/cpuinfo || true)
 
+    # The fixes address Zen processors; older AMD generations do not need them.
     if echo "$cpu_model" | grep -qiE "EPYC|Ryzen"; then
         msg_ok "$(translate "AMD CPU detected")"
+    elif echo "$cpu_vendor" | grep -q "AuthenticAMD"; then
+        msg_ok "$(translate "AMD CPU detected, but these fixes only apply to AMD EPYC and Ryzen. Nothing was changed.")"
+        return 0
     else
         msg_ok "$(translate "No AMD CPU detected. Skipping AMD fixes.")"
         return 0
     fi
+    NECESSARY_REBOOT=1
 
     msg_info "$(translate "Applying AMD-specific fixes...")"
 
