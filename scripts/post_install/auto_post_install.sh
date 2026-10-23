@@ -1104,7 +1104,7 @@ install_log2ram_auto() {
     local existing_log2ram_bin=""
     pmx_journal_context "install_log2ram_auto" "$FUNC_VERSION"
 
-    # description: Install Log2RAM with size auto-tuned to host RAM (128M/256M/512M); SSD/M.2 detection skips on rotational disks.
+    # description: Fresh installs size Log2RAM from host RAM and ask for confirmation if storage is not detected as SSD. Updates preserve the configured size.
 
     existing_log2ram_bin="$(command -v log2ram 2>/dev/null || true)"
     if [[ -f /etc/log2ram.conf || -n "$existing_log2ram_bin" \
