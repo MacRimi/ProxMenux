@@ -92,6 +92,30 @@ remove_registry_logins() {
     rmdir /etc/pve/priv/proxmenux 2>/dev/null || true
 }
 
+remove_usbip_sharing() {
+    local manager="$BASE_DIR/scripts/devices/usbip_manager.py"
+    local config="/etc/proxmenux/usbip/config.json" id unit
+    if [[ -f "$manager" && -f "$config" ]] && command -v jq >/dev/null 2>&1; then
+        for id in $(jq -r '.imports[]?.id' "$config" 2>/dev/null); do
+            pmx_record_execution "Remove USB/IP client connection" "python3 $manager remove-import $id"
+            python3 "$manager" remove-import "$id" >/dev/null 2>&1 || true
+        done
+        pmx_record_execution "Disable USB/IP server" "python3 $manager server-disable"
+        python3 "$manager" server-disable >/dev/null 2>&1 || true
+    fi
+    for unit in /etc/systemd/system/proxmenux-usbip-*.service; do
+        [[ -f "$unit" ]] && grep -q '^# Managed by ProxMenux USB/IP' "$unit" || continue
+        systemctl disable --now "$(basename "$unit")" >/dev/null 2>&1 || true
+        pmx_remove_file "$unit"
+    done
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    if [[ -d /etc/proxmenux/usbip ]]; then
+        pmx_record_execution "Remove USB/IP configuration" "rm -rf /etc/proxmenux/usbip"
+        rm -rf /etc/proxmenux/usbip
+    fi
+    rmdir /etc/proxmenux 2>/dev/null || true
+}
+
 uninstall_proxmenux_monitor() {
 
     # 1. Stop service if it is running
@@ -816,6 +840,7 @@ uninstall_proxmenu() {
         fi
 
         echo "50" ; echo "Removing ProxMenu files..."
+        remove_usbip_sharing
         pmx_remove_file "$INSTALL_DIR/$MENU_SCRIPT"
         pmx_record_execution "Remove ProxMenux application directory" "rm -rf $BASE_DIR"
         rm -rf "$BASE_DIR"

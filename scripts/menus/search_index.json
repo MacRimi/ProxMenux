@@ -1,13 +1,19 @@
 [
   {
+    "title": "USB/IP over SSH",
+    "menu": "Hardware: GPUs, Coral-TPU and USB/IP",
+    "script": "devices/usbip_menu.sh",
+    "keywords": "usbip usb ip ssh remote zigbee bluetooth printer impresora remoto"
+  },
+  {
     "title": "Settings post-install Proxmox",
     "menu": "Settings post-install Proxmox",
     "script": "menus/menu_post_install.sh",
     "keywords": ""
   },
   {
-    "title": "Hardware: GPUs and Coral-TPU",
-    "menu": "Hardware: GPUs and Coral-TPU",
+    "title": "Hardware: GPUs, Coral-TPU and USB/IP",
+    "menu": "Hardware: GPUs, Coral-TPU and USB/IP",
     "script": "menus/hw_grafics_menu.sh",
     "keywords": ""
   },
@@ -98,43 +104,43 @@
   },
   {
     "title": "Install/Update NVIDIA Drivers (Host + LXC)",
-    "menu": "Hardware: GPUs and Coral-TPU",
+    "menu": "Hardware: GPUs, Coral-TPU and USB/IP",
     "script": "gpu_tpu/nvidia_installer.sh",
     "keywords": "gpu nvidia driver"
   },
   {
     "title": "Install/Update Coral TPU on Host",
-    "menu": "Hardware: GPUs and Coral-TPU",
+    "menu": "Hardware: GPUs, Coral-TPU and USB/IP",
     "script": "gpu_tpu/install_coral.sh",
     "keywords": "coral tpu usb"
   },
   {
     "title": "Add GPU to LXC   (Intel | AMD | NVIDIA)",
-    "menu": "Hardware: GPUs and Coral-TPU",
+    "menu": "Hardware: GPUs, Coral-TPU and USB/IP",
     "script": "gpu_tpu/add_gpu_lxc.sh",
     "keywords": "gpu passthrough lxc igpu"
   },
   {
     "title": "Add Coral TPU to LXC",
-    "menu": "Hardware: GPUs and Coral-TPU",
+    "menu": "Hardware: GPUs, Coral-TPU and USB/IP",
     "script": "gpu_tpu/install_coral_lxc.sh",
     "keywords": "coral tpu lxc usb"
   },
   {
     "title": "Add GPU to VM    (Intel | AMD | NVIDIA)",
-    "menu": "Hardware: GPUs and Coral-TPU",
+    "menu": "Hardware: GPUs, Coral-TPU and USB/IP",
     "script": "gpu_tpu/add_gpu_vm.sh",
     "keywords": "gpu passthrough vm"
   },
   {
     "title": "Switch GPU Mode  (VM <-> LXC)",
-    "menu": "Hardware: GPUs and Coral-TPU",
+    "menu": "Hardware: GPUs, Coral-TPU and USB/IP",
     "script": "gpu_tpu/switch_gpu_mode.sh",
     "keywords": "gpu mode modo"
   },
   {
     "title": "Manual CLI Guide (GPU/TPU)",
-    "menu": "Hardware: GPUs and Coral-TPU",
+    "menu": "Hardware: GPUs, Coral-TPU and USB/IP",
     "script": "gpu_tpu/gpu-tpu-manual-guide.sh",
     "keywords": "gpu tpu guide guia"
   },
