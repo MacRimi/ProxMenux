@@ -6678,6 +6678,44 @@
     "os": "debian"
   },
   {
+    "name": "EspoCRM",
+    "slug": "espocrm",
+    "desc": "EspoCRM is an open-source CRM for managing contacts, accounts, leads, opportunities, cases and email, with a customizable entity manager and a REST API.",
+    "script": "ct/espocrm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/espocrm.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/espocrm.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00025"
+    ],
+    "category_names": [
+      "Business & ERP"
+    ],
+    "notes": [
+      "The admin login is saved to ~/espocrm.creds inside the container.",
+      "If the IP changes or EspoCRM sits behind a domain or reverse proxy, update the site URL under Administration > Settings."
+    ],
+    "warnings": [],
+    "port": 80,
+    "website": "https://www.espocrm.com/",
+    "documentation": "https://docs.espocrm.com/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/espocrm.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
+    "default_credentials": {
+      "username": "admin",
+      "password": ""
+    },
+    "os": "debian"
+  },
+  {
     "name": "Etherpad",
     "slug": "etherpad",
     "desc": "Etherpad is a highly customizable real-time collaborative document editor. It lets multiple people edit the same document simultaneously in the browser, with live changes, per-user colors, chat, and a rich plugin ecosystem.",
@@ -12469,6 +12507,41 @@
     "is_dev": false,
     "execute_in": [
       "pve"
+    ],
+    "config_path": "",
+    "os": "debian"
+  },
+  {
+    "name": "Lidify",
+    "slug": "lidify",
+    "desc": "Lidify is a music discovery tool for Lidarr. It reads your existing Lidarr artists and uses Last.fm, Spotify or MusicBrainz to suggest similar artists, which can then be added straight back into Lidarr from the web UI.",
+    "script": "ct/lidify.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/lidify.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/lidify.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00014"
+    ],
+    "category_names": [
+      "*Arr Suite"
+    ],
+    "notes": [
+      "Configure the Lidarr address and API key, and a Last.fm or Spotify API key, under Settings in the web UI on first run."
+    ],
+    "warnings": [
+      "Lidify lets environment variables override config/settings_config.json. A Lidify setting added to /opt/lidify/.env wins over the web UI, and changes made there will appear to revert."
+    ],
+    "port": 5000,
+    "website": "https://github.com/TheWicklowWolf/Lidify",
+    "documentation": "https://github.com/TheWicklowWolf/Lidify#readme",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/lidify.webp",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
     ],
     "config_path": "",
     "os": "debian"
@@ -23155,7 +23228,7 @@
       "Registration is open and the first account becomes the administrator. Register it right away, then set invite_only = true in /Revolt.toml to restrict sign-ups.",
       "Back up the files encryption key in /Revolt.toml. Without it, all uploaded files are unreadable."
     ],
-    "port": 80,
+    "port": 443,
     "website": "https://stoat.chat",
     "documentation": "https://github.com/stoatchat/self-hosted",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/stoatchat.webp",
@@ -27691,6 +27764,42 @@
       "username": "admin",
       "password": ""
     },
+    "os": "debian"
+  },
+  {
+    "name": "YTPTube",
+    "slug": "ytptube",
+    "desc": "YTPTube is a self-hosted web interface and download manager for yt-dlp. It queues URLs, playlists, channels and live streams, checks sources on a schedule, and adds reusable presets, notifications, a file browser and a built-in player.",
+    "script": "ct/ytptube.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/ytptube.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/ytptube.sh",
+    "type": "lxc",
+    "type_id": "nm9bra8mzye2scg",
+    "categories": [
+      "scriptcat00013"
+    ],
+    "category_names": [
+      "Media & Streaming"
+    ],
+    "notes": [
+      "To keep downloads on a NAS or share them with Plex or Jellyfin, mount that folder at /opt/ytptube_data/downloads (pct set <CTID> -mp0 /host/path,mp=/opt/ytptube_data/downloads). The host folder must be writable by UID 100000.",
+      "To reset a password, stop ytptube and run: cd /opt/ytptube && YTP_CONFIG_PATH=/opt/ytptube_data/config .venv/bin/python -m app.scripts.reset_password --username <name>"
+    ],
+    "warnings": [
+      "There is no default login: the first visitor creates the admin account, so open the web UI right after the install."
+    ],
+    "port": 8081,
+    "website": "https://github.com/arabcoders/ytptube",
+    "documentation": "https://github.com/arabcoders/ytptube/blob/master/FAQ.md",
+    "logo": "https://cdn.jsdelivr.net/gh/arabcoders/ytptube@master/ui/public/images/favicon.png",
+    "updateable": true,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": true,
+    "execute_in": [
+      "lxc"
+    ],
+    "config_path": "",
     "os": "debian"
   },
   {
