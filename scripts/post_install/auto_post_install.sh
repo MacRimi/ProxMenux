@@ -707,7 +707,7 @@ path = Path(sys.argv[1])
 mode = sys.argv[2] if len(sys.argv) > 2 else "migrate"
 if mode not in {"inspect", "migrate"}:
     raise SystemExit(f"invalid Bashrc migration mode: {mode}")
-lines = path.read_text(encoding="utf-8", errors="surrogateescape").splitlines(keepends=True)
+lines = path.read_bytes().decode("utf-8", errors="surrogateescape").splitlines(keepends=True)
 
 
 def content(line: str) -> str:
@@ -736,11 +736,47 @@ marker_pairs = (
     ("${marker_begin}", "${marker_end}"),
 )
 
+# Pair each family independently: a foreign END must not hide a closing marker.
+# A complete span containing any other marker is ambiguous (nested, crossed,
+# or unmatched inside). Preserve overlapping spans as a whole before deleting
+# anything, so a rerun cannot expose user bytes as an ordinary managed block.
+# Unclosed BEGINs create no span; later standalone blocks can still migrate.
+marker_ends = dict(marker_pairs)
+marker_tokens = {marker for pair in marker_pairs for marker in pair}
+open_markers = {end: [] for end in marker_ends.values()}
+ambiguous_ranges = []
+marker_number = 0
+for index, line in enumerate(lines):
+    text = content(line)
+    if text not in marker_tokens:
+        continue
+    marker_number += 1
+    if text in marker_ends:
+        open_markers[marker_ends[text]].append((index, marker_number))
+    elif open_markers[text]:
+        start, begin_number = open_markers[text].pop()
+        if marker_number > begin_number + 1:
+            ambiguous_ranges.append((start, index + 1))
+
+preserved_spans = []
+for start, end in sorted(ambiguous_ranges):
+    if preserved_spans and start < preserved_spans[-1][1]:
+        previous_start, previous_end = preserved_spans[-1]
+        preserved_spans[-1] = (previous_start, max(previous_end, end))
+    else:
+        preserved_spans.append((start, end))
+preserved_ranges = dict(preserved_spans)
+
 result: list[str] = []
 detected_style = "short"
 changed = False
 i = 0
 while i < len(lines):
+    if i in preserved_ranges:
+        end_index = preserved_ranges[i]
+        result.extend(lines[i:end_index])
+        i = end_index
+        continue
     current = content(lines[i])
 
     removed = False
@@ -748,11 +784,13 @@ while i < len(lines):
         if current != marker_begin:
             continue
         end_index = next(
-            (j for j in range(i + 1, len(lines)) if content(lines[j]) == marker_end),
+            (j for j in range(i + 1, min(i + 33, len(lines)))
+             if content(lines[j]) == marker_end
+             or any(content(lines[j]) == pair[0] for pair in marker_pairs)),
             None,
         )
-        # Preserve incomplete ranges rather than risk consuming user content.
-        if end_index is None or end_index - i > 32:
+        # A new BEGIN cannot close an earlier orphan; preserve that prefix.
+        if end_index is None or content(lines[end_index]) != marker_end:
             continue
         block = lines[i:end_index + 1]
         if prompt_style(block) == "full":
@@ -812,7 +850,7 @@ PY
 
 
 customize_bashrc() {
-    local FUNC_VERSION="1.2"
+    local FUNC_VERSION="1.3"
     pmx_journal_context "customize_bashrc" "$FUNC_VERSION"
     # description: Install and safely migrate the managed ProxMenux Bash prompt and aliases while preserving or selecting the short/full working-directory style.
     msg_info "$(translate "Customizing bashrc for root user...")"
@@ -823,7 +861,7 @@ customize_bashrc() {
     local prompt_path_escape='\W'
     local detected_path_style="short"
 
-    [[ -f "$bashrc" ]] || pmx_write_file "$bashrc" < /dev/null
+    [[ -f "$bashrc" ]] || pmx_write_file "$bashrc" < /dev/null || return 1
     if ! detected_path_style="$(_migrate_proxmenux_bashrc "$bashrc" inspect)"; then
         msg_error "$(translate "Failed to inspect the existing ProxMenux Bash configuration.")"
         return 1
@@ -845,20 +883,17 @@ customize_bashrc() {
             ;;
     esac
 
-    [ -f "${bashrc}.bak" ] || cp "$bashrc" "${bashrc}.bak" > /dev/null 2>&1
+    [ -f "${bashrc}.bak" ] || cp "$bashrc" "${bashrc}.bak" > /dev/null 2>&1 || return 1
     local migrated_bashrc
-    migrated_bashrc="$(mktemp)"
-    cp -p "$bashrc" "$migrated_bashrc"
-    if ! _migrate_proxmenux_bashrc "$migrated_bashrc" migrate >/dev/null; then
+    # Build the entire replacement beside the original, then rename once.
+    migrated_bashrc="$(mktemp "${bashrc}.proxmenux.XXXXXX")" || return 1
+    if ! cp -p "$bashrc" "$migrated_bashrc" ||
+       ! _migrate_proxmenux_bashrc "$migrated_bashrc" migrate >/dev/null; then
         rm -f "$migrated_bashrc"
         msg_error "$(translate "Failed to migrate the existing ProxMenux Bash configuration.")"
         return 1
     fi
-    pmx_write_file "$bashrc" < "$migrated_bashrc"
-    rm -f "$migrated_bashrc"
-    
- 
-    pmx_append_file "$bashrc" << EOF
+    if ! cat >> "$migrated_bashrc" << EOF
 ${marker_begin}
 # ProxMenux core customizations
 export HISTTIMEFORMAT="%d/%m/%y %T "
@@ -873,12 +908,38 @@ alias egrep='egrep --color=auto'
 source /etc/profile.d/bash_completion.sh
 ${marker_end}
 EOF
-    
+    then
+        rm -f "$migrated_bashrc"
+        msg_error "$(translate "Failed to migrate the existing ProxMenux Bash configuration.")"
+        return 1
+    fi
 
     if ! grep -q "source /root/.bashrc" "$bash_profile" 2>/dev/null; then
-        echo "source /root/.bashrc" | pmx_append_file "$bash_profile" 2>/dev/null
+        if ! echo "source /root/.bashrc" | pmx_append_file "$bash_profile" 2>/dev/null; then
+            rm -f "$migrated_bashrc"
+            return 1
+        fi
     fi
-    
+
+    # Keep the usual file journal, but never truncate the live Bashrc.
+    local before after kept
+    _pmx_store_object "$bashrc"
+    before="$PMX_LAST_DIGEST"; kept="$PMX_LAST_OBJECT_STORED"
+    if ! mv -f -- "$migrated_bashrc" "$bashrc"; then
+        rm -f "$migrated_bashrc"
+        return 1
+    fi
+    _pmx_store_object "$bashrc"; after="$PMX_LAST_DIGEST"
+    if [[ "$before" != "$after" ]]; then
+        local -a fields
+        mapfile -t fields < <(_pmx_journal_common)
+        _pmx_journal_record "${fields[@]}" \
+            "class=configuration" "operation=write_file" "target=$bashrc" \
+            "before=$before" "after=$after" "existed_raw=true" \
+            "capture=present" "revert=restore" \
+            "exactness=$([ "$kept" = true ] && echo exact || echo none)"
+    fi
+
     msg_ok "$(translate "Bashrc customization completed")"
     msg_info "$(translate "The new prompt will be used in new terminal sessions.")"
     msg_info "$(translate "To apply it to the current shell now, run:") source /root/.bashrc"
