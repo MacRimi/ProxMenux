@@ -3516,7 +3516,7 @@
       "repository": "https://codeberg.org/forgejo/forgejo",
       "description": "Host Git repositories and collaborate through a web interface with an integrated SSH server.",
       "website": "https://forgejo.org/",
-      "icon": null,
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/forgejo.webp",
       "architectures": [
         "amd64",
         "arm64"
@@ -4520,7 +4520,7 @@
       "repository": "https://github.com/sysadminsmedia/homebox",
       "description": "Track household items, locations, warranties, documents and maintenance in one place.",
       "website": "https://homebox.software/",
-      "icon": null,
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/homebox.webp",
       "architectures": [
         "amd64",
         "arm64"
@@ -5789,7 +5789,7 @@
       "repository": "https://github.com/sissbruecker/linkding",
       "description": "Save, tag and search bookmarks with a lightweight self-hosted web app.",
       "website": "https://linkding.link/",
-      "icon": null,
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/linkding.webp",
       "architectures": [
         "amd64",
         "arm64"
@@ -6398,7 +6398,7 @@
       "repository": "https://github.com/mealie-recipes/mealie",
       "description": "Save, organize and share recipes with a self-hosted recipe manager.",
       "website": "https://mealie.io/",
-      "icon": null,
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/mealie.webp",
       "architectures": [
         "amd64",
         "arm64"
@@ -6632,7 +6632,7 @@
       "repository": "https://github.com/miniflux/v2",
       "description": "Read and organize RSS feeds with a lightweight web-based feed reader.",
       "website": "https://miniflux.app/",
-      "icon": null,
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/miniflux.webp",
       "architectures": [
         "amd64",
         "arm64"
@@ -10780,7 +10780,7 @@
       "repository": "https://github.com/Stirling-Tools/Stirling-PDF",
       "description": "A web-based toolkit for working with PDF files on your own server.",
       "website": "https://www.stirlingpdf.com/",
-      "icon": null,
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/stirling-pdf.webp",
       "architectures": [
         "amd64",
         "arm64"
@@ -12006,7 +12006,7 @@
       "repository": "https://github.com/go-vikunja/vikunja",
       "description": "Manage personal and shared tasks, lists and projects through a web interface.",
       "website": "https://vikunja.io/",
-      "icon": null,
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/vikunja.webp",
       "architectures": [
         "amd64",
         "arm64"
