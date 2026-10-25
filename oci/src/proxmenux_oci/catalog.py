@@ -879,6 +879,7 @@ class Catalog:
                     .get("catalog", {})
                     .get("replaces_discovered_ids", []),
                     "curated_path": str(path.relative_to(self.root)),
+                    "template_id": template["id"],
                     "template": f"apps/{app_id}.json" if app_id in existing else None,
                     "template_status": existing.get(app_id),
                 }
