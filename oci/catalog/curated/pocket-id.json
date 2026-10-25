@@ -68,7 +68,8 @@
         "required": true,
         "sensitive": false,
         "source": "upstream-documentation",
-        "container_address": "http://@CONTAINER_ADDRESS@:1411"
+        "container_address": "http://@CONTAINER_ADDRESS@:1411",
+        "prompt": "Address Pocket ID will be opened at; passkeys need HTTPS (for example https://id.example.com)"
       },
       {
         "name": "ENCRYPTION_KEY",

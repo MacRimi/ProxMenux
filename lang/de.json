@@ -300,6 +300,7 @@
   "Additional paths for": "Zusätzliche Pfade für",
   "Address BookStack will be opened at (for example http://192.168.1.50)": "Adresse, unter der BookStack geöffnet wird (zum Beispiel http://192.168.1.50)",
   "Address Healthchecks will be opened at (for example http://192.168.1.50:8000)": "Adresse, unter der Healthchecks geöffnet wird (zum Beispiel http://192.168.1.50:8000)",
+  "Address Pocket ID will be opened at; passkeys need HTTPS (for example https://id.example.com)": "Adresse, unter der Pocket ID geöffnet wird; Passkeys benötigen HTTPS (zum Beispiel https://id.example.com)",
   "Address Speedtest Tracker will be opened at (for example http://192.168.1.50)": "Adresse, unter der Speedtest Tracker geöffnet wird (zum Beispiel http://192.168.1.50)",
   "Address of Redis or Valkey (for example redis://192.168.1.20:6379/1)": "Adresse von Redis oder Valkey (zum Beispiel redis://192.168.1.20:6379/1)",
   "Address of the Compose file": "Adresse der Compose-Datei",

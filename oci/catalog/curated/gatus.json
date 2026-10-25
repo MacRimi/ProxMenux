@@ -33,7 +33,7 @@
     "documentation": "https://github.com/TwiN/gatus#configuration",
     "repository": "https://github.com/TwiN/gatus",
     "tips": [
-      "Edit /config/config.yaml to add the endpoints you want to monitor. This profile stores the status history in /data/gatus.db."
+      "Edit config.yaml in the /config volume to add the endpoints you want to monitor; choose a host directory for /config to edit it from the host. This profile stores the status history in /data/gatus.db."
     ],
     "mini_changelog": [],
     "display_version": null,
@@ -84,6 +84,22 @@
         "managed_volume": {
           "backup": true,
           "default_size_gb": 2
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/config",
+        "compose_source_example": "./gatus-config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 1
         }
       }
     ],
@@ -149,6 +165,17 @@
         "id": "gatus-volume-0",
         "service": "gatus",
         "container_path": "/data",
+        "mode": "managed-volume",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "gatus-volume-1",
+        "service": "gatus",
+        "container_path": "/config",
         "mode": "managed-volume",
         "user_selectable": true,
         "backup": true,
@@ -377,7 +404,8 @@
           "container_path": "/config/config.yaml",
           "mode": "0644",
           "owner": "mapped-root",
-          "content": "storage:\n  type: sqlite\n  path: /data/gatus.db\nendpoints:\n  - name: Gatus\n    group: local\n    url: http://127.0.0.1:8080/\n    interval: 1m\n    conditions:\n      - \"[STATUS] == 200\"\n"
+          "content": "storage:\n  type: sqlite\n  path: /data/gatus.db\nendpoints:\n  - name: Gatus\n    group: local\n    url: http://127.0.0.1:8080/\n    interval: 1m\n    conditions:\n      - \"[STATUS] == 200\"\n",
+          "only_if_missing": true
         }
       ]
     },

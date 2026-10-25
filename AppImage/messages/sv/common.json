@@ -3724,7 +3724,7 @@
       "guestBackupJobs": "Säkerhetskopieringsjobb för VM:ar och LXC:er — fliken Säkerhetskopiering listar Proxmox schemalagda jobb och skapar, redigerar, aktiverar och kör dem; de är desamma som i Datacenter → Backup (bidrag från @MattiaC46).",
       "notificationLanguage": "Meddelanden på ditt språk — titlar, brödtexter och dagliga sammanfattningar skrivs på det språk som valts för meddelanden (bidrag från @Vaso73).",
       "auditReviewDate": "Audit & Report — ett accepterat fynd kan ha ett granskningsdatum som tar upp det igen utan att beslutet dras tillbaka, och jämförelsen visar om ett fynd blev värre, blev bättre eller låg kvar (med @Vaso73).",
-      "ociCatalog": "OCI manager Apps (Technology Preview) — en ny post i ProxMenux-menyn installerar applikationer från deras officiella containeravbilder som inbyggda Proxmox LXC, utan Docker-motor. Katalogen innehåller 354 applikationer.",
+      "ociCatalog": "OCI manager Apps (Technology Preview) — en ny post i ProxMenux-menyn installerar applikationer från deras officiella containeravbilder som inbyggda Proxmox LXC, utan Docker-motor. Katalogen innehåller 364 applikationer.",
       "pbsSupport": "ProxMenux på Proxmox Backup Server — installeras med samma kommando och öppnar en egen meny, med efterinstallation och en Monitor som visar serverns hälsa, datalager och uppgifter (bidrag från @jcastro).",
       "menuSearch": "Sökning i huvudmenyn — ett namn eller en del av det hittar ett ProxMenux-alternativ, en OCI-applikation eller ett Helper-Script och öppnar det på dess första skärm."
     }

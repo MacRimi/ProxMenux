@@ -3724,7 +3724,7 @@
       "guestBackupJobs": "Tâches de sauvegarde des VM et des LXC — l'onglet Sauvegarde liste les tâches planifiées de Proxmox et permet de les créer, les modifier, les activer et les exécuter ; ce sont les mêmes que dans Datacenter → Backup (contribution de @MattiaC46).",
       "notificationLanguage": "Notifications dans votre langue — les titres, les corps et les résumés quotidiens sont rédigés dans la langue choisie pour les notifications (contribution de @Vaso73).",
       "auditReviewDate": "Audit & Report — une constatation acceptée peut porter une date de révision qui la fait réapparaître sans retirer la décision, et la comparaison indique si une constatation s'est aggravée, améliorée ou maintenue (avec @Vaso73).",
-      "ociCatalog": "OCI manager Apps (Technology Preview) — une nouvelle entrée du menu ProxMenux installe les applications à partir de leurs images de conteneur officielles en tant que LXC Proxmox natifs, sans moteur Docker. Le catalogue réunit 354 applications.",
+      "ociCatalog": "OCI manager Apps (Technology Preview) — une nouvelle entrée du menu ProxMenux installe les applications à partir de leurs images de conteneur officielles en tant que LXC Proxmox natifs, sans moteur Docker. Le catalogue réunit 364 applications.",
       "pbsSupport": "ProxMenux sur Proxmox Backup Server — il s'installe avec la même commande et ouvre son propre menu, avec post-installation et un Monitor qui affiche la santé, les datastores et les tâches du serveur (contribution de @jcastro).",
       "menuSearch": "Recherche dans le menu principal — un nom ou une partie du nom trouve une option de ProxMenux, une application OCI ou un Helper-Script, et l'ouvre sur son premier écran."
     }
