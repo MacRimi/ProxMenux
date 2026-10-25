@@ -229,6 +229,16 @@
     "your_spotify": "media",
     "zen": "desktop",
     "znc": "communication",
-    "zotero": "documents"
+    "zotero": "documents",
+    "ntfy": "messaging",
+    "gotify": "messaging",
+    "gatus": "monitoring",
+    "sftpgo": "sharing",
+    "picoshare": "sharing",
+    "owncast": "communication",
+    "silverbullet": "documents",
+    "wallos": "finance",
+    "pocket-id": "security",
+    "lldap": "security"
   }
 }
