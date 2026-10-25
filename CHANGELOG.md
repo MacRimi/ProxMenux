@@ -1,4 +1,516 @@
 
+## 2026-10-26
+
+### New version ProxMenux v1.2.7
+
+ProxMenux 1.2.7 brings two new tools. **Audit & Report**, a new page under Admin in ProxMenux Monitor, documents a Proxmox node, assesses it against forty-three checks and prints the result as a report you can hand to somebody else, next to a journal of everything ProxMenux itself has changed on the host. **OCI manager Apps**, a new entry in the main menu, installs applications straight from their official container images as native Proxmox LXC containers, with no Docker engine anywhere: a catalog of 347 applications, multi-container applications such as Immich, Nextcloud and Paperless, hardware acceleration profiles, updates that keep the data, and recovery after a restore or on another host, all of it also managed from the Monitor.
+
+Around them: a **search in the main menu** across ProxMenux options, OCI applications and Helper-Scripts, **ProxMenux on Proxmox Backup Server**, the **backup jobs of VMs and CTs** managed from ProxMenux, read-only API tokens that can only read, notifications written in the reader's language, Docker applications registered with their own identity, a disk history that follows each disk by its serial number, and a long list of improvements across backups, notifications, the Monitor, the installer and the translations, in eight languages.
+
+This version gathers everything the 1.2.6.1 and 1.2.6.2 betas brought. A special thank you goes to [@Vaso73](https://github.com/Vaso73), [@f3rs3n](https://github.com/f3rs3n) and [@jcastro](https://github.com/jcastro). Between them they contributed more than a hundred pull requests during this cycle: real installations compared against their Docker originals, ProxMenux on Proxmox Backup Server, private registries and faster operations in OCI manager, corrections across the Monitor, backups and notifications, a review of hundreds of messages so that each one says exactly what happened, the documentation reviewed in every language, and the Slovak and Italian of everything new. Their testing and debugging are a large part of why this version is available.
+
+---
+
+## 🔎 Audit & Report — a new page under Admin
+
+The page holds three views, and every one of them only reads: an assessment never modifies the host.
+
+**Assessment** evaluates the node and lists what it finds. **Changes** shows what ProxMenux has done to it. **Policy** is where you declare what the host is supposed to be, which is what turns a description into a judgement.
+
+### The assessment
+
+- **Forty-three Proxmox-specific checks** across backup, system, guests, security, storage, network and hardware. Among them: which guests no enabled backup job covers and how old the copies the destinations actually hold are; whether Proxmox Backup Server verified the newest copy of each guest; how the recorded backup runs ended; space *and inodes* on the filesystems the node itself needs; ZFS pool integrity and device error counters; software RAID and multipath redundancy; Ceph's own verdict; cluster quorum and the corosync links carrying it; high availability where quorum cannot answer; the EFI partitions that would start the kernel; essential services and units systemd gave up on; certificate validity; how SSH admits root; the update chain; and whether the channels that would notify you are themselves working.
+- **Every finding carries the evidence it rests on** — the command output or configuration fragment — together with what the check examines and where the reading came from. Evidence is presented as tables and labelled values, with field names humanised and figures formatted by what they are: bytes as a size, hours as a duration, an instant as a date in your own locale.
+- **Six results, each with a definition it has to earn.** *Critical* is an interruption or an urgent threat to availability, integrity or recoverability, with evidence. *Warning* is a verified degradation, an absent protection that was expected, or a declared policy that is not met. *Observation* is configuration, a limit or planning information. *Conformant* means the criterion was verified and met. *Unverified* means there was not enough information to conclude. *Not applicable* means there was nothing to evaluate.
+- **A check that could not be evaluated says what it could not read** — the destination that refused the connection, the command that failed — beside the result rather than two collapsed panels below it. Missing evidence is never counted as a favourable result.
+- **Gravity belongs to the situation, not to the check.** A storage at 90% capacity and an unreachable storage come from the same check and no longer share a severity; a finding takes the gravest of the objects it reports on.
+- **Accepted risks** are recorded against a finding with a mandatory reason and an optional review period. The technical classification stands and the decision sits beside it, so a report still shows that a critical finding was accepted and by whom. When the period ends, the finding returns to the active set.
+- **An accepted risk can carry a review date without an expiry** ([#343](https://github.com/MacRimi/ProxMenux/discussions/343), with [@Vaso73](https://github.com/Vaso73)): the decision stays in force and comes back to be looked at.
+- **The assessment describes its own effects accurately** ([PR #352](https://github.com/MacRimi/ProxMenux/pull/352), contributed by [@f3rs3n](https://github.com/f3rs3n)), and the Lynis removal says what happened ([PR #404](https://github.com/MacRimi/ProxMenux/pull/404)).
+- **Lynis is read, not reimplemented.** Its warnings keep their test identifiers and are collapsed to one row per distinct warning with the number of times it was raised. Where Lynis is installed but has no usable report, the assessment offers to run one before it starts, so the choice of paying that minute is yours.
+- Findings store the identity of their message and its values rather than a rendered sentence, so a report reads in the language of whoever opens it.
+
+### Changes — what ProxMenux did to this host
+
+The complaint that lands hardest against a tool like this one is not that it changes things: it is that afterwards nobody can say what it changed. Reading the script does not answer it either — a function of four hundred lines may alter two values, and the reader has no way to know which two.
+
+- **Three blocks answer the three questions an administrator actually asks**: what the post-install left configured, which ProxMenux scripts wrote to the host and what each one changed, and which packages and utilities are now installed. Every entry names the script it came from, so a change traces back to the menu that made it.
+- **Only the change is shown.** `optimize_logrotate` reads as `rotate 7` → `rotate 14`, not as forty lines of shell. What was replaced is kept in a content store keyed by digest, so it survives somebody tidying `/etc`.
+- **What was changed is separated from what was run.** A function that rewrites a file authored that change; an upgrade launched from a menu did not — apt decided what changed. Both are recorded, in different classes, and the interface says so.
+- **How well the previous state is known travels with each entry**: captured as it happened, captured on re-application to an already-modified host, or never captured because it predates the journal. Each entry also declares how exactly it could be undone — exact, partial, or not at all.
+- **Installations record the difference they made**, not the name that was asked for: the packages that were absent and are now present, dependencies included.
+- **The journal shows the host as it stands now**, not a log of every time a script ran. Re-running the post-install, moving between the stable and beta channels or reinstalling a utility updates the existing entry in place, origin state on one side and current state on the other.
+- **Recording never costs an operation.** One small JSON file written whole into a spool the Monitor consolidates: no database, no Python, no network on the writing side. If the journal cannot be written at all, the change still happens.
+- **The customizable post-install is listed under its own option.** Figurine, Fastfetch and the other options applied from that menu appear in the post-install section by their name, next to the ones of the automatic post-install.
+- The journal has its own section in the printable report, which is where it defends a host.
+
+### Policy — declaring what is expected
+
+- **An assessment can see what a host does, not what it is for.** Whether a guest needs a backup, whether a service must come back by itself, whether a storage is essential — none of that is discoverable, and guessing at it turns ordinary configurations into alarms. A host with nothing declared produces a complete report that describes rather than judges.
+- **Declaring is picking from what is there.** Guests and storages are listed from this node's own inventory rather than typed in by identifier. Per guest: whether a backup is required, whether it is expected to start with the host, and a recovery objective in hours where the workload has one. Per storage: essential, optional, or nothing stated. Plus every threshold the checks measure against, each showing the shipped value as its placeholder — leaving a field empty keeps that value.
+- **Inheritance is explicit.** *Inherit* shows the site default and removes the per-resource override; *Not stated* is stored as such, so it cannot silently reactivate an inherited requirement.
+- **An exempt guest stays visible**, carrying the decision that removed it from the count: *excluded by policy*, which is a different thing from an accepted risk. The report also states which policy it applied, so two reports of the same host — one measured against stated expectations, one against none — no longer read identically.
+
+### What changed since last time
+
+- **An assessment now has a before.** Any run can be marked as the reference, and every later one is read against it.
+- **Fixed is not the same as accepted.** A finding that stopped being reported because the host changed and one that stopped because somebody accepted the risk both leave the list, and only the first is progress. They are counted separately.
+- **The comparison says which way a finding moved** ([#343](https://github.com/MacRimi/ProxMenux/discussions/343), with [@Vaso73](https://github.com/Vaso73)): worse, better or held, in the view and in the printed report.
+- **A check that disappears is reported as no longer assessed**, not as resolved: nothing verified that it stopped failing, only that it stopped being asked.
+
+### Reports
+
+- **A report answers one question**, so the profile selects both the checks that run and the sections the document carries: *Full audit*, *Inventory*, *Security review*, *Backup assurance*, *Capacity and wear* and *Quick diagnosis*. Each focused report opens with its own posture header. Sections a profile did not ask for are absent rather than empty, so an omission is never read as a result.
+- **The document describes the node before judging it.** Identity, cluster, architecture, disks, network, storage, guests, passthrough and managed software come first; the findings follow, because a finding about a bridge means little to a reader who has not been shown the bridge.
+- **Diagrams carry the relations, not the lists**: processor and memory in their slots and what hangs off each controller; the path from the wire to each guest through adapter, bond, bridge; where guest disks live and which destination backs them up; cluster membership over the corosync links that join it. Every diagram is inline SVG, so it prints as vector and the document stays self-contained.
+- **Quick diagnosis carries only what is asking to be decided** — the critical and warning findings with the evidence needed to act on them, and the readings that could not be taken. Every check still runs: a short report that skipped checks would be quick and untrustworthy.
+- **The inventory profile runs no checks at all**, so a node that has never been assessed can still produce its structural document: memory module by module with slot, type, speed and part number; physical disks with model, serial, bus and SMART state; adapters with link speed, driver and PCI address; PCI passthrough with its IOMMU group; and network latency per target.
+- **The disks section carries the observation log** — what happened over time, including events a disk recovered from, with type, severity, count and the first and last time each was seen.
+- SMART, Lynis, latency and audit reports now share one shell: the same header, numbered sections, cards and callouts, and an icon-only action bar that disappears when the page is printed.
+- **Audit findings and printable reports fit narrow screens** ([PR #399](https://github.com/MacRimi/ProxMenux/pull/399), contributed by [@f3rs3n](https://github.com/f3rs3n)).
+- **The whole page works on a phone.** Dense tables stack into blocks where the heading travels with the value instead of scrolling sideways, controls take a row each below the small breakpoint, and the report opens as a real navigation so an installed web app keeps its own back and close controls.
+
+---
+
+## 📦 OCI manager Apps (Technology Preview) — official container images as native Proxmox LXC
+
+ProxMenux does not build its own containers for these applications: it reads the published recipe of each one and turns it into a native Proxmox OCI LXC. OCI manager Apps carries the Technology Preview label that Proxmox VE gives to application containers from OCI images, until Proxmox VE marks them as stable.
+
+### The catalog
+
+- **347 applications** from LinuxServer.io, other public image repositories and recipes written for ProxMenux, in the same layout as the Helper-Scripts: a search, the full list, 29 categories and the installed applications. Every application carries its icon and the architectures its image supports.
+- **A ✓ marks what was tested for real.** 43 applications read *Verified*: 41 tested in the ProxMenux lab, and PocketBase and Glances tested by the community, by [@Vaso73](https://github.com/Vaso73). An issue form records a new test, and the tester is credited in `oci/VALIDATION.md`.
+- **Files & Sharing is a category of its own**, with the sixteen applications that serve or synchronise files. Among them is **ShareCoveX**, a file server with a web panel that publishes directories over SMB, NFS or both, with Samba users and Time Machine destinations.
+- **An image that is not in the catalog can be installed too**, from its Compose file, a `docker run` command or its reference, with the result shown for review before any LXC is created.
+- **An oci-compose written by hand can be installed.** *Install an image that is not in the catalog* takes the JSON file an application is installed from: pasted in the terminal, read from the host or downloaded from an address. The file states the image, its ports, variables and volumes, and what the installation asks; ProxMenux completes the rest, checks it and names each error by its field. `oci/README.md` describes the format block by block, with two examples in `oci/examples/`.
+
+### Installing an application
+
+- **The menus of OCI manager Apps number their options**, as the rest of ProxMenux does, so each description has the whole width; a storage, a bridge or a device keeps its name.
+- **OCI manager Apps opens on Proxmox VE 9.1 or later**, the first release that runs OCI images as LXC containers. On an older host it says so, with the installed version, before installing anything.
+- **The page of an application shows what it will create before anything is installed**: its image, the address it will answer on, where its persistent data goes, the acceleration profiles it offers and, for a multi-container application, every container of the set.
+- **Two ways to install.** The default one asks what every installation decides (storage, where its data goes, DHCP or a static address, how it starts) and takes the rest from the recipe. The advanced one opens every decision in order: VMID and resources, each data path with its location, storage and size, extra paths and devices, the network, the application settings, the GPU and how it starts.
+- **Every question says what it asks for**, with an example or a proposed value. An application that needs a database or a Redis server that is already running, such as BookStack, NetBox or Manyfold, says so first, with the address of its image documentation.
+- **An application is not asked for its own address.** BookStack, Healthchecks, Speedtest Tracker and NetBox are given the address of the container: the fixed one, or the one DHCP gives, obtained before the application starts for the first time.
+- **The data folders belong to the application.** Downloads, series, music, books and backups are created for the user the application runs as, as a container volume or as a host directory, and a new volume starts with what the image holds at that path.
+- **FileBrowser Quantum opens the folder it is given.** It starts with the configuration of its recipe, written for version 2 of the application, which serves the folder chosen in the installation. The starting file a recipe writes takes the place of the copy the image ships in a new volume, and never of a file that was already there.
+- **Images from private registries install and update** ([PR #460](https://github.com/MacRimi/ProxMenux/pull/460), contributed by [@jcastro](https://github.com/jcastro), and requested by several users). *Registry accounts* saves an account once the registry accepts it, and a registry that refuses an image offers to sign in on the spot. The accounts are kept in `/etc/pve/priv` for every node of the cluster, and updates, the watchdog and the Monitor use them.
+- **USB and serial devices are chosen from a list**, by name and type, and every application accepts extra paths and devices in the advanced installation.
+- **Applications start with the memory they need**: 1024 MB unless the recipe asks for more or sets a limit.
+- **The summary ends with what is needed to use the application**: its address, and the user and password to sign in with. A service with no web interface, such as MariaDB, PostgreSQL or an SSH server, is given by its address and port.
+- **A mistyped value asks the same question again**, a static address already in use on the network is not accepted, and creating the container shows its progress while a large image is unpacked.
+- **Images built from scratch with a numeric user install**, such as ddns-updater: the container is created from a copy of the image that adds the `/etc/passwd` and `/etc/group` Proxmox VE needs, and the application runs with the user and group the image declares. The downloaded image is kept as it was.
+- **The downloaded image can be deleted when the installation ends**, and images no installation uses are removed on their own.
+
+### Applications made of several containers
+
+- **One LXC per service**, wired through a private bridge of their own and started in order. Immich, Nextcloud, Paperless and Tandoor have their own recipes, ten more come from their published Compose file, and the Arr suite installs each application as an independent LXC connected to the others.
+- **Immich asks what runs its video and its recognition**: the CPU or each GPU of the host, together or split between two GPUs, with VA-API or NVENC for video and OpenVINO, ROCm or CUDA for recognition.
+- **The address offered is the one a browser can reach**: the LAN address of the container, in the summary and in its Proxmox notes.
+
+### Hardware acceleration
+
+- **The acceleration menu offers only what the host can run**: NVIDIA with the driver and the Container Toolkit, Intel or AMD where that GPU is present. The render node proposed is the one of that GPU.
+- **AI applications take the image built for the chosen GPU.** Ollama gains an AMD (ROCm) profile, llama.cpp offers CPU, CUDA, ROCm and SYCL, and Faster Whisper and Piper offer NVIDIA.
+- **Frigate detects objects on an AMD GPU, an Intel NPU or a Coral** (NPU and Coral suggested by [@jcastro](https://github.com/jcastro)), and its CPU detector runs on AMD processors.
+- **ROCm is offered according to the generation of the AMD GPU**, as an experimental option on the ones the image does not carry kernels for, and Immich checks the GPU with a real inference before accepting it.
+
+### Storage and shared directories
+
+- **A host directory that already exists can be opened to the application that shares it**, with access rules (ACL) that leave the owner of the files as it is.
+- **A shared host directory shows what the host has mounted inside it**: network shares, disks and ZFS datasets, also the ones mounted while the container runs.
+- **A shared host directory is recognised by its filesystem**, so an application keeps being updated after the host restarts or a disk comes back under another device name (reported by Charly Silva).
+
+### Updating, modifying and recreating
+
+- **An update replaces the image and keeps the data.** The container is backed up, rebuilt from the new image and asked to answer before the operation is committed; if it does not, everything returns to how it was. Resource changes made from Proxmox are carried over.
+- **Every installed application can be updated and modified**, privileged containers, host monitors and the applications of the Arr suite included.
+- **Modify** changes the settings of an installed application; on a multi-container one it adds or removes extra paths and devices without rebuilding anything, and changes what runs recognition in Immich.
+- **A multi-container application can be rebuilt as it is** ([PR #423](https://github.com/MacRimi/ProxMenux/pull/423), contributed by [@Vaso73](https://github.com/Vaso73)). *Recreate every container with its saved configuration* rebuilds each container from the image it was installed with.
+- **Proxmox tags can be changed freely** ([PR #473](https://github.com/MacRimi/ProxMenux/pull/473), contributed by [@jcastro](https://github.com/jcastro)): Update, Modify and Recreate keep the tags a container has, or none if they were removed, also on the containers of a multi-container application.
+- **A volume mounted read-only is left as it is** when a container is rebuilt ([PR #494](https://github.com/MacRimi/ProxMenux/pull/494), contributed by [@jcastro](https://github.com/jcastro)), such as `/run/secrets`; its files, owner and permissions are not touched.
+- **An application that runs as a user its image does not list gets `/` as its home** ([PR #496](https://github.com/MacRimi/ProxMenux/pull/496), contributed by [@Vaso73](https://github.com/Vaso73)), as Docker does, and the image's user file is read without following links.
+- **Services that are not web pages update and recover like the rest**: MariaDB, SSH or a speech server answer on their own protocol, and Update, Modify and Recover take that answer as the service being up.
+- **The backup of an operation can be made on another storage** when it does not fit on the system disk, and an operation that has no room says so before anything is stopped.
+- **A damaged image download or working backup is written a second time** before anything fails, and a failed update leaves no temporary container behind.
+- **Modify is a menu of settings** ([PR #495](https://github.com/MacRimi/ProxMenux/pull/495), contributed by [@jcastro](https://github.com/jcastro)): each row shows the current value, only the chosen setting is edited, and the changes are kept until they are reviewed and applied together, or discarded. Refreshing the catalog options is one more entry of the menu.
+- **Manage opens at once** ([PR #493](https://github.com/MacRimi/ProxMenux/pull/493), contributed by [@jcastro](https://github.com/jcastro)): the configuration of each application is read again only when it changed, so a host with 26 applications goes from 15 seconds to a fraction of a second.
+- **Modify and Update open without waiting** ([PR #498](https://github.com/MacRimi/ProxMenux/pull/498), contributed by [@jcastro](https://github.com/jcastro)): the space for the backup is checked once the operation is accepted, and Escape goes back at once.
+- **Modify changes the running container when it can** ([PR #497](https://github.com/MacRimi/ProxMenux/pull/497), contributed by [@jcastro](https://github.com/jcastro)): CPU and memory apply live, and the network, variables, host paths and devices are changed in place, with a rollback if a step fails. Only what cannot be changed in place rebuilds the container.
+- **Variables changed in Proxmox are carried over.** A password changed after the first login, or a variable added from Proxmox, is listed by name, without its value, and saved in oci-compose before Update or Modify continues.
+- **The downloaded image is offered for deletion only after a container was rebuilt from it**, not after a change applied to the running container.
+- **The list of installed applications comes back after each operation**, an update, a change or a removal, without reading every application again.
+
+### Watchdog, backups and clusters
+
+- **An application can be put under watchdog.** Proxmox has no restart policy; with the watchdog on, an application that stops on its own is started again, with a notification. A stop asked by the user, a backup, a migration or a ProxMenux operation is never undone.
+- **A multi-container application starts while one of its containers is being backed up.** Its start waits until vzdump releases that container and then continues, and the watchdog waits as well. Updating ProxMenux brings the new start hook to the applications already installed.
+- **The record of an application travels with its container.** A copy lives inside it and another in `/etc/pve`, so a vzdump or PBS backup always carries it.
+- **A restored application is offered for recovery**, on a new Proxmox installation, on another host or with another ID. The recovery puts back what the host kept for it, such as the private network of a multi-container application, and checks everything before the host is changed.
+- **In a cluster, the record follows the container.** A migrated or HA-moved single-container application starts and is registered on the node it arrives at.
+- **A container that reboots itself keeps its DHCP address**, as Home Assistant OS does from its settings.
+
+### Removing an application
+
+- **Everything the installation kept on the host goes with it** and the result says whether anything was left undone ([PR #402](https://github.com/MacRimi/ProxMenux/pull/402), contributed by [@f3rs3n](https://github.com/f3rs3n)). Host directories are kept, and an application of the Arr suite is removed on its own.
+
+### Tested against their Docker originals (contributed by [@Vaso73](https://github.com/Vaso73))
+
+Real installations compared side by side with the same images under Docker, and what they brought:
+
+- **An image's initial data reaches its new volume** ([PR #394](https://github.com/MacRimi/ProxMenux/pull/394)), as PocketBase needs.
+- **A host monitor is reached through the firewall, on request** ([PR #393](https://github.com/MacRimi/ProxMenux/pull/393), [PR #395](https://github.com/MacRimi/ProxMenux/pull/395)): Glances gets a narrow rule, confirmed separately and removed with the application.
+- **Stack members keep their data on a prepared volume** ([PR #410](https://github.com/MacRimi/ProxMenux/pull/410)), including the data path of current PostgreSQL images.
+- **Stremio, Uptime Kuma and images that need a home directory start as they do under Docker** ([PR #411](https://github.com/MacRimi/ProxMenux/pull/411), [PR #412](https://github.com/MacRimi/ProxMenux/pull/412), [PR #413](https://github.com/MacRimi/ProxMenux/pull/413)).
+
+---
+
+## 📱 OCI applications in ProxMenux Monitor
+
+- **The App tab registers what ProxMenux installed.** The application of an OCI container is registered by itself with its name, logo, address and version tracking, read from the installation record, also while the container is stopped. Every service an application serves gets its own link, and a service with no web interface shows its address and port as text.
+- **An application installed from the menu shows in the Monitor on its own.** The Apps page and the list of containers register it within seconds of the end of its installation, without opening its container.
+- **Updates are tracked by the image.** The card shows the version of the application and the image it runs, with its build date and digest; a new image under the same tag is an update.
+- **The Updates tab updates and modifies the container.** **Update** and **Modify** open the Monitor terminal on the same flow as the OCI menu. The backup taken before updating can be kept, image updates can be scheduled, a multi-container application is updated from its main container, and a restored application shows a **Recover** button.
+- **A new Logs tab shows what the application writes to its console**, kept on the host from the first start: the last lines since the last start, followed live, with a filter and a download.
+- **The Proxmox console of an OCI container opens a shell**, the equivalent of `docker exec`, whenever the image ships one.
+- **The Watchdog switch** sits in the container modal, under Start at boot.
+- **An OCI operation sends one notification with its result**, instead of one per step. Modify and the rebuild of a multi-container application have notifications of their own.
+- **The update icon of the Apps page opens the Updates tab** of that container.
+
+---
+
+## 🔎 Search in the main menu
+
+- **The main menu opens with Search options and applications.** A name or part of it finds an option of ProxMenux, an application of the OCI catalog or a Helper-Script, in that order, by name first and then by category.
+- **Every result opens what its name says**: a script at its first screen, an application at its page, an option of the post-install or a system utility in its list with it already marked. Nothing is run by the search itself.
+- **The Helper-Scripts catalog is kept on the host** and refreshed once a day, so the search also answers without a connection.
+
+---
+
+## 🧩 Helper-Scripts addons run where they belong
+
+- **An addon is run where its catalog says**: on the Proxmox host, inside an LXC picked from a list, or wherever is chosen when it can be both. A stopped LXC is started on confirmation, and OCI containers are left out.
+- **Descriptions and notes are shown as plain text**, and a script is downloaded whole before anything runs.
+
+---
+
+## 🗄 ProxMenux on Proxmox Backup Server ([PR #467](https://github.com/MacRimi/ProxMenux/pull/467), contributed by [@jcastro](https://github.com/jcastro))
+
+- **ProxMenux installs on a Proxmox Backup Server** with the same command as on PVE, and opens a menu of its own: version and packages, datastores, recent tasks, system utilities and a package update that shows its plan before applying it.
+- **The post-install menu works on PBS**: Automated, Customizable, updates and uninstall, with the options that apply to a backup server. Without a subscription it offers the no-subscription repository before upgrading, and Community Scripts lists the Helper-Scripts PBS post-install and microcode.
+- **The Monitor of a PBS has the design of the PVE one**: the same header, health and administration, CPU, memory and network charts from the history PBS keeps, a Datastores tab with the use of each datastore and the disks and pools of the server, and a Tasks tab with recent tasks and maintenance schedules. What only applies to PVE is left out, settings included.
+- **The maintenance jobs of a PBS show the state of their last run** in its own Monitor too, read from the PBS API like a remote PBS.
+- **Log2RAM compresses rotated logs at once**: the most recent rotated log no longer stays uncompressed in `/var/log`, which on a busy PBS filled a 128M Log2RAM and stopped its tasks from being recorded. Hosts that already have Log2RAM or the logrotate optimization are offered the update in *Settings → ProxMenux Optimizations*.
+- **A remote PBS can be watched from PVE** in *Backup → Proxmox Backup Server*. Signing in with a PBS user and password creates a read-only API token for the Monitor and keeps only that token, or an existing token can be entered. The certificate fingerprint is checked before any credential is sent. The PBS servers configured as storage are offered with their address and fingerprint filled in, and a PBS installed on the same host is read directly, without a token.
+
+---
+
+## 💾 VM and CT backup jobs managed from ProxMenux ([PR #421](https://github.com/MacRimi/ProxMenux/pull/421), contributed by [@MattiaC46](https://github.com/MattiaC46))
+
+- **The Backup tab of the Monitor has two views, Host and VMs and LXCs.** The second one, and the Host Backup & Restore menu, list the scheduled jobs of Proxmox, the same ones as Datacenter → Backup, and create, edit, enable, disable, delete and run them through the Proxmox API.
+- **Run now starts a Proxmox task on each node that has a guest of the job.** Changing a job needs an administrator session; a read-only API token can only list them.
+
+---
+
+## 💾 Backups and restore
+
+- **VM and CT backups can be selected and deleted from the Monitor** ([PR #461](https://github.com/MacRimi/ProxMenux/pull/461), contributed by [@jcastro](https://github.com/jcastro)): up to 20 at a time, after a confirmation, through Proxmox itself. A protected backup cannot be selected, and a batch that includes one is refused whole.
+- **The retention of each backup storage is edited from the Monitor** ([PR #462](https://github.com/MacRimi/ProxMenux/pull/462), contributed by [@jcastro](https://github.com/jcastro)): keep all, a number of backups per period, or the Proxmox default. Saving changes the policy in Proxmox and deletes no backup.
+- **Backup notifications say how the job ended** ([PR #406](https://github.com/MacRimi/ProxMenux/pull/406), contributed by [@f3rs3n](https://github.com/f3rs3n)): clean, with warnings, failed or unconfirmed, naming the guest that failed, with long diagnostics kept readable. The recovery summary counts each guest once ([PR #356](https://github.com/MacRimi/ProxMenux/pull/356)).
+- **A backup started from the Monitor runs in its own systemd unit** and continues whatever happens to the Monitor.
+- **A host backup works on a host with SELinux** ([#398](https://github.com/MacRimi/ProxMenux/issues/398), reported by [@sbaghdadi](https://github.com/sbaghdadi)) and keeps all of ProxMenux's host state under `/var/lib/proxmenux`.
+- **Every run of a host backup is notified** ([#425](https://github.com/MacRimi/ProxMenux/discussions/425), reported by @sahartford): each run is sent when it ends, like a VM or CT backup, also on a channel with the daily digest enabled and with HTTPS enabled in the Monitor.
+- **A remote Borg repository authenticates with the key saved on its destination** ([#357](https://github.com/MacRimi/ProxMenux/issues/357), reported by [@bartclone](https://github.com/bartclone)), offering only that key, and keeps its remote path as it was written.
+- **The host backup list shows this node's backups on a cluster** ([#445](https://github.com/MacRimi/ProxMenux/issues/445), requested by [@Joshua1264](https://github.com/Joshua1264)): a This node / All nodes choice, with a count that follows it, sets apart the backups of other nodes kept on a shared PBS or Borg repository.
+- **A local host backup made by a job that no longer exists is marked as Former job** ([#446](https://github.com/MacRimi/ProxMenux/issues/446), requested by [@Joshua1264](https://github.com/Joshua1264)), read from the job and node recorded with the backup. It is kept until it is deleted, and deleting it also removes its metadata file and log.
+- **A host restore is scheduled only once it is complete** ([PR #341](https://github.com/MacRimi/ProxMenux/pull/341), contributed by [@f3rs3n](https://github.com/f3rs3n)): each restore is prepared in its own directory and becomes the pending one only when every step succeeded.
+
+### 🔐 Node web certificate restore ([#333](https://github.com/MacRimi/ProxMenux/issues/333), reported by [@tropicaljoe](https://github.com/tropicaljoe))
+
+- Host backups already preserved the node-local certificate pair; the post-boot restore now maps it from the source node to the current one instead of leaving Proxmox on its generated certificate.
+- Before installing, ProxMenux validates the certificate, rejects encrypted or invalid private keys and confirms both public keys match; an incomplete pair leaves the current certificate untouched and adds a warning to the restore result. Installation goes through `pvenode cert set`, followed by fingerprint and service verification, with a fallback to the previous certificate if that verification fails.
+
+---
+
+## 🟢 NVIDIA installer and GPU passthrough
+
+- **The NVIDIA Container Toolkit is installed with the driver.** It is what lets a container see the host's GPU. It can also be put back on its own, and it is recorded in the Changes view of Audit & Report.
+- **The version picker offers the drivers that support the GPU and can build against the running kernel**, and opens in about five seconds.
+- **A version is proved to build before the working driver is removed.** One that does not build returns to the list with the current driver untouched, and the answer is remembered for that kernel.
+- **The result reports what the driver does**: a driver that installs but does not drive the GPU is recorded as failed, with the kernel's own reason.
+- **Adding an NVIDIA GPU to a VM writes its VFIO rule again when it is missing** (reported by kn): a host whose rule was removed by hand gets it back, and is asked to reboot, instead of being taken as already configured.
+- **Changing the mode of a GPU leaves its neighbours alone** ([#435](https://github.com/MacRimi/ProxMenux/issues/435), reported by [@LucasR3C3](https://github.com/LucasR3C3)). A GPU is its own function, the audio at its slot and the devices of its IOMMU group. On an AMD APU, a USB controller that shares the slot of the integrated graphics stays in the VM it was passed to when the GPU goes back to LXC mode or moves to another VM.
+- **Containers created from an OCI image stay out of the LXC menus that install into a container**: driver propagation, Add GPU to LXC, Coral, disks and shares. Their devices and paths are changed from OCI manager Apps.
+
+---
+
+## 💽 Disks
+
+- **The observations of a disk belong to its serial number.** A replaced disk starts with a clean history, the history follows a disk to another device name, and it is permanent: the same observation seen again adds to its count.
+- **Mechanical disks are left to spin down** ([#347](https://github.com/MacRimi/ProxMenux/issues/347), reported by [@spectante](https://github.com/spectante)). A rotational disk nothing is using is not read at all, the storage view says *Idle* or *Excluded* beside *Standby*, and *Settings → Disk exclusions* keeps a disk out of every scheduled read.
+- **The LVM checks leave excluded and idle disks alone** ([PR #464](https://github.com/MacRimi/ProxMenux/pull/464), contributed by [@jcastro](https://github.com/jcastro)): while a disk is excluded, idle or asleep, the scan reads only the LVM physical volumes on the other disks, and its own reads do not keep a disk counted as busy.
+- **Disk formatting keeps what it promises to keep** ([PR #339](https://github.com/MacRimi/ProxMenux/pull/339), [PR #340](https://github.com/MacRimi/ProxMenux/pull/340), contributed by [@f3rs3n](https://github.com/f3rs3n)): removing signatures leaves the partition table alone, and the system disk is recognised through stacked LVM, RAID or ZFS.
+- **The storage summary distinguishes unavailable disk temperatures and qualifies the SMART status** ([PR #365](https://github.com/MacRimi/ProxMenux/pull/365), [PR #372](https://github.com/MacRimi/ProxMenux/pull/372), contributed by [@f3rs3n](https://github.com/f3rs3n)).
+- **A notice of smartd about its own configuration, or fstrim on a disk that cannot discard, is not reported as a failure.**
+- **Volume mount points on block storage show their usage** in the Mount Points tab.
+
+---
+
+## 🔔 Notifications
+
+- **Notifications in the reader's language** ([PR #348](https://github.com/MacRimi/ProxMenux/pull/348), contributed by [@Vaso73](https://github.com/Vaso73)): titles, bodies, channel labels and daily digests follow the language chosen for notifications, long Telegram messages are split without breaking their formatting, and the wording was reviewed by hand.
+- **Temperature and health alerts carry their values** ([PR #408](https://github.com/MacRimi/ProxMenux/pull/408), contributed by [@f3rs3n](https://github.com/f3rs3n)): the reading, the threshold and the category in the reader's language.
+- **A cluster event notification says what happened** ([PR #403](https://github.com/MacRimi/ProxMenux/pull/403), contributed by [@f3rs3n](https://github.com/f3rs3n)), with the original message from Proxmox.
+- **A cluster node that goes down or comes back is notified by its name** ([PR #444](https://github.com/MacRimi/ProxMenux/pull/444), contributed by [@fklnc94](https://github.com/fklnc94)), read from the membership changes corosync reports on the other nodes.
+- **A health problem that comes back is reported again** ([PR #443](https://github.com/MacRimi/ProxMenux/pull/443), contributed by [@f3rs3n](https://github.com/f3rs3n)): a condition that was resolved and returns is a new episode, listed as active and notified once. Dismissals, also the permanent ones, stay as they were set.
+- **Apprise explains how to set up Slack and Matrix** ([PR #463](https://github.com/MacRimi/ProxMenux/pull/463), contributed by [@jcastro](https://github.com/jcastro)), with example addresses and their documentation, and a recovery is sent as a success, in green, as on the other channels.
+- **The notification settings show the delivery history** ([#425](https://github.com/MacRimi/ProxMenux/discussions/425), reported by @sahartford): the last 20 notifications with the result of each send, the error when one failed, and every run of the daily digest, also on days with nothing to send.
+- **Proxmox notifications arrive with HTTPS enabled on the Monitor**, through a local listener that answers only the notification webhook.
+- **The Monitor leaves `/etc/pve` alone while Proxmox restarts its cluster service** ([#427](https://github.com/MacRimi/ProxMenux/issues/427), reported by [@shtefko](https://github.com/shtefko)). Notification settings are written only while `/etc/pve` is mounted and only when they change, their copies are kept with ProxMenux, and uninstalling the Monitor removes its target from Proxmox.
+- **A log pattern is reported as persistent only while it keeps recurring** ([#386](https://github.com/MacRimi/ProxMenux/issues/386), reported by [@Joshua1264](https://github.com/Joshua1264)).
+- **An alert dismissed permanently stays dismissed** (reported by Maragath): for as long as the condition lasts, when it recovers and comes back, and when the suppression settings are saved, until it is re-enabled from Active Suppressions.
+- **Excluded storages stay out of the capacity alert** (reported by @christiannieveslauz), and a storage that is filling up says how full it is.
+- **A private bridge with nothing connected is not reported as down.**
+
+### 📦 Grouped application update notifications
+
+- **An automatic check now produces one complete notification instead of one message per application.** Pending updates are grouped by LXC and keep the application name plus the installed and available versions, so a quieter inbox does not cost you the detail.
+- A scan with a single pending application keeps the individual notification, and explicit checks you make yourself stay individual. The existing **App update available** setting controls both forms, and per-application exclusions are still respected.
+
+### 🧭 Cluster-owned guest health notifications
+
+- **LXC rootfs and VM filesystem capacity are evaluated only by the node that currently owns the guest**, so several Monitor instances in a cluster no longer record and notify the same condition independently. Guest Agent disk refreshes follow the same boundary.
+- A guest that moves between nodes is retired quietly on the previous one. A migration is not reported as a recovery; the new owner is responsible for the current condition.
+
+### ⚙️ Attributable kernel diagnostics
+
+- **A kernel diagnostic is reported by the line that explains it.** Kernel warnings, blocked tasks, lockups, protection faults, oops and memory-safety diagnostics now name the diagnostic type, process and component when present, and carry the journal excerpt around them — instead of a bare `Call Trace:` marker that identifies nothing and could count one incident twice.
+- **Kernel warnings and diagnostic traces have their own per-channel switch**, and hidden burst summaries inherit the category of the event they summarise, so silencing one event also silences its `+N more`.
+
+### 📮 Notification delivery
+
+- **Events buffered during Quiet Hours are released when the window closes**, and the release is recorded like any other delivery, so it appears in the history and the counters rather than arriving on the channel with no trace. The buffer is cleared only once the channel confirms delivery, so an overnight window is never discarded for a summary nobody received.
+- The 24-hour digest is composed and delivered the same way.
+- **Pending ProxMenux optimization updates re-fire on Monitor restart** alongside every other update report, so a host carrying optimizations it never applied surfaces them again after an update or a reboot. Each version is still announced once per service lifetime.
+
+---
+
+## 🔐 Read-only API tokens only read (reported by [@f3rs3n](https://github.com/f3rs3n))
+
+- **Every API action that changes something requires a full-admin token**: controlling guests, starting backups and SMART tests, running scripts, editing the firewall, Fail2Ban or SSL, and managing 2FA and API tokens. A read-only token keeps reading dashboards and metrics, and the session of the interface works as before.
+- **Reading health data requires a token once authentication is set up**, and every Health Monitor route that changes something requires a full-admin token. `/api/system-info` stays public for external probes such as Uptime Kuma.
+- **Opening a Monitor terminal and disabling authentication require a full-admin token.** Both the terminal-ticket route and the authentication-disable endpoint are guarded by the same admin-scope check the other privileged routes use, and the terminal WebSocket still accepts only a fresh single-use ticket — now issued exclusively to full-admin callers.
+- **Reading a stored credential back in cleartext requires a full-admin token too.** The settings page masks every stored secret, and the one route that returns a value — the eye toggle beside a field — is guarded the same way. A read-only token issued to a monitoring integration reaches none of them: the GitHub token, the Telegram bot token, the mail password, the AI provider keys, the Discord webhook. A session login carries full-admin implicitly, so the toggle behaves as before for whoever is using the interface.
+- **The API token dialog now asks which scope to mint.** Read-only is the default and is enough for dashboards and metrics; full-admin is there for integrations that drive the Actions API, and the dialog says plainly what each one can reach.
+- **The GitHub API card names the token it needs**: that token exists only to raise the anonymous rate limit when checking upstream versions of registered applications, and every call made with it reads public data, so a fine-grained token with read-only access to public repositories and no account permissions is enough.
+
+---
+
+## 🐳 Docker applications — one identity, one update state
+
+- **Applications running inside Docker can be registered in the App tab** with their own name, logo, web links and installed version, while their updates stay linked to the Docker image. They no longer appear twice in Updates: Portainer, Arcane and their equivalents keep their App entry, and the image row carries the versions.
+- **Available versions can be read from image metadata** in Docker Hub, GHCR and other compatible registries when the image publishes a usable version label — which describes what the selected tag would install, not necessarily the latest upstream release. Digest-based detection remains available when no label can be read.
+- **Installed versions follow the image the container actually uses**, including after recreation or when a pulled image has not been applied yet, and image aliases are matched to the workload's configured reference.
+- Image metadata resolves in the background without holding up the inventory, and App and Updates share the result.
+
+Thank you to [@byGarcia](https://github.com/byGarcia) for the implementation, verified detectors and detailed testing in [PR #337](https://github.com/MacRimi/ProxMenux/pull/337) and [PR #338](https://github.com/MacRimi/ProxMenux/pull/338), building on the collaboration in [discussion #206](https://github.com/MacRimi/ProxMenux/discussions/206).
+
+### Docker web links in the App tab
+
+- **The VM and LXC inventory stays available while Docker data warms up.** A Docker inventory can exist before its optional application record is loaded, and that state is now an empty app list rather than an empty guest list.
+- **Stopped Docker workloads keep their registrable links.** Discovery reads a container's persistent published-port configuration when the live mapping is empty, so a stopped Compose service such as HandBrake, MakeMKV or MKVToolNix keeps its detected name and host port ready for registration.
+- **Docker LXCs retain every useful candidate**: named mappings keep their application, icon and published ports, while listening ports that belong to no mapping — host-network containers, native services in the same LXC — remain available as one-click suggestions, without duplicating a port a named mapping already covers.
+- **Adding a detected link stays added.** Link insertion and the delayed catalogue-category response update the editor independently, so the category lookup can no longer restore a snapshot from before the insertion.
+- Discovery remains suggestion-only: you choose which published ports actually expose a web interface and save only those.
+
+---
+
+## 🖥 ProxMenux Monitor
+
+- **The node name in the header opens other Monitors**: the nodes of the cluster, the configured PBS servers and nodes added by hand, each with its state. Each Monitor keeps its own sign-in. Arriving from another one offers, in one dialog, to add it and the Monitors it links, so after visiting each node once every Monitor can reach all of them. A Proxmox Backup Server without a Monitor is shown as its web interface, a PBS installed on the node itself opens on the address in use, and the node form follows the edit-mode style of the other forms.
+- **The terminal of a container that cannot be entered says why** and closes: an image that has no shell, as PeaNUT's, is pointed to its Logs tab, and a stopped container shows the reason Proxmox gives.
+- **The web terminals send Ctrl+D from their Ctrl menu**, which ends a text pasted in the terminal, such as a Compose file or an oci-compose in OCI manager Apps, also from a phone or a tablet. A single Ctrl+D ends the paste, also right after its last line.
+- **A VM or LXC edited from Proxmox shows its current settings** the next time its modal opens: start at boot, tags, cores, memory, network and mount points.
+- **An LXC changed outside the Monitor shows its current data** ([PR #441](https://github.com/MacRimi/ProxMenux/pull/441), contributed by [@Vaso73](https://github.com/Vaso73)): a new DHCP address, a setting edited in Proxmox while its modal is open, and the operating system of a restored or reinstalled container. The Updates tab marks a result older than 48 hours as outdated, and the card keeps showing the number of pending updates.
+- **Updating a stopped LXC keeps its result** ([PR #447](https://github.com/MacRimi/ProxMenux/pull/447), contributed by [@Vaso73](https://github.com/Vaso73)): its packages and applications are read before it is stopped again, so the Updates tab shows what was installed and what is still pending. A run that never got to start the container keeps the previous result.
+- **Checking and installing LXC packages are separate steps** ([PR #448](https://github.com/MacRimi/ProxMenux/pull/448), contributed by [@Vaso73](https://github.com/Vaso73)): Check system packages refreshes the package indexes of a running container and counts what is pending without installing anything, and installing needs a recent successful check. A stopped container is asked to be started first and keeps its last result with its date.
+- **A scheduled update leaves a stopped LXC stopped** ([PR #456](https://github.com/MacRimi/ProxMenux/pull/456), contributed by [@Vaso73](https://github.com/Vaso73)): the run is skipped and the Updates tab says why, while the container is still stopped and afterwards. An update started by hand still starts it.
+- **Find applications recognises applications installed by hand in an LXC** ([PR #492](https://github.com/MacRimi/ProxMenux/pull/492), contributed by [@Vaso73](https://github.com/Vaso73)): systemd and OpenRC services, processes and listening ports of programs under `/opt`, `/srv`, `/usr/local` or a home directory are proposed with their evidence and version, and registered after confirming them in the editor.
+- **JDownloader opens on HTTPS and Prowlarr shows its first-run address** ([PR #506](https://github.com/MacRimi/ProxMenux/pull/506), contributed by [@Vaso73](https://github.com/Vaso73)), as their images serve them.
+- **Snapshot backups of OCI applications work on ZFS** ([PR #514](https://github.com/MacRimi/ProxMenux/pull/514), contributed by [@jcastro](https://github.com/jcastro)): the files an image ships where a data volume is mounted are kept aside in the container, so ZFS can mount each snapshot during a vzdump. They are kept, never deleted, also after an update or a recreation.
+- **OCI applications start after a direct Proxmox restore** ([PR #507](https://github.com/MacRimi/ProxMenux/pull/507), contributed by [@Vaso73](https://github.com/Vaso73)): the empty `lost+found` that a restore creates on each data volume is removed before the application starts, also when ProxMenux recovers a running container.
+- **The OCI menu shows which applications have an update and updates the ones selected** ([PR #504](https://github.com/MacRimi/ProxMenux/pull/504), contributed by [@jcastro](https://github.com/jcastro)): «Check for updates» asks ProxMenux Monitor, which checks every application at once and keeps the result the App tab shows; each selected update goes through the usual review, backup and recovery, one after another, with the number of each one on screen while its container is checked.
+- **The App editor finds the real icon of a local application** ([PR #503](https://github.com/MacRimi/ProxMenux/pull/503), contributed by [@Vaso73](https://github.com/Vaso73)): «Find icon» reads the web port chosen inside the running container, from the container's own network, and keeps a cleaned copy that still shows while the container is stopped. The image is decoded by an unprivileged process.
+- **Find applications also lists Docker containers with published ports** ([PR #505](https://github.com/MacRimi/ProxMenux/pull/505), contributed by [@Vaso73](https://github.com/Vaso73)): each one can be registered with its web address and scheme already filled in, and registering never configures updates.
+- **Find applications on a stopped LXC says why it cannot search** ([PR #501](https://github.com/MacRimi/ProxMenux/pull/501), contributed by [@Vaso73](https://github.com/Vaso73)): the search needs the container running, and the cards and evidence found before are kept.
+- **The power buttons of VMs and LXCs finish when Proxmox does** ([PR #449](https://github.com/MacRimi/ProxMenux/pull/449), contributed by [@Vaso73](https://github.com/Vaso73)): start, shutdown, reboot and stop follow their Proxmox task, also for guests managed by HA, and the guest is released for other actions when it ends.
+- **The VM and LXC search finds a container by any of its addresses** ([PR #385](https://github.com/MacRimi/ProxMenux/pull/385), contributed by [@Vaso73](https://github.com/Vaso73)), and the card shows how many more it has.
+- **Available updates on the overview follow the host** ([#359](https://github.com/MacRimi/ProxMenux/issues/359), reported by [@ash34](https://github.com/ash34)), whichever way the packages were installed.
+- **The Proxmox update log says what was updated** ([#358](https://github.com/MacRimi/ProxMenux/issues/358), reported by [@ash34](https://github.com/ash34)), and the list of packages is shown before the update is accepted.
+- **A dismissed remote mount warning stops counting in the health status** ([PR #453](https://github.com/MacRimi/ProxMenux/pull/453), contributed by [@wolly6973](https://github.com/wolly6973)): a stale or read-only NFS/CIFS mount, on the host or inside an LXC, can be dismissed from its row in Health, and the overall status returns to healthy.
+- **Docker containers pinned by digest stay in the inventory** ([#206](https://github.com/MacRimi/ProxMenux/discussions/206), reported by [@byGarcia](https://github.com/byGarcia)), marked *Pinned to a digest* and never offered an update.
+- **LazyLibrarian and PeaNUT join the LXC application catalog** (with [@pdafoto](https://github.com/pdafoto)); LazyLibrarian is the first entry tracked by commit.
+- **The name of the node is read without waiting for the Proxmox API** ([#438](https://github.com/MacRimi/ProxMenux/issues/438), reported by [@sponger544](https://github.com/sponger544)), in the Monitor and in its storage check, so a host where `pvesh` answers slowly is not asked for it on every request.
+- **Secure Gateway shows the same update state** on the Security page and in the Updates tab of its container.
+- **Typing a number in a script terminal keeps the session open.**
+- **The RAM Critical threshold set in Settings applies to the RAM check.**
+- **`/api/health` reports the installed ProxMenux version**, and the Prometheus disk metrics are exported in bytes, as their names say.
+- **A backup started from a VM or LXC notifies according to the notification settings**, the same as any other backup; its dialog no longer has its own notification menu.
+- **Each notification channel keeps its own AI rewrite**, and a detailed email attaches the original message only when the AI rewrote it.
+
+### 🛠 Explicit application updater selection (feedback from [@SystemIdleProcess](https://github.com/MacRimi/ProxMenux/discussions/306))
+
+- **Registering an application no longer enables an updater on your behalf.** Choose and save **Helper-Scripts** or **Custom command** before running an update; version tracking stays independent of that choice.
+- Each application owns its choice, including in LXCs with several applications, and a custom command replaces that application's helper rather than running both.
+- **Editing shows the command that will actually run** — the detected launcher or your saved custom command. Modifying a helper launcher switches to Custom command so your edits are used by manual, bulk and scheduled runs; leaving it untouched keeps the official method.
+- **A failed or empty updater download stops before execution**, so an empty shell command can no longer be reported as a successful update.
+- Information dialogs explain both options, link to each application's documentation and source, and include examples to adapt — which never fill in or execute anything by themselves.
+
+### 🔍 VM and LXC list — instant search and updates filter ([PR #334](https://github.com/MacRimi/ProxMenux/pull/334), contributed by [@Vaso73](https://github.com/Vaso73))
+
+- **A search box that matches across name, ID, guest type, tags, PVE note, IP address and registered application names.** Multiple terms narrow together and the match ignores accents, so `nuria` finds `Núria` and `virtualny` finds `virtuálny`.
+- **An Updates filter** isolates the LXCs with pending work — OS packages, registered applications and Docker images all count towards its badge — and its state is remembered per device.
+- **Searching by guest type works in every Monitor language**: `contenedor`, `conteneur`, `contenitore`, `contêiner`, `kontajner` and `Container` all find the LXCs on the node.
+
+### 🗂 LXC mount points — targets written with a trailing slash ([PR #336](https://github.com/MacRimi/ProxMenux/pull/336), contributed by [@Vaso73](https://github.com/Vaso73))
+
+- **A bind mount configured as `mp=/path/` is recognised as mounted.** Proxmox accepts the trailing slash while the container's mount table reports the path without it; both spellings now resolve to the same mount point. The path stays on screen exactly as written in the container configuration.
+- The same match applies to ad-hoc detection, so a configured mount is no longer listed as an unmanaged one created inside the container.
+
+### 🔎 LXC application version detection — runtime-verified detectors ([PR #332](https://github.com/MacRimi/ProxMenux/pull/332), contributed by [@Vaso73](https://github.com/Vaso73))
+
+- **A bundled override set ships inside the Monitor** with detectors proven against real containers, and it takes precedence over the remote catalog. It is deliberately not fetched remotely, so an installed Monitor cannot pull an older entry that would resurrect a stale marker over a detector already verified.
+- **Legacy helper markers become a fallback** rather than disappearing, so containers installed with older layouts keep a valid version source while newer installs read the application's own binary, package or file.
+- **Traefik** is the first application on-boarded to the new set, and **Changedetection.io** joins the catalog this cycle (suggested by [@SystemIdleProcess](https://github.com/SystemIdleProcess) in [discussion #306](https://github.com/MacRimi/ProxMenux/discussions/306)).
+- A successful custom-command update marks the reported version unverified, so the refresh that follows re-reads the live version instead of re-affirming the old one.
+
+### 📦 Readable LXC package updates ([#342](https://github.com/MacRimi/ProxMenux/issues/342), reported by [@ash34](https://github.com/ash34))
+
+- **Package names are no longer sacrificed to long Debian version strings.** Each pending package keeps its complete name on its own line, followed by the installed and available versions in separate, equally sized columns.
+- Long names and version identifiers wrap inside the panel instead of truncating or overflowing, and the security marker stays attached to its package.
+
+### 🔐 Password change with two-factor authentication
+
+- **Changing the Monitor password works with and without 2FA enabled.** With two-factor authentication on, the form asks for the current authenticator code or a backup code and sends it with the change. Missing or invalid fields are rejected as validation errors.
+- An already-open browser tab can still complete a password change after the Monitor is updated.
+
+### 🐍 Portable Python runtime for HTTPS and WebSockets ([#331](https://github.com/MacRimi/ProxMenux/issues/331), reported by [@f3rs3n](https://github.com/f3rs3n))
+
+- The Monitor AppImage carries isolated gevent runtimes for both CPython 3.11 (Proxmox VE 8) and CPython 3.13 (Proxmox VE 9), and `AppRun` selects the matching tree from the host interpreter before starting Flask — restoring the intended gevent HTTPS/WSS server on every supported Proxmox VE generation.
+- Native dependencies are pinned and packaged deterministically, and every build imports the bundled stack with real 3.11 and 3.13 interpreters before publishing.
+
+### 📊 Shared historical metrics on slower hosts (reported by Rafael Fernández Díez)
+
+- CPU, memory and network charts share one in-flight query per time range, with the default 24-hour view warmed in advance and a bounded budget per query.
+- A temporary failure keeps the last valid snapshot with its retrieval time and a translated stale-data notice, and charts recover on their own without replacing a newer range with an older response.
+
+### 🔄 Consistent application versions across App and Updates (reported by Nicolas Ortuzar)
+
+- Registered LXC applications use one shared, file-versioned snapshot for the App tab, Updates and the modal cache, so the App tab can no longer show an older available version or check date than the notification you just received.
+- Open App cards receive version-state changes through the existing data feed, without new polling, and a background refresh leaves unsaved editor fields untouched.
+
+---
+
+## 📦 Installer, updates and post-install
+
+- **The installer shows its steps, not apt's output**, and a host without a subscription installs without apt errors on screen. Duplicate repository declarations are commented out.
+- **Dependency checks keep the configured Proxmox repositories** ([PR #407](https://github.com/MacRimi/ProxMenux/pull/407), contributed by [@f3rs3n](https://github.com/f3rs3n)): the switch to no-subscription is offered, not applied, and it is recorded in Audit & Report.
+- **pigz keeps working after a gzip update** ([PR #414](https://github.com/MacRimi/ProxMenux/pull/414), [PR #415](https://github.com/MacRimi/ProxMenux/pull/415), contributed by [@pbr85](https://github.com/pbr85)): gzip is diverted instead of replaced, and its compression level is applied. The journal helpers report a copy that cannot be written ([PR #417](https://github.com/MacRimi/ProxMenux/pull/417), [PR #418](https://github.com/MacRimi/ProxMenux/pull/418)).
+- **The Bashrc customization never loses what is already there** ([PR #515](https://github.com/MacRimi/ProxMenux/pull/515), contributed by [@f3rs3n](https://github.com/f3rs3n)): a rerun keeps incomplete or nested blocks as they are, and the new file replaces the old one in a single step, so a failed write leaves it untouched.
+- **Each optimization is described by what it does** ([PR #517](https://github.com/MacRimi/ProxMenux/pull/517), contributed by [@f3rs3n](https://github.com/f3rs3n)): Log2RAM, kexec, AMD, the guest agent and the backup limits no longer promise what their functions do not provide.
+- **A VM is created only from a complete ISO** ([PR #458](https://github.com/MacRimi/ProxMenux/pull/458), contributed by [@f3rs3n](https://github.com/f3rs3n)): the image and the VirtIO drivers are published only once fully downloaded, a failed download stops before the VM is created, and the Debian 13, Rockstor and OpenMediaVault images point to their current sources.
+- **The Synology loaders download and unpack again** ([PR #459](https://github.com/MacRimi/ProxMenux/pull/459), contributed by [@f3rs3n](https://github.com/f3rs3n)): the M-shell selector takes the Alpine image the publisher now provides, and a failed download or extraction stops before the VM is created, keeping the previous image.
+- **FygoOS joins the NAS systems of Create VM.** ProxMenux downloads the latest installer published on fygonas.com and prepares the VM with the same wizard as TrueNAS or OpenMediaVault: UEFI without Secure Boot keys, the storage plan and the optional GPU.
+- **The Cloud-Init VM installers of Helper-Scripts run again** ([PR #457](https://github.com/MacRimi/ProxMenux/pull/457), contributed by [@f3rs3n](https://github.com/f3rs3n)): Arch Linux, Debian and Ubuntu use the maintained scripts, which ask for the release themselves, and a failed download stops with an error before anything runs.
+- **A system update stopped by a repository of another Proxmox version names it**: the message says which Proxmox VE or Ceph repository is for another Debian suite, in which file, and that it is disabled in Node > Updates > Repositories.
+- **The PVE 8 → 9 upgrade stops when the plan would remove `proxmox-ve`** ([PR #349](https://github.com/MacRimi/ProxMenux/pull/349), contributed by [@f3rs3n](https://github.com/f3rs3n)), and a failed index refresh is reported as one.
+- **Post-install reads the host's memory in any language** ([#353](https://github.com/MacRimi/ProxMenux/issues/353), reported by [@linux-fertxo](https://github.com/linux-fertxo)), and Log2RAM 1.6 sizes itself from it.
+- **Log2RAM 1.7 keeps the newest records of the journal** (reported by [@f3rs3n](https://github.com/f3rs3n)). Its sync no longer leaves an old active journal file on disk, so after a reboot journald starts a new sequence and removes its oldest archives first. Hosts with Log2RAM are offered the update; it takes effect from the next reboot.
+- **An update of several optimizations shows only its steps**, whichever post-install flow each one comes from.
+- **The automated post-install tunes firewall bridges after the udev rules of systemd**, as the customizable one does (contributed by [@Vaso73](https://github.com/Vaso73)). Hosts with the network optimization are offered the update.
+- **A ZRAM swap profile in the customizable post-install** ([PR #450](https://github.com/MacRimi/ProxMenux/pull/450), contributed by [@phyrexia](https://github.com/phyrexia)): a compressed swap in RAM, a tenth of its size, used before the swap on disk. It leaves any other ZRAM setup alone, can be reverted from Uninstall Optimizations, and the Memory card of the Monitor shows its use and compression ratio.
+- **Figurine 2.1.1 installs the build for the host** ([PR #465](https://github.com/MacRimi/ProxMenux/pull/465), contributed by [@jcastro](https://github.com/jcastro)): amd64, arm64 or ARMv7. Hosts with Figurine are offered the update.
+- **Fastfetch keeps its system modules on current releases** ([PR #355](https://github.com/MacRimi/ProxMenux/pull/355), contributed by [@f3rs3n](https://github.com/f3rs3n)).
+- **The Proxmox VE 8 to 9 upgrade keeps the guests running while it prepares the host** and stops if the Proxmox VE 8 update fails or is cancelled, before any repository is moved to Trixie. Without a subscription, the enterprise repository that pve-manager 9 adds during the upgrade is left disabled. The unattended option starts the upgrade, and the interactive mode installs grub-efi-amd64 without waiting on a hidden prompt.
+- **Uninstalling ProxMenux leaves nothing under its installation directory**, and Show version information counts jq installed from GitHub as installed. The release channel is called «canal de versiones» in Spanish.
+- **The help menu adds `qm unlock` and `pct unlock`**, and choosing the CT users option no longer runs the previous command again.
+- **Menu texts with a leading or trailing space are translated**, such as the prompts and the back option of the help menu, in every script.
+- **The storage commands of the help menu scan an NFS server for its exports** with a valid `pvesm scan nfs` command, and `pveupgrade` is described as the interactive package upgrade it starts.
+- **Uninstalling the post-install optimizations removes the open-file limits it set**, in systemd and in the root profile, and the Log2RAM check runs every 10 minutes at low priority in both post-install modes.
+- **Adding a GPU to a VM lists the devices that share its IOMMU group** when it includes devices from another slot, which the VM receives together with the GPU, before the summary.
+- **The NVIDIA installer keeps the NVENC patch state of the installed driver**, so the version menu recognises a patched driver.
+- **The AMD fixes say when a CPU does not need them** ([#519](https://github.com/MacRimi/ProxMenux/issues/519), reported by [@rollingafull](https://github.com/rollingafull)): an AMD processor that is neither EPYC nor Ryzen is recognised as AMD and left unchanged, with a message that says so.
+
+### 🧰 Safe migration of historical Bashrc customizations ([#328](https://github.com/MacRimi/ProxMenux/issues/328), reported by [@f3rs3n](https://github.com/f3rs3n))
+
+- The Bashrc customization migrates the exact unmarked block written by ProxMenux v1.1.3 and earlier — and the historical variant that wrote its markers literally — into one canonical block, instead of appending a second copy of the prompt, history settings and aliases.
+- Detection requires the complete ProxMenux signature and leaves incomplete marker ranges untouched, so unrelated customizations are never removed. The selected short or full prompt path survives the migration, and atomic replacement keeps the original permissions and ownership.
+
+### 🛡 Log2RAM updates without interrupting the active journal ([#327](https://github.com/MacRimi/ProxMenux/issues/327), reported by [@f3rs3n](https://github.com/f3rs3n))
+
+- Existing installations use an in-place ProxMenux migration instead of re-running the upstream installer, whose reinstall path removes both backing directories and temporarily leaves journald without its active `/var/log` mount.
+- The update preserves the configuration, sync interval, active tmpfs mount and running services, replacing only the files ProxMenux manages. First-time installations defer activation to the reboot the post-install flow already asks for.
+
+### 🌀 Post-install prompts appear on their own line
+
+- Each step closes its progress spinner before the next question or menu is drawn, so a prompt such as the Log2RAM install choice is shown on a clean line instead of over a still-turning indicator.
+
+---
+
+## 🌍 Languages and wording
+
+- **Messages say exactly what happened** (contributed by [@f3rs3n](https://github.com/f3rs3n)). A review of the menus, the backup, storage, Samba, Rclone, scheduler and OCI messages so that each one is a complete sentence that can be translated as a whole and claims only what was verified: [PR #363](https://github.com/MacRimi/ProxMenux/pull/363), [PR #364](https://github.com/MacRimi/ProxMenux/pull/364), [PR #367](https://github.com/MacRimi/ProxMenux/pull/367), [PR #368](https://github.com/MacRimi/ProxMenux/pull/368), [PR #369](https://github.com/MacRimi/ProxMenux/pull/369), [PR #370](https://github.com/MacRimi/ProxMenux/pull/370), [PR #371](https://github.com/MacRimi/ProxMenux/pull/371), [PR #375](https://github.com/MacRimi/ProxMenux/pull/375), [PR #384](https://github.com/MacRimi/ProxMenux/pull/384), [PR #389](https://github.com/MacRimi/ProxMenux/pull/389), [PR #390](https://github.com/MacRimi/ProxMenux/pull/390), [PR #397](https://github.com/MacRimi/ProxMenux/pull/397), [PR #400](https://github.com/MacRimi/ProxMenux/pull/400), [PR #401](https://github.com/MacRimi/ProxMenux/pull/401).
+- **Terminal command descriptions in every language** ([PR #351](https://github.com/MacRimi/ProxMenux/pull/351), [PR #354](https://github.com/MacRimi/ProxMenux/pull/354), contributed by [@f3rs3n](https://github.com/f3rs3n); [PR #362](https://github.com/MacRimi/ProxMenux/pull/362), contributed by [@Vaso73](https://github.com/Vaso73)).
+- **Italian** ([PR #422](https://github.com/MacRimi/ProxMenux/pull/422), [PR #424](https://github.com/MacRimi/ProxMenux/pull/424), [PR #426](https://github.com/MacRimi/ProxMenux/pull/426), [PR #429](https://github.com/MacRimi/ProxMenux/pull/429), [PR #432](https://github.com/MacRimi/ProxMenux/pull/432), [PR #437](https://github.com/MacRimi/ProxMenux/pull/437), [PR #516](https://github.com/MacRimi/ProxMenux/pull/516), contributed by [@f3rs3n](https://github.com/f3rs3n)) **and Slovak** ([PR #391](https://github.com/MacRimi/ProxMenux/pull/391), [PR #396](https://github.com/MacRimi/ProxMenux/pull/396), [PR #430](https://github.com/MacRimi/ProxMenux/pull/430), [PR #431](https://github.com/MacRimi/ProxMenux/pull/431), [PR #436](https://github.com/MacRimi/ProxMenux/pull/436), contributed by [@Vaso73](https://github.com/Vaso73)) cover everything new in this version, written by people who speak them.
+- **Slovak of everything new, in the Monitor and the terminal** ([PR #508](https://github.com/MacRimi/ProxMenux/pull/508), [PR #509](https://github.com/MacRimi/ProxMenux/pull/509), [PR #510](https://github.com/MacRimi/ProxMenux/pull/510), [PR #511](https://github.com/MacRimi/ProxMenux/pull/511), [PR #512](https://github.com/MacRimi/ProxMenux/pull/512), [PR #513](https://github.com/MacRimi/ProxMenux/pull/513), contributed by [@Vaso73](https://github.com/Vaso73)): PBS connections and status, linked nodes, host backup, ZRAM and PBS post-install, OCI manager, the application editor and the optimization source viewer. Their errors are shown in the reader's language, a cancelled OCI update or modify says it was cancelled, and the same texts are complete in the other six languages.
+- **German of the Monitor reviewed by a native speaker** ([PR #455](https://github.com/MacRimi/ProxMenux/pull/455), contributed by [@detlefs](https://github.com/detlefs)): mistranslated terms corrected and the wording made consistent across the interface.
+- **A translation that exists is never replaced.** The translation builds only write where there is nothing, keep lists as lists and protect the names that are not words: `nouveau`, `initramfs`, `vfio-pci`, Debian release names and the rest.
+- **Swedish can be chosen when installing ProxMenux, and every translation keeps commands and names intact** ([PR #475](https://github.com/MacRimi/ProxMenux/pull/475), contributed by [@jcastro](https://github.com/jcastro)): an offline check rejects a translation that changes a command, a path, a variable or a placeholder, in the menus and in the documentation, and the texts that did were corrected in every language.
+- **Monitor labels corrected in German, Swedish, Portuguese and French**: the Port field, the 2FA buttons, the name of the backup codes and the European Portuguese words for user name, password and force stop.
+- **The Spanish of the Monitor and the menus follows one style**: the reader is addressed as *tú*, buttons and menu options use the infinitive, and the vocabulary is that of Spain (*pulsar*, *introducir*, *añadir*, the key *Intro*). Backup, snapshot, host, pool and slot stay in English, and several mistranslated texts were corrected. The guide for translators describes it.
+- **The Spanish of the menus and of the OCI catalog was rewritten by hand**, and the 28 catalog categories are written by hand in every language.
+- **The offline test suites cover every shipped locale** ([PR #380](https://github.com/MacRimi/ProxMenux/pull/380), [PR #381](https://github.com/MacRimi/ProxMenux/pull/381), [PR #383](https://github.com/MacRimi/ProxMenux/pull/383), contributed by [@f3rs3n](https://github.com/f3rs3n)).
+- **The Monitor is complete in Slovak**, Audit & Report included ([PR #329](https://github.com/MacRimi/ProxMenux/pull/329), [PR #330](https://github.com/MacRimi/ProxMenux/pull/330), [PR #344](https://github.com/MacRimi/ProxMenux/pull/344), [PR #345](https://github.com/MacRimi/ProxMenux/pull/345), contributed by [@Vaso73](https://github.com/Vaso73)). Application categories are translated for display while the catalogue's own values stay untouched for filtering, so search matches whichever of the two you type.
+- **The remaining texts of the dashboard and the menus are translated** ([PR #470](https://github.com/MacRimi/ProxMenux/pull/470), contributed by [@jcastro](https://github.com/jcastro)), and adding a new message no longer breaks the translation tests ([PR #469](https://github.com/MacRimi/ProxMenux/pull/469)).
+- **`host` and `cluster` read as themselves in every language**, in labels and in prose alike, each language using the term its own catalogue already established.
+- **The network interface panel counts packets again**: errors and dropped packets are named for reception and transmission instead of being translated as ordinary sentences.
+- **Numbers are formatted in the reader's language**, and the running state reads as a state rather than as the physical act of running, in German, Spanish, French, Italian, Portuguese and Swedish.
+- Weekday names in scheduled updates resolve correctly, and VM and LXC power actions follow Proxmox's own Spanish wording: *Apagar* for the graceful action, *Parar* for the forced one.
+
+---
+
+## 📚 Documentation
+
+- **The website documentation was reviewed in all seven translations** ([PR #476](https://github.com/MacRimi/ProxMenux/pull/476), [PR #477](https://github.com/MacRimi/ProxMenux/pull/477), [PR #478](https://github.com/MacRimi/ProxMenux/pull/478), [PR #479](https://github.com/MacRimi/ProxMenux/pull/479), [PR #480](https://github.com/MacRimi/ProxMenux/pull/480), [PR #481](https://github.com/MacRimi/ProxMenux/pull/481), [PR #482](https://github.com/MacRimi/ProxMenux/pull/482), [PR #483](https://github.com/MacRimi/ProxMenux/pull/483), [PR #484](https://github.com/MacRimi/ProxMenux/pull/484), [PR #485](https://github.com/MacRimi/ProxMenux/pull/485), [PR #486](https://github.com/MacRimi/ProxMenux/pull/486), [PR #487](https://github.com/MacRimi/ProxMenux/pull/487), [PR #488](https://github.com/MacRimi/ProxMenux/pull/488), [PR #489](https://github.com/MacRimi/ProxMenux/pull/489), [PR #490](https://github.com/MacRimi/ProxMenux/pull/490), [PR #491](https://github.com/MacRimi/ProxMenux/pull/491), contributed by [@jcastro](https://github.com/jcastro)): installation and reference pages, post-install, VM creation, disks, storage sharing, networking, backup and restore, security, settings, utilities, the Monitor, OCI manager, command references, practical guides and the GPU and Coral guides.
+- **OCI manager has its own documentation**: what it installs and how, the catalog, multi-container applications, updates and recovery, the oci-compose format and its use from the Monitor, with diagrams and screenshots.
+- **The contributors page thanks the people behind each release**: those developing, reviewing, translating and testing ProxMenux today, and those who helped it take its first steps.
+
+---
+
+## 🙏 Acknowledgments
+
+- **[@Vaso73](https://github.com/Vaso73)** — the side-by-side testing of OCI applications against their Docker originals and the fixes that came from it, the rebuild of multi-container applications from their saved state, notifications in the reader's language, Find applications for services installed by hand and for Docker containers, the VM and LXC search and updates filter, the runtime-verified detectors, the update results of stopped containers and the power controls that follow their Proxmox task, the Audit & Report review dates and comparison, and the complete Slovak of the Monitor and the terminal.
+- **[@f3rs3n](https://github.com/f3rs3n)** — the review of hundreds of messages across the menus, backups, storage and OCI manager, backup, health, temperature and cluster notifications, the disk formatting and host restore safeguards, the repository and PVE upgrade checks, the Synology loaders, the Bashrc and Log2RAM migrations, the API token scope report, the portable Python runtime, the test suites, and the complete Italian of this version.
+- **[@jcastro](https://github.com/jcastro)** — ProxMenux on Proxmox Backup Server, the private registry accounts of OCI manager Apps, faster Manage, Modify and Update, Modify applied to the running container, update checks from the OCI menu, snapshot backups on ZFS, Proxmox tags kept across operations, Figurine for every architecture, the Slack and Matrix guide for Apprise, the retention of backup storages, the deletion of guest backups, LVM checks that respect disk exclusions, the translation checks, the remaining translations and the review of the documentation in every language.
+- **[@byGarcia](https://github.com/byGarcia)** — Docker application registration and image version tracking, with verified detectors and lab testing, and Docker images pinned by digest.
+- **[@MattiaC46](https://github.com/MattiaC46)** — the VM and CT backup jobs.
+- **[@SystemIdleProcess](https://github.com/SystemIdleProcess)** — the explicit updater selection design and the Changedetection.io detector.
+- **[@detlefs](https://github.com/detlefs)** — the review of the German of the Monitor.
+- **[@pbr85](https://github.com/pbr85)** — the gzip diversion for pigz and the journal helpers.
+- **[@phyrexia](https://github.com/phyrexia)** — the ZRAM swap profile and its metrics in the Monitor.
+- **[@fklnc94](https://github.com/fklnc94)** and **[@wolly6973](https://github.com/wolly6973)** — the cluster node notifications and the dismissal of stale remote mounts.
+- **[@pdafoto](https://github.com/pdafoto)**, **[@gabglus](https://github.com/gabglus)**, **[@dave100fuegos](https://github.com/dave100fuegos)** and **[@WRCAs](https://github.com/WRCAs)** — the applications suggested for the OCI catalog and their tests, and the LazyLibrarian and PeaNUT detectors.
+- **[@shtefko](https://github.com/shtefko)**, **[@Joshua1264](https://github.com/Joshua1264)**, **[@sbaghdadi](https://github.com/sbaghdadi)**, **[@ash34](https://github.com/ash34)**, **[@bartclone](https://github.com/bartclone)**, **[@spectante](https://github.com/spectante)**, **[@linux-fertxo](https://github.com/linux-fertxo)**, **[@sponger544](https://github.com/sponger544)**, **[@LucasR3C3](https://github.com/LucasR3C3)**, **[@tropicaljoe](https://github.com/tropicaljoe)**, **[@rollingafull](https://github.com/rollingafull)**, **@sahartford**, **@christiannieveslauz**, **Maragath**, **Charly Silva**, **Nicolas Ortuzar** and **Rafael Fernández Díez** — the reports behind the `/etc/pve` handling, persistent log errors, host backups with SELinux, the update count and log, remote Borg repositories, disk spin-down, post-install on any locale, the node name on slow hosts, GPU passthrough on AMD APUs, the certificate restore, the AMD fixes, backup notifications over HTTPS, storage exclusions, permanent dismissals, shared host directories, host backups on a cluster, backups of former jobs, the notification history, application version consistency and historical metrics on slower hosts.
+
+Feedback is welcome in [Discussions](https://github.com/MacRimi/ProxMenux/discussions) or as an issue.
+
+---
+
+For the full history of changes, see [Releases](https://github.com/MacRimi/ProxMenux/releases).
+
+---
+
+
 ## 2026-09-02
 
 ### New version ProxMenux v1.2.6

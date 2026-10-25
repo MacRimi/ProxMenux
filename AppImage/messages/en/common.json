@@ -3850,7 +3850,10 @@
       "shareCoveX": "ShareCoveX joins the catalog — a file server with a web panel that shares host directories or container volumes over SMB, NFS and Time Machine.",
       "guestBackupJobs": "Backup jobs of VMs and LXCs — the Backup tab lists the scheduled jobs of Proxmox and creates, edits, enables and runs them; they are the same ones as Datacenter → Backup (contributed by @MattiaC46).",
       "notificationLanguage": "Notifications in your language — titles, bodies and daily digests are written in the language chosen for notifications (contributed by @Vaso73).",
-      "auditReviewDate": "Audit & Report — an accepted finding can carry a review date that brings it back without withdrawing the decision, and the comparison says whether a finding got worse, got better or held (with @Vaso73)."
+      "auditReviewDate": "Audit & Report — an accepted finding can carry a review date that brings it back without withdrawing the decision, and the comparison says whether a finding got worse, got better or held (with @Vaso73).",
+      "ociCatalog": "OCI manager Apps (Technology Preview) — a new entry in the ProxMenux menu installs applications from their official container images as native Proxmox LXC, with no Docker engine. The catalog carries 347 applications.",
+      "pbsSupport": "ProxMenux on Proxmox Backup Server — it installs with the same command and opens a menu of its own, with post-install and a Monitor showing the health, datastores and tasks of the server (contributed by @jcastro).",
+      "menuSearch": "Search in the main menu — a name or part of it finds a ProxMenux option, an OCI application or a Helper-Script, and opens it at its first screen."
     }
   },
   "network": {
