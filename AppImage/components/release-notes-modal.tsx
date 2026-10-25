@@ -23,7 +23,7 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
     changes: {
       added: [
         "Audit & Report — a new page under Admin that assesses the node against forty-three Proxmox checks, keeps a journal of everything ProxMenux changed on the host, lets the expected state be declared as a policy and prints focused reports.",
-        "OCI manager Apps (Technology Preview) — applications installed from their official container images as native Proxmox LXC, with no Docker engine: a catalog of 347 applications, multi-container applications, hardware acceleration, updates that keep the data and recovery after a restore.",
+        "OCI manager Apps (Technology Preview) — applications installed from their official container images as native Proxmox LXC, with no Docker engine: a catalog of 354 applications, multi-container applications, hardware acceleration, updates that keep the data and recovery after a restore.",
         "OCI applications in the Monitor — registered in the App tab, updated and modified from the Updates tab, with a Logs tab that follows their console and a watchdog switch.",
         "ProxMenux on Proxmox Backup Server — the same installer, a menu, post-install and a Monitor of its own; a remote PBS can also be watched from PVE with a read-only token (contributed by @jcastro).",
         "Search in the main menu across ProxMenux options, OCI applications and Helper-Scripts, and Helper-Scripts addons run on the host or inside the LXC they belong to.",
@@ -356,7 +356,7 @@ const CURRENT_VERSION_FEATURES = [
   {
     icon: <Package className="h-5 w-5" />,
     key: "releaseNotes.currentFeatures.ociCatalog",
-    text: "OCI manager Apps (Technology Preview) — a new entry in the ProxMenux menu installs applications from their official container images as native Proxmox LXC, with no Docker engine. The catalog carries 347 applications.",
+    text: "OCI manager Apps (Technology Preview) — a new entry in the ProxMenux menu installs applications from their official container images as native Proxmox LXC, with no Docker engine. The catalog carries 354 applications.",
   },
   {
     icon: <ScrollText className="h-5 w-5" />,
