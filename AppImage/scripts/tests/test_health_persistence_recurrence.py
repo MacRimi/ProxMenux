@@ -1,7 +1,7 @@
 """Offline recurrence tests against the complete, real persistence module.
 
 From the repository root (stdlib only; no broad test discovery):
-    python3 -I -B -m unittest discover \
+    python3 -I -m unittest discover \
         -s AppImage/scripts/tests -p test_health_persistence_recurrence.py -v
 
 Each test creates and removes its own private temporary directory.
@@ -30,6 +30,9 @@ import unittest
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
+
+# Keep import bytecode writes outside the offline fixture from tripping the guard.
+sys.dont_write_bytecode = True
 
 # Use the concrete platform class while pathlib.Path is temporarily replaced.
 # Python 3.11's abstract Path.__new__ consults the patched module-level name.

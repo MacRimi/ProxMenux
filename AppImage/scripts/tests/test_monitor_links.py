@@ -1,4 +1,5 @@
 import json
+import socket
 from pathlib import Path
 import sys
 import tempfile
@@ -24,6 +25,8 @@ class MonitorLinksTests(unittest.TestCase):
             mock.patch.object(links, "LINKS_FILE", self.root / "links.json"),
             mock.patch.object(links, "SSL_CONFIG_FILE", self.root / "ssl.json"),
             mock.patch.object(links, "STORAGE_CFG", storage),
+            mock.patch.object(links, "_own_addresses", return_value=set()),
+            mock.patch.object(links.socket, "getaddrinfo", side_effect=self.fixture_addresses),
             mock.patch.object(links.pbs_manager, "get_platform", return_value={"product": "pve", "hostname": "amd"}),
             mock.patch.object(links.pbs_manager, "public_servers", return_value=[]),
         ]
@@ -38,6 +41,12 @@ class MonitorLinksTests(unittest.TestCase):
                                            return_value=SimpleNamespace(returncode=0, stdout=json.dumps(cluster)))
         self.run_patch.start()
         self.addCleanup(self.run_patch.stop)
+
+    @staticmethod
+    def fixture_addresses(host: str, _port):
+        address = {"localhost": "127.0.0.1", "pbs.example.com": "203.0.113.49"}.get(host, host)
+        family = socket.AF_INET6 if ":" in address else socket.AF_INET
+        return [(family, socket.SOCK_STREAM, 6, "", (address, 0))]
 
     def test_normalize_url_keeps_only_the_origin_and_rejects_credentials(self):
         self.assertEqual(links.normalize_url("192.168.0.49:8008/dashboard?x=1"), "https://192.168.0.49:8008")

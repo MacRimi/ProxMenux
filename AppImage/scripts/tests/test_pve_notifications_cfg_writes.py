@@ -2,6 +2,8 @@
 mounted cluster filesystem, and only when their content has to change."""
 import ast
 import os
+import sys
+from types import SimpleNamespace
 import tempfile
 import unittest
 from pathlib import Path
@@ -53,6 +55,11 @@ class PveNotificationWriteTests(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         self.pve = Path(tmp.name) / 'pve'
         self.pve.mkdir()
+        platform = mock.patch.dict(sys.modules, {
+            'pbs_manager': SimpleNamespace(is_pbs_host=lambda: False),
+        })
+        platform.start()
+        self.addCleanup(platform.stop)
         self.scope = load(self.pve)
         self.kept = Path(self.scope['_PVE_BACKUP_DIR'])
         self.mounted = True

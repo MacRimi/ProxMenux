@@ -82,6 +82,17 @@ class PBSManagerTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
+        import monitor_links
+        storage = self.root / 'storage.cfg'
+        storage.write_text('')
+        for boundary in (
+            mock.patch.object(pbs, 'get_platform', return_value={'product': 'pve', 'hostname': 'fixture'}),
+            mock.patch.object(pbs.shutil, 'which', return_value=None),
+            mock.patch.object(monitor_links, 'STORAGE_CFG', storage),
+            mock.patch.object(monitor_links, '_own_addresses', return_value=set()),
+        ):
+            boundary.start()
+            self.addCleanup(boundary.stop)
         patch = mock.patch.multiple(auth_manager, CONFIG_DIR=self.root, AUTH_CONFIG_FILE=self.root / "auth.json")
         patch.start(); self.addCleanup(patch.stop)
         auth_manager.save_auth_config({"enabled": True, "username": "admin", "password_hash": "configured",

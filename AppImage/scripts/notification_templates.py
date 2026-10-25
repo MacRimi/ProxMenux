@@ -2798,7 +2798,7 @@ def enrich_with_emojis(event_type: str, title: str, body: str,
             label_variants.extend(localized_labels.get(field_key, []))
             
             for label in label_variants:
-                if stripped.lower().startswith(label.lower() + ':'):
+                if re.match(re.escape(label.lower()) + r'[ \u00a0\u202f]*:', stripped.lower()):
                     enriched_lines.append(f'{field_icon} {stripped}')
                     enriched = True
                     break
