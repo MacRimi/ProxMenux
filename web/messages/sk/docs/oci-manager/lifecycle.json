@@ -76,26 +76,40 @@
     },
     {
       "id": "update",
-      "title": "Transakčná aktualizácia",
+      "title": "Ako prebieha aktualizácia a čo sa stane pri zlyhaní",
       "blocks": [
         {
+          "p": "Aktualizácia je transakčná: najprv sa pripraví a overí nový obraz, potom sa vytvorí záloha a nahradí súborový systém aplikácie. Nová verzia sa potvrdí až po úspešnej kontrole funkčnosti. Ak po zmene kontajnera nastane chyba, vykoná sa pokus o obnovu predchádzajúcej zálohy a overí sa výsledok."
+        },
+        {
           "mermaid": {
-            "chartCode": "sequenceDiagram\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: digest\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n X-->>P: healthcheck\n alt {{healthy}}\n  P-->>U: {{commit}}\n else {{failure}}\n  P->>X: Rollback\n  P-->>U: {{restored}}\n end",
+            "chartCode": "---\nconfig:\n  sequence:\n    wrap: true\n    actorFontSize: 18\n    messageFontSize: 18\n    width: 170\n    actorMargin: 40\n    useMaxWidth: false\n---\nsequenceDiagram\n autonumber\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: {{image}}\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n P->>X: {{start}}\n X-->>P: {{checked}}\n alt {{healthy}}\n  P->>P: {{commit}}\n  P-->>U: {{updated}}\n else {{failure}}\n  P->>X: {{rollback}}\n  alt {{recovered}}\n   P-->>U: {{restored}}\n  else {{restoreFailed}}\n   P-->>U: {{manual}}\n  end\n end",
             "labels": {
               "user": "Používateľ",
-              "registry": "Register OCI",
-              "update": "Aktualizovať inštanciu",
-              "resolve": "Zistiť obraz podľa značky",
-              "verify": "Overiť archív a vykonať predbežné kontroly",
-              "backup": "Zastaviť a zálohovať CT",
-              "import": "Importovať nové rootfs",
-              "reapply": "Znova použiť kontrakt",
-              "healthy": "v poriadku",
-              "failure": "zlyhanie",
-              "commit": "Kontrakt zverejnený s novým digestom",
-              "restored": "Predchádzajúca inštancia obnovená"
+              "registry": "Register obrazov OCI",
+              "update": "Aktualizovať aplikáciu",
+              "resolve": "Určiť novú verziu",
+              "image": "Stiahnuť nový obraz",
+              "verify": "Overiť obraz a požiadavky",
+              "backup": "Zastaviť kontajner a vytvoriť zálohu",
+              "import": "Nainštalovať nový súborový systém",
+              "reapply": "Použiť uloženú konfiguráciu",
+              "start": "Spustiť a skontrolovať aplikáciu",
+              "checked": "Výsledok kontroly funkčnosti",
+              "healthy": "Aplikácia funguje",
+              "failure": "Aktualizácia zlyhá",
+              "commit": "Uložiť novú verziu a konfiguráciu",
+              "updated": "Aktualizácia dokončená",
+              "rollback": "Obnoviť a skontrolovať predchádzajúcu zálohu",
+              "recovered": "Obnova je overená",
+              "restored": "Predchádzajúca verzia obnovená",
+              "restoreFailed": "Obnova nie je overená",
+              "manual": "Obnova čaká: skontrolujte chybu"
             }
           }
+        },
+        {
+          "p": "Ak príprava alebo predbežné kontroly zlyhajú, aktualizácia sa preruší ešte pred zastavením kontajnera. Obnova zálohy kontajnera nevracia súbory v zdieľaných adresároch hostiteľa do predchádzajúceho stavu."
         },
         {
           "list": {
@@ -241,13 +255,6 @@
           }
         },
         {
-          "figure": {
-            "src": "/oci-manager/restore-offer.png",
-            "alt": "Dialóg, ktorý uvádza obnovené kontajnery a ponúka ich obnoviť",
-            "caption": "Obnova ponúknutá po otvorení Spravovať nainštalované aplikácie OCI."
-          }
-        },
-        {
           "table": {
             "headers": [
               "Čo si hostiteľ nechal?",
@@ -334,13 +341,6 @@
           "calloutInfo": {
             "title": "Kontajner, ktorý sa vráti",
             "body": "Kontajner obnovený s pôvodným ID zo staršej zálohy, vrátený do snímky alebo presunutý späť z iného uzla nesie kontrakt svojho aktuálneho stavu. Ak sa pri výbere na operáciu jeho kontrakt líši od kontraktu na tomto hostiteľovi, operácia sa nespustí a ponúkne sa obnova kontajnera."
-          }
-        },
-        {
-          "figure": {
-            "src": "/oci-manager/restore-result.png",
-            "alt": "Výsledok obnovy so súkromnou sieťou, poradím spúšťania a zaregistrovanými kontajnermi",
-            "caption": "Výsledok zotavenia, krok za krokom."
           }
         }
       ]

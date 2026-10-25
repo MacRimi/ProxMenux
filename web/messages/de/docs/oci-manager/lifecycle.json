@@ -76,26 +76,40 @@
     },
     {
       "id": "update",
-      "title": "Transaktionsaktualisierung",
+      "title": "So läuft eine Aktualisierung ab – auch im Fehlerfall",
       "blocks": [
         {
+          "p": "Eine Aktualisierung ist transaktional: Zuerst wird das neue Image vorbereitet und geprüft. Danach wird ein Backup erstellt und das Dateisystem der Anwendung ersetzt. Die neue Version wird erst nach erfolgreicher Funktionsprüfung bestätigt. Tritt nach einer Änderung am Container ein Fehler auf, wird die Wiederherstellung des vorherigen Backups versucht und das Ergebnis geprüft."
+        },
+        {
           "mermaid": {
-            "chartCode": "sequenceDiagram\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: digest\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n X-->>P: healthcheck\n alt {{healthy}}\n  P-->>U: {{commit}}\n else {{failure}}\n  P->>X: Rollback\n  P-->>U: {{restored}}\n end",
+            "chartCode": "---\nconfig:\n  sequence:\n    wrap: true\n    actorFontSize: 18\n    messageFontSize: 18\n    width: 170\n    actorMargin: 40\n    useMaxWidth: false\n---\nsequenceDiagram\n autonumber\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: {{image}}\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n P->>X: {{start}}\n X-->>P: {{checked}}\n alt {{healthy}}\n  P->>P: {{commit}}\n  P-->>U: {{updated}}\n else {{failure}}\n  P->>X: {{rollback}}\n  alt {{recovered}}\n   P-->>U: {{restored}}\n  else {{restoreFailed}}\n   P-->>U: {{manual}}\n  end\n end",
             "labels": {
               "user": "Benutzer",
-              "registry": "OCI-Register",
-              "update": "Instanz aktualisieren",
-              "resolve": "Tag auflösen",
-              "verify": "Archiv prüfen und Vorabprüfungen durchführen",
-              "backup": "Stoppen und sichern Sie den CT",
-              "import": "Neues rootfs importieren",
-              "reapply": "Den Vertrag erneut anwenden",
-              "healthy": "in Ordnung",
-              "failure": "Ausfall",
-              "commit": "Vertrag mit dem neuen Digest veröffentlicht",
-              "restored": "Frühere Instanz wiederhergestellt"
+              "registry": "OCI-Image-Registry",
+              "update": "Anwendung aktualisieren",
+              "resolve": "Neue Version ermitteln",
+              "image": "Neues Image herunterladen",
+              "verify": "Image und Voraussetzungen prüfen",
+              "backup": "Container stoppen und Backup erstellen",
+              "import": "Neues Dateisystem installieren",
+              "reapply": "Gespeicherte Konfiguration anwenden",
+              "start": "Anwendung starten und prüfen",
+              "checked": "Ergebnis der Funktionsprüfung",
+              "healthy": "Die Anwendung funktioniert",
+              "failure": "Die Aktualisierung schlägt fehl",
+              "commit": "Neue Version und Konfiguration speichern",
+              "updated": "Aktualisierung abgeschlossen",
+              "rollback": "Vorheriges Backup wiederherstellen und prüfen",
+              "recovered": "Wiederherstellung bestätigt",
+              "restored": "Vorherige Version wiederhergestellt",
+              "restoreFailed": "Wiederherstellung nicht bestätigt",
+              "manual": "Wiederherstellung offen: Fehler prüfen"
             }
           }
+        },
+        {
+          "p": "Scheitern die Vorbereitung oder die Vorabprüfungen, wird die Aktualisierung vor dem Stoppen des Containers abgebrochen. Dateien in freigegebenen Host-Verzeichnissen werden durch das Container-Backup nicht auf einen früheren Stand zurückgesetzt."
         },
         {
           "list": {
@@ -241,13 +255,6 @@
           }
         },
         {
-          "figure": {
-            "src": "/oci-manager/restore-offer.png",
-            "alt": "Dialog, der die wiederhergestellten Container auflistet und anbietet, sie wiederherzustellen",
-            "caption": "Die beim Öffnen von „Installierte OCI-Anwendungen verwalten“ angebotene Wiederherstellung."
-          }
-        },
-        {
           "table": {
             "headers": [
               "Was der Host behalten hat",
@@ -334,13 +341,6 @@
           "calloutInfo": {
             "title": "Ein Container, der zurückkommt",
             "body": "Ein Container, der von einem älteren Backup wiederhergestellt, zu einem Snapshot zurückgerollt oder von einem anderen Knoten zurückgegeben wurde, trägt den Vertrag des Zustands, in dem er sich befindet. Wenn es für eine Operation ausgewählt wird und sein Vertrag von dem dieses Hosts abweicht, startet die Operation nicht und der Container wird zur Wiederherstellung angeboten."
-          }
-        },
-        {
-          "figure": {
-            "src": "/oci-manager/restore-result.png",
-            "alt": "Ergebnis der Wiederherstellung mit privatem Netzwerk, Startreihenfolge und registrierten Containern",
-            "caption": "Das Ergebnis einer Wiederherstellung, Schritt für Schritt."
           }
         }
       ]

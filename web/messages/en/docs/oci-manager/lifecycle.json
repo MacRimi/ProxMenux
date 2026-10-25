@@ -76,26 +76,40 @@
     },
     {
       "id": "update",
-      "title": "A transactional update",
+      "title": "How an update works and what happens if it fails",
       "blocks": [
         {
+          "p": "An update is transactional: the new image is prepared and verified first; a backup is then created and the application's filesystem is replaced. The new version is only committed after it passes its health check. If something fails after the container has been changed, recovery from the previous backup is attempted and its result is verified."
+        },
+        {
           "mermaid": {
-            "chartCode": "sequenceDiagram\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: digest\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n X-->>P: healthcheck\n alt {{healthy}}\n  P-->>U: {{commit}}\n else {{failure}}\n  P->>X: Rollback\n  P-->>U: {{restored}}\n end",
+            "chartCode": "---\nconfig:\n  sequence:\n    wrap: true\n    actorFontSize: 18\n    messageFontSize: 18\n    width: 170\n    actorMargin: 40\n    useMaxWidth: false\n---\nsequenceDiagram\n autonumber\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: {{image}}\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n P->>X: {{start}}\n X-->>P: {{checked}}\n alt {{healthy}}\n  P->>P: {{commit}}\n  P-->>U: {{updated}}\n else {{failure}}\n  P->>X: {{rollback}}\n  alt {{recovered}}\n   P-->>U: {{restored}}\n  else {{restoreFailed}}\n   P-->>U: {{manual}}\n  end\n end",
             "labels": {
               "user": "User",
-              "registry": "OCI registry",
-              "update": "Update instance",
-              "resolve": "Resolve the tag",
-              "verify": "Verify archive and preflight",
-              "backup": "Stop and back up the CT",
-              "import": "Import the new rootfs",
-              "reapply": "Apply the contract again",
-              "healthy": "healthy",
-              "failure": "failure",
-              "commit": "Contract published with the new digest",
-              "restored": "Previous instance restored"
+              "registry": "OCI image registry",
+              "update": "Update the application",
+              "resolve": "Identify the new version",
+              "image": "Download the new image",
+              "verify": "Verify image and requirements",
+              "backup": "Stop the container and create a backup",
+              "import": "Install the new filesystem",
+              "reapply": "Reapply the saved configuration",
+              "start": "Start and check the application",
+              "checked": "Health check result",
+              "healthy": "The application works",
+              "failure": "The update fails",
+              "commit": "Save the new version and configuration",
+              "updated": "Update completed",
+              "rollback": "Restore and check the previous backup",
+              "recovered": "Recovery is verified",
+              "restored": "Previous version restored",
+              "restoreFailed": "Recovery is not verified",
+              "manual": "Recovery pending: review the error"
             }
           }
+        },
+        {
+          "p": "If preparation or preflight checks fail, the update stops before stopping the container. Files in shared host directories are not reverted by restoring the container backup."
         },
         {
           "list": {
@@ -241,13 +255,6 @@
           }
         },
         {
-          "figure": {
-            "src": "/oci-manager/restore-offer.png",
-            "alt": "Dialog that lists the restored containers and offers to recover them",
-            "caption": "The recovery offered when Manage installed OCI applications opens."
-          }
-        },
-        {
           "table": {
             "headers": [
               "What the host kept",
@@ -334,13 +341,6 @@
           "calloutInfo": {
             "title": "A container that comes back",
             "body": "A container restored over itself from an older backup, rolled back to a snapshot or returned from another node carries the contract of the state it is in. When it is selected for an operation and its contract differs from the one of this host, the operation does not start and the container is offered for recovery."
-          }
-        },
-        {
-          "figure": {
-            "src": "/oci-manager/restore-result.png",
-            "alt": "Result of the recovery with the private network, the start order and the registered containers",
-            "caption": "The result of a recovery, step by step."
           }
         }
       ]

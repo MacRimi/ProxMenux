@@ -1,8 +1,14 @@
 {
   "generated": [
+    "acestream-http-proxy",
+    "chrony",
+    "cloudreve",
+    "crosswatch",
+    "dnsmasq",
     "duplicati-official",
     "emby-official",
     "fileflows",
+    "free-games-claimer-remaster",
     "frigate",
     "haos-one",
     "immich",
@@ -10,6 +16,7 @@
     "jellyfin-official",
     "llamacpp",
     "makemkv",
+    "mdblistarr",
     "mkvtoolnix",
     "nextcloud-stack",
     "nut-server",
@@ -18,12 +25,17 @@
     "open-webui-ollama",
     "paperless-ngx",
     "plex-official",
+    "poznote",
     "rclone",
     "roonserver",
+    "statping",
     "stremio",
-    "tandoor"
+    "strfry",
+    "stunnel",
+    "tandoor",
+    "tor"
   ],
-  "generated_count": 22,
+  "generated_count": 34,
   "failed": [],
   "failed_count": 0
 }

@@ -76,26 +76,40 @@
     },
     {
       "id": "update",
-      "title": "En transaktionell uppdatering",
+      "title": "Så fungerar en uppdatering och vad händer om den misslyckas",
       "blocks": [
         {
+          "p": "Uppdateringen är transaktionell: först förbereds och verifieras den nya avbildningen. Därefter skapas en säkerhetskopia och applikationens filsystem ersätts. Den nya versionen bekräftas först efter en godkänd funktionskontroll. Om något misslyckas efter att containern ändrats försöker systemet återställa den tidigare säkerhetskopian och verifierar resultatet."
+        },
+        {
           "mermaid": {
-            "chartCode": "sequenceDiagram\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: digest\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n X-->>P: healthcheck\n alt {{healthy}}\n  P-->>U: {{commit}}\n else {{failure}}\n  P->>X: Rollback\n  P-->>U: {{restored}}\n end",
+            "chartCode": "---\nconfig:\n  sequence:\n    wrap: true\n    actorFontSize: 18\n    messageFontSize: 18\n    width: 170\n    actorMargin: 40\n    useMaxWidth: false\n---\nsequenceDiagram\n autonumber\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: {{image}}\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n P->>X: {{start}}\n X-->>P: {{checked}}\n alt {{healthy}}\n  P->>P: {{commit}}\n  P-->>U: {{updated}}\n else {{failure}}\n  P->>X: {{rollback}}\n  alt {{recovered}}\n   P-->>U: {{restored}}\n  else {{restoreFailed}}\n   P-->>U: {{manual}}\n  end\n end",
             "labels": {
               "user": "Användare",
-              "registry": "OCI-registret",
-              "update": "Uppdatera instans",
-              "resolve": "Slå upp taggen",
-              "verify": "Verifiera arkivet och kör förkontroller",
-              "backup": "Stoppa och säkerhetskopiera CT:n",
-              "import": "Importera det nya rootfs",
-              "reapply": "Applicera kontraktet igen",
-              "healthy": "frisk",
-              "failure": "misslyckande",
-              "commit": "Kontraktet publiceras med den nya digesten",
-              "restored": "Tidigare instans återställd"
+              "registry": "OCI-avbildningsregister",
+              "update": "Uppdatera applikationen",
+              "resolve": "Identifiera den nya versionen",
+              "image": "Hämta den nya avbildningen",
+              "verify": "Verifiera avbildning och krav",
+              "backup": "Stoppa containern och säkerhetskopiera",
+              "import": "Installera det nya filsystemet",
+              "reapply": "Tillämpa den sparade konfigurationen",
+              "start": "Starta och kontrollera applikationen",
+              "checked": "Resultat av funktionskontrollen",
+              "healthy": "Applikationen fungerar",
+              "failure": "Uppdateringen misslyckas",
+              "commit": "Spara den nya versionen och konfigurationen",
+              "updated": "Uppdateringen slutförd",
+              "rollback": "Återställ och kontrollera tidigare säkerhetskopia",
+              "recovered": "Återställningen har verifierats",
+              "restored": "Tidigare version återställd",
+              "restoreFailed": "Återställningen har inte verifierats",
+              "manual": "Återställning väntar: granska felet"
             }
           }
+        },
+        {
+          "p": "Om förberedelser eller förhandskontroller misslyckas avbryts uppdateringen innan containern stoppas. Återställning av containerns säkerhetskopia återställer inte tidigare versioner av filer i värdens delade kataloger."
         },
         {
           "list": {
@@ -241,13 +255,6 @@
           }
         },
         {
-          "figure": {
-            "src": "/oci-manager/restore-offer.png",
-            "alt": "Dialog som listar de restaurerade containrarna och erbjuder att återställa dem",
-            "caption": "Återställningen som erbjuds när Hantera installerade OCI-program öppnas."
-          }
-        },
-        {
           "table": {
             "headers": [
               "Vad värden sparade",
@@ -334,13 +341,6 @@
           "calloutInfo": {
             "title": "En container som kommer tillbaka",
             "body": "En container som återlästs över sig själv från en äldre säkerhetskopia, återställts till en ögonblicksbild eller återvänt från en annan nod bär kontraktet för sitt nuvarande tillstånd. Om den väljs för en åtgärd och dess kontrakt skiljer sig från värdens startar åtgärden inte, och containern erbjuds för återställning."
-          }
-        },
-        {
-          "figure": {
-            "src": "/oci-manager/restore-result.png",
-            "alt": "Resultatet av återhämtningen med det privata nätverket, startordern och de registrerade containrarna",
-            "caption": "Resultatet av en återhämtning steg för steg."
           }
         }
       ]

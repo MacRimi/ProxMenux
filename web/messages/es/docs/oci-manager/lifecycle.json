@@ -76,26 +76,40 @@
     },
     {
       "id": "update",
-      "title": "Una actualización transaccional",
+      "title": "Cómo se actualiza y qué ocurre si falla",
       "blocks": [
         {
+          "p": "La actualización es transaccional: primero se prepara y verifica la imagen nueva; después se guarda una copia de seguridad y se sustituye el sistema de archivos de la aplicación. La nueva versión solo se confirma cuando supera la comprobación de funcionamiento. Si algo falla después de modificar el contenedor, se intenta restaurar la copia anterior y se verifica el resultado."
+        },
+        {
           "mermaid": {
-            "chartCode": "sequenceDiagram\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: digest\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n X-->>P: healthcheck\n alt {{healthy}}\n  P-->>U: {{commit}}\n else {{failure}}\n  P->>X: Rollback\n  P-->>U: {{restored}}\n end",
+            "chartCode": "---\nconfig:\n  sequence:\n    wrap: true\n    actorFontSize: 18\n    messageFontSize: 18\n    width: 170\n    actorMargin: 40\n    useMaxWidth: false\n---\nsequenceDiagram\n autonumber\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: {{image}}\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n P->>X: {{start}}\n X-->>P: {{checked}}\n alt {{healthy}}\n  P->>P: {{commit}}\n  P-->>U: {{updated}}\n else {{failure}}\n  P->>X: {{rollback}}\n  alt {{recovered}}\n   P-->>U: {{restored}}\n  else {{restoreFailed}}\n   P-->>U: {{manual}}\n  end\n end",
             "labels": {
               "user": "Usuario",
-              "registry": "Registro OCI",
-              "update": "Actualizar la instancia",
-              "resolve": "Resolver la etiqueta",
-              "verify": "Verificar el archivo y realizar las comprobaciones previas",
-              "backup": "Detener y respaldar el CT",
-              "import": "Importar el rootfs nuevo",
-              "reapply": "Aplicar de nuevo el contrato",
-              "healthy": "correcto",
-              "failure": "fallo",
-              "commit": "Contrato publicado con el digest nuevo",
-              "restored": "Instancia anterior restaurada"
+              "registry": "Registro de imágenes OCI",
+              "update": "Actualizar la aplicación",
+              "resolve": "Identificar la versión nueva",
+              "image": "Descargar la imagen nueva",
+              "verify": "Verificar imagen y requisitos",
+              "backup": "Detener el contenedor y crear el backup",
+              "import": "Instalar el sistema de archivos nuevo",
+              "reapply": "Reaplicar la configuración guardada",
+              "start": "Arrancar y comprobar la aplicación",
+              "checked": "Resultado de la comprobación",
+              "healthy": "La aplicación funciona",
+              "failure": "La actualización falla",
+              "commit": "Guardar la versión y configuración nuevas",
+              "updated": "Actualización completada",
+              "rollback": "Restaurar y comprobar la copia anterior",
+              "recovered": "La recuperación se verifica",
+              "restored": "Versión anterior restaurada",
+              "restoreFailed": "La recuperación no se verifica",
+              "manual": "Recuperación pendiente: revisar el error"
             }
           }
+        },
+        {
+          "p": "Si la preparación o las comprobaciones previas fallan, la actualización se detiene antes de parar el contenedor. Los archivos de directorios compartidos del host no vuelven a una versión anterior al restaurar el backup del contenedor."
         },
         {
           "list": {
@@ -241,13 +255,6 @@
           }
         },
         {
-          "figure": {
-            "src": "/oci-manager/restore-offer.png",
-            "alt": "Diálogo que lista los contenedores restaurados y ofrece recuperarlos",
-            "caption": "La recuperación que se ofrece al abrir Gestionar aplicaciones OCI instaladas."
-          }
-        },
-        {
           "table": {
             "headers": [
               "Lo que guardaba el host",
@@ -334,13 +341,6 @@
           "calloutInfo": {
             "title": "Un contenedor que vuelve",
             "body": "Un contenedor restaurado sobre sí mismo desde un backup anterior, devuelto a un snapshot o llegado de vuelta desde otro nodo lleva el contrato del estado en el que está. Al seleccionarlo para una operación, si su contrato es distinto del de este host, la operación no empieza y el contenedor se ofrece para recuperarlo."
-          }
-        },
-        {
-          "figure": {
-            "src": "/oci-manager/restore-result.png",
-            "alt": "Resultado de la recuperación con la red privada, el orden de arranque y los contenedores registrados",
-            "caption": "El resultado de una recuperación, paso a paso."
           }
         }
       ]

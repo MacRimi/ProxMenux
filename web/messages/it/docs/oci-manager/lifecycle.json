@@ -76,26 +76,40 @@
     },
     {
       "id": "update",
-      "title": "Un aggiornamento transazionale",
+      "title": "Come avviene un aggiornamento e cosa succede se fallisce",
       "blocks": [
         {
+          "p": "L'aggiornamento è transazionale: prima si prepara e verifica la nuova immagine; poi si crea un backup e si sostituisce il filesystem dell'applicazione. La nuova versione viene confermata solo dopo una verifica di funzionamento riuscita. Se si verifica un errore dopo una modifica al contenitore, si tenta il ripristino del backup precedente e se ne verifica il risultato."
+        },
+        {
           "mermaid": {
-            "chartCode": "sequenceDiagram\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: digest\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n X-->>P: healthcheck\n alt {{healthy}}\n  P-->>U: {{commit}}\n else {{failure}}\n  P->>X: Rollback\n  P-->>U: {{restored}}\n end",
+            "chartCode": "---\nconfig:\n  sequence:\n    wrap: true\n    actorFontSize: 18\n    messageFontSize: 18\n    width: 170\n    actorMargin: 40\n    useMaxWidth: false\n---\nsequenceDiagram\n autonumber\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: {{image}}\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n P->>X: {{start}}\n X-->>P: {{checked}}\n alt {{healthy}}\n  P->>P: {{commit}}\n  P-->>U: {{updated}}\n else {{failure}}\n  P->>X: {{rollback}}\n  alt {{recovered}}\n   P-->>U: {{restored}}\n  else {{restoreFailed}}\n   P-->>U: {{manual}}\n  end\n end",
             "labels": {
               "user": "Utente",
-              "registry": "Registro OCI",
-              "update": "Aggiorna istanza",
-              "resolve": "Risolvere il tag",
-              "verify": "Verifica archivio e controlli preliminari",
-              "backup": "Arresta e salva un backup del CT",
-              "import": "Importa il nuovo rootfs",
-              "reapply": "Applicare nuovamente il contratto",
-              "healthy": "integro",
-              "failure": "guasto",
-              "commit": "Contratto pubblicato con il nuovo digest",
-              "restored": "Precedente istanza ripristinata"
+              "registry": "Registro di immagini OCI",
+              "update": "Aggiornare l'applicazione",
+              "resolve": "Identificare la nuova versione",
+              "image": "Scaricare la nuova immagine",
+              "verify": "Verificare immagine e requisiti",
+              "backup": "Arrestare il contenitore e creare il backup",
+              "import": "Installare il nuovo filesystem",
+              "reapply": "Riapplicare la configurazione salvata",
+              "start": "Avviare e verificare l'applicazione",
+              "checked": "Risultato della verifica di funzionamento",
+              "healthy": "L'applicazione funziona",
+              "failure": "L'aggiornamento fallisce",
+              "commit": "Salvare nuova versione e configurazione",
+              "updated": "Aggiornamento completato",
+              "rollback": "Ripristinare e verificare il backup precedente",
+              "recovered": "Ripristino verificato",
+              "restored": "Versione precedente ripristinata",
+              "restoreFailed": "Ripristino non verificato",
+              "manual": "Ripristino in sospeso: controllare l'errore"
             }
           }
+        },
+        {
+          "p": "Se la preparazione o i controlli preliminari falliscono, l'aggiornamento si interrompe prima di arrestare il contenitore. Il ripristino del backup del contenitore non riporta a una versione precedente i file nelle directory condivise dell'host."
         },
         {
           "list": {
@@ -241,13 +255,6 @@
           }
         },
         {
-          "figure": {
-            "src": "/oci-manager/restore-offer.png",
-            "alt": "Finestra di dialogo che elenca i contenitori ripristinati e ne propone il recupero",
-            "caption": "Il recupero offerto quando si apre Gestione applicazioni OCI installate."
-          }
-        },
-        {
           "table": {
             "headers": [
               "Ciò che l’host conservava",
@@ -334,13 +341,6 @@
           "calloutInfo": {
             "title": "Un contenitore che ritorna",
             "body": "Un contenitore ripristinato su se stesso da un backup precedente, riportato a uno snapshot o rientrato da un altro nodo porta il contratto dello stato in cui si trova. Se viene selezionato per un’operazione e il suo contratto differisce da quello dell’host, l’operazione non parte e viene proposto il recupero del contenitore."
-          }
-        },
-        {
-          "figure": {
-            "src": "/oci-manager/restore-result.png",
-            "alt": "Risultato del recupero con la rete privata, l’ordine di avvio e i contenitori registrati",
-            "caption": "Il risultato di un recupero, passo dopo passo."
           }
         }
       ]

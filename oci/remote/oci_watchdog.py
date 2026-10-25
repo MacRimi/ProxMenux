@@ -26,6 +26,7 @@ UNIT_FILE = Path('/etc/systemd/system') / UNIT
 JOURNAL = Path('/usr/local/share/proxmenux/scripts/global/pmx_journal.sh')
 CGROUPS = Path('/sys/fs/cgroup/lxc')
 CONFIGS = Path('/etc/pve/lxc')
+STACK_CONTRACTS = Path('/etc/pve/priv')
 HA_RESOURCES = Path('/etc/pve/ha/resources.cfg')
 TASKS = (Path('/var/log/pve/tasks/active'), Path('/var/log/pve/tasks/index'))
 INTERVAL = 10
@@ -137,13 +138,27 @@ def is_running(vmid):
     return (CGROUPS / str(vmid)).is_dir()
 
 
-def is_busy(vmid, now):
-    """Something is working on the container or on the host: look again later."""
+def is_locked(vmid, missing=True):
     try:
         config = (CONFIGS / f'{vmid}.conf').read_text(errors='replace')
     except OSError:
-        return True
-    if any(line.startswith('lock:') for line in config.split('\n[', 1)[0].splitlines()):
+        return missing
+    return any(line.startswith('lock:') for line in config.split('\n[', 1)[0].splitlines())
+
+
+def dependencies(vmid):
+    """The containers the hook of a multi-container application starts first."""
+    try:
+        contract = json.loads((STACK_CONTRACTS / f'proxmenux-stack-{vmid}.json').read_text())
+        return [int(item['vmid']) for item in contract.get('dependencies', [])]
+    except (OSError, ValueError, TypeError, KeyError, AttributeError):
+        return []
+
+
+def is_busy(vmid, now):
+    """Something is working on the container, on a container it depends on,
+    such as a backup, or on the host: look again later."""
+    if is_locked(vmid) or any(is_locked(dependency, missing=False) for dependency in dependencies(vmid)):
         return True
     try:
         mark = json.loads((oci_operation_notice.MARKERS / str(vmid)).read_text())

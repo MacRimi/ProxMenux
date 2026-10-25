@@ -76,26 +76,40 @@
     },
     {
       "id": "update",
-      "title": "Une mise à jour transactionnelle",
+      "title": "Comment se déroule une mise à jour et que se passe-t-il en cas d'échec",
       "blocks": [
         {
+          "p": "La mise à jour est transactionnelle : la nouvelle image est d'abord préparée et vérifiée ; une sauvegarde est ensuite créée et le système de fichiers de l'application est remplacé. La nouvelle version est validée uniquement après un contrôle de fonctionnement réussi. Si un échec survient après une modification du conteneur, une restauration de la sauvegarde précédente est tentée et son résultat est vérifié."
+        },
+        {
           "mermaid": {
-            "chartCode": "sequenceDiagram\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: digest\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n X-->>P: healthcheck\n alt {{healthy}}\n  P-->>U: {{commit}}\n else {{failure}}\n  P->>X: Rollback\n  P-->>U: {{restored}}\n end",
+            "chartCode": "---\nconfig:\n  sequence:\n    wrap: true\n    actorFontSize: 18\n    messageFontSize: 18\n    width: 170\n    actorMargin: 40\n    useMaxWidth: false\n---\nsequenceDiagram\n autonumber\n participant U as {{user}}\n participant P as ProxMenux\n participant R as {{registry}}\n participant X as Proxmox VE\n U->>P: {{update}}\n P->>R: {{resolve}}\n R-->>P: {{image}}\n P->>P: {{verify}}\n P->>X: {{backup}}\n P->>X: {{import}}\n P->>X: {{reapply}}\n P->>X: {{start}}\n X-->>P: {{checked}}\n alt {{healthy}}\n  P->>P: {{commit}}\n  P-->>U: {{updated}}\n else {{failure}}\n  P->>X: {{rollback}}\n  alt {{recovered}}\n   P-->>U: {{restored}}\n  else {{restoreFailed}}\n   P-->>U: {{manual}}\n  end\n end",
             "labels": {
               "user": "Utilisateur",
-              "registry": "Registre OCI",
-              "update": "Mettre à jour l'instance",
-              "resolve": "Résoudre la balise",
-              "verify": "Vérifier l’archive et effectuer les contrôles préalables",
-              "backup": "Arrêter et sauvegarder le CT",
-              "import": "Importer le nouveau rootfs",
-              "reapply": "Appliquer à nouveau le contrat",
-              "healthy": "sain",
-              "failure": "défaillance",
-              "commit": "Contrat publié avec le nouveau digest",
-              "restored": "instance précédente restaurée"
+              "registry": "Registre d'images OCI",
+              "update": "Mettre à jour l'application",
+              "resolve": "Identifier la nouvelle version",
+              "image": "Télécharger la nouvelle image",
+              "verify": "Vérifier l'image et les prérequis",
+              "backup": "Arrêter le conteneur et le sauvegarder",
+              "import": "Installer le nouveau système de fichiers",
+              "reapply": "Réappliquer la configuration enregistrée",
+              "start": "Démarrer et vérifier l'application",
+              "checked": "Résultat du contrôle de fonctionnement",
+              "healthy": "L'application fonctionne",
+              "failure": "La mise à jour échoue",
+              "commit": "Enregistrer la nouvelle version et configuration",
+              "updated": "Mise à jour terminée",
+              "rollback": "Restaurer et vérifier la sauvegarde précédente",
+              "recovered": "Restauration vérifiée",
+              "restored": "Version précédente restaurée",
+              "restoreFailed": "Restauration non vérifiée",
+              "manual": "Restauration en attente : examiner l'erreur"
             }
           }
+        },
+        {
+          "p": "Si la préparation ou les contrôles préalables échouent, la mise à jour s'arrête avant l'arrêt du conteneur. La restauration du conteneur ne rétablit pas les fichiers des répertoires partagés de l'hôte à une version antérieure."
         },
         {
           "list": {
@@ -241,13 +255,6 @@
           }
         },
         {
-          "figure": {
-            "src": "/oci-manager/restore-offer.png",
-            "alt": "Boîte de dialogue qui énumère les conteneurs restaurés et propose de les récupérer",
-            "caption": "La récupération offerte lors de l'ouverture de la gestion des applications OCI installées."
-          }
-        },
-        {
           "table": {
             "headers": [
               "Ce que l'hôte a gardé",
@@ -334,13 +341,6 @@
           "calloutInfo": {
             "title": "Un conteneur qui revient",
             "body": "Un conteneur restauré sur lui-même à partir d'une ancienne sauvegarde, retourné à un instantané ou retourné d'un autre noeud porte le contrat de l'état dans lequel il est. Lorsqu'il est sélectionné pour une opération et que son contrat diffère de celui de cet hôte, l'opération ne démarre pas et le conteneur est offert pour récupération."
-          }
-        },
-        {
-          "figure": {
-            "src": "/oci-manager/restore-result.png",
-            "alt": "Résultat de la récupération avec le réseau privé, l’ordre de démarrage et les conteneurs enregistrés",
-            "caption": "Résultat d'une reprise, étape par étape."
           }
         }
       ]

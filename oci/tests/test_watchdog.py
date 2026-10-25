@@ -205,5 +205,54 @@ class Switch(unittest.TestCase):
             self.assertEqual(record["stack"]["members"], [{"vmid": 101}, {"vmid": 102}])
 
 
+class DependencyLocks(unittest.TestCase):
+    """A multi-container application waits while a container it depends on is busy."""
+    def setUp(self):
+        from unittest.mock import patch
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        self.root = Path(folder.name)
+        (self.root / "lxc").mkdir()
+        (self.root / "priv").mkdir()
+        for target, value in (("CONFIGS", self.root / "lxc"), ("STACK_CONTRACTS", self.root / "priv"),
+                              ("HA_RESOURCES", self.root / "resources.cfg")):
+            patcher = patch.object(watchdog, target, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        patcher = patch.object(watchdog.oci_operation_notice, "MARKERS", self.root / "markers")
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = patch.object(watchdog.subprocess, "run")
+        run = patcher.start()
+        run.return_value.stdout = "running\n"
+        self.addCleanup(patcher.stop)
+        for vmid in (110, 111, 112):
+            self.config(vmid, "arch: amd64\n")
+        (self.root / "priv" / "proxmenux-stack-110.json").write_text(json.dumps(
+            {"schema": 1, "dependencies": [{"vmid": 112, "label": "PostgreSQL"}, {"vmid": 111, "label": "ML"}]}))
+
+    def config(self, vmid, text):
+        (self.root / "lxc" / f"{vmid}.conf").write_text(text)
+
+    def test_a_dependency_being_backed_up_keeps_the_application_waiting(self):
+        self.assertFalse(watchdog.is_busy(110, 1000))
+        self.config(111, "arch: amd64\nlock: backup\n")
+        self.assertTrue(watchdog.is_busy(110, 1000))
+
+    def test_a_lock_in_a_snapshot_of_a_dependency_does_not_count(self):
+        self.config(111, "arch: amd64\n\n[before]\nlock: backup\n")
+        self.assertFalse(watchdog.is_busy(110, 1000))
+
+    def test_a_removed_dependency_does_not_keep_the_application_waiting(self):
+        (self.root / "lxc" / "112.conf").unlink()
+        self.assertFalse(watchdog.is_busy(110, 1000))
+
+    def test_an_application_without_dependencies_only_looks_at_itself(self):
+        self.config(111, "arch: amd64\nlock: backup\n")
+        self.assertFalse(watchdog.is_busy(112, 1000))
+        (self.root / "lxc" / "112.conf").unlink()
+        self.assertTrue(watchdog.is_busy(112, 1000))
+
+
 if __name__ == "__main__":
     unittest.main()

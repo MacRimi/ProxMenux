@@ -899,6 +899,8 @@ install_normal_version() {
         mkdir -p "$BASE_DIR/oci/engine"
         cp -r "./oci/"* "$BASE_DIR/oci/engine/"
         find "$BASE_DIR/oci/engine" -type f -name '*.sh' -exec chmod +x {} +
+        # Multi-container applications already installed take the new start hook.
+        bash "$BASE_DIR/oci/engine/remote/stack_dependency_hook.sh" --refresh >/dev/null 2>&1 || true
         systemctl try-restart proxmenux-oci-watchdog.service >/dev/null 2>&1 || true
     fi
     chmod +x "$BASE_DIR/install_proxmenux.sh"

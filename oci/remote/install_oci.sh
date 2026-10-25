@@ -378,6 +378,7 @@ cleanup_failed_install() {
   stop_spinner
   cleanup_volume_seed_staging || true
   cleanup_canonical_inputs || true
+  [[ -z ${USER_DATABASES_ARCHIVE:-} ]] || rm -f "$USER_DATABASES_ARCHIVE" "${USER_DATABASES_ARCHIVE}.partial"
   if [[ -n ${PROXMENUX_OCI_TRANSACTION:-} ]]; then
     # The transaction owns recovery. Destroying this CT could destroy reused data.
     cleanup_runtime_console_log || true
@@ -1757,8 +1758,25 @@ fi
 
 # pct keeps the OCI Entrypoint/Cmd/Env/User/WorkingDir/StopSignal metadata.
 msg_info "$(translate "Creating the container...")"
-oci_create_container "${CREATE_ARGS[@]}" \
-  || die "$(translate "Could not create the container:") CT $VMID"
+# Proxmox resolves the image User through /etc/passwd and /etc/group, even a
+# numeric one, and cannot create the container from an image without them.
+user_databases_rc=0
+missing_user_databases=$(python3 "$OCI_RUNTIME_RESOLVER" --user-databases "$ARCHIVE_PATH" \
+  2>>"${OCI_LOG:-/dev/stderr}") || user_databases_rc=$?
+if (( user_databases_rc == 3 )); then
+  oci_log "The image declares a user but lacks: ${missing_user_databases}"
+  # A numeric User is created from a copy with those files; the cached image
+  # and its digest stay as they were downloaded.
+  USER_DATABASES_ARCHIVE="${ARCHIVE_PATH%.tar}.user-databases.$$.tar"
+  python3 "$OCI_RUNTIME_RESOLVER" --add-user-databases "$ARCHIVE_PATH" "$USER_DATABASES_ARCHIVE" \
+    >>"${OCI_LOG:-/dev/null}" 2>&1 \
+    || die "$(translate "Proxmox VE cannot create a container from this image: it declares a user but does not include /etc/passwd and /etc/group. Nothing was created.")"
+  CREATE_ARGS[1]=$USER_DATABASES_ARCHIVE
+fi
+create_status=0
+oci_create_container "${CREATE_ARGS[@]}" || create_status=$?
+[[ -z ${USER_DATABASES_ARCHIVE:-} ]] || rm -f "$USER_DATABASES_ARCHIVE"
+(( create_status == 0 )) || die "$(translate "Could not create the container:") CT $VMID"
 CT_CREATED=1
 msg_ok "$(translate "Container created:") CT $VMID ($HOSTNAME)"
 
