@@ -5924,7 +5924,8 @@ except Exception:
     pass
 
 # Console TUI snapshot publisher: one daemon thread that writes the
-# cluster snapshot while a console client holds its lease.
+# cluster snapshot, with each node's last hour of RRD history, while a
+# console client holds its lease.
 # Optional by design — the Monitor must start even if the module fails.
 def _console_run_pvesh():
     result = subprocess.run(['pvesh', 'get', '/cluster/status', '--output-format', 'json'],
@@ -5947,7 +5948,8 @@ try:
     console_snapshot.ensure_publisher(
         get_proxmox_node_name, get_cached_pvesh_cluster_resources,
         _console_run_pvesh, _console_read_language,
-        get_pve_version=get_proxmox_version, version=None)
+        get_pve_version=get_proxmox_version, version=None,
+        get_history=console_snapshot.pvesh_history)
 except Exception:
     pass
 
