@@ -141,8 +141,8 @@
       "tagline": "Vynikajúce pre písanie a preklad. Rýchlo a hospodárne.",
       "items": [
         "Kľúč API: <a>console.anthropic.com/settings/keys</a>",
-        "Príklady z dodaného zoznamu modelov: <code>claude-haiku-4-5-20251001</code>, <code>claude-sonnet-4-6</code>, <code>claude-opus-4-6</code>.",
-        "Dodané odporúčanie: <strong><code>claude-haiku-4-5-20251001</code></strong>, pevne určená snímka namiesto premenlivého aliasu."
+        "Príklady z dodaného zoznamu modelov: <code>claude-haiku-5-5</code>, <code>claude-sonnet-5-5</code>, <code>claude-opus-5-5</code>.",
+        "Dodané odporúčanie: <strong><code>claude-haiku-5-5</code></strong>, najúspornejší aktuálny model Claude."
       ]
     },
     "gemini": {

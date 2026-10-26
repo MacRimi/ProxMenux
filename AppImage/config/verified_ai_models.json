@@ -63,18 +63,21 @@
   },
   "anthropic": {
     "models": [
+      "claude-haiku-5-5",
       "claude-haiku-4-5-20251001",
-      "claude-opus-4-8",
-      "claude-sonnet-4-5-20250929",
-      "claude-opus-4-5-20251101",
-      "claude-opus-4-7",
+      "claude-sonnet-5-5",
+      "claude-sonnet-5",
       "claude-sonnet-4-6",
+      "claude-opus-5-5",
+      "claude-opus-4-8",
+      "claude-opus-4-7",
+      "claude-opus-4-6",
+      "claude-opus-4-5-20251101",
       "claude-fable-5",
-      "claude-fable-5-1",
-      "claude-opus-4-6"
+      "claude-fable-5-1"
     ],
-    "recommended": "claude-haiku-4-5-20251001",
-    "_note": "Verified 2026-09-02 — 9 of 11 tested pass. The `claude-haiku-4-5` alias no longer resolves upstream; the working snapshot is `claude-haiku-4-5-20251001` — used as recommended (2.89s). Full family surfaced: haiku/sonnet/opus/fable across generations 4.5/4.6/4.7/4.8/5."
+    "recommended": "claude-haiku-5-5",
+    "_note": "Verified 2026-10-26 against the live API. Added the 5.x family, recommended `claude-haiku-5-5`. Dropped `claude-sonnet-4-5` (retires 2026-11-30). `claude-opus-5` left out: false refusals on plain notifications."
   },
   "openrouter": {
     "models": [

@@ -141,8 +141,8 @@
       "tagline": "Excellent for writing and translation. Fast and economical.",
       "items": [
         "API key: <a>console.anthropic.com/settings/keys</a>",
-        "Examples from the bundled model list: <code>claude-haiku-4-5-20251001</code>, <code>claude-sonnet-4-6</code>, <code>claude-opus-4-6</code>.",
-        "Bundled recommendation: <strong><code>claude-haiku-4-5-20251001</code></strong>, a pinned snapshot rather than a moving alias."
+        "Examples from the bundled model list: <code>claude-haiku-5-5</code>, <code>claude-sonnet-5-5</code>, <code>claude-opus-5-5</code>.",
+        "Bundled recommendation: <strong><code>claude-haiku-5-5</code></strong>, the most economical current Claude model."
       ]
     },
     "gemini": {
