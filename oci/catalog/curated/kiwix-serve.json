@@ -354,8 +354,8 @@
       {
         "id": "kiwix-zim-directory",
         "upstream_behavior": "The Compose example passes a ZIM wildcard to the official image entrypoint.",
-        "native_lxc_behavior": "The ProxMenux profile passes the mounted data directory to kiwix-serve, which can serve every ZIM file inside that directory.",
-        "reason": "The native OCI runtime does not expand shell wildcards in the Compose command.",
+        "native_lxc_behavior": "The official image entrypoint receives the Compose wildcard and expands it from its /data working directory before starting kiwix-serve.",
+        "reason": "ProxMenux preserves the image entrypoint and Compose command; the image's start script expands *.zim in /data.",
         "behavioral_impact": "The selected host directory must already contain at least one ZIM file.",
         "validation": "pending-per-application"
       }
@@ -369,11 +369,6 @@
           "only_when_mount_type": "managed-volume"
         }
       ],
-      "runtime": {
-        "command": [
-        "/data"
-        ]
-      },
       "required_host_path_prompts": [
         "/data"
       ]
