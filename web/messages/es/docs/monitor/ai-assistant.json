@@ -130,8 +130,8 @@
       "tagline": "Estándar de la industria. Muy preciso y ampliamente usado.",
       "items": [
         "Clave API: <a>platform.openai.com/api-keys</a>",
-        "Ejemplos de la lista de modelos incluida: <code>gpt-4.1-nano</code>, <code>gpt-4.1-mini</code>, <code>gpt-4o-mini</code>, <code>gpt-4.1</code>, <code>gpt-4o</code>, <code>gpt-5-nano</code>.",
-        "Recomendación incluida: <strong><code>gpt-4.1-nano</code></strong>. El adaptador también gestiona requisitos específicos de los modelos de razonamiento; la lista incluye gpt-5-nano, por lo que no se excluyen todos esos modelos."
+        "Ejemplos de la lista de modelos incluida: <code>gpt-6-luna</code>, <code>gpt-5.6-luna</code>, <code>gpt-5.4-mini</code>, <code>gpt-6-sol</code>, <code>gpt-5.5</code>.",
+        "Recomendación incluida: <strong><code>gpt-6-luna</code></strong>, el modelo actual más económico. Todos los modelos de la lista son de razonamiento; el adaptador envía a cada uno los parámetros que acepta."
       ],
       "baseUrlTitle": "Base URL compatible con OpenAI",
       "baseUrlBody": "El proveedor OpenAI también acepta una <em>Base URL</em> personalizada, que te permite apuntar el Monitor a cualquier endpoint compatible con OpenAI. Confirmado que funciona con <strong>BytePlus / ByteDance (Kimi K2.5)</strong>, <strong>LocalAI</strong>, <strong>LM Studio</strong>, <strong>vLLM</strong>, <strong>Together AI</strong>, <strong>Fireworks AI</strong> y cualquier otro servicio que hable el dialecto OpenAI <code>/v1/chat/completions</code>. Configura la URL en la pestaña OpenAI junto al campo de API key."

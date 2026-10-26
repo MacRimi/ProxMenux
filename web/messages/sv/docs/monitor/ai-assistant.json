@@ -130,8 +130,8 @@
       "tagline": "Industristandard. Mycket exakt och allmänt används.",
       "items": [
         "API-nyckel: <a>platform.openai.com/api-keys</a>",
-        "Exempel från den medföljande modellistan: <code>gpt-4.1-nano</code>, <code>gpt-4.1-mini</code>, <code>gpt-4o-mini</code>, <code>gpt-4.1</code>, <code>gpt-4o</code>, <code>gpt-5-nano</code>.",
-        "Medföljande rekommendation: <strong><code>gpt-4.1-nano</code></strong>. Adaptern hanterar även särskilda krav för resonemangsmodeller; listan innehåller gpt-5-nano, så sådana modeller är inte generellt uteslutna."
+        "Exempel från den medföljande modellistan: <code>gpt-6-luna</code>, <code>gpt-5.6-luna</code>, <code>gpt-5.4-mini</code>, <code>gpt-6-sol</code>, <code>gpt-5.5</code>.",
+        "Medföljande rekommendation: <strong><code>gpt-6-luna</code></strong>, den mest ekonomiska aktuella modellen. Alla modeller i listan är resonemangsmodeller; adaptern skickar varje modell de parametrar den accepterar."
       ],
       "baseUrlTitle": "OpenAI-kompatibel bas URL",
       "baseUrlBody": "OpenAI-leverantören accepterar en egen <em>Bas-URL</em> för kompatibla tjänster som <strong>BytePlus / ByteDance (Kimi K2.5)</strong>, <strong>LocalAI</strong>, <strong>LM Studio</strong>, <strong>vLLM</strong>, <strong>Together AI</strong> och <strong>Fireworks AI</strong>, som stöder formatet <code>/v1/chat/completions</code>. Ange URL:en på OpenAI-fliken bredvid API-nyckeln."
