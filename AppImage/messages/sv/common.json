@@ -1495,7 +1495,13 @@
       "startBeforeCheck": "Starta behållaren och kontrollera sedan uppdateringar. Att ett märke saknas betyder inte att det inte finns uppdateringar.",
       "runCustomCommand": "Kör anpassat kommando",
       "installedVersionUnverified": "Den installerade versionen är inte verifierad. Det gick inte att bekräfta om en uppdatering finns.",
-      "versionStatusUnknown": "Det är inte verifierat om en uppdatering finns. Versionsinformationen saknas eller är ofullständig."
+      "versionStatusUnknown": "Det är inte verifierat om en uppdatering finns. Versionsinformationen saknas eller är ofullständig.",
+      "backgroundRunning": "{name} (CT {vmid}): en uppdatering körs på servern.",
+      "backgroundOutputTrimmed": "Tidigare utdata trimmades;uppdateringen fortsätter normalt.",
+      "backgroundFinished": "{name} (CT {vmid}): en uppdatering har slutförts.Se dess resultat.",
+      "viewBackgroundJob": "Visa uppdatering",
+      "backgroundDetached": "Tittaren kopplades bort.Uppdateringen fortsätter på servern;återanslut efter inloggning.",
+      "backgroundDescription": "Om du stänger det här fönstret körs uppdateringen.Använd Ctrl+C för att avbryta."
     },
     "bulkUpdate": {
       "title": "Gruppuppdatering",

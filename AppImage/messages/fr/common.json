@@ -1495,7 +1495,13 @@
       "startBeforeCheck": "Démarrez le conteneur, puis vérifiez les mises à jour. L'absence de badge ne signifie pas qu'il n'y a pas de mises à jour.",
       "runCustomCommand": "Exécuter une commande personnalisée",
       "installedVersionUnverified": "La version installée n'est pas vérifiée. La disponibilité d'une mise à jour n'a pas pu être confirmée.",
-      "versionStatusUnknown": "La disponibilité d'une mise à jour n'est pas vérifiée. Les informations de version sont indisponibles ou incomplètes."
+      "versionStatusUnknown": "La disponibilité d'une mise à jour n'est pas vérifiée. Les informations de version sont indisponibles ou incomplètes.",
+      "backgroundRunning": "{name} (CT {vmid}): an update is running on the server.",
+      "backgroundOutputTrimmed": "la sortie précédente a été tronquée ;la mise à jour continue normalement.",
+      "backgroundFinished": "{name} (CT {vmid}) : une mise à jour est terminée.Visualisez son résultat.",
+      "viewBackgroundJob": "Afficher la mise à jour",
+      "backgroundDetached": "Le spectateur s'est déconnecté.La mise à jour continue sur le serveur ;reconnectez-vous après vous être connecté.",
+      "backgroundDescription": "La fermeture de cette fenêtre laisse la mise à jour en cours d'exécution.Utilisez Ctrl+C pour l'annuler."
     },
     "bulkUpdate": {
       "title": "Mise à jour groupée",

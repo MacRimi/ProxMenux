@@ -1495,7 +1495,13 @@
       "startBeforeCheck": "Starten Sie den Container und suchen Sie nach Updates. Kein Abzeichen bedeutet nicht, dass es keine Updates gibt.",
       "runCustomCommand": "Benutzerdefinierten Befehl ausführen",
       "installedVersionUnverified": "Die installierte Version ist nicht bestätigt. Die Verfügbarkeit des Updates konnte nicht bestätigt werden.",
-      "versionStatusUnknown": "Die Verfügbarkeit des Updates ist nicht bestätigt. Versionsinformationen sind nicht verfügbar oder unvollständig."
+      "versionStatusUnknown": "Die Verfügbarkeit des Updates ist nicht bestätigt. Versionsinformationen sind nicht verfügbar oder unvollständig.",
+      "backgroundRunning": "{name} (CT {vmid}): Auf dem Server wird ein Update ausgeführt.",
+      "backgroundOutputTrimmed": "Die frühere Ausgabe wurde gekürzt;Das Update wird normal fortgesetzt.",
+      "backgroundFinished": "{name} (CT {vmid}): Ein Update wurde abgeschlossen.Sehen Sie sich das Ergebnis an.",
+      "viewBackgroundJob": "Update anzeigen",
+      "backgroundDetached": "The viewer disconnected. The update continues on the server; reconnect after logging in.",
+      "backgroundDescription": "Wenn Sie dieses Fenster schließen, wird das Update weiterhin ausgeführt.Verwenden Sie Strg+C, um den Vorgang abzubrechen."
     },
     "bulkUpdate": {
       "title": "Sammelaktualisierung",

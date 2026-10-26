@@ -1495,7 +1495,13 @@
       "startBeforeCheck": "Inicie o contêiner e depois verifique as atualizações. A ausência do selo não significa que não haja atualizações.",
       "runCustomCommand": "Executar comando personalizado",
       "installedVersionUnverified": "A versão instalada não foi verificada. Não foi possível confirmar se há uma atualização disponível.",
-      "versionStatusUnknown": "A disponibilidade de atualização não foi verificada. As informações de versão estão indisponíveis ou incompletas."
+      "versionStatusUnknown": "A disponibilidade de atualização não foi verificada. As informações de versão estão indisponíveis ou incompletas.",
+      "backgroundRunning": "{name} (CT {vmid}): uma atualização está em execução no servidor.",
+      "backgroundOutputTrimmed": "a saída anterior foi cortada;a atualização continua normalmente.",
+      "backgroundFinished": "{name} (CT {vmid}): uma atualização foi concluída.Veja seu resultado.",
+      "viewBackgroundJob": "Ver atualização",
+      "backgroundDetached": "O visualizador se desconectou.A atualização continua no servidor;reconecte após fazer login.",
+      "backgroundDescription": "Fechar esta janela deixa a atualização em execução.Use Ctrl+C para cancelar."
     },
     "bulkUpdate": {
       "title": "Atualização em bloco",

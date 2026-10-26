@@ -1495,7 +1495,13 @@
       "startBeforeCheck": "Avvia il container, poi controlla gli aggiornamenti. L'assenza del badge non significa che non ci siano aggiornamenti.",
       "runCustomCommand": "Esegui comando personalizzato",
       "installedVersionUnverified": "La versione installata non è verificata. Non è stato possibile confermare la disponibilità di un aggiornamento.",
-      "versionStatusUnknown": "La disponibilità di un aggiornamento non è verificata. Le informazioni sulla versione non sono disponibili o sono incomplete."
+      "versionStatusUnknown": "La disponibilità di un aggiornamento non è verificata. Le informazioni sulla versione non sono disponibili o sono incomplete.",
+      "backgroundRunning": "testo tecnico dell'interfaccia utente per una dashboard di gestione Proxmox.Traduzione: {name} (CT {vmid}): un aggiornamento è in esecuzione sul server.",
+      "backgroundOutputTrimmed": "l'output precedente è stato tagliato;l'aggiornamento continua normalmente.",
+      "backgroundFinished": "{name} (CT {vmid}): un aggiornamento è terminato.Visualizza il suo risultato.",
+      "viewBackgroundJob": "visualizza l'aggiornamento",
+      "backgroundDetached": "lo spettatore si è disconnesso.L'aggiornamento continua sul server;riconnettersi dopo aver effettuato l'accesso.",
+      "backgroundDescription": "la chiusura di questa finestra lascia l'aggiornamento in esecuzione.Usa Ctrl+C per annullarlo."
     },
     "bulkUpdate": {
       "title": "Aggiornamento in blocco",

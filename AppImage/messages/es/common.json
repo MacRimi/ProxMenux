@@ -1648,7 +1648,13 @@
       "startBeforeCheck": "Inicia el contenedor y después comprueba las actualizaciones. Que no aparezca el indicador no significa que no haya actualizaciones.",
       "runCustomCommand": "Ejecutar comando personalizado",
       "installedVersionUnverified": "La versión instalada no está verificada. No se pudo confirmar si hay una actualización disponible.",
-      "versionStatusUnknown": "No se ha verificado si hay una actualización disponible. La información de versión falta o está incompleta."
+      "versionStatusUnknown": "No se ha verificado si hay una actualización disponible. La información de versión falta o está incompleta.",
+      "backgroundRunning": "{name} (CT {vmid}): se está ejecutando una actualización en el servidor.",
+      "backgroundOutputTrimmed": "Se recortó la salida anterior;la actualización continúa normalmente.",
+      "backgroundFinished": "{name} (CT {vmid}): ha finalizado una actualización.Ver su resultado.",
+      "viewBackgroundJob": "Ver actualización",
+      "backgroundDetached": "El espectador se desconectó.La actualización continúa en el servidor;Vuelva a conectarse después de iniciar sesión.",
+      "backgroundDescription": "al cerrar esta ventana, la actualización se ejecuta.Utilice Ctrl+C para cancelarlo."
     },
     "bulkUpdate": {
       "title": "Actualización en bloque",
