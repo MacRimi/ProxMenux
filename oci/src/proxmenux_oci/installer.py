@@ -495,6 +495,7 @@ def build_deployment(
 
     mounts: list[dict[str, Any]] = []
     host_bind_policies = installer_profile.get("host_bind_policies", {})
+    required_host_path_prompts = set(installer_profile.get("required_host_path_prompts", []))
     labels = {"managed-volume": translate("Container volume (included in backups)"),
               "host-bind": translate("Host directory (not included in Proxmox backups)"),
               "skip": translate("Do not mount")}
@@ -528,7 +529,7 @@ def build_deployment(
             backup = item["managed_volume"]["backup"]
         else:
             source = _shared_host_path_default(template, item)
-            if chosen and not _is_system_bind(item):
+            if (chosen or item["container_path"] in required_host_path_prompts) and not _is_system_bind(item):
                 source = ui.ask(f"{translate('Host path for')} {item['container_path']}", source)
             size = None
             backup = False
