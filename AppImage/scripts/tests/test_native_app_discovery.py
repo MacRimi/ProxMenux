@@ -533,6 +533,7 @@ class DiscoveryFixtures(unittest.TestCase):
 
     def test_actual_save_first_check_and_recheck_never_probe_or_configure_updater(self):
         with patch.object(lxc_apps, '_APPS_DIR', str(self.root / 'apps')), \
+             patch.object(lxc_apps, '_fetch_tracking_hints', return_value={}), \
              patch.object(lxc_apps, '_pct_exec', side_effect=AssertionError('forbidden guest execution')) as execute, \
              patch.object(lxc_apps, 'fetch_latest_upstream_details', side_effect=AssertionError('forbidden upstream')) as upstream:
             for version in (None, '1.2.3'):
