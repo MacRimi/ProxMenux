@@ -373,6 +373,11 @@ The variables the image itself defines are imported with it and are not written 
 Where a path goes follows one rule. A path that holds content of the user, such as `/media`, `/downloads`, `/music` or `/backups`, is offered as a container disk or as a host directory, and the installation asks which. The list is in `catalog/volume-policy.json`. Every other path is state of the application and goes to a container disk without asking. Writing `"installation_choice": ["managed-volume", "host-bind"]` or `"default": "host-bind"` on a volume offers the host directory for a path that is not in that list.
 
 **`restart`**. With `unless-stopped`, `always` or `on-failure`, the watchdog is proposed by default: an application that stops on its own is started again.
+Its running history belongs to the installation UUID, not just the VMID. Before
+restarting a guest, it rechecks the saved record and the live ProxMenux identity
+under the registry operation lock. A stale record therefore cannot start an
+unrelated guest or a temporary `oci-data-holder` that reused the same VMID.
+Updates, removals, intentional stops and guests first seen stopped remain left alone.
 
 ### `first_run`: what is shown when the installation ends
 

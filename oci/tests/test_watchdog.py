@@ -2,9 +2,11 @@
 
 import json
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "remote"))
@@ -148,10 +150,26 @@ class Registry(unittest.TestCase):
             }
             for vmid, record in records.items():
                 (root / str(vmid)).mkdir()
-                (root / str(vmid) / "oci-compose.json").write_text(json.dumps({"vmid": vmid, **record}))
+                (root / str(vmid) / "oci-compose.json").write_text(json.dumps({
+                    "schema_version": 1, "vmid": vmid,
+                    "installation_id": "11111111-1111-4111-8111-111111111111", **record}))
             (root / "107").mkdir()
             (root / "107" / "oci-compose.json").write_text("{broken")
-            self.assertEqual(watchdog.watched(root), {101: "Jellyfin", 106: "CT 106"})
+            self.assertEqual(watchdog.watched(root), {
+                101: ("Jellyfin", "11111111-1111-4111-8111-111111111111"),
+                106: ("CT 106", "11111111-1111-4111-8111-111111111111")})
+
+    def test_a_record_without_a_valid_installation_identity_is_not_watched(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            path = root / "109" / "oci-compose.json"
+            path.parent.mkdir()
+            for identity in (None, "", "not-a-uuid", 123, []):
+                with self.subTest(identity=identity):
+                    path.write_text(json.dumps({
+                        "schema_version": 1, "vmid": 109, "status": "installed",
+                        "installation_id": identity, "deployment": {"watchdog": True}}))
+                    self.assertEqual(watchdog.watched(root), {})
 
 
 class Start(unittest.TestCase):
@@ -163,6 +181,154 @@ class Start(unittest.TestCase):
             run.return_value.returncode = 255
             self.assertFalse(watchdog.start(109))
         self.assertEqual(run.call_args.args[0], ["systemd-run", "--scope", "--quiet", "--collect", "pct", "start", "109"])
+
+
+class InstallationIdentity(unittest.TestCase):
+    """A recycled VMID is not the application the watchdog saw running."""
+    VMID = 109
+    ORIGINAL = "11111111-1111-4111-8111-111111111111"
+    REPLACEMENT = "22222222-2222-4222-8222-222222222222"
+
+    def setUp(self):
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        self.base = Path(folder.name)
+        self.registry = self.base / "instances"
+        self.configs = self.base / "lxc"
+        self.cgroups = self.base / "cgroups"
+        for path in (self.registry, self.configs, self.cgroups):
+            path.mkdir()
+        for target, value in (("CONFIGS", self.configs), ("CGROUPS", self.cgroups)):
+            patcher = patch.object(watchdog, target, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        patcher = patch.object(watchdog.instances, "ROOT", self.registry)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        for name, target, kwargs in (
+                ("start", watchdog, {"return_value": True}),
+                ("is_busy", watchdog, {"return_value": False}),
+                ("read_tasks", watchdog, {"return_value": []}),
+                ("notify", watchdog.oci_operation_notice, {}),
+                ("run", watchdog.subprocess, {"side_effect": self.command})):
+            patcher = patch.object(target, name, **kwargs)
+            setattr(self, name, patcher.start())
+            self.addCleanup(patcher.stop)
+        self.states = {}
+        self.record()
+        self.config(self.ORIGINAL)
+
+    def record(self, identity=None, **extra):
+        path = self.registry / str(self.VMID) / "oci-compose.json"
+        path.parent.mkdir(exist_ok=True)
+        path.write_text(json.dumps({
+            "schema_version": 1, "vmid": self.VMID,
+            "installation_id": identity or self.ORIGINAL,
+            "status": "installed", "deployment": {"watchdog": True},
+            "template": {"catalog_ui": {"title": {"en_US": "Example"}}}, **extra}))
+
+    def config(self, identity):
+        self.config_text(f"description: proxmenux-instance={identity}\narch: amd64\n")
+
+    def config_text(self, text):
+        (self.configs / f"{self.VMID}.conf").write_text(text)
+
+    def command(self, argv, **kwargs):
+        self.assertEqual(argv, ["pct", "config", str(self.VMID)])
+        return subprocess.CompletedProcess(argv, 0, (self.configs / f"{self.VMID}.conf").read_bytes(), b"")
+
+    def seen_running(self):
+        (self.cgroups / str(self.VMID)).mkdir()
+        watchdog.look(self.states, 100)
+        (self.cgroups / str(self.VMID)).rmdir()
+
+    def assert_left_alone(self):
+        watchdog.look(self.states, 110)
+        self.start.assert_not_called()
+        self.notify.assert_not_called()
+
+    def test_transaction_holder_is_not_started_for_a_stale_application_record(self):
+        self.seen_running()
+        self.config_text("description: proxmenux-transaction=example-update\nhostname: oci-data-holder\n")
+        self.assert_left_alone()
+
+    def test_another_installation_at_the_same_vmid_is_not_started(self):
+        self.seen_running()
+        self.config(self.REPLACEMENT)
+        self.assert_left_alone()
+
+    def test_a_marker_in_old_snapshot_notes_does_not_own_the_live_guest(self):
+        self.seen_running()
+        self.config_text("description: unrelated container\n\n[old]\n"
+                         f"description: proxmenux-instance={self.ORIGINAL}\n")
+        self.assert_left_alone()
+
+    def test_an_unreadable_live_configuration_is_not_started(self):
+        self.seen_running()
+        self.run.side_effect = None
+        self.run.return_value = subprocess.CompletedProcess([], 2, b"", b"missing config")
+        self.assert_left_alone()
+        self.run.side_effect = self.command
+        watchdog.look(self.states, 111)
+        self.start.assert_called_once_with(self.VMID)
+        self.assertEqual(self.states[self.VMID]["attempts"], 1)
+
+    def test_a_removed_guest_drops_its_running_history_without_a_pve_query(self):
+        self.seen_running()
+        (self.configs / f"{self.VMID}.conf").unlink()
+        self.assert_left_alone()
+        self.run.assert_not_called()
+        self.assertNotIn(self.VMID, self.states)
+
+    def test_a_configuration_timeout_is_retried_without_consuming_an_attempt(self):
+        self.seen_running()
+        self.run.side_effect = subprocess.TimeoutExpired("pct", 30)
+        self.assert_left_alone()
+        self.run.side_effect = self.command
+        watchdog.look(self.states, 111)
+        self.start.assert_called_once_with(self.VMID)
+        self.assertEqual(self.states[self.VMID]["attempts"], 1)
+
+    def test_a_new_installation_does_not_inherit_running_history(self):
+        self.seen_running()
+        self.record(self.REPLACEMENT)
+        self.config(self.REPLACEMENT)
+        self.assert_left_alone()
+        (self.cgroups / str(self.VMID)).mkdir()
+        watchdog.look(self.states, 120)
+        (self.cgroups / str(self.VMID)).rmdir()
+        watchdog.look(self.states, 130)
+        self.start.assert_called_once_with(self.VMID)
+
+    def test_a_transaction_started_after_the_scan_is_respected(self):
+        self.seen_running()
+
+        def updating(vmid):
+            self.record(status="updating", pending_transaction="/journal")
+            return False
+
+        with patch.object(watchdog, "is_running", side_effect=updating):
+            self.assert_left_alone()
+
+    def test_a_busy_registry_does_not_start_or_consume_a_restart_attempt(self):
+        self.seen_running()
+        with watchdog.instances.locked(self.registry):
+            self.assert_left_alone()
+        watchdog.look(self.states, 111)
+        self.start.assert_called_once_with(self.VMID)
+        self.assertEqual(self.states[self.VMID]["attempts"], 1)
+
+    def test_the_same_installation_is_still_restarted_after_a_crash(self):
+        self.seen_running()
+        watchdog.look(self.states, 110)
+        self.start.assert_called_once_with(self.VMID)
+        self.notify.assert_called_once()
+
+    def test_a_recycled_vmid_does_not_receive_a_crash_loop_alert(self):
+        self.seen_running()
+        self.states[self.VMID].update(attempts=len(watchdog.DELAYS), retry_at=0)
+        self.config(self.REPLACEMENT)
+        self.assert_left_alone()
 
 
 class Switch(unittest.TestCase):
