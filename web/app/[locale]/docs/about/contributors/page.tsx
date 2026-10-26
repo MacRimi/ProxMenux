@@ -9,11 +9,11 @@ import { Callout } from "@/components/ui/callout"
 const REPOSITORY = "https://github.com/MacRimi/ProxMenux"
 const activeContributors = ["Vaso73", "f3rs3n", "jcastro"] as const
 
-// Human authors of merged PRs and code contributions, checked on 2026-10-25.
+// Human authors of merged PRs and code contributions, checked on 2026-10-26.
 // Alphabetical, without commit rankings. Ongoing contributors are credited above.
 const codeContributors = [
-  "byGarcia", "cod378", "detlefs", "fklnc94", "MrCaringi",
-  "pbr85", "pespinel", "phyrexia", "riri-314", "yeager",
+  "byGarcia", "cod378", "detlefs", "fklnc94", "MaEscalanteHe",
+  "MrCaringi", "pbr85", "pespinel", "phyrexia", "riri-314", "yeager",
 ]
 const earlyContributors = [
   { name: "MALOW", avatar: "malow.png" },
