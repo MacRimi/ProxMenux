@@ -74,8 +74,7 @@
         "example": "",
         "required": true,
         "sensitive": true,
-        "source": "upstream-documentation",
-        "prompt": "APP_KEY: use the upstream command openssl rand -base64 32 and prefix its output with base64:"
+        "source": "upstream-documentation"
       }
     ],
     "volumes": [
@@ -416,7 +415,14 @@
           "owner_strategy": "image-user",
           "mode": "0755"
         }
-      ]
+      ],
+      "generated_sensitive_environment": {
+        "APP_KEY": {
+          "strategy": "token-hex",
+          "bytes": 16,
+          "prompt": false
+        }
+      }
     }
   },
   "compatibility": {
