@@ -134,6 +134,71 @@ def _run_script_completion_hook(script_path, params, exit_code, duration_seconds
     except Exception as exc:
         print(f"[ProxMenux] script completion hook failed: {exc}", flush=True)
 
+
+@terminal_bp.route('/api/lxc-update-jobs', methods=['GET'])
+@require_admin_scope
+def lxc_update_jobs_status():
+    """Read-only recovery after login. This never creates or restarts a job."""
+    from lxc_update_jobs import list_jobs
+    return jsonify({'jobs': list_jobs()})
+
+
+@sock.route('/ws/lxc-update/<run_id>')
+def lxc_update_viewer(ws, run_id):
+    """An authenticated viewer, deliberately not the owner of the update."""
+    if not _ws_auth_check():
+        ws.close(reason=1008, message="Authentication required")
+        return
+    from lxc_update_jobs import get, start
+    try:
+        init = json.loads(ws.receive(timeout=10))
+        if not isinstance(init, dict) or type(init.get('resume')) is not bool:
+            raise ValueError("Invalid update job request")
+        offset = init.get('offset', 0)
+        if type(offset) is not int or offset < 0:
+            raise ValueError("Invalid update output cursor")
+        if init['resume']:
+            job = get(run_id, init.get('vmid'))
+        else:
+            job = start(run_id, init.get('script_path'), init.get('params'),
+                        _run_script_completion_hook)
+        revision = -1
+        while True:
+            view = job.read(offset)
+            if view['text'] or view['offset'] != offset:
+                ws.send(json.dumps({'type': 'job_output', 'text': view['text'],
+                                    'offset': view['offset'], 'truncated': view['truncated']}))
+                offset = view['offset']
+            if view['revision'] != revision:
+                revision = view['revision']
+                if view['interaction']:
+                    ws.send(json.dumps({'type': 'web_interaction',
+                                        'interaction': view['interaction']}))
+            if view['state'] == 'complete':
+                ws.send(json.dumps({'type': 'script_complete', 'exit_code': view['exit_code']}))
+                break
+            data = ws.receive(timeout=0.2)
+            if data is None:
+                continue
+            try:
+                message = json.loads(data)
+            except (TypeError, ValueError):
+                message = data
+            if isinstance(message, dict) and message.get('type') == 'ping':
+                ws.send('{"type":"pong"}')
+            else:
+                job.input(message if isinstance(message, dict) else data)
+    except (ValueError, KeyError, OSError, TypeError) as exc:
+        try:
+            ws.send(json.dumps({'type': 'job_unavailable', 'message': str(exc)}))
+        except Exception:
+            pass
+    except Exception:
+        # Viewer loss, including auth expiry/reload, has no job side effects.
+        pass
+    # No process termination, PTY close or completion callback here. The job's
+    # worker alone owns those, even while no viewer is authenticated/connected.
+
 @terminal_bp.route('/api/terminal/health', methods=['GET'])
 def terminal_health():
     """Health check for terminal service"""

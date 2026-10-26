@@ -54,6 +54,8 @@ interface ScriptTerminalModalProps {
   completedSuccessfullyMessage?: string
   completedWithErrorMessage?: (exitCode: number) => string
   cancelledExitCode?: number
+  // Only LXC Updates opts into a separate server-owned job transport.
+  backgroundUpdate?: { runId: string; vmid: number; resume: boolean }
   // Optional callback fired when the script's WebSocket closes
   // (script_runner sends an exit code and then closes). Lets the
   // parent auto-dismiss the modal — used by host-backup's Restore
@@ -72,6 +74,7 @@ export function ScriptTerminalModal({
   completedSuccessfullyMessage,
   completedWithErrorMessage,
   cancelledExitCode,
+  backgroundUpdate,
   onComplete,
 }: ScriptTerminalModalProps) {
   const t = useT()
@@ -93,6 +96,7 @@ export function ScriptTerminalModal({
   const reconnectAttemptsRef = useRef(0)
   const keepAliveIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const completionReceivedRef = useRef(false)
+  const outputOffsetRef = useRef(0)
   const [isMobile, setIsMobile] = useState(false)
   const [isTablet, setIsTablet] = useState(false)
 
@@ -130,7 +134,7 @@ export function ScriptTerminalModal({
   }, [onComplete])
 
   const attemptReconnect = useCallback(() => {
-    if (!isOpen || isComplete || reconnectAttemptsRef.current >= 3) {
+    if (!isOpenRef.current || isComplete || reconnectAttemptsRef.current >= 3) {
       return
     }
 
@@ -154,7 +158,9 @@ export function ScriptTerminalModal({
 
         const wsUrl = getScriptWebSocketUrl(sessionIdRef.current)
         // Single-use auth ticket appended as ?ticket=... — see lib/terminal-ws.ts.
-        const ws = new WebSocket(await getTicketedWsUrl(wsUrl))
+        const ticketedUrl = await getTicketedWsUrl(wsUrl)
+        if (!isOpenRef.current || !termRef.current) return
+        const ws = new WebSocket(ticketedUrl)
         wsRef.current = ws
 
         ws.onopen = () => {
@@ -170,9 +176,11 @@ export function ScriptTerminalModal({
             }
           }, 30000)
 
-const initMessage = {
+        const initMessage = {
           script_path: scriptPath,
           params: paramsRef.current,
+          ...(backgroundUpdate ? { resume: true, vmid: backgroundUpdate.vmid,
+            offset: outputOffsetRef.current } : {}),
         }
         ws.send(JSON.stringify(initMessage))
 
@@ -195,7 +203,7 @@ const initMessage = {
           // The PTY worker always emits this final line.  Treat it as a
           // completion fallback because some WebSocket servers tear down the
           // connection before the following structured message is flushed.
-          const exitMatch = typeof event.data === "string"
+          const exitMatch = !backgroundUpdate && typeof event.data === "string"
             ? event.data.match(/\[Script exited with code (-?\d+)\]/)
             : null
           if (exitMatch) {
@@ -211,6 +219,19 @@ const initMessage = {
           
           try {
             const msg = JSON.parse(event.data)
+            if (msg.type === "job_output") {
+              if (msg.truncated) termRef.current?.writeln(t("vmLxc.updates.backgroundOutputTrimmed"))
+              termRef.current?.write(msg.text)
+              outputOffsetRef.current = msg.offset
+              return
+            }
+            if (msg.type === "job_unavailable") {
+              termRef.current?.writeln(`\x1b[31m${msg.message}\x1b[0m`)
+              completionReceivedRef.current = true
+              setIsComplete(true)
+              ws.close()
+              return
+            }
             if (msg.type === "web_interaction" && msg.interaction) {
               setIsWaitingNextInteraction(false)
               if (waitingTimeoutRef.current) {
@@ -255,6 +276,7 @@ const initMessage = {
         }
 
         ws.onclose = (event) => {
+          if (!isOpenRef.current) return
           setConnectionStatus("offline")
           if (keepAliveIntervalRef.current) {
             clearInterval(keepAliveIntervalRef.current)
@@ -266,13 +288,17 @@ const initMessage = {
           if (!isComplete && reconnectAttemptsRef.current < 3) {
             reconnectTimeoutRef.current = setTimeout(attemptReconnect, 2000)
           } else {
-            setIsComplete(true)
-            onCompleteRef.current?.(-1)
+            if (backgroundUpdate) {
+              termRef.current?.writeln(t("vmLxc.updates.backgroundDetached"))
+            } else {
+              setIsComplete(true)
+              onCompleteRef.current?.(-1)
+            }
           }
         }
       }
     }, 1000)
-  }, [isOpen, isComplete, scriptPath, getCompletionMessage, cancelledExitCode, t])
+  }, [isOpen, isComplete, scriptPath, getCompletionMessage, cancelledExitCode, t, backgroundUpdate])
 
   const sendKey = useCallback((key: string) => {
     if (!termRef.current) return
@@ -366,7 +392,9 @@ const initMessage = {
 
     const wsUrl = getScriptWebSocketUrl(sessionIdRef.current)
     // Single-use auth ticket appended as ?ticket=... — see lib/terminal-ws.ts.
-    const ws = new WebSocket(await getTicketedWsUrl(wsUrl))
+    const ticketedUrl = await getTicketedWsUrl(wsUrl)
+    if (!isOpenRef.current || termRef.current !== term) return
+    const ws = new WebSocket(ticketedUrl)
     wsRef.current = ws
 
     ws.onopen = () => {
@@ -384,6 +412,8 @@ const initMessage = {
       const initMessage = {
         script_path: scriptPath,
         params: paramsRef.current,
+        ...(backgroundUpdate ? { resume: backgroundUpdate.resume,
+          vmid: backgroundUpdate.vmid, offset: outputOffsetRef.current } : {}),
       }
       ws.send(JSON.stringify(initMessage))
 
@@ -412,7 +442,7 @@ const initMessage = {
       // See the reconnect handler above.  The exit line is guaranteed to be
       // sent with the PTY output and is therefore a robust fallback when a
       // final JSON frame is lost during server-side socket teardown.
-      const exitMatch = typeof event.data === "string"
+      const exitMatch = !backgroundUpdate && typeof event.data === "string"
         ? event.data.match(/\[Script exited with code (-?\d+)\]/)
         : null
       if (exitMatch) {
@@ -428,6 +458,19 @@ const initMessage = {
       
       try {
         const msg = JSON.parse(event.data)
+        if (msg.type === "job_output") {
+          if (msg.truncated) term.writeln(t("vmLxc.updates.backgroundOutputTrimmed"))
+          term.write(msg.text)
+          outputOffsetRef.current = msg.offset
+          return
+        }
+        if (msg.type === "job_unavailable") {
+          term.writeln(`\x1b[31m${msg.message}\x1b[0m`)
+          completionReceivedRef.current = true
+          setIsComplete(true)
+          ws.close()
+          return
+        }
 
         if (msg.type === "web_interaction" && msg.interaction) {
           setIsWaitingNextInteraction(false)
@@ -478,6 +521,7 @@ const initMessage = {
     }
 
     ws.onclose = (event) => {
+      if (!isOpenRef.current) return
       setConnectionStatus("offline")
       if (!completionReceivedRef.current) {
         term.writeln(`\x1b[33m${t("scriptTerminal.connectionClosed")}\x1b[0m`)
@@ -489,8 +533,13 @@ const initMessage = {
       }
 
       if (!completionReceivedRef.current && !isComplete) {
-        setIsComplete(true)
-        onCompleteRef.current?.(-1)
+        if (backgroundUpdate) {
+          term.writeln(t("vmLxc.updates.backgroundDetached"))
+          attemptReconnect()
+        } else {
+          setIsComplete(true)
+          onCompleteRef.current?.(-1)
+        }
       }
     }
 
@@ -578,6 +627,7 @@ const initMessage = {
       sessionIdRef.current = Math.random().toString(36).substring(2, 8)
       reconnectAttemptsRef.current = 0
       completionReceivedRef.current = false
+      outputOffsetRef.current = 0
       setIsComplete(false)
       setInteractionInput("")
       setCurrentInteraction(null)
@@ -641,8 +691,11 @@ const initMessage = {
   }, [isOpen, isComplete, attemptReconnect])
 
   const getScriptWebSocketUrl = (sid: string): string => {
+    const route = backgroundUpdate
+      ? `/ws/lxc-update/${encodeURIComponent(backgroundUpdate.runId)}`
+      : `/ws/script/${sid}`
     if (typeof window === "undefined") {
-      return `ws://localhost:${API_PORT}/ws/script/${sid}`
+      return `ws://localhost:${API_PORT}${route}`
     }
 
     const { protocol, hostname, port } = window.location
@@ -650,9 +703,9 @@ const initMessage = {
     const wsProtocol = protocol === "https:" ? "wss:" : "ws:"
 
     if (isStandardPort) {
-      return `${wsProtocol}//${hostname}/ws/script/${sid}`
+      return `${wsProtocol}//${hostname}${route}`
     } else {
-      return `${wsProtocol}//${hostname}:${API_PORT}/ws/script/${sid}`
+      return `${wsProtocol}//${hostname}:${API_PORT}${route}`
     }
   }
 
@@ -664,6 +717,10 @@ const initMessage = {
     if (value === "cancel" || value === "") {
       setCurrentInteraction(null)
       setInteractionInput("")
+      if (backgroundUpdate) {
+        wsRef.current.send(JSON.stringify({ type: "cancel" }))
+        return
+      }
       handleCloseModal()
       return
     }
