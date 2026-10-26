@@ -5,6 +5,7 @@ Models are loaded dynamically from the API.
 """
 from typing import Optional, List
 import json
+import re
 import urllib.request
 import urllib.error
 from .base import AIProvider, AIProviderError
@@ -36,11 +37,11 @@ class OpenAIProvider(AIProvider):
     ]
     
     # Recommended models for chat (in priority order)
-    RECOMMENDED_PREFIXES = ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo']
+    RECOMMENDED_PREFIXES = ['gpt-6-luna', 'gpt-5.6-luna', 'gpt-5.4-mini', 'gpt-6-sol']
 
     @staticmethod
     def _is_reasoning_model(model: str) -> bool:
-        """True for OpenAI reasoning models (o-series + non-chat gpt-5+).
+        """True for OpenAI reasoning models (o-series + non-chat gpt-5 and later).
 
         These use a stricter API contract than chat models:
           - Must use ``max_completion_tokens`` instead of ``max_tokens``
@@ -54,11 +55,24 @@ class OpenAIProvider(AIProvider):
         # o1, o3, o4, o5 ...  (o<digit>...)
         if len(m) >= 2 and m[0] == 'o' and m[1].isdigit():
             return True
-        # gpt-5, gpt-5-mini, gpt-5.1, gpt-5.2-pro ...  EXCEPT *-chat-latest
-        if m.startswith('gpt-5') and '-chat' not in m:
-            return True
-        return False
-    
+        # gpt-5, gpt-5-mini, gpt-5.1, gpt-6-luna, gpt-6.1-sol ...  EXCEPT *-chat-latest
+        major = re.match(r'gpt-(\d+)', m)
+        return bool(major) and int(major.group(1)) >= 5 and '-chat' not in m
+
+    @staticmethod
+    def _reasoning_effort(model: str) -> str:
+        """Lowest reasoning_effort the model accepts.
+
+        gpt-5 / gpt-5-mini / gpt-5-nano (and the o-series) accept 'minimal'.
+        gpt-5.1 and later reject 'minimal' with HTTP 400, and gpt-6-astra /
+        gpt-6.1-sol also reject 'none', so 'low' is the value all of them
+        accept. In tests it spent 0-5 reasoning tokens on a notification.
+        """
+        m = model.lower()
+        if re.match(r'gpt-5(?!\.)', m) or m.startswith('o'):
+            return 'minimal'
+        return 'low'
+
     def list_models(self) -> List[str]:
         """List available models for chat completions.
 
@@ -189,22 +203,19 @@ class OpenAIProvider(AIProvider):
         # apply model-specific defaults.
         if self.base_url:
             payload['max_tokens'] = max_tokens
-        # Reasoning models (o1/o3/o4/gpt-5*, excluding *-chat-latest) use a
+        # Reasoning models (o1/o3/o4/gpt-5+, excluding *-chat-latest) use a
         # different parameter contract: max_completion_tokens instead of
         # max_tokens, and no temperature field. Sending the classic chat
         # parameters to them produces HTTP 400 Bad Request.
         #
         # They also spend output budget on internal reasoning by default,
         # which empties the user-visible reply when max_tokens is small
-        # (like the ~200 we use for notifications). reasoning_effort
-        # 'minimal' keeps that internal reasoning to a minimum so the
-        # entire budget is available for the translation, which is
-        # exactly what this pipeline wants. OpenAI documents 'minimal',
-        # 'low', 'medium', 'high' — 'minimal' is the right setting for a
-        # straightforward translate+explain task.
+        # (like the ~200 we use for notifications). The lowest
+        # reasoning_effort the model accepts keeps that internal reasoning
+        # to a minimum so the budget goes to the translation.
         elif self._is_reasoning_model(self.model):
             payload['max_completion_tokens'] = max_tokens
-            payload['reasoning_effort'] = 'minimal'
+            payload['reasoning_effort'] = self._reasoning_effort(self.model)
         else:
             payload['max_tokens'] = max_tokens
             payload['temperature'] = 0.3
