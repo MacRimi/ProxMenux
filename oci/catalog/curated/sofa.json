@@ -273,6 +273,10 @@
           "only_when_mount_type": "managed-volume"
         }
       ],
+      "volume_owner": {
+        "uid": 1000,
+        "gid": 1000
+      },
       "startup_healthcheck": {
         "scheme": "http",
         "port": 3000,
