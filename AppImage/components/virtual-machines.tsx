@@ -2711,6 +2711,12 @@ export function VirtualMachines() {
     // performs the requests (the data map is only a render seed), so no
     // invalidation is needed and there is no "Loading applications" flash.
     void fetchLxcApps(applyVmid)
+    // Recovery can be opened from the job banner while another CT is selected.
+    // Refresh the operated guest without changing that other guest's result UI.
+    if (selectedVMRef.current?.vmid !== applyVmid) {
+      void mutate()
+      return
+    }
     // Enter the "Comprobando resultado…" state on the Updates tab.
     // Baseline snapshot lets a downstream useEffect detect when the
     // SWR poll actually delivers the post-apply counts (as opposed

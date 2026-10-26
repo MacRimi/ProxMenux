@@ -23,7 +23,7 @@ function executable(node, file, scope) {
 function fixture(handler, locale, optedIn=true) {
   const writes=[], callbacks=[], state={closed:0};
   const t=translator(locale), terminal={write:s=>writes.push(s),writeln:s=>writes.push(s)};
-  const shared={...completion, backgroundUpdate:undefined, isOpenRef:{current:true}, cancelledExitCode:optedIn?6:undefined,t,
+  const shared={...completion, backgroundUpdate:undefined, isOpenRef:{current:true}, openGenerationRef:{current:1}, cancelledExitCode:optedIn?6:undefined,t,
     completedSuccessfullyMessage:undefined,completedWithErrorMessage:undefined};
   const getCompletionMessage=executable(messageCallback,source,shared);
   const scope={...shared,getCompletionMessage,term:terminal,termRef:{current:terminal},

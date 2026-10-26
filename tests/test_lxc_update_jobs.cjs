@@ -7,9 +7,13 @@ const ts = require(path.join(root, 'node_modules/typescript'))
 const source = fs.readFileSync(path.join(root, 'components/script-terminal-modal.tsx'), 'utf8')
 const tree = ts.createSourceFile('modal.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
 const handlers = {onmessage: [], onclose: []}
+let unmount
 function walk(node) {
   if (ts.isBinaryExpression(node) && /^ws\.(onmessage|onclose)$/.test(node.left.getText(tree)))
     handlers[node.left.name.text].push(node.right.getText(tree))
+  if (ts.isCallExpression(node) && node.expression.getText(tree) === 'useEffect'
+    && node.arguments[0]?.getText(tree).includes('Transport mode is fixed'))
+    unmount = node.arguments[0].getText(tree)
   ts.forEachChild(node, walk)
 }
 walk(tree)
@@ -69,6 +73,37 @@ for (const handler of handlers.onclose) {
   compile(handler, closed.context)({})
   assert.equal(closed.reconnects.length, 0, 'closing the view cannot reopen a socket')
 }
+assert.ok(unmount)
+for (const backgroundUpdate of [undefined, {runId:'existing'}]) {
+  const f=fixture(backgroundUpdate), closes=[], sends=[], disposals=[]
+  const ref={current:{close:()=>closes.push(true),send:()=>sends.push(true)}}
+  Object.assign(f.context,{wsRef:ref,openGenerationRef:{current:1},
+    checkConnectionInterval:{current:null},reconnectTimeoutRef:{current:null}})
+  f.context.termRef.current.dispose=()=>disposals.push(true)
+  compile(unmount,f.context)()()
+  assert.equal(closes.length,backgroundUpdate?1:0)
+  assert.equal(sends.length,0,'unmount cannot send cancellation or another start')
+  assert.equal(f.finished.length,0)
+  assert.equal(disposals.length,backgroundUpdate?1:0)
+}
+const vms=fs.readFileSync(path.join(root,'components/virtual-machines.tsx'),'utf8')
+const vmTree=ts.createSourceFile('vms.tsx',vms,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX)
+let complete
+function visit(n){if(ts.isVariableDeclaration(n)&&n.name.getText(vmTree)==='handleApplyComplete')complete=n.initializer.getText(vmTree);ts.forEachChild(n,visit)}
+visit(vmTree)
+async function checkCompletion(){
+ for(const selected of [100,200]){
+  const posts=[],states=[],refresh=[]
+  const context={applyVmid:100,applyStartedAt:Date.now(),selectedVM:{vmid:selected},selectedVMRef:{current:{vmid:selected}},
+    applyRunId:'existing',applyTarget:'app',applyTargetIds:['app:test'],applyTargetLabels:['Test'],applyDockerRefresh:false,
+    vmModalCacheRef:{current:{details:new Map(),schedule:new Map()}},fetchApi:async(...args)=>posts.push(args),
+    fetchLxcApps:id=>refresh.push(id),mutate:()=>{},setUpdatesBaselineCount:v=>states.push(v),setUpdatesResult:v=>states.push(v),setUpdatesRefreshing:v=>states.push(v)}
+  await compile(complete,context)(0,false)
+  assert.equal(posts.length,0,'background completion never sends a second finalization POST')
+  assert.deepEqual(refresh,[100])
+  assert.equal(states.length,selected===100?3:0,'another guest result UI is preserved')
+ }
+}
 const local = new Map(), events = []
 const storage = {getItem:k=>local.get(k), setItem:(k,v)=>local.set(k,v)}
 const jobs = loadTypeScript('lib/lxc-update-jobs.ts', {localStorage:storage,
@@ -80,3 +115,4 @@ assert.equal(jobs.viewedUpdateJobs().length, 1)
 assert.equal(events.length, 2)
 assert.equal([...local.values()].join(''), '["opaque-run"]', 'storage has IDs, no commands or credentials')
 console.log('PASS actual initial/reconnect handlers, auth-independent recovery metadata and legacy completion')
+checkCompletion().catch(e=>{console.error(e);process.exitCode=1})

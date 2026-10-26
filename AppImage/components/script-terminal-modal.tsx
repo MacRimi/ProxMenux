@@ -84,6 +84,7 @@ export function ScriptTerminalModal({
   // after dynamic imports resolve — captures the latest value without
   // re-binding the closure.
   const isOpenRef = useRef<boolean>(false)
+  const openGenerationRef = useRef(0)
   const fitAddonRef = useRef<any>(null)
   const sessionIdRef = useRef<string>(Math.random().toString(36).substring(2, 8))
 
@@ -158,8 +159,9 @@ export function ScriptTerminalModal({
 
         const wsUrl = getScriptWebSocketUrl(sessionIdRef.current)
         // Single-use auth ticket appended as ?ticket=... — see lib/terminal-ws.ts.
+        const generation = openGenerationRef.current
         const ticketedUrl = await getTicketedWsUrl(wsUrl)
-        if (!isOpenRef.current || !termRef.current) return
+        if (!isOpenRef.current || !termRef.current || generation !== openGenerationRef.current) return
         const ws = new WebSocket(ticketedUrl)
         wsRef.current = ws
 
@@ -326,12 +328,13 @@ export function ScriptTerminalModal({
     // otherwise we attach a Terminal to a stale ref and open a WS that
     // nobody reads.
     const wasOpenAtCall = isOpenRef.current
+    const generation = ++openGenerationRef.current
     const [TerminalClass, FitAddonClass] = await Promise.all([
       import("xterm").then((mod) => mod.Terminal),
       import("xterm-addon-fit").then((mod) => mod.FitAddon),
       import("xterm/css/xterm.css"),
     ])
-    if (!wasOpenAtCall || !isOpenRef.current) return
+    if (!wasOpenAtCall || !isOpenRef.current || generation !== openGenerationRef.current) return
 
     const fontSize = window.innerWidth < 768 ? 12 : 16
 
@@ -601,6 +604,7 @@ export function ScriptTerminalModal({
     if (isOpen) {
       initializeTerminal()
     } else {
+      openGenerationRef.current++
       if (checkConnectionInterval.current) {
         clearInterval(checkConnectionInterval.current)
       }
@@ -635,6 +639,28 @@ export function ScriptTerminalModal({
       setConnectionStatus("connecting")
     }
   }, [isOpen])
+
+  useEffect(() => () => {
+    if (!backgroundUpdate) return // Transport mode is fixed for this instance.
+    // Conditional parents can unmount an open modal. Detach that viewer too;
+    // only the background job owns its process and completion result.
+    isOpenRef.current = false
+    openGenerationRef.current++
+    for (const ref of [checkConnectionInterval, keepAliveIntervalRef]) {
+      if (ref.current) clearInterval(ref.current)
+    }
+    for (const ref of [waitingTimeoutRef, reconnectTimeoutRef]) {
+      if (ref.current) clearTimeout(ref.current)
+    }
+    if (wsRef.current) {
+      wsRef.current.onclose = null
+      wsRef.current.onmessage = null
+      wsRef.current.close()
+      wsRef.current = null
+    }
+    termRef.current?.dispose()
+    termRef.current = null
+  }, [])
 
   useEffect(() => {
     const updateDeviceType = () => {
