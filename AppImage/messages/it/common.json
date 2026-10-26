@@ -1497,10 +1497,10 @@
       "installedVersionUnverified": "La versione installata non è verificata. Non è stato possibile confermare la disponibilità di un aggiornamento.",
       "versionStatusUnknown": "La disponibilità di un aggiornamento non è verificata. Le informazioni sulla versione non sono disponibili o sono incomplete.",
       "backgroundRunning": "{name} (CT {vmid}): un aggiornamento è in corso sul server.",
-      "backgroundOutputTrimmed": "L'output precedente è stato accorciato; l'aggiornamento prosegue normalmente.",
+      "backgroundOutputTrimmed": "La parte iniziale dell'output è stata troncata; l'aggiornamento prosegue normalmente.",
       "backgroundFinished": "{name} (CT {vmid}): un aggiornamento è terminato. Visualizza il risultato.",
       "viewBackgroundJob": "Visualizza aggiornamento",
-      "backgroundDetached": "La visualizzazione si è disconnessa. L'aggiornamento prosegue sul server; ricollegati dopo aver effettuato l'accesso.",
+      "backgroundDetached": "La connessione al terminale si è interrotta. L'aggiornamento prosegue sul server; ricollegati dopo aver effettuato l'accesso.",
       "backgroundDescription": "Chiudere questa finestra non interrompe l'aggiornamento. Usa Ctrl+C per annullarlo."
     },
     "bulkUpdate": {
