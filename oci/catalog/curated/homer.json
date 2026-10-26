@@ -379,7 +379,8 @@
           "container_path": "/www/assets/config.yml",
           "mode": "0644",
           "owner": "mapped-root",
-          "content": "---\ntitle: \"My Home Lab\"\nsubtitle: \"Self-hosted services\"\nheader: true\ncolumns: \"3\"\ndefaults:\n  layout: columns\n  colorTheme: auto\nservices:\n  - name: \"Getting started\"\n    icon: \"fas fa-book\"\n    items:\n      - name: \"Homer documentation\"\n        icon: \"fas fa-book\"\n        url: \"https://github.com/bastienwirtz/homer\"\n"
+          "content": "---\ntitle: \"My Home Lab\"\nsubtitle: \"Self-hosted services\"\nheader: true\ncolumns: \"3\"\ndefaults:\n  layout: columns\n  colorTheme: auto\nservices:\n  - name: \"Getting started\"\n    icon: \"fas fa-book\"\n    items:\n      - name: \"Homer documentation\"\n        icon: \"fas fa-book\"\n        url: \"https://github.com/bastienwirtz/homer\"\n",
+          "only_if_missing": true
         }
       ]
     }

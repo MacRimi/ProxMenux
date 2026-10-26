@@ -33,7 +33,7 @@
     "documentation": "https://prometheus.io/docs/prometheus/latest/installation/",
     "repository": "https://github.com/prometheus/prometheus",
     "tips": [
-      "The image includes a sample configuration and will scrape itself. Add targets to /etc/prometheus/prometheus.yml for monitoring other services."
+      "The image includes a sample configuration and will scrape itself. Add targets to prometheus.yml in the /etc/prometheus volume to monitor other services; choose a host directory for /etc/prometheus to edit it from the host."
     ],
     "mini_changelog": [],
     "display_version": null,
@@ -76,6 +76,22 @@
         "managed_volume": {
           "backup": true,
           "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/etc/prometheus",
+        "compose_source_example": "./prometheus-config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 1
         }
       }
     ],
@@ -136,6 +152,17 @@
         "id": "prometheus-volume-0",
         "service": "prometheus",
         "container_path": "/prometheus",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "prometheus-volume-1",
+        "service": "prometheus",
+        "container_path": "/etc/prometheus",
         "mode": "managed-volume",
         "user_selectable": false,
         "backup": true,
@@ -353,6 +380,12 @@
       "volume_preparations": [
         {
           "container_path": "/prometheus",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/etc/prometheus",
           "remove_lost_found": true,
           "owner_strategy": "mapped-application-user",
           "only_when_mount_type": "managed-volume"
