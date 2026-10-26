@@ -145,13 +145,16 @@ class TechnicalMessages(unittest.TestCase):
 
     def test_watchdog_manual_stop_stays_stopped_without_start_or_notice(self):
         self.remote_language()
-        self.patch(oci_watchdog, 'watched', return_value={777: 'Fiction'})
+        identity = '11111111-1111-4111-8111-111111111111'
+        self.patch(oci_watchdog, 'watched', return_value={777: ('Fiction', identity)})
+        self.patch(oci_watchdog.instances, 'locked', side_effect=lambda *a: nullcontext())
+        self.patch(oci_watchdog, 'same_installation', return_value=True)
         self.patch(oci_watchdog, 'is_running', return_value=False)
         self.patch(oci_watchdog, 'is_busy', return_value=False)
         self.patch(oci_watchdog, 'read_tasks', return_value=[('vzshutdown', '777', 75)])
         start = self.patch(oci_watchdog, 'start', side_effect=AssertionError('manual stop was undone'))
         notice = self.patch(oci_watchdog.oci_operation_notice, 'notify')
-        state = oci_watchdog.new_state(); state['seen'] = 50
+        state = oci_watchdog.new_state(identity); state['seen'] = 50
         output = io.StringIO()
         with redirect_stdout(output): oci_watchdog.look({777: state}, 100)
         self.assertTrue(state['settled'])
@@ -159,7 +162,10 @@ class TechnicalMessages(unittest.TestCase):
         start.assert_not_called(); notice.assert_not_called()
 
     def test_watchdog_localization_does_not_change_retry_state_or_notification_payload(self):
-        self.patch(oci_watchdog, 'watched', return_value={777: 'Fiction'})
+        identity = '11111111-1111-4111-8111-111111111111'
+        self.patch(oci_watchdog, 'watched', return_value={777: ('Fiction', identity)})
+        self.patch(oci_watchdog.instances, 'locked', side_effect=lambda *a: nullcontext())
+        self.patch(oci_watchdog, 'same_installation', return_value=True)
         self.patch(oci_watchdog, 'is_running', return_value=False)
         self.patch(oci_watchdog, 'is_busy', return_value=False)
         self.patch(oci_watchdog, 'read_tasks', return_value=[])
@@ -168,7 +174,7 @@ class TechnicalMessages(unittest.TestCase):
         outcomes = []
         for locale in ('en', 'sk'):
             with patch.object(oci_ui, '_language', locale), patch.object(oci_ui, '_cache', self.sk):
-                state = oci_watchdog.new_state(); state['seen'] = 50
+                state = oci_watchdog.new_state(identity); state['seen'] = 50
                 text = io.StringIO()
                 with redirect_stdout(text): oci_watchdog.look({777: state}, 100)
                 outcomes.append((copy.deepcopy(state), notice.call_args, start.call_args))
