@@ -65,8 +65,7 @@
         "example": "${GENERATED_CLICKHOUSE_PASSWORD}",
         "required": true,
         "sensitive": true,
-        "source": "upstream-documentation",
-        "prompt_user": false
+        "source": "upstream-documentation"
       },
       {
         "name": "CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT",

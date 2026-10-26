@@ -65,8 +65,7 @@
         "example": "${GENERATED_TYPESENSE_API_KEY}",
         "required": true,
         "sensitive": true,
-        "source": "upstream-documentation",
-        "prompt_user": false
+        "source": "upstream-documentation"
       }
     ],
     "volumes": [

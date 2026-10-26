@@ -65,8 +65,7 @@
         "example": "${GENERATED_MYSQL_ROOT_PASSWORD}",
         "required": true,
         "sensitive": true,
-        "source": "upstream-documentation",
-        "prompt_user": false
+        "source": "upstream-documentation"
       }
     ],
     "volumes": [

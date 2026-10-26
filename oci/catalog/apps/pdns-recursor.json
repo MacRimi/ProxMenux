@@ -32,7 +32,7 @@
     "documentation": "https://doc.powerdns.com/recursor/",
     "repository": "https://github.com/PowerDNS/pdns",
     "tips": [
-      "The image uses the upstream default recursor configuration. Keep it on a trusted LAN and review the allowed client networks before changing its configuration."
+      "The image runs as the non-root pdns user. ProxMenux sets net.ipv4.ip_unprivileged_port_start=53 in this LXC's network namespace so it can listen on DNS port 53. This lets unprivileged processes in this LXC bind ports 53–1023; it does not change the Proxmox host or make the LXC privileged. Keep it on a trusted LAN and review the allowed client networks before changing its configuration."
     ],
     "mini_changelog": [],
     "display_version": null,
@@ -189,6 +189,14 @@
     },
     "adaptations": [
       {
+        "id": "dns-low-ports-in-container-namespace",
+        "upstream_behavior": "The official image runs as the non-root pdns user and listens on DNS port 53; Docker Engine can provide a per-container NET_BIND_SERVICE capability.",
+        "native_lxc_behavior": "ProxMenux sets net.ipv4.ip_unprivileged_port_start=53 through this LXC's own network namespace configuration while keeping the LXC unprivileged.",
+        "reason": "The native OCI-LXC runner does not provide Docker's per-process capability grant. This namespaced sysctl enables the default DNS port without adding a capability or changing a host sysctl.",
+        "behavioral_impact": "Unprivileged processes in this LXC may bind ports 53 through 1023; the Proxmox host and other guests are unchanged.",
+        "validation": "pending-live-retest"
+      },
+      {
         "id": "imported-compose-source",
         "upstream_behavior": "The source definition deploys the complete Docker Compose application model.",
         "native_lxc_behavior": "The source model is preserved and remains blocked until every service option has a reviewed native Proxmox mapping.",
@@ -317,7 +325,16 @@
         "validation": "not-requested-by-compose"
       }
     ],
-    "installer_profile": {},
+    "installer_profile": {
+      "security": {
+        "sysctls": [
+          {
+            "name": "net.ipv4.ip_unprivileged_port_start",
+            "value": "53"
+          }
+        ]
+      }
+    },
     "catalog": {
       "replaces_discovered_ids": []
     }
