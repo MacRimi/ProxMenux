@@ -130,8 +130,8 @@
       "tagline": "Standard di settore. Molto accurato e ampiamente usato.",
       "items": [
         "Chiave API: <a>platform.openai.com/api-keys</a>",
-        "Esempi dall’elenco di modelli incluso: <code>gpt-4.1-nano</code>, <code>gpt-4.1-mini</code>, <code>gpt-4o-mini</code>, <code>gpt-4.1</code>, <code>gpt-4o</code>, <code>gpt-5-nano</code>.",
-        "Raccomandazione inclusa: <strong><code>gpt-4.1-nano</code></strong>. L’adattatore gestisce anche i requisiti dei modelli di ragionamento; la lista include gpt-5-nano, quindi questi modelli non sono esclusi in generale."
+        "Esempi dall’elenco di modelli incluso: <code>gpt-6-luna</code>, <code>gpt-5.6-luna</code>, <code>gpt-5.4-mini</code>, <code>gpt-6-sol</code>, <code>gpt-5.5</code>.",
+        "Raccomandazione inclusa: <strong><code>gpt-6-luna</code></strong>, il modello attuale più economico. Tutti i modelli dell’elenco sono modelli di ragionamento; l’adattatore invia a ciascuno i parametri che accetta."
       ],
       "baseUrlTitle": "URL di base compatibile con OpenAI",
       "baseUrlBody": "Il provider OpenAI accetta un <em>URL di base</em> personalizzato per endpoint compatibili, come <strong>BytePlus / ByteDance (Kimi K2.5)</strong>, <strong>LocalAI</strong>, <strong>LM Studio</strong>, <strong>vLLM</strong>, <strong>Together AI</strong> e <strong>Fireworks AI</strong>, che usano il formato <code>/v1/chat/completions</code>. Imposta l’URL nella scheda OpenAI accanto alla chiave API."

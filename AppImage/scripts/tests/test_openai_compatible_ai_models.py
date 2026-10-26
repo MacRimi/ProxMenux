@@ -98,6 +98,31 @@ class OpenAICompatibleModelTests(unittest.TestCase):
         self.assertNotIn("temperature", provider.captured_payload)
         self.assertNotIn("max_tokens", provider.captured_payload)
 
+    def test_newer_reasoning_models_use_low_effort(self):
+        # gpt-5.1+ reject 'minimal'; gpt-6* were sent chat parameters before.
+        for model in ("gpt-5.6-luna", "gpt-6-luna", "gpt-6.1-sol"):
+            with self.subTest(model=model):
+                provider = CapturingOpenAIProvider(api_key="token", model=model)
+
+                self.assertEqual(provider.generate("system", "user", max_tokens=123), "ok")
+
+                self.assertEqual(provider.captured_payload["max_completion_tokens"], 123)
+                self.assertEqual(provider.captured_payload["reasoning_effort"], "low")
+                self.assertNotIn("temperature", provider.captured_payload)
+                self.assertNotIn("max_tokens", provider.captured_payload)
+
+    def test_classic_chat_models_keep_chat_contract(self):
+        for model in ("gpt-4.1", "gpt-4o-mini"):
+            with self.subTest(model=model):
+                provider = CapturingOpenAIProvider(api_key="token", model=model)
+
+                self.assertEqual(provider.generate("system", "user", max_tokens=123), "ok")
+
+                self.assertEqual(provider.captured_payload["max_tokens"], 123)
+                self.assertEqual(provider.captured_payload["temperature"], 0.3)
+                self.assertNotIn("reasoning_effort", provider.captured_payload)
+                self.assertNotIn("max_completion_tokens", provider.captured_payload)
+
     def test_runtime_ai_config_prefers_provider_specific_model(self):
         manager = self._manager({
             "ai_enabled": "true",

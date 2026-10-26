@@ -814,7 +814,7 @@ curl -H "Authorization: Bearer <api-token>" \\
 curl -X POST http://<host>:8008/api/notifications/test-ai \\
   -H "Authorization: Bearer <api-token>" \\
   -H "Content-Type: application/json" \\
-  -d '{"provider":"openai","api_key":"sk-...","model":"gpt-4o-mini"}'`}
+  -d '{"provider":"openai","api_key":"sk-...","model":"gpt-6-luna"}'`}
         className="my-4"
       />
 

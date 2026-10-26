@@ -130,8 +130,8 @@
       "tagline": "Priemyselná norma. Veľmi presné a široko používané.",
       "items": [
         "Kľúč API: <a>platform.openai.com/api-keys</a>",
-        "Príklady z dodaného zoznamu modelov: <code>gpt-4.1-nano</code>, <code>gpt-4.1-mini</code>, <code>gpt-4o-mini</code>, <code>gpt-4.1</code>, <code>gpt-4o</code>, <code>gpt-5-nano</code>.",
-        "Dodané odporúčanie: <strong><code>gpt-4.1-nano</code></strong>. Adaptér spracúva aj osobitné požiadavky modelov uvažovania; zoznam obsahuje gpt-5-nano, takže tieto modely nie sú všeobecne vylúčené."
+        "Príklady z dodaného zoznamu modelov: <code>gpt-6-luna</code>, <code>gpt-5.6-luna</code>, <code>gpt-5.4-mini</code>, <code>gpt-6-sol</code>, <code>gpt-5.5</code>.",
+        "Dodané odporúčanie: <strong><code>gpt-6-luna</code></strong>, najúspornejší aktuálny model. Všetky modely v zozname sú modely uvažovania; adaptér každému posiela parametre, ktoré prijíma."
       ],
       "baseUrlTitle": "Základné URL kompatibilné s OpenAI",
       "baseUrlBody": "Poskytovateľ OpenAI prijíma vlastnú <em>Základnú URL</em> pre kompatibilné služby, napríklad <strong>BytePlus / ByteDance (Kimi K2.5)</strong>, <strong>LocalAI</strong>, <strong>LM Studio</strong>, <strong>vLLM</strong>, <strong>Together AI</strong> a <strong>Fireworks AI</strong>, ktoré používajú formát <code>/v1/chat/completions</code>. URL nastavte na karte OpenAI vedľa kľúča API."

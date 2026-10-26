@@ -130,8 +130,8 @@
       "tagline": "Industry standard. Very accurate and widely used.",
       "items": [
         "API key: <a>platform.openai.com/api-keys</a>",
-        "Examples from the bundled model list: <code>gpt-4.1-nano</code>, <code>gpt-4.1-mini</code>, <code>gpt-4o-mini</code>, <code>gpt-4.1</code>, <code>gpt-4o</code>, <code>gpt-5-nano</code>.",
-        "Bundled recommendation: <strong><code>gpt-4.1-nano</code></strong>. The adapter also handles model-specific requirements for reasoning models; the bundled list includes gpt-5-nano, so reasoning models are not universally excluded."
+        "Examples from the bundled model list: <code>gpt-6-luna</code>, <code>gpt-5.6-luna</code>, <code>gpt-5.4-mini</code>, <code>gpt-6-sol</code>, <code>gpt-5.5</code>.",
+        "Bundled recommendation: <strong><code>gpt-6-luna</code></strong>, the most economical current model. Every model in the bundled list is a reasoning model; the adapter sends each one the parameters it accepts."
       ],
       "baseUrlTitle": "OpenAI-compatible base URL",
       "baseUrlBody": "The OpenAI provider also accepts a custom <em>Base URL</em>, which lets you point the Monitor at any OpenAI-compatible endpoint. Confirmed to work with <strong>BytePlus / ByteDance (Kimi K2.5)</strong>, <strong>LocalAI</strong>, <strong>LM Studio</strong>, <strong>vLLM</strong>, <strong>Together AI</strong>, <strong>Fireworks AI</strong>, and any other service that speaks the OpenAI <code>/v1/chat/completions</code> dialect. Set the URL in the OpenAI tab next to the API key field."
