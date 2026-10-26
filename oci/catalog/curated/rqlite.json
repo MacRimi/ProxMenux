@@ -32,7 +32,7 @@
     "documentation": "https://rqlite.io/docs/",
     "repository": "https://github.com/rqlite/rqlite",
     "tips": [
-      "This profile runs one node. Port 4001 is the HTTP API; port 4002 is reserved for Raft cluster traffic. The database file is persisted under /rqlite/file."
+      "This profile runs one node. Port 4001 is the HTTP API; port 4002 is reserved for Raft cluster traffic. The image default starts rqlited with its data directory at /rqlite/file/data, persisted by the mounted /rqlite/file volume."
     ],
     "mini_changelog": [],
     "display_version": null,
@@ -97,7 +97,7 @@
     "related_services": [],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "{\n  \"name\": \"rqlite\",\n  \"services\": {\n    \"rqlite\": {\n      \"image\": \"ghcr.io/rqlite/rqlite:latest\",\n      \"restart\": \"unless-stopped\",\n      \"ports\": [\n        \"4001:4001/tcp\",\n        \"4002:4002/tcp\"\n      ],\n      \"volumes\": [\n        \"./file:/rqlite/file\"\n      ],\n      \"command\": [\n        \"/rqlite/file\"\n      ]\n    }\n  }\n}"
+    "original_compose": "{\n  \"name\": \"rqlite\",\n  \"services\": {\n    \"rqlite\": {\n      \"image\": \"ghcr.io/rqlite/rqlite:latest\",\n      \"restart\": \"unless-stopped\",\n      \"ports\": [\n        \"4001:4001/tcp\",\n        \"4002:4002/tcp\"\n      ],\n      \"volumes\": [\n        \"./file:/rqlite/file\"\n      ]\n    }\n  }\n}"
   },
   "compose_stack": {
     "project_name": "rqlite",
@@ -124,9 +124,6 @@
           ],
           "volumes": [
             "./file:/rqlite/file"
-          ],
-          "command": [
-            "/rqlite/file"
           ]
         }
       }
@@ -361,11 +358,6 @@
       }
     ],
     "installer_profile": {
-      "runtime": {
-        "command": [
-          "/rqlite/file"
-        ]
-      },
       "startup_healthcheck": {
         "scheme": "http",
         "port": 4001,
