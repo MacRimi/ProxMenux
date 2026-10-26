@@ -369,6 +369,11 @@
           "only_when_mount_type": "managed-volume"
         }
       ],
+      "runtime": {
+        "command": [
+          "*.zim"
+        ]
+      },
       "required_host_path_prompts": [
         "/data"
       ]
