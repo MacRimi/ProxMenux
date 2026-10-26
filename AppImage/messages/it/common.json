@@ -1495,7 +1495,13 @@
       "startBeforeCheck": "Avvia il container, poi controlla gli aggiornamenti. L'assenza del badge non significa che non ci siano aggiornamenti.",
       "runCustomCommand": "Esegui comando personalizzato",
       "installedVersionUnverified": "La versione installata non è verificata. Non è stato possibile confermare la disponibilità di un aggiornamento.",
-      "versionStatusUnknown": "La disponibilità di un aggiornamento non è verificata. Le informazioni sulla versione non sono disponibili o sono incomplete."
+      "versionStatusUnknown": "La disponibilità di un aggiornamento non è verificata. Le informazioni sulla versione non sono disponibili o sono incomplete.",
+      "backgroundRunning": "{name} (CT {vmid}): un aggiornamento è in corso sul server.",
+      "backgroundOutputTrimmed": "L'output precedente è stato accorciato; l'aggiornamento prosegue normalmente.",
+      "backgroundFinished": "{name} (CT {vmid}): un aggiornamento è terminato. Visualizza il risultato.",
+      "viewBackgroundJob": "Visualizza aggiornamento",
+      "backgroundDetached": "La visualizzazione si è disconnessa. L'aggiornamento prosegue sul server; ricollegati dopo aver effettuato l'accesso.",
+      "backgroundDescription": "Chiudere questa finestra non interrompe l'aggiornamento. Usa Ctrl+C per annullarlo."
     },
     "bulkUpdate": {
       "title": "Aggiornamento in blocco",
@@ -3724,7 +3730,7 @@
       "guestBackupJobs": "Job di backup di VM e LXC: la scheda Backup elenca i job pianificati di Proxmox e li crea, modifica, abilita ed esegue; sono gli stessi di Datacenter → Backup (contributo di @MattiaC46).",
       "notificationLanguage": "Notifiche nella tua lingua: titoli, testi e riepiloghi giornalieri sono scritti nella lingua scelta per le notifiche (contributo di @Vaso73).",
       "auditReviewDate": "Audit & Report: un risultato accettato può avere una data di revisione che lo ripresenta senza ritirare la decisione, e il confronto indica se un risultato è peggiorato, migliorato o rimasto invariato (con @Vaso73).",
-      "ociCatalog": "OCI manager Apps (Technology Preview): una nuova voce nel menu di ProxMenux installa le applicazioni dalle loro immagini container ufficiali come LXC nativi di Proxmox, senza motore Docker. Il catalogo contiene 464 applicazioni.",
+      "ociCatalog": "OCI manager Apps (Technology Preview): una nuova voce nel menu di ProxMenux installa le applicazioni dalle loro immagini container ufficiali come LXC nativi di Proxmox, senza motore Docker. Il catalogo contiene 514 applicazioni.",
       "pbsSupport": "ProxMenux su Proxmox Backup Server: si installa con lo stesso comando e apre un menu proprio, con post-installazione e un Monitor che mostra lo stato, i datastore e le attività del server (contributo di @jcastro).",
       "menuSearch": "Ricerca nel menu principale: basta un nome o parte di esso per trovare un'opzione di ProxMenux, un'applicazione OCI o un Helper-Script e aprirne la prima schermata."
     }

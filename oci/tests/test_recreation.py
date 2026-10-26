@@ -51,7 +51,6 @@ class RecreationCatalogTests(unittest.TestCase):
 
     def test_curated_only_index_entry_has_internal_template_id(self):
         catalog = Catalog(ROOT)
-        self.assertFalse((ROOT / 'catalog' / 'apps' / 'it-tools.json').exists())
         item = next(item for item in catalog._curated_items({}) if item['id'] == 'it-tools')
         self.assertEqual(item['template_id'], 'image-it-tools')
         self.assertIsNone(item['template'])

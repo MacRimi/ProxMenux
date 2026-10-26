@@ -141,8 +141,8 @@
       "tagline": "Eccellente per la scrittura e la traduzione. Veloce ed economico.",
       "items": [
         "Chiave API: <a>console.anthropic.com/settings/keys</a>",
-        "Esempi dall’elenco di modelli incluso: <code>claude-haiku-4-5-20251001</code>, <code>claude-sonnet-4-6</code>, <code>claude-opus-4-6</code>.",
-        "Raccomandazione inclusa: <strong><code>claude-haiku-4-5-20251001</code></strong>, uno snapshot fisso anziché un alias variabile."
+        "Esempi dall’elenco di modelli incluso: <code>claude-haiku-5-5</code>, <code>claude-sonnet-5-5</code>, <code>claude-opus-5-5</code>.",
+        "Raccomandazione inclusa: <strong><code>claude-haiku-5-5</code></strong>, il modello Claude attuale più economico."
       ]
     },
     "gemini": {

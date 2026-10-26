@@ -514,13 +514,10 @@ def get_provider_models():
                     'message': f'Found {len(models)} local models'
                 })
         
-        # Handle Anthropic - no models list API, return verified models directly
+        # Handle Anthropic - return verified models directly
         if provider == 'anthropic':
-            models = list(verified_models) if verified_models else [
-                'claude-3-5-haiku-latest',
-                'claude-3-5-sonnet-latest',
-                'claude-3-opus-latest',
-            ]
+            from ai_providers.anthropic_provider import AnthropicProvider
+            models = list(verified_models) if verified_models else list(AnthropicProvider.KNOWN_MODELS)
             return jsonify({
                 'success': True,
                 'models': sorted(models),

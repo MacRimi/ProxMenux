@@ -46,8 +46,9 @@ STOP_TASKS = {'vzstop', 'vzshutdown', 'vzsuspend', 'vzreboot', 'vzdestroy', 'vzm
 HOST_TASKS = {'stopall', 'migrateall'}
 
 
-def new_state():
-    return {'seen': None, 'since': None, 'attempts': 0, 'retry_at': 0.0, 'settled': False, 'noticed': None}
+def new_state(installation_id=None):
+    return {'installation_id': installation_id, 'seen': None, 'since': None,
+            'attempts': 0, 'retry_at': 0.0, 'settled': False, 'noticed': None}
 
 
 def notice_due(state, now):
@@ -117,21 +118,35 @@ def decide(state, running, now, busy, requested):
 
 
 def watched(root):
-    """The installed applications that asked for the watchdog: {vmid: name}."""
+    """The installed applications that asked for it: {vmid: (name, identity)}."""
     found = {}
     for path in sorted(root.glob('*/oci-compose.json')):
         try:
-            record = json.loads(path.read_text())
-            vmid = int(record['vmid'])
-        except (OSError, ValueError, KeyError, TypeError):
+            vmid = int(path.parent.name)
+            record = instances.read(root, vmid)
+            if record.get('status') != 'installed' or record.get('deployment', {}).get('watchdog') is not True:
+                continue
+            if record.get('pending_stack_transaction') or record.get('pending_transaction'):
+                continue
+            title = record.get('template', {}).get('catalog_ui', {}).get('title')
+            name = (title.get('en_US') if isinstance(title, dict) else title) or f'CT {vmid}'
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
             continue
-        if record.get('status') != 'installed' or record.get('deployment', {}).get('watchdog') is not True:
-            continue
-        if record.get('pending_stack_transaction') or record.get('pending_transaction'):
-            continue
-        title = record.get('template', {}).get('catalog_ui', {}).get('title')
-        found[vmid] = (title.get('en_US') if isinstance(title, dict) else title) or f'CT {vmid}'
+        found[vmid] = (name, record['installation_id'])
     return found
+
+
+def same_installation(vmid, installation_id):
+    """Match the live identity; None means it could not be read this time."""
+    if not (CONFIGS / f'{vmid}.conf').is_file():
+        return False
+    try:
+        config = subprocess.run(['pct', 'config', str(vmid)], capture_output=True, check=False, timeout=30)
+        if config.returncode == 0:
+            return instances.identity(config.stdout) == installation_id
+    except (OSError, ValueError, subprocess.SubprocessError):
+        pass
+    return None
 
 
 def is_running(vmid):
@@ -201,24 +216,50 @@ def look(states, now):
     apps = watched(instances.ROOT)
     for vmid in set(states) - set(apps):
         del states[vmid]
-    for vmid, name in apps.items():
-        state = states.setdefault(vmid, new_state())
-        action = decide(state, is_running(vmid), now, lambda: is_busy(vmid, now),
-                        lambda seen: stop_requested(read_tasks(), vmid, seen))
-        data = {'app_name': name, 'vmid': vmid, 'containers': f'CT {vmid}'}
-        if action == 'start':
-            print(translate('CT {vmid} ({name}) stopped on its own; starting it again (attempt {attempt})').format(
-                vmid=vmid, name=name, attempt=state['attempts']), flush=True)
-            try:
-                started = start(vmid)
-            except (OSError, subprocess.SubprocessError):
-                started = False
-            if started and notice_due(state, now):
-                oci_operation_notice.notify('oci_watchdog_restarted', data)
-        elif action == 'give-up':
-            print(translate('CT {vmid} ({name}) could not be kept running; it is left stopped').format(
-                vmid=vmid, name=name), flush=True)
-            oci_operation_notice.notify('oci_watchdog_failed', data)
+    for vmid, (name, installation_id) in apps.items():
+        state = states.get(vmid)
+        if state is None or state.get('installation_id') != installation_id:
+            state = states[vmid] = new_state(installation_id)
+        running = is_running(vmid)
+        if running or state['seen'] is None or state['settled']:
+            decide(state, running, now, lambda: is_busy(vmid, now),
+                   lambda seen: stop_requested(read_tasks(), vmid, seen))
+            continue
+        notice = None
+        try:
+            # Updates/removals hold this lock too. Recheck the record and the
+            # live identity before deciding, without charging busy operations a retry.
+            with instances.locked(instances.ROOT):
+                current = watched(instances.ROOT).get(vmid)
+                if current is None or current[1] != installation_id:
+                    states.pop(vmid, None)
+                    continue
+                matches = same_installation(vmid, installation_id)
+                if matches is None:
+                    continue
+                if not matches:
+                    states.pop(vmid, None)
+                    continue
+                name = current[0]
+                action = decide(state, is_running(vmid), now, lambda: is_busy(vmid, now),
+                                lambda seen: stop_requested(read_tasks(), vmid, seen))
+                if action == 'start':
+                    print(translate('CT {vmid} ({name}) stopped on its own; starting it again (attempt {attempt})').format(
+                        vmid=vmid, name=name, attempt=state['attempts']), flush=True)
+                    try:
+                        started = start(vmid)
+                    except (OSError, subprocess.SubprocessError):
+                        started = False
+                    if started and notice_due(state, now):
+                        notice = 'oci_watchdog_restarted'
+                elif action == 'give-up':
+                    print(translate('CT {vmid} ({name}) could not be kept running; it is left stopped').format(
+                        vmid=vmid, name=name), flush=True)
+                    notice = 'oci_watchdog_failed'
+        except BlockingIOError:
+            continue
+        if notice:
+            oci_operation_notice.notify(notice, {'app_name': name, 'vmid': vmid, 'containers': f'CT {vmid}'})
 
 
 def run():

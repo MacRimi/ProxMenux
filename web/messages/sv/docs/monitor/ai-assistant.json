@@ -141,8 +141,8 @@
       "tagline": "Utmärkt för att skriva och översätta. Snabb och ekonomisk.",
       "items": [
         "API-nyckel: <a>console.anthropic.com/settings/keys</a>",
-        "Exempel från den medföljande modellistan: <code>claude-haiku-4-5-20251001</code>, <code>claude-sonnet-4-6</code>, <code>claude-opus-4-6</code>.",
-        "Medföljande rekommendation: <strong><code>claude-haiku-4-5-20251001</code></strong>, en fast ögonblicksbild i stället för ett rörligt alias."
+        "Exempel från den medföljande modellistan: <code>claude-haiku-5-5</code>, <code>claude-sonnet-5-5</code>, <code>claude-opus-5-5</code>.",
+        "Medföljande rekommendation: <strong><code>claude-haiku-5-5</code></strong>, den mest ekonomiska aktuella Claude-modellen."
       ]
     },
     "gemini": {
