@@ -187,6 +187,31 @@ class JobTests(unittest.TestCase):
         self.assertEqual(job.exit_code, 124)
         self.callback.assert_called_once()
 
+    def test_cancel_waits_for_the_runners_original_state_cleanup(self):
+        # apply_updates.sh's EXIT trap may need a 60s package probe followed
+        # by `pct shutdown --timeout 60`. A two-second kill truncates that trap.
+        self.script.write_text(
+            f"trap 'sleep 2.3; echo restored >> {shlex.quote(str(self.events))}; exit 0' TERM\n"
+            + self.script.read_text())
+        job = self.start()
+        wait_for(lambda: self.events.exists())
+        job.cancel()
+        wait_for(lambda: job.state == 'complete')
+        self.assertEqual(job.exit_code, 130)
+        self.assertEqual(self.events.read_text().splitlines(), ['backup', 'restored'])
+        self.assertNotIn('update', self.events.read_text())
+        self.callback.assert_called_once()
+        self.assertGreater(jobs.STOP_GRACE, 120)
+
+    def test_timeout_still_reaps_a_process_that_ignores_termination(self):
+        self.script.write_text("trap '' TERM\necho ready\nwhile :; do sleep .02; done\n")
+        with patch.object(jobs, 'MAX_RUNTIME', .15), patch.object(jobs, 'STOP_GRACE', .1):
+            job = self.start()
+            wait_for(lambda: job.state == 'complete')
+        self.assertEqual(job.exit_code, 124)
+        self.assertIsNotNone(job.process.poll())
+        self.callback.assert_called_once()
+
     def test_output_is_bounded_and_cursor_replay_is_read_only(self):
         job = self.start()
         wait_for(lambda: self.events.exists())

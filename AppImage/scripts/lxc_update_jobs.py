@@ -35,6 +35,9 @@ PARAMS = {
 RUN_ID = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 INTERACTION_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 MAX_RUNTIME = 4 * 3600
+# The shared runner restores a guest it started in its EXIT trap. Its package
+# observation and `pct shutdown --timeout 60` need time after SIGTERM, too.
+STOP_GRACE = 300
 RESULT_TTL = 6 * 3600
 MAX_OUTPUT = 256 * 1024
 MAX_JOBS = 32
@@ -187,7 +190,7 @@ class UpdateJob:
                             break
                     if time.monotonic() - self.started >= MAX_RUNTIME:
                         self._signal("timeout")
-                    if running and self.stop_at and now - self.stop_at >= 2:
+                    if running and self.stop_at and now - self.stop_at >= STOP_GRACE:
                         try:
                             os.killpg(self.process.pid, signal.SIGKILL)
                         except ProcessLookupError:
@@ -213,7 +216,7 @@ class UpdateJob:
             self._append(f"\r\nUpdate viewer failed: {type(exc).__name__}\r\n")
             self._signal("viewer failure")
             try:
-                self.process.wait(timeout=2)
+                self.process.wait(timeout=STOP_GRACE)
             except subprocess.TimeoutExpired:
                 os.killpg(self.process.pid, signal.SIGKILL)
                 self.process.wait()
