@@ -31,7 +31,8 @@
     "repository": "https://github.com/InvoiceShelf/InvoiceShelf",
     "tips": [
       "The initial visit opens the setup wizard. The SQLite database is stored under /var/www/html/storage.",
-      "The upstream Docker image includes the web server and scheduler in one image; there is no database or scheduler container to add."
+      "The upstream Docker image includes the web server and scheduler in one image; there is no database or scheduler container to add.",
+      "For HTTPS behind a reverse proxy, update APP_URL, SESSION_DOMAIN and SANCTUM_STATEFUL_DOMAINS to match the public domain and port."
     ],
     "mini_changelog": [],
     "display_version": null,
@@ -44,7 +45,7 @@
     "revision": "479f2396569959064fc6ca7a2bb36af30920d199",
     "image_repository_url": "https://hub.docker.com/r/invoiceshelf/invoiceshelf",
     "readme_pushed_at": "",
-    "compose_sha256": "5c855909373c8b9a8f3c4997fd24e06d8f11f303a2f318ddf084b6185efc43b4",
+    "compose_sha256": "efc376b06def85ad573a1d29b1ef3f2b02c5b23bc99b6d2fc5253e82333b1f25",
     "generated_at": "2026-10-26T06:12:09+00:00",
     "readme_raw_url": "https://raw.githubusercontent.com/InvoiceShelf/docker/master/README.md"
   },
@@ -123,6 +124,22 @@
         "required": true,
         "sensitive": false,
         "source": "upstream-documentation"
+      },
+      {
+        "name": "SESSION_DOMAIN",
+        "example": "@CONTAINER_ADDRESS@",
+        "required": true,
+        "sensitive": false,
+        "container_address": "@CONTAINER_ADDRESS@",
+        "source": "upstream-documentation"
+      },
+      {
+        "name": "SANCTUM_STATEFUL_DOMAINS",
+        "example": "@CONTAINER_ADDRESS@:8080",
+        "required": true,
+        "sensitive": false,
+        "container_address": "@CONTAINER_ADDRESS@:8080",
+        "source": "upstream-documentation"
       }
     ],
     "volumes": [
@@ -171,7 +188,7 @@
     "related_services": [],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "{\n  \"name\": \"invoiceshelf\",\n  \"services\": {\n    \"invoiceshelf\": {\n      \"image\": \"docker.io/invoiceshelf/invoiceshelf:latest\",\n      \"container_name\": \"invoiceshelf\",\n      \"restart\": \"unless-stopped\",\n      \"ports\": [\n        \"8090:8080/tcp\"\n      ],\n      \"volumes\": [\n        \"./invoiceshelf/storage:/var/www/html/storage\",\n        \"./invoiceshelf/modules:/var/www/html/Modules\"\n      ],\n      \"environment\": {\n        \"APP_NAME\": \"InvoiceShelf\",\n        \"APP_ENV\": \"production\",\n        \"APP_DEBUG\": \"false\",\n        \"APP_URL\": \"http://@CONTAINER_ADDRESS@:8080\",\n        \"DB_CONNECTION\": \"sqlite\",\n        \"DB_DATABASE\": \"/var/www/html/storage/app/database.sqlite\",\n        \"CACHE_STORE\": \"file\",\n        \"SESSION_DRIVER\": \"file\",\n        \"SESSION_LIFETIME\": \"240\"\n      }\n    }\n  }\n}"
+    "original_compose": "{\n  \"name\": \"invoiceshelf\",\n  \"services\": {\n    \"invoiceshelf\": {\n      \"image\": \"docker.io/invoiceshelf/invoiceshelf:latest\",\n      \"container_name\": \"invoiceshelf\",\n      \"restart\": \"unless-stopped\",\n      \"ports\": [\n        \"8090:8080/tcp\"\n      ],\n      \"volumes\": [\n        \"./invoiceshelf/storage:/var/www/html/storage\",\n        \"./invoiceshelf/modules:/var/www/html/Modules\"\n      ],\n      \"environment\": {\n        \"APP_NAME\": \"InvoiceShelf\",\n        \"APP_ENV\": \"production\",\n        \"APP_DEBUG\": \"false\",\n        \"APP_URL\": \"http://@CONTAINER_ADDRESS@:8080\",\n        \"DB_CONNECTION\": \"sqlite\",\n        \"DB_DATABASE\": \"/var/www/html/storage/app/database.sqlite\",\n        \"CACHE_STORE\": \"file\",\n        \"SESSION_DRIVER\": \"file\",\n        \"SESSION_LIFETIME\": \"240\",\n        \"SESSION_DOMAIN\": \"@CONTAINER_ADDRESS@\",\n        \"SANCTUM_STATEFUL_DOMAINS\": \"@CONTAINER_ADDRESS@:8080\"\n      }\n    }\n  }\n}"
   },
   "compose_stack": {
     "project_name": "invoiceshelf",
