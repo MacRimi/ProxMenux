@@ -42,7 +42,7 @@
     "provider": "rqlite",
     "repository": "https://github.com/rqlite/rqlite",
     "revision": "b84d5f9796360a0640baf654cc6c753b78eb5cbe",
-    "image_repository_url": "https://hub.docker.com/r/rqlite/rqlite",
+    "image_repository_url": "https://github.com/rqlite/rqlite/pkgs/container/rqlite",
     "readme_pushed_at": "",
     "compose_sha256": "05d6ccf9931bb85374fae008ca8d0b9b40913f9d8db39130c5c5723f56c7683a",
     "generated_at": "2026-10-26T07:25:00+00:00",
@@ -52,9 +52,9 @@
     "service_name": "rqlite",
     "container_name": "rqlite",
     "image": {
-      "reference": "rqlite/rqlite:latest",
-      "registry": "docker.io",
-      "repository": "rqlite/rqlite",
+      "reference": "ghcr.io/rqlite/rqlite:latest",
+      "registry": "ghcr.io",
+      "repository": "ghcr.io/rqlite/rqlite",
       "tag": "latest",
       "digest": null,
       "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
@@ -97,7 +97,7 @@
     "related_services": [],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "{\n  \"name\": \"rqlite\",\n  \"services\": {\n    \"rqlite\": {\n      \"image\": \"rqlite/rqlite:latest\",\n      \"restart\": \"unless-stopped\",\n      \"ports\": [\n        \"4001:4001/tcp\",\n        \"4002:4002/tcp\"\n      ],\n      \"volumes\": [\n        \"./file:/rqlite/file\"\n      ],\n      \"command\": [\n        \"/rqlite/file\"\n      ]\n    }\n  }\n}"
+    "original_compose": "{\n  \"name\": \"rqlite\",\n  \"services\": {\n    \"rqlite\": {\n      \"image\": \"ghcr.io/rqlite/rqlite:latest\",\n      \"restart\": \"unless-stopped\",\n      \"ports\": [\n        \"4001:4001/tcp\",\n        \"4002:4002/tcp\"\n      ],\n      \"volumes\": [\n        \"./file:/rqlite/file\"\n      ],\n      \"command\": [\n        \"/rqlite/file\"\n      ]\n    }\n  }\n}"
   },
   "compose_stack": {
     "project_name": "rqlite",
@@ -108,7 +108,7 @@
     "services": [
       {
         "name": "rqlite",
-        "image": "rqlite/rqlite:latest",
+        "image": "ghcr.io/rqlite/rqlite:latest",
         "is_main": true,
         "role": "frontend",
         "vmid_offset": 0,
@@ -116,7 +116,7 @@
         "frontend_network": true,
         "private_network": false,
         "compose": {
-          "image": "rqlite/rqlite:latest",
+          "image": "ghcr.io/rqlite/rqlite:latest",
           "restart": "unless-stopped",
           "ports": [
             "4001:4001/tcp",

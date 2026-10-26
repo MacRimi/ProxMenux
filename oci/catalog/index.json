@@ -13873,7 +13873,7 @@
         "amd64"
       ],
       "updated_at": null,
-      "main_image": "rqlite/rqlite:latest",
+      "main_image": "ghcr.io/rqlite/rqlite:latest",
       "category": "databases",
       "category_label": "Databases",
       "replaces_discovered_ids": [],
