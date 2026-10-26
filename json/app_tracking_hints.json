@@ -634,6 +634,7 @@
     "github_source": "releases",
     "installed_regex": "v?(\\d+\\.\\d+\\.\\d+)",
     "installed_via": "command",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/changedetection.webp",
     "repo": "dgtlmoon/changedetection.io",
     "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)",
     "website": "https://changedetection.io/"
@@ -2004,6 +2005,13 @@
     "website": "https://github.com/androidseb25/iGotify-Notification-Assistent"
   },
   "immich": {
+    "alt_detectors": [
+      {
+        "container_name": "immich_server",
+        "installed_via": "docker_label",
+        "label": "org.opencontainers.image.version"
+      }
+    ],
     "default_ports": [
       2283
     ],
@@ -2441,6 +2449,26 @@
     "repo": "thedevs-network/kutt",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://kutt.to"
+  },
+  "lazylibrarian": {
+    "command_argv": [
+      "git",
+      "-C",
+      "/opt/LazyLibrarian",
+      "rev-parse",
+      "HEAD"
+    ],
+    "default_ports": [
+      5299
+    ],
+    "installed_regex": "([0-9a-fA-F]{40})",
+    "installed_via": "command",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/lazylibrarian.webp",
+    "tag_regex": "([0-9a-fA-F]{40})",
+    "upstream_json_path": "id",
+    "upstream_type": "http_json",
+    "upstream_url": "https://gitlab.com/api/v4/projects/LazyLibrarian%2FLazyLibrarian/repository/commits/master",
+    "website": "https://gitlab.com/LazyLibrarian/LazyLibrarian"
   },
   "leafwiki": {
     "default_ports": [
@@ -3071,6 +3099,14 @@
     "repo": "neo4j/neo4j",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://neo4j.com/product/neo4j-graph-database/"
+  },
+  "netalertx": {
+    "container_name": "netalertx",
+    "github_source": "releases",
+    "installed_via": "docker_label",
+    "label": "org.opencontainers.image.version",
+    "repo": "netalertx/NetAlertX",
+    "tag_regex": "v?(\\d+(?:\\.\\d+){1,3})"
   },
   "netbird": {
     "github_source": "releases",
@@ -3733,6 +3769,27 @@
     "repo": "paymenter/paymenter",
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://paymenter.org/"
+  },
+  "peanut": {
+    "default_ports": [
+      8080
+    ],
+    "file_fallbacks": [
+      {
+        "path": "/root/.peanut",
+        "regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
+        "source": "helper_marker"
+      }
+    ],
+    "file_path": "/opt/peanut/package.json",
+    "file_regex": "\"version\"\\s*:\\s*\"v?(\\d+\\.\\d+\\.\\d+)\"",
+    "github_source": "releases",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/peanut.webp",
+    "repo": "Brandawg93/PeaNUT",
+    "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)",
+    "upstream_type": "github",
+    "website": "https://github.com/Brandawg93/PeaNUT/"
   },
   "peertube": {
     "default_ports": [
@@ -5113,6 +5170,19 @@
     "tag_regex": "(?i)(?:v|release[-_/]?)?(\\d+(?:\\.\\d+){1,3}(?:[-+._][0-9A-Za-z.-]+)?)",
     "website": "https://teable.io/"
   },
+  "technitiumdns": {
+    "default_ports": [
+      5380
+    ],
+    "file_path": "/root/.technitium",
+    "file_regex": "(\\d+(?:\\.\\d+){1,3})",
+    "installed_via": "file",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/technitium.webp",
+    "upstream_json_path": "updateVersion",
+    "upstream_type": "http_json",
+    "upstream_url": "https://go.technitium.com/?id=42",
+    "website": "https://technitium.com/dns/"
+  },
   "teddycloud": {
     "default_ports": [
       80
@@ -5573,6 +5643,15 @@
         "file_path": "/root/.vaultwarden",
         "file_regex": "v?(\\d+\\.\\d+\\.\\d+)",
         "installed_via": "file"
+      },
+      {
+        "binary_args": [
+          "--version"
+        ],
+        "binary_path": "/vaultwarden",
+        "container_name": "vaultwarden",
+        "installed_regex": "(?im)^Vaultwarden\\s+v?(\\d+\\.\\d+\\.\\d+)",
+        "installed_via": "docker_exec"
       }
     ],
     "binary_path": "/opt/vaultwarden/bin/vaultwarden",
