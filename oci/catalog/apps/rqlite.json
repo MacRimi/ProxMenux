@@ -44,8 +44,8 @@
     "revision": "b84d5f9796360a0640baf654cc6c753b78eb5cbe",
     "image_repository_url": "https://hub.docker.com/r/rqlite/rqlite",
     "readme_pushed_at": "",
-    "compose_sha256": "02897034112dbb5ec8ade00916662dbed07356db366083700c3df87ed862ff21",
-    "generated_at": "2026-10-26T00:00:00+00:00",
+    "compose_sha256": "05d6ccf9931bb85374fae008ca8d0b9b40913f9d8db39130c5c5723f56c7683a",
+    "generated_at": "2026-10-26T07:25:00+00:00",
     "readme_raw_url": "https://rqlite.io/docs/"
   },
   "container_contract": {
@@ -97,7 +97,7 @@
     "related_services": [],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "{\n  \"name\": \"rqlite\",\n  \"services\": {\n    \"rqlite\": {\n      \"image\": \"rqlite/rqlite:latest\",\n      \"restart\": \"unless-stopped\",\n      \"ports\": [\n        \"4001:4001/tcp\",\n        \"4002:4002/tcp\"\n      ],\n      \"volumes\": [\n        \"./file:/rqlite/file\"\n      ],\n      \"command\": [\n        \"-on-disk-path=/rqlite/file\"\n      ]\n    }\n  }\n}"
+    "original_compose": "{\n  \"name\": \"rqlite\",\n  \"services\": {\n    \"rqlite\": {\n      \"image\": \"rqlite/rqlite:latest\",\n      \"restart\": \"unless-stopped\",\n      \"ports\": [\n        \"4001:4001/tcp\",\n        \"4002:4002/tcp\"\n      ],\n      \"volumes\": [\n        \"./file:/rqlite/file\"\n      ],\n      \"command\": [\n        \"/rqlite/file\"\n      ]\n    }\n  }\n}"
   },
   "compose_stack": {
     "project_name": "rqlite",
@@ -126,7 +126,7 @@
             "./file:/rqlite/file"
           ],
           "command": [
-            "-on-disk-path=/rqlite/file"
+            "/rqlite/file"
           ]
         }
       }
@@ -363,7 +363,7 @@
     "installer_profile": {
       "runtime": {
         "command": [
-          "-on-disk-path=/rqlite/file"
+          "/rqlite/file"
         ]
       },
       "startup_healthcheck": {
