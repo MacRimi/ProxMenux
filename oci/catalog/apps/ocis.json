@@ -34,7 +34,8 @@
     "repository": "https://github.com/owncloud/ocis",
     "tips": [
       "The profile runs the single official oCIS image and initializes its built-in services in that container; separate Collabora/office integrations are not included.",
-      "The web interface uses HTTPS with a self-signed certificate by default. ProxMenux checks the startup endpoint without validating that self-signed certificate."
+      "The web interface uses HTTPS with a self-signed certificate by default. ProxMenux checks the startup endpoint without validating that self-signed certificate.",
+      "If you use Nginx Proxy Manager, set OCIS_URL to the exact public HTTPS hostname in Advanced install (without :9200 when NPM listens on 443). Forward that host to the LXC on port 9200 with WebSockets enabled; using the LXC IP here can make the web interface request resources from the self-signed internal address and show a missing-config page."
     ],
     "mini_changelog": [],
     "display_version": null,
