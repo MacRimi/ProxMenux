@@ -300,6 +300,10 @@
       "stop_signal": "import-from-oci-image"
     },
     "installer_profile": {
+      "volume_owner": {
+        "uid": 1000,
+        "gid": 1000
+      },
       "generated_sensitive_environment": {
         "INSTATIC_SECRET_KEY": {
           "strategy": "token-hex",
