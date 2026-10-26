@@ -365,7 +365,8 @@ def apply(root, record, candidate, config, acknowledge_external_data=False):
                 Path(mount['source']).mkdir(parents=True, exist_ok=True)
         host_mounts.verify_sources(original_sources)
         # Capture newly-created directories before installing their mounts.
-        pinned = {p: host_mounts.validate_source(p) for p in desired_sources}
+        pinned = {p: host_mounts.validate_source(p, declared=value.get('declared', False))
+                  for p, value in desired_sources.items()}
         for path, previous in desired_sources.items():
             if previous['exists'] and not host_mounts.same_source(previous, pinned[path]):
                 raise ValueError(translate('A shared source does not match its recorded identity'))

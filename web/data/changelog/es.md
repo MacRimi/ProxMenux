@@ -141,6 +141,7 @@ ProxMenux no construye sus propios contenedores para estas aplicaciones: lee la 
 - **Las variables cambiadas en Proxmox se conservan.** Una contraseña cambiada tras el primer inicio de sesión, o una variable añadida desde Proxmox, se muestra por su nombre, sin su valor, y se guarda en el oci-compose antes de que Actualizar o Modificar continúen.
 - **La imagen descargada solo se ofrece para eliminarla después de reconstruir un contenedor a partir de ella**, no después de un cambio aplicado al contenedor en marcha.
 - **La lista de aplicaciones instaladas vuelve después de cada operación**, ya sea una actualización, un cambio o una eliminación, sin volver a leer todas las aplicaciones.
+- **Una aplicación que monta una ruta de sistema del host, como `/run/dbus` en Home Assistant o `/run/udev` en Roon Server, se actualiza y se modifica como cualquier otra** ([#531](https://github.com/MacRimi/ProxMenux/issues/531), reportado por [@nortuzar](https://github.com/nortuzar)).
 
 ### Vigilancia, backups y clústeres
 

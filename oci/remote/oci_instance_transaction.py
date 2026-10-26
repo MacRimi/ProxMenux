@@ -354,12 +354,28 @@ def is_file_bind(mount, files=()):
     return mount['type'] == 'host-bind' and (mount['source'] in files or Path(mount['source']).is_file())
 
 
+# The host paths the installer mounts as the recipe gives them, never asking.
+SYSTEM_BIND_PREFIXES = ('/dev/', '/proc/', '/sys/', '/run/', '/var/run/')
+
+
 def declared_sources(contract):
-    """The host paths the recipe of a host monitor mounts on its own."""
-    if not contract['deployment'].get('host_monitor'):
-        return set()
-    profile = contract['template'].get('proxmox', {}).get('installer_profile', {})
-    return {item['source'] for item in profile.get('host_monitor_mounts', [])}
+    """The host paths the recipe mounts on its own: those of a host monitor,
+    and the system paths of its volumes, such as /run/dbus."""
+    template = contract.get('template') or {}
+    profile = template.get('proxmox', {}).get('installer_profile', {})
+    declared = set()
+    if contract['deployment'].get('host_monitor'):
+        declared |= {item['source'] for item in profile.get('host_monitor_mounts', [])}
+    system = {}
+    for volume in template.get('container_contract', {}).get('volumes', []):
+        source = str(volume.get('compose_source_example') or volume.get('container_path') or '')
+        if 'host-bind' in volume.get('installation_choice', []) and (
+                source.startswith(SYSTEM_BIND_PREFIXES)
+                or str(volume.get('container_path', '')).startswith(SYSTEM_BIND_PREFIXES)):
+            system[volume['container_path']] = source
+    declared |= {mount['source'] for mount in contract['deployment'].get('mounts', [])
+                 if mount['type'] == 'host-bind' and system.get(mount['container_path']) == mount['source']}
+    return declared
 
 
 def profile_keys(deployment):

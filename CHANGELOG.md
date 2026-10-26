@@ -142,6 +142,7 @@ ProxMenux does not build its own containers for these applications: it reads the
 - **Variables changed in Proxmox are carried over.** A password changed after the first login, or a variable added from Proxmox, is listed by name, without its value, and saved in oci-compose before Update or Modify continues.
 - **The downloaded image is offered for deletion only after a container was rebuilt from it**, not after a change applied to the running container.
 - **The list of installed applications comes back after each operation**, an update, a change or a removal, without reading every application again.
+- **An application that mounts a system path of the host, such as `/run/dbus` in Home Assistant or `/run/udev` in Roon Server, is updated and modified like any other** ([#531](https://github.com/MacRimi/ProxMenux/issues/531), reported by [@nortuzar](https://github.com/nortuzar)).
 
 ### Watchdog, backups and clusters
 
