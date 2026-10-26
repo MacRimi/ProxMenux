@@ -111,6 +111,18 @@ class OpenAICompatibleModelTests(unittest.TestCase):
                 self.assertNotIn("temperature", provider.captured_payload)
                 self.assertNotIn("max_tokens", provider.captured_payload)
 
+    def test_classic_chat_models_keep_chat_contract(self):
+        for model in ("gpt-4.1", "gpt-4o-mini"):
+            with self.subTest(model=model):
+                provider = CapturingOpenAIProvider(api_key="token", model=model)
+
+                self.assertEqual(provider.generate("system", "user", max_tokens=123), "ok")
+
+                self.assertEqual(provider.captured_payload["max_tokens"], 123)
+                self.assertEqual(provider.captured_payload["temperature"], 0.3)
+                self.assertNotIn("reasoning_effort", provider.captured_payload)
+                self.assertNotIn("max_completion_tokens", provider.captured_payload)
+
     def test_runtime_ai_config_prefers_provider_specific_model(self):
         manager = self._manager({
             "ai_enabled": "true",
