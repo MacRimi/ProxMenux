@@ -1,0 +1,366 @@
+name: Feature tests
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/test-features.yml'
+      - 'AppImage/scripts/notification_channels.py'
+      - 'AppImage/components/apprise-service-help.tsx'
+      - 'AppImage/components/notification-settings.tsx'
+      - 'tests/test_apprise_services.py'
+      - 'tests/test_apprise_service_help.cjs'
+      - 'AppImage/scripts/flask_vm_backup_routes.py'
+      - 'AppImage/components/backup-storage-retention.tsx'
+      - 'AppImage/components/backup-tab.tsx'
+      - 'AppImage/components/vm-backup-jobs.tsx'
+      - 'AppImage/lib/backup-retention.ts'
+      - 'tests/test_vm_backup_jobs_api.py'
+      - 'tests/test_backup_storage_retention.cjs'
+      - 'tests/test_figurine_installation.py'
+      - 'scripts/post_install/customizable_post_install.sh'
+      - 'AppImage/scripts/post_install_versions.py'
+      - 'AppImage/scripts/flask_proxmenux_routes.py'
+      - 'AppImage/scripts/guest_backup_archives.py'
+      - 'AppImage/scripts/flask_server.py'
+      - 'AppImage/scripts/jwt_middleware.py'
+      - 'AppImage/scripts/build_appimage.sh'
+      - 'AppImage/components/guest-backup-list.tsx'
+      - 'AppImage/components/virtual-machines.tsx'
+      - 'AppImage/lib/guest-backup-archives.ts'
+      - 'AppImage/messages/**'
+      - 'tests/test_guest_backup_archives.*'
+      - 'AppImage/scripts/lvm_device_scope.py'
+      - 'AppImage/scripts/disk_temperature_history.py'
+      - 'AppImage/scripts/health_monitor.py'
+      - 'AppImage/scripts/flask_notification_routes.py'
+      - 'AppImage/scripts/proxmox_storage_monitor.py'
+      - 'AppImage/scripts/tests/test_host_backup_node.py'
+      - 'AppImage/scripts/tests/test_proxmox_node_name.py'
+      - 'AppImage/scripts/tests/test_pve_notifications_cfg_writes.py'
+      - 'tests/test_lvm_disk_read_policy.py'
+      - 'oci/**'
+      - 'AppImage/scripts/oci_menu_bridge.py'
+      - 'AppImage/scripts/lxc_apps.py'
+      - 'AppImage/scripts/tests/test_oci_parallel_checks.py'
+      - 'AppImage/scripts/*pbs*.py'
+      - 'AppImage/scripts/tests/test_pbs.py'
+      - 'AppImage/scripts/tests/test_pbs_i18n.py'
+      - 'AppImage/scripts/auth_manager.py'
+      - 'AppImage/components/pbs-*.tsx'
+      - 'AppImage/components/proxmox-dashboard.tsx'
+      - 'AppImage/tests/pbs-navigation.cjs'
+      - 'scripts/global/proxmox_platform.py'
+      - 'scripts/global/platform-functions.sh'
+      - 'scripts/global/repository-functions.sh'
+      - 'scripts/menus/pbs_menu.sh'
+      - 'scripts/utilities/pbs_update.sh'
+      - 'scripts/global/update-pbs.sh'
+      - 'scripts/menus/menu_post_install.sh'
+      - 'scripts/post_install/*.sh'
+  push:
+    branches: [main, develop]
+    paths:
+      - '.github/workflows/test-features.yml'
+      - 'AppImage/scripts/notification_channels.py'
+      - 'AppImage/components/apprise-service-help.tsx'
+      - 'tests/test_apprise_services.py'
+      - 'tests/test_apprise_service_help.cjs'
+      - 'AppImage/scripts/flask_vm_backup_routes.py'
+      - 'AppImage/components/backup-storage-retention.tsx'
+      - 'AppImage/lib/backup-retention.ts'
+      - 'tests/test_vm_backup_jobs_api.py'
+      - 'tests/test_backup_storage_retention.cjs'
+      - 'tests/test_figurine_installation.py'
+      - 'scripts/post_install/customizable_post_install.sh'
+      - 'AppImage/scripts/post_install_versions.py'
+      - 'AppImage/scripts/flask_proxmenux_routes.py'
+      - 'AppImage/scripts/guest_backup_archives.py'
+      - 'AppImage/scripts/flask_server.py'
+      - 'AppImage/scripts/jwt_middleware.py'
+      - 'AppImage/components/guest-backup-list.tsx'
+      - 'AppImage/components/virtual-machines.tsx'
+      - 'AppImage/lib/guest-backup-archives.ts'
+      - 'tests/test_guest_backup_archives.*'
+      - 'AppImage/scripts/lvm_device_scope.py'
+      - 'AppImage/scripts/disk_temperature_history.py'
+      - 'AppImage/scripts/health_monitor.py'
+      - 'AppImage/scripts/flask_notification_routes.py'
+      - 'AppImage/scripts/proxmox_storage_monitor.py'
+      - 'AppImage/scripts/build_appimage.sh'
+      - 'AppImage/scripts/tests/test_host_backup_node.py'
+      - 'AppImage/scripts/tests/test_proxmox_node_name.py'
+      - 'AppImage/scripts/tests/test_pve_notifications_cfg_writes.py'
+      - 'tests/test_lvm_disk_read_policy.py'
+      - 'oci/**'
+      - 'AppImage/scripts/oci_menu_bridge.py'
+      - 'AppImage/scripts/lxc_apps.py'
+      - 'AppImage/scripts/tests/test_oci_parallel_checks.py'
+      - 'AppImage/scripts/*pbs*.py'
+      - 'scripts/global/proxmox_platform.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apprise-services:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        apprise: ['1.7.0', '2.0.1']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.14.0'
+      - name: Install fixture dependencies
+        run: |
+          python -m pip install 'apprise==${{ matrix.apprise }}'
+          npm ci --prefix .github/ci/offline-node --ignore-scripts --no-audit --no-fund
+      - name: Test real provider plugins with mocked HTTP
+        run: python -B -m unittest discover -s tests -p test_apprise_services.py -v
+      - name: Render provider help and locale fallback
+        env:
+          NODE_PATH: ${{ github.workspace }}/.github/ci/offline-node/node_modules
+        run: node tests/test_apprise_service_help.cjs
+
+  storage-retention:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.14.0'
+      - name: Install fixture dependencies
+        run: |
+          python -m pip install 'Flask==3.1.2'
+          npm ci --prefix .github/ci/offline-node --ignore-scripts --no-audit --no-fund
+      - name: Test native job and storage configuration APIs
+        run: python -B -m unittest discover -s tests -p test_vm_backup_jobs_api.py -v
+      - name: Test shared retention properties
+        env:
+          NODE_PATH: ${{ github.workspace }}/.github/ci/offline-node/node_modules
+        run: node tests/test_backup_storage_retention.cjs
+
+  installer-and-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check shell syntax and isolated installer regressions
+        run: |
+          bash -n scripts/post_install/customizable_post_install.sh
+          python3 -B -m unittest discover -s tests -p test_figurine_installation.py -v
+      - name: Install ARM user-mode emulation for release smoke tests
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends qemu-user
+      - name: Verify and run the pinned AMD64, ARM64 and ARMv7 release binaries
+        env:
+          FIGURINE_VERSION: '2.1.1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          scratch="$(mktemp -d)"
+          trap 'rm -rf "$scratch"' EXIT
+          while read -r arch sha; do
+            archive="figurine_linux_${arch}_v${FIGURINE_VERSION}.tar.gz"
+            target="$scratch/$arch"
+            mkdir -p "$target"
+            curl --fail --location --retry 3 --output "$target/$archive" \
+              "https://github.com/arsham/figurine/releases/download/v${FIGURINE_VERSION}/$archive"
+            printf '%s  %s\n' "$sha" "$target/$archive" | sha256sum --check
+            tar -xf "$target/$archive" -C "$target"
+            runner=()
+            case "$arch" in
+              arm64) runner=(qemu-aarch64) ;;
+              arm) runner=(qemu-arm) ;;
+            esac
+            "${runner[@]}" "$target/deploy/figurine" --version | tee "$target/version"
+            grep -F "figurine version v$FIGURINE_VERSION" "$target/version"
+            "${runner[@]}" "$target/deploy/figurine" -f "3d.flf" "ProxMenux-test" > "$target/banner"
+            test -s "$target/banner"
+            printf 'PASS: %s version and login banner\n' "$arch"
+          done <<'ASSETS'
+          amd64 f2b1c076942c94009d133df0f304a234a0994bf590b40f2927668324d578306a
+          arm64 611550ddb31a75437be3f8587bcdd029d0d890f4d820b7f494a2c6615fecba10
+          arm 429e66bded486d49f730c4a6559e728cd1e9a163a0f56a85867e2cbec010171d
+          ASSETS
+
+  guest-backups:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.14.0'
+      - name: Install fixture dependencies
+        run: |
+          python -m pip install 'Flask==3.1.2'
+          npm ci --prefix .github/ci/offline-node --ignore-scripts --no-audit --no-fund
+      - name: Test native deletion, protection, authorization and cache invalidation
+        run: python -B -m unittest discover -s tests -p test_guest_backup_archives.py -v
+      - name: Test frontend deletion and completion handling
+        env:
+          NODE_PATH: ${{ github.workspace }}/.github/ci/offline-node/node_modules
+        run: node tests/test_guest_backup_archives.cjs
+
+  disk-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test automatic LVM readers with mocked inventory and policy
+        run: python -I -B -m unittest discover -s tests -p test_lvm_disk_read_policy.py -v
+      - name: Test backup node ownership and former jobs
+        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_host_backup_node.py -v
+      - name: Test local node lookup without Proxmox API commands
+        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_proxmox_node_name.py -v
+      - name: Test notification configuration writes against a cluster filesystem fixture
+        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_pve_notifications_cfg_writes.py -v
+
+  registry-accounts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install OCI test dependencies
+        run: python3 -m pip install -r oci/requirements.txt
+      - name: Run watchdog identity and lifecycle regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -m unittest discover -s oci/tests -p test_watchdog.py -v
+      - name: Run OCI image reuse and resource edit regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p test_modify_image_reuse.py -v
+          python3 -m unittest discover -s oci/tests -p test_native_modify.py -v
+          python3 -m unittest discover -s oci/tests -p test_modify_review.py -v
+          python3 -m unittest discover -s oci/tests -p test_modify_review_transaction.py -v
+          python3 -m unittest discover -s oci/tests -p test_stage_release.py -v
+      - name: Run carried record, recovery and configuration cache regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p 'test_carried*.py' -v
+          python3 -m unittest discover -s oci/tests -p test_restore_recovery.py -v
+      - name: Run read-only volume preparation regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          test -x /bin/bash
+          test -x /usr/bin/jq
+          python3 -m unittest discover -s oci/tests -p test_readonly_volume_preparation.py -v
+      - name: Run offline registry account tests
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -m unittest discover -s oci/tests -p 'test_registry_*.py' -v
+      - name: Run OCI menu update checks and selection regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p 'test_update*.py' -v
+          python3 -m unittest discover -s AppImage/scripts/tests -p 'test_oci*.py' -v
+          python3 -m unittest discover -s oci/tests -p test_recreate_registry_digest.py -v
+      - name: Run OCI Modify latency regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p test_modify_latency.py -v
+          python3 -m unittest discover -s oci/tests -p test_menu_performance.py -v
+          python3 -m unittest discover -s oci/tests -p test_dialog_escape.py -v
+          python3 -m unittest discover -s oci/tests -p test_work_backup.py -v
+          python3 -m unittest discover -s oci/tests -p test_recreation.py -v
+      - name: Run OCI modification menu regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p test_modify_menu.py -v
+          python3 -m unittest discover -s oci/tests -p test_manage_sync_notice.py -v
+          python3 -m unittest discover -s oci/tests -p test_recreation.py -v
+          python3 -m unittest discover -s oci/tests -p test_shared_directories.py -v
+          python3 -m unittest discover -s oci/tests -p 'test_wizard*.py' -v
+      - name: Run external OCI settings regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -m unittest discover -s oci/tests -p 'test_external_tags.py' -v
+          python3 -m unittest discover -s oci/tests -p 'test_instance_reconcile.py' -v
+          python3 -m unittest discover -s oci/tests -p 'test_guessed_endpoint_healthcheck.py' -v
+          python3 -m unittest discover -s oci/tests -p 'test_runtime_home_*.py' -v
+      - name: Run managed volume startup regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -m unittest discover -s oci/tests -p 'test_managed_volume_*.py' -v
+      - name: Run catalog web-link regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 -m unittest discover -s oci/tests -p test_catalog_web_links.py -v
+
+  pbs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install test dependencies
+        run: python -m pip install Flask PyJWT cryptography pyotp segno
+      - name: Platform, real TLS, APIs, health and AppImage packaging
+        run: |
+          python -B -m unittest discover -s AppImage/scripts/tests -p test_pbs.py -v
+          python -B -m unittest discover -s AppImage/scripts/tests -p test_pbs_i18n.py -v
+          python -B -m unittest discover -s AppImage/scripts/tests -p test_auth_manager_ssl_reload.py -v
+          for script in scripts/global/platform-functions.sh scripts/global/repository-functions.sh scripts/menus/pbs_menu.sh scripts/utilities/pbs_update.sh scripts/menus/main_menu.sh scripts/post_install/auto_post_install.sh scripts/post_install/customizable_post_install.sh scripts/post_install/uninstall-tools.sh scripts/global/update-pbs.sh scripts/menus/menu_post_install.sh; do
+            bash -n "$script"
+          done
+      - uses: actions/setup-node@v6
+        if: matrix.python == '3.11'
+        with:
+          node-version: '22.14.0'
+      - name: Dashboard platform routing
+        if: matrix.python == '3.11'
+        run: |
+          npm ci --prefix .github/ci/offline-node --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+          NODE_PATH="$PWD/.github/ci/offline-node/node_modules" node AppImage/tests/pbs-navigation.cjs
