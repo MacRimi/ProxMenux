@@ -57,13 +57,6 @@
             ],
             "caption": "Hodnotenie poskytuje fakty, politika im dáva kontext a denník zaznamenáva zásahy ProxMenux."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/assessment-view.png",
-            "alt": "Audit a správy v ProxMenux Monitor so zobrazeniami Hodnotenie, Zmeny a Politika",
-            "caption": "Audit a správy s otvoreným zobrazením Hodnotenie."
-          }
         }
       ]
     },

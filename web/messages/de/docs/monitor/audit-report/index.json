@@ -57,13 +57,6 @@
             ],
             "caption": "Die Bewertung liefert die Fakten, die Richtlinie gibt ihnen Kontext und das Änderungsprotokoll erfasst die Eingriffe von ProxMenux."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/assessment-view.png",
-            "alt": "Prüfung und Bericht in ProxMenux Monitor mit den Ansichten Bewertung, Änderungen und Richtlinie",
-            "caption": "Prüfung und Bericht mit geöffneter Ansicht Bewertung."
-          }
         }
       ]
     },

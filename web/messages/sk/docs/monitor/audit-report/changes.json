@@ -40,13 +40,6 @@
             ],
             "caption": "Zachytenie sa vykoná pri operácii a konsoliduje sa, keď Monitor načíta denník."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/changes-view.png",
-            "alt": "Zobrazenie Zmeny vo funkcii Audit a správy so záznamami zoskupenými podľa voľby po inštalácii a skriptu",
-            "caption": "Zobrazenie zmien s rozdielmi v súbore upravenom ProxMenuxom."
-          }
         }
       ]
     },

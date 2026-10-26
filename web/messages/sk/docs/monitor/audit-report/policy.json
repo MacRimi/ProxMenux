@@ -17,13 +17,6 @@
             "title": "Bez deklarácie správa opisuje; s deklaráciou hodnotí",
             "body": "Hodnotenie vidí, čo robí hostiteľ, nie na čo je. Hosť bez zálohy, ktorého účel nie je deklarovaný, sa vykazuje ako pozorovanie. Ak je jeho záloha vyhlásená za požadovanú, tá istá neprítomnosť sa oznamuje ako varovanie. Nič sa nemusí vyhlásiť."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/policy-view.png",
-            "alt": "Zobrazenie Politika s hosťovskými systémami, úložiskom a prahovými hodnotami uzla",
-            "caption": "Zobrazenie Politika."
-          }
         }
       ]
     },

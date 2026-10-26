@@ -30,7 +30,6 @@
               {
                 "title": "Full audit",
                 "body": "Documents the node end to end as a technical record.",
-                "href": "/monitor/audit/sample-audit-full-report.pdf",
                 "facts": [
                   { "label": "Checks", "value": "Every available check." },
                   { "label": "Contents", "value": "Executive summary; identity and cluster; hardware; network and latency; storage; guests; passthrough; applications; findings with evidence; sources and scope." }
@@ -39,7 +38,6 @@
               {
                 "title": "Quick diagnosis",
                 "body": "Shows what needs attention without the complete inventory.",
-                "href": "/monitor/audit/sample-audit-diagnostic-report.pdf",
                 "facts": [
                   { "label": "Checks", "value": "The same checks as the full audit." },
                   { "label": "Contents", "value": "Minimal identity; critical findings; warnings; relevant observations; unverified readings and priority actions. Diagrams, inventory and long annexes are left out." }
@@ -48,7 +46,6 @@
               {
                 "title": "Inventory",
                 "body": "Describes what exists on the node without assessing it.",
-                "href": "/monitor/audit/sample-audit-inventory-report.pdf",
                 "facts": [
                   { "label": "Checks", "value": "None; no finding is classified." },
                   { "label": "Contents", "value": "Identity; cluster; CPU and memory; board, BIOS and controllers; network; storage; VMs and LXCs; passthrough; applications and elements managed by ProxMenux." }
@@ -57,7 +54,6 @@
               {
                 "title": "Security review",
                 "body": "Covers exposure and the controls over access to the node.",
-                "href": "/monitor/audit/sample-audit-security-report.pdf",
                 "facts": [
                   { "label": "Checks", "value": "The security area, plus container privileges, updates, repositories and the APT chain." },
                   { "label": "Contents", "value": "Identity and cluster; network and latency; access; firewall; 2FA; certificates; privileges; updates; repositories; state and age of Lynis." }
@@ -66,7 +62,6 @@
               {
                 "title": "Backup assurance",
                 "body": "Checks that the declared protection exists and that its backups are usable.",
-                "href": "/monitor/audit/sample-audit-backup-report.pdf",
                 "facts": [
                   { "label": "Checks", "value": "The backup area, plus storage connectivity and notification delivery." },
                   { "label": "Contents", "value": "Coverage per guest; declared recovery objective; age and result; destination; retention; verification; failed jobs; recovery and incomplete sources." }
@@ -75,20 +70,12 @@
               {
                 "title": "Capacity and wear",
                 "body": "Measures growth margin and signs of exhaustion or ageing.",
-                "href": "/monitor/audit/sample-audit-capacity-report.pdf",
                 "facts": [
                   { "label": "Checks", "value": "The storage and hardware areas, plus memory, swap, journal and the host filesystem." },
                   { "label": "Contents", "value": "Usage and thresholds; thin pools; overprovisioning; memory; inodes; ZFS; temperatures; power-on hours; SMART errors and NVMe/SSD service life." }
                 ]
               }
             ]
-          }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/audit-report-preview.png",
-            "alt": "First page of a full audit report",
-            "caption": "Every document shares the report identifier, numbered sections, date, node, profile and footer."
           }
         },
         {

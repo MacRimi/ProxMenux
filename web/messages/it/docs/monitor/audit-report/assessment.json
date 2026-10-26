@@ -152,13 +152,6 @@
       "blocks": [
         {
           "p": "La verifica di sicurezza usa il rapporto Lynis dell'host. Se Lynis non è mai stato eseguito o il rapporto supera l'età consentita dalla politica, una finestra propone <strong>Esegui con Lynis</strong>, che richiede alcuni minuti in più, oppure <strong>Esegui senza Lynis</strong>, che usa il rapporto esistente."
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/lynis-dialog.png",
-            "alt": "Dialogo che offre di eseguire la valutazione con o senza Lynis",
-            "caption": "La finestra Lynis prima di una verifica di sicurezza."
-          }
         }
       ]
     },

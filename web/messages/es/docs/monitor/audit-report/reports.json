@@ -30,7 +30,6 @@
               {
                 "title": "Auditoría completa",
                 "body": "Documenta todo el nodo como registro técnico.",
-                "href": "/monitor/audit/sample-audit-full-report.pdf",
                 "facts": [
                   {
                     "label": "Comprobaciones",
@@ -45,7 +44,6 @@
               {
                 "title": "Diagnóstico rápido",
                 "body": "Muestra lo que requiere atención sin el inventario completo.",
-                "href": "/monitor/audit/sample-audit-diagnostic-report.pdf",
                 "facts": [
                   {
                     "label": "Comprobaciones",
@@ -60,7 +58,6 @@
               {
                 "title": "Inventario",
                 "body": "Describe lo que existe en el nodo sin evaluarlo.",
-                "href": "/monitor/audit/sample-audit-inventory-report.pdf",
                 "facts": [
                   {
                     "label": "Comprobaciones",
@@ -75,7 +72,6 @@
               {
                 "title": "Revisión de seguridad",
                 "body": "Abarca la exposición y los controles de acceso al nodo.",
-                "href": "/monitor/audit/sample-audit-security-report.pdf",
                 "facts": [
                   {
                     "label": "Comprobaciones",
@@ -90,7 +86,6 @@
               {
                 "title": "Garantía de backups",
                 "body": "Comprueba que la protección declarada existe y que sus backups son utilizables.",
-                "href": "/monitor/audit/sample-audit-backup-report.pdf",
                 "facts": [
                   {
                     "label": "Comprobaciones",
@@ -105,7 +100,6 @@
               {
                 "title": "Capacidad y desgaste",
                 "body": "Mide el margen de crecimiento y las señales de agotamiento o envejecimiento.",
-                "href": "/monitor/audit/sample-audit-capacity-report.pdf",
                 "facts": [
                   {
                     "label": "Comprobaciones",
@@ -118,13 +112,6 @@
                 ]
               }
             ]
-          }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/audit-report-preview.png",
-            "alt": "Primera página de un informe de auditoría completa",
-            "caption": "Todos los documentos comparten el identificador del informe, las secciones numeradas, la fecha, el nodo, el perfil y el pie de página."
           }
         },
         {

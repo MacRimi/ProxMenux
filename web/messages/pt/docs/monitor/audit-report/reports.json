@@ -30,7 +30,6 @@
               {
                 "title": "Auditoria completa",
                 "body": "Documenta todo o nó como registo técnico.",
-                "href": "/monitor/audit/sample-audit-full-report.pdf",
                 "facts": [
                   {
                     "label": "Controlos",
@@ -45,7 +44,6 @@
               {
                 "title": "Diagnóstico rápido",
                 "body": "Mostra o que precisa de atenção sem o inventário completo.",
-                "href": "/monitor/audit/sample-audit-diagnostic-report.pdf",
                 "facts": [
                   {
                     "label": "Controlos",
@@ -60,7 +58,6 @@
               {
                 "title": "Inventário",
                 "body": "Descreve o que existe no nó sem avaliá-lo.",
-                "href": "/monitor/audit/sample-audit-inventory-report.pdf",
                 "facts": [
                   {
                     "label": "Controlos",
@@ -75,7 +72,6 @@
               {
                 "title": "Revisão da segurança",
                 "body": "Cobre a exposição e os controles sobre o acesso ao nó.",
-                "href": "/monitor/audit/sample-audit-security-report.pdf",
                 "facts": [
                   {
                     "label": "Controlos",
@@ -90,7 +86,6 @@
               {
                 "title": "Garantia de backup",
                 "body": "Verifica que a proteção declarada existe e que seus backups são utilizáveis.",
-                "href": "/monitor/audit/sample-audit-backup-report.pdf",
                 "facts": [
                   {
                     "label": "Controlos",
@@ -105,7 +100,6 @@
               {
                 "title": "Capacidade e desgaste",
                 "body": "Mede a margem de crescimento e os sinais de esgotamento ou envelhecimento.",
-                "href": "/monitor/audit/sample-audit-capacity-report.pdf",
                 "facts": [
                   {
                     "label": "Controlos",
@@ -118,13 +112,6 @@
                 ]
               }
             ]
-          }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/audit-report-preview.png",
-            "alt": "Primeira página de um relatório de auditoria completo",
-            "caption": "Cada documento compartilha o identificador do relatório, seções numeradas, data, nó, perfil e rodapé."
           }
         },
         {

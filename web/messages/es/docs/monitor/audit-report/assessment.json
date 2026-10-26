@@ -152,13 +152,6 @@
       "blocks": [
         {
           "p": "La revisión de seguridad usa el informe Lynis del host. Si Lynis nunca se ha ejecutado o el informe supera la antigüedad permitida por la política, un diálogo ofrece <strong>Ejecutar con Lynis</strong>, que tarda unos minutos más, o <strong>Ejecutar sin Lynis</strong>, que usa el informe existente."
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/lynis-dialog.png",
-            "alt": "Diálogo que ofrece ejecutar la evaluación con o sin Lynis",
-            "caption": "El diálogo de Lynis antes de una revisión de seguridad."
-          }
         }
       ]
     },

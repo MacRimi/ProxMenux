@@ -17,13 +17,6 @@
             "title": "Senza dichiarazione il rapporto descrive; con una dichiarazione valuta",
             "body": "Una valutazione vede cosa fa l'host, non a cosa serve. Un guest senza backup e senza scopo dichiarato viene segnalato come osservazione. Se il backup è dichiarato obbligatorio, la stessa assenza diventa un avviso. Non è obbligatorio dichiarare nulla."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/policy-view.png",
-            "alt": "Vista Politica con guest, archiviazione e soglie del nodo",
-            "caption": "La vista politica."
-          }
         }
       ]
     },

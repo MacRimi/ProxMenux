@@ -152,13 +152,6 @@
       "blocks": [
         {
           "p": "Die Sicherheitsprüfung nutzt den Lynis-Bericht des Hosts. Wurde Lynis noch nicht ausgeführt oder ist der Bericht älter als die Richtlinie erlaubt, bietet ein Dialog <strong>Mit Lynis ausführen</strong>, was einige Minuten länger dauert, oder <strong>Ohne Lynis ausführen</strong>, das den vorhandenen Bericht nutzt."
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/lynis-dialog.png",
-            "alt": "Dialog, der anbietet, das Assessment mit oder ohne Lynis durchzuführen",
-            "caption": "Der Lynis-Dialog vor einer Sicherheitsüberprüfung."
-          }
         }
       ]
     },

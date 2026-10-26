@@ -30,7 +30,6 @@
               {
                 "title": "Fullständig granskning",
                 "body": "Dokumenterar hela noden som ett tekniskt underlag.",
-                "href": "/monitor/audit/sample-audit-full-report.pdf",
                 "facts": [
                   {
                     "label": "kontroller",
@@ -45,7 +44,6 @@
               {
                 "title": "Snabbdiagnos",
                 "body": "Visar vad som behöver uppmärksamhet utan den fullständiga inventeringen.",
-                "href": "/monitor/audit/sample-audit-diagnostic-report.pdf",
                 "facts": [
                   {
                     "label": "kontroller",
@@ -60,7 +58,6 @@
               {
                 "title": "Inventering",
                 "body": "Beskriver vad som finns på noden utan att bedöma det.",
-                "href": "/monitor/audit/sample-audit-inventory-report.pdf",
                 "facts": [
                   {
                     "label": "kontroller",
@@ -75,7 +72,6 @@
               {
                 "title": "Säkerhetsgranskning",
                 "body": "Täcker exponering och kontrollerna över tillgången till noden.",
-                "href": "/monitor/audit/sample-audit-security-report.pdf",
                 "facts": [
                   {
                     "label": "kontroller",
@@ -90,7 +86,6 @@
               {
                 "title": "Kontroll av säkerhetskopior",
                 "body": "Kontrollerar att det deklarerade skyddet finns och att dess säkerhetskopior är användbara.",
-                "href": "/monitor/audit/sample-audit-backup-report.pdf",
                 "facts": [
                   {
                     "label": "kontroller",
@@ -105,7 +100,6 @@
               {
                 "title": "Kapacitet och slitage",
                 "body": "Mäter tillväxtmarginal och tecken på utmattning eller åldrande.",
-                "href": "/monitor/audit/sample-audit-capacity-report.pdf",
                 "facts": [
                   {
                     "label": "kontroller",
@@ -118,13 +112,6 @@
                 ]
               }
             ]
-          }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/audit-report-preview.png",
-            "alt": "Första sidan i en fullständig revisionsrapport",
-            "caption": "Varje dokument delar rapportidentifieraren, numrerade sektioner, datum, nod, profil och sidfot."
           }
         },
         {

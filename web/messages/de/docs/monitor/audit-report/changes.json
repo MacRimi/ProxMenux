@@ -40,13 +40,6 @@
             ],
             "caption": "Die Erfassung erfolgt bei Ausführung der Operation und wird zusammengeführt, wenn Monitor das Protokoll liest."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/changes-view.png",
-            "alt": "Ansicht Änderungen von Prüfung und Bericht mit Einträgen nach Nachinstallationsoption und Skript gruppiert",
-            "caption": "Die Ansicht Änderungen mit dem Unterschied einer von ProxMenux bearbeiteten Datei."
-          }
         }
       ]
     },

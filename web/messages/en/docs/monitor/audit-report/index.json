@@ -36,13 +36,6 @@
             ],
             "caption": "The assessment provides the facts, the policy gives them context and the journal records what ProxMenux did."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/assessment-view.png",
-            "alt": "Audit & Report in ProxMenux Monitor with the Assessment, Changes and Policy views",
-            "caption": "Audit & Report, with the Assessment view open."
-          }
         }
       ]
     },

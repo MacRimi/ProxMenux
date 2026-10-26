@@ -17,13 +17,6 @@
             "title": "Sem declaração o relatório descreve; com ela avalia",
             "body": "Uma avaliação vê o que o anfitrião faz, não para que serve. Um convidado sem backup cuja finalidade não é declarada é relatado como uma observação. Caso seu backup seja declarado necessário, a mesma ausência é reportada como advertência. Nada precisa ser declarado."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/policy-view.png",
-            "alt": "Vista Política com os sistemas convidados, armazenamento e limiares do nó",
-            "caption": "A vista Política."
-          }
         }
       ]
     },

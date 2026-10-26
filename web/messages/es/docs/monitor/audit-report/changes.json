@@ -40,13 +40,6 @@
             ],
             "caption": "La captura se realiza al ejecutar la operación y se consolida cuando Monitor lee el registro."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/changes-view.png",
-            "alt": "Vista Cambios de Auditoría e informes con entradas agrupadas por opción de postinstalación y script",
-            "caption": "La vista Cambios, con la diferencia de un archivo editado por ProxMenux."
-          }
         }
       ]
     },
