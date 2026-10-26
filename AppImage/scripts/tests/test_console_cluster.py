@@ -629,5 +629,49 @@ class StateTests(unittest.TestCase):
                     self.assertNotEqual(role, "dim", (x, y))
 
 
+class MalformedSnapshotTests(InvariantMixin, unittest.TestCase):
+    """A corrupted or hostile console.json renders as "no data" or "no history"."""
+
+    def test_sections_of_the_wrong_type_show_no_data(self):
+        broken = ([], "offline", 42,
+                  {"cluster": "offline", "resources": 123, "node": None, "history": "x"},
+                  {"cluster": {"members": "pve-01"}, "resources": {"nodes": {"pve-01": 1}, "guests": 5},
+                   "node": ["pve-01"], "history": {"nodes": []}},
+                  {"cluster": {"members": [None, 1, "pve-01", ["pve-01"],
+                                           {"name": ["pve-01"], "online": True}]},
+                   "resources": {"nodes": [None, {"name": {"pve": 1}, "status": "online"}],
+                                 "guests": [None, "vm", 7]},
+                   "node": {"name": ["pve-01"]}})
+        for snapshot in broken:
+            for size in ((80, 24), (100, 30), (320, 90)):
+                for state in ("ok", "stale", "unavailable"):
+                    with self.subTest(snapshot=snapshot, size=size, state=state):
+                        grid, plan = draw(c1_vm(snapshot=snapshot), *size, state=state)
+                        self.assertIn("no data", row_text(grid, 2))
+                        self.assert_invariants(grid, plan)
+
+    def test_hostile_values_inside_valid_sections_show_no_history(self):
+        vm = c1_vm()
+        snapshot = vm["snapshot"]
+        snapshot["cluster"]["members"] += [None, {"name": {"pve": 1}, "online": True}]
+        snapshot["resources"]["nodes"] += [None, {"name": ["pve01"], "status": "online"}]
+        snapshot["resources"]["guests"] += [
+            None, "vm",
+            {"vmid": [1], "node": ["pve01"], "name": {"x": 1}, "type": "qemu", "status": "running",
+             "cpu": 0.5, "maxcpu": 2, "mem": GIB, "maxmem": 2 * GIB, "tags": 5},
+            {"vmid": {"id": 1}, "node": "pve01", "status": "stopped", "tags": "a;b"}]
+        snapshot["history"].update(points=0.5, step_s=-5)
+        snapshot["history"]["nodes"] = {
+            "pve01": {"status": "ok", "t_end": -1e308, "cpu": [0.5] * 60, "mem": [0.5] * 60},
+            "pve02": {"status": "ok", "t_end": 1e308, "cpu": 5, "mem": "x", "load1": 7},
+            "pve03": "garbage"}
+        for size in ((100, 30), (160, 45), (320, 90)):
+            with self.subTest(size=size):
+                grid, plan = draw(vm, *size)
+                self.assert_invariants(grid, plan)
+                self.assertEqual(plan["n_hist"], 3)
+                self.assertEqual(all_text(grid).count("no history"), 2 * 3)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -97,6 +97,33 @@ def _optional(value):
     return None if isinstance(value, bool) else _number(value, None)
 
 
+# The snapshot is untrusted: every section and list is checked before use, so
+# a malformed document renders as "no data" instead of raising.
+def _dict(value):
+    return value if isinstance(value, dict) else {}
+
+
+def _list(value):
+    return value if isinstance(value, list) else []
+
+
+def _rows(value):
+    """The dict items of ``value`` when it is a list, else ``[]``."""
+    return [item for item in _list(value) if isinstance(item, dict)]
+
+
+def _name(row):
+    """``row["name"]`` when it is a non-empty string (safe as a key), else None."""
+    name = row.get("name")
+    return name if isinstance(name, str) and name else None
+
+
+def _vmid(guest):
+    """The VMID as digits, ``""`` when it is missing or invalid."""
+    value = _optional(guest.get("vmid"))
+    return "" if value is None else str(int(value))
+
+
 def _fraction(value):
     return max(0.0, min(1.0, _number(value)))
 
@@ -342,8 +369,8 @@ def _degree(grid):
 
 
 def _remote_state(vm):
-    snapshot = vm.get("snapshot") or {}
-    resources = snapshot.get("resources") or {}
+    snapshot = _dict(vm.get("snapshot"))
+    resources = _dict(snapshot.get("resources"))
     age = _number(snapshot.get("age_s"))
     interval = _number(snapshot.get("publish_interval_s"), 10) or 10
     status = resources.get("status")
@@ -375,9 +402,9 @@ def _version(grid, node, full=False):
 
 def _header(grid, vm, state, cluster_view):
     label = lambda key: _label(vm, key, grid.glyphs)
-    snapshot = vm.get("snapshot") or {}
-    cluster = snapshot.get("cluster") or {}
-    node = snapshot.get("node") or {}
+    snapshot = _dict(vm.get("snapshot"))
+    cluster = _dict(snapshot.get("cluster"))
+    node = _dict(snapshot.get("node"))
     grid.put(1, 0, label("title"), "title")
     tabs_x = 22
     for view, key in (("node", "tabs.node"), ("cluster", "tabs.cluster")):
@@ -424,8 +451,8 @@ def _header(grid, vm, state, cluster_view):
 def _cluster_info(grid, vm, state, separator):
     """Header candidates of view B, longest first."""
     label = lambda key: _label(vm, key, grid.glyphs)
-    snapshot = vm.get("snapshot") or {}
-    cluster = snapshot.get("cluster") or {}
+    snapshot = _dict(vm.get("snapshot"))
+    cluster = _dict(snapshot.get("cluster"))
     if not cluster.get("is_cluster", True):
         return [[(label("labels.standalone"), "text")]]
     up = int(_number(cluster.get("nodes_online")))
@@ -450,15 +477,15 @@ def _cluster_info(grid, vm, state, separator):
 
 
 def _online_nodes(snapshot):
-    return [n for n in (snapshot.get("resources") or {}).get("nodes", [])
+    return [n for n in _rows(_dict(snapshot.get("resources")).get("nodes"))
             if n.get("status") == "online"]
 
 
 def _coverage(snapshot):
-    cluster = snapshot.get("cluster") or {}
-    members = {m.get("name") for m in cluster.get("members", []) if m.get("online")}
-    nodes = {n.get("name") for n in _online_nodes(snapshot)}
-    return len(members & nodes)
+    cluster = _dict(snapshot.get("cluster"))
+    members = {_name(m) for m in _rows(cluster.get("members")) if m.get("online")}
+    nodes = {_name(n) for n in _online_nodes(snapshot)}
+    return len((members & nodes) - {None})
 
 
 def _footer(grid, vm, state, cluster_view):
@@ -470,9 +497,9 @@ def _footer(grid, vm, state, cluster_view):
     if isinstance(zoom, (list, tuple)) and len(zoom) == 2:
         parts.append(_label_with(vm, "footer.zoom", grid.glyphs,
                                  position=int(_number(zoom[0])), count=int(_number(zoom[1]))))
-    status = (_label_with(vm, "status.data", grid.glyphs,
-                          age=_age(vm["snapshot"].get("age_s")))
-              if state != "starting" and vm.get("snapshot") else label("status.noData"))
+    snapshot = _dict(vm.get("snapshot"))
+    status = (_label_with(vm, "status.data", grid.glyphs, age=_age(snapshot.get("age_s")))
+              if state != "starting" and snapshot else label("status.noData"))
     width = max(0, grid.width - len(status) - 4)
     candidates = [_join(grid, parts)]
     if not cluster_view:
@@ -556,16 +583,16 @@ def _stats(vm, name):
 
 def _local_history(vm):
     """This node's 60-minute RRD entry, or None when it has no data."""
-    snapshot = vm.get("snapshot") or {}
+    snapshot = _dict(vm.get("snapshot"))
     history = snapshot.get("history")
-    name = (snapshot.get("node") or {}).get("name")
+    name = _name(_dict(snapshot.get("node")))
     if not isinstance(history, dict) or not name:
         return None
-    entry = (history.get("nodes") or {}).get(name)
+    entry = _dict(history.get("nodes")).get(name)
     if not isinstance(entry, dict):
         return None
     if not any(_optional(value) is not None
-               for key in ("cpu", "mem") for value in entry.get(key) or []):
+               for key in ("cpu", "mem") for value in _list(entry.get(key))):
         return None
     return entry
 
@@ -644,7 +671,7 @@ def _bands(grid, vm, x, y, width, hist, name, history_key):
     grid.graph(x, y + 1, _window(_series(vm, name), window, width), width, live_rows, 1.0)
     label_y = y + 1 + live_rows
     entry = _local_history(vm)
-    points = [_optional(value) for value in (entry or {}).get(history_key) or []]
+    points = [_optional(value) for value in _list(_dict(entry).get(history_key))]
     if not points:
         _text(grid, x, label_y, _join(grid, (label("labels.last60"), label("labels.noHistory"))),
               width, "dim")
@@ -820,13 +847,13 @@ def _guest_counts(snapshot, node=None):
 
 def _side_panel(grid, vm, x, y, width, rows, state):
     label = lambda key: _label(vm, key, grid.glyphs)
-    snapshot = vm.get("snapshot") or {}
-    cluster = snapshot.get("cluster") or {}
+    snapshot = _dict(vm.get("snapshot"))
+    cluster = _dict(snapshot.get("cluster"))
     standalone = not cluster.get("is_cluster", True)
     inner = width - 4
     if standalone:
         grid.box(x, y, width, rows, label("labels.standalone"))
-        node = snapshot.get("node") or {}
+        node = _dict(snapshot.get("node"))
         running, stopped = _guest_counts(snapshot, node.get("name"))
         version = f"PVE {_version(grid, node, full=True)}"
         kernel = (vm.get("local") or {}).get("kernel")
@@ -853,8 +880,8 @@ def _side_panel(grid, vm, x, y, width, rows, state):
 def _cluster_panel(grid, vm, x, y, width, rows, state):
     """Members of the cluster, then the guest counts; returns the rows used."""
     label = lambda key: _label(vm, key, grid.glyphs)
-    snapshot = vm.get("snapshot") or {}
-    cluster = snapshot.get("cluster") or {}
+    snapshot = _dict(vm.get("snapshot"))
+    cluster = _dict(snapshot.get("cluster"))
     inner = width - 4
     up = int(_number(cluster.get("nodes_online")))
     total = int(_number(cluster.get("nodes_total")))
@@ -876,15 +903,16 @@ def _cluster_panel(grid, vm, x, y, width, rows, state):
         text = label("status.waitingForData") if state == "starting" else label("status.noData")
         _text(grid, x + 2, y + 1, text, inner, "dim")
         return 1
-    members = cluster.get("members") or []
+    members = _rows(cluster.get("members"))
     space = max(0, rows - 2)
     visible = min(len(members), space)
     if len(members) > visible:
         visible = max(0, visible - 1)
-    nodes = {node.get("name"): node for node in (snapshot.get("resources") or {}).get("nodes", [])}
+    nodes = {_name(node): node for node in _rows(_dict(snapshot.get("resources")).get("nodes"))
+             if _name(node)}
     stale = state != "ok"
     for index, member in enumerate(members[:visible]):
-        node = nodes.get(member.get("name"), {}) if member.get("online") else {}
+        node = nodes.get(_name(member), {}) if member.get("online") else {}
         row = y + 1 + index
         member_name = sanitize(member.get("name"), 7, grid.glyphs) + ("*" if member.get("local") else "")
         online = bool(member.get("online"))
@@ -921,7 +949,7 @@ def _cluster_panel(grid, vm, x, y, width, rows, state):
 # ---------------------------------------------------------------- TOP lists
 
 def _guests(snapshot):
-    return [guest for guest in (snapshot.get("resources") or {}).get("guests", [])
+    return [guest for guest in _rows(_dict(snapshot.get("resources")).get("guests"))
             if not guest.get("template")]
 
 
@@ -940,7 +968,7 @@ def _top_lists(guests):
 
 def _identity(grid, guest, width):
     kind = "VM" if guest.get("type") == "qemu" else "CT"
-    head = f"{kind} {guest.get('vmid', '')} "
+    head = f"{kind} {_vmid(guest)} "
     return head + sanitize(guest.get("name"), max(1, width - len(head)), grid.glyphs)
 
 
@@ -949,21 +977,35 @@ def _status_role(guest):
     return "ok" if status == "running" else "warn" if status in ("unknown", "stale") else "text"
 
 
-def _wide_prefix(grid, guest, x, y):
+# Wide TOP lists: ID and NAME share 19 cells. ID takes 5 (4 digits and a
+# space) and widens for longer VMIDs, up to the 9 digits PVE allows, at the
+# expense of NAME, so NODE, STATUS and the values never move.
+_WIDE_ID = 5
+_WIDE_ID_MAX = 10
+_WIDE_ID_AND_NAME = 19
+
+
+def _id_width(guests):
+    """Cells of the ID column for the guests shown in one wide list."""
+    return min(_WIDE_ID_MAX, max([_WIDE_ID] + [len(_vmid(guest)) + 1 for guest in guests]))
+
+
+def _wide_prefix(grid, guest, x, y, id_width):
     kind = "VM" if guest.get("type") == "qemu" else "CT"
-    grid.put(x, y, f"{kind:<5}{str(guest.get('vmid', ''))[:4]:<5}"
-                   f"{sanitize(guest.get('name'), 13, grid.glyphs):<14}"
+    name_width = _WIDE_ID_AND_NAME - id_width
+    grid.put(x, y, f"{kind:<5}{_clip(grid, _vmid(guest), id_width - 1):<{id_width}}"
+                   f"{sanitize(guest.get('name'), name_width - 1, grid.glyphs):<{name_width}}"
                    f"{sanitize(guest.get('node'), 7, grid.glyphs):<8}")
     grid.put(x + 32, y, sanitize(guest.get("status"), 9, grid.glyphs), _status_role(guest))
 
 
-def _memory_row(grid, guest, x, y, width, wide):
+def _memory_row(grid, guest, x, y, width, wide, id_width=_WIDE_ID):
     used, assigned = guest.get("mem"), guest.get("maxmem")
     fraction = _ratio(used, assigned)
     pct = f"{_pct(fraction):>3}%" if _number(assigned) > 0 else " --%"
     if wide:
         x0 = x + 2
-        _wide_prefix(grid, guest, x0, y)
+        _wide_prefix(grid, guest, x0, y, id_width)
         grid.put(x0 + 41, y, f"{_size(used)}/{_size(assigned)}"[:19])
         grid.put(x0 + 60, y, pct, _role(fraction))
         if x0 + 76 <= x + width - 2 and _number(assigned) > 0:
@@ -976,13 +1018,13 @@ def _memory_row(grid, guest, x, y, width, wide):
     grid.put(x + width - 7, y, pct, _role(fraction))
 
 
-def _cpu_row(grid, guest, x, y, width, wide):
+def _cpu_row(grid, guest, x, y, width, wide, id_width=_WIDE_ID):
     fraction = _fraction(guest.get("cpu"))
     cores = f"{_cpu_key(guest):.1f}c"
     vcpu = str(int(_number(guest.get("maxcpu"))))
     if wide:
         x0 = x + 2
-        _wide_prefix(grid, guest, x0, y)
+        _wide_prefix(grid, guest, x0, y, id_width)
         grid.put(x0 + 42, y, f"{_pct(fraction):>3}%", _role(fraction))
         grid.put(x0 + 51 - len(vcpu), y, vcpu)
         grid.put(x0 + 58 - len(cores), y, cores)
@@ -997,10 +1039,11 @@ def _cpu_row(grid, guest, x, y, width, wide):
     grid.put(x + width - 4 - len(cores), y, cores)
 
 
-def _list_headers(grid, vm, x, y, width, mode, wide):
+def _list_headers(grid, vm, x, y, width, mode, wide, id_width=_WIDE_ID):
     label = lambda key: _label(vm, key, grid.glyphs)
     if wide:
-        prefix = (f"{label('columns.type'):<5}{label('columns.id'):<5}{label('columns.name'):<14}"
+        prefix = (f"{label('columns.type'):<5}{label('columns.id'):<{id_width}}"
+                  f"{label('columns.name'):<{_WIDE_ID_AND_NAME - id_width}}"
                   f"{label('columns.node'):<8}{label('columns.status'):<9}")
         if mode == "mem":
             text = f"{prefix}{label('columns.usedAssignedLong'):<22}%  {label('columns.mem')}"
@@ -1022,7 +1065,7 @@ def _list_headers(grid, vm, x, y, width, mode, wide):
 
 def _top(grid, vm, y, rows, state):
     label = lambda key: _label(vm, key, grid.glyphs)
-    snapshot = vm.get("snapshot") or {}
+    snapshot = _dict(vm.get("snapshot"))
     midpoint = grid.width // 2
     # TYPE/ID/NAME/NODE/STATUS columns need 69 cells inside each panel.
     wide = midpoint - 4 >= 69
@@ -1060,13 +1103,15 @@ def _top(grid, vm, y, rows, state):
         items = memory if mode == "mem" else cpu
         if not items:
             continue
-        _list_headers(grid, vm, x, y + 1, width, mode, wide)
         visible = max(0, rows - 3)
         if len(items) > visible:
             visible = max(0, visible - 1)
+        id_width = _id_width(items[:visible])
+        _list_headers(grid, vm, x, y + 1, width, mode, wide, id_width)
         for index, guest in enumerate(items[:visible]):
             row = y + 2 + index
-            (_memory_row if mode == "mem" else _cpu_row)(grid, guest, x, row, width, wide)
+            (_memory_row if mode == "mem" else _cpu_row)(grid, guest, x, row, width, wide,
+                                                          id_width)
             if state != "ok":
                 for column in range(x + 1, x + width - 1):
                     char, _, attrs = grid[row][column]
@@ -1079,7 +1124,7 @@ def _top(grid, vm, y, rows, state):
 
 
 def _node_view(grid, vm, state):
-    snapshot = vm.get("snapshot") or {}
+    snapshot = _dict(vm.get("snapshot"))
     memory, cpu = _top_lists(_guests(snapshot))
     cells = _core_cells((vm.get("local") or {}).get("per_core"))
     layout = _node_layout(grid, max(len(memory), len(cpu)), cells)

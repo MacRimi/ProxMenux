@@ -88,6 +88,33 @@ def _check_owner(info, what):
         raise _Rejected(f"{what} writable by group or others")
 
 
+_DIR_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+
+
+def _open_directory(path):
+    """Descriptor of directory ``path``, opened one component at a time from ``/``.
+
+    ``O_NOFOLLOW`` only guards the last component of a path, so each one is
+    opened relative to the descriptor of the previous one: no component of
+    ``path`` can be a symlink, now or swapped in later. The stat() call only
+    gives a clear reason; the descriptors decide.
+    """
+    fd = os.open("/", _DIR_FLAGS)
+    try:
+        for part in path.split("/"):
+            if part in ("", "."):
+                continue
+            if stat.S_ISLNK(os.stat(part, dir_fd=fd, follow_symlinks=False).st_mode):
+                raise _Rejected("is a symlink")
+            child = os.open(part, _DIR_FLAGS, dir_fd=fd)
+            os.close(fd)
+            fd = child
+    except BaseException:
+        os.close(fd)
+        raise
+    return fd
+
+
 def _read_art(path):
     if not isinstance(path, str) or not os.path.isabs(path):
         raise _Rejected("path must be absolute")
@@ -98,10 +125,7 @@ def _read_art(path):
         raise _Rejected("not a regular file")
     # Validate the directory, then open the file relative to that descriptor:
     # neither can be swapped for a symlink between the check and the read.
-    # The lstat() calls only give clear reasons; the descriptors decide.
-    if stat.S_ISLNK(os.lstat(parent).st_mode):
-        raise _Rejected("is a symlink")
-    dir_fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    dir_fd = _open_directory(parent)
     try:
         _check_owner(os.fstat(dir_fd), "directory")
         # FIFOs and devices are never opened; O_NONBLOCK covers a race.
@@ -185,8 +209,9 @@ def load(text, art_path):
     spaces. ``art_path`` must be an absolute path to a regular, root-owned
     file of at most 4 KiB, not writable by group or others, in a root-owned
     directory not writable by group or others (e.g. ``0644`` in ``0755``),
-    with at most 6 lines of 64 cells of ASCII, U+2588/2591/2592 and box
-    drawing (U+2500-257F). Either input is rejected as a whole, never in part.
+    with no symlink anywhere in the path, and at most 6 lines of 64 cells of
+    ASCII, U+2588/2591/2592 and box drawing (U+2500-257F). Either input is
+    rejected as a whole, never in part.
     """
     badge = None
     if text is not None and text != "":

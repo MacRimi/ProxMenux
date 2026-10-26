@@ -647,6 +647,30 @@ class ConsoleRenderTests(unittest.TestCase, Invariants):
         self.assertIn("TOP MEMORY footprint · host other 8.0 GiB", full[74])
         self.assertIn("TOP CPU share of vCPU · host cores · host other 1.6c", full[74])
 
+    def test_wide_top_lists_never_cut_a_vmid(self):
+        # The ID column widens for longer VMIDs and takes the cells from NAME,
+        # so NODE, STATUS and the values keep their columns.
+        vm = node320()
+        db = next(g for g in vm["snapshot"]["resources"]["guests"] if g["vmid"] == 103)
+        db["vmid"] = 10003
+        full = lines(render(vm, 320, 90))
+        left = {y: full[y][:158].rstrip() for y in range(75, 81)}
+        right = {y: full[y][160:318].rstrip() for y in range(75, 81)}
+        self.assertEqual(left[75][2:],
+                         "TYPE ID    NAME         NODE    STATUS   USED/ASSIGNED         %  MEM")
+        self.assertEqual(left[76][2:],
+                         "VM   10003 db           pvebox  running  11.2 GiB/16.0 GiB   70%  ███████···")
+        self.assertEqual(left[80][2:],
+                         "CT   102   apt-cache    pvebox  stopped  123 MiB/512 MiB     24%  ██········")
+        self.assertEqual(right[75][2:],
+                         "TYPE ID    NAME         NODE    STATUS    CPU% vCPU   HOST   MEM USED")
+        self.assertEqual(right[77][2:],
+                         "VM   10003 db           pvebox  running    12%    4   0.5c   11.2 GiB")
+        # Nine digits, the most PVE allows, still fit.
+        db["vmid"] = 999999999
+        row = lines(render(vm, 320, 90))[76][2:158]
+        self.assertTrue(row.startswith("VM   999999999 db       pvebox  running  11.2 GiB"), row)
+
     def test_node160x45_matches_the_reviewed_render(self):
         expected = golden("node160x45.txt")
         self.assertEqual(lines(render(node320(), 160, 45)), expected)
@@ -810,6 +834,45 @@ class ConsoleRenderTests(unittest.TestCase, Invariants):
         self.assertIn("last 60 min · no history", rows[16])
         self.assertIn("live 1m (w)", rows[1])
         self.assert_invariants(render(vm, 160, 45), 160, 45)
+
+    def test_malformed_snapshot_sections_render_as_no_data(self):
+        broken = ([], "offline", 42,
+                  {"cluster": "offline", "resources": 123, "node": None, "history": "x"},
+                  {"cluster": [], "resources": {"status": "ok", "nodes": {"pve-01": 1}, "guests": 5},
+                   "node": "pve-01", "history": {"nodes": []}, "age_s": 1})
+        for snapshot in broken:
+            for view in ("node", "cluster"):
+                for size in ((80, 24), (160, 45), (320, 90)):
+                    with self.subTest(snapshot=snapshot, view=view, size=size):
+                        vm = load("viewmodel_cluster.json")
+                        vm.update(snapshot=snapshot, selected_view=view)
+                        grid = render(vm, *size)
+                        self.assertEqual(len(grid), size[1])
+                        self.assertTrue(all(len(row) == size[0] for row in grid))
+                        self.assertRegex("\n".join(lines(grid)), "MONITOR UNAVAILABLE|no data")
+
+    def test_hostile_values_inside_the_snapshot_never_raise(self):
+        guest = {"vmid": [1], "node": ["pve-01"], "name": {"x": 1}, "type": "qemu",
+                 "status": "running", "cpu": 0.5, "maxcpu": 2, "mem": 1 << 30,
+                 "maxmem": 2 << 30, "tags": 5}
+        for factory in (lambda: load("viewmodel_cluster.json"), node320):
+            vm = factory()
+            snapshot = vm["snapshot"]
+            snapshot["cluster"]["members"] += [None, 1, {"name": ["pve-01"], "online": True}]
+            snapshot["resources"]["nodes"] += [None, "pve-09", {"name": {"x": 1}, "status": "online"}]
+            snapshot["resources"]["guests"] += [None, "vm", guest]
+            snapshot["node"]["name"] = ["pve-01"]
+            snapshot["history"] = {"status": "ok", "points": 0.5, "step_s": -5,
+                                   "nodes": {"pve-01": {"cpu": 5, "mem": "x", "t_end": -1e308}}}
+            for view in ("node", "cluster"):
+                for size in ((80, 24), (160, 45), (320, 90)):
+                    with self.subTest(fixture=factory, view=view, size=size):
+                        vm["selected_view"] = view
+                        grid = render(vm, *size)
+                        self.assertEqual(len(grid), size[1])
+                        self.assertTrue(all(len(row) == size[0] for row in grid))
+            vm["selected_view"] = "node"
+            self.assertIn("no history", "\n".join(lines(render(vm, 320, 90))))
 
     def test_reverse_video_only_on_text_cells(self):
         vm = node320()

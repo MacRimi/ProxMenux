@@ -123,8 +123,25 @@ def _vmid(guest):
     return int(value) if value is not None else 0
 
 
-def _key(guest):
-    return (guest.get("vmid"), guest.get("node"))
+# The snapshot is untrusted: every section and list is checked before use, so
+# a malformed document renders as "no data" or "no history" instead of raising.
+def _dict(value):
+    return value if isinstance(value, dict) else {}
+
+
+def _list(value):
+    return value if isinstance(value, list) else []
+
+
+def _rows(value):
+    """The dict items of ``value`` when it is a list, else ``[]``."""
+    return [item for item in _list(value) if isinstance(item, dict)]
+
+
+def _name(row):
+    """``row["name"]`` when it is a non-empty string (safe as a key), else None."""
+    name = row.get("name")
+    return name if isinstance(name, str) and name else None
 
 
 class _Painter:
@@ -263,8 +280,9 @@ def _shown(items, rows):
 
 
 def _outside(guests, cpu_items, mem_items, rows):
-    shown = {_key(g) for g in _shown(cpu_items, rows)} | {_key(g) for g in _shown(mem_items, rows)}
-    return [g for g in guests if _key(g) not in shown]
+    # By identity: the lists hold the same guest dicts, and VMIDs may not hash.
+    shown = {id(g) for g in _shown(cpu_items, rows) + _shown(mem_items, rows)}
+    return [g for g in guests if id(g) not in shown]
 
 
 def _identity(p, guest, cells):
@@ -281,29 +299,26 @@ class _View:
         self.vm = vm
         self.state = state
         self.fresh = state == "ok"
-        snapshot = vm.get("snapshot") or {}
-        self.snapshot = snapshot if isinstance(snapshot, dict) else {}
-        cluster = self.snapshot.get("cluster") or {}
-        resources = self.snapshot.get("resources") or {}
-        self.resources = {n.get("name"): n for n in resources.get("nodes") or []
-                          if isinstance(n, dict) and n.get("name")}
-        members = [m for m in cluster.get("members") or []
-                   if isinstance(m, dict) and m.get("name")]
+        self.snapshot = _dict(vm.get("snapshot"))
+        cluster = _dict(self.snapshot.get("cluster"))
+        resources = _dict(self.snapshot.get("resources"))
+        self.resources = {_name(n): n for n in _rows(resources.get("nodes")) if _name(n)}
+        members = [m for m in _rows(cluster.get("members")) if _name(m)]
         if not members:
-            local = (self.snapshot.get("node") or {}).get("name")
+            local = _name(_dict(self.snapshot.get("node")))
             members = [{"name": name, "online": node.get("status") == "online",
                         "local": name == local} for name, node in self.resources.items()]
-        self.members = sorted(members, key=lambda m: (bool(m.get("online")), str(m.get("name"))))
-        self.guests = [g for g in resources.get("guests") or []
-                       if isinstance(g, dict) and not g.get("template")]
+        # Offline first, then by name (ADR 001 §2.4): when rows run out, the
+        # offline nodes stay and online ones go to "+k nodes".
+        self.members = sorted(members, key=lambda m: (bool(m.get("online")), m["name"]))
+        self.guests = [g for g in _rows(resources.get("guests")) if not g.get("template")]
         self.cpu_items = sorted((g for g in self.guests if _cores(g) > 0),
                                 key=lambda g: (-_cores(g), _vmid(g)))
         self.mem_items = sorted((g for g in self.guests if (_num(g.get("mem")) or 0) > 0),
                                 key=lambda g: (-(_num(g.get("mem")) or 0), _vmid(g)))
         history = self.snapshot.get("history")
         self.history = history if isinstance(history, dict) else {"status": "unavailable"}
-        entries = self.history.get("nodes")
-        self.entries = entries if isinstance(entries, dict) else {}
+        self.entries = _dict(self.history.get("nodes"))
 
     # -- node table ---------------------------------------------------------
     def node(self, member):
@@ -327,7 +342,7 @@ class _View:
         entry = self.entries.get(name)
         if not isinstance(entry, dict):
             return None
-        for value in reversed(list(entry.get("load1") or [])):
+        for value in reversed(_list(entry.get("load1"))):
             value = _num(value)
             if value is not None and value >= 0:
                 return value
@@ -357,7 +372,8 @@ class _View:
         shown = self.members if len(self.members) <= lines else self.members[:lines - 1]
         guests_by_node = {}
         for guest in self.guests:
-            guests_by_node.setdefault(guest.get("node"), []).append(guest)
+            if isinstance(guest.get("node"), str):
+                guests_by_node.setdefault(guest["node"], []).append(guest)
         for index, member in enumerate(shown):
             row = y + 1 + index
             node = self.node(member)
@@ -398,18 +414,21 @@ class _View:
     # -- history panels -----------------------------------------------------
     def history_panels(self, y, g, n_hist):
         p = self.p
-        points = int(_num(self.history.get("points")) or 60)
-        step = _num(self.history.get("step_s")) or 60
+        # The reader's bounds (console_snapshot._clean_history), so that a
+        # hostile value can neither divide by zero nor stop align().
+        points = max(1, min(1440, int(_num(self.history.get("points")) or 60)))
+        step = max(1, min(86400, _num(self.history.get("step_s")) or 60))
         nodes = self.members[:n_hist]
         series = {}
         for member in nodes:
             entry = self.entries.get(member.get("name"))
-            if isinstance(entry, dict) and _num(entry.get("t_end")) is not None:
+            t_end = _num(entry.get("t_end")) if isinstance(entry, dict) else None
+            if t_end is not None and t_end >= 0:
                 series[member.get("name")] = entry
         aligned = {}
         for key in ("cpu", "mem"):
             aligned[key] = console_graphs.align(
-                {name: (_num(e.get("t_end")), list(e.get(key) or [])) for name, e in series.items()},
+                {name: (_num(e.get("t_end")), _list(e.get(key))) for name, e in series.items()},
                 step)
         halves = ((0, p.width // 2, "cpu"), (p.width // 2, p.width - p.width // 2, "mem"))
         for px, pw, key in halves:
@@ -463,7 +482,7 @@ class _View:
         sampled = console_graphs.resample(values, room)
         p.graph(graph_x, y, sampled, cols, g, "dim" if stale else "threshold")
         strip = graph_x + cols + 1
-        raw = [v for v in (_num(v) for v in entry.get(key) or []) if v is not None and v >= 0]
+        raw = [v for v in (_num(v) for v in _list(entry.get(key))) if v is not None and v >= 0]
         peak = max(raw) if raw else max(present)
         observed = _num(entry.get("observed_at"))
         if stale and observed is not None:
@@ -589,7 +608,8 @@ class _View:
             return y + 1
         wide, bars = p.width >= 160, p.width >= 100
         name_w = 16 if bars else 13
-        id_w = max([5] + [len(str(_vmid(g))) + 1 for g in self.guests])
+        # PVE VMIDs have at most 9 digits; a longer, invalid one is cut.
+        id_w = min(10, max([5] + [len(str(_vmid(g))) + 1 for g in self.guests]))
         cols = [("columns.type", 5, "<"), ("columns.id", id_w, "<"), ("columns.name", name_w, "<"),
                 ("columns.node", 8, "<"), ("columns.status", 9, "<"),
                 ("columns.usedAssignedLong", 20, "<")]
@@ -641,7 +661,7 @@ class _View:
         values += [(_pct(share).strip(), figure(share)), (_pct(cpu).strip(), figure(cpu)),
                    (str(int(_num(guest.get("maxcpu")) or 0)), role)]
         if wide:
-            tags = ",".join(p.untrusted(t, 16) for t in (guest.get("tags") or [])[:3])
+            tags = ",".join(p.untrusted(t, 16) for t in _list(guest.get("tags"))[:3])
             values += [(f"{_cores(guest):.1f}c", role), ("", role),
                        (_uptime(guest.get("uptime")), role),
                        (p.untrusted(guest.get("hastate"), 5) or "-", role), (tags, role)]

@@ -70,7 +70,8 @@ class BadgeValidationTests(unittest.TestCase):
 
 class ArtFileTests(unittest.TestCase):
     def setUp(self):
-        self.dir = tempfile.mkdtemp(prefix="console-brand-")
+        # realpath: a symlinked TMPDIR (/tmp -> /private/tmp) is itself rejected.
+        self.dir = os.path.realpath(tempfile.mkdtemp(prefix="console-brand-"))
         self.addCleanup(shutil.rmtree, self.dir, True)
         os.chmod(self.dir, 0o755)
         # The owner check targets root; without root, our own uid stands in.
@@ -228,6 +229,18 @@ class ArtFileTests(unittest.TestCase):
         os.symlink(real, link)
         self.assertAccepted(os.path.join(real, "brand.txt"), ["ART"])
         self.assertRejected(os.path.join(link, "brand.txt"), "is a symlink")
+
+    def test_symlink_higher_up_the_path_is_rejected(self):
+        # O_NOFOLLOW alone only guards the last component of the directory.
+        real = os.path.join(self.dir, "real")
+        os.makedirs(os.path.join(real, "sub"), 0o755)
+        os.chmod(real, 0o755)
+        os.chmod(os.path.join(real, "sub"), 0o755)
+        self.write("ART", name="real/sub/brand.txt")
+        link = os.path.join(self.dir, "linked")
+        os.symlink(real, link)
+        self.assertAccepted(os.path.join(real, "sub", "brand.txt"), ["ART"])
+        self.assertRejected(os.path.join(link, "sub", "brand.txt"), "is a symlink")
 
     def test_dangling_symlink_is_rejected(self):
         link = os.path.join(self.dir, "dangling.txt")
