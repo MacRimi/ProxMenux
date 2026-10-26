@@ -231,6 +231,140 @@ class JobTests(unittest.TestCase):
             files.assert_not_called()
         self.finish(job)
 
+    def test_large_paste_cannot_block_output_cancel_or_timeout(self):
+        self.script.write_text("stty raw -echo\necho ready\nwhile :; do echo progress; sleep .02; done\n")
+        for run, cancel in [("cancel-paste", True), ("timeout-paste", False)]:
+            with self.subTest(run=run), patch.object(jobs, "MAX_RUNTIME", .5), \
+                    patch.object(jobs, "STOP_GRACE", .1):
+                job = self.start(run)
+                wait_for(lambda: "ready" in job.read(0)["text"])
+                before = job.read(0)["offset"]
+                job.input("x" * 16384)
+                job.input("y" * 16384)
+                wait_for(lambda: job.read(0)["offset"] > before)
+                if cancel:
+                    job.cancel()
+                wait_for(lambda: job.state == "complete")
+                self.assertEqual(job.exit_code, 130 if cancel else 124)
+                self.assertIsNotNone(job.process.poll())
+                self.assertFalse(job._input)
+        self.assertEqual(self.callback.call_count, 2)
+
+    def test_queued_paste_reaches_a_slow_reader_in_order_without_losing_bytes(self):
+        payload = ("Ž🙂abc" * 3500).encode()
+        received = self.folder / "received"
+        reader = (
+            "import os,pathlib; data=bytearray(); "
+            f"size={len(payload)}; "
+            "exec('while len(data)<size:\\n data.extend(os.read(0,min(257,size-len(data))))'); "
+            f"pathlib.Path({str(received)!r}).write_bytes(data)"
+        )
+        self.script.write_text(
+            "stty raw -echo\necho ready\n"
+            f"while [ ! -f {shlex.quote(str(self.gate))} ]; do sleep .02; done\n"
+            + shlex.quote(sys.executable) + " -c " + shlex.quote(reader) + "\n")
+        job = self.start()
+        wait_for(lambda: "ready" in job.read(0)["text"])
+        text = payload.decode()
+        for offset in range(0, len(text), 8000):
+            job.input(text[offset:offset + 8000])
+        self.gate.touch()
+        wait_for(lambda: job.state == "complete")
+        self.assertEqual(job.exit_code, 0)
+        self.assertEqual(received.read_bytes(), payload)
+        self.callback.assert_called_once()
+
+    def test_full_input_queue_rejects_before_any_write_and_preserves_pending_data(self):
+        job = self.start()
+        with job.lock, patch.object(jobs.os, "write") as write:
+            job._input = bytearray(b"x" * jobs.MAX_INPUT)
+            before = bytes(job._input)
+            with self.assertRaisesRegex(ValueError, "buffer is full"):
+                job.input("overflow")
+            self.assertEqual(bytes(job._input), before)
+            write.assert_not_called()
+            job._input.clear()
+        self.assertIsNone(job.stop_reason)
+        self.finish(job)
+
+    def test_multibyte_output_crosses_pty_chunks_without_corrupting_replay(self):
+        payload = "Ž🙂abc" * 5000
+        command = "import os; os.write(1," + repr(payload) + ".encode())"
+        self.script.write_text(shlex.quote(sys.executable) + " -c " + shlex.quote(command) + "\n")
+        job = self.start()
+        wait_for(lambda: job.state == "complete")
+        self.assertEqual(job.read(0)["text"], payload)
+        self.assertEqual(job.read(len(payload) - 4)["text"], payload[-4:])
+
+    def test_capacity_rejection_preserves_running_jobs_and_evicts_only_completed(self):
+        with patch.object(jobs, "MAX_JOBS", 2):
+            first, second = self.start(), self.start("second", "101")
+            before = set(jobs._jobs)
+            with patch.object(jobs.subprocess, "Popen") as spawn:
+                with self.assertRaises(jobs.JobConflict):
+                    self.start("third", "102")
+                spawn.assert_not_called()
+            self.assertEqual(set(jobs._jobs), before)
+            with second.lock:
+                self.finish(first)
+            wait_for(lambda: second.state == "complete")
+            third = self.start("third", "102")
+            wait_for(lambda: third.state == "complete")
+            self.assertNotIn(first.id, jobs._jobs)
+            self.assertIn(second.id, jobs._jobs)
+            self.assertIn(third.id, jobs._jobs)
+
+    def test_finalization_keeps_the_guest_reserved_and_callback_runs_once(self):
+        entered, release = threading.Event(), threading.Event()
+        self.addCleanup(release.set)
+        def finalize(*_):
+            entered.set()
+            release.wait(3)
+        self.callback.side_effect = finalize
+        job = self.start()
+        self.gate.touch()
+        self.assertTrue(entered.wait(3))
+        self.assertEqual(job.state, "finalizing")
+        with patch.object(jobs.subprocess, "Popen") as spawn:
+            with self.assertRaises(jobs.JobConflict):
+                self.start("other")
+            self.assertIs(jobs.get(job.id, 100), job)
+            spawn.assert_not_called()
+        release.set()
+        wait_for(lambda: job.state == "complete")
+        self.callback.assert_called_once()
+
+    def test_worker_launch_failure_reaps_the_process_without_registering_a_job(self):
+        children = []
+        real_spawn = subprocess.Popen
+        def spawn(*args, **kwargs):
+            child = real_spawn(*args, **kwargs)
+            children.append(child)
+            return child
+        with patch.object(jobs.subprocess, "Popen", side_effect=spawn), \
+                patch.object(jobs.threading.Thread, "start", side_effect=RuntimeError("no worker")):
+            with self.assertRaisesRegex(RuntimeError, "no worker"):
+                self.start()
+        self.assertFalse(jobs.list_jobs())
+        self.assertEqual(len(children), 1)
+        self.assertIsNotNone(children[0].poll())
+        self.callback.assert_not_called()
+
+    def test_interaction_file_collision_is_not_overwritten_or_accepted(self):
+        job = self.start()
+        identity = "fixture-" + os.urandom(8).hex()
+        response = Path("/tmp/proxmenux_response_" + identity)
+        self.addCleanup(lambda: response.unlink(missing_ok=True))
+        response.symlink_to(self.events)
+        job.interaction = dict(type="input", id=identity)
+        wait_for(lambda: self.events.exists())
+        before = self.events.read_bytes() if self.events.exists() else None
+        with self.assertRaises(OSError):
+            job.input(dict(type="interaction_response", id=identity, value="do-not-write"))
+        self.assertEqual(job.interaction["id"], identity)
+        self.assertEqual(self.events.read_bytes() if self.events.exists() else None, before)
+        self.finish(job)
+
     def test_real_process_exit_calls_existing_backend_finalizer_without_viewer(self):
         source = ast.parse((ROOT / "AppImage/scripts/flask_server.py").read_text())
         node = next(n for n in source.body if isinstance(n, ast.FunctionDef)
@@ -413,6 +547,27 @@ class RouteTests(unittest.TestCase):
         complete = self.attach(dict(resume=True, vmid=100), self.ticket().json["ticket"])
         frames = [json.loads(c.args[0]) for c in complete.send.call_args_list]
         self.assertEqual(frames[-1], {"type": "script_complete", "exit_code": 0})
+
+    def test_answer_in_one_viewer_clears_the_question_for_all_viewers(self):
+        self.attach(dict(resume=False, script_path=str(self.script), params=self.params()),
+                    self.ticket().json["ticket"])
+        job = jobs.get("run-1", 100)
+        identity = "fixture-" + os.urandom(8).hex()
+        response = Path("/tmp/proxmenux_response_" + identity)
+        self.addCleanup(lambda: response.unlink(missing_ok=True))
+        job.interaction = dict(type="yesno", id=identity, title="Question", message="Continue?")
+        job.revision += 1
+        first = self.attach(dict(resume=True, vmid=100), self.ticket().json["ticket"],
+            [json.dumps(dict(type="interaction_response", id=identity, value="yes"))])
+        second = self.attach(dict(resume=True, vmid=100), self.ticket().json["ticket"])
+        for ws in [first, second]:
+            frames = [json.loads(c.args[0]) for c in ws.send.call_args_list]
+            self.assertIn(dict(type="web_interaction", interaction=None), frames)
+        self.assertEqual(response.read_text(), "yes")
+        self.assertIsNone(job.stop_reason)
+        self.callback.assert_not_called()
+        self.finish(job)
+        self.callback.assert_called_once()
 
     def test_ticket_is_single_use_and_invalid_resume_never_becomes_execution(self):
         ticket = self.ticket().json["ticket"]

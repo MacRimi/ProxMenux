@@ -40,6 +40,7 @@ MAX_RUNTIME = 4 * 3600
 STOP_GRACE = 300
 RESULT_TTL = 6 * 3600
 MAX_OUTPUT = 256 * 1024
+MAX_INPUT = 64 * 1024
 MAX_JOBS = 32
 _lock = threading.RLock()
 _jobs = {}
@@ -91,11 +92,15 @@ class UpdateJob:
         self.process = None
         self.log_path = None
         self._interaction_buffer = ""
+        self._input = bytearray()
 
     def launch(self):
         master, slave = pty.openpty()
         self.master = master
         try:
+            # A viewer's paste must never block the worker's output, timeout
+            # or cancellation when the updater does not read its stdin.
+            os.set_blocking(master, False)
             fd, self.log_path = tempfile.mkstemp(prefix="proxmenux_update_", suffix=".log")
             os.close(fd)
             fcntl.ioctl(master, termios.TIOCSWINSZ, struct.pack("HHHH", 30, 120, 0, 0))
@@ -158,8 +163,9 @@ class UpdateJob:
                     elif kind in ("input", "inputbox"):
                         value["default"] = base64.b64decode(parts[4]).decode()
                 with self.lock:
-                    self.interaction = value
-                    self.revision += 1
+                    if not self.stop_reason:
+                        self.interaction = value
+                        self.revision += 1
             except (ValueError, UnicodeError, IndexError):
                 continue
 
@@ -168,6 +174,9 @@ class UpdateJob:
             if self.process.poll() is not None or self.stop_reason:
                 return
             self.stop_reason, self.stop_at = reason, time.monotonic()
+            self._input.clear()
+            self.interaction = None
+            self.revision += 1
             try:
                 os.killpg(self.process.pid, signal.SIGTERM)
             except ProcessLookupError:
@@ -175,6 +184,25 @@ class UpdateJob:
 
     def cancel(self):
         self._signal("cancelled")
+
+    def _write_input(self):
+        # The descriptor is nonblocking, so even a full PTY cannot hold this
+        # lock. Retain unwritten bytes in order until the child can read them.
+        with self.lock:
+            if not self._input or self.stop_reason:
+                return
+            try:
+                written = os.write(self.master, self._input[:16384])
+            except BlockingIOError:
+                return
+            except OSError as exc:
+                if exc.errno != errno.EIO:
+                    raise
+                # The child can close its terminal and keep working. Losing
+                # stdin must not turn that update into a viewer failure.
+                self._input.clear()
+                return
+            del self._input[:written]
 
     def _run(self):
         decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
@@ -196,10 +224,18 @@ class UpdateJob:
                         except ProcessLookupError:
                             pass
                     self._interactions(interactions)
-                    readable, _, _ = select.select([] if eof else [self.master], [], [], 0.05)
+                    with self.lock:
+                        pending_input = bool(self._input) and running and not self.stop_reason
+                    readable, writable, _ = select.select(
+                        [] if eof else [self.master],
+                        [self.master] if pending_input else [], [], 0.05)
+                    if writable:
+                        self._write_input()
                     if readable:
                         try:
                             data = os.read(self.master, 16384)
+                        except BlockingIOError:
+                            continue
                         except OSError as exc:
                             if exc.errno != errno.EIO:
                                 raise
@@ -232,6 +268,7 @@ class UpdateJob:
             self.exit_code = code
             self.state = "finalizing"
             self.interaction = None
+            self._input.clear()
             self.revision += 1
         try:
             self.callback(self.script, self.params, code, time.monotonic() - self.started)
@@ -266,7 +303,11 @@ class UpdateJob:
                 if message == "\x03":
                     self.cancel()
                 else:
-                    os.write(self.master, message.encode())
+                    data = message.encode()
+                    if len(self._input) + len(data) > MAX_INPUT:
+                        raise ValueError("Terminal input buffer is full")
+                    if not self.stop_reason:
+                        self._input.extend(data)
             elif message.get("type") == "cancel":
                 self.cancel()
             elif message.get("type") == "resize":

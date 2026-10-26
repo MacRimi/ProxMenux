@@ -222,16 +222,28 @@ export function ScriptTerminalModal({
           try {
             const msg = JSON.parse(event.data)
             if (msg.type === "job_output") {
+              setIsWaitingNextInteraction(false)
+              if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
               if (msg.truncated) termRef.current?.writeln(t("vmLxc.updates.backgroundOutputTrimmed"))
               termRef.current?.write(msg.text)
               outputOffsetRef.current = msg.offset
               return
             }
             if (msg.type === "job_unavailable") {
+              setCurrentInteraction(null)
+              setIsWaitingNextInteraction(false)
+              if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
               termRef.current?.writeln(`\x1b[31m${msg.message}\x1b[0m`)
               completionReceivedRef.current = true
               setIsComplete(true)
               ws.close()
+              return
+            }
+            if (backgroundUpdate && msg.type === "web_interaction" && msg.interaction === null) {
+              setCurrentInteraction(null)
+              setInteractionInput("")
+              setIsWaitingNextInteraction(false)
+              if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
               return
             }
             if (msg.type === "web_interaction" && msg.interaction) {
@@ -254,6 +266,11 @@ export function ScriptTerminalModal({
               return
             }
             if (msg.type === "script_complete") {
+              if (backgroundUpdate) {
+                setCurrentInteraction(null)
+                setIsWaitingNextInteraction(false)
+                if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
+              }
               const exitCode = Number(msg.exit_code ?? 1)
               completionReceivedRef.current = true
               setIsComplete(true)
@@ -462,12 +479,17 @@ export function ScriptTerminalModal({
       try {
         const msg = JSON.parse(event.data)
         if (msg.type === "job_output") {
+          setIsWaitingNextInteraction(false)
+          if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
           if (msg.truncated) term.writeln(t("vmLxc.updates.backgroundOutputTrimmed"))
           term.write(msg.text)
           outputOffsetRef.current = msg.offset
           return
         }
         if (msg.type === "job_unavailable") {
+          setCurrentInteraction(null)
+          setIsWaitingNextInteraction(false)
+          if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
           term.writeln(`\x1b[31m${msg.message}\x1b[0m`)
           completionReceivedRef.current = true
           setIsComplete(true)
@@ -475,6 +497,13 @@ export function ScriptTerminalModal({
           return
         }
 
+        if (backgroundUpdate && msg.type === "web_interaction" && msg.interaction === null) {
+          setCurrentInteraction(null)
+          setInteractionInput("")
+          setIsWaitingNextInteraction(false)
+          if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
+          return
+        }
         if (msg.type === "web_interaction" && msg.interaction) {
           setIsWaitingNextInteraction(false)
           if (waitingTimeoutRef.current) {
@@ -496,6 +525,11 @@ export function ScriptTerminalModal({
           return
         }
         if (msg.type === "script_complete") {
+          if (backgroundUpdate) {
+            setCurrentInteraction(null)
+            setIsWaitingNextInteraction(false)
+            if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current)
+          }
           const exitCode = Number(msg.exit_code ?? 1)
           completionReceivedRef.current = true
           setIsComplete(true)

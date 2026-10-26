@@ -32,7 +32,8 @@ function fixture(backgroundUpdate) {
     reconnectAttemptsRef: {current: 0}, reconnectTimeoutRef: {current: null},
     onCompleteRef: {current: code => finished.push(code)},
     setIsComplete: value => context.isComplete = value, setConnectionStatus() {},
-    setIsWaitingNextInteraction() {}, setCurrentInteraction: value => context.interaction = value,
+    setIsWaitingNextInteraction: value => context.waiting = value,
+    setCurrentInteraction: value => context.interaction = value, setInteractionInput() {},
     clearTimeout() {}, clearInterval() {}, setTimeout: fn => { fn(); return 1 },
     attemptReconnect: () => reconnects.push(true), t: key => key,
     getCompletionMessage: code => 'Result ' + code,
@@ -52,8 +53,18 @@ for (const handler of handlers.onmessage) {
   assert.equal(f.context.outputOffsetRef.current, 27)
   message({data: JSON.stringify({type: 'web_interaction', interaction: {id:'pending', type:'yesno'}})})
   assert.equal(f.context.interaction.id, 'pending', 'replayed interaction remains answerable')
+  f.context.waiting = true
+  message({data: JSON.stringify({type: 'web_interaction', interaction: null})})
+  assert.equal(f.context.interaction, null, 'answer in another viewer dismisses the stale question')
+  assert.equal(f.context.waiting, false)
+  f.context.waiting = true
+  message({data: JSON.stringify({type: 'job_output', text: 'working', offset: 34})})
+  assert.equal(f.context.waiting, false, 'ordinary progress clears the post-answer spinner')
+  f.context.interaction = {id: 'stale'}; f.context.waiting = true
   message({data: JSON.stringify({type: 'script_complete', exit_code: 3})})
   assert.deepEqual(f.finished, [3])
+  assert.equal(f.context.interaction, null, 'a completed job cannot retain an active question')
+  assert.equal(f.context.waiting, false, 'a completed job cannot retain a processing overlay')
   message({data: JSON.stringify({type: 'script_complete', exit_code: 0})})
   assert.deepEqual(f.finished, [3], 'replayed completion cannot finalize twice')
   const missing = fixture({runId: 'missing'})

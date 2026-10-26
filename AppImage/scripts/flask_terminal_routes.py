@@ -171,9 +171,10 @@ def lxc_update_viewer(ws, run_id):
                 offset = view['offset']
             if view['revision'] != revision:
                 revision = view['revision']
-                if view['interaction']:
-                    ws.send(json.dumps({'type': 'web_interaction',
-                                        'interaction': view['interaction']}))
+                # A second viewer must also dismiss a question already
+                # answered elsewhere, or cleared when the job ends.
+                ws.send(json.dumps({'type': 'web_interaction',
+                                    'interaction': view['interaction']}))
             if view['state'] == 'complete':
                 ws.send(json.dumps({'type': 'script_complete', 'exit_code': view['exit_code']}))
                 break
