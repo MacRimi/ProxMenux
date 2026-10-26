@@ -91,7 +91,7 @@ class AnthropicProvider(AIProvider):
         if result.get('stop_reason') == 'refusal':
             category = (result.get('stop_details') or {}).get('category')
             raise AIProviderError(f"Request declined by Anthropic (category: {category})")
-        
+
         # Content is a list of blocks; thinking blocks may come before the
         # text, so take the first text block rather than content[0].
         content = result.get('content')
