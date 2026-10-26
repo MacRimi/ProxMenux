@@ -2005,17 +2005,6 @@ for MOUNT_WARNING in ${MOUNT_WARNINGS[@]+"${MOUNT_WARNINGS[@]}"}; do
   msg_warn "$MOUNT_WARNING"
 done
 
-while IFS=$'\t' read -r TARGET SIZE_MB OPTIONS; do
-  [[ -n $TARGET ]] || continue
-  [[ $TARGET == /* && $TARGET != *","* && $TARGET != *[[:space:]]* ]] \
-    || die "$(translate "Invalid tmpfs path:") $TARGET"
-  [[ $SIZE_MB =~ ^[0-9]+$ && $SIZE_MB -gt 0 ]] || die "$(translate "Invalid tmpfs size:") $TARGET"
-  [[ $OPTIONS =~ ^(rw|ro|nosuid|nodev|noexec|mode=0[0-7]{3})(,(rw|ro|nosuid|nodev|noexec|mode=0[0-7]{3}))*$ ]] || die "$(translate "Invalid tmpfs options:") $TARGET"
-  TARGET_RELATIVE=${TARGET#/}
-  printf 'lxc.mount.entry: tmpfs %s tmpfs %s,size=%sM,create=dir 0 0\n' \
-    "$TARGET_RELATIVE" "$OPTIONS" "$SIZE_MB" >>"$CONF"
-done < <(jq -r '.tmpfs_mounts[]? | [.container_path,.size_mb,(.mount_options | join(","))] | @tsv' "$DEPLOYMENT_FILE")
-
 DEVICE_INDEX=0
 RESOLVED_CHARACTER_DEVICES=()
 NVIDIA_RUNTIME_CONFIGURED=0
@@ -2101,6 +2090,13 @@ prepare_managed_format_directories() {
 prepare_managed_format_directories "/var/lib/lxc/${VMID}/rootfs"
 apply_extra_hosts
 apply_installer_profile
+# Render tmpfs entries after the image and installer profile have set the
+# effective LXC init uid/gid. The same renderer validates and records them.
+TMPFS_CONFIG=$(mktemp)
+python3 "${SCRIPT_DIR}/oci_runtime_settings.py" --render-tmpfs "$DEPLOYMENT_FILE" "$CONF" \
+  >"$TMPFS_CONFIG" || { rm -f "$TMPFS_CONFIG"; die "$(translate "Could not configure the tmpfs mounts")"; }
+cat "$TMPFS_CONFIG" >>"$CONF"
+rm -f "$TMPFS_CONFIG"
 ensure_runtime_home
 apply_rlimits
 apply_host_monitor

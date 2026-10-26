@@ -326,8 +326,16 @@ def refresh_template(candidate, ui):
         size = item['default_size_mb']
         if item.get('prompt_size', True):
             size = positive_integer(ui, f"{translate('Tmpfs size in MiB for')} {item['container_path']}", size, item.get('minimum_size_mb', 1))
-        tmpfs.append({'container_path': item['container_path'], 'size_mb': size,
-                      'mount_options': copy.deepcopy(item.get('mount_options', ['rw', 'nosuid', 'nodev']))})
+        tmpfs_mount = {'container_path': item['container_path'], 'size_mb': size,
+                       'mount_options': copy.deepcopy(item.get('mount_options', ['rw', 'nosuid', 'nodev']))}
+        for key in ('owner_strategy', 'mode', 'uid', 'gid'):
+            if item.get(key) is not None:
+                tmpfs_mount[key] = copy.deepcopy(item[key])
+        if item.get('owner_strategy') == 'mapped-application-user':
+            for key in ('uid', 'gid'):
+                if key not in tmpfs_mount and profile.get('volume_owner', {}).get(key) is not None:
+                    tmpfs_mount[key] = copy.deepcopy(profile['volume_owner'][key])
+        tmpfs.append(tmpfs_mount)
         deployment['tmpfs_mounts'] = tmpfs
     sysctls = deployment.get('security', {}).get('sysctls', [])
     for item in profile.get('security', {}).get('sysctls', []):

@@ -578,8 +578,16 @@ def build_deployment(
                 "container_path": item["container_path"],
                 "size_mb": size_mb,
                 "mount_options": item.get("mount_options", ["rw", "nosuid", "nodev"]),
+                **({"owner_strategy": item["owner_strategy"]} if item.get("owner_strategy") else {}),
+                **({"mode": item["mode"]} if item.get("mode") is not None else {}),
+                **({"uid": item["uid"]} if item.get("uid") is not None else {}),
+                **({"gid": item["gid"]} if item.get("gid") is not None else {}),
             }
         )
+        if item.get("owner_strategy") == "mapped-application-user":
+            for key in ("uid", "gid"):
+                if key not in tmpfs_mounts[-1] and installer_profile.get("volume_owner", {}).get(key) is not None:
+                    tmpfs_mounts[-1][key] = installer_profile["volume_owner"][key]
 
     if advanced:
         bridge = ask_bridge(ui, translate("Network bridge"), defaults["bridge"])
