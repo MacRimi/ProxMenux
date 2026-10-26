@@ -6139,7 +6139,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -17260,41 +17260,6 @@
     ],
     "config_path": "",
     "os": "debian"
-  },
-  {
-    "name": "OpenViking",
-    "slug": "openviking",
-    "desc": "OpenViking is a self-evolving context database for AI agents that unifies agent memory, knowledge RAG and skills. Run it as a standalone HTTP server and connect any client (Python SDK, CLI, or the bundled Web Studio).",
-    "script": "ct/openviking.sh",
-    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/openviking.sh",
-    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/ct/openviking.sh",
-    "type": "lxc",
-    "type_id": "nm9bra8mzye2scg",
-    "categories": [
-      "scriptcat00020"
-    ],
-    "category_names": [
-      "AI / Coding & Dev-Tools"
-    ],
-    "notes": [
-      "A root API key is generated during install and printed at the end of the setup; it is also stored as server.root_api_key in /opt/openviking_data/ov.conf."
-    ],
-    "warnings": [
-      "Model API keys must be configured in /opt/openviking_data/ov.conf (embedding and VLM sections) before the server can store or retrieve memory. Edit the file and restart the service afterwards."
-    ],
-    "port": 1933,
-    "website": "https://www.openviking.ai/",
-    "documentation": "https://docs.openviking.ai/",
-    "logo": "https://raw.githubusercontent.com/volcengine/OpenViking/main/web-studio/public/icon-512.png",
-    "updateable": true,
-    "privileged": false,
-    "has_arm": false,
-    "is_dev": true,
-    "execute_in": [
-      "lxc"
-    ],
-    "config_path": "",
-    "os": "alpine"
   },
   {
     "name": "Open WebUI",
