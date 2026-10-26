@@ -339,6 +339,7 @@
   "Adjusting systemd-journald limits to match Log2RAM size...": "Upravujem limity systemd-journald podľa veľkosti Log2RAM...",
   "Adjusts journald log level if needed (Proxmox defaults may block auth logs)": "Podľa potreby upraví úroveň logovania journald (predvolené Proxmox nastavenie môže blokovať záznamy prihlásení)",
   "Admin page": "Admin stránka",
+  "Admin UI": "Správcovské rozhranie",
   "Administrator email": "Administrátorský mail",
   "Administrator password, at least 12 characters (empty = generated)": "Heslo správcu, minimálne 12 znakov (prázdne = generované)",
   "Advanced": "Pokročilé",

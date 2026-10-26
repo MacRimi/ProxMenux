@@ -339,6 +339,7 @@
   "Adjusting systemd-journald limits to match Log2RAM size...": "Adeguamento dei limiti di systemd-journald alle dimensioni di Log2RAM...",
   "Adjusts journald log level if needed (Proxmox defaults may block auth logs)": "Regola il livello di registro journald se necessario (le impostazioni predefinite di Proxmox potrebbero bloccare i registri di autenticazione)",
   "Admin page": "Pagina amministrazione",
+  "Admin UI": "Interfaccia di amministrazione",
   "Administrator email": "Email amministratore",
   "Administrator password, at least 12 characters (empty = generated)": "Password amministratore, almeno 12 caratteri (campo vuoto = generata)",
   "Advanced": "Avanzato",
