@@ -6174,6 +6174,38 @@
       "template_id": "linuxserver-inkscape"
     },
     {
+      "id": "input",
+      "provider": "official",
+      "template_family": "curated-profile",
+      "title": "Input",
+      "repository": "https://github.com/deck9/input",
+      "description": "A self-hosted form builder using its bundled SQLite configuration for a single-container setup. The application key is required to encrypt stored data.",
+      "website": "https://getinput.co/",
+      "icon": "https://raw.githubusercontent.com/deck9/input/main/docs/public/input-icon.png",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "ghcr.io/deck9/input:main",
+      "category": "business",
+      "category_label": "Business & ERP",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/input.json",
+      "template": "apps/input.json",
+      "template_status": "generated-unvalidated",
+      "automatic_install_candidate": false,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "hidden": true,
+      "template_id": "image-input"
+    },
+    {
       "id": "intellij-idea",
       "provider": "linuxserver.io",
       "title": "Intellij Idea",
