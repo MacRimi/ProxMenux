@@ -2302,6 +2302,27 @@ def _handle_guest_lifecycle(vmid: str, vm_type: str, action: str) -> None:
         return
     if action == 'stop':
         _publish_guest_modal_cache_revision(guest_id)
+    if action == 'destroy' and not _oci_operation_running(guest_id):
+        # The VMID can be reused by a new guest that must not inherit the
+        # applications and scheduled updates of this one. An OCI update
+        # destroys and recreates its own container: it keeps them.
+        try:
+            import lxc_apps
+            lxc_apps.forget_guest(guest_id)
+            _vm_cache_invalidate(guest_id, _vm_schedule_cache)
+        except Exception as exc:
+            print(f'[ProxMenux] could not forget the applications of {guest_type} {guest_id}: {exc}', flush=True)
+        _publish_guest_modal_cache_revision(guest_id)
+
+
+def _oci_operation_running(guest_id: int) -> bool:
+    """An OCI operation on the guest is running or ended moments ago."""
+    try:
+        with open(f'/run/proxmenux/oci-operations/{int(guest_id)}', encoding='utf-8') as handle:
+            mark = json.load(handle)
+        return mark.get('ended') is None or time.time() - float(mark['ended']) < 120
+    except (OSError, ValueError, TypeError, KeyError):
+        return False
 
 # Filesystem types that never count towards VM disk usage:
 # read-only image / CD formats, ram-backed pseudo-fs, kernel virtual
@@ -12424,6 +12445,11 @@ def _vm_modal_prewarmer_pass():
     disappears until something genuinely expires."""
     from flask import g as _flask_g
     warmed = 0
+    try:
+        import lxc_apps
+        lxc_apps.forget_missing_guests()
+    except Exception as exc:
+        print(f'[ProxMenux] could not check the applications of removed guests: {exc}', flush=True)
     resources = get_cached_pvesh_cluster_resources_vm() or []
     for r in resources:
         vmid = r.get('vmid')

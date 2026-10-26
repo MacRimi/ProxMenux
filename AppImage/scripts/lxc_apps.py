@@ -28,6 +28,7 @@ from __future__ import annotations
 import datetime
 import copy
 import concurrent.futures
+import glob
 import hashlib
 import ipaddress
 import json
@@ -48,6 +49,7 @@ from typing import Any, Optional
 import local_app_icons
 
 _APPS_DIR = "/etc/proxmenux/apps"
+_PVE_NODES = "/etc/pve/nodes"
 _PCT_BIN = "/usr/sbin/pct"
 _PROBE_TIMEOUT_SEC = 15
 _GITHUB_TIMEOUT_SEC = 15
@@ -3517,6 +3519,49 @@ def delete_app(vmid, app_id: str) -> bool:
         return True
 
 
+def forget_guest(vmid) -> None:
+    """A destroyed guest takes its registrations with it, scheduled updates
+    included, so a new guest that reuses the VMID starts with nothing."""
+    key = str(int(vmid))
+    path = _sidecar_path(vmid)
+    with _cache_lock:
+        try:
+            os.unlink(path)
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            print(f"[ProxMenux] lxc_apps: could not forget CT {key}: {exc}")
+        with _sidecar_cache_lock:
+            _sidecar_cache.pop(path, None)
+        dismissed = _oci_dismissed()
+        if dismissed.pop(key, None) is not None:
+            _save_oci_dismissed(dismissed)
+    with _docker_inventory_lock:
+        _docker_inventory_cache.pop(key, None)
+    for cache in (_detected_apps_cache, _port_probe_cache, _docker_web_links_cache):
+        cache.pop(key, None)
+    for probe in [probe for probe in list(_file_probe_cache) if probe[0] == key]:
+        _file_probe_cache.pop(probe, None)
+
+
+def forget_missing_guests() -> None:
+    """Registrations of guests that no node of the cluster has any more,
+    removed while the Monitor was not running."""
+    if not os.path.isdir(_PVE_NODES):
+        return
+    try:
+        names = os.listdir(_APPS_DIR)
+    except OSError:
+        return
+    for name in names:
+        vmid = name[:-5] if name.endswith(".json") else ""
+        if not vmid.isdigit():
+            continue
+        if not (glob.glob(f"{_PVE_NODES}/*/lxc/{vmid}.conf")
+                or glob.glob(f"{_PVE_NODES}/*/qemu-server/{vmid}.conf")):
+            forget_guest(vmid)
+
+
 def delete_all(vmid) -> bool:
     sidecar = _read_sidecar(vmid) or {}
     if any(a.get("installed_via") == "oci_image" for a in sidecar.get("apps") or []):
@@ -5654,6 +5699,10 @@ def _dismiss_oci_registration(vmid) -> None:
         return
     data = _oci_dismissed()
     data[str(int(vmid))] = record["installation_id"]
+    _save_oci_dismissed(data)
+
+
+def _save_oci_dismissed(data) -> None:
     _ensure_dir()
     tmp = f"{_OCI_DISMISSED_FILE}.tmp.{os.getpid()}"
     try:
